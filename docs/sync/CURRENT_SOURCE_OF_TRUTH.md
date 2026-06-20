@@ -13,6 +13,20 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 
+## Shopping Already-Have Pantry Reflection Addendum `2026-06-20`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.11 | 장보기 완료 시 팬트리 반영 후보에 구매 체크 항목뿐 아니라 `이미있음`으로 표시한 팬트리 제외 항목을 포함 |
+| 화면정의서 v1.5.18 | `SHOPPING_DETAIL` 완료 팝업 표시 대상을 구매 체크 항목 + `이미있음` 항목으로 갱신하고 버튼/설명을 팬트리 “반영” 용어로 정리 |
+| 유저플로우 v1.3.18 | 장보기 완료 flow에서 `is_pantry_excluded=true` 항목도 기본 반영 후보가 되며 기존 pantry row는 중복 INSERT하지 않는 흐름 추가 |
+| DB v1.3.16 | `shopping_list_items.added_to_pantry` CHECK 의미를 구매 체크 항목 또는 `이미있음` 항목의 반영 처리로 완화 |
+| API v1.2.20 | `POST /shopping/lists/{list_id}/complete`의 `add_to_pantry_item_ids` 기본값/선택값 후보 규칙에 `is_pantry_excluded=true` 항목 포함 |
+
+> 이 변경은 manual UI/UX review plan 17번에 대한 사용자 승인 기반 contract-evolution addendum이다.
+> `add_to_pantry_item_ids: []`는 계속 명시적 팬트리 미반영을 뜻한다.
+> `is_checked=false AND is_pantry_excluded=false`인 미구매 구매 섹션 항목은 계속 반영 후보가 아니다.
+
 ## Recipe Tags Contract-Evolution `36a-recipe-tags-contract-evolution`
 
 | 문서 | 변경 내용 |

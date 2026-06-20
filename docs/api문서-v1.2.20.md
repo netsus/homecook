@@ -263,7 +263,7 @@ type YoutubeQuantityConfirmationStatus =
 | 장보기-1a | 생성 후 상세 자동 이동        | 클라이언트 로직 (8-2 응답의 id로 이동, API 변경 없음)                                      |
 | 장보기-1b | 카드 드래그&드롭 순서 변경    | `sort_order` 필드 추가 + **8-4b 순서 변경 API 신규**                                       |
 | 장보기-1c | 팬트리 제외 섹션 넣었다 뺐다  | 기존 8-4 `is_pantry_excluded` 토글 활용 + **제외 시 is_checked=false 자동 정리 규칙** 추가 |
-| 장보기-2  | 완료 후 팬트리 추가 선택 팝업 | 8-5에 `add_to_pantry_item_ids` 파라미터 추가 (팬트리 반영 분리)                            |
+| 장보기-2  | 완료 후 팬트리 반영 선택 팝업 | 8-5에 `add_to_pantry_item_ids` 파라미터 추가 (팬트리 반영 분리)                            |
 
 ### 연쇄 수정
 
@@ -1597,7 +1597,7 @@ POST /recipes
 >
 > - 목록 생성 → 상세 페이지 자동 이동
 > - 아이템 카드형 드래그&드롭: 순서 변경 + 팬트리 제외 섹션 이동
-> - 장보기 완료 후 “팬트리에 추가할 아이템 선택” 팝업
+> - 장보기 완료 후 “팬트리에 반영할 아이템 선택” 팝업
 
 ### 8-1. 장보기 대상 취합 (Step A~C)
 
@@ -1828,20 +1828,20 @@ POST /shopping/lists/{list_id}/complete
 
 | 구분 | 필드                   | 타입    | 설명                           |
 | ---- | ---------------------- | ------- | ------------------------------ |
-| Body | add_to_pantry_item_ids | uuid[]? | 팬트리에 추가할 아이템 ID 목록 |
+| Body | add_to_pantry_item_ids | uuid[]? | 팬트리에 반영할 shopping_list_item ID 목록 |
 
 > **미전달 vs 빈배열 구분** `v1.2.1 추가`
 >
-> - `add_to_pantry_item_ids`가 **미전달(null/undefined)**: 기본값 정책 적용 (`is_checked=true AND is_pantry_excluded=false` 전부 추가)
+> - `add_to_pantry_item_ids`가 **미전달(null/undefined)**: 기본값 정책 적용. 팬트리 반영 후보 전체를 반영한다 (`is_checked=true AND is_pantry_excluded=false` 구매 섹션 항목 + `is_pantry_excluded=true` 이미있음 항목)
 > - `add_to_pantry_item_ids: []` **(빈 배열)**: 팬트리 반영을 수행하지 않는다 (`pantry_added=0`)
 
 > **프론트 구현 흐름:**
 
 1. 유저가 [장보기 완료] 버튼 클릭
-2. 팝업: 구매 완료 체크(`is_checked=true`)된 아이템 목록 표시
-3. 유저가 팬트리에 추가할 아이템을 체크/체크해제로 선택
-4. [팬트리에 추가] 클릭 → 8-5 호출 (`add_to_pantry_item_ids` 전달)
-5. 전부 해제하고 [추가 안 함] 클릭 → 8-5 호출 (`add_to_pantry_item_ids: []`)
+2. 팝업: 구매 완료 체크(`is_checked=true`)된 구매 섹션 아이템과 `이미있음`으로 표시된 팬트리 제외 아이템 목록 표시
+3. 유저가 팬트리에 반영할 아이템을 체크/체크해제로 선택
+4. [팬트리에 반영] 클릭 → 8-5 호출 (`add_to_pantry_item_ids` 전달)
+5. 전부 해제하고 [반영 안 함] 클릭 → 8-5 호출 (`add_to_pantry_item_ids: []`)
    >
 
 **응답 (200)**
@@ -1858,14 +1858,15 @@ POST /shopping/lists/{list_id}/complete
 > `v1.2.1 수정`: `pantry_added` = `pantry_added_item_ids`의 길이와 항상 일치.
 > `pantry_added`는 이번 요청에서 팬트리 반영 처리된 shopping_list_item의 개수이다.
 > pantry_items에 이미 존재하여 INSERT가 발생하지 않더라도, 사용자가 선택한 항목은 `added_to_pantry=true`로 마킹되며 `pantry_added_item_ids`에 포함된다.
+> `이미있음`으로 표시된 `is_pantry_excluded=true` 항목도 선택 또는 기본값 정책으로 반영되면 같은 규칙을 적용한다.
 
 > **서버 검증/필터 규칙** `v1.2.1 추가`
 >
 > 서버는 `add_to_pantry_item_ids`에 대해 다음을 검증/정리한다:
 >
 > 1. 모든 item_id가 해당 list_id 소속인지 확인 (아니면 무시)
-> 2. `is_pantry_excluded=true`인 항목은 무시 (제외 섹션 아이템)
-> 3. `is_checked=false`인 항목은 무시 (미구매 아이템)
+> 2. 팬트리 반영 후보인지 확인: 구매 섹션은 `is_checked=true AND is_pantry_excluded=false`, 이미있음 항목은 `is_pantry_excluded=true`
+> 3. `is_checked=false AND is_pantry_excluded=false`인 미구매 구매 섹션 항목은 무시
 > 4. 이미 `added_to_pantry=true`인 항목은 중복 반영하지 않음 (멱등)
 >
 > **무효 항목 처리 정책: 무시하고 진행** (409 실패 아님). 유효한 항목만 처리. 모든 item_id가 무효여도 200 반환 (`pantry_added=0`).
@@ -1873,7 +1874,7 @@ POST /shopping/lists/{list_id}/complete
 > 서버 처리:
 
 - **항상**: meals 전이(shopping_done) + shopping_lists.is_completed = true
-- **선택**: 유효한 `add_to_pantry_item_ids`에 해당하는 항목만 pantry_items INSERT + `added_to_pantry=true`
+- **선택**: 유효한 `add_to_pantry_item_ids`에 해당하는 후보 항목만 pantry_items INSERT + `added_to_pantry=true` (`is_pantry_excluded=true` 이미있음 항목 포함, 기존 pantry row는 중복 INSERT 생략)
   > **멱등성**: 이미 완료면 200 + 동일 결과 반환
 
 ### 8-6. 장보기 공유용 텍스트 `v1.2 보완`

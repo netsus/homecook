@@ -496,16 +496,18 @@ SHOPPING_DETAIL (장보기 리스트 상세)로 자동 이동
   └─ [장보기 완료]
        │
        ▼
-     "팬트리에 추가할 아이템" 팝업
+     "팬트리에 반영할 아이템" 팝업
        │
        │ 표시 대상:
-       │   구매 체크된 아이템(is_checked=true) 중
-       │   제외 섹션이 아닌 항목(is_pantry_excluded=false)
+       │   구매 체크된 구매 섹션 아이템
+       │   (is_checked=true AND is_pantry_excluded=false)
+       │   + 이미있음으로 표시된 팬트리 제외 아이템
+       │   (is_pantry_excluded=true)
        │
        ├─ 기본 전체 선택
-       ├─ 체크 해제로 팬트리 추가 제외 가능
-       ├─ [팬트리에 추가]
-       └─ [추가 안 함]
+       ├─ 체크 해제로 팬트리 반영 제외 가능
+       ├─ [팬트리에 반영]
+       └─ [반영 안 함]
             │
             ▼
           ┌────────────────────────────────────┐
@@ -514,6 +516,7 @@ SHOPPING_DETAIL (장보기 리스트 상세)로 자동 이동
           │   → shopping_done                  │
           │                                    │
           │ 선택된 item만 pantry_items INSERT   │
+          │ 이미 있으면 중복 INSERT 생략        │
           │ + shopping_list_items              │
           │   .added_to_pantry = true          │
           └────────────────────────────────────┘

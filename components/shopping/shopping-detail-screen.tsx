@@ -461,8 +461,8 @@ export function ShoppingDetailScreen({
             pantry_added === 0
               ? ""
               : pantry_added === 1
-                ? ", 팬트리 1개 추가"
-                : `, 팬트리 ${pantry_added}개 추가`;
+                ? ", 팬트리 1개 반영"
+                : `, 팬트리 ${pantry_added}개 반영`;
 
           setCompleteToast({
             type: "success",

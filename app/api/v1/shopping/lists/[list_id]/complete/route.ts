@@ -201,6 +201,10 @@ function statusFromRpcErrorCode(code: string | undefined) {
   }
 }
 
+function isPantryReflectionCandidate(item: ShoppingListItemRow) {
+  return (item.is_checked && !item.is_pantry_excluded) || item.is_pantry_excluded;
+}
+
 async function recordShoppingCompletionRewards(
   dbClient: UserProgressDbClient & UserGrowthActivityDbClient,
   {
@@ -418,7 +422,7 @@ export async function POST(request: Request, context: RouteContext) {
         return false;
       }
 
-      return item.is_checked && !item.is_pantry_excluded;
+      return isPantryReflectionCandidate(item);
     });
 
     pantryAddedItemIds = validItems.map((item) => item.id);

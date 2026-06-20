@@ -612,13 +612,14 @@ describe("12a shopping complete backend", () => {
     });
   });
 
-  it("reflects selected valid checked items to pantry and ignores invalid item ids", async () => {
+  it("reflects selected candidate items to pantry and ignores invalid item ids", async () => {
     const existingPantryIngredientId = "550e8400-e29b-41d4-a716-446655440101";
     const newPantryIngredientId = "550e8400-e29b-41d4-a716-446655440102";
+    const alreadyHaveIngredientId = "550e8400-e29b-41d4-a716-446655440104";
     const validExistingItemId = "550e8400-e29b-41d4-a716-446655440201";
     const validNewItemId = "550e8400-e29b-41d4-a716-446655440202";
     const uncheckedItemId = "550e8400-e29b-41d4-a716-446655440203";
-    const excludedItemId = "550e8400-e29b-41d4-a716-446655440204";
+    const alreadyHaveItemId = "550e8400-e29b-41d4-a716-446655440204";
     const invalidItemId = "550e8400-e29b-41d4-a716-446655440999";
     const listQuery = createMaybeSingleQuery([
       {
@@ -667,8 +668,8 @@ describe("12a shopping complete backend", () => {
             added_to_pantry: false,
           },
           {
-            id: excludedItemId,
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440104",
+            id: alreadyHaveItemId,
+            ingredient_id: alreadyHaveIngredientId,
             is_checked: true,
             is_pantry_excluded: true,
             added_to_pantry: false,
@@ -685,7 +686,7 @@ describe("12a shopping complete backend", () => {
     ]);
     const itemReflectQuery = createArrayUpdateQuery([
       {
-        data: [{ id: validExistingItemId }, { id: validNewItemId }],
+        data: [{ id: validExistingItemId }, { id: validNewItemId }, { id: alreadyHaveItemId }],
         error: null,
       },
     ]);
@@ -733,7 +734,7 @@ describe("12a shopping complete backend", () => {
           validExistingItemId,
           validNewItemId,
           uncheckedItemId,
-          excludedItemId,
+          alreadyHaveItemId,
           invalidItemId,
         ],
       }),
@@ -742,11 +743,19 @@ describe("12a shopping complete backend", () => {
     const body = await response.json();
 
     expect(updateItems).toHaveBeenCalledWith({ added_to_pantry: true });
-    expect(itemReflectQuery.in).toHaveBeenCalledWith("id", [validExistingItemId, validNewItemId]);
+    expect(itemReflectQuery.in).toHaveBeenCalledWith("id", [
+      validExistingItemId,
+      validNewItemId,
+      alreadyHaveItemId,
+    ]);
     expect(insertPantryItems).toHaveBeenCalledWith([
       {
         user_id: "user-1",
         ingredient_id: newPantryIngredientId,
+      },
+      {
+        user_id: "user-1",
+        ingredient_id: alreadyHaveIngredientId,
       },
     ]);
     expect(response.status).toBe(200);
@@ -755,14 +764,14 @@ describe("12a shopping complete backend", () => {
       data: {
         completed: true,
         meals_updated: 0,
-        pantry_added: 2,
-        pantry_added_item_ids: [validExistingItemId, validNewItemId],
+        pantry_added: 3,
+        pantry_added_item_ids: [validExistingItemId, validNewItemId, alreadyHaveItemId],
       },
       error: null,
     });
   });
 
-  it("defaults to reflecting all checked non-excluded items when add_to_pantry_item_ids is omitted", async () => {
+  it("defaults to reflecting all checked purchase candidates when add_to_pantry_item_ids is omitted", async () => {
     const firstItemId = "550e8400-e29b-41d4-a716-446655440211";
     const secondItemId = "550e8400-e29b-41d4-a716-446655440212";
     const uncheckedItemId = "550e8400-e29b-41d4-a716-446655440213";
@@ -865,6 +874,132 @@ describe("12a shopping complete backend", () => {
         meals_updated: 0,
         pantry_added: 2,
         pantry_added_item_ids: [firstItemId, secondItemId],
+      },
+      error: null,
+    });
+  });
+
+  it("defaults to reflecting checked purchase items and already-have excluded items", async () => {
+    const checkedItemId = "550e8400-e29b-41d4-a716-446655440231";
+    const alreadyHaveItemId = "550e8400-e29b-41d4-a716-446655440232";
+    const uncheckedPurchaseItemId = "550e8400-e29b-41d4-a716-446655440233";
+    const checkedIngredientId = "550e8400-e29b-41d4-a716-446655440131";
+    const alreadyHaveIngredientId = "550e8400-e29b-41d4-a716-446655440132";
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: listId,
+          user_id: "user-1",
+          is_completed: false,
+          completed_at: null,
+        },
+        error: null,
+      },
+    ]);
+    const listUpdateQuery = createUpdateMaybeSingleQuery([
+      {
+        data: {
+          id: listId,
+          is_completed: true,
+          completed_at: "2026-04-27T11:20:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const mealsUpdateQuery = createArrayUpdateQuery([{ data: [], error: null }]);
+    const itemsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: checkedItemId,
+            ingredient_id: checkedIngredientId,
+            is_checked: true,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+          },
+          {
+            id: alreadyHaveItemId,
+            ingredient_id: alreadyHaveIngredientId,
+            is_checked: false,
+            is_pantry_excluded: true,
+            added_to_pantry: false,
+          },
+          {
+            id: uncheckedPurchaseItemId,
+            ingredient_id: "550e8400-e29b-41d4-a716-446655440133",
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const pantryQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const itemReflectQuery = createArrayUpdateQuery([
+      { data: [{ id: checkedItemId }, { id: alreadyHaveItemId }], error: null },
+    ]);
+    const pantryInsertQuery = createInsertQuery([{ data: null, error: null }]);
+    const updateItems = vi.fn(() => itemReflectQuery);
+    const insertPantryItems = vi.fn(() => pantryInsertQuery);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") {
+          return {
+            select: vi.fn(() => listQuery),
+            update: vi.fn(() => listUpdateQuery),
+          };
+        }
+        if (table === "meals") {
+          return {
+            update: vi.fn(() => mealsUpdateQuery),
+          };
+        }
+        if (table === "shopping_list_items") {
+          return {
+            select: vi.fn(() => itemsQuery),
+            update: updateItems,
+          };
+        }
+        if (table === "pantry_items") {
+          return {
+            select: vi.fn(() => pantryQuery),
+            insert: insertPantryItems,
+          };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importCompleteRoute();
+    const response = await POST(createCompleteRequest(), createContext());
+    const body = await response.json();
+
+    expect(updateItems).toHaveBeenCalledWith({ added_to_pantry: true });
+    expect(itemReflectQuery.in).toHaveBeenCalledWith("id", [checkedItemId, alreadyHaveItemId]);
+    expect(insertPantryItems).toHaveBeenCalledWith([
+      {
+        user_id: "user-1",
+        ingredient_id: checkedIngredientId,
+      },
+      {
+        user_id: "user-1",
+        ingredient_id: alreadyHaveIngredientId,
+      },
+    ]);
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        completed: true,
+        meals_updated: 0,
+        pantry_added: 2,
+        pantry_added_item_ids: [checkedItemId, alreadyHaveItemId],
       },
       error: null,
     });

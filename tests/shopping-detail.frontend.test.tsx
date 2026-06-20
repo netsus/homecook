@@ -996,9 +996,10 @@ describe("ShoppingDetailScreen", () => {
       await expectPantryDialogVisible();
 
       expect(screen.getByRole("button", { name: "반영 안 함" })).toBeTruthy();
-      expect(screen.getByRole("button", { name: "1개 반영하기" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "2개 반영하기" })).toBeTruthy();
       const dialog = screen.getByRole("dialog", { name: /팬트리에 반영할까요/ });
       expect(within(dialog).getByRole("button", { name: /양파/ })).toBeTruthy();
+      expect(within(dialog).getByRole("button", { name: /간장/ })).toBeTruthy();
       expect(within(dialog).queryByText("나중에")).toBeNull();
       expect(screen.queryByText("모두 추가")).toBeNull();
       expect(screen.queryByText("선택 추가")).toBeNull();
@@ -1050,8 +1051,8 @@ describe("ShoppingDetailScreen", () => {
       const completeSpy = vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
         completed: true,
         meals_updated: 3,
-        pantry_added: 1,
-        pantry_added_item_ids: ["item-1"],
+        pantry_added: 2,
+        pantry_added_item_ids: ["item-1", "item-2"],
       });
 
       const user = userEvent.setup();
@@ -1067,7 +1068,7 @@ describe("ShoppingDetailScreen", () => {
 
       await expectPantryDialogVisible();
 
-      const confirmButton = screen.getByRole("button", { name: "1개 반영하기" });
+      const confirmButton = screen.getByRole("button", { name: "2개 반영하기" });
       await user.click(confirmButton);
 
       // Should call API with explicit null default policy
@@ -1079,7 +1080,7 @@ describe("ShoppingDetailScreen", () => {
 
       // Should show success message with pantry count
       await waitFor(() => {
-        expect(screen.getByText(/장보기를 완료했어요.*3개 식사.*팬트리 1개 추가/)).toBeTruthy();
+        expect(screen.getByText(/장보기를 완료했어요.*3개 식사.*팬트리 2개 반영/)).toBeTruthy();
       });
 
       // Should hide complete button after success
@@ -1208,7 +1209,7 @@ describe("ShoppingDetailScreen", () => {
 
       // Should show success message
       await waitFor(() => {
-        expect(screen.getByText(/장보기를 완료했어요.*1개 식사.*팬트리 1개 추가/)).toBeTruthy();
+        expect(screen.getByText(/장보기를 완료했어요.*1개 식사.*팬트리 1개 반영/)).toBeTruthy();
       });
     });
 
@@ -1236,7 +1237,7 @@ describe("ShoppingDetailScreen", () => {
 
       // Popup should disappear
       await waitFor(() => {
-        expect(screen.queryByText("팬트리에 추가할까요?")).toBeFalsy();
+        expect(screen.queryByText("팬트리에 반영할까요?")).toBeFalsy();
       });
 
       // API should not be called
@@ -1246,7 +1247,7 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByRole("button", { name: "장보기 완료" })).toBeTruthy();
     });
 
-    it("only shows checked and not-excluded items in pantry popup", async () => {
+    it("shows checked purchase items and already-have items in pantry popup", async () => {
       const mixedList: ShoppingListDetail = {
         ...mockListDetail,
         items: [
@@ -1298,8 +1299,11 @@ describe("ShoppingDetailScreen", () => {
 
       await expectPantryDialogVisible();
 
+      const dialog = screen.getByRole("dialog", { name: /팬트리에 반영할까요/ });
+      expect(within(dialog).getByRole("button", { name: "2개 반영하기" })).toBeTruthy();
+
       await waitFor(() => {
-        const itemButtons = screen.getAllByRole("button");
+        const itemButtons = within(dialog).getAllByRole("button");
         const yangpaInPopup = itemButtons.some((btn) =>
           btn.textContent?.includes("양파") &&
           btn.textContent?.includes("2개") &&
@@ -1308,11 +1312,11 @@ describe("ShoppingDetailScreen", () => {
         expect(yangpaInPopup).toBeTruthy();
       });
 
-      const popupItemButtons = screen.getAllByRole("button").filter((btn) => !btn.getAttribute("aria-label"));
+      const popupItemButtons = within(dialog).getAllByRole("button").filter((btn) => !btn.getAttribute("aria-label"));
       const hasDaepa = popupItemButtons.some((btn) => btn.textContent?.includes("대파"));
       const hasGanjang = popupItemButtons.some((btn) => btn.textContent?.includes("간장"));
       expect(hasDaepa).toBeFalsy();
-      expect(hasGanjang).toBeFalsy();
+      expect(hasGanjang).toBeTruthy();
     });
 
     it("handles 401 error by redirecting to login", async () => {
@@ -1344,7 +1348,7 @@ describe("ShoppingDetailScreen", () => {
 
       await expectPantryDialogVisible();
 
-      const confirmButton = screen.getByRole("button", { name: "1개 반영하기" });
+      const confirmButton = screen.getByRole("button", { name: "2개 반영하기" });
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -1381,7 +1385,7 @@ describe("ShoppingDetailScreen", () => {
 
       await expectPantryDialogVisible();
 
-      const confirmButton = screen.getByRole("button", { name: "1개 반영하기" });
+      const confirmButton = screen.getByRole("button", { name: "2개 반영하기" });
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -1418,7 +1422,7 @@ describe("ShoppingDetailScreen", () => {
 
       await expectPantryDialogVisible();
 
-      const confirmButton = screen.getByRole("button", { name: "1개 반영하기" });
+      const confirmButton = screen.getByRole("button", { name: "2개 반영하기" });
       await user.click(confirmButton);
 
       await waitFor(() => {
@@ -1450,7 +1454,7 @@ describe("ShoppingDetailScreen", () => {
 
       await expectPantryDialogVisible();
 
-      const confirmButton = screen.getByRole("button", { name: "1개 반영하기" });
+      const confirmButton = screen.getByRole("button", { name: "2개 반영하기" });
       await user.click(confirmButton);
 
       await waitFor(() => {

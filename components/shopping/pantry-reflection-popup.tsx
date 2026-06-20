@@ -24,18 +24,16 @@ export interface PantryReflectionPopupProps {
  * Pantry Reflection Popup
  *
  * Shows a bottom-sheet style popup before completing shopping,
- * allowing users to choose which checked items to add to pantry.
+ * allowing users to choose which items to reflect to pantry.
  *
- * Only checked items where is_pantry_excluded=false are selectable.
+ * Checked purchase items and already-have items are selectable.
  */
 export function PantryReflectionPopup({
   items,
   onConfirm,
   onCancel,
 }: PantryReflectionPopupProps) {
-  const eligibleItems = items.filter(
-    (item) => item.is_checked && !item.is_pantry_excluded
-  );
+  const eligibleItems = items.filter(isPantryReflectionCandidate);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
     // Pre-select all eligible items
     return new Set(eligibleItems.map((item) => item.id));
@@ -100,10 +98,9 @@ export function PantryReflectionPopup({
           <div>
             <WebDialogTitle id="pantry-reflection-title">
               팬트리에 반영할까요?
-              <span className="sr-only"> 팬트리에 추가할까요?</span>
             </WebDialogTitle>
             <p className="web-modal-copy">
-              장 본 재료 중 팬트리에 추가할 항목을 선택하세요.
+              장 본 재료와 이미 있는 재료 중 팬트리에 반영할 항목을 선택하세요.
             </p>
           </div>
           <button
@@ -204,7 +201,7 @@ function MobilePantryReflectionSheet({
             팬트리에 반영할까요?
           </h2>
           <p className="mt-[7px] text-[12px] font-semibold leading-[1.55] text-[var(--text-3)]">
-            장 본 재료 중 팬트리에 추가할 항목을 선택하세요.
+            장 본 재료와 이미 있는 재료 중 팬트리에 반영할 항목을 선택하세요.
           </p>
         </div>
 
@@ -285,4 +282,8 @@ function formatPantryAmountText(item: ShoppingListItemSummary): string {
   return item.amounts_json
     .map((amount) => `${amount.amount}${amount.unit}`)
     .join(" + ");
+}
+
+function isPantryReflectionCandidate(item: ShoppingListItemSummary): boolean {
+  return (item.is_checked && !item.is_pantry_excluded) || item.is_pantry_excluded;
 }
