@@ -211,10 +211,10 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       });
 
       // Should show success message
-      await expect(page.getByText(/장보기를 완료했어요.*2개 식사.*팬트리 2개 추가/)).toBeVisible();
+      await expect(page.getByText(/장보기를 완료했어요.*2개 식사.*팬트리 2개 반영/)).toBeVisible();
     });
 
-    test("should complete with no pantry items when 추가 안 함 is selected", async ({ page }) => {
+    test("should complete with no pantry items when 반영 안 함 is selected", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
 
       const listDetail = buildShoppingListDetail({ is_completed: false });
@@ -321,7 +321,7 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       });
 
       // Should show success message
-      await expect(page.getByText(/장보기를 완료했어요.*2개 식사.*팬트리 1개 추가/)).toBeVisible();
+      await expect(page.getByText(/장보기를 완료했어요.*2개 식사.*팬트리 1개 반영/)).toBeVisible();
     });
 
     test("should cancel popup without completing", async ({ page }) => {
@@ -359,7 +359,7 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       await expect(page.getByRole("button", { name: "장보기 완료" })).toBeVisible();
     });
 
-    test("should only show checked and not-excluded items in popup", async ({ page }) => {
+    test("should show checked purchase items and already-have items in popup", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
 
       const mixedList = buildShoppingListDetail({
@@ -390,7 +390,7 @@ test.describe("slice 12b: shopping pantry reflect", () => {
             display_text: "간장 2큰술",
             amounts_json: [{ amount: 2, unit: "큰술" }],
             is_checked: true,
-            is_pantry_excluded: true, // excluded → should not appear
+            is_pantry_excluded: true, // already-have item → should appear
             added_to_pantry: false,
             sort_order: 200,
           },
@@ -405,14 +405,13 @@ test.describe("slice 12b: shopping pantry reflect", () => {
 
       const dialog = pantryDialog(page);
       await expect(dialog).toBeVisible();
-      await expect(dialog.getByRole("button", { name: "1개 반영하기" })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "2개 반영하기" })).toBeVisible();
 
-      // Only item-1 should be visible
       await expect(dialog.getByRole("button", { name: /양파/ })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: /간장/ })).toBeVisible();
 
-      // item-2 (unchecked) and item-3 (excluded) should not be visible
+      // item-2 (unchecked purchase item) should not be visible
       await expect(dialog.getByRole("button", { name: /대파/ })).toHaveCount(0);
-      await expect(dialog.getByRole("button", { name: /간장/ })).toHaveCount(0);
     });
   });
 
@@ -494,7 +493,7 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       await confirmButton.click();
 
       // Should show success message
-      await expect(page.getByText(/장보기를 완료했어요.*1개 식사.*팬트리 1개 추가/)).toBeVisible();
+      await expect(page.getByText(/장보기를 완료했어요.*1개 식사.*팬트리 1개 반영/)).toBeVisible();
 
       // The completed detail no longer repeats pantry reflection on every item.
       await expect(page.getByText("팬트리 반영 완료", { exact: true })).not.toBeVisible();
