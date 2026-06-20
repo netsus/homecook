@@ -296,9 +296,9 @@ describe("MenuAddScreen", () => {
 
     expect(mockRouterPush).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog", { name: "유튜브 가져오기" })).toBeNull();
-    expect(
-      screen.getByRole("heading", { name: "영상 링크에서 레시피를 추출해요" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "유튜브 가져오기" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "뒤로 가기" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "뒤로" })).toBeNull();
     expect(screen.getByText("4/18 아침")).toBeTruthy();
     expect(screen.getByLabelText("유튜브 URL")).toBeTruthy();
   });
@@ -317,9 +317,11 @@ describe("MenuAddScreen", () => {
     expect(await screen.findByRole("heading", { name: "추출 결과를 확인해 주세요" })).toBeTruthy();
 
     const shell = container.querySelector(".yt-mobile-import-shell");
+    const scrollRegion = container.querySelector(".yt-mobile-import-scroll");
     expect(shell?.className).toContain("h-dvh");
-    expect(shell?.className).toContain("overflow-y-auto");
-    expect(shell?.className).toContain("overscroll-y-contain");
+    expect(shell?.className).toContain("overflow-hidden");
+    expect(scrollRegion?.className).toContain("overflow-y-auto");
+    expect(scrollRegion?.className).toContain("overscroll-y-contain");
   });
 
   // ─── Wave1 acceptance tests ─────────────────────────────────────────────────

@@ -465,7 +465,11 @@
 
 ### 9. 끼니 상태와 맞지 않는 장보기 버튼이 오류만 만드는 문제
 
-- Status: planned
+- Status: implemented in `fix/stale-mobile-navigation-invalid-meal-actions`
+- Progress:
+  - 웹/앱 끼니 카드의 액션을 식사 상태별로 분리했다.
+  - `registered`에는 `장보기`, `shopping_done`에는 `요리하기`만 보이고 `cook_done`에는 두 액션이 보이지 않는다.
+  - 불가능한 상태에서 새 장보기를 만드는 guard는 유지해 stale data와 race condition을 방어한다.
 - Severity: Medium
 - Area: UX / Frontend
 - Source: user manual review screenshot, `components/planner/meal-screen.tsx`
@@ -661,7 +665,12 @@
 
 ### 13. 앱 화면의 뒤로가기 버튼 형태와 위치가 화면마다 다른 문제
 
-- Status: planned
+- Status: implemented in `fix/manual-uiux-back-navigation`
+- Progress:
+  - 앱 navigation back의 기본 형태를 공용 `AppBackButton` / `AppBackButtonSpacer` 기준으로 정리했다.
+  - 직접 등록, 식사 추가, 유튜브 가져오기 entry sheet, 설정, 마이페이지/남은 요리 계열의 뒤로가기 label을 `뒤로 가기`로 맞췄다.
+  - 유튜브 가져오기 full-screen 앱 분기도 상단 `AppBar`의 icon-only back을 쓰도록 바꿔 텍스트 `뒤로` 버튼 중복을 제거했다.
+  - 레시피 상세 hero 위 floating back 같은 특수 케이스는 같은 label과 icon 규칙을 유지하되 배경만 surface에 맞게 둔다.
 - Severity: Low
 - Area: UI / UX / Frontend
 - Source: user manual review screenshot, `components/shared/app-back-button.tsx`, `components/recipe/manual-recipe-create-screen.tsx`, `components/recipe/youtube-import-screen.tsx`, `components/planner/youtube-import-entry-sheet.tsx`
@@ -1200,7 +1209,10 @@
 
 ### 24. 앱 레시피북과 장보기 기록에서 뒤로가기 버튼이 동작하지 않는 문제
 
-- Status: planned
+- Status: implemented in `fix/stale-mobile-navigation-invalid-meal-actions`
+- Progress:
+  - 앱 마이페이지 내부 surface 뒤로가기는 `returnTo`가 있으면 안전한 내부 경로로 돌아가고, 직접 진입이면 `/mypage` fallback으로 돌아가게 했다.
+  - 레시피북/장보기 기록 직접 진입, 복원 진입, 이전 화면 복귀를 component test로 고정했다.
 - Severity: High
 - Area: UX / Frontend
 - Source: user manual review, app recipebook screen, app shopping history screen
@@ -1512,7 +1524,11 @@ Implementation note:
 
 ### 29. 앱과 웹의 기본 폰트가 달라 같은 서비스처럼 보이지 않는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-copy-font-sweep`
+- Progress:
+  - `--font-body`를 Pretendard-first stack으로 통일하고 `Avenir Next`를 기본 한글 UI font stack에서 제거했다.
+  - `--web-font`는 별도 stack 대신 `var(--font-body)`를 참조해 웹/앱 기본 폰트 기준을 맞췄다.
+  - `tests/mobile-typography-policy.test.ts`로 앱/웹 공용 font token과 금지 font-family 재도입을 고정했다.
 - Severity: Medium
 - Area: UI / Frontend
 - Source: user manual review screenshots, app planner date strip, web planner date header, `app/globals.css`

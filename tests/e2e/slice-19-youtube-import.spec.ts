@@ -566,7 +566,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 10000 });
     await page.locator('input[value="백종원 김치찌개"]').fill("수정한 김치찌개");
 
-    await page.getByRole("button", { name: "뒤로" }).click();
+    await page.getByRole("button", { name: "뒤로 가기" }).click();
     await expect(page.locator("text=수정 내용이 사라져요")).toBeVisible();
 
     await page.click('button:has-text("나가기")');
