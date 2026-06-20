@@ -204,6 +204,7 @@ const LEFTOVERS_VISUAL_ITEMS = [
     recipe_title: "김치볶음밥",
     source_meal_label: "저녁",
     source_planned_servings: 2,
+    stale_reviewed_at: null,
     status: "leftover",
   },
   {
@@ -216,6 +217,7 @@ const LEFTOVERS_VISUAL_ITEMS = [
     recipe_title: "순두부찌개",
     source_meal_label: "점심",
     source_planned_servings: 1,
+    stale_reviewed_at: null,
     status: "leftover",
   },
   {
@@ -228,6 +230,7 @@ const LEFTOVERS_VISUAL_ITEMS = [
     recipe_title: "비빔밥",
     source_meal_label: "직접 기록",
     source_planned_servings: 2,
+    stale_reviewed_at: null,
     status: "leftover",
   },
 ] as const satisfies ReadonlyArray<LeftoverListItemData>;
@@ -243,6 +246,7 @@ const ATE_LIST_VISUAL_ITEMS = [
     recipe_title: "김치볶음밥",
     source_meal_label: "저녁",
     source_planned_servings: 2,
+    stale_reviewed_at: null,
     status: "eaten",
   },
   {
@@ -255,6 +259,7 @@ const ATE_LIST_VISUAL_ITEMS = [
     recipe_title: "순두부찌개",
     source_meal_label: "점심",
     source_planned_servings: 1,
+    stale_reviewed_at: null,
     status: "eaten",
   },
 ] as const satisfies ReadonlyArray<LeftoverListItemData>;

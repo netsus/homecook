@@ -107,6 +107,7 @@ const LEFTOVER_ITEMS: LeftoverListItemData[] = [
     status: "leftover",
     cooked_at: "2026-04-20",
     eaten_at: null,
+    stale_reviewed_at: null,
     cooking_servings: 2,
     source_meal_label: "저녁",
     source_planned_servings: 2,
@@ -119,6 +120,7 @@ const LEFTOVER_ITEMS: LeftoverListItemData[] = [
     status: "leftover",
     cooked_at: "2026-04-19",
     eaten_at: null,
+    stale_reviewed_at: null,
     cooking_servings: 1,
     source_meal_label: "점심",
     source_planned_servings: 1,
@@ -134,11 +136,18 @@ const EATEN_ITEMS: LeftoverListItemData[] = [
     status: "eaten",
     cooked_at: "2026-04-18",
     eaten_at: "2026-04-22T00:00:00.000Z",
+    stale_reviewed_at: null,
     cooking_servings: 2,
     source_meal_label: "저녁",
     source_planned_servings: 2,
   },
 ];
+
+function isoDaysAgo(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString();
+}
 
 describe("LeftoversScreen", () => {
   beforeEach(() => {
@@ -151,6 +160,8 @@ describe("LeftoversScreen", () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    vi.useRealTimers();
+    window.localStorage.clear();
     Reflect.deleteProperty(window, "matchMedia");
   });
 
@@ -221,6 +232,96 @@ describe("LeftoversScreen", () => {
     expect(screen.getByRole("link", { name: "김치찌개" }).getAttribute("href")).toBe(
       "/recipe/recipe-1",
     );
+  });
+
+  it("shows a stale reminder for leftovers kept at least 30 days without eating automatically", async () => {
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+      items: [
+        {
+          ...LEFTOVER_ITEMS[0],
+          id: "ld-fresh",
+          cooked_at: isoDaysAgo(29),
+          recipe_title: "29일 된 찌개",
+        },
+        {
+          ...LEFTOVER_ITEMS[1],
+          id: "ld-stale",
+          cooked_at: isoDaysAgo(30),
+          recipe_title: "30일 된 찌개",
+        },
+      ],
+    });
+    const eatSpy = vi.spyOn(leftoversApi, "eatLeftover").mockResolvedValue({
+      id: "ld-stale",
+      status: "eaten",
+      eaten_at: "2026-06-20T12:00:00.000Z",
+      auto_hide_at: "2026-07-20T12:00:00.000Z",
+    });
+
+    render(<LeftoversScreen initialAuthenticated={true} />);
+
+    expect(await screen.findByText("30일 된 찌개")).toBeTruthy();
+    expect(screen.getByText("오래 보관한 남은 요리가 있어요")).toBeTruthy();
+    expect(screen.getByText("보관한 지 30일이 지났어요")).toBeTruthy();
+    expect(screen.queryByText("보관한 지 29일이 지났어요")).toBeNull();
+    expect(eatSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not repeat a stale reminder when the server has a keep review timestamp", async () => {
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+      items: [
+        {
+          ...LEFTOVER_ITEMS[0],
+          id: "ld-reviewed",
+          cooked_at: isoDaysAgo(60),
+          recipe_title: "보관 확인한 찌개",
+          stale_reviewed_at: new Date().toISOString(),
+        },
+      ],
+    });
+
+    render(<LeftoversScreen initialAuthenticated={true} />);
+
+    expect(await screen.findByText("보관 확인한 찌개")).toBeTruthy();
+    expect(screen.queryByTestId("leftover-stale-banner")).toBeNull();
+    expect(screen.queryByTestId("leftover-stale-notice")).toBeNull();
+  });
+
+  it("lets users keep a stale leftover without moving it to eaten", async () => {
+    vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
+      items: [
+        {
+          ...LEFTOVER_ITEMS[0],
+          id: "ld-old",
+          cooked_at: "2020-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+    const keepSpy = vi.spyOn(leftoversApi, "keepLeftoverStaleReview").mockResolvedValue({
+      id: "ld-old",
+      status: "leftover",
+      stale_reviewed_at: "2026-06-20T12:00:00.000Z",
+    });
+    const eatSpy = vi.spyOn(leftoversApi, "eatLeftover").mockResolvedValue({
+      id: "ld-old",
+      status: "eaten",
+      eaten_at: "2026-06-20T12:00:00.000Z",
+      auto_hide_at: "2026-07-20T12:00:00.000Z",
+    });
+
+    render(<LeftoversScreen initialAuthenticated={true} />);
+
+    expect(await screen.findByText("김치찌개")).toBeTruthy();
+    expect(screen.getByText(/보관한 지 \d+일이 지났어요/)).toBeTruthy();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "계속 보관" }));
+
+    expect(screen.queryByText(/보관한 지 \d+일이 지났어요/)).toBeNull();
+    expect(screen.getByText("김치찌개")).toBeTruthy();
+    expect(keepSpy).toHaveBeenCalledWith("ld-old");
+    expect(eatSpy).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem("homecook:leftovers:stale-review:v1")).toBeNull();
   });
 
   it("formats leftover timestamps with the Korea calendar day", async () => {

@@ -8,6 +8,7 @@
 
 > 기준 문서: 요구사항 기준선 v1.7.11 / 화면정의서 v1.5.18 / DB 설계 v1.3.16 / 유저 Flow맵 v1.3.18
 > 작성: 킴실장
+> 2026-06-20 LEFTOVERS stale review server-sync addendum: `leftover_dishes.stale_reviewed_at`을 목록 응답에 추가하고 `POST /leftovers/{leftover_id}/keep`을 추가한다. `leftover` / `eaten` 상태 계약은 유지한다. 엔드포인트 수 72 → 73.
 > 2026-06-20 404 feedback addendum: `POST /api/v1/feedback/404` 추가. 404 페이지 인라인 피드백을 기존 `operational_events`에 `not_found_feedback` 이벤트로 저장한다. 신규 DB table 없음. 엔드포인트 수 71 → 72.
 > v1.2.19 → v1.2.20: recipe tags v2 contract-evolution. `tags` / `recipe_tags` 정규화 모델, `GET /recipes?tag=<normalized_key>`, 제목+승인 tag 검색, `GET /tags`, `POST /recipes/tag-suggestions`, YouTube/manual register의 reviewed tags body를 추가한다. 서버 자동 추천은 유지한다. 엔드포인트 수 69 → 71.
 > 2026-06-16 launch-readiness addendum: `PATCH /shopping/lists/{list_id}/items/bulk` 일괄 체크 API와 `POST /api/v1/admin/page-view` 관리자 진입 감사 API를 공식화한다. 엔드포인트 수 67 → 69.
@@ -2124,7 +2125,8 @@ GET /leftovers
       "cooking_servings": 2,
       "status": "leftover",
       "cooked_at": "2026-03-01T18:00:00Z",
-      "eaten_at": null
+      "eaten_at": null,
+      "stale_reviewed_at": null
     }
   ]
 }
@@ -2132,6 +2134,7 @@ GET /leftovers
 
 > `source_meal_label`과 `source_planned_servings`는 남은요리가 플래너 요리에서 만들어졌거나 이후 플래너에 다시 추가된 경우 최신 연결 meal 기준으로 내려준다. 독립 요리처럼 연결 meal이 없으면 `null`일 수 있다.
 > `cooking_servings`는 남은요리가 만들어진 요리 인분이다.
+> `stale_reviewed_at`은 오래 보관 안내에서 사용자가 [계속 보관]을 누른 마지막 시각이다. 값이 있으면 같은 남은요리의 오래 보관 안내를 반복 표시하지 않는다.
 
 ### 10-2. 다먹음 처리
 
@@ -2171,7 +2174,27 @@ POST /leftovers/{leftover_id}/uneat
 }
 ```
 
-### 10-4. 남은요리 → 플래너 추가
+### 10-4. 계속 보관 확인
+
+```
+POST /leftovers/{leftover_id}/keep
+```
+
+🔒 로그인 필수
+
+`cooked_at` 기준 30일 이상 지난 남은 요리의 오래 보관 안내에서 [계속 보관]을 누를 때 호출한다. 서버는 `stale_reviewed_at=now()`만 저장하고 `status`, `eaten_at`, `auto_hide_at`은 변경하지 않는다.
+
+**응답 (200)**
+
+```json
+{
+  "id": "uuid",
+  "status": "leftover",
+  "stale_reviewed_at": "2026-06-20T12:00:00Z"
+}
+```
+
+### 10-5. 남은요리 → 플래너 추가
 
 > 2-5 `POST /meals` (leftover_dish_id 포함) 재사용
 
@@ -3394,6 +3417,7 @@ POST /api/v1/admin/page-view
 | 10-1     | GET        | /leftovers                             | LEFTOVERS / ATE_LIST     | 🔒     |                                  |
 | 10-2     | POST       | /leftovers/{id}/eat                    | LEFTOVERS                | 🔒     |                                  |
 | 10-3     | POST       | /leftovers/{id}/uneat                  | ATE_LIST                 | 🔒     |                                  |
+| **10-4** | **POST**   | **/leftovers/{id}/keep**               | **LEFTOVERS**            | **🔒** | **stale review server-sync**     |
 | 11-1     | GET        | /pantry                                | PANTRY                   | 🔒     |                                  |
 | 11-2     | POST       | /pantry                                | PANTRY                   | 🔒     |                                  |
 | 11-3     | DELETE     | /pantry                                | PANTRY                   | 🔒     |                                  |
@@ -3422,6 +3446,7 @@ POST /api/v1/admin/page-view
 | 15-3     | GET        | /api/v1/admin/audit-logs               | ADMIN_AUDIT_LOGS         | 🔐     | v1.2.12 신규                     |
 | **15-4** | **POST**   | **/api/v1/admin/page-view**            | **ADMIN_DASHBOARD**      | **🔐** | **launch-readiness 신규**        |
 
+> **2026-06-20 LEFTOVERS stale review server-sync addendum 총계**: 73개 (`POST /leftovers/{id}/keep` 1개 추가)
 > **2026-06-20 404 feedback addendum 총계**: 72개 (`POST /api/v1/feedback/404` 1개 추가. 신규 DB table 없음)
 > **v1.2.20 총계**: 71개 (`GET /tags`, `POST /recipes/tag-suggestions` 2개 추가. recipe 목록/YouTube/manual register는 기존 endpoint 확장)
 > **v1.2.19 총계**: 69개 (launch-readiness addendum: shopping items bulk update, admin page-view audit endpoint 2개 추가)

@@ -52,6 +52,7 @@ interface LeftoverRow {
   cooked_at: string;
   eaten_at: string | null;
   auto_hide_at: string | null;
+  stale_reviewed_at?: string | null;
   cooking_servings?: number | null;
 }
 
@@ -187,7 +188,12 @@ function createLeftoverMutationDb({
   updateRows = [],
 }: {
   selectRows: Array<LeftoverRow | null>;
-  updateRows?: Array<Pick<LeftoverRow, "id" | "status" | "eaten_at" | "auto_hide_at"> | null>;
+  updateRows?: Array<
+    | (Pick<LeftoverRow, "id" | "status" | "eaten_at" | "auto_hide_at"> & {
+        stale_reviewed_at?: string | null;
+      })
+    | null
+  >;
 }) {
   const selectQuery = createMaybeSingleQuery(
     selectRows.map((row) => ({ data: row, error: null })),
@@ -236,6 +242,10 @@ async function importEatRoute() {
 
 async function importUneatRoute() {
   return import("@/app/api/v1/leftovers/[leftover_id]/uneat/route");
+}
+
+async function importKeepRoute() {
+  return import("@/app/api/v1/leftovers/[leftover_id]/keep/route");
 }
 
 describe("GET /api/v1/leftovers", () => {
@@ -312,6 +322,7 @@ describe("GET /api/v1/leftovers", () => {
           cooked_at: "2026-04-28T10:00:00.000Z",
           eaten_at: null,
           auto_hide_at: null,
+          stale_reviewed_at: null,
           cooking_servings: 4,
         },
         {
@@ -322,6 +333,7 @@ describe("GET /api/v1/leftovers", () => {
           cooked_at: "2026-04-27T10:00:00.000Z",
           eaten_at: null,
           auto_hide_at: null,
+          stale_reviewed_at: "2026-06-20T10:00:00.000Z",
           cooking_servings: 1,
         },
       ],
@@ -360,6 +372,7 @@ describe("GET /api/v1/leftovers", () => {
             status: "leftover",
             cooked_at: "2026-04-28T10:00:00.000Z",
             eaten_at: null,
+            stale_reviewed_at: null,
             cooking_servings: 4,
             source_meal_label: "저녁",
             source_planned_servings: 2,
@@ -372,6 +385,7 @@ describe("GET /api/v1/leftovers", () => {
             status: "leftover",
             cooked_at: "2026-04-27T10:00:00.000Z",
             eaten_at: null,
+            stale_reviewed_at: "2026-06-20T10:00:00.000Z",
             cooking_servings: 1,
             source_meal_label: null,
             source_planned_servings: null,
@@ -485,6 +499,118 @@ describe("GET /api/v1/leftovers", () => {
     expect(leftoversQuery.gt).toHaveBeenCalledWith("auto_hide_at", nowIso);
     expect(leftoversQuery.order).toHaveBeenCalledWith("eaten_at", { ascending: false });
     vi.useRealTimers();
+  });
+});
+
+describe("POST /api/v1/leftovers/{id}/keep", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    createRouteHandlerClient.mockReset();
+    createServiceRoleClient.mockReset();
+    ensurePublicUserRow.mockReset();
+    ensureUserBootstrapState.mockReset();
+    formatBootstrapErrorMessage.mockClear();
+    ensurePublicUserRow.mockResolvedValue({});
+    ensureUserBootstrapState.mockResolvedValue(undefined);
+    createServiceRoleClient.mockReturnValue(null);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(nowIso));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns 401 when the user is not authenticated", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
+      from: vi.fn(),
+    });
+
+    const { POST } = await importKeepRoute();
+    const response = await POST(new Request("http://localhost:3000"), {
+      params: Promise.resolve({ leftover_id: leftoverId }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.error.code).toBe("UNAUTHORIZED");
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+  });
+
+  it("stores a stale review timestamp without changing leftover status", async () => {
+    const { db, update, updateQuery } = createLeftoverMutationDb({
+      selectRows: [
+        {
+          id: leftoverId,
+          user_id: "user-1",
+          recipe_id: recipeId,
+          status: "leftover",
+          cooked_at: "2026-04-28T10:00:00.000Z",
+          eaten_at: null,
+          auto_hide_at: null,
+          stale_reviewed_at: null,
+        },
+      ],
+      updateRows: [
+        {
+          id: leftoverId,
+          status: "leftover",
+          eaten_at: null,
+          auto_hide_at: null,
+          stale_reviewed_at: nowIso,
+        },
+      ],
+    });
+    setupAuthenticatedDb(db);
+
+    const { POST } = await importKeepRoute();
+    const response = await POST(new Request("http://localhost:3000"), {
+      params: Promise.resolve({ leftover_id: leftoverId }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(update).toHaveBeenCalledWith({ stale_reviewed_at: nowIso });
+    expect(updateQuery.eq).toHaveBeenCalledWith("id", leftoverId);
+    expect(updateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(body).toEqual({
+      success: true,
+      data: {
+        id: leftoverId,
+        status: "leftover",
+        stale_reviewed_at: nowIso,
+      },
+      error: null,
+    });
+  });
+
+  it("returns 403 for another user's leftover", async () => {
+    const { db, update } = createLeftoverMutationDb({
+      selectRows: [
+        {
+          id: leftoverId,
+          user_id: "other-user",
+          recipe_id: recipeId,
+          status: "leftover",
+          cooked_at: "2026-04-28T10:00:00.000Z",
+          eaten_at: null,
+          auto_hide_at: null,
+          stale_reviewed_at: null,
+        },
+      ],
+    });
+    setupAuthenticatedDb(db);
+
+    const { POST } = await importKeepRoute();
+    const response = await POST(new Request("http://localhost:3000"), {
+      params: Promise.resolve({ leftover_id: leftoverId }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(update).not.toHaveBeenCalled();
+    expect(body.error.code).toBe("FORBIDDEN");
   });
 });
 

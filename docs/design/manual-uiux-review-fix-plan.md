@@ -1389,7 +1389,14 @@
 
 ### 27. 오래된 남은 요리를 사용자가 정리하도록 돕는 안내와 만료 흐름이 없는 문제
 
-- Status: planned
+- Status: implemented in `feature/manual-uiux-item-27-leftovers-stale`
+- Progress:
+  - `leftover_dishes.status`는 기존 공식 계약대로 `leftover` / `eaten`만 유지했다.
+  - `cooked_at` 기준 30일 이상 지난 남은 요리를 LEFTOVERS 화면에서 `보관한 지 N일이 지났어요`로 표시한다.
+  - 오래된 항목이 있을 때 상단 inline banner로 정리 안내를 보여준다.
+  - 사용자가 직접 `다 먹었어요`를 누르기 전에는 자동으로 `eaten` 처리하지 않는다.
+  - `계속 보관`은 `POST /leftovers/{leftover_id}/keep`으로 `leftover_dishes.stale_reviewed_at`에 저장해 기기와 브라우저가 바뀌어도 같은 항목 안내가 반복되지 않게 한다.
+  - `discarded/expired` 같은 새 상태는 추가하지 않았다.
 - Severity: Medium
 - Area: UX / Frontend / Backend / DB
 - Source: user manual review, leftovers experience
