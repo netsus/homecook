@@ -121,7 +121,17 @@ export function createCodexJudgeClient(options = {}) {
   const schemaPath = options.schemaPath || DEFAULT_SCHEMA_PATH;
 
   return {
-    async generate({ prompt, inputText, split, id, outTag, schemaVersion = 1, promptVersion = "semantic-judge-v2" }) {
+    async generate({
+      prompt,
+      inputText,
+      split,
+      id,
+      outTag,
+      schemaVersion = 1,
+      promptVersion = "semantic-judge-v3-anchored",
+      sampleIndex = 0,
+      sampleN = 1,
+    }) {
       const keyParts = {
         provider: "codex",
         model,
@@ -133,6 +143,8 @@ export function createCodexJudgeClient(options = {}) {
         outTag,
         schemaVersion,
         promptVersion,
+        sampleIndex,
+        sampleN,
       };
       const key = cacheKey(keyParts);
       const cachePath = path.join(CACHE_DIR, `${key}.json`);

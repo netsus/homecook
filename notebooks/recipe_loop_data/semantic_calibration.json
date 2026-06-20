@@ -1,12 +1,15 @@
 {
-  "schemaVersion": 2,
-  "calibratedAt": "2026-06-14",
+  "schemaVersion": 3,
+  "calibratedAt": "2026-06-20",
   "policy": "Codex-only semantic judge calibration for the local hard gate. Samples are intentionally small and do not replace human review or holdout.",
   "judgeProvider": "codex",
   "judgeModel": "gpt-5.4",
   "judgeEffort": "high",
   "judgeSchemaVersion": 1,
-  "judgePromptVersion": "semantic-judge-v2",
+  "judgePromptVersion": "semantic-judge-v3-anchored",
+  "scorePolicy": "bottomK-mean",
+  "k": 2,
+  "sampleN": 3,
   "implementationModelContract": {
     "codexModel": "gpt-5.5",
     "codexEffort": "xhigh",
@@ -14,15 +17,12 @@
     "checkedAt": "2026-06-14"
   },
   "thresholds": {
-    "minCaseScore": 3.5,
+    "bottomKMeanScore": 3.5,
     "averageScore": 4
   },
   "borderline": {
-    "enabled": true,
-    "minCaseScore": 3.5,
-    "maxCaseScore": 4,
-    "retryEffort": "xhigh",
-    "finalScorePolicy": "lower_of_primary_and_retry"
+    "enabled": false,
+    "finalScorePolicy": "median_of_N"
   },
   "alignmentStats": {
     "sampleCount": 6,
