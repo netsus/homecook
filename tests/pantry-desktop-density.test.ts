@@ -29,6 +29,27 @@ describe("pantry desktop density", () => {
     expect(ruleBody(".web-pantry-card-copy")).toContain("min-width: 0;");
   });
 
+  it("keeps the pantry add dialog clean and stable for four-column ingredient cards", () => {
+    expect(ruleBody(".web-pantry-add-dialog")).toContain(
+      "width: min(920px, calc(100vw - 64px));",
+    );
+    expect(globalsCss).toContain(
+      [
+        ".web-pantry-add-dialog .web-dialog-body {",
+        "    min-height: 0;",
+        "    overflow: hidden;",
+      ].join("\n"),
+    );
+    expect(ruleBody(".web-pantry-modal-chip-rail")).toContain("min-height: 38px;");
+    expect(ruleBody(".web-pantry-modal-chip-rail")).toContain("overflow-y: hidden;");
+    expect(ruleBody(".web-pantry-add-dialog .web-ingredient-grid")).toContain(
+      "grid-template-columns: repeat(4, minmax(0, 1fr));",
+    );
+    expect(ruleBody(".web-pantry-add-dialog .web-ingredient-cell")).toContain(
+      "min-height: 64px;",
+    );
+  });
+
   it("keeps input focus states aligned to the blue brand ring across app and web", () => {
     expect(globalsCss).toContain("input:focus-visible,");
     expect(globalsCss).toContain("textarea:focus-visible,");

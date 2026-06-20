@@ -348,11 +348,7 @@ export function PantryAddSheet({
                         >
                           {ingredient.standard_name}
                         </span>
-                        {isExisting ? (
-                          <span className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--text-2)]">
-                            보유중
-                          </span>
-                        ) : isChecked ? (
+                        {isChecked ? (
                           <span className="shrink-0 text-[15px] font-extrabold text-[var(--brand)]">
                             ✓
                           </span>
@@ -501,9 +497,6 @@ export function PantryAddSheet({
                       type="button"
                     >
                       <strong>{ingredient.standard_name}</strong>
-                      <small>
-                        {isExisting ? "보유중" : getIngredientGroupDisplayLabel(ingredient)}
-                      </small>
                     </button>
                   );
                 })}

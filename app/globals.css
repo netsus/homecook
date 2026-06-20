@@ -10236,16 +10236,38 @@ button {
   }
 
   .web-pantry-add-dialog .web-dialog-body {
-    min-height: 420px;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .web-pantry-add-dialog {
+    width: min(920px, calc(100vw - 64px));
     height: min(720px, calc(100vh - 80px));
   }
 
-  .web-pantry-modal-tabs,
+  .web-pantry-modal-tabs {
+    margin-top: 16px;
+  }
+
   .web-pantry-modal-chip-rail {
     margin-top: 16px;
+    min-height: 38px;
+    align-items: center;
+    overflow-y: hidden;
+    padding-bottom: 0;
+  }
+
+  .web-pantry-add-dialog .web-ingredient-list-region {
+    min-height: 0;
+  }
+
+  .web-pantry-add-dialog .web-ingredient-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .web-pantry-add-dialog .web-ingredient-cell {
+    min-height: 64px;
+    padding: 12px;
   }
 
   .web-pantry-ingredient-existing {
