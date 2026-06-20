@@ -31,7 +31,7 @@ const MOCK_PANTRY_ITEMS = [
 const MOCK_BUNDLES = [
   {
     id: "b1",
-    name: "조미료 모음",
+    name: "한식 장류",
     display_order: 1,
     ingredients: [
       { ingredient_id: "i10", standard_name: "간장", is_in_pantry: false },
@@ -41,7 +41,7 @@ const MOCK_BUNDLES = [
   },
   {
     id: "b2",
-    name: "기본 야채",
+    name: "자주 쓰는 채소",
     display_order: 2,
     ingredients: [
       { ingredient_id: "i1", standard_name: "양파", is_in_pantry: true },
@@ -325,14 +325,21 @@ test.describe("PANTRY screen", () => {
     await expect(
       page.getByRole("dialog", { name: "묶음으로 재료 추가" }),
     ).toBeVisible();
-    await expect(page.getByText("조미료 모음")).toBeVisible();
-    await expect(page.getByText("기본 야채")).toBeVisible();
-    const seasoningBundle = page.getByRole("button", { name: /조미료 모음/ });
+    await expect(page.getByText("한식 장류")).toBeVisible();
+    await expect(page.getByText("자주 쓰는 채소")).toBeVisible();
+    const seasoningBundle = page.getByRole("button", { name: /한식 장류/ });
     await expect(seasoningBundle).toContainText(/추가 가능 2개/);
     await expect(seasoningBundle).toContainText(/보유중 1개/);
 
     await seasoningBundle.click();
     await expect(page.getByRole("checkbox", { name: /마늘 보유중/ })).toBeDisabled();
+    await page.getByRole("button", { name: "전체 해제" }).click();
+    await expect(
+      page.getByRole("button", {
+        name: /재료 선택|추가할 재료를 선택해 주세요/,
+      }),
+    ).toBeDisabled();
+    await page.getByRole("button", { name: "묶음 전체 선택" }).click();
     await page.getByRole("button", { name: "2개 팬트리에 추가" }).click();
 
     await expect(page.getByText("2개 재료를 팬트리에 추가했어요")).toBeVisible();

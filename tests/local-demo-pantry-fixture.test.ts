@@ -42,47 +42,32 @@ describe("local demo pantry fixture", () => {
   });
 
   it("seeds bundle baseline rows for the pantry bundle picker", () => {
-    expect(DEMO_PANTRY_INGREDIENTS.map((ingredient) => ingredient.standard_name)).toEqual([
-      "양파",
-      "대파",
-      "소고기",
-      "김치",
-      "돼지고기",
-      "소금",
+    expect(DEMO_PANTRY_INGREDIENTS.map((ingredient) => ingredient.standard_name)).toContain(
+      "고춧가루",
+    );
+    expect(DEMO_PANTRY_BUNDLES.map((bundle) => bundle.name)).toEqual([
+      "기본 양념",
+      "한식 장류",
+      "자주 쓰는 채소",
+      "국/찌개 기본",
+      "면/떡/곡류",
+      "냉장 단백질",
+      "냉동/간편 재료",
+      "베이킹/디저트 기본",
     ]);
-    expect(DEMO_PANTRY_BUNDLES).toEqual([
-      {
-        id: "660e8400-e29b-41d4-a716-446655440501",
-        name: "조미료 모음",
-        display_order: 1,
-      },
-      {
-        id: "660e8400-e29b-41d4-a716-446655440502",
-        name: "김치찌개 모음",
-        display_order: 2,
-      },
-    ]);
-    expect(buildDemoPantryBundleItemRows()).toEqual([
-      expect.objectContaining({
-        bundle_id: "660e8400-e29b-41d4-a716-446655440501",
-        ingredient_id: "550e8400-e29b-41d4-a716-446655440015",
-      }),
-      expect.objectContaining({
-        bundle_id: "660e8400-e29b-41d4-a716-446655440502",
-        ingredient_id: "550e8400-e29b-41d4-a716-446655440013",
-      }),
-      expect.objectContaining({
-        bundle_id: "660e8400-e29b-41d4-a716-446655440502",
-        ingredient_id: "550e8400-e29b-41d4-a716-446655440014",
-      }),
-      expect.objectContaining({
-        bundle_id: "660e8400-e29b-41d4-a716-446655440502",
-        ingredient_id: "550e8400-e29b-41d4-a716-446655440010",
-      }),
-      expect.objectContaining({
-        bundle_id: "660e8400-e29b-41d4-a716-446655440502",
-        ingredient_id: "550e8400-e29b-41d4-a716-446655440011",
-      }),
-    ]);
+
+    const ingredientIds = new Set(DEMO_PANTRY_INGREDIENTS.map((ingredient) => ingredient.id));
+    const rowsByBundleId = new Map<string, ReturnType<typeof buildDemoPantryBundleItemRows>>();
+
+    for (const row of buildDemoPantryBundleItemRows()) {
+      expect(ingredientIds.has(row.ingredient_id)).toBe(true);
+      rowsByBundleId.set(row.bundle_id, [...(rowsByBundleId.get(row.bundle_id) ?? []), row]);
+    }
+
+    for (const bundle of DEMO_PANTRY_BUNDLES) {
+      const rows = rowsByBundleId.get(bundle.id) ?? [];
+      expect(rows.length).toBeGreaterThanOrEqual(5);
+      expect(rows.length).toBeLessThanOrEqual(12);
+    }
   });
 });

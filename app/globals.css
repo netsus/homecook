@@ -10374,18 +10374,71 @@ button {
   }
 
   .web-bundle-copy small {
+    overflow: hidden;
     color: var(--web-text-3);
     font-size: 12px;
     font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .web-bundle-preview {
+    display: block;
+    font-weight: 600;
+  }
+
+  .web-bundle-detail {
+    display: grid;
+    gap: 10px;
+    border-top: 1px solid var(--web-divider);
+    background: var(--web-bg-alt);
+    padding: 12px 24px 16px;
+  }
+
+  .web-bundle-selection-bar {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .web-bundle-selection-bar p {
+    margin: 0;
+    color: var(--web-text-2);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .web-bundle-selection-bar div {
+    display: flex;
+    flex-shrink: 0;
+    gap: 6px;
+  }
+
+  .web-bundle-selection-bar button {
+    height: 32px;
+    border-radius: var(--web-r-sm);
+    background: var(--web-surface);
+    padding: 0 10px;
+    color: var(--web-text-2);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .web-bundle-selection-bar button:first-child {
+    background: var(--web-brand-wash);
+    color: var(--web-brand);
+  }
+
+  .web-bundle-selection-bar button:disabled {
+    opacity: 0.45;
   }
 
   .web-bundle-ingredients {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    border-top: 1px solid var(--web-divider);
-    background: var(--web-bg-alt);
-    padding: 12px 24px 16px;
   }
 
   .web-bundle-ingredient {
