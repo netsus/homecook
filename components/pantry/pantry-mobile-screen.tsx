@@ -184,7 +184,8 @@ export function PantryMobileScreen({
             </button>
           ) : (
             <button
-              className="h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 text-[13px] font-extrabold text-[var(--brand)]"
+              className="h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 text-[13px] font-extrabold text-[var(--brand)] disabled:border-[var(--line-strong)] disabled:bg-[var(--surface)] disabled:text-[var(--text-4)]"
+              disabled={displayItems.length === 0}
               onClick={onStartSelectMode}
               type="button"
             >

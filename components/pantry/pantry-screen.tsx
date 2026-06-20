@@ -915,6 +915,7 @@ export function PantryScreen({
                 ) : (
                   <WebButton
                     className="web-pantry-edit-button"
+                    disabled={displayItems.length === 0}
                     onClick={() => setIsSelectMode(true)}
                     variant="tertiary"
                   >

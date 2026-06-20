@@ -10326,7 +10326,7 @@ button {
     gap: 0;
   }
 
-  .web-bundle-section + .web-bundle-section {
+  .web-bundle-trigger + .web-bundle-trigger {
     border-top: 1px solid var(--web-divider);
   }
 
@@ -10362,7 +10362,6 @@ button {
     display: grid;
     min-width: 0;
     flex: 1;
-    gap: 3px;
   }
 
   .web-bundle-copy strong {
@@ -10373,26 +10372,18 @@ button {
     white-space: nowrap;
   }
 
-  .web-bundle-copy small {
-    overflow: hidden;
-    color: var(--web-text-3);
-    font-size: 12px;
-    font-weight: 700;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .web-bundle-preview {
-    display: block;
-    font-weight: 600;
-  }
-
   .web-bundle-detail {
     display: grid;
     gap: 10px;
     border-top: 1px solid var(--web-divider);
     background: var(--web-bg-alt);
     padding: 12px 24px 16px;
+  }
+
+  .web-bundle-detail-standalone {
+    border-top: 0;
+    background: var(--web-surface);
+    padding-top: 2px;
   }
 
   .web-bundle-selection-bar {

@@ -32,21 +32,6 @@ interface PantryBundlePickerProps {
   onClose: () => void;
 }
 
-const REPRESENTATIVE_INGREDIENT_LIMIT = 5;
-
-function formatRepresentativeIngredients(bundle: PantryBundle) {
-  const names = bundle.ingredients
-    .slice(0, REPRESENTATIVE_INGREDIENT_LIMIT)
-    .map((ingredient) => ingredient.standard_name);
-  const remainingCount = bundle.ingredients.length - names.length;
-
-  if (remainingCount <= 0) {
-    return names.join(", ");
-  }
-
-  return `${names.join(", ")} 외 ${remainingCount}개`;
-}
-
 export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) {
   const [sheetState, setSheetState] = useState<SheetState>("loading");
   const [bundles, setBundles] = useState<PantryBundle[]>([]);
@@ -66,11 +51,6 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
       bundle.ingredients
         .filter((ingredient) => !ingredient.is_in_pantry)
         .map((ingredient) => ingredient.ingredient_id),
-    [],
-  );
-  const getOwnedCount = useCallback(
-    (bundle: PantryBundle) =>
-      bundle.ingredients.filter((ingredient) => ingredient.is_in_pantry).length,
     [],
   );
   const expandedMissingIds = expandedBundle ? getMissingIds(expandedBundle) : [];
@@ -100,16 +80,21 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
     }
   }, []);
 
-  const handleToggleBundleExpand = useCallback(
+  const handleSelectBundle = useCallback(
     (bundleId: string) => {
       setAddErrorMessage(null);
-      const isCollapsing = expandedBundleId === bundleId;
       const bundle = bundles.find((item) => item.id === bundleId);
-      setExpandedBundleId(isCollapsing ? null : bundleId);
-      setSelectedIds(!isCollapsing && bundle ? new Set(getMissingIds(bundle)) : new Set());
+      setExpandedBundleId(bundleId);
+      setSelectedIds(bundle ? new Set(getMissingIds(bundle)) : new Set());
     },
-    [bundles, expandedBundleId, getMissingIds],
+    [bundles, getMissingIds],
   );
+
+  const handleReturnToBundleList = useCallback(() => {
+    setAddErrorMessage(null);
+    setExpandedBundleId(null);
+    setSelectedIds(new Set());
+  }, []);
 
   const handleToggleIngredient = useCallback(
     (ingredientId: string) => {
@@ -132,17 +117,153 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
     [expandedBundle],
   );
 
-  const handleSelectAllMissing = useCallback(() => {
+  const handleToggleExpandedSelection = useCallback(() => {
     if (!expandedBundle) return;
 
     setAddErrorMessage(null);
-    setSelectedIds(new Set(getMissingIds(expandedBundle)));
-  }, [expandedBundle, getMissingIds]);
+    setSelectedIds(
+      areAllExpandedMissingSelected
+        ? new Set()
+        : new Set(getMissingIds(expandedBundle)),
+    );
+  }, [areAllExpandedMissingSelected, expandedBundle, getMissingIds]);
 
-  const handleClearSelection = useCallback(() => {
-    setAddErrorMessage(null);
-    setSelectedIds(new Set());
-  }, []);
+  const renderBundleDetail = useCallback(
+    (bundle: PantryBundle, variant: "app" | "web") => {
+      if (variant === "app") {
+        return (
+          <div className="space-y-3">
+            <BundleSelectionActions
+              areAllMissingSelected={areAllExpandedMissingSelected}
+              missingCount={expandedMissingCount}
+              onToggleSelection={handleToggleExpandedSelection}
+              selectedMissingCount={selectedExpandedMissingCount}
+            />
+            <div className="space-y-1.5">
+              {bundle.ingredients.map((ingredient) => {
+                const isChecked = selectedIds.has(ingredient.ingredient_id);
+                const isInPantry = ingredient.is_in_pantry;
+
+                return (
+                  <button
+                    aria-checked={isChecked}
+                    aria-label={
+                      isInPantry
+                        ? `${ingredient.standard_name} 보유중`
+                        : ingredient.standard_name
+                    }
+                    className={[
+                      "flex min-h-[48px] w-full items-center gap-3 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 text-left disabled:opacity-60",
+                      isInPantry
+                        ? "bg-[var(--surface-fill)] opacity-60 grayscale"
+                        : "bg-[var(--surface)]",
+                    ].join(" ")}
+                    data-owned={isInPantry ? "true" : undefined}
+                    disabled={isInPantry}
+                    key={ingredient.ingredient_id}
+                    onClick={() => handleToggleIngredient(ingredient.ingredient_id)}
+                    role="checkbox"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={[
+                        "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border text-[13px] font-bold",
+                        isChecked
+                          ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
+                          : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent",
+                      ].join(" ")}
+                    >
+                      ✓
+                    </span>
+                    <span
+                      className={[
+                        "min-w-0 flex-1 truncate text-[14px] font-bold",
+                        isInPantry
+                          ? "text-[var(--text-3)]"
+                          : "text-[var(--foreground)]",
+                      ].join(" ")}
+                    >
+                      {ingredient.standard_name}
+                    </span>
+                    {isInPantry ? (
+                      <span className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-2)]">
+                        보유중
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="web-bundle-detail web-bundle-detail-standalone">
+          <div className="web-bundle-selection-bar">
+            <p>
+              추가할 재료 {selectedExpandedMissingCount}/
+              {expandedMissingCount}개 선택
+            </p>
+            <div>
+              <button
+                disabled={expandedMissingCount === 0}
+                onClick={handleToggleExpandedSelection}
+                type="button"
+              >
+                {areAllExpandedMissingSelected ? "전체 해제" : "전체 선택"}
+              </button>
+            </div>
+          </div>
+          <div className="web-bundle-ingredients">
+            {bundle.ingredients.map((ingredient) => {
+              const isInPantry = ingredient.is_in_pantry;
+              const isChecked = selectedIds.has(ingredient.ingredient_id);
+
+              return (
+                <button
+                  aria-checked={isChecked}
+                  aria-label={
+                    isInPantry
+                      ? `${ingredient.standard_name} 보유중`
+                      : ingredient.standard_name
+                  }
+                  className={[
+                    "web-bundle-ingredient",
+                    isChecked ? "web-bundle-ingredient-selected" : "",
+                    isInPantry ? "opacity-60 grayscale" : "",
+                  ].join(" ")}
+                  data-owned={isInPantry ? "true" : undefined}
+                  disabled={isInPantry}
+                  key={ingredient.ingredient_id}
+                  onClick={() =>
+                    handleToggleIngredient(ingredient.ingredient_id)
+                  }
+                  role="checkbox"
+                  type="button"
+                >
+                  <span aria-hidden="true">
+                    {isChecked || isInPantry ? "✓" : ""}
+                  </span>
+                  <strong>{ingredient.standard_name}</strong>
+                  <small>{isInPantry ? "보유중" : "추가 가능"}</small>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    },
+    [
+      areAllExpandedMissingSelected,
+      expandedMissingCount,
+      handleToggleExpandedSelection,
+      handleToggleIngredient,
+      selectedExpandedMissingCount,
+      selectedIds,
+    ],
+  );
 
   const handleAdd = useCallback(async () => {
     if (selectedIds.size === 0) return;
@@ -215,10 +336,7 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
                       ? `${selectedCount}개 팬트리에 추가`
                       : "추가할 재료를 선택해 주세요"
                 }
-                onCancel={() => {
-                  setExpandedBundleId(null);
-                  setSelectedIds(new Set());
-                }}
+                onCancel={handleReturnToBundleList}
                 onConfirm={() => void handleAdd()}
               />
             </div>
@@ -258,109 +376,28 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
             </p>
           </div>
         ) : expandedBundle ? (
-          <div className="space-y-3">
-            <BundleSelectionActions
-              areAllMissingSelected={areAllExpandedMissingSelected}
-              missingCount={expandedMissingCount}
-              onClearSelection={handleClearSelection}
-              onSelectAllMissing={handleSelectAllMissing}
-              selectedCount={selectedCount}
-              selectedMissingCount={selectedExpandedMissingCount}
-            />
-            <div className="space-y-1.5">
-              {expandedBundle.ingredients.map((ingredient) => {
-                const isChecked = selectedIds.has(ingredient.ingredient_id);
-                const isInPantry = ingredient.is_in_pantry;
-
-                return (
-                  <button
-                    aria-checked={isChecked}
-                    aria-label={
-                      isInPantry
-                        ? `${ingredient.standard_name} 보유중`
-                        : ingredient.standard_name
-                    }
-                    className={[
-                      "flex min-h-[48px] w-full items-center gap-3 rounded-[var(--radius-control)] border border-[var(--line-strong)] px-3 text-left disabled:opacity-60",
-                      isInPantry
-                        ? "bg-[var(--surface-fill)] opacity-60 grayscale"
-                        : "bg-[var(--surface)]",
-                    ].join(" ")}
-                    data-owned={isInPantry ? "true" : undefined}
-                    disabled={isInPantry}
-                    key={ingredient.ingredient_id}
-                    onClick={() => handleToggleIngredient(ingredient.ingredient_id)}
-                    role="checkbox"
-                    type="button"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={[
-                        "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border text-[13px] font-bold",
-                        isChecked
-                          ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
-                          : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent",
-                      ].join(" ")}
-                    >
-                      ✓
-                    </span>
-                    <span
-                      className={[
-                        "min-w-0 flex-1 truncate text-[14px] font-bold",
-                        isInPantry
-                          ? "text-[var(--text-3)]"
-                          : "text-[var(--foreground)]",
-                      ].join(" ")}
-                    >
-                      {ingredient.standard_name}
-                    </span>
-                    {isInPantry ? (
-                      <span className="shrink-0 rounded-full bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold text-[var(--text-2)]">
-                        보유중
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          renderBundleDetail(expandedBundle, "app")
         ) : (
           <div className="space-y-2.5">
-            {bundles.map((bundle) => {
-              const missingCount = getMissingIds(bundle).length;
-              const ownedCount = getOwnedCount(bundle);
-
-              return (
-                <button
-                  className="flex min-h-[64px] w-full items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5 py-2.5 text-left"
-                  key={bundle.id}
-                  onClick={() => handleToggleBundleExpand(bundle.id)}
-                  type="button"
+            {bundles.map((bundle) => (
+              <button
+                className="flex min-h-[58px] w-full items-center gap-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5 py-2.5 text-left"
+                key={bundle.id}
+                onClick={() => handleSelectBundle(bundle.id)}
+                type="button"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[20px]"
                 >
-                  <span
-                    aria-hidden="true"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[20px]"
-                  >
-                    {getBundleEmoji(bundle.name)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-extrabold text-[var(--foreground)]">
-                      {bundle.name}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[11px] font-bold text-[var(--text-2)]">
-                      {missingCount > 0
-                        ? `추가 가능 ${missingCount}개`
-                        : "추가할 새 재료 없음"}
-                      {ownedCount > 0 ? ` · 보유중 ${ownedCount}개` : ""}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[11px] font-medium text-[var(--text-3)]">
-                      {formatRepresentativeIngredients(bundle)}
-                    </span>
-                  </span>
-                  <ChevronRightIcon />
-                </button>
-              );
-            })}
+                  {getBundleEmoji(bundle.name)}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[14px] font-extrabold text-[var(--foreground)]">
+                  {bundle.name}
+                </span>
+                <ChevronRightIcon />
+              </button>
+            ))}
           </div>
         )}
       </AppBottomSheet>
@@ -379,7 +416,9 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
               묶음으로 재료 추가
             </WebDialogTitle>
             <p className="web-modal-copy">
-              자주 함께 쓰는 재료를 한 번에 추가해요
+              {expandedBundle
+                ? `${expandedBundle.name}에서 추가할 항목을 골라 주세요`
+                : "자주 함께 쓰는 재료를 한 번에 추가해요"}
             </p>
           </div>
           <button
@@ -417,126 +456,41 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
             </div>
           ) : null}
 
-          {sheetState === "ready" ? (
+          {sheetState === "ready" && expandedBundle ? (
+            renderBundleDetail(expandedBundle, "web")
+          ) : null}
+
+          {sheetState === "ready" && !expandedBundle ? (
             <div className="web-bundle-list">
-              {bundles.map((bundle) => {
-                const isExpanded = expandedBundleId === bundle.id;
-                const missingCount = getMissingIds(bundle).length;
-                const ownedCount = getOwnedCount(bundle);
-
-                return (
-                  <section className="web-bundle-section" key={bundle.id}>
-                    <button
-                      aria-controls={`bundle-${bundle.id}-content`}
-                      aria-expanded={isExpanded}
-                      className="web-bundle-trigger"
-                      onClick={() => handleToggleBundleExpand(bundle.id)}
-                      type="button"
-                    >
-                      <span className="web-bundle-emoji" aria-hidden="true">
-                        {getBundleEmoji(bundle.name)}
-                      </span>
-                      <span className="web-bundle-copy">
-                        <strong>{bundle.name}</strong>
-                        <small>
-                          {missingCount > 0
-                            ? `추가 가능 ${missingCount}개`
-                            : "추가할 새 재료 없음"}
-                          {ownedCount > 0 ? ` · 보유중 ${ownedCount}개` : ""}
-                        </small>
-                        <small className="web-bundle-preview">
-                          {formatRepresentativeIngredients(bundle)}
-                        </small>
-                      </span>
-                      <span aria-hidden="true">{isExpanded ? "−" : "+"}</span>
-                    </button>
-
-                    {isExpanded ? (
-                      <div
-                        className="web-bundle-detail"
-                        id={`bundle-${bundle.id}-content`}
-                      >
-                        <div className="web-bundle-selection-bar">
-                          <p>
-                            추가할 재료 {selectedExpandedMissingCount}/
-                            {expandedMissingCount}개 선택
-                          </p>
-                          <div>
-                            <button
-                              disabled={
-                                expandedMissingCount === 0 ||
-                                areAllExpandedMissingSelected
-                              }
-                              onClick={handleSelectAllMissing}
-                              type="button"
-                            >
-                              묶음 전체 선택
-                            </button>
-                            <button
-                              disabled={selectedCount === 0}
-                              onClick={handleClearSelection}
-                              type="button"
-                            >
-                              전체 해제
-                            </button>
-                          </div>
-                        </div>
-                        <div className="web-bundle-ingredients">
-                          {bundle.ingredients.map((ingredient) => {
-                            const isInPantry = ingredient.is_in_pantry;
-                            const isChecked = selectedIds.has(
-                              ingredient.ingredient_id,
-                            );
-
-                            return (
-                              <button
-                                aria-checked={isChecked}
-                                aria-label={
-                                  isInPantry
-                                    ? `${ingredient.standard_name} 보유중`
-                                    : ingredient.standard_name
-                                }
-                                className={[
-                                  "web-bundle-ingredient",
-                                  isChecked ? "web-bundle-ingredient-selected" : "",
-                                  isInPantry ? "opacity-60 grayscale" : "",
-                                ].join(" ")}
-                                data-owned={isInPantry ? "true" : undefined}
-                                disabled={isInPantry}
-                                key={ingredient.ingredient_id}
-                                onClick={() =>
-                                  handleToggleIngredient(ingredient.ingredient_id)
-                                }
-                                role="checkbox"
-                                type="button"
-                              >
-                                <span aria-hidden="true">
-                                  {isChecked || isInPantry ? "✓" : ""}
-                                </span>
-                                <strong>{ingredient.standard_name}</strong>
-                                <small>{isInPantry ? "보유중" : "추가 가능"}</small>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ) : null}
-                  </section>
-                );
-              })}
+              {bundles.map((bundle) => (
+                <button
+                  className="web-bundle-trigger"
+                  key={bundle.id}
+                  onClick={() => handleSelectBundle(bundle.id)}
+                  type="button"
+                >
+                  <span className="web-bundle-emoji" aria-hidden="true">
+                    {getBundleEmoji(bundle.name)}
+                  </span>
+                  <span className="web-bundle-copy">
+                    <strong>{bundle.name}</strong>
+                  </span>
+                  <ChevronRightIcon />
+                </button>
+              ))}
             </div>
           ) : null}
         </WebDialogBody>
 
-        {sheetState === "ready" ? (
+        {sheetState === "ready" && expandedBundle ? (
           <WebDialogFooter>
             {addErrorMessage ? (
               <p className="web-modal-footer-note" role="alert">
                 {addErrorMessage}
               </p>
             ) : null}
-            <WebButton onClick={onClose} variant="tertiary">
-              취소
+            <WebButton onClick={handleReturnToBundleList} variant="tertiary">
+              목록
             </WebButton>
             <WebButton
               aria-busy={isAdding}
@@ -564,18 +518,14 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
 interface BundleSelectionActionsProps {
   areAllMissingSelected: boolean;
   missingCount: number;
-  onClearSelection: () => void;
-  onSelectAllMissing: () => void;
-  selectedCount: number;
+  onToggleSelection: () => void;
   selectedMissingCount: number;
 }
 
 function BundleSelectionActions({
   areAllMissingSelected,
   missingCount,
-  onClearSelection,
-  onSelectAllMissing,
-  selectedCount,
+  onToggleSelection,
   selectedMissingCount,
 }: BundleSelectionActionsProps) {
   return (
@@ -587,19 +537,11 @@ function BundleSelectionActions({
         <div className="flex shrink-0 gap-1.5">
           <button
             className="h-8 rounded-[var(--radius-control)] bg-[var(--brand-soft)] px-2.5 text-[12px] font-extrabold text-[var(--brand)] disabled:opacity-45"
-            disabled={missingCount === 0 || areAllMissingSelected}
-            onClick={onSelectAllMissing}
+            disabled={missingCount === 0}
+            onClick={onToggleSelection}
             type="button"
           >
-            묶음 전체 선택
-          </button>
-          <button
-            className="h-8 rounded-[var(--radius-control)] bg-[var(--surface)] px-2.5 text-[12px] font-extrabold text-[var(--text-2)] disabled:opacity-45"
-            disabled={selectedCount === 0}
-            onClick={onClearSelection}
-            type="button"
-          >
-            전체 해제
+            {areAllMissingSelected ? "전체 해제" : "전체 선택"}
           </button>
         </div>
       </div>
