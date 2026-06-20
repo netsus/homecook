@@ -403,7 +403,7 @@ describe("PantryScreen", () => {
     expect((ownedIngredient as HTMLButtonElement).disabled).toBe(true);
     expect(ownedIngredient.getAttribute("data-owned")).toBe("true");
     expect(ownedIngredient.className).toContain("opacity-60");
-    expect(ownedIngredient.textContent).toContain("보유중");
+    expect(ownedIngredient.textContent).not.toContain("보유중");
 
     await user.click(screen.getByRole("checkbox", { name: "대파" }));
     await user.click(screen.getByRole("button", { name: "팬트리에 추가 (1)" }));
@@ -766,6 +766,35 @@ describe("PantryScreen", () => {
     expect(within(dialog).getByRole("checkbox", { name: "대파" })).toBeTruthy();
     expect(within(dialog).queryByRole("checkbox", { name: "간장" })).toBeNull();
     expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps desktop pantry add ingredient cards free of owned or category helper text", async () => {
+    mockFetchIngredients.mockResolvedValue({
+      items: [
+        { id: "i1", standard_name: "양파", category: "채소" },
+        { id: "i4", standard_name: "대파", category: "채소" },
+        { id: "i10", standard_name: "간장", category: "양념" },
+      ],
+    });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /재료 추가하기/ }));
+    const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+
+    const ownedIngredient = within(dialog).getByRole("checkbox", { name: "양파 보유중" });
+    const newIngredient = within(dialog).getByRole("checkbox", { name: "대파" });
+    const seasoningIngredient = within(dialog).getByRole("checkbox", { name: "간장" });
+
+    expect((ownedIngredient as HTMLButtonElement).disabled).toBe(true);
+    expect(ownedIngredient.getAttribute("data-owned")).toBe("true");
+    expect(ownedIngredient.textContent).toBe("양파");
+    expect(newIngredient.textContent).toBe("대파");
+    expect(seasoningIngredient.textContent).toBe("간장");
+    expect(within(dialog).queryByText("보유중")).toBeNull();
   });
 
   it("shows mobile add sheet search icon, canonical tabs, selected chips, and category sections", async () => {
