@@ -2917,6 +2917,81 @@ print(json.dumps({
     expect(report.clean.log_text).toContain("조리도구 문제");
   });
 
+  it("fails closed on non-aggregation diagnosis leaks without retrying reason aggregation", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+run_dir = root / "runs"
+iter_dir = run_dir / "iteration-01"
+iter_dir.mkdir(parents=True, exist_ok=True)
+secret = "비밀고유재료세트"
+golden_path = loop.DATA_ROOT / "validation" / "val-secret" / "golden.json"
+golden_path.parent.mkdir(parents=True, exist_ok=True)
+golden_path.write_text(json.dumps({
+    "schemaVersion": 1,
+    "videoId": "val-secret",
+    "reviewStatus": "approved",
+    "recipes": [{"title": "검증요리", "ingredients": [{"name": secret, "amount": "1", "unit": "개"}], "steps": []}],
+}, ensure_ascii=False), encoding="utf-8")
+
+aggregate_calls = []
+diagnosis_calls = []
+clean_reason_text = loop.REASON_AGGREGATION_SKIP_MARKER
+
+loop.recompute_iteration_decision = lambda cfg, iter_dir_arg, out_tag: {"checks": {"semantic_validation": False}}
+loop.grade_summaries = lambda cfg, out_tag: {
+    "det": {"aggregate": {}},
+    "ai": {"aggregate": {"bottom_k": 2}},
+    "val": {"aggregate": {}},
+    "val_det": {"aggregate": {}},
+    "val_ai": {"aggregate": {}},
+}
+loop.aggregate_semantic_reasons_with_claude = lambda cfg, iter_dir_arg, out_tag, split: aggregate_calls.append(split) or clean_reason_text
+loop.weak_train_cases_text = lambda cfg, out_tag: "- train-a: " + secret
+
+def fake_run_agent(cmd, prompt, log_path, cwd=None):
+    diagnosis_calls.append(str(log_path))
+    loop.write_text(log_path, "진단이 호출되면 안 됨")
+    return "진단이 호출되면 안 됨"
+
+loop.run_agent = fake_run_agent
+loop.write_current_module_state = lambda *args, **kwargs: None
+
+try:
+    loop.recover_iteration_feedback(loop.LoopConfig(), run_dir, 1)
+    error = None
+except RuntimeError as exc:
+    error = str(exc)
+
+failed = json.loads((iter_dir / "06_diagnosis_failed.json").read_text(encoding="utf-8"))
+clean_reason_scan = loop.scan_texts_for_protected_answers([{"scope": "reason", "text": clean_reason_text}])
+print(json.dumps({
+    "error": error,
+    "aggregate_calls": aggregate_calls,
+    "diagnosis_calls": diagnosis_calls,
+    "failed": failed,
+    "reason_failed_exists": (iter_dir / "06_reason_aggregation_failed.json").exists(),
+    "clean_reason_scan": clean_reason_scan,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.error).toContain("diagnosis prompt failed leakage guard");
+    expect(report.aggregate_calls).toEqual(["train", "validation"]);
+    expect(report.diagnosis_calls).toEqual([]);
+    expect(report.reason_failed_exists).toBe(false);
+    expect(report.clean_reason_scan.success).toBe(true);
+    expect(report.failed).toMatchObject({
+      iteration_status: "aborted",
+      stage: "diagnosis_leakage_guard",
+      recovered: true,
+    });
+    expect(report.failed.leakage_scan.success).toBe(false);
+    expect(report.failed.leakage_scan.scanned_scopes).toContain("06_diagnosis_prompt");
+  });
+
   it("uses non-interactive sudo for fs_usage when the loop is not already root", () => {
     const result = runLoopPython(`
 cmd = loop.fs_usage_command()
