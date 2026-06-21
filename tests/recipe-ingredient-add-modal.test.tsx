@@ -114,12 +114,24 @@ describe("RecipeIngredientAddModal", () => {
     const categoryGroup = screen.getByRole("group", { name: "카테고리 선택" });
     const allCategoryButton = screen.getByRole("button", { name: "전체" });
     const onionCard = onionCheckbox.closest("label");
+    const dialog = screen.getByRole("dialog", { name: "재료로 검색" });
 
+    expect(dialog.className).toContain("web-ingredient-picker-dialog");
     expect(categoryGroup.className).toContain("web-ingredient-category-rail");
     expect(allCategoryButton.className).toContain("web-ingredient-category-chip");
     expect(ruleBody(".web-ingredient-category-rail")).toContain("overflow-x: auto;");
+    expect(ruleBody(".web-ingredient-picker-dialog.web-dialog-narrow")).toContain(
+      "width: min(600px, calc(100vw - 64px));",
+    );
     expect(ruleBody(".web-ingredient-modal-grid")).toContain(
-      "grid-template-columns: repeat(4, minmax(0, 1fr));",
+      "grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));",
+    );
+    expect(ruleBody(".web-ingredient-option")).toContain("padding: 10px 14px;");
+    expect(ruleBody(".web-ingredient-option span:not(.visually-hidden)")).toContain(
+      "white-space: normal;",
+    );
+    expect(ruleBody(".web-ingredient-option span:not(.visually-hidden)")).not.toContain(
+      "text-overflow: ellipsis;",
     );
     expect(onionCard?.className).toContain("web-ingredient-option");
     expect(onionCard?.className).toContain("web-ingredient-option-card");

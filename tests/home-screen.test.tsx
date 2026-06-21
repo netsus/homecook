@@ -363,8 +363,52 @@ describe("home screen", () => {
     expect(searchRule).toContain("top: var(--control-height-xl);");
     expect(searchRule).toContain("z-index: 19;");
     expect(searchRule).toContain("background: var(--surface);");
-    expect(searchRule).toContain("padding: 10px 20px 8px;");
-    expect(searchRule).toContain("gap: 6px;");
+    expect(searchRule).toContain("padding: 10px 20px 12px;");
+    expect(searchRule).toContain("gap: 10px;");
+  });
+
+  it("groups the mobile tag filters with the sticky search surface", async () => {
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve(getMockRecipeThemes());
+      }
+
+      if (input.startsWith("/api/v1/tags")) {
+        return Promise.resolve({
+          items: [
+            { label: "국물요리", normalized_key: "국물요리" },
+            { label: "냉털요리", normalized_key: "냉털요리" },
+          ],
+        });
+      }
+
+      return Promise.resolve(getMockRecipeList());
+    });
+
+    render(<HomeScreen />);
+
+    const searchInput = await screen.findByPlaceholderText("레시피 제목 검색");
+    const tagButton = await screen.findByRole("button", { name: "국물요리" });
+    const searchBlock = searchInput.closest(".home-mobile-discovery-search");
+    const tagRail = tagButton.closest(".home-mobile-tag-rail");
+
+    expect(searchBlock).not.toBeNull();
+    expect(tagRail).not.toBeNull();
+    expect(searchBlock?.contains(tagRail)).toBe(true);
+
+    const searchRule = ruleBody(".home-mobile-discovery-search");
+    const tagRailRule = ruleBody(".home-mobile-tag-rail");
+
+    expect(searchRule).toContain("padding: 10px 20px 12px;");
+    expect(searchRule).toContain("gap: 10px;");
+    expect(tagRailRule).toContain("display: flex;");
+    expect(tagRailRule).toContain("overflow-x: auto;");
+    expect(tagRailRule).toContain("padding: 2px 1px 0;");
+    expect(tagRailRule).toContain("scroll-padding-inline: 1px;");
   });
 
   it("adds left breathing room to web recipe card titles and metrics", () => {
@@ -816,14 +860,25 @@ describe("home screen", () => {
     const onionOption = onionCheckbox.closest("label");
 
     expect(dialog.className).toContain("web-dialog-narrow");
+    expect(dialog.className).toContain("web-ingredient-picker-dialog");
     expect(categoryGroup.className).toContain("web-ingredient-category-rail");
     expect(vegetableCategoryButton.className).toContain("web-ingredient-category-chip");
     expect(ruleBody(".web-ingredient-category-rail")).toContain("overflow-x: auto;");
+    expect(ruleBody(".web-ingredient-picker-dialog.web-dialog-narrow")).toContain(
+      "width: min(600px, calc(100vw - 64px));",
+    );
     expect(ruleBody(".web-ingredient-modal-grid")).toContain(
-      "grid-template-columns: repeat(4, minmax(0, 1fr));",
+      "grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));",
     );
     expect(ruleBody(".web-ingredient-category-chip.web-chip")).toContain(
       "border-radius: var(--web-r-pill);",
+    );
+    expect(ruleBody(".web-ingredient-option")).toContain("padding: 10px 14px;");
+    expect(ruleBody(".web-ingredient-option span:not(.visually-hidden)")).toContain(
+      "white-space: normal;",
+    );
+    expect(ruleBody(".web-ingredient-option span:not(.visually-hidden)")).not.toContain(
+      "text-overflow: ellipsis;",
     );
     expect(onionOption?.className).toContain("web-ingredient-option");
     expect(onionOption?.className).toContain("web-ingredient-option-card");

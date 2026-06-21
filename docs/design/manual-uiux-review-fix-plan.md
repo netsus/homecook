@@ -23,7 +23,9 @@
   - 35: 신규/초기 사용자에게 HOME profile summary 안에서 active tutorial quest title을 알림과 함께 표시했다.
   - 41: 앱 HOME의 `이번 주 인기 테마`를 모든 레시피 위가 아니라 recipe list 중간 지점에 삽입했다. 레시피가 1개뿐이면 첫 카드 뒤에 보인다.
   - 42: 앱 HOME sticky 검색 영역의 padding/gap을 조정해 fixed 상태의 수직 정렬과 태그 경계를 보정했다.
+    - Follow-up: `fix/home-search-tag-boundary`에서 검색창과 아래 태그 rail이 서로 다른 층처럼 끊겨 보이고 첫 태그가 좌측에서 잘리는 재발 케이스를 막기 위해 태그 rail을 sticky 검색 surface 안으로 묶었다.
   - 44: 웹 재료 카테고리는 horizontal rail로 복구하고, HOME/레시피 재료 모달의 재료 option은 4열 grid로 통일했다.
+    - Follow-up: `fix/home-search-tag-boundary`에서 HOME/레시피 재료 picker가 4열 `minmax(0, 1fr)`와 ellipsis 때문에 `가..`처럼 표시되는 재발 케이스를 막기 위해 picker dialog 폭, 재료 option 최소 폭, 텍스트 줄바꿈 규칙을 보정했다.
   - 47: 웹 레시피상세 인분 stepper를 앱 느낌에 맞게 `-`는 흰색, `+`는 파란색 원형 버튼으로 조정했다.
   - 51: 요리모드 조리법 marker를 가운데 정렬하고, instruction text 안에 조리법 label이 나오면 해당 조리법 색상의 bordered tag로 강조했다.
   - 58: 앱 식사추가 옵션의 레시피북 항목에 책 커버 형태와 cover color tone을 넣었다.
@@ -2109,9 +2111,11 @@ Implementation note:
   - 모바일 HOME 검색 영역 `.home-mobile-discovery-search`를 앱바 아래 sticky 영역으로 바꾼다.
   - sticky 상태에서도 배경, 경계선, z-index를 명확히 두어 카드/테마와 겹치지 않게 한다.
   - 320px 폭에서 검색 input과 `재료로 검색` 버튼이 줄바꿈 없이 유지되는지 확인한다.
+  - 2026-06-22 follow-up: 태그 rail은 검색 필터의 일부이므로 검색 sticky surface 안에 포함하고, 별도 회색 띠나 잘린 첫 chip처럼 보이지 않게 좌우/상하 여백을 한 CSS 규칙에서 관리한다.
 - Acceptance criteria:
   - 앱 홈에서 스크롤을 내려도 검색창과 재료 검색 버튼이 앱바 아래에 붙어 있다.
   - 검색 조건 chip과 초기화 버튼이 sticky 영역 안에 함께 남는다.
+  - 추천 태그 chip rail도 검색 surface 안에서 이어져 보이고, 첫 chip이 좌측에서 잘리지 않는다.
   - ingredient bottom sheet, sort dropdown, bottom tab과 z-index 충돌이 없다.
 - Likely implementation target:
   - `app/globals.css`
@@ -2119,6 +2123,7 @@ Implementation note:
 - Verification:
   - `app/globals.css`에서 `.home-mobile-discovery-search`를 app bar 아래 sticky 영역으로 변경했다.
   - `tests/home-screen.test.tsx`에서 `position: sticky`, `top: var(--control-height-xl)`, `z-index`, background 규칙을 고정했다.
+  - Follow-up: `components/home/home-screen.tsx`에서 모바일 `HomeTagRail`을 sticky 검색 surface 내부로 이동하고, `tests/home-screen.test.tsx`에서 태그 rail DOM 위치와 CSS 여백 계약을 추가했다.
   - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx`
   - Verified: `pnpm typecheck`
   - Verified: `pnpm lint`
@@ -2170,15 +2175,17 @@ Implementation note:
   - 웹에서 카테고리 선택지를 발견하기 위해 불필요하게 가로 스크롤해야 한다.
   - 재료 선택 모달의 완성도와 학습성이 낮아진다.
 - Approach decision:
-  - 고치는 게 맞다. 단, 팬트리/플래너/레시피 생성까지 한 번에 전부 교체하면 회귀 범위가 넓으므로 1차로 HOME + 공용 레시피 재료 추가 모달의 웹 카테고리 칩을 사각형 grid로 맞추고, 팬트리 wide modal과의 완전 공통화는 후속 작업으로 다룬다.
+  - 고치는 게 맞다. 단, 사용자 재확인 결과 웹 카테고리는 horizontal rail이 더 적합하고, 실제 문제는 재료 option이 너무 좁아져 이름을 읽을 수 없는 점이다. HOME + 공용 레시피 재료 추가 모달은 카테고리 rail을 유지하고, 재료 option grid의 최소 폭과 텍스트 줄바꿈을 보정한다.
 - Recommended fix:
-  - 웹 재료 카테고리 영역을 가로 rail에서 3~4열 grid형 칩으로 바꾼다.
-  - 칩 radius는 앱의 선택 칩과 유사하게 작은 radius를 사용한다.
-  - HOME 재료 검색 모달과 레시피/플래너 직접 추가에서 쓰는 `RecipeIngredientAddModal`부터 같은 클래스를 사용한다.
+  - 웹 재료 카테고리 영역은 horizontal rail로 유지한다.
+  - 재료 option grid는 `auto-fill` + 최소 폭을 사용해 모달 폭에 따라 3~4열로 자연스럽게 배치한다.
+  - HOME 재료 검색 모달과 레시피/플래너 직접 추가에서 쓰는 `RecipeIngredientAddModal`에 같은 picker dialog/option 클래스를 사용한다.
+  - 재료명은 한 글자 ellipsis가 아니라 최대한 전체 이름이 보이도록 두 줄 수준의 자연 줄바꿈을 허용한다.
   - 팬트리 재료 추가 모달은 wide dialog, 기존 선택 재료 영역, 보유중 disabled 상태가 있어 후속으로 같은 `IngredientPicker` surface 추출 여부를 검토한다.
 - Acceptance criteria:
-  - 웹 HOME 재료 검색 모달의 카테고리 칩이 pill 가로 스크롤이 아니라 grid형 사각 칩으로 보인다.
-  - 웹 레시피/플래너 재료 추가 모달도 같은 카테고리 칩 클래스를 사용한다.
+  - 웹 HOME 재료 검색 모달의 카테고리 칩은 horizontal rail로 유지된다.
+  - 웹 HOME 재료 검색 모달의 재료 option은 `가..`처럼 한 글자 ellipsis로 보이지 않는다.
+  - 웹 레시피/플래너 재료 추가 모달도 같은 picker dialog/option 클래스를 사용한다.
   - 모바일 앱의 한 줄 카테고리 선택은 앱 bottom sheet 폭 제약 때문에 유지하되 radius는 사각형 계열과 맞는다.
   - 팬트리 재료 추가 모달 공통화는 별도 항목으로 추적되며, 현재 동작을 깨지 않는다.
 - Likely implementation target:
@@ -2188,10 +2195,9 @@ Implementation note:
   - `tests/home-screen.test.tsx`
   - `tests/recipe-ingredient-add-modal.test.tsx`
 - Verification:
-  - `components/home/ingredient-filter-modal.tsx`에서 웹 HOME 재료 검색 카테고리를 가로 rail에서 `web-ingredient-category-grid`로 변경했다.
-  - `components/recipe/recipe-ingredient-add-modal.tsx`에서 레시피/플래너 재료 추가 모달도 같은 category grid 클래스를 사용하게 했다.
-  - `app/globals.css`에 3열 grid형 사각 category chip 스타일을 추가했다.
-  - `tests/home-screen.test.tsx`, `tests/recipe-ingredient-add-modal.test.tsx`에서 category grid와 chip class를 고정했다.
+  - `components/home/ingredient-filter-modal.tsx`, `components/recipe/recipe-ingredient-add-modal.tsx`에서 웹 재료 picker dialog class를 공유하게 했다.
+  - `app/globals.css`에서 picker dialog 폭, 재료 option grid 최소 폭, 텍스트 줄바꿈 규칙을 보정했다.
+  - `tests/home-screen.test.tsx`, `tests/recipe-ingredient-add-modal.test.tsx`에서 category rail 유지와 재료 option 가독성 CSS 계약을 고정했다.
   - 팬트리 wide 재료 추가 모달의 완전 공통화는 기존 보유중/선택 재료 구조와 충돌 가능성이 있어 후속 작업으로 남겼다.
   - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx`
   - Verified: `pnpm exec vitest run tests/pantry-desktop-density.test.ts tests/ui-primitives.test.tsx`

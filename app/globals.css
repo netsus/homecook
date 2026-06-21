@@ -926,11 +926,11 @@
   z-index: 19;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
   border-bottom: 0.5px solid var(--line);
   background: var(--surface);
-  padding: 10px 20px 8px;
-  box-shadow: 0 8px 18px var(--shadow-color-soft);
+  padding: 10px 20px 12px;
+  box-shadow: 0 5px 12px rgba(15, 23, 42, 0.04);
 }
 
 .profile-summary {
@@ -1140,7 +1140,19 @@
 }
 
 .home-mobile-tag-rail {
+  display: flex;
   min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  overflow-x: auto;
+  padding: 2px 1px 0;
+  scroll-padding-inline: 1px;
+  scrollbar-width: none;
+}
+
+.home-mobile-tag-rail::-webkit-scrollbar {
+  display: none;
 }
 
 .home-mobile-filter-chip,
@@ -3019,6 +3031,10 @@ button {
 
   .web-dialog-narrow {
     width: min(440px, calc(100vw - 64px));
+  }
+
+  .web-ingredient-picker-dialog.web-dialog-narrow {
+    width: min(600px, calc(100vw - 64px));
   }
 
   .web-dialog-header {
@@ -5702,8 +5718,8 @@ button {
 
   .web-ingredient-modal-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    gap: 10px;
   }
 
   .web-ingredient-modal-grid .web-skeleton {
@@ -5714,7 +5730,7 @@ button {
   .web-ingredient-option {
     position: relative;
     display: inline-flex;
-    min-height: 44px;
+    min-height: 52px;
     width: 100%;
     min-width: 0;
     cursor: pointer;
@@ -5724,7 +5740,7 @@ button {
     border-radius: var(--web-r-sm);
     background: var(--web-surface);
     color: var(--web-text-1);
-    padding: 0 34px;
+    padding: 10px 14px;
     font-size: 14px;
     font-weight: 700;
     text-align: center;
@@ -5735,11 +5751,11 @@ button {
     border-radius: var(--web-r-sm);
   }
 
-  .web-ingredient-option span {
+  .web-ingredient-option span:not(.visually-hidden) {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+    white-space: normal;
   }
 
   .web-ingredient-option svg {

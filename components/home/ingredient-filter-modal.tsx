@@ -270,6 +270,7 @@ export function IngredientFilterModal({
       <WebModal onBackdropClick={handleClose}>
         <WebDialog
           aria-labelledby="ingredient-filter-title"
+          className="web-ingredient-picker-dialog"
           ref={dialogRef}
           size="narrow"
         >
