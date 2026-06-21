@@ -3217,14 +3217,36 @@ function MypageHomeLoadingBody() {
           </div>
         </div>
       </section>
+      <section
+        className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-4"
+        data-testid="mypage-mobile-loading-saved-recipes"
+      >
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-3 w-8" />
+        </div>
+        <div className="-mx-5 flex gap-3 overflow-hidden px-5">
+          {[1, 2, 3].map((index) => (
+            <div
+              className="h-[136px] w-[148px] shrink-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)]"
+              data-testid="mypage-mobile-loading-saved-card"
+              key={index}
+            />
+          ))}
+        </div>
+      </section>
       <section className="p-4">
-        <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]">
-          {[1, 2, 3, 4].map((index) => (
+        <div
+          className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]"
+          data-testid="mypage-mobile-loading-menu"
+        >
+          {[1, 2, 3, 4, 5].map((index) => (
             <div
               className={[
                 "flex min-h-[57px] w-full items-center gap-3 px-4",
-                index < 4 ? "border-b border-[var(--surface-subtle)]" : "",
+                index < 5 ? "border-b border-[var(--surface-subtle)]" : "",
               ].join(" ")}
+              data-testid="mypage-mobile-loading-menu-row"
               key={index}
             >
               <Skeleton className="h-7 w-7 shrink-0 rounded-[var(--radius-control)]" />
@@ -3387,6 +3409,48 @@ function MypageDesktopLoadingShell() {
           </div>
         </WebCard>
 
+        <div
+          aria-hidden="true"
+          className="web-tabs web-mypage-tabs"
+          data-testid="mypage-loading-tabs"
+        >
+          {["저장한 레시피", "레시피북", "장보기 기록", "남은 요리"].map(
+            (label, index) => (
+              <span
+                className={["web-tab", index === 0 ? "web-tab-active" : ""].join(" ")}
+                key={label}
+              >
+                <span className="web-tab-icon">
+                  <WebSkeleton height={18} width={18} />
+                </span>
+                {label}
+              </span>
+            ),
+          )}
+        </div>
+
+        <section
+          className="web-mypage-panel"
+          data-testid="mypage-loading-panel"
+          role="tabpanel"
+        >
+          <div className="web-mypage-subsurface">
+            <div className="web-mypage-section-head">
+              <WebSkeleton height={34} width={220} />
+              <WebSkeleton className="mt-2" height={18} width={320} />
+            </div>
+            <div className="web-recipe-card-grid" data-testid="mypage-loading-card-grid">
+              {[1, 2, 3].map((index) => (
+                <WebSkeleton
+                  data-testid="mypage-loading-panel-card"
+                  height={260}
+                  key={index}
+                  style={{ borderRadius: "var(--web-r-card)" }}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
     </WebShell>
   );

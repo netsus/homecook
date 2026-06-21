@@ -611,7 +611,19 @@ describe("shopping flow screen", () => {
       });
 
       expect(screen.getByText("2개 · 3인분")).toBeTruthy();
+      expect(screen.getByTestId("shopping-flow-mobile-shell").className).toContain(
+        "bg-[var(--surface)]",
+      );
+      expect(screen.getByTestId("shopping-flow-mobile-shell").className).not.toContain(
+        "bg-[var(--surface-fill)]",
+      );
+      expect(screen.getByTestId("shopping-flow-mobile-summary-count").className).toContain(
+        "text-[16px]",
+      );
       const allToggle = screen.getByRole("checkbox", { name: "전체 선택" });
+      expect(
+        allToggle.closest('[data-testid="shopping-flow-mobile-summary-section"]'),
+      ).toBeTruthy();
       expect(allToggle.getAttribute("aria-checked")).toBe("true");
 
       await userEvent.click(allToggle);

@@ -41,6 +41,7 @@ export function PantryReflectionPopup({
   const isMobileViewport = useIsMobileViewport();
   const selectedCount = selectedIds.size;
   const hasSelectedItems = selectedCount > 0;
+  const reflectionSections = getPantryReflectionSections(eligibleItems);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -79,6 +80,7 @@ export function PantryReflectionPopup({
     return (
       <MobilePantryReflectionSheet
         eligibleItems={eligibleItems}
+        reflectionSections={reflectionSections}
         onCancel={onCancel}
         onConfirmNone={() => onConfirm([])}
         onConfirmSelected={handleConfirmSelected}
@@ -118,23 +120,37 @@ export function PantryReflectionPopup({
             {eligibleItems.length === 0 ? (
               <p className="web-modal-copy">선택할 수 있는 재료가 없어요</p>
             ) : (
-              eligibleItems.map((item) => {
-                const checked = selectedIds.has(item.id);
+              reflectionSections.map((section) => (
+                <section
+                  className="web-reflect-section"
+                  data-testid={`pantry-reflection-section-${section.id}`}
+                  key={section.id}
+                >
+                  <h3 className="web-reflect-section-title">
+                    {section.label}
+                    <span>{section.items.length}개</span>
+                  </h3>
+                  <div className="web-reflect-section-list">
+                    {section.items.map((item) => {
+                      const checked = selectedIds.has(item.id);
 
-                return (
-                  <button
-                    aria-pressed={checked}
-                    className="web-reflect-item"
-                    key={item.id}
-                    onClick={() => handleToggleItem(item.id)}
-                    type="button"
-                  >
-                    <span aria-hidden="true">{checked ? "✓" : ""}</span>
-                    <strong>{formatPantryItemName(item)}</strong>
-                    <small>{formatPantryAmountText(item)}</small>
-                  </button>
-                );
-              })
+                      return (
+                        <button
+                          aria-pressed={checked}
+                          className="web-reflect-item"
+                          key={item.id}
+                          onClick={() => handleToggleItem(item.id)}
+                          type="button"
+                        >
+                          <span aria-hidden="true">{checked ? "✓" : ""}</span>
+                          <strong>{formatPantryItemName(item)}</strong>
+                          <small>{formatPantryAmountText(item)}</small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))
             )}
           </div>
         </WebDialogBody>
@@ -165,6 +181,7 @@ export function PantryReflectionPopup({
 
 function MobilePantryReflectionSheet({
   eligibleItems,
+  reflectionSections,
   onCancel,
   onConfirmNone,
   onConfirmSelected,
@@ -172,6 +189,7 @@ function MobilePantryReflectionSheet({
   selectedIds,
 }: {
   eligibleItems: ShoppingListItemSummary[];
+  reflectionSections: PantryReflectionSection[];
   onCancel: () => void;
   onConfirmNone: () => void;
   onConfirmSelected: () => void;
@@ -211,43 +229,56 @@ function MobilePantryReflectionSheet({
               반영할 수 있는 재료가 없어요
             </div>
           ) : (
-            <div className="space-y-2 py-3">
-              {eligibleItems.map((item) => {
-                const isSelected = selectedIds.has(item.id);
+            <div className="space-y-3 py-3">
+              {reflectionSections.map((section) => (
+                <section
+                  data-testid={`pantry-reflection-section-${section.id}`}
+                  key={section.id}
+                >
+                  <h3 className="mb-2 flex items-center justify-between text-[12px] font-extrabold leading-[1.3] text-[var(--text-3)]">
+                    <span>{section.label}</span>
+                    <span>{section.items.length}개</span>
+                  </h3>
+                  <div className="space-y-2">
+                    {section.items.map((item) => {
+                      const isSelected = selectedIds.has(item.id);
 
-                return (
-                  <button
-                    className="flex min-h-[54px] w-full items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-[10px] text-left"
-                    data-testid={`pantry-reflection-row-${item.id}`}
-                    key={item.id}
-                    onClick={() => onToggleItem(item.id)}
-                    type="button"
-                  >
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span
-                        aria-hidden="true"
-                        className={[
-                          "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[5px] border text-[13px] font-extrabold",
-                          isSelected
-                            ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
-                            : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent",
-                        ].join(" ")}
-                      >
-                        ✓
-                      </span>
-                      <span className="block min-w-0 truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
-                        {formatPantryItemName(item)}
-                      </span>
-                    </span>
-                    <span
-                      className="shrink-0 text-right text-[12px] font-extrabold leading-[1.3] text-[var(--text-3)]"
-                      data-testid={`pantry-reflection-amount-${item.id}`}
-                    >
-                      {formatPantryAmountText(item)}
-                    </span>
-                  </button>
-                );
-              })}
+                      return (
+                        <button
+                          className="flex min-h-[54px] w-full items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-[10px] text-left"
+                          data-testid={`pantry-reflection-row-${item.id}`}
+                          key={item.id}
+                          onClick={() => onToggleItem(item.id)}
+                          type="button"
+                        >
+                          <span className="flex min-w-0 items-center gap-3">
+                            <span
+                              aria-hidden="true"
+                              className={[
+                                "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[5px] border text-[13px] font-extrabold",
+                                isSelected
+                                  ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--text-inverse)]"
+                                  : "border-[var(--line-strong)] bg-[var(--surface)] text-transparent",
+                              ].join(" ")}
+                            >
+                              ✓
+                            </span>
+                            <span className="block min-w-0 truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+                              {formatPantryItemName(item)}
+                            </span>
+                          </span>
+                          <span
+                            className="shrink-0 text-right text-[12px] font-extrabold leading-[1.3] text-[var(--text-3)]"
+                            data-testid={`pantry-reflection-amount-${item.id}`}
+                          >
+                            {formatPantryAmountText(item)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
             </div>
           )}
         </div>
@@ -272,6 +303,28 @@ function MobilePantryReflectionSheet({
       </div>
     </div>
   );
+}
+
+interface PantryReflectionSection {
+  id: "purchase" | "already-have";
+  label: string;
+  items: ShoppingListItemSummary[];
+}
+
+function getPantryReflectionSections(
+  eligibleItems: ShoppingListItemSummary[],
+): PantryReflectionSection[] {
+  const purchaseItems = eligibleItems.filter(
+    (item) => item.is_checked && !item.is_pantry_excluded,
+  );
+  const alreadyHaveItems = eligibleItems.filter(
+    (item) => item.is_pantry_excluded,
+  );
+
+  return [
+    { id: "purchase" as const, label: "구매한 재료", items: purchaseItems },
+    { id: "already-have" as const, label: "이미 있는 재료", items: alreadyHaveItems },
+  ].filter((section) => section.items.length > 0);
 }
 
 function formatPantryItemName(item: ShoppingListItemSummary): string {

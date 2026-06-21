@@ -59,9 +59,56 @@ function renderSaveModal(overrides: Partial<React.ComponentProps<typeof SaveModa
   return { appDialog, props };
 }
 
+function renderDesktopSaveModal(
+  overrides: Partial<React.ComponentProps<typeof SaveModal>> = {},
+) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches: query === "(min-width: 1024px)",
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  });
+
+  const props: React.ComponentProps<typeof SaveModal> = {
+    alreadySavedBookIds: [],
+    books: BOOKS,
+    isCreatingBook: false,
+    isOpen: true,
+    isSavingRecipe: false,
+    loadErrorMessage: null,
+    newBookName: "",
+    onClose: vi.fn(),
+    onCreateBook: vi.fn(),
+    onNewBookNameChange: vi.fn(),
+    onRetry: vi.fn(),
+    onSaveRecipe: vi.fn(),
+    onSelectBook: vi.fn(),
+    saveErrorMessage: null,
+    selectedBookIds: ["book-saved"],
+    viewState: "ready",
+    ...overrides,
+  };
+
+  render(<SaveModal {...props} />);
+
+  return {
+    desktopDialog: screen.getByRole("dialog", { name: "레시피 저장" }),
+    props,
+  };
+}
+
 describe("SaveModal", () => {
   afterEach(() => {
     cleanup();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   it("renders the app bottom-sheet shell and fires shared footer actions", async () => {
@@ -102,5 +149,37 @@ describe("SaveModal", () => {
     await userEvent.click(savedBookButton);
 
     expect(props.onSelectBook).toHaveBeenCalledWith("book-saved");
+  });
+
+  it("omits the redundant app multi-select helper copy", () => {
+    const { appDialog } = renderSaveModal();
+
+    expect(within(appDialog).queryByText("레시피북 다중 선택")).toBeNull();
+  });
+
+  it("keeps desktop quick-create collapsed until requested", async () => {
+    const { desktopDialog, props } = renderDesktopSaveModal();
+    const dialog = within(desktopDialog);
+
+    expect(dialog.queryByPlaceholderText("레시피북 이름")).toBeNull();
+
+    await userEvent.click(dialog.getByRole("button", { name: "새 레시피북 만들기" }));
+
+    expect(dialog.getByPlaceholderText("레시피북 이름")).toBeTruthy();
+
+    await userEvent.type(dialog.getByPlaceholderText("레시피북 이름"), "오늘 저녁");
+    expect(props.onNewBookNameChange).toHaveBeenCalled();
+
+    cleanup();
+
+    const { desktopDialog: readyDialog, props: readyProps } = renderDesktopSaveModal({
+      newBookName: "오늘 저녁",
+    });
+    const readyScope = within(readyDialog);
+
+    await userEvent.click(readyScope.getByRole("button", { name: "새 레시피북 만들기" }));
+    await userEvent.click(readyScope.getByRole("button", { name: "추가" }));
+
+    expect(readyProps.onCreateBook).toHaveBeenCalledTimes(1);
   });
 });

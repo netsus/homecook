@@ -889,9 +889,15 @@
 }
 
 .home-mobile-discovery-search {
+  position: sticky;
+  top: var(--control-height-xl);
+  z-index: 19;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  border-bottom: 0.5px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 8px 18px var(--shadow-color-soft);
 }
 
 .home-mobile-discovery-search-row {
@@ -1531,6 +1537,10 @@
   color: var(--text-inverse);
 }
 
+.cook-mobile-whole-header-row {
+  min-width: 0;
+}
+
 .cook-mobile-whole-title {
   color: var(--text-inverse);
 }
@@ -1572,6 +1582,48 @@
 
 .cook-whole-board-mobile {
   grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.cook-whole-board-mobile .cook-whole-panel {
+  padding: 10px;
+}
+
+.cook-whole-board-mobile .cook-whole-ingredients {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.cook-whole-board-mobile .cook-whole-ingredients > li:not(.cook-whole-section-label) {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.cook-whole-board-mobile .cook-whole-section-label {
+  flex: 0 0 100%;
+}
+
+.cook-whole-board-mobile .cook-whole-ingredient {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 34px;
+  gap: 7px;
+  border-radius: 999px;
+  padding: 7px 9px;
+}
+
+.cook-whole-board-mobile .cook-whole-ingredient-name {
+  flex: 0 1 auto;
+  max-width: min(58vw, 210px);
+  font-size: 13px;
+}
+
+.cook-whole-board-mobile .cook-whole-ingredient-amount {
+  flex: 0 0 auto;
+  font-size: 14px;
 }
 
 .cook-whole-panel {
@@ -1637,7 +1689,7 @@
 
 .cook-whole-step {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: minmax(46px, max-content) minmax(0, 1fr);
   align-items: start;
   gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1646,13 +1698,19 @@
   padding: 9px;
 }
 
+.cook-whole-step-marker {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 5px;
+}
+
 .cook-whole-step-number {
   display: inline-flex;
   width: 34px;
   height: 34px;
   align-items: center;
   justify-content: center;
-  margin-top: 1px;
   border-radius: 10px;
   background: var(--brand);
   color: var(--text-inverse);
@@ -1679,7 +1737,7 @@
 }
 
 .cook-whole-step-copy p {
-  margin: 6px 0 0;
+  margin: 0;
   overflow-wrap: break-word;
   color: rgba(255, 255, 255, 0.86);
   font-size: 17px;
@@ -1704,6 +1762,62 @@
   font-size: 14px;
   font-weight: 700;
   text-align: center;
+}
+
+.mobile-planner-slot-meals {
+  display: grid;
+  min-height: 46px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+}
+
+.mobile-planner-slot-meals-multiple {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobile-planner-meal-card {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  border-radius: var(--radius-control);
+}
+
+.mobile-planner-meal-thumb {
+  width: 34px;
+  height: 46px;
+}
+
+.mobile-planner-meal-copy {
+  padding: 0 7px;
+}
+
+.mobile-planner-meal-title {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-planner-overflow-badge {
+  top: -1px;
+  right: -1px;
+  display: inline-flex;
+  min-width: 24px;
+  min-height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--surface);
+  border-radius: 0 var(--radius-control) 0 10px;
+  background: var(--brand);
+  box-shadow: 0 3px 8px var(--brand-shadow-color);
+  color: var(--text-inverse);
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 * {
@@ -1894,6 +2008,7 @@ button {
 .shopping-select-all-control[aria-checked="true"] > span {
   border-color: var(--web-brand, var(--brand));
   background: var(--web-brand, var(--brand));
+  color: var(--web-text-inverse, #fff);
 }
 
 .shopping-select-all-control:disabled {
@@ -4639,19 +4754,21 @@ button {
 
   .web-recipe-reading-grid {
     display: grid;
-    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
-    gap: 36px;
+    grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+    gap: 32px;
     align-items: start;
-    margin-top: 18px;
+    margin-top: 24px;
   }
 
   .web-reading-section-grid {
     margin-top: 0;
+    border-top: 0;
+    padding-top: 0;
   }
 
   .web-recipe-reading-grid > .web-reading-section-grid + .web-reading-section-grid {
     border-left: 1px solid var(--web-divider);
-    padding-left: 36px;
+    padding-left: 32px;
   }
 
   .web-reading-head {
@@ -4674,6 +4791,18 @@ button {
     margin: 4px 0 0;
     color: var(--web-text-3);
     font-size: 14px;
+  }
+
+  .web-ingredient-section-head {
+    display: grid;
+    gap: 12px;
+  }
+
+  .web-ingredient-section-head p {
+    margin: 4px 0 0;
+    color: var(--web-text-3);
+    font-size: 13px;
+    line-height: 1.45;
   }
 
   .web-stepper {
@@ -5023,10 +5152,38 @@ button {
     margin-top: 14px;
   }
 
+  .web-modal-create-trigger {
+    display: flex;
+    width: 100%;
+    min-height: 46px;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    border: 1px solid var(--web-line);
+    border-radius: var(--web-r-sm);
+    background: var(--web-surface);
+    color: var(--web-brand-accessible);
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: left;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .web-modal-create-trigger:hover {
+    border-color: var(--web-brand);
+    background: var(--web-brand-wash);
+    color: var(--web-brand);
+  }
+
+  .web-modal-create-plus {
+    font-size: 18px;
+    line-height: 1;
+  }
+
   .web-modal-create-row {
     display: flex;
     gap: 8px;
-    margin-top: 10px;
   }
 
   .web-modal-input {
@@ -5057,6 +5214,27 @@ button {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .web-ingredient-category-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .web-ingredient-category-chip.web-chip {
+    width: 100%;
+    height: 38px;
+    justify-content: center;
+    border-color: var(--web-line);
+    border-radius: var(--web-r-sm);
+    padding: 0 10px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .web-ingredient-category-chip.web-chip-active {
+    border-color: var(--web-brand);
   }
 
   .web-modal-chip-rail {
@@ -5259,6 +5437,15 @@ button {
     border-radius: var(--web-r-sm);
     background: var(--web-bg-alt);
     padding: 12px 14px;
+  }
+
+  .web-planner-add-section-label {
+    font-weight: 700;
+  }
+
+  .web-planner-servings-copy {
+    color: var(--web-text-1);
+    font-weight: 700;
   }
 
   .web-modal-footer-note {
@@ -5772,6 +5959,41 @@ button {
 
   .web-picker-pantry-thumb {
     overflow: hidden;
+  }
+
+  .planner-recipebook-selector-row {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .planner-recipebook-selector-row-sage {
+    background:
+      linear-gradient(90deg, rgba(183, 213, 184, 0.38), transparent 56%),
+      var(--surface);
+  }
+
+  .planner-recipebook-selector-row-sky {
+    background:
+      linear-gradient(90deg, rgba(191, 233, 255, 0.46), transparent 56%),
+      var(--surface);
+  }
+
+  .planner-recipebook-selector-row-coral {
+    background:
+      linear-gradient(90deg, rgba(246, 181, 157, 0.34), transparent 56%),
+      var(--surface);
+  }
+
+  .planner-recipebook-selector-row-lavender {
+    background:
+      linear-gradient(90deg, rgba(216, 196, 239, 0.38), transparent 56%),
+      var(--surface);
+  }
+
+  .planner-recipebook-selector-row-sand {
+    background:
+      linear-gradient(90deg, rgba(234, 208, 139, 0.42), transparent 56%),
+      var(--surface);
   }
 
   .planner-recipebook-mini-cover {
@@ -7384,11 +7606,15 @@ button {
   }
 
   .web-cook-whole-screen {
-    padding: 22px 0 64px;
+    min-height: calc(100dvh - var(--web-nav-h));
+    padding: 16px 0 24px;
   }
 
   .web-cook-whole-board {
-    min-height: min(800px, calc(100vh - var(--web-nav-h) - 54px));
+    display: grid;
+    height: max(640px, calc(100dvh - var(--web-nav-h) - 40px));
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;
     border: 1px solid rgba(139, 210, 255, 0.16);
     border-radius: 22px;
@@ -7485,7 +7711,7 @@ button {
 
   .web-cook-whole-grid {
     grid-template-columns: minmax(260px, 0.38fr) minmax(0, 1fr);
-    height: min(730px, calc(100vh - var(--web-nav-h) - 124px));
+    min-height: 0;
     gap: 14px;
     padding: 16px;
   }
@@ -7524,7 +7750,7 @@ button {
   }
 
   .web-cook-whole-grid .cook-whole-step {
-    grid-template-columns: 38px minmax(0, 1fr);
+    grid-template-columns: minmax(54px, max-content) minmax(0, 1fr);
     gap: 10px;
     border-radius: 15px;
     padding: 11px;
@@ -7543,7 +7769,6 @@ button {
   }
 
   .web-cook-whole-grid .cook-whole-step-copy p {
-    margin-top: 7px;
     font-size: 20px;
     line-height: 1.4;
   }
@@ -10704,10 +10929,36 @@ button {
 
   .web-reflect-list {
     display: grid;
-    gap: 8px;
+    gap: 14px;
     margin-top: 14px;
     max-height: 220px;
     overflow-y: auto;
+  }
+
+  .web-reflect-section {
+    display: grid;
+    gap: 8px;
+  }
+
+  .web-reflect-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0;
+    color: var(--web-text-2);
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .web-reflect-section-title span {
+    color: var(--web-text-3);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .web-reflect-section-list {
+    display: grid;
+    gap: 8px;
   }
 
   .web-reflect-item {
@@ -10937,6 +11188,7 @@ button {
   .web-shopping-check[aria-checked="true"] {
     border-color: var(--web-brand);
     background: var(--web-brand);
+    color: var(--web-text-inverse);
   }
 
   .web-shopping-recipe-thumb {
@@ -11291,9 +11543,11 @@ button {
   }
 
   .web-shopping-item-copy {
-    display: grid;
+    display: flex;
     min-width: 0;
-    gap: 3px;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
   }
 
   .web-shopping-item-copy-inline {
@@ -11306,16 +11560,19 @@ button {
   .web-shopping-item-copy strong {
     overflow: hidden;
     color: var(--web-text-1);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 800;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .web-shopping-item-copy small {
+    flex: 0 0 auto;
     color: var(--web-text-3);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
+    text-align: right;
+    white-space: nowrap;
   }
 
   .web-shopping-item-copy-inline small {

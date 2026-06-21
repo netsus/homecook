@@ -240,10 +240,15 @@ export function RecipeIngredientAddModal({
               />
             </label>
 
-            <div className="web-modal-chip-rail mt-4">
+            <div
+              aria-label="카테고리 선택"
+              className="web-ingredient-category-grid mt-4"
+              role="group"
+            >
               {INGREDIENT_CATEGORY_GROUP_OPTIONS.map((category) => (
                 <WebChip
                   active={activeCategory === category.value}
+                  className="web-ingredient-category-chip"
                   key={category.value}
                   onClick={() => setActiveCategory(category.value)}
                 >

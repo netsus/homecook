@@ -43,8 +43,11 @@ export function MobileCookModeView({
   onCancel,
   onComplete,
 }: MobileCookModeViewProps) {
-  const contextLabel =
-    variant === "standalone" ? "독립 요리" : mealContextLabel ?? "플래너 요리";
+  const summaryParts = [
+    "요리모드",
+    `${recipe.cooking_servings}인분`,
+    ...(variant === "planner" ? [mealContextLabel ?? "플래너 요리"] : []),
+  ];
 
   return (
     <div
@@ -53,33 +56,41 @@ export function MobileCookModeView({
       data-testid={screenTestId}
     >
       <div className="relative flex h-dvh min-h-0 flex-col pb-[92px]">
-        <header className="px-4 pb-3 pt-[calc(16px+env(safe-area-inset-top))]">
-          <div className="mb-3 flex items-center justify-between gap-3">
+        <header className="px-4 pb-2 pt-[calc(10px+env(safe-area-inset-top))]">
+          <div className="cook-mobile-whole-header-row flex min-h-12 items-center gap-3">
             <button
               aria-label="취소"
-              className="cook-mobile-whole-icon-button inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border-0"
+              className="cook-mobile-whole-icon-button inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border-0"
               disabled={controlsDisabled}
               onClick={onCancel}
               type="button"
             >
               <ChevronLeftIcon />
             </button>
+
+            <div className="min-w-0 flex-1">
+              <h1
+                className="cook-mobile-whole-title line-clamp-1 max-w-full text-[18px] font-extrabold leading-[1.12]"
+                data-testid={titleTestId}
+                title={recipe.title}
+              >
+                {recipe.title}
+              </h1>
+              <p
+                className="cook-mobile-whole-subtitle mt-1 text-[12px] font-bold leading-[1.25]"
+                data-testid={servingsTestId}
+              >
+                {summaryParts.map((part, index) => (
+                  <React.Fragment key={`${part}-${index}`}>
+                    {index > 0 ? " · " : null}
+                    <span>{part}</span>
+                  </React.Fragment>
+                ))}
+              </p>
+            </div>
+
             <WakeLockBadge status={wakeLockStatus} />
           </div>
-
-          <h1
-            className="cook-mobile-whole-title line-clamp-1 max-w-full text-[22px] font-extrabold leading-[1.08]"
-            data-testid={titleTestId}
-            title={recipe.title}
-          >
-            {recipe.title}
-          </h1>
-          <p
-            className="cook-mobile-whole-subtitle mt-2 text-[14px] font-bold leading-[1.3]"
-            data-testid={servingsTestId}
-          >
-            요리모드 · {recipe.cooking_servings}인분 · {contextLabel}
-          </p>
         </header>
 
         <main

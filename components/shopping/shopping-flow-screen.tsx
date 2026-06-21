@@ -696,11 +696,17 @@ function MobileSelectScreen({
   selectedServings: number;
 }) {
   return (
-    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface-fill)] lg:hidden">
+    <div
+      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--surface)] lg:hidden"
+      data-testid="shopping-flow-mobile-shell"
+    >
       <MobileAppBar onBack={onBack} title="장보기 준비" />
 
-      <main className="min-h-0 flex-1 overflow-y-auto pb-[184px]">
-        <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
+      <main className="min-h-0 flex-1 overflow-y-auto bg-[var(--surface)] pb-[184px]">
+        <section
+          className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5"
+          data-testid="shopping-flow-mobile-summary-section"
+        >
           <h2 className="text-[20px] font-extrabold leading-[1.3] text-[var(--foreground)]">
             어떤 끼니의 재료를 살까요?
           </h2>
@@ -710,13 +716,19 @@ function MobileSelectScreen({
           >
             같은 재료는 자동으로 합산돼요. 여러 끼니를 한 번에 장보기할 수 있어요.
           </p>
-          <div className="mt-4 flex items-center justify-between gap-3">
+          <div
+            className="mt-4 flex items-center justify-between gap-3"
+            data-testid="shopping-flow-mobile-selection-toolbar"
+          >
             <ShoppingSelectAllControl
               checked={isAllSelected}
               disabled={configs.length === 0}
               onClick={onToggleAll}
             />
-            <p className="shrink-0 text-[13px] font-extrabold text-[var(--foreground)]">
+            <p
+              className="shrink-0 text-[16px] font-extrabold leading-[1.25] text-[var(--foreground)]"
+              data-testid="shopping-flow-mobile-summary-count"
+            >
               {selectedCount}개 · {selectedServings}인분
             </p>
           </div>

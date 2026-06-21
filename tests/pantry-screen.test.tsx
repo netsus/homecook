@@ -6,8 +6,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PantryScreen } from "@/components/pantry/pantry-screen";
+import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
 import {
-  getIngredientCategoryEmoji,
   INGREDIENT_CATEGORIES,
   INGREDIENT_CATEGORY_GROUP_OPTIONS,
 } from "@/lib/ingredient-categories";
@@ -230,6 +230,9 @@ describe("PantryScreen", () => {
     expect(within(vegetableSection).getByText("양파")).toBeTruthy();
     expect(within(seasoningSection).getByText("마늘")).toBeTruthy();
     expect(within(proteinSection).getByText("돼지고기")).toBeTruthy();
+    expect(screen.getByTestId("web-pantry-card-i1").textContent).toContain(
+      getPantryEmoji("양파", VEGETABLE_CATEGORY),
+    );
     expect(screen.getByTestId("web-pantry-card-i1").textContent).not.toContain("채소/버섯");
     expect(screen.getByTestId("web-pantry-card-copy-i1")).toBeTruthy();
     expect(screen.getByTestId("web-pantry-card-i1").textContent).not.toContain("보유 중");
@@ -713,7 +716,7 @@ describe("PantryScreen", () => {
     PANTRY_CATEGORY_GROUP_LABELS.forEach((category) => {
       expect(screen.getByRole("tab", { name: category })).toBeTruthy();
     });
-    expect(screen.getByText(getIngredientCategoryEmoji(VEGETABLE_CATEGORY))).toBeTruthy();
+    expect(screen.getByText(getPantryEmoji("양파", VEGETABLE_CATEGORY))).toBeTruthy();
   });
 
   it("uses the canonical DB category rail and only owned count on mobile", async () => {
@@ -872,6 +875,70 @@ describe("PantryScreen", () => {
     expect(within(dialog).getByRole("checkbox", { name: "대파" })).toBeTruthy();
     expect(within(dialog).queryByRole("checkbox", { name: "간장" })).toBeNull();
     expect(mockFetchIngredients).toHaveBeenCalledTimes(1);
+  });
+
+  it("searches add sheet ingredients across all categories after a category was selected", async () => {
+    mockFetchIngredients.mockResolvedValue({
+      items: [
+        { id: "i4", standard_name: "대파", category: "채소" },
+        { id: "i10", standard_name: "간장", category: "양념" },
+      ],
+    });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /재료 추가하기/ }));
+    const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+
+    await user.click(within(dialog).getByRole("button", { name: VEGETABLE_GROUP_LABEL }));
+    expect(within(dialog).queryByRole("checkbox", { name: "간장" })).toBeNull();
+
+    await user.type(within(dialog).getByRole("textbox", { name: "재료명 검색" }), "간");
+
+    await waitFor(() => {
+      expect(mockFetchIngredients).toHaveBeenLastCalledWith({ q: "간" });
+    });
+    expect(within(dialog).getByRole("button", { name: "전체" }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(within(dialog).getByRole("checkbox", { name: "간장" })).toBeTruthy();
+  });
+
+  it("keeps selected pantry add chips visible while search results change", async () => {
+    mockFetchIngredients
+      .mockResolvedValueOnce({
+        items: [
+          { id: "i4", standard_name: "대파", category: "채소" },
+          { id: "i10", standard_name: "간장", category: "양념" },
+        ],
+      })
+      .mockResolvedValueOnce({
+        items: [{ id: "i10", standard_name: "간장", category: "양념" }],
+      });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /재료 추가하기/ }));
+    const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+
+    await user.click(await within(dialog).findByRole("checkbox", { name: "대파" }));
+    expect(within(dialog).getByRole("button", { name: "대파 선택 해제" })).toBeTruthy();
+
+    await user.type(within(dialog).getByRole("textbox", { name: "재료명 검색" }), "간");
+
+    await waitFor(() => {
+      expect(mockFetchIngredients).toHaveBeenLastCalledWith({ q: "간" });
+    });
+    expect(within(dialog).getByRole("checkbox", { name: "간장" })).toBeTruthy();
+    expect(within(dialog).queryByRole("checkbox", { name: "대파" })).toBeNull();
+    expect(within(dialog).getByRole("button", { name: "대파 선택 해제" })).toBeTruthy();
+    expect(within(dialog).queryByText("선택한 재료가 없어요")).toBeNull();
   });
 
   it("keeps desktop pantry add ingredient cards free of owned or category helper text", async () => {

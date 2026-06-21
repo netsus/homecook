@@ -320,9 +320,7 @@ test.describe("Slice 04 recipe save flow", () => {
     const modal = page.getByRole("dialog");
     await expect(modal).toBeVisible();
     await expect(modal.getByRole("heading", { name: "레시피 저장" })).toBeVisible();
-    await expect(
-      modal.getByText(isDesktopProject(testInfo) ? "폴더 선택" : "레시피북 다중 선택"),
-    ).toBeVisible();
+    await expect(modal.getByText("저장할 레시피북을 선택하세요")).toBeVisible();
 
     await modal
       .getByRole("button", {
@@ -352,14 +350,9 @@ test.describe("Slice 04 recipe save flow", () => {
     const modal = page.getByRole("dialog");
     await expect(modal).toBeVisible();
 
-    if (isDesktopProject(testInfo)) {
-      await modal.getByPlaceholder("예: 주말 파티").fill("오늘 저녁");
-      await modal.getByRole("button", { name: /^생성$/ }).click();
-    } else {
-      await modal.getByRole("button", { name: /새 레시피북 만들기/ }).click();
-      await modal.getByPlaceholder("레시피북 이름").fill("오늘 저녁");
-      await modal.getByRole("button", { name: /^추가$/ }).click();
-    }
+    await modal.getByRole("button", { name: /새 레시피북 만들기/ }).click();
+    await modal.getByPlaceholder("레시피북 이름").fill("오늘 저녁");
+    await modal.getByRole("button", { name: /^추가$/ }).click();
 
     await expect(modal.getByRole("button", { name: /오늘 저녁/ })).toBeVisible();
     await modal
@@ -410,9 +403,7 @@ test.describe("Slice 04 recipe save flow", () => {
 
     const modal = page.getByRole("dialog");
     await expect(modal.getByRole("heading", { name: "레시피 저장" })).toBeVisible();
-    await expect(
-      modal.getByText(isDesktopProject(testInfo) ? "폴더 선택" : "레시피북 다중 선택"),
-    ).toBeVisible();
+    await expect(modal.getByText("저장할 레시피북을 선택하세요")).toBeVisible();
 
     await expect
       .poll(() =>

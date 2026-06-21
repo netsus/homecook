@@ -101,12 +101,16 @@ test.describe("Slice 01 basic flow", () => {
     ).toBeVisible();
     if (isMobileViewport(page)) {
       await expect(
-        page.locator("div:visible").filter({ hasText: /^인분 조절$/ }).first(),
+        page.locator("div:visible").filter({ hasText: /^인분 조절\s*2인분/ }).first(),
       ).toBeVisible();
+      await expect(page.getByRole("button", { name: "인분 줄이기" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "인분 늘리기" })).toBeVisible();
     } else {
       await expect(
-        page.getByRole("heading", { name: "인분 조절" }),
+        page.getByRole("heading", { name: "재료" }),
       ).toBeVisible();
+      await expect(page.getByRole("button", { name: "인분 줄이기" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "인분 늘리기" })).toBeVisible();
     }
     await expect(page.getByRole("button", { name: "플래너에 추가" })).toBeVisible();
     await expect(page.getByRole("button", { name: "공유하기" })).toHaveCount(1);
@@ -114,29 +118,34 @@ test.describe("Slice 01 basic flow", () => {
 
     const likeChipPrecedesFirstIngredient = await page.evaluate(() => {
       const likeButton = Array.from(
-        document.querySelectorAll('button[aria-label="좋아요 203"]'),
+        document.querySelectorAll("button"),
       ).find((element) => {
         if (!(element instanceof HTMLElement)) {
           return false;
         }
 
         const style = window.getComputedStyle(element);
-        return style.display !== "none" && element.getClientRects().length > 0;
+        return (
+          (element.getAttribute("aria-label") === "좋아요 203" ||
+            element.textContent?.includes("203")) &&
+          style.display !== "none" &&
+          element.getClientRects().length > 0
+        );
       });
-      const firstIngredient = Array.from(document.querySelectorAll("li, span")).find(
-        (element) => {
+      const firstIngredient = Array.from(
+        document.querySelectorAll(".web-ingredient-row, li, div"),
+      ).find((element) => {
           if (!(element instanceof HTMLElement)) {
             return false;
           }
 
           const style = window.getComputedStyle(element);
           return (
-            element.textContent?.trim() === "김치" &&
+            /^김치\s*200g?$/.test(element.textContent?.trim() ?? "") &&
             style.display !== "none" &&
             element.getClientRects().length > 0
           );
-        },
-      );
+        });
 
       if (!(likeButton instanceof HTMLElement) || !(firstIngredient instanceof HTMLElement)) {
         return false;

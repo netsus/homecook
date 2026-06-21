@@ -824,11 +824,11 @@ describe("planner week screen", () => {
 
     expect(breakfastRow).not.toBeNull();
     expect(dinnerButton).toBeTruthy();
-    expect(breakfastRow?.className).toContain("min-h-[46px]");
+    expect(breakfastRow?.className).toContain("mobile-planner-slot-meals");
     expect(screen.getByTestId("planner-mobile-meal-meal-1").className).toContain("border-l-4");
     expect(
       within(screen.getByTestId("planner-mobile-meal-meal-1")).getByText("김치찌개").className,
-    ).toContain("text-[13px]");
+    ).toContain("mobile-planner-meal-title");
     expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
     expect(breakfastAddButton.className).toContain("border-[var(--line-strong)]");
     expect(breakfastAddButton.className).toContain("bg-transparent");
@@ -839,6 +839,67 @@ describe("planner week screen", () => {
     expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
     expect(within(breakfastRow as HTMLElement).getByLabelText("식사 등록 완료")).toBeTruthy();
     expect(dinnerButton.textContent?.replace(/\s+/g, " ").trim()).toBe("+");
+  });
+
+  it("keeps mobile planner meal slots compact with one-line titles and a visible overflow badge", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-long",
+            recipe_id: "recipe-long",
+            recipe_title: "제목이 아주 길어서 앱 플래너 카드 높이를 키우면 안 되는 김치찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+          {
+            id: "meal-side",
+            recipe_id: "recipe-side",
+            recipe_title: "달걀말이",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 1,
+            status: "shopping_done",
+            is_leftover: false,
+          },
+          {
+            id: "meal-hidden",
+            recipe_id: "recipe-hidden",
+            recipe_title: "숨겨진 반찬",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 1,
+            status: "cook_done",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    const slot = await screen.findByTestId(
+      "planner-mobile-slot-2026-03-24-column-breakfast",
+    );
+    const longTitle = within(slot).getByText(
+      "제목이 아주 길어서 앱 플래너 카드 높이를 키우면 안 되는 김치찌개",
+    );
+    const overflowBadge = within(slot).getByText("+1");
+
+    expect(slot.className).toContain("mobile-planner-slot-meals-multiple");
+    expect(slot.querySelectorAll(".mobile-planner-meal-card")).toHaveLength(2);
+    expect(longTitle.className).toContain("mobile-planner-meal-title");
+    expect(longTitle.className).not.toContain("line-clamp-2");
+    expect(screen.queryByText("숨겨진 반찬")).toBeNull();
+    expect(overflowBadge.className).toContain("mobile-planner-overflow-badge");
+    expect(overflowBadge.getAttribute("aria-label")).toBe("외 1개 더 있음");
   });
 
   it("uses global planner status tokens for the mobile summary cards", async () => {
@@ -905,13 +966,18 @@ describe("planner week screen", () => {
     expect(cookedCard?.className).toContain(
       "bg-[var(--planner-status-cooked-soft)]",
     );
+    expect(cookedCard?.className).toContain("text-center");
+    expect(cookedLabel?.className).toContain("text-[13px]");
     expect(cookedLabel?.className).toContain("text-[var(--planner-status-cooked)]");
     expect(cookedLabel?.nextElementSibling?.className).toContain(
       "text-[var(--planner-status-cooked)]",
     );
+    expect(cookedLabel?.nextElementSibling?.className).toContain("text-[22px]");
     expect(shoppingCard?.className).toContain(
       "bg-[var(--planner-status-shopping-soft)]",
     );
+    expect(shoppingCard?.className).toContain("text-center");
+    expect(shoppingLabel?.className).toContain("text-[13px]");
     expect(shoppingLabel?.className).toContain(
       "text-[var(--planner-status-shopping)]",
     );
@@ -921,6 +987,8 @@ describe("planner week screen", () => {
     expect(registeredCard?.className).toContain(
       "bg-[var(--planner-status-registered-soft)]",
     );
+    expect(registeredCard?.className).toContain("text-center");
+    expect(registeredLabel.className).toContain("text-[13px]");
     expect(registeredLabel.className).toContain(
       "text-[var(--planner-status-registered)]",
     );

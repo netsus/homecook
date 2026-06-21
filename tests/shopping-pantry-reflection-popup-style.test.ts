@@ -7,7 +7,9 @@ const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 
 function ruleBody(selector: string) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = globalsCss.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, "m"));
+  const match = globalsCss.match(
+    new RegExp(`(?:^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`, "m"),
+  );
   return match?.[1] ?? "";
 }
 
@@ -32,5 +34,32 @@ describe("shopping detail styles", () => {
     expect(completeCheckRule).toContain("border-color: var(--web-success);");
     expect(completeCheckRule).toContain("background: rgba(26, 174, 57, 0.1);");
     expect(completeCheckRule).toContain("color: var(--web-success);");
+  });
+
+  it("lays out web item name and amount horizontally with stronger names", () => {
+    const copyRule = ruleBody(".web-shopping-item-copy");
+    const nameRule = ruleBody(".web-shopping-item-copy strong");
+    const amountRule = ruleBody(".web-shopping-item-copy small");
+
+    expect(copyRule).toContain("display: flex;");
+    expect(copyRule).toContain("align-items: baseline;");
+    expect(copyRule).toContain("justify-content: space-between;");
+    expect(copyRule).toContain("gap: 14px;");
+    expect(nameRule).toContain("font-size: 15px;");
+    expect(amountRule).toContain("font-size: 13px;");
+    expect(amountRule).toContain("white-space: nowrap;");
+  });
+
+  it("keeps pantry reflection sections visually separated", () => {
+    const listRule = ruleBody(".web-reflect-list");
+    const sectionRule = ruleBody(".web-reflect-section");
+    const titleRule = ruleBody(".web-reflect-section-title");
+    const sectionListRule = ruleBody(".web-reflect-section-list");
+
+    expect(listRule).toContain("gap: 14px;");
+    expect(sectionRule).toContain("display: grid;");
+    expect(titleRule).toContain("justify-content: space-between;");
+    expect(titleRule).toContain("font-weight: 900;");
+    expect(sectionListRule).toContain("gap: 8px;");
   });
 });

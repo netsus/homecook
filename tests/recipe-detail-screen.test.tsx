@@ -357,8 +357,8 @@ describe("recipe detail screen", () => {
     const ctaBar = plannerButton.closest(".wave1-recipe-cta-bar");
     expect(ctaBar).not.toBeNull();
     expect(ctaBar?.contains(cookButton)).toBe(true);
-    expect(ctaBar?.className).toContain("bottom-[calc(66px+env(safe-area-inset-bottom))]");
-    expect(ctaBar?.className).toContain("pb-2");
+    expect(ctaBar?.className).toContain("bottom-0");
+    expect(ctaBar?.className).toContain("pb-[calc(82px+env(safe-area-inset-bottom))]");
     expect(plannerButton.className).toContain("bg-[var(--brand)]");
     expect(plannerButton.className).toContain("text-[var(--text-inverse)]");
     expect(cookButton.className).toContain("border-[var(--brand)]");
@@ -1063,8 +1063,8 @@ describe("recipe detail screen", () => {
     const ctaBar = plannerButton.closest(".wave1-recipe-cta-bar");
     expect(ctaBar).not.toBeNull();
     expect(ctaBar?.contains(cookButton)).toBe(true);
-    expect(ctaBar?.className).toContain("bottom-[calc(66px+env(safe-area-inset-bottom))]");
-    expect(ctaBar?.className).toContain("pb-2");
+    expect(ctaBar?.className).toContain("bottom-0");
+    expect(ctaBar?.className).toContain("pb-[calc(82px+env(safe-area-inset-bottom))]");
   });
 
   it("renders cooking step instructions with text-base font size", async () => {
@@ -1412,12 +1412,29 @@ describe("recipe detail screen", () => {
 
     const readingGrid = container.querySelector(".web-recipe-reading-grid");
     const servingsSection = container.querySelector(".web-servings-section");
+    const ingredientSection = container.querySelector(".web-reading-section-grid");
     expect(readingGrid).not.toBeNull();
-    expect(servingsSection).not.toBeNull();
+    expect(servingsSection).toBeNull();
+    expect(ingredientSection).not.toBeNull();
     expect(readingGrid?.textContent).toContain("재료");
     expect(readingGrid?.textContent).toContain("만들기");
+    expect(ingredientSection?.textContent).toContain("인분을 바꾸면 아래 재료량이 즉시 바뀝니다");
+    expect(
+      within(ingredientSection as HTMLElement).getByRole("button", {
+        name: "인분 늘리기",
+      }),
+    ).toBeTruthy();
     expect(ruleBody(".web-recipe-reading-grid")).toContain(
-      "grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);",
+      "grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);",
+    );
+    expect(globalsCss).toContain(
+      [
+        "  .web-reading-section-grid {",
+        "    margin-top: 0;",
+        "    border-top: 0;",
+        "    padding-top: 0;",
+        "  }",
+      ].join("\n"),
     );
     expect(
       ruleBody(".web-recipe-reading-grid > .web-reading-section-grid + .web-reading-section-grid"),

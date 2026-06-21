@@ -119,6 +119,36 @@ describe("RecipeBookSelector", () => {
     expect(customRow.textContent).not.toContain("🍳");
   });
 
+  it("shows app screen recipebook rows with cover image and cover-tone color", async () => {
+    render(
+      <RecipeBookSelector
+        onBookSelect={vi.fn()}
+        onClose={vi.fn()}
+        presentation="screen"
+        slotLabel="4/18 아침"
+      />,
+    );
+
+    const customRow = await screen.findByTestId("recipebook-selector-row-book-custom");
+    const customMiniCover = within(customRow).getByTestId(
+      "recipebook-selector-mini-cover-book-custom",
+    );
+    const customMiniImage = within(customMiniCover).getByTestId(
+      "recipebook-selector-mini-cover-image-book-custom",
+    );
+    const savedRow = screen.getByTestId("recipebook-selector-row-book-saved");
+
+    expect(screen.getByRole("heading", { name: "레시피북에서 추가" })).toBeTruthy();
+    expect(screen.getByText("4/18 아침")).toBeTruthy();
+    expect(customRow.className).toContain("planner-recipebook-selector-row");
+    expect(customRow.className).toContain("planner-recipebook-selector-row-sand");
+    expect(customMiniCover.className).toContain("mobile-recipebook-book-card-sand");
+    expect(customMiniImage.getAttribute("style")).toContain(
+      'background-image: url("https://example.com/weekend-cover.jpg")',
+    );
+    expect(savedRow.className).toContain("planner-recipebook-selector-row-sky");
+  });
+
   it("shows the web empty state when no recipebooks are available", async () => {
     mockRecipeBooks([]);
 

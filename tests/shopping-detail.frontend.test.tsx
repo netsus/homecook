@@ -152,6 +152,7 @@ describe("ShoppingDetailScreen", () => {
     expect(screen.getByText(/팬트리에 있는 재료 \(1개\)/)).toBeTruthy();
     expect(screen.getByText("채소")).toBeTruthy();
     expect(screen.getByText("양념")).toBeTruthy();
+    expect(screen.queryByText("체크 · 제외")).toBeNull();
   });
 
   it("renders empty state when all items are excluded", async () => {
@@ -358,6 +359,26 @@ describe("ShoppingDetailScreen", () => {
     expect(checkbox.className).toContain("w-11");
     expect(visibleBox?.className).toContain("rounded-[var(--radius-badge)]");
     expect(visibleBox?.className).not.toContain("rounded-full");
+  });
+
+  it("keeps mobile item amount attached to the ingredient copy instead of the already-have action", async () => {
+    setMatchMedia(true);
+    vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+
+    render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+    });
+
+    const copy = screen.getByTestId("shopping-mobile-item-copy-item-1");
+    const amount = screen.getByTestId("shopping-mobile-item-amount-item-1");
+
+    expect(copy.className).toContain("justify-start");
+    expect(copy.className).toContain("gap-2");
+    expect(amount.textContent).toBe("2개");
+    expect(amount.className).toContain("text-left");
+    expect(amount.className).toContain("max-w-[96px]");
   });
 
   it("toggles item check status when clicking the item card", async () => {
@@ -1000,6 +1021,10 @@ describe("ShoppingDetailScreen", () => {
       const dialog = screen.getByRole("dialog", { name: /팬트리에 반영할까요/ });
       expect(within(dialog).getByRole("button", { name: /양파/ })).toBeTruthy();
       expect(within(dialog).getByRole("button", { name: /간장/ })).toBeTruthy();
+      expect(within(dialog).getByTestId("pantry-reflection-section-purchase")).toBeTruthy();
+      expect(within(dialog).getByTestId("pantry-reflection-section-already-have")).toBeTruthy();
+      expect(within(dialog).getByText("구매한 재료")).toBeTruthy();
+      expect(within(dialog).getByText("이미 있는 재료")).toBeTruthy();
       expect(within(dialog).queryByText("나중에")).toBeNull();
       expect(screen.queryByText("모두 추가")).toBeNull();
       expect(screen.queryByText("선택 추가")).toBeNull();
@@ -1028,6 +1053,10 @@ describe("ShoppingDetailScreen", () => {
 
       const dialog = screen.getByRole("dialog", { name: /팬트리에 반영할까요/ });
       expect(within(dialog).queryByText(/선택하지/)).toBeNull();
+      expect(within(dialog).getByTestId("pantry-reflection-section-purchase")).toBeTruthy();
+      expect(within(dialog).getByTestId("pantry-reflection-section-already-have")).toBeTruthy();
+      expect(within(dialog).getByText("구매한 재료")).toBeTruthy();
+      expect(within(dialog).getByText("이미 있는 재료")).toBeTruthy();
 
       const row = within(dialog).getByTestId("pantry-reflection-row-item-1");
       expect(row.className).toContain("justify-between");
@@ -1301,6 +1330,14 @@ describe("ShoppingDetailScreen", () => {
 
       const dialog = screen.getByRole("dialog", { name: /팬트리에 반영할까요/ });
       expect(within(dialog).getByRole("button", { name: "2개 반영하기" })).toBeTruthy();
+      const purchaseSection = within(dialog).getByTestId("pantry-reflection-section-purchase");
+      const alreadyHaveSection = within(dialog).getByTestId(
+        "pantry-reflection-section-already-have",
+      );
+      expect(within(purchaseSection).getByText("구매한 재료")).toBeTruthy();
+      expect(within(purchaseSection).getByText("양파")).toBeTruthy();
+      expect(within(alreadyHaveSection).getByText("이미 있는 재료")).toBeTruthy();
+      expect(within(alreadyHaveSection).getByText("간장")).toBeTruthy();
 
       await waitFor(() => {
         const itemButtons = within(dialog).getAllByRole("button");

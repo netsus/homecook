@@ -298,6 +298,54 @@ describe("admin foundation backend", () => {
     );
   });
 
+  it("filters admin operational events for 404 feedback", async () => {
+    setupRouteUser({ id: "admin-1" });
+    const serviceClient = setupAdminServiceClient({
+      eventsRows: [
+        {
+          id: "event-404-feedback-1",
+          actor_user_id: null,
+          created_at: "2026-06-21T00:00:00Z",
+          error_code: "ROUTE_NOT_FOUND",
+          event_type: "not_found_feedback",
+          http_status: 404,
+          message_summary: "레시피 상세에서 깨진 링크를 눌렀어요",
+          metadata_json: {
+            current_path: "/missing-recipe",
+            feedback_text: "레시피 상세에서 깨진 링크를 눌렀어요",
+            is_authenticated: false,
+            referrer_path: "/recipes/recipe-1",
+          },
+          request_path: "/missing-recipe",
+          severity: "warn",
+          source: "web",
+          target_user_id: null,
+        },
+      ],
+    });
+
+    const { GET } = await importAdminEventsRoute();
+    const response = await GET(
+      new Request("http://localhost:3000/api/v1/admin/operational-events?event_type=not_found_feedback&source=web"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items[0]).toMatchObject({
+      event_type: "not_found_feedback",
+      request_path: "/missing-recipe",
+      source: "web",
+    });
+    expect(serviceClient.__queries.eventsQuery.eq).toHaveBeenCalledWith(
+      "event_type",
+      "not_found_feedback",
+    );
+    expect(serviceClient.__queries.eventsQuery.eq).toHaveBeenCalledWith(
+      "source",
+      "web",
+    );
+  });
+
   it("fails closed when audit writing fails", async () => {
     setupRouteUser({ id: "admin-1" });
     setupAdminServiceClient({

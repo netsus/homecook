@@ -7,7 +7,9 @@ const globals = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
 
 function readRule(selector: string) {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = globals.match(new RegExp(`${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, "u"));
+  const match = globals.match(
+    new RegExp(`(?:^|\\n)\\s*${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, "u"),
+  );
 
   return match?.[1] ?? "";
 }
@@ -31,6 +33,7 @@ describe("manual UI/UX layout policy", () => {
     expect(selectAllBoxRule).toContain("color: var(--web-text-inverse, #fff)");
     expect(selectAllCheckedRule).toContain("border-color: var(--web-brand, var(--brand))");
     expect(selectAllCheckedRule).toContain("background: var(--web-brand, var(--brand))");
+    expect(selectAllCheckedRule).toContain("color: var(--web-text-inverse, #fff)");
     expect(webShoppingCheckRule).toContain("width: 32px");
     expect(webShoppingCheckRule).toContain("height: 32px");
     expect(webShoppingCheckRule).toContain("min-width: 32px");
@@ -38,6 +41,7 @@ describe("manual UI/UX layout policy", () => {
     expect(webShoppingCheckRule).toContain("color: var(--web-text-inverse)");
     expect(webShoppingCheckedRule).toContain("border-color: var(--web-brand)");
     expect(webShoppingCheckedRule).toContain("background: var(--web-brand)");
+    expect(webShoppingCheckedRule).toContain("color: var(--web-text-inverse)");
   });
 
   it("keeps shopping preparation cards dense without hiding title link affordance on web", () => {
@@ -93,12 +97,15 @@ describe("manual UI/UX layout policy", () => {
     expect(panelRule).toContain("padding: 12px");
     expect(methodTagRule).toContain("min-height: 22px");
     expect(methodTagRule).toContain("padding: 0 8px");
-    expect(stepNumberRule).toContain("margin-top: 1px");
+    expect(stepNumberRule).toContain("width: 34px");
+    expect(stepNumberRule).toContain("height: 34px");
     expect(stepCopyRule).toContain("font-weight: 500");
     expect(stepCopyRule).toContain("line-height: 1.42");
     expect(ingredientHighlightRule).toContain("color: var(--brand)");
     expect(ingredientHighlightRule).toContain("font-weight: 850");
-    expect(webBoardRule).toContain("calc(100vh - var(--web-nav-h) - 54px)");
-    expect(webGridRule).toContain("calc(100vh - var(--web-nav-h) - 124px)");
+    expect(webBoardRule).toContain("height: max(640px, calc(100dvh - var(--web-nav-h) - 40px))");
+    expect(webBoardRule).toContain("overflow: hidden");
+    expect(webGridRule).toContain("min-height: 0");
+    expect(webGridRule).toContain("padding: 16px");
   });
 });

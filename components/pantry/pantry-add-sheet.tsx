@@ -48,6 +48,9 @@ export function PantryAddSheet({
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIngredientById, setSelectedIngredientById] = useState<
+    Map<string, IngredientItem>
+  >(new Map());
   const [isAdding, setIsAdding] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -62,14 +65,22 @@ export function PantryAddSheet({
     );
   }, []);
 
+  const hasSearchQuery =
+    searchQuery.trim().length > 0 || debouncedQuery.trim().length > 0;
+  const isAllCategoryActive = !activeCategory || hasSearchQuery;
+
   const visibleIngredients = useMemo(() => {
     return ingredients.filter((ingredient) => {
+      if (hasSearchQuery) {
+        return true;
+      }
+
       const matchesCategory =
         !activeCategory || ingredientMatchesCategoryGroup(ingredient, activeCategory);
 
       return matchesCategory;
     });
-  }, [activeCategory, ingredients]);
+  }, [activeCategory, hasSearchQuery, ingredients]);
 
   const visibleSheetState =
     sheetState === "ready" && visibleIngredients.length === 0
@@ -77,8 +88,11 @@ export function PantryAddSheet({
       : sheetState;
 
   const selectedIngredients = useMemo(
-    () => ingredients.filter((ingredient) => selectedIds.has(ingredient.id)),
-    [ingredients, selectedIds],
+    () =>
+      Array.from(selectedIds)
+        .map((ingredientId) => selectedIngredientById.get(ingredientId))
+        .filter((ingredient): ingredient is IngredientItem => Boolean(ingredient)),
+    [selectedIds, selectedIngredientById],
   );
   const visibleIngredientGroups = useMemo(
     () => groupIngredientsByCategory(visibleIngredients),
@@ -102,6 +116,9 @@ export function PantryAddSheet({
   const handleSearch = useCallback(
     (value: string) => {
       setSearchQuery(value);
+      if (value.trim().length > 0) {
+        setActiveCategory(null);
+      }
 
       if (searchTimerRef.current) {
         clearTimeout(searchTimerRef.current);
@@ -117,26 +134,51 @@ export function PantryAddSheet({
   const handleCategoryChange = useCallback(
     (category: string | null) => {
       setActiveCategory(category);
+      if (category && searchQuery.trim().length > 0) {
+        setSearchQuery("");
+        setDebouncedQuery("");
+        if (searchTimerRef.current) {
+          clearTimeout(searchTimerRef.current);
+        }
+      }
     },
-    [],
+    [searchQuery],
   );
 
-  const handleToggle = useCallback((ingredientId: string) => {
-    setErrorMessage(null);
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(ingredientId)) {
-        next.delete(ingredientId);
-      } else {
-        next.add(ingredientId);
-      }
-      return next;
-    });
-  }, []);
+  const handleToggle = useCallback(
+    (ingredient: IngredientItem) => {
+      const shouldRemove = selectedIds.has(ingredient.id);
+      setErrorMessage(null);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (shouldRemove) {
+          next.delete(ingredient.id);
+        } else {
+          next.add(ingredient.id);
+        }
+        return next;
+      });
+      setSelectedIngredientById((prev) => {
+        const next = new Map(prev);
+        if (shouldRemove) {
+          next.delete(ingredient.id);
+        } else {
+          next.set(ingredient.id, ingredient);
+        }
+        return next;
+      });
+    },
+    [selectedIds],
+  );
 
   const removeSelectedIngredient = useCallback((ingredientId: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
+      next.delete(ingredientId);
+      return next;
+    });
+    setSelectedIngredientById((prev) => {
+      const next = new Map(prev);
       next.delete(ingredientId);
       return next;
     });
@@ -237,13 +279,13 @@ export function PantryAddSheet({
 
             <div className="scrollbar-hide mt-3 flex gap-1.5 overflow-x-auto" role="tablist">
               <MobileCategoryChip
-                active={!activeCategory}
+                active={isAllCategoryActive}
                 label="전체"
                 onClick={() => handleCategoryChange(null)}
               />
               {categories.map((category) => (
                 <MobileCategoryChip
-                  active={activeCategory === category.value}
+                  active={!hasSearchQuery && activeCategory === category.value}
                   key={category.value}
                   label={category.label}
                   onClick={() => handleCategoryChange(category.value)}
@@ -327,7 +369,7 @@ export function PantryAddSheet({
                         data-owned={isExisting ? "true" : undefined}
                         disabled={isExisting}
                         key={ingredient.id}
-                        onClick={() => handleToggle(ingredient.id)}
+                        onClick={() => handleToggle(ingredient)}
                         role="checkbox"
                         type="button"
                       >
@@ -407,14 +449,14 @@ export function PantryAddSheet({
             className="web-modal-chip-rail web-pantry-modal-chip-rail"
           >
             <WebChip
-              active={!activeCategory}
+              active={isAllCategoryActive}
               onClick={() => handleCategoryChange(null)}
             >
               전체
             </WebChip>
             {categories.map((category) => (
               <WebChip
-                active={activeCategory === category.value}
+                active={!hasSearchQuery && activeCategory === category.value}
                 key={category.value}
                 onClick={() => handleCategoryChange(category.value)}
               >
@@ -491,7 +533,7 @@ export function PantryAddSheet({
                       data-owned={isExisting ? "true" : undefined}
                       disabled={isExisting}
                       key={ingredient.id}
-                      onClick={() => handleToggle(ingredient.id)}
+                      onClick={() => handleToggle(ingredient)}
                       role="checkbox"
                       title={ingredient.standard_name}
                       type="button"

@@ -301,7 +301,7 @@ export function PlannerAddSheet({
           </div>
         ) : null}
 
-        <p className="web-modal-section-label">날짜</p>
+        <p className="web-modal-section-label web-planner-add-section-label">날짜</p>
         <div
           aria-label="날짜 선택"
           className="web-planner-date-grid mb-5"
@@ -333,7 +333,7 @@ export function PlannerAddSheet({
           })}
         </div>
 
-        <p className="web-modal-section-label">끼니</p>
+        <p className="web-modal-section-label web-planner-add-section-label">끼니</p>
         <div aria-label="끼니 선택" className="web-modal-chip-grid mb-5" role="group">
           {columns.map((column) => {
             const isSelected = column.id === selectedColumnId;
@@ -351,9 +351,9 @@ export function PlannerAddSheet({
           })}
         </div>
 
-        <p className="web-modal-section-label">인분</p>
+        <p className="web-modal-section-label web-planner-add-section-label">인분</p>
         <div className="web-modal-stepper-row">
-          <span className="web-modal-copy">인분 조절</span>
+          <span className="web-modal-copy web-planner-servings-copy">인분 조절</span>
           <div className="web-stepper">
             <button
               aria-label="인분 줄이기"

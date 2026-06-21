@@ -11,6 +11,7 @@ import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
 import { PantryAddSheet } from "@/components/pantry/pantry-add-sheet";
 import { PantryBundlePicker } from "@/components/pantry/pantry-bundle-picker";
 import { PantryMobileScreen } from "@/components/pantry/pantry-mobile-screen";
+import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { AppBottomSheet } from "@/components/shared/app-overlay";
@@ -41,7 +42,6 @@ import {
 import { createMealSafe } from "@/lib/api/meal";
 import { fetchPlannerColumns } from "@/lib/api/planner";
 import {
-  getIngredientCategoryEmoji,
   getIngredientGroupFilterValue,
   INGREDIENT_CATEGORY_GROUP_OPTIONS,
   ingredientMatchesCategoryGroup,
@@ -974,7 +974,7 @@ export function PantryScreen({
                               </span>
                             ) : null}
                             <span className="web-pantry-emoji" aria-hidden="true">
-                              {getIngredientCategoryEmoji(item.category)}
+                              {getPantryEmoji(item.standard_name, item.category)}
                             </span>
                             <span
                               className="web-pantry-card-copy"

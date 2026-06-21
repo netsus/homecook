@@ -86,10 +86,10 @@ const HOME_QUICK_LINKS = [
     label: "레시피북",
   },
   {
-    description: "레벨·업적 확인",
-    href: "/mypage",
-    icon: "growth",
-    label: "성장 보기",
+    description: "영상 링크로 등록",
+    href: "/menu/add/youtube",
+    icon: "youtube",
+    label: "유튜브 가져오기",
   },
 ] as const;
 
@@ -723,22 +723,33 @@ export function HomeScreen() {
 
             {!hasResultPriorityContext ? <HomeQuickLinks variant="mobile" /> : null}
 
+            {!hasResultPriorityContext && showInitialDiscoverySkeleton ? (
+              <ThemeCarouselSkeleton />
+            ) : null}
+
+            {!hasResultPriorityContext &&
+            !showInitialDiscoverySkeleton &&
+            (themes?.themes.length ?? 0) > 0 ? (
+              <ThemeCarousel
+                activeThemeId={activeThemeId}
+                onSelectTheme={selectTheme}
+                themes={themes?.themes ?? []}
+              />
+            ) : null}
+
             {showInitialDiscoverySkeleton ? (
-              <>
-                <section aria-label="레시피 목록 불러오는 중">
-                  <div className="flex items-center justify-between px-4 pb-2">
-                    <div className="space-y-2">
-                      <Skeleton className="h-6 w-32 rounded-full" />
-                      <Skeleton className="h-4 w-10 rounded-full" />
-                    </div>
-                    <Skeleton className="h-9 w-24 rounded-[var(--radius-control)]" />
+              <section aria-label="레시피 목록 불러오는 중">
+                <div className="flex items-center justify-between px-4 pb-2">
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-32 rounded-full" />
+                    <Skeleton className="h-4 w-10 rounded-full" />
                   </div>
-                  <div className="px-4">
-                    <RecipeListSkeleton includeHeader={false} />
-                  </div>
-                </section>
-                <ThemeCarouselSkeleton />
-              </>
+                  <Skeleton className="h-9 w-24 rounded-[var(--radius-control)]" />
+                </div>
+                <div className="px-4">
+                  <RecipeListSkeleton includeHeader={false} />
+                </div>
+              </section>
             ) : null}
 
             {screenState === "error" && !showInitialDiscoverySkeleton ? (
@@ -830,15 +841,6 @@ export function HomeScreen() {
               </section>
             ) : null}
 
-            {!hasResultPriorityContext &&
-            !showInitialDiscoverySkeleton &&
-            (themes?.themes.length ?? 0) > 0 ? (
-              <ThemeCarousel
-                activeThemeId={activeThemeId}
-                onSelectTheme={selectTheme}
-                themes={themes?.themes ?? []}
-              />
-            ) : null}
           </div>
 
           <Wave1MobileBottomTab ariaLabel="홈 하단 탭" currentTab="home" />
@@ -1354,6 +1356,15 @@ function HomeShortcutIcon({
       <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
         <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v16H7.5A2.5 2.5 0 0 0 5 21.5v-16Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
         <path d="M5 17.5A2.5 2.5 0 0 1 7.5 15H19" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+
+  if (icon === "youtube") {
+    return (
+      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+        <rect height="13" rx="4" stroke="currentColor" strokeWidth="1.8" width="18" x="3" y="5.5" />
+        <path d="m10.5 9 4 2.5-4 2.5V9Z" fill="currentColor" />
       </svg>
     );
   }

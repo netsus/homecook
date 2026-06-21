@@ -145,7 +145,8 @@ describe("home screen", () => {
     expect(screen.getByRole("link", { name: /식단 짜기/ }).getAttribute("href")).toBe("/planner");
     expect(screen.getByRole("link", { name: /장보기 준비/ }).getAttribute("href")).toBe("/shopping/flow");
     expect(screen.getByRole("link", { name: /레시피북/ }).getAttribute("href")).toBe("/mypage?tab=recipebooks");
-    expect(screen.getByRole("link", { name: /성장 보기/ }).getAttribute("href")).toBe("/mypage");
+    expect(screen.getByRole("link", { name: /유튜브 가져오기/ }).getAttribute("href")).toBe("/menu/add/youtube");
+    expect(screen.queryByRole("link", { name: /성장 보기/ })).toBeNull();
     expect(screen.getByRole("navigation", { name: "홈 하단 탭" })).toBeTruthy();
     await waitFor(() => {
       expect(screen.getByTestId("home-result-status").textContent).toBe(
@@ -157,6 +158,18 @@ describe("home screen", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "모든 레시피" }).className,
     ).toContain("text-[var(--foreground)]");
+    const quickLinks = screen.getByRole("navigation", { name: "홈 빠른 이동" });
+    const themeHeading = screen.getByRole("heading", { level: 2, name: "이번 주 인기 테마" });
+    const recipeHeading = screen.getByRole("heading", { level: 2, name: "모든 레시피" });
+
+    expect(
+      quickLinks.compareDocumentPosition(themeHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      themeHeading.compareDocumentPosition(recipeHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
   });
 
@@ -177,6 +190,15 @@ describe("home screen", () => {
     expect(ruleBody(".home-mobile-tag-rail")).toContain("min-height: 40px;");
     expect(ruleBody(".home-mobile-theme-section")).toContain("min-height: 195px;");
     expect(ruleBody(".home-mobile-theme-rail")).toContain("min-height: 129px;");
+  });
+
+  it("keeps the mobile search controls sticky under the app bar", () => {
+    const searchRule = ruleBody(".home-mobile-discovery-search");
+
+    expect(searchRule).toContain("position: sticky;");
+    expect(searchRule).toContain("top: var(--control-height-xl);");
+    expect(searchRule).toContain("z-index: 19;");
+    expect(searchRule).toContain("background: var(--surface);");
   });
 
   it("adds left breathing room to web recipe card titles and metrics", () => {
@@ -202,6 +224,8 @@ describe("home screen", () => {
     expect(screen.queryByRole("button", { name: "양파" })).toBeNull();
     expect(screen.getByRole("navigation", { name: "홈 빠른 이동" })).toBeTruthy();
     expect(screen.getByRole("link", { name: /장보기 준비/ }).getAttribute("href")).toBe("/shopping/flow");
+    expect(screen.getByRole("link", { name: /유튜브 가져오기/ }).getAttribute("href")).toBe("/menu/add/youtube");
+    expect(screen.queryByRole("link", { name: /성장 보기/ })).toBeNull();
     expect(
       screen.queryByRole("navigation", { name: "홈 하단 탭" }),
     ).toBeNull();
@@ -478,10 +502,22 @@ describe("home screen", () => {
 
     await user.click(await screen.findByRole("button", { name: /재료로 검색/ }));
     const dialog = await screen.findByRole("dialog", { name: "재료로 검색" });
+    const categoryGroup = screen.getByRole("group", { name: "카테고리 선택" });
+    const vegetableCategoryButton = screen.getByRole("button", {
+      name: VEGETABLE_GROUP.label,
+    });
     const onionCheckbox = await screen.findByRole("checkbox", { name: "양파" });
     const onionOption = onionCheckbox.closest("label");
 
     expect(dialog.className).toContain("web-dialog-narrow");
+    expect(categoryGroup.className).toContain("web-ingredient-category-grid");
+    expect(vegetableCategoryButton.className).toContain("web-ingredient-category-chip");
+    expect(ruleBody(".web-ingredient-category-grid")).toContain(
+      "grid-template-columns: repeat(3, minmax(0, 1fr));",
+    );
+    expect(ruleBody(".web-ingredient-category-chip.web-chip")).toContain(
+      "border-radius: var(--web-r-sm);",
+    );
     expect(onionOption?.className).toContain("web-ingredient-option");
     expect(onionOption?.className).toContain("web-ingredient-option-card");
     expect(screen.queryByText("1개 선택됨")).toBeNull();
@@ -888,7 +924,7 @@ describe("home screen", () => {
     });
 
     expect(
-      errorHeading.compareDocumentPosition(themeHeading) &
+      themeHeading.compareDocumentPosition(errorHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(

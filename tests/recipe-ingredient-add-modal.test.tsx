@@ -101,8 +101,12 @@ describe("RecipeIngredientAddModal", () => {
 
     const onionCheckbox = await screen.findByRole("checkbox", { name: "양파" });
     const tofuCheckbox = screen.getByRole("checkbox", { name: "두부" });
+    const categoryGroup = screen.getByRole("group", { name: "카테고리 선택" });
+    const allCategoryButton = screen.getByRole("button", { name: "전체" });
     const onionCard = onionCheckbox.closest("label");
 
+    expect(categoryGroup.className).toContain("web-ingredient-category-grid");
+    expect(allCategoryButton.className).toContain("web-ingredient-category-chip");
     expect(onionCard?.className).toContain("web-ingredient-option");
     expect(onionCard?.className).toContain("web-ingredient-option-card");
     expect(onionCard?.getAttribute("title")).toBe("양파");
