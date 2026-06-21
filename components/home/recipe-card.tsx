@@ -13,7 +13,6 @@ interface RecipeCardProps {
 }
 
 export function RecipeCard({ isSaved = false, onOpen, onSave, recipe }: RecipeCardProps) {
-  const remainingTagCount = Math.max(recipe.tags.length - 3, 0);
   const imageSrc = resolveRecipeImage(recipe);
   const badgeLabel =
     recipe.save_count > 100 ? "인기" : formatRecipeSourceLabel(recipe.source_type);
@@ -76,11 +75,6 @@ export function RecipeCard({ isSaved = false, onOpen, onSave, recipe }: RecipeCa
               {tag}
             </span>
           ))}
-          {remainingTagCount ? (
-            <span className="rounded-full bg-[var(--surface-subtle)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-2)]">
-              +{remainingTagCount}
-            </span>
-          ) : null}
         </div>
       </div>
     </article>

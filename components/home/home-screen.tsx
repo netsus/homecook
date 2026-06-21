@@ -29,8 +29,13 @@ import {
   WebSkeleton,
   WebTopNav,
 } from "@/components/web";
-import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import {
+  E2E_AUTH_OVERRIDE_KEY,
+  readE2EAuthOverride,
+} from "@/lib/auth/e2e-auth-override";
 import { fetchUserProfile, type UserProfileData } from "@/lib/api/mypage";
+import { fetchUserGamification } from "@/lib/api/user-gamification";
+import { fetchUserProgress } from "@/lib/api/user-progress";
 import { fetchRecipeTags } from "@/lib/api/recipe";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
@@ -54,6 +59,8 @@ import type {
   RecipeTheme,
   RecipeThemesData,
 } from "@/types/recipe";
+import type { UserGamificationData } from "@/types/user-gamification";
+import type { UserProgressData } from "@/types/user-progress";
 
 const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
   { label: "조회수순", value: "view_count" },
@@ -155,6 +162,30 @@ function filterSafeRecipeThemes(themeData: RecipeThemesData): RecipeThemesData {
   };
 }
 
+function readHomeAuthOverride() {
+  const override = readE2EAuthOverride();
+
+  if (typeof override === "boolean") {
+    return override;
+  }
+
+  if (process.env.NODE_ENV !== "test" || typeof window === "undefined") {
+    return null;
+  }
+
+  const testOverride = window.localStorage.getItem(E2E_AUTH_OVERRIDE_KEY);
+
+  if (testOverride === "authenticated") {
+    return true;
+  }
+
+  if (testOverride === "guest") {
+    return false;
+  }
+
+  return null;
+}
+
 export function HomeScreen() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -171,6 +202,8 @@ export function HomeScreen() {
   const [isIngredientModalOpen, setIngredientModalOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profile, setProfile] = useState<UserProfileData | null>(null);
+  const [progress, setProgress] = useState<UserProgressData | null>(null);
+  const [gamification, setGamification] = useState<UserGamificationData | null>(null);
   const recipeRequestIdRef = useRef(0);
   const appliedIngredientIds = useDiscoveryFilterStore(
     (state) => state.appliedIngredientIds,
@@ -238,22 +271,28 @@ export function HomeScreen() {
   useEffect(() => {
     if (!isAuthenticated) {
       setProfile(null);
+      setProgress(null);
+      setGamification(null);
       return;
     }
 
     let isCurrent = true;
 
-    void fetchUserProfile()
-      .then((nextProfile) => {
-        if (isCurrent) {
-          setProfile(nextProfile);
-        }
-      })
-      .catch(() => {
-        if (isCurrent) {
-          setProfile(null);
-        }
-      });
+    void Promise.allSettled([
+      fetchUserProfile(),
+      fetchUserProgress(),
+      fetchUserGamification(),
+    ]).then(([profileResult, progressResult, gamificationResult]) => {
+      if (!isCurrent) {
+        return;
+      }
+
+      setProfile(profileResult.status === "fulfilled" ? profileResult.value : null);
+      setProgress(progressResult.status === "fulfilled" ? progressResult.value : null);
+      setGamification(
+        gamificationResult.status === "fulfilled" ? gamificationResult.value : null,
+      );
+    });
 
     return () => {
       isCurrent = false;
@@ -269,7 +308,7 @@ export function HomeScreen() {
   }, [loadTagOptions]);
 
   useEffect(() => {
-    const e2eAuthOverride = readE2EAuthOverride();
+    const e2eAuthOverride = readHomeAuthOverride();
 
     if (typeof e2eAuthOverride === "boolean") {
       setIsAuthenticated(e2eAuthOverride);
@@ -385,6 +424,14 @@ export function HomeScreen() {
       : "모든 레시피";
   const showInitialDiscoverySkeleton =
     !hasActiveFilters && themeState === "loading";
+  const shouldShowMobileThemeCarousel =
+    !hasResultPriorityContext &&
+    !showInitialDiscoverySkeleton &&
+    (themes?.themes.length ?? 0) > 0;
+  const mobileThemeInsertAfterIndex = Math.max(
+    0,
+    Math.ceil(displayedRecipes.length / 2) - 1,
+  );
   const showEmptyState =
     (screenState === "ready" || screenState === "empty") &&
     displayedRecipes.length === 0;
@@ -618,7 +665,10 @@ export function HomeScreen() {
           onSelectSort={selectSort}
           onSelectTag={selectTag}
           onSelectTheme={selectTheme}
+          gamification={gamification}
+          isAuthenticated={isAuthenticated}
           profile={profile}
+          progress={progress}
           query={query}
           resultStatusText={resultStatusText}
           savedRecipeIds={homeSaveFlow.savedRecipeIds}
@@ -649,7 +699,12 @@ export function HomeScreen() {
         }
       >
         <div className="flex min-h-screen w-full flex-col bg-[var(--surface)] pb-[calc(86px+env(safe-area-inset-bottom))]">
-          <HomeAppBar />
+          <HomeAppBar
+            gamification={gamification}
+            isAuthenticated={isAuthenticated}
+            profile={profile}
+            progress={progress}
+          />
 
           <div className="pb-[100px]">
             {/* Hero greeting */}
@@ -664,7 +719,7 @@ export function HomeScreen() {
             </div>
 
             {/* Search */}
-            <div className="home-mobile-discovery-search px-5 pb-3 pt-1">
+            <div className="home-mobile-discovery-search">
               <div className="home-mobile-discovery-search-row">
                 <label className="home-mobile-search-bar">
                   <SearchIcon />
@@ -727,9 +782,7 @@ export function HomeScreen() {
               <ThemeCarouselSkeleton />
             ) : null}
 
-            {!hasResultPriorityContext &&
-            !showInitialDiscoverySkeleton &&
-            (themes?.themes.length ?? 0) > 0 ? (
+            {screenState === "error" && shouldShowMobileThemeCarousel ? (
               <ThemeCarousel
                 activeThemeId={activeThemeId}
                 onSelectTheme={selectTheme}
@@ -814,14 +867,23 @@ export function HomeScreen() {
 
                 {screenState === "ready" && displayedRecipes.length ? (
                   <div className="grid grid-cols-1 gap-4 px-4">
-                    {displayedRecipes.map((recipe) => (
-                      <RecipeCard
-                        isSaved={homeSaveFlow.savedRecipeIds.has(recipe.id)}
-                        key={recipe.id}
-                        onOpen={() => incrementRecipeViewCount(recipe.id)}
-                        onSave={homeSaveFlow.openRecipeSaveModal}
-                        recipe={recipe}
-                      />
+                    {displayedRecipes.map((recipe, index) => (
+                      <React.Fragment key={recipe.id}>
+                        <RecipeCard
+                          isSaved={homeSaveFlow.savedRecipeIds.has(recipe.id)}
+                          onOpen={() => incrementRecipeViewCount(recipe.id)}
+                          onSave={homeSaveFlow.openRecipeSaveModal}
+                          recipe={recipe}
+                        />
+                        {index === mobileThemeInsertAfterIndex &&
+                        shouldShowMobileThemeCarousel ? (
+                          <ThemeCarousel
+                            activeThemeId={activeThemeId}
+                            onSelectTheme={selectTheme}
+                            themes={themes?.themes ?? []}
+                          />
+                        ) : null}
+                      </React.Fragment>
                     ))}
                   </div>
                 ) : null}
@@ -897,7 +959,10 @@ function HomeWebScreen({
   onSelectSort,
   onSelectTag,
   onSelectTheme,
+  gamification,
+  isAuthenticated,
   profile,
+  progress,
   query,
   resultStatusText,
   savedRecipeIds,
@@ -929,7 +994,10 @@ function HomeWebScreen({
   onSelectSort: (nextSort: string) => void;
   onSelectTag: (tag: RecipeTagItem) => void;
   onSelectTheme: (themeId: string) => void;
+  gamification: UserGamificationData | null;
+  isAuthenticated: boolean;
   profile: UserProfileData | null;
+  progress: UserProgressData | null;
   query: string;
   resultStatusText: string;
   savedRecipeIds: Set<string>;
@@ -952,7 +1020,15 @@ function HomeWebScreen({
       <WebTopNav
         activeId="home"
         items={PRIMARY_WEB_NAV_ITEMS}
-        rightSlot={<WebProfileButton profile={profile} />}
+        rightSlot={
+          <ProfileSummaryButton
+            gamification={gamification}
+            isAuthenticated={isAuthenticated}
+            profile={profile}
+            progress={progress}
+            variant="web"
+          />
+        }
       />
       <div className="web-screen">
         <section className="web-discovery">
@@ -1220,7 +1296,6 @@ function HomeWebRecipeCard({
   const sourceLabel = formatRecipeSourceLabel(recipe.source_type);
   const sourceBadge = recipe.source_type === "youtube" ? sourceLabel : null;
   const visibleTags = recipe.tags.slice(0, 3);
-  const remainingTagCount = Math.max(recipe.tags.length - visibleTags.length, 0);
 
   return (
     <article className="web-home-recipe-card">
@@ -1244,9 +1319,6 @@ function HomeWebRecipeCard({
                     {tag}
                   </span>
                 ))}
-                {remainingTagCount > 0 ? (
-                  <span className="web-recipe-card-tag">+{remainingTagCount}</span>
-                ) : null}
               </>
             ) : null
           }
@@ -1298,32 +1370,145 @@ function HomeQuickLinks({ variant }: { variant: "mobile" | "web" }) {
   );
 }
 
-function WebProfileButton({ profile }: { profile: UserProfileData | null }) {
+function ProfileSummaryButton({
+  gamification,
+  isAuthenticated,
+  profile,
+  progress,
+  variant,
+}: {
+  gamification: UserGamificationData | null;
+  isAuthenticated: boolean;
+  profile: UserProfileData | null;
+  progress: UserProgressData | null;
+  variant: "mobile" | "web";
+}) {
+  const [isOpen, setIsOpen] = useState(false);
   const fallbackInitial = profile?.nickname?.slice(0, 1).toUpperCase() ?? null;
+  const hasSummaryData = Boolean(profile || progress || gamification);
+  const isGuestSummary = !isAuthenticated && !hasSummaryData;
+  const isLoadingSummary = isAuthenticated && !hasSummaryData;
+  const displayName = profile?.nickname ?? "집밥러";
+  const gradeLabel =
+    gamification?.grade.label ??
+    "새싹 집밥러";
+  const level =
+    gamification?.level.current_level ?? progress?.level.current_level ?? 1;
+  const cookingCount = progress?.event_counts.cooking_completed ?? 0;
+  const plannerCount =
+    (progress?.event_counts.planner_registered_first ?? 0) +
+    (progress?.event_counts.planner_registered_repeat ?? 0);
+  const shoppingCount = progress?.event_counts.shopping_completed ?? 0;
+  const quest =
+    gamification?.quests.active.find((item) => item.quest_type === "tutorial") ??
+    gamification?.quests.active[0] ??
+    null;
+  const notificationTitle =
+    gamification?.notifications.priority_unseen[0]?.title ??
+    (quest ? "튜토리얼 안내" : "알림");
+  const notificationMessage =
+    gamification?.notifications.priority_unseen[0]?.body ??
+    (quest ? `${quest.title}부터 차근차근 시작해 보세요.` : "새로운 알림이 없어요.");
 
   return (
-    <Link
-      aria-label={profile?.nickname ? `${profile.nickname} 프로필` : "내 프로필"}
-      className="web-profile-button"
-      href="/mypage"
-    >
-      {profile?.profile_image_url ? (
-        <Image
-          alt=""
-          className="web-profile-button-image"
-          height={40}
-          src={profile.profile_image_url}
-          unoptimized
-          width={40}
-        />
-      ) : fallbackInitial ? (
-        <span aria-hidden="true" className="web-profile-button-fallback">
-          {fallbackInitial}
-        </span>
-      ) : (
-        <UserIcon />
-      )}
-    </Link>
+    <div className={`profile-summary profile-summary-${variant}`}>
+      <button
+        aria-expanded={isOpen}
+        aria-label={
+          profile?.nickname
+            ? `${profile.nickname} 프로필 요약 ${isOpen ? "닫기" : "열기"}`
+            : `내 프로필 요약 ${isOpen ? "닫기" : "열기"}`
+        }
+        className="web-profile-button"
+        data-testid={`${variant}-profile-summary-button`}
+        onClick={() => setIsOpen((current) => !current)}
+        type="button"
+      >
+        {profile?.profile_image_url ? (
+          <Image
+            alt=""
+            className="web-profile-button-image"
+            height={40}
+            src={profile.profile_image_url}
+            unoptimized
+            width={40}
+          />
+        ) : fallbackInitial ? (
+          <span aria-hidden="true" className="web-profile-button-fallback">
+            {fallbackInitial}
+          </span>
+        ) : (
+          <UserIcon />
+        )}
+      </button>
+
+      {isOpen ? (
+        <section
+          aria-label="마이페이지 요약"
+          className="profile-summary-popover"
+          data-testid={`${variant}-profile-summary-popover`}
+          role="dialog"
+        >
+          {isGuestSummary ? (
+            <>
+              <div className="profile-summary-head">
+                <div>
+                  <strong>로그인이 필요해요</strong>
+                  <span>로그인하면 기록과 알림을 볼 수 있어요.</span>
+                </div>
+              </div>
+              <Link className="profile-summary-link" href="/mypage">
+                마이페이지로 이동
+              </Link>
+            </>
+          ) : isLoadingSummary ? (
+            <>
+              <div className="profile-summary-head">
+                <div>
+                  <strong>요약을 불러오는 중이에요</strong>
+                  <span>잠시만 기다려 주세요.</span>
+                </div>
+              </div>
+              <Link className="profile-summary-link" href="/mypage">
+                마이페이지로 이동
+              </Link>
+            </>
+          ) : (
+            <>
+              <div className="profile-summary-head">
+                <div>
+                  <strong>{displayName}</strong>
+                  <span>{gradeLabel}</span>
+                </div>
+                <b>Lv.{level}</b>
+              </div>
+              <div className="profile-summary-stats" aria-label="기록 요약">
+                <span>
+                  <b>{cookingCount}</b>
+                  요리기록
+                </span>
+                <span>
+                  <b>{plannerCount}</b>
+                  플래너기록
+                </span>
+                <span>
+                  <b>{shoppingCount}</b>
+                  장보기기록
+                </span>
+              </div>
+              <div className="profile-summary-notice" role="status">
+                <strong>{notificationTitle}</strong>
+                {quest ? <span>{quest.title}</span> : null}
+                <span>{notificationMessage}</span>
+              </div>
+              <Link className="profile-summary-link" href="/mypage">
+                마이페이지로 이동
+              </Link>
+            </>
+          )}
+        </section>
+      ) : null}
+    </div>
   );
 }
 
@@ -1377,10 +1562,27 @@ function HomeShortcutIcon({
   );
 }
 
-function HomeAppBar() {
+function HomeAppBar({
+  gamification,
+  isAuthenticated,
+  profile,
+  progress,
+}: {
+  gamification: UserGamificationData | null;
+  isAuthenticated: boolean;
+  profile: UserProfileData | null;
+  progress: UserProgressData | null;
+}) {
   return (
-    <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
+    <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center justify-between border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
       <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">집밥</h1>
+      <ProfileSummaryButton
+        gamification={gamification}
+        isAuthenticated={isAuthenticated}
+        profile={profile}
+        progress={progress}
+        variant="mobile"
+      />
     </header>
   );
 }

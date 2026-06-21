@@ -608,15 +608,13 @@ export function MenuAddScreen({
         <section className="flex flex-col gap-2.5 px-4 pb-8" data-testid="menu-add-option-grid">
           {MENU_ADD_OPTIONS.map((option) => (
             <button
-              className="flex min-h-[64px] w-full items-center gap-3.5 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4 text-left"
+              className="menu-add-option-card flex min-h-[64px] w-full items-center gap-3.5 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4 text-left"
               data-testid={`menu-add-option-${option.id}`}
               key={option.id}
               onClick={actionMapForMobile(option.id)}
               type="button"
             >
-              <span className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--brand-soft)] text-[22px]">
-                {option.emoji}
-              </span>
+              <MenuAddOptionIcon option={option} />
               <span className="min-w-0 flex-1 text-[15px] font-bold text-[var(--foreground)]">
                 {option.label}
               </span>
@@ -797,5 +795,30 @@ export function MenuAddScreen({
         </div>
       ) : null}
     </>
+  );
+}
+
+function MenuAddOptionIcon({
+  option,
+}: {
+  option: (typeof MENU_ADD_OPTIONS)[number];
+}) {
+  if (option.id === "recipebook") {
+    return (
+      <span
+        aria-hidden="true"
+        className="menu-add-recipebook-cover mobile-recipebook-book-card-sky"
+        data-testid="menu-add-option-recipebook-cover"
+      />
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--brand-soft)] text-[22px]"
+    >
+      {option.emoji}
+    </span>
   );
 }

@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import React from "react";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -15,6 +17,14 @@ vi.mock("@/lib/api/ingredients", () => ({
 
 const VEGETABLE_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "vegetable")!.label;
 const VEGETABLE_GROUP_LABEL = "채소/버섯";
+const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+
+function ruleBody(selector: string) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = globalsCss.match(new RegExp(`${escapedSelector}\\s*\\{([^}]+)\\}`));
+
+  return match?.[1] ?? "";
+}
 
 function installMatchMedia(matchesDesktop = false) {
   Object.defineProperty(window, "matchMedia", {
@@ -105,8 +115,12 @@ describe("RecipeIngredientAddModal", () => {
     const allCategoryButton = screen.getByRole("button", { name: "전체" });
     const onionCard = onionCheckbox.closest("label");
 
-    expect(categoryGroup.className).toContain("web-ingredient-category-grid");
+    expect(categoryGroup.className).toContain("web-ingredient-category-rail");
     expect(allCategoryButton.className).toContain("web-ingredient-category-chip");
+    expect(ruleBody(".web-ingredient-category-rail")).toContain("overflow-x: auto;");
+    expect(ruleBody(".web-ingredient-modal-grid")).toContain(
+      "grid-template-columns: repeat(4, minmax(0, 1fr));",
+    );
     expect(onionCard?.className).toContain("web-ingredient-option");
     expect(onionCard?.className).toContain("web-ingredient-option-card");
     expect(onionCard?.getAttribute("title")).toBe("양파");

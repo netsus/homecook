@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,8 +18,10 @@ import {
   INGREDIENT_CATEGORY_GROUP_OPTIONS,
 } from "@/lib/ingredient-categories";
 import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
+import { E2E_AUTH_OVERRIDE_KEY } from "@/lib/auth/e2e-auth-override";
 import { formatCount } from "@/lib/recipe";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
+import type { RecipeCardItem, RecipeThemesData } from "@/types/recipe";
 
 const fetchJson = vi.fn();
 const ONION_ID = "550e8400-e29b-41d4-a716-446655440010";
@@ -49,6 +51,166 @@ const INGREDIENT_ITEMS = [
     category: MEAT_CATEGORY,
   },
 ];
+
+function buildRecipeCard(
+  overrides: Partial<RecipeCardItem> & Pick<RecipeCardItem, "id" | "title">,
+): RecipeCardItem {
+  return {
+    ...MOCK_RECIPE_CARD,
+    tags: ["한식", "간단", "저녁"],
+    ...overrides,
+  };
+}
+
+function mockAuthedProfileFetch() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith("/api/v1/users/me")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: {
+              email: "home@example.com",
+              id: "user-1",
+              nickname: "김집밥",
+              profile_image_url: null,
+              settings: { screen_wake_lock: false },
+              social_provider: "google",
+            },
+            error: null,
+          }),
+        });
+      }
+
+      if (url.endsWith("/api/v1/users/me/progress")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: {
+              event_counts: {
+                cooking_completed: 2,
+                custom_book_created: 1,
+                planner_registered_first: 1,
+                planner_registered_repeat: 3,
+                recipe_saved_distinct_ever: 4,
+                shopping_completed: 1,
+              },
+              last_updated_at: "2026-06-21T00:00:00.000Z",
+              level: {
+                current_level: 3,
+                current_level_start_xp: 100,
+                next_level_start_xp: 250,
+                progress_percent: 40,
+                progress_ratio: 0.4,
+                total_xp: 160,
+                xp_into_current_level: 60,
+                xp_to_next_level: 90,
+              },
+            },
+            error: null,
+          }),
+        });
+      }
+
+      if (url.endsWith("/api/v1/users/me/gamification")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: {
+              achievement_album: {
+                categories: [],
+                summary: {
+                  completed_category_count: 0,
+                  earned_count: 0,
+                  total_count: 0,
+                },
+              },
+              badges: { earned: [], locked: [] },
+              featured_badges: [],
+              grade: {
+                grade_key: "sprout_homecook",
+                label: "새싹 집밥러",
+                level_max: 4,
+                level_min: 1,
+              },
+              last_updated_at: "2026-06-21T00:00:00.000Z",
+              level: {
+                current_level: 3,
+                progress_percent: 40,
+                total_xp: 160,
+                xp_to_next_level: 90,
+              },
+              notifications: {
+                archive_preview: [],
+                priority_unseen: [
+                  {
+                    body: "레시피를 저장하면 첫 퀘스트가 진행돼요.",
+                    category: "tutorial",
+                    created_at: "2026-06-21T00:00:00.000Z",
+                    delivery_channel: "toast",
+                    group_key: null,
+                    id: "notice-1",
+                    notification_type: "xp_awarded",
+                    payload: {},
+                    priority: 10,
+                    seen_at: null,
+                    title: "튜토리얼 안내",
+                    toast_eligible: true,
+                  },
+                ],
+                unseen: [],
+              },
+              quests: {
+                active: [
+                  {
+                    completed_at: null,
+                    description: "마음에 드는 레시피를 저장해 보세요.",
+                    dismissed_at: null,
+                    is_new: true,
+                    progress_current: 0,
+                    progress_percent: 0,
+                    progress_target: 1,
+                    quest_key: "first_recipe_saved",
+                    quest_type: "tutorial",
+                    status: "active",
+                    title: "첫 레시피 저장",
+                  },
+                ],
+                completed_recent: [],
+              },
+              tutorial: {
+                active_steps: [
+                  {
+                    achievement_key: "first_recipe_saved",
+                    current: 0,
+                    status: "active",
+                    target: 1,
+                    title: "첫 레시피 저장",
+                  },
+                ],
+                category_key: "tutorial",
+                completed_count: 0,
+                total_count: 4,
+              },
+            },
+            error: null,
+          }),
+        });
+      }
+
+      return Promise.reject(new Error(`unexpected fetch: ${url}`));
+    }),
+  );
+}
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
@@ -117,8 +279,10 @@ describe("home screen", () => {
   afterEach(() => {
     cleanup();
     Reflect.deleteProperty(window, "matchMedia");
+    vi.unstubAllGlobals();
     vi.useRealTimers();
     useDiscoveryFilterStore.setState({ appliedIngredientIds: [] });
+    window.localStorage.removeItem(E2E_AUTH_OVERRIDE_KEY);
     window.history.replaceState({}, "", "/");
   });
 
@@ -163,11 +327,11 @@ describe("home screen", () => {
     const recipeHeading = screen.getByRole("heading", { level: 2, name: "모든 레시피" });
 
     expect(
-      quickLinks.compareDocumentPosition(themeHeading) &
+      quickLinks.compareDocumentPosition(recipeHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      themeHeading.compareDocumentPosition(recipeHeading) &
+      recipeHeading.compareDocumentPosition(themeHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
@@ -199,10 +363,147 @@ describe("home screen", () => {
     expect(searchRule).toContain("top: var(--control-height-xl);");
     expect(searchRule).toContain("z-index: 19;");
     expect(searchRule).toContain("background: var(--surface);");
+    expect(searchRule).toContain("padding: 10px 20px 8px;");
+    expect(searchRule).toContain("gap: 6px;");
   });
 
   it("adds left breathing room to web recipe card titles and metrics", () => {
     expect(ruleBody(".web-recipe-card-body")).toContain("padding: 12px 12px 8px;");
+  });
+
+  it("keeps web HOME card tag rows single-line without misleading +N tags", async () => {
+    installMatchMedia(true);
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      if (input.startsWith("/api/v1/tags")) {
+        return Promise.resolve({ items: [] });
+      }
+
+      return Promise.resolve({
+        items: [
+          buildRecipeCard({
+            id: "recipe-many-tags",
+            tags: ["생딸기", "우유", "설탕", "디저트", "간식", "냉장"],
+            title: "태그가 많은 레시피",
+          }),
+        ],
+        next_cursor: null,
+        has_next: false,
+      });
+    });
+
+    const { container } = render(<HomeScreen />);
+
+    await screen.findByText("태그가 많은 레시피");
+    expect(container.querySelector(".web-recipe-card-tags")?.textContent).toContain("생딸기");
+    expect(container.querySelector(".web-recipe-card-tags")?.textContent).not.toContain("+");
+    expect(ruleBody(".web-recipe-card-tags")).toContain("flex-wrap: nowrap;");
+    expect(ruleBody(".web-recipe-card-tags")).toContain("max-height: 24px;");
+    expect(ruleBody(".web-recipe-card-tags")).toContain("overflow: hidden;");
+    expect(ruleBody(".web-home-recipe-card .web-recipe-card")).toContain("height: 100%;");
+  });
+
+  it("does not show misleading +N tags on mobile recipe cards", async () => {
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      if (input.startsWith("/api/v1/tags")) {
+        return Promise.resolve({ items: [] });
+      }
+
+      return Promise.resolve({
+        items: [
+          buildRecipeCard({
+            id: "recipe-many-mobile-tags",
+            tags: ["생딸기", "우유", "설탕", "디저트", "간식", "냉장"],
+            title: "모바일 태그 많은 레시피",
+          }),
+        ],
+        next_cursor: null,
+        has_next: false,
+      });
+    });
+
+    render(<HomeScreen />);
+
+    await screen.findByText("모바일 태그 많은 레시피");
+    expect(screen.getByText("생딸기")).toBeTruthy();
+    expect(screen.queryByText("+3")).toBeNull();
+  });
+
+  it("inserts popular themes around the middle of the app recipe list", async () => {
+    const recipes = [
+      buildRecipeCard({ id: "recipe-1", title: "첫 번째 레시피" }),
+      buildRecipeCard({ id: "recipe-2", title: "두 번째 레시피" }),
+      buildRecipeCard({ id: "recipe-3", title: "세 번째 레시피" }),
+      buildRecipeCard({ id: "recipe-4", title: "네 번째 레시피" }),
+    ];
+    const themeData: RecipeThemesData = {
+      themes: [
+        {
+          id: "theme-mid",
+          recipes: [recipes[0]!],
+          title: "중간 인기 테마",
+        },
+      ],
+    };
+
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve(themeData);
+      }
+
+      if (input.startsWith("/api/v1/tags")) {
+        return Promise.resolve({ items: [] });
+      }
+
+      return Promise.resolve({
+        items: recipes,
+        next_cursor: null,
+        has_next: false,
+      });
+    });
+
+    render(<HomeScreen />);
+
+    const secondRecipe = await screen.findByRole("heading", {
+      level: 3,
+      name: "두 번째 레시피",
+    });
+    const themeHeading = screen.getByRole("heading", {
+      level: 2,
+      name: "이번 주 인기 테마",
+    });
+    const thirdRecipe = screen.getByRole("heading", {
+      level: 3,
+      name: "세 번째 레시피",
+    });
+
+    expect(
+      secondRecipe.compareDocumentPosition(themeHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      themeHeading.compareDocumentPosition(thirdRecipe) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("renders the desktop HOME discovery layout at the web breakpoint", async () => {
@@ -510,13 +811,14 @@ describe("home screen", () => {
     const onionOption = onionCheckbox.closest("label");
 
     expect(dialog.className).toContain("web-dialog-narrow");
-    expect(categoryGroup.className).toContain("web-ingredient-category-grid");
+    expect(categoryGroup.className).toContain("web-ingredient-category-rail");
     expect(vegetableCategoryButton.className).toContain("web-ingredient-category-chip");
-    expect(ruleBody(".web-ingredient-category-grid")).toContain(
-      "grid-template-columns: repeat(3, minmax(0, 1fr));",
+    expect(ruleBody(".web-ingredient-category-rail")).toContain("overflow-x: auto;");
+    expect(ruleBody(".web-ingredient-modal-grid")).toContain(
+      "grid-template-columns: repeat(4, minmax(0, 1fr));",
     );
     expect(ruleBody(".web-ingredient-category-chip.web-chip")).toContain(
-      "border-radius: var(--web-r-sm);",
+      "border-radius: var(--web-r-pill);",
     );
     expect(onionOption?.className).toContain("web-ingredient-option");
     expect(onionOption?.className).toContain("web-ingredient-option-card");
@@ -1049,12 +1351,40 @@ describe("home screen", () => {
     expect(searchBlock?.contains(moreButton)).toBe(true);
   });
 
-  it("does not render header profile or cart icons", async () => {
+  it("opens a mobile profile summary with records, level, notifications, and tutorial quest", async () => {
+    window.localStorage.setItem(E2E_AUTH_OVERRIDE_KEY, "authenticated");
+    mockAuthedProfileFetch();
+
+    const user = userEvent.setup();
     render(<HomeScreen />);
 
-    await screen.findByRole("heading", { name: "집밥" });
+    await user.click(await screen.findByRole("button", { name: "김집밥 프로필 요약 열기" }));
+    const summary = await screen.findByRole("dialog", { name: "마이페이지 요약" });
 
-    expect(screen.queryByRole("button", { name: "장보기" })).toBeNull();
-    expect(screen.queryByText("채")).toBeNull();
+    expect(within(summary).getByText("김집밥")).toBeTruthy();
+    expect(within(summary).getByText("새싹 집밥러")).toBeTruthy();
+    expect(within(summary).getByText("Lv.3")).toBeTruthy();
+    expect(within(summary).getByText("요리기록")).toBeTruthy();
+    expect(within(summary).getByText("플래너기록")).toBeTruthy();
+    expect(within(summary).getByText("장보기기록")).toBeTruthy();
+    expect(within(summary).getByText("튜토리얼 안내")).toBeTruthy();
+    expect(within(summary).getByText("첫 레시피 저장")).toBeTruthy();
+  });
+
+  it("opens the web profile summary from the fixed top navigation avatar", async () => {
+    installMatchMedia(true);
+    window.localStorage.setItem(E2E_AUTH_OVERRIDE_KEY, "authenticated");
+    mockAuthedProfileFetch();
+
+    const user = userEvent.setup();
+    render(<HomeScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "김집밥 프로필 요약 열기" }));
+    const summary = await screen.findByRole("dialog", { name: "마이페이지 요약" });
+
+    expect(within(summary).getByText("요리기록")).toBeTruthy();
+    expect(within(summary).getByRole("link", { name: "마이페이지로 이동" }).getAttribute("href")).toBe(
+      "/mypage",
+    );
   });
 });

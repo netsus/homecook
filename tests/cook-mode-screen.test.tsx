@@ -39,6 +39,13 @@ const navigationMocks = vi.hoisted(() => ({
 
 const GLOBAL_CSS = readFileSync("app/globals.css", "utf8");
 
+function ruleBody(selector: string) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = GLOBAL_CSS.match(new RegExp(`${escapedSelector}\\s*\\{([^}]+)\\}`));
+
+  return match?.[1] ?? "";
+}
+
 function installMatchMedia(matchesAppView: boolean) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
@@ -868,6 +875,44 @@ describe("CookModeScreen", () => {
 
     expect(stepItemStyle).toBeNull();
     expect(methodBadgeStyle).toContain("var(--cook-stir)");
+    expect(ruleBody(".cook-whole-step")).toContain("align-items: center;");
+    expect(ruleBody(".cook-whole-step-marker")).toContain("align-content: center;");
+    expect(ruleBody(".cook-whole-method-tag")).toContain("justify-content: center;");
+  });
+
+  it("highlights cooking method words inside step instructions as bordered tags", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({
+        recipe: {
+          ...buildCookModeData().recipe,
+          steps: [
+            buildStep({
+              cooking_method: {
+                code: "stir_fry",
+                label: "볶기",
+                color_key: "orange",
+              },
+              instruction: "양파를 볶기 전에 팬을 충분히 달궈주세요.",
+              step_number: 1,
+            }),
+          ],
+        },
+      }),
+    );
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const firstStepCopy = await screen.findByTestId("cook-mode-step-copy-1");
+    const methodHighlight = within(firstStepCopy).getByTestId(
+      "cook-mode-step-method-highlight",
+    );
+
+    expect(methodHighlight.textContent).toBe("볶기");
+    expect(methodHighlight.className).toContain("cook-whole-step-method-highlight");
+    expect(methodHighlight.getAttribute("style")).toContain("var(--cook-stir)");
+    expect(ruleBody(".cook-whole-step-method-highlight")).toContain("border: 1px solid currentColor;");
   });
 
   it("shows desktop ingredients before steps and opens the consumed ingredient sheet on complete", async () => {

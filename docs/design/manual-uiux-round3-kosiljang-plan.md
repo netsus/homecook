@@ -117,39 +117,39 @@ Detailed entries live in `docs/design/manual-uiux-review-fix-plan.md`.
 
 | Canonical item | Summary | Status |
 | --- | --- | --- |
-| 32 | 웹 홈 레시피 카드의 세로 간격이 태그 줄 수에 따라 달라지는 문제 | planned |
-| 33 | 웹 홈 카드의 `+N` 태그 표시가 상세 화면과 맞지 않아 추가 태그처럼 오해되는 문제 | planned |
-| 34 | 홈/전역 프로필 버튼이 단순 이동만 해서 내 상태와 알림을 즉시 확인하기 어려운 문제 | planned |
-| 35 | 신규/초기 사용자의 튜토리얼 단계가 홈에서 자연스럽게 안내되지 않는 문제 | planned |
+| 32 | 웹 홈 레시피 카드의 세로 간격이 태그 줄 수에 따라 달라지는 문제 | implemented in `fix/manual-uiux-round3-redo` |
+| 33 | 웹 홈 카드의 `+N` 태그 표시가 상세 화면과 맞지 않아 추가 태그처럼 오해되는 문제 | implemented in `fix/manual-uiux-round3-redo` |
+| 34 | 홈/전역 프로필 버튼이 단순 이동만 해서 내 상태와 알림을 즉시 확인하기 어려운 문제 | implemented in `fix/manual-uiux-round3-redo` |
+| 35 | 신규/초기 사용자의 튜토리얼 단계가 홈에서 자연스럽게 안내되지 않는 문제 | implemented in `fix/manual-uiux-round3-redo` |
 | 36 | 웹과 앱의 주요 화면에서 프로필 진입점 위치가 일관되지 않은 문제 | planned |
 | 37 | 여러 알림/피드백 팝업의 형식이 경험치 알림과 달라 서비스 알림 체계가 분산되는 문제 | planned |
 | 38 | 마이페이지 알림 버튼에서 과거 성장 알림을 확인하는 흐름이 더 명확해야 하는 문제 | planned |
 | 39 | 웹 레시피 저장 모달의 새 레시피북 만들기 영역이 앱보다 무겁고 덜 예뻐 보이는 문제 | implemented |
 | 40 | 앱 레시피 저장 모달의 `레시피북 다중 선택` 설명이 불필요하게 보이는 문제 | implemented |
-| 41 | 앱 홈의 `이번 주 인기 테마`가 너무 아래에 있어 발견성이 낮은 문제 | implemented |
-| 42 | 앱 홈 검색창과 검색 결과가 스크롤 중 분리되어 보이는 문제 | implemented |
+| 41 | 앱 홈의 `이번 주 인기 테마`가 레시피 목록 중간이 아니라 위/아래로 치우치는 문제 | reworked in `fix/manual-uiux-round3-redo` |
+| 42 | 앱 홈 sticky 검색창의 수직 정렬과 검색창/태그 경계가 어색한 문제 | reworked in `fix/manual-uiux-round3-redo` |
 | 43 | 홈 퀵슬롯의 `성장 보기`를 `유튜브 가져오기`로 바꾸는 문제 | implemented |
-| 44 | 재료 검색/추가 모달의 카테고리 칩 모양과 웹 레이아웃이 화면마다 다른 문제 | partially implemented |
+| 44 | 재료 검색/추가 모달의 카테고리 rail과 웹 재료 4열 배열이 의도와 다르게 적용된 문제 | reworked in `fix/manual-uiux-round3-redo` |
 | 45 | 웹 레시피상세의 재료/만들기 너비와 구분선이 어색한 문제 | implemented |
 | 46 | 앱 레시피상세 하단 CTA와 하단 탭 사이 틈으로 뒤 화면이 보이는 문제 | implemented |
-| 47 | 웹 레시피상세에서 인분 조절이 재료와 분리되어 보이는 문제 | implemented |
+| 47 | 웹 레시피상세 인분조절 버튼의 `-`/`+` 색상과 크기가 앱과 맞지 않는 문제 | reworked in `fix/manual-uiux-round3-redo` |
 | 48 | 웹 플래너에 추가 모달의 font-weight 위계가 어색한 문제 | implemented |
 | 49 | 웹 요리모드 보드가 화면 높이를 충분히 활용하지 못하는 문제 | implemented |
 | 50 | 앱 요리모드 상단 header가 제목을 별도 줄로 써 화면 높이를 낭비하는 문제 | implemented |
-| 51 | 요리모드 조리법 태그가 조리방법 본문 공간을 줄이는 문제 | implemented |
+| 51 | 요리모드 조리법 태그 정렬과 본문 내 조리법 강조가 부족한 문제 | reworked in `fix/manual-uiux-round3-redo` |
 | 52 | 앱 요리모드 전체 재료 카드가 과하게 넓어 정보 밀도가 낮은 문제 | implemented |
 | 53 | 레시피상세에서 진입한 요리모드에 `독립요리` 문구가 노출되는 문제 | implemented |
 | 54 | 앱 플래너 카드에서 긴 레시피 제목이 카드 높이를 키우는 문제 | implemented |
 | 55 | 앱 플래너 한 끼니에 여러 레시피가 세로로 쌓이고 `+N`이 약한 문제 | implemented |
 | 56 | 앱 플래너 이번 주 요약 텍스트가 작고 정렬감이 약한 문제 | implemented |
 | 57 | 웹 식사추가 첫 진입 시 레시피 검색 패널은 보이지만 왼쪽 버튼이 선택 상태가 아닌 문제 | implemented |
-| 58 | 앱 레시피북에서 추가 화면의 레시피북 row가 커버/색상 없이 밋밋해 보이는 문제 | implemented |
+| 58 | 앱 식사추가 옵션의 레시피북 항목이 커버/색상 없이 밋밋해 보이는 문제 | reworked in `fix/manual-uiux-round3-redo` |
 | 59 | 웹 장보기 준비 전체선택 체크 표시 색상이 충분히 보이지 않는 문제 | implemented |
 | 60 | 앱 장보기 준비의 요약정보 크기와 배경 구조가 선택 확인에 약한 문제 | implemented |
 | 61 | 웹 장보기 리스트 전체선택 체크 표시와 보조 텍스트가 어색한 문제 | implemented |
 | 62 | 웹 장보기 리스트 재료 카드의 재료명/양 배치가 공간을 비효율적으로 쓰는 문제 | implemented |
-| 63 | 앱 장보기 리스트의 재료양이 `이미있음` 버튼에 너무 붙어 보이는 문제 | implemented |
-| 64 | 장보기 완료 전 팬트리 반영 모달에서 구매 재료와 이미있음 재료가 구분되지 않는 문제 | implemented |
+| 63 | 웹/앱 장보기 리스트의 재료양이 재료명보다 액션 쪽에 붙어 보이는 문제 | reworked in `fix/manual-uiux-round3-redo` |
+| 64 | 웹 장보기 완료 전 팬트리 반영 모달의 크기와 재료명 가독성이 부족한 문제 | reworked in `fix/manual-uiux-round3-redo` |
 | 65 | 팬트리 재료추가 검색이 선택된 카테고리 안에서만 동작해 결과를 숨기는 문제 | implemented |
 | 66 | 팬트리 재료추가 선택 칩이 검색 결과 변경 시 사라지는 문제 | implemented |
 | 67 | 웹/앱 팬트리에서 같은 재료의 시각 표시가 서로 다르게 보이는 문제 | implemented |

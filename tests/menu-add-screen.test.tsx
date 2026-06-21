@@ -39,6 +39,7 @@ vi.mock("@/lib/api/meal", () => ({
 }));
 
 vi.mock("@/lib/api/recipe", () => ({
+  fetchRecipeBooks: vi.fn(),
   fetchRecipes: vi.fn(),
 }));
 
@@ -402,15 +403,20 @@ describe("MenuAddScreen", () => {
     expect(screen.queryByTestId("leftover-picker-screen")).toBeNull();
   });
 
-  it("uses matching typography for YouTube and manual option tiles", () => {
+  it("uses matching typography for YouTube and manual option tiles while giving recipebook a cover cue", () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
     const recipeBookButton = screen.getByTestId("menu-add-option-recipebook");
     const youtubeButton = screen.getByTestId("menu-add-option-youtube");
     const manualButton = screen.getByTestId("menu-add-option-manual");
+    const recipeBookCover = screen.getByTestId("menu-add-option-recipebook-cover");
 
-    expect(youtubeButton.className).toBe(recipeBookButton.className);
-    expect(manualButton.className).toBe(recipeBookButton.className);
+    expect(youtubeButton.className).toContain("menu-add-option-card");
+    expect(manualButton.className).toContain("menu-add-option-card");
+    expect(recipeBookButton.className).toContain("menu-add-option-card");
+    expect(recipeBookCover.className).toContain("menu-add-recipebook-cover");
+    expect(recipeBookCover.className).toContain("mobile-recipebook-book-card-sky");
+    expect(recipeBookCover.textContent).not.toContain("📖");
   });
 
   it("keeps the desktop option rail visible while opening manual recipe create in the right panel", async () => {

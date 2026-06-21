@@ -301,7 +301,7 @@ export function IngredientFilterModal({
 
             <div
               aria-label="카테고리 선택"
-              className="web-ingredient-category-grid mt-4"
+              className="web-ingredient-category-rail mt-4"
               role="group"
             >
               {INGREDIENT_CATEGORY_GROUP_OPTIONS.map((category) => (
