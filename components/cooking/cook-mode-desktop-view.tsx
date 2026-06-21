@@ -47,9 +47,11 @@ export function CookModeDesktopView({
   onCancel,
   onComplete,
 }: CookModeDesktopViewProps) {
-  const contextLabel =
-    variant === "planner" ? mealContextLabel ?? "플래너 요리" : "독립 요리";
-  const summaryParts = ["요리모드", `${recipe.cooking_servings}인분`, contextLabel];
+  const summaryParts = [
+    "요리모드",
+    `${recipe.cooking_servings}인분`,
+    ...(variant === "planner" ? [mealContextLabel ?? "플래너 요리"] : []),
+  ];
 
   return (
     <WebShell className="web-cooking-shell web-cooking-shell-dark" wide>

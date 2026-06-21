@@ -505,7 +505,7 @@ function StandaloneCookModeDesktopState({
         <nav aria-label="현재 위치" className="web-cook-breadcrumb">
           <a href={`/recipe/${recipeId}`}>레시피</a>
           <span aria-hidden="true">/</span>
-          <strong>독립 요리모드</strong>
+          <strong>요리모드</strong>
         </nav>
         {children}
       </main>

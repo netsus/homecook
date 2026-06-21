@@ -1539,7 +1539,7 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderAppView ? (
-      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[calc(66px+env(safe-area-inset-bottom))] z-20 flex gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-2 pt-2 shadow-[0_-8px_24px_var(--shadow-color-soft)] lg:hidden">
+      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(82px+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_var(--shadow-color-soft)] lg:hidden">
         <button
           className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand)] px-3 text-[15px] font-bold text-[var(--text-inverse)]"
           onClick={() => handleProtectedAction("planner")}
@@ -1801,22 +1801,18 @@ function RecipeDetailWebView({
               </div>
             </section>
 
-            <section className="web-reading-section web-servings-section">
-              <div className="web-reading-head">
-                <div>
-                  <h2>인분 조절</h2>
-                  <p>아래 재료량이 즉시 바뀝니다</p>
-                </div>
-                <WebStepper
-                  onChange={onSelectedServingsChange}
-                  value={selectedServings}
-                />
-              </div>
-            </section>
-
             <div className="web-recipe-reading-grid">
               <section className="web-reading-section web-reading-section-grid">
-                <h2 className="web-reading-title">재료</h2>
+                <div className="web-ingredient-section-head">
+                  <div>
+                    <h2 className="web-reading-title">재료</h2>
+                    <p>인분을 바꾸면 아래 재료량이 즉시 바뀝니다</p>
+                  </div>
+                  <WebStepper
+                    onChange={onSelectedServingsChange}
+                    value={selectedServings}
+                  />
+                </div>
                 <ul className="web-ingredient-list">
                   {scaledIngredients.map((ingredient, idx) => {
                     const quantityText = ingredient.scaledText.startsWith(

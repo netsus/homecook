@@ -1144,27 +1144,27 @@ export function PlannerWeekScreen({
               이번 주 요약
             </p>
             <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-registered-soft)] p-3">
-              <p className="text-[11px] font-semibold text-[var(--planner-status-registered)]">
+            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-registered-soft)] p-3 text-center">
+              <p className="text-[13px] font-bold leading-[1.15] text-[var(--planner-status-registered)]">
                 등록
               </p>
-              <p className="mt-0.5 text-[20px] font-bold leading-none text-[var(--planner-status-registered-strong)]">
+              <p className="mt-1 text-[22px] font-bold leading-none text-[var(--planner-status-registered-strong)]">
                 {mealStats.registered}개
               </p>
             </div>
-            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-shopping-soft)] p-3">
-              <p className="text-[11px] font-semibold text-[var(--planner-status-shopping)]">
+            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-shopping-soft)] p-3 text-center">
+              <p className="text-[13px] font-bold leading-[1.15] text-[var(--planner-status-shopping)]">
                 장보기
               </p>
-              <p className="mt-0.5 text-[20px] font-bold leading-none text-[var(--planner-status-shopping)]">
+              <p className="mt-1 text-[22px] font-bold leading-none text-[var(--planner-status-shopping)]">
                 {mealStats.shoppingDone}개
               </p>
             </div>
-            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-cooked-soft)] p-3">
-              <p className="text-[11px] font-semibold text-[var(--planner-status-cooked)]">
+            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-cooked-soft)] p-3 text-center">
+              <p className="text-[13px] font-bold leading-[1.15] text-[var(--planner-status-cooked)]">
                 요리 완료
               </p>
-              <p className="mt-0.5 text-[20px] font-bold leading-none text-[var(--planner-status-cooked)]">
+              <p className="mt-1 text-[22px] font-bold leading-none text-[var(--planner-status-cooked)]">
                 {mealStats.cookDone}개
               </p>
             </div>
@@ -1387,14 +1387,18 @@ export function PlannerWeekScreen({
                             <>
                               <Link
                                 className={[
-                                  "grid min-h-[46px] min-w-0 flex-1 grid-cols-1 gap-[5px]",
+                                  "mobile-planner-slot-meals min-w-0 flex-1",
+                                  visibleMeals.length > 1
+                                    ? "mobile-planner-slot-meals-multiple"
+                                    : "",
                                 ].join(" ")}
+                                data-testid={`planner-mobile-slot-${dateKey}-${column.id}`}
                                 href={`/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`}
                               >
                                 {visibleMeals.map((meal, mealIndex) => (
                                   <span
                                     className={[
-                                      "relative flex min-h-[50px] min-w-0 items-center overflow-hidden rounded-[var(--radius-control)] border border-l-4 border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--foreground)]",
+                                      "mobile-planner-meal-card relative min-w-0 overflow-hidden border border-l-4 border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--foreground)]",
                                       getMobilePlannerMealStatusAccentClass(meal.status),
                                     ].join(" ")}
                                     data-testid={`planner-mobile-meal-${meal.id}`}
@@ -1403,20 +1407,20 @@ export function PlannerWeekScreen({
                                     {meal.recipe_thumbnail_url ? (
                                       <Image
                                         alt=""
-                                        className="h-[50px] w-[38px] shrink-0 object-cover"
+                                        className="mobile-planner-meal-thumb shrink-0 object-cover"
                                         height={50}
                                         src={meal.recipe_thumbnail_url}
                                         unoptimized
                                         width={38}
                                       />
                                     ) : (
-                                      <span className="flex h-[50px] w-[38px] shrink-0 items-center justify-center bg-[var(--brand-soft)] text-[14px] font-bold text-[var(--brand)]">
+                                      <span className="mobile-planner-meal-thumb flex shrink-0 items-center justify-center bg-[var(--brand-soft)] text-[13px] font-bold text-[var(--brand)]">
                                         {column.name.charAt(0)}
                                       </span>
                                     )}
-                                    <span className="min-w-0 flex-1 px-2">
+                                    <span className="mobile-planner-meal-copy min-w-0 flex-1">
                                       <span
-                                        className={`line-clamp-2 block text-[13px] font-extrabold leading-[1.25] ${meal.is_leftover ? "text-[var(--brand-deep)]" : "text-[var(--foreground)]"}`}
+                                        className={`mobile-planner-meal-title block ${meal.is_leftover ? "text-[var(--brand-deep)]" : "text-[var(--foreground)]"}`}
                                       >
                                         {meal.recipe_title}
                                       </span>
@@ -1438,7 +1442,10 @@ export function PlannerWeekScreen({
                                       </span>
                                     </span>
                                     {mealIndex === 1 && slotMeals.length > 2 ? (
-                                      <span className="absolute bottom-1 right-1 rounded-full bg-[var(--surface-alpha-90)] px-1.5 py-0.5 text-[10px] font-extrabold text-[var(--text-2)]">
+                                      <span
+                                        aria-label={`외 ${slotMeals.length - 2}개 더 있음`}
+                                        className="mobile-planner-overflow-badge absolute"
+                                      >
                                         +{slotMeals.length - 2}
                                       </span>
                                     ) : null}

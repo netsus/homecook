@@ -153,10 +153,6 @@ export function SaveModal({
 
         {viewState === "ready" ? (
             <div className="space-y-4">
-              <p className="text-[13px] font-semibold text-[var(--text-2)]">
-                레시피북 다중 선택
-              </p>
-
               <div className="overflow-hidden rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)]">
                 {books.length === 0 ? (
                   <div className="px-4 py-5 text-[14px] leading-5 text-[var(--text-2)]">
@@ -365,30 +361,41 @@ export function SaveModal({
               </div>
             )}
 
-            <div className="web-modal-panel web-modal-create">
-              <p className="web-modal-section-label">새 레시피북 만들기</p>
-              <div className="web-modal-create-row">
-                <input
-                  className="web-modal-input"
-                  maxLength={50}
-                  onChange={(event) => onNewBookNameChange(event.target.value)}
-                  placeholder="예: 주말 파티"
-                  value={newBookName}
-                />
-                <WebButton
-                  disabled={disableCreate}
-                  onClick={onCreateBook}
-                  variant="tertiary"
-                >
-                  {isCreatingBook ? "생성 중..." : "생성"}
-                </WebButton>
+            {!isCreateExpanded ? (
+              <button
+                className="web-modal-create-trigger"
+                onClick={() => setIsCreateExpanded(true)}
+                type="button"
+              >
+                <span className="web-modal-create-plus" aria-hidden="true">+</span>
+                새 레시피북 만들기
+              </button>
+            ) : (
+              <div className="web-modal-panel web-modal-create">
+                <div className="web-modal-create-row">
+                  <input
+                    autoFocus
+                    className="web-modal-input"
+                    maxLength={50}
+                    onChange={(event) => onNewBookNameChange(event.target.value)}
+                    placeholder="레시피북 이름"
+                    value={newBookName}
+                  />
+                  <WebButton
+                    disabled={disableCreate}
+                    onClick={onCreateBook}
+                    variant="tertiary"
+                  >
+                    {isCreatingBook ? "추가 중..." : "추가"}
+                  </WebButton>
+                </div>
+                {!isNewBookNameSafe ? (
+                  <p className="web-form-error mt-2">
+                    레시피북 이름을 다시 확인해 주세요.
+                  </p>
+                ) : null}
               </div>
-              {!isNewBookNameSafe ? (
-                <p className="web-form-error mt-2">
-                  레시피북 이름을 다시 확인해 주세요.
-                </p>
-              ) : null}
-            </div>
+            )}
 
             {saveErrorMessage ? (
               <p className="web-modal-panel web-modal-panel-error mt-4">

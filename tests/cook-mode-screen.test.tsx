@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+
 import React from "react";
 import {
   cleanup,
@@ -34,6 +36,8 @@ const mockRouterPush = vi.fn();
 const navigationMocks = vi.hoisted(() => ({
   searchParams: vi.fn(() => new URLSearchParams()),
 }));
+
+const GLOBAL_CSS = readFileSync("app/globals.css", "utf8");
 
 function installMatchMedia(matchesAppView: boolean) {
   Object.defineProperty(window, "matchMedia", {
@@ -665,12 +669,16 @@ describe("CookModeScreen", () => {
     const wholeBoard = await screen.findByTestId("cook-mode-whole-board");
     const layoutShell = screen.getByTestId("cook-mode-screen")
       .firstElementChild as HTMLElement;
+    const title = screen.getByTestId("cook-mode-title");
+    const headerRow = title.closest(".cook-mobile-whole-header-row");
     const ingredientList = screen.getByTestId("ingredient-list");
     const stepList = screen.getByTestId("step-list");
 
     expect(screen.queryByTestId("mobile-ingredient-summary")).toBeNull();
     expect(layoutShell.className).toContain("h-dvh");
     expect(layoutShell.className).toContain("pb-[92px]");
+    expect(headerRow?.contains(screen.getByLabelText("취소"))).toBe(true);
+    expect(headerRow?.contains(title)).toBe(true);
     expect(screen.getByTestId("cook-mode-content").firstElementChild).toBe(wholeBoard);
     expect(screen.getByTestId("cook-mode-servings").textContent).toContain(
       "3인분",
@@ -690,6 +698,22 @@ describe("CookModeScreen", () => {
     expect(screen.queryByTestId("cook-mode-current-step")).toBeNull();
     expect(screen.queryByTestId("cook-mode-current-amount-board")).toBeNull();
     expect(screen.queryByTestId("cook-mode-next-step")).toBeNull();
+  });
+
+  it("keeps cooking mode density rules viewport-driven in CSS", () => {
+    expect(GLOBAL_CSS).toContain(
+      ".web-cook-whole-screen {\n    min-height: calc(100dvh - var(--web-nav-h));",
+    );
+    expect(GLOBAL_CSS).toContain(
+      "height: max(640px, calc(100dvh - var(--web-nav-h) - 40px));",
+    );
+    expect(GLOBAL_CSS).toContain(
+      ".cook-whole-board-mobile .cook-whole-ingredients {\n  display: flex;",
+    );
+    expect(GLOBAL_CSS).toContain("flex-wrap: wrap;");
+    expect(GLOBAL_CSS).toContain(
+      ".cook-whole-board-mobile .cook-whole-ingredient {\n  display: inline-flex;",
+    );
   });
 
   it("defaults mobile cook mode to the service dark cooking board", async () => {
@@ -729,8 +753,17 @@ describe("CookModeScreen", () => {
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
     const stepList = await screen.findByTestId("step-list");
+    const firstMarker = within(stepList).getByTestId("cook-mode-step-marker-1");
+    const firstCopy = within(stepList).getByTestId("cook-mode-step-copy-1");
 
     expect(within(stepList).queryByText(/STEP/i)).toBeNull();
+    expect(firstMarker.contains(within(stepList).getByText("준비"))).toBe(true);
+    expect(
+      firstMarker.contains(within(stepList).getByTestId("cook-mode-step-number-1")),
+    ).toBe(true);
+    expect(firstCopy.closest(".cook-whole-step-copy")?.textContent).not.toContain(
+      "준비",
+    );
     expect(within(stepList).getByTestId("cook-mode-step-number-1")).toBeTruthy();
     expect(within(stepList).getByTestId("cook-mode-step-number-2")).toBeTruthy();
     expect(within(stepList).getByTestId("cook-mode-step-number-3")).toBeTruthy();

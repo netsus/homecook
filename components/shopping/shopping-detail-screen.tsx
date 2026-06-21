@@ -684,7 +684,6 @@ export function ShoppingDetailScreen({
                     }
                     onClick={handleToggleAllPurchaseItems}
                   />
-                  <span>체크 · 제외</span>
                 </div>
               ) : null}
             </div>
@@ -864,7 +863,6 @@ export function ShoppingDetailScreen({
                     }
                     onClick={handleToggleAllPurchaseItems}
                   />
-                  <span>체크 · 제외</span>
                 </div>
               ) : null}
             </div>
@@ -1543,11 +1541,17 @@ function MobileShoppingItemRow({
         </span>
       )}
 
-      <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+      <div
+        className="flex min-w-0 flex-1 items-baseline justify-start gap-2"
+        data-testid={`shopping-mobile-item-copy-${item.id}`}
+      >
         <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[var(--foreground)]">
           {itemName}
         </p>
-        <p className="shrink-0 max-w-[120px] truncate text-right text-[11px] font-semibold leading-[1.3] text-[var(--text-3)]">
+        <p
+          className="shrink-0 max-w-[96px] truncate text-left text-[12px] font-semibold leading-[1.3] text-[var(--text-3)]"
+          data-testid={`shopping-mobile-item-amount-${item.id}`}
+        >
           {amountText}
         </p>
       </div>

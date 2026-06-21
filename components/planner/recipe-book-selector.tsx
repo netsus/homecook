@@ -99,6 +99,8 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
     return (
       <button
         className={[
+          "planner-recipebook-selector-row",
+          `planner-recipebook-selector-row-${coverViewModel.tone}`,
           "mb-2 flex min-h-[74px] w-full items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3.5 text-left",
           hasRecipes
             ? "border-[var(--line-strong)] bg-[var(--surface)] active:border-[var(--brand)] active:bg-[var(--brand-soft)]"

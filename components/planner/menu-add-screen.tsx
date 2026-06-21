@@ -460,7 +460,7 @@ export function MenuAddScreen({
 
   const isOptionActive = useCallback(
     (id: (typeof MENU_ADD_OPTIONS)[number]["id"]) =>
-      (id === "search" && pickerMode === "search") ||
+      (id === "search" && (pickerMode === "none" || pickerMode === "search")) ||
       (id === "recipebook" &&
         (pickerMode === "recipebook-selector" ||
           pickerMode === "recipebook-detail")) ||

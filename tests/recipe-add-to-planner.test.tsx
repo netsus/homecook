@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import React from "react";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -24,6 +26,14 @@ const mockRouterReplace = vi.fn();
 const navigationMocks = vi.hoisted(() => ({
   searchParams: vi.fn(() => new URLSearchParams()),
 }));
+const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+
+function ruleBody(selector: string) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = globalsCss.match(new RegExp(`${escapedSelector}\\s*\\{([^}]+)\\}`));
+
+  return match?.[1] ?? "";
+}
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
@@ -388,6 +398,17 @@ describe("planner add flow", () => {
     expect(imageShell.className).toContain("web-modal-preview-thumb");
     expect(image?.getAttribute("src")).toContain("recipe-detail.jpg");
     expect(image?.className).toContain("web-modal-preview-thumb-image");
+    expect(
+      Array.from(dialog.querySelectorAll(".web-planner-add-section-label")).map(
+        (element) => element.textContent,
+      ),
+    ).toEqual(["날짜", "끼니", "인분"]);
+    expect(dialog.querySelector(".web-planner-servings-copy")?.textContent).toBe(
+      "인분 조절",
+    );
+    expect(ruleBody(".web-planner-add-section-label")).toContain("font-weight: 700;");
+    expect(ruleBody(".web-planner-servings-copy")).toContain("font-weight: 700;");
+    expect(ruleBody(".web-planner-servings-copy")).toContain("color: var(--web-text-1);");
     expect(
       within(dialog).getByRole("button", { name: "5/21 저녁에 추가" }),
     ).toBeTruthy();

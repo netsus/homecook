@@ -273,6 +273,7 @@ describe("StandaloneCookModeScreen", () => {
 
     expect(screen.getByText("김치찌개")).toBeTruthy();
     expect(screen.getByText("2인분")).toBeTruthy();
+    expect(screen.queryByText(/독립/)).toBeNull();
     expect(screen.getByTestId("ingredient-list")).toBeTruthy();
     expect(screen.getByTestId("step-list")).toBeTruthy();
     expect(screen.queryByTestId("standalone-cook-mode-tabs")).not.toBeTruthy();
@@ -444,6 +445,7 @@ describe("StandaloneCookModeScreen", () => {
     });
 
     const stepItemStyle = screen.getByTestId("step-item").getAttribute("style");
+    const marker = screen.getByTestId("cook-mode-step-marker-1");
     const methodBadge = screen
       .getAllByText("볶기")
       .find((element) =>
@@ -455,6 +457,12 @@ describe("StandaloneCookModeScreen", () => {
     expect(methodBadge?.getAttribute("aria-label")).toBe("팬/기름 조리 · 볶기");
     expect(methodBadge?.getAttribute("title")).toBe("팬/기름 조리 · 볶기");
     expect(methodBadgeStyle).toContain("var(--cook-stir)");
+    expect(marker.contains(methodBadge!)).toBe(true);
+    expect(
+      screen
+        .getByTestId("cook-mode-step-copy-1")
+        .closest(".cook-whole-step-copy")?.textContent,
+    ).not.toContain("볶기");
   });
 
   it("submits standalone complete with consumed ingredient ids", async () => {
@@ -691,6 +699,24 @@ describe("StandaloneCookModeScreen", () => {
     expect(
       screen.queryByRole("navigation", { name: "요리모드 하단 탭" }),
     ).toBeNull();
+  });
+
+  it("uses a compact standalone mobile header without the internal standalone label", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());
+
+    const Screen = await importScreen();
+    render(<Screen recipeId="recipe-1" servings={2} />);
+
+    const title = await screen.findByTestId("standalone-cook-mode-title");
+    const headerRow = title.closest(".cook-mobile-whole-header-row");
+    const subtitle = screen.getByTestId("standalone-cook-mode-servings");
+
+    expect(headerRow?.contains(screen.getByLabelText("취소"))).toBe(true);
+    expect(headerRow?.contains(title)).toBe(true);
+    expect(subtitle.textContent).toBe("요리모드 · 2인분");
+    expect(subtitle.textContent).not.toContain("독립");
   });
 
   it("defaults standalone mobile cook mode to the service dark cooking board", async () => {

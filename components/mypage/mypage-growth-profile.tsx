@@ -388,10 +388,33 @@ export function MypageGrowthProfile({
             />
           ))}
         </div>
-        <div
-          className="mt-3 h-20 rounded-[var(--radius-md)] bg-[var(--surface-subtle)]"
-          data-testid="mypage-gamification-loading"
-        />
+        {recordStats ? (
+          <div
+            className="mt-3 grid grid-cols-3 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)]"
+            data-testid="mypage-growth-record-stats-loading"
+          >
+            {[0, 1, 2].map((index) => (
+              <div
+                className={[
+                  "relative flex min-w-0 items-center justify-center gap-2 px-2 py-4",
+                  index > 0 ? "border-l border-[var(--line)]" : "",
+                ].join(" ")}
+                key={index}
+              >
+                <div className="h-10 w-10 shrink-0 rounded-full bg-[var(--surface-subtle)]" />
+                <div className="grid min-w-0 gap-1">
+                  <div className="h-3 w-12 rounded-full bg-[var(--surface-subtle)]" />
+                  <div className="h-5 w-8 rounded-full bg-[var(--surface-subtle)]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            className="mt-3 h-20 rounded-[var(--radius-md)] bg-[var(--surface-subtle)]"
+            data-testid="mypage-gamification-loading"
+          />
+        )}
       </div>
     );
   }

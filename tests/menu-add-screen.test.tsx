@@ -445,6 +445,19 @@ describe("MenuAddScreen", () => {
     expect(screen.queryByTestId("manual-recipe-embedded")).toBeNull();
   });
 
+  it("marks recipe search as the active desktop option on first entry", () => {
+    installMatchMedia(true);
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const searchOption = screen.getByTestId("menu-add-option-search");
+    const recipeBookOption = screen.getByTestId("menu-add-option-recipebook");
+
+    expect(searchOption.className).toContain("web-menu-add-card-active");
+    expect(recipeBookOption.className).not.toContain("web-menu-add-card-active");
+    expect(screen.getByLabelText("레시피 검색")).toBeTruthy();
+  });
+
   it("resets the desktop picker by clicking the active option again", async () => {
     installMatchMedia(true);
 

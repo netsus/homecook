@@ -768,6 +768,7 @@ describe("MypageScreen", () => {
     });
     expect(screen.queryByTestId("mypage-mobile-loading")).toBeNull();
     expect(screen.getByTestId("mypage-growth-profile-loading")).toBeTruthy();
+    expect(screen.getByTestId("mypage-growth-record-stats-loading")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "마이페이지" })).toBeTruthy();
     expect(screen.getByTestId("mobile-saved-recipes-rail")).toBeTruthy();
     expect(within(screen.getByTestId("mypage-menu-card")).getByText("레시피북")).toBeTruthy();
@@ -1308,8 +1309,10 @@ describe("MypageScreen", () => {
     expect(within(skeleton).getAllByTestId("mypage-loading-growth-action")).toHaveLength(3);
     expect(within(skeleton).getByTestId("mypage-loading-progress-meter")).toBeTruthy();
     expect(within(skeleton).queryByTestId("mypage-legacy-loading-list")).toBeNull();
-    expect(container.querySelector(".web-mypage-loading-tabs")).toBeNull();
-    expect(container.querySelector(".web-mypage-panel")).toBeNull();
+    expect(within(skeleton).getByTestId("mypage-loading-tabs")).toBeTruthy();
+    expect(within(skeleton).getByTestId("mypage-loading-panel")).toBeTruthy();
+    expect(within(skeleton).getAllByTestId("mypage-loading-panel-card")).toHaveLength(3);
+    expect(container.querySelector(".web-mypage-panel")).toBeTruthy();
     expect(container.querySelectorAll('[data-testid="mypage-loading-growth-profile"]')).toHaveLength(1);
     expect(screen.getByRole("link", { name: "마이페이지" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "팬트리" })).toBeTruthy();
@@ -1326,6 +1329,10 @@ describe("MypageScreen", () => {
     expect(screen.getByTestId("mypage-mobile-loading-growth-profile")).toBeTruthy();
     expect(screen.getAllByTestId("mypage-mobile-loading-growth-action")).toHaveLength(3);
     expect(screen.getByTestId("mypage-mobile-loading-progress-meter")).toBeTruthy();
+    expect(screen.getByTestId("mypage-mobile-loading-saved-recipes")).toBeTruthy();
+    expect(screen.getAllByTestId("mypage-mobile-loading-saved-card")).toHaveLength(3);
+    expect(screen.getByTestId("mypage-mobile-loading-menu")).toBeTruthy();
+    expect(screen.getAllByTestId("mypage-mobile-loading-menu-row")).toHaveLength(5);
     expect(screen.getByRole("heading", { name: "마이페이지" }).className).toContain(
       "text-[var(--brand)]",
     );
