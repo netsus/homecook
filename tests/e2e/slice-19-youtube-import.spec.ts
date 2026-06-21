@@ -5,7 +5,7 @@ const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 const YOUTUBE_IMPORT_URL = "/menu/add/youtube";
-const YOUTUBE_IMPORT_SCREEN_HEADING = "영상 링크에서 레시피를 추출해요";
+const YOUTUBE_IMPORT_SCREEN_HEADING = "유튜브 가져오기";
 const YOUTUBE_REVIEW_HEADING = "추출 결과를 확인해 주세요";
 const YOUTUBE_IMPORT_EMBEDDED_URL =
   "/menu-add?date=2026-05-15&columnId=column-abc-123&slot=lunch&source=youtube";
@@ -346,7 +346,7 @@ test.describe("Slice 19: YouTube Import", () => {
     // Step 2 → Step 3: extraction progress transitions to review
     // The extracting screen may be brief; we verify review arrives
     await expect(page.getByRole("heading", { name: YOUTUBE_REVIEW_HEADING })).toBeVisible({ timeout: 15000 });
-    await expect(page.locator(".yt-mobile-import-shell")).toHaveCSS("overflow-y", "auto");
+    await expect(page.locator(".yt-mobile-import-shell")).toHaveCSS("overflow-y", "hidden");
 
     await expect(page.locator("[data-testid='extraction-method-chips']")).toHaveCount(0);
     await expect(page.locator("[data-testid^='extraction-method-']")).toHaveCount(0);
