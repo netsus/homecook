@@ -327,7 +327,7 @@ test.describe("Slice 27: YouTube Import Quality Uplift", () => {
     await page.goto(YOUTUBE_IMPORT_URL);
 
     // Step 1: URL input
-    await expect(page.getByRole("heading", { name: "영상 링크에서 레시피를 추출해요" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "유튜브 가져오기" })).toBeVisible();
     await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
     await page.click('button:has-text("가져오기")');
 

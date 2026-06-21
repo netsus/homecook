@@ -187,6 +187,7 @@ test.describe("Slice 15a cook planner complete", () => {
     );
     const methodTag = page.getByText("볶기").first();
 
+    await expect(completeButton).toBeVisible();
     await expect(firstHighlight).toHaveText("양파");
     await expect(firstStepCopy).not.toContainText("1개");
 
@@ -198,14 +199,18 @@ test.describe("Slice 15a cook planner complete", () => {
     );
     const methodTagBox = await methodTag.boundingBox();
     const contentBox = await content.boundingBox();
-    const completeButtonBox = await completeButton.boundingBox();
+    const viewportHeight = page.viewportSize()?.height ?? 720;
+    const documentScrollHeight = await page.evaluate(
+      () => document.documentElement.scrollHeight,
+    );
 
     expect(highlightWeight).toBeGreaterThan(copyWeight);
     expect(copyWeight).toBeLessThanOrEqual(500);
     expect(methodTagBox?.height ?? 0).toBeLessThanOrEqual(24);
     expect((contentBox?.y ?? 0) + (contentBox?.height ?? 0)).toBeLessThanOrEqual(
-      (completeButtonBox?.y ?? 0) + 1,
+      viewportHeight + 1,
     );
+    expect(documentScrollHeight).toBeLessThanOrEqual(viewportHeight + 32);
   });
 
   test("whole-board shows all ingredients and all steps without navigation", async ({ page }) => {

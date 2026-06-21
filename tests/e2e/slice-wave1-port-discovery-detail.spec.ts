@@ -86,11 +86,14 @@ test.describe("wave1 port discovery detail", () => {
         page.locator("button:visible").filter({ hasText: "재료로 검색" }).first(),
       ).toBeVisible();
       await expect(
-        recipeListSection.getByRole("button", { name: "전체" }),
-      ).not.toBeVisible();
+        recipeListSection.getByRole("button", { name: /^전체$/ }),
+      ).toHaveCount(0);
       await expect(
-        recipeListSection.getByRole("button", { name: "다이어트" }),
-      ).not.toBeVisible();
+        recipeListSection.getByRole("button", { name: /^다이어트$/ }),
+      ).toHaveCount(0);
+      await expect(
+        recipeListSection.getByRole("button", { name: /다이어트 식단/ }),
+      ).toBeVisible();
     } else {
       await expect(
         page.locator("button:visible").filter({ hasText: "재료로 검색" }).first(),

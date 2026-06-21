@@ -273,10 +273,7 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
       await page.getByRole("button", { name: "목록" }).click();
       await expect(recipeItem(page, "recipe-2")).toBeVisible();
     } else {
-      await page
-        .getByRole("navigation", { name: /목차/ })
-        .getByRole("button", { name: /김치볶음밥/ })
-        .click();
+      await page.getByRole("button", { name: "다음 레시피" }).click();
       await expect(recipeItem(page, "recipe-2")).toBeVisible();
     }
 
@@ -434,14 +431,11 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
       await expect(recipeItem(page, "recipe-3")).toBeVisible();
       await expect(recipeItem(page, "recipe-2")).toHaveCount(1);
     } else {
-      const mobileToc = page.getByRole("navigation", { name: /목차/ });
-      await expect(
-        mobileToc.getByRole("button", { name: /비빔국수/ }),
-      ).toBeVisible();
-      await expect(
-        mobileToc.getByRole("button", { name: /김치볶음밥/ }),
-      ).toHaveCount(1);
-      await mobileToc.getByRole("button", { name: /비빔국수/ }).click();
+      await expect(page.getByTestId("recipebook-mobile-toc-trigger")).toContainText(
+        "1 / 3",
+      );
+      await page.getByRole("button", { name: "다음 레시피" }).click();
+      await page.getByRole("button", { name: "다음 레시피" }).click();
       await expect(recipeItem(page, "recipe-3")).toBeVisible();
     }
   });
@@ -523,10 +517,10 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
 
     await expect(page.getByText("제거에 실패했어요.")).toBeVisible();
     if (!isDesktopViewport(page)) {
-      await page
-        .getByRole("navigation", { name: /목차/ })
-        .getByRole("button", { name: /된장찌개/ })
-        .click();
+      const previousRecipe = page.getByRole("button", { name: "이전 레시피" });
+      if (await previousRecipe.isEnabled()) {
+        await previousRecipe.click();
+      }
     }
     await expect(recipeItem(page, "recipe-1")).toBeVisible();
   });
