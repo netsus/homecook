@@ -8,6 +8,7 @@ const ADMIN_TABS = [
   { href: "/admin", label: "대시보드" },
   { href: "/admin/users", label: "사용자" },
   { href: "/admin/events", label: "이벤트" },
+  { href: "/admin/feedback", label: "피드백" },
   { href: "/admin/audit-logs", label: "감사로그" },
 ] as const;
 

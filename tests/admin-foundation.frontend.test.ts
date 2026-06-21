@@ -189,6 +189,30 @@ describe("admin page-view API route", () => {
     );
   });
 
+  it("records the admin feedback page path in page-view audit", async () => {
+    setupRouteUser({ id: "admin-1" });
+    const serviceClient = setupAdminServiceClient();
+
+    const { POST } = await importPageViewRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/admin/page-view", {
+        body: JSON.stringify({ path: "/admin/feedback?ignored=query" }),
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(serviceClient.__queries.auditInsertQuery.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "admin_page_view",
+        request_path: "/admin/feedback",
+      }),
+    );
+  });
+
   it("falls back to /admin when page-view path is not an admin page", async () => {
     setupRouteUser({ id: "admin-1" });
     const serviceClient = setupAdminServiceClient();
@@ -316,6 +340,8 @@ describe("admin frontend structure validation", () => {
   it("has admin shell with disabled future nav placeholders", async () => {
     const shell = await readFile("components/admin/admin-shell.tsx", "utf8");
 
+    expect(shell).toContain("/admin/feedback");
+    expect(shell).toContain("피드백");
     expect(shell).toContain("커뮤니티");
     expect(shell).toContain("신고");
     expect(shell).toContain("제재");
@@ -329,9 +355,16 @@ describe("admin frontend structure validation", () => {
     const dashboardPage = await readFile("app/admin/page.tsx", "utf8");
     const usersPage = await readFile("app/admin/users/page.tsx", "utf8");
     const eventsPage = await readFile("app/admin/events/page.tsx", "utf8");
+    const feedbackPage = await readFile("app/admin/feedback/page.tsx", "utf8");
     const auditLogsPage = await readFile("app/admin/audit-logs/page.tsx", "utf8");
 
-    for (const page of [dashboardPage, usersPage, eventsPage, auditLogsPage]) {
+    for (const page of [
+      dashboardPage,
+      usersPage,
+      eventsPage,
+      feedbackPage,
+      auditLogsPage,
+    ]) {
       expect(page).toContain("AdminAuthGuard");
       expect(page).toContain("AdminShell");
     }
@@ -346,12 +379,21 @@ describe("admin frontend structure validation", () => {
       "components/admin/admin-events-screen.tsx",
       "utf8",
     );
+    const feedbackScreen = await readFile(
+      "components/admin/admin-feedback-screen.tsx",
+      "utf8",
+    );
     const auditLogsScreen = await readFile(
       "components/admin/admin-audit-logs-screen.tsx",
       "utf8",
     );
 
-    for (const screen of [usersScreen, eventsScreen, auditLogsScreen]) {
+    for (const screen of [
+      usersScreen,
+      eventsScreen,
+      feedbackScreen,
+      auditLogsScreen,
+    ]) {
       expect(screen).toContain('"loading"');
       expect(screen).toContain('"empty"');
       expect(screen).toContain('"error"');
@@ -396,6 +438,25 @@ describe("admin frontend structure validation", () => {
     expect(eventsScreen).toContain("상세 메타데이터");
   });
 
+  it("feedback screen reads only 404 feedback operational events", async () => {
+    const feedbackScreen = await readFile(
+      "components/admin/admin-feedback-screen.tsx",
+      "utf8",
+    );
+
+    expect(feedbackScreen).toContain('FEEDBACK_EVENT_TYPE = "not_found_feedback"');
+    expect(feedbackScreen).toContain('FEEDBACK_SOURCE = "web"');
+    expect(feedbackScreen).toContain("fetchAdminOperationalEvents");
+    expect(feedbackScreen).toContain("feedback_text");
+    expect(feedbackScreen).toContain("current_path");
+    expect(feedbackScreen).toContain("referrer_path");
+    expect(feedbackScreen).toContain("is_authenticated");
+    expect(feedbackScreen).toContain("아직 404 피드백이 없어요");
+    expect(feedbackScreen).toContain("total={state.data.total}");
+    expect(feedbackScreen).not.toContain("user_agent_hash");
+    expect(feedbackScreen).not.toContain("anonymous_id");
+  });
+
   it("audit logs screen includes actor filter and actor/hash display fields", async () => {
     const auditLogsScreen = await readFile(
       "components/admin/admin-audit-logs-screen.tsx",
@@ -418,12 +479,21 @@ describe("admin frontend structure validation", () => {
       "components/admin/admin-events-screen.tsx",
       "utf8",
     );
+    const feedbackScreen = await readFile(
+      "components/admin/admin-feedback-screen.tsx",
+      "utf8",
+    );
     const auditLogsScreen = await readFile(
       "components/admin/admin-audit-logs-screen.tsx",
       "utf8",
     );
 
-    for (const screen of [usersScreen, eventsScreen, auditLogsScreen]) {
+    for (const screen of [
+      usersScreen,
+      eventsScreen,
+      feedbackScreen,
+      auditLogsScreen,
+    ]) {
       expect(screen).toContain("total={state.data.total}");
       expect(screen).toContain("onPageChange={setPage}");
     }

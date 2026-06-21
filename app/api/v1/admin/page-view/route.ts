@@ -6,6 +6,7 @@ const ALLOWED_ADMIN_PAGE_PATHS = new Set([
   "/admin",
   "/admin/users",
   "/admin/events",
+  "/admin/feedback",
   "/admin/audit-logs",
 ]);
 
