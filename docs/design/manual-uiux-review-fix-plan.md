@@ -17,6 +17,7 @@
 - Trigger: 배포 사이트 기준으로 32~35가 미반영이고, 41/42/44/47/51/58/63/64는 사용자 의도와 다르게 적용되어 재작업 필요.
 - Implemented:
   - 32: 웹 HOME 카드 태그 영역을 한 줄로 제한하고 카드 body 높이를 안정화해 태그 줄 수에 따른 grid 간격 흔들림을 막았다.
+    - Follow-up: `fix/home-card-tag-overflow`에서 긴 태그 칩 내부 텍스트가 세로로 줄바꿈되는 재발 케이스를 막기 위해 tag chip 자체를 `nowrap`/ellipsis 처리했다.
   - 33: 웹/앱 HOME 레시피 카드에서 상세에서 확인할 수 없는 `+N` tag chip을 제거했다.
   - 34: HOME 웹/앱 우측 상단 프로필 버튼을 summary popover trigger로 바꾸고 닉네임, 등급, 레벨, 요리/플래너/장보기 기록, 알림 preview를 표시했다.
   - 35: 신규/초기 사용자에게 HOME profile summary 안에서 active tutorial quest title을 알림과 함께 표시했다.
@@ -1706,7 +1707,7 @@ Implementation note:
 
 ### 32. 웹 홈 레시피 카드의 세로 간격이 태그 줄 수에 따라 달라지는 문제
 
-- Status: reworked in `fix/manual-uiux-round3-redo`
+- Status: reworked in `fix/manual-uiux-round3-redo`; follow-up in `fix/home-card-tag-overflow`
 - Severity: Medium
 - Area: UI / UX / Frontend
 - Source: user manual review screenshots, web HOME recipe cards
@@ -1721,12 +1722,14 @@ Implementation note:
 - Recommended fix:
   - 웹 홈 레시피 카드의 body 높이와 태그 영역 높이를 안정화한다.
   - 카드 preview에서는 태그 영역을 1줄 또는 정해진 높이로 제한해 카드 높이가 태그 wrap에 따라 늘어나지 않게 한다.
+  - 긴 태그 칩 내부 텍스트도 줄바꿈되지 않게 `nowrap`과 말줄임으로 제한한다.
   - 태그를 줄이는 경우, 어떤 태그를 보여줄지 source/type/title 중복 제거 helper를 먼저 적용한다.
   - 카드 전체 높이, 이미지 비율, 제목 2줄 clamp, meta, tag row가 모든 카드에서 같은 리듬으로 보이게 맞춘다.
   - 단순히 grid gap을 줄이는 방식으로 숨기지 않는다. 원인은 카드 높이 변동이므로 카드 내부 레이아웃을 고정한다.
 - Acceptance criteria:
   - 웹 HOME 레시피 카드 목록에서 태그가 많은 카드와 적은 카드가 섞여도 행 간격이 균일하게 보인다.
   - 태그가 0개, 1개, 3개 이상인 카드가 같은 grid row에 있어도 카드 높이와 다음 행 시작점이 어색하게 흔들리지 않는다.
+  - 긴 태그 텍스트가 태그 칩 안에서 세로로 쪼개져 보이지 않고, 한 줄에서 말줄임 처리된다.
   - 제목 2줄, 조회/저장 meta, 북마크 버튼, 이미지 badge 위치는 기존 역할을 유지한다.
   - 모바일 홈 카드 레이아웃은 이번 수정으로 의도치 않게 바뀌지 않는다.
 - Likely implementation target:
@@ -1737,7 +1740,7 @@ Implementation note:
   - 필요 시 HOME web screenshot / visual QA
 - Verification:
   - 태그가 많은 recipe fixture와 태그가 적은 recipe fixture를 같은 웹 HOME grid에 놓고 카드 높이/row gap을 확인한다.
-  - `tests/manual-uiux-layout-policy.test.ts`에서 `.web-recipe-card-tags` 또는 `.web-home-recipe-card`의 높이 안정화 규칙을 고정한다.
+  - `tests/home-screen.test.tsx`에서 `.web-recipe-card-tags` 높이 안정화와 `.web-recipe-card-tag` 내부 nowrap/ellipsis 규칙을 고정한다.
   - 웹 HOME screenshot에서 카드 간격이 균일한지 확인한다.
 
 ### 33. 웹 홈 카드의 `+N` 태그 표시가 상세 화면과 맞지 않아 추가 태그처럼 오해되는 문제

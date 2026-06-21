@@ -407,6 +407,11 @@ describe("home screen", () => {
     expect(ruleBody(".web-recipe-card-tags")).toContain("flex-wrap: nowrap;");
     expect(ruleBody(".web-recipe-card-tags")).toContain("max-height: 24px;");
     expect(ruleBody(".web-recipe-card-tags")).toContain("overflow: hidden;");
+    expect(ruleBody(".web-recipe-card-tag")).toContain("white-space: nowrap;");
+    expect(ruleBody(".web-recipe-card-tag")).toContain("text-overflow: ellipsis;");
+    expect(ruleBody(".web-recipe-card-tag")).toContain("overflow: hidden;");
+    expect(ruleBody(".web-recipe-card-tag")).toContain("min-width: 0;");
+    expect(ruleBody(".web-recipe-card-tag")).toContain("max-width: 100%;");
     expect(ruleBody(".web-home-recipe-card .web-recipe-card")).toContain("height: 100%;");
   });
 
