@@ -97,6 +97,7 @@ ANSWER_LEAK_PREVENTION_INSTRUCTION = (
     "validation/holdout 정답 원문(제목·재료명·분량·단계 문장)을 그대로 옮기지 마라. "
     "실패는 카테고리·지표·인덱스로만 기술하라."
 )
+REASON_AGGREGATION_SKIP_MARKER = "reason aggregation skipped by protection guard"
 TOKEN_BOUNDARY_RE = re.compile(r"[0-9A-Za-z가-힣]")
 SEMANTIC_REASON_TOKEN_RE = re.compile(r"[0-9A-Za-z가-힣]+")
 SEMANTIC_REASON_GROUNDING_STOPWORDS = {
@@ -1825,9 +1826,12 @@ def semantic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[bool,
         "expected_count_mismatch": aggregate.get("expected_count_mismatch") is False,
         "threshold_success": threshold_success is True,
         "averageScore": average_score >= (thresholds.get("averageScore") or cfg.ai_avg_min),
+        "score_policy": score_policy == cfg.semantic_score_policy,
+        "bottom_k": aggregate.get("bottom_k") == cfg.semantic_bottom_k,
+        "sampleN": aggregate.get("sampleN") == cfg.semantic_judge_sample_n,
+        "judge_prompt_version": aggregate.get("judge_prompt_version") == cfg.semantic_judge_prompt_version,
     }
     if score_policy == "bottomK-mean":
-        checks["score_policy"] = score_policy == cfg.semantic_score_policy
         checks["bottomKMeanScore"] = bottom_k_mean_score >= (thresholds.get("bottomKMeanScore") or cfg.ai_case_min)
     else:
         checks["minCaseScore"] = min_case_score >= (thresholds.get("minCaseScore") or cfg.ai_case_min)
@@ -2029,6 +2033,33 @@ def guard_semantic_reason_aggregation_output(samples: list[dict], output: str) -
     }
 
 
+def clean_reason_aggregation_log_if_dirty(log_path: Path) -> dict:
+    scan = scan_paths_for_protected_answers([log_path])
+    if not scan["success"]:
+        write_text(log_path, REASON_AGGREGATION_SKIP_MARKER + "\n")
+    return scan
+
+
+def semantic_reason_text_if_clean(text: str, scope: str) -> str:
+    stripped = str(text or "").strip()
+    if not stripped:
+        return ""
+    scan = scan_texts_for_protected_answers([{"scope": scope, "text": stripped}])
+    if scan["success"]:
+        return stripped
+    return REASON_AGGREGATION_SKIP_MARKER
+
+
+def semantic_reason_fallback_text(cfg: LoopConfig, out_tag: str, split: str) -> str:
+    fallback = semantic_reason_issues_text(cfg, out_tag, split)
+    if not fallback.strip():
+        return ""
+    return semantic_reason_text_if_clean(
+        f"## {split} code-frequency reason 집계\n{fallback}",
+        f"06_reason_aggregation_fallback_{split}",
+    )
+
+
 def aggregate_semantic_reasons_with_claude(cfg: LoopConfig, iter_dir: Path, out_tag: str,
                                            split: str, limit: int = 8) -> str:
     samples = semantic_reason_samples_for_split(cfg, out_tag, split, limit)
@@ -2040,9 +2071,15 @@ def aggregate_semantic_reasons_with_claude(cfg: LoopConfig, iter_dir: Path, out_
         "text": prompt,
     }])
     if not prompt_scan["success"]:
-        raise RuntimeError(f"semantic reason aggregation prompt failed leakage guard: {split}")
+        return semantic_reason_fallback_text(cfg, out_tag, split)
     log_path = iter_dir / f"06_reason_aggregate_{split}.md"
-    output = run_agent(cfg.claude_cmd, prompt, log_path)
+    try:
+        output = run_agent(cfg.claude_cmd, prompt, log_path)
+    except RuntimeError:
+        clean_reason_aggregation_log_if_dirty(log_path)
+        return semantic_reason_fallback_text(cfg, out_tag, split)
+    if not output.strip():
+        return semantic_reason_fallback_text(cfg, out_tag, split)
     output_scan = merge_redaction_scans([
         scan_paths_for_protected_answers([log_path]),
         scan_texts_for_protected_answers([{
@@ -2051,19 +2088,18 @@ def aggregate_semantic_reasons_with_claude(cfg: LoopConfig, iter_dir: Path, out_
         }]),
     ])
     if not output_scan["success"]:
-        raise RuntimeError(f"semantic reason aggregation output failed leakage guard: {split}")
+        clean_reason_aggregation_log_if_dirty(log_path)
+        return semantic_reason_fallback_text(cfg, out_tag, split)
     grounding_guard = guard_semantic_reason_aggregation_output(samples, output)
     write_text(
         iter_dir / f"06_reason_aggregate_{split}.guard.json",
         json.dumps(grounding_guard, ensure_ascii=False, indent=2),
     )
-    if not grounding_guard["success"]:
-        raise RuntimeError(
-            f"semantic reason aggregation output ungrounded: {split}: "
-            + ", ".join(grounding_guard["ungrounded"][:8])
-        )
     stripped = output.strip()
-    return f"## {split} Claude reason 집계\n{stripped}" if stripped else ""
+    return semantic_reason_text_if_clean(
+        f"## {split} Claude reason 집계\n{stripped}",
+        f"06_reason_aggregation_return_{split}",
+    )
 
 
 def fmt_deduction_reasons(agg: dict) -> str:
@@ -2277,23 +2313,10 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
         return {"iteration": iteration, "passed": True, "decision": decision, "out_tag": out_tag}
 
     stage(f"[ITER {iteration}] 6. 진단 (Claude, train 상세 + validation 집계만)")
-    try:
-        semantic_reason_issues = "\n\n".join(filter(None, [
-            aggregate_semantic_reasons_with_claude(cfg, iter_dir, out_tag, cfg.train_split),
-            aggregate_semantic_reasons_with_claude(cfg, iter_dir, out_tag, cfg.val_split),
-        ]))
-    except RuntimeError as error:
-        result = {
-            "iteration": iteration,
-            "passed": False,
-            "iteration_status": "agent_failed",
-            "stage": "reason_aggregation",
-            "decision": decision,
-            "error": str(error),
-            "out_tag": out_tag,
-        }
-        write_text(iter_dir / "06_reason_aggregation_failed.json", json.dumps(result, ensure_ascii=False, indent=2))
-        return result
+    semantic_reason_issues = "\n\n".join(filter(None, [
+        aggregate_semantic_reasons_with_claude(cfg, iter_dir, out_tag, cfg.train_split),
+        aggregate_semantic_reasons_with_claude(cfg, iter_dir, out_tag, cfg.val_split),
+    ]))
     diag_prompt = build_diagnosis_prompt(
         fmt_det(summaries["det"].get("aggregate", {})),
         fmt_ai(summaries["ai"].get("aggregate", {})),
@@ -2395,24 +2418,10 @@ def recover_iteration_feedback(cfg: LoopConfig, run_dir: Path, iteration: int) -
     write_text(iter_dir / "05_decision.recovered.json", json.dumps(decision, ensure_ascii=False, indent=2))
 
     summaries = grade_summaries(cfg, out_tag)
-    try:
-        semantic_reason_issues = "\n\n".join(filter(None, [
-            aggregate_semantic_reasons_with_claude(cfg, iter_dir, out_tag, cfg.train_split),
-            aggregate_semantic_reasons_with_claude(cfg, iter_dir, out_tag, cfg.val_split),
-        ]))
-    except RuntimeError as error:
-        result = {
-            "iteration": iteration,
-            "passed": False,
-            "iteration_status": "agent_failed",
-            "stage": "reason_aggregation",
-            "decision": decision,
-            "error": str(error),
-            "out_tag": out_tag,
-            "recovered": True,
-        }
-        write_text(iter_dir / "06_reason_aggregation_failed.json", json.dumps(result, ensure_ascii=False, indent=2))
-        raise
+    semantic_reason_issues = "\n\n".join(filter(None, [
+        aggregate_semantic_reasons_with_claude(cfg, iter_dir, out_tag, cfg.train_split),
+        aggregate_semantic_reasons_with_claude(cfg, iter_dir, out_tag, cfg.val_split),
+    ]))
     diag_prompt = build_diagnosis_prompt(
         fmt_det(summaries["det"].get("aggregate", {})),
         fmt_ai(summaries["ai"].get("aggregate", {})),

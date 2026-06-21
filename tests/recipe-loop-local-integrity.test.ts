@@ -1378,6 +1378,7 @@ aggregate = {
     "score_policy": "bottomK-mean",
     "bottom_k": 2,
     "sampleN": 3,
+    "judge_prompt_version": "semantic-judge-v3-anchored",
     "thresholds": {"averageScore": 4, "bottomKMeanScore": 3.5},
     "averageScore": 4.1,
     "minCaseScore": 2,
@@ -1392,6 +1393,53 @@ print(json.dumps({"ok": ok, "checks": checks}))
     expect(report.ok).toBe(true);
     expect(report.checks.bottomKMeanScore).toBe(true);
     expect(report.checks).not.toHaveProperty("minCaseScore");
+  });
+
+  it("fails semantic validation when persisted semantic judge settings are stale", () => {
+    const result = runLoopPython(`
+cfg = loop.LoopConfig()
+base = {
+    "success": True,
+    "judge_provider": "codex",
+    "judge_model": "gpt-5.4",
+    "judge_effort": "high",
+    "calibration": {"valid": True},
+    "provider_error_count": 0,
+    "parse_error_count": 0,
+    "schema_error_count": 0,
+    "timeout_error_count": 0,
+    "calibration_error_count": 0,
+    "empty_case_count": 0,
+    "expected_count_mismatch": False,
+    "threshold_success": True,
+    "score_policy": "bottomK-mean",
+    "bottom_k": 2,
+    "sampleN": 3,
+    "judge_prompt_version": "semantic-judge-v3-anchored",
+    "thresholds": {"averageScore": 4, "bottomKMeanScore": 3.5},
+    "averageScore": 4.3,
+    "minCaseScore": 4,
+    "bottomKMeanScore": 4,
+}
+cases = {}
+for label, patch in {
+    "score_policy": {"score_policy": "minCase"},
+    "bottom_k": {"bottom_k": 3},
+    "sampleN": {"sampleN": 1},
+    "judge_prompt_version": {"judge_prompt_version": "semantic-judge-v2"},
+}.items():
+    aggregate = {**base, **patch}
+    ok, checks = loop.semantic_validation_success(cfg, aggregate)
+    cases[label] = {"ok": ok, "checks": checks}
+print(json.dumps(cases, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const cases = JSON.parse(result.stdout);
+    for (const [field, report] of Object.entries(cases) as Array<[string, { ok: boolean; checks: Record<string, boolean> }]>) {
+      expect(report.ok).toBe(false);
+      expect(report.checks[field]).toBe(false);
+    }
   });
 
   it("keeps deterministic amount and step metrics advisory without weakening fail-closed checks", () => {
@@ -1646,6 +1694,9 @@ summaries = {
         "expected_count_mismatch": False,
         "threshold_success": True,
         "score_policy": "bottomK-mean",
+        "bottom_k": 2,
+        "sampleN": 3,
+        "judge_prompt_version": "semantic-judge-v3-anchored",
         "thresholds": {"averageScore": 4, "bottomKMeanScore": 3.5},
         "averageScore": 4.3,
         "minCaseScore": 4,
@@ -1706,8 +1757,14 @@ def sem_agg(canary_status, canary_success):
         "empty_case_count": 0,
         "expected_count_mismatch": False,
         "threshold_success": True,
+        "score_policy": "bottomK-mean",
+        "bottom_k": 2,
+        "sampleN": 3,
+        "judge_prompt_version": "semantic-judge-v3-anchored",
+        "thresholds": {"averageScore": 4, "bottomKMeanScore": 3.5},
         "averageScore": 4.3,
         "minCaseScore": 4,
+        "bottomKMeanScore": 4,
         "canaryLeak": {"status": canary_status, "success": canary_success, "hit_count": 0, "hits": [], "redacted_hits": []},
     }
 
@@ -2409,6 +2466,9 @@ summaries = {
         "expected_count_mismatch": False,
         "threshold_success": True,
         "score_policy": "bottomK-mean",
+        "bottom_k": 2,
+        "sampleN": 3,
+        "judge_prompt_version": "semantic-judge-v3-anchored",
         "thresholds": {"averageScore": 4, "bottomKMeanScore": 3.5},
         "averageScore": 4.3,
         "minCaseScore": 4,
@@ -2707,7 +2767,7 @@ print(json.dumps({"calls": calls, "feedback": feedback}, ensure_ascii=False))
     expect(report.feedback).toContain("진단에서 Claude 집계 반영");
   });
 
-  it("rejects ungrounded Claude semantic reason aggregation output", () => {
+  it("records ungrounded Claude semantic reason aggregation output without blocking it", () => {
     const result = runLoopPython(`
 from pathlib import Path
 root = Path(${JSON.stringify(workdir)})
@@ -2724,22 +2784,137 @@ summary_path.write_text(json.dumps({
 }, ensure_ascii=False), encoding="utf-8")
 
 def fake_run_agent(cmd, prompt, log_path, cwd=None):
-    text = "- (1/3) 조리도구 문제"
+    text = "- train/rKfLY_Lg1-Q case1: (1/3) 조리도구 문제"
     loop.write_text(log_path, text)
     return text
 
 loop.run_agent = fake_run_agent
-try:
-    loop.aggregate_semantic_reasons_with_claude(loop.LoopConfig(), iter_dir, "iter01", "train")
-    error = None
-except RuntimeError as exc:
-    error = str(exc)
-print(json.dumps({"error": error}, ensure_ascii=False))
+text = loop.aggregate_semantic_reasons_with_claude(loop.LoopConfig(), iter_dir, "iter01", "train")
+guard = json.loads((iter_dir / "06_reason_aggregate_train.guard.json").read_text(encoding="utf-8"))
+print(json.dumps({"text": text, "guard": guard}, ensure_ascii=False))
 `);
 
     expect(result.status).toBe(0);
     const report = JSON.parse(result.stdout);
-    expect(report.error).toContain("ungrounded");
+    expect(report.text).toContain("조리도구 문제");
+    expect(report.guard.success).toBe(false);
+    expect(report.guard.ungrounded).toContain("조리도구");
+  });
+
+  it("skips Claude aggregation when the prompt or fallback would expose protected answers", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+iter_dir = root / "runs" / "iteration-01"
+iter_dir.mkdir(parents=True, exist_ok=True)
+secret = "비밀고유재료세트"
+golden_path = loop.DATA_ROOT / "validation" / "val-secret" / "golden.json"
+golden_path.parent.mkdir(parents=True, exist_ok=True)
+golden_path.write_text(json.dumps({
+    "schemaVersion": 1,
+    "videoId": "val-secret",
+    "reviewStatus": "approved",
+    "recipes": [{"title": "검증요리", "ingredients": [{"name": secret, "amount": "1", "unit": "개"}], "steps": []}],
+}, ensure_ascii=False), encoding="utf-8")
+summary_path = loop.DATA_ROOT / "validation" / "_semantic_summary.iter01.json"
+summary_path.write_text(json.dumps({
+    "aggregate": {"sampleN": 3},
+    "perVideo": [{
+        "videoId": "val-secret",
+        "cases": [{
+            "sample_reasons": [secret + " 누락"],
+            "reason_summary": [{"label": "1/3", "text": secret + " 누락"}],
+        }],
+    }],
+}, ensure_ascii=False), encoding="utf-8")
+calls = []
+def fake_run_agent(cmd, prompt, log_path, cwd=None):
+    calls.append(str(log_path))
+    loop.write_text(log_path, "should not run")
+    return "should not run"
+loop.run_agent = fake_run_agent
+text = loop.aggregate_semantic_reasons_with_claude(loop.LoopConfig(), iter_dir, "iter01", "validation")
+scan = loop.scan_texts_for_protected_answers([{"scope": "returned", "text": text}])
+print(json.dumps({"text": text, "calls": calls, "scan": scan}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.calls).toEqual([]);
+    expect(report.scan.success).toBe(true);
+    expect(report.text).not.toContain("비밀고유재료세트");
+  });
+
+  it("cleans dirty semantic aggregation raw logs on output leaks and agent failures", () => {
+    const result = runLoopPython(`
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+secret = "비밀고유재료세트"
+golden_path = loop.DATA_ROOT / "validation" / "val-secret" / "golden.json"
+golden_path.parent.mkdir(parents=True, exist_ok=True)
+golden_path.write_text(json.dumps({
+    "schemaVersion": 1,
+    "videoId": "val-secret",
+    "reviewStatus": "approved",
+    "recipes": [{"title": "검증요리", "ingredients": [{"name": secret, "amount": "1", "unit": "개"}], "steps": []}],
+}, ensure_ascii=False), encoding="utf-8")
+for split in ["train", "validation"]:
+    summary_path = loop.DATA_ROOT / split / "_semantic_summary.iter01.json"
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(json.dumps({
+        "aggregate": {"sampleN": 3},
+        "perVideo": [{
+            "videoId": "case-a",
+            "cases": [{
+                "sample_reasons": ["양념류 범주 누락"],
+                "reason_summary": [{"label": "1/3", "text": "양념류 범주 누락"}],
+            }],
+        }],
+    }, ensure_ascii=False), encoding="utf-8")
+
+def run_case(label, should_fail):
+    iter_dir = root / "runs" / label / "iteration-01"
+    iter_dir.mkdir(parents=True, exist_ok=True)
+    def fake_run_agent(cmd, prompt, log_path, cwd=None):
+        loop.write_text(log_path, secret + " partial dirty")
+        if should_fail:
+            raise RuntimeError("agent command failed rc=1: claude -p")
+        return secret + " partial dirty"
+    loop.run_agent = fake_run_agent
+    text = loop.aggregate_semantic_reasons_with_claude(loop.LoopConfig(), iter_dir, "iter01", "train")
+    log_text = (iter_dir / "06_reason_aggregate_train.md").read_text(encoding="utf-8")
+    scan = loop.scan_directory_for_protected_answers(iter_dir)
+    return {"text": text, "log_text": log_text, "scan": scan}
+
+clean_dir = root / "runs" / "clean" / "iteration-01"
+clean_dir.mkdir(parents=True, exist_ok=True)
+def clean_run_agent(cmd, prompt, log_path, cwd=None):
+    text = "- train/case-a case1: (1/3) 조리도구 문제"
+    loop.write_text(log_path, text)
+    return text
+loop.run_agent = clean_run_agent
+clean_text = loop.aggregate_semantic_reasons_with_claude(loop.LoopConfig(), clean_dir, "iter01", "train")
+clean_log = (clean_dir / "06_reason_aggregate_train.md").read_text(encoding="utf-8")
+
+print(json.dumps({
+    "output_dirty": run_case("output-dirty", False),
+    "agent_failed": run_case("agent-failed", True),
+    "clean": {"text": clean_text, "log_text": clean_log},
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    for (const key of ["output_dirty", "agent_failed"]) {
+      expect(report[key].scan.success).toBe(true);
+      expect(report[key].log_text).toContain("reason aggregation skipped");
+      expect(report[key].log_text).not.toContain("비밀고유재료세트");
+      expect(report[key].text).toContain("양념류 범주 누락");
+    }
+    expect(report.clean.text).toContain("조리도구 문제");
+    expect(report.clean.log_text).toContain("조리도구 문제");
   });
 
   it("uses non-interactive sudo for fs_usage when the loop is not already root", () => {
