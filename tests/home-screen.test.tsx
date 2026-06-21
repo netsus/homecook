@@ -875,6 +875,9 @@ describe("home screen", () => {
     );
     expect(ruleBody(".web-ingredient-option")).toContain("padding: 10px 14px;");
     expect(ruleBody(".web-ingredient-option span:not(.visually-hidden)")).toContain(
+      "overflow-wrap: anywhere;",
+    );
+    expect(ruleBody(".web-ingredient-option span:not(.visually-hidden)")).toContain(
       "white-space: normal;",
     );
     expect(ruleBody(".web-ingredient-option span:not(.visually-hidden)")).not.toContain(
