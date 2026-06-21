@@ -1678,6 +1678,1382 @@ Implementation note:
   - Done: `pnpm exec playwright test tests/e2e/slice-15b-cook-standalone-complete.spec.ts --project=mobile-chrome`
   - Done: `/tmp/homecook-item-31-after/cook-mode-mobile-after.png`, `/tmp/homecook-item-31-after/cook-mode-desktop-after.png` manual screenshot review
 
+### 32. 웹 홈 레시피 카드의 세로 간격이 태그 줄 수에 따라 달라지는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UI / UX / Frontend
+- Source: user manual review screenshots, web HOME recipe cards
+- Problem:
+  - 웹 홈의 레시피 카드에서 태그가 한 줄을 넘어가면 해당 카드가 다른 카드보다 길어진다.
+  - CSS grid row가 같은 줄의 가장 높은 카드에 맞춰지면서, 짧은 카드 아래쪽에는 카드 사이 간격이 더 크게 보인다.
+  - 사용자는 레시피 카드 목록 자체의 spacing이 제각각인 것처럼 느낀다.
+- User impact:
+  - 홈 화면의 카드 그리드가 정돈되어 보이지 않는다.
+  - 태그가 많은 레시피가 섞일수록 행 간격이 불규칙해져 스캔 리듬이 깨진다.
+  - 웹 홈은 첫 진입 화면이므로 시각적 완성도 저하가 서비스 신뢰도에 직접 영향을 준다.
+- Recommended fix:
+  - 웹 홈 레시피 카드의 body 높이와 태그 영역 높이를 안정화한다.
+  - 카드 preview에서는 태그 영역을 1줄 또는 정해진 높이로 제한해 카드 높이가 태그 wrap에 따라 늘어나지 않게 한다.
+  - 태그를 줄이는 경우, 어떤 태그를 보여줄지 source/type/title 중복 제거 helper를 먼저 적용한다.
+  - 카드 전체 높이, 이미지 비율, 제목 2줄 clamp, meta, tag row가 모든 카드에서 같은 리듬으로 보이게 맞춘다.
+  - 단순히 grid gap을 줄이는 방식으로 숨기지 않는다. 원인은 카드 높이 변동이므로 카드 내부 레이아웃을 고정한다.
+- Acceptance criteria:
+  - 웹 HOME 레시피 카드 목록에서 태그가 많은 카드와 적은 카드가 섞여도 행 간격이 균일하게 보인다.
+  - 태그가 0개, 1개, 3개 이상인 카드가 같은 grid row에 있어도 카드 높이와 다음 행 시작점이 어색하게 흔들리지 않는다.
+  - 제목 2줄, 조회/저장 meta, 북마크 버튼, 이미지 badge 위치는 기존 역할을 유지한다.
+  - 모바일 홈 카드 레이아웃은 이번 수정으로 의도치 않게 바뀌지 않는다.
+- Likely implementation target:
+  - `components/home/home-screen.tsx`
+  - `components/web/web-recipe-card.tsx`
+  - `app/globals.css`
+  - `tests/manual-uiux-layout-policy.test.ts`
+  - 필요 시 HOME web screenshot / visual QA
+- Verification:
+  - 태그가 많은 recipe fixture와 태그가 적은 recipe fixture를 같은 웹 HOME grid에 놓고 카드 높이/row gap을 확인한다.
+  - `tests/manual-uiux-layout-policy.test.ts`에서 `.web-recipe-card-tags` 또는 `.web-home-recipe-card`의 높이 안정화 규칙을 고정한다.
+  - 웹 HOME screenshot에서 카드 간격이 균일한지 확인한다.
+
+### 33. 웹 홈 카드의 `+N` 태그 표시가 상세 화면과 맞지 않아 추가 태그처럼 오해되는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / UI / Frontend
+- Source: user manual review screenshots, web HOME recipe card and web RECIPE_DETAIL tag row
+- Problem:
+  - 웹 홈 카드에서 태그 3개가 보인 뒤 `+3` chip이 추가로 표시된다.
+  - 사용자는 `+3`을 "현재 보이는 태그 3개 외에 태그가 3개 더 있다"는 뜻으로 이해한다.
+  - 그런데 레시피 상세로 들어가면 홈에서 보인 태그 3개만 보이고, `+3`에 해당하는 추가 태그를 확인할 수 없다.
+  - 현재 상세 화면도 내부적으로 visible tag를 3개로 제한하고 있어, 홈 preview count와 상세 노출 정책이 서로 맞지 않는다.
+- User impact:
+  - 사용자가 홈 카드의 정보를 신뢰하기 어렵다.
+  - `+3`이 실제로 무엇을 의미하는지 확인할 수 없어 정보 구조가 끊긴다.
+  - 태그 기반 탐색/필터가 있는 서비스에서 태그 수 표시는 작은 정보라도 정확해야 한다.
+- Approach decision:
+  - 1차 수정은 홈 compact card에서 `+N` chip을 제거하는 방향이 더 안전하다.
+  - 추가 태그를 제품적으로 꼭 보여줘야 한다면, 홈과 상세가 같은 tag display helper를 쓰고 상세에서 전체 태그 또는 `더보기`를 제공해야 한다.
+  - 이번 문제를 카드 spacing 문제와 함께 닫으려면, 홈 카드에는 실제 보이는 태그만 표시하고 숨은 개수는 표시하지 않는 것이 가장 작은 변경이다.
+- Recommended fix:
+  - 웹 HOME 카드와 모바일 HOME 카드의 `+N` 표시 정책을 재검토한다.
+  - 상세에서 확인할 수 없는 hidden count는 카드에 표시하지 않는다.
+  - source label, title duplicate, unsafe tag를 제외하는 기준을 홈과 상세에서 공유한다.
+  - 만약 `+N`을 유지한다면 상세 화면에서도 숨은 태그를 확인할 수 있도록 전체 tag row 또는 확장 UI를 추가한다.
+  - `+N` chip이 실제 tag chip처럼 보이지 않게 할 필요가 있다면 label을 `태그 더보기` 같은 명확한 action으로 바꾸되, 실제 동작이 있을 때만 사용한다.
+- Acceptance criteria:
+  - 홈 카드에서 보인 태그 수/의미와 상세 화면에서 확인 가능한 태그 정보가 모순되지 않는다.
+  - `+N`처럼 숨은 태그를 암시하는 표시가 있다면 상세 화면에서 그 숨은 태그를 실제로 확인할 수 있다.
+  - 상세에서 확인할 수 없는 숨은 개수는 홈 카드에 표시하지 않는다.
+  - source label과 recipe tag가 중복되거나 서로 다른 규칙으로 걸러지지 않는다.
+  - 태그 표시 변경이 레시피 검색, tag filter API, 저장/상세 이동 동작을 바꾸지 않는다.
+- Likely implementation target:
+  - `components/home/home-screen.tsx`
+  - `components/home/recipe-card.tsx`
+  - `components/recipe/recipe-detail-screen.tsx`
+  - tag display helper if extracted
+  - `tests/manual-uiux-layout-policy.test.ts`
+  - `tests/recipe-detail-screen.test.tsx` 또는 관련 HOME card test
+- Verification:
+  - 태그가 3개 이하인 recipe와 4개 이상인 recipe fixture를 나눠 홈/상세 태그 표시를 확인한다.
+  - 홈에서 hidden count를 제거하는 경우, `+N` chip이 렌더링되지 않음을 테스트로 고정한다.
+  - `+N`을 유지하는 방향이면 상세에서 모든 추가 태그를 확인할 수 있음을 테스트와 screenshot으로 고정한다.
+
+### 34. 홈/전역 프로필 버튼이 단순 이동만 해서 내 상태와 알림을 즉시 확인하기 어려운 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / UI / Frontend
+- Source: user manual review, web HOME top-right profile button
+- Problem:
+  - 웹 HOME 우측 상단 프로필 이미지는 현재 마이페이지로 이동하는 링크에 가깝다.
+  - 사용자는 프로필을 눌렀을 때 닉네임, 등급, 레벨, 최근 활동, 알림 같은 "내 상태 요약"을 즉시 볼 수 있기를 기대할 수 있다.
+  - 현재 구조에서는 간단한 상태 확인도 마이페이지 전체 진입으로 이어져 흐름이 끊긴다.
+- User impact:
+  - 홈에서 레시피를 탐색하다가 내 성장/알림 상태를 확인하려면 화면 맥락을 떠나야 한다.
+  - 알림이 있는지, 최근 성장 상태가 어떤지 알 수 있는 affordance가 약하다.
+  - 프로필 이미지가 단순 장식/이동 버튼처럼 느껴질 수 있다.
+- Approach decision:
+  - 고치는 게 맞다. 다만 새 API를 만들기보다 기존 `GET /users/me`, `GET /users/me/progress`, `GET /users/me/gamification`, `GET /users/me/gamification/archive` 계약을 재사용한다.
+  - 프로필 팝오버는 마이페이지 전체를 대체하지 않고, compact summary + 주요 CTA만 제공한다.
+  - 웹은 popover/dropdown, 앱은 bottom sheet로 같은 정보 구조를 공유한다.
+- Recommended fix:
+  - 프로필 버튼 클릭 시 작은 프로필 요약 패널을 연다.
+  - 패널에는 프로필 이미지/닉네임, 등급/레벨/XP progress, 요리/플래너/장보기 compact count, 최근 알림 preview를 표시한다.
+  - 주요 액션은 `마이페이지`, `알림`, `업적/튜토리얼`처럼 짧은 CTA로 둔다.
+  - 알림이 있으면 프로필 버튼에 작은 unread dot 또는 badge를 표시한다.
+  - 비로그인 상태에서는 로그인 CTA와 "로그인하면 내 기록을 이어서 볼 수 있어요" 수준의 짧은 안내만 보여준다.
+- Acceptance criteria:
+  - HOME 프로필 버튼을 누르면 현재 화면을 떠나지 않고 프로필 요약 패널이 열린다.
+  - 닉네임, 등급, 레벨, 주요 기록 3개, 최근 알림 preview가 과하게 큰 카드 없이 읽힌다.
+  - 패널 안의 전체 이동 CTA를 통해 기존 MYPAGE와 알림 보관함으로 갈 수 있다.
+  - 프로필 패널 로딩/empty/error/guest 상태가 각각 정의된다.
+  - 패널이 검색, 필터, 카드 클릭, 저장 modal 흐름을 방해하지 않는다.
+- Likely implementation target:
+  - shared profile summary component
+  - `components/home/home-screen.tsx`
+  - `components/mypage/mypage-growth-profile.tsx` reuse candidate
+  - `lib/api/user-gamification.ts`
+  - `components/web/web-top-nav.tsx`
+  - `app/globals.css`
+- Verification:
+  - profile summary loading/ready/guest/error component tests
+  - HOME web popover open/close keyboard and click-away behavior
+  - mobile bottom sheet variant screenshot if app surface is included
+
+### 35. 신규/초기 사용자의 튜토리얼 단계가 홈에서 자연스럽게 안내되지 않는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Onboarding / Frontend
+- Source: user manual review, first-user onboarding expectation
+- Problem:
+  - 공식 계약상 튜토리얼은 업적 앨범의 `tutorial` category와 `GET /users/me/gamification`의 `tutorial.active_steps`에 있다.
+  - 하지만 사용자가 홈에서 서비스를 시작할 때 다음에 무엇을 하면 좋은지 바로 안내받는 진입점은 약하다.
+  - 튜토리얼이 마이페이지 안쪽에만 묶여 있으면 신규 사용자가 기능을 발견하기 어렵다.
+- User impact:
+  - 처음 가입한 사용자가 레시피 저장, 플래너 등록, 장보기 생성, 요리 완료 같은 핵심 흐름을 순서대로 익히기 어렵다.
+  - 기능이 많아 보여도 첫 행동이 분명하지 않으면 이탈 가능성이 커진다.
+- Approach decision:
+  - 고치는 게 맞다. 다만 전체 화면 이미지 튜토리얼을 먼저 띄우는 방식은 사용자를 막을 수 있어 1차안으로 두지 않는다.
+  - 1차안은 프로필 요약 패널과 홈의 작은 안내 영역에서 `tutorial.active_steps`의 다음 행동을 순서대로 보여주는 방식이다.
+  - 이미지형 앱 소개는 프로필/튜토리얼 안내만으로 부족하다고 확인될 때 별도 high-risk onboarding work로 분리한다.
+- Recommended fix:
+  - 신규/초기 사용자에게 프로필 패널 안에서 다음 튜토리얼 step을 1개 우선 표시한다.
+  - 필요하면 `다음 할 일` 형태의 짧은 알림 card를 HOME 상단이나 프로필 패널 내부에 둔다.
+  - 튜토리얼은 알림처럼 쌓아 올리지 않고, 현재 active step과 완료 진행률을 명확히 보여준다.
+  - 완료된 단계는 축하 toast보다 업적/튜토리얼 progress에 반영한다. 공식 계약상 퀘스트 완료 별도 notification row를 만들지 않는다.
+  - dismiss는 기존 tutorial dismiss API의 UX 상태만 사용하고, 업적/XP 상태는 바꾸지 않는다.
+- Acceptance criteria:
+  - 신규/초기 사용자는 HOME 프로필 패널에서 다음 튜토리얼 행동을 확인할 수 있다.
+  - 튜토리얼 단계는 서버가 내려준 순서/상태를 사용하고 클라이언트가 임의 계산하지 않는다.
+  - 완료된 튜토리얼은 업적 앨범 tutorial category와 모순되지 않는다.
+  - 안내가 HOME 핵심 검색/레시피 탐색을 밀어내지 않는다.
+  - 사용자가 닫은 튜토리얼 안내는 같은 세션에서 반복 노출되지 않는다.
+- Likely implementation target:
+  - shared profile summary component
+  - `components/mypage/mypage-growth-profile.tsx`
+  - `components/mypage/growth-archive-surface.tsx`
+  - `lib/api/user-gamification.ts`
+  - HOME web/app shell
+- Verification:
+  - gamification fixture: no XP / active tutorial / partial complete / complete states
+  - tutorial prompt dismiss behavior test
+  - HOME first-user screenshot at desktop and mobile
+
+### 36. 웹과 앱의 주요 화면에서 프로필 진입점 위치가 일관되지 않은 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Navigation / App Shell / Frontend
+- Source: user manual review, HOME/PLANNER/PANTRY/MYPAGE tabs and app top-right empty space
+- Problem:
+  - 웹 HOME에는 프로필 이미지가 있지만, PLANNER/PANTRY/MYPAGE 등 주요 탭의 우측 상단 프로필 진입점은 화면마다 다르거나 단순 placeholder처럼 보인다.
+  - 앱 화면도 일부 상단 오른쪽이 비어 있어 사용자 계정/알림 진입점으로 활용할 여지가 있다.
+  - 전역 알림/튜토리얼/프로필 요약을 도입하려면 이를 여는 위치가 화면마다 달라지면 학습 비용이 커진다.
+- User impact:
+  - 사용자는 어느 화면에서 내 알림이나 성장 상태를 확인할 수 있는지 예측하기 어렵다.
+  - 웹과 앱이 같은 서비스임에도 shell 행동이 다르게 느껴진다.
+  - 알림 unread 상태가 있어도 사용자가 발견하지 못할 수 있다.
+- Approach decision:
+  - 고치는 게 맞다. 단, 모든 화면에 무조건 넣지는 않는다.
+  - HOME, PLANNER_WEEK, PANTRY, MYPAGE 같은 primary tab 화면에는 공통 프로필 버튼을 두는 방향이 맞다.
+  - 요리모드, 입력 집중 화면, modal/sheet 내부처럼 상단 행동이 이미 바쁜 화면은 예외를 둔다.
+- Recommended fix:
+  - 웹 `WebTopNav` rightSlot에 shared profile button/popover를 연결한다.
+  - 앱 primary tab의 `AppHeader` 또는 화면별 상단 오른쪽 영역에 같은 profile trigger를 둔다.
+  - 프로필 이미지, fallback initial, guest icon, unread badge 규칙을 공통화한다.
+  - 화면별 placeholder profile button은 실제 사용자 profile data를 받는 공용 컴포넌트로 교체한다.
+  - 좁은 모바일에서는 profile trigger가 back button, page title, primary CTA와 충돌하지 않게 우선순위를 정한다.
+- Acceptance criteria:
+  - 웹 HOME/PLANNER/PANTRY/MYPAGE에서 같은 위치와 같은 모양의 프로필 trigger가 보인다.
+  - 앱 primary tab 화면에서도 가능한 경우 우측 상단 profile trigger가 보이고 같은 profile panel/sheet를 연다.
+  - unread 알림 상태가 profile trigger에 일관되게 표시된다.
+  - cook mode, 긴 작성 화면, modal 내부처럼 집중 흐름에서는 예외가 명시된다.
+  - 320px 모바일에서 제목/뒤로가기/프로필 trigger가 겹치지 않는다.
+- Likely implementation target:
+  - `components/web/web-top-nav.tsx`
+  - `components/layout/app-header.tsx`
+  - `components/layout/app-shell.tsx`
+  - `components/home/home-screen.tsx`
+  - `components/planner/planner-week-screen.tsx`
+  - `components/pantry/pantry-screen.tsx`
+  - `components/mypage/mypage-screen.tsx`
+  - `components/mypage/mypage-mobile-screen.tsx`
+- Verification:
+  - desktop shell screenshot: HOME/PLANNER/PANTRY/MYPAGE
+  - mobile shell screenshot: primary tabs at 390px and 320px
+  - keyboard focus order and click-away behavior for profile panel
+
+### 37. 여러 알림/피드백 팝업의 형식이 경험치 알림과 달라 서비스 알림 체계가 분산되는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / UI / Notification / Frontend
+- Source: user manual review, existing popup/toast surfaces
+- Problem:
+  - 현재 저장, 장보기, 설정, 남은요리, 레시피북 등 여러 화면에 local toast/feedback popup이 있다.
+  - 성장/경험치 알림은 별도 priority notification/XP toast 계약이 있고, 화면별 일반 toast와 시각 형식이 다르면 서비스 알림 체계가 분산되어 보인다.
+  - 같은 "알림"인데 어떤 것은 성장 toast, 어떤 것은 화면별 작은 toast로 보여 사용자가 중요도와 의미를 구분하기 어렵다.
+- User impact:
+  - 알림의 중요도, 성공/실패 상태, 다음 행동을 빠르게 이해하기 어렵다.
+  - 화면마다 다른 toast 스타일이 반복되면 완성도가 낮아 보인다.
+  - mobile safe area나 bottom tab과 충돌할 가능성이 커진다.
+- Approach decision:
+  - 고치는 게 맞다. 단, 모든 local feedback을 서버 notification으로 승격하지는 않는다.
+  - server-backed 성장 알림은 기존 gamification priority rule을 유지하고, local success/error feedback은 같은 visual shell만 공유한다.
+- Recommended fix:
+  - 공용 notification/toast shell을 만든다.
+  - 경험치/레벨업/업적 알림은 기존 priority order와 archive 연동을 유지한다.
+  - 화면별 local toast는 같은 위치, radius, icon, typography, duration 규칙을 공유하되 archive에는 넣지 않는다.
+  - error toast는 자동 dismiss만 믿지 않고 필요한 경우 화면 내 복구 CTA도 함께 둔다.
+  - mobile visible max, desktop visible max, safe-area 위치를 공식 gamification toast 규칙과 맞춘다.
+- Acceptance criteria:
+  - 주요 local toast와 성장 toast가 같은 시각 문법을 사용한다.
+  - server-backed notification과 local feedback의 차이가 코드와 UX에서 분리된다.
+  - mobile bottom tab, sticky CTA, modal/sheet와 toast가 겹치지 않는다.
+  - 알림 stack 최대 노출 수와 우선순위가 일관된다.
+  - 기존 화면별 성공/실패 피드백이 사라지지 않는다.
+- Likely implementation target:
+  - shared toast/notification component
+  - `lib/gamification-events.ts`
+  - `lib/gamification-notifications.ts`
+  - screen-local toast call sites in `components/**`
+  - `app/globals.css`
+- Verification:
+  - component tests for success/error/gamification notification variants
+  - visual screenshots for desktop/mobile toast stack
+  - source action smoke: recipe save, shopping complete, cooking complete
+
+### 38. 마이페이지 알림 버튼에서 과거 성장 알림을 확인하는 흐름이 더 명확해야 하는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Notification / MYPAGE / Frontend
+- Source: user manual review, MYPAGE notification expectation
+- Problem:
+  - 공식 API에는 `GET /users/me/gamification/archive`가 있고, 마이페이지 성장 surface에도 알림 버튼/보관함 흐름이 정의되어 있다.
+  - 하지만 사용자는 알림 버튼을 눌렀을 때 과거 알림을 확인할 수 있다는 기대를 명확히 갖는다.
+  - 프로필 요약 패널과 마이페이지 알림 버튼이 같은 archive 경험으로 이어지지 않으면 알림 확인 위치가 분산된다.
+- User impact:
+  - 지나간 레벨업/업적/XP 알림을 다시 찾기 어렵다.
+  - 알림 dot을 보고도 어디서 무엇을 확인해야 하는지 알기 어렵다.
+  - 신규 사용자 튜토리얼/성장 알림과 일반 피드백의 차이가 모호해진다.
+- Recommended fix:
+  - MYPAGE 프로필 header의 `알림` 버튼을 notification archive modal/bottom sheet로 명확히 연결한다.
+  - HOME/global profile panel에서도 같은 archive preview와 전체 보기 CTA를 사용한다.
+  - archive list는 최신순, 빈 상태, loading, error, 더보기 상태를 갖춘다.
+  - seen 처리와 archive 보존 의미를 구분한다. 본 알림도 archive에서 사라지지 않는다는 계약을 유지한다.
+  - `level_up`, `achievement_unlocked`, `badge_unlocked`, `xp_awarded` type label과 icon을 통일한다.
+- Acceptance criteria:
+  - MYPAGE 알림 버튼을 누르면 과거 성장 알림 목록을 볼 수 있다.
+  - profile summary panel의 알림 preview와 MYPAGE archive가 같은 데이터 기준을 사용한다.
+  - unseen/seen 상태와 unread badge가 archive 확인 후 자연스럽게 갱신된다.
+  - archive empty/error/loading/has_next 상태가 모두 처리된다.
+  - 타인 알림 접근, notification id 유추, seen 처리 실패가 core action에 영향을 주지 않는다.
+- Likely implementation target:
+  - `components/mypage/growth-archive-surface.tsx`
+  - `components/mypage/mypage-growth-profile.tsx`
+  - global profile summary component
+  - `lib/api/user-gamification.ts`
+  - `app/api/v1/users/me/gamification/archive/route.ts` tests if coverage is missing
+- Verification:
+  - archive surface component tests
+  - MYPAGE notification button open/close and pagination behavior
+  - seen 처리 후 unread badge 갱신 test
+
+### 39. 웹 레시피 저장 모달의 새 레시피북 만들기 영역이 앱보다 무겁고 덜 예뻐 보이는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Low
+- Area: UI / UX / Frontend
+- Source: user manual review screenshots, recipe save modal web/app comparison
+- Problem:
+  - 앱 저장 모달은 `+ 새 레시피북 만들기`를 파란색 텍스트 row로 보여주고, 사용자가 누른 뒤 같은 칸에 input과 추가 버튼이 나타난다.
+  - 웹 저장 모달은 새 레시피북 입력 영역이 처음부터 펼쳐져 있어 모달이 더 무겁고, 기존 레시피북 선택보다 새 책 생성이 과하게 강조된다.
+  - 같은 기능인데 앱과 웹의 정보 위계가 달라 보인다.
+- User impact:
+  - 사용자는 웹 저장 모달에서 "저장할 책 선택"보다 "새 책 만들기" 입력 폼을 먼저 의식할 수 있다.
+  - 앱과 웹을 오가며 같은 기능을 사용할 때 조작 패턴이 다르게 느껴진다.
+- Approach decision:
+  - 고치는 게 맞다. 앱 패턴이 더 간결하고 저장 모달의 기본 목적에 맞다.
+  - 새 레시피북 생성은 보조 행동이므로 처음에는 접힌 row로 두고, 사용자가 명시적으로 누를 때만 input을 보여준다.
+- Recommended fix:
+  - 웹 저장 모달의 새 레시피북 만들기 영역도 앱처럼 접힘형 row로 바꾼다.
+  - row label은 `+ 새 레시피북 만들기`로 맞추고 brand color를 사용한다.
+  - 클릭하면 같은 영역에 input과 `추가` 버튼이 나타난다.
+  - placeholder와 버튼 label도 앱과 맞춰 `레시피북 이름`, `추가`를 사용한다.
+- Acceptance criteria:
+  - 웹 저장 모달 초기 상태에서 새 레시피북 input이 바로 보이지 않는다.
+  - `+ 새 레시피북 만들기`를 누르면 같은 위치에 input과 `추가` 버튼이 나타난다.
+  - 기존 책 선택, 저장, 취소, 에러 표시 동작은 유지된다.
+  - 앱 저장 모달의 기존 접힘형 동작은 유지된다.
+- Likely implementation target:
+  - `components/recipe/save-modal.tsx`
+  - `tests/save-modal.test.tsx`
+  - `tests/e2e/slice-04-recipe-save.spec.ts`
+- Verification:
+  - `components/recipe/save-modal.tsx`에서 웹 quick-create를 접힘형 `+ 새 레시피북 만들기` row로 변경했다.
+  - `tests/save-modal.test.tsx`에서 웹 quick-create 초기 접힘, 펼침, 추가 동작을 고정했다.
+  - Verified: `pnpm exec vitest run tests/save-modal.test.tsx tests/recipe-detail-screen.test.tsx`
+  - Verified: `pnpm exec playwright test tests/e2e/slice-04-recipe-save.spec.ts --project=desktop-chrome --project=mobile-chrome`
+  - Verified: `pnpm typecheck`
+
+### 40. 앱 레시피 저장 모달의 `레시피북 다중 선택` 설명이 불필요하게 보이는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Low
+- Area: Copy / UX / Frontend
+- Source: user manual review screenshot, app recipe save modal
+- Problem:
+  - 앱 저장 모달에는 이미 제목 `레시피 저장`과 설명 `저장할 레시피북을 선택하세요`가 있다.
+  - 그 아래 `레시피북 다중 선택` 문구는 추가 정보를 거의 주지 않고, 작은 모달 안에서 시각적 소음을 만든다.
+  - 실제 사용자는 체크 UI와 하단 저장 버튼만으로 다중 선택 가능성을 이해할 수 있다.
+- User impact:
+  - 모달 상단의 문구가 중복되어 저장 대상 선택 영역이 덜 깔끔해 보인다.
+  - 핵심 선택지와 `+ 새 레시피북 만들기` row가 한 칸 아래로 밀린다.
+- Recommended fix:
+  - 앱 저장 모달의 `레시피북 다중 선택` 보조 설명을 제거한다.
+  - 웹의 `폴더 선택` label은 현재 화면 구조상 section label 역할을 하므로 이번 변경에서는 유지한다.
+- Acceptance criteria:
+  - 앱 저장 모달에 `레시피북 다중 선택` 문구가 보이지 않는다.
+  - 제목, 설명, 책 선택 리스트, 새 레시피북 만들기 row, footer 버튼은 유지된다.
+  - E2E와 component test의 문구 기대값이 새 UI에 맞게 갱신된다.
+- Likely implementation target:
+  - `components/recipe/save-modal.tsx`
+  - `tests/save-modal.test.tsx`
+  - `tests/e2e/slice-04-recipe-save.spec.ts`
+- Verification:
+  - `components/recipe/save-modal.tsx`에서 앱 bottom sheet의 `레시피북 다중 선택` 문구를 제거했다.
+  - `tests/save-modal.test.tsx`에서 앱 bottom sheet에 해당 문구가 없는지 고정했다.
+  - `tests/e2e/slice-04-recipe-save.spec.ts`에서 모바일/데스크톱 공통 설명 문구와 quick-create 흐름을 확인하도록 갱신했다.
+  - Verified: `pnpm exec vitest run tests/save-modal.test.tsx tests/recipe-detail-screen.test.tsx`
+  - Verified: `pnpm exec playwright test tests/e2e/slice-04-recipe-save.spec.ts --project=desktop-chrome --project=mobile-chrome`
+  - Verified: `pnpm typecheck`
+
+### 41. 앱 홈의 `이번 주 인기 테마`가 너무 아래에 있어 발견성이 낮은 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / HOME / Mobile
+- Source: user manual review, app HOME content order
+- Problem:
+  - 앱 홈에서 `이번 주 인기 테마`가 레시피 목록 뒤쪽에 배치되어 첫 화면에서 새로움이나 탐색 동기가 늦게 나온다.
+  - 퀵슬롯 다음에도 바로 긴 레시피 목록이 이어져 홈 피드가 단조롭게 느껴질 수 있다.
+- User impact:
+  - 사용자가 홈을 몇 번 스크롤하기 전까지 테마 탐색을 발견하지 못할 수 있다.
+  - 신규/재방문 사용자 모두에게 홈의 변화감이 약해 보인다.
+- Approach decision:
+  - 고치는 게 맞다. 테마는 레시피 목록을 대체하는 핵심 기능이 아니라 탐색을 환기하는 보조 구간이므로, 퀵슬롯 아래와 레시피 목록 위 사이가 적절하다.
+- Recommended fix:
+  - 모바일 HOME에서 `HomeQuickLinks` 아래, 레시피 목록 섹션 위로 `ThemeCarousel`을 이동한다.
+  - 검색/재료/태그 필터가 활성화된 결과 우선 상태에서는 기존처럼 테마를 숨겨 결과 집중도를 유지한다.
+  - loading skeleton도 같은 순서로 맞춰 실제 로딩 후 layout shift를 줄인다.
+- Acceptance criteria:
+  - 초기 앱 홈에서 퀵슬롯 다음에 `이번 주 인기 테마`가 보이고, 그 아래에 레시피 목록이 이어진다.
+  - 검색어, 태그, 재료 필터가 활성화된 상태에서는 테마가 결과보다 앞에 끼어들지 않는다.
+  - 로딩 skeleton 순서가 실제 콘텐츠 순서와 일치한다.
+- Likely implementation target:
+  - `components/home/home-screen.tsx`
+  - `tests/home-screen.test.tsx`
+- Verification:
+  - `components/home/home-screen.tsx`에서 모바일 HOME 테마 캐러셀을 quick slot 아래, 레시피 목록 위로 이동했다.
+  - `tests/home-screen.test.tsx`에서 quick slot -> `이번 주 인기 테마` -> `모든 레시피` DOM 순서를 고정했다.
+  - 기존 검색/필터 활성 상태에서는 테마가 숨겨지는 regression test를 유지했다.
+  - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+
+### 42. 앱 홈 검색창과 검색 결과가 스크롤 중 분리되어 보이는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / HOME / Mobile / Search
+- Source: user manual review, app HOME search/result relationship
+- Problem:
+  - 앱 홈에서 검색창이 상단 hero 아래에만 머물러 있어 스크롤을 내리면 검색 조건과 결과 목록의 관계가 약해 보인다.
+  - 결과를 보며 검색어를 수정하려면 다시 위로 올라가야 한다.
+- User impact:
+  - 검색 결과를 탐색하다가 키워드나 재료 조건을 바꾸는 반복 흐름이 번거롭다.
+  - 결과 목록이 현재 어떤 조건으로 나온 것인지 체감하기 어렵다.
+- Approach decision:
+  - 고치는 게 맞다. 다만 `fixed`로 viewport 전체에 강제 고정하면 bottom sheet, app bar, keyboard와 충돌할 수 있으므로 모바일 홈 컨테이너 안에서 `sticky`로 고정하는 것이 안전하다.
+- Recommended fix:
+  - 모바일 HOME 검색 영역 `.home-mobile-discovery-search`를 앱바 아래 sticky 영역으로 바꾼다.
+  - sticky 상태에서도 배경, 경계선, z-index를 명확히 두어 카드/테마와 겹치지 않게 한다.
+  - 320px 폭에서 검색 input과 `재료로 검색` 버튼이 줄바꿈 없이 유지되는지 확인한다.
+- Acceptance criteria:
+  - 앱 홈에서 스크롤을 내려도 검색창과 재료 검색 버튼이 앱바 아래에 붙어 있다.
+  - 검색 조건 chip과 초기화 버튼이 sticky 영역 안에 함께 남는다.
+  - ingredient bottom sheet, sort dropdown, bottom tab과 z-index 충돌이 없다.
+- Likely implementation target:
+  - `app/globals.css`
+  - `tests/home-screen.test.tsx`
+- Verification:
+  - `app/globals.css`에서 `.home-mobile-discovery-search`를 app bar 아래 sticky 영역으로 변경했다.
+  - `tests/home-screen.test.tsx`에서 `position: sticky`, `top: var(--control-height-xl)`, `z-index`, background 규칙을 고정했다.
+  - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+
+### 43. 홈 퀵슬롯의 `성장 보기`가 주요 행동 대비 우선순위가 높은 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / HOME / Quick Actions / YouTube Import
+- Source: user manual review, HOME quick slots
+- Problem:
+  - HOME 퀵슬롯은 앱의 핵심 반복 행동을 빠르게 열어야 하는데, `성장 보기`는 즉시 실행형 작업이라기보다 상태 확인에 가깝다.
+  - 유튜브 레시피 가져오기는 서비스의 차별적 핵심 기능인데 현재 홈 퀵슬롯에서 직접 드러나지 않는다.
+- User impact:
+  - 신규 사용자가 유튜브 가져오기 기능을 늦게 발견할 수 있다.
+  - 홈 quick action이 사용자의 실제 recipe import 흐름과 덜 맞을 수 있다.
+- Approach decision:
+  - 고치는 게 맞다. 단, 성장/레벨 정보는 프로필 패널과 마이페이지 쪽으로 이동시키는 장기 방향과 함께 봐야 한다.
+- Recommended fix:
+  - HOME quick slot에서 `성장 보기`를 제거하고 `유튜브 가져오기`를 추가한다.
+  - quick slot 클릭 시 planner 내부 패널이 아니라 `/menu/add/youtube` 전체 화면으로 이동한다.
+  - label은 짧게 `유튜브 가져오기`, 보조 설명은 `영상 링크로 등록`처럼 행동을 설명한다.
+- Acceptance criteria:
+  - 모바일/웹 HOME quick slot에 `유튜브 가져오기`가 보이고 `/menu/add/youtube`로 이동한다.
+  - HOME quick slot에 `성장 보기`가 남아 있지 않다.
+  - 기존 플래너, 장보기, 레시피북 quick slot은 유지된다.
+- Likely implementation target:
+  - `components/home/home-screen.tsx`
+  - `tests/home-screen.test.tsx`
+- Verification:
+  - `components/home/home-screen.tsx`에서 quick slot `성장 보기`를 `유튜브 가져오기`로 교체하고 `/menu/add/youtube`로 연결했다.
+  - `tests/home-screen.test.tsx`에서 모바일/웹 HOME quick slot의 `유튜브 가져오기` href와 `성장 보기` 제거를 고정했다.
+  - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+
+### 44. 재료 검색/추가 모달의 카테고리 칩 모양과 웹 레이아웃이 화면마다 다른 문제
+
+- Status: partially implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UI / UX / Ingredient Picker / Web / App
+- Source: user manual review, HOME ingredient search modal and add-ingredient modals
+- Problem:
+  - HOME 재료 검색 모달의 웹 카테고리 칩은 pill 형태의 가로 스크롤이고, 앱은 사각형에 가까운 선택 칩으로 보여 같은 기능의 시각 언어가 다르다.
+  - 웹은 화면 폭이 더 넓은데도 카테고리를 한 줄 가로 스크롤로 숨기면 선택지를 훑기 어렵다.
+  - HOME 재료 검색, 팬트리 재료 추가, 플래너 직접 추가/레시피 재료 추가 모달이 비슷한 일을 하면서 배열과 모양이 달라 보인다.
+- User impact:
+  - 사용자는 같은 `재료를 고르는 일`을 화면마다 다른 컴포넌트로 인식할 수 있다.
+  - 웹에서 카테고리 선택지를 발견하기 위해 불필요하게 가로 스크롤해야 한다.
+  - 재료 선택 모달의 완성도와 학습성이 낮아진다.
+- Approach decision:
+  - 고치는 게 맞다. 단, 팬트리/플래너/레시피 생성까지 한 번에 전부 교체하면 회귀 범위가 넓으므로 1차로 HOME + 공용 레시피 재료 추가 모달의 웹 카테고리 칩을 사각형 grid로 맞추고, 팬트리 wide modal과의 완전 공통화는 후속 작업으로 다룬다.
+- Recommended fix:
+  - 웹 재료 카테고리 영역을 가로 rail에서 3~4열 grid형 칩으로 바꾼다.
+  - 칩 radius는 앱의 선택 칩과 유사하게 작은 radius를 사용한다.
+  - HOME 재료 검색 모달과 레시피/플래너 직접 추가에서 쓰는 `RecipeIngredientAddModal`부터 같은 클래스를 사용한다.
+  - 팬트리 재료 추가 모달은 wide dialog, 기존 선택 재료 영역, 보유중 disabled 상태가 있어 후속으로 같은 `IngredientPicker` surface 추출 여부를 검토한다.
+- Acceptance criteria:
+  - 웹 HOME 재료 검색 모달의 카테고리 칩이 pill 가로 스크롤이 아니라 grid형 사각 칩으로 보인다.
+  - 웹 레시피/플래너 재료 추가 모달도 같은 카테고리 칩 클래스를 사용한다.
+  - 모바일 앱의 한 줄 카테고리 선택은 앱 bottom sheet 폭 제약 때문에 유지하되 radius는 사각형 계열과 맞는다.
+  - 팬트리 재료 추가 모달 공통화는 별도 항목으로 추적되며, 현재 동작을 깨지 않는다.
+- Likely implementation target:
+  - `components/home/ingredient-filter-modal.tsx`
+  - `components/recipe/recipe-ingredient-add-modal.tsx`
+  - `app/globals.css`
+  - `tests/home-screen.test.tsx`
+  - `tests/recipe-ingredient-add-modal.test.tsx`
+- Verification:
+  - `components/home/ingredient-filter-modal.tsx`에서 웹 HOME 재료 검색 카테고리를 가로 rail에서 `web-ingredient-category-grid`로 변경했다.
+  - `components/recipe/recipe-ingredient-add-modal.tsx`에서 레시피/플래너 재료 추가 모달도 같은 category grid 클래스를 사용하게 했다.
+  - `app/globals.css`에 3열 grid형 사각 category chip 스타일을 추가했다.
+  - `tests/home-screen.test.tsx`, `tests/recipe-ingredient-add-modal.test.tsx`에서 category grid와 chip class를 고정했다.
+  - 팬트리 wide 재료 추가 모달의 완전 공통화는 기존 보유중/선택 재료 구조와 충돌 가능성이 있어 후속 작업으로 남겼다.
+  - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx`
+  - Verified: `pnpm exec vitest run tests/pantry-desktop-density.test.ts tests/ui-primitives.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+
+### 45. 웹 레시피상세의 재료/만들기 너비와 구분선이 어색한 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UI / Recipe Detail / Web
+- Source: user manual review screenshot, recipe detail desktop layout
+- Problem:
+  - 웹 레시피상세에서 재료 섹션이 만들기 섹션 대비 넓어 보이고, 만들기 본문이 상대적으로 답답해 보인다.
+  - 재료/만들기 각 섹션의 top border와 두 섹션 사이 left border가 맞물려 만들기 영역에 top+left 테두리가 둘러진 것처럼 보인다.
+- User impact:
+  - 사용자는 `만들기`가 본문 주 영역이 아니라 테두리 안에 갇힌 보조 영역처럼 느낄 수 있다.
+  - 재료와 만들기의 위계가 흐려지고 조리 과정을 읽는 흐름이 답답해진다.
+- Approach decision:
+  - 고치는 게 맞다. 재료는 짧은 key-value 목록이고 만들기는 긴 문장 흐름이므로 웹에서는 만들기 영역을 더 넓게 주는 편이 읽기 좋다.
+- Recommended fix:
+  - 웹 reading grid의 재료 column 최대 폭을 줄이고 만들기 column을 더 넓힌다.
+  - `web-reading-section-grid`의 top border를 제거해 left divider와 만나는 L자형 테두리 인상을 없앤다.
+  - 두 영역 사이 divider는 유지하되, section top border와 결합되지 않게 한다.
+- Acceptance criteria:
+  - 웹 recipe detail에서 재료 column은 더 compact하고 만들기 column은 더 넓다.
+  - 만들기 섹션에 top+left 테두리가 둘러진 것처럼 보이지 않는다.
+  - 재료/만들기 제목, ingredient rows, step rows의 기존 정보는 유지된다.
+- Likely implementation target:
+  - `components/recipe/recipe-detail-screen.tsx`
+  - `app/globals.css`
+  - `tests/recipe-detail-screen.test.tsx`
+- Verification:
+  - `app/globals.css`에서 웹 recipe reading grid를 `minmax(220px, 300px) minmax(0, 1fr)`로 조정해 재료 column을 줄이고 만들기 column을 넓혔다.
+  - `web-reading-section-grid`의 top border/padding을 제거해 만들기 section의 top+left 테두리 인상을 없앴다.
+  - `tests/recipe-detail-screen.test.tsx`에서 grid 비율, top border 제거, divider 유지 상태를 고정했다.
+  - Verified: `pnpm exec vitest run tests/recipe-detail-screen.test.tsx tests/recipe-add-to-planner.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+
+### 46. 앱 레시피상세 하단 CTA와 하단 탭 사이 틈으로 뒤 화면이 보이는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UI / Recipe Detail / Mobile
+- Source: user manual review screenshot, mobile recipe detail bottom CTA
+- Problem:
+  - 앱 레시피상세의 `플래너에 추가`, `요리하기` CTA가 하단 탭 위에 fixed로 있고, 두 fixed surface 사이의 틈으로 뒤쪽 콘텐츠가 보인다.
+  - CTA와 탭이 서로 분리된 두 레이어처럼 보여 바닥 영역의 완성도가 낮아진다.
+- User impact:
+  - 사용자가 버튼과 네비게이션을 하나의 안정된 bottom action 영역으로 인식하기 어렵다.
+  - 스크롤 중 뒤쪽 콘텐츠가 틈으로 보여 시각적으로 산만하다.
+- Approach decision:
+  - 고치는 게 맞다. 버튼을 다른 위치로 옮기기보다는, 핵심 행동 CTA는 계속 하단 고정으로 유지하고 CTA background를 하단 탭 뒤까지 확장해 틈을 없애는 것이 더 안전하다.
+- Recommended fix:
+  - mobile CTA bar를 viewport bottom까지 확장하고, padding-bottom으로 하단 탭 높이만큼 공간을 확보한다.
+  - 하단 탭은 기존 z-index로 CTA background 위에 올라오게 둔다.
+  - 본문 bottom padding은 CTA 확장 높이를 감안해 유지한다.
+- Acceptance criteria:
+  - CTA 버튼과 하단 탭 사이에 투명한 틈으로 본문이 보이지 않는다.
+  - 하단 탭 클릭 가능성과 CTA 클릭 가능성이 유지된다.
+  - safe-area inset이 있는 기기에서도 버튼/탭이 겹치지 않는다.
+- Likely implementation target:
+  - `components/recipe/recipe-detail-screen.tsx`
+  - `tests/recipe-detail-screen.test.tsx`
+- Verification:
+  - `components/recipe/recipe-detail-screen.tsx`에서 mobile CTA bar를 `bottom-0`으로 확장하고, 하단 탭 높이만큼 padding-bottom을 확보했다.
+  - `tests/recipe-detail-screen.test.tsx`에서 CTA bar의 `bottom-0`과 safe-area 포함 padding class를 고정했다.
+  - Verified: `pnpm exec vitest run tests/recipe-detail-screen.test.tsx tests/recipe-add-to-planner.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+
+### 47. 웹 레시피상세에서 인분 조절이 재료와 분리되어 보이는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Recipe Detail / Web
+- Source: user manual review, web/app comparison
+- Problem:
+  - 앱에서는 인분 조절이 재료 탭에 있어 `인분 변경 -> 재료량 변경` 관계가 자연스럽다.
+  - 웹에서는 인분 조절이 재료/만들기 grid 바깥 독립 section이라 재료량과의 연결감이 약하다.
+  - 재료와 만들기를 나란히 배치하는 현재 구조가 좁아 보일 때, 인분 조절 section이 별도로 한 줄을 더 차지해 답답함을 키운다.
+- User impact:
+  - 사용자는 인분 조절이 어떤 정보를 바꾸는지 즉시 연결하기 어렵다.
+  - 웹 detail의 reading area가 여러 section으로 쪼개져 조리 흐름이 덜 매끄럽게 보인다.
+- Approach decision:
+  - 고치는 게 맞다. 전면 재배치보다 1차로 인분 조절을 재료 패널 헤더로 옮겨 앱의 정보 구조와 맞추는 것이 안전하다.
+- Recommended fix:
+  - 독립 `web-servings-section`을 제거하고 재료 section header 안에 `인분 조절` copy와 stepper를 배치한다.
+  - 재료 header는 좁은 column에 맞게 세로 stack을 허용한다.
+  - 만들기 section은 넓어진 column에서 조리 step 읽기에 집중한다.
+- Acceptance criteria:
+  - 웹 recipe detail에서 인분 조절 stepper가 재료 section 안에 보인다.
+  - 독립 `web-servings-section`이 더 이상 렌더링되지 않는다.
+  - 인분을 바꾸면 재료량 변경과 cook-mode href 반영이 기존처럼 유지된다.
+- Likely implementation target:
+  - `components/recipe/recipe-detail-screen.tsx`
+  - `app/globals.css`
+  - `tests/recipe-detail-screen.test.tsx`
+- Verification:
+  - `components/recipe/recipe-detail-screen.tsx`에서 독립 `web-servings-section`을 제거하고 재료 section header 안에 인분 stepper를 배치했다.
+  - `tests/recipe-detail-screen.test.tsx`에서 독립 servings section 미노출, 재료 section 안의 `인분 늘리기` 버튼, 설명 copy를 고정했다.
+  - 기존 cook CTA selected servings test를 유지해 인분 선택값이 요리모드 href에 반영되는지 확인했다.
+  - Verified: `pnpm exec vitest run tests/recipe-detail-screen.test.tsx tests/recipe-add-to-planner.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+
+### 48. 웹 플래너에 추가 모달의 font-weight 위계가 어색한 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Low
+- Area: UI / Planner Add Modal / Web
+- Source: user manual review, recipe detail planner-add modal
+- Problem:
+  - 웹 플래너에 추가 모달에서 날짜/끼니/인분 같은 section label이 다소 강하게 보인다.
+  - 반대로 stepper row의 `인분 조절` 텍스트는 `web-modal-copy` 스타일이라 너무 연하게 보인다.
+- User impact:
+  - 모달 안 정보 위계가 균형 있게 읽히지 않는다.
+  - 실제 조작 대상인 인분 조절 row가 덜 중요해 보일 수 있다.
+- Recommended fix:
+  - recipe-detail variant의 웹 planner-add section label에 전용 클래스를 추가해 font-weight를 한 단계 낮춘다.
+  - `인분 조절` 텍스트에는 전용 클래스를 추가해 font-weight와 color를 올린다.
+  - 날짜 chip, meal chip, stepper 조작 동작은 유지한다.
+- Acceptance criteria:
+  - 웹 planner-add modal의 날짜/끼니/인분 label은 기존보다 덜 무겁다.
+  - `인분 조절` 텍스트는 기존보다 또렷하다.
+  - 모달 제목, preview, date grid, meal chip, submit CTA는 유지된다.
+- Likely implementation target:
+  - `components/recipe/planner-add-sheet.tsx`
+  - `app/globals.css`
+  - `tests/recipe-add-to-planner.test.tsx`
+- Verification:
+  - `components/recipe/planner-add-sheet.tsx`에서 recipe-detail 웹 planner-add section label과 `인분 조절` copy에 전용 class를 추가했다.
+  - `app/globals.css`에서 section label은 700으로 낮추고, `인분 조절` copy는 `web-text-1`/700으로 올렸다.
+  - `tests/recipe-add-to-planner.test.tsx`에서 새 class와 CSS font-weight/color를 고정했다.
+  - Verified: `pnpm exec vitest run tests/recipe-detail-screen.test.tsx tests/recipe-add-to-planner.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+
+### 49. 웹 요리모드 보드가 화면 높이를 충분히 활용하지 못하는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Cooking Mode / Web
+- Source: user manual review, cooking mode web
+- Problem:
+  - 웹 요리모드에서 컨테이너가 화면 높이를 충분히 쓰지 않으면 조리순서를 보기 위해 불필요한 스크롤이 늘어난다.
+  - 요리 중에는 사용자가 손을 자주 쓰기 어렵기 때문에 스크롤 비용이 일반 읽기 화면보다 크게 느껴진다.
+- User impact:
+  - 한 화면에서 보이는 조리단계 수가 줄어 조리 흐름을 따라가기 어렵다.
+  - 레시피를 보며 실제 조리하는 상황에서 화면 조작 빈도가 늘어난다.
+- Approach decision:
+  - 고치는 게 맞다. 요리모드는 미려한 여백보다 정보 밀도와 스크롤 최소화가 우선이다.
+- Recommended fix:
+  - 웹 요리모드 main/board 높이를 viewport 기준으로 늘리고, 내부 재료/순서 목록만 필요한 경우 스크롤되게 한다.
+  - 상단 nav와 보드 header 높이는 유지하되, board body가 남은 높이를 최대한 차지하게 한다.
+- Acceptance criteria:
+  - 웹 요리모드 board가 viewport 높이에 맞춰 더 크게 보인다.
+  - 전체 page scroll보다 board 내부 목록 scroll이 우선된다.
+  - 취소/요리 완료 CTA는 기존처럼 header에서 접근 가능하다.
+- Likely implementation target:
+  - `components/cooking/cook-mode-desktop-view.tsx`
+  - `app/globals.css`
+  - `tests/cook-mode-screen.test.tsx`
+- Verification:
+  - `app/globals.css`에서 웹 요리모드 board를 viewport 기준 높이로 확장하고, 내부 grid/list가 남은 높이를 쓰도록 조정했다.
+  - `tests/cook-mode-screen.test.tsx`에서 web whole-board의 viewport 기반 height 규칙을 고정했다.
+  - Verified: `pnpm exec vitest run tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 50. 앱 요리모드 상단 header가 제목을 별도 줄로 써 화면 높이를 낭비하는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Cooking Mode / Mobile
+- Source: user manual review, cooking mode mobile
+- Problem:
+  - 앱 요리모드 상단에서 뒤로가기 버튼 오른쪽 공간이 비어 있고, 제목이 그 아래 줄에 있어 상단 고정 영역이 커진다.
+  - 요리모드에서는 조리순서를 최대한 많이 보는 것이 중요하므로 header 높이 낭비가 체감된다.
+- User impact:
+  - 한 화면에 들어오는 조리단계가 줄어든다.
+  - 실제 조리 중 스크롤과 화면 확인이 늘어난다.
+- Approach decision:
+  - 고치는 게 맞다. 뒤로가기 버튼 오른쪽에 제목을 배치해 같은 정보량을 더 낮은 header로 보여주는 편이 낫다.
+- Recommended fix:
+  - 모바일 header를 back button, title/subtitle, wake-lock badge가 한 row에 놓이는 구조로 바꾼다.
+  - title은 한 줄 말줄임 처리하고 subtitle은 더 작은 보조 정보로 유지한다.
+- Acceptance criteria:
+  - 앱 요리모드에서 제목이 뒤로가기 버튼 오른쪽 같은 row에 보인다.
+  - header 높이가 줄고 조리순서 영역이 더 많이 노출된다.
+  - 취소 버튼과 화면 안 꺼짐 badge의 접근성은 유지된다.
+- Likely implementation target:
+  - `components/cooking/cook-mode-mobile-ui.tsx`
+  - `app/globals.css`
+  - `tests/cook-mode-screen.test.tsx`
+  - `tests/standalone-cook-mode-screen.test.tsx`
+- Verification:
+  - `components/cooking/cook-mode-mobile-ui.tsx`에서 back button, title/subtitle, wake-lock badge를 한 row로 재배치했다.
+  - `app/globals.css`에서 compact mobile header row와 줄어든 title/subtitle 크기를 받도록 정리했다.
+  - `tests/cook-mode-screen.test.tsx`와 `tests/standalone-cook-mode-screen.test.tsx`에서 제목과 취소 버튼이 같은 header row에 있는지 고정했다.
+  - Verified: `pnpm exec vitest run tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 51. 요리모드 조리법 태그가 조리방법 본문 공간을 줄이는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Cooking Mode / Web+Mobile
+- Source: user manual review, cooking mode
+- Problem:
+  - 각 조리단계의 조리법 태그가 본문 column 안에 있어 조리방법 텍스트 첫 줄 공간을 줄인다.
+  - 단계 번호 위쪽은 상대적으로 비어 있어 정보를 더 효율적으로 배치할 수 있다.
+- User impact:
+  - 조리방법 문장이 더 많이 줄바꿈되어 한 화면에서 읽을 수 있는 정보량이 줄어든다.
+  - 모바일에서는 특히 단계별 카드 높이가 커진다.
+- Approach decision:
+  - 고치는 게 맞다. 조리법은 단계 번호와 같은 marker 정보로 묶는 편이 의미 구조도 더 자연스럽다.
+- Recommended fix:
+  - 조리법 태그를 step copy 영역에서 빼고 단계 번호 위 marker 영역으로 이동한다.
+  - 조리방법 본문은 첫 줄부터 텍스트만 시작하게 한다.
+- Acceptance criteria:
+  - 각 조리단계에서 조리법 태그가 번호 위에 보인다.
+  - 조리방법 본문 영역에는 조리법 태그가 포함되지 않는다.
+  - 조리법별 색상과 aria label은 유지된다.
+- Likely implementation target:
+  - `components/cooking/cook-mode-whole-board.tsx`
+  - `app/globals.css`
+  - `tests/cook-mode-screen.test.tsx`
+  - `tests/standalone-cook-mode-screen.test.tsx`
+- Verification:
+  - `components/cooking/cook-mode-whole-board.tsx`에서 조리법 tag를 step copy에서 분리해 `cook-whole-step-marker` 안의 단계 번호 위로 이동했다.
+  - `app/globals.css`에서 step marker column과 본문 paragraph margin을 조정했다.
+  - `tests/cook-mode-screen.test.tsx`와 `tests/standalone-cook-mode-screen.test.tsx`에서 조리법 tag가 marker 안에 있고 본문 copy 밖에 있는지 고정했다.
+  - Verified: `pnpm exec vitest run tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 52. 앱 요리모드 전체 재료 카드가 과하게 넓어 정보 밀도가 낮은 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Cooking Mode / Mobile
+- Source: user manual review, cooking mode mobile
+- Problem:
+  - 앱 요리모드의 전체 재료가 카드 하나당 가로 전체를 차지하면 예쁘지만, 실제 조리 중에는 재료 목록을 빠르게 훑기 어렵다.
+  - 요리모드는 UI 장식보다 UX 밀도가 더 중요하다.
+- User impact:
+  - 재료 수가 많을수록 재료 영역이 길어져 조리순서로 내려가기 위한 스크롤이 늘어난다.
+  - 사용자가 필요한 재료를 한눈에 비교하기 어렵다.
+- Approach decision:
+  - 고치는 게 맞다. 모바일 요리모드에 한해 재료를 텍스트 길이만큼 차지하는 compact chip/card로 바꾸는 것이 적절하다.
+- Recommended fix:
+  - 모바일 whole-board의 재료 list를 flex-wrap 구조로 바꾼다.
+  - 각 재료 chip은 재료명과 양 길이에 맞춰 너비를 잡되, 긴 재료명은 화면 폭을 넘지 않게 처리한다.
+  - 웹 재료 패널은 기존 list 구조를 유지한다.
+- Acceptance criteria:
+  - 앱 요리모드 재료 카드가 내용 길이만큼만 차지하며 가로로 이어진다.
+  - section label은 줄 전체를 차지해 구분이 유지된다.
+  - 긴 재료명도 화면 밖으로 넘치지 않는다.
+- Likely implementation target:
+  - `app/globals.css`
+  - `tests/cook-mode-screen.test.tsx`
+  - `tests/standalone-cook-mode-screen.test.tsx`
+- Verification:
+  - `app/globals.css`에서 mobile whole-board 재료 list를 `flex-wrap` 기반 compact chip/card layout으로 바꿨다.
+  - section label은 한 줄 전체를 차지하고, 재료 chip은 내용 길이 기준 너비와 max-width를 갖도록 했다.
+  - `tests/cook-mode-screen.test.tsx`에서 mobile ingredient flex-wrap/inline-flex density 규칙을 고정했다.
+  - Verified: `pnpm exec vitest run tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 53. 레시피상세에서 진입한 요리모드에 `독립요리` 문구가 노출되는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX Writing / Cooking Mode / Web+Mobile
+- Source: user manual review, cooking mode from recipe detail
+- Problem:
+  - 레시피상세에서 요리하기로 들어온 사용자는 `독립요리`라는 내부 구분을 이해할 필요가 없다.
+  - `독립요리`는 서비스 내부 상태 구분에 가깝고 사용자에게 의미가 불명확하다.
+- User impact:
+  - 사용자가 현재 화면의 목적과 무관한 용어를 보고 혼란을 느낄 수 있다.
+  - 요리 시작 흐름의 문구가 덜 자연스럽다.
+- Approach decision:
+  - 고치는 게 맞다. standalone cook mode의 사용자-facing subtitle에서는 내부 용어를 제거한다.
+- Recommended fix:
+  - standalone 요리모드 subtitle에서는 `요리모드 · N인분`만 보여준다.
+  - planner 요리모드는 필요한 경우 끼니/플래너 context label을 유지한다.
+  - loading/error 상태의 `독립 요리모드` 표현도 `요리모드`로 정리한다.
+- Acceptance criteria:
+  - 레시피상세에서 진입한 요리모드에 `독립요리`, `독립 요리`, `독립 요리모드`가 보이지 않는다.
+  - 인분 정보는 그대로 보인다.
+  - 플래너에서 진입한 요리모드의 context 정보는 유지된다.
+- Likely implementation target:
+  - `components/cooking/cook-mode-desktop-view.tsx`
+  - `components/cooking/cook-mode-mobile-ui.tsx`
+  - `components/cooking/standalone-cook-mode-screen.tsx`
+  - `tests/standalone-cook-mode-screen.test.tsx`
+- Verification:
+  - `components/cooking/cook-mode-desktop-view.tsx`와 `components/cooking/cook-mode-mobile-ui.tsx`에서 standalone subtitle의 `독립 요리` context label을 제거했다.
+  - `components/cooking/standalone-cook-mode-screen.tsx`에서 loading/error shell breadcrumb의 `독립 요리모드`를 `요리모드`로 정리했다.
+  - `tests/standalone-cook-mode-screen.test.tsx`에서 standalone 화면에 `독립` 문구가 보이지 않고 subtitle이 `요리모드 · 2인분`으로 표시되는지 고정했다.
+  - Verified: `pnpm exec vitest run tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 54. 앱 플래너 카드에서 긴 레시피 제목이 카드 높이를 키우는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Planner / Mobile
+- Source: user manual review, planner mobile
+- Problem:
+  - 앱 플래너에서 레시피 제목이 길면 제목이 여러 줄로 노출되어 끼니 카드 높이가 커진다.
+  - 웹 플래너는 제목을 제한해 카드 높이를 안정적으로 유지한다.
+- User impact:
+  - 주간 플래너에서 하루/끼니 목록을 빠르게 훑기 어렵다.
+  - 긴 제목 하나가 전체 day card의 밀도를 흐트러뜨린다.
+- Approach decision:
+  - 고치는 게 맞다. 플래너 week view는 상세 읽기보다 스캔성이 우선이므로 제목은 한 줄 말줄임이 적합하다.
+- Recommended fix:
+  - 모바일 planner meal card title을 한 줄 말줄임 처리한다.
+  - 전체 title은 기존처럼 상세/끼니 화면에서 확인하게 두고, week card는 compact preview 역할만 한다.
+- Acceptance criteria:
+  - 앱 플래너 meal card에서 긴 레시피 제목이 한 줄로 줄고 말줄임된다.
+  - 긴 제목 때문에 카드 높이가 커지지 않는다.
+  - 웹 플래너의 기존 표시 방식은 유지된다.
+- Likely implementation target:
+  - `components/planner/planner-week-screen.tsx`
+  - `app/globals.css`
+  - `tests/planner-week-screen.test.tsx`
+- Verification:
+  - `components/planner/planner-week-screen.tsx`에서 모바일 planner meal title을 전용 class로 바꾸고 한 줄 말줄임 스타일을 적용했다.
+  - `app/globals.css`에 `mobile-planner-meal-title`을 추가해 overflow/ellipsis/nowrap을 고정했다.
+  - `tests/planner-week-screen.test.tsx`에서 긴 제목이 `mobile-planner-meal-title`로 렌더링되고 `line-clamp-2`를 쓰지 않는지 고정했다.
+  - Verified: `pnpm exec vitest run tests/planner-week-screen.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 55. 앱 플래너 한 끼니에 여러 레시피가 세로로 쌓여 공간을 많이 차지하는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Planner / Mobile
+- Source: user manual review, planner mobile
+- Problem:
+  - 앱에서 한 끼니에 여러 레시피가 등록되면 현재는 위아래로 배치되어 slot row 높이가 커진다.
+  - 3개 이상일 때 `+1` badge가 작고 약해 잘 보이지 않는다.
+- User impact:
+  - 한 끼니에 여러 메뉴를 넣는 사용자는 플래너 전체를 훑기 위해 더 많이 스크롤해야 한다.
+  - 숨겨진 레시피가 있다는 사실을 놓치기 쉽다.
+- Approach decision:
+  - 고치는 게 맞다. 모바일 week view에서는 2개까지 가로 배치하고 overflow badge를 더 강하게 보여주는 편이 스캔성에 유리하다.
+- Recommended fix:
+  - 모바일 slot meal list를 2열 가로 layout으로 바꾼다.
+  - 3개 이상은 두 번째 카드 위에 `+N` badge를 명확한 색상과 충분한 대비로 표시한다.
+  - card tap target과 meal detail 이동은 유지한다.
+- Acceptance criteria:
+  - 앱 플래너 한 끼니에 레시피가 2개 있으면 옆으로 나란히 보인다.
+  - 3개 이상일 때 `+N` badge가 충분히 눈에 띈다.
+  - 등록/장보기/요리완료 상태의 left accent와 aria label은 유지된다.
+- Likely implementation target:
+  - `components/planner/planner-week-screen.tsx`
+  - `app/globals.css`
+  - `tests/planner-week-screen.test.tsx`
+- Verification:
+  - `components/planner/planner-week-screen.tsx`에서 모바일 slot meal list를 `mobile-planner-slot-meals` 2열 layout으로 바꿨다.
+  - `app/globals.css`에서 2개 meal은 가로로 배치하고, `+N` overflow badge는 brand color와 충분한 대비로 보이게 했다.
+  - `tests/planner-week-screen.test.tsx`에서 3개 meal 중 2개만 보이고, `+1` badge와 aria label이 표시되는지 고정했다.
+  - Verified: `pnpm exec vitest run tests/planner-week-screen.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 56. 앱 플래너 이번 주 요약 텍스트가 작고 정렬감이 약한 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Low
+- Area: UI / Planner / Mobile
+- Source: user manual review, planner mobile weekly summary
+- Problem:
+  - 앱 `이번 주 요약` 카드의 `등록`, `장보기`, `요리 완료` label이 작아 보인다.
+  - label/value 정렬이 가운데로 맞지 않아 세 개의 summary card가 덜 정돈되어 보인다.
+- User impact:
+  - 주간 상태를 빠르게 확인하는 summary의 가독성이 낮다.
+  - 상단 요약 영역의 완성도가 떨어져 보인다.
+- Approach decision:
+  - 고치는 게 맞다. 기능 변경 없이 typography와 정렬만 다듬는 low-risk polish다.
+- Recommended fix:
+  - summary label font-size를 키우고, card 내부 텍스트를 가운데 정렬한다.
+  - 숫자 value는 현재보다 약간 더 또렷하게 유지한다.
+- Acceptance criteria:
+  - 앱 `이번 주 요약`의 세 label이 기존보다 크게 보인다.
+  - label과 count가 각 card 중앙에 정렬된다.
+  - 웹 summary는 기존 구조를 유지한다.
+- Likely implementation target:
+  - `components/planner/planner-week-screen.tsx`
+  - `tests/planner-week-screen.test.tsx`
+- Verification:
+  - `components/planner/planner-week-screen.tsx`에서 앱 summary card label을 13px/center 정렬로 올리고 count를 22px로 조정했다.
+  - `tests/planner-week-screen.test.tsx`에서 summary card의 `text-center`, label `text-[13px]`, count `text-[22px]`를 고정했다.
+  - Verified: `pnpm exec vitest run tests/planner-week-screen.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 57. 웹 식사추가 첫 진입 시 레시피 검색 패널은 보이지만 왼쪽 버튼이 선택 상태가 아닌 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Meal Add / Web
+- Source: user manual review, web meal add
+- Problem:
+  - 웹 식사추가 화면 첫 진입 시 오른쪽 main panel에는 레시피 검색이 자동으로 보인다.
+  - 하지만 왼쪽 추가 방법 버튼 중 `레시피 검색`이 active 상태로 보이지 않아 현재 화면이 어떤 방법에 해당하는지 맞지 않는다.
+- User impact:
+  - 사용자가 처음 화면에서 현재 선택 상태를 파악하기 어렵다.
+  - 같은 화면 안에서 navigation state와 content state가 어긋나 보인다.
+- Approach decision:
+  - 고치는 게 맞다. 현재 콘텐츠가 레시피 검색이면 왼쪽 navigation도 같은 상태를 표시해야 한다.
+- Recommended fix:
+  - web meal add의 `pickerMode === "none"` 초기 상태도 `레시피 검색` option active로 간주한다.
+  - active option을 다시 눌러 search picker를 초기화하는 기존 동작은 유지한다.
+- Acceptance criteria:
+  - 웹 식사추가 첫 진입 시 `레시피 검색` 버튼에 active class가 붙는다.
+  - 오른쪽 panel의 레시피 검색 input은 기존처럼 보인다.
+  - 다른 방법을 선택하면 active 상태가 해당 방법으로 이동한다.
+- Likely implementation target:
+  - `components/planner/menu-add-screen.tsx`
+  - `tests/menu-add-screen.test.tsx`
+- Verification:
+  - `components/planner/menu-add-screen.tsx`에서 `pickerMode === "none"` 초기 상태도 `레시피 검색` option active로 간주하게 했다.
+  - `tests/menu-add-screen.test.tsx`에서 웹 식사추가 첫 진입 시 search option에 `web-menu-add-card-active`가 붙고 오른쪽 검색 input이 보이는지 고정했다.
+  - Verified: `pnpm exec vitest run tests/menu-add-screen.test.tsx tests/recipe-book-selector.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 58. 앱 레시피북에서 추가 화면의 레시피북 row가 커버/색상 없이 밋밋해 보이는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Low
+- Area: UI / Meal Add / Mobile Recipebook
+- Source: user manual review, app recipebook meal add
+- Problem:
+  - 앱 `레시피북에서 추가` 화면에서 레시피북 선택 row가 텍스트 중심으로 보이면 책/컬렉션을 고르는 느낌이 약하다.
+  - 커버 이미지나 색상 정보가 있으면 레시피북별 구분이 더 쉬워진다.
+- User impact:
+  - 여러 레시피북을 빠르게 구분하기 어렵다.
+  - 마이페이지/레시피북 화면에서 쓰는 cover identity와 식사추가 화면의 인상이 분리된다.
+- Approach decision:
+  - 고치는 게 맞다. 이미 레시피북 cover view model이 있으므로 새 데이터 계약 없이 작은 UI 보강으로 해결할 수 있다.
+- Recommended fix:
+  - 앱 `레시피북에서 추가` row에 mini cover를 유지하고, row 자체에도 cover tone 기반의 옅은 색상 배경을 준다.
+  - cover image가 있으면 mini cover 안에 보여주고, 없으면 tone color만으로 구분한다.
+- Acceptance criteria:
+  - 앱 screen presentation의 레시피북 row에 mini cover가 렌더링된다.
+  - cover image가 있는 레시피북은 해당 이미지가 mini cover에 적용된다.
+  - cover image가 없는 레시피북도 tone color class로 구분된다.
+- Likely implementation target:
+  - `components/planner/recipe-book-selector.tsx`
+  - `app/globals.css`
+  - `tests/recipe-book-selector.test.tsx`
+- Verification:
+  - `components/planner/recipe-book-selector.tsx`에서 앱/sheet 레시피북 row에 cover tone class를 붙였다.
+  - `app/globals.css`에서 `planner-recipebook-selector-row-*` tone 배경을 추가해 커버 이미지가 없어도 row별 색상 구분이 되게 했다.
+  - `tests/recipe-book-selector.test.tsx`에서 app screen presentation의 mini cover image와 tone row class를 고정했다.
+  - Verified: `pnpm exec vitest run tests/menu-add-screen.test.tsx tests/recipe-book-selector.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 59. 웹 장보기 준비 전체선택 체크 표시 색상이 충분히 보이지 않는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Low
+- Area: UI / Shopping Flow / Web
+- Source: user manual review, shopping flow web select-all control
+- Problem:
+  - 웹 장보기 준비 화면의 `전체 선택` 버튼이 checked 상태일 때 체크 표시가 흰색으로 충분히 드러나야 한다.
+  - 현재 버튼/체크박스 계열 style이 여러 selector에 걸쳐 있어, checked icon contrast를 명시적으로 고정할 필요가 있다.
+- User impact:
+  - 전체 선택 여부를 즉시 확인하기 어렵다.
+  - 선택 상태가 brand 배경 위에서 흐리게 보이면 조작 확신이 떨어진다.
+- Approach decision:
+  - 고치는 게 맞다. 색상 대비와 상태 인지 문제이며 기능 변경 없이 CSS만 좁게 수정할 수 있다.
+- Recommended fix:
+  - `shopping-select-all-control[aria-checked="true"] > span`에 checked icon color를 white/inverse로 명시한다.
+  - 기존 compact size와 border/background 패턴은 유지한다.
+- Acceptance criteria:
+  - 웹 전체선택 checked 상태의 체크 표시가 흰색으로 렌더링된다.
+  - unchecked/disabled 동작은 그대로 유지된다.
+- Likely implementation target:
+  - `app/globals.css`
+  - `tests/manual-uiux-layout-policy.test.ts`
+- Verification:
+  - `app/globals.css`에서 `shopping-select-all-control[aria-checked="true"] > span`의 icon color를 `var(--web-text-inverse, #fff)`로 명시했다.
+  - `tests/manual-uiux-layout-policy.test.ts`에서 checked 전체선택 box의 white/inverse icon color를 고정했다.
+  - Verified: `pnpm exec vitest run tests/shopping-flow-screen.test.tsx tests/manual-uiux-layout-policy.test.ts`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 60. 앱 장보기 준비의 요약정보 크기와 배경 구조가 선택 확인에 약한 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Shopping Flow / Mobile
+- Source: user manual review, shopping flow mobile preparation screen
+- Problem:
+  - 앱 장보기 준비 화면에서 선택한 끼니 수와 전체 인분 요약 텍스트가 작아 핵심 정보인데도 덜 눈에 띈다.
+  - 전체선택 버튼과 요약정보는 장보기 대상을 고르는 상단 decision section에 붙어 있어야 하며, 회색 배경 영역은 화면을 불필요하게 분리해 보이게 한다.
+- User impact:
+  - 사용자가 장보기 목록을 만들기 전에 몇 끼니/몇 인분을 선택했는지 빠르게 확인하기 어렵다.
+  - 회색 배경이 목록 영역과 상단 선택 영역을 과하게 나눠 화면이 답답하게 보일 수 있다.
+- Approach decision:
+  - 고치는 게 맞다. 장보기 생성 전 확인 정보의 가독성과 화면 구조를 개선하는 low-risk UX 수정이다.
+- Recommended fix:
+  - 앱 상단 summary section 안에 전체선택과 요약정보를 명확히 묶는다.
+  - 요약정보 font-size를 키우고 굵기를 유지한다.
+  - 모바일 shopping flow shell의 회색 배경을 제거하고 surface 배경으로 통일한다.
+- Acceptance criteria:
+  - 앱 `전체 선택` 버튼과 `{선택 수}개 · {인분}인분` 요약정보가 같은 상단 summary section 안에 있다.
+  - 요약정보 텍스트가 기존보다 크게 보인다.
+  - 앱 장보기 준비 화면의 전체 배경에서 회색 fill 배경이 제거된다.
+- Likely implementation target:
+  - `components/shopping/shopping-flow-screen.tsx`
+  - `tests/shopping-flow-screen.test.tsx`
+- Verification:
+  - `components/shopping/shopping-flow-screen.tsx`에서 모바일 shell/main 배경을 `surface`로 통일해 회색 fill 배경을 제거했다.
+  - 앱 상단 summary section에 `전체 선택`과 `{선택 수}개 · {인분}인분` 요약정보를 묶고, 요약 텍스트를 16px로 키웠다.
+  - `tests/shopping-flow-screen.test.tsx`에서 모바일 shell 배경, summary text size, 전체선택 버튼의 summary section 포함 관계를 고정했다.
+  - Verified: `pnpm exec vitest run tests/shopping-flow-screen.test.tsx tests/manual-uiux-layout-policy.test.ts`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 61. 웹 장보기 리스트 전체선택 체크 표시와 보조 텍스트가 어색한 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Low
+- Area: UI / Shopping List / Web
+- Source: user manual review, shopping list web select-all control
+- Problem:
+  - 웹 장보기 리스트의 `전체 선택` checked 표시가 흰색으로 충분히 고정되어 보여야 한다.
+  - 버튼 오른쪽 `체크 · 제외` 보조 텍스트는 실제 조작 버튼과 중복되어 시각 잡음이 된다.
+- User impact:
+  - 전체 선택 상태를 즉시 확인하기 어렵다.
+  - 구매 섹션 header가 불필요한 텍스트로 복잡해 보인다.
+- Approach decision:
+  - 고치는 게 맞다. checked 대비는 접근성 문제이고, 보조 텍스트 제거는 정보 위계를 단순화한다.
+- Recommended fix:
+  - 기존 `shopping-select-all-control` checked icon color를 shopping list에서도 테스트로 고정한다.
+  - 웹 shopping detail header에서 `체크 · 제외` 문구를 제거한다.
+- Acceptance criteria:
+  - 웹 shopping list의 전체선택 checked icon이 흰색으로 보인다.
+  - `체크 · 제외` 문구가 웹 shopping list에 표시되지 않는다.
+- Likely implementation target:
+  - `components/shopping/shopping-detail-screen.tsx`
+  - `app/globals.css`
+  - `tests/shopping-detail.frontend.test.tsx`
+  - `tests/manual-uiux-layout-policy.test.ts`
+- Verification:
+  - `components/shopping/shopping-detail-screen.tsx`에서 웹 shopping list header의 `체크 · 제외` 보조 문구를 제거했다.
+  - `app/globals.css`에서 `.web-shopping-check[aria-checked="true"]`의 icon color를 `var(--web-text-inverse)`로 명시했다.
+  - `tests/shopping-detail.frontend.test.tsx`에서 `체크 · 제외` 문구가 렌더링되지 않음을 고정했다.
+  - `tests/manual-uiux-layout-policy.test.ts`에서 checked web shopping checkbox의 white/inverse icon color를 고정했다.
+  - Verified: `pnpm exec vitest run tests/shopping-detail.frontend.test.tsx tests/shopping-pantry-reflection-popup-style.test.ts tests/manual-uiux-layout-policy.test.ts`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 62. 웹 장보기 리스트 재료 카드의 재료명/양 배치가 공간을 비효율적으로 쓰는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UI / Shopping List / Web
+- Source: user manual review, shopping list web item card
+- Problem:
+  - 웹 재료 카드에서 재료명과 양이 세로로 배치되어 넓은 카드 공간을 충분히 쓰지 못한다.
+  - 재료명 글씨가 작아 구매 중 빠르게 확인하기에 약하다.
+- User impact:
+  - 장보기 중 재료명과 양을 한눈에 대조하기 어렵다.
+  - 웹 화면의 여유 공간 대비 정보 밀도가 낮아 보인다.
+- Approach decision:
+  - 고치는 게 맞다. 쇼핑 리스트는 빠른 스캔이 핵심이므로 재료명과 양을 가로로 놓고 재료명을 조금 키우는 편이 낫다.
+- Recommended fix:
+  - 웹 item card copy 영역을 horizontal flex layout으로 바꾼다.
+  - 재료명 font-size를 15px 이상으로 올리고, 양은 오른쪽에 붙어 보이되 버튼과는 분리한다.
+- Acceptance criteria:
+  - 웹 재료 카드에서 재료명과 양이 같은 줄에 가로로 배치된다.
+  - 재료명 글씨가 기존보다 커진다.
+  - read-only/excluded 카드도 같은 정보 구조를 유지한다.
+- Likely implementation target:
+  - `app/globals.css`
+  - `tests/shopping-pantry-reflection-popup-style.test.ts`
+- Verification:
+  - `app/globals.css`에서 `.web-shopping-item-copy`를 `flex`/baseline/space-between layout으로 바꿔 재료명과 양을 가로 배치했다.
+  - 웹 재료명은 15px, 양은 13px로 올리고 양은 nowrap/right align으로 고정했다.
+  - `tests/shopping-pantry-reflection-popup-style.test.ts`에서 web item copy layout과 typography를 고정했다.
+  - Verified: `pnpm exec vitest run tests/shopping-detail.frontend.test.tsx tests/shopping-pantry-reflection-popup-style.test.ts tests/manual-uiux-layout-policy.test.ts`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 63. 앱 장보기 리스트의 재료양이 `이미있음` 버튼에 너무 붙어 보이는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Shopping List / Mobile
+- Source: user manual review, shopping list mobile item row
+- Problem:
+  - 앱 row에서 재료명, 재료양, `이미있음` 버튼이 한 줄에 있을 때 재료양이 버튼 쪽에 붙어 보여 소속이 애매하다.
+  - 재료양은 버튼보다 재료명에 더 가까워야 한다.
+- User impact:
+  - 사용자가 재료양을 버튼 라벨의 일부처럼 잘못 훑을 수 있다.
+  - 좁은 화면에서 구매 정보와 action이 덜 분리된다.
+- Approach decision:
+  - 고치는 게 맞다. 정보와 action 사이의 거리 조정만으로 해결할 수 있는 작은 UX 수정이다.
+- Recommended fix:
+  - 모바일 item row의 재료명/양 copy 영역을 왼쪽 정렬로 바꾸고, 양을 재료명 옆에 붙인다.
+  - `이미있음` 버튼은 별도 action으로 오른쪽에 유지한다.
+- Acceptance criteria:
+  - 앱 row에서 양 텍스트가 `이미있음` 버튼보다 재료명 쪽에 가깝게 배치된다.
+  - 긴 재료명에서도 row가 깨지지 않고 truncate된다.
+- Likely implementation target:
+  - `components/shopping/shopping-detail-screen.tsx`
+  - `tests/shopping-detail.frontend.test.tsx`
+- Verification:
+  - `components/shopping/shopping-detail-screen.tsx`에서 모바일 item copy 영역을 `justify-start gap-2`로 바꾸고 양 텍스트를 왼쪽 정렬로 재료명 옆에 붙였다.
+  - `이미있음` 버튼은 오른쪽 action으로 유지했다.
+  - `tests/shopping-detail.frontend.test.tsx`에서 모바일 item copy/amount class와 amount text를 고정했다.
+  - Verified: `pnpm exec vitest run tests/shopping-detail.frontend.test.tsx tests/shopping-pantry-reflection-popup-style.test.ts tests/manual-uiux-layout-policy.test.ts`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 64. 장보기 완료 전 팬트리 반영 모달에서 구매 재료와 이미있음 재료가 구분되지 않는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Shopping List / Completion Modal
+- Source: user manual review, pantry reflection modal
+- Problem:
+  - 장보기 완료 시 팬트리 반영 모달은 구매 체크 항목과 `이미있음` 항목을 함께 보여준다.
+  - 하지만 두 종류가 섞여 보이면 사용자가 어떤 항목을 실제로 산 재료로 반영하는지, 어떤 항목을 이미 보유한 재료로 반영하는지 구분하기 어렵다.
+- User impact:
+  - 팬트리에 반영할 항목을 선택할 때 맥락을 놓치기 쉽다.
+  - 구매 완료와 기존 보유 확인이라는 서로 다른 의미가 한 리스트로 합쳐져 보인다.
+- Approach decision:
+  - 고치는 게 맞다. 기존 `이미있음 = 팬트리 반영 후보` 계약은 유지하고, 표시만 `구매한 재료`와 `이미 있는 재료`로 나눈다.
+- Recommended fix:
+  - pantry reflection popup의 eligible items를 구매 체크 항목과 이미있음 항목으로 section 분리한다.
+  - 웹 modal과 앱 bottom sheet 모두 같은 section label과 count를 제공한다.
+  - 선택/해제, 전체 선택 default policy, API body 의미는 바꾸지 않는다.
+- Acceptance criteria:
+  - 팬트리 반영 모달에서 구매 체크 항목과 이미있음 항목이 서로 다른 section으로 보인다.
+  - 각 section에 count가 표시된다.
+  - 반영 선택/해제와 완료 API 요청 값은 기존과 같다.
+- Likely implementation target:
+  - `components/shopping/pantry-reflection-popup.tsx`
+  - `tests/shopping-detail.frontend.test.tsx`
+- Verification:
+  - `components/shopping/pantry-reflection-popup.tsx`에서 팬트리 반영 후보를 `구매한 재료`와 `이미 있는 재료` section으로 분리했다.
+  - 웹 modal과 앱 bottom sheet 모두 같은 section label/count를 렌더링하게 했다.
+  - 선택/해제, default all-selected policy, complete API body는 기존 동작을 유지했다.
+  - `tests/shopping-detail.frontend.test.tsx`에서 웹/앱 pantry reflection dialog의 section 표시와 item 배치를 고정했다.
+  - Verified: `pnpm exec vitest run tests/shopping-detail.frontend.test.tsx tests/shopping-pantry-reflection-popup-style.test.ts tests/manual-uiux-layout-policy.test.ts`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 65. 팬트리 재료추가 검색이 선택된 카테고리 안에서만 동작해 결과를 숨기는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Pantry / Ingredient Add / Search
+- Source: user manual review, pantry add modal
+- Problem:
+  - 재료추가 모달에서 특정 카테고리를 선택한 뒤 검색하면 검색 결과가 그 카테고리 안에서만 다시 필터링된다.
+  - 실제 재료가 있어도 다른 카테고리가 선택된 상태면 `검색 결과가 없어요`처럼 보일 수 있다.
+- User impact:
+  - 사용자는 재료 DB에 재료가 없다고 오해할 수 있다.
+  - 검색이라는 강한 의도가 카테고리 필터보다 우선하지 않아 조작 결과를 예측하기 어렵다.
+- Approach decision:
+  - 고치는 게 맞다. 검색 입력이 있으면 카테고리 필터를 자동으로 `전체`로 되돌리는 것이 가장 자연스럽다.
+- Recommended fix:
+  - 검색어가 입력되면 active category를 `전체`로 초기화한다.
+  - 검색 중에는 현재 fetch 결과를 카테고리로 한 번 더 숨기지 않는다.
+- Acceptance criteria:
+  - 카테고리 선택 후 다른 카테고리 재료명을 검색해도 해당 재료가 보인다.
+  - 검색 입력 시 `전체` 탭/chip이 활성 상태로 보인다.
+  - 검색어가 없을 때는 기존 카테고리 필터가 유지된다.
+- Likely implementation target:
+  - `components/pantry/pantry-add-sheet.tsx`
+  - `tests/pantry-screen.test.tsx`
+- Verification:
+  - `components/pantry/pantry-add-sheet.tsx`에서 검색어 입력 시 active category를 `전체`로 돌리고, 검색 중에는 카테고리로 결과를 다시 숨기지 않게 했다.
+  - 카테고리 button/chip의 active 상태도 검색 중에는 `전체`로 보이게 맞췄다.
+  - `tests/pantry-screen.test.tsx`에서 카테고리 선택 후 다른 카테고리 재료명을 검색해도 결과가 보이는 흐름을 고정했다.
+  - Verified: `pnpm exec vitest run tests/pantry-screen.test.tsx`
+
+### 66. 팬트리 재료추가 선택 칩이 검색 결과 변경 시 사라지는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / Pantry / Ingredient Add / Selection
+- Source: user manual review, pantry add modal
+- Problem:
+  - 재료를 선택한 뒤 검색하면 선택한 재료 id는 남아 있지만, 선택 칩은 현재 검색 결과 배열에서만 다시 계산된다.
+  - 검색 결과에 선택 재료가 없으면 `선택한 재료가 없어요`처럼 보인다.
+- User impact:
+  - 사용자는 선택이 풀린 것으로 오해할 수 있다.
+  - 여러 재료를 검색해가며 추가하는 흐름에서 신뢰도가 떨어진다.
+- Approach decision:
+  - 고치는 게 맞다. 선택 상태는 검색 결과와 독립적인 사용자 작업 결과다.
+- Recommended fix:
+  - 선택한 재료 객체를 id별 map으로 보존한다.
+  - 선택 칩 영역은 검색 결과와 관계없이 선택된 재료 map을 기준으로 렌더링한다.
+- Acceptance criteria:
+  - 재료를 선택한 후 다른 검색어를 입력해도 선택 칩이 계속 보인다.
+  - 선택 칩을 눌러 해제하면 선택 id와 선택 map이 함께 정리된다.
+  - 저장 요청에는 기존처럼 선택 id만 전달된다.
+- Likely implementation target:
+  - `components/pantry/pantry-add-sheet.tsx`
+  - `tests/pantry-screen.test.tsx`
+- Verification:
+  - `components/pantry/pantry-add-sheet.tsx`에서 선택한 재료 객체를 `selectedIngredientById` map으로 보존해 검색 결과와 독립적으로 선택 칩을 렌더링하게 했다.
+  - 선택 칩 해제 시 selected id와 selected ingredient map이 함께 정리되게 했다.
+  - `tests/pantry-screen.test.tsx`에서 대파를 선택한 뒤 간장 검색 결과로 바뀌어도 대파 선택 칩이 유지되는 흐름을 고정했다.
+  - Verified: `pnpm exec vitest run tests/pantry-screen.test.tsx`
+
+### 67. 웹/앱 팬트리에서 같은 재료의 시각 표시가 서로 다르게 보이는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Low
+- Area: UI Consistency / Pantry / Ingredient Visual
+- Source: user manual review, web/app pantry comparison
+- Problem:
+  - 현재 팬트리 재료는 서버 이미지 URL을 쓰지 않고 프론트의 emoji fallback으로 표시된다.
+  - 웹은 카테고리 emoji를, 앱은 재료명 기반 emoji를 우선 사용해 같은 재료가 다르게 보인다.
+- User impact:
+  - 같은 재료가 플랫폼마다 다른 재료처럼 느껴질 수 있다.
+  - 정식 배포 전 시각 일관성이 떨어져 완성도가 낮아 보인다.
+- Approach decision:
+  - 고치는 게 맞다. 실제 이미지 DB가 없는 상태에서는 웹/앱이 같은 fallback 함수를 쓰는 것이 가장 안전하다.
+- Recommended fix:
+  - 웹 팬트리 카드도 앱과 같은 `getPantryEmoji(standard_name, category)`를 사용한다.
+  - 서버 이미지 저장 구조가 필요한지는 별도 데이터 확장 작업으로 분리한다.
+- Acceptance criteria:
+  - 같은 재료명/카테고리 조합은 웹과 앱에서 같은 emoji로 표시된다.
+  - 기존 category grouping, 검색, 편집 동작은 바뀌지 않는다.
+- Likely implementation target:
+  - `components/pantry/pantry-screen.tsx`
+  - `tests/pantry-screen.test.tsx`
+- Verification:
+  - `ingredients` schema와 `PantryItem` 타입에는 ingredient image URL이 없고, 현재 표시는 프론트의 fallback visual임을 확인했다.
+  - `components/pantry/pantry-screen.tsx`에서 웹 팬트리 카드도 앱과 같은 `getPantryEmoji(standard_name, category)`를 사용하게 했다.
+  - `tests/pantry-screen.test.tsx`에서 웹 팬트리 카드가 재료명 기반 visual을 쓰는 기대값을 고정했다.
+  - Verified: `pnpm exec vitest run tests/pantry-screen.test.tsx`
+
+### 68. 정식 배포 전 공식 식품 데이터 기반 ingredient DB 적재가 필요한 문제
+
+- Status: investigated; direct DB write deferred
+- Severity: High
+- Area: Data Quality / Pantry / Ingredient DB
+- Source: user manual review, production readiness concern
+- Problem:
+  - 정식 배포 전에는 팬트리/레시피/장보기에서 검색 가능한 재료 DB가 충분해야 한다.
+  - 식약처/공공데이터 기반 데이터를 seed 또는 production DB로 적재하려면 공식 API/service key, 라이선스 표기, 중복 정규화 기준, 운영 DB 권한이 필요하다.
+- User impact:
+  - 재료 검색이 빈번히 실패하면 팬트리와 장보기 핵심 흐름을 믿기 어렵다.
+  - 데이터 출처와 정규화 기준 없이 수동으로 채우면 중복명, 카테고리 오류, 단위 오류가 누적된다.
+- Approach decision:
+  - 방향은 맞다. 다만 식약처/공공데이터 원본을 무검수로 전부 넣으면 가공식품명, 분류명, 중복명까지 팬트리 재료로 노출될 수 있어 정식 배포 품질에는 오히려 위험하다.
+  - 기존 workpack도 `production DB writes: 0`의 file-backed gate를 먼저 두고, 승인된 fingerprint만 migration으로 승격하는 방식을 택하고 있다.
+- Recommended fix:
+  - 식품의약품안전처/공공데이터포털 식품영양성분 DB API를 우선 source로 사용한다.
+  - 기존 `external:ingredients:live-fetch` / `external:ingredients:dry-run` 스크립트가 현재 schema에 맞는지 확인한다.
+  - API key로 live fetch와 dry-run을 실행한 뒤, `candidate-report.json`에서 팬트리 재료로 적합한 `source_fingerprint`만 검수 승인한다.
+  - 승인된 seed promotion artifact만 새 migration 또는 운영 import로 반영한다.
+- Acceptance criteria:
+  - 공식 데이터 source, 필요한 credential, 실행 command가 문서화된다.
+  - 실제 적재 전 dry-run으로 생성 row 수와 category mapping을 검토한다.
+  - production DB 반영은 service role/DB migration 권한과 rollback 경로가 있을 때만 실행한다.
+- Likely implementation target:
+  - `scripts/external-ingredient-live-fetch.mjs`
+  - `scripts/external-ingredient-file-dry-run.mjs`
+  - `supabase/seed.sql` 또는 운영 import script
+  - `docs/design/manual-uiux-review-fix-plan.md`
+- Verification:
+  - 공식 source 후보로 식품의약품안전처/공공데이터포털 식품영양성분 DB와 RDA 국가표준식품성분표 연동 경로를 확인했다.
+  - `pnpm external:ingredients:live-fetch -- --providers mfds,rda --output-dir /tmp/homecook-external-ingredient-check`를 실행해 MFDS 20 rows, RDA 10 rows live fetch와 candidate dry-run이 성공하는 것을 확인했다.
+  - 생성된 `approved-seed-promotion-artifact.json`의 `seed_rows`는 0개였다. 모든 row가 `pending_review`라서, 기존 안전장치상 직접 DB 적재하지 않는 것이 맞다.
+  - 기존 workpack `docs/workpacks/28-external-ingredient-data-ingest-gate/README.md`에 review decision 기반 승인 절차와 첫 approved seed promotion migration이 이미 정리되어 있음을 확인했다.
+  - Direct DB write: not run. 이유는 공식 원본 row 검수/승인 없이 bulk insert하면 팬트리 검색 품질을 깨뜨릴 수 있고, 현재 게이트가 의도적으로 production write를 막고 있기 때문이다.
+  - Verified: `pnpm exec vitest run tests/external-ingredient-live-fetch-script.test.ts tests/external-ingredient-file-dry-run-script.test.ts tests/external-ingredient-ingest.test.ts`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 69. 마이페이지 로딩 중 먼저 로드된 아래 섹션이 위 섹션 완료에 따라 밀리는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: UX / MyPage / Loading Stability / Web / App
+- Source: user manual review, MYPAGE loading behavior
+- Problem:
+  - 앱 마이페이지 진입 시 프로필/성장 정보, 저장한 레시피, 메뉴 영역이 순차적으로 로드된다.
+  - 아래쪽 일부 내용이 먼저 보인 뒤 위쪽 로딩 영역이 실제 콘텐츠로 바뀌면서 아래 콘텐츠가 밀려 내려갈 수 있다.
+  - 웹도 초기 loading shell이 프로필 중심으로만 구성되어 실제 탭/패널이 나타날 때 화면 안정성이 약하다.
+- User impact:
+  - 사용자가 방금 보던 항목의 위치가 바뀌어 화면을 다시 훑어야 한다.
+  - 마이페이지 첫 진입이 덜 완성된 화면처럼 느껴진다.
+  - 로딩 중 탭이나 메뉴를 누르려 할 때 위치가 흔들리면 조작 실수 가능성이 생긴다.
+- Approach decision:
+  - 고치는 게 맞다. 데이터 fetch 순서를 무리하게 묶기보다, 초기 skeleton이 실제 ready layout의 주요 높이를 먼저 예약하게 하는 것이 안전하다.
+- Recommended fix:
+  - 앱 home loading body에 프로필, 저장한 레시피 rail, 5개 메뉴 row의 자리 높이를 실제 화면과 맞춰 둔다.
+  - 웹 loading shell도 실제 화면처럼 프로필 카드, tab bar, active panel skeleton을 함께 렌더링한다.
+  - secondary growth/progress/gamification API가 늦게 끝나도 핵심 마이페이지 surface가 크게 밀리지 않게 한다.
+- Acceptance criteria:
+  - 앱 마이페이지 loading shell에 저장한 레시피 rail skeleton과 5개 메뉴 row skeleton이 포함된다.
+  - 웹 마이페이지 loading shell에 `.web-mypage-tabs`와 `.web-mypage-panel`에 대응하는 skeleton이 포함된다.
+  - 기존 ready 화면, 비로그인, error 상태는 유지된다.
+- Likely implementation target:
+  - `components/mypage/mypage-screen.tsx`
+  - `components/mypage/mypage-growth-profile.tsx`
+  - `tests/mypage-screen.test.tsx`
+- Verification:
+  - `components/mypage/mypage-screen.tsx`에서 앱 loading shell에 저장한 레시피 rail skeleton과 실제 메뉴 수에 맞춘 5개 row skeleton을 추가했다.
+  - 웹 loading shell에 실제 ready 화면과 같은 `.web-mypage-tabs`와 `.web-mypage-panel` skeleton을 추가해 프로필만 보인 뒤 탭/패널이 밀려 들어오는 느낌을 줄였다.
+  - `components/mypage/mypage-growth-profile.tsx`에서 progress/gamification이 늦게 로드되는 동안 record stats row 높이를 예약하게 했다.
+  - `tests/mypage-screen.test.tsx`에서 앱/웹 loading shell 구조와 growth profile 내부 record stats loading을 고정했다.
+  - Verified: `pnpm exec vitest run tests/mypage-screen.test.tsx tests/mypage-growth-profile.test.tsx tests/mypage-desktop-scroll.test.ts`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+
+### 70. 404 페이지에서 보낸 사용자 피드백을 admin에서 별도 탭으로 확인할 수 없는 문제
+
+- Status: implemented in `fix/manual-uiux-round3-plan`
+- Severity: Medium
+- Area: Admin / 404 Feedback / Operations
+- Source: user request, existing 404 feedback flow
+- Problem:
+  - 404 페이지에서 사용자가 보낸 피드백은 `operational_events`의 `not_found_feedback` 이벤트로 저장된다.
+  - 하지만 admin 화면에는 전용 피드백 탭이 없어 운영자가 일반 운영 이벤트 목록에서 필터를 직접 맞춰 찾아야 한다.
+- User impact:
+  - 사용자가 불편을 알려도 운영자가 놓칠 가능성이 커진다.
+  - 404 개선 루프가 “수집”에서 끝나고 “확인/처리”로 이어지기 어렵다.
+- Approach decision:
+  - 고치는 게 맞다. 피드백 수집 기능이 이미 있으므로 admin에서 확인 경로를 제공해야 기능이 완성된다.
+  - 새 feedback 테이블을 만들지 않고, 기존 공식 구조인 `operational_events`를 `event_type=not_found_feedback`, `source=web`으로 필터링해 재사용한다.
+- Recommended fix:
+  - admin shell에 `피드백` 탭을 추가한다.
+  - `/admin/feedback` 화면에서 404 피드백 이벤트만 조회한다.
+  - 목록에는 접수시간, 피드백 본문, 현재 경로, 이전 경로, 로그인/비로그인 여부를 보여준다.
+  - 개인정보 최소화를 위해 `user_agent_hash`, `anonymous_id` 같은 추적용 메타데이터는 화면에 직접 노출하지 않는다.
+  - page-view 감사 기록에서 `/admin/feedback` 경로가 실제 경로로 남게 한다.
+- Acceptance criteria:
+  - admin 상단 탭에 `피드백`이 보이고 `/admin/feedback`으로 이동한다.
+  - 피드백 화면은 `not_found_feedback`/`web` 이벤트만 조회한다.
+  - empty/loading/error 상태와 pagination을 제공한다.
+  - 새 admin 페이지도 `AdminAuthGuard`와 `AdminShell`을 거친다.
+  - `/admin/feedback` 진입 감사 로그가 `/admin`으로 fallback되지 않는다.
+- Likely implementation target:
+  - `components/admin/admin-shell.tsx`
+  - `components/admin/admin-feedback-screen.tsx`
+  - `app/admin/feedback/page.tsx`
+  - `app/api/v1/admin/page-view/route.ts`
+  - `tests/admin-foundation.frontend.test.ts`
+  - `tests/admin-foundation.backend.test.ts`
+- Verification:
+  - `components/admin/admin-feedback-screen.tsx`에서 `event_type=not_found_feedback`, `source=web`으로 기존 admin operational events API를 조회하게 했다.
+  - `components/admin/admin-shell.tsx`와 `app/admin/feedback/page.tsx`에서 admin 피드백 탭과 인증 가드가 있는 새 페이지를 연결했다.
+  - `app/api/v1/admin/page-view/route.ts`에서 `/admin/feedback`을 허용해 감사 로그 경로가 `/admin`으로 fallback되지 않게 했다.
+  - `tests/admin-foundation.frontend.test.ts`에서 탭/페이지 인증 가드/피드백 화면 필터/감사 경로를 고정했다.
+  - `tests/admin-foundation.backend.test.ts`에서 404 피드백 이벤트 필터가 `event_type`/`source` 조건을 적용하는지 고정했다.
+  - Verified: `pnpm exec vitest run tests/admin-foundation.frontend.test.ts tests/admin-foundation.backend.test.ts tests/not-found-feedback-route.test.ts`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
 ## 보류 항목
 
 아직 없음.
