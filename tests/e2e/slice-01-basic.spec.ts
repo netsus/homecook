@@ -105,8 +105,10 @@ test.describe("Slice 01 basic flow", () => {
       ).toBeVisible();
     } else {
       await expect(
-        page.getByRole("heading", { name: "인분 조절" }),
+        page.getByRole("heading", { name: "재료" }),
       ).toBeVisible();
+      await expect(page.getByRole("button", { name: "인분 줄이기" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "인분 늘리기" })).toBeVisible();
     }
     await expect(page.getByRole("button", { name: "플래너에 추가" })).toBeVisible();
     await expect(page.getByRole("button", { name: "공유하기" })).toHaveCount(1);
@@ -114,16 +116,20 @@ test.describe("Slice 01 basic flow", () => {
 
     const likeChipPrecedesFirstIngredient = await page.evaluate(() => {
       const likeButton = Array.from(
-        document.querySelectorAll('button[aria-label="좋아요 203"]'),
+        document.querySelectorAll("button"),
       ).find((element) => {
         if (!(element instanceof HTMLElement)) {
           return false;
         }
 
         const style = window.getComputedStyle(element);
-        return style.display !== "none" && element.getClientRects().length > 0;
+        return (
+          element.getAttribute("aria-label") === "좋아요 203" &&
+          style.display !== "none" &&
+          element.getClientRects().length > 0
+        );
       });
-      const firstIngredient = Array.from(document.querySelectorAll("li, span")).find(
+      const firstIngredient = Array.from(document.querySelectorAll(".web-ingredient-row")).find(
         (element) => {
           if (!(element instanceof HTMLElement)) {
             return false;
@@ -131,7 +137,7 @@ test.describe("Slice 01 basic flow", () => {
 
           const style = window.getComputedStyle(element);
           return (
-            element.textContent?.trim() === "김치" &&
+            element.textContent?.includes("김치") &&
             style.display !== "none" &&
             element.getClientRects().length > 0
           );
