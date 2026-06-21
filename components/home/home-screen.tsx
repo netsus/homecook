@@ -765,16 +765,15 @@ export function HomeScreen() {
                   </>
                 ) : null}
               </div>
+              <HomeTagRail
+                activeTagKey={activeTagKey}
+                onRetry={() => void loadTagOptions()}
+                onSelectTag={selectTag}
+                tagOptions={tagOptions}
+                tagState={tagState}
+                variant="mobile"
+              />
             </div>
-
-            <HomeTagRail
-              activeTagKey={activeTagKey}
-              onRetry={() => void loadTagOptions()}
-              onSelectTag={selectTag}
-              tagOptions={tagOptions}
-              tagState={tagState}
-              variant="mobile"
-            />
 
             {!hasResultPriorityContext ? <HomeQuickLinks variant="mobile" /> : null}
 
@@ -1610,7 +1609,7 @@ function HomeTagRail({
             ? "web-home-aside-chip-row"
             : variant === "web"
             ? "web-filter-chip-row"
-            : "home-mobile-tag-rail scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2"
+            : "home-mobile-tag-rail"
         }
         aria-label="태그 불러오는 중"
       >
@@ -1632,7 +1631,7 @@ function HomeTagRail({
             ? "web-home-aside-chip-row"
             : variant === "web"
             ? "web-filter-chip-row"
-            : "home-mobile-tag-rail flex items-center gap-2 px-5 pb-2"
+            : "home-mobile-tag-rail"
         }
       >
         <span className="text-[12px] font-semibold text-[var(--text-3)]">
@@ -1651,7 +1650,7 @@ function HomeTagRail({
 
   if (tagOptions.length === 0) {
     if (variant === "mobile") {
-      return <div aria-hidden="true" className="home-mobile-tag-rail" />;
+      return null;
     }
 
     return (
@@ -1666,7 +1665,7 @@ function HomeTagRail({
       ? "web-home-aside-chip-row"
       : variant === "web"
       ? "web-filter-chip-row"
-      : "home-mobile-tag-rail scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-2";
+      : "home-mobile-tag-rail";
 
   return (
     <div className={containerClass} aria-label="태그 필터">

@@ -214,6 +214,7 @@ export function RecipeIngredientAddModal({
       <WebModal onBackdropClick={onClose}>
         <WebDialog
           aria-labelledby="ingredient-picker-title"
+          className="web-ingredient-picker-dialog"
           size="narrow"
         >
           <WebDialogHeader>
