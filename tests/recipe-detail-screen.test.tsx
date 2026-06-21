@@ -1439,6 +1439,14 @@ describe("recipe detail screen", () => {
     expect(
       ruleBody(".web-recipe-reading-grid > .web-reading-section-grid + .web-reading-section-grid"),
     ).toContain("border-left: 1px solid var(--web-divider);");
+    expect(ruleBody(".web-stepper")).toContain("gap: 10px;");
+    expect(ruleBody(".web-stepper")).toContain("border: 0;");
+    expect(ruleBody(".web-stepper")).toContain("background: transparent;");
+    expect(ruleBody(".web-stepper button")).toContain("border-radius: var(--web-r-pill);");
+    expect(ruleBody(".web-stepper button:first-child")).toContain("background: var(--web-surface);");
+    expect(ruleBody(".web-stepper button:last-child")).toContain("background: var(--web-brand);");
+    expect(ruleBody(".web-stepper button:last-child")).toContain("color: var(--web-text-inverse);");
+    expect(ruleBody(".web-stepper span")).toContain("min-width: 60px;");
   });
 
   it("does not show YouTube source note for non-youtube recipes", async () => {

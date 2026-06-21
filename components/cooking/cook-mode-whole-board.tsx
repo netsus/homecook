@@ -186,37 +186,112 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function renderInstructionWithIngredientHighlights(
+type InstructionHighlight = {
+  start: number;
+  end: number;
+  label: string;
+  type: "ingredient" | "method";
+};
+
+function getInstructionHighlights(
   instruction: string,
   ingredientNames: string[],
+  methodLabel: string,
 ) {
-  const matchedNames = ingredientNames.filter((name) => instruction.includes(name));
+  const candidates = [
+    ...ingredientNames.map((label) => ({ label, type: "ingredient" as const })),
+    ...(methodLabel.trim() ? [{ label: methodLabel.trim(), type: "method" as const }] : []),
+  ].sort((a, b) => b.label.length - a.label.length);
 
-  if (matchedNames.length === 0) {
+  const highlights: InstructionHighlight[] = [];
+
+  candidates.forEach((candidate) => {
+    const pattern = new RegExp(escapeRegExp(candidate.label), "gu");
+    let match: RegExpExecArray | null;
+
+    while ((match = pattern.exec(instruction)) !== null) {
+      const start = match.index;
+      const end = start + candidate.label.length;
+      const overlaps = highlights.some(
+        (highlight) => start < highlight.end && end > highlight.start,
+      );
+
+      if (!overlaps) {
+        highlights.push({
+          start,
+          end,
+          label: candidate.label,
+          type: candidate.type,
+        });
+      }
+    }
+  });
+
+  return highlights.sort((a, b) => a.start - b.start);
+}
+
+function renderInstructionWithHighlights({
+  ingredientNames,
+  instruction,
+  methodColor,
+  methodLabel,
+}: {
+  ingredientNames: string[];
+  instruction: string;
+  methodColor: string;
+  methodLabel: string;
+}) {
+  const highlights = getInstructionHighlights(
+    instruction,
+    ingredientNames,
+    methodLabel,
+  );
+
+  if (highlights.length === 0) {
     return instruction;
   }
 
-  const ingredientNameSet = new Set(matchedNames);
-  const ingredientPattern = new RegExp(
-    `(${matchedNames.map(escapeRegExp).join("|")})`,
-    "gu",
-  );
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
 
-  return instruction.split(ingredientPattern).map((part, index) => {
-    if (!ingredientNameSet.has(part)) {
-      return part;
+  highlights.forEach((highlight, index) => {
+    if (cursor < highlight.start) {
+      parts.push(instruction.slice(cursor, highlight.start));
     }
 
-    return (
-      <strong
-        className="cook-whole-step-ingredient"
-        data-testid="cook-mode-step-ingredient-highlight"
-        key={`${part}-${index}`}
-      >
-        {part}
-      </strong>
-    );
+    const text = instruction.slice(highlight.start, highlight.end);
+
+    if (highlight.type === "method") {
+      parts.push(
+        <span
+          className="cook-whole-step-method-highlight"
+          data-testid="cook-mode-step-method-highlight"
+          key={`${highlight.type}-${highlight.label}-${index}`}
+          style={{ color: methodColor }}
+        >
+          {text}
+        </span>,
+      );
+    } else {
+      parts.push(
+        <strong
+          className="cook-whole-step-ingredient"
+          data-testid="cook-mode-step-ingredient-highlight"
+          key={`${highlight.type}-${highlight.label}-${index}`}
+        >
+          {text}
+        </strong>,
+      );
+    }
+
+    cursor = highlight.end;
   });
+
+  if (cursor < instruction.length) {
+    parts.push(instruction.slice(cursor));
+  }
+
+  return parts;
 }
 
 function CookModeWholeStep({
@@ -227,11 +302,13 @@ function CookModeWholeStep({
   step: CookingModeStep;
 }) {
   const instruction = getCookModeStepInstruction(step);
-  const highlightedInstruction = renderInstructionWithIngredientHighlights(
-    instruction,
-    getStepIngredientNames(step, ingredientsById),
-  );
   const methodVisual = getCookingMethodVisual(step.cooking_method);
+  const highlightedInstruction = renderInstructionWithHighlights({
+    ingredientNames: getStepIngredientNames(step, ingredientsById),
+    instruction,
+    methodColor: methodVisual.color,
+    methodLabel: methodVisual.label,
+  });
   const methodAssistiveLabel = getCookingMethodAssistiveLabel({
     methodCode: step.cooking_method.code,
     methodLabel: step.cooking_method.label,

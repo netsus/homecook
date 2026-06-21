@@ -11,6 +11,32 @@
 - 모바일/데스크톱 중 하나에서 화면 완성도를 깨뜨리는가
 - 접근성 포커스 표시를 유지하면서 더 자연스럽게 고칠 수 있는가
 
+## 2026-06-21 Round 3 Redo Closeout
+
+- Branch: `fix/manual-uiux-round3-redo`
+- Trigger: 배포 사이트 기준으로 32~35가 미반영이고, 41/42/44/47/51/58/63/64는 사용자 의도와 다르게 적용되어 재작업 필요.
+- Implemented:
+  - 32: 웹 HOME 카드 태그 영역을 한 줄로 제한하고 카드 body 높이를 안정화해 태그 줄 수에 따른 grid 간격 흔들림을 막았다.
+  - 33: 웹/앱 HOME 레시피 카드에서 상세에서 확인할 수 없는 `+N` tag chip을 제거했다.
+  - 34: HOME 웹/앱 우측 상단 프로필 버튼을 summary popover trigger로 바꾸고 닉네임, 등급, 레벨, 요리/플래너/장보기 기록, 알림 preview를 표시했다.
+  - 35: 신규/초기 사용자에게 HOME profile summary 안에서 active tutorial quest title을 알림과 함께 표시했다.
+  - 41: 앱 HOME의 `이번 주 인기 테마`를 모든 레시피 위가 아니라 recipe list 중간 지점에 삽입했다. 레시피가 1개뿐이면 첫 카드 뒤에 보인다.
+  - 42: 앱 HOME sticky 검색 영역의 padding/gap을 조정해 fixed 상태의 수직 정렬과 태그 경계를 보정했다.
+  - 44: 웹 재료 카테고리는 horizontal rail로 복구하고, HOME/레시피 재료 모달의 재료 option은 4열 grid로 통일했다.
+  - 47: 웹 레시피상세 인분 stepper를 앱 느낌에 맞게 `-`는 흰색, `+`는 파란색 원형 버튼으로 조정했다.
+  - 51: 요리모드 조리법 marker를 가운데 정렬하고, instruction text 안에 조리법 label이 나오면 해당 조리법 색상의 bordered tag로 강조했다.
+  - 58: 앱 식사추가 옵션의 레시피북 항목에 책 커버 형태와 cover color tone을 넣었다.
+  - 63: 웹 장보기 리스트에서도 재료양이 재료명 쪽에 붙도록 copy row 정렬을 앱과 맞췄다.
+  - 64: 웹 팬트리 반영 모달 폭과 list 높이를 키우고, 재료명 font-size를 올렸다.
+- Verification:
+  - `pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx tests/recipe-detail-screen.test.tsx tests/cook-mode-screen.test.tsx tests/menu-add-screen.test.tsx tests/shopping-pantry-reflection-popup-style.test.ts`
+  - `pnpm typecheck`
+  - `pnpm lint`
+  - `pnpm test`
+  - `pnpm build`
+  - `pnpm exec playwright test tests/e2e/qa-visual.spec.ts --grep '@visual-core' --project=desktop-chrome`
+  - `pnpm exec playwright test tests/e2e/qa-visual.spec.ts --grep '@visual-core' --project=mobile-chrome --project=mobile-ios-small`
+
 ## 2026-06-19 실행 계획
 
 - 이번 1차 PR은 공식 계약 변경 없이 닫을 수 있는 FE-only 회귀/시각 결함을 먼저 처리한다.
@@ -1680,7 +1706,7 @@ Implementation note:
 
 ### 32. 웹 홈 레시피 카드의 세로 간격이 태그 줄 수에 따라 달라지는 문제
 
-- Status: implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Medium
 - Area: UI / UX / Frontend
 - Source: user manual review screenshots, web HOME recipe cards
@@ -1716,7 +1742,7 @@ Implementation note:
 
 ### 33. 웹 홈 카드의 `+N` 태그 표시가 상세 화면과 맞지 않아 추가 태그처럼 오해되는 문제
 
-- Status: implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Medium
 - Area: UX / UI / Frontend
 - Source: user manual review screenshots, web HOME recipe card and web RECIPE_DETAIL tag row
@@ -1759,7 +1785,7 @@ Implementation note:
 
 ### 34. 홈/전역 프로필 버튼이 단순 이동만 해서 내 상태와 알림을 즉시 확인하기 어려운 문제
 
-- Status: implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Medium
 - Area: UX / UI / Frontend
 - Source: user manual review, web HOME top-right profile button
@@ -1801,7 +1827,7 @@ Implementation note:
 
 ### 35. 신규/초기 사용자의 튜토리얼 단계가 홈에서 자연스럽게 안내되지 않는 문제
 
-- Status: implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Medium
 - Area: UX / Onboarding / Frontend
 - Source: user manual review, first-user onboarding expectation
@@ -2031,7 +2057,7 @@ Implementation note:
 
 ### 41. 앱 홈의 `이번 주 인기 테마`가 너무 아래에 있어 발견성이 낮은 문제
 
-- Status: implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Medium
 - Area: UX / HOME / Mobile
 - Source: user manual review, app HOME content order
@@ -2064,7 +2090,7 @@ Implementation note:
 
 ### 42. 앱 홈 검색창과 검색 결과가 스크롤 중 분리되어 보이는 문제
 
-- Status: implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Medium
 - Area: UX / HOME / Mobile / Search
 - Source: user manual review, app HOME search/result relationship
@@ -2128,7 +2154,7 @@ Implementation note:
 
 ### 44. 재료 검색/추가 모달의 카테고리 칩 모양과 웹 레이아웃이 화면마다 다른 문제
 
-- Status: partially implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Medium
 - Area: UI / UX / Ingredient Picker / Web / App
 - Source: user manual review, HOME ingredient search modal and add-ingredient modals
@@ -2237,7 +2263,7 @@ Implementation note:
 
 ### 47. 웹 레시피상세에서 인분 조절이 재료와 분리되어 보이는 문제
 
-- Status: implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Medium
 - Area: UX / Recipe Detail / Web
 - Source: user manual review, web/app comparison
@@ -2372,7 +2398,7 @@ Implementation note:
 
 ### 51. 요리모드 조리법 태그가 조리방법 본문 공간을 줄이는 문제
 
-- Status: implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Medium
 - Area: UX / Cooking Mode / Web+Mobile
 - Source: user manual review, cooking mode
@@ -2611,7 +2637,7 @@ Implementation note:
 
 ### 58. 앱 레시피북에서 추가 화면의 레시피북 row가 커버/색상 없이 밋밋해 보이는 문제
 
-- Status: implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Low
 - Area: UI / Meal Add / Mobile Recipebook
 - Source: user manual review, app recipebook meal add
@@ -2778,7 +2804,7 @@ Implementation note:
 
 ### 63. 앱 장보기 리스트의 재료양이 `이미있음` 버튼에 너무 붙어 보이는 문제
 
-- Status: implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Medium
 - Area: UX / Shopping List / Mobile
 - Source: user manual review, shopping list mobile item row
@@ -2810,7 +2836,7 @@ Implementation note:
 
 ### 64. 장보기 완료 전 팬트리 반영 모달에서 구매 재료와 이미있음 재료가 구분되지 않는 문제
 
-- Status: implemented in `fix/manual-uiux-round3-plan`
+- Status: reworked in `fix/manual-uiux-round3-redo`
 - Severity: Medium
 - Area: UX / Shopping List / Completion Modal
 - Source: user manual review, pantry reflection modal

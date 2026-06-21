@@ -43,23 +43,29 @@ describe("shopping detail styles", () => {
 
     expect(copyRule).toContain("display: flex;");
     expect(copyRule).toContain("align-items: baseline;");
-    expect(copyRule).toContain("justify-content: space-between;");
-    expect(copyRule).toContain("gap: 14px;");
+    expect(copyRule).toContain("justify-content: flex-start;");
+    expect(copyRule).toContain("gap: 8px;");
     expect(nameRule).toContain("font-size: 15px;");
     expect(amountRule).toContain("font-size: 13px;");
+    expect(amountRule).toContain("text-align: left;");
     expect(amountRule).toContain("white-space: nowrap;");
   });
 
   it("keeps pantry reflection sections visually separated", () => {
+    const dialogRule = ruleBody(".web-reflect-dialog");
     const listRule = ruleBody(".web-reflect-list");
     const sectionRule = ruleBody(".web-reflect-section");
     const titleRule = ruleBody(".web-reflect-section-title");
     const sectionListRule = ruleBody(".web-reflect-section-list");
+    const itemNameRule = ruleBody(".web-reflect-item strong");
 
+    expect(dialogRule).toContain("width: min(720px, calc(100vw - 48px));");
     expect(listRule).toContain("gap: 14px;");
+    expect(listRule).toContain("max-height: 340px;");
     expect(sectionRule).toContain("display: grid;");
     expect(titleRule).toContain("justify-content: space-between;");
     expect(titleRule).toContain("font-weight: 900;");
     expect(sectionListRule).toContain("gap: 8px;");
+    expect(itemNameRule).toContain("font-size: 15px;");
   });
 });
