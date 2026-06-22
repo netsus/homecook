@@ -1364,6 +1364,41 @@ describe("recipe detail screen", () => {
     expect(ruleBody(".web-recipe-titleblock")).toContain("padding: 14px 0 6px;");
   });
 
+  it("shows every filtered desktop tag so HOME hidden counts can be resolved in detail", async () => {
+    installMatchMedia(true);
+    fetchJson.mockResolvedValue(
+      buildRecipeDetail({
+        source_type: "youtube",
+        source: {
+          youtube_url: "https://www.youtube.com/watch?v=abc",
+          youtube_video_id: "abc",
+        },
+        tags: [
+          "유튜브",
+          MOCK_RECIPE_DETAIL.title,
+          "이모카세두",
+          "흑백요리사",
+          "두부찌개",
+          "초간단",
+        ],
+      }),
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    const youtubeTag = screen.getByRole("link", { name: "유튜브" });
+    const tagContainer = youtubeTag.closest(".web-recipe-tags");
+
+    expect(
+      Array.from(tagContainer?.children ?? []).map((child) => child.textContent),
+    ).toEqual(["유튜브", "이모카세두", "흑백요리사", "두부찌개", "초간단"]);
+  });
+
   it("keeps desktop recipe photos to one tile when only one registered photo exists", async () => {
     installMatchMedia(true);
 

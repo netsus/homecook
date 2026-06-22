@@ -149,6 +149,32 @@ describe("RecipeBookSelector", () => {
     expect(savedRow.className).toContain("planner-recipebook-selector-row-sky");
   });
 
+  it("uses the same covered recipebook rows in the default dialog flow", async () => {
+    render(
+      <RecipeBookSelector
+        onBookSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "레시피북 선택" });
+    const customRow = await within(dialog).findByTestId("recipebook-selector-row-book-custom");
+    const customMiniCover = within(customRow).getByTestId(
+      "recipebook-selector-mini-cover-book-custom",
+    );
+    const customMiniImage = within(customMiniCover).getByTestId(
+      "recipebook-selector-mini-cover-image-book-custom",
+    );
+
+    expect(customRow.className).toContain("planner-recipebook-selector-row");
+    expect(customRow.className).toContain("planner-recipebook-selector-row-sand");
+    expect(customMiniCover.className).toContain("planner-recipebook-mini-cover");
+    expect(customMiniImage.getAttribute("style")).toContain(
+      'background-image: url("https://example.com/weekend-cover.jpg")',
+    );
+    expect(customRow.textContent).not.toContain("🍳");
+  });
+
   it("shows the web empty state when no recipebooks are available", async () => {
     mockRecipeBooks([]);
 

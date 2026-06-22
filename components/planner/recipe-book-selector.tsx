@@ -95,7 +95,7 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
   const screenSubtitle = bookTypeLabel;
   const coverViewModel = getRecipeBookCoverViewModel(book);
 
-  if (presentation === "screen" || presentation === "sheet") {
+  if (presentation === "screen" || presentation === "sheet" || presentation === "dialog") {
     return (
       <button
         className={[

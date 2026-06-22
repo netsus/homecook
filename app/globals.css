@@ -535,6 +535,89 @@
     content: "";
   }
 
+  .planner-recipebook-selector-row {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .planner-recipebook-selector-row-sage {
+    background:
+      linear-gradient(90deg, rgba(183, 213, 184, 0.38), transparent 56%),
+      var(--surface);
+  }
+
+  .planner-recipebook-selector-row-sky {
+    background:
+      linear-gradient(90deg, rgba(191, 233, 255, 0.46), transparent 56%),
+      var(--surface);
+  }
+
+  .planner-recipebook-selector-row-coral {
+    background:
+      linear-gradient(90deg, rgba(246, 181, 157, 0.34), transparent 56%),
+      var(--surface);
+  }
+
+  .planner-recipebook-selector-row-lavender {
+    background:
+      linear-gradient(90deg, rgba(216, 196, 239, 0.38), transparent 56%),
+      var(--surface);
+  }
+
+  .planner-recipebook-selector-row-sand {
+    background:
+      linear-gradient(90deg, rgba(234, 208, 139, 0.42), transparent 56%),
+      var(--surface);
+  }
+
+  .planner-recipebook-mini-cover {
+    position: relative;
+    display: block;
+    width: 44px;
+    height: 56px;
+    flex: 0 0 44px;
+    overflow: hidden;
+    border-radius: 12px 7px 7px 12px;
+    box-shadow:
+      inset 7px 0 0 rgba(0, 0, 0, 0.1),
+      0 8px 16px rgba(93, 61, 27, 0.14);
+  }
+
+  .planner-recipebook-mini-cover::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 12px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent),
+      rgba(0, 0, 0, 0.12);
+    content: "";
+  }
+
+  .planner-recipebook-mini-cover::after {
+    position: absolute;
+    right: 7px;
+    bottom: 9px;
+    left: 16px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.48);
+    box-shadow: 0 -12px 0 rgba(255, 255, 255, 0.18);
+    content: "";
+  }
+
+  .planner-recipebook-mini-cover-image {
+    position: absolute;
+    z-index: 1;
+    top: 10px;
+    right: 7px;
+    left: 16px;
+    height: 25px;
+    border: 2px solid rgba(255, 255, 255, 0.76);
+    border-radius: 7px;
+    background-position: center;
+    background-size: cover;
+    box-shadow: 0 5px 9px rgba(46, 34, 20, 0.13);
+  }
+
   .mobile-recipebook-book-card-coral {
     background: #f6b59d;
   }
@@ -926,11 +1009,11 @@
   z-index: 19;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  border-bottom: 0.5px solid var(--line);
+  gap: 6px;
+  border-bottom: 0;
   background: var(--surface);
-  padding: 10px 20px 12px;
-  box-shadow: 0 5px 12px rgba(15, 23, 42, 0.04);
+  padding: 10px 20px 8px;
+  box-shadow: none;
 }
 
 .profile-summary {
@@ -1146,7 +1229,7 @@
   gap: 8px;
   margin: 0;
   overflow-x: auto;
-  padding: 2px 1px 0;
+  padding: 0 1px;
   scroll-padding-inline: 1px;
   scrollbar-width: none;
 }
@@ -1249,11 +1332,113 @@
 }
 
 .home-mobile-theme-section {
-  min-height: 195px;
+  min-height: 236px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-fill);
+  padding: 18px 0 20px;
+}
+
+.home-mobile-theme-section-embedded {
+  margin: 8px -16px 10px;
+}
+
+.home-mobile-theme-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 20px 14px;
 }
 
 .home-mobile-theme-rail {
-  min-height: 129px;
+  display: flex;
+  min-height: 158px;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 20px 2px;
+  scroll-padding-inline: 20px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.home-mobile-theme-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.home-mobile-theme-title {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 19px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.home-mobile-theme-reset {
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.home-mobile-theme-card {
+  position: relative;
+  width: min(76vw, 320px);
+  height: 154px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  scroll-snap-align: start;
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  border-radius: 14px;
+  background-color: var(--surface);
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--shadow-color-medium) 46%, transparent);
+  text-align: left;
+}
+
+.home-mobile-theme-card-active {
+  border-color: var(--brand);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--brand) 24%, transparent),
+    0 10px 24px color-mix(in srgb, var(--shadow-color-medium) 54%, transparent);
+}
+
+.home-mobile-theme-card-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, transparent 14%, color-mix(in srgb, #000 78%, transparent) 100%),
+    linear-gradient(90deg, color-mix(in srgb, #000 32%, transparent), transparent 62%);
+}
+
+.home-mobile-theme-card-copy {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-inverse);
+}
+
+.home-mobile-theme-card-title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.18;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.home-mobile-theme-card-count {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.92;
 }
 
 .home-search-empty-state {
@@ -2979,11 +3164,9 @@ button {
 
   .web-recipe-card-tag {
     display: inline-flex;
-    max-width: 100%;
+    flex: 0 0 auto;
     min-height: 24px;
-    min-width: 0;
     align-items: center;
-    overflow: hidden;
     border-radius: var(--web-r-pill);
     background: var(--web-bg-alt);
     color: var(--web-text-2);
@@ -2991,8 +3174,11 @@ button {
     font-size: 12px;
     font-weight: 700;
     line-height: 1;
-    text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .web-recipe-card-tag-more {
+    color: var(--web-primary);
   }
 
   .web-modal-backdrop {
@@ -6221,89 +6407,6 @@ button {
 
   .web-picker-pantry-thumb {
     overflow: hidden;
-  }
-
-  .planner-recipebook-selector-row {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .planner-recipebook-selector-row-sage {
-    background:
-      linear-gradient(90deg, rgba(183, 213, 184, 0.38), transparent 56%),
-      var(--surface);
-  }
-
-  .planner-recipebook-selector-row-sky {
-    background:
-      linear-gradient(90deg, rgba(191, 233, 255, 0.46), transparent 56%),
-      var(--surface);
-  }
-
-  .planner-recipebook-selector-row-coral {
-    background:
-      linear-gradient(90deg, rgba(246, 181, 157, 0.34), transparent 56%),
-      var(--surface);
-  }
-
-  .planner-recipebook-selector-row-lavender {
-    background:
-      linear-gradient(90deg, rgba(216, 196, 239, 0.38), transparent 56%),
-      var(--surface);
-  }
-
-  .planner-recipebook-selector-row-sand {
-    background:
-      linear-gradient(90deg, rgba(234, 208, 139, 0.42), transparent 56%),
-      var(--surface);
-  }
-
-  .planner-recipebook-mini-cover {
-    position: relative;
-    display: block;
-    width: 44px;
-    height: 56px;
-    flex: 0 0 44px;
-    overflow: hidden;
-    border-radius: 12px 7px 7px 12px;
-    box-shadow:
-      inset 7px 0 0 rgba(0, 0, 0, 0.1),
-      0 8px 16px rgba(93, 61, 27, 0.14);
-  }
-
-  .planner-recipebook-mini-cover::before {
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 12px;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent),
-      rgba(0, 0, 0, 0.12);
-    content: "";
-  }
-
-  .planner-recipebook-mini-cover::after {
-    position: absolute;
-    right: 7px;
-    bottom: 9px;
-    left: 16px;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.48);
-    box-shadow: 0 -12px 0 rgba(255, 255, 255, 0.18);
-    content: "";
-  }
-
-  .planner-recipebook-mini-cover-image {
-    position: absolute;
-    z-index: 1;
-    top: 10px;
-    right: 7px;
-    left: 16px;
-    height: 25px;
-    border: 2px solid rgba(255, 255, 255, 0.76);
-    border-radius: 7px;
-    background-position: center;
-    background-size: cover;
-    box-shadow: 0 5px 9px rgba(46, 34, 20, 0.13);
   }
 
   .web-picker-pantry-thumb-image {

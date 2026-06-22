@@ -21,7 +21,7 @@
   - 33: 웹/앱 HOME 레시피 카드에서 상세에서 확인할 수 없는 `+N` tag chip을 제거했다.
   - 34: HOME 웹/앱 우측 상단 프로필 버튼을 summary popover trigger로 바꾸고 닉네임, 등급, 레벨, 요리/플래너/장보기 기록, 알림 preview를 표시했다.
   - 35: 신규/초기 사용자에게 HOME profile summary 안에서 active tutorial quest title을 알림과 함께 표시했다.
-  - 41: 앱 HOME의 `이번 주 인기 테마`를 모든 레시피 위가 아니라 recipe list 중간 지점에 삽입했다. 레시피가 1개뿐이면 첫 카드 뒤에 보인다.
+  - 41: 앱 HOME의 `이번 주 인기 테마`를 레시피 4번째 카드 뒤에 삽입하고, 필터칩과 중복되는 테마는 숨기며 큐레이션 테마를 확장했다.
   - 42: 앱 HOME sticky 검색 영역의 padding/gap을 조정해 fixed 상태의 수직 정렬과 태그 경계를 보정했다.
     - Follow-up: `fix/home-search-tag-boundary`에서 검색창과 아래 태그 rail이 서로 다른 층처럼 끊겨 보이고 첫 태그가 좌측에서 잘리는 재발 케이스를 막기 위해 태그 rail을 sticky 검색 surface 안으로 묶었다.
   - 44: 웹 재료 카테고리는 horizontal rail로 복구하고, HOME/레시피 재료 모달의 재료 option은 4열 grid로 통일했다.
@@ -1709,7 +1709,7 @@ Implementation note:
 
 ### 32. 웹 홈 레시피 카드의 세로 간격이 태그 줄 수에 따라 달라지는 문제
 
-- Status: reworked in `fix/manual-uiux-round3-redo`; follow-up in `fix/home-card-tag-overflow`
+- Status: reworked in `fix/manual-uiux-round3-redo`; follow-up in `fix/home-card-tag-overflow`; long-tag summary follow-up in `fix/mobile-recipebook-add-covers`
 - Severity: Medium
 - Area: UI / UX / Frontend
 - Source: user manual review screenshots, web HOME recipe cards
@@ -1724,14 +1724,16 @@ Implementation note:
 - Recommended fix:
   - 웹 홈 레시피 카드의 body 높이와 태그 영역 높이를 안정화한다.
   - 카드 preview에서는 태그 영역을 1줄 또는 정해진 높이로 제한해 카드 높이가 태그 wrap에 따라 늘어나지 않게 한다.
-  - 긴 태그 칩 내부 텍스트도 줄바꿈되지 않게 `nowrap`과 말줄임으로 제한한다.
+  - 긴 태그 칩은 내부 말줄임으로 잘라 보이지 않게 하고, 한 줄에 온전히 들어가는 태그만 앞에서부터 노출한다.
+  - 한 줄 예산을 넘는 나머지 실제 태그는 `+N`으로 요약한다. 이때 `+N`은 상세에 없는 가짜 추가 태그가 아니라 홈에서 숨긴 실제 태그 수여야 한다.
   - 태그를 줄이는 경우, 어떤 태그를 보여줄지 source/type/title 중복 제거 helper를 먼저 적용한다.
   - 카드 전체 높이, 이미지 비율, 제목 2줄 clamp, meta, tag row가 모든 카드에서 같은 리듬으로 보이게 맞춘다.
   - 단순히 grid gap을 줄이는 방식으로 숨기지 않는다. 원인은 카드 높이 변동이므로 카드 내부 레이아웃을 고정한다.
 - Acceptance criteria:
   - 웹 HOME 레시피 카드 목록에서 태그가 많은 카드와 적은 카드가 섞여도 행 간격이 균일하게 보인다.
   - 태그가 0개, 1개, 3개 이상인 카드가 같은 grid row에 있어도 카드 높이와 다음 행 시작점이 어색하게 흔들리지 않는다.
-  - 긴 태그 텍스트가 태그 칩 안에서 세로로 쪼개져 보이지 않고, 한 줄에서 말줄임 처리된다.
+  - 긴 태그 텍스트가 태그 칩 안에서 세로로 쪼개지거나 `...`로 잘린 채 보이지 않는다.
+  - 한 줄에 온전히 들어가지 않는 태그들은 숨긴 실제 개수만큼 `+N`으로 표시된다.
   - 제목 2줄, 조회/저장 meta, 북마크 버튼, 이미지 badge 위치는 기존 역할을 유지한다.
   - 모바일 홈 카드 레이아웃은 이번 수정으로 의도치 않게 바뀌지 않는다.
 - Likely implementation target:
@@ -1742,12 +1744,13 @@ Implementation note:
   - 필요 시 HOME web screenshot / visual QA
 - Verification:
   - 태그가 많은 recipe fixture와 태그가 적은 recipe fixture를 같은 웹 HOME grid에 놓고 카드 높이/row gap을 확인한다.
-  - `tests/home-screen.test.tsx`에서 `.web-recipe-card-tags` 높이 안정화와 `.web-recipe-card-tag` 내부 nowrap/ellipsis 규칙을 고정한다.
+  - Done: `tests/home-screen.test.tsx`에서 긴 태그 fixture가 세 번째 태그를 잘라 보이지 않고 `+2`로 요약되는지 고정한다.
+  - Done: `.web-recipe-card-tag`의 내부 ellipsis 제거, non-shrink chip, `+N` summary 색상 규칙을 고정한다.
   - 웹 HOME screenshot에서 카드 간격이 균일한지 확인한다.
 
 ### 33. 웹 홈 카드의 `+N` 태그 표시가 상세 화면과 맞지 않아 추가 태그처럼 오해되는 문제
 
-- Status: reworked in `fix/manual-uiux-round3-redo`
+- Status: reworked in `fix/manual-uiux-round3-redo`; tag-detail follow-up in `fix/mobile-recipebook-add-covers`
 - Severity: Medium
 - Area: UX / UI / Frontend
 - Source: user manual review screenshots, web HOME recipe card and web RECIPE_DETAIL tag row
@@ -1764,6 +1767,7 @@ Implementation note:
   - 1차 수정은 홈 compact card에서 `+N` chip을 제거하는 방향이 더 안전하다.
   - 추가 태그를 제품적으로 꼭 보여줘야 한다면, 홈과 상세가 같은 tag display helper를 쓰고 상세에서 전체 태그 또는 `더보기`를 제공해야 한다.
   - 이번 문제를 카드 spacing 문제와 함께 닫으려면, 홈 카드에는 실제 보이는 태그만 표시하고 숨은 개수는 표시하지 않는 것이 가장 작은 변경이다.
+  - 32번 후속 수정에서는 긴 칩을 잘라 보이는 문제를 막기 위해 웹 HOME에 `+N`을 다시 허용한다. 단, 이 값은 현재 카드에서 실제로 숨긴 태그 수와 일치해야 하며 상세에서 전체 태그를 확인할 수 있다는 전제가 필요하다.
 - Recommended fix:
   - 웹 HOME 카드와 모바일 HOME 카드의 `+N` 표시 정책을 재검토한다.
   - 상세에서 확인할 수 없는 hidden count는 카드에 표시하지 않는다.
@@ -1787,6 +1791,8 @@ Implementation note:
   - 태그가 3개 이하인 recipe와 4개 이상인 recipe fixture를 나눠 홈/상세 태그 표시를 확인한다.
   - 홈에서 hidden count를 제거하는 경우, `+N` chip이 렌더링되지 않음을 테스트로 고정한다.
   - `+N`을 유지하는 방향이면 상세에서 모든 추가 태그를 확인할 수 있음을 테스트와 screenshot으로 고정한다.
+  - Done: 웹 HOME의 `+N`은 “보이는 3개 외 가짜 추가 태그”가 아니라, 긴 태그 예산 때문에 숨긴 실제 태그 수를 표시하도록 `tests/home-screen.test.tsx`에서 고정한다.
+  - Done: 웹 RECIPE_DETAIL은 source/title duplicate와 unsafe tag만 제외하고 필터링된 전체 태그를 표시하도록 `tests/recipe-detail-screen.test.tsx`에서 고정한다.
 
 ### 34. 홈/전역 프로필 버튼이 단순 이동만 해서 내 상태와 알림을 즉시 확인하기 어려운 문제
 
@@ -2060,36 +2066,57 @@ Implementation note:
   - Verified: `pnpm exec playwright test tests/e2e/slice-04-recipe-save.spec.ts --project=desktop-chrome --project=mobile-chrome`
   - Verified: `pnpm typecheck`
 
-### 41. 앱 홈의 `이번 주 인기 테마`가 너무 아래에 있어 발견성이 낮은 문제
+### 41. 앱 홈의 `이번 주 인기 테마` 위치와 섹션 구분, 테마 다양성이 부족한 문제
 
-- Status: reworked in `fix/manual-uiux-round3-redo`
+- Status: reworked in `fix/manual-uiux-round3-redo`; placement/theme follow-up in `fix/mobile-recipebook-add-covers`
 - Severity: Medium
 - Area: UX / HOME / Mobile
 - Source: user manual review, app HOME content order
 - Problem:
-  - 앱 홈에서 `이번 주 인기 테마`가 레시피 목록 뒤쪽에 배치되어 첫 화면에서 새로움이나 탐색 동기가 늦게 나온다.
-  - 퀵슬롯 다음에도 바로 긴 레시피 목록이 이어져 홈 피드가 단조롭게 느껴질 수 있다.
+  - 앱 홈에서 `이번 주 인기 테마`가 너무 위에 있거나 너무 아래에 있으면 레시피 탐색 흐름을 끊거나 발견성이 떨어진다.
+  - 현재 섹션 카드가 레시피 카드보다 작고, 배경/경계가 약해서 별도 섹션으로 인식되기 어렵다.
+  - 테마가 DB tag group 중심으로 바뀌면서 `한식`처럼 필터칩과 겹치는 테마가 남고, `유튜브에서 가져온 레시피` 같은 큐레이션 테마가 사라져 다양성이 낮아 보인다.
 - User impact:
-  - 사용자가 홈을 몇 번 스크롤하기 전까지 테마 탐색을 발견하지 못할 수 있다.
-  - 신규/재방문 사용자 모두에게 홈의 변화감이 약해 보인다.
+  - 사용자는 레시피를 보기 전에 테마가 끼어들면 방해로 느끼고, 너무 늦게 나오면 발견하지 못한다.
+  - 섹션 구분이 약하면 테마가 홈 피드의 의도된 환기 구간이 아니라 작은 광고/부가 카드처럼 보인다.
+  - 필터와 같은 이름의 테마가 반복되면 테마의 역할이 모호해지고 홈이 덜 새로워 보인다.
 - Approach decision:
-  - 고치는 게 맞다. 테마는 레시피 목록을 대체하는 핵심 기능이 아니라 탐색을 환기하는 보조 구간이므로, 퀵슬롯 아래와 레시피 목록 위 사이가 적절하다.
+  - 고치는 게 맞다. 테마는 레시피 목록을 대체하는 핵심 기능이 아니라 탐색을 환기하는 보조 구간이므로, 레시피 3~4개를 먼저 보여준 뒤 삽입하는 것이 가장 자연스럽다.
+  - 모바일 테마 섹션은 카드 안 카드처럼 보이지 않게 full-width band 성격으로 구분한다.
+  - 테마 데이터는 태그 필터와 같은 단어를 반복하기보다 source/save/text signal 기반 큐레이션 테마를 포함한다.
 - Recommended fix:
-  - 모바일 HOME에서 `HomeQuickLinks` 아래, 레시피 목록 섹션 위로 `ThemeCarousel`을 이동한다.
+  - 모바일 HOME에서 `ThemeCarousel`을 레시피 4번째 카드 뒤에 삽입한다. 레시피가 4개보다 적으면 마지막 카드 뒤에 둔다.
+  - 모바일 목록 안에 삽입되는 테마 섹션은 좌우 여백을 뚫는 구분 밴드, 상하 border, 더 큰 theme card로 정리한다.
+  - 현재 보이는 tag filter chip과 같은 label의 테마는 모바일 테마 캐러셀에서 숨긴다.
+  - API theme response에는 `유튜브에서 가져온 레시피`, `많이 저장한 레시피`, `실패 걱정 없는 메뉴`, `냉장고 비우는 한 끼`, `밥상 든든한 메인`, `불 없이 달달하게`처럼 실제 recipe data에 매칭되는 큐레이션 테마를 포함한다.
   - 검색/재료/태그 필터가 활성화된 결과 우선 상태에서는 기존처럼 테마를 숨겨 결과 집중도를 유지한다.
-  - loading skeleton도 같은 순서로 맞춰 실제 로딩 후 layout shift를 줄인다.
 - Acceptance criteria:
-  - 초기 앱 홈에서 퀵슬롯 다음에 `이번 주 인기 테마`가 보이고, 그 아래에 레시피 목록이 이어진다.
+  - 초기 앱 홈에서 레시피 카드 3~4개를 본 뒤 `이번 주 인기 테마`가 나온다.
+  - 테마 섹션은 배경, 경계, 카드 크기 때문에 레시피 카드와 별도 섹션으로 분명히 인식된다.
+  - `한식`처럼 현재 tag filter chip과 같은 이름의 테마는 모바일 테마 캐러셀에 중복 노출되지 않는다.
+  - `유튜브에서 가져온 레시피`처럼 tag filter와 다른 성격의 실제 기능 테마가 응답과 화면에 포함된다.
   - 검색어, 태그, 재료 필터가 활성화된 상태에서는 테마가 결과보다 앞에 끼어들지 않는다.
-  - 로딩 skeleton 순서가 실제 콘텐츠 순서와 일치한다.
 - Likely implementation target:
   - `components/home/home-screen.tsx`
+  - `lib/recipe-themes.ts`
+  - `app/api/v1/recipes/themes/route.ts`
+  - `app/globals.css`
   - `tests/home-screen.test.tsx`
+  - `tests/recipe-api-contracts.test.ts`
+  - `tests/recipe-themes.test.ts`
 - Verification:
-  - `components/home/home-screen.tsx`에서 모바일 HOME 테마 캐러셀을 quick slot 아래, 레시피 목록 위로 이동했다.
-  - `tests/home-screen.test.tsx`에서 quick slot -> `이번 주 인기 테마` -> `모든 레시피` DOM 순서를 고정했다.
-  - 기존 검색/필터 활성 상태에서는 테마가 숨겨지는 regression test를 유지했다.
-  - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx`
+  - `components/home/home-screen.tsx`에서 모바일 HOME 테마 캐러셀을 레시피 4번째 카드 뒤에 삽입하도록 조정했다.
+  - `components/home/home-screen.tsx`에서 tag filter label과 같은 theme label은 discovery theme list에서 제외했다.
+  - `app/globals.css`에서 삽입형 테마 섹션을 full-width band, 큰 theme card, 명확한 border/background로 조정했다.
+  - `lib/recipe-themes.ts`에서 source/save/text signal 기반 큐레이션 테마를 추가했다.
+  - Done: `tests/home-screen.test.tsx`에서 4번째 카드 뒤 삽입, 중복 tag theme 숨김, 모바일 테마 섹션 스타일을 고정했다.
+  - Done: `tests/recipe-api-contracts.test.ts`에서 `유튜브에서 가져온 레시피`, `많이 저장한 레시피`가 theme API에 포함되는지 고정했다.
+  - Done: `tests/recipe-themes.test.ts`에서 큐레이션 테마와 tag-backed metadata가 함께 유지되는지 고정했다.
+  - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-api-contracts.test.ts tests/recipe-themes.test.ts tests/recipe-detail-screen.test.tsx tests/recipe-book-selector.test.tsx tests/planner-week-screen.test.tsx`
+  - Verified: `pnpm exec playwright test tests/e2e/slice-36e-recipe-tags-frontend.spec.ts --project=mobile-chrome`
+  - Verified: `pnpm exec playwright test tests/e2e/slice-01-basic.spec.ts --project=mobile-chrome`
+  - Verified: `pnpm exec playwright test tests/e2e/qa-visual.spec.ts --grep "home default shell|home sort menu open" --project=mobile-chrome --project=mobile-ios-small --update-snapshots`
+  - Verified: `pnpm exec playwright test tests/e2e/qa-visual.spec.ts --grep "home default shell|home sort menu open" --project=mobile-chrome --project=mobile-ios-small`
   - Verified: `pnpm typecheck`
   - Verified: `pnpm lint`
 
@@ -2112,10 +2139,13 @@ Implementation note:
   - sticky 상태에서도 배경, 경계선, z-index를 명확히 두어 카드/테마와 겹치지 않게 한다.
   - 320px 폭에서 검색 input과 `재료로 검색` 버튼이 줄바꿈 없이 유지되는지 확인한다.
   - 2026-06-22 follow-up: 태그 rail은 검색 필터의 일부이므로 검색 sticky surface 안에 포함하고, 별도 회색 띠나 잘린 첫 chip처럼 보이지 않게 좌우/상하 여백을 한 CSS 규칙에서 관리한다.
+  - 2026-06-22 follow-up 2: 검색 input과 tag rail 사이 빈 filter row가 만드는 추가 gap을 제거하고, tag rail 아래 `border-bottom`은 삭제해 검색 영역과 아래 content 경계가 과하게 보이지 않게 한다.
 - Acceptance criteria:
   - 앱 홈에서 스크롤을 내려도 검색창과 재료 검색 버튼이 앱바 아래에 붙어 있다.
   - 검색 조건 chip과 초기화 버튼이 sticky 영역 안에 함께 남는다.
   - 추천 태그 chip rail도 검색 surface 안에서 이어져 보이고, 첫 chip이 좌측에서 잘리지 않는다.
+  - 재료 필터가 없을 때는 빈 filter chip row가 렌더링되지 않아 검색 input과 tag rail 사이가 과하게 벌어지지 않는다.
+  - tag rail 아래에는 별도 border-bottom이 보이지 않는다.
   - ingredient bottom sheet, sort dropdown, bottom tab과 z-index 충돌이 없다.
 - Likely implementation target:
   - `app/globals.css`
@@ -2124,6 +2154,11 @@ Implementation note:
   - `app/globals.css`에서 `.home-mobile-discovery-search`를 app bar 아래 sticky 영역으로 변경했다.
   - `tests/home-screen.test.tsx`에서 `position: sticky`, `top: var(--control-height-xl)`, `z-index`, background 규칙을 고정했다.
   - Follow-up: `components/home/home-screen.tsx`에서 모바일 `HomeTagRail`을 sticky 검색 surface 내부로 이동하고, `tests/home-screen.test.tsx`에서 태그 rail DOM 위치와 CSS 여백 계약을 추가했다.
+  - Follow-up 2: `components/home/home-screen.tsx`에서 재료 필터가 없을 때 빈 `.home-mobile-filter-chip-row`를 렌더링하지 않게 했다.
+  - Follow-up 2: `app/globals.css`에서 `.home-mobile-discovery-search` gap/bottom padding을 줄이고 `border-bottom`을 제거했다.
+  - Follow-up 2: `tests/home-screen.test.tsx`에서 검색 sticky 영역의 `gap: 6px`, `padding: 10px 20px 8px`, `border-bottom: 0`, tag rail `padding: 0 1px`를 고정했다.
+  - Verified: `pnpm exec playwright test tests/e2e/qa-visual.spec.ts --grep "home default shell|home sort menu open" --project=mobile-chrome --project=mobile-ios-small --update-snapshots`
+  - Verified: `pnpm exec playwright test tests/e2e/qa-visual.spec.ts --grep "home default shell|home sort menu open" --project=mobile-chrome --project=mobile-ios-small`
   - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-ingredient-add-modal.test.tsx`
   - Verified: `pnpm typecheck`
   - Verified: `pnpm lint`
@@ -2646,7 +2681,7 @@ Implementation note:
 
 ### 58. 앱 레시피북에서 추가 화면의 레시피북 row가 커버/색상 없이 밋밋해 보이는 문제
 
-- Status: reworked in `fix/manual-uiux-round3-redo`
+- Status: reworked in `fix/manual-uiux-round3-redo`, dialog fallback follow-up in `fix/mobile-recipebook-add-covers`
 - Severity: Low
 - Area: UI / Meal Add / Mobile Recipebook
 - Source: user manual review, app recipebook meal add
@@ -2663,6 +2698,7 @@ Implementation note:
   - cover image가 있으면 mini cover 안에 보여주고, 없으면 tone color만으로 구분한다.
 - Acceptance criteria:
   - 앱 screen presentation의 레시피북 row에 mini cover가 렌더링된다.
+  - 하단시트/기본 dialog 경로에서도 흰 텍스트 카드 대신 같은 mini cover row가 렌더링된다.
   - cover image가 있는 레시피북은 해당 이미지가 mini cover에 적용된다.
   - cover image가 없는 레시피북도 tone color class로 구분된다.
 - Likely implementation target:
@@ -2671,8 +2707,13 @@ Implementation note:
   - `tests/recipe-book-selector.test.tsx`
 - Verification:
   - `components/planner/recipe-book-selector.tsx`에서 앱/sheet 레시피북 row에 cover tone class를 붙였다.
+  - Follow-up: 기본 `dialog` presentation도 같은 compact cover row를 사용하게 해 다른 진입 경로에서 흰 카드로 되돌아가는 문제를 막았다.
   - `app/globals.css`에서 `planner-recipebook-selector-row-*` tone 배경을 추가해 커버 이미지가 없어도 row별 색상 구분이 되게 했다.
   - `tests/recipe-book-selector.test.tsx`에서 app screen presentation의 mini cover image와 tone row class를 고정했다.
+  - `tests/recipe-book-selector.test.tsx`에서 default dialog presentation의 mini cover image와 tone row class도 고정했다.
+  - Verified: `pnpm exec vitest run tests/planner-week-screen.test.tsx tests/recipe-book-selector.test.tsx`
+  - Verified: `pnpm exec playwright test tests/e2e/slice-08b-meal-add-books-pantry.spec.ts --grep "recipe book" --project=mobile-chrome --project=desktop-chrome`
+  - Verified: local Playwright screenshot `/tmp/recipebook-selector-mobile-covers.png`에서 mini cover 4개와 첫 cover `44x56` 렌더링 확인
   - Verified: `pnpm exec vitest run tests/menu-add-screen.test.tsx tests/recipe-book-selector.test.tsx`
   - Verified: `pnpm typecheck`
   - Verified: `pnpm lint`

@@ -304,7 +304,8 @@ describe("home screen", () => {
     expect(screen.queryByRole("button", { name: "양파" })).toBeNull();
     expect(
       screen.getByRole("heading", { level: 2, name: "이번 주 인기 테마" }).className,
-    ).toContain("text-[var(--foreground)]");
+    ).toContain("home-mobile-theme-title");
+    expect(ruleBody(".home-mobile-theme-title")).toContain("color: var(--foreground);");
     expect(screen.queryByRole("link", { name: /이번 주 식단 플래너/ })).toBeNull();
     expect(screen.getByRole("link", { name: /식단 짜기/ }).getAttribute("href")).toBe("/planner");
     expect(screen.getByRole("link", { name: /장보기 준비/ }).getAttribute("href")).toBe("/shopping/flow");
@@ -352,8 +353,17 @@ describe("home screen", () => {
 
   it("reserves mobile loading rail heights to avoid Lighthouse layout shift", () => {
     expect(ruleBody(".home-mobile-tag-rail")).toContain("min-height: 40px;");
-    expect(ruleBody(".home-mobile-theme-section")).toContain("min-height: 195px;");
-    expect(ruleBody(".home-mobile-theme-rail")).toContain("min-height: 129px;");
+    expect(ruleBody(".home-mobile-theme-section")).toContain("min-height: 236px;");
+    expect(ruleBody(".home-mobile-theme-rail")).toContain("min-height: 158px;");
+  });
+
+  it("styles the mobile popular theme rail as a distinct full-width section", () => {
+    expect(ruleBody(".home-mobile-theme-section-embedded")).toContain("margin: 8px -16px 10px;");
+    expect(ruleBody(".home-mobile-theme-section")).toContain("border-top: 1px solid var(--line);");
+    expect(ruleBody(".home-mobile-theme-section")).toContain("border-bottom: 1px solid var(--line);");
+    expect(ruleBody(".home-mobile-theme-section")).toContain("background: var(--surface-fill);");
+    expect(ruleBody(".home-mobile-theme-card")).toContain("width: min(76vw, 320px);");
+    expect(ruleBody(".home-mobile-theme-card")).toContain("height: 154px;");
   });
 
   it("keeps the mobile search controls sticky under the app bar", () => {
@@ -363,8 +373,9 @@ describe("home screen", () => {
     expect(searchRule).toContain("top: var(--control-height-xl);");
     expect(searchRule).toContain("z-index: 19;");
     expect(searchRule).toContain("background: var(--surface);");
-    expect(searchRule).toContain("padding: 10px 20px 12px;");
-    expect(searchRule).toContain("gap: 10px;");
+    expect(searchRule).toContain("padding: 10px 20px 8px;");
+    expect(searchRule).toContain("gap: 6px;");
+    expect(searchRule).toContain("border-bottom: 0;");
   });
 
   it("groups the mobile tag filters with the sticky search surface", async () => {
@@ -389,7 +400,7 @@ describe("home screen", () => {
       return Promise.resolve(getMockRecipeList());
     });
 
-    render(<HomeScreen />);
+    const { container } = render(<HomeScreen />);
 
     const searchInput = await screen.findByPlaceholderText("레시피 제목 검색");
     const tagButton = await screen.findByRole("button", { name: "국물요리" });
@@ -399,15 +410,17 @@ describe("home screen", () => {
     expect(searchBlock).not.toBeNull();
     expect(tagRail).not.toBeNull();
     expect(searchBlock?.contains(tagRail)).toBe(true);
+    expect(container.querySelector(".home-mobile-filter-chip-row")).toBeNull();
 
     const searchRule = ruleBody(".home-mobile-discovery-search");
     const tagRailRule = ruleBody(".home-mobile-tag-rail");
 
-    expect(searchRule).toContain("padding: 10px 20px 12px;");
-    expect(searchRule).toContain("gap: 10px;");
+    expect(searchRule).toContain("padding: 10px 20px 8px;");
+    expect(searchRule).toContain("gap: 6px;");
+    expect(searchRule).toContain("border-bottom: 0;");
     expect(tagRailRule).toContain("display: flex;");
     expect(tagRailRule).toContain("overflow-x: auto;");
-    expect(tagRailRule).toContain("padding: 2px 1px 0;");
+    expect(tagRailRule).toContain("padding: 0 1px;");
     expect(tagRailRule).toContain("scroll-padding-inline: 1px;");
   });
 
@@ -415,7 +428,7 @@ describe("home screen", () => {
     expect(ruleBody(".web-recipe-card-body")).toContain("padding: 12px 12px 8px;");
   });
 
-  it("keeps web HOME card tag rows single-line without misleading +N tags", async () => {
+  it("summarizes web HOME tags instead of clipping a long tag chip", async () => {
     installMatchMedia(true);
     fetchJson.mockImplementation((input: string) => {
       if (input.startsWith("/api/v1/ingredients")) {
@@ -434,7 +447,7 @@ describe("home screen", () => {
         items: [
           buildRecipeCard({
             id: "recipe-many-tags",
-            tags: ["생딸기", "우유", "설탕", "디저트", "간식", "냉장"],
+            tags: ["이모카세두", "흑백요리사", "두부찌개", "초간단"],
             title: "태그가 많은 레시피",
           }),
         ],
@@ -446,16 +459,19 @@ describe("home screen", () => {
     const { container } = render(<HomeScreen />);
 
     await screen.findByText("태그가 많은 레시피");
-    expect(container.querySelector(".web-recipe-card-tags")?.textContent).toContain("생딸기");
-    expect(container.querySelector(".web-recipe-card-tags")?.textContent).not.toContain("+");
+    const tagRow = container.querySelector(".web-recipe-card-tags");
+
+    expect(tagRow?.textContent).toContain("이모카세두");
+    expect(tagRow?.textContent).toContain("흑백요리사");
+    expect(tagRow?.textContent).not.toContain("두부찌개");
+    expect(tagRow?.textContent).toContain("+2");
     expect(ruleBody(".web-recipe-card-tags")).toContain("flex-wrap: nowrap;");
     expect(ruleBody(".web-recipe-card-tags")).toContain("max-height: 24px;");
     expect(ruleBody(".web-recipe-card-tags")).toContain("overflow: hidden;");
     expect(ruleBody(".web-recipe-card-tag")).toContain("white-space: nowrap;");
-    expect(ruleBody(".web-recipe-card-tag")).toContain("text-overflow: ellipsis;");
-    expect(ruleBody(".web-recipe-card-tag")).toContain("overflow: hidden;");
-    expect(ruleBody(".web-recipe-card-tag")).toContain("min-width: 0;");
-    expect(ruleBody(".web-recipe-card-tag")).toContain("max-width: 100%;");
+    expect(ruleBody(".web-recipe-card-tag")).toContain("flex: 0 0 auto;");
+    expect(ruleBody(".web-recipe-card-tag")).not.toContain("text-overflow: ellipsis;");
+    expect(ruleBody(".web-recipe-card-tag-more")).toContain("color: var(--web-primary);");
     expect(ruleBody(".web-home-recipe-card .web-recipe-card")).toContain("height: 100%;");
   });
 
@@ -499,6 +515,7 @@ describe("home screen", () => {
       buildRecipeCard({ id: "recipe-2", title: "두 번째 레시피" }),
       buildRecipeCard({ id: "recipe-3", title: "세 번째 레시피" }),
       buildRecipeCard({ id: "recipe-4", title: "네 번째 레시피" }),
+      buildRecipeCard({ id: "recipe-5", title: "다섯 번째 레시피" }),
     ];
     const themeData: RecipeThemesData = {
       themes: [
@@ -532,26 +549,91 @@ describe("home screen", () => {
 
     render(<HomeScreen />);
 
-    const secondRecipe = await screen.findByRole("heading", {
+    const fourthRecipe = await screen.findByRole("heading", {
       level: 3,
-      name: "두 번째 레시피",
+      name: "네 번째 레시피",
     });
     const themeHeading = screen.getByRole("heading", {
       level: 2,
       name: "이번 주 인기 테마",
     });
-    const thirdRecipe = screen.getByRole("heading", {
+    const fifthRecipe = screen.getByRole("heading", {
       level: 3,
-      name: "세 번째 레시피",
+      name: "다섯 번째 레시피",
     });
 
     expect(
-      secondRecipe.compareDocumentPosition(themeHeading) &
+      fourthRecipe.compareDocumentPosition(themeHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      themeHeading.compareDocumentPosition(thirdRecipe) &
+      themeHeading.compareDocumentPosition(fifthRecipe) &
         Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("keeps mobile popular themes from duplicating visible tag filters", async () => {
+    const recipe = buildRecipeCard({ id: "recipe-theme", title: "테마 확인 레시피" });
+
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({
+          themes: [
+            {
+              id: "korean",
+              recipes: [recipe],
+              tag_key: "한식",
+              tag_label: "한식",
+              title: "한식",
+            },
+            {
+              id: "youtube",
+              recipes: [recipe],
+              title: "유튜브에서 가져온 레시피",
+            },
+          ],
+        });
+      }
+
+      if (input.startsWith("/api/v1/tags")) {
+        return Promise.resolve({
+          items: [
+            {
+              normalized_key: "한식",
+              label: "한식",
+              slug: null,
+              kind: "semantic",
+              is_system: true,
+              theme_eligible: true,
+              usage_count: 12,
+            },
+          ],
+        });
+      }
+
+      return Promise.resolve({
+        items: [
+          buildRecipeCard({ id: "recipe-1", title: "첫 번째 레시피" }),
+          buildRecipeCard({ id: "recipe-2", title: "두 번째 레시피" }),
+          buildRecipeCard({ id: "recipe-3", title: "세 번째 레시피" }),
+          buildRecipeCard({ id: "recipe-4", title: "네 번째 레시피" }),
+          buildRecipeCard({ id: "recipe-5", title: "다섯 번째 레시피" }),
+        ],
+        next_cursor: null,
+        has_next: false,
+      });
+    });
+
+    render(<HomeScreen />);
+
+    expect(await screen.findByRole("button", { name: "한식" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /한식\s*1개 레시피/ })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /유튜브에서 가져온 레시피\s*1개 레시피/ }),
     ).toBeTruthy();
   });
 
