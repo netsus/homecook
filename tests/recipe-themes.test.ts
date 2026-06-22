@@ -39,19 +39,23 @@ describe("36c recipe tag themes", () => {
       },
     ]);
 
-    expect(themes).toEqual([
-      {
-        id: "popular",
-        title: "이번 주 인기 레시피",
-        recipes: [popularRecipe],
-      },
-      {
-        id: "korean",
-        title: "한식",
-        tag_key: "한식",
-        tag_label: "한식",
-        recipes: [koreanRecipe],
-      },
-    ]);
+    expect(themes[0]).toEqual({
+      id: "popular",
+      title: "이번 주 인기 레시피",
+      recipes: [popularRecipe],
+    });
+    expect(themes).toContainEqual({
+      id: "hearty-main",
+      title: "밥상 든든한 메인",
+      recipes: [popularRecipe],
+    });
+    expect(themes).toContainEqual({
+      id: "korean",
+      title: "한식",
+      tag_key: "한식",
+      tag_label: "한식",
+      recipes: [koreanRecipe],
+    });
+    expect(themes.some((theme) => theme.id === "pending-user-tag")).toBe(false);
   });
 });

@@ -2039,8 +2039,7 @@ function getVisibleRecipeTags(recipe: RecipeDetail) {
         tagKey !== sourceKey &&
         tagKey !== titleKey
       );
-    })
-    .slice(0, 3);
+    });
 }
 
 function normalizeRecipeTag(value: string) {

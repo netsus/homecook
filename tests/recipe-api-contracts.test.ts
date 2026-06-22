@@ -928,8 +928,26 @@ describe("recipe API contracts", () => {
     expect(body.success).toBe(true);
     expect(body.error).toBeNull();
     expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("popular");
+    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("youtube");
+    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("saved-favorites");
     expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("korean");
     expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("dessert");
+    expect(body.data.themes.find((theme: { id: string }) => theme.id === "youtube")).toMatchObject({
+      title: "유튜브에서 가져온 레시피",
+      recipes: [
+        {
+          id: "recipe-2",
+        },
+      ],
+    });
+    expect(body.data.themes.find((theme: { id: string }) => theme.id === "saved-favorites")).toMatchObject({
+      title: "많이 저장한 레시피",
+      recipes: [
+        {
+          id: "recipe-1",
+        },
+      ],
+    });
     expect(body.data.themes.find((theme: { id: string }) => theme.id === "dessert")).toMatchObject({
       title: "디저트",
       tag_key: "디저트",

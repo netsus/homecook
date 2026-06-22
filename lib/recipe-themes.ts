@@ -6,6 +6,8 @@ interface ThemeDefinition {
   id: string;
   title: string;
   keywords?: string[];
+  minimumSaveCount?: number;
+  sortBy?: "save_count" | "view_count";
   sourceTypes?: RecipeCardItem["source_type"][];
 }
 
@@ -18,51 +20,61 @@ export interface RecipeTagThemeGroup {
 
 const THEME_DEFINITIONS: ThemeDefinition[] = [
   {
-    id: "korean-home",
-    title: "한식 집밥",
-    keywords: [
-      "한식",
-      "김치",
-      "된장",
-      "고추장",
-      "찌개",
-      "국",
-      "탕",
-      "전골",
-      "불고기",
-      "비빔",
-    ],
+    id: "youtube",
+    title: "유튜브에서 가져온 레시피",
+    sourceTypes: ["youtube"],
   },
   {
-    id: "quick-meal",
-    title: "간편 한끼",
+    id: "saved-favorites",
+    title: "많이 저장한 레시피",
+    minimumSaveCount: 1,
+    sortBy: "save_count",
+  },
+  {
+    id: "beginner-safe",
+    title: "실패 걱정 없는 메뉴",
     keywords: [
       "간편",
+      "간단",
       "초간단",
-      "한끼",
-      "볶음밥",
-      "덮밥",
-      "도시락",
-      "토스트",
-      "샌드위치",
+      "10분",
+      "30분",
+      "쉬운",
+      "쉽게",
+      "걱정",
+      "성공",
+      "따라",
     ],
   },
   {
-    id: "noodle-pasta",
-    title: "면과 파스타",
+    id: "pantry-cleanout",
+    title: "냉장고 비우는 한 끼",
     keywords: [
-      "면",
-      "국수",
-      "파스타",
-      "라면",
-      "우동",
-      "소바",
-      "스파게티",
+      "냉장고",
+      "냉털",
+      "남은",
+      "자투리",
+      "비우",
+      "털기",
     ],
   },
   {
-    id: "dessert",
-    title: "디저트와 베이킹",
+    id: "hearty-main",
+    title: "밥상 든든한 메인",
+    keywords: [
+      "찌개",
+      "덮밥",
+      "두부",
+      "고기",
+      "불고기",
+      "김치",
+      "한끼",
+      "메인",
+    ],
+  },
+  {
+    id: "sweet-no-oven",
+    title: "불 없이 달달하게",
     keywords: [
       "디저트",
       "푸딩",
@@ -76,11 +88,6 @@ const THEME_DEFINITIONS: ThemeDefinition[] = [
       "딸기",
     ],
   },
-  {
-    id: "youtube",
-    title: "유튜브에서 온 레시피",
-    sourceTypes: ["youtube"],
-  },
 ];
 
 function normalizeSearchText(value: string) {
@@ -92,6 +99,14 @@ function getRecipeThemeText(recipe: RecipeCardItem) {
 }
 
 function recipeMatchesTheme(recipe: RecipeCardItem, theme: ThemeDefinition) {
+  if (theme.minimumSaveCount && recipe.save_count < theme.minimumSaveCount) {
+    return false;
+  }
+
+  if (!theme.sourceTypes?.length && !theme.keywords?.length) {
+    return true;
+  }
+
   if (theme.sourceTypes?.includes(recipe.source_type)) {
     return true;
   }
@@ -111,6 +126,34 @@ function createTheme(id: string, title: string, recipes: RecipeCardItem[]) {
   } satisfies RecipeTheme;
 }
 
+function sortThemeRecipes(recipes: RecipeCardItem[], theme: ThemeDefinition) {
+  if (theme.sortBy === "save_count") {
+    return recipes.slice().sort((left, right) => {
+      if (left.save_count !== right.save_count) {
+        return right.save_count - left.save_count;
+      }
+
+      if (left.view_count !== right.view_count) {
+        return right.view_count - left.view_count;
+      }
+
+      return left.id.localeCompare(right.id);
+    });
+  }
+
+  if (theme.sortBy === "view_count") {
+    return recipes.slice().sort((left, right) => {
+      if (left.view_count !== right.view_count) {
+        return right.view_count - left.view_count;
+      }
+
+      return left.id.localeCompare(right.id);
+    });
+  }
+
+  return recipes;
+}
+
 function createTagTheme(group: RecipeTagThemeGroup) {
   return {
     id: group.id,
@@ -125,14 +168,10 @@ export function createRecipeThemesFromTagGroups(
   popularItems: RecipeCardItem[],
   groups: RecipeTagThemeGroup[],
 ) {
-  const themes: RecipeTheme[] = [];
-
-  if (popularItems.length > 0) {
-    themes.push(createTheme("popular", "이번 주 인기 레시피", popularItems));
-  }
+  const themes = createRecipeThemesFromCards(popularItems);
 
   groups.forEach((group) => {
-    if (group.recipes.length === 0) {
+    if (group.recipes.length === 0 || themes.some((theme) => theme.id === group.id)) {
       return;
     }
 
@@ -152,7 +191,10 @@ export function createRecipeThemesFromCards(items: RecipeCardItem[]) {
   ];
 
   THEME_DEFINITIONS.forEach((theme) => {
-    const recipes = items.filter((recipe) => recipeMatchesTheme(recipe, theme));
+    const recipes = sortThemeRecipes(
+      items.filter((recipe) => recipeMatchesTheme(recipe, theme)),
+      theme,
+    );
 
     if (recipes.length > 0) {
       themes.push(createTheme(theme.id, theme.title, recipes));

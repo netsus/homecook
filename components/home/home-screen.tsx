@@ -70,6 +70,10 @@ const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
   { label: "요리완료순", value: "cook_count" },
 ];
 
+const WEB_HOME_MAX_VISIBLE_TAGS = 3;
+const WEB_HOME_TAG_ROW_UNIT_LIMIT = 14;
+const WEB_HOME_TAG_GAP_UNITS = 1;
+
 type ScreenState = "loading" | "ready" | "empty" | "error";
 type AsyncState = "loading" | "ready" | "error";
 
@@ -151,6 +155,45 @@ function filterSafeRecipeCards(items: RecipeCardItem[]) {
   return filterSafeDisplayItems(items, (recipe) => recipe.title);
 }
 
+function getWebHomeTagUnits(label: string) {
+  return Array.from(label).reduce((total, char) => {
+    return total + (/^[\x00-\x7F]$/.test(char) ? 0.6 : 1);
+  }, 0);
+}
+
+function getWebHomeTagPreview(tags: string[]) {
+  const normalizedTags = tags.map((tag) => tag.trim()).filter(Boolean);
+  const visibleTags: string[] = [];
+  let usedUnits = 0;
+
+  for (let index = 0; index < normalizedTags.length; index += 1) {
+    if (visibleTags.length >= WEB_HOME_MAX_VISIBLE_TAGS) {
+      break;
+    }
+
+    const tag = normalizedTags[index];
+    const hiddenCountIfIncluded = normalizedTags.length - index - 1;
+    const gapUnits = visibleTags.length ? WEB_HOME_TAG_GAP_UNITS : 0;
+    const moreUnits =
+      hiddenCountIfIncluded > 0
+        ? WEB_HOME_TAG_GAP_UNITS + getWebHomeTagUnits(`+${hiddenCountIfIncluded}`)
+        : 0;
+    const nextUnits = usedUnits + gapUnits + getWebHomeTagUnits(tag) + moreUnits;
+
+    if (nextUnits > WEB_HOME_TAG_ROW_UNIT_LIMIT) {
+      break;
+    }
+
+    visibleTags.push(tag);
+    usedUnits += gapUnits + getWebHomeTagUnits(tag);
+  }
+
+  return {
+    hiddenTagCount: normalizedTags.length - visibleTags.length,
+    visibleTags,
+  };
+}
+
 function filterSafeRecipeThemes(themeData: RecipeThemesData): RecipeThemesData {
   return {
     themes: themeData.themes
@@ -160,6 +203,22 @@ function filterSafeRecipeThemes(themeData: RecipeThemesData): RecipeThemesData {
       }))
       .filter((theme) => isSafeDisplayText(theme.title) && theme.recipes.length > 0),
   };
+}
+
+function normalizeHomeThemeLabel(value: string) {
+  return value.trim().replace(/^#+/, "").trim().toLowerCase();
+}
+
+function getDiscoveryThemes(themes: RecipeTheme[], tagOptions: RecipeTagItem[]) {
+  const visibleTagLabels = new Set(
+    tagOptions.map((tag) => normalizeHomeThemeLabel(tag.label)),
+  );
+
+  return themes.filter((theme) => {
+    const themeLabel = normalizeHomeThemeLabel(theme.title);
+
+    return !visibleTagLabels.has(themeLabel);
+  });
 }
 
 function readHomeAuthOverride() {
@@ -345,6 +404,10 @@ export function HomeScreen() {
     () => themes?.themes.find((theme) => theme.id === activeThemeId) ?? null,
     [activeThemeId, themes],
   );
+  const discoveryThemes = useMemo(
+    () => getDiscoveryThemes(themes?.themes ?? [], tagOptions),
+    [tagOptions, themes],
+  );
   const effectiveTagKey = activeTagKey ?? selectedTheme?.tag_key ?? null;
   const effectiveTagLabel =
     activeTagLabel ?? selectedTheme?.tag_label ?? selectedTheme?.title ?? null;
@@ -427,10 +490,10 @@ export function HomeScreen() {
   const shouldShowMobileThemeCarousel =
     !hasResultPriorityContext &&
     !showInitialDiscoverySkeleton &&
-    (themes?.themes.length ?? 0) > 0;
-  const mobileThemeInsertAfterIndex = Math.max(
-    0,
-    Math.ceil(displayedRecipes.length / 2) - 1,
+    discoveryThemes.length > 0;
+  const mobileThemeInsertAfterIndex = Math.min(
+    3,
+    Math.max(0, displayedRecipes.length - 1),
   );
   const showEmptyState =
     (screenState === "ready" || screenState === "empty") &&
@@ -680,7 +743,7 @@ export function HomeScreen() {
           tagState={tagState}
           setQuery={setQuery}
           sort={sort}
-          themes={themes?.themes ?? []}
+          themes={discoveryThemes}
           totalRecipeCount={recipes?.items.length ?? 0}
         />
       </div>
@@ -744,27 +807,25 @@ export function HomeScreen() {
                   재료로 검색
                 </button>
               </div>
-              <div className="home-mobile-filter-chip-row">
-                {hasIngredientFilter ? (
-                  <>
-                    <button
-                      className="home-mobile-filter-chip home-mobile-filter-chip-active"
-                      onClick={() => setIngredientModalOpen(true)}
-                      type="button"
-                    >
-                      <SearchSmallIcon color="currentColor" />
-                      재료 {appliedIngredientIds.length}개
-                    </button>
-                    <button
-                      className="home-mobile-filter-reset"
-                      onClick={clearIngredientFilters}
-                      type="button"
-                    >
-                      초기화
-                    </button>
-                  </>
-                ) : null}
-              </div>
+              {hasIngredientFilter ? (
+                <div className="home-mobile-filter-chip-row">
+                  <button
+                    className="home-mobile-filter-chip home-mobile-filter-chip-active"
+                    onClick={() => setIngredientModalOpen(true)}
+                    type="button"
+                  >
+                    <SearchSmallIcon color="currentColor" />
+                    재료 {appliedIngredientIds.length}개
+                  </button>
+                  <button
+                    className="home-mobile-filter-reset"
+                    onClick={clearIngredientFilters}
+                    type="button"
+                  >
+                    초기화
+                  </button>
+                </div>
+              ) : null}
               <HomeTagRail
                 activeTagKey={activeTagKey}
                 onRetry={() => void loadTagOptions()}
@@ -785,7 +846,7 @@ export function HomeScreen() {
               <ThemeCarousel
                 activeThemeId={activeThemeId}
                 onSelectTheme={selectTheme}
-                themes={themes?.themes ?? []}
+                themes={discoveryThemes}
               />
             ) : null}
 
@@ -878,8 +939,9 @@ export function HomeScreen() {
                         shouldShowMobileThemeCarousel ? (
                           <ThemeCarousel
                             activeThemeId={activeThemeId}
+                            embedded
                             onSelectTheme={selectTheme}
-                            themes={themes?.themes ?? []}
+                            themes={discoveryThemes}
                           />
                         ) : null}
                       </React.Fragment>
@@ -1294,7 +1356,8 @@ function HomeWebRecipeCard({
   const imageSrc = resolveRecipeImage(recipe);
   const sourceLabel = formatRecipeSourceLabel(recipe.source_type);
   const sourceBadge = recipe.source_type === "youtube" ? sourceLabel : null;
-  const visibleTags = recipe.tags.slice(0, 3);
+  const { hiddenTagCount, visibleTags } = getWebHomeTagPreview(recipe.tags);
+  const hasTags = visibleTags.length > 0 || hiddenTagCount > 0;
 
   return (
     <article className="web-home-recipe-card">
@@ -1311,13 +1374,21 @@ function HomeWebRecipeCard({
             </>
           }
           tags={
-            visibleTags.length ? (
+            hasTags ? (
               <>
                 {visibleTags.map((tag) => (
                   <span className="web-recipe-card-tag" key={tag}>
                     {tag}
                   </span>
                 ))}
+                {hiddenTagCount > 0 ? (
+                  <span
+                    aria-label={`숨긴 태그 ${hiddenTagCount}개`}
+                    className="web-recipe-card-tag web-recipe-card-tag-more"
+                  >
+                    +{hiddenTagCount}
+                  </span>
+                ) : null}
               </>
             ) : null
           }
@@ -1705,20 +1776,28 @@ function HomeTagRail({
 
 function ThemeCarousel({
   activeThemeId,
+  embedded = false,
   onSelectTheme,
   themes,
 }: {
   activeThemeId: string | null;
+  embedded?: boolean;
   onSelectTheme: (themeId: string) => void;
   themes: RecipeTheme[];
 }) {
   return (
-    <section aria-label="이번 주 인기 테마" className="home-mobile-theme-section pb-4 pt-2">
-      <div className="flex items-baseline justify-between px-4 pb-3">
-        <h2 className="text-[18px] font-bold text-[var(--foreground)]">이번 주 인기 테마</h2>
+    <section
+      aria-label="이번 주 인기 테마"
+      className={[
+        "home-mobile-theme-section",
+        embedded ? "home-mobile-theme-section-embedded" : "",
+      ].join(" ")}
+    >
+      <div className="home-mobile-theme-header">
+        <h2 className="home-mobile-theme-title">이번 주 인기 테마</h2>
         {activeThemeId ? (
           <button
-            className="text-[12px] font-semibold text-[var(--brand)]"
+            className="home-mobile-theme-reset"
             onClick={() => onSelectTheme(activeThemeId)}
             type="button"
           >
@@ -1726,7 +1805,7 @@ function ThemeCarousel({
           </button>
         ) : null}
       </div>
-      <div className="home-mobile-theme-rail scrollbar-hide flex gap-2.5 overflow-x-auto px-4 pb-1">
+      <div className="home-mobile-theme-rail scrollbar-hide">
         {themes.map((theme, index) => (
           <ThemeCarouselCard
             isActive={activeThemeId === theme.id}
@@ -1759,26 +1838,20 @@ function ThemeCarouselCard({
   return (
     <button
       aria-pressed={isActive}
-      className={`relative h-[128px] w-[184px] shrink-0 overflow-hidden rounded-[var(--radius-card)] text-left shadow-[0px_1px_3px_var(--shadow-color-subtle)] transition hover:shadow-[0px_4px_12px_var(--shadow-color-medium)] ${
-        isActive ? "ring-2 ring-[var(--brand)]" : ""
-      }`}
+      className={[
+        "home-mobile-theme-card",
+        isActive ? "home-mobile-theme-card-active" : "",
+      ].join(" ")}
       onClick={onClick}
       style={{
         backgroundImage: `url(${imageSrc})`,
-        backgroundPosition: "center",
-        backgroundSize: "cover",
-        border: isActive ? "2px solid var(--brand)" : "2px solid transparent",
       }}
       type="button"
     >
-      <span className="absolute inset-0 bg-[linear-gradient(180deg,transparent_20%,var(--overlay-68)_100%)]" />
-      <span className="absolute inset-x-0 bottom-0 flex flex-col gap-1 p-3 text-[var(--text-inverse)]">
-        <span className="line-clamp-2 text-[15px] font-bold leading-[1.2]">
-          {theme.title}
-        </span>
-        <span className="text-[12px] font-semibold opacity-90">
-          {theme.recipes.length}개 레시피
-        </span>
+      <span className="home-mobile-theme-card-overlay" />
+      <span className="home-mobile-theme-card-copy">
+        <span className="home-mobile-theme-card-title">{theme.title}</span>
+        <span className="home-mobile-theme-card-count">{theme.recipes.length}개 레시피</span>
       </span>
     </button>
   );
@@ -1859,16 +1932,16 @@ function ThemeCarouselSkeleton() {
   return (
     <section
       aria-label="이번 주 인기 테마 불러오는 중"
-      className="home-mobile-theme-section pb-4 pt-2"
+      className="home-mobile-theme-section"
     >
-      <div className="flex items-baseline justify-between px-4 pb-3">
+      <div className="home-mobile-theme-header">
         <Skeleton className="h-6 w-36 rounded-full" />
       </div>
-      <div className="home-mobile-theme-rail flex gap-2.5 overflow-hidden px-4 pb-1">
+      <div className="home-mobile-theme-rail overflow-hidden">
         {Array.from({ length: 3 }).map((_, index) => (
           <Skeleton
             key={index}
-            className="h-[128px] w-[184px] shrink-0 rounded-[var(--radius-card)]"
+            className="h-[154px] w-[min(76vw,320px)] shrink-0 rounded-[var(--radius-card)]"
           />
         ))}
       </div>
