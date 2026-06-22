@@ -5,6 +5,7 @@ import React, { useRef, useState } from "react";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   getIngredientCategoryGroupLabel,
   getIngredientGroupDisplayLabel,
@@ -16,6 +17,7 @@ interface PantryMobileScreenProps {
   activeCategory: string | null;
   displayItems: PantryItem[];
   isAllVisibleSelected: boolean;
+  isLoading?: boolean;
   isSelectMode: boolean;
   items: PantryItem[];
   searchQuery: string;
@@ -38,6 +40,7 @@ export function PantryMobileScreen({
   activeCategory,
   displayItems,
   isAllVisibleSelected,
+  isLoading = false,
   isSelectMode,
   items,
   searchQuery,
@@ -57,14 +60,14 @@ export function PantryMobileScreen({
 }: PantryMobileScreenProps) {
   const [swipedIngredientId, setSwipedIngredientId] = useState<string | null>(null);
   const pointerStartXRef = useRef<number | null>(null);
-  const isEmpty = items.length === 0 && !searchQuery && !activeCategory;
-  const isSearchEmpty = displayItems.length === 0 && (searchQuery || activeCategory);
+  const isEmpty = !isLoading && items.length === 0 && !searchQuery && !activeCategory;
+  const isSearchEmpty = !isLoading && displayItems.length === 0 && (searchQuery || activeCategory);
   const sectionGroups = groupPantryItems(displayItems);
   const categoryRail = getCategoryRail();
 
   return (
     <div className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden">
-      <div className="relative flex h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
+      <div className="relative z-50 flex h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
         <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">
           팬트리
         </h1>
@@ -89,12 +92,24 @@ export function PantryMobileScreen({
           냉장고에 있는 재료
         </p>
         <div className="mb-5 flex items-baseline gap-1.5">
-          <span className="text-[32px] font-extrabold leading-none">
-            {items.length}
-          </span>
-          <span className="text-[16px] font-bold leading-none text-[var(--text-3)]">
-            개
-          </span>
+          {isLoading ? (
+            <Skeleton
+              className="mt-1"
+              data-testid="pantry-mobile-count-loading"
+              height={34}
+              rounded="md"
+              width={72}
+            />
+          ) : (
+            <>
+              <span className="text-[32px] font-extrabold leading-none">
+                {items.length}
+              </span>
+              <span className="text-[16px] font-bold leading-none text-[var(--text-3)]">
+                개
+              </span>
+            </>
+          )}
         </div>
         <p className="-mt-3 mb-4 text-[13px] font-medium leading-[1.45] text-[var(--text-3)]">
           팬트리에 있는 재료는 장보기에서 자동 제외돼요.
@@ -169,7 +184,7 @@ export function PantryMobileScreen({
             <button
               aria-checked={isAllVisibleSelected}
               className="inline-flex h-[var(--control-height-md)] shrink-0 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-[12px] font-extrabold text-[var(--text-2)] disabled:opacity-50"
-              disabled={displayItems.length === 0}
+              disabled={isLoading || displayItems.length === 0}
               onClick={onSelectAllToggle}
               role="checkbox"
               type="button"
@@ -190,7 +205,7 @@ export function PantryMobileScreen({
           ) : (
             <button
               className="h-[var(--control-height-md)] shrink-0 rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 text-[13px] font-extrabold text-[var(--brand)] disabled:border-[var(--line-strong)] disabled:bg-[var(--surface)] disabled:text-[var(--text-4)]"
-              disabled={displayItems.length === 0}
+              disabled={isLoading || displayItems.length === 0}
               onClick={onStartSelectMode}
               type="button"
             >
@@ -201,7 +216,9 @@ export function PantryMobileScreen({
       </section>
 
       <main className="px-4 pb-4 pt-[26px]">
-        {isEmpty ? (
+        {isLoading ? (
+          <MobilePantryInlineLoading />
+        ) : isEmpty ? (
           <MobileEmptyState
             onOpenAddSheet={onOpenAddSheet}
             onOpenBundlePicker={onOpenBundlePicker}
@@ -341,6 +358,23 @@ export function PantryMobileScreen({
       )}
 
       <Wave1MobileBottomTab ariaLabel="팬트리 하단 탭" currentTab="pantry" />
+    </div>
+  );
+}
+
+function MobilePantryInlineLoading() {
+  return (
+    <div
+      className="space-y-3"
+      data-testid="pantry-mobile-inline-loading"
+      role="status"
+    >
+      <Skeleton height={16} rounded="md" width={54} />
+      <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]">
+        {[1, 2, 3, 4].map((item) => (
+          <Skeleton className="w-full" height={61} key={item} rounded="md" />
+        ))}
+      </div>
     </div>
   );
 }

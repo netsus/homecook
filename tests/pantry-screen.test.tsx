@@ -249,22 +249,32 @@ describe("PantryScreen", () => {
     );
   });
 
-  it("shows the desktop loading skeleton inside the web pantry shell", () => {
+  it("keeps the desktop pantry controls visible while pantry items load", () => {
     mockFetchPantryList.mockReturnValue(new Promise(() => {}));
 
     render(<PantryScreen initialAuthenticated />);
 
-    expect(screen.getByTestId("pantry-skeleton")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "나의 팬트리" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "팬트리 추천" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "재료 추가하기" })).toBeTruthy();
+    expect(screen.getByRole("searchbox", { name: "팬트리 재료 검색" })).toBeTruthy();
+    expect(screen.getByTestId("web-pantry-inline-loading")).toBeTruthy();
+    expect(screen.queryByTestId("pantry-skeleton")).toBeNull();
     expect(screen.getByRole("link", { name: "마이페이지" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "마이" })).toBeNull();
   });
 
-  it("keeps the mobile bottom tab visible while pantry items load", () => {
+  it("keeps the mobile pantry shell visible while pantry items load", () => {
     installMatchMedia(true);
     mockFetchPantryList.mockReturnValue(new Promise(() => {}));
 
     render(<PantryScreen initialAuthenticated />);
 
+    expect(screen.getByRole("heading", { name: "팬트리" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "팬트리 추천" })).toBeTruthy();
+    expect(screen.getByRole("searchbox", { name: "팬트리 재료 검색" })).toBeTruthy();
+    expect(screen.getByTestId("pantry-mobile-inline-loading")).toBeTruthy();
+    expect(screen.queryByTestId("pantry-mobile-skeleton")).toBeNull();
     expect(screen.getByRole("navigation", { name: "팬트리 하단 탭" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("aria-current")).toBe(
       "page",

@@ -1021,6 +1021,10 @@
   z-index: 25;
 }
 
+.profile-summary-mobile {
+  z-index: 120;
+}
+
 .profile-summary .web-profile-button {
   position: relative;
   display: inline-flex;
@@ -1079,6 +1083,58 @@
   background: var(--surface);
   padding: 14px;
   box-shadow: 0 18px 38px var(--shadow-color-raised);
+}
+
+.profile-summary-popover-mobile {
+  position: fixed;
+  top: calc(var(--control-height-xl) + 8px + env(safe-area-inset-top));
+  right: 16px;
+  z-index: 140;
+  width: min(288px, calc(100vw - 32px));
+  max-height: min(292px, calc(100dvh - var(--control-height-xl) - 132px - env(safe-area-inset-top)));
+  gap: 9px;
+  overflow-y: auto;
+  border-radius: 14px;
+  padding: 12px;
+  overscroll-behavior: contain;
+}
+
+.profile-summary-popover-mobile .profile-summary-head {
+  gap: 8px;
+}
+
+.profile-summary-popover-mobile .profile-summary-head strong {
+  font-size: 14px;
+}
+
+.profile-summary-popover-mobile .profile-summary-head span {
+  font-size: 11px;
+}
+
+.profile-summary-popover-mobile .profile-summary-stats {
+  gap: 5px;
+}
+
+.profile-summary-popover-mobile .profile-summary-stats span {
+  border-radius: 10px;
+  padding: 7px 5px;
+  font-size: 10px;
+}
+
+.profile-summary-popover-mobile .profile-summary-stats b {
+  font-size: 14px;
+}
+
+.profile-summary-popover-mobile .profile-summary-notice,
+.profile-summary-popover-mobile .profile-summary-archive-preview {
+  border-radius: 11px;
+  padding: 8px 10px;
+}
+
+.profile-summary-popover-mobile .profile-summary-link {
+  min-height: 32px;
+  border-radius: 10px;
+  font-size: 12px;
 }
 
 .profile-summary-head {
@@ -1210,6 +1266,16 @@
   border: 1px solid var(--brand);
   background: var(--surface);
   color: var(--brand);
+}
+
+.profile-summary-popover-mobile .profile-summary-notice span,
+.profile-summary-popover-mobile .profile-summary-archive-preview span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .home-mobile-discovery-search-row {
