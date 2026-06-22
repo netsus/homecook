@@ -3,12 +3,35 @@
 import React from "react";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import type { UserProfileData } from "@/lib/api/mypage";
 import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
+
+const apiMocks = vi.hoisted(() => ({
+  fetchUserGamification: vi.fn(),
+  fetchUserProfile: vi.fn(),
+  fetchUserProgress: vi.fn(),
+}));
+
+vi.mock("@/lib/api/mypage", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/mypage")>();
+
+  return {
+    ...actual,
+    fetchUserProfile: apiMocks.fetchUserProfile,
+  };
+});
+
+vi.mock("@/lib/api/user-progress", () => ({
+  fetchUserProgress: apiMocks.fetchUserProgress,
+}));
+
+vi.mock("@/lib/api/user-gamification", () => ({
+  fetchUserGamification: apiMocks.fetchUserGamification,
+}));
 
 const PROFILE: UserProfileData = {
   email: "home@example.com",
@@ -137,6 +160,9 @@ const GAMIFICATION: UserGamificationData = {
 describe("ProfileSummaryButton", () => {
   afterEach(() => {
     cleanup();
+    apiMocks.fetchUserGamification.mockReset();
+    apiMocks.fetchUserProfile.mockReset();
+    apiMocks.fetchUserProgress.mockReset();
   });
 
   it("opens a shared summary panel with records, unread state, and notification archive entry", async () => {
@@ -198,5 +224,50 @@ describe("ProfileSummaryButton", () => {
     const dialog = screen.getByRole("dialog", { name: "마이페이지 요약" });
     expect(within(dialog).getByText("튜토리얼 안내")).toBeTruthy();
     expect(within(dialog).queryByText("최근 알림")).toBeNull();
+  });
+
+  it("opens the mobile summary as a fixed surface so sticky content cannot cover it", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ProfileSummaryButton
+        gamification={GAMIFICATION}
+        isAuthenticated
+        profile={PROFILE}
+        progress={PROGRESS}
+        variant="mobile"
+      />,
+    );
+
+    await user.click(screen.getByTestId("mobile-profile-summary-button"));
+
+    expect(screen.getByRole("dialog", { name: "마이페이지 요약" }).className).toContain(
+      "profile-summary-popover-mobile",
+    );
+  });
+
+  it("reuses a prior shell summary across autoload remounts to avoid nav flicker", () => {
+    apiMocks.fetchUserProfile.mockResolvedValue(PROFILE);
+    apiMocks.fetchUserProgress.mockResolvedValue(PROGRESS);
+    apiMocks.fetchUserGamification.mockResolvedValue(GAMIFICATION);
+
+    const first = render(
+      <ProfileSummaryButton
+        gamification={GAMIFICATION}
+        isAuthenticated
+        profile={PROFILE}
+        progress={PROGRESS}
+        variant="web"
+      />,
+    );
+    expect(screen.getByLabelText("김집밥 프로필 요약 열기")).toBeTruthy();
+
+    first.unmount();
+    render(<ProfileSummaryButton autoLoad isAuthenticated variant="web" />);
+
+    expect(screen.getByLabelText("김집밥 프로필 요약 열기")).toBeTruthy();
+    expect(apiMocks.fetchUserProfile).not.toHaveBeenCalled();
+    expect(apiMocks.fetchUserProgress).not.toHaveBeenCalled();
+    expect(apiMocks.fetchUserGamification).not.toHaveBeenCalled();
   });
 });

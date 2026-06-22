@@ -19,7 +19,6 @@ import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { ContentState } from "@/components/shared/content-state";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   WebButton,
   WebCard,
@@ -557,19 +556,6 @@ export function PantryScreen({
     );
   }
 
-  if (viewState === "loading") {
-    if (!isMobileViewport) {
-      return <PantryDesktopLoadingShell />;
-    }
-
-    return (
-      <>
-        <PantryLoadingSkeleton />
-        <Wave1MobileBottomTab ariaLabel="팬트리 하단 탭" currentTab="pantry" />
-      </>
-    );
-  }
-
   if (viewState === "error") {
     return (
       <>
@@ -595,8 +581,11 @@ export function PantryScreen({
     );
   }
 
-  const isEmpty = allDisplayItems.length === 0 && !searchQuery && !activeCategory;
-  const isSearchEmpty = displayItems.length === 0 && (searchQuery || activeCategory);
+  const isPantryLoading = viewState === "loading";
+  const isEmpty =
+    !isPantryLoading && allDisplayItems.length === 0 && !searchQuery && !activeCategory;
+  const isSearchEmpty =
+    !isPantryLoading && displayItems.length === 0 && (searchQuery || activeCategory);
   const overlayNodes = (
     <>
       {/* Delete confirm modal */}
@@ -769,6 +758,7 @@ export function PantryScreen({
         <PantryMobileScreen
           activeCategory={activeCategory}
           displayItems={mobileDisplayItems}
+          isLoading={isPantryLoading}
           isSelectMode={isSelectMode}
           items={items}
           onCategoryChange={handleCategoryChange}
@@ -804,7 +794,7 @@ export function PantryScreen({
           <header className="web-pantry-head">
             <div>
               <p className="web-menu-add-eyebrow">팬트리</p>
-              <h1>나의 팬트리 {items.length}개</h1>
+              <h1>{isPantryLoading ? "나의 팬트리" : `나의 팬트리 ${items.length}개`}</h1>
               <p>
                 팬트리에 있는 재료는 장보기에서 자동 제외돼요.
               </p>
@@ -840,7 +830,7 @@ export function PantryScreen({
                 aria-label="전체"
                 onClick={() => handleCategoryChange(null)}
               >
-                전체 <span>{searchedItems.length}</span>
+                전체 {isPantryLoading ? null : <span>{searchedItems.length}</span>}
               </WebTabButton>
               {categories.map((category) => (
                 <WebTabButton
@@ -850,7 +840,9 @@ export function PantryScreen({
                   onClick={() => handleCategoryChange(category.value)}
                 >
                   {category.label}{" "}
-                  <span>{categoryCounts.get(category.value) ?? 0}</span>
+                  {isPantryLoading ? null : (
+                    <span>{categoryCounts.get(category.value) ?? 0}</span>
+                  )}
                 </WebTabButton>
               ))}
             </WebTabs>
@@ -917,7 +909,7 @@ export function PantryScreen({
                 ) : (
                   <WebButton
                     className="web-pantry-edit-button"
-                    disabled={displayItems.length === 0}
+                    disabled={isPantryLoading || displayItems.length === 0}
                     onClick={() => setIsSelectMode(true)}
                     variant="tertiary"
                   >
@@ -927,7 +919,9 @@ export function PantryScreen({
               </div>
             </WebToolbar>
 
-            {isEmpty ? (
+            {isPantryLoading ? (
+              <WebPantryInlineLoading />
+            ) : isEmpty ? (
               <div className="web-pantry-empty">
                 <span aria-hidden="true">🥗</span>
                 <h2>아직 등록한 재료가 없어요</h2>
@@ -1077,47 +1071,24 @@ function SearchGlyph({ className }: { className?: string }) {
   );
 }
 
-function PantryLoadingSkeleton() {
+function WebPantryInlineLoading() {
   return (
     <div
-      className="min-h-dvh bg-[var(--surface-fill)] pb-[calc(98px+env(safe-area-inset-bottom))] text-[var(--foreground)] lg:hidden"
-      data-testid="pantry-mobile-skeleton"
+      className="web-pantry-category-list"
+      data-testid="web-pantry-inline-loading"
+      role="status"
     >
-      <div className="flex h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4">
-        <Skeleton height={22} rounded="md" width={72} />
-      </div>
-      <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 pb-5 pt-4">
-        <Skeleton height={16} rounded="md" width={108} />
-        <div className="mt-2">
-          <Skeleton height={34} rounded="md" width={72} />
+      <section className="web-pantry-category-section">
+        <div className="web-pantry-category-head">
+          <WebSkeleton height={18} width={88} />
+          <WebSkeleton height={16} width={32} />
         </div>
-        <div className="mt-3">
-          <Skeleton height={16} rounded="md" width={260} />
-        </div>
-        <div className="mt-4">
-          <Skeleton className="w-full" height={44} rounded="full" />
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <Skeleton className="col-span-2 w-full" height={40} rounded="md" />
-          <Skeleton className="w-full" height={40} rounded="md" />
-          <Skeleton className="w-full" height={40} rounded="md" />
-        </div>
-      </section>
-      <section className="border-b border-[var(--line-strong)] px-4 pt-3">
-        <div className="flex gap-3">
-          {[52, 48, 48, 60, 48].map((width, index) => (
-            <Skeleton height={28} key={index} rounded="md" width={width} />
+        <div className="web-pantry-grid">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <WebSkeleton height={84} key={index} />
           ))}
         </div>
       </section>
-      <main className="space-y-3 px-4 pb-4 pt-[26px]">
-        <Skeleton height={16} rounded="md" width={54} />
-        <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)]">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton className="w-full" height={61} key={i} rounded="md" />
-          ))}
-        </div>
-      </main>
     </div>
   );
 }

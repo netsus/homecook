@@ -22,6 +22,15 @@ interface ProfileSummaryButtonProps {
 
 type SummaryLoadState = "idle" | "loading" | "ready" | "error";
 
+interface ProfileSummaryCache {
+  gamification: UserGamificationData | null;
+  profile: UserProfileData | null;
+  progress: UserProgressData | null;
+}
+
+let cachedProfileSummary: ProfileSummaryCache | null = null;
+let profileSummaryRequest: Promise<ProfileSummaryCache> | null = null;
+
 export function ProfileSummaryButton({
   autoLoad = false,
   className,
@@ -31,17 +40,20 @@ export function ProfileSummaryButton({
   progress,
   variant,
 }: ProfileSummaryButtonProps) {
+  const cachedSummary = autoLoad && isAuthenticated ? cachedProfileSummary : null;
   const [isOpen, setIsOpen] = useState(false);
   const [loadedProfile, setLoadedProfile] = useState<UserProfileData | null>(
-    profile ?? null,
+    profile ?? cachedSummary?.profile ?? null,
   );
   const [loadedProgress, setLoadedProgress] = useState<UserProgressData | null>(
-    progress ?? null,
+    progress ?? cachedSummary?.progress ?? null,
   );
   const [loadedGamification, setLoadedGamification] =
-    useState<UserGamificationData | null>(gamification ?? null);
+    useState<UserGamificationData | null>(
+      gamification ?? cachedSummary?.gamification ?? null,
+    );
   const [loadState, setLoadState] = useState<SummaryLoadState>(
-    profile || progress || gamification ? "ready" : "idle",
+    profile || progress || gamification || cachedSummary ? "ready" : "idle",
   );
 
   useEffect(() => {
@@ -63,6 +75,22 @@ export function ProfileSummaryButton({
   }, [gamification]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    if (profile === undefined && progress === undefined && gamification === undefined) {
+      return;
+    }
+
+    rememberProfileSummary({
+      gamification: gamification ?? cachedProfileSummary?.gamification ?? null,
+      profile: profile ?? cachedProfileSummary?.profile ?? null,
+      progress: progress ?? cachedProfileSummary?.progress ?? null,
+    });
+  }, [gamification, isAuthenticated, profile, progress]);
+
+  useEffect(() => {
     if (!autoLoad || !isAuthenticated) {
       return;
     }
@@ -74,33 +102,44 @@ export function ProfileSummaryButton({
     let mounted = true;
     setLoadState("loading");
 
-    void Promise.allSettled([
-      fetchUserProfile(),
-      fetchUserProgress(),
-      fetchUserGamification(),
-    ]).then(([profileResult, progressResult, gamificationResult]) => {
+    const request =
+      profileSummaryRequest ??
+      Promise.allSettled([
+        fetchUserProfile(),
+        fetchUserProgress(),
+        fetchUserGamification(),
+      ]).then(([profileResult, progressResult, gamificationResult]) => {
+        const nextSummary = {
+          gamification:
+            gamificationResult.status === "fulfilled" ? gamificationResult.value : null,
+          profile: profileResult.status === "fulfilled" ? profileResult.value : null,
+          progress: progressResult.status === "fulfilled" ? progressResult.value : null,
+        };
+
+        rememberProfileSummary(nextSummary);
+
+        return nextSummary;
+      });
+
+    profileSummaryRequest = request;
+
+    void request.then((nextSummary) => {
       if (!mounted) {
         return;
       }
 
-      if (profileResult.status === "fulfilled") {
-        setLoadedProfile(profileResult.value);
-      }
-      if (progressResult.status === "fulfilled") {
-        setLoadedProgress(progressResult.value);
-      }
-      if (gamificationResult.status === "fulfilled") {
-        setLoadedGamification(gamificationResult.value);
-      }
+      setLoadedProfile(nextSummary.profile);
+      setLoadedProgress(nextSummary.progress);
+      setLoadedGamification(nextSummary.gamification);
 
-      if (
-        profileResult.status === "fulfilled" ||
-        progressResult.status === "fulfilled" ||
-        gamificationResult.status === "fulfilled"
-      ) {
+      if (hasProfileSummaryData(nextSummary)) {
         setLoadState("ready");
       } else {
         setLoadState("error");
+      }
+    }).finally(() => {
+      if (profileSummaryRequest === request) {
+        profileSummaryRequest = null;
       }
     });
 
@@ -163,7 +202,12 @@ export function ProfileSummaryButton({
       {isOpen ? (
         <section
           aria-label="마이페이지 요약"
-          className="profile-summary-popover"
+          className={[
+            "profile-summary-popover",
+            variant === "mobile"
+              ? "profile-summary-popover-mobile"
+              : "profile-summary-popover-web",
+          ].join(" ")}
           data-testid={`${variant}-profile-summary-popover`}
           role="dialog"
         >
@@ -172,6 +216,18 @@ export function ProfileSummaryButton({
       ) : null}
     </div>
   );
+}
+
+function hasProfileSummaryData(summary: ProfileSummaryCache) {
+  return Boolean(summary.profile || summary.progress || summary.gamification);
+}
+
+function rememberProfileSummary(summary: ProfileSummaryCache) {
+  if (!hasProfileSummaryData(summary)) {
+    return;
+  }
+
+  cachedProfileSummary = summary;
 }
 
 function ProfileSummaryPanel({ summary }: { summary: ProfileSummaryViewModel }) {
