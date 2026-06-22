@@ -273,12 +273,15 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
     try {
       const result = await addPantryItems(Array.from(selectedIds));
       onAdd(result.added);
-      onClose();
+      setExpandedBundleId(null);
+      setSelectedIds(new Set());
+      await loadBundles();
+      setIsAdding(false);
     } catch {
       setAddErrorMessage("추가에 실패했어요. 다시 시도해 주세요.");
       setIsAdding(false);
     }
-  }, [selectedIds, onAdd, onClose]);
+  }, [loadBundles, selectedIds, onAdd]);
 
   useEffect(() => {
     void loadBundles();

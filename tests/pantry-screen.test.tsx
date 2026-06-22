@@ -501,6 +501,66 @@ describe("PantryScreen", () => {
     });
   });
 
+  it("keeps the bundle picker open after a successful bundle add", async () => {
+    installMatchMedia(true);
+    mockFetchPantryBundles
+      .mockResolvedValueOnce({
+        bundles: [
+          {
+            id: "b1",
+            name: "기본 야채",
+            display_order: 1,
+            ingredients: [
+              {
+                ingredient_id: "i4",
+                is_in_pantry: false,
+                standard_name: "대파",
+              },
+            ],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        bundles: [
+          {
+            id: "b1",
+            name: "기본 야채",
+            display_order: 1,
+            ingredients: [
+              {
+                ingredient_id: "i4",
+                is_in_pantry: true,
+                standard_name: "대파",
+              },
+            ],
+          },
+        ],
+      });
+    mockAddPantryItems.mockResolvedValue({ added: 1 });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "묶음으로 추가" }));
+    await screen.findByRole("dialog", { name: "묶음으로 재료 추가" });
+    await user.click(screen.getByRole("button", { name: /기본 야채/ }));
+    await user.click(screen.getByRole("button", { name: "1개 팬트리에 추가" }));
+
+    await waitFor(() => {
+      expect(mockAddPantryItems).toHaveBeenCalledWith(["i4"]);
+    });
+    await waitFor(() => {
+      expect(mockFetchPantryBundles).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      screen.getByRole("dialog", { name: "묶음으로 재료 추가" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /기본 야채/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "1개 팬트리에 추가" })).toBeNull();
+  });
+
   it("scopes bundle selection to the expanded bundle", async () => {
     mockFetchPantryBundles.mockResolvedValue({
       bundles: [

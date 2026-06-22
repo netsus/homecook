@@ -22,7 +22,9 @@ import { getSurfaceChromeRule } from "@/lib/navigation/app-nav";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import type {
   ShoppingListAllPantryCompletionSummary,
+  ShoppingListAllPantrySummary,
   ShoppingListCreateData,
+  ShoppingListCreateBody,
   ShoppingPreviewData,
 } from "@/types/shopping";
 
@@ -267,6 +269,16 @@ function isAllPantryCompletion(
   return "completed_without_list" in result && result.completed_without_list === true;
 }
 
+function isAllPantryShoppingList(
+  result: ShoppingListCreateData,
+): result is ShoppingListAllPantrySummary {
+  return (
+    "all_items_in_pantry" in result &&
+    result.all_items_in_pantry === true &&
+    typeof result.id === "string"
+  );
+}
+
 export function ShoppingFlowScreen({
   initialAuthenticated,
 }: ShoppingFlowScreenProps) {
@@ -276,7 +288,9 @@ export function ShoppingFlowScreen({
   const [errorMessage, setErrorMessage] = useState<string>("");
   const isMobileViewport = useIsMobileViewport();
   const [allPantryCompletion, setAllPantryCompletion] =
-    useState<ShoppingListAllPantryCompletionSummary | null>(null);
+    useState<ShoppingListAllPantryCompletionSummary | ShoppingListAllPantrySummary | null>(
+      null,
+    );
 
   const loadPreview = useCallback(async () => {
     setViewState("loading");
@@ -334,7 +348,8 @@ export function ShoppingFlowScreen({
     setAllPantryCompletion(null);
 
     try {
-      const body = {
+      const body: ShoppingListCreateBody = {
+        complete_without_list: false,
         meal_configs: selectedConfigs.map((config) => ({
           meal_id: config.meal_ids[0],
           shopping_servings: config.shopping_servings,
@@ -343,7 +358,7 @@ export function ShoppingFlowScreen({
 
       const result = await createShoppingList(body);
 
-      if (isAllPantryCompletion(result)) {
+      if (isAllPantryShoppingList(result) || isAllPantryCompletion(result)) {
         setAllPantryCompletion(result);
         setViewState("ready");
         return;
@@ -392,6 +407,17 @@ export function ShoppingFlowScreen({
     setAllPantryCompletion(null);
     push("/planner");
   }, [push]);
+
+  const handleAllPantryOpenShoppingList = useCallback(() => {
+    if (!allPantryCompletion || typeof allPantryCompletion.id !== "string") {
+      handleAllPantryClose();
+      return;
+    }
+
+    const listId = allPantryCompletion.id;
+    setAllPantryCompletion(null);
+    push(`/shopping/lists/${listId}`);
+  }, [allPantryCompletion, handleAllPantryClose, push]);
 
   // Loading state
   if (viewState === "loading") {
@@ -500,8 +526,10 @@ export function ShoppingFlowScreen({
         {allPantryCompletion ? (
           <AllPantryCompletionModal
             completion={allPantryCompletion}
+            mealCount={selectedCount}
             onClose={handleAllPantryClose}
             onGoPlanner={handleAllPantryGoPlanner}
+            onOpenShoppingList={handleAllPantryOpenShoppingList}
           />
         ) : null}
       </>
@@ -583,8 +611,10 @@ export function ShoppingFlowScreen({
       {allPantryCompletion ? (
         <AllPantryCompletionModal
           completion={allPantryCompletion}
+          mealCount={selectedCount}
           onClose={handleAllPantryClose}
           onGoPlanner={handleAllPantryGoPlanner}
+          onOpenShoppingList={handleAllPantryOpenShoppingList}
         />
       ) : null}
     </WebShell>

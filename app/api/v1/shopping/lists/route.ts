@@ -21,6 +21,7 @@ import {
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type {
   ShoppingListAllPantryCompletionSummary,
+  ShoppingListAllPantrySummary,
   ShoppingListCreateBody,
   ShoppingListHistoryData,
   ShoppingListSummary,
@@ -678,6 +679,8 @@ export async function POST(request: Request) {
     aggregatedIngredients.every((ingredient) =>
       pantryIngredientIds.has(ingredient.ingredient_id),
     );
+  const shouldCompleteWithoutList =
+    body.complete_without_list !== false && allNeededIngredientsAreInPantry;
   const title = buildShoppingListTitle(dateRangeStart);
   const shoppingMealIds = shoppingMeals.map((meal) => meal.id).sort();
   const shoppingRecipePayloadRows = [...recipeAggregation.entries()].map(([recipeId, totals]) => ({
@@ -699,7 +702,7 @@ export async function POST(request: Request) {
       p_title: title,
       p_date_range_start: dateRangeStart,
       p_date_range_end: dateRangeEnd,
-      p_complete_without_list: allNeededIngredientsAreInPantry,
+      p_complete_without_list: shouldCompleteWithoutList,
       p_shopping_meal_ids: shoppingMealIds,
       p_split_remainders: splitMeals.map(({ meal, remainingServings }) => ({
         user_id: meal.user_id,
@@ -806,8 +809,14 @@ export async function POST(request: Request) {
       id: createResult.data.id,
       title: createResult.data.title ?? title,
       is_completed: createResult.data.is_completed ?? false,
+      ...(allNeededIngredientsAreInPantry
+        ? {
+            all_items_in_pantry: true as const,
+            pantry_item_count: aggregatedIngredients.length,
+          }
+        : {}),
       created_at: createResult.data.created_at,
-    } satisfies ShoppingListSummary, { status: 201 });
+    } satisfies ShoppingListSummary | ShoppingListAllPantrySummary, { status: 201 });
   }
 
   if (splitMeals.length > 0) {
@@ -845,7 +854,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (allNeededIngredientsAreInPantry) {
+  if (shouldCompleteWithoutList) {
     const mealDoneUpdateResult = await dbClient
       .from("meals")
       .update({ status: "shopping_done" })
@@ -989,8 +998,14 @@ export async function POST(request: Request) {
     id: shoppingList.id,
     title: shoppingList.title,
     is_completed: shoppingList.is_completed,
+    ...(allNeededIngredientsAreInPantry
+      ? {
+          all_items_in_pantry: true as const,
+          pantry_item_count: aggregatedIngredients.length,
+        }
+      : {}),
     created_at: shoppingList.created_at,
-  } satisfies ShoppingListSummary, { status: 201 });
+  } satisfies ShoppingListSummary | ShoppingListAllPantrySummary, { status: 201 });
 }
 
 const DEFAULT_HISTORY_LIMIT = 20;

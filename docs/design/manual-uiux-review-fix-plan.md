@@ -3130,6 +3130,90 @@ Implementation note:
   - Verified: `pnpm lint`
   - Verified: `git diff --check`
 
+### 71. 모든 재료가 팬트리에 있을 때 장보기목록 생성 선택권이 없는 문제
+
+- Status: implemented in `fix/shopping-empty-list-choice`
+- Severity: Medium
+- Area: UX / Shopping / Planner / App
+- Source: user manual review, all-pantry shopping modal
+- Problem:
+  - 선택한 끼니의 모든 재료가 팬트리에 있으면 현재 흐름은 장보기목록을 만들지 않고 끼니를 장보기 완료로 바꾼다.
+  - 모달의 `계속 보기` 버튼은 사용자가 팬트리 분류가 틀렸다고 판단해도 장보기목록을 만들 수 있는 선택지를 주지 않는다.
+  - 특히 팬트리에 없는 재료를 사용자가 삭제/정정하지 못한 상태라면 자동 완료가 과하게 단정적이다.
+- User impact:
+  - 사용자가 실제로 살 재료가 있다고 생각해도 장보기목록 상세에서 되살리거나 확인할 경로가 없다.
+  - 장보기 플로우가 사용자 판단보다 시스템 판정을 우선하는 느낌을 준다.
+- Approach decision:
+  - 고치는 게 맞다. 팬트리 보유 여부는 편의 기능이지 구매 의사결정의 최종 권한이 아니므로, 사용자가 목록을 만들 수 있어야 한다.
+  - 기존 자동 완료 응답은 호환용으로 유지하되, 화면에서 명시적으로 `complete_without_list: false`를 보내는 경우에는 모든 항목을 팬트리 제외 상태로 가진 장보기목록을 만든다.
+- Recommended fix:
+  - 장보기 준비 화면과 끼니 상세의 장보기 생성 요청에 `complete_without_list: false`를 추가한다.
+  - API는 해당 값이 false이면 all-pantry 상황에서도 `completed_without_list`를 수행하지 않고 장보기목록을 생성한다.
+  - 생성 응답에는 `all_items_in_pantry: true`, `pantry_item_count`를 포함해 화면이 all-pantry 안내 모달을 띄울 수 있게 한다.
+  - 모달은 `계속 보기` 대신 `장보기목록 만들기`를 보여주고, 누르면 생성된 shopping list 상세로 이동한다.
+- Acceptance criteria:
+  - all-pantry 상황에서도 장보기 준비/끼니 상세에서 장보기목록이 생성된다.
+  - 모달에는 사용자 선택권을 설명하는 문구와 `장보기목록 만들기` 버튼이 보인다.
+  - `장보기목록 만들기`를 누르면 방금 생성한 `/shopping/lists/{id}`로 이동한다.
+  - 기존 기본 API 호출에서 `complete_without_list`를 생략하면 자동 완료 호환 동작은 유지된다.
+- Likely implementation target:
+  - `app/api/v1/shopping/lists/route.ts`
+  - `components/shopping/all-pantry-completion-modal.tsx`
+  - `components/shopping/shopping-flow-screen.tsx`
+  - `components/planner/meal-screen.tsx`
+  - `types/shopping.ts`
+  - `tests/shopping-preview.backend.test.ts`
+  - `tests/shopping-flow-screen.test.tsx`
+  - `tests/meal-screen.test.tsx`
+- Verification:
+  - `app/api/v1/shopping/lists/route.ts`에서 `complete_without_list: false` 요청 시 all-pantry 상황에서도 자동 완료 대신 장보기목록을 생성하게 했다.
+  - 생성 응답에 `all_items_in_pantry: true`, `pantry_item_count`를 포함해 화면이 안내 모달을 띄우고 생성된 목록으로 이동할 수 있게 했다.
+  - `components/shopping/all-pantry-completion-modal.tsx`에서 생성된 목록이 있는 경우 `계속 보기` 대신 `장보기목록 만들기`를 보여주고 목록 상세 이동 액션을 연결했다.
+  - `components/shopping/shopping-flow-screen.tsx`와 `components/planner/meal-screen.tsx`에서 장보기 생성 요청에 `complete_without_list: false`를 보내고 all-pantry list 응답을 모달 흐름으로 처리하게 했다.
+  - `tests/shopping-preview.backend.test.ts`에서 all-pantry라도 명시 플래그가 false면 RPC가 목록 생성 모드로 호출되는지 고정했다.
+  - `tests/shopping-flow-screen.test.tsx`와 `tests/meal-screen.test.tsx`에서 모달 문구, `장보기목록 만들기` 버튼, 상세 이동 경로를 고정했다.
+  - Verified: `pnpm exec vitest run tests/shopping-flow-screen.test.tsx tests/meal-screen.test.tsx tests/shopping-preview.backend.test.ts`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 72. 팬트리 묶음 추가 성공 후 묶음추가 모달이 닫혀 반복 추가가 끊기는 문제
+
+- Status: implemented in `fix/shopping-empty-list-choice`
+- Severity: Low
+- Area: UX / Pantry / Bundle Picker / Web / App
+- Source: user manual review, pantry bundle add flow
+- Problem:
+  - 팬트리에서 묶음 추가를 성공하면 묶음추가 모달이 바로 닫힌다.
+  - 여러 묶음을 연속으로 추가하려면 사용자가 다시 `묶음 추가` 버튼을 눌러야 한다.
+- User impact:
+  - 초기 팬트리 세팅처럼 여러 묶음을 빠르게 넣는 상황에서 반복 조작이 늘어난다.
+  - 성공 후 같은 모달 안에서 다른 묶음을 이어서 고르는 흐름이 끊긴다.
+- Approach decision:
+  - 고치는 게 맞다. 묶음 추가는 단발 작업보다 연속 작업 가능성이 높고, 모달 유지가 더 효율적이다.
+  - 성공 후 상세 화면에 그대로 머무르면 이미 추가한 재료가 계속 선택된 것처럼 보일 수 있으므로, 묶음 목록을 다시 불러오고 목록 단계로 돌아가는 방식이 더 안전하다.
+- Recommended fix:
+  - 묶음 추가 성공 시 `onClose`를 호출하지 않는다.
+  - 성공 후 선택 상태와 확장된 묶음을 초기화한다.
+  - 묶음 목록을 다시 조회해 방금 추가한 재료의 `is_in_pantry` 상태가 반영되게 한다.
+  - 기존 팬트리 목록 갱신과 성공 토스트는 유지한다.
+- Acceptance criteria:
+  - 묶음 추가 성공 후 `묶음으로 재료 추가` 모달이 계속 열려 있다.
+  - 성공 후 사용자는 묶음 목록 단계에서 다른 묶음을 바로 선택할 수 있다.
+  - 추가 API에는 선택한 ingredient ids만 전달된다.
+  - 실패 시 기존처럼 모달을 유지하고 오류 메시지를 보여준다.
+- Likely implementation target:
+  - `components/pantry/pantry-bundle-picker.tsx`
+  - `tests/pantry-screen.test.tsx`
+- Verification:
+  - `components/pantry/pantry-bundle-picker.tsx`에서 성공 후 `onClose()` 호출을 제거하고, 선택/확장 상태 초기화 후 `fetchPantryBundles`를 다시 호출하게 했다.
+  - `tests/pantry-screen.test.tsx`에서 묶음 추가 성공 후 모달이 열린 상태로 유지되고 묶음 목록으로 돌아오는 회귀 테스트를 추가했다.
+  - Verified: `pnpm exec vitest run tests/pantry-screen.test.tsx -t "keeps the bundle picker open after a successful bundle add"`
+  - Verified: `pnpm exec vitest run tests/pantry-screen.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
 ## 보류 항목
 
 아직 없음.

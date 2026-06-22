@@ -297,6 +297,7 @@ describe("MealScreen", () => {
 
     await waitFor(() => {
       expect(createShoppingList).toHaveBeenCalledWith({
+        complete_without_list: false,
         meal_configs: [{ meal_id: "meal-1", shopping_servings: 2 }],
       });
     });
@@ -305,18 +306,16 @@ describe("MealScreen", () => {
     );
   });
 
-  it("shows the all-pantry completion modal instead of opening a missing shopping list", async () => {
+  it("lets users open an all-pantry shopping list from the all-pantry modal", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({
       items: [createMealItem()],
     });
     createShoppingList.mockResolvedValue({
-      id: null,
+      id: "list-all-pantry",
       title: "4/18 장보기",
-      is_completed: true,
-      completed_at: "2026-04-18T00:00:00.000Z",
-      completed_without_list: true,
-      meals_updated: 1,
+      is_completed: false,
+      all_items_in_pantry: true,
       pantry_item_count: 4,
       created_at: "2026-04-18T00:00:00.000Z",
     });
@@ -329,10 +328,20 @@ describe("MealScreen", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "살 재료가 없어요" });
     expect(dialog).toBeTruthy();
+    expect(createShoppingList).toHaveBeenCalledWith({
+      complete_without_list: false,
+      meal_configs: [{ meal_id: "meal-1", shopping_servings: 2 }],
+    });
     expect(
-      screen.getByText("선택한 끼니의 재료가 모두 팬트리에 있어 장보기 완료로 바꿨어요."),
+      screen.getByText("선택한 끼니의 재료가 모두 팬트리에 있어요. 그래도 목록에서 필요한 재료를 되살릴 수 있어요."),
     ).toBeTruthy();
     expect(screen.getByText("1개 끼니 · 4개 재료")).toBeTruthy();
-    expect(mockRouterPush).not.toHaveBeenCalledWith(expect.stringContaining("/shopping/lists/"));
+    expect(screen.queryByRole("button", { name: "계속 보기" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "장보기목록 만들기" }));
+
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      "/shopping/lists/list-all-pantry?returnTo=%2Fplanner%2F2026-04-18%2Fcolumn-breakfast%3Fslot%3D%25EC%2595%2584%25EC%25B9%25A8",
+    );
   });
 });

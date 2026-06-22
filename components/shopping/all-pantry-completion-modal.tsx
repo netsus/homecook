@@ -2,17 +2,33 @@
 
 import React from "react";
 
-import type { ShoppingListAllPantryCompletionSummary } from "@/types/shopping";
+import type {
+  ShoppingListAllPantryCompletionSummary,
+  ShoppingListAllPantrySummary,
+} from "@/types/shopping";
+
+type AllPantryModalSummary =
+  | ShoppingListAllPantryCompletionSummary
+  | ShoppingListAllPantrySummary;
 
 export function AllPantryCompletionModal({
   completion,
+  mealCount,
   onClose,
   onGoPlanner,
+  onOpenShoppingList,
 }: {
-  completion: ShoppingListAllPantryCompletionSummary;
+  completion: AllPantryModalSummary;
+  mealCount?: number;
   onClose: () => void;
   onGoPlanner: () => void;
+  onOpenShoppingList?: () => void;
 }) {
+  const hasShoppingList = typeof completion.id === "string";
+  const resolvedMealCount =
+    mealCount ??
+    ("meals_updated" in completion ? completion.meals_updated : 0);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-30)] px-4 py-6">
       <section
@@ -34,25 +50,37 @@ export function AllPantryCompletionModal({
           살 재료가 없어요
         </h2>
         <p className="mt-3 text-[14px] font-semibold leading-[1.55] text-[var(--text-2)]">
-          선택한 끼니의 재료가 모두 팬트리에 있어 장보기 완료로 바꿨어요.
+          {hasShoppingList
+            ? "선택한 끼니의 재료가 모두 팬트리에 있어요. 그래도 목록에서 필요한 재료를 되살릴 수 있어요."
+            : "선택한 끼니의 재료가 모두 팬트리에 있어 장보기 완료로 바꿨어요."}
         </p>
         <p className="mt-4 inline-flex h-8 items-center rounded-full bg-[var(--success-soft)] px-3 text-[13px] font-extrabold text-[var(--success-strong)]">
-          {completion.meals_updated}개 끼니 · {completion.pantry_item_count}개 재료
+          {resolvedMealCount}개 끼니 · {completion.pantry_item_count}개 재료
         </p>
         <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <button
-            className="flex h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 text-[14px] font-extrabold text-[var(--foreground)]"
-            onClick={onClose}
-            type="button"
-          >
-            계속 보기
-          </button>
+          {hasShoppingList ? (
+            <button
+              className="flex h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 text-[14px] font-extrabold text-[var(--foreground)]"
+              onClick={onGoPlanner}
+              type="button"
+            >
+              플래너로 돌아가기
+            </button>
+          ) : (
+            <button
+              className="flex h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-4 text-[14px] font-extrabold text-[var(--foreground)]"
+              onClick={onClose}
+              type="button"
+            >
+              계속 보기
+            </button>
+          )}
           <button
             className="flex h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] bg-[var(--brand)] px-4 text-[14px] font-extrabold text-[var(--text-inverse)]"
-            onClick={onGoPlanner}
+            onClick={hasShoppingList && onOpenShoppingList ? onOpenShoppingList : onGoPlanner}
             type="button"
           >
-            플래너로 돌아가기
+            {hasShoppingList ? "장보기목록 만들기" : "플래너로 돌아가기"}
           </button>
         </div>
       </section>
