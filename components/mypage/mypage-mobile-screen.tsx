@@ -57,6 +57,8 @@ interface MypageMobileScreenProps {
   menuOpenBookId: string | null;
   menuRef: React.RefObject<HTMLDivElement | null>;
   profile: UserProfileData | null;
+  profileSummaryGamification?: UserGamificationData | null;
+  profileSummaryProgress?: UserProgressData | null;
   gamification: UserGamificationData | null;
   gamificationState: MypageGamificationState;
   initialGrowthPanel?: MypageGrowthPanel | null;
@@ -119,6 +121,8 @@ export function MypageMobileScreen({
   menuOpenBookId,
   menuRef,
   profile,
+  profileSummaryGamification,
+  profileSummaryProgress,
   gamification,
   gamificationState,
   initialGrowthPanel = null,
@@ -179,10 +183,11 @@ export function MypageMobileScreen({
         onBack={surface === "home" ? undefined : onSurfaceBack}
         rightSlot={
           <ProfileSummaryButton
-            gamification={gamification}
+            gamification={profileSummaryGamification}
             isAuthenticated
             profile={profile}
-            progress={progress}
+            progress={profileSummaryProgress}
+            useCachedSummary
             variant="mobile"
           />
         }
@@ -284,7 +289,7 @@ function MobileAppBar({
   return (
     <div
       className={[
-        "sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4",
+        "sticky top-0 z-50 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4",
         onBack ? "justify-center" : "",
       ].join(" ")}
       style={{ borderBottomWidth: "0.5px" }}

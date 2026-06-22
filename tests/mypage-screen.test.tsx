@@ -684,6 +684,46 @@ describe("MypageScreen", () => {
     );
   });
 
+  it("keeps the web profile summary button visible while mypage data loads", async () => {
+    let resolveProfile!: (value: typeof MOCK_PROFILE) => void;
+    mockFetchUserProfile.mockReturnValue(
+      new Promise((resolve) => {
+        resolveProfile = resolve;
+      }),
+    );
+
+    const { container } = render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByTestId("mypage-skeleton")).toBeTruthy();
+    expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
+    expect(container.querySelector(".web-mypage-top-profile")).toBeNull();
+    await waitFor(() => expect(mockFetchUserProfile).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      resolveProfile(MOCK_PROFILE);
+    });
+  });
+
+  it("keeps the mobile profile summary button visible while mypage data loads", async () => {
+    installMatchMedia(true);
+    let resolveProfile!: (value: typeof MOCK_PROFILE) => void;
+    mockFetchUserProfile.mockReturnValue(
+      new Promise((resolve) => {
+        resolveProfile = resolve;
+      }),
+    );
+
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByTestId("mypage-mobile-loading")).toBeTruthy();
+    expect(screen.getByTestId("mobile-profile-summary-button")).toBeTruthy();
+    await waitFor(() => expect(mockFetchUserProfile).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      resolveProfile(MOCK_PROFILE);
+    });
+  });
+
   it("shows profile and recipe books when authenticated", async () => {
     render(<MypageScreen initialAuthenticated />);
 
