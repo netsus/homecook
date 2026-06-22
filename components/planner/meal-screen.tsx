@@ -49,6 +49,7 @@ import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { MealListItemData } from "@/types/meal";
 import type {
   ShoppingListAllPantryCompletionSummary,
+  ShoppingListAllPantrySummary,
   ShoppingListCreateData,
 } from "@/types/shopping";
 
@@ -495,6 +496,16 @@ function isAllPantryCompletion(
   result: ShoppingListCreateData,
 ): result is ShoppingListAllPantryCompletionSummary {
   return "completed_without_list" in result && result.completed_without_list === true;
+}
+
+function isAllPantryShoppingList(
+  result: ShoppingListCreateData,
+): result is ShoppingListAllPantrySummary {
+  return (
+    "all_items_in_pantry" in result &&
+    result.all_items_in_pantry === true &&
+    typeof result.id === "string"
+  );
 }
 
 function MealWebProfileButton() {
@@ -1097,7 +1108,9 @@ export function MealScreen({
   const [mealAddPickerMode, setMealAddPickerMode] =
     useState<MealAddPickerMode | null>(null);
   const [allPantryCompletion, setAllPantryCompletion] =
-    useState<ShoppingListAllPantryCompletionSummary | null>(null);
+    useState<ShoppingListAllPantryCompletionSummary | ShoppingListAllPantrySummary | null>(
+      null,
+    );
 
   // ── Auth setup (identical pattern to PlannerWeekScreen) ──────────────────
   useEffect(() => {
@@ -1320,6 +1333,7 @@ export function MealScreen({
 
     try {
       const list = await createShoppingList({
+        complete_without_list: false,
         meal_configs: [
           {
             meal_id: meal.id,
@@ -1328,7 +1342,7 @@ export function MealScreen({
         ],
       });
 
-      if (isAllPantryCompletion(list)) {
+      if (isAllPantryShoppingList(list) || isAllPantryCompletion(list)) {
         setAllPantryCompletion(list);
         await loadMeals();
         return;
@@ -1426,6 +1440,21 @@ export function MealScreen({
   function handleAllPantryCompletionGoPlanner() {
     setAllPantryCompletion(null);
     router.push("/planner");
+  }
+
+  function handleAllPantryCompletionOpenList() {
+    if (!allPantryCompletion || typeof allPantryCompletion.id !== "string") {
+      handleAllPantryCompletionClose();
+      return;
+    }
+
+    const listId = allPantryCompletion.id;
+    setAllPantryCompletion(null);
+    router.push(
+      buildReturnHref(`/shopping/lists/${listId}`, {
+        returnTo: buildNextPath(planDate, columnId, slotName),
+      }),
+    );
   }
 
   // ── Computed values ───────────────────────────────────────────────────────
@@ -1651,8 +1680,10 @@ export function MealScreen({
       {allPantryCompletion ? (
         <AllPantryCompletionModal
           completion={allPantryCompletion}
+          mealCount={1}
           onClose={handleAllPantryCompletionClose}
           onGoPlanner={handleAllPantryCompletionGoPlanner}
+          onOpenShoppingList={handleAllPantryCompletionOpenList}
         />
       ) : null}
 

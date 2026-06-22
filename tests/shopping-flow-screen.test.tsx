@@ -688,6 +688,7 @@ describe("shopping flow screen", () => {
 
       await waitFor(() => {
         expect(createShoppingList).toHaveBeenCalledWith({
+          complete_without_list: false,
           meal_configs: [
             {
               meal_id: "meal-1",
@@ -735,7 +736,7 @@ describe("shopping flow screen", () => {
       expect(fetchShoppingListDetail).not.toHaveBeenCalled();
     });
 
-    it("should show an 안내 modal instead of navigating when all needed ingredients are already in pantry", async () => {
+    it("should let users open a shopping list when all needed ingredients are already in pantry", async () => {
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
           {
@@ -754,13 +755,11 @@ describe("shopping flow screen", () => {
       );
 
       createShoppingList.mockResolvedValue({
-        id: null,
+        id: "list-all-pantry",
         title: "6월 5일 장보기",
-        is_completed: true,
-        completed_without_list: true,
-        completed_at: "2026-06-05T09:00:00.000Z",
+        is_completed: false,
+        all_items_in_pantry: true,
         created_at: "2026-06-05T09:00:00.000Z",
-        meals_updated: 2,
         pantry_item_count: 3,
       });
 
@@ -778,15 +777,23 @@ describe("shopping flow screen", () => {
         expect(screen.getByRole("dialog", { name: "살 재료가 없어요" })).toBeTruthy();
       });
 
-      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining("/shopping/lists/"));
+      expect(createShoppingList).toHaveBeenCalledWith({
+        complete_without_list: false,
+        meal_configs: [
+          { meal_id: "meal-1", shopping_servings: 2 },
+          { meal_id: "meal-2", shopping_servings: 1 },
+        ],
+      });
+      expect(mockPush).not.toHaveBeenCalledWith("/shopping/lists/list-all-pantry");
       expect(
-        screen.getByText("선택한 끼니의 재료가 모두 팬트리에 있어 장보기 완료로 바꿨어요."),
+        screen.getByText("선택한 끼니의 재료가 모두 팬트리에 있어요. 그래도 목록에서 필요한 재료를 되살릴 수 있어요."),
       ).toBeTruthy();
       expect(screen.getByText("2개 끼니 · 3개 재료")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "계속 보기" })).toBeNull();
 
-      await user.click(screen.getByRole("button", { name: "플래너로 돌아가기" }));
+      await user.click(screen.getByRole("button", { name: "장보기목록 만들기" }));
 
-      expect(mockPush).toHaveBeenCalledWith("/planner");
+      expect(mockPush).toHaveBeenCalledWith("/shopping/lists/list-all-pantry");
     });
 
     it("should show creating state while creating list", async () => {
@@ -903,6 +910,7 @@ describe("shopping flow screen", () => {
 
       await waitFor(() => {
         expect(createShoppingList).toHaveBeenCalledWith({
+          complete_without_list: false,
           meal_configs: [
             {
               meal_id: "meal-1",
@@ -948,6 +956,7 @@ describe("shopping flow screen", () => {
 
       await waitFor(() => {
         expect(createShoppingList).toHaveBeenCalledWith({
+          complete_without_list: false,
           meal_configs: [
             {
               meal_id: "meal-1",

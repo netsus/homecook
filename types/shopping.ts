@@ -39,6 +39,7 @@ export interface ShoppingRecipeConfigInput {
 }
 
 export interface ShoppingListCreateBody {
+  complete_without_list?: boolean;
   meal_configs?: ShoppingMealConfigInput[];
   recipes?: ShoppingRecipeConfigInput[];
 }
@@ -52,6 +53,11 @@ export interface ShoppingListSummary {
   completed_at?: string | null;
   item_count?: number;
   created_at: string;
+}
+
+export interface ShoppingListAllPantrySummary extends ShoppingListSummary {
+  all_items_in_pantry: true;
+  pantry_item_count: number;
 }
 
 export interface ShoppingListAllPantryCompletionSummary {
@@ -69,6 +75,7 @@ export interface ShoppingListAllPantryCompletionSummary {
 
 export type ShoppingListCreateData =
   | ShoppingListSummary
+  | ShoppingListAllPantrySummary
   | ShoppingListAllPantryCompletionSummary;
 
 export interface ShoppingListHistoryItem {
