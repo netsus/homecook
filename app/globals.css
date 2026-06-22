@@ -1022,6 +1022,7 @@
 }
 
 .profile-summary .web-profile-button {
+  position: relative;
   display: inline-flex;
   width: 40px;
   height: 40px;
@@ -1052,6 +1053,18 @@
   color: var(--text-inverse);
   font-size: 13px;
   font-weight: 800;
+}
+
+.profile-summary-unread-badge {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--surface);
+  border-radius: 999px;
+  background: var(--brand);
+  box-shadow: 0 2px 5px var(--brand-shadow-color);
 }
 
 .profile-summary-popover {
@@ -1151,6 +1164,36 @@
   line-height: 1.4;
 }
 
+.profile-summary-archive-preview {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-fill);
+  padding: 10px 12px;
+}
+
+.profile-summary-archive-preview strong {
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.profile-summary-archive-preview span {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-summary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .profile-summary-link {
   display: inline-flex;
   min-height: 36px;
@@ -1161,6 +1204,12 @@
   color: var(--text-inverse);
   font-size: 13px;
   font-weight: 850;
+}
+
+.profile-summary-link-secondary {
+  border: 1px solid var(--brand);
+  background: var(--surface);
+  color: var(--brand);
 }
 
 .home-mobile-discovery-search-row {
@@ -10278,32 +10327,6 @@ button {
     margin-bottom: 74px;
   }
 
-  .web-settings-toast {
-    position: fixed;
-    left: 50%;
-    bottom: max(28px, env(safe-area-inset-bottom));
-    z-index: 70;
-    width: min(520px, calc(100vw - 32px));
-    transform: translateX(-50%);
-    border-radius: var(--web-r-sm);
-    padding: 12px 16px;
-    font-size: 14px;
-    font-weight: 700;
-    box-shadow: 0 18px 44px rgba(12, 18, 28, 0.18);
-  }
-
-  .web-settings-toast-success {
-    border: 1px solid rgba(45, 150, 255, 0.24);
-    background: var(--web-brand-wash);
-    color: var(--web-brand-accessible);
-  }
-
-  .web-settings-toast-danger {
-    border: 1px solid rgba(255, 59, 48, 0.24);
-    background: rgba(255, 59, 48, 0.08);
-    color: var(--web-error);
-  }
-
   .web-settings-section {
     margin-top: 18px;
   }
@@ -11815,23 +11838,6 @@ button {
     background: var(--web-brand);
   }
 
-  .web-shopping-toast {
-    margin-bottom: 16px;
-    border: 1px solid rgba(26, 174, 57, 0.18);
-    border-radius: var(--web-r-sm);
-    background: rgba(26, 174, 57, 0.08);
-    color: var(--web-success);
-    padding: 12px 14px;
-    font-size: 13px;
-    font-weight: 800;
-  }
-
-  .web-shopping-toast-error {
-    border-color: rgba(255, 59, 48, 0.18);
-    background: rgba(255, 59, 48, 0.07);
-    color: var(--web-error);
-  }
-
   .web-shopping-item-card {
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr) minmax(88px, auto);
@@ -12181,27 +12187,6 @@ button {
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 14px;
-  }
-
-  .web-leftover-feedback {
-    margin-bottom: 16px;
-    border: 1px solid var(--web-line);
-    border-radius: var(--web-r-sm);
-    padding: 12px 14px;
-    font-size: 13px;
-    font-weight: 800;
-  }
-
-  .web-leftover-feedback-status {
-    border-color: rgba(45, 150, 255, 0.24);
-    background: var(--web-brand-wash);
-    color: var(--web-brand-accessible);
-  }
-
-  .web-leftover-feedback-error {
-    border-color: var(--feedback-danger-border);
-    background: var(--feedback-danger-soft);
-    color: var(--web-error);
   }
 
   .web-leftover-login-actions {

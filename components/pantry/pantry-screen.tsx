@@ -15,7 +15,9 @@ import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { AppBottomSheet } from "@/components/shared/app-overlay";
+import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { ContentState } from "@/components/shared/content-state";
+import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -649,15 +651,11 @@ export function PantryScreen({
 
       {/* Toast */}
       {toast && (
-        <div
-          className={`fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-[var(--radius-md)] px-4 py-2.5 text-sm font-medium shadow-lg transition-opacity ${
-            toast.tone === "success"
-              ? "bg-[var(--brand)] text-[var(--surface)]"
-              : "bg-[var(--danger)] text-[var(--text-inverse)]"
-          }`}
-        >
-          {toast.message}
-        </div>
+        <AppFeedbackToast
+          message={toast.message}
+          position="mobileTop"
+          tone={toast.tone}
+        />
       )}
 
       {/* Add sheet */}
@@ -797,7 +795,11 @@ export function PantryScreen({
   return (
     <>
       <WebShell className="web-pantry-shell">
-        <WebTopNav activeId="pantry" items={WEB_NAV_ITEMS} />
+        <WebTopNav
+          activeId="pantry"
+          items={WEB_NAV_ITEMS}
+          rightSlot={<ProfileSummaryButton autoLoad isAuthenticated variant="web" />}
+        />
         <div className="web-screen web-pantry-screen">
           <header className="web-pantry-head">
             <div>

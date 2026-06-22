@@ -21,6 +21,7 @@ interface MypageGrowthProfileProps {
   className?: string;
   gamification: UserGamificationData | null;
   gamificationState: MypageGamificationState;
+  initialPanel?: MypageGrowthPanel | null;
   onDismissTutorialQuest?: (questKey: string) => void;
   onEditProfile?: () => void;
   profile?: UserProfileData | null;
@@ -324,6 +325,7 @@ export function MypageGrowthProfile({
   className,
   gamification,
   gamificationState,
+  initialPanel = null,
   onEditProfile,
   profile,
   progress,
@@ -331,7 +333,9 @@ export function MypageGrowthProfile({
   recordStats,
   variant = "mobile",
 }: MypageGrowthProfileProps) {
-  const [activePanel, setActivePanel] = useState<MypageGrowthPanel | null>(null);
+  const [activePanel, setActivePanel] = useState<MypageGrowthPanel | null>(
+    () => initialPanel,
+  );
   const hasProgress = progressState === "ready" && isValidProgress(progress);
   const hasGamification = isDisplayableGamification(gamification, gamificationState);
   const isDesktop = variant === "desktop";
@@ -357,6 +361,12 @@ export function MypageGrowthProfile({
       );
     };
   }, []);
+
+  useEffect(() => {
+    if (initialPanel) {
+      setActivePanel(initialPanel);
+    }
+  }, [initialPanel]);
 
   if (loading) {
     return (

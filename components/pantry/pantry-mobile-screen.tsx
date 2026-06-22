@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
+import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import {
   getIngredientCategoryGroupLabel,
   getIngredientGroupDisplayLabel,
@@ -76,7 +77,11 @@ export function PantryMobileScreen({
           >
             취소
           </button>
-        ) : null}
+        ) : (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <ProfileSummaryButton autoLoad isAuthenticated variant="mobile" />
+          </div>
+        )}
       </div>
 
       <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 pb-5 pt-4">

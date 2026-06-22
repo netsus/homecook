@@ -1878,7 +1878,7 @@ Implementation note:
 
 ### 36. 웹과 앱의 주요 화면에서 프로필 진입점 위치가 일관되지 않은 문제
 
-- Status: planned
+- Status: implemented in `fix/manual-uiux-36-38`
 - Severity: Medium
 - Area: UX / Navigation / App Shell / Frontend
 - Source: user manual review, HOME/PLANNER/PANTRY/MYPAGE tabs and app top-right empty space
@@ -1916,13 +1916,16 @@ Implementation note:
   - `components/mypage/mypage-screen.tsx`
   - `components/mypage/mypage-mobile-screen.tsx`
 - Verification:
-  - desktop shell screenshot: HOME/PLANNER/PANTRY/MYPAGE
-  - mobile shell screenshot: primary tabs at 390px and 320px
-  - keyboard focus order and click-away behavior for profile panel
+  - `tests/shared-profile-summary.test.tsx`
+  - `tests/planner-week-screen.test.tsx`
+  - `tests/pantry-screen.test.tsx`
+  - `tests/mypage-screen.test.tsx`
+  - `pnpm typecheck`
+  - `pnpm lint`
 
 ### 37. 여러 알림/피드백 팝업의 형식이 경험치 알림과 달라 서비스 알림 체계가 분산되는 문제
 
-- Status: planned
+- Status: implemented in `fix/manual-uiux-36-38`
 - Severity: Medium
 - Area: UX / UI / Notification / Frontend
 - Source: user manual review, existing popup/toast surfaces
@@ -1956,13 +1959,18 @@ Implementation note:
   - screen-local toast call sites in `components/**`
   - `app/globals.css`
 - Verification:
-  - component tests for success/error/gamification notification variants
-  - visual screenshots for desktop/mobile toast stack
-  - source action smoke: recipe save, shopping complete, cooking complete
+  - `tests/app-feedback-toast.test.tsx`
+  - `tests/settings-screen.test.tsx`
+  - `tests/shopping-detail.frontend.test.tsx`
+  - `tests/leftovers.frontend.test.tsx`
+  - `tests/pantry-screen.test.tsx`
+  - `tests/mypage-screen.test.tsx`
+  - `pnpm typecheck`
+  - `pnpm lint`
 
 ### 38. 마이페이지 알림 버튼에서 과거 성장 알림을 확인하는 흐름이 더 명확해야 하는 문제
 
-- Status: planned
+- Status: implemented in `fix/manual-uiux-36-38`
 - Severity: Medium
 - Area: UX / Notification / MYPAGE / Frontend
 - Source: user manual review, MYPAGE notification expectation
@@ -1993,9 +2001,11 @@ Implementation note:
   - `lib/api/user-gamification.ts`
   - `app/api/v1/users/me/gamification/archive/route.ts` tests if coverage is missing
 - Verification:
-  - archive surface component tests
-  - MYPAGE notification button open/close and pagination behavior
-  - seen 처리 후 unread badge 갱신 test
+  - `tests/shared-profile-summary.test.tsx`
+  - `tests/mypage-achievement-album.test.tsx`
+  - `tests/mypage-screen.test.tsx`
+  - `pnpm typecheck`
+  - `pnpm lint`
 
 ### 39. 웹 레시피 저장 모달의 새 레시피북 만들기 영역이 앱보다 무겁고 덜 예뻐 보이는 문제
 

@@ -784,6 +784,25 @@ describe("MYPAGE achievement album UI", () => {
     expect(within(notificationDialog).getByText("레벨업!")).toBeTruthy();
   });
 
+  it("opens the notification archive immediately when requested by the profile summary route", async () => {
+    render(
+      <MypageGrowthProfile
+        gamification={MOCK_GAMIFICATION}
+        gamificationState="ready"
+        initialPanel="notifications"
+        progress={MOCK_PROGRESS}
+        progressState="ready"
+        variant="mobile"
+      />,
+    );
+
+    const notificationDialog = screen.getByRole("dialog", { name: "알림 기록" });
+    await waitFor(() => {
+      expect(mockFetchArchive).toHaveBeenCalledWith({ limit: 20, cursor: null });
+    });
+    expect(within(notificationDialog).getByText("레벨업!")).toBeTruthy();
+  });
+
   it("loads older notification archive pages from the notification dialog", async () => {
     const user = userEvent.setup();
     mockFetchArchive

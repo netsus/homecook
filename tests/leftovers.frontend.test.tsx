@@ -575,8 +575,8 @@ describe("LeftoversScreen", () => {
     await user.click((await screen.findAllByTestId("eat-button"))[0]);
 
     const toast = await screen.findByTestId("feedback-toast");
-    expect(toast.className).toContain("bg-[var(--brand-soft)]");
-    expect(toast.className).toContain("text-[var(--brand)]");
+    expect(toast.className).toContain("growth-toast-card-xp");
+    expect(toast.className).toContain("border-[var(--growth-toast-xp-border)]");
     expect(toast.className).not.toContain("success");
   });
 
@@ -878,8 +878,8 @@ describe("AteListScreen", () => {
     await user.click(await screen.findByTestId("uneat-button"));
 
     const toast = await screen.findByTestId("feedback-toast");
-    expect(toast.className).toContain("bg-[var(--brand-soft)]");
-    expect(toast.className).toContain("text-[var(--brand)]");
+    expect(toast.className).toContain("growth-toast-card-xp");
+    expect(toast.className).toContain("border-[var(--growth-toast-xp-border)]");
     expect(toast.className).not.toContain("success");
   });
 

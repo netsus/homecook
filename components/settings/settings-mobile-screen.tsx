@@ -4,6 +4,7 @@ import Image from "next/image";
 import React from "react";
 
 import { AppBackButton } from "@/components/shared/app-back-button";
+import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import type { UserProfileData } from "@/lib/api/mypage";
 import type { PlannerColumnData } from "@/types/planner";
@@ -119,18 +120,12 @@ export function SettingsMobileScreen({
       />
 
       {readyToast ? (
-        <div
-          className={[
-            "pointer-events-none fixed left-1/2 top-[calc(var(--control-height-xl)+12px+env(safe-area-inset-top))] z-50 w-[calc(100vw-40px)] max-w-[360px] -translate-x-1/2 rounded-full px-4 py-3 text-center text-[13px] font-extrabold shadow-[0_12px_24px_var(--overlay-20)]",
-            readyToast.tone === "danger"
-              ? "bg-[var(--danger)] text-[var(--text-inverse)]"
-              : "bg-[var(--brand)] text-[var(--text-inverse)]",
-          ].join(" ")}
-          data-testid="settings-error-toast"
-          role="status"
-        >
-          {readyToast.message}
-        </div>
+        <AppFeedbackToast
+          message={readyToast.message}
+          position="mobileTop"
+          testId="settings-error-toast"
+          tone={readyToast.tone === "danger" ? "error" : "success"}
+        />
       ) : null}
 
       <SettingsSurface
