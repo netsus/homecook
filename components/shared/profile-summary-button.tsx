@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchUserProfile, type UserProfileData } from "@/lib/api/mypage";
 import { fetchUserGamification } from "@/lib/api/user-gamification";
@@ -17,6 +17,7 @@ interface ProfileSummaryButtonProps {
   isAuthenticated?: boolean;
   profile?: UserProfileData | null;
   progress?: UserProgressData | null;
+  useCachedSummary?: boolean;
   variant: "mobile" | "web";
 }
 
@@ -38,9 +39,14 @@ export function ProfileSummaryButton({
   isAuthenticated = true,
   profile,
   progress,
+  useCachedSummary = false,
   variant,
 }: ProfileSummaryButtonProps) {
-  const cachedSummary = autoLoad && isAuthenticated ? cachedProfileSummary : null;
+  const cachedSummary =
+    (autoLoad || useCachedSummary) && isAuthenticated
+      ? cachedProfileSummary
+      : null;
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [loadedProfile, setLoadedProfile] = useState<UserProfileData | null>(
     profile ?? cachedSummary?.profile ?? null,
@@ -148,6 +154,32 @@ export function ProfileSummaryButton({
     };
   }, [autoLoad, isAuthenticated, loadedGamification, loadedProfile, loadedProgress]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const closeOnOutsidePress = (event: MouseEvent | PointerEvent | TouchEvent) => {
+      const target = event.target;
+
+      if (!(target instanceof Node) || rootRef.current?.contains(target)) {
+        return;
+      }
+
+      setIsOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("mousedown", closeOnOutsidePress);
+    document.addEventListener("touchstart", closeOnOutsidePress);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("mousedown", closeOnOutsidePress);
+      document.removeEventListener("touchstart", closeOnOutsidePress);
+    };
+  }, [isOpen]);
+
   const summary = useMemo(
     () =>
       buildProfileSummary({
@@ -161,7 +193,10 @@ export function ProfileSummaryButton({
   );
 
   return (
-    <div className={["profile-summary", `profile-summary-${variant}`, className ?? ""].join(" ")}>
+    <div
+      className={["profile-summary", `profile-summary-${variant}`, className ?? ""].join(" ")}
+      ref={rootRef}
+    >
       <button
         aria-expanded={isOpen}
         aria-label={

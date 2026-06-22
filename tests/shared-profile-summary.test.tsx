@@ -246,6 +246,54 @@ describe("ProfileSummaryButton", () => {
     );
   });
 
+  it("closes the web summary when clicking outside the profile surface", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <>
+        <ProfileSummaryButton
+          gamification={GAMIFICATION}
+          isAuthenticated
+          profile={PROFILE}
+          progress={PROGRESS}
+          variant="web"
+        />
+        <button type="button">다른 영역</button>
+      </>,
+    );
+
+    await user.click(screen.getByTestId("web-profile-summary-button"));
+    expect(screen.getByRole("dialog", { name: "마이페이지 요약" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "다른 영역" }));
+
+    expect(screen.queryByRole("dialog", { name: "마이페이지 요약" })).toBeNull();
+  });
+
+  it("closes the mobile summary when tapping outside the profile surface", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <>
+        <ProfileSummaryButton
+          gamification={GAMIFICATION}
+          isAuthenticated
+          profile={PROFILE}
+          progress={PROGRESS}
+          variant="mobile"
+        />
+        <button type="button">다른 영역</button>
+      </>,
+    );
+
+    await user.click(screen.getByTestId("mobile-profile-summary-button"));
+    expect(screen.getByRole("dialog", { name: "마이페이지 요약" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "다른 영역" }));
+
+    expect(screen.queryByRole("dialog", { name: "마이페이지 요약" })).toBeNull();
+  });
+
   it("reuses a prior shell summary across autoload remounts to avoid nav flicker", () => {
     apiMocks.fetchUserProfile.mockResolvedValue(PROFILE);
     apiMocks.fetchUserProgress.mockResolvedValue(PROGRESS);
@@ -264,6 +312,37 @@ describe("ProfileSummaryButton", () => {
 
     first.unmount();
     render(<ProfileSummaryButton autoLoad isAuthenticated variant="web" />);
+
+    expect(screen.getByLabelText("김집밥 프로필 요약 열기")).toBeTruthy();
+    expect(apiMocks.fetchUserProfile).not.toHaveBeenCalled();
+    expect(apiMocks.fetchUserProgress).not.toHaveBeenCalled();
+    expect(apiMocks.fetchUserGamification).not.toHaveBeenCalled();
+  });
+
+  it("can render only from cache without starting a new summary request", () => {
+    const first = render(
+      <ProfileSummaryButton
+        gamification={GAMIFICATION}
+        isAuthenticated
+        profile={PROFILE}
+        progress={PROGRESS}
+        variant="mobile"
+      />,
+    );
+    expect(screen.getByLabelText("김집밥 프로필 요약 열기")).toBeTruthy();
+
+    first.unmount();
+    apiMocks.fetchUserProfile.mockClear();
+    apiMocks.fetchUserProgress.mockClear();
+    apiMocks.fetchUserGamification.mockClear();
+
+    render(
+      <ProfileSummaryButton
+        isAuthenticated
+        useCachedSummary
+        variant="mobile"
+      />,
+    );
 
     expect(screen.getByLabelText("김집밥 프로필 요약 열기")).toBeTruthy();
     expect(apiMocks.fetchUserProfile).not.toHaveBeenCalled();

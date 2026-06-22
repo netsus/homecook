@@ -1599,6 +1599,14 @@ export function MypageScreen({
   const displayBooks = books.map(toSafeRecipeBookSummary);
   const systemBooks = displayBooks.filter((b) => b.book_type !== "custom");
   const customBooks = displayBooks.filter((b) => b.book_type === "custom");
+  const profileSummaryProgress =
+    progressState === "idle" || progressState === "loading"
+      ? undefined
+      : userProgress;
+  const profileSummaryGamification =
+    gamificationState === "idle" || gamificationState === "loading"
+      ? undefined
+      : userGamification;
   const plannerAddSheet = (
     <PlannerAddSheet
       columns={plannerColumns}
@@ -1753,6 +1761,8 @@ export function MypageScreen({
           gamification={userGamification}
           gamificationState={gamificationState}
           initialGrowthPanel={initialGrowthPanel}
+          profileSummaryGamification={profileSummaryGamification}
+          profileSummaryProgress={profileSummaryProgress}
           progress={userProgress}
           progressState={progressState}
           recordStats={mypageRecordStats}
@@ -1855,10 +1865,11 @@ export function MypageScreen({
         items={WEB_NAV_ITEMS}
         rightSlot={
           <ProfileSummaryButton
-            gamification={userGamification}
+            gamification={profileSummaryGamification}
             isAuthenticated
             profile={profile}
-            progress={userProgress}
+            progress={profileSummaryProgress}
+            useCachedSummary
             variant="web"
           />
         }
@@ -3054,7 +3065,7 @@ function MypageLoadingSkeleton({
       >
         <div
           className={[
-            "sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4",
+            "sticky top-0 z-50 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4",
             showBack ? "justify-center" : "",
           ].join(" ")}
           style={{ borderBottomWidth: "0.5px" }}
@@ -3073,6 +3084,13 @@ function MypageLoadingSkeleton({
           >
             {title}
           </h1>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <ProfileSummaryButton
+              isAuthenticated
+              useCachedSummary
+              variant="mobile"
+            />
+          </div>
         </div>
         <p
           className="px-5 pt-3 text-[13px] font-semibold text-[var(--text-3)]"
@@ -3340,7 +3358,13 @@ function MypageDesktopLoadingShell() {
       <WebTopNav
         activeId="mypage"
         items={WEB_NAV_ITEMS}
-        rightSlot={<WebSkeleton className="web-mypage-top-profile" />}
+        rightSlot={
+          <ProfileSummaryButton
+            isAuthenticated
+            useCachedSummary
+            variant="web"
+          />
+        }
       />
       <div className="web-mypage-screen" data-testid="mypage-skeleton">
         <h1 className="sr-only">마이페이지</h1>
