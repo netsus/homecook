@@ -5,6 +5,7 @@ import Link from "next/link";
 import React from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import type { MypageGrowthPanel } from "@/components/mypage/mypage-growth-detail-dialog";
 import type { MypageGamificationState } from "@/components/mypage/mypage-gamification-card";
 import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
 import {
@@ -25,6 +26,7 @@ import {
   type ShoppingHistoryCalendarDay,
 } from "@/components/mypage/shopping-history-calendar";
 import type { UserProfileData } from "@/lib/api/mypage";
+import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import {
   getRecipeBookCoverTone,
@@ -57,6 +59,7 @@ interface MypageMobileScreenProps {
   profile: UserProfileData | null;
   gamification: UserGamificationData | null;
   gamificationState: MypageGamificationState;
+  initialGrowthPanel?: MypageGrowthPanel | null;
   progress: UserProgressData | null;
   progressState: MypageProgressState;
   recordStats: MypageRecordStats;
@@ -118,6 +121,7 @@ export function MypageMobileScreen({
   profile,
   gamification,
   gamificationState,
+  initialGrowthPanel = null,
   progress,
   progressState,
   recordStats,
@@ -173,6 +177,15 @@ export function MypageMobileScreen({
     >
       <MobileAppBar
         onBack={surface === "home" ? undefined : onSurfaceBack}
+        rightSlot={
+          <ProfileSummaryButton
+            gamification={gamification}
+            isAuthenticated
+            profile={profile}
+            progress={progress}
+            variant="mobile"
+          />
+        }
         titleTone={surface === "shopping" ? "default" : "brand"}
         title={title}
       />
@@ -182,6 +195,7 @@ export function MypageMobileScreen({
           books={books}
           gamification={gamification}
           gamificationState={gamificationState}
+          initialGrowthPanel={initialGrowthPanel}
           profile={profile}
           progress={progress}
           progressState={progressState}
@@ -258,10 +272,12 @@ export function MypageMobileScreen({
 
 function MobileAppBar({
   onBack,
+  rightSlot,
   title,
   titleTone = "brand",
 }: {
   onBack?: () => void;
+  rightSlot?: React.ReactNode;
   title: string;
   titleTone?: "brand" | "default";
 }) {
@@ -288,6 +304,11 @@ function MobileAppBar({
       >
         {title}
       </h1>
+      {rightSlot ? (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          {rightSlot}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -296,6 +317,7 @@ function MobileHomeSurface({
   books,
   gamification,
   gamificationState,
+  initialGrowthPanel,
   profile,
   progress,
   progressState,
@@ -313,6 +335,7 @@ function MobileHomeSurface({
   books: RecipeBookSummary[];
   gamification: UserGamificationData | null;
   gamificationState: MypageGamificationState;
+  initialGrowthPanel: MypageGrowthPanel | null;
   profile: UserProfileData | null;
   progress: UserProgressData | null;
   progressState: MypageProgressState;
@@ -395,6 +418,7 @@ function MobileHomeSurface({
           className="mb-3 border-[var(--line-strong)]"
           gamification={gamification}
           gamificationState={gamificationState}
+          initialPanel={initialGrowthPanel}
           onDismissTutorialQuest={onDismissTutorialQuest}
           onEditProfile={onOpenNicknameSheet}
           profile={profile}

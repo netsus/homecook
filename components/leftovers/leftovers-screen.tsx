@@ -7,6 +7,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
+import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { ContentState } from "@/components/shared/content-state";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
@@ -732,18 +733,13 @@ export function LeftoversScreen({
         ) : null}
 
       {authState === "authenticated" && feedback ? (
-        <div
-          className={[
-            "web-leftover-feedback",
-            feedback.tone === "error"
-              ? "web-leftover-feedback-error"
-              : "web-leftover-feedback-status",
-          ].join(" ")}
-          data-testid="feedback-toast"
-          role="alert"
-        >
-          {feedback.message}
-        </div>
+        <AppFeedbackToast
+          className="mb-4"
+          message={feedback.message}
+          position="inline"
+          testId="feedback-toast"
+          tone={feedback.tone === "error" ? "error" : "success"}
+        />
       ) : null}
 
       {authState === "authenticated" &&
@@ -1140,18 +1136,13 @@ function MobileFeedback({
   feedback: { message: string; tone: FeedbackTone };
 }) {
   return (
-    <div
-      className={[
-        "mx-4 mt-2 rounded-[var(--radius-control)] border px-4 py-3 text-center text-[13px] font-extrabold",
-        feedback.tone === "error"
-          ? "border-[var(--feedback-danger-border)] bg-[var(--feedback-danger-soft)] text-[var(--danger)]"
-          : "border-[var(--brand-border)] bg-[var(--brand-soft)] text-[var(--brand)]",
-      ].join(" ")}
-      data-testid="feedback-toast"
-      role="alert"
-    >
-      {feedback.message}
-    </div>
+    <AppFeedbackToast
+      className="mx-4 mt-2"
+      message={feedback.message}
+      position="inline"
+      testId="feedback-toast"
+      tone={feedback.tone === "error" ? "error" : "success"}
+    />
   );
 }
 

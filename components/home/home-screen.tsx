@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   useCallback,
@@ -17,6 +16,7 @@ import { RecipeCard } from "@/components/home/recipe-card";
 import { useHomeRecipeSaveFlow } from "@/components/home/use-home-recipe-save-flow";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { SaveModal } from "@/components/recipe/save-modal";
+import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { ContentState } from "@/components/shared/content-state";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1440,148 +1440,6 @@ function HomeQuickLinks({ variant }: { variant: "mobile" | "web" }) {
   );
 }
 
-function ProfileSummaryButton({
-  gamification,
-  isAuthenticated,
-  profile,
-  progress,
-  variant,
-}: {
-  gamification: UserGamificationData | null;
-  isAuthenticated: boolean;
-  profile: UserProfileData | null;
-  progress: UserProgressData | null;
-  variant: "mobile" | "web";
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const fallbackInitial = profile?.nickname?.slice(0, 1).toUpperCase() ?? null;
-  const hasSummaryData = Boolean(profile || progress || gamification);
-  const isGuestSummary = !isAuthenticated && !hasSummaryData;
-  const isLoadingSummary = isAuthenticated && !hasSummaryData;
-  const displayName = profile?.nickname ?? "집밥러";
-  const gradeLabel =
-    gamification?.grade.label ??
-    "새싹 집밥러";
-  const level =
-    gamification?.level.current_level ?? progress?.level.current_level ?? 1;
-  const cookingCount = progress?.event_counts.cooking_completed ?? 0;
-  const plannerCount =
-    (progress?.event_counts.planner_registered_first ?? 0) +
-    (progress?.event_counts.planner_registered_repeat ?? 0);
-  const shoppingCount = progress?.event_counts.shopping_completed ?? 0;
-  const quest =
-    gamification?.quests.active.find((item) => item.quest_type === "tutorial") ??
-    gamification?.quests.active[0] ??
-    null;
-  const notificationTitle =
-    gamification?.notifications.priority_unseen[0]?.title ??
-    (quest ? "튜토리얼 안내" : "알림");
-  const notificationMessage =
-    gamification?.notifications.priority_unseen[0]?.body ??
-    (quest ? `${quest.title}부터 차근차근 시작해 보세요.` : "새로운 알림이 없어요.");
-
-  return (
-    <div className={`profile-summary profile-summary-${variant}`}>
-      <button
-        aria-expanded={isOpen}
-        aria-label={
-          profile?.nickname
-            ? `${profile.nickname} 프로필 요약 ${isOpen ? "닫기" : "열기"}`
-            : `내 프로필 요약 ${isOpen ? "닫기" : "열기"}`
-        }
-        className="web-profile-button"
-        data-testid={`${variant}-profile-summary-button`}
-        onClick={() => setIsOpen((current) => !current)}
-        type="button"
-      >
-        {profile?.profile_image_url ? (
-          <Image
-            alt=""
-            className="web-profile-button-image"
-            height={40}
-            src={profile.profile_image_url}
-            unoptimized
-            width={40}
-          />
-        ) : fallbackInitial ? (
-          <span aria-hidden="true" className="web-profile-button-fallback">
-            {fallbackInitial}
-          </span>
-        ) : (
-          <UserIcon />
-        )}
-      </button>
-
-      {isOpen ? (
-        <section
-          aria-label="마이페이지 요약"
-          className="profile-summary-popover"
-          data-testid={`${variant}-profile-summary-popover`}
-          role="dialog"
-        >
-          {isGuestSummary ? (
-            <>
-              <div className="profile-summary-head">
-                <div>
-                  <strong>로그인이 필요해요</strong>
-                  <span>로그인하면 기록과 알림을 볼 수 있어요.</span>
-                </div>
-              </div>
-              <Link className="profile-summary-link" href="/mypage">
-                마이페이지로 이동
-              </Link>
-            </>
-          ) : isLoadingSummary ? (
-            <>
-              <div className="profile-summary-head">
-                <div>
-                  <strong>요약을 불러오는 중이에요</strong>
-                  <span>잠시만 기다려 주세요.</span>
-                </div>
-              </div>
-              <Link className="profile-summary-link" href="/mypage">
-                마이페이지로 이동
-              </Link>
-            </>
-          ) : (
-            <>
-              <div className="profile-summary-head">
-                <div>
-                  <strong>{displayName}</strong>
-                  <span>{gradeLabel}</span>
-                </div>
-                <b>Lv.{level}</b>
-              </div>
-              <div className="profile-summary-stats" aria-label="기록 요약">
-                <span>
-                  <b>{cookingCount}</b>
-                  요리기록
-                </span>
-                <span>
-                  <b>{plannerCount}</b>
-                  플래너기록
-                </span>
-                <span>
-                  <b>{shoppingCount}</b>
-                  장보기기록
-                </span>
-              </div>
-              <div className="profile-summary-notice" role="status">
-                <strong>{notificationTitle}</strong>
-                {quest ? <span>{quest.title}</span> : null}
-                <span>{notificationMessage}</span>
-              </div>
-              <Link className="profile-summary-link" href="/mypage">
-                마이페이지로 이동
-              </Link>
-            </>
-          )}
-        </section>
-      ) : null}
-    </div>
-  );
-}
-
 function HomeShortcutIcon({
   icon,
 }: {
@@ -1888,25 +1746,6 @@ function SearchSmallIcon({ color }: { color: string }) {
     >
       <circle cx="9" cy="9" r="6" />
       <path d="m14 14 3 3" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="18"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.8"
-      viewBox="0 0 24 24"
-      width="18"
-    >
-      <path d="M20 21a8 8 0 0 0-16 0" />
-      <circle cx="12" cy="7" r="4" />
     </svg>
   );
 }

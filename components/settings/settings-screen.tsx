@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { ContentState } from "@/components/shared/content-state";
+import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import {
   SettingsMobileScreen,
@@ -597,18 +598,11 @@ export function SettingsScreen({
         </div>
 
         {readyToast ? (
-          <div
-            className={[
-              "web-settings-toast",
-              readyToast.tone === "success"
-                ? "web-settings-toast-success"
-                : "web-settings-toast-danger",
-            ].join(" ")}
-            data-testid="settings-error-toast"
-            role="status"
-          >
-            {readyToast.message}
-          </div>
+          <AppFeedbackToast
+            message={readyToast.message}
+            testId="settings-error-toast"
+            tone={readyToast.tone === "success" ? "success" : "error"}
+          />
         ) : null}
 
         <section

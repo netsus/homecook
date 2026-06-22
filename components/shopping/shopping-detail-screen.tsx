@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { ContentState } from "@/components/shared/content-state";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
@@ -1690,16 +1691,12 @@ function StatusToast({
   tone: "success" | "error" | "empty";
 }) {
   return (
-    <div
-      aria-live="polite"
-      className={[
-        "web-shopping-toast",
-        tone === "error" ? "web-shopping-toast-error" : "",
-      ].join(" ")}
-      role={tone === "error" ? "alert" : "status"}
-    >
-      {message}
-    </div>
+    <AppFeedbackToast
+      className="mb-4"
+      message={message}
+      position="inline"
+      tone={tone === "error" ? "error" : "success"}
+    />
   );
 }
 

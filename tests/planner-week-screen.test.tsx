@@ -361,6 +361,7 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByRole("heading", { name: "주간 플래너" })).toBeTruthy();
+    expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
 
     const actions = screen.getByRole("group", { name: "플래너 작업" });
     const previousWeekButton = within(actions).getByRole("button", { name: "이전 주" });

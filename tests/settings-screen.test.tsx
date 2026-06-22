@@ -334,7 +334,8 @@ describe("SettingsScreen", () => {
     expect(toast.className).toContain("top-");
     expect(toast.className).not.toContain("bottom-");
     expect(toast.className).toContain("pointer-events-none");
-    expect(toast.className).toContain("bg-[var(--brand)]");
+    expect(toast.className).toContain("growth-toast-card-xp");
+    expect(toast.className).toContain("border-[var(--growth-toast-xp-border)]");
   });
 
   it("keeps meal edit and delete controls outside the meal name field", () => {

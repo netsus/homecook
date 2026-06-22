@@ -1470,6 +1470,9 @@ describe("MypageScreen", () => {
     });
 
     expect(await screen.findByText("이름을 변경했어요")).toBeTruthy();
+    expect(screen.getByTestId("app-feedback-toast").className).toContain(
+      "growth-toast-card-xp",
+    );
     expect(
       within(inlineDetail).getByRole("heading", { name: "저녁 모임" }),
     ).toBeTruthy();

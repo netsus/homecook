@@ -12,6 +12,7 @@ import { MealAddOptionsSheet } from "@/components/planner/meal-add-options-sheet
 import type { MealAddPickerMode } from "@/components/planner/meal-add-options-sheet";
 import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
 import { ContentState } from "@/components/shared/content-state";
+import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -170,18 +171,6 @@ function getMobilePlannerMealStatusAccentClass(status: PlannerMealData["status"]
   return "border-l-[var(--planner-status-registered)]";
 }
 
-function WebProfileButton() {
-  return (
-    <Link
-      aria-label="마이페이지"
-      className="web-profile-button"
-      href="/mypage"
-    >
-      <UserIcon />
-    </Link>
-  );
-}
-
 function PlusIcon() {
   return (
     <svg
@@ -197,27 +186,6 @@ function PlusIcon() {
         stroke="currentColor"
         strokeLinecap="round"
         strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="20"
-      viewBox="0 0 20 20"
-      width="20"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle cx="10" cy="7" r="3.25" stroke="currentColor" strokeWidth="1.6" />
-      <path
-        d="M4.75 17c.65-2.65 2.46-4 5.25-4s4.6 1.35 5.25 4"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.6"
       />
     </svg>
   );
@@ -293,7 +261,7 @@ function PlannerWeekWebView({
       <WebTopNav
         activeId="planner"
         items={WEB_NAV_ITEMS}
-        rightSlot={<WebProfileButton />}
+        rightSlot={<ProfileSummaryButton autoLoad isAuthenticated variant="web" />}
       />
       <div className="web-screen web-planner-screen">
         <header className="web-planner-page-head">
@@ -1127,12 +1095,13 @@ export function PlannerWeekScreen({
       {shouldRenderAppView ? (
         <div className="min-h-screen bg-[var(--surface-fill)] pb-[128px] text-[var(--foreground)] lg:hidden">
         <div
-          className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center border-b border-[var(--line-strong)] bg-[var(--surface)] px-4"
+          className="sticky top-0 z-30 flex min-h-[var(--control-height-xl)] items-center justify-between border-b border-[var(--line-strong)] bg-[var(--surface)] px-4"
           style={{ borderBottomWidth: "0.5px" }}
         >
           <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">
             주간 플래너
           </h1>
+          <ProfileSummaryButton autoLoad isAuthenticated variant="mobile" />
         </div>
 
         <section className="border-b border-[var(--surface-subtle)] bg-[var(--surface)] px-5 py-4">

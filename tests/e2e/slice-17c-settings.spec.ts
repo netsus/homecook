@@ -745,7 +745,7 @@ test.describe("SETTINGS planner column management", () => {
     const deleteToast = page.getByTestId("settings-error-toast");
     await expect(deleteToast).toContainText("끼니를 삭제했어요.");
     const deleteToastClass = await deleteToast.getAttribute("class");
-    expect(deleteToastClass).toMatch(/web-settings-toast-danger|bg-\[var\(--danger\)\]/);
+    expect(deleteToastClass).toContain("app-feedback-toast-error");
   });
 
   test("moves a column order and saves the new sort order", async ({ page }) => {

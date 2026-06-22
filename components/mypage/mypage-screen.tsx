@@ -19,6 +19,7 @@ import {
   MypageMobileScreen,
   type MypageMobileSurface,
 } from "@/components/mypage/mypage-mobile-screen";
+import type { MypageGrowthPanel } from "@/components/mypage/mypage-growth-detail-dialog";
 import type { MypageGamificationState } from "@/components/mypage/mypage-gamification-card";
 import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
 import {
@@ -44,7 +45,9 @@ import {
 import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detail-screen";
 import { ShoppingDetailScreen } from "@/components/shopping/shopping-detail-screen";
 import { AppBackButton } from "@/components/shared/app-back-button";
+import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { ContentState } from "@/components/shared/content-state";
+import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -274,6 +277,8 @@ export function MypageScreen({
   const [activeTab, setActiveTab] = useState<MypageTab>(initialActiveTab);
   const [mobileSurface, setMobileSurface] =
     useState<MypageMobileSurface>(initialMobileSurface);
+  const [initialGrowthPanel, setInitialGrowthPanel] =
+    useState<MypageGrowthPanel | null>(null);
   const isMobileViewport = useIsMobileViewport();
   const [hasHydrated, setHasHydrated] = useState(false);
   const shouldUseMobileViewport = hasHydrated && isMobileViewport;
@@ -420,6 +425,10 @@ export function MypageScreen({
     const returnTo = params.get("returnTo");
     if (returnTo) {
       mobileReturnToRef.current = returnTo;
+    }
+    if (params.get("notifications") === "1") {
+      setInitialGrowthPanel("notifications");
+      setMobileSurface("home");
     }
     const tab = getMypageTabFromQuery(params.get("tab"));
     if (tab) {
@@ -1743,6 +1752,7 @@ export function MypageScreen({
           profile={profile}
           gamification={userGamification}
           gamificationState={gamificationState}
+          initialGrowthPanel={initialGrowthPanel}
           progress={userProgress}
           progressState={progressState}
           recordStats={mypageRecordStats}
@@ -1808,16 +1818,11 @@ export function MypageScreen({
         />
 
         {toast ? (
-          <div
-            className={`pointer-events-none fixed left-1/2 top-[calc(var(--control-height-xl)+12px+env(safe-area-inset-top))] z-50 w-[calc(100vw-40px)] max-w-[360px] -translate-x-1/2 rounded-full px-4 py-3 text-center text-[13px] font-extrabold shadow-[0_12px_24px_var(--overlay-20)] ${
-              toast.tone === "success"
-                ? "bg-[var(--brand)] text-[var(--text-inverse)]"
-                : "bg-[var(--danger)] text-[var(--text-inverse)]"
-            }`}
-            role="status"
-          >
-            {toast.message}
-          </div>
+          <AppFeedbackToast
+            message={toast.message}
+            position="mobileTop"
+            tone={toast.tone}
+          />
         ) : null}
 
         {showNicknameSheet ? (
@@ -1848,7 +1853,15 @@ export function MypageScreen({
       <WebTopNav
         activeId="mypage"
         items={WEB_NAV_ITEMS}
-        rightSlot={<WebProfilePill profile={profile} />}
+        rightSlot={
+          <ProfileSummaryButton
+            gamification={userGamification}
+            isAuthenticated
+            profile={profile}
+            progress={userProgress}
+            variant="web"
+          />
+        }
       />
       <div className="web-mypage-screen">
         <h1 className="sr-only">마이페이지</h1>
@@ -1857,6 +1870,7 @@ export function MypageScreen({
             <MypageGrowthProfile
               gamification={userGamification}
               gamificationState={gamificationState}
+              initialPanel={initialGrowthPanel}
               onDismissTutorialQuest={handleDismissTutorialQuest}
               onEditProfile={openNicknameSheet}
               profile={profile}
@@ -2169,47 +2183,13 @@ export function MypageScreen({
       ) : null}
 
       {toast ? (
-        <div
-          className={`fixed inset-x-4 bottom-8 z-50 mx-auto max-w-md rounded-[var(--radius-lg)] px-4 py-3 text-center text-sm font-semibold shadow-lg ${
-            toast.tone === "success"
-              ? "bg-[var(--brand-contrast)] text-[var(--text-inverse)]"
-              : "bg-[var(--danger)] text-[var(--text-inverse)]"
-          }`}
-          role="status"
-        >
-          {toast.message}
-        </div>
+        <AppFeedbackToast message={toast.message} tone={toast.tone} />
       ) : null}
     </WebShell>
   );
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
-
-function WebProfilePill({ profile }: { profile: UserProfileData | null }) {
-  const fallbackInitial = profile?.nickname?.slice(0, 1).toUpperCase() ?? "?";
-
-  return (
-    <Link
-      aria-label={`${profile?.nickname ?? "내"} 마이페이지`}
-      className="web-mypage-top-profile"
-      href="/mypage"
-    >
-      {profile?.profile_image_url ? (
-        <Image
-          alt=""
-          className="web-mypage-top-profile-image"
-          height={34}
-          src={profile.profile_image_url}
-          unoptimized
-          width={34}
-        />
-      ) : (
-        <span aria-hidden="true">{fallbackInitial}</span>
-      )}
-    </Link>
-  );
-}
 
 function MyPageSettingsAccountAvatar({ profile }: { profile: UserProfileData | null }) {
   const fallbackInitial = profile?.nickname?.slice(0, 1).toUpperCase() ?? "?";

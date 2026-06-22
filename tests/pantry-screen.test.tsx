@@ -209,6 +209,7 @@ describe("PantryScreen", () => {
     expect(screen.getByText("마늘", { exact: false })).toBeTruthy();
     expect(screen.getByText(/돼지고기/)).toBeTruthy();
     expect(screen.getByRole("heading", { name: "나의 팬트리 3개" })).toBeTruthy();
+    expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
     expect(screen.queryByText("3개 재료 보유 중")).toBeNull();
     expect(screen.queryByText("3개 표시")).toBeNull();
   });
@@ -361,6 +362,9 @@ describe("PantryScreen", () => {
     await waitFor(() => {
       expect(screen.getByText("1개 재료가 삭제됐어요")).toBeTruthy();
     });
+    expect(screen.getByTestId("app-feedback-toast").className).toContain(
+      "growth-toast-card-xp",
+    );
     expect(mockDeletePantryItems).toHaveBeenCalledWith(["i1"]);
   });
 
