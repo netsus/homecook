@@ -174,4 +174,29 @@ describe("ProfileSummaryButton", () => {
     }) as HTMLAnchorElement;
     expect(archiveLink.getAttribute("href")).toBe("/mypage?notifications=1");
   });
+
+  it("tolerates older gamification payloads without priority or archive notification arrays", async () => {
+    const user = userEvent.setup();
+    const legacyGamification = {
+      ...GAMIFICATION,
+      grade: undefined,
+      notifications: { unseen: [] },
+    } as unknown as UserGamificationData;
+
+    render(
+      <ProfileSummaryButton
+        gamification={legacyGamification}
+        isAuthenticated
+        profile={PROFILE}
+        progress={PROGRESS}
+        variant="mobile"
+      />,
+    );
+
+    await user.click(screen.getByTestId("mobile-profile-summary-button"));
+
+    const dialog = screen.getByRole("dialog", { name: "마이페이지 요약" });
+    expect(within(dialog).getByText("튜토리얼 안내")).toBeTruthy();
+    expect(within(dialog).queryByText("최근 알림")).toBeNull();
+  });
 });

@@ -335,13 +335,14 @@ function buildProfileSummary({
     return { ...base, state: "loading" };
   }
 
+  const activeQuests = gamification?.quests?.active ?? [];
   const quest =
-    gamification?.quests.active.find((item) => item.quest_type === "tutorial") ??
-    gamification?.quests.active[0] ??
+    activeQuests.find((item) => item.quest_type === "tutorial") ??
+    activeQuests[0] ??
     null;
-  const priorityNotice = gamification?.notifications.priority_unseen[0] ?? null;
+  const priorityNotice = gamification?.notifications.priority_unseen?.[0] ?? null;
   const archivePreview =
-    gamification?.notifications.archive_preview.slice(0, 2).map((item) => ({
+    gamification?.notifications.archive_preview?.slice(0, 2).map((item) => ({
       id: item.id,
       title: item.title,
     })) ?? [];
@@ -351,7 +352,7 @@ function buildProfileSummary({
     archivePreview,
     cookingCount: progress?.event_counts.cooking_completed ?? 0,
     displayName: profile?.nickname ?? "집밥러",
-    gradeLabel: gamification?.grade.label ?? "새싹 집밥러",
+    gradeLabel: gamification?.grade?.label ?? "새싹 집밥러",
     level: gamification?.level.current_level ?? progress?.level.current_level ?? 1,
     notificationMessage:
       priorityNotice?.body ??
@@ -372,9 +373,9 @@ function hasUnreadSummary(gamification: UserGamificationData | null) {
   }
 
   return (
-    gamification.notifications.priority_unseen.length > 0 ||
-    gamification.notifications.unseen.length > 0 ||
-    gamification.quests.active.some((quest) => quest.is_new)
+    (gamification.notifications.priority_unseen?.length ?? 0) > 0 ||
+    (gamification.notifications.unseen?.length ?? 0) > 0 ||
+    (gamification.quests?.active ?? []).some((quest) => quest.is_new)
   );
 }
 
