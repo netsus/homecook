@@ -1209,7 +1209,9 @@ for axis in ["deterministic_validation", "semantic_validation", "subprocess_heal
     summaries = json.loads(json.dumps(base_summaries))
     gate_inputs = {"subprocess_health": {"success": True}, "leakage_guard": {"success": True}}
     if axis == "deterministic_validation":
-        summaries["val_det"]["aggregate"]["ingredientF1"] = 0.1
+        # recipeCountMatchRate는 구조 무결성 하드 체크라 미달 시 fail-closed.
+        # (ingredientF1은 advisory로 내려가 단독으로는 게이트를 막지 않는다.)
+        summaries["val_det"]["aggregate"]["recipeCountMatchRate"] = 0.1
     elif axis == "semantic_validation":
         summaries["val_ai"]["aggregate"]["provider_error_count"] = 1
     elif axis == "subprocess_health":
@@ -1227,6 +1229,45 @@ print(json.dumps(cases))
       expect(cases[axis].passed).toBe(false);
       expect(cases[axis].checks[axis]).toBe(false);
     }
+  });
+
+  it("treats ingredientF1 as advisory, not a hard deterministic gate", () => {
+    const result = runLoopPython(`
+cfg = loop.LoopConfig()
+base = {
+    "success": True,
+    "ingredientF1": 0.50,
+    "amountMatchRate": 0.85,
+    "stepCoverage": 0.85,
+    "recipeCountMatchRate": 0.95,
+    "missing_result_count": 0,
+    "missing_golden_count": 0,
+    "unapproved_golden_count": 0,
+    "expected_count_mismatch": False,
+}
+ok_low_f1, details_low_f1 = loop.deterministic_validation_success(cfg, base)
+struct = dict(base)
+struct["ingredientF1"] = 0.99
+struct["recipeCountMatchRate"] = 0.5
+ok_struct, _ = loop.deterministic_validation_success(cfg, struct)
+print(json.dumps({
+    "low_f1_pass": ok_low_f1,
+    "low_f1_advisory_ingredientF1": details_low_f1["advisory"]["ingredientF1"],
+    "low_f1_has_top_ingredientF1": "ingredientF1" in details_low_f1,
+    "struct_violation_pass": ok_struct,
+}))
+`);
+
+    expect(result.status).toBe(0);
+    const out = JSON.parse(result.stdout);
+    // 재료F1만 낮아도 deterministic 게이트는 통과해야 한다(advisory).
+    expect(out.low_f1_pass).toBe(true);
+    // ingredientF1은 advisory에 위치하며 값(미달=false)이 보존된다.
+    expect(out.low_f1_advisory_ingredientF1).toBe(false);
+    // 더 이상 최상위(hard) 키가 아니다.
+    expect(out.low_f1_has_top_ingredientF1).toBe(false);
+    // 구조 무결성(recipeCountMatchRate) 위반은 여전히 게이트를 막는다.
+    expect(out.struct_violation_pass).toBe(false);
   });
 
   it("parses and validates CLI max-iter without changing the default", () => {
@@ -2515,7 +2556,7 @@ write_json(loop.DATA_ROOT / "train" / "_grade_summary.iter01.json", {
 })
 write_json(loop.DATA_ROOT / "train" / "_semantic_summary.iter01.json", {"aggregate": {"averageScore": 2.5, "minCaseScore": 2.5, "canaryLeak": {"status": "not_applicable", "success": True, "hit_count": 0, "hits": [], "redacted_hits": []}}})
 write_json(loop.DATA_ROOT / "validation" / "_grade_summary.iter01.json", {
-    "aggregate": {"success": True, "ingredientF1": 0.4, "amountMatchRate": 0.4, "stepCoverage": 0.4, "recipeCountMatchRate": 1, "missing_result_count": 0, "missing_golden_count": 0, "unapproved_golden_count": 0, "expected_count_mismatch": False, "canaryLeak": {"status": "clean", "success": True, "hit_count": 0, "hits": [], "redacted_hits": []}},
+    "aggregate": {"success": True, "ingredientF1": 0.4, "amountMatchRate": 0.4, "stepCoverage": 0.4, "recipeCountMatchRate": 0.4, "missing_result_count": 0, "missing_golden_count": 0, "unapproved_golden_count": 0, "expected_count_mismatch": False, "canaryLeak": {"status": "clean", "success": True, "hit_count": 0, "hits": [], "redacted_hits": []}},
 })
 write_json(loop.DATA_ROOT / "validation" / "_semantic_summary.iter01.json", {
     "aggregate": {"success": True, "judge_provider": "codex", "judge_model": "gpt-5.4", "judge_effort": "high", "calibration": {"valid": True}, "provider_error_count": 0, "parse_error_count": 0, "schema_error_count": 0, "timeout_error_count": 0, "calibration_error_count": 0, "empty_case_count": 0, "expected_count_mismatch": False, "threshold_success": False, "averageScore": 2.5, "minCaseScore": 2.5, "canaryLeak": {"status": "clean", "success": True, "hit_count": 0, "hits": [], "redacted_hits": []}},

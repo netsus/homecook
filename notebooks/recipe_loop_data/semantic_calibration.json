@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "calibratedAt": "2026-06-20",
+  "calibratedAt": "2026-06-21",
   "policy": "Codex-only semantic judge calibration for the local hard gate. Samples are intentionally small and do not replace human review or holdout.",
   "judgeProvider": "codex",
   "judgeModel": "gpt-5.4",
@@ -26,11 +26,11 @@
   },
   "alignmentStats": {
     "sampleCount": 6,
-    "meanAbsoluteDelta": 0.972,
+    "meanAbsoluteDelta": 0.633,
     "maxMeanAbsoluteDelta": 1.25,
-    "directionDisagreementCount": 1,
+    "directionDisagreementCount": 0,
     "maxDirectionDisagreementCount": 1,
-    "notes": "Codex judge is more generous than the historical human spot labels on weak visual-dependent cases; the hard gate uses higher thresholds plus borderline xhigh retry."
+    "notes": "v3-anchored 재보정(2026-06-21): 앵커 루브릭 도입 후 anchor 6개를 v3 judge(median-of-3, iter08 추출 기준)로 재채점. v2 대비 meanAbsoluteDelta 0.972->0.633, directionDisagreement 1->0로 개선. 단 약한 케이스에서 judge가 여전히 human보다 ~1점 관대 → 하드 게이트는 보수적 임계 유지."
   },
   "samples": [
     {
@@ -39,7 +39,7 @@
       "videoId": "5NSTRKouSWs",
       "caseTitle": "버터 마들렌",
       "humanCaseScore": 3,
-      "judgeCaseScore": 4.1,
+      "judgeCaseScore": 4.0,
       "verdict": "codex_higher",
       "note": "Ingredient amount omission and order issue should stay below strong-pass."
     },
@@ -49,7 +49,7 @@
       "videoId": "DnQ09ZZCjCs",
       "caseTitle": "초간단 김치찌개",
       "humanCaseScore": 5,
-      "judgeCaseScore": 5,
+      "judgeCaseScore": 5.0,
       "verdict": "aligned",
       "note": "Clean single-recipe extraction should be a clear pass."
     },
@@ -59,7 +59,7 @@
       "videoId": "LSYEnH5fGfk",
       "caseTitle": "원 팟 토마토 바질 링귀네",
       "humanCaseScore": 3,
-      "judgeCaseScore": 4.5,
+      "judgeCaseScore": 4.0,
       "verdict": "codex_higher",
       "note": "Good steps with ingredient quantity omissions should not pass as excellent."
     },
@@ -69,8 +69,8 @@
       "videoId": "Egpjve8caK0",
       "caseTitle": "노오븐 라따뚜이",
       "humanCaseScore": 2,
-      "judgeCaseScore": 4,
-      "verdict": "direction_disagreement",
+      "judgeCaseScore": 3.0,
+      "verdict": "codex_higher",
       "note": "Known weak visual-dependent case anchors the need for higher thresholds and borderline retry."
     },
     {
@@ -79,7 +79,7 @@
       "videoId": "MxA2R1tzDLA",
       "caseTitle": "국민 반찬 10가지",
       "humanCaseScore": 4,
-      "judgeCaseScore": 4.73,
+      "judgeCaseScore": 4.3,
       "verdict": "close",
       "note": "Multi-recipe mostly-correct extraction anchors average-score expectations."
     },
@@ -89,7 +89,7 @@
       "videoId": "YZ8KSZboJeM",
       "caseTitle": "진한 초코 마들렌",
       "humanCaseScore": 3.5,
-      "judgeCaseScore": 4,
+      "judgeCaseScore": 4.0,
       "verdict": "close",
       "note": "Baking omissions should remain below perfect but above hard failure."
     }
