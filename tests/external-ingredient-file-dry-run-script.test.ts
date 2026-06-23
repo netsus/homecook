@@ -138,6 +138,106 @@ describe("external ingredient file dry-run script", () => {
     });
   });
 
+  it("keeps fruit and nut source rows in the canonical fruit category", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "homecook-external-ingredient-fruit-category-"));
+    const manualInputPath = join(tempDir, "manual-source-rows.json");
+    const liveInputPath = join(tempDir, "live-source-export.json");
+    const manualOutputDir = join(tempDir, "manual-out");
+    const liveOutputDir = join(tempDir, "live-out");
+
+    writeFileSync(
+      manualInputPath,
+      `${JSON.stringify(
+        [
+          {
+            source_system: "rda",
+            source_file: "manual-rda-export.json",
+            source_version: "2026-06-file",
+            source_date: "2026-06-24",
+            source_license: "kogl-type-1",
+            source_row_id: "RDA-MANUAL-FRUIT-001",
+            original_name: "사과, 생것",
+            legacy_category: "과일",
+            raw_payload: { fdCode: "RDA-MANUAL-FRUIT-001", fdGrupp: "H", fdGruppNm: "과일류" },
+          },
+        ],
+        null,
+        2,
+      )}\n`,
+    );
+    writeFileSync(
+      liveInputPath,
+      `${JSON.stringify(
+        {
+          rdaFoodCompositionRows: [
+            {
+              fdCode: "RDA-LIVE-FRUIT-001",
+              fdNm: "사과, 생것",
+              fdGrupp: "H",
+              fdGruppNm: "과일류",
+              originNm: "국가표준식품성분표",
+            },
+            {
+              fdCode: "RDA-LIVE-NUT-001",
+              fdNm: "아몬드, 볶은것",
+              fdGrupp: "E",
+              fdGruppNm: "견과류및종실류",
+              originNm: "국가표준식품성분표",
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const manualResult = runDryRun([
+      "--input",
+      manualInputPath,
+      "--output-dir",
+      manualOutputDir,
+      "--generated-at",
+      "2026-06-24T00:00:00.000Z",
+    ]);
+    const liveResult = runDryRun([
+      "--input",
+      liveInputPath,
+      "--output-dir",
+      liveOutputDir,
+      "--generated-at",
+      "2026-06-24T00:00:00.000Z",
+    ]);
+
+    expect(manualResult.status).toBe(0);
+    expect(liveResult.status).toBe(0);
+
+    const manualReport = JSON.parse(readFileSync(join(manualOutputDir, "candidate-report.json"), "utf8"));
+    const liveReport = JSON.parse(readFileSync(join(liveOutputDir, "candidate-report.json"), "utf8"));
+
+    expect(manualReport.candidates[0]).toMatchObject({
+      source_row_id: "RDA-MANUAL-FRUIT-001",
+      category_candidate: { label: "과일", reason_code: "source_legacy_category_match" },
+    });
+    expect(liveReport.candidates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source_row_id: "RDA-LIVE-FRUIT-001",
+          category_candidate: expect.objectContaining({
+            label: "과일",
+            reason_code: "source_legacy_category_match",
+          }),
+        }),
+        expect.objectContaining({
+          source_row_id: "RDA-LIVE-NUT-001",
+          category_candidate: expect.objectContaining({
+            label: "과일",
+            reason_code: "source_legacy_category_match",
+          }),
+        }),
+      ]),
+    );
+  });
+
   it("promotes only approved review-decision fingerprints into the seed artifact", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "homecook-external-ingredient-review-decision-"));
     const inputPath = join(tempDir, "source-rows.json");

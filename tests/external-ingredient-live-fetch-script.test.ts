@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 const SCRIPT_PATH = "scripts/external-ingredient-live-fetch.mjs";
 
-function runLiveFetch(args: string[]) {
+function runLiveFetch(args: string[], envOverrides: Record<string, string | undefined> = {}) {
   return spawnSync("node", [SCRIPT_PATH, ...args], {
     cwd: process.cwd(),
     encoding: "utf8",
@@ -16,6 +16,7 @@ function runLiveFetch(args: string[]) {
       DATA_GO_KR_API_KEY: "test-public-data-key",
       KOREANFOOD_RDA_API_KEY: "",
       FOODSERVICE_API_KEY: "",
+      ...envOverrides,
     },
   });
 }
@@ -126,6 +127,65 @@ describe("external ingredient live fetch script", () => {
       ]),
     );
     expect(seedArtifact.seed_rows).toEqual([]);
+  });
+
+  it("ignores RDA-specific key aliases for the current public data portal endpoint", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "homecook-external-ingredient-rda-key-alias-"));
+    const mockDir = join(tempDir, "mock");
+    const outputDir = join(tempDir, "out");
+    mkdirSync(mockDir);
+
+    writeFileSync(
+      join(mockDir, "rda-A.xml"),
+      [
+        "<response>",
+        "<header><result_Code>200</result_Code><result_Msg>OK</result_Msg></header>",
+        "<body><total_Count>1</total_Count><items><item>",
+        "<food_Code>A001001A010a</food_Code>",
+        "<food_Grupp>곡류 및 그 제품</food_Grupp>",
+        "<food_Nm>귀리, 겉귀리, 도정, 생것</food_Nm>",
+        "<origin_Nm>국가표준식품성분 DB 10.4(2026)</origin_Nm>",
+        "</item></items></body>",
+        "</response>\n",
+      ].join(""),
+      { flag: "wx" },
+    );
+
+    const result = runLiveFetch(
+      [
+        "--providers",
+        "rda",
+        "--mock-response-dir",
+        mockDir,
+        "--output-dir",
+        outputDir,
+        "--generated-at",
+        "2026-06-24T00:00:00.000Z",
+        "--rda-groups",
+        "A",
+      ],
+      {
+        DATA_GO_KR_API_KEY: "",
+        KOREANFOOD_RDA_API_KEY: "legacy-rda-key",
+        FOODSERVICE_API_KEY: "legacy-foodservice-key",
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain("legacy-rda-key");
+    expect(result.stdout).not.toContain("legacy-foodservice-key");
+
+    const liveReport = JSON.parse(readFileSync(join(outputDir, "live-fetch-report.json"), "utf8"));
+
+    const rdaProvider = liveReport.providers.find(
+      (provider: { provider: string }) => provider.provider === "rda",
+    );
+
+    expect(rdaProvider).toMatchObject({
+      provider: "rda",
+      status: "ok",
+    });
+    expect(["DATA_GO_KR_API_KEY", null]).toContain(rdaProvider.key_source);
   });
 
   it("records provider failures without writing a candidate report when no rows are fetched", () => {
