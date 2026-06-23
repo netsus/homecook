@@ -5038,7 +5038,7 @@ button {
   .web-theme-rail-side {
     grid-auto-columns: unset;
     grid-auto-flow: row;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     overflow: visible;
     padding-bottom: 0;
@@ -5046,11 +5046,29 @@ button {
 
   .web-theme-rail-side .web-theme-card {
     aspect-ratio: 16 / 9;
-    min-height: 112px;
+    min-height: 0;
   }
 
   .web-home-aside-top .web-theme-rail-side .web-theme-card {
-    min-height: 92px;
+    min-height: 0;
+  }
+
+  .web-home-aside-top .web-theme-card-overlay {
+    gap: 3px;
+    padding: 12px;
+  }
+
+  .web-home-aside-top .web-theme-card-title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .web-home-aside-top .web-theme-card-count {
+    font-size: 12px;
   }
 
   .web-all-recipes {
