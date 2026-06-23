@@ -137,8 +137,12 @@ export function NicknameOnboardingScreen({
       <h1 className="mt-5 text-[26px] font-bold leading-[1.35] text-[var(--foreground)]">
         닉네임을 정해 주세요
       </h1>
-      <p className="mx-auto mt-3 max-w-[310px] text-[14px] font-medium leading-6 text-[var(--text-3)]">
-        레시피와 플래너에서 사용할 이름이에요. 나중에 마이페이지에서 바꿀 수 있어요.
+      <p
+        className="mx-auto mt-3 max-w-[310px] text-[14px] font-medium leading-6 text-[var(--text-3)]"
+        data-testid="nickname-onboarding-description"
+      >
+        <span className="block">레시피와 플래너에서 사용할 이름이에요.</span>
+        <span className="block">나중에 마이페이지에서 바꿀 수 있어요.</span>
       </p>
 
       <form className="mt-7 text-left" onSubmit={handleSubmit}>
@@ -185,31 +189,55 @@ export function NicknameOnboardingScreen({
     </section>
   );
 
-  const content = screenState === "ready" ? form : (
+  const loadingSkeleton = (
+    <section
+      aria-label="닉네임 화면 준비 중"
+      className="mx-auto flex w-full max-w-[430px] flex-col px-6"
+      data-testid="nickname-onboarding-skeleton"
+    >
+      <div className="mx-auto h-12 w-12 animate-pulse rounded-[var(--radius-card)] bg-[var(--surface-fill)]" />
+      <div className="mx-auto mt-4 h-6 w-16 animate-pulse rounded-[var(--radius-full)] bg-[var(--surface-fill)]" />
+      <div className="mx-auto mt-5 h-9 w-56 animate-pulse rounded-[var(--radius-card)] bg-[var(--surface-fill)]" />
+      <div className="mx-auto mt-3 grid w-full max-w-[310px] gap-2">
+        <div className="h-4 animate-pulse rounded-[var(--radius-full)] bg-[var(--surface-fill)]" />
+        <div className="mx-auto h-4 w-4/5 animate-pulse rounded-[var(--radius-full)] bg-[var(--surface-fill)]" />
+      </div>
+      <div className="mt-7 grid gap-2">
+        <div className="h-4 w-14 animate-pulse rounded-[var(--radius-full)] bg-[var(--surface-fill)]" />
+        <div className="h-[var(--input-height)] animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-fill)]" />
+        <div className="h-[var(--control-height-lg)] animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-fill)]" />
+      </div>
+    </section>
+  );
+
+  const errorContent = (
     <section className="mx-auto w-full max-w-[430px] px-6 text-center">
       <div className="mx-auto h-12 w-12 animate-pulse rounded-[var(--radius-card)] bg-[var(--brand-soft)]" />
       <h1 className="mt-5 text-[22px] font-bold text-[var(--foreground)]">
-        {screenState === "error" ? "닉네임 화면을 열지 못했어요" : "내 정보를 확인하고 있어요"}
+        닉네임 화면을 열지 못했어요
       </h1>
-      {screenState === "error" ? (
-        <>
-          <p className="mx-auto mt-3 max-w-[310px] text-[14px] font-medium leading-6 text-[var(--text-3)]">
-            {errorMessage ?? "잠시 후 다시 시도해 주세요."}
-          </p>
-          <button
-            className="mx-auto mt-5 flex h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] px-5 text-[14px] font-bold text-[var(--brand)]"
-            onClick={() => {
-              setScreenState("loading");
-              window.location.reload();
-            }}
-            type="button"
-          >
-            다시 시도
-          </button>
-        </>
-      ) : null}
+      <p className="mx-auto mt-3 max-w-[310px] text-[14px] font-medium leading-6 text-[var(--text-3)]">
+        {errorMessage ?? "잠시 후 다시 시도해 주세요."}
+      </p>
+      <button
+        className="mx-auto mt-5 flex h-[var(--control-height-md)] items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] px-5 text-[14px] font-bold text-[var(--brand)]"
+        onClick={() => {
+          setScreenState("loading");
+          window.location.reload();
+        }}
+        type="button"
+      >
+        다시 시도
+      </button>
     </section>
   );
+
+  const content =
+    screenState === "ready"
+      ? form
+      : screenState === "error"
+      ? errorContent
+      : loadingSkeleton;
 
   if (viewMode === "web") {
     return (

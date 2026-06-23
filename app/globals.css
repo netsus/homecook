@@ -1255,11 +1255,17 @@
   min-height: 36px;
   align-items: center;
   justify-content: center;
+  border: 0;
   border-radius: 12px;
   background: var(--brand);
   color: var(--text-inverse);
+  cursor: pointer;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 850;
+  line-height: 1.2;
+  padding: 0 10px;
+  text-decoration: none;
 }
 
 .profile-summary-link-secondary {
@@ -4740,6 +4746,24 @@ button {
     margin-top: 6px;
   }
 
+  .web-discovery-search-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    align-items: start;
+    gap: 28px;
+    margin-top: 6px;
+  }
+
+  .web-discovery-search-main {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .web-discovery-search-layout .web-discovery-search-row {
+    margin-top: 0;
+  }
+
   .web-search-bar {
     display: flex;
     width: min(560px, 100%);
@@ -4943,10 +4967,10 @@ button {
 
   .web-home-content-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
-    gap: 32px;
-    margin-top: 26px;
+    gap: 0;
+    margin-top: 28px;
   }
 
   .web-home-content-grid .web-all-recipes {
@@ -4962,6 +4986,19 @@ button {
     top: 88px;
     display: grid;
     gap: 22px;
+  }
+
+  .web-home-aside-top {
+    position: static;
+    top: auto;
+    gap: 12px;
+  }
+
+  .web-home-aside-top .web-home-aside-section {
+    border: 1px solid var(--web-divider);
+    border-radius: var(--web-r-sm);
+    background: var(--web-surface);
+    padding: 14px;
   }
 
   .web-home-aside-section {
@@ -5001,7 +5038,7 @@ button {
   .web-theme-rail-side {
     grid-auto-columns: unset;
     grid-auto-flow: row;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     overflow: visible;
     padding-bottom: 0;
@@ -5009,7 +5046,29 @@ button {
 
   .web-theme-rail-side .web-theme-card {
     aspect-ratio: 16 / 9;
-    min-height: 112px;
+    min-height: 0;
+  }
+
+  .web-home-aside-top .web-theme-rail-side .web-theme-card {
+    min-height: 0;
+  }
+
+  .web-home-aside-top .web-theme-card-overlay {
+    gap: 3px;
+    padding: 12px;
+  }
+
+  .web-home-aside-top .web-theme-card-title {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .web-home-aside-top .web-theme-card-count {
+    font-size: 12px;
   }
 
   .web-all-recipes {
@@ -12361,6 +12420,11 @@ button {
   }
 
   @media (max-width: 1180px) {
+    .web-discovery-search-layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+
     .web-home-content-grid {
       grid-template-columns: minmax(0, 1fr);
     }

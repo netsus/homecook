@@ -11,6 +11,7 @@ import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
 
 const apiMocks = vi.hoisted(() => ({
+  fetchUserGamificationArchive: vi.fn(),
   fetchUserGamification: vi.fn(),
   fetchUserProfile: vi.fn(),
   fetchUserProgress: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock("@/lib/api/user-progress", () => ({
 }));
 
 vi.mock("@/lib/api/user-gamification", () => ({
+  fetchUserGamificationArchive: apiMocks.fetchUserGamificationArchive,
   fetchUserGamification: apiMocks.fetchUserGamification,
 }));
 
@@ -161,6 +163,7 @@ describe("ProfileSummaryButton", () => {
   afterEach(() => {
     cleanup();
     apiMocks.fetchUserGamification.mockReset();
+    apiMocks.fetchUserGamificationArchive.mockReset();
     apiMocks.fetchUserProfile.mockReset();
     apiMocks.fetchUserProgress.mockReset();
   });
@@ -195,11 +198,104 @@ describe("ProfileSummaryButton", () => {
     expect(within(dialog).getByText("최근 알림")).toBeTruthy();
     expect(within(dialog).getByText("레벨업!")).toBeTruthy();
 
-    const archiveLink = within(dialog).getByRole("link", {
+    expect(within(dialog).getByRole("button", {
       name: "알림 기록 보기",
-    }) as HTMLAnchorElement;
-    expect(archiveLink.getAttribute("href")).toBe("/mypage?notifications=1");
+    })).toBeTruthy();
   });
+
+  it("uses the next tutorial active step for the tutorial notice instead of later active quests", async () => {
+    const user = userEvent.setup();
+    const gamification = {
+      ...GAMIFICATION,
+      notifications: {
+        archive_preview: [],
+        priority_unseen: [],
+        unseen: [],
+      },
+      quests: {
+        active: [
+          {
+            completed_at: null,
+            description: "직접 쓸 레시피북을 하나 만들어보세요.",
+            dismissed_at: null,
+            is_new: false,
+            progress_current: 0,
+            progress_percent: 0,
+            progress_target: 1,
+            quest_key: "first_custom_book_created",
+            quest_type: "tutorial",
+            status: "active",
+            title: "나만의 레시피북 생성하기",
+          },
+        ],
+        completed_recent: [],
+      },
+      tutorial: {
+        ...GAMIFICATION.tutorial,
+        active_steps: [
+          {
+            achievement_key: "tutorial_recipe_saved",
+            current: 0,
+            status: "active",
+            target: 1,
+            title: "첫 레시피 저장",
+          },
+        ],
+      },
+    } satisfies UserGamificationData;
+
+    render(
+      <ProfileSummaryButton
+        gamification={gamification}
+        isAuthenticated
+        profile={PROFILE}
+        progress={PROGRESS}
+        variant="web"
+      />,
+    );
+
+    await user.click(screen.getByTestId("web-profile-summary-button"));
+
+    const dialog = screen.getByRole("dialog", { name: "마이페이지 요약" });
+    expect(within(dialog).getByText("튜토리얼 안내")).toBeTruthy();
+    expect(within(dialog).getByText("마음에 드는 레시피 저장하기")).toBeTruthy();
+    expect(within(dialog).getByText("다시 만들고 싶은 레시피를 하나 저장해보세요.")).toBeTruthy();
+    expect(within(dialog).queryByText("나만의 레시피북 생성하기")).toBeNull();
+  });
+
+  it.each(["web", "mobile"] as const)(
+    "opens the notification archive dialog in place from the %s summary action",
+    async (variant) => {
+      const user = userEvent.setup();
+      apiMocks.fetchUserGamificationArchive.mockResolvedValue({
+        has_next: false,
+        items: GAMIFICATION.notifications.archive_preview,
+        next_cursor: null,
+      });
+
+      render(
+        <ProfileSummaryButton
+          gamification={GAMIFICATION}
+          isAuthenticated
+          profile={PROFILE}
+          progress={PROGRESS}
+          variant={variant}
+        />,
+      );
+
+      await user.click(screen.getByTestId(`${variant}-profile-summary-button`));
+
+      const summaryDialog = screen.getByRole("dialog", { name: "마이페이지 요약" });
+      await user.click(within(summaryDialog).getByRole("button", { name: "알림 기록 보기" }));
+
+      expect(screen.queryByRole("dialog", { name: "마이페이지 요약" })).toBeNull();
+      expect(screen.getByRole("dialog", { name: "알림 기록" })).toBeTruthy();
+      expect(apiMocks.fetchUserGamificationArchive).toHaveBeenCalledWith({
+        cursor: null,
+        limit: 20,
+      });
+    },
+  );
 
   it("tolerates older gamification payloads without priority or archive notification arrays", async () => {
     const user = userEvent.setup();

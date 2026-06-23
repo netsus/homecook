@@ -186,6 +186,8 @@ function compactGroup(group: UserGamificationNotificationData[]) {
 export function getGrowthNotificationIdsForSeen(
   item: UserGamificationNotificationData,
 ) {
+  if (item.payload.synthetic === true) return [];
+
   const mergedIds = item.payload.merged_notification_ids;
   if (!Array.isArray(mergedIds)) return [item.id];
 

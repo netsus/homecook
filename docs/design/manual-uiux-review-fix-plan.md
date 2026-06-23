@@ -3224,6 +3224,201 @@ Implementation note:
   - Verified: `pnpm lint`
   - Verified: `git diff --check`
 
+### 73. 프로필 요약의 알림 보기 버튼이 현재 화면을 떠나 마이페이지로 이동하는 문제
+
+- Status: implemented in `fix/profile-notifications-inline-modal`
+- Severity: Medium
+- Area: UX / Profile Summary / Notifications / Web / App
+- Source: user manual review, profile summary notification flow
+- Problem:
+  - 프로필 요약 화면의 `알림 기록 보기` 버튼을 누르면 현재 페이지에서 바로 알림을 확인하지 못하고 `/mypage?notifications=1`로 이동한 뒤 알림 모달이 열린다.
+  - 홈, 플래너, 팬트리처럼 작업 맥락이 있는 화면에서는 알림 확인만 하려던 사용자가 화면 이동을 겪는다.
+- User impact:
+  - 레시피 탐색, 식단 계획, 팬트리 확인 흐름이 알림 확인 때문에 끊긴다.
+  - 프로필 요약이 "현재 화면에서 빠르게 보는 보조 패널"이라는 기대와 맞지 않는다.
+- Approach decision:
+  - 고치는 게 맞다. 알림 기록은 현재 작업을 중단해야 하는 목적지가 아니라, 현재 화면 위에서 잠깐 확인하는 보조 정보에 가깝다.
+  - 새 알림 UI를 만들지 않고 기존 마이페이지 성장 알림 모달을 재사용해 웹/앱의 기록 화면을 통일한다.
+- Recommended fix:
+  - `ProfileSummaryButton`의 `알림 기록 보기`를 링크가 아니라 버튼으로 바꾼다.
+  - 버튼 클릭 시 프로필 요약 popover를 닫고 같은 페이지에서 `MypageGrowthDetailDialog`의 `notifications` panel을 연다.
+  - 기존 `마이페이지로 이동` CTA는 유지한다.
+  - 버튼 스타일은 기존 링크형 CTA와 같은 크기/색상으로 유지한다.
+- Acceptance criteria:
+  - 웹 프로필 요약에서 `알림 기록 보기`를 누르면 URL 이동 없이 `알림 기록` dialog가 열린다.
+  - 앱 프로필 요약에서도 같은 버튼이 현재 화면 위에서 `알림 기록` dialog를 연다.
+  - 알림 모달은 기존 archive API와 필터 UI를 그대로 사용한다.
+  - 프로필 요약 popover는 알림 모달이 열릴 때 닫힌다.
+- Likely implementation target:
+  - `components/shared/profile-summary-button.tsx`
+  - `app/globals.css`
+  - `tests/shared-profile-summary.test.tsx`
+- Verification:
+  - `components/shared/profile-summary-button.tsx`에서 알림 CTA를 `/mypage?notifications=1` 링크에서 현재 페이지 modal trigger로 변경했다.
+  - 기존 `MypageGrowthDetailDialog`의 `notifications` panel을 재사용해 마이페이지와 같은 알림 기록 UI를 열게 했다.
+  - `app/globals.css`에서 링크/버튼 CTA가 같은 시각 스타일을 쓰도록 버튼 기본 스타일을 정리했다.
+  - `tests/shared-profile-summary.test.tsx`에서 웹/모바일 프로필 요약의 알림 CTA가 현재 페이지에서 `알림 기록` dialog를 여는 회귀 테스트를 추가했다.
+  - Verified: `pnpm exec vitest run tests/shared-profile-summary.test.tsx tests/mypage-achievement-album.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 74. 업적/경험치 토스트를 눌러도 현재 페이지에서 알림 기록을 열 수 없는 문제
+
+- Status: implemented in `fix/profile-notifications-inline-modal`
+- Severity: Medium
+- Area: UX / Growth Toast / Notifications / Web / App
+- Source: user manual review, growth notification toast flow
+- Problem:
+  - 업적 달성, 배지 획득, 레벨업, 경험치 획득 토스트는 알림처럼 보이지만, 누른 뒤 현재 페이지에서 알림 기록을 바로 확인하는 흐름이 없다.
+  - 기존 구현은 toast click이 global open event만 발생시키고, 실제 모달 수신자는 마이페이지 성장 프로필에만 있어 홈/플래너/팬트리 같은 화면에서는 동작이 끊긴다.
+- User impact:
+  - 사용자가 방금 본 성장 알림의 상세/과거 기록을 확인하려면 마이페이지를 찾아가야 한다.
+  - 토스트가 클릭 가능한 것처럼 보여도 화면별로 결과가 달라져 신뢰감이 떨어진다.
+- Approach decision:
+  - 고치는 게 맞다. 토스트는 알림 기록의 자연스러운 entry point이므로, 어느 화면에서든 현재 페이지 위에서 같은 알림 모달을 열어야 한다.
+  - root layout에 이미 전역 렌더링되는 `GrowthToastStack`이 기존 알림 기록 dialog를 직접 열게 하는 방식이 가장 작고 일관적이다.
+- Recommended fix:
+  - `GrowthToastStack`이 최근 gamification payload를 보관한다.
+  - 토스트 click 또는 Enter/Space activation 시 `MypageGrowthDetailDialog`의 `notifications` panel을 현재 페이지 위에 연다.
+  - 토스트 자동 사라짐 후에도 이미 열린 알림 모달은 유지한다.
+  - 닫기 버튼은 기존처럼 토스트만 닫고 모달을 열지 않게 유지한다.
+- Acceptance criteria:
+  - 웹/앱 어느 화면에서든 성장 토스트를 누르면 `알림 기록` dialog가 열린다.
+  - 키보드로 토스트를 활성화해도 같은 dialog가 열린다.
+  - 토스트가 자동 dismiss되어도 이미 열린 알림 기록 dialog는 닫히지 않는다.
+  - 기존 알림 archive API와 필터 UI를 그대로 사용한다.
+- Likely implementation target:
+  - `components/gamification/growth-toast-stack.tsx`
+  - `tests/growth-toast-stack.test.tsx`
+- Verification:
+  - `components/gamification/growth-toast-stack.tsx`에서 toast click/keyboard activation이 기존 알림 기록 dialog를 직접 열게 했다.
+  - toast stack이 전부 사라져도 열린 알림 dialog는 유지되도록 렌더 조건을 분리했다.
+  - `tests/growth-toast-stack.test.tsx`에서 click, keyboard activation, auto-dismiss 후 dialog 유지 동작을 고정했다.
+  - Verified: `pnpm exec vitest run tests/growth-toast-stack.test.tsx`
+  - Verified: `pnpm exec vitest run tests/shared-profile-summary.test.tsx tests/growth-toast-stack.test.tsx tests/mypage-achievement-album.test.tsx`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 75. 튜토리얼 퀘스트 안내가 첫 단계부터 순서대로 이어지지 않는 문제
+
+- Status: implemented in `fix/profile-notifications-inline-modal`
+- Severity: High
+- Area: UX / Onboarding / Tutorial / Growth Toast / Profile Summary
+- Source: user manual review, first signup tutorial guidance
+- Problem:
+  - 첫 회원가입 사용자는 첫 튜토리얼 퀘스트부터 안내받아야 하는데, 프로필 요약의 `튜토리얼 안내`가 뒤쪽 단계처럼 보일 수 있다.
+  - 성장 토스트는 서버 알림 row가 없으면 신규 사용자의 첫 튜토리얼 퀘스트를 띄우지 않는다.
+  - 튜토리얼을 하나 완료한 뒤 다음 퀘스트가 토스트와 프로필 요약 양쪽에서 같은 기준으로 이어지지 않으면 온보딩 흐름이 끊긴다.
+- User impact:
+  - 신규 사용자가 집밥의 첫 행동을 어디서 시작해야 하는지 헷갈린다.
+  - 튜토리얼 퀘스트 6개가 순차 경험이 아니라 흩어진 알림처럼 느껴진다.
+  - 프로필 요약과 토스트가 서로 다른 튜토리얼 단계를 말하면 서비스 신뢰도가 떨어진다.
+- Approach decision:
+  - 고치는 게 맞다. 튜토리얼 안내 기준은 `quests.active`의 정렬이나 일반 알림 우선순위가 아니라 `tutorial.active_steps[0]`이어야 한다.
+  - 서버가 내려주는 현재 active tutorial step을 공통 helper로 해석하고, 프로필 요약과 토스트가 같은 값을 사용하게 한다.
+- Recommended fix:
+  - 다음 튜토리얼 step을 계산하는 공통 helper를 만든다.
+  - 업적 milestone 제목이 아니라 실제 튜토리얼 퀘스트 title/body 6개를 기준 문구로 사용한다.
+  - 프로필 요약의 `튜토리얼 안내`는 공통 helper의 title/body를 사용한다.
+  - `GrowthToastStack`은 초기 load와 refresh에서 알림 row가 없더라도 active tutorial step을 synthetic toast로 보여준다.
+  - synthetic toast는 실제 알림 row가 아니므로 dismiss 시 seen API에 가짜 알림 ID를 보내지 않는다.
+  - 이전 퀘스트를 완료해 `tutorial.active_steps[0]`가 다음 단계로 바뀌면 토스트와 프로필 요약도 다음 단계로 바뀐다.
+- Acceptance criteria:
+  - 첫 회원가입/초기 상태에서 첫 튜토리얼 퀘스트가 성장 토스트로 표시된다.
+  - 프로필 요약의 `튜토리얼 안내`에는 첫 튜토리얼 퀘스트 title/body가 표시된다.
+  - 첫 퀘스트 완료 후 `tutorial.active_steps[0]`가 두 번째 퀘스트이면 토스트와 프로필 요약 모두 두 번째 퀘스트를 표시한다.
+  - 6개 튜토리얼 퀘스트가 끝날 때까지 같은 방식으로 다음 active step을 기준으로 안내한다.
+  - 기존 업적/경험치/레벨업 토스트 표시와 클릭 시 알림 기록 모달 열기는 유지된다.
+- Likely implementation target:
+  - `lib/gamification-tutorial-guide.ts`
+  - `components/shared/profile-summary-button.tsx`
+  - `components/gamification/growth-toast-stack.tsx`
+  - `tests/shared-profile-summary.test.tsx`
+  - `tests/growth-toast-stack.test.tsx`
+- Verification:
+  - `lib/gamification-tutorial-guide.ts`에서 active tutorial step을 튜토리얼 정의 순서로 정렬하고, 업적 제목 대신 튜토리얼 퀘스트 title/body를 반환하게 했다.
+  - 프로필 요약이 `quests.active`의 임의 순서 대신 `tutorial.active_steps[0]` 기준 안내를 보여주게 했다.
+  - `GrowthToastStack`이 mount 시 gamification을 로드하고, 알림 row가 없어도 active tutorial step synthetic toast를 title/body와 함께 보여주게 했다.
+  - synthetic tutorial toast는 실제 알림 row가 아니므로 dismiss 시 seen API에 가짜 ID를 보내지 않게 했다.
+  - `tests/shared-profile-summary.test.tsx`에서 뒤쪽 active quest가 먼저 오고 첫 step의 업적 제목만 있어도 첫 튜토리얼 퀘스트 문구를 보여주는 회귀 테스트를 추가했다.
+  - `tests/growth-toast-stack.test.tsx`에서 초기 첫 튜토리얼 토스트, 다음 튜토리얼 토스트, synthetic toast seen API 제외를 고정했다.
+  - Verified: `pnpm exec vitest run tests/shared-profile-summary.test.tsx`
+  - Verified: `pnpm exec vitest run tests/growth-toast-stack.test.tsx`
+  - Verified: `pnpm exec vitest run tests/gamification-notifications.test.ts`
+  - Verified: `pnpm exec vitest run tests/user-gamification-definitions.test.ts tests/user-gamification-notification-priority.test.ts`
+  - Verified: `pnpm typecheck`
+  - Verified: `pnpm lint`
+  - Verified: `git diff --check`
+
+### 76. 웹 홈 추천 태그와 인기 테마가 검색창 라인보다 낮아 오른쪽 상단이 비어 보이는 문제
+
+- Status: implemented in `fix/profile-notifications-inline-modal`
+- Severity: Medium
+- Area: UX / Web Home / Layout / Discovery
+- Source: user manual review, web home right-side whitespace
+- Problem:
+  - 웹 홈에서 검색창 오른쪽 상단 공간이 비어 있고, `추천 태그`와 `이번 주 인기 테마`는 레시피 목록 라인 쪽에 내려와 있어 넓은 화면의 균형이 어색하다.
+  - 사용자가 검색/필터를 시작하는 위치와 추천 탐색 정보가 떨어져 있어 홈 상단 탐색 영역이 덜 응집되어 보인다.
+- User impact:
+  - 웹 화면의 첫 인상이 느슨해 보이고 오른쪽 공간이 낭비된다.
+  - 추천 태그와 인기 테마가 검색을 보조하는 정보라는 관계가 약해진다.
+- Approach decision:
+  - 고치는 게 맞다. 웹은 모바일보다 가로 폭이 넓으므로 검색창 오른쪽에 추천 탐색을 배치하면 빈 공간을 줄이고 탐색 맥락을 강화할 수 있다.
+  - 모바일 배치는 건드리지 않고 웹 전용 discovery search layout만 조정한다.
+- Recommended fix:
+  - 웹 홈 discovery 영역에 `web-discovery-search-layout`을 만들고 왼쪽에는 검색/재료검색/퀵슬롯, 오른쪽에는 `추천 태그`와 `이번 주 인기 테마`를 배치한다.
+  - 기존 레시피 목록 오른쪽 aside는 제거해 같은 제목이 중복되지 않게 한다.
+  - 오른쪽 보조 레일의 top을 검색창 라인과 맞추고, 1180px 이하에서는 한 줄 레이아웃으로 자연스럽게 접는다.
+- Acceptance criteria:
+  - 웹 홈에서 `추천 태그`와 `이번 주 인기 테마`가 검색창과 같은 상단 row 안에 렌더링된다.
+  - 두 섹션 제목은 웹 홈에 한 번씩만 나타난다.
+  - 레시피 목록 영역은 중복 aside 없이 한 컬럼으로 유지된다.
+  - 모바일 홈의 인기 테마/태그 배치는 변경되지 않는다.
+- Likely implementation target:
+  - `components/home/home-screen.tsx`
+  - `app/globals.css`
+  - `tests/home-screen.test.tsx`
+- Verification:
+  - `components/home/home-screen.tsx`에서 웹 전용 `HomeWebSideRail`을 검색 layout 안으로 이동했다.
+  - `app/globals.css`에서 `web-discovery-search-layout` 2컬럼 배치와 검색 row top 정렬, 단일 레시피 content grid를 적용했다.
+  - `tests/home-screen.test.tsx`에서 추천 태그/인기 테마가 검색 layout 안에 있고 제목이 중복되지 않는지 고정했다.
+  - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/nickname-onboarding-screen.test.tsx`
+
+### 77. 닉네임 온보딩 진입 전 프로필 확인 로딩 문구가 빠르게 사라져 어색한 문제
+
+- Status: implemented in `fix/profile-notifications-inline-modal`
+- Severity: Medium
+- Area: UX / Signup / Onboarding / Loading State / Readability
+- Source: user manual review, Google signup nickname onboarding
+- Problem:
+  - 구글 계정 선택 후 닉네임 화면으로 넘어가는 중 `내 정보를 확인하고 있어요`라는 로딩 문구가 잠깐 보였다가 빠르게 사라져 화면이 깜빡이는 느낌을 준다.
+  - 닉네임 설명 문장이 한 줄에 이어져 읽히면서 핵심 정보가 덜 또렷하다.
+- User impact:
+  - 가입 직후 첫 화면이 불안정하게 느껴지고, 사용자가 오류나 중복 로딩처럼 오해할 수 있다.
+  - 닉네임 설정 이유와 변경 가능 여부가 한눈에 구분되지 않는다.
+- Approach decision:
+  - 고치는 게 맞다. 짧게 사라지는 설명형 로딩 문구보다 조용한 스켈레톤이 전환을 더 자연스럽게 만든다.
+  - ready 화면의 설명은 두 문장으로 줄바꿈해 읽기 흐름을 분리한다.
+- Recommended fix:
+  - loading 상태에서는 visible text heading 없이 닉네임 카드 형태의 skeleton만 표시한다.
+  - error 상태는 기존처럼 명확한 에러 제목과 다시 시도 버튼을 유지한다.
+  - ready 상태 설명은 두 줄로 분리한다.
+- Acceptance criteria:
+  - 프로필 확인 중에는 `내 정보를 확인하고 있어요` 문구가 화면에 보이지 않는다.
+  - loading 상태에는 닉네임 화면 형태를 예고하는 skeleton이 보인다.
+  - 닉네임 설명은 `레시피와 플래너에서 사용할 이름이에요.`와 `나중에 마이페이지에서 바꿀 수 있어요.` 두 줄로 렌더링된다.
+  - 기존 닉네임 저장, 검증, 이미 닉네임 있는 유저 skip 동작은 유지된다.
+- Likely implementation target:
+  - `components/auth/nickname-onboarding-screen.tsx`
+  - `tests/nickname-onboarding-screen.test.tsx`
+- Verification:
+  - `components/auth/nickname-onboarding-screen.tsx`에서 loading content를 텍스트형 로딩에서 skeleton 카드로 변경했다.
+  - ready 화면 설명을 두 개의 block line으로 분리했다.
+  - `tests/nickname-onboarding-screen.test.tsx`에서 loading skeleton과 설명 줄바꿈을 고정했다.
+  - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/nickname-onboarding-screen.test.tsx`
+
 ## 보류 항목
 
 아직 없음.

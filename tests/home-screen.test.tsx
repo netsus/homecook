@@ -366,6 +366,26 @@ describe("home screen", () => {
     expect(ruleBody(".home-mobile-theme-card")).toContain("height: 154px;");
   });
 
+  it("moves the web recommended tags and weekly themes up beside the search row", async () => {
+    installMatchMedia(true);
+
+    render(<HomeScreen />);
+
+    await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" });
+
+    const searchLayout = screen.getByTestId("web-discovery-search-layout");
+    const sideRail = screen.getByTestId("web-home-side-rail-top");
+
+    expect(searchLayout.contains(sideRail)).toBe(true);
+    expect(screen.getAllByRole("heading", { level: 2, name: "추천 태그" })).toHaveLength(1);
+    expect(screen.getAllByRole("heading", { level: 2, name: "이번 주 인기 테마" })).toHaveLength(1);
+    expect(ruleBody(".web-discovery-search-layout")).toContain(
+      "grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);",
+    );
+    expect(ruleBody(".web-discovery-search-layout .web-discovery-search-row")).toContain("margin-top: 0;");
+    expect(ruleBody(".web-home-content-grid")).toContain("grid-template-columns: minmax(0, 1fr);");
+  });
+
   it("keeps the mobile search controls sticky under the app bar", () => {
     const searchRule = ruleBody(".home-mobile-discovery-search");
 
