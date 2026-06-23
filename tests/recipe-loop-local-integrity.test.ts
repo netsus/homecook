@@ -13,6 +13,12 @@ const gradingModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/recipe-loop/
 const semanticFeedbackModuleUrl = pathToFileURL(
   path.join(repoRoot, "scripts/recipe-loop/lib/semantic-feedback-aggregator.mjs"),
 ).href;
+const recipeExtractionModuleUrl = pathToFileURL(
+  path.join(repoRoot, "lib/server/recipe-extraction-lab/extract.mjs"),
+).href;
+const recipePromptModuleUrl = pathToFileURL(
+  path.join(repoRoot, "lib/server/recipe-extraction-lab/prompt.mjs"),
+).href;
 const loopScript = path.join(repoRoot, "scripts/recipe-loop/loop.py");
 const validationCanaryVideoId = "YZ8KSZboJeM";
 const validationCanaryId = "canary_validation_YZ8KSZboJeM_01";
@@ -166,6 +172,112 @@ describe("recipe-loop local integrity gates", () => {
 
   afterEach(() => {
     rmSync(workdir, { recursive: true, force: true });
+  });
+
+  it("splits supported Korean 와/과 combined recipe titles without over-splitting single dishes", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const splitLlm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "묵참김밥과 오뎅볶이",
+              ingredients: [
+                { name: "김밥김", amount: "2", unit: "장", amountBasis: "stated" },
+                { name: "묵은지", amount: "1", unit: "줌", amountBasis: "stated" },
+                { name: "참치", amount: "1", unit: "캔", amountBasis: "stated" },
+                { name: "어묵", amount: "2", unit: "장", amountBasis: "stated" },
+                { name: "떡", amount: "1", unit: "줌", amountBasis: "stated" },
+                { name: "고추장", amount: "1", unit: "큰술", amountBasis: "stated" },
+              ],
+              steps: [
+                "김밥김에 묵은지와 참치를 올려 묵참김밥을 만다.",
+                "어묵과 떡, 고추장을 볶아 오뎅볶이를 만든다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const splitResult = await extractRecipeFromSources(
+      {
+        video: {
+          videoId: "natural-split",
+          title: "묵참김밥과 오뎅볶이",
+          description: "00:00 묵참김밥\n01:00 오뎅볶이",
+        },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm: splitLlm, useVisual: false },
+    );
+
+    expect(splitResult.recipes.map((recipe: { title: string }) => recipe.title)).toEqual(["묵참김밥", "오뎅볶이"]);
+    expect(splitResult.meta.splitCombinedRecipeGroups).toBe(1);
+    expect(splitResult.recipes[0].ingredients.map((ingredient: { name: string }) => ingredient.name)).toEqual([
+      "김밥김",
+      "묵은지",
+      "참치",
+    ]);
+    expect(splitResult.recipes[1].ingredients.map((ingredient: { name: string }) => ingredient.name)).toEqual([
+      "어묵",
+      "떡",
+      "고추장",
+    ]);
+
+    const singleDishLlm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "두부와 김치 볶음",
+              ingredients: [
+                { name: "두부", amount: "1", unit: "모", amountBasis: "stated" },
+                { name: "김치", amount: "1", unit: "줌", amountBasis: "stated" },
+                { name: "들기름", amount: "1", unit: "큰술", amountBasis: "stated" },
+              ],
+              steps: ["두부와 김치를 팬에 넣고 들기름에 볶는다."],
+            },
+          ],
+        },
+      }),
+    };
+
+    const singleDishResult = await extractRecipeFromSources(
+      {
+        video: { videoId: "single-dish", title: "두부와 김치 볶음", description: "" },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm: singleDishLlm, useVisual: false },
+    );
+
+    expect(singleDishResult.recipes.map((recipe: { title: string }) => recipe.title)).toEqual(["두부와 김치 볶음"]);
+    expect(singleDishResult.meta.splitCombinedRecipeGroups).toBe(0);
+  });
+
+  it("builds the iter11 prompt with candidate isolation and supported ingredient completeness checks", async () => {
+    const { buildExtractionPrompt, PROMPT_VERSION } = await import(recipePromptModuleUrl);
+    const prompt = buildExtractionPrompt({
+      video: { title: "묵참김밥과 오뎅볶이" },
+      sourceText: "[SOURCE: recipe_candidate_hints]\n1. 묵참김밥\n2. 오뎅볶이",
+      useVisual: false,
+    });
+
+    expect(PROMPT_VERSION).toBe("iter11-semantic-count-recovery-1");
+    expect(prompt).toContain("와/과");
+    expect(prompt).toContain("각 후보의 근거끼리 섞지");
+    expect(prompt).toContain("출력 직전");
+    expect(prompt).toContain("고춧가루");
+    expect(prompt).toContain("새우젓");
+    expect(prompt).toContain("단계 근거가 전혀 없는 재료는");
   });
 
   it("records missing deterministic artifacts as explicit failed rows", () => {
