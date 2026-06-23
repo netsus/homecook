@@ -66,6 +66,15 @@ describe("nickname onboarding screen", () => {
     cleanup();
   });
 
+  it("uses a quiet skeleton while checking the signed-in profile", () => {
+    fetchUserProfile.mockImplementation(() => new Promise(() => undefined));
+
+    render(<NicknameOnboardingScreen nextPath="/planner" />);
+
+    expect(screen.getByTestId("nickname-onboarding-skeleton")).toBeTruthy();
+    expect(screen.queryByText("내 정보를 확인하고 있어요")).toBeNull();
+  });
+
   it("collects a nickname for a newly signed-in user and returns to the saved next path", async () => {
     const user = userEvent.setup();
     fetchUserProfile.mockResolvedValue(EMPTY_PROFILE);
@@ -77,6 +86,14 @@ describe("nickname onboarding screen", () => {
     render(<NicknameOnboardingScreen nextPath="/planner" />);
 
     expect(await screen.findByRole("heading", { name: "닉네임을 정해 주세요" })).toBeTruthy();
+    const description = screen.getByTestId("nickname-onboarding-description");
+    const descriptionLines = Array.from(description.querySelectorAll("span")).map(
+      (line) => line.textContent,
+    );
+    expect(descriptionLines).toEqual([
+      "레시피와 플래너에서 사용할 이름이에요.",
+      "나중에 마이페이지에서 바꿀 수 있어요.",
+    ]);
 
     fireEvent.change(screen.getByLabelText("닉네임"), {
       target: { value: "  집밥러  " },

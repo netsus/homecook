@@ -1099,46 +1099,67 @@ function HomeWebScreen({
             레시피 제목으로 검색하거나, 재료로 좁혀 보세요.
           </p>
 
-          <div className="web-discovery-search-row">
-            <label className="web-search-bar">
-              <SearchIcon />
-              <span className="visually-hidden">레시피 제목 검색</span>
-              <input
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  clearTagFilter();
-                }}
-                placeholder="레시피 제목 검색"
-                value={query}
-              />
-            </label>
-            <WebButton
-              className="web-discovery-filter-button"
-              onClick={onOpenIngredientModal}
-              variant="secondary"
-            >
-              <SearchSmallIcon color="currentColor" />
-              재료로 검색
-            </WebButton>
-          </div>
+          <div
+            className="web-discovery-search-layout"
+            data-testid="web-discovery-search-layout"
+          >
+            <div className="web-discovery-search-main">
+              <div className="web-discovery-search-row">
+                <label className="web-search-bar">
+                  <SearchIcon />
+                  <span className="visually-hidden">레시피 제목 검색</span>
+                  <input
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      clearTagFilter();
+                    }}
+                    placeholder="레시피 제목 검색"
+                    value={query}
+                  />
+                </label>
+                <WebButton
+                  className="web-discovery-filter-button"
+                  onClick={onOpenIngredientModal}
+                  variant="secondary"
+                >
+                  <SearchSmallIcon color="currentColor" />
+                  재료로 검색
+                </WebButton>
+              </div>
 
-          {appliedIngredientIds.length > 0 ? (
-            <div className="web-filter-chip-row">
-              <WebChip active onClick={onOpenIngredientModal}>
-                <SearchSmallIcon color="currentColor" />
-                재료 {appliedIngredientIds.length}개
-              </WebChip>
-              <WebButton
-                onClick={clearIngredientFilters}
-                size="sm"
-                variant="ghost"
-              >
-                초기화
-              </WebButton>
+              {appliedIngredientIds.length > 0 ? (
+                <div className="web-filter-chip-row">
+                  <WebChip active onClick={onOpenIngredientModal}>
+                    <SearchSmallIcon color="currentColor" />
+                    재료 {appliedIngredientIds.length}개
+                  </WebChip>
+                  <WebButton
+                    onClick={clearIngredientFilters}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    초기화
+                  </WebButton>
+                </div>
+              ) : null}
+
+              {showDiscoveryShortcuts ? <HomeQuickLinks variant="web" /> : null}
             </div>
-          ) : null}
-
-          {showDiscoveryShortcuts ? <HomeQuickLinks variant="web" /> : null}
+            <HomeWebSideRail
+              activeTagKey={activeTagKey}
+              className="web-home-aside-top"
+              dataTestId="web-home-side-rail-top"
+              onRetryTags={onRetryTags}
+              onSelectTag={onSelectTag}
+              onSelectTheme={onSelectTheme}
+              screenState={screenState}
+              selectedTheme={selectedTheme}
+              showDiscoveryShortcuts={showDiscoveryShortcuts}
+              tagOptions={tagOptions}
+              tagState={tagState}
+              themes={themes}
+            />
+          </div>
         </section>
 
         <div className="web-home-content-grid">
@@ -1225,71 +1246,108 @@ function HomeWebScreen({
             ) : null}
           </section>
 
-          <aside className="web-home-aside" aria-label="홈 보조 탐색">
-            {screenState !== "error" ? (
-              <section className="web-home-aside-section">
-                <div className="web-home-aside-head">
-                  <h2>추천 태그</h2>
-                </div>
-                <HomeTagRail
-                  activeTagKey={activeTagKey}
-                  onRetry={onRetryTags}
-                  onSelectTag={onSelectTag}
-                  tagOptions={tagOptions}
-                  tagState={tagState}
-                  variant="webAside"
-                />
-              </section>
-            ) : null}
-
-            {showDiscoveryShortcuts && themes.length > 0 ? (
-              <section className="web-home-aside-section">
-                <div className="web-home-aside-head">
-                  <h2>이번 주 인기 테마</h2>
-                  {selectedTheme ? (
-                    <WebButton
-                      onClick={() => onSelectTheme(selectedTheme.id)}
-                      size="sm"
-                      variant="ghost"
-                    >
-                      전체 보기
-                    </WebButton>
-                  ) : null}
-                </div>
-                <div className="web-theme-rail web-theme-rail-side">
-                  {themes.map((theme, index) => (
-                    <button
-                      aria-pressed={selectedTheme?.id === theme.id}
-                      className={[
-                        "web-theme-card",
-                        selectedTheme?.id === theme.id ? "web-theme-card-active" : "",
-                      ].join(" ")}
-                      key={theme.id}
-                      onClick={() => onSelectTheme(theme.id)}
-                      type="button"
-                    >
-                      <span
-                        className="web-theme-card-thumb"
-                        style={{
-                          backgroundImage: `url(${resolveRecipeImage(theme.recipes[0] ?? { id: String(index) })})`,
-                        }}
-                      >
-                        <span className="web-theme-card-overlay">
-                          <span className="web-theme-card-title">{theme.title}</span>
-                          <span className="web-theme-card-count">
-                            {theme.recipes.length}개 레시피
-                          </span>
-                        </span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-          </aside>
         </div>
       </div>
     </WebShell>
+  );
+}
+
+function HomeWebSideRail({
+  activeTagKey,
+  className = "",
+  dataTestId,
+  onRetryTags,
+  onSelectTag,
+  onSelectTheme,
+  screenState,
+  selectedTheme,
+  showDiscoveryShortcuts,
+  tagOptions,
+  tagState,
+  themes,
+}: {
+  activeTagKey: string | null;
+  className?: string;
+  dataTestId?: string;
+  onRetryTags: () => void;
+  onSelectTag: (tag: RecipeTagItem) => void;
+  onSelectTheme: (themeId: string) => void;
+  screenState: ScreenState;
+  selectedTheme: RecipeTheme | null;
+  showDiscoveryShortcuts: boolean;
+  tagOptions: RecipeTagItem[];
+  tagState: AsyncState;
+  themes: RecipeTheme[];
+}) {
+  if (screenState === "error") {
+    return null;
+  }
+
+  return (
+    <aside
+      aria-label="홈 보조 탐색"
+      className={["web-home-aside", className].filter(Boolean).join(" ")}
+      data-testid={dataTestId}
+    >
+      <section className="web-home-aside-section">
+        <div className="web-home-aside-head">
+          <h2>추천 태그</h2>
+        </div>
+        <HomeTagRail
+          activeTagKey={activeTagKey}
+          onRetry={onRetryTags}
+          onSelectTag={onSelectTag}
+          tagOptions={tagOptions}
+          tagState={tagState}
+          variant="webAside"
+        />
+      </section>
+
+      {showDiscoveryShortcuts && themes.length > 0 ? (
+        <section className="web-home-aside-section">
+          <div className="web-home-aside-head">
+            <h2>이번 주 인기 테마</h2>
+            {selectedTheme ? (
+              <WebButton
+                onClick={() => onSelectTheme(selectedTheme.id)}
+                size="sm"
+                variant="ghost"
+              >
+                전체 보기
+              </WebButton>
+            ) : null}
+          </div>
+          <div className="web-theme-rail web-theme-rail-side">
+            {themes.map((theme, index) => (
+              <button
+                aria-pressed={selectedTheme?.id === theme.id}
+                className={[
+                  "web-theme-card",
+                  selectedTheme?.id === theme.id ? "web-theme-card-active" : "",
+                ].join(" ")}
+                key={theme.id}
+                onClick={() => onSelectTheme(theme.id)}
+                type="button"
+              >
+                <span
+                  className="web-theme-card-thumb"
+                  style={{
+                    backgroundImage: `url(${resolveRecipeImage(theme.recipes[0] ?? { id: String(index) })})`,
+                  }}
+                >
+                  <span className="web-theme-card-overlay">
+                    <span className="web-theme-card-title">{theme.title}</span>
+                    <span className="web-theme-card-count">
+                      {theme.recipes.length}개 레시피
+                    </span>
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </aside>
   );
 }
 
