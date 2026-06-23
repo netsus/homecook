@@ -10,6 +10,7 @@ import {
   compactGrowthNotificationsForDisplay,
   isVisibleGrowthNotification,
 } from "@/lib/gamification-notifications";
+import { createTutorialGuideNotification } from "@/lib/gamification-tutorial-guide";
 import { USER_PROGRESS_XP_GUIDE_ITEMS } from "@/lib/user-progress-xp-policy";
 import achievementIconManifest from "@/public/assets/growth/achievement-icons-v3-4/manifest.json";
 import type {
@@ -238,10 +239,15 @@ function statusLabel(status: UserGamificationAchievementMilestoneData["status"])
   return "잠김";
 }
 
-function notificationToneLabel(type: UserGamificationNotificationData["notification_type"]) {
-  if (type === "level_up") return "레벨업";
-  if (type === "achievement_unlocked") return "업적";
-  if (type === "badge_unlocked") return "배지";
+function isTutorialGuideNotification(item: UserGamificationNotificationData) {
+  return item.payload.tutorial_guide === true;
+}
+
+function notificationToneLabel(item: UserGamificationNotificationData) {
+  if (isTutorialGuideNotification(item)) return "시스템";
+  if (item.notification_type === "level_up") return "레벨업";
+  if (item.notification_type === "achievement_unlocked") return "업적";
+  if (item.notification_type === "badge_unlocked") return "배지";
   return "XP";
 }
 
@@ -249,6 +255,9 @@ function matchesNotificationFilter(
   item: UserGamificationNotificationData,
   filter: NotificationFilter,
 ) {
+  if (isTutorialGuideNotification(item)) {
+    return filter === "system";
+  }
   if (filter === "all") return true;
   if (filter === "achievement") {
     return item.notification_type === "achievement_unlocked" ||
@@ -262,6 +271,19 @@ function matchesNotificationFilter(
     item.notification_type !== "xp_awarded" &&
     item.notification_type !== "achievement_unlocked" &&
     item.notification_type !== "badge_unlocked";
+}
+
+function buildNotificationPanelItems(
+  data: UserGamificationData | null,
+  archiveItems: UserGamificationNotificationData[],
+) {
+  const tutorialGuide = createTutorialGuideNotification(data);
+  const visibleItems = archiveItems.filter(isVisibleGrowthNotification);
+  const items = tutorialGuide
+    ? [tutorialGuide, ...visibleItems.filter((item) => item.id !== tutorialGuide.id)]
+    : visibleItems;
+
+  return compactGrowthNotificationsForDisplay(items);
 }
 
 function toText(value: unknown) {
@@ -946,13 +968,19 @@ function XpGuidePanel() {
 }
 
 function NotificationPanel({ data }: { data: UserGamificationData | null }) {
-  const previewItems = compactGrowthNotificationsForDisplay(
-    (data?.notifications.archive_preview ?? []).filter(isVisibleGrowthNotification),
+  const realPreviewItems = useMemo(
+    () => data?.notifications.archive_preview ?? [],
+    [data?.notifications.archive_preview],
   );
+  const previewItems = useMemo(
+    () => buildNotificationPanelItems(data, realPreviewItems),
+    [data, realPreviewItems],
+  );
+  const hasRealPreviewItems = realPreviewItems.length > 0;
   const [filter, setFilter] = useState<NotificationFilter>("all");
   const [items, setItems] = useState<UserGamificationNotificationData[]>(previewItems);
   const [state, setState] = useState<"loading" | "ready" | "empty" | "error">(
-    previewItems.length > 0 ? "ready" : "loading",
+    hasRealPreviewItems ? "ready" : "loading",
   );
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasNext, setHasNext] = useState(false);
@@ -980,7 +1008,7 @@ function NotificationPanel({ data }: { data: UserGamificationData | null }) {
       if (nextCursor) {
         setLoadingMore(true);
       } else {
-        setState(previewItems.length > 0 ? "ready" : "loading");
+        setState(hasRealPreviewItems ? "ready" : "loading");
       }
 
       try {
@@ -993,14 +1021,14 @@ function NotificationPanel({ data }: { data: UserGamificationData | null }) {
 
         const nextItems = nextCursor
           ? compactGrowthNotificationsForDisplay([...itemsRef.current, ...visibleItems])
-          : visibleItems;
+          : buildNotificationPanelItems(data, visibleItems);
         setItems(nextItems);
         setState(nextItems.length > 0 ? "ready" : "empty");
         setCursor(archive.next_cursor);
         setHasNext(archive.has_next);
       } catch {
         if (!nextCursor && mountedRef.current) {
-          setState(previewItems.length > 0 ? "ready" : "error");
+          setState(hasRealPreviewItems ? "ready" : "error");
         }
       } finally {
         loadingRef.current = false;
@@ -1009,7 +1037,7 @@ function NotificationPanel({ data }: { data: UserGamificationData | null }) {
         }
       }
     },
-    [previewItems.length],
+    [data, hasRealPreviewItems],
   );
 
   useEffect(() => {
@@ -1084,7 +1112,7 @@ function NotificationPanel({ data }: { data: UserGamificationData | null }) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <span className="rounded-full bg-[var(--surface-alpha-70)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--text-2)]">
-                    {notificationToneLabel(item.notification_type)}
+                    {notificationToneLabel(item)}
                   </span>
                   <span className="shrink-0 text-[10px] font-bold text-[var(--text-3)]">
                     {formatDateTime(item.created_at)}

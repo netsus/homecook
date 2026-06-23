@@ -3537,6 +3537,53 @@ Implementation note:
   - Verified: `pnpm exec vitest run tests/home-screen.test.tsx`
   - Verified: `pnpm typecheck`
 
+### 81. 프로필 요약에 남은 마이페이지 이동 링크와 튜토리얼 알림 재확인/장보기 안내 문구가 어색한 문제
+
+- Status: implemented locally in `fix/profile-summary-tutorial-archive`
+- Severity: High
+- Area: UX / Profile Summary / Tutorial / Notification Archive
+- Source: user manual review, planner profile click and tutorial screenshots
+- Problem:
+  - 플래너 등 일부 화면에서 프로필 이미지를 눌렀을 때 프로필 요약 대신 가끔 마이페이지로 이동하는 흐름이 남아 있다.
+  - 프로필 요약 안에도 `마이페이지로 이동` 링크가 남아 있어 사용자가 요약을 보려다 전체 마이페이지로 빠질 수 있다.
+  - 튜토리얼 안내 toast가 사라진 뒤 사용자가 `알림 기록 보기`를 눌러도 시스템 탭에서 현재 튜토리얼 안내를 다시 확인할 수 없다.
+  - 세 번째 튜토리얼인 `첫 장보기 목록 만들기`는 업적명만 보이고, 신규 사용자가 장보기 기능을 어떻게 시작하는지 이해하기 어렵다.
+- User impact:
+  - 현재 화면에서 간단히 알림/튜토리얼을 확인하려는 흐름이 마이페이지 이동으로 끊긴다.
+  - toast를 놓친 신규 사용자는 다음 행동을 다시 찾기 어렵다.
+  - `첫 장보기 목록 만들기`가 무엇을 누르면 되는 행동인지 설명하지 않아 온보딩 안내력이 약하다.
+- Approach decision:
+  - 고치는 게 맞다. 프로필 요약은 현재 화면에 머무르는 compact surface로 정의했으므로 마이페이지 이동 CTA를 제거하는 편이 일관적이다.
+  - 알림 기록의 `시스템` 탭은 실제 archive row뿐 아니라 현재 active tutorial guide도 다시 확인하는 장소로 쓰는 것이 자연스럽다.
+  - 튜토리얼 문구는 서버 quest description보다 제품 안내용 문구를 우선해 초보 사용자가 다음 행동을 알 수 있게 한다.
+- Recommended fix:
+  - `ProfileSummaryPanel`의 guest/loading/error/ready 상태에서 `/mypage` 링크를 제거한다.
+  - `MypageGrowthDetailDialog` notification panel에 current tutorial guide synthetic item을 추가하되, 기존 `전체` archive 목록을 흐리지 않도록 `시스템` 필터에서만 표시한다.
+  - archive API 실패 상태는 synthetic tutorial guide 때문에 숨기지 않고 기존 에러 안내를 유지한다.
+  - 6개 튜토리얼 안내 문구를 너무 길지 않은 행동 중심 문구로 정리한다.
+- Acceptance criteria:
+  - 웹/앱 프로필 요약 패널 안에 `마이페이지로 이동` link/text가 보이지 않는다.
+  - 프로필 요약의 `알림 기록 보기`를 누른 뒤 `시스템` 탭에서 현재 active tutorial guide를 볼 수 있다.
+  - 실제 archive fetch가 실패하면 기존처럼 알림 기록 오류 안내가 보인다.
+  - `첫 장보기 목록 만들기` 튜토리얼은 장보기 준비 진입 흐름을 설명하는 문구로 보인다.
+  - 다른 튜토리얼도 저장 버튼, 플래너 추가, 장보기 체크, 요리 완료, 새 레시피북 생성처럼 사용자가 누를 위치나 행동을 알 수 있는 짧은 문구로 보인다.
+- Likely implementation target:
+  - `components/shared/profile-summary-button.tsx`
+  - `components/mypage/mypage-growth-detail-dialog.tsx`
+  - `lib/gamification-tutorial-guide.ts`
+  - `tests/shared-profile-summary.test.tsx`
+  - `tests/mypage-achievement-album.test.tsx`
+- Verification:
+  - `ProfileSummaryPanel`에서 `next/link` 기반 마이페이지 이동 CTA를 제거했다.
+  - `NotificationPanel`에 current tutorial guide를 synthetic item으로 합치고, `시스템` 필터에서만 노출되게 했다.
+  - archive fetch 실패 상태는 synthetic guide와 독립적으로 유지했다.
+  - 전체 튜토리얼 문구를 실제 사용 경로 중심으로 변경했다.
+  - `tests/shared-profile-summary.test.tsx`에서 마이페이지 링크 제거, 장보기 튜토리얼 문구, 시스템 탭 튜토리얼 재확인을 고정했다.
+  - `tests/gamification-tutorial-guide.test.ts`에서 6개 튜토리얼 문구가 짧은 행동 중심 copy를 쓰는지 고정했다.
+  - `tests/mypage-achievement-album.test.tsx`로 기존 알림 archive 표시와 실패 격리가 깨지지 않는지 확인했다.
+  - Verified: `pnpm exec vitest run tests/shared-profile-summary.test.tsx tests/growth-toast-stack.test.tsx tests/mypage-achievement-album.test.tsx tests/user-gamification-definitions.test.ts`
+  - Verified: `pnpm exec vitest run tests/gamification-tutorial-guide.test.ts tests/shared-profile-summary.test.tsx tests/growth-toast-stack.test.tsx`
+
 ## 보류 항목
 
 아직 없음.

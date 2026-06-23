@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { MypageGrowthDetailDialog } from "@/components/mypage/mypage-growth-detail-dialog";
@@ -351,49 +350,34 @@ function ProfileSummaryPanel({
 }) {
   if (summary.state === "guest") {
     return (
-      <>
-        <div className="profile-summary-head">
-          <div>
-            <strong>로그인이 필요해요</strong>
-            <span>로그인하면 기록과 알림을 볼 수 있어요.</span>
-          </div>
+      <div className="profile-summary-head">
+        <div>
+          <strong>로그인이 필요해요</strong>
+          <span>로그인하면 기록과 알림을 볼 수 있어요.</span>
         </div>
-        <Link className="profile-summary-link" href="/mypage">
-          마이페이지로 이동
-        </Link>
-      </>
+      </div>
     );
   }
 
   if (summary.state === "loading") {
     return (
-      <>
-        <div className="profile-summary-head">
-          <div>
-            <strong>요약을 불러오는 중이에요</strong>
-            <span>잠시만 기다려 주세요.</span>
-          </div>
+      <div className="profile-summary-head">
+        <div>
+          <strong>요약을 불러오는 중이에요</strong>
+          <span>잠시만 기다려 주세요.</span>
         </div>
-        <Link className="profile-summary-link" href="/mypage">
-          마이페이지로 이동
-        </Link>
-      </>
+      </div>
     );
   }
 
   if (summary.state === "error") {
     return (
-      <>
         <div className="profile-summary-head">
           <div>
             <strong>요약을 불러오지 못했어요</strong>
-            <span>마이페이지에서 다시 확인할 수 있어요.</span>
+            <span>잠시 후 다시 열어 주세요.</span>
           </div>
         </div>
-        <Link className="profile-summary-link" href="/mypage">
-          마이페이지로 이동
-        </Link>
-      </>
     );
   }
 
@@ -445,9 +429,6 @@ function ProfileSummaryPanel({
         >
           알림 기록 보기
         </button>
-        <Link className="profile-summary-link" href="/mypage">
-          마이페이지로 이동
-        </Link>
       </div>
     </>
   );

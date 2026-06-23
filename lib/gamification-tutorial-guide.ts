@@ -34,32 +34,32 @@ const TUTORIAL_GUIDE_BY_ACHIEVEMENT_KEY: Record<
   { body: string; questKey: string; title: string }
 > = {
   tutorial_recipe_saved: {
-    body: "다시 만들고 싶은 레시피를 하나 저장해보세요.",
+    body: "레시피의 저장 버튼을 눌러 레시피를 저장해보세요.",
     questKey: "first_recipe_saved",
     title: "마음에 드는 레시피 저장하기",
   },
   tutorial_planner_registered: {
-    body: "오늘 먹을 끼니를 플래너에 하나 등록해보세요.",
+    body: "레시피에서 플래너에 추가를 누르면 플래너에 끼니를 등록할 수 있어요.",
     questKey: "first_planner_registered",
     title: "플래너에 끼니 등록하기",
   },
   tutorial_shopping_list_create: {
-    body: "여러 끼니를 한 번에 장보기할 수 있어요.",
+    body: "플래너에 등록한 끼니에서 장보기를 누르면, 장보기 목록을 만들 수 있어요.",
     questKey: "first_shopping_list_created",
     title: "첫 장보기 목록 만들기",
   },
   tutorial_shopping_list_complete: {
-    body: "식사 준비에 필요한 장보기 리스트를 끝까지 체크해보세요.",
+    body: "장보기 목록에서 구매한 재료는 장보기를 완료하면 팬트리에 반영할 수 있어요.",
     questKey: "first_shopping_done",
     title: "첫 장보기 완료하기",
   },
   tutorial_cooking_complete: {
-    body: "요리 완료를 기록하면 성장에 반영돼요.",
+    body: "장보기 완료한 끼니에서 요리하기를 누르면 요리모드에 들어갈 수 있어요.",
     questKey: "first_cook_done",
     title: "첫 집밥 완료하기",
   },
   tutorial_recipebook_created: {
-    body: "직접 쓸 레시피북을 하나 만들어보세요.",
+    body: "마이페이지에서 나만의 새 레시피북을 만들어보세요.",
     questKey: "first_custom_book_created",
     title: "나만의 레시피북 생성하기",
   },
@@ -133,9 +133,9 @@ export function getNextTutorialGuide(
 
     return {
       achievementKey,
-      body: quest.description ?? guide?.body ?? `${quest.title}부터 차근차근 시작해 보세요.`,
+      body: guide?.body ?? quest.description ?? `${quest.title}부터 차근차근 시작해 보세요.`,
       questKey: quest.quest_key,
-      title: quest.title ?? guide?.title ?? "다음 튜토리얼 퀘스트",
+      title: guide?.title ?? quest.title ?? "다음 튜토리얼 퀘스트",
     };
   }
 
@@ -146,8 +146,8 @@ export function getNextTutorialGuide(
     guide?.questKey ??
     TUTORIAL_QUEST_KEY_BY_ACHIEVEMENT_KEY[step.achievement_key] ??
     null;
-  const title = quest?.title ?? guide?.title ?? step.title ?? "다음 튜토리얼 퀘스트";
-  const body = quest?.description ?? guide?.body ?? `${title}부터 차근차근 시작해 보세요.`;
+  const title = guide?.title ?? quest?.title ?? step.title ?? "다음 튜토리얼 퀘스트";
+  const body = guide?.body ?? quest?.description ?? `${title}부터 차근차근 시작해 보세요.`;
 
   return {
     achievementKey: step.achievement_key,

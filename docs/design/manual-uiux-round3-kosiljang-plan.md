@@ -166,3 +166,4 @@ Detailed entries live in `docs/design/manual-uiux-review-fix-plan.md`.
 | 78 | 웹 홈 오른쪽 추천 레일이 레시피 목록 시작 위치를 과하게 밀어내는 문제 | implemented locally in `fix/home-right-rail-gap` |
 | 79 | 프로필 요약에서 연 알림 기록 모달이 화면 위로 잘리고 닫기 어려운 문제 | implemented locally in `fix/home-right-rail-gap` |
 | 80 | 첫 튜토리얼 완료 후 두 번째 튜토리얼 안내가 토스트/프로필 요약에 뜨지 않는 문제 | implemented locally in `fix/home-right-rail-gap` |
+| 81 | 프로필 요약에 남은 마이페이지 이동 링크와 튜토리얼 알림 재확인/장보기 안내 문구가 어색한 문제 | implemented locally in `fix/profile-summary-tutorial-archive` |
