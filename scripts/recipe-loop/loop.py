@@ -1768,9 +1768,11 @@ def split_expected_count(split: str) -> int:
 
 
 def deterministic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[bool, dict]:
+    # 구조 무결성만 하드 게이트로 둔다. 재료/분량/단계 같은 품질 지표는
+    # 글자 매칭의 거짓 감점(예: 링귀네면↔링귀니, 간장↔진간장)에 취약해 advisory로 내리고,
+    # 재료/단계 정확성은 의미 judge(ingredient_score/step_score)가 게이팅한다.
     hard_checks = {
         "summary_success": aggregate.get("success") is True,
-        "ingredientF1": (aggregate.get("ingredientF1") or 0) >= cfg.det_f1_min,
         "recipeCountMatchRate": (aggregate.get("recipeCountMatchRate") or 0) >= cfg.det_recipe_count_min,
         "missing_result_count": (aggregate.get("missing_result_count") or 0) == 0,
         "missing_golden_count": (aggregate.get("missing_golden_count") or 0) == 0,
@@ -1778,6 +1780,7 @@ def deterministic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[
         "expected_count_mismatch": aggregate.get("expected_count_mismatch") is False,
     }
     advisory_checks = {
+        "ingredientF1": (aggregate.get("ingredientF1") or 0) >= cfg.det_f1_min,
         "amountMatchRate": (aggregate.get("amountMatchRate") or 0) >= cfg.det_amount_min,
         "stepCoverage": (aggregate.get("stepCoverage") or 0) >= cfg.det_step_min,
     }
