@@ -3419,6 +3419,124 @@ Implementation note:
   - `tests/nickname-onboarding-screen.test.tsx`에서 loading skeleton과 설명 줄바꿈을 고정했다.
   - Verified: `pnpm exec vitest run tests/home-screen.test.tsx tests/nickname-onboarding-screen.test.tsx`
 
+### 78. 웹 홈 오른쪽 추천 레일이 레시피 목록 시작 위치를 과하게 밀어내는 문제
+
+- Status: implemented locally in `fix/home-right-rail-gap`
+- Severity: Medium
+- Area: UX / Web Home / Layout / Discovery
+- Source: user manual review, deployed web home screenshot after item 76
+- Problem:
+  - 76번 수정 후 `추천 태그`와 `이번 주 인기 테마`는 검색창 오른쪽으로 올라왔지만, 오른쪽 레일이 discovery section의 normal flow 안에 있어 그 높이만큼 왼쪽 퀵슬롯 아래에 큰 빈 공간이 생겼다.
+  - 레시피 목록이 퀵슬롯 바로 아래가 아니라 오른쪽 레일 하단 기준으로 내려가, 홈 첫 화면이 느슨하고 의도보다 비어 보인다.
+- User impact:
+  - 검색/퀵슬롯 다음에 바로 레시피를 훑고 싶은 흐름이 끊긴다.
+  - 넓은 화면에서 오른쪽 공간을 활용하려던 수정이 오히려 왼쪽 main column의 큰 공백으로 보인다.
+- Approach decision:
+  - 고치는 게 맞다. 오른쪽 보조 탐색은 검색 라인과 연결되어야 하지만, 그 높이가 main recipe flow의 시작점을 결정하면 안 된다.
+  - 오른쪽 레일을 검색 layout의 자식에서 본문 grid의 aside area로 옮기고, 데스크톱에서만 음수 margin으로 검색 라인까지 끌어올린다.
+- Recommended fix:
+  - `HomeWebSideRail`은 `web-home-content-grid`의 `aside` grid area로 렌더링한다.
+  - `web-all-recipes`는 `recipes` grid area에 두어 퀵슬롯 아래에서 자연스럽게 시작한다.
+  - 데스크톱에서는 `.web-home-aside-top`을 검색 라인까지 올리고, 1180px 이하에서는 margin을 제거해 `aside -> recipes` 순서로 접는다.
+- Acceptance criteria:
+  - 웹 홈에서 레시피 목록 제목은 왼쪽 퀵슬롯 아래에 과한 빈 공간 없이 나타난다.
+  - `추천 태그`와 `이번 주 인기 테마`는 오른쪽 column에 유지되고 검색 라인 근처에서 시작한다.
+  - 오른쪽 레일 높이가 레시피 목록 전체 시작 위치를 밀어내지 않는다.
+  - 1180px 이하에서는 aside가 본문 위에 자연스럽게 쌓이고 모바일 홈 배치는 변경되지 않는다.
+- Likely implementation target:
+  - `components/home/home-screen.tsx`
+  - `app/globals.css`
+  - `tests/home-screen.test.tsx`
+- Verification:
+  - `HomeWebSideRail`을 검색 layout에서 본문 content grid의 aside area로 이동했다.
+  - `.web-home-content-grid`가 recipes/aside grid area를 갖도록 조정하고, 데스크톱 aside만 검색 라인 근처로 끌어올렸다.
+  - `tests/home-screen.test.tsx`에서 오른쪽 레일이 검색 layout이 아니라 content grid 안에 렌더링되는지 고정했다.
+  - Verified: `pnpm exec vitest run tests/home-screen.test.tsx`
+  - Verified: `pnpm test:e2e:visual:web-core`
+  - Verified: `pnpm test:e2e:visual:app-core`
+
+### 79. 프로필 요약에서 연 알림 기록 모달이 화면 위로 잘리고 닫기 어려운 문제
+
+- Status: implemented locally in `fix/home-right-rail-gap`
+- Severity: High
+- Area: UX / Profile Summary / Notifications / Modal
+- Source: user manual review, deployed web home screenshot after opening notifications from profile summary
+- Problem:
+  - 프로필 요약에서 `알림 기록 보기`를 누르면 알림 기록 모달의 상단이 화면 밖으로 밀려 제목과 닫기 버튼이 보이지 않는다.
+  - ESC를 누르지 않으면 사용자가 모달을 닫기 어렵고, 긴 알림 목록에서는 닫기 버튼이 스크롤 내용과 함께 사라질 수 있다.
+- User impact:
+  - 알림을 확인한 뒤 원래 화면으로 돌아가는 기본 흐름이 막힌다.
+  - 사용자는 팝업이 고장 났거나 페이지가 멈춘 것으로 오해할 수 있다.
+- Approach decision:
+  - 고치는 게 맞다. 알림 기록은 현재 페이지 위에 뜨는 전역 모달이어야 하며, 닫기 버튼은 항상 화면 안에 있어야 한다.
+  - 프로필 요약 컴포넌트 내부에 모달을 그대로 두지 않고 `document.body` 포털로 렌더링해 부모 레이아웃/스크롤의 영향을 끊는다.
+  - 모달 패널은 `헤더 + 스크롤 본문`으로 분리해 긴 알림 목록에서도 제목과 닫기 버튼이 사라지지 않게 한다.
+- Recommended fix:
+  - `MypageGrowthDetailDialog`를 body-level portal로 렌더링한다.
+  - 패널 전체가 아니라 본문 영역만 세로 스크롤되게 한다.
+  - backdrop pointer press와 닫기 버튼, ESC가 모두 동일하게 `onClose`를 호출하게 유지한다.
+- Acceptance criteria:
+  - 프로필 요약에서 알림 기록을 열면 overlay가 `document.body` 아래에 렌더링된다.
+  - 알림 기록 모달의 제목과 닫기 버튼은 긴 목록에서도 스크롤 영역 밖에 유지된다.
+  - 바깥 배경 클릭/탭으로 모달이 닫힌다.
+  - 웹/앱 프로필 요약 경로 모두 현재 페이지에서 알림 기록 모달을 열고 닫을 수 있다.
+- Likely implementation target:
+  - `components/mypage/mypage-growth-detail-dialog.tsx`
+  - `tests/shared-profile-summary.test.tsx`
+- Verification:
+  - `MypageGrowthDetailDialog`를 `document.body` portal로 렌더링하게 변경했다.
+  - 모달 패널을 `헤더 + 스크롤 본문` 구조로 분리해 닫기 버튼이 목록 스크롤에 밀려 사라지지 않게 했다.
+  - `tests/shared-profile-summary.test.tsx`에서 웹/모바일 프로필 요약 경로의 body-level modal, persistent header, backdrop close를 고정했다.
+  - Verified: `pnpm exec vitest run tests/shared-profile-summary.test.tsx tests/mypage-achievement-album.test.tsx tests/growth-toast-stack.test.tsx`
+  - Verified: `pnpm exec playwright test tests/e2e/slice-34c-growth-notification.spec.ts --project=desktop-chrome --grep "opens the notification archive from the profile"`
+
+### 80. 첫 튜토리얼 완료 후 두 번째 튜토리얼 안내가 토스트/프로필 요약에 뜨지 않는 문제
+
+- Status: implemented locally in `fix/home-right-rail-gap`
+- Severity: High
+- Area: UX / Onboarding / Tutorial Quest / Notification / Profile Summary
+- Source: user manual review after signup and first tutorial quest completion
+- Problem:
+  - 회원가입 후 첫 튜토리얼 퀘스트를 완료해도 두 번째 퀘스트 안내 토스트가 뜨지 않는다.
+  - 프로필 요약의 `튜토리얼 안내`도 두 번째 퀘스트 내용으로 바뀌지 않는다.
+- Root cause:
+  - 서버의 `tutorial.active_steps`가 업적 앨범의 `tutorial` 트랙 활성 상태에 의존했다.
+  - 튜토리얼 업적 6개가 같은 `tutorial` 트랙으로 묶여 있어 첫 업적이 earned가 되면 다음 업적이 active로 승격되지 않고 `active_steps`가 비거나 첫 단계에 머물 수 있었다.
+  - 프로필 요약은 source action 후 발생하는 gamification refresh 이벤트를 듣지 않아 같은 화면에서 로드된 요약이 오래된 상태로 남았다.
+- User impact:
+  - 가입 직후 가장 중요한 온보딩 진행감이 끊긴다.
+  - 사용자는 다음에 무엇을 해야 하는지 알 수 없고, 프로필 요약의 튜토리얼 안내도 신뢰하기 어렵다.
+- Approach decision:
+  - 고치는 게 맞다. 튜토리얼은 완료한 단계 다음 단계를 즉시 안내해야 하며, 토스트와 프로필 요약이 같은 다음 퀘스트를 가리켜야 한다.
+  - 서버는 `active_steps`를 업적 트랙 상태가 아니라 튜토리얼 퀘스트 정의 순서 기준으로 생성한다.
+  - 클라이언트는 기존/캐시 응답에서 `active_steps`가 비어도 `quests.active`의 다음 튜토리얼 퀘스트로 보정한다.
+  - 프로필 요약은 `HOMECOOK_GAMIFICATION_REFRESH_EVENT`를 듣고 progress/gamification 요약을 조용히 갱신한다.
+- Recommended fix:
+  - `buildUserGamificationData`의 `tutorial.active_steps`를 active tutorial quest 순서 기반으로 생성한다.
+  - `getNextTutorialGuide`에 active quest fallback을 추가한다.
+  - `GrowthToastStack`에서 새 synthetic tutorial guide가 들어오면 이전 synthetic tutorial guide toast를 교체한다.
+  - `ProfileSummaryButton`에서 gamification refresh 이벤트 수신 시 `fetchUserProgress`, `fetchUserGamification`을 다시 호출해 현재 열린 요약도 갱신한다.
+- Acceptance criteria:
+  - 첫 튜토리얼 업적 완료 후 API 응답의 `tutorial.active_steps[0]`는 `tutorial_planner_registered`가 된다.
+  - 첫 단계 토스트가 떠 있던 상태에서 refresh가 오면 두 번째 튜토리얼 토스트가 표시된다.
+  - 프로필 요약을 열어둔 상태에서도 refresh 후 `튜토리얼 안내`가 두 번째 퀘스트 내용으로 바뀐다.
+  - `active_steps`가 비어 있어도 `quests.active`에 다음 튜토리얼 퀘스트가 있으면 토스트/프로필 요약은 그 퀘스트를 안내한다.
+- Likely implementation target:
+  - `lib/server/user-gamification.ts`
+  - `lib/gamification-tutorial-guide.ts`
+  - `components/gamification/growth-toast-stack.tsx`
+  - `components/shared/profile-summary-button.tsx`
+  - `tests/user-gamification-definitions.test.ts`
+  - `tests/growth-toast-stack.test.tsx`
+  - `tests/shared-profile-summary.test.tsx`
+- Verification:
+  - `tests/user-gamification-definitions.test.ts`에서 첫 튜토리얼 완료 후 다음 active step이 `tutorial_planner_registered`로 내려오는지 고정했다.
+  - `tests/growth-toast-stack.test.tsx`에서 첫 단계 토스트 후 refresh로 두 번째 튜토리얼 안내가 뜨는지 고정했다.
+  - `tests/shared-profile-summary.test.tsx`에서 active quest fallback과 프로필 요약 refresh 갱신을 고정했다.
+  - Verified: `pnpm exec vitest run tests/user-gamification-definitions.test.ts tests/user-achievement-awards.test.ts tests/user-gamification-events.test.ts tests/user-gamification-notification-priority.test.ts tests/growth-toast-stack.test.tsx tests/shared-profile-summary.test.tsx`
+  - Verified: `pnpm exec vitest run tests/home-screen.test.tsx`
+  - Verified: `pnpm typecheck`
+
 ## 보류 항목
 
 아직 없음.

@@ -163,3 +163,6 @@ Detailed entries live in `docs/design/manual-uiux-review-fix-plan.md`.
 | 75 | 튜토리얼 퀘스트 안내가 첫 단계부터 순서대로 이어지지 않는 문제 | implemented in `fix/profile-notifications-inline-modal` |
 | 76 | 웹 홈 추천 태그와 인기 테마가 검색창 라인보다 낮아 오른쪽 상단이 비어 보이는 문제 | implemented in `fix/profile-notifications-inline-modal` |
 | 77 | 닉네임 온보딩 진입 전 프로필 확인 로딩 문구가 빠르게 사라져 어색한 문제 | implemented in `fix/profile-notifications-inline-modal` |
+| 78 | 웹 홈 오른쪽 추천 레일이 레시피 목록 시작 위치를 과하게 밀어내는 문제 | implemented locally in `fix/home-right-rail-gap` |
+| 79 | 프로필 요약에서 연 알림 기록 모달이 화면 위로 잘리고 닫기 어려운 문제 | implemented locally in `fix/home-right-rail-gap` |
+| 80 | 첫 튜토리얼 완료 후 두 번째 튜토리얼 안내가 토스트/프로필 요약에 뜨지 않는 문제 | implemented locally in `fix/home-right-rail-gap` |
