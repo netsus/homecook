@@ -3020,7 +3020,7 @@ Implementation note:
 
 ### 68. 정식 배포 전 공식 식품 데이터 기반 ingredient DB 적재가 필요한 문제
 
-- Status: investigated; direct DB write deferred
+- Status: production load plan confirmed; execution gated
 - Severity: High
 - Area: Data Quality / Pantry / Ingredient DB
 - Source: user manual review, production readiness concern
@@ -3053,6 +3053,9 @@ Implementation note:
   - 생성된 `approved-seed-promotion-artifact.json`의 `seed_rows`는 0개였다. 모든 row가 `pending_review`라서, 기존 안전장치상 직접 DB 적재하지 않는 것이 맞다.
   - 기존 workpack `docs/workpacks/28-external-ingredient-data-ingest-gate/README.md`에 review decision 기반 승인 절차와 첫 approved seed promotion migration이 이미 정리되어 있음을 확인했다.
   - Direct DB write: not run. 이유는 공식 원본 row 검수/승인 없이 bulk insert하면 팬트리 검색 품질을 깨뜨릴 수 있고, 현재 게이트가 의도적으로 production write를 막고 있기 때문이다.
+  - 정식 배포 전 운영 적재 계획을 `docs/workpacks/28-external-ingredient-data-ingest-gate/launch-ingredient-db-load-plan-2026-06-24.md`로 확정했다.
+  - 2026-06-24 기준 공공데이터포털 표준데이터와 RDA OpenAPI 안내를 재확인했고, source/license evidence를 production promotion 전에 artifact로 보존하도록 계획에 반영했다.
+  - 현재 공식 category 계약은 `과일` 포함 v1 canonical 8종인데 slice 28 dry-run script는 7종 allowlist를 내부 보유하고 있어, launch-sized load 전 category alignment 또는 fruit row 보류를 blocker로 명시했다.
   - Verified: `pnpm exec vitest run tests/external-ingredient-live-fetch-script.test.ts tests/external-ingredient-file-dry-run-script.test.ts tests/external-ingredient-ingest.test.ts`
   - Verified: `pnpm typecheck`
   - Verified: `pnpm lint`

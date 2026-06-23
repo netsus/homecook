@@ -252,6 +252,12 @@ Stage 2가 DB staging table을 선택하면 `docs/db설계` 영향 기록이 필
 5. approved row만 seed promotion artifact에 들어간다.
 6. 별도 승인된 seed migration 또는 controlled import script가 production 반영을 수행한다.
 
+## Launch Load Plan
+
+- Manual UI/UX round3 68번의 정식 배포 전 ingredient DB 보강 계획은 `launch-ingredient-db-load-plan-2026-06-24.md`를 따른다.
+- 현재 공식 category 계약은 `과일` 포함 v1 canonical 8종이므로, launch-sized load 전에 external ingredient dry-run tooling을 shared category source에 맞추거나 fruit-like row를 promotion에서 보류해야 한다.
+- 이 workpack의 기존 원칙은 유지한다: review 없는 production 직적재 금지, approved seed promotion artifact 우선, idempotent migration만 허용.
+
 ## Delivery Checklist
 
 > 이 체크리스트는 Stage 2~6 동안 갱신하는 living closeout 문서다.

@@ -153,7 +153,7 @@ Detailed entries live in `docs/design/manual-uiux-review-fix-plan.md`.
 | 65 | 팬트리 재료추가 검색이 선택된 카테고리 안에서만 동작해 결과를 숨기는 문제 | implemented |
 | 66 | 팬트리 재료추가 선택 칩이 검색 결과 변경 시 사라지는 문제 | implemented |
 | 67 | 웹/앱 팬트리에서 같은 재료의 시각 표시가 서로 다르게 보이는 문제 | implemented |
-| 68 | 정식 배포 전 공식 식품 데이터 기반 ingredient DB 적재가 필요한 문제 | investigated; direct DB write deferred |
+| 68 | 정식 배포 전 공식 식품 데이터 기반 ingredient DB 적재가 필요한 문제 | production load plan confirmed; execution gated |
 | 69 | 마이페이지 로딩 중 먼저 로드된 아래 섹션이 위 섹션 완료에 따라 밀리는 문제 | implemented |
 | 70 | 404 페이지에서 보낸 사용자 피드백을 admin에서 별도 탭으로 확인할 수 없는 문제 | implemented |
 | 71 | 모든 재료가 팬트리에 있을 때 장보기목록 생성 선택권이 없는 문제 | implemented in `fix/shopping-empty-list-choice` |
