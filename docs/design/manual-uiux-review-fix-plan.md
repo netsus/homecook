@@ -3020,7 +3020,7 @@ Implementation note:
 
 ### 68. 정식 배포 전 공식 식품 데이터 기반 ingredient DB 적재가 필요한 문제
 
-- Status: production load plan confirmed; execution gated
+- Status: production load plan confirmed; category alignment implemented; execution gated
 - Severity: High
 - Area: Data Quality / Pantry / Ingredient DB
 - Source: user manual review, production readiness concern
@@ -3055,8 +3055,9 @@ Implementation note:
   - Direct DB write: not run. 이유는 공식 원본 row 검수/승인 없이 bulk insert하면 팬트리 검색 품질을 깨뜨릴 수 있고, 현재 게이트가 의도적으로 production write를 막고 있기 때문이다.
   - 정식 배포 전 운영 적재 계획을 `docs/workpacks/28-external-ingredient-data-ingest-gate/launch-ingredient-db-load-plan-2026-06-24.md`로 확정했다.
   - 2026-06-24 기준 공공데이터포털 표준데이터와 RDA OpenAPI 안내를 재확인했고, source/license evidence를 production promotion 전에 artifact로 보존하도록 계획에 반영했다.
-  - 현재 공식 category 계약은 `과일` 포함 v1 canonical 8종인데 slice 28 dry-run script는 7종 allowlist를 내부 보유하고 있어, launch-sized load 전 category alignment 또는 fruit row 보류를 blocker로 명시했다.
-  - Verified: `pnpm exec vitest run tests/external-ingredient-live-fetch-script.test.ts tests/external-ingredient-file-dry-run-script.test.ts tests/external-ingredient-ingest.test.ts`
+  - dry-run script의 category allowlist를 `과일` 포함 v1 canonical 8종으로 정렬했고, RDA `H` 과일류와 `E` 견과류/종실류를 `과일`로 매핑하게 했다.
+  - live fetch credential은 `.env.local` 또는 현재 shell environment에 `DATA_GO_KR_API_KEY` 하나만 넣으면 MFDS와 RDA 공공데이터포털 endpoint에서 같이 쓰도록 정리했다.
+  - Verified: `pnpm exec vitest run tests/external-ingredient-live-fetch-script.test.ts tests/external-ingredient-file-dry-run-script.test.ts tests/external-ingredient-ingest.test.ts tests/ingredient-categories.test.ts`
   - Verified: `pnpm typecheck`
   - Verified: `pnpm lint`
   - Verified: `git diff --check`

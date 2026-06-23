@@ -2,7 +2,7 @@
 
 ## Goal
 
-식약처, 농식품올바로 등 외부 재료 데이터를 운영 `ingredients`로 바로 넣지 않고, 파일 기반 batch import -> staging -> deterministic normalization -> review -> approved seed promotion 경로로만 들여오는 안전장치를 만든다. 이 슬라이스는 한국인이 자주 쓰는 재료/동의어를 넓히기 위한 후속 기반이며, public API shape, legacy 7 ingredient category 계약, YouTube import 계약을 깨지 않는다.
+식약처, 농식품올바로 등 외부 재료 데이터를 운영 `ingredients`로 바로 넣지 않고, 파일 기반 batch import -> staging -> deterministic normalization -> review -> approved seed promotion 경로로만 들여오는 안전장치를 만든다. 이 슬라이스는 한국인이 자주 쓰는 재료/동의어를 넓히기 위한 후속 기반이며, public API shape, v1 canonical 8 ingredient category 계약, YouTube import 계약을 깨지 않는다.
 
 ## Branches
 
@@ -15,7 +15,7 @@
 - 외부 데이터 1차 실행 형태: API key 기반 live fetch가 아니라 파일 export/import 기반 batch seed review
 - 데이터 소스: 식약처, 농식품올바로, 기타 공개/승인된 재료명 데이터 export 파일
 - 입력: CSV/JSON/TSV 같은 로컬 파일 fixture 또는 sample export
-- 처리: 원문 row 보존, deterministic normalization, duplicate 후보 탐지, legacy 7 category 후보 추론, synonym 후보 생성
+- 처리: 원문 row 보존, deterministic normalization, duplicate 후보 탐지, v1 canonical 8 category 후보 추론, synonym 후보 생성
 - 검수: `pending_review`, `approved`, `rejected`, `needs_source_check` 같은 review status gate
 - 산출: seed promotion 전 candidate report와 approved-only promotion artifact
 - DB 영향: Stage 2에서 staging table 또는 file-backed staging artifact 중 하나를 구현하되, production `ingredients` / `ingredient_synonyms` 자동 삽입 금지
@@ -27,7 +27,7 @@
 - 외부 데이터를 운영 `ingredients` / `ingredient_synonyms`에 자동 직적재
 - API key를 사용하는 live fetch를 기본 CI/Stage 2 경로로 채택
 - LLM/model 기반 재료명 정규화 또는 카테고리 추론
-- legacy 7 ingredient category 확장 또는 replacement
+- v1 canonical 8 ingredient category replacement
 - `ingredient_categories` public registry/FK cutover
 - `GET /ingredients`에 `category_code`, `category_label`, `legacy_category_label` 같은 additive field 노출
 - `GET /cooking-methods` 응답 확장
@@ -58,7 +58,7 @@
 - 신규 public endpoint 없음
 - 기존 public API response shape 변경 없음
 - `{ success, data, error }` envelope 원칙 유지
-- `ingredients.category`는 legacy 7종 label 계약 유지: `채소`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`
+- `ingredients.category`는 v1 canonical 8종 label 계약 유지: `채소`, `과일`, `육류`, `해산물`, `양념`, `유제품`, `곡류`, `기타`
 - YouTube ingredient registration category validation은 기존 shared source 기준 유지
 
 ### Data Boundary
@@ -95,7 +95,7 @@ Live provider fetch smoke는 다음 명령으로 실행한다:
 pnpm external:ingredients:live-fetch -- --providers mfds,rda --output-dir .artifacts/external-ingredient-ingest/live-public-data-2026-05-29 --generated-at 2026-05-29T00:00:00.000Z --rda-groups A --mfds-rows 5 --rda-page-size 5
 ```
 
-이 명령은 `.env.local`의 `DATA_GO_KR_API_KEY`를 읽고, RDA 전용 키가 없으면 RDA 공공데이터포털 API에도 같은 key를 fallback으로 사용한다. 결과는 `live-fetch-report.json`, `live-source-export.json`, `live-fetch-summary.md`에 남기며 production DB write는 하지 않는다.
+이 명령은 MFDS와 RDA 모두 `.env.local`의 `DATA_GO_KR_API_KEY`를 사용한다. 결과는 `live-fetch-report.json`, `live-source-export.json`, `live-fetch-summary.md`에 남기며 production DB write는 하지 않는다.
 
 검수 후 seed promotion artifact를 만들 때는 먼저 `candidate-report.json`에서 승인할 `source_fingerprint`를 고른 뒤 review decision 파일을 만든다:
 
@@ -155,7 +155,7 @@ pnpm external:ingredients:dry-run -- --input .artifacts/external-ingredient-inge
 | 파일 포맷 불일치 | row-level 또는 file-level validation error report |
 | 필수 source metadata 없음 | import 차단 |
 | 원문 재료명 없음 | row rejected |
-| legacy 7 category 후보 없음 | pending review |
+| v1 canonical 8 category 후보 없음 | pending review |
 | duplicate 후보 충돌 | pending review, 자동 승격 금지 |
 | source 이용 조건 미확인 | needs_source_check |
 | seed artifact 중복 생성 | idempotency guard로 skip |
@@ -227,7 +227,7 @@ Stage 2가 DB staging table을 선택하면 `docs/db설계` 영향 기록이 필
 3. raw row 보존
 4. deterministic normalization only
 5. LLM/model normalization 금지
-6. legacy 7 category compatibility 유지
+6. v1 canonical 8 category compatibility 유지
 7. review status 승인 전 seed promotion 금지
 8. approved-only promotion artifact
 9. idempotent rerun
@@ -255,7 +255,7 @@ Stage 2가 DB staging table을 선택하면 `docs/db설계` 영향 기록이 필
 ## Launch Load Plan
 
 - Manual UI/UX round3 68번의 정식 배포 전 ingredient DB 보강 계획은 `launch-ingredient-db-load-plan-2026-06-24.md`를 따른다.
-- 현재 공식 category 계약은 `과일` 포함 v1 canonical 8종이므로, launch-sized load 전에 external ingredient dry-run tooling을 shared category source에 맞추거나 fruit-like row를 promotion에서 보류해야 한다.
+- 현재 공식 category 계약은 `과일` 포함 v1 canonical 8종이므로, external ingredient dry-run tooling도 `과일`과 RDA fruit/nut group을 같은 기준으로 처리해야 한다.
 - 이 workpack의 기존 원칙은 유지한다: review 없는 production 직적재 금지, approved seed promotion artifact 우선, idempotent migration만 허용.
 
 ## Delivery Checklist

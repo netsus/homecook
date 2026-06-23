@@ -22,7 +22,16 @@ const EXTERNAL_INGREDIENT_REVIEW_STATUSES = new Set([
   "needs_source_check",
 ]);
 
-const INGREDIENT_CATEGORY_LABELS = new Set(["채소", "육류", "해산물", "양념", "유제품", "곡류", "기타"]);
+const INGREDIENT_CATEGORY_LABELS = new Set([
+  "채소",
+  "과일",
+  "육류",
+  "해산물",
+  "양념",
+  "유제품",
+  "곡류",
+  "기타",
+]);
 const EMPTY_LEVEL_VALUES = new Set(["", "0", "00", "해당없음", "해당 없음", "기타"]);
 const GENERIC_LEVEL_NAMES = new Set(["파"]);
 
@@ -151,7 +160,8 @@ function inferLegacyCategoryFromDataGoKrNutritionRow(row) {
     return "육류";
   }
   if (/우유|유제품|유가공|치즈|버터|크림/.test(categoryText)) return "유제품";
-  if (/곡류|쌀|현미|보리|밀|두류|서류|감자|고구마|전분|견과|종실|콩류/.test(categoryText)) {
+  if (/과일|과실|견과|종실/.test(categoryText)) return "과일";
+  if (/곡류|쌀|현미|보리|밀|두류|서류|감자|고구마|전분|콩류/.test(categoryText)) {
     return "곡류";
   }
   if (/채소|버섯|나물|엽채|근채|양파|마늘|대파|쪽파|고추|배추/.test(categoryText)) {
@@ -188,11 +198,14 @@ function inferLegacyCategoryFromRdaFoodGroup(row) {
     return "육류";
   }
   if (groupCode === "M" || /우유|유제품/.test(groupName)) return "유제품";
-  if (["A", "B", "D", "E"].includes(groupCode ?? "") || /곡류|감자|전분|두류|견과/.test(groupName)) {
+  if (groupCode === "H" || groupCode === "E" || /과일|과실|견과|종실/.test(groupName)) {
+    return "과일";
+  }
+  if (["A", "B", "D"].includes(groupCode ?? "") || /곡류|감자|전분|두류/.test(groupName)) {
     return "곡류";
   }
   if (groupCode === "F" || groupCode === "G" || /채소|버섯/.test(groupName)) return "채소";
-  if (groupCode === "N" || groupCode === "R" || /유지|조미료/.test(groupName)) return "양념";
+  if (["C", "N", "R"].includes(groupCode ?? "") || /당류|유지|조미료/.test(groupName)) return "양념";
 
   return "기타";
 }

@@ -22,7 +22,7 @@
 ## Normalization / Candidate Generation
 
 - [x] deterministic normalization helper가 원문명 -> normalized candidate를 산출한다 <!-- omo:id=accept-deterministic-normalization;stage=2;scope=backend;review=3,6 -->
-- [x] legacy 7 category 후보만 사용한다 <!-- omo:id=accept-legacy-7-category-compat;stage=2;scope=backend;review=3,6 -->
+- [x] v1 canonical 8 category 후보만 사용한다 <!-- omo:id=accept-canonical-8-category-compat;stage=2;scope=backend;review=3,6 -->
 - [x] category candidate에는 confidence/reason code가 포함된다 <!-- omo:id=accept-category-reason-code;stage=2;scope=backend;review=3,6 -->
 - [x] duplicate 후보가 exact match, folded match, synonym candidate로 구분된다 <!-- omo:id=accept-duplicate-detection;stage=2;scope=backend;review=3,6 -->
 - [x] synonym 후보는 canonical 승인 전 production 반영 대상이 아니다 <!-- omo:id=accept-synonym-candidate-only;stage=2;scope=backend;review=3,6 -->

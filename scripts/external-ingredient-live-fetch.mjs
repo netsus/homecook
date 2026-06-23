@@ -68,21 +68,11 @@ function envValue(name, localEnv) {
   return process.env[name] || localEnv[name] || "";
 }
 
-function resolveKey(provider, localEnv) {
-  const candidates =
-    provider === "rda"
-      ? ["KOREANFOOD_RDA_API_KEY", "FOODSERVICE_API_KEY", "DATA_GO_KR_API_KEY"]
-      : ["DATA_GO_KR_API_KEY"];
+function resolvePublicDataPortalKey(localEnv) {
+  const keySource = "DATA_GO_KR_API_KEY";
+  const key = envValue(keySource, localEnv);
 
-  for (const candidate of candidates) {
-    const value = envValue(candidate, localEnv);
-
-    if (value) {
-      return { key: value, keySource: candidate };
-    }
-  }
-
-  return { key: "", keySource: null };
+  return key ? { key, keySource } : { key: "", keySource: null };
 }
 
 function buildPublicDataUrl(endpoint, key, params) {
@@ -451,7 +441,7 @@ async function main() {
   };
 
   if (providers.includes("mfds")) {
-    const { key, keySource } = resolveKey("mfds", localEnv);
+    const { key, keySource } = resolvePublicDataPortalKey(localEnv);
 
     if (!key && !mockDir) {
       providerResults.push({
@@ -471,7 +461,7 @@ async function main() {
   }
 
   if (providers.includes("rda")) {
-    const { key, keySource } = resolveKey("rda", localEnv);
+    const { key, keySource } = resolvePublicDataPortalKey(localEnv);
 
     if (!key && !mockDir) {
       providerResults.push({
@@ -481,7 +471,7 @@ async function main() {
         endpoint: RDA_ENDPOINT,
         rows: 0,
         error_code: "missing_key",
-        error_message: "KOREANFOOD_RDA_API_KEY, FOODSERVICE_API_KEY, or DATA_GO_KR_API_KEY is required.",
+        error_message: "DATA_GO_KR_API_KEY is required.",
       });
     } else {
       for (const groupCode of rdaGroups) {
