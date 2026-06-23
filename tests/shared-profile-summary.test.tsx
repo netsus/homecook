@@ -204,6 +204,42 @@ describe("ProfileSummaryButton", () => {
     })).toBeTruthy();
   });
 
+  it("does not expose mypage navigation links from the ready summary panel", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ProfileSummaryButton
+        gamification={GAMIFICATION}
+        isAuthenticated
+        profile={PROFILE}
+        progress={PROGRESS}
+        variant="web"
+      />,
+    );
+
+    await user.click(screen.getByTestId("web-profile-summary-button"));
+
+    const dialog = screen.getByRole("dialog", { name: "마이페이지 요약" });
+    expect(within(dialog).queryByRole("link", { name: "마이페이지로 이동" })).toBeNull();
+    expect(within(dialog).queryByText("마이페이지로 이동")).toBeNull();
+  });
+
+  it("does not expose mypage navigation links from guest and loading summary panels", async () => {
+    const user = userEvent.setup();
+
+    const guest = render(<ProfileSummaryButton isAuthenticated={false} variant="mobile" />);
+    await user.click(screen.getByTestId("mobile-profile-summary-button"));
+    expect(screen.queryByRole("link", { name: "마이페이지로 이동" })).toBeNull();
+    expect(screen.queryByText("마이페이지로 이동")).toBeNull();
+
+    guest.unmount();
+
+    render(<ProfileSummaryButton isAuthenticated variant="mobile" />);
+    await user.click(screen.getByTestId("mobile-profile-summary-button"));
+    expect(screen.queryByRole("link", { name: "마이페이지로 이동" })).toBeNull();
+    expect(screen.queryByText("마이페이지로 이동")).toBeNull();
+  });
+
   it("uses the next tutorial active step for the tutorial notice instead of later active quests", async () => {
     const user = userEvent.setup();
     const gamification = {
@@ -260,7 +296,7 @@ describe("ProfileSummaryButton", () => {
     const dialog = screen.getByRole("dialog", { name: "마이페이지 요약" });
     expect(within(dialog).getByText("튜토리얼 안내")).toBeTruthy();
     expect(within(dialog).getByText("마음에 드는 레시피 저장하기")).toBeTruthy();
-    expect(within(dialog).getByText("다시 만들고 싶은 레시피를 하나 저장해보세요.")).toBeTruthy();
+    expect(within(dialog).getByText("레시피의 저장 버튼을 눌러 레시피를 저장해보세요.")).toBeTruthy();
     expect(within(dialog).queryByText("나만의 레시피북 생성하기")).toBeNull();
   });
 
@@ -325,7 +361,7 @@ describe("ProfileSummaryButton", () => {
     const dialog = screen.getByRole("dialog", { name: "마이페이지 요약" });
     expect(within(dialog).getByText("튜토리얼 안내")).toBeTruthy();
     expect(within(dialog).getByText("플래너에 끼니 등록하기")).toBeTruthy();
-    expect(within(dialog).getByText("오늘 먹을 끼니를 플래너에 하나 등록해보세요.")).toBeTruthy();
+    expect(within(dialog).getByText("레시피에서 플래너에 추가를 누르면 플래너에 끼니를 등록할 수 있어요.")).toBeTruthy();
     expect(within(dialog).queryByText("마음에 드는 레시피 저장하기")).toBeNull();
   });
 
@@ -385,6 +421,69 @@ describe("ProfileSummaryButton", () => {
       expect(within(dialog).getByText("플래너에 끼니 등록하기")).toBeTruthy();
     });
     expect(within(dialog).queryByText("첫 레시피 저장")).toBeNull();
+  });
+
+  it("explains how to create the first shopping list in the tutorial notice", async () => {
+    const user = userEvent.setup();
+    const gamification = {
+      ...GAMIFICATION,
+      notifications: {
+        archive_preview: [],
+        priority_unseen: [],
+        unseen: [],
+      },
+      quests: {
+        active: [
+          {
+            completed_at: null,
+            description: "여러 끼니를 한 번에 장보기할 수 있어요.",
+            dismissed_at: null,
+            is_new: true,
+            progress_current: 0,
+            progress_percent: 0,
+            progress_target: 1,
+            quest_key: "first_shopping_list_created",
+            quest_type: "tutorial",
+            status: "active",
+            title: "첫 장보기 목록 만들기",
+          },
+        ],
+        completed_recent: [],
+      },
+      tutorial: {
+        ...GAMIFICATION.tutorial,
+        active_steps: [
+          {
+            achievement_key: "tutorial_shopping_list_create",
+            current: 0,
+            status: "active",
+            target: 1,
+            title: "첫 장보기 목록 만들기",
+          },
+        ],
+        completed_count: 2,
+      },
+    } satisfies UserGamificationData;
+
+    render(
+      <ProfileSummaryButton
+        gamification={gamification}
+        isAuthenticated
+        profile={PROFILE}
+        progress={PROGRESS}
+        variant="web"
+      />,
+    );
+
+    await user.click(screen.getByTestId("web-profile-summary-button"));
+
+    const dialog = screen.getByRole("dialog", { name: "마이페이지 요약" });
+    expect(within(dialog).getByText("첫 장보기 목록 만들기")).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        "플래너에 등록한 끼니에서 장보기를 누르면, 장보기 목록을 만들 수 있어요.",
+      ),
+    ).toBeTruthy();
   });
 
   it.each(["web", "mobile"] as const)(
@@ -460,6 +559,79 @@ describe("ProfileSummaryButton", () => {
       expect(screen.queryByRole("dialog", { name: "알림 기록" })).toBeNull();
     },
   );
+
+  it("shows the current tutorial guide again from the notification archive system tab", async () => {
+    const user = userEvent.setup();
+    const gamification = {
+      ...GAMIFICATION,
+      notifications: {
+        archive_preview: [],
+        priority_unseen: [],
+        unseen: [],
+      },
+      quests: {
+        active: [
+          {
+            completed_at: null,
+            description: "여러 끼니를 한 번에 장보기할 수 있어요.",
+            dismissed_at: null,
+            is_new: true,
+            progress_current: 0,
+            progress_percent: 0,
+            progress_target: 1,
+            quest_key: "first_shopping_list_created",
+            quest_type: "tutorial",
+            status: "active",
+            title: "첫 장보기 목록 만들기",
+          },
+        ],
+        completed_recent: [],
+      },
+      tutorial: {
+        ...GAMIFICATION.tutorial,
+        active_steps: [
+          {
+            achievement_key: "tutorial_shopping_list_create",
+            current: 0,
+            status: "active",
+            target: 1,
+            title: "첫 장보기 목록 만들기",
+          },
+        ],
+        completed_count: 2,
+      },
+    } satisfies UserGamificationData;
+
+    apiMocks.fetchUserGamificationArchive.mockResolvedValue({
+      has_next: false,
+      items: [],
+      next_cursor: null,
+    });
+
+    render(
+      <ProfileSummaryButton
+        gamification={gamification}
+        isAuthenticated
+        profile={PROFILE}
+        progress={PROGRESS}
+        variant="web"
+      />,
+    );
+
+    await user.click(screen.getByTestId("web-profile-summary-button"));
+    await user.click(screen.getByRole("button", { name: "알림 기록 보기" }));
+    await user.click(screen.getByRole("tab", { name: "시스템" }));
+
+    const archiveDialog = screen.getByRole("dialog", { name: "알림 기록" });
+    expect(within(archiveDialog).getByText("튜토리얼 안내")).toBeTruthy();
+    expect(within(archiveDialog).getByText(/첫 장보기 목록 만들기/)).toBeTruthy();
+    expect(
+      within(archiveDialog).getByText(
+        /플래너에 등록한 끼니에서 장보기를 누르면, 장보기 목록을 만들 수 있어요/,
+      ),
+    ).toBeTruthy();
+    expect(within(archiveDialog).queryByText("아직 표시할 알림 기록이 없어요.")).toBeNull();
+  });
 
   it("tolerates older gamification payloads without priority or archive notification arrays", async () => {
     const user = userEvent.setup();

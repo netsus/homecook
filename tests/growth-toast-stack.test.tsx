@@ -243,7 +243,7 @@ describe("GrowthToastStack", () => {
     const toast = screen.getByTestId("growth-toast");
     expect(toast.textContent).toContain("튜토리얼 안내");
     expect(toast.textContent).toContain("마음에 드는 레시피 저장하기");
-    expect(toast.textContent).toContain("다시 만들고 싶은 레시피를 하나 저장해보세요.");
+    expect(toast.textContent).toContain("레시피의 저장 버튼을 눌러 레시피를 저장해보세요.");
   });
 
   it("shows the next tutorial quest as a toast after the prior tutorial step is completed", async () => {
@@ -263,7 +263,7 @@ describe("GrowthToastStack", () => {
     const toast = screen.getByTestId("growth-toast");
     expect(toast.textContent).toContain("튜토리얼 안내");
     expect(toast.textContent).toContain("플래너에 끼니 등록하기");
-    expect(toast.textContent).toContain("오늘 먹을 끼니를 플래너에 하나 등록해보세요.");
+    expect(toast.textContent).toContain("레시피에서 플래너에 추가를 누르면 플래너에 끼니를 등록할 수 있어요.");
     expect(toast.textContent).not.toContain("마음에 드는 레시피 저장하기");
   });
 
@@ -290,7 +290,7 @@ describe("GrowthToastStack", () => {
     await waitFor(() => {
       expect(screen.getByText(/플래너에 끼니 등록하기/)).toBeTruthy();
     });
-    expect(screen.getByText(/오늘 먹을 끼니를 플래너에 하나 등록해보세요/)).toBeTruthy();
+    expect(screen.getByText(/레시피에서 플래너에 추가를 누르면 플래너에 끼니를 등록할 수 있어요/)).toBeTruthy();
   });
 
   it("does not send synthetic tutorial guide toasts to the seen API", async () => {
