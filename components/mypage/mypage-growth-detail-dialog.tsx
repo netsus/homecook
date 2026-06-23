@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { GrowthBadgeIcon } from "@/components/mypage/growth-badge-icon";
 import { fetchUserGamificationArchive } from "@/lib/api/user-gamification";
@@ -468,9 +469,9 @@ function PanelShell({
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-end justify-center bg-[var(--overlay-40)] px-4 pb-[calc(14px+env(safe-area-inset-bottom))] pt-8 md:items-center md:pb-8"
+      className="fixed inset-0 z-[420] flex items-end justify-center overflow-y-auto overscroll-contain bg-[var(--overlay-40)] px-4 pb-[calc(14px+env(safe-area-inset-bottom))] pt-8 md:items-center md:py-8"
       data-testid="mypage-growth-detail-overlay"
-      onMouseDown={(event) => {
+      onPointerDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
         }
@@ -480,14 +481,17 @@ function PanelShell({
         aria-labelledby={titleId}
         aria-modal="true"
         className={[
-          "max-h-[min(760px,calc(100vh-40px))] w-full overflow-x-hidden overflow-y-auto rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_20px_60px_var(--overlay-30)] md:p-5",
+          "flex max-h-[min(760px,calc(100dvh-40px))] w-full flex-col overflow-hidden overflow-x-hidden rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] shadow-[0_20px_60px_var(--overlay-30)]",
           wide ? "max-w-[860px]" : "max-w-[520px]",
         ].join(" ")}
         data-testid="mypage-growth-detail-panel"
         ref={dialogRef}
         role="dialog"
       >
-        <div className="flex items-start justify-between gap-3">
+        <div
+          className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--line)] px-4 py-4 md:px-5 md:py-5"
+          data-testid="mypage-growth-detail-header"
+        >
           <h2
             className="text-[17px] font-extrabold leading-[1.3] text-[var(--foreground)]"
             id={titleId}
@@ -504,7 +508,12 @@ function PanelShell({
             ×
           </button>
         </div>
-        {children}
+        <div
+          className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pb-4 md:px-5 md:pb-5"
+          data-testid="mypage-growth-detail-content"
+        >
+          {children}
+        </div>
       </section>
     </div>
   );
@@ -1124,7 +1133,7 @@ export function MypageGrowthDetailDialog({
             ? "경험치 안내"
             : "알림 기록";
 
-  return (
+  const dialog = (
     <PanelShell
       onClose={onClose}
       title={title}
@@ -1137,4 +1146,10 @@ export function MypageGrowthDetailDialog({
       {panel === "notifications" ? <NotificationPanel data={data} /> : null}
     </PanelShell>
   );
+
+  if (typeof document === "undefined") {
+    return dialog;
+  }
+
+  return createPortal(dialog, document.body);
 }

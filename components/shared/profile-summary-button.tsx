@@ -8,6 +8,7 @@ import { MypageGrowthDetailDialog } from "@/components/mypage/mypage-growth-deta
 import { fetchUserProfile, type UserProfileData } from "@/lib/api/mypage";
 import { fetchUserGamification } from "@/lib/api/user-gamification";
 import { fetchUserProgress } from "@/lib/api/user-progress";
+import { HOMECOOK_GAMIFICATION_REFRESH_EVENT } from "@/lib/gamification-events";
 import { getNextTutorialGuide } from "@/lib/gamification-tutorial-guide";
 import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
@@ -49,6 +50,7 @@ export function ProfileSummaryButton({
       ? cachedProfileSummary
       : null;
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const summaryRefreshRequestRef = useRef<Promise<void> | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const [loadedProfile, setLoadedProfile] = useState<UserProfileData | null>(
@@ -156,6 +158,65 @@ export function ProfileSummaryButton({
       mounted = false;
     };
   }, [autoLoad, isAuthenticated, loadedGamification, loadedProfile, loadedProgress]);
+
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === "undefined") {
+      return;
+    }
+
+    let mounted = true;
+
+    const refreshGrowthSummary = () => {
+      if (summaryRefreshRequestRef.current) {
+        return;
+      }
+
+      const request = Promise.allSettled([
+        fetchUserProgress(),
+        fetchUserGamification(),
+      ]).then(([progressResult, gamificationResult]) => {
+        if (!mounted) {
+          return;
+        }
+
+        const nextProgress =
+          progressResult.status === "fulfilled"
+            ? progressResult.value
+            : loadedProgress;
+        const nextGamification =
+          gamificationResult.status === "fulfilled"
+            ? gamificationResult.value
+            : loadedGamification;
+        const nextSummary = {
+          gamification: nextGamification,
+          profile: loadedProfile ?? cachedProfileSummary?.profile ?? null,
+          progress: nextProgress,
+        };
+
+        if (progressResult.status === "fulfilled") {
+          setLoadedProgress(progressResult.value);
+        }
+        if (gamificationResult.status === "fulfilled") {
+          setLoadedGamification(gamificationResult.value);
+        }
+        if (hasProfileSummaryData(nextSummary)) {
+          setLoadState("ready");
+          rememberProfileSummary(nextSummary);
+        }
+      }).finally(() => {
+        summaryRefreshRequestRef.current = null;
+      });
+
+      summaryRefreshRequestRef.current = request;
+    };
+
+    window.addEventListener(HOMECOOK_GAMIFICATION_REFRESH_EVENT, refreshGrowthSummary);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener(HOMECOOK_GAMIFICATION_REFRESH_EVENT, refreshGrowthSummary);
+    };
+  }, [isAuthenticated, loadedGamification, loadedProfile, loadedProgress]);
 
   useEffect(() => {
     if (!isOpen) {

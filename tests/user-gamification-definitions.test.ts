@@ -91,6 +91,66 @@ describe("user gamification definitions", () => {
     ]);
   });
 
+  it("advances the active tutorial step after the first tutorial achievement is earned", () => {
+    const data = buildUserGamificationData({
+      progress: buildProgress({
+        event_counts: {
+          cooking_completed: 0,
+          shopping_completed: 0,
+          recipe_saved_distinct_ever: 1,
+          custom_book_created: 0,
+          planner_registered_first: 0,
+          planner_registered_repeat: 0,
+        },
+      }),
+      badgeRows: [],
+      questRows: [
+        {
+          quest_key: "first_recipe_saved",
+          quest_type: "tutorial",
+          status: "completed",
+          progress_current: 1,
+          progress_target: 1,
+          completed_at: "2026-06-10T12:00:00.000Z",
+          dismissed_at: null,
+          seen_at: null,
+          updated_at: "2026-06-10T12:00:00.000Z",
+        },
+      ],
+      achievementRows: [
+        {
+          achievement_key: "tutorial_recipe_saved",
+          category_key: "tutorial",
+          track_key: "tutorial",
+          target_value: 1,
+          achieved_value: 1,
+          badge_key: "tutorial_recipe_saved",
+          earned_at: "2026-06-10T12:00:00.000Z",
+          seen_at: null,
+        },
+      ],
+      activityRows: [],
+      achievementCounts: {
+        pantry_distinct_ingredients: 0,
+        leftover_eaten_manual: 0,
+        recipe_registered: 0,
+        shopping_list_created: 0,
+      },
+      notificationRows: [],
+    });
+
+    expect(data.tutorial.completed_count).toBe(1);
+    expect(data.tutorial.active_steps).toEqual([
+      {
+        achievement_key: "tutorial_planner_registered",
+        current: 0,
+        status: "active",
+        target: 1,
+        title: "첫 식단 등록",
+      },
+    ]);
+  });
+
   it("maps earned badges, active quests, completed quests, and unseen notifications", () => {
     const data = buildUserGamificationData({
       progress: buildProgress({

@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
+import { HOMECOOK_GAMIFICATION_REFRESH_EVENT } from "@/lib/gamification-events";
 import type { UserProfileData } from "@/lib/api/mypage";
 import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
@@ -263,6 +264,129 @@ describe("ProfileSummaryButton", () => {
     expect(within(dialog).queryByText("나만의 레시피북 생성하기")).toBeNull();
   });
 
+  it("falls back to the next active tutorial quest when active_steps are empty after a completed tutorial", async () => {
+    const user = userEvent.setup();
+    const gamification = {
+      ...GAMIFICATION,
+      achievement_album: {
+        ...GAMIFICATION.achievement_album,
+        categories: [
+          {
+            category_key: "tutorial",
+            earned_count: 1,
+            label: "튜토리얼",
+            milestones: [],
+            total_count: 6,
+          },
+        ],
+        summary: {
+          completed_category_count: 0,
+          earned_count: 1,
+          total_count: 6,
+        },
+      },
+      quests: {
+        active: [
+          {
+            completed_at: null,
+            description: "오늘 먹을 끼니를 플래너에 하나 등록해보세요.",
+            dismissed_at: null,
+            is_new: true,
+            progress_current: 0,
+            progress_percent: 0,
+            progress_target: 1,
+            quest_key: "first_planner_registered",
+            quest_type: "tutorial",
+            status: "active",
+            title: "플래너에 끼니 등록하기",
+          },
+        ],
+        completed_recent: [],
+      },
+      tutorial: {
+        ...GAMIFICATION.tutorial,
+        active_steps: [],
+        completed_count: 1,
+      },
+    } satisfies UserGamificationData;
+
+    render(
+      <ProfileSummaryButton
+        gamification={gamification}
+        isAuthenticated
+        profile={PROFILE}
+        progress={PROGRESS}
+        variant="web"
+      />,
+    );
+
+    await user.click(screen.getByTestId("web-profile-summary-button"));
+
+    const dialog = screen.getByRole("dialog", { name: "마이페이지 요약" });
+    expect(within(dialog).getByText("튜토리얼 안내")).toBeTruthy();
+    expect(within(dialog).getByText("플래너에 끼니 등록하기")).toBeTruthy();
+    expect(within(dialog).getByText("오늘 먹을 끼니를 플래너에 하나 등록해보세요.")).toBeTruthy();
+    expect(within(dialog).queryByText("마음에 드는 레시피 저장하기")).toBeNull();
+  });
+
+  it("updates the tutorial notice from the shared gamification refresh event", async () => {
+    const user = userEvent.setup();
+    const nextGamification = {
+      ...GAMIFICATION,
+      quests: {
+        active: [
+          {
+            completed_at: null,
+            description: "오늘 먹을 끼니를 플래너에 하나 등록해보세요.",
+            dismissed_at: null,
+            is_new: true,
+            progress_current: 0,
+            progress_percent: 0,
+            progress_target: 1,
+            quest_key: "first_planner_registered",
+            quest_type: "tutorial",
+            status: "active",
+            title: "플래너에 끼니 등록하기",
+          },
+        ],
+        completed_recent: [],
+      },
+      tutorial: {
+        ...GAMIFICATION.tutorial,
+        active_steps: [],
+        completed_count: 1,
+      },
+    } satisfies UserGamificationData;
+
+    apiMocks.fetchUserGamification.mockResolvedValue(nextGamification);
+    apiMocks.fetchUserProgress.mockResolvedValue(PROGRESS);
+
+    render(
+      <ProfileSummaryButton
+        gamification={GAMIFICATION}
+        isAuthenticated
+        profile={PROFILE}
+        progress={PROGRESS}
+        variant="web"
+      />,
+    );
+
+    await user.click(screen.getByTestId("web-profile-summary-button"));
+
+    const dialog = screen.getByRole("dialog", { name: "마이페이지 요약" });
+    expect(within(dialog).getByText("첫 레시피 저장")).toBeTruthy();
+
+    window.dispatchEvent(new CustomEvent(HOMECOOK_GAMIFICATION_REFRESH_EVENT));
+
+    await waitFor(() => {
+      expect(apiMocks.fetchUserGamification).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(within(dialog).getByText("플래너에 끼니 등록하기")).toBeTruthy();
+    });
+    expect(within(dialog).queryByText("첫 레시피 저장")).toBeNull();
+  });
+
   it.each(["web", "mobile"] as const)(
     "opens the notification archive dialog in place from the %s summary action",
     async (variant) => {
@@ -294,6 +418,46 @@ describe("ProfileSummaryButton", () => {
         cursor: null,
         limit: 20,
       });
+    },
+  );
+
+  it.each(["web", "mobile"] as const)(
+    "opens the notification archive as a body-level modal with a persistent close header from the %s summary action",
+    async (variant) => {
+      const user = userEvent.setup();
+      apiMocks.fetchUserGamificationArchive.mockResolvedValue({
+        has_next: false,
+        items: GAMIFICATION.notifications.archive_preview,
+        next_cursor: null,
+      });
+
+      render(
+        <ProfileSummaryButton
+          gamification={GAMIFICATION}
+          isAuthenticated
+          profile={PROFILE}
+          progress={PROGRESS}
+          variant={variant}
+        />,
+      );
+
+      await user.click(screen.getByTestId(`${variant}-profile-summary-button`));
+      await user.click(screen.getByRole("button", { name: "알림 기록 보기" }));
+
+      const overlay = screen.getByTestId("mypage-growth-detail-overlay");
+      const panel = screen.getByTestId("mypage-growth-detail-panel");
+      const header = screen.getByTestId("mypage-growth-detail-header");
+      const content = screen.getByTestId("mypage-growth-detail-content");
+
+      expect(overlay.parentElement).toBe(document.body);
+      expect(panel.className).toContain("overflow-hidden");
+      expect(panel.className).toContain("flex");
+      expect(header.className).toContain("shrink-0");
+      expect(content.className).toContain("overflow-y-auto");
+
+      await user.click(overlay);
+
+      expect(screen.queryByRole("dialog", { name: "알림 기록" })).toBeNull();
     },
   );
 

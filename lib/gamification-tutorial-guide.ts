@@ -23,6 +23,12 @@ const TUTORIAL_QUEST_KEY_BY_ACHIEVEMENT_KEY: Record<string, string> = {
   tutorial_shopping_list_create: "first_shopping_list_created",
 };
 
+const TUTORIAL_ACHIEVEMENT_KEY_BY_QUEST_KEY = Object.fromEntries(
+  Object.entries(TUTORIAL_QUEST_KEY_BY_ACHIEVEMENT_KEY).map(
+    ([achievementKey, questKey]) => [questKey, achievementKey],
+  ),
+) as Record<string, string>;
+
 const TUTORIAL_GUIDE_BY_ACHIEVEMENT_KEY: Record<
   string,
   { body: string; questKey: string; title: string }
@@ -83,6 +89,15 @@ function tutorialStepRank(step: UserGamificationTutorialStepData) {
   return index === -1 ? TUTORIAL_STEP_ORDER.length : index;
 }
 
+function tutorialQuestRank(quest: UserGamificationQuestData) {
+  const achievementKey = TUTORIAL_ACHIEVEMENT_KEY_BY_QUEST_KEY[quest.quest_key];
+  const index = TUTORIAL_STEP_ORDER.indexOf(
+    achievementKey as (typeof TUTORIAL_STEP_ORDER)[number],
+  );
+
+  return index === -1 ? TUTORIAL_STEP_ORDER.length : index;
+}
+
 function findMatchingQuest(
   quests: UserGamificationQuestData[],
   step: UserGamificationTutorialStepData,
@@ -99,15 +114,32 @@ export function getNextTutorialGuide(
     return null;
   }
 
+  const activeQuests = gamification.quests?.active ?? [];
   const step = [...(gamification.tutorial?.active_steps ?? [])]
     .filter((item) => item.status === "active")
     .sort((left, right) => tutorialStepRank(left) - tutorialStepRank(right))[0];
 
   if (!step) {
-    return null;
+    const quest = [...activeQuests]
+      .filter((item) => item.quest_type === "tutorial" && item.status === "active")
+      .sort((left, right) => tutorialQuestRank(left) - tutorialQuestRank(right))[0];
+
+    if (!quest) {
+      return null;
+    }
+
+    const achievementKey = TUTORIAL_ACHIEVEMENT_KEY_BY_QUEST_KEY[quest.quest_key] ?? quest.quest_key;
+    const guide = TUTORIAL_GUIDE_BY_ACHIEVEMENT_KEY[achievementKey];
+
+    return {
+      achievementKey,
+      body: quest.description ?? guide?.body ?? `${quest.title}부터 차근차근 시작해 보세요.`,
+      questKey: quest.quest_key,
+      title: quest.title ?? guide?.title ?? "다음 튜토리얼 퀘스트",
+    };
   }
 
-  const quest = findMatchingQuest(gamification.quests?.active ?? [], step);
+  const quest = findMatchingQuest(activeQuests, step);
   const guide = TUTORIAL_GUIDE_BY_ACHIEVEMENT_KEY[step.achievement_key];
   const questKey =
     quest?.quest_key ??
