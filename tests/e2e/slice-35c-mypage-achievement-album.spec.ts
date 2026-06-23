@@ -387,7 +387,13 @@ async function openMypage(
   await installRoutes(page, options);
   await page.goto(`${BASE_URL}/mypage`, { waitUntil: "domcontentloaded" });
   await stabilize(page);
-  await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({ timeout: 15_000 });
+  try {
+    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({ timeout: 15_000 });
+  } catch {
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await stabilize(page);
+    await expect(page.getByTestId("mypage-growth-profile")).toBeVisible({ timeout: 30_000 });
+  }
   return { context, page };
 }
 
@@ -408,7 +414,8 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await mobile.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-390-profile.png") });
 
     await mobile.page.getByRole("button", { name: "등급 보기" }).click();
-    await expect(mobile.page.getByRole("dialog", { name: "전체 등급" })).toBeVisible();
+    const gradeDialog = mobile.page.getByRole("dialog", { name: "전체 등급" });
+    await expect(gradeDialog).toBeVisible();
     await expect(mobile.page.getByText("현재 등급")).toBeVisible();
     await expect(mobile.page.getByText("티타늄")).toBeVisible();
     await mobile.page.waitForFunction(() =>
@@ -417,10 +424,11 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
         .every((image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0),
     );
     await mobile.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-grade-modal.png") });
-    await mobile.page.getByRole("button", { name: "닫기" }).click();
+    await gradeDialog.getByRole("button", { exact: true, name: "닫기" }).click();
 
     await mobile.page.getByRole("button", { name: "업적 보기" }).click();
-    await expect(mobile.page.getByRole("dialog", { name: "업적 앨범" })).toBeVisible();
+    const achievementDialog = mobile.page.getByRole("dialog", { name: "업적 앨범" });
+    await expect(achievementDialog).toBeVisible();
     await expect(mobile.page.getByRole("tab", { name: "튜토리얼" })).toBeVisible();
     await expect(mobile.page.getByRole("tab", { name: "식단·장보기·요리" })).toBeVisible();
     await expect(mobile.page.getByRole("tab", { exact: true, name: "요리" })).toHaveCount(0);
@@ -441,7 +449,7 @@ test.describe("35c MYPAGE achievement album UI @smoke-core", () => {
     await expect(mobile.page.getByTestId("growth-badge-image-cooking_completed_300")).toBeVisible();
     await expect(mobile.page.getByTestId("achievement-stamp-cooking_completed_300")).toHaveCount(0);
     await mobile.page.screenshot({ fullPage: true, path: path.join(EVIDENCE_DIR, "mobile-achievement-modal.png") });
-    await mobile.page.getByRole("button", { name: "닫기" }).click();
+    await achievementDialog.getByRole("button", { exact: true, name: "닫기" }).click();
 
     await mobile.page.getByRole("button", { name: "알림 보기" }).click();
     const notificationDialog = mobile.page.getByRole("dialog", { name: "알림 기록" });

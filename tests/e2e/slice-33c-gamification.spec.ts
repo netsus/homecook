@@ -539,14 +539,15 @@ test.describe("33c gamification frontend @smoke-core", () => {
     await toastPage.page.evaluate(() => {
       window.dispatchEvent(new CustomEvent("homecook:gamification-refresh"));
     });
-    await expect(toastPage.page.getByTestId("growth-toast")).toContainText(
-      "요리 완료 +50 XP",
-    );
+    const xpToast = toastPage.page
+      .getByTestId("growth-toast")
+      .filter({ hasText: "요리 완료 +50 XP" });
+    await expect(xpToast).toBeVisible();
     await toastPage.page.screenshot({
       fullPage: true,
       path: path.join(EVIDENCE_DIR, "xp-toast.png"),
     });
-    await toastPage.page.getByLabel("알림 닫기").click();
+    await xpToast.getByLabel("알림 닫기").click();
     await expect.poll(() => seenRequestCount).toBeGreaterThan(0);
     await toastPage.context.close();
 
