@@ -156,3 +156,10 @@ Detailed entries live in `docs/design/manual-uiux-review-fix-plan.md`.
 | 68 | 정식 배포 전 공식 식품 데이터 기반 ingredient DB 적재가 필요한 문제 | investigated; direct DB write deferred |
 | 69 | 마이페이지 로딩 중 먼저 로드된 아래 섹션이 위 섹션 완료에 따라 밀리는 문제 | implemented |
 | 70 | 404 페이지에서 보낸 사용자 피드백을 admin에서 별도 탭으로 확인할 수 없는 문제 | implemented |
+| 71 | 모든 재료가 팬트리에 있을 때 장보기목록 생성 선택권이 없는 문제 | implemented in `fix/shopping-empty-list-choice` |
+| 72 | 팬트리 묶음 추가 성공 후 묶음추가 모달이 닫혀 반복 추가가 끊기는 문제 | implemented in `fix/shopping-empty-list-choice` |
+| 73 | 프로필 요약의 알림 보기 버튼이 현재 화면을 떠나 마이페이지로 이동하는 문제 | implemented in `fix/profile-notifications-inline-modal` |
+| 74 | 업적/경험치 토스트를 눌러도 현재 페이지에서 알림 기록을 열 수 없는 문제 | implemented in `fix/profile-notifications-inline-modal` |
+| 75 | 튜토리얼 퀘스트 안내가 첫 단계부터 순서대로 이어지지 않는 문제 | implemented in `fix/profile-notifications-inline-modal` |
+| 76 | 웹 홈 추천 태그와 인기 테마가 검색창 라인보다 낮아 오른쪽 상단이 비어 보이는 문제 | implemented in `fix/profile-notifications-inline-modal` |
+| 77 | 닉네임 온보딩 진입 전 프로필 확인 로딩 문구가 빠르게 사라져 어색한 문제 | implemented in `fix/profile-notifications-inline-modal` |
