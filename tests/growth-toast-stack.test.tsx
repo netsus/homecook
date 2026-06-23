@@ -5,17 +5,16 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
-import {
-  HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT,
-  HOMECOOK_GAMIFICATION_REFRESH_EVENT,
-} from "@/lib/gamification-events";
+import { HOMECOOK_GAMIFICATION_REFRESH_EVENT } from "@/lib/gamification-events";
 
 const mockFetchUserGamification = vi.fn();
+const mockFetchArchive = vi.fn();
 const mockMarkSeen = vi.fn();
 let desktopMatches = false;
 let mediaListeners: Array<() => void> = [];
 
 vi.mock("@/lib/api/user-gamification", () => ({
+  fetchUserGamificationArchive: (...args: unknown[]) => mockFetchArchive(...args),
   fetchUserGamification: (...args: unknown[]) => mockFetchUserGamification(...args),
   markUserGamificationNotificationsSeen: (...args: unknown[]) => mockMarkSeen(...args),
 }));
@@ -36,6 +35,48 @@ function makeNotification(
     payload: overrides.payload ?? {},
     created_at: overrides.created_at ?? "2026-06-11T00:00:00.000Z",
     seen_at: overrides.seen_at ?? null,
+  };
+}
+
+function makeGamificationWithTutorialStep(
+  step: {
+    achievementKey: string;
+    title: string;
+  },
+) {
+  return {
+    achievement_album: {
+      categories: [],
+      summary: { completed_category_count: 0, earned_count: 0, total_count: 0 },
+    },
+    badges: { earned: [], locked: [] },
+    featured_badges: [],
+    grade: { grade_key: "sprout_homecook", label: "새싹 집밥러", level_min: 1, level_max: 4 },
+    last_updated_at: "2026-06-21T00:00:00.000Z",
+    level: { current_level: 1, progress_percent: 0, total_xp: 0, xp_to_next_level: 100 },
+    notifications: {
+      archive_preview: [],
+      priority_unseen: [],
+      unseen: [],
+    },
+    quests: {
+      active: [],
+      completed_recent: [],
+    },
+    tutorial: {
+      active_steps: [
+        {
+          achievement_key: step.achievementKey,
+          current: 0,
+          status: "active",
+          target: 1,
+          title: step.title,
+        },
+      ],
+      category_key: "tutorial",
+      completed_count: 0,
+      total_count: 6,
+    },
   };
 }
 
@@ -75,8 +116,10 @@ function dispatchRefresh() {
 
 describe("GrowthToastStack", () => {
   beforeEach(() => {
+    mockFetchArchive.mockReset();
     mockFetchUserGamification.mockReset();
     mockMarkSeen.mockReset();
+    mockFetchArchive.mockResolvedValue({ items: [], next_cursor: null, has_next: false });
     mockMarkSeen.mockResolvedValue({ seen_notification_ids: [] });
     setDesktop(false);
   });
@@ -118,6 +161,66 @@ describe("GrowthToastStack", () => {
     expect(within(toasts[0]).getByTestId("growth-toast-priority-rank").textContent).toBe("1");
     expect(within(toasts[1]).getByTestId("growth-toast-priority-rank").textContent).toBe("2");
     expect(within(toasts[2]).getByTestId("growth-toast-priority-rank").textContent).toBe("3");
+  });
+
+  it("shows the first tutorial quest as a toast on initial load when there are no notification rows", async () => {
+    mockFetchUserGamification.mockResolvedValue(
+      makeGamificationWithTutorialStep({
+        achievementKey: "tutorial_recipe_saved",
+        title: "첫 레시피 저장",
+      }),
+    );
+
+    render(<GrowthToastStack />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("growth-toast")).toBeTruthy();
+    });
+
+    const toast = screen.getByTestId("growth-toast");
+    expect(toast.textContent).toContain("튜토리얼 안내");
+    expect(toast.textContent).toContain("마음에 드는 레시피 저장하기");
+    expect(toast.textContent).toContain("다시 만들고 싶은 레시피를 하나 저장해보세요.");
+  });
+
+  it("shows the next tutorial quest as a toast after the prior tutorial step is completed", async () => {
+    mockFetchUserGamification.mockResolvedValue(
+      makeGamificationWithTutorialStep({
+        achievementKey: "tutorial_planner_registered",
+        title: "플래너에 끼니 등록하기",
+      }),
+    );
+
+    render(<GrowthToastStack />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("growth-toast")).toBeTruthy();
+    });
+
+    const toast = screen.getByTestId("growth-toast");
+    expect(toast.textContent).toContain("튜토리얼 안내");
+    expect(toast.textContent).toContain("플래너에 끼니 등록하기");
+    expect(toast.textContent).toContain("오늘 먹을 끼니를 플래너에 하나 등록해보세요.");
+    expect(toast.textContent).not.toContain("마음에 드는 레시피 저장하기");
+  });
+
+  it("does not send synthetic tutorial guide toasts to the seen API", async () => {
+    mockFetchUserGamification.mockResolvedValue(
+      makeGamificationWithTutorialStep({
+        achievementKey: "tutorial_recipe_saved",
+        title: "첫 레시피 저장",
+      }),
+    );
+
+    render(<GrowthToastStack />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("growth-toast")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "알림 닫기" }));
+
+    expect(mockMarkSeen).not.toHaveBeenCalled();
   });
 
   it("uses a grade acquisition visual only when level-up crosses into a new grade", async () => {
@@ -378,14 +481,10 @@ describe("GrowthToastStack", () => {
     expect(screen.queryByTestId("growth-toast")).toBeNull();
   });
 
-  it("opens the notification panel intent when a toast body is clicked", async () => {
-    const openNotifications = vi.fn();
-    window.addEventListener(
-      HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT,
-      openNotifications,
-    );
+  it("opens the notification archive dialog in place when a growth toast is activated by keyboard", async () => {
     mockFetchUserGamification.mockResolvedValue({
       notifications: {
+        archive_preview: [],
         unseen: [],
         priority_unseen: [
           makeNotification({
@@ -401,16 +500,104 @@ describe("GrowthToastStack", () => {
     render(<GrowthToastStack />);
     dispatchRefresh();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("growth-toast")).toBeTruthy();
+    await act(async () => {
+      await Promise.resolve();
     });
+    expect(screen.getByTestId("growth-toast")).toBeTruthy();
+    fireEvent.keyDown(screen.getByTestId("growth-toast"), { key: "Enter" });
+
+    expect(screen.getByRole("dialog", { name: "알림 기록" })).toBeTruthy();
+  });
+
+  it("opens the notification archive dialog in place when a growth toast is clicked", async () => {
+    mockFetchArchive.mockResolvedValue({
+      has_next: false,
+      items: [
+        makeNotification({
+          id: "open-toast",
+          notification_type: "xp_awarded",
+          title: "경험치 획득",
+          body: "+40 XP",
+        }),
+      ],
+      next_cursor: null,
+    });
+    mockFetchUserGamification.mockResolvedValue({
+      notifications: {
+        archive_preview: [],
+        unseen: [],
+        priority_unseen: [
+          makeNotification({
+            id: "open-toast",
+            notification_type: "xp_awarded",
+            title: "경험치 획득",
+            body: "+40 XP",
+          }),
+        ],
+      },
+    });
+
+    render(<GrowthToastStack />);
+    dispatchRefresh();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("growth-toast")).toBeTruthy();
     fireEvent.click(screen.getByTestId("growth-toast"));
 
-    expect(openNotifications).toHaveBeenCalledTimes(1);
-    window.removeEventListener(
-      HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT,
-      openNotifications,
-    );
+    const dialog = screen.getByRole("dialog", { name: "알림 기록" });
+    await waitFor(() => {
+      expect(mockFetchArchive).toHaveBeenCalledWith({ limit: 20, cursor: null });
+    });
+    expect(within(dialog).getByText("경험치 획득")).toBeTruthy();
+  });
+
+  it("keeps the notification archive dialog open after the clicked toast auto-dismisses", async () => {
+    vi.useFakeTimers();
+    mockFetchArchive.mockResolvedValue({
+      has_next: false,
+      items: [
+        makeNotification({
+          id: "auto-dismiss-toast",
+          notification_type: "achievement_unlocked",
+          title: "업적 달성!",
+          body: "첫 요리 완료 배지를 획득했어요.",
+        }),
+      ],
+      next_cursor: null,
+    });
+    mockFetchUserGamification.mockResolvedValue({
+      notifications: {
+        archive_preview: [],
+        unseen: [],
+        priority_unseen: [
+          makeNotification({
+            id: "auto-dismiss-toast",
+            notification_type: "achievement_unlocked",
+            title: "업적 달성!",
+            body: "첫 요리 완료 배지를 획득했어요.",
+          }),
+        ],
+      },
+    });
+
+    render(<GrowthToastStack />);
+    dispatchRefresh();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("growth-toast")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("growth-toast"));
+    expect(screen.getByRole("dialog", { name: "알림 기록" })).toBeTruthy();
+
+    await act(async () => {
+      vi.advanceTimersByTime(6000);
+    });
+
+    expect(screen.queryByTestId("growth-toast")).toBeNull();
+    expect(screen.getByRole("dialog", { name: "알림 기록" })).toBeTruthy();
   });
 
   it("caps visible toasts at 2 on mobile and queues the rest as a collapsed summary", async () => {

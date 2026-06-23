@@ -3,22 +3,24 @@
 import Image from "next/image";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
+import { MypageGrowthDetailDialog } from "@/components/mypage/mypage-growth-detail-dialog";
 import {
   fetchUserGamification,
   markUserGamificationNotificationsSeen,
 } from "@/lib/api/user-gamification";
 import {
   HOMECOOK_GAMIFICATION_REFRESH_EVENT,
-  notifyGamificationOpenNotifications,
 } from "@/lib/gamification-events";
 import {
   compactGrowthNotificationsForDisplay,
   getGrowthNotificationIdsForSeen,
   isVisibleGrowthToastNotification,
 } from "@/lib/gamification-notifications";
+import { createTutorialGuideNotification } from "@/lib/gamification-tutorial-guide";
 import achievementIconManifest from "@/public/assets/growth/achievement-icons-v3-4/manifest.json";
 import type {
   UserGamificationBadgeCategory,
+  UserGamificationData,
   UserGamificationNotificationData,
   UserGamificationNotificationType,
 } from "@/types/user-gamification";
@@ -263,17 +265,16 @@ function dedupeById(views: ToastView[]): ToastView[] {
 
 // Use priority_unseen first, then degrade to legacy unseen. Filter silent rows
 // defensively even though the server should already exclude them.
-function selectToastSource(data: {
-  notifications: {
-    unseen?: UserGamificationNotificationData[];
-    priority_unseen?: UserGamificationNotificationData[];
-  };
-}): UserGamificationNotificationData[] {
+function selectToastSource(data: UserGamificationData): UserGamificationNotificationData[] {
   const priority = data.notifications.priority_unseen;
-  const source =
+  const sourceNotifications =
     Array.isArray(priority) && priority.length > 0
       ? priority
       : (data.notifications.unseen ?? []);
+  const tutorialGuide = createTutorialGuideNotification(data);
+  const source = tutorialGuide
+    ? [tutorialGuide, ...sourceNotifications]
+    : sourceNotifications;
 
   return compactGrowthNotificationsForDisplay(
     source.filter(isVisibleGrowthToastNotification),
@@ -366,6 +367,8 @@ function GrowthToastVisual({ tone, visual }: { tone: ToastTone; visual: ToastVis
 
 export function GrowthToastStack() {
   const [views, setViews] = useState<ToastView[]>([]);
+  const [gamification, setGamification] = useState<UserGamificationData | null>(null);
+  const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const [visibleMax, setVisibleMax] = useState(MOBILE_VISIBLE_MAX);
   const loadingRef = useRef(false);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
@@ -410,8 +413,9 @@ export function GrowthToastStack() {
     loadingRef.current = true;
 
     try {
-      const gamification = await fetchUserGamification();
-      const source = selectToastSource(gamification);
+      const nextGamification = await fetchUserGamification();
+      setGamification(nextGamification);
+      const source = selectToastSource(nextGamification);
       if (source.length === 0) {
         return;
       }
@@ -426,6 +430,7 @@ export function GrowthToastStack() {
   }, []);
 
   useEffect(() => {
+    void refresh();
     window.addEventListener(HOMECOOK_GAMIFICATION_REFRESH_EVENT, refresh);
     return () => {
       window.removeEventListener(HOMECOOK_GAMIFICATION_REFRESH_EVENT, refresh);
@@ -474,7 +479,7 @@ export function GrowthToastStack() {
   }, [markSeen, queued]);
 
   const openNotifications = useCallback(() => {
-    notifyGamificationOpenNotifications();
+    setIsNotificationDialogOpen(true);
   }, []);
 
   const openNotificationsFromKeyboard = useCallback(
@@ -486,78 +491,90 @@ export function GrowthToastStack() {
     [openNotifications],
   );
 
-  if (views.length === 0) {
+  if (views.length === 0 && !isNotificationDialogOpen) {
     return null;
   }
 
   return (
-    <div
-      className="pointer-events-none fixed inset-x-4 bottom-[calc(90px+env(safe-area-inset-bottom))] z-[80] mx-auto flex max-w-[360px] flex-col gap-2 md:inset-x-auto md:right-6 md:bottom-6 md:w-[340px]"
-      data-testid="growth-toast-stack"
-    >
-      {visible.map((view, index) => (
+    <>
+      {views.length > 0 ? (
         <div
-          key={view.id}
-          className={[
-            "pointer-events-auto relative overflow-visible rounded-[var(--radius-card)] border px-3 py-3 pl-4",
-            toneClass(view.tone),
-          ].join(" ")}
-          data-testid="growth-toast"
-          data-group-key={view.groupKey ?? ""}
-          data-notification-id={view.id}
-          data-notification-type={view.type}
-          data-tone={view.tone}
-          onClick={openNotifications}
-          onKeyDown={openNotificationsFromKeyboard}
-          role={view.tone === "level-up" || view.tone === "grade-up" ? "alert" : "status"}
-          tabIndex={0}
+          className="pointer-events-none fixed inset-x-4 bottom-[calc(90px+env(safe-area-inset-bottom))] z-[80] mx-auto flex max-w-[360px] flex-col gap-2 md:inset-x-auto md:right-6 md:bottom-6 md:w-[340px]"
+          data-testid="growth-toast-stack"
         >
-          <span
-            aria-hidden="true"
-            className={[
-              "absolute -left-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[11px] font-extrabold leading-none shadow-[var(--growth-toast-rank-shadow)]",
-              rankClass(index),
-            ].join(" ")}
-            data-testid="growth-toast-priority-rank"
-          >
-            {index + 1}
-          </span>
-          <div className="flex items-center gap-3">
-            <GrowthToastVisual tone={view.tone} visual={view.visual} />
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-extrabold leading-[1.35]">
-                {view.title}
-              </p>
-              <p className="mt-0.5 text-[12px] font-semibold leading-[1.35] opacity-90">
-                {view.body}
-              </p>
+          {visible.map((view, index) => (
+            <div
+              key={view.id}
+              className={[
+                "pointer-events-auto relative overflow-visible rounded-[var(--radius-card)] border px-3 py-3 pl-4",
+                toneClass(view.tone),
+              ].join(" ")}
+              data-testid="growth-toast"
+              data-group-key={view.groupKey ?? ""}
+              data-notification-id={view.id}
+              data-notification-type={view.type}
+              data-tone={view.tone}
+              onClick={openNotifications}
+              onKeyDown={openNotificationsFromKeyboard}
+              role={view.tone === "level-up" || view.tone === "grade-up" ? "alert" : "status"}
+              tabIndex={0}
+            >
+              <span
+                aria-hidden="true"
+                className={[
+                  "absolute -left-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[11px] font-extrabold leading-none shadow-[var(--growth-toast-rank-shadow)]",
+                  rankClass(index),
+                ].join(" ")}
+                data-testid="growth-toast-priority-rank"
+              >
+                {index + 1}
+              </span>
+              <div className="flex items-center gap-3">
+                <GrowthToastVisual tone={view.tone} visual={view.visual} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-extrabold leading-[1.35]">
+                    {view.title}
+                  </p>
+                  <p className="mt-0.5 text-[12px] font-semibold leading-[1.35] opacity-90">
+                    {view.body}
+                  </p>
+                </div>
+                <button
+                  aria-label="알림 닫기"
+                  className="self-start shrink-0 rounded-full px-1.5 text-[14px] font-extrabold text-[var(--text-2)] opacity-70"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    dismiss(view.id);
+                  }}
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
             </div>
+          ))}
+
+          {queued.length > 0 ? (
             <button
-              aria-label="알림 닫기"
-              className="self-start shrink-0 rounded-full px-1.5 text-[14px] font-extrabold text-[var(--text-2)] opacity-70"
-              onClick={(event) => {
-                event.stopPropagation();
-                dismiss(view.id);
-              }}
+              className="pointer-events-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12px] font-extrabold text-[var(--text-2)] shadow-[0_10px_28px_var(--overlay-20)]"
+              aria-label={`${queued.length}개의 성장 알림 확인`}
+              data-testid="growth-toast-collapsed"
+              onClick={dismissCollapsed}
               type="button"
             >
-              ×
+              +{queued.length}개의 새 소식 확인
             </button>
-          </div>
+          ) : null}
         </div>
-      ))}
-
-      {queued.length > 0 ? (
-        <button
-          className="pointer-events-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12px] font-extrabold text-[var(--text-2)] shadow-[0_10px_28px_var(--overlay-20)]"
-          aria-label={`${queued.length}개의 성장 알림 확인`}
-          data-testid="growth-toast-collapsed"
-          onClick={dismissCollapsed}
-          type="button"
-        >
-          +{queued.length}개의 새 소식 확인
-        </button>
       ) : null}
-    </div>
+
+      {isNotificationDialogOpen ? (
+        <MypageGrowthDetailDialog
+          data={gamification}
+          onClose={() => setIsNotificationDialogOpen(false)}
+          panel="notifications"
+        />
+      ) : null}
+    </>
   );
 }

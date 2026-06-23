@@ -4,9 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
+import { MypageGrowthDetailDialog } from "@/components/mypage/mypage-growth-detail-dialog";
 import { fetchUserProfile, type UserProfileData } from "@/lib/api/mypage";
 import { fetchUserGamification } from "@/lib/api/user-gamification";
 import { fetchUserProgress } from "@/lib/api/user-progress";
+import { getNextTutorialGuide } from "@/lib/gamification-tutorial-guide";
 import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
 
@@ -48,6 +50,7 @@ export function ProfileSummaryButton({
       : null;
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const [loadedProfile, setLoadedProfile] = useState<UserProfileData | null>(
     profile ?? cachedSummary?.profile ?? null,
   );
@@ -246,8 +249,21 @@ export function ProfileSummaryButton({
           data-testid={`${variant}-profile-summary-popover`}
           role="dialog"
         >
-          <ProfileSummaryPanel summary={summary} />
+          <ProfileSummaryPanel
+            onOpenNotifications={() => {
+              setIsOpen(false);
+              setIsNotificationDialogOpen(true);
+            }}
+            summary={summary}
+          />
         </section>
+      ) : null}
+      {isNotificationDialogOpen ? (
+        <MypageGrowthDetailDialog
+          data={loadedGamification}
+          onClose={() => setIsNotificationDialogOpen(false)}
+          panel="notifications"
+        />
       ) : null}
     </div>
   );
@@ -265,7 +281,13 @@ function rememberProfileSummary(summary: ProfileSummaryCache) {
   cachedProfileSummary = summary;
 }
 
-function ProfileSummaryPanel({ summary }: { summary: ProfileSummaryViewModel }) {
+function ProfileSummaryPanel({
+  onOpenNotifications,
+  summary,
+}: {
+  onOpenNotifications: () => void;
+  summary: ProfileSummaryViewModel;
+}) {
   if (summary.state === "guest") {
     return (
       <>
@@ -355,9 +377,13 @@ function ProfileSummaryPanel({ summary }: { summary: ProfileSummaryViewModel }) 
         </div>
       ) : null}
       <div className="profile-summary-actions">
-        <Link className="profile-summary-link profile-summary-link-secondary" href="/mypage?notifications=1">
+        <button
+          className="profile-summary-link profile-summary-link-secondary"
+          onClick={onOpenNotifications}
+          type="button"
+        >
           알림 기록 보기
-        </Link>
+        </button>
         <Link className="profile-summary-link" href="/mypage">
           마이페이지로 이동
         </Link>
@@ -426,11 +452,7 @@ function buildProfileSummary({
     return { ...base, state: "loading" };
   }
 
-  const activeQuests = gamification?.quests?.active ?? [];
-  const quest =
-    activeQuests.find((item) => item.quest_type === "tutorial") ??
-    activeQuests[0] ??
-    null;
+  const tutorialGuide = getNextTutorialGuide(gamification);
   const priorityNotice = gamification?.notifications.priority_unseen?.[0] ?? null;
   const archivePreview =
     gamification?.notifications.archive_preview?.slice(0, 2).map((item) => ({
@@ -446,13 +468,14 @@ function buildProfileSummary({
     gradeLabel: gamification?.grade?.label ?? "새싹 집밥러",
     level: gamification?.level.current_level ?? progress?.level.current_level ?? 1,
     notificationMessage:
+      tutorialGuide?.body ??
       priorityNotice?.body ??
-      (quest ? `${quest.title}부터 차근차근 시작해 보세요.` : "새로운 알림이 없어요."),
-    notificationTitle: priorityNotice?.title ?? (quest ? "튜토리얼 안내" : "알림"),
+      "새로운 알림이 없어요.",
+    notificationTitle: tutorialGuide ? "튜토리얼 안내" : (priorityNotice?.title ?? "알림"),
     plannerCount:
       (progress?.event_counts.planner_registered_first ?? 0) +
       (progress?.event_counts.planner_registered_repeat ?? 0),
-    questTitle: quest?.title ?? null,
+    questTitle: tutorialGuide?.title ?? null,
     shoppingCount: progress?.event_counts.shopping_completed ?? 0,
     state: "ready",
   };
