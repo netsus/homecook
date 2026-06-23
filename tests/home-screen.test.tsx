@@ -1554,8 +1554,7 @@ describe("home screen", () => {
     const summary = await screen.findByRole("dialog", { name: "마이페이지 요약" });
 
     expect(within(summary).getByText("요리기록")).toBeTruthy();
-    expect(within(summary).getByRole("link", { name: "마이페이지로 이동" }).getAttribute("href")).toBe(
-      "/mypage",
-    );
+    expect(within(summary).getByRole("button", { name: "알림 기록 보기" })).toBeTruthy();
+    expect(within(summary).queryByRole("link", { name: "마이페이지로 이동" })).toBeNull();
   });
 });
