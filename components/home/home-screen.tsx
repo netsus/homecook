@@ -1145,24 +1145,24 @@ function HomeWebScreen({
 
               {showDiscoveryShortcuts ? <HomeQuickLinks variant="web" /> : null}
             </div>
-            <HomeWebSideRail
-              activeTagKey={activeTagKey}
-              className="web-home-aside-top"
-              dataTestId="web-home-side-rail-top"
-              onRetryTags={onRetryTags}
-              onSelectTag={onSelectTag}
-              onSelectTheme={onSelectTheme}
-              screenState={screenState}
-              selectedTheme={selectedTheme}
-              showDiscoveryShortcuts={showDiscoveryShortcuts}
-              tagOptions={tagOptions}
-              tagState={tagState}
-              themes={themes}
-            />
           </div>
         </section>
 
         <div className="web-home-content-grid">
+          <HomeWebSideRail
+            activeTagKey={activeTagKey}
+            className="web-home-aside-top"
+            dataTestId="web-home-side-rail-top"
+            onRetryTags={onRetryTags}
+            onSelectTag={onSelectTag}
+            onSelectTheme={onSelectTheme}
+            screenState={screenState}
+            selectedTheme={selectedTheme}
+            showDiscoveryShortcuts={showDiscoveryShortcuts}
+            tagOptions={tagOptions}
+            tagState={tagState}
+            themes={themes}
+          />
           <section className="web-all-recipes">
             <p
               aria-live="polite"

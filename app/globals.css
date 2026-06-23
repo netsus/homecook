@@ -4748,9 +4748,8 @@ button {
 
   .web-discovery-search-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+    grid-template-columns: minmax(0, 880px);
     align-items: start;
-    gap: 28px;
     margin-top: 6px;
   }
 
@@ -4967,13 +4966,15 @@ button {
 
   .web-home-content-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "recipes aside";
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
     align-items: start;
-    gap: 0;
+    gap: 28px;
     margin-top: 28px;
   }
 
   .web-home-content-grid .web-all-recipes {
+    grid-area: recipes;
     margin-top: 0;
   }
 
@@ -4989,9 +4990,11 @@ button {
   }
 
   .web-home-aside-top {
+    grid-area: aside;
     position: static;
     top: auto;
     gap: 12px;
+    margin-top: -166px;
   }
 
   .web-home-aside-top .web-home-aside-section {
@@ -12422,16 +12425,23 @@ button {
   @media (max-width: 1180px) {
     .web-discovery-search-layout {
       grid-template-columns: minmax(0, 1fr);
-      gap: 18px;
     }
 
     .web-home-content-grid {
+      grid-template-areas:
+        "aside"
+        "recipes";
       grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
     }
 
     .web-home-aside {
       position: static;
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .web-home-aside-top {
+      margin-top: 0;
     }
 
     .web-theme-rail-side .web-theme-card {
