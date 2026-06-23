@@ -80,6 +80,69 @@ function makeGamificationWithTutorialStep(
   };
 }
 
+function makeGamificationAfterFirstTutorialComplete() {
+  return {
+    ...makeGamificationWithTutorialStep({
+      achievementKey: "tutorial_recipe_saved",
+      title: "첫 레시피 저장",
+    }),
+    achievement_album: {
+      categories: [
+        {
+          category_key: "tutorial",
+          earned_count: 1,
+          label: "튜토리얼",
+          milestones: [
+            {
+              achievement_key: "tutorial_recipe_saved",
+              badge: {
+                badge_key: "tutorial_recipe_saved",
+                category: "tutorial",
+                shape_key: "bookmark",
+              },
+              current: 1,
+              description: "마음에 드는 레시피를 처음 저장했어요.",
+              earned_at: "2026-06-21T00:01:00.000Z",
+              locked_hint: null,
+              status: "earned",
+              target: 1,
+              title: "첫 레시피 저장",
+              track_key: "tutorial",
+            },
+          ],
+          total_count: 6,
+        },
+      ],
+      summary: { completed_category_count: 0, earned_count: 1, total_count: 6 },
+    },
+    last_updated_at: "2026-06-21T00:01:00.000Z",
+    quests: {
+      active: [
+        {
+          completed_at: null,
+          description: "오늘 먹을 끼니를 플래너에 하나 등록해보세요.",
+          dismissed_at: null,
+          is_new: true,
+          progress_current: 0,
+          progress_percent: 0,
+          progress_target: 1,
+          quest_key: "first_planner_registered",
+          quest_type: "tutorial",
+          status: "active",
+          title: "플래너에 끼니 등록하기",
+        },
+      ],
+      completed_recent: [],
+    },
+    tutorial: {
+      active_steps: [],
+      category_key: "tutorial",
+      completed_count: 1,
+      total_count: 6,
+    },
+  };
+}
+
 function setDesktop(isDesktop: boolean) {
   desktopMatches = isDesktop;
   mediaListeners = [];
@@ -202,6 +265,32 @@ describe("GrowthToastStack", () => {
     expect(toast.textContent).toContain("플래너에 끼니 등록하기");
     expect(toast.textContent).toContain("오늘 먹을 끼니를 플래너에 하나 등록해보세요.");
     expect(toast.textContent).not.toContain("마음에 드는 레시피 저장하기");
+  });
+
+  it("shows the second tutorial quest after refreshing from the first completed tutorial quest", async () => {
+    mockFetchUserGamification
+      .mockResolvedValueOnce(
+        makeGamificationWithTutorialStep({
+          achievementKey: "tutorial_recipe_saved",
+          title: "첫 레시피 저장",
+        }),
+      )
+      .mockResolvedValueOnce(makeGamificationAfterFirstTutorialComplete());
+
+    render(<GrowthToastStack />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("growth-toast").textContent).toContain(
+        "마음에 드는 레시피 저장하기",
+      );
+    });
+
+    dispatchRefresh();
+
+    await waitFor(() => {
+      expect(screen.getByText(/플래너에 끼니 등록하기/)).toBeTruthy();
+    });
+    expect(screen.getByText(/오늘 먹을 끼니를 플래너에 하나 등록해보세요/)).toBeTruthy();
   });
 
   it("does not send synthetic tutorial guide toasts to the seen API", async () => {

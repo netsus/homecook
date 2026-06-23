@@ -51,6 +51,7 @@ interface ToastView {
   body: string;
   groupKey: string | null;
   notificationIds: string[];
+  isTutorialGuide: boolean;
 }
 
 const TONE_BY_TYPE: Omit<Record<UserGamificationNotificationType, ToastTone>, "level_up"> = {
@@ -249,6 +250,7 @@ function toToastView(
     body,
     groupKey: notification.group_key ?? null,
     notificationIds: getGrowthNotificationIdsForSeen(notification),
+    isTutorialGuide: payload.tutorial_guide === true,
   };
 }
 
@@ -421,7 +423,14 @@ export function GrowthToastStack() {
       }
       // priority_unseen is already server ordered.
       const incoming = source.map(toToastView);
-      setViews((current) => dedupeById([...current, ...incoming]));
+      const hasIncomingTutorialGuide = incoming.some((view) => view.isTutorialGuide);
+      setViews((current) => {
+        const base = hasIncomingTutorialGuide
+          ? current.filter((view) => !view.isTutorialGuide)
+          : current;
+
+        return dedupeById([...base, ...incoming]);
+      });
     } catch {
       // Growth notifications are auxiliary to the source action.
     } finally {

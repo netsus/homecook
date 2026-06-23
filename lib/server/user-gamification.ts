@@ -1185,23 +1185,24 @@ export function buildUserGamificationData({
   const tutorialCategory = achievementAlbum.categories.find(
     (category) => category.category_key === "tutorial",
   );
-  const dismissedAchievementKeys = new Set(
-    questRows
-      .filter((row) => row.status === "dismissed")
-      .map((row) => getTutorialAchievementKeyForQuest(row.quest_key))
-      .filter((key): key is string => Boolean(key)),
-  );
-  const activeTutorialSteps = (tutorialCategory?.milestones ?? [])
-    .filter((milestone) =>
-      milestone.status === "active" && !dismissedAchievementKeys.has(milestone.achievement_key)
-    )
-    .map((milestone) => ({
-      achievement_key: milestone.achievement_key,
-      title: milestone.title,
-      current: milestone.current,
-      target: milestone.target,
-      status: milestone.status,
-    }));
+  const activeTutorialSteps = questData
+    .filter((quest) => quest.quest_type === "tutorial" && quest.status === "active")
+    .sort((left, right) => getTutorialQuestRank(left.quest_key) - getTutorialQuestRank(right.quest_key))
+    .slice(0, 1)
+    .map((quest) => {
+      const achievementKey = getTutorialAchievementKeyForQuest(quest.quest_key);
+      const achievement = USER_ACHIEVEMENT_DEFINITIONS.find(
+        (definition) => definition.achievement_key === achievementKey,
+      );
+
+      return {
+        achievement_key: achievementKey ?? quest.quest_key,
+        title: achievement?.title ?? quest.title,
+        current: quest.progress_current,
+        target: quest.progress_target,
+        status: "active" as const,
+      };
+    });
   const notificationData = notificationRows
     .map(toNotificationData)
     .filter(isVisibleGrowthNotification);
@@ -2042,6 +2043,15 @@ function getTutorialAchievementKeyForQuest(questKey: string) {
   };
 
   return mapping[questKey] ?? null;
+}
+
+function getTutorialQuestRank(questKey: string) {
+  const achievementKey = getTutorialAchievementKeyForQuest(questKey);
+  const index = TUTORIAL_BASE_ACHIEVEMENT_KEYS.indexOf(
+    achievementKey as (typeof TUTORIAL_BASE_ACHIEVEMENT_KEYS)[number],
+  );
+
+  return index === -1 ? TUTORIAL_BASE_ACHIEVEMENT_KEYS.length : index;
 }
 
 function calculateProgressPercent(current: number, target: number) {
