@@ -110,7 +110,14 @@ async function runCodexExec({ prompt, model, effort, timeoutMs, schemaPath }) {
     }
     return JSON.parse(await readFile(outputPath, "utf8"));
   } finally {
-    await rm(workdir, { recursive: true, force: true });
+    try {
+      // Cleanup must not turn a valid judge result into a provider failure.
+      await rm(workdir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    } catch (error) {
+      if (/^(1|true|yes|on)$/i.test(String(process.env.CODEX_JUDGE_DEBUG_CLEANUP ?? ""))) {
+        console.warn(`Codex judge cleanup failed: ${error.message}`);
+      }
+    }
   }
 }
 
@@ -131,6 +138,7 @@ export function createCodexJudgeClient(options = {}) {
       promptVersion = "semantic-judge-v3-anchored",
       sampleIndex = 0,
       sampleN = 1,
+      validateJson = null,
     }) {
       const keyParts = {
         provider: "codex",
@@ -156,6 +164,7 @@ export function createCodexJudgeClient(options = {}) {
 
       const mock = nextMockResponse();
       const json = mock ?? await runCodexExec({ prompt, model, effort, timeoutMs, schemaPath });
+      if (typeof validateJson === "function") validateJson(json);
       await mkdir(CACHE_DIR, { recursive: true });
       await writeFile(cachePath, JSON.stringify({ key, keyParts, model, effort, json }, null, 2) + "\n", "utf8");
       return { json, cached: false, model, effort };

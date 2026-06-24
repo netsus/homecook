@@ -360,6 +360,24 @@ function combineSampleGrades(sampleGrades, sampleN) {
   return { cases, average_score: round3(avg) };
 }
 
+async function generateCodexSampleWithRetry(client, request, maxAttempts = 2) {
+  let lastError = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      const sample = await client.generate({ ...request, validateJson: validatePayload });
+      return {
+        sample,
+        grade: normalize(sample.json),
+        retryCount: attempt,
+      };
+    } catch (error) {
+      lastError = error;
+      if (attempt + 1 >= maxAttempts) break;
+    }
+  }
+  throw lastError;
+}
+
 async function generateSemanticGrade({ judge, llm, golden, result, id, outTag, split }) {
   if (judge.provider === "fixture") {
     const fixtureSamples = Array.isArray(result.__semanticJudgeSamples)
@@ -390,8 +408,10 @@ async function generateSemanticGrade({ judge, llm, golden, result, id, outTag, s
       schemaPath: judge.schemaPath,
     });
     const samples = [];
+    const sampleGrades = [];
+    let retryCount = 0;
     for (let sampleIndex = 0; sampleIndex < judge.sampleN; sampleIndex += 1) {
-      samples.push(await client.generate({
+      const generated = await generateCodexSampleWithRetry(client, {
         prompt,
         inputText,
         split,
@@ -401,9 +421,11 @@ async function generateSemanticGrade({ judge, llm, golden, result, id, outTag, s
         promptVersion: judge.promptVersion,
         sampleIndex,
         sampleN: judge.sampleN,
-      }));
+      });
+      samples.push(generated.sample);
+      sampleGrades.push(generated.grade);
+      retryCount += generated.retryCount;
     }
-    const sampleGrades = samples.map((sample) => normalize(sample.json));
     return {
       grade: combineSampleGrades(sampleGrades, judge.sampleN),
       cached: samples.every((sample) => sample.cached),
@@ -411,7 +433,7 @@ async function generateSemanticGrade({ judge, llm, golden, result, id, outTag, s
       effort: samples[0]?.effort ?? judge.effort,
       cacheHits: samples.filter((sample) => sample.cached).length,
       cacheMisses: samples.filter((sample) => !sample.cached).length,
-      retryCount: 0,
+      retryCount,
     };
   }
 
@@ -476,6 +498,7 @@ async function main() {
   let cacheHitCount = 0;
   let cacheMissCount = 0;
   let borderlineRetryCount = 0;
+  let judgeRetryCount = 0;
 
   for (const id of ids) {
     const resultPath = path.join(splitDir, id, "runs", resultOutTag, "result.json");
@@ -528,7 +551,7 @@ async function main() {
       }
       cacheHitCount += gradeResult.cacheHits ?? (gradeResult.cached ? 1 : 0);
       cacheMissCount += gradeResult.cacheMisses ?? (gradeResult.cached ? 0 : 1);
-      borderlineRetryCount += gradeResult.retryCount ?? 0;
+      judgeRetryCount += gradeResult.retryCount ?? 0;
       const row = {
         videoId: id,
         success: true,
@@ -611,6 +634,7 @@ async function main() {
     failed_row_count: failedRowCount,
     cache_hit_count: cacheHitCount,
     cache_miss_count: cacheMissCount,
+    judge_retry_count: judgeRetryCount,
     borderline_retry_count: borderlineRetryCount,
     averageScore,
     minCaseScore,
