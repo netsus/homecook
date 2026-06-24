@@ -78,6 +78,28 @@ describe("ci path filter", () => {
     expect(fullCiResult.complete_regression_matrix).toBe(true);
   });
 
+  it("does not run browser QA for recipe extraction lab changes", () => {
+    const result = evaluateCiPathFilters({
+      changedFiles: [
+        "lib/server/recipe-extraction-lab/extract.mjs",
+        "lib/server/recipe-extraction-lab/prompt.mjs",
+        "tests/recipe-loop-local-integrity.test.ts",
+      ],
+      eventName: "pull_request",
+      action: "ready_for_review",
+      draft: false,
+    });
+
+    expect(result).toEqual({
+      smoke: false,
+      accessibility: false,
+      visual: false,
+      lighthouse: false,
+      full_regression: false,
+      complete_regression_matrix: false,
+    });
+  });
+
   it("uses the trimmed CI regression matrix for protected branch pushes", () => {
     expect(
       evaluateCiPathFilters({
