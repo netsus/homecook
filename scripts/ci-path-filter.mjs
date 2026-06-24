@@ -31,6 +31,10 @@ const QA_TOOLING_PATTERNS = [
   "tests/playwright-workflow.test.ts",
 ];
 
+const BROWSER_QA_IGNORED_PATTERNS = [
+  "lib/server/recipe-extraction-lab/**",
+];
+
 const PLAYWRIGHT_SHARED_PATTERNS = [
   "qa/fixtures/**",
   "tests/e2e/assets/**",
@@ -158,6 +162,12 @@ function hasAnyMatch(changedFiles, patterns) {
   return changedFiles.some((filePath) => matchesAnyPath(filePath, patterns));
 }
 
+function withoutBrowserQaIgnoredFiles(changedFiles) {
+  return changedFiles.filter(
+    (filePath) => !matchesAnyPath(filePath, BROWSER_QA_IGNORED_PATTERNS),
+  );
+}
+
 /**
  * @param {Array<string | CiLabel>} labels
  */
@@ -184,26 +194,27 @@ export function evaluateCiPathFilters(input = {}) {
     draft = false,
   } = input;
   const files = [...new Set(changedFiles.map(normalizeFilePath).filter(Boolean))];
+  const browserQaFiles = withoutBrowserQaIgnoredFiles(files);
   const labelNames = normalizeLabels(labels);
   const isManualFullRun = eventName === "workflow_dispatch" || eventName === "schedule";
   const isReadyForReview = eventName === "pull_request" && action === "ready_for_review";
   const hasFullCiLabel = labelNames.includes("full-ci");
   const completeRegressionMatrix = isManualFullRun || hasFullCiLabel;
-  const hasFullRegressionChange = hasAnyMatch(files, FULL_REGRESSION_PATTERNS);
+  const hasFullRegressionChange = hasAnyMatch(browserQaFiles, FULL_REGRESSION_PATTERNS);
   const fullRegression =
     isManualFullRun ||
     hasFullCiLabel ||
-    isReadyForReview ||
+    (isReadyForReview && hasFullRegressionChange) ||
     (eventName === "push" && hasFullRegressionChange);
 
   const forceCoreSuites = isManualFullRun || fullRegression;
-  const lighthousePathChanged = hasAnyMatch(files, LIGHTHOUSE_PATTERNS);
+  const lighthousePathChanged = hasAnyMatch(browserQaFiles, LIGHTHOUSE_PATTERNS);
   const lighthouse = isManualFullRun || (!draft && (hasFullCiLabel || lighthousePathChanged));
 
   return {
-    smoke: forceCoreSuites || hasAnyMatch(files, SMOKE_PATTERNS),
-    accessibility: forceCoreSuites || hasAnyMatch(files, ACCESSIBILITY_PATTERNS),
-    visual: forceCoreSuites || hasAnyMatch(files, VISUAL_PATTERNS),
+    smoke: forceCoreSuites || hasAnyMatch(browserQaFiles, SMOKE_PATTERNS),
+    accessibility: forceCoreSuites || hasAnyMatch(browserQaFiles, ACCESSIBILITY_PATTERNS),
+    visual: forceCoreSuites || hasAnyMatch(browserQaFiles, VISUAL_PATTERNS),
     lighthouse,
     full_regression: fullRegression,
     complete_regression_matrix: completeRegressionMatrix,
