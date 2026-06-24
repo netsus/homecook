@@ -263,6 +263,47 @@ describe("recipe-loop local integrity gates", () => {
     expect(singleDishResult.meta.splitCombinedRecipeGroups).toBe(0);
   });
 
+  it("accepts a top-level recipe array response from the LLM", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: [
+          {
+            title: "어묵볶음",
+            ingredients: [
+              { name: "어묵", amount: "200", unit: "g", amountBasis: "stated" },
+              { name: "양파", amount: "1/2", unit: "개", amountBasis: "stated" },
+            ],
+            steps: ["어묵과 양파를 양념에 볶는다."],
+          },
+        ],
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: {
+          videoId: "top-level-array",
+          title: "어묵볶음",
+          description: "00:00 어묵볶음",
+        },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    expect(result.recipes).toHaveLength(1);
+    expect(result.recipes[0]).toMatchObject({
+      title: "어묵볶음",
+      ingredients: expect.arrayContaining([expect.objectContaining({ name: "어묵", amount: "200", unit: "g" })]),
+      steps: ["어묵과 양파를 양념에 볶는다."],
+    });
+  });
+
   it("does not hydrate cooking ingredient amounts from promotional event quantities", async () => {
     const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
     const llm = {
@@ -618,7 +659,7 @@ describe("recipe-loop local integrity gates", () => {
     });
   });
 
-  it("builds the iter12 prompt with source isolation and low-tail recovery checks", async () => {
+  it("builds the iter15 prompt with source isolation and ingredient identity guards", async () => {
     const { buildExtractionPrompt, PROMPT_VERSION } = await import(recipePromptModuleUrl);
     const prompt = buildExtractionPrompt({
       video: { title: "묵참김밥과 오뎅볶이" },
@@ -626,13 +667,20 @@ describe("recipe-loop local integrity gates", () => {
       useVisual: false,
     });
 
-    expect(PROMPT_VERSION).toBe("iter12-train-diagnostic-recovery-3");
+    expect(PROMPT_VERSION).toBe("iter15-train-first-ingredient-floor");
     expect(prompt).toContain("와/과");
     expect(prompt).toContain("각 후보의 근거끼리 섞지");
+    expect(prompt).toContain("재료의 정체성과 형태를 보존");
+    expect(prompt).toContain("가공식품·완제품 소스·양념장·원물 채소·분말 양념");
+    expect(prompt).toContain("서로 마음대로 치환하지");
+    expect(prompt).toContain("추측해서 추가하지");
+    expect(prompt).toContain("원문 표기를 nameAliases에 보존");
+    expect(prompt).toContain("서로 다른 형태");
     expect(prompt).toContain("출력 직전");
     expect(prompt).toContain("고춧가루");
     expect(prompt).toContain("새우젓");
     expect(prompt).toContain("이벤트");
+    expect(prompt).toContain("상품명은 실제 조리 투입량이 아니므로 재료명·재료 분량으로 쓰지 않는다");
     expect(prompt).toContain("실제 조리 투입량");
     expect(prompt).toContain("곁들임 소스");
     expect(prompt).toContain("기존 요리에 양념 하나를 추가");
@@ -646,6 +694,9 @@ describe("recipe-loop local integrity gates", () => {
     expect(prompt).toContain("전체 대략량");
     expect(prompt).toContain("들깨가루");
     expect(prompt).toContain("단계 근거가 전혀 없는 재료는");
+    expect(prompt).not.toContain("ingredientAdditions");
+    expect(prompt).not.toContain("golden");
+    expect(prompt).not.toContain("grade_semantic");
   });
 
   it("records missing deterministic artifacts as explicit failed rows", () => {
