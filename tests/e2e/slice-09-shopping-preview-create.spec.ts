@@ -364,6 +364,7 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       // Verify request body
       expect(requestBody).toEqual({
+        complete_without_list: false,
         meal_configs: [
           {
             meal_id: "meal-1",
@@ -412,6 +413,7 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       // Should only submit meal-1
       expect(requestBody).toEqual({
+        complete_without_list: false,
         meal_configs: [
           {
             meal_id: "meal-1",
@@ -458,6 +460,7 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await page.getByText("장보기 목록 만들기").click();
 
       expect(requestBody).toEqual({
+        complete_without_list: false,
         meal_configs: [
           {
             meal_id: "meal-1",
