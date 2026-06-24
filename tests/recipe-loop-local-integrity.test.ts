@@ -2564,6 +2564,68 @@ print(json.dumps({
     expect(report.marker_after_dry).toBe(false);
   });
 
+  it("preclaims holdout consumption before running subprocesses", () => {
+    const result = runLoopPython(`
+import json
+from pathlib import Path
+root = Path(${JSON.stringify(workdir)})
+loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
+loop.DATA_ROOT.mkdir(parents=True, exist_ok=True)
+loop.RUN_ROOT = root / "notebooks" / "recipe_loop_runs"
+
+ALL_PASS = {axis: True for axis in loop.GATE_AXES}
+decision_dir = loop.RUN_ROOT / "run-pass" / "iteration-01"
+decision_dir.mkdir(parents=True, exist_ok=True)
+pass_path = decision_dir / "05_decision.json"
+pass_path.write_text(json.dumps({
+    "run_mode": "offline_snapshot_eval",
+    "gate_mode": "local_hardening",
+    "passed": True,
+    "checks": ALL_PASS,
+}), encoding="utf-8")
+
+def boom(*args, **kwargs):
+    raise RuntimeError("subprocess boom")
+
+loop.run_node = boom
+failed = False
+try:
+    loop.run_holdout_final(out_tag="preclaim-smoke", dry_run=False, validation_decision_path=str(pass_path))
+except RuntimeError:
+    failed = True
+
+marker_exists = loop.holdout_marker_path().exists()
+payload = json.loads(loop.holdout_marker_path().read_text(encoding="utf-8")) if marker_exists else {}
+second_refused = False
+try:
+    loop.run_holdout_final(out_tag="preclaim-smoke-2", dry_run=False, validation_decision_path=str(pass_path))
+except RuntimeError:
+    second_refused = True
+
+print(json.dumps({
+    "failed": failed,
+    "marker_exists": marker_exists,
+    "status": payload.get("status"),
+    "out_tag": payload.get("out_tag"),
+    "success": payload.get("success"),
+    "validation_passed": payload.get("validation_passed"),
+    "preclaimed_at": payload.get("preclaimed_at"),
+    "second_refused": second_refused,
+}, ensure_ascii=False))
+`);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.failed).toBe(true);
+    expect(report.marker_exists).toBe(true);
+    expect(report.status).toBe("failed");
+    expect(report.out_tag).toBe("preclaim-smoke");
+    expect(report.success).toBe(false);
+    expect(report.validation_passed).toBe(true);
+    expect(report.preclaimed_at).toBeTruthy();
+    expect(report.second_refused).toBe(true);
+  });
+
   it("builds protected answer fingerprints beyond step instructions and redacts scan hits", () => {
     const result = runLoopPython(`
 fragments = loop.protected_answer_fragments(["validation"])

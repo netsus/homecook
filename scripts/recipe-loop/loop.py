@@ -1595,16 +1595,19 @@ def verify_resume_module_state(iter_dir: Path, accept_current_module_state: bool
     return state
 
 
-def write_holdout_consumed_marker(out_tag: str, result: dict, dry_run: bool = False) -> dict:
-    marker = holdout_marker_path()
-    payload = {
+def build_holdout_consumed_marker_payload(out_tag: str, result: dict, dry_run: bool = False,
+                                          consumed_at: str | None = None,
+                                          preclaimed_at: str | None = None) -> dict:
+    consumed_at = consumed_at or kst_now().isoformat()
+    return {
         "schemaVersion": 1,
         "run_id": result.get("run_id", out_tag),
         "out_tag": out_tag,
         "git_commit": git_commit(),
         "started_at": result.get("started_at"),
         "completed_at": result.get("completed_at"),
-        "consumed_at": kst_now().isoformat(),
+        "consumed_at": consumed_at,
+        "preclaimed_at": preclaimed_at,
         "dry_run": dry_run,
         "status": result.get("status"),
         "validation_decision_path": result.get("validation_decision_path"),
@@ -1614,6 +1617,54 @@ def write_holdout_consumed_marker(out_tag: str, result: dict, dry_run: bool = Fa
         "success": result.get("success") is True,
         "result": result,
     }
+
+
+def preclaim_holdout_consumption(out_tag: str, validation: dict, started_at: str) -> dict:
+    """실제 holdout 실행 시작 전에 소비 마커를 원자적으로 선점한다."""
+    marker = holdout_marker_path()
+    consumed_at = kst_now().isoformat()
+    result = {
+        "success": False,
+        "dry_run": False,
+        "run_id": out_tag,
+        "status": "running",
+        "started_at": started_at,
+        "completed_at": None,
+        "out_tag": out_tag,
+        "validation_decision_path": validation.get("path"),
+        "validation_passed": validation.get("passed"),
+    }
+    payload = build_holdout_consumed_marker_payload(
+        out_tag,
+        result,
+        dry_run=False,
+        consumed_at=consumed_at,
+        preclaimed_at=consumed_at,
+    )
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(str(marker), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    except FileExistsError:
+        raise RuntimeError(f"holdout already consumed: {display_path(marker)}")
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    return payload
+
+
+def write_holdout_consumed_marker(out_tag: str, result: dict, dry_run: bool = False) -> dict:
+    marker = holdout_marker_path()
+    previous = read_json(marker, {}) if marker.exists() and not dry_run else {}
+    consumed_at = previous.get("consumed_at") if isinstance(previous, dict) else None
+    preclaimed_at = previous.get("preclaimed_at") if isinstance(previous, dict) else None
+    payload = build_holdout_consumed_marker_payload(
+        out_tag,
+        result,
+        dry_run=dry_run,
+        consumed_at=consumed_at,
+        preclaimed_at=preclaimed_at,
+    )
     if not dry_run:
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -2619,6 +2670,8 @@ def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None,
     out_tag = out_tag or ("holdout-final-" + kst_now().strftime("%Y%m%d-%H%M%S"))
     started_at = kst_now().isoformat()
     validation = load_validation_decision(validation_decision_path)
+    preclaim = None
+    expected = None
     if not dry_run:
         if not validation["passed"]:
             raise RuntimeError(
@@ -2626,8 +2679,9 @@ def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None,
                 f"{json.dumps(validation, ensure_ascii=False)}"
             )
         assert_holdout_not_consumed()
-    expected = str(split_expected_count("holdout"))
+        preclaim = preclaim_holdout_consumption(out_tag, validation, started_at)
     if dry_run:
+        expected = str(split_expected_count("holdout"))
         result = {
             "success": validation["passed"] and not holdout_consumption_status().get("consumed"),
             "dry_run": True,
@@ -2643,24 +2697,44 @@ def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None,
         }
         return write_holdout_consumed_marker(out_tag, result, dry_run=True)
 
-    ext = run_node("run-extraction.mjs", "--split", "holdout", "--out-tag", out_tag, "--model", cfg.model)
-    det = run_node("grade-extraction.mjs", "--split", "holdout", "--out-tag", out_tag, "--expected-count", expected)
-    sem = run_node("grade-semantic.mjs", *semantic_grader_args(cfg, "holdout", out_tag, expected))
-    summaries = {
-        "deterministic": read_json(DATA_ROOT / "holdout" / f"_grade_summary.{out_tag}.json", {}),
-        "semantic": read_json(DATA_ROOT / "holdout" / f"_semantic_summary.{out_tag}.json", {}),
-    }
-    redaction_scan = merge_redaction_scans([
-        scan_semantic_artifacts_for_protected_answers("holdout", out_tag),
-        scan_texts_for_protected_answers([
-            {"scope": "holdout_extraction_stdout", "text": ext.stdout},
-            {"scope": "holdout_extraction_stderr", "text": ext.stderr},
-            {"scope": "holdout_deterministic_stdout", "text": det.stdout},
-            {"scope": "holdout_deterministic_stderr", "text": det.stderr},
-            {"scope": "holdout_semantic_stdout", "text": sem.stdout},
-            {"scope": "holdout_semantic_stderr", "text": sem.stderr},
-        ]),
-    ])
+    try:
+        expected = str(split_expected_count("holdout"))
+        ext = run_node("run-extraction.mjs", "--split", "holdout", "--out-tag", out_tag, "--model", cfg.model)
+        det = run_node("grade-extraction.mjs", "--split", "holdout", "--out-tag", out_tag, "--expected-count", expected)
+        sem = run_node("grade-semantic.mjs", *semantic_grader_args(cfg, "holdout", out_tag, expected))
+        summaries = {
+            "deterministic": read_json(DATA_ROOT / "holdout" / f"_grade_summary.{out_tag}.json", {}),
+            "semantic": read_json(DATA_ROOT / "holdout" / f"_semantic_summary.{out_tag}.json", {}),
+        }
+        redaction_scan = merge_redaction_scans([
+            scan_semantic_artifacts_for_protected_answers("holdout", out_tag),
+            scan_texts_for_protected_answers([
+                {"scope": "holdout_extraction_stdout", "text": ext.stdout},
+                {"scope": "holdout_extraction_stderr", "text": ext.stderr},
+                {"scope": "holdout_deterministic_stdout", "text": det.stdout},
+                {"scope": "holdout_deterministic_stderr", "text": det.stderr},
+                {"scope": "holdout_semantic_stdout", "text": sem.stdout},
+                {"scope": "holdout_semantic_stderr", "text": sem.stderr},
+            ]),
+        ])
+    except Exception as exc:
+        if preclaim is not None:
+            failed_result = {
+                "success": False,
+                "dry_run": False,
+                "run_id": out_tag,
+                "status": "failed",
+                "started_at": started_at,
+                "completed_at": kst_now().isoformat(),
+                "out_tag": out_tag,
+                "expected_count": expected,
+                "validation_decision_path": validation["path"],
+                "validation_passed": validation["passed"],
+                "failure_reason": f"{type(exc).__name__}: {exc}",
+                "preclaimed_at": preclaim.get("preclaimed_at"),
+            }
+            write_holdout_consumed_marker(out_tag, failed_result, dry_run=False)
+        raise
     success = ext.returncode == 0 and det.returncode == 0 and sem.returncode == 0 and redaction_scan["success"]
     result = {
         "success": success,
@@ -2673,6 +2747,7 @@ def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None,
         "expected_count": expected,
         "validation_decision_path": validation["path"],
         "validation_passed": validation["passed"],
+        "preclaimed_at": preclaim.get("preclaimed_at") if preclaim else None,
         "holdout_summary_path": display_path(DATA_ROOT / "holdout" / f"_grade_summary.{out_tag}.json"),
         "holdout_semantic_summary_path": display_path(DATA_ROOT / "holdout" / f"_semantic_summary.{out_tag}.json"),
         "returncodes": {
