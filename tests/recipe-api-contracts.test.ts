@@ -550,6 +550,67 @@ describe("recipe API contracts", () => {
     ]);
   });
 
+  it.each([
+    ["청도반시", "연시", "과일", "550e8400-e29b-41d4-a716-446655440101"],
+    ["국수", "소면", "곡류", "550e8400-e29b-41d4-a716-446655440102"],
+    ["레몬착즙", "레몬즙", "과일", "550e8400-e29b-41d4-a716-446655440103"],
+    ["멥쌀밥", "쌀밥", "곡류", "550e8400-e29b-41d4-a716-446655440104"],
+  ])("searches reviewed synonym %s as canonical ingredient %s", async (
+    synonym,
+    canonicalName,
+    category,
+    ingredientId,
+  ) => {
+    const ingredientsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const synonymsQuery = createQuery({
+      data: [
+        {
+          ingredient_id: ingredientId,
+          ingredients: {
+            id: ingredientId,
+            standard_name: canonicalName,
+            category,
+            category_code: null,
+          },
+        },
+      ],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_synonyms") return synonymsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/ingredients/route");
+    const response = await GET(
+      new NextRequest(`http://localhost:3000/api/v1/ingredients?q=${encodeURIComponent(synonym)}`),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items).toEqual([
+      expect.objectContaining({
+        id: ingredientId,
+        standard_name: canonicalName,
+        category,
+      }),
+    ]);
+    expect(body.data.items).not.toEqual([
+      expect.objectContaining({
+        standard_name: synonym,
+      }),
+    ]);
+    expect(ingredientsQuery.ilike).toHaveBeenCalledWith("standard_name", `%${synonym}%`);
+    expect(synonymsQuery.ilike).toHaveBeenCalledWith("synonym", `%${synonym}%`);
+  });
+
   it("falls back to standard-name matches when the synonym query fails", async () => {
     const ingredientsQuery = createQuery({
       data: [

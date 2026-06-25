@@ -122,6 +122,35 @@ describe("21 ingredient dictionary backend", () => {
     });
   });
 
+  it.each([
+    ["청도반시", "연시", "00000000-0000-4000-8000-000000000021"],
+    ["국수", "소면", "00000000-0000-4000-8000-000000000022"],
+    ["레몬착즙", "레몬즙", "00000000-0000-4000-8000-000000000023"],
+    ["멥쌀밥", "쌀밥", "00000000-0000-4000-8000-000000000024"],
+  ])("resolves reviewed synonym %s to canonical ingredient %s", async (
+    parsedName,
+    canonicalName,
+    ingredientId,
+  ) => {
+    const { dbClient } = createIngredientDb({
+      ingredients: [{ id: ingredientId, standard_name: canonicalName }],
+      synonyms: [{ synonym: parsedName, ingredients: { id: ingredientId, standard_name: canonicalName } }],
+    });
+
+    const lookup = await findIngredientIds(dbClient, [parsedName]);
+    const ingredient = buildIngredient(parsedName, lookup.matchesByName);
+
+    expect(lookup.error).toBeNull();
+    expect(ingredient).toMatchObject({
+      ingredient_id: ingredientId,
+      standard_name: canonicalName,
+      display_text: `${parsedName} 1T`,
+      raw_text: `${parsedName} 1T`,
+      resolution_status: "resolved",
+      candidates: undefined,
+    });
+  });
+
   it("maps a mixed-case English parsed name through a lowercase synonym row", async () => {
     const soySauceId = "00000000-0000-4000-8000-000000000002";
     const { dbClient, synonymsTable } = createIngredientDb({
@@ -304,6 +333,24 @@ describe("21 ingredient dictionary backend", () => {
       ["배", "기타"],
     ]) {
       expect(migration).toMatch(new RegExp(`'${name}',\\s*'${category}'`));
+    }
+  });
+
+  it("keeps reviewed external synonym mappings for recipe import resolution", () => {
+    const migrationFiles = readdirSync("supabase/migrations")
+      .filter((name) => name.endsWith(".sql"))
+      .sort();
+    const migrations = migrationFiles
+      .map((name) => readFileSync(join("supabase/migrations", name), "utf8"))
+      .join("\n");
+
+    for (const [canonicalName, synonym] of [
+      ["연시", "청도반시"],
+      ["소면", "국수"],
+      ["레몬즙", "레몬착즙"],
+      ["쌀밥", "멥쌀밥"],
+    ]) {
+      expect(migrations).toContain(`'${canonicalName}', '${synonym}'`);
     }
   });
 });
