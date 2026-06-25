@@ -378,3 +378,18 @@ Remote apply 후:
 - bundle promotion migration PR merge.
 - remote DB smoke와 API/search/bundle smoke 통과.
 - source/license evidence 보존.
+
+## Post-Load Status - 2026-06-25
+
+현재 launch 28 재료 DB 적재는 다음 상태까지 진행됐다.
+
+- ingredient/synonym promotion migration PR merge 완료.
+- bundle promotion migration PR merge 완료.
+- synonym follow-up migration PR merge 완료.
+- remote DB에는 `ingredients` 869개, `ingredient_synonyms` 595개, `ingredient_bundles` 13개, `ingredient_bundle_items` 222개가 존재한다.
+- DB 품질 점검 결과 normalized standard name 중복, ambiguous synonym, orphan synonym, invalid category, orphan bundle item, duplicate bundle item은 모두 0건이다.
+- launch ingredient ID가 `recipe_ingredients`, `pantry_items`, `shopping_list_items`에 참조된 건수는 현재 0건이다.
+- 세부 품질 점검 결과는 `db-quality-report-2026-06-25.md`에 남겼다.
+- emergency rollback SQL은 `rollback-20260625090000_28_external_ingredient_full_seed.sql`에 정리했다.
+
+남은 실제 운영 검증은 UI/API smoke다. 대표 경로는 재료 검색, 동의어 검색, 유튜브/수동 레시피 재료 치환, 팬트리 묶음 추가다.
