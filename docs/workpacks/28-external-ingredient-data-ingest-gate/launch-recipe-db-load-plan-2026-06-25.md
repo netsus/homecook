@@ -403,6 +403,40 @@ If any user data references a launch recipe, rollback must stop. In that case us
 - `recipe_tags` and `recipes.tags` projection are consistent.
 - Rollback SQL blocks when user references exist.
 
+## Prep Status - 2026-06-25
+
+The first tooling pass for this plan is implemented and recorded in:
+
+- `recipe-db-pilot-prep-report-2026-06-25.md`
+
+Available commands:
+
+```bash
+pnpm external:recipes:hygiene-report -- \
+  --output-dir .artifacts/external-recipe-ingest/launch-2026-06-25/hygiene \
+  --generated-at 2026-06-25T00:00:00.000Z
+
+pnpm external:recipes:live-fetch -- \
+  --output-dir .artifacts/external-recipe-ingest/launch-2026-06-25/foodsafety-source \
+  --generated-at 2026-06-25T00:00:00.000Z \
+  --start-index 1 \
+  --end-index 30
+
+pnpm external:recipes:review-pack -- \
+  --source-export .artifacts/external-recipe-ingest/launch-2026-06-25/foodsafety-source/live-source-export.json \
+  --output-dir .artifacts/external-recipe-ingest/launch-2026-06-25/review-pack \
+  --target-count 30 \
+  --generated-at 2026-06-25T00:00:00.000Z
+```
+
+Current status:
+
+- Existing recipe hygiene report generation works through read-only Supabase REST.
+- FoodSafetyKorea `COOKRCP01` response shape is verified through the official `sample` key.
+- `DATA_GO_KR_API_KEY` and `DATA_GO_KR_API_KEY1` do not authenticate against FoodSafetyKorea `COOKRCP01`; both returned invalid-key HTML alerts.
+- `.env.local` needs `FOODSAFETYKOREA_API_KEY` before a real 20-30 recipe pilot batch can be generated.
+- Sample response review pack generated 5 candidates and 4 sample pilot selections. These are parser/review proof only and must not be used as launch seed rows.
+
 ## Deferred Work
 
 - Admin recipe review UI.
