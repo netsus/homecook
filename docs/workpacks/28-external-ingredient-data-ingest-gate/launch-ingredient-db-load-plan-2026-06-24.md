@@ -76,10 +76,10 @@ launch-sized load 전 category 정렬 기준은 다음과 같다.
 
 전체 fetch는 호출 제한 안에서 가능하다.
 
-- `Page_Size=1000`이 정상 동작하면 15개 group을 group당 1회 호출하므로 본 fetch는 약 15회다.
-- count preflight를 group당 1회 별도로 해도 총 약 30회다.
-- 만약 안정성을 위해 `Page_Size=100`으로 낮추면 본 fetch는 약 31회, count preflight 포함 약 46회다.
-- 재시도, metadata 확인, 실패 group 재호출을 포함해도 1일 1,000회 제한보다 충분히 낮다.
+- 2026-06-24 실제 API preflight 결과, RDA 조회 서비스는 `Page_Size=20`까지 정상이고 `Page_Size=30`부터 `요청 페이지 형식 오류`를 반환한다.
+- 따라서 full fetch는 `Page_Size=20`으로 실행한다.
+- RDA 전체 2,549개 기준 본 fetch는 약 134회다.
+- 재시도, metadata 확인, 실패 group 재호출을 포함해도 1일 1,000회 제한보다 낮지만, 과호출 방지를 위해 실행당 `--max-requests-per-run 200`을 둔다.
 
 안전 운영 규칙:
 
@@ -95,8 +95,14 @@ launch-sized load 전 category 정렬 기준은 다음과 같다.
 - live fetch에 필요한 key를 운영자 환경에 넣는다.
   - MFDS 공공데이터포털 표준데이터: `DATA_GO_KR_API_KEY`
   - RDA 공공데이터포털 조회 서비스: `DATA_GO_KR_API_KEY`
+- RDA 실행 중 quota/rate limit이 발생하면 보조 공공데이터포털 key를 순서대로 사용할 수 있다.
+  - `DATA_GO_KR_API_KEY`
+  - `DATA_GO_KR_API_KEY1`
+  - `DATA_GO_KR_API_KEY2`
+  - 이후 숫자 suffix 증가
 - key는 repo root의 `.env.local`에 넣거나 현재 shell session에 `export`로 넣는다.
 - `.env.local`은 local secret 파일이므로 commit하지 않는다.
+- artifact와 log에는 실제 key 값이 아니라 key source name만 남긴다.
 - source URL, dataset update date, license token을 `source-lock.md`에 기록한다.
 - output root는 날짜별로 고정한다.
 
@@ -104,6 +110,7 @@ launch-sized load 전 category 정렬 기준은 다음과 같다.
 
 ```dotenv
 DATA_GO_KR_API_KEY=공공데이터포털_인증키
+DATA_GO_KR_API_KEY1=공공데이터포털_보조_인증키
 ```
 
 ```bash
@@ -134,10 +141,21 @@ pnpm external:ingredients:live-fetch -- \
   --output-dir "$LOAD_DIR/rda-full-source" \
   --generated-at "${LOAD_DATE}T00:00:00.000Z" \
   --rda-groups A,B,C,D,E,F,G,H,I,J,K,L,M,N,R \
-  --rda-page-size 1000 \
+  --rda-page-size 20 \
   --rda-fetch-all \
-  --max-requests-per-run 100
+  --max-requests-per-run 200
 ```
+
+2026-06-24 실행 기록:
+
+- Phase 1 pagination/resume tooling 구현 후 위 명령을 실행했다.
+- 1차 실행에서 RDA group `A`, `B`, `C`는 수집 완료되어 `$LOAD_DIR/rda-full-source/rda-A-full-source.json`, `rda-B-full-source.json`, `rda-C-full-source.json` 캐시가 생성됐다.
+- 1차 실행은 `D` group 시작 시 공공데이터포털 응답이 `HTTP_429 API token quota exceeded`로 바뀌어 중단됐다.
+- quota/rate limit이 발생한 partial source에서는 후보 dry-run을 실행하지 않고, stale `candidate-report.json`과 `approved-seed-promotion-artifact.json`을 제거한다.
+- `DATA_GO_KR_API_KEY1` failover 지원을 추가했다.
+- 2차 실행에서 완료된 `A/B/C`는 cache hit로 재사용했고, `D` 이후 group은 `DATA_GO_KR_API_KEY1`로 정상 수집됐다.
+- full-source 결과는 `15/15` providers success, RDA source row `2,549`, production DB writes `0`이다.
+- dry-run 결과는 candidate `2,549`, duplicate candidate `2,222`, pending review `2,549`, needs source check `0`이다.
 
 MFDS는 별도 evidence sample로만 받는다.
 
@@ -159,6 +177,23 @@ full source artifact를 기준으로 다음 review pack을 만든다.
 - `synonym-candidates.json`
 - `rejected-source-rows.json`
 - `candidate-review-summary.md`
+
+```bash
+pnpm external:ingredients:review-pack -- \
+  --candidate-report "$LOAD_DIR/rda-full-source/candidate-report.json" \
+  --output-dir "$LOAD_DIR/review-pack" \
+  --generated-at "${LOAD_DATE}T00:00:00.000Z"
+```
+
+2026-06-24 실행 결과:
+
+- 원본 후보 row: `2,549`
+- 대표 재료 후보: `695`
+- 동의어 후보: `1,077`
+- 보류/제외 source row: `4,826`
+- 우선 수동 검토 필요 대표 후보: `9`
+- 동의어 후보에는 RDA raw name의 comma segment에서 온 품종/가공형/상태 후보가 섞일 수 있으므로 bulk approve하지 않는다.
+- `rejected-source-rows.json`은 실제 삭제/거절 확정 목록이 아니라 자동 삽입하지 않을 duplicate source row와 synonym 제외 근거 확인용이다.
 
 대표 ingredient 승인 기준:
 
