@@ -403,6 +403,28 @@ If any user data references a launch recipe, rollback must stop. In that case us
 - `recipe_tags` and `recipes.tags` projection are consistent.
 - Rollback SQL blocks when user references exist.
 
+## Pilot Status - 2026-06-26
+
+Completed locally and merged:
+
+- Approved decision artifact: `recipe-review-decisions-pilot-30-2026-06-26.json`
+- Pilot ingredient follow-up migration: `supabase/migrations/20260626103000_foodsafety_pilot_ingredient_followup.sql`
+- Pilot recipe seed migration: `supabase/migrations/20260626104000_seed_foodsafety_pilot_recipes.sql`
+- Pilot rollback SQL: `rollback-20260626104000_foodsafety_pilot_recipe_seed.sql`
+
+Local verification completed:
+
+- `pnpm exec vitest run tests/external-recipe-ingest-scripts.test.ts`
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm dlx supabase db reset`
+- Local DB smoke for 30 seeded recipes and the corrected `근채류주먹밥` ingredient order.
+
+Remote status:
+
+- `supabase migration list` on 2026-06-26 showed `20260626102000`, `20260626103000`, and `20260626104000` as local-only.
+- Remote DB apply and remote smoke are still pending.
+
 ## Prep Status - 2026-06-25
 
 The first tooling pass for this plan is implemented and recorded in:
