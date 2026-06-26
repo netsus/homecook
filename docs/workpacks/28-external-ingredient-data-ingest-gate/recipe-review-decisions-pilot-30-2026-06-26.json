@@ -256,7 +256,7 @@
           "mentioned_in_steps_initially": true,
           "original_text": "달걀 1개(60g)",
           "component_label": "",
-          "parsed_name": "달걀 당근",
+          "parsed_name": "달걀",
           "target_name": "달걀",
           "amount_text": "60g",
           "decision": "keep",
@@ -270,7 +270,7 @@
           "mentioned_in_steps_initially": true,
           "original_text": "당근 20g",
           "component_label": "",
-          "parsed_name": "양파",
+          "parsed_name": "당근",
           "target_name": "당근",
           "amount_text": "20g",
           "decision": "keep",
@@ -284,7 +284,7 @@
           "mentioned_in_steps_initially": true,
           "original_text": "양파 50g",
           "component_label": "",
-          "parsed_name": "통깨",
+          "parsed_name": "양파",
           "target_name": "양파",
           "amount_text": "50g",
           "decision": "keep",
@@ -298,8 +298,8 @@
           "mentioned_in_steps_initially": false,
           "original_text": "통깨 3g",
           "component_label": "",
-          "parsed_name": "레몬즙 탄산수",
-          "target_name": "레몬즙",
+          "parsed_name": "통깨",
+          "target_name": "통깨",
           "amount_text": "3g",
           "decision": "keep",
           "note": "",
@@ -312,7 +312,7 @@
           "mentioned_in_steps_initially": true,
           "original_text": "레몬즙 15g",
           "component_label": "",
-          "parsed_name": "어간장",
+          "parsed_name": "레몬즙",
           "target_name": "레몬즙",
           "amount_text": "15g",
           "decision": "keep",
@@ -541,8 +541,8 @@
           "row_kind": "manual_add",
           "reviewed": true,
           "mentioned_in_steps_initially": false,
-          "original_text": "다진 마늘(10g)",
-          "component_label": "양념",
+          "original_text": "물(200g)",
+          "component_label": "",
           "parsed_name": "물",
           "target_name": "물",
           "amount_text": "200g",
@@ -882,7 +882,7 @@
         {
           "step_number": 5,
           "component_label": "",
-          "instruction": "그 릇 에 모 든 재 료 를 넣 고 오 니 기 리 를 만들어준다."
+          "instruction": "그릇에 모든 재료를 넣고 오니기리를 만들어준다."
         },
         {
           "step_number": 6,
@@ -1816,7 +1816,7 @@
         {
           "step_number": 3,
           "component_label": "",
-          "instruction": "가지, 호박, 새송이버섯, 양파, 파프리카, 피망에 올리브유를 바르고 달궈진 그릴 팬에 구운 후 접시에 담고 발사믹 크레타를 뿌리고 간장레몬 소스를 곁들인다."
+          "instruction": "가지, 호박, 새송이버섯, 양파, 파프리카, 피망에 올리브유를 바르고 달궈진 그릴 팬에 구운 후 접시에 담고 발사믹크레마를 뿌리고 간장레몬 소스를 곁들인다."
         }
       ]
     },
@@ -3447,17 +3447,17 @@
         {
           "step_number": 1,
           "component_label": "",
-          "instruction": "손질된 새우를 끓는 물에 데쳐 건진다.a"
+          "instruction": "손질된 새우를 끓는 물에 데쳐 건진다."
         },
         {
           "step_number": 2,
           "component_label": "",
-          "instruction": "연두부, 달걀, 생크림, 설탕에 녹인 무염버터를 믹서에 넣고 간 뒤 새우(1)를 함께 섞어 그릇에 담는다.b"
+          "instruction": "연두부, 달걀, 생크림, 설탕에 녹인 무염버터를 믹서에 넣고 간 뒤 새우(1)를 함께 섞어 그릇에 담는다."
         },
         {
           "step_number": 3,
           "component_label": "",
-          "instruction": "시금치를 잘게 다져 혼합물 그릇(2)에 뿌리고 찜기에 넣고 중간 불에서 10분 정도 찐다.c"
+          "instruction": "시금치를 잘게 다져 혼합물 그릇(2)에 뿌리고 찜기에 넣고 중간 불에서 10분 정도 찐다."
         }
       ]
     },
@@ -5405,7 +5405,7 @@
         {
           "step_number": 4,
           "component_label": "",
-          "instruction": "당근. 양파 . 양송이는 입자 있게 다진다."
+          "instruction": "당근, 양파, 양송이는 입자 있게 다진다."
         },
         {
           "step_number": 5,

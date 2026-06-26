@@ -425,6 +425,12 @@ Remote status:
 - `supabase migration list` on 2026-06-26 showed `20260626102000`, `20260626103000`, and `20260626104000` as local-only.
 - Remote DB apply and remote smoke are still pending.
 
+Pilot seed quality follow-up:
+
+- Corrected pre-remote seed quality issues in `다이어트국수`, `백김치콩비지찌개`, `근채류주먹밥`, `구운채소와 간장레몬 소스`, `새우 두부 계란찜`, and `전복리조또`.
+- Re-ran local `supabase db reset`; pilot quality gates passed with 30 recipes, 299 ingredient rows, 146 steps, and 135 recipe tag rows.
+- Re-ran `supabase db push --linked --dry-run`; remote apply still pending and would push only the three 2026-06-26 pilot migrations.
+
 ## Prep Status - 2026-06-25
 
 The first tooling pass for this plan is implemented and recorded in:
