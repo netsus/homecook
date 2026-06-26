@@ -252,6 +252,8 @@ export function HomeScreen() {
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [themeState, setThemeState] = useState<AsyncState>("loading");
   const [tagState, setTagState] = useState<AsyncState>("loading");
+  const [isLoadingMoreRecipes, setIsLoadingMoreRecipes] = useState(false);
+  const [loadMoreRecipeError, setLoadMoreRecipeError] = useState(false);
   const [recipes, setRecipes] = useState<RecipeListData | null>(null);
   const [themes, setThemes] = useState<RecipeThemesData | null>(null);
   const [tagOptions, setTagOptions] = useState<RecipeTagItem[]>([]);
@@ -418,6 +420,8 @@ export function HomeScreen() {
 
     try {
       setScreenState("loading");
+      setIsLoadingMoreRecipes(false);
+      setLoadMoreRecipeError(false);
 
       const params = new URLSearchParams({
         sort,
@@ -462,6 +466,78 @@ export function HomeScreen() {
     void loadRecipes();
   }, [loadRecipes]);
 
+  const loadMoreRecipes = useCallback(async () => {
+    if (!recipes?.has_next || !recipes.next_cursor || isLoadingMoreRecipes) {
+      return;
+    }
+
+    const currentRequestId = recipeRequestIdRef.current;
+
+    try {
+      setIsLoadingMoreRecipes(true);
+      setLoadMoreRecipeError(false);
+
+      const params = new URLSearchParams({
+        cursor: recipes.next_cursor,
+        sort,
+      });
+
+      if (debouncedQuery.trim()) {
+        params.set("q", debouncedQuery.trim());
+      }
+
+      if (appliedIngredientIds.length > 0) {
+        params.set("ingredient_ids", appliedIngredientIds.join(","));
+      }
+
+      if (effectiveTagKey) {
+        params.set("tag", effectiveTagKey);
+      }
+
+      const nextRecipeData = await fetchJson<RecipeListData>(`/api/v1/recipes?${params}`);
+
+      if (currentRequestId !== recipeRequestIdRef.current) {
+        return;
+      }
+
+      const safeNextRecipeData = {
+        ...nextRecipeData,
+        items: filterSafeRecipeCards(nextRecipeData.items),
+      };
+
+      setRecipes((currentRecipes) => {
+        if (!currentRecipes) {
+          return safeNextRecipeData;
+        }
+
+        const seenRecipeIds = new Set(currentRecipes.items.map((recipe) => recipe.id));
+        const appendedItems = safeNextRecipeData.items.filter(
+          (recipe) => !seenRecipeIds.has(recipe.id),
+        );
+
+        return {
+          items: [...currentRecipes.items, ...appendedItems],
+          has_next: safeNextRecipeData.has_next,
+          next_cursor: safeNextRecipeData.next_cursor,
+        };
+      });
+    } catch {
+      if (currentRequestId === recipeRequestIdRef.current) {
+        setLoadMoreRecipeError(true);
+      }
+    } finally {
+      setIsLoadingMoreRecipes(false);
+    }
+  }, [
+    appliedIngredientIds,
+    debouncedQuery,
+    effectiveTagKey,
+    isLoadingMoreRecipes,
+    recipes?.has_next,
+    recipes?.next_cursor,
+    sort,
+  ]);
+
   const hasQuery = debouncedQuery.trim().length > 0;
   const hasTypedQuery = query.trim().length > 0;
   const hasIngredientFilter = appliedIngredientIds.length > 0;
@@ -478,6 +554,9 @@ export function HomeScreen() {
     () => (effectiveTagKey ? recipes?.items ?? [] : selectedTheme?.recipes ?? recipes?.items ?? []),
     [effectiveTagKey, recipes?.items, selectedTheme?.recipes],
   );
+  const usesPaginatedRecipeList = !selectedTheme || Boolean(effectiveTagKey);
+  const hasMoreDisplayedRecipes =
+    usesPaginatedRecipeList && Boolean(recipes?.has_next && recipes.next_cursor);
   const listTitle = selectedTheme
     ? selectedTheme.title
     : effectiveTagLabel
@@ -725,11 +804,15 @@ export function HomeScreen() {
           onRecipeSave={homeSaveFlow.openRecipeSaveModal}
           onRetry={() => void loadRecipes()}
           onRetryTags={() => void loadTagOptions()}
+          onLoadMoreRecipes={() => void loadMoreRecipes()}
           onSelectSort={selectSort}
           onSelectTag={selectTag}
           onSelectTheme={selectTheme}
           gamification={gamification}
+          hasMoreRecipes={hasMoreDisplayedRecipes}
           isAuthenticated={isAuthenticated}
+          isLoadingMoreRecipes={isLoadingMoreRecipes}
+          loadMoreRecipeError={loadMoreRecipeError}
           profile={profile}
           progress={progress}
           query={query}
@@ -949,6 +1032,24 @@ export function HomeScreen() {
                   </div>
                 ) : null}
 
+                {screenState === "ready" && hasMoreDisplayedRecipes ? (
+                  <div className="home-mobile-load-more">
+                    {loadMoreRecipeError ? (
+                      <p className="home-mobile-load-more-error">
+                        다음 레시피를 불러오지 못했어요.
+                      </p>
+                    ) : null}
+                    <button
+                      className="home-mobile-load-more-button"
+                      disabled={isLoadingMoreRecipes}
+                      onClick={() => void loadMoreRecipes()}
+                      type="button"
+                    >
+                      {isLoadingMoreRecipes ? "불러오는 중..." : "더 보기"}
+                    </button>
+                  </div>
+                ) : null}
+
                 {showEmptyState ? (
                   <div className="px-4">
                     <HomeSearchEmptyState
@@ -1017,11 +1118,15 @@ function HomeWebScreen({
   onRecipeSave,
   onRetry,
   onRetryTags,
+  onLoadMoreRecipes,
   onSelectSort,
   onSelectTag,
   onSelectTheme,
   gamification,
+  hasMoreRecipes,
   isAuthenticated,
+  isLoadingMoreRecipes,
+  loadMoreRecipeError,
   profile,
   progress,
   query,
@@ -1052,11 +1157,15 @@ function HomeWebScreen({
   onRecipeSave: (recipe: RecipeCardItem) => void;
   onRetry: () => void;
   onRetryTags: () => void;
+  onLoadMoreRecipes: () => void;
   onSelectSort: (nextSort: string) => void;
   onSelectTag: (tag: RecipeTagItem) => void;
   onSelectTheme: (themeId: string) => void;
   gamification: UserGamificationData | null;
+  hasMoreRecipes: boolean;
   isAuthenticated: boolean;
+  isLoadingMoreRecipes: boolean;
+  loadMoreRecipeError: boolean;
   profile: UserProfileData | null;
   progress: UserProgressData | null;
   query: string;
@@ -1176,8 +1285,8 @@ function HomeWebScreen({
               <div>
                 <h2 className="web-section-title">{listTitle}</h2>
                 <p className="web-section-meta">
-                  {displayedRecipes.length}개
-                  {selectedTheme ? " · 테마 결과" : totalRecipeCount ? ` · 전체 ${totalRecipeCount}개` : ""}
+                  {displayedRecipes.length}개 표시 중
+                  {selectedTheme ? " · 테마 결과" : hasMoreRecipes ? " · 더 있음" : totalRecipeCount ? ` · 전체 ${totalRecipeCount}개` : ""}
                 </p>
               </div>
               <div className="web-section-actions">
@@ -1229,6 +1338,23 @@ function HomeWebScreen({
                     recipe={recipe}
                   />
                 ))}
+              </div>
+            ) : null}
+
+            {screenState === "ready" && hasMoreRecipes ? (
+              <div className="web-home-load-more">
+                {loadMoreRecipeError ? (
+                  <p className="web-home-load-more-error">
+                    다음 레시피를 불러오지 못했어요.
+                  </p>
+                ) : null}
+                <WebButton
+                  disabled={isLoadingMoreRecipes}
+                  onClick={onLoadMoreRecipes}
+                  variant="secondary"
+                >
+                  {isLoadingMoreRecipes ? "불러오는 중..." : "더 보기"}
+                </WebButton>
               </div>
             ) : null}
 
