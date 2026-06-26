@@ -1,6 +1,7 @@
 import type {
   RecipeIngredient,
   RecipeStep,
+  RecipeStepCookingMethod,
   RecipeUserStatus,
 } from "@/types/recipe";
 import {
@@ -37,7 +38,19 @@ interface RecipeStepsRow {
   heat_level: string | null;
   duration_seconds: number | null;
   duration_text: string | null;
-  cooking_methods: RecipeStep["cooking_method"] | RecipeStep["cooking_method"][];
+  cooking_methods:
+    | RecipeStepCookingMethod
+    | Array<RecipeStepCookingMethod | null>
+    | null;
+  recipe_step_cooking_methods?:
+    | Array<{
+        position?: number | null;
+        cooking_methods:
+          | RecipeStepCookingMethod
+          | Array<RecipeStepCookingMethod | null>
+          | null;
+      }>
+    | null;
 }
 
 export function mapRecipeUserStatus(
@@ -84,6 +97,7 @@ export function normalizeRecipeSteps(
   return (
     rows?.map((item) => {
       const componentLabel = normalizeRecipeSectionLabel(item.component_label);
+      const cookingMethods = normalizeStepCookingMethods(item);
       return {
         id: item.id,
         step_number: item.step_number,
@@ -91,9 +105,8 @@ export function normalizeRecipeSteps(
         instruction:
           stripMatchingSectionPrefix(item.instruction, componentLabel) ??
           item.instruction,
-        cooking_method: Array.isArray(item.cooking_methods)
-          ? (item.cooking_methods[0] ?? null)
-          : item.cooking_methods,
+        cooking_method: cookingMethods[0] ?? null,
+        cooking_methods: cookingMethods,
         ingredients_used: Array.isArray(item.ingredients_used)
           ? item.ingredients_used
           : [],
@@ -103,4 +116,34 @@ export function normalizeRecipeSteps(
       };
     }) ?? []
   );
+}
+
+function firstJoin<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function normalizeStepCookingMethods(row: RecipeStepsRow) {
+  const orderedMethods = (row.recipe_step_cooking_methods ?? [])
+    .slice()
+    .sort((left, right) => (left.position ?? 0) - (right.position ?? 0))
+    .map((item) => firstJoin(item.cooking_methods))
+    .filter((method): method is RecipeStepCookingMethod => Boolean(method));
+
+  const legacyMethod = firstJoin(row.cooking_methods);
+  const methods = orderedMethods.length > 0
+    ? orderedMethods
+    : legacyMethod
+      ? [legacyMethod]
+      : [];
+  const seen = new Set<string>();
+
+  return methods.filter((method) => {
+    const key = method.id || method.code || method.label;
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
 }

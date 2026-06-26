@@ -75,6 +75,7 @@ export interface CookingModeStep {
   instruction: string;
   component_label?: string | null;
   cooking_method: CookingMethodSummary;
+  cooking_methods?: CookingMethodSummary[];
   ingredients_used: unknown[];
   heat_level: string | null;
   duration_seconds: number | null;

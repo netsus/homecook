@@ -17,7 +17,7 @@ import {
 } from "@/lib/cooking-method-taxonomy";
 
 describe("cooking method taxonomy v2", () => {
-  it("defines 6 groups and 20 canonical methods", () => {
+  it("defines 6 groups and 29 canonical methods", () => {
     expect(COOKING_METHOD_CATEGORIES.map((category) => category.label)).toEqual([
       "준비/손질",
       "전처리",
@@ -27,7 +27,7 @@ describe("cooking method taxonomy v2", () => {
       "기기 조리",
     ]);
     expect(COOKING_METHOD_CATEGORIES).toHaveLength(6);
-    expect(CANONICAL_COOKING_METHODS).toHaveLength(20);
+    expect(CANONICAL_COOKING_METHODS).toHaveLength(29);
     expect(getCookingMethodCategoryByCode("appliance")?.label).toBe("기기 조리");
     expect(isValidCookingMethodCategoryCode("pan_oil")).toBe(true);
     expect(isValidCookingMethodCategoryCode("finish")).toBe(false);
@@ -37,6 +37,8 @@ describe("cooking method taxonomy v2", () => {
     const labels = CANONICAL_COOKING_METHODS.map((method) => method.label);
 
     expect(labels).not.toContain("씻기");
+    expect(labels).toContain("손질");
+    expect(labels).toContain("마무리");
     expect(labels).toContain("에어프라이어");
     expect(isCanonicalCookingMethodCode("air_fryer")).toBe(true);
     expect(getCanonicalCookingMethodByCode("air_fryer")).toMatchObject({

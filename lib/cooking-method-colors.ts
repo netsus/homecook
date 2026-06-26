@@ -32,6 +32,14 @@ const COOKING_METHOD_COLORS: Record<string, string> = {
   reduce: "var(--cook-reduce)",
   raw: "var(--cook-mix)",
   prep: "var(--cook-slice)",
+  grind: "var(--cook-mince)",
+  mash: "var(--cook-mince)",
+  roll: "var(--cook-slice)",
+  sieve: "var(--cook-slice)",
+  infuse: "var(--cook-pickle)",
+  cook_rice: "var(--cook-boil)",
+  fill: "var(--cook-mix)",
+  finish: "var(--cook-mix)",
   other: "var(--cook-etc)",
 };
 

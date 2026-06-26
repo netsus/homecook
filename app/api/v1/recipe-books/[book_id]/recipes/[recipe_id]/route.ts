@@ -16,6 +16,11 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import {
+  isMissingStepCookingMethodsRelation,
+  RECIPE_STEP_SELECT_LEGACY,
+  RECIPE_STEP_SELECT_WITH_METHODS,
+} from "@/lib/server/recipe-step-method-select";
+import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
@@ -92,7 +97,19 @@ interface RecipeStepRow {
   heat_level: string | null;
   duration_seconds: number | null;
   duration_text: string | null;
-  cooking_methods: RecipeStep["cooking_method"] | RecipeStep["cooking_method"][];
+  cooking_methods:
+    | RecipeStep["cooking_method"]
+    | Array<RecipeStep["cooking_method"]>
+    | null;
+  recipe_step_cooking_methods?:
+    | Array<{
+        position?: number | null;
+        cooking_methods:
+          | RecipeStep["cooking_method"]
+          | Array<RecipeStep["cooking_method"]>
+          | null;
+      }>
+    | null;
 }
 
 type MaybeSingleResult<T> = PromiseLike<{
@@ -372,13 +389,19 @@ async function readReaderSteps(
   dbClient: RecipeBookRecipeRemoveDbClient,
   recipeId: string,
 ) {
-  const result = await dbClient
+  let result = await dbClient
     .from("recipe_steps")
-    .select(
-      "id, step_number, instruction, component_label, ingredients_used, heat_level, duration_seconds, duration_text, cooking_methods(id, code, label, color_key)",
-    )
+    .select(RECIPE_STEP_SELECT_WITH_METHODS)
     .eq("recipe_id", recipeId)
     .order("step_number", { ascending: true });
+
+  if (result.error && isMissingStepCookingMethodsRelation(result.error)) {
+    result = await dbClient
+      .from("recipe_steps")
+      .select(RECIPE_STEP_SELECT_LEGACY)
+      .eq("recipe_id", recipeId)
+      .order("step_number", { ascending: true });
+  }
 
   if (result.error || !result.data) {
     return {

@@ -11,6 +11,11 @@ import {
   createRouteHandlerClient,
   createServiceRoleClient,
 } from "@/lib/supabase/server";
+import {
+  COOK_MODE_STEP_SELECT_LEGACY,
+  COOK_MODE_STEP_SELECT_WITH_METHODS,
+  isMissingStepCookingMethodsRelation,
+} from "@/lib/server/recipe-step-method-select";
 import type { CookingStandaloneCookModeData } from "@/types/cooking";
 
 interface RouteContext {
@@ -157,13 +162,19 @@ export async function GET(request: Request, context: RouteContext) {
       return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);
     }
 
-    const stepsResult = await dbClient
+    let stepsResult = await dbClient
       .from("recipe_steps")
-      .select(
-        "step_number, instruction, component_label, ingredients_used, heat_level, duration_seconds, duration_text, cooking_methods(code, label, color_key)",
-      )
+      .select(COOK_MODE_STEP_SELECT_WITH_METHODS)
       .eq("recipe_id", recipeId)
       .order("step_number", { ascending: true });
+
+    if (stepsResult.error && isMissingStepCookingMethodsRelation(stepsResult.error)) {
+      stepsResult = await dbClient
+        .from("recipe_steps")
+        .select(COOK_MODE_STEP_SELECT_LEGACY)
+        .eq("recipe_id", recipeId)
+        .order("step_number", { ascending: true });
+    }
 
     if (stepsResult.error || !stepsResult.data) {
       return fail("INTERNAL_ERROR", "요리모드 데이터를 불러오지 못했어요.", 500);

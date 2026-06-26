@@ -47,8 +47,11 @@ Use a correction review pack and migration, not manual DB edits.
 
 - Add step-level method control to the review HTML.
 - Default value can use current DB value, but reviewer can override each step.
-- Generated migration updates `recipe_steps.cooking_method_id`.
-- Keep existing `cooking_methods`; do not add new method rows unless a repeated gap is proven.
+- Generated migration updates legacy `recipe_steps.cooking_method_id` with the first/primary method.
+- `recipe_steps.cooking_method_id` remains a compatibility field.
+- Add `recipe_step_cooking_methods` as the ordered multi-method truth for steps that need more than one method.
+- Keep existing `cooking_methods` where possible. Add method rows only for repeated gaps proven by the pilot review.
+- Pilot 30 review proved repeated gaps for `손질`, `갈기`, `으깨기`, `밀기`, `체`, `우리기`, `밥하기`, `채우기`, `마무리`.
 
 ### B. Tags
 
@@ -103,6 +106,7 @@ Use a correction review pack and migration, not manual DB edits.
    - `recipe_tags`
    - `recipe_sources.extraction_meta_json`
    - `recipe_steps.cooking_method_id`
+   - `recipe_step_cooking_methods`
    - `recipe_ingredients.sort_order`
    - approved ingredient/amount/section fixes only if included in the decisions.
 5. Run local dry-run and data smoke:
@@ -118,6 +122,7 @@ Use a correction review pack and migration, not manual DB edits.
 - Pilot 30 recipes no longer show source-only tags as prominent visible tags.
 - Each pilot recipe has a reviewed primary image chosen from available source image candidates.
 - Step method labels are reviewed per step, not inferred only from recipe-level source method.
+- Steps that combine multiple actions can show multiple ordered method labels, while older clients can still read the first method from `recipe_steps.cooking_method_id`.
 - Ingredients display in a cooking-friendly order, especially matching early step usage.
 - All corrections are reproducible through JSON decisions plus migration/rollback SQL.
 - No direct manual production DB edits are required.

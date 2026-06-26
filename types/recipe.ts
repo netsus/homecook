@@ -117,19 +117,22 @@ export interface RecipeIngredient {
   sort_order: number;
 }
 
+export interface RecipeStepCookingMethod {
+  id: string;
+  code: string;
+  label: string;
+  color_key: string;
+  category_code?: string | null;
+  category_label?: string | null;
+}
+
 export interface RecipeStep {
   id: string;
   step_number: number;
   instruction: string;
   component_label?: string | null;
-  cooking_method: {
-    id: string;
-    code: string;
-    label: string;
-    color_key: string;
-    category_code?: string | null;
-    category_label?: string | null;
-  } | null;
+  cooking_method: RecipeStepCookingMethod | null;
+  cooking_methods?: RecipeStepCookingMethod[];
   ingredients_used: Array<{
     ingredient_id: string;
     amount: number | null;
