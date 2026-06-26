@@ -501,6 +501,72 @@ describe("home screen", () => {
     expect(ruleBody(".web-home-recipe-card .web-recipe-card")).toContain("height: 100%;");
   });
 
+  it("loads the next recipe page from the home list cursor", async () => {
+    installMatchMedia(true);
+    const user = userEvent.setup();
+
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      if (input.startsWith("/api/v1/tags")) {
+        return Promise.resolve({ items: [] });
+      }
+
+      const url = new URL(input, "http://localhost:3000");
+
+      if (url.searchParams.get("cursor") === "cursor-page-2") {
+        return Promise.resolve({
+          items: [
+            buildRecipeCard({
+              id: "recipe-page-2",
+              title: "두 번째 페이지 레시피",
+            }),
+          ],
+          next_cursor: null,
+          has_next: false,
+        });
+      }
+
+      return Promise.resolve({
+        items: [
+          buildRecipeCard({
+            id: "recipe-page-1",
+            title: "첫 번째 페이지 레시피",
+          }),
+        ],
+        next_cursor: "cursor-page-2",
+        has_next: true,
+      });
+    });
+
+    render(<HomeScreen />);
+
+    expect(await screen.findByText("첫 번째 페이지 레시피")).toBeTruthy();
+    expect(screen.getByText(/1개 표시 중/)).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "더 보기" }));
+
+    expect(await screen.findByText("두 번째 페이지 레시피")).toBeTruthy();
+    expect(screen.getByText(/2개 표시 중/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "더 보기" })).toBeNull();
+    expect(
+      fetchJson.mock.calls.some(([input]) => {
+        if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
+          return false;
+        }
+
+        const url = new URL(input, "http://localhost:3000");
+        return url.searchParams.get("cursor") === "cursor-page-2";
+      }),
+    ).toBe(true);
+  });
+
   it("does not show misleading +N tags on mobile recipe cards", async () => {
     fetchJson.mockImplementation((input: string) => {
       if (input.startsWith("/api/v1/ingredients")) {

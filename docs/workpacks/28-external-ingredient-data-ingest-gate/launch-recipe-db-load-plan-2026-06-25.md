@@ -431,6 +431,12 @@ Pilot seed quality follow-up:
 - Re-ran local `supabase db reset`; pilot quality gates passed with 30 recipes, 299 ingredient rows, 146 steps, and 135 recipe tag rows.
 - Re-ran `supabase db push --linked --dry-run`; remote apply still pending and would push only the three 2026-06-26 pilot migrations.
 
+Pilot post-remote follow-up:
+
+- After remote apply, DB held the expected 43 total recipes and 30 FoodSafety pilot recipes, but HOME still showed only the first recipe page because `/api/v1/recipes` already paginates and HOME did not consume `next_cursor`.
+- HOME now appends the next page from `next_cursor` with an explicit `더 보기` action and labels the count as displayed rows instead of implying the loaded page is the whole DB.
+- The original FoodSafety API only provided recipe-level `RCP_WAY2`, so the seed copied one cooking method to every step in each recipe. Added `20260626121000_fix_foodsafety_pilot_step_methods.sql` to reclassify all 146 pilot steps by step instruction using existing `cooking_methods`.
+
 ## Prep Status - 2026-06-25
 
 The first tooling pass for this plan is implemented and recorded in:
