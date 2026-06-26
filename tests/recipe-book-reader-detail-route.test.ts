@@ -247,6 +247,7 @@ describe("/api/v1/recipe-books/[book_id]/recipes/[recipe_id]", () => {
             instruction: "냄비에 물과 된장을 넣고 끓인다.",
             component_label: null,
             cooking_method: null,
+            cooking_methods: [],
             ingredients_used: [],
             heat_level: null,
             duration_seconds: 90,
@@ -258,7 +259,7 @@ describe("/api/v1/recipe-books/[book_id]/recipes/[recipe_id]", () => {
     });
     expect(rpc).not.toHaveBeenCalled();
     expect(recipeStepsTable.select).toHaveBeenCalledWith(
-      "id, step_number, instruction, component_label, ingredients_used, heat_level, duration_seconds, duration_text, cooking_methods(id, code, label, color_key)",
+      "id, step_number, instruction, component_label, ingredients_used, heat_level, duration_seconds, duration_text, cooking_methods(id, code, label, color_key, category_code), recipe_step_cooking_methods(position, cooking_methods(id, code, label, color_key, category_code))",
     );
   });
 });

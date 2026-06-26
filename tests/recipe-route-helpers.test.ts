@@ -5,6 +5,7 @@ import {
   normalizeRecipeIngredients,
   normalizeRecipeSteps,
 } from "@/lib/recipe-detail";
+import { toCookingModeStep } from "@/lib/server/cooking";
 import {
   clampLimit,
   encodeRecipeListCursor,
@@ -164,5 +165,89 @@ describe("recipe route helpers", () => {
         cooking_method: expect.objectContaining({ label: "끓이기" }),
       }),
     ]);
+  });
+
+  it("prefers ordered multi-method step relations over the legacy single method", () => {
+    const [step] = normalizeRecipeSteps([
+      {
+        id: "step-1",
+        step_number: 1,
+        instruction: "시금치를 데친 뒤 곱게 간다.",
+        component_label: null,
+        ingredients_used: [],
+        heat_level: null,
+        duration_seconds: null,
+        duration_text: null,
+        cooking_methods: {
+          id: "legacy-method",
+          code: "boil",
+          label: "끓이기",
+          color_key: "red",
+        },
+        recipe_step_cooking_methods: [
+          {
+            position: 2,
+            cooking_methods: {
+              id: "method-grind",
+              code: "grind",
+              label: "갈기",
+              color_key: "gray",
+            },
+          },
+          {
+            position: 1,
+            cooking_methods: {
+              id: "method-blanch",
+              code: "blanch",
+              label: "데치기",
+              color_key: "lime",
+            },
+          },
+        ],
+      },
+    ]);
+
+    expect(step?.cooking_method?.label).toBe("데치기");
+    expect(step?.cooking_methods?.map((method) => method.label)).toEqual([
+      "데치기",
+      "갈기",
+    ]);
+  });
+
+  it("keeps multi-method cook-mode steps while preserving the primary method", () => {
+    expect(
+      toCookingModeStep({
+        step_number: 1,
+        instruction: "시금치를 데친 뒤 곱게 간다.",
+        component_label: null,
+        ingredients_used: [],
+        heat_level: null,
+        duration_seconds: null,
+        duration_text: null,
+        cooking_methods: {
+          code: "boil",
+          label: "끓이기",
+          color_key: "red",
+        },
+        recipe_step_cooking_methods: [
+          {
+            position: 2,
+            cooking_methods: {
+              code: "grind",
+              label: "갈기",
+              color_key: "gray",
+            },
+          },
+          {
+            position: 1,
+            cooking_methods: {
+              code: "blanch",
+              label: "데치기",
+              color_key: "lime",
+            },
+          },
+        ],
+      }).cooking_methods?.map((method) => method.label),
+    ).toEqual(["데치기", "갈기"]);
   });
 });

@@ -1,0 +1,569 @@
+{
+  "exported_at": "2026-06-26T15:49:35.563Z",
+  "source": "pilot-30-result-review.html",
+  "storage_key": "homecook:p30-quality-edit-decisions:v1",
+  "summary": {
+    "edited_recipe_count": 25,
+    "base_recipe_count": 30
+  },
+  "decisions": {
+    "82b6a95a-d524-5a39-8c97-0fb6b230b5a4": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "8504b99f-1b6a-41b4-9dcc-cbece5d367c0": {
+          "decision": "edit",
+          "memo": "이건 끓여서 만든게 아니라 그냥 상온에 넣어두고 우린듯. '우리기'를 추가해야할 듯.",
+          "methods": [
+            "우리기"
+          ],
+          "method": "우리기"
+        },
+        "9f6bf01f-ab5b-427b-bd6e-a62010c1bf78": {
+          "decision": "edit",
+          "memo": "고명으로 얹는건 '마무리'로. db에는 마무리가 있는데 조리법 옵션엔 없음.",
+          "methods": [
+            "마무리"
+          ],
+          "method": "마무리"
+        }
+      },
+      "image": {
+        "thumbnail_url": "http://www.foodsafetykorea.go.kr/uploadimg/20141118/20141118102104_1416273664244.jpg",
+        "decision": "edit"
+      },
+      "notes": ""
+    },
+    "9e9e82c1-f7bc-5372-9588-0f242cc8239d": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "ef1d82bf-0ccb-4b4b-9e48-e05d8e97d588": {
+          "decision": "edit",
+          "memo": "섞기 -> 마무리",
+          "methods": [
+            "마무리"
+          ],
+          "method": "마무리"
+        }
+      },
+      "image": {
+        "thumbnail_url": "http://www.foodsafetykorea.go.kr/uploadimg/cook/20_00386_06.png",
+        "decision": "edit"
+      },
+      "notes": ""
+    },
+    "298da2db-51e4-50da-9295-034d6e77045b": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "2cec809a-d1e0-4dea-851d-229272249ed2": {
+          "methods": [
+            "썰기",
+            "굽기"
+          ],
+          "method": "썰기",
+          "decision": "edit"
+        },
+        "4e2c11b2-2894-45eb-b89b-a3b7b1c8ebba": {
+          "methods": [
+            "끓이기",
+            "갈기"
+          ],
+          "method": "끓이기",
+          "decision": "edit",
+          "memo": "'갈기' 추가"
+        }
+      },
+      "image": {
+        "thumbnail_url": "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00037_2.png",
+        "decision": "edit"
+      },
+      "notes": ""
+    },
+    "12dbf6ae-8783-52c6-a1e4-8280fcfe16b2": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "ab9e1548-19cf-4078-a72d-ca3771965fb3": {
+          "decision": "edit",
+          "memo": "밥은 끓이기보다 다른 조리법이 필요함. ",
+          "methods": [
+            "밥하기"
+          ],
+          "method": "밥하기"
+        },
+        "98e65761-2959-48ef-b92d-b28dc129b0a6": {
+          "decision": "edit",
+          "memo": "섞기 -> 마무리",
+          "methods": [
+            "마무리"
+          ],
+          "method": "마무리"
+        },
+        "58d7c26c-ba77-4a28-bb25-7d56d038756d": {
+          "methods": [
+            "다지기",
+            "볶기"
+          ],
+          "method": "다지기",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "0a54f6c0-0ac3-59ea-97f9-4b4f58156ecf": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "4f7a8cb4-473c-4bc7-9eaa-3964ade8d036": {
+          "decision": "edit",
+          "memo": "썰기 -> 밀기",
+          "methods": [
+            "밀기"
+          ],
+          "method": "밀기"
+        },
+        "54fe54ce-f011-4d64-a04b-1a165474baa8": {
+          "methods": [
+            "삶기",
+            "으깨기"
+          ],
+          "method": "삶기",
+          "decision": "edit",
+          "memo": "으깨기 추가"
+        }
+      },
+      "image": {
+        "thumbnail_url": "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00441_2.png",
+        "decision": "edit"
+      },
+      "notes": ""
+    },
+    "c2693c74-4109-5f64-8a69-865acd0ef77f": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "ecb29f50-b77d-4df4-96dc-e5b041c625c3": {
+          "methods": [
+            "체"
+          ],
+          "method": "체",
+          "decision": "edit",
+          "memo": "체 추가"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "a5a7fc1e-ceef-5970-9a85-b60377ce72f8": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "5100d769-8cb1-42c7-982f-6aeb8ddd2e2b": {
+          "methods": [
+            "썰기",
+            "볶기"
+          ],
+          "method": "썰기",
+          "decision": "edit"
+        },
+        "d29e3a28-0e55-48d4-939b-03fce68449d0": {
+          "methods": [
+            "볶기",
+            "졸이기"
+          ],
+          "method": "볶기",
+          "decision": "edit"
+        }
+      },
+      "image": {
+        "thumbnail_url": "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00571_2.png",
+        "decision": "edit"
+      },
+      "notes": ""
+    },
+    "ff795de4-16d5-563c-af83-9fd8c4a9fda4": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "371c5ea6-3ff5-4eef-9bbc-703daa83d7b3": {
+          "methods": [
+            "다지기",
+            "썰기"
+          ],
+          "method": "다지기",
+          "decision": "edit"
+        },
+        "d49d2c60-aece-446e-a1da-f724e17ba6c7": {
+          "methods": [
+            "채우기"
+          ],
+          "method": "채우기",
+          "decision": "edit",
+          "memo": "채우기 추가"
+        },
+        "8cea7f92-d2c1-4e66-8b0a-9c5b58c50c9c": {
+          "methods": [
+            "마무리"
+          ],
+          "method": "마무리",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "426ae2a2-04f0-552d-98e8-6c6d144bc1f7": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {},
+      "image": {
+        "thumbnail_url": "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00093_2.png",
+        "decision": "edit"
+      },
+      "notes": ""
+    },
+    "2af320dd-544b-58df-8c9d-8a9a8d5fc585": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "fe11f5b0-44e2-4f35-80a9-92d83483ff5a": {
+          "methods": [
+            "썰기"
+          ],
+          "method": "썰기"
+        },
+        "0c4e0160-2b98-43c7-b151-b591120d6777": {
+          "methods": [
+            "썰기",
+            "섞기"
+          ],
+          "method": "썰기",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "72307be5-40e0-5fa3-a7f1-e350b02b445d": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "24ec2185-7f26-49b0-ad2f-978f72c344ab": {
+          "methods": [
+            "썰기",
+            "볶기"
+          ],
+          "method": "썰기",
+          "decision": "edit"
+        },
+        "ea626e6e-7c6c-45e6-ac31-885284c5526b": {
+          "methods": [
+            "체",
+            "섞기"
+          ],
+          "method": "체",
+          "decision": "edit",
+          "memo": "체 추가, '채' -> '체' 만들기 문장에 오타 있음.",
+          "instruction": "쪄 낸 단호박은 껍질을 벗기고 체에 곱게 내려 밀가루와 물, 소금을 조금 섞어 단호박 반죽을 만들어 놓는다."
+        },
+        "a1491b64-9e96-49de-95ee-bcd9086aefa2": {
+          "methods": [
+            "부치기",
+            "마무리"
+          ],
+          "method": "부치기",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "f8f195c4-b7d7-58da-bd81-07d35357db59": {
+      "recipe": {},
+      "ingredients": {
+        "48881162-680f-4ce2-96ff-d5bafa92e675": {
+          "component_label": "레몬마요네즈 소스",
+          "decision": "edit"
+        }
+      },
+      "steps": {
+        "85d6c084-8c8b-45e8-ad42-0b025decf45a": {
+          "methods": [
+            "볶기",
+            "섞기"
+          ],
+          "method": "볶기",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "7e169300-b4d5-5a14-9b31-aa989035d862": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "02cc8a8d-4bde-41df-a5f5-8f6a71272040": {
+          "component_label": ""
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "dc2c7bf6-2470-5dbf-bca5-08c56b6fa10a": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "babc3444-ecdf-40b3-87c4-3329030af0a7": {
+          "methods": [
+            "썰기",
+            "오븐굽기"
+          ],
+          "method": "썰기",
+          "decision": "edit"
+        },
+        "043fd40b-d648-45c6-816d-2d5cb7358ea8": {
+          "methods": [
+            "굽기",
+            "마무리"
+          ],
+          "method": "굽기",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "bf0b1e5e-df1c-5293-843a-47f835040c72": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "16970371-5728-4b20-81c6-04ef6deb5e65": {
+          "decision": "edit",
+          "memo": "만들기 문장 오타 '채' -> '체'",
+          "methods": [
+            "체",
+            "섞기"
+          ],
+          "method": "체"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "b1e4550e-f9a9-516a-b11b-29a410ade9d9": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {},
+      "image": {
+        "thumbnail_url": "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00201_2.png",
+        "decision": "edit"
+      },
+      "notes": ""
+    },
+    "2240c082-e0cb-5eda-9ce8-4e9d1c4b52c8": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "186556d5-d5c4-46c6-bc06-7c736cdded02": {
+          "methods": [
+            "갈기"
+          ],
+          "method": "갈기",
+          "decision": "edit",
+          "memo": ""
+        }
+      },
+      "image": {
+        "thumbnail_url": "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00028_2.png",
+        "decision": "edit"
+      },
+      "notes": ""
+    },
+    "4358a8a3-cac1-5173-86df-ee15a5960131": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "318af24e-36e0-483b-a8be-e83b165cac2e": {
+          "methods": [
+            "섞기",
+            "채우기"
+          ],
+          "method": "섞기",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "3c578726-7058-5ba3-ac43-951e98ef2a61": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "427b042f-b766-4b8c-9b50-7ac4afdcec88": {
+          "methods": [
+            "데치기",
+            "갈기"
+          ],
+          "method": "데치기",
+          "decision": "edit"
+        },
+        "2f753f93-a80d-4cf0-8aca-78ea745e4f56": {
+          "methods": [
+            "찌기",
+            "으깨기",
+            "다지기"
+          ],
+          "method": "찌기",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "bad91971-54e4-52b5-8c40-3335c55c83b8": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "c064d479-7a76-4401-beb4-aa3f5a92a41c": {
+          "methods": [
+            "갈기",
+            "다지기"
+          ],
+          "method": "갈기",
+          "decision": "edit"
+        },
+        "2c9f681f-5d49-4944-96b2-97f823c96f3c": {
+          "component_label": ""
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "ef8a2ea5-848a-5a09-9525-26a233911832": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "ffaa23a4-abb6-4f07-8cac-576b2fcf4826": {
+          "methods": [
+            "손질"
+          ],
+          "method": "손질",
+          "decision": "edit",
+          "memo": "db에는 prep(손질)이 있는듯."
+        },
+        "26a914a0-a62e-4fcf-9e59-a8a307644cc3": {
+          "methods": [
+            "체"
+          ],
+          "method": "체",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "b7badda4-d285-5b6d-8c61-81d387f137ed": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "b39cce7c-6fc8-4c3c-bf02-5a69d8026fcf": {
+          "methods": [
+            "썰기",
+            "데치기"
+          ],
+          "method": "썰기",
+          "decision": "edit"
+        },
+        "90562e8a-c085-4c78-846d-63f9a3820c2b": {
+          "methods": [
+            "갈기"
+          ],
+          "method": "갈기",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "8cb5c8e7-7566-5a93-ba06-28d3d3ad12bb": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "438812dd-3ab0-46f0-9609-2ee668df6fff": {
+          "methods": [
+            "썰기",
+            "볶기"
+          ],
+          "method": "썰기",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "7da19cdd-f8f9-59d6-9583-378b0225b5f5": {
+      "recipe": {},
+      "ingredients": {
+        "2a05e090-d62a-4287-a17f-f054658999fd": {
+          "standard_name": "미니파프리카",
+          "decision": "edit",
+          "memo": "미니파프리카가 db에 있음."
+        }
+      },
+      "steps": {
+        "a2baf594-dde8-4497-acfc-4269344d5592": {
+          "methods": [
+            "손질",
+            "다지기"
+          ],
+          "method": "손질",
+          "decision": "edit"
+        },
+        "1b153cbb-a6e0-44da-89ce-9aaeff01fa32": {
+          "methods": [
+            "채우기",
+            "굽기"
+          ],
+          "method": "채우기",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    },
+    "381fb996-b8ab-5a0e-84fe-401a9ddb5387": {
+      "recipe": {},
+      "ingredients": {},
+      "steps": {
+        "7d0deb6e-db91-4cdf-918c-4e3039801a64": {
+          "methods": [
+            "손질"
+          ],
+          "method": "손질",
+          "decision": "edit"
+        },
+        "c98942c3-26fb-4f3d-98e3-38ad9493f8e7": {
+          "methods": [
+            "손질"
+          ],
+          "method": "손질",
+          "decision": "edit"
+        },
+        "23671658-7572-4b64-a28b-0a3a1e8736ce": {
+          "methods": [
+            "볶기",
+            "끓이기"
+          ],
+          "method": "볶기",
+          "decision": "edit"
+        }
+      },
+      "image": {},
+      "notes": ""
+    }
+  }
+}

@@ -543,6 +543,9 @@ describe("14 cook session start backend", () => {
               instruction: "김치를 썬다",
               component_label: "찌개 재료",
               cooking_method: { code: "prep", label: "손질", color_key: "gray" },
+              cooking_methods: [
+                { code: "prep", label: "손질", color_key: "gray" },
+              ],
               ingredients_used: ["김치"],
               heat_level: null,
               duration_seconds: null,

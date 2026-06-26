@@ -234,6 +234,13 @@ describe("15b cook standalone complete backend", () => {
                 label: "볶기",
                 color_key: "stir_fry",
               },
+              cooking_methods: [
+                {
+                  code: "stir_fry",
+                  label: "볶기",
+                  color_key: "stir_fry",
+                },
+              ],
               ingredients_used: [],
               heat_level: "medium",
               duration_seconds: 300,

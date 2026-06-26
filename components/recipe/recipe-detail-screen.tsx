@@ -85,6 +85,59 @@ function getStepCookingMethodAssistiveLabel(
   });
 }
 
+function getStepCookingMethods(step: RecipeDetail["steps"][number]) {
+  if (step.cooking_methods && step.cooking_methods.length > 0) {
+    return step.cooking_methods;
+  }
+
+  return step.cooking_method ? [step.cooking_method] : [];
+}
+
+function StepCookingMethodBadges({
+  className,
+  fallbackLabel,
+  step,
+}: {
+  className: string;
+  fallbackLabel: string;
+  step: RecipeDetail["steps"][number];
+}) {
+  const methods = getStepCookingMethods(step);
+
+  if (methods.length === 0) {
+    return (
+      <span
+        className={className}
+        style={{
+          backgroundColor: getCookingMethodTint(null),
+          color: resolveCookingMethodDark(null),
+        }}
+      >
+        {fallbackLabel}
+      </span>
+    );
+  }
+
+  return (
+    <>
+      {methods.map((method) => (
+        <span
+          aria-label={getStepCookingMethodAssistiveLabel(method)}
+          className={className}
+          key={method.id}
+          style={{
+            backgroundColor: getCookingMethodTint(method),
+            color: resolveCookingMethodDark(method),
+          }}
+          title={getStepCookingMethodAssistiveLabel(method)}
+        >
+          {method.label}
+        </span>
+      ))}
+    </>
+  );
+}
+
 const FEEDBACK_AUTO_DISMISS_MS = 4000;
 
 interface RecipeDetailScreenProps {
@@ -1096,6 +1149,7 @@ export function RecipeDetailScreen({
               const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
               const previousLabel = idx > 0 ? recipe.steps[idx - 1]?.component_label : null;
               const showSectionHeading = shouldShowSectionHeading(sectionLabel, previousLabel);
+              const primaryMethod = getStepCookingMethods(step)[0] ?? step.cooking_method;
 
               return (
                 <React.Fragment key={step.id}>
@@ -1107,7 +1161,7 @@ export function RecipeDetailScreen({
                   <li
                     className="rounded-[var(--radius-card)] bg-[var(--panel)] p-4 shadow-[var(--shadow-1)]"
                     style={{
-                      borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method)}`,
+                      borderLeft: `4px solid ${getCookingMethodColor(primaryMethod)}`,
                     }}
                   >
                 <div className="flex items-start justify-between gap-3">
@@ -1116,28 +1170,20 @@ export function RecipeDetailScreen({
                       className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold"
                       style={{
                         backgroundColor: getCookingMethodTint(
-                          step.cooking_method,
+                          primaryMethod,
                         ),
                         color: resolveCookingMethodDark(
-                          step.cooking_method,
+                          primaryMethod,
                         ),
                       }}
                     >
                       {step.step_number}
                     </span>
-                    <span
+                    <StepCookingMethodBadges
                       className="rounded px-2 py-0.5 text-[11px] font-bold"
-                      style={{
-                        backgroundColor: getCookingMethodTint(
-                          step.cooking_method,
-                        ),
-                        color: resolveCookingMethodDark(
-                          step.cooking_method,
-                        ),
-                      }}
-                    >
-                      {step.cooking_method?.label ?? "기타"}
-                    </span>
+                      fallbackLabel="기타"
+                      step={step}
+                    />
                   </div>
                   {step.duration_text ? (
                     <span className="text-xs text-[var(--muted)]">
@@ -1450,6 +1496,7 @@ export function RecipeDetailScreen({
                 const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
                 const previousLabel = idx > 0 ? recipe.steps[idx - 1]?.component_label : null;
                 const showSectionHeading = shouldShowSectionHeading(sectionLabel, previousLabel);
+                const primaryMethod = getStepCookingMethods(step)[0] ?? step.cooking_method;
 
                 return (
                   <React.Fragment key={step.id}>
@@ -1464,30 +1511,20 @@ export function RecipeDetailScreen({
                       className="inline-flex h-7 w-7 items-center justify-center rounded-full pt-px text-[13px] font-bold leading-[1]"
                       style={{
                         backgroundColor: getCookingMethodTint(
-                          step.cooking_method,
+                          primaryMethod,
                         ),
                         color: resolveCookingMethodDark(
-                          step.cooking_method,
+                          primaryMethod,
                         ),
                       }}
                     >
                       {step.step_number}
                     </span>
-                    <span
-                      aria-label={getStepCookingMethodAssistiveLabel(step.cooking_method)}
+                    <StepCookingMethodBadges
                       className="rounded-full px-2 py-0.5 text-[12px] font-bold"
-                      style={{
-                        backgroundColor: getCookingMethodTint(
-                          step.cooking_method,
-                        ),
-                        color: resolveCookingMethodDark(
-                          step.cooking_method,
-                        ),
-                      }}
-                      title={getStepCookingMethodAssistiveLabel(step.cooking_method)}
-                    >
-                      {step.cooking_method?.label ?? "만들기"}
-                    </span>
+                      fallbackLabel="만들기"
+                      step={step}
+                    />
                     {step.duration_text ? (
                       <span className="ml-auto text-[12px] text-[var(--text-2)]">
                         {step.duration_text}
@@ -1858,6 +1895,7 @@ function RecipeDetailWebView({
                     const sectionLabel = normalizeRecipeSectionLabel(step.component_label);
                     const previousLabel = idx > 0 ? recipe.steps[idx - 1]?.component_label : null;
                     const showSectionHeading = shouldShowSectionHeading(sectionLabel, previousLabel);
+                    const primaryMethod = getStepCookingMethods(step)[0] ?? step.cooking_method;
 
                     return (
                       <React.Fragment key={step.id}>
@@ -1871,10 +1909,10 @@ function RecipeDetailWebView({
                             className="web-step-num"
                             style={{
                               backgroundColor: getCookingMethodTint(
-                                step.cooking_method,
+                                primaryMethod,
                               ),
                               color: resolveCookingMethodDark(
-                                step.cooking_method,
+                                primaryMethod,
                               ),
                             }}
                           >
@@ -1882,21 +1920,11 @@ function RecipeDetailWebView({
                           </span>
                           <div className="web-step-body">
                             <div className="web-step-meta">
-                              <span
-                                aria-label={getStepCookingMethodAssistiveLabel(step.cooking_method)}
+                              <StepCookingMethodBadges
                                 className="web-step-method"
-                                style={{
-                                  backgroundColor: getCookingMethodTint(
-                                    step.cooking_method,
-                                  ),
-                                  color: resolveCookingMethodDark(
-                                    step.cooking_method,
-                                  ),
-                                }}
-                                title={getStepCookingMethodAssistiveLabel(step.cooking_method)}
-                              >
-                                {step.cooking_method?.label ?? "만들기"}
-                              </span>
+                                fallbackLabel="만들기"
+                                step={step}
+                              />
                               {step.duration_text ? (
                                 <span className="web-step-duration">
                                   {step.duration_text}

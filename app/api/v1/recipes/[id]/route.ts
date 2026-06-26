@@ -11,6 +11,11 @@ import {
   normalizeRecipeIngredients,
   normalizeRecipeSteps,
 } from "@/lib/recipe-detail";
+import {
+  isMissingStepCookingMethodsRelation,
+  RECIPE_STEP_SELECT_LEGACY,
+  RECIPE_STEP_SELECT_WITH_METHODS,
+} from "@/lib/server/recipe-step-method-select";
 import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipeDetail, RecipeUserStatus } from "@/types/recipe";
@@ -95,7 +100,6 @@ export async function GET(request: Request, context: RouteContext) {
       recipeResult,
       sourceResult,
       ingredientsResult,
-      stepsResult,
       authResult,
     ] = await Promise.all([
       dbClient
@@ -117,15 +121,28 @@ export async function GET(request: Request, context: RouteContext) {
         )
         .eq("recipe_id", id)
         .order("sort_order", { ascending: true }),
-      dbClient
-        .from("recipe_steps")
-        .select(
-          "id, step_number, instruction, component_label, ingredients_used, heat_level, duration_seconds, duration_text, cooking_methods(id, code, label, color_key)",
-        )
-        .eq("recipe_id", id)
-        .order("step_number", { ascending: true }),
       routeClient.auth.getUser(),
     ]);
+
+    let stepsResult = await dbClient
+      .from("recipe_steps")
+      .select(RECIPE_STEP_SELECT_WITH_METHODS)
+      .eq("recipe_id", id)
+      .order("step_number", { ascending: true }) as {
+        data: Parameters<typeof normalizeRecipeSteps>[0];
+        error: unknown;
+      };
+
+    if (stepsResult.error && isMissingStepCookingMethodsRelation(stepsResult.error)) {
+      stepsResult = await dbClient
+        .from("recipe_steps")
+        .select(RECIPE_STEP_SELECT_LEGACY)
+        .eq("recipe_id", id)
+        .order("step_number", { ascending: true }) as {
+          data: Parameters<typeof normalizeRecipeSteps>[0];
+          error: unknown;
+        };
+    }
 
     if (recipeResult.error || !recipeResult.data) {
       return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);

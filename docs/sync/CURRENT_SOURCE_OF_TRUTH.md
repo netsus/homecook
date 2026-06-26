@@ -13,6 +13,18 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 
+## Pilot Recipe Step Multi-Method Addendum `2026-06-27`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| DB v1.3.16 | `recipe_step_cooking_methods` additive table target 추가. `recipe_steps.cooking_method_id`는 첫/대표 조리법 호환 필드로 유지 |
+| API v1.2.20 | 레시피 상세/요리모드 step 응답에 `cooking_methods[]` 배열을 additive 추가. 기존 `cooking_method`는 첫/대표 조리법으로 유지 |
+
+> 이 변경은 파일럿 30개 식약처 레시피 품질 검수에서 한 단계에 `데치기 + 갈기`, `썰기 + 볶기`처럼 여러 조리법이 실제로 필요한 것이 확인되어 추가한다.
+> 기존 클라이언트 호환을 위해 `recipe_steps.cooking_method_id`와 응답 `cooking_method`는 제거하지 않는다.
+> 새 read path는 `recipe_step_cooking_methods.position ASC`를 canonical ordering으로 사용한다.
+> DB 마이그레이션 전 코드가 배포되어도 기존 단일 조리법 조회로 fallback해야 한다.
+
 ## Leftovers Stale Review Addendum `2026-06-20`
 
 | 문서 | 변경 내용 |

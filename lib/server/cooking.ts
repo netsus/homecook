@@ -37,6 +37,8 @@ interface CookingMethodJoinRow {
   code?: string | null;
   label?: string | null;
   color_key?: string | null;
+  category_code?: string | null;
+  category_label?: string | null;
 }
 
 export interface CookingStepRow {
@@ -48,6 +50,12 @@ export interface CookingStepRow {
   duration_seconds: number | null;
   duration_text: string | null;
   cooking_methods: CookingMethodJoinRow | CookingMethodJoinRow[] | null;
+  recipe_step_cooking_methods?:
+    | Array<{
+        position?: number | null;
+        cooking_methods: CookingMethodJoinRow | CookingMethodJoinRow[] | null;
+      }>
+    | null;
 }
 
 export interface ParsedCookingSessionBody {
@@ -304,7 +312,8 @@ export function toCookingModeIngredient({
 }
 
 export function toCookingModeStep(row: CookingStepRow): CookingModeStep {
-  const method = firstJoin(row.cooking_methods) ?? {};
+  const methods = normalizeCookingStepMethods(row);
+  const method = methods[0] ?? {};
   const ingredientsUsed = Array.isArray(row.ingredients_used) ? row.ingredients_used : [];
   const componentLabel = normalizeRecipeSectionLabel(row.component_label);
 
@@ -316,10 +325,44 @@ export function toCookingModeStep(row: CookingStepRow): CookingModeStep {
       code: method.code ?? "",
       label: method.label ?? "",
       color_key: method.color_key ?? "unassigned",
+      category_code: method.category_code,
+      category_label: method.category_label,
     },
+    cooking_methods: methods.map((item) => ({
+      code: item.code ?? "",
+      label: item.label ?? "",
+      color_key: item.color_key ?? "unassigned",
+      category_code: item.category_code,
+      category_label: item.category_label,
+    })),
     ingredients_used: ingredientsUsed,
     heat_level: row.heat_level,
     duration_seconds: row.duration_seconds,
     duration_text: row.duration_text,
   };
+}
+
+function normalizeCookingStepMethods(row: CookingStepRow) {
+  const orderedMethods = (row.recipe_step_cooking_methods ?? [])
+    .slice()
+    .sort((left, right) => (left.position ?? 0) - (right.position ?? 0))
+    .map((item) => firstJoin(item.cooking_methods))
+    .filter((method): method is CookingMethodJoinRow => Boolean(method));
+  const legacyMethod = firstJoin(row.cooking_methods);
+  const methods = orderedMethods.length > 0
+    ? orderedMethods
+    : legacyMethod
+      ? [legacyMethod]
+      : [];
+  const seen = new Set<string>();
+
+  return methods.filter((method) => {
+    const key = method.code || method.label || "";
+    if (!key || seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
 }

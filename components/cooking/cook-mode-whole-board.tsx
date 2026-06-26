@@ -182,6 +182,14 @@ function getStepIngredientNames(
   return Array.from(names).sort((a, b) => b.length - a.length);
 }
 
+function getStepCookingMethods(step: CookingModeStep) {
+  if (step.cooking_methods && step.cooking_methods.length > 0) {
+    return step.cooking_methods;
+  }
+
+  return step.cooking_method ? [step.cooking_method] : [];
+}
+
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -196,11 +204,14 @@ type InstructionHighlight = {
 function getInstructionHighlights(
   instruction: string,
   ingredientNames: string[],
-  methodLabel: string,
+  methodLabels: string[],
 ) {
   const candidates = [
     ...ingredientNames.map((label) => ({ label, type: "ingredient" as const })),
-    ...(methodLabel.trim() ? [{ label: methodLabel.trim(), type: "method" as const }] : []),
+    ...methodLabels
+      .map((label) => label.trim())
+      .filter((label) => label.length > 0)
+      .map((label) => ({ label, type: "method" as const })),
   ].sort((a, b) => b.label.length - a.label.length);
 
   const highlights: InstructionHighlight[] = [];
@@ -234,17 +245,17 @@ function renderInstructionWithHighlights({
   ingredientNames,
   instruction,
   methodColor,
-  methodLabel,
+  methodLabels,
 }: {
   ingredientNames: string[];
   instruction: string;
   methodColor: string;
-  methodLabel: string;
+  methodLabels: string[];
 }) {
   const highlights = getInstructionHighlights(
     instruction,
     ingredientNames,
-    methodLabel,
+    methodLabels,
   );
 
   if (highlights.length === 0) {
@@ -302,18 +313,20 @@ function CookModeWholeStep({
   step: CookingModeStep;
 }) {
   const instruction = getCookModeStepInstruction(step);
-  const methodVisual = getCookingMethodVisual(step.cooking_method);
+  const methods = getStepCookingMethods(step);
+  const primaryMethod = methods[0] ?? step.cooking_method;
+  const methodVisual = getCookingMethodVisual(primaryMethod);
   const highlightedInstruction = renderInstructionWithHighlights({
     ingredientNames: getStepIngredientNames(step, ingredientsById),
     instruction,
     methodColor: methodVisual.color,
-    methodLabel: methodVisual.label,
+    methodLabels: methods.map((method) => method.label),
   });
   const methodAssistiveLabel = getCookingMethodAssistiveLabel({
-    methodCode: step.cooking_method.code,
-    methodLabel: step.cooking_method.label,
-    categoryCode: step.cooking_method.category_code,
-    categoryLabel: step.cooking_method.category_label,
+    methodCode: primaryMethod.code,
+    methodLabel: primaryMethod.label,
+    categoryCode: primaryMethod.category_code,
+    categoryLabel: primaryMethod.category_label,
   });
 
   return (
@@ -326,14 +339,38 @@ function CookModeWholeStep({
         className="cook-whole-step-marker"
         data-testid={`cook-mode-step-marker-${step.step_number}`}
       >
-        <span
-          aria-label={methodAssistiveLabel}
-          className="cook-whole-method-tag"
-          style={{ backgroundColor: methodVisual.color }}
-          title={methodAssistiveLabel}
-        >
-          {methodVisual.label}
-        </span>
+        {methods.length > 0 ? (
+          methods.map((method) => {
+            const visual = getCookingMethodVisual(method);
+            const assistiveLabel = getCookingMethodAssistiveLabel({
+              methodCode: method.code,
+              methodLabel: method.label,
+              categoryCode: method.category_code,
+              categoryLabel: method.category_label,
+            });
+
+            return (
+              <span
+                aria-label={assistiveLabel}
+                className="cook-whole-method-tag"
+                key={method.code || method.label}
+                style={{ backgroundColor: visual.color }}
+                title={assistiveLabel}
+              >
+                {visual.label}
+              </span>
+            );
+          })
+        ) : (
+          <span
+            aria-label={methodAssistiveLabel}
+            className="cook-whole-method-tag"
+            style={{ backgroundColor: methodVisual.color }}
+            title={methodAssistiveLabel}
+          >
+            {methodVisual.label}
+          </span>
+        )}
         <div
           aria-label={`${step.step_number}단계`}
           className="cook-whole-step-number"
