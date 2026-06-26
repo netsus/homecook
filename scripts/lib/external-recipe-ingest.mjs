@@ -278,18 +278,117 @@ const QUANTITY_UNIT_PATTERN =
   /(?:(?:\d+(?:\.\d+)?|\d+\/\d+|[½⅓⅔¼¾])\s*(?:g|kg|ml|l|L|개|장|컵|큰술|작은술|스푼|술|T|t|Ts|Ts\.|줌|쪽|대|알|봉|캔|팩|포|줄기|마리|토막|꼬집|cm)?|(?:반|한|두|세|네)\s*(?:개|장|컵|큰술|작은술|스푼|술|줌|쪽|대|알|봉|캔|팩|포|줄기|마리|토막|꼬집)|(?:약간|조금|적당량))/giu;
 const LEADING_PREP_PATTERN =
   /^(다진|간|채 썬|채썬|송송 썬|송송썬|썬|자른|깐|삶은|데친|불린|볶은|구운|냉동|냉장)\s+/u;
+const SECTION_MARKER_PATTERN = /^[●○◆◇■□▶▷•·\-\s]+/u;
+const SECTION_LABEL_WITH_COLON_PATTERN = /^([가-힣A-Za-z0-9\s/·&()]{1,28})\s*[:：]\s*(.*)$/u;
+const SECTION_LABEL_WITHOUT_COLON_PATTERN =
+  /^([가-힣A-Za-z0-9\s/·&()]{0,18}(?:주재료|필수\s*재료|재료|양념장|양념|소스|드레싱|육수|고명|장식|곁들임(?:채소)?|채소준비|절임물|반죽|필링|밑간|국물))\s+(.+)$/u;
+const SECTION_LABEL_KEYWORD_PATTERN =
+  /(?:주재료|필수\s*재료|재료|양념장|양념|소스|드레싱|육수|고명|장식|곁들임|채소준비|절임물|반죽|필링|밑간|국물)/u;
+const SECTION_LABEL_ONLY_PATTERN =
+  /^(?:주재료|필수\s*재료|재료|양념장|양념|소스|드레싱|육수|고명|장식|곁들임(?:채소)?|채소준비|절임물|반죽|필링|밑간|국물)$/u;
+const INGREDIENT_TEXT_HINT_PATTERN = /(?:\d|약간|조금|적당량|취향|,|，|、|;|；|\(|\))/u;
 
 export function splitIngredientParts(value) {
-  const normalized = normalizeRecipePartsText(value);
-  if (!normalized) return [];
+  return splitIngredientPartsWithLabels(value).map((part) => part.text);
+}
 
-  return normalized
-    .split(/[,;，、]|(?:\s+-\s+)|(?:\s{2,})/u)
+export function normalizeComponentLabel(value) {
+  const label = normalizeText(value)
+    .replace(SECTION_MARKER_PATTERN, "")
+    .replace(/\[[^\]]+\]/g, " ")
+    .replace(/[()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/(?:의)?\s*재료$/u, " 재료")
+    .trim();
+
+  return label.length > 0 ? label : null;
+}
+
+function stripBracketedComponentLabel(line) {
+  const match = /^\[([^\]]+)\]\s*(.*)$/u.exec(line);
+  if (!match) return { componentLabel: null, text: line };
+
+  const label = normalizeComponentLabel(match[1]);
+  if (!label || !SECTION_LABEL_KEYWORD_PATTERN.test(label)) {
+    return { componentLabel: null, text: normalizeText(match[2]) };
+  }
+
+  return {
+    componentLabel: label,
+    text: normalizeText(match[2]),
+  };
+}
+
+function splitComponentLabelFromLine(line) {
+  const bracketed = stripBracketedComponentLabel(line);
+  if (bracketed.componentLabel) return bracketed;
+
+  const markerStripped = normalizeText(line).replace(SECTION_MARKER_PATTERN, "").trim();
+  const colonMatch = SECTION_LABEL_WITH_COLON_PATTERN.exec(markerStripped);
+  if (colonMatch && SECTION_LABEL_KEYWORD_PATTERN.test(colonMatch[1])) {
+    return {
+      componentLabel: normalizeComponentLabel(colonMatch[1]),
+      text: normalizeText(colonMatch[2]),
+    };
+  }
+
+  const noColonMatch = SECTION_LABEL_WITHOUT_COLON_PATTERN.exec(markerStripped);
+  if (noColonMatch && SECTION_LABEL_KEYWORD_PATTERN.test(noColonMatch[1])) {
+    return {
+      componentLabel: normalizeComponentLabel(noColonMatch[1]),
+      text: normalizeText(noColonMatch[2]),
+    };
+  }
+
+  return { componentLabel: null, text: markerStripped };
+}
+
+function isStandaloneComponentLabel(line) {
+  const label = normalizeComponentLabel(line);
+
+  return Boolean(label && label.length <= 16 && SECTION_LABEL_ONLY_PATTERN.test(label));
+}
+
+function splitPartText(value) {
+  return normalizeText(value)
+    .split(/[,;，、；]|(?:\s+-\s+)|(?:\s{2,})/u)
     .map((part) => normalizeText(part))
     .filter((part) => part.length > 0 && !/^\d+[.)]?$/.test(part));
 }
 
-export function parseIngredientPart(part) {
+export function splitIngredientPartsWithLabels(value, { title } = {}) {
+  const raw = stringOrEmpty(value).normalize("NFKC").replace(/\u00a0/g, " ");
+  const titleKey = foldText(title);
+  const parts = [];
+  let currentComponentLabel = null;
+
+  for (const rawLine of raw.split(/\r?\n+/u)) {
+    const line = normalizeText(rawLine);
+    if (!line) continue;
+    if (titleKey && foldText(line) === titleKey) continue;
+
+    const { componentLabel, text } = splitComponentLabelFromLine(line);
+    if (componentLabel) currentComponentLabel = componentLabel;
+
+    if (!text) continue;
+    if (!INGREDIENT_TEXT_HINT_PATTERN.test(text) && isStandaloneComponentLabel(text)) {
+      currentComponentLabel = normalizeComponentLabel(text);
+      continue;
+    }
+
+    for (const part of splitPartText(text)) {
+      parts.push({
+        text: part,
+        component_label: currentComponentLabel,
+      });
+    }
+  }
+
+  return parts;
+}
+
+export function parseIngredientPart(part, componentLabel = null) {
   const original = normalizeText(part);
   const amountMatches = [...original.matchAll(QUANTITY_UNIT_PATTERN)].map((match) => match[0].trim());
   const amountText = amountMatches.join(" ") || null;
@@ -307,6 +406,7 @@ export function parseIngredientPart(part) {
     display_text: original,
     parsed_name: name,
     amount_text: amountText,
+    component_label: componentLabel,
   };
 }
 
@@ -361,7 +461,43 @@ export function resolveIngredientName(name, lookup) {
   return null;
 }
 
-export function extractFoodSafetySteps(row) {
+export function inferStepComponentLabel(instruction, componentLabels = []) {
+  const text = normalizeText(instruction);
+  if (!text || componentLabels.length === 0) return null;
+
+  const foldedText = foldText(text);
+  const direct = componentLabels
+    .filter(Boolean)
+    .find((label) => {
+      const foldedLabel = foldText(label);
+
+      return foldedLabel.length >= 2 && foldedText.includes(foldedLabel);
+    });
+  if (direct) return direct;
+
+  const sectionKeywords = [
+    ["소스", /소스/u],
+    ["드레싱", /드레싱/u],
+    ["양념장", /양념장/u],
+    ["양념", /양념/u],
+    ["육수", /육수/u],
+    ["고명", /고명/u],
+    ["반죽", /반죽/u],
+    ["필링", /필링/u],
+    ["밑간", /밑간/u],
+  ];
+
+  for (const [keyword, pattern] of sectionKeywords) {
+    if (!pattern.test(text)) continue;
+
+    const label = componentLabels.find((componentLabel) => pattern.test(componentLabel) || componentLabel.includes(keyword));
+    if (label) return label;
+  }
+
+  return null;
+}
+
+export function extractFoodSafetySteps(row, { componentLabels = [] } = {}) {
   const steps = [];
 
   for (let index = 1; index <= 20; index += 1) {
@@ -374,6 +510,7 @@ export function extractFoodSafetySteps(row) {
       instruction: text.replace(/^\d+\.\s*/u, "").trim(),
       source_key: key,
       image_url: stringOrNull(row[`MANUAL_IMG${String(index).padStart(2, "0")}`]),
+      component_label: inferStepComponentLabel(text, componentLabels),
     });
   }
 
@@ -450,8 +587,8 @@ export function inferTagCandidates(row, resolvedIngredients, method) {
 export function normalizeFoodSafetyRecipeRow(row, { ingredientLookup }) {
   const sourceId = recipeSourceId(row);
   const title = normalizeRecipeTitle(row.RCP_NM);
-  const rawIngredientParts = splitIngredientParts(row.RCP_PARTS_DTLS);
-  const parsedIngredients = rawIngredientParts.map(parseIngredientPart);
+  const rawIngredientParts = splitIngredientPartsWithLabels(row.RCP_PARTS_DTLS, { title });
+  const parsedIngredients = rawIngredientParts.map((part) => parseIngredientPart(part.text, part.component_label));
   const resolvedIngredients = parsedIngredients.map((ingredient, index) => {
     const target = resolveIngredientName(ingredient.parsed_name, ingredientLookup);
 
@@ -462,7 +599,8 @@ export function normalizeFoodSafetyRecipeRow(row, { ingredientLookup }) {
       resolved: Boolean(target),
     };
   });
-  const steps = extractFoodSafetySteps(row);
+  const componentLabels = [...new Set(resolvedIngredients.map((ingredient) => ingredient.component_label).filter(Boolean))];
+  const steps = extractFoodSafetySteps(row, { componentLabels });
   const method = inferCookingMethod(row, steps);
   const tagCandidates = inferTagCandidates(row, resolvedIngredients, method);
   const bucket = inferPilotBucket(row, resolvedIngredients, tagCandidates, method);

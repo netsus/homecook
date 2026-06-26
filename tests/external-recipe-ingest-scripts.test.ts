@@ -29,10 +29,10 @@ const foodsafetyRow = {
   HASH_TAG: "한식",
   INFO_WGT: "2인분",
   INFO_ENG: "320",
-  RCP_PARTS_DTLS: "[재료] 두부 1모, 김치 200g, 돼지고기 100g, 대파 1대, 고춧가루 1큰술",
+  RCP_PARTS_DTLS: "[찌개 재료] 두부 1모, 김치 200g, 돼지고기 100g, 대파 1대\n[양념장] 고춧가루 1큰술",
   ATT_FILE_NO_MAIN: "https://example.test/tofu-kimchi.jpg",
   MANUAL01: "1. 김치와 돼지고기를 냄비에 넣고 볶는다.",
-  MANUAL02: "2. 물을 붓고 끓인 뒤 두부와 대파를 넣는다.",
+  MANUAL02: "2. 고춧가루로 양념장을 만든 뒤 물을 붓고 두부와 대파를 넣는다.",
 };
 
 describe("external recipe ingest scripts", () => {
@@ -182,6 +182,7 @@ describe("external recipe ingest scripts", () => {
     expect(result.status).toBe(0);
     expect(existsSync(join(outputDir, "recipe-review.html"))).toBe(true);
     expect(existsSync(join(outputDir, "recipe-review-worklist.tsv"))).toBe(true);
+    const reviewHtml = readFileSync(join(outputDir, "recipe-review.html"), "utf8");
 
     const candidates = JSON.parse(readFileSync(join(outputDir, "recipe-candidates.json"), "utf8"));
     const riskReport = JSON.parse(readFileSync(join(outputDir, "recipe-load-risk-report.json"), "utf8"));
@@ -199,6 +200,19 @@ describe("external recipe ingest scripts", () => {
       blocked: false,
     });
     expect(candidates.candidates[0].ingredients.filter((ingredient: { resolved: boolean }) => ingredient.resolved)).toHaveLength(5);
+    expect(candidates.candidates[0].ingredients.map((ingredient: { component_label: string | null }) => ingredient.component_label)).toEqual([
+      "찌개 재료",
+      "찌개 재료",
+      "찌개 재료",
+      "찌개 재료",
+      "양념장",
+    ]);
+    expect(candidates.candidates[0].steps[1].component_label).toBe("양념장");
+    expect(reviewHtml).toContain("Pilot 1/1");
+    expect(reviewHtml).toContain("data-ingredient-reviewed");
+    expect(reviewHtml).toContain("원본 재료 전문");
+    expect(reviewHtml).toContain("단계 미언급");
+    expect(reviewHtml).toContain("미확인 재료");
     expect(riskReport.summary.pilot_selected_count).toBe(1);
   });
 });
