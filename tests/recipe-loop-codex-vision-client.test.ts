@@ -219,4 +219,94 @@ describe("recipe-loop codex-vision provider", () => {
     expect(output.meta.provider).toBe("codex-vision");
     expect(output.recipes[0].title).toBe("김치찌개");
   });
+
+  it("keeps the Gemini provider as the default run-extraction path", async () => {
+    const { runExtraction } = await import(runExtractionModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-gemini");
+    writeJson(path.join(caseDir, "source.json"), {
+      video: {
+        videoId: "case-gemini",
+        title: "된장찌개",
+        description: "된장 1큰술",
+        url: "https://www.youtube.com/watch?v=case-gemini",
+      },
+      captions: { available: false, segments: [] },
+      authorComments: { comments: [] },
+    });
+
+    const geminiFactoryCalls: Array<Record<string, unknown>> = [];
+    const result = await runExtraction(
+      { split: "train", ids: "case-gemini", "out-tag": "gemini-default-test" },
+      {
+        projectRoot: workdir,
+        factories: {
+          createGemini: (options: Record<string, unknown>) => {
+            geminiFactoryCalls.push(options);
+            return {
+              generate: async () => ({
+                cached: false,
+                model: "fixture-gemini",
+                provider: "gemini",
+                meta: { provider: "gemini" },
+                json: {
+                  recipes: [
+                    {
+                      title: "된장찌개",
+                      ingredients: [{ name: "된장", amount: "1", unit: "큰술" }],
+                      steps: ["된장을 풀고 끓인다."],
+                    },
+                  ],
+                },
+              }),
+            };
+          },
+        },
+      },
+    );
+
+    expect(result.failures).toBe(0);
+    expect(geminiFactoryCalls).toHaveLength(1);
+    const output = JSON.parse(readFileSync(path.join(caseDir, "runs/gemini-default-test/result.json"), "utf8"));
+    expect(output.meta.provider).toBe("gemini");
+    expect(output.recipes[0].title).toBe("된장찌개");
+  });
+
+  it("writes a run-level failure artifact when extraction fails", async () => {
+    const { runExtraction } = await import(runExtractionModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-fail");
+    writeJson(path.join(caseDir, "source.json"), {
+      video: {
+        videoId: "case-fail",
+        title: "실패 케이스",
+        description: "김치 1컵",
+        url: "https://www.youtube.com/watch?v=case-fail",
+      },
+      captions: { available: false, segments: [] },
+      authorComments: { comments: [] },
+    });
+
+    const result = await runExtraction(
+      { split: "train", ids: "case-fail", "out-tag": "codex-test-fail", provider: "codex-vision" },
+      {
+        projectRoot: workdir,
+        llm: {
+          generate: async () => {
+            throw new Error("fixture extraction failed");
+          },
+        },
+      },
+    );
+
+    expect(result.failures).toBe(1);
+    const failurePath = path.join(caseDir, "runs/codex-test-fail/failure.json");
+    expect(existsSync(failurePath)).toBe(true);
+    const failure = JSON.parse(readFileSync(failurePath, "utf8"));
+    expect(failure).toMatchObject({
+      videoId: "case-fail",
+      split: "train",
+      outTag: "codex-test-fail",
+      provider: "codex-vision",
+      message: "fixture extraction failed",
+    });
+  });
 });
