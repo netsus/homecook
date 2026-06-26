@@ -136,7 +136,7 @@ export function createCachedLlmClient(options = {}) {
 
       if (!options.noCache && existsSync(cachePath)) {
         const cached = JSON.parse(await readFile(cachePath, "utf8"));
-        return { json: cached.json, cached: true, model: resolvedModel };
+        return { json: cached.json, cached: true, model: resolvedModel, provider: "gemini" };
       }
 
       const parts = [];
@@ -224,7 +224,7 @@ export function createCachedLlmClient(options = {}) {
 
       await mkdir(CACHE_DIR, { recursive: true });
       await writeFile(cachePath, JSON.stringify({ key, model: resolvedModel, json }, null, 2), "utf8");
-      return { json, cached: false, model: resolvedModel };
+      return { json, cached: false, model: resolvedModel, provider: "gemini" };
     },
   };
 }

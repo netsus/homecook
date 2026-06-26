@@ -9,14 +9,17 @@
 import { readFile, writeFile, readdir, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
+import { createCodexVisionClient } from "./lib/codex-vision-client.mjs";
 import { createCachedLlmClient } from "./lib/llm-client.mjs";
 import { extractRecipeFromSources } from "../../lib/server/recipe-extraction-lab/extract.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
+const SUPPORTED_PROVIDERS = new Set(["gemini", "codex-vision"]);
 
-function parseCliArgs(argv) {
+export function parseCliArgs(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i += 1) {
     const t = argv[i];
@@ -29,7 +32,13 @@ function parseCliArgs(argv) {
   return args;
 }
 
-function sourceToInput(source) {
+function optionalNumber(value) {
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+export function sourceToInput(source) {
   const caps = source.captions ?? {};
   const transcript = caps.available && Array.isArray(caps.segments) && caps.segments.length > 0
     ? { segments: caps.segments, language: caps.selectedTrack?.languageCode ?? caps.language ?? null }
@@ -48,19 +57,53 @@ function sourceToInput(source) {
   };
 }
 
-async function main() {
-  const args = parseCliArgs(process.argv.slice(2));
+export function resolveProvider(args) {
+  const provider = typeof args.provider === "string" ? args.provider : "gemini";
+  if (!SUPPORTED_PROVIDERS.has(provider)) {
+    throw new Error(`지원하지 않는 provider입니다: ${provider}. 사용 가능: ${[...SUPPORTED_PROVIDERS].join(", ")}`);
+  }
+  return provider;
+}
+
+export function createLlmForProvider(provider, args = {}, factories = {}) {
+  if (provider === "gemini") {
+    const createGemini = factories.createGemini ?? createCachedLlmClient;
+    return createGemini(typeof args.model === "string" ? { model: args.model } : {});
+  }
+
+  if (provider === "codex-vision") {
+    const createCodexVision = factories.createCodexVision ?? createCodexVisionClient;
+    return createCodexVision({
+      model: typeof args.model === "string" ? args.model : undefined,
+      codexEffort: typeof args["codex-effort"] === "string" ? args["codex-effort"] : undefined,
+      maxFrames: optionalNumber(args["max-frames"]),
+      batchSize: optionalNumber(args["batch-size"]),
+      sceneDetail: typeof args["scene-detail"] === "string" ? args["scene-detail"] : undefined,
+      sceneSelection: typeof args["scene-selection"] === "string" ? args["scene-selection"] : undefined,
+      timeoutMs: optionalNumber(args["timeout-ms"]),
+      noCache: args["no-cache"] === true,
+    });
+  }
+
+  throw new Error(`지원하지 않는 provider입니다: ${provider}`);
+}
+
+export async function runExtraction(rawArgs = {}, options = {}) {
+  const args = typeof rawArgs.length === "number" ? parseCliArgs(rawArgs) : rawArgs;
   const split = typeof args.split === "string" ? args.split : "train";
   const outTag = typeof args["out-tag"] === "string" ? args["out-tag"] : "latest";
   const useVisual = args["no-visual"] !== true;
-  const splitDir = path.join(PROJECT_ROOT, DATA_ROOT, split);
+  const provider = resolveProvider(args);
+  const projectRoot = options.projectRoot ?? PROJECT_ROOT;
+  const dataRoot = options.dataRoot ?? DATA_ROOT;
+  const splitDir = path.join(projectRoot, dataRoot, split);
 
   let ids = typeof args.ids === "string"
     ? args.ids.split(",").map((s) => s.trim()).filter(Boolean)
     : (await readdir(splitDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
   ids = ids.sort();
 
-  const llm = createCachedLlmClient(typeof args.model === "string" ? { model: args.model } : {});
+  const llm = options.llm ?? createLlmForProvider(provider, args, options.factories);
   let failures = 0;
 
   for (const id of ids) {
@@ -76,14 +119,21 @@ async function main() {
       const recipeCount = result.recipes.length;
       const ingCount = result.recipes.reduce((a, r) => a + r.ingredients.length, 0);
       const stepCount = result.recipes.reduce((a, r) => a + r.steps.length, 0);
-      console.log(`[OK] ${split}/${id}: 레시피 ${recipeCount}, 재료 ${ingCount}, 단계 ${stepCount}${result.meta.cached ? " (cache)" : ""}${result.meta.droppedUnusedVisualIngredients ? `, 미사용제거 ${result.meta.droppedUnusedVisualIngredients}` : ""}`);
+      console.log(`[OK] ${provider} ${split}/${id}: 레시피 ${recipeCount}, 재료 ${ingCount}, 단계 ${stepCount}${result.meta.cached ? " (cache)" : ""}${result.meta.droppedUnusedVisualIngredients ? `, 미사용제거 ${result.meta.droppedUnusedVisualIngredients}` : ""}`);
     } catch (error) {
       failures += 1;
       console.error(`[FAIL] ${split}/${id}: ${error.message}`);
     }
   }
 
-  process.exit(failures > 0 ? 1 : 0);
+  return { failures };
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+async function main() {
+  const result = await runExtraction(process.argv.slice(2));
+  process.exit(result.failures > 0 ? 1 : 0);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((e) => { console.error(e); process.exit(1); });
+}
