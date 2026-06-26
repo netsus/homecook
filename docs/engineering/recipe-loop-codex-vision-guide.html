@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Codex Vision Provider 동작 설명</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #171717;
+        --muted: #5a5f67;
+        --paper: #fbfaf7;
+        --panel: #ffffff;
+        --line: #d8dde3;
+        --blue: #2463eb;
+        --green: #157347;
+        --amber: #aa6a00;
+        --red: #bd2d1f;
+        --violet: #6254b8;
+        --soft-blue: #e8f0ff;
+        --soft-green: #e7f6ef;
+        --soft-amber: #fff1da;
+        --soft-red: #ffebe7;
+        --soft-violet: #efedff;
+        --shadow: 0 18px 50px rgba(23, 23, 23, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(90deg, rgba(36, 99, 235, 0.05) 1px, transparent 1px),
+          linear-gradient(0deg, rgba(36, 99, 235, 0.04) 1px, transparent 1px),
+          var(--paper);
+        background-size: 34px 34px;
+        color: var(--ink);
+        font-family:
+          "Avenir Next", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic",
+          sans-serif;
+        line-height: 1.68;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      code,
+      pre,
+      .mono {
+        font-family:
+          "SFMono-Regular", "Cascadia Code", "Menlo", "Consolas", monospace;
+      }
+
+      .shell {
+        display: block;
+        margin: 0;
+        overflow-x: auto;
+        border: 1px solid #263445;
+        border-radius: 8px;
+        background: #111822;
+        color: #e9f1ff;
+        padding: 16px;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .page {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      .hero {
+        min-height: 560px;
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+        align-items: center;
+        gap: 44px;
+        padding: 56px 0 28px;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--blue);
+      }
+
+      h1 {
+        margin: 0;
+        font-family:
+          "Georgia", "Times New Roman", "Apple SD Gothic Neo", serif;
+        font-size: 58px;
+        line-height: 1.05;
+        font-weight: 800;
+      }
+
+      .lead {
+        margin: 22px 0 0;
+        max-width: 680px;
+        color: #353941;
+        font-size: 19px;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 6px 12px;
+        color: #30343b;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .tag::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--green);
+      }
+
+      .diagram-panel {
+        border: 1px solid #cbd3dd;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: var(--shadow);
+        padding: 18px;
+      }
+
+      .mini-pipeline {
+        display: grid;
+        gap: 10px;
+      }
+
+      .mini-step {
+        position: relative;
+        border: 1px solid var(--line);
+        border-left-width: 5px;
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 14px 14px 14px 16px;
+      }
+
+      .mini-step strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .mini-step span {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .mini-step.blue {
+        border-left-color: var(--blue);
+      }
+
+      .mini-step.green {
+        border-left-color: var(--green);
+      }
+
+      .mini-step.amber {
+        border-left-color: var(--amber);
+      }
+
+      .mini-step.violet {
+        border-left-color: var(--violet);
+      }
+
+      .section {
+        padding: 34px 0;
+      }
+
+      .section h2 {
+        margin: 0 0 14px;
+        font-family:
+          "Georgia", "Times New Roman", "Apple SD Gothic Neo", serif;
+        font-size: 34px;
+        line-height: 1.18;
+      }
+
+      .section > p {
+        margin: 0 0 18px;
+        max-width: 820px;
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .note {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 18px;
+      }
+
+      .note h3 {
+        margin: 0 0 8px;
+        font-size: 17px;
+        line-height: 1.35;
+      }
+
+      .note p,
+      .note li {
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .note p {
+        margin: 0;
+      }
+
+      .note ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      .note.blue {
+        background: var(--soft-blue);
+      }
+
+      .note.green {
+        background: var(--soft-green);
+      }
+
+      .note.amber {
+        background: var(--soft-amber);
+      }
+
+      .note.red {
+        background: var(--soft-red);
+      }
+
+      .note.violet {
+        background: var(--soft-violet);
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .flow-card {
+        position: relative;
+        min-height: 164px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 16px;
+      }
+
+      .flow-card::after {
+        content: "→";
+        position: absolute;
+        right: -14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6f7782;
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .flow-card:nth-child(5)::after,
+      .flow-card:nth-child(10)::after {
+        content: "";
+      }
+
+      .number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--ink);
+        color: white;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .flow-card h3 {
+        margin: 12px 0 6px;
+        font-size: 16px;
+        line-height: 1.35;
+      }
+
+      .flow-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .compare {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .provider {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        overflow: hidden;
+      }
+
+      .provider header {
+        padding: 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .provider header h3 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      .provider header p {
+        margin: 6px 0 0;
+        color: var(--muted);
+      }
+
+      .provider .body {
+        padding: 18px;
+      }
+
+      .path-table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .path-table th,
+      .path-table td {
+        border-bottom: 1px solid var(--line);
+        padding: 12px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+      }
+
+      .path-table th {
+        background: #f1f4f7;
+        color: #2e333a;
+        font-size: 13px;
+      }
+
+      .path-table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .callout {
+        border-left: 6px solid var(--red);
+        border-radius: 8px;
+        background: #fff;
+        padding: 18px;
+        box-shadow: 0 10px 30px rgba(23, 23, 23, 0.08);
+      }
+
+      .callout strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .callout p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .glossary {
+        columns: 2;
+        column-gap: 24px;
+      }
+
+      .glossary div {
+        break-inside: avoid;
+        margin: 0 0 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 14px;
+      }
+
+      .glossary dt {
+        font-weight: 900;
+      }
+
+      .glossary dd {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      footer {
+        padding: 44px 0 60px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      @media (max-width: 900px) {
+        .hero {
+          grid-template-columns: 1fr;
+          min-height: auto;
+        }
+
+        h1 {
+          font-size: 44px;
+        }
+
+        .grid,
+        .compare {
+          grid-template-columns: 1fr;
+        }
+
+        .flow {
+          grid-template-columns: 1fr;
+        }
+
+        .flow-card::after {
+          content: "↓";
+          right: 18px;
+          top: auto;
+          bottom: -18px;
+          transform: none;
+        }
+
+        .flow-card:nth-child(5)::after {
+          content: "↓";
+        }
+
+        .flow-card:last-child::after {
+          content: "";
+        }
+
+        .glossary {
+          columns: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">recipe-loop beginner guide</p>
+          <h1>Codex Vision은 영상을 어떻게 레시피 JSON으로 바꾸나요?</h1>
+          <p class="lead">
+            기존 기본 경로는 Gemini입니다. 새로 추가된 <code>--provider codex-vision</code>은
+            Gemini를 지우는 기능이 아니라, 같은 입력을 Codex Vision 방식으로도 돌려서 비교할 수 있게 만든
+            실험용 옆길입니다.
+          </p>
+          <div class="hero-actions" aria-label="핵심 요약">
+            <span class="tag">Gemini 기본 유지</span>
+            <span class="tag">Codex Vision 선택 실행</span>
+            <span class="tag">캐시와 실패 로그 보존</span>
+          </div>
+        </div>
+
+        <aside class="diagram-panel" aria-label="간단한 처리 흐름">
+          <div class="mini-pipeline">
+            <div class="mini-step blue">
+              <strong>1. source.json 읽기</strong>
+              <span>제목, 설명란, 자막, 댓글, YouTube URL을 입력으로 만든다.</span>
+            </div>
+            <div class="mini-step green">
+              <strong>2. 영상 프레임 뽑기</strong>
+              <span>영상에서 중요한 장면 이미지를 고르고 파일로 저장한다.</span>
+            </div>
+            <div class="mini-step amber">
+              <strong>3. Codex가 이미지 묶음을 본다</strong>
+              <span>프레임을 여러 묶음으로 나누어 화면 속 재료와 동작을 메모한다.</span>
+            </div>
+            <div class="mini-step violet">
+              <strong>4. 최종 recipes JSON 생성</strong>
+              <span>텍스트 소스와 시각 메모를 합쳐 구조화된 레시피를 만든다.</span>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section">
+        <h2>먼저 큰 그림</h2>
+        <p>
+          <code>recipe-loop</code>는 YouTube 레시피 추출 품질을 실험하는 오프라인 도구입니다.
+          입력은 각 영상 폴더의 <code>source.json</code>이고, 출력은 실행 태그별 <code>result.json</code>입니다.
+        </p>
+        <div class="grid">
+          <article class="note blue">
+            <h3>Provider</h3>
+            <p>
+              “어떤 AI 경로로 추출할지”를 고르는 이름입니다. 지금은
+              <code>gemini</code>와 <code>codex-vision</code> 두 가지가 있습니다.
+            </p>
+          </article>
+          <article class="note green">
+            <h3>Gemini는 그대로 기본값</h3>
+            <p>
+              <code>--provider</code>를 안 쓰면 여전히 Gemini 경로가 실행됩니다.
+              기존 비교 기준을 깨지 않기 위해서입니다.
+            </p>
+          </article>
+          <article class="note amber">
+            <h3>Codex Vision은 비교용 새 경로</h3>
+            <p>
+              <code>--provider codex-vision</code>을 붙였을 때만 영상 프레임을 뽑고
+              Codex CLI에 이미지를 넘깁니다.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>실행 명령어는 이렇게 다릅니다</h2>
+        <p>
+          Gemini와 Codex Vision은 같은 <code>run-extraction.mjs</code>를 씁니다. 차이는
+          <code>--provider</code> 옵션입니다.
+        </p>
+        <div class="compare">
+          <article class="provider">
+            <header>
+              <h3>기존 Gemini 기본 경로</h3>
+              <p>옵션을 생략하면 이쪽입니다.</p>
+            </header>
+            <div class="body">
+              <pre class="shell"><code>node scripts/recipe-loop/run-extraction.mjs \
+  --split train \
+  --ids 5NSTRKouSWs \
+  --out-tag gemini-smoke</code></pre>
+            </div>
+          </article>
+
+          <article class="provider">
+            <header>
+              <h3>새 Codex Vision 경로</h3>
+              <p>영상 프레임 기반으로 비교 실행합니다.</p>
+            </header>
+            <div class="body">
+              <pre class="shell"><code>node scripts/recipe-loop/run-extraction.mjs \
+  --split train \
+  --ids 5NSTRKouSWs \
+  --out-tag codex-vision-smoke \
+  --provider codex-vision \
+  --max-frames 4 \
+  --batch-size 4</code></pre>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Codex Vision 전체 흐름</h2>
+        <p>
+          아래 순서대로 보면 됩니다. 핵심은 “영상을 바로 한 번에 이해한다”가 아니라,
+          “영상에서 이미지를 뽑고, 이미지 메모를 만든 뒤, 그 메모로 JSON을 만든다”입니다.
+        </p>
+        <div class="flow" aria-label="Codex Vision 상세 흐름">
+          <article class="flow-card">
+            <span class="number">1</span>
+            <h3><code>source.json</code> 읽기</h3>
+            <p>영상 제목, 설명란, 자막, 작성자 댓글, YouTube URL을 읽습니다.</p>
+          </article>
+          <article class="flow-card">
+            <span class="number">2</span>
+            <h3>입력 객체 만들기</h3>
+            <p><code>sourceToInput()</code>이 추출 모듈이 이해하는 형태로 바꿉니다.</p>
+          </article>
+          <article class="flow-card">
+            <span class="number">3</span>
+            <h3>Provider 선택</h3>
+            <p><code>--provider codex-vision</code>이면 Codex Vision client를 만듭니다.</p>
+          </article>
+          <article class="flow-card">
+            <span class="number">4</span>
+            <h3>프롬프트 생성</h3>
+            <p><code>extractRecipeFromSources()</code>가 레시피 추출 지시문을 만듭니다.</p>
+          </article>
+          <article class="flow-card">
+            <span class="number">5</span>
+            <h3>프레임 추출</h3>
+            <p><code>extract-video-frames.py</code>가 중요한 장면 이미지를 저장합니다.</p>
+          </article>
+          <article class="flow-card">
+            <span class="number">6</span>
+            <h3>이미지 배치 분석</h3>
+            <p>프레임을 <code>batch-size</code>만큼 나눠 Codex CLI에 이미지로 보냅니다.</p>
+          </article>
+          <article class="flow-card">
+            <span class="number">7</span>
+            <h3>시각 메모 저장</h3>
+            <p>각 배치 결과를 합쳐 <code>visual_notes.md</code>에 저장합니다.</p>
+          </article>
+          <article class="flow-card">
+            <span class="number">8</span>
+            <h3>최종 JSON 생성</h3>
+            <p>원래 프롬프트와 시각 메모를 함께 주고 <code>{ recipes: [...] }</code>를 받습니다.</p>
+          </article>
+          <article class="flow-card">
+            <span class="number">9</span>
+            <h3>파싱과 1회 복구</h3>
+            <p>JSON 파싱 실패 시 한 번만 “JSON만 복구해줘”라고 다시 요청합니다.</p>
+          </article>
+          <article class="flow-card">
+            <span class="number">10</span>
+            <h3>결과와 캐시 저장</h3>
+            <p><code>final.json</code>, <code>run_meta.json</code>, 최종 <code>result.json</code>이 남습니다.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>프레임 추출은 어떤 방식인가요?</h2>
+        <p>
+          Codex Vision은 영상 전체를 그대로 AI에 넣지 않습니다. 먼저 Python helper가 영상에서
+          대표 장면 이미지를 뽑습니다.
+        </p>
+        <table class="path-table">
+          <thead>
+            <tr>
+              <th>방식</th>
+              <th>무슨 뜻인가요?</th>
+              <th>관련 옵션</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>scene</code></td>
+              <td>화면 변화가 큰 지점을 장면 후보로 잡습니다. 기본값입니다.</td>
+              <td><code>--scene-detail</code>, <code>--scene-selection</code>, <code>--max-frames</code></td>
+            </tr>
+            <tr>
+              <td><code>interval</code></td>
+              <td>일정 시간 간격으로 이미지를 뽑는 방식입니다.</td>
+              <td><code>--interval</code>, <code>--max-frames</code></td>
+            </tr>
+            <tr>
+              <td><code>storyboard:fallback</code></td>
+              <td>YouTube 영상 파일 다운로드가 막히면 storyboard 이미지를 받아 대체합니다.</td>
+              <td>자동 fallback이며 실패 기록은 <code>video_download_failure.json</code>에 남습니다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>캐시와 로그가 남는 위치</h2>
+        <p>
+          Codex Vision은 비교 실험용이라 “왜 실패했는지”, “다시 돌렸을 때 캐시를 썼는지”가 중요합니다.
+          그래서 중간 파일을 많이 남깁니다.
+        </p>
+        <div class="grid">
+          <article class="note green">
+            <h3>프레임 캐시</h3>
+            <ul>
+              <li><code>notebooks/recipe_loop_data/cache/codex-vision/_frames/&lt;key&gt;/frames/</code></li>
+              <li><code>frames.json</code></li>
+              <li><code>extraction_stats.json</code></li>
+              <li><code>extract-video-frames.log</code></li>
+            </ul>
+          </article>
+          <article class="note blue">
+            <h3>Codex Vision 결과 캐시</h3>
+            <ul>
+              <li><code>batch_reports/</code></li>
+              <li><code>visual_notes.md</code></li>
+              <li><code>final.raw.md</code></li>
+              <li><code>final.json</code></li>
+              <li><code>run_meta.json</code></li>
+            </ul>
+          </article>
+          <article class="note red">
+            <h3>실패 기록</h3>
+            <ul>
+              <li><code>failure.json</code></li>
+              <li><code>parse_failure_before_repair.json</code></li>
+              <li><code>video_download_failure.json</code></li>
+              <li>명령 로그에는 실패한 CLI 명령과 stderr가 남습니다.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>중요한 안전 규칙</h2>
+        <div class="callout">
+          <strong><code>golden.json</code>은 추출 중 읽지 않습니다.</strong>
+          <p>
+            <code>golden.json</code>은 정답지입니다. 추출 단계가 정답지를 보면 실험이 오염됩니다.
+            그래서 <code>run-extraction.mjs</code>는 <code>source.json</code>만 읽고,
+            채점은 별도 <code>grade-extraction.mjs</code> 같은 단계에서 수행합니다.
+          </p>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Gemini와 Codex Vision 차이</h2>
+        <table class="path-table">
+          <thead>
+            <tr>
+              <th>항목</th>
+              <th>Gemini 기본 경로</th>
+              <th>Codex Vision 경로</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>실행 방법</td>
+              <td><code>--provider</code> 생략 또는 <code>--provider gemini</code></td>
+              <td><code>--provider codex-vision</code></td>
+            </tr>
+            <tr>
+              <td>영상 처리</td>
+              <td>Gemini client가 기존 방식으로 처리합니다.</td>
+              <td>프레임 추출 후 Codex CLI에 이미지 묶음을 넘깁니다.</td>
+            </tr>
+            <tr>
+              <td>실패 시 동작</td>
+              <td>기존 Gemini 경로의 실패 처리 방식을 따릅니다.</td>
+              <td>Gemini로 fallback하지 않고 <code>failure.json</code>을 남깁니다.</td>
+            </tr>
+            <tr>
+              <td>비교 목적</td>
+              <td>기존 기준선입니다.</td>
+              <td>프레임 기반 추출이 더 나은지 나란히 비교하기 위한 새 경로입니다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>자주 만지는 옵션</h2>
+        <div class="glossary">
+          <div>
+            <dt><code>--provider codex-vision</code></dt>
+            <dd>Codex Vision 경로를 켭니다. 없으면 Gemini가 기본입니다.</dd>
+          </div>
+          <div>
+            <dt><code>--max-frames 4</code></dt>
+            <dd>영상에서 최대 몇 장의 이미지를 볼지 정합니다. 숫자가 크면 더 자세하지만 느립니다.</dd>
+          </div>
+          <div>
+            <dt><code>--batch-size 4</code></dt>
+            <dd>Codex CLI 한 번에 몇 장의 이미지를 보낼지 정합니다.</dd>
+          </div>
+          <div>
+            <dt><code>--scene-detail dense</code></dt>
+            <dd>장면 변화를 얼마나 촘촘히 찾을지 정합니다. <code>normal</code>, <code>dense</code>, <code>exhaustive</code>가 있습니다.</dd>
+          </div>
+          <div>
+            <dt><code>--scene-selection balanced</code></dt>
+            <dd>후보 장면이 많을 때 영상 전체에 고르게 퍼지도록 고릅니다.</dd>
+          </div>
+          <div>
+            <dt><code>--timeout-ms 900000</code></dt>
+            <dd>외부 명령이 너무 오래 걸릴 때 끊는 시간입니다. 단위는 밀리초입니다.</dd>
+          </div>
+          <div>
+            <dt><code>--no-cache</code></dt>
+            <dd>기존 Codex Vision 결과 캐시를 쓰지 않고 새로 생성합니다.</dd>
+          </div>
+          <div>
+            <dt><code>--model</code>, <code>--codex-effort</code></dt>
+            <dd>Codex CLI에 쓸 모델과 추론 강도를 조정합니다.</dd>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>초보자용 비유</h2>
+        <p>
+          Codex Vision은 요리 영상을 “처음부터 끝까지 통째로 보는 사람”이라기보다,
+          “영상에서 사진 여러 장을 뽑아 메모한 뒤, 그 메모와 설명란을 합쳐 레시피 카드를 작성하는 사람”에 가깝습니다.
+        </p>
+        <div class="grid">
+          <article class="note blue">
+            <h3>사진 뽑기</h3>
+            <p>중요해 보이는 순간을 캡처합니다. 재료가 들어가거나 장면이 바뀌는 지점입니다.</p>
+          </article>
+          <article class="note amber">
+            <h3>메모하기</h3>
+            <p>각 사진 묶음을 보고 “보이는 재료, 도구, 조리 동작, 자막”만 적습니다.</p>
+          </article>
+          <article class="note green">
+            <h3>레시피 쓰기</h3>
+            <p>메모와 텍스트 소스를 합쳐 <code>ingredients</code>와 <code>steps</code>가 있는 JSON을 만듭니다.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page">
+      기준 코드:
+      <code>scripts/recipe-loop/run-extraction.mjs</code>,
+      <code>scripts/recipe-loop/lib/codex-vision-client.mjs</code>,
+      <code>scripts/recipe-loop/extract-video-frames.py</code>.
+    </footer>
+  </body>
+</html>

@@ -88,6 +88,23 @@ export function createLlmForProvider(provider, args = {}, factories = {}) {
   throw new Error(`지원하지 않는 provider입니다: ${provider}`);
 }
 
+async function writeRunFailure(outDir, { id, split, outTag, provider, error }) {
+  await mkdir(outDir, { recursive: true });
+  await writeFile(
+    path.join(outDir, "failure.json"),
+    JSON.stringify({
+      videoId: id,
+      split,
+      outTag,
+      provider,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      failedAt: new Date().toISOString(),
+    }, null, 2) + "\n",
+    "utf8",
+  );
+}
+
 export async function runExtraction(rawArgs = {}, options = {}) {
   const args = typeof rawArgs.length === "number" ? parseCliArgs(rawArgs) : rawArgs;
   const split = typeof args.split === "string" ? args.split : "train";
@@ -108,12 +125,18 @@ export async function runExtraction(rawArgs = {}, options = {}) {
 
   for (const id of ids) {
     const sourcePath = path.join(splitDir, id, "source.json");
-    if (!existsSync(sourcePath)) { console.error(`[SKIP] source 없음: ${id}`); failures += 1; continue; }
+    const outDir = path.join(splitDir, id, "runs", outTag);
+    if (!existsSync(sourcePath)) {
+      const error = new Error(`source 없음: ${sourcePath}`);
+      await writeRunFailure(outDir, { id, split, outTag, provider, error });
+      console.error(`[SKIP] source 없음: ${id}`);
+      failures += 1;
+      continue;
+    }
     try {
       const source = JSON.parse(await readFile(sourcePath, "utf8"));
       const input = sourceToInput(source);
       const result = await extractRecipeFromSources(input, { llm, useVisual });
-      const outDir = path.join(splitDir, id, "runs", outTag);
       await mkdir(outDir, { recursive: true });
       await writeFile(path.join(outDir, "result.json"), JSON.stringify({ videoId: id, ...result }, null, 2) + "\n", "utf8");
       const recipeCount = result.recipes.length;
@@ -122,6 +145,7 @@ export async function runExtraction(rawArgs = {}, options = {}) {
       console.log(`[OK] ${provider} ${split}/${id}: 레시피 ${recipeCount}, 재료 ${ingCount}, 단계 ${stepCount}${result.meta.cached ? " (cache)" : ""}${result.meta.droppedUnusedVisualIngredients ? `, 미사용제거 ${result.meta.droppedUnusedVisualIngredients}` : ""}`);
     } catch (error) {
       failures += 1;
+      await writeRunFailure(outDir, { id, split, outTag, provider, error });
       console.error(`[FAIL] ${split}/${id}: ${error.message}`);
     }
   }
