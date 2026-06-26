@@ -639,7 +639,7 @@ describe("GrowthToastStack", () => {
     await waitFor(() => {
       expect(mockFetchArchive).toHaveBeenCalledWith({ limit: 20, cursor: null });
     });
-    expect(within(dialog).getByText("경험치 획득")).toBeTruthy();
+    expect(await within(dialog).findByText("경험치 획득")).toBeTruthy();
   });
 
   it("keeps the notification archive dialog open after the clicked toast auto-dismisses", async () => {
