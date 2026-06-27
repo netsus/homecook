@@ -78,6 +78,36 @@ describe("recipe-loop codex-vision provider", () => {
     expect(changed).not.toBe(first);
   });
 
+  it("compacts large visual notes for final synthesis while preserving batch markers", async () => {
+    const { compactVisualNotesForFinal } = await import(codexVisionModuleUrl);
+    const noisyBatch = (batchNo: number) => [
+      `## Batch ${batchNo}`,
+      "",
+      "1. 시간순 관찰",
+      ...Array.from({ length: 40 }, (_, index) => `- ${batchNo}:${index} 긴 관찰 내용과 조리 화면 설명입니다.`),
+      "2. 보이는 재료",
+      ...Array.from({ length: 40 }, (_, index) => `- 재료 ${batchNo}-${index}`),
+      "3. 보이는 도구와 조리 동작",
+      ...Array.from({ length: 40 }, (_, index) => `- 도구 ${batchNo}-${index}`),
+      "4. 화면 자막/글자",
+      ...Array.from({ length: 40 }, (_, index) => `- 자막 ${batchNo}-${index}`),
+      `- 아주 뒤쪽 자막에 된장과 소곱창, 깨소금이 일부 판독됨 ${batchNo}`,
+      "5. 불확실한 점",
+      ...Array.from({ length: 40 }, (_, index) => `- 불확실 ${batchNo}-${index}`),
+    ].join("\n");
+    const notes = [noisyBatch(1), noisyBatch(2), noisyBatch(3)].join("\n\n");
+    const compacted = compactVisualNotesForFinal(notes, 4_000);
+
+    expect(compacted.length).toBeLessThanOrEqual(4_000);
+    expect(compacted).toContain("## Batch 1");
+    expect(compacted).toContain("## Batch 3");
+    expect(compacted).toContain("보이는 재료");
+    expect(compacted).toContain("된장");
+    expect(compacted).toContain("소곱창");
+    expect(compacted).toContain("깨소금");
+    expect(compacted.length).toBeLessThan(notes.length);
+  });
+
   it("generates through Codex Vision, writes cache artifacts, and reuses the result cache", async () => {
     const { createCodexVisionClient } = await import(codexVisionModuleUrl);
     const { frameDir, frames } = makeFrameFixture(workdir);
@@ -170,12 +200,131 @@ describe("recipe-loop codex-vision provider", () => {
     expect(failure).toMatchObject({ provider: "codex-vision", message: "codex final failed" });
   });
 
+  it("reuses successful batch reports after a final synthesis failure", async () => {
+    const { createCodexVisionClient } = await import(codexVisionModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir);
+    let batchCalls = 0;
+    let finalCalls = 0;
+    const client = createCodexVisionClient({
+      cacheDir: path.join(workdir, "cache"),
+      model: "fixture-model",
+      batchSize: 1,
+      extractFrames: async () => ({
+        frameCacheHit: true,
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 1 },
+      }),
+      codexExec: async ({ images, outputPath, logPath }: { images: string[]; outputPath: string; logPath: string }) => {
+        if (images.length > 0) {
+          batchCalls += 1;
+          const output = "1. 시간순 관찰\n- 김치와 냄비가 보임";
+          writeFileSync(outputPath, output, "utf8");
+          writeFileSync(logPath, "batch ok", "utf8");
+          return output;
+        }
+
+        finalCalls += 1;
+        if (finalCalls === 1) {
+          writeFileSync(logPath, "final failed", "utf8");
+          throw new Error("codex final failed once");
+        }
+
+        const output = "{\"recipes\":[{\"title\":\"김치찌개\",\"ingredients\":[{\"name\":\"김치\",\"amount\":\"1\",\"unit\":\"컵\"}],\"steps\":[\"김치를 냄비에 넣고 끓인다.\"]}]}";
+        writeFileSync(outputPath, output, "utf8");
+        writeFileSync(logPath, "final ok", "utf8");
+        return output;
+      },
+    });
+
+    const input = {
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      cacheText: "김치찌개",
+    };
+    await expect(client.generate(input)).rejects.toThrow("codex final failed once");
+    const retry = await client.generate(input);
+
+    expect(batchCalls).toBe(1);
+    expect(finalCalls).toBe(2);
+    expect(retry.json.recipes[0].title).toBe("김치찌개");
+    expect(retry.meta.codexBatchCacheHits).toBe(1);
+  });
+
+  it("treats corrupt batch cache metadata as a cache miss", async () => {
+    const { createCodexVisionClient } = await import(codexVisionModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir);
+    const cacheDir = path.join(workdir, "cache");
+    let batchCalls = 0;
+    let finalCalls = 0;
+    const client = createCodexVisionClient({
+      cacheDir,
+      model: "fixture-model",
+      batchSize: 1,
+      extractFrames: async () => ({
+        frameCacheHit: true,
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 1 },
+      }),
+      codexExec: async ({ images, outputPath, logPath }: { images: string[]; outputPath: string; logPath: string }) => {
+        if (images.length > 0) {
+          batchCalls += 1;
+          const output = `1. 시간순 관찰\n- 김치와 냄비가 보임 ${batchCalls}`;
+          writeFileSync(outputPath, output, "utf8");
+          writeFileSync(logPath, "batch ok", "utf8");
+          return output;
+        }
+
+        finalCalls += 1;
+        if (finalCalls === 1) {
+          writeFileSync(logPath, "final failed", "utf8");
+          throw new Error("codex final failed once");
+        }
+
+        const output = "{\"recipes\":[{\"title\":\"김치찌개\",\"ingredients\":[{\"name\":\"김치\",\"amount\":\"1\",\"unit\":\"컵\"}],\"steps\":[\"김치를 냄비에 넣고 끓인다.\"]}]}";
+        writeFileSync(outputPath, output, "utf8");
+        writeFileSync(logPath, "final ok", "utf8");
+        return output;
+      },
+    });
+
+    const input = {
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      cacheText: "김치찌개",
+    };
+    await expect(client.generate(input)).rejects.toThrow("codex final failed once");
+
+    const metaFile = readdirSync(cacheDir, { recursive: true })
+      .map((entry) => String(entry))
+      .find((entry) => entry.endsWith("batch_001.meta.json"));
+    expect(metaFile).toBeDefined();
+    writeFileSync(path.join(cacheDir, metaFile!), "{not json", "utf8");
+
+    const retry = await client.generate(input);
+
+    expect(batchCalls).toBe(2);
+    expect(retry.json.recipes[0].title).toBe("김치찌개");
+    expect(retry.meta.codexBatchCacheHits).toBe(0);
+  });
+
   it("selects codex-vision from run-extraction without reading golden.json", async () => {
     const { createLlmForProvider, runExtraction } = await import(runExtractionModuleUrl);
-    const selected = createLlmForProvider("codex-vision", { model: "fixture-model", "max-frames": "3" }, {
+    const selected = createLlmForProvider("codex-vision", {
+      model: "fixture-model",
+      "max-frames": "3",
+      "storyboard-max-frames": "0",
+      "refresh-final": true,
+    }, {
       createCodexVision: (options: Record<string, unknown>) => ({ options }),
     });
-    expect(selected.options).toMatchObject({ model: "fixture-model", maxFrames: 3 });
+    expect(selected.options).toMatchObject({
+      model: "fixture-model",
+      maxFrames: 3,
+      storyboardMaxFrames: 0,
+      refreshFinal: true,
+    });
 
     const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
     writeJson(path.join(caseDir, "source.json"), {
