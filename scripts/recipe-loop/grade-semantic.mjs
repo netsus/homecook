@@ -245,7 +245,13 @@ function resolveJudgeConfig(args) {
 function compactRecipe(recipe) {
   return {
     title: recipe.title,
-    ingredients: (recipe.ingredients ?? []).map((i) => [i.name, [i.amount, i.unit].filter(Boolean).join(" ")].filter(Boolean).join(": ")),
+    ingredients: (recipe.ingredients ?? []).map((i) => ({
+      name: i.name,
+      amount: [i.amount, i.unit].filter(Boolean).join(" ") || null,
+      amountBasis: i.amountBasis ?? i.evidence ?? null,
+      optional: Boolean(i.optional),
+      groupLabel: i.groupLabel ?? null,
+    })),
     steps: (recipe.steps ?? []).map((s) => (typeof s === "string" ? s : s.instruction)),
   };
 }
@@ -260,15 +266,26 @@ function promptInput(golden, result) {
 function buildPrompt(golden, result, split) {
   const input = promptInput(golden, result);
   const protectedSplitInstruction = split === "validation" || split === "holdout"
-    ? "\n- 이 split은 보호 split이다. reason에 구체 재료명·구체 분량·정답 문장을 절대 쓰지 말고 양념류/채소류/분량/단계순서 같은 범주로만 쓴다."
+    ? "\n- 이 split은 보호 split이다. reason과 quantity_deferred에 구체 재료명·구체 분량·정답 문장을 절대 쓰지 말고 양념류/채소류/분량/단계순서 같은 범주로만 쓴다."
     : "\n- 이 split은 train/public이다. reason에 필요한 구체 문제를 짧게 쓸 수 있다.";
   return `너는 레시피 추출 품질을 평가하는 채점자다. 정답(golden)과 추출 결과(predicted)를 의미 기준으로 비교하라.
 글자가 완전히 같지 않아도 같은 재료·같은 동작을 의미하면 맞는 것으로 본다. 분량은 합리적 근사면 인정한다.
 
-각 정답 레시피마다 가장 잘 대응되는 추출 레시피를 찾아 채점하라:
+각 정답 레시피마다 가장 잘 대응되는 추출 레시피를 찾아 채점하라. 목록 순서만 믿지 말고 title, 재료 묶음, 조리 흐름을 함께 보고 대응시켜라:
 - ingredient_score(0~5): 정답 재료가 빠짐없이/정확히 추출됐는지(누락·오검출·분량오류 감점)
 - step_score(0~5): 정답 만들기의 핵심 동작·순서·조리설정이 담겼는지
 - case_score = min(ingredient_score, step_score)
+
+재료 분량 채점 규칙:
+- golden ingredient의 amountBasis가 stated-description, stated-caption, stated, onscreen처럼 명시값이면 분량 차이를 정상 채점한다.
+- golden ingredient의 amountBasis가 visual-estimate이면 재료 존재 여부는 계속 채점하되, 분량 차이만 hard penalty에서 제외한다.
+- visual-estimate 분량 차이를 보류한 경우 해당 case에 quantity_deferred 배열을 넣어 "재료명: Golden amountBasis=visual-estimate라 분량 차이 감점 보류"처럼 짧게 기록한다.
+- predicted가 해당 재료 자체를 누락했다면 분량 보류가 아니라 재료 누락으로 감점한다.
+
+단계 채점 규칙:
+- predicted 단계가 더 짧아도 핵심 조리 의미가 보존되고 초보자가 따라 할 수 있으면 감점하지 않는다.
+- 문장 수, 표현, 세부 설명 순서보다 주재료 조리, 열처리, 밑간, 양념장/국물 베이스, 간 맞추기, 마무리처럼 결과를 바꾸는 행동을 우선한다.
+- 여러 레시피가 섞이거나 다른 레시피의 단계가 대응되면 강하게 감점한다.
 
 점수 앵커:
 - 5 = 핵심 재료·동작 누락 0, 분량이 합리적이다.
@@ -285,6 +302,7 @@ function buildPrompt(golden, result, split) {
 - JSON만 출력한다.
 - 정답 원문 문장을 그대로 인용하지 않는다.
 - reason은 80자 안팎의 짧은 추상 근거로 쓴다.
+- 모든 case에 quantity_deferred 배열을 반드시 넣는다. 보류한 분량이 없으면 []로 둔다.
 ${protectedSplitInstruction}
 
 입력:
@@ -308,8 +326,21 @@ function validatePayload(parsed) {
         throw new Error(`semantic judge schema error: ${field} out of range`);
       }
     }
+    if (c.quantity_deferred !== undefined && !Array.isArray(c.quantity_deferred)) {
+      throw new Error("semantic judge schema error: quantity_deferred must be array");
+    }
+    for (const item of c.quantity_deferred ?? []) {
+      if (typeof item !== "string") {
+        throw new Error("semantic judge schema error: quantity_deferred entries must be strings");
+      }
+    }
   }
   return parsed;
+}
+
+function normalizeQuantityDeferred(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((item) => String(item ?? "").trim()).filter(Boolean))];
 }
 
 function normalize(parsed) {
@@ -317,12 +348,15 @@ function normalize(parsed) {
   const cases = (parsed.cases ?? []).map((c) => {
     const ing = Math.max(0, Math.min(5, Number(c.ingredient_score ?? 0)));
     const step = Math.max(0, Math.min(5, Number(c.step_score ?? 0)));
+    const quantityDeferred = normalizeQuantityDeferred(c.quantity_deferred);
     return {
       title: c.title,
       ingredient_score: ing,
       step_score: step,
       case_score: Math.min(ing, step),
       reason: c.reason ?? "",
+      quantity_deferred: quantityDeferred,
+      quantity_deferred_count: quantityDeferred.length,
     };
   });
   const avg = cases.length ? cases.reduce((a, c) => a + c.case_score, 0) / cases.length : 0;
@@ -343,13 +377,18 @@ function combineSampleGrades(sampleGrades, sampleN) {
     const stepScores = sampleCases.map((sample) => sample.step_score);
     const caseScores = sampleCases.map((sample) => sample.case_score);
     const sampleReasons = sampleCases.map((sample) => String(sample.reason ?? ""));
-    const caseScore = round3(median(caseScores));
+    const quantityDeferred = normalizeQuantityDeferred(sampleCases.flatMap((sample) => sample.quantity_deferred ?? []));
+    const ingredientScore = round3(median(ingredientScores));
+    const stepScore = round3(median(stepScores));
+    const caseScore = Math.min(ingredientScore, stepScore);
     return {
       title: baseCase.title,
-      ingredient_score: round3(median(ingredientScores)),
-      step_score: round3(median(stepScores)),
+      ingredient_score: ingredientScore,
+      step_score: stepScore,
       case_score: caseScore,
       reason: sampleReasons.find(Boolean) ?? "",
+      quantity_deferred: quantityDeferred,
+      quantity_deferred_count: quantityDeferred.length,
       sample_case_scores: caseScores,
       sample_reasons: sampleReasons,
       judge_sample_count: sampleCases.length,

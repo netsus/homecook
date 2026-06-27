@@ -17,6 +17,12 @@ function cacheKey(parts) {
   return sha256(JSON.stringify(parts)).slice(0, 32);
 }
 
+function summarizeProcessOutput(stderr, stdout, limit = 1200) {
+  const text = String(stderr || stdout || "");
+  if (text.length <= limit * 2) return text;
+  return `${text.slice(0, limit)}\n...[truncated]...\n${text.slice(-limit)}`;
+}
+
 let mockResponses = null;
 
 function nextMockResponse() {
@@ -97,7 +103,7 @@ async function runCodexExec({ prompt, model, effort, timeoutMs, schemaPath }) {
           return;
         }
         if (code !== 0) {
-          reject(new Error(`Codex judge exited ${code}: ${(stderr || stdout).slice(0, 400)}`));
+          reject(new Error(`Codex judge exited ${code}: ${summarizeProcessOutput(stderr, stdout)}`));
           return;
         }
         resolve({ stdout, stderr });
