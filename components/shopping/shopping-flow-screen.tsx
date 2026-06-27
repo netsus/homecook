@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
+import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { AllPantryCompletionModal } from "@/components/shopping/all-pantry-completion-modal";
 import {
@@ -538,7 +539,14 @@ export function ShoppingFlowScreen({
 
   return (
     <WebShell className="web-shopping-shell" wide>
-      <WebTopNav activeId={SHOPPING_FLOW_CHROME.primaryNavId} />
+      <WebTopNav
+        activeId={SHOPPING_FLOW_CHROME.primaryNavId}
+        rightSlot={
+          initialAuthenticated ? (
+            <ProfileSummaryButton autoLoad isAuthenticated variant="web" />
+          ) : null
+        }
+      />
       <main
         className="web-screen web-shopping-flow-screen max-w-none"
         data-testid="shopping-flow-shell"

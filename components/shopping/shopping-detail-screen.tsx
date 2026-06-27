@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { ContentState } from "@/components/shared/content-state";
+import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
@@ -516,6 +517,7 @@ export function ShoppingDetailScreen({
         mobile={isMobileViewport}
         navActiveId={navActiveId}
         onBack={handleBack}
+        showProfileSummary={initialAuthenticated}
       />
     );
   }
@@ -772,7 +774,15 @@ export function ShoppingDetailScreen({
 
   return (
     <WebShell className="web-shopping-shell" wide>
-      <WebTopNav activeId={navActiveId} items={WEB_NAV_ITEMS} />
+      <WebTopNav
+        activeId={navActiveId}
+        items={WEB_NAV_ITEMS}
+        rightSlot={
+          initialAuthenticated ? (
+            <ProfileSummaryButton autoLoad isAuthenticated variant="web" />
+          ) : null
+        }
+      />
       <main className="web-screen web-shopping-detail-screen">
         <nav aria-label="장보기 상세 경로" className="web-breadcrumb">
           <button
@@ -955,11 +965,13 @@ function ShoppingDetailSkeleton({
   mobile,
   navActiveId,
   onBack,
+  showProfileSummary = false,
 }: {
   embedded?: boolean;
   mobile: boolean;
   navActiveId: "planner" | "mypage";
   onBack: () => void;
+  showProfileSummary?: boolean;
 }) {
   if (mobile) {
     return (
@@ -1066,7 +1078,15 @@ function ShoppingDetailSkeleton({
       data-testid="shopping-detail-skeleton"
     >
       <WebShell className="web-shopping-shell" wide>
-        <WebTopNav activeId={navActiveId} items={WEB_NAV_ITEMS} />
+        <WebTopNav
+          activeId={navActiveId}
+          items={WEB_NAV_ITEMS}
+          rightSlot={
+            showProfileSummary ? (
+              <ProfileSummaryButton autoLoad isAuthenticated variant="web" />
+            ) : null
+          }
+        />
         <main className="web-screen web-shopping-detail-screen">
           <nav aria-hidden="true" className="web-breadcrumb">
             <span className="h-4 w-20 animate-pulse rounded-full bg-[var(--surface-subtle)]" />

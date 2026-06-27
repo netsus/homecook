@@ -155,6 +155,26 @@ describe("shopping flow screen", () => {
     });
   });
 
+  describe("web navigation", () => {
+    it("shows the profile summary entry point on the ready shopping flow screen", async () => {
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 2,
+          },
+        ]),
+      );
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      expect(await screen.findByTestId("shopping-flow-shell")).toBeTruthy();
+      expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
+    });
+  });
+
   describe("empty state", () => {
     it("should show empty state when no eligible meals", async () => {
       fetchShoppingPreview.mockResolvedValue(createPreviewData([]));

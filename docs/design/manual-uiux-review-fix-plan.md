@@ -3946,7 +3946,7 @@ Implementation note:
 
 ### 92. 웹 장보기 화면 우측상단에 프로필요약 진입점이 없는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: Medium
 - Area: UX / Shopping / Global Navigation
 - Source: user manual review
@@ -3965,7 +3965,10 @@ Implementation note:
   - shopping screen components
   - shared web nav
 - Verification:
-  - relevant shopping screen tests/manual check.
+  - `CI=true corepack pnpm exec vitest run tests/shopping-flow-screen.test.tsx tests/shopping-detail.frontend.test.tsx`
+- Implementation notes:
+  - 웹 장보기 준비 화면과 장보기 상세 화면의 `WebTopNav` right slot에 `ProfileSummaryButton`을 추가했다.
+  - 장보기 상세 skeleton에도 같은 진입점을 유지해 화면 전환 중 상단 진입점이 빠지지 않게 했다.
 
 ### 93. 우측상단 프로필이미지 클릭이 아직 마이페이지 이동으로 남아 있는 문제
 
