@@ -400,6 +400,8 @@ describe("user gamification event projection", () => {
         user_id: "user-1",
         notification_key: "xp-toast:progress-event-1",
         notification_type: "xp_awarded",
+        delivery_channel: "archive_only",
+        toast_eligible: false,
         source_event_id: "progress-event-1",
         payload_json: expect.objectContaining({
           event_type: "shopping_completed",
@@ -539,6 +541,8 @@ describe("user gamification event projection", () => {
         user_id: "user-1",
         notification_key: "xp-toast:progress-event-2",
         notification_type: "xp_awarded",
+        delivery_channel: "archive_only",
+        toast_eligible: false,
         source_event_id: "progress-event-2",
         payload_json: expect.objectContaining({
           event_type: "recipe_saved",

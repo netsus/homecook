@@ -4135,7 +4135,7 @@ Implementation note:
 
 ### 99. 첫 경험치 안내까지 모두 토스트/모달로 보여 성장 알림이 복잡해지는 문제
 
-- Status: planned
+- Status: implemented in `fix/suppress-first-xp-toast`
 - Severity: Low
 - Area: UX / Gamification / XP Notifications
 - Source: user manual review
@@ -4155,6 +4155,12 @@ Implementation note:
   - growth toast stack
 - Verification:
   - notification priority tests.
+- Implementation notes:
+  - 첫 튜토리얼 흐름과 겹치는 XP 알림은 DB에는 남기되 `delivery_channel='archive_only'`, `toast_eligible=false`로 저장하게 했다.
+  - 적용 대상은 첫 레시피 저장, 첫 플래너 등록, 첫 장보기 완료, 첫 요리 완료, 첫 레시피북 생성 XP다.
+  - 튜토리얼/업적 토스트는 유지하고, 첫 XP 자체는 알림 기록/아카이브 맥락에서만 확인되게 했다.
+  - 반복 XP나 튜토리얼과 무관한 XP 알림의 기존 토스트 경로는 유지했다.
+  - `tests/user-gamification-events.test.ts`, `tests/user-gamification-notification-priority.test.ts`로 생성/조회 양쪽을 고정했다.
 
 ### 100. 팬트리 재료추가/묶음추가가 오래 걸리는 문제
 

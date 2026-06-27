@@ -728,6 +728,14 @@ const SOURCE_EVENT_CATEGORIES: Record<UserProgressEventType, UserGamificationBad
   leftover_eaten: "leftovers",
 };
 
+const FIRST_TUTORIAL_XP_TOAST_ARCHIVE_EVENT_TYPES = new Set<UserProgressEventType>([
+  "recipe_saved",
+  "planner_registered",
+  "shopping_completed",
+  "cooking_completed",
+  "custom_book_created",
+]);
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function readUserGamification(
@@ -816,6 +824,10 @@ export async function projectUserGamificationAfterProgressEvent(
   try {
     const now = input.awardInput.occurredAt ?? new Date().toISOString();
     const groupKey = `progress-event:${input.progressEventId}`;
+    const archiveOnlyFirstXpToast = shouldArchiveOnlyFirstTutorialXpToast(
+      input.awardInput.eventType,
+      input.progress,
+    );
     const notificationResult = await insertProgressNotification(dbClient, {
       userId: input.userId,
       notificationKey: `xp-toast:${input.progressEventId}`,
@@ -825,8 +837,11 @@ export async function projectUserGamificationAfterProgressEvent(
         event_type: input.awardInput.eventType,
         label: SOURCE_EVENT_LABELS[input.awardInput.eventType],
         xp_delta: input.xpDelta,
+        ...(archiveOnlyFirstXpToast ? { xp_kind: "first" } : {}),
       },
       groupKey,
+      deliveryChannel: archiveOnlyFirstXpToast ? "archive_only" : "toast",
+      toastEligible: !archiveOnlyFirstXpToast,
       now,
     });
 
@@ -1742,6 +1757,8 @@ async function insertProgressNotification(
     sourceEventId: string | null;
     payload: Record<string, unknown>;
     groupKey?: string | null;
+    deliveryChannel?: UserGamificationNotificationDeliveryChannel;
+    toastEligible?: boolean;
     now: string;
   },
 ): Promise<{ created: boolean; error: QueryError | null }> {
@@ -1754,8 +1771,8 @@ async function insertProgressNotification(
       source_event_id: input.sourceEventId,
       payload_json: input.payload,
       priority: USER_NOTIFICATION_PRIORITIES[input.notificationType],
-      delivery_channel: "toast",
-      toast_eligible: true,
+      delivery_channel: input.deliveryChannel ?? "toast",
+      toast_eligible: input.toastEligible ?? true,
       group_key: input.groupKey ?? null,
       created_at: input.now,
     })
@@ -1890,6 +1907,34 @@ function compareNotificationArchive(
 ) {
   return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
     || right.id.localeCompare(left.id);
+}
+
+function shouldArchiveOnlyFirstTutorialXpToast(
+  eventType: UserProgressEventType,
+  progress: UserProgressData,
+) {
+  if (!FIRST_TUTORIAL_XP_TOAST_ARCHIVE_EVENT_TYPES.has(eventType)) {
+    return false;
+  }
+
+  if (eventType === "recipe_saved") {
+    return progress.event_counts.recipe_saved_distinct_ever === 1;
+  }
+
+  if (eventType === "planner_registered") {
+    return progress.event_counts.planner_registered_first === 1 &&
+      progress.event_counts.planner_registered_repeat === 0;
+  }
+
+  if (eventType === "shopping_completed") {
+    return progress.event_counts.shopping_completed === 1;
+  }
+
+  if (eventType === "cooking_completed") {
+    return progress.event_counts.cooking_completed === 1;
+  }
+
+  return progress.event_counts.custom_book_created === 1;
 }
 
 function getMetricValue(progress: UserProgressData, metric: MetricKey) {

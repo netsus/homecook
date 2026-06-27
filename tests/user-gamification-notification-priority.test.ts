@@ -315,6 +315,84 @@ describe("user gamification notification priority", () => {
     ]);
   });
 
+  it("keeps first tutorial XP out of toast priority while preserving it in archive context", () => {
+    const data = buildUserGamificationData({
+      progress: {
+        level: {
+          current_level: 1,
+          total_xp: 40,
+          current_level_start_xp: 0,
+          next_level_start_xp: 100,
+          xp_into_current_level: 40,
+          xp_to_next_level: 60,
+          progress_ratio: 0.4,
+          progress_percent: 40,
+        },
+        event_counts: {
+          cooking_completed: 0,
+          shopping_completed: 1,
+          recipe_saved_distinct_ever: 0,
+          custom_book_created: 0,
+          planner_registered_first: 0,
+          planner_registered_repeat: 0,
+        },
+        last_updated_at: "2026-06-10T10:00:00.000Z",
+      },
+      badgeRows: [],
+      questRows: [],
+      achievementRows: [],
+      activityRows: [],
+      achievementCounts: {
+        pantry_distinct_ingredients: 0,
+        leftover_eaten_manual: 0,
+        recipe_registered: 0,
+        shopping_list_created: 0,
+      },
+      notificationRows: [
+        {
+          id: "tutorial-achievement",
+          notification_type: "achievement_unlocked",
+          priority: 2,
+          delivery_channel: "toast",
+          toast_eligible: true,
+          group_key: "progress-event:e1",
+          payload_json: {
+            achievement_key: "tutorial_shopping_list_complete",
+            category_key: "tutorial",
+            title: "첫 장보기 완료",
+          },
+          created_at: "2026-06-10T10:00:00.000Z",
+          seen_at: null,
+        },
+        {
+          id: "first-xp",
+          notification_type: "xp_awarded",
+          priority: 4,
+          delivery_channel: "archive_only",
+          toast_eligible: false,
+          group_key: "progress-event:e1",
+          payload_json: {
+            event_type: "shopping_completed",
+            xp_delta: 40,
+            label: "장보기 완료",
+            xp_kind: "first",
+          },
+          created_at: "2026-06-10T10:00:00.000Z",
+          seen_at: null,
+        },
+      ],
+    });
+
+    expect(data.notifications.priority_unseen).toHaveLength(1);
+    expect(data.notifications.priority_unseen[0]?.id).toBe("tutorial-achievement");
+    expect(data.notifications.priority_unseen.map((item) => item.id)).not.toContain("first-xp");
+    expect(data.notifications.archive_preview[0]?.id).toBe("tutorial-achievement");
+    expect(data.notifications.archive_preview[0]?.payload.merged_notification_ids).toEqual(
+      expect.arrayContaining(["tutorial-achievement", "first-xp"]),
+    );
+    expect(data.notifications.archive_preview[0]?.payload.merged_xp_delta).toBe(40);
+  });
+
   it("keeps legacy one-shot achievement rows visible at projection read time", () => {
     const data = buildUserGamificationData({
       progress: {
