@@ -7,6 +7,7 @@ import React from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
+import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { MealAddOptionsSheet } from "@/components/planner/meal-add-options-sheet";
 import type { MealAddPickerMode } from "@/components/planner/meal-add-options-sheet";
@@ -898,17 +899,6 @@ export function PlannerWeekScreen({
     }
   }, [dateKeys, selectedDateKey, todayKey]);
 
-  // Single source for the "login required" surface: send unauthenticated
-  // visitors to /login (same screen everywhere) instead of rendering a
-  // separate inline gate here.
-  useEffect(() => {
-    if (authState === "unauthorized") {
-      const queryString = searchParams.toString();
-      const nextPath = queryString ? `/planner?${queryString}` : "/planner";
-      router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
-    }
-  }, [authState, router, searchParams]);
-
   useEffect(() => {
     if (
       searchParams.get("restore") !== "meal-add-modal" &&
@@ -1059,12 +1049,10 @@ export function PlannerWeekScreen({
   if (authState === "checking") {
     return (
       <>
-        <ContentState
-          className="md:px-7"
-          description="플래너 접근 권한과 현재 세션을 확인하고 있어요."
-          eyebrow="세션 확인"
-          tone="loading"
-          title="로그인 상태를 확인하고 있어요"
+        <div
+          aria-busy="true"
+          className="min-h-screen bg-[var(--surface)] md:min-h-[calc(100dvh-96px)]"
+          data-testid="planner-auth-checking-shell"
         />
         {!isDesktopViewport ? (
           <Wave1MobileBottomTab ariaLabel="플래너 하단 탭" currentTab="planner" />
@@ -1074,16 +1062,33 @@ export function PlannerWeekScreen({
   }
 
   if (authState === "unauthorized") {
-    // Redirect handled by the effect above; render a lightweight placeholder
-    // while navigation to /login completes.
+    const queryString = searchParams.toString();
+    const nextPath = queryString ? `/planner?${queryString}` : "/planner";
+
     return (
-      <ContentState
-        className="md:px-7"
-        description="로그인 화면으로 이동하고 있어요."
-        eyebrow="세션 확인"
-        tone="loading"
-        title="잠시만 기다려 주세요"
-      />
+      <>
+        <ContentState
+          description="로그인 후 보던 주간 범위로 돌아와 식단을 계속 관리할 수 있어요."
+          eyebrow="플래너 접근"
+          safeBottomPadding
+          title="이 화면은 로그인이 필요해요"
+          titleLevel={1}
+          tone="gate"
+        >
+          <div className="space-y-3">
+            <SocialLoginButtons nextPath={nextPath} />
+            <Link
+              className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
+              href="/"
+            >
+              홈으로 돌아가기
+            </Link>
+          </div>
+        </ContentState>
+        {!isDesktopViewport ? (
+          <Wave1MobileBottomTab ariaLabel="플래너 하단 탭" currentTab="planner" />
+        ) : null}
+      </>
     );
   }
 
