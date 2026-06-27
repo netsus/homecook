@@ -4054,7 +4054,7 @@ Implementation note:
 
 ### 98. 앱 레시피북 생성 완료/취소가 텍스트만 보여 버튼으로 인식되기 약한 문제
 
-- Status: planned
+- Status: implemented
 - Severity: Medium
 - Area: UX / Recipebook / Mobile Create Input
 - Source: user manual review, screenshot
@@ -4070,6 +4070,9 @@ Implementation note:
 - Acceptance criteria:
   - 앱에서 완료/취소가 명확한 버튼 형태로 보인다.
   - 좁은 폭에서도 input과 버튼이 겹치지 않는다.
+- Implementation notes:
+  - 모바일 레시피북 생성의 `완료`는 filled primary pill button으로, `취소`는 secondary pill button으로 보이게 했다.
+  - 두 버튼 모두 최소 높이와 nowrap을 고정해 좁은 폭에서 텍스트 버튼처럼 풀리거나 줄바꿈되지 않게 했다.
 - Likely implementation target:
   - mobile recipebook create component/CSS
 - Verification:

@@ -856,7 +856,7 @@ function MobileRecipebookSurface({
             {isCreating ? "만드는 중..." : "완료"}
           </button>
           <button
-            className="shrink-0 text-[13px] font-bold text-[var(--text-3)]"
+            className="mobile-recipebooks-create-cancel shrink-0 text-[13px] font-bold"
             onClick={onCancelCreate}
             type="button"
           >
