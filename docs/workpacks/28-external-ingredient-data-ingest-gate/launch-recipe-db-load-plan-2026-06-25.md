@@ -437,6 +437,49 @@ Pilot post-remote follow-up:
 - HOME now appends the next page from `next_cursor` with an explicit `더 보기` action and labels the count as displayed rows instead of implying the loaded page is the whole DB.
 - The original FoodSafety API only provided recipe-level `RCP_WAY2`, so the seed copied one cooking method to every step in each recipe. Added `20260626121000_fix_foodsafety_pilot_step_methods.sql` to reclassify all 146 pilot steps by step instruction using existing `cooking_methods`.
 
+## Next Batch Parking Plan - 2026-06-27
+
+Additional recipe loading is intentionally parked until the current pilot display-quality issues are addressed.
+
+Proceed when the following gates are complete or explicitly deferred:
+
+1. Recipe detail public-image gallery fix is implemented:
+   - preserve original image ratio for the main detail image,
+   - show public recipe image candidates as secondary thumbnails,
+   - support `사진 모두 보기`.
+2. Cook mode readability fixes are implemented or scheduled in the same release batch:
+   - larger ingredient text,
+   - stable cook-mode skeleton,
+   - horizontal multi-method badges.
+3. Home theme taxonomy is corrected:
+   - theme names must be backed by current DB fields such as tags, ingredients, cooking methods, source metadata, or counters,
+   - do not create themes like `불 없이` unless the recipe method data can prove no heat-based method is used,
+   - avoid themes that duplicate existing sort controls such as save-count sort.
+4. Pilot 30 quality lessons are folded into the next review pack:
+   - visible source tags are internalized,
+   - step cooking methods can be multi-valued,
+   - ingredient order follows likely step usage,
+   - sauce/dressing components are preserved as sections,
+   - image candidates and their dimensions/roles are exported for review.
+
+Recommended next load shape:
+
+- Use a small batch before any large import: 50 recipes first, then 100 if the quality gates pass.
+- Prioritize recipes that improve theme coverage with reliable data:
+  - no-heat / cold-prep only if cooking methods prove it,
+  - main meal / one-bowl / soup / side / salad only when tags and ingredients support it,
+  - beginner-friendly only when step count, method complexity, and ingredient count are low enough.
+- Generate an editable HTML review pack again, but include:
+  - pilot number and source id,
+  - all image candidates with dimensions,
+  - editable visible tags,
+  - editable step methods with multiple methods per step,
+  - ingredient section/order editing,
+  - theme eligibility preview.
+- Create migration, rollback SQL, local dry-run, remote dry-run, and smoke checks only after the review decisions are exported.
+
+Do not bulk-load hundreds of recipes until the 50-recipe batch passes UI review on home, detail, cook mode, planner add, and shopping-list creation.
+
 ## Prep Status - 2026-06-25
 
 The first tooling pass for this plan is implemented and recorded in:
