@@ -11,13 +11,14 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { createCodexVisionKeyframesClient } from "./lib/codex-vision-keyframes-client.mjs";
 import { createCodexVisionClient } from "./lib/codex-vision-client.mjs";
 import { createCachedLlmClient } from "./lib/llm-client.mjs";
 import { extractRecipeFromSources } from "../../lib/server/recipe-extraction-lab/extract.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
-const SUPPORTED_PROVIDERS = new Set(["gemini", "codex-vision"]);
+const SUPPORTED_PROVIDERS = new Set(["gemini", "codex-vision", "codex-vision-keyframes"]);
 
 export function parseCliArgs(argv) {
   const args = {};
@@ -79,6 +80,26 @@ export function createLlmForProvider(provider, args = {}, factories = {}) {
       maxFrames: optionalNumber(args["max-frames"]),
       storyboardMaxFrames: optionalNumber(args["storyboard-max-frames"]),
       batchSize: optionalNumber(args["batch-size"]),
+      sceneDetail: typeof args["scene-detail"] === "string" ? args["scene-detail"] : undefined,
+      sceneSelection: typeof args["scene-selection"] === "string" ? args["scene-selection"] : undefined,
+      timeoutMs: optionalNumber(args["timeout-ms"]),
+      refreshFinal: args["refresh-final"] === true,
+      noCache: args["no-cache"] === true,
+    });
+  }
+
+  if (provider === "codex-vision-keyframes") {
+    const createCodexVisionKeyframes = factories.createCodexVisionKeyframes ?? createCodexVisionKeyframesClient;
+    return createCodexVisionKeyframes({
+      model: typeof args.model === "string" ? args.model : undefined,
+      selectorModel: typeof args["selector-model"] === "string" ? args["selector-model"] : undefined,
+      codexEffort: typeof args["codex-effort"] === "string" ? args["codex-effort"] : undefined,
+      selectorEffort: typeof args["selector-effort"] === "string" ? args["selector-effort"] : undefined,
+      maxFrames: optionalNumber(args["max-frames"]),
+      storyboardMaxFrames: optionalNumber(args["storyboard-max-frames"]),
+      selectorCandidateLimit: optionalNumber(args["selector-candidate-limit"]),
+      keyframeTotalLimit: optionalNumber(args["keyframe-total-limit"]),
+      keyframesPerRecipe: optionalNumber(args["keyframes-per-recipe"]),
       sceneDetail: typeof args["scene-detail"] === "string" ? args["scene-detail"] : undefined,
       sceneSelection: typeof args["scene-selection"] === "string" ? args["scene-selection"] : undefined,
       timeoutMs: optionalNumber(args["timeout-ms"]),
