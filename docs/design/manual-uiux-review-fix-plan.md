@@ -3590,7 +3590,7 @@ Implementation note:
 
 ### 82. 공공 레시피 상세 이미지가 작은 원본을 `cover`로 확대해 잘리고 흐리게 보이는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: High
 - Area: UX / Recipe Detail / Public Recipe Media
 - Source: user manual review, public recipe detail screenshot for `석류 보쌈김치`
@@ -3647,7 +3647,7 @@ Implementation note:
 
 ### 83. 비로그인 상태로 플래너 진입 시 `잠시만 기다려주세요`가 짧게 보인 뒤 로그인 화면으로 바뀌는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: Medium
 - Area: UX / Auth Gate / Planner
 - Source: user manual review
@@ -3662,6 +3662,10 @@ Implementation note:
 - Recommended fix:
   - planner auth gate에서 unauth 판단 전 임시 문구 화면을 제거한다.
   - 공통 auth-loading shell이 필요하면 실제 로그인 화면 구조와 크게 다르지 않은 최소 skeleton으로 통일한다.
+- Implementation notes:
+  - `/planner` 인증 확인 상태에서 visible loading 문구를 제거하고 문구 없는 최소 shell만 남겼다.
+  - 비로그인 확정 시 `/login` redirect용 `잠시만 기다려 주세요` placeholder를 거치지 않고 현재 화면에서 바로 로그인 안내와 로그인 버튼을 보여주게 했다.
+  - 모바일에서는 기존 하단 플래너 탭을 유지해 전역 navigation 위치가 흔들리지 않게 했다.
 - Acceptance criteria:
   - 비로그인 상태에서 `/planner` 진입 시 `잠시만 기다려주세요` 문구가 보이지 않는다.
   - 로그인 안내 화면으로 전환되기 전 불필요한 full-screen flicker가 없다.

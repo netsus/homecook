@@ -229,24 +229,42 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByText("잠시만 기다려 주세요")).toBeTruthy();
-    expect(screen.getByText("세션 확인")).toBeTruthy();
-    expect(screen.getByText("로그인 화면으로 이동하고 있어요.")).toBeTruthy();
-    expect(navigationMocks.replace).toHaveBeenCalledWith("/login?next=%2Fplanner");
+    expect(
+      await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
+    ).toBeTruthy();
+    expect(screen.getByText("플래너 접근")).toBeTruthy();
+    expect(
+      screen.getByText("로그인 후 보던 주간 범위로 돌아와 식단을 계속 관리할 수 있어요."),
+    ).toBeTruthy();
+    expect(screen.queryByText("잠시만 기다려 주세요")).toBeNull();
+    expect(screen.queryByText("로그인 화면으로 이동하고 있어요.")).toBeNull();
+    expect(navigationMocks.replace).not.toHaveBeenCalled();
   });
 
-  it("uses the centered login redirect state for guests on small screens", async () => {
+  it("does not show auth loading copy before the guest gate resolves", async () => {
+    readE2EAuthOverride.mockReturnValue(undefined);
+
+    render(<PlannerWeekScreen />);
+
+    expect(screen.queryByText("잠시만 기다려 주세요")).toBeNull();
+    expect(screen.queryByText("로그인 상태를 확인하고 있어요")).toBeNull();
+    expect(
+      await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
+    ).toBeTruthy();
+  });
+
+  it("uses the centered login gate state for guests on small screens", async () => {
     readE2EAuthOverride.mockReturnValue(false);
 
     render(<PlannerWeekScreen />);
 
     const heading = await screen.findByRole("heading", {
-      name: "잠시만 기다려 주세요",
+      name: "이 화면은 로그인이 필요해요",
     });
     const authGate = heading.closest("[data-state-kind='prototype-derived']");
 
     expect(authGate).not.toBeNull();
-    expect(authGate?.getAttribute("data-state-tone")).toBe("loading");
+    expect(authGate?.getAttribute("data-state-tone")).toBe("gate");
   });
 
   it("loads planner data into four fixed slots inside the same day card", async () => {
