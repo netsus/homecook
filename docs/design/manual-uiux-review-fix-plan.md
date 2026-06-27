@@ -4164,7 +4164,7 @@ Implementation note:
 
 ### 100. 팬트리 재료추가/묶음추가가 오래 걸리는 문제
 
-- Status: planned
+- Status: implemented in `fix/pantry-add-bundle-performance`
 - Severity: High
 - Area: UX / Pantry / Performance
 - Source: user manual review
@@ -4178,16 +4178,22 @@ Implementation note:
   - 묶음 추가 시 호출 수, payload 크기, DB RPC/insert 횟수, client re-render 비용을 측정한다.
   - 가능한 경우 bulk insert/upsert 또는 RPC로 묶고, optimistic UI 또는 progress state를 제공한다.
   - 재료 목록/묶음 데이터를 화면 진입 시 prefetch/cache한다.
+- Implementation note:
+  - `POST /api/v1/pantry`는 이미 `ingredient_ids` 배열을 한 번에 처리하고 있어 단건 반복 호출 병목은 없었다.
+  - 체감 지연의 주 원인은 묶음 추가 성공 후 `GET /api/v1/pantry/bundles`를 다시 기다리며 버튼이 계속 loading 상태에 묶이는 구조였다.
+  - 묶음 추가 성공 후 선택한 재료를 로컬 bundle state에서 즉시 `보유중`으로 표시하도록 바꾸고, 묶음 전체 재조회는 제거했다.
+  - 성공 후 팬트리 목록 갱신은 기존처럼 부모 화면에서 백그라운드로 유지한다.
 - Acceptance criteria:
-  - 묶음 추가의 네트워크 요청 수와 처리 시간이 현재보다 줄어든다.
+  - 묶음 추가 성공 path에서 묶음 목록 재조회가 2회에서 초기 1회로 줄어든다.
   - 추가 중 버튼 loading/disabled 상태가 명확하다.
-  - 실패 시 어떤 항목이 실패했는지 알 수 있다.
+  - 실패 시 모달을 닫지 않고 같은 묶음 상세에서 실패 안내를 보여준다.
 - Likely implementation target:
   - pantry add modal components
   - pantry APIs/RPCs
   - ingredient bundle hooks
 - Verification:
-  - performance log before/after and pantry API tests.
+  - `CI=true corepack pnpm exec vitest run tests/pantry-screen.test.tsx`
+  - `CI=true corepack pnpm exec vitest run tests/pantry-core.backend.test.ts`
 
 ### 101. 요리모드에서 조리법이 여러 개인 단계의 조리법 태그가 세로로 쌓이는 문제
 

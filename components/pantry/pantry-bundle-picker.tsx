@@ -268,20 +268,30 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
   const handleAdd = useCallback(async () => {
     if (selectedIds.size === 0) return;
 
+    const selectedIngredientIds = Array.from(selectedIds);
+
     setIsAdding(true);
     setAddErrorMessage(null);
     try {
-      const result = await addPantryItems(Array.from(selectedIds));
+      const result = await addPantryItems(selectedIngredientIds);
       onAdd(result.added);
-      setExpandedBundleId(null);
+      setBundles((currentBundles) =>
+        currentBundles.map((bundle) => ({
+          ...bundle,
+          ingredients: bundle.ingredients.map((ingredient) =>
+            selectedIngredientIds.includes(ingredient.ingredient_id)
+              ? { ...ingredient, is_in_pantry: true }
+              : ingredient,
+          ),
+        })),
+      );
       setSelectedIds(new Set());
-      await loadBundles();
       setIsAdding(false);
     } catch {
       setAddErrorMessage("추가에 실패했어요. 다시 시도해 주세요.");
       setIsAdding(false);
     }
-  }, [loadBundles, selectedIds, onAdd]);
+  }, [selectedIds, onAdd]);
 
   useEffect(() => {
     void loadBundles();
