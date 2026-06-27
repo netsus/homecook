@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import {
   createCustomRecipeBook,
@@ -42,12 +42,14 @@ export function useHomeRecipeSaveFlow({
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [saveModalState, setSaveModalState] = useState<SaveModalState>("idle");
   const [saveBooks, setSaveBooks] = useState<RecipeBookSummary[]>([]);
+  const [hasLoadedSaveBooks, setHasLoadedSaveBooks] = useState(false);
   const [selectedSaveBookIds, setSelectedSaveBookIds] = useState<string[]>([]);
   const [newSaveBookName, setNewSaveBookName] = useState("");
   const [saveLoadError, setSaveLoadError] = useState<string | null>(null);
   const [saveSubmitError, setSaveSubmitError] = useState<string | null>(null);
   const [isCreatingBook, setIsCreatingBook] = useState(false);
   const [isSavingRecipe, setIsSavingRecipe] = useState(false);
+  const saveBooksRequestRef = useRef<Promise<RecipeBookSummary[]> | null>(null);
 
   const alreadySavedBookIds = useMemo(() => {
     if (!saveTargetRecipe) {
@@ -57,6 +59,54 @@ export function useHomeRecipeSaveFlow({
     return savedBookIdsByRecipeId[saveTargetRecipe.id] ?? [];
   }, [saveTargetRecipe, savedBookIdsByRecipeId]);
 
+  const requestSaveBooks = useCallback(() => {
+    if (!saveBooksRequestRef.current) {
+      saveBooksRequestRef.current = fetchSaveableRecipeBooks().finally(() => {
+        saveBooksRequestRef.current = null;
+      });
+    }
+
+    return saveBooksRequestRef.current;
+  }, []);
+
+  const applySaveBooks = useCallback(
+    (recipeId: string, books: RecipeBookSummary[]) => {
+      const availableBookIds = new Set(books.map((book) => book.id));
+      const savedBookIds = savedBookIdsByRecipeId[recipeId] ?? [];
+      const availableSavedBookIds = savedBookIds.filter((bookId) =>
+        availableBookIds.has(bookId),
+      );
+
+      setSaveBooks(books);
+      setSelectedSaveBookIds((currentBookIds) => {
+        const retainedBookIds = currentBookIds.filter((bookId) =>
+          availableBookIds.has(bookId),
+        );
+
+        if (retainedBookIds.length > 0) {
+          return retainedBookIds;
+        }
+
+        if (availableSavedBookIds.length > 0) {
+          return availableSavedBookIds;
+        }
+
+        return books[0] ? [books[0].id] : [];
+      });
+    },
+    [savedBookIdsByRecipeId],
+  );
+
+  const showCachedSaveBooks = useCallback(
+    (recipeId: string) => {
+      applySaveBooks(recipeId, saveBooks);
+      setSaveModalState("ready");
+      setSaveLoadError(null);
+      setSaveSubmitError(null);
+    },
+    [applySaveBooks, saveBooks],
+  );
+
   const loadSaveBooks = useCallback(
     async (recipeId: string) => {
       setSaveModalState("loading");
@@ -64,29 +114,9 @@ export function useHomeRecipeSaveFlow({
       setSaveSubmitError(null);
 
       try {
-        const books = await fetchSaveableRecipeBooks();
-        const availableBookIds = new Set(books.map((book) => book.id));
-        const savedBookIds = savedBookIdsByRecipeId[recipeId] ?? [];
-        const availableSavedBookIds = savedBookIds.filter((bookId) =>
-          availableBookIds.has(bookId),
-        );
-
-        setSaveBooks(books);
-        setSelectedSaveBookIds((currentBookIds) => {
-          const retainedBookIds = currentBookIds.filter((bookId) =>
-            availableBookIds.has(bookId),
-          );
-
-          if (retainedBookIds.length > 0) {
-            return retainedBookIds;
-          }
-
-          if (availableSavedBookIds.length > 0) {
-            return availableSavedBookIds;
-          }
-
-          return books[0] ? [books[0].id] : [];
-        });
+        const books = await requestSaveBooks();
+        applySaveBooks(recipeId, books);
+        setHasLoadedSaveBooks(true);
         setSaveModalState("ready");
       } catch (error) {
         setSaveLoadError(
@@ -97,7 +127,7 @@ export function useHomeRecipeSaveFlow({
         setSaveModalState("error");
       }
     },
-    [savedBookIdsByRecipeId],
+    [applySaveBooks, requestSaveBooks],
   );
 
   const openRecipeSaveModal = useCallback(
@@ -112,9 +142,20 @@ export function useHomeRecipeSaveFlow({
       setSaveSubmitError(null);
       setNewSaveBookName("");
 
-      await loadSaveBooks(recipe.id);
+      if (hasLoadedSaveBooks) {
+        showCachedSaveBooks(recipe.id);
+        return;
+      }
+
+      void loadSaveBooks(recipe.id);
     },
-    [isAuthenticated, loadSaveBooks, requestLogin],
+    [
+      hasLoadedSaveBooks,
+      isAuthenticated,
+      loadSaveBooks,
+      requestLogin,
+      showCachedSaveBooks,
+    ],
   );
 
   const closeSaveModal = useCallback(() => {
@@ -213,6 +254,7 @@ export function useHomeRecipeSaveFlow({
           ? currentBookIds
           : [...currentBookIds, createdBook.id],
       );
+      setHasLoadedSaveBooks(true);
       setNewSaveBookName("");
       setSaveModalState("ready");
     } catch (error) {

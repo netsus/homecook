@@ -157,6 +157,17 @@ describe("SaveModal", () => {
     expect(within(appDialog).queryByText("레시피북 다중 선택")).toBeNull();
   });
 
+  it("shows an in-modal skeleton while recipe books are loading", () => {
+    const { appDialog } = renderSaveModal({
+      books: [],
+      selectedBookIds: [],
+      viewState: "loading",
+    });
+
+    expect(within(appDialog).getByTestId("save-modal-loading-skeleton")).toBeTruthy();
+    expect(within(appDialog).queryByText(/불러오는 중이에요/)).toBeNull();
+  });
+
   it("keeps desktop quick-create collapsed until requested", async () => {
     const { desktopDialog, props } = renderDesktopSaveModal();
     const dialog = within(desktopDialog);

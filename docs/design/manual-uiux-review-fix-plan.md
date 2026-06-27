@@ -3889,7 +3889,7 @@ Implementation note:
 
 ### 90. 레시피 저장 모달을 열 때 로딩이 오래 걸리는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: High
 - Area: UX / Recipe Save Modal / Performance
 - Source: user manual review
@@ -3911,7 +3911,12 @@ Implementation note:
   - `components/recipe/recipe-detail-screen.tsx`
   - save modal hooks/API
 - Verification:
-  - interaction test and manual latency check.
+  - `CI=true corepack pnpm exec vitest run tests/save-modal.test.tsx tests/recipe-detail-screen.test.tsx`
+  - `CI=true corepack pnpm exec vitest run tests/home-screen.test.tsx`
+- Implementation notes:
+  - 저장 모달 로딩 상태를 텍스트 패널에서 모달 내부 skeleton으로 교체했다.
+  - 레시피 상세와 홈 저장 플로우에서 레시피북 목록 요청을 화면 단위로 캐시하고 중복 요청을 막았다.
+  - 같은 상세 화면에서 저장 모달을 다시 열면 이미 불러온 레시피북 목록을 즉시 보여준다.
 
 ### 91. 앱 레시피상세 리뷰탭이 미개발 기능을 빈 리뷰처럼 안내하는 문제
 

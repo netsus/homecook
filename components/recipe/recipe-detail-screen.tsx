@@ -173,6 +173,7 @@ export function RecipeDetailScreen({
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [saveModalState, setSaveModalState] = useState<SaveModalState>("idle");
   const [saveBooks, setSaveBooks] = useState<RecipeBookSummary[]>([]);
+  const [hasLoadedSaveBooks, setHasLoadedSaveBooks] = useState(false);
   const [selectedSaveBookIds, setSelectedSaveBookIds] = useState<string[]>([]);
   const [newSaveBookName, setNewSaveBookName] = useState("");
   const [saveLoadError, setSaveLoadError] = useState<string | null>(null);
@@ -192,6 +193,9 @@ export function RecipeDetailScreen({
   const openAuthGate = useAuthGateStore((state) => state.open);
   const isDesktopViewport = useDesktopViewport();
   const appReturn = useAppReturn({ fallback: "/" });
+  const saveBooksRequestRef = React.useRef<Promise<RecipeBookSummary[]> | null>(
+    null,
+  );
 
   const loadRecipe = useCallback(async () => {
     try {
@@ -521,13 +525,8 @@ export function RecipeDetailScreen({
     selectedPlanDate,
   ]);
 
-  const loadSaveBooks = useCallback(async () => {
-    setSaveModalState("loading");
-    setSaveLoadError(null);
-    setSaveSubmitError(null);
-
-    try {
-      const books = await fetchSaveableRecipeBooks();
+  const applySaveBooks = useCallback(
+    (books: RecipeBookSummary[]) => {
       setSaveBooks(books);
       setSelectedSaveBookIds((currentSelectedBookIds) => {
         if (books.length === 0) {
@@ -535,15 +534,18 @@ export function RecipeDetailScreen({
         }
 
         const availableBookIds = new Set(books.map((book) => book.id));
-        const retainedBookIds = currentSelectedBookIds.filter((bookId) => availableBookIds.has(bookId));
+        const retainedBookIds = currentSelectedBookIds.filter((bookId) =>
+          availableBookIds.has(bookId),
+        );
 
         if (retainedBookIds.length > 0) {
           return retainedBookIds;
         }
 
-        const alreadySavedBookIds = recipe?.user_status?.saved_book_ids.filter((bookId) =>
-          availableBookIds.has(bookId),
-        ) ?? [];
+        const alreadySavedBookIds =
+          recipe?.user_status?.saved_book_ids.filter((bookId) =>
+            availableBookIds.has(bookId),
+          ) ?? [];
 
         return alreadySavedBookIds.length > 0
           ? alreadySavedBookIds
@@ -551,6 +553,36 @@ export function RecipeDetailScreen({
             ? [books[0].id]
             : [];
       });
+    },
+    [recipe?.user_status?.saved_book_ids],
+  );
+
+  const requestSaveBooks = useCallback(() => {
+    if (!saveBooksRequestRef.current) {
+      saveBooksRequestRef.current = fetchSaveableRecipeBooks().finally(() => {
+        saveBooksRequestRef.current = null;
+      });
+    }
+
+    return saveBooksRequestRef.current;
+  }, []);
+
+  const showCachedSaveBooks = useCallback(() => {
+    applySaveBooks(saveBooks);
+    setSaveModalState("ready");
+    setSaveLoadError(null);
+    setSaveSubmitError(null);
+  }, [applySaveBooks, saveBooks]);
+
+  const loadSaveBooks = useCallback(async () => {
+    setSaveModalState("loading");
+    setSaveLoadError(null);
+    setSaveSubmitError(null);
+
+    try {
+      const books = await requestSaveBooks();
+      applySaveBooks(books);
+      setHasLoadedSaveBooks(true);
       setSaveModalState("ready");
     } catch (error) {
       setSaveLoadError(
@@ -560,7 +592,7 @@ export function RecipeDetailScreen({
       );
       setSaveModalState("error");
     }
-  }, [recipe?.user_status?.saved_book_ids]);
+  }, [applySaveBooks, requestSaveBooks]);
 
   const openSaveModal = useCallback(
     async ({ source }: { source: "manual" | "return-to-action" }) => {
@@ -576,9 +608,21 @@ export function RecipeDetailScreen({
         setFeedback(null);
       }
 
-      await loadSaveBooks();
+      if (hasLoadedSaveBooks) {
+        showCachedSaveBooks();
+        return;
+      }
+
+      void loadSaveBooks();
     },
-    [isAuthenticated, loadSaveBooks, openAuthGate, recipeId],
+    [
+      hasLoadedSaveBooks,
+      isAuthenticated,
+      loadSaveBooks,
+      openAuthGate,
+      recipeId,
+      showCachedSaveBooks,
+    ],
   );
 
   const handleCreateSaveBook = useCallback(async () => {
@@ -630,6 +674,7 @@ export function RecipeDetailScreen({
           ? currentBookIds
           : [...currentBookIds, createdBook.id]
       ));
+      setHasLoadedSaveBooks(true);
       setNewSaveBookName("");
       setSaveModalState("ready");
       setSaveSubmitError(null);

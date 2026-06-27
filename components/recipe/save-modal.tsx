@@ -131,9 +131,7 @@ export function SaveModal({
         title="레시피 저장"
       >
         {viewState === "loading" ? (
-          <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-4 py-5 text-[14px] text-[var(--text-2)]">
-            저장 가능한 레시피북을 불러오는 중이에요...
-          </div>
+          <SaveModalLoadingSkeleton />
         ) : null}
 
         {viewState === "error" ? (
@@ -282,9 +280,7 @@ export function SaveModal({
 
         {viewState === "loading" ? (
           <WebDialogBody>
-            <div className="web-modal-panel">
-              저장 가능한 레시피북을 불러오는 중이에요...
-            </div>
+            <SaveModalLoadingSkeleton />
           </WebDialogBody>
         ) : null}
 
@@ -428,6 +424,31 @@ export function SaveModal({
     </div>
     ) : null}
     </>
+  );
+}
+
+function SaveModalLoadingSkeleton() {
+  return (
+    <div
+      aria-label="저장 가능한 레시피북 불러오는 중"
+      className="space-y-3 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4"
+      data-testid="save-modal-loading-skeleton"
+      role="status"
+    >
+      {[0, 1, 2].map((index) => (
+        <div
+          className="flex items-center gap-3 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 py-3"
+          key={index}
+        >
+          <span className="h-5 w-5 shrink-0 rounded-full bg-[var(--surface-subtle)]" />
+          <span className="min-w-0 flex-1 space-y-2">
+            <span className="block h-3.5 w-2/5 rounded-full bg-[var(--surface-subtle)]" />
+            <span className="block h-2.5 w-1/4 rounded-full bg-[var(--surface-subtle)]" />
+          </span>
+          <span className="h-7 w-12 rounded-full bg-[var(--surface-subtle)]" />
+        </div>
+      ))}
+    </div>
   );
 }
 
