@@ -409,9 +409,17 @@ function ProfileSummaryPanel({
         </span>
       </div>
       <div className="profile-summary-notice" role="status">
-        <strong>{summary.notificationTitle}</strong>
-        {summary.questTitle ? <span>{summary.questTitle}</span> : null}
-        <span>{summary.notificationMessage}</span>
+        <strong className="profile-summary-notice-label" data-testid="profile-summary-notice-label">
+          {summary.notificationTitle}
+        </strong>
+        {summary.questTitle ? (
+          <span className="profile-summary-notice-title" data-testid="profile-summary-notice-title">
+            {summary.questTitle}
+          </span>
+        ) : null}
+        <span className="profile-summary-notice-body" data-testid="profile-summary-notice-body">
+          {summary.notificationMessage}
+        </span>
       </div>
       {summary.archivePreview.length > 0 ? (
         <div className="profile-summary-archive-preview">

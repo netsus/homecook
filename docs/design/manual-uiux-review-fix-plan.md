@@ -3816,7 +3816,7 @@ Implementation note:
 
 ### 88. 프로필요약 튜토리얼 안내 섹션에서 제목과 안내 문구가 구분되지 않는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: Medium
 - Area: UX / Profile Summary / Tutorial
 - Source: user manual review
@@ -3837,6 +3837,11 @@ Implementation note:
   - `lib/gamification-tutorial-guide.ts`
 - Verification:
   - profile summary component test and screenshot review.
+- Implementation:
+  - `components/shared/profile-summary-button.tsx`에서 튜토리얼 안내 라벨, 퀘스트 제목, 설명을 별도 요소로 분리했다.
+  - `app/globals.css`에서 라벨은 작고 파란 섹션명, 퀘스트 제목은 더 진한 본문 제목, 안내 문구는 보조 설명으로 보이도록 font-size/weight/line-height를 분리했다.
+  - `tests/shared-profile-summary.test.tsx`에서 프로필요약 알림의 라벨/제목/본문 클래스가 분리되어 렌더링되는지 고정했다.
+  - Verified: `CI=true corepack pnpm exec vitest run tests/shared-profile-summary.test.tsx`
 
 ### 89. 홈 `이번 주 인기 테마`의 크기와 분류 기준이 현재 데이터와 맞지 않는 문제
 
