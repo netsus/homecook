@@ -245,6 +245,38 @@ describe("recipe-loop codex-vision provider", () => {
     expect(existsSync(path.join(first.meta.codexVisionKeyframesCacheDir, "final.json"))).toBe(true);
   });
 
+  it("builds source-derived candidate hints without promoting obvious non-recipes", async () => {
+    const { buildCandidateHintsFromSourceText } = await import(codexVisionKeyframesModuleUrl);
+
+    const bundled = buildCandidateHintsFromSourceText([
+      "[SOURCE: recipe_candidate_hints]",
+      "1. 김치찌개&된장찌개ㅣ제육볶음",
+      "2. 소금과 후추",
+      "3. 브이로그/집밥",
+    ].join("\n"));
+    expect(bundled.recipeCandidates.map((candidate: { titleHint: string }) => candidate.titleHint)).toEqual([
+      "김치찌개",
+      "된장찌개",
+      "제육볶음",
+    ]);
+    expect(bundled.recipeCandidates.every((candidate: { sourceEvidence: unknown[] }) => candidate.sourceEvidence.length > 0)).toBe(true);
+
+    const single = buildCandidateHintsFromSourceText("[SOURCE: recipe_candidate_hints]\n1. 김치찌개");
+    expect(single.recipeCandidates.map((candidate: { titleHint: string }) => candidate.titleHint)).toEqual(["김치찌개"]);
+
+    const withTimeline = buildCandidateHintsFromSourceText([
+      "[SOURCE: recipe_candidate_hints]",
+      "1. 김치찌개",
+      "[SOURCE: description]",
+      "00:16 김치찌개",
+    ].join("\n"));
+    expect(withTimeline.recipeCandidates[0]).toMatchObject({
+      titleHint: "김치찌개",
+      timeHintSec: 16,
+      evidenceStrength: "title+timeline",
+    });
+  });
+
   it("generates through Codex Vision segmented keyframes and preserves per-segment artifacts", async () => {
     const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
     const { frameDir, frames } = makeFrameFixture(workdir, 8);
@@ -285,33 +317,44 @@ describe("recipe-loop codex-vision provider", () => {
             segments: [
               {
                 segmentId: "seg-01",
+                candidateId: "cand-01",
                 titleHint: "메밀 후토마끼",
                 startSec: 0,
                 endSec: 25,
-                confidence: 0.9,
-                textEvidence: ["제목 후보: 메밀 후토마끼"],
+                timeEvidence: ["제목 후보: 메밀 후토마끼"],
                 frameBudget: 3,
               },
               {
                 segmentId: "seg-02",
+                candidateId: "cand-02",
                 titleHint: "맥적구이",
                 startSec: 40,
                 endSec: 70,
-                confidence: 0.8,
-                textEvidence: ["제목 후보: 맥적구이"],
+                timeEvidence: ["제목 후보: 맥적구이"],
                 frameBudget: 3,
               },
             ],
+            coverage: [
+              { candidateId: "cand-01", titleHint: "메밀 후토마끼", status: "covered", segmentIds: ["seg-01"] },
+              { candidateId: "cand-02", titleHint: "맥적구이", status: "covered", segmentIds: ["seg-02"] },
+            ],
           });
         } else if (model === "fixture-selector-model") {
+          const fuzzyBasename = (imagePath: string) => {
+            const basename = path.basename(imagePath);
+            const timestamp = basename.match(/_(\d+(?:\.\d+)?)\.jpg$/)?.[1];
+            return `frame_9999_${timestamp}.jpg`;
+          };
           output = JSON.stringify({
             selectedFrames: [
-              { file: path.basename(images[0]), reason: "양념 또는 재료 투입" },
-              { file: path.basename(images[images.length - 1]), reason: "조리 상태 확인" },
+              { file: fuzzyBasename(images[0]), reason: "양념 또는 재료 투입" },
+              { file: fuzzyBasename(images[images.length - 1]), reason: "조리 상태 확인" },
             ],
           });
         } else {
           expect(prompt).toContain("[SEGMENT seg-01]");
+          expect(prompt).toContain("candidateId: cand-02");
+          expect(prompt).toContain("Candidate coverage checklist");
           expect(prompt).toContain("titleHint: 맥적구이");
           output = "```json\n{\"recipes\":[{\"title\":\"메밀 후토마끼\",\"ingredients\":[{\"name\":\"오이\",\"amount\":\"1\",\"unit\":\"개\"}],\"steps\":[\"오이를 채 썰어 준비한다.\"]},{\"title\":\"맥적구이\",\"ingredients\":[{\"name\":\"돼지고기\",\"amount\":\"1\",\"unit\":\"팩\"}],\"steps\":[\"돼지고기에 된장 양념을 바른다.\"]}]}\n```";
         }
@@ -332,24 +375,143 @@ describe("recipe-loop codex-vision provider", () => {
       keyframeMode: "segmented",
       segmentModel: "fixture-segment-model",
       selectorModel: "fixture-selector-model",
+      candidateCount: 2,
+      coveredCandidateCount: 2,
+      droppedCandidateCount: 0,
       segmentCount: 2,
       selectedFrameCount: 4,
     });
     expect(result.json.recipes.map((recipe: { title: string }) => recipe.title)).toEqual(["메밀 후토마끼", "맥적구이"]);
     expect(calls).toHaveLength(4);
     expect(calls[0]).toMatchObject({ model: "fixture-segment-model", images: [] });
+    expect(calls[0].prompt).toContain("recipeCandidates JSON");
     expect(calls[1].images).toHaveLength(3);
     expect(calls[1].images).not.toContain(frames[3].path);
     expect(calls[1].images).not.toContain(frames[4].path);
     expect(calls[2].images).not.toContain(frames[0].path);
     expect(calls[3].images).toHaveLength(4);
+    expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "recipe-candidates.json"))).toBe(true);
+    const candidatePlan = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "recipe-candidates.json"), "utf8"));
+    expect(candidatePlan.recipeCandidates.map((candidate: { titleHint: string }) => candidate.titleHint)).toEqual(["메밀 후토마끼", "맥적구이"]);
+    expect(candidatePlan.candidatePlanHash).toBe(result.meta.candidatePlanHash);
     expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-plan.json"))).toBe(true);
     const segmentPlan = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-plan.json"), "utf8"));
     expect(segmentPlan.segments.map((segment: { frameBudget: number }) => segment.frameBudget)).toEqual([2, 2]);
+    expect(segmentPlan.coverage.map((entry: { candidateId: string; status: string }) => [entry.candidateId, entry.status])).toEqual([
+      ["cand-01", "covered"],
+      ["cand-02", "covered"],
+    ]);
     expect(segmentPlan.segments.every((segment: { frameBudgetAdjusted?: boolean }) => segment.frameBudgetAdjusted)).toBe(true);
     expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-keyframes.json"))).toBe(true);
     expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "selected_frames.json"))).toBe(true);
+    const selectedFrames = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "selected_frames.json"), "utf8"));
+    expect(selectedFrames.selectedFrames.some((frame: { file: string }) => frame.file.startsWith("frame_9999_"))).toBe(false);
     expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "final.json"))).toBe(true);
+  });
+
+  it("records candidate-aware segment schema failures with candidate artifacts", async () => {
+    const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir, 3);
+    const cacheDir = path.join(workdir, "keyframes-cache");
+    const client = createCodexVisionKeyframesClient({
+      cacheDir,
+      keyframeMode: "segmented",
+      model: "fixture-final-model",
+      segmentModel: "fixture-segment-model",
+      selectorModel: "fixture-selector-model",
+      extractFrames: async () => ({
+        frameCacheHit: false,
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 3 },
+      }),
+      codexExec: async ({ outputPath, logPath }: { outputPath: string; logPath: string }) => {
+        writeFileSync(outputPath, JSON.stringify({
+          segments: [{
+            segmentId: "seg-01",
+            titleHint: "김치찌개",
+            startSec: 0,
+            endSec: 20,
+            frameBudget: 2,
+          }],
+        }), "utf8");
+        writeFileSync(logPath, "segment schema failed", "utf8");
+        return readFileSync(outputPath, "utf8");
+      },
+    });
+
+    await expect(client.generate({
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      cacheText: "[SOURCE: recipe_candidate_hints]\n1. 김치찌개",
+    })).rejects.toThrow("candidateId가 비었습니다");
+
+    const artifactFiles = readdirSync(cacheDir, { recursive: true }).map((entry) => String(entry));
+    expect(artifactFiles.some((entry) => entry.endsWith("recipe-candidates.json"))).toBe(true);
+    const failureFile = artifactFiles.find((entry) => entry.endsWith("failure.json"));
+    expect(failureFile).toBeDefined();
+    const failure = JSON.parse(readFileSync(path.join(cacheDir, failureFile!), "utf8"));
+    expect(failure).toMatchObject({
+      provider: "codex-vision-keyframes",
+      keyframeMode: "segmented",
+      stage: "segment-normalize",
+      candidatePlanHash: expect.any(String),
+    });
+  });
+
+  it("uses candidatePlanHash to separate segmented result cache keys", async () => {
+    const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir, 3);
+    const client = createCodexVisionKeyframesClient({
+      cacheDir: path.join(workdir, "keyframes-cache"),
+      keyframeMode: "segmented",
+      model: "fixture-final-model",
+      segmentModel: "fixture-segment-model",
+      selectorModel: "fixture-selector-model",
+      segmentPaddingSec: 0,
+      segmentMinFrames: 1,
+      segmentMaxFrames: 2,
+      extractFrames: async () => ({
+        frameCacheHit: false,
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 3 },
+      }),
+      codexExec: async ({ model, outputPath, logPath }: { model: string; outputPath: string; logPath: string }) => {
+        const output = model === "fixture-segment-model"
+          ? JSON.stringify({
+            segments: [{
+              segmentId: "seg-01",
+              candidateId: "cand-01",
+              titleHint: "후보 요리",
+              startSec: 0,
+              endSec: 20,
+              frameBudget: 1,
+            }],
+            coverage: [{ candidateId: "cand-01", titleHint: "후보 요리", status: "covered", segmentIds: ["seg-01"] }],
+          })
+          : model === "fixture-selector-model"
+            ? JSON.stringify({ selectedFrames: [{ file: path.basename(frames[0].path), reason: "근거 프레임" }] })
+            : "```json\n{\"recipes\":[{\"title\":\"후보 요리\",\"ingredients\":[{\"name\":\"김치\",\"amount\":\"1\",\"unit\":\"컵\"}],\"steps\":[\"김치를 넣는다.\"]}]}\n```";
+        writeFileSync(outputPath, output, "utf8");
+        writeFileSync(logPath, "ok", "utf8");
+        return output;
+      },
+    });
+
+    const first = await client.generate({
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      cacheText: "[SOURCE: recipe_candidate_hints]\n1. 김치찌개",
+    });
+    const second = await client.generate({
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      cacheText: "[SOURCE: recipe_candidate_hints]\n1. 된장찌개",
+    });
+
+    expect(first.meta.candidatePlanHash).not.toBe(second.meta.candidatePlanHash);
+    expect(first.meta.codexVisionKeyframesCacheDir).not.toBe(second.meta.codexVisionKeyframesCacheDir);
   });
 
   it("records segmented planner failure artifacts without falling back to Gemini", async () => {

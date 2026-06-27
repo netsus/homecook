@@ -22,8 +22,9 @@ const CACHE_DIR = path.join(PROJECT_ROOT, "notebooks/recipe_loop_data/cache/code
 const CLIENT_VERSION = "codex-vision-keyframes-client-v1";
 const SELECTOR_PROMPT_VERSION = "keyframe-selector-v1";
 const FINAL_PROMPT_VERSION = "keyframe-final-v1";
-const SEGMENT_PROMPT_VERSION = "keyframe-segment-plan-v1";
-const SEGMENT_SELECTOR_PROMPT_VERSION = "keyframe-segment-selector-v1";
+const CANDIDATE_SPLITTER_VERSION = "candidate-splitter-v1";
+const SEGMENT_PROMPT_VERSION = "keyframe-segment-plan-v2";
+const SEGMENT_SELECTOR_PROMPT_VERSION = "keyframe-segment-selector-v2";
 const DEFAULT_FINAL_MODEL = "gpt-5.4";
 const DEFAULT_SELECTOR_MODEL = "gpt-5.4-mini";
 const DEFAULT_SEGMENT_MODEL = "gpt-5.4-mini";
@@ -40,6 +41,18 @@ const DEFAULT_SEGMENT_MAX_COUNT = 12;
 const DEFAULT_SEGMENT_FRAME_TOTAL_LIMIT = 64;
 const DEFAULT_SEGMENT_OVERLAP_TOLERANCE_SEC = 15;
 const DEFAULT_TIMEOUT_MS = 20 * 60 * 1000;
+const MAX_CANDIDATE_HINTS = 16;
+const SOURCE_BLOCK_RE = /^\[SOURCE:\s*([^\]]+)\]\s*$/;
+const LIST_PREFIX_RE = /^(?:[-*•·ㆍ▶▷✔✅#\s]+|\d+[.)]\s*)+/;
+const TIMESTAMP_RE = /(?:^|\s)((?:\d{1,2}:)?\d{1,2}:\d{2})(?:\s*[~-]\s*(?:\d{1,2}:)?\d{1,2}:\d{2})?/;
+const CANDIDATE_SEPARATOR_RE = /\s*(?:[&＆/·ㆍ+]|ㅣ|\|)\s*/;
+const JOINER_RE = /\s+(?:와|과|그리고)\s+/;
+const NOISE_CANDIDATE_RE = /^(?:미리보기|preview|intro|인트로|오프닝|opening|outro|아웃트로|엔딩|ending|재료|ingredients?|instructions?|레시피|recipe|시식|먹방|구독|subscribe|좋아요|like|댓글|comment|event|이벤트|공지|주방용품|용품|bgm|music|음악|문의|email|인스타|instagram|facebook|camera|equipment|브이로그|vlog|집밥)(?:$|[\s:：\-\/|ㅣ&＆+·ㆍ])/i;
+const INGREDIENT_PAIR_RE = /^(?:소금|후추|마늘|버터|설탕|간장|된장|고추장|식초|기름|참기름|들기름|깨|통깨|물|육수|대파|쪽파|양파)(?:\s*(?:와|과|&|\/|\+)\s*)(?:소금|후추|마늘|버터|설탕|간장|된장|고추장|식초|기름|참기름|들기름|깨|통깨|물|육수|대파|쪽파|양파)$/;
+const DISH_WORD_RE = /(밥|덮밥|솥밥|죽|국|탕|찌개|전골|칼국수|국수|면|라면|파스타|냉파스타|우동|볶음|볶이|무침|조림|구이|튀김|전|찜|수육|스테이크|샐러드|김밥|후토마끼|초밥|토스트|샌드위치|피자|커리|카레|만두|묵국|묵사발|오믈렛|계란말이|케이크|쿠키|라떼|스무디|꼬치|야끼|치즈|soup|stew|pasta|noodle|rice|salad|sandwich|toast|pizza|curry|cake|cookie)/i;
+const GENERIC_RECIPE_LABEL_RE = /(?:레시피|recipe|요리|만드는\s*법|how\s*to)(?:\s*)$/i;
+const FRAME_FILE_TIMESTAMP_RE = /_(\d+(?:\.\d+)?)(?:\.[^.]+)$/;
+const FRAME_TIMESTAMP_TOLERANCE_SEC = 0.075;
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -96,6 +109,205 @@ function frameDisplayLine(frame, index) {
   return `- ${index + 1}. file=${frameBasename(frame)}, timestamp=${frame.timestamp ?? frame.timestamp_sec ?? "?"}, reason=${frame.reason ?? "unknown"}${score}`;
 }
 
+function compact(value) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function keyOf(value) {
+  return compact(value).replace(/[^\p{L}\p{N}]+/gu, "").toLowerCase();
+}
+
+function sourceBlocks(sourceText) {
+  const blocks = [];
+  let current = { name: "unknown", lines: [] };
+  for (const line of String(sourceText ?? "").split(/\r?\n/)) {
+    const match = line.match(SOURCE_BLOCK_RE);
+    if (match) {
+      if (current.lines.length > 0) blocks.push(current);
+      current = { name: match[1].trim(), lines: [] };
+      continue;
+    }
+    current.lines.push(line);
+  }
+  if (current.lines.length > 0) blocks.push(current);
+  return blocks;
+}
+
+function stripCandidateText(text) {
+  return compact(text)
+    .replace(TIMESTAMP_RE, " ")
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/#[\p{L}\p{N}_-]+/gu, " ")
+    .replace(/[()[\]{}<>]/g, " ")
+    .replace(/[🍯🔌🍱🍚🌿👀🔥🎁💚💖📢👉✅✔️✨⏰✉️🎧]/g, " ")
+    .replace(LIST_PREFIX_RE, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^[,:：\-–—]+|[,:：\-–—]+$/g, "")
+    .trim();
+}
+
+function isPlausibleCandidate(text, { trustedHint = false } = {}) {
+  const cleaned = stripCandidateText(text);
+  if (cleaned.length < (trustedHint ? 1 : 2) || cleaned.length > 80) return false;
+  if (/https?:\/\//i.test(cleaned) || NOISE_CANDIDATE_RE.test(cleaned)) return false;
+  if (/^[\d\s:~\-.,]+$/.test(cleaned)) return false;
+  if (INGREDIENT_PAIR_RE.test(cleaned)) return false;
+  if (GENERIC_RECIPE_LABEL_RE.test(cleaned) && !DISH_WORD_RE.test(cleaned)) return false;
+  if (trustedHint) return /[\p{L}]/u.test(cleaned) && DISH_WORD_RE.test(cleaned);
+  return /[\p{L}]/u.test(cleaned) && DISH_WORD_RE.test(cleaned);
+}
+
+function splitCandidateText(text, { trustedHint = false } = {}) {
+  const cleaned = stripCandidateText(text);
+  if (!cleaned) return [];
+  const splitBySeparator = cleaned.split(CANDIDATE_SEPARATOR_RE).map(stripCandidateText).filter(Boolean);
+  const separatorParts = splitBySeparator.length > 1 ? splitBySeparator : [cleaned];
+  const parts = separatorParts.flatMap((part) => {
+    const particleMatch = part.match(/^(.+?)(?:와|과)\s+(.+)$/u);
+    if (particleMatch) return [particleMatch[1], particleMatch[2]].map(stripCandidateText).filter(Boolean);
+    const joined = part.split(JOINER_RE).map(stripCandidateText).filter(Boolean);
+    return joined.length > 1 ? joined : [part];
+  });
+  const plausible = parts.filter((part) => isPlausibleCandidate(part, { trustedHint }));
+  if (plausible.length >= 2) return plausible;
+  return isPlausibleCandidate(cleaned, { trustedHint }) ? [cleaned] : [];
+}
+
+function evidenceStrengthFor(evidence) {
+  const sources = new Set(evidence.map((item) => item.source));
+  if (sources.has("recipe_candidate_hints") && sources.has("description_timeline")) return "title+timeline";
+  if (sources.has("recipe_candidate_hints")) return "title_only";
+  if (sources.has("description_timeline")) return "timeline_only";
+  if (sources.has("author_comment") || [...sources].some((source) => source.startsWith("transcript"))) return "comment_or_caption";
+  return "weak_text";
+}
+
+function firstFiniteTimeHint(evidence) {
+  for (const item of evidence) {
+    if (Number.isFinite(item.timeHintSec)) return item.timeHintSec;
+  }
+  return null;
+}
+
+function addCandidate(candidates, byKey, titleHint, evidence, { splitFromBundle = false, bundleText = null } = {}) {
+  const cleaned = stripCandidateText(titleHint);
+  if (!cleaned) return;
+  const key = keyOf(cleaned);
+  if (!key) return;
+  const existing = byKey.get(key);
+  if (existing) {
+    existing.sourceEvidence.push(...evidence);
+    existing.evidenceStrength = evidenceStrengthFor(existing.sourceEvidence);
+    existing.splitFromBundle = existing.splitFromBundle || splitFromBundle;
+    existing.bundleText = existing.bundleText ?? bundleText;
+    existing.timeHintSec = existing.timeHintSec ?? firstFiniteTimeHint(evidence);
+    return;
+  }
+  if (candidates.length >= MAX_CANDIDATE_HINTS) return;
+  const sourceEvidence = [...evidence];
+  const candidate = {
+    candidateId: `cand-${String(candidates.length + 1).padStart(2, "0")}`,
+    titleHint: cleaned,
+    sourceEvidence,
+    timeHintSec: firstFiniteTimeHint(sourceEvidence),
+    evidenceStrength: evidenceStrengthFor(sourceEvidence),
+    candidateStatus: "confirmed_hint",
+    splitFromBundle,
+    bundleText,
+    notes: null,
+  };
+  byKey.set(key, candidate);
+  candidates.push(candidate);
+}
+
+function timelineCandidateEvidence(line, source) {
+  const timeMatch = line.match(TIMESTAMP_RE);
+  const timeHintSec = timeMatch ? parseTimeSec(timeMatch[1]) : null;
+  return {
+    source: source === "description" ? "description_timeline" : source,
+    text: compact(line).slice(0, 220),
+    timeHintSec,
+  };
+}
+
+export function buildCandidateHintsFromSourceText(sourceText) {
+  const candidates = [];
+  const byKey = new Map();
+  const warnings = [];
+  const blocks = sourceBlocks(sourceText);
+
+  for (const block of blocks) {
+    if (block.name === "recipe_candidate_hints") {
+      for (const line of block.lines) {
+        const raw = stripCandidateText(line);
+        if (!raw) continue;
+        const parts = splitCandidateText(raw, { trustedHint: true });
+        const splitFromBundle = parts.length > 1;
+        for (const part of parts) {
+          addCandidate(candidates, byKey, part, [{
+            source: "recipe_candidate_hints",
+            text: raw.slice(0, 220),
+          }], { splitFromBundle, bundleText: splitFromBundle ? raw : null });
+        }
+      }
+    }
+  }
+
+  for (const block of blocks) {
+    const isTimelineSource = block.name === "description" || block.name.startsWith("transcript") || block.name === "author_comment";
+    if (!isTimelineSource) continue;
+    for (const line of block.lines) {
+      if (!TIMESTAMP_RE.test(line)) {
+        TIMESTAMP_RE.lastIndex = 0;
+        continue;
+      }
+      TIMESTAMP_RE.lastIndex = 0;
+      const raw = stripCandidateText(line);
+      const parts = splitCandidateText(raw, { trustedHint: false });
+      const splitFromBundle = parts.length > 1;
+      for (const part of parts) {
+        addCandidate(candidates, byKey, part, [timelineCandidateEvidence(line, block.name)], {
+          splitFromBundle,
+          bundleText: splitFromBundle ? raw : null,
+        });
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    const fallbackText = stripCandidateText(sourceText).split(/[.!?\n]/)[0] ?? "";
+    const parts = splitCandidateText(fallbackText, { trustedHint: false });
+    const splitFromBundle = parts.length > 1;
+    for (const part of parts) {
+      addCandidate(candidates, byKey, part, [{
+        source: "source_text_fallback",
+        text: fallbackText.slice(0, 220),
+      }], { splitFromBundle, bundleText: splitFromBundle ? fallbackText : null });
+    }
+  }
+
+  if (candidates.length === 0) {
+    warnings.push("source text에서 recipe candidate hint를 찾지 못해 전체 segment hint로 fallback합니다.");
+    addCandidate(candidates, byKey, "전체 레시피", [{
+      source: "fallback",
+      text: "candidate hint unavailable",
+    }], {});
+    candidates[0].candidateStatus = "weak_hint";
+    candidates[0].evidenceStrength = "weak_text";
+  }
+
+  return {
+    recipeCandidates: candidates.map((candidate) => ({
+      ...candidate,
+      sourceEvidence: candidate.sourceEvidence.slice(0, 8),
+    })),
+    candidateCountPolicy: "source-inferred",
+    splitterVersion: CANDIDATE_SPLITTER_VERSION,
+    warnings,
+  };
+}
+
 function sampleEvenly(frames, limit) {
   if (!Number.isFinite(limit) || limit <= 0 || frames.length <= limit) return frames;
   if (limit === 1) return [frames[0]];
@@ -134,7 +346,7 @@ function buildSelectorPrompt({ sourceText, candidateFrames, totalLimit, perRecip
     "2. 재료 카드, 재료가 놓인 장면, 재료 투입 장면, 양념 배합, 핵심 조리 단계가 보이는 프레임을 우선한다.",
     "3. 완성샷만 반복되는 프레임, 얼굴/잡담/광고/이벤트 장면은 제외한다.",
     "4. 비슷한 장면이 많으면 가장 정보가 많은 프레임만 남긴다.",
-    "5. 파일명은 아래 목록의 file 값을 정확히 복사한다.",
+    "5. 파일명은 아래 후보 프레임 목록의 file 값을 한 글자도 바꾸지 말고 정확히 복사한다. 새 파일명이나 새 번호를 만들지 않는다.",
     `6. selectedFrames는 전체 최대 ${totalLimit}개, 같은 recipeHint당 최대 ${perRecipeLimit}개로 제한한다.`,
     "",
     "출력은 설명 없이 JSON만 한다.",
@@ -227,18 +439,29 @@ function safeSegmentId(value, fallback) {
   return text.replace(/[^\p{L}\p{N}_-]+/gu, "-").replace(/^-+|-+$/g, "") || fallback;
 }
 
-function buildSegmentPlanPrompt({ sourceText, frames, segmentMaxCount, segmentFrameTotalLimit }) {
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (!isObject(value)) return value;
+  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, stableValue(value[key])]));
+}
+
+function canonicalJson(value) {
+  return JSON.stringify(stableValue(value));
+}
+
+function buildSegmentPlanPrompt({ sourceText, frames, candidatePlan, segmentMaxCount, segmentFrameTotalLimit }) {
   return [
     "너는 다중 요리 영상의 레시피별 시간 구간을 나누는 담당자다.",
-    "최종 레시피를 작성하지 말고, 어떤 시간 구간이 어떤 레시피 후보인지 JSON으로만 나눈다.",
+    "최종 레시피를 작성하지 말고, source-derived candidate hint별로 어떤 시간 구간과 프레임을 우선 볼지 JSON으로만 나눈다.",
     "",
     "중요 규칙:",
-    "1. 제목, 설명란, 작성자 댓글, 자막/발화, recipe_candidate_hints를 먼저 본다.",
+    "1. recipeCandidates는 정답이 아니라 힌트다. 충분한 근거가 없으면 coverage status를 supporting 또는 dropped로 남길 수 있다.",
     "2. golden.json, 채점 결과, validation/holdout 정답은 절대 보지 않는다.",
-    "3. 소스/토핑/플레이팅만 따로 나온 짧은 장면은 별도 recipe가 아니라 관련 recipe의 연속 구간으로 본다.",
-    "4. 같은 레시피가 연속으로 이어지면 하나의 segment로 묶는다.",
-    "5. 너무 넓게 잡아 다른 레시피 재료가 섞이지 않게 한다.",
+    "3. candidateId는 아래 recipeCandidates의 candidateId 중 하나를 정확히 복사한다.",
+    "4. 소스/토핑/플레이팅만 따로 나온 짧은 장면은 별도 recipe가 아니라 supporting 또는 관련 candidate의 연속 구간으로 본다.",
+    "5. 묶음 타임라인 안에 여러 candidate가 있으면 같은 parent range를 공유해도 되지만, selected frame은 candidate별로 고를 수 있게 segment를 나눈다.",
     `6. segments는 최대 ${segmentMaxCount}개, frameBudget 총합은 최대 ${segmentFrameTotalLimit}이다.`,
+    "7. coverage에는 모든 recipeCandidates의 covered/supporting/dropped 여부와 이유를 남긴다.",
     "",
     "출력은 설명 없이 JSON만 한다.",
     "스키마:",
@@ -246,16 +469,23 @@ function buildSegmentPlanPrompt({ sourceText, frames, segmentMaxCount, segmentFr
     "  \"segments\": [",
     "    {",
     "      \"segmentId\": \"seg-01\",",
+    "      \"candidateId\": \"cand-01\",",
     "      \"titleHint\": \"요리 후보명\",",
     "      \"startSec\": 0,",
     "      \"endSec\": 30,",
-    "      \"confidence\": 0.8,",
-    "      \"textEvidence\": [\"짧은 근거\"],",
+    "      \"timeEvidence\": [\"짧은 근거\"],",
     "      \"frameBudget\": 8,",
     "      \"notes\": \"짧은 메모\"",
     "    }",
-    "  ]",
+    "  ],",
+    "  \"coverage\": [",
+    "    { \"candidateId\": \"cand-01\", \"titleHint\": \"요리 후보명\", \"status\": \"covered\", \"segmentIds\": [\"seg-01\"], \"dropReason\": null }",
+    "  ],",
+    "  \"warnings\": []",
     "}",
+    "",
+    "recipeCandidates JSON:",
+    JSON.stringify(candidatePlan, null, 2),
     "",
     "텍스트 소스:",
     sourceText || "(텍스트 소스 없음)",
@@ -270,15 +500,63 @@ function normalizeTextEvidence(value) {
   return value.map((item) => String(item ?? "").trim()).filter(Boolean).slice(0, 8);
 }
 
-function normalizeSegmentPlan(rawPlan, { maxCount, maxFrameSec, totalFrameLimit, perSegmentMaxFrames, overlapToleranceSec }) {
+function normalizeCoverage(rawCoverage, segments, candidatePlan) {
+  const segmentIdsByCandidate = new Map();
+  for (const segment of segments) {
+    const list = segmentIdsByCandidate.get(segment.candidateId) ?? [];
+    list.push(segment.segmentId);
+    segmentIdsByCandidate.set(segment.candidateId, list);
+  }
+
+  const rawByCandidate = new Map();
+  if (Array.isArray(rawCoverage)) {
+    for (const raw of rawCoverage) {
+      if (!isObject(raw)) continue;
+      const candidateId = String(raw.candidateId ?? "").trim();
+      if (candidateId) rawByCandidate.set(candidateId, raw);
+    }
+  }
+
+  const coverage = [];
+  const warnings = [];
+  for (const candidate of candidatePlan.recipeCandidates) {
+    const raw = rawByCandidate.get(candidate.candidateId);
+    const segmentIds = Array.isArray(raw?.segmentIds)
+      ? raw.segmentIds.map((id) => String(id ?? "").trim()).filter(Boolean)
+      : (segmentIdsByCandidate.get(candidate.candidateId) ?? []);
+    const rawStatus = String(raw?.status ?? "").trim();
+    const status = ["covered", "supporting", "dropped", "uncovered"].includes(rawStatus)
+      ? rawStatus
+      : (segmentIds.length > 0 ? "covered" : "uncovered");
+    if (segmentIds.length === 0 && status !== "dropped" && status !== "supporting") {
+      warnings.push(`${candidate.candidateId}(${candidate.titleHint}) coverage가 segment 없이 남았습니다.`);
+    }
+    coverage.push({
+      candidateId: candidate.candidateId,
+      titleHint: candidate.titleHint,
+      status,
+      segmentIds,
+      dropReason: raw?.dropReason ? String(raw.dropReason).trim() : null,
+    });
+  }
+
+  return { coverage, warnings };
+}
+
+function normalizeSegmentPlan(rawPlan, { maxCount, maxFrameSec, totalFrameLimit, perSegmentMaxFrames, overlapToleranceSec, candidatePlan }) {
   const rawSegments = Array.isArray(rawPlan?.segments) ? rawPlan.segments : [];
   if (rawSegments.length === 0) throw new Error("segment plan은 segments 배열을 1개 이상 포함해야 합니다.");
   if (rawSegments.length > maxCount) throw new Error(`segment plan segments 개수가 상한(${maxCount})을 넘었습니다.`);
+  const candidatesById = new Map(candidatePlan.recipeCandidates.map((candidate) => [candidate.candidateId, candidate]));
 
   const segments = rawSegments.map((raw, index) => {
     if (!isObject(raw)) throw new Error(`segment ${index + 1}이 object가 아닙니다.`);
     const fallbackId = `seg-${String(index + 1).padStart(2, "0")}`;
     const segmentId = safeSegmentId(raw.segmentId, fallbackId);
+    const candidateId = String(raw.candidateId ?? "").trim();
+    if (!candidateId) throw new Error(`${segmentId} candidateId가 비었습니다.`);
+    const candidate = candidatesById.get(candidateId);
+    if (!candidate) throw new Error(`${segmentId} candidateId(${candidateId})는 recipeCandidates에 없습니다.`);
     const titleHint = String(raw.titleHint ?? raw.title ?? raw.recipeHint ?? "").trim();
     if (!titleHint) throw new Error(`${segmentId} titleHint가 비었습니다.`);
 
@@ -291,15 +569,17 @@ function normalizeSegmentPlan(rawPlan, { maxCount, maxFrameSec, totalFrameLimit,
     const endSec = maxFrameSec > 0 && endSecRaw > maxFrameSec ? maxFrameSec : endSecRaw;
     if (startSec >= endSec) throw new Error(`${segmentId} startSec는 endSec보다 작아야 합니다.`);
 
-    const confidence = Number(raw.confidence);
     const frameBudget = Math.min(positiveInt(raw.frameBudget, DEFAULT_SEGMENT_MIN_FRAMES), perSegmentMaxFrames);
     return {
       segmentId,
+      candidateId,
       titleHint,
       startSec,
       endSec,
-      confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : null,
-      textEvidence: normalizeTextEvidence(raw.textEvidence),
+      candidateStatus: candidate.candidateStatus,
+      evidenceStrength: candidate.evidenceStrength,
+      sourceEvidence: candidate.sourceEvidence ?? [],
+      textEvidence: normalizeTextEvidence(raw.textEvidence ?? raw.timeEvidence),
       frameBudget,
       notes: raw.notes ? String(raw.notes).trim() : null,
     };
@@ -322,16 +602,26 @@ function normalizeSegmentPlan(rawPlan, { maxCount, maxFrameSec, totalFrameLimit,
     }
   }
 
+  const segmentWarnings = [];
   for (let index = 1; index < segments.length; index += 1) {
     const previous = segments[index - 1];
     const current = segments[index];
     const overlap = previous.endSec - current.startSec;
     if (overlap > overlapToleranceSec) {
-      throw new Error(`${previous.segmentId}와 ${current.segmentId}의 overlap(${overlap.toFixed(1)}초)이 너무 큽니다.`);
+      segmentWarnings.push(`${previous.segmentId}와 ${current.segmentId}의 overlap(${overlap.toFixed(1)}초)이 허용치를 넘었습니다.`);
     }
   }
 
-  return { segments };
+  const normalizedCoverage = normalizeCoverage(rawPlan?.coverage, segments, candidatePlan);
+  return {
+    segments,
+    coverage: normalizedCoverage.coverage,
+    warnings: [
+      ...segmentWarnings,
+      ...normalizedCoverage.warnings,
+      ...(Array.isArray(rawPlan?.warnings) ? rawPlan.warnings.map((warning) => String(warning ?? "").trim()).filter(Boolean) : []),
+    ],
+  };
 }
 
 function framesInRange(frames, startSec, endSec) {
@@ -376,13 +666,17 @@ function buildSegmentSelectorPrompt({ sourceText, segment, candidateFrames }) {
     "최종 레시피를 작성하지 말고, 최종 모델이 이 segment를 이해하기 위해 봐야 할 프레임 파일명만 고른다.",
     "",
     `segmentId: ${segment.segmentId}`,
+    `candidateId: ${segment.candidateId}`,
     `titleHint: ${segment.titleHint}`,
+    `candidateStatus: ${segment.candidateStatus}`,
+    `evidenceStrength: ${segment.evidenceStrength}`,
     `time: ${segment.startSec}-${segment.endSec}`,
     `textEvidence: ${segment.textEvidence.length ? segment.textEvidence.join(" / ") : "(없음)"}`,
+    `sourceEvidence: ${(segment.sourceEvidence ?? []).map((item) => `${item.source}: ${item.text}`).join(" / ") || "(없음)"}`,
     `frameBudget: ${budget}`,
     "",
     "선별 기준:",
-    "1. 이 segment의 레시피만 판단한다. 다른 segment의 재료, 토핑, 플레이팅을 섞지 않는다.",
+    "1. 이 candidate/segment의 근거만 판단한다. 다른 candidate의 재료, 토핑, 플레이팅을 섞지 않는다.",
     "2. 완성샷보다 재료 카드, 계량, 양념 배합, 재료 투입, 조리 상태 전환 장면을 우선한다.",
     "3. 된장, 쯔유, 액젓, 미나리, 우삼겹, 스프처럼 작은 장면으로 지나가는 핵심 재료를 놓치지 않는다.",
     "4. 비슷한 장면이 많으면 가장 정보가 많은 프레임만 남긴다.",
@@ -415,30 +709,48 @@ function dedupeFrames(frames) {
   return selected;
 }
 
-function buildSegmentedFinalPrompt({ prompt, sourceText, segmentPlan, segmentKeyframes }) {
+function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentPlan, segmentKeyframes }) {
   const segmentBlocks = segmentKeyframes.segments.map((entry) => [
     `[SEGMENT ${entry.segmentId}]`,
+    `candidateId: ${entry.candidateId}`,
     `titleHint: ${entry.titleHint}`,
+    `candidateStatus: ${entry.candidateStatus}`,
+    `evidenceStrength: ${entry.evidenceStrength}`,
     `time: ${entry.startSec}-${entry.endSec}`,
     `textEvidence: ${entry.textEvidence.length ? entry.textEvidence.join(" / ") : "(없음)"}`,
     "selectedFrames:",
     ...entry.selectedFrames.map((frame, index) => `- ${index + 1}. file=${frame.file}, timestamp=${frame.timestamp ?? frame.timestamp_sec ?? "?"}, reason=${frame.selectionReason ?? frame.reason ?? "unknown"}`),
   ].join("\n")).join("\n\n");
 
+  const coverageLines = (segmentPlan.coverage ?? []).map((entry) => {
+    const segments = entry.segmentIds.length ? entry.segmentIds.join(", ") : "(없음)";
+    const reason = entry.dropReason ? `, dropReason=${entry.dropReason}` : "";
+    return `- ${entry.candidateId}: titleHint=${entry.titleHint}, status=${entry.status}, segments=[${segments}]${reason}`;
+  });
+
   return [
     prompt,
     "",
-    "추가 입력: 아래는 레시피별 시간 구간을 먼저 나눈 뒤, 각 구간 안에서만 고른 핵심 프레임 묶음이다.",
-    "segment plan과 selected frames는 책갈피일 뿐이며, 최종 판단은 제목, 설명란, 댓글, 자막/발화, 첨부 프레임의 실제 화면을 함께 보고 한다.",
+    "추가 입력: 아래는 source-derived candidate hint를 먼저 만든 뒤, candidate/segment별로 고른 핵심 프레임 묶음이다.",
+    "candidate, segment plan, selected frames는 책갈피일 뿐이며 정답이 아니다.",
+    "최종 판단은 제목, 설명란, 댓글, 자막/발화, 첨부 프레임의 실제 화면을 함께 보고 한다.",
     "",
     "중요한 우선순위:",
-    "1. 각 SEGMENT의 재료와 단계를 다른 SEGMENT로 섞지 않는다.",
-    "2. 같은 요리의 연속 구간으로 보일 때만 하나의 recipe로 합친다.",
-    "3. 소스, 토핑, 플레이팅만 따로 나온 segment는 별도 recipe로 만들지 말고 관련 recipe의 재료/단계에 합친다.",
-    "4. 설명란/댓글/자막/발화에 재료명과 수량이 명시되면 화면 추정보다 우선한다.",
-    "5. 화면에서만 보이는 수량은 amountBasis를 visual-estimate로 둔다.",
-    "6. '초록색 줄기채소', '노란색 긴 재료' 같은 추상 이름은 최후의 수단이다.",
-    "7. 영상에 없는 재료나 단계를 요리 상식으로 추가하지 않는다.",
+    "1. candidate는 힌트다. 충분한 근거가 없으면 별도 recipe로 만들지 않는다.",
+    "2. confirmed_hint라도 화면/자막/설명란 근거가 부족하면 무리하게 recipe로 만들지 않는다.",
+    "3. 각 candidate/SEGMENT의 재료와 단계를 다른 candidate로 섞지 않는다.",
+    "4. 같은 요리의 연속 구간으로 보일 때만 하나의 recipe로 합친다.",
+    "5. 소스, 토핑, 플레이팅만 따로 나온 segment는 별도 recipe로 만들지 말고 관련 recipe의 재료/단계에 합친다.",
+    "6. 설명란/댓글/자막/발화에 재료명과 수량이 명시되면 화면 추정보다 우선한다.",
+    "7. 화면에서만 보이는 수량은 amountBasis를 visual-estimate로 둔다.",
+    "8. '초록색 줄기채소', '노란색 긴 재료' 같은 추상 이름은 최후의 수단이다.",
+    "9. 영상에 없는 재료나 단계를 요리 상식으로 추가하지 않는다.",
+    "",
+    "candidate hints JSON:",
+    JSON.stringify(candidatePlan, null, 2),
+    "",
+    "Candidate coverage checklist:",
+    ...(coverageLines.length ? coverageLines : ["- (coverage 없음)"]),
     "",
     "segment plan JSON:",
     JSON.stringify(segmentPlan, null, 2),
@@ -488,6 +800,7 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
   prompt,
   cacheText,
   frameManifest,
+  candidatePlanHash,
   frameOptions,
   segmentOptions,
 }) {
@@ -500,9 +813,11 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
     promptHash: hashText(prompt),
     cacheTextHash: hashText(cacheText),
     frameManifest,
+    candidatePlanHash,
     frameOptions,
     segmentOptions,
     clientVersion: CLIENT_VERSION,
+    candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
     segmentPromptVersion: SEGMENT_PROMPT_VERSION,
     segmentSelectorPromptVersion: SEGMENT_SELECTOR_PROMPT_VERSION,
     finalPromptVersion: FINAL_PROMPT_VERSION,
@@ -512,13 +827,55 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
 function frameLookup(frames) {
   const byFile = new Map();
   const byPath = new Map();
+  const byTimestamp = new Map();
   frames.forEach((frame, index) => {
     byFile.set(frameBasename(frame), frame);
     byPath.set(frame.path, frame);
     byFile.set(String(index + 1), frame);
     if (frame.index !== undefined && frame.index !== null) byFile.set(String(frame.index), frame);
+    const timestampKey = frameTimestampKey(frameTimestampSec(frame));
+    if (timestampKey) byTimestamp.set(timestampKey, frame);
   });
-  return { byFile, byPath };
+  return { byFile, byPath, byTimestamp };
+}
+
+function frameTimestampKey(value) {
+  const timestamp = Number(value);
+  return Number.isFinite(timestamp) ? timestamp.toFixed(3) : null;
+}
+
+function timestampFromFrameFileName(fileName) {
+  const match = path.basename(String(fileName ?? "")).match(FRAME_FILE_TIMESTAMP_RE);
+  if (!match) return null;
+  const timestamp = Number(match[1]);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function nearestFrameByTimestamp(frames, targetTimestamp) {
+  if (!Number.isFinite(targetTimestamp)) return null;
+  let nearest = null;
+  let nearestDelta = Infinity;
+  for (const frame of frames) {
+    const timestamp = frameTimestampSec(frame);
+    if (!Number.isFinite(timestamp)) continue;
+    const delta = Math.abs(timestamp - targetTimestamp);
+    if (delta < nearestDelta) {
+      nearest = frame;
+      nearestDelta = delta;
+    }
+  }
+  return nearestDelta <= FRAME_TIMESTAMP_TOLERANCE_SEC ? nearest : null;
+}
+
+function resolveSelectedFrame(rawFile, candidateFrames, lookup) {
+  const file = path.basename(String(rawFile));
+  const exact = lookup.byFile.get(file) ?? lookup.byPath.get(String(rawFile)) ?? lookup.byFile.get(String(rawFile));
+  if (exact) return exact;
+
+  const timestamp = timestampFromFrameFileName(file);
+  const timestampKey = frameTimestampKey(timestamp);
+  return (timestampKey ? lookup.byTimestamp.get(timestampKey) : null)
+    ?? nearestFrameByTimestamp(candidateFrames, timestamp);
 }
 
 function selectedFrameFile(entry) {
@@ -536,7 +893,7 @@ function normalizeSelectedFrames(selectorJson, candidateFrames, { totalLimit, pe
   const rawEntries = Array.isArray(selectorJson?.selectedFrames)
     ? selectorJson.selectedFrames
     : (Array.isArray(selectorJson?.frames) ? selectorJson.frames : []);
-  const { byFile, byPath } = frameLookup(candidateFrames);
+  const lookup = frameLookup(candidateFrames);
   const selected = [];
   const seenPaths = new Set();
   const recipeCounts = new Map();
@@ -544,8 +901,7 @@ function normalizeSelectedFrames(selectorJson, candidateFrames, { totalLimit, pe
   for (const entry of rawEntries) {
     const rawFile = selectedFrameFile(entry);
     if (!rawFile) continue;
-    const file = path.basename(String(rawFile));
-    const frame = byFile.get(file) ?? byPath.get(String(rawFile)) ?? byFile.get(String(rawFile));
+    const frame = resolveSelectedFrame(rawFile, candidateFrames, lookup);
     if (!frame || seenPaths.has(frame.path)) continue;
 
     const recipe = selectedFrameRecipe(entry);
@@ -582,6 +938,9 @@ async function runSegmentedKeyframesFlow({
   options,
   timeoutMs,
 }) {
+  let stage = "candidate-split";
+  const candidatePlan = buildCandidateHintsFromSourceText(cacheText);
+  const candidatePlanHash = hashText(canonicalJson(candidatePlan.recipeCandidates));
   const resultKey = buildCodexVisionSegmentedKeyframesCacheKey({
     model,
     selectorModel,
@@ -589,6 +948,7 @@ async function runSegmentedKeyframesFlow({
     prompt,
     cacheText,
     frameManifest: manifestHash,
+    candidatePlanHash,
     frameOptions,
     segmentOptions,
   });
@@ -607,6 +967,9 @@ async function runSegmentedKeyframesFlow({
         provider: PROVIDER,
         keyframeMode: "segmented",
         cached: true,
+        candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
+        candidatePlanHash,
+        candidateCount: candidatePlan.recipeCandidates.length,
         frameCacheHit: frameResult.frameCacheHit,
         visionCacheHit: true,
         codexVisionKeyframesCacheDir: resultDir,
@@ -617,15 +980,20 @@ async function runSegmentedKeyframesFlow({
   await mkdir(resultDir, { recursive: true });
   await copyIfExists(path.join(frameResult.frameDir, "frames.json"), path.join(resultDir, "frames.json"));
   await copyIfExists(path.join(frameResult.frameDir, "extraction_stats.json"), path.join(resultDir, "extraction_stats.json"));
+  await writeFile(path.join(resultDir, "recipe-candidates.json"), JSON.stringify({
+    ...candidatePlan,
+    candidatePlanHash,
+  }, null, 2) + "\n", "utf8");
 
-  let stage = "segment-plan";
   let segmentPlan = null;
   let segmentKeyframes = null;
   try {
+    stage = "segment-plan";
     const maxFrameSec = maxFrameTimestampSec(frames);
     const segmentPrompt = buildSegmentPlanPrompt({
       sourceText: cacheText,
       frames,
+      candidatePlan,
       segmentMaxCount: segmentOptions.maxCount,
       segmentFrameTotalLimit: segmentOptions.frameTotalLimit,
     });
@@ -657,6 +1025,7 @@ async function runSegmentedKeyframesFlow({
         totalFrameLimit: segmentOptions.frameTotalLimit,
         perSegmentMaxFrames: segmentOptions.maxFrames,
         overlapToleranceSec: segmentOptions.overlapToleranceSec,
+        candidatePlan,
       });
       await writeFile(segmentJsonPath, JSON.stringify(segmentPlan, null, 2) + "\n", "utf8");
     }
@@ -718,6 +1087,9 @@ async function runSegmentedKeyframesFlow({
           reason: frame.reason ?? null,
           selectionReason: isObject(rawEntry) ? (rawEntry.reason ?? null) : null,
           scene_score: frame.scene_score ?? null,
+          candidateId: segment.candidateId,
+          candidateStatus: segment.candidateStatus,
+          evidenceStrength: segment.evidenceStrength,
         };
       });
 
@@ -736,10 +1108,18 @@ async function runSegmentedKeyframesFlow({
 
     const finalSelectedFrames = dedupeFrames(selectedFramesWithSegment.map((entry) => entry.frame));
     const selectedFrameHash = frameManifestHash(finalSelectedFrames);
+    const coveredCandidateCount = (segmentPlan.coverage ?? []).filter((entry) => entry.status === "covered").length;
+    const droppedCandidateCount = (segmentPlan.coverage ?? []).filter((entry) => entry.status === "dropped").length;
+    const supportingCandidateCount = (segmentPlan.coverage ?? []).filter((entry) => entry.status === "supporting").length;
     segmentKeyframes = {
+      candidatePlanHash,
       selectedFrameHash,
       selectedFrameCount: finalSelectedFrames.length,
       segmentSelectedFrameCount: selectedFramesWithSegment.length,
+      candidateCount: candidatePlan.recipeCandidates.length,
+      coveredCandidateCount,
+      droppedCandidateCount,
+      supportingCandidateCount,
       segments: segmentEntries,
     };
     await writeFile(path.join(resultDir, "segment-keyframes.json"), JSON.stringify(segmentKeyframes, null, 2) + "\n", "utf8");
@@ -758,6 +1138,7 @@ async function runSegmentedKeyframesFlow({
           reason: frame.reason ?? null,
           scene_score: frame.scene_score ?? null,
           segmentId: segment.segmentId,
+          candidateId: segment.candidateId,
           titleHint: segment.titleHint,
         })),
       }, null, 2) + "\n",
@@ -765,7 +1146,7 @@ async function runSegmentedKeyframesFlow({
     );
 
     stage = "final";
-    const finalPrompt = buildSegmentedFinalPrompt({ prompt, sourceText: cacheText, segmentPlan, segmentKeyframes });
+    const finalPrompt = buildSegmentedFinalPrompt({ prompt, sourceText: cacheText, candidatePlan, segmentPlan, segmentKeyframes });
     const finalPromptPath = path.join(resultDir, "final.prompt.md");
     const finalRawPath = path.join(resultDir, "final.raw.md");
     const finalLogPath = path.join(resultDir, "final.log");
@@ -794,6 +1175,7 @@ async function runSegmentedKeyframesFlow({
       selectorModel,
       segmentModel,
       clientVersion: CLIENT_VERSION,
+      candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
       segmentPromptVersion: SEGMENT_PROMPT_VERSION,
       segmentSelectorPromptVersion: SEGMENT_SELECTOR_PROMPT_VERSION,
       finalPromptVersion: FINAL_PROMPT_VERSION,
@@ -801,12 +1183,21 @@ async function runSegmentedKeyframesFlow({
       usedVisual: true,
       frameCount: frames.length,
       candidateFrameCount,
+      candidateCount: candidatePlan.recipeCandidates.length,
+      coveredCandidateCount,
+      droppedCandidateCount,
+      supportingCandidateCount,
       segmentCount: segmentPlan.segments.length,
       selectedFrameCount: finalSelectedFrames.length,
       segmentSelectedFrameCount: selectedFramesWithSegment.length,
+      candidatePlanHash,
       selectedFrameHash,
       segmentPlanHash: hashText(JSON.stringify(segmentPlan)),
       segmentKeyframesHash: hashText(JSON.stringify(segmentKeyframes)),
+      warnings: [
+        ...(candidatePlan.warnings ?? []),
+        ...(segmentPlan.warnings ?? []),
+      ],
       frameMode: frameOptions.mode,
       frameCacheHit: frameResult.frameCacheHit,
       visionCacheHit: false,
@@ -826,6 +1217,7 @@ async function runSegmentedKeyframesFlow({
         segmentModel,
         frameOptions,
         segmentOptions,
+        candidatePlanHash,
         promptHash: hashText(prompt),
         cacheTextHash: hashText(cacheText),
         frameManifestHash: manifestHash,
@@ -842,6 +1234,9 @@ async function runSegmentedKeyframesFlow({
       model,
       selectorModel,
       segmentModel,
+      candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
+      candidatePlan,
+      candidatePlanHash,
       frameCacheDir: frameResult.frameDir,
       frameCount: frames.length,
       segmentPlan,
