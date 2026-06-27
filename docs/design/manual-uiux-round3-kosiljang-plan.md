@@ -170,7 +170,7 @@ Detailed entries live in `docs/design/manual-uiux-review-fix-plan.md`.
 | 82 | 공공 레시피 상세 이미지가 작은 원본을 `cover`로 확대해 잘리고 흐리게 보이는 문제 | implemented in `fix/public-recipe-detail-gallery` |
 | 83 | 비로그인 상태로 플래너 진입 시 `잠시만 기다려주세요`가 짧게 보인 뒤 로그인 화면으로 바뀌는 문제 | implemented |
 | 84 | 웹/앱 전역 스켈레톤이 실제 화면과 맞지 않고 여러 단계로 바뀌어 화면이 바빠 보이는 문제 | implemented |
-| 85 | 첫 회원가입 튜토리얼 안내 토스트가 닉네임 확정 전/전환 중에 뜰 수 있는 문제 | planned |
+| 85 | 첫 회원가입 튜토리얼 안내 토스트가 닉네임 확정 전/전환 중에 뜰 수 있는 문제 | implemented |
 | 86 | 튜토리얼 안내 알림이 알림모달 전체 탭과 완료 후 시스템 기록에 일관되게 남지 않는 문제 | planned |
 | 87 | 알림모달의 알림 글자 크기가 작아 읽기 어려운 문제 | planned |
 | 88 | 프로필요약 튜토리얼 안내 섹션에서 제목과 안내 문구가 구분되지 않는 문제 | planned |

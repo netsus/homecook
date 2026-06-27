@@ -3726,7 +3726,7 @@ Implementation note:
 
 ### 85. 첫 회원가입 튜토리얼 안내 토스트가 닉네임 확정 전/전환 중에 뜰 수 있는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: Medium
 - Area: UX / Onboarding / Tutorial Toast
 - Source: user manual review
@@ -3739,6 +3739,10 @@ Implementation note:
 - Recommended fix:
   - nickname onboarding completion 이후 route transition이 끝난 뒤 tutorial guide toast를 enqueue한다.
   - onboarding 화면 자체에서는 첫 tutorial toast를 띄우지 않는다.
+- Implemented:
+  - `GrowthToastStack`에서 현재 경로가 `/onboarding/nickname`일 때 synthetic tutorial guide toast만 제외한다.
+  - route transition 후 pathname이 서비스 화면으로 바뀌면 gamification을 다시 읽어 첫 튜토리얼 토스트를 표시한다.
+  - 실제 서버 알림은 막지 않고, 닉네임 화면에서 문제였던 첫 튜토리얼 안내만 지연한다.
 - Acceptance criteria:
   - 신규 회원가입 후 닉네임을 정하고 이동한 화면에서 첫 튜토리얼 토스트가 보인다.
   - 닉네임 화면에서는 tutorial toast가 먼저 뜨지 않는다.
@@ -3747,7 +3751,7 @@ Implementation note:
   - `components/gamification/growth-toast-stack.tsx`
   - tutorial guide state
 - Verification:
-  - onboarding completion flow test 또는 manual smoke.
+  - `CI=true corepack pnpm exec vitest run tests/growth-toast-stack.test.tsx`
 
 ### 86. 튜토리얼 안내 알림이 알림모달 전체 탭과 완료 후 시스템 기록에 일관되게 남지 않는 문제
 
