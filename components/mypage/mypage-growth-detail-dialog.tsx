@@ -243,8 +243,28 @@ function isTutorialGuideNotification(item: UserGamificationNotificationData) {
   return item.payload.tutorial_guide === true;
 }
 
+function isTutorialSystemNotification(item: UserGamificationNotificationData) {
+  if (isTutorialGuideNotification(item)) return true;
+
+  const achievementKey = typeof item.payload.achievement_key === "string"
+    ? item.payload.achievement_key
+    : "";
+  const questKey = typeof item.payload.quest_key === "string"
+    ? item.payload.quest_key
+    : "";
+
+  return achievementKey.startsWith("tutorial_") || questKey.startsWith("first_");
+}
+
+function isGrowthOrAchievementNotification(item: UserGamificationNotificationData) {
+  return item.notification_type === "level_up" ||
+    item.notification_type === "xp_awarded" ||
+    item.notification_type === "achievement_unlocked" ||
+    item.notification_type === "badge_unlocked";
+}
+
 function notificationToneLabel(item: UserGamificationNotificationData) {
-  if (isTutorialGuideNotification(item)) return "시스템";
+  if (isTutorialSystemNotification(item)) return "시스템";
   if (item.notification_type === "level_up") return "레벨업";
   if (item.notification_type === "achievement_unlocked") return "업적";
   if (item.notification_type === "badge_unlocked") return "배지";
@@ -255,10 +275,11 @@ function matchesNotificationFilter(
   item: UserGamificationNotificationData,
   filter: NotificationFilter,
 ) {
-  if (isTutorialGuideNotification(item)) {
-    return filter === "system";
-  }
   if (filter === "all") return true;
+  if (filter === "system") {
+    return isTutorialSystemNotification(item) ||
+      !isGrowthOrAchievementNotification(item);
+  }
   if (filter === "achievement") {
     return item.notification_type === "achievement_unlocked" ||
       item.notification_type === "badge_unlocked";
@@ -267,10 +288,7 @@ function matchesNotificationFilter(
     return item.notification_type === "level_up" ||
       item.notification_type === "xp_awarded";
   }
-  return item.notification_type !== "level_up" &&
-    item.notification_type !== "xp_awarded" &&
-    item.notification_type !== "achievement_unlocked" &&
-    item.notification_type !== "badge_unlocked";
+  return false;
 }
 
 function buildNotificationPanelItems(

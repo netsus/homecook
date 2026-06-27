@@ -3755,7 +3755,7 @@ Implementation note:
 
 ### 86. 튜토리얼 안내 알림이 알림모달 전체 탭과 완료 후 시스템 기록에 일관되게 남지 않는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: High
 - Area: UX / Notifications / Tutorial
 - Source: user manual review
@@ -3771,6 +3771,10 @@ Implementation note:
   - current tutorial guide synthetic notification을 `전체`와 `시스템` 양쪽에 표시하되, 중복 row처럼 보이지 않게 타입/라벨을 명확히 한다.
   - 튜토리얼 단계 완료 시 시스템 알림 archive row를 남긴다.
   - 단, 이미 완료된 안내가 과도하게 쌓이지 않도록 quest id 기준 idempotent 처리를 한다.
+- Implemented:
+  - 알림모달 `전체` 탭에서 synthetic current tutorial guide가 보이도록 필터 순서를 바로잡았다.
+  - `payload.achievement_key`가 `tutorial_`로 시작하거나 `payload.quest_key`가 `first_`로 시작하는 튜토리얼 알림은 `시스템` 탭에도 보이게 했다.
+  - 완료된 튜토리얼 업적 알림은 기존 idempotent `achievement_unlocked` archive row를 재사용한다. 새 알림 타입/중복 row를 추가하지 않았다.
 - Acceptance criteria:
   - 현재 튜토리얼 안내가 `전체` 탭과 `시스템` 탭에서 모두 보인다.
   - 튜토리얼 퀘스트 완료 후 시스템 탭에 완료/다음 안내 기록이 남는다.
@@ -3780,7 +3784,8 @@ Implementation note:
   - notification archive API/server logic
   - tutorial achievement award flow
 - Verification:
-  - notification panel tests and tutorial completion event tests.
+  - `CI=true corepack pnpm exec vitest run tests/shared-profile-summary.test.tsx tests/mypage-achievement-album.test.tsx`
+  - `CI=true corepack pnpm exec vitest run tests/user-achievement-awards.test.ts`
 
 ### 87. 알림모달의 알림 글자 크기가 작아 읽기 어려운 문제
 

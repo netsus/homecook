@@ -620,9 +620,15 @@ describe("ProfileSummaryButton", () => {
 
     await user.click(screen.getByTestId("web-profile-summary-button"));
     await user.click(screen.getByRole("button", { name: "알림 기록 보기" }));
-    await user.click(screen.getByRole("tab", { name: "시스템" }));
 
     const archiveDialog = screen.getByRole("dialog", { name: "알림 기록" });
+    await waitFor(() => {
+      expect(within(archiveDialog).getByText("튜토리얼 안내")).toBeTruthy();
+    });
+    expect(within(archiveDialog).getByText(/첫 장보기 목록 만들기/)).toBeTruthy();
+
+    await user.click(screen.getByRole("tab", { name: "시스템" }));
+
     expect(within(archiveDialog).getByText("튜토리얼 안내")).toBeTruthy();
     expect(within(archiveDialog).getByText(/첫 장보기 목록 만들기/)).toBeTruthy();
     expect(

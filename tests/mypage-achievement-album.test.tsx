@@ -744,7 +744,7 @@ describe("MYPAGE achievement album UI", () => {
         .getByTestId("mypage-notification-visual-notice-grade")
         .getAttribute("data-visual-kind"),
     ).toBe("grade");
-    expect(within(notificationDialog).getByText("2026-06-14 10:15")).toBeTruthy();
+    expect(within(notificationDialog).getAllByText("2026-06-14 10:15").length).toBeGreaterThan(0);
     expect(
       within(notificationDialog).getByTestId("mypage-notification-item-notice-level").className,
     ).toContain("border-[var(--growth-toast-level-border)]");
@@ -760,6 +760,12 @@ describe("MYPAGE achievement album UI", () => {
     expect(within(notificationDialog).getByText("튜토리얼 완료 배지를 획득했어요.")).toBeTruthy();
     expect(within(notificationDialog).getByText("2026-06-14 10:02")).toBeTruthy();
     expect(within(notificationDialog).queryByText("+120 XP 획득")).toBeNull();
+
+    await user.click(within(notificationDialog).getByRole("tab", { name: "시스템" }));
+    expect(within(notificationDialog).getByText("튜토리얼 안내")).toBeTruthy();
+    expect(within(notificationDialog).getByText(/플래너에 끼니 등록하기/)).toBeTruthy();
+    expect(within(notificationDialog).getByText("튜토리얼 완료 배지를 획득했어요.")).toBeTruthy();
+    expect(within(notificationDialog).queryByText("요리 100회 배지를 획득했어요.")).toBeNull();
   });
 
   it("opens the notification archive when the global toast open event is dispatched", async () => {
