@@ -26,15 +26,15 @@ const VISUAL_NOTE_SECTION_LIMITS = [
 ];
 const IMPORTANT_VISUAL_NOTE_RE = /(새우|통새우|쯔유|들기름|참기름|액젓|된장|고추장|고춧가루|간장|진간장|다진\s*마늘|마늘|맛술|알룰로스|루스|후추|소금|스프|우삼겹|샤브|소곱창|곱창|부추|통깨|깨소금|미나리|마늘쫑|마늘종|항정|열무|동치미|육수)/;
 
-function hashKey(parts, length = 24) {
+export function hashKey(parts, length = 24) {
   return createHash("sha256").update(JSON.stringify(parts)).digest("hex").slice(0, length);
 }
 
-function hashText(text, length = 24) {
+export function hashText(text, length = 24) {
   return createHash("sha256").update(String(text ?? "")).digest("hex").slice(0, length);
 }
 
-function videoIdFromUrl(videoUrl) {
+export function videoIdFromUrl(videoUrl) {
   try {
     const url = new URL(videoUrl);
     if (url.hostname.includes("youtube.com")) return url.searchParams.get("v");
@@ -103,7 +103,7 @@ function buildFrameCacheKey({ videoUrl, videoId, frameOptions }) {
   });
 }
 
-function frameManifestHash(frames) {
+export function frameManifestHash(frames) {
   return hashKey(
     frames.map((frame) => ({
       index: frame.index,
@@ -319,7 +319,7 @@ async function runCommand(command, args, { input = "", cwd = PROJECT_ROOT, timeo
   });
 }
 
-async function runCodexExec({ prompt, images = [], model, codexEffort = null, outputPath, logPath, timeoutMs }) {
+export async function runCodexExec({ prompt, images = [], model, codexEffort = null, outputPath, logPath, timeoutMs }) {
   const args = [
     "exec",
     "--ephemeral",
@@ -341,7 +341,7 @@ async function runCodexExec({ prompt, images = [], model, codexEffort = null, ou
   return readFile(logPath, "utf8");
 }
 
-async function defaultExtractFrames({
+export async function defaultExtractFrames({
   videoUrl,
   videoId,
   cacheDir,
