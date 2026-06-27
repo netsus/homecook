@@ -120,6 +120,7 @@ describe("ShoppingDetailScreen", () => {
     render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
 
     expect(screen.getByTestId("shopping-detail-skeleton")).toBeTruthy();
+    expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
     expect(screen.queryByText(/장보기 리스트를 불러오고 있어요/)).toBeNull();
     expect(
       screen.getByTestId("shopping-detail-skeleton").querySelector(".web-shopping-detail-screen"),
@@ -148,6 +149,7 @@ describe("ShoppingDetailScreen", () => {
 
     expect(screen.queryByText("생성 4월 12일 · 4월 12일 ~ 20일")).toBeNull();
     expect(screen.getByText("0 / 1 항목")).toBeTruthy();
+    expect(screen.getByTestId("web-profile-summary-button")).toBeTruthy();
     expect(screen.getByText(/구매할 재료 \(1개\)/)).toBeTruthy();
     expect(screen.getByText(/팬트리에 있는 재료 \(1개\)/)).toBeTruthy();
     expect(screen.getByText("채소")).toBeTruthy();
