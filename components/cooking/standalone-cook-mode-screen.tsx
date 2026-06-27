@@ -5,6 +5,10 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { CookModeDesktopView } from "@/components/cooking/cook-mode-desktop-view";
+import {
+  MobileCookModeLoadingBoard,
+  WebCookModeLoadingBoard,
+} from "@/components/cooking/cook-mode-loading-board";
 import { ConsumedIngredientSheet } from "@/components/cooking/consumed-ingredient-sheet";
 import {
   MobileCookModeView,
@@ -13,14 +17,12 @@ import {
 import { useUserScreenWakeLock } from "@/components/cooking/use-screen-wake-lock";
 import { ContentState } from "@/components/shared/content-state";
 import { useAppReturn } from "@/components/shared/use-app-return";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   WebButton,
   WebCard,
   WebEmptyState,
   WebErrorState,
   WebShell,
-  WebSkeleton,
   WebTopNav,
 } from "@/components/web";
 import { isCookingApiError } from "@/lib/api/cooking";
@@ -193,26 +195,18 @@ export function StandaloneCookModeScreen({
       return (
         <StandaloneCookModeDesktopLoading
           description="요리모드 준비 중이에요."
-          recipeId={recipeId}
           title="요리모드를 불러오고 있어요"
         />
       );
     }
 
     return (
-      <div
-        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
-        data-testid="standalone-cook-mode-screen"
-      >
-        <div className="flex flex-1 items-center justify-center p-4">
-          <ContentState
-            description="요리모드 준비 중이에요."
-            eyebrow="준비 중"
-            title="요리모드를 불러오고 있어요"
-            tone="loading"
-          />
-        </div>
-      </div>
+      <MobileCookModeLoadingBoard
+        description="요리모드 준비 중이에요."
+        loadingTestId="standalone-cook-mode-loading"
+        screenTestId="standalone-cook-mode-screen"
+        title="요리모드를 불러오고 있어요"
+      />
     );
   }
 
@@ -275,32 +269,18 @@ export function StandaloneCookModeScreen({
       return (
         <StandaloneCookModeDesktopLoading
           description="레시피와 만들기를 준비하고 있어요."
-          recipeId={recipeId}
           title="요리모드를 불러오고 있어요"
         />
       );
     }
 
     return (
-      <div
-        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
-        data-testid="standalone-cook-mode-screen"
-      >
-        <div className="p-4" data-testid="standalone-cook-mode-loading">
-          <Skeleton className="mb-3" height={32} rounded="md" />
-          <Skeleton className="mb-2" height={20} rounded="sm" width="40%" />
-          <div className="mt-4 flex flex-col gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton
-                className="border border-[var(--line)]"
-                height={64}
-                key={i}
-                rounded="md"
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      <MobileCookModeLoadingBoard
+        description="레시피와 만들기를 준비하고 있어요."
+        loadingTestId="standalone-cook-mode-loading"
+        screenTestId="standalone-cook-mode-screen"
+        title="요리모드를 불러오고 있어요"
+      />
     );
   }
 
@@ -515,43 +495,29 @@ function StandaloneCookModeDesktopState({
 
 function StandaloneCookModeDesktopLoading({
   description,
-  recipeId,
   title,
 }: {
   description: string;
-  recipeId: string;
   title: string;
 }) {
   return (
-    <StandaloneCookModeDesktopState recipeId={recipeId}>
-      <WebCard
-        className="web-cook-mode-state-card"
-        data-testid="standalone-cook-mode-loading"
+    <WebShell className="web-cooking-shell web-cooking-shell-dark" wide>
+      <WebTopNav
+        items={WEB_NAV_ITEMS}
+        rightSlot={<div className="web-profile-button">◎</div>}
+      />
+      <main
+        className="web-cook-mode-screen web-cook-whole-screen"
+        data-cook-theme="dark"
+        data-testid="standalone-cook-mode-screen"
       >
-        <div className="web-cook-mode-loading-head">
-          <WebSkeleton height={18} width={120} />
-          <WebSkeleton height={34} width="42%" />
-          <WebSkeleton height={16} width="34%" />
-          <span className="visually-hidden">
-            {title}. {description}
-          </span>
-        </div>
-        <div className="web-cook-mode-loading-layout">
-          <div className="web-cook-mode-loading-list">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <WebSkeleton height={96} key={index} />
-            ))}
-          </div>
-          <div className="web-cook-mode-loading-rail">
-            <WebSkeleton height={22} width={140} />
-            {Array.from({ length: 5 }).map((_, index) => (
-              <WebSkeleton height={48} key={index} />
-            ))}
-            <WebSkeleton height={44} />
-            <WebSkeleton height={44} />
-          </div>
-        </div>
-      </WebCard>
-    </StandaloneCookModeDesktopState>
+        <h1 className="sr-only">요리모드</h1>
+        <WebCookModeLoadingBoard
+          description={description}
+          testId="standalone-cook-mode-loading"
+          title={title}
+        />
+      </main>
+    </WebShell>
   );
 }

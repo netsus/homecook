@@ -2101,6 +2101,10 @@
   box-shadow: 0 10px 22px rgba(0, 161, 255, 0.2);
 }
 
+.cook-mobile-whole-screen .cook-whole-loading-skeleton {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .cook-whole-board {
   display: grid;
   min-width: 0;
@@ -2136,21 +2140,23 @@
   display: inline-flex;
   width: fit-content;
   max-width: 100%;
-  min-height: 34px;
-  gap: 7px;
+  min-height: 44px;
+  gap: 8px;
   border-radius: 999px;
-  padding: 7px 9px;
+  padding: 8px 11px;
 }
 
 .cook-whole-board-mobile .cook-whole-ingredient-name {
   flex: 0 1 auto;
-  max-width: min(58vw, 210px);
-  font-size: 13px;
+  max-width: min(54vw, 230px);
+  font-size: 20px;
+  line-height: 1.1;
 }
 
 .cook-whole-board-mobile .cook-whole-ingredient-amount {
   flex: 0 0 auto;
-  font-size: 14px;
+  font-size: 20px;
+  line-height: 1.1;
 }
 
 .cook-whole-panel {
@@ -2188,29 +2194,31 @@
 
 .cook-whole-ingredient {
   display: grid;
-  min-height: 44px;
+  min-height: 52px;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   border-radius: 13px;
   background: rgba(255, 255, 255, 0.07);
-  padding: 8px 10px;
+  padding: 9px 12px;
 }
 
 .cook-whole-ingredient-name {
   min-width: 0;
   overflow: hidden;
   color: rgba(255, 255, 255, 0.88);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .cook-whole-ingredient-amount {
   color: var(--brand);
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 700;
+  line-height: 1.15;
   white-space: nowrap;
 }
 
@@ -2231,6 +2239,15 @@
   align-content: center;
   justify-items: center;
   gap: 5px;
+}
+
+.cook-whole-method-tags {
+  display: flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .cook-whole-step-number {
@@ -8217,6 +8234,12 @@ button {
     box-shadow: var(--web-shadow-card);
   }
 
+  .web-cook-whole-loading-board .web-skeleton {
+    border-radius: 13px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.14) 50%, rgba(255, 255, 255, 0.08) 100%);
+    background-size: 600px 100%;
+  }
+
   .web-cook-whole-top {
     display: grid;
     min-height: 70px;
@@ -8305,7 +8328,7 @@ button {
   }
 
   .web-cook-whole-grid {
-    grid-template-columns: minmax(260px, 0.38fr) minmax(0, 1fr);
+    grid-template-columns: minmax(300px, 0.4fr) minmax(0, 1fr);
     min-height: 0;
     gap: 14px;
     padding: 16px;
@@ -8330,17 +8353,17 @@ button {
   }
 
   .web-cook-whole-grid .cook-whole-ingredient {
-    min-height: 50px;
+    min-height: 56px;
     border-radius: 13px;
-    padding: 10px 11px;
+    padding: 10px 12px;
   }
 
   .web-cook-whole-grid .cook-whole-ingredient-name {
-    font-size: 14px;
+    font-size: 20px;
   }
 
   .web-cook-whole-grid .cook-whole-ingredient-amount {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
   }
 

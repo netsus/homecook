@@ -721,6 +721,20 @@ describe("CookModeScreen", () => {
     expect(GLOBAL_CSS).toContain(
       ".cook-whole-board-mobile .cook-whole-ingredient {\n  display: inline-flex;",
     );
+    expect(ruleBody(".cook-whole-ingredient-name")).toContain(
+      "font-size: 20px;",
+    );
+    expect(ruleBody(".cook-whole-ingredient-amount")).toContain(
+      "font-size: 20px;",
+    );
+    expect(ruleBody(".cook-whole-board-mobile .cook-whole-ingredient-name")).toContain(
+      "font-size: 20px;",
+    );
+    expect(ruleBody(".cook-whole-board-mobile .cook-whole-ingredient-amount")).toContain(
+      "font-size: 20px;",
+    );
+    expect(ruleBody(".cook-whole-method-tags")).toContain("display: flex;");
+    expect(ruleBody(".cook-whole-method-tags")).toContain("flex-wrap: wrap;");
   });
 
   it("defaults mobile cook mode to the service dark cooking board", async () => {
@@ -877,7 +891,47 @@ describe("CookModeScreen", () => {
     expect(methodBadgeStyle).toContain("var(--cook-stir)");
     expect(ruleBody(".cook-whole-step")).toContain("align-items: center;");
     expect(ruleBody(".cook-whole-step-marker")).toContain("align-content: center;");
+    expect(ruleBody(".cook-whole-method-tags")).toContain("justify-content: center;");
     expect(ruleBody(".cook-whole-method-tag")).toContain("justify-content: center;");
+  });
+
+  it("keeps multiple cooking method badges in one horizontal row before the step number", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({
+        recipe: {
+          ...buildCookModeData().recipe,
+          steps: [
+            buildStep({
+              cooking_method: {
+                code: "prep",
+                label: "손질",
+                color_key: "gray",
+              },
+              cooking_methods: [
+                { code: "prep", label: "손질", color_key: "gray" },
+                { code: "stir_fry", label: "볶기", color_key: "orange" },
+                { code: "boil", label: "끓이기", color_key: "red" },
+              ],
+            }),
+          ],
+        },
+      }),
+    );
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const marker = await screen.findByTestId("cook-mode-step-marker-1");
+    const methodGroup = marker.querySelector(".cook-whole-method-tags");
+
+    expect(methodGroup).toBeTruthy();
+    expect(marker.firstElementChild).toBe(methodGroup);
+    expect(methodGroup?.querySelectorAll(".cook-whole-method-tag")).toHaveLength(3);
+    expect(methodGroup?.textContent).toContain("손질");
+    expect(methodGroup?.textContent).toContain("볶기");
+    expect(methodGroup?.textContent).toContain("끓이기");
   });
 
   it("highlights cooking method words inside step instructions as bordered tags", async () => {
@@ -1522,7 +1576,7 @@ describe("CookModeScreen", () => {
     ).toBeNull();
   });
 
-  it("uses the Wave1 white surface for cook mode loading states", async () => {
+  it("matches mobile cook-mode loading to the whole-board cooking shell", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockReturnValue(new Promise(() => {}));
@@ -1531,10 +1585,15 @@ describe("CookModeScreen", () => {
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
     const screenRoot = await screen.findByTestId("cook-mode-screen");
-    expect(screenRoot.className).toContain("bg-[var(--wave1-surface)]");
+    const loading = await screen.findByTestId("cook-mode-loading");
+
+    expect(screenRoot.className).toContain("cook-mobile-whole-screen");
+    expect(screenRoot.className).toContain("h-dvh");
+    expect(loading.querySelector(".cook-whole-board-mobile")).toBeTruthy();
+    expect(loading.querySelectorAll(".cook-whole-panel")).toHaveLength(2);
   });
 
-  it("keeps desktop cook-mode loading inside the web cooking shell", async () => {
+  it("matches desktop cook-mode loading to the whole-board cooking shell", async () => {
     installMatchMedia(false);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockReturnValue(new Promise(() => {}));
@@ -1542,8 +1601,15 @@ describe("CookModeScreen", () => {
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
+    const screenRoot = await screen.findByTestId("cook-mode-screen");
     const loading = await screen.findByTestId("cook-mode-loading");
+
+    expect(screenRoot.className).toContain("web-cook-whole-screen");
     expect(loading.closest(".web-cooking-shell")).toBeTruthy();
-    expect(loading.closest(".web-cook-mode-state-card")).toBeTruthy();
+    expect(loading.closest(".web-cook-mode-state-card")).toBeNull();
+    expect(loading.className).toContain("web-cook-whole-board");
+    expect(loading.querySelector(".web-cook-whole-top")).toBeTruthy();
+    expect(loading.querySelector(".web-cook-whole-grid")).toBeTruthy();
+    expect(loading.querySelectorAll(".cook-whole-panel")).toHaveLength(2);
   });
 });
