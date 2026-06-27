@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveRecipeImage } from "@/lib/recipe-image";
+import { resolveRecipeImage, resolveRecipePhotoSet } from "@/lib/recipe-image";
 
 describe("recipe image resolver", () => {
   it("uses recipes.thumbnail_url when the recipe has a stored image", () => {
@@ -52,5 +52,22 @@ describe("recipe image resolver", () => {
         thumbnail_url: "   ",
       }),
     );
+  });
+
+  it("returns deduped recipe photos before falling back to generated placeholders", () => {
+    expect(
+      resolveRecipePhotoSet({
+        id: "public-recipe",
+        thumbnail_url: "https://cdn.example.com/primary.png",
+        photos: [
+          { url: "https://cdn.example.com/primary.png" },
+          { url: "https://cdn.example.com/alternate.png" },
+          { url: "   " },
+        ],
+      }),
+    ).toEqual([
+      "https://cdn.example.com/primary.png",
+      "https://cdn.example.com/alternate.png",
+    ]);
   });
 });

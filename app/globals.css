@@ -5244,9 +5244,19 @@ button {
     transition: transform 0.25s ease;
   }
 
+  .web-recipe-photo-main-contained span {
+    background-color: var(--web-image-placeholder);
+    background-repeat: no-repeat;
+    background-size: contain;
+  }
+
   .web-recipe-photo-main:hover span,
   .web-recipe-photo-thumb:hover > span:first-child {
     transform: scale(1.04);
+  }
+
+  .web-recipe-photo-main-contained:hover span {
+    transform: none;
   }
 
   .web-recipe-photo-side {

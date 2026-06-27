@@ -18,7 +18,7 @@ import {
 } from "@/lib/server/recipe-step-method-select";
 import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
-import type { RecipeDetail, RecipeUserStatus } from "@/types/recipe";
+import type { RecipeDetail, RecipePhoto, RecipePhotoRole, RecipeUserStatus } from "@/types/recipe";
 
 interface RouteContext {
   params: Promise<{
@@ -29,6 +29,115 @@ interface RouteContext {
 interface RecipeViewCountIncrementRow {
   id: string;
   view_count: number;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizePhotoRole(value: unknown): RecipePhotoRole {
+  if (value === "primary" || value === "alternate" || value === "step") {
+    return value;
+  }
+
+  return "unknown";
+}
+
+function normalizePositiveNumber(value: unknown) {
+  const numberValue = typeof value === "number" ? value : Number(value);
+
+  if (!Number.isFinite(numberValue) || numberValue <= 0) {
+    return null;
+  }
+
+  return numberValue;
+}
+
+function isUsableImageUrl(value: string, { allowDataUri = false } = {}) {
+  if (allowDataUri && value.startsWith("data:image/")) {
+    return true;
+  }
+
+  try {
+    const url = new URL(value);
+
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function buildRecipePhotos(
+  thumbnailUrl: string | null,
+  extractionMetaJson: unknown,
+): RecipePhoto[] {
+  const photos: RecipePhoto[] = [];
+  const indexesByUrl = new Map<string, number>();
+  const addPhoto = (photo: RecipePhoto) => {
+    const normalizedUrl = photo.url.trim();
+    if (!normalizedUrl) {
+      return;
+    }
+
+    const existingIndex = indexesByUrl.get(normalizedUrl);
+    if (existingIndex !== undefined) {
+      const existing = photos[existingIndex];
+      photos[existingIndex] = {
+        ...existing,
+        role: existing.role === "unknown" ? photo.role : existing.role,
+        label: existing.label ?? photo.label ?? null,
+        width: existing.width ?? photo.width ?? null,
+        height: existing.height ?? photo.height ?? null,
+      };
+      return;
+    }
+
+    indexesByUrl.set(normalizedUrl, photos.length);
+    photos.push({
+      ...photo,
+      url: normalizedUrl,
+      label: photo.label ?? null,
+      width: photo.width ?? null,
+      height: photo.height ?? null,
+    });
+  };
+
+  const normalizedThumbnailUrl = thumbnailUrl?.trim();
+  if (
+    normalizedThumbnailUrl &&
+    isUsableImageUrl(normalizedThumbnailUrl, { allowDataUri: true })
+  ) {
+    addPhoto({
+      url: normalizedThumbnailUrl,
+      role: "primary",
+    });
+  }
+
+  const candidates = isRecord(extractionMetaJson) &&
+    Array.isArray(extractionMetaJson.image_candidates)
+    ? extractionMetaJson.image_candidates
+    : [];
+
+  candidates.forEach((candidate) => {
+    if (!isRecord(candidate) || typeof candidate.url !== "string") {
+      return;
+    }
+
+    const url = candidate.url.trim();
+    if (!isUsableImageUrl(url)) {
+      return;
+    }
+
+    addPhoto({
+      url,
+      role: normalizePhotoRole(candidate.role),
+      label: typeof candidate.label === "string" ? candidate.label.trim() || null : null,
+      width: normalizePositiveNumber(candidate.width),
+      height: normalizePositiveNumber(candidate.height),
+    });
+  });
+
+  return photos;
 }
 
 async function incrementRecipeViewCountWithFallback(
@@ -111,7 +220,7 @@ export async function GET(request: Request, context: RouteContext) {
         .maybeSingle(),
       dbClient
         .from("recipe_sources")
-        .select("youtube_url, youtube_video_id")
+        .select("youtube_url, youtube_video_id, extraction_meta_json")
         .eq("recipe_id", id)
         .maybeSingle(),
       dbClient
@@ -226,6 +335,10 @@ export async function GET(request: Request, context: RouteContext) {
       title: recipeResult.data.title,
       description: recipeResult.data.description,
       thumbnail_url: recipeResult.data.thumbnail_url,
+      photos: buildRecipePhotos(
+        recipeResult.data.thumbnail_url,
+        sourceResult.data?.extraction_meta_json,
+      ),
       base_servings: recipeResult.data.base_servings,
       tags: recipeResult.data.tags ?? [],
       source_type: recipeResult.data.source_type,

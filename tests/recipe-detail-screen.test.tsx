@@ -1413,6 +1413,36 @@ describe("recipe detail screen", () => {
     expect(screen.queryByLabelText("레시피 사진 2 보기")).toBeNull();
   });
 
+  it("shows desktop public recipe photo candidates as a gallery", async () => {
+    installMatchMedia(true);
+    fetchJson.mockResolvedValue(
+      {
+        ...buildRecipeDetail({
+          source_type: "system",
+          thumbnail_url: "https://cdn.example.com/primary.png",
+        }),
+        photos: [
+          { url: "https://cdn.example.com/primary.png", role: "primary" },
+          { url: "https://cdn.example.com/alternate.png", role: "alternate" },
+          { url: "https://cdn.example.com/step-1.png", role: "step" },
+          { url: "https://cdn.example.com/step-2.png", role: "step" },
+        ],
+      } as RecipeDetail & { photos: Array<{ url: string; role: string }> },
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    expect(screen.getByRole("button", { name: "레시피 사진 크게 보기" })).toBeTruthy();
+    expect(screen.getByLabelText("레시피 사진 2 보기")).toBeTruthy();
+    expect(screen.getByLabelText("레시피 사진 3 보기")).toBeTruthy();
+    expect(screen.getByText("사진 모두 보기")).toBeTruthy();
+  });
+
   it("moves desktop engagement counts into the summary row and removes duplicate rail stats", async () => {
     installMatchMedia(true);
     const { container } = render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);

@@ -2384,7 +2384,7 @@ Implementation note:
 
 ### 49. 웹 요리모드 보드가 화면 높이를 충분히 활용하지 못하는 문제
 
-- Status: planned
+- Status: implemented in `fix/public-recipe-detail-gallery`
 - Severity: Medium
 - Area: UX / Cooking Mode / Web
 - Source: user manual review, cooking mode web
@@ -3630,6 +3630,13 @@ Implementation note:
   - `types/recipe.ts`
   - `lib/recipe-image.ts`
   - `components/recipe/recipe-detail-screen.tsx`
+- Implementation note:
+  - `GET /api/v1/recipes/{id}`가 `thumbnail_url`과 `recipe_sources.extraction_meta_json.image_candidates`를 중복 제거해 `photos[]`로 내려준다.
+  - 웹 상세는 후보가 여러 장이면 메인 이미지 + 우측 썸네일 + `사진 모두 보기` lightbox 진입점을 보여주고, 공공 레시피 메인 이미지는 `contain`으로 비율을 보존한다.
+  - 앱 상세는 후보가 여러 장이면 히어로 아래 가로 썸네일 rail과 `사진 모두 보기` 버튼을 보여준다.
+  - Verified: `CI=true corepack pnpm lint`
+  - Verified: `CI=true corepack pnpm typecheck`
+  - Verified: `CI=true corepack pnpm exec vitest run tests/recipe-image.test.ts tests/recipe-api-contracts.test.ts tests/recipe-detail-screen.test.tsx`
   - `app/globals.css`
   - `tests/recipe-detail-route.test.ts`
   - `tests/recipe-detail-screen.test.tsx`

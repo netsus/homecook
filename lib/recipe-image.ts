@@ -22,6 +22,9 @@ interface RecipeImageInput {
   recipe_id?: string | null;
   recipe_thumbnail_url?: string | null;
   thumbnail_url?: string | null;
+  photos?: Array<{
+    url?: string | null;
+  } | null> | null;
 }
 
 function hashId(id: string): number {
@@ -45,4 +48,30 @@ export function resolveRecipeImage(recipe: RecipeImageInput): string {
   const stableId = recipe.id ?? recipe.recipe_id;
   const index = stableId ? hashId(stableId) : 0;
   return RECIPE_FALLBACK_IMAGES[index % RECIPE_FALLBACK_IMAGES.length]!;
+}
+
+export function resolveRecipePhotoSet(recipe: RecipeImageInput): string[] {
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  const addUrl = (value?: string | null) => {
+    const url = value?.trim();
+    if (!url || seen.has(url)) {
+      return;
+    }
+
+    seen.add(url);
+    urls.push(url);
+  };
+
+  addUrl(recipe.thumbnail_url);
+  addUrl(recipe.recipe_thumbnail_url);
+  recipe.photos?.forEach((photo) => {
+    addUrl(photo?.url);
+  });
+
+  if (urls.length > 0) {
+    return urls;
+  }
+
+  return [resolveRecipeImage(recipe)];
 }

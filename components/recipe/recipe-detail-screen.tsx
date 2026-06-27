@@ -40,7 +40,7 @@ import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { getCookingMethodColor, getCookingMethodTint } from "@/lib/cooking-method-colors";
 import { getCookingMethodAssistiveLabel } from "@/lib/cooking-method-taxonomy";
 import { formatHeatLevelLabel } from "@/lib/heat-level";
-import { resolveRecipeImage } from "@/lib/recipe-image";
+import { resolveRecipeImage, resolveRecipePhotoSet } from "@/lib/recipe-image";
 import { fetchJson, isApiFetchError } from "@/lib/api/fetch-json";
 import { fetchPlanner } from "@/lib/api/planner";
 import {
@@ -874,11 +874,14 @@ export function RecipeDetailScreen({
   const cookCountLabel = formatRecipeHeroCount(recipe.cook_count);
   const heroEmoji = getRecipeHeroEmoji(recipe);
   const heroBackground = getRecipeHeroBackground(recipe);
-  const heroImageSrc = resolveRecipeImage(recipe);
+  const photoSet = resolveRecipePhotoSet(recipe);
+  const heroImageSrc = photoSet[0] ?? resolveRecipeImage(recipe);
+  const shouldContainHeroImage = shouldContainRecipePhoto(recipe);
   const mobileHeroStyle = {
     backgroundImage: `linear-gradient(var(--foreground-alpha-04),var(--foreground-alpha-32)),url("${heroImageSrc}")`,
     backgroundPosition: "center",
-    backgroundSize: "cover",
+    backgroundRepeat: "no-repeat",
+    backgroundSize: shouldContainHeroImage ? "contain" : "cover",
   } as const;
   const minutesLabel = getRecipeMinutesLabel(recipe);
   const displayTags = getVisibleRecipeTags(recipe);
@@ -1313,6 +1316,37 @@ export function RecipeDetailScreen({
           </div>
         </section>
 
+        {photoSet.length > 1 ? (
+          <div
+            aria-label="레시피 사진 목록"
+            className="flex gap-2 overflow-x-auto border-b border-[var(--line)] bg-[var(--surface)] px-5 py-3"
+          >
+            {photoSet.slice(0, 6).map((photo, index) => (
+              <button
+                aria-label={`레시피 사진 ${index + 1} 보기`}
+                className="h-16 w-20 shrink-0 overflow-hidden rounded-[10px] border border-[var(--line)] bg-[var(--surface-fill)] bg-center bg-cover"
+                key={photo}
+                onClick={() => {
+                  setLightboxIndex(index);
+                  setIsLightboxOpen(true);
+                }}
+                style={{ backgroundImage: `url(${photo})` }}
+                type="button"
+              />
+            ))}
+            <button
+              className="h-16 min-w-[88px] shrink-0 rounded-[10px] border border-[var(--line)] bg-[var(--surface-fill)] px-3 text-[12px] font-bold text-[var(--text-2)]"
+              onClick={() => {
+                setLightboxIndex(0);
+                setIsLightboxOpen(true);
+              }}
+              type="button"
+            >
+              사진 모두 보기
+            </button>
+          </div>
+        ) : null}
+
         <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] p-5">
           {recipe.source_type === "youtube" ? (
             <p className="mb-2 text-[12px] text-[var(--text-3)]" data-testid="recipe-youtube-source-note">
@@ -1661,7 +1695,7 @@ export function RecipeDetailScreen({
         isOpen={isLightboxOpen}
         onClose={() => setIsLightboxOpen(false)}
         onNavigate={(nextIndex) => setLightboxIndex(nextIndex)}
-        photos={getRecipePhotoSet(recipe)}
+        photos={photoSet}
         title={recipe.title}
       />
       {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
@@ -1701,10 +1735,13 @@ function RecipeDetailWebView({
   scaledIngredients: Array<RecipeIngredient & { scaledText: string }>;
   selectedServings: number;
 }) {
-  const photos = getRecipePhotoSet(recipe);
+  const photos = resolveRecipePhotoSet(recipe);
   const photoGridClassName = photos.length > 1
     ? "web-recipe-photos"
     : "web-recipe-photos web-recipe-photos-single";
+  const mainPhotoClassName = shouldContainRecipePhoto(recipe)
+    ? "web-recipe-photo-main web-recipe-photo-main-contained"
+    : "web-recipe-photo-main";
   const sourceLabel = formatRecipeSourceLabel(recipe.source_type);
   const visibleTags = getVisibleRecipeTags(recipe);
   const youtubeSourceHref = getYoutubeSourceHref(recipe);
@@ -1731,7 +1768,7 @@ function RecipeDetailWebView({
             <div className={photoGridClassName}>
               <button
                 aria-label="레시피 사진 크게 보기"
-                className="web-recipe-photo-main"
+                className={mainPhotoClassName}
                 onClick={() => onOpenLightbox(0)}
                 type="button"
               >
@@ -1751,7 +1788,7 @@ function RecipeDetailWebView({
                       {index === 2 ? (
                         <span className="web-recipe-photo-more">
                           <GridIcon />
-                          사진 전체
+                          사진 모두 보기
                         </span>
                       ) : null}
                     </button>
@@ -2039,10 +2076,8 @@ function RecipeWebProfileButton() {
   );
 }
 
-function getRecipePhotoSet(recipe: RecipeDetail) {
-  // Single shared resolver (thumbnail column first, shared deterministic
-  // fallback) so home card / detail / planner-add modal show the same image.
-  return [resolveRecipeImage(recipe)];
+function shouldContainRecipePhoto(recipe: RecipeDetail) {
+  return recipe.source_type === "system" && Boolean(recipe.photos?.length);
 }
 
 function getYoutubeSourceHref(recipe: RecipeDetail) {
