@@ -3092,12 +3092,6 @@ function MypageLoadingSkeleton({
             />
           </div>
         </div>
-        <p
-          className="px-5 pt-3 text-[13px] font-semibold text-[var(--text-3)]"
-          role="status"
-        >
-          내 정보와 레시피북을 불러오는 중이에요.
-        </p>
         {surface === "home" ? <MypageHomeLoadingBody /> : null}
         {surface === "recipebook" ? <MypageListLoadingBody kind="recipebook" /> : null}
         {surface === "shopping" ? <MypageListLoadingBody kind="shopping" /> : null}
@@ -3368,9 +3362,6 @@ function MypageDesktopLoadingShell() {
       />
       <div className="web-mypage-screen" data-testid="mypage-skeleton">
         <h1 className="sr-only">마이페이지</h1>
-        <p className="web-section-meta" role="status">
-          내 정보와 레시피북을 불러오는 중이에요.
-        </p>
         <WebCard className="web-mypage-profile">
           <div
             className="grid gap-4"

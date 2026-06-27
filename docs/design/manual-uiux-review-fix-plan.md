@@ -3678,7 +3678,7 @@ Implementation note:
 
 ### 84. 웹/앱 전역 스켈레톤이 실제 화면과 맞지 않고 여러 단계로 바뀌어 화면이 바빠 보이는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: High
 - Area: UX / Loading States / Skeleton System
 - Source: user manual review, screenshots for mypage loading
@@ -3698,6 +3698,17 @@ Implementation note:
   - 같은 화면에서 loading component가 2번 이상 교체되는 곳을 제거한다.
   - skeleton에는 안내 문구를 최소화하고, 실제 최종 카드/탭/리스트 구조와 같은 높이/위치를 맞춘다.
   - 특히 마이페이지는 상단 프로필/요약/탭/컨텐츠 skeleton을 final layout과 맞추고 텍스트 안내를 제거한다.
+- Implementation notes:
+  - 마이페이지 웹/앱 full-page skeleton에서 `내 정보와 레시피북을 불러오는 중이에요.` visible 문구를 제거했다.
+  - 마이페이지 loading 테스트에 해당 문구가 다시 보이지 않는 회귀 조건을 추가했다.
+  - 전수조사 체크:
+    - 마이페이지: top profile/summary/tabs/content skeleton 1종 유지, visible loading copy 제거.
+    - 환경설정: `SettingsMobileLoadingShell` / `SettingsDesktopLoadingShell`가 최종 설정 섹션 구조와 같은 shell 안에서 렌더링되고 기존 테스트가 있다.
+    - 요리모드: 94번에서 `MobileCookModeLoadingBoard` / `WebCookModeLoadingBoard`로 실제 요리모드 board형 skeleton을 적용했다.
+    - 플래너/끼니: 주간 카드 grid와 식사 카드형 skeleton 테스트가 있다.
+    - 장보기 상세: progress 값을 노출하지 않는 skeleton이 이미 있고 관련 테스트가 있다.
+    - 레시피 상세/레시피북 상세: 상세 shell 내부 skeleton 테스트가 있다.
+  - 팬트리/장보기 flow의 인증 확인 copy와 성능성 loading은 각각 100번 이후 항목에서 별도 개선 대상으로 남긴다.
 - Acceptance criteria:
   - 웹/앱 마이페이지 진입 시 skeleton이 1종류로 안정적으로 보인다.
   - `내 정보와 레시피북을 불러오는 중이에요.` 문구가 보이지 않는다.

@@ -1345,6 +1345,7 @@ describe("MypageScreen", () => {
     const { container } = render(<MypageScreen initialAuthenticated />);
 
     const skeleton = screen.getByTestId("mypage-skeleton");
+    expect(screen.queryByText("내 정보와 레시피북을 불러오는 중이에요.")).toBeNull();
     expect(within(skeleton).getByTestId("mypage-loading-growth-profile")).toBeTruthy();
     expect(within(skeleton).getAllByTestId("mypage-loading-growth-action")).toHaveLength(3);
     expect(within(skeleton).getByTestId("mypage-loading-progress-meter")).toBeTruthy();
@@ -1366,6 +1367,7 @@ describe("MypageScreen", () => {
     render(<MypageScreen initialAuthenticated />);
 
     expect(screen.getByTestId("mypage-mobile-loading")).toBeTruthy();
+    expect(screen.queryByText("내 정보와 레시피북을 불러오는 중이에요.")).toBeNull();
     expect(screen.getByTestId("mypage-mobile-loading-growth-profile")).toBeTruthy();
     expect(screen.getAllByTestId("mypage-mobile-loading-growth-action")).toHaveLength(3);
     expect(screen.getByTestId("mypage-mobile-loading-progress-meter")).toBeTruthy();
