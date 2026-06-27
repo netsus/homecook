@@ -390,7 +390,7 @@ export function getMockRecipeThemes(): RecipeThemesData {
     themes: [
       {
         id: "popular",
-        title: "이번 주 인기 레시피",
+        title: "조회 많은 레시피",
         recipes: [buildRecipeCardFromState(getQaFixtureState())],
       },
     ],

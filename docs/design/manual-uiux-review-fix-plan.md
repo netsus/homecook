@@ -3845,7 +3845,7 @@ Implementation note:
 
 ### 89. 홈 `이번 주 인기 테마`의 크기와 분류 기준이 현재 데이터와 맞지 않는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: High
 - Area: UX / Home / Recipe Themes
 - Source: user manual review
@@ -3878,6 +3878,14 @@ Implementation note:
 - Verification:
   - theme query unit tests.
   - desktop/mobile home screenshot review.
+- Implementation:
+  - 홈 테마 섹션 문구를 `이번 주 추천 테마`로 바꿔, 섹션 전체가 popularity-only처럼 보이지 않게 했다.
+  - 기본 `popular` 테마 title을 `조회 많은 레시피`로 바꿔 정렬 기준을 드러냈다.
+  - 저장순과 중복되는 `많이 저장한 레시피`, 근거가 약한 `실패 걱정 없는 메뉴`, `밥상 든든한 메인`, `불 없이 달달하게` 정적 테마를 제거했다.
+  - 현재 카드 데이터로 판정 가능한 `냉장고 재료 쓰기`, `국물 있는 한 끼`, `밥 한 그릇 메뉴`, `과일 디저트` 정적 테마로 교체했다.
+  - 모바일 테마 카드는 폭을 줄이고 높이를 키웠고, 웹 사이드 테마 카드는 비율/최소 높이/제목 크기를 키웠다.
+  - 최신 API 문서 `docs/api문서-v1.2.20.md`의 `/recipes/themes` 샘플 title을 새 기준에 맞췄다.
+  - Verified: `CI=true corepack pnpm exec vitest run tests/recipe-themes.test.ts tests/recipe-api-contracts.test.ts tests/home-screen.test.tsx`
 
 ### 90. 레시피 저장 모달을 열 때 로딩이 오래 걸리는 문제
 

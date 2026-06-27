@@ -988,11 +988,17 @@ describe("recipe API contracts", () => {
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.error).toBeNull();
-    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("popular");
-    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("youtube");
-    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("saved-favorites");
-    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("korean");
-    expect(body.data.themes.map((theme: { id: string }) => theme.id)).toContain("dessert");
+    const themeIds = body.data.themes.map((theme: { id: string }) => theme.id);
+    expect(themeIds).toContain("popular");
+    expect(themeIds).toContain("youtube");
+    expect(themeIds).toContain("soup-stew");
+    expect(themeIds).toContain("fruit-dessert");
+    expect(themeIds).toContain("korean");
+    expect(themeIds).toContain("dessert");
+    expect(themeIds).not.toContain("saved-favorites");
+    const popularTheme = body.data.themes.find((theme: { id: string }) => theme.id === "popular");
+    expect(popularTheme.title).toBe("조회 많은 레시피");
+    expect(popularTheme.recipes[0]).toMatchObject({ id: "recipe-1" });
     expect(body.data.themes.find((theme: { id: string }) => theme.id === "youtube")).toMatchObject({
       title: "유튜브에서 가져온 레시피",
       recipes: [
@@ -1001,11 +1007,19 @@ describe("recipe API contracts", () => {
         },
       ],
     });
-    expect(body.data.themes.find((theme: { id: string }) => theme.id === "saved-favorites")).toMatchObject({
-      title: "많이 저장한 레시피",
+    expect(body.data.themes.find((theme: { id: string }) => theme.id === "soup-stew")).toMatchObject({
+      title: "국물 있는 한 끼",
       recipes: [
         {
           id: "recipe-1",
+        },
+      ],
+    });
+    expect(body.data.themes.find((theme: { id: string }) => theme.id === "fruit-dessert")).toMatchObject({
+      title: "과일 디저트",
+      recipes: [
+        {
+          id: "recipe-2",
         },
       ],
     });

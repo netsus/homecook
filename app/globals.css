@@ -1491,7 +1491,7 @@
 }
 
 .home-mobile-theme-section {
-  min-height: 236px;
+  min-height: 258px;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   background: var(--surface-fill);
@@ -1512,7 +1512,7 @@
 
 .home-mobile-theme-rail {
   display: flex;
-  min-height: 158px;
+  min-height: 178px;
   gap: 12px;
   overflow-x: auto;
   padding: 0 20px 2px;
@@ -1544,8 +1544,8 @@
 
 .home-mobile-theme-card {
   position: relative;
-  width: min(76vw, 320px);
-  height: 154px;
+  width: min(64vw, 280px);
+  height: 174px;
   flex: 0 0 auto;
   overflow: hidden;
   scroll-snap-align: start;
@@ -5132,30 +5132,30 @@ button {
   }
 
   .web-theme-rail-side .web-theme-card {
-    aspect-ratio: 16 / 9;
-    min-height: 0;
+    aspect-ratio: 4 / 3;
+    min-height: 118px;
   }
 
   .web-home-aside-top .web-theme-rail-side .web-theme-card {
-    min-height: 0;
+    min-height: 118px;
   }
 
   .web-home-aside-top .web-theme-card-overlay {
     gap: 3px;
-    padding: 12px;
+    padding: 14px;
   }
 
   .web-home-aside-top .web-theme-card-title {
     display: -webkit-box;
     overflow: hidden;
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.3;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
 
   .web-home-aside-top .web-theme-card-count {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .web-all-recipes {
@@ -12573,7 +12573,7 @@ button {
     }
 
     .web-theme-rail-side .web-theme-card {
-      min-height: 128px;
+      min-height: 148px;
     }
 
     .web-home-grid {
