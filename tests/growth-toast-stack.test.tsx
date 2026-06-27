@@ -7,11 +7,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
 import { HOMECOOK_GAMIFICATION_REFRESH_EVENT } from "@/lib/gamification-events";
 
+const mockNextNavigation = vi.hoisted(() => ({
+  pathname: "/",
+}));
 const mockFetchUserGamification = vi.fn();
 const mockFetchArchive = vi.fn();
 const mockMarkSeen = vi.fn();
 let desktopMatches = false;
 let mediaListeners: Array<() => void> = [];
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => mockNextNavigation.pathname,
+}));
 
 vi.mock("@/lib/api/user-gamification", () => ({
   fetchUserGamificationArchive: (...args: unknown[]) => mockFetchArchive(...args),
@@ -184,6 +191,7 @@ describe("GrowthToastStack", () => {
     mockMarkSeen.mockReset();
     mockFetchArchive.mockResolvedValue({ items: [], next_cursor: null, has_next: false });
     mockMarkSeen.mockResolvedValue({ seen_notification_ids: [] });
+    mockNextNavigation.pathname = "/";
     setDesktop(false);
   });
 
@@ -244,6 +252,32 @@ describe("GrowthToastStack", () => {
     expect(toast.textContent).toContain("튜토리얼 안내");
     expect(toast.textContent).toContain("마음에 드는 레시피 저장하기");
     expect(toast.textContent).toContain("레시피의 저장 버튼을 눌러 레시피를 저장해보세요.");
+  });
+
+  it("delays the first tutorial quest toast until the nickname onboarding route has changed", async () => {
+    const firstTutorialGamification = makeGamificationWithTutorialStep({
+      achievementKey: "tutorial_recipe_saved",
+      title: "첫 레시피 저장",
+    });
+    mockNextNavigation.pathname = "/onboarding/nickname";
+    mockFetchUserGamification.mockResolvedValue(firstTutorialGamification);
+
+    const { rerender } = render(<GrowthToastStack />);
+
+    await waitFor(() => {
+      expect(mockFetchUserGamification).toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId("growth-toast")).toBeNull();
+
+    mockFetchUserGamification.mockResolvedValue(firstTutorialGamification);
+    mockNextNavigation.pathname = "/";
+    rerender(<GrowthToastStack />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("growth-toast").textContent).toContain(
+        "마음에 드는 레시피 저장하기",
+      );
+    });
   });
 
   it("shows the next tutorial quest as a toast after the prior tutorial step is completed", async () => {

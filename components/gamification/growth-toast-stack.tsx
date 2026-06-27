@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { MypageGrowthDetailDialog } from "@/components/mypage/mypage-growth-detail-dialog";
@@ -267,13 +268,22 @@ function dedupeById(views: ToastView[]): ToastView[] {
 
 // Use priority_unseen first, then degrade to legacy unseen. Filter silent rows
 // defensively even though the server should already exclude them.
-function selectToastSource(data: UserGamificationData): UserGamificationNotificationData[] {
+function isNicknameOnboardingPath(pathname: string | null) {
+  return pathname === "/onboarding/nickname";
+}
+
+function selectToastSource(
+  data: UserGamificationData,
+  { includeTutorialGuide = true }: { includeTutorialGuide?: boolean } = {},
+): UserGamificationNotificationData[] {
   const priority = data.notifications.priority_unseen;
   const sourceNotifications =
     Array.isArray(priority) && priority.length > 0
       ? priority
       : (data.notifications.unseen ?? []);
-  const tutorialGuide = createTutorialGuideNotification(data);
+  const tutorialGuide = includeTutorialGuide
+    ? createTutorialGuideNotification(data)
+    : null;
   const source = tutorialGuide
     ? [tutorialGuide, ...sourceNotifications]
     : sourceNotifications;
@@ -368,6 +378,8 @@ function GrowthToastVisual({ tone, visual }: { tone: ToastTone; visual: ToastVis
 }
 
 export function GrowthToastStack() {
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
   const [views, setViews] = useState<ToastView[]>([]);
   const [gamification, setGamification] = useState<UserGamificationData | null>(null);
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
@@ -388,6 +400,10 @@ export function GrowthToastStack() {
     mql.addEventListener("change", apply);
     return () => mql.removeEventListener("change", apply);
   }, []);
+
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   const markSeen = useCallback((ids: string[]) => {
     if (ids.length === 0) return;
@@ -417,7 +433,9 @@ export function GrowthToastStack() {
     try {
       const nextGamification = await fetchUserGamification();
       setGamification(nextGamification);
-      const source = selectToastSource(nextGamification);
+      const source = selectToastSource(nextGamification, {
+        includeTutorialGuide: !isNicknameOnboardingPath(pathnameRef.current),
+      });
       if (source.length === 0) {
         return;
       }
@@ -440,6 +458,9 @@ export function GrowthToastStack() {
 
   useEffect(() => {
     void refresh();
+  }, [pathname, refresh]);
+
+  useEffect(() => {
     window.addEventListener(HOMECOOK_GAMIFICATION_REFRESH_EVENT, refresh);
     return () => {
       window.removeEventListener(HOMECOOK_GAMIFICATION_REFRESH_EVENT, refresh);
