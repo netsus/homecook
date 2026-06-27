@@ -303,7 +303,7 @@ describe("home screen", () => {
     expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
     expect(screen.queryByRole("button", { name: "양파" })).toBeNull();
     expect(
-      screen.getByRole("heading", { level: 2, name: "이번 주 인기 테마" }).className,
+      screen.getByRole("heading", { level: 2, name: "이번 주 추천 테마" }).className,
     ).toContain("home-mobile-theme-title");
     expect(ruleBody(".home-mobile-theme-title")).toContain("color: var(--foreground);");
     expect(screen.queryByRole("link", { name: /이번 주 식단 플래너/ })).toBeNull();
@@ -324,7 +324,7 @@ describe("home screen", () => {
       screen.getByRole("heading", { level: 2, name: "모든 레시피" }).className,
     ).toContain("text-[var(--foreground)]");
     const quickLinks = screen.getByRole("navigation", { name: "홈 빠른 이동" });
-    const themeHeading = screen.getByRole("heading", { level: 2, name: "이번 주 인기 테마" });
+    const themeHeading = screen.getByRole("heading", { level: 2, name: "이번 주 추천 테마" });
     const recipeHeading = screen.getByRole("heading", { level: 2, name: "모든 레시피" });
 
     expect(
@@ -353,17 +353,23 @@ describe("home screen", () => {
 
   it("reserves mobile loading rail heights to avoid Lighthouse layout shift", () => {
     expect(ruleBody(".home-mobile-tag-rail")).toContain("min-height: 40px;");
-    expect(ruleBody(".home-mobile-theme-section")).toContain("min-height: 236px;");
-    expect(ruleBody(".home-mobile-theme-rail")).toContain("min-height: 158px;");
+    expect(ruleBody(".home-mobile-theme-section")).toContain("min-height: 258px;");
+    expect(ruleBody(".home-mobile-theme-rail")).toContain("min-height: 178px;");
   });
 
-  it("styles the mobile popular theme rail as a distinct full-width section", () => {
+  it("styles the mobile recommended theme rail as a distinct full-width section", () => {
     expect(ruleBody(".home-mobile-theme-section-embedded")).toContain("margin: 8px -16px 10px;");
     expect(ruleBody(".home-mobile-theme-section")).toContain("border-top: 1px solid var(--line);");
     expect(ruleBody(".home-mobile-theme-section")).toContain("border-bottom: 1px solid var(--line);");
     expect(ruleBody(".home-mobile-theme-section")).toContain("background: var(--surface-fill);");
-    expect(ruleBody(".home-mobile-theme-card")).toContain("width: min(76vw, 320px);");
-    expect(ruleBody(".home-mobile-theme-card")).toContain("height: 154px;");
+    expect(ruleBody(".home-mobile-theme-card")).toContain("width: min(64vw, 280px);");
+    expect(ruleBody(".home-mobile-theme-card")).toContain("height: 174px;");
+  });
+
+  it("makes the web weekly theme cards large enough to read in the side rail", () => {
+    expect(ruleBody(".web-theme-rail-side .web-theme-card")).toContain("aspect-ratio: 4 / 3;");
+    expect(ruleBody(".web-theme-rail-side .web-theme-card")).toContain("min-height: 118px;");
+    expect(ruleBody(".web-home-aside-top .web-theme-card-title")).toContain("font-size: 15px;");
   });
 
   it("moves the web recommended tags and weekly themes up beside the search row", async () => {
@@ -380,7 +386,7 @@ describe("home screen", () => {
     expect(searchLayout.contains(sideRail)).toBe(false);
     expect(contentGrid?.contains(sideRail)).toBe(true);
     expect(screen.getAllByRole("heading", { level: 2, name: "추천 태그" })).toHaveLength(1);
-    expect(screen.getAllByRole("heading", { level: 2, name: "이번 주 인기 테마" })).toHaveLength(1);
+    expect(screen.getAllByRole("heading", { level: 2, name: "이번 주 추천 테마" })).toHaveLength(1);
     expect(ruleBody(".web-discovery-search-layout")).toContain(
       "grid-template-columns: minmax(0, 880px);",
     );
@@ -647,7 +653,7 @@ describe("home screen", () => {
     });
     const themeHeading = screen.getByRole("heading", {
       level: 2,
-      name: "이번 주 인기 테마",
+      name: "이번 주 추천 테마",
     });
     const fifthRecipe = screen.getByRole("heading", {
       level: 3,
@@ -893,7 +899,7 @@ describe("home screen", () => {
     await user.type(await screen.findByPlaceholderText("레시피 제목 검색"), "김치");
 
     expect(screen.queryByRole("navigation", { name: "홈 빠른 이동" })).toBeNull();
-    expect(screen.queryByRole("heading", { level: 2, name: "이번 주 인기 테마" })).toBeNull();
+    expect(screen.queryByRole("heading", { level: 2, name: "이번 주 추천 테마" })).toBeNull();
     await waitFor(() => {
       expect(
         screen.getAllByRole("status").some((status) =>
@@ -1095,12 +1101,12 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     const themeButton = await screen.findByRole("button", {
-      name: /이번 주 인기 레시피/,
+      name: /조회 많은 레시피/,
     });
 
     await user.click(themeButton);
     expect(
-      screen.getByRole("heading", { level: 2, name: "이번 주 인기 레시피" }),
+      screen.getByRole("heading", { level: 2, name: "조회 많은 레시피" }),
     ).toBeTruthy();
 
     await user.click(themeButton);
@@ -1316,7 +1322,7 @@ describe("home screen", () => {
 
     await screen.findByRole("heading", {
       level: 2,
-      name: "이번 주 인기 테마",
+      name: "이번 주 추천 테마",
     });
 
     const initialThemeCalls = fetchJson.mock.calls.filter(([input]) => {
@@ -1327,7 +1333,7 @@ describe("home screen", () => {
     await user.click(screen.getByText("저장순"));
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 2, name: "이번 주 인기 테마" })).toBeTruthy();
+      expect(screen.getByRole("heading", { level: 2, name: "이번 주 추천 테마" })).toBeTruthy();
       expect(
         fetchJson.mock.calls.some(([input]) => {
           if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
@@ -1456,7 +1462,7 @@ describe("home screen", () => {
     ).toBeTruthy();
     const themeHeading = screen.getByRole("heading", {
       level: 2,
-      name: "이번 주 인기 테마",
+      name: "이번 주 추천 테마",
     });
     const errorHeading = screen.getByRole("heading", {
       name: "레시피를 불러오지 못했어요",

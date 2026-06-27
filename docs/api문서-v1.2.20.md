@@ -489,7 +489,7 @@ GET /recipes/themes
   "themes": [
     {
       "id": "popular",
-      "title": "이번 주 인기 레시피",
+      "title": "조회 많은 레시피",
       "recipes": [
         /* 레시피 카드 배열 (최대 10개) */
       ]
@@ -498,7 +498,7 @@ GET /recipes/themes
 }
 ```
 
-> 테마는 `popular`를 기본으로 포함하고, `theme_eligible=true`인 public/approved semantic/source tag 기반 분류 결과가 있으면 `korean-home`, `quick-meal`, `dessert`, `youtube` 같은 추가 테마를 함께 반환한다.
+> 테마는 조회수 정렬 기반 `popular`를 기본으로 포함하고, `theme_eligible=true`인 public/approved semantic/source tag 기반 분류 결과가 있으면 `korean-home`, `quick-meal`, `dessert`, `youtube` 같은 추가 테마를 함께 반환한다.
 > 사용자 자유 입력 tag는 표시/검색 가능하더라도 `theme_eligible=true`와 `review_status='approved'`가 되기 전에는 HOME theme seed로 사용하지 않는다.
 > theme가 특정 tag에서 파생된 경우 응답 item에 `tag_key`와 `tag_label`을 additive로 포함할 수 있다.
 

@@ -1432,7 +1432,7 @@ function HomeWebSideRail({
       {showDiscoveryShortcuts && themes.length > 0 ? (
         <section className="web-home-aside-section">
           <div className="web-home-aside-head">
-            <h2>이번 주 인기 테마</h2>
+            <h2>이번 주 추천 테마</h2>
             {selectedTheme ? (
               <WebButton
                 onClick={() => onSelectTheme(selectedTheme.id)}
@@ -1829,14 +1829,14 @@ function ThemeCarousel({
 }) {
   return (
     <section
-      aria-label="이번 주 인기 테마"
+      aria-label="이번 주 추천 테마"
       className={[
         "home-mobile-theme-section",
         embedded ? "home-mobile-theme-section-embedded" : "",
       ].join(" ")}
     >
       <div className="home-mobile-theme-header">
-        <h2 className="home-mobile-theme-title">이번 주 인기 테마</h2>
+        <h2 className="home-mobile-theme-title">이번 주 추천 테마</h2>
         {activeThemeId ? (
           <button
             className="home-mobile-theme-reset"
@@ -1954,7 +1954,7 @@ function WebBookmarkIcon({ filled = false }: { filled?: boolean }) {
 function ThemeCarouselSkeleton() {
   return (
     <section
-      aria-label="이번 주 인기 테마 불러오는 중"
+      aria-label="이번 주 추천 테마 불러오는 중"
       className="home-mobile-theme-section"
     >
       <div className="home-mobile-theme-header">
