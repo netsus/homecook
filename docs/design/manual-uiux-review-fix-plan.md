@@ -3920,7 +3920,7 @@ Implementation note:
 
 ### 91. 앱 레시피상세 리뷰탭이 미개발 기능을 빈 리뷰처럼 안내하는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: Medium
 - Area: UX / Recipe Detail / Reviews
 - Source: user manual review
@@ -3939,7 +3939,10 @@ Implementation note:
 - Likely implementation target:
   - `components/recipe/recipe-detail-screen.tsx`
 - Verification:
-  - mobile detail screenshot or component test.
+  - `CI=true corepack pnpm exec vitest run tests/recipe-detail-screen.test.tsx`
+- Implementation notes:
+  - 앱 레시피상세 리뷰탭의 빈 리뷰 문구를 미개발 기능 안내 copy로 교체했다.
+  - 리뷰 작성 CTA는 현재 없어서 추가로 숨길 대상은 없다.
 
 ### 92. 웹 장보기 화면 우측상단에 프로필요약 진입점이 없는 문제
 

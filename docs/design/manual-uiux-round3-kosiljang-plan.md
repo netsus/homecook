@@ -176,7 +176,7 @@ Detailed entries live in `docs/design/manual-uiux-review-fix-plan.md`.
 | 88 | 프로필요약 튜토리얼 안내 섹션에서 제목과 안내 문구가 구분되지 않는 문제 | implemented |
 | 89 | 홈 `이번 주 인기 테마`의 크기와 분류 기준이 현재 데이터와 맞지 않는 문제 | implemented |
 | 90 | 레시피 저장 모달을 열 때 로딩이 오래 걸리는 문제 | implemented |
-| 91 | 앱 레시피상세 리뷰탭이 미개발 기능을 빈 리뷰처럼 안내하는 문제 | planned |
+| 91 | 앱 레시피상세 리뷰탭이 미개발 기능을 빈 리뷰처럼 안내하는 문제 | implemented |
 | 92 | 웹 장보기 화면 우측상단에 프로필요약 진입점이 없는 문제 | planned |
 | 93 | 우측상단 프로필이미지 클릭이 아직 마이페이지 이동으로 남아 있는 문제 | planned |
 | 94 | 웹/앱 요리모드 스켈레톤이 실제 요리모드 화면과 맞지 않는 문제 | implemented in `fix/cook-mode-legibility-polish` |

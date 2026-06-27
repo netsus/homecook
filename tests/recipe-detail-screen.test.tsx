@@ -404,6 +404,20 @@ describe("recipe detail screen", () => {
     ).toContain("min-h-[var(--control-height-md)]");
   });
 
+  it("labels the undeveloped review tab as a coming-soon feature", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    await userEvent.click(screen.getByRole("tab", { name: "리뷰" }));
+
+    expect(screen.getByText("리뷰 기능을 준비 중이에요.")).toBeTruthy();
+    expect(screen.queryByText("아직 등록된 리뷰가 없어요.")).toBeNull();
+  });
+
   it("marks TO_TASTE ingredients with a readable helper badge", async () => {
     fetchJson.mockResolvedValue(
       buildRecipeDetail({
