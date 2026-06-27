@@ -1119,7 +1119,7 @@ function NotificationPanel({ data }: { data: UserGamificationData | null }) {
             return (
             <li
               className={[
-                "flex gap-3 rounded-[var(--radius-md)] border px-3 py-3 text-[var(--foreground)]",
+                "flex gap-3 rounded-[var(--radius-md)] border px-3.5 py-3.5 text-[var(--foreground)]",
                 notificationToneClass(tone),
               ].join(" ")}
               data-testid={`mypage-notification-item-${item.id}`}
@@ -1129,17 +1129,29 @@ function NotificationPanel({ data }: { data: UserGamificationData | null }) {
               <NotificationVisual item={item} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded-full bg-[var(--surface-alpha-70)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--text-2)]">
+                  <span
+                    className="rounded-full bg-[var(--surface-alpha-70)] px-2 py-0.5 text-[11px] font-extrabold text-[var(--text-2)]"
+                    data-testid={`mypage-notification-label-${item.id}`}
+                  >
                     {notificationToneLabel(item)}
                   </span>
-                  <span className="shrink-0 text-[10px] font-bold text-[var(--text-3)]">
+                  <span
+                    className="shrink-0 text-[11px] font-bold text-[var(--text-3)]"
+                    data-testid={`mypage-notification-time-${item.id}`}
+                  >
                     {formatDateTime(item.created_at)}
                   </span>
                 </div>
-                <p className="mt-1 text-[12px] font-extrabold leading-[1.3] text-[var(--foreground)]">
+                <p
+                  className="mt-1.5 text-[14px] font-extrabold leading-[1.35] text-[var(--foreground)]"
+                  data-testid={`mypage-notification-title-${item.id}`}
+                >
                   {item.title}
                 </p>
-                <p className="mt-0.5 text-[11px] font-semibold leading-[1.35] text-[var(--text-2)]">
+                <p
+                  className="mt-1 text-[13px] font-semibold leading-[1.45] text-[var(--text-2)]"
+                  data-testid={`mypage-notification-body-${item.id}`}
+                >
                   {item.body}
                 </p>
               </div>
