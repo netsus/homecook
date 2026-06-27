@@ -617,6 +617,63 @@ describe("recipe detail screen", () => {
     expect(modalScope.getByRole("button", { name: /주말 파티/ })).toBeTruthy();
   });
 
+  it("shows the save modal shell immediately and reopens from cached books", async () => {
+    const detail = buildRecipeDetail();
+    const recipeBookResponse = createDeferred<RecipeBookListData>();
+    let recipeBookRequests = 0;
+
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (!init?.method && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`) {
+        return Promise.resolve(detail);
+      }
+
+      if (!init?.method && input === "/api/v1/recipe-books") {
+        recipeBookRequests += 1;
+        return recipeBookRequests === 1
+          ? recipeBookResponse.promise
+          : Promise.resolve(buildSaveableBooks());
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    });
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "저장" }));
+
+    const loadingModal = await screen.findByRole("dialog", { name: "레시피 저장" });
+    expect(
+      within(loadingModal).getByTestId("save-modal-loading-skeleton"),
+    ).toBeTruthy();
+    expect(recipeBookRequests).toBe(1);
+
+    recipeBookResponse.resolve(buildSaveableBooks());
+
+    await waitFor(() => {
+      expect(
+        within(loadingModal).getByRole("button", { name: /저장한 레시피/ }),
+      ).toBeTruthy();
+    });
+
+    await userEvent.click(within(loadingModal).getByRole("button", { name: "취소" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "레시피 저장" })).toBeNull();
+    });
+
+    await userEvent.click(await screen.findByRole("button", { name: "저장" }));
+
+    const reopenedModal = await screen.findByRole("dialog", { name: "레시피 저장" });
+    expect(
+      within(reopenedModal).getByRole("button", { name: /저장한 레시피/ }),
+    ).toBeTruthy();
+    expect(
+      within(reopenedModal).queryByTestId("save-modal-loading-skeleton"),
+    ).toBeNull();
+    expect(recipeBookRequests).toBe(1);
+  });
+
   it("renders save modal without recipe preview and with prototype footer copy", async () => {
     const detail = buildRecipeDetail();
 
