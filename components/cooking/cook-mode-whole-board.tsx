@@ -339,38 +339,40 @@ function CookModeWholeStep({
         className="cook-whole-step-marker"
         data-testid={`cook-mode-step-marker-${step.step_number}`}
       >
-        {methods.length > 0 ? (
-          methods.map((method) => {
-            const visual = getCookingMethodVisual(method);
-            const assistiveLabel = getCookingMethodAssistiveLabel({
-              methodCode: method.code,
-              methodLabel: method.label,
-              categoryCode: method.category_code,
-              categoryLabel: method.category_label,
-            });
+        <div className="cook-whole-method-tags">
+          {methods.length > 0 ? (
+            methods.map((method) => {
+              const visual = getCookingMethodVisual(method);
+              const assistiveLabel = getCookingMethodAssistiveLabel({
+                methodCode: method.code,
+                methodLabel: method.label,
+                categoryCode: method.category_code,
+                categoryLabel: method.category_label,
+              });
 
-            return (
-              <span
-                aria-label={assistiveLabel}
-                className="cook-whole-method-tag"
-                key={method.code || method.label}
-                style={{ backgroundColor: visual.color }}
-                title={assistiveLabel}
-              >
-                {visual.label}
-              </span>
-            );
-          })
-        ) : (
-          <span
-            aria-label={methodAssistiveLabel}
-            className="cook-whole-method-tag"
-            style={{ backgroundColor: methodVisual.color }}
-            title={methodAssistiveLabel}
-          >
-            {methodVisual.label}
-          </span>
-        )}
+              return (
+                <span
+                  aria-label={assistiveLabel}
+                  className="cook-whole-method-tag"
+                  key={method.code || method.label}
+                  style={{ backgroundColor: visual.color }}
+                  title={assistiveLabel}
+                >
+                  {visual.label}
+                </span>
+              );
+            })
+          ) : (
+            <span
+              aria-label={methodAssistiveLabel}
+              className="cook-whole-method-tag"
+              style={{ backgroundColor: methodVisual.color }}
+              title={methodAssistiveLabel}
+            >
+              {methodVisual.label}
+            </span>
+          )}
+        </div>
         <div
           aria-label={`${step.step_number}단계`}
           className="cook-whole-step-number"

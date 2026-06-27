@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { CookModeDesktopView } from "@/components/cooking/cook-mode-desktop-view";
+import {
+  MobileCookModeLoadingBoard,
+  WebCookModeLoadingBoard,
+} from "@/components/cooking/cook-mode-loading-board";
 import { ConsumedIngredientSheet } from "@/components/cooking/consumed-ingredient-sheet";
 import {
   MobileCookModeView,
@@ -15,10 +18,8 @@ import {
 import { useUserScreenWakeLock } from "@/components/cooking/use-screen-wake-lock";
 import { ContentState } from "@/components/shared/content-state";
 import { useAppReturn } from "@/components/shared/use-app-return";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   WebButton,
-  WebCard,
   WebDialog,
   WebDialogBody,
   WebDialogFooter,
@@ -26,7 +27,6 @@ import {
   WebDialogTitle,
   WebModal,
   WebShell,
-  WebSkeleton,
   WebTopNav,
 } from "@/components/web";
 import { isCookingApiError } from "@/lib/api/cooking";
@@ -274,25 +274,12 @@ export function CookModeScreen({
     }
 
     return (
-      <div
-        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
-        data-testid="cook-mode-screen"
-      >
-        <div className="p-4" data-testid="cook-mode-loading">
-          <Skeleton className="mb-3" height={32} rounded="md" />
-          <Skeleton className="mb-2" height={20} rounded="sm" width="40%" />
-          <div className="mt-4 flex flex-col gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton
-                className="border border-[var(--line)]"
-                height={64}
-                key={i}
-                rounded="md"
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      <MobileCookModeLoadingBoard
+        description="플래너 요리모드를 불러오는 중이에요."
+        loadingTestId="cook-mode-loading"
+        screenTestId="cook-mode-screen"
+        title="요리모드"
+      />
     );
   }
 
@@ -489,62 +476,27 @@ export function CookModeScreen({
   );
 }
 
-function PlannerCookModeDesktopState({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function PlannerCookModeDesktopLoading() {
   return (
-    <WebShell className="web-cooking-shell" wide>
+    <WebShell className="web-cooking-shell web-cooking-shell-dark" wide>
       <WebTopNav
         activeId="planner"
         items={WEB_NAV_ITEMS}
         rightSlot={<div className="web-profile-button">JY</div>}
       />
-      <main className="web-cook-mode-screen" data-testid="cook-mode-screen">
-        <nav aria-label="현재 위치" className="web-cook-breadcrumb">
-          <Link href="/planner">플래너</Link>
-          <span aria-hidden="true">/</span>
-          <strong>플래너 요리모드</strong>
-        </nav>
-        {children}
+      <main
+        className="web-cook-mode-screen web-cook-whole-screen"
+        data-cook-theme="dark"
+        data-testid="cook-mode-screen"
+      >
+        <h1 className="sr-only">요리모드</h1>
+        <WebCookModeLoadingBoard
+          description="플래너 요리모드를 불러오는 중이에요."
+          testId="cook-mode-loading"
+          title="요리모드"
+        />
       </main>
     </WebShell>
-  );
-}
-
-function PlannerCookModeDesktopLoading() {
-  return (
-    <PlannerCookModeDesktopState>
-      <WebCard
-        className="web-cook-mode-state-card"
-        data-testid="cook-mode-loading"
-      >
-        <div className="web-cook-mode-loading-head">
-          <WebSkeleton height={18} width={120} />
-          <WebSkeleton height={34} width="42%" />
-          <WebSkeleton height={16} width="34%" />
-          <span className="visually-hidden">
-            플래너 요리모드를 불러오는 중이에요.
-          </span>
-        </div>
-        <div className="web-cook-mode-loading-layout">
-          <div className="web-cook-mode-loading-list">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <WebSkeleton height={96} key={index} />
-            ))}
-          </div>
-          <div className="web-cook-mode-loading-rail">
-            <WebSkeleton height={22} width={140} />
-            {Array.from({ length: 5 }).map((_, index) => (
-              <WebSkeleton height={48} key={index} />
-            ))}
-            <WebSkeleton height={44} />
-            <WebSkeleton height={44} />
-          </div>
-        </div>
-      </WebCard>
-    </PlannerCookModeDesktopState>
   );
 }
 

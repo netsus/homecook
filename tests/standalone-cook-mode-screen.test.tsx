@@ -746,7 +746,7 @@ describe("StandaloneCookModeScreen", () => {
     expect(screen.queryByTestId("cook-mode-theme-toggle")).toBeNull();
   });
 
-  it("uses a desktop web shell for standalone cook loading states", async () => {
+  it("matches desktop standalone cook loading to the whole-board cooking shell", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockReturnValue(new Promise(() => {}));
 
@@ -754,12 +754,18 @@ describe("StandaloneCookModeScreen", () => {
     render(<Screen recipeId="recipe-1" servings={2} />);
 
     const screenRoot = await screen.findByTestId("standalone-cook-mode-screen");
+    const loading = await screen.findByTestId("standalone-cook-mode-loading");
+
     expect(screenRoot.className).toContain("web-cook-mode-screen");
-    expect(screenRoot.className).not.toContain("min-h-dvh");
+    expect(screenRoot.className).toContain("web-cook-whole-screen");
     expect(screen.getByRole("link", { name: "홈" })).toBeTruthy();
+    expect(loading.className).toContain("web-cook-whole-board");
+    expect(loading.querySelector(".web-cook-whole-top")).toBeTruthy();
+    expect(loading.querySelector(".web-cook-whole-grid")).toBeTruthy();
+    expect(loading.querySelectorAll(".cook-whole-panel")).toHaveLength(2);
   });
 
-  it("keeps the Wave1 white surface for mobile standalone cook loading states", async () => {
+  it("matches mobile standalone cook loading to the whole-board cooking shell", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockReturnValue(new Promise(() => {}));
@@ -768,6 +774,11 @@ describe("StandaloneCookModeScreen", () => {
     render(<Screen recipeId="recipe-1" servings={2} />);
 
     const screenRoot = await screen.findByTestId("standalone-cook-mode-screen");
-    expect(screenRoot.className).toContain("bg-[var(--wave1-surface)]");
+    const loading = await screen.findByTestId("standalone-cook-mode-loading");
+
+    expect(screenRoot.className).toContain("cook-mobile-whole-screen");
+    expect(screenRoot.getAttribute("data-cook-theme")).toBe("dark");
+    expect(loading.querySelector(".cook-whole-board-mobile")).toBeTruthy();
+    expect(loading.querySelectorAll(".cook-whole-panel")).toHaveLength(2);
   });
 });

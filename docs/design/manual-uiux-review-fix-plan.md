@@ -3946,7 +3946,7 @@ Implementation note:
 
 ### 94. 웹/앱 요리모드 스켈레톤이 실제 요리모드 화면과 맞지 않는 문제
 
-- Status: planned
+- Status: implemented in `fix/cook-mode-legibility-polish`
 - Severity: Medium
 - Area: UX / Cook Mode / Loading State
 - Source: user manual review
@@ -3959,6 +3959,10 @@ Implementation note:
 - Recommended fix:
   - 웹/앱 요리모드의 final layout에 맞춘 skeleton을 만든다.
   - 상단, 현재 단계, 재료 rail/list의 skeleton 위치와 크기를 맞춘다.
+- Implementation:
+  - 플래너/독립요리 로딩 화면이 같은 `MobileCookModeLoadingBoard` / `WebCookModeLoadingBoard`를 사용하도록 정리했다.
+  - 웹 로딩은 실제 `web-cook-whole-screen` / `web-cook-whole-board` 구조와 같은 상단/재료/조리순서 패널을 사용한다.
+  - 앱 로딩은 실제 fullscreen cook board와 같은 dark shell, header, 재료 패널, 조리순서 패널, 하단 버튼 영역 skeleton을 사용한다.
 - Acceptance criteria:
   - 요리모드 로딩 화면이 실제 요리모드 구조와 유사하다.
   - 앱/웹 모두 불필요한 skeleton 전환이 없다.
@@ -3966,11 +3970,11 @@ Implementation note:
   - cook mode components
   - `app/globals.css`
 - Verification:
-  - cook mode loading screenshot review.
+  - `CI=true corepack pnpm exec vitest run tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx`
 
 ### 95. 웹/앱 요리모드 재료 폰트가 작아 조리 중 보기 어려운 문제
 
-- Status: planned
+- Status: implemented in `fix/cook-mode-legibility-polish`
 - Severity: High
 - Area: UX / Cook Mode / Readability
 - Source: user manual review
@@ -3983,13 +3987,16 @@ Implementation note:
 - Recommended fix:
   - 웹/앱 요리모드 재료명/양의 font-size를 약 20px 기준으로 키운다.
   - 줄바꿈과 chip/card 폭이 깨지지 않게 responsive constraints를 같이 조정한다.
+- Implementation:
+  - 웹/앱 요리모드의 재료명과 재료양을 20px 기준으로 키웠다.
+  - 커진 글자에 맞춰 모바일 ingredient chip padding/min-height/max-width와 웹 ingredient panel 최소 폭을 함께 조정했다.
 - Acceptance criteria:
   - 요리모드 재료 텍스트가 약 20px 수준으로 커진다.
   - 긴 재료명/양도 카드 안에서 깨지지 않는다.
 - Likely implementation target:
   - cook mode components/CSS
 - Verification:
-  - desktop/mobile cook mode screenshot review.
+  - `CI=true corepack pnpm exec vitest run tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx`
 
 ### 96. 요리완료 소진재료 확인 모달의 전체선택 상태와 체크 표시 색상이 불명확한 문제
 
@@ -4114,7 +4121,7 @@ Implementation note:
 
 ### 101. 요리모드에서 조리법이 여러 개인 단계의 조리법 태그가 세로로 쌓이는 문제
 
-- Status: planned
+- Status: implemented in `fix/cook-mode-legibility-polish`
 - Severity: Medium
 - Area: UX / Cook Mode / Cooking Method Tags
 - Source: user manual review
@@ -4127,6 +4134,9 @@ Implementation note:
 - Recommended fix:
   - 요리모드의 method badge container를 horizontal flex-wrap으로 바꾼다.
   - 긴 조리법 라벨이 있어도 단계 문장과 겹치지 않게 gap/line-height를 조정한다.
+- Implementation:
+  - 단계 marker 안에 `cook-whole-method-tags` wrapper를 추가해 여러 조리법 태그가 가로로 배치되고 공간 부족 시 자연스럽게 wrap되게 했다.
+  - 기존 조리법별 color/assistive label/title은 유지했다.
 - Acceptance criteria:
   - 여러 조리법 태그가 가능한 한 가로로 배치되고, 공간 부족 시 자연스럽게 다음 줄로 감긴다.
   - 단계 카드가 불필요하게 세로로 길어지지 않는다.
@@ -4134,7 +4144,7 @@ Implementation note:
   - cook mode components/CSS
   - `StepCookingMethodBadges` usage
 - Verification:
-  - multi-method step fixture screenshot.
+  - `CI=true corepack pnpm exec vitest run tests/cook-mode-screen.test.tsx tests/standalone-cook-mode-screen.test.tsx`
 
 ## 보류 항목
 
