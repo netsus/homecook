@@ -4028,7 +4028,7 @@ Implementation note:
 
 ### 97. 웹 레시피북 생성 input 내부에 불필요한 파란 박스가 생기는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: Medium
 - Area: UX / Recipebook / Create Input
 - Source: user manual review, screenshot
@@ -4044,6 +4044,9 @@ Implementation note:
 - Acceptance criteria:
   - input 내부 파란 박스가 사라진다.
   - 키보드 포커스 시 외곽 focus indication은 남는다.
+- Implementation notes:
+  - 웹 레시피북 생성 input의 `appearance`, `box-shadow`, `outline`을 제거하고 배경을 투명하게 맞췄다.
+  - focus indication은 input 내부가 아니라 생성 패널의 `:focus-within` 외곽 ring으로 유지했다.
 - Likely implementation target:
   - recipebook create component/CSS
 - Verification:
