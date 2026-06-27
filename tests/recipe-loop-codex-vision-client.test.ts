@@ -245,6 +245,155 @@ describe("recipe-loop codex-vision provider", () => {
     expect(existsSync(path.join(first.meta.codexVisionKeyframesCacheDir, "final.json"))).toBe(true);
   });
 
+  it("generates through Codex Vision segmented keyframes and preserves per-segment artifacts", async () => {
+    const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir, 8);
+    const calls: Array<{ model: string; images: string[]; prompt: string }> = [];
+    const client = createCodexVisionKeyframesClient({
+      cacheDir: path.join(workdir, "keyframes-cache"),
+      keyframeMode: "segmented",
+      model: "fixture-final-model",
+      segmentModel: "fixture-segment-model",
+      selectorModel: "fixture-selector-model",
+      segmentPaddingSec: 0,
+      segmentMinFrames: 2,
+      segmentMaxFrames: 3,
+      segmentFrameTotalLimit: 4,
+      extractFrames: async () => ({
+        frameCacheHit: false,
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 8 },
+      }),
+      codexExec: async ({
+        prompt,
+        images,
+        model,
+        outputPath,
+        logPath,
+      }: {
+        prompt: string;
+        images: string[];
+        model: string;
+        outputPath: string;
+        logPath: string;
+      }) => {
+        calls.push({ prompt, images, model });
+        let output: string;
+        if (model === "fixture-segment-model") {
+          output = JSON.stringify({
+            segments: [
+              {
+                segmentId: "seg-01",
+                titleHint: "메밀 후토마끼",
+                startSec: 0,
+                endSec: 25,
+                confidence: 0.9,
+                textEvidence: ["제목 후보: 메밀 후토마끼"],
+                frameBudget: 3,
+              },
+              {
+                segmentId: "seg-02",
+                titleHint: "맥적구이",
+                startSec: 40,
+                endSec: 70,
+                confidence: 0.8,
+                textEvidence: ["제목 후보: 맥적구이"],
+                frameBudget: 3,
+              },
+            ],
+          });
+        } else if (model === "fixture-selector-model") {
+          output = JSON.stringify({
+            selectedFrames: [
+              { file: path.basename(images[0]), reason: "양념 또는 재료 투입" },
+              { file: path.basename(images[images.length - 1]), reason: "조리 상태 확인" },
+            ],
+          });
+        } else {
+          expect(prompt).toContain("[SEGMENT seg-01]");
+          expect(prompt).toContain("titleHint: 맥적구이");
+          output = "```json\n{\"recipes\":[{\"title\":\"메밀 후토마끼\",\"ingredients\":[{\"name\":\"오이\",\"amount\":\"1\",\"unit\":\"개\"}],\"steps\":[\"오이를 채 썰어 준비한다.\"]},{\"title\":\"맥적구이\",\"ingredients\":[{\"name\":\"돼지고기\",\"amount\":\"1\",\"unit\":\"팩\"}],\"steps\":[\"돼지고기에 된장 양념을 바른다.\"]}]}\n```";
+        }
+        writeFileSync(outputPath, output, "utf8");
+        writeFileSync(logPath, "ok", "utf8");
+        return output;
+      },
+    });
+
+    const result = await client.generate({
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      cacheText: "메밀 후토마끼와 맥적구이",
+    });
+
+    expect(result.meta).toMatchObject({
+      provider: "codex-vision-keyframes",
+      keyframeMode: "segmented",
+      segmentModel: "fixture-segment-model",
+      selectorModel: "fixture-selector-model",
+      segmentCount: 2,
+      selectedFrameCount: 4,
+    });
+    expect(result.json.recipes.map((recipe: { title: string }) => recipe.title)).toEqual(["메밀 후토마끼", "맥적구이"]);
+    expect(calls).toHaveLength(4);
+    expect(calls[0]).toMatchObject({ model: "fixture-segment-model", images: [] });
+    expect(calls[1].images).toHaveLength(3);
+    expect(calls[1].images).not.toContain(frames[3].path);
+    expect(calls[1].images).not.toContain(frames[4].path);
+    expect(calls[2].images).not.toContain(frames[0].path);
+    expect(calls[3].images).toHaveLength(4);
+    expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-plan.json"))).toBe(true);
+    const segmentPlan = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-plan.json"), "utf8"));
+    expect(segmentPlan.segments.map((segment: { frameBudget: number }) => segment.frameBudget)).toEqual([2, 2]);
+    expect(segmentPlan.segments.every((segment: { frameBudgetAdjusted?: boolean }) => segment.frameBudgetAdjusted)).toBe(true);
+    expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-keyframes.json"))).toBe(true);
+    expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "selected_frames.json"))).toBe(true);
+    expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "final.json"))).toBe(true);
+  });
+
+  it("records segmented planner failure artifacts without falling back to Gemini", async () => {
+    const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir, 3);
+    const cacheDir = path.join(workdir, "keyframes-cache");
+    const client = createCodexVisionKeyframesClient({
+      cacheDir,
+      keyframeMode: "segmented",
+      model: "fixture-final-model",
+      segmentModel: "fixture-segment-model",
+      selectorModel: "fixture-selector-model",
+      extractFrames: async () => ({
+        frameCacheHit: false,
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 3 },
+      }),
+      codexExec: async ({ outputPath, logPath }: { outputPath: string; logPath: string }) => {
+        writeFileSync(outputPath, "not json", "utf8");
+        writeFileSync(logPath, "segment failed", "utf8");
+        return "not json";
+      },
+    });
+
+    await expect(client.generate({
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      cacheText: "메밀 후토마끼",
+    })).rejects.toThrow("Codex Vision JSON 파싱 실패");
+
+    const failureFiles = readdirSync(cacheDir, { recursive: true })
+      .map((entry) => String(entry))
+      .filter((entry) => entry.endsWith("failure.json"));
+    expect(failureFiles).toHaveLength(1);
+    const failure = JSON.parse(readFileSync(path.join(cacheDir, failureFiles[0]), "utf8"));
+    expect(failure).toMatchObject({
+      provider: "codex-vision-keyframes",
+      keyframeMode: "segmented",
+      stage: "segment-plan",
+      segmentModel: "fixture-segment-model",
+    });
+  });
+
   it("records keyframe selector failure artifacts without falling back to Gemini", async () => {
     const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
     const { frameDir, frames } = makeFrameFixture(workdir, 2);
@@ -553,6 +702,84 @@ describe("recipe-loop codex-vision provider", () => {
     const output = JSON.parse(readFileSync(path.join(caseDir, "runs/keyframes-test/result.json"), "utf8"));
     expect(output.meta.provider).toBe("codex-vision-keyframes");
     expect(output.recipes[0].title).toBe("메밀 후토마끼");
+  });
+
+  it("passes segmented keyframe options from run-extraction without reading golden.json", async () => {
+    const { createLlmForProvider, runExtraction } = await import(runExtractionModuleUrl);
+    const selected = createLlmForProvider("codex-vision-keyframes", {
+      model: "fixture-final-model",
+      "selector-model": "fixture-selector-model",
+      "segment-model": "fixture-segment-model",
+      "keyframe-mode": "segmented",
+      "segment-padding-sec": "5",
+      "segment-min-frames": "3",
+      "segment-max-frames": "9",
+      "segment-max-count": "7",
+      "segment-frame-total-limit": "21",
+      "refresh-final": true,
+    }, {
+      createCodexVisionKeyframes: (options: Record<string, unknown>) => ({ options }),
+    });
+    expect(selected.options).toMatchObject({
+      model: "fixture-final-model",
+      selectorModel: "fixture-selector-model",
+      segmentModel: "fixture-segment-model",
+      keyframeMode: "segmented",
+      segmentPaddingSec: 5,
+      segmentMinFrames: 3,
+      segmentMaxFrames: 9,
+      segmentMaxCount: 7,
+      segmentFrameTotalLimit: 21,
+      refreshFinal: true,
+    });
+
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-keyframes-segmented");
+    writeJson(path.join(caseDir, "source.json"), {
+      video: {
+        videoId: "case-keyframes-segmented",
+        title: "맥적구이",
+        description: "돼지고기 1팩",
+        url: "https://www.youtube.com/watch?v=case-keyframes-segmented",
+      },
+      captions: { available: false, segments: [] },
+      authorComments: { comments: [] },
+    });
+    writeFileSync(path.join(caseDir, "golden.json"), "{ this would fail if read", "utf8");
+
+    const result = await runExtraction(
+      {
+        split: "train",
+        ids: "case-keyframes-segmented",
+        "out-tag": "segmented-keyframes-test",
+        provider: "codex-vision-keyframes",
+        "keyframe-mode": "segmented",
+      },
+      {
+        projectRoot: workdir,
+        llm: {
+          generate: async () => ({
+            cached: false,
+            model: "fixture-final-model",
+            provider: "codex-vision-keyframes",
+            meta: { provider: "codex-vision-keyframes", keyframeMode: "segmented", selectedFrameCount: 2 },
+            json: {
+              recipes: [
+                {
+                  title: "맥적구이",
+                  ingredients: [{ name: "돼지고기", amount: "1", unit: "팩" }],
+                  steps: ["돼지고기에 된장 양념을 바른다."],
+                },
+              ],
+            },
+          }),
+        },
+      },
+    );
+
+    expect(result.failures).toBe(0);
+    const output = JSON.parse(readFileSync(path.join(caseDir, "runs/segmented-keyframes-test/result.json"), "utf8"));
+    expect(output.meta).toMatchObject({ provider: "codex-vision-keyframes", keyframeMode: "segmented" });
+    expect(output.recipes[0].title).toBe("맥적구이");
   });
 
   it("keeps the Gemini provider as the default run-extraction path", async () => {
