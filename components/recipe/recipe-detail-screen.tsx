@@ -1631,8 +1631,13 @@ export function RecipeDetailScreen({
 
         {activeTab === "reviews" ? (
           <section className="bg-[var(--surface)] p-5">
-            <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-4 py-5 text-[14px] leading-5 text-[var(--text-2)]">
-              아직 등록된 리뷰가 없어요.
+            <div className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-4 py-5 leading-5">
+              <p className="text-[15px] font-bold text-[var(--foreground)]">
+                리뷰 기능을 준비 중이에요.
+              </p>
+              <p className="mt-1.5 text-[13px] text-[var(--text-2)]">
+                완성한 요리 후기를 남기고 볼 수 있게 곧 연결할게요.
+              </p>
             </div>
           </section>
         ) : null}
