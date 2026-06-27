@@ -749,6 +749,18 @@ describe("MYPAGE achievement album UI", () => {
       within(notificationDialog).getByTestId("mypage-notification-item-notice-level").className,
     ).toContain("border-[var(--growth-toast-level-border)]");
     expect(
+      within(notificationDialog).getByTestId("mypage-notification-label-notice-level").className,
+    ).toContain("text-[11px]");
+    expect(
+      within(notificationDialog).getByTestId("mypage-notification-time-notice-level").className,
+    ).toContain("text-[11px]");
+    expect(
+      within(notificationDialog).getByTestId("mypage-notification-title-notice-level").className,
+    ).toContain("text-[14px]");
+    expect(
+      within(notificationDialog).getByTestId("mypage-notification-body-notice-level").className,
+    ).toContain("text-[13px]");
+    expect(
       within(notificationDialog)
         .getByTestId("mypage-notification-visual-notice-achievement")
         .getAttribute("data-visual-kind"),

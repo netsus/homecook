@@ -3789,7 +3789,7 @@ Implementation note:
 
 ### 87. 알림모달의 알림 글자 크기가 작아 읽기 어려운 문제
 
-- Status: planned
+- Status: implemented
 - Severity: Medium
 - Area: UX / Notifications / Readability
 - Source: user manual review
@@ -3802,6 +3802,9 @@ Implementation note:
 - Recommended fix:
   - 알림 제목, 본문, 시간 텍스트의 font-size/weight 위계를 재정의한다.
   - 모바일과 웹 모두 같은 정보 위계를 유지한다.
+- Implemented:
+  - 알림 카드 padding을 소폭 키우고 제목을 14px, 본문을 13px, 라벨/시간을 11px로 올렸다.
+  - notification item의 label/time/title/body에 test id를 추가해 가독성 위계가 회귀하지 않도록 했다.
 - Acceptance criteria:
   - 알림 title/body가 현재보다 명확하게 크고 읽기 쉽다.
   - 긴 알림도 카드 안에서 자연스럽게 줄바꿈된다.
@@ -3809,7 +3812,7 @@ Implementation note:
   - `components/mypage/mypage-growth-detail-dialog.tsx`
   - notification CSS/classes
 - Verification:
-  - 알림모달 screenshot review.
+  - `CI=true corepack pnpm exec vitest run tests/mypage-achievement-album.test.tsx`
 
 ### 88. 프로필요약 튜토리얼 안내 섹션에서 제목과 안내 문구가 구분되지 않는 문제
 
