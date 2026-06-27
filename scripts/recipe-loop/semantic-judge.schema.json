@@ -10,13 +10,17 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["title", "ingredient_score", "step_score", "case_score", "reason"],
+        "required": ["title", "ingredient_score", "step_score", "case_score", "reason", "quantity_deferred"],
         "properties": {
           "title": { "type": "string" },
           "ingredient_score": { "type": "number", "minimum": 0, "maximum": 5 },
           "step_score": { "type": "number", "minimum": 0, "maximum": 5 },
           "case_score": { "type": "number", "minimum": 0, "maximum": 5 },
-          "reason": { "type": "string", "maxLength": 240 }
+          "reason": { "type": "string", "maxLength": 240 },
+          "quantity_deferred": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 180 }
+          }
         }
       }
     },

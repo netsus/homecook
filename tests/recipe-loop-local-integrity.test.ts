@@ -1507,6 +1507,194 @@ describe("recipe-loop local integrity gates", () => {
     });
   });
 
+  it("preserves visual-estimate quantity deferrals from semantic judge output", () => {
+    writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), {
+      schemaVersion: 1,
+      videoId: "case-a",
+      reviewStatus: "approved",
+      recipes: [
+        {
+          title: "다시마 고추다대기",
+          ingredients: [
+            { name: "고추", amount: "10", unit: "개", amountBasis: "visual-estimate" },
+            { name: "간장", amount: "3", unit: "큰술", amountBasis: "stated-description" },
+          ],
+          steps: [{ order: 1, instruction: "재료를 다져 볶는다" }],
+        },
+      ],
+    });
+    writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), {
+      recipes: [
+        {
+          title: "다시마 고추다대기",
+          ingredients: [
+            { name: "고추", amount: "15", unit: "개", amountBasis: "visual-estimate" },
+            { name: "간장", amount: "3", unit: "큰술", amountBasis: "stated" },
+          ],
+          steps: ["재료를 다져 볶는다"],
+        },
+      ],
+    });
+    writeJson(
+      path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"),
+      codexCalibration({ sampleN: 1, thresholds: { bottomKMeanScore: 3, averageScore: 3 } }),
+    );
+
+    const result = spawnSync(
+      "node",
+      [
+        gradeSemanticScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--expected-count",
+        "1",
+        "--judge-provider",
+        "codex",
+        "--judge-model",
+        "gpt-5.4",
+        "--judge-effort",
+        "high",
+        "--judge-sample-n",
+        "1",
+        "--calibration",
+        "notebooks/recipe_loop_data/semantic_calibration.json",
+      ],
+      {
+        cwd: workdir,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          CODEX_JUDGE_MOCK_RESPONSE: JSON.stringify({
+            cases: [
+              {
+                title: "다시마 고추다대기",
+                ingredient_score: 4,
+                step_score: 5,
+                case_score: 4,
+                reason: "visual-estimate 분량 차이는 보류하고 명시 간장과 단계는 맞다.",
+                quantity_deferred: ["고추: Golden amountBasis=visual-estimate라 분량 차이 감점 보류"],
+              },
+            ],
+            average_score: 4,
+          }),
+        },
+      },
+    );
+
+    expect(result.status).toBe(0);
+    const summary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    const row = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/case-a/runs/latest/grade_semantic.json"),
+        "utf8",
+      ),
+    );
+    expect(row.cases[0]).toMatchObject({
+      title: "다시마 고추다대기",
+      ingredient_score: 4,
+      step_score: 5,
+      case_score: 4,
+      quantity_deferred: ["고추: Golden amountBasis=visual-estimate라 분량 차이 감점 보류"],
+      quantity_deferred_count: 1,
+    });
+    expect(summary.perVideo[0].cases[0]).toMatchObject({
+      quantity_deferred: ["고추: Golden amountBasis=visual-estimate라 분량 차이 감점 보류"],
+      quantity_deferred_count: 1,
+    });
+  });
+
+  it("recomputes combined semantic case scores from the final ingredient and step medians", () => {
+    writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
+    writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), matchingResult());
+    writeJson(
+      path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"),
+      codexCalibration({ thresholds: { bottomKMeanScore: 3, averageScore: 3 } }),
+    );
+
+    const result = spawnSync(
+      "node",
+      [
+        gradeSemanticScript,
+        "--split",
+        "validation",
+        "--out-tag",
+        "latest",
+        "--expected-count",
+        "1",
+        "--judge-provider",
+        "codex",
+        "--judge-model",
+        "gpt-5.4",
+        "--judge-effort",
+        "high",
+        "--judge-sample-n",
+        "3",
+        "--calibration",
+        "notebooks/recipe_loop_data/semantic_calibration.json",
+      ],
+      {
+        cwd: workdir,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          CODEX_JUDGE_MOCK_RESPONSES: JSON.stringify([
+            {
+              cases: [{
+                title: "테스트 레시피",
+                ingredient_score: 2,
+                step_score: 5,
+                case_score: 2,
+                reason: "sample ingredient weak",
+                quantity_deferred: [],
+              }],
+            },
+            {
+              cases: [{
+                title: "테스트 레시피",
+                ingredient_score: 5,
+                step_score: 2,
+                case_score: 2,
+                reason: "sample step weak",
+                quantity_deferred: [],
+              }],
+            },
+            {
+              cases: [{
+                title: "테스트 레시피",
+                ingredient_score: 5,
+                step_score: 5,
+                case_score: 5,
+                reason: "sample strong",
+                quantity_deferred: [],
+              }],
+            },
+          ]),
+        },
+      },
+    );
+
+    expect(result.status).toBe(0);
+    const summary = JSON.parse(
+      readFileSync(
+        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        "utf8",
+      ),
+    );
+    expect(summary.perVideo[0].cases[0]).toMatchObject({
+      ingredient_score: 5,
+      step_score: 5,
+      case_score: 5,
+      sample_case_scores: [2, 2, 5],
+    });
+  });
+
   it("fails codex semantic grading before provider calls when calibration effort mismatches", () => {
     writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
     writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), matchingResult());
