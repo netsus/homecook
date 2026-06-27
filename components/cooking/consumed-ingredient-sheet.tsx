@@ -29,11 +29,14 @@ export function ConsumedIngredientSheet({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const isMobileViewport = useIsMobileViewport();
   const ingredientIds = useMemo(
-    () => ingredients.map((ingredient) => ingredient.ingredient_id),
+    () =>
+      Array.from(
+        new Set(ingredients.map((ingredient) => ingredient.ingredient_id)),
+      ),
     [ingredients],
   );
   const totalCount = ingredientIds.length;
-  const selectedCount = checked.size;
+  const selectedCount = ingredientIds.filter((id) => checked.has(id)).length;
   const allSelected = totalCount > 0 && selectedCount === totalCount;
   const partiallySelected = selectedCount > 0 && !allSelected;
 
@@ -122,14 +125,14 @@ export function ConsumedIngredientSheet({
           className="grid grid-cols-2 gap-2"
           data-testid="consumed-ingredient-list"
         >
-          {ingredients.map((ingredient) => {
+          {ingredients.map((ingredient, index) => {
             const isChecked = checked.has(ingredient.ingredient_id);
 
             return (
               <button
                 className="flex min-h-[58px] w-full cursor-pointer items-center gap-2 rounded-[var(--radius-control)] border border-[var(--wave1-border)] bg-[var(--surface)] px-3 py-2.5 text-left"
                 data-testid={`consumed-check-${ingredient.ingredient_id}`}
-                key={ingredient.ingredient_id}
+                key={`${ingredient.ingredient_id}-${index}`}
                 onClick={() => toggleIngredient(ingredient.ingredient_id)}
                 aria-checked={isChecked}
                 aria-label={`${ingredient.standard_name} ${formatIngredientAmountOnly(ingredient)} 소진 재료 선택`}
@@ -221,28 +224,40 @@ export function ConsumedIngredientSheet({
           data-testid="consumed-ingredient-list"
         >
           {selectionToolbar}
-          {ingredients.map((ing) => (
-            <label
-              className="mb-2 flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 last:mb-0"
-              data-testid="consumed-ingredient-item"
-              key={ing.ingredient_id}
-            >
-              <input
-                checked={checked.has(ing.ingredient_id)}
-                className="h-5 w-5 shrink-0 accent-[var(--brand)]"
-                data-testid={`consumed-check-${ing.ingredient_id}`}
+          {ingredients.map((ing, index) => {
+            const isChecked = checked.has(ing.ingredient_id);
+
+            return (
+              <button
+                aria-checked={isChecked}
                 aria-label={`${ing.standard_name} ${formatIngredientAmountOnly(ing)} 소진 재료 선택`}
-                onChange={() => toggleIngredient(ing.ingredient_id)}
-                type="checkbox"
-              />
-              <span className="min-w-0 flex-1 break-keep text-sm text-[var(--foreground)]">
-                {ing.standard_name}
-              </span>
-              <span className="min-w-0 max-w-[44%] break-words text-right text-xs text-[var(--muted)]">
-                {formatIngredientAmountOnly(ing)}
-              </span>
-            </label>
-          ))}
+                className="mb-2 flex w-full cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 text-left last:mb-0"
+                data-testid={`consumed-check-${ing.ingredient_id}`}
+                key={`${ing.ingredient_id}-${index}`}
+                onClick={() => toggleIngredient(ing.ingredient_id)}
+                role="checkbox"
+                type="button"
+              >
+                <span
+                  aria-hidden="true"
+                  className={[
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] border-[1.5px]",
+                    isChecked
+                      ? "border-[var(--brand)] bg-[var(--brand)]"
+                      : "border-[var(--line-strong)] bg-[var(--surface)]",
+                  ].join(" ")}
+                >
+                  {isChecked ? <CheckIcon /> : null}
+                </span>
+                <span className="min-w-0 flex-1 break-keep text-sm text-[var(--foreground)]">
+                  {ing.standard_name}
+                </span>
+                <span className="min-w-0 max-w-[44%] break-words text-right text-xs text-[var(--muted)]">
+                  {formatIngredientAmountOnly(ing)}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex gap-3 border-t border-[var(--line)] bg-[var(--surface)] px-6 py-4">
@@ -332,12 +347,17 @@ function ConsumedSelectionToolbar({
       >
         <span
           aria-hidden="true"
+          data-testid="consumed-bulk-checkmark"
           className={[
             "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[5px] border text-[13px] font-extrabold",
             checkBoxClass,
           ].join(" ")}
         >
-          {allSelected ? "✓" : partiallySelected ? "-" : ""}
+          {allSelected ? (
+            <CheckIcon />
+          ) : partiallySelected ? (
+            <MinusIcon />
+          ) : null}
         </span>
         <span>{totalCount === 0 ? "선택할 재료 없음" : actionLabel}</span>
       </button>
@@ -363,6 +383,26 @@ function CheckIcon() {
     >
       <path
         d="m5 12 4 4 10-10"
+        stroke="var(--text-inverse)"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="3"
+      />
+    </svg>
+  );
+}
+
+function MinusIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="14"
+      viewBox="0 0 24 24"
+      width="14"
+    >
+      <path
+        d="M6 12h12"
         stroke="var(--text-inverse)"
         strokeLinecap="round"
         strokeLinejoin="round"

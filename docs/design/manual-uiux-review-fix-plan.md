@@ -4000,7 +4000,7 @@ Implementation note:
 
 ### 96. 요리완료 소진재료 확인 모달의 전체선택 상태와 체크 표시 색상이 불명확한 문제
 
-- Status: planned
+- Status: implemented
 - Severity: Medium
 - Area: UX / Cook Completion / Pantry Deduction Modal
 - Source: user manual review
@@ -4017,6 +4017,9 @@ Implementation note:
 - Acceptance criteria:
   - 전체선택 시 `-`가 아니라 checked 상태가 보인다.
   - 웹 checked icon이 흰색으로 보인다.
+- Implementation notes:
+  - 소진재료 선택 상태를 고유 재료 ID 기준으로 계산해 같은 재료가 여러 행에 나와도 전체선택이 `mixed`로 오인되지 않게 했다.
+  - 웹 개별 선택 checkbox를 커스텀 체크 아이콘으로 바꿔 checked 상태의 체크 표시가 흰색으로 보이게 했다.
 - Likely implementation target:
   - cook completion pantry modal components
   - checkbox component/CSS
