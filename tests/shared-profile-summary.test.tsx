@@ -196,6 +196,15 @@ describe("ProfileSummaryButton", () => {
     expect(within(dialog).getByText("장보기기록")).toBeTruthy();
     expect(within(dialog).getByText("튜토리얼 안내")).toBeTruthy();
     expect(within(dialog).getByText("첫 레시피 저장")).toBeTruthy();
+    expect(within(dialog).getByTestId("profile-summary-notice-label").className).toContain(
+      "profile-summary-notice-label",
+    );
+    expect(within(dialog).getByTestId("profile-summary-notice-title").className).toContain(
+      "profile-summary-notice-title",
+    );
+    expect(within(dialog).getByTestId("profile-summary-notice-body").className).toContain(
+      "profile-summary-notice-body",
+    );
     expect(within(dialog).getByText("최근 알림")).toBeTruthy();
     expect(within(dialog).getByText("레벨업!")).toBeTruthy();
 

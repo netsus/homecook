@@ -1227,23 +1227,31 @@
 
 .profile-summary-notice {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   border-radius: 13px;
   background: var(--brand-soft);
-  color: var(--brand);
   padding: 10px 12px;
 }
 
-.profile-summary-notice strong {
-  font-size: 13px;
+.profile-summary-notice-label {
+  color: var(--brand);
+  font-size: 12px;
   font-weight: 900;
+  line-height: 1.2;
 }
 
-.profile-summary-notice span {
+.profile-summary-notice-title {
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.profile-summary-notice-body {
   color: var(--text-2);
   font-size: 12px;
-  font-weight: 650;
-  line-height: 1.4;
+  font-weight: 600;
+  line-height: 1.45;
 }
 
 .profile-summary-archive-preview {
@@ -1308,6 +1316,10 @@
   -webkit-line-clamp: 2;
   text-overflow: clip;
   white-space: normal;
+}
+
+.profile-summary-popover-mobile .profile-summary-notice-title {
+  -webkit-line-clamp: 1;
 }
 
 .home-mobile-discovery-search-row {
