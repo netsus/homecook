@@ -73,6 +73,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scene-scan-interval", type=float, default=None)
     parser.add_argument("--scene-selection", choices=["balanced", "first"], default="balanced")
     parser.add_argument("--max-frames", type=int, default=80)
+    parser.add_argument("--storyboard-max-frames", type=int, default=None)
     parser.add_argument("--video-format", default="mp4")
     return parser.parse_args()
 
@@ -217,6 +218,10 @@ def parse_hhmmss_millis(value: str) -> float:
 
 def save_frame(cv2, frame, frames_dir: Path, index: int, timestamp_sec: float, reason: str, scene_score: float | None) -> FrameInfo:
     path = frames_dir / f"frame_{index:04d}_{timestamp_sec:09.3f}.jpg"
+    height, width = frame.shape[:2]
+    if reason.startswith("storyboard") and width < 960:
+        scale = math.ceil(960 / max(width, 1))
+        frame = cv2.resize(frame, (width * scale, height * scale), interpolation=cv2.INTER_CUBIC)
     ok = cv2.imwrite(str(path), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
     if not ok:
         fail(f"프레임 저장 실패: {path}")
@@ -490,6 +495,8 @@ def main() -> None:
         fail("--interval은 0보다 커야 합니다.")
     if args.max_frames < 0:
         fail("--max-frames는 0 이상이어야 합니다.")
+    if args.storyboard_max_frames is not None and args.storyboard_max_frames < 0:
+        fail("--storyboard-max-frames는 0 이상이어야 합니다.")
     if args.scene_threshold <= 0:
         fail("--scene-threshold는 0보다 커야 합니다.")
     if args.min_scene_gap < 0:
@@ -503,7 +510,8 @@ def main() -> None:
     video_path = download_video(args.source, args.out_dir, args.video_format)
 
     if video_path is None:
-        frames, stats = extract_storyboard_frames(cv2, args.source, args.out_dir, args.max_frames)
+        storyboard_max_frames = args.storyboard_max_frames if args.storyboard_max_frames is not None else args.max_frames
+        frames, stats = extract_storyboard_frames(cv2, args.source, args.out_dir, storyboard_max_frames)
     elif args.mode == "scene":
         frames, stats = extract_scene_frames(cv2, video_path, args.out_dir, args)
     else:
@@ -514,7 +522,7 @@ def main() -> None:
 
     stats.update(
         {
-            "extractor_version": "extract-video-frames-v1",
+            "extractor_version": "extract-video-frames-v2",
             "video_id": args.video_id,
             "mode": args.mode,
             "scene_detail": args.scene_detail,
@@ -522,6 +530,7 @@ def main() -> None:
             "min_scene_gap": args.min_scene_gap,
             "scene_scan_interval": args.scene_scan_interval,
             "max_frames": args.max_frames,
+            "storyboard_max_frames": args.storyboard_max_frames,
         }
     )
     (args.out_dir / "frames.json").write_text(

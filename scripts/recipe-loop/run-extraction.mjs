@@ -77,10 +77,12 @@ export function createLlmForProvider(provider, args = {}, factories = {}) {
       model: typeof args.model === "string" ? args.model : undefined,
       codexEffort: typeof args["codex-effort"] === "string" ? args["codex-effort"] : undefined,
       maxFrames: optionalNumber(args["max-frames"]),
+      storyboardMaxFrames: optionalNumber(args["storyboard-max-frames"]),
       batchSize: optionalNumber(args["batch-size"]),
       sceneDetail: typeof args["scene-detail"] === "string" ? args["scene-detail"] : undefined,
       sceneSelection: typeof args["scene-selection"] === "string" ? args["scene-selection"] : undefined,
       timeoutMs: optionalNumber(args["timeout-ms"]),
+      refreshFinal: args["refresh-final"] === true,
       noCache: args["no-cache"] === true,
     });
   }

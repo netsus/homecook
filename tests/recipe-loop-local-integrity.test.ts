@@ -304,6 +304,88 @@ describe("recipe-loop local integrity gates", () => {
     });
   });
 
+  it("matches shortened and reordered recipe titles without case-specific IDs", async () => {
+    const { recipeTitleMatchScore, recipeTitlesLikelySame } = await import(recipeExtractionModuleUrl);
+
+    expect(recipeTitlesLikelySame("맥적구이", "맥적")).toBe(true);
+    expect(recipeTitlesLikelySame("항정살 마늘쫑 솥밥", "마늘쫑 항정솥밥")).toBe(true);
+    expect(recipeTitlesLikelySame("등촌식 멸치칼국수", "등촌칼국수")).toBe(true);
+    expect(recipeTitlesLikelySame("도토리 묵사발", "열무묵국")).toBe(true);
+    expect(recipeTitleMatchScore("맥적구이", "소곱창구이")).toBeLessThan(0.62);
+  });
+
+  it("keeps packet seasoning ingredients when a recipe step only says sauce or salad mix", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "맥적구이",
+              ingredients: [
+                { name: "돼지 목살", amount: "2", unit: "인분", amountBasis: "visual-estimate" },
+                { name: "된장", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "알룰로스", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "진간장", amount: "0.5", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "다진 마늘", amount: "0.5", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "들기름", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "맛술", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+              ],
+              steps: [
+                "돼지 목살에 양념을 바른다.",
+                "돼지 목살을 팬에 올려 굽는다.",
+              ],
+            },
+            {
+              title: "소곱창구이",
+              ingredients: [
+                { name: "소곱창", amount: "350", unit: "g", amountBasis: "visual-estimate" },
+                { name: "부추", amount: "1", unit: "줌", amountBasis: "visual-estimate" },
+                { name: "고춧가루", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "진간장", amount: "0.5", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "들기름", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "알룰로스", amount: "0.5", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "통깨", amount: null, unit: null, amountBasis: null },
+                { name: "소금", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: [
+                "소곱창을 그릴에 올려 굽는다.",
+                "부추무침을 만들어 소곱창 옆에 올린다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: {
+          videoId: "packet-seasonings",
+          title: "맥적구이와 소곱창구이",
+          description: "00:00 맥적구이\n02:00 소곱창구이",
+        },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const grilledPork = result.recipes.find((recipe: { title: string }) => recipe.title === "맥적구이");
+    const grilledPorkNames = grilledPork.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(grilledPorkNames).toEqual(expect.arrayContaining(["된장", "알룰로스", "진간장", "다진 마늘", "들기름", "맛술"]));
+    expect(grilledPork.steps[0]).toContain("된장, 알룰로스, 진간장, 다진 마늘, 들기름, 맛술");
+
+    const tripe = result.recipes.find((recipe: { title: string }) => recipe.title === "소곱창구이");
+    const tripeNames = tripe.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(tripeNames).toEqual(expect.arrayContaining(["부추", "고춧가루", "진간장", "들기름", "알룰로스"]));
+    expect(tripe.steps.some((step: string) => step.includes("고춧가루, 진간장, 들기름, 알룰로스"))).toBe(true);
+    expect(result.meta.packetIngredientStepRecoveries).toBe(2);
+  });
+
   it("does not hydrate cooking ingredient amounts from promotional event quantities", async () => {
     const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
     const llm = {
@@ -659,7 +741,7 @@ describe("recipe-loop local integrity gates", () => {
     });
   });
 
-  it("builds the iter15 prompt with source isolation and ingredient identity guards", async () => {
+  it("builds the iter16 prompt with source isolation and ingredient identity guards", async () => {
     const { buildExtractionPrompt, PROMPT_VERSION } = await import(recipePromptModuleUrl);
     const prompt = buildExtractionPrompt({
       video: { title: "묵참김밥과 오뎅볶이" },
@@ -667,8 +749,12 @@ describe("recipe-loop local integrity gates", () => {
       useVisual: false,
     });
 
-    expect(PROMPT_VERSION).toBe("iter15-train-first-ingredient-floor");
+    expect(PROMPT_VERSION).toBe("iter16-evidence-packet-title-ingredient");
     expect(prompt).toContain("와/과");
+    expect(prompt).toContain("evidence packet");
+    expect(prompt).toContain("한 packet의 양념·곁들임·고명·단계를 다른 packet으로 옮기지");
+    expect(prompt).toContain("맥적");
+    expect(prompt).toContain("항정살 마늘쫑 솥밥");
     expect(prompt).toContain("각 후보의 근거끼리 섞지");
     expect(prompt).toContain("재료의 정체성과 형태를 보존");
     expect(prompt).toContain("가공식품·완제품 소스·양념장·원물 채소·분말 양념");
@@ -688,6 +774,9 @@ describe("recipe-loop local integrity gates", () => {
     expect(prompt).toContain("솥밥");
     expect(prompt).toContain("포장 수량");
     expect(prompt).toContain("붉은 곁들임 소스");
+    expect(prompt).toContain("양념 돼지고기");
+    expect(prompt).toContain("갈색 소스");
+    expect(prompt).toContain("초록 잎채소");
     expect(prompt).toContain("자동자막이 깨져도");
     expect(prompt).toContain("화면에 보이는 통채소");
     expect(prompt).toContain("설탕/양파");
