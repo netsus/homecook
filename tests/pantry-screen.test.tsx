@@ -515,41 +515,24 @@ describe("PantryScreen", () => {
     });
   });
 
-  it("keeps the bundle picker open after a successful bundle add", async () => {
+  it("keeps the bundle picker open and marks added ingredients without refetching bundles", async () => {
     installMatchMedia(true);
-    mockFetchPantryBundles
-      .mockResolvedValueOnce({
-        bundles: [
-          {
-            id: "b1",
-            name: "기본 야채",
-            display_order: 1,
-            ingredients: [
-              {
-                ingredient_id: "i4",
-                is_in_pantry: false,
-                standard_name: "대파",
-              },
-            ],
-          },
-        ],
-      })
-      .mockResolvedValueOnce({
-        bundles: [
-          {
-            id: "b1",
-            name: "기본 야채",
-            display_order: 1,
-            ingredients: [
-              {
-                ingredient_id: "i4",
-                is_in_pantry: true,
-                standard_name: "대파",
-              },
-            ],
-          },
-        ],
-      });
+    mockFetchPantryBundles.mockResolvedValue({
+      bundles: [
+        {
+          id: "b1",
+          name: "기본 야채",
+          display_order: 1,
+          ingredients: [
+            {
+              ingredient_id: "i4",
+              is_in_pantry: false,
+              standard_name: "대파",
+            },
+          ],
+        },
+      ],
+    });
     mockAddPantryItems.mockResolvedValue({ added: 1 });
 
     render(<PantryScreen initialAuthenticated />);
@@ -566,12 +549,12 @@ describe("PantryScreen", () => {
       expect(mockAddPantryItems).toHaveBeenCalledWith(["i4"]);
     });
     await waitFor(() => {
-      expect(mockFetchPantryBundles).toHaveBeenCalledTimes(2);
+      expect(mockFetchPantryBundles).toHaveBeenCalledTimes(1);
     });
-    expect(
-      screen.getByRole("dialog", { name: "묶음으로 재료 추가" }),
-    ).toBeTruthy();
-    expect(screen.getByRole("button", { name: /기본 야채/ })).toBeTruthy();
+    const dialog = screen.getByRole("dialog", { name: "묶음으로 재료 추가" });
+    expect(dialog).toBeTruthy();
+    const addedIngredient = within(dialog).getByRole("checkbox", { name: /대파 보유중/ });
+    expect((addedIngredient as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: "1개 팬트리에 추가" })).toBeNull();
   });
 
