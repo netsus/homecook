@@ -1257,6 +1257,118 @@ describe("recipe API contracts", () => {
     expect(body.data.plan_count).toBe(3);
   });
 
+  it("returns deduped public recipe image candidates for the detail gallery", async () => {
+    const recipeReadQuery = createQuery({
+      data: {
+        id: "recipe-1",
+        title: "석류 보쌈김치",
+        description: null,
+        thumbnail_url: "https://cdn.example.com/primary.png",
+        base_servings: 1,
+        tags: ["한식"],
+        source_type: "system",
+        view_count: 10,
+        like_count: 0,
+        save_count: 0,
+        plan_count: 0,
+        cook_count: 0,
+      },
+      error: null,
+    });
+    const sourceQuery = createQuery({
+      data: {
+        youtube_url: null,
+        youtube_video_id: null,
+        extraction_meta_json: {
+          image_candidates: [
+            {
+              url: "https://cdn.example.com/primary.png",
+              role: "primary",
+              width: 320,
+              height: 321,
+            },
+            {
+              url: "https://cdn.example.com/alternate.png",
+              role: "alternate",
+              width: 552,
+              height: 534,
+            },
+            {
+              url: "https://cdn.example.com/step.png",
+              role: "step",
+              width: 119,
+              height: 80,
+            },
+          ],
+        },
+      },
+      error: null,
+    });
+    const ingredientsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const stepsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const mealsCountQuery = createQuery({
+      data: null,
+      error: null,
+      count: 0,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipeReadQuery;
+        if (table === "recipe_sources") return sourceQuery;
+        if (table === "recipe_ingredients") return ingredientsQuery;
+        if (table === "recipe_steps") return stepsQuery;
+        if (table === "meals") return mealsCountQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/[id]/route");
+    const response = await GET(new Request("http://localhost:3000/api/v1/recipes/recipe-1"), {
+      params: Promise.resolve({ id: "recipe-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(sourceQuery.select).toHaveBeenCalledWith(
+      "youtube_url, youtube_video_id, extraction_meta_json",
+    );
+    expect(body.data.photos).toEqual([
+      {
+        url: "https://cdn.example.com/primary.png",
+        role: "primary",
+        label: null,
+        width: 320,
+        height: 321,
+      },
+      {
+        url: "https://cdn.example.com/alternate.png",
+        role: "alternate",
+        label: null,
+        width: 552,
+        height: 534,
+      },
+      {
+        url: "https://cdn.example.com/step.png",
+        role: "step",
+        label: null,
+        width: 119,
+        height: 80,
+      },
+    ]);
+  });
+
   it("falls back to a direct recipe update when the view-count RPC is unavailable", async () => {
     const recipeReadQuery = createQuery({
       data: {

@@ -25,6 +25,16 @@
 > 새 read path는 `recipe_step_cooking_methods.position ASC`를 canonical ordering으로 사용한다.
 > DB 마이그레이션 전 코드가 배포되어도 기존 단일 조리법 조회로 fallback해야 한다.
 
+## Public Recipe Photo Gallery Addendum `2026-06-27`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| API v1.2.20 | `GET /recipes/{recipe_id}` 응답에 상세 갤러리용 `photos[]` additive 필드 추가. 기존 `thumbnail_url`은 유지 |
+
+> 이 변경은 manual UI/UX review plan 82번에 대한 사용자 승인 기반 후속 구현이다.
+> 공공 레시피는 `recipe_sources.extraction_meta_json.image_candidates`에 남은 license-cleared public image 후보를 중복 제거해 `photos[]`로 내려줄 수 있다.
+> 클라이언트는 `thumbnail_url` 단일 이미지만 있는 기존 레시피와 호환되어야 하며, 후보가 여러 장일 때만 갤러리 UI를 확장한다.
+
 ## Leftovers Stale Review Addendum `2026-06-20`
 
 | 문서 | 변경 내용 |

@@ -144,6 +144,16 @@ export interface RecipeStep {
   duration_text: string | null;
 }
 
+export type RecipePhotoRole = "primary" | "alternate" | "step" | "unknown";
+
+export interface RecipePhoto {
+  url: string;
+  role: RecipePhotoRole;
+  label?: string | null;
+  width?: number | null;
+  height?: number | null;
+}
+
 export interface ManualRecipeIngredientInput {
   ingredient_id: string;
   standard_name: string;
@@ -564,6 +574,7 @@ export interface RecipeDetail {
   title: string;
   description: string | null;
   thumbnail_url: string | null;
+  photos?: RecipePhoto[];
   base_servings: number;
   tags: string[];
   source_type: "system" | "youtube" | "manual";

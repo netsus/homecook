@@ -594,6 +594,22 @@ GET /recipes/{recipe_id}
   "title": "김치찌개",
   "description": "...",
   "thumbnail_url": "https://...",
+  "photos": [
+    {
+      "url": "https://...",
+      "role": "primary",
+      "label": null,
+      "width": 552,
+      "height": 534
+    },
+    {
+      "url": "https://...",
+      "role": "step",
+      "label": "조리 과정",
+      "width": 119,
+      "height": 80
+    }
+  ],
   "base_servings": 2,
   "tags": ["한식", "찌개"],
   "source_type": "youtube",
@@ -667,6 +683,7 @@ GET /recipes/{recipe_id}
 
 > 비로그인 시 `user_status`는 null. 조회 시 `increment_recipe_view_count(p_recipe_id)`로 `view_count += 1`을 원자적으로 반영한 뒤 응답한다.
 > `component_label`은 nullable이다. 값이 있으면 UI는 인접 항목의 label 변경 지점에만 섹션 소제목을 표시한다. 같은 label prefix가 본문에 있으면 중복 표시하지 않는다.
+> `photos`는 상세 화면 갤러리용 additive 필드다. `thumbnail_url`을 대표 후보로 포함하고, 공공 레시피는 `recipe_sources.extraction_meta_json.image_candidates`의 license-cleared public image 후보를 중복 제거해 함께 내려줄 수 있다. `role`은 `primary` / `alternate` / `step` / `unknown` 중 하나다.
 
 ### 2-2. 좋아요 토글
 
