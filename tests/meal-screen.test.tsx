@@ -26,6 +26,9 @@ const fetchMeals = vi.fn();
 const deleteMeal = vi.fn();
 const updateMealServings = vi.fn();
 const createShoppingList = vi.fn();
+const fetchUserProfile = vi.fn();
+const fetchUserProgress = vi.fn();
+const fetchUserGamification = vi.fn();
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
@@ -43,6 +46,18 @@ vi.mock("@/lib/api/shopping", () => ({
   createShoppingList: (body: unknown) => createShoppingList(body),
   isShoppingApiError: (error: unknown) =>
     Boolean(error) && typeof error === "object" && "status" in (error as Record<string, unknown>),
+}));
+
+vi.mock("@/lib/api/mypage", () => ({
+  fetchUserProfile: () => fetchUserProfile(),
+}));
+
+vi.mock("@/lib/api/user-progress", () => ({
+  fetchUserProgress: () => fetchUserProgress(),
+}));
+
+vi.mock("@/lib/api/user-gamification", () => ({
+  fetchUserGamification: () => fetchUserGamification(),
 }));
 
 vi.mock("@/lib/supabase/env", () => ({
@@ -92,6 +107,36 @@ function createMealItem(overrides: Partial<{
   };
 }
 
+function mockProfileSummaryApis() {
+  fetchUserProfile.mockResolvedValue({
+    email: "home@example.com",
+    id: "user-1",
+    nickname: "김집밥",
+    profile_image_url: null,
+    settings: { screen_wake_lock: false },
+    social_provider: "google",
+  });
+  fetchUserProgress.mockResolvedValue(null);
+  fetchUserGamification.mockResolvedValue(null);
+}
+
+function setDesktopViewport(enabled: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: enabled && query === "(min-width: 1024px)",
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe("MealScreen", () => {
   beforeEach(() => {
     mockRouterPush.mockReset();
@@ -103,10 +148,15 @@ describe("MealScreen", () => {
     deleteMeal.mockReset();
     updateMealServings.mockReset();
     createShoppingList.mockReset();
+    fetchUserProfile.mockReset();
+    fetchUserProgress.mockReset();
+    fetchUserGamification.mockReset();
+    mockProfileSummaryApis();
   });
 
   afterEach(() => {
     cleanup();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   it("renders a stable loading skeleton that matches the meal card structure", async () => {
@@ -141,6 +191,28 @@ describe("MealScreen", () => {
     await user.click(recipeLink);
 
     expect(mockRouterPush).toHaveBeenCalledWith("/recipe/recipe-1");
+  });
+
+  it("opens the web profile summary from the top avatar without linking to mypage", async () => {
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [createMealItem()],
+    });
+
+    const user = userEvent.setup();
+    const { container } = render(<MealScreen {...DEFAULT_PROPS} />);
+
+    await screen.findByText("김치찌개");
+    const profileTrigger = screen.getByTestId("web-profile-summary-button");
+
+    expect(profileTrigger.tagName).toBe("BUTTON");
+    expect(container.querySelector('a.web-profile-button[href="/mypage"]')).toBeNull();
+
+    await user.click(profileTrigger);
+
+    expect(await screen.findByRole("dialog", { name: "마이페이지 요약" })).toBeTruthy();
+    expect(mockRouterPush).not.toHaveBeenCalledWith("/mypage");
   });
 
   it("renders a trash icon button for delete instead of text button (Wave1)", async () => {

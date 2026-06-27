@@ -12,6 +12,7 @@ import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
+import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -878,7 +879,7 @@ export function RecipeDetailScreen({
 
   if (detailState === "loading") {
     return isDesktopViewport ? (
-      <RecipeDetailWebLoadingSkeleton />
+      <RecipeDetailWebLoadingSkeleton isAuthenticated={isAuthenticated} />
     ) : (
       <RecipeDetailLoadingSkeleton />
     );
@@ -952,6 +953,7 @@ export function RecipeDetailScreen({
         <div className="hidden lg:block">
           <RecipeDetailWebView
             cookCountLabel={desktopCookCountLabel}
+            isAuthenticated={isAuthenticated}
             isLikePending={likeRequestState === "pending"}
             likeCountLabel={desktopLikeCountLabel}
             onCook={() =>
@@ -1756,6 +1758,7 @@ export function RecipeDetailScreen({
 
 function RecipeDetailWebView({
   cookCountLabel,
+  isAuthenticated,
   isLikePending,
   likeCountLabel,
   onCook,
@@ -1771,6 +1774,7 @@ function RecipeDetailWebView({
   selectedServings,
 }: {
   cookCountLabel: string;
+  isAuthenticated: boolean;
   isLikePending: boolean;
   likeCountLabel: string;
   onCook: () => void;
@@ -1801,7 +1805,7 @@ function RecipeDetailWebView({
       <WebTopNav
         activeId="home"
         items={WEB_NAV_ITEMS}
-        rightSlot={<RecipeWebProfileButton />}
+        rightSlot={<RecipeWebProfileButton isAuthenticated={isAuthenticated} />}
       />
       <div className="web-screen">
         <nav aria-label="레시피 경로" className="web-breadcrumb">
@@ -2114,15 +2118,17 @@ function WebStepper({
   );
 }
 
-function RecipeWebProfileButton() {
+function RecipeWebProfileButton({
+  isAuthenticated,
+}: {
+  isAuthenticated: boolean;
+}) {
   return (
-    <Link
-      aria-label="마이페이지"
-      className="web-profile-button"
-      href="/mypage"
-    >
-      <UserIcon />
-    </Link>
+    <ProfileSummaryButton
+      autoLoad
+      isAuthenticated={isAuthenticated}
+      variant="web"
+    />
   );
 }
 
@@ -2246,13 +2252,17 @@ function RecipeDetailLoadingSkeleton() {
   );
 }
 
-function RecipeDetailWebLoadingSkeleton() {
+function RecipeDetailWebLoadingSkeleton({
+  isAuthenticated,
+}: {
+  isAuthenticated: boolean;
+}) {
   return (
     <WebShell className="web-recipe-detail" wide>
       <WebTopNav
         activeId="home"
         items={WEB_NAV_ITEMS}
-        rightSlot={<RecipeWebProfileButton />}
+        rightSlot={<RecipeWebProfileButton isAuthenticated={isAuthenticated} />}
       />
       <div className="web-screen" data-testid="recipe-detail-web-loading">
         <nav aria-label="레시피 경로" className="web-breadcrumb">
@@ -2767,25 +2777,6 @@ function InfoIcon() {
     >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 10.5v5M12 7.5h.01" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="18"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.8"
-      viewBox="0 0 24 24"
-      width="18"
-    >
-      <path d="M20 21a8 8 0 0 0-16 0" />
-      <circle cx="12" cy="7" r="4" />
     </svg>
   );
 }

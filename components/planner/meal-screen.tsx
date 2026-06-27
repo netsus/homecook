@@ -14,6 +14,7 @@ import type {
 } from "@/components/planner/meal-add-options-sheet";
 import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
 import { ModalHeader } from "@/components/shared/modal-header";
+import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { AllPantryCompletionModal } from "@/components/shopping/all-pantry-completion-modal";
@@ -508,15 +509,17 @@ function isAllPantryShoppingList(
   );
 }
 
-function MealWebProfileButton() {
+function MealWebProfileButton({
+  isAuthenticated,
+}: {
+  isAuthenticated: boolean;
+}) {
   return (
-    <Link
-      aria-label="마이페이지"
-      className="web-profile-button"
-      href="/mypage"
-    >
-      <UserIcon />
-    </Link>
+    <ProfileSummaryButton
+      autoLoad
+      isAuthenticated={isAuthenticated}
+      variant="web"
+    />
   );
 }
 
@@ -822,7 +825,7 @@ function MealWebView({
       <WebTopNav
         activeId="planner"
         items={WEB_NAV_ITEMS}
-        rightSlot={<MealWebProfileButton />}
+        rightSlot={<MealWebProfileButton isAuthenticated={authState === "authenticated"} />}
       />
       <div className="web-screen web-meal-screen">
         <nav aria-label="식사 경로" className="web-breadcrumb">
@@ -1026,15 +1029,6 @@ function TrashIcon() {
     <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
       <path d="M3.5 5h11M7 5V3.7c0-.7.5-1.2 1.2-1.2h1.6c.7 0 1.2.5 1.2 1.2V5m2.1 0l-.5 9a1.4 1.4 0 01-1.4 1.3H6.8A1.4 1.4 0 015.4 14L4.9 5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
       <path d="M7.8 8v4M10.2 8v4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="10" cy="7" r="3.25" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M4.75 17c.65-2.65 2.46-4 5.25-4s4.6 1.35 5.25 4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
     </svg>
   );
 }

@@ -24,6 +24,9 @@ const onAuthStateChange = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
 const fetchPlanner = vi.fn();
 const createMeal = vi.fn();
+const fetchUserProfile = vi.fn();
+const fetchUserProgress = vi.fn();
+const fetchUserGamification = vi.fn();
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
 const globalsCss = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
@@ -55,6 +58,18 @@ vi.mock("@/lib/api/planner", () => ({
 vi.mock("@/lib/api/meal", () => ({
   createMeal: (...args: unknown[]) => createMeal(...args),
   isMealApiError: () => false,
+}));
+
+vi.mock("@/lib/api/mypage", () => ({
+  fetchUserProfile: () => fetchUserProfile(),
+}));
+
+vi.mock("@/lib/api/user-progress", () => ({
+  fetchUserProgress: () => fetchUserProgress(),
+}));
+
+vi.mock("@/lib/api/user-gamification", () => ({
+  fetchUserGamification: () => fetchUserGamification(),
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
@@ -147,6 +162,19 @@ function buildSaveableBooks(): RecipeBookListData {
   };
 }
 
+function mockProfileSummaryApis() {
+  fetchUserProfile.mockResolvedValue({
+    email: "home@example.com",
+    id: "user-1",
+    nickname: "김집밥",
+    profile_image_url: null,
+    settings: { screen_wake_lock: false },
+    social_provider: "google",
+  });
+  fetchUserProgress.mockResolvedValue(null);
+  fetchUserGamification.mockResolvedValue(null);
+}
+
 async function findSaveActionButton() {
   const buttons = await screen.findAllByRole("button", { name: "저장" });
   const button = buttons.find(
@@ -173,6 +201,9 @@ describe("recipe detail screen", () => {
     hasSupabasePublicEnv.mockReset();
     fetchPlanner.mockReset();
     createMeal.mockReset();
+    fetchUserProfile.mockReset();
+    fetchUserProgress.mockReset();
+    fetchUserGamification.mockReset();
     mockRouterPush.mockReset();
     mockRouterReplace.mockReset();
     navigationMocks.searchParams.mockReset();
@@ -181,6 +212,7 @@ describe("recipe detail screen", () => {
     window.localStorage.clear();
 
     fetchJson.mockResolvedValue(MOCK_RECIPE_DETAIL);
+    mockProfileSummaryApis();
     getSession.mockResolvedValue({ data: { session: null } });
     onAuthStateChange.mockReturnValue({
       data: { subscription: { unsubscribe: vi.fn() } },
@@ -208,6 +240,32 @@ describe("recipe detail screen", () => {
     expect(closeButton.className).toContain("h-[var(--control-height-md)]");
     expect(closeButton.classList.contains("w-11")).toBe(true);
     expect(closeButton.textContent).toBe("");
+  });
+
+  it("opens the web profile summary from the top avatar without linking to mypage", async () => {
+    installMatchMedia(true);
+
+    const user = userEvent.setup();
+    const { container } = render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+      />,
+    );
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+    const profileTrigger = screen.getByTestId("web-profile-summary-button");
+
+    expect(profileTrigger.tagName).toBe("BUTTON");
+    expect(container.querySelector('a.web-profile-button[href="/mypage"]')).toBeNull();
+
+    await user.click(profileTrigger);
+
+    expect(await screen.findByRole("dialog", { name: "마이페이지 요약" })).toBeTruthy();
+    expect(mockRouterPush).not.toHaveBeenCalledWith("/mypage");
   });
 
   it("keeps recipe detail loading inside the desktop shell", () => {
