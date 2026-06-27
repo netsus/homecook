@@ -3588,6 +3588,547 @@ Implementation note:
   - Verified: `pnpm exec vitest run tests/shared-profile-summary.test.tsx tests/growth-toast-stack.test.tsx tests/mypage-achievement-album.test.tsx tests/user-gamification-definitions.test.ts`
   - Verified: `pnpm exec vitest run tests/gamification-tutorial-guide.test.ts tests/shared-profile-summary.test.tsx tests/growth-toast-stack.test.tsx`
 
+### 82. 공공 레시피 상세 이미지가 작은 원본을 `cover`로 확대해 잘리고 흐리게 보이는 문제
+
+- Status: planned
+- Severity: High
+- Area: UX / Recipe Detail / Public Recipe Media
+- Source: user manual review, public recipe detail screenshot for `석류 보쌈김치`
+- Problem:
+  - 공공 레시피의 대표 이미지 원본이 작은 경우에도 레시피 상세 웹 화면은 큰 히어로 칸에 `background-size: cover`로 이미지를 채워 넣는다.
+  - 예: `석류 보쌈김치`의 현재 `recipes.thumbnail_url` 원본은 `320x321`이고, 대체 완성 사진도 `552x534` 수준이라 넓은 상세 히어로에 확대하면 흐리게 보인다.
+  - 원본 비율이 정사각형/세로형에 가까운데 넓은 히어로 영역을 꽉 채우면서 위아래 또는 좌우가 잘려 음식 중심이 어긋난다.
+  - 공공 레시피는 여러 이미지 후보가 `recipe_sources.extraction_meta_json.image_candidates`에 남아 있지만, 현재 상세 화면은 `recipes.thumbnail_url` 한 장만 사용한다.
+- User impact:
+  - 레시피 상세 첫 인상이 낮아지고, 사용자는 음식 사진이 깨지거나 잘못 들어온 것으로 느낀다.
+  - 공공 레시피 DB 자체의 신뢰도까지 낮아 보일 수 있다.
+  - 여러 후보 이미지가 있는데도 대표 한 장만 크게 확대해 정보와 시각 품질을 모두 잃는다.
+- Approach decision:
+  - 고치는 게 맞다.
+  - Airbnb식 갤러리 방향은 타당하지만, 공공 레시피 사진은 고해상도 숙소 사진과 달리 작은 조리 단계 이미지도 섞여 있으므로 그대로 `cover` 그리드를 쓰면 같은 문제가 반복된다.
+  - 상세의 메인 이미지는 원본 비율을 보존하고 과도하게 확대하지 않는 방식으로 보여준다.
+  - 오른쪽 빈 공간에는 다른 이미지 후보를 작은 썸네일로 보여주고, `사진 모두 보기` 버튼으로 전체 후보를 lightbox에서 확인하게 한다.
+  - 단계 이미지는 작으므로 큰 대표 이미지 후보가 아니라 보조 썸네일/조리 과정 사진으로 취급한다.
+- Recommended fix:
+  - `GET /api/v1/recipes/{id}` 상세 응답에서 공공 레시피 이미지 후보를 내려줄 수 있는 내부 구조를 만든다. 단기적으로는 `recipe_sources.extraction_meta_json.image_candidates`를 읽고, 장기적으로는 `recipe_images` 테이블 또는 공식 media contract로 정규화한다.
+  - `getRecipePhotoSet`이 `thumbnail_url` 한 장만 반환하지 않고, 중복 제거된 후보 배열을 반환하게 한다.
+  - 웹 레시피 상세 이미지 영역을 `메인 이미지 + 오른쪽 2x2 썸네일` 구조로 바꾸되:
+    - 메인 이미지는 `object-fit: contain` 또는 equivalent background contain으로 원본 비율을 유지한다.
+    - 작은 원본은 최대 확대 폭을 제한하거나 부드러운 배경/여백 안에 배치한다.
+    - 오른쪽 썸네일은 작은 영역에서만 `cover`를 허용하되, 조리 단계 사진은 크게 확대하지 않는다.
+    - 사진이 1장뿐이면 기존 단일 이미지 레이아웃을 유지하되 `cover` 확대를 피한다.
+  - `사진 모두 보기` 버튼은 현재 `RecipePhotoLightbox`를 재사용해 전체 후보를 열게 한다.
+  - 앱 화면은 좁은 폭에서 오른쪽 갤러리 대신 가로 썸네일 rail 또는 lightbox 버튼으로 축약한다.
+- Acceptance criteria:
+  - `석류 보쌈김치` 상세 웹 화면에서 대표 이미지가 현재처럼 크게 잘리거나 과도하게 흐려 보이지 않는다.
+  - 공공 레시피에 이미지 후보가 여러 개 있으면 웹 상세 우측에 보조 썸네일이 표시된다.
+  - `사진 모두 보기` 버튼을 누르면 후보 이미지 전체를 볼 수 있다.
+  - 작은 단계 이미지는 큰 대표 이미지처럼 확대되지 않는다.
+  - 후보 이미지가 1장인 레시피와 YouTube/직접 등록 레시피의 기존 이미지 표시가 깨지지 않는다.
+- Likely implementation target:
+  - `app/api/v1/recipes/[id]/route.ts`
+  - `types/recipe.ts`
+  - `lib/recipe-image.ts`
+  - `components/recipe/recipe-detail-screen.tsx`
+  - `app/globals.css`
+  - `tests/recipe-detail-route.test.ts`
+  - `tests/recipe-detail-screen.test.tsx`
+- Verification:
+  - Add route/unit coverage for public recipe image candidate extraction and dedupe.
+  - Add component coverage that multiple photos render thumbnails and `사진 모두 보기`.
+  - Manual screenshot check for desktop recipe detail with `석류 보쌈김치` and one normal YouTube/manual recipe.
+
+### 83. 비로그인 상태로 플래너 진입 시 `잠시만 기다려주세요`가 짧게 보인 뒤 로그인 화면으로 바뀌는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Auth Gate / Planner
+- Source: user manual review
+- Problem:
+  - 비로그인 사용자가 플래너에 들어갈 때 실제로 기다릴 필요가 없는 인증 확인 상태가 `잠시만 기다려주세요` 화면으로 먼저 보이고 곧바로 로그인 화면으로 바뀐다.
+  - 전환 시간이 짧아도 화면이 두 번 바뀌어 깜빡임처럼 느껴진다.
+- User impact:
+  - 로그인 게이트가 느리거나 불안정한 것처럼 보인다.
+  - 사용자는 플래너가 로딩 중인지, 로그인이 필요한지 즉시 이해하기 어렵다.
+- Approach decision:
+  - 고치는 게 맞다. auth state가 아직 unknown인 극히 짧은 구간은 전체 화면 문구보다 skeleton 또는 blank-stable shell이 낫고, unauth가 확인되면 바로 로그인 안내로 가야 한다.
+- Recommended fix:
+  - planner auth gate에서 unauth 판단 전 임시 문구 화면을 제거한다.
+  - 공통 auth-loading shell이 필요하면 실제 로그인 화면 구조와 크게 다르지 않은 최소 skeleton으로 통일한다.
+- Acceptance criteria:
+  - 비로그인 상태에서 `/planner` 진입 시 `잠시만 기다려주세요` 문구가 보이지 않는다.
+  - 로그인 안내 화면으로 전환되기 전 불필요한 full-screen flicker가 없다.
+- Likely implementation target:
+  - `app/planner/page.tsx`
+  - `components/planner/planner-week-screen.tsx`
+  - shared auth gate component if present
+- Verification:
+  - 비로그인 상태 Playwright 또는 component test로 planner 진입 시 transient waiting text가 없는지 확인한다.
+
+### 84. 웹/앱 전역 스켈레톤이 실제 화면과 맞지 않고 여러 단계로 바뀌어 화면이 바빠 보이는 문제
+
+- Status: planned
+- Severity: High
+- Area: UX / Loading States / Skeleton System
+- Source: user manual review, screenshots for mypage loading
+- Problem:
+  - 웹/앱 마이페이지 스켈레톤이 실제 최종 화면 구조와 맞지 않는다.
+  - `내 정보와 레시피북을 불러오는 중이에요.` 같은 설명 문구가 skeleton 위에 떠 있어 오히려 화면을 복잡하게 만든다.
+  - 앱 마이페이지에서는 스켈레톤이 2종류 이상 연속으로 보이며 화면이 바쁘게 바뀐다.
+  - 환경설정, 요리모드 등 다른 화면도 skeleton shape가 실제 UI와 맞는지 전수 확인이 필요하다.
+- User impact:
+  - 로딩이 실제보다 더 길고 불안정하게 느껴진다.
+  - 최종 화면이 뜰 때 layout shift가 커져 완성도가 낮아 보인다.
+- Approach decision:
+  - 고치는 게 맞다. 개별 화면의 문구를 늘리는 것보다 화면별 final layout에 가까운 skeleton을 1단계로 고정하는 방향이 좋다.
+  - 2~5번은 각각 고치면 중복이 생기므로 `전역 스켈레톤 재정비` 묶음으로 진행한다.
+- Recommended fix:
+  - 마이페이지, 환경설정, 요리모드, 플래너, 팬트리, 장보기, 레시피 상세/목록의 loading state를 목록화한다.
+  - 같은 화면에서 loading component가 2번 이상 교체되는 곳을 제거한다.
+  - skeleton에는 안내 문구를 최소화하고, 실제 최종 카드/탭/리스트 구조와 같은 높이/위치를 맞춘다.
+  - 특히 마이페이지는 상단 프로필/요약/탭/컨텐츠 skeleton을 final layout과 맞추고 텍스트 안내를 제거한다.
+- Acceptance criteria:
+  - 웹/앱 마이페이지 진입 시 skeleton이 1종류로 안정적으로 보인다.
+  - `내 정보와 레시피북을 불러오는 중이에요.` 문구가 보이지 않는다.
+  - 환경설정과 요리모드 skeleton이 실제 화면 구조와 크게 다르지 않다.
+  - 전수조사 결과가 체크리스트로 남는다.
+- Likely implementation target:
+  - `components/mypage/*`
+  - settings screen components
+  - `components/cooking/*`
+  - `app/globals.css`
+  - related loading components/tests
+- Verification:
+  - 주요 화면별 loading screenshot 또는 Playwright capture를 남긴다.
+  - component tests에서 loading text 제거와 stable skeleton rendering을 확인한다.
+
+### 85. 첫 회원가입 튜토리얼 안내 토스트가 닉네임 확정 전/전환 중에 뜰 수 있는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Onboarding / Tutorial Toast
+- Source: user manual review
+- Problem:
+  - 첫 회원가입 직후 튜토리얼 안내 토스트가 닉네임 설정 전환 흐름과 겹치면 사용자가 토스트를 놓칠 수 있다.
+- User impact:
+  - 신규 사용자가 첫 안내를 제대로 보지 못하고 홈/다음 화면에 도착한다.
+- Approach decision:
+  - 고치는 게 맞다. 첫 튜토리얼 안내는 닉네임 확정 후 실제로 이동한 첫 서비스 화면에서 보여야 한다.
+- Recommended fix:
+  - nickname onboarding completion 이후 route transition이 끝난 뒤 tutorial guide toast를 enqueue한다.
+  - onboarding 화면 자체에서는 첫 tutorial toast를 띄우지 않는다.
+- Acceptance criteria:
+  - 신규 회원가입 후 닉네임을 정하고 이동한 화면에서 첫 튜토리얼 토스트가 보인다.
+  - 닉네임 화면에서는 tutorial toast가 먼저 뜨지 않는다.
+- Likely implementation target:
+  - onboarding/auth callback flow
+  - `components/gamification/growth-toast-stack.tsx`
+  - tutorial guide state
+- Verification:
+  - onboarding completion flow test 또는 manual smoke.
+
+### 86. 튜토리얼 안내 알림이 알림모달 전체 탭과 완료 후 시스템 기록에 일관되게 남지 않는 문제
+
+- Status: planned
+- Severity: High
+- Area: UX / Notifications / Tutorial
+- Source: user manual review
+- Problem:
+  - 알림모달 `시스템` 탭에는 현재 튜토리얼 안내가 보이지만 `전체` 탭에는 보이지 않는다.
+  - 튜토리얼 퀘스트 완료 후에도 다음 안내 또는 완료한 안내를 시스템 기록에서 다시 볼 수 있어야 하는데 기록성이 약하다.
+- User impact:
+  - 사용자는 토스트를 놓친 뒤 `전체` 탭에서 알림을 찾다가 놓칠 수 있다.
+  - 튜토리얼 흐름이 일시적인 토스트에만 의존한다.
+- Approach decision:
+  - 고치는 게 맞다. 알림 기록은 사용자가 놓친 안내를 다시 찾는 장소이므로 active tutorial guide와 완료 후 tutorial archive가 전체/시스템 정책에 맞게 보여야 한다.
+- Recommended fix:
+  - current tutorial guide synthetic notification을 `전체`와 `시스템` 양쪽에 표시하되, 중복 row처럼 보이지 않게 타입/라벨을 명확히 한다.
+  - 튜토리얼 단계 완료 시 시스템 알림 archive row를 남긴다.
+  - 단, 이미 완료된 안내가 과도하게 쌓이지 않도록 quest id 기준 idempotent 처리를 한다.
+- Acceptance criteria:
+  - 현재 튜토리얼 안내가 `전체` 탭과 `시스템` 탭에서 모두 보인다.
+  - 튜토리얼 퀘스트 완료 후 시스템 탭에 완료/다음 안내 기록이 남는다.
+  - 같은 튜토리얼 알림이 중복 저장되지 않는다.
+- Likely implementation target:
+  - `components/mypage/mypage-growth-detail-dialog.tsx`
+  - notification archive API/server logic
+  - tutorial achievement award flow
+- Verification:
+  - notification panel tests and tutorial completion event tests.
+
+### 87. 알림모달의 알림 글자 크기가 작아 읽기 어려운 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Notifications / Readability
+- Source: user manual review
+- Problem:
+  - 알림모달 안의 알림 제목/본문/메타 텍스트가 작아 실제 사용자가 빠르게 읽기 어렵다.
+- User impact:
+  - 중요한 성장/튜토리얼/시스템 알림이 정보로 인식되지 못한다.
+- Approach decision:
+  - 고치는 게 맞다. 알림은 scan-read가 핵심이므로 최소 14~15px 수준의 본문 가독성이 필요하다.
+- Recommended fix:
+  - 알림 제목, 본문, 시간 텍스트의 font-size/weight 위계를 재정의한다.
+  - 모바일과 웹 모두 같은 정보 위계를 유지한다.
+- Acceptance criteria:
+  - 알림 title/body가 현재보다 명확하게 크고 읽기 쉽다.
+  - 긴 알림도 카드 안에서 자연스럽게 줄바꿈된다.
+- Likely implementation target:
+  - `components/mypage/mypage-growth-detail-dialog.tsx`
+  - notification CSS/classes
+- Verification:
+  - 알림모달 screenshot review.
+
+### 88. 프로필요약 튜토리얼 안내 섹션에서 제목과 안내 문구가 구분되지 않는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Profile Summary / Tutorial
+- Source: user manual review
+- Problem:
+  - 프로필요약의 튜토리얼 안내 섹션에서 퀘스트 제목과 안내 설명의 시각 위계가 약하다.
+- User impact:
+  - 사용자가 “무엇을 해야 하는지”와 “왜/어떻게 하는지”를 빠르게 구분하기 어렵다.
+- Approach decision:
+  - 고치는 게 맞다. 프로필요약은 작은 surface라 제목/설명 구분이 더 중요하다.
+- Recommended fix:
+  - 섹션 라벨, 퀘스트 제목, 안내 문구의 font-weight/size/spacing을 분리한다.
+  - 안내 문구는 1~2줄 안에 들어오게 copy를 유지한다.
+- Acceptance criteria:
+  - 튜토리얼 섹션에서 제목과 설명이 한눈에 구분된다.
+  - 모바일 좁은 폭에서도 텍스트가 겹치거나 잘리지 않는다.
+- Likely implementation target:
+  - `components/shared/profile-summary-button.tsx`
+  - `lib/gamification-tutorial-guide.ts`
+- Verification:
+  - profile summary component test and screenshot review.
+
+### 89. 홈 `이번 주 인기 테마`의 크기와 분류 기준이 현재 데이터와 맞지 않는 문제
+
+- Status: planned
+- Severity: High
+- Area: UX / Home / Recipe Themes
+- Source: user manual review
+- Problem:
+  - 웹 홈 인기테마 카드가 너무 작아져 섹션 존재감이 약하다.
+  - 앱 홈 테마 카드는 너무 가로로 길쭉해 카드 비율이 어색하다.
+  - `이번주 인기레시피`, `실패 걱정 없는 메뉴`, `많이 저장한 레시피`, `밥상 든든한 메인`, `불 없이 달달하게` 같은 테마명이 실제 분류 기준과 맞지 않는다.
+  - 예: `불 없이 달달하게`에 들어간 레시피가 실제로는 중불 가열을 요구한다.
+- User impact:
+  - 사용자는 테마를 추천/큐레이션으로 믿고 눌렀다가 내용이 맞지 않아 신뢰를 잃는다.
+  - 저장순 같은 기존 정렬과 겹치는 테마는 홈 추천의 새로움이 약하다.
+- Approach decision:
+  - 고치는 게 맞다. 다만 UI 크기보다 먼저 `현재 시스템이 판별 가능한 기준`으로 테마를 제한해야 한다.
+  - 레시피 DB가 늘기 전에는 무리한 감성 테마보다 tags/ingredients/cooking_methods/source metadata로 검증 가능한 테마를 써야 한다.
+- Recommended fix:
+  - 현재 DB 필드로 판정 가능한 theme taxonomy를 정의한다.
+  - 예: `불 없이`는 cooking method에 끓이기/볶기/굽기/튀기기/오븐굽기 등이 없는 레시피만 포함한다.
+  - `메인`은 밑반찬/디저트/샐러드만 있는 레시피를 제외한다.
+  - `인기`는 view/save/like 중 어떤 기준인지 label에 드러내거나 제거한다.
+  - 웹 카드 크기를 키우고 섹션 존재감을 회복한다.
+  - 앱 카드 width를 줄이고 height를 키워 덜 납작하게 만든다.
+- Acceptance criteria:
+  - 테마명과 포함 레시피 조건이 서로 충돌하지 않는다.
+  - 기존 정렬/필터와 중복되는 테마는 제거하거나 의미를 바꾼다.
+  - 웹/앱 테마 카드 비율이 안정적이다.
+- Likely implementation target:
+  - `app/api/v1/recipes/themes/route.ts`
+  - home screen components
+  - theme taxonomy utilities/tests
+- Verification:
+  - theme query unit tests.
+  - desktop/mobile home screenshot review.
+
+### 90. 레시피 저장 모달을 열 때 로딩이 오래 걸리는 문제
+
+- Status: planned
+- Severity: High
+- Area: UX / Recipe Save Modal / Performance
+- Source: user manual review
+- Problem:
+  - 레시피 저장 버튼을 누른 뒤 저장 모달이 뜨기까지 체감 대기가 길다.
+- User impact:
+  - 저장 액션이 눌렸는지 불확실하고, 반복 클릭을 유발할 수 있다.
+- Approach decision:
+  - 고치는 게 맞다. 저장 모달은 핵심 액션이라 즉시 shell을 띄우고 데이터는 내부에서 채우는 방식이 더 낫다.
+- Recommended fix:
+  - 저장 버튼 클릭 즉시 modal shell을 열고 recipebooks fetch는 내부 skeleton으로 처리한다.
+  - recipebooks/user saved state를 page 진입 후 prefetch하거나 cache한다.
+  - 중복 요청과 stale fetch를 줄인다.
+- Acceptance criteria:
+  - 저장 버튼 클릭 즉시 모달 frame이 열린다.
+  - 레시피북 목록 로딩은 모달 안 skeleton으로 보인다.
+  - 같은 상세 화면에서 두 번째 저장 모달 열기는 즉시 열린다.
+- Likely implementation target:
+  - `components/recipe/recipe-detail-screen.tsx`
+  - save modal hooks/API
+- Verification:
+  - interaction test and manual latency check.
+
+### 91. 앱 레시피상세 리뷰탭이 미개발 기능을 빈 리뷰처럼 안내하는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Recipe Detail / Reviews
+- Source: user manual review
+- Problem:
+  - 앱 레시피상세 리뷰탭에서 `아직 등록된 리뷰가 없어요.`라고 보여 기능이 이미 구현되어 있는데 데이터만 없는 것처럼 느껴진다.
+  - 실제로 리뷰 기능이 아직 개발되지 않았다.
+- User impact:
+  - 사용자는 리뷰 작성/조회 기능이 있다고 오해할 수 있다.
+- Approach decision:
+  - 고치는 게 맞다. 미구현 기능은 empty state가 아니라 준비 중 안내가 맞다.
+- Recommended fix:
+  - 리뷰탭 copy를 `리뷰 기능을 준비 중이에요` 계열로 변경한다.
+  - 작성 CTA가 있으면 숨기거나 disabled 안내로 바꾼다.
+- Acceptance criteria:
+  - 미개발 리뷰 기능이 빈 데이터처럼 보이지 않는다.
+- Likely implementation target:
+  - `components/recipe/recipe-detail-screen.tsx`
+- Verification:
+  - mobile detail screenshot or component test.
+
+### 92. 웹 장보기 화면 우측상단에 프로필요약 진입점이 없는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Shopping / Global Navigation
+- Source: user manual review
+- Problem:
+  - 웹 장보기 화면에 다른 주요 화면과 같은 우측상단 프로필요약 진입점이 없다.
+- User impact:
+  - 화면별 전역 조작 일관성이 깨진다.
+- Approach decision:
+  - 고치는 게 맞다. 기존 36번의 “주요 화면 프로필 진입점 일관성”과 같은 방향이며 shopping surface를 누락 없이 포함해야 한다.
+- Recommended fix:
+  - 장보기 준비/목록/상세 웹 화면의 top nav/right slot을 조사하고 `ProfileSummaryButton`으로 통일한다.
+- Acceptance criteria:
+  - 웹 장보기 관련 화면 우측상단에서 프로필요약을 열 수 있다.
+  - 클릭 시 마이페이지로 이동하지 않는다.
+- Likely implementation target:
+  - shopping screen components
+  - shared web nav
+- Verification:
+  - relevant shopping screen tests/manual check.
+
+### 93. 우측상단 프로필이미지 클릭이 아직 마이페이지 이동으로 남아 있는 문제
+
+- Status: planned
+- Severity: High
+- Area: UX / Global Profile Summary
+- Source: user manual review
+- Problem:
+  - 끼니 화면 등 일부 화면에서 우측상단 프로필 이미지를 클릭하면 프로필요약이 아니라 마이페이지로 이동한다.
+  - 과거 `href="/mypage"` 패턴이 일부 남아 있는 것으로 보인다.
+- User impact:
+  - 사용자는 현재 흐름을 유지한 채 알림/요약을 보려다 화면을 이탈한다.
+- Approach decision:
+  - 고치는 게 맞다. 프로필 이미지는 전역적으로 `현재 페이지에서 요약 열기`로 통일해야 한다.
+- Recommended fix:
+  - `href="/mypage"`, `router.push("/mypage")`, `aria-label="마이페이지"`를 가진 프로필 이미지 패턴을 전수 검색한다.
+  - 실제 마이페이지 이동이 필요한 nav item과 프로필요약 avatar click을 분리한다.
+- Acceptance criteria:
+  - 우측상단 avatar 클릭으로 마이페이지 이동하는 코드가 남아 있지 않다.
+  - 마이페이지 이동은 하단/상단 nav의 명시적 `마이페이지` 탭에서만 발생한다.
+- Likely implementation target:
+  - shared nav/profile components
+  - meal/shopping/planner/pantry screens
+- Verification:
+  - repo-wide test/search and manual click checks.
+
+### 94. 웹/앱 요리모드 스켈레톤이 실제 요리모드 화면과 맞지 않는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Cook Mode / Loading State
+- Source: user manual review
+- Problem:
+  - 요리모드 skeleton이 실제 조리 단계/재료/상단 구조와 달라 로딩 중 화면이 어색하다.
+- User impact:
+  - 요리모드 진입 시 화면이 한번 바뀌는 느낌이 강하고, 조리 중 맥락이 끊긴다.
+- Approach decision:
+  - 고치는 게 맞다. 이 항목은 84번 전역 skeleton audit에 포함하되, 요리모드는 핵심 사용 화면이라 별도 acceptance를 둔다.
+- Recommended fix:
+  - 웹/앱 요리모드의 final layout에 맞춘 skeleton을 만든다.
+  - 상단, 현재 단계, 재료 rail/list의 skeleton 위치와 크기를 맞춘다.
+- Acceptance criteria:
+  - 요리모드 로딩 화면이 실제 요리모드 구조와 유사하다.
+  - 앱/웹 모두 불필요한 skeleton 전환이 없다.
+- Likely implementation target:
+  - cook mode components
+  - `app/globals.css`
+- Verification:
+  - cook mode loading screenshot review.
+
+### 95. 웹/앱 요리모드 재료 폰트가 작아 조리 중 보기 어려운 문제
+
+- Status: planned
+- Severity: High
+- Area: UX / Cook Mode / Readability
+- Source: user manual review
+- Problem:
+  - 요리모드 재료 텍스트가 조리 중 멀리서 보기에 작다.
+- User impact:
+  - 손이 젖었거나 조리 중인 상황에서 화면을 가까이 봐야 한다.
+- Approach decision:
+  - 고치는 게 맞다. 요리모드는 미관보다 조리 중 가독성이 우선이다.
+- Recommended fix:
+  - 웹/앱 요리모드 재료명/양의 font-size를 약 20px 기준으로 키운다.
+  - 줄바꿈과 chip/card 폭이 깨지지 않게 responsive constraints를 같이 조정한다.
+- Acceptance criteria:
+  - 요리모드 재료 텍스트가 약 20px 수준으로 커진다.
+  - 긴 재료명/양도 카드 안에서 깨지지 않는다.
+- Likely implementation target:
+  - cook mode components/CSS
+- Verification:
+  - desktop/mobile cook mode screenshot review.
+
+### 96. 요리완료 소진재료 확인 모달의 전체선택 상태와 체크 표시 색상이 불명확한 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Cook Completion / Pantry Deduction Modal
+- Source: user manual review
+- Problem:
+  - 웹/앱 모두 소진재료확인 모달에서 전체선택 버튼을 눌러도 모양이 `-` 상태처럼 남아 있어 선택 상태가 불명확하다.
+  - 웹에서는 체크된 박스 내부 체크 표시가 검은색이라 checked state contrast가 어색하다.
+- User impact:
+  - 사용자는 전체선택이 적용됐는지 확신하기 어렵다.
+- Approach decision:
+  - 고치는 게 맞다. 선택 상태는 즉시 시각적으로 바뀌어야 한다.
+- Recommended fix:
+  - 전체선택/부분선택/전체해제 상태를 명확히 분리한다.
+  - checked state의 check icon은 흰색으로 통일한다.
+- Acceptance criteria:
+  - 전체선택 시 `-`가 아니라 checked 상태가 보인다.
+  - 웹 checked icon이 흰색으로 보인다.
+- Likely implementation target:
+  - cook completion pantry modal components
+  - checkbox component/CSS
+- Verification:
+  - modal component test and screenshot review.
+
+### 97. 웹 레시피북 생성 input 내부에 불필요한 파란 박스가 생기는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Recipebook / Create Input
+- Source: user manual review, screenshot
+- Problem:
+  - 웹 레시피북 생성 중 이름 input에 바깥 테두리와 별개로 내부 파란색 박스/outline이 생긴다.
+- User impact:
+  - focus 상태가 이중 테두리처럼 보여 디자인 완성도가 낮아 보인다.
+- Approach decision:
+  - 고치는 게 맞다. focus indication은 유지하되 이중 박스는 제거해야 한다.
+- Recommended fix:
+  - 해당 input의 nested focus ring/inner border를 제거한다.
+  - 접근성 focus는 외곽 ring 하나로 유지한다.
+- Acceptance criteria:
+  - input 내부 파란 박스가 사라진다.
+  - 키보드 포커스 시 외곽 focus indication은 남는다.
+- Likely implementation target:
+  - recipebook create component/CSS
+- Verification:
+  - screenshot and keyboard focus check.
+
+### 98. 앱 레시피북 생성 완료/취소가 텍스트만 보여 버튼으로 인식되기 약한 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Recipebook / Mobile Create Input
+- Source: user manual review, screenshot
+- Problem:
+  - 앱 레시피북 생성에서 `완료`, `취소`가 텍스트 버튼처럼만 보여 조작 영역과 우선순위가 약하다.
+- User impact:
+  - 사용자는 입력 후 어떤 액션이 primary인지 빠르게 파악하기 어렵다.
+- Approach decision:
+  - 고치는 게 맞다. 웹처럼 버튼 모양을 갖추되 모바일 폭에서 과하지 않게 해야 한다.
+- Recommended fix:
+  - `완료`는 primary filled 또는 soft filled button, `취소`는 secondary button으로 만든다.
+  - input 높이와 버튼 높이를 맞춘다.
+- Acceptance criteria:
+  - 앱에서 완료/취소가 명확한 버튼 형태로 보인다.
+  - 좁은 폭에서도 input과 버튼이 겹치지 않는다.
+- Likely implementation target:
+  - mobile recipebook create component/CSS
+- Verification:
+  - mobile screenshot review.
+
+### 99. 첫 경험치 안내까지 모두 토스트/모달로 보여 성장 알림이 복잡해지는 문제
+
+- Status: planned
+- Severity: Low
+- Area: UX / Gamification / XP Notifications
+- Source: user manual review
+- Problem:
+  - 첫 경험치 획득까지 별도 안내하면 성장 알림이 튜토리얼/업적/경험치로 과하게 복잡해 보인다.
+- User impact:
+  - 신규 사용자가 핵심 튜토리얼보다 경험치 안내에 주의를 뺏길 수 있다.
+- Approach decision:
+  - 일부 고치는 게 맞다. 경험치 시스템 자체는 유지하되 첫 경험치 안내는 억제하거나 우선순위를 낮추는 편이 낫다.
+- Recommended fix:
+  - 첫 XP 획득 toast는 숨기거나 notification archive에만 조용히 남긴다.
+  - 튜토리얼/업적 완료 안내가 있는 경우 XP toast를 합치거나 생략한다.
+- Acceptance criteria:
+  - 첫 회원가입/첫 튜토리얼 단계에서 XP 안내가 과하게 중복 노출되지 않는다.
+- Likely implementation target:
+  - gamification notification priority logic
+  - growth toast stack
+- Verification:
+  - notification priority tests.
+
+### 100. 팬트리 재료추가/묶음추가가 오래 걸리는 문제
+
+- Status: planned
+- Severity: High
+- Area: UX / Pantry / Performance
+- Source: user manual review
+- Problem:
+  - 팬트리에서 재료추가, 특히 묶음 추가가 매우 오래 걸린다.
+- User impact:
+  - 반복 사용성이 크게 떨어지고, 사용자는 클릭이 실패했는지 오해할 수 있다.
+- Approach decision:
+  - 고치는 게 맞다. 먼저 원인을 측정한 뒤 쿼리/렌더/중복 검사/네트워크 요청 중 병목을 줄인다.
+- Recommended fix:
+  - 묶음 추가 시 호출 수, payload 크기, DB RPC/insert 횟수, client re-render 비용을 측정한다.
+  - 가능한 경우 bulk insert/upsert 또는 RPC로 묶고, optimistic UI 또는 progress state를 제공한다.
+  - 재료 목록/묶음 데이터를 화면 진입 시 prefetch/cache한다.
+- Acceptance criteria:
+  - 묶음 추가의 네트워크 요청 수와 처리 시간이 현재보다 줄어든다.
+  - 추가 중 버튼 loading/disabled 상태가 명확하다.
+  - 실패 시 어떤 항목이 실패했는지 알 수 있다.
+- Likely implementation target:
+  - pantry add modal components
+  - pantry APIs/RPCs
+  - ingredient bundle hooks
+- Verification:
+  - performance log before/after and pantry API tests.
+
+### 101. 요리모드에서 조리법이 여러 개인 단계의 조리법 태그가 세로로 쌓이는 문제
+
+- Status: planned
+- Severity: Medium
+- Area: UX / Cook Mode / Cooking Method Tags
+- Source: user manual review
+- Problem:
+  - 조리단계에 조리법이 여러 개인 경우 태그가 세로로 배치되어 단계 카드 높이가 불필요하게 커진다.
+- User impact:
+  - 요리모드에서 한 화면에 보이는 조리 정보가 줄어든다.
+- Approach decision:
+  - 고치는 게 맞다. 이미 단계별 다중 조리법을 지원하므로, 표시 방식도 가로 wrap으로 맞춰야 한다.
+- Recommended fix:
+  - 요리모드의 method badge container를 horizontal flex-wrap으로 바꾼다.
+  - 긴 조리법 라벨이 있어도 단계 문장과 겹치지 않게 gap/line-height를 조정한다.
+- Acceptance criteria:
+  - 여러 조리법 태그가 가능한 한 가로로 배치되고, 공간 부족 시 자연스럽게 다음 줄로 감긴다.
+  - 단계 카드가 불필요하게 세로로 길어지지 않는다.
+- Likely implementation target:
+  - cook mode components/CSS
+  - `StepCookingMethodBadges` usage
+- Verification:
+  - multi-method step fixture screenshot.
+
 ## 보류 항목
 
 아직 없음.
