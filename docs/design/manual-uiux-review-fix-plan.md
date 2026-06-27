@@ -3972,7 +3972,7 @@ Implementation note:
 
 ### 93. 우측상단 프로필이미지 클릭이 아직 마이페이지 이동으로 남아 있는 문제
 
-- Status: planned
+- Status: implemented
 - Severity: High
 - Area: UX / Global Profile Summary
 - Source: user manual review
@@ -3993,7 +3993,11 @@ Implementation note:
   - shared nav/profile components
   - meal/shopping/planner/pantry screens
 - Verification:
-  - repo-wide test/search and manual click checks.
+  - `rg -n 'href="/mypage"|aria-label="마이페이지"|web-profile-button' components/planner/meal-screen.tsx components/recipe/recipe-detail-screen.tsx`
+  - `CI=true corepack pnpm exec vitest run tests/meal-screen.test.tsx tests/recipe-detail-screen.test.tsx`
+- Implementation notes:
+  - 끼니 화면과 레시피상세 웹 상단 avatar의 `href="/mypage"` 링크를 `ProfileSummaryButton`으로 교체했다.
+  - explicit nav item의 마이페이지 링크는 유지하고, avatar click은 현재 페이지 요약 dialog로 통일했다.
 
 ### 94. 웹/앱 요리모드 스켈레톤이 실제 요리모드 화면과 맞지 않는 문제
 
