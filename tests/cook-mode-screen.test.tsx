@@ -1092,6 +1092,76 @@ describe("CookModeScreen", () => {
     });
   });
 
+  it("keeps the consumed bulk checkbox fully checked when ingredient rows share the same id", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({
+        recipe: {
+          ...buildCookModeData().recipe,
+          ingredients: [
+            buildIngredient({ ingredient_id: "ing-1", standard_name: "양파" }),
+            buildIngredient({
+              ingredient_id: "ing-1",
+              standard_name: "양파",
+              amount: 0.5,
+              unit: "개",
+              display_text: "양파 1/2개",
+              component_label: "양념",
+            }),
+            buildIngredient({ ingredient_id: "ing-2", standard_name: "김치" }),
+          ],
+        },
+      }),
+    );
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("complete-button")).toBeTruthy();
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("complete-button"));
+    await screen.findByTestId("consumed-ingredient-sheet");
+
+    const bulkToggle = screen.getByTestId("consumed-bulk-toggle");
+    const bulkMark = within(bulkToggle).getByTestId("consumed-bulk-checkmark");
+
+    expect(bulkToggle.textContent).toContain("전체 해제");
+    expect(bulkToggle.getAttribute("aria-checked")).toBe("true");
+    expect(bulkMark.textContent).not.toContain("-");
+    expect(bulkMark.querySelector("svg path")?.getAttribute("stroke")).toBe(
+      "var(--text-inverse)",
+    );
+    expect(screen.getByTestId("consumed-selection-summary").textContent).toBe(
+      "2개 선택됨",
+    );
+  });
+
+  it("renders desktop consumed ingredient checks with a white check icon", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("complete-button")).toBeTruthy();
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("complete-button"));
+    await screen.findByTestId("consumed-ingredient-sheet");
+
+    const firstCheck = screen.getByTestId("consumed-check-ing-1");
+    const checkedIcon = firstCheck.querySelector("svg path");
+
+    expect(firstCheck.getAttribute("role")).toBe("checkbox");
+    expect(firstCheck.getAttribute("aria-checked")).toBe("true");
+    expect(checkedIcon?.getAttribute("stroke")).toBe("var(--text-inverse)");
+  });
+
   it("sends empty array when all desktop ingredients are unchecked", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());

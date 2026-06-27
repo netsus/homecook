@@ -181,7 +181,7 @@ Detailed entries live in `docs/design/manual-uiux-review-fix-plan.md`.
 | 93 | 우측상단 프로필이미지 클릭이 아직 마이페이지 이동으로 남아 있는 문제 | planned |
 | 94 | 웹/앱 요리모드 스켈레톤이 실제 요리모드 화면과 맞지 않는 문제 | implemented in `fix/cook-mode-legibility-polish` |
 | 95 | 웹/앱 요리모드 재료 폰트가 작아 조리 중 보기 어려운 문제 | implemented in `fix/cook-mode-legibility-polish` |
-| 96 | 요리완료 소진재료 확인 모달의 전체선택 상태와 체크 표시 색상이 불명확한 문제 | planned |
+| 96 | 요리완료 소진재료 확인 모달의 전체선택 상태와 체크 표시 색상이 불명확한 문제 | implemented |
 | 97 | 웹 레시피북 생성 input 내부에 불필요한 파란 박스가 생기는 문제 | planned |
 | 98 | 앱 레시피북 생성 완료/취소가 텍스트만 보여 버튼으로 인식되기 약한 문제 | planned |
 | 99 | 첫 경험치 안내까지 모두 토스트/모달로 보여 성장 알림이 복잡해지는 문제 | planned |
