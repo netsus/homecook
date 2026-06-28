@@ -3,12 +3,14 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(__dirname, "..");
 const recordScript = path.join(repoRoot, "scripts/recipe-loop/codex-vision-iter-record.mjs");
 const dashboardScript = path.join(repoRoot, "scripts/recipe-loop/codex-vision-history-dashboard.mjs");
+const historyModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/recipe-loop/lib/codex-vision-history.mjs")).href;
 
 function writeJson(filePath: string, value: unknown) {
   mkdirSync(path.dirname(filePath), { recursive: true });
@@ -139,6 +141,14 @@ describe("codex vision iteration history recorder", () => {
     rmSync(workdir, { recursive: true, force: true });
   });
 
+  it("formats recorded times in KST for dashboard display", async () => {
+    const { formatKstTimestamp } = await import(historyModuleUrl);
+
+    expect(formatKstTimestamp("2026-06-27T15:57:24.531Z")).toBe("2026-06-28 00:57:24 KST");
+    expect(formatKstTimestamp(null)).toBe("n/a");
+    expect(formatKstTimestamp("not-a-date")).toBe("not-a-date");
+  });
+
   it("records a train single-id iteration and regenerates README/dashboard", () => {
     createFixture({ dataRoot });
 
@@ -180,7 +190,10 @@ describe("codex vision iteration history recorder", () => {
     });
     expect(readJson(path.join(runDir, "iteration-01/05_decision.json")).decision).toBe("accepted");
     expect(readFileSync(path.join(runDir, "README.md"), "utf8")).toContain("history-smoke");
-    expect(readFileSync(path.join(runDir, "dashboard.html"), "utf8")).toContain("Codex Vision Keyframes");
+    const dashboardHtml = readFileSync(path.join(runDir, "dashboard.html"), "utf8");
+    expect(dashboardHtml).toContain("Codex Vision Keyframes");
+    expect(dashboardHtml).toContain("recorded (KST)");
+    expect(dashboardHtml).toContain("KST");
   });
 
   it("refuses duplicate iteration numbers without overwriting existing files", () => {
@@ -327,6 +340,8 @@ describe("codex vision iteration history recorder", () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(readFileSync(path.join(runDir, "README.md"), "utf8")).toContain("history-smoke");
-    expect(readFileSync(path.join(runDir, "dashboard.html"), "utf8")).toContain("history-smoke");
+    const dashboardHtml = readFileSync(path.join(runDir, "dashboard.html"), "utf8");
+    expect(dashboardHtml).toContain("history-smoke");
+    expect(dashboardHtml).toContain("recorded (KST)");
   });
 });

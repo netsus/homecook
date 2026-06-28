@@ -21,10 +21,11 @@ const PROVIDER = "codex-vision-keyframes";
 const CACHE_DIR = path.join(PROJECT_ROOT, "notebooks/recipe_loop_data/cache/codex-vision-keyframes");
 const CLIENT_VERSION = "codex-vision-keyframes-client-v1";
 const SELECTOR_PROMPT_VERSION = "keyframe-selector-v1";
-const FINAL_PROMPT_VERSION = "keyframe-final-v1";
 const CANDIDATE_SPLITTER_VERSION = "candidate-splitter-v1";
-const SEGMENT_PROMPT_VERSION = "keyframe-segment-plan-v2";
+const SEGMENT_PROMPT_VERSION = "keyframe-segment-plan-v3";
 const SEGMENT_SELECTOR_PROMPT_VERSION = "keyframe-segment-selector-v2";
+const FINAL_PROMPT_VERSION = "keyframe-final-v1";
+const TIMELINE_PARENT_RANGE_VERSION = "timeline-parent-range-v1";
 const DEFAULT_FINAL_MODEL = "gpt-5.4";
 const DEFAULT_SELECTOR_MODEL = "gpt-5.4-mini";
 const DEFAULT_SEGMENT_MODEL = "gpt-5.4-mini";
@@ -53,6 +54,8 @@ const DISH_WORD_RE = /(밥|덮밥|솥밥|죽|국|탕|찌개|전골|칼국수|국
 const GENERIC_RECIPE_LABEL_RE = /(?:레시피|recipe|요리|만드는\s*법|how\s*to)(?:\s*)$/i;
 const FRAME_FILE_TIMESTAMP_RE = /_(\d+(?:\.\d+)?)(?:\.[^.]+)$/;
 const FRAME_TIMESTAMP_TOLERANCE_SEC = 0.075;
+const TIMELINE_RANGE_CONFIDENCE_THRESHOLD = 0.75;
+const LAST_RANGE_TAIL_WARNING_SEC = 7 * 60;
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -449,6 +452,240 @@ function canonicalJson(value) {
   return JSON.stringify(stableValue(value));
 }
 
+function timelineFallback({ timelineConfidence, parsedTimelineEntries, lastKeyframeSec, fallbackReason }) {
+  return {
+    rangeSource: "llm_planner_fallback",
+    timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
+    timelineConfidence,
+    parsedTimelineEntries,
+    fallbackReason,
+    lastKeyframeSec,
+    tailWarning: null,
+    parentRanges: [],
+  };
+}
+
+function parseDescriptionTimelineEntries(sourceText) {
+  const entries = [];
+  const seen = new Set();
+  for (const block of sourceBlocks(sourceText)) {
+    if (block.name !== "description") continue;
+    for (const line of block.lines) {
+      const match = line.match(TIMESTAMP_RE);
+      if (!match) continue;
+      const startSec = parseTimeSec(match[1]);
+      const title = stripCandidateText(line);
+      if (!Number.isFinite(startSec) || !title) continue;
+      const hasPlausibleTitle = isPlausibleCandidate(title, { trustedHint: false })
+        || splitCandidateText(title, { trustedHint: false }).length > 0;
+      if (!hasPlausibleTitle) continue;
+      const key = `${startSec}:${keyOf(title)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      entries.push({
+        time: match[1],
+        startSec,
+        title,
+        text: compact(line).slice(0, 220),
+      });
+    }
+  }
+  return entries.sort((a, b) => a.startSec - b.startSec || a.title.localeCompare(b.title));
+}
+
+function titleMatchTokens(value) {
+  const cleaned = stripCandidateText(value);
+  const tokens = new Set([keyOf(cleaned)]);
+  for (const part of cleaned.split(CANDIDATE_SEPARATOR_RE)) {
+    const partKey = keyOf(part);
+    if (partKey.length >= 2) tokens.add(partKey);
+    for (const token of part.split(/[^\p{L}\p{N}]+/gu)) {
+      const tokenKey = keyOf(token);
+      if (tokenKey.length >= 2) tokens.add(tokenKey);
+    }
+  }
+  return [...tokens].filter((token) => token.length >= 2);
+}
+
+function titleMatchesTimelineRange(candidateTitle, rangeTitle) {
+  const candidateKey = keyOf(candidateTitle);
+  const rangeKey = keyOf(rangeTitle);
+  if (!candidateKey || !rangeKey) return false;
+  if (candidateKey.length >= 3 && rangeKey.includes(candidateKey)) return true;
+  if (rangeKey.length >= 3 && candidateKey.includes(rangeKey)) return true;
+  return titleMatchTokens(rangeTitle).some((token) => token.length >= 2 && candidateKey.includes(token));
+}
+
+export function buildTimelineParentRangePlan({ sourceText, lastKeyframeSec }) {
+  const parsedTimelineEntries = parseDescriptionTimelineEntries(sourceText);
+  const safeLastKeyframeSec = Number.isFinite(lastKeyframeSec) && lastKeyframeSec > 0 ? lastKeyframeSec : 0;
+  const timelineConfidence = parsedTimelineEntries.length >= 2 ? 0.95 : (parsedTimelineEntries.length === 1 ? 0.6 : 0);
+
+  if (parsedTimelineEntries.length === 0) {
+    return timelineFallback({
+      timelineConfidence,
+      parsedTimelineEntries,
+      lastKeyframeSec: safeLastKeyframeSec,
+      fallbackReason: "no_description_timeline_found",
+    });
+  }
+
+  if (timelineConfidence < TIMELINE_RANGE_CONFIDENCE_THRESHOLD) {
+    return timelineFallback({
+      timelineConfidence,
+      parsedTimelineEntries,
+      lastKeyframeSec: safeLastKeyframeSec,
+      fallbackReason: "description_timeline_confidence_below_threshold",
+    });
+  }
+
+  if (safeLastKeyframeSec <= parsedTimelineEntries[0].startSec) {
+    return timelineFallback({
+      timelineConfidence: 0.4,
+      parsedTimelineEntries,
+      lastKeyframeSec: safeLastKeyframeSec,
+      fallbackReason: "last_keyframe_before_description_timeline",
+    });
+  }
+
+  const parentRanges = parsedTimelineEntries
+    .map((entry, index) => {
+      const next = parsedTimelineEntries[index + 1];
+      return {
+        parentRangeId: `range-${String(index + 1).padStart(2, "0")}`,
+        title: entry.title,
+        time: entry.time,
+        startSec: entry.startSec,
+        endSec: next ? next.startSec : safeLastKeyframeSec,
+        textEvidence: entry.text,
+      };
+    })
+    .filter((range) => Number.isFinite(range.startSec) && Number.isFinite(range.endSec) && range.startSec < range.endSec);
+
+  if (parentRanges.length === 0) {
+    return timelineFallback({
+      timelineConfidence: 0.4,
+      parsedTimelineEntries,
+      lastKeyframeSec: safeLastKeyframeSec,
+      fallbackReason: "description_timeline_ranges_invalid",
+    });
+  }
+
+  const lastRange = parentRanges[parentRanges.length - 1];
+  const lastRangeDuration = lastRange.endSec - lastRange.startSec;
+  const tailWarning = lastRangeDuration > LAST_RANGE_TAIL_WARNING_SEC
+    ? `last parent range duration ${lastRangeDuration.toFixed(1)}s exceeds ${LAST_RANGE_TAIL_WARNING_SEC}s`
+    : null;
+
+  return {
+    rangeSource: "description_timeline",
+    timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
+    timelineConfidence,
+    parsedTimelineEntries,
+    fallbackReason: null,
+    lastKeyframeSec: safeLastKeyframeSec,
+    tailWarning,
+    parentRanges,
+  };
+}
+
+function findTimelineRangeForCandidate(candidate, parentRanges) {
+  const timeHint = Number(candidate?.timeHintSec);
+  if (Number.isFinite(timeHint)) {
+    const byTime = parentRanges.find((range, index) => {
+      const isLast = index === parentRanges.length - 1;
+      return timeHint >= range.startSec && (timeHint < range.endSec || (isLast && timeHint <= range.endSec));
+    });
+    if (byTime) return byTime;
+  }
+
+  return parentRanges.find((range) => titleMatchesTimelineRange(candidate?.titleHint, range.title)) ?? null;
+}
+
+function applyTimelineParentRanges(segmentPlan, timelineRangePlan, candidatePlan) {
+  if (timelineRangePlan.rangeSource !== "description_timeline") {
+    return {
+      ...segmentPlan,
+      ...timelineRangePlan,
+    };
+  }
+
+  const candidatesById = new Map(candidatePlan.recipeCandidates.map((candidate) => [candidate.candidateId, candidate]));
+  let appliedCount = 0;
+  const segments = segmentPlan.segments.map((segment) => {
+    const candidate = candidatesById.get(segment.candidateId);
+    const parentRange = findTimelineRangeForCandidate(candidate, timelineRangePlan.parentRanges);
+    if (!parentRange) {
+      return {
+        ...segment,
+        rangeSource: "llm_planner_fallback",
+        fallbackReason: "candidate_not_matched_to_description_timeline",
+      };
+    }
+
+    appliedCount += 1;
+    const evidenceLine = `description_timeline: ${parentRange.time} ${parentRange.title}`;
+    const textEvidence = segment.textEvidence.includes(evidenceLine)
+      ? segment.textEvidence
+      : [...segment.textEvidence, evidenceLine].slice(0, 8);
+    return {
+      ...segment,
+      startSec: parentRange.startSec,
+      endSec: parentRange.endSec,
+      rangeSource: "description_timeline",
+      fallbackReason: null,
+      parentRangeId: parentRange.parentRangeId,
+      parentRangeTitle: parentRange.title,
+      parentRangeStartSec: parentRange.startSec,
+      parentRangeEndSec: parentRange.endSec,
+      textEvidence,
+    };
+  }).sort((a, b) => a.startSec - b.startSec || a.endSec - b.endSec);
+
+  if (appliedCount === 0) {
+    return {
+      ...segmentPlan,
+      rangeSource: "llm_planner_fallback",
+      timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
+      timelineConfidence: timelineRangePlan.timelineConfidence,
+      parsedTimelineEntries: timelineRangePlan.parsedTimelineEntries,
+      fallbackReason: "no_segment_matched_to_description_timeline",
+      lastKeyframeSec: timelineRangePlan.lastKeyframeSec,
+      tailWarning: timelineRangePlan.tailWarning,
+      parentRanges: timelineRangePlan.parentRanges,
+    };
+  }
+
+  return {
+    ...segmentPlan,
+    ...timelineRangePlan,
+    segments,
+  };
+}
+
+function extractSegmentPlanJson(segmentRaw, { maxFrameSec } = {}) {
+  try {
+    return { rawPlan: extractJsonFromText(segmentRaw), warnings: [] };
+  } catch (error) {
+    const replacement = Number.isFinite(maxFrameSec) && maxFrameSec > 0 ? Math.ceil(maxFrameSec) : 0;
+    const sanitized = String(segmentRaw ?? "")
+      .replace(/:\s*(?:Infinity|inf)\b/gi, `: ${replacement}`)
+      .replace(/:\s*NaN\b/g, `: ${replacement}`);
+    if (sanitized === segmentRaw) throw error;
+    const rawPlan = extractJsonFromText(sanitized);
+    return {
+      rawPlan: {
+        ...rawPlan,
+        warnings: [
+          ...(Array.isArray(rawPlan?.warnings) ? rawPlan.warnings : []),
+          `segment plan non-finite numeric value was sanitized to ${replacement}`,
+        ],
+      },
+      warnings: [`segment plan non-finite numeric value was sanitized to ${replacement}`],
+    };
+  }
+}
+
 function buildSegmentPlanPrompt({ sourceText, frames, candidatePlan, segmentMaxCount, segmentFrameTotalLimit }) {
   return [
     "너는 다중 요리 영상의 레시피별 시간 구간을 나누는 담당자다.",
@@ -462,6 +699,7 @@ function buildSegmentPlanPrompt({ sourceText, frames, candidatePlan, segmentMaxC
     "5. 묶음 타임라인 안에 여러 candidate가 있으면 같은 parent range를 공유해도 되지만, selected frame은 candidate별로 고를 수 있게 segment를 나눈다.",
     `6. segments는 최대 ${segmentMaxCount}개, frameBudget 총합은 최대 ${segmentFrameTotalLimit}이다.`,
     "7. coverage에는 모든 recipeCandidates의 covered/supporting/dropped 여부와 이유를 남긴다.",
+    "8. startSec/endSec는 반드시 유한한 숫자만 쓴다. 끝 구간도 Infinity, inf, NaN을 쓰지 말고 전체 프레임 manifest의 마지막 timestamp를 사용한다.",
     "",
     "출력은 설명 없이 JSON만 한다.",
     "스키마:",
@@ -818,6 +1056,7 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
     segmentOptions,
     clientVersion: CLIENT_VERSION,
     candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
+    timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
     segmentPromptVersion: SEGMENT_PROMPT_VERSION,
     segmentSelectorPromptVersion: SEGMENT_SELECTOR_PROMPT_VERSION,
     finalPromptVersion: FINAL_PROMPT_VERSION,
@@ -968,6 +1207,7 @@ async function runSegmentedKeyframesFlow({
         keyframeMode: "segmented",
         cached: true,
         candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
+        timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
         candidatePlanHash,
         candidateCount: candidatePlan.recipeCandidates.length,
         frameCacheHit: frameResult.frameCacheHit,
@@ -1017,7 +1257,9 @@ async function runSegmentedKeyframesFlow({
       });
       await writeFile(segmentRawPath, segmentRaw, "utf8");
 
-      const rawPlan = extractJsonFromText(segmentRaw);
+      const { rawPlan } = extractSegmentPlanJson(segmentRaw, {
+        maxFrameSec,
+      });
       stage = "segment-normalize";
       segmentPlan = normalizeSegmentPlan(rawPlan, {
         maxCount: segmentOptions.maxCount,
@@ -1027,6 +1269,11 @@ async function runSegmentedKeyframesFlow({
         overlapToleranceSec: segmentOptions.overlapToleranceSec,
         candidatePlan,
       });
+      segmentPlan = applyTimelineParentRanges(
+        segmentPlan,
+        buildTimelineParentRangePlan({ sourceText: cacheText, lastKeyframeSec: maxFrameSec }),
+        candidatePlan,
+      );
       await writeFile(segmentJsonPath, JSON.stringify(segmentPlan, null, 2) + "\n", "utf8");
     }
 
@@ -1120,6 +1367,7 @@ async function runSegmentedKeyframesFlow({
       coveredCandidateCount,
       droppedCandidateCount,
       supportingCandidateCount,
+      timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
       segments: segmentEntries,
     };
     await writeFile(path.join(resultDir, "segment-keyframes.json"), JSON.stringify(segmentKeyframes, null, 2) + "\n", "utf8");
@@ -1176,6 +1424,7 @@ async function runSegmentedKeyframesFlow({
       segmentModel,
       clientVersion: CLIENT_VERSION,
       candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
+      timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
       segmentPromptVersion: SEGMENT_PROMPT_VERSION,
       segmentSelectorPromptVersion: SEGMENT_SELECTOR_PROMPT_VERSION,
       finalPromptVersion: FINAL_PROMPT_VERSION,
@@ -1235,6 +1484,7 @@ async function runSegmentedKeyframesFlow({
       selectorModel,
       segmentModel,
       candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
+      timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
       candidatePlan,
       candidatePlanHash,
       frameCacheDir: frameResult.frameDir,
