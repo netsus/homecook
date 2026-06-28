@@ -277,6 +277,68 @@ describe("recipe-loop codex-vision provider", () => {
     });
   });
 
+  it("builds description timeline parent ranges with fallback metadata", async () => {
+    const { buildTimelineParentRangePlan } = await import(codexVisionKeyframesModuleUrl);
+
+    const rangePlan = buildTimelineParentRangePlan({
+      sourceText: [
+        "[SOURCE: description]",
+        "00:16 메밀 파이프 후토마끼",
+        "04:55 맥적&열무 들기름냉파스타",
+        "07:40 등촌칼국수&소곱창구이",
+        "10:23 열무묵국&항정살 솥밥",
+      ].join("\n"),
+      lastKeyframeSec: 745.2,
+    });
+
+    expect(rangePlan).toMatchObject({
+      rangeSource: "description_timeline",
+      timelineParentRangeVersion: "timeline-parent-range-v1",
+      timelineConfidence: 0.95,
+      fallbackReason: null,
+      lastKeyframeSec: 745.2,
+    });
+    expect(rangePlan.parsedTimelineEntries.map((entry: { startSec: number; title: string }) => [entry.startSec, entry.title])).toEqual([
+      [16, "메밀 파이프 후토마끼"],
+      [295, "맥적&열무 들기름냉파스타"],
+      [460, "등촌칼국수&소곱창구이"],
+      [623, "열무묵국&항정살 솥밥"],
+    ]);
+    expect(rangePlan.parentRanges.map((range: { startSec: number; endSec: number }) => [range.startSec, range.endSec])).toEqual([
+      [16, 295],
+      [295, 460],
+      [460, 623],
+      [623, 745.2],
+    ]);
+
+    const fallbackPlan = buildTimelineParentRangePlan({
+      sourceText: [
+        "[SOURCE: recipe_candidate_hints]",
+        "1. 메밀 후토마끼",
+      ].join("\n"),
+      lastKeyframeSec: 745.2,
+    });
+    expect(fallbackPlan).toMatchObject({
+      rangeSource: "llm_planner_fallback",
+      timelineParentRangeVersion: "timeline-parent-range-v1",
+      timelineConfidence: 0,
+      parsedTimelineEntries: [],
+      fallbackReason: "no_description_timeline_found",
+    });
+
+    const lowConfidencePlan = buildTimelineParentRangePlan({
+      sourceText: [
+        "[SOURCE: description]",
+        "00:16 메밀 후토마끼",
+      ].join("\n"),
+      lastKeyframeSec: 745.2,
+    });
+    expect(lowConfidencePlan).toMatchObject({
+      rangeSource: "llm_planner_fallback",
+      timelineConfidence: 0.6,
+      fallbackReason: "description_timeline_confidence_below_threshold",
+    });
+  });
   it("generates through Codex Vision segmented keyframes and preserves per-segment artifacts", async () => {
     const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
     const { frameDir, frames } = makeFrameFixture(workdir, 8);
@@ -356,6 +418,7 @@ describe("recipe-loop codex-vision provider", () => {
           expect(prompt).toContain("candidateId: cand-02");
           expect(prompt).toContain("Candidate coverage checklist");
           expect(prompt).toContain("titleHint: 맥적구이");
+          expect(prompt).not.toContain("sourceBackedCues");
           output = "```json\n{\"recipes\":[{\"title\":\"메밀 후토마끼\",\"ingredients\":[{\"name\":\"오이\",\"amount\":\"1\",\"unit\":\"개\"}],\"steps\":[\"오이를 채 썰어 준비한다.\"]},{\"title\":\"맥적구이\",\"ingredients\":[{\"name\":\"돼지고기\",\"amount\":\"1\",\"unit\":\"팩\"}],\"steps\":[\"돼지고기에 된장 양념을 바른다.\"]}]}\n```";
         }
         writeFileSync(outputPath, output, "utf8");
@@ -367,7 +430,14 @@ describe("recipe-loop codex-vision provider", () => {
     const result = await client.generate({
       prompt: "JSON만 출력",
       videoUrl: "https://www.youtube.com/watch?v=abc123",
-      cacheText: "메밀 후토마끼와 맥적구이",
+      cacheText: [
+        "[SOURCE: recipe_candidate_hints]",
+        "1. 메밀 후토마끼",
+        "2. 맥적구이",
+        "[SOURCE: description]",
+        "00:00 메밀 후토마끼",
+        "00:40 맥적구이",
+      ].join("\n"),
     });
 
     expect(result.meta).toMatchObject({
@@ -379,23 +449,45 @@ describe("recipe-loop codex-vision provider", () => {
       coveredCandidateCount: 2,
       droppedCandidateCount: 0,
       segmentCount: 2,
-      selectedFrameCount: 4,
+      selectedFrameCount: 3,
+      segmentSelectedFrameCount: 4,
     });
     expect(result.json.recipes.map((recipe: { title: string }) => recipe.title)).toEqual(["메밀 후토마끼", "맥적구이"]);
     expect(calls).toHaveLength(4);
     expect(calls[0]).toMatchObject({ model: "fixture-segment-model", images: [] });
     expect(calls[0].prompt).toContain("recipeCandidates JSON");
+    expect(calls[1].prompt).not.toContain("mustLookFor(source-backed only)");
+    expect(calls[1].prompt).toContain("된장, 쯔유, 액젓");
     expect(calls[1].images).toHaveLength(3);
-    expect(calls[1].images).not.toContain(frames[3].path);
-    expect(calls[1].images).not.toContain(frames[4].path);
+    expect(calls[1].images).toContain(frames[4].path);
     expect(calls[2].images).not.toContain(frames[0].path);
-    expect(calls[3].images).toHaveLength(4);
+    expect(calls[3].images).toHaveLength(3);
     expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "recipe-candidates.json"))).toBe(true);
     const candidatePlan = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "recipe-candidates.json"), "utf8"));
     expect(candidatePlan.recipeCandidates.map((candidate: { titleHint: string }) => candidate.titleHint)).toEqual(["메밀 후토마끼", "맥적구이"]);
+    expect(candidatePlan.recipeCandidates[0].sourceBackedCues).toBeUndefined();
     expect(candidatePlan.candidatePlanHash).toBe(result.meta.candidatePlanHash);
     expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-plan.json"))).toBe(true);
     const segmentPlan = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-plan.json"), "utf8"));
+    expect(segmentPlan).toMatchObject({
+      rangeSource: "description_timeline",
+      timelineParentRangeVersion: "timeline-parent-range-v1",
+      timelineConfidence: 0.95,
+      fallbackReason: null,
+      lastKeyframeSec: 70,
+    });
+    expect(segmentPlan.parsedTimelineEntries.map((entry: { startSec: number; title: string }) => [entry.startSec, entry.title])).toEqual([
+      [0, "메밀 후토마끼"],
+      [40, "맥적구이"],
+    ]);
+    expect(segmentPlan.parentRanges.map((range: { startSec: number; endSec: number }) => [range.startSec, range.endSec])).toEqual([
+      [0, 40],
+      [40, 70],
+    ]);
+    expect(segmentPlan.segments.map((segment: { startSec: number; endSec: number; rangeSource: string }) => [segment.startSec, segment.endSec, segment.rangeSource])).toEqual([
+      [0, 40, "description_timeline"],
+      [40, 70, "description_timeline"],
+    ]);
     expect(segmentPlan.segments.map((segment: { frameBudget: number }) => segment.frameBudget)).toEqual([2, 2]);
     expect(segmentPlan.coverage.map((entry: { candidateId: string; status: string }) => [entry.candidateId, entry.status])).toEqual([
       ["cand-01", "covered"],
@@ -457,6 +549,47 @@ describe("recipe-loop codex-vision provider", () => {
       stage: "segment-normalize",
       candidatePlanHash: expect.any(String),
     });
+  });
+
+  it("sanitizes non-finite segment planner end times to the last frame timestamp", async () => {
+    const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir, 3);
+    const client = createCodexVisionKeyframesClient({
+      cacheDir: path.join(workdir, "keyframes-cache"),
+      keyframeMode: "segmented",
+      model: "fixture-final-model",
+      segmentModel: "fixture-segment-model",
+      selectorModel: "fixture-selector-model",
+      segmentPaddingSec: 0,
+      segmentMinFrames: 1,
+      segmentMaxFrames: 2,
+      extractFrames: async () => ({
+        frameCacheHit: false,
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 3 },
+      }),
+      codexExec: async ({ model, outputPath, logPath }: { model: string; outputPath: string; logPath: string }) => {
+        const output = model === "fixture-segment-model"
+          ? "{\"segments\":[{\"segmentId\":\"seg-01\",\"candidateId\":\"cand-01\",\"titleHint\":\"김치찌개\",\"startSec\":0,\"endSec\":inf,\"frameBudget\":1}],\"coverage\":[{\"candidateId\":\"cand-01\",\"titleHint\":\"김치찌개\",\"status\":\"covered\",\"segmentIds\":[\"seg-01\"]}]}"
+          : model === "fixture-selector-model"
+            ? JSON.stringify({ selectedFrames: [{ file: path.basename(frames[0].path), reason: "재료 프레임" }] })
+            : "```json\n{\"recipes\":[{\"title\":\"김치찌개\",\"ingredients\":[{\"name\":\"김치\",\"amount\":\"1\",\"unit\":\"컵\"}],\"steps\":[\"김치를 넣고 끓인다.\"]}]}\n```";
+        writeFileSync(outputPath, output, "utf8");
+        writeFileSync(logPath, "ok", "utf8");
+        return output;
+      },
+    });
+
+    const result = await client.generate({
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      cacheText: "[SOURCE: recipe_candidate_hints]\n1. 김치찌개",
+    });
+
+    const segmentPlan = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-plan.json"), "utf8"));
+    expect(segmentPlan.segments[0].endSec).toBe(20);
+    expect(segmentPlan.warnings).toContain("segment plan non-finite numeric value was sanitized to 20");
   });
 
   it("uses candidatePlanHash to separate segmented result cache keys", async () => {
