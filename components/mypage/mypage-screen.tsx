@@ -168,6 +168,15 @@ const EATEN_DESCRIPTION =
   "다먹은 음식 기록을 확인하고, 필요하면 남은 요리로 다시 옮길 수 있어요.";
 const MYPAGE_SAVED_RECIPES_HREF = "/mypage?tab=saved";
 const MYPAGE_SHOPPING_HREF = "/mypage?tab=shopping";
+const WEB_MYPAGE_LOADING_TAB_LABELS = [
+  "저장한 레시피",
+  "레시피북",
+  "장보기 기록",
+  "남은 요리",
+  "다먹은 요리",
+  "환경설정",
+  "도움말",
+] as const;
 
 function buildMypageSavedRecipeHref(recipeId: string) {
   return buildReturnHref(`/recipe/${recipeId}`, {
@@ -563,7 +572,6 @@ export function MypageScreen({
     } catch (error) {
       setUserProgress(null);
       if (isMypageApiError(error) && error.status === 401) {
-        setAuthState("unauthorized");
         setProgressState("error");
         return false;
       }
@@ -589,7 +597,6 @@ export function MypageScreen({
     } catch (error) {
       setUserGamification(null);
       if (isMypageApiError(error) && error.status === 401) {
-        setAuthState("unauthorized");
         setGamificationState("error");
         return false;
       }
@@ -604,6 +611,12 @@ export function MypageScreen({
     setUserGamification(null);
     setProgressState("loading");
     setGamificationState("loading");
+    const secondaryLoads = Promise.allSettled([
+      loadMypageStats(),
+      loadUserProgress(),
+      loadUserGamification(),
+    ]);
+
     try {
       const [profileOk, booksOk] = await Promise.all([
         loadProfile(),
@@ -611,13 +624,10 @@ export function MypageScreen({
       ]);
       if (profileOk && booksOk) {
         setViewState("ready");
-        void Promise.allSettled([
-          loadMypageStats(),
-          loadUserProgress(),
-          loadUserGamification(),
-        ]);
+        void secondaryLoads;
       }
     } catch {
+      void secondaryLoads;
       setProgressState("error");
       setGamificationState("error");
       setViewState("error");
@@ -1659,8 +1669,16 @@ export function MypageScreen({
   );
 
   // --- Render states ---
+  const renderLoadingShell = () => {
+    if (!hasHydrated) {
+      return (
+        <MypageResponsiveLoadingShell
+          onBack={handleMobileSurfaceBack}
+          surface={mobileSurface}
+        />
+      );
+    }
 
-  if (authState === "checking") {
     if (shouldUseMobileViewport) {
       return (
         <MypageLoadingSkeleton
@@ -1672,6 +1690,10 @@ export function MypageScreen({
     }
 
     return <MypageDesktopLoadingShell />;
+  };
+
+  if (authState === "checking") {
+    return renderLoadingShell();
   }
 
   if (authState === "unauthorized") {
@@ -1702,17 +1724,7 @@ export function MypageScreen({
   }
 
   if (viewState === "loading") {
-    if (!shouldUseMobileViewport) {
-      return <MypageDesktopLoadingShell />;
-    }
-
-    return (
-      <MypageLoadingSkeleton
-        mobile={shouldUseMobileViewport}
-        onBack={handleMobileSurfaceBack}
-        surface={mobileSurface}
-      />
-    );
+    return renderLoadingShell();
   }
 
   if (viewState === "error") {
@@ -3166,13 +3178,33 @@ function MypageLoadingSkeleton({
   );
 }
 
+function MypageResponsiveLoadingShell({
+  onBack,
+  surface,
+}: {
+  onBack?: () => void;
+  surface: MypageMobileSurface;
+}) {
+  return (
+    <>
+      <MypageLoadingSkeleton mobile onBack={onBack} surface={surface} />
+      <div
+        className="hidden lg:block"
+        data-testid="mypage-responsive-desktop-loading-shell"
+      >
+        <MypageDesktopLoadingShell />
+      </div>
+    </>
+  );
+}
+
 function MypageHomeLoadingBody() {
   return (
     <>
       <section className="border-b border-[var(--line-strong)] bg-[var(--surface)] px-5 py-5">
         <div
-          className="rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4"
-          data-testid="mypage-mobile-loading-growth-profile"
+          className="mb-3 grid min-h-[340px] gap-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4"
+          data-testid="mypage-mobile-loading-profile-shell"
         >
           <div className="flex items-start gap-3">
             <Skeleton className="h-[52px] w-[52px] shrink-0 rounded-full" />
@@ -3181,32 +3213,10 @@ function MypageHomeLoadingBody() {
               <Skeleton className="h-4 w-36" />
             </div>
           </div>
-          <div className="mt-4">
-            <Skeleton className="h-3 w-36" />
-            <Skeleton
-              className="mt-2 h-4 w-full rounded-full"
-              data-testid="mypage-mobile-loading-progress-meter"
-            />
-            <Skeleton className="ml-auto mt-1 h-3 w-24" />
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-1.5">
-            {[1, 2, 3].map((index) => (
-              <Skeleton
-                className="h-10 rounded-[var(--radius-md)]"
-                data-testid="mypage-mobile-loading-growth-action"
-                key={index}
-              />
-            ))}
-          </div>
-          <div className="mt-3 grid grid-cols-3 overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)]">
-            {[1, 2, 3].map((index) => (
-              <div className="px-2 py-2.5" key={index}>
-                <Skeleton className="mx-auto h-8 w-8 rounded-full" />
-                <Skeleton className="mx-auto mt-2 h-4 w-8" />
-                <Skeleton className="mx-auto mt-1 h-3 w-12" />
-              </div>
-            ))}
-          </div>
+          <div
+            aria-hidden="true"
+            className="min-h-[232px] rounded-[var(--radius-md)] bg-[var(--surface-fill)]"
+          />
         </div>
       </section>
       <section
@@ -3220,7 +3230,7 @@ function MypageHomeLoadingBody() {
         <div className="-mx-5 flex gap-3 overflow-hidden px-5">
           {[1, 2, 3].map((index) => (
             <div
-              className="h-[136px] w-[148px] shrink-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)]"
+              className="h-[158px] w-[148px] shrink-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)]"
               data-testid="mypage-mobile-loading-saved-card"
               key={index}
             />
@@ -3364,43 +3374,20 @@ function MypageDesktopLoadingShell() {
         <h1 className="sr-only">마이페이지</h1>
         <WebCard className="web-mypage-profile">
           <div
-            className="grid gap-4"
-            data-testid="mypage-loading-growth-profile"
+            className="grid min-h-[302px] gap-4 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-6"
+            data-testid="mypage-loading-profile-shell"
           >
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <WebSkeleton height={72} width={72} style={{ borderRadius: "50%" }} />
-                <div className="grid min-w-0 gap-2">
-                  <WebSkeleton height={28} width={128} />
-                  <WebSkeleton height={18} width={180} />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {[1, 2, 3].map((item) => (
-                  <div data-testid="mypage-loading-growth-action" key={item}>
-                    <WebSkeleton height={40} width={74} />
-                  </div>
-                ))}
+            <div className="flex min-w-0 items-center gap-3">
+              <WebSkeleton height={72} width={72} style={{ borderRadius: "50%" }} />
+              <div className="grid min-w-0 gap-2">
+                <WebSkeleton height={28} width={128} />
+                <WebSkeleton height={18} width={180} />
               </div>
             </div>
-            <div>
-              <WebSkeleton height={16} width={180} />
-              <div className="mt-2" data-testid="mypage-loading-progress-meter">
-                <WebSkeleton height={16} width="100%" />
-              </div>
-              <div className="mt-1 flex justify-end">
-                <WebSkeleton height={14} width={100} />
-              </div>
-            </div>
-            <div className="web-mypage-stats" aria-hidden="true">
-              {[1, 2, 3].map((item) => (
-                <div className="web-mypage-stat" key={item}>
-                  <WebSkeleton height={32} width={32} style={{ borderRadius: "50%" }} />
-                  <WebSkeleton height={28} width={48} />
-                  <WebSkeleton height={14} width={72} />
-                </div>
-              ))}
-            </div>
+            <div
+              aria-hidden="true"
+              className="min-h-[164px] rounded-[var(--radius-md)] bg-[var(--surface-fill)]"
+            />
           </div>
         </WebCard>
 
@@ -3409,43 +3396,19 @@ function MypageDesktopLoadingShell() {
           className="web-tabs web-mypage-tabs"
           data-testid="mypage-loading-tabs"
         >
-          {["저장한 레시피", "레시피북", "장보기 기록", "남은 요리"].map(
-            (label, index) => (
-              <span
-                className={["web-tab", index === 0 ? "web-tab-active" : ""].join(" ")}
-                key={label}
-              >
-                <span className="web-tab-icon">
-                  <WebSkeleton height={18} width={18} />
-                </span>
-                {label}
+          {WEB_MYPAGE_LOADING_TAB_LABELS.map((label, index) => (
+            <span
+              className={["web-tab", index === 0 ? "web-tab-active" : ""].join(" ")}
+              data-testid="mypage-loading-tab"
+              key={label}
+            >
+              <span className="web-tab-icon">
+                <WebSkeleton height={18} width={18} />
               </span>
-            ),
-          )}
+              {label}
+            </span>
+          ))}
         </div>
-
-        <section
-          className="web-mypage-panel"
-          data-testid="mypage-loading-panel"
-          role="tabpanel"
-        >
-          <div className="web-mypage-subsurface">
-            <div className="web-mypage-section-head">
-              <WebSkeleton height={34} width={220} />
-              <WebSkeleton className="mt-2" height={18} width={320} />
-            </div>
-            <div className="web-recipe-card-grid" data-testid="mypage-loading-card-grid">
-              {[1, 2, 3].map((index) => (
-                <WebSkeleton
-                  data-testid="mypage-loading-panel-card"
-                  height={260}
-                  key={index}
-                  style={{ borderRadius: "var(--web-r-card)" }}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
       </div>
     </WebShell>
   );

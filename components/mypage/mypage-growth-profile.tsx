@@ -374,7 +374,7 @@ export function MypageGrowthProfile({
         aria-label="프로필 성장 정보를 불러오는 중"
         className={[
           "min-w-0 rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)] p-4",
-          isDesktop ? "w-full" : "",
+          isDesktop ? "min-h-[302px] w-full" : "min-h-[340px]",
           className ?? "",
         ].join(" ")}
         data-testid="mypage-growth-profile-loading"
@@ -533,6 +533,7 @@ export function MypageGrowthProfile({
         <section
           className={[
             "min-w-0 overflow-hidden rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)]",
+            isDesktop ? "min-h-[302px]" : "min-h-[340px]",
             className ?? "",
           ].join(" ")}
           data-grade-key={gradeKey ?? undefined}
