@@ -102,6 +102,26 @@ describe("user gamification notification priority", () => {
     });
 
     expect(toNotificationData({
+      id: "n-first-recipe-achievement",
+      notification_type: "achievement_unlocked",
+      priority: 2,
+      delivery_channel: "toast",
+      toast_eligible: true,
+      group_key: "progress-event:e2",
+      payload_json: {
+        achievement_key: "tutorial_recipe_saved",
+        title: "첫 레시피 저장",
+        xp_delta: 15,
+      },
+      created_at: "2026-06-10T10:00:00.000Z",
+      seen_at: null,
+    })).toMatchObject({
+      title: "업적 달성!",
+      body: "첫 레시피 저장 배지를 획득했어요. +15 XP",
+      category: "tutorial",
+    });
+
+    expect(toNotificationData({
       id: "n-badge",
       notification_type: "badge_unlocked",
       priority: 2,

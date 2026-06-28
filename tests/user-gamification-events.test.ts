@@ -551,6 +551,19 @@ describe("user gamification event projection", () => {
         }),
       }),
     );
+    expect(notificationsTable.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: "user-1",
+        notification_key: "achievement:tutorial_recipe_saved:user-1",
+        notification_type: "achievement_unlocked",
+        group_key: "progress-event:progress-event-2",
+        payload_json: expect.objectContaining({
+          achievement_key: "tutorial_recipe_saved",
+          title: "첫 레시피 저장",
+          xp_delta: USER_PROGRESS_XP_AWARDS.recipe_saved,
+        }),
+      }),
+    );
     expect(notificationsTable.insert).not.toHaveBeenCalledWith(
       expect.objectContaining({
         notification_key: "badge:first_recipe_saved:user-1",
