@@ -10,6 +10,7 @@ import {
   isMypageApiError,
   updateNickname,
 } from "@/lib/api/mypage";
+import { ONBOARDING_TUTORIAL_REFRESH_KEY } from "@/lib/gamification-events";
 import { sanitizeInternalPath } from "@/lib/navigation/return-context";
 
 interface NicknameOnboardingScreenProps {
@@ -37,6 +38,14 @@ function getErrorMessage(error: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function markOnboardingTutorialRefreshPending() {
+  try {
+    window.sessionStorage.setItem(ONBOARDING_TUTORIAL_REFRESH_KEY, "pending");
+  } catch {
+    // Storage availability should not block nickname onboarding completion.
+  }
 }
 
 export function NicknameOnboardingScreen({
@@ -108,6 +117,7 @@ export function NicknameOnboardingScreen({
 
       try {
         await updateNickname(trimmed);
+        markOnboardingTutorialRefreshPending();
         router.replace(safeNextPath);
       } catch (error) {
         if (isMypageApiError(error) && error.status === 401) {

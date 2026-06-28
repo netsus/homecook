@@ -135,9 +135,9 @@ describe("recipe API contracts", () => {
       data: [
         {
           id: "recipe-1",
-          title: "김치찌개",
+          title: "실패 없는 기본 김치찌개",
           thumbnail_url: "https://example.com/kimchi.jpg",
-          tags: ["한식"],
+          tags: ["한식", "간단"],
           base_servings: 2,
           view_count: 10,
           like_count: 4,
@@ -907,9 +907,9 @@ describe("recipe API contracts", () => {
       data: [
         {
           id: "recipe-1",
-          title: "김치찌개",
+          title: "실패 없는 기본 김치찌개",
           thumbnail_url: "https://example.com/kimchi.jpg",
-          tags: ["한식"],
+          tags: ["한식", "간단"],
           base_servings: 2,
           view_count: 10,
           like_count: 4,
@@ -918,7 +918,7 @@ describe("recipe API contracts", () => {
         },
         {
           id: "recipe-2",
-          title: "딸기 우유 푸딩",
+          title: "불 없이 딸기 우유 푸딩",
           thumbnail_url: "https://example.com/pudding.jpg",
           tags: ["딸기푸딩", "디저트"],
           base_servings: 4,
@@ -949,9 +949,9 @@ describe("recipe API contracts", () => {
               theme_rank: 1,
               recipe_rank: 1,
               id: "recipe-1",
-              title: "김치찌개",
+              title: "실패 없는 기본 김치찌개",
               thumbnail_url: "https://example.com/kimchi.jpg",
-              tags: ["한식"],
+              tags: ["한식", "간단"],
               base_servings: 2,
               view_count: 10,
               like_count: 4,
@@ -965,7 +965,7 @@ describe("recipe API contracts", () => {
               theme_rank: 2,
               recipe_rank: 1,
               id: "recipe-2",
-              title: "딸기 우유 푸딩",
+              title: "불 없이 딸기 우유 푸딩",
               thumbnail_url: "https://example.com/pudding.jpg",
               tags: ["딸기푸딩", "디저트"],
               base_servings: 4,
@@ -991,8 +991,8 @@ describe("recipe API contracts", () => {
     const themeIds = body.data.themes.map((theme: { id: string }) => theme.id);
     expect(themeIds).toContain("popular");
     expect(themeIds).toContain("youtube");
-    expect(themeIds).toContain("soup-stew");
-    expect(themeIds).toContain("fruit-dessert");
+    expect(themeIds).toContain("fail-safe");
+    expect(themeIds).toContain("no-cook-sweet");
     expect(themeIds).toContain("korean");
     expect(themeIds).toContain("dessert");
     expect(themeIds).not.toContain("saved-favorites");
@@ -1007,16 +1007,16 @@ describe("recipe API contracts", () => {
         },
       ],
     });
-    expect(body.data.themes.find((theme: { id: string }) => theme.id === "soup-stew")).toMatchObject({
-      title: "국물 있는 한 끼",
+    expect(body.data.themes.find((theme: { id: string }) => theme.id === "fail-safe")).toMatchObject({
+      title: "실패 걱정 없는 메뉴",
       recipes: [
         {
           id: "recipe-1",
         },
       ],
     });
-    expect(body.data.themes.find((theme: { id: string }) => theme.id === "fruit-dessert")).toMatchObject({
-      title: "과일 디저트",
+    expect(body.data.themes.find((theme: { id: string }) => theme.id === "no-cook-sweet")).toMatchObject({
+      title: "불 없이 달달하게",
       recipes: [
         {
           id: "recipe-2",

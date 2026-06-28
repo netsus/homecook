@@ -494,9 +494,9 @@ describe("home screen", () => {
     const tagRow = container.querySelector(".web-recipe-card-tags");
 
     expect(tagRow?.textContent).toContain("이모카세두");
-    expect(tagRow?.textContent).toContain("흑백요리사");
+    expect(tagRow?.textContent).not.toContain("흑백요리사");
     expect(tagRow?.textContent).not.toContain("두부찌개");
-    expect(tagRow?.textContent).toContain("+2");
+    expect(tagRow?.textContent).toContain("+3");
     expect(ruleBody(".web-recipe-card-tags")).toContain("flex-wrap: nowrap;");
     expect(ruleBody(".web-recipe-card-tags")).toContain("max-height: 24px;");
     expect(ruleBody(".web-recipe-card-tags")).toContain("overflow: hidden;");
@@ -505,6 +505,49 @@ describe("home screen", () => {
     expect(ruleBody(".web-recipe-card-tag")).not.toContain("text-overflow: ellipsis;");
     expect(ruleBody(".web-recipe-card-tag-more")).toContain("color: var(--web-primary);");
     expect(ruleBody(".web-home-recipe-card .web-recipe-card")).toContain("height: 100%;");
+  });
+
+  it("reserves enough room for the web HOME +N tag summary on compact cards", async () => {
+    installMatchMedia(true);
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      if (input.startsWith("/api/v1/tags")) {
+        return Promise.resolve({ items: [] });
+      }
+
+      return Promise.resolve({
+        items: [
+          buildRecipeCard({
+            id: "recipe-compact-tags",
+            tags: ["생딸기", "우유", "설탕", "디저트", "간식", "냉장"],
+            title: "오븐도 젤라틴도 필요 없는 딸기 우유 푸딩 만들기",
+          }),
+        ],
+        next_cursor: null,
+        has_next: false,
+      });
+    });
+
+    const { container } = render(<HomeScreen />);
+
+    await screen.findByText("오븐도 젤라틴도 필요 없는 딸기 우유 푸딩 만들기");
+    const tagRow = container.querySelector(".web-recipe-card-tags");
+    const moreChip = container.querySelector(".web-recipe-card-tag-more");
+
+    expect(tagRow?.textContent).toContain("생딸기");
+    expect(tagRow?.textContent).toContain("우유");
+    expect(tagRow?.textContent).not.toContain("설탕");
+    expect(tagRow?.textContent).toContain("+4");
+    expect(moreChip?.getAttribute("aria-label")).toBe("숨긴 태그 4개");
+    expect(ruleBody(".web-recipe-card-tag-more")).toContain("min-width: 34px;");
+    expect(ruleBody(".web-recipe-card-tag-more")).toContain("justify-content: center;");
   });
 
   it("loads the next recipe page from the home list cursor", async () => {

@@ -5,7 +5,10 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
-import { HOMECOOK_GAMIFICATION_REFRESH_EVENT } from "@/lib/gamification-events";
+import {
+  HOMECOOK_GAMIFICATION_REFRESH_EVENT,
+  ONBOARDING_TUTORIAL_REFRESH_KEY,
+} from "@/lib/gamification-events";
 
 const mockNextNavigation = vi.hoisted(() => ({
   pathname: "/",
@@ -189,6 +192,7 @@ describe("GrowthToastStack", () => {
     mockFetchArchive.mockReset();
     mockFetchUserGamification.mockReset();
     mockMarkSeen.mockReset();
+    window.sessionStorage.clear();
     mockFetchArchive.mockResolvedValue({ items: [], next_cursor: null, has_next: false });
     mockMarkSeen.mockResolvedValue({ seen_notification_ids: [] });
     mockNextNavigation.pathname = "/";
@@ -278,6 +282,25 @@ describe("GrowthToastStack", () => {
         "마음에 드는 레시피 저장하기",
       );
     });
+  });
+
+  it("retries the first tutorial guide on the first service route after nickname onboarding", async () => {
+    const firstTutorialGamification = makeGamificationWithTutorialStep({
+      achievementKey: "tutorial_recipe_saved",
+      title: "첫 레시피 저장",
+    });
+    mockNextNavigation.pathname = "/mypage";
+    window.sessionStorage.setItem(ONBOARDING_TUTORIAL_REFRESH_KEY, "pending");
+    mockFetchUserGamification.mockResolvedValue(firstTutorialGamification);
+
+    render(<GrowthToastStack />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("growth-toast").textContent).toContain(
+        "마음에 드는 레시피 저장하기",
+      );
+    });
+    expect(window.sessionStorage.getItem(ONBOARDING_TUTORIAL_REFRESH_KEY)).toBeNull();
   });
 
   it("shows the next tutorial quest as a toast after the prior tutorial step is completed", async () => {

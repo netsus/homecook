@@ -59,9 +59,9 @@ describe("36c recipe tag themes", () => {
 
   it("only creates curated themes that can be inferred from card fields", () => {
     const themes = createRecipeThemesFromTagGroups([
-      createRecipe({ id: "soup", title: "청국장찌개", tags: ["한식"] }),
-      createRecipe({ id: "rice", title: "오징어 덮밥", tags: ["한그릇"] }),
-      createRecipe({ id: "dessert", title: "딸기 우유 푸딩", tags: ["디저트"] }),
+      createRecipe({ id: "simple", title: "실패 없는 기본 달걀찜", tags: ["초간단"] }),
+      createRecipe({ id: "main", title: "닭고기 메인 반찬", tags: ["든든한"] }),
+      createRecipe({ id: "dessert", title: "불 없이 딸기 우유 푸딩", tags: ["디저트"] }),
       createRecipe({ id: "leftover", title: "냉털 볶음밥", tags: ["냉장고"] }),
       createRecipe({ id: "youtube", source_type: "youtube", title: "영상 레시피" }),
     ], []);
@@ -69,10 +69,10 @@ describe("36c recipe tag themes", () => {
     expect(themes.map((theme) => theme.title)).toEqual([
       "조회 많은 레시피",
       "유튜브에서 가져온 레시피",
-      "냉장고 재료 쓰기",
-      "국물 있는 한 끼",
-      "밥 한 그릇 메뉴",
-      "과일 디저트",
+      "냉장고 비우는 한 끼",
+      "실패 걱정 없는 메뉴",
+      "밥상 든든한 메인",
+      "불 없이 달달하게",
     ]);
   });
 });
