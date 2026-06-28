@@ -864,16 +864,86 @@ describe("MYPAGE achievement album UI", () => {
     ).toBe("achievement");
 
     await user.click(within(notificationDialog).getByRole("tab", { name: "업적" }));
-    expect(within(notificationDialog).getAllByText("업적 달성!")).toHaveLength(2);
+    expect(within(notificationDialog).getAllByText("업적 달성!")).toHaveLength(1);
     expect(within(notificationDialog).getByText("2026-06-14 10:06")).toBeTruthy();
-    expect(within(notificationDialog).getByText("튜토리얼 완료 배지를 획득했어요.")).toBeTruthy();
-    expect(within(notificationDialog).getByText("2026-06-14 10:02")).toBeTruthy();
+    expect(within(notificationDialog).queryByText("튜토리얼 완료 배지를 획득했어요.")).toBeNull();
+    expect(within(notificationDialog).queryByText("2026-06-14 10:02")).toBeNull();
     expect(within(notificationDialog).queryByText("+120 XP 획득")).toBeNull();
 
     await user.click(within(notificationDialog).getByRole("tab", { name: "시스템" }));
     expect(within(notificationDialog).getAllByText("튜토리얼 안내").length).toBeGreaterThan(0);
     expect(within(notificationDialog).getByText(/플래너에 끼니 등록하기/)).toBeTruthy();
     expect(within(notificationDialog).getByText("튜토리얼 완료 배지를 획득했어요.")).toBeTruthy();
+    expect(within(notificationDialog).queryByText("요리 100회 배지를 획득했어요.")).toBeNull();
+  });
+
+  it("keeps each notification category tab scoped to its own category", async () => {
+    const user = userEvent.setup();
+    mockFetchArchive.mockResolvedValueOnce({
+      items: [
+        ...MOCK_GAMIFICATION.notifications.archive_preview,
+        {
+          id: "notice-tutorial-xp-guide",
+          notification_type: "xp_awarded",
+          priority: 3,
+          delivery_channel: "archive_only",
+          toast_eligible: false,
+          group_key: null,
+          title: "튜토리얼 안내",
+          body: "튜토리얼 XP row도 시스템 안내로 분류되어야 해요.",
+          category: "tutorial",
+          payload: {
+            achievement_key: "tutorial_recipe_saved",
+            quest_key: "first_recipe_saved",
+          },
+          created_at: "2026-06-14T10:01:00.000Z",
+          seen_at: null,
+        },
+      ],
+      next_cursor: null,
+      has_next: false,
+    });
+
+    render(
+      <MypageGrowthProfile
+        gamification={MOCK_GAMIFICATION}
+        gamificationState="ready"
+        progress={MOCK_PROGRESS}
+        progressState="ready"
+        variant="mobile"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "알림 보기" }));
+
+    const notificationDialog = screen.getByRole("dialog", { name: "알림 기록" });
+    await waitFor(() => {
+      expect(mockFetchArchive).toHaveBeenCalledWith({ limit: 20, cursor: null });
+    });
+    expect(within(notificationDialog).getByText("Lv.46 달성")).toBeTruthy();
+    expect(within(notificationDialog).getByText("요리 100회 배지를 획득했어요.")).toBeTruthy();
+    expect(within(notificationDialog).getByText("튜토리얼 완료 배지를 획득했어요.")).toBeTruthy();
+    expect(within(notificationDialog).getByText("튜토리얼 XP row도 시스템 안내로 분류되어야 해요.")).toBeTruthy();
+
+    await user.click(within(notificationDialog).getByRole("tab", { name: "성장" }));
+    expect(within(notificationDialog).getByText("Lv.46 달성")).toBeTruthy();
+    expect(within(notificationDialog).getByText("레시피 XP")).toBeTruthy();
+    expect(within(notificationDialog).queryByText("요리 100회 배지를 획득했어요.")).toBeNull();
+    expect(within(notificationDialog).queryByText("튜토리얼 완료 배지를 획득했어요.")).toBeNull();
+    expect(within(notificationDialog).queryByText("튜토리얼 XP row도 시스템 안내로 분류되어야 해요.")).toBeNull();
+
+    await user.click(within(notificationDialog).getByRole("tab", { name: "업적" }));
+    expect(within(notificationDialog).getByText("요리 100회 배지를 획득했어요.")).toBeTruthy();
+    expect(within(notificationDialog).queryByText("Lv.46 달성")).toBeNull();
+    expect(within(notificationDialog).queryByText("레시피 XP")).toBeNull();
+    expect(within(notificationDialog).queryByText("튜토리얼 완료 배지를 획득했어요.")).toBeNull();
+    expect(within(notificationDialog).queryByText("튜토리얼 XP row도 시스템 안내로 분류되어야 해요.")).toBeNull();
+
+    await user.click(within(notificationDialog).getByRole("tab", { name: "시스템" }));
+    expect(within(notificationDialog).getByText("튜토리얼 완료 배지를 획득했어요.")).toBeTruthy();
+    expect(within(notificationDialog).getByText("튜토리얼 XP row도 시스템 안내로 분류되어야 해요.")).toBeTruthy();
+    expect(within(notificationDialog).queryByText("Lv.46 달성")).toBeNull();
+    expect(within(notificationDialog).queryByText("레시피 XP")).toBeNull();
     expect(within(notificationDialog).queryByText("요리 100회 배지를 획득했어요.")).toBeNull();
   });
 
