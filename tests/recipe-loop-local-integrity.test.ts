@@ -749,7 +749,7 @@ describe("recipe-loop local integrity gates", () => {
       useVisual: false,
     });
 
-    expect(PROMPT_VERSION).toBe("iter16-evidence-packet-title-ingredient");
+    expect(PROMPT_VERSION).toBe("iter17-evidence-packet-artifacts");
     expect(prompt).toContain("와/과");
     expect(prompt).toContain("evidence packet");
     expect(prompt).toContain("한 packet의 양념·곁들임·고명·단계를 다른 packet으로 옮기지");

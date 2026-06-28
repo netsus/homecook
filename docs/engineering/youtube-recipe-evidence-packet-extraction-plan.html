@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YouTube 레시피 Evidence Packet 추출 계획</title>
+  <style>
+    :root{
+      --ink:#172033; --muted:#596579; --line:#dde5ef; --panel:#fff;
+      --brand:#0f766e; --brand-soft:#e6f5f3; --brand-line:#a7dcd5;
+      --green:#15803d; --green-soft:#e8f5ed; --green-line:#bfe0cd;
+      --amber:#b45309; --amber-soft:#fff4df; --amber-line:#f2d7a5;
+      --red:#b91c1c; --red-soft:#fdecec; --red-line:#efc3c3;
+      --blue:#3454d1; --blue-soft:#edf1ff; --slate:#344256;
+      --radius:14px; --shadow:0 1px 2px rgba(16,24,40,.06),0 10px 28px rgba(16,24,40,.07);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Segoe UI",Roboto,sans-serif;
+      background:linear-gradient(180deg,#102f33 0%,#184c4c 250px,#f1f5f7 250px,#f1f5f7 100%);
+      color:var(--ink);
+      line-height:1.72;
+      -webkit-font-smoothing:antialiased;
+      word-break:keep-all;
+      overflow-wrap:anywhere;
+    }
+    .wrap{max-width:980px;margin:0 auto;padding:0 20px 80px}
+    header.hero{padding:44px 0 30px;color:#e9f6f4}
+    .tag-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .pill{display:inline-block;font-size:12.5px;font-weight:700;padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.12);color:#d2efeb;border:1px solid rgba(255,255,255,.18)}
+    header.hero h1{font-size:29px;line-height:1.32;margin:4px 0 10px;color:#fff;letter-spacing:0}
+    header.hero p.sub{margin:0;color:#b7d7d4;font-size:15px;max-width:760px}
+    main{display:block}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 28px;margin:18px 0}
+    .card h2{font-size:20px;margin:0 0 14px;display:flex;align-items:center;gap:10px;letter-spacing:0}
+    .card h2 .num{flex:none;width:30px;height:30px;border-radius:9px;background:var(--brand);color:#fff;font-size:15px;display:grid;place-items:center;font-weight:800}
+    .card h3{font-size:16px;margin:22px 0 8px;letter-spacing:0}
+    p{margin:10px 0}
+    a{color:var(--blue);text-decoration:none;border-bottom:1px solid #bbc7ff}
+    .tldr{background:var(--brand-soft);border:1px solid var(--brand-line);border-left:5px solid var(--brand);border-radius:12px;padding:18px 20px;margin:18px 0;font-size:16px}
+    .tldr strong{color:var(--brand)}
+    .note{border-radius:12px;padding:14px 16px;margin:14px 0;font-size:14.5px}
+    .note .label{font-weight:800;display:block;margin-bottom:4px;font-size:13px;letter-spacing:0}
+    .note.info{background:var(--blue-soft);border:1px solid #c9d3ff}.note.info .label{color:var(--blue)}
+    .note.warn{background:var(--amber-soft);border:1px solid var(--amber-line)}.note.warn .label{color:var(--amber)}
+    .note.danger{background:var(--red-soft);border:1px solid var(--red-line)}.note.danger .label{color:var(--red)}
+    .note.good{background:var(--green-soft);border:1px solid var(--green-line)}.note.good .label{color:var(--green)}
+    .glossary{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .term{background:#f7fbfa;border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+    .term dt{font-weight:800;color:var(--brand);font-size:14.5px;margin-bottom:3px}
+    .term dd{margin:0;font-size:13.5px;color:var(--muted)}
+    .term .en{color:#6f7c8e;font-weight:700;font-size:12px}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;min-width:560px}
+    th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{background:#eef6f5;font-weight:800}
+    td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+    tr:last-child td{border-bottom:none}
+    tr.highlight td{background:#fff8ec}
+    .pass{color:var(--green);font-weight:800}.fail{color:var(--red);font-weight:800}.muted{color:var(--muted)}
+    .steps{list-style:none;padding:0;margin:8px 0 0}
+    .step{position:relative;padding:0 0 18px 46px}
+    .step:not(:last-child)::before{content:"";position:absolute;left:16px;top:30px;bottom:-2px;width:2px;background:var(--line)}
+    .step .dot{position:absolute;left:0;top:2px;width:34px;height:34px;border-radius:50%;background:var(--brand-soft);color:var(--brand);border:2px solid var(--brand);display:grid;place-items:center;font-weight:800;font-size:11.5px}
+    .step h4{margin:4px 0 4px;font-size:15.5px}
+    .step p{margin:4px 0;font-size:14px;color:var(--muted)}
+    .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .listbox{border-radius:12px;padding:16px 18px}
+    .listbox.allow{background:var(--green-soft);border:1px solid var(--green-line)}
+    .listbox.deny{background:var(--red-soft);border:1px solid var(--red-line)}
+    .listbox.info{background:var(--blue-soft);border:1px solid #c9d3ff}
+    .listbox.warn{background:var(--amber-soft);border:1px solid var(--amber-line)}
+    .listbox h4{margin:0 0 8px;font-size:15px}.listbox.allow h4{color:var(--green)}.listbox.deny h4{color:var(--red)}.listbox.info h4{color:var(--blue)}.listbox.warn h4{color:var(--amber)}
+    .listbox ul{margin:0;padding-left:18px;font-size:13.5px}.listbox li{margin:5px 0}
+    code,.mono{font-family:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;background:#e9eff2;padding:1px 6px;border-radius:5px;font-size:12.5px;color:#223}
+    pre{background:#112d2f;color:#e0f2ef;border-radius:10px;padding:14px 16px;overflow-x:auto;font-size:12.5px;line-height:1.6;margin:12px 0;font-family:"SF Mono",Menlo,monospace;white-space:pre}
+    .tree{display:grid;gap:10px;margin:8px 0}
+    .branch{display:grid;grid-template-columns:240px 1fr;gap:14px;align-items:start;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:#f8fbfa}
+    .branch.go{border-left:4px solid var(--green)}.branch.two{border-left:4px solid var(--brand)}.branch.stop{border-left:4px solid var(--red)}.branch.warn{border-left:4px solid var(--amber)}
+    .targets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .target{display:flex;gap:10px;align-items:flex-start;background:#f7fbfa;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px}
+    .target .badge{flex:none;width:22px;height:22px;border-radius:6px;background:var(--brand);color:#fff;font-weight:800;font-size:11px;display:grid;place-items:center}
+    .check{list-style:none;padding:0;margin:0}
+    .check li{padding:7px 0 7px 30px;position:relative;font-size:14px;border-bottom:1px dashed var(--line)}
+    .check li::before{content:"[ ]";position:absolute;left:0;top:7px;color:var(--brand);font-size:12px;font-family:"SF Mono",Menlo,monospace}
+    .check li.done::before{content:"[x]";color:var(--green)}
+    .check li:last-child{border-bottom:none}
+    .miniflow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 4px}
+    .miniflow .box{background:#fff;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:800;box-shadow:var(--shadow)}
+    .miniflow .arrow{color:var(--muted);font-weight:800}
+    footer{text-align:center;color:#6c7888;font-size:12.5px;margin-top:40px}
+    @media(max-width:720px){
+      .wrap{padding:0 14px 64px}
+      .card{padding:20px 18px}
+      .glossary,.twocol,.targets{grid-template-columns:1fr}
+      .branch{grid-template-columns:1fr;gap:4px}
+      header.hero h1{font-size:23px}
+      table{font-size:12.5px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="tag-row">
+        <span class="pill">recipe-loop</span>
+        <span class="pill">2026-06-28</span>
+        <span class="pill">gpt-5.5 검토 반영 완료</span>
+        <span class="pill">초보 개발자용</span>
+      </div>
+      <h1>YouTube 레시피 Evidence Packet 추출 계획</h1>
+      <p class="sub">유튜브 영상에서 재료와 조리 단계를 뽑을 때, 큰 프롬프트 하나에 맡기지 않고 증거 묶음을 먼저 만든 뒤 LLM과 비전을 단계적으로 쓰는 계획입니다.</p>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2><span class="num">!</span>딱 한 줄 요약</h2>
+        <div class="tldr"><strong>영상 전체를 한 번에 LLM에게 던지지 말고</strong>, 레시피 후보별로 증거 봉투인 <code>EvidencePacket</code>을 만든 다음 그 봉투만 정리하게 하자는 계획입니다.</div>
+        <p>비유: 냉장고 속 재료를 전부 바닥에 쏟아놓고 요리법을 맞히게 하는 대신, “후토마끼 봉투”, “칼국수 봉투”처럼 요리별 봉투에 관련 재료와 메모를 나눠 담은 뒤 확인하는 방식입니다.</p>
+        <div class="note warn">
+          <span class="label">중요한 수정</span>
+          <code>gpt-5.5</code> 검토 후, “텍스트만으로 모든 정답을 맞힌다”는 기대를 뺐습니다. source에 없는 <code>180도 10분</code>, <code>700ml</code>, 상세 <code>큰술</code> 계량은 text cue 성공 기준이 아니라 <code>visualFrameCues</code> 보강 대상입니다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">1</span>헷갈리는 구분</h2>
+        <div class="twocol">
+          <div class="listbox allow">
+            <h4>Evidence-first</h4>
+            <ul>
+              <li>설명란, 댓글, 자막을 먼저 <code>EvidenceRef</code>로 정리합니다.</li>
+              <li>레시피 후보마다 <code>EvidencePacket</code>을 만듭니다.</li>
+              <li>텍스트에 있는 계량은 <code>visual-estimate</code>보다 우선합니다.</li>
+            </ul>
+          </div>
+          <div class="listbox deny">
+            <h4>Vision-first</h4>
+            <ul>
+              <li>영상을 통째로 보고 바로 정답 JSON을 만들게 합니다.</li>
+              <li>비용과 실행 시간이 커질 수 있습니다.</li>
+              <li>텍스트에 있는 값보다 시각 추정이 앞서면 정확도가 떨어질 수 있습니다.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="miniflow" aria-label="전체 흐름">
+          <span class="box">source.json</span><span class="arrow">→</span>
+          <span class="box">EvidenceRef</span><span class="arrow">→</span>
+          <span class="box">EvidencePacket</span><span class="arrow">→</span>
+          <span class="box">text-only prompt</span><span class="arrow">→</span>
+          <span class="box">visualFrameCues</span><span class="arrow">→</span>
+          <span class="box">result.json</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">2</span>알아둘 용어</h2>
+        <dl class="glossary">
+          <div class="term"><dt>EvidencePacket <span class="en">증거 봉투</span></dt><dd>한 레시피 후보에 관련된 제목, 자막, 계량, 단계 단서를 묶은 객체입니다.</dd></div>
+          <div class="term"><dt>EvidenceRef <span class="en">증거 위치</span></dt><dd>어느 source의 몇 번째 줄, 몇 초 구간에서 나온 말인지 저장하는 참조입니다.</dd></div>
+          <div class="term"><dt>EvidenceCue <span class="en">단서</span></dt><dd>재료, 계량, 단계, 온도, 시간처럼 LLM이 참고할 작은 힌트입니다.</dd></div>
+          <div class="term"><dt>visualFrameCues <span class="en">시각 보강 단서</span></dt><dd>텍스트가 부족한 packet에만 selected frame이나 keyframe 결과를 넣는 보강 영역입니다.</dd></div>
+          <div class="term"><dt>visual-estimate <span class="en">시각 추정</span></dt><dd>영상만 보고 추정한 계량입니다. 텍스트에 명시된 값보다 우선하면 안 됩니다.</dd></div>
+          <div class="term"><dt>packet boundary <span class="en">packet 경계</span></dt><dd>어떤 재료와 단계가 어느 레시피에 속하는지 나누는 선입니다.</dd></div>
+          <div class="term"><dt>deterministic cue extraction <span class="en">규칙 기반 단서 추출</span></dt><dd>LLM 전에 정규식과 규칙으로 source에 실제 있는 단서만 뽑는 단계입니다.</dd></div>
+          <div class="term"><dt>augmentation <span class="en">보강</span></dt><dd>부족한 정보를 비전 결과로 채우되, 원래 증거를 덮어쓰지 않는 추가 단계입니다.</dd></div>
+          <div class="term"><dt>baseline <span class="en">기준 결과</span></dt><dd>새 로직이 최소한 이 정도는 유지해야 하는 기존 성능 기준입니다.</dd></div>
+          <div class="term"><dt>artifact <span class="en">산출물 파일</span></dt><dd>디버깅과 검토를 위해 남기는 <code>evidence-packets.json</code> 같은 중간 결과입니다.</dd></div>
+        </dl>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">3</span>현재 상태</h2>
+        <p>대상 fixture는 <code>fTlTpSJtrEs</code>입니다. <code>golden.json</code> 기준 정답 레시피는 7개입니다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>run</th>
+                <th class="num">recipe count</th>
+                <th class="num">ingredientF1</th>
+                <th class="num">amountMatchRate</th>
+                <th class="num">amountCoverage</th>
+                <th class="num">stepCoverage</th>
+                <th>관찰</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>baseline</code></td>
+                <td class="num">7/7</td>
+                <td class="num">0.793</td>
+                <td class="num">0.634</td>
+                <td class="num">0.792</td>
+                <td class="num">0.647</td>
+                <td>레시피 개수와 전체 골격이 가장 좋습니다.</td>
+              </tr>
+              <tr class="highlight">
+                <td><code>codex-vision-keyframes-source-cue-packet-smoke-20260628</code></td>
+                <td class="num">7/7</td>
+                <td class="num">0.387</td>
+                <td class="num">0.711</td>
+                <td class="num">0.862</td>
+                <td class="num">0.301</td>
+                <td>비전 중심 결과가 핵심 재료와 단계 일부를 크게 놓쳤습니다.</td>
+              </tr>
+              <tr class="highlight">
+                <td><code>codex-vision-keyframes-recipe-evidence-ledger-prompt-smoke-20260628</code></td>
+                <td class="num">7/7</td>
+                <td class="num">0.491</td>
+                <td class="num">0.788</td>
+                <td class="num">1.000</td>
+                <td class="num">0.343</td>
+                <td>계량 coverage는 좋아졌지만 재료와 단계 의미 품질은 낮습니다.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note info">
+          <span class="label">이 fixture가 어려운 이유</span>
+          <code>source.json</code>의 caption은 available이지만 55줄로 짧고 자동자막이 깨진 줄이 많습니다. description timeline은 4개 조리 묶음만 주지만, <code>golden.json</code>은 7개 recipe를 기대합니다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">4</span>선택지와 결론</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>선택지</th><th>장점</th><th>문제</th><th>판단</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Option A</strong><br>Prompt-only tuning</td>
+                <td>구현량이 적고 현재 runner를 거의 유지합니다.</td>
+                <td>프롬프트가 계속 길어지고 후보별 경계가 코드로 고정되지 않습니다.</td>
+                <td class="muted">보조 개선 정도</td>
+              </tr>
+              <tr>
+                <td><strong>Option B</strong><br>Vision-first segmented extraction</td>
+                <td>자막이 빈약한 영상이나 화면 속 계량에는 강할 수 있습니다.</td>
+                <td>비싸고 느리며 <code>fTlTpSJtrEs</code>에서 baseline보다 낮았습니다.</td>
+                <td class="muted">fallback에 적합</td>
+              </tr>
+              <tr>
+                <td><strong>Option C</strong><br>Evidence Packet-first hybrid</td>
+                <td>후보별 증거 경계를 코드로 고정하고, 비전 비용을 필요한 구간에만 씁니다.</td>
+                <td>새 모듈과 테스트가 필요합니다.</td>
+                <td class="pass">추천</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">5</span>데이터 모델</h2>
+        <p>핵심은 정답 JSON을 바로 만들지 않고, 먼저 “증거 장부”를 만드는 것입니다.</p>
+        <pre><code>type EvidenceSource = "description" | "comment" | "caption" | "transcript" | "visual";
+
+type EvidenceCue = {
+  kind: "title" | "ingredient" | "seasoning" | "amount" | "step" | "temperature" | "time" | "tip";
+  basis: "source" | "visual";
+  text: string;
+  normalizedText?: string;
+  refs: EvidenceRef[];
+  confidence: number;
+};
+
+type EvidencePacket = {
+  candidateId: string;
+  titleHint: string;
+  aliases: string[];
+  timeRange: { startMs: number | null; endMs: number | null };
+  titleEvidence: EvidenceRef[];
+  ingredientCues: EvidenceCue[];
+  stepCues: EvidenceCue[];
+  amountCues: EvidenceCue[];
+  visualFrameCues: EvidenceCue[];
+  confidence: "high" | "medium" | "low";
+  warnings: string[];
+};</code></pre>
+        <div class="tree">
+          <div class="branch go"><strong><code>basis: "source"</code></strong><span>설명란, 댓글, 자막, transcript에서 나온 단서입니다. 명시 계량이면 우선권이 가장 높습니다.</span></div>
+          <div class="branch warn"><strong><code>basis: "visual"</code></strong><span>영상 프레임에서 나온 보강 단서입니다. 텍스트 단서를 덮어쓰면 안 됩니다.</span></div>
+          <div class="branch stop"><strong>금지</strong><span><code>lib/server/*</code>가 <code>scripts/*</code>를 직접 import하지 않습니다. 필요한 규칙은 공통 순수 함수로 분리하거나 lab 모듈에 최소 이식합니다.</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">6</span>실행 단계</h2>
+        <ul class="steps">
+          <li class="step"><span class="dot">P0</span><h4>Regression lock</h4><p>기존 fixture와 baseline을 기록합니다. 새 테스트는 production 같은 변경 전에 packet 구조를 먼저 고정합니다.</p></li>
+          <li class="step"><span class="dot">P1</span><h4>Timed transcript 보존</h4><p><code>buildSourceText()</code>가 transcript를 한 덩어리로 합치며 잃던 <code>startMs</code>를 보존합니다.</p></li>
+          <li class="step"><span class="dot">P2</span><h4>Source evidence normalization</h4><p><code>source-evidence.mjs</code>에서 description, author comments, transcript segments를 <code>EvidenceRef[]</code>로 통일합니다.</p></li>
+          <li class="step"><span class="dot">P3</span><h4>Candidate packet builder</h4><p><code>candidate-packets.mjs</code>에서 description timeline과 title/tag를 이용해 4개 timeline row를 7개 child packet으로 나눕니다.</p></li>
+          <li class="step"><span class="dot">P4</span><h4>Deterministic cue extraction</h4><p>source에 실제 있는 cue만 뽑습니다. 없는 계량은 <code>missingTextEvidence</code>로 기록합니다.</p></li>
+          <li class="step"><span class="dot">P5</span><h4>Packet prompt</h4><p><code>buildExtractionPrompt()</code>가 <code>EvidencePacket[]</code>을 받고, 첫 pass는 <code>videoUrl: null</code>인 text-only로 실행합니다.</p></li>
+          <li class="step"><span class="dot">P6</span><h4>Conditional vision augmentation</h4><p>confidence가 낮거나 cue가 부족한 packet에만 비전을 돌리고, 결과를 <code>visualFrameCues</code> artifact로 주입합니다.</p></li>
+          <li class="step"><span class="dot">P7</span><h4>Postprocess and provenance</h4><p>packet mode와 legacy mode를 분리하고, <code>recoverLowTailVisualDefaults()</code>가 source evidence를 덮지 못하게 막습니다.</p></li>
+          <li class="step"><span class="dot">P8</span><h4>Verification and rollout</h4><p>train target과 validation split을 검증한 뒤, production integration은 별도 계획에서 다룹니다.</p></li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">7</span>판단 규칙</h2>
+        <div class="tree">
+          <div class="branch two"><strong>timeline has explicit start times</strong><span>timeline window를 primary candidate range로 사용합니다.</span></div>
+          <div class="branch two"><strong>title has multiple dish names</strong><span>timeline이 약하면 title candidates를 weak hint로 사용합니다.</span></div>
+          <div class="branch warn"><strong>candidate has no cooking cue</strong><span><code>confidence: "low"</code>로 표시하고 recipe output을 억지로 만들지 않습니다.</span></div>
+          <div class="branch go"><strong>bundled candidate has child cues</strong><span><code>맥적&amp;열무 들기름냉파스타</code>처럼 parent range를 공유하는 child packet으로 나눕니다.</span></div>
+          <div class="branch stop"><strong>source에 없는 golden value</strong><span><code>180도 10분</code>, <code>700ml</code> 같은 값은 deterministic cue 성공으로 세지 않고 <code>visualFrameCues</code> 필요 항목으로 기록합니다.</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">8</span>성공 기준</h2>
+        <h3>Packet artifact milestone</h3>
+        <div class="targets">
+          <div class="target"><span class="badge">1</span><span><code>runs/&lt;outTag&gt;/evidence-packets.json</code>이 lab run마다 존재합니다.</span></div>
+          <div class="target"><span class="badge">2</span><span><code>runs/&lt;outTag&gt;/cue-extraction-report.json</code>이 lab run마다 존재합니다.</span></div>
+          <div class="target"><span class="badge">3</span><span><code>fTlTpSJtrEs</code>에서 4개 timeline row와 title/tag evidence로 7개 recipe candidates를 만듭니다.</span></div>
+          <div class="target"><span class="badge">4</span><span>규칙 기반 cue extraction은 source evidence에 있는 cue만 성공으로 주장합니다.</span></div>
+        </div>
+        <h3>Full target after conditional vision</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>기준</th></tr></thead>
+            <tbody>
+              <tr><td>recipe count</td><td><code>7/7</code> 유지</td></tr>
+              <tr><td>ingredientF1</td><td>baseline <code>0.793</code> 아래로 떨어지지 않기</td></tr>
+              <tr><td>stepCoverage</td><td>baseline <code>0.647</code> 아래로 떨어지지 않기</td></tr>
+              <tr><td>amountCoverage</td><td>baseline <code>0.792</code> 아래로 떨어지지 않기</td></tr>
+              <tr><td>semantic judge</td><td>sampled cases에서 baseline 대비 regression 없음</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">9</span>검증 명령어</h2>
+        <h3>Local targeted verification</h3>
+        <pre><code>pnpm test -- --run tests/recipe-extraction-lab
+node scripts/recipe-loop/run-extraction.mjs --split train --ids fTlTpSJtrEs --provider gemini --out-tag evidence-packet-v1
+node scripts/recipe-loop/grade-extraction.mjs --split train --ids fTlTpSJtrEs --run evidence-packet-v1
+node scripts/recipe-loop/grade-semantic.mjs --split train --ids fTlTpSJtrEs --run evidence-packet-v1</code></pre>
+        <h3>Broader recipe-loop verification</h3>
+        <pre><code>node scripts/recipe-loop/run-extraction.mjs --split validation --provider gemini --out-tag evidence-packet-v1
+node scripts/recipe-loop/grade-extraction.mjs --split validation --run evidence-packet-v1
+node scripts/recipe-loop/grade-semantic.mjs --split validation --run evidence-packet-v1</code></pre>
+        <h3>Optional visual fallback verification</h3>
+        <pre><code>node scripts/recipe-loop/run-extraction.mjs --split train --ids fTlTpSJtrEs --provider codex-vision-keyframes --keyframe-mode segmented --source-cue-packets --recipe-evidence-ledger-prompt --out-tag evidence-packet-visual-v1</code></pre>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">10</span>하지 않을 일과 안전장치</h2>
+        <div class="twocol">
+          <div class="listbox allow">
+            <h4>허용</h4>
+            <ul>
+              <li>lab 모듈 안에서 packet 생성과 artifact 저장을 실험합니다.</li>
+              <li>기존 <code>youtube-caption-normalizer.ts</code>, <code>youtube-multi-recipe-extractor.ts</code>의 개념을 재사용합니다.</li>
+              <li>텍스트 evidence가 부족하면 scoped vision artifact로 보강합니다.</li>
+            </ul>
+          </div>
+          <div class="listbox deny">
+            <h4>금지</h4>
+            <ul>
+              <li>이 계획에서 <code>POST /recipes/youtube/extract</code>를 바로 바꾸지 않습니다.</li>
+              <li><code>golden.json</code>을 새 extractor에 맞춰 수정하지 않습니다.</li>
+              <li>일반 요리 상식으로 없는 재료나 계량을 꾸며내지 않습니다.</li>
+              <li>새 paid extraction provider를 추가하지 않습니다.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">11</span>주요 위험</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위험</th><th>심각도</th><th>대응</th></tr></thead>
+            <tbody>
+              <tr><td>Packet builder가 한 레시피를 여러 개로 과분리</td><td class="fail">High</td><td>child packet마다 cooking cue를 요구하고 sauce/topping-only packet은 merge합니다.</td></tr>
+              <tr><td>텍스트에 없는 evidence까지 기대</td><td class="fail">High</td><td>Phase 4는 source-visible cue만 인정하고 full parity는 vision 이후로 옮깁니다.</td></tr>
+              <tr><td>기존 visual default가 source evidence를 덮음</td><td class="fail">High</td><td>packet mode에서 legacy visual recovery guard를 추가합니다.</td></tr>
+              <tr><td><code>fTlTpSJtrEs</code>에 과적합</td><td class="fail">High</td><td><code>validation</code> split에서 regression 여부를 확인합니다.</td></tr>
+              <tr><td><code>codex-vision-keyframes-client.mjs</code>와 로직 중복</td><td>Medium</td><td>직접 import하지 않고 공통 순수 함수 추출 또는 최소 규칙 이식으로 제한합니다.</td></tr>
+              <tr><td>vision fallback 비용 증가</td><td>Medium</td><td>low-confidence packet에만 기본 실행합니다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">12</span>GPT 5.5 검토 반영</h2>
+        <p>검토 결론은 “Option C 방향은 맞지만, 텍스트 EvidencePacket만으로 <code>fTlTpSJtrEs</code> baseline 이상을 기대하면 무리”였습니다. 반영한 변경은 아래와 같습니다.</p>
+        <ul class="check">
+          <li class="done">Phase 4 acceptance를 낮춰, source evidence에 실제 있는 cue만 성공으로 인정했습니다.</li>
+          <li class="done">full <code>fTlTpSJtrEs</code> baseline parity를 conditional vision augmentation과 packet postprocess 이후 기준으로 옮겼습니다.</li>
+          <li class="done"><code>evidence-packets.json</code>과 <code>cue-extraction-report.json</code>을 lab run artifact로 요구했습니다.</li>
+          <li class="done">packet prompt 기본 pass는 <code>videoUrl: null</code>인 text-only로 실행하도록 했습니다.</li>
+          <li class="done">vision은 별도 artifact를 만들고 <code>visualFrameCues</code>로만 주입하도록 했습니다.</li>
+          <li class="done">legacy visual defaults가 source evidence를 덮지 않도록 packet-mode guardrail을 추가했습니다.</li>
+          <li class="done"><code>lib/server/*</code>가 <code>scripts/*</code>를 직접 import하지 않도록 중복 통제 규칙을 넣었습니다.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">13</span>체크리스트</h2>
+        <ul class="check">
+          <li>Add regression tests for source evidence normalization.</li>
+          <li>Add regression tests for candidate packet builder.</li>
+          <li>Always write <code>evidence-packets.json</code> and <code>cue-extraction-report.json</code> in lab runs.</li>
+          <li>Preserve timed transcript lines in lab source text.</li>
+          <li>Add deterministic cue extraction.</li>
+          <li>Update packet-scoped prompt.</li>
+          <li>Add conditional vision augmentation gate.</li>
+          <li>Guard legacy visual recovery in packet mode.</li>
+          <li>Add packet provenance metadata to <code>meta</code>.</li>
+          <li>Run <code>fTlTpSJtrEs</code> targeted grade.</li>
+          <li>Run validation split grade.</li>
+          <li>Write follow-up production integration plan only if lab results justify it.</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      원문: /Users/cwj/01_vibe_coding/homecook/docs/engineering/youtube-recipe-evidence-packet-extraction-plan.md |
+      검토: /Users/cwj/01_vibe_coding/homecook/docs/engineering/youtube-recipe-evidence-packet-extraction-plan.gpt55-review.md |
+      초보 개발자 이해용 HTML | 생성일: 2026-06-28
+    </footer>
+  </div>
+</body>
+</html>

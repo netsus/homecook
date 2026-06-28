@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YouTube 레시피 Evidence Packet 구현 완료 요약</title>
+  <style>
+    :root{
+      --ink:#172033;--muted:#5b6678;--line:#dfe6ef;--panel:#fff;
+      --brand:#1f6f8b;--brand-soft:#e8f4f7;--brand-line:#b8dce6;
+      --green:#15803d;--green-soft:#e8f5ed;--green-line:#bddfc9;
+      --amber:#a15c07;--amber-soft:#fff4df;--amber-line:#ecd39d;
+      --red:#b91c1c;--red-soft:#fdecec;--red-line:#efc3c3;
+      --blue:#3454d1;--blue-soft:#edf1ff;--radius:14px;
+      --shadow:0 1px 2px rgba(16,24,40,.06),0 10px 28px rgba(16,24,40,.07);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Segoe UI",Roboto,sans-serif;background:linear-gradient(180deg,#153445 0%,#1f5870 250px,#f2f6f8 250px,#f2f6f8 100%);color:var(--ink);line-height:1.72;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:anywhere}
+    .wrap{max-width:980px;margin:0 auto;padding:0 20px 80px}
+    header.hero{padding:44px 0 30px;color:#ecf7fa}
+    .tag-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .pill{display:inline-block;font-size:12.5px;font-weight:700;padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.12);color:#d9f0f5;border:1px solid rgba(255,255,255,.18)}
+    h1{font-size:29px;line-height:1.32;margin:4px 0 10px;color:#fff;letter-spacing:0}
+    header.hero p{margin:0;color:#bfdae2;font-size:15px;max-width:760px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 28px;margin:18px 0}
+    .card h2{font-size:20px;margin:0 0 14px;display:flex;align-items:center;gap:10px;letter-spacing:0}
+    .num{flex:none;width:30px;height:30px;border-radius:9px;background:var(--brand);color:#fff;font-size:15px;display:grid;place-items:center;font-weight:800}
+    h3{font-size:16px;margin:22px 0 8px;letter-spacing:0}
+    p{margin:10px 0}
+    .tldr{background:var(--brand-soft);border:1px solid var(--brand-line);border-left:5px solid var(--brand);border-radius:12px;padding:18px 20px;margin:18px 0;font-size:16px}
+    .tldr strong{color:var(--brand)}
+    .note{border-radius:12px;padding:14px 16px;margin:14px 0;font-size:14.5px}
+    .note .label{font-weight:800;display:block;margin-bottom:4px;font-size:13px}
+    .note.good{background:var(--green-soft);border:1px solid var(--green-line)}.note.good .label{color:var(--green)}
+    .note.warn{background:var(--amber-soft);border:1px solid var(--amber-line)}.note.warn .label{color:var(--amber)}
+    .note.info{background:var(--blue-soft);border:1px solid #c9d3ff}.note.info .label{color:var(--blue)}
+    .glossary{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .term{background:#f8fbfc;border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+    .term dt{font-weight:800;color:var(--brand);font-size:14.5px;margin-bottom:3px}
+    .term dd{margin:0;font-size:13.5px;color:var(--muted)}
+    .term .en{color:#6f7c8e;font-weight:700;font-size:12px}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;min-width:560px}
+    th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{background:#edf6f8;font-weight:800}
+    tr:last-child td{border-bottom:none}
+    .pass{color:var(--green);font-weight:800}.warn-text{color:var(--amber);font-weight:800}.fail{color:var(--red);font-weight:800}
+    code,.mono{font-family:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;background:#e9eff2;padding:1px 6px;border-radius:5px;font-size:12.5px;color:#223}
+    pre{background:#102d38;color:#e3f5f8;border-radius:10px;padding:14px 16px;overflow-x:auto;font-size:12.5px;line-height:1.6;margin:12px 0;font-family:"SF Mono",Menlo,monospace;white-space:pre}
+    .steps{list-style:none;padding:0;margin:8px 0 0}
+    .step{position:relative;padding:0 0 18px 46px}
+    .step:not(:last-child)::before{content:"";position:absolute;left:16px;top:30px;bottom:-2px;width:2px;background:var(--line)}
+    .dot{position:absolute;left:0;top:2px;width:34px;height:34px;border-radius:50%;background:var(--brand-soft);color:var(--brand);border:2px solid var(--brand);display:grid;place-items:center;font-weight:800;font-size:11.5px}
+    .step h4{margin:4px 0 4px;font-size:15.5px}.step p{margin:4px 0;font-size:14px;color:var(--muted)}
+    .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .listbox{border-radius:12px;padding:16px 18px}
+    .listbox.allow{background:var(--green-soft);border:1px solid var(--green-line)}
+    .listbox.deny{background:var(--red-soft);border:1px solid var(--red-line)}
+    .listbox h4{margin:0 0 8px;font-size:15px}.listbox.allow h4{color:var(--green)}.listbox.deny h4{color:var(--red)}
+    .listbox ul{margin:0;padding-left:18px;font-size:13.5px}.listbox li{margin:5px 0}
+    .targets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .target{display:flex;gap:10px;align-items:flex-start;background:#f8fbfc;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px}
+    .badge{flex:none;width:22px;height:22px;border-radius:6px;background:var(--brand);color:#fff;font-weight:800;font-size:11px;display:grid;place-items:center}
+    .check{list-style:none;padding:0;margin:0}
+    .check li{padding:7px 0 7px 30px;position:relative;font-size:14px;border-bottom:1px dashed var(--line)}
+    .check li::before{content:"[x]";position:absolute;left:0;top:7px;color:var(--green);font-size:12px;font-family:"SF Mono",Menlo,monospace}
+    .check li.pending::before{content:"[ ]";color:var(--amber)}
+    footer{text-align:center;color:#6c7888;font-size:12.5px;margin-top:40px}
+    @media(max-width:720px){.wrap{padding:0 14px 64px}.card{padding:20px 18px}.glossary,.twocol,.targets{grid-template-columns:1fr}h1{font-size:23px}table{font-size:12.5px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="tag-row">
+        <span class="pill">recipe-loop</span>
+        <span class="pill">2026-06-28</span>
+        <span class="pill">local implementation complete</span>
+        <span class="pill">초보 개발자용</span>
+      </div>
+      <h1>YouTube 레시피 Evidence Packet 구현 완료 요약</h1>
+      <p>계획서에서 정한 “증거 봉투 먼저 만들기” 구조를 lab 추출 경로에 구현하고, 테스트와 빌드까지 확인한 내용을 정리했습니다.</p>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2><span class="num">!</span>딱 한 줄 요약</h2>
+        <div class="tldr"><strong>유튜브 영상 전체를 바로 LLM에게 맡기기 전에</strong>, 레시피별 증거 봉투인 <code>EvidencePacket</code>을 만들고 그 중간 결과를 파일로 남기게 했습니다.</div>
+        <p>비유: 장보기 영수증과 조리 메모를 전부 섞어 두는 대신, “후토마끼 봉투”, “칼국수 봉투”처럼 요리별 봉투를 먼저 만든 뒤 요약하는 방식입니다.</p>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">1</span>무엇이 바뀌었나</h2>
+        <pre><code>source.json
+  -&gt; source-evidence.mjs
+  -&gt; candidate-packets.mjs
+  -&gt; evidence-packets.json / cue-extraction-report.json
+  -&gt; packet-aware prompt
+  -&gt; extract.mjs normalization and postprocess</code></pre>
+        <div class="note info">
+          <span class="label">Production API 영향</span>
+          이번 변경은 <code>recipe-extraction-lab</code>와 <code>recipe-loop</code> 도구 경로입니다. <code>POST /recipes/youtube/extract</code> 동작은 바꾸지 않았습니다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">2</span>알아둘 용어</h2>
+        <dl class="glossary">
+          <div class="term"><dt>EvidenceRef <span class="en">증거 위치</span></dt><dd>어느 source의 몇 번째 줄, 몇 초에서 나온 말인지 저장합니다.</dd></div>
+          <div class="term"><dt>EvidenceCue <span class="en">작은 단서</span></dt><dd>재료, 계량, 단계처럼 LLM이 참고할 단서입니다.</dd></div>
+          <div class="term"><dt>EvidencePacket <span class="en">증거 봉투</span></dt><dd>한 요리 후보에 관련된 증거와 단서를 모은 객체입니다.</dd></div>
+          <div class="term"><dt>cue report <span class="en">단서 보고서</span></dt><dd>packet마다 어떤 단서가 있고 무엇이 부족한지 보여주는 JSON입니다.</dd></div>
+          <div class="term"><dt>source-visible cue <span class="en">원문에 있는 단서</span></dt><dd>텍스트나 자막에 실제로 있는 단서입니다. 없는 값은 만들지 않습니다.</dd></div>
+          <div class="term"><dt>visualFrameCues <span class="en">시각 보강 단서</span></dt><dd>나중에 selected frame 결과를 넣기 위한 보강 자리입니다.</dd></div>
+          <div class="term"><dt>text-only pass <span class="en">텍스트만 보는 1차 실행</span></dt><dd>Gemini 기본 packet prompt에서 <code>videoUrl: null</code>로 실행하는 방식입니다.</dd></div>
+          <div class="term"><dt>artifact <span class="en">중간 산출물</span></dt><dd>디버깅을 위해 남기는 <code>evidence-packets.json</code> 같은 파일입니다.</dd></div>
+        </dl>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">3</span>변경 파일</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>파일</th><th>역할</th></tr></thead>
+            <tbody>
+              <tr><td><code>source-evidence.mjs</code></td><td>description, comment, transcript를 <code>EvidenceRef[]</code>로 정규화합니다.</td></tr>
+              <tr><td><code>candidate-packets.mjs</code></td><td><code>EvidencePacket[]</code>과 <code>cue-extraction-report</code>를 생성합니다.</td></tr>
+              <tr><td><code>prompt.mjs</code></td><td>timestamp source text와 packet-aware prompt를 추가했습니다.</td></tr>
+              <tr><td><code>extract.mjs</code></td><td>packet bundle을 prompt/meta에 연결하고 source amount precedence guard를 추가했습니다.</td></tr>
+              <tr><td><code>run-extraction.mjs</code></td><td>run마다 <code>evidence-packets.json</code>, <code>cue-extraction-report.json</code>를 저장합니다.</td></tr>
+              <tr><td><code>recipe-loop-evidence-packets.test.ts</code></td><td>timestamp 보존, 7 packet 생성, artifact 저장을 테스트합니다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">4</span>핵심 동작</h2>
+        <h3>Timestamp 보존</h3>
+        <div class="twocol">
+          <div class="listbox deny">
+            <h4>이전</h4>
+            <ul><li><code>일단 새우부터. 할머니 들기름 고추장</code>처럼 한 줄 blob이 됐습니다.</li></ul>
+          </div>
+          <div class="listbox allow">
+            <h4>이제</h4>
+            <ul><li><code>[00:38.320] 일단 새우부터.</code>처럼 시간과 문장을 보존합니다.</li></ul>
+          </div>
+        </div>
+        <h3><code>fTlTpSJtrEs</code> packet 생성</h3>
+        <div class="targets">
+          <div class="target"><span class="badge">1</span><span><code>메밀 후토마끼</code></span></div>
+          <div class="target"><span class="badge">2</span><span><code>맥적구이</code></span></div>
+          <div class="target"><span class="badge">3</span><span><code>열무 들기름 냉파스타</code></span></div>
+          <div class="target"><span class="badge">4</span><span><code>등촌식 멸치칼국수</code></span></div>
+          <div class="target"><span class="badge">5</span><span><code>소곱창구이</code></span></div>
+          <div class="target"><span class="badge">6</span><span><code>도토리 묵사발</code></span></div>
+          <div class="target"><span class="badge">7</span><span><code>항정살 마늘쫑 솥밥</code></span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">5</span>검증 결과</h2>
+        <pre><code>pnpm test -- --run tests/recipe-loop-evidence-packets.test.ts
+pnpm lint
+pnpm typecheck
+pnpm build</code></pre>
+        <ul class="check">
+          <li>Vitest가 인자 전달 방식 때문에 전체 suite로 실행되었고, <code>248</code> test files / <code>2436</code> tests가 모두 통과했습니다.</li>
+          <li><code>pnpm lint</code> 통과.</li>
+          <li><code>pnpm typecheck</code> 통과.</li>
+          <li><code>pnpm build</code> 통과. Next.js production build completed successfully.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">6</span>GPT 5.5 검토 반영</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>검토 지적</th><th>반영 내용</th></tr></thead>
+            <tbody>
+              <tr><td>source에 없는 <code>180도 10분</code>, <code>700ml</code>까지 Phase 4에서 기대했다.</td><td>source-visible cue만 deterministic 성공으로 인정합니다.</td></tr>
+              <tr><td><code>llm.generate</code>는 packet별 video scoping이 어렵다.</td><td>Gemini 기본 packet prompt pass는 <code>videoUrl: null</code> text-only로 실행합니다.</td></tr>
+              <tr><td>기존 vision client와 중복 위험이 있다.</td><td><code>lib/server/*</code>에서 <code>scripts/*</code>를 직접 import하지 않았습니다.</td></tr>
+              <tr><td>legacy visual recovery가 text precedence를 덮을 수 있다.</td><td>source text에 명시 amount가 있으면 visual default가 덮지 못하게 guard를 추가했습니다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">7</span>남은 리스크</h2>
+        <div class="note warn">
+          <span class="label">아직 남은 일</span>
+          실제 Gemini extraction grade와 validation split 전체 품질 평가는 별도 API run이 필요합니다. 이번 변경은 packet 구조, artifact 저장, prompt/meta 연결, local deterministic verification까지 닫았습니다.
+        </div>
+        <ul class="check">
+          <li class="pending">실제 selected frame 결과를 <code>visualFrameCues</code>로 주입하는 단계.</li>
+          <li class="pending">validation split 전체에서 packet 과소/과분리 확인.</li>
+          <li class="pending">실제 LLM output 품질이 baseline 이상인지 측정.</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      원문: /Users/cwj/01_vibe_coding/homecook/docs/engineering/youtube-recipe-evidence-packet-implementation-summary.md |
+      초보 개발자 이해용 HTML | 생성일: 2026-06-28
+    </footer>
+  </div>
+</body>
+</html>
