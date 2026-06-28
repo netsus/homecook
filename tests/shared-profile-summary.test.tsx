@@ -632,14 +632,18 @@ describe("ProfileSummaryButton", () => {
 
     const archiveDialog = screen.getByRole("dialog", { name: "알림 기록" });
     await waitFor(() => {
-      expect(within(archiveDialog).getByText("튜토리얼 안내")).toBeTruthy();
+      expect(within(archiveDialog).getAllByText("튜토리얼 안내").length).toBeGreaterThanOrEqual(3);
     });
     expect(within(archiveDialog).getByText(/첫 장보기 목록 만들기/)).toBeTruthy();
+    expect(within(archiveDialog).getByText(/플래너에 끼니 등록하기/)).toBeTruthy();
+    expect(within(archiveDialog).getByText(/마음에 드는 레시피 저장하기/)).toBeTruthy();
 
     await user.click(screen.getByRole("tab", { name: "시스템" }));
 
-    expect(within(archiveDialog).getByText("튜토리얼 안내")).toBeTruthy();
+    expect(within(archiveDialog).getAllByText("튜토리얼 안내").length).toBeGreaterThanOrEqual(3);
     expect(within(archiveDialog).getByText(/첫 장보기 목록 만들기/)).toBeTruthy();
+    expect(within(archiveDialog).getByText(/플래너에 끼니 등록하기/)).toBeTruthy();
+    expect(within(archiveDialog).getByText(/마음에 드는 레시피 저장하기/)).toBeTruthy();
     expect(
       within(archiveDialog).getByText(
         /플래너에 등록한 끼니에서 장보기를 누르면, 장보기 목록을 만들 수 있어요/,

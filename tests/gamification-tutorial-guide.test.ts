@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { getNextTutorialGuide } from "@/lib/gamification-tutorial-guide";
-import type { UserGamificationData } from "@/types/user-gamification";
+import {
+  createTutorialGuideHistoryNotifications,
+  getNextTutorialGuide,
+} from "@/lib/gamification-tutorial-guide";
+import type {
+  UserGamificationAchievementMilestoneData,
+  UserGamificationData,
+} from "@/types/user-gamification";
 
 const GUIDE_EXPECTATIONS = [
   {
@@ -97,6 +103,27 @@ function makeGamification(
   };
 }
 
+function makeTutorialMilestone(
+  achievementKey: string,
+  current: number,
+  status: UserGamificationAchievementMilestoneData["status"],
+): UserGamificationAchievementMilestoneData {
+  const guide = GUIDE_EXPECTATIONS.find((item) => item.achievementKey === achievementKey);
+
+  return {
+    achievement_key: achievementKey,
+    badge: { badge_key: achievementKey, category: "tutorial", shape_key: "bookmark" },
+    current,
+    description: guide?.body ?? "튜토리얼 단계",
+    earned_at: status === "earned" ? "2026-06-20T00:00:00.000Z" : null,
+    locked_hint: status === "earned" ? null : "튜토리얼을 진행해 보세요.",
+    status,
+    target: 1,
+    title: guide?.title ?? "튜토리얼 단계",
+    track_key: "tutorial",
+  };
+}
+
 describe("gamification tutorial guide", () => {
   it("uses concise action-oriented guide copy for every tutorial quest", () => {
     for (const expected of GUIDE_EXPECTATIONS) {
@@ -108,5 +135,48 @@ describe("gamification tutorial guide", () => {
       expect(guide?.body.length).toBeLessThanOrEqual(45);
       expect(guide?.body).not.toBe("서버 기본 설명");
     }
+  });
+
+  it("keeps previous tutorial guide rows when the active tutorial advances without award rows", () => {
+    const notifications = createTutorialGuideHistoryNotifications(
+      makeGamification("tutorial_planner_registered", "first_planner_registered"),
+    );
+
+    expect(notifications.map((item) => item.body)).toEqual([
+      expect.stringContaining("플래너에 끼니 등록하기"),
+      expect.stringContaining("마음에 드는 레시피 저장하기"),
+    ]);
+    expect(
+      notifications.find((item) => item.body.includes("마음에 드는 레시피 저장하기"))?.payload
+        .tutorial_guide_status,
+    ).toBe("completed");
+  });
+
+  it("restores completed tutorial guide rows from completed progress when awards are missing", () => {
+    const gamification = makeGamification(
+      "tutorial_shopping_list_create",
+      "first_shopping_list_created",
+    );
+    gamification.achievement_album.categories = [
+      {
+        category_key: "tutorial",
+        earned_count: 0,
+        label: "튜토리얼",
+        milestones: [
+          makeTutorialMilestone("tutorial_recipe_saved", 1, "active"),
+          makeTutorialMilestone("tutorial_planner_registered", 1, "locked"),
+          makeTutorialMilestone("tutorial_shopping_list_create", 0, "active"),
+        ],
+        total_count: 3,
+      },
+    ];
+
+    const notifications = createTutorialGuideHistoryNotifications(gamification);
+
+    expect(notifications.map((item) => item.body)).toEqual([
+      expect.stringContaining("첫 장보기 목록 만들기"),
+      expect.stringContaining("플래너에 끼니 등록하기"),
+      expect.stringContaining("마음에 드는 레시피 저장하기"),
+    ]);
   });
 });
