@@ -899,6 +899,7 @@ export async function projectUserGamificationAfterProgressEvent(
       userId: input.userId,
       progress: input.progress,
       sourceEventId: input.progressEventId,
+      sourceXpDelta: input.xpDelta,
       notificationMode: "live",
       now,
     });
@@ -1410,6 +1411,7 @@ async function reconcileUserGamification(
     progress: UserProgressData;
     sourceEventId?: string;
     sourceActivityId?: string;
+    sourceXpDelta?: number;
     achievementCounts?: UserAchievementCounts;
     notificationMode?: "live" | "silent";
     now?: string;
@@ -1476,6 +1478,9 @@ async function reconcileUserGamification(
           title: definition.title,
           description: definition.description,
           badge_key: definition.badge_key,
+          ...(input.sourceXpDelta && input.sourceXpDelta > 0
+            ? { xp_delta: input.sourceXpDelta }
+            : {}),
         },
         groupKey: input.sourceEventId
           ? `progress-event:${input.sourceEventId}`
@@ -2170,6 +2175,18 @@ export function decodeArchiveCursor(value: string) {
   }
 }
 
+function appendNotificationXp(body: string, payload: Record<string, unknown>) {
+  const xpDelta = typeof payload.xp_delta === "number" ? payload.xp_delta : 0;
+
+  if (xpDelta <= 0) {
+    return body;
+  }
+
+  const xpLabel = `+${xpDelta} XP`;
+
+  return body.includes(xpLabel) ? body : `${body} ${xpLabel}`;
+}
+
 function buildNotificationPresentation(
   notificationType: UserGamificationNotificationType,
   payload: Record<string, unknown>,
@@ -2219,7 +2236,10 @@ function buildNotificationPresentation(
 
     return {
       title: "업적 달성!",
-      body: `${typeof payload.title === "string" ? payload.title : definition?.title ?? "새 업적"} 배지를 획득했어요.`,
+      body: appendNotificationXp(
+        `${typeof payload.title === "string" ? payload.title : definition?.title ?? "새 업적"} 배지를 획득했어요.`,
+        payload,
+      ),
       category: definition?.category_key ?? "tutorial",
     };
   }
