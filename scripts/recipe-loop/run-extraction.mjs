@@ -14,6 +14,7 @@ import { pathToFileURL } from "node:url";
 import { createCodexVisionKeyframesClient } from "./lib/codex-vision-keyframes-client.mjs";
 import { createCodexVisionClient } from "./lib/codex-vision-client.mjs";
 import { createCachedLlmClient } from "./lib/llm-client.mjs";
+import { buildEvidencePacketBundle } from "../../lib/server/recipe-extraction-lab/candidate-packets.mjs";
 import { extractRecipeFromSources } from "../../lib/server/recipe-extraction-lab/extract.mjs";
 
 const PROJECT_ROOT = process.cwd();
@@ -170,8 +171,31 @@ export async function runExtraction(rawArgs = {}, options = {}) {
     try {
       const source = JSON.parse(await readFile(sourcePath, "utf8"));
       const input = sourceToInput(source);
-      const result = await extractRecipeFromSources(input, { llm, useVisual });
+      const evidencePacketBundle = buildEvidencePacketBundle(input);
+      const result = await extractRecipeFromSources(input, {
+        llm,
+        useVisual,
+        packetPromptTextOnly: provider === "gemini",
+      });
       await mkdir(outDir, { recursive: true });
+      await writeFile(
+        path.join(outDir, "evidence-packets.json"),
+        JSON.stringify({
+          videoId: id,
+          version: evidencePacketBundle.version,
+          source: evidencePacketBundle.source,
+          packets: evidencePacketBundle.packets,
+        }, null, 2) + "\n",
+        "utf8",
+      );
+      await writeFile(
+        path.join(outDir, "cue-extraction-report.json"),
+        JSON.stringify({
+          videoId: id,
+          ...evidencePacketBundle.report,
+        }, null, 2) + "\n",
+        "utf8",
+      );
       await writeFile(path.join(outDir, "result.json"), JSON.stringify({ videoId: id, ...result }, null, 2) + "\n", "utf8");
       const recipeCount = result.recipes.length;
       const ingCount = result.recipes.reduce((a, r) => a + r.ingredients.length, 0);
