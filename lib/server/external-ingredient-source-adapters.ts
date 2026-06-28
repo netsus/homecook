@@ -70,7 +70,7 @@ function meaningfulLevel(value: unknown) {
   return text;
 }
 
-export function inferDataGoKrSourceSystem(row: DataGoKrNutritionStandardRow) {
+function inferDataGoKrSourceSystem(row: DataGoKrNutritionStandardRow) {
   const sourceText = fieldText(row, ["SRC_NM", "INSTT_NM"]);
 
   if (/식품의약품안전처|식약처/.test(sourceText)) return "mfds";
@@ -80,7 +80,7 @@ export function inferDataGoKrSourceSystem(row: DataGoKrNutritionStandardRow) {
   return "data-go-kr";
 }
 
-export function inferLegacyCategoryFromDataGoKrNutritionRow(
+function inferLegacyCategoryFromDataGoKrNutritionRow(
   row: DataGoKrNutritionStandardRow,
 ): IngredientCategory {
   const categoryText = fieldText(row, [

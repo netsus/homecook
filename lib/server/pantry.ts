@@ -60,7 +60,7 @@ export function normalizeIngredientIds(value: unknown) {
   return [...new Set(ids)];
 }
 
-export function toPantryItem(row: PantryItemJoinedRow): PantryItem {
+function toPantryItem(row: PantryItemJoinedRow): PantryItem {
   const ingredient = firstJoin(row.ingredients) ?? {};
   const taxonomy = getIngredientTaxonomyMetadata({
     category: ingredient.category,

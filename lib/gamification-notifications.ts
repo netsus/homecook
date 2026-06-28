@@ -7,7 +7,7 @@ const DISPLAY_PRIORITY: Record<UserGamificationNotificationData["notification_ty
   xp_awarded: 5,
 };
 
-export function isHiddenGrowthNotification(
+function isHiddenGrowthNotification(
   item: UserGamificationNotificationData,
 ) {
   if (item.delivery_channel === "silent") return true;

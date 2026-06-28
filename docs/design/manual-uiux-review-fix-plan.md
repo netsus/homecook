@@ -20,6 +20,55 @@
   - 100 PASS: 빈 팬트리 상태에서 `채소 기본` 22개 묶음 추가 시 성공 status가 약 1.26초에 표시됐고, 모달을 닫은 뒤 팬트리 목록이 약 2.87초 안에 `나의 팬트리 22개`/`전체 22`로 갱신됐다.
   - 이 closeout 대상 14개 기준으로 현재 `Status`에 `pending`, `FAIL/PARTIAL`로 남길 항목은 없다.
 
+## 2026-06-28 XP Guide Correction Follow-up
+
+- Branch: `fix/xp-guide-modal-readability`
+- Trigger: 사용자가 99번 의도를 정정했다. 99번은 XP 수치를 숨기자는 뜻이 아니라, `경험치 안내` 모달에서 각 항목마다 처음/반복 XP가 얼마인지 명확히 알려주고, 글자 크기를 키워 읽기 쉽게 하라는 요구였다.
+- Implemented:
+  - `경험치 안내` 모달은 다시 `USER_PROGRESS_XP_GUIDE_ITEMS`를 source of truth로 사용한다.
+  - `레시피 저장`, `레시피북 만들기`, `장보기 완료`, `요리 완료`, `플래너 등록`, `남은요리 다먹음` 각 항목에 `처음 +N XP`와 `반복 +N XP`를 표시한다.
+  - 제목/본문/항목/XP 숫자 크기를 키웠다.
+  - 데스크톱은 860px wide dialog + 2열 카드, 모바일은 1열 scroll dialog로 유지한다.
+  - 이전에 남아 있던 요약형 XP guide group 코드는 삭제했다.
+- Verification:
+  - `CI=true corepack pnpm exec vitest run tests/mypage-growth-profile.test.tsx tests/user-progress-xp-guide.test.ts`
+  - `CI=true corepack pnpm typecheck`
+  - `CI=true corepack pnpm lint`
+  - Playwright local QA fixture: desktop/mobile `경험치 안내` modal에서 모든 항목의 처음/반복 XP 표시, 17px heading, 가로 overflow 없음 확인.
+
+## 2026-06-28 Dead Code Cleanup Follow-up
+
+- Branch: `fix/xp-guide-modal-readability`
+- Trigger: 사용자가 스켈레톤/프로필요약 수정 과정에서 예전 UI를 제거하지 않고 새 UI로 덮어쓴 흔적이 있다고 지적했고, 전체 코드/파일의 미사용 항목을 목록화해 확실한 것만 삭제해 달라고 요청했다.
+- Cleanup scope:
+  - Product/runtime에서 참조 0개이고 최신 화면 방향에서 retired된 파일은 삭제한다.
+  - 파일 내부에서만 쓰이는 헬퍼는 삭제하지 않고 `export`만 제거한다.
+  - `knip`가 미사용으로 잡더라도 동적 실행 모듈, 운영 스크립트, 디자인 프로토타입, 공개 API 타입, QA fixture helper는 import 그래프만으로 삭제하지 않는다.
+- Deleted:
+  - `components/mypage/growth-archive-surface.tsx`: 최신 방향에서는 profile summary와 `mypage-growth-detail-dialog` 알림 모달이 archive 접근을 소유한다. 기존 화면 테스트도 `growth-archive-surface`가 없어야 한다고 검증한다.
+  - `tests/gamification-archive-surface.test.tsx`: 삭제된 legacy surface 전용 테스트.
+  - `components/ui/index.ts`: 아무 곳에서도 import하지 않는 UI barrel.
+  - `notifyGamificationOpenNotifications`, `todayDateString`, `createRecipeThemesFromTagGroups`, `createRecipeThemesFromCards`, `getAppUrl` 등 참조 0개 함수/API.
+  - `@dnd-kit/core`, `@testing-library/jest-dom`: 현재 production/test code에서 직접 import하지 않는 의존성. `eslint-config-next`는 ESLint 설정에서 직접 쓰므로 유지한다.
+- Demoted exports:
+  - cooking wake lock, planner column validation, shopping/category inference, ingredient category internals, Gemini 429 classifier, pantry/user-progress/youtube-import 내부 헬퍼 등 외부 import가 없는 함수/상수는 module-private로 낮췄다.
+- Documents updated:
+  - 34c/34e workpack의 stale verify command와 `growth-archive-surface` 파일 참조를 제거했다.
+  - manual review item 35/38 target을 legacy archive surface 대신 `mypage-growth-detail-dialog`와 profile summary 기준으로 맞췄다.
+- Deferred static-analysis candidates:
+  - `lib/server/recipe-extraction-lab/*`와 `scripts/recipe-loop/*`는 knip에서 unused file로 나오지만 동적 import와 recipe-loop 테스트/문서에서 쓰는 lab/runtime 모듈이라 삭제하지 않는다.
+  - `ui/designs/prototypes/*`, `.agents/.claude/skills/*`, capture scripts는 import되지 않는 산출물/도구 파일이라 product dead code로 삭제하지 않는다.
+  - `types/*` response 타입과 `lib/server/*` exported types는 public contract 역할 가능성이 있어 이번 UI cleanup에서 삭제하지 않는다.
+- Verification:
+  - `CI=true corepack pnpm install --frozen-lockfile`
+  - `corepack pnpm exec tsc --noEmit --noUnusedLocals --noUnusedParameters --pretty false`
+  - `CI=true corepack pnpm exec vitest run tests/mypage-growth-profile.test.tsx tests/user-progress-xp-guide.test.ts tests/mypage-screen.test.tsx tests/shared-profile-summary.test.tsx tests/recipe-themes.test.ts tests/ingredient-categories.test.ts tests/recipe-image-compression.test.ts tests/recipe-tag-input.test.ts tests/youtube-import-gemini-key-failover.test.ts tests/planner-column-customization.backend.test.ts tests/user-progress-events.test.ts tests/user-progress-xp-policy-v2.test.ts`
+  - `CI=true corepack pnpm exec vitest run tests/gamification-notifications.test.ts tests/growth-toast-stack.test.tsx tests/meal-api-client.test.ts tests/growth-source-api-client.test.ts tests/user-gamification-events.test.ts tests/user-gamification-source-action-smoke.test.ts tests/leftovers.backend.test.ts tests/shopping-complete.backend.test.ts`
+  - `CI=true corepack pnpm typecheck`
+  - `CI=true corepack pnpm lint`
+  - `CI=true corepack pnpm build`
+  - `git diff --check`
+
 ## 2026-06-28 Incomplete / Follow-up Closeout
 
 - Branch: `fix/manual-uiux-review-incomplete-items`
@@ -30,7 +79,7 @@
   - 58: 레시피북 row cover/tone 보강은 기존 구현과 테스트로 이미 닫힌 상태임을 재확인했다.
   - 68: 공식 식품 데이터는 승인 artifact 없이 production DB에 직접 쓰지 않는 gated load 기준이 완료 상태임을 명확히 했다.
   - 75/85: 닉네임 확정 직후 첫 서비스 화면에서도 tutorial guide를 다시 읽도록 onboarding refresh marker를 추가했다.
-  - 99: 경험치 안내 모달의 항목별 `처음/반복 +N XP` 카드 grid를 제거하고, 실제 XP 획득량은 토스트/알림에서 확인한다는 구조로 단순화했다.
+  - 99: 경험치 안내 모달의 항목별 `처음/반복 +N XP` 카드 grid를 제거하고, 실제 XP 획득량은 토스트/알림에서 확인한다는 구조로 단순화했다. 이 해석은 이후 `fix/xp-guide-modal-readability`에서 사용자 정정에 따라 superseded됐다.
   - 100: 팬트리 묶음 추가 후 개별 growth activity 기록을 순차 대기하지 않고 병렬 후처리로 넘겨, 20개 이상 묶음에서 API 응답이 오래 묶이는 병목을 줄였다.
 - Verification before deploy:
   - `corepack pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-themes.test.ts tests/mypage-growth-profile.test.tsx tests/nickname-onboarding-screen.test.tsx tests/growth-toast-stack.test.tsx tests/pantry-core.backend.test.ts`
@@ -1928,7 +1977,7 @@ Implementation note:
 - Likely implementation target:
   - shared profile summary component
   - `components/mypage/mypage-growth-profile.tsx`
-  - `components/mypage/growth-archive-surface.tsx`
+  - `components/mypage/mypage-growth-detail-dialog.tsx`
   - `lib/api/user-gamification.ts`
   - HOME web/app shell
 - Verification:
@@ -2055,7 +2104,7 @@ Implementation note:
   - archive empty/error/loading/has_next 상태가 모두 처리된다.
   - 타인 알림 접근, notification id 유추, seen 처리 실패가 core action에 영향을 주지 않는다.
 - Likely implementation target:
-  - `components/mypage/growth-archive-surface.tsx`
+  - `components/mypage/mypage-growth-detail-dialog.tsx`
   - `components/mypage/mypage-growth-profile.tsx`
   - global profile summary component
   - `lib/api/user-gamification.ts`
@@ -4264,31 +4313,40 @@ Implementation note:
 - Verification:
   - mobile screenshot review.
 
-### 99. 경험치 안내 모달이 항목별 첫/반복 XP를 과하게 보여 복잡한 문제
+### 99. 경험치 안내 모달이 항목별 첫/반복 XP와 큰 글자를 충분히 제공하지 않는 문제
 
-- Status: implemented and production Chrome PASS after `fix/manual-uiux-xp-toast-amount`
+- Status: updated locally in `fix/xp-guide-modal-readability`; previous simplification superseded
 - Severity: Medium
 - Area: UX / Gamification / XP Guide / XP Notifications
 - Source: user manual review correction, XP guide modal screenshot
 - Problem:
-  - 문제의 핵심은 첫 XP toast 자체가 아니라, `경험치 안내` modal이 각 행동마다 `처음 +N XP`와 `반복 +N XP`를 큰 카드로 모두 설명해 정보량이 과한 점이다.
-  - 사용자는 실제 행동으로 XP를 얻었을 때는 toast/notification으로 얼마를 얻었는지 알려주는 편을 기대한다.
-  - 현재 modal은 `레시피 저장`, `레시피북 만들기`, `장보기 완료`, `요리 완료`, `플래너 등록`, `남은요리 다먹음`마다 첫/반복 수치와 제한 문구를 모두 보여 초보 사용자에게 복잡하게 보인다.
+  - 사용자 정정: 99번은 XP 수치를 숨기라는 뜻이 아니었다.
+  - `경험치 안내` modal에서 각 행동마다 처음 받을 XP와 반복 받을 XP가 얼마인지 명확히 알려줘야 한다.
+  - 기존 단순화 버전은 수치 확인을 toast/notification으로만 넘겨, 사용자가 모달에서 성장 규칙을 미리 확인하기 어렵게 만들었다.
+  - 모달 텍스트가 작아 모바일에서 읽기 어렵다.
 - User impact:
-  - 경험치 안내를 열었을 때 성장 규칙이 한눈에 들어오기보다 운영 정책 표처럼 느껴진다.
-  - 실제 XP 획득 feedback까지 숨기면 사용자는 방금 한 행동이 성장에 반영됐는지 알기 어렵다.
+  - 사용자는 어떤 행동이 처음/반복으로 각각 몇 XP를 주는지 모달에서 바로 알 수 없다.
+  - 작은 글자는 경험치 안내를 열어도 내용을 읽기 어렵게 만든다.
+  - 실제 XP 획득 feedback은 toast로 필요하지만, 사전 안내 modal도 충분한 정보를 제공해야 한다.
 - Approach decision:
-  - 고치는 게 맞다. 정적 guide modal은 간단한 성장 원리와 주요 행동 범주 중심으로 줄이고, 실제 XP 획득 시점의 toast/notification feedback은 유지해야 한다.
-  - 튜토리얼/업적/XP가 동시에 발생하는 경우에도 XP 금액을 완전히 숨기기보다 업적 toast 본문이나 알림 row에 합쳐 보여주는 방향이 맞다.
+  - 고치는 게 맞다. XP guide modal은 `USER_PROGRESS_XP_GUIDE_ITEMS`를 source of truth로 삼아 항목별 `처음`/`반복` XP를 표시해야 한다.
+  - 정보량을 숨겨 해결하지 말고, 글자 크기와 레이아웃을 키워 읽기 쉽게 만든다.
+  - 실제 행동 직후에는 기존처럼 toast/notification에서 `+N XP`를 알려준다.
 - Recommended fix:
-  - `경험치 안내` modal의 기본 화면에서는 항목별 `처음/반복` 수치 카드 grid를 제거하거나 접힌 `자세히` 영역으로 낮춘다.
-  - 기본 안내는 `레시피 저장`, `식단 계획`, `장보기/요리 완료`처럼 큰 행동 묶음과 "처음에는 보너스가 있고, 반복 적립은 일부 제한돼요" 수준으로 요약한다.
+  - `경험치 안내` modal에 `레시피 저장`, `레시피북 만들기`, `장보기 완료`, `요리 완료`, `플래너 등록`, `남은요리 다먹음` 항목을 모두 표시한다.
+  - 각 항목에는 `처음 +N XP`, `반복 +N XP`, 제한/중복 적립 note를 함께 표시한다.
+  - 모달 heading, 설명, 항목 제목, XP 숫자 크기를 키운다.
+  - 데스크톱에서는 wide dialog와 2열 grid로 전체 항목을 더 쉽게 훑을 수 있게 한다.
+  - 모바일에서는 1열 scroll 구조를 유지하되, 카드 내부 텍스트가 잘리지 않게 한다.
   - 실제 XP가 지급되는 행동 직후에는 toast 또는 같은 우선순위의 성장 notification에서 `+N XP`를 확인할 수 있게 한다.
   - 중복 toast가 과하면 `업적 달성! 첫 레시피 저장 배지를 획득했어요. +15 XP`처럼 하나의 toast에 합친다.
 - Acceptance criteria:
-  - `경험치 안내` modal의 첫 화면에서 각 행동별 `처음/반복` XP 수치 카드가 과하게 나열되지 않는다.
+  - `경험치 안내` modal에서 모든 XP 적립 항목의 `처음`/`반복` XP 수치를 확인할 수 있다.
+  - XP guide의 수치는 `USER_PROGRESS_XP_POLICY` / `USER_PROGRESS_XP_GUIDE_ITEMS`와 어긋나지 않는다.
+  - 모달 텍스트는 모바일에서도 읽기 쉬운 크기다.
+  - 데스크톱에서는 2열 wide dialog로 과도하게 긴 단일 column이 되지 않는다.
+  - 모바일에서는 가로 overflow 없이 끝까지 scroll해서 모든 항목과 footer 안내를 볼 수 있다.
   - 사용자가 실제 XP를 얻은 직후에는 얼마를 얻었는지 toast/notification에서 확인할 수 있다.
-  - XP guide의 수치가 필요한 경우에도 서버/source-of-truth XP policy와 어긋나지 않는다.
   - 튜토리얼/업적/XP가 동시에 발생해도 사용자는 핵심 행동 완료와 XP 반영을 함께 이해할 수 있다.
 - Likely implementation target:
   - `components/mypage/mypage-growth-detail-dialog.tsx`
@@ -4300,12 +4358,20 @@ Implementation note:
   - First-save, first-planner, first-shopping, first-cooking, first-recipebook XP toast/notification copy checks.
 - Previous implementation notes:
   - `fix/suppress-first-xp-toast`는 첫 튜토리얼 흐름과 겹치는 XP 알림을 DB archive-only로 저장하고 toast 대상에서 제외했다.
-  - 이 구현은 "정적 guide modal의 정보량이 과하다"는 사용자 의도를 해결하지 못하므로 99번 완료 근거로 보지 않는다.
-- Follow-up implementation:
+  - 이 구현은 toast 누락을 줄이는 작업이었고, XP guide modal 자체의 수치 안내/가독성 문제를 해결하지 못하므로 99번 완료 근거로 보지 않는다.
+- Superseded implementation:
   - `components/mypage/mypage-growth-detail-dialog.tsx`에서 `USER_PROGRESS_XP_GUIDE_ITEMS` 기반의 항목별 `처음`/`반복` 수치 card grid를 제거했다.
   - 기본 안내는 `레시피 저장`, `식단 계획`, `장보기와 요리`, `보관 정리`의 4개 행동 묶음으로 줄였다.
   - footer copy에 실제 적립 XP는 알림과 토스트로 바로 알려준다는 기준을 명시했다.
   - `tests/mypage-growth-profile.test.tsx`에서 모달 첫 화면에 `처음`, `반복`, `+15 XP` 같은 항목별 정책 카드가 남지 않도록 고정했다.
+  - 이 단순화는 사용자 정정 후 폐기됐다.
+- Current implementation:
+  - `components/mypage/mypage-growth-detail-dialog.tsx`에서 `USER_PROGRESS_XP_GUIDE_ITEMS` 기반 항목별 `처음`/`반복` 수치 card grid를 복구했다.
+  - 이전 요약용 `XP_GUIDE_GROUPS` 정적 상수는 삭제했다.
+  - `경험치 안내` modal은 desktop wide dialog로 열리고 XP guide list는 `md:grid-cols-2`로 보인다.
+  - heading은 17px, 항목 제목은 16px, 설명은 14px, XP 숫자는 20px로 키웠다.
+  - `tests/mypage-growth-profile.test.tsx`에서 모든 guide item의 label, `처음`, `+first XP`, `반복`, `+repeat XP`, note가 표시되는지 고정했다.
+  - `tests/user-progress-xp-guide.test.ts`에서 guide item 수치가 awarding policy와 같은지 고정한다.
   - `tests/growth-toast-stack.test.tsx`에서 첫 저장 source action refresh가 기존 gamification refresh와 겹쳐도 pending refresh를 한 번 더 실행해 XP toast를 표시하는지 고정했다.
   - `fix/manual-uiux-xp-toast-amount`에서 업적 알림 payload에 source action의 `xp_delta`를 보존하고, 업적 toast 본문에 `+N XP`를 붙이도록 했다.
   - `tests/user-gamification-notification-priority.test.ts`와 `tests/user-gamification-events.test.ts`에서 첫 저장 업적 알림의 `+15 XP` 본문과 payload 보존을 고정했다.

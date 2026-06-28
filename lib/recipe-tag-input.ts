@@ -1,4 +1,4 @@
-export const RECIPE_TAG_MAX_LENGTH = 12;
+const RECIPE_TAG_MAX_LENGTH = 12;
 export const REVIEWED_RECIPE_TAG_LIMIT = 8;
 
 export type RecipeTagInputReason =
@@ -32,7 +32,7 @@ export function normalizeRecipeTagKey(value: string) {
     .replace(/\s+/gu, "");
 }
 
-export function getRecipeTagInputErrorMessage(reason: RecipeTagInputReason) {
+function getRecipeTagInputErrorMessage(reason: RecipeTagInputReason) {
   return RECIPE_TAG_ERROR_MESSAGES[reason];
 }
 

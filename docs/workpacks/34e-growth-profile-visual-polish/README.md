@@ -27,7 +27,7 @@
   - XP progress + next-level helper text
   - representative badges: mobile 최대 4개, desktop 최대 4개
   - active quest/tutorial summary를 profile header 안의 보조 행 또는 내부 section으로 통합
-- `GrowthArchiveSurface`를 profile header 바깥의 secondary surface로 분리
+- 성장 알림 archive는 legacy secondary surface가 아니라 profile summary/알림 모달에서 연다
 - desktop `/mypage` layout guard
   - profile header가 첫 viewport 상단에 안정적으로 배치된다
   - archive column 높이가 profile card 높이를 늘리지 않는다
@@ -240,7 +240,7 @@ BRANCH_NAME=feature/fe-34e-growth-profile-visual-polish PR_IS_DRAFT=false pnpm v
 ## Implementation Evidence
 
 - `MypageGrowthProfile` now owns identity, server `grade.label`, level/XP progress, representative badges, and active quest summary inside one profile header.
-- `GrowthArchiveSurface` is rendered outside the profile header, so archive list height cannot stretch the profile card.
+- The legacy archive surface has been retired; profile summary and the notification modal own archive access, so archive list height cannot stretch the profile card.
 - `GrowthGradeMark` separates all 7 grade motifs. `homecook_runner` uses clean bowl/motion/timer treatment with no footwear or sprout, and `homecook_artisan` uses seal/tool/steam treatment instead of a plain pot.
 - `GrowthBadgeIcon` keeps the 7 shape families but adds rim/depth/symbol layers so guide and representative badges read as collectible emblems.
 - Codex image generation concept v2 is recorded at `ui/designs/evidence/34e-growth-profile-visual-polish/profile-growth-concept-v2-collectible-grades.png`.

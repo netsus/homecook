@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { GrowthGradeMark } from "@/components/mypage/growth-grade-mark";
 import { MypageGrowthProfile } from "@/components/mypage/mypage-growth-profile";
+import { USER_PROGRESS_XP_GUIDE_ITEMS } from "@/lib/user-progress-xp-policy";
 import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
 
@@ -244,7 +245,7 @@ describe("MypageGrowthProfile", () => {
     expect(within(header).queryByRole("button", { name: "튜토리얼 보기" })).toBeNull();
   });
 
-  it("opens a simplified XP guide from the growth profile without first/repeat policy cards", () => {
+  it("opens an XP guide that shows first and repeat XP values for each progress item", () => {
     render(
       <MypageGrowthProfile
         gamification={MOCK_GAMIFICATION}
@@ -258,16 +259,25 @@ describe("MypageGrowthProfile", () => {
     fireEvent.click(screen.getByRole("button", { name: "경험치 안내" }));
 
     const dialog = screen.getByRole("dialog", { name: "경험치 안내" });
-    expect(within(dialog).getByText("경험치는 이렇게 쌓여요")).toBeTruthy();
-    expect(within(dialog).getByText("레시피 저장")).toBeTruthy();
-    expect(within(dialog).getByText("식단 계획")).toBeTruthy();
-    expect(within(dialog).getByText("장보기와 요리")).toBeTruthy();
-    expect(within(dialog).getByText("보관 정리")).toBeTruthy();
+    expect(dialog.className).toContain("max-w-[860px]");
+    const guideHeading = within(dialog).getByTestId("mypage-xp-guide-heading");
+    expect(guideHeading.textContent).toBe("경험치는 이렇게 쌓여요");
+    expect(guideHeading.className).toContain("text-[17px]");
+    expect(within(dialog).getByTestId("mypage-xp-guide-list").className).toContain(
+      "md:grid-cols-2",
+    );
+
+    for (const item of USER_PROGRESS_XP_GUIDE_ITEMS) {
+      const card = within(dialog).getByTestId(`mypage-xp-guide-item-${item.eventType}`);
+      expect(within(card).getByText(item.label)).toBeTruthy();
+      expect(within(card).getByText("처음")).toBeTruthy();
+      expect(within(card).getByText(`+${item.first} XP`)).toBeTruthy();
+      expect(within(card).getByText("반복")).toBeTruthy();
+      expect(within(card).getByText(`+${item.repeat} XP`)).toBeTruthy();
+      expect(card.textContent).toContain(item.note);
+    }
+
     expect(dialog.textContent).toContain("실제 적립된 XP는 알림과 토스트로 바로 알려드려요.");
-    expect(dialog.textContent).not.toContain("처음");
-    expect(dialog.textContent).not.toContain("반복");
-    expect(dialog.textContent).not.toContain("+15 XP");
-    expect(within(dialog).queryByTestId("mypage-xp-guide-item-recipe_saved")).toBeNull();
   });
 });
 

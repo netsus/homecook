@@ -47,7 +47,7 @@ function canRequestWakeLock() {
   );
 }
 
-export function useScreenWakeLock(enabled: boolean) {
+function useScreenWakeLock(enabled: boolean) {
   const [status, setStatus] = useState<ScreenWakeLockStatus>(
     enabled ? "waiting" : "off",
   );

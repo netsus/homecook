@@ -176,7 +176,7 @@ git diff --check
 Stage 4 targeted checks:
 
 ```bash
-pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/meal-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/shopping-flow-screen.test.tsx
+pnpm vitest run tests/growth-toast-stack.test.tsx tests/user-gamification-api-client.test.ts tests/meal-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/shopping-flow-screen.test.tsx
 pnpm exec playwright test tests/e2e/slice-34c-growth-notification.spec.ts tests/e2e/slice-33c-gamification.spec.ts
 CI=1 pnpm verify:frontend:pr
 ```
@@ -185,8 +185,8 @@ Ready for Review 전 전체 게이트: `pnpm verify:frontend` 1회 통과 + expl
 
 Stage 4 closeout evidence:
 
-- `pnpm vitest run tests/growth-toast-stack.test.tsx tests/gamification-archive-surface.test.tsx tests/user-gamification-api-client.test.ts tests/meal-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/shopping-flow-screen.test.tsx` — passed, 56 tests.
-- `pnpm vitest run tests/gamification-archive-surface.test.tsx tests/mypage-screen.test.tsx tests/mypage-gamification-card.test.tsx && pnpm typecheck` — passed, 59 tests + typecheck.
+- `pnpm vitest run tests/growth-toast-stack.test.tsx tests/user-gamification-api-client.test.ts tests/meal-api-client.test.ts tests/mypage-gamification-card.test.tsx tests/shopping-flow-screen.test.tsx` — passed.
+- `pnpm vitest run tests/mypage-screen.test.tsx tests/mypage-gamification-card.test.tsx && pnpm typecheck` — passed.
 - `CI=1 pnpm verify:frontend:pr` — passed (lint, typecheck, product tests, build, smoke, a11y core, visual core).
 - `CI=1 pnpm verify:frontend` — attempted after the PR fast gate. Lint/typecheck/product/build/Lighthouse passed, but the full regression suite stopped on unrelated existing failures in slice-09, slice-12a, and slice-17b. The same line-targeted Playwright failures reproduced outside the 34c paths, so 34c relies on the passed `verify:frontend:pr`, targeted 34c/33c E2E, and QA/eval evidence for merge readiness.
 - `pnpm qa:explore -- --slice 34c-growth-notification-ui --base-url http://127.0.0.1:3100` — generated `.artifacts/qa/34c-growth-notification-ui/2026-06-11T12-47-06-582Z/`.

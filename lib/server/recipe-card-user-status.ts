@@ -28,7 +28,7 @@ export interface RecipeCardUserStatusDbClient {
   from(table: "recipe_book_items"): SavedRecipeBookItemsTable;
 }
 
-export function buildEmptyRecipeCardUserStatuses(recipeIds: string[]) {
+function buildEmptyRecipeCardUserStatuses(recipeIds: string[]) {
   return new Map<string, RecipeCardUserStatus>(
     recipeIds.map((recipeId) => [
       recipeId,

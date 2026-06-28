@@ -79,7 +79,6 @@
       "components/mypage/mypage-gamification-card.tsx",
       "components/mypage/mypage-badge-guide-dialog.tsx",
       "components/mypage/growth-badge-icon.tsx",
-      "components/mypage/growth-archive-surface.tsx",
       "app/globals.css"
     ],
     "new_files": [

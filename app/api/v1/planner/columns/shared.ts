@@ -90,7 +90,7 @@ export interface PlannerColumnsDbClient {
   from(table: "meals"): MealsTable;
 }
 
-export const PLANNER_COLUMN_NAME_MAX_LENGTH = 30;
+const PLANNER_COLUMN_NAME_MAX_LENGTH = 30;
 export const PLANNER_COLUMN_MAX_COUNT = 5;
 export const PLANNER_COLUMN_MIN_COUNT = 1;
 
@@ -100,11 +100,11 @@ export function isUuid(value: string) {
   return UUID_PATTERN.test(value);
 }
 
-export function normalizePlannerColumnName(value: unknown) {
+function normalizePlannerColumnName(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-export function validatePlannerColumnName(name: string) {
+function validatePlannerColumnName(name: string) {
   if (!name) {
     return [{ field: "name", reason: "required" }];
   }

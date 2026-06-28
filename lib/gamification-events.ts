@@ -22,11 +22,3 @@ export function notifyGamificationSourceActionAfter(delayMs: number) {
     notifyGamificationSourceAction();
   }, delayMs);
 }
-
-export function notifyGamificationOpenNotifications() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.dispatchEvent(new CustomEvent(HOMECOOK_GAMIFICATION_OPEN_NOTIFICATIONS_EVENT));
-}

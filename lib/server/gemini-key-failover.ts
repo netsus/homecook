@@ -3,7 +3,7 @@ export interface GeminiApiKeyCandidate {
   label: string;
 }
 
-export type Gemini429Kind = "quota-exhausted" | "rate-limit" | "unknown";
+type Gemini429Kind = "quota-exhausted" | "rate-limit" | "unknown";
 
 export interface GeminiGenerateContentFetchResult {
   response: Response;
@@ -57,12 +57,12 @@ export function getGeminiApiKeyCandidates(env: Record<string, string | undefined
   return uniqueKeyEntries(entries);
 }
 
-export function extractGeminiRetryAfterMs(body: string) {
+function extractGeminiRetryAfterMs(body: string) {
   const match = body.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/);
   return match ? Number(match[1]) * 1000 : null;
 }
 
-export function classifyGemini429(body: string): Gemini429Kind {
+function classifyGemini429(body: string): Gemini429Kind {
   const lower = body.toLowerCase();
   const compact = lower.replace(/[\s_-]+/g, "");
   const retryAfter = extractGeminiRetryAfterMs(body);

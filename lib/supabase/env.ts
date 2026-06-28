@@ -1,6 +1,5 @@
 const PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export function getSupabaseEnv() {
@@ -24,8 +23,4 @@ export function hasSupabasePublicEnv() {
 
 export function getServiceRoleKey() {
   return SERVICE_ROLE_KEY ?? null;
-}
-
-export function getAppUrl() {
-  return APP_URL ?? "http://localhost:3000";
 }

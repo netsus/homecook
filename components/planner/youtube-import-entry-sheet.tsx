@@ -14,7 +14,7 @@ interface YoutubeImportEntrySheetProps {
   youtubeHref: string;
 }
 
-export function buildYoutubeImportHref(baseHref: string, youtubeUrl: string) {
+function buildYoutubeImportHref(baseHref: string, youtubeUrl: string) {
   const trimmed = youtubeUrl.trim();
   if (!trimmed) return baseHref;
 
