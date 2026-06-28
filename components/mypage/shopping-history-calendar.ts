@@ -54,7 +54,7 @@ function getKoreaDateTimeParts(value: string) {
   };
 }
 
-export function getShoppingHistoryCreatedDateKey(item: ShoppingListHistoryItem) {
+function getShoppingHistoryCreatedDateKey(item: ShoppingListHistoryItem) {
   return getKoreaDateTimeParts(item.created_at)?.dateKey ?? item.created_at.slice(0, 10);
 }
 

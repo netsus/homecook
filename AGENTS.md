@@ -95,7 +95,7 @@
 ## Tech Stack
 
 - 패키지 매니저는 `pnpm`이다.
-- 현재 기본 스택은 `Next.js 15`, `React 19`, `TypeScript`, `Tailwind CSS 4`, `Zustand`, `Supabase`, `Next.js Route Handlers`, `Vitest`, `@dnd-kit/core`다.
+- 현재 기본 스택은 `Next.js 15`, `React 19`, `TypeScript`, `Tailwind CSS 4`, `Zustand`, `Supabase`, `Next.js Route Handlers`, `Vitest`다.
 
 ## Domain Rules
 

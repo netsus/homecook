@@ -16,7 +16,7 @@ function normalizeE2EAuthOverride(
   return null;
 }
 
-export function readE2EAuthOverrideState() {
+function readE2EAuthOverrideState() {
   if (typeof window === "undefined" || !isQaFixtureClientModeEnabled()) {
     return null;
   }

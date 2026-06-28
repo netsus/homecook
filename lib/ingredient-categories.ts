@@ -36,7 +36,6 @@ export const INGREDIENT_CATEGORIES = [
 ] as const satisfies readonly IngredientCategoryEntry[];
 
 export type IngredientCategory = (typeof INGREDIENT_CATEGORIES)[number]["label"];
-export type LegacyIngredientCategoryCode = (typeof INGREDIENT_CATEGORIES)[number]["code"];
 
 export const INGREDIENT_CATEGORY_LABELS = INGREDIENT_CATEGORIES.map(
   (category) => category.label,
@@ -61,7 +60,7 @@ export const INGREDIENT_CATEGORY_GROUPS = [
 export type IngredientCategoryGroupCode =
   (typeof INGREDIENT_CATEGORY_GROUPS)[number]["code"];
 
-export type IngredientCategoryGroupFilterValue =
+type IngredientCategoryGroupFilterValue =
   | typeof ALL_INGREDIENT_CATEGORY
   | IngredientCategoryGroupCode;
 
@@ -264,10 +263,6 @@ const INGREDIENT_CATEGORY_BY_LABEL = new Map<string, (typeof INGREDIENT_CATEGORI
   INGREDIENT_CATEGORIES.map((category) => [category.label, category]),
 );
 
-const INGREDIENT_CATEGORY_BY_CODE = new Map<string, (typeof INGREDIENT_CATEGORIES)[number]>(
-  INGREDIENT_CATEGORIES.map((category) => [category.code, category]),
-);
-
 const INGREDIENT_GROUP_BY_CODE = new Map<string, (typeof INGREDIENT_CATEGORY_GROUPS)[number]>(
   INGREDIENT_CATEGORY_GROUPS.map((group) => [group.code, group]),
 );
@@ -293,14 +288,6 @@ export function getIngredientCategoryByLabel(label: string | null | undefined) {
   }
 
   return INGREDIENT_CATEGORY_BY_LABEL.get(label.trim());
-}
-
-export function getIngredientCategoryByCode(code: string | null | undefined) {
-  if (!code) {
-    return undefined;
-  }
-
-  return INGREDIENT_CATEGORY_BY_CODE.get(code.trim());
 }
 
 export function getIngredientCategoryGroupByCode(code: string | null | undefined) {
@@ -383,18 +370,6 @@ export function getIngredientGroupCodesForLegacyCategory(
   ));
 }
 
-export function getIngredientSubcategoryCodesForGroup(
-  groupCode: string | null | undefined,
-): IngredientSubcategoryCode[] {
-  if (!isValidIngredientCategoryGroupCode(groupCode)) {
-    return [];
-  }
-
-  return INGREDIENT_SUBCATEGORIES
-    .filter((category) => category.group_code === groupCode && category.is_active)
-    .map((category) => category.code);
-}
-
 export const INGREDIENT_CATEGORY_GROUP_OPTIONS = [
   {
     value: ALL_INGREDIENT_CATEGORY,
@@ -410,7 +385,7 @@ export const INGREDIENT_CATEGORY_GROUP_OPTIONS = [
     })),
 ] as const satisfies readonly IngredientCategoryGroupFilterOption[];
 
-export const INGREDIENT_SUBCATEGORY_OPTIONS = INGREDIENT_SUBCATEGORIES
+const INGREDIENT_SUBCATEGORY_OPTIONS = INGREDIENT_SUBCATEGORIES
   .filter((category) => category.is_active)
   .map((category) => ({
     value: category.code,
@@ -537,20 +512,6 @@ export function ingredientMatchesCategoryGroup(
     categoryGroupCode: ingredient.category_group_code,
     categoryCode: ingredient.category_code,
   }) === groupCode;
-}
-
-export function getLegacyCategoriesForIngredientGroup(
-  groupCode: string | null | undefined,
-): IngredientCategory[] {
-  if (!isValidIngredientCategoryGroupCode(groupCode)) {
-    return [];
-  }
-
-  return Array.from(new Set(
-    INGREDIENT_SUBCATEGORIES
-      .filter((category) => category.group_code === groupCode && category.is_active)
-      .map((category) => category.legacy_category as IngredientCategory),
-  ));
 }
 
 export function getIngredientTaxonomyMetadata({

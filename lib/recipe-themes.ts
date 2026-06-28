@@ -142,22 +142,3 @@ export function createRecipeThemes({
 
   return themes;
 }
-
-export function createRecipeThemesFromTagGroups(
-  items: RecipeCardItem[],
-  groups: RecipeTagThemeGroup[],
-) {
-  return createRecipeThemes({
-    youtubeItems: items.filter((recipe) => recipe.source_type === "youtube"),
-    heartyMainItems: selectHeartyMainThemeRecipes(items),
-    tagGroups: groups,
-  });
-}
-
-export function createRecipeThemesFromCards(items: RecipeCardItem[]) {
-  if (items.length === 0) {
-    return [];
-  }
-
-  return createRecipeThemesFromTagGroups(items, []);
-}

@@ -6,15 +6,11 @@ import {
   type IngredientCategory,
 } from "@/lib/ingredient-categories";
 
-export const EXTERNAL_INGREDIENT_REVIEW_STATUSES = [
-  "pending_review",
-  "approved",
-  "rejected",
-  "needs_source_check",
-] as const;
-
 export type ExternalIngredientReviewStatus =
-  (typeof EXTERNAL_INGREDIENT_REVIEW_STATUSES)[number];
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "needs_source_check";
 
 export type ExternalIngredientDuplicateKind =
   | "exact_normalized_name"

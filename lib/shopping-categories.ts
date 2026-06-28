@@ -21,7 +21,7 @@ const SHOPPING_CATEGORY_INDEX: Map<string, number> = new Map(
   SHOPPING_CATEGORY_ORDER.map((category, index) => [category, index]),
 );
 
-export function normalizeShoppingCategory(rawCategory: string | null | undefined) {
+function normalizeShoppingCategory(rawCategory: string | null | undefined) {
   const category = rawCategory?.trim() ?? "";
 
   if (/채소|버섯|나물/.test(category)) return "채소";
@@ -37,7 +37,7 @@ export function normalizeShoppingCategory(rawCategory: string | null | undefined
   return category || "기타";
 }
 
-export function inferShoppingCategoryFromName(displayText: string) {
+function inferShoppingCategoryFromName(displayText: string) {
   if (/양파|대파|파|마늘|고추|배추|무|당근|감자|버섯|상추|깻잎|호박|오이|토마토/.test(displayText)) {
     return "채소";
   }
@@ -52,7 +52,7 @@ export function inferShoppingCategoryFromName(displayText: string) {
   return "기타";
 }
 
-export function getShoppingItemCategory(
+function getShoppingItemCategory(
   item: Pick<ShoppingListItemSummary, "category" | "display_text">,
 ) {
   const normalized = normalizeShoppingCategory(item.category);

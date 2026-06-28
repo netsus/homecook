@@ -383,7 +383,7 @@ function buildVisualRecipeResult(fixture: ParityFixture) {
           raw_text: ingredientLines[index].text,
           evidence_refs: [{ source: "visual", line_index: index, start_ms: index * 1000, end_ms: index * 1000 + 500 }],
         })),
-        steps: fixture.expected_steps.map((step, index) => ({
+        steps: fixture.expected_steps.map((_, index) => ({
           instruction: stepLines[index].text,
           raw_text: stepLines[index].text,
           evidence_refs: [{

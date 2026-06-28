@@ -95,10 +95,6 @@ export function isUuid(value: string) {
   return UUID_PATTERN.test(value);
 }
 
-export function todayDateString(now = new Date()) {
-  return now.toISOString().slice(0, 10);
-}
-
 function firstJoin<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -245,7 +241,7 @@ export function parseCookingStandaloneCompleteBody(
   };
 }
 
-export function scaleAmount({
+function scaleAmount({
   amount,
   baseServings,
   cookingServings,

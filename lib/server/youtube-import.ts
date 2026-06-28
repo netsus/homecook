@@ -1357,7 +1357,7 @@ function table<T>(dbClient: DbClient, tableName: string) {
   return dbClient.from(tableName) as T;
 }
 
-export function parseYoutubeUrl(value: unknown) {
+function parseYoutubeUrl(value: unknown) {
   const rawUrl = typeof value === "string" ? value.trim() : "";
 
   if (!rawUrl) {

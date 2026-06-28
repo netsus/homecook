@@ -122,7 +122,7 @@ export interface UserProgressAwardResult {
   summary: UserProgressData | null;
 }
 
-export const USER_PROGRESS_LEVEL_CURVE_VERSION = "v2" as const;
+const USER_PROGRESS_LEVEL_CURVE_VERSION = "v2" as const;
 
 export const USER_PROGRESS_XP_AWARDS: Record<UserProgressEventType, number> = {
   cooking_completed: USER_PROGRESS_XP_POLICY.cooking_completed.first,
@@ -261,7 +261,7 @@ export function getUserProgressGrade(level: number): UserProgressGradeData {
   ) ?? GRADE_BANDS[0];
 }
 
-export function buildProgressSourceKey(input: UserProgressAwardInput) {
+function buildProgressSourceKey(input: UserProgressAwardInput) {
   if (input.eventType === "planner_registered") {
     return `planner_registered:${input.sourceId}`;
   }
@@ -494,7 +494,7 @@ export async function readUserProgress(
   }
 }
 
-export async function recalculateUserProgressSummary(
+async function recalculateUserProgressSummary(
   dbClient: UserProgressDbClient,
   userId: string,
 ): Promise<{ data: UserProgressSummaryRow | null; error: QueryError | null }> {
@@ -531,7 +531,7 @@ export async function recalculateUserProgressSummary(
   return { data: upsertResult.data, error: null };
 }
 
-export function toUserProgressData(summary: UserProgressSummaryRow): UserProgressData {
+function toUserProgressData(summary: UserProgressSummaryRow): UserProgressData {
   return {
     level: calculateUserProgressLevel(summary.total_xp),
     event_counts: normalizeEventCounts(summary.event_counts),
