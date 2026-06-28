@@ -419,7 +419,7 @@ describe("13 pantry core backend", () => {
     });
   });
 
-  it("POST /pantry starts growth activity records in parallel for bulk additions", async () => {
+  it("POST /pantry returns before slow growth activity records settle for bulk additions", async () => {
     let resolveFirstActivity!: (value: { recorded: boolean; duplicate: boolean; error: null }) => void;
     let resolveSecondActivity!: (value: { recorded: boolean; duplicate: boolean; error: null }) => void;
     const firstActivity = new Promise<{ recorded: boolean; duplicate: boolean; error: null }>((resolve) => {
@@ -493,11 +493,11 @@ describe("13 pantry core backend", () => {
       expect(recordUserGrowthActivityEvent).toHaveBeenCalledTimes(2);
     });
 
+    const response = await responsePromise;
+    expect(response.status).toBe(201);
     resolveFirstActivity({ recorded: true, duplicate: false, error: null });
     resolveSecondActivity({ recorded: true, duplicate: false, error: null });
-    const response = await responsePromise;
 
-    expect(response.status).toBe(201);
     expect(recordUserGrowthActivityEvent).toHaveBeenCalledTimes(2);
     expect(recordUserGrowthActivityEvent).toHaveBeenNthCalledWith(2, expect.anything(), expect.objectContaining({
       sourceId: "pantry-onion",

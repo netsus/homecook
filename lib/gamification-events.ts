@@ -13,6 +13,16 @@ export function notifyGamificationSourceAction() {
   window.dispatchEvent(new CustomEvent(HOMECOOK_GAMIFICATION_REFRESH_EVENT));
 }
 
+export function notifyGamificationSourceActionAfter(delayMs: number) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.setTimeout(() => {
+    notifyGamificationSourceAction();
+  }, delayMs);
+}
+
 export function notifyGamificationOpenNotifications() {
   if (typeof window === "undefined") {
     return;

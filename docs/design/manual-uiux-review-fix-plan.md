@@ -32,6 +32,26 @@
   - `corepack pnpm build`
   - Local Chrome: `http://localhost:3000/` HOME card에서 문제 screenshot의 `생딸기`, `우유`, `설탕`, ... 태그가 `생딸기`, `우유`, `+4`로 보이고 `+4` chip이 잘리지 않는 것을 확인했다.
 
+## 2026-06-28 Post-merge QA Follow-up
+
+- Branch: `fix/manual-uiux-review-postmerge-qa`
+- Trigger: `fix/manual-uiux-review-incomplete-items` 머지 후 production Chrome과 `master` QA를 다시 확인한 결과, 첫 저장 XP toast와 팬트리 묶음 성능, master visual/full-regression에 후속 조치가 필요했다.
+- Implemented:
+  - 99: `GrowthToastStack`이 gamification refresh 중일 때 source action refresh가 들어오면 요청을 버리지 않고 현재 refresh가 끝난 뒤 한 번 더 실행하게 했다. 첫 저장 직후 업적/XP 알림이 알림 기록에는 생겼지만 toast에는 누락될 수 있는 경합을 막는다.
+  - 100: `POST /api/v1/pantry`가 팬트리 insert 성공 후 20개 이상 growth activity 기록 완료를 응답 전에 기다리지 않게 `after` 후속 작업으로 분리했다. 팬트리 추가 자체가 authoritative이고 성장 기록은 soft-fail secondary라는 기존 정책을 유지한다.
+  - 100: pantry growth 기록이 응답 이후 저장되더라도 XP toast를 놓치지 않게 pantry add client가 즉시 refresh 후 1.5초/5초 지연 refresh를 한 번씩 더 예약한다.
+  - QA: `tests/e2e/slice-13-pantry-core.spec.ts`의 `간장` 확인을 `간장 보유중` checkbox로 좁혀, 정상적으로 카드와 모달 양쪽에 보이는 상태를 strict locator 실패로 오해하지 않게 했다.
+  - QA: `qa-cook-mode-planner`, `qa-cook-mode-standalone` desktop snapshot을 현재 안정 렌더링 기준으로 갱신했다.
+- Verification before deploy:
+  - `corepack pnpm exec vitest run tests/growth-source-api-client.test.ts tests/growth-toast-stack.test.tsx tests/pantry-core.backend.test.ts`
+  - `corepack pnpm exec playwright test tests/e2e/slice-13-pantry-core.spec.ts --project=desktop-chrome --project=mobile-chrome --grep "opens the bundle picker"`
+  - `corepack pnpm exec playwright test tests/e2e/qa-visual.spec.ts --project=desktop-chrome --grep "cooking desktop cook modes"`
+- Production Chrome evidence before this branch:
+  - 32/33: HOME 문제 카드가 `생딸기`, `우유`, `+4`로 보였고 `+4` chip이 잘리지 않았다.
+  - 75/85: 조해피 신규 가입 후 닉네임 저장 직후 `/mypage`에서 첫 튜토리얼 toast가 표시됐다.
+  - 99: `경험치 안내` modal에서 `처음`, `반복`, `+15 XP` 수치 카드가 사라졌고, 첫 레시피 저장 후 알림 기록에 `첫 레시피 저장 배지를 획득했어요. +15 XP`가 남았다.
+  - 100: `채소 기본` 22개 묶음 추가가 16.3초에서 약 9.2초로 줄었지만 여전히 느려, 이번 branch에서 응답 전 growth activity 대기를 추가로 제거했다.
+
 ## 2026-06-21 Round 3 Redo Closeout
 
 - Branch: `fix/manual-uiux-round3-redo`
@@ -1730,7 +1750,7 @@ Implementation note:
 
 ### 32. 웹 홈 레시피 카드의 세로 간격이 태그 줄 수에 따라 달라지는 문제
 
-- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome verification pending
+- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome PASS
 - Severity: Medium
 - Area: UI / UX / Frontend
 - Source: user manual review screenshots, web HOME recipe cards
@@ -1769,11 +1789,12 @@ Implementation note:
   - Done: `.web-recipe-card-tag`의 내부 ellipsis 제거, non-shrink chip, `+N` summary 색상 규칙을 고정한다.
   - Done: `fix/manual-uiux-review-incomplete-items`에서 web HOME tag 예산을 더 보수적으로 낮추고 `.web-recipe-card-tag-more`에 `min-width: 34px`와 center 정렬을 추가했다.
   - Local Chrome: `http://localhost:3000/`에서 문제 screenshot과 같은 `생딸기`, `우유`, `설탕`, ... 카드가 `생딸기`, `우유`, `+4`로 보이고 `+4` chip 오른쪽이 잘리지 않는 것을 확인했다.
+  - Production Chrome: `https://homecook-flame.vercel.app/`에서 같은 카드가 `생딸기`, `우유`, `+4`로 보이고 tag chip이 잘리지 않는 것을 확인했다.
   - 웹 HOME screenshot에서 카드 간격이 균일한지 확인한다.
 
 ### 33. 웹 홈 카드의 `+N` 태그 표시가 상세 화면과 맞지 않아 추가 태그처럼 오해되는 문제
 
-- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome verification pending
+- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome PASS
 - Severity: Medium
 - Area: UX / UI / Frontend
 - Source: user manual review screenshots, web HOME recipe card and web RECIPE_DETAIL tag row
@@ -1791,6 +1812,7 @@ Implementation note:
   - 추가 태그를 제품적으로 꼭 보여줘야 한다면, 홈과 상세가 같은 tag display helper를 쓰고 상세에서 전체 태그 또는 `더보기`를 제공해야 한다.
   - 이번 문제를 카드 spacing 문제와 함께 닫으려면, 홈 카드에는 실제 보이는 태그만 표시하고 숨은 개수는 표시하지 않는 것이 가장 작은 변경이다.
   - 32번 후속 수정에서는 긴 칩을 잘라 보이는 문제를 막기 위해 웹 HOME에 `+N`을 다시 허용한다. 단, 이 값은 현재 카드에서 실제로 숨긴 태그 수와 일치해야 하며 상세에서 전체 태그를 확인할 수 있다는 전제가 필요하다.
+  - User correction: 현재 HOME 카드 폭에서는 `+N` 요약이 필요하다. 이 항목의 실제 미완료 판정은 `+N` 자체가 아니라, `+N` chip 또는 앞 태그가 카드 오른쪽에서 잘려 보이는 문제로 정정한다.
 - Recommended fix:
   - 웹 HOME 카드와 모바일 HOME 카드의 `+N` 표시 정책을 재검토한다.
   - 상세에서 확인할 수 없는 hidden count는 카드에 표시하지 않는다.
@@ -2106,7 +2128,7 @@ Implementation note:
 
 ### 41. 앱 홈의 `이번 주 인기 테마` 위치와 섹션 구분, 테마 다양성이 부족한 문제
 
-- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome verification pending
+- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome PASS
 - Severity: Medium
 - Area: UX / HOME / Mobile
 - Source: user manual review, app HOME content order
@@ -2159,6 +2181,7 @@ Implementation note:
   - Verified: `pnpm exec playwright test tests/e2e/qa-visual.spec.ts --grep "home default shell|home sort menu open" --project=mobile-chrome --project=mobile-ios-small`
   - Verified: `pnpm typecheck`
   - Verified: `pnpm lint`
+  - Production Chrome: `https://homecook-flame.vercel.app/` 모바일 HOME에서 `실패 걱정 없는 메뉴`, `밥상 든든한 메인`, `불 없이 달달하게` 테마가 보이고 필터 chip과 다른 큐레이션 문구로 표시되는 것을 확인했다.
 
 ### 42. 앱 홈 검색창과 검색 결과가 스크롤 중 분리되어 보이는 문제
 
@@ -3343,7 +3366,7 @@ Implementation note:
 
 ### 75. 튜토리얼 퀘스트 안내가 첫 단계부터 순서대로 이어지지 않는 문제
 
-- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome re-verification pending
+- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome PASS
 - Severity: High
 - Area: UX / Onboarding / Tutorial / Growth Toast / Profile Summary
 - Source: user manual review, first signup tutorial guidance
@@ -3392,13 +3415,14 @@ Implementation note:
   - Verified: `pnpm lint`
   - Verified: `git diff --check`
 - Chrome verification:
-  - 2026-06-28 `https://homecook-flame.vercel.app/`, 조해피 신규 가입 흐름에서 PARTIAL.
+  - 2026-06-28 `https://homecook-flame.vercel.app/`, 조해피 신규 가입 흐름에서 PASS after follow-up deploy.
   - 닉네임 저장 직후 이동한 첫 서비스 화면(`/mypage`)에서는 첫 튜토리얼 toast가 12초 이상 보이지 않았다. 이 미충족은 85번에 남긴다.
   - 이후 HOME(`/`)으로 이동하자 첫 튜토리얼 `마음에 드는 레시피 저장하기` toast가 표시됐다.
   - 첫 레시피 저장 완료 후 다음 튜토리얼 `플래너에 끼니 등록하기` toast가 표시됐고, 프로필 요약도 같은 다음 단계로 갱신됐다.
   - Follow-up result: `fix/manual-uiux-review-incomplete-items`에서 닉네임 저장 성공 시 onboarding tutorial refresh marker를 남기고, 첫 서비스 pathname에서 `GrowthToastStack`이 gamification을 다시 읽도록 했다.
   - Done: `tests/nickname-onboarding-screen.test.tsx`에서 닉네임 저장 성공 시 refresh marker가 저장되는지 고정했다.
   - Done: `tests/growth-toast-stack.test.tsx`에서 `/mypage` 같은 첫 서비스 화면에서 pending marker를 감지해 첫 tutorial guide toast를 다시 enqueue하는지 고정했다.
+  - Re-verified: 조해피 계정 삭제 후 재가입/닉네임 저장 흐름에서 `/mypage` 첫 화면에 `마음에 드는 레시피 저장하기` tutorial toast가 즉시 표시됐다.
 
 ### 76. 웹 홈 추천 태그와 인기 테마가 검색창 라인보다 낮아 오른쪽 상단이 비어 보이는 문제
 
@@ -3786,7 +3810,7 @@ Implementation note:
 
 ### 85. 첫 회원가입 튜토리얼 안내 토스트가 닉네임 확정 전/전환 중에 뜰 수 있는 문제
 
-- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome re-verification pending
+- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome PASS
 - Severity: Medium
 - Area: UX / Onboarding / Tutorial Toast
 - Source: user manual review
@@ -3814,11 +3838,12 @@ Implementation note:
   - `CI=true corepack pnpm exec vitest run tests/growth-toast-stack.test.tsx`
   - `corepack pnpm exec vitest run tests/nickname-onboarding-screen.test.tsx tests/growth-toast-stack.test.tsx`
 - Chrome verification:
-  - 2026-06-28 `https://homecook-flame.vercel.app/onboarding/nickname?next=%2Fmypage`, 조해피 신규 가입 흐름에서 PARTIAL/FAIL.
+  - 2026-06-28 `https://homecook-flame.vercel.app/onboarding/nickname?next=%2Fmypage`, 조해피 신규 가입 흐름에서 PASS after follow-up deploy.
   - 닉네임 화면에서는 tutorial toast가 먼저 뜨지 않았다. 이 부분은 PASS.
   - 닉네임 저장 후 실제로 이동한 첫 서비스 화면(`/mypage`)에서는 첫 tutorial toast가 12초 이상 보이지 않았다. 이후 HOME(`/`)으로 이동했을 때야 첫 tutorial toast가 표시됐다.
   - Follow-up: onboarding completion 직후의 first service pathname이 `/mypage`여도 synthetic tutorial toast가 enqueue되어야 한다.
   - Follow-up result: `fix/manual-uiux-review-incomplete-items`에서 nickname onboarding completion 후 첫 서비스 route에서 delayed refresh를 실행하도록 했다.
+  - Re-verified: 닉네임 확정 전에는 tutorial toast가 뜨지 않았고, 확정 후 첫 서비스 화면(`/mypage`)에서 첫 tutorial toast가 표시됐다.
 
 ### 86. 튜토리얼 안내 알림이 알림모달 전체 탭과 완료 후 시스템 기록에 일관되게 남지 않는 문제
 
@@ -4209,7 +4234,7 @@ Implementation note:
 
 ### 99. 경험치 안내 모달이 항목별 첫/반복 XP를 과하게 보여 복잡한 문제
 
-- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome verification pending
+- Status: implemented in `fix/manual-uiux-review-postmerge-qa`; production Chrome re-verification pending for live first-save toast
 - Severity: Medium
 - Area: UX / Gamification / XP Guide / XP Notifications
 - Source: user manual review correction, XP guide modal screenshot
@@ -4249,14 +4274,16 @@ Implementation note:
   - 기본 안내는 `레시피 저장`, `식단 계획`, `장보기와 요리`, `보관 정리`의 4개 행동 묶음으로 줄였다.
   - footer copy에 실제 적립 XP는 알림과 토스트로 바로 알려준다는 기준을 명시했다.
   - `tests/mypage-growth-profile.test.tsx`에서 모달 첫 화면에 `처음`, `반복`, `+15 XP` 같은 항목별 정책 카드가 남지 않도록 고정했다.
+  - `tests/growth-toast-stack.test.tsx`에서 첫 저장 source action refresh가 기존 gamification refresh와 겹쳐도 pending refresh를 한 번 더 실행해 XP toast를 표시하는지 고정했다.
 - Chrome verification:
-  - 2026-06-28 user screenshot 기준 FAIL/PARTIAL.
-  - `경험치 안내` modal은 여전히 행동별 카드마다 `처음`/`반복` XP 수치를 크게 보여준다.
-  - 조해피 계정 첫 레시피 저장 직후에는 tutorial toast와 achievement toast가 떴고, 별도 XP toast는 보이지 않았다. 알림 기록 archive row에는 `업적 달성! 첫 레시피 저장 배지를 획득했어요. +15 XP`가 남았다.
+  - 2026-06-28 `https://homecook-flame.vercel.app/mypage`, 조해피 계정에서 modal simplification PASS.
+  - `경험치 안내` modal에는 `처음`/`반복`/`+15 XP` 수치 카드가 더 이상 보이지 않았다.
+  - 조해피 계정 첫 레시피 저장 후 알림 기록 archive row에는 `업적 달성! 첫 레시피 저장 배지를 획득했어요. +15 XP`가 남았다.
+  - Follow-up: 저장 직후 live toast는 refresh 중첩 경합 때문에 누락될 수 있어 `fix/manual-uiux-review-postmerge-qa`에서 pending refresh를 보강했다.
 
 ### 100. 팬트리 재료추가/묶음추가가 오래 걸리는 문제
 
-- Status: implemented in `fix/manual-uiux-review-incomplete-items`; production Chrome verification pending
+- Status: implemented in `fix/manual-uiux-review-postmerge-qa`; production Chrome re-verification pending after deploy
 - Severity: High
 - Area: UX / Pantry / Performance
 - Source: user manual review
@@ -4290,12 +4317,17 @@ Implementation note:
   - `corepack pnpm exec vitest run tests/user-growth-activity-events.test.ts tests/user-achievement-awards.test.ts tests/user-gamification-events.test.ts tests/user-gamification-definitions.test.ts`
   - Follow-up result: `app/api/v1/pantry/route.ts`에서 pantry item insert 성공 후 growth activity 기록을 item별 순차 `await`에서 `Promise.allSettled` 병렬 후처리로 바꿨다.
   - Done: `tests/pantry-core.backend.test.ts`에서 2개 이상 item의 growth activity 기록이 첫 번째 기록 완료를 기다리지 않고 동시에 시작되는지 고정했다.
+  - Follow-up result: `fix/manual-uiux-review-postmerge-qa`에서 growth activity 기록을 Next `after` 후속 작업으로 옮겨 API 응답이 개별 성장 기록 완료를 기다리지 않게 했다.
+  - Done: `tests/pantry-core.backend.test.ts`에서 느린 growth activity promise가 settle되기 전에도 `POST /api/v1/pantry` 응답이 반환되는지 고정했다.
+  - Follow-up result: `fix/manual-uiux-review-postmerge-qa`에서 pantry add client가 immediate refresh 뒤 1.5초/5초 delayed refresh를 예약해, after-response growth 기록이 늦게 저장되어도 toast refresh가 다시 일어나도록 했다.
+  - Done: `tests/growth-source-api-client.test.ts`에서 pantry add 성공 후 immediate/delayed gamification refresh 3회를 고정했다.
 - Chrome verification:
   - 2026-06-28 `https://homecook-flame.vercel.app/pantry`, 조해피 계정에서 FAIL/PARTIAL.
   - 단건 `우유` 1개 추가는 약 2.4초에 완료됐고 목록이 `23개`로 갱신됐다.
   - `채소 기본` 묶음 22개 추가는 `22개 팬트리에 추가` 클릭 후 버튼이 `추가 중...` 상태로 약 16.3초 유지됐다. 이후에야 `22개 재료를 팬트리에 추가했어요`와 각 항목 `보유중` 상태가 표시됐다.
+  - `fix/manual-uiux-review-incomplete-items` 배포 후 같은 `채소 기본` 22개 묶음 추가는 약 9.2초까지 줄었지만 여전히 느렸다.
   - 모달을 닫은 뒤 팬트리 목록은 약 0.5초 안에 `나의 팬트리 22개`/`전체 22`로 갱신됐다.
-  - 따라서 현재 남은 병목은 모달 종료 후 목록 반영이 아니라, 묶음 추가 요청 완료 전까지의 긴 loading 구간이다.
+  - 따라서 현재 남은 병목은 모달 종료 후 목록 반영이 아니라, 묶음 추가 요청 완료 전까지의 긴 loading 구간이다. 이 branch에서 응답 전 growth activity 대기를 제거했으므로 production 재측정이 필요하다.
 
 ### 101. 요리모드에서 조리법이 여러 개인 단계의 조리법 태그가 세로로 쌓이는 문제
 

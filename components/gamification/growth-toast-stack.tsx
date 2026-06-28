@@ -404,6 +404,7 @@ export function GrowthToastStack() {
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const [visibleMax, setVisibleMax] = useState(MOBILE_VISIBLE_MAX);
   const loadingRef = useRef(false);
+  const pendingRefreshRef = useRef(false);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map(),
   );
@@ -446,36 +447,42 @@ export function GrowthToastStack() {
   );
 
   const refresh = useCallback(async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-
-    try {
-      const nextGamification = await fetchUserGamification();
-      setGamification(nextGamification);
-      const source = selectToastSource(nextGamification, {
-        includeTutorialGuide: !isNicknameOnboardingPath(pathnameRef.current),
-      });
-      if (source.length === 0) {
-        return;
-      }
-      // priority_unseen is already server ordered.
-      const incoming = source.map(toToastView);
-      const hasIncomingTutorialGuide = incoming.some((view) => view.isTutorialGuide);
-      if (hasIncomingTutorialGuide) {
-        clearPendingOnboardingTutorialRefresh();
-      }
-      setViews((current) => {
-        const base = hasIncomingTutorialGuide
-          ? current.filter((view) => !view.isTutorialGuide)
-          : current;
-
-        return dedupeById([...base, ...incoming]);
-      });
-    } catch {
-      // Growth notifications are auxiliary to the source action.
-    } finally {
-      loadingRef.current = false;
+    if (loadingRef.current) {
+      pendingRefreshRef.current = true;
+      return;
     }
+
+    do {
+      pendingRefreshRef.current = false;
+      loadingRef.current = true;
+
+      try {
+        const nextGamification = await fetchUserGamification();
+        setGamification(nextGamification);
+        const source = selectToastSource(nextGamification, {
+          includeTutorialGuide: !isNicknameOnboardingPath(pathnameRef.current),
+        });
+        if (source.length > 0) {
+          // priority_unseen is already server ordered.
+          const incoming = source.map(toToastView);
+          const hasIncomingTutorialGuide = incoming.some((view) => view.isTutorialGuide);
+          if (hasIncomingTutorialGuide) {
+            clearPendingOnboardingTutorialRefresh();
+          }
+          setViews((current) => {
+            const base = hasIncomingTutorialGuide
+              ? current.filter((view) => !view.isTutorialGuide)
+              : current;
+
+            return dedupeById([...base, ...incoming]);
+          });
+        }
+      } catch {
+        // Growth notifications are auxiliary to the source action.
+      } finally {
+        loadingRef.current = false;
+      }
+    } while (pendingRefreshRef.current);
   }, []);
 
   useEffect(() => {

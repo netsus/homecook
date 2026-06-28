@@ -1,5 +1,8 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
-import { notifyGamificationSourceAction } from "@/lib/gamification-events";
+import {
+  notifyGamificationSourceAction,
+  notifyGamificationSourceActionAfter,
+} from "@/lib/gamification-events";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   PantryAddData,
@@ -95,6 +98,8 @@ export async function addPantryItems(ingredientIds: string[]) {
   });
   if (data.added > 0) {
     notifyGamificationSourceAction();
+    notifyGamificationSourceActionAfter(1_500);
+    notifyGamificationSourceActionAfter(5_000);
   }
   return data;
 }
