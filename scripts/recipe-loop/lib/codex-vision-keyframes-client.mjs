@@ -26,6 +26,7 @@ const SEGMENT_PROMPT_VERSION = "keyframe-segment-plan-v3";
 const SEGMENT_SELECTOR_PROMPT_VERSION = "keyframe-segment-selector-v2";
 const FINAL_PROMPT_VERSION = "keyframe-final-v1";
 const TIMELINE_PARENT_RANGE_VERSION = "timeline-parent-range-v1";
+const BUNDLE_CHILD_SEGMENT_VERSION = "bundle-child-segment-v1";
 const DEFAULT_FINAL_MODEL = "gpt-5.4";
 const DEFAULT_SELECTOR_MODEL = "gpt-5.4-mini";
 const DEFAULT_SEGMENT_MODEL = "gpt-5.4-mini";
@@ -177,6 +178,23 @@ function splitCandidateText(text, { trustedHint = false } = {}) {
   return isPlausibleCandidate(cleaned, { trustedHint }) ? [cleaned] : [];
 }
 
+function splitLooseBundleText(text) {
+  const cleaned = stripCandidateText(text);
+  if (!cleaned) return [];
+  const separatorParts = cleaned.split(CANDIDATE_SEPARATOR_RE).map(stripCandidateText).filter(Boolean);
+  const initialParts = separatorParts.length > 1 ? separatorParts : [cleaned];
+  return initialParts.flatMap((part) => {
+    const particleMatch = part.match(/^(.+?)(?:와|과)\s+(.+)$/u);
+    if (particleMatch) return [particleMatch[1], particleMatch[2]].map(stripCandidateText).filter(Boolean);
+    const joined = part.split(JOINER_RE).map(stripCandidateText).filter(Boolean);
+    return joined.length > 1 ? joined : [part];
+  }).filter(Boolean);
+}
+
+function hasBundleCandidateShape(text) {
+  return splitLooseBundleText(text).length >= 2;
+}
+
 function evidenceStrengthFor(evidence) {
   const sources = new Set(evidence.map((item) => item.source));
   if (sources.has("recipe_candidate_hints") && sources.has("description_timeline")) return "title+timeline";
@@ -193,7 +211,11 @@ function firstFiniteTimeHint(evidence) {
   return null;
 }
 
-function addCandidate(candidates, byKey, titleHint, evidence, { splitFromBundle = false, bundleText = null } = {}) {
+function addCandidate(candidates, byKey, titleHint, evidence, {
+  splitFromBundle = false,
+  bundleText = null,
+  bundleRole = null,
+} = {}) {
   const cleaned = stripCandidateText(titleHint);
   if (!cleaned) return;
   const key = keyOf(cleaned);
@@ -204,6 +226,8 @@ function addCandidate(candidates, byKey, titleHint, evidence, { splitFromBundle 
     existing.evidenceStrength = evidenceStrengthFor(existing.sourceEvidence);
     existing.splitFromBundle = existing.splitFromBundle || splitFromBundle;
     existing.bundleText = existing.bundleText ?? bundleText;
+    existing.bundleSourceText = existing.bundleSourceText ?? bundleText;
+    existing.bundleRole = existing.bundleRole ?? bundleRole;
     existing.timeHintSec = existing.timeHintSec ?? firstFiniteTimeHint(evidence);
     return;
   }
@@ -218,10 +242,53 @@ function addCandidate(candidates, byKey, titleHint, evidence, { splitFromBundle 
     candidateStatus: "confirmed_hint",
     splitFromBundle,
     bundleText,
+    bundleSourceText: bundleText,
+    bundleRole,
+    bundleParentId: null,
+    bundleMemberIds: [],
     notes: null,
   };
   byKey.set(key, candidate);
   candidates.push(candidate);
+}
+
+function candidateMatchesBundlePart(candidateTitle, bundlePart) {
+  const candidateKey = keyOf(candidateTitle);
+  const partKey = keyOf(bundlePart);
+  if (!candidateKey || !partKey || partKey.length < 2) return false;
+  if (candidateKey.includes(partKey) || partKey.includes(candidateKey)) return true;
+  return titleMatchTokens(candidateTitle).some((token) => token.length >= 2 && partKey.includes(token))
+    || titleMatchTokens(bundlePart).some((token) => token.length >= 2 && candidateKey.includes(token));
+}
+
+function linkBundleCandidateGraph(candidates) {
+  for (const parent of candidates) {
+    if (parent.bundleRole !== "parent") continue;
+    const bundleSourceText = parent.bundleSourceText ?? parent.bundleText ?? parent.titleHint;
+    const parts = splitLooseBundleText(bundleSourceText);
+    if (parts.length < 2) continue;
+
+    const memberIds = [];
+    for (const part of parts) {
+      const matches = candidates.filter((candidate) => (
+        candidate.candidateId !== parent.candidateId
+        && candidate.bundleRole !== "parent"
+        && candidateMatchesBundlePart(candidate.titleHint, part)
+      ));
+      for (const match of matches) memberIds.push(match.candidateId);
+    }
+
+    const uniqueMemberIds = [...new Set(memberIds)];
+    if (uniqueMemberIds.length === 0) continue;
+    parent.bundleMemberIds = uniqueMemberIds;
+    parent.bundleSourceText = bundleSourceText;
+    for (const memberId of uniqueMemberIds) {
+      const member = candidates.find((candidate) => candidate.candidateId === memberId);
+      if (!member) continue;
+      member.bundleParentId = member.bundleParentId ?? parent.candidateId;
+      member.bundleSourceText = member.bundleSourceText ?? bundleSourceText;
+    }
+  }
 }
 
 function timelineCandidateEvidence(line, source) {
@@ -247,11 +314,12 @@ export function buildCandidateHintsFromSourceText(sourceText) {
         if (!raw) continue;
         const parts = splitCandidateText(raw, { trustedHint: true });
         const splitFromBundle = parts.length > 1;
+        const bundleText = hasBundleCandidateShape(raw) ? raw : null;
         for (const part of parts) {
           addCandidate(candidates, byKey, part, [{
             source: "recipe_candidate_hints",
             text: raw.slice(0, 220),
-          }], { splitFromBundle, bundleText: splitFromBundle ? raw : null });
+          }], { splitFromBundle, bundleText, bundleRole: splitFromBundle ? "member" : null });
         }
       }
     }
@@ -269,10 +337,13 @@ export function buildCandidateHintsFromSourceText(sourceText) {
       const raw = stripCandidateText(line);
       const parts = splitCandidateText(raw, { trustedHint: false });
       const splitFromBundle = parts.length > 1;
+      const bundleText = hasBundleCandidateShape(raw) ? raw : null;
+      const bundleRole = splitFromBundle ? "member" : (bundleText ? "parent" : null);
       for (const part of parts) {
         addCandidate(candidates, byKey, part, [timelineCandidateEvidence(line, block.name)], {
           splitFromBundle,
-          bundleText: splitFromBundle ? raw : null,
+          bundleText,
+          bundleRole,
         });
       }
     }
@@ -282,11 +353,13 @@ export function buildCandidateHintsFromSourceText(sourceText) {
     const fallbackText = stripCandidateText(sourceText).split(/[.!?\n]/)[0] ?? "";
     const parts = splitCandidateText(fallbackText, { trustedHint: false });
     const splitFromBundle = parts.length > 1;
+    const bundleText = hasBundleCandidateShape(fallbackText) ? fallbackText : null;
+    const bundleRole = splitFromBundle ? "member" : (bundleText ? "parent" : null);
     for (const part of parts) {
       addCandidate(candidates, byKey, part, [{
         source: "source_text_fallback",
         text: fallbackText.slice(0, 220),
-      }], { splitFromBundle, bundleText: splitFromBundle ? fallbackText : null });
+      }], { splitFromBundle, bundleText, bundleRole });
     }
   }
 
@@ -299,6 +372,8 @@ export function buildCandidateHintsFromSourceText(sourceText) {
     candidates[0].candidateStatus = "weak_hint";
     candidates[0].evidenceStrength = "weak_text";
   }
+
+  linkBundleCandidateGraph(candidates);
 
   return {
     recipeCandidates: candidates.map((candidate) => ({
@@ -663,6 +738,156 @@ function applyTimelineParentRanges(segmentPlan, timelineRangePlan, candidatePlan
   };
 }
 
+function segmentIdsByCandidate(segments) {
+  const byCandidate = new Map();
+  for (const segment of segments) {
+    const current = byCandidate.get(segment.candidateId) ?? [];
+    current.push(segment.segmentId);
+    byCandidate.set(segment.candidateId, current);
+  }
+  return byCandidate;
+}
+
+function rebalanceFrameBudgets(segments, totalFrameLimit) {
+  const frameBudgetTotal = segments.reduce((sum, segment) => sum + segment.frameBudget, 0);
+  if (frameBudgetTotal <= totalFrameLimit) return segments;
+
+  let remainingOverage = frameBudgetTotal - totalFrameLimit;
+  const adjustable = [...segments].sort((a, b) => b.frameBudget - a.frameBudget);
+  while (remainingOverage > 0) {
+    const target = adjustable.find((segment) => segment.frameBudget > 1);
+    if (!target) break;
+    target.frameBudget -= 1;
+    target.frameBudgetAdjusted = true;
+    remainingOverage -= 1;
+    adjustable.sort((a, b) => b.frameBudget - a.frameBudget);
+  }
+  if (remainingOverage > 0) {
+    throw new Error(`bundle child segment frameBudget 재분배가 상한(${totalFrameLimit})을 맞추지 못했습니다.`);
+  }
+  return segments;
+}
+
+function applyBundleChildSegments(segmentPlan, candidatePlan, { totalFrameLimit }) {
+  const candidatesById = new Map(candidatePlan.recipeCandidates.map((candidate) => [candidate.candidateId, candidate]));
+  const originalSegmentCandidateIds = new Set(segmentPlan.segments.map((segment) => segment.candidateId));
+  const segments = [];
+  const expandedParents = [];
+
+  for (const segment of segmentPlan.segments) {
+    const parent = candidatesById.get(segment.candidateId);
+    const memberIds = Array.isArray(parent?.bundleMemberIds) ? parent.bundleMemberIds : [];
+    const members = memberIds
+      .map((memberId) => candidatesById.get(memberId))
+      .filter((member) => member && !originalSegmentCandidateIds.has(member.candidateId));
+    if (members.length === 0) {
+      segments.push(segment);
+      continue;
+    }
+
+    expandedParents.push({
+      parentId: parent.candidateId,
+      parentTitle: parent.titleHint,
+      memberIds: members.map((member) => member.candidateId),
+    });
+    const baseBudget = Math.max(1, Math.floor(segment.frameBudget / members.length));
+    let remainingBudget = Math.max(0, segment.frameBudget - (baseBudget * members.length));
+
+    for (const member of members) {
+      const segmentId = safeSegmentId(`${segment.segmentId}-${member.candidateId}`, `${segment.segmentId}-child`);
+      const evidenceLine = `bundle_child: ${member.titleHint} from ${parent.titleHint}`;
+      const textEvidence = segment.textEvidence.includes(evidenceLine)
+        ? segment.textEvidence
+        : [...segment.textEvidence, evidenceLine].slice(0, 8);
+      const frameBudget = baseBudget + (remainingBudget > 0 ? 1 : 0);
+      remainingBudget = Math.max(0, remainingBudget - 1);
+      segments.push({
+        ...segment,
+        segmentId,
+        candidateId: member.candidateId,
+        titleHint: member.titleHint,
+        candidateStatus: member.candidateStatus,
+        evidenceStrength: member.evidenceStrength,
+        sourceEvidence: member.sourceEvidence ?? [],
+        textEvidence,
+        frameBudget,
+        bundleParentId: parent.candidateId,
+        bundleParentTitle: parent.titleHint,
+        bundleSourceText: parent.bundleSourceText ?? parent.bundleText ?? parent.titleHint,
+        bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
+        notes: segment.notes ? `${segment.notes} / bundle child evidence` : "bundle child evidence",
+      });
+    }
+  }
+
+  if (expandedParents.length === 0) {
+    return {
+      ...segmentPlan,
+      bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
+      bundleChildSegmentApplied: false,
+      bundleChildSegmentParents: [],
+    };
+  }
+
+  rebalanceFrameBudgets(segments, totalFrameLimit);
+  segments.sort((a, b) => a.startSec - b.startSec || a.endSec - b.endSec || a.segmentId.localeCompare(b.segmentId));
+
+  const idsByCandidate = segmentIdsByCandidate(segments);
+  const expandedParentIds = new Set(expandedParents.map((entry) => entry.parentId));
+  const coverage = candidatePlan.recipeCandidates.map((candidate) => {
+    const segmentIds = idsByCandidate.get(candidate.candidateId) ?? [];
+    const original = (segmentPlan.coverage ?? []).find((entry) => entry.candidateId === candidate.candidateId);
+    if (expandedParentIds.has(candidate.candidateId)) {
+      const childSegmentIds = (candidate.bundleMemberIds ?? []).flatMap((memberId) => idsByCandidate.get(memberId) ?? []);
+      return {
+        candidateId: candidate.candidateId,
+        titleHint: candidate.titleHint,
+        status: "supporting",
+        segmentIds: childSegmentIds,
+        dropReason: null,
+      };
+    }
+    if (candidate.bundleParentId && segmentIds.length > 0) {
+      return {
+        candidateId: candidate.candidateId,
+        titleHint: candidate.titleHint,
+        status: "covered",
+        segmentIds,
+        dropReason: null,
+      };
+    }
+    if (segmentIds.length > 0) {
+      return {
+        candidateId: candidate.candidateId,
+        titleHint: candidate.titleHint,
+        status: original?.status === "supporting" ? "supporting" : "covered",
+        segmentIds,
+        dropReason: null,
+      };
+    }
+    return {
+      candidateId: candidate.candidateId,
+      titleHint: candidate.titleHint,
+      status: original?.status ?? "uncovered",
+      segmentIds: original?.segmentIds ?? [],
+      dropReason: original?.dropReason ?? null,
+    };
+  });
+
+  return {
+    ...segmentPlan,
+    segments,
+    coverage,
+    bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
+    bundleChildSegmentApplied: true,
+    bundleChildSegmentParents: expandedParents,
+    warnings: [
+      ...(segmentPlan.warnings ?? []),
+      ...expandedParents.map((entry) => `bundle child segments expanded: ${entry.parentId} -> ${entry.memberIds.join(",")}`),
+    ],
+  };
+}
+
 function extractSegmentPlanJson(segmentRaw, { maxFrameSec } = {}) {
   try {
     return { rawPlan: extractJsonFromText(segmentRaw), warnings: [] };
@@ -954,10 +1179,12 @@ function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentP
     `titleHint: ${entry.titleHint}`,
     `candidateStatus: ${entry.candidateStatus}`,
     `evidenceStrength: ${entry.evidenceStrength}`,
+    `bundleParentId: ${entry.bundleParentId ?? "(없음)"}`,
+    `bundleParentTitle: ${entry.bundleParentTitle ?? "(없음)"}`,
     `time: ${entry.startSec}-${entry.endSec}`,
     `textEvidence: ${entry.textEvidence.length ? entry.textEvidence.join(" / ") : "(없음)"}`,
     "selectedFrames:",
-    ...entry.selectedFrames.map((frame, index) => `- ${index + 1}. file=${frame.file}, timestamp=${frame.timestamp ?? frame.timestamp_sec ?? "?"}, reason=${frame.selectionReason ?? frame.reason ?? "unknown"}`),
+    ...entry.selectedFrames.map((frame, index) => `- ${index + 1}. file=${frame.file}, timestamp=${frame.timestamp ?? frame.timestamp_sec ?? "?"}, frameReason=${frame.reason ?? "unknown"}, selectionReason=${frame.selectionReason ?? "unknown"}`),
   ].join("\n")).join("\n\n");
 
   const coverageLines = (segmentPlan.coverage ?? []).map((entry) => {
@@ -1057,6 +1284,7 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
     clientVersion: CLIENT_VERSION,
     candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
     timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
+    bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
     segmentPromptVersion: SEGMENT_PROMPT_VERSION,
     segmentSelectorPromptVersion: SEGMENT_SELECTOR_PROMPT_VERSION,
     finalPromptVersion: FINAL_PROMPT_VERSION,
@@ -1208,6 +1436,7 @@ async function runSegmentedKeyframesFlow({
         cached: true,
         candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
         timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
+        bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
         candidatePlanHash,
         candidateCount: candidatePlan.recipeCandidates.length,
         frameCacheHit: frameResult.frameCacheHit,
@@ -1274,6 +1503,9 @@ async function runSegmentedKeyframesFlow({
         buildTimelineParentRangePlan({ sourceText: cacheText, lastKeyframeSec: maxFrameSec }),
         candidatePlan,
       );
+      segmentPlan = applyBundleChildSegments(segmentPlan, candidatePlan, {
+        totalFrameLimit: segmentOptions.frameTotalLimit,
+      });
       await writeFile(segmentJsonPath, JSON.stringify(segmentPlan, null, 2) + "\n", "utf8");
     }
 
@@ -1322,9 +1554,17 @@ async function runSegmentedKeyframesFlow({
         totalLimit: segment.frameBudget,
         perRecipeLimit: segment.frameBudget,
       });
+      const rawSelectorEntries = Array.isArray(selectorJson.selectedFrames) ? selectorJson.selectedFrames : [];
+      const selectorLookup = frameLookup(candidateFrames);
+      const rawEntryByFramePath = new Map();
+      for (const entry of rawSelectorEntries) {
+        const rawFile = selectedFrameFile(entry);
+        if (!rawFile) continue;
+        const frame = resolveSelectedFrame(rawFile, candidateFrames, selectorLookup);
+        if (frame) rawEntryByFramePath.set(frame.path, entry);
+      }
       const selectedForJson = selectedFrames.map((frame) => {
-        const rawEntry = (Array.isArray(selectorJson.selectedFrames) ? selectorJson.selectedFrames : [])
-          .find((entry) => path.basename(String(selectedFrameFile(entry) ?? "")) === frameBasename(frame));
+        const rawEntry = rawEntryByFramePath.get(frame.path);
         return {
           index: frame.index,
           timestamp_sec: frame.timestamp_sec,
@@ -1335,6 +1575,9 @@ async function runSegmentedKeyframesFlow({
           selectionReason: isObject(rawEntry) ? (rawEntry.reason ?? null) : null,
           scene_score: frame.scene_score ?? null,
           candidateId: segment.candidateId,
+          titleHint: segment.titleHint,
+          bundleParentId: segment.bundleParentId ?? null,
+          bundleParentTitle: segment.bundleParentTitle ?? null,
           candidateStatus: segment.candidateStatus,
           evidenceStrength: segment.evidenceStrength,
         };
@@ -1350,7 +1593,10 @@ async function runSegmentedKeyframesFlow({
         selectedFrameCount: selectedForJson.length,
         selectedFrames: selectedForJson,
       });
-      selectedFramesWithSegment.push(...selectedFrames.map((frame) => ({ frame, segment })));
+      selectedFramesWithSegment.push(...selectedFrames.map((frame) => {
+        const selectedFrame = selectedForJson.find((entry) => entry.path === frame.path);
+        return { frame, segment, selectedFrame };
+      }));
     }
 
     const finalSelectedFrames = dedupeFrames(selectedFramesWithSegment.map((entry) => entry.frame));
@@ -1368,6 +1614,7 @@ async function runSegmentedKeyframesFlow({
       droppedCandidateCount,
       supportingCandidateCount,
       timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
+      bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
       segments: segmentEntries,
     };
     await writeFile(path.join(resultDir, "segment-keyframes.json"), JSON.stringify(segmentKeyframes, null, 2) + "\n", "utf8");
@@ -1377,17 +1624,20 @@ async function runSegmentedKeyframesFlow({
         selectedFrameHash,
         selectedFrameCount: finalSelectedFrames.length,
         keyframeMode: "segmented",
-        selectedFrames: selectedFramesWithSegment.map(({ frame, segment }) => ({
+        selectedFrames: selectedFramesWithSegment.map(({ frame, segment, selectedFrame }) => ({
           index: frame.index,
           timestamp_sec: frame.timestamp_sec,
           timestamp: frame.timestamp,
           file: frameBasename(frame),
           path: frame.path,
           reason: frame.reason ?? null,
+          selectionReason: selectedFrame?.selectionReason ?? null,
           scene_score: frame.scene_score ?? null,
           segmentId: segment.segmentId,
           candidateId: segment.candidateId,
           titleHint: segment.titleHint,
+          bundleParentId: segment.bundleParentId ?? null,
+          bundleParentTitle: segment.bundleParentTitle ?? null,
         })),
       }, null, 2) + "\n",
       "utf8",
@@ -1425,6 +1675,7 @@ async function runSegmentedKeyframesFlow({
       clientVersion: CLIENT_VERSION,
       candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
       timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
+      bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
       segmentPromptVersion: SEGMENT_PROMPT_VERSION,
       segmentSelectorPromptVersion: SEGMENT_SELECTOR_PROMPT_VERSION,
       finalPromptVersion: FINAL_PROMPT_VERSION,
@@ -1485,6 +1736,7 @@ async function runSegmentedKeyframesFlow({
       segmentModel,
       candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
       timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
+      bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
       candidatePlan,
       candidatePlanHash,
       frameCacheDir: frameResult.frameDir,
