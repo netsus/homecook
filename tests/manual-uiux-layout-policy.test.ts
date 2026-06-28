@@ -86,6 +86,9 @@ describe("manual UI/UX layout policy", () => {
   it("keeps cook mode whole-board steps compact with ingredient emphasis", () => {
     const boardRule = readRule(".cook-whole-board");
     const panelRule = readRule(".cook-whole-panel");
+    const stepRule = readRule(".cook-whole-step");
+    const stepMainRule = readRule(".cook-whole-step-main");
+    const methodTagsRule = readRule(".cook-whole-method-tags");
     const methodTagRule = readRule(".cook-whole-method-tag");
     const stepNumberRule = readRule(".cook-whole-step-number");
     const stepCopyRule = readRule(".cook-whole-step-copy p");
@@ -95,6 +98,11 @@ describe("manual UI/UX layout policy", () => {
 
     expect(boardRule).toContain("gap: 10px");
     expect(panelRule).toContain("padding: 12px");
+    expect(stepRule).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(stepRule).toContain("grid-template-rows: auto auto");
+    expect(stepMainRule).toContain("grid-template-columns: auto minmax(0, 1fr)");
+    expect(stepMainRule).toContain("align-items: start");
+    expect(methodTagsRule).toContain("justify-content: flex-start");
     expect(methodTagRule).toContain("min-height: 22px");
     expect(methodTagRule).toContain("padding: 0 8px");
     expect(stepNumberRule).toContain("width: 34px");

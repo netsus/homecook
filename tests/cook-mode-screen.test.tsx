@@ -733,8 +733,11 @@ describe("CookModeScreen", () => {
     expect(ruleBody(".cook-whole-board-mobile .cook-whole-ingredient-amount")).toContain(
       "font-size: 20px;",
     );
+    expect(ruleBody(".cook-whole-step")).toContain("grid-template-columns: minmax(0, 1fr);");
+    expect(ruleBody(".cook-whole-step-main")).toContain("grid-template-columns: auto minmax(0, 1fr);");
     expect(ruleBody(".cook-whole-method-tags")).toContain("display: flex;");
     expect(ruleBody(".cook-whole-method-tags")).toContain("flex-wrap: wrap;");
+    expect(ruleBody(".cook-whole-method-tags")).toContain("justify-content: flex-start;");
   });
 
   it("defaults mobile cook mode to the service dark cooking board", async () => {
@@ -775,17 +778,20 @@ describe("CookModeScreen", () => {
 
     const stepList = await screen.findByTestId("step-list");
     const firstMarker = within(stepList).getByTestId("cook-mode-step-marker-1");
+    const firstStep = firstMarker.closest(".cook-whole-step");
+    const firstStepMain = firstStep?.querySelector(".cook-whole-step-main");
+    const firstStepNumber = within(stepList).getByTestId("cook-mode-step-number-1");
     const firstCopy = within(stepList).getByTestId("cook-mode-step-copy-1");
 
     expect(within(stepList).queryByText(/STEP/i)).toBeNull();
     expect(firstMarker.contains(within(stepList).getByText("준비"))).toBe(true);
-    expect(
-      firstMarker.contains(within(stepList).getByTestId("cook-mode-step-number-1")),
-    ).toBe(true);
+    expect(firstMarker.contains(firstStepNumber)).toBe(false);
+    expect(firstStepMain?.contains(firstStepNumber)).toBe(true);
+    expect(firstStepMain?.contains(firstCopy)).toBe(true);
     expect(firstCopy.closest(".cook-whole-step-copy")?.textContent).not.toContain(
       "준비",
     );
-    expect(within(stepList).getByTestId("cook-mode-step-number-1")).toBeTruthy();
+    expect(firstStepNumber).toBeTruthy();
     expect(within(stepList).getByTestId("cook-mode-step-number-2")).toBeTruthy();
     expect(within(stepList).getByTestId("cook-mode-step-number-3")).toBeTruthy();
   });
@@ -889,13 +895,14 @@ describe("CookModeScreen", () => {
 
     expect(stepItemStyle).toBeNull();
     expect(methodBadgeStyle).toContain("var(--cook-stir)");
-    expect(ruleBody(".cook-whole-step")).toContain("align-items: center;");
-    expect(ruleBody(".cook-whole-step-marker")).toContain("align-content: center;");
-    expect(ruleBody(".cook-whole-method-tags")).toContain("justify-content: center;");
+    expect(ruleBody(".cook-whole-step")).toContain("grid-template-rows: auto auto;");
+    expect(ruleBody(".cook-whole-step-marker")).toContain("justify-items: start;");
+    expect(ruleBody(".cook-whole-step-main")).toContain("align-items: start;");
+    expect(ruleBody(".cook-whole-method-tags")).toContain("justify-content: flex-start;");
     expect(ruleBody(".cook-whole-method-tag")).toContain("justify-content: center;");
   });
 
-  it("keeps multiple cooking method badges in one horizontal row before the step number", async () => {
+  it("places cooking method badges above the row with the step number and instruction", async () => {
     installMatchMedia(true);
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(
@@ -924,10 +931,18 @@ describe("CookModeScreen", () => {
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
 
     const marker = await screen.findByTestId("cook-mode-step-marker-1");
+    const stepItem = screen.getByTestId("step-item");
     const methodGroup = marker.querySelector(".cook-whole-method-tags");
+    const stepMain = stepItem.querySelector(".cook-whole-step-main");
+    const stepNumber = screen.getByTestId("cook-mode-step-number-1");
+    const stepCopy = screen.getByTestId("cook-mode-step-copy-1");
 
     expect(methodGroup).toBeTruthy();
+    expect(stepItem.firstElementChild).toBe(marker);
     expect(marker.firstElementChild).toBe(methodGroup);
+    expect(stepItem.children[1]).toBe(stepMain);
+    expect(stepMain?.firstElementChild).toBe(stepNumber);
+    expect(stepMain?.lastElementChild).toBe(stepCopy.closest(".cook-whole-step-copy"));
     expect(methodGroup?.querySelectorAll(".cook-whole-method-tag")).toHaveLength(3);
     expect(methodGroup?.textContent).toContain("손질");
     expect(methodGroup?.textContent).toContain("볶기");
@@ -1661,6 +1676,13 @@ describe("CookModeScreen", () => {
     expect(screenRoot.className).toContain("h-dvh");
     expect(loading.querySelector(".cook-whole-board-mobile")).toBeTruthy();
     expect(loading.querySelectorAll(".cook-whole-panel")).toHaveLength(2);
+    expect(loading.querySelectorAll(".cook-whole-step-skeleton")).toHaveLength(4);
+    const firstStepSkeleton = loading.querySelector(".cook-whole-step-skeleton");
+    expect(firstStepSkeleton?.firstElementChild?.className).toContain(
+      "cook-whole-step-marker",
+    );
+    expect(firstStepSkeleton?.querySelector(".cook-whole-step-main")).toBeTruthy();
+    expect(firstStepSkeleton?.querySelector(".cook-whole-step-copy")).toBeTruthy();
   });
 
   it("matches desktop cook-mode loading to the whole-board cooking shell", async () => {
@@ -1681,5 +1703,12 @@ describe("CookModeScreen", () => {
     expect(loading.querySelector(".web-cook-whole-top")).toBeTruthy();
     expect(loading.querySelector(".web-cook-whole-grid")).toBeTruthy();
     expect(loading.querySelectorAll(".cook-whole-panel")).toHaveLength(2);
+    expect(loading.querySelectorAll(".cook-whole-step-skeleton")).toHaveLength(5);
+    const firstStepSkeleton = loading.querySelector(".cook-whole-step-skeleton");
+    expect(firstStepSkeleton?.firstElementChild?.className).toContain(
+      "cook-whole-step-marker",
+    );
+    expect(firstStepSkeleton?.querySelector(".cook-whole-step-main")).toBeTruthy();
+    expect(firstStepSkeleton?.querySelector(".cook-whole-step-copy")).toBeTruthy();
   });
 });
