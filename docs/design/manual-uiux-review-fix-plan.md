@@ -3883,6 +3883,7 @@ Implementation note:
   - `payload.achievement_key`가 `tutorial_`로 시작하거나 `payload.quest_key`가 `first_`로 시작하는 튜토리얼 알림은 `시스템` 탭에도 보이게 했다.
   - 완료된 튜토리얼 업적 알림은 기존 idempotent `achievement_unlocked` archive row를 재사용한다. 새 알림 타입/중복 row를 추가하지 않았다.
   - Follow-up: 이미 완료된 튜토리얼 안내 자체도 `achievement_album.categories[].milestones(status='earned')`에서 모달 전용 synthetic system notification으로 생성해 `전체`/`시스템` 탭에 유지한다.
+  - Follow-up: 기존 사용자처럼 achievement award row가 없더라도 active tutorial보다 앞선 순차 단계, `current >= target`인 tutorial milestone, `tutorial.completed_count`에서 확인되는 완료 단계는 완료 안내로 복원한다.
   - Follow-up: 모든 튜토리얼을 완료해 active step이 없어도 6개 튜토리얼 안내 이력이 시스템 탭에 남는다.
   - Follow-up: 튜토리얼 안내 synthetic row는 `성장` 탭에서 제외해 실제 XP/레벨 알림과 섞이지 않게 했다.
 - Acceptance criteria:
@@ -3898,6 +3899,7 @@ Implementation note:
   - `CI=true corepack pnpm exec vitest run tests/shared-profile-summary.test.tsx tests/mypage-achievement-album.test.tsx`
   - `CI=true corepack pnpm exec vitest run tests/user-achievement-awards.test.ts`
   - Follow-up: `CI=true corepack pnpm test tests/mypage-achievement-album.test.tsx`
+  - Follow-up: `CI=true corepack pnpm test tests/gamification-tutorial-guide.test.ts tests/mypage-achievement-album.test.tsx tests/growth-toast-stack.test.tsx`
 - Chrome verification:
   - 2026-06-28 `https://homecook-flame.vercel.app/mypage` 및 HOME, 조해피 계정에서 PASS.
   - 신규/초기 상태의 current tutorial guide `마음에 드는 레시피 저장하기`가 알림 기록 `전체` 탭과 `시스템` 탭 모두에 보였다.

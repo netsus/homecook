@@ -1,4 +1,5 @@
 import type {
+  UserGamificationAchievementMilestoneData,
   UserGamificationData,
   UserGamificationNotificationData,
   UserGamificationQuestData,
@@ -233,6 +234,11 @@ function timestamp(value: string | null | undefined) {
   return Number.isFinite(time) ? time : 0;
 }
 
+function isCompletedTutorialMilestone(milestone: UserGamificationAchievementMilestoneData) {
+  return milestone.status === "earned" ||
+    (milestone.target > 0 && milestone.current >= milestone.target);
+}
+
 export function createTutorialGuideHistoryNotifications(
   gamification: UserGamificationData | null,
 ): UserGamificationNotificationData[] {
@@ -244,18 +250,51 @@ export function createTutorialGuideHistoryNotifications(
   const tutorialCategory = (gamification.achievement_album?.categories ?? []).find(
     (category) => category.category_key === "tutorial",
   );
-  const completedGuides = (tutorialCategory?.milestones ?? [])
-    .filter((milestone) => milestone.status === "earned")
-    .map((milestone) => ({
-      earnedAt: milestone.earned_at ?? gamification.last_updated_at,
-      guide: tutorialGuideForAchievementKey(milestone.achievement_key),
-    }))
-    .filter((item): item is { earnedAt: string; guide: TutorialGuide } => item.guide !== null)
+  const completedGuideMap = new Map<string, { earnedAt: string; guide: TutorialGuide }>();
+  const addCompletedGuide = (achievementKey: string, earnedAt: string | null | undefined) => {
+    const guide = tutorialGuideForAchievementKey(achievementKey);
+
+    if (!guide) {
+      return;
+    }
+
+    const nextEarnedAt = earnedAt ?? gamification.last_updated_at;
+    const previous = completedGuideMap.get(achievementKey);
+
+    if (!previous || timestamp(nextEarnedAt) > timestamp(previous.earnedAt)) {
+      completedGuideMap.set(achievementKey, { earnedAt: nextEarnedAt, guide });
+    }
+  };
+
+  const activeRank = currentGuide
+    ? tutorialAchievementRank(String(currentGuide.payload.achievement_key ?? ""))
+    : -1;
+  if (activeRank > 0) {
+    TUTORIAL_STEP_ORDER.slice(0, activeRank).forEach((achievementKey) => {
+      addCompletedGuide(achievementKey, gamification.last_updated_at);
+    });
+  }
+
+  const completedCount = Math.min(
+    Math.max(gamification.tutorial?.completed_count ?? 0, 0),
+    TUTORIAL_STEP_ORDER.length,
+  );
+  TUTORIAL_STEP_ORDER.slice(0, completedCount).forEach((achievementKey) => {
+    addCompletedGuide(achievementKey, gamification.last_updated_at);
+  });
+
+  (tutorialCategory?.milestones ?? [])
+    .filter(isCompletedTutorialMilestone)
+    .forEach((milestone) => {
+      addCompletedGuide(milestone.achievement_key, milestone.earned_at);
+    });
+
+  const completedGuides = [...completedGuideMap.values()]
     .sort((left, right) => {
       const timeDiff = timestamp(right.earnedAt) - timestamp(left.earnedAt);
       if (timeDiff !== 0) return timeDiff;
-      return tutorialAchievementRank(left.guide.achievementKey) -
-        tutorialAchievementRank(right.guide.achievementKey);
+      return tutorialAchievementRank(right.guide.achievementKey) -
+        tutorialAchievementRank(left.guide.achievementKey);
     })
     .map((item) =>
       createTutorialGuideNotificationItem(item.guide, {
