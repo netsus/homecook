@@ -547,7 +547,7 @@ function MobileSavedRecipesRail({
         >
           {[0, 1, 2].map((index) => (
             <div
-              className="h-[136px] w-[148px] shrink-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)]"
+              className="h-[158px] w-[148px] shrink-0 rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface-fill)]"
               key={index}
             />
           ))}

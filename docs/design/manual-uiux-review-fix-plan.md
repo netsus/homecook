@@ -3795,6 +3795,11 @@ Implementation note:
 - Implementation notes:
   - 마이페이지 웹/앱 full-page skeleton에서 `내 정보와 레시피북을 불러오는 중이에요.` visible 문구를 제거했다.
   - 마이페이지 loading 테스트에 해당 문구가 다시 보이지 않는 회귀 조건을 추가했다.
+  - 2026-06-28 재점검에서 마이페이지 진입 시 상단 성장 영역이 늦게 완료되며 탭/메뉴 위치가 밀리는 문제가 남아 있음을 확인했고, 다음 보완을 적용했다:
+    - 프로필/레시피북 이후에 시작하던 성장/통계 요청을 초기 로딩과 병렬로 시작하도록 변경했다.
+    - 웹/앱 마이페이지 full-page skeleton의 상세 성장 스켈레톤을 제거하고 현재 화면 구조에 맞는 단일 profile shell로 정리했다.
+    - 성장 프로필, 모바일 저장 레시피 레일의 로딩/완료 높이를 맞춰 아래 탭/메뉴 위치가 로딩 완료 후 밀리지 않게 했다.
+    - 보조 성장 API 401은 핵심 마이페이지 화면을 로그인 게이트로 바꾸지 않고 성장 영역의 soft error로만 처리한다.
   - 전수조사 체크:
     - 마이페이지: top profile/summary/tabs/content skeleton 1종 유지, visible loading copy 제거.
     - 환경설정: `SettingsMobileLoadingShell` / `SettingsDesktopLoadingShell`가 최종 설정 섹션 구조와 같은 shell 안에서 렌더링되고 기존 테스트가 있다.

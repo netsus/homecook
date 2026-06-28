@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
+import { renderToString } from "react-dom/server";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -724,6 +725,36 @@ describe("MypageScreen", () => {
     });
   });
 
+  it("starts growth and record fetches before core profile and books finish", async () => {
+    let resolveProfile!: (value: typeof MOCK_PROFILE) => void;
+    let resolveBooks!: (value: typeof MOCK_BOOKS) => void;
+    mockFetchUserProfile.mockReturnValue(
+      new Promise((resolve) => {
+        resolveProfile = resolve;
+      }),
+    );
+    mockFetchRecipeBooks.mockReturnValue(
+      new Promise((resolve) => {
+        resolveBooks = resolve;
+      }),
+    );
+
+    render(<MypageScreen initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(mockFetchUserProfile).toHaveBeenCalledTimes(1);
+      expect(mockFetchRecipeBooks).toHaveBeenCalledTimes(1);
+    });
+    expect(mockFetchUserProgress).toHaveBeenCalledTimes(1);
+    expect(mockFetchUserGamification).toHaveBeenCalledTimes(1);
+    expect(mockFetchPlanner).toHaveBeenCalledWith("1900-01-01", "9999-12-31");
+
+    await act(async () => {
+      resolveProfile(MOCK_PROFILE);
+      resolveBooks(MOCK_BOOKS);
+    });
+  });
+
   it("shows profile and recipe books when authenticated", async () => {
     render(<MypageScreen initialAuthenticated />);
 
@@ -785,6 +816,37 @@ describe("MypageScreen", () => {
     expect(screen.queryByText("🍳 집밥 러너 · 레벨 5")).toBeNull();
   });
 
+  it("reserves desktop growth profile height while secondary growth data is still loading", async () => {
+    let resolveProgress!: (value: unknown) => void;
+    let resolveGamification!: (value: unknown) => void;
+    mockFetchUserProgress.mockReturnValue(
+      new Promise((resolve) => {
+        resolveProgress = resolve;
+      }),
+    );
+    mockFetchUserGamification.mockReturnValue(
+      new Promise((resolve) => {
+        resolveGamification = resolve;
+      }),
+    );
+
+    render(<MypageScreen initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(mockFetchUserProgress).toHaveBeenCalledTimes(1);
+      expect(mockFetchUserGamification).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByTestId("mypage-skeleton")).toBeNull();
+    expect(screen.getByTestId("mypage-growth-profile-loading").className).toContain(
+      "min-h-[302px]",
+    );
+
+    await act(async () => {
+      resolveProgress(MOCK_PROGRESS);
+      resolveGamification(MOCK_GAMIFICATION);
+    });
+  });
+
   it("renders mobile core MYPAGE while growth profile data is still loading", async () => {
     installMatchMedia(true);
     let resolveProgress!: (value: unknown) => void;
@@ -807,7 +869,9 @@ describe("MypageScreen", () => {
       expect(mockFetchUserGamification).toHaveBeenCalledTimes(1);
     });
     expect(screen.queryByTestId("mypage-mobile-loading")).toBeNull();
-    expect(screen.getByTestId("mypage-growth-profile-loading")).toBeTruthy();
+    const growthLoading = screen.getByTestId("mypage-growth-profile-loading");
+    expect(growthLoading).toBeTruthy();
+    expect(growthLoading.className).toContain("min-h-[340px]");
     expect(screen.getByTestId("mypage-growth-record-stats-loading")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "마이페이지" })).toBeTruthy();
     expect(screen.getByTestId("mobile-saved-recipes-rail")).toBeTruthy();
@@ -864,6 +928,29 @@ describe("MypageScreen", () => {
     expect(
       screen.queryByRole("heading", { name: "데이터를 불러오지 못했어요" }),
     ).toBeNull();
+  });
+
+  it("does not replace core MYPAGE with the login gate when secondary growth fetches return 401", async () => {
+    const unauthorizedError = Object.assign(new Error("로그인이 필요해요."), {
+      code: "UNAUTHORIZED",
+      fields: [],
+      status: 401,
+    });
+    mockFetchUserProgress.mockRejectedValueOnce(unauthorizedError);
+    mockFetchUserGamification.mockRejectedValueOnce(unauthorizedError);
+
+    render(<MypageScreen initialAuthenticated />);
+
+    expect(await screen.findByText("집밥러")).toBeTruthy();
+    expect(screen.getByTestId("mypage-profile")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "저장한 레시피" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "이 화면은 로그인이 필요해요" })).toBeNull();
+    expect((await screen.findByTestId("mypage-growth-progress-error")).textContent).toContain(
+      "XP를 잠시 불러오지 못했어요",
+    );
+    expect(screen.getByTestId("mypage-growth-gamification-error").textContent).toContain(
+      "배지 정보를 잠시 불러오지 못했어요",
+    );
   });
 
   it("resets desktop scroll position when opening the recipebook surface", async () => {
@@ -1346,17 +1433,44 @@ describe("MypageScreen", () => {
 
     const skeleton = screen.getByTestId("mypage-skeleton");
     expect(screen.queryByText("내 정보와 레시피북을 불러오는 중이에요.")).toBeNull();
-    expect(within(skeleton).getByTestId("mypage-loading-growth-profile")).toBeTruthy();
-    expect(within(skeleton).getAllByTestId("mypage-loading-growth-action")).toHaveLength(3);
-    expect(within(skeleton).getByTestId("mypage-loading-progress-meter")).toBeTruthy();
+    expect(within(skeleton).getByTestId("mypage-loading-profile-shell")).toBeTruthy();
+    expect(within(skeleton).queryByTestId("mypage-loading-growth-profile")).toBeNull();
+    expect(within(skeleton).queryAllByTestId("mypage-loading-growth-action")).toHaveLength(0);
+    expect(within(skeleton).queryByTestId("mypage-loading-progress-meter")).toBeNull();
     expect(within(skeleton).queryByTestId("mypage-legacy-loading-list")).toBeNull();
     expect(within(skeleton).getByTestId("mypage-loading-tabs")).toBeTruthy();
-    expect(within(skeleton).getByTestId("mypage-loading-panel")).toBeTruthy();
-    expect(within(skeleton).getAllByTestId("mypage-loading-panel-card")).toHaveLength(3);
-    expect(container.querySelector(".web-mypage-panel")).toBeTruthy();
-    expect(container.querySelectorAll('[data-testid="mypage-loading-growth-profile"]')).toHaveLength(1);
+    expect(
+      within(skeleton)
+        .getAllByTestId("mypage-loading-tab")
+        .map((tab) => tab.textContent),
+    ).toEqual([
+      "저장한 레시피",
+      "레시피북",
+      "장보기 기록",
+      "남은 요리",
+      "다먹은 요리",
+      "환경설정",
+      "도움말",
+    ]);
+    expect(within(skeleton).queryByTestId("mypage-loading-panel")).toBeNull();
+    expect(within(skeleton).queryAllByTestId("mypage-loading-panel-card")).toHaveLength(0);
+    expect(container.querySelector(".web-mypage-panel")).toBeNull();
+    expect(container.querySelectorAll('[data-testid="mypage-loading-profile-shell"]')).toHaveLength(1);
     expect(screen.getByRole("link", { name: "마이페이지" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "팬트리" })).toBeTruthy();
+  });
+
+  it("server-renders responsive loading shells before viewport hydration", () => {
+    const container = document.createElement("div");
+
+    container.innerHTML = renderToString(<MypageScreen initialAuthenticated />);
+
+    expect(container.querySelector('[data-testid="mypage-mobile-loading"]')).toBeTruthy();
+    const desktopShell = container.querySelector(
+      '[data-testid="mypage-responsive-desktop-loading-shell"]',
+    );
+    expect(desktopShell?.className).toContain("hidden lg:block");
+    expect(container.querySelector('[data-testid="mypage-loading-tabs"]')).toBeTruthy();
   });
 
   it("uses the mobile app loading shell instead of the legacy skeleton", () => {
@@ -1368,11 +1482,20 @@ describe("MypageScreen", () => {
 
     expect(screen.getByTestId("mypage-mobile-loading")).toBeTruthy();
     expect(screen.queryByText("내 정보와 레시피북을 불러오는 중이에요.")).toBeNull();
-    expect(screen.getByTestId("mypage-mobile-loading-growth-profile")).toBeTruthy();
-    expect(screen.getAllByTestId("mypage-mobile-loading-growth-action")).toHaveLength(3);
-    expect(screen.getByTestId("mypage-mobile-loading-progress-meter")).toBeTruthy();
+    expect(screen.getByTestId("mypage-mobile-loading-profile-shell").className).toContain(
+      "mb-3",
+    );
+    expect(screen.getByTestId("mypage-mobile-loading-profile-shell").className).toContain(
+      "min-h-[340px]",
+    );
+    expect(screen.queryByTestId("mypage-mobile-loading-growth-profile")).toBeNull();
+    expect(screen.queryAllByTestId("mypage-mobile-loading-growth-action")).toHaveLength(0);
+    expect(screen.queryByTestId("mypage-mobile-loading-progress-meter")).toBeNull();
     expect(screen.getByTestId("mypage-mobile-loading-saved-recipes")).toBeTruthy();
     expect(screen.getAllByTestId("mypage-mobile-loading-saved-card")).toHaveLength(3);
+    expect(screen.getAllByTestId("mypage-mobile-loading-saved-card")[0].className).toContain(
+      "h-[158px]",
+    );
     expect(screen.getByTestId("mypage-mobile-loading-menu")).toBeTruthy();
     expect(screen.getAllByTestId("mypage-mobile-loading-menu-row")).toHaveLength(5);
     expect(screen.getByRole("heading", { name: "마이페이지" }).className).toContain(
