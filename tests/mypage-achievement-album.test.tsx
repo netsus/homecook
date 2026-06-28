@@ -406,6 +406,103 @@ const NEW_USER_PROGRESS: UserProgressData = {
   last_updated_at: "2026-06-14T10:15:00.000Z",
 };
 
+const REGULAR_TUTORIAL_KEYS = [
+  "tutorial_recipe_saved",
+  "tutorial_planner_registered",
+  "tutorial_shopping_list_create",
+  "tutorial_shopping_list_complete",
+  "tutorial_cooking_complete",
+  "tutorial_recipebook_created",
+] as const;
+
+function makeTutorialHistoryGamification({
+  activeKey,
+  earnedKeys,
+}: {
+  activeKey: string | null;
+  earnedKeys: string[];
+}): UserGamificationData {
+  const earnedKeySet = new Set(earnedKeys);
+  const isTutorialComplete = REGULAR_TUTORIAL_KEYS.every((key) => earnedKeySet.has(key));
+  const tutorialCategory = MOCK_GAMIFICATION.achievement_album.categories.find(
+    (category) => category.category_key === "tutorial",
+  );
+  const nextMilestones = MOCK_GAMIFICATION.achievement_album.categories.map((category) => {
+    if (category.category_key !== "tutorial") return category;
+
+    return {
+      ...category,
+      earned_count: earnedKeys.length + (isTutorialComplete ? 1 : 0),
+      milestones: category.milestones.map((milestone, index) => {
+        if (earnedKeySet.has(milestone.achievement_key)) {
+          return {
+            ...milestone,
+            current: milestone.target,
+            earned_at: `2026-06-${String(10 + index).padStart(2, "0")}T00:00:00.000Z`,
+            status: "earned" as const,
+          };
+        }
+
+        if (milestone.achievement_key === "tutorial_complete") {
+          return {
+            ...milestone,
+            current: isTutorialComplete ? milestone.target : 0,
+            earned_at: isTutorialComplete ? "2026-06-20T00:00:00.000Z" : null,
+            status: isTutorialComplete ? ("earned" as const) : ("locked" as const),
+          };
+        }
+
+        if (milestone.achievement_key === activeKey) {
+          return {
+            ...milestone,
+            current: 0,
+            earned_at: null,
+            status: "active" as const,
+          };
+        }
+
+        return {
+          ...milestone,
+          current: 0,
+          earned_at: null,
+          status: "locked" as const,
+        };
+      }),
+    };
+  });
+  const activeMilestone = tutorialCategory?.milestones.find(
+    (milestone) => milestone.achievement_key === activeKey,
+  );
+
+  return {
+    ...MOCK_GAMIFICATION,
+    achievement_album: {
+      ...MOCK_GAMIFICATION.achievement_album,
+      categories: nextMilestones,
+    },
+    notifications: {
+      archive_preview: [],
+      priority_unseen: [],
+      unseen: [],
+    },
+    tutorial: {
+      ...MOCK_GAMIFICATION.tutorial,
+      active_steps: activeKey && activeMilestone
+        ? [
+            {
+              achievement_key: activeKey,
+              current: 0,
+              status: "active",
+              target: activeMilestone.target,
+              title: activeMilestone.title,
+            },
+          ]
+        : [],
+      completed_count: earnedKeys.length + (isTutorialComplete ? 1 : 0),
+    },
+  };
+}
+
 describe("MYPAGE achievement album UI", () => {
   beforeEach(() => {
     mockFetchArchive.mockResolvedValue({
@@ -774,10 +871,86 @@ describe("MYPAGE achievement album UI", () => {
     expect(within(notificationDialog).queryByText("+120 XP 획득")).toBeNull();
 
     await user.click(within(notificationDialog).getByRole("tab", { name: "시스템" }));
-    expect(within(notificationDialog).getByText("튜토리얼 안내")).toBeTruthy();
+    expect(within(notificationDialog).getAllByText("튜토리얼 안내").length).toBeGreaterThan(0);
     expect(within(notificationDialog).getByText(/플래너에 끼니 등록하기/)).toBeTruthy();
     expect(within(notificationDialog).getByText("튜토리얼 완료 배지를 획득했어요.")).toBeTruthy();
     expect(within(notificationDialog).queryByText("요리 100회 배지를 획득했어요.")).toBeNull();
+  });
+
+  it("keeps completed tutorial guide notifications after the active tutorial advances", async () => {
+    const user = userEvent.setup();
+    mockFetchArchive.mockResolvedValueOnce({
+      items: [],
+      next_cursor: null,
+      has_next: false,
+    });
+
+    render(
+      <MypageGrowthProfile
+        gamification={makeTutorialHistoryGamification({
+          activeKey: "tutorial_planner_registered",
+          earnedKeys: ["tutorial_recipe_saved"],
+        })}
+        gamificationState="ready"
+        progress={MOCK_PROGRESS}
+        progressState="ready"
+        variant="mobile"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "알림 보기" }));
+
+    const notificationDialog = screen.getByRole("dialog", { name: "알림 기록" });
+    await waitFor(() => {
+      expect(mockFetchArchive).toHaveBeenCalledWith({ limit: 20, cursor: null });
+    });
+    expect(within(notificationDialog).getByText(/마음에 드는 레시피 저장하기/)).toBeTruthy();
+    expect(within(notificationDialog).getByText(/플래너에 끼니 등록하기/)).toBeTruthy();
+
+    await user.click(within(notificationDialog).getByRole("tab", { name: "시스템" }));
+    expect(within(notificationDialog).getByText(/마음에 드는 레시피 저장하기/)).toBeTruthy();
+    expect(within(notificationDialog).getByText(/플래너에 끼니 등록하기/)).toBeTruthy();
+
+    await user.click(within(notificationDialog).getByRole("tab", { name: "성장" }));
+    expect(within(notificationDialog).queryByText(/마음에 드는 레시피 저장하기/)).toBeNull();
+    expect(within(notificationDialog).queryByText(/플래너에 끼니 등록하기/)).toBeNull();
+  });
+
+  it("keeps tutorial guide history visible after all tutorial steps are completed", async () => {
+    const user = userEvent.setup();
+    mockFetchArchive.mockResolvedValueOnce({
+      items: [],
+      next_cursor: null,
+      has_next: false,
+    });
+
+    render(
+      <MypageGrowthProfile
+        gamification={makeTutorialHistoryGamification({
+          activeKey: null,
+          earnedKeys: [...REGULAR_TUTORIAL_KEYS],
+        })}
+        gamificationState="ready"
+        progress={MOCK_PROGRESS}
+        progressState="ready"
+        variant="mobile"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "알림 보기" }));
+
+    const notificationDialog = screen.getByRole("dialog", { name: "알림 기록" });
+    await waitFor(() => {
+      expect(mockFetchArchive).toHaveBeenCalledWith({ limit: 20, cursor: null });
+    });
+
+    await user.click(within(notificationDialog).getByRole("tab", { name: "시스템" }));
+    expect(within(notificationDialog).getByText(/마음에 드는 레시피 저장하기/)).toBeTruthy();
+    expect(within(notificationDialog).getByText(/플래너에 끼니 등록하기/)).toBeTruthy();
+    expect(within(notificationDialog).getByText(/첫 장보기 목록 만들기/)).toBeTruthy();
+    expect(within(notificationDialog).getByText(/첫 장보기 완료하기/)).toBeTruthy();
+    expect(within(notificationDialog).getByText(/첫 집밥 완료하기/)).toBeTruthy();
+    expect(within(notificationDialog).getByText(/나만의 레시피북 생성하기/)).toBeTruthy();
   });
 
   it("opens the notification archive when the global toast open event is dispatched", async () => {

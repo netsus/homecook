@@ -3876,16 +3876,20 @@ Implementation note:
   - 고치는 게 맞다. 알림 기록은 사용자가 놓친 안내를 다시 찾는 장소이므로 active tutorial guide와 완료 후 tutorial archive가 전체/시스템 정책에 맞게 보여야 한다.
 - Recommended fix:
   - current tutorial guide synthetic notification을 `전체`와 `시스템` 양쪽에 표시하되, 중복 row처럼 보이지 않게 타입/라벨을 명확히 한다.
-  - 튜토리얼 단계 완료 시 시스템 알림 archive row를 남긴다.
-  - 단, 이미 완료된 안내가 과도하게 쌓이지 않도록 quest id 기준 idempotent 처리를 한다.
+  - 완료된 튜토리얼 안내도 알림모달 이력에 그대로 남겨서 다음 단계로 넘어간 뒤에도 사용자가 이전 튜토리얼 내용을 다시 볼 수 있게 한다.
+  - 단, 서버 알림 계약에 없는 새 알림 타입/quest_completed row는 만들지 않고, achievement album의 earned tutorial 상태를 모달 전용 synthetic system notification으로 재구성한다.
 - Implemented:
   - 알림모달 `전체` 탭에서 synthetic current tutorial guide가 보이도록 필터 순서를 바로잡았다.
   - `payload.achievement_key`가 `tutorial_`로 시작하거나 `payload.quest_key`가 `first_`로 시작하는 튜토리얼 알림은 `시스템` 탭에도 보이게 했다.
   - 완료된 튜토리얼 업적 알림은 기존 idempotent `achievement_unlocked` archive row를 재사용한다. 새 알림 타입/중복 row를 추가하지 않았다.
+  - Follow-up: 이미 완료된 튜토리얼 안내 자체도 `achievement_album.categories[].milestones(status='earned')`에서 모달 전용 synthetic system notification으로 생성해 `전체`/`시스템` 탭에 유지한다.
+  - Follow-up: 모든 튜토리얼을 완료해 active step이 없어도 6개 튜토리얼 안내 이력이 시스템 탭에 남는다.
+  - Follow-up: 튜토리얼 안내 synthetic row는 `성장` 탭에서 제외해 실제 XP/레벨 알림과 섞이지 않게 했다.
 - Acceptance criteria:
   - 현재 튜토리얼 안내가 `전체` 탭과 `시스템` 탭에서 모두 보인다.
-  - 튜토리얼 퀘스트 완료 후 시스템 탭에 완료/다음 안내 기록이 남는다.
-  - 같은 튜토리얼 알림이 중복 저장되지 않는다.
+  - 튜토리얼 퀘스트 완료 후 시스템 탭에 완료한 안내와 다음 안내 기록이 함께 남는다.
+  - 전체 튜토리얼 완료 후에도 완료한 튜토리얼 안내 이력이 남는다.
+  - 같은 튜토리얼 안내는 같은 synthetic id 기준으로 중복 표시되지 않는다.
 - Likely implementation target:
   - `components/mypage/mypage-growth-detail-dialog.tsx`
   - notification archive API/server logic
@@ -3893,10 +3897,13 @@ Implementation note:
 - Verification:
   - `CI=true corepack pnpm exec vitest run tests/shared-profile-summary.test.tsx tests/mypage-achievement-album.test.tsx`
   - `CI=true corepack pnpm exec vitest run tests/user-achievement-awards.test.ts`
+  - Follow-up: `CI=true corepack pnpm test tests/mypage-achievement-album.test.tsx`
 - Chrome verification:
   - 2026-06-28 `https://homecook-flame.vercel.app/mypage` 및 HOME, 조해피 계정에서 PASS.
   - 신규/초기 상태의 current tutorial guide `마음에 드는 레시피 저장하기`가 알림 기록 `전체` 탭과 `시스템` 탭 모두에 보였다.
   - 첫 레시피 저장 후에는 current guide가 `플래너에 끼니 등록하기`로 바뀌었고, `업적 달성! 첫 레시피 저장 배지를 획득했어요. +15 XP` 기록도 `전체`/`시스템` 탭 모두에 남았다.
+  - Follow-up pending: 배포 후 완료된 튜토리얼 안내 자체가 다음 단계 진행 중/전체 완료 상태에서도 알림모달에 유지되는지 Chrome에서 재확인한다.
+  - Local Chrome follow-up: 2026-06-28 `http://localhost:3001/mypage`, 조해피 fixture 상태에서 완료된 `마음에 드는 레시피 저장하기`, `플래너에 끼니 등록하기`, `첫 장보기 목록 만들기` 안내가 `전체`/`시스템` 탭에 남고 `성장` 탭에는 실제 XP 알림만 남는 것을 확인했다.
 
 ### 87. 알림모달의 알림 글자 크기가 작아 읽기 어려운 문제
 

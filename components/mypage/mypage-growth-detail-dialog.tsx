@@ -10,7 +10,7 @@ import {
   compactGrowthNotificationsForDisplay,
   isVisibleGrowthNotification,
 } from "@/lib/gamification-notifications";
-import { createTutorialGuideNotification } from "@/lib/gamification-tutorial-guide";
+import { createTutorialGuideHistoryNotifications } from "@/lib/gamification-tutorial-guide";
 import achievementIconManifest from "@/public/assets/growth/achievement-icons-v3-4/manifest.json";
 import type {
   UserGamificationBadgeCategory,
@@ -280,8 +280,9 @@ function matchesNotificationFilter(
       item.notification_type === "badge_unlocked";
   }
   if (filter === "growth") {
-    return item.notification_type === "level_up" ||
-      item.notification_type === "xp_awarded";
+    return !isTutorialGuideNotification(item) &&
+      (item.notification_type === "level_up" ||
+        item.notification_type === "xp_awarded");
   }
   return false;
 }
@@ -290,11 +291,13 @@ function buildNotificationPanelItems(
   data: UserGamificationData | null,
   archiveItems: UserGamificationNotificationData[],
 ) {
-  const tutorialGuide = createTutorialGuideNotification(data);
+  const tutorialGuides = createTutorialGuideHistoryNotifications(data);
+  const tutorialGuideIds = new Set(tutorialGuides.map((item) => item.id));
   const visibleItems = archiveItems.filter(isVisibleGrowthNotification);
-  const items = tutorialGuide
-    ? [tutorialGuide, ...visibleItems.filter((item) => item.id !== tutorialGuide.id)]
-    : visibleItems;
+  const items = [
+    ...tutorialGuides,
+    ...visibleItems.filter((item) => !tutorialGuideIds.has(item.id)),
+  ];
 
   return compactGrowthNotificationsForDisplay(items);
 }
