@@ -271,18 +271,17 @@ function matchesNotificationFilter(
   filter: NotificationFilter,
 ) {
   if (filter === "all") return true;
+  if (isTutorialSystemNotification(item)) return filter === "system";
   if (filter === "system") {
-    return isTutorialSystemNotification(item) ||
-      !isGrowthOrAchievementNotification(item);
+    return !isGrowthOrAchievementNotification(item);
   }
   if (filter === "achievement") {
     return item.notification_type === "achievement_unlocked" ||
       item.notification_type === "badge_unlocked";
   }
   if (filter === "growth") {
-    return !isTutorialGuideNotification(item) &&
-      (item.notification_type === "level_up" ||
-        item.notification_type === "xp_awarded");
+    return item.notification_type === "level_up" ||
+      item.notification_type === "xp_awarded";
   }
   return false;
 }

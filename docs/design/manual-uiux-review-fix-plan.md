@@ -3886,11 +3886,13 @@ Implementation note:
   - Follow-up: 기존 사용자처럼 achievement award row가 없더라도 active tutorial보다 앞선 순차 단계, `current >= target`인 tutorial milestone, `tutorial.completed_count`에서 확인되는 완료 단계는 완료 안내로 복원한다.
   - Follow-up: 모든 튜토리얼을 완료해 active step이 없어도 6개 튜토리얼 안내 이력이 시스템 탭에 남는다.
   - Follow-up: 튜토리얼 안내 synthetic row는 `성장` 탭에서 제외해 실제 XP/레벨 알림과 섞이지 않게 했다.
+  - Follow-up: 알림 모달 category tab은 `전체=모든 알림`, `성장=레벨/XP`, `업적=비튜토리얼 업적/배지`, `시스템=튜토리얼 안내/튜토리얼 알림`으로 배타 필터링한다.
 - Acceptance criteria:
   - 현재 튜토리얼 안내가 `전체` 탭과 `시스템` 탭에서 모두 보인다.
   - 튜토리얼 퀘스트 완료 후 시스템 탭에 완료한 안내와 다음 안내 기록이 함께 남는다.
   - 전체 튜토리얼 완료 후에도 완료한 튜토리얼 안내 이력이 남는다.
   - 같은 튜토리얼 안내는 같은 synthetic id 기준으로 중복 표시되지 않는다.
+  - `성장`, `업적`, `시스템` 탭은 각 category에 해당하는 알림만 보여주고 튜토리얼 시스템 알림을 성장/업적 탭에 중복 표시하지 않는다.
 - Likely implementation target:
   - `components/mypage/mypage-growth-detail-dialog.tsx`
   - notification archive API/server logic
@@ -3900,6 +3902,7 @@ Implementation note:
   - `CI=true corepack pnpm exec vitest run tests/user-achievement-awards.test.ts`
   - Follow-up: `CI=true corepack pnpm test tests/mypage-achievement-album.test.tsx`
   - Follow-up: `CI=true corepack pnpm test tests/gamification-tutorial-guide.test.ts tests/mypage-achievement-album.test.tsx tests/growth-toast-stack.test.tsx`
+  - Follow-up: `CI=true corepack pnpm test tests/shared-profile-summary.test.tsx tests/growth-toast-stack.test.tsx tests/gamification-tutorial-guide.test.ts tests/mypage-achievement-album.test.tsx`
 - Chrome verification:
   - 2026-06-28 `https://homecook-flame.vercel.app/mypage` 및 HOME, 조해피 계정에서 PASS.
   - 신규/초기 상태의 current tutorial guide `마음에 드는 레시피 저장하기`가 알림 기록 `전체` 탭과 `시스템` 탭 모두에 보였다.
