@@ -389,8 +389,8 @@ export function getMockRecipeThemes(): RecipeThemesData {
   return {
     themes: [
       {
-        id: "popular",
-        title: "조회 많은 레시피",
+        id: "recent-planner",
+        title: "요즘 플래너에 많이 담은 메뉴",
         recipes: [buildRecipeCardFromState(getQaFixtureState())],
       },
     ],

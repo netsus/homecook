@@ -80,8 +80,8 @@ test.describe("Slice 02 discovery filter flow", () => {
           data: {
             themes: [
               {
-                id: "popular",
-                title: "조회 많은 레시피",
+                id: "recent-planner",
+                title: "요즘 플래너에 많이 담은 메뉴",
                 recipes: buildRecipeItems(new URL("http://localhost/api/v1/recipes")),
               },
             ],

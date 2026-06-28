@@ -26,7 +26,7 @@
 - Trigger: 배포 사이트를 Chrome으로 직접 확인한 결과, 완료 처리된 항목 중 32, 33, 75, 85, 99, 100이 실제 사용자 화면에서 아직 미충족/부분충족으로 남아 있었다. 41, 58, 68은 후속 확인 또는 실행 기준 정리가 필요했다.
 - Implemented:
   - 32/33: 웹 HOME compact card에서 태그 row 예산을 더 보수적으로 잡고 `+N` chip 최소 폭을 고정해, 긴 태그가 잘린 채 보이기 전에 실제 숨김 개수를 `+N`으로 요약한다.
-  - 41: 앱 HOME 큐레이션 테마 title을 tag/filter 느낌이 덜한 문구로 조정해 `냉장고 비우는 한 끼`, `실패 걱정 없는 메뉴`, `밥상 든든한 메인`, `불 없이 달달하게`가 유지되게 했다.
+  - 41: 앱 HOME 큐레이션 테마 title을 tag/filter 느낌이 덜한 문구로 조정했다. 이후 89번 후속에서 주관적/부정확한 테마는 명확 기준 테마로 대체했다.
   - 58: 레시피북 row cover/tone 보강은 기존 구현과 테스트로 이미 닫힌 상태임을 재확인했다.
   - 68: 공식 식품 데이터는 승인 artifact 없이 production DB에 직접 쓰지 않는 gated load 기준이 완료 상태임을 명확히 했다.
   - 75/85: 닉네임 확정 직후 첫 서비스 화면에서도 tutorial guide를 다시 읽도록 onboarding refresh marker를 추가했다.
@@ -2158,7 +2158,7 @@ Implementation note:
   - 모바일 HOME에서 `ThemeCarousel`을 레시피 4번째 카드 뒤에 삽입한다. 레시피가 4개보다 적으면 마지막 카드 뒤에 둔다.
   - 모바일 목록 안에 삽입되는 테마 섹션은 좌우 여백을 뚫는 구분 밴드, 상하 border, 더 큰 theme card로 정리한다.
   - 현재 보이는 tag filter chip과 같은 label의 테마는 모바일 테마 캐러셀에서 숨긴다.
-  - API theme response에는 `유튜브에서 가져온 레시피`, `많이 저장한 레시피`, `실패 걱정 없는 메뉴`, `냉장고 비우는 한 끼`, `밥상 든든한 메인`, `불 없이 달달하게`처럼 실제 recipe data에 매칭되는 큐레이션 테마를 포함한다.
+  - API theme response에는 `유튜브에서 가져온 레시피`, `냉장고 비우는 한 끼`, `밥상 든든한 메인`처럼 실제 recipe data에 매칭되는 큐레이션 테마를 포함한다.
   - 검색/재료/태그 필터가 활성화된 결과 우선 상태에서는 기존처럼 테마를 숨겨 결과 집중도를 유지한다.
 - Acceptance criteria:
   - 초기 앱 홈에서 레시피 카드 3~4개를 본 뒤 `이번 주 인기 테마`가 나온다.
@@ -2179,7 +2179,7 @@ Implementation note:
   - `components/home/home-screen.tsx`에서 tag filter label과 같은 theme label은 discovery theme list에서 제외했다.
   - `app/globals.css`에서 삽입형 테마 섹션을 full-width band, 큰 theme card, 명확한 border/background로 조정했다.
   - `lib/recipe-themes.ts`에서 source/save/text signal 기반 큐레이션 테마를 추가했다.
-  - Follow-up: `fix/manual-uiux-review-incomplete-items`에서 기존 category/tag 느낌의 title을 `냉장고 비우는 한 끼`, `실패 걱정 없는 메뉴`, `밥상 든든한 메인`, `불 없이 달달하게`로 조정해 필터 chip과 다른 큐레이션 인상을 강화했다.
+  - Follow-up: `fix/manual-uiux-review-incomplete-items`에서 기존 category/tag 느낌의 title을 큐레이션 문구로 조정했다. 이후 89번 follow-up에서 `실패 걱정 없는 메뉴`와 부정확한 `불 없이 달달하게`는 제거/대체했다.
   - Done: `tests/home-screen.test.tsx`에서 4번째 카드 뒤 삽입, 중복 tag theme 숨김, 모바일 테마 섹션 스타일을 고정했다.
   - Done: `tests/recipe-api-contracts.test.ts`에서 `유튜브에서 가져온 레시피`, `많이 저장한 레시피`가 theme API에 포함되는지 고정했다.
   - Done: `tests/recipe-themes.test.ts`에서 큐레이션 테마와 tag-backed metadata가 함께 유지되는지 고정했다.
@@ -2191,7 +2191,7 @@ Implementation note:
   - Verified: `pnpm exec playwright test tests/e2e/qa-visual.spec.ts --grep "home default shell|home sort menu open" --project=mobile-chrome --project=mobile-ios-small`
   - Verified: `pnpm typecheck`
   - Verified: `pnpm lint`
-  - Production Chrome: `https://homecook-flame.vercel.app/` 모바일 HOME에서 `실패 걱정 없는 메뉴`, `밥상 든든한 메인`, `불 없이 달달하게` 테마가 보이고 필터 chip과 다른 큐레이션 문구로 표시되는 것을 확인했다.
+  - Historical Production Chrome: 당시 `https://homecook-flame.vercel.app/` 모바일 HOME에서 큐레이션 문구 표시를 확인했다. 현재 테마 기준은 89번 follow-up을 따른다.
 
 ### 42. 앱 홈 검색창과 검색 결과가 스크롤 중 분리되어 보이는 문제
 
@@ -4006,12 +4006,17 @@ Implementation note:
   - desktop/mobile home screenshot review.
 - Implementation:
   - 홈 테마 섹션 문구를 `이번 주 추천 테마`로 바꿔, 섹션 전체가 popularity-only처럼 보이지 않게 했다.
-  - 기본 `popular` 테마 title을 `조회 많은 레시피`로 바꿔 정렬 기준을 드러냈다.
-  - 저장순과 중복되는 `많이 저장한 레시피`, 근거가 약한 `실패 걱정 없는 메뉴`, `밥상 든든한 메인`, `불 없이 달달하게` 정적 테마를 제거했다.
-  - 현재 카드 데이터로 판정 가능한 `냉장고 재료 쓰기`, `국물 있는 한 끼`, `밥 한 그릇 메뉴`, `과일 디저트` 정적 테마로 교체했다.
+  - `popular`/`조회 많은 레시피`와 주관적인 `실패 걱정 없는 메뉴`를 제거했다.
+  - `요즘 플래너에 많이 담은 메뉴`: 최근 3일 `meals.created_at` 기준 플래너 등록 수가 많은 레시피만 포함한다.
+  - `냉장고 비우는 한 끼`: 로그인 사용자의 `pantry_items`와 `recipe_ingredients` 매칭률이 높은 팬트리 기반 추천 레시피를 그대로 사용한다.
+  - `불 없이 만드는 요리`: 모든 step 조리법이 전자레인지/오븐/에어프라이어 또는 준비/섞기 계열이고, 끓이기/볶기/팬굽기/튀기기/졸이기 같은 화구 조리법이 없는 레시피만 포함한다.
+  - `밥상 든든한 메인`: `한그릇요리` 또는 `고단백` tag가 있고 `밑반찬`/`디저트`/`샐러드` tag가 없는 레시피만 포함한다.
+  - `유튜브에서 가져온 레시피`: `recipes.source_type='youtube'`인 레시피만 포함한다.
+  - public/approved system tag 기반 동적 theme는 기존처럼 유지하되, 빈 테마는 숨긴다.
   - 모바일 테마 카드는 폭을 줄이고 높이를 키웠고, 웹 사이드 테마 카드는 비율/최소 높이/제목 크기를 키웠다.
   - 최신 API 문서 `docs/api문서-v1.2.20.md`의 `/recipes/themes` 샘플 title을 새 기준에 맞췄다.
   - Verified: `CI=true corepack pnpm exec vitest run tests/recipe-themes.test.ts tests/recipe-api-contracts.test.ts tests/home-screen.test.tsx`
+  - Follow-up verified: `CI=true corepack pnpm exec vitest run tests/recipe-themes.test.ts tests/recipe-api-contracts.test.ts tests/home-screen.test.tsx`
 
 ### 90. 레시피 저장 모달을 열 때 로딩이 오래 걸리는 문제
 

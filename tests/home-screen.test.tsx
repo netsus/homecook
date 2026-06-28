@@ -650,7 +650,7 @@ describe("home screen", () => {
     expect(screen.queryByText("+3")).toBeNull();
   });
 
-  it("inserts popular themes around the middle of the app recipe list", async () => {
+  it("inserts recommended themes around the middle of the app recipe list", async () => {
     const recipes = [
       buildRecipeCard({ id: "recipe-1", title: "첫 번째 레시피" }),
       buildRecipeCard({ id: "recipe-2", title: "두 번째 레시피" }),
@@ -713,7 +713,7 @@ describe("home screen", () => {
     ).toBeTruthy();
   });
 
-  it("keeps mobile popular themes from duplicating visible tag filters", async () => {
+  it("keeps mobile recommended themes from duplicating visible tag filters", async () => {
     const recipe = buildRecipeCard({ id: "recipe-theme", title: "테마 확인 레시피" });
 
     fetchJson.mockImplementation((input: string) => {
@@ -1144,12 +1144,12 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     const themeButton = await screen.findByRole("button", {
-      name: /조회 많은 레시피/,
+      name: /요즘 플래너에 많이 담은 메뉴/,
     });
 
     await user.click(themeButton);
     expect(
-      screen.getByRole("heading", { level: 2, name: "조회 많은 레시피" }),
+      screen.getByRole("heading", { level: 2, name: "요즘 플래너에 많이 담은 메뉴" }),
     ).toBeTruthy();
 
     await user.click(themeButton);
