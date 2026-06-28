@@ -134,6 +134,111 @@ describe("recipe-loop codex-vision provider", () => {
     }
   });
 
+  it("builds recipe evidence ledger only for covered output recipes without source leakage", async () => {
+    const { buildRecipeEvidenceLedger, isLedgerTextAllowedSubstring } = await import(codexVisionKeyframesModuleUrl);
+
+    const candidatePlan = {
+      recipeCandidates: [
+        {
+          candidateId: "cand-01",
+          titleHint: "두부볶음",
+          outputRole: "recipe",
+          sourceEvidence: [
+            { source: "recipe_candidate_hints", text: "1. 두부볶음" },
+            { source: "description_timeline", text: "00:10 두부볶음 재료 두부 1컵", timeHintSec: 10 },
+          ],
+        },
+        {
+          candidateId: "cand-02",
+          titleHint: "보조국",
+          outputRole: "recipe",
+          sourceEvidence: [{ source: "recipe_candidate_hints", text: "2. 보조국" }],
+        },
+        {
+          candidateId: "cand-03",
+          titleHint: "묶음 제목",
+          outputRole: "bundle_parent",
+          sourceEvidence: [{ source: "description_timeline", text: "00:10 두부볶음&보조국" }],
+        },
+      ],
+    };
+    const segmentPlan = {
+      segments: [
+        {
+          segmentId: "seg-01",
+          candidateId: "cand-01",
+          titleHint: "두부볶음",
+          startSec: 10,
+          endSec: 35,
+          textEvidence: ["segment note: 양념 소스를 넣고 볶는다."],
+        },
+        {
+          segmentId: "seg-02",
+          candidateId: "cand-02",
+          titleHint: "보조국",
+          startSec: 40,
+          endSec: 55,
+          textEvidence: ["segment note: 보조국"],
+        },
+      ],
+      coverage: [
+        { candidateId: "cand-01", titleHint: "두부볶음", status: "covered", outputRole: "recipe", segmentIds: ["seg-01"] },
+        { candidateId: "cand-02", titleHint: "보조국", status: "supporting", outputRole: "recipe", segmentIds: ["seg-02"] },
+        { candidateId: "cand-03", titleHint: "묶음 제목", status: "supporting", outputRole: "bundle_parent", segmentIds: ["seg-01"] },
+      ],
+    };
+    const segmentKeyframes = {
+      selectedFrameHash: "frames",
+      segments: [
+        {
+          segmentId: "seg-01",
+          candidateId: "cand-01",
+          titleHint: "두부볶음",
+          selectedFrames: [
+            {
+              file: "frame_0001_00010.000.jpg",
+              timestamp_sec: 10,
+              selectionReason: "양념 재료가 보임",
+            },
+          ],
+        },
+      ],
+    };
+    const ledger = buildRecipeEvidenceLedger({
+      sourceText: [
+        "[SOURCE: transcript(ko)]",
+        "00:12 두부 1컵을 넣고 양념한다.",
+        "00:13 구매처 쿠폰 안내",
+      ].join("\n"),
+      candidatePlan,
+      segmentPlan,
+      segmentKeyframes,
+      generatedFrom: {
+        candidatePlanHash: "candidate-hash",
+        segmentPlanHash: "segment-hash",
+        segmentKeyframesHash: "segment-keyframes-hash",
+        selectedFrameHash: "frames",
+      },
+    });
+
+    expect(ledger.version).toBe("recipe-evidence-ledger-v1");
+    expect(ledger.recipes.map((recipe: { candidateId: string }) => recipe.candidateId)).toEqual(["cand-01"]);
+    const recipe = ledger.recipes[0];
+    expect(recipe.evidenceItems.some((item: { text: string }) => item.text.includes("쿠폰"))).toBe(false);
+    expect(recipe.evidenceItems).toContainEqual(expect.objectContaining({
+      basis: "selector_inference",
+      sourceKind: "selected_frame",
+      kind: "visual_context",
+      text: "양념 재료가 보임",
+    }));
+    expect(recipe.promptCues.length).toBeLessThanOrEqual(5);
+    expect(JSON.stringify(ledger)).not.toContain("golden.json");
+    expect(JSON.stringify(ledger)).not.toContain("_semantic_summary");
+    expect(JSON.stringify(ledger)).not.toContain("feedback_for_next_iter");
+    expect(isLedgerTextAllowedSubstring("두부 1컵", ["00:12 두부 1컵을 넣고 양념한다."])).toBe(true);
+    expect(isLedgerTextAllowedSubstring("없는 재료", ["00:12 두부 1컵을 넣고 양념한다."])).toBe(false);
+  });
+
   it("compacts large visual notes for final synthesis while preserving batch markers", async () => {
     const { compactVisualNotesForFinal } = await import(codexVisionModuleUrl);
     const noisyBatch = (batchNo: number) => [
@@ -631,6 +736,154 @@ describe("recipe-loop codex-vision provider", () => {
     const selectedFrames = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "selected_frames.json"), "utf8"));
     expect(selectedFrames.selectedFrames.some((frame: { file: string }) => frame.file.startsWith("frame_9999_"))).toBe(false);
     expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "final.json"))).toBe(true);
+  });
+
+  it("separates recipe evidence ledger artifact-only and prompt-on segmented cache paths", async () => {
+    const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir, 4);
+    const cacheDir = path.join(workdir, "keyframes-cache");
+
+    async function runLedgerMode(mode: "artifact" | "prompt") {
+      const finalPrompts: string[] = [];
+      const client = createCodexVisionKeyframesClient({
+        cacheDir,
+        keyframeMode: "segmented",
+        model: "fixture-final-model",
+        segmentModel: "fixture-segment-model",
+        selectorModel: "fixture-selector-model",
+        segmentPaddingSec: 0,
+        segmentMinFrames: 1,
+        segmentMaxFrames: 2,
+        recipeEvidenceLedger: mode === "artifact",
+        recipeEvidenceLedgerPrompt: mode === "prompt",
+        extractFrames: async () => ({
+          frameCacheHit: false,
+          frameDir,
+          frames,
+          extractionStats: { scene_selected: 4 },
+        }),
+        codexExec: async ({ model, prompt, images, outputPath, logPath }: { model: string; prompt: string; images: string[]; outputPath: string; logPath: string }) => {
+          let output: string;
+          if (model === "fixture-segment-model") {
+            output = JSON.stringify({
+              segments: [
+                {
+                  segmentId: "seg-01",
+                  candidateId: "cand-01",
+                  titleHint: "두부볶음",
+                  startSec: 0,
+                  endSec: 20,
+                  textEvidence: ["두부 1컵을 양념한다"],
+                  frameBudget: 2,
+                },
+                {
+                  segmentId: "seg-02",
+                  candidateId: "cand-02",
+                  titleHint: "보조국",
+                  startSec: 20,
+                  endSec: 30,
+                  textEvidence: ["보조국"],
+                  frameBudget: 1,
+                },
+              ],
+              coverage: [
+                { candidateId: "cand-01", titleHint: "두부볶음", status: "covered", outputRole: "recipe", segmentIds: ["seg-01"] },
+                { candidateId: "cand-02", titleHint: "보조국", status: "supporting", outputRole: "recipe", segmentIds: ["seg-02"] },
+              ],
+            });
+          } else if (model === "fixture-selector-model") {
+            output = JSON.stringify({
+              selectedFrames: [{ file: path.basename(images[0]), reason: "양념 재료 확인" }],
+            });
+          } else {
+            finalPrompts.push(prompt);
+            output = "```json\n{\"recipes\":[{\"title\":\"두부볶음\",\"ingredients\":[{\"name\":\"두부\",\"amount\":\"1\",\"unit\":\"컵\"}],\"steps\":[\"두부를 양념해 볶는다.\"]}]}\n```";
+          }
+          writeFileSync(outputPath, output, "utf8");
+          writeFileSync(logPath, "ok", "utf8");
+          return output;
+        },
+      });
+
+      const result = await client.generate({
+        prompt: "JSON만 출력",
+        videoUrl: "https://www.youtube.com/watch?v=abc123",
+        cacheText: [
+          "[SOURCE: recipe_candidate_hints]",
+          "1. 두부볶음",
+          "2. 보조국",
+          "[SOURCE: description]",
+          "00:00 두부볶음",
+          "[SOURCE: transcript(ko)]",
+          "00:01 두부 1컵을 넣고 양념한다.",
+        ].join("\n"),
+      });
+      return { result, finalPrompt: finalPrompts.at(-1) ?? "" };
+    }
+
+    const artifact = await runLedgerMode("artifact");
+    const prompt = await runLedgerMode("prompt");
+
+    expect(artifact.result.meta).toMatchObject({
+      recipeEvidenceLedgerEnabled: true,
+      recipeEvidenceLedgerPromptEnabled: false,
+      recipeEvidenceLedgerVersion: "recipe-evidence-ledger-v1",
+      recipeEvidenceLedgerRecipeCount: 1,
+      promptLedgerTextChars: 0,
+    });
+    expect(prompt.result.meta).toMatchObject({
+      recipeEvidenceLedgerEnabled: true,
+      recipeEvidenceLedgerPromptEnabled: true,
+      recipeEvidenceLedgerVersion: "recipe-evidence-ledger-v1",
+      recipeEvidenceLedgerRecipeCount: 1,
+    });
+    expect(artifact.result.meta.codexVisionKeyframesCacheDir).not.toBe(prompt.result.meta.codexVisionKeyframesCacheDir);
+    expect(existsSync(path.join(artifact.result.meta.codexVisionKeyframesCacheDir, "recipe-evidence-ledger.json"))).toBe(true);
+    expect(existsSync(path.join(prompt.result.meta.codexVisionKeyframesCacheDir, "recipe-evidence-ledger.json"))).toBe(true);
+    expect(artifact.finalPrompt).not.toContain("Recipe evidence ledger:");
+    expect(prompt.finalPrompt).toContain("Recipe evidence ledger:");
+    expect(prompt.finalPrompt).toContain("basis=source");
+    expect(prompt.finalPrompt).toContain("selector_inference");
+    const ledger = JSON.parse(readFileSync(path.join(prompt.result.meta.codexVisionKeyframesCacheDir, "recipe-evidence-ledger.json"), "utf8"));
+    expect(ledger.recipes.map((recipe: { candidateId: string }) => recipe.candidateId)).toEqual(["cand-01"]);
+    expect(JSON.stringify(ledger)).not.toContain("golden.json");
+    expect(JSON.stringify(ledger)).not.toContain("semantic judge");
+  });
+
+  it("ignores recipe evidence ledger flags for global keyframe mode", async () => {
+    const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir, 2);
+    const client = createCodexVisionKeyframesClient({
+      cacheDir: path.join(workdir, "keyframes-cache"),
+      keyframeMode: "global",
+      model: "fixture-final-model",
+      selectorModel: "fixture-selector-model",
+      recipeEvidenceLedgerPrompt: true,
+      extractFrames: async () => ({
+        frameCacheHit: false,
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 2 },
+      }),
+      codexExec: async ({ model, outputPath, logPath }: { model: string; outputPath: string; logPath: string }) => {
+        const output = model === "fixture-selector-model"
+          ? JSON.stringify({ selectedFrames: [{ file: path.basename(frames[0].path), recipeHint: "두부볶음", reason: "재료" }] })
+          : "```json\n{\"recipes\":[{\"title\":\"두부볶음\",\"ingredients\":[{\"name\":\"두부\",\"amount\":\"1\",\"unit\":\"컵\"}],\"steps\":[\"두부를 볶는다.\"]}]}\n```";
+        writeFileSync(outputPath, output, "utf8");
+        writeFileSync(logPath, "ok", "utf8");
+        return output;
+      },
+    });
+
+    const result = await client.generate({
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      cacheText: "두부볶음",
+    });
+
+    expect(result.meta.keyframeMode).toBe("global");
+    expect(result.meta).not.toHaveProperty("recipeEvidenceLedgerEnabled");
+    expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "recipe-evidence-ledger.json"))).toBe(false);
   });
 
   it("expands bundled parent segments into child evidence blocks and preserves selection reasons", async () => {
@@ -1298,6 +1551,7 @@ describe("recipe-loop codex-vision provider", () => {
       "segment-max-count": "7",
       "segment-frame-total-limit": "21",
       "source-cue-packets": true,
+      "recipe-evidence-ledger-prompt": true,
       "refresh-final": true,
     }, {
       createCodexVisionKeyframes: (options: Record<string, unknown>) => ({ options }),
@@ -1313,6 +1567,8 @@ describe("recipe-loop codex-vision provider", () => {
       segmentMaxCount: 7,
       segmentFrameTotalLimit: 21,
       sourceCuePackets: true,
+      recipeEvidenceLedger: false,
+      recipeEvidenceLedgerPrompt: true,
       refreshFinal: true,
     });
 

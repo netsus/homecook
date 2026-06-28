@@ -114,6 +114,8 @@ export function createLlmForProvider(provider, args = {}, factories = {}) {
       refreshFinal: args["refresh-final"] === true,
       noCache: args["no-cache"] === true,
       sourceCuePackets: args["source-cue-packets"] === true,
+      recipeEvidenceLedger: args["recipe-evidence-ledger"] === true,
+      recipeEvidenceLedgerPrompt: args["recipe-evidence-ledger-prompt"] === true,
     });
   }
 
