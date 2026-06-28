@@ -28,6 +28,7 @@ const FINAL_PROMPT_VERSION = "keyframe-final-v2";
 const TIMELINE_PARENT_RANGE_VERSION = "timeline-parent-range-v1";
 const BUNDLE_CHILD_SEGMENT_VERSION = "bundle-child-segment-v2";
 const SOURCE_CUE_PACKET_VERSION = "source-cue-packet-v1";
+const RECIPE_EVIDENCE_LEDGER_VERSION = "recipe-evidence-ledger-v1";
 const DEFAULT_FINAL_MODEL = "gpt-5.4";
 const DEFAULT_SELECTOR_MODEL = "gpt-5.4-mini";
 const DEFAULT_SEGMENT_MODEL = "gpt-5.4-mini";
@@ -68,6 +69,14 @@ const SOURCE_CUE_PACKET_MAX_CHARS = 1200;
 const SOURCE_CUE_LOCAL_WINDOW_LINES = 3;
 const SOURCE_CUE_COOKING_RE = /(양념|소스|간|고명|밥물|무침|볶|굽|끓|삶|비비|올리|졸이)/u;
 const SOURCE_CUE_NOISE_RE = /(구독|좋아요|댓글\s*이벤트|이벤트|공지|알림|협찬|광고|할인|쿠폰|공구|공동구매|구매처|판매처|쇼핑|배송|택배|링크|https?:\/\/|www\.|인스타|instagram|email|메일|문의|BGM|music|음악|노래|camera|equipment|촬영장비)/i;
+const RECIPE_LEDGER_EVIDENCE_ITEM_LIMIT = 12;
+const RECIPE_LEDGER_PROMPT_SOURCE_LIMIT = 4;
+const RECIPE_LEDGER_PROMPT_SELECTOR_LIMIT = 1;
+const RECIPE_LEDGER_PROMPT_TEXT_MAX_CHARS = 120;
+const RECIPE_LEDGER_PROMPT_RECIPE_BUDGET_CHARS = 520;
+const RECIPE_LEDGER_PROMPT_TOTAL_BUDGET_CHARS = 2800;
+const RECIPE_LEDGER_SOURCE_TEXT_MAX_CHARS = 220;
+const RECIPE_LEDGER_AMOUNT_RE = /(?:\d+(?:\.\d+)?\s*)?(?:큰술|작은술|숟가락|스푼|컵|봉|팩|줌|개|장|줄|대|마리|알|g|kg|ml|l|L|T|t|그램|킬로|리터)/u;
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -1342,6 +1351,345 @@ export function buildSourceCuePacketsFromSourceText(sourceText, candidatePlan, s
   };
 }
 
+function clippedLedgerText(value, maxChars = RECIPE_LEDGER_SOURCE_TEXT_MAX_CHARS) {
+  const text = compact(value);
+  return text.length > maxChars ? text.slice(0, maxChars).trimEnd() : text;
+}
+
+function sourceKindFromName(sourceName) {
+  const source = String(sourceName ?? "").trim();
+  if (source === "description" || source === "description_timeline") return "description";
+  if (source === "recipe_candidate_hints") return "recipe_candidate_hints";
+  if (source === "author_comment") return "author_comment";
+  if (source.startsWith("transcript")) return "caption";
+  if (source === "segment_text_evidence") return "segment_text_evidence";
+  if (source === "selected_frame") return "selected_frame";
+  return source || "source";
+}
+
+function recipeLedgerKindForText(text, fallback = "identity") {
+  const value = compact(text);
+  if (RECIPE_LEDGER_AMOUNT_RE.test(value)) return "ingredient_or_amount";
+  if (SOURCE_CUE_COOKING_RE.test(value)) return "cooking_action";
+  if (TIMESTAMP_RE.test(value)) return "timeline";
+  return fallback;
+}
+
+function isRecipeLedgerNoise(sourceName, line) {
+  const text = compact(line);
+  if (!text) return true;
+  return isSourceCueNoise(sourceName, text);
+}
+
+export function isLedgerTextAllowedSubstring(text, allowedTexts) {
+  const needle = compact(text);
+  if (!needle) return false;
+  return allowedTexts.some((allowed) => compact(allowed).includes(needle));
+}
+
+function recipeLedgerSourceLineEntries(sourceText) {
+  return sourceBlocks(sourceText).flatMap((block, blockIndex) => block.lines.map((line, lineIndex) => ({
+    source: block.name,
+    sourceKind: sourceKindFromName(block.name),
+    blockIndex,
+    lineIndex,
+    text: line,
+  })));
+}
+
+function timestampFromLedgerLine(line) {
+  const match = String(line ?? "").match(TIMESTAMP_RE);
+  return match ? parseTimeSec(match[1]) : null;
+}
+
+function lineTimeWithinSegment(line, segment) {
+  const timestampSec = timestampFromLedgerLine(line);
+  if (!Number.isFinite(timestampSec)) return false;
+  return timestampSec >= segment.startSec && timestampSec <= segment.endSec;
+}
+
+function buildLedgerLineage(item) {
+  if (item.sourceKind === "selected_frame") {
+    return `${item.frameFile ?? "selected_frame"}@${item.timestampSec ?? "?"}s`;
+  }
+  if (item.sourceKind === "segment_text_evidence") {
+    return `${item.sourceKind}#${item.segmentId}:${item.lineIndex ?? "?"}`;
+  }
+  if (Number.isInteger(item.blockIndex) && Number.isInteger(item.lineIndex)) {
+    return `${item.sourceKind}#${item.blockIndex}:${item.lineIndex}`;
+  }
+  if (Number.isInteger(item.evidenceIndex)) {
+    return `${item.sourceKind}#${item.evidenceIndex}`;
+  }
+  return `${item.sourceKind}${item.segmentId ? `#${item.segmentId}` : ""}`;
+}
+
+function pushRecipeLedgerEvidenceItem(recipe, state, item, allowedText) {
+  const text = clippedLedgerText(item.text);
+  if (!text || isRecipeLedgerNoise(item.sourceKind, text)) {
+    state.droppedCueCount += 1;
+    return;
+  }
+  if (!isLedgerTextAllowedSubstring(text, [allowedText])) {
+    state.droppedCueCount += 1;
+    recipe.warnings.push(`dropped non-substring cue from ${item.sourceKind}`);
+    return;
+  }
+  const normalizedItem = {
+    ...item,
+    text,
+    lineage: buildLedgerLineage(item),
+  };
+  const key = [
+    normalizedItem.basis,
+    normalizedItem.sourceKind,
+    normalizedItem.segmentId ?? "",
+    normalizedItem.frameFile ?? "",
+    normalizedItem.text,
+  ].join("\u0000");
+  if (recipe._seenEvidence.has(key)) {
+    state.droppedCueCount += 1;
+    return;
+  }
+  if (recipe.evidenceItems.length >= RECIPE_LEDGER_EVIDENCE_ITEM_LIMIT) {
+    state.droppedCueCount += 1;
+    return;
+  }
+  recipe._seenEvidence.add(key);
+  recipe.evidenceItems.push(normalizedItem);
+}
+
+function promptCueText(value) {
+  return clippedLedgerText(value, RECIPE_LEDGER_PROMPT_TEXT_MAX_CHARS);
+}
+
+function promptCueLineLength(cue) {
+  return `[${cue.kind}/${cue.basis}/${cue.lineage}] ${cue.text}`.length + 4;
+}
+
+function addPromptCue(recipe, cue, state, perRecipeState) {
+  const text = promptCueText(cue.text);
+  if (!text) return false;
+  const normalizedCue = { ...cue, text };
+  const lineLength = promptCueLineLength(normalizedCue);
+  if (perRecipeState.charCount + lineLength > RECIPE_LEDGER_PROMPT_RECIPE_BUDGET_CHARS) {
+    state.droppedCueCount += 1;
+    state.truncatedByBudget = true;
+    return false;
+  }
+  if (state.promptTextChars + lineLength > RECIPE_LEDGER_PROMPT_TOTAL_BUDGET_CHARS) {
+    state.droppedCueCount += 1;
+    state.truncatedByBudget = true;
+    return false;
+  }
+  recipe.promptCues.push(normalizedCue);
+  perRecipeState.charCount += lineLength;
+  state.promptTextChars += lineLength;
+  return true;
+}
+
+function buildPromptCuesForRecipe(recipe, state) {
+  const perRecipeState = { charCount: 0 };
+  const sourceItems = recipe.evidenceItems
+    .filter((item) => item.basis === "source" && ["ingredient_or_amount", "cooking_action"].includes(item.kind));
+  const selectorItems = recipe.evidenceItems
+    .filter((item) => item.basis === "selector_inference" && item.kind === "visual_context");
+
+  let sourceCount = 0;
+  for (const item of sourceItems) {
+    if (sourceCount >= RECIPE_LEDGER_PROMPT_SOURCE_LIMIT) break;
+    if (addPromptCue(recipe, {
+      kind: item.kind,
+      basis: item.basis,
+      sourceKind: item.sourceKind,
+      text: item.text,
+      lineage: item.lineage,
+    }, state, perRecipeState)) {
+      sourceCount += 1;
+    }
+  }
+
+  if (sourceCount < RECIPE_LEDGER_PROMPT_SOURCE_LIMIT) {
+    let selectorCount = 0;
+    for (const item of selectorItems) {
+      if (selectorCount >= RECIPE_LEDGER_PROMPT_SELECTOR_LIMIT) break;
+      if (addPromptCue(recipe, {
+        kind: item.kind,
+        basis: item.basis,
+        sourceKind: item.sourceKind,
+        text: item.text,
+        lineage: item.lineage,
+      }, state, perRecipeState)) {
+        selectorCount += 1;
+      }
+    }
+  }
+}
+
+function cleanLedgerRecipe(recipe) {
+  const cleaned = { ...recipe };
+  delete cleaned._seenEvidence;
+  return cleaned;
+}
+
+export function summarizeRecipeEvidenceLedger(ledger) {
+  const evidenceItems = (ledger.recipes ?? []).flatMap((recipe) => recipe.evidenceItems ?? []);
+  const promptCues = (ledger.recipes ?? []).flatMap((recipe) => recipe.promptCues ?? []);
+  const cueCountByBasis = evidenceItems.reduce((acc, item) => {
+    const basis = item.basis ?? "unknown";
+    acc[basis] = (acc[basis] ?? 0) + 1;
+    return acc;
+  }, {});
+  return {
+    recipeEvidenceLedgerRecipeCount: ledger.recipes?.length ?? 0,
+    ledgerTextChars: evidenceItems.reduce((sum, item) => sum + String(item.text ?? "").length, 0),
+    promptLedgerTextChars: promptCues.reduce((sum, item) => sum + String(item.text ?? "").length, 0),
+    cueCountByBasis,
+    droppedCueCount: ledger.stats?.droppedCueCount ?? 0,
+    truncatedByBudget: Boolean(ledger.stats?.truncatedByBudget),
+  };
+}
+
+export function buildRecipeEvidenceLedger({ sourceText = "", candidatePlan, segmentPlan, segmentKeyframes, generatedFrom = {} }) {
+  const coverageByCandidate = new Map((segmentPlan?.coverage ?? []).map((entry) => [entry.candidateId, entry]));
+  const segmentsById = new Map((segmentPlan?.segments ?? []).map((segment) => [segment.segmentId, segment]));
+  const keyframeSegmentsById = new Map((segmentKeyframes?.segments ?? []).map((segment) => [segment.segmentId, segment]));
+  const captionLines = recipeLedgerSourceLineEntries(sourceText)
+    .filter((entry) => entry.sourceKind === "caption");
+  const state = {
+    droppedCueCount: 0,
+    truncatedByBudget: false,
+    promptTextChars: 0,
+  };
+  const recipes = [];
+
+  for (const candidate of Array.isArray(candidatePlan?.recipeCandidates) ? candidatePlan.recipeCandidates : []) {
+    const coverage = coverageByCandidate.get(candidate.candidateId);
+    const outputRole = coverage?.outputRole ?? candidate.outputRole ?? outputRoleForCandidate(candidate);
+    if (outputRole !== "recipe" || coverage?.status !== "covered") continue;
+
+    const segmentIds = Array.isArray(coverage.segmentIds) ? coverage.segmentIds : [];
+    const segments = segmentIds.map((segmentId) => segmentsById.get(segmentId)).filter(Boolean);
+    const keyframeSegments = segmentIds.map((segmentId) => keyframeSegmentsById.get(segmentId)).filter(Boolean);
+    const timeValues = segments.flatMap((segment) => [segment.startSec, segment.endSec]).filter(Number.isFinite);
+    const recipe = {
+      candidateId: candidate.candidateId,
+      titleHint: candidate.titleHint,
+      outputRole,
+      segmentIds,
+      timeRangeSec: timeValues.length
+        ? { start: Math.min(...timeValues), end: Math.max(...timeValues) }
+        : null,
+      evidenceItems: [],
+      promptCues: [],
+      warnings: [],
+      _seenEvidence: new Set(),
+    };
+
+    for (const [index, evidence] of (Array.isArray(candidate.sourceEvidence) ? candidate.sourceEvidence : []).entries()) {
+      const source = String(evidence?.source ?? "source").trim() || "source";
+      const text = evidence?.text ?? "";
+      pushRecipeLedgerEvidenceItem(recipe, state, {
+        kind: recipeLedgerKindForText(text),
+        basis: "source",
+        sourceKind: sourceKindFromName(source),
+        source,
+        text,
+        evidenceIndex: index,
+        timeHintSec: Number.isFinite(evidence?.timeHintSec) ? evidence.timeHintSec : null,
+        segmentId: segmentIds[0] ?? null,
+      }, text);
+    }
+
+    for (const segment of segments) {
+      for (const [index, textEvidence] of (Array.isArray(segment.textEvidence) ? segment.textEvidence : []).entries()) {
+        pushRecipeLedgerEvidenceItem(recipe, state, {
+          kind: recipeLedgerKindForText(textEvidence),
+          basis: "source",
+          sourceKind: "segment_text_evidence",
+          source: "segment_text_evidence",
+          text: textEvidence,
+          lineIndex: index,
+          segmentId: segment.segmentId,
+        }, textEvidence);
+      }
+
+      for (const entry of captionLines) {
+        if (!lineTimeWithinSegment(entry.text, segment)) continue;
+        const kind = recipeLedgerKindForText(entry.text);
+        if (kind === "identity") {
+          state.droppedCueCount += 1;
+          continue;
+        }
+        pushRecipeLedgerEvidenceItem(recipe, state, {
+          kind,
+          basis: "source",
+          sourceKind: entry.sourceKind,
+          source: entry.source,
+          text: entry.text,
+          blockIndex: entry.blockIndex,
+          lineIndex: entry.lineIndex,
+          timestampSec: timestampFromLedgerLine(entry.text),
+          segmentId: segment.segmentId,
+        }, entry.text);
+      }
+    }
+
+    for (const segment of keyframeSegments) {
+      for (const selectedFrame of Array.isArray(segment.selectedFrames) ? segment.selectedFrames : []) {
+        if (!selectedFrame?.selectionReason) continue;
+        pushRecipeLedgerEvidenceItem(recipe, state, {
+          kind: "visual_context",
+          basis: "selector_inference",
+          sourceKind: "selected_frame",
+          source: "selected_frame",
+          text: selectedFrame.selectionReason,
+          frameFile: selectedFrame.file,
+          timestampSec: Number.isFinite(selectedFrame.timestamp_sec) ? selectedFrame.timestamp_sec : frameTimestampSec(selectedFrame),
+          segmentId: segment.segmentId,
+        }, selectedFrame.selectionReason);
+      }
+    }
+
+    buildPromptCuesForRecipe(recipe, state);
+    recipes.push(cleanLedgerRecipe(recipe));
+  }
+
+  const ledger = {
+    version: RECIPE_EVIDENCE_LEDGER_VERSION,
+    generatedFrom,
+    recipes,
+    warnings: [],
+    stats: {
+      droppedCueCount: state.droppedCueCount,
+      truncatedByBudget: state.truncatedByBudget,
+      promptTextChars: state.promptTextChars,
+    },
+  };
+  ledger.stats = {
+    ...ledger.stats,
+    ...summarizeRecipeEvidenceLedger(ledger),
+  };
+  return ledger;
+}
+
+function formatRecipeEvidenceLedgerPrompt(ledger) {
+  const blocks = (ledger?.recipes ?? [])
+    .filter((recipe) => Array.isArray(recipe.promptCues) && recipe.promptCues.length > 0)
+    .map((recipe) => [
+      `- candidateId: ${recipe.candidateId} / titleHint: ${recipe.titleHint} / segments: ${recipe.segmentIds.length ? recipe.segmentIds.join(", ") : "(없음)"}`,
+      "  promptCues:",
+      ...recipe.promptCues.map((cue) => `  - [${cue.kind}/${cue.basis}/${cue.lineage}] ${cue.text}`),
+    ].join("\n"));
+  if (!blocks.length) return null;
+  return [
+    "Recipe evidence ledger:",
+    "이 ledger는 정답이 아니라 체크리스트다. basis=source cue를 basis=selector_inference보다 우선하고, ledger에 없는 내용을 요리 상식으로 추가하지 않는다.",
+    "source text가 애매하거나 자동자막이 깨졌으면 확정 재료로 단정하지 않는다. visual-only 수량 추정은 계속 amountBasis: \"visual-estimate\"를 사용한다.",
+    ...blocks,
+  ].join("\n");
+}
+
 function formatSourceCuePacket(packet) {
   const lineGroup = (label, values) => {
     if (!values?.length) return [`${label}: (없음)`];
@@ -1449,7 +1797,15 @@ function dedupeFrames(frames) {
   return selected;
 }
 
-function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentPlan, segmentKeyframes, sourceCuePacketPlan = null }) {
+function buildSegmentedFinalPrompt({
+  prompt,
+  sourceText,
+  candidatePlan,
+  segmentPlan,
+  segmentKeyframes,
+  sourceCuePacketPlan = null,
+  recipeEvidenceLedger = null,
+}) {
   const sourceCuePacketByCandidate = new Map(
     Array.isArray(sourceCuePacketPlan?.packets)
       ? sourceCuePacketPlan.packets.map((packet) => [packet.candidateId, packet])
@@ -1502,6 +1858,7 @@ function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentP
     const reason = entry.dropReason ? `, dropReason=${entry.dropReason}` : "";
     return `- ${entry.candidateId}: titleHint=${entry.titleHint}, status=${entry.status}, outputRole=${entry.outputRole ?? "recipe"}, segments=[${segments}]${reason}`;
   });
+  const recipeEvidenceLedgerPrompt = formatRecipeEvidenceLedgerPrompt(recipeEvidenceLedger);
 
   return [
     prompt,
@@ -1525,6 +1882,10 @@ function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentP
       "11. sourceCuePacket은 후보별 원문 책갈피다. 정답이 아니라, 설명란/댓글/자막에서 근거를 다시 찾기 위한 작은 단서로만 쓴다.",
       "12. sourceCuePacket의 localSourceSnippets와 cookingCueSnippets에 명시 재료, 수량, 조리 동작이 있으면 먼저 대조하되 이벤트/구매/BGM성 문구는 무시한다.",
     ] : []),
+    ...(recipeEvidenceLedgerPrompt ? [
+      "13. Recipe evidence ledger는 후보별 작은 근거 장부다. 정답지가 아니라 재확인 체크리스트로만 쓰며, basis=source를 selector_inference보다 우선한다.",
+      "14. Recipe evidence ledger에 없는 재료나 단계를 요리 상식만으로 새로 추가하지 않는다.",
+    ] : []),
     "",
     "Output recipe candidates:",
     ...(outputCandidateLines.length ? outputCandidateLines : ["- (없음)"]),
@@ -1543,6 +1904,10 @@ function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentP
     "",
     "segment별 선택 프레임:",
     segmentBlocks,
+    ...(recipeEvidenceLedgerPrompt ? [
+      "",
+      recipeEvidenceLedgerPrompt,
+    ] : []),
     "",
     "텍스트 소스 원문 재확인:",
     sourceText || "(텍스트 소스 없음)",
@@ -1590,6 +1955,8 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
   frameOptions,
   segmentOptions,
   sourceCuePackets,
+  recipeEvidenceLedger,
+  recipeEvidenceLedgerPrompt,
 }) {
   const keyPayload = {
     provider: PROVIDER,
@@ -1612,6 +1979,10 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
     finalPromptVersion: FINAL_PROMPT_VERSION,
   };
   if (sourceCuePackets) keyPayload.sourceCuePacketVersion = SOURCE_CUE_PACKET_VERSION;
+  if (recipeEvidenceLedger) {
+    keyPayload.recipeEvidenceLedgerVersion = RECIPE_EVIDENCE_LEDGER_VERSION;
+    keyPayload.recipeEvidenceLedgerPromptEnabled = Boolean(recipeEvidenceLedgerPrompt);
+  }
   return hashKey(keyPayload);
 }
 
@@ -1729,8 +2100,12 @@ async function runSegmentedKeyframesFlow({
   options,
   timeoutMs,
   sourceCuePackets = false,
+  recipeEvidenceLedger = false,
+  recipeEvidenceLedgerPrompt = false,
 }) {
   let stage = "candidate-split";
+  const recipeEvidenceLedgerEnabled = Boolean(recipeEvidenceLedger || recipeEvidenceLedgerPrompt);
+  const recipeEvidenceLedgerPromptEnabled = recipeEvidenceLedgerEnabled && Boolean(recipeEvidenceLedgerPrompt);
   const candidatePlan = buildCandidateHintsFromSourceText(cacheText);
   const candidatePlanHash = hashText(canonicalJson(candidatePlan.recipeCandidates));
   const resultKey = buildCodexVisionSegmentedKeyframesCacheKey({
@@ -1744,6 +2119,8 @@ async function runSegmentedKeyframesFlow({
     frameOptions,
     segmentOptions,
     sourceCuePackets,
+    recipeEvidenceLedger: recipeEvidenceLedgerEnabled,
+    recipeEvidenceLedgerPrompt: recipeEvidenceLedgerPromptEnabled,
   });
   const resultDir = path.join(cacheDir, resultKey);
   const finalJsonPath = path.join(resultDir, "final.json");
@@ -1751,6 +2128,13 @@ async function runSegmentedKeyframesFlow({
     ? {
       sourceCuePacketsEnabled: true,
       sourceCuePacketVersion: SOURCE_CUE_PACKET_VERSION,
+    }
+    : {};
+  const recipeEvidenceLedgerBaseMeta = recipeEvidenceLedgerEnabled
+    ? {
+      recipeEvidenceLedgerEnabled: true,
+      recipeEvidenceLedgerPromptEnabled,
+      recipeEvidenceLedgerVersion: RECIPE_EVIDENCE_LEDGER_VERSION,
     }
     : {};
 
@@ -1770,6 +2154,7 @@ async function runSegmentedKeyframesFlow({
         timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
         bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
         ...sourceCueMeta,
+        ...recipeEvidenceLedgerBaseMeta,
         candidatePlanHash,
         candidateCount: candidatePlan.recipeCandidates.length,
         frameCacheHit: frameResult.frameCacheHit,
@@ -1790,6 +2175,8 @@ async function runSegmentedKeyframesFlow({
   let segmentPlan = null;
   let segmentKeyframes = null;
   let sourceCuePacketPlan = null;
+  let recipeEvidenceLedgerPlan = null;
+  let recipeEvidenceLedgerStats = {};
   try {
     stage = "segment-plan";
     const maxFrameSec = maxFrameTimestampSec(frames);
@@ -1983,6 +2370,33 @@ async function runSegmentedKeyframesFlow({
       "utf8",
     );
 
+    if (recipeEvidenceLedgerEnabled) {
+      recipeEvidenceLedgerPlan = buildRecipeEvidenceLedger({
+        sourceText: cacheText,
+        candidatePlan,
+        segmentPlan,
+        segmentKeyframes,
+        generatedFrom: {
+          candidatePlanHash,
+          segmentPlanHash: hashText(JSON.stringify(segmentPlan)),
+          segmentKeyframesHash: hashText(JSON.stringify(segmentKeyframes)),
+          selectedFrameHash,
+        },
+      });
+      const ledgerSummary = summarizeRecipeEvidenceLedger(recipeEvidenceLedgerPlan);
+      recipeEvidenceLedgerStats = {
+        ...ledgerSummary,
+        promptLedgerTextChars: recipeEvidenceLedgerPromptEnabled
+          ? ledgerSummary.promptLedgerTextChars
+          : 0,
+      };
+      await writeFile(
+        path.join(resultDir, "recipe-evidence-ledger.json"),
+        JSON.stringify(recipeEvidenceLedgerPlan, null, 2) + "\n",
+        "utf8",
+      );
+    }
+
     stage = "final";
     const finalPrompt = buildSegmentedFinalPrompt({
       prompt,
@@ -1991,6 +2405,7 @@ async function runSegmentedKeyframesFlow({
       segmentPlan,
       segmentKeyframes,
       sourceCuePacketPlan,
+      recipeEvidenceLedger: recipeEvidenceLedgerPromptEnabled ? recipeEvidenceLedgerPlan : null,
     });
     const finalPromptPath = path.join(resultDir, "final.prompt.md");
     const finalRawPath = path.join(resultDir, "final.raw.md");
@@ -2024,6 +2439,7 @@ async function runSegmentedKeyframesFlow({
       timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
       bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
       ...sourceCueMeta,
+      ...recipeEvidenceLedgerBaseMeta,
       segmentPromptVersion: SEGMENT_PROMPT_VERSION,
       segmentSelectorPromptVersion: SEGMENT_SELECTOR_PROMPT_VERSION,
       finalPromptVersion: FINAL_PROMPT_VERSION,
@@ -2043,6 +2459,10 @@ async function runSegmentedKeyframesFlow({
       segmentPlanHash: hashText(JSON.stringify(segmentPlan)),
       segmentKeyframesHash: hashText(JSON.stringify(segmentKeyframes)),
       ...(sourceCuePacketPlan ? { sourceCuePacketHash: hashText(JSON.stringify(sourceCuePacketPlan)) } : {}),
+      ...(recipeEvidenceLedgerPlan ? {
+        recipeEvidenceLedgerHash: hashText(JSON.stringify(recipeEvidenceLedgerPlan)),
+        ...recipeEvidenceLedgerStats,
+      } : {}),
       warnings: [
         ...(candidatePlan.warnings ?? []),
         ...(segmentPlan.warnings ?? []),
@@ -2087,9 +2507,14 @@ async function runSegmentedKeyframesFlow({
       timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
       bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
       ...sourceCueMeta,
+      ...recipeEvidenceLedgerBaseMeta,
       candidatePlan,
       candidatePlanHash,
       ...(sourceCuePacketPlan ? { sourceCuePacketHash: hashText(JSON.stringify(sourceCuePacketPlan)) } : {}),
+      ...(recipeEvidenceLedgerPlan ? {
+        recipeEvidenceLedgerHash: hashText(JSON.stringify(recipeEvidenceLedgerPlan)),
+        ...recipeEvidenceLedgerStats,
+      } : {}),
       frameCacheDir: frameResult.frameDir,
       frameCount: frames.length,
       segmentPlan,
@@ -2126,6 +2551,8 @@ export function createCodexVisionKeyframesClient(options = {}) {
   };
   const timeoutMs = positiveInt(options.timeoutMs, DEFAULT_TIMEOUT_MS);
   const sourceCuePackets = Boolean(options.sourceCuePackets);
+  const recipeEvidenceLedgerPrompt = Boolean(options.recipeEvidenceLedgerPrompt);
+  const recipeEvidenceLedger = Boolean(options.recipeEvidenceLedger || recipeEvidenceLedgerPrompt);
   const codexExec = options.codexExec ?? runCodexExec;
   const extractFrames = options.extractFrames ?? defaultExtractFrames;
 
@@ -2163,6 +2590,8 @@ export function createCodexVisionKeyframesClient(options = {}) {
           options,
           timeoutMs,
           sourceCuePackets,
+          recipeEvidenceLedger,
+          recipeEvidenceLedgerPrompt,
         });
       }
 
