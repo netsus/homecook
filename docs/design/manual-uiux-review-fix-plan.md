@@ -3862,7 +3862,7 @@ Implementation note:
 
 ### 86. 튜토리얼 안내 알림이 알림모달 전체 탭과 완료 후 시스템 기록에 일관되게 남지 않는 문제
 
-- Status: implemented
+- Status: implemented; production Chrome PASS
 - Severity: High
 - Area: UX / Notifications / Tutorial
 - Source: user manual review
@@ -3904,7 +3904,7 @@ Implementation note:
   - 2026-06-28 `https://homecook-flame.vercel.app/mypage` 및 HOME, 조해피 계정에서 PASS.
   - 신규/초기 상태의 current tutorial guide `마음에 드는 레시피 저장하기`가 알림 기록 `전체` 탭과 `시스템` 탭 모두에 보였다.
   - 첫 레시피 저장 후에는 current guide가 `플래너에 끼니 등록하기`로 바뀌었고, `업적 달성! 첫 레시피 저장 배지를 획득했어요. +15 XP` 기록도 `전체`/`시스템` 탭 모두에 남았다.
-  - Follow-up pending: 배포 후 완료된 튜토리얼 안내 자체가 다음 단계 진행 중/전체 완료 상태에서도 알림모달에 유지되는지 Chrome에서 재확인한다.
+  - Production follow-up PASS: 2026-06-28 `https://homecook-flame.vercel.app/mypage`, 조해피 계정에서 두 번째 튜토리얼 진행 중에도 완료된 `마음에 드는 레시피 저장하기` 안내와 현재 `플래너에 끼니 등록하기` 안내가 `전체`/`시스템` 탭에 함께 남고, `성장` 탭에는 섞이지 않는 것을 확인했다.
   - Local Chrome follow-up: 2026-06-28 `http://localhost:3001/mypage`, 조해피 fixture 상태에서 완료된 `마음에 드는 레시피 저장하기`, `플래너에 끼니 등록하기`, `첫 장보기 목록 만들기` 안내가 `전체`/`시스템` 탭에 남고 `성장` 탭에는 실제 XP 알림만 남는 것을 확인했다.
 
 ### 87. 알림모달의 알림 글자 크기가 작아 읽기 어려운 문제
