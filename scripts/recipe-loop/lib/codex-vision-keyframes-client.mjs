@@ -21,12 +21,12 @@ const PROVIDER = "codex-vision-keyframes";
 const CACHE_DIR = path.join(PROJECT_ROOT, "notebooks/recipe_loop_data/cache/codex-vision-keyframes");
 const CLIENT_VERSION = "codex-vision-keyframes-client-v1";
 const SELECTOR_PROMPT_VERSION = "keyframe-selector-v1";
-const CANDIDATE_SPLITTER_VERSION = "candidate-splitter-v1";
+const CANDIDATE_SPLITTER_VERSION = "candidate-splitter-v2";
 const SEGMENT_PROMPT_VERSION = "keyframe-segment-plan-v3";
 const SEGMENT_SELECTOR_PROMPT_VERSION = "keyframe-segment-selector-v2";
-const FINAL_PROMPT_VERSION = "keyframe-final-v1";
+const FINAL_PROMPT_VERSION = "keyframe-final-v2";
 const TIMELINE_PARENT_RANGE_VERSION = "timeline-parent-range-v1";
-const BUNDLE_CHILD_SEGMENT_VERSION = "bundle-child-segment-v1";
+const BUNDLE_CHILD_SEGMENT_VERSION = "bundle-child-segment-v2";
 const SOURCE_CUE_PACKET_VERSION = "source-cue-packet-v1";
 const DEFAULT_FINAL_MODEL = "gpt-5.4";
 const DEFAULT_SELECTOR_MODEL = "gpt-5.4-mini";
@@ -234,6 +234,12 @@ function firstFiniteTimeHint(evidence) {
   return null;
 }
 
+function outputRoleForCandidate(candidate) {
+  if (candidate?.bundleRole === "parent") return "bundle_parent";
+  if (candidate?.candidateStatus === "weak_hint") return "recipe";
+  return "recipe";
+}
+
 function addCandidate(candidates, byKey, titleHint, evidence, {
   splitFromBundle = false,
   bundleText = null,
@@ -269,6 +275,7 @@ function addCandidate(candidates, byKey, titleHint, evidence, {
     bundleRole,
     bundleParentId: null,
     bundleMemberIds: [],
+    outputRole: bundleRole === "parent" ? "bundle_parent" : "recipe",
     notes: null,
   };
   byKey.set(key, candidate);
@@ -279,9 +286,25 @@ function candidateMatchesBundlePart(candidateTitle, bundlePart) {
   const candidateKey = keyOf(candidateTitle);
   const partKey = keyOf(bundlePart);
   if (!candidateKey || !partKey || partKey.length < 2) return false;
-  if (candidateKey.includes(partKey) || partKey.includes(candidateKey)) return true;
-  return titleMatchTokens(candidateTitle).some((token) => token.length >= 2 && partKey.includes(token))
-    || titleMatchTokens(bundlePart).some((token) => token.length >= 2 && candidateKey.includes(token));
+  if (candidateKey === partKey) return true;
+  if (candidateKey.length >= 3 && partKey.includes(candidateKey)) return true;
+  if (partKey.length >= 3 && candidateKey.includes(partKey)) return true;
+
+  const partHasDishWord = titleHasDishWord(bundlePart);
+  const candidateHasDishWord = titleHasDishWord(candidateTitle);
+  if (!partHasDishWord && candidateHasDishWord && candidateKey.startsWith(partKey)) return true;
+
+  const candidateTokens = titleMatchTokens(candidateTitle);
+  const partTokens = titleMatchTokens(bundlePart);
+  return candidateTokens.some((token) => (
+    token.length >= 3
+    && titleHasDishWord(token)
+    && partKey.includes(token)
+  )) || partTokens.some((token) => (
+    token.length >= 3
+    && titleHasDishWord(token)
+    && candidateKey.includes(token)
+  ));
 }
 
 function linkBundleCandidateGraph(candidates) {
@@ -311,6 +334,10 @@ function linkBundleCandidateGraph(candidates) {
       member.bundleParentId = member.bundleParentId ?? parent.candidateId;
       member.bundleSourceText = member.bundleSourceText ?? bundleSourceText;
     }
+  }
+
+  for (const candidate of candidates) {
+    candidate.outputRole = outputRoleForCandidate(candidate);
   }
 }
 
@@ -605,6 +632,10 @@ function titleMatchTokens(value) {
   return [...tokens].filter((token) => token.length >= 2);
 }
 
+function titleHasDishWord(value) {
+  return DISH_WORD_RE.test(stripCandidateText(value));
+}
+
 function titleMatchesTimelineRange(candidateTitle, rangeTitle) {
   const candidateKey = keyOf(candidateTitle);
   const rangeKey = keyOf(rangeTitle);
@@ -831,6 +862,7 @@ function applyBundleChildSegments(segmentPlan, candidatePlan, { totalFrameLimit 
         titleHint: member.titleHint,
         candidateStatus: member.candidateStatus,
         evidenceStrength: member.evidenceStrength,
+        outputRole: member.outputRole ?? outputRoleForCandidate(member),
         sourceEvidence: member.sourceEvidence ?? [],
         textEvidence,
         frameBudget,
@@ -866,6 +898,7 @@ function applyBundleChildSegments(segmentPlan, candidatePlan, { totalFrameLimit 
         candidateId: candidate.candidateId,
         titleHint: candidate.titleHint,
         status: "supporting",
+        outputRole: candidate.outputRole ?? outputRoleForCandidate(candidate),
         segmentIds: childSegmentIds,
         dropReason: null,
       };
@@ -875,15 +908,18 @@ function applyBundleChildSegments(segmentPlan, candidatePlan, { totalFrameLimit 
         candidateId: candidate.candidateId,
         titleHint: candidate.titleHint,
         status: "covered",
+        outputRole: candidate.outputRole ?? outputRoleForCandidate(candidate),
         segmentIds,
         dropReason: null,
       };
     }
     if (segmentIds.length > 0) {
+      const outputRole = candidate.outputRole ?? outputRoleForCandidate(candidate);
       return {
         candidateId: candidate.candidateId,
         titleHint: candidate.titleHint,
-        status: original?.status === "supporting" ? "supporting" : "covered",
+        status: outputRole === "bundle_parent" || original?.status === "supporting" ? "supporting" : "covered",
+        outputRole,
         segmentIds,
         dropReason: null,
       };
@@ -892,6 +928,7 @@ function applyBundleChildSegments(segmentPlan, candidatePlan, { totalFrameLimit 
       candidateId: candidate.candidateId,
       titleHint: candidate.titleHint,
       status: original?.status ?? "uncovered",
+      outputRole: candidate.outputRole ?? outputRoleForCandidate(candidate),
       segmentIds: original?.segmentIds ?? [],
       dropReason: original?.dropReason ?? null,
     };
@@ -1011,9 +1048,13 @@ function normalizeCoverage(rawCoverage, segments, candidatePlan) {
       ? raw.segmentIds.map((id) => String(id ?? "").trim()).filter(Boolean)
       : (segmentIdsByCandidate.get(candidate.candidateId) ?? []);
     const rawStatus = String(raw?.status ?? "").trim();
-    const status = ["covered", "supporting", "dropped", "uncovered"].includes(rawStatus)
+    const rawNormalizedStatus = ["covered", "supporting", "dropped", "uncovered"].includes(rawStatus)
       ? rawStatus
       : (segmentIds.length > 0 ? "covered" : "uncovered");
+    const outputRole = candidate.outputRole ?? outputRoleForCandidate(candidate);
+    const status = outputRole === "bundle_parent" && rawNormalizedStatus === "covered"
+      ? "supporting"
+      : rawNormalizedStatus;
     if (segmentIds.length === 0 && status !== "dropped" && status !== "supporting") {
       warnings.push(`${candidate.candidateId}(${candidate.titleHint}) coverage가 segment 없이 남았습니다.`);
     }
@@ -1021,6 +1062,7 @@ function normalizeCoverage(rawCoverage, segments, candidatePlan) {
       candidateId: candidate.candidateId,
       titleHint: candidate.titleHint,
       status,
+      outputRole,
       segmentIds,
       dropReason: raw?.dropReason ? String(raw.dropReason).trim() : null,
     });
@@ -1064,6 +1106,7 @@ function normalizeSegmentPlan(rawPlan, { maxCount, maxFrameSec, totalFrameLimit,
       endSec,
       candidateStatus: candidate.candidateStatus,
       evidenceStrength: candidate.evidenceStrength,
+      outputRole: candidate.outputRole ?? outputRoleForCandidate(candidate),
       sourceEvidence: candidate.sourceEvidence ?? [],
       textEvidence: normalizeTextEvidence(raw.textEvidence ?? raw.timeEvidence),
       frameBudget,
@@ -1412,6 +1455,29 @@ function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentP
       ? sourceCuePacketPlan.packets.map((packet) => [packet.candidateId, packet])
       : [],
   );
+  const coverageByCandidate = new Map((segmentPlan.coverage ?? []).map((entry) => [entry.candidateId, entry]));
+  const candidateRole = (candidate) => coverageByCandidate.get(candidate.candidateId)?.outputRole
+    ?? candidate.outputRole
+    ?? outputRoleForCandidate(candidate);
+  const candidateCoverageStatus = (candidate) => coverageByCandidate.get(candidate.candidateId)?.status ?? "uncovered";
+  const outputCandidateLines = candidatePlan.recipeCandidates
+    .filter((candidate) => candidateRole(candidate) === "recipe" && candidateCoverageStatus(candidate) === "covered")
+    .map((candidate) => {
+      const coverage = coverageByCandidate.get(candidate.candidateId);
+      const segments = coverage?.segmentIds?.length ? coverage.segmentIds.join(", ") : "(없음)";
+      return `- ${candidate.candidateId}: titleHint=${candidate.titleHint}, role=recipe, status=${coverage?.status ?? "uncovered"}, segments=[${segments}]`;
+    });
+  const supportOnlyCandidateLines = candidatePlan.recipeCandidates
+    .filter((candidate) => (
+      !["dropped", "uncovered"].includes(candidateCoverageStatus(candidate))
+      && (candidateRole(candidate) !== "recipe" || candidateCoverageStatus(candidate) !== "covered")
+    ))
+    .map((candidate) => {
+      const coverage = coverageByCandidate.get(candidate.candidateId);
+      const role = candidateRole(candidate);
+      const segments = coverage?.segmentIds?.length ? coverage.segmentIds.join(", ") : "(없음)";
+      return `- ${candidate.candidateId}: titleHint=${candidate.titleHint}, role=${role}, status=${coverage?.status ?? "uncovered"}, segments=[${segments}]`;
+    });
   const segmentBlocks = segmentKeyframes.segments.map((entry) => {
     const sourceCuePacket = sourceCuePacketByCandidate.get(entry.candidateId);
     return [
@@ -1420,6 +1486,7 @@ function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentP
       `titleHint: ${entry.titleHint}`,
       `candidateStatus: ${entry.candidateStatus}`,
       `evidenceStrength: ${entry.evidenceStrength}`,
+      `outputRole: ${entry.outputRole ?? "recipe"}`,
       `bundleParentId: ${entry.bundleParentId ?? "(없음)"}`,
       `bundleParentTitle: ${entry.bundleParentTitle ?? "(없음)"}`,
       `time: ${entry.startSec}-${entry.endSec}`,
@@ -1433,7 +1500,7 @@ function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentP
   const coverageLines = (segmentPlan.coverage ?? []).map((entry) => {
     const segments = entry.segmentIds.length ? entry.segmentIds.join(", ") : "(없음)";
     const reason = entry.dropReason ? `, dropReason=${entry.dropReason}` : "";
-    return `- ${entry.candidateId}: titleHint=${entry.titleHint}, status=${entry.status}, segments=[${segments}]${reason}`;
+    return `- ${entry.candidateId}: titleHint=${entry.titleHint}, status=${entry.status}, outputRole=${entry.outputRole ?? "recipe"}, segments=[${segments}]${reason}`;
   });
 
   return [
@@ -1453,10 +1520,17 @@ function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentP
     "7. 화면에서만 보이는 수량은 amountBasis를 visual-estimate로 둔다.",
     "8. '초록색 줄기채소', '노란색 긴 재료' 같은 추상 이름은 최후의 수단이다.",
     "9. 영상에 없는 재료나 단계를 요리 상식으로 추가하지 않는다.",
+    "10. Output recipe candidates는 recipes[] 출력 후보이고, Support-only candidates는 구간/별칭 참고용이다. Support-only candidate를 recipes[] title로 직접 출력하지 않는다.",
     ...(sourceCuePacketPlan ? [
-      "10. sourceCuePacket은 후보별 원문 책갈피다. 정답이 아니라, 설명란/댓글/자막에서 근거를 다시 찾기 위한 작은 단서로만 쓴다.",
-      "11. sourceCuePacket의 localSourceSnippets와 cookingCueSnippets에 명시 재료, 수량, 조리 동작이 있으면 먼저 대조하되 이벤트/구매/BGM성 문구는 무시한다.",
+      "11. sourceCuePacket은 후보별 원문 책갈피다. 정답이 아니라, 설명란/댓글/자막에서 근거를 다시 찾기 위한 작은 단서로만 쓴다.",
+      "12. sourceCuePacket의 localSourceSnippets와 cookingCueSnippets에 명시 재료, 수량, 조리 동작이 있으면 먼저 대조하되 이벤트/구매/BGM성 문구는 무시한다.",
     ] : []),
+    "",
+    "Output recipe candidates:",
+    ...(outputCandidateLines.length ? outputCandidateLines : ["- (없음)"]),
+    "",
+    "Support-only candidates:",
+    ...(supportOnlyCandidateLines.length ? supportOnlyCandidateLines : ["- (없음)"]),
     "",
     "candidate hints JSON:",
     JSON.stringify(candidatePlan, null, 2),
@@ -1844,6 +1918,7 @@ async function runSegmentedKeyframesFlow({
           bundleParentTitle: segment.bundleParentTitle ?? null,
           candidateStatus: segment.candidateStatus,
           evidenceStrength: segment.evidenceStrength,
+          outputRole: segment.outputRole ?? "recipe",
         };
       });
 
@@ -1902,6 +1977,7 @@ async function runSegmentedKeyframesFlow({
           titleHint: segment.titleHint,
           bundleParentId: segment.bundleParentId ?? null,
           bundleParentTitle: segment.bundleParentTitle ?? null,
+          outputRole: segment.outputRole ?? "recipe",
         })),
       }, null, 2) + "\n",
       "utf8",

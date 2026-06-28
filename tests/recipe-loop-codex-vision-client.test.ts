@@ -362,10 +362,48 @@ describe("recipe-loop codex-vision provider", () => {
     expect(parent).toMatchObject({
       bundleRole: "parent",
       bundleSourceText: "가지&차가운 토마토면",
+      outputRole: "bundle_parent",
       bundleMemberIds: expect.arrayContaining([tomato?.candidateId, eggplant?.candidateId]),
     });
-    expect(tomato).toMatchObject({ bundleParentId: parent?.candidateId });
-    expect(eggplant).toMatchObject({ bundleParentId: parent?.candidateId });
+    expect(tomato).toMatchObject({ bundleParentId: parent?.candidateId, outputRole: "recipe" });
+    expect(eggplant).toMatchObject({ bundleParentId: parent?.candidateId, outputRole: "recipe" });
+  });
+
+  it("does not link bundle children from a shared ingredient token only", async () => {
+    const { buildCandidateHintsFromSourceText } = await import(codexVisionKeyframesModuleUrl);
+
+    const candidatePlan = buildCandidateHintsFromSourceText([
+      "[SOURCE: recipe_candidate_hints]",
+      "1. 감자전",
+      "2. 바질 냉파스타",
+      "3. 바질국",
+      "[SOURCE: description]",
+      "00:10 감자&바질 냉파스타",
+    ].join("\n"));
+
+    type CandidateHint = {
+      candidateId: string;
+      titleHint: string;
+      bundleRole?: string | null;
+      bundleMemberIds?: string[];
+      bundleParentId?: string | null;
+      outputRole?: string;
+    };
+    const candidates = candidatePlan.recipeCandidates as CandidateHint[];
+    const parent = candidates.find((candidate) => candidate.titleHint === "감자&바질 냉파스타");
+    const potato = candidates.find((candidate) => candidate.titleHint === "감자전");
+    const pasta = candidates.find((candidate) => candidate.titleHint === "바질 냉파스타");
+    const soup = candidates.find((candidate) => candidate.titleHint === "바질국");
+
+    expect(parent).toMatchObject({
+      bundleRole: "parent",
+      outputRole: "bundle_parent",
+      bundleMemberIds: expect.arrayContaining([potato?.candidateId, pasta?.candidateId]),
+    });
+    expect(parent?.bundleMemberIds).not.toContain(soup?.candidateId);
+    expect(potato).toMatchObject({ bundleParentId: parent?.candidateId, outputRole: "recipe" });
+    expect(pasta).toMatchObject({ bundleParentId: parent?.candidateId, outputRole: "recipe" });
+    expect(soup).toMatchObject({ bundleParentId: null, outputRole: "recipe" });
   });
 
   it("builds description timeline parent ranges with fallback metadata", async () => {
@@ -507,8 +545,11 @@ describe("recipe-loop codex-vision provider", () => {
         } else {
           expect(prompt).toContain("[SEGMENT seg-01]");
           expect(prompt).toContain("candidateId: cand-02");
+          expect(prompt).toContain("Output recipe candidates:");
+          expect(prompt).toContain("Support-only candidates:");
           expect(prompt).toContain("Candidate coverage checklist");
           expect(prompt).toContain("titleHint: 맥적구이");
+          expect(prompt).toContain("outputRole=recipe");
           expect(prompt).not.toContain("sourceBackedCues");
           output = "```json\n{\"recipes\":[{\"title\":\"메밀 후토마끼\",\"ingredients\":[{\"name\":\"오이\",\"amount\":\"1\",\"unit\":\"개\"}],\"steps\":[\"오이를 채 썰어 준비한다.\"]},{\"title\":\"맥적구이\",\"ingredients\":[{\"name\":\"돼지고기\",\"amount\":\"1\",\"unit\":\"팩\"}],\"steps\":[\"돼지고기에 된장 양념을 바른다.\"]}]}\n```";
         }
@@ -580,9 +621,9 @@ describe("recipe-loop codex-vision provider", () => {
       [40, 70, "description_timeline"],
     ]);
     expect(segmentPlan.segments.map((segment: { frameBudget: number }) => segment.frameBudget)).toEqual([2, 2]);
-    expect(segmentPlan.coverage.map((entry: { candidateId: string; status: string }) => [entry.candidateId, entry.status])).toEqual([
-      ["cand-01", "covered"],
-      ["cand-02", "covered"],
+    expect(segmentPlan.coverage.map((entry: { candidateId: string; status: string; outputRole: string }) => [entry.candidateId, entry.status, entry.outputRole])).toEqual([
+      ["cand-01", "covered", "recipe"],
+      ["cand-02", "covered", "recipe"],
     ]);
     expect(segmentPlan.segments.every((segment: { frameBudgetAdjusted?: boolean }) => segment.frameBudgetAdjusted)).toBe(true);
     expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-keyframes.json"))).toBe(true);
@@ -657,6 +698,10 @@ describe("recipe-loop codex-vision provider", () => {
           expect(prompt).toContain("[SEGMENT seg-parent-cand-01]");
           expect(prompt).toContain("[SEGMENT seg-parent-cand-02]");
           expect(prompt).toContain("bundleParentId: cand-03");
+          expect(prompt).toContain("Output recipe candidates:");
+          expect(prompt).toContain("cand-01: titleHint=차가운 토마토면, role=recipe");
+          expect(prompt).toContain("Support-only candidates:");
+          expect(prompt).toContain("cand-03: titleHint=가지&차가운 토마토면, role=bundle_parent");
           expect(prompt).toContain("selectionReason=토마토면 재료가 보임");
           expect(prompt).toContain("selectionReason=가지구이 재료가 보임");
           expect(prompt).toContain("sourceCuePacket:");
@@ -689,7 +734,7 @@ describe("recipe-loop codex-vision provider", () => {
     });
 
     expect(result.meta).toMatchObject({
-      bundleChildSegmentVersion: "bundle-child-segment-v1",
+      bundleChildSegmentVersion: "bundle-child-segment-v2",
       sourceCuePacketsEnabled: true,
       sourceCuePacketVersion: "source-cue-packet-v1",
       segmentCount: 2,
@@ -700,17 +745,17 @@ describe("recipe-loop codex-vision provider", () => {
     expect(calls.filter((call) => call.model === "fixture-selector-model")).toHaveLength(2);
     const segmentPlan = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-plan.json"), "utf8"));
     expect(segmentPlan).toMatchObject({
-      bundleChildSegmentVersion: "bundle-child-segment-v1",
+      bundleChildSegmentVersion: "bundle-child-segment-v2",
       bundleChildSegmentApplied: true,
     });
     expect(segmentPlan.segments.map((segment: { candidateId: string; bundleParentId?: string }) => [segment.candidateId, segment.bundleParentId])).toEqual([
       ["cand-01", "cand-03"],
       ["cand-02", "cand-03"],
     ]);
-    expect(segmentPlan.coverage.map((entry: { candidateId: string; status: string }) => [entry.candidateId, entry.status])).toEqual([
-      ["cand-01", "covered"],
-      ["cand-02", "covered"],
-      ["cand-03", "supporting"],
+    expect(segmentPlan.coverage.map((entry: { candidateId: string; status: string; outputRole: string }) => [entry.candidateId, entry.status, entry.outputRole])).toEqual([
+      ["cand-01", "covered", "recipe"],
+      ["cand-02", "covered", "recipe"],
+      ["cand-03", "supporting", "bundle_parent"],
     ]);
     const selectedFrames = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "selected_frames.json"), "utf8"));
     expect(selectedFrames.selectedFrames.map((frame: { selectionReason: string | null }) => frame.selectionReason)).toEqual(expect.arrayContaining([
@@ -718,7 +763,7 @@ describe("recipe-loop codex-vision provider", () => {
       "가지구이 재료가 보임",
     ]));
     const segmentKeyframes = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-keyframes.json"), "utf8"));
-    expect(segmentKeyframes.segments.every((segment: { bundleParentId: string }) => segment.bundleParentId === "cand-03")).toBe(true);
+    expect(segmentKeyframes.segments.every((segment: { bundleParentId: string; outputRole: string }) => segment.bundleParentId === "cand-03" && segment.outputRole === "recipe")).toBe(true);
     expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "source-cue-packets.json"))).toBe(false);
     const forbidden = [
       "golden.json",
