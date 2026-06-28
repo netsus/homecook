@@ -6,6 +6,7 @@ import React from "react";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { useAppReturn } from "@/components/shared/use-app-return";
+import { SettingsMobileColumnLoadingContent } from "@/components/settings/settings-mobile-loading";
 import type { UserProfileData } from "@/lib/api/mypage";
 import type { PlannerColumnData } from "@/types/planner";
 
@@ -308,17 +309,7 @@ function SettingsSurface({
         </div>
 
         {columnsLoading ? (
-          <div
-            className="grid grid-cols-2 gap-2"
-            data-testid="columns-loading"
-          >
-            {[1, 2, 3].map((index) => (
-              <div
-                className="h-10 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)]"
-                key={index}
-              />
-            ))}
-          </div>
+          <SettingsMobileColumnLoadingContent />
         ) : columnsError ? (
           <div
             className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4"
