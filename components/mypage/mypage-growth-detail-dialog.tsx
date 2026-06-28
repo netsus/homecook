@@ -11,7 +11,6 @@ import {
   isVisibleGrowthNotification,
 } from "@/lib/gamification-notifications";
 import { createTutorialGuideNotification } from "@/lib/gamification-tutorial-guide";
-import { USER_PROGRESS_XP_GUIDE_ITEMS } from "@/lib/user-progress-xp-policy";
 import achievementIconManifest from "@/public/assets/growth/achievement-icons-v3-4/manifest.json";
 import type {
   UserGamificationBadgeCategory,
@@ -216,10 +215,6 @@ function formatDateTime(value: string | null) {
   const date = value.slice(0, 10);
   const time = value.length >= 16 ? value.slice(11, 16) : "";
   return time ? `${date} ${time}` : date;
-}
-
-function formatXpValue(value: number) {
-  return NUMBER_FORMATTER.format(value);
 }
 
 function clampPercent(value: number) {
@@ -925,6 +920,25 @@ function TutorialPanel({ data }: { data: UserGamificationData | null }) {
   );
 }
 
+const XP_GUIDE_GROUPS = [
+  {
+    body: "마음에 드는 레시피를 저장하고, 나만의 레시피북을 만들 때 성장에 반영돼요.",
+    title: "레시피 저장",
+  },
+  {
+    body: "플래너에 끼니를 넣으면 식단을 꾸준히 준비한 기록으로 쌓여요.",
+    title: "식단 계획",
+  },
+  {
+    body: "장보기 완료와 요리 완료처럼 실제 준비 흐름을 마치면 경험치가 반영돼요.",
+    title: "장보기와 요리",
+  },
+  {
+    body: "남은요리를 다 먹음 처리하는 보관 정리도 성장 기록에 포함돼요.",
+    title: "보관 정리",
+  },
+];
+
 function XpGuidePanel() {
   return (
     <>
@@ -940,46 +954,24 @@ function XpGuidePanel() {
         </p>
       </div>
 
-      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-        {USER_PROGRESS_XP_GUIDE_ITEMS.map((item) => (
+      <ul className="mt-3 grid gap-2">
+        {XP_GUIDE_GROUPS.map((item) => (
           <li
-            className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] p-3"
-            data-testid={`mypage-xp-guide-item-${item.eventType}`}
-            key={item.eventType}
+            className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 py-2.5"
+            key={item.title}
           >
             <p className="text-[13px] font-extrabold leading-[1.3] text-[var(--foreground)]">
-              {item.label}
+              {item.title}
             </p>
-            <p className="mt-1 min-h-[34px] text-[11px] font-semibold leading-[1.45] text-[var(--text-2)]">
-              {item.description}
-            </p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <span className="rounded-[var(--radius-sm)] bg-[var(--surface)] px-2 py-1.5">
-                <span className="block text-[10px] font-bold leading-none text-[var(--text-3)]">
-                  처음
-                </span>
-                <strong className="mt-1 block text-[13px] font-extrabold leading-none text-[var(--brand)]">
-                  +{formatXpValue(item.first)} XP
-                </strong>
-              </span>
-              <span className="rounded-[var(--radius-sm)] bg-[var(--surface)] px-2 py-1.5">
-                <span className="block text-[10px] font-bold leading-none text-[var(--text-3)]">
-                  반복
-                </span>
-                <strong className="mt-1 block text-[13px] font-extrabold leading-none text-[var(--brand)]">
-                  +{formatXpValue(item.repeat)} XP
-                </strong>
-              </span>
-            </div>
-            <p className="mt-2 text-[10px] font-bold leading-[1.4] text-[var(--text-3)]">
-              {item.note}
+            <p className="mt-1 text-[12px] font-semibold leading-[1.45] text-[var(--text-2)]">
+              {item.body}
             </p>
           </li>
         ))}
       </ul>
 
       <p className="mt-3 rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-3 py-2 text-[11px] font-semibold leading-[1.45] text-[var(--text-2)]">
-        업적과 튜토리얼은 성장 기록으로 보여주지만, 별도 경험치를 추가로 주지는 않아요.
+        실제 적립된 XP는 알림과 토스트로 바로 알려드려요. 업적과 튜토리얼은 성장 기록으로 보여주지만, 별도 경험치를 추가로 주지는 않아요.
       </p>
     </>
   );

@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NicknameOnboardingScreen } from "@/components/auth/nickname-onboarding-screen";
+import { ONBOARDING_TUTORIAL_REFRESH_KEY } from "@/lib/gamification-events";
 
 const fetchUserProfile = vi.fn();
 const updateNickname = vi.fn();
@@ -59,6 +60,7 @@ describe("nickname onboarding screen", () => {
     fetchUserProfile.mockReset();
     updateNickname.mockReset();
     navigationMocks.replace.mockReset();
+    window.sessionStorage.clear();
     installMatchMedia(false);
   });
 
@@ -103,6 +105,7 @@ describe("nickname onboarding screen", () => {
     await waitFor(() => {
       expect(updateNickname).toHaveBeenCalledWith("집밥러");
     });
+    expect(window.sessionStorage.getItem(ONBOARDING_TUTORIAL_REFRESH_KEY)).toBe("pending");
     expect(navigationMocks.replace).toHaveBeenCalledWith("/planner");
   });
 

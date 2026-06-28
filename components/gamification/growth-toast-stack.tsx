@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/user-gamification";
 import {
   HOMECOOK_GAMIFICATION_REFRESH_EVENT,
+  ONBOARDING_TUTORIAL_REFRESH_KEY,
 } from "@/lib/gamification-events";
 import {
   compactGrowthNotificationsForDisplay,
@@ -272,6 +273,24 @@ function isNicknameOnboardingPath(pathname: string | null) {
   return pathname === "/onboarding/nickname";
 }
 
+function hasPendingOnboardingTutorialRefresh() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(ONBOARDING_TUTORIAL_REFRESH_KEY) === "pending";
+  } catch {
+    return false;
+  }
+}
+
+function clearPendingOnboardingTutorialRefresh() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(ONBOARDING_TUTORIAL_REFRESH_KEY);
+  } catch {
+    // Ignore storage failures after the toast has been shown.
+  }
+}
+
 function selectToastSource(
   data: UserGamificationData,
   { includeTutorialGuide = true }: { includeTutorialGuide?: boolean } = {},
@@ -442,6 +461,9 @@ export function GrowthToastStack() {
       // priority_unseen is already server ordered.
       const incoming = source.map(toToastView);
       const hasIncomingTutorialGuide = incoming.some((view) => view.isTutorialGuide);
+      if (hasIncomingTutorialGuide) {
+        clearPendingOnboardingTutorialRefresh();
+      }
       setViews((current) => {
         const base = hasIncomingTutorialGuide
           ? current.filter((view) => !view.isTutorialGuide)
@@ -458,6 +480,18 @@ export function GrowthToastStack() {
 
   useEffect(() => {
     void refresh();
+  }, [pathname, refresh]);
+
+  useEffect(() => {
+    if (isNicknameOnboardingPath(pathname) || !hasPendingOnboardingTutorialRefresh()) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 350);
+
+    return () => window.clearTimeout(timer);
   }, [pathname, refresh]);
 
   useEffect(() => {

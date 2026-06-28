@@ -244,7 +244,7 @@ describe("MypageGrowthProfile", () => {
     expect(within(header).queryByRole("button", { name: "튜토리얼 보기" })).toBeNull();
   });
 
-  it("opens the XP guide from the growth profile with current policy values", () => {
+  it("opens a simplified XP guide from the growth profile without first/repeat policy cards", () => {
     render(
       <MypageGrowthProfile
         gamification={MOCK_GAMIFICATION}
@@ -259,16 +259,15 @@ describe("MypageGrowthProfile", () => {
 
     const dialog = screen.getByRole("dialog", { name: "경험치 안내" });
     expect(within(dialog).getByText("경험치는 이렇게 쌓여요")).toBeTruthy();
-
-    const recipeGuide = within(dialog).getByTestId("mypage-xp-guide-item-recipe_saved");
-    expect(recipeGuide.textContent).toContain("레시피 저장");
-    expect(recipeGuide.textContent).toContain("+15 XP");
-    expect(recipeGuide.textContent).toContain("+8 XP");
-
-    const plannerGuide = within(dialog).getByTestId("mypage-xp-guide-item-planner_registered");
-    expect(plannerGuide.textContent).toContain("+25 XP");
-    expect(plannerGuide.textContent).toContain("+5 XP");
-    expect(plannerGuide.textContent).toContain("하루 3회, 주 12회");
+    expect(within(dialog).getByText("레시피 저장")).toBeTruthy();
+    expect(within(dialog).getByText("식단 계획")).toBeTruthy();
+    expect(within(dialog).getByText("장보기와 요리")).toBeTruthy();
+    expect(within(dialog).getByText("보관 정리")).toBeTruthy();
+    expect(dialog.textContent).toContain("실제 적립된 XP는 알림과 토스트로 바로 알려드려요.");
+    expect(dialog.textContent).not.toContain("처음");
+    expect(dialog.textContent).not.toContain("반복");
+    expect(dialog.textContent).not.toContain("+15 XP");
+    expect(within(dialog).queryByTestId("mypage-xp-guide-item-recipe_saved")).toBeNull();
   });
 });
 

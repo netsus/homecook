@@ -419,14 +419,18 @@ describe("13 pantry core backend", () => {
     });
   });
 
-  it("POST /pantry records growth activities sequentially so threshold achievements see the full batch", async () => {
+  it("POST /pantry starts growth activity records in parallel for bulk additions", async () => {
     let resolveFirstActivity!: (value: { recorded: boolean; duplicate: boolean; error: null }) => void;
+    let resolveSecondActivity!: (value: { recorded: boolean; duplicate: boolean; error: null }) => void;
     const firstActivity = new Promise<{ recorded: boolean; duplicate: boolean; error: null }>((resolve) => {
       resolveFirstActivity = resolve;
     });
+    const secondActivity = new Promise<{ recorded: boolean; duplicate: boolean; error: null }>((resolve) => {
+      resolveSecondActivity = resolve;
+    });
     recordUserGrowthActivityEvent
       .mockReturnValueOnce(firstActivity)
-      .mockResolvedValueOnce({ recorded: true, duplicate: false, error: null });
+      .mockReturnValueOnce(secondActivity);
 
     const ingredientsTable = createTable({
       selectResults: [
@@ -486,10 +490,11 @@ describe("13 pantry core backend", () => {
     }));
 
     await vi.waitFor(() => {
-      expect(recordUserGrowthActivityEvent).toHaveBeenCalledTimes(1);
+      expect(recordUserGrowthActivityEvent).toHaveBeenCalledTimes(2);
     });
 
     resolveFirstActivity({ recorded: true, duplicate: false, error: null });
+    resolveSecondActivity({ recorded: true, duplicate: false, error: null });
     const response = await responsePromise;
 
     expect(response.status).toBe(201);

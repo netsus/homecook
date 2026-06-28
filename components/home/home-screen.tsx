@@ -71,7 +71,7 @@ const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
 ];
 
 const WEB_HOME_MAX_VISIBLE_TAGS = 3;
-const WEB_HOME_TAG_ROW_UNIT_LIMIT = 14;
+const WEB_HOME_TAG_ROW_UNIT_LIMIT = 10;
 const WEB_HOME_TAG_GAP_UNITS = 1;
 
 type ScreenState = "loading" | "ready" | "empty" | "error";
