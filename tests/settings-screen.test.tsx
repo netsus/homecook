@@ -305,6 +305,28 @@ describe("SettingsScreen", () => {
     expect(screen.getByText("계정 삭제").className).toContain("text-[var(--danger)]");
   });
 
+  it("reserves the mobile column-management layout while columns load", () => {
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        columnsLoading={true}
+        plannerColumns={[]}
+      />,
+    );
+
+    const section = screen.getByTestId("column-management-section");
+
+    expect(
+      within(section).getAllByTestId("settings-mobile-column-loading-row"),
+    ).toHaveLength(3);
+    expect(
+      within(section).getByTestId("settings-mobile-column-add-loading"),
+    ).toBeTruthy();
+    expect(
+      within(section).getByTestId("settings-mobile-column-help-loading"),
+    ).toBeTruthy();
+  });
+
   it("renders the mobile settings account profile image when it is available", () => {
     render(
       <SettingsMobileScreen
@@ -443,6 +465,35 @@ describe("SettingsScreen", () => {
 
     expect(screen.getByTestId("settings-mobile-loading")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "환경설정" })).toBeTruthy();
+  });
+
+  it("mirrors the mobile settings section structure while loading", () => {
+    installMatchMedia(true);
+    mockFetchUserProfile.mockReturnValue(new Promise(() => {}));
+
+    render(<SettingsScreen initialAuthenticated={true} />);
+
+    const loading = screen.getByTestId("settings-loading");
+    const loadingSections = within(loading).getAllByRole("region");
+
+    expect(loadingSections).toHaveLength(4);
+    expect(
+      within(loading).getByRole("region", { name: "끼니 관리 로딩" }),
+    ).toBeTruthy();
+    expect(
+      within(loading).getByRole("region", { name: "요리 모드 로딩" }),
+    ).toBeTruthy();
+    expect(
+      within(loading).getByRole("region", { name: "계정 로딩" }),
+    ).toBeTruthy();
+    expect(
+      within(loading).getByRole("region", { name: "위험 영역 로딩" }),
+    ).toBeTruthy();
+    expect(
+      within(
+        within(loading).getByRole("region", { name: "끼니 관리 로딩" }),
+      ).getAllByTestId("settings-mobile-column-loading-row"),
+    ).toHaveLength(3);
   });
 
   // --- Login gate ---

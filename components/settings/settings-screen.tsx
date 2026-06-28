@@ -13,6 +13,14 @@ import {
   type SettingsMobileSurface,
 } from "@/components/settings/settings-mobile-screen";
 import {
+  SETTINGS_MOBILE_MAIN_CLASS,
+  SETTINGS_MOBILE_SECTION_CLASS,
+  SettingsMobileAccountLoadingCard,
+  SettingsMobileColumnLoadingContent,
+  SettingsMobileDangerLoadingContent,
+  SettingsMobileToggleLoadingRow,
+} from "@/components/settings/settings-mobile-loading";
+import {
   AppBackButton,
   AppBackButtonSpacer,
 } from "@/components/shared/app-back-button";
@@ -947,29 +955,42 @@ function SettingsMobileLoadingShell() {
           {title}
         </h1>
       </div>
-      <div className="space-y-4 p-4" data-testid="settings-loading">
-        <section className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-            <Skeleton className="h-7 w-12 rounded-full" />
+      <main className={SETTINGS_MOBILE_MAIN_CLASS} data-testid="settings-loading">
+        <section
+          aria-label="끼니 관리 로딩"
+          className={`${SETTINGS_MOBILE_SECTION_CLASS} min-h-[342px]`}
+        >
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <Skeleton className="h-[22px] w-[86px]" />
+            <Skeleton className="h-8 w-[74px] rounded-[var(--radius-control)]" />
           </div>
+          <SettingsMobileColumnLoadingContent />
         </section>
-        <section className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-14" />
-            <Skeleton className="h-5 w-28" />
-          </div>
+
+        <section
+          aria-label="요리 모드 로딩"
+          className={`${SETTINGS_MOBILE_SECTION_CLASS} min-h-[133px]`}
+        >
+          <Skeleton className="mb-2.5 h-[22px] w-[82px]" />
+          <SettingsMobileToggleLoadingRow />
         </section>
-        <section className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-5 w-36" />
-          </div>
+
+        <section
+          aria-label="계정 로딩"
+          className={SETTINGS_MOBILE_SECTION_CLASS}
+        >
+          <Skeleton className="mb-2 h-[22px] w-12" />
+          <SettingsMobileAccountLoadingCard />
         </section>
-      </div>
+
+        <section
+          aria-label="위험 영역 로딩"
+          className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--feedback-danger-soft)] p-4"
+        >
+          <Skeleton className="mb-2 h-[22px] w-[82px]" />
+          <SettingsMobileDangerLoadingContent />
+        </section>
+      </main>
     </div>
   );
 }
