@@ -277,6 +277,42 @@ describe("recipe-loop codex-vision provider", () => {
     });
   });
 
+  it("links bundled timeline candidates to existing child candidates without title hardcoding", async () => {
+    const { buildCandidateHintsFromSourceText } = await import(codexVisionKeyframesModuleUrl);
+
+    const candidatePlan = buildCandidateHintsFromSourceText([
+      "[SOURCE: recipe_candidate_hints]",
+      "1. 차가운 토마토면",
+      "2. 가지구이",
+      "[SOURCE: description]",
+      "00:10 가지&차가운 토마토면",
+    ].join("\n"));
+
+    type CandidateHint = {
+      candidateId: string;
+      titleHint: string;
+      bundleRole?: string | null;
+      bundleSourceText?: string | null;
+      bundleMemberIds?: string[];
+      bundleParentId?: string | null;
+    };
+    const candidates = candidatePlan.recipeCandidates as CandidateHint[];
+    const parent = candidates.find((candidate) => candidate.titleHint === "가지&차가운 토마토면");
+    const tomato = candidates.find((candidate) => candidate.titleHint === "차가운 토마토면");
+    const eggplant = candidates.find((candidate) => candidate.titleHint === "가지구이");
+
+    expect(parent).toBeDefined();
+    expect(tomato).toBeDefined();
+    expect(eggplant).toBeDefined();
+    expect(parent).toMatchObject({
+      bundleRole: "parent",
+      bundleSourceText: "가지&차가운 토마토면",
+      bundleMemberIds: expect.arrayContaining([tomato?.candidateId, eggplant?.candidateId]),
+    });
+    expect(tomato).toMatchObject({ bundleParentId: parent?.candidateId });
+    expect(eggplant).toMatchObject({ bundleParentId: parent?.candidateId });
+  });
+
   it("builds description timeline parent ranges with fallback metadata", async () => {
     const { buildTimelineParentRangePlan } = await import(codexVisionKeyframesModuleUrl);
 
@@ -499,6 +535,128 @@ describe("recipe-loop codex-vision provider", () => {
     const selectedFrames = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "selected_frames.json"), "utf8"));
     expect(selectedFrames.selectedFrames.some((frame: { file: string }) => frame.file.startsWith("frame_9999_"))).toBe(false);
     expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "final.json"))).toBe(true);
+  });
+
+  it("expands bundled parent segments into child evidence blocks and preserves selection reasons", async () => {
+    const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir, 6);
+    const calls: Array<{ model: string; images: string[]; prompt: string }> = [];
+    const client = createCodexVisionKeyframesClient({
+      cacheDir: path.join(workdir, "keyframes-cache"),
+      keyframeMode: "segmented",
+      model: "fixture-final-model",
+      segmentModel: "fixture-segment-model",
+      selectorModel: "fixture-selector-model",
+      segmentPaddingSec: 0,
+      segmentMinFrames: 1,
+      segmentMaxFrames: 3,
+      segmentFrameTotalLimit: 4,
+      extractFrames: async () => ({
+        frameCacheHit: false,
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 6 },
+      }),
+      codexExec: async ({
+        prompt,
+        images,
+        model,
+        outputPath,
+        logPath,
+      }: {
+        prompt: string;
+        images: string[];
+        model: string;
+        outputPath: string;
+        logPath: string;
+      }) => {
+        calls.push({ prompt, images, model });
+        let output: string;
+        if (model === "fixture-segment-model") {
+          output = JSON.stringify({
+            segments: [{
+              segmentId: "seg-parent",
+              candidateId: "cand-03",
+              titleHint: "가지&차가운 토마토면",
+              startSec: 0,
+              endSec: 50,
+              timeEvidence: ["00:10 가지&차가운 토마토면"],
+              frameBudget: 4,
+            }],
+            coverage: [
+              { candidateId: "cand-01", titleHint: "차가운 토마토면", status: "supporting", segmentIds: ["seg-parent"] },
+              { candidateId: "cand-02", titleHint: "가지구이", status: "supporting", segmentIds: ["seg-parent"] },
+              { candidateId: "cand-03", titleHint: "가지&차가운 토마토면", status: "covered", segmentIds: ["seg-parent"] },
+            ],
+          });
+        } else if (model === "fixture-selector-model") {
+          const isTomato = prompt.includes("titleHint: 차가운 토마토면");
+          output = JSON.stringify({
+            selectedFrames: [
+              { file: path.basename(images[0]), reason: isTomato ? "토마토면 재료가 보임" : "가지구이 재료가 보임" },
+              { file: path.basename(images[images.length - 1]), reason: isTomato ? "면 조합 단계" : "가지 굽기 단계" },
+            ],
+          });
+        } else {
+          expect(prompt).toContain("[SEGMENT seg-parent-cand-01]");
+          expect(prompt).toContain("[SEGMENT seg-parent-cand-02]");
+          expect(prompt).toContain("bundleParentId: cand-03");
+          expect(prompt).toContain("selectionReason=토마토면 재료가 보임");
+          expect(prompt).toContain("selectionReason=가지구이 재료가 보임");
+          expect(prompt).not.toContain("golden.json");
+          expect(prompt).not.toContain("_grade_summary");
+          expect(prompt).not.toContain("_semantic_summary");
+          expect(prompt).not.toContain("feedback_for_next_iter");
+          expect(prompt).not.toContain("artifact_diagnosis");
+          expect(prompt).not.toContain("stageHint");
+          output = "```json\n{\"recipes\":[{\"title\":\"차가운 토마토면\",\"ingredients\":[{\"name\":\"토마토\",\"amount\":\"1\",\"unit\":\"개\"}],\"steps\":[\"면을 차갑게 준비한다.\"]},{\"title\":\"가지구이\",\"ingredients\":[{\"name\":\"가지\",\"amount\":\"1\",\"unit\":\"개\"}],\"steps\":[\"가지를 굽는다.\"]}]}\n```";
+        }
+        writeFileSync(outputPath, output, "utf8");
+        writeFileSync(logPath, "ok", "utf8");
+        return output;
+      },
+    });
+
+    const result = await client.generate({
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      cacheText: [
+        "[SOURCE: recipe_candidate_hints]",
+        "1. 차가운 토마토면",
+        "2. 가지구이",
+        "[SOURCE: description]",
+        "00:10 가지&차가운 토마토면",
+      ].join("\n"),
+    });
+
+    expect(result.meta).toMatchObject({
+      bundleChildSegmentVersion: "bundle-child-segment-v1",
+      segmentCount: 2,
+      coveredCandidateCount: 2,
+      supportingCandidateCount: 1,
+    });
+    expect(calls.filter((call) => call.model === "fixture-selector-model")).toHaveLength(2);
+    const segmentPlan = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-plan.json"), "utf8"));
+    expect(segmentPlan).toMatchObject({
+      bundleChildSegmentVersion: "bundle-child-segment-v1",
+      bundleChildSegmentApplied: true,
+    });
+    expect(segmentPlan.segments.map((segment: { candidateId: string; bundleParentId?: string }) => [segment.candidateId, segment.bundleParentId])).toEqual([
+      ["cand-01", "cand-03"],
+      ["cand-02", "cand-03"],
+    ]);
+    expect(segmentPlan.coverage.map((entry: { candidateId: string; status: string }) => [entry.candidateId, entry.status])).toEqual([
+      ["cand-01", "covered"],
+      ["cand-02", "covered"],
+      ["cand-03", "supporting"],
+    ]);
+    const selectedFrames = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "selected_frames.json"), "utf8"));
+    expect(selectedFrames.selectedFrames.map((frame: { selectionReason: string | null }) => frame.selectionReason)).toEqual(expect.arrayContaining([
+      "토마토면 재료가 보임",
+      "가지구이 재료가 보임",
+    ]));
+    const segmentKeyframes = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-keyframes.json"), "utf8"));
+    expect(segmentKeyframes.segments.every((segment: { bundleParentId: string }) => segment.bundleParentId === "cand-03")).toBe(true);
   });
 
   it("records candidate-aware segment schema failures with candidate artifacts", async () => {
