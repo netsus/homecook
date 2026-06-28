@@ -52,7 +52,7 @@ async function main() {
   const lines = [
     `# M2 골든셋 검수 문서 — ${split} ${entries.length}`,
     "",
-    "분량의 \\[근거\\]: 설명란/자막/댓글 = 텍스트 명시, 발화/화면자막 = 영상 내 명시, **시각추정** = Gemini 영상 분석 추정치.",
+    "분량의 \\[근거\\]: 설명란/자막/댓글 = 텍스트 명시, 발화/화면자막 = 영상 내 명시, **시각추정** = GPT 5.4 keyframe 분석 추정치.",
     "수정할 내용을 알려주시면 golden.json에 반영하고 reviewStatus를 approved로 바꿉니다.",
     "",
   ];

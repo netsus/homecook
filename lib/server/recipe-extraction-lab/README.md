@@ -21,23 +21,24 @@ const result = await extractRecipeFromSources(
     authorComments: ["...", ...],
     youtubeUrl: "https://www.youtube.com/watch?v=...",
   },
-  { llm: createCachedLlmClient(), useVisual: true },
+  { llm: createCodexVisionKeyframesClient(), useVisual: true },
 );
 // → { recipes: [{ title, ingredients:[{name,nameAliases,amount,unit,amountBasis,optional,groupLabel}], steps:[string] }], meta }
 ```
 
-`deps.llm`은 기본적으로 `scripts/recipe-loop/lib/llm-client.mjs`의 캐시 래핑 Gemini 클라이언트다. 동일 입력+프롬프트는
-디스크 캐시를 읽어 재호출하지 않으므로, 프롬프트가 바뀐 ITER만 실제 LLM 비용이 발생한다.
+`deps.llm`은 recipe-loop runner에서 기본적으로 `scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs`의 GPT 5.4 keyframes 클라이언트다.
+동일 입력+프롬프트+프레임 선택 결과는 디스크 캐시를 읽어 재호출하지 않으므로, 프롬프트나 증거 묶음이 바뀐 ITER만 실제 LLM 비용이 발생한다.
 
-recipe-loop 실험에서는 `scripts/recipe-loop/run-extraction.mjs --provider codex-vision`으로
-`scripts/recipe-loop/lib/codex-vision-client.mjs`를 선택할 수 있다. 이 경로는 Gemini를 fallback으로 쓰지 않고,
-YouTube 영상 프레임 추출 → Codex CLI 이미지 배치 분석 → 최종 `{ recipes: [...] }` JSON 생성 순서로 동작한다.
-캐시와 실패 로그는 `notebooks/recipe_loop_data/cache/codex-vision/` 아래에 남긴다.
+recipe-loop 실험에서는 `scripts/recipe-loop/run-extraction.mjs --provider codex-vision-keyframes`가 기본 경로다.
+필요하면 `--provider codex-vision`으로 단순 프레임 배치 분석 경로를 선택할 수 있다. 두 경로 모두 다른 모델 provider로 fallback하지 않는다.
+기본 경로는 YouTube 링크에서 프레임을 고르고, 텍스트 source/evidence packet과 keyframe 근거를 GPT 5.4에 넘겨 최종 `{ recipes: [...] }` JSON을 생성한다.
+캐시와 실패 로그는 `notebooks/recipe_loop_data/cache/codex-vision-keyframes/` 또는 `notebooks/recipe_loop_data/cache/codex-vision/` 아래에 남긴다.
 
 ## 현재 baseline (iteration 0)
 
-기본 경로는 단일 Gemini 호출로 텍스트 소스(설명란+댓글+자막) + 영상 시각 분석(`file_uri`)을 함께 주고 구조화 레시피를 받는다.
-후처리: 만들기 단계에 등장하지 않는 `visual-estimate` 재료를 제거(오검출 방지).
+기본 경로는 GPT 5.4 keyframes 추출이다. 텍스트 소스(설명란+댓글+자막)를 EvidencePacket으로 나누고,
+선택된 영상 프레임 근거를 보강해 구조화 레시피를 받는다.
+후처리: 만들기 단계에 등장하지 않는 `visual-estimate` 재료를 제거(오검출 방지)하고, 명시 source 수량이 있으면 시각 추정값으로 덮지 않는다.
 
 ## 루프가 강화할 지점 (M2 교훈 기반)
 

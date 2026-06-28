@@ -148,7 +148,7 @@ def build(run_dir: Path, out_path: Path) -> Path:
     ]
 
     model_color = {"Claude": "#6d5278", "Codex": "#275d8c", "코드 (Node/Python)": "#0f7a55",
-                   "코드 + Gemini": "#9a6a00", "코드 (Python)": "#0f7a55"}
+                   "코드 + GPT 5.4": "#275d8c", "코드 (Python)": "#0f7a55"}
 
     stage_html = []
     for num, name, model, model_spec, cmd, code_ref, role, prompt, output, kind in stages:
@@ -229,7 +229,7 @@ th:first-child, td:first-child {{ text-align:left; }}
 <div class="models">
   <div class="modelcard"><div class="label">계획 · 진단</div><div class="val">{esc(cfg.claude_model)}</div><div class="who">Claude · claude -p --permission-mode plan --model {esc(cfg.claude_model)}</div></div>
   <div class="modelcard"><div class="label">구현</div><div class="val">{esc(cfg.codex_model)} · effort {esc(cfg.codex_effort)}</div><div class="who">Codex · allowlist temp workspace · codex exec -m {esc(cfg.codex_model)} -c model_reasoning_effort={esc(cfg.codex_effort)}</div></div>
-  <div class="modelcard"><div class="label">추출</div><div class="val">{esc(cfg.model)}</div><div class="who">Gemini · file_uri 영상분석(추출)</div></div>
+  <div class="modelcard"><div class="label">추출</div><div class="val">{esc(cfg.model)}</div><div class="who">GPT 5.4 · source evidence + keyframe 분석(추출)</div></div>
   <div class="modelcard"><div class="label">AI 의미채점</div><div class="val">{esc(semantic_judge_spec)}</div><div class="who">Codex · repo 밖 read-only ephemeral judge</div></div>
 </div>
 <div class="note"><strong>모델 주의:</strong> 위 값은 현재 <code>loop.py</code>에 명시 고정된 값입니다. <strong>이 스모크 실행 시점</strong>에는 Claude가 <code>--model</code> 미지정(CLI 기본값)으로 돌았고, 이후 재현성을 위해 <code>{esc(cfg.claude_model)}</code>로 고정했습니다. Codex는 실행 당시에도 <code>~/.codex/config.toml</code>의 {esc(cfg.codex_model)}/{esc(cfg.codex_effort)}를 사용했습니다.</div>

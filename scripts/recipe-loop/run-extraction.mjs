@@ -5,6 +5,7 @@
 //
 // 사용법:
 //   node scripts/recipe-loop/run-extraction.mjs --split train [--ids id1,id2] [--no-visual] [--out-tag baseline]
+// 기본 provider는 codex-vision-keyframes(GPT 5.4)다.
 
 import { readFile, writeFile, readdir, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -13,13 +14,15 @@ import { pathToFileURL } from "node:url";
 
 import { createCodexVisionKeyframesClient } from "./lib/codex-vision-keyframes-client.mjs";
 import { createCodexVisionClient } from "./lib/codex-vision-client.mjs";
-import { createCachedLlmClient } from "./lib/llm-client.mjs";
+import { createUrlOnlyGptClient } from "./lib/url-only-gpt-client.mjs";
 import { buildEvidencePacketBundle } from "../../lib/server/recipe-extraction-lab/candidate-packets.mjs";
 import { extractRecipeFromSources } from "../../lib/server/recipe-extraction-lab/extract.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
-const SUPPORTED_PROVIDERS = new Set(["gemini", "codex-vision", "codex-vision-keyframes"]);
+const DEFAULT_PROVIDER = "codex-vision-keyframes";
+const URL_ONLY_PROVIDER = "url-only-gpt";
+const SUPPORTED_PROVIDERS = new Set(["codex-vision", DEFAULT_PROVIDER, URL_ONLY_PROVIDER]);
 
 export function parseCliArgs(argv) {
   const args = {};
@@ -60,7 +63,7 @@ export function sourceToInput(source) {
 }
 
 export function resolveProvider(args) {
-  const provider = typeof args.provider === "string" ? args.provider : "gemini";
+  const provider = typeof args.provider === "string" ? args.provider : DEFAULT_PROVIDER;
   if (!SUPPORTED_PROVIDERS.has(provider)) {
     throw new Error(`지원하지 않는 provider입니다: ${provider}. 사용 가능: ${[...SUPPORTED_PROVIDERS].join(", ")}`);
   }
@@ -68,11 +71,6 @@ export function resolveProvider(args) {
 }
 
 export function createLlmForProvider(provider, args = {}, factories = {}) {
-  if (provider === "gemini") {
-    const createGemini = factories.createGemini ?? createCachedLlmClient;
-    return createGemini(typeof args.model === "string" ? { model: args.model } : {});
-  }
-
   if (provider === "codex-vision") {
     const createCodexVision = factories.createCodexVision ?? createCodexVisionClient;
     return createCodexVision({
@@ -117,6 +115,17 @@ export function createLlmForProvider(provider, args = {}, factories = {}) {
       sourceCuePackets: args["source-cue-packets"] === true,
       recipeEvidenceLedger: args["recipe-evidence-ledger"] === true,
       recipeEvidenceLedgerPrompt: args["recipe-evidence-ledger-prompt"] === true,
+    });
+  }
+
+  if (provider === URL_ONLY_PROVIDER) {
+    const createUrlOnlyGpt = factories.createUrlOnlyGpt ?? createUrlOnlyGptClient;
+    return createUrlOnlyGpt({
+      model: typeof args.model === "string" ? args.model : undefined,
+      codexEffort: typeof args["codex-effort"] === "string" ? args["codex-effort"] : undefined,
+      timeoutMs: optionalNumber(args["timeout-ms"]),
+      refreshFinal: args["refresh-final"] === true,
+      noCache: args["no-cache"] === true,
     });
   }
 
@@ -171,31 +180,36 @@ export async function runExtraction(rawArgs = {}, options = {}) {
     try {
       const source = JSON.parse(await readFile(sourcePath, "utf8"));
       const input = sourceToInput(source);
-      const evidencePacketBundle = buildEvidencePacketBundle(input);
+      const sourceMode = provider === URL_ONLY_PROVIDER ? "url-only" : "source-text";
+      const evidencePacketBundle = sourceMode === "url-only" ? null : buildEvidencePacketBundle(input);
       const result = await extractRecipeFromSources(input, {
         llm,
         useVisual,
-        packetPromptTextOnly: provider === "gemini",
+        sourceMode,
+        useEvidencePackets: sourceMode !== "url-only",
+        packetPromptTextOnly: false,
       });
       await mkdir(outDir, { recursive: true });
-      await writeFile(
-        path.join(outDir, "evidence-packets.json"),
-        JSON.stringify({
-          videoId: id,
-          version: evidencePacketBundle.version,
-          source: evidencePacketBundle.source,
-          packets: evidencePacketBundle.packets,
-        }, null, 2) + "\n",
-        "utf8",
-      );
-      await writeFile(
-        path.join(outDir, "cue-extraction-report.json"),
-        JSON.stringify({
-          videoId: id,
-          ...evidencePacketBundle.report,
-        }, null, 2) + "\n",
-        "utf8",
-      );
+      if (evidencePacketBundle) {
+        await writeFile(
+          path.join(outDir, "evidence-packets.json"),
+          JSON.stringify({
+            videoId: id,
+            version: evidencePacketBundle.version,
+            source: evidencePacketBundle.source,
+            packets: evidencePacketBundle.packets,
+          }, null, 2) + "\n",
+          "utf8",
+        );
+        await writeFile(
+          path.join(outDir, "cue-extraction-report.json"),
+          JSON.stringify({
+            videoId: id,
+            ...evidencePacketBundle.report,
+          }, null, 2) + "\n",
+          "utf8",
+        );
+      }
       await writeFile(path.join(outDir, "result.json"), JSON.stringify({ videoId: id, ...result }, null, 2) + "\n", "utf8");
       const recipeCount = result.recipes.length;
       const ingCount = result.recipes.reduce((a, r) => a + r.ingredients.length, 0);

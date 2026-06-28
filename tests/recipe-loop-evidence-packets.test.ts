@@ -138,8 +138,8 @@ describe("recipe-loop evidence packets", () => {
     expect(result.meta).toMatchObject({
       evidencePacketMode: true,
       evidencePacketCount: 1,
-      usedVisual: false,
-      receivedVideoUrl: null,
+      usedVisual: true,
+      receivedVideoUrl: "https://www.youtube.com/watch?v=case-a",
     });
   });
 

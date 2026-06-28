@@ -101,7 +101,7 @@ export function containsSecretLikeText(value) {
   return [
     /discord(?:app)?\.com\/api\/webhooks/i,
     /\b(?:sk|sk-proj)-[A-Za-z0-9_-]{16,}/,
-    /\b(?:OPENAI|GEMINI|ANTHROPIC|DISCORD)_[A-Z0-9_]*KEY\b/,
+    /\b(?:OPENAI|ANTHROPIC|DISCORD)_[A-Z0-9_]*KEY\b/,
     /\b(?:api[_-]?key|webhook[_-]?url)\s*[:=]\s*\S+/i,
   ].some((pattern) => pattern.test(text));
 }

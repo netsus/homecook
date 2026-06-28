@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 // AI 의미 채점기: result.json(추출) vs golden.json(정답)을 의미 기준으로 비교한다.
-// 기본 gate는 Codex judge를 사용한다. Gemini는 historical/reference 실행용으로만 남긴다.
+// 기본 gate는 Codex judge(GPT 5.4)를 사용한다.
 //
 // case_score = min(ingredient_score, step_score), average_score = 케이스 평균.
 //
@@ -12,7 +12,6 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { createCodexJudgeClient } from "./lib/codex-judge-client.mjs";
-import { createCachedLlmClient } from "./lib/llm-client.mjs";
 import { prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
 import { summarizeReasonFrequencies } from "./lib/semantic-feedback-aggregator.mjs";
 
@@ -225,7 +224,7 @@ function resolveJudgeConfig(args) {
   const provider = typeof args["judge-provider"] === "string" ? args["judge-provider"] : "codex";
   const model = typeof args["judge-model"] === "string"
     ? args["judge-model"]
-    : (provider === "codex" ? "gpt-5.4" : (typeof args.model === "string" ? args.model : "gemini-2.5-flash"));
+    : "gpt-5.4";
   const effort = typeof args["judge-effort"] === "string" ? args["judge-effort"] : (provider === "codex" ? "high" : null);
   const borderlineEffort = typeof args["judge-borderline-effort"] === "string" ? args["judge-borderline-effort"] : "xhigh";
   const timeoutMs = toNumber(args["judge-timeout-ms"], 200000);
@@ -236,7 +235,7 @@ function resolveJudgeConfig(args) {
     ? args["judge-prompt-version"]
     : JUDGE_PROMPT_VERSION;
   const scorePolicy = typeof args["score-policy"] === "string" ? args["score-policy"] : DEFAULT_SCORE_POLICY;
-  if (!["gemini", "fixture", "codex"].includes(provider)) {
+  if (!["fixture", "codex"].includes(provider)) {
     throw new Error(`unsupported semantic judge provider: ${provider}`);
   }
   return { provider, model, effort, borderlineEffort, timeoutMs, schemaPath, sampleN, bottomK, promptVersion, scorePolicy };
@@ -417,7 +416,7 @@ async function generateCodexSampleWithRetry(client, request, maxAttempts = 2) {
   throw lastError;
 }
 
-async function generateSemanticGrade({ judge, llm, golden, result, id, outTag, split }) {
+async function generateSemanticGrade({ judge, golden, result, id, outTag, split }) {
   if (judge.provider === "fixture") {
     const fixtureSamples = Array.isArray(result.__semanticJudgeSamples)
       ? result.__semanticJudgeSamples
@@ -475,17 +474,7 @@ async function generateSemanticGrade({ judge, llm, golden, result, id, outTag, s
       retryCount,
     };
   }
-
-  const { json, cached, model } = await llm.generate({ prompt, cacheText: id + outTag });
-  return {
-    grade: normalize(json),
-    cached,
-    model,
-    effort: null,
-    cacheHits: cached ? 1 : 0,
-    cacheMisses: cached ? 0 : 1,
-    retryCount: 0,
-  };
+  throw new Error(`unsupported semantic judge provider: ${judge.provider}`);
 }
 
 function failedRow(id, reason, message = null) {
@@ -532,7 +521,6 @@ async function main() {
     : (await readdir(splitDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
   ids = ids.sort();
 
-  const llm = judge.provider === "gemini" ? createCachedLlmClient({ model: judge.model }) : null;
   const rows = [];
   let cacheHitCount = 0;
   let cacheMissCount = 0;
@@ -575,7 +563,6 @@ async function main() {
     try {
       const gradeResult = await generateSemanticGrade({
         judge,
-        llm,
         golden: cleanGolden,
         result: cleanResult,
         id,
