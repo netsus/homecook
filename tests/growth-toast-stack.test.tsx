@@ -350,6 +350,60 @@ describe("GrowthToastStack", () => {
     expect(screen.getByText(/레시피에서 플래너에 추가를 누르면 플래너에 끼니를 등록할 수 있어요/)).toBeTruthy();
   });
 
+  it("runs a pending refresh after a source action fires during an existing refresh", async () => {
+    let resolveInitialRefresh:
+      | ((value: { notifications: { priority_unseen: unknown[]; unseen: unknown[] } }) => void)
+      | null = null;
+    const initialRefresh = new Promise<{
+      notifications: { priority_unseen: unknown[]; unseen: unknown[] };
+    }>((resolve) => {
+      resolveInitialRefresh = resolve;
+    });
+
+    mockFetchUserGamification
+      .mockReturnValueOnce(initialRefresh)
+      .mockResolvedValueOnce({
+        notifications: {
+          unseen: [],
+          priority_unseen: [
+            makeNotification({
+              id: "first-recipe-save",
+              notification_type: "achievement_unlocked",
+              group_key: "progress-event:recipe-save",
+              title: "업적 달성!",
+              body: "첫 레시피 저장 배지를 획득했어요. +15 XP",
+              payload: {
+                achievement_key: "first_recipe_saved",
+                badge_key: "first_recipe_saved",
+              },
+            }),
+          ],
+        },
+        quests: { active: [] },
+        tutorial: { active_steps: [] },
+      });
+
+    render(<GrowthToastStack />);
+    dispatchRefresh();
+
+    await act(async () => {
+      resolveInitialRefresh?.({
+        notifications: {
+          priority_unseen: [],
+          unseen: [],
+        },
+      });
+      await initialRefresh;
+    });
+
+    await waitFor(() => {
+      expect(mockFetchUserGamification).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("growth-toast").textContent).toContain("+15 XP");
+    });
+  });
+
   it("does not send synthetic tutorial guide toasts to the seen API", async () => {
     mockFetchUserGamification.mockResolvedValue(
       makeGamificationWithTutorialStep({
@@ -500,7 +554,6 @@ describe("GrowthToastStack", () => {
       });
 
     const { unmount } = render(<GrowthToastStack />);
-    dispatchRefresh();
 
     await waitFor(() => {
       expect(screen.getAllByTestId("growth-toast")).toHaveLength(3);
@@ -524,12 +577,10 @@ describe("GrowthToastStack", () => {
 
     unmount();
     render(<GrowthToastStack />);
-    dispatchRefresh();
 
-    await act(async () => {
-      await Promise.resolve();
+    await waitFor(() => {
+      expect(screen.getByTestId("growth-toast")).toBeTruthy();
     });
-    expect(screen.getByTestId("growth-toast")).toBeTruthy();
 
     const nextAchievementToast = screen.getByTestId("growth-toast");
     expect(nextAchievementToast.getAttribute("data-tone")).toBe("achievement");

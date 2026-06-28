@@ -20,6 +20,7 @@ describe("growth source API clients", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -68,7 +69,8 @@ describe("growth source API clients", () => {
     window.removeEventListener(HOMECOOK_GAMIFICATION_REFRESH_EVENT, listener);
   });
 
-  it("dispatches a gamification refresh immediately after pantry ingredients are added", async () => {
+  it("dispatches immediate and delayed gamification refreshes after pantry ingredients are added", async () => {
+    vi.useFakeTimers();
     const listener = vi.fn();
     window.addEventListener(HOMECOOK_GAMIFICATION_REFRESH_EVENT, listener);
     fetchMock.mockResolvedValue({
@@ -89,6 +91,10 @@ describe("growth source API clients", () => {
     });
 
     expect(listener).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(listener).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(3_500);
+    expect(listener).toHaveBeenCalledTimes(3);
     window.removeEventListener(HOMECOOK_GAMIFICATION_REFRESH_EVENT, listener);
   });
 

@@ -346,7 +346,7 @@ test.describe("PANTRY screen", () => {
 
     await expect(page.getByText("2개 재료를 팬트리에 추가했어요")).toBeVisible();
     await expect(page.getByText(/5\s*개/).first()).toBeVisible();
-    await expect(page.getByText(/간장/)).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: "간장 보유중" })).toBeVisible();
   });
 
   test("searches pantry items and shows an empty result state", async ({ page }) => {

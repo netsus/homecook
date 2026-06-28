@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
 
 import { fail, ok } from "@/lib/api/response";
 import {
@@ -96,6 +96,41 @@ interface PantryAuthSuccess {
 
 interface PantryAuthFailure {
   response: Response;
+}
+
+function scheduleAfterResponse(task: () => Promise<void>) {
+  try {
+    after(task);
+  } catch {
+    void task();
+  }
+}
+
+function schedulePantryItemAddedActivityRecords({
+  auth,
+  items,
+}: {
+  auth: PantryAuthSuccess;
+  items: ReturnType<typeof toPantryItems>;
+}) {
+  scheduleAfterResponse(async () => {
+    try {
+      await Promise.allSettled(items.map((item) =>
+        recordUserGrowthActivityEvent(auth.dbClient, {
+          userId: auth.user.id,
+          activityType: "pantry_item_added",
+          category: "pantry",
+          sourceKey: `pantry_item_added:${item.id}`,
+          sourceTable: "pantry_items",
+          sourceId: item.id,
+          sourceMeta: { ingredient_id: item.ingredient_id },
+          occurredAt: item.created_at,
+        }),
+      ));
+    } catch {
+      // Activity history is secondary; pantry mutation remains authoritative.
+    }
+  });
 }
 
 async function getAuthenticatedDb(
@@ -303,22 +338,7 @@ export async function POST(request: Request) {
 
   const items = toPantryItems(insertResult.data);
 
-  try {
-    await Promise.allSettled(items.map((item) =>
-      recordUserGrowthActivityEvent(auth.dbClient, {
-        userId: auth.user.id,
-        activityType: "pantry_item_added",
-        category: "pantry",
-        sourceKey: `pantry_item_added:${item.id}`,
-        sourceTable: "pantry_items",
-        sourceId: item.id,
-        sourceMeta: { ingredient_id: item.ingredient_id },
-        occurredAt: item.created_at,
-      }),
-    ));
-  } catch {
-    // Activity history is secondary; pantry mutation remains authoritative.
-  }
+  schedulePantryItemAddedActivityRecords({ auth, items });
 
   return ok({ added: items.length, items }, { status: 201 });
 }
