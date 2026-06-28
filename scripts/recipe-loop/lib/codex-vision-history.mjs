@@ -69,6 +69,25 @@ export function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+export function formatKstTimestamp(value) {
+  if (!value) return "n/a";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(date).map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second} KST`;
+}
+
 export function isCanaryOk(canaryLeak) {
   if (!canaryLeak) return true;
   if (canaryLeak.success === false) return false;
@@ -162,6 +181,7 @@ export function buildDashboardHtml(entries, { generatedAt = new Date().toISOStri
         : "";
       return `<tr class="${escapeHtml(entry.decision)}">
         <td>${escapeHtml(entry.iteration)}</td>
+        <td>${escapeHtml(formatKstTimestamp(entry.createdAt))}</td>
         <td><span class="badge">${escapeHtml(entry.decision)}</span></td>
         <td><code>${escapeHtml(entry.outTag)}</code></td>
         <td class="num">${escapeHtml(entry.result?.semantic?.averageScore ?? "n/a")}</td>
@@ -207,13 +227,13 @@ export function buildDashboardHtml(entries, { generatedAt = new Date().toISOStri
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>iteration</th><th>decision</th><th>outTag</th><th class="num">semantic avg</th><th class="num">min case</th><th>weakest</th><th>next action</th></tr>
+            <tr><th>iteration</th><th>recorded (KST)</th><th>decision</th><th>outTag</th><th class="num">semantic avg</th><th class="num">min case</th><th>weakest</th><th>next action</th></tr>
           </thead>
-          <tbody>${rows || '<tr><td colspan="7">아직 기록된 iteration이 없습니다.</td></tr>'}</tbody>
+          <tbody>${rows || '<tr><td colspan="8">아직 기록된 iteration이 없습니다.</td></tr>'}</tbody>
         </table>
       </div>
     </section>
-    <footer>Generated at ${escapeHtml(generatedAt)}</footer>
+    <footer>Generated at ${escapeHtml(formatKstTimestamp(generatedAt))}</footer>
   </div>
 </body>
 </html>
