@@ -11,6 +11,15 @@
 - 모바일/데스크톱 중 하나에서 화면 완성도를 깨뜨리는가
 - 접근성 포커스 표시를 유지하면서 더 자연스럽게 고칠 수 있는가
 
+## 2026-06-28 Production Chrome Closeout
+
+- Branches: `fix/manual-uiux-review-incomplete-items`, `fix/manual-uiux-review-postmerge-qa`, `fix/manual-uiux-xp-toast-amount`, `fix/manual-uiux-production-closeout-doc`
+- Trigger: 사용자가 지적한 미완료 5개와 후속 확인/작업 필요 9개를 실제 배포 사이트에서 다시 닫기 위한 최종 확인.
+- Final result:
+  - 99 PASS: 신규 가입 상태에서 첫 레시피 저장 후 live status/toast에 `업적 달성! 첫 레시피 저장 배지를 획득했어요. +15 XP`가 표시됐다.
+  - 100 PASS: 빈 팬트리 상태에서 `채소 기본` 22개 묶음 추가 시 성공 status가 약 1.26초에 표시됐고, 모달을 닫은 뒤 팬트리 목록이 약 2.87초 안에 `나의 팬트리 22개`/`전체 22`로 갱신됐다.
+  - 이 closeout 대상 14개 기준으로 현재 `Status`에 `pending`, `FAIL/PARTIAL`로 남길 항목은 없다.
+
 ## 2026-06-28 Incomplete / Follow-up Closeout
 
 - Branch: `fix/manual-uiux-review-incomplete-items`
@@ -38,6 +47,7 @@
 - Trigger: `fix/manual-uiux-review-incomplete-items` 머지 후 production Chrome과 `master` QA를 다시 확인한 결과, 첫 저장 XP toast와 팬트리 묶음 성능, master visual/full-regression에 후속 조치가 필요했다.
 - Implemented:
   - 99: `GrowthToastStack`이 gamification refresh 중일 때 source action refresh가 들어오면 요청을 버리지 않고 현재 refresh가 끝난 뒤 한 번 더 실행하게 했다. 첫 저장 직후 업적/XP 알림이 알림 기록에는 생겼지만 toast에는 누락될 수 있는 경합을 막는다.
+  - 99: `fix/manual-uiux-xp-toast-amount`에서 업적 알림 payload에 source action의 `xp_delta`를 보존하고, live achievement toast 본문에도 `+N XP`를 붙이게 했다.
   - 100: `POST /api/v1/pantry`가 팬트리 insert 성공 후 20개 이상 growth activity 기록 완료를 응답 전에 기다리지 않게 `after` 후속 작업으로 분리했다. 팬트리 추가 자체가 authoritative이고 성장 기록은 soft-fail secondary라는 기존 정책을 유지한다.
   - 100: pantry growth 기록이 응답 이후 저장되더라도 XP toast를 놓치지 않게 pantry add client가 즉시 refresh 후 1.5초/5초 지연 refresh를 한 번씩 더 예약한다.
   - QA: `tests/e2e/slice-13-pantry-core.spec.ts`의 `간장` 확인을 `간장 보유중` checkbox로 좁혀, 정상적으로 카드와 모달 양쪽에 보이는 상태를 strict locator 실패로 오해하지 않게 했다.
@@ -49,8 +59,8 @@
 - Production Chrome evidence before this branch:
   - 32/33: HOME 문제 카드가 `생딸기`, `우유`, `+4`로 보였고 `+4` chip이 잘리지 않았다.
   - 75/85: 조해피 신규 가입 후 닉네임 저장 직후 `/mypage`에서 첫 튜토리얼 toast가 표시됐다.
-  - 99: `경험치 안내` modal에서 `처음`, `반복`, `+15 XP` 수치 카드가 사라졌고, 첫 레시피 저장 후 알림 기록에 `첫 레시피 저장 배지를 획득했어요. +15 XP`가 남았다.
-  - 100: `채소 기본` 22개 묶음 추가가 16.3초에서 약 9.2초로 줄었지만 여전히 느려, 이번 branch에서 응답 전 growth activity 대기를 추가로 제거했다.
+  - 99: `경험치 안내` modal에서 `처음`, `반복`, `+15 XP` 수치 카드가 사라졌고, `fix/manual-uiux-xp-toast-amount` 배포 후 첫 레시피 저장 live toast에도 `첫 레시피 저장 배지를 획득했어요. +15 XP`가 표시됐다.
+  - 100: `채소 기본` 22개 묶음 추가가 16.3초에서 약 9.2초까지 줄어든 뒤, `fix/manual-uiux-review-postmerge-qa` 배포 후 성공 status 약 1.26초, 목록 반영 약 2.87초까지 개선됐다.
 
 ## 2026-06-21 Round 3 Redo Closeout
 
@@ -4234,7 +4244,7 @@ Implementation note:
 
 ### 99. 경험치 안내 모달이 항목별 첫/반복 XP를 과하게 보여 복잡한 문제
 
-- Status: implemented in `fix/manual-uiux-review-postmerge-qa`; production Chrome re-verification pending for live first-save toast
+- Status: implemented and production Chrome PASS after `fix/manual-uiux-xp-toast-amount`
 - Severity: Medium
 - Area: UX / Gamification / XP Guide / XP Notifications
 - Source: user manual review correction, XP guide modal screenshot
@@ -4275,15 +4285,18 @@ Implementation note:
   - footer copy에 실제 적립 XP는 알림과 토스트로 바로 알려준다는 기준을 명시했다.
   - `tests/mypage-growth-profile.test.tsx`에서 모달 첫 화면에 `처음`, `반복`, `+15 XP` 같은 항목별 정책 카드가 남지 않도록 고정했다.
   - `tests/growth-toast-stack.test.tsx`에서 첫 저장 source action refresh가 기존 gamification refresh와 겹쳐도 pending refresh를 한 번 더 실행해 XP toast를 표시하는지 고정했다.
+  - `fix/manual-uiux-xp-toast-amount`에서 업적 알림 payload에 source action의 `xp_delta`를 보존하고, 업적 toast 본문에 `+N XP`를 붙이도록 했다.
+  - `tests/user-gamification-notification-priority.test.ts`와 `tests/user-gamification-events.test.ts`에서 첫 저장 업적 알림의 `+15 XP` 본문과 payload 보존을 고정했다.
 - Chrome verification:
   - 2026-06-28 `https://homecook-flame.vercel.app/mypage`, 조해피 계정에서 modal simplification PASS.
   - `경험치 안내` modal에는 `처음`/`반복`/`+15 XP` 수치 카드가 더 이상 보이지 않았다.
-  - 조해피 계정 첫 레시피 저장 후 알림 기록 archive row에는 `업적 달성! 첫 레시피 저장 배지를 획득했어요. +15 XP`가 남았다.
-  - Follow-up: 저장 직후 live toast는 refresh 중첩 경합 때문에 누락될 수 있어 `fix/manual-uiux-review-postmerge-qa`에서 pending refresh를 보강했다.
+  - 2026-06-28 `fix/manual-uiux-xp-toast-amount` 배포 후 조해피 계정을 삭제/재가입해 첫 저장 흐름을 다시 실행했다.
+  - `/mypage` 닉네임 저장 직후 첫 튜토리얼 안내가 표시됐고, HOME에서 `집밥 김치찌개` 첫 저장 후 약 4.6초 시점 live status/toast에 `업적 달성! 첫 레시피 저장 배지를 획득했어요. +15 XP`가 표시됐다.
+  - PASS: 저장 직후 live toast에서도 실제 첫 XP 금액을 확인할 수 있었다.
 
 ### 100. 팬트리 재료추가/묶음추가가 오래 걸리는 문제
 
-- Status: implemented in `fix/manual-uiux-review-postmerge-qa`; production Chrome re-verification pending after deploy
+- Status: implemented and production Chrome PASS after `fix/manual-uiux-review-postmerge-qa`
 - Severity: High
 - Area: UX / Pantry / Performance
 - Source: user manual review
@@ -4322,12 +4335,14 @@ Implementation note:
   - Follow-up result: `fix/manual-uiux-review-postmerge-qa`에서 pantry add client가 immediate refresh 뒤 1.5초/5초 delayed refresh를 예약해, after-response growth 기록이 늦게 저장되어도 toast refresh가 다시 일어나도록 했다.
   - Done: `tests/growth-source-api-client.test.ts`에서 pantry add 성공 후 immediate/delayed gamification refresh 3회를 고정했다.
 - Chrome verification:
-  - 2026-06-28 `https://homecook-flame.vercel.app/pantry`, 조해피 계정에서 FAIL/PARTIAL.
+  - 2026-06-28 `https://homecook-flame.vercel.app/pantry`, 조해피 계정에서 최초 측정 시 미충족 상태였다.
   - 단건 `우유` 1개 추가는 약 2.4초에 완료됐고 목록이 `23개`로 갱신됐다.
   - `채소 기본` 묶음 22개 추가는 `22개 팬트리에 추가` 클릭 후 버튼이 `추가 중...` 상태로 약 16.3초 유지됐다. 이후에야 `22개 재료를 팬트리에 추가했어요`와 각 항목 `보유중` 상태가 표시됐다.
   - `fix/manual-uiux-review-incomplete-items` 배포 후 같은 `채소 기본` 22개 묶음 추가는 약 9.2초까지 줄었지만 여전히 느렸다.
-  - 모달을 닫은 뒤 팬트리 목록은 약 0.5초 안에 `나의 팬트리 22개`/`전체 22`로 갱신됐다.
-  - 따라서 현재 남은 병목은 모달 종료 후 목록 반영이 아니라, 묶음 추가 요청 완료 전까지의 긴 loading 구간이다. 이 branch에서 응답 전 growth activity 대기를 제거했으므로 production 재측정이 필요하다.
+  - `fix/manual-uiux-review-postmerge-qa` 배포 후 빈 팬트리 상태에서 `채소 기본` 22개 묶음 추가를 다시 측정했다.
+  - `22개 팬트리에 추가` 클릭 후 성공 status `22개 재료를 팬트리에 추가했어요`가 약 1.26초에 표시됐다.
+  - 모달을 닫은 뒤 팬트리 목록은 약 2.87초 안에 `나의 팬트리 22개`, `전체 22`, `채소/버섯 22`, 22개 카드로 갱신됐다.
+  - PASS: 테스트한 20개 이상 묶음 추가 path에서 더 이상 긴 `추가 중...` loading 구간이 재현되지 않았다.
 
 ### 101. 요리모드에서 조리법이 여러 개인 단계의 조리법 태그가 세로로 쌓이는 문제
 
