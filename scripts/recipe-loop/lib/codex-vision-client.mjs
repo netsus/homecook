@@ -1,5 +1,5 @@
 // Codex Vision client for recipe-loop.
-// It matches the Gemini client shape: generate({ prompt, videoUrl, cacheText }) -> { json, cached, model }.
+// It matches the recipe-loop LLM client shape: generate({ prompt, videoUrl, cacheText }) -> { json, cached, model }.
 
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";

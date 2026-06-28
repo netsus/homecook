@@ -124,7 +124,7 @@ class LoopConfig:
     train_split: str = "train"
     val_split: str = "validation"
     # 추출 단계에 쓰는 모델. 의미채점 gate는 semantic_judge_* 설정을 사용한다.
-    model: str = "gemini-2.5-flash"
+    model: str = "gpt-5.4"
     semantic_judge_provider: str = "codex"
     semantic_judge_model: str = "gpt-5.4"
     semantic_judge_effort: str = "high"
@@ -1677,7 +1677,7 @@ def build_plan_prompt(cfg: LoopConfig, baseline_summary: str, weak_cases: str, f
     header = (
         "너는 유튜브 레시피 추출 강화 루프의 계획 담당자다.\n"
         "구현 대상은 lib/server/recipe-extraction-lab/ (extract.mjs, prompt.mjs) 뿐이다.\n"
-        "이 모듈은 영상 소스(설명란/자막/댓글) + Gemini 영상 분석으로 {재료, 만들기}를 추출한다.\n"
+        "이 모듈은 유튜브 링크에서 모은 영상 소스(설명란/자막/댓글) + keyframe 증거를 GPT 5.4로 분석해 {재료, 만들기}를 추출한다.\n"
     )
     if first:
         body = (

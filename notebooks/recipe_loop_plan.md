@@ -14,7 +14,7 @@
 | 항목 | 결정 |
 |---|---|
 | 구현 대상 | **별도 추출 모듈 신설**. Codex는 이 모듈 디렉터리만 수정. `lib/server/youtube-import.ts` 본체와 기존 테스트는 건드리지 않고, 루프 합격 후 본체 통합은 별도 작업으로 진행 |
-| LLM 호출 | **Gemini 실제 호출 + 응답 디스크 캐시**. 캐시 키 = source 해시 + prompt 해시 + model. 프롬프트가 바뀐 ITER만 재호출 |
+| LLM 호출 | **GPT 5.4 keyframes 실제 호출 + 응답 디스크 캐시**. 캐시 키 = source 해시 + prompt 해시 + keyframe/모델 해시. 프롬프트나 증거 묶음이 바뀐 ITER만 재호출 |
 | 데이터셋 선정 | **Claude가 다양성 축 기준 후보 제안 → 사용자 승인**. 정답지는 AI 초안 → 사용자 검수로 확정 |
 | 데이터 분할 | **train 12 / validation 10 / blind holdout 5** (사용자 제안으로 3계층 채택). spare 2개는 교체용 보관 |
 | validation 노출 | **매 ITER 코드로 채점하되 집계 점수(평균·최저·분포)만 공개**. 케이스별 입력·정답·출력은 구현자/진단자에게 비공개 |
@@ -22,10 +22,9 @@
 
 ## 현재 파이프라인 요약 (참조용)
 
-`handleYoutubeExtract` 폴백 체인: 영상 메타 → 분류 → 설명란 파서(결정적) → 작성자 댓글 →
-자막(공개 timedtext → Apify, 캐시) → 다중 레시피 결정적 추출 → Gemini LLM 구조화 추출 →
-Gemini 시각 추출(`file_data.file_uri`로 유튜브 URL 직접 전달) → 시각 분량 보강 → 재료 사전 매칭.
-모든 외부 의존성에 `set*ForTest` 주입 시임이 있어 스냅샷 기반 오프라인 실행 가능.
+recipe-loop 실험 체인: 유튜브 링크 스냅샷(source.json) → 설명란/작성자 댓글/자막 정리 →
+EvidencePacket 생성 → keyframe 선택 → GPT 5.4 구조화 추출 → 후처리/재료 사전 매칭.
+runner는 `golden.json`을 읽지 않으며, 채점기는 별도 프로세스에서만 정답을 읽는다.
 
 ## 디렉터리 레이아웃 (안)
 
@@ -41,7 +40,7 @@ notebooks/
     validation/<video_id>/...        # hidden — 집계 점수만 루프에 공개
     holdout/<video_id>/...           # blind — 루프 중 채점 금지, 최종 1회만
     candidates/<video_id>/...        # spare (교체용)
-    cache/llm/<hash>.json            # Gemini 응답 캐시 (텍스트·시각 공용)
+    cache/codex-vision-keyframes/    # GPT 5.4 keyframe 추출 캐시
 lib/server/recipe-extraction-lab/    # (가칭) Codex 구현 대상 모듈
 scripts/recipe-loop/
   snapshot-video.mjs                 # 1회 수집: 영상 메타·설명·자막·댓글 → source.json (Apify 자막 폴백 --apify)
@@ -57,7 +56,7 @@ extractRecipeFromSources(input: {
   video: { videoId, title, description, tags },
   transcript: { segments, language } | null,
   authorComments: string[] | null,
-}, deps: { llm: LlmClient /* 캐시 래핑된 Gemini */ }): Promise<{
+}, deps: { llm: LlmClient /* 캐시 래핑된 GPT 5.4 keyframes */ }): Promise<{
   recipes: Array<{
     title: string,
     ingredients: Array<{ name, amount, unit, rawText }>,
@@ -106,22 +105,22 @@ hidden 누수 차단 원칙(데모 그대로): validation/holdout의 입력·정
   공개 timedtext가 빈 200 응답을 반환하는 문제(poToken 정책)가 있어 프로덕션과 동일한
   Apify actor(`tubelens~youtube-video-scraper`) 폴백을 `--apify`로 추가해 수집.
 - **M2** 정답지 (완료 · 2026-06-13): 27개 전부 golden.json 확정(`reviewStatus: approved`).
-  2단계 방식(텍스트 초안 → Gemini 시각 보강) + 사용자 3회 검수. 레시피 55개, 재료 611개(분량 미상 5), 단계 489개.
-  스크립트: `enrich-golden-visual.mjs`(분량 보강), `extract-visual-recipes.mjs`(텍스트 빈약 영상 단계 추출),
-  `check-unused-ingredients.mjs`(시각추정 재료 중 단계 미사용분 필터 — 검수+파이프라인 공용), `build-review-doc.mjs`(검수 문서).
+  2단계 방식(텍스트 초안 → 과거 시각 보강) + 사용자 3회 검수. 레시피 55개, 재료 611개(분량 미상 5), 단계 489개.
+  현재 recipe-loop provider 정리는 GPT 5.4 keyframes 경로로 통합됐고, 과거 provider 전용 보강 스크립트는 제거됐다.
+  유지 스크립트: `check-unused-ingredients.mjs`(시각추정 재료 중 단계 미사용분 필터 — 검수+파이프라인 공용), `build-review-doc.mjs`(검수 문서).
   교훈: 시각 추출 첫 패스가 재료를 누락(라따뚜이 마늘)하거나 오검출(김밥 소고기/맛살, 된장찌개 소고기)할 수 있어
   타임스탬프 지정 재질의·미사용 재료 필터·텍스트 소스 교차검증이 필요. 이 점검들은 M5 파이프라인 후처리로 이식.
-- **M3** 하네스 (완료 · 2026-06-13): `.mjs` 모듈(tsx 미설치라 Node 네이티브) + 러너 + 결정적 채점기 + 캐시 LLM 클라이언트.
+- **M3** 하네스 (완료 · 2026-06-13): `.mjs` 모듈(tsx 미설치라 Node 네이티브) + 러너 + 결정적 채점기 + GPT 5.4 keyframes 클라이언트.
   추출 모듈 `lib/server/recipe-extraction-lab/`(extract.mjs + prompt.mjs), 러너 `run-extraction.mjs`(golden 미접근 격리),
   채점기 `grade-extraction.mjs` + `lib/grading.mjs`(재료 F1·분량 일치·단계 커버리지·레시피 개수 매칭).
-  **기준선(baseline-0, gemini-2.5-flash)**: train(n=12) 재료F1 0.899 / 분량 0.787 / 단계 0.813 / 레시피개수 0.917,
+  **과거 기준선(baseline-0)**: train(n=12) 재료F1 0.899 / 분량 0.787 / 단계 0.813 / 레시피개수 0.917,
   validation(n=8, 2건 쿼터 보류) 재료F1 0.899 / 분량 0.864 / 단계 0.932. 상세 `recipe_loop_data/BASELINE.md`.
   최대 헤드룸: 다중 레시피 vlog 누락(밥통민 4/7), 시각추정 분량 정확도. 쿼터(429)는 분당 한도라 백오프 재시도로 우회하나 일일 한도는 별도.
 - **M4** 노트북 루프 (진행 중 · 2026-06-13): 오케스트레이터 `scripts/recipe-loop/loop.py`(계획→구현→검증→채점→판정→진단→재시도) +
   얇은 노트북 `notebooks/recipe_extract_loop.ipynb`(loop.py 호출) + AI 의미 채점기 `grade-semantic.mjs`(텍스트 기반, 캐시).
   데모와 달리 오케스트레이션을 .py에 두고 노트북이 호출(대용량 .ipynb 수기 작성 위험 회피). **배선 스모크 통과**:
   하드코딩 점검·baseline 채점 집계·판정 로직·약점 케이스 추출까지 동작 확인(노트북 nbconvert 실행 성공).
-  남은 것: Gemini 일일 쿼터 회복 후 실제 1 ITER(Codex 구현 포함) 스모크. 격리: 모듈에 validation/holdout 정답 문구 하드코딩 시 확정검증 FAIL, validation은 집계만·holdout은 미채점.
+  남은 것: GPT 5.4 keyframes 기본 경로로 실제 ITER(Codex 구현 포함) 스모크. 격리: 모듈에 validation/holdout 정답 문구 하드코딩 시 확정검증 FAIL, validation은 집계만·holdout은 미채점.
 - **M5** 본 루프 운영: 임계값 도달까지 반복 → train+validation 통과 시 holdout 최종 채점 → 합격 시 본체 통합 계획 수립
 
 ## 제품 방향 (사용자 확정)
@@ -132,7 +131,7 @@ hidden 누수 차단 원칙(데모 그대로): validation/holdout의 입력·정
 
 ## 미결 사항 (진행하며 결정)
 
-- 시각 의존 케이스 비중 — Gemini `file_uri` 방식이라 포함 가능(캐시 동일)하나, 시각 케이스는 캐시 미스 시 변동성이 큼
+- 시각 의존 케이스 비중 — GPT 5.4 keyframes 방식으로 포함 가능하나, frame 선택과 캐시 미스 시 변동성이 큼
 - 모듈 정식 이름 (가칭 `recipe-extraction-lab`)
 - 임계값 초기값 보정 — M3 기준선 측정 후 확정
 - `recipe_loop_runs/`, `recipe_loop_data/cache/` gitignore 추가 여부와 data/golden의 git 추적 여부

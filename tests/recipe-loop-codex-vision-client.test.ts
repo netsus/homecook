@@ -13,6 +13,9 @@ const codexVisionModuleUrl = pathToFileURL(
 const codexVisionKeyframesModuleUrl = pathToFileURL(
   path.join(repoRoot, "scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs"),
 ).href;
+const urlOnlyGptModuleUrl = pathToFileURL(
+  path.join(repoRoot, "scripts/recipe-loop/lib/url-only-gpt-client.mjs"),
+).href;
 const runExtractionModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/recipe-loop/run-extraction.mjs")).href;
 
 function writeJson(filePath: string, value: unknown) {
@@ -1186,7 +1189,7 @@ describe("recipe-loop codex-vision provider", () => {
     expect(first.meta.codexVisionKeyframesCacheDir).not.toBe(second.meta.codexVisionKeyframesCacheDir);
   });
 
-  it("records segmented planner failure artifacts without falling back to Gemini", async () => {
+  it("records segmented planner failure artifacts without hidden provider fallback", async () => {
     const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
     const { frameDir, frames } = makeFrameFixture(workdir, 3);
     const cacheDir = path.join(workdir, "keyframes-cache");
@@ -1228,7 +1231,7 @@ describe("recipe-loop codex-vision provider", () => {
     });
   });
 
-  it("records keyframe selector failure artifacts without falling back to Gemini", async () => {
+  it("records keyframe selector failure artifacts without hidden provider fallback", async () => {
     const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
     const { frameDir, frames } = makeFrameFixture(workdir, 2);
     const cacheDir = path.join(workdir, "keyframes-cache");
@@ -1267,7 +1270,7 @@ describe("recipe-loop codex-vision provider", () => {
     });
   });
 
-  it("records failure artifacts and does not silently fall back to Gemini", async () => {
+  it("records failure artifacts and does not silently fall back to another provider", async () => {
     const { createCodexVisionClient } = await import(codexVisionModuleUrl);
     const { frameDir, frames } = makeFrameFixture(workdir);
     const cacheDir = path.join(workdir, "cache");
@@ -1474,7 +1477,7 @@ describe("recipe-loop codex-vision provider", () => {
     expect(output.recipes[0].title).toBe("김치찌개");
   });
 
-  it("selects codex-vision-keyframes from run-extraction without changing the Gemini default", async () => {
+  it("selects codex-vision-keyframes from run-extraction explicitly", async () => {
     const { createLlmForProvider, runExtraction } = await import(runExtractionModuleUrl);
     const selected = createLlmForProvider("codex-vision-keyframes", {
       model: "fixture-final-model",
@@ -1621,34 +1624,177 @@ describe("recipe-loop codex-vision provider", () => {
     expect(output.recipes[0].title).toBe("맥적구이");
   });
 
-  it("keeps the Gemini provider as the default run-extraction path", async () => {
-    const { runExtraction } = await import(runExtractionModuleUrl);
-    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-gemini");
+  it("selects url-only-gpt without injecting local source text or reading golden.json", async () => {
+    const { createLlmForProvider, runExtraction } = await import(runExtractionModuleUrl);
+    const selected = createLlmForProvider("url-only-gpt", {
+      model: "fixture-url-model",
+      "codex-effort": "low",
+      "timeout-ms": "1234",
+      "refresh-final": true,
+      "no-cache": true,
+    }, {
+      createUrlOnlyGpt: (options: Record<string, unknown>) => ({ options }),
+    });
+    expect(selected.options).toMatchObject({
+      model: "fixture-url-model",
+      codexEffort: "low",
+      timeoutMs: 1234,
+      refreshFinal: true,
+      noCache: true,
+    });
+
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-url-only");
     writeJson(path.join(caseDir, "source.json"), {
       video: {
-        videoId: "case-gemini",
+        videoId: "case-url-only",
+        title: "SHOULD_NOT_APPEAR_TITLE",
+        description: "SHOULD_NOT_APPEAR_DESCRIPTION",
+        url: "https://www.youtube.com/watch?v=case-url-only",
+      },
+      captions: {
+        available: true,
+        segments: [{ text: "SHOULD_NOT_APPEAR_CAPTION", startMs: 1000 }],
+      },
+      authorComments: { comments: [{ text: "SHOULD_NOT_APPEAR_COMMENT" }] },
+    });
+    writeFileSync(path.join(caseDir, "golden.json"), "{ this would fail if read", "utf8");
+
+    const generateCalls: Array<Record<string, string | null>> = [];
+    const result = await runExtraction(
+      {
+        split: "train",
+        ids: "case-url-only",
+        "out-tag": "url-only-test",
+        provider: "url-only-gpt",
+      },
+      {
+        projectRoot: workdir,
+        factories: {
+          createUrlOnlyGpt: () => ({
+            generate: async ({ prompt, videoUrl, cacheText }: Record<string, string>) => {
+              generateCalls.push({ prompt, videoUrl, cacheText });
+              return {
+                cached: false,
+                model: "fixture-url-model",
+                provider: "url-only-gpt",
+                meta: { provider: "url-only-gpt", sourceMode: "url-only" },
+                json: {
+                  recipes: [
+                    {
+                      title: "URL 직접 추출",
+                      ingredients: [{ name: "김", amount: "1", unit: "장" }],
+                      steps: ["김을 펼친다."],
+                    },
+                  ],
+                },
+              };
+            },
+          }),
+        },
+      },
+    );
+
+    expect(result.failures).toBe(0);
+    expect(generateCalls).toHaveLength(1);
+    expect(generateCalls[0].videoUrl).toBe("https://www.youtube.com/watch?v=case-url-only");
+    expect(generateCalls[0].cacheText).toBe("url-only:https://www.youtube.com/watch?v=case-url-only");
+    expect(generateCalls[0].prompt).toContain("대상 링크: https://www.youtube.com/watch?v=case-url-only");
+    expect(generateCalls[0].prompt).not.toContain("SHOULD_NOT_APPEAR");
+    expect(existsSync(path.join(caseDir, "runs/url-only-test/evidence-packets.json"))).toBe(false);
+    expect(existsSync(path.join(caseDir, "runs/url-only-test/cue-extraction-report.json"))).toBe(false);
+
+    const output = JSON.parse(readFileSync(path.join(caseDir, "runs/url-only-test/result.json"), "utf8"));
+    expect(output.meta).toMatchObject({
+      provider: "url-only-gpt",
+      promptVersion: "url-only-gpt-direct-v1",
+      sourceMode: "url-only",
+    });
+    expect(output.recipes[0].title).toBe("URL 직접 추출");
+  });
+
+  it("writes url-only-gpt prompt, raw response, cache, and failure artifacts", async () => {
+    const { createUrlOnlyGptClient } = await import(urlOnlyGptModuleUrl);
+    const cacheDir = path.join(workdir, "url-only-cache");
+    const client = createUrlOnlyGptClient({
+      cacheDir,
+      model: "fixture-url-model",
+      codexExec: async ({ outputPath, logPath }: Record<string, string>) => {
+        writeFileSync(logPath, "fixture log", "utf8");
+        writeFileSync(outputPath, "will be overwritten by client return", "utf8");
+        return "```json\n{\"recipes\":[{\"title\":\"후토마끼\",\"ingredients\":[{\"name\":\"김\",\"amount\":\"1\",\"unit\":\"장\"}],\"steps\":[\"김을 펼친다.\"]}]}\n```";
+      },
+    });
+
+    const first = await client.generate({
+      prompt: "대상 링크: https://www.youtube.com/watch?v=case-url-only",
+      videoUrl: "https://www.youtube.com/watch?v=case-url-only",
+      cacheText: "url-only:https://www.youtube.com/watch?v=case-url-only",
+    });
+
+    expect(first.cached).toBe(false);
+    expect(first.provider).toBe("url-only-gpt");
+    expect(first.meta.urlOnlyGptCacheDir).toContain(cacheDir);
+    expect(first.json.recipes[0].title).toBe("후토마끼");
+    expect(existsSync(path.join(first.meta.urlOnlyGptCacheDir, "final.prompt.md"))).toBe(true);
+    expect(existsSync(path.join(first.meta.urlOnlyGptCacheDir, "final.raw.md"))).toBe(true);
+    expect(existsSync(path.join(first.meta.urlOnlyGptCacheDir, "final.log"))).toBe(true);
+    expect(existsSync(path.join(first.meta.urlOnlyGptCacheDir, "final.json"))).toBe(true);
+    expect(existsSync(path.join(first.meta.urlOnlyGptCacheDir, "run_meta.json"))).toBe(true);
+
+    const second = await client.generate({
+      prompt: "대상 링크: https://www.youtube.com/watch?v=case-url-only",
+      videoUrl: "https://www.youtube.com/watch?v=case-url-only",
+      cacheText: "url-only:https://www.youtube.com/watch?v=case-url-only",
+    });
+    expect(second.cached).toBe(true);
+
+    const failingClient = createUrlOnlyGptClient({
+      cacheDir: path.join(workdir, "url-only-cache-fail"),
+      model: "fixture-url-model",
+      codexExec: async () => {
+        throw new Error("fixture direct extraction failed");
+      },
+    });
+
+    await expect(failingClient.generate({
+      prompt: "대상 링크: https://www.youtube.com/watch?v=case-fail",
+      videoUrl: "https://www.youtube.com/watch?v=case-fail",
+      cacheText: "url-only:https://www.youtube.com/watch?v=case-fail",
+    })).rejects.toThrow("fixture direct extraction failed");
+    const failureFiles = readdirSync(path.join(workdir, "url-only-cache-fail"), { recursive: true })
+      .map((entry) => String(entry))
+      .filter((entry) => entry.endsWith("failure.json"));
+    expect(failureFiles).toHaveLength(1);
+  });
+
+  it("uses codex-vision-keyframes as the default GPT 5.4 extraction path", async () => {
+    const { runExtraction } = await import(runExtractionModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-default-keyframes");
+    writeJson(path.join(caseDir, "source.json"), {
+      video: {
+        videoId: "case-default-keyframes",
         title: "된장찌개",
         description: "된장 1큰술",
-        url: "https://www.youtube.com/watch?v=case-gemini",
+        url: "https://www.youtube.com/watch?v=case-default-keyframes",
       },
       captions: { available: false, segments: [] },
       authorComments: { comments: [] },
     });
 
-    const geminiFactoryCalls: Array<Record<string, unknown>> = [];
+    const keyframeFactoryCalls: Array<Record<string, unknown>> = [];
     const result = await runExtraction(
-      { split: "train", ids: "case-gemini", "out-tag": "gemini-default-test" },
+      { split: "train", ids: "case-default-keyframes", "out-tag": "keyframes-default-test" },
       {
         projectRoot: workdir,
         factories: {
-          createGemini: (options: Record<string, unknown>) => {
-            geminiFactoryCalls.push(options);
+          createCodexVisionKeyframes: (options: Record<string, unknown>) => {
+            keyframeFactoryCalls.push(options);
             return {
               generate: async () => ({
                 cached: false,
-                model: "fixture-gemini",
-                provider: "gemini",
-                meta: { provider: "gemini" },
+                model: "gpt-5.4",
+                provider: "codex-vision-keyframes",
+                meta: { provider: "codex-vision-keyframes" },
                 json: {
                   recipes: [
                     {
@@ -1666,9 +1812,9 @@ describe("recipe-loop codex-vision provider", () => {
     );
 
     expect(result.failures).toBe(0);
-    expect(geminiFactoryCalls).toHaveLength(1);
-    const output = JSON.parse(readFileSync(path.join(caseDir, "runs/gemini-default-test/result.json"), "utf8"));
-    expect(output.meta.provider).toBe("gemini");
+    expect(keyframeFactoryCalls).toHaveLength(1);
+    const output = JSON.parse(readFileSync(path.join(caseDir, "runs/keyframes-default-test/result.json"), "utf8"));
+    expect(output.meta.provider).toBe("codex-vision-keyframes");
     expect(output.recipes[0].title).toBe("된장찌개");
   });
 
