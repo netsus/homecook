@@ -82,8 +82,12 @@ export interface TutorialGuide {
 }
 
 function tutorialStepRank(step: UserGamificationTutorialStepData) {
+  return tutorialAchievementRank(step.achievement_key);
+}
+
+function tutorialAchievementRank(achievementKey: string) {
   const index = TUTORIAL_STEP_ORDER.indexOf(
-    step.achievement_key as (typeof TUTORIAL_STEP_ORDER)[number],
+    achievementKey as (typeof TUTORIAL_STEP_ORDER)[number],
   );
 
   return index === -1 ? TUTORIAL_STEP_ORDER.length : index;
@@ -166,11 +170,28 @@ export function createTutorialGuideNotification(
     return null;
   }
 
+  return createTutorialGuideNotificationItem(guide, {
+    createdAt: gamification?.last_updated_at ?? new Date(0).toISOString(),
+    deliveryChannel: "toast",
+    status: "active",
+    toastEligible: true,
+  });
+}
+
+function createTutorialGuideNotificationItem(
+  guide: TutorialGuide,
+  options: {
+    createdAt: string;
+    deliveryChannel: UserGamificationNotificationData["delivery_channel"];
+    status: "active" | "completed";
+    toastEligible: boolean;
+  },
+): UserGamificationNotificationData {
   return {
     body: `${guide.title} · ${guide.body}`,
     category: "tutorial",
-    created_at: gamification?.last_updated_at ?? new Date(0).toISOString(),
-    delivery_channel: "toast",
+    created_at: options.createdAt,
+    delivery_channel: options.deliveryChannel,
     group_key: null,
     id:
       TUTORIAL_TOAST_UUID_BY_ACHIEVEMENT_KEY[guide.achievementKey] ??
@@ -182,10 +203,71 @@ export function createTutorialGuideNotification(
       quest_key: guide.questKey,
       synthetic: true,
       tutorial_guide: true,
+      tutorial_guide_status: options.status,
     },
     priority: 0,
     seen_at: null,
     title: "튜토리얼 안내",
-    toast_eligible: true,
+    toast_eligible: options.toastEligible,
   };
+}
+
+function tutorialGuideForAchievementKey(achievementKey: string): TutorialGuide | null {
+  const guide = TUTORIAL_GUIDE_BY_ACHIEVEMENT_KEY[achievementKey];
+
+  if (!guide) {
+    return null;
+  }
+
+  return {
+    achievementKey,
+    body: guide.body,
+    questKey: guide.questKey,
+    title: guide.title,
+  };
+}
+
+function timestamp(value: string | null | undefined) {
+  if (!value) return 0;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : 0;
+}
+
+export function createTutorialGuideHistoryNotifications(
+  gamification: UserGamificationData | null,
+): UserGamificationNotificationData[] {
+  if (!gamification) {
+    return [];
+  }
+
+  const currentGuide = createTutorialGuideNotification(gamification);
+  const tutorialCategory = (gamification.achievement_album?.categories ?? []).find(
+    (category) => category.category_key === "tutorial",
+  );
+  const completedGuides = (tutorialCategory?.milestones ?? [])
+    .filter((milestone) => milestone.status === "earned")
+    .map((milestone) => ({
+      earnedAt: milestone.earned_at ?? gamification.last_updated_at,
+      guide: tutorialGuideForAchievementKey(milestone.achievement_key),
+    }))
+    .filter((item): item is { earnedAt: string; guide: TutorialGuide } => item.guide !== null)
+    .sort((left, right) => {
+      const timeDiff = timestamp(right.earnedAt) - timestamp(left.earnedAt);
+      if (timeDiff !== 0) return timeDiff;
+      return tutorialAchievementRank(left.guide.achievementKey) -
+        tutorialAchievementRank(right.guide.achievementKey);
+    })
+    .map((item) =>
+      createTutorialGuideNotificationItem(item.guide, {
+        createdAt: item.earnedAt,
+        deliveryChannel: "archive_only",
+        status: "completed",
+        toastEligible: false,
+      })
+    );
+  const notifications = currentGuide
+    ? [currentGuide, ...completedGuides.filter((item) => item.id !== currentGuide.id)]
+    : completedGuides;
+
+  return notifications;
 }
