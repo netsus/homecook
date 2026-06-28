@@ -52,6 +52,7 @@ function createQuery<T>(result: QueryResult<T>) {
     or: vi.fn(() => query),
     ilike: vi.fn(() => query),
     eq: vi.fn(() => query),
+    gte: vi.fn(() => query),
     in: vi.fn(() => query),
     maybeSingle: vi.fn(() => createAwaitableQuery(result)),
     then(onFulfilled?: (value: QueryResult<T>) => unknown, onRejected?: (reason: unknown) => unknown) {
@@ -902,14 +903,74 @@ describe("recipe API contracts", () => {
     expect(listQuery.ilike).toHaveBeenCalledWith("title", "%김치%");
   });
 
-  it("returns tag-classified themed recipe sections in the API envelope", async () => {
-    const listQuery = createQuery({
+  it("returns explicit themed recipe sections in the API envelope", async () => {
+    const baseRecipesQuery = createQuery({
       data: [
         {
           id: "recipe-1",
-          title: "실패 없는 기본 김치찌개",
+          title: "연어오븐구이",
           thumbnail_url: "https://example.com/kimchi.jpg",
-          tags: ["한식", "간단"],
+          tags: ["한그릇요리", "고단백"],
+          base_servings: 2,
+          view_count: 10,
+          like_count: 4,
+          save_count: 2,
+          source_type: "system",
+        },
+        {
+          id: "recipe-side",
+          title: "단호박소고기롤",
+          thumbnail_url: "https://example.com/side.jpg",
+          tags: ["한식", "밑반찬", "고단백"],
+          base_servings: 4,
+          view_count: 8,
+          like_count: 1,
+          save_count: 0,
+          source_type: "system",
+        },
+      ],
+      error: null,
+    });
+    const youtubeRecipesQuery = createQuery({
+      data: [
+        {
+          id: "recipe-2",
+          title: "유튜브 전자레인지 계란찜",
+          thumbnail_url: "https://example.com/youtube.jpg",
+          tags: ["전자레인지"],
+          base_servings: 2,
+          view_count: 6,
+          like_count: 1,
+          save_count: 1,
+          source_type: "youtube",
+        },
+      ],
+      error: null,
+    });
+    const recentPlannerRowsQuery = createQuery({
+      data: [
+        { recipe_id: "recipe-1" },
+        { recipe_id: "recipe-1" },
+        { recipe_id: "recipe-2" },
+      ],
+      error: null,
+    });
+    const methodRowsQuery = createQuery({
+      data: [
+        { recipe_id: "recipe-2", cooking_methods: { code: "mix" } },
+        { recipe_id: "recipe-2", cooking_methods: { code: "microwave" } },
+        { recipe_id: "recipe-side", cooking_methods: { code: "oven_bake" } },
+        { recipe_id: "recipe-side", cooking_methods: { code: "stir_fry" } },
+      ],
+      error: null,
+    });
+    const supplementalRecipesQuery = createQuery({
+      data: [
+        {
+          id: "recipe-1",
+          title: "연어오븐구이",
+          thumbnail_url: "https://example.com/kimchi.jpg",
+          tags: ["한그릇요리", "고단백"],
           base_servings: 2,
           view_count: 10,
           like_count: 4,
@@ -918,18 +979,23 @@ describe("recipe API contracts", () => {
         },
         {
           id: "recipe-2",
-          title: "불 없이 딸기 우유 푸딩",
-          thumbnail_url: "https://example.com/pudding.jpg",
-          tags: ["딸기푸딩", "디저트"],
-          base_servings: 4,
-          view_count: 8,
+          title: "유튜브 전자레인지 계란찜",
+          thumbnail_url: "https://example.com/youtube.jpg",
+          tags: ["전자레인지"],
+          base_servings: 2,
+          view_count: 6,
           like_count: 1,
-          save_count: 0,
+          save_count: 1,
           source_type: "youtube",
         },
       ],
       error: null,
     });
+    const recipeQueries = [
+      baseRecipesQuery,
+      youtubeRecipesQuery,
+      supplementalRecipesQuery,
+    ];
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -958,27 +1024,25 @@ describe("recipe API contracts", () => {
               save_count: 2,
               source_type: "system",
             },
-            {
-              tag_normalized_key: "디저트",
-              tag_label: "디저트",
-              tag_slug: "dessert",
-              theme_rank: 2,
-              recipe_rank: 1,
-              id: "recipe-2",
-              title: "불 없이 딸기 우유 푸딩",
-              thumbnail_url: "https://example.com/pudding.jpg",
-              tags: ["딸기푸딩", "디저트"],
-              base_servings: 4,
-              view_count: 8,
-              like_count: 1,
-              save_count: 0,
-              source_type: "youtube",
-            },
           ],
           error: null,
         };
       }),
-      from: vi.fn(() => listQuery),
+      from: vi.fn((table: string) => {
+        if (table === "recipes") {
+          const query = recipeQueries.shift();
+
+          if (!query) {
+            throw new Error("unexpected recipes query");
+          }
+
+          return query;
+        }
+
+        if (table === "meals") return recentPlannerRowsQuery;
+        if (table === "recipe_steps") return methodRowsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
     });
 
     const { GET } = await import("@/app/api/v1/recipes/themes/route");
@@ -989,16 +1053,18 @@ describe("recipe API contracts", () => {
     expect(body.success).toBe(true);
     expect(body.error).toBeNull();
     const themeIds = body.data.themes.map((theme: { id: string }) => theme.id);
-    expect(themeIds).toContain("popular");
+    expect(themeIds).toContain("recent-planner");
     expect(themeIds).toContain("youtube");
-    expect(themeIds).toContain("fail-safe");
-    expect(themeIds).toContain("no-cook-sweet");
+    expect(themeIds).toContain("no-flame-appliance");
+    expect(themeIds).toContain("hearty-main");
     expect(themeIds).toContain("korean");
-    expect(themeIds).toContain("dessert");
+    expect(themeIds).not.toContain("popular");
+    expect(themeIds).not.toContain("fail-safe");
+    expect(themeIds).not.toContain("no-cook-sweet");
     expect(themeIds).not.toContain("saved-favorites");
-    const popularTheme = body.data.themes.find((theme: { id: string }) => theme.id === "popular");
-    expect(popularTheme.title).toBe("조회 많은 레시피");
-    expect(popularTheme.recipes[0]).toMatchObject({ id: "recipe-1" });
+    const recentPlannerTheme = body.data.themes.find((theme: { id: string }) => theme.id === "recent-planner");
+    expect(recentPlannerTheme.title).toBe("요즘 플래너에 많이 담은 메뉴");
+    expect(recentPlannerTheme.recipes[0]).toMatchObject({ id: "recipe-1" });
     expect(body.data.themes.find((theme: { id: string }) => theme.id === "youtube")).toMatchObject({
       title: "유튜브에서 가져온 레시피",
       recipes: [
@@ -1007,30 +1073,142 @@ describe("recipe API contracts", () => {
         },
       ],
     });
-    expect(body.data.themes.find((theme: { id: string }) => theme.id === "fail-safe")).toMatchObject({
-      title: "실패 걱정 없는 메뉴",
+    expect(body.data.themes.find((theme: { id: string }) => theme.id === "no-flame-appliance")).toMatchObject({
+      title: "불 없이 만드는 요리",
+      recipes: [
+        {
+          id: "recipe-2",
+        },
+      ],
+    });
+    expect(body.data.themes.find((theme: { id: string }) => theme.id === "hearty-main")).toMatchObject({
+      title: "밥상 든든한 메인",
       recipes: [
         {
           id: "recipe-1",
         },
       ],
     });
-    expect(body.data.themes.find((theme: { id: string }) => theme.id === "no-cook-sweet")).toMatchObject({
-      title: "불 없이 달달하게",
-      recipes: [
+    expect(
+      body.data.themes
+        .find((theme: { id: string }) => theme.id === "hearty-main")
+        .recipes.map((recipe: { id: string }) => recipe.id),
+    ).not.toContain("recipe-side");
+  });
+
+  it("adds the pantry cleanout theme from the authenticated user's pantry matches", async () => {
+    const baseRecipesQuery = createQuery({ data: [], error: null });
+    const youtubeRecipesQuery = createQuery({ data: [], error: null });
+    const supplementalRecipesQuery = createQuery({
+      data: [
         {
-          id: "recipe-2",
+          id: "recipe-pantry-perfect",
+          title: "팬트리만으로 만드는 달걀밥",
+          thumbnail_url: "https://example.com/egg-rice.jpg",
+          tags: ["한그릇요리"],
+          base_servings: 1,
+          view_count: 3,
+          like_count: 0,
+          save_count: 0,
+          source_type: "system",
+        },
+        {
+          id: "recipe-pantry-partial",
+          title: "두부 김치찌개",
+          thumbnail_url: "https://example.com/tofu-kimchi.jpg",
+          tags: ["한식", "국물요리"],
+          base_servings: 2,
+          view_count: 7,
+          like_count: 1,
+          save_count: 1,
+          source_type: "system",
         },
       ],
+      error: null,
     });
-    expect(body.data.themes.find((theme: { id: string }) => theme.id === "dessert")).toMatchObject({
-      title: "디저트",
-      tag_key: "디저트",
-      tag_label: "디저트",
+    const recentPlannerRowsQuery = createQuery({ data: [], error: null });
+    const methodRowsQuery = createQuery({ data: [], error: null });
+    const pantryItemsQuery = createQuery({
+      data: [
+        { ingredient_id: "ing-egg" },
+        { ingredient_id: "ing-rice" },
+      ],
+      error: null,
+    });
+    const matchedIngredientsQuery = createQuery({
+      data: [
+        { recipe_id: "recipe-pantry-perfect", ingredient_id: "ing-egg" },
+        { recipe_id: "recipe-pantry-perfect", ingredient_id: "ing-rice" },
+        { recipe_id: "recipe-pantry-partial", ingredient_id: "ing-rice" },
+      ],
+      error: null,
+    });
+    const totalIngredientsQuery = createQuery({
+      data: [
+        { recipe_id: "recipe-pantry-perfect", ingredient_id: "ing-egg" },
+        { recipe_id: "recipe-pantry-perfect", ingredient_id: "ing-rice" },
+        { recipe_id: "recipe-pantry-partial", ingredient_id: "ing-rice" },
+        { recipe_id: "recipe-pantry-partial", ingredient_id: "ing-tofu" },
+      ],
+      error: null,
+    });
+    const savedItemsQuery = createQuery({ data: [], error: null });
+    const recipeQueries = [
+      baseRecipesQuery,
+      youtubeRecipesQuery,
+      supplementalRecipesQuery,
+    ];
+    const recipeIngredientQueries = [
+      matchedIngredientsQuery,
+      totalIngredientsQuery,
+    ];
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
+      from: vi.fn((table: string) => {
+        if (table === "recipes") {
+          const query = recipeQueries.shift();
+
+          if (!query) {
+            throw new Error("unexpected recipes query");
+          }
+
+          return query;
+        }
+
+        if (table === "meals") return recentPlannerRowsQuery;
+        if (table === "recipe_steps") return methodRowsQuery;
+        if (table === "pantry_items") return pantryItemsQuery;
+        if (table === "recipe_ingredients") {
+          const query = recipeIngredientQueries.shift();
+
+          if (!query) {
+            throw new Error("unexpected recipe_ingredients query");
+          }
+
+          return query;
+        }
+        if (table === "recipe_book_items") return savedItemsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/themes/route");
+    const response = await GET();
+    const body = await response.json();
+    const pantryTheme = body.data.themes.find((theme: { id: string }) => theme.id === "pantry-cleanout");
+
+    expect(response.status).toBe(200);
+    expect(pantryTheme).toMatchObject({
+      title: "냉장고 비우는 한 끼",
       recipes: [
-        {
-          id: "recipe-2",
-        },
+        { id: "recipe-pantry-perfect" },
+        { id: "recipe-pantry-partial" },
       ],
     });
   });
@@ -1049,7 +1227,7 @@ describe("recipe API contracts", () => {
       data: {
         themes: [
           {
-            id: "popular",
+            id: "recent-planner",
             recipes: [
               {
                 id: "mock-kimchi-jjigae",

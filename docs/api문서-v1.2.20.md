@@ -488,17 +488,27 @@ GET /recipes/themes
 {
   "themes": [
     {
-      "id": "popular",
-      "title": "조회 많은 레시피",
+      "id": "recent-planner",
+      "title": "요즘 플래너에 많이 담은 메뉴",
       "recipes": [
-        /* 레시피 카드 배열 (최대 10개) */
+        /* 최근 3일 플래너 등록 수 기준 레시피 카드 배열 (최대 10개) */
+      ]
+    },
+    {
+      "id": "no-flame-appliance",
+      "title": "불 없이 만드는 요리",
+      "recipes": [
+        /* 전자레인지/오븐/에어프라이어 조리법만 쓰는 레시피 카드 배열 (최대 10개) */
       ]
     }
   ]
 }
 ```
 
-> 테마는 조회수 정렬 기반 `popular`를 기본으로 포함하고, `theme_eligible=true`인 public/approved semantic/source tag 기반 분류 결과가 있으면 `korean-home`, `quick-meal`, `dessert`, `youtube` 같은 추가 테마를 함께 반환한다.
+> 테마는 이름과 포함 기준이 명확히 일치하는 경우에만 반환한다. 빈 테마는 숨긴다.
+> 기본 큐레이션 테마는 `recent-planner`(최근 3일 `meals.created_at` 기준 플래너 등록 수), `youtube`(`recipes.source_type='youtube'`), `no-flame-appliance`(모든 step 조리법이 전자레인지/오븐/에어프라이어 또는 준비/섞기 계열이며 화구 조리법 없음), `hearty-main`(`한그릇요리`/`고단백` tag가 있고 `밑반찬`/`디저트`/`샐러드` tag 없음)이다.
+> 로그인 사용자의 팬트리 재료로 매칭 가능한 레시피가 있으면 `pantry-cleanout`(팬트리 매칭률, 부족 재료 수, 매칭 재료 수 순 정렬)을 함께 반환한다. 비로그인 사용자는 이 테마를 받지 않을 수 있다.
+> 추가 tag theme는 `theme_eligible=true`인 public/approved semantic/source tag 기반 분류 결과가 있으면 `korean`, `bowl-meal`, `soup`, `youtube` 같은 형태로 함께 반환한다.
 > 사용자 자유 입력 tag는 표시/검색 가능하더라도 `theme_eligible=true`와 `review_status='approved'`가 되기 전에는 HOME theme seed로 사용하지 않는다.
 > theme가 특정 tag에서 파생된 경우 응답 item에 `tag_key`와 `tag_label`을 additive로 포함할 수 있다.
 

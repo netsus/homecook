@@ -75,7 +75,7 @@
 ### `GET /api/v1/recipes/themes`
 
 - Response: 기존 `{ success, data: { themes }, error }` 유지.
-- `popular`는 기본 theme로 유지한다.
+- `popular` 기본 theme는 manual UI/UX review 89 follow-up에서 제거됐다. 현재 기본 큐레이션은 최근 3일 플래너 등록 수 기반 `recent-planner`와 명확 조건을 가진 theme만 반환한다.
 - 추가 theme는 `list_home_theme_recipes` RPC 결과에서만 만든다.
 - tag theme에는 `tag_key`와 `tag_label`을 additive로 포함할 수 있다.
 - tag theme seed는 approved system semantic/source tag로 제한한다.
@@ -149,7 +149,7 @@
 2. 클라이언트가 `GET /api/v1/recipes?tag=<normalized_key>`를 호출한다.
 3. 서버는 canonical `recipe_tags`에서 public/approved tag 매칭 recipe id를 dedupe하고 기존 list sort/cursor로 카드 목록을 반환한다.
 4. 사용자가 검색어를 입력하면 `GET /api/v1/recipes?q=`가 제목과 승인 태그 라벨을 함께 검색해 목록을 갱신한다.
-5. HOME 테마 섹션은 `popular`와 승인된 시스템 태그 기반 theme를 함께 보여줄 수 있다.
+5. HOME 테마 섹션은 `recent-planner` 등 명확 기준 theme와 승인된 시스템 태그 기반 theme를 함께 보여줄 수 있다.
 
 ## Delivery Checklist
 

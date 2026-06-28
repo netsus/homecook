@@ -2,13 +2,6 @@ import type { RecipeCardItem, RecipeTheme } from "@/types/recipe";
 
 const MAX_RECIPES_PER_THEME = 10;
 
-interface ThemeDefinition {
-  id: string;
-  title: string;
-  keywords?: string[];
-  sourceTypes?: RecipeCardItem["source_type"][];
-}
-
 export interface RecipeTagThemeGroup {
   id: string;
   tag_key: string;
@@ -16,93 +9,18 @@ export interface RecipeTagThemeGroup {
   recipes: RecipeCardItem[];
 }
 
-const THEME_DEFINITIONS: ThemeDefinition[] = [
-  {
-    id: "youtube",
-    title: "유튜브에서 가져온 레시피",
-    sourceTypes: ["youtube"],
-  },
-  {
-    id: "pantry-cleanout",
-    title: "냉장고 비우는 한 끼",
-    keywords: [
-      "냉장고",
-      "냉털",
-      "남은",
-      "자투리",
-      "비우",
-      "털기",
-    ],
-  },
-  {
-    id: "fail-safe",
-    title: "실패 걱정 없는 메뉴",
-    keywords: [
-      "간단",
-      "기본",
-      "쉽게",
-      "쉬운",
-      "실패",
-      "초간단",
-    ],
-  },
-  {
-    id: "hearty-main",
-    title: "밥상 든든한 메인",
-    keywords: [
-      "고기",
-      "닭",
-      "돼지",
-      "든든",
-      "메인",
-      "소고기",
-      "제육",
-    ],
-  },
-  {
-    id: "no-cook-sweet",
-    title: "불 없이 달달하게",
-    keywords: [
-      "달달",
-      "딸기",
-      "무화과",
-      "바나나",
-      "불 없이",
-      "과일",
-      "디저트",
-      "복숭아",
-      "사과",
-      "젤리",
-      "젤라틴",
-      "딸기",
-      "푸딩",
-      "케이크",
-    ],
-  },
-];
-
-function normalizeSearchText(value: string) {
-  return value.toLowerCase();
+export interface RecipeThemeInput {
+  recentPlannerItems?: RecipeCardItem[];
+  pantryItems?: RecipeCardItem[];
+  youtubeItems?: RecipeCardItem[];
+  noFlameItems?: RecipeCardItem[];
+  heartyMainItems?: RecipeCardItem[];
+  tagGroups?: RecipeTagThemeGroup[];
 }
 
-function getRecipeThemeText(recipe: RecipeCardItem) {
-  return normalizeSearchText([recipe.title, ...recipe.tags].join(" "));
-}
-
-function recipeMatchesTheme(recipe: RecipeCardItem, theme: ThemeDefinition) {
-  if (!theme.sourceTypes?.length && !theme.keywords?.length) {
-    return true;
-  }
-
-  if (theme.sourceTypes?.includes(recipe.source_type)) {
-    return true;
-  }
-
-  const searchText = getRecipeThemeText(recipe);
-
-  return theme.keywords?.some((keyword) =>
-    searchText.includes(normalizeSearchText(keyword)),
-  ) ?? false;
+export interface RecipeMethodCodeRow {
+  recipe_id: string;
+  method_code: string | null;
 }
 
 function createTheme(id: string, title: string, recipes: RecipeCardItem[]) {
@@ -111,6 +29,14 @@ function createTheme(id: string, title: string, recipes: RecipeCardItem[]) {
     title,
     recipes: recipes.slice(0, MAX_RECIPES_PER_THEME),
   } satisfies RecipeTheme;
+}
+
+function pushTheme(themes: RecipeTheme[], id: string, title: string, recipes: RecipeCardItem[] | undefined) {
+  if (!recipes?.length) {
+    return;
+  }
+
+  themes.push(createTheme(id, title, recipes));
 }
 
 function createTagTheme(group: RecipeTagThemeGroup) {
@@ -123,13 +49,90 @@ function createTagTheme(group: RecipeTagThemeGroup) {
   } satisfies RecipeTheme;
 }
 
-export function createRecipeThemesFromTagGroups(
-  popularItems: RecipeCardItem[],
-  groups: RecipeTagThemeGroup[],
-) {
-  const themes = createRecipeThemesFromCards(popularItems);
+const NO_FLAME_APPLIANCE_METHOD_CODES = new Set([
+  "air_fryer",
+  "microwave",
+  "oven_bake",
+]);
 
-  groups.forEach((group) => {
+const NO_FLAME_ALLOWED_METHOD_CODES = new Set([
+  ...NO_FLAME_APPLIANCE_METHOD_CODES,
+  "mince",
+  "mix",
+  "pickle",
+  "pre_season",
+  "slice",
+  "thaw",
+  "toss",
+]);
+
+const HEARTY_MAIN_INCLUDE_TAGS = new Set([
+  "고단백",
+  "한그릇요리",
+]);
+
+const HEARTY_MAIN_EXCLUDE_TAGS = new Set([
+  "디저트",
+  "밑반찬",
+  "샐러드",
+]);
+
+export function selectNoFlameApplianceRecipeIds(rows: RecipeMethodCodeRow[]) {
+  const recipeMethods = new Map<string, {
+    hasApplianceMethod: boolean;
+    hasDisallowedMethod: boolean;
+  }>();
+
+  rows.forEach((row) => {
+    const methodCode = row.method_code;
+    const state = recipeMethods.get(row.recipe_id) ?? {
+      hasApplianceMethod: false,
+      hasDisallowedMethod: false,
+    };
+
+    if (!methodCode || !NO_FLAME_ALLOWED_METHOD_CODES.has(methodCode)) {
+      state.hasDisallowedMethod = true;
+    }
+
+    if (methodCode && NO_FLAME_APPLIANCE_METHOD_CODES.has(methodCode)) {
+      state.hasApplianceMethod = true;
+    }
+
+    recipeMethods.set(row.recipe_id, state);
+  });
+
+  return [...recipeMethods.entries()]
+    .filter(([, state]) => state.hasApplianceMethod && !state.hasDisallowedMethod)
+    .map(([recipeId]) => recipeId);
+}
+
+export function selectHeartyMainThemeRecipes(items: RecipeCardItem[]) {
+  return items.filter((recipe) => {
+    const tagSet = new Set(recipe.tags);
+    const hasMainSignal = recipe.tags.some((tag) => HEARTY_MAIN_INCLUDE_TAGS.has(tag));
+    const hasExcludedSignal = recipe.tags.some((tag) => HEARTY_MAIN_EXCLUDE_TAGS.has(tag));
+
+    return hasMainSignal && !hasExcludedSignal && tagSet.size > 0;
+  });
+}
+
+export function createRecipeThemes({
+  recentPlannerItems = [],
+  pantryItems = [],
+  youtubeItems = [],
+  noFlameItems = [],
+  heartyMainItems = [],
+  tagGroups = [],
+}: RecipeThemeInput) {
+  const themes: RecipeTheme[] = [];
+
+  pushTheme(themes, "recent-planner", "요즘 플래너에 많이 담은 메뉴", recentPlannerItems);
+  pushTheme(themes, "pantry-cleanout", "냉장고 비우는 한 끼", pantryItems);
+  pushTheme(themes, "youtube", "유튜브에서 가져온 레시피", youtubeItems);
+  pushTheme(themes, "no-flame-appliance", "불 없이 만드는 요리", noFlameItems);
+  pushTheme(themes, "hearty-main", "밥상 든든한 메인", heartyMainItems);
+
+  tagGroups.forEach((group) => {
     if (group.recipes.length === 0 || themes.some((theme) => theme.id === group.id)) {
       return;
     }
@@ -140,22 +143,21 @@ export function createRecipeThemesFromTagGroups(
   return themes;
 }
 
+export function createRecipeThemesFromTagGroups(
+  items: RecipeCardItem[],
+  groups: RecipeTagThemeGroup[],
+) {
+  return createRecipeThemes({
+    youtubeItems: items.filter((recipe) => recipe.source_type === "youtube"),
+    heartyMainItems: selectHeartyMainThemeRecipes(items),
+    tagGroups: groups,
+  });
+}
+
 export function createRecipeThemesFromCards(items: RecipeCardItem[]) {
   if (items.length === 0) {
     return [];
   }
 
-  const themes: RecipeTheme[] = [
-    createTheme("popular", "조회 많은 레시피", items),
-  ];
-
-  THEME_DEFINITIONS.forEach((theme) => {
-    const recipes = items.filter((recipe) => recipeMatchesTheme(recipe, theme));
-
-    if (recipes.length > 0) {
-      themes.push(createTheme(theme.id, theme.title, recipes));
-    }
-  });
-
-  return themes;
+  return createRecipeThemesFromTagGroups(items, []);
 }
