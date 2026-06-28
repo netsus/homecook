@@ -19,6 +19,85 @@ interface MobileCookModeLoadingBoardProps extends CookModeLoadingBoardProps {
   screenTestId: string;
 }
 
+function WebStepSkeleton({ index }: { index: number }) {
+  return (
+    <div
+      className="cook-whole-step cook-whole-step-skeleton"
+      data-testid={`cook-mode-step-skeleton-${index + 1}`}
+    >
+      <div className="cook-whole-step-marker">
+        <div className="cook-whole-method-tags">
+          <WebSkeleton className="cook-whole-method-tag" height={23} width={52} />
+          {index % 2 === 0 ? (
+            <WebSkeleton className="cook-whole-method-tag" height={23} width={64} />
+          ) : null}
+        </div>
+      </div>
+      <div className="cook-whole-step-main">
+        <WebSkeleton className="cook-whole-step-number" height={38} width={38} />
+        <div className="cook-whole-step-copy">
+          <WebSkeleton height={20} width={index % 2 === 0 ? "92%" : "78%"} />
+          <WebSkeleton
+            className="mt-2"
+            height={16}
+            width={index % 2 === 0 ? "64%" : "88%"}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileStepSkeleton({ index }: { index: number }) {
+  return (
+    <div
+      className="cook-whole-step cook-whole-step-skeleton"
+      data-testid={`cook-mode-step-skeleton-${index + 1}`}
+    >
+      <div className="cook-whole-step-marker">
+        <div className="cook-whole-method-tags">
+          <Skeleton
+            className="cook-whole-loading-skeleton cook-whole-method-tag"
+            height={22}
+            rounded="full"
+            width={48}
+          />
+          {index % 2 === 0 ? (
+            <Skeleton
+              className="cook-whole-loading-skeleton cook-whole-method-tag"
+              height={22}
+              rounded="full"
+              width={56}
+            />
+          ) : null}
+        </div>
+      </div>
+      <div className="cook-whole-step-main">
+        <Skeleton
+          className="cook-whole-loading-skeleton cook-whole-step-number"
+          height={34}
+          rounded="md"
+          width={34}
+        />
+        <div className="cook-whole-step-copy">
+          <Skeleton
+            className="cook-whole-loading-skeleton"
+            height={18}
+            rounded="sm"
+            width={index % 2 === 0 ? "88%" : "72%"}
+          />
+          <Skeleton
+            className="cook-whole-loading-skeleton mt-2"
+            height={14}
+            rounded="sm"
+            width={index % 2 === 0 ? "58%" : "84%"}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function WebCookModeLoadingBoard({
   description,
   testId,
@@ -56,7 +135,7 @@ export function WebCookModeLoadingBoard({
           <WebSkeleton height={18} width={118} />
           <div className="cook-whole-steps mt-3">
             {Array.from({ length: 5 }).map((_, index) => (
-              <WebSkeleton height={84} key={`step-${index}`} />
+              <WebStepSkeleton index={index} key={`step-${index}`} />
             ))}
           </div>
         </section>
@@ -142,12 +221,7 @@ export function MobileCookModeLoadingBoard({
               />
               <div className="cook-whole-steps mt-3">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <Skeleton
-                    className="cook-whole-loading-skeleton"
-                    height={78}
-                    key={`step-${index}`}
-                    rounded="md"
-                  />
+                  <MobileStepSkeleton index={index} key={`step-${index}`} />
                 ))}
               </div>
             </section>

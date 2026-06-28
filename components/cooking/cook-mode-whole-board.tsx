@@ -373,6 +373,8 @@ function CookModeWholeStep({
             </span>
           )}
         </div>
+      </div>
+      <div className="cook-whole-step-main">
         <div
           aria-label={`${step.step_number}단계`}
           className="cook-whole-step-number"
@@ -380,11 +382,11 @@ function CookModeWholeStep({
         >
           {step.step_number}
         </div>
-      </div>
-      <div className="cook-whole-step-copy">
-        <p data-testid={`cook-mode-step-copy-${step.step_number}`}>
-          {highlightedInstruction}
-        </p>
+        <div className="cook-whole-step-copy">
+          <p data-testid={`cook-mode-step-copy-${step.step_number}`}>
+            {highlightedInstruction}
+          </p>
+        </div>
       </div>
     </li>
   );

@@ -763,6 +763,10 @@ describe("StandaloneCookModeScreen", () => {
     expect(loading.querySelector(".web-cook-whole-top")).toBeTruthy();
     expect(loading.querySelector(".web-cook-whole-grid")).toBeTruthy();
     expect(loading.querySelectorAll(".cook-whole-panel")).toHaveLength(2);
+    expect(loading.querySelectorAll(".cook-whole-step-skeleton")).toHaveLength(5);
+    expect(
+      loading.querySelector(".cook-whole-step-skeleton .cook-whole-step-main"),
+    ).toBeTruthy();
   });
 
   it("matches mobile standalone cook loading to the whole-board cooking shell", async () => {
@@ -780,5 +784,9 @@ describe("StandaloneCookModeScreen", () => {
     expect(screenRoot.getAttribute("data-cook-theme")).toBe("dark");
     expect(loading.querySelector(".cook-whole-board-mobile")).toBeTruthy();
     expect(loading.querySelectorAll(".cook-whole-panel")).toHaveLength(2);
+    expect(loading.querySelectorAll(".cook-whole-step-skeleton")).toHaveLength(4);
+    expect(
+      loading.querySelector(".cook-whole-step-skeleton .cook-whole-step-main"),
+    ).toBeTruthy();
   });
 });

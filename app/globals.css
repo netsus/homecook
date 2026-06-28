@@ -2262,8 +2262,9 @@
 
 .cook-whole-step {
   display: grid;
-  grid-template-columns: minmax(46px, max-content) minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: stretch;
   gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
@@ -2274,8 +2275,8 @@
 .cook-whole-step-marker {
   display: grid;
   min-width: 0;
-  align-content: center;
-  justify-items: center;
+  align-content: start;
+  justify-items: start;
   gap: 5px;
 }
 
@@ -2284,8 +2285,16 @@
   max-width: 100%;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px;
+}
+
+.cook-whole-step-main {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
 }
 
 .cook-whole-step-number {
@@ -8408,10 +8417,15 @@ button {
   }
 
   .web-cook-whole-grid .cook-whole-step {
-    grid-template-columns: minmax(54px, max-content) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
     gap: 10px;
     border-radius: 15px;
     padding: 11px;
+  }
+
+  .web-cook-whole-grid .cook-whole-step-main {
+    gap: 10px;
   }
 
   .web-cook-whole-grid .cook-whole-step-number {
