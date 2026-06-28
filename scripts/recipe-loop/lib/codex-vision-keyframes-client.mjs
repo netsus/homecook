@@ -27,6 +27,7 @@ const SEGMENT_SELECTOR_PROMPT_VERSION = "keyframe-segment-selector-v2";
 const FINAL_PROMPT_VERSION = "keyframe-final-v1";
 const TIMELINE_PARENT_RANGE_VERSION = "timeline-parent-range-v1";
 const BUNDLE_CHILD_SEGMENT_VERSION = "bundle-child-segment-v1";
+const SOURCE_CUE_PACKET_VERSION = "source-cue-packet-v1";
 const DEFAULT_FINAL_MODEL = "gpt-5.4";
 const DEFAULT_SELECTOR_MODEL = "gpt-5.4-mini";
 const DEFAULT_SEGMENT_MODEL = "gpt-5.4-mini";
@@ -57,6 +58,16 @@ const FRAME_FILE_TIMESTAMP_RE = /_(\d+(?:\.\d+)?)(?:\.[^.]+)$/;
 const FRAME_TIMESTAMP_TOLERANCE_SEC = 0.075;
 const TIMELINE_RANGE_CONFIDENCE_THRESHOLD = 0.75;
 const LAST_RANGE_TAIL_WARNING_SEC = 7 * 60;
+const SOURCE_CUE_IDENTITY_LIMIT = 5;
+const SOURCE_CUE_TIMELINE_LIMIT = 3;
+const SOURCE_CUE_LOCAL_SNIPPET_LIMIT = 3;
+const SOURCE_CUE_COOKING_SNIPPET_LIMIT = 5;
+const SOURCE_CUE_UNCERTAINTY_LIMIT = 3;
+const SOURCE_CUE_SNIPPET_MAX_CHARS = 160;
+const SOURCE_CUE_PACKET_MAX_CHARS = 1200;
+const SOURCE_CUE_LOCAL_WINDOW_LINES = 3;
+const SOURCE_CUE_COOKING_RE = /(양념|소스|간|고명|밥물|무침|볶|굽|끓|삶|비비|올리|졸이)/u;
+const SOURCE_CUE_NOISE_RE = /(구독|좋아요|댓글\s*이벤트|이벤트|공지|알림|협찬|광고|할인|쿠폰|공구|공동구매|구매처|판매처|쇼핑|배송|택배|링크|https?:\/\/|www\.|인스타|instagram|email|메일|문의|BGM|music|음악|노래|camera|equipment|촬영장비)/i;
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -119,6 +130,18 @@ function compact(value) {
 
 function keyOf(value) {
   return compact(value).replace(/[^\p{L}\p{N}]+/gu, "").toLowerCase();
+}
+
+function clippedCompact(value, maxChars = SOURCE_CUE_SNIPPET_MAX_CHARS) {
+  const text = compact(value);
+  return text.length > maxChars ? `${text.slice(0, Math.max(0, maxChars - 1)).trimEnd()}…` : text;
+}
+
+function pushUniqueLimited(list, value, limit, keyFn = (entry) => JSON.stringify(entry)) {
+  if (list.length >= limit) return;
+  const key = keyFn(value);
+  if (!key || list.some((entry) => keyFn(entry) === key)) return;
+  list.push(value);
 }
 
 function sourceBlocks(sourceText) {
@@ -918,7 +941,7 @@ function buildSegmentPlanPrompt({ sourceText, frames, candidatePlan, segmentMaxC
     "",
     "중요 규칙:",
     "1. recipeCandidates는 정답이 아니라 힌트다. 충분한 근거가 없으면 coverage status를 supporting 또는 dropped로 남길 수 있다.",
-    "2. golden.json, 채점 결과, validation/holdout 정답은 절대 보지 않는다.",
+    "2. 정답 파일, 채점 결과, validation/holdout 정답은 절대 보지 않는다.",
     "3. candidateId는 아래 recipeCandidates의 candidateId 중 하나를 정확히 복사한다.",
     "4. 소스/토핑/플레이팅만 따로 나온 짧은 장면은 별도 recipe가 아니라 supporting 또는 관련 candidate의 연속 구간으로 본다.",
     "5. 묶음 타임라인 안에 여러 candidate가 있으면 같은 parent range를 공유해도 되지만, selected frame은 candidate별로 고를 수 있게 segment를 나눈다.",
@@ -1087,6 +1110,217 @@ function normalizeSegmentPlan(rawPlan, { maxCount, maxFrameSec, totalFrameLimit,
   };
 }
 
+function sourceCueTextValues(candidate, segments = []) {
+  return [
+    candidate.titleHint,
+    candidate.bundleText,
+    candidate.bundleSourceText,
+    ...(Array.isArray(candidate.sourceEvidence) ? candidate.sourceEvidence.map((item) => item?.text) : []),
+    ...segments.flatMap((segment) => [
+      segment.titleHint,
+      segment.bundleParentTitle,
+      segment.notes,
+      ...(Array.isArray(segment.textEvidence) ? segment.textEvidence : []),
+      ...(Array.isArray(segment.sourceEvidence) ? segment.sourceEvidence.map((item) => item?.text) : []),
+    ]),
+  ].filter(Boolean);
+}
+
+function sourceCueAliasTokens(candidate, segments = []) {
+  const tokens = new Set();
+  for (const value of sourceCueTextValues(candidate, segments)) {
+    const cleaned = stripCandidateText(value);
+    if (!cleaned) continue;
+    for (const token of titleMatchTokens(cleaned)) tokens.add(token);
+    for (const part of splitLooseBundleText(cleaned)) {
+      for (const token of titleMatchTokens(part)) tokens.add(token);
+    }
+  }
+  return [...tokens].filter((token) => token.length >= 2);
+}
+
+function lineMatchesAlias(line, aliases) {
+  const lineKey = keyOf(stripCandidateText(line));
+  if (!lineKey) return false;
+  return aliases.some((alias) => alias.length >= 2 && (lineKey.includes(alias) || (lineKey.length >= 4 && alias.includes(lineKey))));
+}
+
+function sourceCueAllowsLocalWindow(sourceName) {
+  return sourceName === "description" || sourceName === "author_comment" || sourceName === "recipe_candidate_hints";
+}
+
+function sourceCueSnippet(source, text) {
+  return { source, text: clippedCompact(text) };
+}
+
+function isSourceCueNoise(sourceName, line) {
+  const text = compact(line);
+  if (!text) return true;
+  if (SOURCE_CUE_NOISE_RE.test(text)) return true;
+  if (sourceName === "recipe_candidate_hints" && NOISE_CANDIDATE_RE.test(stripCandidateText(text))) return true;
+  return false;
+}
+
+function packetTextSize(packet) {
+  return [
+    packet.identityCues.join(" "),
+    packet.timelineCues.join(" "),
+    packet.localSourceSnippets.map((entry) => entry.text).join(" "),
+    packet.cookingCueSnippets.map((entry) => entry.text).join(" "),
+    packet.uncertainty.map((entry) => `${entry.reason} ${entry.text ?? ""}`).join(" "),
+  ].join(" ").length;
+}
+
+function trimCuePacketBudget(packet) {
+  while (packetTextSize(packet) > SOURCE_CUE_PACKET_MAX_CHARS) {
+    if (packet.uncertainty.length) {
+      packet.uncertainty.pop();
+    } else if (packet.localSourceSnippets.length) {
+      packet.localSourceSnippets.pop();
+    } else if (packet.cookingCueSnippets.length) {
+      packet.cookingCueSnippets.pop();
+    } else if (packet.timelineCues.length) {
+      packet.timelineCues.pop();
+    } else if (packet.identityCues.length) {
+      packet.identityCues.pop();
+    } else {
+      break;
+    }
+  }
+  return packet;
+}
+
+function segmentIdsForCandidate(segmentPlan, candidateId) {
+  return (Array.isArray(segmentPlan?.segments) ? segmentPlan.segments : [])
+    .filter((segment) => segment.candidateId === candidateId)
+    .map((segment) => segment.segmentId);
+}
+
+function segmentsForCandidate(segmentPlan, candidateId) {
+  return (Array.isArray(segmentPlan?.segments) ? segmentPlan.segments : [])
+    .filter((segment) => segment.candidateId === candidateId);
+}
+
+export function buildSourceCuePacketsFromSourceText(sourceText, candidatePlan, segmentPlan) {
+  const candidates = Array.isArray(candidatePlan?.recipeCandidates) ? candidatePlan.recipeCandidates : [];
+  const blocks = sourceBlocks(sourceText);
+  const aliasesByCandidate = new Map();
+  const packets = [];
+
+  for (const candidate of candidates) {
+    const segments = segmentsForCandidate(segmentPlan, candidate.candidateId);
+    aliasesByCandidate.set(candidate.candidateId, sourceCueAliasTokens(candidate, segments));
+  }
+
+  for (const candidate of candidates) {
+    const segments = segmentsForCandidate(segmentPlan, candidate.candidateId);
+    const aliases = aliasesByCandidate.get(candidate.candidateId) ?? [];
+    const segmentIds = segmentIdsForCandidate(segmentPlan, candidate.candidateId);
+    const packet = {
+      candidateId: candidate.candidateId,
+      titleHint: candidate.titleHint,
+      segmentIds,
+      identityCues: [],
+      timelineCues: [],
+      localSourceSnippets: [],
+      cookingCueSnippets: [],
+      uncertainty: [],
+    };
+
+    for (const evidence of Array.isArray(candidate.sourceEvidence) ? candidate.sourceEvidence : []) {
+      const source = String(evidence?.source ?? "source").trim() || "source";
+      const text = clippedCompact(evidence?.text);
+      if (!text || isSourceCueNoise(source, text)) continue;
+      pushUniqueLimited(packet.identityCues, `${source}: ${text}`, SOURCE_CUE_IDENTITY_LIMIT);
+      if (TIMESTAMP_RE.test(text)) {
+        pushUniqueLimited(packet.timelineCues, `${source}: ${text}`, SOURCE_CUE_TIMELINE_LIMIT);
+      }
+    }
+
+    for (const segment of segments) {
+      for (const textEvidence of Array.isArray(segment.textEvidence) ? segment.textEvidence : []) {
+        const text = clippedCompact(textEvidence);
+        if (!text || isSourceCueNoise("segment_text_evidence", text)) continue;
+        if (TIMESTAMP_RE.test(text) || Number.isFinite(segment.startSec)) {
+          pushUniqueLimited(packet.timelineCues, `segment_text_evidence: ${text}`, SOURCE_CUE_TIMELINE_LIMIT);
+        }
+      }
+    }
+
+    for (const block of blocks) {
+      let localWindow = 0;
+      for (const rawLine of block.lines) {
+        const line = compact(rawLine);
+        if (!line) {
+          localWindow = 0;
+          continue;
+        }
+        if (isSourceCueNoise(block.name, line)) continue;
+
+        const matched = lineMatchesAlias(line, aliases);
+        if (!matched && localWindow > 0) {
+          const matchesOtherCandidate = [...aliasesByCandidate.entries()]
+            .some(([candidateId, otherAliases]) => candidateId !== candidate.candidateId && lineMatchesAlias(line, otherAliases));
+          if (matchesOtherCandidate) localWindow = 0;
+        }
+        const local = matched || localWindow > 0;
+        if (!local) continue;
+
+        const snippet = sourceCueSnippet(block.name, line);
+        pushUniqueLimited(packet.localSourceSnippets, snippet, SOURCE_CUE_LOCAL_SNIPPET_LIMIT, (entry) => `${entry.source}:${entry.text}`);
+        if (TIMESTAMP_RE.test(line)) {
+          pushUniqueLimited(packet.timelineCues, `${block.name}: ${snippet.text}`, SOURCE_CUE_TIMELINE_LIMIT);
+        }
+        if (SOURCE_CUE_COOKING_RE.test(line)) {
+          pushUniqueLimited(packet.cookingCueSnippets, snippet, SOURCE_CUE_COOKING_SNIPPET_LIMIT, (entry) => `${entry.source}:${entry.text}`);
+        }
+        if (block.name.startsWith("transcript") && line.length > SOURCE_CUE_SNIPPET_MAX_CHARS) {
+          pushUniqueLimited(
+            packet.uncertainty,
+            { source: block.name, reason: "long_transcript_line", text: snippet.text },
+            SOURCE_CUE_UNCERTAINTY_LIMIT,
+            (entry) => `${entry.source}:${entry.reason}:${entry.text}`,
+          );
+        }
+        if (matched && sourceCueAllowsLocalWindow(block.name)) {
+          localWindow = SOURCE_CUE_LOCAL_WINDOW_LINES;
+        } else if (localWindow > 0) {
+          localWindow -= 1;
+        }
+      }
+    }
+
+    packets.push(trimCuePacketBudget(packet));
+  }
+
+  return {
+    version: SOURCE_CUE_PACKET_VERSION,
+    packets,
+  };
+}
+
+function formatSourceCuePacket(packet) {
+  const lineGroup = (label, values) => {
+    if (!values?.length) return [`${label}: (없음)`];
+    return [
+      `${label}:`,
+      ...values.map((value) => `- ${typeof value === "string" ? value : `${value.source}: ${value.text ?? value.reason}`}`),
+    ];
+  };
+  return [
+    `sourceCuePacket: ${packet.candidateId} / ${packet.titleHint}`,
+    `segmentIds: ${packet.segmentIds.length ? packet.segmentIds.join(", ") : "(없음)"}`,
+    ...lineGroup("identityCues", packet.identityCues),
+    ...lineGroup("timelineCues", packet.timelineCues),
+    ...lineGroup("localSourceSnippets", packet.localSourceSnippets),
+    ...lineGroup("cookingCueSnippets", packet.cookingCueSnippets),
+    ...lineGroup("uncertainty", packet.uncertainty.map((entry) => ({
+      source: entry.source,
+      text: `${entry.reason}${entry.text ? `: ${entry.text}` : ""}`,
+    }))),
+  ].join("\n");
+}
+
 function framesInRange(frames, startSec, endSec) {
   return frames.filter((frame) => {
     const timestamp = frameTimestampSec(frame);
@@ -1172,20 +1406,29 @@ function dedupeFrames(frames) {
   return selected;
 }
 
-function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentPlan, segmentKeyframes }) {
-  const segmentBlocks = segmentKeyframes.segments.map((entry) => [
-    `[SEGMENT ${entry.segmentId}]`,
-    `candidateId: ${entry.candidateId}`,
-    `titleHint: ${entry.titleHint}`,
-    `candidateStatus: ${entry.candidateStatus}`,
-    `evidenceStrength: ${entry.evidenceStrength}`,
-    `bundleParentId: ${entry.bundleParentId ?? "(없음)"}`,
-    `bundleParentTitle: ${entry.bundleParentTitle ?? "(없음)"}`,
-    `time: ${entry.startSec}-${entry.endSec}`,
-    `textEvidence: ${entry.textEvidence.length ? entry.textEvidence.join(" / ") : "(없음)"}`,
-    "selectedFrames:",
-    ...entry.selectedFrames.map((frame, index) => `- ${index + 1}. file=${frame.file}, timestamp=${frame.timestamp ?? frame.timestamp_sec ?? "?"}, frameReason=${frame.reason ?? "unknown"}, selectionReason=${frame.selectionReason ?? "unknown"}`),
-  ].join("\n")).join("\n\n");
+function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentPlan, segmentKeyframes, sourceCuePacketPlan = null }) {
+  const sourceCuePacketByCandidate = new Map(
+    Array.isArray(sourceCuePacketPlan?.packets)
+      ? sourceCuePacketPlan.packets.map((packet) => [packet.candidateId, packet])
+      : [],
+  );
+  const segmentBlocks = segmentKeyframes.segments.map((entry) => {
+    const sourceCuePacket = sourceCuePacketByCandidate.get(entry.candidateId);
+    return [
+      `[SEGMENT ${entry.segmentId}]`,
+      `candidateId: ${entry.candidateId}`,
+      `titleHint: ${entry.titleHint}`,
+      `candidateStatus: ${entry.candidateStatus}`,
+      `evidenceStrength: ${entry.evidenceStrength}`,
+      `bundleParentId: ${entry.bundleParentId ?? "(없음)"}`,
+      `bundleParentTitle: ${entry.bundleParentTitle ?? "(없음)"}`,
+      `time: ${entry.startSec}-${entry.endSec}`,
+      `textEvidence: ${entry.textEvidence.length ? entry.textEvidence.join(" / ") : "(없음)"}`,
+      ...(sourceCuePacket ? ["", formatSourceCuePacket(sourceCuePacket)] : []),
+      "selectedFrames:",
+      ...entry.selectedFrames.map((frame, index) => `- ${index + 1}. file=${frame.file}, timestamp=${frame.timestamp ?? frame.timestamp_sec ?? "?"}, frameReason=${frame.reason ?? "unknown"}, selectionReason=${frame.selectionReason ?? "unknown"}`),
+    ].join("\n");
+  }).join("\n\n");
 
   const coverageLines = (segmentPlan.coverage ?? []).map((entry) => {
     const segments = entry.segmentIds.length ? entry.segmentIds.join(", ") : "(없음)";
@@ -1210,6 +1453,10 @@ function buildSegmentedFinalPrompt({ prompt, sourceText, candidatePlan, segmentP
     "7. 화면에서만 보이는 수량은 amountBasis를 visual-estimate로 둔다.",
     "8. '초록색 줄기채소', '노란색 긴 재료' 같은 추상 이름은 최후의 수단이다.",
     "9. 영상에 없는 재료나 단계를 요리 상식으로 추가하지 않는다.",
+    ...(sourceCuePacketPlan ? [
+      "10. sourceCuePacket은 후보별 원문 책갈피다. 정답이 아니라, 설명란/댓글/자막에서 근거를 다시 찾기 위한 작은 단서로만 쓴다.",
+      "11. sourceCuePacket의 localSourceSnippets와 cookingCueSnippets에 명시 재료, 수량, 조리 동작이 있으면 먼저 대조하되 이벤트/구매/BGM성 문구는 무시한다.",
+    ] : []),
     "",
     "candidate hints JSON:",
     JSON.stringify(candidatePlan, null, 2),
@@ -1268,8 +1515,9 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
   candidatePlanHash,
   frameOptions,
   segmentOptions,
+  sourceCuePackets,
 }) {
-  return hashKey({
+  const keyPayload = {
     provider: PROVIDER,
     keyframeMode: "segmented",
     model,
@@ -1288,7 +1536,9 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
     segmentPromptVersion: SEGMENT_PROMPT_VERSION,
     segmentSelectorPromptVersion: SEGMENT_SELECTOR_PROMPT_VERSION,
     finalPromptVersion: FINAL_PROMPT_VERSION,
-  });
+  };
+  if (sourceCuePackets) keyPayload.sourceCuePacketVersion = SOURCE_CUE_PACKET_VERSION;
+  return hashKey(keyPayload);
 }
 
 function frameLookup(frames) {
@@ -1404,6 +1654,7 @@ async function runSegmentedKeyframesFlow({
   codexExec,
   options,
   timeoutMs,
+  sourceCuePackets = false,
 }) {
   let stage = "candidate-split";
   const candidatePlan = buildCandidateHintsFromSourceText(cacheText);
@@ -1418,9 +1669,16 @@ async function runSegmentedKeyframesFlow({
     candidatePlanHash,
     frameOptions,
     segmentOptions,
+    sourceCuePackets,
   });
   const resultDir = path.join(cacheDir, resultKey);
   const finalJsonPath = path.join(resultDir, "final.json");
+  const sourceCueMeta = sourceCuePackets
+    ? {
+      sourceCuePacketsEnabled: true,
+      sourceCuePacketVersion: SOURCE_CUE_PACKET_VERSION,
+    }
+    : {};
 
   if (!options.noCache && !options.refreshFinal && existsSync(finalJsonPath)) {
     const cached = JSON.parse(await readFile(finalJsonPath, "utf8"));
@@ -1437,6 +1695,7 @@ async function runSegmentedKeyframesFlow({
         candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
         timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
         bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
+        ...sourceCueMeta,
         candidatePlanHash,
         candidateCount: candidatePlan.recipeCandidates.length,
         frameCacheHit: frameResult.frameCacheHit,
@@ -1456,6 +1715,7 @@ async function runSegmentedKeyframesFlow({
 
   let segmentPlan = null;
   let segmentKeyframes = null;
+  let sourceCuePacketPlan = null;
   try {
     stage = "segment-plan";
     const maxFrameSec = maxFrameTimestampSec(frames);
@@ -1508,6 +1768,10 @@ async function runSegmentedKeyframesFlow({
       });
       await writeFile(segmentJsonPath, JSON.stringify(segmentPlan, null, 2) + "\n", "utf8");
     }
+
+    sourceCuePacketPlan = sourceCuePackets
+      ? buildSourceCuePacketsFromSourceText(cacheText, candidatePlan, segmentPlan)
+      : null;
 
     stage = "segment-selector";
     const segmentEntries = [];
@@ -1644,7 +1908,14 @@ async function runSegmentedKeyframesFlow({
     );
 
     stage = "final";
-    const finalPrompt = buildSegmentedFinalPrompt({ prompt, sourceText: cacheText, candidatePlan, segmentPlan, segmentKeyframes });
+    const finalPrompt = buildSegmentedFinalPrompt({
+      prompt,
+      sourceText: cacheText,
+      candidatePlan,
+      segmentPlan,
+      segmentKeyframes,
+      sourceCuePacketPlan,
+    });
     const finalPromptPath = path.join(resultDir, "final.prompt.md");
     const finalRawPath = path.join(resultDir, "final.raw.md");
     const finalLogPath = path.join(resultDir, "final.log");
@@ -1676,6 +1947,7 @@ async function runSegmentedKeyframesFlow({
       candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
       timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
       bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
+      ...sourceCueMeta,
       segmentPromptVersion: SEGMENT_PROMPT_VERSION,
       segmentSelectorPromptVersion: SEGMENT_SELECTOR_PROMPT_VERSION,
       finalPromptVersion: FINAL_PROMPT_VERSION,
@@ -1694,6 +1966,7 @@ async function runSegmentedKeyframesFlow({
       selectedFrameHash,
       segmentPlanHash: hashText(JSON.stringify(segmentPlan)),
       segmentKeyframesHash: hashText(JSON.stringify(segmentKeyframes)),
+      ...(sourceCuePacketPlan ? { sourceCuePacketHash: hashText(JSON.stringify(sourceCuePacketPlan)) } : {}),
       warnings: [
         ...(candidatePlan.warnings ?? []),
         ...(segmentPlan.warnings ?? []),
@@ -1737,8 +2010,10 @@ async function runSegmentedKeyframesFlow({
       candidateSplitterVersion: CANDIDATE_SPLITTER_VERSION,
       timelineParentRangeVersion: TIMELINE_PARENT_RANGE_VERSION,
       bundleChildSegmentVersion: BUNDLE_CHILD_SEGMENT_VERSION,
+      ...sourceCueMeta,
       candidatePlan,
       candidatePlanHash,
+      ...(sourceCuePacketPlan ? { sourceCuePacketHash: hashText(JSON.stringify(sourceCuePacketPlan)) } : {}),
       frameCacheDir: frameResult.frameDir,
       frameCount: frames.length,
       segmentPlan,
@@ -1774,6 +2049,7 @@ export function createCodexVisionKeyframesClient(options = {}) {
     overlapToleranceSec: positiveNumber(options.segmentOverlapToleranceSec, DEFAULT_SEGMENT_OVERLAP_TOLERANCE_SEC),
   };
   const timeoutMs = positiveInt(options.timeoutMs, DEFAULT_TIMEOUT_MS);
+  const sourceCuePackets = Boolean(options.sourceCuePackets);
   const codexExec = options.codexExec ?? runCodexExec;
   const extractFrames = options.extractFrames ?? defaultExtractFrames;
 
@@ -1810,6 +2086,7 @@ export function createCodexVisionKeyframesClient(options = {}) {
           codexExec,
           options,
           timeoutMs,
+          sourceCuePackets,
         });
       }
 

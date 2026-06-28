@@ -82,6 +82,58 @@ describe("recipe-loop codex-vision provider", () => {
     expect(changed).not.toBe(first);
   });
 
+  it("builds bounded source cue packets from raw source text while skipping source noise", async () => {
+    const { buildSourceCuePacketsFromSourceText } = await import(codexVisionKeyframesModuleUrl);
+
+    const packetPlan = buildSourceCuePacketsFromSourceText(
+      [
+        "[SOURCE: recipe_candidate_hints]",
+        "1. 후보 요리",
+        "[SOURCE: description]",
+        "00:05 후보 요리",
+        "- 양념 소스를 준비하고 간을 맞춘다.",
+        "- 팬에서 볶고 올리기 전에 고명을 둔다.",
+        "- 구매처 링크와 쿠폰 안내",
+        "[SOURCE: author_comment]",
+        "후보 요리는 밥물 조절 후 끓이면 됩니다.",
+        "[SOURCE: transcript(ko)]",
+        "후보 요리에서 무침과 굽기 설명이 길게 이어지지만 BGM 정보는 조리 근거가 아닙니다.",
+      ].join("\n"),
+      {
+        recipeCandidates: [{
+          candidateId: "cand-01",
+          titleHint: "후보 요리",
+          sourceEvidence: [{ source: "description_timeline", text: "00:05 후보 요리" }],
+        }],
+      },
+      {
+        segments: [{
+          segmentId: "seg-01",
+          candidateId: "cand-01",
+          titleHint: "후보 요리",
+          startSec: 5,
+          endSec: 40,
+          textEvidence: ["00:05 후보 요리"],
+        }],
+      },
+    );
+
+    expect(packetPlan.version).toBe("source-cue-packet-v1");
+    expect(packetPlan.packets).toHaveLength(1);
+    const packet = packetPlan.packets[0];
+    expect(packet.localSourceSnippets.length).toBeLessThanOrEqual(3);
+    expect(packet.cookingCueSnippets.length).toBeLessThanOrEqual(5);
+    expect(packet.localSourceSnippets.map((entry: { text: string }) => entry.text).join(" ")).toContain("양념 소스");
+    expect(packet.cookingCueSnippets.map((entry: { text: string }) => entry.text).join(" ")).toContain("볶");
+    const allCueText = JSON.stringify(packet);
+    expect(allCueText).not.toContain("구매처");
+    expect(allCueText).not.toContain("쿠폰");
+    expect(allCueText).not.toContain("BGM");
+    for (const entry of [...packet.localSourceSnippets, ...packet.cookingCueSnippets]) {
+      expect(entry.text.length).toBeLessThanOrEqual(160);
+    }
+  });
+
   it("compacts large visual notes for final synthesis while preserving batch markers", async () => {
     const { compactVisualNotesForFinal } = await import(codexVisionModuleUrl);
     const noisyBatch = (batchNo: number) => [
@@ -177,6 +229,7 @@ describe("recipe-loop codex-vision provider", () => {
       selectorCandidateLimit: 3,
       keyframeTotalLimit: 2,
       keyframesPerRecipe: 2,
+      sourceCuePackets: true,
       extractFrames: async () => ({
         frameCacheHit: false,
         frameDir,
@@ -238,6 +291,8 @@ describe("recipe-loop codex-vision provider", () => {
     expect(first.json.recipes[0].title).toBe("메밀 후토마끼");
     expect(second.cached).toBe(true);
     expect(calls).toHaveLength(2);
+    expect(calls[1].prompt).not.toContain("sourceCuePacket");
+    expect(first.meta).not.toHaveProperty("sourceCuePacketsEnabled");
     expect(calls[0].images).toEqual(frames.map((frame) => frame.path));
     expect(calls[1].images).toEqual([frames[1].path, frames[2].path]);
     expect(existsSync(path.join(first.meta.codexVisionKeyframesCacheDir, "selector.json"))).toBe(true);
@@ -551,6 +606,7 @@ describe("recipe-loop codex-vision provider", () => {
       segmentMinFrames: 1,
       segmentMaxFrames: 3,
       segmentFrameTotalLimit: 4,
+      sourceCuePackets: true,
       extractFrames: async () => ({
         frameCacheHit: false,
         frameDir,
@@ -603,6 +659,9 @@ describe("recipe-loop codex-vision provider", () => {
           expect(prompt).toContain("bundleParentId: cand-03");
           expect(prompt).toContain("selectionReason=토마토면 재료가 보임");
           expect(prompt).toContain("selectionReason=가지구이 재료가 보임");
+          expect(prompt).toContain("sourceCuePacket:");
+          expect(prompt).toContain("localSourceSnippets:");
+          expect(prompt).toContain("cookingCueSnippets:");
           expect(prompt).not.toContain("golden.json");
           expect(prompt).not.toContain("_grade_summary");
           expect(prompt).not.toContain("_semantic_summary");
@@ -631,10 +690,13 @@ describe("recipe-loop codex-vision provider", () => {
 
     expect(result.meta).toMatchObject({
       bundleChildSegmentVersion: "bundle-child-segment-v1",
+      sourceCuePacketsEnabled: true,
+      sourceCuePacketVersion: "source-cue-packet-v1",
       segmentCount: 2,
       coveredCandidateCount: 2,
       supportingCandidateCount: 1,
     });
+    expect(result.meta.sourceCuePacketHash).toEqual(expect.any(String));
     expect(calls.filter((call) => call.model === "fixture-selector-model")).toHaveLength(2);
     const segmentPlan = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-plan.json"), "utf8"));
     expect(segmentPlan).toMatchObject({
@@ -657,6 +719,27 @@ describe("recipe-loop codex-vision provider", () => {
     ]));
     const segmentKeyframes = JSON.parse(readFileSync(path.join(result.meta.codexVisionKeyframesCacheDir, "segment-keyframes.json"), "utf8"));
     expect(segmentKeyframes.segments.every((segment: { bundleParentId: string }) => segment.bundleParentId === "cand-03")).toBe(true);
+    expect(existsSync(path.join(result.meta.codexVisionKeyframesCacheDir, "source-cue-packets.json"))).toBe(false);
+    const forbidden = [
+      "golden.json",
+      "_grade_summary",
+      "_semantic_summary",
+      "feedback_for_next_iter",
+      "artifact_diagnosis",
+      "stageHint",
+    ];
+    for (const entry of readdirSync(result.meta.codexVisionKeyframesCacheDir, { recursive: true }).map((name) => String(name))) {
+      const fullPath = path.join(result.meta.codexVisionKeyframesCacheDir, entry);
+      let body = "";
+      try {
+        body = readFileSync(fullPath, "utf8");
+      } catch {
+        continue;
+      }
+      for (const term of forbidden) {
+        expect(body).not.toContain(term);
+      }
+    }
   });
 
   it("records candidate-aware segment schema failures with candidate artifacts", async () => {
@@ -1169,6 +1252,7 @@ describe("recipe-loop codex-vision provider", () => {
       "segment-max-frames": "9",
       "segment-max-count": "7",
       "segment-frame-total-limit": "21",
+      "source-cue-packets": true,
       "refresh-final": true,
     }, {
       createCodexVisionKeyframes: (options: Record<string, unknown>) => ({ options }),
@@ -1183,6 +1267,7 @@ describe("recipe-loop codex-vision provider", () => {
       segmentMaxFrames: 9,
       segmentMaxCount: 7,
       segmentFrameTotalLimit: 21,
+      sourceCuePackets: true,
       refreshFinal: true,
     });
 

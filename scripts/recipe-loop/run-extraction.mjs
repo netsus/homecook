@@ -113,6 +113,7 @@ export function createLlmForProvider(provider, args = {}, factories = {}) {
       timeoutMs: optionalNumber(args["timeout-ms"]),
       refreshFinal: args["refresh-final"] === true,
       noCache: args["no-cache"] === true,
+      sourceCuePackets: args["source-cue-packets"] === true,
     });
   }
 
