@@ -66,8 +66,12 @@ export async function recordOperationalEvent(
 }
 
 export async function recordOperationalEventFromServiceRole(input: OperationalEventInput) {
-  return recordOperationalEvent(
-    createServiceRoleClient() as unknown as OperationalEventsDbClient | null,
-    input,
-  );
+  try {
+    return await recordOperationalEvent(
+      createServiceRoleClient() as unknown as OperationalEventsDbClient | null,
+      input,
+    );
+  } catch {
+    return false;
+  }
 }

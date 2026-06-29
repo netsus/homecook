@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PantryScreen } from "@/components/pantry/pantry-screen";
-import { getServerAuthUser } from "@/lib/supabase/server";
+import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";
 
 export const metadata = {
   description: "집에 있는 재료를 관리하고 장보기 제외 재료를 정리하는 팬트리",
@@ -8,7 +8,7 @@ export const metadata = {
 };
 
 export default async function PantryPage() {
-  const user = await getServerAuthUser();
+  const initialAuthenticated = await getInitialAuthenticatedFromServer();
 
   return (
     <AppShell
@@ -17,7 +17,7 @@ export default async function PantryPage() {
       currentTab="pantry"
       headerMode="hidden"
     >
-      <PantryScreen initialAuthenticated={Boolean(user)} />
+      <PantryScreen initialAuthenticated={initialAuthenticated} />
     </AppShell>
   );
 }
