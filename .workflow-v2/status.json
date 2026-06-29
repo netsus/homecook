@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-17T18:59:27+09:00",
+  "updated_at": "2026-06-29T18:11:46+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1819,6 +1819,21 @@
         "git diff --check"
       ],
       "notes": "Stage 4 frontend implementation completed on feature/fe-36e-recipe-tags-frontend. Scope: HOME public tag rail, exact Korean tag chip/theme filters, MANUAL_RECIPE_CREATE suggestion/review chip editor, YT_IMPORT session tag review, and omit-unmodified-tags submit policy. Backend/API/schema changes are out of scope; production DB migration application is tracked as a manual ops step, and production backfill/reconcile writes require separate explicit approval after dry-run review."
+    },
+    {
+      "id": "launch-readiness-blockers",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/launch-readiness-blockers",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice launch-readiness-blockers",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs branch opened by Codex per explicit user instruction. This release-hotfix proceeds before earlier in-progress slices because fake contact/legal 404, hydration/console errors, missing security headers, FoodSafety mixed-content, and PostCSS audit failure directly block ads and deployment. Claude is forbidden; review, authority, final authority, and closeout must be handled by separate Codex sessions."
     }
   ]
 }

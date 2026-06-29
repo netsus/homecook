@@ -42,6 +42,8 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 - **1단계(Claude)**: `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 작성하고 main에 merge한다. 단계별 절차는 `docs/engineering/slice-workflow.md` 참조.
 - **2단계 시작 조건**: 1단계 문서 PR이 main에 **merge된 후**에만 백엔드 구현(2단계)을 시작한다.
 - Slice Order에서 선행 슬라이스 Status가 전부 `merged`인지 확인한 뒤 착수한다.
+- **Launch blocker 예외**: `launch-readiness-blockers`는 광고/배포를 직접 막는 release-hotfix workpack이다. 선행 slice 일부가 미완료여도 fake contact/legal 404, hydration/console error, missing security headers, mixed-content, audit failure를 먼저 닫기 위해 진행한다. 이 예외는 해당 workpack에만 적용되며 product contract, required checks, authority evidence, current-head CI green gate를 완화하지 않는다.
+- **Codex-only 예외**: `launch-readiness-blockers`는 사용자 지시에 따라 Claude를 사용하지 않는다. 기존 Claude 담당 Stage 1/3/4/final authority 역할은 같은 세션이 아니라 별도 Codex 세션으로 분리하고, 구현 세션은 자기 작업을 approve하지 않는다.
 - `workflow-v2` / `OMO` 대상 product slice는 Stage 1 전에 **slice ID / goal / 분기 경로를 고정**한다.
 - `planned` 상태 slice에 `착수 시점에 분할 여부 결정` 메모를 남기지 않는다. 분할이 필요하면 roadmap PR에서 `08a/08b`처럼 먼저 쪼갠다.
 - 예외: `docs/engineering/` 아래의 repo-engineering automation, workflow tooling, agent 운영 규칙 변경은 제품 workpack roadmap 바깥이다.
@@ -140,6 +142,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `36c-recipe-tags-search-themes` | merged | `GET /recipes?tag=`, 제목+승인 태그 검색, `GET /tags`, HOME theme generation을 cursor-stable dedupe 전략으로 구현 |
 | `36d-recipe-tags-rules-backfill` | merged | P0 의미 태그 rule fixture와 기존 레시피 backfill dry-run/report, usage count reconcile, P1 후보 승인 정책 구현 |
 | `36e-recipe-tags-frontend` | ready-for-review | MANUAL_RECIPE_CREATE/YT_IMPORT 태그 추천·검수 UI와 HOME 태그 검색/filter/theme chip UX 구현 |
+| `launch-readiness-blockers` | docs | 광고/배포 차단 release-hotfix 예외: legal/trust/SEO 404와 fake contact, HOME hydration/guest console noise, security headers, FoodSafety mixed-content, PostCSS audit blocker를 Codex-only 세션 분리로 닫음 |
 
 ## Design Decision Gates
 
