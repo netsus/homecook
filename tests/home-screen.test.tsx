@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import React from "react";
+import { renderToString } from "react-dom/server";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -292,7 +293,7 @@ describe("home screen", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
-    expect(screen.getByText(/요일 (아침|점심|오후|저녁|밤),/)).toBeTruthy();
+    expect(screen.getByText("오늘도,")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "집밥" }).className).toContain(
       "text-[var(--brand)]",
     );
@@ -336,6 +337,24 @@ describe("home screen", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
+  });
+
+  it("keeps the first HOME greeting render deterministic across SSR and hydration", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-29T01:59:00.000Z"));
+    const serverHtml = renderToString(<HomeScreen />);
+    const serverGreeting = serverHtml.match(
+      /<div class="home-mobile-discovery-kicker">([^<]+)<\/div>/,
+    )?.[1];
+
+    vi.setSystemTime(new Date("2026-06-29T02:01:00.000Z"));
+    const { container } = render(<HomeScreen />);
+    const clientGreeting = container.querySelector(
+      ".home-mobile-discovery-kicker",
+    )?.textContent;
+
+    expect(serverGreeting).toBe("오늘도,");
+    expect(clientGreeting).toBe(serverGreeting);
   });
 
   it("keeps the mobile meal greeting lighter than section titles", () => {
@@ -786,7 +805,7 @@ describe("home screen", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
-    expect(screen.getByText(/요일 (아침|점심|오후|저녁|밤),/)).toBeTruthy();
+    expect(screen.getByText("오늘도,")).toBeTruthy();
     expect(screen.getByRole("link", { name: "집밥" })).toBeTruthy();
     expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
     expect(

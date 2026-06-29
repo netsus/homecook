@@ -238,6 +238,28 @@ describe("GrowthToastStack", () => {
     expect(within(toasts[2]).getByTestId("growth-toast-priority-rank").textContent).toBe("3");
   });
 
+  it("does not fetch gamification while the global stack is mounted for a guest", async () => {
+    const GuestGrowthToastStack = GrowthToastStack as React.ComponentType<{
+      initialAuthenticated: boolean;
+    }>;
+    const { rerender } = render(<GuestGrowthToastStack initialAuthenticated={false} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockFetchUserGamification).not.toHaveBeenCalled();
+
+    mockNextNavigation.pathname = "/login";
+    rerender(<GuestGrowthToastStack initialAuthenticated={false} />);
+    dispatchRefresh();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockFetchUserGamification).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("growth-toast")).toBeNull();
+  });
+
   it("shows the first tutorial quest as a toast on initial load when there are no notification rows", async () => {
     mockFetchUserGamification.mockResolvedValue(
       makeGamificationWithTutorialStep({

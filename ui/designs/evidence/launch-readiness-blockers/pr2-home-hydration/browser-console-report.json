@@ -1,0 +1,74 @@
+{
+  "capturedAt": "2026-06-29T09:59:59.233Z",
+  "baseURL": "http://127.0.0.1:3100",
+  "results": [
+    {
+      "name": "home-desktop",
+      "path": "/",
+      "viewport": {
+        "width": 1440,
+        "height": 1100
+      },
+      "screenshot": "home-desktop.png",
+      "consoleWarningOrErrorCount": 0,
+      "relevantConsole": [],
+      "pageErrors": [],
+      "gamification401s": []
+    },
+    {
+      "name": "home-mobile",
+      "path": "/",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "screenshot": "home-mobile.png",
+      "consoleWarningOrErrorCount": 0,
+      "relevantConsole": [],
+      "pageErrors": [],
+      "gamification401s": []
+    },
+    {
+      "name": "home-narrow",
+      "path": "/",
+      "viewport": {
+        "width": 320,
+        "height": 720
+      },
+      "screenshot": "home-narrow.png",
+      "consoleWarningOrErrorCount": 0,
+      "relevantConsole": [],
+      "pageErrors": [],
+      "gamification401s": []
+    },
+    {
+      "name": "login-guest-console",
+      "path": "/login",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "screenshot": null,
+      "consoleWarningOrErrorCount": 0,
+      "relevantConsole": [],
+      "pageErrors": [],
+      "gamification401s": []
+    },
+    {
+      "name": "recipe-detail-guest-console",
+      "path": "/recipe/mock-kimchi-jjigae",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "screenshot": null,
+      "consoleWarningOrErrorCount": 0,
+      "relevantConsole": [],
+      "pageErrors": [],
+      "gamification401s": []
+    }
+  ],
+  "relevantConsoleCount": 0,
+  "gamification401Count": 0,
+  "pageErrorCount": 0
+}

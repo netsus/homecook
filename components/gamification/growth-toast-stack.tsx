@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { MypageGrowthDetailDialog } from "@/components/mypage/mypage-growth-detail-dialog";
@@ -9,6 +10,7 @@ import {
   fetchUserGamification,
   markUserGamificationNotificationsSeen,
 } from "@/lib/api/user-gamification";
+import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
   HOMECOOK_GAMIFICATION_REFRESH_EVENT,
   ONBOARDING_TUTORIAL_REFRESH_KEY,
@@ -19,6 +21,8 @@ import {
   isVisibleGrowthToastNotification,
 } from "@/lib/gamification-notifications";
 import { createTutorialGuideNotification } from "@/lib/gamification-tutorial-guide";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import achievementIconManifest from "@/public/assets/growth/achievement-icons-v3-4/manifest.json";
 import type {
   UserGamificationBadgeCategory,
@@ -54,6 +58,11 @@ interface ToastView {
   groupKey: string | null;
   notificationIds: string[];
   isTutorialGuide: boolean;
+}
+
+interface GrowthToastStackProps {
+  initialAuthenticated?: boolean;
+  resolveAuthenticatedOnClient?: boolean;
 }
 
 const TONE_BY_TYPE: Omit<Record<UserGamificationNotificationType, ToastTone>, "level_up"> = {
@@ -396,13 +405,17 @@ function GrowthToastVisual({ tone, visual }: { tone: ToastTone; visual: ToastVis
   );
 }
 
-export function GrowthToastStack() {
+export function GrowthToastStack({
+  initialAuthenticated = true,
+  resolveAuthenticatedOnClient = false,
+}: GrowthToastStackProps = {}) {
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
   const [views, setViews] = useState<ToastView[]>([]);
   const [gamification, setGamification] = useState<UserGamificationData | null>(null);
   const [isNotificationDialogOpen, setIsNotificationDialogOpen] = useState(false);
   const [visibleMax, setVisibleMax] = useState(MOBILE_VISIBLE_MAX);
+  const [isAuthenticated, setIsAuthenticated] = useState(initialAuthenticated);
   const loadingRef = useRef(false);
   const pendingRefreshRef = useRef(false);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
@@ -424,6 +437,62 @@ export function GrowthToastStack() {
   useEffect(() => {
     pathnameRef.current = pathname;
   }, [pathname]);
+
+  useEffect(() => {
+    setIsAuthenticated(initialAuthenticated);
+  }, [initialAuthenticated]);
+
+  useEffect(() => {
+    if (!resolveAuthenticatedOnClient) {
+      return;
+    }
+
+    const authOverride = readE2EAuthOverride();
+
+    if (typeof authOverride === "boolean") {
+      setIsAuthenticated(authOverride);
+      return;
+    }
+
+    if (!hasSupabasePublicEnv()) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    let isCurrent = true;
+    const supabase = getSupabaseBrowserClient();
+
+    void supabase.auth
+      .getSession()
+      .then((result: { data: { session: Session | null } }) => {
+        if (isCurrent) {
+          setIsAuthenticated(Boolean(result.data.session));
+        }
+      });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
+        setIsAuthenticated(Boolean(session));
+      },
+    );
+
+    return () => {
+      isCurrent = false;
+      subscription.unsubscribe();
+    };
+  }, [resolveAuthenticatedOnClient]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      return;
+    }
+
+    pendingRefreshRef.current = false;
+    setGamification(null);
+    setViews([]);
+  }, [isAuthenticated]);
 
   const markSeen = useCallback((ids: string[]) => {
     if (ids.length === 0) return;
@@ -447,6 +516,11 @@ export function GrowthToastStack() {
   );
 
   const refresh = useCallback(async () => {
+    if (!isAuthenticated) {
+      pendingRefreshRef.current = false;
+      return;
+    }
+
     if (loadingRef.current) {
       pendingRefreshRef.current = true;
       return;
@@ -483,11 +557,13 @@ export function GrowthToastStack() {
         loadingRef.current = false;
       }
     } while (pendingRefreshRef.current);
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    void refresh();
-  }, [pathname, refresh]);
+    if (isAuthenticated) {
+      void refresh();
+    }
+  }, [isAuthenticated, pathname, refresh]);
 
   useEffect(() => {
     if (isNicknameOnboardingPath(pathname) || !hasPendingOnboardingTutorialRefresh()) {
