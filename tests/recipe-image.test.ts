@@ -1,8 +1,39 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveRecipeImage, resolveRecipePhotoSet } from "@/lib/recipe-image";
+import {
+  normalizeFoodSafetyImageUrl,
+  resolveRecipeImage,
+  resolveRecipePhotoSet,
+} from "@/lib/recipe-image";
 
 describe("recipe image resolver", () => {
+  it("normalizes only FoodSafetyKorea http image URLs", () => {
+    expect(
+      normalizeFoodSafetyImageUrl(
+        "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
+      ),
+    ).toBe("https://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png");
+    expect(
+      normalizeFoodSafetyImageUrl(
+        "http://example.com/uploadimg/cook/10_00386_2.png",
+      ),
+    ).toBe("http://example.com/uploadimg/cook/10_00386_2.png");
+    expect(
+      normalizeFoodSafetyImageUrl(
+        "http://foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
+      ),
+    ).toBe("http://foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png");
+  });
+
+  it("normalizes FoodSafetyKorea thumbnail URLs before returning them", () => {
+    expect(
+      resolveRecipeImage({
+        id: "foodsafety-recipe",
+        thumbnail_url: "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
+      }),
+    ).toBe("https://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png");
+  });
+
   it("uses recipes.thumbnail_url when the recipe has a stored image", () => {
     expect(
       resolveRecipeImage({
@@ -58,15 +89,15 @@ describe("recipe image resolver", () => {
     expect(
       resolveRecipePhotoSet({
         id: "public-recipe",
-        thumbnail_url: "https://cdn.example.com/primary.png",
+        thumbnail_url: "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
         photos: [
-          { url: "https://cdn.example.com/primary.png" },
+          { url: "https://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png" },
           { url: "https://cdn.example.com/alternate.png" },
           { url: "   " },
         ],
       }),
     ).toEqual([
-      "https://cdn.example.com/primary.png",
+      "https://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
       "https://cdn.example.com/alternate.png",
     ]);
   });

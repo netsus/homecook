@@ -3,6 +3,7 @@ import {
   getMockRecipeThemes,
   isDiscoveryFilterManualMockEnabled,
 } from "@/lib/mock/recipes";
+import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   createRecipeThemes,
   selectHeartyMainThemeRecipes,
@@ -124,7 +125,7 @@ function mapRecipeCard(recipe: {
   return {
     id: recipe.id,
     title: recipe.title,
-    thumbnail_url: recipe.thumbnail_url,
+    thumbnail_url: normalizeFoodSafetyImageUrl(recipe.thumbnail_url),
     tags: recipe.tags ?? [],
     base_servings: recipe.base_servings,
     view_count: recipe.view_count,

@@ -242,7 +242,7 @@ create temp table tmp_pilot30_thumbnail_updates (
 
 insert into tmp_pilot30_thumbnail_updates (recipe_id, thumbnail_url)
 values
-  ('9e9e82c1-f7bc-5372-9588-0f242cc8239d'::uuid, 'http://www.foodsafetykorea.go.kr/uploadimg/cook/20_00386_06.png'::text);
+  ('9e9e82c1-f7bc-5372-9588-0f242cc8239d'::uuid, 'https://www.foodsafetykorea.go.kr/uploadimg/cook/20_00386_06.png'::text);
 
 update public.recipes recipe
    set thumbnail_url = image.thumbnail_url,

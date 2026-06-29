@@ -3,6 +3,7 @@ import type {
   LeftoverListItemData,
   LeftoverMutationData,
 } from "@/types/leftover";
+import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 
 const LEFTOVER_DISH_STATUSES = ["leftover", "eaten"] as const;
 
@@ -88,7 +89,7 @@ export function toLeftoverListItem(
     id: row.id,
     recipe_id: row.recipe_id,
     recipe_title: recipe?.title ?? "",
-    recipe_thumbnail_url: recipe?.thumbnail_url ?? null,
+    recipe_thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
     status: row.status,
     cooked_at: row.cooked_at,
     eaten_at: row.eaten_at,

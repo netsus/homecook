@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -193,7 +194,9 @@ export async function GET() {
       plan_date: meal.plan_date,
       recipe_id: meal.recipe_id,
       recipe_name: recipeMap.get(meal.recipe_id)?.title ?? "",
-      recipe_thumbnail: recipeMap.get(meal.recipe_id)?.thumbnail_url ?? null,
+      recipe_thumbnail: normalizeFoodSafetyImageUrl(
+        recipeMap.get(meal.recipe_id)?.thumbnail_url,
+      ),
       planned_servings: meal.planned_servings,
       created_at: meal.created_at,
     })),
@@ -209,7 +212,9 @@ export async function GET() {
       .map((recipe) => ({
         recipe_id: recipe.recipe_id,
         recipe_name: recipeMap.get(recipe.recipe_id)?.title ?? "",
-        recipe_thumbnail: recipeMap.get(recipe.recipe_id)?.thumbnail_url ?? null,
+        recipe_thumbnail: normalizeFoodSafetyImageUrl(
+          recipeMap.get(recipe.recipe_id)?.thumbnail_url,
+        ),
         meal_ids: recipe.meal_ids,
         planned_servings_total: recipe.planned_servings_total,
         shopping_servings: recipe.planned_servings_total,

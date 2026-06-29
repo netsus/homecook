@@ -7,6 +7,7 @@ import {
   getQaFixtureRecipeDetail,
   isQaFixtureModeEnabled,
 } from "@/lib/mock/recipes";
+import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -236,7 +237,7 @@ function mapRecipeBookItem({
   return {
     recipe_id: recipeId,
     title: recipe?.title ?? "",
-    thumbnail_url: recipe?.thumbnail_url ?? null,
+    thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
     tags: recipe?.tags ?? [],
     view_count: recipe?.view_count ?? 0,
     total_duration_seconds: totalDurationSeconds,
@@ -401,7 +402,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           {
             recipe_id: detail.id,
             title: detail.title,
-            thumbnail_url: detail.thumbnail_url,
+            thumbnail_url: normalizeFoodSafetyImageUrl(detail.thumbnail_url),
             tags: detail.tags,
             view_count: detail.view_count,
             total_duration_seconds: detail.steps.reduce(
