@@ -1,6 +1,6 @@
 import { LoginScreen } from "@/components/auth/login-screen";
 import { resolveNextPath } from "@/lib/auth/callback";
-import { getServerAuthUser } from "@/lib/supabase/server";
+import { getInitialAuthenticatedFromServer } from "@/lib/auth/server-initial-auth";
 import { redirect } from "next/navigation";
 
 export const metadata = {
@@ -18,9 +18,9 @@ interface LoginPageProps {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const resolvedSearchParams = await searchParams;
   const nextPath = resolveNextPath(resolvedSearchParams.next ?? "/");
-  const user = await getServerAuthUser();
+  const initialAuthenticated = await getInitialAuthenticatedFromServer();
 
-  if (user) {
+  if (initialAuthenticated) {
     redirect(nextPath);
   }
 
