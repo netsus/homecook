@@ -143,6 +143,7 @@
       "lodash": "4.18.1",
       "lodash-es": "4.18.1",
       "micromatch>picomatch": "2.3.2",
+      "postcss": "8.5.15",
       "tmp": "0.2.7",
       "@supabase/realtime-js>ws": "8.21.0",
       "lighthouse>ws": "7.5.11",
