@@ -9,6 +9,7 @@ import {
   isQaFixtureModeEnabled,
   MOCK_RECIPE_ID,
 } from "@/lib/mock/recipes";
+import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -300,7 +301,7 @@ function toMealListItem(row: MealListRow, recipeMap: Map<string, RecipeSummaryRo
     id: row.id,
     recipe_id: row.recipe_id,
     recipe_title: recipe?.title ?? "",
-    recipe_thumbnail_url: recipe?.thumbnail_url ?? null,
+    recipe_thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
     planned_servings: row.planned_servings,
     status: normalizeMealStatus(row.status),
     is_leftover: row.is_leftover,

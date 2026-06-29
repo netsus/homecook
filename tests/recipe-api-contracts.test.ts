@@ -85,7 +85,7 @@ describe("recipe API contracts", () => {
         {
           id: "recipe-1",
           title: "김치찌개",
-          thumbnail_url: "https://example.com/kimchi.jpg",
+          thumbnail_url: "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
           tags: ["한식"],
           base_servings: 2,
           view_count: 10,
@@ -125,6 +125,7 @@ describe("recipe API contracts", () => {
           {
             id: "recipe-1",
             title: "김치찌개",
+            thumbnail_url: "https://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
           },
         ],
       },
@@ -1455,7 +1456,7 @@ describe("recipe API contracts", () => {
         id: "recipe-1",
         title: "석류 보쌈김치",
         description: null,
-        thumbnail_url: "https://cdn.example.com/primary.png",
+        thumbnail_url: "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
         base_servings: 1,
         tags: ["한식"],
         source_type: "system",
@@ -1474,7 +1475,7 @@ describe("recipe API contracts", () => {
         extraction_meta_json: {
           image_candidates: [
             {
-              url: "https://cdn.example.com/primary.png",
+              url: "https://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
               role: "primary",
               width: 320,
               height: 321,
@@ -1538,7 +1539,7 @@ describe("recipe API contracts", () => {
     );
     expect(body.data.photos).toEqual([
       {
-        url: "https://cdn.example.com/primary.png",
+        url: "https://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
         role: "primary",
         label: null,
         width: 320,

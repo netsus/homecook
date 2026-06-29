@@ -17,6 +17,8 @@ const RECIPE_FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=900&h=675&fit=crop&q=80",
 ] as const;
 
+const FOODSERVICE_IMAGE_HOST = "www.foodsafetykorea.go.kr";
+
 interface RecipeImageInput {
   id?: string | null;
   recipe_id?: string | null;
@@ -25,6 +27,25 @@ interface RecipeImageInput {
   photos?: Array<{
     url?: string | null;
   } | null> | null;
+}
+
+export function normalizeFoodSafetyImageUrl(value?: string | null): string | null {
+  const urlText = value?.trim();
+  if (!urlText) {
+    return null;
+  }
+
+  try {
+    const url = new URL(urlText);
+    if (url.protocol === "http:" && url.hostname === FOODSERVICE_IMAGE_HOST) {
+      url.protocol = "https:";
+      return url.toString();
+    }
+  } catch {
+    return urlText;
+  }
+
+  return urlText;
 }
 
 function hashId(id: string): number {
@@ -40,7 +61,9 @@ function hashId(id: string): number {
  * recipe looks identical on every screen.
  */
 export function resolveRecipeImage(recipe: RecipeImageInput): string {
-  const thumbnailUrl = recipe.thumbnail_url?.trim() || recipe.recipe_thumbnail_url?.trim();
+  const thumbnailUrl =
+    normalizeFoodSafetyImageUrl(recipe.thumbnail_url) ??
+    normalizeFoodSafetyImageUrl(recipe.recipe_thumbnail_url);
   if (thumbnailUrl) {
     return thumbnailUrl;
   }
@@ -54,7 +77,7 @@ export function resolveRecipePhotoSet(recipe: RecipeImageInput): string[] {
   const urls: string[] = [];
   const seen = new Set<string>();
   const addUrl = (value?: string | null) => {
-    const url = value?.trim();
+    const url = normalizeFoodSafetyImageUrl(value);
     if (!url || seen.has(url)) {
       return;
     }

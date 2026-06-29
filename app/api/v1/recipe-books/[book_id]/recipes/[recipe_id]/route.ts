@@ -9,6 +9,7 @@ import {
   normalizeRecipeIngredients,
   normalizeRecipeSteps,
 } from "@/lib/recipe-detail";
+import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -259,7 +260,7 @@ function mapReaderData({
   return {
     recipe_id: recipe.id,
     title: recipe.title,
-    thumbnail_url: recipe.thumbnail_url,
+    thumbnail_url: normalizeFoodSafetyImageUrl(recipe.thumbnail_url),
     tags: recipe.tags ?? [],
     view_count: recipe.view_count ?? 0,
     total_duration_seconds: totalDurationSeconds,
@@ -278,7 +279,7 @@ function mapQaFixtureReaderData(addedAt: string | null): RecipeBookReaderRecipeD
   return {
     recipe_id: detail.id,
     title: detail.title,
-    thumbnail_url: detail.thumbnail_url,
+    thumbnail_url: normalizeFoodSafetyImageUrl(detail.thumbnail_url),
     tags: detail.tags,
     view_count: detail.view_count,
     total_duration_seconds: totalDurationSeconds,

@@ -11,6 +11,7 @@ import {
   normalizeRecipeIngredients,
   normalizeRecipeSteps,
 } from "@/lib/recipe-detail";
+import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   isMissingStepCookingMethodsRelation,
   RECIPE_STEP_SELECT_LEGACY,
@@ -74,7 +75,7 @@ function buildRecipePhotos(
   const photos: RecipePhoto[] = [];
   const indexesByUrl = new Map<string, number>();
   const addPhoto = (photo: RecipePhoto) => {
-    const normalizedUrl = photo.url.trim();
+    const normalizedUrl = normalizeFoodSafetyImageUrl(photo.url);
     if (!normalizedUrl) {
       return;
     }
@@ -102,7 +103,7 @@ function buildRecipePhotos(
     });
   };
 
-  const normalizedThumbnailUrl = thumbnailUrl?.trim();
+  const normalizedThumbnailUrl = normalizeFoodSafetyImageUrl(thumbnailUrl);
   if (
     normalizedThumbnailUrl &&
     isUsableImageUrl(normalizedThumbnailUrl, { allowDataUri: true })
@@ -124,12 +125,13 @@ function buildRecipePhotos(
     }
 
     const url = candidate.url.trim();
-    if (!isUsableImageUrl(url)) {
+    const normalizedUrl = normalizeFoodSafetyImageUrl(url);
+    if (!normalizedUrl || !isUsableImageUrl(normalizedUrl)) {
       return;
     }
 
     addPhoto({
-      url,
+      url: normalizedUrl,
       role: normalizePhotoRole(candidate.role),
       label: typeof candidate.label === "string" ? candidate.label.trim() || null : null,
       width: normalizePositiveNumber(candidate.width),
@@ -330,13 +332,14 @@ export async function GET(request: Request, context: RouteContext) {
       }
     }
 
+    const thumbnailUrl = normalizeFoodSafetyImageUrl(recipeResult.data.thumbnail_url);
     const detail: RecipeDetail = {
       id: recipeResult.data.id,
       title: recipeResult.data.title,
       description: recipeResult.data.description,
-      thumbnail_url: recipeResult.data.thumbnail_url,
+      thumbnail_url: thumbnailUrl,
       photos: buildRecipePhotos(
-        recipeResult.data.thumbnail_url,
+        thumbnailUrl,
         sourceResult.data?.extraction_meta_json,
       ),
       base_servings: recipeResult.data.base_servings,

@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import { getQaFixturePlannerData, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
+import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -137,7 +138,7 @@ function toPlannerMeal(
     id: meal.id,
     recipe_id: meal.recipe_id,
     recipe_title: recipe?.title ?? "",
-    recipe_thumbnail_url: recipe?.thumbnail_url ?? null,
+    recipe_thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
     plan_date: meal.plan_date,
     column_id: meal.column_id,
     planned_servings: meal.planned_servings,
