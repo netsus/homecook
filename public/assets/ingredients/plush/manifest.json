@@ -1,0 +1,49 @@
+{
+  "concept": "plush-diary-sticker",
+  "version": 1,
+  "format": {
+    "width": 512,
+    "height": 512,
+    "type": "image/png",
+    "background": "soft light gray",
+    "safeArea": "centered subject with white sticker border"
+  },
+  "items": {
+    "간장": {
+      "src": "/assets/ingredients/plush/soy-sauce.png",
+      "status": "approved-sample"
+    },
+    "닭가슴살": {
+      "src": "/assets/ingredients/plush/chicken-breast.png",
+      "status": "approved-sample"
+    },
+    "대파": {
+      "src": "/assets/ingredients/plush/green-onion.png",
+      "status": "approved-sample"
+    },
+    "밥": {
+      "src": "/assets/ingredients/plush/cooked-rice.png",
+      "status": "approved-sample"
+    },
+    "버터": {
+      "src": "/assets/ingredients/plush/butter.png",
+      "status": "approved-sample"
+    },
+    "설탕": {
+      "src": "/assets/ingredients/plush/sugar.png",
+      "status": "approved-sample"
+    },
+    "소금": {
+      "src": "/assets/ingredients/plush/salt.png",
+      "status": "approved-sample"
+    },
+    "쌀": {
+      "src": "/assets/ingredients/plush/rice.png",
+      "status": "approved-sample"
+    },
+    "양파": {
+      "src": "/assets/ingredients/plush/onion.png",
+      "status": "approved-sample"
+    }
+  }
+}

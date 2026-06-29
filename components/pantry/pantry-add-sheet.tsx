@@ -3,7 +3,7 @@
 import React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
+import { PantryIngredientVisual } from "@/components/pantry/pantry-ingredient-visual";
 import {
   AppBottomSheet,
   AppModalFooterActions,
@@ -373,15 +373,15 @@ export function PantryAddSheet({
                         role="checkbox"
                         type="button"
                       >
-                        <span
-                          aria-hidden="true"
+                        <PantryIngredientVisual
+                          category={ingredient.category}
                           className={[
-                            "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[18px]",
+                            "flex h-[30px] w-[30px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] bg-[var(--surface-fill)] text-[18px]",
                             isExisting ? "opacity-70" : "",
                           ].join(" ")}
-                        >
-                          {getPantryEmoji(ingredient.standard_name, ingredient.category)}
-                        </span>
+                          imageClassName="h-full w-full object-contain"
+                          name={ingredient.standard_name}
+                        />
                         <span
                           className={[
                             "min-w-0 flex-1 truncate text-[13px] font-extrabold",

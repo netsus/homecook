@@ -10,8 +10,8 @@ import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-ta
 import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
 import { PantryAddSheet } from "@/components/pantry/pantry-add-sheet";
 import { PantryBundlePicker } from "@/components/pantry/pantry-bundle-picker";
+import { PantryIngredientVisual } from "@/components/pantry/pantry-ingredient-visual";
 import { PantryMobileScreen } from "@/components/pantry/pantry-mobile-screen";
-import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { AppBottomSheet } from "@/components/shared/app-overlay";
@@ -969,9 +969,11 @@ export function PantryScreen({
                                 {isSelected ? "✓" : ""}
                               </span>
                             ) : null}
-                            <span className="web-pantry-emoji" aria-hidden="true">
-                              {getPantryEmoji(item.standard_name, item.category)}
-                            </span>
+                            <PantryIngredientVisual
+                              category={item.category}
+                              className="web-pantry-emoji"
+                              name={item.standard_name}
+                            />
                             <span
                               className="web-pantry-card-copy"
                               data-testid={`web-pantry-card-copy-${item.ingredient_id}`}

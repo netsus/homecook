@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
+import { getPantryEmoji, getPantryStickerSrc } from "@/components/pantry/pantry-mobile-visuals";
 
 describe("pantry mobile visuals", () => {
   it("uses the shared category emoji for canonical fruit", () => {
@@ -10,5 +10,10 @@ describe("pantry mobile visuals", () => {
   it("keeps Wave1-only display group fallbacks separate from canonical categories", () => {
     expect(getPantryEmoji("렌틸콩", "단백질")).toBe("🥚");
     expect(getPantryEmoji("잡곡밥", "주식")).toBe("🍚");
+  });
+
+  it("returns approved sticker assets only for manifest-backed ingredients", () => {
+    expect(getPantryStickerSrc("소금")).toBe("/assets/ingredients/plush/salt.png");
+    expect(getPantryStickerSrc("렌틸콩")).toBeNull();
   });
 });

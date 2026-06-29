@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PantryScreen } from "@/components/pantry/pantry-screen";
-import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
+import { getPantryStickerSrc } from "@/components/pantry/pantry-mobile-visuals";
 import {
   INGREDIENT_CATEGORIES,
   INGREDIENT_CATEGORY_GROUP_OPTIONS,
@@ -231,9 +231,11 @@ describe("PantryScreen", () => {
     expect(within(vegetableSection).getByText("양파")).toBeTruthy();
     expect(within(seasoningSection).getByText("마늘")).toBeTruthy();
     expect(within(proteinSection).getByText("돼지고기")).toBeTruthy();
-    expect(screen.getByTestId("web-pantry-card-i1").textContent).toContain(
-      getPantryEmoji("양파", VEGETABLE_CATEGORY),
-    );
+    const onionStickerSrc = screen
+      .getByTestId("web-pantry-card-i1")
+      .querySelector("img")
+      ?.getAttribute("src");
+    expect(onionStickerSrc).toContain("onion.png");
     expect(screen.getByTestId("web-pantry-card-i1").textContent).not.toContain("채소/버섯");
     expect(screen.getByTestId("web-pantry-card-copy-i1")).toBeTruthy();
     expect(screen.getByTestId("web-pantry-card-i1").textContent).not.toContain("보유 중");
@@ -773,7 +775,10 @@ describe("PantryScreen", () => {
     PANTRY_CATEGORY_GROUP_LABELS.forEach((category) => {
       expect(screen.getByRole("tab", { name: category })).toBeTruthy();
     });
-    expect(screen.getByText(getPantryEmoji("양파", VEGETABLE_CATEGORY))).toBeTruthy();
+    expect(getPantryStickerSrc("양파")).toBe(
+      "/assets/ingredients/plush/onion.png",
+    );
+    expect(screen.getByTestId("web-pantry-card-i1").querySelector("img")).toBeTruthy();
   });
 
   it("uses the canonical DB category rail and only owned count on mobile", async () => {

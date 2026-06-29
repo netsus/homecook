@@ -3,7 +3,7 @@
 import React, { useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
-import { getPantryEmoji } from "@/components/pantry/pantry-mobile-visuals";
+import { PantryIngredientVisual } from "@/components/pantry/pantry-ingredient-visual";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -319,12 +319,12 @@ export function PantryMobileScreen({
                               ✓
                             </span>
                           )}
-                          <span
-                            aria-hidden="true"
-                            className="mr-3 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[var(--radius-card)] bg-[var(--surface-fill)] text-[20px]"
-                          >
-                            {getPantryEmoji(item.standard_name, item.category)}
-                          </span>
+                          <PantryIngredientVisual
+                            category={item.category}
+                            className="mr-3 flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface-fill)] text-[20px]"
+                            imageClassName="h-full w-full object-contain"
+                            name={item.standard_name}
+                          />
                           <span className="min-w-0 flex-1 truncate text-[15px] font-extrabold leading-[1.35] text-[var(--foreground)]">
                             {item.standard_name}
                           </span>
