@@ -40,6 +40,8 @@ Current seed-derived inventory:
 
 ## Approved Samples
 
+Initial visual anchor:
+
 | Ingredient | File |
 | --- | --- |
 | 소금 | `salt.png` |
@@ -52,6 +54,23 @@ Current seed-derived inventory:
 | 버터 | `butter.png` |
 | 닭가슴살 | `chicken-breast.png` |
 
+Batch 1 extension:
+
+| Ingredient | File |
+| --- | --- |
+| 계란 | `egg.png` |
+| 마늘 | `garlic.png` |
+| 감자 | `potato.png` |
+| 당근 | `carrot.png` |
+| 애호박 | `zucchini.png` |
+| 두부 | `tofu.png` |
+| 돼지고기 | `pork.png` |
+| 소고기 | `beef.png` |
+| 닭고기 | `chicken.png` |
+| 고춧가루 | `red-pepper-powder.png` |
+| 후추 | `black-pepper.png` |
+| 참기름 | `sesame-oil.png` |
+
 ## Prompt Template
 
 Use one prompt per ingredient. Do not combine multiple different ingredients into one generated image.
@@ -61,7 +80,7 @@ Use case: stylized-concept
 Asset type: 512x512 pantry ingredient app sticker
 Primary request: Create one collectible diary sticker image for the Korean ingredient "<INGREDIENT_NAME>".
 Scene/backdrop: clean square icon composition on a very light warm gray background.
-Subject: one simple, instantly recognizable version of "<INGREDIENT_NAME>" as the main object.
+Subject: one simple, instantly recognizable version of "<INGREDIENT_NAME>" as the main object, optionally with a tiny embroidered face and plush hands/feet when it improves the collectible sticker feel without hiding the ingredient shape.
 Style/medium: cute mini plush diary sticker, soft felt texture, rounded handmade shape, polished app asset.
 Composition/framing: centered, generous padding, no cropping, readable at 34px and 56px.
 Lighting/mood: soft studio light, gentle shadow only under the sticker.
