@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -287,7 +288,9 @@ export async function GET(_request: Request, context: RouteContext) {
       .map((recipe) => ({
         recipe_id: recipe.recipe_id,
         recipe_name: recipeNameMap.get(recipe.recipe_id)?.title ?? "",
-        recipe_thumbnail: recipeNameMap.get(recipe.recipe_id)?.thumbnail_url ?? null,
+        recipe_thumbnail: normalizeFoodSafetyImageUrl(
+          recipeNameMap.get(recipe.recipe_id)?.thumbnail_url,
+        ),
         shopping_servings: recipe.shopping_servings,
         planned_servings_total: recipe.planned_servings_total,
       }))

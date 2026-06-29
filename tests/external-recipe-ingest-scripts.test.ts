@@ -30,7 +30,8 @@ const foodsafetyRow = {
   INFO_WGT: "2인분",
   INFO_ENG: "320",
   RCP_PARTS_DTLS: "[찌개 재료] 두부 1모, 김치 200g, 돼지고기 100g, 대파 1대\n[양념장] 고춧가루 1큰술",
-  ATT_FILE_NO_MAIN: "https://example.test/tofu-kimchi.jpg",
+  ATT_FILE_NO_MAIN: "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
+  ATT_FILE_NO_MK: "http://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_1.png",
   MANUAL01: "1. 김치와 돼지고기를 냄비에 넣고 볶는다.",
   MANUAL02: "2. 고춧가루로 양념장을 만든 뒤 물을 붓고 두부와 대파를 넣는다.",
 };
@@ -197,6 +198,8 @@ describe("external recipe ingest scripts", () => {
     expect(candidates.candidates[0]).toMatchObject({
       title: "두부 김치찌개",
       cooking_method: { label: "끓이기" },
+      thumbnail_url: "https://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_2.png",
+      image_url: "https://www.foodsafetykorea.go.kr/uploadimg/cook/10_00386_1.png",
       blocked: false,
     });
     expect(candidates.candidates[0].ingredients.filter((ingredient: { resolved: boolean }) => ingredient.resolved)).toHaveLength(5);

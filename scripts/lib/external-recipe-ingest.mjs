@@ -115,6 +115,25 @@ export function stringOrEmpty(value) {
   return stringOrNull(value) ?? "";
 }
 
+export function normalizeFoodSafetyImageUrl(value) {
+  const urlText = stringOrNull(value);
+  if (!urlText) {
+    return null;
+  }
+
+  try {
+    const url = new URL(urlText);
+    if (url.protocol === "http:" && url.hostname === "www.foodsafetykorea.go.kr") {
+      url.protocol = "https:";
+      return url.toString();
+    }
+  } catch {
+    return urlText;
+  }
+
+  return urlText;
+}
+
 export function normalizeText(value) {
   return stringOrEmpty(value)
     .normalize("NFKC")
@@ -640,8 +659,8 @@ export function normalizeFoodSafetyRecipeRow(row, { ingredientLookup }) {
     cooking_method_source_label: normalizeText(row.RCP_WAY2),
     cooking_method: method,
     bucket,
-    thumbnail_url: stringOrNull(row.ATT_FILE_NO_MAIN),
-    image_url: stringOrNull(row.ATT_FILE_NO_MK),
+    thumbnail_url: normalizeFoodSafetyImageUrl(row.ATT_FILE_NO_MAIN),
+    image_url: normalizeFoodSafetyImageUrl(row.ATT_FILE_NO_MK),
     raw_ingredient_text: stringOrNull(row.RCP_PARTS_DTLS),
     ingredients: resolvedIngredients,
     steps,

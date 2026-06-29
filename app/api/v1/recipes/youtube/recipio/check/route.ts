@@ -1,5 +1,6 @@
 import { fail, ok } from "@/lib/api/response";
 import { isYoutubeImportEnabled } from "@/lib/feature-flags";
+import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import { normalizeRecipioYoutubeUrl } from "@/lib/recipio-youtube-import";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipioYoutubeDuplicateCheckData } from "@/types/recipe";
@@ -78,7 +79,7 @@ export async function GET(request: Request) {
     recipe: {
       recipe_id: recipe.id,
       title: recipe.title,
-      thumbnail_url: recipe.thumbnail_url,
+      thumbnail_url: normalizeFoodSafetyImageUrl(recipe.thumbnail_url),
       youtube_url: result.data.youtube_url ?? parsedUrl.youtubeUrl,
       youtube_video_id: result.data.youtube_video_id ?? parsedUrl.videoId,
     },

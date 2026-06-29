@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { fail, ok } from "@/lib/api/response";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { getQaFixtureRecipeDetail, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
+import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -122,7 +123,7 @@ function createFixtureItems() {
     {
       id: detail.id,
       title: detail.title,
-      thumbnail_url: detail.thumbnail_url,
+      thumbnail_url: normalizeFoodSafetyImageUrl(detail.thumbnail_url),
       match_score: Number(((totalIngredients - missing.length) / totalIngredients).toFixed(2)),
       matched_ingredients: totalIngredients - missing.length,
       total_ingredients: totalIngredients,
@@ -292,7 +293,7 @@ export async function GET(request: NextRequest) {
       return {
         id: recipe.id,
         title: recipe.title,
-        thumbnail_url: recipe.thumbnail_url,
+        thumbnail_url: normalizeFoodSafetyImageUrl(recipe.thumbnail_url),
         match_score: normalizePantryMatchScore(matchedIngredients, totalIngredients),
         matched_ingredients: matchedIngredients,
         total_ingredients: totalIngredients,
