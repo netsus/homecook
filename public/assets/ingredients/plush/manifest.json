@@ -9,16 +9,48 @@
     "safeArea": "centered subject with white sticker border"
   },
   "items": {
+    "감자": {
+      "src": "/assets/ingredients/plush/potato.png",
+      "status": "approved-sample"
+    },
     "간장": {
       "src": "/assets/ingredients/plush/soy-sauce.png",
+      "status": "approved-sample"
+    },
+    "계란": {
+      "src": "/assets/ingredients/plush/egg.png",
+      "status": "approved-sample"
+    },
+    "고춧가루": {
+      "src": "/assets/ingredients/plush/red-pepper-powder.png",
       "status": "approved-sample"
     },
     "닭가슴살": {
       "src": "/assets/ingredients/plush/chicken-breast.png",
       "status": "approved-sample"
     },
+    "닭고기": {
+      "src": "/assets/ingredients/plush/chicken.png",
+      "status": "approved-sample"
+    },
+    "당근": {
+      "src": "/assets/ingredients/plush/carrot.png",
+      "status": "approved-sample"
+    },
     "대파": {
       "src": "/assets/ingredients/plush/green-onion.png",
+      "status": "approved-sample"
+    },
+    "돼지고기": {
+      "src": "/assets/ingredients/plush/pork.png",
+      "status": "approved-sample"
+    },
+    "두부": {
+      "src": "/assets/ingredients/plush/tofu.png",
+      "status": "approved-sample"
+    },
+    "마늘": {
+      "src": "/assets/ingredients/plush/garlic.png",
       "status": "approved-sample"
     },
     "밥": {
@@ -33,6 +65,10 @@
       "src": "/assets/ingredients/plush/sugar.png",
       "status": "approved-sample"
     },
+    "소고기": {
+      "src": "/assets/ingredients/plush/beef.png",
+      "status": "approved-sample"
+    },
     "소금": {
       "src": "/assets/ingredients/plush/salt.png",
       "status": "approved-sample"
@@ -41,8 +77,20 @@
       "src": "/assets/ingredients/plush/rice.png",
       "status": "approved-sample"
     },
+    "애호박": {
+      "src": "/assets/ingredients/plush/zucchini.png",
+      "status": "approved-sample"
+    },
     "양파": {
       "src": "/assets/ingredients/plush/onion.png",
+      "status": "approved-sample"
+    },
+    "참기름": {
+      "src": "/assets/ingredients/plush/sesame-oil.png",
+      "status": "approved-sample"
+    },
+    "후추": {
+      "src": "/assets/ingredients/plush/black-pepper.png",
       "status": "approved-sample"
     }
   }
