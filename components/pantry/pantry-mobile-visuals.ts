@@ -1,4 +1,12 @@
 import { getIngredientCategoryEmoji } from "@/lib/ingredient-categories";
+import stickerManifest from "@/public/assets/ingredients/plush/manifest.json";
+
+type PantryStickerManifestItem = {
+  src: string;
+  status: string;
+};
+
+const PANTRY_STICKER_ITEMS = stickerManifest.items as Record<string, PantryStickerManifestItem>;
 
 const PANTRY_EMOJI: Record<string, string> = {
   감자: "🥔",
@@ -90,6 +98,10 @@ export function getPantryEmoji(name: string, category?: string) {
   }
 
   return getIngredientCategoryEmoji(category);
+}
+
+export function getPantryStickerSrc(name: string) {
+  return PANTRY_STICKER_ITEMS[name]?.src ?? null;
 }
 
 export function getBundleEmoji(name: string) {
