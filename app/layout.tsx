@@ -41,7 +41,10 @@ export default function RootLayout({
     <html lang="ko">
       <body>
         {children}
-        <GrowthToastStack />
+        <GrowthToastStack
+          initialAuthenticated={false}
+          resolveAuthenticatedOnClient
+        />
         <QaFixtureToolbar />
       </body>
     </html>

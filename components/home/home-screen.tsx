@@ -73,6 +73,7 @@ const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
 const WEB_HOME_MAX_VISIBLE_TAGS = 3;
 const WEB_HOME_TAG_ROW_UNIT_LIMIT = 10;
 const WEB_HOME_TAG_GAP_UNITS = 1;
+const HOME_MEAL_GREETING_FALLBACK = "오늘도,";
 
 type ScreenState = "loading" | "ready" | "empty" | "error";
 type AsyncState = "loading" | "ready" | "error";
@@ -104,7 +105,7 @@ const HOME_QUICK_LINKS = [
   },
 ] as const;
 
-function formatHomeMealGreeting(now = new Date()) {
+function formatHomeMealGreeting(now: Date) {
   const weekday = new Intl.DateTimeFormat("ko-KR", {
     timeZone: KOREA_TIME_ZONE,
     weekday: "long",
@@ -578,12 +579,22 @@ export function HomeScreen() {
     (screenState === "ready" || screenState === "empty") &&
     displayedRecipes.length === 0;
   const emptyStateActionLabel = "초기화";
-  const mealGreeting = useMemo(() => formatHomeMealGreeting(), []);
+  const [mealGreeting, setMealGreeting] = useState(HOME_MEAL_GREETING_FALLBACK);
   const resultStatusText = buildResultStatusText({
     count: displayedRecipes.length,
     listTitle,
     screenState,
   });
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setMealGreeting(formatHomeMealGreeting(new Date()));
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
 
   const clearIngredientFilters = useCallback(() => {
     resetAppliedIngredientIds();
