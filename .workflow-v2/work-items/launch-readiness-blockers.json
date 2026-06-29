@@ -1,0 +1,108 @@
+{
+  "id": "launch-readiness-blockers",
+  "title": "Launch readiness blockers",
+  "summary": "광고 집행과 실제 사용자 모집 전에 legal/trust/SEO, HOME hydration, guest console noise, security headers, FoodSafety mixed-content, PostCSS audit blocker를 release-hotfix workpack으로 닫는다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "critical",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자 유입 전 production에서 신뢰, 첫 렌더 안정성, 기본 보안 헤더, mixed-content, dependency audit 차단 이슈를 제거한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not use Claude for planning, review, authority, or closeout",
+    "codex": "stage1 docs, implementation, independent review sessions, authority sessions, final closeout, and launch evidence aggregation",
+    "workers": []
+  },
+  "dependencies": [
+    ".omx/plans/homecook-launch-blockers-5-ralplan-dr-20260629.md",
+    "Track 0 real legal/operator facts before PR1 production merge"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.11.md",
+      "docs/화면정의서-v1.5.18.md",
+      "docs/유저flow맵-v1.3.18.md",
+      "docs/db설계-v1.3.16.md",
+      "docs/api문서-v1.2.20.md"
+    ],
+    "governing_docs": [
+      ".omx/plans/homecook-launch-blockers-5-ralplan-dr-20260629.md",
+      "docs/workpacks/launch-readiness-blockers/README.md",
+      "docs/workpacks/launch-readiness-blockers/acceptance.md",
+      "docs/workpacks/launch-readiness-blockers/automation-spec.json",
+      "docs/workpacks/README.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:preview-legal-seo-routes",
+      "manual:preview-home-console-clean",
+      "manual:preview-security-header-curl",
+      "manual:production-db-foodsafety-http-count-zero",
+      "manual:production-pnpm-audit-output"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice launch-readiness-blockers",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice launch-readiness-blockers",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "launch-hotfix-roadmap-exception-documented",
+      "codex-only-independent-review-rule-documented",
+      "pr1-legal-seo-gate-defined",
+      "pr2-home-hydration-console-gate-defined",
+      "pr3-security-header-gate-defined",
+      "pr4-foodsafety-normalization-gate-defined",
+      "pr5-postcss-audit-gate-defined"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Legal advice or legal adequacy guarantee by Codex",
+    "Placeholder legal copy production merge",
+    "Private/auth routes in sitemap",
+    "Nonce/hash CSP hardening",
+    "Non-FoodSafety external URL rewrite",
+    "Unrelated dependency upgrade sweep",
+    "Earlier in-progress product slice completion"
+  ],
+  "open_questions": [
+    "Track 0 real operator/legal facts must be supplied before PR1 can production merge.",
+    "If CSP breaks preview flows, split PR3 into PR3a non-CSP headers and PR3b CSP baseline."
+  ],
+  "notes": "Stage 1 docs branch opened by Codex per explicit user instruction. This release-hotfix is allowed to proceed before earlier in-progress slices because fake contact/legal 404, hydration/console errors, missing security headers, FoodSafety mixed-content, and PostCSS audit failure directly block ads and deployment. Claude is forbidden; review, authority, final authority, and closeout must be handled by separate Codex sessions."
+}

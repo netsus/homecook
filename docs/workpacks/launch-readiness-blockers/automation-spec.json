@@ -1,0 +1,194 @@
+{
+  "slice_id": "launch-readiness-blockers",
+  "execution_mode": "manual",
+  "risk_class": "critical",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/recipes",
+      "GET /api/v1/recipes/{recipe_id}",
+      "GET /api/v1/recipes/themes",
+      "GET /api/v1/planner",
+      "GET /api/v1/shopping/preview",
+      "GET /api/v1/shopping/lists/{list_id}",
+      "GET /api/v1/recipe-books/{book_id}/recipes",
+      "GET /api/v1/recipe-books/{book_id}/recipes/{recipe_id}"
+    ],
+    "invariants": [
+      "api-envelope-preserved",
+      "error-object-shape-preserved",
+      "foodsafety-host-limited-http-to-https-normalization",
+      "foodsafety-migration-idempotent",
+      "no-private-route-in-sitemap",
+      "security-headers-do-not-break-auth-or-assets",
+      "postcss-audit-compliance-without-new-dependency",
+      "codex-only-independent-review-sessions"
+    ],
+    "verify_commands": [
+      "pnpm test -- tests/recipe-image.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice launch-readiness-blockers",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/recipe-image.test.ts",
+      "route contract tests for recipe list/detail/themes/planner/shopping/recipe-book image URL normalization",
+      "SQL count query evidence for FoodSafety http URL count zero"
+    ],
+    "schema_changes": [
+      "supabase/migrations/<timestamp>_normalize_foodsafety_image_urls.sql"
+    ],
+    "required_tables": [
+      "recipes",
+      "recipe_sources"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/",
+      "/login",
+      "/privacy",
+      "/terms",
+      "/robots.txt",
+      "/sitemap.xml",
+      "/recipes/{recipe_id}",
+      "/mypage",
+      "/planner",
+      "/pantry"
+    ],
+    "required_states": [
+      "legal-long-content",
+      "legal-mobile-320-fit",
+      "home-hydration-clean",
+      "guest-console-clean",
+      "logged-in-growth-toast-retained",
+      "security-header-present",
+      "csp-no-critical-asset-block",
+      "foodsafety-mixed-content-clean",
+      "postcss-audit-pass",
+      "codex-only-authority-reviewed"
+    ],
+    "required_endpoints": [
+      "GET /api/v1/users/me/gamification",
+      "GET /api/v1/recipes",
+      "GET /api/v1/recipes/{recipe_id}",
+      "GET /api/v1/recipes/themes"
+    ],
+    "verify_commands": [
+      "pnpm test -- tests/home-screen.test.tsx tests/growth-toast-stack.test.tsx tests/user-gamification-api-client.test.ts",
+      "pnpm test:e2e:security",
+      "pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
+      "pnpm build",
+      "corepack pnpm audit --prod --audit-level moderate",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice launch-readiness-blockers",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "privacy-terms-mobile-desktop-screenshots",
+      "home-hydration-console-clean-desktop-mobile",
+      "guest-login-recipe-detail-console-clean",
+      "security-header-curl-snapshot",
+      "csp-origin-inventory",
+      "foodsafety-mixed-content-browser-capture",
+      "postcss-audit-output",
+      "separate-codex-authority-report",
+      "separate-codex-final-closeout"
+    ],
+    "touched_components": [
+      "app/layout.tsx",
+      "app/privacy/page.tsx",
+      "app/terms/page.tsx",
+      "app/robots.ts",
+      "app/sitemap.ts",
+      "components/home/home-screen.tsx",
+      "components/gamification/growth-toast-stack.tsx",
+      "components/mypage/mypage-screen.tsx",
+      "lib/api/user-gamification.ts",
+      "lib/recipe-image.ts",
+      "next.config.ts",
+      "package.json",
+      "pnpm-lock.yaml"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [
+        "HOME"
+      ],
+      "required_screens": [
+        "PRIVACY",
+        "TERMS",
+        "HOME"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/LAUNCH_READINESS_BLOCKERS.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/LAUNCH_READINESS_BLOCKERS-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "privacy-mobile-390",
+        "privacy-mobile-320",
+        "privacy-desktop",
+        "terms-mobile-390",
+        "terms-mobile-320",
+        "terms-desktop",
+        "home-desktop-hydration-console-clean",
+        "home-mobile-hydration-console-clean",
+        "guest-login-console-clean",
+        "public-recipe-detail-console-clean",
+        "foodsafety-mixed-content-clean"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/PRIVACY.md",
+        "ui/designs/TERMS.md",
+        "ui/designs/critiques/PRIVACY-critique.md",
+        "ui/designs/critiques/TERMS-critique.md",
+        "ui/designs/evidence/launch-readiness-blockers/"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/LAUNCH_READINESS_BLOCKERS-authority.md",
+        "ui/designs/authority/HOME-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "manual:preview-legal-seo-routes",
+    "manual:preview-home-console-clean",
+    "manual:preview-security-header-curl",
+    "manual:production-db-foodsafety-http-count-zero",
+    "manual:production-pnpm-audit-output"
+  ],
+  "blocked_conditions": [
+    "claude-used-for-any-stage",
+    "implementation-session-approves-own-work",
+    "missing-separate-codex-authority-review",
+    "missing-separate-codex-final-closeout",
+    "placeholder-legal-copy",
+    "fake-contact-left-in-production",
+    "privacy-or-terms-route-404",
+    "robots-or-sitemap-route-404",
+    "private-route-in-sitemap",
+    "home-react-hydration-error-418",
+    "guest-gamification-401-console-noise",
+    "security-header-missing-on-representative-route",
+    "csp-breaks-auth-or-critical-assets",
+    "foodsafety-http-url-left-in-db-or-api-response",
+    "mixed-content-warning-on-foodsafety-surfaces",
+    "postcss-resolved-below-8-5-10",
+    "prod-audit-moderate-fails",
+    "current-head-ci-not-green"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
