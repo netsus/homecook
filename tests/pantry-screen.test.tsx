@@ -24,6 +24,8 @@ const VEGETABLE_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "ve
 const MEAT_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "meat")!.label;
 const SEASONING_CATEGORY = INGREDIENT_CATEGORIES.find(({ code }) => code === "seasoning")!.label;
 const VEGETABLE_GROUP_LABEL = "채소/버섯";
+const UPGRADED_PANTRY_STICKER_SIZES =
+  "(min-resolution: 2.5dppx) 96px, (min-resolution: 2dppx) 128px, 192px";
 const PANTRY_CATEGORY_GROUP_LABELS = INGREDIENT_CATEGORY_GROUP_OPTIONS
   .filter((category) => category.category_group_code)
   .map((category) => category.label);
@@ -785,7 +787,7 @@ describe("PantryScreen", () => {
     const decodedOnionImageSrc = decodeURIComponent(onionImage?.getAttribute("src") ?? "");
     expect(decodedOnionImageSrc).toContain("/assets/ingredients/plush-v2/onion.webp");
     expect(decodedOnionImageSrc).toContain("q=95");
-    expect(onionImage?.getAttribute("sizes")).toBe("112px");
+    expect(onionImage?.getAttribute("sizes")).toBe(UPGRADED_PANTRY_STICKER_SIZES);
   });
 
   it("uses the canonical DB category rail and only owned count on mobile", async () => {

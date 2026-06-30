@@ -1,4 +1,5 @@
 import fixtureData from "@/qa/fixtures/slices-01-05.json";
+import { getIngredientTaxonomyMetadata } from "@/lib/ingredient-categories";
 import { sortPlannerColumns } from "@/lib/planner/fixed-slots";
 import type {
   IngredientItem,
@@ -27,6 +28,7 @@ import type {
   PlannerColumnData,
   PlannerData,
 } from "@/types/planner";
+import type { PantryItem, PantryListData } from "@/types/pantry";
 
 type DateAnchor = "start" | "mid" | "end";
 
@@ -37,6 +39,14 @@ const RECIPE_BOOK_COVER_COLORS = [
   "lavender",
   "sand",
 ] as const satisfies readonly RecipeBookCoverColorKey[];
+const QA_FIXTURE_PANTRY_INGREDIENT_NAMES = [
+  "양파",
+  "대파",
+  "소고기",
+  "돼지고기",
+  "고춧가루",
+  "마늘",
+] as const;
 
 function getFixtureCoverColorKey(sortOrder: number): RecipeBookCoverColorKey {
   return RECIPE_BOOK_COVER_COLORS[
@@ -91,6 +101,24 @@ function toIngredientItem(value: (typeof fixtureData.ingredients)[number]): Ingr
     id: value.id,
     standard_name: value.standardName,
     category: value.category,
+  };
+}
+
+function toPantryFixtureItem(
+  value: (typeof fixtureData.ingredients)[number],
+  index: number,
+): PantryItem {
+  const taxonomy = getIngredientTaxonomyMetadata({ category: value.category });
+
+  return {
+    id: `qa-pantry-${value.id}`,
+    ingredient_id: value.id,
+    standard_name: value.standardName,
+    category: value.category,
+    category_group_code: taxonomy.category_group_code,
+    category_code: taxonomy.category_code,
+    category_label: taxonomy.category_label,
+    created_at: `2026-06-30T0${index}:00:00.000Z`,
   };
 }
 
@@ -357,6 +385,32 @@ export function getMockIngredientList(
         normalizedCategory.length === 0 || ingredient.category === normalizedCategory;
 
       return matchesCategory && matchesIngredientQuery(ingredient, synonyms, normalizedQuery);
+    });
+
+  return { items };
+}
+
+export function getQaFixturePantryItems({
+  category,
+  q,
+}: {
+  category?: string | null;
+  q?: string | null;
+} = {}): PantryListData {
+  const normalizedCategory = category?.trim() ?? "";
+  const normalizedQuery = q?.trim() ?? "";
+  const fixtureNames = new Set<string>(QA_FIXTURE_PANTRY_INGREDIENT_NAMES);
+
+  const items = fixtureData.ingredients
+    .filter((ingredient) => fixtureNames.has(ingredient.standardName))
+    .map(toPantryFixtureItem)
+    .filter((ingredient) => {
+      const matchesCategory =
+        normalizedCategory.length === 0 || ingredient.category === normalizedCategory;
+      const matchesQuery =
+        normalizedQuery.length === 0 || ingredient.standard_name.includes(normalizedQuery);
+
+      return matchesCategory && matchesQuery;
     });
 
   return { items };

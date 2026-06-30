@@ -381,7 +381,6 @@ export function PantryAddSheet({
                           ].join(" ")}
                           imageClassName="h-full w-full object-contain"
                           name={ingredient.standard_name}
-                          sizes="60px"
                         />
                         <span
                           className={[
@@ -543,7 +542,6 @@ export function PantryAddSheet({
                         category={ingredient.category}
                         className="web-ingredient-cell-visual"
                         name={ingredient.standard_name}
-                        sizes="80px"
                       />
                       <strong>{ingredient.standard_name}</strong>
                     </button>

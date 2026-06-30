@@ -5,6 +5,9 @@ import React from "react";
 
 import { getPantryEmoji, getPantryStickerSrc } from "@/components/pantry/pantry-mobile-visuals";
 
+export const PANTRY_STICKER_UPGRADED_SIZES =
+  "(min-resolution: 2.5dppx) 96px, (min-resolution: 2dppx) 128px, 192px";
+
 interface PantryIngredientVisualProps {
   category?: string;
   className: string;
@@ -18,7 +21,7 @@ export function PantryIngredientVisual({
   className,
   imageClassName = "pantry-sticker-image",
   name,
-  sizes = "112px",
+  sizes = PANTRY_STICKER_UPGRADED_SIZES,
 }: PantryIngredientVisualProps) {
   const stickerSrc = getPantryStickerSrc(name);
 

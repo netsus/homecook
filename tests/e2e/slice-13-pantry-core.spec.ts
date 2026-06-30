@@ -3,6 +3,8 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
+const UPGRADED_PANTRY_STICKER_SIZES =
+  "(min-resolution: 2.5dppx) 96px, (min-resolution: 2dppx) 128px, 192px";
 
 const MOCK_PANTRY_ITEMS = [
   {
@@ -192,9 +194,11 @@ async function expectSharpV2Sticker(
   image: Locator,
   {
     expectedFile,
+    expectedMinOptimizedWidth,
     expectedSizes,
   }: {
     expectedFile: string;
+    expectedMinOptimizedWidth: number;
     expectedSizes: string;
   },
 ) {
@@ -243,6 +247,7 @@ async function expectSharpV2Sticker(
 
   expect(metrics.currentSrc).toContain(`/assets/ingredients/plush-v2/${expectedFile}`);
   expect(metrics.optimizedQuality ?? 95).toBe(95);
+  expect(sourceWidth).toBeGreaterThanOrEqual(expectedMinOptimizedWidth);
   expect(metrics.naturalWidth).toBeGreaterThanOrEqual(Math.floor(metrics.renderedWidth));
   expect(metrics.naturalHeight).toBeGreaterThanOrEqual(Math.floor(metrics.renderedHeight));
   expect(sourceWidth).toBeGreaterThanOrEqual(
@@ -287,7 +292,8 @@ test.describe("PANTRY screen", () => {
 
     await expectSharpV2Sticker(onionImage, {
       expectedFile: "onion.webp",
-      expectedSizes: isMobile ? "68px" : "112px",
+      expectedMinOptimizedWidth: 256,
+      expectedSizes: UPGRADED_PANTRY_STICKER_SIZES,
     });
   });
 

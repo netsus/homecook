@@ -1,5 +1,6 @@
 import { after, NextRequest } from "next/server";
 
+import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import {
   ALL_INGREDIENT_CATEGORY,
@@ -12,6 +13,10 @@ import {
   type PantryIngredientRow,
   type PantryItemJoinedRow,
 } from "@/lib/server/pantry";
+import {
+  getQaFixturePantryItems,
+  isQaFixtureModeEnabled,
+} from "@/lib/mock/recipes";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -227,17 +232,31 @@ function buildPantryItemsQuery({
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await getAuthenticatedDb("팬트리 목록을 불러오지 못했어요.");
-
-  if ("response" in auth) {
-    return auth.response;
-  }
-
   const q = request.nextUrl.searchParams.get("q")?.trim();
   const rawCategory = request.nextUrl.searchParams.get("category")?.trim();
   const category = rawCategory && rawCategory !== ALL_INGREDIENT_CATEGORY
     ? rawCategory
     : undefined;
+
+  if (isQaFixtureModeEnabled()) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
+
+    if (authOverride !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    if (category && !isValidIngredientCategory(category)) {
+      return ok({ items: [] });
+    }
+
+    return ok(getQaFixturePantryItems({ category, q }));
+  }
+
+  const auth = await getAuthenticatedDb("팬트리 목록을 불러오지 못했어요.");
+
+  if ("response" in auth) {
+    return auth.response;
+  }
 
   if (category && !isValidIngredientCategory(category)) {
     return ok({ items: [] });
