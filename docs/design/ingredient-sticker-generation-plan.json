@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-30T09:15:00.000+09:00",
+  "generatedAt": "2026-06-30T18:45:00.000+09:00",
   "source": {
     "inventory": "supabase/seed.sql + supabase/migrations/*.sql",
     "manifestPath": "public/assets/ingredients/plush-v2/manifest.json"
@@ -44,8 +44,8 @@
   },
   "summary": {
     "totalIngredientCount": 889,
-    "approvedExistingCount": 21,
-    "missingIngredientCount": 868,
+    "approvedExistingCount": 51,
+    "missingIngredientCount": 838,
     "duplicateStandardNameCount": 115,
     "pilotBatchSize": 30,
     "rolloutBatchSize": 100,
@@ -53,6 +53,12 @@
     "aliasReviewGroupCount": 17
   },
   "approvedExisting": [
+    {
+      "standardName": "가지",
+      "src": "/assets/ingredients/plush-v2/eggplant.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
     {
       "standardName": "간장",
       "src": "/assets/ingredients/plush-v2/soy-sauce.webp",
@@ -72,9 +78,39 @@
       "planStatus": "approved-existing"
     },
     {
+      "standardName": "고구마",
+      "src": "/assets/ingredients/plush-v2/sweet-potato.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "고추장",
+      "src": "/assets/ingredients/plush-v2/gochujang.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
       "standardName": "고춧가루",
       "src": "/assets/ingredients/plush-v2/red-pepper-powder.webp",
       "currentStatus": "approved-sample",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "김치",
+      "src": "/assets/ingredients/plush-v2/kimchi.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "깻잎",
+      "src": "/assets/ingredients/plush-v2/perilla-leaf.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "느타리버섯",
+      "src": "/assets/ingredients/plush-v2/oyster-mushroom.webp",
+      "currentStatus": "approved-pilot-001",
       "planStatus": "approved-existing"
     },
     {
@@ -96,6 +132,12 @@
       "planStatus": "approved-existing"
     },
     {
+      "standardName": "당면",
+      "src": "/assets/ingredients/plush-v2/glass-noodles.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
       "standardName": "대파",
       "src": "/assets/ingredients/plush-v2/green-onion.webp",
       "currentStatus": "approved-sample",
@@ -108,9 +150,21 @@
       "planStatus": "approved-existing"
     },
     {
+      "standardName": "된장",
+      "src": "/assets/ingredients/plush-v2/doenjang.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
       "standardName": "두부",
       "src": "/assets/ingredients/plush-v2/tofu.webp",
       "currentStatus": "approved-sample",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "딸기",
+      "src": "/assets/ingredients/plush-v2/strawberry.webp",
+      "currentStatus": "approved-pilot-001",
       "planStatus": "approved-existing"
     },
     {
@@ -120,15 +174,63 @@
       "planStatus": "approved-existing"
     },
     {
+      "standardName": "무",
+      "src": "/assets/ingredients/plush-v2/radish.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "밀가루",
+      "src": "/assets/ingredients/plush-v2/flour.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "바나나",
+      "src": "/assets/ingredients/plush-v2/banana.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
       "standardName": "밥",
       "src": "/assets/ingredients/plush-v2/cooked-rice.webp",
       "currentStatus": "approved-sample",
       "planStatus": "approved-existing"
     },
     {
+      "standardName": "방울토마토",
+      "src": "/assets/ingredients/plush-v2/cherry-tomato.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "배추",
+      "src": "/assets/ingredients/plush-v2/napa-cabbage.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
       "standardName": "버터",
       "src": "/assets/ingredients/plush-v2/butter.webp",
       "currentStatus": "approved-sample",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "부추",
+      "src": "/assets/ingredients/plush-v2/chives.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "상추",
+      "src": "/assets/ingredients/plush-v2/lettuce.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "새우",
+      "src": "/assets/ingredients/plush-v2/shrimp.webp",
+      "currentStatus": "approved-pilot-001",
       "planStatus": "approved-existing"
     },
     {
@@ -150,6 +252,18 @@
       "planStatus": "approved-existing"
     },
     {
+      "standardName": "소면",
+      "src": "/assets/ingredients/plush-v2/somyeon.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "식용유",
+      "src": "/assets/ingredients/plush-v2/cooking-oil.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
       "standardName": "쌀",
       "src": "/assets/ingredients/plush-v2/rice.webp",
       "currentStatus": "approved-sample",
@@ -162,15 +276,81 @@
       "planStatus": "approved-existing"
     },
     {
+      "standardName": "양배추",
+      "src": "/assets/ingredients/plush-v2/cabbage.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
       "standardName": "양파",
       "src": "/assets/ingredients/plush-v2/onion.webp",
       "currentStatus": "approved-sample",
       "planStatus": "approved-existing"
     },
     {
+      "standardName": "연어",
+      "src": "/assets/ingredients/plush-v2/salmon.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "오이",
+      "src": "/assets/ingredients/plush-v2/cucumber.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "올리브유",
+      "src": "/assets/ingredients/plush-v2/olive-oil.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "우유",
+      "src": "/assets/ingredients/plush-v2/milk.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
       "standardName": "참기름",
       "src": "/assets/ingredients/plush-v2/sesame-oil.webp",
       "currentStatus": "approved-sample",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "청양고추",
+      "src": "/assets/ingredients/plush-v2/cheongyang-pepper.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "치즈",
+      "src": "/assets/ingredients/plush-v2/cheese.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "콩나물",
+      "src": "/assets/ingredients/plush-v2/bean-sprouts.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "토마토",
+      "src": "/assets/ingredients/plush-v2/tomato.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "팽이버섯",
+      "src": "/assets/ingredients/plush-v2/enoki-mushroom.webp",
+      "currentStatus": "approved-pilot-001",
+      "planStatus": "approved-existing"
+    },
+    {
+      "standardName": "표고버섯",
+      "src": "/assets/ingredients/plush-v2/shiitake-mushroom.webp",
+      "currentStatus": "approved-pilot-001",
       "planStatus": "approved-existing"
     },
     {
@@ -181,89 +361,75 @@
     }
   ],
   "missingCategoryCounts": {
-    "곡류": 132,
-    "과일": 120,
-    "기타": 22,
-    "양념": 159,
-    "유제품": 28,
+    "곡류": 129,
+    "과일": 119,
+    "기타": 20,
+    "양념": 155,
+    "유제품": 26,
     "육류": 85,
-    "채소": 238,
-    "해산물": 84
+    "채소": 222,
+    "해산물": 82
   },
   "missingBucketCounts": {
     "allium": 13,
     "bean": 11,
-    "berry-fruit": 6,
-    "cheese": 13,
+    "berry-fruit": 5,
+    "cheese": 12,
     "citrus-fruit": 13,
-    "crustacean": 7,
+    "crustacean": 6,
     "dairy": 6,
-    "dairy-liquid": 9,
+    "dairy-liquid": 8,
     "dried-fruit": 3,
     "egg": 4,
-    "fish-or-seafood": 66,
-    "fruit": 101,
+    "fish-or-seafood": 65,
+    "fruit": 100,
     "grain": 81,
-    "grain-powder": 19,
-    "kimchi": 9,
-    "leafy-vegetable": 40,
+    "grain-powder": 18,
+    "kimchi": 8,
+    "leafy-vegetable": 34,
     "misc": 20,
-    "mushroom": 27,
-    "noodle": 14,
-    "oil": 25,
-    "pepper-vegetable": 10,
+    "mushroom": 24,
+    "noodle": 12,
+    "oil": 23,
+    "pepper-vegetable": 9,
     "powder": 9,
     "processed-meat": 5,
     "raw-meat": 76,
     "rice-cake-or-bread": 7,
-    "root-vegetable": 24,
-    "sauce-or-liquid": 47,
+    "root-vegetable": 22,
+    "sauce-or-liquid": 45,
     "seaweed": 6,
     "shellfish": 5,
     "spice-or-seasoning": 76,
-    "vegetable": 116
+    "vegetable": 112
   },
   "aliasReviewGroups": [
     {
       "reuseGroup": "sauce-or-liquid",
-      "count": 47,
+      "count": 45,
       "sampleIngredients": [
         "겨자 페이스트",
         "고기 소스",
-        "고추장",
         "국간장",
         "굴 소스",
         "굴소스",
         "꿀",
-        "데리야끼 소스"
+        "데리야끼 소스",
+        "돈까스소스"
       ]
     },
     {
       "reuseGroup": "vegetable:leafy",
-      "count": 40,
+      "count": 34,
       "sampleIngredients": [
         "갓",
         "갯기름나물",
         "갯나물",
         "고춧잎",
-        "깻잎",
         "꽃양배추",
         "누리장나무잎",
-        "돌나물"
-      ]
-    },
-    {
-      "reuseGroup": "powder",
-      "count": 28,
-      "sampleIngredients": [
-        "강력밀가루",
-        "강력분",
-        "강황가루",
-        "계피가루",
-        "들깨가루",
-        "미숫가루",
-        "밀가루",
-        "박력밀가루"
+        "돌나물",
+        "들깻잎장아찌"
       ]
     },
     {
@@ -281,31 +447,31 @@
       ]
     },
     {
-      "reuseGroup": "vegetable:mushroom",
+      "reuseGroup": "powder",
       "count": 27,
+      "sampleIngredients": [
+        "강력밀가루",
+        "강력분",
+        "강황가루",
+        "계피가루",
+        "들깨가루",
+        "미숫가루",
+        "박력밀가루",
+        "박력분"
+      ]
+    },
+    {
+      "reuseGroup": "vegetable:mushroom",
+      "count": 24,
       "sampleIngredients": [
         "검은비늘버섯",
         "꽃송이버섯",
         "나도팽나무버섯",
         "노루궁뎅이버섯",
-        "느타리버섯",
         "능이버섯",
         "만가닥버섯",
-        "목이버섯"
-      ]
-    },
-    {
-      "reuseGroup": "oil",
-      "count": 25,
-      "sampleIngredients": [
-        "고추기름",
-        "닭기름",
-        "돼지기름",
-        "들기름",
-        "땅콩기름",
-        "마늘기름",
-        "면실유",
-        "복숭아씨기름"
+        "목이버섯",
+        "미니새송이버섯"
       ]
     },
     {
@@ -323,6 +489,20 @@
       ]
     },
     {
+      "reuseGroup": "oil",
+      "count": 23,
+      "sampleIngredients": [
+        "고추기름",
+        "닭기름",
+        "돼지기름",
+        "들기름",
+        "땅콩기름",
+        "마늘기름",
+        "면실유",
+        "복숭아씨기름"
+      ]
+    },
+    {
       "reuseGroup": "meat:pork",
       "count": 16,
       "sampleIngredients": [
@@ -337,22 +517,8 @@
       ]
     },
     {
-      "reuseGroup": "grain:noodle",
-      "count": 14,
-      "sampleIngredients": [
-        "녹두당면",
-        "당면",
-        "라면",
-        "메밀 국수",
-        "멥쌀 국수",
-        "소면",
-        "수제비면",
-        "스파게티면"
-      ]
-    },
-    {
       "reuseGroup": "dairy:cheese",
-      "count": 13,
+      "count": 12,
       "sampleIngredients": [
         "고다 치즈",
         "리코타 치즈",
@@ -365,28 +531,41 @@
       ]
     },
     {
+      "reuseGroup": "grain:noodle",
+      "count": 12,
+      "sampleIngredients": [
+        "녹두당면",
+        "라면",
+        "메밀 국수",
+        "멥쌀 국수",
+        "수제비면",
+        "스파게티면",
+        "우동면",
+        "중식면"
+      ]
+    },
+    {
       "reuseGroup": "kimchi",
-      "count": 9,
+      "count": 8,
       "sampleIngredients": [
         "갓김치",
-        "김치",
         "나박 김치",
         "백김치",
         "열무 김치",
         "열무김치 국물",
         "유채 김치",
-        "총각 김치"
+        "총각 김치",
+        "파 김치"
       ]
     },
     {
       "reuseGroup": "seafood:crustacean",
-      "count": 7,
+      "count": 6,
       "sampleIngredients": [
         "가재",
         "건새우",
         "게",
         "냉동새우",
-        "새우",
         "새우젓",
         "칵테일새우"
       ]
@@ -451,272 +630,275 @@
     "status": "planned",
     "count": 30,
     "categoryCounts": {
-      "곡류": 3,
-      "과일": 1,
-      "기타": 2,
-      "양념": 4,
-      "유제품": 2,
-      "채소": 16,
-      "해산물": 2
+      "곡류": 5,
+      "과일": 2,
+      "기타": 3,
+      "양념": 7,
+      "유제품": 3,
+      "육류": 2,
+      "채소": 2,
+      "해산물": 6
     },
     "bucketCounts": {
-      "berry-fruit": 1,
+      "bean": 1,
       "cheese": 1,
-      "crustacean": 1,
-      "dairy-liquid": 1,
-      "fish-or-seafood": 1,
+      "citrus-fruit": 1,
+      "dairy-liquid": 2,
+      "egg": 1,
+      "fish-or-seafood": 3,
       "fruit": 1,
-      "grain-powder": 1,
-      "kimchi": 1,
-      "leafy-vegetable": 6,
-      "mushroom": 3,
-      "noodle": 2,
-      "oil": 2,
-      "pepper-vegetable": 1,
-      "root-vegetable": 2,
+      "grain-powder": 3,
+      "leafy-vegetable": 1,
+      "misc": 3,
+      "oil": 1,
+      "raw-meat": 1,
+      "rice-cake-or-bread": 1,
       "sauce-or-liquid": 2,
-      "vegetable": 4
+      "seaweed": 1,
+      "shellfish": 2,
+      "spice-or-seasoning": 4,
+      "vegetable": 1
     },
     "ingredients": [
       {
-        "standardName": "고추장",
-        "category": "양념",
-        "generationBucket": "sauce-or-liquid",
-        "limbPolicy": "optional-small-arms-no-legs",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0054.webp"
-      },
-      {
-        "standardName": "된장",
-        "category": "양념",
-        "generationBucket": "sauce-or-liquid",
-        "limbPolicy": "optional-small-arms-no-legs",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0185.webp"
-      },
-      {
-        "standardName": "식용유",
-        "category": "양념",
-        "generationBucket": "oil",
-        "limbPolicy": "optional-small-arms-no-legs",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0498.webp"
-      },
-      {
-        "standardName": "올리브유",
-        "category": "양념",
-        "generationBucket": "oil",
-        "limbPolicy": "optional-small-arms-no-legs",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0618.webp"
-      },
-      {
-        "standardName": "우유",
-        "category": "유제품",
-        "generationBucket": "dairy-liquid",
-        "limbPolicy": "optional-small-arms-no-legs",
-        "assetStrategy": "unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0629.webp"
-      },
-      {
-        "standardName": "치즈",
-        "category": "유제품",
-        "generationBucket": "cheese",
+        "standardName": "사과",
+        "category": "기타",
+        "generationBucket": "misc",
         "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0748.webp"
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0390.webp"
       },
       {
-        "standardName": "밀가루",
+        "standardName": "레몬",
+        "category": "과일",
+        "generationBucket": "citrus-fruit",
+        "limbPolicy": "arms-and-legs-allowed",
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0215.webp"
+      },
+      {
+        "standardName": "식초",
+        "category": "양념",
+        "generationBucket": "sauce-or-liquid",
+        "limbPolicy": "optional-small-arms-no-legs",
+        "assetStrategy": "alias-review-or-unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0499.webp"
+      },
+      {
+        "standardName": "맛술",
+        "category": "양념",
+        "generationBucket": "sauce-or-liquid",
+        "limbPolicy": "optional-small-arms-no-legs",
+        "assetStrategy": "alias-review-or-unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0248.webp"
+      },
+      {
+        "standardName": "참깨",
+        "category": "양념",
+        "generationBucket": "spice-or-seasoning",
+        "limbPolicy": "arms-and-legs-allowed",
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0713.webp"
+      },
+      {
+        "standardName": "들기름",
+        "category": "양념",
+        "generationBucket": "oil",
+        "limbPolicy": "optional-small-arms-no-legs",
+        "assetStrategy": "alias-review-or-unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0194.webp"
+      },
+      {
+        "standardName": "올리고당",
+        "category": "양념",
+        "generationBucket": "spice-or-seasoning",
+        "limbPolicy": "arms-and-legs-allowed",
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0615.webp"
+      },
+      {
+        "standardName": "전분",
         "category": "곡류",
         "generationBucket": "grain-powder",
         "limbPolicy": "optional-small-arms-no-legs",
         "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0313.webp"
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0677.webp"
       },
       {
-        "standardName": "소면",
+        "standardName": "옥수수전분",
         "category": "곡류",
-        "generationBucket": "noodle",
-        "limbPolicy": "arms-and-legs-allowed",
+        "generationBucket": "grain-powder",
+        "limbPolicy": "optional-small-arms-no-legs",
         "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0459.webp"
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0613.webp"
       },
       {
-        "standardName": "당면",
+        "standardName": "빵가루",
         "category": "곡류",
-        "generationBucket": "noodle",
-        "limbPolicy": "arms-and-legs-allowed",
+        "generationBucket": "grain-powder",
+        "limbPolicy": "optional-small-arms-no-legs",
         "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0144.webp"
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0386.webp"
       },
       {
-        "standardName": "김치",
+        "standardName": "생크림",
+        "category": "유제품",
+        "generationBucket": "dairy-liquid",
+        "limbPolicy": "optional-small-arms-no-legs",
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0421.webp"
+      },
+      {
+        "standardName": "김",
         "category": "기타",
-        "generationBucket": "kimchi",
+        "generationBucket": "misc",
         "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0082.webp"
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0079.webp"
       },
       {
-        "standardName": "새우",
+        "standardName": "미역",
         "category": "해산물",
-        "generationBucket": "crustacean",
+        "generationBucket": "seaweed",
         "limbPolicy": "optional-arms-no-forced-legs",
         "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0413.webp"
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0305.webp"
       },
       {
-        "standardName": "연어",
+        "standardName": "멸치",
         "category": "해산물",
         "generationBucket": "fish-or-seafood",
         "limbPolicy": "optional-arms-no-forced-legs",
         "assetStrategy": "unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0576.webp"
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0270.webp"
       },
       {
-        "standardName": "오이",
+        "standardName": "오징어",
+        "category": "해산물",
+        "generationBucket": "fish-or-seafood",
+        "limbPolicy": "optional-arms-no-forced-legs",
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0607.webp"
+      },
+      {
+        "standardName": "고등어",
+        "category": "해산물",
+        "generationBucket": "fish-or-seafood",
+        "limbPolicy": "optional-arms-no-forced-legs",
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0045.webp"
+      },
+      {
+        "standardName": "조개",
+        "category": "해산물",
+        "generationBucket": "shellfish",
+        "limbPolicy": "optional-arms-no-forced-legs",
+        "assetStrategy": "alias-review-or-unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0689.webp"
+      },
+      {
+        "standardName": "가공당",
+        "category": "양념",
+        "generationBucket": "spice-or-seasoning",
+        "limbPolicy": "arms-and-legs-allowed",
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0001.webp"
+      },
+      {
+        "standardName": "가시오갈피",
         "category": "채소",
         "generationBucket": "vegetable",
         "limbPolicy": "arms-and-legs-allowed",
         "assetStrategy": "unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0602.webp"
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0004.webp"
       },
       {
-        "standardName": "청양고추",
-        "category": "채소",
-        "generationBucket": "pepper-vegetable",
+        "standardName": "가래떡",
+        "category": "곡류",
+        "generationBucket": "rice-cake-or-bread",
         "limbPolicy": "arms-and-legs-allowed",
         "assetStrategy": "unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0729.webp"
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0002.webp"
       },
       {
-        "standardName": "방울토마토",
-        "category": "채소",
-        "generationBucket": "vegetable",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0338.webp"
-      },
-      {
-        "standardName": "고구마",
-        "category": "채소",
-        "generationBucket": "root-vegetable",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0039.webp"
-      },
-      {
-        "standardName": "가지",
-        "category": "채소",
-        "generationBucket": "vegetable",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0007.webp"
-      },
-      {
-        "standardName": "표고버섯",
-        "category": "채소",
-        "generationBucket": "mushroom",
+        "standardName": "고다 치즈",
+        "category": "유제품",
+        "generationBucket": "cheese",
         "limbPolicy": "arms-and-legs-allowed",
         "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0842.webp"
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0042.webp"
       },
       {
-        "standardName": "느타리버섯",
-        "category": "채소",
-        "generationBucket": "mushroom",
-        "limbPolicy": "arms-and-legs-allowed",
+        "standardName": "거위고기",
+        "category": "육류",
+        "generationBucket": "raw-meat",
+        "limbPolicy": "arms-only-or-none",
         "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0116.webp"
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0023.webp"
       },
       {
-        "standardName": "팽이버섯",
-        "category": "채소",
-        "generationBucket": "mushroom",
-        "limbPolicy": "arms-and-legs-allowed",
+        "standardName": "가리비",
+        "category": "해산물",
+        "generationBucket": "shellfish",
+        "limbPolicy": "optional-arms-no-forced-legs",
         "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0834.webp"
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0003.webp"
       },
       {
-        "standardName": "양배추",
-        "category": "채소",
-        "generationBucket": "leafy-vegetable",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0551.webp"
-      },
-      {
-        "standardName": "무",
-        "category": "채소",
-        "generationBucket": "root-vegetable",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0285.webp"
-      },
-      {
-        "standardName": "깻잎",
-        "category": "채소",
-        "generationBucket": "leafy-vegetable",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0086.webp"
-      },
-      {
-        "standardName": "상추",
-        "category": "채소",
-        "generationBucket": "leafy-vegetable",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0410.webp"
-      },
-      {
-        "standardName": "배추",
-        "category": "채소",
-        "generationBucket": "leafy-vegetable",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0343.webp"
-      },
-      {
-        "standardName": "부추",
-        "category": "채소",
-        "generationBucket": "leafy-vegetable",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0366.webp"
-      },
-      {
-        "standardName": "콩나물",
-        "category": "채소",
-        "generationBucket": "leafy-vegetable",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "alias-review-or-unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0784.webp"
-      },
-      {
-        "standardName": "토마토",
-        "category": "채소",
-        "generationBucket": "vegetable",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0805.webp"
-      },
-      {
-        "standardName": "딸기",
+        "standardName": "감",
         "category": "과일",
-        "generationBucket": "berry-fruit",
-        "limbPolicy": "arms-and-legs-allowed",
-        "assetStrategy": "unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0199.webp"
-      },
-      {
-        "standardName": "바나나",
-        "category": "기타",
         "generationBucket": "fruit",
         "limbPolicy": "arms-and-legs-allowed",
         "assetStrategy": "unique",
-        "proposedSrc": "/assets/ingredients/plush-v2/asset-0316.webp"
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0009.webp"
+      },
+      {
+        "standardName": "견과류",
+        "category": "기타",
+        "generationBucket": "misc",
+        "limbPolicy": "arms-and-legs-allowed",
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0034.webp"
+      },
+      {
+        "standardName": "감미료",
+        "category": "양념",
+        "generationBucket": "spice-or-seasoning",
+        "limbPolicy": "arms-and-legs-allowed",
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0011.webp"
+      },
+      {
+        "standardName": "갓",
+        "category": "채소",
+        "generationBucket": "leafy-vegetable",
+        "limbPolicy": "arms-and-legs-allowed",
+        "assetStrategy": "alias-review-or-unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0013.webp"
+      },
+      {
+        "standardName": "강낭콩",
+        "category": "곡류",
+        "generationBucket": "bean",
+        "limbPolicy": "arms-and-legs-allowed",
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0015.webp"
+      },
+      {
+        "standardName": "두유 그릭 요거트",
+        "category": "유제품",
+        "generationBucket": "dairy-liquid",
+        "limbPolicy": "optional-small-arms-no-legs",
+        "assetStrategy": "unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0191.webp"
+      },
+      {
+        "standardName": "거위알",
+        "category": "육류",
+        "generationBucket": "egg",
+        "limbPolicy": "arms-and-legs-allowed",
+        "assetStrategy": "alias-review-or-unique",
+        "proposedSrc": "/assets/ingredients/plush-v2/asset-0024.webp"
       }
     ]
   },
@@ -734,26 +916,10 @@
         "kimchi": 1,
         "oil": 15,
         "powder": 4,
-        "sauce-or-liquid": 31,
-        "spice-or-seasoning": 48
+        "sauce-or-liquid": 30,
+        "spice-or-seasoning": 49
       },
       "ingredients": [
-        {
-          "standardName": "가공당",
-          "category": "양념",
-          "generationBucket": "spice-or-seasoning",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0001.webp"
-        },
-        {
-          "standardName": "감미료",
-          "category": "양념",
-          "generationBucket": "spice-or-seasoning",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0011.webp"
-        },
         {
           "standardName": "강황",
           "category": "양념",
@@ -971,14 +1137,6 @@
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0188.webp"
         },
         {
-          "standardName": "들기름",
-          "category": "양념",
-          "generationBucket": "oil",
-          "limbPolicy": "optional-small-arms-no-legs",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0194.webp"
-        },
-        {
           "standardName": "들깨가루",
           "category": "양념",
           "generationBucket": "powder",
@@ -1097,14 +1255,6 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0240.webp"
-        },
-        {
-          "standardName": "맛술",
-          "category": "양념",
-          "generationBucket": "sauce-or-liquid",
-          "limbPolicy": "optional-small-arms-no-legs",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0248.webp"
         },
         {
           "standardName": "매실청",
@@ -1347,14 +1497,6 @@
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0495.webp"
         },
         {
-          "standardName": "식초",
-          "category": "양념",
-          "generationBucket": "sauce-or-liquid",
-          "limbPolicy": "optional-small-arms-no-legs",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0499.webp"
-        },
-        {
           "standardName": "쌀겨기름",
           "category": "양념",
           "generationBucket": "oil",
@@ -1507,14 +1649,6 @@
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0611.webp"
         },
         {
-          "standardName": "올리고당",
-          "category": "양념",
-          "generationBucket": "spice-or-seasoning",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0615.webp"
-        },
-        {
           "standardName": "올리브 오일",
           "category": "양념",
           "generationBucket": "oil",
@@ -1537,31 +1671,7 @@
           "limbPolicy": "optional-small-arms-no-legs",
           "assetStrategy": "alias-review-or-unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0627.webp"
-        }
-      ]
-    },
-    {
-      "id": "rollout-002",
-      "kind": "rollout",
-      "status": "planned",
-      "count": 100,
-      "categoryCounts": {
-        "양념": 55,
-        "채소": 45
-      },
-      "bucketCounts": {
-        "kimchi": 2,
-        "leafy-vegetable": 7,
-        "mushroom": 5,
-        "oil": 8,
-        "pepper-vegetable": 3,
-        "powder": 5,
-        "root-vegetable": 5,
-        "sauce-or-liquid": 14,
-        "spice-or-seasoning": 28,
-        "vegetable": 23
-      },
-      "ingredients": [
+        },
         {
           "standardName": "원당",
           "category": "양념",
@@ -1609,7 +1719,32 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0644.webp"
-        },
+        }
+      ]
+    },
+    {
+      "id": "rollout-002",
+      "kind": "rollout",
+      "status": "planned",
+      "count": 100,
+      "categoryCounts": {
+        "양념": 48,
+        "채소": 52
+      },
+      "bucketCounts": {
+        "allium": 1,
+        "kimchi": 2,
+        "leafy-vegetable": 7,
+        "mushroom": 5,
+        "oil": 7,
+        "pepper-vegetable": 3,
+        "powder": 5,
+        "root-vegetable": 5,
+        "sauce-or-liquid": 13,
+        "spice-or-seasoning": 23,
+        "vegetable": 29
+      },
+      "ingredients": [
         {
           "standardName": "잇꽃씨기름",
           "category": "양념",
@@ -1673,14 +1808,6 @@
           "limbPolicy": "optional-small-arms-no-legs",
           "assetStrategy": "alias-review-or-unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0708.webp"
-        },
-        {
-          "standardName": "참깨",
-          "category": "양념",
-          "generationBucket": "spice-or-seasoning",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0713.webp"
         },
         {
           "standardName": "청국장",
@@ -2001,22 +2128,6 @@
           "limbPolicy": "optional-small-arms-no-legs",
           "assetStrategy": "alias-review-or-unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0870.webp"
-        },
-        {
-          "standardName": "가시오갈피",
-          "category": "채소",
-          "generationBucket": "vegetable",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0004.webp"
-        },
-        {
-          "standardName": "갓",
-          "category": "채소",
-          "generationBucket": "leafy-vegetable",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0013.webp"
         },
         {
           "standardName": "갓김치",
@@ -2361,28 +2472,7 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0163.webp"
-        }
-      ]
-    },
-    {
-      "id": "rollout-003",
-      "kind": "rollout",
-      "status": "planned",
-      "count": 100,
-      "categoryCounts": {
-        "채소": 100
-      },
-      "bucketCounts": {
-        "allium": 8,
-        "fruit": 1,
-        "kimchi": 1,
-        "leafy-vegetable": 16,
-        "mushroom": 14,
-        "pepper-vegetable": 1,
-        "root-vegetable": 8,
-        "vegetable": 51
-      },
-      "ingredients": [
+        },
         {
           "standardName": "동충하초",
           "category": "채소",
@@ -2454,7 +2544,28 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0232.webp"
-        },
+        }
+      ]
+    },
+    {
+      "id": "rollout-003",
+      "kind": "rollout",
+      "status": "planned",
+      "count": 100,
+      "categoryCounts": {
+        "채소": 100
+      },
+      "bucketCounts": {
+        "allium": 9,
+        "fruit": 1,
+        "kimchi": 1,
+        "leafy-vegetable": 17,
+        "mushroom": 15,
+        "pepper-vegetable": 1,
+        "root-vegetable": 8,
+        "vegetable": 48
+      },
+      "ingredients": [
         {
           "standardName": "마늘종",
           "category": "채소",
@@ -3182,33 +3293,7 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "alias-review-or-unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0539.webp"
-        }
-      ]
-    },
-    {
-      "id": "rollout-004",
-      "kind": "rollout",
-      "status": "planned",
-      "count": 100,
-      "categoryCounts": {
-        "곡류": 23,
-        "채소": 77
-      },
-      "bucketCounts": {
-        "allium": 5,
-        "bean": 1,
-        "grain": 17,
-        "grain-powder": 2,
-        "kimchi": 4,
-        "leafy-vegetable": 11,
-        "mushroom": 5,
-        "noodle": 1,
-        "pepper-vegetable": 5,
-        "rice-cake-or-bread": 2,
-        "root-vegetable": 9,
-        "vegetable": 38
-      },
-      "ingredients": [
+        },
         {
           "standardName": "양상추",
           "category": "채소",
@@ -3280,7 +3365,33 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0570.webp"
-        },
+        }
+      ]
+    },
+    {
+      "id": "rollout-004",
+      "kind": "rollout",
+      "status": "planned",
+      "count": 100,
+      "categoryCounts": {
+        "곡류": 32,
+        "채소": 68
+      },
+      "bucketCounts": {
+        "allium": 3,
+        "bean": 2,
+        "grain": 23,
+        "grain-powder": 2,
+        "kimchi": 4,
+        "leafy-vegetable": 9,
+        "mushroom": 4,
+        "noodle": 4,
+        "pepper-vegetable": 5,
+        "rice-cake-or-bread": 1,
+        "root-vegetable": 9,
+        "vegetable": 34
+      },
+      "ingredients": [
         {
           "standardName": "연근",
           "category": "채소",
@@ -3826,22 +3937,6 @@
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0877.webp"
         },
         {
-          "standardName": "가래떡",
-          "category": "곡류",
-          "generationBucket": "rice-cake-or-bread",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0002.webp"
-        },
-        {
-          "standardName": "강낭콩",
-          "category": "곡류",
-          "generationBucket": "bean",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0015.webp"
-        },
-        {
           "standardName": "강력밀가루",
           "category": "곡류",
           "generationBucket": "grain-powder",
@@ -4008,25 +4103,7 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0205.webp"
-        }
-      ]
-    },
-    {
-      "id": "rollout-005",
-      "kind": "rollout",
-      "status": "planned",
-      "count": 100,
-      "categoryCounts": {
-        "곡류": 100
-      },
-      "bucketCounts": {
-        "bean": 10,
-        "grain": 60,
-        "grain-powder": 15,
-        "noodle": 11,
-        "rice-cake-or-bread": 4
-      },
-      "ingredients": [
+        },
         {
           "standardName": "라면",
           "category": "곡류",
@@ -4114,7 +4191,29 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "alias-review-or-unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0267.webp"
-        },
+        }
+      ]
+    },
+    {
+      "id": "rollout-005",
+      "kind": "rollout",
+      "status": "planned",
+      "count": 100,
+      "categoryCounts": {
+        "곡류": 92,
+        "유제품": 8
+      },
+      "bucketCounts": {
+        "bean": 8,
+        "cheese": 5,
+        "dairy": 2,
+        "dairy-liquid": 1,
+        "grain": 58,
+        "grain-powder": 13,
+        "noodle": 8,
+        "rice-cake-or-bread": 5
+      },
+      "ingredients": [
         {
           "standardName": "모닝빵",
           "category": "곡류",
@@ -4242,14 +4341,6 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0380.webp"
-        },
-        {
-          "standardName": "빵가루",
-          "category": "곡류",
-          "generationBucket": "grain-powder",
-          "limbPolicy": "optional-small-arms-no-legs",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0386.webp"
         },
         {
           "standardName": "송편",
@@ -4404,14 +4495,6 @@
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0612.webp"
         },
         {
-          "standardName": "옥수수전분",
-          "category": "곡류",
-          "generationBucket": "grain-powder",
-          "limbPolicy": "optional-small-arms-no-legs",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0613.webp"
-        },
-        {
           "standardName": "올방개묵",
           "category": "곡류",
           "generationBucket": "grain",
@@ -4498,14 +4581,6 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0665.webp"
-        },
-        {
-          "standardName": "전분",
-          "category": "곡류",
-          "generationBucket": "grain-powder",
-          "limbPolicy": "optional-small-arms-no-legs",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0677.webp"
         },
         {
           "standardName": "전분가루",
@@ -4826,31 +4901,7 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0871.webp"
-        }
-      ]
-    },
-    {
-      "id": "rollout-006",
-      "kind": "rollout",
-      "status": "planned",
-      "count": 100,
-      "categoryCounts": {
-        "곡류": 6,
-        "유제품": 26,
-        "육류": 68
-      },
-      "bucketCounts": {
-        "cheese": 12,
-        "dairy": 6,
-        "dairy-liquid": 8,
-        "egg": 3,
-        "grain": 4,
-        "grain-powder": 1,
-        "processed-meat": 4,
-        "raw-meat": 61,
-        "rice-cake-or-bread": 1
-      },
-      "ingredients": [
+        },
         {
           "standardName": "호밀가루",
           "category": "곡류",
@@ -4898,22 +4949,6 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0889.webp"
-        },
-        {
-          "standardName": "고다 치즈",
-          "category": "유제품",
-          "generationBucket": "cheese",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0042.webp"
-        },
-        {
-          "standardName": "두유 그릭 요거트",
-          "category": "유제품",
-          "generationBucket": "dairy-liquid",
-          "limbPolicy": "optional-small-arms-no-legs",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0191.webp"
         },
         {
           "standardName": "따뜻한 우유",
@@ -4978,7 +5013,30 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "alias-review-or-unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0375.webp"
-        },
+        }
+      ]
+    },
+    {
+      "id": "rollout-006",
+      "kind": "rollout",
+      "status": "planned",
+      "count": 100,
+      "categoryCounts": {
+        "유제품": 15,
+        "육류": 83,
+        "해산물": 2
+      },
+      "bucketCounts": {
+        "cheese": 6,
+        "crustacean": 1,
+        "dairy": 4,
+        "dairy-liquid": 5,
+        "egg": 3,
+        "fish-or-seafood": 1,
+        "processed-meat": 5,
+        "raw-meat": 75
+      },
+      "ingredients": [
         {
           "standardName": "산양유",
           "category": "유제품",
@@ -4986,14 +5044,6 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0400.webp"
-        },
-        {
-          "standardName": "생크림",
-          "category": "유제품",
-          "generationBucket": "dairy-liquid",
-          "limbPolicy": "optional-small-arms-no-legs",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0421.webp"
         },
         {
           "standardName": "셔벗",
@@ -5106,22 +5156,6 @@
           "limbPolicy": "optional-small-arms-no-legs",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0878.webp"
-        },
-        {
-          "standardName": "거위고기",
-          "category": "육류",
-          "generationBucket": "raw-meat",
-          "limbPolicy": "arms-only-or-none",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0023.webp"
-        },
-        {
-          "standardName": "거위알",
-          "category": "육류",
-          "generationBucket": "egg",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0024.webp"
         },
         {
           "standardName": "고래고기",
@@ -5650,30 +5684,7 @@
           "limbPolicy": "arms-only-or-none",
           "assetStrategy": "alias-review-or-unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0492.webp"
-        }
-      ]
-    },
-    {
-      "id": "rollout-007",
-      "kind": "rollout",
-      "status": "planned",
-      "count": 100,
-      "categoryCounts": {
-        "과일": 1,
-        "육류": 17,
-        "해산물": 82
-      },
-      "bucketCounts": {
-        "crustacean": 6,
-        "egg": 1,
-        "fish-or-seafood": 65,
-        "fruit": 1,
-        "processed-meat": 1,
-        "raw-meat": 15,
-        "seaweed": 6,
-        "shellfish": 5
-      },
-      "ingredients": [
+        },
         {
           "standardName": "양고기",
           "category": "육류",
@@ -5811,14 +5822,6 @@
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0885.webp"
         },
         {
-          "standardName": "가리비",
-          "category": "해산물",
-          "generationBucket": "shellfish",
-          "limbPolicy": "optional-arms-no-forced-legs",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0003.webp"
-        },
-        {
           "standardName": "가오리",
           "category": "해산물",
           "generationBucket": "fish-or-seafood",
@@ -5833,7 +5836,29 @@
           "limbPolicy": "optional-arms-no-forced-legs",
           "assetStrategy": "alias-review-or-unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0006.webp"
-        },
+        }
+      ]
+    },
+    {
+      "id": "rollout-007",
+      "kind": "rollout",
+      "status": "planned",
+      "count": 100,
+      "categoryCounts": {
+        "과일": 26,
+        "해산물": 74
+      },
+      "bucketCounts": {
+        "berry-fruit": 1,
+        "citrus-fruit": 4,
+        "crustacean": 5,
+        "dried-fruit": 3,
+        "fish-or-seafood": 61,
+        "fruit": 18,
+        "seaweed": 5,
+        "shellfish": 3
+      },
+      "ingredients": [
         {
           "standardName": "건새우",
           "category": "해산물",
@@ -5873,14 +5898,6 @@
           "limbPolicy": "optional-arms-no-forced-legs",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0043.webp"
-        },
-        {
-          "standardName": "고등어",
-          "category": "해산물",
-          "generationBucket": "fish-or-seafood",
-          "limbPolicy": "optional-arms-no-forced-legs",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0045.webp"
         },
         {
           "standardName": "굴",
@@ -6043,14 +6060,6 @@
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0259.webp"
         },
         {
-          "standardName": "멸치",
-          "category": "해산물",
-          "generationBucket": "fish-or-seafood",
-          "limbPolicy": "optional-arms-no-forced-legs",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0270.webp"
-        },
-        {
           "standardName": "멸치 육수",
           "category": "해산물",
           "generationBucket": "fish-or-seafood",
@@ -6097,14 +6106,6 @@
           "limbPolicy": "optional-arms-no-forced-legs",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0297.webp"
-        },
-        {
-          "standardName": "미역",
-          "category": "해산물",
-          "generationBucket": "seaweed",
-          "limbPolicy": "optional-arms-no-forced-legs",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0305.webp"
         },
         {
           "standardName": "민어",
@@ -6251,14 +6252,6 @@
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0564.webp"
         },
         {
-          "standardName": "오징어",
-          "category": "해산물",
-          "generationBucket": "fish-or-seafood",
-          "limbPolicy": "optional-arms-no-forced-legs",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0607.webp"
-        },
-        {
           "standardName": "우렁이",
           "category": "해산물",
           "generationBucket": "fish-or-seafood",
@@ -6353,14 +6346,6 @@
           "limbPolicy": "optional-arms-no-forced-legs",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0683.webp"
-        },
-        {
-          "standardName": "조개",
-          "category": "해산물",
-          "generationBucket": "shellfish",
-          "limbPolicy": "optional-arms-no-forced-legs",
-          "assetStrategy": "alias-review-or-unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0689.webp"
         },
         {
           "standardName": "조미김",
@@ -6466,31 +6451,6 @@
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0883.webp"
         },
-        {
-          "standardName": "감",
-          "category": "과일",
-          "generationBucket": "fruit",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0009.webp"
-        }
-      ]
-    },
-    {
-      "id": "rollout-008",
-      "kind": "rollout",
-      "status": "planned",
-      "count": 100,
-      "categoryCounts": {
-        "과일": 100
-      },
-      "bucketCounts": {
-        "berry-fruit": 5,
-        "citrus-fruit": 12,
-        "dried-fruit": 3,
-        "fruit": 80
-      },
-      "ingredients": [
         {
           "standardName": "감말랭이",
           "category": "과일",
@@ -6644,14 +6604,6 @@
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0214.webp"
         },
         {
-          "standardName": "레몬",
-          "category": "과일",
-          "generationBucket": "citrus-fruit",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0215.webp"
-        },
-        {
           "standardName": "롱안",
           "category": "과일",
           "generationBucket": "fruit",
@@ -6706,7 +6658,25 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0250.webp"
-        },
+        }
+      ]
+    },
+    {
+      "id": "rollout-008",
+      "kind": "rollout",
+      "status": "planned",
+      "count": 100,
+      "categoryCounts": {
+        "과일": 91,
+        "기타": 9
+      },
+      "bucketCounts": {
+        "berry-fruit": 4,
+        "citrus-fruit": 8,
+        "fruit": 79,
+        "misc": 9
+      },
+      "ingredients": [
         {
           "standardName": "매실",
           "category": "과일",
@@ -7290,24 +7260,7 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0800.webp"
-        }
-      ]
-    },
-    {
-      "id": "rollout-009",
-      "kind": "rollout",
-      "status": "planned",
-      "count": 38,
-      "categoryCounts": {
-        "과일": 18,
-        "기타": 20
-      },
-      "bucketCounts": {
-        "citrus-fruit": 1,
-        "fruit": 17,
-        "misc": 20
-      },
-      "ingredients": [
+        },
         {
           "standardName": "파인애플",
           "category": "과일",
@@ -7453,22 +7406,6 @@
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0880.webp"
         },
         {
-          "standardName": "견과류",
-          "category": "기타",
-          "generationBucket": "misc",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0034.webp"
-        },
-        {
-          "standardName": "김",
-          "category": "기타",
-          "generationBucket": "misc",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0079.webp"
-        },
-        {
           "standardName": "김가루",
           "category": "기타",
           "generationBucket": "misc",
@@ -7539,7 +7476,21 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0339.webp"
-        },
+        }
+      ]
+    },
+    {
+      "id": "rollout-009",
+      "kind": "rollout",
+      "status": "planned",
+      "count": 8,
+      "categoryCounts": {
+        "기타": 8
+      },
+      "bucketCounts": {
+        "misc": 8
+      },
+      "ingredients": [
         {
           "standardName": "베이킹파우더",
           "category": "기타",
@@ -7547,14 +7498,6 @@
           "limbPolicy": "arms-and-legs-allowed",
           "assetStrategy": "unique",
           "proposedSrc": "/assets/ingredients/plush-v2/asset-0356.webp"
-        },
-        {
-          "standardName": "사과",
-          "category": "기타",
-          "generationBucket": "misc",
-          "limbPolicy": "arms-and-legs-allowed",
-          "assetStrategy": "unique",
-          "proposedSrc": "/assets/ingredients/plush-v2/asset-0390.webp"
         },
         {
           "standardName": "얼음",
@@ -7693,19 +7636,6 @@
       "limbPolicy": "optional-arms-no-forced-legs",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0006.webp",
       "assetStrategy": "alias-review-or-unique"
-    },
-    {
-      "standardName": "가지",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260530001000_28_external_ingredient_seed_promotion.sql",
-      "catalogIndex": 7,
-      "generationBucket": "vegetable",
-      "reuseGroup": "unique:가지",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0007.webp",
-      "assetStrategy": "unique"
     },
     {
       "standardName": "감",
@@ -8072,19 +8002,6 @@
       "assetStrategy": "alias-review-or-unique"
     },
     {
-      "standardName": "고구마",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260525170000_26_youtube_dictionary_seed_uplift.sql",
-      "catalogIndex": 39,
-      "generationBucket": "root-vegetable",
-      "reuseGroup": "unique:고구마",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0039.webp",
-      "assetStrategy": "unique"
-    },
-    {
       "standardName": "고구마말랭이",
       "category": "곡류",
       "categoryCode": null,
@@ -8265,19 +8182,6 @@
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0053.webp",
       "assetStrategy": "unique"
-    },
-    {
-      "standardName": "고추장",
-      "category": "양념",
-      "categoryCode": "paste_sauce",
-      "defaultUnit": null,
-      "sourceFile": "supabase/seed.sql",
-      "catalogIndex": 54,
-      "generationBucket": "sauce-or-liquid",
-      "reuseGroup": "sauce-or-liquid",
-      "limbPolicy": "optional-small-arms-no-legs",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0054.webp",
-      "assetStrategy": "alias-review-or-unique"
     },
     {
       "standardName": "고추장아찌",
@@ -8618,19 +8522,6 @@
       "assetStrategy": "alias-review-or-unique"
     },
     {
-      "standardName": "김치",
-      "category": "기타",
-      "categoryCode": "kimchi_pickle_can",
-      "defaultUnit": "g",
-      "sourceFile": "supabase/seed.sql",
-      "catalogIndex": 82,
-      "generationBucket": "kimchi",
-      "reuseGroup": "kimchi",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0082.webp",
-      "assetStrategy": "alias-review-or-unique"
-    },
-    {
       "standardName": "까나리액젓",
       "category": "해산물",
       "categoryCode": null,
@@ -8668,19 +8559,6 @@
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0085.webp",
       "assetStrategy": "unique"
-    },
-    {
-      "standardName": "깻잎",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260625090000_28_external_ingredient_full_seed.sql",
-      "catalogIndex": 86,
-      "generationBucket": "leafy-vegetable",
-      "reuseGroup": "vegetable:leafy",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0086.webp",
-      "assetStrategy": "alias-review-or-unique"
     },
     {
       "standardName": "껌",
@@ -9060,19 +8938,6 @@
       "assetStrategy": "alias-review-or-unique"
     },
     {
-      "standardName": "느타리버섯",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260526205500_27_youtube_live_goal_multi_recipe_seed.sql",
-      "catalogIndex": 116,
-      "generationBucket": "mushroom",
-      "reuseGroup": "vegetable:mushroom",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0116.webp",
-      "assetStrategy": "alias-review-or-unique"
-    },
-    {
       "standardName": "는쟁이냉이",
       "category": "채소",
       "categoryCode": null,
@@ -9383,19 +9248,6 @@
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0142.webp",
       "assetStrategy": "unique"
-    },
-    {
-      "standardName": "당면",
-      "category": "곡류",
-      "categoryCode": "noodle_pasta",
-      "defaultUnit": "g",
-      "sourceFile": "supabase/seed.sql",
-      "catalogIndex": 144,
-      "generationBucket": "noodle",
-      "reuseGroup": "grain:noodle",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0144.webp",
-      "assetStrategy": "alias-review-or-unique"
     },
     {
       "standardName": "당밀",
@@ -9892,19 +9744,6 @@
       "assetStrategy": "unique"
     },
     {
-      "standardName": "된장",
-      "category": "양념",
-      "categoryCode": "paste_sauce",
-      "defaultUnit": null,
-      "sourceFile": "supabase/seed.sql",
-      "catalogIndex": 185,
-      "generationBucket": "sauce-or-liquid",
-      "reuseGroup": "sauce-or-liquid",
-      "limbPolicy": "optional-small-arms-no-legs",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0185.webp",
-      "assetStrategy": "alias-review-or-unique"
-    },
-    {
       "standardName": "두릅",
       "category": "채소",
       "categoryCode": null,
@@ -10058,19 +9897,6 @@
       "reuseGroup": "unique:따뜻한 우유",
       "limbPolicy": "optional-small-arms-no-legs",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0198.webp",
-      "assetStrategy": "unique"
-    },
-    {
-      "standardName": "딸기",
-      "category": "과일",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260625090000_28_external_ingredient_full_seed.sql",
-      "catalogIndex": 199,
-      "generationBucket": "berry-fruit",
-      "reuseGroup": "unique:딸기",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0199.webp",
       "assetStrategy": "unique"
     },
     {
@@ -11166,19 +10992,6 @@
       "assetStrategy": "unique"
     },
     {
-      "standardName": "무",
-      "category": "채소",
-      "categoryCode": "root_stem",
-      "defaultUnit": "개",
-      "sourceFile": "supabase/seed.sql",
-      "catalogIndex": 285,
-      "generationBucket": "root-vegetable",
-      "reuseGroup": "unique:무",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0285.webp",
-      "assetStrategy": "unique"
-    },
-    {
       "standardName": "무 절임",
       "category": "채소",
       "categoryCode": null,
@@ -11530,19 +11343,6 @@
       "assetStrategy": "unique"
     },
     {
-      "standardName": "밀가루",
-      "category": "곡류",
-      "categoryCode": "bread_ricecake_cereal",
-      "defaultUnit": "g",
-      "sourceFile": "supabase/seed.sql",
-      "catalogIndex": 313,
-      "generationBucket": "grain-powder",
-      "reuseGroup": "powder",
-      "limbPolicy": "optional-small-arms-no-legs",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0313.webp",
-      "assetStrategy": "alias-review-or-unique"
-    },
-    {
       "standardName": "밀떡",
       "category": "곡류",
       "categoryCode": null,
@@ -11566,19 +11366,6 @@
       "reuseGroup": "unique:바게트",
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0315.webp",
-      "assetStrategy": "unique"
-    },
-    {
-      "standardName": "바나나",
-      "category": "기타",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260525170000_26_youtube_dictionary_seed_uplift.sql",
-      "catalogIndex": 316,
-      "generationBucket": "fruit",
-      "reuseGroup": "unique:바나나",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0316.webp",
       "assetStrategy": "unique"
     },
     {
@@ -11842,19 +11629,6 @@
       "assetStrategy": "alias-review-or-unique"
     },
     {
-      "standardName": "방울토마토",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260525170000_26_youtube_dictionary_seed_uplift.sql",
-      "catalogIndex": 338,
-      "generationBucket": "vegetable",
-      "reuseGroup": "unique:방울토마토",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0338.webp",
-      "assetStrategy": "unique"
-    },
-    {
       "standardName": "배",
       "category": "기타",
       "categoryCode": null,
@@ -11905,19 +11679,6 @@
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0342.webp",
       "assetStrategy": "unique"
-    },
-    {
-      "standardName": "배추",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260625090000_28_external_ingredient_full_seed.sql",
-      "catalogIndex": 343,
-      "generationBucket": "leafy-vegetable",
-      "reuseGroup": "vegetable:leafy",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0343.webp",
-      "assetStrategy": "alias-review-or-unique"
     },
     {
       "standardName": "백김치",
@@ -12191,19 +11952,6 @@
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0365.webp",
       "assetStrategy": "unique"
-    },
-    {
-      "standardName": "부추",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260526182000_27_youtube_live_smoke_dictionary_seed.sql",
-      "catalogIndex": 366,
-      "generationBucket": "leafy-vegetable",
-      "reuseGroup": "vegetable:leafy",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0366.webp",
-      "assetStrategy": "alias-review-or-unique"
     },
     {
       "standardName": "부침가루",
@@ -12765,19 +12513,6 @@
       "assetStrategy": "unique"
     },
     {
-      "standardName": "상추",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260625090000_28_external_ingredient_full_seed.sql",
-      "catalogIndex": 410,
-      "generationBucket": "leafy-vegetable",
-      "reuseGroup": "vegetable:leafy",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0410.webp",
-      "assetStrategy": "alias-review-or-unique"
-    },
-    {
       "standardName": "상황버섯",
       "category": "채소",
       "categoryCode": null,
@@ -12801,19 +12536,6 @@
       "reuseGroup": "vegetable:mushroom",
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0412.webp",
-      "assetStrategy": "alias-review-or-unique"
-    },
-    {
-      "standardName": "새우",
-      "category": "해산물",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260526203000_27_youtube_live_goal_dictionary_seed.sql",
-      "catalogIndex": 413,
-      "generationBucket": "crustacean",
-      "reuseGroup": "seafood:crustacean",
-      "limbPolicy": "optional-arms-no-forced-legs",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0413.webp",
       "assetStrategy": "alias-review-or-unique"
     },
     {
@@ -13363,19 +13085,6 @@
       "assetStrategy": "unique"
     },
     {
-      "standardName": "소면",
-      "category": "곡류",
-      "categoryCode": "noodle_pasta",
-      "defaultUnit": "g",
-      "sourceFile": "supabase/seed.sql",
-      "catalogIndex": 459,
-      "generationBucket": "noodle",
-      "reuseGroup": "grain:noodle",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0459.webp",
-      "assetStrategy": "alias-review-or-unique"
-    },
-    {
       "standardName": "소불고기",
       "category": "육류",
       "categoryCode": null,
@@ -13868,19 +13577,6 @@
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0497.webp",
       "assetStrategy": "unique"
-    },
-    {
-      "standardName": "식용유",
-      "category": "양념",
-      "categoryCode": "oil_vinegar_sugar_stock",
-      "defaultUnit": null,
-      "sourceFile": "supabase/seed.sql",
-      "catalogIndex": 498,
-      "generationBucket": "oil",
-      "reuseGroup": "oil",
-      "limbPolicy": "optional-small-arms-no-legs",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0498.webp",
-      "assetStrategy": "alias-review-or-unique"
     },
     {
       "standardName": "식초",
@@ -14533,19 +14229,6 @@
       "assetStrategy": "alias-review-or-unique"
     },
     {
-      "standardName": "양배추",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260525170000_26_youtube_dictionary_seed_uplift.sql",
-      "catalogIndex": 551,
-      "generationBucket": "leafy-vegetable",
-      "reuseGroup": "vegetable:leafy",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0551.webp",
-      "assetStrategy": "alias-review-or-unique"
-    },
-    {
       "standardName": "양상추",
       "category": "채소",
       "categoryCode": null,
@@ -14842,19 +14525,6 @@
       "reuseGroup": "unique:연씨",
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0575.webp",
-      "assetStrategy": "unique"
-    },
-    {
-      "standardName": "연어",
-      "category": "해산물",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260625090000_28_external_ingredient_full_seed.sql",
-      "catalogIndex": 576,
-      "generationBucket": "fish-or-seafood",
-      "reuseGroup": "unique:연어",
-      "limbPolicy": "optional-arms-no-forced-legs",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0576.webp",
       "assetStrategy": "unique"
     },
     {
@@ -15183,19 +14853,6 @@
       "assetStrategy": "unique"
     },
     {
-      "standardName": "오이",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260625090000_28_external_ingredient_full_seed.sql",
-      "catalogIndex": 602,
-      "generationBucket": "vegetable",
-      "reuseGroup": "unique:오이",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0602.webp",
-      "assetStrategy": "unique"
-    },
-    {
       "standardName": "오이 소박이",
       "category": "채소",
       "categoryCode": null,
@@ -15391,19 +15048,6 @@
       "assetStrategy": "unique"
     },
     {
-      "standardName": "올리브유",
-      "category": "양념",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260625090000_28_external_ingredient_full_seed.sql",
-      "catalogIndex": 618,
-      "generationBucket": "oil",
-      "reuseGroup": "oil",
-      "limbPolicy": "optional-small-arms-no-legs",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0618.webp",
-      "assetStrategy": "alias-review-or-unique"
-    },
-    {
       "standardName": "올방개묵",
       "category": "곡류",
       "categoryCode": null,
@@ -15531,19 +15175,6 @@
       "reuseGroup": "unique:우엉",
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0628.webp",
-      "assetStrategy": "unique"
-    },
-    {
-      "standardName": "우유",
-      "category": "유제품",
-      "categoryCode": "milk_yogurt_cream",
-      "defaultUnit": "ml",
-      "sourceFile": "supabase/seed.sql",
-      "catalogIndex": 629,
-      "generationBucket": "dairy-liquid",
-      "reuseGroup": "unique:우유",
-      "limbPolicy": "optional-small-arms-no-legs",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0629.webp",
       "assetStrategy": "unique"
     },
     {
@@ -16821,19 +16452,6 @@
       "assetStrategy": "unique"
     },
     {
-      "standardName": "청양고추",
-      "category": "채소",
-      "categoryCode": "fruiting_vegetable_mushroom",
-      "defaultUnit": "개",
-      "sourceFile": "supabase/seed.sql",
-      "catalogIndex": 729,
-      "generationBucket": "pepper-vegetable",
-      "reuseGroup": "unique:청양고추",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0729.webp",
-      "assetStrategy": "unique"
-    },
-    {
       "standardName": "청어",
       "category": "해산물",
       "categoryCode": null,
@@ -17066,19 +16684,6 @@
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0747.webp",
       "assetStrategy": "unique"
-    },
-    {
-      "standardName": "치즈",
-      "category": "유제품",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260525170000_26_youtube_dictionary_seed_uplift.sql",
-      "catalogIndex": 748,
-      "generationBucket": "cheese",
-      "reuseGroup": "dairy:cheese",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0748.webp",
-      "assetStrategy": "alias-review-or-unique"
     },
     {
       "standardName": "치즈시즈닝",
@@ -17536,19 +17141,6 @@
       "assetStrategy": "alias-review-or-unique"
     },
     {
-      "standardName": "콩나물",
-      "category": "채소",
-      "categoryCode": "leaf_namul",
-      "defaultUnit": "봉",
-      "sourceFile": "supabase/seed.sql",
-      "catalogIndex": 784,
-      "generationBucket": "leafy-vegetable",
-      "reuseGroup": "vegetable:leafy",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0784.webp",
-      "assetStrategy": "alias-review-or-unique"
-    },
-    {
       "standardName": "콩잎",
       "category": "채소",
       "categoryCode": null,
@@ -17806,19 +17398,6 @@
       "reuseGroup": "unique:토란대",
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0804.webp",
-      "assetStrategy": "unique"
-    },
-    {
-      "standardName": "토마토",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260525170000_26_youtube_dictionary_seed_uplift.sql",
-      "catalogIndex": 805,
-      "generationBucket": "vegetable",
-      "reuseGroup": "unique:토마토",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0805.webp",
       "assetStrategy": "unique"
     },
     {
@@ -18186,19 +17765,6 @@
       "assetStrategy": "alias-review-or-unique"
     },
     {
-      "standardName": "팽이버섯",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260526203000_27_youtube_live_goal_dictionary_seed.sql",
-      "catalogIndex": 834,
-      "generationBucket": "mushroom",
-      "reuseGroup": "vegetable:mushroom",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0834.webp",
-      "assetStrategy": "alias-review-or-unique"
-    },
-    {
       "standardName": "팽화",
       "category": "곡류",
       "categoryCode": null,
@@ -18288,19 +17854,6 @@
       "limbPolicy": "arms-and-legs-allowed",
       "proposedSrc": "/assets/ingredients/plush-v2/asset-0841.webp",
       "assetStrategy": "unique"
-    },
-    {
-      "standardName": "표고버섯",
-      "category": "채소",
-      "categoryCode": null,
-      "defaultUnit": null,
-      "sourceFile": "supabase/migrations/20260526182000_27_youtube_live_smoke_dictionary_seed.sql",
-      "catalogIndex": 842,
-      "generationBucket": "mushroom",
-      "reuseGroup": "vegetable:mushroom",
-      "limbPolicy": "arms-and-legs-allowed",
-      "proposedSrc": "/assets/ingredients/plush-v2/asset-0842.webp",
-      "assetStrategy": "alias-review-or-unique"
     },
     {
       "standardName": "푸딩",
