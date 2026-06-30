@@ -235,7 +235,9 @@ describe("PantryScreen", () => {
       .getByTestId("web-pantry-card-i1")
       .querySelector("img")
       ?.getAttribute("src");
-    expect(onionStickerSrc).toContain("onion.png");
+    const decodedOnionStickerSrc = decodeURIComponent(onionStickerSrc ?? "");
+    expect(decodedOnionStickerSrc).toContain("/assets/ingredients/plush-v2/onion.webp");
+    expect(decodedOnionStickerSrc).toContain("q=95");
     expect(screen.getByTestId("web-pantry-card-i1").textContent).not.toContain("채소/버섯");
     expect(screen.getByTestId("web-pantry-card-copy-i1")).toBeTruthy();
     expect(screen.getByTestId("web-pantry-card-i1").textContent).not.toContain("보유 중");
@@ -776,9 +778,14 @@ describe("PantryScreen", () => {
       expect(screen.getByRole("tab", { name: category })).toBeTruthy();
     });
     expect(getPantryStickerSrc("양파")).toBe(
-      "/assets/ingredients/plush/onion.png",
+      "/assets/ingredients/plush-v2/onion.webp",
     );
-    expect(screen.getByTestId("web-pantry-card-i1").querySelector("img")).toBeTruthy();
+    const onionImage = screen.getByTestId("web-pantry-card-i1").querySelector("img");
+    expect(onionImage).toBeTruthy();
+    const decodedOnionImageSrc = decodeURIComponent(onionImage?.getAttribute("src") ?? "");
+    expect(decodedOnionImageSrc).toContain("/assets/ingredients/plush-v2/onion.webp");
+    expect(decodedOnionImageSrc).toContain("q=95");
+    expect(onionImage?.getAttribute("sizes")).toBe("112px");
   });
 
   it("uses the canonical DB category rail and only owned count on mobile", async () => {

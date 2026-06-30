@@ -1,0 +1,98 @@
+{
+  "concept": "plush-diary-sticker",
+  "version": 2,
+  "format": {
+    "width": 512,
+    "height": 512,
+    "type": "image/webp",
+    "quality": 95,
+    "background": "soft light gray",
+    "safeArea": "centered subject with white sticker border"
+  },
+  "items": {
+    "감자": {
+      "src": "/assets/ingredients/plush-v2/potato.webp",
+      "status": "approved-sample"
+    },
+    "간장": {
+      "src": "/assets/ingredients/plush-v2/soy-sauce.webp",
+      "status": "approved-sample"
+    },
+    "계란": {
+      "src": "/assets/ingredients/plush-v2/egg.webp",
+      "status": "approved-sample"
+    },
+    "고춧가루": {
+      "src": "/assets/ingredients/plush-v2/red-pepper-powder.webp",
+      "status": "approved-sample"
+    },
+    "닭가슴살": {
+      "src": "/assets/ingredients/plush-v2/chicken-breast.webp",
+      "status": "approved-sample"
+    },
+    "닭고기": {
+      "src": "/assets/ingredients/plush-v2/chicken.webp",
+      "status": "approved-sample"
+    },
+    "당근": {
+      "src": "/assets/ingredients/plush-v2/carrot.webp",
+      "status": "approved-sample"
+    },
+    "대파": {
+      "src": "/assets/ingredients/plush-v2/green-onion.webp",
+      "status": "approved-sample"
+    },
+    "돼지고기": {
+      "src": "/assets/ingredients/plush-v2/pork.webp",
+      "status": "approved-sample"
+    },
+    "두부": {
+      "src": "/assets/ingredients/plush-v2/tofu.webp",
+      "status": "approved-sample"
+    },
+    "마늘": {
+      "src": "/assets/ingredients/plush-v2/garlic.webp",
+      "status": "approved-sample"
+    },
+    "밥": {
+      "src": "/assets/ingredients/plush-v2/cooked-rice.webp",
+      "status": "approved-sample"
+    },
+    "버터": {
+      "src": "/assets/ingredients/plush-v2/butter.webp",
+      "status": "approved-sample"
+    },
+    "설탕": {
+      "src": "/assets/ingredients/plush-v2/sugar.webp",
+      "status": "approved-sample"
+    },
+    "소고기": {
+      "src": "/assets/ingredients/plush-v2/beef.webp",
+      "status": "approved-sample"
+    },
+    "소금": {
+      "src": "/assets/ingredients/plush-v2/salt.webp",
+      "status": "approved-sample"
+    },
+    "쌀": {
+      "src": "/assets/ingredients/plush-v2/rice.webp",
+      "status": "approved-sample"
+    },
+    "애호박": {
+      "src": "/assets/ingredients/plush-v2/zucchini.webp",
+      "status": "approved-sample"
+    },
+    "양파": {
+      "src": "/assets/ingredients/plush-v2/onion.webp",
+      "status": "approved-sample"
+    },
+    "참기름": {
+      "src": "/assets/ingredients/plush-v2/sesame-oil.webp",
+      "status": "approved-sample"
+    },
+    "후추": {
+      "src": "/assets/ingredients/plush-v2/black-pepper.webp",
+      "status": "approved-sample"
+    }
+  }
+}

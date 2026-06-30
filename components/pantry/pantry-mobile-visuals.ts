@@ -1,5 +1,5 @@
 import { getIngredientCategoryEmoji } from "@/lib/ingredient-categories";
-import stickerManifest from "@/public/assets/ingredients/plush/manifest.json";
+import stickerManifest from "@/public/assets/ingredients/plush-v2/manifest.json";
 
 type PantryStickerManifestItem = {
   src: string;

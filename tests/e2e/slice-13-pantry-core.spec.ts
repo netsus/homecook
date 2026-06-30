@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -188,6 +188,68 @@ async function installPantryRoutes(page: Page) {
   });
 }
 
+async function expectSharpV2Sticker(
+  image: Locator,
+  {
+    expectedFile,
+    expectedSizes,
+  }: {
+    expectedFile: string;
+    expectedSizes: string;
+  },
+) {
+  await expect(image).toBeVisible();
+  await expect(image).toHaveAttribute("sizes", expectedSizes);
+  await expect
+    .poll(async () =>
+      image.evaluate((node) => {
+        const img = node as HTMLImageElement;
+
+        return img.complete ? img.naturalWidth : 0;
+      }),
+    )
+    .toBeGreaterThan(0);
+
+  const metrics = await image.evaluate((node) => {
+    const img = node as HTMLImageElement;
+    const rect = img.getBoundingClientRect();
+    const currentSrc = img.currentSrc || img.src;
+    let optimizedQuality: number | null = null;
+    let optimizedWidth: number | null = null;
+
+    try {
+      const currentUrl = new URL(currentSrc);
+      const qualityParam = currentUrl.searchParams.get("q");
+      const widthParam = currentUrl.searchParams.get("w");
+      optimizedQuality = qualityParam ? Number.parseInt(qualityParam, 10) : null;
+      optimizedWidth = widthParam ? Number.parseInt(widthParam, 10) : null;
+    } catch {
+      optimizedQuality = null;
+      optimizedWidth = null;
+    }
+
+    return {
+      currentSrc: decodeURIComponent(currentSrc),
+      devicePixelRatio: window.devicePixelRatio,
+      naturalHeight: img.naturalHeight,
+      naturalWidth: img.naturalWidth,
+      optimizedQuality,
+      optimizedWidth,
+      renderedHeight: rect.height,
+      renderedWidth: rect.width,
+    };
+  });
+  const sourceWidth = metrics.optimizedWidth ?? metrics.naturalWidth;
+
+  expect(metrics.currentSrc).toContain(`/assets/ingredients/plush-v2/${expectedFile}`);
+  expect(metrics.optimizedQuality ?? 95).toBe(95);
+  expect(metrics.naturalWidth).toBeGreaterThanOrEqual(Math.floor(metrics.renderedWidth));
+  expect(metrics.naturalHeight).toBeGreaterThanOrEqual(Math.floor(metrics.renderedHeight));
+  expect(sourceWidth).toBeGreaterThanOrEqual(
+    Math.ceil(metrics.renderedWidth * metrics.devicePixelRatio),
+  );
+}
+
 test.describe("PANTRY screen", () => {
   test("shows login gate for unauthenticated users", async ({ page }) => {
     await setAuthOverride(page, "guest");
@@ -207,6 +269,26 @@ test.describe("PANTRY screen", () => {
     await expect(page.getByText(/양파/)).toBeVisible();
     await expect(page.getByText(/마늘/)).toBeVisible();
     await expect(page.getByText(/돼지고기/)).toBeVisible();
+  });
+
+  test("loads plush-v2 pantry stickers at display-safe resolution", async ({
+    page,
+  }) => {
+    await setAuthOverride(page, "authenticated");
+    await installPantryRoutes(page);
+    await page.goto("/pantry");
+
+    await expect(page.getByText(/양파/)).toBeVisible();
+
+    const isMobile = isMobileViewport(page);
+    const onionImage = isMobile
+      ? page.getByRole("button", { exact: true, name: "양파" }).locator("img").first()
+      : page.getByTestId("web-pantry-card-i1").locator("img").first();
+
+    await expectSharpV2Sticker(onionImage, {
+      expectedFile: "onion.webp",
+      expectedSizes: isMobile ? "68px" : "112px",
+    });
   });
 
   test("shows only owned pantry items without missing ingredient toggles", async ({

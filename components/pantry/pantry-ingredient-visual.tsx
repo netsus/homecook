@@ -10,6 +10,7 @@ interface PantryIngredientVisualProps {
   className: string;
   imageClassName?: string;
   name: string;
+  sizes?: string;
 }
 
 export function PantryIngredientVisual({
@@ -17,6 +18,7 @@ export function PantryIngredientVisual({
   className,
   imageClassName = "pantry-sticker-image",
   name,
+  sizes = "112px",
 }: PantryIngredientVisualProps) {
   const stickerSrc = getPantryStickerSrc(name);
 
@@ -29,7 +31,8 @@ export function PantryIngredientVisual({
           draggable={false}
           height={512}
           loading="lazy"
-          sizes="56px"
+          quality={95}
+          sizes={sizes}
           src={stickerSrc}
           width={512}
         />

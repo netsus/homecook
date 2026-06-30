@@ -324,6 +324,7 @@ export function PantryMobileScreen({
                             className="mr-3 flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface-fill)] text-[20px]"
                             imageClassName="h-full w-full object-contain"
                             name={item.standard_name}
+                            sizes="68px"
                           />
                           <span className="min-w-0 flex-1 truncate text-[15px] font-extrabold leading-[1.35] text-[var(--foreground)]">
                             {item.standard_name}
