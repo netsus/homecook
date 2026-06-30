@@ -50,7 +50,9 @@ Generated: 2026-06-30
 - Existing 21 plush-v2 files were not regenerated.
 - Images follow the plush diary sticker direction: white sticker border, no text, no surrounding decorations, large 90%-style subject framing.
 - Eyes, mouth, and blush are rendered as crisp flat graphic details.
-- Contact sheet review did not find a blocker. `청양고추` is slightly plumper than a real Cheongyang pepper, but remains visually distinct from `오이` due to the stem, shape, and smaller pepper proportions.
+- Follow-up correction restored the no-outline pilot baseline for most assets while keeping targeted shape fixes.
+- `바나나`, `청양고추`, `오이`, and `고구마` were corrected for balanced limbs.
+- `콩나물` and `김치` use container-based compositions with the face on the container.
 
 ## Next Step
 
