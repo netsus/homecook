@@ -71,14 +71,12 @@ describe("ingredient sticker generation plan script", () => {
       expect(missingNames.has(name)).toBe(false);
     }
 
-    expect(plan.firstPilotBatch.ingredients.map((ingredient: { standardName: string }) => ingredient.standardName)).toEqual([
-      "고추장",
-      "된장",
-      "식용유",
-      "올리브유",
-      "우유",
-    ]);
+    expect(plan.firstPilotBatch.ingredients).toHaveLength(5);
+    for (const ingredient of plan.firstPilotBatch.ingredients as Array<{ standardName: string }>) {
+      expect(missingNames.has(ingredient.standardName)).toBe(true);
+      expect(manifestNames.includes(ingredient.standardName)).toBe(false);
+    }
     expect(markdown).toContain("Frozen Existing Assets");
-    expect(markdown).toContain("The existing 21 plush-v2 images are approved");
+    expect(markdown).toContain(`The existing ${manifestNames.length} plush-v2 images are approved`);
   });
 });

@@ -10,21 +10,45 @@
     "safeArea": "centered subject with white sticker border"
   },
   "items": {
-    "감자": {
-      "src": "/assets/ingredients/plush-v2/potato.webp",
-      "status": "approved-sample"
+    "가지": {
+      "src": "/assets/ingredients/plush-v2/eggplant.webp",
+      "status": "approved-pilot-001"
     },
     "간장": {
       "src": "/assets/ingredients/plush-v2/soy-sauce.webp",
+      "status": "approved-sample"
+    },
+    "감자": {
+      "src": "/assets/ingredients/plush-v2/potato.webp",
       "status": "approved-sample"
     },
     "계란": {
       "src": "/assets/ingredients/plush-v2/egg.webp",
       "status": "approved-sample"
     },
+    "고구마": {
+      "src": "/assets/ingredients/plush-v2/sweet-potato.webp",
+      "status": "approved-pilot-001"
+    },
+    "고추장": {
+      "src": "/assets/ingredients/plush-v2/gochujang.webp",
+      "status": "approved-pilot-001"
+    },
     "고춧가루": {
       "src": "/assets/ingredients/plush-v2/red-pepper-powder.webp",
       "status": "approved-sample"
+    },
+    "김치": {
+      "src": "/assets/ingredients/plush-v2/kimchi.webp",
+      "status": "approved-pilot-001"
+    },
+    "깻잎": {
+      "src": "/assets/ingredients/plush-v2/perilla-leaf.webp",
+      "status": "approved-pilot-001"
+    },
+    "느타리버섯": {
+      "src": "/assets/ingredients/plush-v2/oyster-mushroom.webp",
+      "status": "approved-pilot-001"
     },
     "닭가슴살": {
       "src": "/assets/ingredients/plush-v2/chicken-breast.webp",
@@ -38,6 +62,10 @@
       "src": "/assets/ingredients/plush-v2/carrot.webp",
       "status": "approved-sample"
     },
+    "당면": {
+      "src": "/assets/ingredients/plush-v2/glass-noodles.webp",
+      "status": "approved-pilot-001"
+    },
     "대파": {
       "src": "/assets/ingredients/plush-v2/green-onion.webp",
       "status": "approved-sample"
@@ -46,21 +74,61 @@
       "src": "/assets/ingredients/plush-v2/pork.webp",
       "status": "approved-sample"
     },
+    "된장": {
+      "src": "/assets/ingredients/plush-v2/doenjang.webp",
+      "status": "approved-pilot-001"
+    },
     "두부": {
       "src": "/assets/ingredients/plush-v2/tofu.webp",
       "status": "approved-sample"
+    },
+    "딸기": {
+      "src": "/assets/ingredients/plush-v2/strawberry.webp",
+      "status": "approved-pilot-001"
     },
     "마늘": {
       "src": "/assets/ingredients/plush-v2/garlic.webp",
       "status": "approved-sample"
     },
+    "무": {
+      "src": "/assets/ingredients/plush-v2/radish.webp",
+      "status": "approved-pilot-001"
+    },
+    "밀가루": {
+      "src": "/assets/ingredients/plush-v2/flour.webp",
+      "status": "approved-pilot-001"
+    },
+    "바나나": {
+      "src": "/assets/ingredients/plush-v2/banana.webp",
+      "status": "approved-pilot-001"
+    },
     "밥": {
       "src": "/assets/ingredients/plush-v2/cooked-rice.webp",
       "status": "approved-sample"
     },
+    "방울토마토": {
+      "src": "/assets/ingredients/plush-v2/cherry-tomato.webp",
+      "status": "approved-pilot-001"
+    },
+    "배추": {
+      "src": "/assets/ingredients/plush-v2/napa-cabbage.webp",
+      "status": "approved-pilot-001"
+    },
     "버터": {
       "src": "/assets/ingredients/plush-v2/butter.webp",
       "status": "approved-sample"
+    },
+    "부추": {
+      "src": "/assets/ingredients/plush-v2/chives.webp",
+      "status": "approved-pilot-001"
+    },
+    "상추": {
+      "src": "/assets/ingredients/plush-v2/lettuce.webp",
+      "status": "approved-pilot-001"
+    },
+    "새우": {
+      "src": "/assets/ingredients/plush-v2/shrimp.webp",
+      "status": "approved-pilot-001"
     },
     "설탕": {
       "src": "/assets/ingredients/plush-v2/sugar.webp",
@@ -74,6 +142,14 @@
       "src": "/assets/ingredients/plush-v2/salt.webp",
       "status": "approved-sample"
     },
+    "소면": {
+      "src": "/assets/ingredients/plush-v2/somyeon.webp",
+      "status": "approved-pilot-001"
+    },
+    "식용유": {
+      "src": "/assets/ingredients/plush-v2/cooking-oil.webp",
+      "status": "approved-pilot-001"
+    },
     "쌀": {
       "src": "/assets/ingredients/plush-v2/rice.webp",
       "status": "approved-sample"
@@ -82,13 +158,57 @@
       "src": "/assets/ingredients/plush-v2/zucchini.webp",
       "status": "approved-sample"
     },
+    "양배추": {
+      "src": "/assets/ingredients/plush-v2/cabbage.webp",
+      "status": "approved-pilot-001"
+    },
     "양파": {
       "src": "/assets/ingredients/plush-v2/onion.webp",
       "status": "approved-sample"
     },
+    "연어": {
+      "src": "/assets/ingredients/plush-v2/salmon.webp",
+      "status": "approved-pilot-001"
+    },
+    "오이": {
+      "src": "/assets/ingredients/plush-v2/cucumber.webp",
+      "status": "approved-pilot-001"
+    },
+    "올리브유": {
+      "src": "/assets/ingredients/plush-v2/olive-oil.webp",
+      "status": "approved-pilot-001"
+    },
+    "우유": {
+      "src": "/assets/ingredients/plush-v2/milk.webp",
+      "status": "approved-pilot-001"
+    },
     "참기름": {
       "src": "/assets/ingredients/plush-v2/sesame-oil.webp",
       "status": "approved-sample"
+    },
+    "청양고추": {
+      "src": "/assets/ingredients/plush-v2/cheongyang-pepper.webp",
+      "status": "approved-pilot-001"
+    },
+    "치즈": {
+      "src": "/assets/ingredients/plush-v2/cheese.webp",
+      "status": "approved-pilot-001"
+    },
+    "콩나물": {
+      "src": "/assets/ingredients/plush-v2/bean-sprouts.webp",
+      "status": "approved-pilot-001"
+    },
+    "토마토": {
+      "src": "/assets/ingredients/plush-v2/tomato.webp",
+      "status": "approved-pilot-001"
+    },
+    "팽이버섯": {
+      "src": "/assets/ingredients/plush-v2/enoki-mushroom.webp",
+      "status": "approved-pilot-001"
+    },
+    "표고버섯": {
+      "src": "/assets/ingredients/plush-v2/shiitake-mushroom.webp",
+      "status": "approved-pilot-001"
     },
     "후추": {
       "src": "/assets/ingredients/plush-v2/black-pepper.webp",

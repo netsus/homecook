@@ -44,7 +44,7 @@ describe("pantry mobile visuals", () => {
   it("keeps plush-v2 sticker sources as 512px WebP assets for crisp pantry rendering", () => {
     const items = stickerManifest.items as Record<string, PantryStickerManifestItem>;
 
-    expect(Object.keys(items)).toHaveLength(21);
+    expect(Object.keys(items)).toHaveLength(51);
 
     for (const item of Object.values(items)) {
       expect(item.src).toMatch(/^\/assets\/ingredients\/plush-v2\/.+\.webp$/);

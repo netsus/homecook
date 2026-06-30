@@ -75,6 +75,12 @@ Batch 1 extension:
 | 후추 | `black-pepper.webp` |
 | 참기름 | `sesame-oil.webp` |
 
+Pilot 001 extension:
+
+- Contact sheet: `public/assets/ingredients/plush-v2/preview-pilot-001.png`
+- Status in manifest: `approved-pilot-001`
+- Added ingredients: 고추장, 된장, 식용유, 올리브유, 우유, 치즈, 밀가루, 소면, 당면, 김치, 새우, 연어, 오이, 청양고추, 방울토마토, 고구마, 가지, 표고버섯, 느타리버섯, 팽이버섯, 양배추, 무, 깻잎, 상추, 배추, 부추, 콩나물, 토마토, 딸기, 바나나.
+
 ## Prompt Template
 
 Use one prompt per ingredient. Do not combine multiple different ingredients into one generated image.
