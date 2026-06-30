@@ -131,6 +131,7 @@ async function importPantryBundlesRoute() {
 describe("13 pantry core backend", () => {
   beforeEach(() => {
     vi.resetModules();
+    delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
     ensurePublicUserRow.mockReset();
@@ -156,6 +157,60 @@ describe("13 pantry core backend", () => {
     const body = await response.json();
 
     expect(response.status).toBe(401);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "UNAUTHORIZED",
+      },
+    });
+  });
+
+  it("GET /pantry returns QA fixture items when the e2e auth override is authenticated", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const { GET } = await importPantryRoute();
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/pantry", {
+        headers: {
+          "x-homecook-e2e-auth": "authenticated",
+        },
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        items: expect.arrayContaining([
+          expect.objectContaining({
+            standard_name: "양파",
+            category_group_code: "vegetable_mushroom",
+          }),
+          expect.objectContaining({
+            standard_name: "소고기",
+            category_group_code: "protein",
+          }),
+          expect.objectContaining({
+            standard_name: "고춧가루",
+            category_group_code: "seasoning_condiment",
+          }),
+        ]),
+      },
+    });
+  });
+
+  it("GET /pantry keeps QA fixture items behind the e2e auth override", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const { GET } = await importPantryRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/pantry"));
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
     expect(body).toMatchObject({
       success: false,
       data: null,
