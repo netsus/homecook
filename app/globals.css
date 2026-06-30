@@ -11352,6 +11352,18 @@ button {
     white-space: nowrap;
   }
 
+  .web-ingredient-cell-visual {
+    display: flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: var(--web-r-xs);
+    background: var(--web-image-placeholder);
+    font-size: 20px;
+  }
+
   .web-ingredient-cell small {
     max-width: 100%;
     overflow: hidden;

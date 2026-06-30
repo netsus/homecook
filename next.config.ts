@@ -154,6 +154,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   ...(isQaFixtureServer ? { devIndicators: false } : {}),
+  images: {
+    qualities: [75, 95],
+  },
   poweredByHeader: false,
   async headers() {
     return [
