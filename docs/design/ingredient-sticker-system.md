@@ -1,20 +1,24 @@
 # Ingredient Sticker System
 
-Last updated: 2026-06-29
+Last updated: 2026-06-30
 
 This document locks the approved pantry ingredient image direction before scaling it to the full ingredient catalog.
 
 ## Approved Direction
 
 - Concept: collectible diary sticker with a small plush mascot feel.
-- Current sample format: square `512x512` PNG for app assets.
-- Full batch format: prefer compressed WebP or an equivalent optimized raster format when the batch tooling is available. Keeping all 889 assets as uncompressed PNG would make the repository unnecessarily large.
+- Current sample format: square `512x512` WebP, q95.
+- Full batch format: compressed WebP q95. Keeping all 889 assets as uncompressed PNG would make the repository unnecessarily large.
 - Background: very light warm gray or off-white, kept simple enough to read inside small pantry cards.
-- Shared identity point: thick white sticker border, soft drop shadow, tiny blush/face details, small decorative sparkles or dots.
+- Shared identity point: thick white sticker border, crisp outer outline, soft plush/felt ingredient body, and crisp flat graphic face details.
 - Subject rule: the ingredient must remain obvious at small size. The decorative face can be playful, but it must not hide the ingredient shape.
+- Framing rule: the ingredient should fill about 90% of the square canvas.
+- Face rule: eyes, mouth, and blush must read as crisp flat graphics, not fuzzy felt texture.
+- Decoration rule: no surrounding stars, pieces, crystals, colored dots, sparkles, or unrelated decorative props.
+- Raw meat limb rule: use arms only or no limbs. Do not force arms/legs when they look unnatural.
 - Text rule: no text inside the image. Ingredient names remain UI text.
-- Current sample asset path: `public/assets/ingredients/plush/`.
-- Current manifest: `public/assets/ingredients/plush/manifest.json`.
+- Current sample asset path: `public/assets/ingredients/plush-v2/`.
+- Current manifest: `public/assets/ingredients/plush-v2/manifest.json`.
 
 ## Inventory Snapshot
 
@@ -44,32 +48,32 @@ Initial visual anchor:
 
 | Ingredient | File |
 | --- | --- |
-| 소금 | `salt.png` |
-| 설탕 | `sugar.png` |
-| 밥 | `cooked-rice.png` |
-| 쌀 | `rice.png` |
-| 양파 | `onion.png` |
-| 대파 | `green-onion.png` |
-| 간장 | `soy-sauce.png` |
-| 버터 | `butter.png` |
-| 닭가슴살 | `chicken-breast.png` |
+| 소금 | `salt.webp` |
+| 설탕 | `sugar.webp` |
+| 밥 | `cooked-rice.webp` |
+| 쌀 | `rice.webp` |
+| 양파 | `onion.webp` |
+| 대파 | `green-onion.webp` |
+| 간장 | `soy-sauce.webp` |
+| 버터 | `butter.webp` |
+| 닭가슴살 | `chicken-breast.webp` |
 
 Batch 1 extension:
 
 | Ingredient | File |
 | --- | --- |
-| 계란 | `egg.png` |
-| 마늘 | `garlic.png` |
-| 감자 | `potato.png` |
-| 당근 | `carrot.png` |
-| 애호박 | `zucchini.png` |
-| 두부 | `tofu.png` |
-| 돼지고기 | `pork.png` |
-| 소고기 | `beef.png` |
-| 닭고기 | `chicken.png` |
-| 고춧가루 | `red-pepper-powder.png` |
-| 후추 | `black-pepper.png` |
-| 참기름 | `sesame-oil.png` |
+| 계란 | `egg.webp` |
+| 마늘 | `garlic.webp` |
+| 감자 | `potato.webp` |
+| 당근 | `carrot.webp` |
+| 애호박 | `zucchini.webp` |
+| 두부 | `tofu.webp` |
+| 돼지고기 | `pork.webp` |
+| 소고기 | `beef.webp` |
+| 닭고기 | `chicken.webp` |
+| 고춧가루 | `red-pepper-powder.webp` |
+| 후추 | `black-pepper.webp` |
+| 참기름 | `sesame-oil.webp` |
 
 ## Prompt Template
 
@@ -80,14 +84,15 @@ Use case: stylized-concept
 Asset type: 512x512 pantry ingredient app sticker
 Primary request: Create one collectible diary sticker image for the Korean ingredient "<INGREDIENT_NAME>".
 Scene/backdrop: clean square icon composition on a very light warm gray background.
-Subject: one simple, instantly recognizable version of "<INGREDIENT_NAME>" as the main object, optionally with a tiny embroidered face and plush hands/feet when it improves the collectible sticker feel without hiding the ingredient shape.
+Subject: one simple, instantly recognizable version of "<INGREDIENT_NAME>" as the main object, optionally with small plush hands/feet only when they improve the collectible sticker feel without hiding the ingredient shape.
 Style/medium: cute mini plush diary sticker, soft felt texture, rounded handmade shape, polished app asset.
-Composition/framing: centered, generous padding, no cropping, readable at 34px and 56px.
+Composition/framing: centered, fills about 90% of the square canvas, no cropping, readable at 34px and 56px.
 Lighting/mood: soft studio light, gentle shadow only under the sticker.
 Color palette: natural ingredient colors with a unified white sticker border and small pastel accent details.
-Materials/textures: plush felt, subtle fabric grain, raised puffy sticker edge.
+Materials/textures: plush felt body, subtle fabric grain, raised puffy sticker edge, crisp outer outline.
+Face details: eyes, mouth, and blush are crisp flat graphic shapes on top of the plush body.
 Constraints: no text, no labels, no watermark, no extra unrelated ingredients, no plate unless the ingredient requires a container to be recognized.
-Avoid: photorealism, complex background, busy props, realistic grocery packaging, hard shadows, dark background.
+Avoid: photorealism, complex background, busy props, realistic grocery packaging, hard shadows, dark background, surrounding stars, pieces, crystals, colored dots, sparkles, white blotch cleanup artifacts.
 ```
 
 ## Ingredient-Specific Guidance
@@ -101,30 +106,31 @@ Avoid: photorealism, complex background, busy props, realistic grocery packaging
 
 ## Batch Plan
 
-1. Keep the 9 approved samples as the visual anchor.
-2. Generate in category batches of 40-60 ingredients so review stays manageable.
-3. Start with high-frequency pantry ingredients before rare external ingredients.
-4. After every batch, update `manifest.json` and verify every referenced image exists.
-5. Only wire broader UI coverage after the manifest is complete enough to avoid a mixed visual surface.
+1. Keep the 21 approved plush-v2 images as frozen visual anchors.
+2. Generate a seed-derived missing list with `node scripts/ingredient-sticker-generation-plan.mjs`.
+3. Generate only the first pilot batch before starting large-scale batches.
+4. Review a contact sheet and regenerate failures before promoting images into `public/assets/ingredients/plush-v2/`.
+5. Use rollout batches of about 100 assets after the pilot is approved.
+6. After every batch, update `manifest.json` and verify every referenced image exists.
+7. Only wire broader UI coverage after the manifest is complete enough to avoid a mixed visual surface.
 
 Recommended order:
 
 | Batch | Scope |
 | --- | --- |
-| 1 | common pantry staples and current bundle ingredients |
-| 2 | remaining 양념 |
-| 3 | 채소 |
-| 4 | 곡류 and 유제품 |
-| 5 | 육류 and 해산물 |
-| 6 | 과일 and 기타 |
+| pilot-001 | 30 common missing ingredients across categories |
+| rollout-001+ | remaining missing ingredients in about 100-asset batches |
 
 ## QA Checklist
 
 - The ingredient is recognizable at `34x34` and `56x56`.
-- The subject is centered and not cropped.
+- The subject is centered, not cropped, and fills about 90% of the canvas.
 - The white sticker border is present.
+- The outer silhouette is crisp.
+- Eyes, mouth, and blush are crisp flat graphics.
 - The background stays simple and consistent.
+- There are no surrounding stars, pieces, crystals, colored dots, sparkles, or unrelated decorations.
 - There is no text or brand-like label.
-- The file is square `512x512`.
+- The file is square `512x512` WebP q95.
 - The manifest key exactly matches `ingredients.standard_name`.
-- The image path starts with `/assets/ingredients/plush/`.
+- The image path starts with `/assets/ingredients/plush-v2/`.

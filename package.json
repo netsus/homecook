@@ -64,6 +64,7 @@
     "external:ingredients:medium-risk-review": "node scripts/external-ingredient-medium-risk-review.mjs",
     "external:ingredients:review-pack": "node scripts/external-ingredient-review-pack.mjs",
     "ingredients:stickers:inventory": "node scripts/ingredient-sticker-inventory.mjs",
+    "ingredients:stickers:plan": "node scripts/ingredient-sticker-generation-plan.mjs",
     "external:recipes:hygiene-report": "node scripts/external-recipe-hygiene-report.mjs",
     "external:recipes:live-fetch": "node scripts/external-recipe-live-fetch.mjs",
     "external:recipes:review-pack": "node scripts/external-recipe-review-pack.mjs",
