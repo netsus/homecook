@@ -353,4 +353,57 @@ describe("21 ingredient dictionary backend", () => {
       expect(migrations).toContain(`'${canonicalName}', '${synonym}'`);
     }
   });
+
+  it("ships user-requested ingredient dictionary corrections without re-seeding deleted sesame rows", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260702034500_ingredient_dictionary_user_corrections.sql",
+      "utf8",
+    );
+    const seed = readFileSync("supabase/seed.sql", "utf8");
+
+    for (const [canonicalName, synonym] of [
+      ["방울토마토", "체리토마토"],
+      ["오리엔탈 소스", "오리엔탈"],
+      ["참깨", "통깨"],
+      ["참깨", "깨"],
+      ["발사믹 식초", "발사믹"],
+    ]) {
+      expect(migration).toContain(`('${canonicalName}', '${synonym}')`);
+    }
+
+    expect(migration).toContain("('크림 소스', '양념', 'paste_sauce', null)");
+
+    for (const removedName of [
+      "견과류",
+      "가공당",
+      "과당",
+      "감미료",
+      "고기 소스",
+      "굴 소스",
+      "껌",
+      "돼지불고기 양념",
+      "발사믹 소스",
+      "바닐라빈 페이스트",
+      "샐러드 드레싱",
+      "소불고기 양념",
+      "쇠기름",
+      "쇼트닝",
+      "스파게티 소스",
+      "양념닭 소스",
+      "연어기름",
+      "월계수",
+    ]) {
+      expect(migration).toContain(`'${removedName}'`);
+    }
+
+    expect(migration).toContain("select pg_temp.merge_ingredient_name('깨', '참깨', true)");
+    expect(migration).toContain("select pg_temp.merge_ingredient_name('통깨', '참깨', true)");
+    expect(migration).toContain("select pg_temp.merge_ingredient_name('오리엔탈', '오리엔탈 소스', true)");
+    expect(migration).toContain("select pg_temp.merge_ingredient_name('발사믹 소스', '발사믹 식초', false)");
+
+    expect(seed).toContain("'550e8400-e29b-41d4-a716-446655440021', '참깨'");
+    expect(seed).toContain("'660e8400-e29b-41d4-a716-446655440517'::uuid, '660e8400-e29b-41d4-a716-446655440501'::uuid, '참깨'");
+    expect(seed).not.toContain("'깨', '양념', 'spice_herb'");
+    expect(seed).not.toContain("'660e8400-e29b-41d4-a716-446655440501'::uuid, '깨'");
+  });
 });
