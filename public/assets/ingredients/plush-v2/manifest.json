@@ -26,6 +26,14 @@
       "src": "/assets/ingredients/plush-v2/egg.webp",
       "status": "approved-sample"
     },
+    "계피": {
+      "src": "/assets/ingredients/plush-v2/cinnamon.webp",
+      "status": "approved-user-request"
+    },
+    "계피가루": {
+      "src": "/assets/ingredients/plush-v2/cinnamon-powder.webp",
+      "status": "approved-user-request"
+    },
     "고구마": {
       "src": "/assets/ingredients/plush-v2/sweet-potato.webp",
       "status": "approved-pilot-001"
@@ -34,9 +42,37 @@
       "src": "/assets/ingredients/plush-v2/gochujang.webp",
       "status": "approved-pilot-001"
     },
+    "고추기름": {
+      "src": "/assets/ingredients/plush-v2/chili-oil.webp",
+      "status": "approved-user-request"
+    },
     "고춧가루": {
       "src": "/assets/ingredients/plush-v2/red-pepper-powder.webp",
       "status": "approved-sample"
+    },
+    "국간장": {
+      "src": "/assets/ingredients/plush-v2/soup-soy-sauce.webp",
+      "status": "approved-user-request"
+    },
+    "굴소스": {
+      "src": "/assets/ingredients/plush-v2/oyster-sauce.webp",
+      "status": "approved-user-request"
+    },
+    "꿀": {
+      "src": "/assets/ingredients/plush-v2/honey.webp",
+      "status": "approved-user-request"
+    },
+    "강낭콩": {
+      "src": "/assets/ingredients/plush-v2/kidney-bean.webp",
+      "status": "approved-user-request"
+    },
+    "강황": {
+      "src": "/assets/ingredients/plush-v2/turmeric.webp",
+      "status": "approved-user-request"
+    },
+    "강황가루": {
+      "src": "/assets/ingredients/plush-v2/turmeric-powder.webp",
+      "status": "approved-user-request"
     },
     "김치": {
       "src": "/assets/ingredients/plush-v2/kimchi.webp",
@@ -45,6 +81,10 @@
     "깻잎": {
       "src": "/assets/ingredients/plush-v2/perilla-leaf.webp",
       "status": "approved-pilot-001"
+    },
+    "낫토": {
+      "src": "/assets/ingredients/plush-v2/natto.webp",
+      "status": "approved-user-request"
     },
     "느타리버섯": {
       "src": "/assets/ingredients/plush-v2/oyster-mushroom.webp",
@@ -58,6 +98,10 @@
       "src": "/assets/ingredients/plush-v2/chicken.webp",
       "status": "approved-sample"
     },
+    "닭기름": {
+      "src": "/assets/ingredients/plush-v2/chicken-fat.webp",
+      "status": "approved-user-request"
+    },
     "당근": {
       "src": "/assets/ingredients/plush-v2/carrot.webp",
       "status": "approved-sample"
@@ -66,29 +110,141 @@
       "src": "/assets/ingredients/plush-v2/glass-noodles.webp",
       "status": "approved-pilot-001"
     },
+    "당밀": {
+      "src": "/assets/ingredients/plush-v2/molasses.webp",
+      "status": "approved-user-request"
+    },
+    "다진마늘": {
+      "src": "/assets/ingredients/plush-v2/minced-garlic.webp",
+      "status": "approved-user-request"
+    },
+    "다진생강": {
+      "src": "/assets/ingredients/plush-v2/minced-ginger.webp",
+      "status": "approved-user-request"
+    },
     "대파": {
       "src": "/assets/ingredients/plush-v2/green-onion.webp",
       "status": "approved-sample"
+    },
+    "데리야끼 소스": {
+      "src": "/assets/ingredients/plush-v2/teriyaki-sauce.webp",
+      "status": "approved-user-request"
+    },
+    "돈까스소스": {
+      "src": "/assets/ingredients/plush-v2/tonkatsu-sauce.webp",
+      "status": "approved-user-request"
     },
     "돼지고기": {
       "src": "/assets/ingredients/plush-v2/pork.webp",
       "status": "approved-sample"
     },
+    "돼지기름": {
+      "src": "/assets/ingredients/plush-v2/pork-fat.webp",
+      "status": "approved-user-request"
+    },
     "된장": {
       "src": "/assets/ingredients/plush-v2/doenjang.webp",
       "status": "approved-pilot-001"
+    },
+    "두반장": {
+      "src": "/assets/ingredients/plush-v2/doubanjiang-v2.webp",
+      "status": "approved-user-request"
     },
     "두부": {
       "src": "/assets/ingredients/plush-v2/tofu.webp",
       "status": "approved-sample"
     },
+    "들깨가루": {
+      "src": "/assets/ingredients/plush-v2/perilla-seed-powder.webp",
+      "status": "approved-user-request"
+    },
     "딸기": {
       "src": "/assets/ingredients/plush-v2/strawberry.webp",
       "status": "approved-pilot-001"
     },
+    "땅콩 버터": {
+      "src": "/assets/ingredients/plush-v2/peanut-butter.webp",
+      "status": "approved-user-request"
+    },
+    "땅콩기름": {
+      "src": "/assets/ingredients/plush-v2/peanut-oil.webp",
+      "status": "approved-user-request"
+    },
+    "라면 건더기 스프": {
+      "src": "/assets/ingredients/plush-v2/ramen-dried-flakes.webp",
+      "status": "approved-user-request"
+    },
+    "라면 스프": {
+      "src": "/assets/ingredients/plush-v2/ramen-seasoning-powder.webp",
+      "status": "approved-user-request"
+    },
+    "라벤더": {
+      "src": "/assets/ingredients/plush-v2/lavender.webp",
+      "status": "approved-user-request"
+    },
+    "레몬": {
+      "src": "/assets/ingredients/plush-v2/lemon.webp",
+      "status": "approved-user-request"
+    },
+    "레몬즙": {
+      "src": "/assets/ingredients/plush-v2/lemon-juice.webp",
+      "status": "approved-user-request"
+    },
+    "레몬그라스": {
+      "src": "/assets/ingredients/plush-v2/lemongrass.webp",
+      "status": "approved-user-request"
+    },
+    "로즈메리": {
+      "src": "/assets/ingredients/plush-v2/rosemary.webp",
+      "status": "approved-user-request"
+    },
+    "로열 젤리": {
+      "src": "/assets/ingredients/plush-v2/royal-jelly.webp",
+      "status": "approved-user-request"
+    },
+    "마가린": {
+      "src": "/assets/ingredients/plush-v2/margarine.webp",
+      "status": "approved-user-request"
+    },
     "마늘": {
       "src": "/assets/ingredients/plush-v2/garlic.webp",
       "status": "approved-sample"
+    },
+    "마늘기름": {
+      "src": "/assets/ingredients/plush-v2/garlic-oil.webp",
+      "status": "approved-user-request"
+    },
+    "마라 육수": {
+      "src": "/assets/ingredients/plush-v2/mala-broth.webp",
+      "status": "approved-user-request"
+    },
+    "마시멜로": {
+      "src": "/assets/ingredients/plush-v2/marshmallow.webp",
+      "status": "approved-user-request"
+    },
+    "마요네즈": {
+      "src": "/assets/ingredients/plush-v2/mayonnaise.webp",
+      "status": "approved-user-request"
+    },
+    "매실청": {
+      "src": "/assets/ingredients/plush-v2/maesil-cheong.webp",
+      "status": "approved-user-request"
+    },
+    "면실유": {
+      "src": "/assets/ingredients/plush-v2/cottonseed-oil.webp",
+      "status": "approved-user-request"
+    },
+    "머스타드 소스": {
+      "src": "/assets/ingredients/plush-v2/mustard-sauce.webp",
+      "status": "approved-user-request"
+    },
+    "멸치액젓": {
+      "src": "/assets/ingredients/plush-v2/anchovy-fish-sauce.webp",
+      "status": "approved-user-request"
+    },
+    "물엿": {
+      "src": "/assets/ingredients/plush-v2/starch-syrup.webp",
+      "status": "approved-user-request"
     },
     "무": {
       "src": "/assets/ingredients/plush-v2/radish.webp",
@@ -98,13 +254,45 @@
       "src": "/assets/ingredients/plush-v2/flour.webp",
       "status": "approved-pilot-001"
     },
+    "미소": {
+      "src": "/assets/ingredients/plush-v2/miso.webp",
+      "status": "approved-user-request"
+    },
+    "미원": {
+      "src": "/assets/ingredients/plush-v2/msg-seasoning.webp",
+      "status": "approved-user-request"
+    },
+    "민트": {
+      "src": "/assets/ingredients/plush-v2/mint.webp",
+      "status": "approved-user-request"
+    },
     "바나나": {
       "src": "/assets/ingredients/plush-v2/banana.webp",
       "status": "approved-pilot-001"
     },
+    "바닐라 페이스트": {
+      "src": "/assets/ingredients/plush-v2/vanilla-paste.webp",
+      "status": "approved-user-request"
+    },
+    "바닐라빈 페이스트": {
+      "src": "/assets/ingredients/plush-v2/vanilla-bean-paste.webp",
+      "status": "approved-user-request"
+    },
+    "바닐라익스트랙": {
+      "src": "/assets/ingredients/plush-v2/vanilla-extract.webp",
+      "status": "approved-user-request"
+    },
+    "바비큐 소스": {
+      "src": "/assets/ingredients/plush-v2/barbecue-sauce.webp",
+      "status": "approved-user-request"
+    },
     "밥": {
       "src": "/assets/ingredients/plush-v2/cooked-rice.webp",
       "status": "approved-sample"
+    },
+    "발사믹 식초": {
+      "src": "/assets/ingredients/plush-v2/balsamic-vinegar.webp",
+      "status": "approved-user-request"
     },
     "방울토마토": {
       "src": "/assets/ingredients/plush-v2/cherry-tomato.webp",
@@ -118,9 +306,29 @@
       "src": "/assets/ingredients/plush-v2/butter.webp",
       "status": "approved-sample"
     },
+    "복숭아씨기름": {
+      "src": "/assets/ingredients/plush-v2/peach-kernel-oil.webp",
+      "status": "approved-user-request"
+    },
     "부추": {
       "src": "/assets/ingredients/plush-v2/chives.webp",
       "status": "approved-pilot-001"
+    },
+    "사과": {
+      "src": "/assets/ingredients/plush-v2/apple.webp",
+      "status": "approved-user-request"
+    },
+    "사우전드아일랜드": {
+      "src": "/assets/ingredients/plush-v2/thousand-island-dressing.webp",
+      "status": "approved-user-request"
+    },
+    "사프란": {
+      "src": "/assets/ingredients/plush-v2/saffron.webp",
+      "status": "approved-user-request"
+    },
+    "산초": {
+      "src": "/assets/ingredients/plush-v2/sansho-pepper.webp",
+      "status": "approved-user-request"
     },
     "상추": {
       "src": "/assets/ingredients/plush-v2/lettuce.webp",
@@ -129,6 +337,14 @@
     "새우": {
       "src": "/assets/ingredients/plush-v2/shrimp.webp",
       "status": "approved-pilot-001"
+    },
+    "생강 페이스트": {
+      "src": "/assets/ingredients/plush-v2/ginger-paste.webp",
+      "status": "approved-user-request"
+    },
+    "생강청": {
+      "src": "/assets/ingredients/plush-v2/ginger-cheong.webp",
+      "status": "approved-user-request"
     },
     "설탕": {
       "src": "/assets/ingredients/plush-v2/sugar.webp",
@@ -146,6 +362,22 @@
       "src": "/assets/ingredients/plush-v2/somyeon.webp",
       "status": "approved-pilot-001"
     },
+    "수끼 소스": {
+      "src": "/assets/ingredients/plush-v2/suki-sauce.webp",
+      "status": "approved-user-request"
+    },
+    "슈가파우더": {
+      "src": "/assets/ingredients/plush-v2/powdered-sugar.webp",
+      "status": "approved-user-request"
+    },
+    "스리라차 소스": {
+      "src": "/assets/ingredients/plush-v2/sriracha-sauce.webp",
+      "status": "approved-user-request"
+    },
+    "시럽": {
+      "src": "/assets/ingredients/plush-v2/syrup.webp",
+      "status": "approved-user-request"
+    },
     "식용유": {
       "src": "/assets/ingredients/plush-v2/cooking-oil.webp",
       "status": "approved-pilot-001"
@@ -154,9 +386,45 @@
       "src": "/assets/ingredients/plush-v2/rice.webp",
       "status": "approved-sample"
     },
+    "쌀겨기름": {
+      "src": "/assets/ingredients/plush-v2/rice-bran-oil.webp",
+      "status": "approved-user-request"
+    },
+    "쌈장": {
+      "src": "/assets/ingredients/plush-v2/ssamjang.webp",
+      "status": "approved-user-request"
+    },
+    "아마씨유": {
+      "src": "/assets/ingredients/plush-v2/flaxseed-oil.webp",
+      "status": "approved-user-request"
+    },
+    "아몬드유": {
+      "src": "/assets/ingredients/plush-v2/almond-oil.webp",
+      "status": "approved-user-request"
+    },
+    "아보카도유": {
+      "src": "/assets/ingredients/plush-v2/avocado-oil.webp",
+      "status": "approved-user-request"
+    },
+    "알룰로스": {
+      "src": "/assets/ingredients/plush-v2/allulose.webp",
+      "status": "approved-user-request"
+    },
+    "애플민트": {
+      "src": "/assets/ingredients/plush-v2/apple-mint.webp",
+      "status": "approved-user-request"
+    },
+    "액젓": {
+      "src": "/assets/ingredients/plush-v2/fish-sauce.webp",
+      "status": "approved-user-request"
+    },
     "애호박": {
       "src": "/assets/ingredients/plush-v2/zucchini.webp",
       "status": "approved-sample"
+    },
+    "양갱": {
+      "src": "/assets/ingredients/plush-v2/yanggaeng.webp",
+      "status": "approved-user-request"
     },
     "양배추": {
       "src": "/assets/ingredients/plush-v2/cabbage.webp",
@@ -166,21 +434,81 @@
       "src": "/assets/ingredients/plush-v2/onion.webp",
       "status": "approved-sample"
     },
+    "양파시즈닝": {
+      "src": "/assets/ingredients/plush-v2/onion-seasoning.webp",
+      "status": "approved-user-request"
+    },
+    "어간장": {
+      "src": "/assets/ingredients/plush-v2/fish-soy-sauce.webp",
+      "status": "approved-user-request"
+    },
+    "연겨자": {
+      "src": "/assets/ingredients/plush-v2/korean-soft-mustard-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "열무김치 국물": {
+      "src": "/assets/ingredients/plush-v2/young-radish-kimchi-brine.webp",
+      "status": "approved-user-request"
+    },
     "연어": {
       "src": "/assets/ingredients/plush-v2/salmon.webp",
       "status": "approved-pilot-001"
+    },
+    "엿": {
+      "src": "/assets/ingredients/plush-v2/yeot.webp",
+      "status": "approved-user-request"
+    },
+    "오레가노": {
+      "src": "/assets/ingredients/plush-v2/oregano.webp",
+      "status": "approved-user-request"
     },
     "오이": {
       "src": "/assets/ingredients/plush-v2/cucumber.webp",
       "status": "approved-pilot-001"
     },
+    "옥수수기름": {
+      "src": "/assets/ingredients/plush-v2/corn-oil.webp",
+      "status": "approved-user-request"
+    },
+    "올리브 오일": {
+      "src": "/assets/ingredients/plush-v2/olive-oil-bottle.webp",
+      "status": "approved-user-request"
+    },
     "올리브유": {
-      "src": "/assets/ingredients/plush-v2/olive-oil.webp",
-      "status": "approved-pilot-001"
+      "src": "/assets/ingredients/plush-v2/olive-oil-bottle.webp",
+      "status": "approved-user-request"
+    },
+    "올스파이스": {
+      "src": "/assets/ingredients/plush-v2/allspice.webp",
+      "status": "approved-user-request"
     },
     "우유": {
       "src": "/assets/ingredients/plush-v2/milk.webp",
       "status": "approved-pilot-001"
+    },
+    "우스터 소스": {
+      "src": "/assets/ingredients/plush-v2/worcestershire-sauce.webp",
+      "status": "approved-user-request"
+    },
+    "원당": {
+      "src": "/assets/ingredients/plush-v2/raw-sugar.webp",
+      "status": "approved-user-request"
+    },
+    "월계수잎": {
+      "src": "/assets/ingredients/plush-v2/bay-leaves.webp",
+      "status": "approved-user-request"
+    },
+    "유자청": {
+      "src": "/assets/ingredients/plush-v2/yuja-cheong.webp",
+      "status": "approved-user-request"
+    },
+    "유채씨기름": {
+      "src": "/assets/ingredients/plush-v2/rapeseed-oil.webp",
+      "status": "approved-user-request"
+    },
+    "육두구": {
+      "src": "/assets/ingredients/plush-v2/nutmeg.webp",
+      "status": "approved-user-request"
     },
     "참기름": {
       "src": "/assets/ingredients/plush-v2/sesame-oil.webp",
@@ -213,6 +541,138 @@
     "후추": {
       "src": "/assets/ingredients/plush-v2/black-pepper.webp",
       "status": "approved-sample"
+    },
+    "가래떡": {
+      "src": "/assets/ingredients/plush-v2/garaetteok-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "가리비": {
+      "src": "/assets/ingredients/plush-v2/scallop-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "가시오갈피": {
+      "src": "/assets/ingredients/plush-v2/eleuthero-diary-sticker-no-limbs.webp",
+      "status": "approved-user-request"
+    },
+    "갓": {
+      "src": "/assets/ingredients/plush-v2/gat-mustard-greens-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "거위고기": {
+      "src": "/assets/ingredients/plush-v2/goose-meat-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "거위알": {
+      "src": "/assets/ingredients/plush-v2/goose-egg-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "겨자": {
+      "src": "/assets/ingredients/plush-v2/mustard-paste-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "겨자 페이스트": {
+      "src": "/assets/ingredients/plush-v2/mustard-paste-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "고다 치즈": {
+      "src": "/assets/ingredients/plush-v2/gouda-cheese-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "고등어": {
+      "src": "/assets/ingredients/plush-v2/mackerel-diary-sticker-anchovy-face.webp",
+      "status": "approved-user-request"
+    },
+    "고추냉이": {
+      "src": "/assets/ingredients/plush-v2/wasabi-root-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "골든세이지": {
+      "src": "/assets/ingredients/plush-v2/golden-sage-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "김": {
+      "src": "/assets/ingredients/plush-v2/gim-bundle-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "맛술": {
+      "src": "/assets/ingredients/plush-v2/cooking-wine-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "멸치": {
+      "src": "/assets/ingredients/plush-v2/dried-anchovy-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "모시조개": {
+      "src": "/assets/ingredients/plush-v2/clam-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "미역": {
+      "src": "/assets/ingredients/plush-v2/wakame-seaweed-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "빵가루": {
+      "src": "/assets/ingredients/plush-v2/bread-crumbs-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "생크림": {
+      "src": "/assets/ingredients/plush-v2/fresh-cream-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "식초": {
+      "src": "/assets/ingredients/plush-v2/vinegar-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "오징어": {
+      "src": "/assets/ingredients/plush-v2/squid-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "옥수수전분": {
+      "src": "/assets/ingredients/plush-v2/corn-starch-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "올리고당": {
+      "src": "/assets/ingredients/plush-v2/oligosaccharide-syrup-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "전분": {
+      "src": "/assets/ingredients/plush-v2/starch-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "전분가루": {
+      "src": "/assets/ingredients/plush-v2/starch-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "조개": {
+      "src": "/assets/ingredients/plush-v2/clam-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "참깨": {
+      "src": "/assets/ingredients/plush-v2/sesame-seeds-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "들기름": {
+      "src": "/assets/ingredients/plush-v2/perilla-oil-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "두유 그릭 요거트": {
+      "src": "/assets/ingredients/plush-v2/soy-milk-greek-yogurt-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "플레인요거트": {
+      "src": "/assets/ingredients/plush-v2/greek-yogurt-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "오리엔탈": {
+      "src": "/assets/ingredients/plush-v2/oriental-dressing.webp",
+      "status": "approved-user-request"
+    },
+    "크림": {
+      "src": "/assets/ingredients/plush-v2/cream-sauce.webp",
+      "status": "approved-user-request"
+    },
+    "토마토 소스": {
+      "src": "/assets/ingredients/plush-v2/tomato-sauce.webp",
+      "status": "approved-user-request"
     }
   }
 }
