@@ -23,7 +23,7 @@ values
   ('550e8400-e29b-41d4-a716-446655440018', '후추', '양념', 'spice_herb', null),
   ('550e8400-e29b-41d4-a716-446655440019', '참기름', '양념', 'oil_vinegar_sugar_stock', null),
   ('550e8400-e29b-41d4-a716-446655440020', '식용유', '양념', 'oil_vinegar_sugar_stock', null),
-  ('550e8400-e29b-41d4-a716-446655440021', '깨', '양념', 'spice_herb', null),
+  ('550e8400-e29b-41d4-a716-446655440021', '참깨', '양념', 'spice_herb', null),
   ('550e8400-e29b-41d4-a716-446655440022', '간장', '양념', 'paste_sauce', null),
   ('550e8400-e29b-41d4-a716-446655440023', '된장', '양념', 'paste_sauce', null),
   ('550e8400-e29b-41d4-a716-446655440024', '고추장', '양념', 'paste_sauce', null),
@@ -71,6 +71,16 @@ from public.ingredients
 where ingredients.standard_name = '대파'
 on conflict (ingredient_id, synonym) do nothing;
 
+insert into public.ingredient_synonyms (id, ingredient_id, synonym)
+select v.id, ingredients.id, v.synonym
+from (values
+  ('550e8400-e29b-41d4-a716-446655440111'::uuid, '참깨', '통깨'),
+  ('550e8400-e29b-41d4-a716-446655440112'::uuid, '참깨', '깨')
+) as v(id, standard_name, synonym)
+join public.ingredients
+  on ingredients.standard_name = v.standard_name
+on conflict (ingredient_id, synonym) do nothing;
+
 insert into public.ingredient_bundles (id, name, display_order)
 values
   ('660e8400-e29b-41d4-a716-446655440501', '기본 양념', 1),
@@ -105,7 +115,7 @@ with seed_bundle_items (id, bundle_id, standard_name) as (
     ('660e8400-e29b-41d4-a716-446655440514'::uuid, '660e8400-e29b-41d4-a716-446655440501'::uuid, '후추'),
     ('660e8400-e29b-41d4-a716-446655440515'::uuid, '660e8400-e29b-41d4-a716-446655440501'::uuid, '참기름'),
     ('660e8400-e29b-41d4-a716-446655440516'::uuid, '660e8400-e29b-41d4-a716-446655440501'::uuid, '식용유'),
-    ('660e8400-e29b-41d4-a716-446655440517'::uuid, '660e8400-e29b-41d4-a716-446655440501'::uuid, '깨'),
+    ('660e8400-e29b-41d4-a716-446655440517'::uuid, '660e8400-e29b-41d4-a716-446655440501'::uuid, '참깨'),
     ('660e8400-e29b-41d4-a716-446655440521'::uuid, '660e8400-e29b-41d4-a716-446655440502'::uuid, '간장'),
     ('660e8400-e29b-41d4-a716-446655440522'::uuid, '660e8400-e29b-41d4-a716-446655440502'::uuid, '국간장'),
     ('660e8400-e29b-41d4-a716-446655440523'::uuid, '660e8400-e29b-41d4-a716-446655440502'::uuid, '된장'),
