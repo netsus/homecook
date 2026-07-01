@@ -53,6 +53,9 @@ Generated: 2026-06-30
 - Follow-up correction restored the no-outline pilot baseline for most assets while keeping targeted shape fixes.
 - `바나나`, `청양고추`, `오이`, and `고구마` were corrected for balanced limbs.
 - `콩나물` and `김치` use container-based compositions with the face on the container.
+- Selection pass 002 corrected `청양고추`, `오이`, `가지`, `고추장`, `깻잎`, and `당면` for ingredient shape, limb placement/material, face readability, and container color separation.
+- Selection pass 003 refined `청양고추`, `오이`, and `가지` right-foot placement against the body line, and matched `깻잎` limb shape to the rounded garlic-style plush reference.
+- Selection pass 004 raised the `청양고추`, `오이`, and `가지` right feet further against the body line for stronger left-right symmetry.
 
 ## Next Step
 
