@@ -41,6 +41,18 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("렌틸콩")).toBeNull();
   });
 
+  it("uses the corrected local sticker selections for pilot pantry ingredients", () => {
+    expect(getPantryStickerSrc("청양고추")).toBe(
+      "/assets/ingredients/plush-v2/cheongyang-pepper.webp",
+    );
+    expect(getPantryStickerSrc("오이")).toBe(
+      "/assets/ingredients/plush-v2/cucumber.webp",
+    );
+    expect(getPantryStickerSrc("가지")).toBe(
+      "/assets/ingredients/plush-v2/eggplant.webp",
+    );
+  });
+
   it("keeps plush-v2 sticker sources as 512px WebP assets for crisp pantry rendering", () => {
     const items = stickerManifest.items as Record<string, PantryStickerManifestItem>;
 
