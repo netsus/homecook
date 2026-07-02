@@ -42,9 +42,21 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("강황가루")).toBe(
       "/assets/ingredients/plush-v2/turmeric-powder.webp",
     );
+    expect(getPantryStickerSrc("갯기름나물")).toBe(
+      "/assets/ingredients/plush-v2/coastal-hog-fennel-greens.webp",
+    );
+    expect(getPantryStickerSrc("갯나물")).toBe(
+      "/assets/ingredients/plush-v2/seashore-greens.webp",
+    );
+    expect(getPantryStickerSrc("경수채")).toBe(
+      "/assets/ingredients/plush-v2/mizuna-greens.webp",
+    );
     expect(getPantryStickerSrc("계피")).toBe("/assets/ingredients/plush-v2/cinnamon.webp");
     expect(getPantryStickerSrc("계피가루")).toBe(
       "/assets/ingredients/plush-v2/cinnamon-powder.webp",
+    );
+    expect(getPantryStickerSrc("고려엉겅퀴")).toBe(
+      "/assets/ingredients/plush-v2/gondre-thistle-greens.webp",
     );
     expect(getPantryStickerSrc("고추기름")).toBe(
       "/assets/ingredients/plush-v2/chili-oil.webp",
@@ -59,6 +71,85 @@ describe("pantry mobile visuals", () => {
       "/assets/ingredients/plush-v2/oyster-sauce.webp",
     );
     expect(getPantryStickerSrc("달걀")).toBe("/assets/ingredients/plush-v2/egg.webp");
+    expect(getPantryStickerSrc("갓김치")).toBe(
+      "/assets/ingredients/plush-v2/gat-kimchi.webp",
+    );
+    expect(getPantryStickerSrc("김치국물")).toBe(
+      "/assets/ingredients/plush-v2/kimchi-brine.webp",
+    );
+    expect(getPantryStickerSrc("고추장아찌")).toBe(
+      "/assets/ingredients/plush-v2/pickled-green-chili.webp",
+    );
+    expect(getPantryStickerSrc("고수")).toBe(
+      "/assets/ingredients/plush-v2/cilantro.webp",
+    );
+    expect(getPantryStickerSrc("고춧잎")).toBe(
+      "/assets/ingredients/plush-v2/chili-pepper-leaves.webp",
+    );
+    expect(getPantryStickerSrc("깍두기")).toBe(
+      "/assets/ingredients/plush-v2/kkakdugi.webp",
+    );
+    expect(getPantryStickerSrc("근대")).toBe(
+      "/assets/ingredients/plush-v2/swiss-chard.webp",
+    );
+    expect(getPantryStickerSrc("꽃양배추")).toBe(
+      "/assets/ingredients/plush-v2/cauliflower.webp",
+    );
+    expect(getPantryStickerSrc("나박 김치")).toBe(
+      "/assets/ingredients/plush-v2/nabak-kimchi.webp",
+    );
+    expect(getPantryStickerSrc("냉이")).toBe(
+      "/assets/ingredients/plush-v2/shepherds-purse.webp",
+    );
+    expect(getPantryStickerSrc("누리장나무잎")).toBe(
+      "/assets/ingredients/plush-v2/harlequin-glorybower-leaves.webp",
+    );
+    expect(getPantryStickerSrc("는쟁이냉이")).toBe(
+      "/assets/ingredients/plush-v2/neunjangi-naengi.webp",
+    );
+    expect(getPantryStickerSrc("단무지")).toBe(
+      "/assets/ingredients/plush-v2/danmuji.webp",
+    );
+    expect(getPantryStickerSrc("동치미")).toBe(
+      "/assets/ingredients/plush-v2/dongchimi.webp",
+    );
+    expect(getPantryStickerSrc("돌나물")).toBe(
+      "/assets/ingredients/plush-v2/stonecrop.webp",
+    );
+    expect(getPantryStickerSrc("신김치")).toBe(
+      "/assets/ingredients/plush-v2/sour-kimchi.webp",
+    );
+    expect(getPantryStickerSrc("들깻잎장아찌")).toBe(
+      "/assets/ingredients/plush-v2/pickled-perilla-leaves.webp",
+    );
+    expect(getPantryStickerSrc("마늘 장아찌")).toBe(
+      "/assets/ingredients/plush-v2/pickled-garlic.webp",
+    );
+    expect(getPantryStickerSrc("마늘종 장아찌")).toBe(
+      "/assets/ingredients/plush-v2/pickled-garlic-scapes.webp",
+    );
+    expect(getPantryStickerSrc("무 절임")).toBe(
+      "/assets/ingredients/plush-v2/pickled-radish.webp",
+    );
+    expect(getPantryStickerSrc("무말랭이")).toBe(
+      "/assets/ingredients/plush-v2/dried-radish-strips.webp",
+    );
+    expect(getPantryStickerSrc("백김치")).toBe(
+      "/assets/ingredients/plush-v2/baek-kimchi.webp",
+    );
+    expect(getPantryStickerSrc("비트 피클")).toBe(
+      "/assets/ingredients/plush-v2/beet-pickle.webp",
+    );
+    expect(getPantryStickerSrc("산마늘 장아찌")).toBe(
+      "/assets/ingredients/plush-v2/pickled-wild-garlic.webp",
+    );
+    expect(getPantryStickerSrc("생강 피클")).toBe(
+      "/assets/ingredients/plush-v2/pickled-ginger.webp",
+    );
+    expect(getPantryStickerSrc("쌈무")).toBe("/assets/ingredients/plush-v2/ssammu.webp");
+    expect(getPantryStickerSrc("양파 장아찌")).toBe(
+      "/assets/ingredients/plush-v2/pickled-onion.webp",
+    );
     expect(getPantryStickerSrc("꿀")).toBe("/assets/ingredients/plush-v2/honey.webp");
     expect(getPantryStickerSrc("낫토")).toBe("/assets/ingredients/plush-v2/natto.webp");
     expect(getPantryStickerSrc("닭기름")).toBe(
@@ -69,6 +160,9 @@ describe("pantry mobile visuals", () => {
     );
     expect(getPantryStickerSrc("다진생강")).toBe(
       "/assets/ingredients/plush-v2/minced-ginger.webp",
+    );
+    expect(getPantryStickerSrc("다시다")).toBe(
+      "/assets/ingredients/plush-v2/dashida-seasoning.webp",
     );
     expect(getPantryStickerSrc("당밀")).toBe("/assets/ingredients/plush-v2/molasses.webp");
     expect(getPantryStickerSrc("데리야끼 소스")).toBe(
@@ -109,11 +203,17 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("레몬그라스")).toBe(
       "/assets/ingredients/plush-v2/lemongrass.webp",
     );
+    expect(getPantryStickerSrc("로메인")).toBe(
+      "/assets/ingredients/plush-v2/romaine-lettuce.webp",
+    );
     expect(getPantryStickerSrc("로즈메리")).toBe(
       "/assets/ingredients/plush-v2/rosemary.webp",
     );
     expect(getPantryStickerSrc("로열 젤리")).toBe(
       "/assets/ingredients/plush-v2/royal-jelly.webp",
+    );
+    expect(getPantryStickerSrc("루꼴라")).toBe(
+      "/assets/ingredients/plush-v2/arugula.webp",
     );
     expect(getPantryStickerSrc("마가린")).toBe(
       "/assets/ingredients/plush-v2/margarine.webp",
@@ -133,6 +233,9 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("매실청")).toBe(
       "/assets/ingredients/plush-v2/maesil-cheong.webp",
     );
+    expect(getPantryStickerSrc("매실 절임")).toBe(
+      "/assets/ingredients/plush-v2/pickled-maesil.webp",
+    );
     expect(getPantryStickerSrc("면실유")).toBe(
       "/assets/ingredients/plush-v2/cottonseed-oil.webp",
     );
@@ -142,14 +245,41 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("멸치액젓")).toBe(
       "/assets/ingredients/plush-v2/anchovy-fish-sauce.webp",
     );
+    expect(getPantryStickerSrc("모링가")).toBe(
+      "/assets/ingredients/plush-v2/moringa-leaves.webp",
+    );
+    expect(getPantryStickerSrc("물냉이")).toBe(
+      "/assets/ingredients/plush-v2/watercress.webp",
+    );
     expect(getPantryStickerSrc("물엿")).toBe(
       "/assets/ingredients/plush-v2/starch-syrup.webp",
+    );
+    expect(getPantryStickerSrc("물쑥")).toBe(
+      "/assets/ingredients/plush-v2/water-mugwort.webp",
+    );
+    expect(getPantryStickerSrc("미나리")).toBe(
+      "/assets/ingredients/plush-v2/minari.webp",
+    );
+    expect(getPantryStickerSrc("미나리청")).toBe(
+      "/assets/ingredients/plush-v2/minari-cheong.webp",
     );
     expect(getPantryStickerSrc("미소")).toBe("/assets/ingredients/plush-v2/miso.webp");
     expect(getPantryStickerSrc("미원")).toBe(
       "/assets/ingredients/plush-v2/msg-seasoning.webp",
     );
+    expect(getPantryStickerSrc("민들레")).toBe(
+      "/assets/ingredients/plush-v2/dandelion.webp",
+    );
+    expect(getPantryStickerSrc("민들레 잎")).toBe(
+      "/assets/ingredients/plush-v2/dandelion-leaves.webp",
+    );
     expect(getPantryStickerSrc("민트")).toBe("/assets/ingredients/plush-v2/mint.webp");
+    expect(getPantryStickerSrc("바질")).toBe(
+      "/assets/ingredients/plush-v2/basil.webp",
+    );
+    expect(getPantryStickerSrc("방가지똥")).toBe(
+      "/assets/ingredients/plush-v2/sow-thistle-greens.webp",
+    );
     expect(getPantryStickerSrc("바닐라 페이스트")).toBe(
       "/assets/ingredients/plush-v2/vanilla-paste.webp",
     );
@@ -165,17 +295,59 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("발사믹 식초")).toBe(
       "/assets/ingredients/plush-v2/balsamic-vinegar.webp",
     );
+    expect(getPantryStickerSrc("방울다다기양배추")).toBe(
+      "/assets/ingredients/plush-v2/brussels-sprouts.webp",
+    );
+    expect(getPantryStickerSrc("배초향")).toBe(
+      "/assets/ingredients/plush-v2/korean-mint-leaves.webp",
+    );
+    expect(getPantryStickerSrc("배추김치")).toBe(
+      "/assets/ingredients/plush-v2/baechu-kimchi.webp",
+    );
+    expect(getPantryStickerSrc("버터헤드")).toBe(
+      "/assets/ingredients/plush-v2/butterhead-lettuce.webp",
+    );
+    expect(getPantryStickerSrc("봄동")).toBe(
+      "/assets/ingredients/plush-v2/bomdong-cabbage.webp",
+    );
     expect(getPantryStickerSrc("복숭아씨기름")).toBe(
       "/assets/ingredients/plush-v2/peach-kernel-oil.webp",
+    );
+    expect(getPantryStickerSrc("부지깽이")).toBe(
+      "/assets/ingredients/plush-v2/bujiggaengi-greens.webp",
+    );
+    expect(getPantryStickerSrc("비름")).toBe(
+      "/assets/ingredients/plush-v2/amaranth-greens.webp",
+    );
+    expect(getPantryStickerSrc("비비추")).toBe(
+      "/assets/ingredients/plush-v2/hosta-leaves.webp",
     );
     expect(getPantryStickerSrc("사우전드아일랜드")).toBe(
       "/assets/ingredients/plush-v2/thousand-island-dressing.webp",
     );
+    expect(getPantryStickerSrc("비타민채")).toBe(
+      "/assets/ingredients/plush-v2/vitamin-greens.webp",
+    );
     expect(getPantryStickerSrc("사프란")).toBe(
       "/assets/ingredients/plush-v2/saffron.webp",
     );
+    expect(getPantryStickerSrc("뽕잎")).toBe(
+      "/assets/ingredients/plush-v2/mulberry-leaves.webp",
+    );
     expect(getPantryStickerSrc("산초")).toBe(
       "/assets/ingredients/plush-v2/sansho-pepper.webp",
+    );
+    expect(getPantryStickerSrc("삼나물")).toBe(
+      "/assets/ingredients/plush-v2/samnamul-greens.webp",
+    );
+    expect(getPantryStickerSrc("삼채")).toBe(
+      "/assets/ingredients/plush-v2/samchae.webp",
+    );
+    expect(getPantryStickerSrc("섬초롱")).toBe(
+      "/assets/ingredients/plush-v2/island-bellflower-greens.webp",
+    );
+    expect(getPantryStickerSrc("셀러리")).toBe(
+      "/assets/ingredients/plush-v2/celery.webp",
     );
     expect(getPantryStickerSrc("생강 페이스트")).toBe(
       "/assets/ingredients/plush-v2/ginger-paste.webp",
@@ -193,11 +365,44 @@ describe("pantry mobile visuals", () => {
       "/assets/ingredients/plush-v2/sriracha-sauce.webp",
     );
     expect(getPantryStickerSrc("시럽")).toBe("/assets/ingredients/plush-v2/syrup.webp");
+    expect(getPantryStickerSrc("소리쟁이")).toBe(
+      "/assets/ingredients/plush-v2/curly-dock-greens.webp",
+    );
+    expect(getPantryStickerSrc("쇠귀나물")).toBe(
+      "/assets/ingredients/plush-v2/arrowhead-greens.webp",
+    );
+    expect(getPantryStickerSrc("수리취")).toBe(
+      "/assets/ingredients/plush-v2/surichwi-greens.webp",
+    );
+    expect(getPantryStickerSrc("숙주나물")).toBe(
+      "/assets/ingredients/plush-v2/mung-bean-sprouts.webp",
+    );
+    expect(getPantryStickerSrc("시금치")).toBe(
+      "/assets/ingredients/plush-v2/spinach.webp",
+    );
+    expect(getPantryStickerSrc("시래기")).toBe(
+      "/assets/ingredients/plush-v2/dried-radish-greens-siraegi.webp",
+    );
+    expect(getPantryStickerSrc("신선초")).toBe(
+      "/assets/ingredients/plush-v2/ashitaba-greens.webp",
+    );
     expect(getPantryStickerSrc("쌀겨기름")).toBe(
       "/assets/ingredients/plush-v2/rice-bran-oil.webp",
     );
     expect(getPantryStickerSrc("쌈장")).toBe(
       "/assets/ingredients/plush-v2/ssamjang.webp",
+    );
+    expect(getPantryStickerSrc("쌈추")).toBe(
+      "/assets/ingredients/plush-v2/ssamchu.webp",
+    );
+    expect(getPantryStickerSrc("쑥")).toBe(
+      "/assets/ingredients/plush-v2/mugwort.webp",
+    );
+    expect(getPantryStickerSrc("쑥갓")).toBe(
+      "/assets/ingredients/plush-v2/crown-daisy-greens.webp",
+    );
+    expect(getPantryStickerSrc("쑥부쟁이")).toBe(
+      "/assets/ingredients/plush-v2/aster-greens.webp",
     );
     expect(getPantryStickerSrc("아마씨유")).toBe(
       "/assets/ingredients/plush-v2/flaxseed-oil.webp",
@@ -229,6 +434,9 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("열무김치 국물")).toBe(
       "/assets/ingredients/plush-v2/young-radish-kimchi-brine.webp",
     );
+    expect(getPantryStickerSrc("열무 김치")).toBe(
+      "/assets/ingredients/plush-v2/yeolmu-kimchi.webp",
+    );
     expect(getPantryStickerSrc("엿")).toBe("/assets/ingredients/plush-v2/yeot.webp");
     expect(getPantryStickerSrc("오레가노")).toBe(
       "/assets/ingredients/plush-v2/oregano.webp",
@@ -245,11 +453,23 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("오리엔탈드레싱")).toBe(
       "/assets/ingredients/plush-v2/oriental-dressing.webp",
     );
+    expect(getPantryStickerSrc("오이 소박이")).toBe(
+      "/assets/ingredients/plush-v2/cucumber-sobagi.webp",
+    );
+    expect(getPantryStickerSrc("오이 피클")).toBe(
+      "/assets/ingredients/plush-v2/cucumber-pickle.webp",
+    );
+    expect(getPantryStickerSrc("오이지")).toBe(
+      "/assets/ingredients/plush-v2/oiji.webp",
+    );
     expect(getPantryStickerSrc("옥수수기름")).toBe(
       "/assets/ingredients/plush-v2/corn-oil.webp",
     );
     expect(getPantryStickerSrc("올리브 오일")).toBe(
       "/assets/ingredients/plush-v2/olive-oil-bottle.webp",
+    );
+    expect(getPantryStickerSrc("올리브 절임")).toBe(
+      "/assets/ingredients/plush-v2/pickled-olives.webp",
     );
     expect(getPantryStickerSrc("올리브유")).toBe(
       "/assets/ingredients/plush-v2/olive-oil.webp",
@@ -260,6 +480,9 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("우스터 소스")).toBe(
       "/assets/ingredients/plush-v2/worcestershire-sauce.webp",
     );
+    expect(getPantryStickerSrc("울외장아찌")).toBe(
+      "/assets/ingredients/plush-v2/pickled-oriental-melon.webp",
+    );
     expect(getPantryStickerSrc("원당")).toBe(
       "/assets/ingredients/plush-v2/raw-sugar.webp",
     );
@@ -269,14 +492,152 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("유자청")).toBe(
       "/assets/ingredients/plush-v2/yuja-cheong.webp",
     );
+    expect(getPantryStickerSrc("유채 김치")).toBe(
+      "/assets/ingredients/plush-v2/yuchae-kimchi.webp",
+    );
     expect(getPantryStickerSrc("유채씨기름")).toBe(
       "/assets/ingredients/plush-v2/rapeseed-oil.webp",
+    );
+    expect(getPantryStickerSrc("잇꽃씨기름")).toBe(
+      "/assets/ingredients/plush-v2/safflower-seed-oil.webp",
     );
     expect(getPantryStickerSrc("카놀라유")).toBe(
       "/assets/ingredients/plush-v2/rapeseed-oil.webp",
     );
     expect(getPantryStickerSrc("육두구")).toBe(
       "/assets/ingredients/plush-v2/nutmeg.webp",
+    );
+    expect(getPantryStickerSrc("젤라틴")).toBe(
+      "/assets/ingredients/plush-v2/gelatin.webp",
+    );
+    expect(getPantryStickerSrc("정향")).toBe(
+      "/assets/ingredients/plush-v2/cloves.webp",
+    );
+    expect(getPantryStickerSrc("조청")).toBe(
+      "/assets/ingredients/plush-v2/jocheong.webp",
+    );
+    expect(getPantryStickerSrc("짜장 소스")).toBe(
+      "/assets/ingredients/plush-v2/jajang-sauce.webp",
+    );
+    expect(getPantryStickerSrc("짜장라면")).toBe(
+      "/assets/ingredients/plush-v2/jajang-ramen.webp",
+    );
+    expect(getPantryStickerSrc("청국장")).toBe(
+      "/assets/ingredients/plush-v2/cheonggukjang.webp",
+    );
+    expect(getPantryStickerSrc("초고추장")).toBe(
+      "/assets/ingredients/plush-v2/cho-gochujang.webp",
+    );
+    expect(getPantryStickerSrc("초콜릿")).toBe(
+      "/assets/ingredients/plush-v2/chocolate.webp",
+    );
+    expect(getPantryStickerSrc("춘장")).toBe(
+      "/assets/ingredients/plush-v2/chunjang.webp",
+    );
+    expect(getPantryStickerSrc("치즈시즈닝")).toBe(
+      "/assets/ingredients/plush-v2/cheese-seasoning.webp",
+    );
+    expect(getPantryStickerSrc("치킨스톡")).toBe(
+      "/assets/ingredients/plush-v2/chicken-stock.webp",
+    );
+    expect(getPantryStickerSrc("칠리 소스")).toBe(
+      "/assets/ingredients/plush-v2/chili-sauce.webp",
+    );
+    expect(getPantryStickerSrc("칠리파우더")).toBe(
+      "/assets/ingredients/plush-v2/chili-powder.webp",
+    );
+    expect(getPantryStickerSrc("코코아 파우더")).toBe(
+      "/assets/ingredients/plush-v2/cocoa-powder.webp",
+    );
+    expect(getPantryStickerSrc("코코넛유")).toBe(
+      "/assets/ingredients/plush-v2/coconut-oil.webp",
+    );
+    expect(getPantryStickerSrc("콩기름")).toBe(
+      "/assets/ingredients/plush-v2/soybean-oil.webp",
+    );
+    expect(getPantryStickerSrc("타라곤")).toBe(
+      "/assets/ingredients/plush-v2/tarragon.webp",
+    );
+    expect(getPantryStickerSrc("타임")).toBe(
+      "/assets/ingredients/plush-v2/thyme.webp",
+    );
+    expect(getPantryStickerSrc("파슬리")).toBe(
+      "/assets/ingredients/plush-v2/parsley.webp",
+    );
+    expect(getPantryStickerSrc("파슬리 가루")).toBe(
+      "/assets/ingredients/plush-v2/parsley-powder.webp",
+    );
+    expect(getPantryStickerSrc("팜유")).toBe(
+      "/assets/ingredients/plush-v2/palm-oil.webp",
+    );
+    expect(getPantryStickerSrc("페퍼민트")).toBe(
+      "/assets/ingredients/plush-v2/peppermint.webp",
+    );
+    expect(getPantryStickerSrc("포도씨유")).toBe(
+      "/assets/ingredients/plush-v2/grapeseed-oil.webp",
+    );
+    expect(getPantryStickerSrc("포도당")).toBe(
+      "/assets/ingredients/plush-v2/glucose.webp",
+    );
+    expect(getPantryStickerSrc("카레가루")).toBe(
+      "/assets/ingredients/plush-v2/curry-powder.webp",
+    );
+    expect(getPantryStickerSrc("캐러멜")).toBe(
+      "/assets/ingredients/plush-v2/caramel.webp",
+    );
+    expect(getPantryStickerSrc("커스터드")).toBe(
+      "/assets/ingredients/plush-v2/custard.webp",
+    );
+    expect(getPantryStickerSrc("케첩")).toBe(
+      "/assets/ingredients/plush-v2/ketchup.webp",
+    );
+    expect(getPantryStickerSrc("탕수육 소스")).toBe(
+      "/assets/ingredients/plush-v2/sweet-and-sour-pork-sauce.webp",
+    );
+    expect(getPantryStickerSrc("템페")).toBe(
+      "/assets/ingredients/plush-v2/tempeh.webp",
+    );
+    expect(getPantryStickerSrc("토마토 케첩")).toBe(
+      "/assets/ingredients/plush-v2/ketchup.webp",
+    );
+    expect(getPantryStickerSrc("팟타이 소스")).toBe(
+      "/assets/ingredients/plush-v2/pad-thai-sauce.webp",
+    );
+    expect(getPantryStickerSrc("하이라이스가루")).toBe(
+      "/assets/ingredients/plush-v2/hayashi-rice-powder.webp",
+    );
+    expect(getPantryStickerSrc("핫 소스")).toBe(
+      "/assets/ingredients/plush-v2/hot-sauce.webp",
+    );
+    expect(getPantryStickerSrc("해물육수")).toBe(
+      "/assets/ingredients/plush-v2/seafood-stock-coin.webp",
+    );
+    expect(getPantryStickerSrc("해물육수(코인)")).toBe(
+      "/assets/ingredients/plush-v2/seafood-stock-coin.webp",
+    );
+    expect(getPantryStickerSrc("해선장")).toBe(
+      "/assets/ingredients/plush-v2/hoisin-sauce.webp",
+    );
+    expect(getPantryStickerSrc("해바라기유")).toBe(
+      "/assets/ingredients/plush-v2/sunflower-oil.webp",
+    );
+    expect(getPantryStickerSrc("허브솔트")).toBe(
+      "/assets/ingredients/plush-v2/herb-salt.webp",
+    );
+    expect(getPantryStickerSrc("호두유")).toBe(
+      "/assets/ingredients/plush-v2/walnut-oil.webp",
+    );
+    expect(getPantryStickerSrc("참치액")).toBe(
+      "/assets/ingredients/plush-v2/tuna-liquid-seasoning.webp",
+    );
+    expect(getPantryStickerSrc("총각 김치")).toBe(
+      "/assets/ingredients/plush-v2/chonggak-kimchi.webp",
+    );
+    expect(getPantryStickerSrc("치킨무")).toBe(
+      "/assets/ingredients/plush-v2/chicken-mu.webp",
+    );
+    expect(getPantryStickerSrc("파 김치")).toBe(
+      "/assets/ingredients/plush-v2/green-onion-kimchi.webp",
     );
     expect(getPantryStickerSrc("토마토 소스")).toBe(
       "/assets/ingredients/plush-v2/tomato-sauce.webp",
@@ -402,7 +763,7 @@ describe("pantry mobile visuals", () => {
   it("keeps plush-v2 sticker sources as 512px WebP assets for crisp pantry rendering", () => {
     const items = stickerManifest.items as Record<string, PantryStickerManifestItem>;
 
-    expect(Object.keys(items)).toHaveLength(172);
+    expect(Object.keys(items)).toHaveLength(293);
 
     for (const item of Object.values(items)) {
       expect(item.src).toMatch(/^\/assets\/ingredients\/plush-v2\/.+\.webp$/);
