@@ -16,6 +16,20 @@ function runPlan(args: string[]) {
   });
 }
 
+function readInventory() {
+  const result = spawnSync("node", ["scripts/ingredient-sticker-inventory.mjs"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+
+  expect(result.status).toBe(0);
+  expect(result.stderr).toBe("");
+
+  return JSON.parse(result.stdout) as {
+    ingredients: Array<{ standardName: string }>;
+  };
+}
+
 function getAbsoluteTempDir() {
   const tempDir = tmpdir();
   return isAbsolute(tempDir) ? tempDir : join("/", tempDir);
@@ -48,6 +62,8 @@ describe("ingredient sticker generation plan script", () => {
     const plan = JSON.parse(readFileSync(jsonPath, "utf8"));
     const markdown = readFileSync(markdownPath, "utf8");
     const manifestNames = Object.keys(stickerManifest.items);
+    const inventoryNames = new Set(readInventory().ingredients.map((ingredient) => ingredient.standardName));
+    const approvedInventoryNameCount = manifestNames.filter((name) => inventoryNames.has(name)).length;
     const missingNames = new Set(
       plan.missingIngredients.map((ingredient: { standardName: string }) => ingredient.standardName),
     );
@@ -55,7 +71,7 @@ describe("ingredient sticker generation plan script", () => {
     expect(plan.generatedAt).toBe("2026-06-30T00:00:00.000Z");
     expect(plan.summary.approvedExistingCount).toBe(manifestNames.length);
     expect(plan.summary.missingIngredientCount).toBe(
-      plan.summary.totalIngredientCount - manifestNames.length,
+      plan.summary.totalIngredientCount - approvedInventoryNameCount,
     );
     expect(plan.summary.pilotBatchSize).toBe(5);
     expect(plan.styleContract.format).toMatchObject({

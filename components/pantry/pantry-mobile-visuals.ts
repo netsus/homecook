@@ -7,6 +7,38 @@ type PantryStickerManifestItem = {
 };
 
 const PANTRY_STICKER_ITEMS = stickerManifest.items as Record<string, PantryStickerManifestItem>;
+const PANTRY_STICKER_NAME_STRIP_CHARS = new Set([
+  "·",
+  "ㆍ",
+  "-",
+  "_",
+  "/",
+  "\\",
+  "(",
+  ")",
+  "[",
+  "]",
+  "{",
+  "}",
+  ".",
+  ",",
+  "'",
+  '"',
+  "`",
+]);
+
+function normalizePantryStickerName(name: string) {
+  return [...name.normalize("NFKC").trim().toLowerCase()]
+    .filter((char) => !/\s/u.test(char) && !PANTRY_STICKER_NAME_STRIP_CHARS.has(char))
+    .join("");
+}
+
+const PANTRY_STICKER_ITEMS_BY_NORMALIZED_NAME = Object.fromEntries(
+  Object.entries(PANTRY_STICKER_ITEMS).map(([name, item]) => [
+    normalizePantryStickerName(name),
+    item,
+  ]),
+);
 
 const PANTRY_EMOJI: Record<string, string> = {
   감자: "🥔",
@@ -101,7 +133,13 @@ export function getPantryEmoji(name: string, category?: string) {
 }
 
 export function getPantryStickerSrc(name: string) {
-  return PANTRY_STICKER_ITEMS[name]?.src ?? null;
+  const exactMatch = PANTRY_STICKER_ITEMS[name];
+
+  if (exactMatch) {
+    return exactMatch.src;
+  }
+
+  return PANTRY_STICKER_ITEMS_BY_NORMALIZED_NAME[normalizePantryStickerName(name)]?.src ?? null;
 }
 
 export function getBundleEmoji(name: string) {

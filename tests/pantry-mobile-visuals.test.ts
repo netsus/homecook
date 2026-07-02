@@ -55,6 +55,10 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("굴소스")).toBe(
       "/assets/ingredients/plush-v2/oyster-sauce.webp",
     );
+    expect(getPantryStickerSrc("굴 소스")).toBe(
+      "/assets/ingredients/plush-v2/oyster-sauce.webp",
+    );
+    expect(getPantryStickerSrc("달걀")).toBe("/assets/ingredients/plush-v2/egg.webp");
     expect(getPantryStickerSrc("꿀")).toBe("/assets/ingredients/plush-v2/honey.webp");
     expect(getPantryStickerSrc("낫토")).toBe("/assets/ingredients/plush-v2/natto.webp");
     expect(getPantryStickerSrc("닭기름")).toBe(
@@ -232,6 +236,15 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("오리엔탈")).toBe(
       "/assets/ingredients/plush-v2/oriental-dressing.webp",
     );
+    expect(getPantryStickerSrc("오리엔탈 소스")).toBe(
+      "/assets/ingredients/plush-v2/oriental-dressing.webp",
+    );
+    expect(getPantryStickerSrc("오리엔탈 드레싱")).toBe(
+      "/assets/ingredients/plush-v2/oriental-dressing.webp",
+    );
+    expect(getPantryStickerSrc("오리엔탈드레싱")).toBe(
+      "/assets/ingredients/plush-v2/oriental-dressing.webp",
+    );
     expect(getPantryStickerSrc("옥수수기름")).toBe(
       "/assets/ingredients/plush-v2/corn-oil.webp",
     );
@@ -239,7 +252,7 @@ describe("pantry mobile visuals", () => {
       "/assets/ingredients/plush-v2/olive-oil-bottle.webp",
     );
     expect(getPantryStickerSrc("올리브유")).toBe(
-      "/assets/ingredients/plush-v2/olive-oil-bottle.webp",
+      "/assets/ingredients/plush-v2/olive-oil.webp",
     );
     expect(getPantryStickerSrc("올스파이스")).toBe(
       "/assets/ingredients/plush-v2/allspice.webp",
@@ -259,6 +272,9 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("유채씨기름")).toBe(
       "/assets/ingredients/plush-v2/rapeseed-oil.webp",
     );
+    expect(getPantryStickerSrc("카놀라유")).toBe(
+      "/assets/ingredients/plush-v2/rapeseed-oil.webp",
+    );
     expect(getPantryStickerSrc("육두구")).toBe(
       "/assets/ingredients/plush-v2/nutmeg.webp",
     );
@@ -266,6 +282,12 @@ describe("pantry mobile visuals", () => {
       "/assets/ingredients/plush-v2/tomato-sauce.webp",
     );
     expect(getPantryStickerSrc("크림")).toBe(
+      "/assets/ingredients/plush-v2/fresh-cream-diary-sticker.webp",
+    );
+    expect(getPantryStickerSrc("크림 소스")).toBe(
+      "/assets/ingredients/plush-v2/cream-sauce.webp",
+    );
+    expect(getPantryStickerSrc("크림소스")).toBe(
       "/assets/ingredients/plush-v2/cream-sauce.webp",
     );
     expect(getPantryStickerSrc("어간장")).toBe(
@@ -380,7 +402,7 @@ describe("pantry mobile visuals", () => {
   it("keeps plush-v2 sticker sources as 512px WebP assets for crisp pantry rendering", () => {
     const items = stickerManifest.items as Record<string, PantryStickerManifestItem>;
 
-    expect(Object.keys(items)).toHaveLength(166);
+    expect(Object.keys(items)).toHaveLength(172);
 
     for (const item of Object.values(items)) {
       expect(item.src).toMatch(/^\/assets\/ingredients\/plush-v2\/.+\.webp$/);

@@ -26,6 +26,10 @@
       "src": "/assets/ingredients/plush-v2/egg.webp",
       "status": "approved-sample"
     },
+    "달걀": {
+      "src": "/assets/ingredients/plush-v2/egg.webp",
+      "status": "approved-user-request"
+    },
     "계피": {
       "src": "/assets/ingredients/plush-v2/cinnamon.webp",
       "status": "approved-user-request"
@@ -55,6 +59,10 @@
       "status": "approved-user-request"
     },
     "굴소스": {
+      "src": "/assets/ingredients/plush-v2/oyster-sauce.webp",
+      "status": "approved-user-request"
+    },
+    "굴 소스": {
       "src": "/assets/ingredients/plush-v2/oyster-sauce.webp",
       "status": "approved-user-request"
     },
@@ -475,7 +483,7 @@
       "status": "approved-user-request"
     },
     "올리브유": {
-      "src": "/assets/ingredients/plush-v2/olive-oil-bottle.webp",
+      "src": "/assets/ingredients/plush-v2/olive-oil.webp",
       "status": "approved-user-request"
     },
     "올스파이스": {
@@ -503,6 +511,10 @@
       "status": "approved-user-request"
     },
     "유채씨기름": {
+      "src": "/assets/ingredients/plush-v2/rapeseed-oil.webp",
+      "status": "approved-user-request"
+    },
+    "카놀라유": {
       "src": "/assets/ingredients/plush-v2/rapeseed-oil.webp",
       "status": "approved-user-request"
     },
@@ -666,7 +678,19 @@
       "src": "/assets/ingredients/plush-v2/oriental-dressing.webp",
       "status": "approved-user-request"
     },
+    "오리엔탈 소스": {
+      "src": "/assets/ingredients/plush-v2/oriental-dressing.webp",
+      "status": "approved-user-request"
+    },
+    "오리엔탈 드레싱": {
+      "src": "/assets/ingredients/plush-v2/oriental-dressing.webp",
+      "status": "approved-user-request"
+    },
     "크림": {
+      "src": "/assets/ingredients/plush-v2/fresh-cream-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "크림 소스": {
       "src": "/assets/ingredients/plush-v2/cream-sauce.webp",
       "status": "approved-user-request"
     },
