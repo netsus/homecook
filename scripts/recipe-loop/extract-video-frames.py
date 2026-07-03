@@ -18,6 +18,7 @@ import json
 import math
 import re
 import shutil
+import subprocess
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -117,12 +118,6 @@ def download_video(source: str, out_dir: Path, video_format: str) -> Path | None
             shutil.copy2(local, target)
         return target
 
-    try:
-        import yt_dlp  # type: ignore
-    except ImportError as exc:
-        fail("yt-dlp가 설치되어 있지 않습니다. `python3 -m pip install -U yt-dlp`를 실행하세요.")
-        raise exc
-
     has_ffmpeg = shutil.which("ffmpeg") is not None
     requested_format = (
         f"bv*[ext={video_format}]+ba/b[ext={video_format}]/b"
@@ -130,6 +125,59 @@ def download_video(source: str, out_dir: Path, video_format: str) -> Path | None
         else f"b[ext={video_format}]/best[ext={video_format}]/best"
     )
     output_template = str(out_dir / "source.%(ext)s")
+    yt_dlp_cli = shutil.which("yt-dlp")
+    if yt_dlp_cli:
+        command = [
+            yt_dlp_cli,
+            "--no-playlist",
+            "--force-overwrites",
+            "-f",
+            requested_format,
+            "--merge-output-format",
+            video_format,
+            "-o",
+            output_template,
+            source,
+        ]
+        (out_dir / "yt-dlp-command.json").write_text(
+            json.dumps({"command": command, "driver": "cli"}, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        result = subprocess.run(command, cwd=out_dir, text=True, capture_output=True, check=False)
+        (out_dir / "yt-dlp.log").write_text(
+            f"exit_code={result.returncode}\n\n[stdout]\n{result.stdout}\n\n[stderr]\n{result.stderr}\n",
+            encoding="utf-8",
+        )
+        if result.returncode != 0:
+            (out_dir / "video_download_failure.json").write_text(
+                json.dumps(
+                    {
+                        "message": result.stderr[-4000:] or result.stdout[-4000:],
+                        "source": source,
+                        "fallback": "storyboard",
+                        "driver": "cli",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ) + "\n",
+                encoding="utf-8",
+            )
+            return None
+        videos = [
+            path
+            for path in sorted(out_dir.glob("source.*"))
+            if path.suffix.lower() in {".mp4", ".mkv", ".webm", ".mov", ".avi"}
+        ]
+        if not videos:
+            fail("yt-dlp CLI 다운로드 결과 영상 파일을 찾지 못했습니다.")
+        return videos[0]
+
+    try:
+        import yt_dlp  # type: ignore
+    except ImportError as exc:
+        fail("yt-dlp가 설치되어 있지 않습니다. `python3 -m pip install -U yt-dlp`를 실행하세요.")
+        raise exc
+
     options = {
         "format": requested_format,
         "outtmpl": output_template,
