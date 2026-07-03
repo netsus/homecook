@@ -245,7 +245,7 @@ async function expectSharpV2Sticker(
   });
   const sourceWidth = metrics.optimizedWidth ?? metrics.naturalWidth;
 
-  expect(metrics.currentSrc).toContain(`/assets/ingredients/plush-v2/${expectedFile}`);
+  expect(metrics.currentSrc).toContain(`/assets/plush-v2/${expectedFile}`);
   expect(metrics.optimizedQuality ?? 95).toBe(95);
   expect(sourceWidth).toBeGreaterThanOrEqual(expectedMinOptimizedWidth);
   expect(metrics.naturalWidth).toBeGreaterThanOrEqual(Math.floor(metrics.renderedWidth));
