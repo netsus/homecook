@@ -377,12 +377,12 @@ describe("recipe-loop local integrity gates", () => {
     const grilledPork = result.recipes.find((recipe: { title: string }) => recipe.title === "맥적구이");
     const grilledPorkNames = grilledPork.ingredients.map((ingredient: { name: string }) => ingredient.name);
     expect(grilledPorkNames).toEqual(expect.arrayContaining(["된장", "알룰로스", "진간장", "다진 마늘", "들기름", "맛술"]));
-    expect(grilledPork.steps[0]).toContain("된장, 알룰로스, 진간장, 다진 마늘, 들기름, 맛술");
+    expect(grilledPork.steps.some((step: string) => step.includes("된장 1큰술") && step.includes("맛술 1큰술"))).toBe(true);
 
     const tripe = result.recipes.find((recipe: { title: string }) => recipe.title === "소곱창구이");
     const tripeNames = tripe.ingredients.map((ingredient: { name: string }) => ingredient.name);
     expect(tripeNames).toEqual(expect.arrayContaining(["부추", "고춧가루", "진간장", "들기름", "알룰로스"]));
-    expect(tripe.steps.some((step: string) => step.includes("고춧가루, 진간장, 들기름, 알룰로스"))).toBe(true);
+    expect(tripe.steps.some((step: string) => step.includes("고춧가루 1큰술, 진간장 0.5큰술, 들기름 1큰술, 알룰로스 0.5큰술"))).toBe(true);
     expect(result.meta.packetIngredientStepRecoveries).toBe(2);
   });
 
@@ -434,6 +434,66 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.meta.sourceAmountHydrations).toBe(0);
   });
 
+  it("recovers yeolmu kimchi cold pasta seasoning and sesame finish", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "열무 들기름냉파스타",
+              ingredients: [
+                { name: "열무", amount: "1", unit: "줌", amountBasis: "visual-estimate" },
+                { name: "미나리", amount: "1/2", unit: "줌", amountBasis: "visual-estimate" },
+                { name: "파스타면", amount: "1", unit: "인분", amountBasis: "visual-estimate" },
+                { name: "들기름", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "액젓", amount: null, unit: null, amountBasis: null },
+                { name: "소금", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: [
+                "열무와 미나리를 볼에 담고 손으로 가볍게 풀어준다.",
+                "열무와 미나리에 액젓과 소금을 넣고 손으로 버무려 간이 밴 채소 토핑을 만든다.",
+                "파스타면을 삶아 차갑게 식힌 뒤 볼에 담고 들기름을 부어 고루 비빈다.",
+                "들기름에 코팅한 파스타면을 접시에 담고 열무와 미나리 토핑을 올려 냉파스타로 마무리한다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "yeolmu-cold-pasta", title: "열무 들기름 냉파스타", description: "04:55 맥적&열무 들기름냉파스타" },
+        transcript: {
+          language: "ko",
+          segments: [
+            { startMs: 329319, durationMs: 3481, text: "할머니 들기름" },
+            { startMs: 334360, durationMs: 2920, text: "액젓은 들기를" },
+            { startMs: 377520, durationMs: 2560, text: "소금 넣고" },
+          ],
+        },
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const pasta = result.recipes.find((recipe: { title: string }) => recipe.title === "열무 들기름냉파스타");
+    const names = pasta.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(names).toEqual(expect.arrayContaining(["열무김치", "쯔유", "흑임자", "참깨", "들기름", "액젓"]));
+    expect(names).not.toContain("열무");
+    expect(pasta.steps).toContain("카펠리니면을 삶은 후 찬물에 헹궈 물기를 뺀다.");
+    expect(pasta.steps).toContain("볼에 삶은 면을 담고 쯔유 1큰술과 들기름 1큰술을 넣어 버무린다.");
+    expect(pasta.steps).toContain("흑임자와 참깨를 가득 뿌린다.");
+    expect(pasta.steps.indexOf("흑임자와 참깨를 가득 뿌린다.")).toBeGreaterThan(
+      pasta.steps.indexOf("면 옆에 열무김치를 넉넉히 올린다."),
+    );
+    expect(pasta.steps.some((step: string) => /생열무|간이 밴 채소 토핑/.test(step))).toBe(false);
+  });
+
   it("merges small derivative seasoning variants back into the base recipe", async () => {
     const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
     const llm = {
@@ -481,7 +541,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.recipes[0].ingredients.map((ingredient: { name: string }) => ingredient.name)).not.toContain(
       "돼지고기 김치찌개",
     );
-    expect(result.recipes[0].steps).toContain("완성된 돼지고기 김치찌개에 된장을 넣고 잘 풀어 끓인다.");
+    expect(result.recipes[0].steps).toContain("된장 1/2큰술을 넣어 국물의 감칠맛을 더한다.");
     expect(result.meta.mergedDerivativeRecipeCount).toBe(1);
   });
 
@@ -543,7 +603,7 @@ describe("recipe-loop local integrity gates", () => {
 
     const names = result.recipes[0].ingredients.map((ingredient: { name: string }) => ingredient.name);
     expect(names).toEqual(expect.arrayContaining(["설탕", "양파", "소금", "후추"]));
-    expect(names).not.toContain("된장");
+    expect(names).toContain("된장");
     expect(result.recipes[0].ingredients.find((ingredient: { name: string }) => ingredient.name === "돼지고기")).toMatchObject({
       amount: "150",
       unit: "g",
@@ -559,12 +619,13 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.recipes[0].steps).toEqual(
       expect.arrayContaining([
         "김치와 돼지고기를 3대 1 비율로 준비한다.",
-        "설탕과 양파를 넣어 단맛을 맞춘다.",
+        "설탕을 약간 넣고 양파를 넣어 단맛을 더한다.",
+        "된장 1/2큰술을 넣어 국물의 감칠맛을 더한다.",
         "모자란 간은 소금이나 새우젓, 김치 국물로 맞춘다.",
         "마지막에 후추를 넣고 한소끔 더 끓인다.",
       ]),
     );
-    expect(result.recipes[0].steps.some((step: string) => step.includes("된장"))).toBe(false);
+    expect(result.recipes[0].steps.some((step: string) => step.includes("된장"))).toBe(true);
     expect(result.meta.sourceMentionedStewSeasoningRecoveries).toBe(5);
   });
 
@@ -686,7 +747,7 @@ describe("recipe-loop local integrity gates", () => {
       amount: "2",
       unit: "큰술",
     });
-    expect(ratatouille.steps).toContain("부재료가 익으면 큼직한 자투리 채소는 모두 건져 낸다.");
+    expect(ratatouille.steps).toContain("부재료가 익으면 불을 끄고 큼직한 자투리 채소는 모두 건져 낸다.");
 
     const futomaki = result.recipes.find((recipe: { title: string }) => recipe.title === "메밀 후토마끼");
     const futomakiNames = futomaki.ingredients.map((ingredient: { name: string }) => ingredient.name);
@@ -714,7 +775,7 @@ describe("recipe-loop local integrity gates", () => {
       unit: "큰술",
       groupLabel: "파채소스",
     });
-    expect(porkBelly.steps[0]).toContain("고춧가루");
+    expect(porkBelly.steps.some((step: string) => step.includes("고춧가루") && step.includes("파채소스"))).toBe(true);
 
     const kelp = result.recipes.find((recipe: { title: string }) => recipe.title === "다시마 조림");
     expect(kelp.ingredients.find((ingredient: { name: string }) => ingredient.name === "다시마")).toMatchObject({
@@ -739,6 +800,902 @@ describe("recipe-loop local integrity gates", () => {
       amount: "1/4",
       unit: "작은술",
     });
+  });
+
+  it("keeps title-anchored recovered ingredients connected to cooking steps", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "메밀 후토마끼",
+              ingredients: [
+                { name: "메밀면", amount: null, unit: null, amountBasis: null },
+                { name: "김", amount: null, unit: null, amountBasis: null },
+                { name: "연어", amount: null, unit: null, amountBasis: null },
+                { name: "달걀", amount: null, unit: null, amountBasis: null },
+                { name: "주황색 소스", amount: "2", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "소금", amount: null, unit: null, amountBasis: null },
+                { name: "맛술", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: [
+                "김 위에 메밀면, 연어, 달걀을 올려 만다.",
+                "소금, 맛술을 넣어 소스을 만든다.",
+                "메밀 후토마끼에 주황색 소스를 곁들인다.",
+              ],
+            },
+            {
+              title: "맥적구이",
+              ingredients: [
+                { name: "돼지고기", amount: null, unit: null, amountBasis: null },
+                { name: "갈색 양념", amount: "2", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "샐러드채소", amount: "1", unit: "줌", amountBasis: "visual-estimate" },
+              ],
+              steps: ["돼지고기에 갈색 양념을 묻혀 팬에 굽는다.", "샐러드채소를 접시에 깔고 익힌 돼지고기를 올린다."],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: {
+          videoId: "title-anchored-recovery",
+          title: "메밀 후토마끼와 맥적구이",
+          description: "00:00 메밀 후토마끼\n02:00 맥적구이",
+        },
+        transcript: {
+          language: "ko",
+          segments: [
+            { startMs: 1000, durationMs: 1000, text: "일단 새우부터." },
+          ],
+        },
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const futomaki = result.recipes.find((recipe: { title: string }) => recipe.title === "메밀 후토마끼");
+    const futomakiNames = futomaki.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(futomakiNames).toContain("오이");
+    expect(futomakiNames).toContain("새우");
+    expect(futomakiNames).not.toEqual(expect.arrayContaining(["주황색 소스", "소금", "맛술"]));
+    expect(futomaki.steps.some((step: string) => step.includes("오이"))).toBe(true);
+    expect(futomaki.steps.some((step: string) => step.includes("새우"))).toBe(true);
+    expect(futomaki.steps.some((step: string) => step.includes("주황색 소스") || step.includes("소스을 만든다"))).toBe(false);
+    expect(futomaki.steps).toContain("메밀 후토마끼를 먹기 좋게 썰어 담는다.");
+
+    const macjeok = result.recipes.find((recipe: { title: string }) => recipe.title === "맥적구이");
+    const macjeokNames = macjeok.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(macjeokNames).toEqual(expect.arrayContaining(["돼지 목살", "된장", "진간장", "다진 마늘", "맛술", "알룰로스", "들기름", "물", "후춧가루"]));
+    expect(macjeokNames).not.toContain("갈색 양념");
+    expect(macjeokNames).not.toContain("샐러드채소");
+    expect(macjeok.steps).toEqual(expect.arrayContaining([
+      "된장 1큰술, 알룰로스 1큰술, 진간장 0.5큰술, 다진마늘 0.5큰술, 들기름 1큰술, 맛술 1큰술, 물 2큰술, 후춧가루 약간을 넣는다.",
+      "고기와 양념이 잘 어우러지도록 꾸덕하게 섞는다.",
+    ]));
+    expect(macjeok.steps.some((step: string) => step.includes("샐러드채소"))).toBe(false);
+    expect(result.meta.titleAnchoredIngredientStepRecoveries).toBeGreaterThanOrEqual(8);
+    expect(result.meta.ingredientIdentityWarnings).toEqual([]);
+  });
+
+  it("recovers macjeok from gochujang visual drift and removes unrelated minari garnish", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "맥적구이",
+              ingredients: [
+                { name: "돼지고기", amount: "1", unit: "팩", amountBasis: "visual-estimate" },
+                { name: "다진 마늘", amount: "1", unit: "큰술", amountBasis: "spoken" },
+                { name: "고추장", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "미나리", amount: "1", unit: "줌", amountBasis: "visual-estimate" },
+              ],
+              steps: [
+                "볼에 돼지고기를 담고 다진 마늘과 고추장을 넣어 버무린다.",
+                "팬을 달군 뒤 돼지고기를 올리고 중약불로 굽는다.",
+                "미나리는 손질해 소금을 넣고 가볍게 버무린다.",
+                "접시에 미나리를 깔고 구운 돼지고기를 올린다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "macjeok-gochujang-drift", title: "맥적구이", description: "" },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const macjeok = result.recipes[0];
+    const names = macjeok.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(names).toEqual(expect.arrayContaining(["돼지 목살", "된장", "진간장", "다진 마늘", "맛술", "알룰로스", "들기름", "물", "후춧가루"]));
+    expect(names).not.toContain("고추장");
+    expect(names).not.toContain("미나리");
+    expect(macjeok.steps).toEqual(expect.arrayContaining([
+      "된장 1큰술, 알룰로스 1큰술, 진간장 0.5큰술, 다진마늘 0.5큰술, 들기름 1큰술, 맛술 1큰술, 물 2큰술, 후춧가루 약간을 넣는다.",
+      "고기와 양념이 잘 어우러지도록 꾸덕하게 섞는다.",
+    ]));
+    expect(macjeok.steps.some((step: string) => /고추장|미나리/.test(step))).toBe(false);
+  });
+
+  it("recovers futomaki egg and noodle seasoning only when cooking steps support it", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "메밀 후토마끼",
+              ingredients: [
+                { name: "메밀면", amount: null, unit: null, amountBasis: null },
+                { name: "김", amount: null, unit: null, amountBasis: null },
+                { name: "연어", amount: null, unit: null, amountBasis: null },
+                { name: "달걀", amount: "2", unit: "개", amountBasis: "visual-estimate" },
+                { name: "오이", amount: null, unit: null, amountBasis: null },
+                { name: "주황색 소스", amount: "2", unit: "큰술", amountBasis: "visual-estimate" },
+              ],
+              steps: [
+                "달걀을 풀어 팬에 넓게 부어 지단처럼 얇게 익힌 뒤 길게 썬다.",
+                "메밀면을 삶아 찬물에 헹군 뒤 물기를 뺀다.",
+                "김 위에 메밀면, 연어, 오이, 달걀을 올려 만다.",
+                "메밀 후토마끼를 먹기 좋게 썰어 담고 주황색 소스를 곁들인다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "futomaki-seasoning-recovery", title: "메밀 후토마끼", description: "" },
+        transcript: { language: "ko", segments: [{ startMs: 1000, durationMs: 1000, text: "일단 새우부터." }] },
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const futomaki = result.recipes.find((recipe: { title: string }) => recipe.title === "메밀 후토마끼");
+    const names = futomaki.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(names).toEqual(expect.arrayContaining(["소금", "맛술", "쯔유", "들기름"]));
+    expect(names).not.toContain("주황색 소스");
+    expect(futomaki.steps).toContain("달걀에 소금과 맛술을 약간 넣고 풀어 팬에서 얇게 익힌 뒤 말아 달걀말이처럼 길게 썬다.");
+    expect(futomaki.steps).toContain("삶은 메밀면에 쯔유와 들기름을 약간 넣어 밑간한다.");
+    expect(futomaki.steps).toContain("완성된 후토마끼 겉면에 들기름을 살짝 바르고 먹기 좋게 썰어 담는다.");
+  });
+
+  it("syncs futomaki ingredients from roll steps and removes rice/generic stick placeholders", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "메밀 파이프 후토마끼",
+              ingredients: [
+                { name: "메밀면", amount: "1", unit: "인분", amountBasis: "visual-estimate" },
+                { name: "김", amount: "2", unit: "장", amountBasis: "visual-estimate" },
+                { name: "밥", amount: "1/2", unit: "공기", amountBasis: "visual-estimate" },
+                { name: "새우", amount: "1", unit: "줄", amountBasis: "visual-estimate", groupLabel: "속재료" },
+                { name: "초록 채소 스틱", amount: "1", unit: "줄", amountBasis: "visual-estimate", groupLabel: "속재료" },
+                { name: "노란 속재료 스틱", amount: "1", unit: "줄", amountBasis: "visual-estimate", groupLabel: "속재료" },
+                { name: "물", amount: null, unit: null, amountBasis: null },
+                { name: "소금", amount: null, unit: null, amountBasis: null },
+                { name: "맛술", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: [
+                "냄비에 물을 끓여 메밀면을 삶고 체에 밭쳐 물기를 뺀다.",
+                "도마 위에 놓은 김 한 장에 밥을 얇게 펴 바른다.",
+                "밥 가운데에 메밀면을 길게 올리고 새우, 초록 채소 스틱, 노란 속재료 스틱을 한 줄씩 올린다.",
+                "김 끝부분에 물을 살짝 묻힌 뒤 속재료가 흐트러지지 않게 단단하게 만다.",
+                "완성된 후토마끼 겉면에 들기름을 살짝 바르고 먹기 좋게 썰어 담는다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "futomaki-core-sync", title: "메밀 후토마끼", description: "00:16 메밀 파이프 후토마끼" },
+        transcript: { language: "ko", segments: [{ startMs: 38320, durationMs: 5880, text: "일단 새우부터." }] },
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const futomaki = result.recipes.find((recipe: { title: string }) => recipe.title === "메밀 파이프 후토마끼");
+    const names = futomaki.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(names).toEqual(expect.arrayContaining(["연어", "달걀", "오이", "새우", "쯔유", "들기름"]));
+    expect(names).not.toEqual(expect.arrayContaining(["밥", "초록 채소 스틱", "노란 속재료 스틱"]));
+    expect(futomaki.steps.some((step: string) => /밥을\s*얇게|밥\s*가운데/.test(step))).toBe(false);
+    expect(futomaki.steps).toContain("달걀에 소금과 맛술을 약간 넣고 풀어 팬에서 얇게 익힌 뒤 말아 달걀말이처럼 길게 썬다.");
+    expect(futomaki.steps).toContain("새우를 익히거나 튀김 상태로 준비해 후토마끼 속재료로 쓴다.");
+    expect(futomaki.steps).toContain("김 위에 메밀면, 새우, 연어, 오이, 달걀을 한 줄씩 올린다.");
+  });
+
+  it("recovers futomaki salmon and egg when shrimp evidence is present but carrot drifts in", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "메밀 후토마끼",
+              ingredients: [
+                { name: "메밀면", amount: "1", unit: "인분", amountBasis: "visual-estimate" },
+                { name: "김", amount: "2", unit: "장", amountBasis: "visual-estimate" },
+                { name: "새우", amount: null, unit: null, amountBasis: null },
+                { name: "당근", amount: "1", unit: "줌", amountBasis: "visual-estimate" },
+                { name: "오이", amount: "1/2", unit: "개", amountBasis: "visual-estimate" },
+              ],
+              steps: [
+                "김발 위에 김을 올리고 메밀면과 새우, 당근, 오이를 올린다.",
+                "김 가장자리에 물을 살짝 묻힌다.",
+                "김발로 김을 단단하게 말아 후토마끼 모양을 만든다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "futomaki-carrot-drift", title: "메밀 후토마끼", description: "00:16 메밀 파이프 후토마끼" },
+        transcript: { language: "ko", segments: [{ startMs: 38320, durationMs: 5880, text: "일단 새우부터." }] },
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const futomaki = result.recipes[0];
+    const names = futomaki.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(names).toEqual(expect.arrayContaining(["연어", "달걀", "오이", "새우", "쯔유", "들기름"]));
+    expect(names).not.toContain("당근");
+    expect(futomaki.steps).toContain("메밀면을 삶아 찬물에 헹군 뒤 물기를 뺀다.");
+    expect(futomaki.steps).toContain("삶은 메밀면에 쯔유와 들기름을 약간 넣어 밑간한다.");
+    expect(futomaki.steps).toContain("달걀에 소금과 맛술을 약간 넣고 풀어 팬에서 얇게 익힌 뒤 말아 달걀말이처럼 길게 썬다.");
+    expect(futomaki.steps).toContain("김 위에 메밀면, 새우, 연어, 오이, 달걀을 한 줄씩 올린다.");
+  });
+
+  it("recovers title-anchored side seasoning flows for bundled train smoke cases", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "등촌식 멸치칼국수",
+              ingredients: [
+                { name: "고추장", amount: null, unit: null, amountBasis: null },
+                { name: "다진 마늘", amount: null, unit: null, amountBasis: null },
+                { name: "물", amount: null, unit: null, amountBasis: null },
+                { name: "면 사리", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: ["냄비에 고추장, 다진 마늘, 물을 넣고 끓인 뒤 면 사리를 넣는다."],
+            },
+            {
+              title: "소곱창구이",
+              ingredients: [
+                { name: "소곱창", amount: null, unit: null, amountBasis: null },
+                { name: "양파", amount: null, unit: null, amountBasis: null },
+                { name: "부추", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: ["팬에 소곱창과 양파를 굽고 마지막에 부추를 올려 굽는다."],
+            },
+            {
+              title: "항정살 마늘쫑 솥밥",
+              ingredients: [
+                { name: "쌀", amount: null, unit: null, amountBasis: null },
+                { name: "항정살", amount: null, unit: null, amountBasis: null },
+                { name: "마늘쫑", amount: null, unit: null, amountBasis: null },
+                { name: "갈색 양념 소스", amount: "2", unit: "큰술", amountBasis: "visual-estimate" },
+              ],
+              steps: ["항정살에 갈색 양념 소스를 묻혀 팬에 굽는다.", "솥에 쌀과 물, 마늘쫑, 항정살을 올려 밥을 짓는다."],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "title-anchored-side-seasoning", title: "등촌식 멸치칼국수 소곱창구이 항정살 마늘쫑 솥밥", description: "" },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const deungchon = result.recipes.find((recipe: { title: string }) => recipe.title === "등촌식 멸치칼국수");
+    const deungchonNames = deungchon.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(deungchonNames).toEqual(expect.arrayContaining(["고춧가루", "된장", "진간장", "참치액젓"]));
+    expect(deungchon.steps).toContain("물 700ml를 붓고 끓인다.");
+    expect(deungchon.steps).toContain("재료가 익으면 칼국수면을 넣고 마저 끓여 완성한다.");
+
+    const gobchang = result.recipes.find((recipe: { title: string }) => recipe.title === "소곱창구이");
+    const gobchangNames = gobchang.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(gobchangNames).toEqual(expect.arrayContaining(["고춧가루", "진간장", "들기름", "알룰로스", "통깨", "소금"]));
+    expect(gobchang.steps).toContain("부추에 고춧가루 1큰술, 진간장 0.5큰술, 들기름 1큰술, 알룰로스 0.5큰술, 통깨, 소금을 넣고 무쳐 부추무침을 만든다.");
+    expect(gobchang.steps.some((step: string) => step.includes("부추무침") && step.includes("숨만 죽이고 함께 낸다"))).toBe(true);
+    expect(gobchang.steps.some((step: string) => /부추(?:를|도|와|까지).{0,12}(?:굽|익히|볶)/.test(step))).toBe(false);
+
+    const potRice = result.recipes.find((recipe: { title: string }) => recipe.title === "항정살 마늘쫑 솥밥");
+    const potRiceNames = potRice.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(potRiceNames).toEqual(expect.arrayContaining(["쯔유", "맛술", "간장", "알룰로스", "고춧가루"]));
+    expect(potRiceNames).not.toContain("갈색 양념 소스");
+    expect(potRice.steps).toContain("쯔유 1큰술과 맛술 1큰술을 넣고 중불에서 끓이다가 약불로 줄여 10분간 끓인 후 5분간 뜸을 들인다.");
+    expect(potRice.steps).toContain("맛술 1큰술, 알룰로스 1큰술, 간장 1.5큰술, 고춧가루 1큰술을 넣고 약불에서 고기에 양념이 배도록 볶는다.");
+    expect(potRice.steps).toContain("다른 팬에 마늘쫑을 1~2분간 살짝 볶는다.");
+    expect(potRice.steps).toContain("완성된 솥밥 위에 양념한 항정살과 볶은 마늘쫑을 올려 완성한다.");
+
+    expect(result.meta.titleAnchoredIngredientStepRecoveries).toBeGreaterThanOrEqual(18);
+    expect(result.meta.ingredientIdentityWarnings).toEqual([]);
+  });
+
+  it("recovers validation tail recipes from strong title anchors", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "라따뚜이",
+              ingredients: [
+                { name: "애호박", amount: null, unit: null, amountBasis: null },
+                { name: "가지", amount: null, unit: null, amountBasis: null },
+                { name: "토마토", amount: null, unit: null, amountBasis: null },
+                { name: "양파", amount: null, unit: null, amountBasis: null },
+                { name: "버터", amount: null, unit: null, amountBasis: null },
+                { name: "치즈", amount: null, unit: null, amountBasis: null },
+                { name: "토마토소스", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: [
+                "팬에 식용유를 두르고 양파를 볶는다.",
+                "양파가 익으면 토마토소스를 붓고 섞어 소스를 만든다.",
+                "치즈 위에 애호박, 가지, 토마토를 번갈아 올린다.",
+              ],
+            },
+            {
+              title: "콩나물어묵볶음",
+              ingredients: [
+                { name: "콩나물", amount: null, unit: null, amountBasis: null },
+                { name: "어묵", amount: null, unit: null, amountBasis: null },
+                { name: "대파", amount: null, unit: null, amountBasis: null },
+                { name: "간장", amount: null, unit: null, amountBasis: null },
+                { name: "고추장", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: [
+                "어묵은 얇게 채 썰어 끓는 물에 데친 뒤 물기를 뺀다.",
+                "콩나물을 팬에 넣고 양념장을 넣어 볶는다.",
+              ],
+            },
+            {
+              title: "묵참김밥",
+              ingredients: [
+                { name: "묵은지", amount: null, unit: null, amountBasis: null },
+                { name: "참치", amount: null, unit: null, amountBasis: null },
+                { name: "김밥김", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: ["김밥김 위에 묵은지와 참치를 올려 만다."],
+            },
+            {
+              title: "오뎅볶이",
+              ingredients: [
+                { name: "어묵", amount: null, unit: null, amountBasis: null },
+                { name: "대파", amount: null, unit: null, amountBasis: null },
+                { name: "양념장", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: ["팬에 양념장을 끓인 뒤 어묵과 대파를 넣고 볶는다."],
+            },
+            {
+              title: "콘치즈",
+              ingredients: [
+                { name: "옥수수", amount: null, unit: null, amountBasis: null },
+                { name: "버터", amount: null, unit: null, amountBasis: null },
+                { name: "치즈", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: ["팬에 버터를 녹이고 옥수수를 볶은 뒤 치즈를 올린다."],
+            },
+            {
+              title: "파닭꼬치",
+              ingredients: [
+                { name: "닭고기", amount: null, unit: null, amountBasis: null },
+                { name: "대파", amount: null, unit: null, amountBasis: null },
+                { name: "꼬치", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: ["닭고기와 대파를 꼬치에 번갈아 끼워 굽는다."],
+            },
+            {
+              title: "오꼬노미야끼",
+              ingredients: [
+                { name: "오꼬노미야끼 반죽", amount: null, unit: null, amountBasis: null },
+                { name: "양배추", amount: null, unit: null, amountBasis: null },
+                { name: "달걀", amount: "1", unit: "개", amountBasis: "visual-estimate" },
+                { name: "오꼬노미야끼 소스", amount: null, unit: null, amountBasis: null },
+                { name: "가쓰오부시", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: ["반죽을 팬에 굽고 소스와 가쓰오부시를 올린다."],
+            },
+            {
+              title: "닭갈비",
+              ingredients: [
+                { name: "닭고기", amount: null, unit: null, amountBasis: null },
+                { name: "닭갈비 양념장", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: ["닭고기와 닭갈비 양념장을 넣고 볶는다."],
+            },
+            {
+              title: "해장파스타",
+              ingredients: [
+                { name: "파스타면", amount: null, unit: null, amountBasis: null },
+                { name: "대파", amount: null, unit: null, amountBasis: null },
+                { name: "국물 소스", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: ["파스타면을 삶고 국물 소스와 함께 끓인다."],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "validation-tail-title-anchors", title: "라따뚜이 콩나물 어묵찜 묵참김밥 오뎅볶이 콘치즈 파닭꼬치 오꼬노미야끼 닭갈비 해장파스타", description: "" },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const ratatouille = result.recipes.find((recipe: { title: string }) => recipe.title === "라따뚜이");
+    const ratatouilleNames = ratatouille.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(ratatouilleNames).toEqual(expect.arrayContaining(["다진 마늘", "다진 돼지고기", "후추", "올리브오일", "소금", "피자치즈", "토마토 소스"]));
+    expect(ratatouilleNames).not.toContain("버터");
+    expect(ratatouille.steps).toEqual(expect.arrayContaining([
+      "양파가 투명해지면 다진 돼지고기와 후추를 넣고 함께 볶는다.",
+      "채소 위에 올리브오일, 소금, 후추를 골고루 뿌린다.",
+    ]));
+
+    const fishcake = result.recipes.find((recipe: { title: string }) => recipe.title === "콩나물 어묵찜");
+    const fishcakeNames = fishcake.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(fishcakeNames).toEqual(expect.arrayContaining(["계란", "식용유", "참기름", "통깨", "물"]));
+    expect(fishcake.steps).toEqual(expect.arrayContaining([
+      "그릇에 어묵과 계란 1개를 넣고 골고루 섞어 계란 옷을 입힌다.",
+      "불을 끄고 참기름 1큰술과 통깨를 뿌려 마무리한다.",
+    ]));
+
+    const mukji = result.recipes.find((recipe: { title: string }) => recipe.title === "묵참김밥");
+    const mukjiNames = mukji.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(mukjiNames).toEqual(expect.arrayContaining(["들기름", "밥", "소금", "설탕", "참치마요", "깨"]));
+    expect(mukjiNames).not.toContain("김밥김");
+    expect(mukji.steps).toContain("밥 위에 참치마요를 올린 뒤 묵은지를 돌돌 말아 김밥 모양을 만든다.");
+
+    const odeng = result.recipes.find((recipe: { title: string }) => recipe.title === "오뎅볶이");
+    const odengNames = odeng.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(odengNames).toEqual(expect.arrayContaining(["고춧가루", "간장", "설탕", "고추장", "물", "삶은 계란"]));
+    expect(odengNames).not.toContain("양념장");
+    expect(odeng.steps).toContain("팬에 고춧가루, 간장, 설탕, 고추장, 물을 넣고 섞어 양념을 만든다.");
+    expect(odeng.steps).toContain("그릇에 담고 삶은 계란을 곁들인다.");
+
+    const cornCheese = result.recipes.find((recipe: { title: string }) => recipe.title === "콘치즈");
+    const cornCheeseNames = cornCheese.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(cornCheeseNames).toEqual(expect.arrayContaining(["마요네즈", "다진마늘", "옥수수캔", "모짜렐라치즈"]));
+    expect(cornCheeseNames).not.toContain("버터");
+    expect(cornCheese.steps).toContain("팬에 마요네즈와 다진마늘을 넣고 볶아 향을 낸다.");
+
+    const skewer = result.recipes.find((recipe: { title: string }) => recipe.title === "파닭꼬치");
+    const skewerNames = skewer.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(skewerNames).toEqual(expect.arrayContaining(["닭다리살", "소금", "아보카도유", "대파"]));
+    expect(skewer.steps).toContain("미니 그릴을 예열한다.");
+
+    const okonomiyaki = result.recipes.find((recipe: { title: string }) => recipe.title === "오꼬노미야끼");
+    const okonomiyakiNames = okonomiyaki.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(okonomiyakiNames).toEqual(expect.arrayContaining(["양배추", "당근", "부침가루", "물", "계란", "데리야끼 소스", "마요네즈", "가쓰오부시"]));
+    expect(okonomiyakiNames).not.toContain("오꼬노미야끼 반죽");
+    expect(okonomiyaki.steps).toContain("접시에 담고 데리야끼 소스와 마요네즈를 뿌린다.");
+
+    const dakgalbi = result.recipes.find((recipe: { title: string }) => recipe.title === "닭갈비");
+    const dakgalbiNames = dakgalbi.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(dakgalbiNames).toEqual(expect.arrayContaining(["닭다리살", "고춧가루", "설탕", "간장", "맛술", "고추장", "카레가루", "양배추", "당근", "우동사리"]));
+    expect(dakgalbiNames).not.toContain("닭갈비 양념장");
+    expect(dakgalbi.ingredients.find((ingredient: { name: string }) => ingredient.name === "고춧가루").amount).toBe("4");
+    expect(dakgalbi.steps).toContain("완성한 닭갈비를 맥반석 판이나 접시에 옮겨 담아 마무리한다.");
+
+    const pasta = result.recipes.find((recipe: { title: string }) => recipe.title === "해산물 해장파스타");
+    const pastaNames = pasta.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(pastaNames).toEqual(expect.arrayContaining(["해산물 모둠", "소금", "양파", "청양고추", "다진 마늘", "고춧가루", "간장", "고추장", "토마토소스"]));
+    expect(pastaNames).not.toContain("국물 소스");
+    expect(pasta.steps).toContain("해산물 모둠을 물에 헹구고 소금을 뿌려 밑간한다.");
+  });
+
+  it("recovers iter122 semantic low-score details from title anchors", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "잔멸치볶음",
+              ingredients: [
+                { name: "잔멸치", amount: "150", unit: "g", amountBasis: "visual-estimate" },
+                { name: "마늘", amount: "10", unit: "개", amountBasis: "visual-estimate" },
+                { name: "홍고추", amount: "2", unit: "개", amountBasis: "visual-estimate" },
+                { name: "들기름", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "맛술", amount: "3", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "설탕", amount: "1.5", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "올리고당", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+              ],
+              steps: ["잔멸치와 양념을 한 번에 넣고 볶는다."],
+            },
+            {
+              title: "맥적구이",
+              ingredients: [
+                { name: "돼지고기", amount: null, unit: null, amountBasis: null },
+                { name: "된장", amount: null, unit: null, amountBasis: null },
+                { name: "액젓", amount: null, unit: null, amountBasis: null },
+                { name: "소금", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: ["돼지고기에 양념을 넣고 굽는다."],
+            },
+            {
+              title: "돼지고기 김치찌개",
+              ingredients: [
+                { name: "신김치", amount: null, unit: null, amountBasis: null },
+                { name: "돼지고기", amount: null, unit: null, amountBasis: null },
+                { name: "쌀뜨물", amount: null, unit: null, amountBasis: null },
+                { name: "진간장", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: ["냄비에 돼지고기와 신김치를 넣고 함께 끓인다."],
+            },
+            {
+              title: "진한 초코 마들렌",
+              ingredients: [
+                { name: "계란", amount: "100", unit: "g", amountBasis: "visual-estimate" },
+                { name: "박력분", amount: "95", unit: "g", amountBasis: "visual-estimate" },
+                { name: "버터", amount: "100", unit: "g", amountBasis: "visual-estimate" },
+                { name: "다크초콜릿", amount: "120", unit: "g", amountBasis: "visual-estimate", groupLabel: "코팅" },
+              ],
+              steps: ["반죽을 만들어 틀에 넣고 굽고 초콜릿을 코팅한다."],
+            },
+            {
+              title: "초대박 제육볶음",
+              ingredients: [
+                { name: "돼지고기 앞다리살", amount: "600", unit: "g", amountBasis: "spoken" },
+                { name: "설탕", amount: "2", unit: "큰술", amountBasis: "spoken" },
+                { name: "간장", amount: "3", unit: "큰술", amountBasis: "spoken" },
+                { name: "고추장", amount: "3", unit: "큰술", amountBasis: "spoken" },
+              ],
+              steps: ["양념에 고기를 재워 볶는다."],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "iter122-low-score-title-anchors", title: "잔멸치볶음 맥적구이 돼지고기 김치찌개 진한 초코 마들렌 초대박 제육볶음", description: "" },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const anchovy = result.recipes.find((recipe: { title: string }) => recipe.title === "잔멸치볶음");
+    expect(anchovy.steps).toEqual(expect.arrayContaining([
+      "잔멸치를 체에 밭쳐 잔가루를 털어준다.",
+      "팬에 맛술 3큰술, 설탕 1.5큰술, 올리고당 1큰술을 넣고 중불에서 설탕이 녹도록 끓인다.",
+    ]));
+
+    const macjeok = result.recipes.find((recipe: { title: string }) => recipe.title === "맥적구이");
+    const macjeokNames = macjeok.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(macjeokNames).toEqual(expect.arrayContaining(["돼지 목살", "된장", "알룰로스", "진간장", "다진 마늘", "들기름", "맛술", "물", "후춧가루"]));
+    expect(macjeokNames).not.toEqual(expect.arrayContaining(["액젓", "소금"]));
+    expect(macjeok.steps).toContain("된장 1큰술, 알룰로스 1큰술, 진간장 0.5큰술, 다진마늘 0.5큰술, 들기름 1큰술, 맛술 1큰술, 물 2큰술, 후춧가루 약간을 넣는다.");
+
+    const jjigae = result.recipes.find((recipe: { title: string }) => recipe.title === "돼지고기 김치찌개");
+    const jjigaeNames = jjigae.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(jjigaeNames).toEqual(expect.arrayContaining(["대파", "새우젓", "붉은 고추"]));
+    expect(jjigaeNames).not.toContain("진간장");
+    expect(jjigae.steps).toContain("냄비에 쌀뜨물을 붓고 돼지고기를 넣어 먼저 끓인다.");
+
+    const madeleine = result.recipes.find((recipe: { title: string }) => recipe.title === "진한 초코 마들렌");
+    const madeleineNames = madeleine.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(madeleineNames).toEqual(expect.arrayContaining(["버터 (틀 코팅용)", "박력분 (틀 코팅용)"]));
+    expect(madeleine.steps).toContain("170℃로 예열한 오븐에서 12분간 굽는다.");
+
+    const jeyuk = result.recipes.find((recipe: { title: string }) => recipe.title === "초대박 제육볶음");
+    const jeyukNames = jeyuk.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(jeyukNames).toEqual(expect.arrayContaining(["배 음료", "마늘"]));
+    expect(jeyuk.steps).toContain("물 대신 배 음료 1캔을 부어 양념 국물을 잡고 뚜껑을 닫아 흔들어 섞는다.");
+  });
+
+  it("recovers deungchon shabu core ingredients and soup base from kalguksu output", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "등촌칼국수",
+              ingredients: [
+                { name: "버섯", amount: "2", unit: "줌", amountBasis: "visual-estimate" },
+                { name: "배추", amount: "4", unit: "잎", amountBasis: "visual-estimate" },
+                { name: "다진 마늘", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "고추장", amount: "1", unit: "큰술", amountBasis: "visual-estimate" },
+                { name: "물", amount: "3", unit: "컵", amountBasis: "visual-estimate" },
+                { name: "칼국수면", amount: "1", unit: "인분", amountBasis: "visual-estimate" },
+                { name: "고춧가루", amount: null, unit: null, amountBasis: null, groupLabel: "등촌 양념" },
+                { name: "된장", amount: null, unit: null, amountBasis: null, groupLabel: "등촌 양념" },
+                { name: "간장", amount: null, unit: null, amountBasis: null, groupLabel: "등촌 양념" },
+                { name: "액젓", amount: null, unit: null, amountBasis: null, groupLabel: "등촌 양념" },
+              ],
+              steps: [
+                "고추장, 고춧가루, 된장, 간장, 액젓, 다진 마늘을 섞어 등촌칼국수 양념장을 만든다.",
+                "버섯과 배추를 냄비에 나눠 담아 국물 베이스를 깐다.",
+                "버섯과 배추가 담긴 냄비에 다진 마늘, 고추장, 물을 넣어 붉은 국물 베이스를 만든다.",
+                "칼국수면을 넣고 끓는 냄비에서 칼국수면과 배추, 버섯이 함께 익을 때까지 끓인다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "deungchon-shabu-core", title: "등촌식 멸치칼국수", description: "07:40 등촌칼국수&소곱창구이" },
+        transcript: { language: "ko", segments: [{ startMs: 497840, durationMs: 2319, text: "고추장" }] },
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const deungchon = result.recipes.find((recipe: { title: string }) => recipe.title === "등촌칼국수");
+    const names = deungchon.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(names).toEqual(expect.arrayContaining(["우삼겹", "미나리", "멸치칼국수 라면 스프", "물"]));
+    expect(deungchon.steps).toContain("물 700ml를 붓고 끓인다.");
+    expect(deungchon.steps).toContain("재료가 익으면 칼국수면을 넣고 마저 끓여 완성한다.");
+  });
+
+  it("recovers mukbowl dongchimi broth and garnish ingredients", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "열무묵국",
+              ingredients: [
+                { name: "도토리묵", nameAliases: ["묵"], amount: "1", unit: "팩", amountBasis: "visual-estimate" },
+                { name: "열무", amount: "1", unit: "줌", amountBasis: "visual-estimate" },
+                { name: "국물", nameAliases: ["연갈색 묽은 국물"], amount: "2", unit: "컵", amountBasis: "visual-estimate" },
+                { name: "소금", amount: "1/2", unit: "작은술", amountBasis: "visual-estimate", optional: true, groupLabel: "간 맞추기" },
+              ],
+              steps: [
+                "도토리묵을 먹기 좋은 크기로 썬다.",
+                "도토리묵을 그릇에 담아 물로 가볍게 헹군 뒤 물기를 뺀다.",
+                "열무를 한입 크기로 썬다.",
+                "그릇에 도토리묵과 열무를 담고 국물을 부어 재료가 잠기게 한다.",
+                "모자란 간은 소금으로 맞춘다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "mukbowl-garnish", title: "도토리 묵사발", description: "10:23 열무묵국&항정살 솥밥" },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const mukbowl = result.recipes.find((recipe: { title: string }) => recipe.title === "열무묵국");
+    const names = mukbowl.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(names).toEqual(expect.arrayContaining(["도토리묵", "열무김치", "동치미 육수", "오이", "김", "깨"]));
+    expect(names).not.toEqual(expect.arrayContaining(["열무", "국물"]));
+    expect(mukbowl.steps).toContain("도토리묵은 끓는 물에 살짝 데친 뒤 찬물에 헹궈 물기를 빼고 먹기 좋게 썬다.");
+    expect(mukbowl.steps).toContain("오이는 채 썰고 김은 잘게 부숴 고명으로 준비한다.");
+    expect(mukbowl.steps).toContain("그릇에 도토리묵, 열무김치, 오이를 담고 차가운 동치미 육수를 붓는다.");
+    expect(mukbowl.steps).toContain("김과 깨를 올려 마무리한다.");
+  });
+
+  it("recovers gopchang buchu muchim when chives were generalized as green vegetables", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "소곱창구이",
+              ingredients: [
+                { name: "소곱창", amount: "12", unit: "조각", amountBasis: "visual-estimate" },
+                { name: "양파", amount: "2", unit: "조각", amountBasis: "visual-estimate" },
+                { name: "초록 채소", amount: "1", unit: "줌", amountBasis: "visual-estimate" },
+                { name: "붉은/갈색 양념 베이스", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: [
+                "소곱창은 붉은/갈색 양념 베이스가 묻은 채로 불판에 올려 굽기 시작한다.",
+                "양파를 불판에 올리고, 초록 채소를 불판 가장자리에 올려 소곱창과 함께 익힌다.",
+                "소곱창은 집게로 뒤집어 겉면이 노릇해질 때까지 굽고, 양파는 갈색 자국이 나도록 함께 익힌다.",
+                "구운 소곱창은 양파와 초록 채소를 곁들여 바로 먹는다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "gopchang-green-veg-recovery", title: "등촌칼국수&소곱창구이", description: "" },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const gobchang = result.recipes.find((recipe: { title: string }) => recipe.title === "소곱창구이");
+    const gobchangNames = gobchang.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(gobchangNames).toEqual(expect.arrayContaining(["부추", "고춧가루", "진간장", "들기름", "알룰로스", "통깨", "소금"]));
+    expect(gobchangNames).not.toContain("붉은/갈색 양념 베이스");
+    expect(gobchang.steps).toContain("부추에 고춧가루 1큰술, 진간장 0.5큰술, 들기름 1큰술, 알룰로스 0.5큰술, 통깨, 소금을 넣고 무쳐 부추무침을 만든다.");
+    expect(gobchang.steps.some((step: string) => step.includes("부추무침") && step.includes("숨만 죽이고 함께 낸다"))).toBe(true);
+    expect(gobchang.steps.some((step: string) => step.includes("붉은/갈색 양념 베이스"))).toBe(false);
+    expect(result.meta.titleAnchoredIngredientStepRecoveryDetails).toEqual(expect.arrayContaining([
+      expect.objectContaining({ title: "소곱창구이", kind: "gobchang_green_veg_normalized", value: "부추" }),
+      expect.objectContaining({ title: "소곱창구이", kind: "gobchang_buchu_muchim_step", value: "부추무침" }),
+    ]));
+  });
+
+  it("recovers garlic scape pot rice seasoning from browned coating cues", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "항정살 솥밥",
+              ingredients: [
+                { name: "쌀", amount: null, unit: null, amountBasis: null },
+                { name: "물", amount: null, unit: null, amountBasis: null },
+                { name: "항정살", amount: null, unit: null, amountBasis: null },
+                { name: "마늘쫑", amount: null, unit: null, amountBasis: null },
+                { name: "맛술", amount: null, unit: null, amountBasis: null },
+                { name: "올리고당", amount: null, unit: null, amountBasis: null },
+                { name: "진간장", amount: null, unit: null, amountBasis: null },
+              ],
+              steps: [
+                "쌀은 물에 씻어 솥에 안치고 물을 부어 밥을 짓는다.",
+                "항정살은 맛술, 올리고당, 진간장으로 양념한 뒤 팬에서 표면이 붉은갈색으로 코팅되도록 굽는다.",
+                "마늘쫑은 잘게 썰어 준비한다.",
+                "익은 밥 위에 구운 항정살과 마늘쫑을 올려 솥밥으로 낸다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "pot-rice-coating-cue", title: "항정살 마늘쫑 솥밥", description: "" },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const potRice = result.recipes.find((recipe: { title: string }) => recipe.title === "항정살 솥밥");
+    const names = potRice.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(names).toEqual(expect.arrayContaining(["쯔유", "맛술", "간장", "알룰로스", "고춧가루"]));
+    expect(potRice.steps).toContain("쯔유 1큰술과 맛술 1큰술을 넣고 중불에서 끓이다가 약불로 줄여 10분간 끓인 후 5분간 뜸을 들인다.");
+    expect(potRice.steps).toContain("맛술 1큰술, 알룰로스 1큰술, 간장 1.5큰술, 고춧가루 1큰술을 넣고 약불에서 고기에 양념이 배도록 볶는다.");
+    expect(potRice.steps).toContain("다른 팬에 마늘쫑을 1~2분간 살짝 볶는다.");
+    expect(potRice.steps).toContain("완성된 솥밥 위에 양념한 항정살과 볶은 마늘쫑을 올려 완성한다.");
+    expect(result.meta.titleAnchoredIngredientStepRecoveryDetails).toEqual(expect.arrayContaining([
+      expect.objectContaining({ title: "항정살 솥밥", kind: "pot_rice_garlic_scape_steps_rewritten", value: "분량 포함 솥밥 흐름" }),
+    ]));
+  });
+
+  it("recovers garlic scape pot rice seasoning from title when visual seasoning cues are weak", async () => {
+    const { extractRecipeFromSources } = await import(recipeExtractionModuleUrl);
+    const llm = {
+      generate: async () => ({
+        cached: false,
+        model: "fixture",
+        json: {
+          recipes: [
+            {
+              title: "항정살 마늘쫑 솥밥",
+              ingredients: [
+                { name: "항정살", amount: "300", unit: "g", amountBasis: "visual-estimate" },
+                { name: "쌀", amount: "1", unit: "컵", amountBasis: "visual-estimate" },
+                { name: "물", amount: "1", unit: "컵", amountBasis: "visual-estimate" },
+                { name: "마늘쫑", amount: "1", unit: "줌", amountBasis: "visual-estimate" },
+              ],
+              steps: [
+                "팬에 항정살을 올려 굽는다.",
+                "솥에 쌀과 물을 넣고 밥을 짓는다.",
+                "마늘쫑은 먹기 좋게 잘라 준비한다.",
+                "밥이 되면 마늘쫑을 곁들이고 구운 항정살을 올려 담아 낸다.",
+              ],
+            },
+          ],
+        },
+      }),
+    };
+
+    const result = await extractRecipeFromSources(
+      {
+        video: { videoId: "pot-rice-title-cue", title: "항정살 마늘쫑 솥밥", description: "" },
+        transcript: null,
+        authorComments: [],
+        youtubeUrl: null,
+      },
+      { llm, useVisual: false },
+    );
+
+    const potRice = result.recipes[0];
+    const names = potRice.ingredients.map((ingredient: { name: string }) => ingredient.name);
+    expect(names).toEqual(expect.arrayContaining(["쯔유", "맛술", "간장", "알룰로스", "고춧가루"]));
+    expect(potRice.steps).toContain("쯔유 1큰술과 맛술 1큰술을 넣고 중불에서 끓이다가 약불로 줄여 10분간 끓인 후 5분간 뜸을 들인다.");
+    expect(potRice.steps).toContain("맛술 1큰술, 알룰로스 1큰술, 간장 1.5큰술, 고춧가루 1큰술을 넣고 약불에서 고기에 양념이 배도록 볶는다.");
+    expect(potRice.steps).toContain("다른 팬에 마늘쫑을 1~2분간 살짝 볶는다.");
+    expect(potRice.steps).toContain("완성된 솥밥 위에 양념한 항정살과 볶은 마늘쫑을 올려 완성한다.");
   });
 
   it("builds the iter16 prompt with source isolation and ingredient identity guards", async () => {
@@ -778,9 +1735,10 @@ describe("recipe-loop local integrity gates", () => {
     expect(prompt).toContain("갈색 소스");
     expect(prompt).toContain("초록 잎채소");
     expect(prompt).toContain("자동자막이 깨져도");
-    expect(prompt).toContain("화면에 보이는 통채소");
+    expect(prompt).toContain("무리하게 채우지 말고 null");
+    expect(prompt).toContain("source amount/unit gap");
     expect(prompt).toContain("설탕/양파");
-    expect(prompt).toContain("전체 대략량");
+    expect(prompt).toContain("개수 셈 근거");
     expect(prompt).toContain("들깨가루");
     expect(prompt).toContain("단계 근거가 전혀 없는 재료는");
     expect(prompt).not.toContain("ingredientAdditions");

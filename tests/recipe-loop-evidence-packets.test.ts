@@ -88,6 +88,29 @@ describe("recipe-loop evidence packets", () => {
     expect(JSON.stringify(bundle.report.rows)).not.toContain("700ml");
   });
 
+  it("recovers fish sauce from noisy transcript ingredient wording", async () => {
+    const { buildEvidencePacketBundle } = await import(candidatePacketsModuleUrl);
+
+    const bundle = buildEvidencePacketBundle({
+      video: {
+        title: "열무 들기름냉파스타",
+        description: "00:00 열무 들기름냉파스타",
+        tags: [],
+      },
+      transcript: {
+        language: "ko",
+        segments: [
+          { lineIndex: 0, text: "액젓은 들기를", startMs: 534360, durationMs: 2000, language: "ko" },
+        ],
+      },
+      authorComments: [],
+    });
+
+    const packet = bundle.packets[0];
+    expect(packet.titleHint).toBe("열무 들기름 냉파스타");
+    expect(packet.ingredientCues.map((cue: { text: string }) => cue.text)).toContain("액젓");
+  });
+
   it("writes evidence packet artifacts for lab extraction runs", async () => {
     const { runExtraction } = await import(runExtractionModuleUrl);
     const source = {
