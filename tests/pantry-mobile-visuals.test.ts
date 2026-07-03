@@ -745,7 +745,7 @@ describe("pantry mobile visuals", () => {
       "/assets/ingredients/plush-v2/greek-yogurt-diary-sticker.webp",
     );
     expect(getPantryStickerSrc("소금")).toBe("/assets/ingredients/plush-v2/salt.webp");
-    expect(getPantryStickerSrc("렌틸콩")).toBeNull();
+    expect(getPantryStickerSrc("렌틸콩")).toBe("/assets/plush-v2/lentils.webp");
   });
 
   it("uses the corrected local sticker selections for pilot pantry ingredients", () => {
@@ -760,13 +760,157 @@ describe("pantry mobile visuals", () => {
     );
   });
 
+  it("returns the generated leafy greens sticker batch from the public plush-v2 folder", () => {
+    expect(getPantryStickerSrc("씀바귀")).toBe("/assets/plush-v2/ssumbagwi.webp");
+    expect(getPantryStickerSrc("아욱")).toBe("/assets/plush-v2/mallow-greens.webp");
+    expect(getPantryStickerSrc("아티초크")).toBe("/assets/plush-v2/artichoke.webp");
+    expect(getPantryStickerSrc("알배추")).toBe("/assets/plush-v2/albaechu.webp");
+    expect(getPantryStickerSrc("알팔파")).toBe("/assets/plush-v2/alfalfa-sprouts.webp");
+    expect(getPantryStickerSrc("양상추")).toBe("/assets/plush-v2/lettuce-v2.webp");
+    expect(getPantryStickerSrc("어수리")).toBe("/assets/plush-v2/eosuri-greens.webp");
+    expect(getPantryStickerSrc("얼갈이배추")).toBe(
+      "/assets/plush-v2/eolgari-cabbage.webp",
+    );
+    expect(getPantryStickerSrc("엉겅퀴")).toBe("/assets/plush-v2/thistle-greens.webp");
+    expect(getPantryStickerSrc("열대비름")).toBe(
+      "/assets/plush-v2/tropical-amaranth.webp",
+    );
+    expect(getPantryStickerSrc("열무")).toBe(
+      "/assets/plush-v2/young-radish-greens.webp",
+    );
+    expect(getPantryStickerSrc("영아자")).toBe("/assets/plush-v2/yeongaja-greens.webp");
+    expect(getPantryStickerSrc("우거지")).toBe(
+      "/assets/plush-v2/ugeoji-cabbage-leaves.webp",
+    );
+    expect(getPantryStickerSrc("유채")).toBe("/assets/plush-v2/yu-chae-greens.webp");
+    expect(getPantryStickerSrc("적양배추")).toBe("/assets/plush-v2/red-cabbage.webp");
+    expect(getPantryStickerSrc("전호")).toBe("/assets/plush-v2/jeonho-greens.webp");
+    expect(getPantryStickerSrc("제비쑥")).toBe("/assets/plush-v2/jebi-mugwort.webp");
+    expect(getPantryStickerSrc("줄나물")).toBe("/assets/plush-v2/julnamul-greens.webp");
+    expect(getPantryStickerSrc("질경이")).toBe("/assets/plush-v2/plantain-greens.webp");
+    expect(getPantryStickerSrc("쪽파")).toBe("/assets/plush-v2/jjokpa.webp");
+    expect(getPantryStickerSrc("차이브")).toBe("/assets/plush-v2/chives-v2.webp");
+    expect(getPantryStickerSrc("참나물")).toBe("/assets/plush-v2/chamnamul.webp");
+    expect(getPantryStickerSrc("참반디")).toBe(
+      "/assets/plush-v2/chambandi-greens.webp",
+    );
+    expect(getPantryStickerSrc("참죽나물")).toBe("/assets/plush-v2/chamjuk-namul.webp");
+    expect(getPantryStickerSrc("청경채")).toBe("/assets/plush-v2/bok-choy.webp");
+    expect(getPantryStickerSrc("취나물")).toBe("/assets/plush-v2/chwinamul.webp");
+    expect(getPantryStickerSrc("치커리")).toBe("/assets/plush-v2/chicory.webp");
+    expect(getPantryStickerSrc("케일")).toBe("/assets/plush-v2/kale.webp");
+    expect(getPantryStickerSrc("콩잎")).toBe("/assets/plush-v2/soybean-leaves.webp");
+    expect(getPantryStickerSrc("토스카노")).toBe("/assets/plush-v2/tuscan-kale.webp");
+    expect(getPantryStickerSrc("파드득나물")).toBe(
+      "/assets/plush-v2/padeudeuk-namul.webp",
+    );
+  });
+
+  it("returns the generated vegetable and mushroom sticker batches from the public plush-v2 folder", () => {
+    expect(getPantryStickerSrc("검은비늘버섯")).toBe(
+      "/assets/plush-v2/black-scaled-mushroom.webp",
+    );
+    expect(getPantryStickerSrc("목이버섯")).toBe("/assets/plush-v2/wood-ear-mushroom.webp");
+    expect(getPantryStickerSrc("송이버섯")).toBe(
+      "/assets/plush-v2/matsutake-mushroom.webp",
+    );
+    expect(getPantryStickerSrc("양파즙")).toBe("/assets/plush-v2/onion-juice.webp");
+    expect(getPantryStickerSrc("토마토 주스")).toBe("/assets/plush-v2/tomato-juice.webp");
+    expect(getPantryStickerSrc("고추")).toBe("/assets/plush-v2/chili-pepper.webp");
+    expect(getPantryStickerSrc("홍고추")).toBe("/assets/plush-v2/red-chili-pepper.webp");
+    expect(getPantryStickerSrc("고비")).toBe("/assets/plush-v2/gobi-fern.webp");
+    expect(getPantryStickerSrc("알배기")).toBe("/assets/plush-v2/albaegi-cabbage.webp");
+    expect(getPantryStickerSrc("코울슬로")).toBe("/assets/plush-v2/coleslaw.webp");
+    expect(getPantryStickerSrc("포타벨라")).toBe(
+      "/assets/plush-v2/portabella-mushroom.webp",
+    );
+    expect(getPantryStickerSrc("냉동야채")).toBe(
+      "/assets/plush-v2/frozen-vegetables.webp",
+    );
+  });
+
+  it("returns the generated fruit, grain, and soy sticker batches from the public plush-v2 folder", () => {
+    const expectedStickers: Array<[string, string]> = [
+      ["구기자", "/assets/plush-v2/goji-berry.webp"],
+      ["국화꽃", "/assets/plush-v2/chrysanthemum-flower.webp"],
+      ["꾸지뽕", "/assets/plush-v2/cudrania.webp"],
+      ["날개콩", "/assets/plush-v2/winged-bean.webp"],
+      ["늙은호박", "/assets/plush-v2/mature-pumpkin.webp"],
+      ["단호박", "/assets/plush-v2/kabocha-squash.webp"],
+      ["동아", "/assets/plush-v2/winter-melon.webp"],
+      ["모시풀", "/assets/plush-v2/ramie-leaf.webp"],
+      ["박", "/assets/plush-v2/bottle-gourd.webp"],
+      ["박고지", "/assets/plush-v2/dried-gourd-strips.webp"],
+      ["브로콜리", "/assets/plush-v2/broccoli.webp"],
+      ["사탕수수", "/assets/plush-v2/sugarcane.webp"],
+      ["선인장", "/assets/plush-v2/cactus.webp"],
+      ["아보카도", "/assets/plush-v2/avocado.webp"],
+      ["아스파라거스", "/assets/plush-v2/asparagus.webp"],
+      ["아주까리", "/assets/plush-v2/castor-bean.webp"],
+      ["알로에", "/assets/plush-v2/aloe.webp"],
+      ["여주", "/assets/plush-v2/bitter-melon.webp"],
+      ["염교", "/assets/plush-v2/rakkyo.webp"],
+      ["오크라", "/assets/plush-v2/okra.webp"],
+      ["원추리", "/assets/plush-v2/daylily.webp"],
+      ["잇꽃", "/assets/plush-v2/safflower.webp"],
+      ["자운영", "/assets/plush-v2/chinese-milk-vetch.webp"],
+      ["쥬키니", "/assets/plush-v2/zucchini.webp"],
+      ["편강", "/assets/plush-v2/candied-ginger.webp"],
+      ["호박", "/assets/plush-v2/pumpkin.webp"],
+      ["옥수수콘", "/assets/plush-v2/corn-kernels.webp"],
+      ["귀리", "/assets/plush-v2/oats.webp"],
+      ["귀리밥", "/assets/plush-v2/oat-rice.webp"],
+      ["기장", "/assets/plush-v2/proso-millet.webp"],
+      ["누룽지", "/assets/plush-v2/scorched-rice.webp"],
+      ["멥쌀", "/assets/plush-v2/short-grain-rice.webp"],
+      ["보리", "/assets/plush-v2/barley.webp"],
+      ["수수", "/assets/plush-v2/sorghum.webp"],
+      ["쌀밥", "/assets/plush-v2/cooked-rice.webp"],
+      ["옥수수", "/assets/plush-v2/corn.webp"],
+      ["율무", "/assets/plush-v2/adlay.webp"],
+      ["잡곡", "/assets/plush-v2/mixed-grains.webp"],
+      ["조", "/assets/plush-v2/foxtail-millet.webp"],
+      ["즉석밥", "/assets/plush-v2/instant-rice.webp"],
+      ["퀴노아", "/assets/plush-v2/quinoa.webp"],
+      ["녹두묵", "/assets/plush-v2/mung-bean-jelly.webp"],
+      ["대두", "/assets/plush-v2/soybeans.webp"],
+      ["도토리묵", "/assets/plush-v2/acorn-jelly.webp"],
+      ["동부", "/assets/plush-v2/cowpeas.webp"],
+      ["두유", "/assets/plush-v2/soy-milk.webp"],
+      ["렌틸콩", "/assets/plush-v2/lentils.webp"],
+      ["리마콩", "/assets/plush-v2/lima-beans.webp"],
+      ["메밀묵", "/assets/plush-v2/buckwheat-jelly.webp"],
+      ["병아리콩", "/assets/plush-v2/chickpeas.webp"],
+      ["비지", "/assets/plush-v2/okara.webp"],
+      ["순두부", "/assets/plush-v2/silken-tofu.webp"],
+      ["연두부", "/assets/plush-v2/soft-tofu.webp"],
+      ["옥수수묵", "/assets/plush-v2/corn-jelly.webp"],
+      ["올방개묵", "/assets/plush-v2/olbanggae-jelly.webp"],
+      ["완두", "/assets/plush-v2/peas.webp"],
+      ["유부", "/assets/plush-v2/fried-tofu.webp"],
+      ["잠두", "/assets/plush-v2/broad-beans.webp"],
+      ["쥐눈이콩", "/assets/plush-v2/jwinuni-beans.webp"],
+      ["콩가루", "/assets/plush-v2/soy-flour.webp"],
+      ["콩고기", "/assets/plush-v2/soy-meat.webp"],
+      ["콩고물", "/assets/plush-v2/roasted-soybean-powder.webp"],
+      ["콩국물", "/assets/plush-v2/soy-broth.webp"],
+      ["팥", "/assets/plush-v2/red-beans.webp"],
+      ["팥 앙금", "/assets/plush-v2/red-bean-paste.webp"],
+      ["흑태", "/assets/plush-v2/black-soybeans.webp"],
+    ];
+
+    for (const [name, src] of expectedStickers) {
+      expect(getPantryStickerSrc(name)).toBe(src);
+    }
+  });
+
   it("keeps plush-v2 sticker sources as 512px WebP assets for crisp pantry rendering", () => {
     const items = stickerManifest.items as Record<string, PantryStickerManifestItem>;
 
-    expect(Object.keys(items)).toHaveLength(293);
+    expect(Object.keys(items)).toHaveLength(477);
 
     for (const item of Object.values(items)) {
-      expect(item.src).toMatch(/^\/assets\/ingredients\/plush-v2\/.+\.webp$/);
+      expect(item.src).toMatch(/^\/assets\/(?:ingredients\/)?plush-v2\/.+\.webp$/);
       expect(readVp8Size(item.src)).toEqual({ width: 512, height: 512 });
     }
   });
