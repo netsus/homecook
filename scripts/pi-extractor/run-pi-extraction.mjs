@@ -20,10 +20,13 @@ import {
   applyGenericRepair,
   buildCandidateLedger,
   buildEvidencePackets,
+  buildGapLedger,
+  buildSourceDraft,
   buildVisualTargetLedger,
   buildVisualLedger,
   freezePiExtraction,
   hashText,
+  validateFinalVisualEvidenceContract,
 } from "./lib/artifacts.mjs";
 import {
   buildPiRecipeCandidatePrompt,
@@ -146,6 +149,8 @@ function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
     candidateRawPath: path.join(outDir, "candidate-raw-response.json"),
     candidateResultPath: path.join(outDir, "candidate-result.json"),
     candidateLedgerPath: path.join(outDir, "candidate-ledger.json"),
+    sourceDraftPath: path.join(outDir, "source-draft.json"),
+    gapLedgerPath: path.join(outDir, "gap-ledger.json"),
     visualTargetLedgerPath: path.join(outDir, "visual-target-ledger.json"),
     visualLedgerPath: path.join(outDir, "visual-ledger.json"),
     visualEstimatesPath: path.join(outDir, "visual-estimates.json"),
@@ -321,6 +326,8 @@ async function runStagedPiExtractionCase({
   visualDescriptionOnlySweep,
   visualDescriptionOnlySweepFrames,
   visualMaxTargetsPerCandidate,
+  visualMaxTotalTargetsPerCase,
+  visualMaxFramesPerTarget,
   visualEstimatesEnabled,
   visualEstimateMaxFrames,
   visualTimeoutMs,
@@ -378,14 +385,18 @@ async function runStagedPiExtractionCase({
   assertValidPiRecipeCandidates(candidateOutput);
   await writeJsonTracked(manifest, paths.candidateResultPath, candidateOutput, "candidate-result");
   const candidateLedger = buildCandidateLedger({ sourcePacket, candidateOutput });
+  const sourceDraft = buildSourceDraft({ sourcePacket, candidateLedger });
+  const gapLedger = buildGapLedger({ sourceDraft });
   const visualTargetLedger = buildVisualTargetLedger({
     sourcePacket,
     candidateLedger,
+    gapLedger,
     maxRanges: visualTargetMaxRanges,
     windowBeforeSec: visualWindowBeforeSec,
     windowAfterSec: visualWindowAfterSec,
     descriptionOnlySweep: visualDescriptionOnlySweep,
     maxTargetsPerCandidate: visualMaxTargetsPerCandidate,
+    maxTotalTargetsPerCase: visualMaxTotalTargetsPerCase,
   });
   const visualLedger = visualFrames
     ? await collectVisualLedgerFn({
@@ -408,6 +419,7 @@ async function runStagedPiExtractionCase({
       frameExtractorScript,
       frameExtractorPythonBin,
       descriptionOnlySweepFrames: visualDescriptionOnlySweepFrames,
+      maxFramesPerTarget: visualMaxFramesPerTarget,
       timeoutMs: visualTimeoutMs,
       executeCommandFn: executeVisualCommandFn,
       executePiFn,
@@ -436,8 +448,18 @@ async function runStagedPiExtractionCase({
       errors: [],
       skipped: true,
     };
-  const evidencePackets = buildEvidencePackets({ sourcePacket, candidateLedger, visualLedger, visualTargetLedger, visualEstimates });
+  const evidencePackets = buildEvidencePackets({
+    sourcePacket,
+    candidateLedger,
+    visualLedger,
+    visualTargetLedger,
+    visualEstimates,
+    sourceDraft,
+    gapLedger,
+  });
   await writeJsonTracked(manifest, paths.candidateLedgerPath, candidateLedger, "candidate-ledger");
+  await writeJsonTracked(manifest, paths.sourceDraftPath, sourceDraft, "source-draft");
+  await writeJsonTracked(manifest, paths.gapLedgerPath, gapLedger, "gap-ledger");
   await writeJsonTracked(manifest, paths.visualTargetLedgerPath, visualTargetLedger, "visual-target-ledger");
   await writeJsonTracked(manifest, paths.visualLedgerPath, visualLedger, "visual-ledger");
   await writeJsonTracked(manifest, paths.visualEstimatesPath, visualEstimates, "visual-estimates");
@@ -454,7 +476,10 @@ async function runStagedPiExtractionCase({
       enabled: visualFrames,
       collectionStatus: visualLedger.collectionStatus,
       frameCount: visualLedger.candidates.reduce((sum, candidate) => sum + candidate.frames.length, 0),
+      maxFramesPerTarget: visualMaxFramesPerTarget,
       targetCount: visualTargetLedger.targets.length,
+      skippedTargetCount: visualTargetLedger.skippedTargets?.length ?? 0,
+      gapAllowedTargetCount: gapLedger.summary.visualTargetAllowedCount,
       estimateCount: visualEstimates.visualEstimates.length,
       errors: visualLedger.errors ?? [],
     },
@@ -530,13 +555,21 @@ async function runStagedPiExtractionCase({
   const finalOutput = visualEstimatesEnabled
     ? applyVisualEstimateRepair({ output: repairedOutput, visualEstimates })
     : repairedOutput;
-  assertValidPiRecipeOutput(finalOutput);
-  await writeJsonTracked(manifest, paths.resultPath, { videoId: manifest.videoId, ...finalOutput }, "result");
+  const contract = validateFinalVisualEvidenceContract(finalOutput, {
+    visualLedger,
+    visualEstimates,
+    auditMode: false,
+  });
+  assertValidPiRecipeOutput(contract.output);
+  await writeJsonTracked(manifest, paths.resultPath, { videoId: manifest.videoId, ...contract.output }, "result");
   manifest.phase = "completed";
   manifest.candidateCount = candidateOutput.candidates.length;
-  manifest.recipeCount = finalOutput.recipes.length;
-  manifest.ingredientCount = finalOutput.recipes.reduce((sum, recipe) => sum + recipe.ingredients.length, 0);
-  manifest.stepCount = finalOutput.recipes.reduce((sum, recipe) => sum + recipe.steps.length, 0);
+  manifest.recipeCount = contract.output.recipes.length;
+  manifest.ingredientCount = contract.output.recipes.reduce((sum, recipe) => sum + recipe.ingredients.length, 0);
+  manifest.stepCount = contract.output.recipes.reduce((sum, recipe) => sum + recipe.steps.length, 0);
+  manifest.visualEvidenceContractFailureCount = contract.failureCount;
+  manifest.visualEvidenceContractWarnings = contract.warnings;
+  manifest.needsInvestigation = contract.failureCount > 0;
 }
 
 export async function runPiExtraction(rawArgs = {}, options = {}) {
@@ -570,9 +603,11 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   const visualWindowAfterSec = optionalNumber(args["visual-window-after-sec"], 12);
   const visualDescriptionOnlySweep = args["visual-description-only-sweep"] !== false;
   const visualDescriptionOnlySweepFrames = optionalNumber(args["visual-description-only-sweep-frames"], 6);
-  const visualMaxTargetsPerCandidate = optionalNumber(args["visual-max-targets-per-candidate"], 8);
+  const visualMaxTargetsPerCandidate = optionalNumber(args["visual-max-targets-per-candidate"], 4);
+  const visualMaxTotalTargetsPerCase = optionalNumber(args["visual-max-total-targets-per-case"], 16);
   const visualEstimatesEnabled = args["visual-estimates"] !== false;
   const visualEstimateMaxFrames = optionalNumber(args["visual-estimate-max-frames"], 6);
+  const visualMaxFramesPerTarget = optionalNumber(args["visual-max-frames-per-target"], visualEstimateMaxFrames);
   const visualTimeoutMs = optionalNumber(args["visual-timeout-ms"], timeoutMs);
   const freezeAfterExtraction = args.freeze === true;
   const piTools = buildPiTools({ allowFetchContent, sourcePacketOnly });
@@ -641,6 +676,8 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
         descriptionOnlySweep: visualDescriptionOnlySweep,
         descriptionOnlySweepFrames: visualDescriptionOnlySweepFrames,
         maxTargetsPerCandidate: visualMaxTargetsPerCandidate,
+        maxTotalTargetsPerCase: visualMaxTotalTargetsPerCase,
+        maxFramesPerTarget: visualMaxFramesPerTarget,
         estimatesEnabled: visualEstimatesEnabled,
         estimateMaxFrames: visualEstimateMaxFrames,
         timeoutMs: visualTimeoutMs,
@@ -695,6 +732,8 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
           visualDescriptionOnlySweep,
           visualDescriptionOnlySweepFrames,
           visualMaxTargetsPerCandidate,
+          visualMaxTotalTargetsPerCase,
+          visualMaxFramesPerTarget,
           visualEstimatesEnabled,
           visualEstimateMaxFrames,
           visualTimeoutMs,

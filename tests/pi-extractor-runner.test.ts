@@ -186,8 +186,8 @@ describe("pi recipe extractor MVP runner", () => {
     expect(ledger.candidates[1].timeRange.basis).toBe("even-split-fallback");
   });
 
-  it("creates ingredient-level description-only visual targets when source amount is missing", async () => {
-    const { buildCandidateLedger, buildVisualTargetLedger } = await import(artifactsModuleUrl);
+  it("creates ingredient-level description-only visual targets only through gap-ledger", async () => {
+    const { buildCandidateLedger, buildGapLedger, buildSourceDraft, buildVisualTargetLedger } = await import(artifactsModuleUrl);
     const source = makeSource("case-a");
     source.video.description = "[재료]\n바르는술\n럼(바카디 화이트)";
     source.captions.segments = [
@@ -205,13 +205,23 @@ describe("pi recipe extractor MVP runner", () => {
         }],
       },
     });
+    const sourceDraft = buildSourceDraft({ sourcePacket: source, candidateLedger });
+    const gapLedger = buildGapLedger({ sourceDraft });
 
-    const targetLedger = buildVisualTargetLedger({ sourcePacket: source, candidateLedger });
+    const targetLedger = buildVisualTargetLedger({ sourcePacket: source, candidateLedger, gapLedger });
 
+    expect(sourceDraft.sourceDraftMode).toBe("existing-artifacts");
+    expect(gapLedger.gaps[0]).toMatchObject({
+      candidateId: "r1",
+      ingredient: "럼",
+      gapType: "amount_missing_visual_possible",
+      visualTargetAllowed: true,
+    });
     expect(targetLedger.targets).toHaveLength(1);
     expect(targetLedger.targets[0]).toMatchObject({
       candidateId: "r1",
       ingredient: "럼",
+      gapType: "amount_missing_visual_possible",
       reason: "description_has_ingredient_without_amount",
       fallbackPolicy: "description-only-sweep",
     });
@@ -239,6 +249,9 @@ describe("pi recipe extractor MVP runner", () => {
           amount: "약 1",
           unit: "큰술",
           amountBasis: "visual-estimate",
+          targetVisible: true,
+          referenceObjectVisible: true,
+          countEvidence: null,
           confidence: 0.45,
           evidence: ["frame:r1:럼:1"],
           reason: "병으로 표면에 얇게 바르는 동작과 숟가락 1큰술 안팎의 양으로 보임",
@@ -254,6 +267,115 @@ describe("pi recipe extractor MVP runner", () => {
     expect(repaired.repairLog[0]).toMatchObject({
       reasonCode: "visual_estimate_from_reference_object",
       evidenceRef: ["frame:r1:럼:1"],
+    });
+  });
+
+  it("falls back invalid final visual-estimate values to null and reports contract failures", async () => {
+    const { validateFinalVisualEvidenceContract } = await import(artifactsModuleUrl);
+    const output = {
+      recipes: [{
+        title: "마들렌",
+        candidateId: "r1",
+        ingredients: [{
+          name: "럼",
+          amount: "약 1",
+          unit: "큰술",
+          amountBasis: "visual-estimate",
+          evidence: ["frame:r1:럼:1"],
+        }],
+        steps: ["럼을 바른다."],
+      }],
+      repairLog: [],
+    };
+
+    const contract = validateFinalVisualEvidenceContract(output, {
+      visualLedger: {
+        targets: [{
+          targetId: "r1:럼",
+          candidateId: "r1",
+          ingredient: "럼",
+          frames: [{ ref: "frame:r1:럼:1", candidateId: "r1", ingredient: "럼" }],
+        }],
+      },
+      visualEstimates: {
+        visualEstimates: [{
+          targetId: "r1:럼",
+          candidateId: "r1",
+          ingredient: "럼",
+          targetVisible: true,
+          referenceObjectVisible: false,
+          countEvidence: "frame:r1:럼:1에 병은 보이지만 계량 기준은 없음",
+          amount: "약 1",
+          unit: "큰술",
+          amountBasis: "visual-estimate",
+          evidence: ["frame:r1:럼:1"],
+        }],
+      },
+    });
+
+    expect(contract.failureCount).toBe(1);
+    expect(contract.output.recipes[0].ingredients[0]).toMatchObject({
+      amount: null,
+      unit: null,
+      amountBasis: null,
+    });
+    expect(contract.output.repairLog[0]).toMatchObject({
+      reasonCode: "visual_evidence_contract_fallback",
+    });
+  });
+
+  it("allows count evidence for countable visual-estimate ingredients", async () => {
+    const { validateFinalVisualEvidenceContract } = await import(artifactsModuleUrl);
+    const output = {
+      recipes: [{
+        title: "계란말이",
+        candidateId: "r1",
+        ingredients: [{
+          name: "계란",
+          amount: "2",
+          unit: "개",
+          amountBasis: "visual-estimate",
+          evidence: ["frame:r1:계란:1"],
+        }],
+        steps: ["계란을 푼다."],
+      }],
+      repairLog: [],
+    };
+
+    const contract = validateFinalVisualEvidenceContract(output, {
+      visualLedger: {
+        targets: [{
+          targetId: "r1:계란",
+          candidateId: "r1",
+          ingredient: "계란",
+          frames: [{ ref: "frame:r1:계란:1", candidateId: "r1", ingredient: "계란" }],
+        }],
+      },
+      visualEstimates: {
+        visualEstimates: [{
+          targetId: "r1:계란",
+          candidateId: "r1",
+          ingredient: "계란",
+          targetVisible: true,
+          referenceObjectVisible: false,
+          countEvidence: "frame:r1:계란:1에서 계란 2개를 셀 수 있음",
+          amount: "2",
+          unit: "개",
+          amountBasis: "visual-estimate",
+          evidence: ["frame:r1:계란:1"],
+        }],
+      },
+    });
+
+    expect(contract.failureCount).toBe(0);
+    expect(contract.output.recipes[0].ingredients[0]).toMatchObject({
+      amount: "2",
+      unit: "개",
+      amountBasis: "visual-estimate",
+    });
+    expect(contract.output.repairLog[0]).toMatchObject({
+      reasonCode: "visual_estimate_from_reference_object",
+      countEvidence: "frame:r1:계란:1에서 계란 2개를 셀 수 있음",
     });
   });
 
@@ -558,6 +680,8 @@ describe("pi recipe extractor MVP runner", () => {
     const candidates = JSON.parse(readFileSync(path.join(outDir, "candidate-result.json"), "utf8"));
     const candidateLedger = JSON.parse(readFileSync(path.join(outDir, "candidate-ledger.json"), "utf8"));
     const visualLedger = JSON.parse(readFileSync(path.join(outDir, "visual-ledger.json"), "utf8"));
+    const sourceDraft = JSON.parse(readFileSync(path.join(outDir, "source-draft.json"), "utf8"));
+    const gapLedger = JSON.parse(readFileSync(path.join(outDir, "gap-ledger.json"), "utf8"));
     const evidencePackets = JSON.parse(readFileSync(path.join(outDir, "evidence-packets.json"), "utf8"));
     const cacheManifest = JSON.parse(readFileSync(path.join(outDir, "cache/cache-manifest.json"), "utf8"));
     const detail = JSON.parse(readFileSync(path.join(outDir, "detail-01-r1-result.json"), "utf8"));
@@ -579,6 +703,8 @@ describe("pi recipe extractor MVP runner", () => {
       timeRange: { basis: "caption-cue" },
     });
     expect(visualLedger).toMatchObject({ collectionStatus: "not-requested" });
+    expect(sourceDraft).toMatchObject({ kind: "source-draft", sourceDraftMode: "existing-artifacts" });
+    expect(gapLedger).toMatchObject({ kind: "gap-ledger" });
     expect(evidencePackets.packets[0].amountCues).toEqual(expect.arrayContaining([
       expect.objectContaining({ ingredient: "양파", amount: "1/2", unit: "개" }),
       expect.objectContaining({ ingredient: "간장", amount: "1", unit: "큰술" }),
@@ -679,6 +805,9 @@ describe("pi recipe extractor MVP runner", () => {
           amount: "약 1",
           unit: "큰술",
           amountBasis: "visual-estimate",
+          targetVisible: true,
+          referenceObjectVisible: true,
+          countEvidence: null,
           confidence: 0.45,
           evidence: [`frame:${target.candidateId}:${target.ingredient}:1`],
           reason: "병으로 표면에 얇게 바르는 동작과 숟가락 1큰술 안팎의 양으로 보임",
@@ -703,6 +832,7 @@ describe("pi recipe extractor MVP runner", () => {
       amountBasis: "visual-estimate",
     });
     expect(output.repairLog.map((entry: { reasonCode: string }) => entry.reasonCode)).toContain("visual_estimate_from_reference_object");
+    expect(output.repairLog.map((entry: { reasonCode: string }) => entry.reasonCode)).not.toContain("visual_evidence_contract_fallback");
   });
 
   it("freezes completed Pi extraction outputs before grading without reading golden", async () => {

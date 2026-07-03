@@ -156,14 +156,21 @@ export function buildVisualEstimatePiCommand({
     "",
     "해야 할 일:",
     "- 이 프레임 묶음에서 대상 재료의 양만 추정한다.",
-    "- 계량컵, 숟가락, 병, 손, 그릇, 팬, 채워진 정도, 붓는/바르는 동작 같은 기준이 보일 때만 amount/unit을 채운다.",
-    "- 기준 물체나 target 재료가 보이지 않으면 amount, unit, amountBasis는 null이다.",
+    "- 먼저 targetVisible에 대상 재료가 실제로 보이는지 답한다.",
+    "- 액체/가루/소스처럼 부피·무게를 어림잡는 재료는 계량컵, 숟가락, 병, 손, 그릇, 팬, 채워진 정도, 붓는/바르는 동작 같은 기준 물체가 보일 때만 referenceObjectVisible=true로 둔다.",
+    "- 계란, 마늘, 토마토처럼 화면에서 개수를 셀 수 있는 재료는 기준 물체가 없어도 countEvidence에 보이는 개수와 frame ref를 적을 수 있다.",
+    "- target 재료가 보이지 않으면 amount, unit, amountBasis는 null이다.",
+    "- 부피·무게 추정 재료에서 referenceObjectVisible이 true가 아니면 amount, unit, amountBasis는 null이다.",
+    "- 개수 셈 재료에서 referenceObjectVisible이 true가 아니면 countEvidence가 있을 때만 amount, unit, amountBasis를 채운다.",
     "- 일반 레시피 지식이나 정답 추측으로 채우지 않는다.",
     "- confidence는 0~1이며 visual-estimate는 보통 낮게 둔다.",
     "",
     "출력은 설명 없이 JSON 객체 하나만 반환한다. 스키마:",
     JSON.stringify({
       ingredient: target.ingredient,
+      targetVisible: true,
+      referenceObjectVisible: true,
+      countEvidence: null,
       amount: "약 1 또는 null",
       unit: "큰술 또는 null",
       amountBasis: "visual-estimate 또는 null",
@@ -360,6 +367,7 @@ async function collectTargetVisual({
   frameExtractorPythonBin,
   framesPerRange,
   descriptionOnlySweepFrames,
+  maxFramesPerTarget = 6,
   timeoutMs,
   executeCommandFn,
 }) {
@@ -382,6 +390,7 @@ async function collectTargetVisual({
 
   const frameEntries = [];
   for (const [rangeIndex, range] of ranges.entries()) {
+    if (frameEntries.length >= maxFramesPerTarget) break;
     const rangeDir = path.join(targetDir, `range-${String(rangeIndex + 1).padStart(2, "0")}`);
     await mkdir(rangeDir, { recursive: true });
     const clipPath = await downloadRangeClip({
@@ -409,6 +418,7 @@ async function collectTargetVisual({
       manifest,
     });
     for (const [frameIndex, framePath] of framePaths.entries()) {
+      if (frameEntries.length >= maxFramesPerTarget) break;
       recordWrite(manifest, framePath, `visual-target-frame:${target.targetId}`);
       addAllowedRead(manifest, framePath);
       recordRead(manifest, framePath, `visual-target-frame-input:${target.targetId}`);
@@ -439,17 +449,33 @@ async function collectTargetVisual({
   };
 }
 
+function requiresReferenceObjectForVisualEstimate(ingredient, unit) {
+  const ingredientText = String(ingredient ?? "");
+  const unitText = String(unit ?? "");
+  if (/^(?:개|쪽|알|장|줄기|송이|줌)$/u.test(unitText)) return false;
+  if (/^(?:g|kg|ml|l|큰술|작은술|컵|스푼|t|T)$/iu.test(unitText)) return true;
+  return /(?:소스|양념|장$|간장|식초|기름|오일|물|육수|우유|크림|술|와인|맛술|럼|시럽|꿀|액젓|고추장|된장|쌈장|마요|마요네즈|케첩|가루|분말|설탕|소금|후추|고춧가루|밀가루|전분)/u.test(ingredientText);
+}
+
 function normalizeVisualEstimateOutput(value, target, frameEntries) {
   const parsed = parsePiRawOutput(value) ?? {};
   const amount = cleanString(parsed.amount);
   const unit = cleanString(parsed.unit);
-  const basis = parsed.amountBasis === "visual-estimate" && amount && unit ? "visual-estimate" : null;
+  const targetVisible = parsed.targetVisible === true;
+  const referenceObjectVisible = parsed.referenceObjectVisible === true;
+  const countEvidence = cleanString(parsed.countEvidence);
+  const visibleGatePassed = targetVisible
+    && (referenceObjectVisible || (countEvidence && !requiresReferenceObjectForVisualEstimate(target.ingredient, unit)));
+  const basis = parsed.amountBasis === "visual-estimate" && amount && unit && visibleGatePassed ? "visual-estimate" : null;
   const frameRefs = frameEntries.map((frame) => frame.ref);
   const evidence = uniqueStrings(Array.isArray(parsed.evidence) ? parsed.evidence : []);
   return {
     targetId: target.targetId,
     candidateId: target.candidateId,
     ingredient: target.ingredient,
+    targetVisible,
+    referenceObjectVisible,
+    countEvidence,
     amount: basis ? amount : null,
     unit: basis ? unit : null,
     amountBasis: basis,
@@ -595,6 +621,7 @@ export async function collectVisualLedger({
   frameCount = 2,
   framesPerRange = frameCount,
   descriptionOnlySweepFrames = 6,
+  maxFramesPerTarget = 6,
   secondsPerCandidate = 30,
   maxCandidates = null,
   allowFallbackRanges = false,
@@ -640,6 +667,7 @@ export async function collectVisualLedger({
           frameExtractorPythonBin,
           framesPerRange,
           descriptionOnlySweepFrames,
+          maxFramesPerTarget,
           timeoutMs,
           executeCommandFn,
         }));
@@ -816,6 +844,9 @@ export async function collectVisualEstimates({
         targetId: target.targetId,
         candidateId: target.candidateId,
         ingredient: target.ingredient,
+        targetVisible: false,
+        referenceObjectVisible: false,
+        countEvidence: null,
         amount: null,
         unit: null,
         amountBasis: null,
@@ -875,6 +906,9 @@ export async function collectVisualEstimates({
         targetId: target.targetId,
         candidateId: target.candidateId,
         ingredient: target.ingredient,
+        targetVisible: false,
+        referenceObjectVisible: false,
+        countEvidence: null,
         amount: null,
         unit: null,
         amountBasis: null,

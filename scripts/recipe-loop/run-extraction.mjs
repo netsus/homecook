@@ -14,15 +14,21 @@ import { pathToFileURL } from "node:url";
 
 import { createCodexVisionKeyframesClient } from "./lib/codex-vision-keyframes-client.mjs";
 import { createCodexVisionClient } from "./lib/codex-vision-client.mjs";
-import { createUrlOnlyGptClient } from "./lib/url-only-gpt-client.mjs";
+import { createPublicSourceGptClient } from "./lib/public-source-gpt-client.mjs";
+import { collectPublicSource } from "./lib/public-source-collector.mjs";
+import { collectPublicSourceVisualAssist } from "./lib/public-source-visual-assist.mjs";
 import { buildEvidencePacketBundle } from "../../lib/server/recipe-extraction-lab/candidate-packets.mjs";
 import { extractRecipeFromSources } from "../../lib/server/recipe-extraction-lab/extract.mjs";
+import { buildPublicSourcePacketBundle } from "../../lib/server/recipe-extraction-lab/public-source-packets.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
 const DEFAULT_PROVIDER = "codex-vision-keyframes";
-const URL_ONLY_PROVIDER = "url-only-gpt";
-const SUPPORTED_PROVIDERS = new Set(["codex-vision", DEFAULT_PROVIDER, URL_ONLY_PROVIDER]);
+const PUBLIC_SOURCE_PROVIDER = "public-source-gpt";
+const SUPPORTED_PROVIDERS = new Set(["codex-vision", DEFAULT_PROVIDER, PUBLIC_SOURCE_PROVIDER]);
+const DEFAULT_KEYFRAMES_CODEX_EFFORT = process.env.RECIPE_LOOP_CODEX_VISION_CODEX_EFFORT || "low";
+const DEFAULT_KEYFRAMES_SELECTOR_EFFORT = process.env.RECIPE_LOOP_CODEX_VISION_SELECTOR_EFFORT || DEFAULT_KEYFRAMES_CODEX_EFFORT;
+const DEFAULT_KEYFRAMES_SEGMENT_EFFORT = process.env.RECIPE_LOOP_CODEX_VISION_SEGMENT_EFFORT || DEFAULT_KEYFRAMES_SELECTOR_EFFORT;
 
 export function parseCliArgs(argv) {
   const args = {};
@@ -92,10 +98,12 @@ export function createLlmForProvider(provider, args = {}, factories = {}) {
     return createCodexVisionKeyframes({
       model: typeof args.model === "string" ? args.model : undefined,
       selectorModel: typeof args["selector-model"] === "string" ? args["selector-model"] : undefined,
-      codexEffort: typeof args["codex-effort"] === "string" ? args["codex-effort"] : undefined,
-      selectorEffort: typeof args["selector-effort"] === "string" ? args["selector-effort"] : undefined,
-      segmentEffort: typeof args["segment-effort"] === "string" ? args["segment-effort"] : undefined,
+      codexEffort: typeof args["codex-effort"] === "string" ? args["codex-effort"] : DEFAULT_KEYFRAMES_CODEX_EFFORT,
+      selectorEffort: typeof args["selector-effort"] === "string" ? args["selector-effort"] : DEFAULT_KEYFRAMES_SELECTOR_EFFORT,
+      segmentEffort: typeof args["segment-effort"] === "string" ? args["segment-effort"] : DEFAULT_KEYFRAMES_SEGMENT_EFFORT,
       keyframeMode: typeof args["keyframe-mode"] === "string" ? args["keyframe-mode"] : undefined,
+      segmentedFinalMode: typeof args["segmented-final-mode"] === "string" ? args["segmented-final-mode"] : undefined,
+      segmentedRepairMode: typeof args["segmented-repair-mode"] === "string" ? args["segmented-repair-mode"] : undefined,
       segmentModel: typeof args["segment-model"] === "string" ? args["segment-model"] : undefined,
       maxFrames: optionalNumber(args["max-frames"]),
       storyboardMaxFrames: optionalNumber(args["storyboard-max-frames"]),
@@ -105,6 +113,7 @@ export function createLlmForProvider(provider, args = {}, factories = {}) {
       segmentPaddingSec: optionalNumber(args["segment-padding-sec"]),
       segmentMinFrames: optionalNumber(args["segment-min-frames"]),
       segmentMaxFrames: optionalNumber(args["segment-max-frames"]),
+      segmentSelectorCandidateLimit: optionalNumber(args["segment-selector-candidate-limit"]),
       segmentMaxCount: optionalNumber(args["segment-max-count"]),
       segmentFrameTotalLimit: optionalNumber(args["segment-frame-total-limit"]),
       sceneDetail: typeof args["scene-detail"] === "string" ? args["scene-detail"] : undefined,
@@ -115,12 +124,17 @@ export function createLlmForProvider(provider, args = {}, factories = {}) {
       sourceCuePackets: args["source-cue-packets"] === true,
       recipeEvidenceLedger: args["recipe-evidence-ledger"] === true,
       recipeEvidenceLedgerPrompt: args["recipe-evidence-ledger-prompt"] === true,
+      visualFrameLedgerPrompt: args["visual-frame-ledger-prompt"] === true,
+      visualFrameLedgerBatchSize: optionalNumber(args["visual-frame-ledger-batch-size"]),
+      segmentBridgeFrames: args["segment-bridge-frames"] === true,
+      segmentPhaseAnchorFrames: args["segment-phase-anchor-frames"] === true,
+      segmentSelectorAutoSelect: args["segment-selector-auto-select"] === true,
     });
   }
 
-  if (provider === URL_ONLY_PROVIDER) {
-    const createUrlOnlyGpt = factories.createUrlOnlyGpt ?? createUrlOnlyGptClient;
-    return createUrlOnlyGpt({
+  if (provider === PUBLIC_SOURCE_PROVIDER) {
+    const createPublicSourceGpt = factories.createPublicSourceGpt ?? createPublicSourceGptClient;
+    return createPublicSourceGpt({
       model: typeof args.model === "string" ? args.model : undefined,
       codexEffort: typeof args["codex-effort"] === "string" ? args["codex-effort"] : undefined,
       timeoutMs: optionalNumber(args["timeout-ms"]),
@@ -149,6 +163,34 @@ async function writeRunFailure(outDir, { id, split, outTag, provider, error }) {
   );
 }
 
+async function writeRunProgress(outDir, update) {
+  await mkdir(outDir, { recursive: true });
+  const progressPath = path.join(outDir, "run-progress.json");
+  const existing = existsSync(progressPath)
+    ? await readFile(progressPath, "utf8").then((raw) => JSON.parse(raw)).catch(() => ({}))
+    : {};
+  const now = new Date().toISOString();
+  const phase = update.phase ?? existing.phase ?? "unknown";
+  const events = Array.isArray(existing.events) ? existing.events : [];
+  await writeFile(
+    progressPath,
+    JSON.stringify({
+      ...existing,
+      ...update,
+      phase,
+      updatedAt: now,
+      events: [
+        ...events,
+        {
+          phase,
+          at: now,
+        },
+      ],
+    }, null, 2) + "\n",
+    "utf8",
+  );
+}
+
 export async function runExtraction(rawArgs = {}, options = {}) {
   const args = typeof rawArgs.length === "number" ? parseCliArgs(rawArgs) : rawArgs;
   const split = typeof args.split === "string" ? args.split : "train";
@@ -170,26 +212,80 @@ export async function runExtraction(rawArgs = {}, options = {}) {
   for (const id of ids) {
     const sourcePath = path.join(splitDir, id, "source.json");
     const outDir = path.join(splitDir, id, "runs", outTag);
+    await writeRunProgress(outDir, {
+      videoId: id,
+      split,
+      outTag,
+      provider,
+      sourcePath,
+      phase: "started",
+    });
     if (!existsSync(sourcePath)) {
       const error = new Error(`source 없음: ${sourcePath}`);
       await writeRunFailure(outDir, { id, split, outTag, provider, error });
+      await writeRunProgress(outDir, { phase: "failed", message: error.message });
       console.error(`[SKIP] source 없음: ${id}`);
       failures += 1;
       continue;
     }
     try {
       const source = JSON.parse(await readFile(sourcePath, "utf8"));
+      await writeRunProgress(outDir, { phase: "source-loaded" });
       const input = sourceToInput(source);
-      const sourceMode = provider === URL_ONLY_PROVIDER ? "url-only" : "source-text";
-      const evidencePacketBundle = sourceMode === "url-only" ? null : buildEvidencePacketBundle(input);
+      const sourceMode = provider === PUBLIC_SOURCE_PROVIDER ? "public-source" : "source-text";
+      await writeRunProgress(outDir, { phase: "input-built", sourceMode });
+      const evidencePacketBundle = sourceMode === "public-source" ? null : buildEvidencePacketBundle(input);
+      if (evidencePacketBundle) {
+        await writeRunProgress(outDir, {
+          phase: "evidence-packets-built",
+          evidencePacketCount: evidencePacketBundle.packets.length,
+        });
+      }
+      const publicSource = sourceMode === "public-source"
+        ? await (options.publicSourceCollector ?? collectPublicSource)({
+          input,
+          source,
+          videoUrl: input.youtubeUrl,
+          cacheDir: options.publicSourceCacheDir,
+          noCache: args["no-cache"] === true,
+          refresh: args["refresh-final"] === true,
+          timeoutMs: optionalNumber(args["timeout-ms"]),
+        })
+        : null;
+      if (publicSource) {
+        await writeRunProgress(outDir, { phase: "public-source-collected" });
+      }
+      const publicSourceVisualAssist = sourceMode === "public-source"
+        ? await (options.publicSourceVisualAssistCollector ?? collectPublicSourceVisualAssist)({
+          videoId: id,
+          cacheRoot: options.publicSourceVisualAssistCacheRoot ?? path.join(projectRoot, dataRoot, "cache/codex-vision-keyframes"),
+        })
+        : null;
+      if (publicSourceVisualAssist) {
+        await writeRunProgress(outDir, { phase: "public-source-visual-assist-collected" });
+      }
+      const publicSourceBundle = publicSource
+        ? buildPublicSourcePacketBundle(input, publicSource, { visualAssist: publicSourceVisualAssist })
+        : null;
+      await writeRunProgress(outDir, { phase: "extracting" });
       const result = await extractRecipeFromSources(input, {
         llm,
-        useVisual,
+        useVisual: sourceMode === "public-source" ? false : useVisual,
         sourceMode,
-        useEvidencePackets: sourceMode !== "url-only",
+        useEvidencePackets: sourceMode !== "public-source",
         packetPromptTextOnly: false,
+        publicSourceBundle,
       });
       await mkdir(outDir, { recursive: true });
+      if (publicSource) {
+        await writeFile(path.join(outDir, "public-source.json"), JSON.stringify(publicSource, null, 2) + "\n", "utf8");
+      }
+      if (publicSourceVisualAssist) {
+        await writeFile(path.join(outDir, "public-source-visual-assist.json"), JSON.stringify(publicSourceVisualAssist, null, 2) + "\n", "utf8");
+      }
+      if (publicSourceBundle) {
+        await writeFile(path.join(outDir, "public-source-packets.json"), JSON.stringify(publicSourceBundle, null, 2) + "\n", "utf8");
+      }
       if (evidencePacketBundle) {
         await writeFile(
           path.join(outDir, "evidence-packets.json"),
@@ -211,6 +307,12 @@ export async function runExtraction(rawArgs = {}, options = {}) {
         );
       }
       await writeFile(path.join(outDir, "result.json"), JSON.stringify({ videoId: id, ...result }, null, 2) + "\n", "utf8");
+      await writeRunProgress(outDir, {
+        phase: "completed",
+        recipeCount: result.recipes.length,
+        ingredientCount: result.recipes.reduce((a, r) => a + r.ingredients.length, 0),
+        stepCount: result.recipes.reduce((a, r) => a + r.steps.length, 0),
+      });
       const recipeCount = result.recipes.length;
       const ingCount = result.recipes.reduce((a, r) => a + r.ingredients.length, 0);
       const stepCount = result.recipes.reduce((a, r) => a + r.steps.length, 0);
@@ -218,6 +320,10 @@ export async function runExtraction(rawArgs = {}, options = {}) {
     } catch (error) {
       failures += 1;
       await writeRunFailure(outDir, { id, split, outTag, provider, error });
+      await writeRunProgress(outDir, {
+        phase: "failed",
+        message: error instanceof Error ? error.message : String(error),
+      });
       console.error(`[FAIL] ${split}/${id}: ${error.message}`);
     }
   }

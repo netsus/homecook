@@ -145,6 +145,60 @@ function sourceLines(sourcePacket) {
     .filter(Boolean);
 }
 
+function sourceEntries(sourcePacket) {
+  const entries = [];
+  if (sourcePacket?.video?.title) {
+    entries.push({ type: "title", ref: "title", text: sourcePacket.video.title });
+  }
+  const descriptionLines = String(sourcePacket?.video?.description ?? "")
+    .split(/\r?\n/u)
+    .map((line) => line.replace(/\s+/gu, " ").trim())
+    .filter(Boolean);
+  for (const [index, line] of descriptionLines.entries()) {
+    entries.push({ type: "description", ref: `description:${index + 1}`, text: line });
+  }
+  const authorComments = Array.isArray(sourcePacket?.authorComments)
+    ? sourcePacket.authorComments
+    : Array.isArray(sourcePacket?.authorComments?.comments)
+    ? sourcePacket.authorComments.comments.map((comment) => comment.text)
+    : [];
+  for (const [index, text] of authorComments.entries()) {
+    if (cleanString(text)) entries.push({ type: "author-comment", ref: `author-comment:${index + 1}`, text });
+  }
+  for (const segment of sourcePacket?.captions?.segments ?? []) {
+    if (!cleanString(segment.text)) continue;
+    const startMs = Number(segment.startMs);
+    const startSec = Number.isFinite(startMs) ? Math.round(startMs / 1000) : null;
+    entries.push({
+      type: "caption",
+      ref: startSec === null ? "caption" : `transcript:${startSec}s`,
+      text: segment.text,
+      startSec,
+    });
+  }
+  return entries;
+}
+
+function amountCueFromText(text, ingredientName, sourceType, sourceRef) {
+  const compactIngredient = String(ingredientName).replace(/\s+/gu, "");
+  const flexibleIngredient = [...compactIngredient]
+    .map((char) => char.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"))
+    .join("\\s*");
+  const line = String(text ?? "");
+  const exactIndex = line.indexOf(ingredientName);
+  const afterName = exactIndex >= 0 ? line.slice(exactIndex + ingredientName.length) : "";
+  const match = afterName.match(QUANTITY_PATTERN)
+    ?? line.match(new RegExp(`${flexibleIngredient}\\s*${QUANTITY_PATTERN.source}`, "iu"));
+  if (!match?.groups?.amount || !match?.groups?.unit) return null;
+  const amountBasis = sourceType === "caption" ? "spoken" : "stated";
+  return {
+    amount: match.groups.amount,
+    unit: match.groups.unit,
+    amountBasis,
+    evidence: [sourceRef],
+  };
+}
+
 function lineMentionsIngredient(line, ingredientName) {
   const rawLine = String(line ?? "");
   const rawIngredient = String(ingredientName ?? "").trim();
@@ -213,23 +267,10 @@ function captionSegmentsForIngredient(sourcePacket, candidate, ingredientName, {
 
 export function extractAmountFromSource(sourcePacket, ingredientName) {
   if (!ingredientName) return null;
-  const compactIngredient = String(ingredientName).replace(/\s+/gu, "");
-  const flexibleIngredient = [...compactIngredient]
-    .map((char) => char.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"))
-    .join("\\s*");
-  for (const line of sourceLines(sourcePacket)) {
-    if (!lineMentionsIngredient(line, ingredientName)) continue;
-    const exactIndex = line.indexOf(ingredientName);
-    const afterName = exactIndex >= 0 ? line.slice(exactIndex + ingredientName.length) : "";
-    const match = afterName.match(QUANTITY_PATTERN) ?? line.match(new RegExp(`${flexibleIngredient}\\s*${QUANTITY_PATTERN.source}`, "iu"));
-    if (match?.groups?.amount && match?.groups?.unit) {
-      return {
-        amount: match.groups.amount,
-        unit: match.groups.unit,
-        amountBasis: "stated",
-        evidence: ["sourcePacket:description"],
-      };
-    }
+  for (const entry of sourceEntries(sourcePacket)) {
+    if (!lineMentionsIngredient(entry.text, ingredientName)) continue;
+    const cue = amountCueFromText(entry.text, ingredientName, entry.type, entry.ref);
+    if (cue) return cue;
   }
   return null;
 }
@@ -245,18 +286,53 @@ function extractDescriptionEvidence(sourcePacket, candidate) {
 export function buildVisualTargetLedger({
   sourcePacket,
   candidateLedger,
+  gapLedger = null,
   maxRanges = 3,
   windowBeforeSec = 8,
   windowAfterSec = 12,
   descriptionOnlySweep = true,
-  maxTargetsPerCandidate = 8,
+  maxTargetsPerCandidate = 4,
+  maxTotalTargetsPerCase = 16,
 } = {}) {
   const descriptionLines = sourceLines({ ...sourcePacket, captions: { segments: [] } });
   const targets = [];
+  const skippedTargets = [];
+  const allowedGaps = Array.isArray(gapLedger?.gaps)
+    ? gapLedger.gaps.filter((gap) => gap.visualTargetAllowed === true)
+    : null;
+  const gapKey = (candidateId, ingredient) => `${candidateId ?? ""}::${cleanString(ingredient)?.replace(/\s+/gu, "") ?? ""}`;
+  const allowedGapMap = new Map((allowedGaps ?? []).map((gap) => [gapKey(gap.candidateId, gap.ingredient), gap]));
   for (const candidate of candidateLedger.candidates ?? []) {
     let candidateTargetCount = 0;
-    for (const ingredient of candidate.ingredientNames ?? []) {
-      if (candidateTargetCount >= maxTargetsPerCandidate) break;
+    const ingredients = allowedGaps
+      ? allowedGaps.filter((gap) => gap.candidateId === candidate.candidateId).map((gap) => gap.ingredient)
+      : candidate.ingredientNames ?? [];
+    for (const ingredient of ingredients) {
+      const gap = allowedGapMap.get(gapKey(candidate.candidateId, ingredient)) ?? null;
+      if (allowedGaps && !gap) {
+        skippedTargets.push({
+          candidateId: candidate.candidateId,
+          ingredient,
+          reasonCode: "gap_ledger_not_allowed",
+        });
+        continue;
+      }
+      if (candidateTargetCount >= maxTargetsPerCandidate) {
+        skippedTargets.push({
+          candidateId: candidate.candidateId,
+          ingredient,
+          reasonCode: "max_targets_per_candidate",
+        });
+        continue;
+      }
+      if (targets.length >= maxTotalTargetsPerCase) {
+        skippedTargets.push({
+          candidateId: candidate.candidateId,
+          ingredient,
+          reasonCode: "max_total_targets_per_case",
+        });
+        continue;
+      }
       const amountCue = extractAmountFromSource(sourcePacket, ingredient);
       if (amountCue) continue;
       const descriptionCues = descriptionLines
@@ -270,14 +346,30 @@ export function buildVisualTargetLedger({
       const hasDescriptionCue = descriptionCues.length > 0;
       const hasCaptionCue = preferredTimeRanges.length > 0;
       const shouldTarget = hasDescriptionCue || hasCaptionCue || candidate.sourceCues?.includes("description");
-      if (!shouldTarget) continue;
+      if (!shouldTarget) {
+        skippedTargets.push({
+          candidateId: candidate.candidateId,
+          ingredient,
+          reasonCode: "no_source_or_caption_target_cue",
+        });
+        continue;
+      }
       const descriptionOnly = hasDescriptionCue && !hasCaptionCue;
-      if (descriptionOnly && !descriptionOnlySweep) continue;
+      if (descriptionOnly && !descriptionOnlySweep) {
+        skippedTargets.push({
+          candidateId: candidate.candidateId,
+          ingredient,
+          reasonCode: "description_only_sweep_disabled",
+        });
+        continue;
+      }
       const fallbackPolicy = descriptionOnly ? "description-only-sweep" : "none";
       targets.push({
         targetId: `${candidate.candidateId}:${safeTargetSegment(ingredient)}`,
         candidateId: candidate.candidateId,
         ingredient,
+        gapType: gap?.gapType ?? "legacy_amount_gap",
+        sourceEvidence: gap?.sourceEvidence ?? [],
         reason: descriptionOnly ? "description_has_ingredient_without_amount" : "caption_or_action_cue_without_amount",
         textCues: uniqueStrings([...descriptionCues, ...preferredTimeRanges.map((range) => range.cueText)]).slice(0, 10),
         preferredTimeRanges: preferredTimeRanges.map((range) => {
@@ -301,12 +393,107 @@ export function buildVisualTargetLedger({
       windowAfterSec,
       descriptionOnlySweep,
       maxTargetsPerCandidate,
+      maxTotalTargetsPerCase,
+      gapGated: Boolean(gapLedger),
     },
     targets,
+    skippedTargets,
+    warnings: skippedTargets.filter((target) => target.reasonCode.startsWith("max_")),
   };
 }
 
-export function buildEvidencePackets({ sourcePacket, candidateLedger, visualLedger, visualTargetLedger = null, visualEstimates = null }) {
+export function buildSourceDraft({ sourcePacket, candidateLedger }) {
+  const recipes = (candidateLedger.candidates ?? []).map((candidate) => {
+    const ingredients = (candidate.ingredientNames ?? []).map((ingredient) => {
+      const entries = sourceEntries(sourcePacket).filter((entry) => lineMentionsIngredient(entry.text, ingredient));
+      const amountCue = extractAmountFromSource(sourcePacket, ingredient);
+      const sourceEvidence = amountCue?.evidence?.length
+        ? amountCue.evidence
+        : entries.map((entry) => entry.ref).slice(0, 6);
+      const explicitSourceType = amountCue
+        ? amountCue.amountBasis === "spoken" ? "caption" : "description"
+        : entries[0]?.type ?? null;
+      return {
+        name: ingredient,
+        amount: amountCue?.amount ?? null,
+        unit: amountCue?.unit ?? null,
+        amountBasis: amountCue?.amountBasis ?? null,
+        sourceEvidence,
+        sourceAmountPresent: Boolean(amountCue?.amount),
+        sourceUnitPresent: Boolean(amountCue?.unit),
+        explicitSourceType,
+        confidence: sourceEvidence.length > 0 ? 0.65 : 0.35,
+      };
+    });
+    return {
+      candidateId: candidate.candidateId,
+      title: candidate.titleHint,
+      sourceCues: candidate.sourceCues,
+      ingredients,
+    };
+  });
+  return {
+    schemaVersion: 1,
+    kind: "source-draft",
+    videoId: sourcePacket?.video?.videoId ?? null,
+    sourceDraftMode: "existing-artifacts",
+    inputs: ["sourcePacket", "candidateResult", "candidateLedger"],
+    recipes,
+  };
+}
+
+export function buildGapLedger({ sourceDraft }) {
+  const gaps = [];
+  for (const recipe of sourceDraft?.recipes ?? []) {
+    for (const ingredient of recipe.ingredients ?? []) {
+      const hasSourceEvidence = Array.isArray(ingredient.sourceEvidence) && ingredient.sourceEvidence.length > 0;
+      const sourceAmountPresent = ingredient.sourceAmountPresent === true;
+      const sourceUnitPresent = ingredient.sourceUnitPresent === true;
+      let gapType = "no_visual_needed";
+      let visualTargetAllowed = false;
+      if (hasSourceEvidence && (!sourceAmountPresent || !sourceUnitPresent)) {
+        gapType = !sourceAmountPresent ? "amount_missing_visual_possible" : "unit_missing_visual_possible";
+        visualTargetAllowed = true;
+      } else if (!hasSourceEvidence) {
+        gapType = "ingredient_identity_unclear";
+      }
+      gaps.push({
+        candidateId: recipe.candidateId,
+        ingredient: ingredient.name,
+        field: !sourceAmountPresent
+          ? `ingredients[${ingredient.name}].amount`
+          : !sourceUnitPresent
+          ? `ingredients[${ingredient.name}].unit`
+          : null,
+        gapType,
+        sourceAmountPresent,
+        sourceUnitPresent,
+        explicitSourceType: ingredient.explicitSourceType,
+        sourceEvidence: ingredient.sourceEvidence ?? [],
+        whyVisualNeeded: visualTargetAllowed
+          ? "재료명은 source에 있지만 amount/unit이 source에 없음"
+          : gapType === "no_visual_needed"
+          ? "source에 amount/unit 근거가 있음"
+          : "재료 source 근거가 부족해 1차 visual target 금지",
+        visualTargetAllowed,
+      });
+    }
+  }
+  return {
+    schemaVersion: 1,
+    kind: "gap-ledger",
+    videoId: sourceDraft?.videoId ?? null,
+    sourceDraftMode: sourceDraft?.sourceDraftMode ?? null,
+    gaps,
+    summary: {
+      totalGaps: gaps.length,
+      visualTargetAllowedCount: gaps.filter((gap) => gap.visualTargetAllowed).length,
+      noVisualNeededCount: gaps.filter((gap) => gap.gapType === "no_visual_needed").length,
+    },
+  };
+}
+
+export function buildEvidencePackets({ sourcePacket, candidateLedger, visualLedger, visualTargetLedger = null, visualEstimates = null, sourceDraft = null, gapLedger = null }) {
   const packets = candidateLedger.candidates.map((candidate) => {
     const visual = visualLedger.candidates.find((entry) => entry.candidateId === candidate.candidateId) ?? null;
     const descriptionEvidence = extractDescriptionEvidence(sourcePacket, candidate);
@@ -332,6 +519,8 @@ export function buildEvidencePackets({ sourcePacket, candidateLedger, visualLedg
       visualEvidence: visual ? visual.frames : [],
       visualTargets: (visualTargetLedger?.targets ?? []).filter((target) => target.candidateId === candidate.candidateId),
       visualEstimates: (visualEstimates?.visualEstimates ?? []).filter((estimate) => estimate.candidateId === candidate.candidateId),
+      sourceDraft: (sourceDraft?.recipes ?? []).find((recipe) => recipe.candidateId === candidate.candidateId) ?? null,
+      gapLedger: (gapLedger?.gaps ?? []).filter((gap) => gap.candidateId === candidate.candidateId),
       amountCues,
       uncertainties: candidate.uncertainties,
     };
@@ -348,8 +537,22 @@ function hasFrameEvidence(estimate) {
   return (estimate?.evidence ?? []).some((entry) => String(entry).startsWith("frame:"));
 }
 
-function hasVisualReason(estimate) {
-  return /숟가락|스푼|컵|계량|병|그릇|팬|손|채워|붓|바르|뿌리|담|표면|기준|reference|fill|pour/iu.test(String(estimate?.reason ?? ""));
+function hasCountEvidence(estimate) {
+  return cleanString(estimate?.countEvidence) !== null;
+}
+
+function requiresReferenceObjectForVisualEstimate(estimate) {
+  const ingredient = String(estimate?.ingredient ?? "");
+  const unit = String(estimate?.unit ?? "");
+  if (/^(?:개|쪽|알|장|줄기|송이|줌)$/u.test(unit)) return false;
+  if (/^(?:g|kg|ml|l|큰술|작은술|컵|스푼|t|T)$/iu.test(unit)) return true;
+  return /(?:소스|양념|장$|간장|식초|기름|오일|물|육수|우유|크림|술|와인|맛술|럼|시럽|꿀|액젓|고추장|된장|쌈장|마요|마요네즈|케첩|가루|분말|설탕|소금|후추|고춧가루|밀가루|전분)/u.test(ingredient);
+}
+
+function hasVisibleEstimateGate(estimate) {
+  if (estimate?.targetVisible !== true) return false;
+  if (estimate?.referenceObjectVisible === true) return true;
+  return hasCountEvidence(estimate) && !requiresReferenceObjectForVisualEstimate(estimate);
 }
 
 export function applyVisualEstimateRepair({ output, visualEstimates }) {
@@ -365,9 +568,9 @@ export function applyVisualEstimateRepair({ output, visualEstimates }) {
   for (const estimate of visualEstimates?.visualEstimates ?? []) {
     if (!estimate?.amount || !estimate?.unit) continue;
     if (estimate.amountBasis !== "visual-estimate") continue;
-    if (Number(estimate.confidence ?? 0) < 0.35) continue;
+    if (Number(estimate.confidence ?? 0) < 0.2) continue;
     if (!hasFrameEvidence(estimate)) continue;
-    if (!hasVisualReason(estimate)) continue;
+    if (!hasVisibleEstimateGate(estimate)) continue;
     const recipe = recipes.find((entry) => entry.candidateId === estimate.candidateId)
       ?? recipes.find((entry) => (entry.ingredients ?? []).some((ingredient) => sameIngredient(ingredient.name, estimate.ingredient)));
     if (!recipe) continue;
@@ -400,10 +603,144 @@ export function applyVisualEstimateRepair({ output, visualEstimates }) {
       reasonCode: "visual_estimate_from_reference_object",
       reason: estimate.reason ?? null,
       confidence: Number(estimate.confidence ?? 0),
+      targetVisible: estimate.targetVisible === true,
+      referenceObjectVisible: estimate.referenceObjectVisible === true,
+      countEvidence: estimate.countEvidence ?? null,
     });
   }
 
   return { recipes, repairLog };
+}
+
+function frameEntriesFromVisualLedger(visualLedger) {
+  const frames = [];
+  for (const target of visualLedger?.targets ?? []) {
+    for (const frame of target.frames ?? []) {
+      frames.push({
+        ...frame,
+        targetId: frame.targetId ?? target.targetId,
+        candidateId: frame.candidateId ?? target.candidateId,
+        ingredient: frame.ingredient ?? target.ingredient,
+      });
+    }
+  }
+  for (const candidate of visualLedger?.candidates ?? []) {
+    for (const frame of candidate.frames ?? []) {
+      frames.push({
+        ...frame,
+        candidateId: frame.candidateId ?? candidate.candidateId,
+      });
+    }
+  }
+  return frames;
+}
+
+export function validateFinalVisualEvidenceContract(output, { visualLedger = null, visualEstimates = null, auditMode = false } = {}) {
+  const recipes = (output.recipes ?? []).map((recipe) => ({
+    ...recipe,
+    ingredients: (recipe.ingredients ?? []).map((ingredient) => ({ ...ingredient })),
+    steps: [...(recipe.steps ?? [])],
+    uncertainties: [...(recipe.uncertainties ?? [])],
+  }));
+  const repairLog = [...(output.repairLog ?? [])];
+  const warnings = [];
+  let failureCount = 0;
+  const framesByRef = new Map(frameEntriesFromVisualLedger(visualLedger).filter((frame) => frame.ref).map((frame) => [frame.ref, frame]));
+  const estimates = visualEstimates?.visualEstimates ?? [];
+  const consumedFrameRefs = new Set(repairLog.flatMap((entry) => Array.isArray(entry.evidenceRef) ? entry.evidenceRef : []).filter((ref) => String(ref).startsWith("frame:")));
+  let patchIndex = repairLog.length + 1;
+
+  for (const recipe of recipes) {
+    for (const ingredient of recipe.ingredients ?? []) {
+      if (ingredient.amountBasis !== "visual-estimate") continue;
+      if (ingredient.amount === null && ingredient.unit === null) continue;
+      const frameRefs = uniqueStrings([
+        ...(Array.isArray(ingredient.evidence) ? ingredient.evidence : []),
+        ...[...consumedFrameRefs],
+      ].filter((ref) => String(ref).startsWith("frame:")));
+      let matchedEstimate = null;
+      const validFrameRef = frameRefs.find((frameRef) => {
+        const frame = framesByRef.get(frameRef);
+        if (!frame) return false;
+        if (recipe.candidateId && frame.candidateId && recipe.candidateId !== frame.candidateId) return false;
+        if (frame.ingredient && !sameIngredient(frame.ingredient, ingredient.name)) return false;
+        const estimate = estimates.find((entry) => (entry.evidence ?? []).includes(frameRef));
+        if (!estimate) return false;
+        if (estimate.candidateId && recipe.candidateId && estimate.candidateId !== recipe.candidateId) return false;
+        if (!sameIngredient(estimate.ingredient, ingredient.name)) return false;
+        if (!hasVisibleEstimateGate(estimate)) return false;
+        matchedEstimate = estimate;
+        return true;
+      });
+      if (validFrameRef) {
+        if (!consumedFrameRefs.has(validFrameRef)) {
+          repairLog.push({
+            patchId: `visual-consumption-${patchIndex++}`,
+            candidateId: recipe.candidateId ?? matchedEstimate?.candidateId ?? null,
+            field: `ingredients[${ingredient.name}].amount`,
+            before: null,
+            after: {
+              name: ingredient.name,
+              amount: ingredient.amount ?? null,
+              unit: ingredient.unit ?? null,
+              amountBasis: ingredient.amountBasis ?? null,
+            },
+            evidenceRef: matchedEstimate?.evidence ?? [validFrameRef],
+            reasonCode: "visual_estimate_from_reference_object",
+            reason: matchedEstimate?.reason ?? "detail output consumed frame-backed visual estimate",
+            confidence: Number(matchedEstimate?.confidence ?? ingredient.confidence ?? 0.4),
+            targetVisible: matchedEstimate?.targetVisible === true,
+            referenceObjectVisible: matchedEstimate?.referenceObjectVisible === true,
+            countEvidence: matchedEstimate?.countEvidence ?? null,
+          });
+          consumedFrameRefs.add(validFrameRef);
+        }
+        continue;
+      }
+      failureCount += 1;
+      const before = {
+        name: ingredient.name,
+        amount: ingredient.amount ?? null,
+        unit: ingredient.unit ?? null,
+        amountBasis: ingredient.amountBasis ?? null,
+      };
+      warnings.push({
+        candidateId: recipe.candidateId ?? null,
+        ingredient: ingredient.name,
+        reasonCode: "visual_evidence_contract_failed",
+        frameRefs,
+      });
+      if (auditMode) continue;
+      ingredient.amount = null;
+      ingredient.unit = null;
+      ingredient.amountBasis = null;
+      ingredient.evidence = Array.isArray(ingredient.evidence)
+        ? ingredient.evidence.filter((entry) => !String(entry).startsWith("frame:"))
+        : ingredient.evidence;
+      repairLog.push({
+        patchId: `visual-contract-fallback-${patchIndex++}`,
+        candidateId: recipe.candidateId ?? null,
+        field: `ingredients[${ingredient.name}].amount`,
+        before,
+        after: {
+          name: ingredient.name,
+          amount: ingredient.amount,
+          unit: ingredient.unit,
+          amountBasis: ingredient.amountBasis,
+        },
+        evidenceRef: frameRefs,
+        reasonCode: "visual_evidence_contract_fallback",
+        reason: "final visual-estimate lacked a valid consumed frame estimate",
+        confidence: 1,
+      });
+    }
+  }
+
+  return {
+    output: { ...output, recipes, repairLog },
+    warnings,
+    failureCount,
+  };
 }
 
 function sameIngredient(left, right) {
@@ -567,6 +904,8 @@ export async function freezePiExtraction({ projectRoot = process.cwd(), dataRoot
     for (const fileName of [
       "result.json",
       "candidate-ledger.json",
+      "source-draft.json",
+      "gap-ledger.json",
       "visual-target-ledger.json",
       "visual-ledger.json",
       "visual-estimates.json",

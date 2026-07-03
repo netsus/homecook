@@ -142,9 +142,13 @@ function cacheArtifactInfo(cacheDir, cwd) {
 }
 
 function buildArtifactIndex({ dataRoot, split, id, outTag, deterministicPath, semanticPath, resultPath, resultJson, cwd }) {
-  const cacheDir = resultJson?.meta?.codexVisionKeyframesCacheDir ?? null;
+  const cacheDir = resultJson?.meta?.codexVisionKeyframesCacheDir
+    ?? resultJson?.meta?.publicSourceGptCacheDir
+    ?? resultJson?.meta?.codexVisionCacheDir
+    ?? null;
   return {
     dataRoot: repoRelative(dataRoot, cwd),
+    provider: resultJson?.meta?.provider ?? null,
     resultJson: fileInfo(resultPath, cwd),
     deterministicSummary: fileInfo(deterministicPath, cwd),
     semanticSummary: fileInfo(semanticPath, cwd),
@@ -339,7 +343,7 @@ export function recordIteration(options) {
       runId,
       iteration,
       createdAt: now,
-      provider: "codex-vision-keyframes",
+      provider: resultJson?.meta?.provider ?? "codex-vision-keyframes",
       split,
       ids: [id],
       outTag,

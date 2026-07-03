@@ -127,7 +127,8 @@ function buildAmountRuleLines() {
     "- 명시 텍스트/자막/음성이 화면 추정보다 우선이다.",
     "- amountBasis는 stated, spoken, onscreen, visual-estimate 중 하나만 사용한다.",
     "- 근거가 없으면 amount, unit, amountBasis를 null로 둔다. unknown/estimated/text/visual 같은 새 값은 쓰지 않는다.",
-    "- 화면만 보고 어림잡은 양은 amountBasis를 visual-estimate로 표시하고 confidence를 낮게 둔다.",
+    "- visual-estimate는 evidencePacket.visualEstimates에 targetVisible, referenceObjectVisible 또는 countEvidence, frame evidence가 같이 있는 경우에만 사용한다.",
+    "- visualEvidence 프레임 목록만 보고 새 amount/unit을 만들지 않는다.",
   ];
 }
 
@@ -149,7 +150,8 @@ function evidencePacketText(evidencePacket) {
   if (!evidencePacket) return "";
   return [
     "후보별 근거 묶음:",
-    "visualEvidence는 같은 유튜브 영상 프레임을 Pi 이미지 입력으로 분석한 결과다. 보인 재료/자막/계량 단서만 근거로 사용한다.",
+    "visualEvidence는 같은 유튜브 영상 프레임을 Pi 이미지 입력으로 분석한 결과다. 보인 재료/자막/계량 단서만 참고한다.",
+    "amount/unit을 visual-estimate로 채우려면 visualEstimates의 amount/unit/evidence를 사용한다. visualEvidence만 보고 새 추정값을 만들지 않는다.",
     JSON.stringify({
       candidateId: evidencePacket.candidateId,
       titleHint: evidencePacket.titleHint,
@@ -180,9 +182,10 @@ function buildFastCandidatePrompt(sourcePacket) {
 function buildFastDetailPrompt(sourcePacket, candidate, evidencePacket = null) {
   return [
     "아래 공개 유튜브 입력만 사용한다. 로컬 파일, 웹검색, 도구 사용 금지. 설명 없이 JSON만 반환.",
-    "후보 1개만 처리한다. 재료 양은 근거가 있으면 최대한 채우고, 없으면 null이다.",
+    "후보 1개만 처리한다. 재료 양은 source 근거 또는 visualEstimates 근거가 있으면 채우고, 없으면 null이다.",
     "steps는 제목/자막/설명/visualEvidence 중 조리 순서를 암시하는 단서가 조금이라도 있으면 2~6개의 거친 단계로 쓴다. 완전히 근거가 없을 때만 빈 배열로 둔다.",
-    "visualEvidence가 있으면 보이는 재료와 화면 자막만 참고하고, 일반 레시피 지식으로 빈칸을 채우지 않는다.",
+    "visualEvidence가 있으면 보이는 재료와 화면 자막만 참고하고, visualEvidence만으로 새 amount/unit을 만들지 않는다.",
+    "visualEstimates에 targetVisible=true와 referenceObjectVisible=true 또는 countEvidence가 있고 frame evidence가 있을 때만 amountBasis=visual-estimate를 쓴다.",
     "amountBasis는 stated, spoken, onscreen, visual-estimate, null 중 하나다.",
     "스키마: {\"recipe\":{\"title\":\"요리명\",\"candidateId\":\"r1\",\"ingredients\":[{\"name\":\"재료명\",\"amount\":\"1\",\"unit\":\"g\",\"amountBasis\":\"stated\",\"confidence\":0.8,\"evidence\":[\"description\"]}],\"steps\":[\"조리 단계\"],\"uncertainties\":[]},\"repairLog\":[]}",
     "",
