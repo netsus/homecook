@@ -1,0 +1,66 @@
+#!/usr/bin/env node
+
+import { pathToFileURL } from "node:url";
+
+import { runPiExtraction } from "./run-pi-extraction.mjs";
+
+function parseCliArgs(argv) {
+  const args = {};
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (!token.startsWith("--")) continue;
+    const key = token.slice(2);
+    const next = argv[i + 1];
+    if (!next || next.startsWith("--")) {
+      args[key] = true;
+      continue;
+    }
+    args[key] = next;
+    i += 1;
+  }
+  return args;
+}
+
+export async function runPiTrainExtraction(rawArgs = {}, options = {}) {
+  const args = typeof rawArgs.length === "number" ? parseCliArgs(rawArgs) : rawArgs;
+  return runPiExtraction({
+    split: "train",
+    staged: true,
+    "source-packet-only": true,
+    "compact-source-packet": true,
+    "fast-prompt": true,
+    "generic-repair": true,
+    "visual-frames": true,
+    "visual-frame-count": "3",
+    "visual-frames-per-range": "3",
+    "visual-seconds-per-candidate": "24",
+    "visual-target-max-ranges": "3",
+    "visual-window-before-sec": "8",
+    "visual-window-after-sec": "12",
+    "visual-description-only-sweep": true,
+    "visual-description-only-sweep-frames": "6",
+    "visual-max-targets-per-candidate": "8",
+    "visual-estimates": true,
+    "visual-estimate-max-frames": "6",
+    "visual-timeout-ms": "180000",
+    freeze: true,
+    "max-caption-segments": "120",
+    "max-description-chars": "2400",
+    "max-author-comments": "0",
+    "timeout-ms": "180000",
+    thinking: "low",
+    ...args,
+  }, options);
+}
+
+async function main() {
+  const result = await runPiTrainExtraction(process.argv.slice(2));
+  process.exit(result.failures > 0 ? 1 : 0);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
