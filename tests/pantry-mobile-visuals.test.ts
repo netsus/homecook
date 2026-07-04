@@ -867,6 +867,9 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("참치액")).toBe(
       "/assets/plush-v2/tuna-liquid-seasoning.webp",
     );
+    expect(getPantryStickerSrc("참치캔")).toBe(
+      "/assets/plush-v2/tuna-can-diary-sticker.webp",
+    );
     expect(getPantryStickerSrc("총각 김치")).toBe(
       "/assets/plush-v2/chonggak-kimchi.webp",
     );
@@ -1325,7 +1328,7 @@ describe("pantry mobile visuals", () => {
   it("keeps plush-v2 sticker sources as 512px WebP assets for crisp pantry rendering", () => {
     const items = stickerManifest.items as Record<string, PantryStickerManifestItem>;
 
-    expect(Object.keys(items)).toHaveLength(853);
+    expect(Object.keys(items)).toHaveLength(854);
 
     for (const item of Object.values(items)) {
       expect(item.src).toMatch(/^\/assets\/plush-v2\/.+\.webp$/);
