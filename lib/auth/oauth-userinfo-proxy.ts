@@ -58,11 +58,13 @@ export async function proxyOAuthUserinfo(
 function normalizeNaverUserinfo(payload: unknown) {
   const root = asRecord(payload);
   const response = asRecord(root.response);
+  const email = readClaim(response.email);
   const avatarUrl = readClaim(response.profile_image);
 
   return compactClaims({
     sub: readClaim(response.id),
-    email: readClaim(response.email),
+    email,
+    email_verified: email ? true : undefined,
     name: readClaim(response.name),
     nickname: readClaim(response.nickname),
     avatar_url: avatarUrl,
