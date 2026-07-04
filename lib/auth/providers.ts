@@ -18,11 +18,16 @@ export const AUTH_PROVIDER_META = {
 export type AuthProviderId = keyof typeof AUTH_PROVIDER_META;
 
 const DEFAULT_PROVIDERS: AuthProviderId[] = ["kakao", "naver", "google"];
+const LEGACY_GOOGLE_ONLY_PROVIDERS = "google";
 const DEFAULT_NAVER_SUPABASE_PROVIDER: Extract<Provider, `custom:${string}`> =
   "custom:naver";
 
 export function parseEnabledAuthProviders(raw?: string | null) {
   if (!raw) {
+    return DEFAULT_PROVIDERS;
+  }
+
+  if (raw.trim().toLowerCase() === LEGACY_GOOGLE_ONLY_PROVIDERS) {
     return DEFAULT_PROVIDERS;
   }
 

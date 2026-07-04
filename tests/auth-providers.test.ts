@@ -18,4 +18,8 @@ describe("auth providers", () => {
   it("uses all production social providers when parsed list is empty", () => {
     expect(parseEnabledAuthProviders("unknown")).toEqual(["kakao", "naver", "google"]);
   });
+
+  it("uses all production social providers for the legacy google-only env", () => {
+    expect(parseEnabledAuthProviders("google")).toEqual(["kakao", "naver", "google"]);
+  });
 });
