@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -150,8 +150,44 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("양파 장아찌")).toBe(
       "/assets/plush-v2/pickled-onion.webp",
     );
+    expect(getPantryStickerSrc("고래고기")).toBe(
+      "/assets/plush-v2/whale-meat.webp",
+    );
+    expect(getPantryStickerSrc("꿩고기")).toBe(
+      "/assets/plush-v2/pheasant-meat.webp",
+    );
+    expect(getPantryStickerSrc("기러기알")).toBe(
+      "/assets/plush-v2/wild-goose-egg.webp",
+    );
+    expect(getPantryStickerSrc("달걀노른자")).toBe(
+      "/assets/plush-v2/egg-yolk.webp",
+    );
+    expect(getPantryStickerSrc("메추리알")).toBe(
+      "/assets/plush-v2/quail-eggs.webp",
+    );
+    expect(getPantryStickerSrc("수란")).toBe(
+      "/assets/plush-v2/poached-egg.webp",
+    );
     expect(getPantryStickerSrc("꿀")).toBe("/assets/plush-v2/honey.webp");
     expect(getPantryStickerSrc("낫토")).toBe("/assets/plush-v2/natto.webp");
+    expect(getPantryStickerSrc("닭 육수")).toBe(
+      "/assets/plush-v2/chicken-broth.webp",
+    );
+    expect(getPantryStickerSrc("닭가슴살 패티")).toBe(
+      "/assets/plush-v2/chicken-breast-patty.webp",
+    );
+    expect(getPantryStickerSrc("닭날개")).toBe(
+      "/assets/plush-v2/chicken-wings.webp",
+    );
+    expect(getPantryStickerSrc("닭다리살")).toBe(
+      "/assets/plush-v2/chicken-thigh-meat.webp",
+    );
+    expect(getPantryStickerSrc("닭발")).toBe(
+      "/assets/plush-v2/chicken-feet.webp",
+    );
+    expect(getPantryStickerSrc("닭뼈 육수")).toBe(
+      "/assets/plush-v2/chicken-bone-broth.webp",
+    );
     expect(getPantryStickerSrc("닭기름")).toBe(
       "/assets/plush-v2/chicken-fat.webp",
     );
@@ -168,11 +204,118 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("데리야끼 소스")).toBe(
       "/assets/plush-v2/teriyaki-sauce.webp",
     );
+    expect(getPantryStickerSrc("돈까스")).toBe(
+      "/assets/plush-v2/tonkatsu-cutlet.webp",
+    );
     expect(getPantryStickerSrc("돈까스소스")).toBe(
       "/assets/plush-v2/tonkatsu-sauce.webp",
     );
+    expect(getPantryStickerSrc("돼지고기 갈비")).toBe(
+      "/assets/plush-v2/pork-ribs.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 꾸리살")).toBe(
+      "/assets/plush-v2/pork-kkuri-sal.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 도가니살")).toBe(
+      "/assets/plush-v2/pork-dogani-sal.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 뒷다리")).toBe(
+      "/assets/plush-v2/pork-hind-leg.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 등심")).toBe(
+      "/assets/plush-v2/pork-loin.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 목심")).toBe(
+      "/assets/plush-v2/pork-neck-cut.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 보섭살")).toBe(
+      "/assets/plush-v2/pork-boseop-sal.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 부채살")).toBe(
+      "/assets/plush-v2/pork-flat-iron.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 사태")).toBe(
+      "/assets/plush-v2/pork-shank.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 삼겹살")).toBe(
+      "/assets/plush-v2/pork-belly-cut.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 설깃살")).toBe(
+      "/assets/plush-v2/pork-seolgit-sal.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 안심")).toBe(
+      "/assets/plush-v2/pork-tenderloin.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 앞다리")).toBe(
+      "/assets/plush-v2/pork-foreleg.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 토시살")).toBe(
+      "/assets/plush-v2/pork-toshi-sal.webp",
+    );
+    expect(getPantryStickerSrc("돼지고기 홍두깨살")).toBe(
+      "/assets/plush-v2/pork-eye-round.webp",
+    );
     expect(getPantryStickerSrc("돼지기름")).toBe(
       "/assets/plush-v2/pork-fat.webp",
+    );
+    expect(getPantryStickerSrc("멧돼지고기")).toBe(
+      "/assets/plush-v2/wild-boar-meat.webp",
+    );
+    expect(getPantryStickerSrc("말고기")).toBe(
+      "/assets/plush-v2/horse-meat.webp",
+    );
+    expect(getPantryStickerSrc("메추리고기")).toBe(
+      "/assets/plush-v2/quail-meat.webp",
+    );
+    expect(getPantryStickerSrc("목살")).toBe("/assets/plush-v2/pork-moksal.webp");
+    expect(getPantryStickerSrc("양고기")).toBe(
+      "/assets/plush-v2/lamb-meat.webp",
+    );
+    expect(getPantryStickerSrc("양고기 갈비")).toBe(
+      "/assets/plush-v2/lamb-ribs.webp",
+    );
+    expect(getPantryStickerSrc("양고기 다리")).toBe(
+      "/assets/plush-v2/lamb-leg.webp",
+    );
+    expect(getPantryStickerSrc("양고기 어깨")).toBe(
+      "/assets/plush-v2/lamb-shoulder.webp",
+    );
+    expect(getPantryStickerSrc("자라고기")).toBe(
+      "/assets/plush-v2/softshell-turtle-meat.webp",
+    );
+    expect(getPantryStickerSrc("토끼고기")).toBe(
+      "/assets/plush-v2/rabbit-meat.webp",
+    );
+    expect(getPantryStickerSrc("오리고기")).toBe(
+      "/assets/plush-v2/duck-meat.webp",
+    );
+    expect(getPantryStickerSrc("오리알")).toBe(
+      "/assets/plush-v2/duck-egg.webp",
+    );
+    expect(getPantryStickerSrc("베이컨")).toBe("/assets/plush-v2/bacon.webp");
+    expect(getPantryStickerSrc("떡갈비")).toBe(
+      "/assets/plush-v2/tteokgalbi.webp",
+    );
+    expect(getPantryStickerSrc("소시지")).toBe(
+      "/assets/plush-v2/sausage.webp",
+    );
+    expect(getPantryStickerSrc("순대")).toBe("/assets/plush-v2/sundae.webp");
+    expect(getPantryStickerSrc("스팸")).toBe(
+      "/assets/plush-v2/luncheon-meat.webp",
+    );
+    expect(getPantryStickerSrc("삼겹살")).toBe(
+      "/assets/plush-v2/samgyeopsal.webp",
+    );
+    expect(getPantryStickerSrc("족발")).toBe("/assets/plush-v2/jokbal.webp");
+    expect(getPantryStickerSrc("햄")).toBe("/assets/plush-v2/ham.webp");
+    expect(getPantryStickerSrc("치킨너겟")).toBe(
+      "/assets/plush-v2/chicken-nuggets.webp",
+    );
+    expect(getPantryStickerSrc("칠면조고기")).toBe(
+      "/assets/plush-v2/turkey-meat.webp",
+    );
+    expect(getPantryStickerSrc("훈제오리")).toBe(
+      "/assets/plush-v2/smoked-duck.webp",
     );
     expect(getPantryStickerSrc("두반장")).toBe(
       "/assets/plush-v2/doubanjiang-v2.webp",
@@ -368,6 +511,97 @@ describe("pantry mobile visuals", () => {
     expect(getPantryStickerSrc("소리쟁이")).toBe(
       "/assets/plush-v2/curly-dock-greens.webp",
     );
+    expect(getPantryStickerSrc("소고기 갈비")).toBe(
+      "/assets/plush-v2/beef-ribs.webp",
+    );
+    expect(getPantryStickerSrc("소고기 꾸리살")).toBe(
+      "/assets/plush-v2/beef-kkuri-sal.webp",
+    );
+    expect(getPantryStickerSrc("소고기 도가니살")).toBe(
+      "/assets/plush-v2/beef-dogani-sal.webp",
+    );
+    expect(getPantryStickerSrc("소고기 등심")).toBe(
+      "/assets/plush-v2/beef-sirloin.webp",
+    );
+    expect(getPantryStickerSrc("소고기 목심")).toBe(
+      "/assets/plush-v2/beef-neck.webp",
+    );
+    expect(getPantryStickerSrc("소고기 보섭살")).toBe(
+      "/assets/plush-v2/beef-boseop-sal.webp",
+    );
+    expect(getPantryStickerSrc("소고기 부채살")).toBe(
+      "/assets/plush-v2/beef-flat-iron.webp",
+    );
+    expect(getPantryStickerSrc("소고기 사태")).toBe(
+      "/assets/plush-v2/beef-shank.webp",
+    );
+    expect(getPantryStickerSrc("소고기 살치살")).toBe(
+      "/assets/plush-v2/beef-salchi-sal.webp",
+    );
+    expect(getPantryStickerSrc("소고기 설깃살")).toBe(
+      "/assets/plush-v2/beef-seolgit-sal.webp",
+    );
+    expect(getPantryStickerSrc("소고기 설도")).toBe(
+      "/assets/plush-v2/beef-seoldo.webp",
+    );
+    expect(getPantryStickerSrc("소고기 안심")).toBe(
+      "/assets/plush-v2/beef-tenderloin.webp",
+    );
+    expect(getPantryStickerSrc("소고기 안창살")).toBe(
+      "/assets/plush-v2/beef-anchang-sal.webp",
+    );
+    expect(getPantryStickerSrc("소고기 앞다리")).toBe(
+      "/assets/plush-v2/beef-foreleg.webp",
+    );
+    expect(getPantryStickerSrc("소고기 앞치마살")).toBe(
+      "/assets/plush-v2/beef-skirt.webp",
+    );
+    expect(getPantryStickerSrc("소고기 양지")).toBe(
+      "/assets/plush-v2/beef-brisket.webp",
+    );
+    expect(getPantryStickerSrc("소고기 업진살")).toBe(
+      "/assets/plush-v2/beef-upjin-sal.webp",
+    );
+    expect(getPantryStickerSrc("소고기 우둔")).toBe(
+      "/assets/plush-v2/beef-round.webp",
+    );
+    expect(getPantryStickerSrc("소고기 제비추리")).toBe(
+      "/assets/plush-v2/beef-jebichuri.webp",
+    );
+    expect(getPantryStickerSrc("소고기 채끝")).toBe(
+      "/assets/plush-v2/beef-striploin.webp",
+    );
+    expect(getPantryStickerSrc("소고기 치마살")).toBe(
+      "/assets/plush-v2/beef-chima-sal.webp",
+    );
+    expect(getPantryStickerSrc("소고기 토시살")).toBe(
+      "/assets/plush-v2/beef-toshi-sal.webp",
+    );
+    expect(getPantryStickerSrc("소고기 홍두깨살")).toBe(
+      "/assets/plush-v2/beef-eye-round.webp",
+    );
+    expect(getPantryStickerSrc("소불고기")).toBe(
+      "/assets/plush-v2/beef-bulgogi.webp",
+    );
+    expect(getPantryStickerSrc("송아지고기")).toBe("/assets/plush-v2/veal.webp");
+    expect(getPantryStickerSrc("송아지고기 갈비")).toBe(
+      "/assets/plush-v2/veal-ribs.webp",
+    );
+    expect(getPantryStickerSrc("송아지고기 등심")).toBe(
+      "/assets/plush-v2/veal-sirloin.webp",
+    );
+    expect(getPantryStickerSrc("송아지고기 어깨")).toBe(
+      "/assets/plush-v2/veal-shoulder.webp",
+    );
+    expect(getPantryStickerSrc("송아지고기 채끝")).toBe(
+      "/assets/plush-v2/veal-striploin.webp",
+    );
+    expect(getPantryStickerSrc("양지국물")).toBe(
+      "/assets/plush-v2/beef-brisket-broth.webp",
+    );
+    expect(getPantryStickerSrc("염소고기")).toBe(
+      "/assets/plush-v2/goat-meat.webp",
+    );
     expect(getPantryStickerSrc("쇠귀나물")).toBe(
       "/assets/plush-v2/arrowhead-greens.webp",
     );
@@ -479,6 +713,9 @@ describe("pantry mobile visuals", () => {
     );
     expect(getPantryStickerSrc("우스터 소스")).toBe(
       "/assets/plush-v2/worcestershire-sauce.webp",
+    );
+    expect(getPantryStickerSrc("우족국물")).toBe(
+      "/assets/plush-v2/beef-hoof-broth.webp",
     );
     expect(getPantryStickerSrc("울외장아찌")).toBe(
       "/assets/plush-v2/pickled-oriental-melon.webp",
@@ -868,6 +1105,7 @@ describe("pantry mobile visuals", () => {
       ["쌀밥", "/assets/plush-v2/cooked-rice.webp"],
       ["옥수수", "/assets/plush-v2/corn.webp"],
       ["율무", "/assets/plush-v2/adlay.webp"],
+      ["잡뼈국물", "/assets/plush-v2/mixed-bone-broth.webp"],
       ["잡곡", "/assets/plush-v2/mixed-grains.webp"],
       ["조", "/assets/plush-v2/foxtail-millet.webp"],
       ["즉석밥", "/assets/plush-v2/instant-rice.webp"],
@@ -963,6 +1201,17 @@ describe("pantry mobile visuals", () => {
       ["베이킹파우더", "/assets/plush-v2/baking-powder.webp"],
       ["인스턴트 드라이 이스트", "/assets/plush-v2/instant-dry-yeast.webp"],
       ["강력분", "/assets/plush-v2/bread-flour.webp"],
+      ["밀", "/assets/plush-v2/wheat.webp"],
+      ["박력분", "/assets/plush-v2/cake-flour.webp"],
+      ["부침가루", "/assets/plush-v2/buchim-garu.webp"],
+      ["아몬드가루", "/assets/plush-v2/almond-flour.webp"],
+      ["중력분", "/assets/plush-v2/all-purpose-flour.webp"],
+      ["통밀", "/assets/plush-v2/whole-wheat.webp"],
+      ["통밀가루", "/assets/plush-v2/whole-wheat-flour.webp"],
+      ["튀김가루", "/assets/plush-v2/frying-mix.webp"],
+      ["호밀", "/assets/plush-v2/rye.webp"],
+      ["호밀가루", "/assets/plush-v2/rye-flour.webp"],
+      ["흑밀", "/assets/plush-v2/black-wheat.webp"],
       ["메밀", "/assets/plush-v2/buckwheat-groats.webp"],
       ["미숫가루", "/assets/plush-v2/misutgaru.webp"],
       ["리코타 치즈", "/assets/plush-v2/ricotta-cheese-tub-diary-sticker.webp"],
@@ -1018,10 +1267,65 @@ describe("pantry mobile visuals", () => {
     }
   });
 
+  it("returns the generated seafood, seaweed, and tropical fruit stickers from the public plush-v2 folder", () => {
+    const expectedStickers: Array<[string, string]> = [
+      ["어육소시지", "/assets/plush-v2/fish-sausage.webp"],
+      ["젓갈", "/assets/plush-v2/jeotgal.webp"],
+      ["추젓", "/assets/plush-v2/chujeot.webp"],
+      ["고둥", "/assets/plush-v2/sea-snail.webp"],
+      ["굴", "/assets/plush-v2/oyster.webp"],
+      ["담치", "/assets/plush-v2/mussel.webp"],
+      ["백합", "/assets/plush-v2/baekhap-clam.webp"],
+      ["우렁이", "/assets/plush-v2/freshwater-snail.webp"],
+      ["전복", "/assets/plush-v2/abalone.webp"],
+      ["김가루", "/assets/plush-v2/seaweed-flakes.webp"],
+      ["김밥용김", "/assets/plush-v2/gimbap-seaweed.webp"],
+      ["다시마", "/assets/plush-v2/kelp.webp"],
+      ["모자반", "/assets/plush-v2/mojaban-seaweed.webp"],
+      ["조미김", "/assets/plush-v2/seasoned-seaweed.webp"],
+      ["파래", "/assets/plush-v2/green-laver.webp"],
+      ["롱안", "/assets/plush-v2/longan.webp"],
+      ["리치", "/assets/plush-v2/lychee.webp"],
+      ["망고", "/assets/plush-v2/mango.webp"],
+      ["망고스틴", "/assets/plush-v2/mangosteen.webp"],
+      ["아떼모야", "/assets/plush-v2/atemoya.webp"],
+      ["용과", "/assets/plush-v2/dragon-fruit.webp"],
+      ["잭프루트", "/assets/plush-v2/jackfruit.webp"],
+      ["코코넛", "/assets/plush-v2/coconut.webp"],
+      ["코코넛수", "/assets/plush-v2/coconut-water.webp"],
+      ["키위", "/assets/plush-v2/kiwi.webp"],
+      ["파인애플", "/assets/plush-v2/pineapple.webp"],
+      ["파파야", "/assets/plush-v2/papaya.webp"],
+      ["패션프루트", "/assets/plush-v2/passion-fruit.webp"],
+    ];
+
+    for (const [name, src] of expectedStickers) {
+      expect(getPantryStickerSrc(name)).toBe(src);
+    }
+  });
+
+  it("keeps every public plush-v2 WebP asset mapped in the pantry sticker manifest", () => {
+    const items = stickerManifest.items as Record<string, PantryStickerManifestItem>;
+    const manifestSrcSlugs = Object.values(items)
+      .flatMap((item) => {
+        const slug = item.src.match(/^\/assets\/plush-v2\/(.+)\.webp$/)?.[1];
+        return slug ? [slug] : [];
+      })
+      .sort();
+    const generatedWebpSlugs = readdirSync(
+      join(process.cwd(), "public/assets/plush-v2"),
+    )
+      .filter((file) => file.endsWith(".webp"))
+      .map((file) => file.replace(/\.webp$/, ""))
+      .sort();
+
+    expect(generatedWebpSlugs).toEqual([...new Set(manifestSrcSlugs)]);
+  });
+
   it("keeps plush-v2 sticker sources as 512px WebP assets for crisp pantry rendering", () => {
     const items = stickerManifest.items as Record<string, PantryStickerManifestItem>;
 
-    expect(Object.keys(items)).toHaveLength(591);
+    expect(Object.keys(items)).toHaveLength(853);
 
     for (const item of Object.values(items)) {
       expect(item.src).toMatch(/^\/assets\/plush-v2\/.+\.webp$/);

@@ -42,6 +42,22 @@
       "src": "/assets/plush-v2/egg.webp",
       "status": "approved-user-request"
     },
+    "달걀노른자": {
+      "src": "/assets/plush-v2/egg-yolk.webp",
+      "status": "approved-user-request"
+    },
+    "기러기알": {
+      "src": "/assets/plush-v2/wild-goose-egg.webp",
+      "status": "approved-user-request"
+    },
+    "메추리알": {
+      "src": "/assets/plush-v2/quail-eggs.webp",
+      "status": "approved-user-request"
+    },
+    "수란": {
+      "src": "/assets/plush-v2/poached-egg.webp",
+      "status": "approved-user-request"
+    },
     "계피": {
       "src": "/assets/plush-v2/cinnamon.webp",
       "status": "approved-user-request"
@@ -53,6 +69,10 @@
     "고구마": {
       "src": "/assets/plush-v2/sweet-potato.webp",
       "status": "approved-pilot-001"
+    },
+    "고래고기": {
+      "src": "/assets/plush-v2/whale-meat.webp",
+      "status": "approved-user-request"
     },
     "고려엉겅퀴": {
       "src": "/assets/plush-v2/gondre-thistle-greens.webp",
@@ -100,6 +120,10 @@
     },
     "꿀": {
       "src": "/assets/plush-v2/honey.webp",
+      "status": "approved-user-request"
+    },
+    "꿩고기": {
+      "src": "/assets/plush-v2/pheasant-meat.webp",
       "status": "approved-user-request"
     },
     "강낭콩": {
@@ -166,9 +190,33 @@
       "src": "/assets/plush-v2/chicken-breast.webp",
       "status": "approved-sample"
     },
+    "닭가슴살 패티": {
+      "src": "/assets/plush-v2/chicken-breast-patty.webp",
+      "status": "approved-user-request"
+    },
     "닭고기": {
       "src": "/assets/plush-v2/chicken.webp",
       "status": "approved-sample"
+    },
+    "닭 육수": {
+      "src": "/assets/plush-v2/chicken-broth.webp",
+      "status": "approved-user-request"
+    },
+    "닭날개": {
+      "src": "/assets/plush-v2/chicken-wings.webp",
+      "status": "approved-user-request"
+    },
+    "닭다리살": {
+      "src": "/assets/plush-v2/chicken-thigh-meat.webp",
+      "status": "approved-user-request"
+    },
+    "닭발": {
+      "src": "/assets/plush-v2/chicken-feet.webp",
+      "status": "approved-user-request"
+    },
+    "닭뼈 육수": {
+      "src": "/assets/plush-v2/chicken-bone-broth.webp",
+      "status": "approved-user-request"
     },
     "닭기름": {
       "src": "/assets/plush-v2/chicken-fat.webp",
@@ -206,6 +254,10 @@
       "src": "/assets/plush-v2/teriyaki-sauce.webp",
       "status": "approved-user-request"
     },
+    "돈까스": {
+      "src": "/assets/plush-v2/tonkatsu-cutlet.webp",
+      "status": "approved-user-request"
+    },
     "돈까스소스": {
       "src": "/assets/plush-v2/tonkatsu-sauce.webp",
       "status": "approved-user-request"
@@ -222,8 +274,140 @@
       "src": "/assets/plush-v2/pork.webp",
       "status": "approved-sample"
     },
+    "돼지고기 갈비": {
+      "src": "/assets/plush-v2/pork-ribs.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 꾸리살": {
+      "src": "/assets/plush-v2/pork-kkuri-sal.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 도가니살": {
+      "src": "/assets/plush-v2/pork-dogani-sal.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 뒷다리": {
+      "src": "/assets/plush-v2/pork-hind-leg.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 등심": {
+      "src": "/assets/plush-v2/pork-loin.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 목심": {
+      "src": "/assets/plush-v2/pork-neck-cut.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 보섭살": {
+      "src": "/assets/plush-v2/pork-boseop-sal.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 부채살": {
+      "src": "/assets/plush-v2/pork-flat-iron.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 사태": {
+      "src": "/assets/plush-v2/pork-shank.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 삼겹살": {
+      "src": "/assets/plush-v2/pork-belly-cut.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 설깃살": {
+      "src": "/assets/plush-v2/pork-seolgit-sal.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 안심": {
+      "src": "/assets/plush-v2/pork-tenderloin.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 앞다리": {
+      "src": "/assets/plush-v2/pork-foreleg.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 토시살": {
+      "src": "/assets/plush-v2/pork-toshi-sal.webp",
+      "status": "approved-user-request"
+    },
+    "돼지고기 홍두깨살": {
+      "src": "/assets/plush-v2/pork-eye-round.webp",
+      "status": "approved-user-request"
+    },
     "돼지기름": {
       "src": "/assets/plush-v2/pork-fat.webp",
+      "status": "approved-user-request"
+    },
+    "멧돼지고기": {
+      "src": "/assets/plush-v2/wild-boar-meat.webp",
+      "status": "approved-user-request"
+    },
+    "말고기": {
+      "src": "/assets/plush-v2/horse-meat.webp",
+      "status": "approved-user-request"
+    },
+    "메추리고기": {
+      "src": "/assets/plush-v2/quail-meat.webp",
+      "status": "approved-user-request"
+    },
+    "목살": {
+      "src": "/assets/plush-v2/pork-moksal.webp",
+      "status": "approved-user-request"
+    },
+    "양고기": {
+      "src": "/assets/plush-v2/lamb-meat.webp",
+      "status": "approved-user-request"
+    },
+    "양고기 갈비": {
+      "src": "/assets/plush-v2/lamb-ribs.webp",
+      "status": "approved-user-request"
+    },
+    "양고기 다리": {
+      "src": "/assets/plush-v2/lamb-leg.webp",
+      "status": "approved-user-request"
+    },
+    "양고기 어깨": {
+      "src": "/assets/plush-v2/lamb-shoulder.webp",
+      "status": "approved-user-request"
+    },
+    "자라고기": {
+      "src": "/assets/plush-v2/softshell-turtle-meat.webp",
+      "status": "approved-user-request"
+    },
+    "토끼고기": {
+      "src": "/assets/plush-v2/rabbit-meat.webp",
+      "status": "approved-user-request"
+    },
+    "베이컨": {
+      "src": "/assets/plush-v2/bacon.webp",
+      "status": "approved-user-request"
+    },
+    "떡갈비": {
+      "src": "/assets/plush-v2/tteokgalbi.webp",
+      "status": "approved-user-request"
+    },
+    "소시지": {
+      "src": "/assets/plush-v2/sausage.webp",
+      "status": "approved-user-request"
+    },
+    "순대": {
+      "src": "/assets/plush-v2/sundae.webp",
+      "status": "approved-user-request"
+    },
+    "스팸": {
+      "src": "/assets/plush-v2/luncheon-meat.webp",
+      "status": "approved-user-request"
+    },
+    "삼겹살": {
+      "src": "/assets/plush-v2/samgyeopsal.webp",
+      "status": "approved-user-request"
+    },
+    "족발": {
+      "src": "/assets/plush-v2/jokbal.webp",
+      "status": "approved-user-request"
+    },
+    "햄": {
+      "src": "/assets/plush-v2/ham.webp",
       "status": "approved-user-request"
     },
     "된장": {
@@ -578,6 +762,130 @@
       "src": "/assets/plush-v2/beef.webp",
       "status": "approved-sample"
     },
+    "소고기 갈비": {
+      "src": "/assets/plush-v2/beef-ribs.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 꾸리살": {
+      "src": "/assets/plush-v2/beef-kkuri-sal.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 도가니살": {
+      "src": "/assets/plush-v2/beef-dogani-sal.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 등심": {
+      "src": "/assets/plush-v2/beef-sirloin.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 목심": {
+      "src": "/assets/plush-v2/beef-neck.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 보섭살": {
+      "src": "/assets/plush-v2/beef-boseop-sal.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 부채살": {
+      "src": "/assets/plush-v2/beef-flat-iron.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 사태": {
+      "src": "/assets/plush-v2/beef-shank.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 살치살": {
+      "src": "/assets/plush-v2/beef-salchi-sal.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 설깃살": {
+      "src": "/assets/plush-v2/beef-seolgit-sal.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 설도": {
+      "src": "/assets/plush-v2/beef-seoldo.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 안심": {
+      "src": "/assets/plush-v2/beef-tenderloin.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 안창살": {
+      "src": "/assets/plush-v2/beef-anchang-sal.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 앞다리": {
+      "src": "/assets/plush-v2/beef-foreleg.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 앞치마살": {
+      "src": "/assets/plush-v2/beef-skirt.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 양지": {
+      "src": "/assets/plush-v2/beef-brisket.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 업진살": {
+      "src": "/assets/plush-v2/beef-upjin-sal.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 우둔": {
+      "src": "/assets/plush-v2/beef-round.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 제비추리": {
+      "src": "/assets/plush-v2/beef-jebichuri.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 채끝": {
+      "src": "/assets/plush-v2/beef-striploin.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 치마살": {
+      "src": "/assets/plush-v2/beef-chima-sal.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 토시살": {
+      "src": "/assets/plush-v2/beef-toshi-sal.webp",
+      "status": "approved-user-request"
+    },
+    "소고기 홍두깨살": {
+      "src": "/assets/plush-v2/beef-eye-round.webp",
+      "status": "approved-user-request"
+    },
+    "소불고기": {
+      "src": "/assets/plush-v2/beef-bulgogi.webp",
+      "status": "approved-user-request"
+    },
+    "송아지고기": {
+      "src": "/assets/plush-v2/veal.webp",
+      "status": "approved-user-request"
+    },
+    "송아지고기 갈비": {
+      "src": "/assets/plush-v2/veal-ribs.webp",
+      "status": "approved-user-request"
+    },
+    "송아지고기 등심": {
+      "src": "/assets/plush-v2/veal-sirloin.webp",
+      "status": "approved-user-request"
+    },
+    "송아지고기 어깨": {
+      "src": "/assets/plush-v2/veal-shoulder.webp",
+      "status": "approved-user-request"
+    },
+    "송아지고기 채끝": {
+      "src": "/assets/plush-v2/veal-striploin.webp",
+      "status": "approved-user-request"
+    },
+    "양지국물": {
+      "src": "/assets/plush-v2/beef-brisket-broth.webp",
+      "status": "approved-user-request"
+    },
+    "염소고기": {
+      "src": "/assets/plush-v2/goat-meat.webp",
+      "status": "approved-user-request"
+    },
     "소금": {
       "src": "/assets/plush-v2/salt.webp",
       "status": "approved-sample"
@@ -790,6 +1098,10 @@
       "src": "/assets/plush-v2/worcestershire-sauce.webp",
       "status": "approved-user-request"
     },
+    "우족국물": {
+      "src": "/assets/plush-v2/beef-hoof-broth.webp",
+      "status": "approved-user-request"
+    },
     "울외장아찌": {
       "src": "/assets/plush-v2/pickled-oriental-melon.webp",
       "status": "approved-user-request"
@@ -882,12 +1194,20 @@
       "src": "/assets/plush-v2/cheese-seasoning.webp",
       "status": "approved-user-request"
     },
+    "치킨너겟": {
+      "src": "/assets/plush-v2/chicken-nuggets.webp",
+      "status": "approved-user-request"
+    },
     "치킨무": {
       "src": "/assets/plush-v2/chicken-mu.webp",
       "status": "approved-user-request"
     },
     "치킨스톡": {
       "src": "/assets/plush-v2/chicken-stock.webp",
+      "status": "approved-user-request"
+    },
+    "칠면조고기": {
+      "src": "/assets/plush-v2/turkey-meat.webp",
       "status": "approved-user-request"
     },
     "칠리 소스": {
@@ -1084,6 +1404,18 @@
     },
     "플레인요거트": {
       "src": "/assets/plush-v2/greek-yogurt-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "오리고기": {
+      "src": "/assets/plush-v2/duck-meat.webp",
+      "status": "approved-user-request"
+    },
+    "오리알": {
+      "src": "/assets/plush-v2/duck-egg.webp",
+      "status": "approved-user-request"
+    },
+    "훈제오리": {
+      "src": "/assets/plush-v2/smoked-duck.webp",
       "status": "approved-user-request"
     },
     "오리엔탈": {
@@ -1802,6 +2134,10 @@
       "src": "/assets/plush-v2/adlay.webp",
       "status": "approved-user-request"
     },
+    "잡뼈국물": {
+      "src": "/assets/plush-v2/mixed-bone-broth.webp",
+      "status": "approved-user-request"
+    },
     "잡곡": {
       "src": "/assets/plush-v2/mixed-grains.webp",
       "status": "approved-user-request"
@@ -2182,6 +2518,50 @@
       "src": "/assets/plush-v2/bread-flour.webp",
       "status": "approved-user-request"
     },
+    "밀": {
+      "src": "/assets/plush-v2/wheat.webp",
+      "status": "approved-user-request"
+    },
+    "박력분": {
+      "src": "/assets/plush-v2/cake-flour.webp",
+      "status": "approved-user-request"
+    },
+    "부침가루": {
+      "src": "/assets/plush-v2/buchim-garu.webp",
+      "status": "approved-user-request"
+    },
+    "아몬드가루": {
+      "src": "/assets/plush-v2/almond-flour.webp",
+      "status": "approved-user-request"
+    },
+    "중력분": {
+      "src": "/assets/plush-v2/all-purpose-flour.webp",
+      "status": "approved-user-request"
+    },
+    "통밀": {
+      "src": "/assets/plush-v2/whole-wheat.webp",
+      "status": "approved-user-request"
+    },
+    "통밀가루": {
+      "src": "/assets/plush-v2/whole-wheat-flour.webp",
+      "status": "approved-user-request"
+    },
+    "튀김가루": {
+      "src": "/assets/plush-v2/frying-mix.webp",
+      "status": "approved-user-request"
+    },
+    "호밀": {
+      "src": "/assets/plush-v2/rye.webp",
+      "status": "approved-user-request"
+    },
+    "호밀가루": {
+      "src": "/assets/plush-v2/rye-flour.webp",
+      "status": "approved-user-request"
+    },
+    "흑밀": {
+      "src": "/assets/plush-v2/black-wheat.webp",
+      "status": "approved-user-request"
+    },
     "메밀": {
       "src": "/assets/plush-v2/buckwheat-groats.webp",
       "status": "approved-user-request"
@@ -2372,6 +2752,674 @@
     },
     "탄산수": {
       "src": "/assets/plush-v2/sparkling-water-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "참치": {
+      "src": "/assets/plush-v2/tuna-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "가오리": {
+      "src": "/assets/plush-v2/skate-ray-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "꼴뚜기": {
+      "src": "/assets/plush-v2/baby-squid-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "꽁치": {
+      "src": "/assets/plush-v2/pacific-saury-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "낙지": {
+      "src": "/assets/plush-v2/nakji-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "노랑촉수": {
+      "src": "/assets/plush-v2/yellow-tentacles-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "농어": {
+      "src": "/assets/plush-v2/sea-bass-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "다랑어": {
+      "src": "/assets/plush-v2/tuna-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "대구": {
+      "src": "/assets/plush-v2/cod-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "도치": {
+      "src": "/assets/plush-v2/dochi-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "돔": {
+      "src": "/assets/plush-v2/sea-bream-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "둑중개": {
+      "src": "/assets/plush-v2/sculpin-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "만새기": {
+      "src": "/assets/plush-v2/mahi-mahi-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "명태": {
+      "src": "/assets/plush-v2/pollock-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "문어": {
+      "src": "/assets/plush-v2/octopus-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "미꾸리": {
+      "src": "/assets/plush-v2/mud-loach-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "민어": {
+      "src": "/assets/plush-v2/croaker-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "박대": {
+      "src": "/assets/plush-v2/tongue-sole-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "방어": {
+      "src": "/assets/plush-v2/yellowtail-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "볼락": {
+      "src": "/assets/plush-v2/rockfish-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "북어": {
+      "src": "/assets/plush-v2/dried-pollock-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "빙어": {
+      "src": "/assets/plush-v2/smelt-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "삼치": {
+      "src": "/assets/plush-v2/spanish-mackerel-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "샛멸": {
+      "src": "/assets/plush-v2/satmyeol-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "송어": {
+      "src": "/assets/plush-v2/trout-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "숭어": {
+      "src": "/assets/plush-v2/mullet-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "애꼬치": {
+      "src": "/assets/plush-v2/aeggochi-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "은어": {
+      "src": "/assets/plush-v2/sweetfish-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "임연수어": {
+      "src": "/assets/plush-v2/atka-mackerel-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "잉어": {
+      "src": "/assets/plush-v2/carp-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "장문볼락": {
+      "src": "/assets/plush-v2/jangmun-rockfish-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "장어": {
+      "src": "/assets/plush-v2/eel-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "잿방어": {
+      "src": "/assets/plush-v2/amberjack-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "전갱이": {
+      "src": "/assets/plush-v2/horse-mackerel-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "점줄우럭": {
+      "src": "/assets/plush-v2/spotted-line-rockfish-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "정어리": {
+      "src": "/assets/plush-v2/sardine-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "쥐치": {
+      "src": "/assets/plush-v2/filefish-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "청새치": {
+      "src": "/assets/plush-v2/blue-marlin-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "청어": {
+      "src": "/assets/plush-v2/herring-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "코다리": {
+      "src": "/assets/plush-v2/kodari-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "학공치": {
+      "src": "/assets/plush-v2/halfbeak-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "황새치": {
+      "src": "/assets/plush-v2/swordfish-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "황태": {
+      "src": "/assets/plush-v2/hwangtae-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "황태채": {
+      "src": "/assets/plush-v2/dried-pollock-strips-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "가재": {
+      "src": "/assets/plush-v2/crayfish-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "건새우": {
+      "src": "/assets/plush-v2/dried-shrimp-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "게": {
+      "src": "/assets/plush-v2/crab-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "게르치": {
+      "src": "/assets/plush-v2/gerchi-fish-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "냉동새우": {
+      "src": "/assets/plush-v2/frozen-shrimp-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "멍게": {
+      "src": "/assets/plush-v2/sea-squirt-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "새우젓": {
+      "src": "/assets/plush-v2/salted-shrimp-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "성게": {
+      "src": "/assets/plush-v2/sea-urchin-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "칵테일새우": {
+      "src": "/assets/plush-v2/cocktail-shrimp-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "크릴": {
+      "src": "/assets/plush-v2/krill-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "까나리액젓": {
+      "src": "/assets/plush-v2/sand-lance-fish-sauce-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "맛살": {
+      "src": "/assets/plush-v2/imitation-crab-stick-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "사각어묵": {
+      "src": "/assets/plush-v2/square-fish-cake-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "어묵": {
+      "src": "/assets/plush-v2/fish-cake-diary-sticker.webp",
+      "status": "approved-user-request"
+    },
+    "어육소시지": {
+      "src": "/assets/plush-v2/fish-sausage.webp",
+      "status": "approved-user-request"
+    },
+    "젓갈": {
+      "src": "/assets/plush-v2/jeotgal.webp",
+      "status": "approved-user-request"
+    },
+    "추젓": {
+      "src": "/assets/plush-v2/chujeot.webp",
+      "status": "approved-user-request"
+    },
+    "고둥": {
+      "src": "/assets/plush-v2/sea-snail.webp",
+      "status": "approved-user-request"
+    },
+    "굴": {
+      "src": "/assets/plush-v2/oyster.webp",
+      "status": "approved-user-request"
+    },
+    "담치": {
+      "src": "/assets/plush-v2/mussel.webp",
+      "status": "approved-user-request"
+    },
+    "백합": {
+      "src": "/assets/plush-v2/baekhap-clam.webp",
+      "status": "approved-user-request"
+    },
+    "우렁이": {
+      "src": "/assets/plush-v2/freshwater-snail.webp",
+      "status": "approved-user-request"
+    },
+    "전복": {
+      "src": "/assets/plush-v2/abalone.webp",
+      "status": "approved-user-request"
+    },
+    "김가루": {
+      "src": "/assets/plush-v2/seaweed-flakes.webp",
+      "status": "approved-user-request"
+    },
+    "김밥용김": {
+      "src": "/assets/plush-v2/gimbap-seaweed.webp",
+      "status": "approved-user-request"
+    },
+    "다시마": {
+      "src": "/assets/plush-v2/kelp.webp",
+      "status": "approved-user-request"
+    },
+    "모자반": {
+      "src": "/assets/plush-v2/mojaban-seaweed.webp",
+      "status": "approved-user-request"
+    },
+    "조미김": {
+      "src": "/assets/plush-v2/seasoned-seaweed.webp",
+      "status": "approved-user-request"
+    },
+    "파래": {
+      "src": "/assets/plush-v2/green-laver.webp",
+      "status": "approved-user-request"
+    },
+    "배": {
+      "src": "/assets/plush-v2/asian-pear.webp",
+      "status": "approved-user-request"
+    },
+    "감": {
+      "src": "/assets/plush-v2/persimmon.webp",
+      "status": "approved-user-request"
+    },
+    "거봉": {
+      "src": "/assets/plush-v2/kyoho-grapes.webp",
+      "status": "approved-user-request"
+    },
+    "다래": {
+      "src": "/assets/plush-v2/hardy-kiwi.webp",
+      "status": "approved-user-request"
+    },
+    "대추": {
+      "src": "/assets/plush-v2/jujube.webp",
+      "status": "approved-user-request"
+    },
+    "대추야자": {
+      "src": "/assets/plush-v2/date-palm-fruit.webp",
+      "status": "approved-user-request"
+    },
+    "마가목 열매": {
+      "src": "/assets/plush-v2/rowan-berries.webp",
+      "status": "approved-user-request"
+    },
+    "매실": {
+      "src": "/assets/plush-v2/maesil-green-plum.webp",
+      "status": "approved-user-request"
+    },
+    "머루": {
+      "src": "/assets/plush-v2/wild-grapes.webp",
+      "status": "approved-user-request"
+    },
+    "멜론": {
+      "src": "/assets/plush-v2/melon.webp",
+      "status": "approved-user-request"
+    },
+    "무화과": {
+      "src": "/assets/plush-v2/fig.webp",
+      "status": "approved-user-request"
+    },
+    "미니수박": {
+      "src": "/assets/plush-v2/mini-watermelon.webp",
+      "status": "approved-user-request"
+    },
+    "백도": {
+      "src": "/assets/plush-v2/white-peach.webp",
+      "status": "approved-user-request"
+    },
+    "보리밥 열매": {
+      "src": "/assets/plush-v2/boribap-berries.webp",
+      "status": "approved-user-request"
+    },
+    "복숭아": {
+      "src": "/assets/plush-v2/peach.webp",
+      "status": "approved-user-request"
+    },
+    "비파": {
+      "src": "/assets/plush-v2/loquat.webp",
+      "status": "approved-user-request"
+    },
+    "산수유": {
+      "src": "/assets/plush-v2/cornelian-cherry.webp",
+      "status": "approved-user-request"
+    },
+    "산자나무 열매": {
+      "src": "/assets/plush-v2/sea-buckthorn-berries.webp",
+      "status": "approved-user-request"
+    },
+    "살구": {
+      "src": "/assets/plush-v2/apricot.webp",
+      "status": "approved-user-request"
+    },
+    "샤인머스캣": {
+      "src": "/assets/plush-v2/shine-muscat.webp",
+      "status": "approved-user-request"
+    },
+    "석류": {
+      "src": "/assets/plush-v2/pomegranate.webp",
+      "status": "approved-user-request"
+    },
+    "소귀나무 열매": {
+      "src": "/assets/plush-v2/bayberry.webp",
+      "status": "approved-user-request"
+    },
+    "수박": {
+      "src": "/assets/plush-v2/watermelon.webp",
+      "status": "approved-user-request"
+    },
+    "아세로라": {
+      "src": "/assets/plush-v2/acerola.webp",
+      "status": "approved-user-request"
+    },
+    "앵두": {
+      "src": "/assets/plush-v2/nanking-cherries.webp",
+      "status": "approved-user-request"
+    },
+    "연시": {
+      "src": "/assets/plush-v2/soft-ripe-persimmon.webp",
+      "status": "approved-user-request"
+    },
+    "오렴자": {
+      "src": "/assets/plush-v2/starfruit.webp",
+      "status": "approved-user-request"
+    },
+    "오미자": {
+      "src": "/assets/plush-v2/omija-berries.webp",
+      "status": "approved-user-request"
+    },
+    "으름": {
+      "src": "/assets/plush-v2/akebia.webp",
+      "status": "approved-user-request"
+    },
+    "자두": {
+      "src": "/assets/plush-v2/plum.webp",
+      "status": "approved-user-request"
+    },
+    "참외": {
+      "src": "/assets/plush-v2/korean-melon.webp",
+      "status": "approved-user-request"
+    },
+    "천도": {
+      "src": "/assets/plush-v2/nectarine.webp",
+      "status": "approved-user-request"
+    },
+    "캠벨 포도": {
+      "src": "/assets/plush-v2/campbell-grapes.webp",
+      "status": "approved-user-request"
+    },
+    "포도": {
+      "src": "/assets/plush-v2/grapes.webp",
+      "status": "approved-user-request"
+    },
+    "프루트칵테일": {
+      "src": "/assets/plush-v2/fruit-cocktail.webp",
+      "status": "approved-user-request"
+    },
+    "프루트펀치": {
+      "src": "/assets/plush-v2/fruit-punch.webp",
+      "status": "approved-user-request"
+    },
+    "플럼코트": {
+      "src": "/assets/plush-v2/plumcot.webp",
+      "status": "approved-user-request"
+    },
+    "황도": {
+      "src": "/assets/plush-v2/yellow-peach.webp",
+      "status": "approved-user-request"
+    },
+    "감말랭이": {
+      "src": "/assets/plush-v2/dried-persimmon-strips.webp",
+      "status": "approved-user-request"
+    },
+    "건포도": {
+      "src": "/assets/plush-v2/raisins.webp",
+      "status": "approved-user-request"
+    },
+    "곶감": {
+      "src": "/assets/plush-v2/gotgam-dried-persimmon.webp",
+      "status": "approved-user-request"
+    },
+    "라임즙": {
+      "src": "/assets/plush-v2/lime-juice.webp",
+      "status": "approved-user-request"
+    },
+    "배즙": {
+      "src": "/assets/plush-v2/pear-juice.webp",
+      "status": "approved-user-request"
+    },
+    "사과 주스": {
+      "src": "/assets/plush-v2/apple-juice.webp",
+      "status": "approved-user-request"
+    },
+    "석류즙": {
+      "src": "/assets/plush-v2/pomegranate-juice.webp",
+      "status": "approved-user-request"
+    },
+    "오렌지 마멀레이드": {
+      "src": "/assets/plush-v2/orange-marmalade.webp",
+      "status": "approved-user-request"
+    },
+    "오렌지 주스": {
+      "src": "/assets/plush-v2/orange-juice.webp",
+      "status": "approved-user-request"
+    },
+    "오렌지즙": {
+      "src": "/assets/plush-v2/squeezed-orange-juice.webp",
+      "status": "approved-user-request"
+    },
+    "오미자청": {
+      "src": "/assets/plush-v2/omija-cheong.webp",
+      "status": "approved-user-request"
+    },
+    "청포도": {
+      "src": "/assets/plush-v2/green-grapes.webp",
+      "status": "approved-user-request"
+    },
+    "크랜베리 주스": {
+      "src": "/assets/plush-v2/cranberry-juice.webp",
+      "status": "approved-user-request"
+    },
+    "파인애플 주스": {
+      "src": "/assets/plush-v2/pineapple-juice.webp",
+      "status": "approved-user-request"
+    },
+    "패션프루트 주스": {
+      "src": "/assets/plush-v2/passion-fruit-juice.webp",
+      "status": "approved-user-request"
+    },
+    "귤": {
+      "src": "/assets/plush-v2/mandarin.webp",
+      "status": "approved-user-request"
+    },
+    "금귤": {
+      "src": "/assets/plush-v2/kumquat.webp",
+      "status": "approved-user-request"
+    },
+    "라임": {
+      "src": "/assets/plush-v2/lime.webp",
+      "status": "approved-user-request"
+    },
+    "레드향": {
+      "src": "/assets/plush-v2/redhyang-citrus.webp",
+      "status": "approved-user-request"
+    },
+    "오렌지": {
+      "src": "/assets/plush-v2/orange.webp",
+      "status": "approved-user-request"
+    },
+    "오렌지 껍질": {
+      "src": "/assets/plush-v2/orange-peel.webp",
+      "status": "approved-user-request"
+    },
+    "유자": {
+      "src": "/assets/plush-v2/yuja.webp",
+      "status": "approved-user-request"
+    },
+    "자몽": {
+      "src": "/assets/plush-v2/grapefruit.webp",
+      "status": "approved-user-request"
+    },
+    "천혜향": {
+      "src": "/assets/plush-v2/cheonhyehyang-citrus.webp",
+      "status": "approved-user-request"
+    },
+    "탱자": {
+      "src": "/assets/plush-v2/trifoliate-orange.webp",
+      "status": "approved-user-request"
+    },
+    "한라봉": {
+      "src": "/assets/plush-v2/hallabong.webp",
+      "status": "approved-user-request"
+    },
+    "황금향": {
+      "src": "/assets/plush-v2/hwanggeumhyang-citrus.webp",
+      "status": "approved-user-request"
+    },
+    "구스베리": {
+      "src": "/assets/plush-v2/gooseberry.webp",
+      "status": "approved-user-request"
+    },
+    "라즈베리": {
+      "src": "/assets/plush-v2/raspberry.webp",
+      "status": "approved-user-request"
+    },
+    "버찌": {
+      "src": "/assets/plush-v2/beotjji-wild-cherries.webp",
+      "status": "approved-user-request"
+    },
+    "복분자": {
+      "src": "/assets/plush-v2/bokbunja-black-raspberry.webp",
+      "status": "approved-user-request"
+    },
+    "블랙베리": {
+      "src": "/assets/plush-v2/blackberry.webp",
+      "status": "approved-user-request"
+    },
+    "블랙커런트": {
+      "src": "/assets/plush-v2/blackcurrant.webp",
+      "status": "approved-user-request"
+    },
+    "블루베리": {
+      "src": "/assets/plush-v2/blueberry.webp",
+      "status": "approved-user-request"
+    },
+    "산딸기": {
+      "src": "/assets/plush-v2/wild-raspberry.webp",
+      "status": "approved-user-request"
+    },
+    "아로니아": {
+      "src": "/assets/plush-v2/aronia-berries.webp",
+      "status": "approved-user-request"
+    },
+    "엘더베리": {
+      "src": "/assets/plush-v2/elderberries.webp",
+      "status": "approved-user-request"
+    },
+    "오디": {
+      "src": "/assets/plush-v2/mulberries.webp",
+      "status": "approved-user-request"
+    },
+    "체리": {
+      "src": "/assets/plush-v2/cherry.webp",
+      "status": "approved-user-request"
+    },
+    "크랜베리": {
+      "src": "/assets/plush-v2/cranberries.webp",
+      "status": "approved-user-request"
+    },
+    "구아바": {
+      "src": "/assets/plush-v2/guava.webp",
+      "status": "approved-user-request"
+    },
+    "두리안": {
+      "src": "/assets/plush-v2/durian.webp",
+      "status": "approved-user-request"
+    },
+    "람부탄": {
+      "src": "/assets/plush-v2/rambutan.webp",
+      "status": "approved-user-request"
+    },
+    "롱안": {
+      "src": "/assets/plush-v2/longan.webp",
+      "status": "approved-user-request"
+    },
+    "리치": {
+      "src": "/assets/plush-v2/lychee.webp",
+      "status": "approved-user-request"
+    },
+    "망고": {
+      "src": "/assets/plush-v2/mango.webp",
+      "status": "approved-user-request"
+    },
+    "망고스틴": {
+      "src": "/assets/plush-v2/mangosteen.webp",
+      "status": "approved-user-request"
+    },
+    "아떼모야": {
+      "src": "/assets/plush-v2/atemoya.webp",
+      "status": "approved-user-request"
+    },
+    "용과": {
+      "src": "/assets/plush-v2/dragon-fruit.webp",
+      "status": "approved-user-request"
+    },
+    "잭프루트": {
+      "src": "/assets/plush-v2/jackfruit.webp",
+      "status": "approved-user-request"
+    },
+    "코코넛": {
+      "src": "/assets/plush-v2/coconut.webp",
+      "status": "approved-user-request"
+    },
+    "코코넛수": {
+      "src": "/assets/plush-v2/coconut-water.webp",
+      "status": "approved-user-request"
+    },
+    "키위": {
+      "src": "/assets/plush-v2/kiwi.webp",
+      "status": "approved-user-request"
+    },
+    "파인애플": {
+      "src": "/assets/plush-v2/pineapple.webp",
+      "status": "approved-user-request"
+    },
+    "파파야": {
+      "src": "/assets/plush-v2/papaya.webp",
+      "status": "approved-user-request"
+    },
+    "패션프루트": {
+      "src": "/assets/plush-v2/passion-fruit.webp",
       "status": "approved-user-request"
     }
   }
