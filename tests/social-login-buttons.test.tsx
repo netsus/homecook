@@ -118,6 +118,77 @@ describe("social login buttons", () => {
     );
   });
 
+  it("starts Naver login through the configured Supabase custom provider", async () => {
+    const originalProviders = process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS;
+    const originalNaverProvider = process.env.NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER;
+    process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS = "naver";
+    delete process.env.NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER;
+
+    try {
+      hasSupabasePublicEnv.mockReturnValue(true);
+      signInWithOAuth.mockResolvedValue({ error: null });
+
+      render(<SocialLoginButtons nextPath="/mypage" />);
+
+      await userEvent.click(screen.getByRole("button", { name: "네이버로 시작하기" }));
+
+      await waitFor(() => {
+        expect(signInWithOAuth).toHaveBeenCalledTimes(1);
+      });
+      expect(signInWithOAuth.mock.calls[0][0]).toMatchObject({
+        provider: "custom:naver",
+        options: {
+          redirectTo: "http://localhost:3000/auth/callback",
+        },
+      });
+    } finally {
+      if (originalProviders === undefined) {
+        delete process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS;
+      } else {
+        process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS = originalProviders;
+      }
+
+      if (originalNaverProvider === undefined) {
+        delete process.env.NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER;
+      } else {
+        process.env.NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER = originalNaverProvider;
+      }
+    }
+  });
+
+  it("allows the Naver Supabase provider id to be overridden", async () => {
+    const originalProviders = process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS;
+    const originalNaverProvider = process.env.NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER;
+    process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS = "naver";
+    process.env.NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER = "custom:naver-login";
+
+    try {
+      hasSupabasePublicEnv.mockReturnValue(true);
+      signInWithOAuth.mockResolvedValue({ error: null });
+
+      render(<SocialLoginButtons nextPath="/" />);
+
+      await userEvent.click(screen.getByRole("button", { name: "네이버로 시작하기" }));
+
+      await waitFor(() => {
+        expect(signInWithOAuth).toHaveBeenCalledTimes(1);
+      });
+      expect(signInWithOAuth.mock.calls[0][0].provider).toBe("custom:naver-login");
+    } finally {
+      if (originalProviders === undefined) {
+        delete process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS;
+      } else {
+        process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS = originalProviders;
+      }
+
+      if (originalNaverProvider === undefined) {
+        delete process.env.NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER;
+      } else {
+        process.env.NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER = originalNaverProvider;
+      }
+    }
+  });
+
   it("hides external providers and explains the local Supabase override in local dev auth mode", () => {
     isLocalDevAuthEnabled.mockReturnValue(true);
 

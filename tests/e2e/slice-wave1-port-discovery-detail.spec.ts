@@ -178,7 +178,7 @@ test.describe("wave1 port discovery detail", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
   });
 
-  test("login page shows only Naver and Google providers", async ({
+  test("login page shows Kakao, Naver, and Google providers", async ({
     page,
   }) => {
     await page.route("**/api/v1/recipes/**", async (route) => {
@@ -193,6 +193,10 @@ test.describe("wave1 port discovery detail", () => {
 
     await expect(
       page.getByRole("button", { name: "카카오로 시작하기" }),
-    ).not.toBeVisible();
+    ).toBeVisible();
+
+    await expect(
+      page.getByRole("button", { name: "네이버로 시작하기" }),
+    ).toBeVisible();
   });
 });
