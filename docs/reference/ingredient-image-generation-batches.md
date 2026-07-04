@@ -5,18 +5,18 @@ Source: local Supabase DB `public.ingredients`, `public.ingredient_synonyms` syn
 
 ## Summary
 
-- DB ingredients: 865
-- DB synonyms: 625
-- Manifest image entries: 853
-- Manifest exact DB standard-name matches: 845
-- DB ingredients already covered by actual pantry sticker lookup: 845
+- DB ingredients: 852
+- DB synonyms: 617
+- Manifest image entries: 854
+- Manifest exact DB standard-name matches: 846
+- DB ingredients already covered by actual pantry sticker lookup: 846
 - Generated WebP-only targets excluded from generation backlog: 10
 - Duplicate/synonym groups found among DB standard names: 9
 - Duplicate variant DB names excluded from generation: 10
 - Non-covered duplicate variants excluded from generation: 7
-- Generation targets after exclusions: 14
+- Generation targets after exclusions: 0
 - Batch size: up to 100, similar-type grouping first
-- Batch count: 5
+- Batch count: 0
 
 ## 기준
 
@@ -116,32 +116,4 @@ Source: local Supabase DB `public.ingredients`, `public.ingredient_synonyms` syn
 
 유사한 재료가 같은 이미지 생성 컨텍스트에 들어가도록 재료군을 먼저 고정한 뒤 배치를 다시 묶었습니다. 정확히 100개로 자르는 것보다 재료군 응집도를 우선하며, 현재 모든 배치는 100개 이하입니다.
 
-## Batch 1 - 김치/절임/양념류 (6개)
-
-- 재료군: 소스/장/육수 3, 당류/디저트 3
-- 카테고리: 양념 6
-- 목록: 조미료, 허니머스타드 소스, 육수, 젤리, 초코바, 푸딩
-
-## Batch 2 - 열매채소/콩/잡곡 원물 (2개)
-
-- 재료군: 쌀/잡곡/밥류 2
-- 카테고리: 곡류 2
-- 목록: 즉석밥 작은 거, 초밥용 밥
-
-## Batch 3 - 유제품/견과/조리보조 (1개)
-
-- 재료군: 유제품/크림류 1
-- 카테고리: 유제품 1
-- 목록: 따뜻한 우유
-
-## Batch 4 - 육류/알/가공육 (1개)
-
-- 재료군: 알/계란류 1
-- 카테고리: 육류 1
-- 목록: 스크램블드에그
-
-## Batch 5 - 해산물/해조류/젓갈 (4개)
-
-- 재료군: 해산물 가공/젓갈/육수 3, 해조류/김 1
-- 카테고리: 해산물 4
-- 목록: 참치캔, 멸치 육수, 어묵 국물, 다시마 육수
+남은 배치 대상은 DB에서 삭제되어 현재 추가 생성할 재료가 없습니다.
