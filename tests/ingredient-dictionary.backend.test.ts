@@ -406,4 +406,32 @@ describe("21 ingredient dictionary backend", () => {
     expect(seed).not.toContain("'깨', '양념', 'spice_herb'");
     expect(seed).not.toContain("'660e8400-e29b-41d4-a716-446655440501'::uuid, '깨'");
   });
+
+  it("ships follow-up ingredient dictionary corrections for stock, mustard, and deleted peppers", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260704183000_ingredient_dictionary_user_followup.sql",
+      "utf8",
+    );
+    const seed = readFileSync("supabase/seed.sql", "utf8");
+
+    expect(migration).toContain(
+      "select pg_temp.merge_ingredient_name('해물육수', '해물육수코인', '양념', null, true)",
+    );
+    expect(migration).toContain(
+      "select pg_temp.merge_ingredient_name('허니머스타드 소스', '머스타드 소스', '양념', null, true)",
+    );
+    expect(migration).toContain("select pg_temp.merge_ingredient_name('파', '대파', null, null, true)");
+    expect(migration).toContain("select pg_temp.attach_ingredient_synonym('머스타드 소스', '허니머스타드')");
+    expect(migration).toContain("select pg_temp.attach_ingredient_synonym('머스타드 소스', '머스타드소스')");
+
+    expect(migration).toContain("('풋고추')");
+    expect(migration).not.toContain("('파')");
+
+    expect(migration).toContain("where lower(trim(synonym)) = lower('풋고추')");
+    expect(migration).toContain("delete from public.recipe_ingredients");
+    expect(migration).toContain("delete from public.shopping_list_items");
+    expect(migration).toContain("delete from public.ingredient_bundle_items");
+    expect(seed).toContain("'550e8400-e29b-41d4-a716-446655440110', ingredients.id, '파'");
+    expect(seed).toContain("where ingredients.standard_name = '대파'");
+  });
 });
