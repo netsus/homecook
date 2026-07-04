@@ -18,6 +18,25 @@ Source: local Supabase DB `public.ingredients`, `public.ingredient_synonyms` syn
 - Batch size: up to 100, similar-type grouping first
 - Batch count: 0
 
+## Manual Generation Workflow
+
+새 재료 이미지는 자동 OpenAI API worker나 Supabase Storage를 쓰지 않고, 기존 로컬 asset + manifest 방식으로 관리한다.
+
+1. DB 재료 변경 후 누락 대상을 다시 계산한다.
+
+```bash
+node scripts/ingredient-sticker-generation-plan.mjs --write-md docs/reference/ingredient-image-generation-batches.md
+```
+
+2. `Generation Batches`, `Next Pilot Batch`, `Rollout Batches`에 남은 항목이 있으면 Codex `imagegen`으로 기존 plush-v2 컨셉 이미지를 수동 생성한다.
+3. 생성 이미지는 512px WebP q95로 변환해 `public/assets/plush-v2/<slug>.webp`에 저장한다.
+4. `public/assets/ingredients/plush-v2/manifest.json`에 표준 재료명과 `src`를 추가한다.
+5. 매핑과 이미지 규격을 검증한다.
+
+```bash
+./node_modules/.bin/vitest run tests/pantry-mobile-visuals.test.ts
+```
+
 ## 기준
 
 - “이미지 적용됨”은 `getPantryStickerSrc()`와 같은 기준입니다: manifest exact match 또는 띄어쓰기/기호 정규화 match.
