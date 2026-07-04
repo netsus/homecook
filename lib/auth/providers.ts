@@ -19,6 +19,8 @@ export type AuthProviderId = keyof typeof AUTH_PROVIDER_META;
 
 const DEFAULT_PROVIDERS: AuthProviderId[] = ["kakao", "naver", "google"];
 const LEGACY_GOOGLE_ONLY_PROVIDERS = "google";
+const DEFAULT_KAKAO_SUPABASE_PROVIDER: Extract<Provider, `custom:${string}`> =
+  "custom:kakao";
 const DEFAULT_NAVER_SUPABASE_PROVIDER: Extract<Provider, `custom:${string}`> =
   "custom:naver";
 
@@ -46,11 +48,26 @@ export function getEnabledAuthProviders() {
 }
 
 export function getSupabaseAuthProvider(provider: AuthProviderId): Provider {
+  if (provider === "kakao") {
+    return getKakaoSupabaseProvider();
+  }
+
   if (provider === "naver") {
     return getNaverSupabaseProvider();
   }
 
   return provider;
+}
+
+function getKakaoSupabaseProvider() {
+  const configuredProvider = process.env.NEXT_PUBLIC_KAKAO_SUPABASE_PROVIDER
+    ?.trim();
+
+  if (configuredProvider?.startsWith("custom:")) {
+    return configuredProvider as Extract<Provider, `custom:${string}`>;
+  }
+
+  return DEFAULT_KAKAO_SUPABASE_PROVIDER;
 }
 
 function getNaverSupabaseProvider() {

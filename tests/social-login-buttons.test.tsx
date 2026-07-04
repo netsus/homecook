@@ -118,6 +118,44 @@ describe("social login buttons", () => {
     );
   });
 
+  it("starts Kakao login through the Supabase custom OAuth provider", async () => {
+    const originalProviders = process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS;
+    const originalKakaoProvider = process.env.NEXT_PUBLIC_KAKAO_SUPABASE_PROVIDER;
+    process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS = "kakao";
+    delete process.env.NEXT_PUBLIC_KAKAO_SUPABASE_PROVIDER;
+
+    try {
+      hasSupabasePublicEnv.mockReturnValue(true);
+      signInWithOAuth.mockResolvedValue({ error: null });
+
+      render(<SocialLoginButtons nextPath="/mypage" />);
+
+      await userEvent.click(screen.getByRole("button", { name: "카카오로 시작하기" }));
+
+      await waitFor(() => {
+        expect(signInWithOAuth).toHaveBeenCalledTimes(1);
+      });
+      expect(signInWithOAuth.mock.calls[0][0]).toMatchObject({
+        provider: "custom:kakao",
+        options: {
+          redirectTo: "http://localhost:3000/auth/callback",
+        },
+      });
+    } finally {
+      if (originalProviders === undefined) {
+        delete process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS;
+      } else {
+        process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS = originalProviders;
+      }
+
+      if (originalKakaoProvider === undefined) {
+        delete process.env.NEXT_PUBLIC_KAKAO_SUPABASE_PROVIDER;
+      } else {
+        process.env.NEXT_PUBLIC_KAKAO_SUPABASE_PROVIDER = originalKakaoProvider;
+      }
+    }
+  });
+
   it("starts Naver login through the configured Supabase custom provider", async () => {
     const originalProviders = process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS;
     const originalNaverProvider = process.env.NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER;
