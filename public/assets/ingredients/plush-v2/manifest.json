@@ -6,7 +6,7 @@
     "height": 512,
     "type": "image/webp",
     "quality": 95,
-    "background": "soft light gray",
+    "background": "#DDE8F0",
     "safeArea": "centered subject with white sticker border"
   },
   "items": {
@@ -2095,7 +2095,7 @@
       "status": "approved-user-request"
     },
     "귀리": {
-      "src": "/assets/plush-v2/oats.webp",
+      "src": "/assets/plush-v2/raw-oats.webp",
       "status": "approved-user-request"
     },
     "귀리밥": {
@@ -3424,6 +3424,30 @@
     },
     "패션프루트": {
       "src": "/assets/plush-v2/passion-fruit.webp",
+      "status": "approved-user-request"
+    },
+    "흑미": {
+      "src": "/assets/plush-v2/black-rice.webp",
+      "status": "approved-user-request"
+    },
+    "찹쌀": {
+      "src": "/assets/plush-v2/glutinous-rice.webp",
+      "status": "approved-user-request"
+    },
+    "청오이": {
+      "src": "/assets/plush-v2/cheong-cucumber.webp",
+      "status": "approved-user-request"
+    },
+    "통후추": {
+      "src": "/assets/plush-v2/whole-black-pepper.webp",
+      "status": "approved-user-request"
+    },
+    "오트밀": {
+      "src": "/assets/plush-v2/oats.webp",
+      "status": "approved-user-request"
+    },
+    "해물육수코인": {
+      "src": "/assets/plush-v2/seafood-stock-coin.webp",
       "status": "approved-user-request"
     }
   }

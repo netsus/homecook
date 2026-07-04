@@ -1098,8 +1098,9 @@ describe("pantry mobile visuals", () => {
       ["편강", "/assets/plush-v2/candied-ginger.webp"],
       ["호박", "/assets/plush-v2/pumpkin.webp"],
       ["옥수수콘", "/assets/plush-v2/corn-kernels.webp"],
-      ["귀리", "/assets/plush-v2/oats.webp"],
+      ["귀리", "/assets/plush-v2/raw-oats.webp"],
       ["귀리밥", "/assets/plush-v2/oat-rice.webp"],
+      ["오트밀", "/assets/plush-v2/oats.webp"],
       ["기장", "/assets/plush-v2/proso-millet.webp"],
       ["누룽지", "/assets/plush-v2/scorched-rice.webp"],
       ["멥쌀", "/assets/plush-v2/short-grain-rice.webp"],
@@ -1263,6 +1264,11 @@ describe("pantry mobile visuals", () => {
       ["물", "/assets/plush-v2/water-diary-sticker.webp"],
       ["얼음", "/assets/plush-v2/ice-diary-sticker.webp"],
       ["탄산수", "/assets/plush-v2/sparkling-water-diary-sticker.webp"],
+      ["흑미", "/assets/plush-v2/black-rice.webp"],
+      ["찹쌀", "/assets/plush-v2/glutinous-rice.webp"],
+      ["청오이", "/assets/plush-v2/cheong-cucumber.webp"],
+      ["통후추", "/assets/plush-v2/whole-black-pepper.webp"],
+      ["해물육수코인", "/assets/plush-v2/seafood-stock-coin.webp"],
     ];
 
     for (const [name, src] of expectedStickers) {
@@ -1328,7 +1334,7 @@ describe("pantry mobile visuals", () => {
   it("keeps plush-v2 sticker sources as 512px WebP assets for crisp pantry rendering", () => {
     const items = stickerManifest.items as Record<string, PantryStickerManifestItem>;
 
-    expect(Object.keys(items)).toHaveLength(854);
+    expect(Object.keys(items)).toHaveLength(860);
 
     for (const item of Object.values(items)) {
       expect(item.src).toMatch(/^\/assets\/plush-v2\/.+\.webp$/);
