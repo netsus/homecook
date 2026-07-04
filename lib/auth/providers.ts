@@ -1,3 +1,5 @@
+import type { Provider } from "@supabase/supabase-js";
+
 export const AUTH_PROVIDER_META = {
   kakao: {
     label: "카카오로 시작하기",
@@ -15,7 +17,9 @@ export const AUTH_PROVIDER_META = {
 
 export type AuthProviderId = keyof typeof AUTH_PROVIDER_META;
 
-const DEFAULT_PROVIDERS: AuthProviderId[] = ["google"];
+const DEFAULT_PROVIDERS: AuthProviderId[] = ["kakao", "naver", "google"];
+const DEFAULT_NAVER_SUPABASE_PROVIDER: Extract<Provider, `custom:${string}`> =
+  "custom:naver";
 
 export function parseEnabledAuthProviders(raw?: string | null) {
   if (!raw) {
@@ -34,4 +38,23 @@ export function getEnabledAuthProviders() {
   return parseEnabledAuthProviders(
     process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS,
   );
+}
+
+export function getSupabaseAuthProvider(provider: AuthProviderId): Provider {
+  if (provider === "naver") {
+    return getNaverSupabaseProvider();
+  }
+
+  return provider;
+}
+
+function getNaverSupabaseProvider() {
+  const configuredProvider = process.env.NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER
+    ?.trim();
+
+  if (configuredProvider?.startsWith("custom:")) {
+    return configuredProvider as Extract<Provider, `custom:${string}`>;
+  }
+
+  return DEFAULT_NAVER_SUPABASE_PROVIDER;
 }

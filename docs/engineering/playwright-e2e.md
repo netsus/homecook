@@ -70,6 +70,9 @@ npx playwright install --with-deps chromium
 - docs-only 또는 governance-only PR은 전체 Playwright gate 대신 관련 최소 검증만 보일 수 있다.
 - 외부 OAuth가 필요한 시나리오는 `workflow_dispatch`로만 실행한다.
 - 실패 시 trace, screenshot, video를 아티팩트로 남긴다.
+- 기본 fixture E2E dev server는 개인 `.env.local`과 무관하게
+  `NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS=kakao,naver,google`과
+  `NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER=custom:naver`를 사용한다.
 
 ## Device Matrix
 
@@ -84,7 +87,7 @@ npx playwright install --with-deps chromium
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS=google`
+- `NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS=google` 또는 live OAuth 대상 provider 목록
 - `E2E_GOOGLE_EMAIL`
 - `E2E_GOOGLE_PASSWORD`
 - local Supabase에서 same flow를 쓰려면 `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`, `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET`

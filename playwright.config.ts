@@ -59,6 +59,8 @@ export default defineConfig({
       [
         "HOMECOOK_ENABLE_QA_FIXTURES=1",
         "NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES=1",
+        "NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS=kakao,naver,google",
+        "NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER=custom:naver",
         `NEXT_PUBLIC_APP_URL=${webServerUrl.origin}`,
         `corepack pnpm exec next dev --hostname ${webServerHost} --port ${webServerPort}`,
       ].join(" "),

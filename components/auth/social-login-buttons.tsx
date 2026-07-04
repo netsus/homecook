@@ -7,6 +7,7 @@ import { LocalDevLoginPanel } from "@/components/auth/local-dev-login-panel";
 import {
   AUTH_PROVIDER_META,
   getEnabledAuthProviders,
+  getSupabaseAuthProvider,
   type AuthProviderId,
 } from "@/lib/auth/providers";
 import {
@@ -69,9 +70,10 @@ export function SocialLoginButtons({
 
         const supabase = getSupabaseBrowserClient();
         const callback = new URL("/auth/callback", window.location.origin);
+        const authProvider = getSupabaseAuthProvider(provider);
 
         const { error } = await supabase.auth.signInWithOAuth({
-          provider: provider as never,
+          provider: authProvider,
           options: {
             redirectTo: callback.toString(),
           },
@@ -109,11 +111,7 @@ export function SocialLoginButtons({
               aria-hidden="true"
               className="mr-3 inline-flex h-5 w-5 items-center justify-center text-[15px] font-extrabold uppercase"
             >
-              {providerId === "google" ? (
-                <GoogleLogoIcon />
-              ) : (
-                providerId.slice(0, 1)
-              )}
+              <ProviderLogoIcon providerId={providerId} />
             </span>
             {pendingProvider === providerId ? `${provider.label} 로그인 중...` : provider.label}
           </button>
@@ -179,6 +177,49 @@ function getProviderButtonClass(
   }
 
   return fallbackClassName;
+}
+
+function ProviderLogoIcon({ providerId }: { providerId: AuthProviderId }) {
+  if (providerId === "google") {
+    return <GoogleLogoIcon />;
+  }
+
+  if (providerId === "kakao") {
+    return <KakaoLogoIcon />;
+  }
+
+  return <NaverLogoIcon />;
+}
+
+function KakaoLogoIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      data-testid="kakao-provider-logo"
+      height="20"
+      viewBox="0 0 20 20"
+      width="20"
+    >
+      <path
+        d="M10 2.8c-4.37 0-7.92 2.75-7.92 6.13 0 2.12 1.4 3.99 3.53 5.09l-.78 2.86c-.07.27.23.49.46.33l3.42-2.27c.42.06.85.09 1.29.09 4.37 0 7.92-2.74 7.92-6.1C17.92 5.55 14.37 2.8 10 2.8Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function NaverLogoIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      data-testid="naver-provider-logo"
+      height="20"
+      viewBox="0 0 20 20"
+      width="20"
+    >
+      <path d="M3 3.2h5.1l3.8 5.5V3.2H17v13.6h-5.1L8.1 11.3v5.5H3V3.2Z" fill="currentColor" />
+    </svg>
+  );
 }
 
 function GoogleLogoIcon() {
