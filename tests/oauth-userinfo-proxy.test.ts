@@ -38,6 +38,7 @@ describe("OAuth userinfo proxy", () => {
     await expect(response.json()).resolves.toEqual({
       sub: "naver-user-1",
       email: "cook@example.com",
+      email_verified: true,
       name: "홍길동",
       nickname: "길동",
       avatar_url: "https://example.com/naver.png",
