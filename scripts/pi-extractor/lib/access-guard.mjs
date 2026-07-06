@@ -9,10 +9,17 @@ const FORBIDDEN_BASENAME = new Set([
 const FORBIDDEN_PATTERNS = [
   /(^|[/\\])_grade_summary\.[^/\\]+\.json$/u,
   /(^|[/\\])_semantic_summary\.[^/\\]+\.json$/u,
+  /(^|[/\\])_grade_semantic\.[^/\\]+\.json$/u,
+  /(^|[/\\])_semantic_grade\.[^/\\]+\.json$/u,
+  /(^|[/\\])[^/\\]+-vs-golden\.html$/u,
   /(^|[/\\])runs[/\\][^/\\]+[/\\]result\.json$/u,
   /(^|[/\\])runs[/\\][^/\\]+[/\\]grade\.json$/u,
   /(^|[/\\])runs[/\\][^/\\]+[/\\]semantic-grade\.json$/u,
+  /(^|[/\\])runs[/\\][^/\\]+[/\\]grade-semantic\.json$/u,
   /(^|[/\\])runs[/\\][^/\\]+[/\\]semantic-judge-raw\.json$/u,
+  /(^|[/\\])runs[/\\][^/\\]+[/\\]holistic-final-result\.json$/u,
+  /(^|[/\\])runs[/\\][^/\\]+[/\\]holistic-final-prompt\.txt$/u,
+  /(^|[/\\])runs[/\\][^/\\]+[/\\]holistic-visual-repair-result\.json$/u,
 ];
 
 export function resolveAccessPath(filePath, projectRoot = process.cwd()) {
