@@ -36,6 +36,33 @@ import {
   sourceToPiPublicPacket,
 } from "./lib/prompt.mjs";
 import {
+  HOLISTIC_PROMPT_VERSION,
+  assertValidHolisticDraft,
+  auditHolisticDraft,
+  buildFinalOutputFromHolisticAudit,
+  buildHolisticCandidateLedger,
+  buildHolisticDraftPrompt,
+  buildHolisticFinalPrompt,
+  buildHolisticSourcePacket,
+  buildHolisticStoryboardCandidateLedger,
+  buildHolisticVisualRepairPrompt,
+  buildHolisticVisualTargetLedger,
+  normalizeHolisticDraft,
+  recommendHolisticTimelineFrameBudget,
+} from "./lib/holistic.mjs";
+import {
+  assertValidCandidateTimelineIndex,
+  assertValidVideoTimeline,
+  buildCandidateTimelineIndex,
+  buildTimelineCandidateLedger,
+  buildTimelineFrameLedger,
+  buildTimelineFramePlan,
+  buildVideoTimelinePrompt,
+  framesPerTimelineWindow,
+  normalizeVideoTimeline,
+  timelineAllowedEvidenceRefs,
+} from "./lib/timeline.mjs";
+import {
   assertValidPiRecipeCandidates,
   assertValidPiRecipeOutput,
   normalizePiRecipeCandidates,
@@ -144,6 +171,27 @@ function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
     resultPath: path.join(outDir, "result.json"),
     manifestPath: path.join(outDir, "file-access-manifest.json"),
     failurePath: path.join(outDir, "failure.json"),
+    holisticSourcePacketPath: path.join(outDir, "holistic-source-packet.json"),
+    holisticStoryboardLedgerPath: path.join(outDir, "holistic-storyboard-ledger.json"),
+    holisticDraftPromptPath: path.join(outDir, "holistic-draft-prompt.txt"),
+    holisticDraftCommandPath: path.join(outDir, "holistic-draft-command.json"),
+    holisticDraftRawPath: path.join(outDir, "holistic-draft-raw-response.json"),
+    holisticDraftPath: path.join(outDir, "holistic-draft.json"),
+    holisticVisualRepairPromptPath: path.join(outDir, "holistic-visual-repair-prompt.txt"),
+    holisticVisualRepairCommandPath: path.join(outDir, "holistic-visual-repair-command.json"),
+    holisticVisualRepairRawPath: path.join(outDir, "holistic-visual-repair-raw-response.json"),
+    holisticVisualRepairResultPath: path.join(outDir, "holistic-visual-repair-result.json"),
+    holisticEvidenceAuditPath: path.join(outDir, "holistic-evidence-audit.json"),
+    holisticVisualNeedsPath: path.join(outDir, "holistic-visual-needs.json"),
+    holisticFinalPromptPath: path.join(outDir, "holistic-final-prompt.txt"),
+    holisticFinalResultPath: path.join(outDir, "holistic-final-result.json"),
+    timelineFramePlanPath: path.join(outDir, "timeline-frame-plan.json"),
+    timelineFrameLedgerPath: path.join(outDir, "timeline-frame-ledger.json"),
+    videoTimelinePromptPath: path.join(outDir, "video-timeline-prompt.txt"),
+    videoTimelineCommandPath: path.join(outDir, "video-timeline-command.json"),
+    videoTimelineRawPath: path.join(outDir, "video-timeline-raw-response.json"),
+    videoTimelinePath: path.join(outDir, "video-timeline.json"),
+    candidateTimelineIndexPath: path.join(outDir, "candidate-timeline-index.json"),
     candidatePromptPath: path.join(outDir, "candidate-prompt.txt"),
     candidateCommandPath: path.join(outDir, "candidate-command.json"),
     candidateRawPath: path.join(outDir, "candidate-raw-response.json"),
@@ -298,6 +346,483 @@ function candidatesToRecipeStubs(candidates) {
     })),
     repairLog: [],
   };
+}
+
+function emptyVisualEstimates(videoId, reason = "holistic visual estimate targets were not requested") {
+  return {
+    schemaVersion: 1,
+    kind: "visual-estimates",
+    videoId,
+    visualEstimates: [],
+    uncertainties: [reason],
+    errors: [],
+    skipped: true,
+  };
+}
+
+function visualLedgerFrameCount(visualLedger) {
+  const candidateFrames = (visualLedger?.candidates ?? []).reduce((sum, candidate) => sum + (candidate.frames?.length ?? 0), 0);
+  const targetFrames = (visualLedger?.targets ?? []).reduce((sum, target) => sum + (target.frames?.length ?? 0), 0);
+  return candidateFrames + targetFrames;
+}
+
+function mergeVisualLedgers(sourcePacket, ledgers) {
+  const usableLedgers = ledgers.filter(Boolean);
+  const errors = usableLedgers.flatMap((ledger) => ledger.errors ?? []);
+  return {
+    schemaVersion: 1,
+    kind: "visual-ledger",
+    videoId: sourcePacket?.video?.videoId ?? null,
+    collectionStatus: errors.length > 0 ? "partial" : usableLedgers.some((ledger) => visualLedgerFrameCount(ledger) > 0) ? "completed" : "skipped",
+    note: "Merged holistic storyboard frames and target frames for final visual evidence contract.",
+    errors,
+    candidates: usableLedgers.flatMap((ledger) => ledger.candidates ?? []),
+    targets: usableLedgers.flatMap((ledger) => ledger.targets ?? []),
+  };
+}
+
+function buildStoryboardVisualTargetLedger({ sourcePacket, storyboardCandidateLedger, frameBudget }) {
+  const candidates = storyboardCandidateLedger.candidates ?? [];
+  const framesPerCandidate = Math.max(1, Math.ceil(Math.max(1, frameBudget) / Math.max(1, candidates.length)));
+  return {
+    ledger: {
+      schemaVersion: 1,
+      kind: "visual-target-ledger",
+      videoId: sourcePacket?.video?.videoId ?? null,
+      targets: candidates.map((candidate, index) => ({
+        targetId: `${candidate.candidateId}:storyboard`,
+        candidateId: candidate.candidateId,
+        targetType: "candidate_visual_recall",
+        ingredient: `storyboard-${index + 1}`,
+        reason: "holistic draft needs a lightweight storyboard for this recipe timeline section",
+        sourceEvidence: candidate.evidence ?? ["title"],
+        textCues: [candidate.title, candidate.titleHint, sourcePacket?.video?.title].filter(Boolean),
+        preferredTimeRanges: [],
+        candidateTimeRange: candidate.timeRange,
+        fallbackPolicy: "candidate-visual-recall-sweep",
+      })),
+      skippedTargets: [],
+      summary: {
+        totalTargets: candidates.length,
+        skippedTargets: 0,
+        visualTargetAllowedCount: candidates.length,
+      },
+    },
+    framesPerCandidate,
+  };
+}
+
+async function runHolisticPiExtractionCase({
+  manifest,
+  paths,
+  sourcePacket,
+  allowFetchContent,
+  sourcePacketOnly,
+  piTools,
+  model,
+  provider,
+  thinking,
+  dryRun,
+  visualFrames,
+  visualFrameCount,
+  visualFramesPerRange,
+  visualSecondsPerCandidate,
+  visualAllowFallbackRanges,
+  visualDescriptionOnlySweepFrames,
+  visualMaxFramesPerTarget,
+  visualEstimatesEnabled,
+  visualEstimateMaxFrames,
+  visualTimeoutMs,
+  holisticResponseJsonPath,
+  holisticRepairResponseJsonPath,
+  holisticVideoTimelineResponseJsonPath,
+  holisticStoryboardFrameCount,
+  holisticTimelineUnderstanding,
+  holisticVideoTimelineLedger,
+  holisticVideoTimelineMaxSegments,
+  holisticVideoTimelineMaxWindowsPerSegment,
+  holisticVideoTimelineMaxTotalFrames,
+  holisticTimelineFrameBudget,
+  holisticStoryboardMaxCandidates,
+  holisticMaxTargetsPerRecipe,
+  holisticMaxTotalTargets,
+  holisticVisualTargetMaxWindowSec,
+  holisticVisualRepairEnabled,
+  ytDlpBin,
+  ffmpegBin,
+  frameExtractorScript,
+  frameExtractorPythonBin,
+  projectRoot,
+  timeoutMs,
+  executePiFn,
+  executeVisualCommandFn,
+  collectVisualLedgerFn,
+  collectVisualEstimatesFn,
+}) {
+  manifest.mode = "holistic-draft";
+  manifest.promptVersion = HOLISTIC_PROMPT_VERSION;
+  manifest.stages = [];
+
+  const effectiveStoryboardFrameBudget = holisticTimelineUnderstanding
+    ? recommendHolisticTimelineFrameBudget(sourcePacket, {
+      enableTimelineUnderstanding: true,
+      configuredFrameBudget: holisticTimelineFrameBudget,
+    })
+    : holisticStoryboardFrameCount;
+  const storyboardCandidateLedger = buildHolisticStoryboardCandidateLedger(sourcePacket, {
+    maxCandidates: holisticStoryboardMaxCandidates,
+    enableTimelineUnderstanding: holisticTimelineUnderstanding,
+    frameBudget: effectiveStoryboardFrameBudget,
+  });
+  let storyboardFramesPerCandidate = 1;
+  let storyboardLedger = null;
+  let timelineFramePlan = null;
+  let timelineFrameLedger = null;
+  let videoTimeline = null;
+  let candidateTimelineIndex = null;
+
+  if (holisticVideoTimelineLedger) {
+    timelineFramePlan = buildTimelineFramePlan(sourcePacket, {
+      maxSegments: holisticVideoTimelineMaxSegments,
+      maxWindowsPerSegment: holisticVideoTimelineMaxWindowsPerSegment,
+      maxTotalFrames: holisticVideoTimelineMaxTotalFrames ?? effectiveStoryboardFrameBudget,
+    });
+    await writeJsonTracked(manifest, paths.timelineFramePlanPath, timelineFramePlan, "timeline-frame-plan");
+    const timelineCandidateLedger = buildTimelineCandidateLedger(timelineFramePlan);
+    storyboardFramesPerCandidate = framesPerTimelineWindow(timelineFramePlan);
+    storyboardLedger = dryRun || !visualFrames
+      ? buildVisualLedger({ sourcePacket, candidateLedger: timelineCandidateLedger })
+      : await collectVisualLedgerFn({
+        sourcePacket,
+        candidateLedger: timelineCandidateLedger,
+        projectRoot,
+        cacheRoot: path.join(paths.visualCacheRoot, "video-timeline-ledger"),
+        manifest,
+        model,
+        provider,
+        thinking,
+        ytDlpBin,
+        ffmpegBin,
+        frameCount: storyboardFramesPerCandidate,
+        framesPerRange: 1,
+        secondsPerCandidate: visualSecondsPerCandidate,
+        maxCandidates: null,
+        allowFallbackRanges: true,
+        frameExtractorScript,
+        frameExtractorPythonBin,
+        timeoutMs: visualTimeoutMs,
+        executeCommandFn: executeVisualCommandFn,
+        executePiFn,
+      });
+    timelineFrameLedger = buildTimelineFrameLedger({
+      sourcePacket,
+      timelineFramePlan,
+      visualLedger: storyboardLedger,
+    });
+    await writeJsonTracked(manifest, paths.timelineFrameLedgerPath, timelineFrameLedger, "timeline-frame-ledger");
+    const videoTimelinePrompt = buildVideoTimelinePrompt({
+      sourcePacket,
+      recipeCandidateLedger: storyboardCandidateLedger,
+      timelineFramePlan,
+      timelineFrameLedger,
+    });
+    await writeTextTracked(manifest, paths.videoTimelinePromptPath, `${videoTimelinePrompt}\n`, "video-timeline-prompt");
+    addAllowedRead(manifest, paths.videoTimelinePromptPath);
+    const videoTimelineCommand = buildPiCommand({ promptPath: paths.videoTimelinePromptPath, model, provider, thinking, tools: piTools });
+    manifest.stages.push({ name: "video-timeline", command: videoTimelineCommand });
+    await writeJsonTracked(manifest, paths.videoTimelineCommandPath, {
+      command: videoTimelineCommand,
+      note: piCommandNote(piTools),
+      mode: "video-timeline",
+    }, "video-timeline-command");
+    if (dryRun) {
+      videoTimeline = normalizeVideoTimeline({ events: [], errors: ["dry-run"] }, { videoId: sourcePacket?.video?.videoId ?? null });
+    } else {
+      manifest.currentStage = "video-timeline";
+      const videoTimelineRawPayload = await readFixtureOrExecutePi({
+        manifest,
+        fixturePath: holisticVideoTimelineResponseJsonPath,
+        fixtureReason: "video-timeline-fixture-response-json",
+        command: videoTimelineCommand,
+        projectRoot,
+        timeoutMs,
+        executePiFn,
+      });
+      await writeTextTracked(
+        manifest,
+        paths.videoTimelineRawPath,
+        videoTimelineRawPayload.endsWith("\n") ? videoTimelineRawPayload : `${videoTimelineRawPayload}\n`,
+        "video-timeline-raw-response",
+      );
+      videoTimeline = normalizeVideoTimeline(videoTimelineRawPayload, {
+        videoId: sourcePacket?.video?.videoId ?? null,
+      });
+      assertValidVideoTimeline(videoTimeline, {
+        allowedCandidateIds: storyboardCandidateLedger.candidates.map((candidate) => candidate.candidateId),
+        allowedEvidenceRefs: timelineAllowedEvidenceRefs({ sourcePacket, timelineFrameLedger }),
+      });
+    }
+    await writeJsonTracked(manifest, paths.videoTimelinePath, videoTimeline, "video-timeline");
+    candidateTimelineIndex = buildCandidateTimelineIndex({
+      recipeCandidateLedger: storyboardCandidateLedger,
+      videoTimeline,
+    });
+    assertValidCandidateTimelineIndex(candidateTimelineIndex);
+    await writeJsonTracked(manifest, paths.candidateTimelineIndexPath, candidateTimelineIndex, "candidate-timeline-index");
+  } else {
+    const storyboardTargets = buildStoryboardVisualTargetLedger({
+      sourcePacket,
+      storyboardCandidateLedger,
+      frameBudget: effectiveStoryboardFrameBudget,
+    });
+    storyboardFramesPerCandidate = storyboardTargets.framesPerCandidate;
+    storyboardLedger = dryRun || !visualFrames
+      ? buildVisualLedger({ sourcePacket, candidateLedger: storyboardCandidateLedger })
+      : await collectVisualLedgerFn({
+        sourcePacket,
+        candidateLedger: storyboardCandidateLedger,
+        visualTargetLedger: storyboardTargets.ledger,
+        projectRoot,
+        cacheRoot: path.join(paths.visualCacheRoot, "holistic-storyboard"),
+        manifest,
+        model,
+        provider,
+        thinking,
+        ytDlpBin,
+        ffmpegBin,
+        frameCount: storyboardFramesPerCandidate,
+        framesPerRange: 1,
+        secondsPerCandidate: visualSecondsPerCandidate,
+        maxCandidates: null,
+        allowFallbackRanges: true,
+        frameExtractorScript,
+        frameExtractorPythonBin,
+        descriptionOnlySweepFrames: storyboardTargets.framesPerCandidate,
+        maxFramesPerTarget: storyboardTargets.framesPerCandidate,
+        timeoutMs: visualTimeoutMs,
+        executeCommandFn: executeVisualCommandFn,
+        executePiFn,
+      });
+  }
+
+  await writeJsonTracked(manifest, paths.holisticStoryboardLedgerPath, storyboardLedger, "holistic-storyboard-ledger");
+  manifest.holisticStoryboardCandidateCount = storyboardCandidateLedger.candidates.length;
+  manifest.holisticStoryboardFrameBudget = effectiveStoryboardFrameBudget;
+  manifest.holisticStoryboardFramesPerCandidate = storyboardFramesPerCandidate;
+  manifest.holisticTimelineUnderstandingEnabled = holisticTimelineUnderstanding;
+  manifest.holisticVideoTimelineLedgerEnabled = holisticVideoTimelineLedger;
+  const holisticSourcePacket = buildHolisticSourcePacket(sourcePacket, storyboardLedger, {
+    includeStoryboardEntries: !holisticVideoTimelineLedger,
+    videoTimeline,
+    candidateTimelineIndex,
+  });
+  await writeJsonTracked(manifest, paths.holisticSourcePacketPath, holisticSourcePacket, "holistic-source-packet");
+  const holisticDraftPrompt = buildHolisticDraftPrompt(holisticSourcePacket, {
+    timelineMode: holisticVideoTimelineLedger,
+  });
+  await writeTextTracked(manifest, paths.holisticDraftPromptPath, `${holisticDraftPrompt}\n`, "holistic-draft-prompt");
+  addAllowedRead(manifest, paths.holisticDraftPromptPath);
+  const holisticCommand = buildPiCommand({ promptPath: paths.holisticDraftPromptPath, model, provider, thinking, tools: piTools });
+  manifest.stages.push({ name: "holistic-draft", command: holisticCommand });
+  await writeJsonTracked(manifest, paths.holisticDraftCommandPath, {
+    command: holisticCommand,
+    note: piCommandNote(piTools),
+    mode: "holistic-draft",
+    allowFetchContent,
+    sourcePacketOnly,
+  }, "holistic-draft-command");
+
+  if (dryRun) {
+    manifest.phase = "holistic-dry-run-completed";
+    return;
+  }
+
+  manifest.currentStage = "holistic-draft";
+  const holisticRawPayload = await readFixtureOrExecutePi({
+    manifest,
+    fixturePath: holisticResponseJsonPath,
+    fixtureReason: "holistic-fixture-response-json",
+    command: holisticCommand,
+    projectRoot,
+    timeoutMs,
+    executePiFn,
+  });
+  await writeTextTracked(
+    manifest,
+    paths.holisticDraftRawPath,
+    holisticRawPayload.endsWith("\n") ? holisticRawPayload : `${holisticRawPayload}\n`,
+    "holistic-draft-raw-response",
+  );
+  const draft = normalizeHolisticDraft(holisticRawPayload);
+  assertValidHolisticDraft(draft);
+  await writeJsonTracked(manifest, paths.holisticDraftPath, draft, "holistic-draft");
+
+  const candidateLedger = buildHolisticCandidateLedger({ draft, sourcePacket });
+  await writeJsonTracked(manifest, paths.candidateLedgerPath, candidateLedger, "candidate-ledger");
+  const visualTargetLedger = buildHolisticVisualTargetLedger({
+    draft,
+    sourcePacket,
+    maxTargetsPerRecipe: holisticMaxTargetsPerRecipe,
+    maxTotalTargets: holisticMaxTotalTargets,
+    maxWindowSec: holisticVisualTargetMaxWindowSec,
+    includeSparseRecallTargets: !holisticVideoTimelineLedger,
+    amountTargetsOnly: holisticVideoTimelineLedger,
+  });
+  await writeJsonTracked(manifest, paths.holisticVisualNeedsPath, visualTargetLedger, "holistic-visual-needs");
+  await writeJsonTracked(manifest, paths.visualTargetLedgerPath, visualTargetLedger, "visual-target-ledger");
+
+  const targetVisualLedger = visualFrames && visualTargetLedger.targets.length > 0
+    ? await collectVisualLedgerFn({
+      sourcePacket,
+      candidateLedger,
+      visualTargetLedger,
+      projectRoot,
+      cacheRoot: paths.visualCacheRoot,
+      manifest,
+      model,
+      provider,
+      thinking,
+      ytDlpBin,
+      ffmpegBin,
+      frameCount: visualFrameCount,
+      framesPerRange: visualFramesPerRange,
+      secondsPerCandidate: visualSecondsPerCandidate,
+      maxCandidates: holisticMaxTotalTargets,
+      allowFallbackRanges: visualAllowFallbackRanges,
+      frameExtractorScript,
+      frameExtractorPythonBin,
+      descriptionOnlySweepFrames: visualDescriptionOnlySweepFrames,
+      maxFramesPerTarget: visualMaxFramesPerTarget,
+      timeoutMs: visualTimeoutMs,
+      executeCommandFn: executeVisualCommandFn,
+      executePiFn,
+    })
+    : buildVisualLedger({ sourcePacket, candidateLedger });
+  await writeJsonTracked(manifest, paths.visualLedgerPath, targetVisualLedger, "visual-ledger");
+
+  const visualEstimates = visualFrames && visualEstimatesEnabled && visualTargetLedger.targets.length > 0
+    ? await collectVisualEstimatesFn({
+      visualTargetLedger,
+      visualLedger: targetVisualLedger,
+      projectRoot,
+      cacheRoot: paths.visualCacheRoot,
+      manifest,
+      model,
+      provider,
+      thinking,
+      timeoutMs: visualTimeoutMs,
+      maxFramesPerEstimate: visualEstimateMaxFrames,
+      executePiFn,
+    })
+    : emptyVisualEstimates(sourcePacket?.video?.videoId ?? null);
+  await writeJsonTracked(manifest, paths.visualEstimatesPath, visualEstimates, "visual-estimates");
+
+  let repairDraft = draft;
+  let repairPrompt = null;
+  let repairRawPayload = null;
+  const shouldRunVisualRepair = holisticVisualRepairEnabled && visualFrames && visualLedgerFrameCount(targetVisualLedger) > 0;
+  if (shouldRunVisualRepair) {
+    repairPrompt = buildHolisticVisualRepairPrompt({
+      draft,
+      holisticSourcePacket,
+      visualLedger: targetVisualLedger,
+    });
+    await writeTextTracked(manifest, paths.holisticVisualRepairPromptPath, `${repairPrompt}\n`, "holistic-visual-repair-prompt");
+    addAllowedRead(manifest, paths.holisticVisualRepairPromptPath);
+    const repairCommand = buildPiCommand({ promptPath: paths.holisticVisualRepairPromptPath, model, provider, thinking, tools: piTools });
+    manifest.stages.push({ name: "holistic-visual-repair", command: repairCommand });
+    await writeJsonTracked(manifest, paths.holisticVisualRepairCommandPath, {
+      command: repairCommand,
+      note: piCommandNote(piTools),
+      mode: "holistic-visual-repair",
+    }, "holistic-visual-repair-command");
+    manifest.currentStage = "holistic-visual-repair";
+    repairRawPayload = await readFixtureOrExecutePi({
+      manifest,
+      fixturePath: holisticRepairResponseJsonPath,
+      fixtureReason: "holistic-repair-fixture-response-json",
+      command: repairCommand,
+      projectRoot,
+      timeoutMs,
+      executePiFn,
+    });
+    await writeTextTracked(
+      manifest,
+      paths.holisticVisualRepairRawPath,
+      repairRawPayload.endsWith("\n") ? repairRawPayload : `${repairRawPayload}\n`,
+      "holistic-visual-repair-raw-response",
+    );
+    repairDraft = normalizeHolisticDraft(repairRawPayload);
+    assertValidHolisticDraft(repairDraft);
+    await writeJsonTracked(manifest, paths.holisticVisualRepairResultPath, repairDraft, "holistic-visual-repair-result");
+  }
+
+  const auditVisualLedger = mergeVisualLedgers(sourcePacket, [storyboardLedger, targetVisualLedger]);
+  const audit = auditHolisticDraft({
+    draft: repairDraft,
+    holisticSourcePacket,
+    visualLedger: auditVisualLedger,
+    visualEstimates,
+  });
+  await writeJsonTracked(manifest, paths.holisticEvidenceAuditPath, audit, "holistic-evidence-audit");
+  const finalOutput = buildFinalOutputFromHolisticAudit(audit);
+  const finalPrompt = buildHolisticFinalPrompt({ draft: repairDraft, audit, visualEstimates });
+  await writeTextTracked(manifest, paths.holisticFinalPromptPath, `${finalPrompt}\n`, "holistic-final-prompt");
+  const contract = validateFinalVisualEvidenceContract(finalOutput, {
+    visualLedger: auditVisualLedger,
+    visualEstimates,
+    auditMode: false,
+  });
+  assertValidPiRecipeOutput(contract.output);
+  await writeJsonTracked(manifest, paths.holisticFinalResultPath, contract.output, "holistic-final-result");
+  await writeJsonTracked(manifest, paths.resultPath, { videoId: manifest.videoId, ...contract.output }, "result");
+  await writeCacheManifest(manifest, paths.cacheManifestPath, {
+    cachePolicy: "holistic raw response, storyboard ledger, target ledgers, and final audit are stored in the run directory",
+    promptHashes: {
+      holisticDraft: hashText(holisticDraftPrompt),
+      holisticFinal: hashText(finalPrompt),
+    },
+    rawResponseHashes: {
+      holisticDraft: hashText(holisticRawPayload),
+      ...(repairRawPayload ? { holisticVisualRepair: hashText(repairRawPayload) } : {}),
+    },
+    visualRepair: {
+      enabled: shouldRunVisualRepair,
+      promptHash: repairPrompt ? hashText(repairPrompt) : null,
+      defaultDisabledByTimelineLedger: holisticVideoTimelineLedger && !holisticVisualRepairEnabled,
+    },
+    visual: {
+      enabled: visualFrames,
+      storyboardFrameCount: visualLedgerFrameCount(storyboardLedger),
+      storyboardFrameBudget: effectiveStoryboardFrameBudget,
+      storyboardFramesPerCandidate,
+      storyboardCandidateCount: storyboardCandidateLedger.candidates.length,
+      timelineUnderstandingEnabled: holisticTimelineUnderstanding,
+      videoTimelineLedgerEnabled: holisticVideoTimelineLedger,
+      timelineFramePlanSummary: timelineFramePlan?.summary ?? null,
+      videoTimelineSummary: videoTimeline?.summary ?? null,
+      candidateTimelineIndexSummary: candidateTimelineIndex?.summary ?? null,
+      timelineSource: storyboardCandidateLedger.summary?.timelineSource ?? null,
+      targetFrameCount: visualLedgerFrameCount(targetVisualLedger),
+      targetCount: visualTargetLedger.targets.length,
+      skippedTargetCount: visualTargetLedger.skippedTargets?.length ?? 0,
+      estimateCount: visualEstimates.visualEstimates.length,
+      errors: auditVisualLedger.errors ?? [],
+    },
+    evidenceAudit: audit.summary,
+  });
+
+  manifest.phase = "completed";
+  manifest.recipeCount = contract.output.recipes.length;
+  manifest.ingredientCount = contract.output.recipes.reduce((sum, recipe) => sum + recipe.ingredients.length, 0);
+  manifest.stepCount = contract.output.recipes.reduce((sum, recipe) => sum + recipe.steps.length, 0);
+  manifest.visualEvidenceContractFailureCount = contract.failureCount;
+  manifest.visualEvidenceContractWarnings = contract.warnings;
+  manifest.needsInvestigation = contract.failureCount > 0;
+  manifest.holisticEvidenceAudit = audit.summary;
+  manifest.holisticVisualTargetCount = visualTargetLedger.targets.length;
+  manifest.holisticVisualEstimateCount = visualEstimates.visualEstimates.length;
+  manifest.holisticVisualRepairEnabled = shouldRunVisualRepair;
 }
 
 async function runStagedPiExtractionCase({
@@ -588,6 +1113,10 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   const allowFetchContent = args["allow-fetch-content"] === true;
   const sourcePacketOnly = args["source-packet-only"] === true;
   const staged = args.staged === true;
+  const mode = typeof args.mode === "string" ? args.mode : staged ? "staged" : "single";
+  if (!["single", "staged", "holistic-draft"].includes(mode)) {
+    throw new Error(`unknown pi extraction mode: ${mode}`);
+  }
   const candidateOnly = args["candidate-only"] === true;
   const fastPrompt = args["fast-prompt"] === true;
   const genericRepair = args["generic-repair"] !== false;
@@ -618,10 +1147,34 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   const detailResponseJsonPath = typeof args["detail-response-json"] === "string"
     ? path.resolve(projectRoot, args["detail-response-json"])
     : responseJsonPath;
+  const holisticResponseJsonPath = typeof args["holistic-response-json"] === "string"
+    ? path.resolve(projectRoot, args["holistic-response-json"])
+    : responseJsonPath;
+  const holisticRepairResponseJsonPath = typeof args["holistic-repair-response-json"] === "string"
+    ? path.resolve(projectRoot, args["holistic-repair-response-json"])
+    : null;
+  const holisticVideoTimelineResponseJsonPath = typeof args["holistic-video-timeline-response-json"] === "string"
+    ? path.resolve(projectRoot, args["holistic-video-timeline-response-json"])
+    : null;
   const maxCaptionSegments = optionalNumber(args["max-caption-segments"], null);
   const maxDescriptionChars = optionalNumber(args["max-description-chars"], 16000);
   const compactSourcePacket = args["compact-source-packet"] === true;
   const maxAuthorComments = optionalNumber(args["max-author-comments"], compactSourcePacket ? 0 : 10);
+  const holisticStoryboardFrameCountArg = optionalNumber(args["holistic-storyboard-frame-count"], null);
+  const holisticStoryboardFrameCount = holisticStoryboardFrameCountArg ?? 8;
+  const holisticVideoTimelineLedger = args["holistic-enable-video-timeline-ledger"] === true;
+  const holisticTimelineUnderstanding = args["holistic-enable-timeline-understanding"] === true || holisticVideoTimelineLedger;
+  const holisticTimelineFrameBudget = optionalNumber(args["holistic-timeline-frame-budget"], holisticStoryboardFrameCountArg);
+  const holisticStoryboardMaxCandidates = optionalNumber(args["holistic-storyboard-max-candidates"], 8);
+  const holisticVideoTimelineMaxSegments = optionalNumber(args["holistic-video-timeline-max-segments"], 8);
+  const holisticVideoTimelineMaxWindowsPerSegment = optionalNumber(args["holistic-video-timeline-max-windows-per-segment"], 3);
+  const holisticVideoTimelineMaxTotalFrames = optionalNumber(args["holistic-video-timeline-max-total-frames"], holisticTimelineFrameBudget);
+  const holisticMaxTargetsPerRecipe = optionalNumber(args["holistic-max-targets-per-recipe"], 3);
+  const holisticMaxTotalTargets = optionalNumber(args["holistic-max-total-targets"], 12);
+  const holisticVisualTargetMaxWindowSec = optionalNumber(args["holistic-visual-target-max-window-sec"], 16);
+  const holisticVisualRepairEnabled = holisticVideoTimelineLedger
+    ? args["holistic-enable-visual-repair"] === true
+    : args["holistic-disable-visual-repair"] !== true;
   const model = typeof args.model === "string" ? args.model : DEFAULT_MODEL;
   const provider = typeof args["pi-provider"] === "string" ? args["pi-provider"] : null;
   const thinking = typeof args.thinking === "string" ? args.thinking : null;
@@ -641,14 +1194,18 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
     if (responseJsonPath) allowedReads.push(responseJsonPath);
     if (candidateResponseJsonPath) allowedReads.push(candidateResponseJsonPath);
     if (detailResponseJsonPath) allowedReads.push(detailResponseJsonPath);
+    if (holisticResponseJsonPath) allowedReads.push(holisticResponseJsonPath);
+    if (holisticRepairResponseJsonPath) allowedReads.push(holisticRepairResponseJsonPath);
+    if (holisticVideoTimelineResponseJsonPath) allowedReads.push(holisticVideoTimelineResponseJsonPath);
     const manifest = createAccessManifest({ projectRoot, allowedReads });
     Object.assign(manifest, {
       runner: "scripts/pi-extractor/run-pi-extraction.mjs",
-      promptVersion: PROMPT_VERSION,
+      promptVersion: mode === "holistic-draft" ? HOLISTIC_PROMPT_VERSION : PROMPT_VERSION,
       split,
       videoId: id,
       outTag,
       dryRun,
+      mode,
       staged,
       candidateOnly,
       fastPrompt,
@@ -663,6 +1220,21 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
       sourcePacketOnly,
       compactSourcePacket,
       piTools,
+      holistic: {
+        enabled: mode === "holistic-draft",
+        storyboardFrameCount: holisticStoryboardFrameCount,
+        timelineUnderstandingEnabled: holisticTimelineUnderstanding,
+        videoTimelineLedgerEnabled: holisticVideoTimelineLedger,
+        timelineFrameBudget: holisticTimelineFrameBudget,
+        storyboardMaxCandidates: holisticStoryboardMaxCandidates,
+        videoTimelineMaxSegments: holisticVideoTimelineMaxSegments,
+        videoTimelineMaxWindowsPerSegment: holisticVideoTimelineMaxWindowsPerSegment,
+        videoTimelineMaxTotalFrames: holisticVideoTimelineMaxTotalFrames,
+        maxTargetsPerRecipe: holisticMaxTargetsPerRecipe,
+        maxTotalTargets: holisticMaxTotalTargets,
+        visualTargetMaxWindowSec: holisticVisualTargetMaxWindowSec,
+        visualRepairEnabled: holisticVisualRepairEnabled,
+      },
       visual: {
         enabled: visualFrames,
         frameCount: visualFrameCount,
@@ -705,6 +1277,65 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
         compactSourcePacket,
       });
       await writeJsonTracked(manifest, paths.sourcePacketPath, sourcePacket, "source-packet");
+      if (mode === "holistic-draft") {
+        await runHolisticPiExtractionCase({
+          manifest,
+          paths,
+          sourcePacket,
+          allowFetchContent,
+          sourcePacketOnly,
+          piTools,
+          model,
+          provider,
+          thinking,
+          dryRun,
+          visualFrames,
+          visualFrameCount,
+          visualFramesPerRange,
+          visualSecondsPerCandidate,
+          visualAllowFallbackRanges,
+          visualDescriptionOnlySweepFrames,
+          visualMaxFramesPerTarget,
+          visualEstimatesEnabled,
+          visualEstimateMaxFrames,
+          visualTimeoutMs,
+          holisticResponseJsonPath,
+          holisticRepairResponseJsonPath,
+          holisticVideoTimelineResponseJsonPath,
+          holisticStoryboardFrameCount,
+          holisticTimelineUnderstanding,
+          holisticVideoTimelineLedger,
+          holisticVideoTimelineMaxSegments,
+          holisticVideoTimelineMaxWindowsPerSegment,
+          holisticVideoTimelineMaxTotalFrames,
+          holisticTimelineFrameBudget,
+          holisticStoryboardMaxCandidates,
+          holisticMaxTargetsPerRecipe,
+          holisticMaxTotalTargets,
+          holisticVisualTargetMaxWindowSec,
+          holisticVisualRepairEnabled,
+          ytDlpBin,
+          ffmpegBin,
+          frameExtractorScript,
+          frameExtractorPythonBin,
+          projectRoot,
+          timeoutMs,
+          executePiFn: options.executePi ?? executePi,
+          executeVisualCommandFn: options.executeVisualCommand ?? executeVisualCommand,
+          collectVisualLedgerFn: options.collectVisualLedger ?? collectVisualLedger,
+          collectVisualEstimatesFn: options.collectVisualEstimates ?? collectVisualEstimates,
+        });
+        assertNoForbiddenReads(manifest);
+        await writeJsonTracked(manifest, paths.manifestPath, manifest, "file-access-manifest");
+        if (dryRun) {
+          console.log(`[DRY-RUN] pi holistic ${split}/${id}: holistic prompt + manifest 작성`);
+        } else {
+          console.log(
+            `[OK] pi holistic ${split}/${id}: 레시피 ${manifest.recipeCount}, 재료 ${manifest.ingredientCount}, 단계 ${manifest.stepCount}, visual target ${manifest.holisticVisualTargetCount ?? 0}`,
+          );
+        }
+        continue;
+      }
       if (staged) {
         await runStagedPiExtractionCase({
           manifest,

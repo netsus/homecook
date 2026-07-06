@@ -36,98 +36,444 @@ function esc(value) {
     .replace(/"/gu, "&quot;");
 }
 
-function ingredientLine(ingredient) {
-  const amount = [ingredient.amount, ingredient.unit].filter(Boolean).join(" ");
-  const basis = ingredient.amountBasis ? ` · ${ingredient.amountBasis}` : "";
-  const confidence = Number.isFinite(Number(ingredient.confidence)) ? ` · conf ${Number(ingredient.confidence).toFixed(2)}` : "";
-  const evidence = Array.isArray(ingredient.evidence) && ingredient.evidence.length
-    ? ` · evidence ${ingredient.evidence.slice(0, 3).join(" / ")}`
-    : "";
-  return `${ingredient.name ?? ingredient.item ?? ingredient.ingredient ?? "재료명 없음"}${amount ? ` — ${amount}` : ""}${basis}${confidence}${evidence}`;
-}
-
-function stepLine(step, index) {
-  if (typeof step === "string") return step;
-  return step?.instruction ?? step?.text ?? step?.description ?? `단계 ${index + 1}`;
-}
-
-function list(items, mapper) {
-  if (!Array.isArray(items) || items.length === 0) return "<p class=\"empty\">없음</p>";
-  return `<ol>${items.map((item, index) => `<li>${esc(mapper(item, index))}</li>`).join("")}</ol>`;
-}
-
 function metric(value) {
   return Number.isFinite(Number(value)) ? Number(value).toFixed(3).replace(/0+$/u, "").replace(/\.$/u, "") : "-";
 }
 
-function recipeBlock(recipe, type) {
-  return `
-    <section class="recipe ${type}">
-      <h4>${esc(recipe?.title ?? "제목 없음")}</h4>
-      <div class="subhead">재료</div>
-      ${list(recipe?.ingredients ?? [], ingredientLine)}
-      <div class="subhead">단계</div>
-      ${list(recipe?.steps ?? [], stepLine)}
-    </section>
-  `;
+function normalizeName(value) {
+  return String(value ?? "").normalize("NFKC").replace(/\s+/gu, "").toLowerCase();
 }
 
-function visualSummaryHtml({ visualTarget, visual, visualEstimates }) {
+function allIngredientNames(ingredient) {
+  return [
+    ingredient?.name,
+    ingredient?.item,
+    ingredient?.ingredient,
+    ...(Array.isArray(ingredient?.nameAliases) ? ingredient.nameAliases : []),
+  ].filter(Boolean);
+}
+
+function ingredientName(ingredient) {
+  return ingredient?.name ?? ingredient?.item ?? ingredient?.ingredient ?? "재료명 없음";
+}
+
+function namesMatch(first, second) {
+  const firstNames = allIngredientNames(first).map(normalizeName).filter(Boolean);
+  const secondNames = allIngredientNames(second).map(normalizeName).filter(Boolean);
+  for (const a of firstNames) {
+    for (const b of secondNames) {
+      if (a === b) return { score: 1, label: "100%" };
+      const shorter = a.length <= b.length ? a : b;
+      const longer = a.length > b.length ? a : b;
+      if (shorter.length >= 2 && longer.includes(shorter)) return { score: 0.86, label: "86%" };
+    }
+  }
+  return { score: 0, label: "miss" };
+}
+
+function amountText(item) {
+  return [item?.amount, item?.unit].filter(Boolean).join(" ") || "";
+}
+
+function refsText(refs, limit = 5) {
+  const values = Array.isArray(refs) ? refs : refs ? [refs] : [];
+  if (values.length === 0) return "-";
+  const clipped = values.slice(0, limit).join(" / ");
+  return values.length > limit ? `${clipped} / +${values.length - limit}` : clipped;
+}
+
+function boolText(value) {
+  return value === true ? "true" : value === false ? "false" : "-";
+}
+
+function badge(className, value) {
+  return value ? `<span class="${className}">${esc(value)}</span>` : "";
+}
+
+function ingredientCell(ingredient, { isGolden = false } = {}) {
+  if (!ingredient) return "<span class=\"empty\">-</span>";
+  const amount = amountText(ingredient);
+  const aliases = Array.isArray(ingredient.nameAliases) && ingredient.nameAliases.length
+    ? `<div class="alias">alias: ${esc(ingredient.nameAliases.join(", "))}</div>`
+    : "";
+  const evidence = Array.isArray(ingredient.evidence) || ingredient.evidence
+    ? `<div class="alias">evidence: ${esc(refsText(ingredient.evidence, 6))}</div>`
+    : "";
+  const confidence = Number.isFinite(Number(ingredient.confidence))
+    ? badge("conf", `conf ${Number(ingredient.confidence).toFixed(2)}`)
+    : "";
+  return [
+    `<b>${esc(ingredientName(ingredient))}</b>`,
+    amount ? ` ${esc(amount)}` : "",
+    badge("basis", ingredient.amountBasis),
+    badge("group", ingredient.groupLabel),
+    ingredient.optional ? badge("opt", "선택") : "",
+    confidence,
+    aliases,
+    isGolden ? "" : evidence,
+  ].join("");
+}
+
+function stepText(step, index) {
+  if (typeof step === "string") return step;
+  return step?.instruction ?? step?.text ?? step?.description ?? `단계 ${index + 1}`;
+}
+
+function titleScore(first, second) {
+  const a = normalizeName(first);
+  const b = normalizeName(second);
+  if (!a || !b) return 0;
+  if (a === b) return 3;
+  if (a.includes(b) || b.includes(a)) return 2;
+  const aChars = new Set([...a]);
+  const bChars = new Set([...b]);
+  const common = [...aChars].filter((char) => bChars.has(char)).length;
+  return common / Math.max(1, Math.max(aChars.size, bChars.size));
+}
+
+function alignRecipes(goldenRecipes, predRecipes) {
+  const used = new Set();
+  return (goldenRecipes ?? []).map((golden, index) => {
+    let bestIndex = -1;
+    let bestScore = -1;
+    for (const [predIndex, pred] of (predRecipes ?? []).entries()) {
+      if (used.has(predIndex)) continue;
+      const score = titleScore(golden?.title, pred?.title) + (predIndex === index ? 0.25 : 0);
+      if (score > bestScore) {
+        bestIndex = predIndex;
+        bestScore = score;
+      }
+    }
+    if (bestIndex >= 0 && bestScore >= 0.25) {
+      used.add(bestIndex);
+      return { golden, pred: predRecipes[bestIndex], predIndex: bestIndex, goldenIndex: index, matched: true };
+    }
+    return { golden, pred: null, predIndex: -1, goldenIndex: index, matched: false };
+  }).concat((predRecipes ?? [])
+    .map((pred, predIndex) => ({ pred, predIndex }))
+    .filter((item) => !used.has(item.predIndex))
+    .map((item) => ({ golden: null, pred: item.pred, predIndex: item.predIndex, goldenIndex: -1, matched: false })));
+}
+
+function alignIngredients(goldenIngredients, predIngredients) {
+  const used = new Set();
+  const rows = [];
+  for (const golden of goldenIngredients ?? []) {
+    let bestIndex = -1;
+    let best = { score: 0, label: "miss" };
+    for (const [index, pred] of (predIngredients ?? []).entries()) {
+      if (used.has(index)) continue;
+      const match = namesMatch(golden, pred);
+      if (match.score > best.score) {
+        best = match;
+        bestIndex = index;
+      }
+    }
+    if (bestIndex >= 0 && best.score > 0) {
+      used.add(bestIndex);
+      rows.push({ golden, pred: predIngredients[bestIndex], className: best.score === 1 ? "ing-match" : "ing-order", label: best.label });
+    } else {
+      rows.push({ golden, pred: null, className: "ing-miss", label: "miss" });
+    }
+  }
+  for (const [index, pred] of (predIngredients ?? []).entries()) {
+    if (!used.has(index)) rows.push({ golden: null, pred, className: "ing-extra", label: "extra" });
+  }
+  return rows;
+}
+
+function scoreClass(score) {
+  if (!Number.isFinite(Number(score))) return "na";
+  if (Number(score) >= 4) return "good";
+  if (Number(score) >= 3) return "mid";
+  return "low";
+}
+
+function recipeProblem(score, pair) {
+  return !pair.matched || !Number.isFinite(Number(score)) || Number(score) < 4;
+}
+
+function semanticCase(sem, index, title) {
+  const cases = sem?.cases ?? [];
+  return cases[index] ?? cases.find((item) => normalizeName(item.title) === normalizeName(title)) ?? null;
+}
+
+function deterministicRecipe(det, index) {
+  return det?.perRecipe?.[index] ?? null;
+}
+
+function visualRows({ visualTarget, visual, visualEstimates }) {
   const targets = visualTarget?.targets ?? [];
   const estimates = visualEstimates?.visualEstimates ?? [];
-  if (targets.length === 0 && estimates.length === 0) return "";
-  const rows = targets.slice(0, 12).map((target) => {
+  const framesByCandidate = new Map((visual?.candidates ?? []).map((candidate) => [candidate.candidateId, candidate.frames ?? []]));
+  const rows = targets.map((target) => {
     const estimate = estimates.find((entry) => entry.targetId === target.targetId);
-    const amount = [estimate?.amount, estimate?.unit].filter(Boolean).join(" ") || "null";
-    return `<tr><td>${esc(target.candidateId)}</td><td>${esc(target.ingredient)}</td><td>${esc(target.reason)}</td><td>${esc(target.fallbackPolicy)}</td><td>${esc(amount)}</td><td>${esc(estimate?.amountBasis ?? "-")}</td><td>${metric(estimate?.confidence)}</td><td>${esc(estimate?.reason ?? "-")}</td></tr>`;
-  }).join("");
-  const frameCount = (visual?.targets ?? []).reduce((sum, target) => sum + (target.frames?.length ?? 0), 0);
+    const frames = framesByCandidate.get(target.candidateId) ?? [];
+    const reasonParts = [
+      estimate?.reason,
+      estimate?.error,
+      estimate?.uncertainty,
+      estimate?.targetVisible === false ? "targetVisible=false" : null,
+      estimate?.referenceObjectVisible === false ? "referenceObjectVisible=false" : null,
+      Array.isArray(estimate?.evidence) && estimate.evidence.length ? null : "frame evidence 없음",
+    ].filter(Boolean);
+    return `
+      <tr>
+        <td>${esc(target.candidateId)}</td>
+        <td>${esc(target.ingredient)}</td>
+        <td>${esc(target.reason ?? "-")}</td>
+        <td>${esc(target.fallbackPolicy ?? "-")}</td>
+        <td>${esc(amountText(estimate) || "null")}</td>
+        <td>${esc(estimate?.amountBasis ?? "null")}</td>
+        <td>${metric(estimate?.confidence)}</td>
+        <td>${esc(refsText(estimate?.evidence, 6))}</td>
+        <td>${esc([
+          `visible ${boolText(estimate?.targetVisible)}`,
+          `ref ${boolText(estimate?.referenceObjectVisible)}`,
+          estimate?.countEvidence ? `count ${estimate.countEvidence}` : null,
+          `candidate frames ${frames.length}`,
+          reasonParts.join(" · ") || "visual-estimate 미적용",
+        ].filter(Boolean).join(" · "))}</td>
+      </tr>
+    `;
+  });
+  for (const skipped of visualTarget?.skippedTargets ?? []) {
+    rows.push(`
+      <tr>
+        <td>${esc(skipped.candidateId)}</td>
+        <td>${esc(skipped.ingredient)}</td>
+        <td>${esc(skipped.reasonCode ?? "skipped")}</td>
+        <td colspan="6">visual target 생성 안 함</td>
+      </tr>
+    `);
+  }
+  return rows.join("");
+}
+
+function visualEvidenceHtml({ visualTarget, visual, visualEstimates }) {
+  const targets = visualTarget?.targets ?? [];
+  const skipped = visualTarget?.skippedTargets ?? [];
+  const estimates = visualEstimates?.visualEstimates ?? [];
+  const frameCount = (visual?.candidates ?? []).reduce((sum, candidate) => sum + (candidate.frames?.length ?? 0), 0);
+  if (targets.length === 0 && skipped.length === 0 && estimates.length === 0 && frameCount === 0) return "";
   return `
-    <section class="visual-box">
-      <h3>Visual target / estimate</h3>
-      <p class="muted">targets ${targets.length} · frames ${frameCount} · estimates ${estimates.length}</p>
-      <div class="table-wrap">
+    <details class="visual">
+      <summary>Visual estimate 근거 · targets ${targets.length} · frames ${frameCount} · estimates ${estimates.length}</summary>
+      <div class="tbl">
         <table>
-          <thead><tr><th>후보</th><th>재료</th><th>target 이유</th><th>fallback</th><th>추정량</th><th>basis</th><th>conf</th><th>이유</th></tr></thead>
-          <tbody>${rows || "<tr><td colspan=\"8\">없음</td></tr>"}</tbody>
+          <thead><tr><th>후보</th><th>재료</th><th>target 이유</th><th>fallback</th><th>추정량</th><th>basis</th><th>conf</th><th>evidence</th><th>판단 이유</th></tr></thead>
+          <tbody>${visualRows({ visualTarget, visual, visualEstimates }) || "<tr><td colspan=\"9\">visual target 없음</td></tr>"}</tbody>
         </table>
       </div>
+    </details>
+  `;
+}
+
+function sourceGapHtml({ sourceDraft, gapLedger, holisticAudit }) {
+  const recipes = sourceDraft?.recipes ?? [];
+  const gaps = gapLedger?.gaps ?? [];
+  const rows = [];
+  for (const recipe of recipes) {
+    for (const ingredient of recipe.ingredients ?? []) {
+      const gap = gaps.find((item) => item.candidateId === recipe.candidateId && item.ingredient === ingredient.name);
+      rows.push(`
+        <tr>
+          <td>${esc(recipe.candidateId ?? "-")}</td>
+          <td>${esc(recipe.title ?? "-")}</td>
+          <td>${esc(ingredient.name ?? "-")}</td>
+          <td>${esc(amountText(ingredient) || "null")}</td>
+          <td>${esc(ingredient.amountBasis ?? "null")}</td>
+          <td>${esc(refsText(ingredient.sourceEvidence, 5))}</td>
+          <td>${esc(gap?.gapType ?? "-")}</td>
+          <td>${esc(boolText(gap?.visualTargetAllowed))}</td>
+          <td>${esc(gap?.whyVisualNeeded ?? gap?.reason ?? "-")}</td>
+        </tr>
+      `);
+    }
+  }
+  for (const recipe of holisticAudit?.recipes ?? []) {
+    const ingredientRows = recipe.ingredients?.length ? recipe.ingredients : [{ ingredient: null, status: recipe.status }];
+    for (const auditRow of ingredientRows) {
+      const ingredient = auditRow.ingredient ?? auditRow.original ?? {};
+      const original = auditRow.original ?? ingredient;
+      rows.push(`
+        <tr>
+          <td>${esc(recipe.candidateId ?? "-")}</td>
+          <td>${esc(recipe.title ?? "-")}</td>
+          <td>${esc(ingredientName(ingredient))}</td>
+          <td>${esc(amountText(ingredient) || amountText(original) || "null")}</td>
+          <td>${esc(ingredient.amountBasis ?? original.amountBasis ?? "null")}</td>
+          <td>${esc(refsText(auditRow.evidenceRefs ?? ingredient.evidence ?? original.evidence, 5))}</td>
+          <td>${esc(`holistic:${auditRow.status ?? recipe.status ?? "-"}:${auditRow.amountStatus ?? "-"}`)}</td>
+          <td>${esc(boolText(Boolean(auditRow.visualEstimate)))}</td>
+          <td>${esc(auditRow.reason ?? recipe.reason ?? "-")}</td>
+        </tr>
+      `);
+    }
+  }
+  if (rows.length === 0) return "";
+  return `
+    <details class="visual source-gap">
+      <summary>Source evidence / gap-ledger / holistic audit · source recipes ${recipes.length} · gaps ${gaps.length} · audit recipes ${holisticAudit?.recipes?.length ?? 0}</summary>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>후보</th><th>레시피</th><th>재료</th><th>source 양</th><th>basis</th><th>source evidence</th><th>gap</th><th>visual 허용</th><th>판단 이유</th></tr></thead>
+          <tbody>${rows.join("") || "<tr><td colspan=\"9\">없음</td></tr>"}</tbody>
+        </table>
+      </div>
+    </details>
+  `;
+}
+
+function deferredNotes(goldenIngredients, predIngredients) {
+  const rows = alignIngredients(goldenIngredients, predIngredients);
+  return rows
+    .filter((row) => row.golden?.amountBasis === "visual-estimate")
+    .filter((row) => amountText(row.golden) !== amountText(row.pred))
+    .map((row) => `${ingredientName(row.golden)}: Golden amountBasis=visual-estimate라 분량 차이 감점 보류`);
+}
+
+function ingredientTable(goldenRecipe, predRecipe) {
+  const goldenIngredients = goldenRecipe?.ingredients ?? [];
+  const predIngredients = predRecipe?.ingredients ?? [];
+  const rows = alignIngredients(goldenIngredients, predIngredients).map((row) => `
+    <tr class="${row.className}">
+      <td>${ingredientCell(row.golden, { isGolden: true })}</td>
+      <td>${ingredientCell(row.pred)}</td>
+      <td class="align-score">${esc(row.label)}</td>
+    </tr>
+  `).join("");
+  return `
+    <div class="tbl">
+      <h3>재료 (정답 ${goldenIngredients.length} / Pi ${predIngredients.length})</h3>
+      <table>
+        <thead><tr><th>정답 golden</th><th>Pi 추출</th><th>정렬</th></tr></thead>
+        <tbody>${rows || "<tr><td colspan=\"3\">재료 없음</td></tr>"}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function stepTable(goldenRecipe, predRecipe) {
+  const goldenSteps = goldenRecipe?.steps ?? [];
+  const predSteps = predRecipe?.steps ?? [];
+  const length = Math.max(goldenSteps.length, predSteps.length);
+  const rows = Array.from({ length }, (_, index) => `
+    <tr>
+      <td class="num">${index + 1}</td>
+      <td>${goldenSteps[index] ? esc(stepText(goldenSteps[index], index)) : "<span class=\"empty\">-</span>"}</td>
+      <td>${predSteps[index] ? esc(stepText(predSteps[index], index)) : "<span class=\"empty\">매칭된 단계 없음</span>"}</td>
+    </tr>
+  `).join("");
+  return `
+    <div class="tbl">
+      <h3>만들기 (정답 ${goldenSteps.length} / Pi ${predSteps.length})</h3>
+      <table class="steps">
+        <thead><tr><th>#</th><th>정답 golden</th><th>Pi 추출</th></tr></thead>
+        <tbody>${rows || "<tr><td colspan=\"3\">단계 없음</td></tr>"}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function recipeCard({ pair, semCase, detRecipe }) {
+  const caseScore = semCase?.case_score;
+  const className = pair.matched ? scoreClass(caseScore) : "na";
+  const open = recipeProblem(caseScore, pair) ? "open" : "";
+  const deferred = deferredNotes(pair.golden?.ingredients ?? [], pair.pred?.ingredients ?? []);
+  const title = pair.golden?.title ?? "정답에 없는 Pi 추가 레시피";
+  const predTitle = pair.pred?.title ?? "매칭된 추출 레시피 없음";
+  return `
+    <details class="recipe ${className}" ${open} data-problem="${recipeProblem(caseScore, pair) ? "1" : "0"}">
+      <summary>
+        <span class="rtitle">${esc(title)}</span>
+        <span class="pred-title">Pi: ${esc(predTitle)}</span>
+        <span class="scores">
+          <b class="sc ${scoreClass(semCase?.ingredient_score)}">재료 ${metric(semCase?.ingredient_score)}</b>
+          <b class="sc ${scoreClass(semCase?.step_score)}">단계 ${metric(semCase?.step_score)}</b>
+          <b class="sc case ${scoreClass(caseScore)}">case ${metric(caseScore)}</b>
+          <span class="scale">/5</span>
+        </span>
+      </summary>
+      <div class="body">
+        <div class="reason">
+          <b>semantic judge</b>
+          <p>${esc(semCase?.reason ?? (pair.matched ? "semantic judge 결과 없음" : "매칭된 추출 레시피 없음"))}</p>
+          ${deferred.length ? `<p class="deferred"><b>분량 보류:</b> ${esc(deferred.join(" / "))}</p>` : ""}
+          <p class="metric-line">deterministic: ingredient F1 ${metric(detRecipe?.ingredientF1)} · amount match ${metric(detRecipe?.amountMatchRate)} · amount coverage ${metric(detRecipe?.amountCoverage)} · step coverage ${metric(detRecipe?.stepCoverage)}</p>
+        </div>
+        ${ingredientTable(pair.golden, pair.pred)}
+        ${stepTable(pair.golden, pair.pred)}
+      </div>
+    </details>
+  `;
+}
+
+function videoProblem({ sem, det, manifest }) {
+  const caseScores = (sem?.cases ?? []).map((item) => Number(item.case_score)).filter(Number.isFinite);
+  return (
+    caseScores.some((score) => score < 4)
+    || det?.recipeCountMatch === false
+    || (manifest?.forbiddenReadEvents?.length ?? 0) > 0
+    || (manifest?.visualEvidenceContractFailureCount ?? 0) > 0
+  );
+}
+
+function videoHtml({ id, source, golden, result, det, sem, manifest, sourceDraft, gapLedger, holisticAudit, visualTarget, visual, visualEstimates, outTag }) {
+  const pairs = alignRecipes(golden?.recipes ?? [], result?.recipes ?? []);
+  const minScore = (sem?.cases ?? []).reduce((min, item) => Math.min(min, Number(item.case_score)), Number.POSITIVE_INFINITY);
+  const minDisplay = Number.isFinite(minScore) ? minScore : null;
+  return `
+    <section class="video" data-problem="${videoProblem({ sem, det, manifest }) ? "1" : "0"}">
+      <h2><a href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener noreferrer">${esc(id)}</a> <span>${esc(source?.video?.title ?? golden?.title ?? "")}</span></h2>
+      <div class="video-meta">
+        <span>run: ${esc(outTag)}</span>
+        <span>recipes ${det?.recipeCountPredicted ?? result?.recipes?.length ?? 0}/${det?.recipeCountGolden ?? golden?.recipes?.length ?? 0}</span>
+        <span>semantic avg ${metric(sem?.average_score ?? sem?.averageScore)} · min ${metric(minDisplay)}</span>
+        <span>det F1 ${metric(det?.ingredientF1)} · amount ${metric(det?.amountMatchRate)} · coverage ${metric(det?.amountCoverage)} · steps ${metric(det?.stepCoverage)}</span>
+        <span>forbidden reads ${manifest?.forbiddenReadEvents?.length ?? 0}</span>
+      <span>contract failures ${manifest?.visualEvidenceContractFailureCount ?? 0}</span>
+      </div>
+      ${visualEvidenceHtml({ visualTarget, visual, visualEstimates })}
+      ${sourceGapHtml({ sourceDraft, gapLedger, holisticAudit })}
+      ${pairs.map((pair, index) => recipeCard({
+        pair,
+        semCase: semanticCase(sem, pair.goldenIndex >= 0 ? pair.goldenIndex : index, pair.golden?.title ?? pair.pred?.title),
+        detRecipe: deterministicRecipe(det, pair.goldenIndex >= 0 ? pair.goldenIndex : index),
+      })).join("\n")}
     </section>
   `;
 }
 
-function caseHtml({ source, golden, result, det, sem, manifest, visualTarget, visual, visualEstimates }) {
-  const maxRecipes = Math.max(golden?.recipes?.length ?? 0, result?.recipes?.length ?? 0);
-  const rows = [];
-  for (let index = 0; index < maxRecipes; index += 1) {
-    rows.push(`
-      <div class="pair">
-        <div>${recipeBlock(golden?.recipes?.[index] ?? { title: "누락", ingredients: [], steps: [] }, "golden")}</div>
-        <div>${recipeBlock(result?.recipes?.[index] ?? { title: "누락", ingredients: [], steps: [] }, "pred")}</div>
-      </div>
-    `);
-  }
-  const visualStatus = visual
-    ? `${visual.collectionStatus ?? "-"} · frames ${(visual.candidates ?? []).reduce((sum, candidate) => sum + (candidate.frames?.length ?? 0), 0)}`
-    : "-";
-  const semScore = sem?.averageScore ?? sem?.cases?.[0]?.case_score ?? null;
+function kstNow() {
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    dateStyle: "medium",
+    timeStyle: "medium",
+  }).format(new Date());
+}
+
+function summaryTable({ ids, freeze, grade, semantic }) {
+  const aggregate = grade.aggregate ?? {};
+  const sem = semantic.aggregate ?? {};
+  const forbiddenReads = freeze?.forbiddenReadCount ?? aggregate.forbiddenReadCount ?? 0;
   return `
-    <article class="case">
-      <header>
-        <div>
-          <h2>${esc(source?.video?.title ?? golden?.videoId ?? result?.videoId)}</h2>
-          <p class="muted">${esc(golden?.videoId ?? result?.videoId)} · visual ${esc(visualStatus)} · forbidden reads ${manifest?.forbiddenReadEvents?.length ?? "-"}</p>
-        </div>
-        <div class="scores">
-          <span>F1 ${metric(det?.ingredientF1)}</span>
-          <span>Amount ${metric(det?.amountMatchRate)}</span>
-          <span>Step ${metric(det?.stepCoverage)}</span>
-          <span>Semantic ${metric(semScore)}</span>
-        </div>
-      </header>
-      ${visualSummaryHtml({ visualTarget, visual, visualEstimates })}
-      ${rows.join("")}
-    </article>
+    <table class="summary">
+      <thead><tr><th>영상</th><th>freeze</th><th>forbidden reads</th><th>semantic 평균</th><th>bottom2</th><th>최저</th><th>semantic gate</th><th>재료 F1</th><th>분량 match</th><th>분량 coverage</th><th>단계 coverage</th></tr></thead>
+      <tbody><tr>
+        <td>${ids.length}</td>
+        <td>${freeze?.completedCount ?? aggregate.actual_count ?? "-"}/${freeze?.caseCount ?? aggregate.expected_count ?? ids.length}</td>
+        <td>${forbiddenReads}</td>
+        <td>${metric(sem.averageScore)}</td>
+        <td>${metric(sem.bottomKMeanScore)}</td>
+        <td>${metric(sem.minCaseScore)}</td>
+        <td class="${sem.threshold_success ? "pass" : "fail"}">${sem.threshold_success ? "PASS" : "FAIL"}</td>
+        <td>${metric(aggregate.ingredientF1)}</td>
+        <td>${metric(aggregate.amountMatchRate)}</td>
+        <td>${metric(aggregate.amountCoverage)}</td>
+        <td>${metric(aggregate.stepCoverage)}</td>
+      </tr></tbody>
+    </table>
   `;
 }
 
@@ -141,83 +487,66 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
   const ids = typeof args.ids === "string"
     ? args.ids.split(",").map((item) => item.trim()).filter(Boolean)
     : (await readdir(dataRoot, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
-  const outputPath = path.resolve(projectRoot, args.output ?? `.omx/plans/pi-extractor-${outTag}-vs-golden.html`);
+  const outputPath = path.resolve(projectRoot, args.output ?? `.omx/plans/${outTag}-vs-golden.html`);
   const grade = await readJson(path.join(dataRoot, `_grade_summary.${outTag}.json`), { aggregate: {}, perVideo: [] });
   const semantic = await readJson(path.join(dataRoot, `_semantic_summary.${outTag}.json`), { aggregate: {}, perVideo: [] });
+  const freeze = await readJson(path.join(dataRoot, `_pi_freeze.${outTag}.json`), null);
   const cases = [];
   for (const id of ids) {
     const caseDir = path.join(dataRoot, id);
     const runDir = path.join(caseDir, "runs", outTag);
-    cases.push(caseHtml({
+    cases.push(videoHtml({
+      id,
       source: await readJson(path.join(caseDir, "source.json"), {}),
       golden: await readJson(path.join(caseDir, "golden.json"), { videoId: id, recipes: [] }),
       result: await readJson(path.join(runDir, "result.json"), { videoId: id, recipes: [] }),
       det: grade.perVideo?.find((item) => item.videoId === id),
       sem: semantic.perVideo?.find((item) => item.videoId === id),
       manifest: await readJson(path.join(runDir, "file-access-manifest.json"), null),
+      sourceDraft: await readJson(path.join(runDir, "source-draft.json"), null),
+      gapLedger: await readJson(path.join(runDir, "gap-ledger.json"), null),
+      holisticAudit: await readJson(path.join(runDir, "holistic-evidence-audit.json"), null),
       visualTarget: await readJson(path.join(runDir, "visual-target-ledger.json"), null),
       visual: await readJson(path.join(runDir, "visual-ledger.json"), null),
       visualEstimates: await readJson(path.join(runDir, "visual-estimates.json"), null),
+      outTag,
     }));
   }
+
   const html = `<!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pi extractor train vs golden · ${esc(outTag)}</title>
-  <style>
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1f2933; background: #f6f7f9; }
-    main { max-width: 1280px; margin: 0 auto; padding: 32px 20px 64px; }
-    h1 { margin: 0 0 8px; font-size: 28px; }
-    h2 { margin: 0; font-size: 18px; line-height: 1.35; }
-    h4 { margin: 0 0 12px; font-size: 16px; }
-    .summary, .case { background: #fff; border: 1px solid #d8dee8; border-radius: 8px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
-    .summary { padding: 20px; margin: 20px 0; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-    .tile { padding: 12px; background: #f9fafb; border: 1px solid #e3e8ef; border-radius: 6px; }
-    .tile strong { display: block; font-size: 20px; margin-top: 4px; }
-    .case { margin-top: 18px; overflow: hidden; }
-    .case > header { display: flex; justify-content: space-between; gap: 16px; padding: 18px 20px; border-bottom: 1px solid #e3e8ef; }
-    .scores { display: flex; flex-wrap: wrap; gap: 8px; align-content: start; justify-content: flex-end; }
-    .scores span { padding: 6px 8px; background: #eef2f7; border-radius: 6px; font-size: 13px; white-space: nowrap; }
-    .muted { color: #627386; margin: 6px 0 0; font-size: 13px; }
-    .pair { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #edf0f4; }
-    .pair:first-of-type { border-top: 0; }
-    .recipe { padding: 18px 20px; min-height: 160px; }
-    .golden { border-right: 1px solid #edf0f4; background: #fffef8; }
-    .pred { background: #f8fbff; }
-    .subhead { margin-top: 14px; font-weight: 700; color: #334155; }
-    .visual-box { padding: 14px 20px; border-bottom: 1px solid #e3e8ef; background: #fbfcfe; }
-    .visual-box h3 { margin: 0 0 4px; font-size: 15px; }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
-    th, td { border: 1px solid #e3e8ef; padding: 6px 8px; text-align: left; vertical-align: top; }
-    th { background: #eef2f7; }
-    ol { margin: 8px 0 0 20px; padding: 0; }
-    li { margin: 5px 0; line-height: 1.45; }
-    .empty { color: #9aa6b2; margin: 8px 0 0; }
-    @media (max-width: 760px) { .case > header, .pair { display: block; } .golden { border-right: 0; border-bottom: 1px solid #edf0f4; } }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(outTag)} 추출 결과 vs golden 정답 비교</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#1f2937;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",sans-serif;font-size:14px;line-height:1.5}header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid #d9dee8;padding:14px 22px;box-shadow:0 2px 12px rgba(15,23,42,.06);max-height:52vh;overflow:auto}main{max-width:1320px;margin:0 auto;padding:18px 22px 60px}h1{font-size:20px;margin:0 0 6px}code{background:#eef2f7;border-radius:4px;padding:1px 5px}.note{margin:3px 0;color:#596274;font-size:12.5px}.summary{border-collapse:collapse;margin:10px 0}.summary th,.summary td{border:1px solid #d7dce5;padding:5px 10px;text-align:center}.summary th{background:#f1f4f8}.legend span,.basis,.group,.opt,.conf{display:inline-block;margin:1px 3px 1px 0;padding:1px 6px;border-radius:4px;font-size:11px}.lgood{background:#dcfce7}.lmid{background:#fef3c7}.llow{background:#fee2e2}.controls button{margin:6px 8px 0 0;padding:5px 11px;border:1px solid #b7c0cf;background:#fff;border-radius:6px;cursor:pointer}.controls button.active{background:#2563eb;color:#fff;border-color:#2563eb}.video{margin:18px 0 26px}.video.hide,.recipe.hide{display:none}.video h2{font-size:14px;margin:0 0 6px;background:#111827;color:#fff;border-radius:6px;padding:8px 10px}.video h2 a{color:#bfdbfe;text-decoration:none}.video h2 span{font-weight:500}.video-meta{display:flex;flex-wrap:wrap;gap:6px 10px;margin:6px 0;color:#4b5563;font-size:12px}.video-meta span{background:#fff;border:1px solid #dfe4ec;border-radius:999px;padding:3px 8px}.visual{background:#fff;border:1px solid #e5e7eb;border-radius:6px;margin:6px 0;padding:0 10px}.visual summary{cursor:pointer;padding:6px 0;font-size:12px;color:#374151}.source-gap summary{color:#334155}.recipe{background:#fff;border:1px solid #e1e5ed;border-left-width:5px;border-radius:8px;margin:8px 0;overflow:hidden}.recipe.good{border-left-color:#16a34a}.recipe.mid{border-left-color:#d97706}.recipe.low{border-left-color:#dc2626}.recipe.na{border-left-color:#9ca3af}.recipe summary{cursor:pointer;list-style:none;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}.recipe summary::-webkit-details-marker{display:none}.rtitle{font-weight:800;font-size:15px}.pred-title{color:#64748b;font-size:12px}.scores{margin-left:auto;display:flex;gap:5px;align-items:center}.sc{font-size:12px;border-radius:5px;padding:2px 7px;font-weight:800}.sc.good{background:#dcfce7;color:#166534}.sc.mid{background:#fef3c7;color:#92400e}.sc.low{background:#fee2e2;color:#991b1b}.sc.na{background:#e5e7eb;color:#4b5563}.scale{color:#8a93a3;font-size:11px}.body{padding:0 12px 12px}.reason{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:9px 11px;margin:4px 0 10px}.reason p{margin:4px 0}.deferred{color:#7c5a00}.metric-line{font-size:12px;color:#64748b}.tbl{margin:10px 0;overflow:auto}.tbl h3{font-size:13px;margin:0 0 5px;color:#374151}.tbl table{width:100%;border-collapse:collapse}.tbl th{background:#f1f5f9;border:1px solid #dfe4ec;text-align:left;padding:6px 8px;font-size:12px}.tbl td{border:1px solid #edf0f5;padding:6px 8px;vertical-align:top}.tbl td:nth-child(1),.tbl td:nth-child(2){width:46%}.steps td:nth-child(1){width:44px!important;text-align:center;color:#8a93a3}.basis{background:#eef2ff;color:#3730a3}.group{background:#ecfdf5;color:#047857}.opt{background:#fff7ed;color:#c2410c}.conf{background:#f1f5f9;color:#475569}.alias{color:#8a93a3;font-size:11px;margin-top:2px}.empty{color:#a0a7b4}.align-score{width:74px!important;text-align:center;color:#64748b;font-size:12px}.ing-match td{background:#fbfffb}.ing-order td{background:#fffbeb}.ing-miss td{background:#fff7f7}.ing-extra td{background:#f8fafc}.pass{color:#166534;font-weight:800}.fail{color:#991b1b;font-weight:800}@media(max-width:780px){header{position:static;max-height:none}main{padding:12px}.scores{margin-left:0}.tbl table,.summary{font-size:12px}.tbl td,.tbl th{padding:4px}}
+</style>
 </head>
 <body>
+<header>
+<h1>${esc(outTag)} 추출 결과 vs golden 정답 비교</h1>
+<p class="note">split: <code>${esc(split)}</code> · run tag: <code>${esc(outTag)}</code> · 생성: ${esc(kstNow())} KST · 추출 중에는 <code>source.json</code>/공개 입력만 사용했고, 이 HTML은 freeze 이후 golden을 읽어 만든 비교표입니다.</p>
+<p class="note">Visual estimate 근거는 영상별 접이식 영역에 넣었습니다. null/실패/미적용 결과도 숨기지 않습니다.</p>
+<p class="legend">case_score: <span class="lgood">≥4 양호</span><span class="lmid">3~4 보통</span><span class="llow">&lt;3 약함</span></p>
+${summaryTable({ ids, freeze, grade, semantic })}
+<div class="controls"><button id="btn-all" class="active" onclick="flt('all')">전체</button><button id="btn-prob" onclick="flt('prob')">case&lt;4만</button><button onclick="tog(true)">모두 펼치기</button><button onclick="tog(false)">모두 접기</button></div>
+</header>
 <main>
-  <h1>Pi 추출 결과와 Golden 비교</h1>
-  <p class="muted">split=${esc(split)} · outTag=${esc(outTag)} · 이 보고서는 추출/freeze 이후에 생성되어 golden을 읽습니다.</p>
-  <section class="summary">
-    <div class="grid">
-      <div class="tile">완료<strong>${grade.aggregate?.actual_count ?? ids.length}/${grade.aggregate?.expected_count ?? ids.length}</strong></div>
-      <div class="tile">레시피 수 일치<strong>${metric(grade.aggregate?.recipeCountMatchRate)}</strong></div>
-      <div class="tile">재료 F1<strong>${metric(grade.aggregate?.ingredientF1)}</strong></div>
-      <div class="tile">분량 일치<strong>${metric(grade.aggregate?.amountMatchRate)}</strong></div>
-      <div class="tile">단계 커버리지<strong>${metric(grade.aggregate?.stepCoverage)}</strong></div>
-      <div class="tile">Semantic 평균<strong>${metric(semantic.aggregate?.averageScore)}</strong></div>
-      <div class="tile">Semantic 하위2<strong>${metric(semantic.aggregate?.bottomKMeanScore)}</strong></div>
-      <div class="tile">Semantic 통과<strong>${semantic.aggregate?.threshold_success ? "PASS" : "FAIL"}</strong></div>
-    </div>
-  </section>
-  ${cases.join("\n")}
+${cases.join("\n")}
 </main>
+<script>
+function flt(mode){
+  document.getElementById('btn-all').classList.toggle('active', mode === 'all');
+  document.getElementById('btn-prob').classList.toggle('active', mode === 'prob');
+  document.querySelectorAll('.video').forEach((el) => {
+    el.classList.toggle('hide', mode === 'prob' && el.dataset.problem !== '1');
+  });
+}
+function tog(open){
+  document.querySelectorAll('details.recipe, details.visual').forEach((el) => { el.open = open; });
+}
+</script>
 </body>
 </html>`;
   await mkdir(path.dirname(outputPath), { recursive: true });

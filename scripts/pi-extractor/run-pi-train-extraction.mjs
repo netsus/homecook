@@ -23,6 +23,8 @@ function parseCliArgs(argv) {
 
 export async function runPiTrainExtraction(rawArgs = {}, options = {}) {
   const args = typeof rawArgs.length === "number" ? parseCliArgs(rawArgs) : rawArgs;
+  const holisticMode = args.mode === "holistic-draft";
+  const holisticTimelineUnderstanding = args["holistic-enable-timeline-understanding"] === true;
   return runPiExtraction({
     split: "train",
     staged: true,
@@ -46,11 +48,22 @@ export async function runPiTrainExtraction(rawArgs = {}, options = {}) {
     "visual-estimate-max-frames": "6",
     "visual-timeout-ms": "180000",
     freeze: true,
-    "max-caption-segments": "120",
+    "max-caption-segments": "300",
     "max-description-chars": "2800",
     "max-author-comments": "2",
     "timeout-ms": "180000",
-    thinking: "low",
+    thinking: holisticMode ? "medium" : "low",
+    ...(holisticMode ? {
+      ...(holisticTimelineUnderstanding ? {} : { "holistic-storyboard-frame-count": "8" }),
+      "holistic-storyboard-max-candidates": "8",
+      "holistic-max-targets-per-recipe": "3",
+      "holistic-max-total-targets": "12",
+      "holistic-visual-target-max-window-sec": "16",
+      "visual-allow-fallback-ranges": true,
+      "visual-description-only-sweep-frames": "2",
+      "visual-max-frames-per-target": "4",
+      "visual-estimate-max-frames": "4",
+    } : {}),
     ...args,
   }, options);
 }

@@ -191,6 +191,9 @@ export function normalizePiRecipeCandidates(value) {
 export function normalizePiRecipeOutput(value) {
   const parsed = parsePiRawOutput(value);
   const recipes = Array.isArray(parsed?.recipes) ? parsed.recipes : isObject(parsed?.recipe) ? [parsed.recipe] : [];
+  const repairLog = Array.isArray(parsed?.repairLog)
+    ? parsed.repairLog.filter((entry) => isObject(entry))
+    : [];
   return {
     ...parsed,
     recipes: recipes.map((recipe) => {
@@ -204,7 +207,7 @@ export function normalizePiRecipeOutput(value) {
         uncertainties: Array.isArray(source.uncertainties) ? source.uncertainties.filter((item) => typeof item === "string") : [],
       };
     }),
-    repairLog: Array.isArray(parsed?.repairLog) ? parsed.repairLog : [],
+    repairLog,
   };
 }
 

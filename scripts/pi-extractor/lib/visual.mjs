@@ -38,6 +38,10 @@ function safeFileSegment(value) {
     .slice(0, 60) || "unknown";
 }
 
+function targetFileSegment(target) {
+  return safeFileSegment(target?.ingredient ?? target?.targetType ?? "target");
+}
+
 function commandError(message, details) {
   const error = new Error(message);
   error.commandExecution = details;
@@ -162,6 +166,8 @@ export function buildVisualEstimatePiCommand({
     "- target 재료가 보이지 않으면 amount, unit, amountBasis는 null이다.",
     "- 부피·무게 추정 재료에서 referenceObjectVisible이 true가 아니면 amount, unit, amountBasis는 null이다.",
     "- 개수 셈 재료에서 referenceObjectVisible이 true가 아니면 countEvidence가 있을 때만 amount, unit, amountBasis를 채운다.",
+    "- evidence 배열에는 실제 양 추정에 사용한 frame ref만 넣는다. 위 프레임 참조에 없는 ref나 직접 근거로 쓰지 않은 ref는 넣지 않는다.",
+    "- countEvidence를 쓰는 경우 countEvidence 문장 안에도 실제 근거 frame ref를 포함한다.",
     "- 일반 레시피 지식이나 정답 추측으로 채우지 않는다.",
     "- confidence는 0~1이며 visual-estimate는 보통 낮게 둔다.",
     "",
@@ -220,6 +226,53 @@ function candidateTimeWindow(candidate, secondsPerCandidate) {
   return { start, end };
 }
 
+function sharedRangeKey(candidate) {
+  const start = Number(candidate?.timeRange?.startSec);
+  const end = Number(candidate?.timeRange?.endSec);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+  return `${Math.round(start * 1000)}:${Math.round(end * 1000)}`;
+}
+
+function candidateWithSharedRangeSlice(candidate, candidates) {
+  const key = sharedRangeKey(candidate);
+  if (!key) return candidate;
+  const group = (candidates ?? []).filter((entry) => sharedRangeKey(entry) === key);
+  if (group.length <= 1) return candidate;
+  const index = group.findIndex((entry) => entry.candidateId === candidate.candidateId);
+  if (index < 0) return candidate;
+  const range = candidate.timeRange ?? {};
+  const start = Number(range.startSec);
+  const end = Number(range.endSec);
+  const span = (end - start) / group.length;
+  return {
+    ...candidate,
+    timeRange: {
+      ...range,
+      startSec: start + span * index,
+      endSec: start + span * (index + 1),
+      basis: "shared-range-slice",
+      parentRange: range,
+      sliceIndex: index,
+      sliceCount: group.length,
+    },
+  };
+}
+
+function frameOverlapsCandidateRange(frame, candidate) {
+  const frameRange = frame?.range ?? {};
+  const frameStart = optionalNumber(frameRange.startSec, null);
+  const frameEnd = optionalNumber(frameRange.endSec, null);
+  if (frameStart === null && frameEnd === null) return true;
+  const range = candidate?.timeRange ?? {};
+  const rangeStart = optionalNumber(range.startSec, null);
+  const rangeEnd = optionalNumber(range.endSec, null);
+  if (rangeStart === null || rangeEnd === null) return true;
+  const start = frameStart ?? frameEnd;
+  const end = frameEnd ?? frameStart;
+  if (start === null || end === null) return true;
+  return end > rangeStart && start < rangeEnd;
+}
+
 async function findClipFile(cacheDir) {
   const entries = await readdir(cacheDir);
   const clip = entries.find((entry) => entry.startsWith("clip.") && !entry.endsWith(".part"));
@@ -257,7 +310,7 @@ function targetRanges(target, sourcePacket, { sweepFrames = 6 } = {}) {
   if (preferred.length > 0) {
     return preferred.map((range) => normalizeRange(range, sourcePacket?.video?.durationSeconds));
   }
-  if (target.fallbackPolicy === "description-only-sweep") {
+  if (target.fallbackPolicy === "description-only-sweep" || target.fallbackPolicy === "candidate-visual-recall-sweep") {
     const base = normalizeRange(target.candidateTimeRange, sourcePacket?.video?.durationSeconds);
     const start = base.startSec;
     const end = base.endSec;
@@ -268,7 +321,7 @@ function targetRanges(target, sourcePacket, { sweepFrames = 6 } = {}) {
       return {
         startSec: Math.max(start, anchor - 2),
         endSec: Math.min(end, anchor + 2),
-        basis: "description-only-sweep",
+        basis: target.fallbackPolicy,
       };
     });
   }
@@ -333,7 +386,7 @@ async function extractFramesWithRecipeLoopExtractor({
     frameExtractorScript,
     clipPath,
     "--video-id",
-    `${target.candidateId}-${safeFileSegment(target.ingredient)}`,
+    `${target.candidateId}-${targetFileSegment(target)}`,
     "--out-dir",
     frameDir,
     "--mode",
@@ -372,7 +425,7 @@ async function collectTargetVisual({
   executeCommandFn,
 }) {
   const ranges = targetRanges(target, sourcePacket, { sweepFrames: descriptionOnlySweepFrames });
-  const targetDir = path.join(cacheRoot, target.candidateId, safeFileSegment(target.ingredient));
+  const targetDir = path.join(cacheRoot, target.candidateId, targetFileSegment(target));
   await mkdir(targetDir, { recursive: true });
   if (ranges.length === 0) {
     return {
@@ -423,10 +476,11 @@ async function collectTargetVisual({
       addAllowedRead(manifest, framePath);
       recordRead(manifest, framePath, `visual-target-frame-input:${target.targetId}`);
       frameEntries.push({
-        ref: `frame:${target.candidateId}:${safeFileSegment(target.ingredient)}:${frameEntries.length + 1}`,
+        ref: `frame:${target.candidateId}:${targetFileSegment(target)}:${frameEntries.length + 1}`,
         targetId: target.targetId,
         candidateId: target.candidateId,
         ingredient: target.ingredient,
+        targetType: target.targetType ?? null,
         rangeIndex,
         frameIndex,
         range,
@@ -457,6 +511,10 @@ function requiresReferenceObjectForVisualEstimate(ingredient, unit) {
   return /(?:소스|양념|장$|간장|식초|기름|오일|물|육수|우유|크림|술|와인|맛술|럼|시럽|꿀|액젓|고추장|된장|쌈장|마요|마요네즈|케첩|가루|분말|설탕|소금|후추|고춧가루|밀가루|전분)/u.test(ingredientText);
 }
 
+function frameRefsInText(text) {
+  return uniqueStrings(String(text ?? "").match(/frame:[^:\s,;)\]}]+(?::[^:\s,;)\]}]+)?:\d+/gu) ?? []);
+}
+
 function normalizeVisualEstimateOutput(value, target, frameEntries) {
   const parsed = parsePiRawOutput(value) ?? {};
   const amount = cleanString(parsed.amount);
@@ -464,11 +522,22 @@ function normalizeVisualEstimateOutput(value, target, frameEntries) {
   const targetVisible = parsed.targetVisible === true;
   const referenceObjectVisible = parsed.referenceObjectVisible === true;
   const countEvidence = cleanString(parsed.countEvidence);
-  const visibleGatePassed = targetVisible
-    && (referenceObjectVisible || (countEvidence && !requiresReferenceObjectForVisualEstimate(target.ingredient, unit)));
-  const basis = parsed.amountBasis === "visual-estimate" && amount && unit && visibleGatePassed ? "visual-estimate" : null;
   const frameRefs = frameEntries.map((frame) => frame.ref);
-  const evidence = uniqueStrings(Array.isArray(parsed.evidence) ? parsed.evidence : []);
+  const availableFrameRefSet = new Set(frameRefs);
+  const parsedEvidence = uniqueStrings(Array.isArray(parsed.evidence) ? parsed.evidence : []);
+  const parsedEvidenceFrameRefs = uniqueStrings(parsedEvidence.flatMap(frameRefsInText));
+  const evidenceFrameRefs = parsedEvidenceFrameRefs.filter((entry) => availableFrameRefSet.has(entry));
+  const nonFrameEvidence = parsedEvidence.filter((entry) => frameRefsInText(entry).length === 0);
+  const countEvidenceFrameRefs = frameRefsInText(countEvidence).filter((entry) => availableFrameRefSet.has(entry));
+  const countEvidenceLinked = countEvidenceFrameRefs.some((entry) => evidenceFrameRefs.includes(entry));
+  const visibleGatePassed = targetVisible
+    && (
+      referenceObjectVisible
+      || (countEvidenceLinked && !requiresReferenceObjectForVisualEstimate(target.ingredient, unit))
+    );
+  const hasCitedFrameEvidence = evidenceFrameRefs.length > 0;
+  const basis = parsed.amountBasis === "visual-estimate" && amount && unit && visibleGatePassed && hasCitedFrameEvidence ? "visual-estimate" : null;
+  const evidence = uniqueStrings([...nonFrameEvidence, ...evidenceFrameRefs]);
   return {
     targetId: target.targetId,
     candidateId: target.candidateId,
@@ -480,7 +549,8 @@ function normalizeVisualEstimateOutput(value, target, frameEntries) {
     unit: basis ? unit : null,
     amountBasis: basis,
     confidence: Math.max(0, Math.min(1, optionalNumber(parsed.confidence, basis ? 0.4 : 0.2))),
-    evidence: basis ? uniqueStrings([...evidence, ...frameRefs]) : evidence.filter((entry) => String(entry).startsWith("frame:")),
+    evidence,
+    availableFrameRefs: frameRefs,
     reason: cleanString(parsed.reason) ?? (basis ? "visual estimate from target frames" : "description-only target, no matching frame evidence"),
     uncertainties: uniqueStrings(Array.isArray(parsed.uncertainties) ? parsed.uncertainties : []),
   };
@@ -494,6 +564,74 @@ function pickBalancedEntries(entries, maxEntries) {
     const pickedIndex = Math.round((entries.length - 1) * index / (limit - 1));
     return entries[pickedIndex];
   });
+}
+
+async function analyzeCandidateTargetFrames({
+  candidate,
+  frameEntries,
+  projectRoot,
+  cacheRoot,
+  manifest,
+  model,
+  provider,
+  thinking,
+  timeoutMs,
+  maxFrames,
+  executePiFn,
+}) {
+  if (!executePiFn || frameEntries.length === 0) {
+    return {
+      visual: { observed: [], onscreenText: [], quantityCues: [], confidence: null },
+      rawPath: null,
+      error: null,
+    };
+  }
+
+  const selectedFrameEntries = pickBalancedEntries(frameEntries, maxFrames);
+  const framePaths = selectedFrameEntries.map((frame) => path.resolve(projectRoot, frame.path));
+  for (const framePath of framePaths) {
+    addAllowedRead(manifest, framePath);
+    recordRead(manifest, framePath, `visual-candidate-context-frame-input:${candidate.candidateId}`);
+  }
+
+  const candidateCacheDir = path.join(cacheRoot, candidate.candidateId);
+  await mkdir(candidateCacheDir, { recursive: true });
+  const visualCommand = buildVisualPiCommand({
+    model,
+    provider,
+    thinking,
+    framePaths,
+  });
+  const commandPath = path.join(candidateCacheDir, "candidate-visual-pi-command.json");
+  recordWrite(manifest, commandPath, `visual-candidate-context-command:${candidate.candidateId}`);
+  await writeJson(commandPath, { command: visualCommand });
+
+  try {
+    const piResult = await executePiFn(visualCommand, { cwd: projectRoot, timeoutMs });
+    const rawPath = path.join(candidateCacheDir, "candidate-visual-pi-raw-response.json");
+    recordWrite(manifest, rawPath, `visual-candidate-context-raw-response:${candidate.candidateId}`);
+    await writeFile(rawPath, JSON.stringify(piResult, null, 2) + "\n", "utf8");
+    return {
+      visual: normalizeVisualOutput(piResult),
+      rawPath: relative(projectRoot, rawPath),
+      error: null,
+    };
+  } catch (error) {
+    const entry = {
+      candidateId: candidate.candidateId,
+      reasonCode: "visual_candidate_context_failed",
+      message: error instanceof Error ? error.message : String(error),
+      piExecution: error?.piExecution ?? null,
+    };
+    const failurePath = path.join(candidateCacheDir, "candidate-visual-failure.json");
+    recordWrite(manifest, failurePath, `visual-candidate-context-failure:${candidate.candidateId}`);
+    await writeJson(failurePath, entry);
+    return {
+      visual: { observed: [], onscreenText: [], quantityCues: [], confidence: null },
+      rawPath: null,
+      error: entry,
+    };
+  }
 }
 
 async function collectCandidateVisual({
@@ -691,7 +829,7 @@ export async function collectVisualLedger({
           frames: [],
           error: entry,
         });
-        const failurePath = path.join(cacheRoot, target.candidateId, safeFileSegment(target.ingredient), "visual-failure.json");
+        const failurePath = path.join(cacheRoot, target.candidateId, targetFileSegment(target), "visual-failure.json");
         recordWrite(manifest, failurePath, `visual-target-failure:${target.targetId}`);
         await writeJson(failurePath, entry);
       }
@@ -700,14 +838,80 @@ export async function collectVisualLedger({
     for (const candidate of candidateLedger.candidates) {
       const candidateTargets = targets.filter((target) => target.candidateId === candidate.candidateId);
       const candidateFrames = candidateTargets.flatMap((target) => target.frames ?? []);
+      const evidenceCandidate = candidateWithSharedRangeSlice(candidate, candidateLedger.candidates);
+      const candidateContextFrames = candidateFrames.filter((frame) => frameOverlapsCandidateRange(frame, evidenceCandidate));
+      if (candidateContextFrames.length === 0 && executePiFn && (allowFallbackRanges || candidate.timeRange?.basis !== "even-split-fallback")) {
+        try {
+          const fallbackVisual = await collectCandidateVisual({
+            candidate: evidenceCandidate,
+            sourcePacket,
+            projectRoot,
+            cacheRoot,
+            manifest,
+            model,
+            provider,
+            thinking,
+            ytDlpBin,
+            ffmpegBin,
+            frameCount,
+            secondsPerCandidate,
+            timeoutMs,
+            executeCommandFn,
+            executePiFn,
+          });
+          candidates.push({
+            ...fallbackVisual,
+            timeRange: candidate.timeRange,
+            fallbackTimeRange: evidenceCandidate.timeRange,
+            targetCount: candidateTargets.length,
+            fallbackPolicy: "candidate-window-visual-context",
+          });
+          continue;
+        } catch (error) {
+          const entry = {
+            candidateId: candidate.candidateId,
+            reasonCode: "candidate_window_visual_context_failed",
+            message: error instanceof Error ? error.message : String(error),
+            commandExecution: error?.commandExecution ?? null,
+          };
+          errors.push(entry);
+          const failurePath = path.join(cacheRoot, candidate.candidateId, "candidate-window-visual-failure.json");
+          recordWrite(manifest, failurePath, `visual-candidate-window-failure:${candidate.candidateId}`);
+          await writeJson(failurePath, entry);
+        }
+      }
+      const candidateAnalysis = await analyzeCandidateTargetFrames({
+        candidate,
+        frameEntries: candidateContextFrames,
+        projectRoot,
+        cacheRoot,
+        manifest,
+        model,
+        provider,
+        thinking,
+        timeoutMs,
+        maxFrames: Math.max(1, Math.min(maxFramesPerTarget, maxFramesPerTarget * Math.max(1, candidateTargets.length))),
+        executePiFn,
+      });
+      if (candidateAnalysis.error) errors.push(candidateAnalysis.error);
+      const visual = candidateAnalysis.visual;
+      const visualFrames = candidateContextFrames.map((frame) => ({
+        ...frame,
+        observed: visual.observed,
+        onscreenText: visual.onscreenText,
+        quantityCues: visual.quantityCues,
+        confidence: visual.confidence,
+        rawRef: candidateAnalysis.rawPath,
+      }));
       candidates.push({
         candidateId: candidate.candidateId,
         timeRange: candidate.timeRange,
-        frames: candidateFrames,
-        observed: [],
-        onscreenText: [],
-        quantityCues: [],
+        frames: visualFrames,
+        observed: visual.observed,
+        onscreenText: visual.onscreenText,
+        quantityCues: visual.quantityCues,
         targetCount: candidateTargets.length,
+        rawRef: candidateAnalysis.rawPath,
       });
     }
 
@@ -837,6 +1041,10 @@ export async function collectVisualEstimates({
   const targetEntries = visualLedger?.targets ?? [];
 
   for (const target of visualTargetLedger?.targets ?? []) {
+    if (target.targetType === "candidate_visual_recall") {
+      uncertainties.push(`${target.candidateId}: candidate visual recall target is not an amount-estimate target`);
+      continue;
+    }
     const targetVisual = targetEntries.find((entry) => entry.targetId === target.targetId);
     const frameEntries = targetVisual?.frames ?? [];
     if (frameEntries.length === 0) {
@@ -868,7 +1076,7 @@ export async function collectVisualEstimates({
       addAllowedRead(manifest, framePath);
       recordRead(manifest, framePath, `visual-estimate-frame-input:${target.targetId}`);
     }
-    const targetCacheDir = path.join(cacheRoot, target.candidateId, safeFileSegment(target.ingredient));
+    const targetCacheDir = path.join(cacheRoot, target.candidateId, targetFileSegment(target));
     await mkdir(targetCacheDir, { recursive: true });
     const { command, prompt } = buildVisualEstimatePiCommand({
       model,
