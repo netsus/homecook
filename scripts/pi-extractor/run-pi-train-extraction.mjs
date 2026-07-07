@@ -25,6 +25,7 @@ export async function runPiTrainExtraction(rawArgs = {}, options = {}) {
   const args = typeof rawArgs.length === "number" ? parseCliArgs(rawArgs) : rawArgs;
   const holisticMode = args.mode === "holistic-draft";
   const holisticTimelineUnderstanding = args["holistic-enable-timeline-understanding"] === true;
+  const holisticVideoTimelineLedger = args["holistic-enable-video-timeline-ledger"] === true;
   return runPiExtraction({
     split: "train",
     staged: true,
@@ -56,8 +57,8 @@ export async function runPiTrainExtraction(rawArgs = {}, options = {}) {
     ...(holisticMode ? {
       ...(holisticTimelineUnderstanding ? {} : { "holistic-storyboard-frame-count": "8" }),
       "holistic-storyboard-max-candidates": "8",
-      "holistic-max-targets-per-recipe": "3",
-      "holistic-max-total-targets": "12",
+      "holistic-max-targets-per-recipe": holisticVideoTimelineLedger ? "2" : "3",
+      "holistic-max-total-targets": holisticVideoTimelineLedger ? "4" : "12",
       "holistic-visual-target-max-window-sec": "16",
       "visual-allow-fallback-ranges": true,
       "visual-description-only-sweep-frames": "2",

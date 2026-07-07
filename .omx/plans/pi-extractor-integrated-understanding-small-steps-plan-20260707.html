@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pi Extractor 통합 이해 전환 계획</title>
+  <style>
+    :root{
+      --ink:#172033;--muted:#5b6577;--line:#e4e8f0;--panel:#fff;
+      --brand:#2563eb;--brand-soft:#eaf1ff;--brand-line:#c9dbff;
+      --green:#15803d;--green-soft:#e6f4ea;--green-line:#bfe0cd;
+      --amber:#b45309;--amber-soft:#fdf3e3;--amber-line:#f3dcb0;
+      --red:#b91c1c;--red-soft:#fdeaea;--red-line:#f3c4c4;
+      --radius:14px;--shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.07);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Segoe UI",Roboto,sans-serif;background:linear-gradient(180deg,#102b63 0%,#1d4ed8 240px,#eef4fb 240px,#eef4fb 100%);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:anywhere}
+    .wrap{max-width:940px;margin:0 auto;padding:0 20px 80px}
+    header.hero{padding:44px 0 28px;color:#eaf1ff}
+    .tag-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .pill{display:inline-block;font-size:12.5px;font-weight:700;padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.14);color:#dce8ff;border:1px solid rgba(255,255,255,.22)}
+    h1{font-size:29px;line-height:1.35;margin:4px 0 10px;color:#fff;letter-spacing:0}
+    .sub{margin:0;color:#c8d8ff;font-size:15px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 28px;margin:18px 0}
+    .card h2{font-size:20px;margin:0 0 14px;display:flex;align-items:center;gap:10px;letter-spacing:0}
+    .num{flex:none;width:30px;height:30px;border-radius:9px;background:var(--brand);color:#fff;font-size:15px;display:grid;place-items:center;font-weight:800}
+    .card h3{font-size:16px;margin:22px 0 8px}
+    p{margin:10px 0}
+    .tldr{background:var(--brand-soft);border:1px solid var(--brand-line);border-left:5px solid var(--brand);border-radius:12px;padding:18px 20px;margin:18px 0;font-size:16px}
+    .tldr strong{color:var(--brand)}
+    .note{border-radius:12px;padding:14px 16px;margin:14px 0;font-size:14.5px}
+    .note .label{font-weight:800;display:block;margin-bottom:4px;font-size:13px}
+    .note.good{background:var(--green-soft);border:1px solid var(--green-line)}.note.good .label{color:var(--green)}
+    .note.warn{background:var(--amber-soft);border:1px solid var(--amber-line)}.note.warn .label{color:var(--amber)}
+    .note.danger{background:var(--red-soft);border:1px solid var(--red-line)}.note.danger .label{color:var(--red)}
+    .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .listbox{border-radius:12px;padding:16px 18px}
+    .listbox.allow{background:var(--green-soft);border:1px solid var(--green-line)}
+    .listbox.deny{background:var(--red-soft);border:1px solid var(--red-line)}
+    .listbox h4{margin:0 0 8px;font-size:15px}.listbox.allow h4{color:var(--green)}.listbox.deny h4{color:var(--red)}
+    .listbox ul{margin:0;padding-left:18px;font-size:13.5px}.listbox li{margin:5px 0}
+    .glossary{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .term{background:#f6f8fc;border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+    .term dt{font-weight:800;color:var(--brand);font-size:14.5px;margin-bottom:3px}
+    .term dd{margin:0;font-size:13.5px;color:var(--muted)}
+    .en{color:#6c788f;font-weight:700;font-size:12px}
+    .miniflow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 4px}
+    .box{background:#fff;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:700;box-shadow:var(--shadow)}
+    .arrow{color:var(--muted);font-weight:800}
+    .steps{list-style:none;padding:0;margin:8px 0 0}
+    .step{position:relative;padding:0 0 18px 46px}
+    .step:not(:last-child)::before{content:"";position:absolute;left:16px;top:30px;bottom:-2px;width:2px;background:var(--line)}
+    .dot{position:absolute;left:0;top:2px;width:34px;height:34px;border-radius:50%;background:var(--brand-soft);color:var(--brand);border:2px solid var(--brand);display:grid;place-items:center;font-weight:800;font-size:11.5px}
+    .step h4{margin:4px 0 4px;font-size:15.5px}.step p{margin:4px 0;font-size:14px;color:var(--muted)}
+    .targets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .target{display:flex;gap:10px;align-items:flex-start;background:#f6f8fc;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px}
+    .badge{flex:none;width:22px;height:22px;border-radius:6px;background:var(--brand);color:#fff;font-weight:800;font-size:11px;display:grid;place-items:center}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;min-width:560px}
+    th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{background:#eef3ff;font-weight:800}tr:last-child td{border-bottom:none}
+    code,.mono{font-family:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;background:#e8edf8;padding:1px 6px;border-radius:5px;font-size:12.5px;color:#1d2b4f}
+    pre{background:#10234f;color:#dce8ff;border-radius:10px;padding:14px 16px;overflow-x:auto;font-size:12.5px;line-height:1.6;margin:12px 0;font-family:"SF Mono",Menlo,monospace;white-space:pre}
+    .tree{display:grid;gap:10px;margin:8px 0}
+    .branch{display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:start;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:#f8faff}
+    .branch.go{border-left:4px solid var(--green)}.branch.stop{border-left:4px solid var(--red)}.branch.two{border-left:4px solid var(--brand)}
+    .check{list-style:none;padding:0;margin:0}
+    .check li{padding:7px 0 7px 30px;position:relative;font-size:14px;border-bottom:1px dashed var(--line)}
+    .check li::before{content:"[ ]";position:absolute;left:0;top:7px;color:var(--brand);font-size:12px;font-family:"SF Mono",Menlo,monospace}
+    .check li.done::before{content:"[x]";color:var(--green)}
+    footer{text-align:center;color:#6c788f;font-size:12.5px;margin-top:40px}
+    @media(max-width:720px){.wrap{padding:0 14px 64px}.card{padding:20px 18px}.glossary,.twocol,.targets{grid-template-columns:1fr}.branch{grid-template-columns:1fr;gap:4px}h1{font-size:23px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="tag-row">
+        <span class="pill">Pi extractor</span>
+        <span class="pill">2026-07-07</span>
+        <span class="pill">작은 1단계 구현 계획</span>
+      </div>
+      <h1>증거 조립기에서 통합 이해 흐름으로 바꾸기</h1>
+      <p class="sub">초보 개발자를 위한 계획 요약: 먼저 영상을 이해하고, 그 다음 레시피를 쓰게 만든다.</p>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2><span class="num">!</span>딱 한 줄 요약</h2>
+        <div class="tldr"><strong>이번 계획은 레시피를 바로 조립하지 않고, 먼저 `video-understanding`이라는 "영상 이해 메모"를 만든 뒤 그 메모를 보고 레시피 초안을 쓰게 하는 첫 단계다.</strong></div>
+        <p>비유: 지금은 퍼즐 조각을 바로 맞추려는 방식이었다. 이제는 먼저 완성 그림을 대략 보고, 그 다음 퍼즐 조각을 맞추는 방식으로 바꾼다.</p>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">1</span>헷갈리는 구분</h2>
+        <div class="twocol">
+          <div class="listbox allow">
+            <h4>통합 이해</h4>
+            <ul>
+              <li>영상 전체 흐름을 먼저 잡는다.</li>
+              <li>요리별로 "무슨 일이 일어났는지"를 이야기처럼 정리한다.</li>
+              <li>그 이해를 바탕으로 레시피 초안을 쓴다.</li>
+            </ul>
+          </div>
+          <div class="listbox deny">
+            <h4>증거 조립기</h4>
+            <ul>
+              <li>candidate와 timeline을 먼저 고정한다.</li>
+              <li>근거 조각을 레시피 칸에 끼워 넣는다.</li>
+              <li>흐름이 약하면 단계가 비거나 엉성해진다.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">2</span>알아둘 용어</h2>
+        <dl class="glossary">
+          <div class="term"><dt>통합 이해 <span class="en">Integrated understanding</span></dt><dd>제목, 설명란, 자막, 영상 흐름을 함께 보고 요리의 큰 흐름을 잡는 것.</dd></div>
+          <div class="term"><dt>증거 조립기 <span class="en">Evidence assembler</span></dt><dd>근거 조각을 모아 결과를 만드는 구조. 안전하지만 흐름 이해가 약할 수 있다.</dd></div>
+          <div class="term"><dt>영상 이해 메모 <span class="en">Video understanding</span></dt><dd>레시피를 쓰기 전에 만드는 요리별 이야기 요약.</dd></div>
+          <div class="term"><dt>후보 <span class="en">candidate</span></dt><dd>영상 안에서 하나의 레시피로 볼 수 있는 구간 또는 요리 단위.</dd></div>
+          <div class="term"><dt>타임라인 <span class="en">timeline ledger</span></dt><dd>시간순으로 어떤 장면이 있었는지 정리한 사건표.</dd></div>
+          <div class="term"><dt>근거 <span class="en">evidence</span></dt><dd>`description:5`, `transcript:320s`, `event:e4`처럼 결과를 뒷받침하는 참조.</dd></div>
+          <div class="term"><dt>초안 <span class="en">draft</span></dt><dd>최종 검증 전의 레시피 후보 결과.</dd></div>
+          <div class="term"><dt>검증 <span class="en">audit</span></dt><dd>초안에 근거가 있는지 확인하고 unsupported 항목을 제거하는 단계.</dd></div>
+          <div class="term"><dt>visual estimate</dt><dd>텍스트로 부족한 양을 화면 프레임으로 보충하는 과정.</dd></div>
+          <div class="term"><dt>opt-in flag</dt><dd>기본 동작은 그대로 두고, 옵션을 켰을 때만 새 기능을 쓰는 스위치.</dd></div>
+        </dl>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">3</span>현재 문제</h2>
+        <div class="miniflow">
+          <span class="box">source packet</span><span class="arrow">→</span>
+          <span class="box">candidate</span><span class="arrow">→</span>
+          <span class="box">timeline event</span><span class="arrow">→</span>
+          <span class="box">visual target</span><span class="arrow">→</span>
+          <span class="box">recipe draft</span>
+        </div>
+        <div class="note warn">
+          <span class="label">주의</span>
+          위 순서는 안전하지만, 모델이 레시피를 쓰기 전에 영상 전체를 사람처럼 이해하는 단계가 부족하다. 그래서 `fTlTpSJtrEs` 같은 다중 레시피 영상에서 단계 흐름이 약해진다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">4</span>목표 구조</h2>
+        <div class="miniflow">
+          <span class="box">공개 source</span><span class="arrow">+</span>
+          <span class="box">timeline event</span><span class="arrow">→</span>
+          <span class="box">video-understanding</span><span class="arrow">→</span>
+          <span class="box">recipe draft</span><span class="arrow">→</span>
+          <span class="box">evidence audit</span>
+        </div>
+        <div class="targets">
+          <div class="target"><span class="badge">1</span><span>`video-understanding.json`을 만든다.</span></div>
+          <div class="target"><span class="badge">2</span><span>`holistic-draft-prompt.txt`에 `[VIDEO_UNDERSTANDING]`을 넣는다.</span></div>
+          <div class="target"><span class="badge">3</span><span>narrative는 방향키로만 쓰고 final evidence로 인정하지 않는다.</span></div>
+          <div class="target"><span class="badge">4</span><span>기존 경로는 flag가 꺼져 있으면 그대로 유지한다.</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">5</span>이번 PR 실행 단계</h2>
+        <ul class="steps">
+          <li class="step"><span class="dot">P1</span><h4>계획 문서 작성</h4><p>`pi-extractor-integrated-understanding-small-steps-plan-20260707.md`에 목표와 단계, 성공 기준을 고정한다.</p></li>
+          <li class="step"><span class="dot">P2</span><h4>새 flag 추가</h4><p>`--holistic-enable-integrated-understanding`이 켜졌을 때만 새 단계를 실행한다.</p></li>
+          <li class="step"><span class="dot">P3</span><h4>video-understanding stage 추가</h4><p>`video-understanding-prompt.txt`, `video-understanding.json` 등을 생성한다.</p></li>
+          <li class="step"><span class="dot">P4</span><h4>draft에 주입</h4><p>레시피 초안 prompt가 `[VIDEO_UNDERSTANDING]`을 먼저 읽도록 한다.</p></li>
+          <li class="step"><span class="dot">P5</span><h4>테스트</h4><p>fixture 기반으로 새 stage가 생기고, raw frame dump가 draft prompt에 노출되지 않는지 확인한다.</p></li>
+        </ul>
+        <pre><code>pnpm exec vitest run tests/pi-extractor-runner.test.ts --testNamePattern "integrated understanding|timeline-ledger|sanitizes Pi raw"</code></pre>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">6</span>하지 않는 것</h2>
+        <div class="twocol">
+          <div class="listbox allow">
+            <h4>이번에 하는 일</h4>
+            <ul>
+              <li>작은 opt-in stage 추가</li>
+              <li>계획 MD와 초보용 HTML 생성</li>
+              <li>fixture 테스트로 구조 고정</li>
+            </ul>
+          </div>
+          <div class="listbox deny">
+            <h4>이번에 하지 않는 일</h4>
+            <ul>
+              <li>full train 전체 재추출</li>
+              <li>Claude golden 맞춤 하드코딩</li>
+              <li>evidence audit 제거</li>
+              <li>visual target cap 완화</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">7</span>판단 규칙</h2>
+        <div class="tree">
+          <div class="branch go"><strong>진행</strong><span>fixture에서 `video-understanding` stage가 draft 앞에 생기고 테스트가 통과하면 다음 iter에서 실제 Pi smoke로 간다.</span></div>
+          <div class="branch two"><strong>보류</strong><span>narrative가 비어 있거나 candidate와 맞지 않으면 draft에 주입하지 않는 gate를 다음 iter에서 추가한다.</span></div>
+          <div class="branch stop"><strong>중단</strong><span>forbidden read, raw trace 폭증, visual target 폭증이 다시 생기면 성능 실험 전에 먼저 막는다.</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">8</span>위험과 대응</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위험</th><th>왜 문제인가</th><th>대응</th></tr></thead>
+            <tbody>
+              <tr><td>narrative hallucination</td><td>이해 메모가 근거 없이 내용을 꾸밀 수 있다.</td><td>narrative 자체를 final evidence로 인정하지 않는다.</td></tr>
+              <tr><td>비용 증가</td><td>Pi 호출이 1회 늘어난다.</td><td>opt-in flag로만 실행한다.</td></tr>
+              <tr><td>복잡도 증가</td><td>stage가 하나 더 늘어난다.</td><td>파일명을 분리하고 manifest stage를 명확히 기록한다.</td></tr>
+              <tr><td>점수 즉시 미개선</td><td>이번 PR은 성능보다 구조 전환이 목표다.</td><td>실제 smoke는 다음 iter에서 off/on 비교로 판단한다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">9</span>체크리스트</h2>
+        <ul class="check">
+          <li class="done">통합 이해 전환 계획 MD 작성</li>
+          <li class="done">초보 개발자용 HTML 작성</li>
+          <li>새 opt-in flag 구현</li>
+          <li>`video-understanding` stage 구현</li>
+          <li>fixture 테스트 추가</li>
+          <li>Vitest 전체 실행</li>
+          <li>PR shipping 및 Discord 알림</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      원문: /Users/cwj/01_vibe_coding/homecook/.omx/plans/pi-extractor-integrated-understanding-small-steps-plan-20260707.md |
+      초보 개발자 이해용 요약본 | 생성일: 2026-07-07
+    </footer>
+  </div>
+</body>
+</html>

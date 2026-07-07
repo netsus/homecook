@@ -288,11 +288,54 @@ function sourceRefs(sourcePacket) {
   (sourcePacket?.authorComments ?? []).forEach((comment, index) => {
     if (cleanString(comment)) refs.push(`author-comment:${index + 1}`);
   });
-  for (const segment of sourcePacket?.captions?.segments ?? []) {
-    const startSec = optionalNumber(Number(segment.startMs) / 1000);
-    if (startSec !== null) refs.push(`transcript:${Math.max(0, Math.round(startSec))}s`);
-  }
+  refs.push(...captionTimeRecords(sourcePacket).map((record) => record.ref));
   return uniqueStrings(refs);
+}
+
+function captionTimeRecords(sourcePacket) {
+  return (sourcePacket?.captions?.segments ?? [])
+    .map((segment) => {
+      const startSec = optionalNumber(Number(segment.startMs) / 1000);
+      if (startSec === null) return null;
+      const durationSec = Math.max(0, optionalNumber(Number(segment.durationMs) / 1000, 0) ?? 0);
+      const endSec = durationSec > 0 ? startSec + durationSec : startSec;
+      return {
+        startSec,
+        endSec,
+        ref: `transcript:${Math.max(0, Math.round(startSec))}s`,
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeTranscriptEvidenceRef(ref, sourcePacket) {
+  const cleaned = cleanString(ref);
+  if (!cleaned) return null;
+  const match = cleaned.match(/^transcript:(?<second>\d+(?:\.\d+)?)s$/iu);
+  if (!match?.groups) return cleaned;
+  const second = Number(match.groups.second);
+  if (!Number.isFinite(second)) return cleaned;
+  const records = captionTimeRecords(sourcePacket);
+  if (records.length === 0) return `transcript:${Math.max(0, Math.round(second))}s`;
+  const roundedRef = `transcript:${Math.max(0, Math.round(second))}s`;
+  if (records.some((record) => record.ref === roundedRef)) return roundedRef;
+  const scored = records
+    .map((record) => {
+      const contains = second >= record.startSec - 0.75 && second <= record.endSec + 0.75;
+      const distance = contains ? 0 : Math.min(
+        Math.abs(second - record.startSec),
+        Math.abs(second - record.endSec),
+      );
+      return { record, contains, distance };
+    })
+    .sort((left, right) => left.distance - right.distance);
+  const best = scored[0];
+  if (best && (best.contains || best.distance <= 5)) return best.record.ref;
+  return roundedRef;
+}
+
+function normalizeEvidenceRefs(value, sourcePacket) {
+  return uniqueStrings(normalizeStringArray(value).map((ref) => normalizeTranscriptEvidenceRef(ref, sourcePacket)));
 }
 
 export function timelineAllowedEvidenceRefs({ sourcePacket, timelineFrameLedger }) {
@@ -317,6 +360,7 @@ export function buildVideoTimelinePrompt({
     sourceEvidence: candidate.evidence ?? [],
     siblingGroup: candidate.siblingGroup ?? null,
   }));
+  const exampleCandidateId = compactCandidates[0]?.candidateId ?? "whole";
   const compactWindows = (timelineFrameLedger?.windows ?? []).map((window) => ({
     windowId: window.windowId,
     segmentId: window.segmentId,
@@ -356,7 +400,7 @@ export function buildVideoTimelinePrompt({
         quantityCues: [],
         dishCandidates: ["양파 볶음"],
         candidateAssignments: [{
-          candidateId: "storyboard-1",
+          candidateId: exampleCandidateId,
           status: "supporting",
           reason: "event action and ingredients match this candidate",
         }],
@@ -416,7 +460,7 @@ function normalizeTimeRange(value) {
   };
 }
 
-export function normalizeVideoTimeline(value, { videoId = null } = {}) {
+export function normalizeVideoTimeline(value, { videoId = null, sourcePacket = null } = {}) {
   const parsed = parsePiRawOutput(value) ?? {};
   const events = Array.isArray(parsed.events)
     ? parsed.events
@@ -440,7 +484,7 @@ export function normalizeVideoTimeline(value, { videoId = null } = {}) {
       candidateAssignments: normalizeCandidateAssignments(
         source.candidateAssignments ?? source.assignments ?? source.candidateIds ?? source.candidateId,
       ),
-      evidence: normalizeStringArray(source.evidence),
+      evidence: normalizeEvidenceRefs(source.evidence, sourcePacket),
       confidence: clampConfidence(source.confidence, 0.5),
       uncertainties: normalizeStringArray(source.uncertainties),
     };

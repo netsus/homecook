@@ -163,6 +163,63 @@ export function assertValidHolisticDraft(draft) {
   return true;
 }
 
+function normalizeVideoUnderstandingStory(value, index) {
+  const source = isObject(value) ? value : {};
+  return {
+    ...source,
+    candidateId: cleanString(source.candidateId) ?? `story-${index + 1}`,
+    title: cleanString(source.title) ?? `요리 흐름 ${index + 1}`,
+    plainStory: cleanString(source.plainStory ?? source.story ?? source.summary) ?? "",
+    timeRange: normalizeTimeRange(source.timeRange),
+    mainIngredients: normalizeStringArray(source.mainIngredients ?? source.ingredients),
+    stepOutline: normalizeStringArray(source.stepOutline ?? source.steps),
+    sourceRefs: normalizeStringArray(source.sourceRefs ?? source.evidence),
+    uncertainties: normalizeStringArray(source.uncertainties),
+    confidence: Math.max(0, Math.min(1, optionalNumber(source.confidence, 0.4))),
+  };
+}
+
+export function normalizeVideoUnderstanding(value, { videoId = null } = {}) {
+  const parsed = parsePiRawOutput(value) ?? {};
+  const dishStories = Array.isArray(parsed.dishStories)
+    ? parsed.dishStories
+    : Array.isArray(parsed.recipes)
+      ? parsed.recipes
+      : [];
+  return {
+    ...parsed,
+    schemaVersion: 1,
+    kind: "video-understanding",
+    videoId: cleanString(parsed.videoId) ?? videoId,
+    globalStory: cleanString(parsed.globalStory ?? parsed.summary) ?? "",
+    dishStories: dishStories.map(normalizeVideoUnderstandingStory),
+    crossDishNotes: normalizeStringArray(parsed.crossDishNotes),
+    uncertainties: normalizeStringArray(parsed.uncertainties ?? parsed.globalUncertainties),
+  };
+}
+
+export function validateVideoUnderstanding(understanding) {
+  const errors = [];
+  if (!isObject(understanding)) return ["video understanding must be an object"];
+  if (!Array.isArray(understanding.dishStories)) return ["video understanding dishStories must be an array"];
+  understanding.dishStories.forEach((story, storyIndex) => {
+    if (!cleanString(story.candidateId)) errors.push(`dishStories[${storyIndex}].candidateId is required`);
+    if (!cleanString(story.title)) errors.push(`dishStories[${storyIndex}].title is required`);
+    if (!Array.isArray(story.mainIngredients)) errors.push(`dishStories[${storyIndex}].mainIngredients must be an array`);
+    if (!Array.isArray(story.stepOutline)) errors.push(`dishStories[${storyIndex}].stepOutline must be an array`);
+    if (!Array.isArray(story.sourceRefs)) errors.push(`dishStories[${storyIndex}].sourceRefs must be an array`);
+  });
+  return errors;
+}
+
+export function assertValidVideoUnderstanding(understanding) {
+  const errors = validateVideoUnderstanding(understanding);
+  if (errors.length) {
+    throw new Error(`Pi video understanding schema validation failed:\n- ${errors.join("\n- ")}`);
+  }
+  return true;
+}
+
 function descriptionEntries(sourcePacket, maxEntries = 80) {
   return String(sourcePacket?.video?.description ?? "")
     .split(/\r?\n/u)
@@ -273,6 +330,49 @@ function timelineEventEntries(videoTimeline, maxEntries = 40) {
   }).filter((entry) => cleanString(entry.text));
 }
 
+function entryInCandidateRange(entry, candidate) {
+  if (entry?.type !== "caption") return false;
+  const startSec = optionalNumber(entry.startSec, null);
+  const rangeStart = optionalNumber(candidate?.timeRange?.startSec, null);
+  const rangeEnd = optionalNumber(candidate?.timeRange?.endSec, null);
+  if (startSec === null || rangeStart === null || rangeEnd === null) return false;
+  return startSec >= rangeStart - 8 && startSec <= rangeEnd + 8;
+}
+
+function buildCandidateSourcePackets(entries, candidateTimelineIndex, maxEntriesPerCandidate = 48) {
+  const candidates = candidateTimelineIndex?.candidates ?? [];
+  if (!Array.isArray(candidates) || candidates.length === 0) return [];
+  const entryByRef = new Map(entries.map((entry) => [entry.ref, entry]));
+  return candidates.map((candidate) => {
+    const refs = new Set([
+      "title",
+      ...(candidate.sourceEvidence ?? []),
+      ...(candidate.supportingEvents ?? []).map((eventId) => `event:${eventId}`),
+      ...(candidate.unclearEvents ?? []).map((eventId) => `event:${eventId}`),
+    ]);
+    const selected = [];
+    const seen = new Set();
+    const push = (entry) => {
+      if (!entry || seen.has(entry.ref) || selected.length >= maxEntriesPerCandidate) return;
+      if (entry.type === "frame") return;
+      seen.add(entry.ref);
+      selected.push(entry);
+    };
+    for (const ref of refs) push(entryByRef.get(ref));
+    for (const entry of entries) {
+      if (entryInCandidateRange(entry, candidate)) push(entry);
+    }
+    return {
+      candidateId: candidate.candidateId,
+      title: candidate.title,
+      timeRange: candidate.timeRange ?? null,
+      supportingEvents: candidate.supportingEvents ?? [],
+      unclearEvents: candidate.unclearEvents ?? [],
+      sourceEntries: selected,
+    };
+  });
+}
+
 export function buildHolisticSourcePacket(sourcePacket, visualLedger = null, {
   maxDescriptionEntries = 80,
   maxCaptionEntries = 300,
@@ -295,6 +395,7 @@ export function buildHolisticSourcePacket(sourcePacket, visualLedger = null, {
     ...(includeStoryboardEntries ? storyboardEntries(visualLedger, maxFrameEntries) : []),
   ].filter((entry) => cleanString(entry.text) || entry.type === "frame");
   const timelineEvents = entries.filter((entry) => entry.type === "timeline-event");
+  const candidateSourcePackets = buildCandidateSourcePackets(entries, candidateTimelineIndex);
   return {
     schemaVersion: 1,
     kind: "holistic-source-packet",
@@ -312,11 +413,64 @@ export function buildHolisticSourcePacket(sourcePacket, visualLedger = null, {
     } : null,
     timelineEvents,
     candidateTimelineIndex: candidateTimelineIndex ?? null,
+    candidateSourcePackets,
   };
 }
 
-export function buildHolisticDraftPrompt(holisticSourcePacket, { timelineMode = false } = {}) {
+export function buildVideoUnderstandingPrompt(holisticSourcePacket, { timelineMode = false } = {}) {
   const candidateTimelineIndex = holisticSourcePacket?.candidateTimelineIndex ?? null;
+  const exampleCandidateId = candidateTimelineIndex?.candidates?.[0]?.candidateId ?? "whole";
+  return [
+    "너는 유튜브 레시피 영상을 한 번에 이해하기 위한 중간 메모를 쓰는 도우미다.",
+    "목표: 최종 레시피를 바로 쓰지 말고, 영상 전체가 어떤 요리 흐름인지 사람 말로 먼저 정리한다.",
+    "",
+    "중요한 제한:",
+    "- 로컬 파일, golden.json, grade, 이전 result, 비교 HTML, 이전 추출 결과를 읽지 마라.",
+    "- 아래 HOLISTIC_SOURCE_PACKET만 사용한다.",
+    "- VIDEO_UNDERSTANDING은 다음 draft의 방향키일 뿐이다. 최종 evidence로 쓰이지 않는다.",
+    "- 근거 없는 일반 레시피 지식으로 재료 양이나 단계를 채우지 마라.",
+    "- 불확실한 내용은 uncertainties에 남긴다.",
+    ...(timelineMode ? [
+      "- CANDIDATE_SOURCE_PACKETS가 있으면 candidate별 묶음을 먼저 보고 요리 흐름을 나눈다.",
+      "- candidateId는 CANDIDATE_TIMELINE_INDEX에 있는 값만 사용한다.",
+    ] : []),
+    "- 출력은 설명 없이 JSON 객체 하나만 반환한다.",
+    "",
+    "스키마:",
+    JSON.stringify({
+      globalStory: "영상 전체의 요리 흐름을 2~4문장으로 설명",
+      dishStories: [{
+        candidateId: exampleCandidateId,
+        title: "요리명 또는 후보명",
+        plainStory: "이 후보에서 실제로 무엇을 만드는지 쉬운 문장으로 설명",
+        timeRange: { startSec: 0, endSec: 120, basis: "video-timeline|description|caption|inferred" },
+        mainIngredients: ["주요 재료"],
+        stepOutline: ["큰 조리 흐름 1", "큰 조리 흐름 2"],
+        sourceRefs: ["description:1", "transcript:45s", "event:e1"],
+        uncertainties: ["헷갈리는 지점"],
+        confidence: 0.6,
+      }],
+      crossDishNotes: ["여러 레시피가 섞이는 경우의 구분 메모"],
+      uncertainties: ["전체 영상 이해의 한계"],
+    }, null, 2),
+    "",
+    ...(timelineMode ? [
+      "[CANDIDATE_TIMELINE_INDEX]",
+      JSON.stringify(candidateTimelineIndex ?? { candidates: [] }, null, 2),
+      "",
+      "[CANDIDATE_SOURCE_PACKETS]",
+      JSON.stringify(holisticSourcePacket?.candidateSourcePackets ?? [], null, 2),
+      "",
+    ] : []),
+    "[HOLISTIC_SOURCE_PACKET]",
+    JSON.stringify(holisticSourcePacket, null, 2),
+  ].join("\n");
+}
+
+export function buildHolisticDraftPrompt(holisticSourcePacket, { timelineMode = false, videoUnderstanding = null } = {}) {
+  const candidateTimelineIndex = holisticSourcePacket?.candidateTimelineIndex ?? null;
+  const exampleCandidateId = candidateTimelineIndex?.candidates?.[0]?.candidateId ?? "r1";
+  const hasVideoUnderstanding = isObject(videoUnderstanding) && Array.isArray(videoUnderstanding.dishStories);
   const promptGoal = timelineMode
     ? "목표: 제목, 설명란, 고정댓글, 자막, video timeline event를 종합해서 실제 만든 레시피들을 candidateId별로 분리한다."
     : "목표: 제목, 설명란, 고정댓글, 자막, storyboard frame을 먼저 종합해서 실제 만든 레시피들을 모두 분리한다.";
@@ -325,9 +479,17 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, { timelineMode = 
     : "- 아래 HOLISTIC_SOURCE_PACKET에 들어 있는 공개 YouTube source와 허용 frame 요약만 사용한다.";
   const timelineRules = timelineMode ? [
     "- candidateId는 CANDIDATE_TIMELINE_INDEX에 있는 값만 사용한다. 새 candidateId나 recipeId를 만들지 않는다.",
-    "- steps는 supporting event를 주 근거로 삼고, excluded/unclear event의 내용은 레시피에 넣지 않는다.",
+    "- CANDIDATE_SOURCE_PACKETS는 candidate별로 잘라낸 description/caption/timeline 근거다. 각 recipe를 쓸 때 이 묶음을 먼저 사용한다.",
+    "- steps는 supporting event와 같은 candidateSourcePacket 안의 description/caption 근거를 주 근거로 삼는다.",
+    "- timeline event가 압축되어 있어도 같은 candidate timeRange 안의 caption/description 근거가 명확하면 재료와 단계를 채운다.",
+    "- excluded event의 내용은 레시피에 넣지 않는다. unclear event는 같은 candidateSourcePacket의 source 근거가 뒷받침할 때만 조심스럽게 사용한다.",
     "- event:e1 같은 timeline event ref를 evidence에 넣고, 가능한 경우 그 event가 가진 source/frame ref도 함께 넣는다.",
     "- timeline이 약한 후보는 단계를 추측하지 말고 uncertainties 또는 visualNeeds로 남긴다.",
+  ] : [];
+  const understandingRules = hasVideoUnderstanding ? [
+    "- 먼저 VIDEO_UNDERSTANDING으로 영상의 큰 요리 흐름을 잡고, 세부 재료/양/단계는 반드시 CANDIDATE_SOURCE_PACKETS 또는 HOLISTIC_SOURCE_PACKET 근거로 확인한다.",
+    "- VIDEO_UNDERSTANDING은 방향키다. final evidence ref로 쓰지 말고, evidence에는 source ref/event ref/frame ref만 넣는다.",
+    "- VIDEO_UNDERSTANDING과 source packet이 충돌하면 source packet을 우선하고 uncertainties에 남긴다.",
   ] : [];
   return [
     "너는 유튜브 레시피 영상을 전체적으로 이해한 뒤 레시피 정답지 초안을 쓰는 도우미다.",
@@ -341,6 +503,7 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, { timelineMode = 
     "- 모든 재료, amount/unit, 단계에는 가능한 한 evidence ref를 붙인다.",
     "- amount/unit이 부족하지만 화면으로 확인할 수 있어 보이면 visualNeeds에 넣고, 임의 추정하지 않는다.",
     "- 같은 timeRange에 여러 레시피가 있으면 어떤 근거가 어느 레시피에 속하는지 분리해서 쓴다.",
+    ...understandingRules,
     "- 출력은 설명 없이 JSON 객체 하나만 반환한다.",
     "",
     "허용 evidence ref 예시:",
@@ -354,7 +517,7 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, { timelineMode = 
     "스키마:",
     JSON.stringify({
       recipes: [{
-        candidateId: "r1",
+        candidateId: exampleCandidateId,
         title: "요리명",
         timeRange: { startSec: 0, endSec: 120, basis: "description-timeline|caption|visual-storyboard|inferred" },
         ingredients: [{
@@ -383,9 +546,17 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, { timelineMode = 
       globalUncertainties: [],
     }, null, 2),
     "",
+    ...(hasVideoUnderstanding ? [
+      "[VIDEO_UNDERSTANDING]",
+      JSON.stringify(videoUnderstanding, null, 2),
+      "",
+    ] : []),
     ...(timelineMode ? [
       "[CANDIDATE_TIMELINE_INDEX]",
       JSON.stringify(candidateTimelineIndex ?? { candidates: [] }, null, 2),
+      "",
+      "[CANDIDATE_SOURCE_PACKETS]",
+      JSON.stringify(holisticSourcePacket?.candidateSourcePackets ?? [], null, 2),
       "",
     ] : []),
     "[HOLISTIC_SOURCE_PACKET]",
@@ -876,6 +1047,7 @@ export function buildHolisticStoryboardCandidateLedger(sourcePacket, {
   maxCandidates = 8,
   enableTimelineUnderstanding = false,
   frameBudget = null,
+  coarseAsWholeRecipeCandidate = false,
 } = {}) {
   const duration = optionalNumber(sourcePacket?.video?.durationSeconds);
   const timelineCandidates = storyboardTimelineEntries(sourcePacket, { maxCandidates, enableTimelineUnderstanding });
@@ -900,7 +1072,9 @@ export function buildHolisticStoryboardCandidateLedger(sourcePacket, {
     };
   }
   if (enableTimelineUnderstanding) {
-    const candidates = withFrameBudget(buildCoarseStoryboardCandidates(sourcePacket, { maxCandidates }));
+    const candidates = withFrameBudget(buildCoarseStoryboardCandidates(sourcePacket, {
+      maxCandidates: coarseAsWholeRecipeCandidate ? 1 : maxCandidates,
+    }));
     return {
       schemaVersion: 1,
       kind: "candidate-ledger",
@@ -909,6 +1083,7 @@ export function buildHolisticStoryboardCandidateLedger(sourcePacket, {
       summary: {
         timelineUnderstandingEnabled: true,
         timelineSource: "coarse-video-window",
+        coarseAsWholeRecipeCandidate,
         totalCandidates: candidates.length,
         totalFrameBudget: budget,
       },
@@ -1010,7 +1185,7 @@ export function buildHolisticVisualTargetLedger({
       ingredient: need.ingredient,
       reason: groupedTarget ? `${need.reason} (grouped visual need; use for recipe visual recall, not amount estimate)` : need.reason,
       sourceEvidence: normalizeStringArray(need.evidence),
-      textCues: normalizeStringArray([need.reason, ...(need.suggestedFrameRefs ?? [])]),
+      textCues: normalizeStringArray([need.reason]),
       preferredTimeRanges: range ? [{ ...range, basis: range.basis ?? "holistic-visual-need" }] : [],
       candidateTimeRange: recipe.timeRange,
       fallbackPolicy: range ? "holistic-visual-need-range" : targetType === "candidate_visual_recall" ? "candidate-visual-recall-sweep" : "description-only-sweep",
@@ -1040,6 +1215,17 @@ export function buildHolisticVisualTargetLedger({
         candidateId: recipe.candidateId,
         ingredient: need.ingredient,
         reasonCode: "timeline_ledger_amount_only_grouped_target_skipped",
+      });
+      continue;
+    }
+    if (
+      amountTargetsOnly
+      && normalizeStringArray(need.evidence).length === 0
+    ) {
+      skippedTargets.push({
+        candidateId: recipe.candidateId,
+        ingredient: need.ingredient,
+        reasonCode: "timeline_ledger_missing_visual_evidence_skipped",
       });
       continue;
     }
