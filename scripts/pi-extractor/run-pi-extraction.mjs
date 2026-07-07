@@ -38,6 +38,7 @@ import {
 import {
   HOLISTIC_PROMPT_VERSION,
   assertValidHolisticDraft,
+  assertValidVideoUnderstanding,
   auditHolisticDraft,
   buildFinalOutputFromHolisticAudit,
   buildHolisticCandidateLedger,
@@ -47,7 +48,9 @@ import {
   buildHolisticStoryboardCandidateLedger,
   buildHolisticVisualRepairPrompt,
   buildHolisticVisualTargetLedger,
+  buildVideoUnderstandingPrompt,
   normalizeHolisticDraft,
+  normalizeVideoUnderstanding,
   recommendHolisticTimelineFrameBudget,
 } from "./lib/holistic.mjs";
 import {
@@ -157,6 +160,70 @@ async function writeTextTracked(manifest, filePath, value, reason) {
   await writeFile(resolved, value, "utf8");
 }
 
+function truncateLargeStringsForDisk(value, maxTextLength) {
+  if (!value || typeof value !== "object") return false;
+  let sanitized = false;
+  for (const [key, field] of Object.entries(value)) {
+    if (typeof field === "string" && field.length > maxTextLength) {
+      value[key] = `${field.slice(0, maxTextLength)}\n[omitted ${field.length - maxTextLength} chars from Pi trace echo]`;
+      sanitized = true;
+    } else if (Array.isArray(field)) {
+      for (const item of field) {
+        if (truncateLargeStringsForDisk(item, maxTextLength)) sanitized = true;
+      }
+    } else if (field && typeof field === "object") {
+      if (truncateLargeStringsForDisk(field, maxTextLength)) sanitized = true;
+    }
+  }
+  return sanitized;
+}
+
+function sanitizePiJsonlStdoutForDisk(stdout, maxTextLength = 1200) {
+  if (typeof stdout !== "string" || stdout.length === 0) return stdout;
+  let sanitized = false;
+  const lines = stdout.split("\n").map((line) => {
+    if (!line.trim()) return line;
+    try {
+      const event = JSON.parse(line);
+      if (event?.type === "message_update") {
+        sanitized = true;
+        return "";
+      }
+      const keepFinalAssistant = event?.type === "message_end" && event?.message?.role === "assistant";
+      if (!keepFinalAssistant && truncateLargeStringsForDisk(event, maxTextLength)) {
+        sanitized = true;
+      }
+      return JSON.stringify(event);
+    } catch {
+      return line;
+    }
+  });
+  return sanitized ? lines.join("\n") : stdout;
+}
+
+export function sanitizePiRawPayloadForDisk(rawPayload) {
+  try {
+    const payload = JSON.parse(rawPayload);
+    if (!payload || typeof payload !== "object" || typeof payload.stdout !== "string") {
+      return rawPayload;
+    }
+    const stdout = sanitizePiJsonlStdoutForDisk(payload.stdout);
+    if (stdout === payload.stdout) return rawPayload;
+    return JSON.stringify({
+      ...payload,
+      stdout,
+      stdoutSanitizedForDisk: true,
+    }, null, 2);
+  } catch {
+    return rawPayload;
+  }
+}
+
+function rawPayloadForDisk(rawPayload) {
+  const sanitized = sanitizePiRawPayloadForDisk(rawPayload);
+  return sanitized.endsWith("\n") ? sanitized : `${sanitized}\n`;
+}
+
 function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
   const caseDir = path.join(projectRoot, dataRoot, split, id);
   const outDir = path.join(caseDir, "runs", outTag);
@@ -191,6 +258,10 @@ function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
     videoTimelineCommandPath: path.join(outDir, "video-timeline-command.json"),
     videoTimelineRawPath: path.join(outDir, "video-timeline-raw-response.json"),
     videoTimelinePath: path.join(outDir, "video-timeline.json"),
+    videoUnderstandingPromptPath: path.join(outDir, "video-understanding-prompt.txt"),
+    videoUnderstandingCommandPath: path.join(outDir, "video-understanding-command.json"),
+    videoUnderstandingRawPath: path.join(outDir, "video-understanding-raw-response.json"),
+    videoUnderstandingPath: path.join(outDir, "video-understanding.json"),
     candidateTimelineIndexPath: path.join(outDir, "candidate-timeline-index.json"),
     candidatePromptPath: path.join(outDir, "candidate-prompt.txt"),
     candidateCommandPath: path.join(outDir, "candidate-command.json"),
@@ -436,9 +507,11 @@ async function runHolisticPiExtractionCase({
   holisticResponseJsonPath,
   holisticRepairResponseJsonPath,
   holisticVideoTimelineResponseJsonPath,
+  holisticUnderstandingResponseJsonPath,
   holisticStoryboardFrameCount,
   holisticTimelineUnderstanding,
   holisticVideoTimelineLedger,
+  holisticIntegratedUnderstanding,
   holisticVideoTimelineMaxSegments,
   holisticVideoTimelineMaxWindowsPerSegment,
   holisticVideoTimelineMaxTotalFrames,
@@ -473,6 +546,7 @@ async function runHolisticPiExtractionCase({
     maxCandidates: holisticStoryboardMaxCandidates,
     enableTimelineUnderstanding: holisticTimelineUnderstanding,
     frameBudget: effectiveStoryboardFrameBudget,
+    coarseAsWholeRecipeCandidate: holisticVideoTimelineLedger,
   });
   let storyboardFramesPerCandidate = 1;
   let storyboardLedger = null;
@@ -480,6 +554,9 @@ async function runHolisticPiExtractionCase({
   let timelineFrameLedger = null;
   let videoTimeline = null;
   let candidateTimelineIndex = null;
+  let videoUnderstanding = null;
+  let videoUnderstandingPrompt = null;
+  let videoUnderstandingRawPayload = null;
 
   if (holisticVideoTimelineLedger) {
     timelineFramePlan = buildTimelineFramePlan(sourcePacket, {
@@ -551,11 +628,12 @@ async function runHolisticPiExtractionCase({
       await writeTextTracked(
         manifest,
         paths.videoTimelineRawPath,
-        videoTimelineRawPayload.endsWith("\n") ? videoTimelineRawPayload : `${videoTimelineRawPayload}\n`,
+        rawPayloadForDisk(videoTimelineRawPayload),
         "video-timeline-raw-response",
       );
       videoTimeline = normalizeVideoTimeline(videoTimelineRawPayload, {
         videoId: sourcePacket?.video?.videoId ?? null,
+        sourcePacket,
       });
       assertValidVideoTimeline(videoTimeline, {
         allowedCandidateIds: storyboardCandidateLedger.candidates.map((candidate) => candidate.candidateId),
@@ -611,14 +689,65 @@ async function runHolisticPiExtractionCase({
   manifest.holisticStoryboardFramesPerCandidate = storyboardFramesPerCandidate;
   manifest.holisticTimelineUnderstandingEnabled = holisticTimelineUnderstanding;
   manifest.holisticVideoTimelineLedgerEnabled = holisticVideoTimelineLedger;
+  manifest.holisticIntegratedUnderstandingEnabled = holisticIntegratedUnderstanding;
   const holisticSourcePacket = buildHolisticSourcePacket(sourcePacket, storyboardLedger, {
     includeStoryboardEntries: !holisticVideoTimelineLedger,
     videoTimeline,
     candidateTimelineIndex,
   });
   await writeJsonTracked(manifest, paths.holisticSourcePacketPath, holisticSourcePacket, "holistic-source-packet");
+  if (holisticIntegratedUnderstanding) {
+    videoUnderstandingPrompt = buildVideoUnderstandingPrompt(holisticSourcePacket, {
+      timelineMode: holisticVideoTimelineLedger,
+    });
+    await writeTextTracked(manifest, paths.videoUnderstandingPromptPath, `${videoUnderstandingPrompt}\n`, "video-understanding-prompt");
+    addAllowedRead(manifest, paths.videoUnderstandingPromptPath);
+    const videoUnderstandingCommand = buildPiCommand({
+      promptPath: paths.videoUnderstandingPromptPath,
+      model,
+      provider,
+      thinking,
+      tools: piTools,
+    });
+    manifest.stages.push({ name: "video-understanding", command: videoUnderstandingCommand });
+    await writeJsonTracked(manifest, paths.videoUnderstandingCommandPath, {
+      command: videoUnderstandingCommand,
+      note: piCommandNote(piTools),
+      mode: "video-understanding",
+    }, "video-understanding-command");
+    if (dryRun) {
+      videoUnderstanding = normalizeVideoUnderstanding({
+        globalStory: "dry-run video understanding placeholder",
+        dishStories: [],
+        uncertainties: ["dry-run"],
+      }, { videoId: sourcePacket?.video?.videoId ?? null });
+    } else {
+      manifest.currentStage = "video-understanding";
+      videoUnderstandingRawPayload = await readFixtureOrExecutePi({
+        manifest,
+        fixturePath: holisticUnderstandingResponseJsonPath,
+        fixtureReason: "video-understanding-fixture-response-json",
+        command: videoUnderstandingCommand,
+        projectRoot,
+        timeoutMs,
+        executePiFn,
+      });
+      await writeTextTracked(
+        manifest,
+        paths.videoUnderstandingRawPath,
+        rawPayloadForDisk(videoUnderstandingRawPayload),
+        "video-understanding-raw-response",
+      );
+      videoUnderstanding = normalizeVideoUnderstanding(videoUnderstandingRawPayload, {
+        videoId: sourcePacket?.video?.videoId ?? null,
+      });
+      assertValidVideoUnderstanding(videoUnderstanding);
+    }
+    await writeJsonTracked(manifest, paths.videoUnderstandingPath, videoUnderstanding, "video-understanding");
+  }
   const holisticDraftPrompt = buildHolisticDraftPrompt(holisticSourcePacket, {
     timelineMode: holisticVideoTimelineLedger,
+    videoUnderstanding,
   });
   await writeTextTracked(manifest, paths.holisticDraftPromptPath, `${holisticDraftPrompt}\n`, "holistic-draft-prompt");
   addAllowedRead(manifest, paths.holisticDraftPromptPath);
@@ -650,7 +779,7 @@ async function runHolisticPiExtractionCase({
   await writeTextTracked(
     manifest,
     paths.holisticDraftRawPath,
-    holisticRawPayload.endsWith("\n") ? holisticRawPayload : `${holisticRawPayload}\n`,
+    rawPayloadForDisk(holisticRawPayload),
     "holistic-draft-raw-response",
   );
   const draft = normalizeHolisticDraft(holisticRawPayload);
@@ -749,7 +878,7 @@ async function runHolisticPiExtractionCase({
     await writeTextTracked(
       manifest,
       paths.holisticVisualRepairRawPath,
-      repairRawPayload.endsWith("\n") ? repairRawPayload : `${repairRawPayload}\n`,
+      rawPayloadForDisk(repairRawPayload),
       "holistic-visual-repair-raw-response",
     );
     repairDraft = normalizeHolisticDraft(repairRawPayload);
@@ -779,10 +908,12 @@ async function runHolisticPiExtractionCase({
   await writeCacheManifest(manifest, paths.cacheManifestPath, {
     cachePolicy: "holistic raw response, storyboard ledger, target ledgers, and final audit are stored in the run directory",
     promptHashes: {
+      ...(videoUnderstandingPrompt ? { videoUnderstanding: hashText(videoUnderstandingPrompt) } : {}),
       holisticDraft: hashText(holisticDraftPrompt),
       holisticFinal: hashText(finalPrompt),
     },
     rawResponseHashes: {
+      ...(videoUnderstandingRawPayload ? { videoUnderstanding: hashText(videoUnderstandingRawPayload) } : {}),
       holisticDraft: hashText(holisticRawPayload),
       ...(repairRawPayload ? { holisticVisualRepair: hashText(repairRawPayload) } : {}),
     },
@@ -799,6 +930,11 @@ async function runHolisticPiExtractionCase({
       storyboardCandidateCount: storyboardCandidateLedger.candidates.length,
       timelineUnderstandingEnabled: holisticTimelineUnderstanding,
       videoTimelineLedgerEnabled: holisticVideoTimelineLedger,
+      integratedUnderstandingEnabled: holisticIntegratedUnderstanding,
+      videoUnderstandingSummary: videoUnderstanding ? {
+        dishStoryCount: videoUnderstanding.dishStories.length,
+        hasGlobalStory: Boolean(videoUnderstanding.globalStory),
+      } : null,
       timelineFramePlanSummary: timelineFramePlan?.summary ?? null,
       videoTimelineSummary: videoTimeline?.summary ?? null,
       candidateTimelineIndexSummary: candidateTimelineIndex?.summary ?? null,
@@ -900,7 +1036,7 @@ async function runStagedPiExtractionCase({
   await writeTextTracked(
     manifest,
     paths.candidateRawPath,
-    candidateRawPayload.endsWith("\n") ? candidateRawPayload : `${candidateRawPayload}\n`,
+    rawPayloadForDisk(candidateRawPayload),
     "candidate-raw-response",
   );
   const candidateOutput = applyGenericCandidateRepair({
@@ -1055,7 +1191,7 @@ async function runStagedPiExtractionCase({
     await writeTextTracked(
       manifest,
       detailPaths.rawPath,
-      detailRawPayload.endsWith("\n") ? detailRawPayload : `${detailRawPayload}\n`,
+      rawPayloadForDisk(detailRawPayload),
       `detail-raw-response:${candidate.candidateId}`,
     );
     const detailOutput = normalizePiRecipeOutput(parsePiRawOutput(detailRawPayload));
@@ -1156,6 +1292,9 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   const holisticVideoTimelineResponseJsonPath = typeof args["holistic-video-timeline-response-json"] === "string"
     ? path.resolve(projectRoot, args["holistic-video-timeline-response-json"])
     : null;
+  const holisticUnderstandingResponseJsonPath = typeof args["holistic-understanding-response-json"] === "string"
+    ? path.resolve(projectRoot, args["holistic-understanding-response-json"])
+    : null;
   const maxCaptionSegments = optionalNumber(args["max-caption-segments"], null);
   const maxDescriptionChars = optionalNumber(args["max-description-chars"], 16000);
   const compactSourcePacket = args["compact-source-packet"] === true;
@@ -1164,13 +1303,20 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   const holisticStoryboardFrameCount = holisticStoryboardFrameCountArg ?? 8;
   const holisticVideoTimelineLedger = args["holistic-enable-video-timeline-ledger"] === true;
   const holisticTimelineUnderstanding = args["holistic-enable-timeline-understanding"] === true || holisticVideoTimelineLedger;
+  const holisticIntegratedUnderstanding = args["holistic-enable-integrated-understanding"] === true;
   const holisticTimelineFrameBudget = optionalNumber(args["holistic-timeline-frame-budget"], holisticStoryboardFrameCountArg);
   const holisticStoryboardMaxCandidates = optionalNumber(args["holistic-storyboard-max-candidates"], 8);
   const holisticVideoTimelineMaxSegments = optionalNumber(args["holistic-video-timeline-max-segments"], 8);
   const holisticVideoTimelineMaxWindowsPerSegment = optionalNumber(args["holistic-video-timeline-max-windows-per-segment"], 3);
   const holisticVideoTimelineMaxTotalFrames = optionalNumber(args["holistic-video-timeline-max-total-frames"], holisticTimelineFrameBudget);
-  const holisticMaxTargetsPerRecipe = optionalNumber(args["holistic-max-targets-per-recipe"], 3);
-  const holisticMaxTotalTargets = optionalNumber(args["holistic-max-total-targets"], 12);
+  const holisticMaxTargetsPerRecipe = optionalNumber(
+    args["holistic-max-targets-per-recipe"],
+    holisticVideoTimelineLedger ? 2 : 3,
+  );
+  const holisticMaxTotalTargets = optionalNumber(
+    args["holistic-max-total-targets"],
+    holisticVideoTimelineLedger ? 4 : 12,
+  );
   const holisticVisualTargetMaxWindowSec = optionalNumber(args["holistic-visual-target-max-window-sec"], 16);
   const holisticVisualRepairEnabled = holisticVideoTimelineLedger
     ? args["holistic-enable-visual-repair"] === true
@@ -1197,6 +1343,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
     if (holisticResponseJsonPath) allowedReads.push(holisticResponseJsonPath);
     if (holisticRepairResponseJsonPath) allowedReads.push(holisticRepairResponseJsonPath);
     if (holisticVideoTimelineResponseJsonPath) allowedReads.push(holisticVideoTimelineResponseJsonPath);
+    if (holisticUnderstandingResponseJsonPath) allowedReads.push(holisticUnderstandingResponseJsonPath);
     const manifest = createAccessManifest({ projectRoot, allowedReads });
     Object.assign(manifest, {
       runner: "scripts/pi-extractor/run-pi-extraction.mjs",
@@ -1225,6 +1372,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
         storyboardFrameCount: holisticStoryboardFrameCount,
         timelineUnderstandingEnabled: holisticTimelineUnderstanding,
         videoTimelineLedgerEnabled: holisticVideoTimelineLedger,
+        integratedUnderstandingEnabled: holisticIntegratedUnderstanding,
         timelineFrameBudget: holisticTimelineFrameBudget,
         storyboardMaxCandidates: holisticStoryboardMaxCandidates,
         videoTimelineMaxSegments: holisticVideoTimelineMaxSegments,
@@ -1302,9 +1450,11 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
           holisticResponseJsonPath,
           holisticRepairResponseJsonPath,
           holisticVideoTimelineResponseJsonPath,
+          holisticUnderstandingResponseJsonPath,
           holisticStoryboardFrameCount,
           holisticTimelineUnderstanding,
           holisticVideoTimelineLedger,
+          holisticIntegratedUnderstanding,
           holisticVideoTimelineMaxSegments,
           holisticVideoTimelineMaxWindowsPerSegment,
           holisticVideoTimelineMaxTotalFrames,
@@ -1418,7 +1568,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
         rawPayload = JSON.stringify(piResult, null, 2);
       }
 
-      await writeTextTracked(manifest, paths.rawPath, rawPayload.endsWith("\n") ? rawPayload : `${rawPayload}\n`, "pi-raw-response");
+      await writeTextTracked(manifest, paths.rawPath, rawPayloadForDisk(rawPayload), "pi-raw-response");
       const rawJson = parsePiRawOutput(rawPayload);
       const normalized = normalizePiRecipeOutput(rawJson);
       const finalOutput = genericRepair

@@ -3085,6 +3085,50 @@ describe("pi recipe extractor MVP runner", () => {
     ))).toBe(true);
   });
 
+  it("collapses coarse windows to one recipe candidate for timeline-ledger drafting", async () => {
+    const {
+      buildHolisticStoryboardCandidateLedger,
+      recommendHolisticTimelineFrameBudget,
+    } = await import(holisticModuleUrl);
+    const sourcePacket = {
+      video: {
+        videoId: "case-no-timeline-ledger",
+        title: "마들렌 이렇게만 하세요",
+        durationSeconds: 480,
+        description: "[재료]\n버터\n박력분",
+      },
+      captions: {
+        segments: [
+          { startMs: 1000, endMs: 2000, text: "마들렌을 만들어 볼게요." },
+          { startMs: 220000, endMs: 222000, text: "반죽을 섞어 주세요." },
+        ],
+      },
+    };
+
+    const frameBudget = recommendHolisticTimelineFrameBudget(sourcePacket, {
+      enableTimelineUnderstanding: true,
+    });
+    const ledger = buildHolisticStoryboardCandidateLedger(sourcePacket, {
+      maxCandidates: 8,
+      enableTimelineUnderstanding: true,
+      frameBudget,
+      coarseAsWholeRecipeCandidate: true,
+    });
+
+    expect(ledger.summary).toMatchObject({
+      timelineSource: "coarse-video-window",
+      coarseAsWholeRecipeCandidate: true,
+      totalCandidates: 1,
+    });
+    expect(ledger.candidates).toHaveLength(1);
+    expect(ledger.candidates[0]).toMatchObject({
+      candidateId: "whole",
+      title: "마들렌 이렇게만 하세요",
+      timeRange: { startSec: 0, endSec: 480, basis: "coarse-video-window" },
+      storyboardFrameBudget: 48,
+    });
+  });
+
   it("splits multi-recipe timeline rows into sibling storyboard probes", async () => {
     const {
       buildHolisticStoryboardCandidateLedger,
@@ -3308,6 +3352,41 @@ describe("pi recipe extractor MVP runner", () => {
     });
   });
 
+  it("normalizes timeline transcript evidence to nearby caption refs", async () => {
+    const {
+      assertValidVideoTimeline,
+      normalizeVideoTimeline,
+      timelineAllowedEvidenceRefs,
+    } = await import(timelineModuleUrl);
+    const sourcePacket = {
+      video: { videoId: "case-transcript-ref", title: "테스트", description: "" },
+      captions: {
+        segments: [
+          { text: "양파를 썬다", startMs: 14320, durationMs: 2600 },
+          { text: "팬에 넣는다", startMs: 30000, durationMs: 1800 },
+        ],
+      },
+      authorComments: [],
+    };
+    const timeline = normalizeVideoTimeline({
+      events: [{
+        eventId: "e1",
+        segmentId: "s1",
+        timeRange: { startSec: 14, endSec: 16 },
+        action: "양파를 썬다",
+        candidateAssignments: [{ candidateId: "r1", status: "supporting", reason: "same dish" }],
+        evidence: ["transcript:15s"],
+        confidence: 0.7,
+      }],
+    }, { videoId: "case-transcript-ref", sourcePacket });
+
+    expect(timeline.events[0].evidence).toEqual(["transcript:14s"]);
+    expect(() => assertValidVideoTimeline(timeline, {
+      allowedCandidateIds: ["r1"],
+      allowedEvidenceRefs: timelineAllowedEvidenceRefs({ sourcePacket, timelineFrameLedger: { windows: [] } }),
+    })).not.toThrow();
+  });
+
   it("runs holistic timeline-ledger mode before drafting without exposing raw frame dumps", async () => {
     const { runPiExtraction } = await import(runnerModuleUrl);
     const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
@@ -3413,7 +3492,13 @@ describe("pi recipe extractor MVP runner", () => {
     ]);
     expect(sourcePacket.storyboard).toEqual([]);
     expect(sourcePacket.timelineEvents.map((entry: { ref: string }) => entry.ref)).toEqual(["event:e1"]);
+    expect(sourcePacket.candidateSourcePackets[0]).toMatchObject({
+      candidateId: "whole",
+      supportingEvents: ["e1"],
+    });
+    expect(sourcePacket.candidateSourcePackets[0].sourceEntries.map((entry: { type: string }) => entry.type)).not.toContain("frame");
     expect(draftPrompt).toContain("[CANDIDATE_TIMELINE_INDEX]");
+    expect(draftPrompt).toContain("[CANDIDATE_SOURCE_PACKETS]");
     expect(draftPrompt).toContain("event:e1");
     expect(draftPrompt).not.toContain("raw-only-not-in-draft-prompt");
     expect(visualTargetLedger.targets).toEqual([]);
@@ -3425,6 +3510,209 @@ describe("pi recipe extractor MVP runner", () => {
       "video-timeline-response.json",
       "holistic-timeline-draft.json",
     ]);
+  });
+
+  it("runs opt-in integrated video understanding before holistic drafting", async () => {
+    const { runPiExtraction } = await import(runnerModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const timelineResponsePath = path.join(workdir, "fixtures/video-timeline-response.json");
+    const understandingResponsePath = path.join(workdir, "fixtures/video-understanding-response.json");
+    const holisticResponsePath = path.join(workdir, "fixtures/holistic-timeline-draft.json");
+    const source = makeSource("case-a");
+    source.video.durationSeconds = 60;
+    source.video.title = "테스트 영상";
+    source.video.description = "[재료]\n양파 1/2개\n간장 1큰술";
+    writeJson(path.join(caseDir, "source.json"), source);
+    writeJson(path.join(caseDir, "golden.json"), { shouldNotRead: true });
+    writeJson(timelineResponsePath, {
+      events: [{
+        eventId: "e1",
+        segmentId: "s1",
+        timeRange: { startSec: 0, endSec: 12 },
+        action: "양파를 썰고 간장으로 간한다",
+        visibleIngredients: ["양파", "간장"],
+        candidateAssignments: [{ candidateId: "whole", status: "supporting", reason: "single coarse candidate" }],
+        evidence: ["transcript:1s", "frame:s1-w1:1"],
+        confidence: 0.8,
+      }],
+    });
+    writeJson(understandingResponsePath, {
+      globalStory: "테스트 영상은 양파를 썰고 간장으로 간하는 단일 요리 흐름이다.",
+      dishStories: [{
+        candidateId: "whole",
+        title: "테스트 영상",
+        plainStory: "양파를 썰고 간장으로 간하는 흐름이다.",
+        timeRange: { startSec: 0, endSec: 60, basis: "video-timeline" },
+        mainIngredients: ["양파", "간장"],
+        stepOutline: ["양파를 썬다", "간장으로 간한다"],
+        sourceRefs: ["description:2", "description:3", "event:e1"],
+        uncertainties: [],
+        confidence: 0.8,
+      }],
+      crossDishNotes: [],
+      uncertainties: [],
+    });
+    writeJson(holisticResponsePath, {
+      recipes: [{
+        candidateId: "whole",
+        title: "테스트 영상",
+        timeRange: { startSec: 0, endSec: 60, basis: "video-timeline" },
+        ingredients: [
+          { name: "양파", amount: "1/2", unit: "개", amountBasis: "stated", evidence: ["description:2"] },
+          { name: "간장", amount: "1", unit: "큰술", amountBasis: "stated", evidence: ["description:3"] },
+        ],
+        steps: [
+          { text: "양파를 썬다.", evidence: ["event:e1"], confidence: 0.8 },
+          { text: "간장으로 간한다.", evidence: ["event:e1"], confidence: 0.8 },
+        ],
+        visualNeeds: [],
+        uncertainties: [],
+      }],
+      globalUncertainties: [],
+    });
+
+    const result = await runPiExtraction({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "pi-holistic-integrated-understanding-fixture",
+      mode: "holistic-draft",
+      "source-packet-only": true,
+      "compact-source-packet": true,
+      "visual-frames": true,
+      "holistic-enable-video-timeline-ledger": true,
+      "holistic-enable-integrated-understanding": true,
+      "holistic-video-timeline-response-json": timelineResponsePath,
+      "holistic-understanding-response-json": understandingResponsePath,
+      "holistic-response-json": holisticResponsePath,
+    }, {
+      projectRoot: workdir,
+      collectVisualLedger: async ({ sourcePacket, candidateLedger }: {
+        sourcePacket: { video: { videoId: string } };
+        candidateLedger: { candidates: Array<{ candidateId: string; timeRange: unknown }> };
+      }) => ({
+        schemaVersion: 1,
+        kind: "visual-ledger",
+        videoId: sourcePacket.video.videoId,
+        collectionStatus: "completed",
+        note: "test timeline frame ledger",
+        errors: [],
+        candidates: candidateLedger.candidates.map((candidate) => ({
+          candidateId: candidate.candidateId,
+          timeRange: candidate.timeRange,
+          frames: [{
+            ref: `frame:${candidate.candidateId}:1`,
+            observed: ["raw-only-not-in-draft-prompt"],
+            onscreenText: [],
+            quantityCues: [],
+            confidence: 0.8,
+          }],
+          observed: ["raw-only-not-in-draft-prompt"],
+          onscreenText: [],
+          quantityCues: [],
+        })),
+      }),
+    });
+
+    expect(result.failures).toBe(0);
+    const outDir = path.join(caseDir, "runs/pi-holistic-integrated-understanding-fixture");
+    const manifest = JSON.parse(readFileSync(path.join(outDir, "file-access-manifest.json"), "utf8"));
+    const understanding = JSON.parse(readFileSync(path.join(outDir, "video-understanding.json"), "utf8"));
+    const understandingPrompt = readFileSync(path.join(outDir, "video-understanding-prompt.txt"), "utf8");
+    const draftPrompt = readFileSync(path.join(outDir, "holistic-draft-prompt.txt"), "utf8");
+
+    expect(understanding).toMatchObject({
+      kind: "video-understanding",
+      dishStories: [{ candidateId: "whole", plainStory: "양파를 썰고 간장으로 간하는 흐름이다." }],
+    });
+    expect(manifest.holisticIntegratedUnderstandingEnabled).toBe(true);
+    expect(manifest.holistic.integratedUnderstandingEnabled).toBe(true);
+    expect(manifest.stages.map((stage: { name: string }) => stage.name)).toEqual([
+      "video-timeline",
+      "video-understanding",
+      "holistic-draft",
+    ]);
+    expect(understandingPrompt).toContain("[CANDIDATE_SOURCE_PACKETS]");
+    expect(understandingPrompt).not.toContain("raw-only-not-in-draft-prompt");
+    expect(draftPrompt).toContain("[VIDEO_UNDERSTANDING]");
+    expect(draftPrompt).toContain("양파를 썰고 간장으로 간하는 흐름이다.");
+    expect(draftPrompt).not.toContain("raw-only-not-in-draft-prompt");
+    expect(manifest.readEvents.map((event: { path: string }) => path.basename(event.path))).toEqual([
+      "source.json",
+      "video-timeline-response.json",
+      "video-understanding-response.json",
+      "holistic-timeline-draft.json",
+    ]);
+  });
+
+  it("does not open timeline-ledger amount targets from suggested frame refs without source evidence", async () => {
+    const { normalizeHolisticDraft, buildHolisticVisualTargetLedger } = await import(holisticModuleUrl);
+    const draft = normalizeHolisticDraft({
+      recipes: [{
+        candidateId: "storyboard-1",
+        title: "테스트 레시피",
+        timeRange: { startSec: 0, endSec: 60, basis: "test" },
+        ingredients: [],
+        steps: [{ text: "재료를 넣는다.", evidence: ["caption:1"] }],
+        visualNeeds: [
+          {
+            ingredient: "붉은색 소스",
+            reason: "스푼 계량 장면이 있으나 source에 정확한 양이 없음",
+            evidence: [],
+            suggestedFrameRefs: ["frame:s1-w2:3"],
+            candidateTimeRange: { startSec: 10, endSec: 20, basis: "draft" },
+          },
+          {
+            ingredient: "양파",
+            reason: "자막 근거는 있으나 양이 부족함",
+            evidence: ["caption:1"],
+            suggestedFrameRefs: ["frame:s1-w2:1"],
+            candidateTimeRange: { startSec: 20, endSec: 30, basis: "draft" },
+          },
+        ],
+      }],
+    });
+
+    const ledger = buildHolisticVisualTargetLedger({
+      draft,
+      amountTargetsOnly: true,
+      includeSparseRecallTargets: false,
+      maxTotalTargets: 4,
+    });
+
+    expect(ledger.targets.map((target: { ingredient: string }) => target.ingredient)).toEqual(["양파"]);
+    expect(ledger.targets[0].sourceEvidence).toEqual(["caption:1"]);
+    expect(ledger.targets[0].textCues.join(" ")).not.toContain("frame:");
+    expect(ledger.skippedTargets).toContainEqual(expect.objectContaining({
+      ingredient: "붉은색 소스",
+      reasonCode: "timeline_ledger_missing_visual_evidence_skipped",
+    }));
+  });
+
+  it("sanitizes Pi raw trace prompt echoes while keeping final assistant JSON parseable", async () => {
+    const { sanitizePiRawPayloadForDisk } = await import(runnerModuleUrl);
+    const { parsePiRawOutput } = await import(schemaModuleUrl);
+    const hugePrompt = "프롬프트".repeat(1000);
+    const hugeUpdate = "중간응답".repeat(1000);
+    const finalJson = JSON.stringify({
+      recipes: [{
+        title: "테스트",
+        ingredients: [{ name: "양파", amount: "1/2", unit: "개", amountBasis: "stated" }],
+        steps: ["양파를 썬다."],
+      }],
+    });
+    const stdout = [
+      JSON.stringify({ type: "message_start", message: { role: "user", content: [{ type: "text", text: hugePrompt }] } }),
+      JSON.stringify({ type: "message_update", message: { role: "assistant", content: [{ type: "text", text: hugeUpdate }] } }),
+      JSON.stringify({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: finalJson }] } }),
+    ].join("\n");
+    const rawPayload = JSON.stringify({ stdout, stderr: "", exitCode: 0 }, null, 2);
+
+    const sanitized = sanitizePiRawPayloadForDisk(rawPayload);
+
+    expect(sanitized.length).toBeLessThan(rawPayload.length / 2);
+    expect(sanitized).toContain("stdoutSanitizedForDisk");
+    expect(sanitized).toContain("[omitted ");
+    expect(parsePiRawOutput(sanitized)).toMatchObject({ recipes: [{ title: "테스트" }] });
   });
 
   it("can run holistic fixture extraction and consume frame-backed visual estimates only after audit", async () => {
@@ -3760,6 +4048,39 @@ describe("pi recipe extractor MVP runner", () => {
     });
     expect(manifest.holistic.storyboardFrameCount).toBe(8);
     expect(manifest.holistic.timelineFrameBudget).toBeNull();
+  });
+
+  it("uses tighter holistic visual target caps in train wrapper timeline-ledger mode", async () => {
+    const { runPiTrainExtraction } = await import(trainRunnerModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const source = makeSource("case-a");
+    source.video.durationSeconds = 240;
+    source.video.description = [
+      "00:00 첫 번째 요리",
+      "02:00 두 번째 요리",
+    ].join("\n");
+    writeJson(path.join(caseDir, "source.json"), source);
+
+    const result = await runPiTrainExtraction({
+      ids: "case-a",
+      "out-tag": "pi-train-holistic-timeline-ledger-cap-dry-run",
+      mode: "holistic-draft",
+      "dry-run": true,
+      "holistic-enable-timeline-understanding": true,
+      "holistic-enable-video-timeline-ledger": true,
+      "holistic-storyboard-max-candidates": "4",
+    }, { projectRoot: workdir });
+
+    expect(result.failures).toBe(0);
+    const manifest = JSON.parse(readFileSync(
+      path.join(caseDir, "runs/pi-train-holistic-timeline-ledger-cap-dry-run/file-access-manifest.json"),
+      "utf8",
+    ));
+    expect(manifest.holistic).toMatchObject({
+      videoTimelineLedgerEnabled: true,
+      maxTargetsPerRecipe: 2,
+      maxTotalTargets: 4,
+    });
   });
 
   it("keeps late multi-recipe caption cues in compact train extraction", async () => {
