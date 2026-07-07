@@ -18,7 +18,7 @@ function compactRecipeText(value, maxLength = 4000) {
   let recipeBlock = false;
   const rejectPattern = /비즈니스|메일|구매시|수수료|프랜차이즈|팬트리점|궁금하시다면|직접 맛보고|구매|링크/iu;
   const recipeKeywordPattern = /재료|만드는\s*법|만들기|레시피|오븐|굽|섞|넣|반죽|발효|소스|양념|바르는\s*술/iu;
-  const quantityPattern = /\d+(?:\.\d+)?\s*(?:g|kg|ml|l|큰술|작은술|개|컵|스푼|t|T|분|도|℃|%)\b/iu;
+  const quantityPattern = /\d+(?:\.\d+)?\s*(?:g|kg|ml|l|큰술|작은술|개|컵|스푼|t|T|분|도|℃|%)/iu;
   const timelineHeadingPattern = /타임라인|챕터|chapter|timeline|timestamps?/iu;
   const timelineLinePattern = /(?:^|\s)(?:\d{1,2}:)?\d{1,2}:\d{2}\s+\S/u;
 

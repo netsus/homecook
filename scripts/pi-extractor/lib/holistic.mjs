@@ -612,6 +612,33 @@ function entryInCandidateRange(entry, candidate) {
   return startSec >= rangeStart - 8 && startSec <= rangeEnd + 8;
 }
 
+function descriptionIndexFromRef(ref) {
+  const match = String(ref ?? "").match(/^description:(\d+)$/u);
+  if (!match) return null;
+  const index = Number(match[1]);
+  return Number.isFinite(index) ? index : null;
+}
+
+function firstDescriptionEvidenceIndex(candidate) {
+  return (candidate?.sourceEvidence ?? [])
+    .map(descriptionIndexFromRef)
+    .filter((index) => index !== null)
+    .sort((left, right) => left - right)[0] ?? null;
+}
+
+function entryInCandidateDescriptionSection(entry, candidate, candidates) {
+  if (entry?.type !== "description") return false;
+  const entryIndex = descriptionIndexFromRef(entry.ref);
+  const startIndex = firstDescriptionEvidenceIndex(candidate);
+  if (entryIndex === null || startIndex === null || entryIndex < startIndex) return false;
+  const nextStart = candidates
+    .filter((other) => other?.candidateId !== candidate?.candidateId)
+    .map(firstDescriptionEvidenceIndex)
+    .filter((index) => index !== null && index > startIndex)
+    .sort((left, right) => left - right)[0] ?? null;
+  return nextStart === null ? true : entryIndex < nextStart;
+}
+
 function buildCandidateSourcePackets(entries, candidateTimelineIndex, maxEntriesPerCandidate = 48) {
   const candidates = candidateTimelineIndex?.candidates ?? [];
   if (!Array.isArray(candidates) || candidates.length === 0) return [];
@@ -633,6 +660,7 @@ function buildCandidateSourcePackets(entries, candidateTimelineIndex, maxEntries
     };
     for (const ref of refs) push(entryByRef.get(ref));
     for (const entry of entries) {
+      if (entryInCandidateDescriptionSection(entry, candidate, candidates)) push(entry);
       if (entryInCandidateRange(entry, candidate)) push(entry);
     }
     return {
@@ -849,6 +877,86 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, {
     ] : []),
     "[HOLISTIC_SOURCE_PACKET]",
     JSON.stringify(holisticSourcePacket, null, 2),
+  ].join("\n");
+}
+
+export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
+  understandingAudit = null,
+} = {}) {
+  const candidatePacket = candidateScopedSourcePacket?.candidateSourcePackets?.[0] ?? {};
+  const candidateTimeline = candidateScopedSourcePacket?.candidateTimelineIndex?.candidates?.[0] ?? {};
+  const candidateId = cleanString(candidatePacket.candidateId ?? candidateTimeline.candidateId) ?? "r1";
+  const title = cleanString(candidatePacket.title ?? candidateTimeline.title) ?? "후보 레시피";
+  const hasUnderstandingAudit = isObject(understandingAudit) && Array.isArray(understandingAudit.storyAudits);
+  return [
+    "너는 다중 레시피 영상에서 후보 하나만 맡아 레시피 초안을 쓰는 도우미다.",
+    "목표: 아래 candidate 하나를 다른 candidate와 섞지 않고, 제목/설명란/고정댓글/자막/video timeline event 근거로 recipe draft 1개를 만든다.",
+    "",
+    "중요한 제한:",
+    "- 로컬 파일, golden.json, grade, 이전 result, 비교 HTML, 이전 추출 결과를 읽지 마라.",
+    "- 아래 CANDIDATE_SOURCE_PACKET과 CANDIDATE_TIMELINE_ENTRY만 우선 사용한다.",
+    "- raw VIDEO_UNDERSTANDING은 제공되지 않는다. CANDIDATE_UNDERSTANDING_AUDIT은 source-backed 수정 메모일 뿐이다.",
+    "- 다른 candidate의 재료, 수량, 단계는 절대 합치지 않는다.",
+    "- candidateId는 반드시 아래 값 그대로 쓴다: " + candidateId,
+    "- 확정 근거가 없는 재료 양이나 단계는 일반 레시피 지식으로 채우지 말고 null 또는 uncertainties로 남긴다.",
+    "- amount/unit이 부족하지만 화면으로 확인할 수 있어 보이면 visualNeeds에 넣고 임의 추정하지 않는다.",
+    "- 모든 재료, amount/unit, 단계에는 가능한 한 evidence ref를 붙인다.",
+    "- recipe가 맞는지 불확실해도 후보를 삭제하지 말고, source-backed로 보이는 최소 recipe 1개와 uncertainties를 남긴다.",
+    "- 출력은 설명 없이 JSON 객체 하나만 반환한다.",
+    "",
+    "허용 evidence ref 예시:",
+    "- title",
+    "- description:1",
+    "- author-comment:1",
+    "- transcript:45s",
+    "- event:e1",
+    "- frame:r1:1",
+    "",
+    "스키마:",
+    JSON.stringify({
+      recipes: [{
+        candidateId,
+        title,
+        timeRange: { startSec: 0, endSec: 120, basis: "candidate-timeline|description-timeline|caption|inferred" },
+        ingredients: [{
+          name: "재료명",
+          amount: "1 또는 null",
+          unit: "큰술 또는 null",
+          amountBasis: "stated|spoken|onscreen|visual-estimate|null",
+          evidence: ["description:1", "event:e1"],
+          needsVisualEstimate: false,
+          uncertainty: null,
+        }],
+        steps: [{
+          text: "조리 단계",
+          evidence: ["event:e1", "transcript:45s"],
+          confidence: 0.7,
+        }],
+        visualNeeds: [{
+          targetType: "ingredient_amount",
+          ingredient: "재료명",
+          reason: "source에 양이 없고 화면 계량 장면이 보임",
+          candidateTimeRange: { startSec: 0, endSec: 120, basis: "draft" },
+          suggestedFrameRefs: [],
+        }],
+        uncertainties: ["근거 한계"],
+      }],
+      globalUncertainties: [],
+    }, null, 2),
+    "",
+    "[CANDIDATE_TIMELINE_ENTRY]",
+    JSON.stringify(candidateTimeline, null, 2),
+    "",
+    "[CANDIDATE_SOURCE_PACKET]",
+    JSON.stringify(candidatePacket, null, 2),
+    "",
+    ...(hasUnderstandingAudit ? [
+      "[CANDIDATE_UNDERSTANDING_AUDIT]",
+      JSON.stringify(understandingAudit, null, 2),
+      "",
+    ] : []),
+    "[CANDIDATE_SCOPED_HOLISTIC_SOURCE_PACKET]",
+    JSON.stringify(candidateScopedSourcePacket, null, 2),
   ].join("\n");
 }
 
