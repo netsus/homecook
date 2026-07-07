@@ -52,6 +52,7 @@ import {
   normalizeHolisticDraft,
   normalizeVideoUnderstanding,
   recommendHolisticTimelineFrameBudget,
+  selectUsableVideoUnderstanding,
 } from "./lib/holistic.mjs";
 import {
   assertValidCandidateTimelineIndex,
@@ -262,6 +263,9 @@ function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
     videoUnderstandingCommandPath: path.join(outDir, "video-understanding-command.json"),
     videoUnderstandingRawPath: path.join(outDir, "video-understanding-raw-response.json"),
     videoUnderstandingPath: path.join(outDir, "video-understanding.json"),
+    videoUnderstandingUsagePath: path.join(outDir, "video-understanding-usage.json"),
+    videoUnderstandingAuditPath: path.join(outDir, "video-understanding-audit.json"),
+    holisticDraftSourcePacketPath: path.join(outDir, "holistic-draft-source-packet.json"),
     candidateTimelineIndexPath: path.join(outDir, "candidate-timeline-index.json"),
     candidatePromptPath: path.join(outDir, "candidate-prompt.txt"),
     candidateCommandPath: path.join(outDir, "candidate-command.json"),
@@ -548,6 +552,19 @@ async function runHolisticPiExtractionCase({
     frameBudget: effectiveStoryboardFrameBudget,
     coarseAsWholeRecipeCandidate: holisticVideoTimelineLedger,
   });
+  const multiCandidateTimelineLedgerFallback = holisticVideoTimelineLedger && storyboardCandidateLedger.candidates.length > 1;
+  const effectiveHolisticVideoTimelineLedger = holisticVideoTimelineLedger && !multiCandidateTimelineLedgerFallback;
+  const shouldRunHolisticIntegratedUnderstanding = holisticIntegratedUnderstanding;
+  const effectiveHolisticIntegratedUnderstanding = holisticIntegratedUnderstanding && !multiCandidateTimelineLedgerFallback;
+  const effectiveHolisticMaxTargetsPerRecipe = multiCandidateTimelineLedgerFallback
+    ? Math.max(holisticMaxTargetsPerRecipe, 3)
+    : holisticMaxTargetsPerRecipe;
+  const effectiveHolisticMaxTotalTargets = multiCandidateTimelineLedgerFallback
+    ? Math.max(holisticMaxTotalTargets, 12)
+    : holisticMaxTotalTargets;
+  const effectiveHolisticVisualRepairEnabled = multiCandidateTimelineLedgerFallback
+    ? true
+    : holisticVisualRepairEnabled;
   let storyboardFramesPerCandidate = 1;
   let storyboardLedger = null;
   let timelineFramePlan = null;
@@ -555,10 +572,12 @@ async function runHolisticPiExtractionCase({
   let videoTimeline = null;
   let candidateTimelineIndex = null;
   let videoUnderstanding = null;
+  let videoUnderstandingUsage = null;
+  let videoUnderstandingAudit = null;
   let videoUnderstandingPrompt = null;
   let videoUnderstandingRawPayload = null;
 
-  if (holisticVideoTimelineLedger) {
+  if (effectiveHolisticVideoTimelineLedger) {
     timelineFramePlan = buildTimelineFramePlan(sourcePacket, {
       maxSegments: holisticVideoTimelineMaxSegments,
       maxWindowsPerSegment: holisticVideoTimelineMaxWindowsPerSegment,
@@ -688,17 +707,27 @@ async function runHolisticPiExtractionCase({
   manifest.holisticStoryboardFrameBudget = effectiveStoryboardFrameBudget;
   manifest.holisticStoryboardFramesPerCandidate = storyboardFramesPerCandidate;
   manifest.holisticTimelineUnderstandingEnabled = holisticTimelineUnderstanding;
-  manifest.holisticVideoTimelineLedgerEnabled = holisticVideoTimelineLedger;
-  manifest.holisticIntegratedUnderstandingEnabled = holisticIntegratedUnderstanding;
+  manifest.holisticVideoTimelineLedgerRequested = holisticVideoTimelineLedger;
+  manifest.holisticVideoTimelineLedgerEnabled = effectiveHolisticVideoTimelineLedger;
+  manifest.holisticVideoTimelineLedgerFallback = multiCandidateTimelineLedgerFallback;
+  manifest.holisticIntegratedUnderstandingRequested = holisticIntegratedUnderstanding;
+  manifest.holisticIntegratedUnderstandingStageEnabled = shouldRunHolisticIntegratedUnderstanding;
+  manifest.holisticIntegratedUnderstandingEnabled = effectiveHolisticIntegratedUnderstanding;
+  manifest.holistic.videoTimelineLedgerEffective = effectiveHolisticVideoTimelineLedger;
+  manifest.holistic.videoTimelineLedgerFallback = multiCandidateTimelineLedgerFallback;
+  manifest.holistic.integratedUnderstandingStageEnabled = shouldRunHolisticIntegratedUnderstanding;
+  manifest.holistic.integratedUnderstandingEffective = effectiveHolisticIntegratedUnderstanding;
+  manifest.holistic.visualRepairEffective = effectiveHolisticVisualRepairEnabled;
   const holisticSourcePacket = buildHolisticSourcePacket(sourcePacket, storyboardLedger, {
-    includeStoryboardEntries: !holisticVideoTimelineLedger,
+    includeStoryboardEntries: !effectiveHolisticVideoTimelineLedger,
     videoTimeline,
     candidateTimelineIndex,
   });
+  let holisticDraftSourcePacket = holisticSourcePacket;
   await writeJsonTracked(manifest, paths.holisticSourcePacketPath, holisticSourcePacket, "holistic-source-packet");
-  if (holisticIntegratedUnderstanding) {
+  if (shouldRunHolisticIntegratedUnderstanding) {
     videoUnderstandingPrompt = buildVideoUnderstandingPrompt(holisticSourcePacket, {
-      timelineMode: holisticVideoTimelineLedger,
+      timelineMode: effectiveHolisticVideoTimelineLedger,
     });
     await writeTextTracked(manifest, paths.videoUnderstandingPromptPath, `${videoUnderstandingPrompt}\n`, "video-understanding-prompt");
     addAllowedRead(manifest, paths.videoUnderstandingPromptPath);
@@ -743,11 +772,35 @@ async function runHolisticPiExtractionCase({
       });
       assertValidVideoUnderstanding(videoUnderstanding);
     }
+    const selectedVideoUnderstanding = selectUsableVideoUnderstanding(videoUnderstanding, holisticSourcePacket, {
+      forceLogOnly: !effectiveHolisticIntegratedUnderstanding,
+      logOnlyReason: multiCandidateTimelineLedgerFallback
+        ? "multi_candidate_understanding_injection_disabled"
+        : "understanding_injection_disabled",
+    });
+    videoUnderstanding = selectedVideoUnderstanding.understanding;
+    videoUnderstandingUsage = selectedVideoUnderstanding.usage;
+    videoUnderstandingAudit = selectedVideoUnderstanding.audit;
+    manifest.holisticIntegratedUnderstandingUsable = videoUnderstandingUsage.usable;
+    manifest.holisticVideoUnderstandingUsage = videoUnderstandingUsage;
+    manifest.holisticVideoUnderstandingAudit = videoUnderstandingAudit?.summary ?? null;
+    manifest.holistic.integratedUnderstandingUsable = videoUnderstandingUsage.usable;
+    manifest.holistic.videoUnderstandingUsage = videoUnderstandingUsage;
+    manifest.holistic.videoUnderstandingAudit = videoUnderstandingAudit?.summary ?? null;
     await writeJsonTracked(manifest, paths.videoUnderstandingPath, videoUnderstanding, "video-understanding");
+    await writeJsonTracked(manifest, paths.videoUnderstandingUsagePath, videoUnderstandingUsage, "video-understanding-usage");
+    await writeJsonTracked(manifest, paths.videoUnderstandingAuditPath, videoUnderstandingAudit, "video-understanding-audit");
   }
-  const holisticDraftPrompt = buildHolisticDraftPrompt(holisticSourcePacket, {
-    timelineMode: holisticVideoTimelineLedger,
-    videoUnderstanding,
+  await writeJsonTracked(
+    manifest,
+    paths.holisticDraftSourcePacketPath,
+    holisticDraftSourcePacket,
+    "holistic-draft-source-packet",
+  );
+  const holisticDraftPrompt = buildHolisticDraftPrompt(holisticDraftSourcePacket, {
+    timelineMode: effectiveHolisticVideoTimelineLedger,
+    videoUnderstanding: videoUnderstandingUsage?.usable && effectiveHolisticIntegratedUnderstanding ? videoUnderstanding : null,
+    understandingAudit: videoUnderstandingUsage?.usable && effectiveHolisticIntegratedUnderstanding ? videoUnderstandingAudit : null,
   });
   await writeTextTracked(manifest, paths.holisticDraftPromptPath, `${holisticDraftPrompt}\n`, "holistic-draft-prompt");
   addAllowedRead(manifest, paths.holisticDraftPromptPath);
@@ -791,11 +844,11 @@ async function runHolisticPiExtractionCase({
   const visualTargetLedger = buildHolisticVisualTargetLedger({
     draft,
     sourcePacket,
-    maxTargetsPerRecipe: holisticMaxTargetsPerRecipe,
-    maxTotalTargets: holisticMaxTotalTargets,
+    maxTargetsPerRecipe: effectiveHolisticMaxTargetsPerRecipe,
+    maxTotalTargets: effectiveHolisticMaxTotalTargets,
     maxWindowSec: holisticVisualTargetMaxWindowSec,
-    includeSparseRecallTargets: !holisticVideoTimelineLedger,
-    amountTargetsOnly: holisticVideoTimelineLedger,
+    includeSparseRecallTargets: !effectiveHolisticVideoTimelineLedger,
+    amountTargetsOnly: effectiveHolisticVideoTimelineLedger,
   });
   await writeJsonTracked(manifest, paths.holisticVisualNeedsPath, visualTargetLedger, "holistic-visual-needs");
   await writeJsonTracked(manifest, paths.visualTargetLedgerPath, visualTargetLedger, "visual-target-ledger");
@@ -816,7 +869,7 @@ async function runHolisticPiExtractionCase({
       frameCount: visualFrameCount,
       framesPerRange: visualFramesPerRange,
       secondsPerCandidate: visualSecondsPerCandidate,
-      maxCandidates: holisticMaxTotalTargets,
+      maxCandidates: effectiveHolisticMaxTotalTargets,
       allowFallbackRanges: visualAllowFallbackRanges,
       frameExtractorScript,
       frameExtractorPythonBin,
@@ -849,7 +902,8 @@ async function runHolisticPiExtractionCase({
   let repairDraft = draft;
   let repairPrompt = null;
   let repairRawPayload = null;
-  const shouldRunVisualRepair = holisticVisualRepairEnabled && visualFrames && visualLedgerFrameCount(targetVisualLedger) > 0;
+  const shouldRunVisualRepair = effectiveHolisticVisualRepairEnabled && visualFrames && visualLedgerFrameCount(targetVisualLedger) > 0;
+  const visualRepairTimeoutMs = Math.max(timeoutMs, visualTimeoutMs, 6 * 60 * 1000);
   if (shouldRunVisualRepair) {
     repairPrompt = buildHolisticVisualRepairPrompt({
       draft,
@@ -872,7 +926,7 @@ async function runHolisticPiExtractionCase({
       fixtureReason: "holistic-repair-fixture-response-json",
       command: repairCommand,
       projectRoot,
-      timeoutMs,
+      timeoutMs: visualRepairTimeoutMs,
       executePiFn,
     });
     await writeTextTracked(
@@ -920,7 +974,7 @@ async function runHolisticPiExtractionCase({
     visualRepair: {
       enabled: shouldRunVisualRepair,
       promptHash: repairPrompt ? hashText(repairPrompt) : null,
-      defaultDisabledByTimelineLedger: holisticVideoTimelineLedger && !holisticVisualRepairEnabled,
+      defaultDisabledByTimelineLedger: effectiveHolisticVideoTimelineLedger && !effectiveHolisticVisualRepairEnabled,
     },
     visual: {
       enabled: visualFrames,
@@ -929,8 +983,19 @@ async function runHolisticPiExtractionCase({
       storyboardFramesPerCandidate,
       storyboardCandidateCount: storyboardCandidateLedger.candidates.length,
       timelineUnderstandingEnabled: holisticTimelineUnderstanding,
-      videoTimelineLedgerEnabled: holisticVideoTimelineLedger,
-      integratedUnderstandingEnabled: holisticIntegratedUnderstanding,
+      videoTimelineLedgerRequested: holisticVideoTimelineLedger,
+      videoTimelineLedgerEnabled: effectiveHolisticVideoTimelineLedger,
+      videoTimelineLedgerFallback: multiCandidateTimelineLedgerFallback,
+      integratedUnderstandingRequested: holisticIntegratedUnderstanding,
+      integratedUnderstandingStageEnabled: shouldRunHolisticIntegratedUnderstanding,
+      integratedUnderstandingEnabled: effectiveHolisticIntegratedUnderstanding,
+      integratedUnderstandingUsable: videoUnderstandingUsage?.usable ?? null,
+      videoUnderstandingUsage: videoUnderstandingUsage ? {
+        acceptedStoryCount: videoUnderstandingUsage.acceptedStoryCount,
+        rejectedStoryCount: videoUnderstandingUsage.rejectedStoryCount,
+        reason: videoUnderstandingUsage.reason,
+      } : null,
+      videoUnderstandingAudit: videoUnderstandingAudit?.summary ?? null,
       videoUnderstandingSummary: videoUnderstanding ? {
         dishStoryCount: videoUnderstanding.dishStories.length,
         hasGlobalStory: Boolean(videoUnderstanding.globalStory),

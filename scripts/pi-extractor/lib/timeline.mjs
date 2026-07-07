@@ -338,6 +338,10 @@ function normalizeEvidenceRefs(value, sourcePacket) {
   return uniqueStrings(normalizeStringArray(value).map((ref) => normalizeTranscriptEvidenceRef(ref, sourcePacket)));
 }
 
+function isTimelineFrameLedgerErrorRef(ref) {
+  return /^timeline-frame-ledger:error:/iu.test(String(ref ?? ""));
+}
+
 export function timelineAllowedEvidenceRefs({ sourcePacket, timelineFrameLedger }) {
   return uniqueStrings([
     ...sourceRefs(sourcePacket),
@@ -382,6 +386,7 @@ export function buildVideoTimelinePrompt({
     "- candidateAssignments에는 아래 RECIPE_CANDIDATES에 있는 candidateId만 사용한다.",
     "- 한 event가 후보 레시피를 뒷받침하면 status=supporting, 다른 레시피 사건이면 excluded, 애매하면 unclear로 둔다.",
     "- 모든 event에는 source ref 또는 frame ref를 evidence에 넣는다.",
+    "- timeline-frame-ledger:error:* 값은 frame 수집 실패 로그다. evidence에 넣지 말고 uncertainties에만 설명한다.",
     "- 확실하지 않으면 uncertainties에 남기고 invented detail을 만들지 않는다.",
     `- event는 최대 ${maxEvents}개로 압축한다.`,
     "- 출력은 설명 없이 JSON 객체 하나만 반환한다.",
@@ -470,6 +475,9 @@ export function normalizeVideoTimeline(value, { videoId = null, sourcePacket = n
   const normalizedEvents = events.map((event, index) => {
     const source = isObject(event) ? event : {};
     const eventId = cleanString(source.eventId) ?? `e${index + 1}`;
+    const normalizedEvidence = normalizeEvidenceRefs(source.evidence, sourcePacket);
+    const frameLedgerErrorRefs = normalizedEvidence.filter(isTimelineFrameLedgerErrorRef);
+    const evidence = normalizedEvidence.filter((ref) => !isTimelineFrameLedgerErrorRef(ref));
     return {
       eventId,
       segmentId: cleanString(source.segmentId),
@@ -484,9 +492,12 @@ export function normalizeVideoTimeline(value, { videoId = null, sourcePacket = n
       candidateAssignments: normalizeCandidateAssignments(
         source.candidateAssignments ?? source.assignments ?? source.candidateIds ?? source.candidateId,
       ),
-      evidence: normalizeEvidenceRefs(source.evidence, sourcePacket),
+      evidence,
       confidence: clampConfidence(source.confidence, 0.5),
-      uncertainties: normalizeStringArray(source.uncertainties),
+      uncertainties: uniqueStrings([
+        ...normalizeStringArray(source.uncertainties),
+        ...frameLedgerErrorRefs.map((ref) => `${ref} frame collection failed; not usable as evidence`),
+      ]),
     };
   }).filter((event) => event.action);
   return {

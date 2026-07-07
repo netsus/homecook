@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pi Extractor 통합 이해 Audit Bridge 구현 결과</title>
+  <style>
+    :root{
+      --ink:#182230; --muted:#5f6b7a; --line:#e2e8f0; --panel:#fff;
+      --brand:#0f766e; --brand-soft:#e6f4f1; --brand-line:#b8dfd8;
+      --green:#15803d; --green-soft:#e9f6ee; --green-line:#bfdfca;
+      --amber:#a16207; --amber-soft:#fff7e8; --amber-line:#efd39a;
+      --red:#b91c1c; --red-soft:#fff0f0; --red-line:#efc4c4;
+      --blue:#1d4ed8; --blue-soft:#edf4ff;
+      --radius:14px; --shadow:0 1px 2px rgba(16,24,40,.06),0 10px 26px rgba(16,24,40,.07);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;background:linear-gradient(180deg,#123b38 0%,#174f4a 230px,#eef5f4 230px);color:var(--ink);line-height:1.7;word-break:keep-all;overflow-wrap:anywhere}
+    .wrap{max-width:960px;margin:0 auto;padding:0 20px 72px}
+    header{padding:42px 0 28px;color:#dff4ef}
+    .pill{display:inline-block;margin:0 7px 9px 0;padding:4px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);font-size:12px;font-weight:700;color:#d4f1eb}
+    h1{margin:4px 0 10px;color:#fff;font-size:28px;line-height:1.35;letter-spacing:0}
+    .sub{margin:0;color:#acd6d0;font-size:15px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 28px;margin:18px 0}
+    h2{font-size:20px;margin:0 0 14px;display:flex;gap:10px;align-items:center;letter-spacing:0}
+    h2 .num{width:30px;height:30px;border-radius:9px;background:var(--brand);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:800;flex:none}
+    h3{font-size:16px;margin:20px 0 8px}
+    p{margin:9px 0}
+    code{font-family:"SF Mono",Menlo,Consolas,monospace;background:#edf2f2;padding:1px 6px;border-radius:5px;font-size:12.5px}
+    pre{background:#10302d;color:#e4f7f2;border-radius:10px;padding:14px 16px;overflow-x:auto;font-size:12.5px;line-height:1.6}
+    .tldr{background:var(--brand-soft);border:1px solid var(--brand-line);border-left:5px solid var(--brand);border-radius:12px;padding:17px 19px;font-size:16px}
+    .note{border-radius:12px;padding:14px 16px;margin:14px 0;font-size:14.5px}
+    .note b{display:block;margin-bottom:4px}
+    .note.good{background:var(--green-soft);border:1px solid var(--green-line)} .note.good b{color:var(--green)}
+    .note.warn{background:var(--amber-soft);border:1px solid var(--amber-line)} .note.warn b{color:var(--amber)}
+    .note.danger{background:var(--red-soft);border:1px solid var(--red-line)} .note.danger b{color:var(--red)}
+    .note.info{background:var(--blue-soft);border:1px solid #cbdcff} .note.info b{color:var(--blue)}
+    .twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .box{border-radius:12px;padding:15px 17px;border:1px solid var(--line);background:#f8fbfa}
+    .box h3{margin-top:0}
+    .allow{background:var(--green-soft);border-color:var(--green-line)}
+    .deny{background:var(--red-soft);border-color:var(--red-line)}
+    ul{padding-left:20px}
+    li{margin:6px 0}
+    .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+    .flow span{background:#fff;border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:12.5px;font-weight:700;box-shadow:var(--shadow)}
+    .flow .arrow{box-shadow:none;border:none;background:transparent;color:var(--muted)}
+    .glossary{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .term{background:#f8fbfa;border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+    .term dt{font-weight:800;color:var(--brand);font-size:14px}
+    .term dd{margin:3px 0 0;color:var(--muted);font-size:13.5px}
+    table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:620px}
+    .table-wrap{overflow-x:auto}
+    th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{background:#edf5f3}
+    .pass{color:var(--green);font-weight:800}
+    .risk{color:var(--amber);font-weight:800}
+    .fail{color:var(--red);font-weight:800}
+    .steps{list-style:none;padding:0}
+    .step{position:relative;padding:0 0 17px 46px}
+    .step:not(:last-child)::before{content:"";position:absolute;left:16px;top:30px;bottom:-2px;width:2px;background:var(--line)}
+    .dot{position:absolute;left:0;top:2px;width:34px;height:34px;border-radius:50%;background:var(--brand-soft);border:2px solid var(--brand);color:var(--brand);display:grid;place-items:center;font-size:11px;font-weight:900}
+    .check{list-style:none;padding:0}
+    .check li{position:relative;padding:7px 0 7px 31px;border-bottom:1px dashed var(--line)}
+    .check li::before{content:"[x]";position:absolute;left:0;color:var(--green);font-family:"SF Mono",Menlo,monospace;font-size:12px}
+    footer{text-align:center;color:#6c7a86;font-size:12.5px;margin-top:36px}
+    @media(max-width:720px){.wrap{padding:0 14px 56px}.card{padding:20px 18px}.twocol,.glossary{grid-template-columns:1fr}h1{font-size:22px}table{min-width:560px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="pill">Pi extractor</span>
+      <span class="pill">2026-07-08</span>
+      <span class="pill">구현 + 검토 완료</span>
+      <h1>통합 이해가 증거 조립기로 돌아가지 않게 중간 검토층을 추가했다</h1>
+      <p class="sub">대상 파일: <code>scripts/pi-extractor</code>, 계획 파일: <code>.omx/plans/pi-extractor-understanding-audit-bridge-plan-20260708.md</code></p>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2><span class="num">!</span>딱 한 줄 요약</h2>
+        <div class="tldr">이번 변경은 Pi가 만든 “영상 이해 메모”를 바로 레시피에 섞지 않고, 먼저 source와 대조한 <strong>understanding audit</strong>을 만든 뒤 draft가 그 검토 결과를 보게 만든 것이다.</div>
+        <p>비유하면, 요리 영상을 보고 바로 답안지를 쓰는 대신 먼저 “내가 이해한 줄거리”를 적고, 그 줄거리가 설명란/자막/타임라인과 맞는지 빨간펜으로 확인한 다음 답안지를 쓰는 방식이다.</p>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">1</span>무엇이 달라졌나</h2>
+        <div class="twocol">
+          <div class="box deny">
+            <h3>이전: 증거 조립기에 가까움</h3>
+            <ul>
+              <li>source ref, event ref, frame ref를 모은다.</li>
+              <li>각 조각이 통과하면 레시피 필드에 붙인다.</li>
+              <li>안전하지만 “전체 요리 흐름”이 약해질 수 있다.</li>
+            </ul>
+          </div>
+          <div class="box allow">
+            <h3>이번: 이해 후 검토 bridge</h3>
+            <ul>
+              <li>먼저 <code>video-understanding</code>으로 큰 흐름을 만든다.</li>
+              <li><code>video-understanding-audit.json</code>이 그 흐름을 source와 대조한다.</li>
+              <li>draft는 raw story가 아니라 audit의 수정 지침을 같이 본다.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="flow">
+          <span>source packet</span><span class="arrow">→</span><span>video-understanding</span><span class="arrow">→</span><span>understanding audit</span><span class="arrow">→</span><span>holistic draft</span><span class="arrow">→</span><span>evidence audit</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">2</span>알아둘 용어</h2>
+        <dl class="glossary">
+          <div class="term"><dt>video-understanding</dt><dd>Pi가 레시피를 쓰기 전에 만드는 “영상 이해 메모”. 정답지가 아니다.</dd></div>
+          <div class="term"><dt>understanding audit</dt><dd>이해 메모가 실제 source와 맞는지 대조한 검토표.</dd></div>
+          <div class="term"><dt>source packet</dt><dd>제목, 설명란, 댓글, 자막, timeline event를 담은 입력 묶음.</dd></div>
+          <div class="term"><dt>draft</dt><dd>최종 결과 전 단계의 레시피 초안.</dd></div>
+          <div class="term"><dt>evidence</dt><dd>어떤 재료/양/단계를 믿는 근거. 예: <code>description:2</code>, <code>event:e1</code>.</dd></div>
+          <div class="term"><dt>log-only</dt><dd>기록은 남기지만 draft에는 주입하지 않는 안전 모드.</dd></div>
+          <div class="term"><dt>multi-candidate</dt><dd>한 영상 안에 여러 레시피 후보가 있는 상태.</dd></div>
+          <div class="term"><dt>raw understanding contamination</dt><dd>검토 전 이해 메모가 source evidence처럼 섞이는 위험.</dd></div>
+        </dl>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">3</span>구현 내용</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>파일</th><th>변경</th><th>초보자용 의미</th></tr></thead>
+            <tbody>
+              <tr><td><code>scripts/pi-extractor/lib/holistic.mjs</code></td><td><code>auditVideoUnderstandingAlignment()</code> 추가</td><td>Pi의 이해 메모가 source와 맞는지 story별로 검토한다.</td></tr>
+              <tr><td><code>scripts/pi-extractor/lib/holistic.mjs</code></td><td><code>selectUsableVideoUnderstanding()</code>에 audit/log-only 추가</td><td>이해 메모가 약하거나 multi-candidate면 draft에 넣지 않고 기록만 남긴다.</td></tr>
+              <tr><td><code>scripts/pi-extractor/run-pi-extraction.mjs</code></td><td><code>video-understanding-audit.json</code> 생성</td><td>각 run 폴더에서 이해 검토 결과를 직접 볼 수 있다.</td></tr>
+              <tr><td><code>scripts/pi-extractor/run-pi-extraction.mjs</code></td><td>source packet 주입 제거</td><td>raw understanding을 <code>candidateSourcePackets</code>에 넣지 않아 source와 이해 메모가 섞이지 않는다.</td></tr>
+              <tr><td><code>tests/pi-extractor-runner.test.ts</code></td><td>5개 행동 테스트 추가/수정</td><td>usable, weak, multi-candidate, no contamination 케이스를 고정했다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">4</span>새 세션 리뷰 반영</h2>
+        <div class="note danger">
+          <b>P1 반영: multi-candidate audit 누락</b>
+          critic은 multi-candidate fallback에서 integrated understanding 자체가 꺼져 audit 파일도 안 생길 수 있다고 지적했다. 타당해서, 이제 fallback에서도 <code>video-understanding</code>과 audit은 실행하되 draft 주입은 <code>log-only</code>로 막았다.
+        </div>
+        <div class="note danger">
+          <b>P1 반영: raw understanding 오염</b>
+          raw understanding을 <code>candidateSourcePackets</code>에 넣으면 source evidence처럼 보일 수 있다. 타당해서, 이제 understanding은 source packet에 섞지 않고 별도 prompt block으로만 전달한다.
+        </div>
+        <div class="note warn">
+          <b>P2 반영: audit 범위 축소</b>
+          “source 근처”라는 표현이 너무 넓었다. 지금은 story의 supported ref가 가리키는 entry와 같은 candidateSourcePacket text까지만 본다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">5</span>통합 이해 방향으로 잘 갔나?</h2>
+        <div class="note good">
+          <b>판정: 방향은 더 좋아졌다</b>
+          이번 변경은 단순히 evidence gate를 하나 더 만든 것이 아니라, “이해 메모”와 “근거 검토”를 분리했다. 특히 source packet 안에 raw story를 섞지 않은 점이 중요하다.
+        </div>
+        <div class="note warn">
+          <b>하지만 아직 Claude-like 완성은 아니다</b>
+          multi-candidate에서는 아직 draft에 이해를 주입하지 않는다. 즉 어려운 다중 레시피 영상에서 성능을 바로 크게 올리는 변경이라기보다, 다음 iter에서 안전하게 실험할 기반이다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">6</span>검증 결과</h2>
+        <pre><code>node --check scripts/pi-extractor/lib/holistic.mjs
+node --check scripts/pi-extractor/lib/timeline.mjs
+node --check scripts/pi-extractor/run-pi-extraction.mjs
+pnpm exec vitest run tests/pi-extractor-runner.test.ts
+pnpm lint
+pnpm typecheck
+pnpm test</code></pre>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>검증</th><th>결과</th><th>의미</th></tr></thead>
+            <tbody>
+              <tr><td>구문 검사</td><td class="pass">통과</td><td>수정한 JS 파일들이 문법적으로 유효하다.</td></tr>
+              <tr><td>runner 단위 테스트</td><td class="pass">81 passed</td><td>Pi extractor 핵심 경로가 깨지지 않았다.</td></tr>
+              <tr><td>lint</td><td class="pass">통과</td><td>코드 스타일/정적 규칙을 통과했다.</td></tr>
+              <tr><td>typecheck</td><td class="pass">통과</td><td>TypeScript 타입 검사가 통과했다.</td></tr>
+              <tr><td>전체 테스트</td><td class="pass">250 files, 2611 tests passed</td><td>전체 회귀 테스트가 통과했다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">7</span>남은 리스크</h2>
+        <ul>
+          <li><span class="risk">실제 Pi smoke는 별도 필요</span>: 이번 검증은 fixture와 전체 테스트 중심이다. 실제 모델 응답 품질은 다음 smoke에서 봐야 한다.</li>
+          <li><span class="risk">multi-candidate는 아직 log-only</span>: 안전하게 기록은 남기지만, 어려운 다중 레시피 성능 개선은 다음 단계다.</li>
+          <li><span class="risk">audit은 간단한 text alignment</span>: 너무 복잡한 semantic matcher를 넣지 않았기 때문에, “이해 품질 평가기”라기보다 “오염 방지용 검토표”에 가깝다.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">8</span>체크리스트</h2>
+        <ul class="check">
+          <li>계획 md 작성 완료</li>
+          <li>새 critic 세션 리뷰 완료</li>
+          <li>타당한 P1/P2 피드백 반영 완료</li>
+          <li><code>video-understanding-audit.json</code> 생성 구현 완료</li>
+          <li>raw understanding source packet 오염 방지 완료</li>
+          <li>multi-candidate log-only audit 구현 완료</li>
+          <li>초보 개발자용 HTML 생성 완료</li>
+          <li>검증 명령 통과</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      원문: .omx/plans/pi-extractor-understanding-audit-bridge-plan-20260708.md |
+      생성 목적: 초보 개발자도 구현 방향과 한계를 한눈에 보기 위한 설명서 |
+      생성일: 2026-07-08 KST
+    </footer>
+  </div>
+</body>
+</html>

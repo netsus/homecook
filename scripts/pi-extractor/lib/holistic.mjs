@@ -220,6 +220,279 @@ export function assertValidVideoUnderstanding(understanding) {
   return true;
 }
 
+function videoUnderstandingAllowedRefs(holisticSourcePacket) {
+  return new Set(uniqueStrings([
+    ...(holisticSourcePacket?.refs ?? []),
+    ...(holisticSourcePacket?.timelineEvents ?? []).map((entry) => entry.ref),
+    ...(holisticSourcePacket?.candidateSourcePackets ?? []).flatMap((packet) => (
+      packet.sourceEntries ?? []
+    ).map((entry) => entry.ref)),
+  ]));
+}
+
+function videoUnderstandingCandidateIds(holisticSourcePacket) {
+  const ids = (holisticSourcePacket?.candidateTimelineIndex?.candidates ?? [])
+    .map((candidate) => cleanString(candidate.candidateId))
+    .filter(Boolean);
+  return ids.length > 0 ? new Set(ids) : null;
+}
+
+function evaluateVideoUnderstandingStory(story, { allowedRefs, candidateIds }) {
+  const reasons = [];
+  const storyRefs = normalizeStringArray(story.sourceRefs);
+  const supportedRefs = storyRefs.filter((ref) => allowedRefs.has(ref));
+  if (candidateIds && !candidateIds.has(story.candidateId)) reasons.push("unknown_candidate_id");
+  if ((story.plainStory ?? "").length < 8) reasons.push("plain_story_too_short");
+  if (supportedRefs.length === 0) reasons.push("missing_supported_source_refs");
+  if ((story.mainIngredients ?? []).length === 0 && (story.stepOutline ?? []).length === 0) {
+    reasons.push("missing_ingredient_or_step_outline");
+  }
+  if (Number(story.confidence ?? 0) < 0.35) reasons.push("low_confidence");
+  return {
+    accepted: reasons.length === 0,
+    reasons,
+    supportedRefs,
+  };
+}
+
+const KOREAN_PARTICLE_SUFFIXES = [
+  "으로",
+  "부터",
+  "까지",
+  "에게",
+  "한테",
+  "은",
+  "는",
+  "이",
+  "가",
+  "을",
+  "를",
+  "로",
+  "와",
+  "과",
+  "에",
+  "의",
+  "도",
+  "만",
+];
+
+function textTokens(value) {
+  return uniqueStrings(String(value ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .split(/[^\p{Letter}\p{Number}]+/gu)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2));
+}
+
+function tokenVariants(token) {
+  const normalized = cleanString(token);
+  if (!normalized) return [];
+  const variants = [normalized];
+  for (const suffix of KOREAN_PARTICLE_SUFFIXES) {
+    if (normalized.endsWith(suffix) && normalized.length - suffix.length >= 2) {
+      variants.push(normalized.slice(0, -suffix.length));
+    }
+  }
+  return uniqueStrings(variants);
+}
+
+function entryTextMatches(entry, value) {
+  const text = cleanString(entry?.text);
+  if (!text || !cleanString(value)) return false;
+  if (textMentions(text, value)) return true;
+  const haystack = normalizeKey(text);
+  return textTokens(value).some((token) => tokenVariants(token).some((variant) => {
+    const needle = normalizeKey(variant);
+    return needle.length >= 2 && haystack.includes(needle);
+  }));
+}
+
+function pushUniqueEntry(entries, seen, entry) {
+  const ref = cleanString(entry?.ref);
+  if (!ref || seen.has(ref)) return;
+  seen.add(ref);
+  entries.push(entry);
+}
+
+function buildUnderstandingSourceIndex(holisticSourcePacket) {
+  const entryByRef = new Map();
+  const addEntry = (entry) => {
+    const ref = cleanString(entry?.ref);
+    if (!ref || entryByRef.has(ref)) return;
+    entryByRef.set(ref, entry);
+  };
+  for (const entry of holisticSourcePacket?.entries ?? []) addEntry(entry);
+  for (const entry of holisticSourcePacket?.timelineEvents ?? []) addEntry(entry);
+  const candidateEntriesById = new Map();
+  for (const packet of holisticSourcePacket?.candidateSourcePackets ?? []) {
+    const candidateId = cleanString(packet?.candidateId);
+    if (!candidateId) continue;
+    const entries = [];
+    const seen = new Set();
+    for (const entry of packet.sourceEntries ?? []) {
+      addEntry(entry);
+      pushUniqueEntry(entries, seen, entry);
+    }
+    candidateEntriesById.set(candidateId, entries);
+  }
+  return { entryByRef, candidateEntriesById };
+}
+
+function entriesForUnderstandingStory(story, { entryByRef, candidateEntriesById }) {
+  const entries = [];
+  const seen = new Set();
+  for (const ref of story.sourceRefs ?? []) {
+    pushUniqueEntry(entries, seen, entryByRef.get(ref));
+  }
+  for (const entry of candidateEntriesById.get(story.candidateId) ?? []) {
+    pushUniqueEntry(entries, seen, entry);
+  }
+  return entries.filter((entry) => entry?.type !== "frame");
+}
+
+function matchedEntryRefs(entries, value) {
+  return entries.filter((entry) => entryTextMatches(entry, value)).map((entry) => entry.ref);
+}
+
+export function auditVideoUnderstandingAlignment(videoUnderstanding, holisticSourcePacket, {
+  candidateInjectionDisabled = false,
+} = {}) {
+  const allowedRefs = videoUnderstandingAllowedRefs(holisticSourcePacket);
+  const candidateIds = videoUnderstandingCandidateIds(holisticSourcePacket);
+  const sourceIndex = buildUnderstandingSourceIndex(holisticSourcePacket);
+  const storyAudits = (videoUnderstanding?.dishStories ?? []).map((story) => {
+    const evaluation = evaluateVideoUnderstandingStory(story, { allowedRefs, candidateIds });
+    const storyRefs = normalizeStringArray(story.sourceRefs);
+    const sourceEntries = entriesForUnderstandingStory(story, sourceIndex);
+    const supportedMainIngredients = [];
+    const unsupportedMainIngredients = [];
+    for (const ingredient of story.mainIngredients ?? []) {
+      if (matchedEntryRefs(sourceEntries, ingredient).length > 0) {
+        supportedMainIngredients.push(ingredient);
+      } else {
+        unsupportedMainIngredients.push(ingredient);
+      }
+    }
+    const stepAlignment = (story.stepOutline ?? []).map((step) => {
+      const matchedRefs = matchedEntryRefs(sourceEntries, step);
+      return {
+        step,
+        status: matchedRefs.length > 0 ? "source-aligned" : evaluation.supportedRefs.length > 0 ? "weak" : "unsupported",
+        matchedRefs,
+      };
+    });
+    const revisionNotes = [];
+    if (unsupportedMainIngredients.length > 0) {
+      revisionNotes.push(`source에서 확인되지 않는 재료는 draft에서 확정하지 않는다: ${unsupportedMainIngredients.join(", ")}`);
+    }
+    if (stepAlignment.some((step) => step.status !== "source-aligned")) {
+      revisionNotes.push("source와 약하게만 맞는 stepOutline은 확정 단계가 아니라 uncertainty 또는 visualNeeds 후보로 둔다.");
+    }
+    const unsupportedRefs = storyRefs.filter((ref) => !allowedRefs.has(ref));
+    if (unsupportedRefs.length > 0) {
+      revisionNotes.push(`허용되지 않은 sourceRef는 evidence로 쓰지 않는다: ${unsupportedRefs.join(", ")}`);
+    }
+    if (candidateInjectionDisabled) {
+      revisionNotes.push("다중 후보 understanding 주입은 아직 비활성화되어 draft에는 방향키로 넣지 않는다.");
+    }
+    if (evaluation.reasons.length > 0) {
+      revisionNotes.push(`understanding gate 실패 이유: ${evaluation.reasons.join(", ")}`);
+    }
+    const draftRole = evaluation.accepted && !candidateInjectionDisabled ? "orientation" : "log-only";
+    return {
+      candidateId: story.candidateId,
+      title: story.title,
+      draftRole,
+      confidence: story.confidence,
+      supportedRefs: evaluation.supportedRefs,
+      unsupportedRefs,
+      supportedMainIngredients,
+      unsupportedMainIngredients,
+      stepAlignment,
+      revisionNotes: uniqueStrings(revisionNotes),
+    };
+  });
+  const orientationStoryCount = storyAudits.filter((story) => story.draftRole === "orientation").length;
+  return {
+    schemaVersion: 1,
+    kind: "video-understanding-audit",
+    summary: {
+      storyCount: storyAudits.length,
+      orientationStoryCount,
+      logOnlyStoryCount: storyAudits.length - orientationStoryCount,
+      allowedRefCount: allowedRefs.size,
+      candidateScoped: Boolean(candidateIds),
+      candidateInjectionDisabled,
+    },
+    storyAudits,
+  };
+}
+
+export function selectUsableVideoUnderstanding(videoUnderstanding, holisticSourcePacket, {
+  forceLogOnly = false,
+  logOnlyReason = "understanding_injection_disabled",
+} = {}) {
+  const allowedRefs = videoUnderstandingAllowedRefs(holisticSourcePacket);
+  const candidateIds = videoUnderstandingCandidateIds(holisticSourcePacket);
+  const multiCandidateInjectionDisabled = Boolean(candidateIds && candidateIds.size > 1);
+  const injectionDisabled = multiCandidateInjectionDisabled || forceLogOnly;
+  const audit = auditVideoUnderstandingAlignment(videoUnderstanding, holisticSourcePacket, {
+    candidateInjectionDisabled: injectionDisabled,
+  });
+  const acceptedStories = [];
+  const rejectedStories = [];
+  for (const story of videoUnderstanding?.dishStories ?? []) {
+    const evaluation = evaluateVideoUnderstandingStory(story, { allowedRefs, candidateIds });
+    if (evaluation.accepted && !injectionDisabled) {
+      acceptedStories.push({
+        ...story,
+        sourceRefs: evaluation.supportedRefs,
+      });
+    } else {
+      rejectedStories.push({
+        candidateId: story.candidateId,
+        title: story.title,
+        reasons: uniqueStrings([
+          ...evaluation.reasons,
+          ...(multiCandidateInjectionDisabled ? ["multi_candidate_understanding_injection_disabled"] : []),
+          ...(forceLogOnly ? [logOnlyReason] : []),
+        ]),
+        sourceRefs: story.sourceRefs,
+      });
+    }
+  }
+  const usable = acceptedStories.length > 0;
+  return {
+    understanding: {
+      ...videoUnderstanding,
+      dishStories: acceptedStories,
+      uncertainties: uniqueStrings([
+        ...(videoUnderstanding?.uncertainties ?? []),
+        ...(usable ? [] : ["video understanding was not injected into draft because no story passed the source-backed quality gate"]),
+      ]),
+    },
+    usage: {
+      schemaVersion: 1,
+      kind: "video-understanding-usage",
+      usable,
+      acceptedStoryCount: acceptedStories.length,
+      rejectedStoryCount: rejectedStories.length,
+      rejectedStories,
+      allowedRefCount: allowedRefs.size,
+      candidateScoped: Boolean(candidateIds),
+      reason: usable
+        ? "source-backed video understanding stories will be used as draft orientation"
+        : multiCandidateInjectionDisabled
+          ? "video understanding was logged but not injected because multi-candidate story injection is not yet reliable enough"
+          : forceLogOnly
+            ? "video understanding was logged but not injected because this run uses a log-only understanding gate"
+        : "video understanding was skipped for draft orientation because every story failed the quality gate",
+    },
+    audit,
+  };
+}
+
 function descriptionEntries(sourcePacket, maxEntries = 80) {
   return String(sourcePacket?.video?.description ?? "")
     .split(/\r?\n/u)
@@ -467,10 +740,15 @@ export function buildVideoUnderstandingPrompt(holisticSourcePacket, { timelineMo
   ].join("\n");
 }
 
-export function buildHolisticDraftPrompt(holisticSourcePacket, { timelineMode = false, videoUnderstanding = null } = {}) {
+export function buildHolisticDraftPrompt(holisticSourcePacket, {
+  timelineMode = false,
+  videoUnderstanding = null,
+  understandingAudit = null,
+} = {}) {
   const candidateTimelineIndex = holisticSourcePacket?.candidateTimelineIndex ?? null;
   const exampleCandidateId = candidateTimelineIndex?.candidates?.[0]?.candidateId ?? "r1";
   const hasVideoUnderstanding = isObject(videoUnderstanding) && Array.isArray(videoUnderstanding.dishStories);
+  const hasUnderstandingAudit = isObject(understandingAudit) && Array.isArray(understandingAudit.storyAudits);
   const promptGoal = timelineMode
     ? "목표: 제목, 설명란, 고정댓글, 자막, video timeline event를 종합해서 실제 만든 레시피들을 candidateId별로 분리한다."
     : "목표: 제목, 설명란, 고정댓글, 자막, storyboard frame을 먼저 종합해서 실제 만든 레시피들을 모두 분리한다.";
@@ -490,6 +768,11 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, { timelineMode = 
     "- 먼저 VIDEO_UNDERSTANDING으로 영상의 큰 요리 흐름을 잡고, 세부 재료/양/단계는 반드시 CANDIDATE_SOURCE_PACKETS 또는 HOLISTIC_SOURCE_PACKET 근거로 확인한다.",
     "- VIDEO_UNDERSTANDING은 방향키다. final evidence ref로 쓰지 말고, evidence에는 source ref/event ref/frame ref만 넣는다.",
     "- VIDEO_UNDERSTANDING과 source packet이 충돌하면 source packet을 우선하고 uncertainties에 남긴다.",
+    ...(hasUnderstandingAudit ? [
+      "- VIDEO_UNDERSTANDING_AUDIT은 이해 메모를 source와 대조한 수정 지침이다. draft는 raw story가 아니라 audit의 revisionNotes를 반영한 이해를 따른다.",
+      "- audit에서 unsupportedMainIngredients로 표시된 재료는 확정 재료로 쓰지 말고, 꼭 필요하면 uncertainties에만 남긴다.",
+      "- audit에서 stepAlignment.status가 weak 또는 unsupported인 단계는 확정 단계가 아니라 uncertainty 또는 visualNeeds 후보로 둔다.",
+    ] : []),
   ] : [];
   return [
     "너는 유튜브 레시피 영상을 전체적으로 이해한 뒤 레시피 정답지 초안을 쓰는 도우미다.",
@@ -549,6 +832,11 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, { timelineMode = 
     ...(hasVideoUnderstanding ? [
       "[VIDEO_UNDERSTANDING]",
       JSON.stringify(videoUnderstanding, null, 2),
+      "",
+    ] : []),
+    ...(hasUnderstandingAudit ? [
+      "[VIDEO_UNDERSTANDING_AUDIT]",
+      JSON.stringify(understandingAudit, null, 2),
       "",
     ] : []),
     ...(timelineMode ? [
