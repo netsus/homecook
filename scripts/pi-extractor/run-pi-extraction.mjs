@@ -38,6 +38,7 @@ import {
 import {
   HOLISTIC_PROMPT_VERSION,
   assertValidHolisticDraft,
+  assertValidRecipeBoundaryPlan,
   assertValidVideoUnderstanding,
   auditHolisticDraft,
   buildFinalOutputFromHolisticAudit,
@@ -48,9 +49,11 @@ import {
   buildHolisticSourcePacket,
   buildHolisticStoryboardCandidateLedger,
   buildHolisticVisualRepairPrompt,
+  buildRecipeBoundaryPlanPrompt,
   buildHolisticVisualTargetLedger,
   buildVideoUnderstandingPrompt,
   normalizeHolisticDraft,
+  normalizeRecipeBoundaryPlan,
   normalizeVideoUnderstanding,
   recommendHolisticTimelineFrameBudget,
   selectUsableVideoUnderstanding,
@@ -268,6 +271,12 @@ function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
     videoUnderstandingPath: path.join(outDir, "video-understanding.json"),
     videoUnderstandingUsagePath: path.join(outDir, "video-understanding-usage.json"),
     videoUnderstandingAuditPath: path.join(outDir, "video-understanding-audit.json"),
+    recipeBoundaryPromptPath: path.join(outDir, "recipe-boundary-prompt.txt"),
+    recipeBoundaryCommandPath: path.join(outDir, "recipe-boundary-command.json"),
+    recipeBoundaryRawPath: path.join(outDir, "recipe-boundary-raw-response.json"),
+    recipeBoundaryPlanPath: path.join(outDir, "recipe-boundary-plan.json"),
+    recipeBoundaryFailurePath: path.join(outDir, "recipe-boundary-failure.json"),
+    recipeUnitDraftsDir: path.join(outDir, "recipe-unit-drafts"),
     holisticDraftSourcePacketPath: path.join(outDir, "holistic-draft-source-packet.json"),
     candidateTimelineIndexPath: path.join(outDir, "candidate-timeline-index.json"),
     candidatePromptPath: path.join(outDir, "candidate-prompt.txt"),
@@ -479,6 +488,151 @@ function eventIdsForCandidate(candidatePacket, candidateTimelineEntry) {
   ].filter(Boolean));
 }
 
+function uniqueStrings(values) {
+  return [...new Set((values ?? []).filter((value) => typeof value === "string" && value.trim()).map((value) => value.trim()))];
+}
+
+function boundaryAllowedEvidenceRefs({ sourcePacket, holisticSourcePacket, timelineFrameLedger }) {
+  return uniqueStrings([
+    ...timelineAllowedEvidenceRefs({ sourcePacket, timelineFrameLedger }),
+    ...(holisticSourcePacket?.refs ?? []),
+    ...(holisticSourcePacket?.timelineEvents ?? []).flatMap((entry) => [entry.ref, ...(entry.evidence ?? [])]),
+    ...(holisticSourcePacket?.videoTimeline?.events ?? []).flatMap((event) => [
+      event?.eventId ? `event:${event.eventId}` : null,
+      ...(event?.evidence ?? []),
+    ]),
+    ...(holisticSourcePacket?.candidateSourcePackets ?? []).flatMap((packet) => (
+      packet?.sourceEntries ?? []
+    ).map((entry) => entry.ref)),
+  ]);
+}
+
+function buildDryRunRecipeBoundaryPlan(holisticSourcePacket) {
+  const candidates = holisticSourcePacket?.candidateTimelineIndex?.candidates ?? [];
+  return normalizeRecipeBoundaryPlan({
+    recipeUnits: candidates.map((candidate, index) => ({
+      recipeUnitId: `r${index + 1}`,
+      title: candidate.title ?? `레시피 ${index + 1}`,
+      candidateIds: [candidate.candidateId],
+      timeRange: candidate.timeRange ?? null,
+      dishIdentityEvidence: candidate.sourceEvidence ?? ["title"],
+      stageSummary: [],
+      reason: "dry-run boundary placeholder; no Pi call was executed",
+      confidence: 0.4,
+    })),
+    skippedCandidates: [],
+    uncertainties: ["dry-run recipe boundary plan; not a quality signal"],
+  }, {
+    videoId: holisticSourcePacket?.video?.videoId ?? null,
+    candidates,
+  });
+}
+
+function mergedCandidateTimeRange(candidates, fallback = null) {
+  const starts = candidates
+    .map((candidate) => Number(candidate?.timeRange?.startSec))
+    .filter(Number.isFinite);
+  const ends = candidates
+    .map((candidate) => Number(candidate?.timeRange?.endSec))
+    .filter(Number.isFinite);
+  return {
+    startSec: starts.length ? Math.min(...starts) : fallback?.startSec ?? null,
+    endSec: ends.length ? Math.max(...ends) : fallback?.endSec ?? null,
+    basis: "recipe-boundary-merged-candidates",
+  };
+}
+
+function buildRecipeUnitHolisticSourcePacket(holisticSourcePacket, recipeBoundaryPlan) {
+  const candidatePackets = holisticSourcePacket?.candidateSourcePackets ?? [];
+  const timelineCandidates = holisticSourcePacket?.candidateTimelineIndex?.candidates ?? [];
+  const candidatePacketById = new Map(candidatePackets.map((packet) => [packet.candidateId, packet]));
+  const timelineCandidateById = new Map(timelineCandidates.map((candidate) => [candidate.candidateId, candidate]));
+  const entryByRef = new Map((holisticSourcePacket?.entries ?? []).map((entry) => [entry.ref, entry]));
+  const titleEntry = entryByRef.get("title") ?? null;
+  const recipeUnitPackets = [];
+  const recipeUnitTimelineCandidates = [];
+
+  for (const [unitIndex, unit] of (recipeBoundaryPlan?.recipeUnits ?? []).entries()) {
+    const sourcePackets = unit.candidateIds.map((candidateId) => candidatePacketById.get(candidateId)).filter(Boolean);
+    const sourceTimelineCandidates = unit.candidateIds.map((candidateId) => timelineCandidateById.get(candidateId)).filter(Boolean);
+    const supportingEvents = uniqueStrings([
+      ...sourcePackets.flatMap((packet) => packet.supportingEvents ?? []),
+      ...sourceTimelineCandidates.flatMap((candidate) => candidate.supportingEvents ?? []),
+    ]);
+    const unclearEvents = uniqueStrings([
+      ...sourcePackets.flatMap((packet) => packet.unclearEvents ?? []),
+      ...sourceTimelineCandidates.flatMap((candidate) => candidate.unclearEvents ?? []),
+    ]);
+    const excludedEvents = uniqueStrings(sourceTimelineCandidates.flatMap((candidate) => candidate.excludedEvents ?? []));
+    const sourceEntries = uniqueEntriesByRef([
+      titleEntry,
+      ...sourcePackets.flatMap((packet) => packet.sourceEntries ?? []),
+      ...(holisticSourcePacket?.timelineEvents ?? []).filter((entry) => (
+        [...supportingEvents, ...unclearEvents].some((eventId) => entry.ref === `event:${eventId}`)
+      )),
+    ].filter(Boolean));
+    const timeRange = unit.timeRange ?? mergedCandidateTimeRange(sourceTimelineCandidates);
+    const recipeSourceCandidateIds = unit.candidateIds;
+    recipeUnitPackets.push({
+      candidateId: unit.recipeUnitId,
+      recipeSourceCandidateIds,
+      title: unit.title,
+      timeRange,
+      supportingEvents,
+      unclearEvents,
+      sourceEntries,
+      boundaryReason: unit.reason ?? null,
+      boundaryEvidence: unit.dishIdentityEvidence ?? [],
+      stageSummary: unit.stageSummary ?? [],
+    });
+    recipeUnitTimelineCandidates.push({
+      candidateId: unit.recipeUnitId,
+      recipeSourceCandidateIds,
+      title: unit.title,
+      sourceEvidence: unit.dishIdentityEvidence ?? [],
+      timeRange,
+      supportingEvents,
+      excludedEvents,
+      unclearEvents,
+      orderBasis: "recipe-boundary-plan",
+      confidence: unit.confidence ?? 0.4,
+      boundaryReason: unit.reason ?? null,
+      order: unitIndex,
+    });
+  }
+
+  return {
+    ...holisticSourcePacket,
+    candidateTimelineIndex: {
+      ...(holisticSourcePacket?.candidateTimelineIndex ?? {}),
+      candidates: recipeUnitTimelineCandidates,
+      recipeBoundaryPlanApplied: true,
+      skippedCandidates: recipeBoundaryPlan?.skippedCandidates ?? [],
+      summary: {
+        candidateCount: recipeUnitTimelineCandidates.length,
+        sourceCandidateCount: timelineCandidates.length,
+        skippedCandidateCount: recipeBoundaryPlan?.skippedCandidates?.length ?? 0,
+        recipeBoundaryPlanApplied: true,
+      },
+    },
+    candidateSourcePackets: recipeUnitPackets,
+    recipeBoundaryPlan: {
+      schemaVersion: recipeBoundaryPlan?.schemaVersion ?? 1,
+      kind: recipeBoundaryPlan?.kind ?? "recipe-boundary-plan",
+      recipeUnits: (recipeBoundaryPlan?.recipeUnits ?? []).map((unit) => ({
+        recipeUnitId: unit.recipeUnitId,
+        title: unit.title,
+        candidateIds: unit.candidateIds,
+        timeRange: unit.timeRange,
+        stageSummary: unit.stageSummary,
+        confidence: unit.confidence,
+      })),
+      skippedCandidates: recipeBoundaryPlan?.skippedCandidates ?? [],
+      uncertainties: recipeBoundaryPlan?.uncertainties ?? [],
+    },
+  };
+}
+
 function buildCandidateScopedHolisticSourcePacket(holisticSourcePacket, candidatePacket, candidateTimelineEntry) {
   const eventIds = eventIdsForCandidate(candidatePacket, candidateTimelineEntry);
   const eventRefs = new Set([...eventIds].map((eventId) => `event:${eventId}`));
@@ -527,15 +681,17 @@ function buildCandidateScopedHolisticSourcePacket(holisticSourcePacket, candidat
   };
 }
 
-function candidateUnderstandingAuditForPrompt(videoUnderstandingAudit, candidateId) {
+function candidateUnderstandingAuditForPrompt(videoUnderstandingAudit, candidateId, recipeSourceCandidateIds = []) {
+  const sourceCandidateIdSet = new Set(recipeSourceCandidateIds);
   const storyAudits = (videoUnderstandingAudit?.storyAudits ?? [])
-    .filter((story) => story?.candidateId === candidateId)
+    .filter((story) => story?.candidateId === candidateId || sourceCandidateIdSet.has(story?.candidateId))
     .filter((story) => (story.supportedRefs ?? []).length > 0);
   if (storyAudits.length === 0) return null;
   return {
     schemaVersion: videoUnderstandingAudit.schemaVersion ?? 1,
     kind: "candidate-understanding-audit",
     candidateId,
+    recipeSourceCandidateIds,
     summary: {
       storyCount: storyAudits.length,
       sourceBackedStoryCount: storyAudits.length,
@@ -546,9 +702,9 @@ function candidateUnderstandingAuditForPrompt(videoUnderstandingAudit, candidate
   };
 }
 
-function buildCandidateDraftPaths(paths, candidateId, index) {
+function buildCandidateDraftPaths(paths, candidateId, index, { recipeBoundaryPlanEnabled = false } = {}) {
   const dir = path.join(
-    paths.candidateDraftsDir,
+    recipeBoundaryPlanEnabled ? paths.recipeUnitDraftsDir : paths.candidateDraftsDir,
     `${String(index + 1).padStart(2, "0")}-${safeFileSegment(candidateId)}`,
   );
   return {
@@ -561,12 +717,25 @@ function buildCandidateDraftPaths(paths, candidateId, index) {
   };
 }
 
-function candidateFirstSummarySkeleton({ sourcePacket, maxCandidates, perCandidateTimeoutMs, totalTimeoutMs }) {
+function candidateFirstSummarySkeleton({
+  sourcePacket,
+  maxCandidates,
+  perCandidateTimeoutMs,
+  totalTimeoutMs,
+  recipeBoundaryPlanEnabled = false,
+  recipeBoundaryPlan = null,
+}) {
   return {
     schemaVersion: 1,
     kind: "candidate-first-drafts",
     videoId: sourcePacket?.video?.videoId ?? null,
-    mode: "candidate-first-holistic-draft",
+    mode: recipeBoundaryPlanEnabled ? "recipe-boundary-candidate-first-holistic-draft" : "candidate-first-holistic-draft",
+    recipeBoundaryPlanEnabled,
+    recipeBoundaryPlanSummary: recipeBoundaryPlan ? {
+      recipeUnitCount: recipeBoundaryPlan.recipeUnits?.length ?? 0,
+      skippedCandidateCount: recipeBoundaryPlan.skippedCandidates?.length ?? 0,
+      uncertainties: recipeBoundaryPlan.uncertainties ?? [],
+    } : null,
     budget: {
       maxCandidates,
       perCandidateTimeoutMs,
@@ -611,6 +780,8 @@ async function runCandidateFirstHolisticDraft({
   maxCandidates,
   perCandidateTimeoutMs,
   totalTimeoutMs,
+  recipeBoundaryPlanEnabled = false,
+  recipeBoundaryPlan = null,
 }) {
   const candidatePackets = holisticSourcePacket?.candidateSourcePackets ?? [];
   const timelineCandidates = holisticSourcePacket?.candidateTimelineIndex?.candidates ?? [];
@@ -619,6 +790,8 @@ async function runCandidateFirstHolisticDraft({
     maxCandidates,
     perCandidateTimeoutMs,
     totalTimeoutMs,
+    recipeBoundaryPlanEnabled,
+    recipeBoundaryPlan,
   });
   if (candidatePackets.length === 0) {
     summary.errors.push({
@@ -644,7 +817,7 @@ async function runCandidateFirstHolisticDraft({
   for (const [index, candidatePacket] of candidatePackets.entries()) {
     const candidateId = candidatePacket.candidateId;
     const candidateTimelineEntry = timelineCandidates.find((candidate) => candidate.candidateId === candidateId) ?? null;
-    const candidatePaths = buildCandidateDraftPaths(paths, candidateId, index);
+    const candidatePaths = buildCandidateDraftPaths(paths, candidateId, index, { recipeBoundaryPlanEnabled });
     const elapsedMs = Date.now() - startedAt;
     const remainingMs = totalTimeoutMs - elapsedMs;
     if (remainingMs <= 0) {
@@ -663,7 +836,11 @@ async function runCandidateFirstHolisticDraft({
       candidatePacket,
       candidateTimelineEntry,
     );
-    const candidateUnderstandingAudit = candidateUnderstandingAuditForPrompt(videoUnderstandingAudit, candidateId);
+    const candidateUnderstandingAudit = candidateUnderstandingAuditForPrompt(
+      videoUnderstandingAudit,
+      candidateId,
+      candidatePacket.recipeSourceCandidateIds ?? [],
+    );
     const candidatePrompt = buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
       understandingAudit: candidateUnderstandingAudit,
     });
@@ -681,12 +858,14 @@ async function runCandidateFirstHolisticDraft({
     await writeJsonTracked(manifest, candidatePaths.commandPath, {
       command: candidateCommand,
       note: piCommandNote(piTools),
-      mode: "candidate-first-holistic-draft",
+      mode: recipeBoundaryPlanEnabled ? "recipe-boundary-candidate-first-holistic-draft" : "candidate-first-holistic-draft",
       candidateId,
+      recipeSourceCandidateIds: candidatePacket.recipeSourceCandidateIds ?? [],
       timeoutMs: candidateTimeoutMs,
     }, `candidate-draft-command:${candidateId}`);
     const summaryEntry = {
       candidateId,
+      recipeSourceCandidateIds: candidatePacket.recipeSourceCandidateIds ?? [],
       title: candidatePacket.title ?? candidateTimelineEntry?.title ?? null,
       status: dryRun ? "planned" : "pending",
       promptPath: path.relative(paths.outDir, candidatePaths.promptPath),
@@ -723,6 +902,9 @@ async function runCandidateFirstHolisticDraft({
       );
       const candidateDraft = normalizeHolisticDraft(candidateRawPayload);
       const recipe = assertCandidateDraftReadyForAssembly(candidateDraft, candidateId);
+      if ((candidatePacket.recipeSourceCandidateIds ?? []).length > 0) {
+        recipe.recipeSourceCandidateIds = candidatePacket.recipeSourceCandidateIds;
+      }
       assembledRecipes.push(recipe);
       await writeJsonTracked(manifest, candidatePaths.draftPath, candidateDraft, `candidate-draft-result:${candidateId}`);
       summaryEntry.status = "drafted";
@@ -833,6 +1015,7 @@ async function runHolisticPiExtractionCase({
   holisticRepairResponseJsonPath,
   holisticVideoTimelineResponseJsonPath,
   holisticUnderstandingResponseJsonPath,
+  holisticRecipeBoundaryResponseJsonPath,
   holisticStoryboardFrameCount,
   holisticTimelineUnderstanding,
   holisticVideoTimelineLedger,
@@ -847,6 +1030,7 @@ async function runHolisticPiExtractionCase({
   holisticVisualTargetMaxWindowSec,
   holisticVisualRepairEnabled,
   holisticCandidateFirstDraft,
+  holisticRecipeBoundaryPlan,
   holisticCandidateFirstMaxCandidates,
   holisticCandidateFirstDraftTimeoutMs,
   holisticCandidateFirstTotalTimeoutMs,
@@ -880,6 +1064,7 @@ async function runHolisticPiExtractionCase({
   const candidateFirstDraftActive = holisticCandidateFirstDraft
     && holisticVideoTimelineLedger
     && storyboardCandidateLedger.candidates.length > 1;
+  const recipeBoundaryPlanActive = holisticRecipeBoundaryPlan && candidateFirstDraftActive;
   const multiCandidateTimelineLedgerFallback = holisticVideoTimelineLedger
     && storyboardCandidateLedger.candidates.length > 1
     && !candidateFirstDraftActive;
@@ -908,6 +1093,9 @@ async function runHolisticPiExtractionCase({
   let videoUnderstandingAudit = null;
   let videoUnderstandingPrompt = null;
   let videoUnderstandingRawPayload = null;
+  let recipeBoundaryPrompt = null;
+  let recipeBoundaryRawPayload = null;
+  let recipeBoundaryPlan = null;
 
   if (effectiveHolisticVideoTimelineLedger) {
     timelineFramePlan = buildTimelineFramePlan(sourcePacket, {
@@ -1047,6 +1235,8 @@ async function runHolisticPiExtractionCase({
   manifest.holisticIntegratedUnderstandingEnabled = effectiveHolisticIntegratedUnderstanding;
   manifest.holisticCandidateFirstDraftRequested = holisticCandidateFirstDraft;
   manifest.holisticCandidateFirstDraftEnabled = candidateFirstDraftActive;
+  manifest.holisticRecipeBoundaryPlanRequested = holisticRecipeBoundaryPlan;
+  manifest.holisticRecipeBoundaryPlanEnabled = recipeBoundaryPlanActive;
   manifest.holistic.videoTimelineLedgerEffective = effectiveHolisticVideoTimelineLedger;
   manifest.holistic.videoTimelineLedgerFallback = multiCandidateTimelineLedgerFallback;
   manifest.holistic.integratedUnderstandingStageEnabled = shouldRunHolisticIntegratedUnderstanding;
@@ -1057,6 +1247,10 @@ async function runHolisticPiExtractionCase({
     maxCandidates: holisticCandidateFirstMaxCandidates,
     perCandidateTimeoutMs: holisticCandidateFirstDraftTimeoutMs,
     totalTimeoutMs: holisticCandidateFirstTotalTimeoutMs,
+  };
+  manifest.holistic.recipeBoundaryPlan = {
+    requested: holisticRecipeBoundaryPlan,
+    enabled: recipeBoundaryPlanActive,
   };
   manifest.holistic.visualRepairEffective = effectiveHolisticVisualRepairEnabled;
   const holisticSourcePacket = buildHolisticSourcePacket(sourcePacket, storyboardLedger, {
@@ -1134,6 +1328,75 @@ async function runHolisticPiExtractionCase({
     await writeJsonTracked(manifest, paths.videoUnderstandingUsagePath, videoUnderstandingUsage, "video-understanding-usage");
     await writeJsonTracked(manifest, paths.videoUnderstandingAuditPath, videoUnderstandingAudit, "video-understanding-audit");
   }
+  if (recipeBoundaryPlanActive) {
+    recipeBoundaryPrompt = buildRecipeBoundaryPlanPrompt(holisticSourcePacket, {
+      videoUnderstandingAudit,
+    });
+    await writeTextTracked(manifest, paths.recipeBoundaryPromptPath, `${recipeBoundaryPrompt}\n`, "recipe-boundary-prompt");
+    addAllowedRead(manifest, paths.recipeBoundaryPromptPath);
+    const recipeBoundaryCommand = buildPiCommand({
+      promptPath: paths.recipeBoundaryPromptPath,
+      model,
+      provider,
+      thinking,
+      tools: [],
+    });
+    manifest.stages.push({ name: "recipe-boundary-plan", command: recipeBoundaryCommand });
+    await writeJsonTracked(manifest, paths.recipeBoundaryCommandPath, {
+      command: recipeBoundaryCommand,
+      note: piCommandNote([]),
+      mode: "recipe-boundary-plan",
+      candidateCount: holisticSourcePacket?.candidateTimelineIndex?.candidates?.length ?? 0,
+    }, "recipe-boundary-command");
+    try {
+      const boundaryCandidates = holisticSourcePacket?.candidateTimelineIndex?.candidates ?? [];
+      if (dryRun) {
+        recipeBoundaryPlan = buildDryRunRecipeBoundaryPlan(holisticSourcePacket);
+      } else {
+        manifest.currentStage = "recipe-boundary-plan";
+        recipeBoundaryRawPayload = await readFixtureOrExecutePi({
+          manifest,
+          fixturePath: holisticRecipeBoundaryResponseJsonPath,
+          fixtureReason: "recipe-boundary-fixture-response-json",
+          command: recipeBoundaryCommand,
+          projectRoot,
+          timeoutMs,
+          executePiFn,
+        });
+        await writeTextTracked(
+          manifest,
+          paths.recipeBoundaryRawPath,
+          rawPayloadForDisk(recipeBoundaryRawPayload),
+          "recipe-boundary-raw-response",
+        );
+        recipeBoundaryPlan = normalizeRecipeBoundaryPlan(recipeBoundaryRawPayload, {
+          videoId: sourcePacket?.video?.videoId ?? null,
+          candidates: boundaryCandidates,
+        });
+      }
+      assertValidRecipeBoundaryPlan(recipeBoundaryPlan, {
+        allowedCandidateIds: boundaryCandidates.map((candidate) => candidate.candidateId),
+        allowedEvidenceRefs: boundaryAllowedEvidenceRefs({ sourcePacket, holisticSourcePacket, timelineFrameLedger }),
+      });
+      await writeJsonTracked(manifest, paths.recipeBoundaryPlanPath, recipeBoundaryPlan, "recipe-boundary-plan");
+      holisticDraftSourcePacket = buildRecipeUnitHolisticSourcePacket(holisticSourcePacket, recipeBoundaryPlan);
+      manifest.holisticRecipeBoundaryPlanSummary = {
+        recipeUnitCount: recipeBoundaryPlan.recipeUnits.length,
+        skippedCandidateCount: recipeBoundaryPlan.skippedCandidates.length,
+        sourceCandidateCount: boundaryCandidates.length,
+        uncertainties: recipeBoundaryPlan.uncertainties,
+      };
+      manifest.holistic.recipeBoundaryPlan.summary = manifest.holisticRecipeBoundaryPlanSummary;
+    } catch (error) {
+      const failure = {
+        code: "recipe_boundary_plan_failed",
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      };
+      await writeJsonTracked(manifest, paths.recipeBoundaryFailurePath, failure, "recipe-boundary-failure");
+      throw new Error(failure.message);
+    }
+  }
   await writeJsonTracked(
     manifest,
     paths.holisticDraftSourcePacketPath,
@@ -1145,17 +1408,19 @@ async function runHolisticPiExtractionCase({
   let candidateFirstSummary = null;
   let draft = null;
   if (candidateFirstDraftActive) {
+    const draftDirLabel = recipeBoundaryPlanActive ? "recipe-unit-drafts/<recipeUnitId>" : "candidate-drafts/<candidateId>";
     const assemblyPrompt = [
-      "candidate-first holistic draft mode",
-      "후보별 prompt/raw/draft는 candidate-drafts/<candidateId>/ 아래에 저장된다.",
+      recipeBoundaryPlanActive ? "recipe-boundary candidate-first holistic draft mode" : "candidate-first holistic draft mode",
+      `후보별 prompt/raw/draft는 ${draftDirLabel}/ 아래에 저장된다.`,
       "이 파일은 기존 cache hash와 디버깅 경로 호환을 위한 조립 메모다.",
     ].join("\n");
     await writeTextTracked(manifest, paths.holisticDraftPromptPath, `${assemblyPrompt}\n`, "holistic-draft-prompt");
     await writeJsonTracked(manifest, paths.holisticDraftCommandPath, {
-      note: "candidate-first mode writes one command per candidate under candidate-drafts/<candidateId>/command.json",
-      mode: "candidate-first-holistic-draft",
+      note: `candidate-first mode writes one command per draft unit under ${draftDirLabel}/command.json`,
+      mode: recipeBoundaryPlanActive ? "recipe-boundary-candidate-first-holistic-draft" : "candidate-first-holistic-draft",
       allowFetchContent,
       sourcePacketOnly,
+      recipeBoundaryPlanEnabled: recipeBoundaryPlanActive,
     }, "holistic-draft-command");
     const candidateFirstResult = await runCandidateFirstHolisticDraft({
       manifest,
@@ -1174,6 +1439,8 @@ async function runHolisticPiExtractionCase({
       maxCandidates: holisticCandidateFirstMaxCandidates,
       perCandidateTimeoutMs: holisticCandidateFirstDraftTimeoutMs,
       totalTimeoutMs: holisticCandidateFirstTotalTimeoutMs,
+      recipeBoundaryPlanEnabled: recipeBoundaryPlanActive,
+      recipeBoundaryPlan,
     });
     holisticDraftPrompt = candidateFirstResult.promptText;
     holisticRawPayload = candidateFirstResult.rawPayload;
@@ -1364,11 +1631,13 @@ async function runHolisticPiExtractionCase({
     cachePolicy: "holistic raw response, storyboard ledger, target ledgers, and final audit are stored in the run directory",
     promptHashes: {
       ...(videoUnderstandingPrompt ? { videoUnderstanding: hashText(videoUnderstandingPrompt) } : {}),
+      ...(recipeBoundaryPrompt ? { recipeBoundaryPlan: hashText(recipeBoundaryPrompt) } : {}),
       holisticDraft: hashText(holisticDraftPrompt),
       holisticFinal: hashText(finalPrompt),
     },
     rawResponseHashes: {
       ...(videoUnderstandingRawPayload ? { videoUnderstanding: hashText(videoUnderstandingRawPayload) } : {}),
+      ...(recipeBoundaryRawPayload ? { recipeBoundaryPlan: hashText(recipeBoundaryRawPayload) } : {}),
       holisticDraft: hashText(holisticRawPayload),
       ...(repairRawPayload ? { holisticVisualRepair: hashText(repairRawPayload) } : {}),
     },
@@ -1389,6 +1658,13 @@ async function runHolisticPiExtractionCase({
       videoTimelineLedgerFallback: multiCandidateTimelineLedgerFallback,
       candidateFirstDraftRequested: holisticCandidateFirstDraft,
       candidateFirstDraftEnabled: candidateFirstDraftActive,
+      recipeBoundaryPlanRequested: holisticRecipeBoundaryPlan,
+      recipeBoundaryPlanEnabled: recipeBoundaryPlanActive,
+      recipeBoundaryPlanSummary: recipeBoundaryPlan ? {
+        recipeUnitCount: recipeBoundaryPlan.recipeUnits.length,
+        skippedCandidateCount: recipeBoundaryPlan.skippedCandidates.length,
+        uncertainties: recipeBoundaryPlan.uncertainties,
+      } : null,
       candidateFirstDraftSummary: candidateFirstSummary ? {
         candidateCount: candidateFirstSummary.candidates.length,
         draftedCount: candidateFirstSummary.candidates.filter((candidate) => candidate.status === "drafted").length,
@@ -1769,6 +2045,9 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   const holisticUnderstandingResponseJsonPath = typeof args["holistic-understanding-response-json"] === "string"
     ? path.resolve(projectRoot, args["holistic-understanding-response-json"])
     : null;
+  const holisticRecipeBoundaryResponseJsonPath = typeof args["holistic-recipe-boundary-response-json"] === "string"
+    ? path.resolve(projectRoot, args["holistic-recipe-boundary-response-json"])
+    : null;
   const maxCaptionSegments = optionalNumber(args["max-caption-segments"], null);
   const maxDescriptionChars = optionalNumber(args["max-description-chars"], 16000);
   const compactSourcePacket = args["compact-source-packet"] === true;
@@ -1796,6 +2075,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
     ? args["holistic-enable-visual-repair"] === true
     : args["holistic-disable-visual-repair"] !== true;
   const holisticCandidateFirstDraft = args["holistic-enable-candidate-first-draft"] === true;
+  const holisticRecipeBoundaryPlan = args["holistic-enable-recipe-boundary-plan"] === true;
   const holisticCandidateFirstMaxCandidates = optionalNumber(args["holistic-candidate-first-max-candidates"], 8);
   const holisticCandidateFirstDraftTimeoutMs = optionalNumber(
     args["holistic-candidate-first-draft-timeout-ms"],
@@ -1828,6 +2108,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
     if (holisticRepairResponseJsonPath) allowedReads.push(holisticRepairResponseJsonPath);
     if (holisticVideoTimelineResponseJsonPath) allowedReads.push(holisticVideoTimelineResponseJsonPath);
     if (holisticUnderstandingResponseJsonPath) allowedReads.push(holisticUnderstandingResponseJsonPath);
+    if (holisticRecipeBoundaryResponseJsonPath) allowedReads.push(holisticRecipeBoundaryResponseJsonPath);
     const manifest = createAccessManifest({ projectRoot, allowedReads });
     Object.assign(manifest, {
       runner: "scripts/pi-extractor/run-pi-extraction.mjs",
@@ -1867,6 +2148,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
         visualTargetMaxWindowSec: holisticVisualTargetMaxWindowSec,
         visualRepairEnabled: holisticVisualRepairEnabled,
         candidateFirstDraftEnabled: holisticCandidateFirstDraft,
+        recipeBoundaryPlanEnabled: holisticRecipeBoundaryPlan,
         candidateFirstMaxCandidates: holisticCandidateFirstMaxCandidates,
         candidateFirstDraftTimeoutMs: holisticCandidateFirstDraftTimeoutMs,
         candidateFirstTotalTimeoutMs: holisticCandidateFirstTotalTimeoutMs,
@@ -1939,6 +2221,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
           holisticRepairResponseJsonPath,
           holisticVideoTimelineResponseJsonPath,
           holisticUnderstandingResponseJsonPath,
+          holisticRecipeBoundaryResponseJsonPath,
           holisticStoryboardFrameCount,
           holisticTimelineUnderstanding,
           holisticVideoTimelineLedger,
@@ -1953,6 +2236,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
           holisticVisualTargetMaxWindowSec,
           holisticVisualRepairEnabled,
           holisticCandidateFirstDraft,
+          holisticRecipeBoundaryPlan,
           holisticCandidateFirstMaxCandidates,
           holisticCandidateFirstDraftTimeoutMs,
           holisticCandidateFirstTotalTimeoutMs,

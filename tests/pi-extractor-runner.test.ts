@@ -3829,6 +3829,301 @@ describe("pi recipe extractor MVP runner", () => {
     ]);
   });
 
+  it("validates recipe boundary plans as source-ordered candidate partitions", async () => {
+    const {
+      normalizeRecipeBoundaryPlan,
+      assertValidRecipeBoundaryPlan,
+    } = await import(holisticModuleUrl);
+    const candidates = Array.from({ length: 6 }, (_, index) => ({
+      candidateId: `s${index + 1}-w1`,
+      title: `구간 ${index + 1}`,
+      timeRange: { startSec: index * 30, endSec: (index + 1) * 30 },
+    }));
+    const allowedEvidenceRefs = ["title", "description:1", "description:2", "event:e1"];
+    const normalized = normalizeRecipeBoundaryPlan({
+      recipeUnits: [{
+        recipeUnitId: "r1",
+        title: "마들렌",
+        candidateIds: candidates.map((candidate) => candidate.candidateId),
+        dishIdentityEvidence: ["title", "description:1", "event:e1"],
+        stageSummary: ["반죽", "굽기"],
+        reason: "같은 디저트의 연속 조리 구간이다.",
+        confidence: 0.8,
+      }],
+      skippedCandidates: [],
+      uncertainties: [],
+    }, {
+      videoId: "case-a",
+      candidates,
+    });
+
+    expect(() => assertValidRecipeBoundaryPlan(normalized, {
+      allowedCandidateIds: candidates.map((candidate) => candidate.candidateId),
+      allowedEvidenceRefs,
+    })).not.toThrow();
+    expect(normalized.recipeUnits).toHaveLength(1);
+    expect(normalized.recipeUnits[0].timeRange).toMatchObject({ startSec: 0, endSec: 180 });
+
+    expect(() => assertValidRecipeBoundaryPlan({
+      ...normalized,
+      recipeUnits: [{
+        ...normalized.recipeUnits[0],
+        candidateIds: ["s1-w1", "s1-w1"],
+      }],
+    }, {
+      allowedCandidateIds: candidates.map((candidate) => candidate.candidateId),
+      allowedEvidenceRefs,
+    })).toThrow(/duplicate candidate assignment/u);
+
+    expect(() => assertValidRecipeBoundaryPlan({
+      ...normalized,
+      recipeUnits: [{
+        ...normalized.recipeUnits[0],
+        candidateIds: ["s1-w1", "unknown"],
+      }],
+      skippedCandidates: candidates.slice(1).map((candidate) => ({
+        candidateId: candidate.candidateId,
+        reasonCode: "not_part_of_recipe",
+        evidence: [],
+      })),
+    }, {
+      allowedCandidateIds: candidates.map((candidate) => candidate.candidateId),
+      allowedEvidenceRefs,
+    })).toThrow(/unknown candidateId/u);
+
+    expect(() => assertValidRecipeBoundaryPlan({
+      ...normalized,
+      recipeUnits: [{
+        ...normalized.recipeUnits[0],
+        dishIdentityEvidence: ["description:999"],
+      }],
+    }, {
+      allowedCandidateIds: candidates.map((candidate) => candidate.candidateId),
+      allowedEvidenceRefs,
+    })).toThrow(/invalid evidence ref/u);
+  });
+
+  it("uses recipe boundary units instead of raw timeline windows for candidate-first drafts", async () => {
+    const { runPiExtraction } = await import(runnerModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const timelineResponsePath = path.join(workdir, "fixtures/video-timeline-response.json");
+    const understandingResponsePath = path.join(workdir, "fixtures/video-understanding-response.json");
+    const boundaryResponsePath = path.join(workdir, "fixtures/recipe-boundary-response.json");
+    const source = makeSource("case-a");
+    source.video.durationSeconds = 180;
+    source.video.title = "마들렌 만들기";
+    source.video.description = [
+      "00:00 마들렌 재료 소개",
+      "00:30 버터를 녹인다",
+      "01:00 반죽을 섞는다",
+      "01:30 틀에 넣는다",
+      "02:00 오븐에 굽는다",
+      "02:30 마들렌 완성",
+    ].join("\n");
+    writeJson(path.join(caseDir, "source.json"), source);
+    writeJson(path.join(caseDir, "golden.json"), { shouldNotRead: true });
+    writeJson(timelineResponsePath, {
+      events: Array.from({ length: 6 }, (_, index) => ({
+        eventId: `e${index + 1}`,
+        segmentId: `s${index + 1}`,
+        timeRange: { startSec: index * 30, endSec: (index + 1) * 30 },
+        action: ["재료 소개", "버터 녹이기", "반죽 섞기", "팬닝", "굽기", "완성"][index],
+        visibleIngredients: index < 5 ? ["버터", "밀가루"] : ["마들렌"],
+        candidateAssignments: [{ candidateId: `storyboard-${index + 1}`, status: "supporting", reason: "same madeleine flow" }],
+        evidence: [`description:${index + 1}`],
+        confidence: 0.8,
+      })),
+    });
+    writeJson(understandingResponsePath, {
+      globalStory: "하나의 마들렌을 처음부터 끝까지 만드는 영상이다.",
+      dishStories: Array.from({ length: 6 }, (_, index) => ({
+        candidateId: `storyboard-${index + 1}`,
+        title: "마들렌",
+        plainStory: "마들렌 조리의 한 단계이다.",
+        mainIngredients: ["버터", "밀가루"],
+        stepOutline: [["재료 소개", "버터 녹이기", "반죽 섞기", "팬닝", "굽기", "완성"][index]],
+        sourceRefs: [`description:${index + 1}`, `event:e${index + 1}`],
+        confidence: 0.8,
+      })),
+      crossDishNotes: ["새 요리 시작 신호가 없다."],
+      uncertainties: [],
+    });
+    writeJson(boundaryResponsePath, {
+      recipeUnits: [{
+        recipeUnitId: "r1",
+        title: "마들렌",
+        candidateIds: ["storyboard-1", "storyboard-2", "storyboard-3", "storyboard-4", "storyboard-5", "storyboard-6"],
+        dishIdentityEvidence: ["title", "description:1", "event:e1"],
+        stageSummary: ["재료 소개", "반죽", "굽기", "완성"],
+        reason: "새 레시피 시작 신호 없이 같은 마들렌 조리가 이어진다.",
+        confidence: 0.8,
+      }],
+      skippedCandidates: [],
+      uncertainties: [],
+    });
+
+    const result = await runPiExtraction({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "pi-holistic-boundary-unit-fixture",
+      mode: "holistic-draft",
+      "source-packet-only": true,
+      "compact-source-packet": true,
+      "visual-frames": false,
+      "holistic-enable-timeline-understanding": true,
+      "holistic-enable-video-timeline-ledger": true,
+      "holistic-enable-integrated-understanding": true,
+      "holistic-enable-candidate-first-draft": true,
+      "holistic-enable-recipe-boundary-plan": true,
+      "holistic-video-timeline-response-json": timelineResponsePath,
+      "holistic-understanding-response-json": understandingResponsePath,
+      "holistic-recipe-boundary-response-json": boundaryResponsePath,
+    }, {
+      projectRoot: workdir,
+      executePi: async (command: string[]) => {
+        const promptPath = command[command.length - 1].replace(/^@/u, "");
+        if (promptPath.includes("recipe-unit-drafts/01-r1")) {
+          return {
+            stdout: JSON.stringify({
+              recipes: [{
+                candidateId: "r1",
+                title: "마들렌",
+                timeRange: { startSec: 0, endSec: 180, basis: "recipe-boundary-plan" },
+                ingredients: [
+                  { name: "버터", amount: null, unit: null, amountBasis: null, evidence: ["description:2"] },
+                  { name: "밀가루", amount: null, unit: null, amountBasis: null, evidence: ["description:3"] },
+                ],
+                steps: [
+                  { text: "버터를 녹인다.", evidence: ["event:e2"], confidence: 0.8 },
+                  { text: "반죽을 섞어 굽는다.", evidence: ["event:e3", "event:e5"], confidence: 0.8 },
+                ],
+                visualNeeds: [],
+                uncertainties: [],
+              }],
+              globalUncertainties: [],
+            }),
+            stderr: "",
+            exitCode: 0,
+          };
+        }
+        throw new Error(`unexpected Pi command in fixture: ${command.join(" ")}`);
+      },
+    });
+
+    expect(result.failures).toBe(0);
+    const outDir = path.join(caseDir, "runs/pi-holistic-boundary-unit-fixture");
+    const output = JSON.parse(readFileSync(path.join(outDir, "result.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync(path.join(outDir, "file-access-manifest.json"), "utf8"));
+    const boundaryPlan = JSON.parse(readFileSync(path.join(outDir, "recipe-boundary-plan.json"), "utf8"));
+    const candidateDrafts = JSON.parse(readFileSync(path.join(outDir, "candidate-drafts.json"), "utf8"));
+    const unitPrompt = readFileSync(path.join(outDir, "recipe-unit-drafts/01-r1/prompt.txt"), "utf8");
+
+    expect(boundaryPlan.recipeUnits).toHaveLength(1);
+    expect(candidateDrafts.candidates.map((candidate: { candidateId: string }) => candidate.candidateId)).toEqual(["r1"]);
+    expect(candidateDrafts.candidates[0].recipeSourceCandidateIds).toEqual(["storyboard-1", "storyboard-2", "storyboard-3", "storyboard-4", "storyboard-5", "storyboard-6"]);
+    expect(output.recipes).toHaveLength(1);
+    expect(output.recipes[0].candidateId).toBe("r1");
+    expect(output.recipes[0].recipeSourceCandidateIds).toEqual(["storyboard-1", "storyboard-2", "storyboard-3", "storyboard-4", "storyboard-5", "storyboard-6"]);
+    expect(unitPrompt).toContain("recipeSourceCandidateIds");
+    expect(unitPrompt).toContain("버터를 녹인다");
+    expect(unitPrompt).toContain("오븐에 굽는다");
+    expect(manifest.holisticRecipeBoundaryPlanEnabled).toBe(true);
+    expect(manifest.stages.map((stage: { name: string }) => stage.name)).toEqual([
+      "video-timeline",
+      "video-understanding",
+      "recipe-boundary-plan",
+      "candidate-holistic-draft",
+    ]);
+    expect(manifest.readEvents.map((event: { path: string }) => path.basename(event.path))).toEqual([
+      "source.json",
+      "video-timeline-response.json",
+      "video-understanding-response.json",
+      "recipe-boundary-response.json",
+    ]);
+  });
+
+  it("does not silently fall back to raw candidates when recipe boundary validation fails", async () => {
+    const { runPiExtraction } = await import(runnerModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const timelineResponsePath = path.join(workdir, "fixtures/video-timeline-response.json");
+    const understandingResponsePath = path.join(workdir, "fixtures/video-understanding-response.json");
+    const boundaryResponsePath = path.join(workdir, "fixtures/recipe-boundary-bad-response.json");
+    const source = makeSource("case-a");
+    source.video.durationSeconds = 60;
+    source.video.title = "두 구간 한 요리";
+    source.video.description = ["00:00 첫 구간", "00:30 둘째 구간"].join("\n");
+    writeJson(path.join(caseDir, "source.json"), source);
+    writeJson(path.join(caseDir, "golden.json"), { shouldNotRead: true });
+    writeJson(timelineResponsePath, {
+      events: [
+        {
+          eventId: "e1",
+          segmentId: "s1",
+          timeRange: { startSec: 0, endSec: 30 },
+          action: "첫 구간",
+          candidateAssignments: [{ candidateId: "storyboard-1", status: "supporting", reason: "first" }],
+          evidence: ["description:1"],
+          confidence: 0.8,
+        },
+        {
+          eventId: "e2",
+          segmentId: "s2",
+          timeRange: { startSec: 30, endSec: 60 },
+          action: "둘째 구간",
+          candidateAssignments: [{ candidateId: "storyboard-2", status: "supporting", reason: "second" }],
+          evidence: ["description:2"],
+          confidence: 0.8,
+        },
+      ],
+    });
+    writeJson(understandingResponsePath, {
+      globalStory: "한 요리의 두 구간이다.",
+      dishStories: [],
+      crossDishNotes: [],
+      uncertainties: [],
+    });
+    writeJson(boundaryResponsePath, {
+      recipeUnits: [{
+        recipeUnitId: "r1",
+        title: "첫 구간",
+        candidateIds: ["storyboard-1"],
+        dishIdentityEvidence: ["description:1"],
+      }],
+      skippedCandidates: [],
+      uncertainties: [],
+    });
+
+    const result = await runPiExtraction({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "pi-holistic-boundary-invalid-fixture",
+      mode: "holistic-draft",
+      "source-packet-only": true,
+      "compact-source-packet": true,
+      "visual-frames": false,
+      "holistic-enable-timeline-understanding": true,
+      "holistic-enable-video-timeline-ledger": true,
+      "holistic-enable-integrated-understanding": true,
+      "holistic-enable-candidate-first-draft": true,
+      "holistic-enable-recipe-boundary-plan": true,
+      "holistic-video-timeline-response-json": timelineResponsePath,
+      "holistic-understanding-response-json": understandingResponsePath,
+      "holistic-recipe-boundary-response-json": boundaryResponsePath,
+    }, {
+      projectRoot: workdir,
+      executePi: async () => {
+        throw new Error("candidate draft should not run after invalid boundary plan");
+      },
+    });
+
+    expect(result.failures).toBe(1);
+    const outDir = path.join(caseDir, "runs/pi-holistic-boundary-invalid-fixture");
+    const failure = JSON.parse(readFileSync(path.join(outDir, "recipe-boundary-failure.json"), "utf8"));
+    expect(failure.code).toBe("recipe_boundary_plan_failed");
+    expect(failure.message).toContain("missing candidate assignment");
+    expect(() => readFileSync(path.join(outDir, "candidate-drafts.json"), "utf8")).toThrow();
+  });
+
   it("keeps coarse candidates for candidate-first dry runs when description timeline is missing", async () => {
     const { runPiExtraction } = await import(runnerModuleUrl);
     const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
