@@ -1870,6 +1870,8 @@ describe("pi recipe extractor MVP runner", () => {
       "04:55 맥적&열무 들기름냉파스타",
       "✅ [재료]",
       "전란 90g https://example.com/egg",
+      "양파 1개",
+      "감자 2개",
       "설탕 89g https://example.com/sugar",
       "바르는술",
       "럼(바카디 화이트)",
@@ -1890,6 +1892,8 @@ describe("pi recipe extractor MVP runner", () => {
     const packet = JSON.parse(readFileSync(path.join(caseDir, "runs/pi-mvp-compact-source/source-packet.json"), "utf8"));
 
     expect(packet.video.description).toContain("전란 90g");
+    expect(packet.video.description).toContain("양파 1개");
+    expect(packet.video.description).toContain("감자 2개");
     expect(packet.video.description).toContain("00:16 메밀 파이프 후토마끼");
     expect(packet.video.description).toContain("04:55 맥적&열무 들기름냉파스타");
     expect(packet.video.description).toContain("럼(바카디 화이트)");
@@ -3647,6 +3651,223 @@ describe("pi recipe extractor MVP runner", () => {
     expect(draftPrompt).not.toContain("[VIDEO_UNDERSTANDING]");
     expect(draftPrompt).not.toContain("[VIDEO_UNDERSTANDING_AUDIT]");
     expect(draftPrompt).not.toContain("[CANDIDATE_TIMELINE_INDEX]");
+  });
+
+  it("drafts multi-candidate holistic timelines candidate-first when the opt-in flag is enabled", async () => {
+    const { runPiExtraction } = await import(runnerModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const timelineResponsePath = path.join(workdir, "fixtures/video-timeline-response.json");
+    const understandingResponsePath = path.join(workdir, "fixtures/video-understanding-response.json");
+    const source = makeSource("case-a");
+    source.video.durationSeconds = 120;
+    source.video.title = "두 가지 반찬";
+    source.video.description = [
+      "00:00 양파 볶음",
+      "양파 1개",
+      "01:00 감자 무침",
+      "감자 2개",
+    ].join("\n");
+    writeJson(path.join(caseDir, "source.json"), source);
+    writeJson(path.join(caseDir, "golden.json"), { shouldNotRead: true });
+    writeJson(timelineResponsePath, {
+      events: [
+        {
+          eventId: "e1",
+          segmentId: "s1",
+          timeRange: { startSec: 0, endSec: 50 },
+          action: "양파를 볶는다",
+          visibleIngredients: ["양파"],
+          candidateAssignments: [{ candidateId: "storyboard-1", status: "supporting", reason: "first recipe" }],
+          evidence: ["description:1"],
+          confidence: 0.8,
+        },
+        {
+          eventId: "e2",
+          segmentId: "s2",
+          timeRange: { startSec: 60, endSec: 110 },
+          action: "감자를 무친다",
+          visibleIngredients: ["감자"],
+          candidateAssignments: [{ candidateId: "storyboard-2", status: "supporting", reason: "second recipe" }],
+          evidence: ["description:3"],
+          confidence: 0.8,
+        },
+      ],
+    });
+    writeJson(understandingResponsePath, {
+      globalStory: "두 가지 반찬을 순서대로 만드는 영상이다.",
+      dishStories: [
+        {
+          candidateId: "storyboard-1",
+          title: "양파 볶음",
+          plainStory: "양파를 볶는 첫 번째 반찬이다.",
+          mainIngredients: ["양파"],
+          stepOutline: ["양파를 볶는다"],
+          sourceRefs: ["description:1", "description:2", "event:e1"],
+          confidence: 0.8,
+        },
+        {
+          candidateId: "storyboard-2",
+          title: "감자 무침",
+          plainStory: "감자를 무치는 두 번째 반찬이다.",
+          mainIngredients: ["감자"],
+          stepOutline: ["감자를 무친다"],
+          sourceRefs: ["description:3", "description:4", "event:e2"],
+          confidence: 0.8,
+        },
+      ],
+      crossDishNotes: [],
+      uncertainties: [],
+    });
+
+    const result = await runPiExtraction({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "pi-holistic-candidate-first-fixture",
+      mode: "holistic-draft",
+      "source-packet-only": true,
+      "compact-source-packet": true,
+      "visual-frames": false,
+      "holistic-enable-timeline-understanding": true,
+      "holistic-enable-video-timeline-ledger": true,
+      "holistic-enable-integrated-understanding": true,
+      "holistic-enable-candidate-first-draft": true,
+      "holistic-video-timeline-response-json": timelineResponsePath,
+      "holistic-understanding-response-json": understandingResponsePath,
+    }, {
+      projectRoot: workdir,
+      executePi: async (command: string[]) => {
+        const promptPath = command[command.length - 1].replace(/^@/u, "");
+        if (promptPath.includes("storyboard-1")) {
+          return {
+            stdout: JSON.stringify({
+              recipes: [{
+                candidateId: "storyboard-1",
+                title: "양파 볶음",
+                timeRange: { startSec: 0, endSec: 60, basis: "candidate-timeline" },
+                ingredients: [
+                  { name: "양파", amount: "1", unit: "개", amountBasis: "stated", evidence: ["description:2"] },
+                ],
+                steps: [
+                  { text: "양파를 볶는다.", evidence: ["event:e1"], confidence: 0.8 },
+                ],
+                visualNeeds: [],
+                uncertainties: [],
+              }],
+              globalUncertainties: [],
+            }),
+            stderr: "",
+            exitCode: 0,
+          };
+        }
+        if (promptPath.includes("storyboard-2")) {
+          return {
+            stdout: JSON.stringify({
+              recipes: [{
+                candidateId: "storyboard-2",
+                title: "감자 무침",
+                timeRange: { startSec: 60, endSec: 120, basis: "candidate-timeline" },
+                ingredients: [
+                  { name: "감자", amount: "2", unit: "개", amountBasis: "stated", evidence: ["description:4"] },
+                ],
+                steps: [
+                  { text: "감자를 무친다.", evidence: ["event:e2"], confidence: 0.8 },
+                ],
+                visualNeeds: [],
+                uncertainties: [],
+              }],
+              globalUncertainties: [],
+            }),
+            stderr: "",
+            exitCode: 0,
+          };
+        }
+        throw new Error(`unexpected Pi command in fixture: ${command.join(" ")}`);
+      },
+    });
+
+    expect(result.failures).toBe(0);
+    const outDir = path.join(caseDir, "runs/pi-holistic-candidate-first-fixture");
+    const output = JSON.parse(readFileSync(path.join(outDir, "result.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync(path.join(outDir, "file-access-manifest.json"), "utf8"));
+    const candidateDrafts = JSON.parse(readFileSync(path.join(outDir, "candidate-drafts.json"), "utf8"));
+    const firstPrompt = readFileSync(
+      path.join(outDir, "candidate-drafts/01-storyboard-1/prompt.txt"),
+      "utf8",
+    );
+    const draftPrompt = readFileSync(path.join(outDir, "holistic-draft-prompt.txt"), "utf8");
+
+    expect(output.recipes.map((recipe: { title: string }) => recipe.title)).toEqual(["양파 볶음", "감자 무침"]);
+    expect(manifest.holisticVideoTimelineLedgerEnabled).toBe(true);
+    expect(manifest.holisticVideoTimelineLedgerFallback).toBe(false);
+    expect(manifest.holisticIntegratedUnderstandingEnabled).toBe(false);
+    expect(manifest.holisticCandidateFirstDraftEnabled).toBe(true);
+    expect(manifest.stages.map((stage: { name: string }) => stage.name)).toEqual([
+      "video-timeline",
+      "video-understanding",
+      "candidate-holistic-draft",
+      "candidate-holistic-draft",
+    ]);
+    expect(candidateDrafts).toMatchObject({
+      kind: "candidate-first-drafts",
+      assembly: {
+        recipeCount: 2,
+        expectedRecipeCount: 2,
+        mismatch: false,
+      },
+      errors: [],
+    });
+    expect(firstPrompt).toContain("[CANDIDATE_SOURCE_PACKET]");
+    expect(firstPrompt).toContain("[CANDIDATE_UNDERSTANDING_AUDIT]");
+    expect(firstPrompt).toContain("양파 1개");
+    expect(firstPrompt).not.toContain("감자 2개");
+    expect(firstPrompt).not.toContain("[VIDEO_UNDERSTANDING]");
+    expect(draftPrompt).toContain("candidate-first holistic draft mode");
+    expect(manifest.readEvents.map((event: { path: string }) => path.basename(event.path))).toEqual([
+      "source.json",
+      "video-timeline-response.json",
+      "video-understanding-response.json",
+    ]);
+  });
+
+  it("keeps coarse candidates for candidate-first dry runs when description timeline is missing", async () => {
+    const { runPiExtraction } = await import(runnerModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const source = makeSource("case-a");
+    source.video.durationSeconds = 240;
+    source.video.title = "냉장고 털이 반찬 모음";
+    source.video.description = "[재료]\n양파 1개\n감자 2개";
+    writeJson(path.join(caseDir, "source.json"), source);
+    writeJson(path.join(caseDir, "golden.json"), { shouldNotRead: true });
+
+    const result = await runPiExtraction({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "pi-holistic-candidate-first-coarse-dry-run",
+      mode: "holistic-draft",
+      "source-packet-only": true,
+      "compact-source-packet": true,
+      "dry-run": true,
+      "visual-frames": false,
+      "holistic-enable-timeline-understanding": true,
+      "holistic-enable-video-timeline-ledger": true,
+      "holistic-enable-integrated-understanding": true,
+      "holistic-enable-candidate-first-draft": true,
+      "holistic-storyboard-max-candidates": "4",
+    }, { projectRoot: workdir });
+
+    expect(result.failures).toBe(0);
+    const outDir = path.join(caseDir, "runs/pi-holistic-candidate-first-coarse-dry-run");
+    const manifest = JSON.parse(readFileSync(path.join(outDir, "file-access-manifest.json"), "utf8"));
+    const candidateDrafts = JSON.parse(readFileSync(path.join(outDir, "candidate-drafts.json"), "utf8"));
+
+    expect(manifest.holisticCandidateFirstDraftEnabled).toBe(true);
+    expect(manifest.holisticVideoTimelineLedgerFallback).toBe(false);
+    expect(manifest.holisticStoryboardCandidateCount).toBeGreaterThan(1);
+    expect(candidateDrafts.candidates.length).toBeGreaterThan(1);
+    expect(candidateDrafts.candidates.every((candidate: { status: string }) => candidate.status === "planned")).toBe(true);
+    expect(manifest.readEvents.map((event: { path: string }) => path.basename(event.path))).toEqual([
+      "source.json",
+    ]);
   });
 
   it("runs opt-in integrated video understanding before holistic drafting", async () => {

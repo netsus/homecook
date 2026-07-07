@@ -41,6 +41,7 @@ import {
   assertValidVideoUnderstanding,
   auditHolisticDraft,
   buildFinalOutputFromHolisticAudit,
+  buildCandidateFirstHolisticDraftPrompt,
   buildHolisticCandidateLedger,
   buildHolisticDraftPrompt,
   buildHolisticFinalPrompt,
@@ -245,6 +246,8 @@ function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
     holisticDraftCommandPath: path.join(outDir, "holistic-draft-command.json"),
     holisticDraftRawPath: path.join(outDir, "holistic-draft-raw-response.json"),
     holisticDraftPath: path.join(outDir, "holistic-draft.json"),
+    candidateDraftsPath: path.join(outDir, "candidate-drafts.json"),
+    candidateDraftsDir: path.join(outDir, "candidate-drafts"),
     holisticVisualRepairPromptPath: path.join(outDir, "holistic-visual-repair-prompt.txt"),
     holisticVisualRepairCommandPath: path.join(outDir, "holistic-visual-repair-command.json"),
     holisticVisualRepairRawPath: path.join(outDir, "holistic-visual-repair-raw-response.json"),
@@ -456,6 +459,324 @@ function mergeVisualLedgers(sourcePacket, ledgers) {
   };
 }
 
+function uniqueEntriesByRef(entries) {
+  const selected = [];
+  const seen = new Set();
+  for (const entry of entries ?? []) {
+    if (!entry?.ref || seen.has(entry.ref)) continue;
+    seen.add(entry.ref);
+    selected.push(entry);
+  }
+  return selected;
+}
+
+function eventIdsForCandidate(candidatePacket, candidateTimelineEntry) {
+  return new Set([
+    ...(candidatePacket?.supportingEvents ?? []),
+    ...(candidatePacket?.unclearEvents ?? []),
+    ...(candidateTimelineEntry?.supportingEvents ?? []),
+    ...(candidateTimelineEntry?.unclearEvents ?? []),
+  ].filter(Boolean));
+}
+
+function buildCandidateScopedHolisticSourcePacket(holisticSourcePacket, candidatePacket, candidateTimelineEntry) {
+  const eventIds = eventIdsForCandidate(candidatePacket, candidateTimelineEntry);
+  const eventRefs = new Set([...eventIds].map((eventId) => `event:${eventId}`));
+  const sourceEntries = candidatePacket?.sourceEntries ?? [];
+  const entries = uniqueEntriesByRef([
+    (holisticSourcePacket?.entries ?? []).find((entry) => entry.ref === "title"),
+    ...sourceEntries,
+    ...(holisticSourcePacket?.timelineEvents ?? []).filter((entry) => eventRefs.has(entry.ref)),
+  ].filter(Boolean));
+  const timelineEvents = entries.filter((entry) => entry.type === "timeline-event");
+  const videoTimelineEvents = (holisticSourcePacket?.videoTimeline?.events ?? [])
+    .filter((event) => eventIds.has(event.eventId));
+  const scopedDescription = entries
+    .filter((entry) => entry.type === "description")
+    .map((entry) => entry.text)
+    .filter(Boolean)
+    .join("\n");
+  return {
+    ...holisticSourcePacket,
+    video: {
+      ...(holisticSourcePacket?.video ?? {}),
+      description: scopedDescription,
+    },
+    entries,
+    refs: entries.map((entry) => entry.ref),
+    storyboard: [],
+    videoTimeline: holisticSourcePacket?.videoTimeline ? {
+      ...holisticSourcePacket.videoTimeline,
+      events: videoTimelineEvents,
+      summary: {
+        ...(holisticSourcePacket.videoTimeline.summary ?? {}),
+        eventCount: videoTimelineEvents.length,
+        candidateScoped: true,
+      },
+    } : null,
+    timelineEvents,
+    candidateTimelineIndex: {
+      ...(holisticSourcePacket?.candidateTimelineIndex ?? {}),
+      candidates: candidateTimelineEntry ? [candidateTimelineEntry] : [],
+      summary: {
+        candidateCount: candidateTimelineEntry ? 1 : 0,
+        candidateFirstScoped: true,
+      },
+    },
+    candidateSourcePackets: candidatePacket ? [candidatePacket] : [],
+  };
+}
+
+function candidateUnderstandingAuditForPrompt(videoUnderstandingAudit, candidateId) {
+  const storyAudits = (videoUnderstandingAudit?.storyAudits ?? [])
+    .filter((story) => story?.candidateId === candidateId)
+    .filter((story) => (story.supportedRefs ?? []).length > 0);
+  if (storyAudits.length === 0) return null;
+  return {
+    schemaVersion: videoUnderstandingAudit.schemaVersion ?? 1,
+    kind: "candidate-understanding-audit",
+    candidateId,
+    summary: {
+      storyCount: storyAudits.length,
+      sourceBackedStoryCount: storyAudits.length,
+      source: "video-understanding-audit",
+      rawUnderstandingInjected: false,
+    },
+    storyAudits,
+  };
+}
+
+function buildCandidateDraftPaths(paths, candidateId, index) {
+  const dir = path.join(
+    paths.candidateDraftsDir,
+    `${String(index + 1).padStart(2, "0")}-${safeFileSegment(candidateId)}`,
+  );
+  return {
+    dir,
+    promptPath: path.join(dir, "prompt.txt"),
+    commandPath: path.join(dir, "command.json"),
+    rawPath: path.join(dir, "raw-response.json"),
+    draftPath: path.join(dir, "draft.json"),
+    failurePath: path.join(dir, "failure.json"),
+  };
+}
+
+function candidateFirstSummarySkeleton({ sourcePacket, maxCandidates, perCandidateTimeoutMs, totalTimeoutMs }) {
+  return {
+    schemaVersion: 1,
+    kind: "candidate-first-drafts",
+    videoId: sourcePacket?.video?.videoId ?? null,
+    mode: "candidate-first-holistic-draft",
+    budget: {
+      maxCandidates,
+      perCandidateTimeoutMs,
+      totalTimeoutMs,
+    },
+    candidates: [],
+    assembly: {
+      recipeCount: 0,
+      expectedRecipeCount: 0,
+      mismatch: false,
+    },
+    errors: [],
+  };
+}
+
+function assertCandidateDraftReadyForAssembly(draft, candidateId) {
+  assertValidHolisticDraft(draft);
+  if (draft.recipes.length !== 1) {
+    throw new Error(`candidate_first_recipe_count_mismatch:${candidateId}: expected 1 recipe, got ${draft.recipes.length}`);
+  }
+  const recipe = draft.recipes[0];
+  if (recipe.candidateId !== candidateId) {
+    throw new Error(`candidate_first_candidate_id_mismatch:${candidateId}: got ${recipe.candidateId}`);
+  }
+  return recipe;
+}
+
+async function runCandidateFirstHolisticDraft({
+  manifest,
+  paths,
+  sourcePacket,
+  holisticSourcePacket,
+  videoUnderstandingAudit,
+  piTools,
+  model,
+  provider,
+  thinking,
+  dryRun,
+  projectRoot,
+  timeoutMs,
+  executePiFn,
+  maxCandidates,
+  perCandidateTimeoutMs,
+  totalTimeoutMs,
+}) {
+  const candidatePackets = holisticSourcePacket?.candidateSourcePackets ?? [];
+  const timelineCandidates = holisticSourcePacket?.candidateTimelineIndex?.candidates ?? [];
+  const summary = candidateFirstSummarySkeleton({
+    sourcePacket,
+    maxCandidates,
+    perCandidateTimeoutMs,
+    totalTimeoutMs,
+  });
+  if (candidatePackets.length === 0) {
+    summary.errors.push({
+      code: "candidate_first_no_candidates",
+      message: "candidateSourcePackets가 없어 candidate-first draft를 실행할 수 없다.",
+    });
+    await writeJsonTracked(manifest, paths.candidateDraftsPath, summary, "candidate-drafts-summary");
+    throw new Error("candidate_first_no_candidates");
+  }
+  if (candidatePackets.length > maxCandidates) {
+    summary.errors.push({
+      code: "candidate_first_budget_exceeded",
+      message: `candidate count ${candidatePackets.length} exceeds max ${maxCandidates}`,
+    });
+    await writeJsonTracked(manifest, paths.candidateDraftsPath, summary, "candidate-drafts-summary");
+    throw new Error("candidate_first_budget_exceeded");
+  }
+
+  const startedAt = Date.now();
+  const assembledRecipes = [];
+  const promptParts = [];
+  const rawParts = [];
+  for (const [index, candidatePacket] of candidatePackets.entries()) {
+    const candidateId = candidatePacket.candidateId;
+    const candidateTimelineEntry = timelineCandidates.find((candidate) => candidate.candidateId === candidateId) ?? null;
+    const candidatePaths = buildCandidateDraftPaths(paths, candidateId, index);
+    const elapsedMs = Date.now() - startedAt;
+    const remainingMs = totalTimeoutMs - elapsedMs;
+    if (remainingMs <= 0) {
+      const failure = {
+        candidateId,
+        code: "candidate_first_budget_exceeded",
+        message: "candidate-first total timeout budget was exhausted before this candidate",
+      };
+      summary.errors.push(failure);
+      await writeJsonTracked(manifest, candidatePaths.failurePath, failure, `candidate-draft-failure:${candidateId}`);
+      break;
+    }
+    const candidateTimeoutMs = Math.min(perCandidateTimeoutMs, remainingMs, timeoutMs);
+    const candidateScopedSourcePacket = buildCandidateScopedHolisticSourcePacket(
+      holisticSourcePacket,
+      candidatePacket,
+      candidateTimelineEntry,
+    );
+    const candidateUnderstandingAudit = candidateUnderstandingAuditForPrompt(videoUnderstandingAudit, candidateId);
+    const candidatePrompt = buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
+      understandingAudit: candidateUnderstandingAudit,
+    });
+    promptParts.push(candidatePrompt);
+    await writeTextTracked(manifest, candidatePaths.promptPath, `${candidatePrompt}\n`, `candidate-draft-prompt:${candidateId}`);
+    addAllowedRead(manifest, candidatePaths.promptPath);
+    const candidateCommand = buildPiCommand({
+      promptPath: candidatePaths.promptPath,
+      model,
+      provider,
+      thinking,
+      tools: piTools,
+    });
+    manifest.stages.push({ name: "candidate-holistic-draft", candidateId, command: candidateCommand });
+    await writeJsonTracked(manifest, candidatePaths.commandPath, {
+      command: candidateCommand,
+      note: piCommandNote(piTools),
+      mode: "candidate-first-holistic-draft",
+      candidateId,
+      timeoutMs: candidateTimeoutMs,
+    }, `candidate-draft-command:${candidateId}`);
+    const summaryEntry = {
+      candidateId,
+      title: candidatePacket.title ?? candidateTimelineEntry?.title ?? null,
+      status: dryRun ? "planned" : "pending",
+      promptPath: path.relative(paths.outDir, candidatePaths.promptPath),
+      commandPath: path.relative(paths.outDir, candidatePaths.commandPath),
+      rawPath: path.relative(paths.outDir, candidatePaths.rawPath),
+      draftPath: path.relative(paths.outDir, candidatePaths.draftPath),
+      failurePath: path.relative(paths.outDir, candidatePaths.failurePath),
+      sourceEntryCount: candidatePacket.sourceEntries?.length ?? 0,
+      understandingAuditStoryCount: candidateUnderstandingAudit?.storyAudits?.length ?? 0,
+      recipeCount: 0,
+      timeoutMs: candidateTimeoutMs,
+      reason: null,
+    };
+    summary.candidates.push(summaryEntry);
+    if (dryRun) continue;
+
+    try {
+      manifest.currentStage = `candidate-holistic-draft:${candidateId}`;
+      const candidateRawPayload = await readFixtureOrExecutePi({
+        manifest,
+        fixturePath: null,
+        fixtureReason: `candidate-draft-fixture-response-json:${candidateId}`,
+        command: candidateCommand,
+        projectRoot,
+        timeoutMs: candidateTimeoutMs,
+        executePiFn,
+      });
+      rawParts.push(candidateRawPayload);
+      await writeTextTracked(
+        manifest,
+        candidatePaths.rawPath,
+        rawPayloadForDisk(candidateRawPayload),
+        `candidate-draft-raw-response:${candidateId}`,
+      );
+      const candidateDraft = normalizeHolisticDraft(candidateRawPayload);
+      const recipe = assertCandidateDraftReadyForAssembly(candidateDraft, candidateId);
+      assembledRecipes.push(recipe);
+      await writeJsonTracked(manifest, candidatePaths.draftPath, candidateDraft, `candidate-draft-result:${candidateId}`);
+      summaryEntry.status = "drafted";
+      summaryEntry.recipeCount = candidateDraft.recipes.length;
+    } catch (error) {
+      summaryEntry.status = "failed";
+      summaryEntry.reason = error instanceof Error ? error.message : String(error);
+      const failure = {
+        candidateId,
+        code: "candidate_first_candidate_failed",
+        message: summaryEntry.reason,
+        stack: error instanceof Error ? error.stack : undefined,
+        piExecution: error?.piExecution ?? null,
+      };
+      summary.errors.push(failure);
+      await writeJsonTracked(manifest, candidatePaths.failurePath, failure, `candidate-draft-failure:${candidateId}`);
+      break;
+    }
+  }
+
+  summary.assembly.expectedRecipeCount = candidatePackets.length;
+  summary.assembly.recipeCount = assembledRecipes.length;
+  summary.assembly.mismatch = !dryRun && summary.assembly.recipeCount !== summary.assembly.expectedRecipeCount;
+  if (summary.assembly.mismatch) {
+    summary.errors.push({
+      code: "candidate_first_assembly_mismatch",
+      message: `assembled recipe count ${summary.assembly.recipeCount} did not match candidate count ${summary.assembly.expectedRecipeCount}`,
+    });
+  }
+  await writeJsonTracked(manifest, paths.candidateDraftsPath, summary, "candidate-drafts-summary");
+  if (dryRun) {
+    return {
+      draft: null,
+      summary,
+      promptText: promptParts.join("\n\n--- candidate draft prompt ---\n\n"),
+      rawPayload: rawParts.join("\n"),
+    };
+  }
+  if (summary.errors.length > 0) {
+    throw new Error(summary.errors.map((entry) => entry.code).join(","));
+  }
+  const draft = normalizeHolisticDraft({
+    recipes: assembledRecipes,
+    globalUncertainties: summary.errors.map((entry) => entry.message),
+  });
+  assertValidHolisticDraft(draft);
+  return {
+    draft,
+    summary,
+    promptText: promptParts.join("\n\n--- candidate draft prompt ---\n\n"),
+    rawPayload: rawParts.join("\n"),
+  };
+}
+
 function buildStoryboardVisualTargetLedger({ sourcePacket, storyboardCandidateLedger, frameBudget }) {
   const candidates = storyboardCandidateLedger.candidates ?? [];
   const framesPerCandidate = Math.max(1, Math.ceil(Math.max(1, frameBudget) / Math.max(1, candidates.length)));
@@ -525,6 +846,10 @@ async function runHolisticPiExtractionCase({
   holisticMaxTotalTargets,
   holisticVisualTargetMaxWindowSec,
   holisticVisualRepairEnabled,
+  holisticCandidateFirstDraft,
+  holisticCandidateFirstMaxCandidates,
+  holisticCandidateFirstDraftTimeoutMs,
+  holisticCandidateFirstTotalTimeoutMs,
   ytDlpBin,
   ffmpegBin,
   frameExtractorScript,
@@ -550,12 +875,19 @@ async function runHolisticPiExtractionCase({
     maxCandidates: holisticStoryboardMaxCandidates,
     enableTimelineUnderstanding: holisticTimelineUnderstanding,
     frameBudget: effectiveStoryboardFrameBudget,
-    coarseAsWholeRecipeCandidate: holisticVideoTimelineLedger,
+    coarseAsWholeRecipeCandidate: holisticVideoTimelineLedger && !holisticCandidateFirstDraft,
   });
-  const multiCandidateTimelineLedgerFallback = holisticVideoTimelineLedger && storyboardCandidateLedger.candidates.length > 1;
+  const candidateFirstDraftActive = holisticCandidateFirstDraft
+    && holisticVideoTimelineLedger
+    && storyboardCandidateLedger.candidates.length > 1;
+  const multiCandidateTimelineLedgerFallback = holisticVideoTimelineLedger
+    && storyboardCandidateLedger.candidates.length > 1
+    && !candidateFirstDraftActive;
   const effectiveHolisticVideoTimelineLedger = holisticVideoTimelineLedger && !multiCandidateTimelineLedgerFallback;
   const shouldRunHolisticIntegratedUnderstanding = holisticIntegratedUnderstanding;
-  const effectiveHolisticIntegratedUnderstanding = holisticIntegratedUnderstanding && !multiCandidateTimelineLedgerFallback;
+  const effectiveHolisticIntegratedUnderstanding = holisticIntegratedUnderstanding
+    && !multiCandidateTimelineLedgerFallback
+    && !candidateFirstDraftActive;
   const effectiveHolisticMaxTargetsPerRecipe = multiCandidateTimelineLedgerFallback
     ? Math.max(holisticMaxTargetsPerRecipe, 3)
     : holisticMaxTargetsPerRecipe;
@@ -713,10 +1045,19 @@ async function runHolisticPiExtractionCase({
   manifest.holisticIntegratedUnderstandingRequested = holisticIntegratedUnderstanding;
   manifest.holisticIntegratedUnderstandingStageEnabled = shouldRunHolisticIntegratedUnderstanding;
   manifest.holisticIntegratedUnderstandingEnabled = effectiveHolisticIntegratedUnderstanding;
+  manifest.holisticCandidateFirstDraftRequested = holisticCandidateFirstDraft;
+  manifest.holisticCandidateFirstDraftEnabled = candidateFirstDraftActive;
   manifest.holistic.videoTimelineLedgerEffective = effectiveHolisticVideoTimelineLedger;
   manifest.holistic.videoTimelineLedgerFallback = multiCandidateTimelineLedgerFallback;
   manifest.holistic.integratedUnderstandingStageEnabled = shouldRunHolisticIntegratedUnderstanding;
   manifest.holistic.integratedUnderstandingEffective = effectiveHolisticIntegratedUnderstanding;
+  manifest.holistic.candidateFirstDraft = {
+    requested: holisticCandidateFirstDraft,
+    enabled: candidateFirstDraftActive,
+    maxCandidates: holisticCandidateFirstMaxCandidates,
+    perCandidateTimeoutMs: holisticCandidateFirstDraftTimeoutMs,
+    totalTimeoutMs: holisticCandidateFirstTotalTimeoutMs,
+  };
   manifest.holistic.visualRepairEffective = effectiveHolisticVisualRepairEnabled;
   const holisticSourcePacket = buildHolisticSourcePacket(sourcePacket, storyboardLedger, {
     includeStoryboardEntries: !effectiveHolisticVideoTimelineLedger,
@@ -774,7 +1115,9 @@ async function runHolisticPiExtractionCase({
     }
     const selectedVideoUnderstanding = selectUsableVideoUnderstanding(videoUnderstanding, holisticSourcePacket, {
       forceLogOnly: !effectiveHolisticIntegratedUnderstanding,
-      logOnlyReason: multiCandidateTimelineLedgerFallback
+      logOnlyReason: candidateFirstDraftActive
+        ? "candidate_first_uses_audit_only"
+        : multiCandidateTimelineLedgerFallback
         ? "multi_candidate_understanding_injection_disabled"
         : "understanding_injection_disabled",
     });
@@ -797,47 +1140,105 @@ async function runHolisticPiExtractionCase({
     holisticDraftSourcePacket,
     "holistic-draft-source-packet",
   );
-  const holisticDraftPrompt = buildHolisticDraftPrompt(holisticDraftSourcePacket, {
-    timelineMode: effectiveHolisticVideoTimelineLedger,
-    videoUnderstanding: videoUnderstandingUsage?.usable && effectiveHolisticIntegratedUnderstanding ? videoUnderstanding : null,
-    understandingAudit: videoUnderstandingUsage?.usable && effectiveHolisticIntegratedUnderstanding ? videoUnderstandingAudit : null,
-  });
-  await writeTextTracked(manifest, paths.holisticDraftPromptPath, `${holisticDraftPrompt}\n`, "holistic-draft-prompt");
-  addAllowedRead(manifest, paths.holisticDraftPromptPath);
-  const holisticCommand = buildPiCommand({ promptPath: paths.holisticDraftPromptPath, model, provider, thinking, tools: piTools });
-  manifest.stages.push({ name: "holistic-draft", command: holisticCommand });
-  await writeJsonTracked(manifest, paths.holisticDraftCommandPath, {
-    command: holisticCommand,
-    note: piCommandNote(piTools),
-    mode: "holistic-draft",
-    allowFetchContent,
-    sourcePacketOnly,
-  }, "holistic-draft-command");
+  let holisticDraftPrompt = "";
+  let holisticRawPayload = "";
+  let candidateFirstSummary = null;
+  let draft = null;
+  if (candidateFirstDraftActive) {
+    const assemblyPrompt = [
+      "candidate-first holistic draft mode",
+      "후보별 prompt/raw/draft는 candidate-drafts/<candidateId>/ 아래에 저장된다.",
+      "이 파일은 기존 cache hash와 디버깅 경로 호환을 위한 조립 메모다.",
+    ].join("\n");
+    await writeTextTracked(manifest, paths.holisticDraftPromptPath, `${assemblyPrompt}\n`, "holistic-draft-prompt");
+    await writeJsonTracked(manifest, paths.holisticDraftCommandPath, {
+      note: "candidate-first mode writes one command per candidate under candidate-drafts/<candidateId>/command.json",
+      mode: "candidate-first-holistic-draft",
+      allowFetchContent,
+      sourcePacketOnly,
+    }, "holistic-draft-command");
+    const candidateFirstResult = await runCandidateFirstHolisticDraft({
+      manifest,
+      paths,
+      sourcePacket,
+      holisticSourcePacket: holisticDraftSourcePacket,
+      videoUnderstandingAudit,
+      piTools,
+      model,
+      provider,
+      thinking,
+      dryRun,
+      projectRoot,
+      timeoutMs,
+      executePiFn,
+      maxCandidates: holisticCandidateFirstMaxCandidates,
+      perCandidateTimeoutMs: holisticCandidateFirstDraftTimeoutMs,
+      totalTimeoutMs: holisticCandidateFirstTotalTimeoutMs,
+    });
+    holisticDraftPrompt = candidateFirstResult.promptText;
+    holisticRawPayload = candidateFirstResult.rawPayload;
+    candidateFirstSummary = candidateFirstResult.summary;
+    manifest.holisticCandidateFirstDraftSummary = {
+      candidateCount: candidateFirstSummary.candidates.length,
+      draftedCount: candidateFirstSummary.candidates.filter((candidate) => candidate.status === "drafted").length,
+      errorCount: candidateFirstSummary.errors.length,
+      assembly: candidateFirstSummary.assembly,
+    };
+    if (dryRun) {
+      manifest.phase = "holistic-dry-run-completed";
+      return;
+    }
+    draft = candidateFirstResult.draft;
+    await writeTextTracked(
+      manifest,
+      paths.holisticDraftRawPath,
+      rawPayloadForDisk(holisticRawPayload),
+      "holistic-draft-raw-response",
+    );
+    await writeJsonTracked(manifest, paths.holisticDraftPath, draft, "holistic-draft");
+  } else {
+    holisticDraftPrompt = buildHolisticDraftPrompt(holisticDraftSourcePacket, {
+      timelineMode: effectiveHolisticVideoTimelineLedger,
+      videoUnderstanding: videoUnderstandingUsage?.usable && effectiveHolisticIntegratedUnderstanding ? videoUnderstanding : null,
+      understandingAudit: videoUnderstandingUsage?.usable && effectiveHolisticIntegratedUnderstanding ? videoUnderstandingAudit : null,
+    });
+    await writeTextTracked(manifest, paths.holisticDraftPromptPath, `${holisticDraftPrompt}\n`, "holistic-draft-prompt");
+    addAllowedRead(manifest, paths.holisticDraftPromptPath);
+    const holisticCommand = buildPiCommand({ promptPath: paths.holisticDraftPromptPath, model, provider, thinking, tools: piTools });
+    manifest.stages.push({ name: "holistic-draft", command: holisticCommand });
+    await writeJsonTracked(manifest, paths.holisticDraftCommandPath, {
+      command: holisticCommand,
+      note: piCommandNote(piTools),
+      mode: "holistic-draft",
+      allowFetchContent,
+      sourcePacketOnly,
+    }, "holistic-draft-command");
 
-  if (dryRun) {
-    manifest.phase = "holistic-dry-run-completed";
-    return;
+    if (dryRun) {
+      manifest.phase = "holistic-dry-run-completed";
+      return;
+    }
+
+    manifest.currentStage = "holistic-draft";
+    holisticRawPayload = await readFixtureOrExecutePi({
+      manifest,
+      fixturePath: holisticResponseJsonPath,
+      fixtureReason: "holistic-fixture-response-json",
+      command: holisticCommand,
+      projectRoot,
+      timeoutMs,
+      executePiFn,
+    });
+    await writeTextTracked(
+      manifest,
+      paths.holisticDraftRawPath,
+      rawPayloadForDisk(holisticRawPayload),
+      "holistic-draft-raw-response",
+    );
+    draft = normalizeHolisticDraft(holisticRawPayload);
+    assertValidHolisticDraft(draft);
+    await writeJsonTracked(manifest, paths.holisticDraftPath, draft, "holistic-draft");
   }
-
-  manifest.currentStage = "holistic-draft";
-  const holisticRawPayload = await readFixtureOrExecutePi({
-    manifest,
-    fixturePath: holisticResponseJsonPath,
-    fixtureReason: "holistic-fixture-response-json",
-    command: holisticCommand,
-    projectRoot,
-    timeoutMs,
-    executePiFn,
-  });
-  await writeTextTracked(
-    manifest,
-    paths.holisticDraftRawPath,
-    rawPayloadForDisk(holisticRawPayload),
-    "holistic-draft-raw-response",
-  );
-  const draft = normalizeHolisticDraft(holisticRawPayload);
-  assertValidHolisticDraft(draft);
-  await writeJsonTracked(manifest, paths.holisticDraftPath, draft, "holistic-draft");
 
   const candidateLedger = buildHolisticCandidateLedger({ draft, sourcePacket });
   await writeJsonTracked(manifest, paths.candidateLedgerPath, candidateLedger, "candidate-ledger");
@@ -986,6 +1387,14 @@ async function runHolisticPiExtractionCase({
       videoTimelineLedgerRequested: holisticVideoTimelineLedger,
       videoTimelineLedgerEnabled: effectiveHolisticVideoTimelineLedger,
       videoTimelineLedgerFallback: multiCandidateTimelineLedgerFallback,
+      candidateFirstDraftRequested: holisticCandidateFirstDraft,
+      candidateFirstDraftEnabled: candidateFirstDraftActive,
+      candidateFirstDraftSummary: candidateFirstSummary ? {
+        candidateCount: candidateFirstSummary.candidates.length,
+        draftedCount: candidateFirstSummary.candidates.filter((candidate) => candidate.status === "drafted").length,
+        errorCount: candidateFirstSummary.errors.length,
+        assembly: candidateFirstSummary.assembly,
+      } : null,
       integratedUnderstandingRequested: holisticIntegratedUnderstanding,
       integratedUnderstandingStageEnabled: shouldRunHolisticIntegratedUnderstanding,
       integratedUnderstandingEnabled: effectiveHolisticIntegratedUnderstanding,
@@ -1386,6 +1795,16 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   const holisticVisualRepairEnabled = holisticVideoTimelineLedger
     ? args["holistic-enable-visual-repair"] === true
     : args["holistic-disable-visual-repair"] !== true;
+  const holisticCandidateFirstDraft = args["holistic-enable-candidate-first-draft"] === true;
+  const holisticCandidateFirstMaxCandidates = optionalNumber(args["holistic-candidate-first-max-candidates"], 8);
+  const holisticCandidateFirstDraftTimeoutMs = optionalNumber(
+    args["holistic-candidate-first-draft-timeout-ms"],
+    75 * 1000,
+  );
+  const holisticCandidateFirstTotalTimeoutMs = optionalNumber(
+    args["holistic-candidate-first-total-timeout-ms"],
+    600 * 1000,
+  );
   const model = typeof args.model === "string" ? args.model : DEFAULT_MODEL;
   const provider = typeof args["pi-provider"] === "string" ? args["pi-provider"] : null;
   const thinking = typeof args.thinking === "string" ? args.thinking : null;
@@ -1447,6 +1866,10 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
         maxTotalTargets: holisticMaxTotalTargets,
         visualTargetMaxWindowSec: holisticVisualTargetMaxWindowSec,
         visualRepairEnabled: holisticVisualRepairEnabled,
+        candidateFirstDraftEnabled: holisticCandidateFirstDraft,
+        candidateFirstMaxCandidates: holisticCandidateFirstMaxCandidates,
+        candidateFirstDraftTimeoutMs: holisticCandidateFirstDraftTimeoutMs,
+        candidateFirstTotalTimeoutMs: holisticCandidateFirstTotalTimeoutMs,
       },
       visual: {
         enabled: visualFrames,
@@ -1529,6 +1952,10 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
           holisticMaxTotalTargets,
           holisticVisualTargetMaxWindowSec,
           holisticVisualRepairEnabled,
+          holisticCandidateFirstDraft,
+          holisticCandidateFirstMaxCandidates,
+          holisticCandidateFirstDraftTimeoutMs,
+          holisticCandidateFirstTotalTimeoutMs,
           ytDlpBin,
           ffmpegBin,
           frameExtractorScript,
