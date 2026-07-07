@@ -220,6 +220,158 @@ export function assertValidVideoUnderstanding(understanding) {
   return true;
 }
 
+function normalizeRecipeBoundaryTimeRange(value, candidateIds, candidateById) {
+  const explicit = normalizeTimeRange(value);
+  const candidateRanges = candidateIds
+    .map((candidateId) => candidateById.get(candidateId)?.timeRange)
+    .filter(Boolean);
+  const starts = candidateRanges
+    .map((range) => optionalNumber(range?.startSec, null))
+    .filter((second) => second !== null);
+  const ends = candidateRanges
+    .map((range) => optionalNumber(range?.endSec, null))
+    .filter((second) => second !== null);
+  return {
+    startSec: explicit?.startSec ?? (starts.length ? Math.min(...starts) : null),
+    endSec: explicit?.endSec ?? (ends.length ? Math.max(...ends) : null),
+    basis: explicit?.basis ?? (candidateRanges.length ? "recipe-boundary-merged-candidates" : "inferred"),
+  };
+}
+
+function normalizeRecipeBoundaryUnit(value, index, { candidateById }) {
+  const source = isObject(value) ? value : {};
+  const candidateIds = normalizeStringArray(source.candidateIds ?? source.sourceCandidateIds ?? source.recipeSourceCandidateIds);
+  const firstCandidate = candidateById.get(candidateIds[0]) ?? null;
+  return {
+    ...source,
+    recipeUnitId: cleanString(source.recipeUnitId ?? source.unitId ?? source.candidateId) ?? `r${index + 1}`,
+    title: cleanString(source.title) ?? cleanString(firstCandidate?.title) ?? `레시피 ${index + 1}`,
+    candidateIds,
+    timeRange: normalizeRecipeBoundaryTimeRange(source.timeRange, candidateIds, candidateById),
+    dishIdentityEvidence: normalizeStringArray(source.dishIdentityEvidence ?? source.evidence ?? source.sourceRefs),
+    stageSummary: normalizeStringArray(source.stageSummary ?? source.stages ?? source.stepOutline),
+    reason: cleanString(source.reason),
+    confidence: Math.max(0, Math.min(1, optionalNumber(source.confidence, 0.4))),
+  };
+}
+
+function normalizeSkippedBoundaryCandidate(value) {
+  const source = isObject(value) ? value : { candidateId: value };
+  return {
+    ...source,
+    candidateId: cleanString(source.candidateId),
+    reasonCode: cleanString(source.reasonCode) ?? "not_independent_recipe",
+    reason: cleanString(source.reason),
+    evidence: normalizeStringArray(source.evidence ?? source.sourceRefs),
+  };
+}
+
+export function normalizeRecipeBoundaryPlan(value, { videoId = null, candidates = [] } = {}) {
+  const parsed = parsePiRawOutput(value) ?? {};
+  const candidateById = new Map((candidates ?? [])
+    .map((candidate) => [cleanString(candidate?.candidateId), candidate])
+    .filter(([candidateId]) => candidateId));
+  const recipeUnits = Array.isArray(parsed.recipeUnits)
+    ? parsed.recipeUnits
+    : Array.isArray(parsed.units)
+      ? parsed.units
+      : [];
+  const skippedCandidates = Array.isArray(parsed.skippedCandidates)
+    ? parsed.skippedCandidates
+    : Array.isArray(parsed.skipped)
+      ? parsed.skipped
+      : [];
+  return {
+    ...parsed,
+    schemaVersion: 1,
+    kind: "recipe-boundary-plan",
+    videoId: cleanString(parsed.videoId) ?? videoId,
+    recipeUnits: recipeUnits.map((unit, index) => normalizeRecipeBoundaryUnit(unit, index, { candidateById })),
+    skippedCandidates: skippedCandidates.map(normalizeSkippedBoundaryCandidate).filter((candidate) => candidate.candidateId),
+    uncertainties: normalizeStringArray(parsed.uncertainties),
+  };
+}
+
+export function validateRecipeBoundaryPlan(plan, {
+  allowedCandidateIds = [],
+  allowedEvidenceRefs = null,
+} = {}) {
+  const errors = [];
+  if (!isObject(plan)) return ["recipe boundary plan must be an object"];
+  if (!Array.isArray(plan.recipeUnits)) return ["recipe boundary plan recipeUnits must be an array"];
+  if (!Array.isArray(plan.skippedCandidates)) return ["recipe boundary plan skippedCandidates must be an array"];
+
+  const candidateOrder = new Map((allowedCandidateIds ?? []).map((candidateId, index) => [candidateId, index]));
+  const knownCandidates = new Set(allowedCandidateIds ?? []);
+  const allowedRefs = allowedEvidenceRefs ? new Set(allowedEvidenceRefs) : null;
+  const seen = new Map();
+  const markCandidate = (candidateId, path) => {
+    if (!candidateId) {
+      errors.push(`${path} candidateId is required`);
+      return;
+    }
+    if (!knownCandidates.has(candidateId)) {
+      errors.push(`${path} unknown candidateId: ${candidateId}`);
+    }
+    if (seen.has(candidateId)) {
+      errors.push(`${path} duplicate candidate assignment: ${candidateId}`);
+    } else {
+      seen.set(candidateId, path);
+    }
+  };
+  const checkEvidence = (refs, path) => {
+    if (!allowedRefs) return;
+    for (const ref of refs ?? []) {
+      if (!allowedRefs.has(ref)) errors.push(`${path} invalid evidence ref: ${ref}`);
+    }
+  };
+
+  let previousUnitFirstIndex = -1;
+  plan.recipeUnits.forEach((unit, unitIndex) => {
+    const path = `recipeUnits[${unitIndex}]`;
+    if (!cleanString(unit.recipeUnitId)) errors.push(`${path}.recipeUnitId is required`);
+    if (!Array.isArray(unit.candidateIds) || unit.candidateIds.length === 0) {
+      errors.push(`${path}.candidateIds must contain at least one candidate`);
+    }
+    let previousInsideUnitIndex = -1;
+    let firstInsideUnitIndex = null;
+    for (const candidateId of unit.candidateIds ?? []) {
+      markCandidate(candidateId, `${path}.candidateIds`);
+      const candidateIndex = candidateOrder.get(candidateId);
+      if (candidateIndex === undefined) continue;
+      if (firstInsideUnitIndex === null) firstInsideUnitIndex = candidateIndex;
+      if (candidateIndex <= previousInsideUnitIndex) {
+        errors.push(`${path}.candidateIds must stay in source order`);
+      }
+      previousInsideUnitIndex = candidateIndex;
+    }
+    if (firstInsideUnitIndex !== null && firstInsideUnitIndex <= previousUnitFirstIndex) {
+      errors.push(`${path} must stay in source order`);
+    }
+    if (firstInsideUnitIndex !== null) previousUnitFirstIndex = firstInsideUnitIndex;
+    checkEvidence(unit.dishIdentityEvidence, `${path}.dishIdentityEvidence`);
+  });
+
+  plan.skippedCandidates.forEach((candidate, skippedIndex) => {
+    const path = `skippedCandidates[${skippedIndex}]`;
+    markCandidate(candidate.candidateId, path);
+    checkEvidence(candidate.evidence, `${path}.evidence`);
+  });
+
+  for (const candidateId of knownCandidates) {
+    if (!seen.has(candidateId)) errors.push(`missing candidate assignment: ${candidateId}`);
+  }
+  return errors;
+}
+
+export function assertValidRecipeBoundaryPlan(plan, options = {}) {
+  const errors = validateRecipeBoundaryPlan(plan, options);
+  if (errors.length) {
+    throw new Error(`Pi recipe boundary plan validation failed:\n- ${errors.join("\n- ")}`);
+  }
+  return true;
+}
+
 function videoUnderstandingAllowedRefs(holisticSourcePacket) {
   return new Set(uniqueStrings([
     ...(holisticSourcePacket?.refs ?? []),
@@ -768,6 +920,68 @@ export function buildVideoUnderstandingPrompt(holisticSourcePacket, { timelineMo
   ].join("\n");
 }
 
+export function buildRecipeBoundaryPlanPrompt(holisticSourcePacket, {
+  videoUnderstandingAudit = null,
+} = {}) {
+  const candidates = holisticSourcePacket?.candidateTimelineIndex?.candidates ?? [];
+  const exampleCandidateIds = candidates.slice(0, Math.min(2, candidates.length)).map((candidate) => candidate.candidateId);
+  const exampleCandidateId = exampleCandidateIds[0] ?? "storyboard-1";
+  return [
+    "너는 유튜브 레시피 영상의 후보 구간들을 실제 레시피 단위로 묶는 도우미다.",
+    "목표: 레시피를 쓰지 말고, 후보 구간(candidate)들이 같은 요리인지 다른 요리인지 판단해 recipe-boundary-plan JSON만 만든다.",
+    "",
+    "중요한 제한:",
+    "- 로컬 파일, golden.json, grade, 이전 result, 비교 HTML, 이전 추출 결과를 읽지 마라.",
+    "- 아래 HOLISTIC_SOURCE_PACKET, CANDIDATE_TIMELINE_INDEX, CANDIDATE_SOURCE_PACKETS, VIDEO_UNDERSTANDING_AUDIT만 사용한다.",
+    "- 이 단계에서 재료표, 재료양, 만들기 단계를 작성하지 마라. 오직 레시피 경계만 판단한다.",
+    "- candidateId는 CANDIDATE_TIMELINE_INDEX에 있는 값만 사용한다.",
+    "- 많은 candidate window가 하나의 레시피를 이룰 수 있다.",
+    "- 시간 구간이 바뀌었다는 이유만으로 레시피를 나누지 마라.",
+    "- 인접 후보가 애매하고 새 레시피 시작 신호가 없으면 하나의 recipeUnit으로 합쳐라.",
+    "- 새 번호/새 제목/재료 묶음 초기화/두 번째 레시피 같은 명확한 신호가 있으면 recipeUnit을 분리하라.",
+    "- 인트로, 아웃트로, 시식, 반복 설명, 광고성 구간은 recipeUnit으로 만들지 말고 skippedCandidates에 넣어라.",
+    "- 모든 candidate는 recipeUnits[].candidateIds 또는 skippedCandidates[]에 정확히 한 번만 들어가야 한다.",
+    "- evidence에는 아래 packet 안에 있는 source ref, event ref, frame ref만 넣어라.",
+    "- 확실하지 않은 판단은 uncertainties에 남긴다.",
+    "- 출력은 설명 없이 JSON 객체 하나만 반환한다.",
+    "",
+    "스키마:",
+    JSON.stringify({
+      recipeUnits: [{
+        recipeUnitId: "r1",
+        title: "실제 요리명",
+        candidateIds: exampleCandidateIds.length > 0 ? exampleCandidateIds : [exampleCandidateId],
+        timeRange: { startSec: 0, endSec: 120, basis: "recipe-boundary-plan" },
+        dishIdentityEvidence: ["title", "description:1", "event:e1"],
+        stageSummary: ["요리 흐름 요약 1", "요리 흐름 요약 2"],
+        reason: "같은 요리가 인접 후보들에 걸쳐 이어진다.",
+        confidence: 0.7,
+      }],
+      skippedCandidates: [{
+        candidateId: exampleCandidateId,
+        reasonCode: "intro_outro_or_repetition",
+        reason: "독립 레시피가 아니라 반복 설명이다.",
+        evidence: ["description:1"],
+      }],
+      uncertainties: [],
+    }, null, 2),
+    "",
+    "[CANDIDATE_TIMELINE_INDEX]",
+    JSON.stringify(holisticSourcePacket?.candidateTimelineIndex ?? { candidates: [] }, null, 2),
+    "",
+    "[CANDIDATE_SOURCE_PACKETS]",
+    JSON.stringify(holisticSourcePacket?.candidateSourcePackets ?? [], null, 2),
+    "",
+    ...(videoUnderstandingAudit ? [
+      "[VIDEO_UNDERSTANDING_AUDIT]",
+      JSON.stringify(videoUnderstandingAudit, null, 2),
+      "",
+    ] : []),
+    "[HOLISTIC_SOURCE_PACKET]",
+    JSON.stringify(holisticSourcePacket, null, 2),
+  ].join("\n");
+}
+
 export function buildHolisticDraftPrompt(holisticSourcePacket, {
   timelineMode = false,
   videoUnderstanding = null,
@@ -887,6 +1101,13 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
   const candidateTimeline = candidateScopedSourcePacket?.candidateTimelineIndex?.candidates?.[0] ?? {};
   const candidateId = cleanString(candidatePacket.candidateId ?? candidateTimeline.candidateId) ?? "r1";
   const title = cleanString(candidatePacket.title ?? candidateTimeline.title) ?? "후보 레시피";
+  const recipeSourceCandidateIds = normalizeStringArray(candidatePacket.recipeSourceCandidateIds);
+  const recipeBoundaryRules = recipeSourceCandidateIds.length > 0 ? [
+    "- 이 candidate는 recipe-boundary-plan이 여러 원래 candidate를 하나의 실제 요리로 묶은 recipe unit이다.",
+    `- recipeSourceCandidateIds ${JSON.stringify(recipeSourceCandidateIds)} 안의 source와 event는 같은 요리 범위로 보고 함께 사용한다.`,
+    "- recipeSourceCandidateIds 밖의 source나 event는 이 recipe unit에 합치지 않는다.",
+    "- recipeSourceCandidateIds 안의 구간을 다시 여러 recipe로 쪼개지 말고, 반드시 recipe draft 1개로 작성한다.",
+  ] : [];
   const hasUnderstandingAudit = isObject(understandingAudit) && Array.isArray(understandingAudit.storyAudits);
   return [
     "너는 다중 레시피 영상에서 후보 하나만 맡아 레시피 초안을 쓰는 도우미다.",
@@ -897,6 +1118,7 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
     "- 아래 CANDIDATE_SOURCE_PACKET과 CANDIDATE_TIMELINE_ENTRY만 우선 사용한다.",
     "- raw VIDEO_UNDERSTANDING은 제공되지 않는다. CANDIDATE_UNDERSTANDING_AUDIT은 source-backed 수정 메모일 뿐이다.",
     "- 다른 candidate의 재료, 수량, 단계는 절대 합치지 않는다.",
+    ...recipeBoundaryRules,
     "- candidateId는 반드시 아래 값 그대로 쓴다: " + candidateId,
     "- 확정 근거가 없는 재료 양이나 단계는 일반 레시피 지식으로 채우지 말고 null 또는 uncertainties로 남긴다.",
     "- amount/unit이 부족하지만 화면으로 확인할 수 있어 보이면 visualNeeds에 넣고 임의 추정하지 않는다.",
@@ -916,6 +1138,7 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
     JSON.stringify({
       recipes: [{
         candidateId,
+        ...(recipeSourceCandidateIds.length ? { recipeSourceCandidateIds } : {}),
         title,
         timeRange: { startSec: 0, endSec: 120, basis: "candidate-timeline|description-timeline|caption|inferred" },
         ingredients: [{
@@ -1155,6 +1378,7 @@ export function auditHolisticDraft({ draft, holisticSourcePacket, visualLedger =
     return {
       status: visualOnlyRecipe ? "unsupported_recipe" : "kept",
       candidateId: recipe.candidateId,
+      recipeSourceCandidateIds: normalizeStringArray(recipe.recipeSourceCandidateIds),
       title: recipe.title,
       timeRange: recipe.timeRange,
       ingredients: ingredientAudits,
@@ -1666,6 +1890,7 @@ export function buildFinalOutputFromHolisticAudit(audit) {
     return {
       title: recipe.title,
       candidateId: recipe.candidateId,
+      ...(recipe.recipeSourceCandidateIds?.length ? { recipeSourceCandidateIds: recipe.recipeSourceCandidateIds } : {}),
       ingredients,
       steps,
       uncertainties,
