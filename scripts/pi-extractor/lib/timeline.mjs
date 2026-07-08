@@ -342,13 +342,34 @@ function compactEvidenceLabel(value) {
     .trim();
 }
 
+function descriptionEvidenceLabel(ref) {
+  const cleaned = cleanString(ref);
+  if (!cleaned) return null;
+  const descriptionMatch = cleaned.match(/^description:(?<label>.+)$/iu);
+  if (descriptionMatch?.groups) {
+    return { cleaned, label: cleanString(descriptionMatch.groups.label), canonicalPrefix: "description" };
+  }
+  const videoDescriptionMatch = cleaned.match(/^video:description:\s*(?:\[(?<bracketed>.+)\]|(?<plain>.+))$/iu);
+  if (videoDescriptionMatch?.groups) {
+    return {
+      cleaned,
+      label: cleanString(videoDescriptionMatch.groups.bracketed ?? videoDescriptionMatch.groups.plain),
+      canonicalPrefix: "video:description",
+    };
+  }
+  return null;
+}
+
 function normalizeDescriptionEvidenceRef(ref, sourcePacket) {
   const cleaned = cleanString(ref);
   if (!cleaned) return null;
-  const match = cleaned.match(/^description:(?<label>.+)$/iu);
-  if (!match?.groups) return cleaned;
-  const label = cleanString(match.groups.label);
-  if (!label || /^\d+(?::\d+)?$/u.test(label)) return cleaned;
+  const parsed = descriptionEvidenceLabel(cleaned);
+  if (!parsed) return cleaned;
+  const label = parsed.label;
+  if (!label) return cleaned;
+  if (/^\d+(?::\d+)?$/u.test(label)) {
+    return parsed.canonicalPrefix === "video:description" ? `description:${label}` : cleaned;
+  }
   const labelKey = compactEvidenceLabel(label);
   if (labelKey.length < 3 || ["재료", "양념", "ingredient", "ingredients"].includes(labelKey)) return cleaned;
 
@@ -548,6 +569,105 @@ export function normalizeVideoTimeline(value, { videoId = null, sourcePacket = n
     },
     errors: normalizeStringArray(parsed.errors),
   };
+}
+
+export function repairVideoTimelineEvidenceRefs(timeline, { allowedEvidenceRefs = null } = {}) {
+  const originalEvents = Array.isArray(timeline?.events) ? timeline.events : [];
+  const allowedSet = allowedEvidenceRefs ? new Set(uniqueStrings(allowedEvidenceRefs)) : null;
+  if (!allowedSet) {
+    const repairLog = {
+      schemaVersion: 1,
+      kind: "timeline-evidence-ref-repair",
+      videoId: cleanString(timeline?.videoId),
+      summary: {
+        eventCountBefore: originalEvents.length,
+        eventCountAfter: originalEvents.length,
+        repairedEventCount: 0,
+        droppedEventCount: 0,
+        removedEvidenceRefCount: 0,
+        unknownEvidenceRefCount: 0,
+      },
+      unknownEvidenceRefs: [],
+      repairs: [],
+      droppedEvents: [],
+    };
+    return { timeline, repairLog, droppedEvents: [] };
+  }
+
+  const repairs = [];
+  const droppedEvents = [];
+  const unknownEvidenceRefs = [];
+  const repairedEvents = [];
+  let removedEvidenceRefCount = 0;
+  for (const event of originalEvents) {
+    const evidence = uniqueStrings(event?.evidence);
+    const allowedEvidence = evidence.filter((ref) => allowedSet.has(ref));
+    const droppedEvidence = evidence.filter((ref) => !allowedSet.has(ref));
+    if (droppedEvidence.length > 0) {
+      unknownEvidenceRefs.push(...droppedEvidence);
+      removedEvidenceRefCount += droppedEvidence.length;
+    }
+    if (allowedEvidence.length === 0) {
+      droppedEvents.push({
+        eventId: cleanString(event?.eventId),
+        segmentId: cleanString(event?.segmentId),
+        action: cleanString(event?.action),
+        candidateAssignments: Array.isArray(event?.candidateAssignments) ? event.candidateAssignments : [],
+        originalEvidence: evidence,
+        droppedEvidence,
+        reasonCode: "timeline_event_without_allowed_evidence",
+      });
+      continue;
+    }
+    if (droppedEvidence.length > 0) {
+      repairs.push({
+        eventId: cleanString(event?.eventId),
+        segmentId: cleanString(event?.segmentId),
+        action: cleanString(event?.action),
+        originalEvidence: evidence,
+        keptEvidence: allowedEvidence,
+        droppedEvidence,
+        reasonCode: "unknown_timeline_evidence_ref_removed",
+      });
+      repairedEvents.push({ ...event, evidence: allowedEvidence });
+    } else {
+      repairedEvents.push(event);
+    }
+  }
+
+  const uniqueUnknownEvidenceRefs = uniqueStrings(unknownEvidenceRefs);
+  const summary = {
+    eventCountBefore: originalEvents.length,
+    eventCountAfter: repairedEvents.length,
+    repairedEventCount: repairs.length,
+    droppedEventCount: droppedEvents.length,
+    removedEvidenceRefCount,
+    unknownEvidenceRefCount: uniqueUnknownEvidenceRefs.length,
+  };
+  const repairedTimeline = {
+    ...timeline,
+    events: repairedEvents,
+    summary: {
+      ...(isObject(timeline?.summary) ? timeline.summary : {}),
+      eventCount: repairedEvents.length,
+      unclearEventCount: repairedEvents.filter((event) => (
+        event.candidateAssignments ?? []
+      ).some((entry) => entry.status === "unclear")).length,
+      evidenceRefRepairCount: repairs.length,
+      droppedEventCount: droppedEvents.length,
+      unknownEvidenceRefCount: uniqueUnknownEvidenceRefs.length,
+    },
+  };
+  const repairLog = {
+    schemaVersion: 1,
+    kind: "timeline-evidence-ref-repair",
+    videoId: cleanString(timeline?.videoId),
+    summary,
+    unknownEvidenceRefs: uniqueUnknownEvidenceRefs,
+    repairs,
+    droppedEvents,
+  };
+  return { timeline: repairedTimeline, repairLog, droppedEvents };
 }
 
 function normalizeStringArray(value) {
