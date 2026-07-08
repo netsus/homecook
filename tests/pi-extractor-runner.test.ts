@@ -3903,6 +3903,60 @@ describe("pi recipe extractor MVP runner", () => {
     })).toThrow(/invalid evidence ref/u);
   });
 
+  it("builds recipe unit working memory from boundary-scoped candidate packets", async () => {
+    const { buildRecipeUnitWorkingMemory } = await import(holisticModuleUrl);
+    const memory = buildRecipeUnitWorkingMemory({
+      video: { videoId: "case-a", title: "두 가지 반찬" },
+      candidateSourcePackets: [{
+        candidateId: "r1",
+        recipeSourceCandidateIds: ["storyboard-1", "storyboard-2"],
+        title: "양파 볶음",
+        timeRange: { startSec: 0, endSec: 60, basis: "recipe-boundary-plan" },
+        boundaryReason: "같은 양파 볶음 조리가 이어진다.",
+        boundaryEvidence: ["description:1", "event:e1"],
+        stageSummary: ["양파를 썬다", "양파를 볶는다"],
+        sourceEntries: [
+          { ref: "title", type: "title", text: "두 가지 반찬" },
+          { ref: "description:2", type: "description", text: "양파 1개" },
+          { ref: "event:e1", type: "timeline-event", text: "양파를 볶는다", evidence: ["description:1"] },
+        ],
+      }],
+    }, {
+      videoUnderstandingAudit: {
+        storyAudits: [{
+          candidateId: "storyboard-1",
+          supportedMainIngredients: ["양파"],
+          supportedRefs: ["description:2", "event:e1"],
+          revisionNotes: [],
+        }],
+      },
+    });
+
+    expect(memory).toMatchObject({
+      kind: "recipe-unit-working-memory",
+      summary: {
+        unitCount: 1,
+      },
+      units: [{
+        recipeUnitId: "r1",
+        sourceCandidateIds: ["storyboard-1", "storyboard-2"],
+      }],
+    });
+    expect(memory.units[0].ingredientMemory).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: "양파",
+        memoryPriority: "core",
+      }),
+    ]));
+    expect(memory.units[0].ingredientMemory.flatMap((item: { amountCandidates: unknown[] }) => item.amountCandidates)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ amount: "1", unit: "개", basis: "stated", evidence: ["description:2"] }),
+    ]));
+    expect(memory.units[0].stepMemory.map((step: { action: string }) => step.action)).toEqual(expect.arrayContaining([
+      "양파를 썬다",
+      "양파를 볶는다",
+    ]));
+  });
+
   it("uses recipe boundary units instead of raw timeline windows for candidate-first drafts", async () => {
     const { runPiExtraction } = await import(runnerModuleUrl);
     const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
@@ -3975,6 +4029,7 @@ describe("pi recipe extractor MVP runner", () => {
       "holistic-enable-integrated-understanding": true,
       "holistic-enable-candidate-first-draft": true,
       "holistic-enable-recipe-boundary-plan": true,
+      "holistic-enable-recipe-unit-working-memory": true,
       "holistic-video-timeline-response-json": timelineResponsePath,
       "holistic-understanding-response-json": understandingResponsePath,
       "holistic-recipe-boundary-response-json": boundaryResponsePath,
@@ -4015,16 +4070,29 @@ describe("pi recipe extractor MVP runner", () => {
     const output = JSON.parse(readFileSync(path.join(outDir, "result.json"), "utf8"));
     const manifest = JSON.parse(readFileSync(path.join(outDir, "file-access-manifest.json"), "utf8"));
     const boundaryPlan = JSON.parse(readFileSync(path.join(outDir, "recipe-boundary-plan.json"), "utf8"));
+    const recipeUnitWorkingMemory = JSON.parse(readFileSync(path.join(outDir, "recipe-unit-working-memory.json"), "utf8"));
     const candidateDrafts = JSON.parse(readFileSync(path.join(outDir, "candidate-drafts.json"), "utf8"));
     const unitPrompt = readFileSync(path.join(outDir, "recipe-unit-drafts/01-r1/prompt.txt"), "utf8");
 
     expect(boundaryPlan.recipeUnits).toHaveLength(1);
+    expect(recipeUnitWorkingMemory).toMatchObject({
+      kind: "recipe-unit-working-memory",
+      summary: { unitCount: 1 },
+      units: [expect.objectContaining({
+        recipeUnitId: "r1",
+        sourceCandidateIds: ["storyboard-1", "storyboard-2", "storyboard-3", "storyboard-4", "storyboard-5", "storyboard-6"],
+      })],
+    });
     expect(candidateDrafts.candidates.map((candidate: { candidateId: string }) => candidate.candidateId)).toEqual(["r1"]);
     expect(candidateDrafts.candidates[0].recipeSourceCandidateIds).toEqual(["storyboard-1", "storyboard-2", "storyboard-3", "storyboard-4", "storyboard-5", "storyboard-6"]);
+    expect(candidateDrafts.candidates[0].recipeUnitWorkingMemoryEnabled).toBe(true);
+    expect(candidateDrafts.candidates[0].recipeUnitWorkingMemoryPromptBytes).toBeGreaterThan(0);
     expect(output.recipes).toHaveLength(1);
     expect(output.recipes[0].candidateId).toBe("r1");
     expect(output.recipes[0].recipeSourceCandidateIds).toEqual(["storyboard-1", "storyboard-2", "storyboard-3", "storyboard-4", "storyboard-5", "storyboard-6"]);
     expect(unitPrompt).toContain("recipeSourceCandidateIds");
+    expect(unitPrompt).toContain("[RECIPE_UNIT_WORKING_MEMORY]");
+    expect(unitPrompt).toContain("\"kind\": \"candidate-recipe-unit-working-memory\"");
     expect(unitPrompt).toContain("버터를 녹인다");
     expect(unitPrompt).toContain("오븐에 굽는다");
     expect(manifest.holisticRecipeBoundaryPlanEnabled).toBe(true);

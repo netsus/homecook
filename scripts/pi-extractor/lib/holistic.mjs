@@ -39,6 +39,12 @@ function normalizeStringArray(value) {
   return Array.isArray(value) ? uniqueStrings(value) : [];
 }
 
+function compactText(value, maxLength = 180) {
+  const text = cleanString(value);
+  if (!text) return null;
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+}
+
 function normalizeTimeRange(value) {
   if (!isObject(value)) return null;
   const startSec = optionalNumber(value.startSec);
@@ -982,6 +988,222 @@ export function buildRecipeBoundaryPlanPrompt(holisticSourcePacket, {
   ].join("\n");
 }
 
+const AMOUNT_PATTERN = /([가-힣A-Za-z][가-힣A-Za-z0-9\s·()./-]{0,28}?)\s*([0-9]+(?:[./][0-9]+)?|[0-9]+(?:\.[0-9]+)?|반|한|두|세|네)\s*(큰술|작은술|스푼|티스푼|컵|개|g|kg|ml|L|장|대|쪽|줌|모|봉|팩|캔|알|마리|인분|줄|꼬집|조각|T|t)(?=$|[^가-힣A-Za-z0-9])/giu;
+const AMOUNT_LINE_PREFIX_PATTERN = /^\s*[-*•]?\s*/u;
+
+function amountBasisForSourceEntry(entry) {
+  if (entry?.type === "caption" || entry?.type === "transcript") return "spoken";
+  if (entry?.type === "frame") return "onscreen";
+  return "stated";
+}
+
+function normalizeIngredientNameFromAmountMatch(value) {
+  const text = cleanString(value);
+  if (!text) return null;
+  const withoutPrefix = text
+    .replace(AMOUNT_LINE_PREFIX_PATTERN, "")
+    .replace(/[:：,，/]+$/gu, "")
+    .replace(/^(재료|양념|소스|선택|필수|마무리|토핑)\s*/u, "")
+    .trim();
+  if (!withoutPrefix || withoutPrefix.length > 24) return null;
+  return withoutPrefix;
+}
+
+function extractAmountMemoryFromEntry(entry) {
+  const text = cleanString(entry?.text);
+  if (!text) return [];
+  const memories = [];
+  for (const line of text.split(/\r?\n/u)) {
+    const normalizedLine = line.trim();
+    if (!normalizedLine) continue;
+    AMOUNT_PATTERN.lastIndex = 0;
+    for (const match of normalizedLine.matchAll(AMOUNT_PATTERN)) {
+      const name = normalizeIngredientNameFromAmountMatch(match[1]);
+      if (!name) continue;
+      memories.push({
+        name,
+        role: "unknown",
+        memoryPriority: "supporting",
+        amountCandidates: [{
+          amount: match[2],
+          unit: match[3],
+          basis: amountBasisForSourceEntry(entry),
+          evidence: [entry.ref].filter(Boolean),
+        }],
+        uncertainty: null,
+      });
+    }
+  }
+  return memories;
+}
+
+function mergeIngredientMemory(memories) {
+  const byKey = new Map();
+  for (const memory of memories) {
+    const key = normalizeKey(memory.name);
+    if (!key) continue;
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, {
+        name: memory.name,
+        role: memory.role ?? "unknown",
+        memoryPriority: memory.memoryPriority ?? "supporting",
+        amountCandidates: memory.amountCandidates ?? [],
+        evidence: uniqueStrings([
+          ...(memory.evidence ?? []),
+          ...(memory.amountCandidates ?? []).flatMap((candidate) => candidate.evidence ?? []),
+        ]),
+        uncertainty: memory.uncertainty ?? null,
+      });
+      continue;
+    }
+    existing.amountCandidates = [
+      ...existing.amountCandidates,
+      ...(memory.amountCandidates ?? []),
+    ];
+    existing.evidence = uniqueStrings([
+      ...existing.evidence,
+      ...(memory.evidence ?? []),
+      ...(memory.amountCandidates ?? []).flatMap((candidate) => candidate.evidence ?? []),
+    ]);
+    if (memory.memoryPriority === "core") existing.memoryPriority = "core";
+  }
+  return [...byKey.values()].map((memory) => ({
+    ...memory,
+    amountCandidates: (memory.amountCandidates ?? []).slice(0, 4),
+  })).slice(0, 24);
+}
+
+function buildStepMemoryFromPacket(candidatePacket) {
+  const stageSummary = normalizeStringArray(candidatePacket?.stageSummary);
+  const fromBoundary = stageSummary.map((stage, index) => ({
+    order: index + 1,
+    action: stage,
+    stage: "boundary-summary",
+    memoryPriority: "core",
+    evidence: normalizeStringArray(candidatePacket?.boundaryEvidence),
+  }));
+  const fromEvents = (candidatePacket?.sourceEntries ?? [])
+    .filter((entry) => entry?.type === "timeline-event")
+    .map((entry, index) => ({
+      order: fromBoundary.length + index + 1,
+      action: compactText(entry.text, 140),
+      stage: "timeline-event",
+      memoryPriority: "core",
+      evidence: uniqueStrings([entry.ref, ...(entry.evidence ?? [])]),
+    }))
+    .filter((step) => step.action);
+  const seen = new Set();
+  return [...fromBoundary, ...fromEvents].filter((step) => {
+    const key = normalizeKey(step.action);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 12);
+}
+
+function visualNeedHintsFromMemory({ ingredientMemory, stepMemory, candidatePacket }) {
+  const sourceRefs = new Set((candidatePacket?.sourceEntries ?? []).map((entry) => entry.ref).filter(Boolean));
+  return ingredientMemory
+    .filter((memory) => (memory.amountCandidates ?? []).length === 0 && memory.memoryPriority === "core")
+    .slice(0, 3)
+    .map((memory) => ({
+      targetType: "ingredient_amount",
+      ingredient: memory.name,
+      reason: "recipe unit working memory has a core ingredient without source-backed amount",
+      candidateTimeRange: candidatePacket?.timeRange ?? null,
+      suggestedEvidence: uniqueStrings([
+        ...memory.evidence,
+        ...stepMemory.flatMap((step) => step.evidence ?? []),
+      ]).filter((ref) => typeof ref === "string" && (sourceRefs.has(ref) || ref.startsWith("event:"))),
+    }));
+}
+
+function storyAuditForRecipeUnit(videoUnderstandingAudit, candidateId, recipeSourceCandidateIds = []) {
+  const sourceIds = new Set(recipeSourceCandidateIds);
+  const storyAudits = (videoUnderstandingAudit?.storyAudits ?? [])
+    .filter((story) => story?.candidateId === candidateId || sourceIds.has(story?.candidateId));
+  return storyAudits.length ? storyAudits : [];
+}
+
+export function buildRecipeUnitWorkingMemory(holisticSourcePacket, {
+  videoUnderstandingAudit = null,
+} = {}) {
+  const candidatePackets = holisticSourcePacket?.candidateSourcePackets ?? [];
+  const units = candidatePackets.map((candidatePacket) => {
+    const storyAudits = storyAuditForRecipeUnit(
+      videoUnderstandingAudit,
+      candidatePacket.candidateId,
+      candidatePacket.recipeSourceCandidateIds ?? [],
+    );
+    const auditIngredientMemory = storyAudits.flatMap((story) => (
+      normalizeStringArray(story.supportedMainIngredients).map((name) => ({
+        name,
+        role: "main",
+        memoryPriority: "core",
+        amountCandidates: [],
+        evidence: normalizeStringArray(story.supportedRefs),
+        uncertainty: null,
+      }))
+    ));
+    const amountIngredientMemory = (candidatePacket.sourceEntries ?? []).flatMap(extractAmountMemoryFromEntry);
+    const ingredientMemory = mergeIngredientMemory([
+      ...auditIngredientMemory,
+      ...amountIngredientMemory,
+    ]);
+    const stepMemory = buildStepMemoryFromPacket(candidatePacket);
+    return {
+      recipeUnitId: candidatePacket.candidateId,
+      title: candidatePacket.title ?? null,
+      sourceCandidateIds: normalizeStringArray(candidatePacket.recipeSourceCandidateIds),
+      timeRange: candidatePacket.timeRange ?? null,
+      dishIdentity: {
+        summary: compactText([
+          candidatePacket.title,
+          candidatePacket.boundaryReason,
+          ...(candidatePacket.stageSummary ?? []),
+        ].filter(Boolean).join(" / "), 220),
+        evidence: normalizeStringArray(candidatePacket.boundaryEvidence),
+      },
+      ingredientMemory,
+      stepMemory,
+      visualNeedHints: visualNeedHintsFromMemory({ ingredientMemory, stepMemory, candidatePacket }),
+      understandingAudit: storyAudits.length ? {
+        storyCount: storyAudits.length,
+        supportedRefs: uniqueStrings(storyAudits.flatMap((story) => story.supportedRefs ?? [])),
+        revisionNotes: uniqueStrings(storyAudits.flatMap((story) => story.revisionNotes ?? [])),
+      } : null,
+      uncertainties: uniqueStrings([
+        ...(storyAudits.flatMap((story) => story.unsupportedMainIngredients ?? [])
+          .map((name) => `${name}: video understanding audit에서 source 미지원 재료로 표시됨`)),
+      ]),
+    };
+  });
+  return {
+    schemaVersion: 1,
+    kind: "recipe-unit-working-memory",
+    videoId: cleanString(holisticSourcePacket?.video?.videoId),
+    units,
+    summary: {
+      unitCount: units.length,
+      ingredientMemoryCount: units.reduce((sum, unit) => sum + unit.ingredientMemory.length, 0),
+      stepMemoryCount: units.reduce((sum, unit) => sum + unit.stepMemory.length, 0),
+      visualNeedHintCount: units.reduce((sum, unit) => sum + unit.visualNeedHints.length, 0),
+    },
+  };
+}
+
+function recipeUnitWorkingMemoryForPrompt(recipeUnitWorkingMemory, candidateId) {
+  if (!isObject(recipeUnitWorkingMemory) || !Array.isArray(recipeUnitWorkingMemory.units)) return null;
+  const unit = recipeUnitWorkingMemory.units.find((item) => item?.recipeUnitId === candidateId);
+  return unit ? {
+    schemaVersion: recipeUnitWorkingMemory.schemaVersion ?? 1,
+    kind: "candidate-recipe-unit-working-memory",
+    videoId: recipeUnitWorkingMemory.videoId ?? null,
+    unit,
+  } : null;
+}
+
 export function buildHolisticDraftPrompt(holisticSourcePacket, {
   timelineMode = false,
   videoUnderstanding = null,
@@ -1096,12 +1318,14 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, {
 
 export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
   understandingAudit = null,
+  recipeUnitWorkingMemory = null,
 } = {}) {
   const candidatePacket = candidateScopedSourcePacket?.candidateSourcePackets?.[0] ?? {};
   const candidateTimeline = candidateScopedSourcePacket?.candidateTimelineIndex?.candidates?.[0] ?? {};
   const candidateId = cleanString(candidatePacket.candidateId ?? candidateTimeline.candidateId) ?? "r1";
   const title = cleanString(candidatePacket.title ?? candidateTimeline.title) ?? "후보 레시피";
   const recipeSourceCandidateIds = normalizeStringArray(candidatePacket.recipeSourceCandidateIds);
+  const scopedWorkingMemory = recipeUnitWorkingMemoryForPrompt(recipeUnitWorkingMemory, candidateId);
   const recipeBoundaryRules = recipeSourceCandidateIds.length > 0 ? [
     "- 이 candidate는 recipe-boundary-plan이 여러 원래 candidate를 하나의 실제 요리로 묶은 recipe unit이다.",
     `- recipeSourceCandidateIds ${JSON.stringify(recipeSourceCandidateIds)} 안의 source와 event는 같은 요리 범위로 보고 함께 사용한다.`,
@@ -1109,6 +1333,7 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
     "- recipeSourceCandidateIds 안의 구간을 다시 여러 recipe로 쪼개지 말고, 반드시 recipe draft 1개로 작성한다.",
   ] : [];
   const hasUnderstandingAudit = isObject(understandingAudit) && Array.isArray(understandingAudit.storyAudits);
+  const hasWorkingMemory = isObject(scopedWorkingMemory);
   return [
     "너는 다중 레시피 영상에서 후보 하나만 맡아 레시피 초안을 쓰는 도우미다.",
     "목표: 아래 candidate 하나를 다른 candidate와 섞지 않고, 제목/설명란/고정댓글/자막/video timeline event 근거로 recipe draft 1개를 만든다.",
@@ -1124,6 +1349,12 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
     "- amount/unit이 부족하지만 화면으로 확인할 수 있어 보이면 visualNeeds에 넣고 임의 추정하지 않는다.",
     "- 모든 재료, amount/unit, 단계에는 가능한 한 evidence ref를 붙인다.",
     "- recipe가 맞는지 불확실해도 후보를 삭제하지 말고, source-backed로 보이는 최소 recipe 1개와 uncertainties를 남긴다.",
+    ...(hasWorkingMemory ? [
+      "- RECIPE_UNIT_WORKING_MEMORY는 이 recipe unit을 쓰기 전에 보존해야 할 작은 작업 메모다. 최종 evidence가 아니라 draft orientation으로만 사용한다.",
+      "- memoryPriority가 core인 ingredientMemory와 stepMemory는 요리 정체성과 흐름을 잡는 중심 단서로 사용한다.",
+      "- amountCandidates가 있는 재료는 source-backed 분량 후보를 임의로 비우지 말고, 충돌하거나 불확실하면 uncertainties에 남긴다.",
+      "- visualNeedHints는 곧바로 정답으로 쓰지 말고 visualNeeds 후보로만 연결한다.",
+    ] : []),
     "- 출력은 설명 없이 JSON 객체 하나만 반환한다.",
     "",
     "허용 evidence ref 예시:",
@@ -1176,6 +1407,11 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
     ...(hasUnderstandingAudit ? [
       "[CANDIDATE_UNDERSTANDING_AUDIT]",
       JSON.stringify(understandingAudit, null, 2),
+      "",
+    ] : []),
+    ...(hasWorkingMemory ? [
+      "[RECIPE_UNIT_WORKING_MEMORY]",
+      JSON.stringify(scopedWorkingMemory, null, 2),
       "",
     ] : []),
     "[CANDIDATE_SCOPED_HOLISTIC_SOURCE_PACKET]",
