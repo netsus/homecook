@@ -269,6 +269,68 @@ function visualEvidenceHtml({ visualTarget, visual, visualEstimates }) {
   `;
 }
 
+function understandingInjectionRows(candidateDrafts) {
+  return (candidateDrafts?.candidates ?? []).map((candidate) => {
+    const injected = candidate.candidateIntegratedBriefInjected ?? candidate.recipeUnitUnderstandingStatePromptInjected;
+    const bytes = candidate.candidateIntegratedBriefBytes ?? candidate.recipeUnitUnderstandingStatePromptBytes;
+    const maxBytes = candidate.candidateIntegratedBriefMaxBytes ?? candidate.recipeUnitUnderstandingStatePromptMaxDeltaBytes;
+    const budgetExceeded = candidate.candidateIntegratedBriefBudgetExceeded ?? candidate.recipeUnitUnderstandingStatePromptBudgetExceeded;
+    const failOpen = candidate.candidateIntegratedBriefFailOpen ?? candidate.recipeUnitUnderstandingStatePromptFailOpen;
+    const section = candidate.candidateIntegratedBriefInjected
+      ? "CANDIDATE_INTEGRATED_BRIEF"
+      : candidate.recipeUnitUnderstandingStatePromptSection;
+    return `
+      <tr>
+        <td>${esc(candidate.candidateId ?? "-")}</td>
+        <td>${esc(candidate.title ?? "-")}</td>
+        <td>${esc(boolText(injected))}</td>
+        <td>${esc(section ?? "-")}</td>
+        <td>${esc(bytes ?? "-")}${maxBytes ? ` / ${esc(maxBytes)}` : ""}</td>
+        <td>${esc(boolText(budgetExceeded))}</td>
+        <td>${esc(boolText(failOpen))}</td>
+        <td>${esc([
+          `stories ${candidate.understandingAuditStoryCount ?? 0}`,
+          `source entries ${candidate.sourceEntryCount ?? 0}`,
+          candidate.candidateIntegratedBriefTruncated || candidate.recipeUnitUnderstandingStatePromptTruncated ? "truncated" : null,
+          candidate.reason,
+        ].filter(Boolean).join(" · ") || "-")}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function understandingUsageHtml({ candidateDrafts, videoUnderstandingUsage, videoUnderstandingFailure }) {
+  const candidateCount = candidateDrafts?.candidates?.length ?? 0;
+  if (!videoUnderstandingUsage && !videoUnderstandingFailure && candidateCount === 0) return "";
+  const usable = videoUnderstandingUsage?.usable;
+  const acceptedStoryCount = videoUnderstandingUsage?.acceptedStoryCount ?? 0;
+  const rejectedStoryCount = videoUnderstandingUsage?.rejectedStoryCount ?? 0;
+  const injectedCount = (candidateDrafts?.candidates ?? [])
+    .filter((candidate) => (candidate.candidateIntegratedBriefInjected ?? candidate.recipeUnitUnderstandingStatePromptInjected) === true)
+    .length;
+  const failureText = videoUnderstandingFailure
+    ? `${videoUnderstandingFailure.reason ?? "failed"}${videoUnderstandingFailure.message ? ` · ${videoUnderstandingFailure.message}` : ""}`
+    : "";
+  return `
+    <details class="visual understanding">
+      <summary>Integrated understanding 주입 · candidates ${candidateCount} · injected ${injectedCount} · accepted stories ${acceptedStoryCount}</summary>
+      <div class="note">
+        video-understanding usable: <code>${esc(boolText(usable))}</code>
+        · rejected stories: <code>${esc(rejectedStoryCount)}</code>
+        · candidate scoped: <code>${esc(boolText(videoUnderstandingUsage?.candidateScoped))}</code>
+        ${videoUnderstandingUsage?.reason ? `· reason: <code>${esc(videoUnderstandingUsage.reason)}</code>` : ""}
+        ${failureText ? `· failure: <code>${esc(failureText)}</code>` : ""}
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>후보</th><th>레시피</th><th>주입</th><th>prompt 섹션</th><th>bytes</th><th>budget 초과</th><th>fail-open</th><th>설명</th></tr></thead>
+          <tbody>${understandingInjectionRows(candidateDrafts) || "<tr><td colspan=\"8\">candidate draft 없음</td></tr>"}</tbody>
+        </table>
+      </div>
+    </details>
+  `;
+}
+
 function sourceGapHtml({ sourceDraft, gapLedger, holisticAudit }) {
   const recipes = sourceDraft?.recipes ?? [];
   const gaps = gapLedger?.gaps ?? [];
@@ -419,7 +481,25 @@ function videoProblem({ sem, det, manifest }) {
   );
 }
 
-function videoHtml({ id, source, golden, result, det, sem, manifest, sourceDraft, gapLedger, holisticAudit, visualTarget, visual, visualEstimates, outTag }) {
+function videoHtml({
+  id,
+  source,
+  golden,
+  result,
+  det,
+  sem,
+  manifest,
+  sourceDraft,
+  gapLedger,
+  holisticAudit,
+  visualTarget,
+  visual,
+  visualEstimates,
+  candidateDrafts,
+  videoUnderstandingUsage,
+  videoUnderstandingFailure,
+  outTag,
+}) {
   const pairs = alignRecipes(golden?.recipes ?? [], result?.recipes ?? []);
   const minScore = (sem?.cases ?? []).reduce((min, item) => Math.min(min, Number(item.case_score)), Number.POSITIVE_INFINITY);
   const minDisplay = Number.isFinite(minScore) ? minScore : null;
@@ -431,9 +511,10 @@ function videoHtml({ id, source, golden, result, det, sem, manifest, sourceDraft
         <span>recipes ${det?.recipeCountPredicted ?? result?.recipes?.length ?? 0}/${det?.recipeCountGolden ?? golden?.recipes?.length ?? 0}</span>
         <span>semantic avg ${metric(sem?.average_score ?? sem?.averageScore)} · min ${metric(minDisplay)}</span>
         <span>det F1 ${metric(det?.ingredientF1)} · amount ${metric(det?.amountMatchRate)} · coverage ${metric(det?.amountCoverage)} · steps ${metric(det?.stepCoverage)}</span>
-        <span>forbidden reads ${manifest?.forbiddenReadEvents?.length ?? 0}</span>
+      <span>forbidden reads ${manifest?.forbiddenReadEvents?.length ?? 0}</span>
       <span>contract failures ${manifest?.visualEvidenceContractFailureCount ?? 0}</span>
       </div>
+      ${understandingUsageHtml({ candidateDrafts, videoUnderstandingUsage, videoUnderstandingFailure })}
       ${visualEvidenceHtml({ visualTarget, visual, visualEstimates })}
       ${sourceGapHtml({ sourceDraft, gapLedger, holisticAudit })}
       ${pairs.map((pair, index) => recipeCard({
@@ -509,6 +590,9 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
       visualTarget: await readJson(path.join(runDir, "visual-target-ledger.json"), null),
       visual: await readJson(path.join(runDir, "visual-ledger.json"), null),
       visualEstimates: await readJson(path.join(runDir, "visual-estimates.json"), null),
+      candidateDrafts: await readJson(path.join(runDir, "candidate-drafts.json"), null),
+      videoUnderstandingUsage: await readJson(path.join(runDir, "video-understanding-usage.json"), null),
+      videoUnderstandingFailure: await readJson(path.join(runDir, "video-understanding-failure.json"), null),
       outTag,
     }));
   }

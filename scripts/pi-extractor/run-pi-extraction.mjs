@@ -43,7 +43,7 @@ import {
   auditHolisticDraft,
   auditRecipeUnitConsistency,
   applyRecipeUnitUnderstandingDemotion,
-  buildCandidateRecipeUnitUnderstandingPromptPayload,
+  buildCandidateIntegratedBrief,
   buildFinalOutputFromHolisticAudit,
   buildCandidateFirstHolisticDraftPrompt,
   buildHolisticCandidateLedger,
@@ -279,6 +279,7 @@ function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
     videoUnderstandingPath: path.join(outDir, "video-understanding.json"),
     videoUnderstandingUsagePath: path.join(outDir, "video-understanding-usage.json"),
     videoUnderstandingAuditPath: path.join(outDir, "video-understanding-audit.json"),
+    videoUnderstandingFailurePath: path.join(outDir, "video-understanding-failure.json"),
     recipeBoundaryPromptPath: path.join(outDir, "recipe-boundary-prompt.txt"),
     recipeBoundaryCommandPath: path.join(outDir, "recipe-boundary-command.json"),
     recipeBoundaryRawPath: path.join(outDir, "recipe-boundary-raw-response.json"),
@@ -884,9 +885,16 @@ async function runCandidateFirstHolisticDraft({
     });
     const candidatePromptBytesBeforeUnderstandingState = Buffer.byteLength(baseCandidatePrompt, "utf8");
     let candidatePrompt = baseCandidatePrompt;
-    let recipeUnitUnderstandingStatePromptPayload = null;
+    let candidateIntegratedBriefPayload = null;
     let candidatePromptBytesAfterUnderstandingState = candidatePromptBytesBeforeUnderstandingState;
     let candidatePromptDeltaBytes = 0;
+    let candidateIntegratedBriefInjected = false;
+    let candidateIntegratedBriefBudgetExceeded = false;
+    let candidateIntegratedBriefTruncated = false;
+    let candidateIntegratedBriefFailOpen = false;
+    let candidateIntegratedBriefBytes = 0;
+    let candidateIntegratedBriefMaxBytes = 0;
+    let candidateIntegratedBriefSource = null;
     let recipeUnitUnderstandingStatePromptInjected = false;
     let recipeUnitUnderstandingStatePromptBudgetExceeded = false;
     let recipeUnitUnderstandingStatePromptTruncated = false;
@@ -897,30 +905,38 @@ async function runCandidateFirstHolisticDraft({
         500,
         recipeUnitUnderstandingStatePromptMaxDeltaBytes - 2600,
       );
-      recipeUnitUnderstandingStatePromptPayload = buildCandidateRecipeUnitUnderstandingPromptPayload(
+      candidateIntegratedBriefMaxBytes = recipeUnitUnderstandingStatePayloadMaxBytes;
+      candidateIntegratedBriefPayload = buildCandidateIntegratedBrief({
         recipeUnitUnderstandingState,
         candidateId,
-        { maxBytes: recipeUnitUnderstandingStatePayloadMaxBytes },
-      );
-      recipeUnitUnderstandingStatePromptBytes = recipeUnitUnderstandingStatePromptPayload?.bytes ?? 0;
-      recipeUnitUnderstandingStatePromptTruncated = recipeUnitUnderstandingStatePromptPayload?.truncated === true;
-      const promptWithUnderstandingState = recipeUnitUnderstandingStatePromptPayload?.state
+        recipeSourceCandidateIds: candidatePacket.recipeSourceCandidateIds ?? [],
+        videoUnderstandingAudit,
+        maxBytes: recipeUnitUnderstandingStatePayloadMaxBytes,
+      });
+      candidateIntegratedBriefBytes = candidateIntegratedBriefPayload?.bytes ?? 0;
+      candidateIntegratedBriefTruncated = candidateIntegratedBriefPayload?.truncated === true;
+      candidateIntegratedBriefSource = candidateIntegratedBriefPayload?.source ?? null;
+      const promptWithUnderstandingState = candidateIntegratedBriefPayload?.brief
         ? buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
-          understandingAudit: candidateUnderstandingAudit,
+          candidateIntegratedBrief: candidateIntegratedBriefPayload.brief,
           recipeUnitWorkingMemory: recipeUnitWorkingMemoryEnabled ? recipeUnitWorkingMemory : null,
-          recipeUnitUnderstandingPromptPayload: recipeUnitUnderstandingStatePromptPayload.state,
         })
         : baseCandidatePrompt;
       candidatePromptBytesAfterUnderstandingState = Buffer.byteLength(promptWithUnderstandingState, "utf8");
       candidatePromptDeltaBytes = candidatePromptBytesAfterUnderstandingState - candidatePromptBytesBeforeUnderstandingState;
-      recipeUnitUnderstandingStatePromptBudgetExceeded = recipeUnitUnderstandingStatePromptPayload?.budgetExceeded === true
+      candidateIntegratedBriefBudgetExceeded = candidateIntegratedBriefPayload?.budgetExceeded === true
         || candidatePromptDeltaBytes > recipeUnitUnderstandingStatePromptMaxDeltaBytes;
-      if (recipeUnitUnderstandingStatePromptPayload?.state && !recipeUnitUnderstandingStatePromptBudgetExceeded) {
+      if (candidateIntegratedBriefPayload?.brief && !candidateIntegratedBriefBudgetExceeded) {
         candidatePrompt = promptWithUnderstandingState;
-        recipeUnitUnderstandingStatePromptInjected = true;
+        candidateIntegratedBriefInjected = true;
       } else {
-        recipeUnitUnderstandingStatePromptFailOpen = true;
+        candidateIntegratedBriefFailOpen = true;
       }
+      recipeUnitUnderstandingStatePromptInjected = candidateIntegratedBriefInjected;
+      recipeUnitUnderstandingStatePromptBytes = candidateIntegratedBriefBytes;
+      recipeUnitUnderstandingStatePromptBudgetExceeded = candidateIntegratedBriefBudgetExceeded;
+      recipeUnitUnderstandingStatePromptTruncated = candidateIntegratedBriefTruncated;
+      recipeUnitUnderstandingStatePromptFailOpen = candidateIntegratedBriefFailOpen;
     }
     promptParts.push(candidatePrompt);
     await writeTextTracked(manifest, candidatePaths.promptPath, `${candidatePrompt}\n`, `candidate-draft-prompt:${candidateId}`);
@@ -967,6 +983,14 @@ async function runCandidateFirstHolisticDraft({
         : 0,
       recipeUnitUnderstandingStatePromptInjected,
       recipeUnitUnderstandingStatePromptBytes,
+      recipeUnitUnderstandingStatePromptSection: candidateIntegratedBriefInjected ? "CANDIDATE_INTEGRATED_BRIEF" : null,
+      candidateIntegratedBriefInjected,
+      candidateIntegratedBriefBytes,
+      candidateIntegratedBriefMaxBytes,
+      candidateIntegratedBriefSource,
+      candidateIntegratedBriefBudgetExceeded,
+      candidateIntegratedBriefTruncated,
+      candidateIntegratedBriefFailOpen,
       candidatePromptBytesBeforeUnderstandingState,
       candidatePromptBytesAfterUnderstandingState,
       candidatePromptActualBytes: Buffer.byteLength(candidatePrompt, "utf8"),
@@ -1138,6 +1162,7 @@ async function runHolisticPiExtractionCase({
   holisticCandidateFirstMaxCandidates,
   holisticCandidateFirstDraftTimeoutMs,
   holisticCandidateFirstTotalTimeoutMs,
+  holisticVideoUnderstandingTimeoutMs,
   ytDlpBin,
   ffmpegBin,
   frameExtractorScript,
@@ -1366,6 +1391,8 @@ async function runHolisticPiExtractionCase({
   manifest.holisticIntegratedUnderstandingRequested = holisticIntegratedUnderstanding;
   manifest.holisticIntegratedUnderstandingStageEnabled = shouldRunHolisticIntegratedUnderstanding;
   manifest.holisticIntegratedUnderstandingEnabled = effectiveHolisticIntegratedUnderstanding;
+  manifest.holisticVideoUnderstandingTimeoutCount = 0;
+  manifest.holisticVideoUnderstandingFailureCount = 0;
   manifest.holisticCandidateFirstDraftRequested = holisticCandidateFirstDraft;
   manifest.holisticCandidateFirstDraftEnabled = candidateFirstDraftActive;
   manifest.holisticRecipeBoundaryPlanRequested = holisticRecipeBoundaryPlan;
@@ -1378,6 +1405,9 @@ async function runHolisticPiExtractionCase({
   manifest.holistic.videoTimelineLedgerFallback = multiCandidateTimelineLedgerFallback;
   manifest.holistic.integratedUnderstandingStageEnabled = shouldRunHolisticIntegratedUnderstanding;
   manifest.holistic.integratedUnderstandingEffective = effectiveHolisticIntegratedUnderstanding;
+  manifest.holistic.videoUnderstandingTimeoutMs = holisticVideoUnderstandingTimeoutMs;
+  manifest.holistic.videoUnderstandingTimeoutCount = 0;
+  manifest.holistic.videoUnderstandingFailureCount = 0;
   manifest.holistic.candidateFirstDraft = {
     requested: holisticCandidateFirstDraft,
     enabled: candidateFirstDraftActive,
@@ -1425,6 +1455,7 @@ async function runHolisticPiExtractionCase({
       command: videoUnderstandingCommand,
       note: piCommandNote(piTools),
       mode: "video-understanding",
+      timeoutMs: holisticVideoUnderstandingTimeoutMs,
     }, "video-understanding-command");
     if (dryRun) {
       videoUnderstanding = normalizeVideoUnderstanding({
@@ -1434,37 +1465,107 @@ async function runHolisticPiExtractionCase({
       }, { videoId: sourcePacket?.video?.videoId ?? null });
     } else {
       manifest.currentStage = "video-understanding";
-      videoUnderstandingRawPayload = await readFixtureOrExecutePi({
-        manifest,
-        fixturePath: holisticUnderstandingResponseJsonPath,
-        fixtureReason: "video-understanding-fixture-response-json",
-        command: videoUnderstandingCommand,
-        projectRoot,
-        timeoutMs,
-        executePiFn,
-      });
-      await writeTextTracked(
-        manifest,
-        paths.videoUnderstandingRawPath,
-        rawPayloadForDisk(videoUnderstandingRawPayload),
-        "video-understanding-raw-response",
-      );
-      videoUnderstanding = normalizeVideoUnderstanding(videoUnderstandingRawPayload, {
-        videoId: sourcePacket?.video?.videoId ?? null,
-      });
+      try {
+        videoUnderstandingRawPayload = await readFixtureOrExecutePi({
+          manifest,
+          fixturePath: holisticUnderstandingResponseJsonPath,
+          fixtureReason: "video-understanding-fixture-response-json",
+          command: videoUnderstandingCommand,
+          projectRoot,
+          timeoutMs: holisticVideoUnderstandingTimeoutMs,
+          executePiFn,
+        });
+        await writeTextTracked(
+          manifest,
+          paths.videoUnderstandingRawPath,
+          rawPayloadForDisk(videoUnderstandingRawPayload),
+          "video-understanding-raw-response",
+        );
+        videoUnderstanding = normalizeVideoUnderstanding(videoUnderstandingRawPayload, {
+          videoId: sourcePacket?.video?.videoId ?? null,
+        });
+        assertValidVideoUnderstanding(videoUnderstanding);
+      } catch (error) {
+        if (!error?.piExecution) throw error;
+        const timedOut = error.piExecution.timedOut === true;
+        const reason = timedOut ? "video_understanding_timeout" : "video_understanding_failed";
+        const failure = {
+          schemaVersion: 1,
+          kind: "video-understanding-failure",
+          videoId: sourcePacket?.video?.videoId ?? null,
+          reason,
+          message: error instanceof Error ? error.message : String(error),
+          piExecution: error.piExecution,
+        };
+        await writeJsonTracked(manifest, paths.videoUnderstandingFailurePath, failure, "video-understanding-failure");
+        manifest.holisticVideoUnderstandingFailure = {
+          reason,
+          timedOut,
+          timeoutMs: holisticVideoUnderstandingTimeoutMs,
+        };
+        manifest.holisticVideoUnderstandingFailureCount = 1;
+        manifest.holisticVideoUnderstandingTimeoutCount = timedOut ? 1 : 0;
+        manifest.holistic.videoUnderstandingFailureCount = 1;
+        manifest.holistic.videoUnderstandingTimeoutCount = timedOut ? 1 : 0;
+        manifest.holistic.videoUnderstandingFailure = manifest.holisticVideoUnderstandingFailure;
+        videoUnderstanding = normalizeVideoUnderstanding({
+          globalStory: "",
+          dishStories: [],
+          uncertainties: [reason],
+        }, {
+          videoId: sourcePacket?.video?.videoId ?? null,
+        });
+      }
+      if (!videoUnderstanding) {
+        videoUnderstanding = normalizeVideoUnderstanding({
+          globalStory: "",
+          dishStories: [],
+          uncertainties: ["video_understanding_unavailable"],
+        }, {
+          videoId: sourcePacket?.video?.videoId ?? null,
+        });
+      }
       assertValidVideoUnderstanding(videoUnderstanding);
     }
-    const selectedVideoUnderstanding = selectUsableVideoUnderstanding(videoUnderstanding, holisticSourcePacket, {
-      forceLogOnly: !effectiveHolisticIntegratedUnderstanding,
-      logOnlyReason: candidateFirstDraftActive
-        ? "candidate_first_uses_audit_only"
-        : multiCandidateTimelineLedgerFallback
-        ? "multi_candidate_understanding_injection_disabled"
-        : "understanding_injection_disabled",
-    });
-    videoUnderstanding = selectedVideoUnderstanding.understanding;
-    videoUnderstandingUsage = selectedVideoUnderstanding.usage;
-    videoUnderstandingAudit = selectedVideoUnderstanding.audit;
+    if (manifest.holisticVideoUnderstandingFailure) {
+      videoUnderstandingUsage = {
+        schemaVersion: 1,
+        kind: "video-understanding-usage",
+        usable: false,
+        acceptedStoryCount: 0,
+        rejectedStoryCount: 0,
+        rejectedStories: [],
+        allowedRefCount: 0,
+        candidateScoped: Boolean(holisticSourcePacket?.candidateTimelineIndex?.candidates?.length),
+        reason: manifest.holisticVideoUnderstandingFailure.reason,
+      };
+      videoUnderstandingAudit = {
+        schemaVersion: 1,
+        kind: "video-understanding-audit",
+        summary: {
+          storyCount: 0,
+          orientationStoryCount: 0,
+          logOnlyStoryCount: 0,
+          allowedRefCount: 0,
+          candidateScoped: Boolean(holisticSourcePacket?.candidateTimelineIndex?.candidates?.length),
+          candidateInjectionDisabled: true,
+          failureReason: manifest.holisticVideoUnderstandingFailure.reason,
+        },
+        storyAudits: [],
+      };
+    } else {
+      const selectedVideoUnderstanding = selectUsableVideoUnderstanding(videoUnderstanding, holisticSourcePacket, {
+        forceLogOnly: !effectiveHolisticIntegratedUnderstanding,
+        logOnlyReason: candidateFirstDraftActive
+          ? "candidate_first_uses_audit_only"
+          : multiCandidateTimelineLedgerFallback
+          ? "multi_candidate_understanding_injection_disabled"
+          : "understanding_injection_disabled",
+      });
+      videoUnderstanding = selectedVideoUnderstanding.understanding;
+      videoUnderstandingUsage = selectedVideoUnderstanding.usage;
+      videoUnderstandingAudit = selectedVideoUnderstanding.audit;
+    }
     manifest.holisticIntegratedUnderstandingUsable = videoUnderstandingUsage.usable;
     manifest.holisticVideoUnderstandingUsage = videoUnderstandingUsage;
     manifest.holisticVideoUnderstandingAudit = videoUnderstandingAudit?.summary ?? null;
@@ -2352,6 +2453,10 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
     args["holistic-candidate-first-total-timeout-ms"],
     600 * 1000,
   );
+  const holisticVideoUnderstandingTimeoutMs = optionalNumber(
+    args["holistic-video-understanding-timeout-ms"],
+    Math.min(timeoutMs, 120 * 1000),
+  );
   const model = typeof args.model === "string" ? args.model : DEFAULT_MODEL;
   const provider = typeof args["pi-provider"] === "string" ? args["pi-provider"] : null;
   const thinking = typeof args.thinking === "string" ? args.thinking : null;
@@ -2511,6 +2616,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
           holisticCandidateFirstMaxCandidates,
           holisticCandidateFirstDraftTimeoutMs,
           holisticCandidateFirstTotalTimeoutMs,
+          holisticVideoUnderstandingTimeoutMs,
           ytDlpBin,
           ffmpegBin,
           frameExtractorScript,

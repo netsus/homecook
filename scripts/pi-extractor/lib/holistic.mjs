@@ -1403,6 +1403,252 @@ function recipeUnitUnderstandingStateForPrompt(recipeUnitUnderstandingState, can
   return buildCandidateRecipeUnitUnderstandingPromptPayload(recipeUnitUnderstandingState, candidateId)?.state ?? null;
 }
 
+function compactStoryAuditForIntegratedBrief(story, {
+  evidenceMax = 1,
+  ingredientMax = 4,
+  stepMax = 4,
+  revisionNoteMax = 2,
+  includeWarnings = true,
+} = {}) {
+  const sourceAlignedSteps = (story?.stepAlignment ?? [])
+    .filter((step) => cleanString(step?.step))
+    .slice(0, stepMax)
+    .map((step) => ({
+      step: cleanString(step.step),
+      status: cleanString(step.status) ?? "unknown",
+      matchedRefs: truncateRefs(step.matchedRefs, evidenceMax),
+    }));
+  return {
+    candidateId: cleanString(story?.candidateId),
+    title: cleanString(story?.title),
+    draftRole: cleanString(story?.draftRole),
+    supportedRefs: truncateRefs(story?.supportedRefs, evidenceMax),
+    supportedMainIngredients: normalizeStringArray(story?.supportedMainIngredients).slice(0, ingredientMax),
+    stepAlignment: sourceAlignedSteps,
+    ...(includeWarnings ? {
+      warnings: {
+        unsupportedMainIngredients: normalizeStringArray(story?.unsupportedMainIngredients).slice(0, ingredientMax),
+        revisionNotes: normalizeStringArray(story?.revisionNotes).slice(0, revisionNoteMax),
+      },
+    } : {}),
+  };
+}
+
+function candidateIntegratedBriefFromInputs({
+  recipeUnitUnderstandingState,
+  videoUnderstandingAudit,
+  candidateId,
+  recipeSourceCandidateIds = [],
+  options = {},
+}) {
+  const {
+    allowedMax = 6,
+    blockedMax = 3,
+    sourceAmountMax = 4,
+    coreStepMax = 6,
+    storyMax = 2,
+    evidenceMax = 1,
+    includeWarnings = true,
+    includeBlocked = true,
+  } = options;
+  const unit = (recipeUnitUnderstandingState?.units ?? [])
+    .find((item) => item?.recipeUnitId === candidateId) ?? null;
+  const sourceIds = new Set(recipeSourceCandidateIds);
+  const storyAudits = (videoUnderstandingAudit?.storyAudits ?? [])
+    .filter((story) => story?.candidateId === candidateId || sourceIds.has(story?.candidateId))
+    .filter((story) => (story?.supportedRefs ?? []).length > 0)
+    .slice(0, storyMax)
+    .map((story) => compactStoryAuditForIntegratedBrief(story, {
+      evidenceMax,
+      includeWarnings,
+    }));
+  const statePayload = unit
+    ? recipeUnitUnderstandingPromptPayloadFromUnit(unit, {
+      includeUnresolvedQuestions: false,
+      includeBlockedReasons: includeBlocked,
+      allowedMax,
+      blockedMax,
+      sourceAmountMax,
+      coreStepMax,
+      evidenceMax,
+    })
+    : null;
+  if (!unit && storyAudits.length === 0) return null;
+  return {
+    kind: "candidate-integrated-brief",
+    schemaVersion: 1,
+    videoId: cleanString(recipeUnitUnderstandingState?.videoId),
+    candidateId,
+    recipeUnitId: candidateId,
+    recipeSourceCandidateIds: normalizeStringArray(recipeSourceCandidateIds),
+    source: "recipe-unit-state+understanding-audit",
+    title: cleanString(unit?.title) ?? cleanString(storyAudits[0]?.title),
+    dishIdentity: statePayload?.dishIdentity ?? null,
+    sourceNamedIngredientNames: statePayload?.allowedIngredientNames ?? [],
+    blockedIngredientNames: includeBlocked ? statePayload?.blockedIngredientNames ?? [] : [],
+    sourceBackedAmounts: statePayload?.sourceBackedAmounts ?? [],
+    coreStepFlow: statePayload?.coreStepFlow ?? [],
+    understandingOrientation: {
+      storyCount: storyAudits.length,
+      rawStoryInjected: false,
+      stories: storyAudits,
+    },
+    unresolvedIdentityQuestionCount: Array.isArray(unit?.unresolvedIdentityQuestions)
+    ? unit.unresolvedIdentityQuestions.length
+    : 0,
+  };
+}
+
+function compactIntegratedBriefEntries(values, limit, mapEntry) {
+  const entries = Array.isArray(values) ? values : [];
+  return entries.slice(0, limit).map(mapEntry).filter(Boolean);
+}
+
+function trimCandidateIntegratedBriefToBudget(brief, maxBytes) {
+  if (!brief) return null;
+  const buildTrimmed = ({
+    allowedMax,
+    blockedMax,
+    sourceAmountMax,
+    coreStepMax,
+    evidenceMax,
+    textMax,
+    includeDishIdentity = true,
+    includeStories = false,
+  }) => ({
+    kind: brief.kind,
+    schemaVersion: brief.schemaVersion,
+    videoId: cleanString(brief.videoId),
+    candidateId: cleanString(brief.candidateId),
+    recipeUnitId: cleanString(brief.recipeUnitId),
+    recipeSourceCandidateIds: normalizeStringArray(brief.recipeSourceCandidateIds),
+    source: brief.source,
+    title: compactText(brief.title, textMax),
+    dishIdentity: includeDishIdentity && brief.dishIdentity ? {
+      status: cleanString(brief.dishIdentity.status) ?? "unresolved",
+      name: compactText(brief.dishIdentity.name, textMax),
+      summary: compactText(brief.dishIdentity.summary, textMax),
+      evidence: truncateRefs(brief.dishIdentity.evidence, evidenceMax),
+    } : null,
+    sourceNamedIngredientNames: compactIntegratedBriefEntries(
+      brief.sourceNamedIngredientNames,
+      allowedMax,
+      (entry) => ({
+        name: compactText(entry?.name, textMax),
+        status: cleanString(entry?.status),
+        role: compactText(entry?.role, Math.max(24, Math.floor(textMax / 2))),
+        evidence: truncateRefs(entry?.evidence, evidenceMax),
+      }),
+    ).filter((entry) => entry.name),
+    blockedIngredientNames: compactIntegratedBriefEntries(
+      brief.blockedIngredientNames,
+      blockedMax,
+      (entry) => ({
+        surfaceName: compactText(entry?.surfaceName, textMax),
+      }),
+    ).filter((entry) => entry.surfaceName),
+    sourceBackedAmounts: compactIntegratedBriefEntries(
+      brief.sourceBackedAmounts,
+      sourceAmountMax,
+      (entry) => ({
+        ingredient: compactText(entry?.ingredient, textMax),
+        amount: compactText(entry?.amount, 24),
+        unit: compactText(entry?.unit, 24),
+        amountBasis: cleanString(entry?.amountBasis),
+        evidence: truncateRefs(entry?.evidence, evidenceMax),
+        preservePolicy: cleanString(entry?.preservePolicy) ?? "preserve_or_explain",
+      }),
+    ).filter((entry) => entry.ingredient && entry.amount && entry.unit),
+    coreStepFlow: compactIntegratedBriefEntries(
+      brief.coreStepFlow,
+      coreStepMax,
+      (step, index) => ({
+        order: optionalNumber(step?.order, index + 1),
+        action: compactText(step?.action, textMax),
+        evidence: truncateRefs(step?.evidence, evidenceMax),
+      }),
+    ).filter((step) => step.action),
+    understandingOrientation: {
+      storyCount: brief.understandingOrientation?.storyCount ?? 0,
+      rawStoryInjected: false,
+      stories: includeStories ? compactIntegratedBriefEntries(
+        brief.understandingOrientation?.stories,
+        1,
+        (story) => compactStoryAuditForIntegratedBrief(story, {
+          evidenceMax,
+          ingredientMax: 2,
+          stepMax: 2,
+          revisionNoteMax: 1,
+          includeWarnings: false,
+        }),
+      ) : [],
+    },
+    unresolvedIdentityQuestionCount: optionalNumber(brief.unresolvedIdentityQuestionCount, 0),
+  });
+  const variants = [
+    { allowedMax: 4, blockedMax: 1, sourceAmountMax: 3, coreStepMax: 4, evidenceMax: 1, textMax: 90, includeDishIdentity: true, includeStories: false },
+    { allowedMax: 3, blockedMax: 1, sourceAmountMax: 2, coreStepMax: 3, evidenceMax: 1, textMax: 70, includeDishIdentity: true, includeStories: false },
+    { allowedMax: 2, blockedMax: 0, sourceAmountMax: 1, coreStepMax: 2, evidenceMax: 1, textMax: 60, includeDishIdentity: true, includeStories: false },
+    { allowedMax: 1, blockedMax: 0, sourceAmountMax: 1, coreStepMax: 1, evidenceMax: 0, textMax: 50, includeDishIdentity: false, includeStories: false },
+  ];
+  let selected = null;
+  for (const options of variants) {
+    const trimmed = buildTrimmed(options);
+    selected = trimmed;
+    if (payloadBytes(trimmed) <= maxBytes) return trimmed;
+  }
+  return selected;
+}
+
+export function buildCandidateIntegratedBrief({
+  recipeUnitUnderstandingState,
+  videoUnderstandingAudit,
+  candidateId,
+  recipeSourceCandidateIds = [],
+  maxBytes = 1400,
+} = {}) {
+  if (!cleanString(candidateId)) return null;
+  const variants = [
+    { allowedMax: 8, blockedMax: 4, sourceAmountMax: 4, coreStepMax: 6, storyMax: 2, evidenceMax: 1, includeWarnings: true, includeBlocked: true },
+    { allowedMax: 6, blockedMax: 3, sourceAmountMax: 4, coreStepMax: 4, storyMax: 2, evidenceMax: 1, includeWarnings: true, includeBlocked: true },
+    { allowedMax: 4, blockedMax: 2, sourceAmountMax: 2, coreStepMax: 4, storyMax: 1, evidenceMax: 1, includeWarnings: true, includeBlocked: true },
+    { allowedMax: 3, blockedMax: 1, sourceAmountMax: 2, coreStepMax: 3, storyMax: 1, evidenceMax: 0, includeWarnings: false, includeBlocked: true },
+    { allowedMax: 2, blockedMax: 0, sourceAmountMax: 1, coreStepMax: 2, storyMax: 1, evidenceMax: 0, includeWarnings: false, includeBlocked: false },
+  ];
+  let selected = null;
+  let truncated = false;
+  for (const [index, options] of variants.entries()) {
+    const brief = candidateIntegratedBriefFromInputs({
+      recipeUnitUnderstandingState,
+      videoUnderstandingAudit,
+      candidateId,
+      recipeSourceCandidateIds,
+      options,
+    });
+    if (!brief) return null;
+    const bytes = payloadBytes(brief);
+    selected = { brief, bytes };
+    truncated = index > 0;
+    if (bytes <= maxBytes) break;
+  }
+  if (selected?.brief && selected.bytes > maxBytes) {
+    const trimmed = trimCandidateIntegratedBriefToBudget(selected.brief, maxBytes);
+    selected = {
+      brief: trimmed,
+      bytes: payloadBytes(trimmed),
+    };
+    truncated = true;
+  }
+  return {
+    brief: selected?.brief ?? null,
+    bytes: selected?.bytes ?? 0,
+    truncated,
+    budgetExceeded: selected ? selected.bytes > maxBytes : false,
+    maxBytes,
+    source: "recipe-unit-state+understanding-audit",
+  };
+}
+
 function storyAuditForRecipeUnit(videoUnderstandingAudit, candidateId, recipeSourceCandidateIds = []) {
   const sourceIds = new Set(recipeSourceCandidateIds);
   const storyAudits = (videoUnderstandingAudit?.storyAudits ?? [])
@@ -1602,6 +1848,7 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, {
 
 export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
   understandingAudit = null,
+  candidateIntegratedBrief = null,
   recipeUnitWorkingMemory = null,
   recipeUnitUnderstandingState = null,
   recipeUnitUnderstandingPromptPayload = null,
@@ -1621,8 +1868,9 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
     "- recipeSourceCandidateIds 안의 구간을 다시 여러 recipe로 쪼개지 말고, 반드시 recipe draft 1개로 작성한다.",
   ] : [];
   const hasUnderstandingAudit = isObject(understandingAudit) && Array.isArray(understandingAudit.storyAudits);
+  const hasCandidateIntegratedBrief = isObject(candidateIntegratedBrief);
   const hasWorkingMemory = isObject(scopedWorkingMemory);
-  const hasUnderstandingState = isObject(scopedUnderstandingState);
+  const hasUnderstandingState = isObject(scopedUnderstandingState) && !hasCandidateIntegratedBrief;
   return [
     "너는 다중 레시피 영상에서 후보 하나만 맡아 레시피 초안을 쓰는 도우미다.",
     "목표: 아래 candidate 하나를 다른 candidate와 섞지 않고, 제목/설명란/고정댓글/자막/video timeline event 근거로 recipe draft 1개를 만든다.",
@@ -1630,7 +1878,9 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
     "중요한 제한:",
     "- 로컬 파일, golden.json, grade, 이전 result, 비교 HTML, 이전 추출 결과를 읽지 마라.",
     "- 아래 CANDIDATE_SOURCE_PACKET과 CANDIDATE_TIMELINE_ENTRY만 우선 사용한다.",
-    "- raw VIDEO_UNDERSTANDING은 제공되지 않는다. CANDIDATE_UNDERSTANDING_AUDIT은 source-backed 수정 메모일 뿐이다.",
+    hasCandidateIntegratedBrief
+      ? "- raw VIDEO_UNDERSTANDING과 CANDIDATE_UNDERSTANDING_AUDIT은 제공되지 않는다. CANDIDATE_INTEGRATED_BRIEF 하나만 후보별 이해 메모로 사용한다."
+      : "- raw VIDEO_UNDERSTANDING은 제공되지 않는다. CANDIDATE_UNDERSTANDING_AUDIT은 source-backed 수정 메모일 뿐이다.",
     "- 다른 candidate의 재료, 수량, 단계는 절대 합치지 않는다.",
     ...recipeBoundaryRules,
     "- candidateId는 반드시 아래 값 그대로 쓴다: " + candidateId,
@@ -1638,6 +1888,13 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
     "- amount/unit이 부족하지만 화면으로 확인할 수 있어 보이면 visualNeeds에 넣고 임의 추정하지 않는다.",
     "- 모든 재료, amount/unit, 단계에는 가능한 한 evidence ref를 붙인다.",
     "- recipe가 맞는지 불확실해도 후보를 삭제하지 말고, source-backed로 보이는 최소 recipe 1개와 uncertainties를 남긴다.",
+    ...(hasCandidateIntegratedBrief ? [
+      "- CANDIDATE_INTEGRATED_BRIEF는 이 recipe unit의 요리 정체성, source-backed 분량, 핵심 조리 흐름을 짧게 압축한 orientation이다.",
+      "- CANDIDATE_INTEGRATED_BRIEF는 final evidence가 아니다. final evidence에는 source/event/frame ref만 넣는다.",
+      "- brief의 sourceBackedAmounts에 있는 amount/unit은 source에서 이미 나온 분량이다. 같은 재료를 final ingredients에 쓰면 해당 amount/unit과 amountBasis를 보존한다.",
+      "- brief의 understandingOrientation.stories는 raw story가 아니라 source-backed audit 요약이다. warnings에 있는 unsupported 재료는 확정 재료로 쓰지 않는다.",
+      "- brief의 blockedIngredientNames에 있는 surfaceName은 final ingredient name으로 쓰지 말고 uncertainties에 남긴다.",
+    ] : []),
     ...(hasWorkingMemory ? [
       "- RECIPE_UNIT_WORKING_MEMORY는 이 recipe unit을 쓰기 전에 보존해야 할 작은 작업 메모다. 최종 evidence가 아니라 draft orientation으로만 사용한다.",
       "- memoryPriority가 core인 ingredientMemory와 stepMemory는 요리 정체성과 흐름을 잡는 중심 단서로 사용한다.",
@@ -1704,7 +1961,12 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
     "[CANDIDATE_SOURCE_PACKET]",
     JSON.stringify(candidatePacket, null, 2),
     "",
-    ...(hasUnderstandingAudit ? [
+    ...(hasCandidateIntegratedBrief ? [
+      "[CANDIDATE_INTEGRATED_BRIEF]",
+      JSON.stringify(candidateIntegratedBrief, null, 2),
+      "",
+    ] : []),
+    ...(!hasCandidateIntegratedBrief && hasUnderstandingAudit ? [
       "[CANDIDATE_UNDERSTANDING_AUDIT]",
       JSON.stringify(understandingAudit, null, 2),
       "",
