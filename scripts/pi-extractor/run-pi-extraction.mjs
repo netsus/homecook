@@ -73,6 +73,7 @@ import {
   buildVideoTimelinePrompt,
   framesPerTimelineWindow,
   normalizeVideoTimeline,
+  repairVideoTimelineEvidenceRefs,
   timelineAllowedEvidenceRefs,
 } from "./lib/timeline.mjs";
 import {
@@ -269,6 +270,8 @@ function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
     videoTimelinePromptPath: path.join(outDir, "video-timeline-prompt.txt"),
     videoTimelineCommandPath: path.join(outDir, "video-timeline-command.json"),
     videoTimelineRawPath: path.join(outDir, "video-timeline-raw-response.json"),
+    timelineEvidenceRefRepairPath: path.join(outDir, "timeline-evidence-ref-repair.json"),
+    timelineDroppedEventsPath: path.join(outDir, "timeline-dropped-events.json"),
     videoTimelinePath: path.join(outDir, "video-timeline.json"),
     videoUnderstandingPromptPath: path.join(outDir, "video-understanding-prompt.txt"),
     videoUnderstandingCommandPath: path.join(outDir, "video-understanding-command.json"),
@@ -1252,6 +1255,7 @@ async function runHolisticPiExtractionCase({
       note: piCommandNote(piTools),
       mode: "video-timeline",
     }, "video-timeline-command");
+    const videoTimelineAllowedEvidenceRefs = timelineAllowedEvidenceRefs({ sourcePacket, timelineFrameLedger });
     if (dryRun) {
       videoTimeline = normalizeVideoTimeline({ events: [], errors: ["dry-run"] }, { videoId: sourcePacket?.video?.videoId ?? null });
     } else {
@@ -1275,9 +1279,37 @@ async function runHolisticPiExtractionCase({
         videoId: sourcePacket?.video?.videoId ?? null,
         sourcePacket,
       });
+    }
+    const timelineEvidenceRefRepair = repairVideoTimelineEvidenceRefs(videoTimeline, {
+      allowedEvidenceRefs: videoTimelineAllowedEvidenceRefs,
+    });
+    videoTimeline = timelineEvidenceRefRepair.timeline;
+    manifest.holisticVideoTimelineEvidenceRefRepairSummary = timelineEvidenceRefRepair.repairLog.summary;
+    manifest.holistic.videoTimelineEvidenceRefRepair = timelineEvidenceRefRepair.repairLog.summary;
+    await writeJsonTracked(
+      manifest,
+      paths.timelineEvidenceRefRepairPath,
+      timelineEvidenceRefRepair.repairLog,
+      "timeline-evidence-ref-repair",
+    );
+    await writeJsonTracked(
+      manifest,
+      paths.timelineDroppedEventsPath,
+      {
+        schemaVersion: 1,
+        kind: "timeline-dropped-events",
+        videoId: videoTimeline.videoId ?? null,
+        summary: {
+          droppedEventCount: timelineEvidenceRefRepair.droppedEvents.length,
+        },
+        events: timelineEvidenceRefRepair.droppedEvents,
+      },
+      "timeline-dropped-events",
+    );
+    if (!dryRun) {
       assertValidVideoTimeline(videoTimeline, {
         allowedCandidateIds: storyboardCandidateLedger.candidates.map((candidate) => candidate.candidateId),
-        allowedEvidenceRefs: timelineAllowedEvidenceRefs({ sourcePacket, timelineFrameLedger }),
+        allowedEvidenceRefs: videoTimelineAllowedEvidenceRefs,
       });
     }
     await writeJsonTracked(manifest, paths.videoTimelinePath, videoTimeline, "video-timeline");

@@ -3472,6 +3472,122 @@ describe("pi recipe extractor MVP runner", () => {
     })).not.toThrow();
   });
 
+  it("normalizes video description pseudo evidence refs to numbered description refs", async () => {
+    const {
+      assertValidVideoTimeline,
+      normalizeVideoTimeline,
+      timelineAllowedEvidenceRefs,
+    } = await import(timelineModuleUrl);
+    const sourcePacket = {
+      video: {
+        videoId: "case-video-description-pseudo-ref",
+        title: "반찬 모음",
+        description: [
+          "반찬 모음",
+          "",
+          "[표고버섯무침 재료]",
+          "생표고버섯 12개",
+          "",
+          "[매콤감자조림 재료]",
+          "감자 3개",
+        ].join("\n"),
+      },
+      captions: { segments: [] },
+      authorComments: [],
+    };
+    const timeline = normalizeVideoTimeline({
+      events: [{
+        eventId: "e1",
+        segmentId: "s1",
+        timeRange: { startSec: 0, endSec: 60 },
+        action: "표고버섯무침 재료를 준비한다",
+        candidateAssignments: [{ candidateId: "r1", status: "supporting", reason: "same dish" }],
+        evidence: ["video:description:[표고버섯무침 재료]"],
+        confidence: 0.7,
+      }, {
+        eventId: "e2",
+        segmentId: "s2",
+        timeRange: { startSec: 60, endSec: 120 },
+        action: "감자조림 재료를 준비한다",
+        candidateAssignments: [{ candidateId: "r2", status: "supporting", reason: "same dish" }],
+        evidence: ["video:description:[매콤감자조림 재료]"],
+        confidence: 0.7,
+      }],
+    }, { videoId: "case-video-description-pseudo-ref", sourcePacket });
+
+    expect(timeline.events.map((event: { evidence: string[] }) => event.evidence)).toEqual([
+      ["description:3"],
+      ["description:6"],
+    ]);
+    expect(() => assertValidVideoTimeline(timeline, {
+      allowedCandidateIds: ["r1", "r2"],
+      allowedEvidenceRefs: timelineAllowedEvidenceRefs({ sourcePacket, timelineFrameLedger: { windows: [] } }),
+    })).not.toThrow();
+  });
+
+  it("repairs unknown timeline evidence refs before final validation", async () => {
+    const {
+      assertValidVideoTimeline,
+      normalizeVideoTimeline,
+      repairVideoTimelineEvidenceRefs,
+      timelineAllowedEvidenceRefs,
+    } = await import(timelineModuleUrl);
+    const sourcePacket = {
+      video: {
+        videoId: "case-timeline-ref-repair",
+        title: "반찬 모음",
+        description: "00:00 양파 볶음\n양파 1개",
+      },
+      captions: { segments: [] },
+      authorComments: [],
+    };
+    const allowedEvidenceRefs = timelineAllowedEvidenceRefs({ sourcePacket, timelineFrameLedger: { windows: [] } });
+    const timeline = normalizeVideoTimeline({
+      events: [{
+        eventId: "e1",
+        segmentId: "s1",
+        timeRange: { startSec: 0, endSec: 60 },
+        action: "양파를 볶는다",
+        candidateAssignments: [{ candidateId: "r1", status: "supporting", reason: "same dish" }],
+        evidence: ["description:1", "video:description:[없는 섹션]"],
+        confidence: 0.7,
+      }, {
+        eventId: "e2",
+        segmentId: "s2",
+        timeRange: { startSec: 60, endSec: 120 },
+        action: "근거가 없는 사건",
+        candidateAssignments: [{ candidateId: "r2", status: "unclear", reason: "no usable evidence" }],
+        evidence: ["video:description:[없는 섹션]"],
+        confidence: 0.3,
+      }],
+    }, { videoId: "case-timeline-ref-repair", sourcePacket });
+    const repaired = repairVideoTimelineEvidenceRefs(timeline, { allowedEvidenceRefs });
+
+    expect(repaired.timeline.events.map((event: { eventId: string }) => event.eventId)).toEqual(["e1"]);
+    expect(repaired.timeline.events[0].evidence).toEqual(["description:1"]);
+    expect(repaired.repairLog.summary).toMatchObject({
+      eventCountBefore: 2,
+      eventCountAfter: 1,
+      repairedEventCount: 1,
+      droppedEventCount: 1,
+      unknownEvidenceRefCount: 1,
+    });
+    expect(repaired.repairLog.repairs[0]).toMatchObject({
+      eventId: "e1",
+      droppedEvidence: ["video:description:[없는 섹션]"],
+      reasonCode: "unknown_timeline_evidence_ref_removed",
+    });
+    expect(repaired.droppedEvents[0]).toMatchObject({
+      eventId: "e2",
+      droppedEvidence: ["video:description:[없는 섹션]"],
+      reasonCode: "timeline_event_without_allowed_evidence",
+    });
+    expect(() => assertValidVideoTimeline(repaired.timeline, {
+      allowedCandidateIds: ["r1", "r2"],
+      allowedEvidenceRefs,
+    })).not.toThrow();
+  });
+
   it("moves timeline frame collection error refs from evidence to uncertainties", async () => {
     const {
       assertValidVideoTimeline,
@@ -3517,7 +3633,7 @@ describe("pi recipe extractor MVP runner", () => {
     const source = makeSource("case-a");
     source.video.durationSeconds = 60;
     source.video.title = "테스트 영상";
-    source.video.description = "[재료]\n양파 1/2개\n간장";
+    source.video.description = "[양파 재료]\n양파 1/2개\n간장";
     writeJson(path.join(caseDir, "source.json"), source);
     writeJson(path.join(caseDir, "golden.json"), { shouldNotRead: true });
     writeJson(timelineResponsePath, {
@@ -3528,7 +3644,7 @@ describe("pi recipe extractor MVP runner", () => {
         action: "양파를 썬다",
         visibleIngredients: ["양파"],
         candidateAssignments: [{ candidateId: "whole", status: "supporting", reason: "single coarse candidate" }],
-        evidence: ["transcript:1s", "frame:s1-w1:1"],
+        evidence: ["video:description:[양파 재료]", "frame:s1-w1:1"],
         confidence: 0.8,
       }],
     });
@@ -3602,6 +3718,9 @@ describe("pi recipe extractor MVP runner", () => {
     const sourcePacket = JSON.parse(readFileSync(path.join(outDir, "holistic-source-packet.json"), "utf8"));
     const draftPrompt = readFileSync(path.join(outDir, "holistic-draft-prompt.txt"), "utf8");
     const visualTargetLedger = JSON.parse(readFileSync(path.join(outDir, "visual-target-ledger.json"), "utf8"));
+    const videoTimeline = JSON.parse(readFileSync(path.join(outDir, "video-timeline.json"), "utf8"));
+    const evidenceRefRepair = JSON.parse(readFileSync(path.join(outDir, "timeline-evidence-ref-repair.json"), "utf8"));
+    const droppedEvents = JSON.parse(readFileSync(path.join(outDir, "timeline-dropped-events.json"), "utf8"));
 
     expect(output.recipes[0].steps).toEqual(["양파를 썬다."]);
     expect(manifest).toMatchObject({
@@ -3619,6 +3738,14 @@ describe("pi recipe extractor MVP runner", () => {
       supportingEvents: ["e1"],
     });
     expect(sourcePacket.candidateSourcePackets[0].sourceEntries.map((entry: { type: string }) => entry.type)).not.toContain("frame");
+    expect(videoTimeline.events[0].evidence).toEqual(["description:1", "frame:s1-w1:1"]);
+    expect(evidenceRefRepair.summary).toMatchObject({
+      eventCountBefore: 1,
+      eventCountAfter: 1,
+      droppedEventCount: 0,
+      unknownEvidenceRefCount: 0,
+    });
+    expect(droppedEvents.events).toEqual([]);
     expect(draftPrompt).toContain("[CANDIDATE_TIMELINE_INDEX]");
     expect(draftPrompt).toContain("[CANDIDATE_SOURCE_PACKETS]");
     expect(draftPrompt).toContain("event:e1");
