@@ -1277,6 +1277,677 @@ export function buildRecipeUnitUnderstandingState({
   };
 }
 
+function uniqueEntriesByRefForMap(entries) {
+  const byRef = new Map();
+  for (const entry of entries ?? []) {
+    if (!entry?.ref || byRef.has(entry.ref)) continue;
+    byRef.set(entry.ref, entry);
+  }
+  return [...byRef.values()];
+}
+
+function wholeVideoMapSourceEntries(holisticSourcePacket) {
+  return uniqueEntriesByRefForMap([
+    ...(holisticSourcePacket?.entries ?? []),
+    ...(holisticSourcePacket?.timelineEvents ?? []),
+    ...(holisticSourcePacket?.candidateSourcePackets ?? []).flatMap((packet) => packet.sourceEntries ?? []),
+  ]);
+}
+
+function candidatePacketRefs(candidatePacket) {
+  return new Set(uniqueStrings([
+    ...(candidatePacket?.sourceEntries ?? []).map((entry) => entry?.ref),
+    ...(candidatePacket?.supportingEvents ?? []).map((eventId) => `event:${eventId}`),
+    ...(candidatePacket?.unclearEvents ?? []).map((eventId) => `event:${eventId}`),
+    ...(candidatePacket?.boundaryEvidence ?? []),
+  ]));
+}
+
+function suspiciousAmountIngredientReason(name, entry) {
+  const text = cleanString(name);
+  if (!text) return "empty_ingredient_name";
+  const sourceType = cleanString(entry?.type);
+  if (text.length > 24) return "ingredient_name_too_long";
+  if (/[\n\r]/u.test(text)) return "ingredient_name_has_newline";
+  if (/(?:하시는|거죠|그수|이제|그러면|주세요|입니다|했|하면|넣|섞|볶|굽|끓|해요|하셔|정도|그리고|살짝|이번엔|오늘은)/u.test(text)) {
+    return "ingredient_name_looks_like_sentence";
+  }
+  if ((sourceType === "caption" || sourceType === "transcript") && /\s/u.test(text)) {
+    const tokenCount = text.split(/\s+/u).filter(Boolean).length;
+    if (tokenCount >= 3) return "spoken_amount_match_too_phrase_like";
+    if (/(?:은|는|이|가|을|를|죠|요|다|고|서|면)$/u.test(text)) return "spoken_amount_name_has_sentence_particle";
+  }
+  return null;
+}
+
+function rawAmountCandidatesFromEntries(entries) {
+  const accepted = [];
+  const rejected = [];
+  const seen = new Set();
+  for (const entry of entries ?? []) {
+    const memories = extractAmountMemoryFromEntry(entry);
+    for (const memory of memories) {
+      for (const candidate of memory.amountCandidates ?? []) {
+        const amount = cleanString(candidate.amount);
+        const unit = cleanString(candidate.unit);
+        const ingredient = cleanString(memory.name);
+        const evidence = normalizeStringArray(candidate.evidence);
+        const key = [entry?.ref, ingredient, amount, unit].join("::");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const item = {
+          ingredient,
+          amount,
+          unit,
+          amountBasis: candidate.basis ?? amountBasisForSourceEntry(entry),
+          evidence,
+          sourceType: entry?.type ?? null,
+          sourceRef: entry?.ref ?? null,
+          textSnippet: compactText(entry?.text, 160),
+        };
+        const rejectReason = suspiciousAmountIngredientReason(ingredient, entry);
+        if (!ingredient || !amount || !unit || evidence.length === 0 || rejectReason) {
+          rejected.push({
+            ...item,
+            reason: rejectReason ?? "missing_amount_unit_or_evidence",
+          });
+          continue;
+        }
+        accepted.push(item);
+      }
+    }
+  }
+  return { accepted, rejected };
+}
+
+function amountCandidateMatchesIngredient(candidate, ingredientName) {
+  const candidateKey = normalizeKey(candidate?.ingredient);
+  const ingredientKey = normalizeKey(ingredientName);
+  if (!candidateKey || !ingredientKey) return false;
+  return candidateKey === ingredientKey
+    || textMentions(candidate?.ingredient, ingredientName)
+    || textMentions(ingredientName, candidate?.ingredient);
+}
+
+function mapUnitById(recipeUnitUnderstandingState) {
+  return new Map((recipeUnitUnderstandingState?.units ?? [])
+    .map((unit) => [unit.recipeUnitId, unit]));
+}
+
+function mapUnitTitle(unitState, candidatePacket, candidateTimeline) {
+  return cleanString(unitState?.title)
+    ?? cleanString(candidatePacket?.title)
+    ?? cleanString(candidateTimeline?.title)
+    ?? "레시피";
+}
+
+function mapIngredientNames(unitState, unitAcceptedAmounts) {
+  return uniqueStrings([
+    ...(unitState?.ingredientIdentityState ?? [])
+      .filter((entry) => entry?.nameStatus === "source_named" && entry?.finalNameAllowed !== false)
+      .map((entry) => entry.resolvedName ?? entry.surfaceName),
+    ...unitAcceptedAmounts.map((candidate) => candidate.ingredient),
+  ]).slice(0, 30);
+}
+
+function knownAmountSlotFromCandidate(candidate) {
+  return {
+    status: "known",
+    amount: candidate.amount,
+    unit: candidate.unit,
+    amountBasis: candidate.amountBasis,
+    evidence: normalizeStringArray(candidate.evidence),
+    reason: "raw source entry에서 ingredient/amount/unit이 다시 검증됨",
+  };
+}
+
+function unknownAmountSlot(reason) {
+  return {
+    status: "unknown",
+    amount: null,
+    unit: null,
+    amountBasis: null,
+    evidence: [],
+    reason,
+  };
+}
+
+function mapStepSpine(unitState, candidatePacket) {
+  const fromState = (unitState?.coreStepFlow ?? [])
+    .map((step, index) => ({
+      order: step.order ?? index + 1,
+      text: cleanString(step.text ?? step.action),
+      evidence: normalizeStringArray(step.evidence),
+      confidence: optionalNumber(step.confidence, null),
+    }))
+    .filter((step) => step.text);
+  if (fromState.length > 0) return fromState;
+  return (candidatePacket?.stageSummary ?? [])
+    .map((text, index) => ({
+      order: index + 1,
+      text: cleanString(text),
+      evidence: normalizeStringArray(candidatePacket?.boundaryEvidence),
+      confidence: null,
+    }))
+    .filter((step) => step.text);
+}
+
+function normalizeMapAmountSlot(slot) {
+  const status = cleanString(slot?.status) ?? "unknown";
+  return {
+    status: ["known", "unknown", "visual_needed", "ambiguous"].includes(status) ? status : "unknown",
+    amount: cleanString(slot?.amount),
+    unit: cleanString(slot?.unit),
+    amountBasis: cleanString(slot?.amountBasis),
+    evidence: normalizeStringArray(slot?.evidence),
+    reason: cleanString(slot?.reason),
+  };
+}
+
+function normalizeMapIngredientSlot(slot) {
+  const name = cleanString(slot?.name ?? slot?.ingredient);
+  if (!name) return null;
+  return {
+    name,
+    role: cleanString(slot?.role) ?? "unknown",
+    evidence: normalizeStringArray(slot?.evidence),
+    amountSlot: normalizeMapAmountSlot(slot?.amountSlot ?? slot),
+  };
+}
+
+function normalizeMapUnit(unit) {
+  const recipeUnitId = cleanString(unit?.recipeUnitId ?? unit?.candidateId);
+  if (!recipeUnitId) return null;
+  return {
+    recipeUnitId,
+    title: cleanString(unit?.title),
+    sourceCandidateIds: normalizeStringArray(unit?.sourceCandidateIds ?? unit?.candidateIds),
+    timeRange: normalizeTimeRange(unit?.timeRange),
+    dishIntent: {
+      name: cleanString(unit?.dishIntent?.name ?? unit?.title),
+      evidence: normalizeStringArray(unit?.dishIntent?.evidence),
+      reason: cleanString(unit?.dishIntent?.reason),
+    },
+    ingredientSlots: (unit?.ingredientSlots ?? unit?.ingredients ?? [])
+      .map(normalizeMapIngredientSlot)
+      .filter(Boolean),
+    stepSpine: (unit?.stepSpine ?? unit?.steps ?? [])
+      .map((step, index) => ({
+        order: optionalNumber(step?.order, index + 1),
+        text: cleanString(step?.text ?? step?.action),
+        evidence: normalizeStringArray(step?.evidence),
+        confidence: optionalNumber(step?.confidence, null),
+      }))
+      .filter((step) => step.text),
+    visualGaps: (unit?.visualGaps ?? [])
+      .map((gap) => ({
+        targetType: cleanString(gap?.targetType) ?? "ingredient_amount",
+        ingredient: cleanString(gap?.ingredient),
+        reason: cleanString(gap?.reason),
+        evidence: normalizeStringArray(gap?.evidence),
+      }))
+      .filter((gap) => gap.ingredient),
+    rejectedAmountCandidates: (unit?.rejectedAmountCandidates ?? [])
+      .map((candidate) => ({
+        ingredient: cleanString(candidate?.ingredient),
+        amount: cleanString(candidate?.amount),
+        unit: cleanString(candidate?.unit),
+        sourceRef: cleanString(candidate?.sourceRef),
+        sourceType: cleanString(candidate?.sourceType),
+        reason: cleanString(candidate?.reason),
+        textSnippet: compactText(candidate?.textSnippet, 160),
+      }))
+      .filter((candidate) => candidate.ingredient || candidate.sourceRef),
+    uncertainties: normalizeStringArray(unit?.uncertainties),
+  };
+}
+
+export function buildWholeVideoRecipeMapFromInputs({
+  holisticSourcePacket,
+  recipeUnitUnderstandingState,
+} = {}) {
+  const allEntries = wholeVideoMapSourceEntries(holisticSourcePacket);
+  const amountCandidates = rawAmountCandidatesFromEntries(allEntries);
+  const unitStateById = mapUnitById(recipeUnitUnderstandingState);
+  const candidatePackets = holisticSourcePacket?.candidateSourcePackets ?? [];
+  const timelineById = new Map((holisticSourcePacket?.candidateTimelineIndex?.candidates ?? [])
+    .map((candidate) => [candidate.candidateId, candidate]));
+  const units = candidatePackets.map((candidatePacket) => {
+    const recipeUnitId = candidatePacket.candidateId;
+    const unitState = unitStateById.get(recipeUnitId) ?? null;
+    const candidateRefs = candidatePacketRefs(candidatePacket);
+    const unitAcceptedAmounts = amountCandidates.accepted
+      .filter((candidate) => normalizeStringArray(candidate.evidence).some((ref) => candidateRefs.has(ref)));
+    const unitRejectedAmounts = amountCandidates.rejected
+      .filter((candidate) => normalizeStringArray(candidate.evidence).some((ref) => candidateRefs.has(ref)) || candidateRefs.has(candidate.sourceRef));
+    const ingredientNames = mapIngredientNames(unitState, unitAcceptedAmounts);
+    const ingredientSlots = ingredientNames.map((name) => {
+      const amountCandidate = unitAcceptedAmounts.find((candidate) => amountCandidateMatchesIngredient(candidate, name));
+      const identity = (unitState?.ingredientIdentityState ?? [])
+        .find((entry) => amountCandidateMatchesIngredient({ ingredient: entry.resolvedName ?? entry.surfaceName }, name));
+      return {
+        name,
+        role: identity?.role ?? "unknown",
+        evidence: uniqueStrings([
+          ...(identity?.evidence ?? []),
+          ...(amountCandidate?.evidence ?? []),
+        ]),
+        amountSlot: amountCandidate
+          ? knownAmountSlotFromCandidate(amountCandidate)
+          : unknownAmountSlot("source packet 안에서 원본 amount/unit 근거를 재검증하지 못함"),
+      };
+    });
+    const visualGaps = ingredientSlots
+      .filter((slot) => slot.amountSlot.status !== "known")
+      .map((slot) => ({
+        targetType: "ingredient_amount",
+        ingredient: slot.name,
+        reason: "source-backed amount가 없어서 필요한 경우 visual estimate 후보로만 남긴다.",
+        evidence: slot.evidence,
+      }));
+    return normalizeMapUnit({
+      recipeUnitId,
+      title: mapUnitTitle(unitState, candidatePacket, timelineById.get(recipeUnitId)),
+      sourceCandidateIds: candidatePacket.recipeSourceCandidateIds ?? [recipeUnitId],
+      timeRange: unitState?.timeRange ?? candidatePacket.timeRange,
+      dishIntent: {
+        name: mapUnitTitle(unitState, candidatePacket, timelineById.get(recipeUnitId)),
+        evidence: uniqueStrings([
+          ...(unitState?.dishIdentity?.evidence ?? []),
+          ...(candidatePacket.boundaryEvidence ?? []),
+        ]),
+        reason: unitState?.dishIdentity?.summary ?? candidatePacket.boundaryReason ?? null,
+      },
+      ingredientSlots,
+      stepSpine: mapStepSpine(unitState, candidatePacket),
+      visualGaps,
+      rejectedAmountCandidates: unitRejectedAmounts,
+      uncertainties: [
+        ...(unitState?.unresolvedIdentityQuestions ?? []).map((question) => question?.reason ?? question?.surfaceName ?? question).filter(Boolean),
+      ],
+    });
+  }).filter(Boolean);
+  return {
+    schemaVersion: 1,
+    kind: "whole-video-recipe-map",
+    videoId: cleanString(recipeUnitUnderstandingState?.videoId ?? holisticSourcePacket?.video?.videoId),
+    generationMode: "source-revalidated-deterministic",
+    units,
+    rejectedAmountCandidates: amountCandidates.rejected,
+    summary: {
+      unitCount: units.length,
+      ingredientSlotCount: units.reduce((sum, unit) => sum + unit.ingredientSlots.length, 0),
+      knownAmountSlotCount: units.reduce(
+        (sum, unit) => sum + unit.ingredientSlots.filter((slot) => slot.amountSlot.status === "known").length,
+        0,
+      ),
+      visualGapCount: units.reduce((sum, unit) => sum + unit.visualGaps.length, 0),
+      rejectedAmountCandidateCount: amountCandidates.rejected.length,
+    },
+  };
+}
+
+export function normalizeWholeVideoRecipeMap(value, {
+  holisticSourcePacket = null,
+  recipeUnitUnderstandingState = null,
+} = {}) {
+  const parsed = parsePiRawOutput(value) ?? {};
+  if (!Array.isArray(parsed.units) && holisticSourcePacket) {
+    return buildWholeVideoRecipeMapFromInputs({ holisticSourcePacket, recipeUnitUnderstandingState });
+  }
+  const units = (parsed.units ?? parsed.recipeUnits ?? [])
+    .map(normalizeMapUnit)
+    .filter(Boolean);
+  return {
+    schemaVersion: optionalNumber(parsed.schemaVersion, 1),
+    kind: "whole-video-recipe-map",
+    videoId: cleanString(parsed.videoId ?? recipeUnitUnderstandingState?.videoId ?? holisticSourcePacket?.video?.videoId),
+    generationMode: cleanString(parsed.generationMode) ?? "pi",
+    units,
+    rejectedAmountCandidates: (parsed.rejectedAmountCandidates ?? [])
+      .map((candidate) => ({
+        ingredient: cleanString(candidate?.ingredient),
+        amount: cleanString(candidate?.amount),
+        unit: cleanString(candidate?.unit),
+        sourceRef: cleanString(candidate?.sourceRef),
+        sourceType: cleanString(candidate?.sourceType),
+        reason: cleanString(candidate?.reason),
+        textSnippet: compactText(candidate?.textSnippet, 160),
+      }))
+      .filter((candidate) => candidate.ingredient || candidate.sourceRef),
+    summary: {
+      unitCount: units.length,
+      ingredientSlotCount: units.reduce((sum, unit) => sum + unit.ingredientSlots.length, 0),
+      knownAmountSlotCount: units.reduce(
+        (sum, unit) => sum + unit.ingredientSlots.filter((slot) => slot.amountSlot.status === "known").length,
+        0,
+      ),
+      visualGapCount: units.reduce((sum, unit) => sum + unit.visualGaps.length, 0),
+      rejectedAmountCandidateCount: (parsed.rejectedAmountCandidates ?? []).length,
+    },
+  };
+}
+
+export function assertValidWholeVideoRecipeMap(map) {
+  if (!isObject(map) || !Array.isArray(map.units)) {
+    throw new Error("whole_video_recipe_map_invalid");
+  }
+  const seen = new Set();
+  for (const unit of map.units) {
+    if (!unit.recipeUnitId) throw new Error("whole_video_recipe_map_unit_id_missing");
+    if (seen.has(unit.recipeUnitId)) throw new Error(`whole_video_recipe_map_duplicate_unit:${unit.recipeUnitId}`);
+    seen.add(unit.recipeUnitId);
+    if (!Array.isArray(unit.ingredientSlots)) throw new Error(`whole_video_recipe_map_ingredients_invalid:${unit.recipeUnitId}`);
+    for (const slot of unit.ingredientSlots) {
+      if (!slot.name) throw new Error(`whole_video_recipe_map_ingredient_name_missing:${unit.recipeUnitId}`);
+      if (slot.amountSlot.status === "known" && (!slot.amountSlot.amount || !slot.amountSlot.unit)) {
+        throw new Error(`whole_video_recipe_map_known_amount_missing:${unit.recipeUnitId}:${slot.name}`);
+      }
+    }
+  }
+  return true;
+}
+
+export function auditWholeVideoRecipeMap(map, {
+  holisticSourcePacket,
+} = {}) {
+  const entries = wholeVideoMapSourceEntries(holisticSourcePacket);
+  const rawAmounts = rawAmountCandidatesFromEntries(entries);
+  const candidateRefUniverse = new Set((holisticSourcePacket?.candidateSourcePackets ?? [])
+    .flatMap((packet) => [...candidatePacketRefs(packet)]));
+  const acceptedByKey = new Set(rawAmounts.accepted.flatMap((candidate) => (
+    normalizeStringArray(candidate.evidence).map((ref) => [
+      normalizeKey(candidate.ingredient),
+      normalizeKey(candidate.amount),
+      normalizeKey(candidate.unit),
+      ref,
+    ].join("::"))
+  )));
+  const warnings = [];
+  const expectedUnitIds = new Set((holisticSourcePacket?.candidateSourcePackets ?? [])
+    .map((packet) => packet.candidateId)
+    .filter(Boolean));
+  const mapUnitIds = new Set((map?.units ?? [])
+    .map((unit) => unit.recipeUnitId)
+    .filter(Boolean));
+  for (const expectedUnitId of expectedUnitIds) {
+    if (mapUnitIds.has(expectedUnitId)) continue;
+    warnings.push({
+      type: "map_unit_missing_candidate_packet",
+      recipeUnitId: expectedUnitId,
+      reason: "candidate source packet에는 recipe unit이 있지만 whole-video map에는 없다.",
+    });
+  }
+  for (const mapUnitId of mapUnitIds) {
+    if (expectedUnitIds.has(mapUnitId)) continue;
+    warnings.push({
+      type: "map_unit_extra",
+      recipeUnitId: mapUnitId,
+      reason: "whole-video map에만 있고 candidate source packet에는 없는 recipe unit이다.",
+    });
+  }
+  for (const rejected of rawAmounts.rejected) {
+    warnings.push({
+      type: "rejected_suspicious_amount_candidate",
+      ingredient: rejected.ingredient,
+      amount: rejected.amount,
+      unit: rejected.unit,
+      sourceRef: rejected.sourceRef,
+      reason: rejected.reason,
+      textSnippet: rejected.textSnippet,
+    });
+  }
+  for (const accepted of rawAmounts.accepted) {
+    const refs = normalizeStringArray(accepted.evidence);
+    if (refs.length > 0 && !refs.some((ref) => candidateRefUniverse.has(ref)) && accepted.sourceRef !== "title") {
+      warnings.push({
+        type: "source_amount_not_in_candidate_packet",
+        ingredient: accepted.ingredient,
+        amount: accepted.amount,
+        unit: accepted.unit,
+        sourceRef: accepted.sourceRef,
+        reason: "top-level source에는 amount가 있지만 후보 source packet에는 포함되지 않았다.",
+      });
+    }
+  }
+  for (const unit of map?.units ?? []) {
+    for (const slot of unit.ingredientSlots ?? []) {
+      if (slot.amountSlot?.status !== "known") continue;
+      const keys = normalizeStringArray(slot.amountSlot.evidence).map((ref) => [
+        normalizeKey(slot.name),
+        normalizeKey(slot.amountSlot.amount),
+        normalizeKey(slot.amountSlot.unit),
+        ref,
+      ].join("::"));
+      if (!keys.some((key) => acceptedByKey.has(key))) {
+        warnings.push({
+          type: "known_amount_without_valid_raw_evidence",
+          recipeUnitId: unit.recipeUnitId,
+          ingredient: slot.name,
+          amount: slot.amountSlot.amount,
+          unit: slot.amountSlot.unit,
+          evidence: slot.amountSlot.evidence,
+          reason: "whole-video map의 known amount가 원본 source entry 재검증을 통과하지 못했다.",
+        });
+      }
+    }
+  }
+  return {
+    schemaVersion: 1,
+    kind: "whole-video-recipe-map-audit",
+    videoId: map?.videoId ?? holisticSourcePacket?.video?.videoId ?? null,
+    warnings,
+    summary: {
+      warningCount: warnings.length,
+      sourceAmountCandidateCount: rawAmounts.accepted.length,
+      rejectedAmountCandidateCount: rawAmounts.rejected.length,
+      candidatePacketSourceRefCount: candidateRefUniverse.size,
+      passed: warnings.filter((warning) => [
+        "known_amount_without_valid_raw_evidence",
+        "map_unit_missing_candidate_packet",
+        "map_unit_extra",
+      ].includes(warning.type)).length === 0,
+    },
+  };
+}
+
+export function buildWholeVideoRecipeMapPrompt({
+  holisticSourcePacket,
+  recipeBoundaryPlan,
+  recipeUnitWorkingMemory,
+  recipeUnitUnderstandingState,
+  videoUnderstandingAudit,
+} = {}) {
+  return [
+    "너는 유튜브 레시피 영상 전체를 먼저 이해해 recipe map을 만드는 도우미다.",
+    "목표: final recipe를 쓰지 말고, 전체 영상에서 각 recipe unit의 요리 정체성, 검증된 수량, 아직 비어 있는 수량, 핵심 조리 흐름만 지도처럼 정리한다.",
+    "",
+    "중요한 제한:",
+    "- golden.json, grade, 이전 result, 비교 HTML을 절대 읽지 마라.",
+    "- recipe-unit-understanding-state의 sourceBackedAmounts를 그대로 복사하지 말고, 아래 HOLISTIC_SOURCE_PACKET의 원본 source entry에서 ingredient/amount/unit/evidence를 다시 확인해 known amount로 올려라.",
+    "- 자막/음성에서 문장 일부가 재료명처럼 잘린 amount 후보는 rejectedAmountCandidates에 넣고 known amount로 쓰지 마라.",
+    "- 후보 source packet에서 빠진 top-level description/comment 수량은 known으로 단정하지 말고 uncertainties 또는 rejected/gap에 남겨라.",
+    "- amount가 source로 검증되지 않으면 unknown 또는 visual_needed로 남긴다. 일반 레시피 지식으로 채우지 않는다.",
+    "- 출력은 설명 없이 JSON 객체 하나만 반환한다.",
+    "",
+    "스키마:",
+    JSON.stringify({
+      units: [{
+        recipeUnitId: "r1",
+        title: "요리명",
+        sourceCandidateIds: ["storyboard-1"],
+        timeRange: { startSec: 0, endSec: 120, basis: "recipe-boundary-plan" },
+        dishIntent: { name: "요리명", evidence: ["title", "description:1"], reason: "근거 요약" },
+        ingredientSlots: [{
+          name: "재료명",
+          role: "main|seasoning|garnish|unknown",
+          evidence: ["description:1"],
+          amountSlot: {
+            status: "known|unknown|visual_needed|ambiguous",
+            amount: "100 또는 null",
+            unit: "g 또는 null",
+            amountBasis: "stated|spoken|onscreen|null",
+            evidence: ["description:1"],
+            reason: "왜 이렇게 판단했는지",
+          },
+        }],
+        stepSpine: [{ order: 1, text: "핵심 조리 흐름", evidence: ["event:e1"], confidence: 0.7 }],
+        visualGaps: [{ targetType: "ingredient_amount", ingredient: "재료명", reason: "source 수량 없음", evidence: ["event:e1"] }],
+        rejectedAmountCandidates: [{ ingredient: "잘못 잘린 이름", amount: "30", unit: "g", sourceRef: "transcript:30s", reason: "문장 일부" }],
+        uncertainties: [],
+      }],
+      rejectedAmountCandidates: [],
+    }, null, 2),
+    "",
+    "[RECIPE_BOUNDARY_PLAN]",
+    JSON.stringify(recipeBoundaryPlan ?? null, null, 2),
+    "",
+    "[RECIPE_UNIT_WORKING_MEMORY]",
+    JSON.stringify(recipeUnitWorkingMemory ?? null, null, 2),
+    "",
+    "[RECIPE_UNIT_UNDERSTANDING_STATE]",
+    JSON.stringify(recipeUnitUnderstandingState ?? null, null, 2),
+    "",
+    ...(videoUnderstandingAudit ? [
+      "[VIDEO_UNDERSTANDING_AUDIT]",
+      JSON.stringify(videoUnderstandingAudit, null, 2),
+      "",
+    ] : []),
+    "[HOLISTIC_SOURCE_PACKET]",
+    JSON.stringify(holisticSourcePacket, null, 2),
+  ].join("\n");
+}
+
+export function buildCandidateRecipeMapContract(wholeVideoRecipeMap, candidateId, {
+  maxBytes = 1400,
+} = {}) {
+  const unit = (wholeVideoRecipeMap?.units ?? []).find((item) => item.recipeUnitId === candidateId);
+  if (!unit) {
+    return {
+      contract: null,
+      bytes: 0,
+      maxBytes,
+      budgetExceeded: false,
+      truncated: false,
+      source: "whole-video-recipe-map",
+    };
+  }
+  const compact = {
+    schemaVersion: 1,
+    kind: "recipe-map-contract",
+    source: "whole-video-recipe-map",
+    recipeUnitId: unit.recipeUnitId,
+    title: unit.title,
+    sourceCandidateIds: unit.sourceCandidateIds,
+    timeRange: unit.timeRange,
+    dishIntent: unit.dishIntent,
+    knownAmountSlots: unit.ingredientSlots
+      .filter((slot) => slot.amountSlot?.status === "known")
+      .map((slot) => ({
+        name: slot.name,
+        amount: slot.amountSlot.amount,
+        unit: slot.amountSlot.unit,
+        amountBasis: slot.amountSlot.amountBasis,
+        evidence: truncateRefs(slot.amountSlot.evidence, 4),
+      })),
+    unknownAmountSlots: unit.ingredientSlots
+      .filter((slot) => slot.amountSlot?.status !== "known")
+      .map((slot) => ({
+        name: slot.name,
+        status: slot.amountSlot?.status ?? "unknown",
+        evidence: truncateRefs(slot.evidence, 4),
+        reason: slot.amountSlot?.reason ?? null,
+      })),
+    stepSpine: unit.stepSpine.slice(0, 12).map((step) => ({
+      order: step.order,
+      text: step.text,
+      evidence: truncateRefs(step.evidence, 4),
+    })),
+    visualGaps: unit.visualGaps.slice(0, 12),
+    uncertainties: unit.uncertainties,
+  };
+  const bytes = Buffer.byteLength(JSON.stringify(compact), "utf8");
+  return {
+    contract: compact,
+    bytes,
+    maxBytes,
+    budgetExceeded: bytes > maxBytes,
+    truncated: false,
+    source: "whole-video-recipe-map",
+  };
+}
+
+export function auditCandidateMapAdherence(finalOutput, wholeVideoRecipeMap) {
+  const warnings = [];
+  let checkedKnownAmountCount = 0;
+  let preservedKnownAmountCount = 0;
+  let checkedStepSpineCount = 0;
+  let preservedStepSpineCount = 0;
+  for (const unit of wholeVideoRecipeMap?.units ?? []) {
+    const recipe = (finalOutput?.recipes ?? []).find((item) => item.candidateId === unit.recipeUnitId) ?? null;
+    if (!recipe) {
+      warnings.push({
+        type: "recipe_missing_for_map_unit",
+        recipeUnitId: unit.recipeUnitId,
+        reason: "whole-video map에는 recipe unit이 있지만 final draft에는 없다.",
+      });
+      continue;
+    }
+    for (const slot of unit.ingredientSlots ?? []) {
+      if (slot.amountSlot?.status !== "known") continue;
+      checkedKnownAmountCount += 1;
+      const ingredient = (recipe.ingredients ?? []).find((item) => amountCandidateMatchesIngredient({ ingredient: item.name }, slot.name));
+      if (ingredient && normalizeKey(ingredient.amount) === normalizeKey(slot.amountSlot.amount) && normalizeKey(ingredient.unit) === normalizeKey(slot.amountSlot.unit)) {
+        preservedKnownAmountCount += 1;
+        continue;
+      }
+      warnings.push({
+        type: ingredient ? "map_known_amount_changed" : "map_known_ingredient_missing",
+        recipeUnitId: unit.recipeUnitId,
+        ingredient: slot.name,
+        expectedAmount: slot.amountSlot.amount,
+        expectedUnit: slot.amountSlot.unit,
+        actualAmount: ingredient?.amount ?? null,
+        actualUnit: ingredient?.unit ?? null,
+        reason: "RECIPE_MAP_CONTRACT의 known amount가 후보 draft에 보존되지 않았다.",
+      });
+    }
+    for (const step of unit.stepSpine ?? []) {
+      checkedStepSpineCount += 1;
+      const matched = (recipe.steps ?? []).some((recipeStep) => (
+        textMentions(recipeStep.text ?? recipeStep, step.text)
+        || evidenceIntersects(step.evidence, recipeStep.evidence)
+      ));
+      if (matched) {
+        preservedStepSpineCount += 1;
+        continue;
+      }
+      warnings.push({
+        type: "map_step_spine_missing",
+        recipeUnitId: unit.recipeUnitId,
+        step: step.text,
+        evidence: step.evidence,
+        reason: "RECIPE_MAP_CONTRACT의 stepSpine이 후보 draft steps에 반영되지 않았다.",
+      });
+    }
+  }
+  return {
+    schemaVersion: 1,
+    kind: "candidate-map-adherence-audit",
+    videoId: wholeVideoRecipeMap?.videoId ?? finalOutput?.videoId ?? null,
+    warnings,
+    summary: {
+      mapUnitCount: wholeVideoRecipeMap?.units?.length ?? 0,
+      checkedKnownAmountCount,
+      preservedKnownAmountCount,
+      checkedStepSpineCount,
+      preservedStepSpineCount,
+      warningCount: warnings.length,
+      passed: warnings.length === 0,
+    },
+  };
+}
+
 function truncateRefs(refs, maxRefs = 4) {
   return normalizeStringArray(refs).slice(0, maxRefs);
 }
@@ -1849,6 +2520,7 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, {
 export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
   understandingAudit = null,
   candidateIntegratedBrief = null,
+  recipeMapContract = null,
   recipeUnitWorkingMemory = null,
   recipeUnitUnderstandingState = null,
   recipeUnitUnderstandingPromptPayload = null,
@@ -1869,8 +2541,9 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
   ] : [];
   const hasUnderstandingAudit = isObject(understandingAudit) && Array.isArray(understandingAudit.storyAudits);
   const hasCandidateIntegratedBrief = isObject(candidateIntegratedBrief);
+  const hasRecipeMapContract = isObject(recipeMapContract);
   const hasWorkingMemory = isObject(scopedWorkingMemory);
-  const hasUnderstandingState = isObject(scopedUnderstandingState) && !hasCandidateIntegratedBrief;
+  const hasUnderstandingState = isObject(scopedUnderstandingState) && !hasCandidateIntegratedBrief && !hasRecipeMapContract;
   return [
     "너는 다중 레시피 영상에서 후보 하나만 맡아 레시피 초안을 쓰는 도우미다.",
     "목표: 아래 candidate 하나를 다른 candidate와 섞지 않고, 제목/설명란/고정댓글/자막/video timeline event 근거로 recipe draft 1개를 만든다.",
@@ -1878,7 +2551,9 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
     "중요한 제한:",
     "- 로컬 파일, golden.json, grade, 이전 result, 비교 HTML, 이전 추출 결과를 읽지 마라.",
     "- 아래 CANDIDATE_SOURCE_PACKET과 CANDIDATE_TIMELINE_ENTRY만 우선 사용한다.",
-    hasCandidateIntegratedBrief
+    hasRecipeMapContract
+      ? "- raw VIDEO_UNDERSTANDING과 CANDIDATE_UNDERSTANDING_AUDIT은 제공되지 않는다. RECIPE_MAP_CONTRACT 하나만 후보별 전체 이해 계약으로 사용한다."
+      : hasCandidateIntegratedBrief
       ? "- raw VIDEO_UNDERSTANDING과 CANDIDATE_UNDERSTANDING_AUDIT은 제공되지 않는다. CANDIDATE_INTEGRATED_BRIEF 하나만 후보별 이해 메모로 사용한다."
       : "- raw VIDEO_UNDERSTANDING은 제공되지 않는다. CANDIDATE_UNDERSTANDING_AUDIT은 source-backed 수정 메모일 뿐이다.",
     "- 다른 candidate의 재료, 수량, 단계는 절대 합치지 않는다.",
@@ -1894,6 +2569,13 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
       "- brief의 sourceBackedAmounts에 있는 amount/unit은 source에서 이미 나온 분량이다. 같은 재료를 final ingredients에 쓰면 해당 amount/unit과 amountBasis를 보존한다.",
       "- brief의 understandingOrientation.stories는 raw story가 아니라 source-backed audit 요약이다. warnings에 있는 unsupported 재료는 확정 재료로 쓰지 않는다.",
       "- brief의 blockedIngredientNames에 있는 surfaceName은 final ingredient name으로 쓰지 말고 uncertainties에 남긴다.",
+    ] : []),
+    ...(hasRecipeMapContract ? [
+      "- RECIPE_MAP_CONTRACT는 전체 영상을 먼저 이해해 만든 후보별 계약이다. final evidence는 아니며, final evidence에는 source/event/frame ref만 넣는다.",
+      "- knownAmountSlots의 amount/unit은 원본 source entry에서 다시 검증된 분량이다. 같은 재료를 final ingredients에 쓰면 amount/unit/amountBasis를 보존한다.",
+      "- unknownAmountSlots는 일반 지식으로 채우지 않는다. source가 없으면 amount/unit은 null로 두거나 visualNeeds로 남긴다.",
+      "- visualGaps는 visual-estimate 후보일 뿐이다. 화면 확인 없이 final amount로 확정하지 않는다.",
+      "- stepSpine은 이 recipe unit의 핵심 조리 흐름이다. 단계 작성 시 이 흐름을 우선 반영하고, 없는 단계를 상상해서 추가하지 않는다.",
     ] : []),
     ...(hasWorkingMemory ? [
       "- RECIPE_UNIT_WORKING_MEMORY는 이 recipe unit을 쓰기 전에 보존해야 할 작은 작업 메모다. 최종 evidence가 아니라 draft orientation으로만 사용한다.",
@@ -1966,7 +2648,12 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
       JSON.stringify(candidateIntegratedBrief, null, 2),
       "",
     ] : []),
-    ...(!hasCandidateIntegratedBrief && hasUnderstandingAudit ? [
+    ...(hasRecipeMapContract ? [
+      "[RECIPE_MAP_CONTRACT]",
+      JSON.stringify(recipeMapContract, null, 2),
+      "",
+    ] : []),
+    ...(!hasCandidateIntegratedBrief && !hasRecipeMapContract && hasUnderstandingAudit ? [
       "[CANDIDATE_UNDERSTANDING_AUDIT]",
       JSON.stringify(understandingAudit, null, 2),
       "",
@@ -2962,9 +3649,27 @@ function visualNeedsFromDraft(draft) {
   return needs;
 }
 
+function recipeMapUnitForCandidate(wholeVideoRecipeMap, candidateId) {
+  return (wholeVideoRecipeMap?.units ?? []).find((unit) => (
+    unit.recipeUnitId === candidateId
+    || normalizeStringArray(unit.sourceCandidateIds).includes(candidateId)
+  )) ?? null;
+}
+
+function recipeMapAllowsVisualNeed(wholeVideoRecipeMap, recipe, need) {
+  if (!wholeVideoRecipeMap) return true;
+  const unit = recipeMapUnitForCandidate(wholeVideoRecipeMap, recipe?.candidateId);
+  if (!unit) return true;
+  return (unit.visualGaps ?? []).some((gap) => (
+    (gap.targetType ?? "ingredient_amount") === "ingredient_amount"
+    && amountCandidateMatchesIngredient({ ingredient: gap.ingredient }, need?.ingredient)
+  ));
+}
+
 export function buildHolisticVisualTargetLedger({
   draft,
   sourcePacket,
+  wholeVideoRecipeMap = null,
   maxTargetsPerRecipe = 3,
   maxTotalTargets = 12,
   maxWindowSec = 16,
@@ -3034,6 +3739,14 @@ export function buildHolisticVisualTargetLedger({
   }
   for (const { recipe, need } of visualNeedsFromDraft(draft)) {
     const groupedTarget = isGroupedVisualIngredient(need.ingredient);
+    if (!recipeMapAllowsVisualNeed(wholeVideoRecipeMap, recipe, need)) {
+      skippedTargets.push({
+        candidateId: recipe.candidateId,
+        ingredient: need.ingredient,
+        reasonCode: "recipe_map_visual_gap_missing",
+      });
+      continue;
+    }
     if (amountTargetsOnly && groupedTarget) {
       skippedTargets.push({
         candidateId: recipe.candidateId,
@@ -3072,6 +3785,9 @@ export function buildHolisticVisualTargetLedger({
       totalTargets: targets.length,
       skippedTargets: skippedTargets.length,
       visualTargetAllowedCount: targets.length,
+      recipeMapVisualGapFilterEnabled: Boolean(wholeVideoRecipeMap),
+      recipeMapVisualGapSkippedCount: skippedTargets
+        .filter((target) => target.reasonCode === "recipe_map_visual_gap_missing").length,
     },
     warnings: skippedTargets.filter((target) => target.reasonCode.startsWith("max_")),
   };

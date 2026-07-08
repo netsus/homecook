@@ -40,10 +40,14 @@ import {
   assertValidHolisticDraft,
   assertValidRecipeBoundaryPlan,
   assertValidVideoUnderstanding,
+  assertValidWholeVideoRecipeMap,
+  auditCandidateMapAdherence,
   auditHolisticDraft,
   auditRecipeUnitConsistency,
+  auditWholeVideoRecipeMap,
   applyRecipeUnitUnderstandingDemotion,
   buildCandidateIntegratedBrief,
+  buildCandidateRecipeMapContract,
   buildFinalOutputFromHolisticAudit,
   buildCandidateFirstHolisticDraftPrompt,
   buildHolisticCandidateLedger,
@@ -55,11 +59,14 @@ import {
   buildRecipeBoundaryPlanPrompt,
   buildRecipeUnitUnderstandingState,
   buildRecipeUnitWorkingMemory,
+  buildWholeVideoRecipeMapFromInputs,
+  buildWholeVideoRecipeMapPrompt,
   buildHolisticVisualTargetLedger,
   buildVideoUnderstandingPrompt,
   normalizeHolisticDraft,
   normalizeRecipeBoundaryPlan,
   normalizeVideoUnderstanding,
+  normalizeWholeVideoRecipeMap,
   recommendHolisticTimelineFrameBudget,
   selectUsableVideoUnderstanding,
 } from "./lib/holistic.mjs";
@@ -287,6 +294,13 @@ function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
     recipeBoundaryFailurePath: path.join(outDir, "recipe-boundary-failure.json"),
     recipeUnitWorkingMemoryPath: path.join(outDir, "recipe-unit-working-memory.json"),
     recipeUnitUnderstandingStatePath: path.join(outDir, "recipe-unit-understanding-state.json"),
+    wholeVideoRecipeMapPromptPath: path.join(outDir, "whole-video-recipe-map-prompt.txt"),
+    wholeVideoRecipeMapCommandPath: path.join(outDir, "whole-video-recipe-map-command.json"),
+    wholeVideoRecipeMapRawPath: path.join(outDir, "whole-video-recipe-map-raw-response.json"),
+    wholeVideoRecipeMapPath: path.join(outDir, "whole-video-recipe-map.json"),
+    wholeVideoRecipeMapAuditPath: path.join(outDir, "whole-video-recipe-map-audit.json"),
+    wholeVideoRecipeMapFailurePath: path.join(outDir, "whole-video-recipe-map-failure.json"),
+    candidateMapAdherenceAuditPath: path.join(outDir, "candidate-map-adherence-audit.json"),
     recipeUnitDraftSelfAuditPath: path.join(outDir, "recipe-unit-draft-self-audit.json"),
     unitConsistencyAuditPath: path.join(outDir, "unit-consistency-audit.json"),
     unitConsistencySummaryPath: path.join(outDir, "unit-consistency-summary.json"),
@@ -744,6 +758,10 @@ function candidateFirstSummarySkeleton({
   recipeUnitUnderstandingState = null,
   recipeUnitUnderstandingStatePromptGuardEnabled = false,
   recipeUnitUnderstandingStatePromptMaxDeltaBytes = 4000,
+  wholeVideoRecipeMapEnabled = false,
+  wholeVideoRecipeMap = null,
+  recipeMapContractEnabled = false,
+  recipeMapContractPromptMaxDeltaBytes = 4000,
 }) {
   return {
     schemaVersion: 1,
@@ -754,6 +772,8 @@ function candidateFirstSummarySkeleton({
     recipeUnitWorkingMemoryEnabled,
     recipeUnitUnderstandingStateEnabled,
     recipeUnitUnderstandingStatePromptGuardEnabled,
+    wholeVideoRecipeMapEnabled,
+    recipeMapContractEnabled,
     recipeBoundaryPlanSummary: recipeBoundaryPlan ? {
       recipeUnitCount: recipeBoundaryPlan.recipeUnits?.length ?? 0,
       skippedCandidateCount: recipeBoundaryPlan.skippedCandidates?.length ?? 0,
@@ -761,11 +781,13 @@ function candidateFirstSummarySkeleton({
     } : null,
     recipeUnitWorkingMemorySummary: recipeUnitWorkingMemory?.summary ?? null,
     recipeUnitUnderstandingStateSummary: recipeUnitUnderstandingState?.summary ?? null,
+    wholeVideoRecipeMapSummary: wholeVideoRecipeMap?.summary ?? null,
     budget: {
       maxCandidates,
       perCandidateTimeoutMs,
       totalTimeoutMs,
       recipeUnitUnderstandingStatePromptMaxDeltaBytes,
+      recipeMapContractPromptMaxDeltaBytes,
     },
     candidates: [],
     assembly: {
@@ -814,6 +836,10 @@ async function runCandidateFirstHolisticDraft({
   recipeUnitUnderstandingState = null,
   recipeUnitUnderstandingStatePromptGuardEnabled = false,
   recipeUnitUnderstandingStatePromptMaxDeltaBytes = 4000,
+  wholeVideoRecipeMapEnabled = false,
+  wholeVideoRecipeMap = null,
+  recipeMapContractEnabled = false,
+  recipeMapContractPromptMaxDeltaBytes = 4000,
 }) {
   const candidatePackets = holisticSourcePacket?.candidateSourcePackets ?? [];
   const timelineCandidates = holisticSourcePacket?.candidateTimelineIndex?.candidates ?? [];
@@ -830,6 +856,10 @@ async function runCandidateFirstHolisticDraft({
     recipeUnitUnderstandingState,
     recipeUnitUnderstandingStatePromptGuardEnabled,
     recipeUnitUnderstandingStatePromptMaxDeltaBytes,
+    wholeVideoRecipeMapEnabled,
+    wholeVideoRecipeMap,
+    recipeMapContractEnabled,
+    recipeMapContractPromptMaxDeltaBytes,
   });
   if (candidatePackets.length === 0) {
     summary.errors.push({
@@ -900,7 +930,50 @@ async function runCandidateFirstHolisticDraft({
     let recipeUnitUnderstandingStatePromptTruncated = false;
     let recipeUnitUnderstandingStatePromptFailOpen = false;
     let recipeUnitUnderstandingStatePromptBytes = 0;
-    if (recipeUnitUnderstandingStateEnabled && recipeUnitUnderstandingStatePromptGuardEnabled) {
+    let candidateRecipeMapContractInjected = false;
+    let candidateRecipeMapContractBudgetExceeded = false;
+    let candidateRecipeMapContractTruncated = false;
+    let candidateRecipeMapContractFailOpen = false;
+    let candidateRecipeMapContractBytes = 0;
+    let candidateRecipeMapContractMaxBytes = 0;
+    let candidateRecipeMapContractSource = null;
+    if (recipeMapContractEnabled && wholeVideoRecipeMapEnabled && wholeVideoRecipeMap) {
+      const recipeMapContractPayloadMaxBytes = Math.max(
+        500,
+        recipeMapContractPromptMaxDeltaBytes - 2600,
+      );
+      candidateRecipeMapContractMaxBytes = recipeMapContractPayloadMaxBytes;
+      const candidateRecipeMapContractPayload = buildCandidateRecipeMapContract(
+        wholeVideoRecipeMap,
+        candidateId,
+        { maxBytes: recipeMapContractPayloadMaxBytes },
+      );
+      candidateRecipeMapContractBytes = candidateRecipeMapContractPayload?.bytes ?? 0;
+      candidateRecipeMapContractTruncated = candidateRecipeMapContractPayload?.truncated === true;
+      candidateRecipeMapContractSource = candidateRecipeMapContractPayload?.source ?? null;
+      const promptWithRecipeMapContract = candidateRecipeMapContractPayload?.contract
+        ? buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
+          recipeMapContract: candidateRecipeMapContractPayload.contract,
+          recipeUnitWorkingMemory: recipeUnitWorkingMemoryEnabled ? recipeUnitWorkingMemory : null,
+        })
+        : baseCandidatePrompt;
+      candidatePromptBytesAfterUnderstandingState = Buffer.byteLength(promptWithRecipeMapContract, "utf8");
+      candidatePromptDeltaBytes = candidatePromptBytesAfterUnderstandingState - candidatePromptBytesBeforeUnderstandingState;
+      candidateRecipeMapContractBudgetExceeded = candidateRecipeMapContractPayload?.budgetExceeded === true
+        || candidatePromptDeltaBytes > recipeMapContractPromptMaxDeltaBytes;
+      if (candidateRecipeMapContractPayload?.contract && !candidateRecipeMapContractBudgetExceeded) {
+        candidatePrompt = promptWithRecipeMapContract;
+        candidateRecipeMapContractInjected = true;
+      } else if (candidateRecipeMapContractPayload?.contract) {
+        candidateRecipeMapContractFailOpen = true;
+      }
+      recipeUnitUnderstandingStatePromptInjected = candidateRecipeMapContractInjected;
+      recipeUnitUnderstandingStatePromptBytes = candidateRecipeMapContractBytes;
+      recipeUnitUnderstandingStatePromptBudgetExceeded = candidateRecipeMapContractBudgetExceeded;
+      recipeUnitUnderstandingStatePromptTruncated = candidateRecipeMapContractTruncated;
+      recipeUnitUnderstandingStatePromptFailOpen = candidateRecipeMapContractFailOpen;
+    }
+    if (!candidateRecipeMapContractInjected && recipeUnitUnderstandingStateEnabled && recipeUnitUnderstandingStatePromptGuardEnabled) {
       const recipeUnitUnderstandingStatePayloadMaxBytes = Math.max(
         500,
         recipeUnitUnderstandingStatePromptMaxDeltaBytes - 2600,
@@ -983,7 +1056,20 @@ async function runCandidateFirstHolisticDraft({
         : 0,
       recipeUnitUnderstandingStatePromptInjected,
       recipeUnitUnderstandingStatePromptBytes,
-      recipeUnitUnderstandingStatePromptSection: candidateIntegratedBriefInjected ? "CANDIDATE_INTEGRATED_BRIEF" : null,
+      recipeUnitUnderstandingStatePromptSection: candidateRecipeMapContractInjected
+        ? "RECIPE_MAP_CONTRACT"
+        : candidateIntegratedBriefInjected
+        ? "CANDIDATE_INTEGRATED_BRIEF"
+        : null,
+      wholeVideoRecipeMapEnabled,
+      recipeMapContractEnabled,
+      candidateRecipeMapContractInjected,
+      candidateRecipeMapContractBytes,
+      candidateRecipeMapContractMaxBytes,
+      candidateRecipeMapContractSource,
+      candidateRecipeMapContractBudgetExceeded,
+      candidateRecipeMapContractTruncated,
+      candidateRecipeMapContractFailOpen,
       candidateIntegratedBriefInjected,
       candidateIntegratedBriefBytes,
       candidateIntegratedBriefMaxBytes,
@@ -1159,6 +1245,10 @@ async function runHolisticPiExtractionCase({
   holisticRecipeUnitUnderstandingState,
   holisticRecipeUnitUnderstandingStatePromptGuard,
   holisticRecipeUnitUnderstandingStatePromptMaxDeltaBytes,
+  holisticWholeVideoRecipeMap,
+  holisticWholeVideoRecipeMapContract,
+  holisticWholeVideoRecipeMapResponseJsonPath,
+  holisticRecipeMapContractPromptMaxDeltaBytes,
   holisticCandidateFirstMaxCandidates,
   holisticCandidateFirstDraftTimeoutMs,
   holisticCandidateFirstTotalTimeoutMs,
@@ -1401,6 +1491,10 @@ async function runHolisticPiExtractionCase({
   manifest.holisticRecipeUnitWorkingMemoryEnabled = false;
   manifest.holisticRecipeUnitUnderstandingStateRequested = holisticRecipeUnitUnderstandingState;
   manifest.holisticRecipeUnitUnderstandingStateEnabled = false;
+  manifest.holisticWholeVideoRecipeMapRequested = holisticWholeVideoRecipeMap;
+  manifest.holisticWholeVideoRecipeMapEnabled = false;
+  manifest.holisticWholeVideoRecipeMapContractRequested = holisticWholeVideoRecipeMapContract;
+  manifest.holisticWholeVideoRecipeMapContractEnabled = false;
   manifest.holistic.videoTimelineLedgerEffective = effectiveHolisticVideoTimelineLedger;
   manifest.holistic.videoTimelineLedgerFallback = multiCandidateTimelineLedgerFallback;
   manifest.holistic.integratedUnderstandingStageEnabled = shouldRunHolisticIntegratedUnderstanding;
@@ -1427,6 +1521,12 @@ async function runHolisticPiExtractionCase({
     requested: holisticRecipeUnitUnderstandingState,
     enabled: false,
   };
+  manifest.holistic.wholeVideoRecipeMap = {
+    requested: holisticWholeVideoRecipeMap,
+    enabled: false,
+    contractRequested: holisticWholeVideoRecipeMapContract,
+    contractEnabled: false,
+  };
   manifest.holistic.visualRepairEffective = effectiveHolisticVisualRepairEnabled;
   const holisticSourcePacket = buildHolisticSourcePacket(sourcePacket, storyboardLedger, {
     includeStoryboardEntries: !effectiveHolisticVideoTimelineLedger,
@@ -1436,6 +1536,8 @@ async function runHolisticPiExtractionCase({
   let holisticDraftSourcePacket = holisticSourcePacket;
   let recipeUnitWorkingMemory = null;
   let recipeUnitUnderstandingState = null;
+  let wholeVideoRecipeMap = null;
+  let wholeVideoRecipeMapContractAllowed = false;
   await writeJsonTracked(manifest, paths.holisticSourcePacketPath, holisticSourcePacket, "holistic-source-packet");
   if (shouldRunHolisticIntegratedUnderstanding) {
     videoUnderstandingPrompt = buildVideoUnderstandingPrompt(holisticSourcePacket, {
@@ -1702,6 +1804,150 @@ async function runHolisticPiExtractionCase({
       summary: recipeUnitUnderstandingState.summary,
     };
   }
+  if (recipeBoundaryPlanActive && holisticWholeVideoRecipeMap) {
+    if (!recipeUnitWorkingMemory) {
+      recipeUnitWorkingMemory = buildRecipeUnitWorkingMemory(holisticDraftSourcePacket, {
+        videoUnderstandingAudit,
+      });
+      await writeJsonTracked(
+        manifest,
+        paths.recipeUnitWorkingMemoryPath,
+        recipeUnitWorkingMemory,
+        "recipe-unit-working-memory",
+      );
+      manifest.holisticRecipeUnitWorkingMemoryEnabled = true;
+      manifest.holisticRecipeUnitWorkingMemorySummary = recipeUnitWorkingMemory.summary;
+      manifest.holistic.recipeUnitWorkingMemory = {
+        requested: holisticRecipeUnitWorkingMemory,
+        enabled: true,
+        summary: recipeUnitWorkingMemory.summary,
+      };
+    }
+    if (!recipeUnitUnderstandingState) {
+      recipeUnitUnderstandingState = buildRecipeUnitUnderstandingState({
+        recipeUnitWorkingMemory,
+        holisticSourcePacket: holisticDraftSourcePacket,
+        videoUnderstanding,
+        videoUnderstandingAudit,
+      });
+      await writeJsonTracked(
+        manifest,
+        paths.recipeUnitUnderstandingStatePath,
+        recipeUnitUnderstandingState,
+        "recipe-unit-understanding-state",
+      );
+      manifest.holisticRecipeUnitUnderstandingStateEnabled = true;
+      manifest.holisticRecipeUnitUnderstandingStateSummary = recipeUnitUnderstandingState.summary;
+      manifest.holistic.recipeUnitUnderstandingState = {
+        requested: holisticRecipeUnitUnderstandingState,
+        enabled: true,
+        summary: recipeUnitUnderstandingState.summary,
+      };
+    }
+    const wholeVideoRecipeMapPrompt = buildWholeVideoRecipeMapPrompt({
+      holisticSourcePacket: holisticDraftSourcePacket,
+      recipeBoundaryPlan,
+      recipeUnitWorkingMemory,
+      recipeUnitUnderstandingState,
+      videoUnderstandingAudit,
+    });
+    await writeTextTracked(
+      manifest,
+      paths.wholeVideoRecipeMapPromptPath,
+      `${wholeVideoRecipeMapPrompt}\n`,
+      "whole-video-recipe-map-prompt",
+    );
+    addAllowedRead(manifest, paths.wholeVideoRecipeMapPromptPath);
+    const wholeVideoRecipeMapCommand = buildPiCommand({
+      promptPath: paths.wholeVideoRecipeMapPromptPath,
+      model,
+      provider,
+      thinking,
+      tools: [],
+    });
+    manifest.stages.push({ name: "whole-video-recipe-map", command: wholeVideoRecipeMapCommand });
+    await writeJsonTracked(manifest, paths.wholeVideoRecipeMapCommandPath, {
+      command: wholeVideoRecipeMapCommand,
+      note: piCommandNote([]),
+      mode: "whole-video-recipe-map",
+      contractRequested: holisticWholeVideoRecipeMapContract,
+    }, "whole-video-recipe-map-command");
+    try {
+      if (dryRun) {
+        wholeVideoRecipeMap = buildWholeVideoRecipeMapFromInputs({
+          holisticSourcePacket: holisticDraftSourcePacket,
+          recipeUnitUnderstandingState,
+        });
+      } else {
+        manifest.currentStage = "whole-video-recipe-map";
+        const wholeVideoRecipeMapRawPayload = await readFixtureOrExecutePi({
+          manifest,
+          fixturePath: holisticWholeVideoRecipeMapResponseJsonPath,
+          fixtureReason: "whole-video-recipe-map-fixture-response-json",
+          command: wholeVideoRecipeMapCommand,
+          projectRoot,
+          timeoutMs,
+          executePiFn,
+        });
+        await writeTextTracked(
+          manifest,
+          paths.wholeVideoRecipeMapRawPath,
+          rawPayloadForDisk(wholeVideoRecipeMapRawPayload),
+          "whole-video-recipe-map-raw-response",
+        );
+        wholeVideoRecipeMap = normalizeWholeVideoRecipeMap(wholeVideoRecipeMapRawPayload, {
+          holisticSourcePacket: holisticDraftSourcePacket,
+          recipeUnitUnderstandingState,
+        });
+      }
+      assertValidWholeVideoRecipeMap(wholeVideoRecipeMap);
+      const wholeVideoRecipeMapAudit = auditWholeVideoRecipeMap(wholeVideoRecipeMap, {
+        holisticSourcePacket: holisticDraftSourcePacket,
+        recipeUnitUnderstandingState,
+      });
+      await writeJsonTracked(manifest, paths.wholeVideoRecipeMapPath, wholeVideoRecipeMap, "whole-video-recipe-map");
+      await writeJsonTracked(
+        manifest,
+        paths.wholeVideoRecipeMapAuditPath,
+        wholeVideoRecipeMapAudit,
+        "whole-video-recipe-map-audit",
+      );
+      manifest.holisticWholeVideoRecipeMapEnabled = true;
+      manifest.holisticWholeVideoRecipeMapSummary = wholeVideoRecipeMap.summary;
+      manifest.holisticWholeVideoRecipeMapAuditSummary = wholeVideoRecipeMapAudit.summary;
+      wholeVideoRecipeMapContractAllowed = Boolean(
+        holisticWholeVideoRecipeMapContract
+        && wholeVideoRecipeMap
+        && wholeVideoRecipeMapAudit.summary?.passed === true,
+      );
+      manifest.holisticWholeVideoRecipeMapContractEnabled = wholeVideoRecipeMapContractAllowed;
+      manifest.holistic.wholeVideoRecipeMap = {
+        requested: true,
+        enabled: true,
+        contractRequested: holisticWholeVideoRecipeMapContract,
+        contractEnabled: manifest.holisticWholeVideoRecipeMapContractEnabled,
+        summary: wholeVideoRecipeMap.summary,
+        auditSummary: wholeVideoRecipeMapAudit.summary,
+      };
+    } catch (error) {
+      wholeVideoRecipeMap = null;
+      const failure = {
+        code: "whole_video_recipe_map_failed",
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      };
+      await writeJsonTracked(manifest, paths.wholeVideoRecipeMapFailurePath, failure, "whole-video-recipe-map-failure");
+      manifest.holisticWholeVideoRecipeMapFailure = failure;
+      wholeVideoRecipeMapContractAllowed = false;
+      manifest.holistic.wholeVideoRecipeMap = {
+        requested: true,
+        enabled: false,
+        contractRequested: holisticWholeVideoRecipeMapContract,
+        contractEnabled: false,
+        failure: failure.message,
+      };
+    }
+  }
   await writeJsonTracked(
     manifest,
     paths.holisticDraftSourcePacketPath,
@@ -1752,6 +1998,10 @@ async function runHolisticPiExtractionCase({
       recipeUnitUnderstandingState,
       recipeUnitUnderstandingStatePromptGuardEnabled: Boolean(recipeUnitUnderstandingState) && holisticRecipeUnitUnderstandingStatePromptGuard,
       recipeUnitUnderstandingStatePromptMaxDeltaBytes: holisticRecipeUnitUnderstandingStatePromptMaxDeltaBytes,
+      wholeVideoRecipeMapEnabled: Boolean(wholeVideoRecipeMap),
+      wholeVideoRecipeMap,
+      recipeMapContractEnabled: Boolean(wholeVideoRecipeMap) && wholeVideoRecipeMapContractAllowed,
+      recipeMapContractPromptMaxDeltaBytes: holisticRecipeMapContractPromptMaxDeltaBytes,
     });
     holisticDraftPrompt = candidateFirstResult.promptText;
     holisticRawPayload = candidateFirstResult.rawPayload;
@@ -1818,11 +2068,27 @@ async function runHolisticPiExtractionCase({
     await writeJsonTracked(manifest, paths.holisticDraftPath, draft, "holistic-draft");
   }
 
+  if (wholeVideoRecipeMap && draft) {
+    const candidateMapAdherenceAudit = auditCandidateMapAdherence(draft, wholeVideoRecipeMap);
+    await writeJsonTracked(
+      manifest,
+      paths.candidateMapAdherenceAuditPath,
+      candidateMapAdherenceAudit,
+      "candidate-map-adherence-audit",
+    );
+    manifest.holisticWholeVideoRecipeMapAdherenceSummary = candidateMapAdherenceAudit.summary;
+    manifest.holistic.wholeVideoRecipeMap = {
+      ...(manifest.holistic.wholeVideoRecipeMap ?? {}),
+      adherenceSummary: candidateMapAdherenceAudit.summary,
+    };
+  }
+
   const candidateLedger = buildHolisticCandidateLedger({ draft, sourcePacket });
   await writeJsonTracked(manifest, paths.candidateLedgerPath, candidateLedger, "candidate-ledger");
   const visualTargetLedger = buildHolisticVisualTargetLedger({
     draft,
     sourcePacket,
+    wholeVideoRecipeMap,
     maxTargetsPerRecipe: effectiveHolisticMaxTargetsPerRecipe,
     maxTotalTargets: effectiveHolisticMaxTotalTargets,
     maxWindowSec: holisticVisualTargetMaxWindowSec,
@@ -2403,6 +2669,9 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   const holisticRecipeBoundaryResponseJsonPath = typeof args["holistic-recipe-boundary-response-json"] === "string"
     ? path.resolve(projectRoot, args["holistic-recipe-boundary-response-json"])
     : null;
+  const holisticWholeVideoRecipeMapResponseJsonPath = typeof args["holistic-whole-video-recipe-map-response-json"] === "string"
+    ? path.resolve(projectRoot, args["holistic-whole-video-recipe-map-response-json"])
+    : null;
   const maxCaptionSegments = optionalNumber(args["max-caption-segments"], null);
   const maxDescriptionChars = optionalNumber(args["max-description-chars"], 16000);
   const compactSourcePacket = args["compact-source-packet"] === true;
@@ -2444,6 +2713,13 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
     args["holistic-recipe-unit-understanding-state-prompt-max-delta-bytes"],
     4000,
   );
+  const holisticWholeVideoRecipeMapContract = args["holistic-enable-recipe-map-contract"] === true;
+  const holisticWholeVideoRecipeMap = args["holistic-enable-whole-video-recipe-map"] === true
+    || holisticWholeVideoRecipeMapContract;
+  const holisticRecipeMapContractPromptMaxDeltaBytes = optionalNumber(
+    args["holistic-recipe-map-contract-prompt-max-delta-bytes"],
+    4000,
+  );
   const holisticCandidateFirstMaxCandidates = optionalNumber(args["holistic-candidate-first-max-candidates"], 8);
   const holisticCandidateFirstDraftTimeoutMs = optionalNumber(
     args["holistic-candidate-first-draft-timeout-ms"],
@@ -2481,6 +2757,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
     if (holisticVideoTimelineResponseJsonPath) allowedReads.push(holisticVideoTimelineResponseJsonPath);
     if (holisticUnderstandingResponseJsonPath) allowedReads.push(holisticUnderstandingResponseJsonPath);
     if (holisticRecipeBoundaryResponseJsonPath) allowedReads.push(holisticRecipeBoundaryResponseJsonPath);
+    if (holisticWholeVideoRecipeMapResponseJsonPath) allowedReads.push(holisticWholeVideoRecipeMapResponseJsonPath);
     const manifest = createAccessManifest({ projectRoot, allowedReads });
     Object.assign(manifest, {
       runner: "scripts/pi-extractor/run-pi-extraction.mjs",
@@ -2521,6 +2798,9 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
         visualRepairEnabled: holisticVisualRepairEnabled,
         candidateFirstDraftEnabled: holisticCandidateFirstDraft,
         recipeBoundaryPlanEnabled: holisticRecipeBoundaryPlan,
+        wholeVideoRecipeMapEnabled: holisticWholeVideoRecipeMap,
+        recipeMapContractEnabled: holisticWholeVideoRecipeMapContract,
+        recipeMapContractPromptMaxDeltaBytes: holisticRecipeMapContractPromptMaxDeltaBytes,
         candidateFirstMaxCandidates: holisticCandidateFirstMaxCandidates,
         candidateFirstDraftTimeoutMs: holisticCandidateFirstDraftTimeoutMs,
         candidateFirstTotalTimeoutMs: holisticCandidateFirstTotalTimeoutMs,
@@ -2613,6 +2893,10 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
           holisticRecipeUnitUnderstandingState,
           holisticRecipeUnitUnderstandingStatePromptGuard,
           holisticRecipeUnitUnderstandingStatePromptMaxDeltaBytes,
+          holisticWholeVideoRecipeMap,
+          holisticWholeVideoRecipeMapContract,
+          holisticWholeVideoRecipeMapResponseJsonPath,
+          holisticRecipeMapContractPromptMaxDeltaBytes,
           holisticCandidateFirstMaxCandidates,
           holisticCandidateFirstDraftTimeoutMs,
           holisticCandidateFirstTotalTimeoutMs,
