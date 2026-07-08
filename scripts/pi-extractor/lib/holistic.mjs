@@ -1177,6 +1177,47 @@ function coreStepFlowFromMemory(unit) {
     .slice(0, 12);
 }
 
+function sourceBackedAmountsFromIngredientMemory(ingredientMemory, {
+  maxAmounts = 24,
+  evidenceMax = 4,
+} = {}) {
+  const amounts = [];
+  const seen = new Set();
+  for (const memory of ingredientMemory ?? []) {
+    const ingredient = cleanString(memory?.name);
+    if (!ingredient) continue;
+    for (const candidate of memory?.amountCandidates ?? []) {
+      const amount = cleanString(candidate?.amount);
+      const unit = cleanString(candidate?.unit);
+      const amountBasis = cleanString(candidate?.amountBasis ?? candidate?.basis);
+      if (!amount || !unit || !SOURCE_AMOUNT_BASIS.has(amountBasis)) continue;
+      const evidence = normalizeStringArray([
+        ...(candidate?.evidence ?? []),
+        ...(memory?.evidence ?? []),
+      ]).slice(0, evidenceMax);
+      const key = [
+        normalizeKey(ingredient),
+        normalizeKey(amount),
+        normalizeKey(unit),
+        amountBasis,
+        evidence.join("|"),
+      ].join("::");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      amounts.push({
+        ingredient,
+        amount,
+        unit,
+        amountBasis,
+        evidence,
+        preservePolicy: "preserve_or_explain",
+      });
+      if (amounts.length >= maxAmounts) return amounts;
+    }
+  }
+  return amounts;
+}
+
 export function buildRecipeUnitUnderstandingState({
   recipeUnitWorkingMemory,
   holisticSourcePacket,
@@ -1195,6 +1236,7 @@ export function buildRecipeUnitUnderstandingState({
         candidateNames: [],
         reason: entry.unresolvedQuestion,
       }));
+    const sourceBackedAmounts = sourceBackedAmountsFromIngredientMemory(unit.ingredientMemory);
     return {
       recipeUnitId: unit.recipeUnitId,
       title: unit.title ?? null,
@@ -1209,6 +1251,7 @@ export function buildRecipeUnitUnderstandingState({
       },
       ingredientIdentityState,
       coreStepFlow: coreStepFlowFromMemory(unit),
+      sourceBackedAmounts,
       unresolvedIdentityQuestions,
     };
   });
@@ -1229,6 +1272,7 @@ export function buildRecipeUnitUnderstandingState({
         0,
       ),
       unresolvedIdentityQuestionCount: units.reduce((sum, unit) => sum + unit.unresolvedIdentityQuestions.length, 0),
+      sourceBackedAmountCount: units.reduce((sum, unit) => sum + unit.sourceBackedAmounts.length, 0),
     },
   };
 }
@@ -1242,6 +1286,7 @@ function recipeUnitUnderstandingPromptPayloadFromUnit(unit, {
   includeBlockedReasons = true,
   allowedMax = 20,
   blockedMax = 20,
+  sourceAmountMax = 16,
   coreStepMax = 12,
   evidenceMax = 4,
 } = {}) {
@@ -1276,6 +1321,17 @@ function recipeUnitUnderstandingPromptPayloadFromUnit(unit, {
       ))
       .filter(Boolean)
     : [];
+  const sourceBackedAmounts = (unit?.sourceBackedAmounts ?? [])
+    .slice(0, sourceAmountMax)
+    .map((entry) => ({
+      ingredient: cleanString(entry?.ingredient),
+      amount: cleanString(entry?.amount),
+      unit: cleanString(entry?.unit),
+      amountBasis: cleanString(entry?.amountBasis),
+      evidence: truncateRefs(entry?.evidence, evidenceMax),
+      preservePolicy: cleanString(entry?.preservePolicy) ?? "preserve_or_explain",
+    }))
+    .filter((entry) => entry.ingredient && entry.amount && entry.unit);
   return {
     kind: "candidate-recipe-unit-understanding-state-prompt",
     schemaVersion: 1,
@@ -1297,9 +1353,10 @@ function recipeUnitUnderstandingPromptPayloadFromUnit(unit, {
         order: optionalNumber(step.order, index + 1),
         action: cleanString(step.action),
         evidence: truncateRefs(step.evidence, evidenceMax),
-      })),
+    })),
     allowedIngredientNames,
     blockedIngredientNames,
+    sourceBackedAmounts,
     unresolvedIdentityQuestions,
   };
 }
@@ -1318,10 +1375,10 @@ export function buildCandidateRecipeUnitUnderstandingPromptPayload(recipeUnitUnd
     {},
     { includeUnresolvedQuestions: false },
     { includeUnresolvedQuestions: false, includeBlockedReasons: false },
-    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 12, blockedMax: 12, evidenceMax: 3 },
-    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 8, blockedMax: 8, coreStepMax: 10, evidenceMax: 2 },
-    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 4, blockedMax: 6, coreStepMax: 8, evidenceMax: 1 },
-    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 4, blockedMax: 4, coreStepMax: 4, evidenceMax: 0 },
+    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 12, blockedMax: 12, sourceAmountMax: 12, evidenceMax: 3 },
+    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 8, blockedMax: 8, sourceAmountMax: 8, coreStepMax: 10, evidenceMax: 2 },
+    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 4, blockedMax: 6, sourceAmountMax: 4, coreStepMax: 8, evidenceMax: 1 },
+    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 4, blockedMax: 4, sourceAmountMax: 2, coreStepMax: 4, evidenceMax: 0 },
   ];
   let selected = null;
   let truncated = false;
@@ -1591,6 +1648,9 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
       "- RECIPE_UNIT_UNDERSTANDING_STATE는 evidence 조각 저장소가 아니라, 이 recipe unit이 무엇을 만들고 어떤 흐름인지에 대한 1차 이해 객체다.",
       "- 먼저 dishIdentity와 coreStepFlow를 읽고 조리 흐름을 잡은 뒤, 재료는 그 흐름을 설명하는 데 필요한 범위만 채운다.",
       "- allowedIngredientNames에 있는 source_named 재료명은 가장 안전한 final ingredient name이다.",
+      "- sourceBackedAmounts에 있는 amount/unit은 source에서 이미 나온 분량이다. 같은 재료를 final ingredients에 쓰면 해당 amount/unit과 amountBasis를 보존한다.",
+      "- sourceBackedAmounts를 보존하지 못하면 해당 재료명의 uncertainties 또는 repairLog급 이유를 반드시 남긴다.",
+      "- visualNeeds는 sourceBackedAmounts로 채울 수 없는 빈칸만 남긴다. source-backed 분량을 무시하고 visual-estimate 대상으로 보내지 않는다.",
       "- blockedIngredientNames에 있는 surfaceName은 final ingredient name으로 쓰지 말고 uncertainties에 남긴다.",
       "- unresolvedIdentityQuestions는 확정하지 말아야 할 질문이다. 현재 CANDIDATE_SOURCE_PACKET의 evidence가 직접 뒷받침하지 않으면 final 재료명으로 쓰지 않는다.",
       "- unresolvedIdentityQuestions는 후속 확인 메모이며, 확인되지 않은 새 재료명을 상상해서 만들지 않는다.",
@@ -1703,6 +1763,150 @@ function auditGenericVisualDescriptorLeaks(output, recipeUnitUnderstandingState,
   };
 }
 
+function quantityKey(value) {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/\s+/gu, "")
+    .trim();
+}
+
+function evidenceIntersects(left, right) {
+  const rightRefs = new Set(normalizeStringArray(right));
+  return normalizeStringArray(left).some((ref) => rightRefs.has(ref));
+}
+
+function amountMatches(expected, ingredient) {
+  return Boolean(
+    quantityKey(expected?.amount)
+    && quantityKey(expected?.unit)
+    && quantityKey(expected?.amount) === quantityKey(ingredient?.amount)
+    && quantityKey(expected?.unit) === quantityKey(ingredient?.unit),
+  );
+}
+
+function findRecipeForUnit(finalOutput, unit) {
+  const unitId = cleanString(unit?.recipeUnitId);
+  const sourceIds = new Set(normalizeStringArray(unit?.sourceCandidateIds));
+  return (finalOutput?.recipes ?? []).find((recipe) => (
+    cleanString(recipe?.candidateId) === unitId
+    || normalizeStringArray(recipe?.recipeSourceCandidateIds).some((candidateId) => sourceIds.has(candidateId))
+  )) ?? null;
+}
+
+function findIngredientForSourceBackedAmount(recipe, expectedAmount) {
+  const expectedNameKey = normalizeKey(expectedAmount?.ingredient);
+  const expectedEvidence = normalizeStringArray(expectedAmount?.evidence);
+  return (recipe?.ingredients ?? []).find((ingredient) => {
+    const ingredientNameKey = normalizeKey(ingredient?.name);
+    if (expectedNameKey && ingredientNameKey === expectedNameKey) return true;
+    return evidenceIntersects(expectedEvidence, ingredient?.evidence);
+  }) ?? null;
+}
+
+function sourceBackedAmountExplanationText(finalOutput, recipe) {
+  const repairText = (finalOutput?.repairLog ?? [])
+    .filter((entry) => !recipe?.candidateId || !entry?.candidateId || entry.candidateId === recipe.candidateId)
+    .map((entry) => [
+      entry.field,
+      entry.before,
+      entry.after,
+      entry.reasonCode,
+      entry.reason,
+      ...(entry.evidenceRef ?? []),
+    ].filter(Boolean).join(" "))
+    .join(" ");
+  return uniqueStrings([
+    ...(recipe?.uncertainties ?? []),
+    ...(finalOutput?.globalUncertainties ?? []),
+    repairText,
+  ]).join(" ");
+}
+
+function sourceBackedAmountExplained(finalOutput, recipe, expectedAmount) {
+  const text = sourceBackedAmountExplanationText(finalOutput, recipe);
+  const mentionsIngredient = textMentions(text, expectedAmount?.ingredient)
+    || evidenceIntersects(expectedAmount?.evidence, recipe?.uncertainties ?? []);
+  const mentionsAmountIssue = /(?:amount|unit|분량|수량|계량|근거|충돌|불확실|null|누락|제외|unsupported)/iu.test(text);
+  return mentionsIngredient && mentionsAmountIssue;
+}
+
+export function auditRecipeUnitAmountPreservation(finalOutput, recipeUnitUnderstandingState) {
+  if (!isObject(recipeUnitUnderstandingState) || !Array.isArray(recipeUnitUnderstandingState.units)) {
+    return {
+      schemaVersion: 1,
+      kind: "recipe-unit-amount-preservation-audit",
+      videoId: recipeUnitUnderstandingState?.videoId ?? null,
+      warnings: [],
+      summary: {
+        sourceBackedAmountCount: 0,
+        preservedCount: 0,
+        explainedMissingCount: 0,
+        warningCount: 0,
+        passed: true,
+      },
+    };
+  }
+
+  const warnings = [];
+  let sourceBackedAmountCount = 0;
+  let preservedCount = 0;
+  let explainedMissingCount = 0;
+  for (const unit of recipeUnitUnderstandingState.units) {
+    const recipe = findRecipeForUnit(finalOutput, unit);
+    for (const expectedAmount of unit?.sourceBackedAmounts ?? []) {
+      sourceBackedAmountCount += 1;
+      if (!recipe) {
+        warnings.push({
+          recipeUnitId: unit.recipeUnitId ?? null,
+          type: "recipe_missing_for_source_backed_amount",
+          ingredient: expectedAmount.ingredient,
+          expectedAmount: expectedAmount.amount,
+          expectedUnit: expectedAmount.unit,
+          evidence: normalizeStringArray(expectedAmount.evidence),
+          reason: "source-backed amount existed, but the final recipe unit is missing",
+        });
+        continue;
+      }
+      const ingredient = findIngredientForSourceBackedAmount(recipe, expectedAmount);
+      if (ingredient && amountMatches(expectedAmount, ingredient)) {
+        preservedCount += 1;
+        continue;
+      }
+      if (sourceBackedAmountExplained(finalOutput, recipe, expectedAmount)) {
+        explainedMissingCount += 1;
+        continue;
+      }
+      warnings.push({
+        recipeUnitId: unit.recipeUnitId ?? null,
+        type: ingredient ? "source_backed_amount_changed_or_missing" : "source_backed_ingredient_missing",
+        ingredient: expectedAmount.ingredient,
+        expectedAmount: expectedAmount.amount,
+        expectedUnit: expectedAmount.unit,
+        actualAmount: ingredient?.amount ?? null,
+        actualUnit: ingredient?.unit ?? null,
+        evidence: normalizeStringArray(expectedAmount.evidence),
+        reason: ingredient
+          ? "source-backed amount/unit was not preserved and no explanation was found"
+          : "source-backed ingredient was not present in final ingredients and no explanation was found",
+      });
+    }
+  }
+  return {
+    schemaVersion: 1,
+    kind: "recipe-unit-amount-preservation-audit",
+    videoId: recipeUnitUnderstandingState.videoId ?? null,
+    warnings,
+    summary: {
+      sourceBackedAmountCount,
+      preservedCount,
+      explainedMissingCount,
+      warningCount: warnings.length,
+      passed: warnings.length === 0,
+    },
+  };
+}
+
 export function applyRecipeUnitUnderstandingDemotion(finalOutput, recipeUnitUnderstandingState) {
   if (!isObject(recipeUnitUnderstandingState) || !Array.isArray(recipeUnitUnderstandingState.units)) {
     return {
@@ -1764,16 +1968,22 @@ export function applyRecipeUnitUnderstandingDemotion(finalOutput, recipeUnitUnde
     recipeUnitUnderstandingState,
     "after-deterministic-demotion",
   );
+  const amountPreservation = auditRecipeUnitAmountPreservation(demotedOutput, recipeUnitUnderstandingState);
   const selfAudit = {
     schemaVersion: 1,
     kind: "recipe-unit-draft-self-audit",
     videoId: recipeUnitUnderstandingState.videoId ?? null,
     passes: [beforePass, afterPass],
+    amountPreservation,
     summary: {
       beforeDemotionBlockCount: beforePass.issues.length,
       afterDemotionBlockCount: afterPass.issues.length,
       demotedIngredientCount: demotedRepairLog.length,
       failedAfterDemotion: afterPass.issues.length > 0,
+      sourceBackedAmountCount: amountPreservation.summary.sourceBackedAmountCount,
+      amountPreservationWarningCount: amountPreservation.summary.warningCount,
+      amountPreservationExplainedMissingCount: amountPreservation.summary.explainedMissingCount,
+      amountPreservationPassed: amountPreservation.summary.passed,
     },
   };
   return {
