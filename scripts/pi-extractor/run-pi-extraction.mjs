@@ -41,6 +41,7 @@ import {
   assertValidRecipeBoundaryPlan,
   assertValidVideoUnderstanding,
   auditHolisticDraft,
+  auditRecipeUnitConsistency,
   applyRecipeUnitUnderstandingDemotion,
   buildCandidateRecipeUnitUnderstandingPromptPayload,
   buildFinalOutputFromHolisticAudit,
@@ -283,6 +284,8 @@ function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
     recipeUnitWorkingMemoryPath: path.join(outDir, "recipe-unit-working-memory.json"),
     recipeUnitUnderstandingStatePath: path.join(outDir, "recipe-unit-understanding-state.json"),
     recipeUnitDraftSelfAuditPath: path.join(outDir, "recipe-unit-draft-self-audit.json"),
+    unitConsistencyAuditPath: path.join(outDir, "unit-consistency-audit.json"),
+    unitConsistencySummaryPath: path.join(outDir, "unit-consistency-summary.json"),
     recipeUnitDraftsDir: path.join(outDir, "recipe-unit-drafts"),
     holisticDraftSourcePacketPath: path.join(outDir, "holistic-draft-source-packet.json"),
     candidateTimelineIndexPath: path.join(outDir, "candidate-timeline-index.json"),
@@ -1807,6 +1810,25 @@ async function runHolisticPiExtractionCase({
     if (recipeUnitDraftSelfAudit?.summary?.failedAfterDemotion) {
       throw new Error("recipe_unit_draft_self_audit_failed");
     }
+  }
+  let unitConsistencyAudit = null;
+  if (recipeBoundaryPlanActive && recipeBoundaryPlan) {
+    unitConsistencyAudit = auditRecipeUnitConsistency(finalOutput, { recipeBoundaryPlan });
+    const warningCodeCounts = unitConsistencyAudit.warnings.reduce((counts, warning) => {
+      const code = warning.code ?? "unknown";
+      counts[code] = (counts[code] ?? 0) + 1;
+      return counts;
+    }, {});
+    const unitConsistencySummary = {
+      schemaVersion: 1,
+      kind: "unit-consistency-summary",
+      videoId: unitConsistencyAudit.videoId,
+      ...unitConsistencyAudit.summary,
+      warningCodeCounts,
+    };
+    await writeJsonTracked(manifest, paths.unitConsistencyAuditPath, unitConsistencyAudit, "unit-consistency-audit");
+    await writeJsonTracked(manifest, paths.unitConsistencySummaryPath, unitConsistencySummary, "unit-consistency-summary");
+    manifest.holisticUnitConsistencySummary = unitConsistencySummary;
   }
   const finalPrompt = buildHolisticFinalPrompt({ draft: repairDraft, audit, visualEstimates });
   await writeTextTracked(manifest, paths.holisticFinalPromptPath, `${finalPrompt}\n`, "holistic-final-prompt");

@@ -4371,6 +4371,117 @@ describe("pi recipe extractor MVP runner", () => {
     });
   });
 
+  it("audits recipe unit count and identity consistency without failing extraction", async () => {
+    const { auditRecipeUnitConsistency } = await import(holisticModuleUrl);
+    const recipeBoundaryPlan = {
+      schemaVersion: 1,
+      kind: "recipe-boundary-plan",
+      videoId: "case-a",
+      recipeUnits: [{
+        recipeUnitId: "r1",
+        title: "무생채",
+        candidateIds: ["storyboard-1"],
+        timeRange: { startSec: 0, endSec: 60, basis: "recipe-boundary-plan" },
+      }, {
+        recipeUnitId: "r2",
+        title: "깻잎조림",
+        candidateIds: ["storyboard-2"],
+        timeRange: { startSec: 60, endSec: 120, basis: "recipe-boundary-plan" },
+      }],
+      skippedCandidates: [],
+      uncertainties: [],
+    };
+
+    const clean = auditRecipeUnitConsistency({
+      recipes: [{
+        candidateId: "r1",
+        title: "무생채",
+        recipeSourceCandidateIds: ["storyboard-1"],
+        ingredients: [],
+        steps: [],
+      }, {
+        candidateId: "r2",
+        title: "깻잎조림",
+        recipeSourceCandidateIds: ["storyboard-2"],
+        ingredients: [],
+        steps: [],
+      }],
+    }, { recipeBoundaryPlan });
+    const collapsed = auditRecipeUnitConsistency({
+      recipes: [{
+        candidateId: "r1",
+        title: "밑반찬 2종",
+        recipeSourceCandidateIds: ["storyboard-1", "storyboard-2"],
+        ingredients: [],
+        steps: [],
+      }],
+    }, { recipeBoundaryPlan });
+    const staleTimelineId = auditRecipeUnitConsistency({
+      recipes: [{
+        candidateId: "storyboard-1",
+        title: "무생채",
+        recipeSourceCandidateIds: ["storyboard-1"],
+        ingredients: [],
+        steps: [],
+      }, {
+        candidateId: "r2",
+        title: "깻잎조림",
+        recipeSourceCandidateIds: ["storyboard-2"],
+        ingredients: [],
+        steps: [],
+      }],
+    }, { recipeBoundaryPlan });
+    const missingFinalId = auditRecipeUnitConsistency({
+      recipes: [{
+        candidateId: null,
+        title: "무생채",
+        recipeSourceCandidateIds: ["storyboard-1"],
+        ingredients: [],
+        steps: [],
+      }, {
+        candidateId: "r2",
+        title: "깻잎조림",
+        recipeSourceCandidateIds: ["storyboard-2"],
+        ingredients: [],
+        steps: [],
+      }],
+    }, { recipeBoundaryPlan });
+
+    expect(clean.summary).toMatchObject({
+      expectedUnitCount: 2,
+      finalRecipeCount: 2,
+      warningCount: 0,
+      passed: true,
+    });
+    expect(collapsed.summary).toMatchObject({
+      expectedUnitCount: 2,
+      finalRecipeCount: 1,
+      representedUnitCount: 2,
+      possibleMergeCount: 1,
+      warningCount: 2,
+      passed: false,
+    });
+    expect(collapsed.warnings.map((warning: { code: string }) => warning.code)).toEqual([
+      "recipe_count_mismatch",
+      "possible_unit_merge",
+    ]);
+    expect(staleTimelineId.summary).toMatchObject({
+      identityMismatchCount: 1,
+      warningCount: 1,
+      passed: false,
+    });
+    expect(staleTimelineId.warnings[0]).toMatchObject({
+      code: "identity_contract_mismatch",
+      finalCandidateId: "storyboard-1",
+      expectedRecipeUnitIds: ["r1"],
+    });
+    expect(missingFinalId.warnings[0]).toMatchObject({
+      code: "identity_contract_mismatch",
+      finalCandidateId: null,
+      expectedRecipeUnitIds: ["r1"],
+    });
+  });
+
   it("uses recipe boundary units instead of raw timeline windows for candidate-first drafts", async () => {
     const { runPiExtraction } = await import(runnerModuleUrl);
     const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
@@ -4489,6 +4600,8 @@ describe("pi recipe extractor MVP runner", () => {
     const recipeUnitWorkingMemory = JSON.parse(readFileSync(path.join(outDir, "recipe-unit-working-memory.json"), "utf8"));
     const recipeUnitUnderstandingState = JSON.parse(readFileSync(path.join(outDir, "recipe-unit-understanding-state.json"), "utf8"));
     const draftSelfAudit = JSON.parse(readFileSync(path.join(outDir, "recipe-unit-draft-self-audit.json"), "utf8"));
+    const unitConsistencyAudit = JSON.parse(readFileSync(path.join(outDir, "unit-consistency-audit.json"), "utf8"));
+    const unitConsistencySummary = JSON.parse(readFileSync(path.join(outDir, "unit-consistency-summary.json"), "utf8"));
     const candidateDrafts = JSON.parse(readFileSync(path.join(outDir, "candidate-drafts.json"), "utf8"));
     const unitPrompt = readFileSync(path.join(outDir, "recipe-unit-drafts/01-r1/prompt.txt"), "utf8");
 
@@ -4530,6 +4643,23 @@ describe("pi recipe extractor MVP runner", () => {
       demotedIngredientCount: 1,
       failedAfterDemotion: false,
     });
+    expect(unitConsistencyAudit).toMatchObject({
+      kind: "unit-consistency-audit",
+      summary: {
+        expectedUnitCount: 1,
+        finalRecipeCount: 1,
+        warningCount: 0,
+        passed: true,
+      },
+    });
+    expect(unitConsistencySummary).toMatchObject({
+      kind: "unit-consistency-summary",
+      expectedUnitCount: 1,
+      finalRecipeCount: 1,
+      warningCount: 0,
+      passed: true,
+      warningCodeCounts: {},
+    });
     expect(output.recipes).toHaveLength(1);
     expect(output.recipes[0].candidateId).toBe("r1");
     expect(output.recipes[0].recipeSourceCandidateIds).toEqual(["storyboard-1", "storyboard-2", "storyboard-3", "storyboard-4", "storyboard-5", "storyboard-6"]);
@@ -4554,6 +4684,12 @@ describe("pi recipe extractor MVP runner", () => {
     expect(manifest.holisticRecipeUnitDraftSelfAuditSummary).toMatchObject({
       beforeDemotionBlockCount: 1,
       afterDemotionBlockCount: 0,
+    });
+    expect(manifest.holisticUnitConsistencySummary).toMatchObject({
+      expectedUnitCount: 1,
+      finalRecipeCount: 1,
+      warningCount: 0,
+      passed: true,
     });
     expect(manifest.stages.map((stage: { name: string }) => stage.name)).toEqual([
       "video-timeline",
