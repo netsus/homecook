@@ -41,6 +41,8 @@ import {
   assertValidRecipeBoundaryPlan,
   assertValidVideoUnderstanding,
   auditHolisticDraft,
+  applyRecipeUnitUnderstandingDemotion,
+  buildCandidateRecipeUnitUnderstandingPromptPayload,
   buildFinalOutputFromHolisticAudit,
   buildCandidateFirstHolisticDraftPrompt,
   buildHolisticCandidateLedger,
@@ -50,6 +52,7 @@ import {
   buildHolisticStoryboardCandidateLedger,
   buildHolisticVisualRepairPrompt,
   buildRecipeBoundaryPlanPrompt,
+  buildRecipeUnitUnderstandingState,
   buildRecipeUnitWorkingMemory,
   buildHolisticVisualTargetLedger,
   buildVideoUnderstandingPrompt,
@@ -278,6 +281,8 @@ function buildCasePaths({ projectRoot, dataRoot, split, id, outTag }) {
     recipeBoundaryPlanPath: path.join(outDir, "recipe-boundary-plan.json"),
     recipeBoundaryFailurePath: path.join(outDir, "recipe-boundary-failure.json"),
     recipeUnitWorkingMemoryPath: path.join(outDir, "recipe-unit-working-memory.json"),
+    recipeUnitUnderstandingStatePath: path.join(outDir, "recipe-unit-understanding-state.json"),
+    recipeUnitDraftSelfAuditPath: path.join(outDir, "recipe-unit-draft-self-audit.json"),
     recipeUnitDraftsDir: path.join(outDir, "recipe-unit-drafts"),
     holisticDraftSourcePacketPath: path.join(outDir, "holistic-draft-source-packet.json"),
     candidateTimelineIndexPath: path.join(outDir, "candidate-timeline-index.json"),
@@ -728,6 +733,10 @@ function candidateFirstSummarySkeleton({
   recipeBoundaryPlan = null,
   recipeUnitWorkingMemoryEnabled = false,
   recipeUnitWorkingMemory = null,
+  recipeUnitUnderstandingStateEnabled = false,
+  recipeUnitUnderstandingState = null,
+  recipeUnitUnderstandingStatePromptGuardEnabled = false,
+  recipeUnitUnderstandingStatePromptMaxDeltaBytes = 4000,
 }) {
   return {
     schemaVersion: 1,
@@ -736,16 +745,20 @@ function candidateFirstSummarySkeleton({
     mode: recipeBoundaryPlanEnabled ? "recipe-boundary-candidate-first-holistic-draft" : "candidate-first-holistic-draft",
     recipeBoundaryPlanEnabled,
     recipeUnitWorkingMemoryEnabled,
+    recipeUnitUnderstandingStateEnabled,
+    recipeUnitUnderstandingStatePromptGuardEnabled,
     recipeBoundaryPlanSummary: recipeBoundaryPlan ? {
       recipeUnitCount: recipeBoundaryPlan.recipeUnits?.length ?? 0,
       skippedCandidateCount: recipeBoundaryPlan.skippedCandidates?.length ?? 0,
       uncertainties: recipeBoundaryPlan.uncertainties ?? [],
     } : null,
     recipeUnitWorkingMemorySummary: recipeUnitWorkingMemory?.summary ?? null,
+    recipeUnitUnderstandingStateSummary: recipeUnitUnderstandingState?.summary ?? null,
     budget: {
       maxCandidates,
       perCandidateTimeoutMs,
       totalTimeoutMs,
+      recipeUnitUnderstandingStatePromptMaxDeltaBytes,
     },
     candidates: [],
     assembly: {
@@ -790,6 +803,10 @@ async function runCandidateFirstHolisticDraft({
   recipeBoundaryPlan = null,
   recipeUnitWorkingMemoryEnabled = false,
   recipeUnitWorkingMemory = null,
+  recipeUnitUnderstandingStateEnabled = false,
+  recipeUnitUnderstandingState = null,
+  recipeUnitUnderstandingStatePromptGuardEnabled = false,
+  recipeUnitUnderstandingStatePromptMaxDeltaBytes = 4000,
 }) {
   const candidatePackets = holisticSourcePacket?.candidateSourcePackets ?? [];
   const timelineCandidates = holisticSourcePacket?.candidateTimelineIndex?.candidates ?? [];
@@ -802,6 +819,10 @@ async function runCandidateFirstHolisticDraft({
     recipeBoundaryPlan,
     recipeUnitWorkingMemoryEnabled,
     recipeUnitWorkingMemory,
+    recipeUnitUnderstandingStateEnabled,
+    recipeUnitUnderstandingState,
+    recipeUnitUnderstandingStatePromptGuardEnabled,
+    recipeUnitUnderstandingStatePromptMaxDeltaBytes,
   });
   if (candidatePackets.length === 0) {
     summary.errors.push({
@@ -851,10 +872,50 @@ async function runCandidateFirstHolisticDraft({
       candidateId,
       candidatePacket.recipeSourceCandidateIds ?? [],
     );
-    const candidatePrompt = buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
+    const baseCandidatePrompt = buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
       understandingAudit: candidateUnderstandingAudit,
       recipeUnitWorkingMemory: recipeUnitWorkingMemoryEnabled ? recipeUnitWorkingMemory : null,
     });
+    const candidatePromptBytesBeforeUnderstandingState = Buffer.byteLength(baseCandidatePrompt, "utf8");
+    let candidatePrompt = baseCandidatePrompt;
+    let recipeUnitUnderstandingStatePromptPayload = null;
+    let candidatePromptBytesAfterUnderstandingState = candidatePromptBytesBeforeUnderstandingState;
+    let candidatePromptDeltaBytes = 0;
+    let recipeUnitUnderstandingStatePromptInjected = false;
+    let recipeUnitUnderstandingStatePromptBudgetExceeded = false;
+    let recipeUnitUnderstandingStatePromptTruncated = false;
+    let recipeUnitUnderstandingStatePromptFailOpen = false;
+    let recipeUnitUnderstandingStatePromptBytes = 0;
+    if (recipeUnitUnderstandingStateEnabled && recipeUnitUnderstandingStatePromptGuardEnabled) {
+      const recipeUnitUnderstandingStatePayloadMaxBytes = Math.max(
+        500,
+        recipeUnitUnderstandingStatePromptMaxDeltaBytes - 2600,
+      );
+      recipeUnitUnderstandingStatePromptPayload = buildCandidateRecipeUnitUnderstandingPromptPayload(
+        recipeUnitUnderstandingState,
+        candidateId,
+        { maxBytes: recipeUnitUnderstandingStatePayloadMaxBytes },
+      );
+      recipeUnitUnderstandingStatePromptBytes = recipeUnitUnderstandingStatePromptPayload?.bytes ?? 0;
+      recipeUnitUnderstandingStatePromptTruncated = recipeUnitUnderstandingStatePromptPayload?.truncated === true;
+      const promptWithUnderstandingState = recipeUnitUnderstandingStatePromptPayload?.state
+        ? buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
+          understandingAudit: candidateUnderstandingAudit,
+          recipeUnitWorkingMemory: recipeUnitWorkingMemoryEnabled ? recipeUnitWorkingMemory : null,
+          recipeUnitUnderstandingPromptPayload: recipeUnitUnderstandingStatePromptPayload.state,
+        })
+        : baseCandidatePrompt;
+      candidatePromptBytesAfterUnderstandingState = Buffer.byteLength(promptWithUnderstandingState, "utf8");
+      candidatePromptDeltaBytes = candidatePromptBytesAfterUnderstandingState - candidatePromptBytesBeforeUnderstandingState;
+      recipeUnitUnderstandingStatePromptBudgetExceeded = recipeUnitUnderstandingStatePromptPayload?.budgetExceeded === true
+        || candidatePromptDeltaBytes > recipeUnitUnderstandingStatePromptMaxDeltaBytes;
+      if (recipeUnitUnderstandingStatePromptPayload?.state && !recipeUnitUnderstandingStatePromptBudgetExceeded) {
+        candidatePrompt = promptWithUnderstandingState;
+        recipeUnitUnderstandingStatePromptInjected = true;
+      } else {
+        recipeUnitUnderstandingStatePromptFailOpen = true;
+      }
+    }
     promptParts.push(candidatePrompt);
     await writeTextTracked(manifest, candidatePaths.promptPath, `${candidatePrompt}\n`, `candidate-draft-prompt:${candidateId}`);
     addAllowedRead(manifest, candidatePaths.promptPath);
@@ -893,6 +954,21 @@ async function runCandidateFirstHolisticDraft({
       recipeUnitWorkingMemoryPromptBytes: recipeUnitWorkingMemoryEnabled
         ? Buffer.byteLength(candidatePrompt.match(/\[RECIPE_UNIT_WORKING_MEMORY\][\s\S]*?\n\[CANDIDATE_SCOPED_HOLISTIC_SOURCE_PACKET\]/u)?.[0] ?? "", "utf8")
         : 0,
+      recipeUnitUnderstandingStateEnabled,
+      recipeUnitUnderstandingStatePromptGuardEnabled,
+      recipeUnitUnderstandingStateBytes: recipeUnitUnderstandingStateEnabled
+        ? Buffer.byteLength(JSON.stringify((recipeUnitUnderstandingState?.units ?? []).find((unit) => unit.recipeUnitId === candidateId) ?? {}), "utf8")
+        : 0,
+      recipeUnitUnderstandingStatePromptInjected,
+      recipeUnitUnderstandingStatePromptBytes,
+      candidatePromptBytesBeforeUnderstandingState,
+      candidatePromptBytesAfterUnderstandingState,
+      candidatePromptActualBytes: Buffer.byteLength(candidatePrompt, "utf8"),
+      candidatePromptDeltaBytes,
+      recipeUnitUnderstandingStatePromptMaxDeltaBytes,
+      recipeUnitUnderstandingStatePromptBudgetExceeded,
+      recipeUnitUnderstandingStatePromptTruncated,
+      recipeUnitUnderstandingStatePromptFailOpen,
       recipeCount: 0,
       timeoutMs: candidateTimeoutMs,
       reason: null,
@@ -1050,6 +1126,9 @@ async function runHolisticPiExtractionCase({
   holisticCandidateFirstDraft,
   holisticRecipeBoundaryPlan,
   holisticRecipeUnitWorkingMemory,
+  holisticRecipeUnitUnderstandingState,
+  holisticRecipeUnitUnderstandingStatePromptGuard,
+  holisticRecipeUnitUnderstandingStatePromptMaxDeltaBytes,
   holisticCandidateFirstMaxCandidates,
   holisticCandidateFirstDraftTimeoutMs,
   holisticCandidateFirstTotalTimeoutMs,
@@ -1258,6 +1337,8 @@ async function runHolisticPiExtractionCase({
   manifest.holisticRecipeBoundaryPlanEnabled = recipeBoundaryPlanActive;
   manifest.holisticRecipeUnitWorkingMemoryRequested = holisticRecipeUnitWorkingMemory;
   manifest.holisticRecipeUnitWorkingMemoryEnabled = false;
+  manifest.holisticRecipeUnitUnderstandingStateRequested = holisticRecipeUnitUnderstandingState;
+  manifest.holisticRecipeUnitUnderstandingStateEnabled = false;
   manifest.holistic.videoTimelineLedgerEffective = effectiveHolisticVideoTimelineLedger;
   manifest.holistic.videoTimelineLedgerFallback = multiCandidateTimelineLedgerFallback;
   manifest.holistic.integratedUnderstandingStageEnabled = shouldRunHolisticIntegratedUnderstanding;
@@ -1277,6 +1358,10 @@ async function runHolisticPiExtractionCase({
     requested: holisticRecipeUnitWorkingMemory,
     enabled: false,
   };
+  manifest.holistic.recipeUnitUnderstandingState = {
+    requested: holisticRecipeUnitUnderstandingState,
+    enabled: false,
+  };
   manifest.holistic.visualRepairEffective = effectiveHolisticVisualRepairEnabled;
   const holisticSourcePacket = buildHolisticSourcePacket(sourcePacket, storyboardLedger, {
     includeStoryboardEntries: !effectiveHolisticVideoTimelineLedger,
@@ -1285,6 +1370,7 @@ async function runHolisticPiExtractionCase({
   });
   let holisticDraftSourcePacket = holisticSourcePacket;
   let recipeUnitWorkingMemory = null;
+  let recipeUnitUnderstandingState = null;
   await writeJsonTracked(manifest, paths.holisticSourcePacketPath, holisticSourcePacket, "holistic-source-packet");
   if (shouldRunHolisticIntegratedUnderstanding) {
     videoUnderstandingPrompt = buildVideoUnderstandingPrompt(holisticSourcePacket, {
@@ -1441,6 +1527,45 @@ async function runHolisticPiExtractionCase({
       summary: recipeUnitWorkingMemory.summary,
     };
   }
+  if (recipeBoundaryPlanActive && holisticRecipeUnitUnderstandingState) {
+    if (!recipeUnitWorkingMemory) {
+      recipeUnitWorkingMemory = buildRecipeUnitWorkingMemory(holisticDraftSourcePacket, {
+        videoUnderstandingAudit,
+      });
+      await writeJsonTracked(
+        manifest,
+        paths.recipeUnitWorkingMemoryPath,
+        recipeUnitWorkingMemory,
+        "recipe-unit-working-memory",
+      );
+      manifest.holisticRecipeUnitWorkingMemoryEnabled = true;
+      manifest.holisticRecipeUnitWorkingMemorySummary = recipeUnitWorkingMemory.summary;
+      manifest.holistic.recipeUnitWorkingMemory = {
+        requested: holisticRecipeUnitWorkingMemory,
+        enabled: true,
+        summary: recipeUnitWorkingMemory.summary,
+      };
+    }
+    recipeUnitUnderstandingState = buildRecipeUnitUnderstandingState({
+      recipeUnitWorkingMemory,
+      holisticSourcePacket: holisticDraftSourcePacket,
+      videoUnderstanding,
+      videoUnderstandingAudit,
+    });
+    await writeJsonTracked(
+      manifest,
+      paths.recipeUnitUnderstandingStatePath,
+      recipeUnitUnderstandingState,
+      "recipe-unit-understanding-state",
+    );
+    manifest.holisticRecipeUnitUnderstandingStateEnabled = true;
+    manifest.holisticRecipeUnitUnderstandingStateSummary = recipeUnitUnderstandingState.summary;
+    manifest.holistic.recipeUnitUnderstandingState = {
+      requested: true,
+      enabled: true,
+      summary: recipeUnitUnderstandingState.summary,
+    };
+  }
   await writeJsonTracked(
     manifest,
     paths.holisticDraftSourcePacketPath,
@@ -1487,6 +1612,10 @@ async function runHolisticPiExtractionCase({
       recipeBoundaryPlan,
       recipeUnitWorkingMemoryEnabled: Boolean(recipeUnitWorkingMemory),
       recipeUnitWorkingMemory,
+      recipeUnitUnderstandingStateEnabled: Boolean(recipeUnitUnderstandingState) && holisticRecipeUnitUnderstandingStatePromptGuard,
+      recipeUnitUnderstandingState,
+      recipeUnitUnderstandingStatePromptGuardEnabled: Boolean(recipeUnitUnderstandingState) && holisticRecipeUnitUnderstandingStatePromptGuard,
+      recipeUnitUnderstandingStatePromptMaxDeltaBytes: holisticRecipeUnitUnderstandingStatePromptMaxDeltaBytes,
     });
     holisticDraftPrompt = candidateFirstResult.promptText;
     holisticRawPayload = candidateFirstResult.rawPayload;
@@ -1662,7 +1791,23 @@ async function runHolisticPiExtractionCase({
     visualEstimates,
   });
   await writeJsonTracked(manifest, paths.holisticEvidenceAuditPath, audit, "holistic-evidence-audit");
-  const finalOutput = buildFinalOutputFromHolisticAudit(audit);
+  let finalOutput = buildFinalOutputFromHolisticAudit(audit);
+  let recipeUnitDraftSelfAudit = null;
+  if (recipeUnitUnderstandingState) {
+    const demotionResult = applyRecipeUnitUnderstandingDemotion(finalOutput, recipeUnitUnderstandingState);
+    finalOutput = demotionResult.output;
+    recipeUnitDraftSelfAudit = demotionResult.selfAudit;
+    await writeJsonTracked(
+      manifest,
+      paths.recipeUnitDraftSelfAuditPath,
+      recipeUnitDraftSelfAudit,
+      "recipe-unit-draft-self-audit",
+    );
+    manifest.holisticRecipeUnitDraftSelfAuditSummary = recipeUnitDraftSelfAudit?.summary ?? null;
+    if (recipeUnitDraftSelfAudit?.summary?.failedAfterDemotion) {
+      throw new Error("recipe_unit_draft_self_audit_failed");
+    }
+  }
   const finalPrompt = buildHolisticFinalPrompt({ draft: repairDraft, audit, visualEstimates });
   await writeTextTracked(manifest, paths.holisticFinalPromptPath, `${finalPrompt}\n`, "holistic-final-prompt");
   const contract = validateFinalVisualEvidenceContract(finalOutput, {
@@ -1714,6 +1859,12 @@ async function runHolisticPiExtractionCase({
       recipeUnitWorkingMemoryRequested: holisticRecipeUnitWorkingMemory,
       recipeUnitWorkingMemoryEnabled: Boolean(recipeUnitWorkingMemory),
       recipeUnitWorkingMemorySummary: recipeUnitWorkingMemory?.summary ?? null,
+      recipeUnitUnderstandingStateRequested: holisticRecipeUnitUnderstandingState,
+      recipeUnitUnderstandingStateEnabled: Boolean(recipeUnitUnderstandingState),
+      recipeUnitUnderstandingStatePromptGuardEnabled: Boolean(recipeUnitUnderstandingState) && holisticRecipeUnitUnderstandingStatePromptGuard,
+      recipeUnitUnderstandingStatePromptMaxDeltaBytes: holisticRecipeUnitUnderstandingStatePromptMaxDeltaBytes,
+      recipeUnitUnderstandingStateSummary: recipeUnitUnderstandingState?.summary ?? null,
+      recipeUnitDraftSelfAuditSummary: recipeUnitDraftSelfAudit?.summary ?? null,
       candidateFirstDraftSummary: candidateFirstSummary ? {
         candidateCount: candidateFirstSummary.candidates.length,
         draftedCount: candidateFirstSummary.candidates.filter((candidate) => candidate.status === "drafted").length,
@@ -2126,6 +2277,18 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   const holisticCandidateFirstDraft = args["holistic-enable-candidate-first-draft"] === true;
   const holisticRecipeBoundaryPlan = args["holistic-enable-recipe-boundary-plan"] === true;
   const holisticRecipeUnitWorkingMemory = args["holistic-enable-recipe-unit-working-memory"] === true;
+  const holisticRecipeUnitUnderstandingState = args["holistic-enable-recipe-unit-understanding-state"] === true;
+  const holisticRecipeUnitUnderstandingStatePromptGuardExplicit = args["holistic-enable-recipe-unit-understanding-state-prompt-guard"] === true;
+  const holisticRecipeUnitUnderstandingStatePromptGuardDisabled = args["holistic-disable-recipe-unit-understanding-state-prompt-guard"] === true;
+  const holisticRecipeUnitUnderstandingStatePromptGuardDefault = holisticRecipeUnitUnderstandingState
+    && holisticCandidateFirstDraft
+    && holisticRecipeBoundaryPlan;
+  const holisticRecipeUnitUnderstandingStatePromptGuard = !holisticRecipeUnitUnderstandingStatePromptGuardDisabled
+    && (holisticRecipeUnitUnderstandingStatePromptGuardExplicit || holisticRecipeUnitUnderstandingStatePromptGuardDefault);
+  const holisticRecipeUnitUnderstandingStatePromptMaxDeltaBytes = optionalNumber(
+    args["holistic-recipe-unit-understanding-state-prompt-max-delta-bytes"],
+    4000,
+  );
   const holisticCandidateFirstMaxCandidates = optionalNumber(args["holistic-candidate-first-max-candidates"], 8);
   const holisticCandidateFirstDraftTimeoutMs = optionalNumber(
     args["holistic-candidate-first-draft-timeout-ms"],
@@ -2288,6 +2451,9 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
           holisticCandidateFirstDraft,
           holisticRecipeBoundaryPlan,
           holisticRecipeUnitWorkingMemory,
+          holisticRecipeUnitUnderstandingState,
+          holisticRecipeUnitUnderstandingStatePromptGuard,
+          holisticRecipeUnitUnderstandingStatePromptMaxDeltaBytes,
           holisticCandidateFirstMaxCandidates,
           holisticCandidateFirstDraftTimeoutMs,
           holisticCandidateFirstTotalTimeoutMs,

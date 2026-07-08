@@ -334,8 +334,44 @@ function normalizeTranscriptEvidenceRef(ref, sourcePacket) {
   return roundedRef;
 }
 
+function compactEvidenceLabel(value) {
+  return String(value ?? "")
+    .toLocaleLowerCase("ko-KR")
+    .replace(/[()[\]{}【】「」『』<>]/gu, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, "")
+    .trim();
+}
+
+function normalizeDescriptionEvidenceRef(ref, sourcePacket) {
+  const cleaned = cleanString(ref);
+  if (!cleaned) return null;
+  const match = cleaned.match(/^description:(?<label>.+)$/iu);
+  if (!match?.groups) return cleaned;
+  const label = cleanString(match.groups.label);
+  if (!label || /^\d+(?::\d+)?$/u.test(label)) return cleaned;
+  const labelKey = compactEvidenceLabel(label);
+  if (labelKey.length < 3 || ["재료", "양념", "ingredient", "ingredients"].includes(labelKey)) return cleaned;
+
+  const descriptionLines = String(sourcePacket?.video?.description ?? "").split(/\r?\n/u);
+  for (const [index, line] of descriptionLines.entries()) {
+    const lineKey = compactEvidenceLabel(line);
+    if (!lineKey) continue;
+    if (lineKey === labelKey || lineKey.includes(labelKey) || labelKey.includes(lineKey)) {
+      return `description:${index + 1}`;
+    }
+  }
+  return cleaned;
+}
+
+function normalizeTimelineEvidenceRef(ref, sourcePacket) {
+  return normalizeDescriptionEvidenceRef(
+    normalizeTranscriptEvidenceRef(ref, sourcePacket),
+    sourcePacket,
+  );
+}
+
 function normalizeEvidenceRefs(value, sourcePacket) {
-  return uniqueStrings(normalizeStringArray(value).map((ref) => normalizeTranscriptEvidenceRef(ref, sourcePacket)));
+  return uniqueStrings(normalizeStringArray(value).map((ref) => normalizeTimelineEvidenceRef(ref, sourcePacket)));
 }
 
 function isTimelineFrameLedgerErrorRef(ref) {
