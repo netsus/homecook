@@ -1907,6 +1907,139 @@ export function auditRecipeUnitAmountPreservation(finalOutput, recipeUnitUnderst
   };
 }
 
+function recipeUnitExpectedEntries(recipeBoundaryPlan) {
+  const sourceCandidateIdsForUnit = (unit) => {
+    const primary = normalizeStringArray(unit?.candidateIds);
+    if (primary.length) return primary;
+    const sourceCandidateIds = normalizeStringArray(unit?.sourceCandidateIds);
+    if (sourceCandidateIds.length) return sourceCandidateIds;
+    return normalizeStringArray(unit?.recipeSourceCandidateIds);
+  };
+  return (recipeBoundaryPlan?.recipeUnits ?? []).map((unit) => ({
+    recipeUnitId: cleanString(unit?.recipeUnitId),
+    title: cleanString(unit?.title),
+    recipeSourceCandidateIds: sourceCandidateIdsForUnit(unit),
+    timeRange: unit?.timeRange ?? null,
+  })).filter((unit) => unit.recipeUnitId);
+}
+
+function recipeUnitFinalEntries(finalOutput) {
+  return (finalOutput?.recipes ?? []).map((recipe) => ({
+    candidateId: cleanString(recipe?.candidateId),
+    title: cleanString(recipe?.title),
+    recipeSourceCandidateIds: normalizeStringArray(recipe?.recipeSourceCandidateIds),
+    timeRange: recipe?.timeRange ?? null,
+  }));
+}
+
+function linkedExpectedUnitsForRecipe(finalRecipe, expectedUnits) {
+  const finalCandidateId = cleanString(finalRecipe?.candidateId);
+  const finalSourceIds = new Set(normalizeStringArray(finalRecipe?.recipeSourceCandidateIds));
+  return expectedUnits.filter((unit) => (
+    unit.recipeUnitId === finalCandidateId
+    || unit.recipeSourceCandidateIds.some((candidateId) => finalSourceIds.has(candidateId))
+  ));
+}
+
+export function auditRecipeUnitConsistency(finalOutput, {
+  recipeBoundaryPlan = null,
+} = {}) {
+  const expectedUnits = recipeUnitExpectedEntries(recipeBoundaryPlan);
+  const finalRecipes = recipeUnitFinalEntries(finalOutput);
+  const expectedUnitIds = new Set(expectedUnits.map((unit) => unit.recipeUnitId));
+  const warnings = [];
+  const links = [];
+  const representedUnitIds = new Set();
+
+  if (expectedUnits.length !== finalRecipes.length) {
+    warnings.push({
+      code: "recipe_count_mismatch",
+      expectedUnitCount: expectedUnits.length,
+      finalRecipeCount: finalRecipes.length,
+      message: "recipe-boundary-plan unit count and final recipe count differ",
+    });
+  }
+
+  for (const recipe of finalRecipes) {
+    const linkedUnits = linkedExpectedUnitsForRecipe(recipe, expectedUnits);
+    const linkedRecipeUnitIds = linkedUnits.map((unit) => unit.recipeUnitId);
+    linkedRecipeUnitIds.forEach((unitId) => representedUnitIds.add(unitId));
+    links.push({
+      finalCandidateId: recipe.candidateId,
+      linkedRecipeUnitIds,
+      matchBasis: linkedUnits.some((unit) => unit.recipeUnitId === recipe.candidateId)
+        ? "candidateId"
+        : linkedUnits.length > 0
+          ? "recipeSourceCandidateIds"
+          : "none",
+    });
+
+    if (linkedUnits.length === 0) {
+      warnings.push({
+        code: "extra_final_recipe",
+        finalCandidateId: recipe.candidateId,
+        title: recipe.title,
+        recipeSourceCandidateIds: recipe.recipeSourceCandidateIds,
+        message: "final recipe does not map to any recipe-boundary-plan unit",
+      });
+      continue;
+    }
+
+    if (!recipe.candidateId || !expectedUnitIds.has(recipe.candidateId)) {
+      warnings.push({
+        code: "identity_contract_mismatch",
+        finalCandidateId: recipe.candidateId,
+        expectedRecipeUnitIds: linkedRecipeUnitIds,
+        recipeSourceCandidateIds: recipe.recipeSourceCandidateIds,
+        message: "final recipe candidateId is not the recipeUnitId even though it maps to a known recipe unit",
+      });
+    }
+
+    if (linkedUnits.length > 1) {
+      warnings.push({
+        code: "possible_unit_merge",
+        finalCandidateId: recipe.candidateId,
+        linkedRecipeUnitIds,
+        recipeSourceCandidateIds: recipe.recipeSourceCandidateIds,
+        message: "one final recipe appears to combine multiple recipe-boundary-plan units",
+      });
+    }
+  }
+
+  for (const unit of expectedUnits) {
+    if (!representedUnitIds.has(unit.recipeUnitId)) {
+      warnings.push({
+        code: "missing_recipe_unit",
+        recipeUnitId: unit.recipeUnitId,
+        title: unit.title,
+        recipeSourceCandidateIds: unit.recipeSourceCandidateIds,
+        message: "recipe-boundary-plan unit is not represented in final recipes",
+      });
+    }
+  }
+
+  return {
+    schemaVersion: 1,
+    kind: "unit-consistency-audit",
+    videoId: cleanString(recipeBoundaryPlan?.videoId ?? finalOutput?.videoId),
+    expectedUnits,
+    finalRecipes,
+    links,
+    warnings,
+    summary: {
+      expectedUnitCount: expectedUnits.length,
+      finalRecipeCount: finalRecipes.length,
+      representedUnitCount: representedUnitIds.size,
+      missingUnitCount: warnings.filter((warning) => warning.code === "missing_recipe_unit").length,
+      extraFinalRecipeCount: warnings.filter((warning) => warning.code === "extra_final_recipe").length,
+      possibleMergeCount: warnings.filter((warning) => warning.code === "possible_unit_merge").length,
+      identityMismatchCount: warnings.filter((warning) => warning.code === "identity_contract_mismatch").length,
+      warningCount: warnings.length,
+      passed: warnings.length === 0,
+    },
+  };
+}
+
 export function applyRecipeUnitUnderstandingDemotion(finalOutput, recipeUnitUnderstandingState) {
   if (!isObject(recipeUnitUnderstandingState) || !Array.isArray(recipeUnitUnderstandingState.units)) {
     return {
