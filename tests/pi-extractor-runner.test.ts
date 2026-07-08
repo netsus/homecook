@@ -74,6 +74,207 @@ describe("pi recipe extractor MVP runner", () => {
     rmSync(workdir, { recursive: true, force: true });
   });
 
+  it("does not promote suspicious spoken amount matches into whole-video known amounts", async () => {
+    const { buildWholeVideoRecipeMapFromInputs, auditWholeVideoRecipeMap } = await import(holisticModuleUrl);
+    const holisticSourcePacket = {
+      video: { videoId: "case-a", title: "케이크" },
+      entries: [
+        { ref: "title", type: "title", text: "케이크" },
+        { ref: "transcript:30s", type: "transcript", text: "하시는 거죠. 그수는 30g 정도 넣고요." },
+      ],
+      candidateTimelineIndex: { candidates: [{ candidateId: "r1", title: "케이크" }] },
+      candidateSourcePackets: [{
+        candidateId: "r1",
+        title: "케이크",
+        sourceEntries: [
+          { ref: "title", type: "title", text: "케이크" },
+          { ref: "transcript:30s", type: "transcript", text: "하시는 거죠. 그수는 30g 정도 넣고요." },
+        ],
+      }],
+    };
+    const recipeUnitUnderstandingState = {
+      videoId: "case-a",
+      units: [{
+        recipeUnitId: "r1",
+        title: "케이크",
+        ingredientIdentityState: [{
+          surfaceName: "밀가루",
+          resolvedName: "밀가루",
+          nameStatus: "source_named",
+          finalNameAllowed: true,
+          evidence: ["title"],
+        }],
+        sourceBackedAmounts: [{
+          ingredient: "하시는 거죠. 그수는",
+          amount: "30",
+          unit: "g",
+          evidence: ["transcript:30s"],
+        }],
+        coreStepFlow: [],
+      }],
+    };
+
+    const map = buildWholeVideoRecipeMapFromInputs({ holisticSourcePacket, recipeUnitUnderstandingState });
+    const audit = auditWholeVideoRecipeMap(map, { holisticSourcePacket });
+
+    expect(map.units[0].ingredientSlots.map((slot: { name: string }) => slot.name)).not.toContain("하시는 거죠. 그수는");
+    expect(map.summary.knownAmountSlotCount).toBe(0);
+    expect(map.rejectedAmountCandidates.some((candidate: { ingredient: string }) => candidate.ingredient.includes("그수"))).toBe(true);
+    expect(audit.warnings.some((warning: { type: string }) => warning.type === "rejected_suspicious_amount_candidate")).toBe(true);
+  });
+
+  it("flags top-level source amounts that are missing from candidate source packets", async () => {
+    const { buildWholeVideoRecipeMapFromInputs, auditWholeVideoRecipeMap } = await import(holisticModuleUrl);
+    const holisticSourcePacket = {
+      video: { videoId: "case-a", title: "양파 볶음" },
+      entries: [
+        { ref: "title", type: "title", text: "양파 볶음" },
+        { ref: "description:1", type: "description", text: "양파 1개" },
+      ],
+      candidateTimelineIndex: { candidates: [{ candidateId: "r1", title: "양파 볶음" }] },
+      candidateSourcePackets: [{
+        candidateId: "r1",
+        title: "양파 볶음",
+        sourceEntries: [{ ref: "title", type: "title", text: "양파 볶음" }],
+      }],
+    };
+    const recipeUnitUnderstandingState = {
+      videoId: "case-a",
+      units: [{
+        recipeUnitId: "r1",
+        title: "양파 볶음",
+        ingredientIdentityState: [{
+          surfaceName: "양파",
+          resolvedName: "양파",
+          nameStatus: "source_named",
+          finalNameAllowed: true,
+          evidence: ["title"],
+        }],
+        coreStepFlow: [],
+      }],
+    };
+
+    const map = buildWholeVideoRecipeMapFromInputs({ holisticSourcePacket, recipeUnitUnderstandingState });
+    const audit = auditWholeVideoRecipeMap(map, { holisticSourcePacket });
+
+    expect(map.summary.knownAmountSlotCount).toBe(0);
+    expect(audit.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "source_amount_not_in_candidate_packet",
+        ingredient: "양파",
+        amount: "1",
+        unit: "개",
+        sourceRef: "description:1",
+      }),
+    ]));
+  });
+
+  it("injects recipe map contract instead of the older integrated brief section", async () => {
+    const { buildCandidateFirstHolisticDraftPrompt } = await import(holisticModuleUrl);
+    const prompt = buildCandidateFirstHolisticDraftPrompt({
+      candidateTimelineIndex: { candidates: [{ candidateId: "r1", title: "양파 볶음" }] },
+      candidateSourcePackets: [{
+        candidateId: "r1",
+        title: "양파 볶음",
+        sourceEntries: [{ ref: "description:1", type: "description", text: "양파 1개" }],
+      }],
+    }, {
+      recipeMapContract: {
+        kind: "recipe-map-contract",
+        recipeUnitId: "r1",
+        title: "양파 볶음",
+        knownAmountSlots: [{ name: "양파", amount: "1", unit: "개", amountBasis: "stated", evidence: ["description:1"] }],
+        unknownAmountSlots: [],
+        stepSpine: [{ order: 1, text: "양파를 볶는다", evidence: ["description:1"] }],
+        visualGaps: [],
+      },
+    });
+
+    expect(prompt).toContain("[RECIPE_MAP_CONTRACT]");
+    expect(prompt).toContain("knownAmountSlots");
+    expect(prompt).not.toContain("[CANDIDATE_INTEGRATED_BRIEF]");
+    expect(prompt).toContain("knownAmountSlots의 amount/unit은 원본 source entry에서 다시 검증된 분량");
+  });
+
+  it("limits visual targets to whole-video recipe map visual gaps when the map is available", async () => {
+    const { buildHolisticVisualTargetLedger } = await import(holisticModuleUrl);
+    const ledger = buildHolisticVisualTargetLedger({
+      sourcePacket: { video: { videoId: "case-a" } },
+      draft: {
+        recipes: [{
+          candidateId: "r1",
+          title: "양파 볶음",
+          timeRange: { startSec: 0, endSec: 30, basis: "test" },
+          ingredients: [{
+            name: "양파",
+            amount: null,
+            unit: null,
+            needsVisualEstimate: true,
+            evidence: ["description:1"],
+          }],
+          steps: [],
+          visualNeeds: [],
+        }],
+      },
+      wholeVideoRecipeMap: {
+        units: [{
+          recipeUnitId: "r1",
+          title: "양파 볶음",
+          ingredientSlots: [{
+            name: "양파",
+            amountSlot: { status: "known", amount: "1", unit: "개", evidence: ["description:1"] },
+          }],
+          visualGaps: [],
+        }],
+      },
+      includeSparseRecallTargets: false,
+    });
+
+    expect(ledger.targets).toHaveLength(0);
+    expect(ledger.skippedTargets).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        candidateId: "r1",
+        ingredient: "양파",
+        reasonCode: "recipe_map_visual_gap_missing",
+      }),
+    ]));
+    expect(ledger.summary.recipeMapVisualGapFilterEnabled).toBe(true);
+    expect(ledger.summary.recipeMapVisualGapSkippedCount).toBe(1);
+  });
+
+  it("reports step spine drops in candidate map adherence audit", async () => {
+    const { auditCandidateMapAdherence } = await import(holisticModuleUrl);
+    const audit = auditCandidateMapAdherence({
+      recipes: [{
+        candidateId: "r1",
+        title: "양파 볶음",
+        ingredients: [],
+        steps: [{ text: "양파를 썬다.", evidence: ["description:1"] }],
+      }],
+    }, {
+      videoId: "case-a",
+      units: [{
+        recipeUnitId: "r1",
+        title: "양파 볶음",
+        ingredientSlots: [],
+        stepSpine: [
+          { order: 1, text: "양파를 썬다.", evidence: ["description:1"] },
+          { order: 2, text: "양파를 노릇하게 볶는다.", evidence: ["description:2"] },
+        ],
+      }],
+    });
+
+    expect(audit.summary.checkedStepSpineCount).toBe(2);
+    expect(audit.summary.preservedStepSpineCount).toBe(1);
+    expect(audit.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "map_step_spine_missing",
+        recipeUnitId: "r1",
+        step: "양파를 노릇하게 볶는다.",
+      }),
+    ]));
+  });
+
   it("rejects amountBasis values outside the fixed enum", async () => {
     const { normalizePiRecipeOutput, validatePiRecipeOutput } = await import(schemaModuleUrl);
     const normalized = normalizePiRecipeOutput({

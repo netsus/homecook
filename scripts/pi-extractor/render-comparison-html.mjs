@@ -271,12 +271,24 @@ function visualEvidenceHtml({ visualTarget, visual, visualEstimates }) {
 
 function understandingInjectionRows(candidateDrafts) {
   return (candidateDrafts?.candidates ?? []).map((candidate) => {
-    const injected = candidate.candidateIntegratedBriefInjected ?? candidate.recipeUnitUnderstandingStatePromptInjected;
-    const bytes = candidate.candidateIntegratedBriefBytes ?? candidate.recipeUnitUnderstandingStatePromptBytes;
-    const maxBytes = candidate.candidateIntegratedBriefMaxBytes ?? candidate.recipeUnitUnderstandingStatePromptMaxDeltaBytes;
-    const budgetExceeded = candidate.candidateIntegratedBriefBudgetExceeded ?? candidate.recipeUnitUnderstandingStatePromptBudgetExceeded;
-    const failOpen = candidate.candidateIntegratedBriefFailOpen ?? candidate.recipeUnitUnderstandingStatePromptFailOpen;
-    const section = candidate.candidateIntegratedBriefInjected
+    const injected = candidate.candidateRecipeMapContractInjected
+      ?? candidate.candidateIntegratedBriefInjected
+      ?? candidate.recipeUnitUnderstandingStatePromptInjected;
+    const bytes = candidate.candidateRecipeMapContractBytes
+      ?? candidate.candidateIntegratedBriefBytes
+      ?? candidate.recipeUnitUnderstandingStatePromptBytes;
+    const maxBytes = candidate.candidateRecipeMapContractMaxBytes
+      ?? candidate.candidateIntegratedBriefMaxBytes
+      ?? candidate.recipeUnitUnderstandingStatePromptMaxDeltaBytes;
+    const budgetExceeded = candidate.candidateRecipeMapContractBudgetExceeded
+      ?? candidate.candidateIntegratedBriefBudgetExceeded
+      ?? candidate.recipeUnitUnderstandingStatePromptBudgetExceeded;
+    const failOpen = candidate.candidateRecipeMapContractFailOpen
+      ?? candidate.candidateIntegratedBriefFailOpen
+      ?? candidate.recipeUnitUnderstandingStatePromptFailOpen;
+    const section = candidate.candidateRecipeMapContractInjected
+      ? "RECIPE_MAP_CONTRACT"
+      : candidate.candidateIntegratedBriefInjected
       ? "CANDIDATE_INTEGRATED_BRIEF"
       : candidate.recipeUnitUnderstandingStatePromptSection;
     return `
@@ -291,7 +303,7 @@ function understandingInjectionRows(candidateDrafts) {
         <td>${esc([
           `stories ${candidate.understandingAuditStoryCount ?? 0}`,
           `source entries ${candidate.sourceEntryCount ?? 0}`,
-          candidate.candidateIntegratedBriefTruncated || candidate.recipeUnitUnderstandingStatePromptTruncated ? "truncated" : null,
+          candidate.candidateRecipeMapContractTruncated || candidate.candidateIntegratedBriefTruncated || candidate.recipeUnitUnderstandingStatePromptTruncated ? "truncated" : null,
           candidate.reason,
         ].filter(Boolean).join(" · ") || "-")}</td>
       </tr>
@@ -306,7 +318,11 @@ function understandingUsageHtml({ candidateDrafts, videoUnderstandingUsage, vide
   const acceptedStoryCount = videoUnderstandingUsage?.acceptedStoryCount ?? 0;
   const rejectedStoryCount = videoUnderstandingUsage?.rejectedStoryCount ?? 0;
   const injectedCount = (candidateDrafts?.candidates ?? [])
-    .filter((candidate) => (candidate.candidateIntegratedBriefInjected ?? candidate.recipeUnitUnderstandingStatePromptInjected) === true)
+    .filter((candidate) => (
+      candidate.candidateRecipeMapContractInjected
+      ?? candidate.candidateIntegratedBriefInjected
+      ?? candidate.recipeUnitUnderstandingStatePromptInjected
+    ) === true)
     .length;
   const failureText = videoUnderstandingFailure
     ? `${videoUnderstandingFailure.reason ?? "failed"}${videoUnderstandingFailure.message ? ` · ${videoUnderstandingFailure.message}` : ""}`
@@ -325,6 +341,60 @@ function understandingUsageHtml({ candidateDrafts, videoUnderstandingUsage, vide
         <table>
           <thead><tr><th>후보</th><th>레시피</th><th>주입</th><th>prompt 섹션</th><th>bytes</th><th>budget 초과</th><th>fail-open</th><th>설명</th></tr></thead>
           <tbody>${understandingInjectionRows(candidateDrafts) || "<tr><td colspan=\"8\">candidate draft 없음</td></tr>"}</tbody>
+        </table>
+      </div>
+    </details>
+  `;
+}
+
+function wholeVideoRecipeMapHtml({ wholeVideoRecipeMap, wholeVideoRecipeMapAudit, candidateMapAdherenceAudit }) {
+  if (!wholeVideoRecipeMap && !wholeVideoRecipeMapAudit && !candidateMapAdherenceAudit) return "";
+  const units = wholeVideoRecipeMap?.units ?? [];
+  const warnings = [
+    ...(wholeVideoRecipeMapAudit?.warnings ?? []).map((warning) => ({ source: "map-audit", ...warning })),
+    ...(candidateMapAdherenceAudit?.warnings ?? []).map((warning) => ({ source: "adherence", ...warning })),
+  ];
+  const unitRows = units.map((unit) => {
+    const known = (unit.ingredientSlots ?? []).filter((slot) => slot.amountSlot?.status === "known");
+    const unknown = (unit.ingredientSlots ?? []).filter((slot) => slot.amountSlot?.status !== "known");
+    return `
+      <tr>
+        <td>${esc(unit.recipeUnitId ?? "-")}</td>
+        <td>${esc(unit.title ?? unit.dishIntent?.name ?? "-")}</td>
+        <td>${esc(known.map((slot) => `${slot.name} ${slot.amountSlot.amount}${slot.amountSlot.unit}`).join(", ") || "-")}</td>
+        <td>${esc(unknown.map((slot) => `${slot.name}(${slot.amountSlot?.status ?? "unknown"})`).join(", ") || "-")}</td>
+        <td>${esc((unit.stepSpine ?? []).map((step) => step.text).join(" -> ") || "-")}</td>
+        <td>${esc((unit.visualGaps ?? []).map((gap) => gap.ingredient).join(", ") || "-")}</td>
+      </tr>
+    `;
+  }).join("");
+  const warningRows = warnings.map((warning) => `
+    <tr>
+      <td>${esc(warning.source)}</td>
+      <td>${esc(warning.type ?? "-")}</td>
+      <td>${esc(warning.recipeUnitId ?? "-")}</td>
+      <td>${esc(warning.ingredient ?? "-")}</td>
+      <td>${esc([warning.amount, warning.unit].filter(Boolean).join("") || [warning.expectedAmount, warning.expectedUnit].filter(Boolean).join("") || "-")}</td>
+      <td>${esc(warning.sourceRef ?? (warning.evidence ?? []).join(", ") ?? "-")}</td>
+      <td>${esc(warning.reason ?? warning.textSnippet ?? "-")}</td>
+    </tr>
+  `).join("");
+  return `
+    <details class="visual understanding">
+      <summary>Whole-video recipe map · units ${units.length} · known amounts ${wholeVideoRecipeMap?.summary?.knownAmountSlotCount ?? 0} · warnings ${warnings.length}</summary>
+      <div class="note">
+        지도는 후보 draft 전에 만든 전체 영상 이해 메모입니다. known amount는 원본 source entry로 다시 검증된 수량이고, unknown/visual gap은 아직 채우면 안 되는 빈칸입니다.
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>unit</th><th>요리</th><th>검증된 수량</th><th>미확정 수량</th><th>조리 흐름</th><th>visual gap</th></tr></thead>
+          <tbody>${unitRows || "<tr><td colspan=\"6\">recipe map unit 없음</td></tr>"}</tbody>
+        </table>
+      </div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>출처</th><th>경고</th><th>unit</th><th>재료</th><th>수량</th><th>근거</th><th>이유</th></tr></thead>
+          <tbody>${warningRows || "<tr><td colspan=\"7\">map/adherence 경고 없음</td></tr>"}</tbody>
         </table>
       </div>
     </details>
@@ -498,6 +568,9 @@ function videoHtml({
   candidateDrafts,
   videoUnderstandingUsage,
   videoUnderstandingFailure,
+  wholeVideoRecipeMap,
+  wholeVideoRecipeMapAudit,
+  candidateMapAdherenceAudit,
   outTag,
 }) {
   const pairs = alignRecipes(golden?.recipes ?? [], result?.recipes ?? []);
@@ -515,6 +588,7 @@ function videoHtml({
       <span>contract failures ${manifest?.visualEvidenceContractFailureCount ?? 0}</span>
       </div>
       ${understandingUsageHtml({ candidateDrafts, videoUnderstandingUsage, videoUnderstandingFailure })}
+      ${wholeVideoRecipeMapHtml({ wholeVideoRecipeMap, wholeVideoRecipeMapAudit, candidateMapAdherenceAudit })}
       ${visualEvidenceHtml({ visualTarget, visual, visualEstimates })}
       ${sourceGapHtml({ sourceDraft, gapLedger, holisticAudit })}
       ${pairs.map((pair, index) => recipeCard({
@@ -593,6 +667,9 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
       candidateDrafts: await readJson(path.join(runDir, "candidate-drafts.json"), null),
       videoUnderstandingUsage: await readJson(path.join(runDir, "video-understanding-usage.json"), null),
       videoUnderstandingFailure: await readJson(path.join(runDir, "video-understanding-failure.json"), null),
+      wholeVideoRecipeMap: await readJson(path.join(runDir, "whole-video-recipe-map.json"), null),
+      wholeVideoRecipeMapAudit: await readJson(path.join(runDir, "whole-video-recipe-map-audit.json"), null),
+      candidateMapAdherenceAudit: await readJson(path.join(runDir, "candidate-map-adherence-audit.json"), null),
       outTag,
     }));
   }
