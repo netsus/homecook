@@ -4185,6 +4185,192 @@ describe("pi recipe extractor MVP runner", () => {
     expect(prompt).not.toContain("감자조림");
   });
 
+  it("passes source-backed amounts through the recipe unit understanding prompt contract", async () => {
+    const {
+      buildCandidateFirstHolisticDraftPrompt,
+      buildCandidateRecipeUnitUnderstandingPromptPayload,
+      buildRecipeUnitUnderstandingState,
+    } = await import(holisticModuleUrl);
+    const state = buildRecipeUnitUnderstandingState({
+      recipeUnitWorkingMemory: {
+        kind: "recipe-unit-working-memory",
+        schemaVersion: 1,
+        videoId: "case-a",
+        units: [{
+          recipeUnitId: "r1",
+          title: "양파 볶음",
+          sourceCandidateIds: ["storyboard-1"],
+          timeRange: { startSec: 0, endSec: 60, basis: "recipe-boundary-plan" },
+          dishIdentity: { summary: "양파 볶음", evidence: ["description:1"] },
+          ingredientMemory: [
+            {
+              name: "양파",
+              role: "main",
+              memoryPriority: "core",
+              amountCandidates: [{ amount: "1", unit: "개", basis: "stated", evidence: ["description:2"] }],
+              evidence: ["description:2"],
+            },
+          ],
+          stepMemory: [
+            { order: 1, action: "양파를 볶는다", stage: "cook", memoryPriority: "core", evidence: ["event:e1"] },
+          ],
+          visualNeedHints: [],
+          uncertainties: [],
+        }],
+      },
+      holisticSourcePacket: {
+        video: { videoId: "case-a" },
+        candidateSourcePackets: [{
+          candidateId: "r1",
+          sourceEntries: [
+            { ref: "description:2", type: "description", text: "양파 1개" },
+            { ref: "event:e1", type: "timeline-event", text: "양파를 볶는다", evidence: ["description:2"] },
+          ],
+        }],
+      },
+    });
+    const payload = buildCandidateRecipeUnitUnderstandingPromptPayload(state, "r1", { maxBytes: 4000 });
+    const prompt = buildCandidateFirstHolisticDraftPrompt({
+      video: { videoId: "case-a", title: "양파 볶음" },
+      candidateTimelineIndex: {
+        candidates: [{
+          candidateId: "r1",
+          recipeSourceCandidateIds: ["storyboard-1"],
+          title: "양파 볶음",
+          timeRange: { startSec: 0, endSec: 60, basis: "recipe-boundary-plan" },
+          supportingEvents: ["e1"],
+        }],
+      },
+      candidateSourcePackets: [{
+        candidateId: "r1",
+        recipeSourceCandidateIds: ["storyboard-1"],
+        title: "양파 볶음",
+        sourceEntries: [
+          { ref: "description:2", type: "description", text: "양파 1개" },
+          { ref: "event:e1", type: "timeline-event", text: "양파를 볶는다", evidence: ["description:2"] },
+        ],
+      }],
+      entries: [],
+      refs: [],
+    }, {
+      recipeUnitUnderstandingPromptPayload: payload?.state,
+    });
+
+    expect(state.summary.sourceBackedAmountCount).toBe(1);
+    expect(state.units[0].sourceBackedAmounts).toEqual([
+      expect.objectContaining({
+        ingredient: "양파",
+        amount: "1",
+        unit: "개",
+        amountBasis: "stated",
+        evidence: ["description:2"],
+        preservePolicy: "preserve_or_explain",
+      }),
+    ]);
+    expect(payload?.state.sourceBackedAmounts).toEqual([
+      expect.objectContaining({
+        ingredient: "양파",
+        amount: "1",
+        unit: "개",
+        amountBasis: "stated",
+      }),
+    ]);
+    expect(prompt).toContain("\"sourceBackedAmounts\"");
+    expect(prompt).toContain("sourceBackedAmounts에 있는 amount/unit은 source에서 이미 나온 분량");
+    expect(prompt).toContain("\"amount\": \"1\"");
+    expect(prompt).toContain("\"unit\": \"개\"");
+  });
+
+  it("warns when final output drops source-backed amounts without explanation", async () => {
+    const { auditRecipeUnitAmountPreservation } = await import(holisticModuleUrl);
+    const state = {
+      schemaVersion: 1,
+      kind: "recipe-unit-understanding-state",
+      videoId: "case-a",
+      units: [{
+        recipeUnitId: "r1",
+        sourceCandidateIds: ["storyboard-1"],
+        sourceBackedAmounts: [{
+          ingredient: "양파",
+          amount: "1",
+          unit: "개",
+          amountBasis: "stated",
+          evidence: ["description:2"],
+          preservePolicy: "preserve_or_explain",
+        }],
+      }],
+    };
+
+    const missing = auditRecipeUnitAmountPreservation({
+      recipes: [{
+        candidateId: "r1",
+        title: "양파 볶음",
+        ingredients: [{ name: "양파", amount: null, unit: null, amountBasis: null, evidence: ["description:2"] }],
+        steps: ["양파를 볶는다"],
+        uncertainties: [],
+      }],
+      repairLog: [],
+    }, state);
+    const preserved = auditRecipeUnitAmountPreservation({
+      recipes: [{
+        candidateId: "r1",
+        title: "양파 볶음",
+        ingredients: [{ name: "양파", amount: "1", unit: "개", amountBasis: "stated", evidence: ["description:2"] }],
+        steps: ["양파를 볶는다"],
+        uncertainties: [],
+      }],
+      repairLog: [],
+    }, state);
+    const explained = auditRecipeUnitAmountPreservation({
+      recipes: [{
+        candidateId: "r1",
+        title: "양파 볶음",
+        ingredients: [{ name: "양파", amount: null, unit: null, amountBasis: null, evidence: ["description:2"] }],
+        steps: ["양파를 볶는다"],
+        uncertainties: ["양파: source 분량이 final audit에서 충돌해 null로 남김"],
+      }],
+      repairLog: [],
+    }, state);
+    const weakExplanation = auditRecipeUnitAmountPreservation({
+      recipes: [{
+        candidateId: "r1",
+        title: "양파 볶음",
+        ingredients: [{ name: "양파", amount: null, unit: null, amountBasis: null, evidence: ["description:2"] }],
+        steps: ["양파를 볶는다"],
+        uncertainties: ["양파: 확인 필요"],
+      }],
+      repairLog: [],
+    }, state);
+
+    expect(missing.summary).toMatchObject({
+      sourceBackedAmountCount: 1,
+      preservedCount: 0,
+      warningCount: 1,
+      passed: false,
+    });
+    expect(missing.warnings[0]).toMatchObject({
+      type: "source_backed_amount_changed_or_missing",
+      ingredient: "양파",
+      expectedAmount: "1",
+      expectedUnit: "개",
+    });
+    expect(preserved.summary).toMatchObject({
+      preservedCount: 1,
+      warningCount: 0,
+      passed: true,
+    });
+    expect(explained.summary).toMatchObject({
+      explainedMissingCount: 1,
+      warningCount: 0,
+      passed: true,
+    });
+    expect(weakExplanation.summary).toMatchObject({
+      explainedMissingCount: 0,
+      warningCount: 1,
+      passed: false,
+    });
+  });
+
   it("uses recipe boundary units instead of raw timeline windows for candidate-first drafts", async () => {
     const { runPiExtraction } = await import(runnerModuleUrl);
     const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
