@@ -1119,6 +1119,233 @@ function visualNeedHintsFromMemory({ ingredientMemory, stepMemory, candidatePack
     }));
 }
 
+const GENERIC_VISUAL_DESCRIPTOR_PATTERN = /(?:초록색?|녹색|파란색?|파랑|노란색?|노랑|주황색?|빨간색?|붉은|갈색|검은색?|까만|하얀|흰색?|분홍색?|핑크|보라색?).{0,10}(?:채소|야채|재료|속재료|고명|묵|고기|소스|가루|토핑)|(?:속재료|고명류|채소류|야채류|고기류|소스류|가루류|토핑류|무언가|어떤\s*재료|재료\s*확인|미확인\s*재료)/u;
+
+function isGenericVisualDescriptorName(value) {
+  const text = cleanString(value);
+  if (!text) return false;
+  return GENERIC_VISUAL_DESCRIPTOR_PATTERN.test(text);
+}
+
+function sourceMentionsIngredientName(candidatePacket, name) {
+  return (candidatePacket?.sourceEntries ?? [])
+    .filter((entry) => entry?.type !== "frame")
+    .some((entry) => textMentions(entry.text, name));
+}
+
+function nonFrameEvidence(evidence) {
+  return normalizeStringArray(evidence).filter((ref) => !ref.startsWith("frame:"));
+}
+
+function ingredientIdentityStateFromMemory(memory, candidatePacket) {
+  const surfaceName = cleanString(memory?.name);
+  if (!surfaceName) return null;
+  const genericDescriptor = isGenericVisualDescriptorName(surfaceName);
+  const sourceEvidence = nonFrameEvidence(memory.evidence);
+  const sourceNamed = !genericDescriptor && (sourceEvidence.length > 0 || sourceMentionsIngredientName(candidatePacket, surfaceName));
+  const nameStatus = genericDescriptor
+    ? "generic_visual_descriptor"
+    : sourceNamed
+    ? "source_named"
+    : "unresolved";
+  return {
+    surfaceName,
+    resolvedName: sourceNamed ? surfaceName : null,
+    nameStatus,
+    role: cleanString(memory.role) ?? null,
+    evidence: normalizeStringArray(memory.evidence),
+    finalNameAllowed: nameStatus !== "generic_visual_descriptor",
+    ...(nameStatus !== "source_named" ? {
+      unresolvedQuestion: genericDescriptor
+        ? `${surfaceName}: 실제 재료명이 아니라 화면 묘사이므로 final 재료명으로 확정하지 않는다.`
+        : `${surfaceName}: source-backed 이름인지 후속 확인 필요`,
+    } : {}),
+  };
+}
+
+function coreStepFlowFromMemory(unit) {
+  return (unit?.stepMemory ?? [])
+    .filter((step) => cleanString(step?.action))
+    .map((step, index) => ({
+      order: optionalNumber(step.order, index + 1),
+      action: cleanString(step.action),
+      basis: "source_or_step_memory",
+      evidence: normalizeStringArray(step.evidence),
+      ...(cleanString(step.stage) ? { stage: cleanString(step.stage) } : {}),
+    }))
+    .filter((step) => step.action)
+    .slice(0, 12);
+}
+
+export function buildRecipeUnitUnderstandingState({
+  recipeUnitWorkingMemory,
+  holisticSourcePacket,
+} = {}) {
+  const candidatePackets = new Map((holisticSourcePacket?.candidateSourcePackets ?? [])
+    .map((packet) => [packet.candidateId, packet]));
+  const units = (recipeUnitWorkingMemory?.units ?? []).map((unit) => {
+    const candidatePacket = candidatePackets.get(unit.recipeUnitId) ?? null;
+    const ingredientIdentityState = (unit.ingredientMemory ?? [])
+      .map((memory) => ingredientIdentityStateFromMemory(memory, candidatePacket))
+      .filter(Boolean);
+    const unresolvedIdentityQuestions = ingredientIdentityState
+      .filter((entry) => entry.nameStatus !== "source_named")
+      .map((entry) => ({
+        surfaceName: entry.surfaceName,
+        candidateNames: [],
+        reason: entry.unresolvedQuestion,
+      }));
+    return {
+      recipeUnitId: unit.recipeUnitId,
+      title: unit.title ?? null,
+      sourceCandidateIds: normalizeStringArray(unit.sourceCandidateIds),
+      timeRange: unit.timeRange ?? null,
+      dishIdentity: {
+        status: unit.dishIdentity?.summary ? "source_named" : "unresolved",
+        name: cleanString(unit.title),
+        summary: unit.dishIdentity?.summary ?? null,
+        evidence: normalizeStringArray(unit.dishIdentity?.evidence),
+        uncertainties: normalizeStringArray(unit.uncertainties),
+      },
+      ingredientIdentityState,
+      coreStepFlow: coreStepFlowFromMemory(unit),
+      unresolvedIdentityQuestions,
+    };
+  });
+  return {
+    schemaVersion: 1,
+    kind: "recipe-unit-understanding-state",
+    videoId: cleanString(recipeUnitWorkingMemory?.videoId ?? holisticSourcePacket?.video?.videoId),
+    units,
+    summary: {
+      unitCount: units.length,
+      ingredientIdentityCount: units.reduce((sum, unit) => sum + unit.ingredientIdentityState.length, 0),
+      genericVisualDescriptorCount: units.reduce(
+        (sum, unit) => sum + unit.ingredientIdentityState.filter((entry) => entry.nameStatus === "generic_visual_descriptor").length,
+        0,
+      ),
+      finalNameBlockedCount: units.reduce(
+        (sum, unit) => sum + unit.ingredientIdentityState.filter((entry) => !entry.finalNameAllowed).length,
+        0,
+      ),
+      unresolvedIdentityQuestionCount: units.reduce((sum, unit) => sum + unit.unresolvedIdentityQuestions.length, 0),
+    },
+  };
+}
+
+function truncateRefs(refs, maxRefs = 4) {
+  return normalizeStringArray(refs).slice(0, maxRefs);
+}
+
+function recipeUnitUnderstandingPromptPayloadFromUnit(unit, {
+  includeUnresolvedQuestions = true,
+  includeBlockedReasons = true,
+  allowedMax = 20,
+  blockedMax = 20,
+  coreStepMax = 12,
+  evidenceMax = 4,
+} = {}) {
+  const ingredientStates = unit?.ingredientIdentityState ?? [];
+  const allowedIngredientNames = ingredientStates
+    .filter((entry) => entry?.nameStatus === "source_named" && entry?.finalNameAllowed !== false)
+    .slice(0, allowedMax)
+    .map((entry) => ({
+      name: cleanString(entry.resolvedName ?? entry.surfaceName),
+      status: "source_named",
+      role: cleanString(entry.role) ?? null,
+      evidence: truncateRefs(entry.evidence, evidenceMax),
+    }))
+    .filter((entry) => entry.name);
+  const blockedIngredientNames = ingredientStates
+    .filter((entry) => entry?.nameStatus === "generic_visual_descriptor" || entry?.finalNameAllowed === false)
+    .slice(0, blockedMax)
+    .map((entry) => ({
+      surfaceName: cleanString(entry.surfaceName),
+      ...(includeBlockedReasons ? {
+        reason: cleanString(entry.unresolvedQuestion) ?? "실제 재료명이 아니라 화면 묘사이므로 final 재료명으로 확정하지 않는다.",
+      } : {}),
+    }))
+    .filter((entry) => entry.surfaceName);
+  const unresolvedIdentityQuestions = includeUnresolvedQuestions
+    ? (unit?.unresolvedIdentityQuestions ?? [])
+      .slice(0, 8)
+      .map((question) => (
+        typeof question === "string"
+          ? question
+          : cleanString(question?.reason) ?? cleanString(question?.surfaceName)
+      ))
+      .filter(Boolean)
+    : [];
+  return {
+    kind: "candidate-recipe-unit-understanding-state-prompt",
+    schemaVersion: 1,
+    videoId: null,
+    recipeUnitId: unit?.recipeUnitId ?? null,
+    recipeSourceCandidateIds: normalizeStringArray(unit?.sourceCandidateIds),
+    title: cleanString(unit?.title),
+    dishIdentity: {
+      status: cleanString(unit?.dishIdentity?.status) ?? "unresolved",
+      name: cleanString(unit?.dishIdentity?.name),
+      summary: cleanString(unit?.dishIdentity?.summary),
+      evidence: truncateRefs(unit?.dishIdentity?.evidence, evidenceMax),
+      uncertainties: normalizeStringArray(unit?.dishIdentity?.uncertainties).slice(0, 4),
+    },
+    coreStepFlow: (unit?.coreStepFlow ?? [])
+      .filter((step) => cleanString(step?.action))
+      .slice(0, coreStepMax)
+      .map((step, index) => ({
+        order: optionalNumber(step.order, index + 1),
+        action: cleanString(step.action),
+        evidence: truncateRefs(step.evidence, evidenceMax),
+      })),
+    allowedIngredientNames,
+    blockedIngredientNames,
+    unresolvedIdentityQuestions,
+  };
+}
+
+function payloadBytes(value) {
+  return Buffer.byteLength(JSON.stringify(value), "utf8");
+}
+
+export function buildCandidateRecipeUnitUnderstandingPromptPayload(recipeUnitUnderstandingState, candidateId, {
+  maxBytes = 4000,
+} = {}) {
+  if (!isObject(recipeUnitUnderstandingState) || !Array.isArray(recipeUnitUnderstandingState.units)) return null;
+  const unit = recipeUnitUnderstandingState.units.find((item) => item?.recipeUnitId === candidateId);
+  if (!unit) return null;
+  const variants = [
+    {},
+    { includeUnresolvedQuestions: false },
+    { includeUnresolvedQuestions: false, includeBlockedReasons: false },
+    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 12, blockedMax: 12, evidenceMax: 3 },
+    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 8, blockedMax: 8, coreStepMax: 10, evidenceMax: 2 },
+    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 4, blockedMax: 6, coreStepMax: 8, evidenceMax: 1 },
+    { includeUnresolvedQuestions: false, includeBlockedReasons: false, allowedMax: 4, blockedMax: 4, coreStepMax: 4, evidenceMax: 0 },
+  ];
+  let selected = null;
+  let truncated = false;
+  for (const [index, variant] of variants.entries()) {
+    const payload = recipeUnitUnderstandingPromptPayloadFromUnit(unit, variant);
+    payload.videoId = recipeUnitUnderstandingState.videoId ?? null;
+    const bytes = payloadBytes(payload);
+    selected = { payload, bytes };
+    truncated = index > 0;
+    if (bytes <= maxBytes) break;
+  }
+  return {
+    state: selected?.payload ?? null,
+    bytes: selected?.bytes ?? 0,
+    truncated,
+    budgetExceeded: selected ? selected.bytes > maxBytes : false,
+    maxBytes,
+  };
+}
+
+function recipeUnitUnderstandingStateForPrompt(recipeUnitUnderstandingState, candidateId) {
+  return buildCandidateRecipeUnitUnderstandingPromptPayload(recipeUnitUnderstandingState, candidateId)?.state ?? null;
+}
+
 function storyAuditForRecipeUnit(videoUnderstandingAudit, candidateId, recipeSourceCandidateIds = []) {
   const sourceIds = new Set(recipeSourceCandidateIds);
   const storyAudits = (videoUnderstandingAudit?.storyAudits ?? [])
@@ -1319,6 +1546,8 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, {
 export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePacket, {
   understandingAudit = null,
   recipeUnitWorkingMemory = null,
+  recipeUnitUnderstandingState = null,
+  recipeUnitUnderstandingPromptPayload = null,
 } = {}) {
   const candidatePacket = candidateScopedSourcePacket?.candidateSourcePackets?.[0] ?? {};
   const candidateTimeline = candidateScopedSourcePacket?.candidateTimelineIndex?.candidates?.[0] ?? {};
@@ -1326,6 +1555,8 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
   const title = cleanString(candidatePacket.title ?? candidateTimeline.title) ?? "후보 레시피";
   const recipeSourceCandidateIds = normalizeStringArray(candidatePacket.recipeSourceCandidateIds);
   const scopedWorkingMemory = recipeUnitWorkingMemoryForPrompt(recipeUnitWorkingMemory, candidateId);
+  const scopedUnderstandingState = recipeUnitUnderstandingPromptPayload
+    ?? recipeUnitUnderstandingStateForPrompt(recipeUnitUnderstandingState, candidateId);
   const recipeBoundaryRules = recipeSourceCandidateIds.length > 0 ? [
     "- 이 candidate는 recipe-boundary-plan이 여러 원래 candidate를 하나의 실제 요리로 묶은 recipe unit이다.",
     `- recipeSourceCandidateIds ${JSON.stringify(recipeSourceCandidateIds)} 안의 source와 event는 같은 요리 범위로 보고 함께 사용한다.`,
@@ -1334,6 +1565,7 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
   ] : [];
   const hasUnderstandingAudit = isObject(understandingAudit) && Array.isArray(understandingAudit.storyAudits);
   const hasWorkingMemory = isObject(scopedWorkingMemory);
+  const hasUnderstandingState = isObject(scopedUnderstandingState);
   return [
     "너는 다중 레시피 영상에서 후보 하나만 맡아 레시피 초안을 쓰는 도우미다.",
     "목표: 아래 candidate 하나를 다른 candidate와 섞지 않고, 제목/설명란/고정댓글/자막/video timeline event 근거로 recipe draft 1개를 만든다.",
@@ -1354,6 +1586,14 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
       "- memoryPriority가 core인 ingredientMemory와 stepMemory는 요리 정체성과 흐름을 잡는 중심 단서로 사용한다.",
       "- amountCandidates가 있는 재료는 source-backed 분량 후보를 임의로 비우지 말고, 충돌하거나 불확실하면 uncertainties에 남긴다.",
       "- visualNeedHints는 곧바로 정답으로 쓰지 말고 visualNeeds 후보로만 연결한다.",
+    ] : []),
+    ...(hasUnderstandingState ? [
+      "- RECIPE_UNIT_UNDERSTANDING_STATE는 evidence 조각 저장소가 아니라, 이 recipe unit이 무엇을 만들고 어떤 흐름인지에 대한 1차 이해 객체다.",
+      "- 먼저 dishIdentity와 coreStepFlow를 읽고 조리 흐름을 잡은 뒤, 재료는 그 흐름을 설명하는 데 필요한 범위만 채운다.",
+      "- allowedIngredientNames에 있는 source_named 재료명은 가장 안전한 final ingredient name이다.",
+      "- blockedIngredientNames에 있는 surfaceName은 final ingredient name으로 쓰지 말고 uncertainties에 남긴다.",
+      "- unresolvedIdentityQuestions는 확정하지 말아야 할 질문이다. 현재 CANDIDATE_SOURCE_PACKET의 evidence가 직접 뒷받침하지 않으면 final 재료명으로 쓰지 않는다.",
+      "- unresolvedIdentityQuestions는 후속 확인 메모이며, 확인되지 않은 새 재료명을 상상해서 만들지 않는다.",
     ] : []),
     "- 출력은 설명 없이 JSON 객체 하나만 반환한다.",
     "",
@@ -1414,9 +1654,132 @@ export function buildCandidateFirstHolisticDraftPrompt(candidateScopedSourcePack
       JSON.stringify(scopedWorkingMemory, null, 2),
       "",
     ] : []),
+    ...(hasUnderstandingState ? [
+      "[RECIPE_UNIT_UNDERSTANDING_STATE]",
+      JSON.stringify(scopedUnderstandingState, null, 2),
+      "",
+    ] : []),
     "[CANDIDATE_SCOPED_HOLISTIC_SOURCE_PACKET]",
     JSON.stringify(candidateScopedSourcePacket, null, 2),
   ].join("\n");
+}
+
+function blockedIngredientNamesByCandidate(recipeUnitUnderstandingState) {
+  const map = new Map();
+  for (const unit of recipeUnitUnderstandingState?.units ?? []) {
+    const blocked = new Set((unit.ingredientIdentityState ?? [])
+      .filter((entry) => entry?.finalNameAllowed === false)
+      .map((entry) => normalizeKey(entry.surfaceName))
+      .filter(Boolean));
+    map.set(unit.recipeUnitId, blocked);
+  }
+  return map;
+}
+
+function auditGenericVisualDescriptorLeaks(output, recipeUnitUnderstandingState, passName) {
+  const blockedByCandidate = blockedIngredientNamesByCandidate(recipeUnitUnderstandingState);
+  const issues = [];
+  for (const recipe of output?.recipes ?? []) {
+    const blockedNames = blockedByCandidate.get(recipe.candidateId) ?? new Set();
+    for (const ingredient of recipe.ingredients ?? []) {
+      const nameKey = normalizeKey(ingredient.name);
+      const genericPatternMatch = isGenericVisualDescriptorName(ingredient.name);
+      const blockedByState = Boolean(nameKey && blockedNames.has(nameKey));
+      if (!genericPatternMatch && !blockedByState) continue;
+      issues.push({
+        recipeUnitId: recipe.candidateId ?? null,
+        type: "generic_visual_descriptor_as_final_ingredient",
+        value: ingredient.name,
+        severity: passName === "before-deterministic-demotion" ? "demote_then_recheck" : "block_final",
+        reason: blockedByState
+          ? "recipe-unit-understanding-state에서 finalNameAllowed=false로 표시된 재료명"
+          : "실제 재료명이 아니라 화면 색/모양 묘사로 보이는 재료명",
+      });
+    }
+  }
+  return {
+    name: passName,
+    issues,
+  };
+}
+
+export function applyRecipeUnitUnderstandingDemotion(finalOutput, recipeUnitUnderstandingState) {
+  if (!isObject(recipeUnitUnderstandingState) || !Array.isArray(recipeUnitUnderstandingState.units)) {
+    return {
+      output: finalOutput,
+      selfAudit: null,
+    };
+  }
+  const beforePass = auditGenericVisualDescriptorLeaks(
+    finalOutput,
+    recipeUnitUnderstandingState,
+    "before-deterministic-demotion",
+  );
+  const blockedByCandidate = blockedIngredientNamesByCandidate(recipeUnitUnderstandingState);
+  const demotedRepairLog = [];
+  let patchIndex = (finalOutput.repairLog ?? []).length + 1;
+  const recipes = (finalOutput.recipes ?? []).map((recipe) => {
+    const blockedNames = blockedByCandidate.get(recipe.candidateId) ?? new Set();
+    const keptIngredients = [];
+    const demotedNames = [];
+    for (const ingredient of recipe.ingredients ?? []) {
+      const nameKey = normalizeKey(ingredient.name);
+      const shouldDemote = isGenericVisualDescriptorName(ingredient.name)
+        || Boolean(nameKey && blockedNames.has(nameKey));
+      if (!shouldDemote) {
+        keptIngredients.push(ingredient);
+        continue;
+      }
+      demotedNames.push(ingredient.name);
+      demotedRepairLog.push({
+        patchId: `recipe-unit-understanding-${patchIndex++}`,
+        candidateId: recipe.candidateId ?? null,
+        field: "ingredient",
+        before: ingredient.name,
+        after: null,
+        evidenceRef: normalizeStringArray(ingredient.evidence),
+        reasonCode: "generic_visual_descriptor_demoted",
+        confidence: 0.82,
+      });
+    }
+    return {
+      ...recipe,
+      ingredients: keptIngredients,
+      uncertainties: uniqueStrings([
+        ...(recipe.uncertainties ?? []),
+        ...demotedNames.map((name) => `${name}: 실제 재료명이 아니라 화면 묘사로 보여 final 재료명에서 제외됨`),
+      ]),
+    };
+  });
+  const demotedOutput = {
+    ...finalOutput,
+    recipes,
+    repairLog: [
+      ...(finalOutput.repairLog ?? []),
+      ...demotedRepairLog,
+    ],
+  };
+  const afterPass = auditGenericVisualDescriptorLeaks(
+    demotedOutput,
+    recipeUnitUnderstandingState,
+    "after-deterministic-demotion",
+  );
+  const selfAudit = {
+    schemaVersion: 1,
+    kind: "recipe-unit-draft-self-audit",
+    videoId: recipeUnitUnderstandingState.videoId ?? null,
+    passes: [beforePass, afterPass],
+    summary: {
+      beforeDemotionBlockCount: beforePass.issues.length,
+      afterDemotionBlockCount: afterPass.issues.length,
+      demotedIngredientCount: demotedRepairLog.length,
+      failedAfterDemotion: afterPass.issues.length > 0,
+    },
+  };
+  return {
+    output: demotedOutput,
+    selfAudit,
+  };
 }
 
 export function buildHolisticFinalPrompt({ draft, audit, visualEstimates }) {

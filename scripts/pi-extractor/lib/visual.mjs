@@ -48,24 +48,50 @@ function commandError(message, details) {
   return error;
 }
 
-export async function executeCommand(command, { cwd, timeoutMs }) {
+export async function executeCommand(command, { cwd, timeoutMs, timeoutKillGraceMs = 1000 }) {
   const [bin, ...args] = command;
   return new Promise((resolve, reject) => {
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let settled = false;
+    let timer = null;
+    let killTimer = null;
+    const settle = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (killTimer) clearTimeout(killTimer);
+      fn(value);
+    };
+    const killProcessGroup = (signal) => {
+      try {
+        process.kill(-child.pid, signal);
+      } catch {
+        child.kill(signal);
+      }
+    };
     const child = spawn(bin, args, {
       cwd,
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
-    const timer = setTimeout(() => {
+    timer = setTimeout(() => {
       timedOut = true;
-      try {
-        process.kill(-child.pid, "SIGTERM");
-      } catch {
-        child.kill("SIGTERM");
-      }
+      killProcessGroup("SIGTERM");
+      killTimer = setTimeout(() => {
+        killProcessGroup("SIGKILL");
+        settle(reject, commandError(`Command timed out: ${command.join(" ")}`, {
+          code: null,
+          signal: "SIGTERM",
+          killed: true,
+          timedOut,
+          stdout: stdout.slice(0, 20000),
+          stderr: stderr.slice(0, 20000),
+          command,
+          timeoutMs,
+        }));
+      }, timeoutKillGraceMs);
     }, timeoutMs);
 
     child.stdout.setEncoding("utf8");
@@ -77,8 +103,7 @@ export async function executeCommand(command, { cwd, timeoutMs }) {
       stderr += chunk;
     });
     child.on("error", (error) => {
-      clearTimeout(timer);
-      reject(commandError(error.message, {
+      settle(reject, commandError(error.message, {
         code: error.code ?? null,
         signal: null,
         killed: false,
@@ -90,12 +115,13 @@ export async function executeCommand(command, { cwd, timeoutMs }) {
       }));
     });
     child.on("close", (code, signal) => {
-      clearTimeout(timer);
       if (code === 0) {
-        resolve({ stdout, stderr, exitCode: 0 });
+        settle(resolve, { stdout, stderr, exitCode: 0 });
         return;
       }
-      reject(commandError(`Command failed: ${command.join(" ")}`, {
+      settle(reject, commandError(
+        timedOut ? `Command timed out: ${command.join(" ")}` : `Command failed: ${command.join(" ")}`,
+        {
         code,
         signal,
         killed: timedOut,
