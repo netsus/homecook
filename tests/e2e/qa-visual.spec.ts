@@ -75,6 +75,7 @@ const MYPAGE_SAVED_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 5200;
 const COOKING_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 3200;
 const LEFTOVERS_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2600;
 const FIXED_HOME_VISUAL_NOW = "2026-06-01T10:30:00.000Z";
+const FIXED_PLANNER_VISUAL_NOW = "2026-06-18T10:30:00.000Z";
 
 function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1280) < 1024;
@@ -170,7 +171,7 @@ async function stabilizeFixedHeaderForScrolledFullPageSnapshot(page: Page) {
   });
 }
 
-async function installFixedHomeVisualClock(page: Page) {
+async function installFixedVisualClock(page: Page, fixedNow: string) {
   await page.addInitScript(({ fixedNow }: { fixedNow: string }) => {
     const RealDate = Date;
     const fixedTime = new RealDate(fixedNow).getTime();
@@ -192,12 +193,12 @@ async function installFixedHomeVisualClock(page: Page) {
 
     Object.setPrototypeOf(FixedDate, RealDate);
     globalThis.Date = FixedDate as DateConstructor;
-  }, { fixedNow: FIXED_HOME_VISUAL_NOW });
+  }, { fixedNow });
 }
 
 test.describe("QA visual regression", () => {
   test("home default shell matches the visual baseline @visual-core", async ({ page }) => {
-    await installFixedHomeVisualClock(page);
+    await installFixedVisualClock(page, FIXED_HOME_VISUAL_NOW);
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
@@ -212,7 +213,7 @@ test.describe("QA visual regression", () => {
   });
 
   test("home sort menu open matches the visual baseline @visual-core", async ({ page }) => {
-    await installFixedHomeVisualClock(page);
+    await installFixedVisualClock(page, FIXED_HOME_VISUAL_NOW);
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
@@ -281,6 +282,7 @@ test.describe("QA visual regression", () => {
     page,
   }) => {
     test.skip(isMobileViewport(page), "desktop-only prototype parity baseline");
+    await installFixedVisualClock(page, FIXED_PLANNER_VISUAL_NOW);
     await setE2EAuthOverride(page);
     await installPlannerWeekRoutes(page);
 
