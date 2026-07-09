@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
 import { QaFixtureToolbar } from "@/components/layout/qa-fixture-toolbar";
+import { getPublicSiteOrigin } from "@/lib/legal-info";
 import "./globals.css";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://homecook-flame.vercel.app";
+const siteUrl = getPublicSiteOrigin();
 const siteDescription = "레시피 찾기, 식단 계획, 장보기, 요리 기록까지 이어지는 집밥 서비스";
 
 export const metadata: Metadata = {
