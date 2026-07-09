@@ -12,8 +12,19 @@ const getSession = vi.fn();
 const onAuthStateChange = vi.fn();
 
 vi.mock("@/components/auth/social-login-buttons-deferred", () => ({
-  SocialLoginButtonsDeferred: ({ nextPath }: { nextPath: string }) => (
-    <div>social-buttons:{nextPath}</div>
+  SocialLoginButtonsDeferred: ({
+    expectedProvider,
+    lastProvider,
+    nextPath,
+  }: {
+    expectedProvider?: string | null;
+    lastProvider?: string | null;
+    nextPath: string;
+  }) => (
+    <div>
+      social-buttons:{nextPath}:{expectedProvider ?? "none"}:
+      {lastProvider ?? "none"}
+    </div>
   ),
 }));
 
@@ -83,7 +94,23 @@ describe("login screen", () => {
     render(<LoginScreen authError="oauth_failed" />);
 
     expect(screen.getByText("로그인에 실패했어요. 다시 시도해 주세요.")).toBeTruthy();
-    expect(screen.getByText("social-buttons:/")).toBeTruthy();
+    expect(screen.getByText("social-buttons:/:none:none")).toBeTruthy();
+  });
+
+  it("explains provider mismatches without exposing the account email", () => {
+    render(
+      <LoginScreen
+        attemptedProvider="naver"
+        authError="provider_mismatch"
+        expectedProvider="google"
+      />,
+    );
+
+    expect(
+      screen.getByText("이 계정은 Google로 가입되어 있어요. Google로 로그인해 주세요."),
+    ).toBeTruthy();
+    expect(screen.getByText("social-buttons:/:google:none")).toBeTruthy();
+    expect(screen.queryByText(/@/)).toBeNull();
   });
 
   it("renders the Wave1 mobile login copy by default", () => {
@@ -107,7 +134,7 @@ describe("login screen", () => {
   it("uses the provided nextPath for login actions", () => {
     render(<LoginScreen nextPath="/planner" />);
 
-    expect(screen.getByText("social-buttons:/planner")).toBeTruthy();
+    expect(screen.getByText("social-buttons:/planner:none:none")).toBeTruthy();
   });
 
   it("renders the desktop web login panel at 1024px and above", () => {
@@ -127,7 +154,7 @@ describe("login screen", () => {
     expect(
       screen.getAllByText("로그인 후 보던 주간 범위로 돌아와 식단을 계속 관리할 수 있어요."),
     ).toHaveLength(1);
-    expect(screen.getByText("social-buttons:/planner")).toBeTruthy();
+    expect(screen.getByText("social-buttons:/planner:none:none")).toBeTruthy();
     expect(
       screen
         .getByRole("heading", { name: "이 화면은 로그인이 필요해요" })

@@ -4,8 +4,10 @@ import React from "react";
 import { useState, useTransition } from "react";
 
 import { LocalDevLoginPanel } from "@/components/auth/local-dev-login-panel";
+import { createAuthProviderAttemptCookie } from "@/lib/auth/provider-cookies";
 import {
   AUTH_PROVIDER_META,
+  getAuthProviderDisplayName,
   getEnabledAuthProviders,
   getSupabaseAuthProvider,
   type AuthProviderId,
@@ -24,12 +26,17 @@ import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export interface SocialLoginButtonsProps {
+  attemptedProvider?: AuthProviderId | null;
+  expectedProvider?: AuthProviderId | null;
+  lastProvider?: AuthProviderId | null;
   nextPath: string;
   pendingAction?: PendingRecipeAction | null;
   onStarted?: () => void;
 }
 
 export function SocialLoginButtons({
+  expectedProvider = null,
+  lastProvider = null,
   nextPath,
   pendingAction,
   onStarted,
@@ -41,12 +48,13 @@ export function SocialLoginButtons({
   const localGoogleOAuthEnabled = isLocalGoogleOAuthEnabled();
   const qaFixtureMode = isQaFixtureClientModeEnabled();
   const enabledProviders = getEnabledAuthProviders();
-  const providers = localDevAuthEnabled && !localGoogleOAuthEnabled
+  const availableProviders = localDevAuthEnabled && !localGoogleOAuthEnabled
     ? []
     : (qaFixtureMode
         ? ensureFixtureProviders(enabledProviders)
         : enabledProviders
       );
+  const providers = prioritizeProvider(availableProviders, expectedProvider);
 
   const handleSignIn = (provider: AuthProviderId) => {
     startTransition(async () => {
@@ -65,11 +73,13 @@ export function SocialLoginButtons({
         }
 
         document.cookie = createPostAuthNextCookie(nextPath);
+        document.cookie = createAuthProviderAttemptCookie(provider);
 
         onStarted?.();
 
         const supabase = getSupabaseBrowserClient();
         const callback = new URL("/auth/callback", window.location.origin);
+        callback.searchParams.set("attemptedProvider", provider);
         const authProvider = getSupabaseAuthProvider(provider);
 
         const { error } = await supabase.auth.signInWithOAuth({
@@ -98,11 +108,16 @@ export function SocialLoginButtons({
     <div className="space-y-3">
       {providers.map((providerId) => {
         const provider = AUTH_PROVIDER_META[providerId];
+        const highlighted = expectedProvider === providerId;
+        const label = highlighted
+          ? `${getAuthProviderDisplayName(providerId)}로 계속하기`
+          : provider.label;
 
         return (
           <button
             key={providerId}
-            className={`flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-control)] px-4 py-3.5 text-[15px] font-bold transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${getProviderButtonClass(providerId, provider.className)}`}
+            className={`flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-control)] px-4 py-3.5 text-[15px] font-bold transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${getProviderButtonClass(providerId, provider.className)} ${highlighted ? "ring-2 ring-[var(--brand)] ring-offset-2 ring-offset-[var(--surface)]" : ""}`}
+            data-provider-highlighted={highlighted ? "true" : undefined}
             disabled={isPending}
             onClick={() => handleSignIn(providerId)}
             type="button"
@@ -113,10 +128,15 @@ export function SocialLoginButtons({
             >
               <ProviderLogoIcon providerId={providerId} />
             </span>
-            {pendingProvider === providerId ? `${provider.label} 로그인 중...` : provider.label}
+            {pendingProvider === providerId ? `${label} 로그인 중...` : label}
           </button>
         );
       })}
+      {lastProvider && !expectedProvider ? (
+        <p className="text-xs leading-5 text-[var(--muted)]">
+          이 브라우저에서는 마지막으로 {getAuthProviderDisplayName(lastProvider)}로 로그인했어요.
+        </p>
+      ) : null}
       {providers.length > 0 && !qaFixtureMode ? (
         <p className="text-xs leading-5 text-[var(--muted)]">
           현재 지원 로그인:{" "}
@@ -161,6 +181,20 @@ function ensureFixtureProviders(providers: AuthProviderId[]) {
   return [
     ...providers,
     ...fixtureProviders.filter((provider) => !providers.includes(provider)),
+  ];
+}
+
+function prioritizeProvider(
+  providers: AuthProviderId[],
+  expectedProvider: AuthProviderId | null,
+) {
+  if (!expectedProvider || !providers.includes(expectedProvider)) {
+    return providers;
+  }
+
+  return [
+    expectedProvider,
+    ...providers.filter((provider) => provider !== expectedProvider),
   ];
 }
 

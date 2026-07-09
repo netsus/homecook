@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { parseEnabledAuthProviders } from "@/lib/auth/providers";
+import {
+  normalizeAuthProviderId,
+  parseEnabledAuthProviders,
+} from "@/lib/auth/providers";
 
 describe("auth providers", () => {
   it("uses all production social providers when env is missing", () => {
@@ -21,5 +24,14 @@ describe("auth providers", () => {
 
   it("uses all production social providers for the legacy google-only env", () => {
     expect(parseEnabledAuthProviders("google")).toEqual(["kakao", "naver", "google"]);
+  });
+
+  it("normalizes Supabase custom OAuth provider ids into product provider ids", () => {
+    expect(normalizeAuthProviderId("custom:kakao")).toBe("kakao");
+    expect(normalizeAuthProviderId("custom:naver")).toBe("naver");
+    expect(normalizeAuthProviderId("google")).toBe("google");
+    expect(normalizeAuthProviderId("custom:unknown")).toBeNull();
+    expect(normalizeAuthProviderId("toString")).toBeNull();
+    expect(normalizeAuthProviderId("__proto__")).toBeNull();
   });
 });
