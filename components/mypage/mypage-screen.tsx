@@ -2977,6 +2977,7 @@ function NicknameEditSheet({
 }
 
 function MyPageHelpSurface() {
+  const contactEmail = process.env.NEXT_PUBLIC_SERVICE_CONTACT_EMAIL?.trim();
   const faqs = [
     ["레시피북은 어떻게 정리되나요?", "내가 추가한 레시피, 저장한 레시피, 좋아요한 레시피는 자동으로 정리되고 커스텀 북은 직접 만들 수 있어요."],
     ["장보기 기록은 어디서 보나요?", "저장한 레시피 탭 하단의 장보기 기록에서 진행 중인 리스트와 완료된 리스트를 확인할 수 있어요."],
@@ -3004,7 +3005,13 @@ function MyPageHelpSurface() {
       </WebCard>
       <WebCard className="web-mypage-contact-card">
         <strong>문의하기</strong>
-        <p>support@homecook.local · 카카오톡 채널 @homecook</p>
+        {contactEmail ? (
+          <p>
+            <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
+          </p>
+        ) : (
+          <p>문의처는 정식 운영 정보 확정 후 공개됩니다.</p>
+        )}
       </WebCard>
     </div>
   );
