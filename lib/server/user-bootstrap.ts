@@ -1,5 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 
+import { normalizeAuthProviderId } from "@/lib/auth/providers";
 import { DEFAULT_PLANNER_COLUMN_NAMES } from "@/types/planner";
 
 interface QueryError {
@@ -172,9 +173,11 @@ function normalizeProfileImage(user: Pick<User, "user_metadata">) {
 function normalizeProvider(user: Pick<User, "app_metadata" | "user_metadata">) {
   const appMetadata = normalizeMetadata(user.app_metadata);
   const userMetadata = normalizeMetadata(user.user_metadata);
-  const provider = appMetadata.provider ?? userMetadata.provider;
+  const provider =
+    normalizeAuthProviderId(appMetadata.provider)
+    ?? normalizeAuthProviderId(userMetadata.provider);
 
-  if (provider === "kakao" || provider === "naver" || provider === "google") {
+  if (provider) {
     return provider;
   }
 

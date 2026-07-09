@@ -293,6 +293,21 @@ describe("user bootstrap", () => {
     expect(client.state.users[0]?.social_provider).toBe("google");
   });
 
+  it("stores Supabase custom OAuth provider ids as canonical social providers", async () => {
+    const client = createMemoryBootstrapClient({});
+
+    await ensurePublicUserRow(client as never, {
+      id: "user-1",
+      email: "cook@example.com",
+      app_metadata: { provider: "custom:naver" },
+      user_metadata: {
+        nickname: "집밥러",
+      },
+    });
+
+    expect(client.state.users[0]?.social_provider).toBe("naver");
+  });
+
   it("creates system recipe books and default planner columns once for completed users", async () => {
     const client = createMemoryBootstrapClient({
       users: [

@@ -3,6 +3,16 @@ import { cookies } from "next/headers";
 
 import { resolveNextPath } from "@/lib/auth/callback";
 import {
+  AUTH_PROVIDER_ATTEMPT_COOKIE,
+  clearAuthProviderAttemptCookie,
+  parseAuthProviderCookie,
+  setLastAuthProviderCookie,
+} from "@/lib/auth/provider-cookies";
+import {
+  normalizeAuthProviderId,
+  type AuthProviderId,
+} from "@/lib/auth/providers";
+import {
   parsePostAuthNextCookie,
   POST_AUTH_NEXT_COOKIE,
 } from "@/lib/auth/post-auth-next";
@@ -21,6 +31,32 @@ function getFailurePath(nextPath: string) {
 function buildFailureRedirectUrl(requestUrl: URL, nextPath: string) {
   const redirectUrl = new URL(getFailurePath(nextPath), requestUrl.origin);
   redirectUrl.searchParams.set("authError", "oauth_failed");
+
+  return redirectUrl;
+}
+
+function buildProviderMismatchRedirectUrl({
+  attemptedProvider,
+  expectedProvider,
+  nextPath,
+  requestUrl,
+}: {
+  attemptedProvider: AuthProviderId | null;
+  expectedProvider: AuthProviderId;
+  nextPath: string;
+  requestUrl: URL;
+}) {
+  const redirectUrl = new URL("/login", requestUrl.origin);
+  redirectUrl.searchParams.set("authError", "provider_mismatch");
+  redirectUrl.searchParams.set("expectedProvider", expectedProvider);
+
+  if (attemptedProvider) {
+    redirectUrl.searchParams.set("attemptedProvider", attemptedProvider);
+  }
+
+  if (nextPath !== "/") {
+    redirectUrl.searchParams.set("next", nextPath);
+  }
 
   return redirectUrl;
 }
@@ -45,6 +81,81 @@ function clearPostAuthNextCookie(response: NextResponse) {
   return response;
 }
 
+function clearAuthFlowCookies(response: NextResponse) {
+  clearPostAuthNextCookie(response);
+  clearAuthProviderAttemptCookie(response);
+
+  return response;
+}
+
+function rememberLastAuthProvider(
+  response: NextResponse,
+  provider: AuthProviderId | null,
+) {
+  if (provider) {
+    setLastAuthProviderCookie(response, provider);
+  }
+
+  return response;
+}
+
+interface ActiveUserProviderRow {
+  id: string;
+  social_provider: AuthProviderId;
+}
+
+interface ActiveUserProviderQuery {
+  eq(column: string, value: string): ActiveUserProviderQuery;
+  is(column: string, value: null): ActiveUserProviderQuery;
+  maybeSingle(): PromiseLike<{
+    data: ActiveUserProviderRow | null;
+    error: { message: string } | null;
+  }>;
+}
+
+interface ActiveUserProviderDbClient {
+  from(table: "users"): {
+    select(columns: string): ActiveUserProviderQuery;
+  };
+}
+
+async function findActiveUserProviderByEmail(
+  dbClient: ActiveUserProviderDbClient,
+  email: string,
+) {
+  const result = await dbClient
+    .from("users")
+    .select("id, social_provider")
+    .eq("email", email)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return result.data;
+}
+
+function resolveAttemptedProvider({
+  cookieProvider,
+  queryProvider,
+  userAppProvider,
+  userMetadataProvider,
+}: {
+  cookieProvider: string | undefined;
+  queryProvider: string | null;
+  userAppProvider: unknown;
+  userMetadataProvider: unknown;
+}) {
+  return (
+    normalizeAuthProviderId(queryProvider)
+    ?? parseAuthProviderCookie(cookieProvider)
+    ?? normalizeAuthProviderId(userAppProvider)
+    ?? normalizeAuthProviderId(userMetadataProvider)
+  );
+}
+
 async function recordAuthFailure(request: Request, errorCode: string) {
   await recordOperationalEventFromServiceRole({
     event_type: "auth_failure",
@@ -64,18 +175,19 @@ export async function GET(request: Request) {
   const cookieNextPath = parsePostAuthNextCookie(
     cookieStore.get(POST_AUTH_NEXT_COOKIE)?.value,
   );
+  const cookieAttemptedProvider = cookieStore.get(AUTH_PROVIDER_ATTEMPT_COOKIE)?.value;
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next") ?? cookieNextPath);
   const oauthError = requestUrl.searchParams.get("error");
 
   if (!code) {
     if (oauthError) {
       await recordAuthFailure(request, "OAUTH_PROVIDER_ERROR");
-      return clearPostAuthNextCookie(
+      return clearAuthFlowCookies(
         NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
       );
     }
 
-    return clearPostAuthNextCookie(
+    return clearAuthFlowCookies(
       NextResponse.redirect(new URL(nextPath, requestUrl.origin)),
     );
   }
@@ -87,7 +199,7 @@ export async function GET(request: Request) {
 
     if (error) {
       await recordAuthFailure(request, "OAUTH_EXCHANGE_FAILED");
-      return clearPostAuthNextCookie(
+      return clearAuthFlowCookies(
         NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
       );
     }
@@ -97,27 +209,67 @@ export async function GET(request: Request) {
 
     if (!user) {
       await recordAuthFailure(request, "OAUTH_USER_MISSING");
-      return clearPostAuthNextCookie(
+      return clearAuthFlowCookies(
         NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
       );
     }
 
-    const dbClient = (createServiceRoleClient() ?? supabase) as unknown as UserBootstrapDbClient;
+    const serviceRoleClient = createServiceRoleClient();
+    const dbClient = (serviceRoleClient ?? supabase) as unknown as UserBootstrapDbClient;
+    const attemptedProvider = resolveAttemptedProvider({
+      cookieProvider: cookieAttemptedProvider,
+      queryProvider: requestUrl.searchParams.get("attemptedProvider"),
+      userAppProvider: user.app_metadata?.provider,
+      userMetadataProvider: user.user_metadata?.provider,
+    });
+
+    if (user.email && serviceRoleClient) {
+      const existingUserProvider = await findActiveUserProviderByEmail(
+        serviceRoleClient as unknown as ActiveUserProviderDbClient,
+        user.email,
+      );
+
+      if (
+        existingUserProvider
+        && attemptedProvider
+        && existingUserProvider.social_provider !== attemptedProvider
+      ) {
+        await supabase.auth.signOut();
+
+        return clearAuthFlowCookies(
+          NextResponse.redirect(
+            buildProviderMismatchRedirectUrl({
+              attemptedProvider,
+              expectedProvider: existingUserProvider.social_provider,
+              nextPath,
+              requestUrl,
+            }),
+          ),
+        );
+      }
+    }
+
     const userRow = await ensurePublicUserRow(dbClient, user);
     await ensureUserBootstrapState(dbClient, user.id);
 
     if (shouldCollectNickname(userRow)) {
-      return clearPostAuthNextCookie(
-        NextResponse.redirect(
-          buildNicknameOnboardingRedirectUrl(requestUrl, nextPath),
+      return rememberLastAuthProvider(
+        clearAuthFlowCookies(
+          NextResponse.redirect(
+            buildNicknameOnboardingRedirectUrl(requestUrl, nextPath),
+          ),
         ),
+        attemptedProvider,
       );
     }
 
-    return clearPostAuthNextCookie(NextResponse.redirect(redirectUrl));
+    return rememberLastAuthProvider(
+      clearAuthFlowCookies(NextResponse.redirect(redirectUrl)),
+      attemptedProvider,
+    );
   } catch {
     await recordAuthFailure(request, "OAUTH_CALLBACK_UNHANDLED");
-    return clearPostAuthNextCookie(
+    return clearAuthFlowCookies(
       NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
     );
   }

@@ -3,14 +3,17 @@ import type { Provider } from "@supabase/supabase-js";
 export const AUTH_PROVIDER_META = {
   kakao: {
     label: "카카오로 시작하기",
+    displayName: "카카오",
     className: "bg-[#FEE500] text-[#181600]",
   },
   naver: {
     label: "네이버로 시작하기",
+    displayName: "네이버",
     className: "bg-[#03C75A] text-white",
   },
   google: {
     label: "Google로 시작하기",
+    displayName: "Google",
     className: "border border-black/10 bg-white text-[#2c2c2c]",
   },
 } as const;
@@ -24,6 +27,10 @@ const DEFAULT_KAKAO_SUPABASE_PROVIDER: Extract<Provider, `custom:${string}`> =
 const DEFAULT_NAVER_SUPABASE_PROVIDER: Extract<Provider, `custom:${string}`> =
   "custom:naver";
 
+function isAuthProviderId(value: string): value is AuthProviderId {
+  return Object.prototype.hasOwnProperty.call(AUTH_PROVIDER_META, value);
+}
+
 export function parseEnabledAuthProviders(raw?: string | null) {
   if (!raw) {
     return DEFAULT_PROVIDERS;
@@ -36,7 +43,7 @@ export function parseEnabledAuthProviders(raw?: string | null) {
   const providers = raw
     .split(",")
     .map((value) => value.trim().toLowerCase())
-    .filter((value): value is AuthProviderId => value in AUTH_PROVIDER_META);
+    .filter(isAuthProviderId);
 
   return providers.length ? providers : DEFAULT_PROVIDERS;
 }
@@ -57,6 +64,27 @@ export function getSupabaseAuthProvider(provider: AuthProviderId): Provider {
   }
 
   return provider;
+}
+
+export function normalizeAuthProviderId(value: unknown): AuthProviderId | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  const provider = normalized.startsWith("custom:")
+    ? normalized.slice("custom:".length)
+    : normalized;
+
+  if (isAuthProviderId(provider)) {
+    return provider;
+  }
+
+  return null;
+}
+
+export function getAuthProviderDisplayName(provider: AuthProviderId) {
+  return AUTH_PROVIDER_META[provider].displayName;
 }
 
 function getKakaoSupabaseProvider() {

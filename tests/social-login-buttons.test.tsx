@@ -52,6 +52,7 @@ describe("social login buttons", () => {
     isQaFixtureClientModeEnabled.mockReset();
     window.localStorage.clear();
     document.cookie = "homecook-post-auth-next=; Path=/; Max-Age=0";
+    document.cookie = "homecook-auth-provider-attempt=; Path=/; Max-Age=0";
     isLocalDevAuthEnabled.mockReturnValue(false);
     isLocalGoogleOAuthEnabled.mockReturnValue(false);
     isQaFixtureClientModeEnabled.mockReturnValue(false);
@@ -97,7 +98,7 @@ describe("social login buttons", () => {
     );
   });
 
-  it("keeps the OAuth callback URL simple and stores the sanitized return path in a cookie", async () => {
+  it("passes the attempted provider to the OAuth callback and stores the sanitized return path in a cookie", async () => {
     hasSupabasePublicEnv.mockReturnValue(true);
     signInWithOAuth.mockResolvedValue({ error: null });
 
@@ -112,10 +113,32 @@ describe("social login buttons", () => {
     const redirectTo = signInWithOAuth.mock.calls[0][0].options.redirectTo;
     const callbackUrl = new URL(redirectTo);
     expect(callbackUrl.pathname).toBe("/auth/callback");
+    expect(callbackUrl.searchParams.get("attemptedProvider")).toBe("google");
     expect(callbackUrl.searchParams.get("next")).toBeNull();
     expect(document.cookie).toContain(
       "homecook-post-auth-next=%2Fplanner%3Fdate%3D2026-06-17",
     );
+    expect(document.cookie).toContain("homecook-auth-provider-attempt=google");
+  });
+
+  it("prioritizes and relabels the expected provider after a mismatch", () => {
+    render(<SocialLoginButtons expectedProvider="google" nextPath="/" />);
+
+    const buttonNames = screen.getAllByRole("button").map((button) => button.textContent);
+    expect(buttonNames[0]).toContain("Google로 계속하기");
+    expect(
+      screen
+        .getByRole("button", { name: "Google로 계속하기" })
+        .getAttribute("data-provider-highlighted"),
+    ).toBe("true");
+  });
+
+  it("shows the last successful provider stored for this browser", () => {
+    render(<SocialLoginButtons lastProvider="naver" nextPath="/" />);
+
+    expect(
+      screen.getByText("이 브라우저에서는 마지막으로 네이버로 로그인했어요."),
+    ).toBeTruthy();
   });
 
   it("starts Kakao login through the Supabase custom OAuth provider", async () => {
@@ -138,7 +161,7 @@ describe("social login buttons", () => {
       expect(signInWithOAuth.mock.calls[0][0]).toMatchObject({
         provider: "custom:kakao",
         options: {
-          redirectTo: "http://localhost:3000/auth/callback",
+          redirectTo: "http://localhost:3000/auth/callback?attemptedProvider=kakao",
         },
       });
     } finally {
@@ -176,7 +199,7 @@ describe("social login buttons", () => {
       expect(signInWithOAuth.mock.calls[0][0]).toMatchObject({
         provider: "custom:naver",
         options: {
-          redirectTo: "http://localhost:3000/auth/callback",
+          redirectTo: "http://localhost:3000/auth/callback?attemptedProvider=naver",
         },
       });
     } finally {

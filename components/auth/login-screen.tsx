@@ -8,12 +8,19 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SocialLoginButtonsDeferred } from "@/components/auth/social-login-buttons-deferred";
 import { ContentState } from "@/components/shared/content-state";
 import { useViewMode } from "@/components/shared/use-view-mode";
+import {
+  getAuthProviderDisplayName,
+  type AuthProviderId,
+} from "@/lib/auth/providers";
 import { sanitizeInternalPath } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 
 interface LoginScreenProps {
+  attemptedProvider?: AuthProviderId | null;
   authError?: string | null;
+  expectedProvider?: AuthProviderId | null;
+  lastProvider?: AuthProviderId | null;
   nextPath?: string;
 }
 
@@ -50,13 +57,20 @@ function resolveGateContext(nextPath: string) {
 }
 
 export function LoginScreen({
+  attemptedProvider = null,
   authError,
+  expectedProvider = null,
+  lastProvider = null,
   nextPath = "/",
 }: LoginScreenProps) {
   const showAuthError = authError === "oauth_failed";
+  const showProviderMismatch = authError === "provider_mismatch";
   const safeNextPath = sanitizeInternalPath(nextPath, "/");
   const viewMode = useViewMode();
   const gateContext = resolveGateContext(safeNextPath);
+  const expectedProviderName = expectedProvider
+    ? getAuthProviderDisplayName(expectedProvider)
+    : null;
 
   useEffect(() => {
     if (!hasSupabasePublicEnv()) {
@@ -112,8 +126,24 @@ export function LoginScreen({
             로그인에 실패했어요. 다시 시도해 주세요.
           </div>
         ) : null}
+        {showProviderMismatch ? (
+          <div
+            className="rounded-[var(--radius-card)] border border-[var(--brand-border)] bg-[var(--brand-soft)] px-4 py-3 text-[13px] font-semibold text-[var(--brand-contrast)]"
+            data-testid="login-provider-mismatch"
+            role="alert"
+          >
+            {expectedProviderName
+              ? `이 계정은 ${expectedProviderName}로 가입되어 있어요. ${expectedProviderName}로 로그인해 주세요.`
+              : "이 계정은 다른 로그인 수단으로 가입되어 있어요. 처음 가입했던 수단으로 로그인해 주세요."}
+          </div>
+        ) : null}
         <div data-testid="login-brand-mark">
-          <SocialLoginButtonsDeferred nextPath={safeNextPath} />
+          <SocialLoginButtonsDeferred
+            attemptedProvider={attemptedProvider}
+            expectedProvider={expectedProvider}
+            lastProvider={lastProvider}
+            nextPath={safeNextPath}
+          />
         </div>
         <Link
           className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
