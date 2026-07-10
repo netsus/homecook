@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { GrowthToastStack } from "@/components/gamification/growth-toast-stack";
+import { ProviderMemorySync } from "@/components/auth/provider-memory-sync";
 import { QaFixtureToolbar } from "@/components/layout/qa-fixture-toolbar";
 import { getPublicSiteOrigin } from "@/lib/legal-info";
 import "./globals.css";
@@ -42,6 +43,7 @@ export default function RootLayout({
     <html lang="ko">
       <body>
         {children}
+        <ProviderMemorySync />
         <GrowthToastStack
           initialAuthenticated={false}
           resolveAuthenticatedOnClient

@@ -121,24 +121,22 @@ describe("social login buttons", () => {
     expect(document.cookie).toContain("homecook-auth-provider-attempt=google");
   });
 
-  it("prioritizes and relabels the expected provider after a mismatch", () => {
-    render(<SocialLoginButtons expectedProvider="google" nextPath="/" />);
-
-    const buttonNames = screen.getAllByRole("button").map((button) => button.textContent);
-    expect(buttonNames[0]).toContain("Google로 계속하기");
-    expect(
-      screen
-        .getByRole("button", { name: "Google로 계속하기" })
-        .getAttribute("data-provider-highlighted"),
-    ).toBe("true");
+  it("highlights the recent provider as advisory", () => {
+    render(<SocialLoginButtons lastProvider="naver" nextPath="/" />);
+    expect(screen.getByText("최근 이 브라우저에서 네이버로 로그인했어요.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "네이버로 시작하기" }).dataset.providerHighlighted).toBe("true");
   });
 
-  it("shows the last successful provider stored for this browser", () => {
-    render(<SocialLoginButtons lastProvider="naver" nextPath="/" />);
-
-    expect(
-      screen.getByText("이 브라우저에서는 마지막으로 네이버로 로그인했어요."),
-    ).toBeTruthy();
+  it("opens confirmation before a different provider and starts no OAuth on cancel", async () => {
+    hasSupabasePublicEnv.mockReturnValue(true);
+    render(<SocialLoginButtons lastProvider="google" nextPath="/" />);
+    const naver = screen.getByRole("button", { name: "네이버로 시작하기" });
+    await userEvent.click(naver);
+    expect(signInWithOAuth).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "다른 로그인 방법으로 계속할까요?" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    expect(signInWithOAuth).not.toHaveBeenCalled();
+    await waitFor(() => expect(document.activeElement).toBe(naver));
   });
 
   it("starts Kakao login through the Supabase built-in provider", async () => {
