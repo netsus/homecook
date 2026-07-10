@@ -13,6 +13,25 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 
+## Social Auth Provider Memory And Identity Linking Addendum `2026-07-10`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.11 | Google/Naver/Kakao 이메일 필수, provider memory advisory 정책, same-email/same-user 연결 허용과 different-user 자동 merge 금지, 수동 provider 연결 추가 |
+| 화면정의서 v1.5.18 | LOGIN 최근 provider 강조/다른 provider 확인창/email-required·account-conflict 상태, MYPAGE 연결 provider 상태/연결 액션 추가 |
+| 유저플로우 v1.3.18 | 일반 로그인 callback과 link callback 분리, 이메일 누락/same-user/different-user 분기, manual linking 흐름 추가 |
+| DB v1.3.16 | schema 변경 없이 `social_provider` 최초/primary 의미와 Supabase Auth identity truth, normalized email/user-id conflict guard, PII 비로그 정책 고정 |
+| API v1.2.20 | `/auth/callback`과 `/auth/link/callback` web route 계약, built-in Kakao 우선, Naver 표준 claim gate, 실제 provider 판정, provider memory 경계 추가. public API endpoint 수 변경 없음 |
+
+> 이 변경은 사용자가 승인한 `auth-provider-memory-linking` contract-evolution이다.
+> Kakao는 Supabase built-in `kakao`를 우선하고 기존 Kakao proxy는 custom compatibility fallback으로만 유지한다. Naver `custom:naver`는 기존 no-store `/api/auth/oauth-userinfo/naver`를 UserInfo URL로 사용하고 E3에서 `auth.users.email`과 안정적인 표준 `sub`를 함께 실측한다.
+> `public.users.email`은 이번 slice에서 DB NOT NULL로 바꾸지 않지만 신규 social OAuth callback은 정규화된 비어 있지 않은 이메일을 필수로 한다.
+> 동일 이메일 자동 연결은 Supabase가 같은 auth user id로 identity를 해석한 경우에만 허용한다. 다른 user id는 자동 merge/delete하지 않는다.
+> `app_metadata.provider`는 최초 provider이므로 실제 마지막 로그인 provider의 단일 근거로 쓰지 않는다.
+> 연결 identity의 canonical truth는 Supabase Auth이며 `public.users.social_provider`는 최초/primary provider 의미를 유지한다.
+> `Allow users without an email`은 E1-E3 동안 ON, E4 직전 사용자 알림·확인 후 세 provider 모두 OFF, 이후 E5 production smoke를 수행한다.
+> 구현 Stage 2/4는 이 공식 계약과 workpack이 main에 merge된 후에만 시작한다.
+
 ## Pilot Recipe Step Multi-Method Addendum `2026-06-27`
 
 | 문서 | 변경 내용 |

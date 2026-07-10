@@ -1,0 +1,170 @@
+{
+  "slice_id": "auth-provider-memory-linking",
+  "execution_mode": "manual",
+  "risk_class": "critical",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /auth/callback",
+      "GET /auth/link/callback",
+      "GET /api/auth/oauth-userinfo/naver"
+    ],
+    "invariants": [
+      "google-naver-kakao-email-required",
+      "kakao-built-in-provider-preferred",
+      "custom-kakao-proxy-compatibility-only",
+      "naver-existing-no-store-userinfo-adapter-reused",
+      "naver-standard-sub-email-claims-live-verified",
+      "normalized-email-before-lookup",
+      "same-email-same-user-allowed",
+      "same-email-different-user-blocked-no-merge",
+      "app-metadata-provider-not-used-as-actual-provider-alone",
+      "verified-attempt-and-identity-sign-in-evidence-required",
+      "normal-and-link-callbacks-have-separate-boundaries",
+      "public-users-social-provider-remains-primary",
+      "auth-events-contain-no-pii-or-credentials"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/auth-callback.test.ts tests/auth-link-callback.test.ts tests/oauth-userinfo-proxy.test.ts tests/user-bootstrap.test.ts tests/auth-provider-resolution.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice auth-provider-memory-linking",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/auth-callback.test.ts",
+      "tests/auth-link-callback.test.ts",
+      "tests/oauth-userinfo-proxy.test.ts",
+      "tests/auth-provider-resolution.test.ts",
+      "tests/user-bootstrap.test.ts"
+    ],
+    "schema_changes": [],
+    "required_tables": [
+      "public.users",
+      "auth.users",
+      "auth.identities"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/login",
+      "/mypage",
+      "/settings"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized",
+      "recent-provider-advisory",
+      "different-provider-confirmation",
+      "email-required-safe-error",
+      "account-conflict-safe-error",
+      "connected-provider-list",
+      "manual-link-pending-success-cancel-conflict"
+    ],
+    "required_endpoints": [
+      "GET /auth/callback",
+      "GET /auth/link/callback",
+      "DELETE /api/v1/users/me"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/auth-provider-memory.test.ts tests/social-login-buttons.test.tsx tests/login-screen.test.tsx tests/linked-auth-providers.test.tsx tests/settings-account.test.tsx",
+      "pnpm exec playwright test tests/e2e/auth-provider-memory-linking.spec.ts",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
+      "pnpm qa:explore -- --slice auth-provider-memory-linking",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice auth-provider-memory-linking",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "login-current-state-before-mobile-390-320",
+      "mypage-current-state-before-mobile-390-320",
+      "recent-provider-mobile-390-320-desktop",
+      "provider-switch-dialog-mobile-390-320-desktop",
+      "safe-auth-errors-mobile-390-320",
+      "connected-providers-mobile-390-320-desktop",
+      "manual-link-pending-error-conflict-mobile-390-320",
+      "focus-restoration-and-44px-touch-targets"
+    ],
+    "touched_components": [
+      "app/login/page.tsx",
+      "components/auth/login-screen.tsx",
+      "components/auth/social-login-buttons.tsx",
+      "components/mypage/mypage-screen.tsx",
+      "components/mypage/mypage-mobile-screen.tsx",
+      "components/settings/settings-screen.tsx",
+      "components/settings/settings-mobile-screen.tsx"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "AUTH_PROVIDER_MEMORY_LINKING"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/AUTH_PROVIDER_MEMORY_LINKING.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/AUTH_PROVIDER_MEMORY_LINKING-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "login-before-mobile-390",
+        "login-before-mobile-320",
+        "mypage-before-mobile-390",
+        "mypage-before-mobile-320",
+        "recent-provider-mobile-390",
+        "recent-provider-mobile-320",
+        "provider-dialog-mobile-390",
+        "provider-dialog-mobile-320",
+        "safe-auth-errors-mobile-390",
+        "safe-auth-errors-mobile-320",
+        "connected-providers-mobile-390",
+        "connected-providers-mobile-320",
+        "login-desktop-1440",
+        "mypage-desktop-1440"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/auth-provider-memory-linking/"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/AUTH_PROVIDER_MEMORY_LINKING-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "manual:e1-provider-config-built-in-kakao-naver-adapter-manual-linking",
+    "manual:e3-email-present-and-naver-sub-while-allow-email-less-on",
+    "manual:e3-email-less-qa-cleanup-zero-audit",
+    "manual:e4-user-notification-before-three-provider-toggle-off",
+    "manual:e5-three-provider-and-same-user-linking-after-toggle-off",
+    "manual:e5-auth-event-no-pii-audit"
+  ],
+  "blocked_conditions": [
+    "implementation-started-before-contract-workpack-merge",
+    "custom-kakao-kept-as-final-default-without-approved-blocker",
+    "naver-custom-provider-not-using-existing-userinfo-adapter",
+    "naver-sub-missing-unstable-or-colliding",
+    "any-provider-auth-users-email-empty",
+    "app-metadata-provider-used-alone-for-last-provider",
+    "provider-mismatch-or-expected-provider-exposed",
+    "same-email-different-user-bootstrapped-or-merged",
+    "link-callback-creates-or-updates-public-user",
+    "provider-memory-written-on-click-failure-or-link",
+    "auth-log-contains-email-token-code-user-id-provider-payload",
+    "allow-users-without-email-disabled-before-e4-notification",
+    "current-head-ci-not-green"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "id": "auth-provider-memory-linking",
+  "title": "Social auth provider memory and identity linking",
+  "summary": "Google/Naver/Kakao email enforcement, recent-provider advisory UX, safe same-user identity linking, different-user conflict protection, and authenticated manual provider linking.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "critical",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 provider를 기억하고 안전하게 전환하며, verified same-email identity를 동일 Supabase/app user에만 연결하고 다른 user 계정을 자동 병합하지 않게 한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; user discontinued Claude and approved Codex docs-owner replacement",
+    "codex": "stage1 docs owner in this session; backend, frontend, review, authority, and closeout must use role-separated Codex sessions",
+    "workers": []
+  },
+  "dependencies": [
+    "01-discovery-detail-auth",
+    "17a-mypage-overview-history",
+    "17c-settings-account",
+    ".omx/plans/social-auth-provider-memory-linking.md"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.11.md",
+      "docs/화면정의서-v1.5.18.md",
+      "docs/유저flow맵-v1.3.18.md",
+      "docs/db설계-v1.3.16.md",
+      "docs/api문서-v1.2.20.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/auth-provider-memory-linking/README.md",
+      "docs/workpacks/auth-provider-memory-linking/acceptance.md",
+      "docs/workpacks/auth-provider-memory-linking/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "ui/designs/AUTH_PROVIDER_MEMORY_LINKING.md",
+      "ui/designs/critiques/AUTH_PROVIDER_MEMORY_LINKING-critique.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:e1-provider-config-built-in-kakao-naver-adapter-manual-linking",
+      "manual:e3-email-present-and-naver-sub-while-allow-email-less-on",
+      "manual:e3-email-less-qa-cleanup-zero-audit",
+      "manual:e4-user-notification-before-three-provider-toggle-off",
+      "manual:e5-three-provider-and-same-user-linking-after-toggle-off",
+      "manual:e5-auth-event-no-pii-audit"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice auth-provider-memory-linking",
+      "node scripts/validate-automation-spec.mjs --slice auth-provider-memory-linking",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice auth-provider-memory-linking",
+      "node scripts/validate-automation-spec.mjs --slice auth-provider-memory-linking",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "canonical-five-contract-addendum-synced",
+      "normal-and-link-callback-boundaries-explicit",
+      "same-email-same-user-and-different-user-table-explicit",
+      "built-in-kakao-and-existing-naver-adapter-gates-explicit",
+      "actual-provider-resolution-does-not-trust-app-metadata-provider-alone",
+      "provider-memory-lifecycle-explicit",
+      "pii-non-logging-explicit",
+      "e1-e5-toggle-gate-explicit",
+      "high-risk-login-mypage-design-authority-plan-present"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Duplicate Supabase user merge",
+    "Identity unlink",
+    "Primary provider change",
+    "Cross-device provider memory sync",
+    "public.users.email NOT NULL migration",
+    "New Naver proxy implementation",
+    "Raw OAuth token or provider profile persistence"
+  ],
+  "open_questions": [],
+  "notes": "User explicitly approved this Codex session as Stage 1 docs owner after discontinuing Claude. Kakao final default is Supabase built-in kakao. custom:naver reuses the existing no-store /api/auth/oauth-userinfo/naver adapter and E3 must measure auth.users.email plus stable/distinct identity sub. Implementation and final review remain separate Codex sessions."
+}
