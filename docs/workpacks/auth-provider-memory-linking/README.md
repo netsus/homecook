@@ -142,7 +142,7 @@
 
 ## Design Status
 
-`pending-review` — Stage 4 구현·evidence·authority precheck 완료. public review와 독립 final authority gate 통과 전이며 `confirmed`가 아니다.
+`pending-review` — Stage 4 구현·evidence와 public Stage 5 디자인 리뷰 완료. 독립 final authority gate 통과 전이며 `confirmed`가 아니다.
 
 ## Source Links
 

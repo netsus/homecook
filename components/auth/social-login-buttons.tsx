@@ -207,12 +207,12 @@ export function SocialLoginButtons({
         </p>
       ) : null}
       {switchTarget && recentProvider ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDialog(); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-40)] p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDialog(); }}>
           <div aria-labelledby="provider-switch-title" aria-modal="true" className="w-full max-w-sm rounded-[var(--radius-card)] bg-[var(--surface)] p-5 text-left shadow-2xl" ref={dialogRef} role="dialog">
             <h2 className="text-lg font-extrabold" id="provider-switch-title">다른 로그인 방법으로 계속할까요?</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--muted)]">이 브라우저에서는 최근 {getAuthProviderDisplayName(recentProvider)}를 사용했어요. 선택한 방법으로 다른 계정에 로그인할 수도 있어요.</p>
             <div className="mt-5 space-y-2">
-              <button className="min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand)] px-4 font-bold text-white" onClick={() => { setSwitchTarget(null); handleSignIn(recentProvider); }} type="button">{getAuthProviderDisplayName(recentProvider)}로 로그인</button>
+              <button className="min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand)] px-4 font-bold text-[var(--text-inverse)]" onClick={() => { setSwitchTarget(null); handleSignIn(recentProvider); }} type="button">{getAuthProviderDisplayName(recentProvider)}로 로그인</button>
               <button className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" onClick={() => { const target = switchTarget; setSwitchTarget(null); handleSignIn(target); }} type="button">{getAuthProviderDisplayName(switchTarget)}의 다른 계정으로 계속</button>
               <button className="min-h-11 w-full px-4 font-semibold text-[var(--muted)]" onClick={closeDialog} type="button">취소</button>
             </div>
