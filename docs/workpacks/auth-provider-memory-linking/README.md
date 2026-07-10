@@ -230,15 +230,15 @@
 
 ## Delivery Checklist
 
-- [ ] Kakao built-in 우선/Naver standard claim provider config를 고정한다 <!-- omo:id=delivery-provider-config;stage=2;scope=backend;review=3,6 -->
-- [ ] normal callback email/user-id decision table을 구현한다 <!-- omo:id=delivery-normal-callback;stage=2;scope=backend;review=3,6 -->
-- [ ] actual provider를 verified attempt + identity evidence로 판정한다 <!-- omo:id=delivery-provider-resolution;stage=2;scope=backend;review=3,6 -->
-- [ ] dedicated manual link callback 경계를 구현한다 <!-- omo:id=delivery-link-callback;stage=2;scope=backend;review=3,6 -->
-- [ ] PII-safe auth/link event를 구현한다 <!-- omo:id=delivery-auth-observability;stage=2;scope=backend;review=3,6 -->
+- [x] Kakao built-in 우선/Naver standard claim provider config를 고정한다 <!-- omo:id=delivery-provider-config;stage=2;scope=backend;review=3,6 -->
+- [x] normal callback email/user-id decision table을 구현한다 <!-- omo:id=delivery-normal-callback;stage=2;scope=backend;review=3,6 -->
+- [x] actual provider를 verified attempt + identity evidence로 판정한다 <!-- omo:id=delivery-provider-resolution;stage=2;scope=backend;review=3,6 -->
+- [x] dedicated manual link callback 경계를 구현한다 <!-- omo:id=delivery-link-callback;stage=2;scope=backend;review=3,6 -->
+- [x] PII-safe auth/link event를 구현한다 <!-- omo:id=delivery-auth-observability;stage=2;scope=backend;review=3,6 -->
 - [ ] provider memory localStorage/cookie lifecycle을 구현한다 <!-- omo:id=delivery-provider-memory;stage=4;scope=shared;review=6 -->
 - [ ] recent provider UI와 provider-switch dialog를 연결한다 <!-- omo:id=delivery-provider-dialog;stage=4;scope=frontend;review=5,6 -->
 - [ ] MYPAGE connected provider/read-only/manual link UI를 연결한다 <!-- omo:id=delivery-link-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] account deletion memory cleanup을 연결한다 <!-- omo:id=delivery-deletion-memory-clear;stage=4;scope=frontend;review=6 -->
-- [ ] fixture와 real OAuth E3/E5 smoke 경로를 분리한다 <!-- omo:id=delivery-auth-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real OAuth E3/E5 smoke 경로를 분리한다 <!-- omo:id=delivery-auth-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [ ] LOGIN/MYPAGE 390px·320px·desktop evidence와 authority report를 확보한다 <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] deterministic tests와 Playwright/live OAuth automation split을 닫는다 <!-- omo:id=delivery-test-split;stage=4;scope=shared;review=6 -->

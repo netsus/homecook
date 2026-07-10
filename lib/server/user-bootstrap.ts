@@ -163,6 +163,15 @@ function normalizeNickname(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function normalizeUserEmail(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
 function normalizeProfileImage(user: Pick<User, "user_metadata">) {
   const metadata = normalizeMetadata(user.user_metadata);
   const image = metadata.avatar_url ?? metadata.picture;
@@ -305,7 +314,7 @@ export async function ensurePublicUserRow(
     .insert({
       id: user.id,
       nickname: normalizeNickname(normalizeMetadata(user.user_metadata).nickname),
-      email: user.email ?? null,
+      email: normalizeUserEmail(user.email),
       profile_image_url: normalizeProfileImage(user),
       social_provider: normalizeProvider(user),
       social_id: normalizeSocialId(user),

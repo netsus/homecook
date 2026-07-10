@@ -141,7 +141,7 @@ describe("social login buttons", () => {
     ).toBeTruthy();
   });
 
-  it("starts Kakao login through the Supabase custom OAuth provider", async () => {
+  it("starts Kakao login through the Supabase built-in provider", async () => {
     const originalProviders = process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS;
     const originalKakaoProvider = process.env.NEXT_PUBLIC_KAKAO_SUPABASE_PROVIDER;
     process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS = "kakao";
@@ -159,7 +159,7 @@ describe("social login buttons", () => {
         expect(signInWithOAuth).toHaveBeenCalledTimes(1);
       });
       expect(signInWithOAuth.mock.calls[0][0]).toMatchObject({
-        provider: "custom:kakao",
+        provider: "kakao",
         options: {
           redirectTo: "http://localhost:3000/auth/callback?attemptedProvider=kakao",
         },

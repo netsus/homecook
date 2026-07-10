@@ -1838,8 +1838,8 @@
     {
       "id": "auth-provider-memory-linking",
       "preset": "vertical-slice-strict",
-      "branch": "docs/auth-provider-memory-linking",
-      "lifecycle": "planned",
+      "branch": "feature/be-auth-provider-memory-linking",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [

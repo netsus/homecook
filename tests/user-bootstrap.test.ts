@@ -4,6 +4,7 @@ import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+  normalizeUserEmail,
   USER_BOOTSTRAP_VERSION,
 } from "@/lib/server/user-bootstrap";
 
@@ -291,6 +292,25 @@ describe("user bootstrap", () => {
     expect(row.nickname).toBe("집밥러");
     expect(client.state.users).toHaveLength(1);
     expect(client.state.users[0]?.social_provider).toBe("google");
+  });
+
+  it("normalizes email before persisting a public user row", async () => {
+    const client = createMemoryBootstrapClient({});
+
+    await ensurePublicUserRow(client as never, {
+      id: "user-1",
+      email: "  Cook@Example.COM  ",
+      app_metadata: { provider: "google" },
+      user_metadata: {},
+    });
+
+    expect(client.state.users[0]?.email).toBe("cook@example.com");
+  });
+
+  it("normalizes email consistently for lookup boundaries", () => {
+    expect(normalizeUserEmail("  Cook@Example.COM  ")).toBe("cook@example.com");
+    expect(normalizeUserEmail("   ")).toBeNull();
+    expect(normalizeUserEmail(null)).toBeNull();
   });
 
   it("stores Supabase custom OAuth provider ids as canonical social providers", async () => {

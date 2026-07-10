@@ -1,60 +1,73 @@
-import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
 import { resolveNextPath } from "@/lib/auth/callback";
 import {
   AUTH_PROVIDER_ATTEMPT_COOKIE,
   clearAuthProviderAttemptCookie,
-  parseAuthProviderCookie,
   setLastAuthProviderCookie,
 } from "@/lib/auth/provider-cookies";
 import {
-  normalizeAuthProviderId,
-  type AuthProviderId,
-} from "@/lib/auth/providers";
+  hasExplicitlyInvalidEmailEvidence,
+  hasVerifiedEmailEvidence,
+  resolveActualAuthProvider,
+} from "@/lib/auth/provider-resolution";
+import { expireSupabaseAuthCookies } from "@/lib/auth/session-cookies";
 import {
   parsePostAuthNextCookie,
   POST_AUTH_NEXT_COOKIE,
 } from "@/lib/auth/post-auth-next";
+import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
+  normalizeUserEmail,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+
+type AuthFailureCode =
+  | "email_required"
+  | "account_conflict"
+  | "oauth_failed"
+  | "provider_resolution_failed";
+
+interface ActiveUserRow {
+  id: string;
+  social_provider: "google" | "naver" | "kakao";
+}
+
+interface ActiveUserQuery {
+  eq(column: string, value: string): ActiveUserQuery;
+  is(column: string, value: null): ActiveUserQuery;
+  maybeSingle(): PromiseLike<{
+    data: ActiveUserRow | null;
+    error: { message: string } | null;
+  }>;
+}
+
+interface ActiveUserDbClient {
+  from(table: "users"): { select(columns: string): ActiveUserQuery };
+}
 
 function getFailurePath(nextPath: string) {
   return nextPath === "/" ? "/login" : nextPath;
 }
 
-function buildFailureRedirectUrl(requestUrl: URL, nextPath: string) {
-  const redirectUrl = new URL(getFailurePath(nextPath), requestUrl.origin);
-  redirectUrl.searchParams.set("authError", "oauth_failed");
+function buildFailureRedirectUrl(
+  requestUrl: URL,
+  nextPath: string,
+  code: AuthFailureCode,
+) {
+  const pathname = code === "account_conflict"
+    || code === "provider_resolution_failed"
+    || code === "email_required"
+    ? "/login"
+    : getFailurePath(nextPath);
+  const redirectUrl = new URL(pathname, requestUrl.origin);
+  redirectUrl.searchParams.set("authError", code);
 
-  return redirectUrl;
-}
-
-function buildProviderMismatchRedirectUrl({
-  attemptedProvider,
-  expectedProvider,
-  nextPath,
-  requestUrl,
-}: {
-  attemptedProvider: AuthProviderId | null;
-  expectedProvider: AuthProviderId;
-  nextPath: string;
-  requestUrl: URL;
-}) {
-  const redirectUrl = new URL("/login", requestUrl.origin);
-  redirectUrl.searchParams.set("authError", "provider_mismatch");
-  redirectUrl.searchParams.set("expectedProvider", expectedProvider);
-
-  if (attemptedProvider) {
-    redirectUrl.searchParams.set("attemptedProvider", attemptedProvider);
-  }
-
-  if (nextPath !== "/") {
+  if (pathname === "/login" && nextPath !== "/") {
     redirectUrl.searchParams.set("next", nextPath);
   }
 
@@ -64,7 +77,6 @@ function buildProviderMismatchRedirectUrl({
 function buildNicknameOnboardingRedirectUrl(requestUrl: URL, nextPath: string) {
   const redirectUrl = new URL("/onboarding/nickname", requestUrl.origin);
   redirectUrl.searchParams.set("next", nextPath);
-
   return redirectUrl;
 }
 
@@ -72,57 +84,28 @@ function shouldCollectNickname(userRow: { nickname?: unknown }) {
   return typeof userRow.nickname === "string" && userRow.nickname.trim().length === 0;
 }
 
-function clearPostAuthNextCookie(response: NextResponse) {
-  response.cookies.set(POST_AUTH_NEXT_COOKIE, "", {
-    maxAge: 0,
-    path: "/",
-  });
-
-  return response;
-}
-
 function clearAuthFlowCookies(response: NextResponse) {
-  clearPostAuthNextCookie(response);
+  response.cookies.set(POST_AUTH_NEXT_COOKIE, "", { maxAge: 0, path: "/" });
   clearAuthProviderAttemptCookie(response);
-
   return response;
 }
 
-function rememberLastAuthProvider(
+async function clearPartialSession(
+  supabase: { auth: { signOut(): PromiseLike<unknown> } },
   response: NextResponse,
-  provider: AuthProviderId | null,
+  request: Request,
+  cookieStore: { getAll(): Array<{ name: string }> },
 ) {
-  if (provider) {
-    setLastAuthProviderCookie(response, provider);
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    // The response still expires every incoming Supabase auth cookie below.
   }
 
-  return response;
+  return expireSupabaseAuthCookies(response, request, cookieStore);
 }
 
-interface ActiveUserProviderRow {
-  id: string;
-  social_provider: AuthProviderId;
-}
-
-interface ActiveUserProviderQuery {
-  eq(column: string, value: string): ActiveUserProviderQuery;
-  is(column: string, value: null): ActiveUserProviderQuery;
-  maybeSingle(): PromiseLike<{
-    data: ActiveUserProviderRow | null;
-    error: { message: string } | null;
-  }>;
-}
-
-interface ActiveUserProviderDbClient {
-  from(table: "users"): {
-    select(columns: string): ActiveUserProviderQuery;
-  };
-}
-
-async function findActiveUserProviderByEmail(
-  dbClient: ActiveUserProviderDbClient,
-  email: string,
-) {
+async function findActiveUserByEmail(dbClient: ActiveUserDbClient, email: string) {
   const result = await dbClient
     .from("users")
     .select("id, social_provider")
@@ -137,25 +120,6 @@ async function findActiveUserProviderByEmail(
   return result.data;
 }
 
-function resolveAttemptedProvider({
-  cookieProvider,
-  queryProvider,
-  userAppProvider,
-  userMetadataProvider,
-}: {
-  cookieProvider: string | undefined;
-  queryProvider: string | null;
-  userAppProvider: unknown;
-  userMetadataProvider: unknown;
-}) {
-  return (
-    normalizeAuthProviderId(queryProvider)
-    ?? parseAuthProviderCookie(cookieProvider)
-    ?? normalizeAuthProviderId(userAppProvider)
-    ?? normalizeAuthProviderId(userMetadataProvider)
-  );
-}
-
 async function recordAuthFailure(request: Request, errorCode: string) {
   await recordOperationalEventFromServiceRole({
     event_type: "auth_failure",
@@ -164,27 +128,26 @@ async function recordAuthFailure(request: Request, errorCode: string) {
     request,
     http_status: 401,
     error_code: errorCode,
-    message_summary: "OAuth callback authentication failed",
+    message_summary: "OAuth callback failed",
   });
 }
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get("code");
   const cookieStore = await cookies();
-  const cookieNextPath = parsePostAuthNextCookie(
-    cookieStore.get(POST_AUTH_NEXT_COOKIE)?.value,
+  const nextPath = resolveNextPath(
+    requestUrl.searchParams.get("next")
+      ?? parsePostAuthNextCookie(cookieStore.get(POST_AUTH_NEXT_COOKIE)?.value),
   );
-  const cookieAttemptedProvider = cookieStore.get(AUTH_PROVIDER_ATTEMPT_COOKIE)?.value;
-  const nextPath = resolveNextPath(requestUrl.searchParams.get("next") ?? cookieNextPath);
-  const oauthError = requestUrl.searchParams.get("error");
+  const code = requestUrl.searchParams.get("code");
+  let supabase: Awaited<ReturnType<typeof createRouteHandlerClient>> | null = null;
 
   if (!code) {
-    if (oauthError) {
+    if (requestUrl.searchParams.get("error")) {
       await recordAuthFailure(request, "OAUTH_PROVIDER_ERROR");
-      return clearAuthFlowCookies(
-        NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
-      );
+      return clearAuthFlowCookies(NextResponse.redirect(
+        buildFailureRedirectUrl(requestUrl, nextPath, "oauth_failed"),
+      ));
     }
 
     return clearAuthFlowCookies(
@@ -193,84 +156,121 @@ export async function GET(request: Request) {
   }
 
   try {
-    const supabase = await createRouteHandlerClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    const redirectUrl = new URL(nextPath, requestUrl.origin);
-
-    if (error) {
+    supabase = await createRouteHandlerClient();
+    const exchangeResult = await supabase.auth.exchangeCodeForSession(code);
+    if (exchangeResult.error) {
       await recordAuthFailure(request, "OAUTH_EXCHANGE_FAILED");
-      return clearAuthFlowCookies(
-        NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
+      return clearPartialSession(
+        supabase,
+        clearAuthFlowCookies(NextResponse.redirect(
+          buildFailureRedirectUrl(requestUrl, nextPath, "oauth_failed"),
+        )),
+        request,
+        cookieStore,
       );
     }
 
     const authResult = await supabase.auth.getUser();
     const user = authResult.data.user;
-
-    if (!user) {
+    if (authResult.error || !user) {
       await recordAuthFailure(request, "OAUTH_USER_MISSING");
-      return clearAuthFlowCookies(
-        NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
+      return clearPartialSession(
+        supabase,
+        clearAuthFlowCookies(NextResponse.redirect(
+          buildFailureRedirectUrl(requestUrl, nextPath, "oauth_failed"),
+        )),
+        request,
+        cookieStore,
+      );
+    }
+
+    const actualProvider = resolveActualAuthProvider({
+      queryAttempt: requestUrl.searchParams.get("attemptedProvider"),
+      cookieAttempt: cookieStore.get(AUTH_PROVIDER_ATTEMPT_COOKIE)?.value,
+      identities: user.identities,
+    });
+    if (!actualProvider) {
+      await recordAuthFailure(request, "PROVIDER_RESOLUTION_FAILED");
+      return clearPartialSession(
+        supabase,
+        clearAuthFlowCookies(NextResponse.redirect(
+          buildFailureRedirectUrl(requestUrl, nextPath, "provider_resolution_failed"),
+        )),
+        request,
+        cookieStore,
+      );
+    }
+
+    const email = normalizeUserEmail(user.email);
+    if (
+      !email
+      || hasExplicitlyInvalidEmailEvidence(user.identities, actualProvider)
+      || !hasVerifiedEmailEvidence({
+        identities: user.identities,
+        provider: actualProvider,
+        userEmailConfirmedAt: user.email_confirmed_at,
+        userMetadata: user.user_metadata,
+      })
+    ) {
+      await recordAuthFailure(request, "EMAIL_REQUIRED");
+      return clearPartialSession(
+        supabase,
+        clearAuthFlowCookies(NextResponse.redirect(
+          buildFailureRedirectUrl(requestUrl, nextPath, "email_required"),
+        )),
+        request,
+        cookieStore,
       );
     }
 
     const serviceRoleClient = createServiceRoleClient();
-    const dbClient = (serviceRoleClient ?? supabase) as unknown as UserBootstrapDbClient;
-    const attemptedProvider = resolveAttemptedProvider({
-      cookieProvider: cookieAttemptedProvider,
-      queryProvider: requestUrl.searchParams.get("attemptedProvider"),
-      userAppProvider: user.app_metadata?.provider,
-      userMetadataProvider: user.user_metadata?.provider,
-    });
-
-    if (user.email && serviceRoleClient) {
-      const existingUserProvider = await findActiveUserProviderByEmail(
-        serviceRoleClient as unknown as ActiveUserProviderDbClient,
-        user.email,
+    if (!serviceRoleClient) {
+      await recordAuthFailure(request, "SERVICE_ROLE_UNAVAILABLE");
+      return clearPartialSession(
+        supabase,
+        clearAuthFlowCookies(NextResponse.redirect(
+          buildFailureRedirectUrl(requestUrl, nextPath, "oauth_failed"),
+        )),
+        request,
+        cookieStore,
       );
-
-      if (
-        existingUserProvider
-        && attemptedProvider
-        && existingUserProvider.social_provider !== attemptedProvider
-      ) {
-        await supabase.auth.signOut();
-
-        return clearAuthFlowCookies(
-          NextResponse.redirect(
-            buildProviderMismatchRedirectUrl({
-              attemptedProvider,
-              expectedProvider: existingUserProvider.social_provider,
-              nextPath,
-              requestUrl,
-            }),
-          ),
-        );
-      }
     }
 
-    const userRow = await ensurePublicUserRow(dbClient, user);
+    const existingUser = await findActiveUserByEmail(
+      serviceRoleClient as unknown as ActiveUserDbClient,
+      email,
+    );
+    if (existingUser && existingUser.id !== user.id) {
+      await recordAuthFailure(request, "ACCOUNT_CONFLICT");
+      return clearPartialSession(
+        supabase,
+        clearAuthFlowCookies(NextResponse.redirect(
+          buildFailureRedirectUrl(requestUrl, nextPath, "account_conflict"),
+        )),
+        request,
+        cookieStore,
+      );
+    }
+
+    const normalizedUser = { ...user, email };
+    const dbClient = serviceRoleClient as unknown as UserBootstrapDbClient;
+    const userRow = await ensurePublicUserRow(dbClient, normalizedUser);
     await ensureUserBootstrapState(dbClient, user.id);
 
-    if (shouldCollectNickname(userRow)) {
-      return rememberLastAuthProvider(
-        clearAuthFlowCookies(
-          NextResponse.redirect(
-            buildNicknameOnboardingRedirectUrl(requestUrl, nextPath),
-          ),
-        ),
-        attemptedProvider,
-      );
-    }
-
-    return rememberLastAuthProvider(
-      clearAuthFlowCookies(NextResponse.redirect(redirectUrl)),
-      attemptedProvider,
-    );
+    const redirectUrl = shouldCollectNickname(userRow)
+      ? buildNicknameOnboardingRedirectUrl(requestUrl, nextPath)
+      : new URL(nextPath, requestUrl.origin);
+    const response = clearAuthFlowCookies(NextResponse.redirect(redirectUrl));
+    setLastAuthProviderCookie(response, actualProvider);
+    return response;
   } catch {
     await recordAuthFailure(request, "OAUTH_CALLBACK_UNHANDLED");
-    return clearAuthFlowCookies(
-      NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
-    );
+    const response = clearAuthFlowCookies(NextResponse.redirect(
+      buildFailureRedirectUrl(requestUrl, nextPath, "oauth_failed"),
+    ));
+
+    return supabase
+      ? clearPartialSession(supabase, response, request, cookieStore)
+      : expireSupabaseAuthCookies(response, request, cookieStore);
   }
 }

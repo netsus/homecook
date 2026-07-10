@@ -89,7 +89,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "codex_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",

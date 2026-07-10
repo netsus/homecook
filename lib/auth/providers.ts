@@ -22,8 +22,7 @@ export type AuthProviderId = keyof typeof AUTH_PROVIDER_META;
 
 const DEFAULT_PROVIDERS: AuthProviderId[] = ["kakao", "naver", "google"];
 const LEGACY_GOOGLE_ONLY_PROVIDERS = "google";
-const DEFAULT_KAKAO_SUPABASE_PROVIDER: Extract<Provider, `custom:${string}`> =
-  "custom:kakao";
+const DEFAULT_KAKAO_SUPABASE_PROVIDER: Provider = "kakao";
 const DEFAULT_NAVER_SUPABASE_PROVIDER: Extract<Provider, `custom:${string}`> =
   "custom:naver";
 
