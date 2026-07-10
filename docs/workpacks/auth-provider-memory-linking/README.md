@@ -142,7 +142,7 @@
 
 ## Design Status
 
-`pending-review` — Stage 4 구현·evidence와 public Stage 5 디자인 리뷰 완료. 독립 final authority gate 통과 전이며 `confirmed`가 아니다.
+`confirmed` — PR #968 current head의 320/390/1440 evidence를 독립 final authority가 직접 판독하고 interaction·overflow·focus 증거를 재검증했다. actionable design finding 0건으로 Stage 5 최종 승인됐다.
 
 ## Source Links
 

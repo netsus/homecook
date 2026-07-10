@@ -19,6 +19,8 @@ export function LinkedAuthProviders() {
   const searchParams = useSearchParams();
   const result = searchParams.get("linkResult");
   const error = searchParams.get("linkError");
+  const linkSucceeded = result === "linked" || result === "already_linked";
+  const linkCancelled = error === "link_cancelled";
 
   useEffect(() => {
     if (isQaFixtureClientModeEnabled()) {
@@ -64,9 +66,9 @@ export function LinkedAuthProviders() {
     <section aria-label="연결된 로그인 방법" className="mt-4 border-t border-[var(--line)] pt-4">
       <h3 className="text-sm font-extrabold text-[var(--foreground)]">연결된 로그인 방법</h3>
       <p className="mt-1 text-xs leading-5 text-[var(--muted)]">로그인할 때 사용할 수 있는 방법이에요. 계정 소유 정보는 표시하지 않아요.</p>
-      {result === "success" ? <p role="status" className="mt-3 text-sm text-[var(--success)]">로그인 방법이 연결됐어요.</p> : null}
-      {result === "cancelled" ? <p role="status" className="mt-3 text-sm text-[var(--muted)]">연결을 취소했어요.</p> : null}
-      {error ? <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error === "link_conflict" ? "이 로그인 방법을 현재 계정에 연결하지 못했어요." : "연결에 실패했어요. 잠시 후 다시 연결해 주세요."}</p> : null}
+      {linkSucceeded ? <p role="status" className="mt-3 text-sm text-[var(--success)]">로그인 방법이 연결됐어요.</p> : null}
+      {linkCancelled ? <p role="status" className="mt-3 text-sm text-[var(--muted)]">연결을 취소했어요.</p> : null}
+      {error && !linkCancelled ? <p role="alert" className="mt-3 text-sm text-[var(--danger)]">{error === "link_conflict" ? "이 로그인 방법을 현재 계정에 연결하지 못했어요." : "연결에 실패했어요. 잠시 후 다시 연결해 주세요."}</p> : null}
       {state === "loading" ? <p role="status" className="mt-3 text-sm text-[var(--muted)]">연결 상태를 불러오는 중...</p> : null}
       {state === "unauthorized" ? <p className="mt-3 text-sm text-[var(--muted)]">로그인 후 연결 상태를 확인할 수 있어요. <Link className="font-bold text-[var(--brand)]" href="/login?next=/mypage">로그인으로 이동</Link></p> : null}
       {state === "error" ? <p role="alert" className="mt-3 text-sm text-[var(--danger)]">연결 상태를 불러오지 못했어요.</p> : null}

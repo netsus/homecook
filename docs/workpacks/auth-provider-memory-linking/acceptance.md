@@ -34,10 +34,10 @@
 
 - [x] unauthenticated 사용자는 manual link를 시작할 수 없다 <!-- omo:id=accept-link-auth-required;stage=2;scope=backend;review=3,6 -->
 - [x] link callback은 시작/current/callback Supabase user id가 같음을 검증한다 <!-- omo:id=accept-link-same-user;stage=2;scope=backend;review=3,6 -->
-- [ ] 성공은 요청 provider identity가 같은 user identities에 실제 존재할 때만 표시한다 <!-- omo:id=accept-link-identity-present;stage=4;scope=shared;review=6 -->
+- [x] 성공은 요청 provider identity가 같은 user identities에 실제 존재할 때만 표시한다 <!-- omo:id=accept-link-identity-present;stage=4;scope=shared;review=6 -->
 - [x] link callback은 `public.users` bootstrap/merge/update/delete를 하지 않는다 <!-- omo:id=accept-link-no-public-user-write;stage=2;scope=backend;review=3,6 -->
 - [x] identity가 다른 Supabase user에 속하면 `link_conflict`로 실패하고 자동 이전/merge하지 않는다 <!-- omo:id=accept-link-conflict;stage=2;scope=backend;review=3,6 -->
-- [ ] cancel/failure 후 기존 로그인 세션과 identities가 유지된다 <!-- omo:id=accept-link-cancel-preserves-state;stage=4;scope=shared;review=6 -->
+- [x] cancel/failure 후 기존 로그인 세션과 identities가 유지된다 <!-- omo:id=accept-link-cancel-preserves-state;stage=4;scope=shared;review=6 -->
 - [x] 이미 연결된 provider 재요청은 duplicate identity 없이 safe no-op/already-linked가 된다 <!-- omo:id=accept-link-idempotency;stage=2;scope=backend;review=3,6 -->
 - [x] link callback은 normal callback/bootstrap으로 fallback하지 않는다 <!-- omo:id=accept-link-no-normal-fallback;stage=2;scope=backend;review=3,6 -->
 
@@ -109,7 +109,7 @@
 - [x] link callback auth/same-user/identity-present/conflict/no-public-write를 고정한다 <!-- omo:id=accept-vitest-link-callback;stage=2;scope=backend;review=3,6 -->
 - [x] provider memory parse/read/write/migrate/clear lifecycle을 고정한다 <!-- omo:id=accept-vitest-provider-memory;stage=4;scope=shared;review=6 -->
 - [x] provider-switch dialog action/cancel/focus를 고정한다 <!-- omo:id=accept-vitest-provider-dialog;stage=4;scope=frontend;review=5,6 -->
-- [ ] connected provider UI 5개 상태를 고정한다 <!-- omo:id=accept-vitest-link-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] connected provider UI 5개 상태를 고정한다 <!-- omo:id=accept-vitest-link-ui-states;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright
 
