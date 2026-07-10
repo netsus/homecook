@@ -1,9 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 
 import {
+  getSupabaseAuthProvider,
   normalizeAuthProviderId,
   parseEnabledAuthProviders,
 } from "@/lib/auth/providers";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("auth providers", () => {
   it("uses all production social providers when env is missing", () => {
@@ -33,5 +39,25 @@ describe("auth providers", () => {
     expect(normalizeAuthProviderId("custom:unknown")).toBeNull();
     expect(normalizeAuthProviderId("toString")).toBeNull();
     expect(normalizeAuthProviderId("__proto__")).toBeNull();
+  });
+
+  it("uses the Supabase built-in Kakao provider by default", () => {
+    expect(getSupabaseAuthProvider("kakao")).toBe("kakao");
+  });
+
+  it("keeps an explicit custom Kakao provider override for compatibility", () => {
+    vi.stubEnv("NEXT_PUBLIC_KAKAO_SUPABASE_PROVIDER", "custom:kakao");
+
+    expect(getSupabaseAuthProvider("kakao")).toBe("custom:kakao");
+  });
+
+  it("keeps Naver on the custom provider", () => {
+    expect(getSupabaseAuthProvider("naver")).toBe("custom:naver");
+  });
+
+  it("enables manual identity linking in local Supabase", () => {
+    const config = readFileSync("supabase/config.toml", "utf8");
+
+    expect(config).toMatch(/enable_manual_linking\s*=\s*true/);
   });
 });
