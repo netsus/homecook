@@ -18,6 +18,20 @@
 > - `ui/designs/evidence/auth-provider-memory-linking/after/MYPAGE-linked-error-390.png`
 > - `ui/designs/evidence/auth-provider-memory-linking/after/MYPAGE-linked-error-320.png`
 > - `ui/designs/evidence/auth-provider-memory-linking/after/MYPAGE-linked-error-1440.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/login-before-mobile-390.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/login-before-mobile-320.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/mypage-before-mobile-390.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/mypage-before-mobile-320.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/recent-provider-mobile-390.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/recent-provider-mobile-320.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/provider-dialog-mobile-390.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/provider-dialog-mobile-320.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/safe-auth-errors-mobile-390.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/safe-auth-errors-mobile-320.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/connected-providers-mobile-390.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/connected-providers-mobile-320.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/login-desktop-1440.png`
+> - `ui/designs/evidence/auth-provider-memory-linking/authority/mypage-desktop-1440.png`
 
 ## Review 범위
 
