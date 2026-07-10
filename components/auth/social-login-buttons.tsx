@@ -128,12 +128,8 @@ export function SocialLoginButtons({
         if (error) {
           throw error;
         }
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "로그인을 시작하지 못했어요.",
-        );
+      } catch {
+        setErrorMessage("로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.");
       } finally {
         setPendingProvider(null);
       }

@@ -1,6 +1,6 @@
-# AUTH_PROVIDER_MEMORY_LINKING Stage 5 public design review
+# AUTH_PROVIDER_MEMORY_LINKING Stage 5 design authority
 
-> verdict: pass (public Stage 5; independent final authority gate pending)
+> verdict: pass (independent final authority confirmed)
 >
 > evidence:
 > - `ui/designs/evidence/auth-provider-memory-linking/before/LOGIN-390.png`
@@ -21,7 +21,7 @@
 
 ## Review 범위
 
-이 문서는 구현 세션과 분리된 Codex 세션의 public Stage 5 디자인 리뷰다. PR #968 current head의 fixture 화면을 320px, 390px, 1440px에서 다시 캡처하고 코드·접근성·상태 UI를 검토했다. 이 verdict는 `confirmed`, `final_authority_gate`, Stage 6, Ready for Review 또는 merge 승인이 아니다.
+이 문서는 구현 세션 및 public Stage 5 세션과 분리된 Codex final authority의 최종 디자인 판정이다. PR #968 current head의 fixture 화면을 320px, 390px, 1440px에서 직접 판독하고 코드·접근성·상태 UI 증거를 독립 재검토했다.
 
 ## Scorecard
 
@@ -69,6 +69,18 @@
 - category match: true
 - blocker / major / minor unresolved: 0 / 0 / 0
 
+## Independent final authority gate
+
+- 판정 head: `5d052e25754284a8111b7082b8dea2f4b915caf5`
+- 판정일: 2026-07-10
+- 판정자: 구현 및 public Stage 5와 독립된 Codex final authority 세션
+- 직접 판독: `LOGIN-dialog`, `LOGIN-safe-error`, `MYPAGE-linked-error`의 320/390/1440 current-head PNG 9개
+- 행동 증거 재검증: focus trap/restore, ESC/backdrop/cancel, 44px target, document horizontal overflow, selected-only pending
+- 개인정보·계정 소유 암시: 없음
+- unresolved blocker / major / minor: 0 / 0 / 0
+- 최종 verdict: `pass`
+- Design Status: `confirmed`
+
 ## 다음 행동
 
-public Stage 5는 approve한다. Design Status는 `pending-review`로 유지하고, 독립 `final_authority_gate`가 blocker 0과 이 report를 확인한 뒤에만 `confirmed`로 바꿀 수 있다. Stage 6, Draft 해제, Ready for Review, merge는 이 세션의 범위가 아니다. hosted manual linking과 live OAuth E1/E3/E4/E5는 이 verdict의 통과 근거가 아니다.
+독립 `final_authority_gate`는 approve하며 Design Status를 `confirmed`로 확정한다. hosted manual linking과 live OAuth E1/E3/E4/E5는 이 verdict의 통과 근거가 아니며 Manual Only 미체크 상태를 유지한다.

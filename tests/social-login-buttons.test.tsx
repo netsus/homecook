@@ -58,7 +58,7 @@ describe("social login buttons", () => {
     isQaFixtureClientModeEnabled.mockReturnValue(false);
   });
 
-  it("shows a consistent message when public env is missing", async () => {
+  it("shows a safe consistent message when public env is missing", async () => {
     hasSupabasePublicEnv.mockReturnValue(false);
 
     render(<SocialLoginButtons nextPath="/recipe/mock-kimchi-jjigae" />);
@@ -66,10 +66,21 @@ describe("social login buttons", () => {
     await userEvent.click(screen.getByRole("button", { name: "Google로 시작하기" }));
 
     expect(
-      await screen.findByText(
-        "Supabase 공개 환경변수를 읽지 못했어요. .env.local 작성 후 개발 서버를 다시 시작하세요.",
-      ),
+      await screen.findByText("로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요."),
     ).toBeTruthy();
+  });
+
+  it("does not expose a raw OAuth provider error message", async () => {
+    hasSupabasePublicEnv.mockReturnValue(true);
+    signInWithOAuth.mockResolvedValue({
+      error: new Error("provider payload contained user@example.com and token=secret"),
+    });
+
+    render(<SocialLoginButtons nextPath="/" />);
+    await userEvent.click(screen.getByRole("button", { name: "Google로 시작하기" }));
+
+    expect(await screen.findByText("로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.")).toBeTruthy();
+    expect(screen.queryByText(/user@example\.com|token=secret/)).toBeNull();
   });
 
   it("stores pending action before starting OAuth", async () => {
