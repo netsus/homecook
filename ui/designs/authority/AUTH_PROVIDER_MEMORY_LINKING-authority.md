@@ -81,6 +81,27 @@
 - 최종 verdict: `pass`
 - Design Status: `confirmed`
 
+## Named evidence matrix
+
+| Required evidence name | Current-head PNG |
+| --- | --- |
+| `login-before-mobile-390` | `ui/designs/evidence/auth-provider-memory-linking/before/LOGIN-390.png` |
+| `login-before-mobile-320` | `ui/designs/evidence/auth-provider-memory-linking/before/LOGIN-320.png` |
+| `mypage-before-mobile-390` | `ui/designs/evidence/auth-provider-memory-linking/before/MYPAGE-390.png` |
+| `mypage-before-mobile-320` | `ui/designs/evidence/auth-provider-memory-linking/before/MYPAGE-320.png` |
+| `recent-provider-mobile-390` | `ui/designs/evidence/auth-provider-memory-linking/after/LOGIN-safe-error-390.png` |
+| `recent-provider-mobile-320` | `ui/designs/evidence/auth-provider-memory-linking/after/LOGIN-safe-error-320.png` |
+| `provider-dialog-mobile-390` | `ui/designs/evidence/auth-provider-memory-linking/after/LOGIN-dialog-390.png` |
+| `provider-dialog-mobile-320` | `ui/designs/evidence/auth-provider-memory-linking/after/LOGIN-dialog-320.png` |
+| `safe-auth-errors-mobile-390` | `ui/designs/evidence/auth-provider-memory-linking/after/LOGIN-safe-error-390.png` |
+| `safe-auth-errors-mobile-320` | `ui/designs/evidence/auth-provider-memory-linking/after/LOGIN-safe-error-320.png` |
+| `connected-providers-mobile-390` | `ui/designs/evidence/auth-provider-memory-linking/after/MYPAGE-linked-error-390.png` |
+| `connected-providers-mobile-320` | `ui/designs/evidence/auth-provider-memory-linking/after/MYPAGE-linked-error-320.png` |
+| `login-desktop-1440` | `ui/designs/evidence/auth-provider-memory-linking/after/LOGIN-safe-error-1440.png` |
+| `mypage-desktop-1440` | `ui/designs/evidence/auth-provider-memory-linking/after/MYPAGE-linked-error-1440.png` |
+
+`recent-provider-*`와 `safe-auth-errors-*`는 같은 LOGIN 화면에서 recent-provider 안내와 safe error를 함께 검증하므로 동일 current-head PNG를 1:1 근거로 사용한다.
+
 ## 다음 행동
 
 독립 `final_authority_gate`는 approve하며 Design Status를 `confirmed`로 확정한다. hosted manual linking과 live OAuth E1/E3/E4/E5는 이 verdict의 통과 근거가 아니며 Manual Only 미체크 상태를 유지한다.
