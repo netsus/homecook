@@ -73,15 +73,15 @@ describe("actual auth provider resolution", () => {
     })).toBe("google");
   });
 
-  it("rejects when another provider identity signed in more recently", () => {
+  it("accepts the attempted identity when another provider has a newer timestamp", () => {
     expect(resolveActualAuthProvider({
       queryAttempt: "google",
       cookieAttempt: "google",
       identities,
-    })).toBeNull();
+    })).toBe("google");
   });
 
-  it("rejects when the latest sign-in time is tied across providers", () => {
+  it("accepts the attempted identity when another provider has the same timestamp", () => {
     expect(resolveActualAuthProvider({
       queryAttempt: "google",
       cookieAttempt: "google",
@@ -92,6 +92,20 @@ describe("actual auth provider resolution", () => {
           last_sign_in_at: identities[0].last_sign_in_at,
         },
       ],
-    })).toBeNull();
+    })).toBe("google");
+  });
+
+  it("accepts the attempted identity when another provider has no timestamp", () => {
+    expect(resolveActualAuthProvider({
+      queryAttempt: "naver",
+      cookieAttempt: "naver",
+      identities: [
+        identities[1],
+        {
+          provider: "kakao",
+          identity_data: { email_verified: true },
+        },
+      ],
+    })).toBe("naver");
   });
 });

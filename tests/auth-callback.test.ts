@@ -216,11 +216,18 @@ describe("auth callback", () => {
           user_metadata: {
             nickname: "집밥러",
           },
-          identities: [{
-            provider: "custom:naver",
-            last_sign_in_at: "2026-07-10T09:00:00.000Z",
-            identity_data: { email_verified: true },
-          }],
+          identities: [
+            {
+              provider: "custom:naver",
+              last_sign_in_at: "2026-07-10T09:00:00.000Z",
+              identity_data: { email_verified: true },
+            },
+            {
+              provider: "kakao",
+              last_sign_in_at: "2026-07-10T10:00:00.000Z",
+              identity_data: { email_verified: true },
+            },
+          ],
         },
       },
     });
@@ -276,6 +283,7 @@ describe("auth callback", () => {
 
     expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
     expect(lookup.usersQuery.eq).toHaveBeenCalledWith("email", "cook@example.com");
+    expect(response.headers.get("set-cookie")).toContain("homecook-last-auth-provider=naver");
     expect(signOut).not.toHaveBeenCalled();
   });
 
@@ -311,10 +319,18 @@ describe("auth callback", () => {
         email: "cook@example.com",
         app_metadata: { provider: "google" },
         user_metadata: {},
-        identities: [{
-          provider: "google",
-          identity_data: { email_verified: false },
-        }],
+        identities: [
+          {
+            provider: "google",
+            last_sign_in_at: "2026-07-10T09:00:00.000Z",
+            identity_data: { email_verified: false },
+          },
+          {
+            provider: "kakao",
+            last_sign_in_at: "2026-07-10T10:00:00.000Z",
+            identity_data: { email_verified: true },
+          },
+        ],
       } },
     });
 
