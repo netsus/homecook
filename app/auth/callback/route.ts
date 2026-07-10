@@ -188,6 +188,7 @@ export async function GET(request: Request) {
       queryAttempt: requestUrl.searchParams.get("attemptedProvider"),
       cookieAttempt: cookieStore.get(AUTH_PROVIDER_ATTEMPT_COOKIE)?.value,
       identities: user.identities,
+      userMetadata: user.user_metadata,
     });
     if (!actualProvider) {
       await recordAuthFailure(request, "PROVIDER_RESOLUTION_FAILED");
