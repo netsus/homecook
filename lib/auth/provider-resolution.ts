@@ -13,6 +13,7 @@ interface ResolveActualAuthProviderInput {
   queryAttempt: unknown;
   cookieAttempt: unknown;
   identities: AuthIdentityEvidence[] | null | undefined;
+  userMetadata?: unknown;
 }
 
 function parseTimestamp(value: unknown) {
@@ -24,10 +25,23 @@ function parseTimestamp(value: unknown) {
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
+function parseSubject(value: unknown) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return null;
+}
+
 export function resolveActualAuthProvider({
   queryAttempt,
   cookieAttempt,
   identities,
+  userMetadata,
 }: ResolveActualAuthProviderInput): AuthProviderId | null {
   const queryProvider = normalizeAuthProviderId(queryAttempt);
   const cookieProvider = normalizeAuthProviderId(cookieAttempt);
@@ -44,21 +58,35 @@ export function resolveActualAuthProvider({
   const normalizedIdentities = identities
     .map((identity) => ({
       provider: normalizeAuthProviderId(identity.provider),
+      subject: parseSubject(asRecord(identity.identity_data).sub),
       timestamp: parseTimestamp(identity.last_sign_in_at),
     }))
     .filter((identity) => identity.provider !== null);
+  const matchingIdentities = normalizedIdentities.filter(
+    (identity) => identity.provider === attemptedProvider,
+  );
 
-  if (!normalizedIdentities.some((identity) => identity.provider === attemptedProvider)) {
-    return null;
+  if (normalizedIdentities.length === 1 && matchingIdentities.length === 1) {
+    return attemptedProvider;
   }
 
-  if (normalizedIdentities.length === 1) {
-    return normalizedIdentities[0]?.provider === attemptedProvider
+  // Custom OAuth may leave identity timestamps stale, while the exchanged provider refreshes `sub`.
+  const currentSubject = parseSubject(asRecord(userMetadata).sub);
+  if (currentSubject) {
+    const subjectMatches = normalizedIdentities.filter(
+      (identity) => identity.subject === currentSubject,
+    );
+
+    return subjectMatches.length === 1
+      && subjectMatches[0]?.provider === attemptedProvider
       ? attemptedProvider
       : null;
   }
 
-  if (normalizedIdentities.some((identity) => identity.timestamp === null)) {
+  if (
+    matchingIdentities.length === 0
+    || normalizedIdentities.some((identity) => identity.timestamp === null)
+  ) {
     return null;
   }
 
