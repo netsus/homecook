@@ -126,13 +126,13 @@
 
 ### Manual Only
 
-- [ ] E1: Kakao built-in provider, Kakao required email consent, Naver required email/claim path, Google email, callback URLs, manual linking setting이 구성됐다.
-- [ ] E3: `Allow users without an email`이 ON인 상태에서 fresh Google/Naver/Kakao login을 완료하고 세 provider의 `auth.users.email`이 non-empty임을 확인했다.
-- [ ] E3: 기존 no-store Naver adapter를 경유한 `sub`가 non-empty/stable/distinct이며 `auth.users.email`이 non-empty임을 실측했다.
-- [ ] E3: Kakao valid/verified metadata를 Supabase가 노출하는 범위에서 확인했다.
-- [ ] E3: 각 login이 정확히 하나의 `public.users` row를 만들거나 같은 row로 해석된다.
-- [ ] E3: 이메일 없는 기존 QA 계정 3개를 supported deletion path로 정리하고 privacy-safe audit에서 활성 email-less user 0을 확인했다.
-- [ ] E4: E1-E3 완료 후 사용자에게 “세 제공자 이메일 반환, 콜백 차단, QA 계정 정리가 확인됐으므로 지금 `Allow users without an email`을 Google, Naver, Kakao 모두 OFF로 바꿀 시점입니다.”라고 알리고 확인을 기다렸다.
+- [x] E1: Kakao built-in provider, Kakao required email consent, Naver required email/claim path, Google email, callback URLs, manual linking setting이 구성됐다.
+- [x] E3: `Allow users without an email`이 ON인 상태에서 fresh Google/Naver/Kakao login을 완료하고 세 provider의 `auth.users.email`이 non-empty임을 확인했다.
+- [x] E3: 기존 no-store Naver adapter를 경유한 `sub`가 non-empty/stable/distinct이며 `auth.users.email`이 non-empty임을 실측했다.
+- [x] E3: Kakao valid/verified metadata를 Supabase가 노출하는 범위에서 확인했다.
+- [x] E3: 각 login이 정확히 하나의 `public.users` row를 만들거나 같은 row로 해석된다.
+- [x] E3: 이메일 없는 기존 QA Auth 계정 2개와 orphan public QA row 2개를 supported cleanup path로 정리하고 privacy-safe audit에서 양쪽 활성 email-less user 0을 확인했다.
+- [x] E4: E1-E3 완료 후 사용자에게 “세 제공자 이메일 반환, 콜백 차단, QA 계정 정리가 확인됐으므로 지금 `Allow users without an email`을 Google, Naver, Kakao 모두 OFF로 바꿀 시점입니다.”라고 알리고 확인을 기다렸다.
 - [ ] E4: hosted Supabase에서 Google/Naver/Kakao 모두 `Allow users without an email` OFF가 확인됐다.
 - [ ] E5: OFF 상태에서 fresh Google/Naver/Kakao production smoke가 성공하고 non-empty email을 유지한다.
 - [ ] E5: same-email linked provider login이 같은 Supabase/app user id로 해석되고 duplicate app row가 생기지 않는다.
