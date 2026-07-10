@@ -8,10 +8,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SocialLoginButtonsDeferred } from "@/components/auth/social-login-buttons-deferred";
 import { ContentState } from "@/components/shared/content-state";
 import { useViewMode } from "@/components/shared/use-view-mode";
-import {
-  getAuthProviderDisplayName,
-  type AuthProviderId,
-} from "@/lib/auth/providers";
+import type { AuthProviderId } from "@/lib/auth/providers";
 import { sanitizeInternalPath } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -57,20 +54,20 @@ function resolveGateContext(nextPath: string) {
 }
 
 export function LoginScreen({
-  attemptedProvider = null,
   authError,
-  expectedProvider = null,
   lastProvider = null,
   nextPath = "/",
 }: LoginScreenProps) {
-  const showAuthError = authError === "oauth_failed";
-  const showProviderMismatch = authError === "provider_mismatch";
+  const safeErrorCopy: Record<string, string> = {
+    oauth_failed: "로그인에 실패했어요. 다시 시도해 주세요.",
+    email_required: "로그인하려면 이메일 제공 동의가 필요해요. 동의 항목을 확인한 뒤 다시 시도해 주세요.",
+    account_conflict: "현재 계정으로 로그인할 수 없어요. 다른 로그인 방법을 시도해 주세요.",
+    provider_resolution_failed: "로그인 정보를 안전하게 확인하지 못했어요. 다시 시도해 주세요.",
+  };
   const safeNextPath = sanitizeInternalPath(nextPath, "/");
   const viewMode = useViewMode();
   const gateContext = resolveGateContext(safeNextPath);
-  const expectedProviderName = expectedProvider
-    ? getAuthProviderDisplayName(expectedProvider)
-    : null;
+  const errorCopy = authError ? safeErrorCopy[authError] : null;
 
   useEffect(() => {
     if (!hasSupabasePublicEnv()) {
@@ -117,30 +114,17 @@ export function LoginScreen({
       tone="gate"
     >
       <div className="space-y-3">
-        {showAuthError ? (
+        {errorCopy ? (
           <div
             className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] font-semibold text-[var(--danger-strong)]"
             data-testid="login-web-card"
             role="alert"
           >
-            로그인에 실패했어요. 다시 시도해 주세요.
-          </div>
-        ) : null}
-        {showProviderMismatch ? (
-          <div
-            className="rounded-[var(--radius-card)] border border-[var(--brand-border)] bg-[var(--brand-soft)] px-4 py-3 text-[13px] font-semibold text-[var(--brand-contrast)]"
-            data-testid="login-provider-mismatch"
-            role="alert"
-          >
-            {expectedProviderName
-              ? `이 계정은 ${expectedProviderName}로 가입되어 있어요. ${expectedProviderName}로 로그인해 주세요.`
-              : "이 계정은 다른 로그인 수단으로 가입되어 있어요. 처음 가입했던 수단으로 로그인해 주세요."}
+            {errorCopy}
           </div>
         ) : null}
         <div data-testid="login-brand-mark">
           <SocialLoginButtonsDeferred
-            attemptedProvider={attemptedProvider}
-            expectedProvider={expectedProvider}
             lastProvider={lastProvider}
             nextPath={safeNextPath}
           />

@@ -20,7 +20,7 @@
 - [x] same normalized email + same app/Supabase user id는 linked identity login을 허용한다 <!-- omo:id=accept-same-email-same-user;stage=2;scope=backend;review=3,6 -->
 - [x] same normalized email + different user id는 sign out + `account_conflict`이며 bootstrap/merge/update/delete를 하지 않는다 <!-- omo:id=accept-same-email-different-user;stage=2;scope=backend;review=3,6 -->
 - [x] primary provider와 attempted provider가 다르다는 이유만으로 same-user login을 차단하지 않는다 <!-- omo:id=accept-no-provider-name-block;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 `provider_mismatch`/`expectedProvider` 노출은 제거되고 `account_conflict`만 안전하게 표시된다 <!-- omo:id=accept-safe-account-conflict;stage=4;scope=shared;review=6 -->
+- [x] 기존 `provider_mismatch`/`expectedProvider` 노출은 제거되고 `account_conflict`만 안전하게 표시된다 <!-- omo:id=accept-safe-account-conflict;stage=4;scope=shared;review=6 -->
 - [x] callback 재호출은 duplicate app user/bootstrap row를 만들지 않는다 <!-- omo:id=accept-callback-idempotency;stage=2;scope=backend;review=3,6 -->
 
 ## Actual Provider Resolution
@@ -44,35 +44,35 @@
 ## Error / Permission
 
 - [x] normal/link callback은 각 경계의 인증·소유권 조건을 fail closed로 검증한다 <!-- omo:id=accept-error-permission-fail-closed;stage=2;scope=backend;review=3,6 -->
-- [ ] 사용자-facing auth/link 오류는 safe code와 복구 action만 제공한다 <!-- omo:id=accept-error-safe-recovery;stage=4;scope=shared;review=6 -->
+- [x] 사용자-facing auth/link 오류는 safe code와 복구 action만 제공한다 <!-- omo:id=accept-error-safe-recovery;stage=4;scope=shared;review=6 -->
 
 ## Provider Memory
 
-- [ ] normal login 성공은 canonical provider 하나만 `homecook:last-auth-provider:v1`에 기록한다 <!-- omo:id=accept-memory-success-write;stage=4;scope=frontend;review=5,6 -->
-- [ ] 버튼 클릭, dialog open/cancel, OAuth failure, callback failure는 memory를 바꾸지 않는다 <!-- omo:id=accept-memory-failure-no-write;stage=4;scope=frontend;review=5,6 -->
-- [ ] manual link 성공/실패는 memory를 바꾸지 않는다 <!-- omo:id=accept-memory-link-no-write;stage=4;scope=frontend;review=5,6 -->
-- [ ] invalid localStorage provider는 제거되고 무시된다 <!-- omo:id=accept-memory-invalid-local;stage=4;scope=frontend;review=5,6 -->
-- [ ] localStorage가 비었을 때만 valid legacy cookie를 migration/fallback으로 사용한다 <!-- omo:id=accept-memory-cookie-fallback;stage=4;scope=frontend;review=5,6 -->
-- [ ] localStorage와 cookie가 다르면 localStorage가 우선한다 <!-- omo:id=accept-memory-local-precedence;stage=4;scope=frontend;review=5,6 -->
-- [ ] logout은 memory를 보존한다 <!-- omo:id=accept-memory-logout-preserve;stage=4;scope=frontend;review=6 -->
-- [ ] confirmed account deletion 성공은 localStorage와 cookie를 모두 지운다 <!-- omo:id=accept-memory-delete-clear;stage=4;scope=frontend;review=6 -->
+- [x] normal login 성공은 canonical provider 하나만 `homecook:last-auth-provider:v1`에 기록한다 <!-- omo:id=accept-memory-success-write;stage=4;scope=frontend;review=5,6 -->
+- [x] 버튼 클릭, dialog open/cancel, OAuth failure, callback failure는 memory를 바꾸지 않는다 <!-- omo:id=accept-memory-failure-no-write;stage=4;scope=frontend;review=5,6 -->
+- [x] manual link 성공/실패는 memory를 바꾸지 않는다 <!-- omo:id=accept-memory-link-no-write;stage=4;scope=frontend;review=5,6 -->
+- [x] invalid localStorage provider는 제거되고 무시된다 <!-- omo:id=accept-memory-invalid-local;stage=4;scope=frontend;review=5,6 -->
+- [x] localStorage가 비었을 때만 valid legacy cookie를 migration/fallback으로 사용한다 <!-- omo:id=accept-memory-cookie-fallback;stage=4;scope=frontend;review=5,6 -->
+- [x] localStorage와 cookie가 다르면 localStorage가 우선한다 <!-- omo:id=accept-memory-local-precedence;stage=4;scope=frontend;review=5,6 -->
+- [x] logout은 memory를 보존한다 <!-- omo:id=accept-memory-logout-preserve;stage=4;scope=frontend;review=6 -->
+- [x] confirmed account deletion 성공은 localStorage와 cookie를 모두 지운다 <!-- omo:id=accept-memory-delete-clear;stage=4;scope=frontend;review=6 -->
 
 ## Provider Switch UI
 
-- [ ] 기억 provider가 표시·강조되지만 개인 정보나 계정 소유를 암시하지 않는다 <!-- omo:id=accept-ui-recent-provider-advisory;stage=4;scope=frontend;review=5,6 -->
-- [ ] 같은 provider 클릭은 dialog 없이 OAuth를 시작한다 <!-- omo:id=accept-ui-same-provider-direct;stage=4;scope=frontend;review=5,6 -->
-- [ ] 다른 provider 클릭은 explicit dialog action 전 OAuth를 호출하지 않는다 <!-- omo:id=accept-ui-different-provider-dialog;stage=4;scope=frontend;review=5,6 -->
-- [ ] primary action은 remembered provider, secondary action은 selected provider의 다른 계정 계속이다 <!-- omo:id=accept-ui-dialog-actions;stage=4;scope=frontend;review=5,6 -->
-- [ ] cancel/ESC/backdrop은 OAuth를 호출하지 않고 선택 버튼으로 focus를 복귀한다 <!-- omo:id=accept-ui-dialog-cancel-focus;stage=4;scope=frontend;review=5,6 -->
-- [ ] 320px에서 dialog footer/CTA가 잘리지 않고 모든 touch target이 44px 이상이다 <!-- omo:id=accept-ui-dialog-mobile-fit;stage=4;scope=frontend;review=5,6 -->
+- [x] 기억 provider가 표시·강조되지만 개인 정보나 계정 소유를 암시하지 않는다 <!-- omo:id=accept-ui-recent-provider-advisory;stage=4;scope=frontend;review=5,6 -->
+- [x] 같은 provider 클릭은 dialog 없이 OAuth를 시작한다 <!-- omo:id=accept-ui-same-provider-direct;stage=4;scope=frontend;review=5,6 -->
+- [x] 다른 provider 클릭은 explicit dialog action 전 OAuth를 호출하지 않는다 <!-- omo:id=accept-ui-different-provider-dialog;stage=4;scope=frontend;review=5,6 -->
+- [x] primary action은 remembered provider, secondary action은 selected provider의 다른 계정 계속이다 <!-- omo:id=accept-ui-dialog-actions;stage=4;scope=frontend;review=5,6 -->
+- [x] cancel/ESC/backdrop은 OAuth를 호출하지 않고 선택 버튼으로 focus를 복귀한다 <!-- omo:id=accept-ui-dialog-cancel-focus;stage=4;scope=frontend;review=5,6 -->
+- [x] 320px에서 dialog footer/CTA가 잘리지 않고 모든 touch target이 44px 이상이다 <!-- omo:id=accept-ui-dialog-mobile-fit;stage=4;scope=frontend;review=5,6 -->
 
 ## Connected Provider UI States
 
-- [ ] loading: link pending 동안 중복 action이 disabled된다 <!-- omo:id=accept-ui-link-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty: 추가 연결 가능 provider가 없으면 안전한 완료 상태를 표시한다 <!-- omo:id=accept-ui-link-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error: link failure/conflict는 PII 없는 복구 안내를 표시한다 <!-- omo:id=accept-ui-link-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] read-only: 연결된 provider는 상태로만 보이고 unlink/primary-change control이 없다 <!-- omo:id=accept-ui-link-read-only;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized: 세션이 없으면 link action을 차단하고 로그인 복귀를 제공한다 <!-- omo:id=accept-ui-link-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] loading: link pending 동안 중복 action이 disabled된다 <!-- omo:id=accept-ui-link-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty: 추가 연결 가능 provider가 없으면 안전한 완료 상태를 표시한다 <!-- omo:id=accept-ui-link-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error: link failure/conflict는 PII 없는 복구 안내를 표시한다 <!-- omo:id=accept-ui-link-error;stage=4;scope=frontend;review=5,6 -->
+- [x] read-only: 연결된 provider는 상태로만 보이고 unlink/primary-change control이 없다 <!-- omo:id=accept-ui-link-read-only;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized: 세션이 없으면 link action을 차단하고 로그인 복귀를 제공한다 <!-- omo:id=accept-ui-link-unauthorized;stage=4;scope=frontend;review=5,6 -->
 
 ## Provider Configuration And Claims
 
@@ -90,7 +90,7 @@
 - [x] name/nickname/avatar/birthday로 identity를 연결하지 않는다 <!-- omo:id=accept-no-profile-linking;stage=2;scope=backend;review=3,6 -->
 - [x] conflict/link/auth event에 email, user id, token, code, provider payload가 기록되지 않는다 <!-- omo:id=accept-auth-event-no-pii;stage=2;scope=backend;review=3,6 -->
 - [x] 오류 redirect query에 `expectedProvider`, email, user id, provider payload가 없다 <!-- omo:id=accept-error-query-no-pii;stage=2;scope=backend;review=3,6 -->
-- [ ] `public.users.social_provider`와 Supabase identities의 역할 경계가 타입/UI에서 섞이지 않는다 <!-- omo:id=accept-provider-truth-boundary;stage=4;scope=shared;review=6 -->
+- [x] `public.users.social_provider`와 Supabase identities의 역할 경계가 타입/UI에서 섞이지 않는다 <!-- omo:id=accept-provider-truth-boundary;stage=4;scope=shared;review=6 -->
 
 ## Data Setup / Preconditions
 
@@ -107,16 +107,16 @@
 - [x] callback missing-email, same-user, different-user, no-provider-name-only-block 분기를 고정한다 <!-- omo:id=accept-vitest-normal-callback;stage=2;scope=backend;review=3,6 -->
 - [x] actual provider attempt/identity/last-sign-in 판정을 고정한다 <!-- omo:id=accept-vitest-provider-resolution;stage=2;scope=backend;review=3,6 -->
 - [x] link callback auth/same-user/identity-present/conflict/no-public-write를 고정한다 <!-- omo:id=accept-vitest-link-callback;stage=2;scope=backend;review=3,6 -->
-- [ ] provider memory parse/read/write/migrate/clear lifecycle을 고정한다 <!-- omo:id=accept-vitest-provider-memory;stage=4;scope=shared;review=6 -->
-- [ ] provider-switch dialog action/cancel/focus를 고정한다 <!-- omo:id=accept-vitest-provider-dialog;stage=4;scope=frontend;review=5,6 -->
+- [x] provider memory parse/read/write/migrate/clear lifecycle을 고정한다 <!-- omo:id=accept-vitest-provider-memory;stage=4;scope=shared;review=6 -->
+- [x] provider-switch dialog action/cancel/focus를 고정한다 <!-- omo:id=accept-vitest-provider-dialog;stage=4;scope=frontend;review=5,6 -->
 - [ ] connected provider UI 5개 상태를 고정한다 <!-- omo:id=accept-vitest-link-ui-states;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright
 
-- [ ] fixture mode에서 recent provider, different-provider dialog, safe errors를 검증한다 <!-- omo:id=accept-playwright-login-memory;stage=4;scope=frontend;review=5,6 -->
+- [x] fixture mode에서 recent provider, different-provider dialog, safe errors를 검증한다 <!-- omo:id=accept-playwright-login-memory;stage=4;scope=frontend;review=5,6 -->
 - [ ] fixture mode에서 MYPAGE link success/cancel/conflict와 account deletion memory clear를 검증한다 <!-- omo:id=accept-playwright-link-account;stage=4;scope=frontend;review=5,6 -->
-- [ ] LOGIN/MYPAGE 390px/320px/desktop visual evidence를 남긴다 <!-- omo:id=accept-playwright-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] live OAuth E3/E5는 deterministic CI와 분리된 manual smoke로 유지한다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=shared;review=6 -->
+- [x] LOGIN/MYPAGE 390px/320px/desktop visual evidence를 남긴다 <!-- omo:id=accept-playwright-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] live OAuth E3/E5는 deterministic CI와 분리된 manual smoke로 유지한다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=shared;review=6 -->
 
 ## Manual QA
 

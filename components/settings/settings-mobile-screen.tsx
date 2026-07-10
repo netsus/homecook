@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { LinkedAuthProviders } from "@/components/auth/linked-auth-providers";
 import React from "react";
 
 import { AppBackButton } from "@/components/shared/app-back-button";
@@ -514,6 +515,9 @@ function SettingsSurface({
             </span>
             <span className="text-[18px] text-[var(--text-4)]">›</span>
           </button>
+          <div className="px-4 pb-4">
+            <LinkedAuthProviders />
+          </div>
         </div>
       </section>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { LocalDevLoginPanel } from "@/components/auth/local-dev-login-panel";
 import { createAuthProviderAttemptCookie } from "@/lib/auth/provider-cookies";
@@ -24,6 +24,7 @@ import {
 } from "@/lib/auth/pending-action";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { readLastAuthProvider } from "@/lib/auth/provider-memory";
 
 export interface SocialLoginButtonsProps {
   attemptedProvider?: AuthProviderId | null;
@@ -35,7 +36,6 @@ export interface SocialLoginButtonsProps {
 }
 
 export function SocialLoginButtons({
-  expectedProvider = null,
   lastProvider = null,
   nextPath,
   pendingAction,
@@ -43,6 +43,10 @@ export function SocialLoginButtons({
 }: SocialLoginButtonsProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
+  const [recentProvider, setRecentProvider] = useState<AuthProviderId | null>(lastProvider);
+  const [switchTarget, setSwitchTarget] = useState<AuthProviderId | null>(null);
+  const selectedButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const [isPending, startTransition] = useTransition();
   const localDevAuthEnabled = isLocalDevAuthEnabled();
   const localGoogleOAuthEnabled = isLocalGoogleOAuthEnabled();
@@ -54,7 +58,39 @@ export function SocialLoginButtons({
         ? ensureFixtureProviders(enabledProviders)
         : enabledProviders
       );
-  const providers = prioritizeProvider(availableProviders, expectedProvider);
+  const providers = availableProviders;
+
+  useEffect(() => { setRecentProvider(readLastAuthProvider() ?? lastProvider); }, [lastProvider]);
+
+  useEffect(() => {
+    if (!switchTarget) return;
+    const dialog = dialogRef.current;
+    const focusable = dialog?.querySelectorAll<HTMLElement>("button:not([disabled])");
+    focusable?.[0]?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); closeDialog(); return; }
+      if (event.key !== "Tab" || !focusable?.length) return;
+      const first = focusable[0]; const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [switchTarget]);
+
+  function closeDialog() {
+    setSwitchTarget(null);
+    requestAnimationFrame(() => selectedButtonRef.current?.focus());
+  }
+
+  function requestSignIn(provider: AuthProviderId, button: HTMLButtonElement) {
+    if (recentProvider && recentProvider !== provider) {
+      selectedButtonRef.current = button;
+      setSwitchTarget(provider);
+      return;
+    }
+    handleSignIn(provider);
+  }
 
   const handleSignIn = (provider: AuthProviderId) => {
     startTransition(async () => {
@@ -108,10 +144,8 @@ export function SocialLoginButtons({
     <div className="space-y-3">
       {providers.map((providerId) => {
         const provider = AUTH_PROVIDER_META[providerId];
-        const highlighted = expectedProvider === providerId;
-        const label = highlighted
-          ? `${getAuthProviderDisplayName(providerId)}로 계속하기`
-          : provider.label;
+        const highlighted = recentProvider === providerId;
+        const label = provider.label;
 
         return (
           <button
@@ -119,7 +153,7 @@ export function SocialLoginButtons({
             className={`flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-control)] px-4 py-3.5 text-[15px] font-bold transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${getProviderButtonClass(providerId, provider.className)} ${highlighted ? "ring-2 ring-[var(--brand)] ring-offset-2 ring-offset-[var(--surface)]" : ""}`}
             data-provider-highlighted={highlighted ? "true" : undefined}
             disabled={isPending}
-            onClick={() => handleSignIn(providerId)}
+            onClick={(event) => requestSignIn(providerId, event.currentTarget)}
             type="button"
           >
             <span
@@ -132,9 +166,9 @@ export function SocialLoginButtons({
           </button>
         );
       })}
-      {lastProvider && !expectedProvider ? (
+      {recentProvider ? (
         <p className="text-xs leading-5 text-[var(--muted)]">
-          이 브라우저에서는 마지막으로 {getAuthProviderDisplayName(lastProvider)}로 로그인했어요.
+          최근 이 브라우저에서 {getAuthProviderDisplayName(recentProvider)}로 로그인했어요.
         </p>
       ) : null}
       {providers.length > 0 && !qaFixtureMode ? (
@@ -172,6 +206,19 @@ export function SocialLoginButtons({
           {errorMessage}
         </p>
       ) : null}
+      {switchTarget && recentProvider ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDialog(); }}>
+          <div aria-labelledby="provider-switch-title" aria-modal="true" className="w-full max-w-sm rounded-[var(--radius-card)] bg-[var(--surface)] p-5 text-left shadow-2xl" ref={dialogRef} role="dialog">
+            <h2 className="text-lg font-extrabold" id="provider-switch-title">다른 로그인 방법으로 계속할까요?</h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">이 브라우저에서는 최근 {getAuthProviderDisplayName(recentProvider)}를 사용했어요. 선택한 방법으로 다른 계정에 로그인할 수도 있어요.</p>
+            <div className="mt-5 space-y-2">
+              <button className="min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--brand)] px-4 font-bold text-white" onClick={() => { setSwitchTarget(null); handleSignIn(recentProvider); }} type="button">{getAuthProviderDisplayName(recentProvider)}로 로그인</button>
+              <button className="min-h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] px-4 font-bold" onClick={() => { const target = switchTarget; setSwitchTarget(null); handleSignIn(target); }} type="button">{getAuthProviderDisplayName(switchTarget)}의 다른 계정으로 계속</button>
+              <button className="min-h-11 w-full px-4 font-semibold text-[var(--muted)]" onClick={closeDialog} type="button">취소</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -181,20 +228,6 @@ function ensureFixtureProviders(providers: AuthProviderId[]) {
   return [
     ...providers,
     ...fixtureProviders.filter((provider) => !providers.includes(provider)),
-  ];
-}
-
-function prioritizeProvider(
-  providers: AuthProviderId[],
-  expectedProvider: AuthProviderId | null,
-) {
-  if (!expectedProvider || !providers.includes(expectedProvider)) {
-    return providers;
-  }
-
-  return [
-    expectedProvider,
-    ...providers.filter((provider) => provider !== expectedProvider),
   ];
 }
 

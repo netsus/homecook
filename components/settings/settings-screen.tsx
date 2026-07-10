@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { ContentState } from "@/components/shared/content-state";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { LinkedAuthProviders } from "@/components/auth/linked-auth-providers";
 import {
   SettingsMobileScreen,
   type SettingsMobileSurface,
@@ -42,6 +43,7 @@ import {
   WebTopNav,
 } from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { clearLastAuthProvider } from "@/lib/auth/provider-memory";
 import {
   deleteAccount,
   fetchUserProfile,
@@ -287,6 +289,7 @@ export function SettingsScreen({
     setIsDeleting(true);
     try {
       await deleteAccount();
+      clearLastAuthProvider();
     } catch (error) {
       if (isMypageApiError(error)) {
         setDeleteError(error.message);
@@ -813,6 +816,9 @@ export function SettingsScreen({
                 <strong>{profile?.nickname ?? ""}</strong>
                 <em>{profile?.social_provider === "kakao" ? "카카오 로그인" : "소셜 로그인"}</em>
               </span>
+            </div>
+            <div className="px-4">
+              <LinkedAuthProviders />
             </div>
             <button
               className="web-settings-account-row web-settings-account-action"

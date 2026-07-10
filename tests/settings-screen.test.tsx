@@ -747,6 +747,8 @@ describe("SettingsScreen", () => {
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     mockDeleteAccount.mockResolvedValue({ deleted: true });
     mockLogout.mockResolvedValue({ logged_out: true });
+    localStorage.setItem("homecook:last-auth-provider:v1", "google");
+    document.cookie = "homecook-last-auth-provider=google; Path=/";
 
     render(<SettingsScreen initialAuthenticated={true} />);
     const user = userEvent.setup();
@@ -767,6 +769,8 @@ describe("SettingsScreen", () => {
       expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
       expect(mockLogout).toHaveBeenCalledTimes(1);
       expect(mockRouterReplace).toHaveBeenCalledWith("/");
+      expect(localStorage.getItem("homecook:last-auth-provider:v1")).toBeNull();
+      expect(document.cookie).not.toContain("homecook-last-auth-provider=");
     });
   });
 
@@ -840,6 +844,7 @@ describe("SettingsScreen", () => {
   it("calls logout and navigates home on success", async () => {
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     mockLogout.mockResolvedValue({ logged_out: true });
+    localStorage.setItem("homecook:last-auth-provider:v1", "naver");
     render(<SettingsScreen initialAuthenticated={true} />);
     const user = userEvent.setup();
 
@@ -859,6 +864,7 @@ describe("SettingsScreen", () => {
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalledTimes(1);
       expect(mockRouterReplace).toHaveBeenCalledWith("/");
+      expect(localStorage.getItem("homecook:last-auth-provider:v1")).toBe("naver");
     });
   });
 
