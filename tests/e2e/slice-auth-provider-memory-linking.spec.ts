@@ -70,3 +70,29 @@ test("captures deterministic recent-provider, safe-error, and linked-provider ev
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: join(evidenceDir, `MYPAGE-linked-error-${width}.png`), fullPage: true });
 });
+
+test("shows link outcomes and clears provider memory only after account deletion succeeds", async ({ page }) => {
+  await setE2EAuthOverride(page);
+  await installAccountLibraryVisualRoutes(page);
+
+  await page.goto("/settings?linkedProviders=google,custom:naver&linkResult=linked");
+  await expect(page.getByText("로그인 방법이 연결됐어요.")).toBeVisible();
+  await expect(page.getByText("네이버 연결됨")).toBeVisible();
+
+  await page.goto("/settings?linkedProviders=google&linkError=link_cancelled");
+  await expect(page.getByText("연결을 취소했어요.")).toBeVisible();
+  await expect(page.getByText("연결에 실패했어요. 잠시 후 다시 연결해 주세요.")).toHaveCount(0);
+
+  await page.goto("/settings?linkedProviders=google&linkError=link_conflict");
+  await expect(page.getByText("이 로그인 방법을 현재 계정에 연결하지 못했어요.")).toBeVisible();
+
+  await page.evaluate(() => {
+    localStorage.setItem("homecook:last-auth-provider:v1", "google");
+    document.cookie = "homecook-last-auth-provider=google; Path=/; SameSite=Lax";
+  });
+  await page.getByRole("button", { name: "계정 삭제하기" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "계정 삭제" }).click();
+  await expect(page).toHaveURL("/");
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("homecook:last-auth-provider:v1"))).toBeNull();
+  await expect.poll(() => page.evaluate(() => document.cookie.includes("homecook-last-auth-provider="))).toBe(false);
+});

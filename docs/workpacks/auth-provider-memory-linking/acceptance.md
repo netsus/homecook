@@ -8,7 +8,7 @@
 - [x] Kakao callback fixture는 built-in `kakao` 기본값과 invalid/unverified email 차단을 고정한다 <!-- omo:id=accept-kakao-built-in;stage=2;scope=shared;review=3,6 -->
 - [x] Naver adapter fixture는 normalized non-empty email과 top-level 표준 `sub`를 만든다 <!-- omo:id=accept-naver-standard-claims;stage=2;scope=shared;review=3,6 -->
 - [x] normal callback 성공은 신규/기존 사용자 bootstrap과 return-to-action을 정확히 수행한다 <!-- omo:id=accept-normal-callback-success;stage=2;scope=backend;review=3,6 -->
-- [ ] 로그인된 사용자는 미연결 provider를 같은 Supabase user에 수동 연결할 수 있다 <!-- omo:id=accept-manual-link-success;stage=4;scope=shared;review=6 -->
+- [x] 로그인된 사용자는 미연결 provider를 같은 Supabase user에 수동 연결할 수 있다 <!-- omo:id=accept-manual-link-success;stage=4;scope=shared;review=6 -->
 - [x] `public.users.social_provider`는 linked-provider login/link 후에도 최초/primary provider로 유지된다 <!-- omo:id=accept-primary-provider-stable;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
@@ -114,7 +114,7 @@
 ### Playwright
 
 - [x] fixture mode에서 recent provider, different-provider dialog, safe errors를 검증한다 <!-- omo:id=accept-playwright-login-memory;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture mode에서 MYPAGE link success/cancel/conflict와 account deletion memory clear를 검증한다 <!-- omo:id=accept-playwright-link-account;stage=4;scope=frontend;review=5,6 -->
+- [x] fixture mode에서 MYPAGE link success/cancel/conflict와 account deletion memory clear를 검증한다 <!-- omo:id=accept-playwright-link-account;stage=4;scope=frontend;review=5,6 -->
 - [x] LOGIN/MYPAGE 390px/320px/desktop visual evidence를 남긴다 <!-- omo:id=accept-playwright-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] live OAuth E3/E5는 deterministic CI와 분리된 manual smoke로 유지한다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=shared;review=6 -->
 
