@@ -132,10 +132,17 @@ describe("social login buttons", () => {
     expect(document.cookie).toContain("homecook-auth-provider-attempt=google");
   });
 
-  it("highlights the recent provider as advisory", () => {
+  it("labels the recent provider without relying on a colored outline", () => {
     render(<SocialLoginButtons lastProvider="naver" nextPath="/" />);
     expect(screen.getByText("최근 이 브라우저에서 네이버로 로그인했어요.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "네이버로 시작하기" }).dataset.providerHighlighted).toBe("true");
+    const recentProviderButton = screen.getByRole("button", { name: "네이버로 시작하기" });
+    const recentLoginBadge = screen.getByText("최근 로그인");
+
+    expect(recentLoginBadge.closest("button")).toBe(recentProviderButton);
+    expect(recentLoginBadge.getAttribute("aria-hidden")).toBe("true");
+    expect(screen.getAllByText("최근 로그인")).toHaveLength(1);
+    expect(recentProviderButton.className).not.toContain("ring-2");
+    expect(recentProviderButton.querySelector(".truncate")).toBeTruthy();
   });
 
   it("opens confirmation before a different provider and starts no OAuth on cancel", async () => {
