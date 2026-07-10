@@ -45,5 +45,6 @@ describe("LinkedAuthProviders", () => {
       options: expect.objectContaining({ redirectTo: expect.stringContaining("/auth/link/callback") }),
     }));
     await waitFor(() => expect(screen.getByRole("button", { name: "네이버 연결 중" }).hasAttribute("disabled")).toBe(true));
+    expect(screen.getByRole("button", { name: "카카오 연결" }).hasAttribute("disabled")).toBe(false);
   });
 });
