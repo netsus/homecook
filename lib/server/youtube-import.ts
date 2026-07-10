@@ -593,6 +593,10 @@ const SESSION_TTL_HOURS = 24;
 const AUTHOR_COMMENT_RAW_SOURCE_HEADER = "--- author comment ---";
 const CAPTION_TRANSCRIPT_RAW_SOURCE_HEADER = "--- caption transcript ---";
 const MULTI_CANDIDATE_REVIEW_REQUIRED = "MULTI_CANDIDATE_REVIEW_REQUIRED";
+
+function isYoutubeSingleRecipeOnlyEnabled() {
+  return ["1", "true"].includes(process.env.YOUTUBE_RECIPE_SINGLE_ONLY?.trim().toLowerCase() ?? "");
+}
 const AUTHOR_COMMENT_MAX_RESULTS = 100;
 const AUTHOR_COMMENT_ORDER = "relevance";
 const AUTHOR_COMMENT_QUOTA_UNITS_ESTIMATE = 1;
@@ -5963,19 +5967,20 @@ function buildLlmMultiRecipeExtraction(
   candidates: YoutubeRawRecipeCandidate[],
   sourceBlocks: LlmSourceBlock[],
 ): SelectedMultiRecipeExtraction | null {
-  if (candidates.length < 2) {
+  const usableCandidates = candidates.filter(isUsableTextMultiRecipeCandidate);
+  if (usableCandidates.length < 2) {
     return null;
   }
 
   const fallbackSource = sourceBlocks[0]?.source ?? "description";
-  const source = choosePrimarySourceFromCandidates(candidates, fallbackSource);
+  const source = choosePrimarySourceFromCandidates(usableCandidates, fallbackSource);
   const segments = sourceBlocks
     .filter((block) => block.source === source)
     .flatMap((block) => block.segments);
 
   return {
     source,
-    candidates,
+    candidates: usableCandidates,
     segments,
   };
 }
@@ -9080,6 +9085,13 @@ export async function handleYoutubeExtract(request: Request) {
   }
 
   if (multiRecipeExtraction) {
+    if (isYoutubeSingleRecipeOnlyEnabled()) {
+      return fail(
+        "UNSUPPORTED_MULTI_RECIPE_VIDEO",
+        "이 영상은 여러 요리를 포함해서 현재 단일 레시피 추출 대상이 아니에요.",
+        422,
+      );
+    }
     const candidateBuild = await buildExtractedRecipeCandidates({
       dbClient,
       rawCandidates: multiRecipeExtraction.candidates,
@@ -9330,6 +9342,11 @@ export async function handleYoutubeExtract(request: Request) {
     ingredients,
     steps,
     new_cooking_methods: cookingMethodResult.newCookingMethods,
+    ...(isYoutubeSingleRecipeOnlyEnabled() ? {
+      multi_recipe_status: "single" as const,
+      primary_candidate_id: null,
+      recipe_candidates: [],
+    } : {}),
   };
 
   const sessionError = await insertExtractionSession(dbClient, {

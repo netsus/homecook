@@ -1675,6 +1675,39 @@ export function validateFinalVisualEvidenceContract(output, { visualLedger = nul
   };
 }
 
+export function validateFinalSingleRecipeContract(output, {
+  enabled = false,
+  expectedRecipeCount = 1,
+  expectedCandidateId = "r1",
+  unsupportedMultiRecipe = false,
+} = {}) {
+  if (!enabled) {
+    return { output, errors: [], failureCount: 0 };
+  }
+
+  const recipes = Array.isArray(output?.recipes) ? output.recipes : [];
+  const errors = [];
+  if (unsupportedMultiRecipe) {
+    errors.push("UNSUPPORTED_MULTI_RECIPE_VIDEO");
+  }
+  if (recipes.length !== expectedRecipeCount) {
+    errors.push(`expected exactly ${expectedRecipeCount} recipe, received ${recipes.length}`);
+  }
+  if (recipes.length === expectedRecipeCount) {
+    for (const recipe of recipes) {
+      if (recipe?.candidateId !== expectedCandidateId) {
+        errors.push(`expected candidateId ${expectedCandidateId}, received ${recipe?.candidateId ?? "missing"}`);
+      }
+    }
+  }
+
+  return {
+    output,
+    errors,
+    failureCount: errors.length > 0 ? 1 : 0,
+  };
+}
+
 function sameIngredient(left, right) {
   const l = cleanString(left)?.replace(/\s+/gu, "");
   const r = cleanString(right)?.replace(/\s+/gu, "");
@@ -1953,7 +1986,14 @@ export async function hashFile(filePath) {
   return hashText(await readFile(filePath, "utf8"));
 }
 
-export async function freezePiExtraction({ projectRoot = process.cwd(), dataRoot = "notebooks/recipe_loop_data", split = "train", outTag, ids = null }) {
+export async function freezePiExtraction({
+  projectRoot = process.cwd(),
+  dataRoot = "notebooks/recipe_loop_data",
+  split = "train",
+  outTag,
+  ids = null,
+  datasetProfile = null,
+}) {
   if (!outTag) throw new Error("outTag is required");
   const splitDir = path.join(projectRoot, dataRoot, split);
   const resolvedIds = ids ?? (await readdir(splitDir, { withFileTypes: true }))
@@ -2000,6 +2040,9 @@ export async function freezePiExtraction({ projectRoot = process.cwd(), dataRoot
     kind: "pi-extraction-freeze",
     split,
     outTag,
+    datasetProfileId: datasetProfile?.profileId ?? null,
+    datasetManifestPath: datasetProfile?.manifestPathRelative ?? null,
+    expectedCount: datasetProfile?.expectedCount ?? resolvedIds.length,
     frozenAt: new Date().toISOString(),
     policy: {
       gradingAllowedAfterFreeze: true,
