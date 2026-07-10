@@ -17,8 +17,8 @@ export function LinkedAuthProviders() {
   const [pending, setPending] = useState<AuthProviderId | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const result = searchParams.get("linkResult");
-  const error = searchParams.get("linkError");
+  const [result] = useState(() => searchParams.get("linkResult"));
+  const [error] = useState(() => searchParams.get("linkError"));
   const linkSucceeded = result === "linked" || result === "already_linked";
   const linkCancelled = error === "link_cancelled";
 

@@ -142,7 +142,12 @@
 
 ## Design Status
 
-`confirmed` — PR #968 current head의 320/390/1440 evidence를 독립 final authority가 직접 판독하고 interaction·overflow·focus 증거를 재검증했다. actionable design finding 0건으로 Stage 5 최종 승인됐다.
+- [ ] 임시 UI (temporary) — 기능 완성 우선
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후 public review 준비 상태
+- [x] 확정 (confirmed) — 독립 final authority 통과, authority blocker 0개
+- [ ] N/A — BE-only 슬라이스
+
+> PR #968 current head의 320/390/1440 evidence를 독립 final authority가 직접 판독하고 interaction·overflow·focus 증거를 재검증했다. actionable design finding 0건으로 Stage 5 최종 승인됐다.
 
 ## Source Links
 
