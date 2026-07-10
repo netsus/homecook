@@ -58,7 +58,7 @@ describe("social login buttons", () => {
     isQaFixtureClientModeEnabled.mockReturnValue(false);
   });
 
-  it("shows a consistent message when public env is missing", async () => {
+  it("shows a safe consistent message when public env is missing", async () => {
     hasSupabasePublicEnv.mockReturnValue(false);
 
     render(<SocialLoginButtons nextPath="/recipe/mock-kimchi-jjigae" />);
@@ -66,10 +66,21 @@ describe("social login buttons", () => {
     await userEvent.click(screen.getByRole("button", { name: "Google로 시작하기" }));
 
     expect(
-      await screen.findByText(
-        "Supabase 공개 환경변수를 읽지 못했어요. .env.local 작성 후 개발 서버를 다시 시작하세요.",
-      ),
+      await screen.findByText("로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요."),
     ).toBeTruthy();
+  });
+
+  it("does not expose a raw OAuth provider error message", async () => {
+    hasSupabasePublicEnv.mockReturnValue(true);
+    signInWithOAuth.mockResolvedValue({
+      error: new Error("provider payload contained user@example.com and token=secret"),
+    });
+
+    render(<SocialLoginButtons nextPath="/" />);
+    await userEvent.click(screen.getByRole("button", { name: "Google로 시작하기" }));
+
+    expect(await screen.findByText("로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.")).toBeTruthy();
+    expect(screen.queryByText(/user@example\.com|token=secret/)).toBeNull();
   });
 
   it("stores pending action before starting OAuth", async () => {
@@ -121,24 +132,22 @@ describe("social login buttons", () => {
     expect(document.cookie).toContain("homecook-auth-provider-attempt=google");
   });
 
-  it("prioritizes and relabels the expected provider after a mismatch", () => {
-    render(<SocialLoginButtons expectedProvider="google" nextPath="/" />);
-
-    const buttonNames = screen.getAllByRole("button").map((button) => button.textContent);
-    expect(buttonNames[0]).toContain("Google로 계속하기");
-    expect(
-      screen
-        .getByRole("button", { name: "Google로 계속하기" })
-        .getAttribute("data-provider-highlighted"),
-    ).toBe("true");
+  it("highlights the recent provider as advisory", () => {
+    render(<SocialLoginButtons lastProvider="naver" nextPath="/" />);
+    expect(screen.getByText("최근 이 브라우저에서 네이버로 로그인했어요.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "네이버로 시작하기" }).dataset.providerHighlighted).toBe("true");
   });
 
-  it("shows the last successful provider stored for this browser", () => {
-    render(<SocialLoginButtons lastProvider="naver" nextPath="/" />);
-
-    expect(
-      screen.getByText("이 브라우저에서는 마지막으로 네이버로 로그인했어요."),
-    ).toBeTruthy();
+  it("opens confirmation before a different provider and starts no OAuth on cancel", async () => {
+    hasSupabasePublicEnv.mockReturnValue(true);
+    render(<SocialLoginButtons lastProvider="google" nextPath="/" />);
+    const naver = screen.getByRole("button", { name: "네이버로 시작하기" });
+    await userEvent.click(naver);
+    expect(signInWithOAuth).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "다른 로그인 방법으로 계속할까요?" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    expect(signInWithOAuth).not.toHaveBeenCalled();
+    await waitFor(() => expect(document.activeElement).toBe(naver));
   });
 
   it("starts Kakao login through the Supabase built-in provider", async () => {

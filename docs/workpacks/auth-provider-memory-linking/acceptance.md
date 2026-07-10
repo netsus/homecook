@@ -8,7 +8,7 @@
 - [x] Kakao callback fixture는 built-in `kakao` 기본값과 invalid/unverified email 차단을 고정한다 <!-- omo:id=accept-kakao-built-in;stage=2;scope=shared;review=3,6 -->
 - [x] Naver adapter fixture는 normalized non-empty email과 top-level 표준 `sub`를 만든다 <!-- omo:id=accept-naver-standard-claims;stage=2;scope=shared;review=3,6 -->
 - [x] normal callback 성공은 신규/기존 사용자 bootstrap과 return-to-action을 정확히 수행한다 <!-- omo:id=accept-normal-callback-success;stage=2;scope=backend;review=3,6 -->
-- [ ] 로그인된 사용자는 미연결 provider를 같은 Supabase user에 수동 연결할 수 있다 <!-- omo:id=accept-manual-link-success;stage=4;scope=shared;review=6 -->
+- [x] 로그인된 사용자는 미연결 provider를 같은 Supabase user에 수동 연결할 수 있다 <!-- omo:id=accept-manual-link-success;stage=4;scope=shared;review=6 -->
 - [x] `public.users.social_provider`는 linked-provider login/link 후에도 최초/primary provider로 유지된다 <!-- omo:id=accept-primary-provider-stable;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
@@ -20,7 +20,7 @@
 - [x] same normalized email + same app/Supabase user id는 linked identity login을 허용한다 <!-- omo:id=accept-same-email-same-user;stage=2;scope=backend;review=3,6 -->
 - [x] same normalized email + different user id는 sign out + `account_conflict`이며 bootstrap/merge/update/delete를 하지 않는다 <!-- omo:id=accept-same-email-different-user;stage=2;scope=backend;review=3,6 -->
 - [x] primary provider와 attempted provider가 다르다는 이유만으로 same-user login을 차단하지 않는다 <!-- omo:id=accept-no-provider-name-block;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 `provider_mismatch`/`expectedProvider` 노출은 제거되고 `account_conflict`만 안전하게 표시된다 <!-- omo:id=accept-safe-account-conflict;stage=4;scope=shared;review=6 -->
+- [x] 기존 `provider_mismatch`/`expectedProvider` 노출은 제거되고 `account_conflict`만 안전하게 표시된다 <!-- omo:id=accept-safe-account-conflict;stage=4;scope=shared;review=6 -->
 - [x] callback 재호출은 duplicate app user/bootstrap row를 만들지 않는다 <!-- omo:id=accept-callback-idempotency;stage=2;scope=backend;review=3,6 -->
 
 ## Actual Provider Resolution
@@ -34,45 +34,45 @@
 
 - [x] unauthenticated 사용자는 manual link를 시작할 수 없다 <!-- omo:id=accept-link-auth-required;stage=2;scope=backend;review=3,6 -->
 - [x] link callback은 시작/current/callback Supabase user id가 같음을 검증한다 <!-- omo:id=accept-link-same-user;stage=2;scope=backend;review=3,6 -->
-- [ ] 성공은 요청 provider identity가 같은 user identities에 실제 존재할 때만 표시한다 <!-- omo:id=accept-link-identity-present;stage=4;scope=shared;review=6 -->
+- [x] 성공은 요청 provider identity가 같은 user identities에 실제 존재할 때만 표시한다 <!-- omo:id=accept-link-identity-present;stage=4;scope=shared;review=6 -->
 - [x] link callback은 `public.users` bootstrap/merge/update/delete를 하지 않는다 <!-- omo:id=accept-link-no-public-user-write;stage=2;scope=backend;review=3,6 -->
 - [x] identity가 다른 Supabase user에 속하면 `link_conflict`로 실패하고 자동 이전/merge하지 않는다 <!-- omo:id=accept-link-conflict;stage=2;scope=backend;review=3,6 -->
-- [ ] cancel/failure 후 기존 로그인 세션과 identities가 유지된다 <!-- omo:id=accept-link-cancel-preserves-state;stage=4;scope=shared;review=6 -->
+- [x] cancel/failure 후 기존 로그인 세션과 identities가 유지된다 <!-- omo:id=accept-link-cancel-preserves-state;stage=4;scope=shared;review=6 -->
 - [x] 이미 연결된 provider 재요청은 duplicate identity 없이 safe no-op/already-linked가 된다 <!-- omo:id=accept-link-idempotency;stage=2;scope=backend;review=3,6 -->
 - [x] link callback은 normal callback/bootstrap으로 fallback하지 않는다 <!-- omo:id=accept-link-no-normal-fallback;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
 - [x] normal/link callback은 각 경계의 인증·소유권 조건을 fail closed로 검증한다 <!-- omo:id=accept-error-permission-fail-closed;stage=2;scope=backend;review=3,6 -->
-- [ ] 사용자-facing auth/link 오류는 safe code와 복구 action만 제공한다 <!-- omo:id=accept-error-safe-recovery;stage=4;scope=shared;review=6 -->
+- [x] 사용자-facing auth/link 오류는 safe code와 복구 action만 제공한다 <!-- omo:id=accept-error-safe-recovery;stage=4;scope=shared;review=6 -->
 
 ## Provider Memory
 
-- [ ] normal login 성공은 canonical provider 하나만 `homecook:last-auth-provider:v1`에 기록한다 <!-- omo:id=accept-memory-success-write;stage=4;scope=frontend;review=5,6 -->
-- [ ] 버튼 클릭, dialog open/cancel, OAuth failure, callback failure는 memory를 바꾸지 않는다 <!-- omo:id=accept-memory-failure-no-write;stage=4;scope=frontend;review=5,6 -->
-- [ ] manual link 성공/실패는 memory를 바꾸지 않는다 <!-- omo:id=accept-memory-link-no-write;stage=4;scope=frontend;review=5,6 -->
-- [ ] invalid localStorage provider는 제거되고 무시된다 <!-- omo:id=accept-memory-invalid-local;stage=4;scope=frontend;review=5,6 -->
-- [ ] localStorage가 비었을 때만 valid legacy cookie를 migration/fallback으로 사용한다 <!-- omo:id=accept-memory-cookie-fallback;stage=4;scope=frontend;review=5,6 -->
-- [ ] localStorage와 cookie가 다르면 localStorage가 우선한다 <!-- omo:id=accept-memory-local-precedence;stage=4;scope=frontend;review=5,6 -->
-- [ ] logout은 memory를 보존한다 <!-- omo:id=accept-memory-logout-preserve;stage=4;scope=frontend;review=6 -->
-- [ ] confirmed account deletion 성공은 localStorage와 cookie를 모두 지운다 <!-- omo:id=accept-memory-delete-clear;stage=4;scope=frontend;review=6 -->
+- [x] normal login 성공은 canonical provider 하나만 `homecook:last-auth-provider:v1`에 기록한다 <!-- omo:id=accept-memory-success-write;stage=4;scope=frontend;review=5,6 -->
+- [x] 버튼 클릭, dialog open/cancel, OAuth failure, callback failure는 memory를 바꾸지 않는다 <!-- omo:id=accept-memory-failure-no-write;stage=4;scope=frontend;review=5,6 -->
+- [x] manual link 성공/실패는 memory를 바꾸지 않는다 <!-- omo:id=accept-memory-link-no-write;stage=4;scope=frontend;review=5,6 -->
+- [x] invalid localStorage provider는 제거되고 무시된다 <!-- omo:id=accept-memory-invalid-local;stage=4;scope=frontend;review=5,6 -->
+- [x] localStorage가 비었을 때만 valid legacy cookie를 migration/fallback으로 사용한다 <!-- omo:id=accept-memory-cookie-fallback;stage=4;scope=frontend;review=5,6 -->
+- [x] localStorage와 cookie가 다르면 localStorage가 우선한다 <!-- omo:id=accept-memory-local-precedence;stage=4;scope=frontend;review=5,6 -->
+- [x] logout은 memory를 보존한다 <!-- omo:id=accept-memory-logout-preserve;stage=4;scope=frontend;review=6 -->
+- [x] confirmed account deletion 성공은 localStorage와 cookie를 모두 지운다 <!-- omo:id=accept-memory-delete-clear;stage=4;scope=frontend;review=6 -->
 
 ## Provider Switch UI
 
-- [ ] 기억 provider가 표시·강조되지만 개인 정보나 계정 소유를 암시하지 않는다 <!-- omo:id=accept-ui-recent-provider-advisory;stage=4;scope=frontend;review=5,6 -->
-- [ ] 같은 provider 클릭은 dialog 없이 OAuth를 시작한다 <!-- omo:id=accept-ui-same-provider-direct;stage=4;scope=frontend;review=5,6 -->
-- [ ] 다른 provider 클릭은 explicit dialog action 전 OAuth를 호출하지 않는다 <!-- omo:id=accept-ui-different-provider-dialog;stage=4;scope=frontend;review=5,6 -->
-- [ ] primary action은 remembered provider, secondary action은 selected provider의 다른 계정 계속이다 <!-- omo:id=accept-ui-dialog-actions;stage=4;scope=frontend;review=5,6 -->
-- [ ] cancel/ESC/backdrop은 OAuth를 호출하지 않고 선택 버튼으로 focus를 복귀한다 <!-- omo:id=accept-ui-dialog-cancel-focus;stage=4;scope=frontend;review=5,6 -->
-- [ ] 320px에서 dialog footer/CTA가 잘리지 않고 모든 touch target이 44px 이상이다 <!-- omo:id=accept-ui-dialog-mobile-fit;stage=4;scope=frontend;review=5,6 -->
+- [x] 기억 provider가 표시·강조되지만 개인 정보나 계정 소유를 암시하지 않는다 <!-- omo:id=accept-ui-recent-provider-advisory;stage=4;scope=frontend;review=5,6 -->
+- [x] 같은 provider 클릭은 dialog 없이 OAuth를 시작한다 <!-- omo:id=accept-ui-same-provider-direct;stage=4;scope=frontend;review=5,6 -->
+- [x] 다른 provider 클릭은 explicit dialog action 전 OAuth를 호출하지 않는다 <!-- omo:id=accept-ui-different-provider-dialog;stage=4;scope=frontend;review=5,6 -->
+- [x] primary action은 remembered provider, secondary action은 selected provider의 다른 계정 계속이다 <!-- omo:id=accept-ui-dialog-actions;stage=4;scope=frontend;review=5,6 -->
+- [x] cancel/ESC/backdrop은 OAuth를 호출하지 않고 선택 버튼으로 focus를 복귀한다 <!-- omo:id=accept-ui-dialog-cancel-focus;stage=4;scope=frontend;review=5,6 -->
+- [x] 320px에서 dialog footer/CTA가 잘리지 않고 모든 touch target이 44px 이상이다 <!-- omo:id=accept-ui-dialog-mobile-fit;stage=4;scope=frontend;review=5,6 -->
 
 ## Connected Provider UI States
 
-- [ ] loading: link pending 동안 중복 action이 disabled된다 <!-- omo:id=accept-ui-link-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty: 추가 연결 가능 provider가 없으면 안전한 완료 상태를 표시한다 <!-- omo:id=accept-ui-link-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error: link failure/conflict는 PII 없는 복구 안내를 표시한다 <!-- omo:id=accept-ui-link-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] read-only: 연결된 provider는 상태로만 보이고 unlink/primary-change control이 없다 <!-- omo:id=accept-ui-link-read-only;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized: 세션이 없으면 link action을 차단하고 로그인 복귀를 제공한다 <!-- omo:id=accept-ui-link-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] loading: link pending 동안 중복 action이 disabled된다 <!-- omo:id=accept-ui-link-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty: 추가 연결 가능 provider가 없으면 안전한 완료 상태를 표시한다 <!-- omo:id=accept-ui-link-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error: link failure/conflict는 PII 없는 복구 안내를 표시한다 <!-- omo:id=accept-ui-link-error;stage=4;scope=frontend;review=5,6 -->
+- [x] read-only: 연결된 provider는 상태로만 보이고 unlink/primary-change control이 없다 <!-- omo:id=accept-ui-link-read-only;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized: 세션이 없으면 link action을 차단하고 로그인 복귀를 제공한다 <!-- omo:id=accept-ui-link-unauthorized;stage=4;scope=frontend;review=5,6 -->
 
 ## Provider Configuration And Claims
 
@@ -90,7 +90,7 @@
 - [x] name/nickname/avatar/birthday로 identity를 연결하지 않는다 <!-- omo:id=accept-no-profile-linking;stage=2;scope=backend;review=3,6 -->
 - [x] conflict/link/auth event에 email, user id, token, code, provider payload가 기록되지 않는다 <!-- omo:id=accept-auth-event-no-pii;stage=2;scope=backend;review=3,6 -->
 - [x] 오류 redirect query에 `expectedProvider`, email, user id, provider payload가 없다 <!-- omo:id=accept-error-query-no-pii;stage=2;scope=backend;review=3,6 -->
-- [ ] `public.users.social_provider`와 Supabase identities의 역할 경계가 타입/UI에서 섞이지 않는다 <!-- omo:id=accept-provider-truth-boundary;stage=4;scope=shared;review=6 -->
+- [x] `public.users.social_provider`와 Supabase identities의 역할 경계가 타입/UI에서 섞이지 않는다 <!-- omo:id=accept-provider-truth-boundary;stage=4;scope=shared;review=6 -->
 
 ## Data Setup / Preconditions
 
@@ -107,16 +107,16 @@
 - [x] callback missing-email, same-user, different-user, no-provider-name-only-block 분기를 고정한다 <!-- omo:id=accept-vitest-normal-callback;stage=2;scope=backend;review=3,6 -->
 - [x] actual provider attempt/identity/last-sign-in 판정을 고정한다 <!-- omo:id=accept-vitest-provider-resolution;stage=2;scope=backend;review=3,6 -->
 - [x] link callback auth/same-user/identity-present/conflict/no-public-write를 고정한다 <!-- omo:id=accept-vitest-link-callback;stage=2;scope=backend;review=3,6 -->
-- [ ] provider memory parse/read/write/migrate/clear lifecycle을 고정한다 <!-- omo:id=accept-vitest-provider-memory;stage=4;scope=shared;review=6 -->
-- [ ] provider-switch dialog action/cancel/focus를 고정한다 <!-- omo:id=accept-vitest-provider-dialog;stage=4;scope=frontend;review=5,6 -->
-- [ ] connected provider UI 5개 상태를 고정한다 <!-- omo:id=accept-vitest-link-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] provider memory parse/read/write/migrate/clear lifecycle을 고정한다 <!-- omo:id=accept-vitest-provider-memory;stage=4;scope=shared;review=6 -->
+- [x] provider-switch dialog action/cancel/focus를 고정한다 <!-- omo:id=accept-vitest-provider-dialog;stage=4;scope=frontend;review=5,6 -->
+- [x] connected provider UI 5개 상태를 고정한다 <!-- omo:id=accept-vitest-link-ui-states;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright
 
-- [ ] fixture mode에서 recent provider, different-provider dialog, safe errors를 검증한다 <!-- omo:id=accept-playwright-login-memory;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture mode에서 MYPAGE link success/cancel/conflict와 account deletion memory clear를 검증한다 <!-- omo:id=accept-playwright-link-account;stage=4;scope=frontend;review=5,6 -->
-- [ ] LOGIN/MYPAGE 390px/320px/desktop visual evidence를 남긴다 <!-- omo:id=accept-playwright-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] live OAuth E3/E5는 deterministic CI와 분리된 manual smoke로 유지한다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=shared;review=6 -->
+- [x] fixture mode에서 recent provider, different-provider dialog, safe errors를 검증한다 <!-- omo:id=accept-playwright-login-memory;stage=4;scope=frontend;review=5,6 -->
+- [x] fixture mode에서 MYPAGE link success/cancel/conflict와 account deletion memory clear를 검증한다 <!-- omo:id=accept-playwright-link-account;stage=4;scope=frontend;review=5,6 -->
+- [x] LOGIN/MYPAGE 390px/320px/desktop visual evidence를 남긴다 <!-- omo:id=accept-playwright-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] live OAuth E3/E5는 deterministic CI와 분리된 manual smoke로 유지한다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=shared;review=6 -->
 
 ## Manual QA
 
@@ -126,14 +126,22 @@
 
 ### Manual Only
 
-- [ ] E1: Kakao built-in provider, Kakao required email consent, Naver required email/claim path, Google email, callback URLs, manual linking setting이 구성됐다.
-- [ ] E3: `Allow users without an email`이 ON인 상태에서 fresh Google/Naver/Kakao login을 완료하고 세 provider의 `auth.users.email`이 non-empty임을 확인했다.
-- [ ] E3: 기존 no-store Naver adapter를 경유한 `sub`가 non-empty/stable/distinct이며 `auth.users.email`이 non-empty임을 실측했다.
-- [ ] E3: Kakao valid/verified metadata를 Supabase가 노출하는 범위에서 확인했다.
-- [ ] E3: 각 login이 정확히 하나의 `public.users` row를 만들거나 같은 row로 해석된다.
-- [ ] E3: 이메일 없는 기존 QA 계정 3개를 supported deletion path로 정리하고 privacy-safe audit에서 활성 email-less user 0을 확인했다.
-- [ ] E4: E1-E3 완료 후 사용자에게 “세 제공자 이메일 반환, 콜백 차단, QA 계정 정리가 확인됐으므로 지금 `Allow users without an email`을 Google, Naver, Kakao 모두 OFF로 바꿀 시점입니다.”라고 알리고 확인을 기다렸다.
-- [ ] E4: hosted Supabase에서 Google/Naver/Kakao 모두 `Allow users without an email` OFF가 확인됐다.
-- [ ] E5: OFF 상태에서 fresh Google/Naver/Kakao production smoke가 성공하고 non-empty email을 유지한다.
-- [ ] E5: same-email linked provider login이 같은 Supabase/app user id로 해석되고 duplicate app row가 생기지 않는다.
-- [ ] E5: account conflict/callback/link failure event에 email, access token, authorization code, provider payload가 없다.
+- [x] E1: Kakao built-in provider, Kakao required email consent, Naver required email/claim path, Google email, callback URLs, manual linking setting이 구성됐다.
+- [x] E3: `Allow users without an email`이 ON인 상태에서 fresh Google/Naver/Kakao login을 완료하고 세 provider의 `auth.users.email`이 non-empty임을 확인했다.
+- [x] E3: 기존 no-store Naver adapter를 경유한 `sub`가 non-empty/stable/distinct이며 `auth.users.email`이 non-empty임을 실측했다.
+- [x] E3: Kakao valid/verified metadata를 Supabase가 노출하는 범위에서 확인했다.
+- [x] E3: 각 login이 정확히 하나의 `public.users` row를 만들거나 같은 row로 해석된다.
+- [x] E3: 이메일 없는 기존 QA Auth 계정 2개와 orphan public QA row 2개를 supported cleanup path로 정리하고 privacy-safe audit에서 양쪽 활성 email-less user 0을 확인했다.
+- [x] E4: E1-E3 완료 후 사용자에게 “세 제공자 이메일 반환, 콜백 차단, QA 계정 정리가 확인됐으므로 지금 `Allow users without an email`을 Google, Naver, Kakao 모두 OFF로 바꿀 시점입니다.”라고 알리고 확인을 기다렸다.
+- [x] E4: hosted Supabase에서 Google/Naver/Kakao 모두 `Allow users without an email` OFF가 확인됐다.
+- [x] E5: OFF 상태에서 fresh Google/Naver/Kakao production smoke가 성공하고 non-empty email을 유지한다.
+- [x] E5: same-email linked provider login이 같은 Supabase/app user id로 해석되고 duplicate app row가 생기지 않는다.
+- [x] E5: account conflict/callback/link failure event에 email, access token, authorization code, provider payload가 없다.
+
+### Hosted E4/E5 privacy-safe evidence
+
+- Google/Kakao/Naver의 email-less 설정 OFF를 저장 후 재오픈해 확인했고 compatibility `custom:kakao`도 OFF를 확인했다.
+- OFF 전환 후 세 provider 모두 production OAuth/callback/session과 authenticated profile 진입이 성공했다.
+- identity aggregate는 Google 3/3, Kakao 1/1, Naver 1/1에서 email/sub/email_verified가 모두 존재했고 Auth/public missing-email은 각각 0이었다.
+- `custom:naver+kakao`가 연결된 Supabase auth user는 1명, 대응 `public.users` row도 1개였으며 양 provider 재로그인이 성공했다.
+- 최신 `auth_failure` 74건의 privacy-safe audit에서 user id, query, metadata, email/token/code/client-secret pattern 위반은 0이었다.

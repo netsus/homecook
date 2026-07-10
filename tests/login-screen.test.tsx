@@ -90,27 +90,26 @@ describe("login screen", () => {
     Reflect.deleteProperty(window, "matchMedia");
   });
 
-  it("shows the OAuth failure banner when authError is present", () => {
+  it("shows safe OAuth failure copy", () => {
     render(<LoginScreen authError="oauth_failed" />);
 
     expect(screen.getByText("로그인에 실패했어요. 다시 시도해 주세요.")).toBeTruthy();
     expect(screen.getByText("social-buttons:/:none:none")).toBeTruthy();
   });
 
-  it("explains provider mismatches without exposing the account email", () => {
-    render(
-      <LoginScreen
-        attemptedProvider="naver"
-        authError="provider_mismatch"
-        expectedProvider="google"
-      />,
-    );
+  it.each([
+    ["email_required", "이메일 제공 동의"],
+    ["account_conflict", "현재 계정으로 로그인할 수 없어요"],
+    ["provider_resolution_failed", "로그인 정보를 안전하게 확인하지 못했어요"],
+  ])("shows a PII-safe recovery for %s", (code, copy) => {
+    render(<LoginScreen authError={code} />);
+    expect(screen.getByRole("alert").textContent).toContain(copy);
+    expect(screen.getByRole("alert").textContent).not.toContain("@");
+  });
 
-    expect(
-      screen.getByText("이 계정은 Google로 가입되어 있어요. Google로 로그인해 주세요."),
-    ).toBeTruthy();
-    expect(screen.getByText("social-buttons:/:google:none")).toBeTruthy();
-    expect(screen.queryByText(/@/)).toBeNull();
+  it("does not expose retired provider mismatch guidance", () => {
+    render(<LoginScreen authError="provider_mismatch" />);
+    expect(screen.queryByTestId("login-provider-mismatch")).toBeNull();
   });
 
   it("renders the Wave1 mobile login copy by default", () => {

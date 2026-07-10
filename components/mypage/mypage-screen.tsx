@@ -14,6 +14,7 @@ import {
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { LinkedAuthProviders } from "@/components/auth/linked-auth-providers";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import {
   MypageMobileScreen,
@@ -69,6 +70,7 @@ import {
   WebTopNav,
 } from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { clearLastAuthProvider } from "@/lib/auth/provider-memory";
 import {
   getSafeDisplayText,
   isSafeDisplayText,
@@ -873,6 +875,7 @@ export function MypageScreen({
 
     try {
       await deleteAccount();
+      clearLastAuthProvider();
       await logout();
       router.replace("/");
     } catch (error) {
@@ -2678,6 +2681,7 @@ function MyPagePreferencesSurface({
               <span>{formatProviderLabel(profile?.social_provider)}</span>
             </span>
           </div>
+          <LinkedAuthProviders />
           <button
             className="web-mypage-settings-row"
             onClick={onShowLogoutDialog}

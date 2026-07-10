@@ -142,7 +142,12 @@
 
 ## Design Status
 
-`temporary` — Stage 4 구현·evidence·authority precheck 후 `pending-review`, public review와 독립 final authority gate 통과 후 `confirmed`.
+- [ ] 임시 UI (temporary) — 기능 완성 우선
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후 public review 준비 상태
+- [x] 확정 (confirmed) — 독립 final authority 통과, authority blocker 0개
+- [ ] N/A — BE-only 슬라이스
+
+> PR #968 current head의 320/390/1440 evidence를 독립 final authority가 직접 판독하고 interaction·overflow·focus 증거를 재검증했다. actionable design finding 0건으로 Stage 5 최종 승인됐다.
 
 ## Source Links
 
@@ -181,7 +186,7 @@
 
 - fixture reset: existing auth test helpers and deterministic mock state
 - local real auth: `pnpm dev:local-supabase`; manual linking local config enabled only for implementation verification
-- email 없는 기존 3개 계정은 QA data이며 E4 전에 supported deletion path로 제거 가능하다.
+- email 없는 기존 QA Auth 계정 2개와 orphan public QA row 2개는 E4 전에 supported cleanup path로 제거했고, 양쪽 missing-email audit 0을 확인했다.
 - Blocker: Kakao/Naver/Google 중 하나라도 `auth.users.email`이 비었거나, Naver `sub`가 missing/unstable/colliding이거나, same-email different-user가 bootstrap되거나, auth failure log에 PII가 보이면 E4 진입 금지다.
 
 ## Key Rules
@@ -235,10 +240,17 @@
 - [x] actual provider를 verified attempt + identity evidence로 판정한다 <!-- omo:id=delivery-provider-resolution;stage=2;scope=backend;review=3,6 -->
 - [x] dedicated manual link callback 경계를 구현한다 <!-- omo:id=delivery-link-callback;stage=2;scope=backend;review=3,6 -->
 - [x] PII-safe auth/link event를 구현한다 <!-- omo:id=delivery-auth-observability;stage=2;scope=backend;review=3,6 -->
-- [ ] provider memory localStorage/cookie lifecycle을 구현한다 <!-- omo:id=delivery-provider-memory;stage=4;scope=shared;review=6 -->
-- [ ] recent provider UI와 provider-switch dialog를 연결한다 <!-- omo:id=delivery-provider-dialog;stage=4;scope=frontend;review=5,6 -->
-- [ ] MYPAGE connected provider/read-only/manual link UI를 연결한다 <!-- omo:id=delivery-link-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] account deletion memory cleanup을 연결한다 <!-- omo:id=delivery-deletion-memory-clear;stage=4;scope=frontend;review=6 -->
+- [x] provider memory localStorage/cookie lifecycle을 구현한다 <!-- omo:id=delivery-provider-memory;stage=4;scope=shared;review=6 -->
+- [x] recent provider UI와 provider-switch dialog를 연결한다 <!-- omo:id=delivery-provider-dialog;stage=4;scope=frontend;review=5,6 -->
+- [x] MYPAGE connected provider/read-only/manual link UI를 연결한다 <!-- omo:id=delivery-link-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] account deletion memory cleanup을 연결한다 <!-- omo:id=delivery-deletion-memory-clear;stage=4;scope=frontend;review=6 -->
 - [x] fixture와 real OAuth E3/E5 smoke 경로를 분리한다 <!-- omo:id=delivery-auth-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] LOGIN/MYPAGE 390px·320px·desktop evidence와 authority report를 확보한다 <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] deterministic tests와 Playwright/live OAuth automation split을 닫는다 <!-- omo:id=delivery-test-split;stage=4;scope=shared;review=6 -->
+- [x] LOGIN/MYPAGE 390px·320px·desktop evidence와 authority report를 확보한다 <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] deterministic tests와 Playwright/live OAuth automation split을 닫는다 <!-- omo:id=delivery-test-split;stage=4;scope=shared;review=6 -->
+
+## Final Hosted Closeout
+
+- E1/E3 provider configuration, email/sub/email_verified, cleanup audit를 privacy-safe aggregate로 확인했다.
+- 사용자 승인 후 Google/Kakao/Naver와 compatibility `custom:kakao`의 email-less 설정 OFF를 재오픈 확인했다.
+- OFF 상태 production Google/Kakao/Naver OAuth/callback/session과 same-user Naver+Kakao linked-provider login을 확인했다.
+- Auth/public missing-email 0, duplicate public row 0, 최신 auth failure 74건의 PII/token/code pattern 위반 0을 확인했다.
