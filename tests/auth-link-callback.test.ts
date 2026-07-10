@@ -155,6 +155,29 @@ describe("auth link callback", () => {
 
     expect(new URL(response.headers.get("location") ?? "").searchParams.get("linkError"))
       .toBe("link_failed");
+    expect(setSession).toHaveBeenCalledWith({
+      access_token: "existing-access-token",
+      refresh_token: "existing-refresh-token",
+    });
+  });
+
+  it("restores the original session when the post-exchange user lookup throws", async () => {
+    getUser
+      .mockResolvedValueOnce({ data: { user: userWithProviders("user-1", ["google"]) } })
+      .mockRejectedValueOnce(new Error("user lookup unavailable"));
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+
+    const { GET } = await import("@/app/auth/link/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/link/callback?code=secret&attemptedProvider=naver&next=/mypage",
+    ));
+
+    expect(new URL(response.headers.get("location") ?? "").searchParams.get("linkError"))
+      .toBe("link_failed");
+    expect(setSession).toHaveBeenCalledWith({
+      access_token: "existing-access-token",
+      refresh_token: "existing-refresh-token",
+    });
   });
 
   it("restores the original session when the post-exchange user is missing", async () => {

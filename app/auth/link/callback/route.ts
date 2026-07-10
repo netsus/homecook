@@ -167,44 +167,55 @@ export async function GET(request: Request) {
       });
     }
 
-    const afterResult = await supabase.auth.getUser();
-    const afterUser = afterResult.data.user;
-    if (afterResult.error || !afterUser) {
+    try {
+      const afterResult = await supabase.auth.getUser();
+      const afterUser = afterResult.data.user;
+      if (afterResult.error || !afterUser) {
+        await recordLinkFailure(request, "link_failed");
+        return restoreOrTerminateSession({
+          cookieStore,
+          request,
+          response: clearLinkAttemptCookie(NextResponse.redirect(
+            buildLinkRedirect(requestUrl, nextPath, { error: "link_failed" }),
+          )),
+          session: originalSession,
+          supabase,
+        });
+      }
+
+      if (afterUser.id !== beforeUser.id) {
+        await recordLinkFailure(request, "link_conflict");
+        return restoreOrTerminateSession({
+          cookieStore,
+          request,
+          response: clearLinkAttemptCookie(NextResponse.redirect(
+            buildLinkRedirect(requestUrl, nextPath, { error: "link_conflict" }),
+          )),
+          session: originalSession,
+          supabase,
+        });
+      }
+
+      if (hasProviderIdentity(afterUser.identities, queryProvider)) {
+        return clearLinkAttemptCookie(NextResponse.redirect(
+          buildLinkRedirect(requestUrl, nextPath, { success: "linked" }),
+        ));
+      }
+
       await recordLinkFailure(request, "link_failed");
-      return restoreOrTerminateSession({
-        cookieStore,
-        request,
-        response: clearLinkAttemptCookie(NextResponse.redirect(
-          buildLinkRedirect(requestUrl, nextPath, { error: "link_failed" }),
-        )),
-        session: originalSession,
-        supabase,
-      });
+    } catch {
+      await recordLinkFailure(request, "link_failed");
     }
 
-    if (afterUser.id !== beforeUser.id) {
-      await recordLinkFailure(request, "link_conflict");
-      return restoreOrTerminateSession({
-        cookieStore,
-        request,
-        response: clearLinkAttemptCookie(NextResponse.redirect(
-          buildLinkRedirect(requestUrl, nextPath, { error: "link_conflict" }),
-        )),
-        session: originalSession,
-        supabase,
-      });
-    }
-
-    if (!hasProviderIdentity(afterUser.identities, queryProvider)) {
-      await recordLinkFailure(request, "link_failed");
-      return clearLinkAttemptCookie(NextResponse.redirect(
+    return restoreOrTerminateSession({
+      cookieStore,
+      request,
+      response: clearLinkAttemptCookie(NextResponse.redirect(
         buildLinkRedirect(requestUrl, nextPath, { error: "link_failed" }),
-      ));
-    }
-
-    return clearLinkAttemptCookie(NextResponse.redirect(
-      buildLinkRedirect(requestUrl, nextPath, { success: "linked" }),
-    ));
+      )),
+      session: originalSession,
+      supabase,
+    });
   } catch {
     await recordLinkFailure(request, "link_failed");
     return clearLinkAttemptCookie(NextResponse.redirect(

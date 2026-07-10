@@ -4,9 +4,9 @@
 
 ## Happy Path
 
-- [x] fresh Google login은 normalized non-empty `auth.users.email`과 정확한 Google identity를 만든다 <!-- omo:id=accept-google-login;stage=2;scope=shared;review=3,6 -->
-- [x] fresh Kakao login은 Supabase built-in `kakao`를 우선 사용하고 normalized non-empty email을 만든다 <!-- omo:id=accept-kakao-built-in;stage=2;scope=shared;review=3,6 -->
-- [x] fresh Naver login은 normalized non-empty email과 올바른 표준 `sub`를 만든다 <!-- omo:id=accept-naver-standard-claims;stage=2;scope=shared;review=3,6 -->
+- [x] Google identity callback fixture는 normalized non-empty verified email을 요구한다 <!-- omo:id=accept-google-login;stage=2;scope=shared;review=3,6 -->
+- [x] Kakao callback fixture는 built-in `kakao` 기본값과 invalid/unverified email 차단을 고정한다 <!-- omo:id=accept-kakao-built-in;stage=2;scope=shared;review=3,6 -->
+- [x] Naver adapter fixture는 normalized non-empty email과 top-level 표준 `sub`를 만든다 <!-- omo:id=accept-naver-standard-claims;stage=2;scope=shared;review=3,6 -->
 - [x] normal callback 성공은 신규/기존 사용자 bootstrap과 return-to-action을 정확히 수행한다 <!-- omo:id=accept-normal-callback-success;stage=2;scope=backend;review=3,6 -->
 - [ ] 로그인된 사용자는 미연결 provider를 같은 Supabase user에 수동 연결할 수 있다 <!-- omo:id=accept-manual-link-success;stage=4;scope=shared;review=6 -->
 - [x] `public.users.social_provider`는 linked-provider login/link 후에도 최초/primary provider로 유지된다 <!-- omo:id=accept-primary-provider-stable;stage=2;scope=backend;review=3,6 -->
@@ -79,7 +79,8 @@
 - [x] Kakao client는 Supabase built-in `kakao`를 기본 provider로 사용한다 <!-- omo:id=accept-config-kakao-built-in;stage=2;scope=backend;review=3,6 -->
 - [x] Kakao email consent/valid/verified metadata가 가능한 범위에서 검증된다 <!-- omo:id=accept-config-kakao-email-signals;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 no-store Naver adapter는 nested UserInfo를 top-level 표준 claims로 변환한다 <!-- omo:id=accept-config-naver-nested-fixture;stage=2;scope=backend;review=3,6 -->
-- [x] Naver `sub`는 non-empty/stable/distinct 조건을 만족한다 <!-- omo:id=accept-config-naver-sub-integrity;stage=2;scope=backend;review=3,6 -->
+
+- [x] Naver adapter fixture의 non-empty upstream id는 동일한 top-level `sub`로 보존된다 <!-- omo:id=accept-config-naver-sub-integrity;stage=2;scope=backend;review=3,6 -->
 - [x] `custom:naver` UserInfo URL은 기존 `/api/auth/oauth-userinfo/naver` adapter를 사용한다 <!-- omo:id=accept-config-naver-adapter-fallback;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 adapter는 `Cache-Control: no-store`와 raw token/profile/upstream payload 비저장·비반환을 유지한다 <!-- omo:id=accept-config-naver-adapter-pii;stage=2;scope=backend;review=3,6 -->
 
@@ -96,7 +97,8 @@
 - [x] missing-email/same-user/different-user/multi-identity fixture가 준비된다 <!-- omo:id=accept-fixture-auth-matrix;stage=2;scope=shared;review=3,6 -->
 - [x] 기존 `tests/oauth-userinfo-proxy.test.ts` Naver standard-claims fixture가 회귀 검증에 포함된다 <!-- omo:id=accept-fixture-naver-claims;stage=2;scope=backend;review=3,6 -->
 - [x] manual-link success/already-linked/conflict/cancel fixture가 준비된다 <!-- omo:id=accept-fixture-link-matrix;stage=2;scope=shared;review=3,6 -->
-- [x] local/hosted manual identity linking 설정과 callback allowlist가 준비된다 <!-- omo:id=accept-link-config-ready;stage=2;scope=shared;review=3,6 -->
+
+- [x] local manual identity linking 설정과 dedicated callback contract가 준비된다 <!-- omo:id=accept-link-config-ready;stage=2;scope=shared;review=3,6 -->
 
 ## Automation Split
 
