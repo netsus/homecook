@@ -6,12 +6,12 @@ const identities = [
   {
     provider: "google",
     last_sign_in_at: "2026-07-10T09:00:00.000Z",
-    identity_data: { email_verified: true },
+    identity_data: { sub: "google-sub", email_verified: true },
   },
   {
     provider: "custom:naver",
     last_sign_in_at: "2026-07-10T10:00:00.000Z",
-    identity_data: { email_verified: true },
+    identity_data: { sub: "naver-sub", email_verified: true },
   },
 ];
 
@@ -77,6 +77,7 @@ describe("actual auth provider resolution", () => {
     expect(resolveActualAuthProvider({
       queryAttempt: "google",
       cookieAttempt: "google",
+      userMetadata: { sub: "google-sub" },
       identities,
     })).toBe("google");
   });
@@ -85,6 +86,7 @@ describe("actual auth provider resolution", () => {
     expect(resolveActualAuthProvider({
       queryAttempt: "google",
       cookieAttempt: "google",
+      userMetadata: { sub: "google-sub" },
       identities: [
         identities[0],
         {
@@ -99,13 +101,34 @@ describe("actual auth provider resolution", () => {
     expect(resolveActualAuthProvider({
       queryAttempt: "naver",
       cookieAttempt: "naver",
+      userMetadata: { sub: "naver-sub" },
       identities: [
         identities[1],
         {
           provider: "kakao",
-          identity_data: { email_verified: true },
+          identity_data: { sub: "kakao-sub", email_verified: true },
         },
       ],
     })).toBe("naver");
+  });
+
+  it("rejects a spoofed attempt when the current OAuth subject matches another identity", () => {
+    expect(resolveActualAuthProvider({
+      queryAttempt: "google",
+      cookieAttempt: "google",
+      userMetadata: { sub: "kakao-sub" },
+      identities: [
+        {
+          provider: "google",
+          last_sign_in_at: "2026-07-10T10:00:00.000Z",
+          identity_data: { sub: "google-sub", email_verified: true },
+        },
+        {
+          provider: "kakao",
+          last_sign_in_at: "2026-07-10T09:00:00.000Z",
+          identity_data: { sub: "kakao-sub", email_verified: true },
+        },
+      ],
+    })).toBeNull();
   });
 });
