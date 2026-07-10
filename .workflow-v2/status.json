@@ -1834,6 +1834,22 @@
         "git diff --check"
       ],
       "notes": "Stage 1 docs branch opened by Codex per explicit user instruction. This release-hotfix proceeds before earlier in-progress slices because fake contact/legal 404, hydration/console errors, missing security headers, FoodSafety mixed-content, and PostCSS audit failure directly block ads and deployment. Claude is forbidden; review, authority, final authority, and closeout must be handled by separate Codex sessions."
+    },
+    {
+      "id": "auth-provider-memory-linking",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/auth-provider-memory-linking",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice auth-provider-memory-linking",
+        "node scripts/validate-automation-spec.mjs --slice auth-provider-memory-linking",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 contract-evolution docs prepared by a separate Codex docs-owner session under explicit user approval after Claude was discontinued. Kakao defaults to built-in kakao; custom:naver reuses the existing no-store /api/auth/oauth-userinfo/naver adapter and E3 must verify non-empty email plus stable/distinct sub. Implementation and review must remain role-separated Codex sessions."
     }
   ]
 }

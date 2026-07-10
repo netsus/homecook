@@ -4,6 +4,15 @@
 담당자: 채실장
 날짜: 6월 17
 
+> **2026-07-10 addendum — social auth identity ownership**
+>
+> | # | 변경 내용 | 조치 |
+> | --- | --- | --- |
+> | 1 | 새 소셜 로그인 사용자는 정규화된 비어 있지 않은 이메일을 필수로 한다 | DB NOT NULL 전환 없이 OAuth callback/bootstrap 경계에서 강제한다 |
+> | 2 | `public.users.social_provider`는 최초 가입/primary provider 의미를 유지한다 | 연결된 identity 목록은 Supabase Auth를 truth로 사용하며 별도 app table/column을 추가하지 않는다 |
+> | 3 | 동일 이메일 연결은 app user id와 callback Supabase user id가 같은 경우에만 허용한다 | id가 다르면 bootstrap/merge/delete를 수행하지 않는다 |
+> | 4 | auth 실패 이벤트는 PII를 저장하지 않는다 | email, token, authorization code, provider payload, localStorage 값 저장 금지 |
+
 > 기준 문서: 요구사항 기준선 v1.7.11 / 화면정의서 v1.5.18 / API 설계 v1.2.20 / 유저 Flow맵 v1.3.18
 >
 >
@@ -215,10 +224,10 @@ operational_events (독립 운영 이벤트 테이블, FK 없음)
 | --- | --- | --- | --- |
 | id | uuid | PK |  |
 | nickname | varchar(30) | NOT NULL | 닉네임 |
-| email | varchar(255) | nullable | 소셜 로그인에서 받아옴 |
+| email | varchar(255) | nullable | 소셜 로그인에서 받아오며 신규 social OAuth callback에서는 `trim().toLowerCase()` 후 비어 있지 않은 값을 필수로 함. QA/legacy 호환 때문에 이 slice에서는 DB NOT NULL 전환 없음 |
 | profile_image_url | text | nullable | 프로필 이미지 |
-| social_provider | enum | NOT NULL | `kakao` / `naver` / `google` |
-| social_id | varchar(255) | NOT NULL | 소셜 고유 ID |
+| social_provider | enum | NOT NULL | 최초 가입/primary provider: `kakao` / `naver` / `google`. 연결 provider 로그인/수동 연결로 변경하지 않음 |
+| social_id | varchar(255) | NOT NULL | 최초 가입/primary provider의 소셜 고유 ID. 추가 identity의 truth로 사용하지 않음 |
 | settings_json | jsonb | NOT NULL, DEFAULT '{}' | 유저 설정 (예: `screen_wake_lock`) |
 | created_at | timestamptz | NOT NULL |  |
 | updated_at | timestamptz | NOT NULL |  |
@@ -238,6 +247,17 @@ CREATEUNIQUE INDEX users_email_unique_active
 ON users (email)
 WHERE deleted_atISNULLAND emailISNOTNULL;
 ```
+
+### Social identity linking 정책 `2026-07-10 추가`
+
+- 연결된 provider identity의 canonical truth는 Supabase Auth의 현재 user identities다. `public.users`에 provider별 identity row나 연결 테이블을 중복 생성하지 않는다.
+- 일반 OAuth callback은 정규화 이메일로 활성 `public.users`를 조회한다.
+    - row 없음: callback Supabase user id로 신규 `public.users` bootstrap 허용
+    - row 있음 + `users.id = auth.users.id`: 기존/연결 identity 로그인 허용
+    - row 있음 + `users.id != auth.users.id`: conflict로 차단, INSERT/UPDATE/DELETE/merge 금지
+- `users_email_unique_active`는 duplicate app row 생성을 막는 최종 DB 안전장치이며, 동일 이메일 문자열만으로 auth user를 merge하는 근거가 아니다.
+- 수동 identity link callback은 기존 `public.users` row 생성/수정 없이 같은 Supabase user id에 identity가 추가됐는지만 검증한다.
+- provider unlink, duplicate auth user merge, identity ownership 강제 이전은 이번 계약 범위 밖이다.
 
 ### 회원 탈퇴 cleanup RPC `v1.3.6 신규`
 
@@ -1441,7 +1461,7 @@ XP toast와 achievement/badge new 상태 표시를 위한 사용자별 notificat
 | http_status | integer | NULL 허용 | HTTP 상태 코드 |
 | error_code | text | NULL 허용 | 에러 코드 |
 | message_summary | text | NULL 허용 | 이벤트 요약 메시지 |
-| metadata_json | jsonb | NULL 허용, default '{}' | 추가 메타데이터 (PII 포함 금지: OAuth 토큰, OAuth code/next/error 쿼리 값, YouTube URL, YouTube 자막/소스 텍스트, 관리자 검색어/이메일/닉네임, 비공개 장보기/팬트리 상세 금지) |
+| metadata_json | jsonb | NULL 허용, default '{}' | 추가 메타데이터 (PII 포함 금지: 이메일 원문, OAuth 토큰, OAuth code/next/error 쿼리 값, provider payload, localStorage 값, YouTube URL, YouTube 자막/소스 텍스트, 관리자 검색어/닉네임, 비공개 장보기/팬트리 상세 금지) |
 | created_at | timestamptz | NOT NULL, default now() | 이벤트 발생 시각 |
 
 - **인덱스**:

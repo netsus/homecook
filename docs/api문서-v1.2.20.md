@@ -4,6 +4,19 @@
 담당자: 킴실장
 날짜: 6월 17
 
+> **2026-07-10 addendum — social auth callback / identity linking**
+>
+> | # | 변경 내용 | 조치 |
+> | --- | --- | --- |
+> | 1 | 일반 OAuth callback에 이메일 필수·same-email/same-user·same-email/different-user 분기를 고정한다 | `/auth/callback` web route 계약 추가 |
+> | 2 | 로그인된 사용자의 provider 연결은 일반 callback과 분리한다 | `/auth/link/callback` web route 계약 추가 |
+> | 3 | Kakao는 Supabase built-in `kakao`를 우선하고, Naver custom provider는 표준 `sub/email/email_verified` 산출을 E3에서 검증한다 | provider configuration gate 추가 |
+> | 4 | 실제 로그인 provider는 `app_metadata.provider`만으로 판정하지 않는다 | 검증된 attempt와 실제 identity evidence를 결합해 결정 |
+> | 5 | provider memory는 일반 로그인 성공 후에만 갱신한다 | `localStorage` primary + cookie fallback, link callback은 갱신 금지 |
+> | 6 | auth/link 오류 로그에서 PII와 credential을 금지한다 | 이메일, token, code, provider payload, localStorage 값 비로그 |
+>
+> 두 callback은 `/api/v1/*` public JSON API가 아닌 Supabase OAuth용 web route이므로 active API endpoint 수와 `{ success, data, error }` JSON endpoint 목록은 변경하지 않는다.
+
 # 집밥 서비스 — API 설계 v1.2.20
 
 > 기준 문서: 요구사항 기준선 v1.7.11 / 화면정의서 v1.5.18 / DB 설계 v1.3.16 / 유저 Flow맵 v1.3.18
@@ -410,6 +423,59 @@ type YoutubeQuantityConfirmationStatus =
 > `LOGIN` 화면의 소셜 로그인은 public `/api/v1/auth/login` endpoint가 아니라 Supabase browser client OAuth + `/auth/callback`으로 처리한다.
 > 신규/기존 사용자 row와 기본 recipe book / planner column bootstrap은 callback 및 users/me 계열 API에서 보정한다.
 > 닉네임 설정/변경은 `PATCH /auth/profile` 대체 API인 `PATCH /users/me`를 사용한다.
+
+### 0-1. Provider configuration 계약
+
+- Kakao는 Supabase 공식 built-in provider id `kakao`를 우선 사용한다. 현재 `custom:kakao` 기본값은 호환 fallback일 뿐이며, built-in 전환이 E1-E3에서 검증되면 최종 기본값으로 유지하지 않는다.
+- Kakao Developers의 `account_email` 동의항목은 필수로 구성한다. Supabase/Kakao metadata에서 `is_email_valid` / `is_email_verified` 같은 명시적 신호를 확인할 수 있으면 false인 값을 동일 이메일 자동 연결 후보로 사용하지 않는다.
+- Naver `custom:naver`의 UserInfo URL은 이미 구현된 no-store `GET /api/auth/oauth-userinfo/naver` adapter를 사용한다. 이 route는 Naver `response.id` / `response.email`을 top-level `sub` / `email` / `email_verified`와 승인된 최소 profile claim으로 변환하며 raw token/profile과 upstream error payload를 저장·반환하지 않는다.
+- E3는 위 adapter를 경유한 `auth.users.email`과 identity `sub`를 실측한다. 실패 시 새 proxy를 추가하지 않고 기존 adapter URL/config/normalization을 복구한 뒤 재검증한다.
+- 기존 `GET /api/auth/oauth-userinfo/kakao` proxy는 `custom:kakao` compatibility fallback에만 남긴다. 최종 기본 Kakao provider는 built-in `kakao`다.
+- Naver `sub`는 비어 있지 않고 같은 QA identity 재로그인에서 안정적이며, 서로 다른 QA identity 사이에서 달라야 한다. email만 맞아도 `sub`가 잘못됐으면 E3 실패다.
+
+### 0-2. 일반 OAuth callback
+
+```http
+GET /auth/callback?code=<oauth_code>&next=<safe_path>
+```
+
+- 책임: OAuth code 교환 → auth user 확인 → email 정책 검증 → 활성 `public.users` 동일 이메일 조회 → 신규 bootstrap 또는 기존 user 확인 → nickname onboarding / safe `next` 복귀 → 마지막 성공 provider 갱신
+- provider는 `google | naver | kakao`만 허용하고 custom provider id는 canonical app provider로 정규화한다.
+- **실제 로그인 provider 판정**: `app_metadata.provider`는 최초 가입 provider 의미이므로 단독 사용하지 않는다. callback 시작 시 서버가 검증한 provider attempt와 callback user의 identities를 대조하고, 해당 attempt와 일치하는 identity의 sign-in evidence(예: provider identity의 최신 `last_sign_in_at`)를 사용한다. 둘이 일치하지 않거나 여러 identity 중 실제 provider를 유일하게 판정할 수 없으면 성공 memory를 쓰지 않고 fail closed 한다.
+- 이메일은 `trim().toLowerCase()` 후 사용한다. 비어 있으면 부분 세션을 sign out하고 `authError=email_required`로 LOGIN에 복귀하며 `public.users`와 기본 recipe book/planner column을 만들지 않는다.
+- provider/Supabase identity metadata에 명시적 email valid/verified 신호가 있고 false이면 동일 이메일 자동 연결 후보로 사용하지 않는다.
+- 동일 이메일 분기:
+
+| 활성 `public.users` 조회 | callback Supabase user id 비교 | 결과 |
+| --- | --- | --- |
+| 없음 | 해당 없음 | callback user id로 신규 bootstrap |
+| 있음 | `existing.id === auth.user.id` | 기존/연결 identity 로그인 허용, `social_provider` 유지 |
+| 있음 | `existing.id !== auth.user.id` | sign out, `authError=account_conflict`, bootstrap/merge/delete 금지 |
+
+- provider 이름이 `public.users.social_provider`와 다르다는 이유만으로 차단하지 않는다. 기존 `provider_mismatch` / `expectedProvider` 오류 계약은 `account_conflict`로 대체하며 expected/attempted provider를 오류 URL이나 사용자 메시지에 노출하지 않는다.
+- 성공한 일반 로그인만 `homecook:last-auth-provider:v1`과 compatibility cookie를 갱신한다. 버튼 클릭, OAuth 취소/실패, link callback은 갱신하지 않는다.
+- 실패 event는 `email_required`, `account_conflict`, `oauth_failed`, `provider_resolution_failed` 같은 bounded code만 기록한다. email, access/refresh token, OAuth code, provider payload, user id, localStorage 값을 기록하지 않는다.
+
+### 0-3. 로그인된 계정 provider 연결 callback
+
+```http
+GET /auth/link/callback?code=<oauth_code>&next=/mypage
+```
+
+- 진입 전제: 이미 로그인된 현재 사용자만 Supabase `linkIdentity()` 계열 흐름으로 시작할 수 있다. 일반 `signInWithOAuth()` 로그인 흐름으로 대체하지 않는다.
+- 책임: link OAuth code 처리 → 현재 인증된 Supabase user id 유지 확인 → 요청 provider identity가 **같은 user id**의 identities 목록에 추가됐는지 확인 → MYPAGE 연결 상태로 복귀
+- 금지: `public.users` bootstrap/merge/update/delete, `social_provider` 변경, 마지막 로그인 provider 변경, identity unlink, duplicate account merge
+- callback user id가 시작 user id와 다르거나 identity가 다른 Supabase user에 속하면 안전한 conflict로 실패하며 자동 이전/삭제/merge하지 않는다.
+- 취소/실패/충돌 후에도 기존 로그인 계정과 기존 identity 목록은 유지한다. 성공/실패 메시지에는 email, user id, token, OAuth code, provider payload를 포함하지 않는다.
+- normal callback과 link callback은 서로의 success marker를 소비하지 않으며, link callback에서 신규 app user bootstrap으로 fallback하지 않는다.
+
+### 0-3-a. Provider memory 브라우저 계약
+
+- primary key: `localStorage["homecook:last-auth-provider:v1"]`
+- 허용값: `google | naver | kakao`; 이외 값은 제거하고 무시한다.
+- localStorage가 비어 있을 때만 유효한 `homecook-last-auth-provider` cookie를 fallback/migration source로 사용한다. 둘이 충돌하면 localStorage가 우선한다.
+- 기억값은 안내용이며 인증/인가/identity linking 판단에 사용하지 않는다.
+- logout은 유지하고, 확인된 `DELETE /users/me` 성공은 localStorage와 cookie를 모두 삭제한다.
 
 ### 0-4. 로그아웃
 

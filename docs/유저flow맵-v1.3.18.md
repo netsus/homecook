@@ -4,6 +4,14 @@
 담당자: 채실장
 날짜: 6월 17
 
+> **2026-07-10 addendum — social auth provider memory / linking flow**
+>
+> | # | 변경 내용 | 영향 범위 |
+> | --- | --- | --- |
+> | 1 | 세 provider 이메일 필수, callback 누락 차단, 동일 이메일 same-user/different-user 분기를 로그인 여정에 추가한다 | ② 로그인 여정 |
+> | 2 | 최근 provider 안내와 다른 provider 확인창 흐름을 추가한다 | ② 로그인 여정 |
+> | 3 | 로그인된 MYPAGE에서 provider identity를 수동 연결하는 흐름을 추가한다 | ⑪ 저장/관리 여정 |
+
 > 기준 문서: 요구사항 기준선 v1.7.11 / 화면정의서 v1.5.18 / DB 설계 v1.3.16 / API 설계 v1.2.20
 >
 > 작성: Claude / Codex (H2 Stage 1, Baemin prototype planner contract-evolution)
@@ -281,21 +289,47 @@ HOME (홈)
   │          └─ 이전 화면 유지 (아무 일 없음)
   ▼
 LOGIN (로그인 화면)
+  ├─ 이 브라우저의 마지막 성공 provider 안내/강조 (advisory only)
   ├─ [카카오 로그인]
   ├─ [네이버 로그인]
   └─ [구글 로그인]
        │
+       ├─ (기억한 provider와 다름)
+       │    └─ 확인창
+       │         ├─ [기억한 provider로 로그인] → 해당 OAuth 시작
+       │         ├─ [다른 계정으로 계속] → 선택 provider OAuth 시작
+       │         └─ [취소/ESC/backdrop] → OAuth 호출 없이 LOGIN 유지
+       │
        ▼
      소셜 인증 완료
        │
-       ├─ (신규 회원) → 닉네임 입력 → 가입 완료
-       │    └─ 자동 생성: meal_plan_columns ×3(아침/점심/저녁), recipe_books ×3
+       ├─ provider configuration 검증
+       │    ├─ Kakao: built-in `kakao` 우선
+       │    └─ Naver: 기존 no-store `/api/auth/oauth-userinfo/naver`를 custom UserInfo URL로 사용
+       │         └─ 표준 sub/email/email_verified 실측 실패 시 E3 중단·기존 adapter 설정/동작 복구
        │
-       └─ (기존 회원) → 로그인 완료
-            │
-            ▼
-          ★ return-to-action
-          원래 하려던 작업으로 자동 복귀
+       ├─ email 누락 또는 명시적 invalid/unverified
+       │    └─ 부분 세션 sign out → email_required → public.users/bootstrap 없음
+       │
+       └─ 정규화 email로 활성 public.users 조회
+            ├─ row 없음
+            │    └─ callback Supabase user id로 신규 회원 bootstrap
+            │         ├─ 닉네임 입력
+            │         └─ meal_plan_columns ×3, recipe_books ×3
+            ├─ row 있음 + existing app user id = callback Supabase user id
+            │    └─ 기존/연결 identity 로그인 허용
+            │         └─ public.users.social_provider 유지
+            └─ row 있음 + existing app user id ≠ callback Supabase user id
+                 └─ 부분 세션 sign out → account_conflict
+                      └─ 자동 merge/delete/bootstrap 없음
+                              │
+                              ▼
+                         일반 로그인 성공
+                              ├─ 검증된 attempt + 실제 identity sign-in evidence로 provider 확정
+                              ├─ localStorage 마지막 성공 provider 갱신
+                              ├─ compatibility cookie 갱신
+                              └─ ★ return-to-action
+                                  원래 하려던 작업으로 자동 복귀
 ```
 
 > LoginGateModal의 visual은 Wave1 prototype reference를 따르지만, 로그인 후 원래 작업으로 돌아오는 return-to-action 동작은 MVP flow를 유지한다.
@@ -1158,6 +1192,22 @@ MYPAGE → SETTINGS
             ├─ 직접/유튜브 등록 레시피는 recipes.created_by = null 상태로 보존
             ├─ HOME 이동
             └─ 같은 소셜 계정 재로그인 시 새 사용자 bootstrap 상태
+
+MYPAGE → 연결된 로그인 제공자
+  │
+  ├─ 연결된 provider 목록 확인 (Supabase Auth identity truth, read-only)
+  └─ 미연결 provider [연결]
+       │
+       ├─ 현재 로그인 세션 확인 실패 → unauthorized / 로그인 복귀
+       └─ provider 인증 시작 → /auth/link/callback
+            ├─ 같은 Supabase user id에 새 identity 확인
+            │    └─ 연결 성공 표시
+            │         ├─ public.users.social_provider 변경 없음
+            │         └─ 마지막 로그인 provider 변경 없음
+            ├─ identity가 다른 Supabase user 소유 / user id 불일치
+            │    └─ 안전한 conflict 표시, 자동 merge 없음
+            └─ 취소/실패
+                 └─ 기존 계정/identity 상태 유지
 ```
 
 ### 종료 조건
