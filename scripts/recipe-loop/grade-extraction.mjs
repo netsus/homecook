@@ -11,6 +11,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { gradeDeterministic, mergeDeductionReasonSummaries, prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
+import { loadDatasetProfile } from "./lib/dataset-profile.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
@@ -66,11 +67,19 @@ async function main() {
   const outTag = typeof args["out-tag"] === "string" ? args["out-tag"] : "latest";
   const expectedCountArg = toInt(args["expected-count"]);
   const splitDir = path.join(PROJECT_ROOT, DATA_ROOT, split);
-
-  let ids = typeof args.ids === "string"
+  const requestedIds = typeof args.ids === "string"
     ? args.ids.split(",").map((s) => s.trim()).filter(Boolean)
-    : (await readdir(splitDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
-  ids = ids.sort();
+    : null;
+  const datasetProfile = typeof args["dataset-manifest"] === "string"
+    ? await loadDatasetProfile({
+      projectRoot: PROJECT_ROOT,
+      manifestPath: args["dataset-manifest"],
+      split,
+      requestedIds,
+    })
+    : null;
+  const ids = datasetProfile?.ids ?? requestedIds
+    ?? (await readdir(splitDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name).sort();
 
   const rows = [];
   for (const id of ids) {
@@ -105,7 +114,7 @@ async function main() {
     await writeFile(path.join(splitDir, id, "runs", outTag, "grade.json"), JSON.stringify(row, null, 2) + "\n", "utf8");
   }
 
-  const expectedCount = expectedCountArg ?? ids.length;
+  const expectedCount = expectedCountArg ?? datasetProfile?.expectedCount ?? ids.length;
   const missingResultCount = rows.filter((r) => r.failureReason === "missing_result" || r.failureReason === "missing_result_and_golden").length;
   const missingGoldenCount = rows.filter((r) => r.failureReason === "missing_golden" || r.failureReason === "missing_result_and_golden").length;
   const unapprovedGoldenCount = rows.filter((r) => r.failureReason === "unapproved_golden").length;
@@ -117,6 +126,8 @@ async function main() {
     success,
     split,
     outTag,
+    datasetProfileId: datasetProfile?.profileId ?? null,
+    datasetManifestPath: datasetProfile?.manifestPathRelative ?? null,
     count: rows.length,
     expected_count: expectedCount,
     actual_count: rows.length,

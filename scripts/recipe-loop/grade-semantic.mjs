@@ -12,6 +12,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { createCodexJudgeClient } from "./lib/codex-judge-client.mjs";
+import { loadDatasetProfile } from "./lib/dataset-profile.mjs";
 import { prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
 import { summarizeReasonFrequencies } from "./lib/semantic-feedback-aggregator.mjs";
 
@@ -515,11 +516,19 @@ async function main() {
   const judge = resolveJudgeConfig(args);
   const calibration = await loadCalibration(args.calibration ?? DEFAULT_CALIBRATION_PATH, judge);
   const splitDir = path.join(PROJECT_ROOT, DATA_ROOT, split);
-
-  let ids = typeof args.ids === "string"
+  const requestedIds = typeof args.ids === "string"
     ? args.ids.split(",").map((s) => s.trim()).filter(Boolean)
-    : (await readdir(splitDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
-  ids = ids.sort();
+    : null;
+  const datasetProfile = typeof args["dataset-manifest"] === "string"
+    ? await loadDatasetProfile({
+      projectRoot: PROJECT_ROOT,
+      manifestPath: args["dataset-manifest"],
+      split,
+      requestedIds,
+    })
+    : null;
+  const ids = datasetProfile?.ids ?? requestedIds
+    ?? (await readdir(splitDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name).sort();
 
   const rows = [];
   let cacheHitCount = 0;
@@ -608,7 +617,7 @@ async function main() {
   const effectiveSampleN = judge.provider === "codex"
     ? judge.sampleN
     : (rowSampleNs.length ? Math.max(...rowSampleNs) : calibration.sampleN);
-  const expectedCount = expectedCountArg ?? ids.length;
+  const expectedCount = expectedCountArg ?? datasetProfile?.expectedCount ?? ids.length;
   const providerErrorCount = rows.filter((r) => r.failureReason === "provider_error").length;
   const parseErrorCount = rows.filter((r) => r.failureReason === "parse_error").length;
   const schemaErrorCount = rows.filter((r) => r.failureReason === "schema_error").length;
@@ -639,6 +648,8 @@ async function main() {
     split,
     outTag,
     resultOutTag,
+    datasetProfileId: datasetProfile?.profileId ?? null,
+    datasetManifestPath: datasetProfile?.manifestPathRelative ?? null,
     count: rows.length,
     judge_provider: judge.provider,
     judge_model: judge.model,

@@ -5,6 +5,7 @@ import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { loadDatasetProfile } from "../recipe-loop/lib/dataset-profile.mjs";
 
 function parseCliArgs(argv) {
   const args = {};
@@ -638,10 +639,23 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
   const split = typeof args.split === "string" ? args.split : "train";
   const outTag = args["out-tag"];
   if (!outTag) throw new Error("--out-tag is required");
+  if (split !== "train") {
+    throw new Error("protected split comparison HTML is aggregate-only; detailed rendering is allowed for train only");
+  }
   const dataRoot = path.join(projectRoot, "notebooks/recipe_loop_data", split);
-  const ids = typeof args.ids === "string"
+  const requestedIds = typeof args.ids === "string"
     ? args.ids.split(",").map((item) => item.trim()).filter(Boolean)
-    : (await readdir(dataRoot, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+    : null;
+  const datasetProfile = typeof args["dataset-manifest"] === "string"
+    ? await loadDatasetProfile({
+      projectRoot,
+      manifestPath: args["dataset-manifest"],
+      split,
+      requestedIds,
+    })
+    : null;
+  const ids = datasetProfile?.ids ?? requestedIds
+    ?? (await readdir(dataRoot, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
   const outputPath = path.resolve(projectRoot, args.output ?? `.omx/plans/${outTag}-vs-golden.html`);
   const grade = await readJson(path.join(dataRoot, `_grade_summary.${outTag}.json`), { aggregate: {}, perVideo: [] });
   const semantic = await readJson(path.join(dataRoot, `_semantic_summary.${outTag}.json`), { aggregate: {}, perVideo: [] });

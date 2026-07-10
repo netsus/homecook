@@ -26,8 +26,10 @@ import {
   buildVisualLedger,
   freezePiExtraction,
   hashText,
+  validateFinalSingleRecipeContract,
   validateFinalVisualEvidenceContract,
 } from "./lib/artifacts.mjs";
+import { loadDatasetProfile } from "../recipe-loop/lib/dataset-profile.mjs";
 import {
   buildPiRecipeCandidatePrompt,
   buildPiRecipeDetailPrompt,
@@ -1263,6 +1265,7 @@ async function runHolisticPiExtractionCase({
   executeVisualCommandFn,
   collectVisualLedgerFn,
   collectVisualEstimatesFn,
+  singleRecipeOnly,
 }) {
   manifest.mode = "holistic-draft";
   manifest.promptVersion = HOLISTIC_PROMPT_VERSION;
@@ -1279,12 +1282,15 @@ async function runHolisticPiExtractionCase({
     enableTimelineUnderstanding: holisticTimelineUnderstanding,
     frameBudget: effectiveStoryboardFrameBudget,
     coarseAsWholeRecipeCandidate: holisticVideoTimelineLedger && !holisticCandidateFirstDraft,
+    singleRecipeOnly,
   });
-  const candidateFirstDraftActive = holisticCandidateFirstDraft
+  const candidateFirstDraftActive = !singleRecipeOnly
+    && holisticCandidateFirstDraft
     && holisticVideoTimelineLedger
     && storyboardCandidateLedger.candidates.length > 1;
-  const recipeBoundaryPlanActive = holisticRecipeBoundaryPlan && candidateFirstDraftActive;
-  const multiCandidateTimelineLedgerFallback = holisticVideoTimelineLedger
+  const recipeBoundaryPlanActive = !singleRecipeOnly && holisticRecipeBoundaryPlan && candidateFirstDraftActive;
+  const multiCandidateTimelineLedgerFallback = !singleRecipeOnly
+    && holisticVideoTimelineLedger
     && storyboardCandidateLedger.candidates.length > 1
     && !candidateFirstDraftActive;
   const effectiveHolisticVideoTimelineLedger = holisticVideoTimelineLedger && !multiCandidateTimelineLedgerFallback;
@@ -1542,6 +1548,7 @@ async function runHolisticPiExtractionCase({
   if (shouldRunHolisticIntegratedUnderstanding) {
     videoUnderstandingPrompt = buildVideoUnderstandingPrompt(holisticSourcePacket, {
       timelineMode: effectiveHolisticVideoTimelineLedger,
+      singleRecipeOnly,
     });
     await writeTextTracked(manifest, paths.videoUnderstandingPromptPath, `${videoUnderstandingPrompt}\n`, "video-understanding-prompt");
     addAllowedRead(manifest, paths.videoUnderstandingPromptPath);
@@ -2029,6 +2036,7 @@ async function runHolisticPiExtractionCase({
       timelineMode: effectiveHolisticVideoTimelineLedger,
       videoUnderstanding: videoUnderstandingUsage?.usable && effectiveHolisticIntegratedUnderstanding ? videoUnderstanding : null,
       understandingAudit: videoUnderstandingUsage?.usable && effectiveHolisticIntegratedUnderstanding ? videoUnderstandingAudit : null,
+      singleRecipeOnly,
     });
     await writeTextTracked(manifest, paths.holisticDraftPromptPath, `${holisticDraftPrompt}\n`, "holistic-draft-prompt");
     addAllowedRead(manifest, paths.holisticDraftPromptPath);
@@ -2094,6 +2102,7 @@ async function runHolisticPiExtractionCase({
     maxWindowSec: holisticVisualTargetMaxWindowSec,
     includeSparseRecallTargets: !effectiveHolisticVideoTimelineLedger,
     amountTargetsOnly: effectiveHolisticVideoTimelineLedger,
+    singleRecipeOnly,
   });
   await writeJsonTracked(manifest, paths.holisticVisualNeedsPath, visualTargetLedger, "holistic-visual-needs");
   await writeJsonTracked(manifest, paths.visualTargetLedgerPath, visualTargetLedger, "visual-target-ledger");
@@ -2236,9 +2245,49 @@ async function runHolisticPiExtractionCase({
     visualEstimates,
     auditMode: false,
   });
-  assertValidPiRecipeOutput(contract.output);
-  await writeJsonTracked(manifest, paths.holisticFinalResultPath, contract.output, "holistic-final-result");
-  await writeJsonTracked(manifest, paths.resultPath, { videoId: manifest.videoId, ...contract.output }, "result");
+  const sourceStageSignal = singleRecipeOnly && (storyboardCandidateLedger.summary?.sourceCandidateCount ?? 0) > 1;
+  const understandingSignalText = [
+    ...(videoUnderstanding?.crossDishNotes ?? []),
+    ...(videoUnderstanding?.uncertainties ?? []),
+  ].join(" ");
+  const draftSignalText = [
+    ...(draft?.globalUncertainties ?? []),
+    ...(draft?.recipes ?? []).flatMap((recipe) => recipe.uncertainties ?? []),
+  ].join(" ");
+  const understandingStageSignal = singleRecipeOnly && (
+    (videoUnderstanding?.dishStories?.length ?? 0) > 1
+    || understandingSignalText.includes("UNSUPPORTED_MULTI_RECIPE_VIDEO")
+  );
+  const draftStageSignal = singleRecipeOnly && (
+    (draft?.recipes?.length ?? 0) > 1
+    || draftSignalText.includes("UNSUPPORTED_MULTI_RECIPE_VIDEO")
+  );
+  const multiRecipeStageCount = [sourceStageSignal, understandingStageSignal, draftStageSignal].filter(Boolean).length;
+  const unsupportedMultiRecipe = singleRecipeOnly && multiRecipeStageCount >= 2;
+  manifest.multiRecipeSignalDetected = {
+    detected: multiRecipeStageCount > 0,
+    unsupported: unsupportedMultiRecipe,
+    stageCount: multiRecipeStageCount,
+    stages: {
+      sourceTimeline: sourceStageSignal,
+      videoUnderstanding: understandingStageSignal,
+      holisticDraft: draftStageSignal,
+    },
+  };
+  const singleContract = validateFinalSingleRecipeContract(contract.output, {
+    enabled: singleRecipeOnly,
+    unsupportedMultiRecipe,
+  });
+  manifest.singleRecipeContractFailureCount = singleContract.failureCount;
+  manifest.singleRecipeContractErrors = singleContract.errors;
+  if (singleContract.failureCount > 0) {
+    throw new Error(singleContract.errors.includes("UNSUPPORTED_MULTI_RECIPE_VIDEO")
+      ? "UNSUPPORTED_MULTI_RECIPE_VIDEO"
+      : `single recipe contract failed: ${singleContract.errors.join("; ")}`);
+  }
+  assertValidPiRecipeOutput(singleContract.output);
+  await writeJsonTracked(manifest, paths.holisticFinalResultPath, singleContract.output, "holistic-final-result");
+  await writeJsonTracked(manifest, paths.resultPath, { videoId: manifest.videoId, ...singleContract.output }, "result");
   await writeCacheManifest(manifest, paths.cacheManifestPath, {
     cachePolicy: "holistic raw response, storyboard ledger, target ledgers, and final audit are stored in the run directory",
     promptHashes: {
@@ -2320,9 +2369,9 @@ async function runHolisticPiExtractionCase({
   });
 
   manifest.phase = "completed";
-  manifest.recipeCount = contract.output.recipes.length;
-  manifest.ingredientCount = contract.output.recipes.reduce((sum, recipe) => sum + recipe.ingredients.length, 0);
-  manifest.stepCount = contract.output.recipes.reduce((sum, recipe) => sum + recipe.steps.length, 0);
+  manifest.recipeCount = singleContract.output.recipes.length;
+  manifest.ingredientCount = singleContract.output.recipes.reduce((sum, recipe) => sum + recipe.ingredients.length, 0);
+  manifest.stepCount = singleContract.output.recipes.reduce((sum, recipe) => sum + recipe.steps.length, 0);
   manifest.visualEvidenceContractFailureCount = contract.failureCount;
   manifest.visualEvidenceContractWarnings = contract.warnings;
   manifest.needsInvestigation = contract.failureCount > 0;
@@ -2375,6 +2424,7 @@ async function runStagedPiExtractionCase({
   executeVisualCommandFn,
   collectVisualLedgerFn,
   collectVisualEstimatesFn,
+  singleRecipeOnly,
 }) {
   manifest.mode = candidateOnly ? "staged-candidate-only" : "staged";
   manifest.stages = [];
@@ -2519,8 +2569,14 @@ async function runStagedPiExtractionCase({
 
   if (candidateOnly) {
     const candidateStubs = candidatesToRecipeStubs(candidateOutput.candidates);
-    assertValidPiRecipeOutput(candidateStubs);
-    await writeJsonTracked(manifest, paths.resultPath, { videoId: manifest.videoId, ...candidateStubs }, "result");
+    const singleContract = validateFinalSingleRecipeContract(candidateStubs, { enabled: singleRecipeOnly });
+    manifest.singleRecipeContractFailureCount = singleContract.failureCount;
+    manifest.singleRecipeContractErrors = singleContract.errors;
+    if (singleContract.failureCount > 0) {
+      throw new Error(`single recipe contract failed: ${singleContract.errors.join("; ")}`);
+    }
+    assertValidPiRecipeOutput(singleContract.output);
+    await writeJsonTracked(manifest, paths.resultPath, { videoId: manifest.videoId, ...singleContract.output }, "result");
     manifest.phase = "candidate-only-completed";
     manifest.candidateCount = candidateOutput.candidates.length;
     manifest.recipeCount = candidateOutput.candidates.length;
@@ -2592,13 +2648,19 @@ async function runStagedPiExtractionCase({
     visualEstimates,
     auditMode: false,
   });
-  assertValidPiRecipeOutput(contract.output);
-  await writeJsonTracked(manifest, paths.resultPath, { videoId: manifest.videoId, ...contract.output }, "result");
+  const singleContract = validateFinalSingleRecipeContract(contract.output, { enabled: singleRecipeOnly });
+  manifest.singleRecipeContractFailureCount = singleContract.failureCount;
+  manifest.singleRecipeContractErrors = singleContract.errors;
+  if (singleContract.failureCount > 0) {
+    throw new Error(`single recipe contract failed: ${singleContract.errors.join("; ")}`);
+  }
+  assertValidPiRecipeOutput(singleContract.output);
+  await writeJsonTracked(manifest, paths.resultPath, { videoId: manifest.videoId, ...singleContract.output }, "result");
   manifest.phase = "completed";
   manifest.candidateCount = candidateOutput.candidates.length;
-  manifest.recipeCount = contract.output.recipes.length;
-  manifest.ingredientCount = contract.output.recipes.reduce((sum, recipe) => sum + recipe.ingredients.length, 0);
-  manifest.stepCount = contract.output.recipes.reduce((sum, recipe) => sum + recipe.steps.length, 0);
+  manifest.recipeCount = singleContract.output.recipes.length;
+  manifest.ingredientCount = singleContract.output.recipes.reduce((sum, recipe) => sum + recipe.ingredients.length, 0);
+  manifest.stepCount = singleContract.output.recipes.reduce((sum, recipe) => sum + recipe.steps.length, 0);
   manifest.visualEvidenceContractFailureCount = contract.failureCount;
   manifest.visualEvidenceContractWarnings = contract.warnings;
   manifest.needsInvestigation = contract.failureCount > 0;
@@ -2612,10 +2674,23 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   const outTag = typeof args["out-tag"] === "string" ? args["out-tag"] : "pi-mvp-latest";
   const splitDir = path.join(projectRoot, dataRoot, split);
   const explicitIds = idsFromArgs(args);
-  const ids = explicitIds ?? (await readdir(splitDir, { withFileTypes: true }))
+  const datasetManifestArg = typeof args["dataset-manifest"] === "string" ? args["dataset-manifest"] : null;
+  const datasetProfile = datasetManifestArg
+    ? await loadDatasetProfile({
+      projectRoot,
+      manifestPath: datasetManifestArg,
+      split,
+      requestedIds: explicitIds,
+    })
+    : null;
+  const ids = datasetProfile?.ids ?? explicitIds ?? (await readdir(splitDir, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
+  const singleRecipeOnly = args["single-recipe-only"] === true;
+  if (singleRecipeOnly && datasetProfile && datasetProfile.expectedRecipeCountPerVideo !== 1) {
+    throw new Error("single-recipe-only requires a dataset profile with expectedRecipeCountPerVideo=1");
+  }
   const dryRun = args["dry-run"] === true;
   const allowFetchContent = args["allow-fetch-content"] === true;
   const sourcePacketOnly = args["source-packet-only"] === true;
@@ -2686,14 +2761,20 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   const holisticVideoTimelineMaxSegments = optionalNumber(args["holistic-video-timeline-max-segments"], 8);
   const holisticVideoTimelineMaxWindowsPerSegment = optionalNumber(args["holistic-video-timeline-max-windows-per-segment"], 3);
   const holisticVideoTimelineMaxTotalFrames = optionalNumber(args["holistic-video-timeline-max-total-frames"], holisticTimelineFrameBudget);
-  const holisticMaxTargetsPerRecipe = optionalNumber(
+  const configuredHolisticMaxTargetsPerRecipe = optionalNumber(
     args["holistic-max-targets-per-recipe"],
-    holisticVideoTimelineLedger ? 2 : 3,
+    singleRecipeOnly ? 4 : holisticVideoTimelineLedger ? 2 : 3,
   );
-  const holisticMaxTotalTargets = optionalNumber(
+  const holisticMaxTargetsPerRecipe = singleRecipeOnly
+    ? Math.min(4, configuredHolisticMaxTargetsPerRecipe)
+    : configuredHolisticMaxTargetsPerRecipe;
+  const configuredHolisticMaxTotalTargets = optionalNumber(
     args["holistic-max-total-targets"],
-    holisticVideoTimelineLedger ? 4 : 12,
+    singleRecipeOnly ? 6 : holisticVideoTimelineLedger ? 4 : 12,
   );
+  const holisticMaxTotalTargets = singleRecipeOnly
+    ? Math.min(6, configuredHolisticMaxTotalTargets)
+    : configuredHolisticMaxTotalTargets;
   const holisticVisualTargetMaxWindowSec = optionalNumber(args["holistic-visual-target-max-window-sec"], 16);
   const holisticVisualRepairEnabled = holisticVideoTimelineLedger
     ? args["holistic-enable-visual-repair"] === true
@@ -2749,6 +2830,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
   for (const id of ids) {
     const paths = buildCasePaths({ projectRoot, dataRoot, split, id, outTag });
     const allowedReads = [paths.sourcePath];
+    if (datasetProfile) allowedReads.push(datasetProfile.manifestPath);
     if (responseJsonPath) allowedReads.push(responseJsonPath);
     if (candidateResponseJsonPath) allowedReads.push(candidateResponseJsonPath);
     if (detailResponseJsonPath) allowedReads.push(detailResponseJsonPath);
@@ -2779,6 +2861,12 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
       visualTimeoutMs,
       freezeAfterExtraction,
       sourcePacketOnly,
+      singleRecipeOnly,
+      expectedRecipeCount: singleRecipeOnly ? 1 : null,
+      singleRecipeContractFailureCount: 0,
+      datasetProfileId: datasetProfile?.profileId ?? null,
+      datasetManifestPath: datasetProfile?.manifestPathRelative ?? null,
+      datasetExpectedCount: datasetProfile?.expectedCount ?? null,
       compactSourcePacket,
       piTools,
       holistic: {
@@ -2836,6 +2924,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
     });
 
     try {
+      if (datasetProfile) recordRead(manifest, datasetProfile.manifestPath, "dataset-manifest");
       if (!existsSync(paths.sourcePath)) {
         throw new Error(`source 없음: ${paths.sourcePath}`);
       }
@@ -2911,6 +3000,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
           executeVisualCommandFn: options.executeVisualCommand ?? executeVisualCommand,
           collectVisualLedgerFn: options.collectVisualLedger ?? collectVisualLedger,
           collectVisualEstimatesFn: options.collectVisualEstimates ?? collectVisualEstimates,
+          singleRecipeOnly,
         });
         assertNoForbiddenReads(manifest);
         await writeJsonTracked(manifest, paths.manifestPath, manifest, "file-access-manifest");
@@ -2967,6 +3057,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
           executeVisualCommandFn: options.executeVisualCommand ?? executeVisualCommand,
           collectVisualLedgerFn: options.collectVisualLedger ?? collectVisualLedger,
           collectVisualEstimatesFn: options.collectVisualEstimates ?? collectVisualEstimates,
+          singleRecipeOnly,
         });
         assertNoForbiddenReads(manifest);
         await writeJsonTracked(manifest, paths.manifestPath, manifest, "file-access-manifest");
@@ -3011,12 +3102,18 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
       const finalOutput = genericRepair
         ? applyGenericRepair({ output: normalized, candidateOutput: { candidates: [] }, sourcePacket })
         : normalized;
-      assertValidPiRecipeOutput(finalOutput);
-      await writeJsonTracked(manifest, paths.resultPath, { videoId: id, ...finalOutput }, "result");
+      const singleContract = validateFinalSingleRecipeContract(finalOutput, { enabled: singleRecipeOnly });
+      manifest.singleRecipeContractFailureCount = singleContract.failureCount;
+      manifest.singleRecipeContractErrors = singleContract.errors;
+      if (singleContract.failureCount > 0) {
+        throw new Error(`single recipe contract failed: ${singleContract.errors.join("; ")}`);
+      }
+      assertValidPiRecipeOutput(singleContract.output);
+      await writeJsonTracked(manifest, paths.resultPath, { videoId: id, ...singleContract.output }, "result");
       manifest.phase = "completed";
-      manifest.recipeCount = finalOutput.recipes.length;
-      manifest.ingredientCount = finalOutput.recipes.reduce((sum, recipe) => sum + recipe.ingredients.length, 0);
-      manifest.stepCount = finalOutput.recipes.reduce((sum, recipe) => sum + recipe.steps.length, 0);
+      manifest.recipeCount = singleContract.output.recipes.length;
+      manifest.ingredientCount = singleContract.output.recipes.reduce((sum, recipe) => sum + recipe.ingredients.length, 0);
+      manifest.stepCount = singleContract.output.recipes.reduce((sum, recipe) => sum + recipe.steps.length, 0);
       await writeCacheManifest(manifest, paths.cacheManifestPath, {
         cachePolicy: "raw responses are stored in the run directory",
         promptHashes: {
@@ -3048,7 +3145,7 @@ export async function runPiExtraction(rawArgs = {}, options = {}) {
 
   let freeze = null;
   if (freezeAfterExtraction && !dryRun) {
-    freeze = await freezePiExtraction({ projectRoot, dataRoot, split, outTag, ids });
+    freeze = await freezePiExtraction({ projectRoot, dataRoot, split, outTag, ids, datasetProfile });
     console.log(`[OK] freeze ${split}/${outTag}: ${freeze.freeze.completedCount}/${freeze.freeze.caseCount}`);
   }
 

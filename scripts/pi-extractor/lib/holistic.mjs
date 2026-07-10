@@ -876,12 +876,17 @@ export function buildHolisticSourcePacket(sourcePacket, visualLedger = null, {
   };
 }
 
-export function buildVideoUnderstandingPrompt(holisticSourcePacket, { timelineMode = false } = {}) {
+export function buildVideoUnderstandingPrompt(holisticSourcePacket, {
+  timelineMode = false,
+  singleRecipeOnly = false,
+} = {}) {
   const candidateTimelineIndex = holisticSourcePacket?.candidateTimelineIndex ?? null;
   const exampleCandidateId = candidateTimelineIndex?.candidates?.[0]?.candidateId ?? "whole";
   return [
     "너는 유튜브 레시피 영상을 한 번에 이해하기 위한 중간 메모를 쓰는 도우미다.",
-    "목표: 최종 레시피를 바로 쓰지 말고, 영상 전체가 어떤 요리 흐름인지 사람 말로 먼저 정리한다.",
+    singleRecipeOnly
+      ? "목표: 최종 레시피를 바로 쓰지 말고, 영상 전체의 한 레시피 r1이 어떤 조리 흐름인지 사람 말로 먼저 정리한다."
+      : "목표: 최종 레시피를 바로 쓰지 말고, 영상 전체가 어떤 요리 흐름인지 사람 말로 먼저 정리한다.",
     "",
     "중요한 제한:",
     "- 로컬 파일, golden.json, grade, 이전 result, 비교 HTML, 이전 추출 결과를 읽지 마라.",
@@ -889,9 +894,14 @@ export function buildVideoUnderstandingPrompt(holisticSourcePacket, { timelineMo
     "- VIDEO_UNDERSTANDING은 다음 draft의 방향키일 뿐이다. 최종 evidence로 쓰이지 않는다.",
     "- 근거 없는 일반 레시피 지식으로 재료 양이나 단계를 채우지 마라.",
     "- 불확실한 내용은 uncertainties에 남긴다.",
-    ...(timelineMode ? [
+    ...(timelineMode && !singleRecipeOnly ? [
       "- CANDIDATE_SOURCE_PACKETS가 있으면 candidate별 묶음을 먼저 보고 요리 흐름을 나눈다.",
       "- candidateId는 CANDIDATE_TIMELINE_INDEX에 있는 값만 사용한다.",
+    ] : []),
+    ...(singleRecipeOnly ? [
+      "- recipe candidate는 r1 하나뿐이다. 여러 시간 구간은 r1을 이해하기 위한 관찰 시점이다.",
+      "- 독립된 완성 요리가 여러 개로 보이면 합치지 말고 crossDishNotes와 uncertainties에 남긴다.",
+      "- dishStories는 r1 하나만 반환한다.",
     ] : []),
     "- 출력은 설명 없이 JSON 객체 하나만 반환한다.",
     "",
@@ -2409,18 +2419,21 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, {
   timelineMode = false,
   videoUnderstanding = null,
   understandingAudit = null,
+  singleRecipeOnly = false,
 } = {}) {
   const candidateTimelineIndex = holisticSourcePacket?.candidateTimelineIndex ?? null;
   const exampleCandidateId = candidateTimelineIndex?.candidates?.[0]?.candidateId ?? "r1";
   const hasVideoUnderstanding = isObject(videoUnderstanding) && Array.isArray(videoUnderstanding.dishStories);
   const hasUnderstandingAudit = isObject(understandingAudit) && Array.isArray(understandingAudit.storyAudits);
-  const promptGoal = timelineMode
+  const promptGoal = singleRecipeOnly
+    ? "목표: 제목, 설명란, 고정댓글, 자막, timeline event와 필요한 frame evidence를 종합해 영상 전체의 한 레시피 r1을 작성한다."
+    : timelineMode
     ? "목표: 제목, 설명란, 고정댓글, 자막, video timeline event를 종합해서 실제 만든 레시피들을 candidateId별로 분리한다."
     : "목표: 제목, 설명란, 고정댓글, 자막, storyboard frame을 먼저 종합해서 실제 만든 레시피들을 모두 분리한다.";
   const packetRule = timelineMode
     ? "- 아래 HOLISTIC_SOURCE_PACKET에 들어 있는 공개 YouTube source와 video timeline event 요약만 사용한다. raw frame dump나 이전 storyboard dump는 사용하지 않는다."
     : "- 아래 HOLISTIC_SOURCE_PACKET에 들어 있는 공개 YouTube source와 허용 frame 요약만 사용한다.";
-  const timelineRules = timelineMode ? [
+  const timelineRules = timelineMode && !singleRecipeOnly ? [
     "- candidateId는 CANDIDATE_TIMELINE_INDEX에 있는 값만 사용한다. 새 candidateId나 recipeId를 만들지 않는다.",
     "- CANDIDATE_SOURCE_PACKETS는 candidate별로 잘라낸 description/caption/timeline 근거다. 각 recipe를 쓸 때 이 묶음을 먼저 사용한다.",
     "- steps는 supporting event와 같은 candidateSourcePacket 안의 description/caption 근거를 주 근거로 삼는다.",
@@ -2450,7 +2463,12 @@ export function buildHolisticDraftPrompt(holisticSourcePacket, {
     "- 일반 레시피 지식으로 재료 양이나 단계를 채우지 말고, 근거가 없으면 null 또는 uncertainties로 남긴다.",
     "- 모든 재료, amount/unit, 단계에는 가능한 한 evidence ref를 붙인다.",
     "- amount/unit이 부족하지만 화면으로 확인할 수 있어 보이면 visualNeeds에 넣고, 임의 추정하지 않는다.",
-    "- 같은 timeRange에 여러 레시피가 있으면 어떤 근거가 어느 레시피에 속하는지 분리해서 쓴다.",
+    ...(singleRecipeOnly ? [
+      "- recipe candidate는 r1 하나만 사용한다. 여러 시간 구간은 r1의 손질, 조리, 마무리 흐름으로 연결한다.",
+      "- 독립 완성 요리가 여러 개로 보이면 억지로 합치지 말고 globalUncertainties에 UNSUPPORTED_MULTI_RECIPE_VIDEO 신호를 남긴다.",
+    ] : [
+      "- 같은 timeRange에 여러 레시피가 있으면 어떤 근거가 어느 레시피에 속하는지 분리해서 쓴다.",
+    ]),
     ...understandingRules,
     "- 출력은 설명 없이 JSON 객체 하나만 반환한다.",
     "",
@@ -3559,6 +3577,7 @@ export function buildHolisticStoryboardCandidateLedger(sourcePacket, {
   enableTimelineUnderstanding = false,
   frameBudget = null,
   coarseAsWholeRecipeCandidate = false,
+  singleRecipeOnly = false,
 } = {}) {
   const duration = optionalNumber(sourcePacket?.video?.durationSeconds);
   const timelineCandidates = storyboardTimelineEntries(sourcePacket, { maxCandidates, enableTimelineUnderstanding });
@@ -3567,6 +3586,37 @@ export function buildHolisticStoryboardCandidateLedger(sourcePacket, {
     ...candidate,
     ...(budget !== null ? { storyboardFrameBudget: Math.max(1, Math.ceil(budget / Math.max(1, candidates.length))) } : {}),
   }));
+  if (singleRecipeOnly) {
+    const sourceCandidates = timelineCandidates.length > 0
+      ? timelineCandidates
+      : buildCoarseStoryboardCandidates(sourcePacket, { maxCandidates });
+    const sourceEvidence = uniqueStrings(sourceCandidates.flatMap((candidate) => candidate.evidence ?? []));
+    return {
+      schemaVersion: 1,
+      kind: "candidate-ledger",
+      videoId: sourcePacket?.video?.videoId ?? null,
+      candidates: withFrameBudget([buildStoryboardCandidate({
+        candidateId: "r1",
+        title: sourcePacket?.video?.title ?? "single recipe",
+        evidence: sourceEvidence.length > 0 ? sourceEvidence : ["title"],
+        sourceCues: uniqueStrings(["single-recipe-only", timelineCandidates.length > 0 ? "description-timeline" : "coarse-video-window"]),
+        timeRange: {
+          startSec: 0,
+          endSec: duration,
+          basis: duration ? "single-recipe-full-video" : "single-recipe-unknown-duration",
+        },
+        order: 0,
+      })]),
+      summary: {
+        singleRecipeOnly: true,
+        timelineUnderstandingEnabled: enableTimelineUnderstanding,
+        timelineSource: timelineCandidates.length > 0 ? "description-timeline" : "coarse-video-window",
+        sourceCandidateCount: sourceCandidates.length,
+        totalCandidates: 1,
+        totalFrameBudget: budget,
+      },
+    };
+  }
   if (timelineCandidates.length > 0) {
     const candidates = withFrameBudget(timelineCandidates);
     return {
@@ -3675,14 +3725,21 @@ export function buildHolisticVisualTargetLedger({
   maxWindowSec = 16,
   includeSparseRecallTargets = true,
   amountTargetsOnly = false,
+  singleRecipeOnly = false,
 } = {}) {
+  const targetDraft = singleRecipeOnly
+    ? {
+      ...draft,
+      recipes: (draft?.recipes ?? []).map((recipe) => ({ ...recipe, candidateId: "r1" })),
+    }
+    : draft;
   const targets = [];
   const skippedTargets = [];
   const perRecipeCount = new Map();
   const targetKeys = new Set();
   const sparseRecipeIds = new Set(
     includeSparseRecallTargets
-      ? (draft.recipes ?? []).filter(recipeNeedsVisualRecall).map((recipe) => recipe.candidateId)
+      ? (targetDraft.recipes ?? []).filter(recipeNeedsVisualRecall).map((recipe) => recipe.candidateId)
       : [],
   );
   const pushTarget = ({ recipe, need, targetType = "ingredient_amount", groupedTarget = false, range = null }) => {
@@ -3721,7 +3778,7 @@ export function buildHolisticVisualTargetLedger({
     });
   };
   if (includeSparseRecallTargets) {
-    for (const recipe of draft.recipes ?? []) {
+    for (const recipe of targetDraft.recipes ?? []) {
       if (!sparseRecipeIds.has(recipe.candidateId)) continue;
       pushTarget({
         recipe,
@@ -3737,7 +3794,7 @@ export function buildHolisticVisualTargetLedger({
       });
     }
   }
-  for (const { recipe, need } of visualNeedsFromDraft(draft)) {
+  for (const { recipe, need } of visualNeedsFromDraft(targetDraft)) {
     const groupedTarget = isGroupedVisualIngredient(need.ingredient);
     if (!recipeMapAllowsVisualNeed(wholeVideoRecipeMap, recipe, need)) {
       skippedTargets.push({

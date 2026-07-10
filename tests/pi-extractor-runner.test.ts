@@ -17,6 +17,8 @@ const timelineModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/pi-extracto
 const promptModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/pi-extractor/lib/prompt.mjs")).href;
 const visualModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/pi-extractor/lib/visual.mjs")).href;
 const freezeModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/pi-extractor/freeze-pi-extraction.mjs")).href;
+const datasetProfileModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/recipe-loop/lib/dataset-profile.mjs")).href;
+const comparisonHtmlModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/pi-extractor/render-comparison-html.mjs")).href;
 
 type TestSource = {
   schemaVersion: number;
@@ -286,6 +288,327 @@ describe("pi recipe extractor MVP runner", () => {
     });
 
     expect(validatePiRecipeOutput(normalized).join("\n")).toContain("amountBasis must be one of");
+  });
+
+  it("enforces the exact-one final contract only when single-recipe mode is enabled", async () => {
+    const { validateFinalSingleRecipeContract } = await import(artifactsModuleUrl);
+    const oneRecipe = {
+      recipes: [{ candidateId: "r1", title: "양파볶음", ingredients: [], steps: [] }],
+      repairLog: [],
+    };
+
+    expect(validateFinalSingleRecipeContract(oneRecipe, { enabled: true })).toMatchObject({
+      failureCount: 0,
+      errors: [],
+    });
+    expect(validateFinalSingleRecipeContract({ ...oneRecipe, recipes: [] }, { enabled: true })).toMatchObject({
+      failureCount: 1,
+    });
+    expect(validateFinalSingleRecipeContract({
+      ...oneRecipe,
+      recipes: [...oneRecipe.recipes, { ...oneRecipe.recipes[0], candidateId: "r2" }],
+    }, { enabled: true })).toMatchObject({
+      failureCount: 1,
+    });
+    expect(validateFinalSingleRecipeContract({
+      ...oneRecipe,
+      recipes: [{ ...oneRecipe.recipes[0], candidateId: "candidate-1" }],
+    }, { enabled: true })).toMatchObject({
+      failureCount: 1,
+    });
+    expect(validateFinalSingleRecipeContract({
+      ...oneRecipe,
+      recipes: [{ title: "양파볶음", ingredients: [], steps: [] }],
+    }, { enabled: true })).toMatchObject({
+      failureCount: 1,
+    });
+    expect(validateFinalSingleRecipeContract({ ...oneRecipe, recipes: [] }, { enabled: false })).toMatchObject({
+      failureCount: 0,
+    });
+  });
+
+  it("keeps several timeline observation windows under one r1 recipe candidate", async () => {
+    const { buildHolisticStoryboardCandidateLedger } = await import(holisticModuleUrl);
+    const { buildTimelineCandidateLedger, buildTimelineFramePlan } = await import(timelineModuleUrl);
+    const source = makeSource("single-timeline");
+    source.video.durationSeconds = 180;
+    source.video.description = [
+      "00:00 재료 준비",
+      "01:00 볶기",
+      "02:00 마무리",
+    ].join("\n");
+
+    const recipeLedger = buildHolisticStoryboardCandidateLedger(source, {
+      enableTimelineUnderstanding: true,
+      singleRecipeOnly: true,
+      frameBudget: 18,
+    });
+    const framePlan = buildTimelineFramePlan(source, { maxTotalFrames: 18 });
+    const observationLedger = buildTimelineCandidateLedger(framePlan);
+
+    expect(recipeLedger.candidates).toHaveLength(1);
+    expect(recipeLedger.candidates[0]).toMatchObject({ candidateId: "r1" });
+    expect(recipeLedger.summary).toMatchObject({ singleRecipeOnly: true, sourceCandidateCount: 3 });
+    expect(observationLedger.candidates.length).toBeGreaterThan(1);
+  });
+
+  it("uses singular video-understanding and draft prompts in single-recipe mode", async () => {
+    const { buildHolisticDraftPrompt, buildVideoUnderstandingPrompt } = await import(holisticModuleUrl);
+    const packet = {
+      candidateTimelineIndex: { candidates: [{ candidateId: "r1" }] },
+      candidateSourcePackets: [{ candidateId: "r1", sourceEntries: [] }],
+      entries: [],
+    };
+
+    const understandingPrompt = buildVideoUnderstandingPrompt(packet, {
+      timelineMode: true,
+      singleRecipeOnly: true,
+    });
+    const draftPrompt = buildHolisticDraftPrompt(packet, {
+      timelineMode: true,
+      singleRecipeOnly: true,
+    });
+
+    expect(understandingPrompt).toContain("영상 전체의 한 레시피 r1");
+    expect(understandingPrompt).not.toContain("candidate별 묶음을 먼저 보고 요리 흐름을 나눈다");
+    expect(draftPrompt).toContain("영상 전체의 한 레시피 r1");
+    expect(draftPrompt).not.toContain("실제 만든 레시피들을 candidateId별로 분리한다");
+    expect(draftPrompt).not.toContain("같은 timeRange에 여러 레시피가 있으면");
+  });
+
+  it("forces holistic visual targets to r1 in single-recipe mode", async () => {
+    const { buildHolisticVisualTargetLedger } = await import(holisticModuleUrl);
+    const ledger = buildHolisticVisualTargetLedger({
+      draft: {
+        recipes: [{
+          candidateId: "candidate-7",
+          title: "양파볶음",
+          timeRange: { startSec: 0, endSec: 90, basis: "draft" },
+          ingredients: [{
+            name: "양파",
+            amount: null,
+            unit: null,
+            evidence: ["description:1"],
+            needsVisualEstimate: true,
+            uncertainty: "화면 계량 확인 필요",
+          }],
+          steps: [],
+          visualNeeds: [],
+          uncertainties: [],
+        }],
+      },
+      sourcePacket: makeSource("single-visual"),
+      singleRecipeOnly: true,
+      maxTargetsPerRecipe: 4,
+      maxTotalTargets: 6,
+      includeSparseRecallTargets: false,
+    });
+
+    expect(ledger.targets).toHaveLength(1);
+    expect(ledger.targets[0]).toMatchObject({ candidateId: "r1", ingredient: "양파" });
+  });
+
+  it("loads only the requested subset from a dataset profile and rejects outside ids", async () => {
+    const { loadDatasetProfile } = await import(datasetProfileModuleUrl);
+    const manifestPath = path.join(workdir, "notebooks/recipe_loop_data/manifest.single-recipe.json");
+    writeJson(manifestPath, {
+      schemaVersion: 1,
+      profileId: "single-recipe-v1",
+      expectedRecipeCountPerVideo: 1,
+      splits: {
+        train: { expectedCount: 2, ids: ["case-a", "case-b"] },
+      },
+    });
+
+    await expect(loadDatasetProfile({
+      projectRoot: workdir,
+      manifestPath,
+      split: "train",
+      requestedIds: ["case-b"],
+    })).resolves.toMatchObject({
+      profileId: "single-recipe-v1",
+      ids: ["case-b"],
+      expectedCount: 1,
+      profileExpectedCount: 2,
+    });
+    await expect(loadDatasetProfile({
+      projectRoot: workdir,
+      manifestPath,
+      split: "train",
+      requestedIds: ["outside"],
+    })).rejects.toThrow("dataset profile outside id");
+  });
+
+  it("disables candidate-first and multi fallback in single-recipe dry runs", async () => {
+    const { runPiExtraction } = await import(runnerModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const source = makeSource("case-a");
+    source.video.durationSeconds = 180;
+    source.video.description = "00:00 재료 준비\n01:00 볶기\n02:00 마무리";
+    writeJson(path.join(caseDir, "source.json"), source);
+
+    const result = await runPiExtraction({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "pi-single-recipe-dry-run",
+      mode: "holistic-draft",
+      "single-recipe-only": true,
+      "source-packet-only": true,
+      "dry-run": true,
+      "visual-frames": false,
+      "holistic-enable-timeline-understanding": true,
+      "holistic-enable-video-timeline-ledger": true,
+      "holistic-enable-candidate-first-draft": true,
+      "holistic-max-targets-per-recipe": "99",
+      "holistic-max-total-targets": "99",
+    }, { projectRoot: workdir });
+
+    expect(result.failures).toBe(0);
+    const runDir = path.join(caseDir, "runs/pi-single-recipe-dry-run");
+    const manifest = JSON.parse(readFileSync(path.join(runDir, "file-access-manifest.json"), "utf8"));
+    const prompt = readFileSync(path.join(runDir, "holistic-draft-prompt.txt"), "utf8");
+    expect(manifest).toMatchObject({
+      singleRecipeOnly: true,
+      expectedRecipeCount: 1,
+      holisticStoryboardCandidateCount: 1,
+      holisticCandidateFirstDraftRequested: true,
+      holisticCandidateFirstDraftEnabled: false,
+      holisticVideoTimelineLedgerFallback: false,
+      holistic: {
+        maxTargetsPerRecipe: 4,
+        maxTotalTargets: 6,
+      },
+    });
+    expect(prompt).toContain("영상 전체의 한 레시피 r1");
+    expect(prompt).not.toContain("candidate-first holistic draft mode");
+  });
+
+  it("fails the run instead of trimming a two-recipe final output in single-recipe mode", async () => {
+    const { runPiExtraction } = await import(runnerModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const responsePath = path.join(workdir, "two-recipes.json");
+    writeJson(path.join(caseDir, "source.json"), makeSource("case-a"));
+    writeJson(responsePath, {
+      recipes: [
+        { candidateId: "r1", title: "양파볶음", ingredients: [], steps: [] },
+        { candidateId: "r2", title: "감자볶음", ingredients: [], steps: [] },
+      ],
+      repairLog: [],
+    });
+
+    const result = await runPiExtraction({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "pi-single-recipe-contract-failure",
+      "single-recipe-only": true,
+      "response-json": responsePath,
+    }, { projectRoot: workdir });
+
+    expect(result.failures).toBe(1);
+    const runDir = path.join(caseDir, "runs/pi-single-recipe-contract-failure");
+    const manifest = JSON.parse(readFileSync(path.join(runDir, "file-access-manifest.json"), "utf8"));
+    const failure = JSON.parse(readFileSync(path.join(runDir, "failure.json"), "utf8"));
+    expect(manifest.singleRecipeContractFailureCount).toBe(1);
+    expect(failure.message).toContain("single recipe contract failed");
+    expect(() => readFileSync(path.join(runDir, "result.json"), "utf8")).toThrow();
+  });
+
+  it("does not let staged candidate-only output bypass the single-recipe contract", async () => {
+    const { runPiExtraction } = await import(runnerModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const candidateResponsePath = path.join(workdir, "two-candidates.json");
+    writeJson(path.join(caseDir, "source.json"), makeSource("case-a"));
+    writeJson(candidateResponsePath, {
+      candidates: [
+        { candidateId: "r1", title: "양파볶음", ingredientNames: ["양파"], evidence: ["description:1"] },
+        { candidateId: "r2", title: "감자볶음", ingredientNames: ["감자"], evidence: ["description:2"] },
+      ],
+    });
+
+    const result = await runPiExtraction({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "pi-single-candidate-only-contract",
+      staged: true,
+      "candidate-only": true,
+      "single-recipe-only": true,
+      "candidate-response-json": candidateResponsePath,
+    }, { projectRoot: workdir });
+
+    expect(result.failures).toBe(1);
+    const runDir = path.join(caseDir, "runs/pi-single-candidate-only-contract");
+    const manifest = JSON.parse(readFileSync(path.join(runDir, "file-access-manifest.json"), "utf8"));
+    expect(manifest.singleRecipeContractFailureCount).toBe(1);
+    expect(() => readFileSync(path.join(runDir, "result.json"), "utf8")).toThrow();
+  });
+
+  it("rejects a merged one-recipe draft when source timeline and video understanding both detect multiple dishes", async () => {
+    const { runPiExtraction } = await import(runnerModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const understandingPath = path.join(workdir, "multi-understanding.json");
+    const draftPath = path.join(workdir, "merged-draft.json");
+    const source = makeSource("case-a");
+    source.video.durationSeconds = 180;
+    source.video.description = "00:00 양파볶음\n양파 1개\n01:30 감자볶음\n감자 2개";
+    writeJson(path.join(caseDir, "source.json"), source);
+    writeJson(understandingPath, {
+      globalStory: "양파볶음 뒤에 감자볶음을 따로 만든다.",
+      dishStories: [{
+        candidateId: "r1",
+        title: "양파볶음",
+        plainStory: "양파를 볶은 뒤 별도 감자볶음이 이어진다.",
+        mainIngredients: ["양파"],
+        stepOutline: ["양파를 볶는다"],
+        sourceRefs: ["description:1", "description:2", "description:3", "description:4"],
+        uncertainties: [],
+        confidence: 0.9,
+      }],
+      crossDishNotes: ["UNSUPPORTED_MULTI_RECIPE_VIDEO: 서로 다른 완성 요리 두 개"],
+      uncertainties: [],
+    });
+    writeJson(draftPath, {
+      recipes: [{
+        candidateId: "r1",
+        title: "볶음 모음",
+        timeRange: { startSec: 0, endSec: 180, basis: "description-timeline" },
+        ingredients: [
+          { name: "양파", amount: "1", unit: "개", amountBasis: "stated", evidence: ["description:2"] },
+          { name: "감자", amount: "2", unit: "개", amountBasis: "stated", evidence: ["description:4"] },
+        ],
+        steps: [
+          { text: "양파를 볶는다.", evidence: ["description:1"], confidence: 0.8 },
+          { text: "감자를 볶는다.", evidence: ["description:3"], confidence: 0.8 },
+        ],
+        visualNeeds: [],
+        uncertainties: [],
+      }],
+      globalUncertainties: [],
+    });
+
+    const result = await runPiExtraction({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "pi-single-recipe-unsupported",
+      mode: "holistic-draft",
+      "single-recipe-only": true,
+      "source-packet-only": true,
+      "visual-frames": false,
+      "holistic-enable-timeline-understanding": true,
+      "holistic-enable-integrated-understanding": true,
+      "holistic-understanding-response-json": understandingPath,
+      "holistic-response-json": draftPath,
+    }, { projectRoot: workdir });
+
+    expect(result.failures).toBe(1);
+    const runDir = path.join(caseDir, "runs/pi-single-recipe-unsupported");
+    const manifest = JSON.parse(readFileSync(path.join(runDir, "file-access-manifest.json"), "utf8"));
+    const failure = JSON.parse(readFileSync(path.join(runDir, "failure.json"), "utf8"));
+    expect(manifest.multiRecipeSignalDetected).toMatchObject({
+      detected: true,
+      unsupported: true,
+      stageCount: 2,
+    });
+    expect(failure.message).toBe("UNSUPPORTED_MULTI_RECIPE_VIDEO");
   });
 
   it("times out visual shell commands even when a detached child ignores SIGTERM", async () => {
@@ -6143,6 +6466,53 @@ describe("pi recipe extractor MVP runner", () => {
     expect(freeze.policy.goldenReadDuringFreeze).toBe(false);
     expect(freeze.cases[0].files["result.json"].sha256).toMatch(/^[a-f0-9]{64}$/u);
     expect(freeze.cases[0].readEvents.map((event: { path: string }) => path.basename(event.path))).toEqual(["source.json", "pi-response.json"]);
+  });
+
+  it("freezes exactly the ids selected by the dataset profile", async () => {
+    const { runFreeze } = await import(freezeModuleUrl);
+    const manifestPath = path.join(workdir, "notebooks/recipe_loop_data/manifest.single-recipe.json");
+    writeJson(manifestPath, {
+      schemaVersion: 1,
+      profileId: "single-recipe-v1",
+      expectedRecipeCountPerVideo: 1,
+      splits: { train: { expectedCount: 2, ids: ["case-a", "case-b"] } },
+    });
+    writeJson(
+      path.join(workdir, "notebooks/recipe_loop_data/train/case-a/runs/profile-freeze/result.json"),
+      { videoId: "case-a", recipes: [{ candidateId: "r1", title: "테스트", ingredients: [], steps: [] }] },
+    );
+
+    const result = await runFreeze({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "profile-freeze",
+      "dataset-manifest": manifestPath,
+    }, { projectRoot: workdir });
+    const freeze = JSON.parse(readFileSync(result.freezePath, "utf8"));
+
+    expect(freeze).toMatchObject({
+      datasetProfileId: "single-recipe-v1",
+      datasetManifestPath: "notebooks/recipe_loop_data/manifest.single-recipe.json",
+      expectedCount: 1,
+      caseCount: 1,
+      completedCount: 1,
+    });
+    expect(freeze.cases.map((entry: { videoId: string }) => entry.videoId)).toEqual(["case-a"]);
+  });
+
+  it("blocks detailed comparison HTML for protected splits even without a dataset manifest", async () => {
+    const { renderComparisonHtml } = await import(comparisonHtmlModuleUrl);
+
+    await expect(renderComparisonHtml({
+      split: "validation",
+      "out-tag": "protected-detail",
+      ids: "case-a",
+    }, { projectRoot: workdir })).rejects.toThrow("aggregate-only");
+    await expect(renderComparisonHtml({
+      split: "holdout",
+      "out-tag": "protected-detail",
+      ids: "case-a",
+    }, { projectRoot: workdir })).rejects.toThrow("aggregate-only");
   });
 
   it("runs the train wrapper with staged fast compact defaults and freeze", async () => {

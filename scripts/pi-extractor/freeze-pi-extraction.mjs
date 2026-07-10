@@ -5,6 +5,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { freezePiExtraction } from "./lib/artifacts.mjs";
+import { loadDatasetProfile } from "../recipe-loop/lib/dataset-profile.mjs";
 
 const PROJECT_ROOT = process.cwd();
 
@@ -33,15 +34,26 @@ function idsFromArgs(args) {
 
 export async function runFreeze(rawArgs = {}, options = {}) {
   const args = typeof rawArgs.length === "number" ? parseCliArgs(rawArgs) : rawArgs;
+  const projectRoot = options.projectRoot ?? PROJECT_ROOT;
   const split = typeof args.split === "string" ? args.split : "train";
   const outTag = typeof args["out-tag"] === "string" ? args["out-tag"] : null;
   if (!outTag) throw new Error("--out-tag is required");
+  const requestedIds = idsFromArgs(args);
+  const datasetProfile = typeof args["dataset-manifest"] === "string"
+    ? await loadDatasetProfile({
+      projectRoot,
+      manifestPath: args["dataset-manifest"],
+      split,
+      requestedIds,
+    })
+    : null;
   return freezePiExtraction({
-    projectRoot: options.projectRoot ?? PROJECT_ROOT,
+    projectRoot,
     dataRoot: options.dataRoot ?? "notebooks/recipe_loop_data",
     split,
     outTag,
-    ids: idsFromArgs(args),
+    ids: datasetProfile?.ids ?? requestedIds,
+    datasetProfile,
   });
 }
 

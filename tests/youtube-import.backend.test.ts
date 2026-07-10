@@ -1985,6 +1985,7 @@ describe("20 youtube real import backend", () => {
   it("POST /api/v1/recipes/youtube/extract parses structured Korean description without fixed fallback ingredients", async () => {
     mockAuth();
     vi.stubEnv("YOUTUBE_API_KEY", "test-key");
+    vi.stubEnv("YOUTUBE_RECIPE_SINGLE_ONLY", "1");
 
     const fetchMock = vi.fn(async () =>
       new Response(JSON.stringify({
@@ -2066,6 +2067,9 @@ describe("20 youtube real import backend", () => {
       data: {
         title: "살찔 걱정 절대 없는 초간단 오이 샌드위치",
         blocking_issues: [],
+        multi_recipe_status: "single",
+        primary_candidate_id: null,
+        recipe_candidates: [],
       },
       error: null,
     });
@@ -3471,6 +3475,77 @@ describe("20 youtube real import backend", () => {
         title: "계란국",
       }),
     ]);
+  });
+
+  it("rejects a newly detected multi-recipe video without creating a parent session when single-only mode is enabled", async () => {
+    mockAuth();
+    vi.stubEnv("YOUTUBE_RECIPE_SINGLE_ONLY", "1");
+
+    const transcriptLines = [
+      "첫 번째 요리 김치볶음밥",
+      "재료",
+      "김치 200g",
+      "밥 1공기",
+      "만드는 법",
+      "1. 김치를 볶아요.",
+      "2. 밥을 넣고 볶아요.",
+      "두 번째 요리 계란국",
+      "재료",
+      "달걀 2개",
+      "물 500ml",
+      "만드는 법",
+      "1. 물을 끓여요.",
+      "2. 달걀을 풀어 넣어요.",
+    ];
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "fixture-transcript",
+      fetchTranscript: vi.fn(async () => ({
+        status: "available" as const,
+        providerName: "fixture-transcript",
+        transcriptText: transcriptLines.join("\n"),
+        transcriptSegments: transcriptLines.map((text, lineIndex) => ({
+          source: "caption" as const,
+          lineIndex,
+          text,
+          startMs: 60_000 + lineIndex * 5_000,
+          durationMs: 4_000,
+          language: "ko",
+          trackKind: "auto",
+        })),
+        language: "ko",
+        trackKind: "auto" as const,
+      })),
+    };
+    const { dbClient, sessionsTable, candidatesTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: riceIngredientId, standard_name: "밥" },
+        { id: eggIngredientId, standard_name: "달걀" },
+        { id: waterIngredientId, standard_name: "물" },
+      ],
+      cookingMethodLookupRows: [
+        { id: prepMethodId, code: "prep", label: "손질", color_key: "gray", is_system: true },
+        { id: mixMethodId, code: "stir_fry", label: "볶기", color_key: "orange", is_system: true },
+      ],
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { response, body } = await withYoutubeTranscriptProvider(transcriptProvider, () =>
+      postYoutubeExtract("https://www.youtube.com/watch?v=transcriptmulti1"),
+    );
+
+    expect(response.status).toBe(422);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "UNSUPPORTED_MULTI_RECIPE_VIDEO",
+        message: "이 영상은 여러 요리를 포함해서 현재 단일 레시피 추출 대상이 아니에요.",
+        fields: [],
+      },
+    });
+    expect(sessionsTable.insert).not.toHaveBeenCalled();
+    expect(candidatesTable.insert).not.toHaveBeenCalled();
   });
 
   it("POST /api/v1/recipes/youtube/extract falls back to visual OCR when caption multi-recipe candidates are noisy", async () => {

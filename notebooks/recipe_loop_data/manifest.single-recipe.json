@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "profileId": "single-recipe-v1",
+  "definition": "one video with exactly one approved golden recipe",
+  "baseManifest": "notebooks/recipe_loop_data/manifest.json",
+  "expectedRecipeCountPerVideo": 1,
+  "splits": {
+    "train": {
+      "expectedCount": 9,
+      "ids": [
+        "YUdJBeOdrMY",
+        "J5Rmux3ttaY",
+        "DnQ09ZZCjCs",
+        "tqpwhtw54mQ",
+        "vqb3WyZmL_8",
+        "5NSTRKouSWs",
+        "QF0gBfW3od4",
+        "rKfLY_Lg1-Q",
+        "eJyoszbyNNQ"
+      ]
+    },
+    "validation": {
+      "expectedCount": 8,
+      "ids": [
+        "Egpjve8caK0",
+        "rkOEBmECi_o",
+        "fnhLXA-bSu8",
+        "gChK94Ai-TE",
+        "YZ8KSZboJeM",
+        "oe_WhcK2X4Q",
+        "jenDETSgvz4",
+        "nE7ANT3uGMQ"
+      ]
+    },
+    "holdout": {
+      "expectedCount": 5,
+      "ids": [
+        "2FF9ayF_d3w",
+        "oqJzB3OD0eI",
+        "mlN1SdVf0yo",
+        "jghNqyzxWWE",
+        "3kvXys6npBM"
+      ]
+    }
+  },
+  "excludedCases": [
+    { "split": "train", "videoId": "LSYEnH5fGfk", "reason": "multiple_golden_recipes" },
+    { "split": "train", "videoId": "PBHWL8_0Kb0", "reason": "multiple_golden_recipes" },
+    { "split": "train", "videoId": "fTlTpSJtrEs", "reason": "multiple_golden_recipes" },
+    { "split": "validation", "videoId": "MxA2R1tzDLA", "reason": "multiple_golden_recipes" },
+    { "split": "validation", "videoId": "vw73AKRDxI8", "reason": "multiple_golden_recipes" }
+  ]
+}
