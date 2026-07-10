@@ -146,24 +146,36 @@ export function SocialLoginButtons({
         return (
           <button
             key={providerId}
-            className={`flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-control)] px-4 py-3.5 text-[15px] font-bold transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${getProviderButtonClass(providerId, provider.className)} ${highlighted ? "ring-2 ring-[var(--brand)] ring-offset-2 ring-offset-[var(--surface)]" : ""}`}
-            data-provider-highlighted={highlighted ? "true" : undefined}
+            className={`grid min-h-[52px] w-full items-center gap-2 rounded-[var(--radius-control)] px-3 py-3.5 text-[15px] font-bold transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${highlighted ? "grid-cols-[20px_minmax(0,1fr)_auto]" : "grid-cols-[20px_minmax(0,1fr)_20px]"} ${getProviderButtonClass(providerId, provider.className)}`}
+            data-recent-provider={highlighted ? "true" : undefined}
             disabled={isPending}
             onClick={(event) => requestSignIn(providerId, event.currentTarget)}
             type="button"
           >
             <span
               aria-hidden="true"
-              className="mr-3 inline-flex h-5 w-5 items-center justify-center text-[15px] font-extrabold uppercase"
+              className="inline-flex h-5 w-5 items-center justify-center text-[15px] font-extrabold uppercase"
             >
               <ProviderLogoIcon providerId={providerId} />
             </span>
-            {pendingProvider === providerId ? `${label} 로그인 중...` : label}
+            <span className="min-w-0 truncate text-center leading-5">
+              {pendingProvider === providerId ? `${label} 로그인 중...` : label}
+            </span>
+            {highlighted ? (
+              <span
+                aria-hidden="true"
+                className="whitespace-nowrap rounded-md bg-[var(--foreground)] px-2 py-1 text-[11px] font-extrabold leading-4 text-[var(--surface)]"
+              >
+                최근 로그인
+              </span>
+            ) : (
+              <span aria-hidden="true" className="h-5 w-5" />
+            )}
           </button>
         );
       })}
       {recentProvider ? (
-        <p className="text-xs leading-5 text-[var(--muted)]">
+        <p className="rounded-md bg-[var(--surface-fill)] px-3 py-2 text-left text-xs font-semibold leading-5 text-[var(--text-2)]">
           최근 이 브라우저에서 {getAuthProviderDisplayName(recentProvider)}로 로그인했어요.
         </p>
       ) : null}

@@ -46,6 +46,11 @@ test("captures deterministic recent-provider, safe-error, and linked-provider ev
   const width = page.viewportSize()?.width ?? 1280;
   await page.addInitScript(() => localStorage.setItem("homecook:last-auth-provider:v1", "google"));
   await page.goto("/login");
+  const recentProviderButton = page.getByRole("button", { name: "Google로 시작하기" });
+  await expect(recentProviderButton.getByText("최근 로그인")).toBeVisible();
+  await expect(recentProviderButton).toHaveAttribute("data-recent-provider", "true");
+  await expect(recentProviderButton).not.toHaveClass(/ring-2/);
+  await page.screenshot({ path: join(evidenceDir, `LOGIN-recent-provider-${width}.png`), fullPage: true });
   await page.getByRole("button", { name: "네이버로 시작하기" }).click();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   for (const action of await page.getByRole("dialog").getByRole("button").all()) {
