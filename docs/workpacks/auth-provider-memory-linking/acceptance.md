@@ -133,7 +133,15 @@
 - [x] E3: 각 login이 정확히 하나의 `public.users` row를 만들거나 같은 row로 해석된다.
 - [x] E3: 이메일 없는 기존 QA Auth 계정 2개와 orphan public QA row 2개를 supported cleanup path로 정리하고 privacy-safe audit에서 양쪽 활성 email-less user 0을 확인했다.
 - [x] E4: E1-E3 완료 후 사용자에게 “세 제공자 이메일 반환, 콜백 차단, QA 계정 정리가 확인됐으므로 지금 `Allow users without an email`을 Google, Naver, Kakao 모두 OFF로 바꿀 시점입니다.”라고 알리고 확인을 기다렸다.
-- [ ] E4: hosted Supabase에서 Google/Naver/Kakao 모두 `Allow users without an email` OFF가 확인됐다.
-- [ ] E5: OFF 상태에서 fresh Google/Naver/Kakao production smoke가 성공하고 non-empty email을 유지한다.
-- [ ] E5: same-email linked provider login이 같은 Supabase/app user id로 해석되고 duplicate app row가 생기지 않는다.
-- [ ] E5: account conflict/callback/link failure event에 email, access token, authorization code, provider payload가 없다.
+- [x] E4: hosted Supabase에서 Google/Naver/Kakao 모두 `Allow users without an email` OFF가 확인됐다.
+- [x] E5: OFF 상태에서 fresh Google/Naver/Kakao production smoke가 성공하고 non-empty email을 유지한다.
+- [x] E5: same-email linked provider login이 같은 Supabase/app user id로 해석되고 duplicate app row가 생기지 않는다.
+- [x] E5: account conflict/callback/link failure event에 email, access token, authorization code, provider payload가 없다.
+
+### Hosted E4/E5 privacy-safe evidence
+
+- Google/Kakao/Naver의 email-less 설정 OFF를 저장 후 재오픈해 확인했고 compatibility `custom:kakao`도 OFF를 확인했다.
+- OFF 전환 후 세 provider 모두 production OAuth/callback/session과 authenticated profile 진입이 성공했다.
+- identity aggregate는 Google 3/3, Kakao 1/1, Naver 1/1에서 email/sub/email_verified가 모두 존재했고 Auth/public missing-email은 각각 0이었다.
+- `custom:naver+kakao`가 연결된 Supabase auth user는 1명, 대응 `public.users` row도 1개였으며 양 provider 재로그인이 성공했다.
+- 최신 `auth_failure` 74건의 privacy-safe audit에서 user id, query, metadata, email/token/code/client-secret pattern 위반은 0이었다.

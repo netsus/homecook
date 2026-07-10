@@ -186,7 +186,7 @@
 
 - fixture reset: existing auth test helpers and deterministic mock state
 - local real auth: `pnpm dev:local-supabase`; manual linking local config enabled only for implementation verification
-- email 없는 기존 3개 계정은 QA data이며 E4 전에 supported deletion path로 제거 가능하다.
+- email 없는 기존 QA Auth 계정 2개와 orphan public QA row 2개는 E4 전에 supported cleanup path로 제거했고, 양쪽 missing-email audit 0을 확인했다.
 - Blocker: Kakao/Naver/Google 중 하나라도 `auth.users.email`이 비었거나, Naver `sub`가 missing/unstable/colliding이거나, same-email different-user가 bootstrap되거나, auth failure log에 PII가 보이면 E4 진입 금지다.
 
 ## Key Rules
@@ -247,3 +247,10 @@
 - [x] fixture와 real OAuth E3/E5 smoke 경로를 분리한다 <!-- omo:id=delivery-auth-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] LOGIN/MYPAGE 390px·320px·desktop evidence와 authority report를 확보한다 <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] deterministic tests와 Playwright/live OAuth automation split을 닫는다 <!-- omo:id=delivery-test-split;stage=4;scope=shared;review=6 -->
+
+## Final Hosted Closeout
+
+- E1/E3 provider configuration, email/sub/email_verified, cleanup audit를 privacy-safe aggregate로 확인했다.
+- 사용자 승인 후 Google/Kakao/Naver와 compatibility `custom:kakao`의 email-less 설정 OFF를 재오픈 확인했다.
+- OFF 상태 production Google/Kakao/Naver OAuth/callback/session과 same-user Naver+Kakao linked-provider login을 확인했다.
+- Auth/public missing-email 0, duplicate public row 0, 최신 auth failure 74건의 PII/token/code pattern 위반 0을 확인했다.
