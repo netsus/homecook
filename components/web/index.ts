@@ -5,6 +5,7 @@ export * from "@/components/web/web-cta";
 export * from "@/components/web/web-dialog";
 export * from "@/components/web/web-empty-state";
 export * from "@/components/web/web-error-state";
+export * from "@/components/web/web-footer";
 export * from "@/components/web/web-icon-button";
 export * from "@/components/web/web-list-row";
 export * from "@/components/web/web-modal";

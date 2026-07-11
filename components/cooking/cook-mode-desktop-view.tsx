@@ -54,7 +54,7 @@ export function CookModeDesktopView({
   ];
 
   return (
-    <WebShell className="web-cooking-shell web-cooking-shell-dark" wide>
+    <WebShell className="web-cooking-shell web-cooking-shell-dark" footer={false} wide>
       <WebTopNav
         activeId={variant === "planner" ? "planner" : undefined}
         items={WEB_NAV_ITEMS}

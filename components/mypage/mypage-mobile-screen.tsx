@@ -39,7 +39,7 @@ import type { ShoppingListHistoryItem } from "@/types/shopping";
 import type { UserGamificationData } from "@/types/user-gamification";
 import type { UserProgressData } from "@/types/user-progress";
 
-export type MypageMobileSurface = "home" | "recipebook" | "shopping";
+export type MypageMobileSurface = "home" | "legal" | "recipebook" | "shopping";
 
 interface MypageMobileScreenProps {
   books: RecipeBookSummary[];
@@ -164,11 +164,13 @@ export function MypageMobileScreen({
   onSurfaceChange,
 }: MypageMobileScreenProps) {
   const title =
-    surface === "recipebook"
-      ? "레시피북"
-      : surface === "shopping"
-        ? "장보기 기록"
-        : "마이페이지";
+    surface === "legal"
+      ? "법적 정보"
+      : surface === "recipebook"
+        ? "레시피북"
+        : surface === "shopping"
+          ? "장보기 기록"
+          : "마이페이지";
 
   return (
     <div
@@ -215,6 +217,8 @@ export function MypageMobileScreen({
           onRetrySavedRecipes={onRetrySavedRecipes}
           onSurfaceChange={onSurfaceChange}
         />
+      ) : surface === "legal" ? (
+        <MobileLegalSurface />
       ) : surface === "recipebook" ? (
         <MobileRecipebookSurface
           bookCoverImages={bookCoverImages}
@@ -410,6 +414,13 @@ function MobileHomeSurface({
         returnTo: "/mypage",
       }),
       label: "환경설정",
+    },
+    {
+      icon: "document",
+      iconTreatment: "plain",
+      id: "legal",
+      label: "법적 정보",
+      onClick: () => onSurfaceChange("legal"),
     },
   ];
 
@@ -693,6 +704,15 @@ function MypageMenuIcon({ name }: { name: string }) {
     );
   }
 
+  if (name === "document") {
+    return (
+      <svg {...commonProps}>
+        <path d="M7 3h7l3 3v15H7V3Z" />
+        <path d="M14 3v4h4M10 11h4M10 15h4" />
+      </svg>
+    );
+  }
+
   if (name === "user") {
     return (
       <svg {...commonProps}>
@@ -706,6 +726,49 @@ function MypageMenuIcon({ name }: { name: string }) {
     <svg {...commonProps}>
       <path d="M4 5h16M4 12h16M4 19h16" />
     </svg>
+  );
+}
+
+function MobileLegalSurface() {
+  const documents = [
+    {
+      description: "수집 항목, 이용 목적, 보유 기간과 권리 행사 방법",
+      href: "/privacy",
+      label: "개인정보처리방침",
+    },
+    {
+      description: "서비스 이용 조건, 콘텐츠, 이용 제한과 면책고지",
+      href: "/terms",
+      label: "이용약관",
+    },
+  ] as const;
+
+  return (
+    <main className="p-4" data-testid="mypage-legal-surface">
+      <section className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--line)] bg-[var(--surface)]">
+        {documents.map((document, index) => (
+          <Link
+            aria-label={document.label}
+            className={[
+              "flex min-h-[72px] items-center gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand)]",
+              index < documents.length - 1 ? "border-b border-[var(--line)]" : "",
+            ].join(" ")}
+            href={document.href}
+            key={document.href}
+          >
+            <span className="min-w-0 flex-1">
+              <strong className="block text-[15px] text-[var(--foreground)]">
+                {document.label}
+              </strong>
+              <span className="mt-1 block text-[13px] leading-5 text-[var(--text-3)]">
+                {document.description}
+              </span>
+            </span>
+            <ChevronRightIcon />
+          </Link>
+        ))}
+      </section>
+    </main>
   );
 }
 
