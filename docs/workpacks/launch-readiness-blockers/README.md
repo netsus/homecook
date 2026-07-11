@@ -35,6 +35,9 @@
   - fake contact 문자열 제거: `support@homecook.local`, `@homecook`
   - 실제 운영정보 기반 개인정보처리방침/이용약관 작성
   - public route만 sitemap에 포함
+  - 운영용 기본 OG/Twitter 공유 이미지와 절대 URL metadata 제공
+  - 공개 레시피 상세에 제목, 설명, 대표 이미지, canonical metadata 제공
+  - 로그인 및 개인 데이터 route는 검색 색인에서 제외
 - PR2 HOME hydration + guest gamification noise
   - HOME React hydration error `#418` 제거
   - guest route에서 global `GrowthToastStack`의 불필요한 401 fetch/console noise 제거
@@ -78,7 +81,7 @@
 - FoodSafety가 아닌 외부 URL의 임의 rewrite
 - unrelated recipe image CDN migration
 - PostCSS 이외의 dependency upgrade sweep
-- OG/Twitter image polish
+- 브랜드 일러스트를 별도 제작하는 고급 OG/Twitter image polish
 - Search Console 제출 자동화
 - 앞선 in-progress product slice의 구현/closeout 해결
 
@@ -100,6 +103,8 @@
 - PR4 migration은 idempotent 해야 하며, repeated apply 또는 already-normalized row에서 결과가 꼬이지 않아야 한다.
 - PR4 read path guard는 migration 전/후 모두 API 응답에서 FoodSafety `https://`를 보장해야 한다.
 - PR1 robots/sitemap은 Next.js metadata route로 만들고, private/auth route를 노출하지 않는다.
+- PR1의 기본 social card는 Next.js image metadata route로 생성하고 1200x630 OG 규격을 유지한다.
+- 공개 레시피 metadata 조회 실패 시 기본 집밥 social card로 안전하게 fallback한다.
 - PR3 response headers는 representative route 전체에 적용되어야 한다.
 - PR5는 새 dependency를 추가하지 않고 기존 override/lockfile로 audit blocker를 닫는다.
 

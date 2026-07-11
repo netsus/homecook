@@ -61,6 +61,17 @@ export function createServiceRoleClient() {
   });
 }
 
+export function createPublicDataClient() {
+  const { url, anonKey } = getSupabaseEnv();
+
+  return createClient(url, anonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
 export async function getServerAuthUser() {
   const supabase = await createServerComponentClient();
   const authResult = await supabase.auth.getUser();

@@ -8,6 +8,13 @@ export const metadata = {
     canonical: "/privacy",
   },
   description: "집밥 서비스 개인정보 수집, 이용, 보관, 파기 기준",
+  openGraph: {
+    description: "집밥 서비스 개인정보 수집, 이용, 보관, 파기 기준",
+    images: ["/opengraph-image"],
+    title: "개인정보처리방침",
+    type: "website",
+    url: "/privacy",
+  },
   title: "개인정보처리방침",
 };
 

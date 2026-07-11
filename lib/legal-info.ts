@@ -6,10 +6,17 @@ function readPublicEnv(name: string) {
 }
 
 export function getPublicSiteOrigin() {
-  const raw =
+  const explicitUrl =
     readPublicEnv("NEXT_PUBLIC_SITE_URL") ??
-    readPublicEnv("NEXT_PUBLIC_APP_URL") ??
-    "http://localhost:3000";
+    readPublicEnv("NEXT_PUBLIC_APP_URL");
+  const vercelHost =
+    readPublicEnv("VERCEL_PROJECT_PRODUCTION_URL") ??
+    readPublicEnv("VERCEL_URL");
+  const raw = explicitUrl ?? (vercelHost
+    ? vercelHost.startsWith("http://") || vercelHost.startsWith("https://")
+      ? vercelHost
+      : `https://${vercelHost}`
+    : "http://localhost:3000");
 
   try {
     return new URL(raw).origin;

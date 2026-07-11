@@ -8,6 +8,13 @@ export const metadata = {
     canonical: "/terms",
   },
   description: "집밥 서비스 이용 조건과 계정, 탈퇴, 금지행위 기준",
+  openGraph: {
+    description: "집밥 서비스 이용 조건과 계정, 탈퇴, 금지행위 기준",
+    images: ["/opengraph-image"],
+    title: "이용약관",
+    type: "website",
+    url: "/terms",
+  },
   title: "이용약관",
 };
 

@@ -25,6 +25,18 @@ describe("launch readiness legal and SEO routes", () => {
     vi.unstubAllEnvs();
     delete process.env.NEXT_PUBLIC_SITE_URL;
     delete process.env.NEXT_PUBLIC_SERVICE_CONTACT_EMAIL;
+    delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  });
+
+  it("uses the Vercel production domain when the explicit public URL is absent", async () => {
+    vi.resetModules();
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = "homecook-flame.vercel.app";
+
+    const { getPublicSiteOrigin } = await import("@/lib/legal-info");
+
+    expect(getPublicSiteOrigin()).toBe("https://homecook-flame.vercel.app");
   });
 
   it("renders the privacy page with required policy sections", async () => {
@@ -66,25 +78,45 @@ describe("launch readiness legal and SEO routes", () => {
     ]);
 
     const robotsResult = robots();
-    const sitemapResult = sitemap();
+    const sitemapResult = await sitemap();
     const sitemapUrls = sitemapResult.map((entry) => entry.url);
 
     expect(robotsResult).toMatchObject({
       rules: {
         allow: "/",
+        disallow: expect.arrayContaining([
+          "/admin",
+          "/auth",
+          "/login",
+          "/mypage",
+          "/planner",
+          "/settings",
+        ]),
         userAgent: "*",
       },
       sitemap: `${TEST_SITE_ORIGIN}/sitemap.xml`,
     });
-    expect(sitemapUrls).toEqual([
+    expect(sitemapUrls.slice(0, 3)).toEqual([
       TEST_SITE_ORIGIN,
-      `${TEST_SITE_ORIGIN}/login`,
       `${TEST_SITE_ORIGIN}/privacy`,
       `${TEST_SITE_ORIGIN}/terms`,
     ]);
     expect(sitemapUrls.join("\n")).not.toContain("/admin");
     expect(sitemapUrls.join("\n")).not.toContain("/auth/");
     expect(sitemapUrls.join("\n")).not.toContain("/mypage");
+  });
+
+  it("publishes production-ready default social metadata", async () => {
+    const layoutSource = readSource("app/layout.tsx");
+    const homeSource = readSource("app/page.tsx");
+
+    expect(layoutSource).not.toContain("alternates: {\n    canonical: \"/\"");
+    expect(layoutSource).toContain('url: "/opengraph-image"');
+    expect(layoutSource).toContain("width: 1200");
+    expect(layoutSource).toContain("height: 630");
+    expect(layoutSource).toContain('images: ["/twitter-image"]');
+    expect(homeSource).toContain('canonical: "/"');
+    expect(homeSource).toContain('url: "/"');
   });
 
   it("does not ship stale preview domains or fake contact strings in launch surfaces", () => {
