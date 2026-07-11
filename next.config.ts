@@ -152,6 +152,29 @@ const securityHeaders = [
   },
 ];
 
+const noIndexHeaders = [
+  {
+    key: "X-Robots-Tag",
+    value: "noindex, nofollow, noarchive",
+  },
+];
+
+const privatePageSources = [
+  "/admin/:path*",
+  "/cooking/:path*",
+  "/leftovers/:path*",
+  "/login",
+  "/menu/:path*",
+  "/menu-add",
+  "/mypage/:path*",
+  "/onboarding/:path*",
+  "/pantry",
+  "/planner/:path*",
+  "/recipes/new/:path*",
+  "/settings",
+  "/shopping/:path*",
+];
+
 const nextConfig: NextConfig = {
   ...(isQaFixtureServer ? { devIndicators: false } : {}),
   images: {
@@ -165,6 +188,10 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
+      ...privatePageSources.map((source) => ({
+        headers: noIndexHeaders,
+        source,
+      })),
     ];
   },
 };
