@@ -89,6 +89,12 @@ describe("user gamification definitions", () => {
     expect(data.tutorial.active_steps.map((step) => step.achievement_key)).toEqual([
       "tutorial_recipe_saved",
     ]);
+    expect(data.quests.active).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        quest_key: "first_cook_done",
+        title: "첫 요리 완료하기",
+      }),
+    ]));
   });
 
   it("advances the active tutorial step after the first tutorial achievement is earned", () => {

@@ -709,7 +709,7 @@ export const USER_QUEST_DEFINITIONS: UserQuestDefinition[] = [
   {
     quest_key: "first_cook_done",
     quest_type: "tutorial",
-    title: "첫 집밥 완료하기",
+    title: "첫 요리 완료하기",
     description: "요리 완료를 기록하면 성장에 반영돼요.",
     metric: "cooking_completed",
     target: 1,

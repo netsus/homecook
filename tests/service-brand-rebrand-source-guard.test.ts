@@ -8,7 +8,7 @@ function source(path: string) {
 
 describe("service brand rebrand source guard", () => {
   it("keeps runtime identifiers while removing legacy copy from current brand surfaces", () => {
-    const currentBrandSources = [
+    const frontendBrandSources = [
       "app/layout.tsx",
       "components/layout/app-header.tsx",
       "components/home/home-screen.tsx",
@@ -24,6 +24,8 @@ describe("service brand rebrand source guard", () => {
       "lib/navigation/app-nav.ts",
       "lib/recipe.ts",
     ].map(source).join("\n");
+    const serverBrandSource = source("lib/server/user-gamification.ts");
+    const currentBrandSources = `${frontendBrandSources}\n${serverBrandSource}`;
     const runtimeSources = [
       "components/gamification/growth-toast-stack.tsx",
       "components/shared/profile-summary-button.tsx",
@@ -40,11 +42,12 @@ describe("service brand rebrand source guard", () => {
       "집밥 성장",
       "첫 집밥 기록",
       '"집밥 활동"',
-      "첫 집밥 완료하기",
       '?? "집밥러"',
     ]) {
-      expect(currentBrandSources).not.toContain(legacyCopy);
+      expect(frontendBrandSources).not.toContain(legacyCopy);
     }
+
+    expect(currentBrandSources).not.toContain('title: "첫 집밥 완료하기"');
 
     expect(runtimeSources).toContain("HOMECOOK_GAMIFICATION_REFRESH_EVENT");
     expect(runtimeSources).toContain("NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES");
