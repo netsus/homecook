@@ -21,7 +21,7 @@
 
 ## Navigation / Platform Policy
 
-- [x] desktop global nav는 정확히 `홈 / 플래너 / 팬트리 / 마이페이지 / 집밥 가이드`다 <!-- omo:id=accept-desktop-five-nav;stage=4;scope=shared;review=5,6 -->
+- [x] desktop global nav는 정확히 `홈 / 플래너 / 팬트리 / 마이페이지 / 집밥 가이드`다 <!-- omo:id=accept-desktop-five-nav;stage=4;scope=shared;review=6 -->
 - [x] 일반 제품 화면의 local primary `WEB_NAV_ITEMS` 복제 선언은 0개다 <!-- omo:id=accept-web-nav-no-drift;stage=4;scope=shared;review=6 -->
 - [x] 개인정보/약관 화면은 global nav와 문서 보조 nav를 모두 유지한다 <!-- omo:id=accept-legal-nav-split;stage=4;scope=frontend;review=5,6 -->
 - [x] mobile bottom tab은 기존 `홈 / 플래너 / 팬트리 / 마이` 4개이며 `/about`을 포함하지 않는다 <!-- omo:id=accept-mobile-four-tabs;stage=4;scope=frontend;review=5,6 -->

@@ -197,7 +197,7 @@
 
 - [x] `/about` 정적 콘텐츠 모델과 공개 route 구현 <!-- omo:id=delivery-about-route-content;stage=4;scope=frontend;review=5,6 -->
 - [x] ABOUT desktop/mobile shell, anchor, CTA, accordion 구현 <!-- omo:id=delivery-about-responsive-ui;stage=4;scope=frontend;review=5,6 -->
-- [x] `PRIMARY_WEB_NAV_ITEMS` 5메뉴와 web/mobile nav 타입 경계 고정 <!-- omo:id=delivery-web-nav-single-source;stage=4;scope=shared;review=5,6 -->
+- [x] `PRIMARY_WEB_NAV_ITEMS` 5메뉴와 web/mobile nav 타입 경계 고정 <!-- omo:id=delivery-web-nav-single-source;stage=4;scope=shared;review=6 -->
 - [x] 일반 웹 화면 local primary nav 복제 제거와 legal 보조 nav 분리 <!-- omo:id=delivery-web-nav-cleanup;stage=4;scope=frontend;review=5,6 -->
 - [x] HOME `집밥 둘러보기` rail 위치·guide Link·theme button 동작 구현 <!-- omo:id=delivery-home-discovery-rail;stage=4;scope=frontend;review=5,6 -->
 - [x] HOME loading/empty/error/filter state와 guide 독립성 고정 <!-- omo:id=delivery-home-rail-states;stage=4;scope=frontend;review=5,6 -->
