@@ -7,7 +7,7 @@
 
 > **2026-07-12 사용자 승인 superseding addendum:** 기존 fixed prototype/exact-reference-ready authority는 유지하되, `service-about-guide`의 공식 HOME 계약이 **rail 위치, `집밥 둘러보기` heading, 첫 guide card, guide-only fallback, compact rail geometry**에 한해서 이를 대체한다. 이 좁은 차이는 기능 계약상 필수 차이이며 prototype parity 결함으로 채점하지 않는다. app bar, hero/search/tag/quick links, recipe cards, bottom tabs, token/type/material과 rail 밖 geometry는 기존 fixed prototype authority를 계속 따른다.
 
-> **2026-07-13 서비스 브랜드 superseding addendum:** 정식명은 `무엇을 먹든`, HOME AppBar 텍스트 워드마크와 좁은 표시는 `무먹`이다. 아래 living contract의 `HOMECOOK`/`집밥 가이드`/`집밥 둘러보기` 브랜드 표시는 각각 `무먹`/`무먹 가이드`/`무먹 둘러보기`로 대체한다. 이 변경은 AppBar와 rail의 **표시 copy만** supersede하며 `AppHeader`, route, geometry, token, material, interaction, `homecook:*`/`HOMECOOK_*` 기술 식별자, 기존 prototype/evidence 파일은 바꾸지 않는다. HOME direct modification은 anchor-extension이므로 Stage 4에서 390px/320px before/after와 authority report가 필요하다.
+> **2026-07-13 서비스 브랜드 superseding addendum:** 정식명은 `무엇을 먹든`, HOME AppBar 텍스트 워드마크와 좁은 표시는 `무먹`이다. 아래 living contract의 `HOMECOOK`/`집밥 가이드`/`집밥 둘러보기`/system source badge `집밥 추천` 브랜드 표시는 각각 `무먹`/`무먹 가이드`/`무먹 둘러보기`/`무먹 추천`으로 대체한다. 이 변경은 승인된 브랜드 고정 copy만 supersede하며 `AppHeader`, source key, route, geometry, token, material, interaction, `homecook:*`/`HOMECOOK_*` 기술 식별자, 기존 prototype/evidence 파일은 바꾸지 않는다. HOME direct modification은 anchor-extension이므로 Stage 4에서 390px/320px before/after와 authority report가 필요하다.
 
 ---
 

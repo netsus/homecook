@@ -18,6 +18,7 @@
 - [ ] features heading은 `끼니 계획이 편해지는 이유`다 <!-- omo:id=brand-accept-copy-features;stage=4;scope=frontend;review=5,6 -->
 - [ ] 성장 label은 `끼니 기록 / 끼니 활동 / 끼니 성장`이다 <!-- omo:id=brand-accept-copy-growth;stage=4;scope=frontend;review=5,6 -->
 - [ ] 조리 업적 label은 `첫 요리 완성`이다 <!-- omo:id=brand-accept-copy-first-cook;stage=2;scope=shared;review=3,6 -->
+- [ ] HOME system source badge는 `무먹 추천`을 표시하고 `system` key/API shape는 유지한다 <!-- omo:id=brand-accept-copy-system-source-badge;stage=4;scope=shared;review=5,6 -->
 - [ ] 설명 섹션 영문 label은 `WHY IT WORKS`이며 새 영문 서비스명으로 사용하지 않는다 <!-- omo:id=brand-accept-copy-why;stage=4;scope=frontend;review=5,6 -->
 
 ## Nickname / Notification Policy
@@ -68,7 +69,7 @@
 - [ ] 신규 null/빈 nickname과 기존 저장 nickname fixture가 준비된다 <!-- omo:id=brand-accept-fixture-nickname;stage=2;scope=shared;review=3,6 -->
 - [ ] exact legacy notification copy와 사용자 콘텐츠 보존 fixture가 준비된다 <!-- omo:id=brand-accept-fixture-notification;stage=2;scope=shared;review=3,6 -->
 - [ ] 신규 DB seed/bootstrap/system row가 필요하지 않음을 확인한다 <!-- omo:id=brand-accept-no-bootstrap;stage=2;scope=shared;review=3,6 -->
-- [ ] `service-about-guide`와 `auth-provider-memory-linking` current head가 merge된 뒤 후속 구현을 시작한다 <!-- omo:id=brand-accept-dependency-gate;stage=2;scope=shared;review=3,6 -->
+- [ ] `auth-provider-memory-linking` PR #967과 `service-about-guide` docs #978/FE #979 merge 증거가 일치하고 후속 구현 current-head conflict가 0이다 <!-- omo:id=brand-accept-dependency-gate;stage=2;scope=shared;review=3,6 -->
 
 ## Automation Split
 

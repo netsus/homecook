@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-13T00:00:00+09:00",
+  "updated_at": "2026-07-13T05:21:28+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1839,7 +1839,7 @@
       "id": "auth-provider-memory-linking",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-auth-provider-memory-linking",
-      "lifecycle": "in_progress",
+      "lifecycle": "merged",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1849,13 +1849,13 @@
         "node scripts/validate-automation-spec.mjs --slice auth-provider-memory-linking",
         "git diff --check"
       ],
-      "notes": "Stage 1 contract-evolution docs prepared by a separate Codex docs-owner session under explicit user approval after Claude was discontinued. Kakao defaults to built-in kakao; custom:naver reuses the existing no-store /api/auth/oauth-userinfo/naver adapter and E3 must verify non-empty email plus stable/distinct sub. Implementation and review must remain role-separated Codex sessions."
+      "notes": "Merged via GitHub PR #967. Stage 1 contract-evolution docs were prepared by a separate Codex docs-owner session under explicit user approval after Claude was discontinued. Kakao defaults to built-in kakao; custom:naver reuses the existing no-store /api/auth/oauth-userinfo/naver adapter and E3 verified the required provider contract. Implementation and review remained role-separated Codex sessions."
     },
     {
       "id": "service-about-guide",
       "preset": "vertical-slice-strict",
       "branch": "docs/service-about-guide",
-      "lifecycle": "planned",
+      "lifecycle": "merged",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1865,7 +1865,7 @@
         "node scripts/validate-automation-spec.mjs --slice service-about-guide",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs were prepared on docs/service-about-guide after the user-approved contract-evolution PR #977 merged and approved by a separate Codex internal docs-gate reviewer after required validators passed. Lifecycle remains planned until the docs PR merges. This is FE-only: Stage 2/3 are skipped. Claude is forbidden by explicit user instruction; Stage 1 docs, Stage 4 implementation, docs repair, review, final authority, and closeout use role-separated Codex sessions, and authoring sessions cannot self-approve. Community and 404 feedback publication remain out of scope."
+      "notes": "Merged through docs PR #978 and frontend PR #979 after the user-approved contract-evolution PR #977. This is FE-only: Stage 2/3 were skipped. Claude was forbidden by explicit user instruction; Stage 1 docs, Stage 4 implementation, docs repair, review, final authority, and closeout used role-separated Codex sessions, and authoring sessions could not self-approve. Community and 404 feedback publication remain out of scope."
     },
     {
       "id": "service-brand-rebrand",
@@ -1880,7 +1880,7 @@
         "pnpm validate:workflow-v2",
         "git diff --check"
       ],
-      "notes": "User-approved 2026-07-13 contract-evolution and Stage 1 workpack prepared by a separate Codex docs-owner session replacing the prior Claude owner. Locks full name 무엇을 먹든, short name 무먹, new/empty nickname fallback 무먹러, and exact system notification read-time copy canonicalization without API/DB shape changes, stored-row rewrites, technical identifier renames, or historical evidence edits. Roadmap status is docs; Stage 2/4 remain gated on service-about-guide and auth-provider-memory-linking current-head merge/conflict checks."
+      "notes": "User-approved 2026-07-13 contract-evolution and Stage 1 workpack prepared under a Claude-forbidden slice exception. Role-separated new Codex sessions replace Stage 1 docs, Stage 3 backend review, Stage 4 frontend implementation, internal docs repair/final ownership, and authority-required final authority; Stage 1/4 authoring or implementation sessions cannot self-approve. Locks full name 무엇을 먹든, short name 무먹, HOME system source badge 무먹 추천 with the system key/API shape preserved, new/empty nickname fallback 무먹러, and exact system notification read-time copy canonicalization without API/DB shape changes, stored-row rewrites, technical identifier renames, or historical evidence edits. auth PR #967 and guide docs #978/FE #979 are merged, so only current-head conflict checks remain before Stage 2/4."
     }
   ]
 }

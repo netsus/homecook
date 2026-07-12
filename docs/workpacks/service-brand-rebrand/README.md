@@ -6,9 +6,9 @@
 
 ## Approval And Ownership
 
-- 사용자 승인: 2026-07-13. 고정 계약과 기존 Claude 담당의 별도 Codex Stage 1 세션 대체를 명시 승인했다.
+- 사용자 승인: 2026-07-13. 고정 계약, Claude 미사용, 기존 Claude 담당 단계의 역할 분리된 새 Codex 세션 대체를 명시 승인했다.
 - change type: `contract-evolution` + 후속 fullstack product slice.
-- Stage 1 docs owner: 이 Codex 세션. 구현·review·final authority는 역할을 분리한 후속 세션이 맡고 작성 세션은 자기 변경을 최종 승인하지 않는다.
+- 역할 분리: Stage 1 docs owner, Stage 3 backend reviewer, Stage 4 frontend implementer, internal docs repair/final owner, authority-required final authority를 각각 별도 Codex 세션이 맡는다. Stage 1/4 작성·구현 세션은 자기 변경을 최종 승인하지 않는다. 이 slice 예외는 전역 workflow actor 규칙을 변경하지 않는다.
 - 이 커밋은 docs 계약만 포함한다. 구현 코드, push, PR, merge는 수행하지 않는다.
 
 ## Branches
@@ -22,7 +22,7 @@
 - 화면/copy:
   - 서비스 최초 정의·법적·SEO: `무엇을 먹든`
   - 텍스트 워드마크·AppBar·좁은 내비게이션: `무먹`
-  - HOME: `무먹` AppBar, `무먹 둘러보기`, `무먹 가이드`와 접근성 이름
+  - HOME: `무먹` AppBar, `무먹 둘러보기`, `무먹 가이드`와 접근성 이름, system source badge `무먹 추천`
   - ABOUT_SERVICE_GUIDE: `무먹 가이드`, `무엇을 먹든, 계획은 한곳에서`, `한 끼는 이렇게 이어져요`, `끼니 계획이 편해지는 이유`, `WHY IT WORKS`
   - MYPAGE/성장: `끼니 기록 / 끼니 활동 / 끼니 성장`, 조리 업적 `첫 요리 완성`
   - LOGIN/bootstrap: 신규 또는 trim 후 빈 nickname만 `무먹러` fallback
@@ -48,6 +48,7 @@
 | `집밥이 편해지는 이유` | `끼니 계획이 편해지는 이유` |
 | `집밥 기록 / 집밥 활동 / 집밥 성장` | `끼니 기록 / 끼니 활동 / 끼니 성장` |
 | 조리 업적 `첫 집밥 완성` | `첫 요리 완성` |
+| HOME system source badge `집밥 추천` | `무먹 추천` (`system` key/shape 유지) |
 | `WHY ZIPBAP` | `WHY IT WORKS` |
 
 ## Out of Scope
@@ -64,11 +65,11 @@
 
 | 선행 항목 | 상태 | 확인 |
 | --- | --- | --- |
-| `service-about-guide` | in-progress | [ ] closeout/roadmap가 `merged`로 정리되기 전 Stage 4 시작 금지 |
-| `auth-provider-memory-linking` | in-progress | [ ] callback/bootstrap 변경과 충돌 없는 current head 기준 확인 후 Stage 2 시작 |
+| `service-about-guide` | merged | [x] docs PR #978, FE PR #979 merge. 후속 구현 전 current-head conflict check |
+| `auth-provider-memory-linking` | merged | [x] PR #967 merge. 후속 구현 전 callback/bootstrap current-head conflict check |
 | service brand contract-evolution | docs | [x] 사용자 승인과 공식 문서 v1.7.12/v1.5.19/v1.3.19/v1.2.21 작성 |
 
-> 이 Stage 1 계약 작성은 사용자 승인으로 진행한다. 후속 Stage 2/4는 위 선행 구현 branch가 merge되고 current source of truth와 충돌이 없을 때만 시작한다.
+> 선행 merge gate는 충족했다. 후속 Stage 2/4는 현재 head에서 두 선행 변경과 충돌이 없음을 확인한 뒤 시작한다.
 
 ## Backend First Contract
 

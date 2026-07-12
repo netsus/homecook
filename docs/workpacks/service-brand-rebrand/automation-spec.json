@@ -61,6 +61,7 @@
       "official-docs-v1.7.12-v1.5.19-v1.3.19-v1.2.21",
       "db-v1.3.16-unchanged",
       "canonical-copy-matrix",
+      "home-system-source-badge-label-mumeok-recommendation-key-shape-preserved",
       "nickname-fallback-preserves-existing-values",
       "notification-read-time-canonicalization-no-rewrite",
       "technical-identifiers-preserved",
@@ -100,7 +101,7 @@
   "external_smokes": [],
   "blocked_conditions": [
     "official-doc-conflict",
-    "implementation-before-dependencies-merge",
+    "current-head-conflict-with-merged-pr-967-978-979",
     "new-english-brand-added",
     "dependency-added",
     "db-migration-or-row-rewrite-added",

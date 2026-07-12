@@ -9,13 +9,13 @@
   "preset": "vertical-slice-strict",
   "goal": "사용자가 모든 공식 브랜드 surface에서 무엇을 먹든/무먹을 일관되게 보되 기존 nickname, stored notification, 사용자 콘텐츠, 기술 식별자와 과거 evidence는 그대로 보존한다.",
   "owners": {
-    "claude": "replaced for Stage 1 by explicit user approval; do not use this authoring session for final approval",
-    "codex": "Stage 1 docs owner in this session; implementation, review, and final authority require role-separated follow-up sessions",
+    "claude": "forbidden for this slice by explicit user approval; the exception does not change global workflow actors",
+    "codex": "role-separated new sessions own Stage 1 docs, Stage 3 backend review, Stage 4 frontend implementation, internal docs repair/final ownership, and authority-required final authority; Stage 1/4 authoring or implementation sessions cannot self-approve",
     "workers": []
   },
   "dependencies": [
-    "service-about-guide closeout/roadmap merged before Stage 4",
-    "auth-provider-memory-linking merged and current-head conflict check before Stage 2",
+    "service-about-guide docs PR #978 and FE PR #979 merged; current-head conflict check remains",
+    "auth-provider-memory-linking PR #967 merged; current-head conflict check remains",
     "user-approved service brand contract-evolution 2026-07-13"
   ],
   "docs_refs": {
@@ -71,6 +71,7 @@
       "official-doc-versions-and-sot-synchronized",
       "db-v1.3.16-unchanged",
       "canonical-copy-matrix-complete",
+      "home-system-source-badge-mumeok-recommendation-key-shape-preserved",
       "new-empty-nickname-only-fallback",
       "system-notification-read-time-canonicalization-no-rewrite",
       "technical-identifiers-and-user-content-preserved",
@@ -98,5 +99,5 @@
     "Route, information architecture, interaction model, or domain state transition changes"
   ],
   "open_questions": [],
-  "notes": "Stage 1 contract and workpack prepared on docs/service-brand-rebrand-contract under explicit user approval replacing the prior Claude owner with a separate Codex docs-owner session. Roadmap status is docs while workflow lifecycle remains planned because the schema has no docs enum. No implementation, push, PR, or merge is part of this change."
+  "notes": "Stage 1 contract and workpack prepared on docs/service-brand-rebrand-contract under explicit user approval forbidding Claude for this slice. Role-separated new Codex sessions replace Stage 1 docs, Stage 3 backend review, Stage 4 frontend implementation, internal docs repair/final ownership, and authority-required final authority; Stage 1/4 authoring or implementation sessions cannot self-approve. Predecessors are merged via auth PR #967 and guide docs #978/FE #979, so only current-head conflict checks remain. Roadmap status is docs while workflow lifecycle remains planned because the schema has no docs enum. No implementation, push, PR, or merge is part of this change."
 }
