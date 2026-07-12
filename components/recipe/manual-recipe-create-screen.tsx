@@ -54,13 +54,6 @@ type ModalMode =
   | "success"
   | "servings-input";
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 function formatTargetLabel(planDate: string, slotName: string) {
   return formatMealAddTargetLabel(planDate, slotName);
 }
@@ -1343,7 +1336,7 @@ export function ManualRecipeCreateScreen({
     return (
       <div className="web-menu-add-shell">
         <WebShell>
-          <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
+          <WebTopNav activeId="planner" />
           <nav aria-label="직접 등록 경로" className="web-breadcrumb">
             <button
               className="web-breadcrumb-link"

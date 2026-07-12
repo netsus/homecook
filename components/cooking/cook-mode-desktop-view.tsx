@@ -24,13 +24,6 @@ interface CookModeDesktopViewProps {
   onComplete: () => void;
 }
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 export function CookModeDesktopView({
   recipe,
   variant,
@@ -57,7 +50,6 @@ export function CookModeDesktopView({
     <WebShell className="web-cooking-shell web-cooking-shell-dark" footer={false} wide>
       <WebTopNav
         activeId={variant === "planner" ? "planner" : undefined}
-        items={WEB_NAV_ITEMS}
         rightSlot={
           <div className="web-profile-button">
             {variant === "planner" ? "JY" : "◎"}

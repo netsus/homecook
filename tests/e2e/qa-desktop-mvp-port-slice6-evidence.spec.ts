@@ -181,17 +181,6 @@ test("capture Slice 6 desktop prototype-port evidence", async ({ browser }) => {
   await capture(
     browser,
     "desktop1280",
-    "mypage-help-1280.png",
-    MYPAGE_VISUAL_PATH,
-    async (page) => {
-      await page.getByRole("tab", { name: "도움말" }).click();
-      await expect(page.getByRole("heading", { name: "도움말" })).toBeVisible();
-    },
-  );
-
-  await capture(
-    browser,
-    "desktop1280",
     "settings-nickname-modal-1280.png",
     SETTINGS_VISUAL_PATH,
     async (page) => {

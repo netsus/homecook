@@ -3,6 +3,7 @@ export const PRIMARY_WEB_NAV_ITEMS = [
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
+  { id: "about", href: "/about", label: "집밥 가이드" },
 ] as const;
 
 export const PRIMARY_MOBILE_TAB_ITEMS = [
@@ -12,12 +13,13 @@ export const PRIMARY_MOBILE_TAB_ITEMS = [
   { id: "mypage", href: "/mypage", label: "마이" },
 ] as const;
 
-export type PrimaryNavId = (typeof PRIMARY_WEB_NAV_ITEMS)[number]["id"];
+export type PrimaryWebNavId = (typeof PRIMARY_WEB_NAV_ITEMS)[number]["id"];
+export type PrimaryMobileTabId = (typeof PRIMARY_MOBILE_TAB_ITEMS)[number]["id"];
 
 export interface SurfaceChromeRule {
   backFallbackHref?: string;
-  mobileBottomTab: PrimaryNavId;
-  primaryNavId: PrimaryNavId;
+  mobileBottomTab: PrimaryMobileTabId;
+  primaryNavId: PrimaryWebNavId;
   showBack: boolean;
 }
 

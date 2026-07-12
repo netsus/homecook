@@ -39,13 +39,6 @@ type FeedbackTone = "error" | "status";
 const FEEDBACK_AUTO_DISMISS_MS = 4000;
 const EATEN_DESCRIPTION =
   "다먹은 음식 기록을 확인하고, 필요하면 남은 요리로 다시 옮길 수 있어요.";
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 export interface AteListScreenProps {
   initialAuthenticated?: boolean;
 }
@@ -392,7 +385,6 @@ export function AteListScreen({
     <WebShell className="web-leftovers-shell" wide>
       <WebTopNav
         activeId="mypage"
-        items={WEB_NAV_ITEMS}
         rightSlot={<div className="web-profile-button">JY</div>}
       />
       <div className="web-leftovers-screen" data-testid="ate-list-screen">

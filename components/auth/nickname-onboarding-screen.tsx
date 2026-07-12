@@ -19,13 +19,6 @@ interface NicknameOnboardingScreenProps {
 
 type ScreenState = "loading" | "ready" | "error";
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 function buildLoginPath(nextPath: string) {
   const onboardingPath = `/onboarding/nickname?next=${encodeURIComponent(nextPath)}`;
 
@@ -252,7 +245,7 @@ export function NicknameOnboardingScreen({
   if (viewMode === "web") {
     return (
       <WebShell className="web-login-shell">
-        <WebTopNav activeId="login" items={WEB_NAV_ITEMS} />
+        <WebTopNav activeId="login" />
         <main className="flex min-h-[calc(100vh-72px)] items-center justify-center bg-[var(--surface-fill)] px-6 py-12 text-[var(--foreground)]">
           {content}
         </main>

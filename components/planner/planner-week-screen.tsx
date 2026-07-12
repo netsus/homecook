@@ -65,13 +65,6 @@ const RANGE_SHIFT_DAYS = 7;
 const WEEK_PAGE_INDEX_CURRENT = 1;
 const WEEK_SCROLL_SETTLE_MS = 96;
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 function getTodayDateKey() {
   const now = new Date();
   const y = now.getFullYear();
@@ -261,7 +254,6 @@ function PlannerWeekWebView({
     <WebShell className="web-planner" wide>
       <WebTopNav
         activeId="planner"
-        items={WEB_NAV_ITEMS}
         rightSlot={<ProfileSummaryButton autoLoad isAuthenticated variant="web" />}
       />
       <div className="web-screen web-planner-screen">

@@ -68,13 +68,6 @@ type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
 type FeedbackTone = "success" | "danger";
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 const MYPAGE_PREFERENCES_HREF = "/mypage?tab=preferences";
 const SETTINGS_FEEDBACK_DURATION_MS = 3000;
 
@@ -591,7 +584,6 @@ export function SettingsScreen({
     <WebShell className="web-settings-shell" wide>
       <WebTopNav
         activeId="mypage"
-        items={WEB_NAV_ITEMS}
         rightSlot={<SettingsProfilePill nickname={profile?.nickname} />}
       />
       <main className="web-settings-screen">
@@ -1006,7 +998,6 @@ function SettingsDesktopLoadingShell() {
     <WebShell className="web-settings-shell" wide>
       <WebTopNav
         activeId="mypage"
-        items={WEB_NAV_ITEMS}
         rightSlot={<WebSkeleton className="web-mypage-top-profile" />}
       />
       <main

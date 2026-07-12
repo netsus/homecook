@@ -79,6 +79,18 @@ describe("launch readiness legal and SEO routes", () => {
     expect(html).toContain("help@zipbap.example");
   });
 
+  it("keeps global product navigation and local legal navigation separate", async () => {
+    const page = await importWithSiteEnv(() => import("@/app/privacy/page"));
+    const html = renderToStaticMarkup(React.createElement(page.default));
+    const css = readSource("app/globals.css");
+
+    expect(html).toContain('aria-label="데스크탑 주요 메뉴"');
+    expect(html).toContain('href="/about"');
+    expect(html).toContain('aria-label="법적 문서"');
+    expect(html).toContain('aria-current="page"');
+    expect(css).toContain(".legal-document-nav {");
+  });
+
   it("leaves unknown legal facts blank instead of publishing placeholder copy", async () => {
     vi.resetModules();
     delete process.env.NEXT_PUBLIC_LEGAL_OPERATOR_NAME;
@@ -148,11 +160,13 @@ describe("launch readiness legal and SEO routes", () => {
       },
       sitemap: `${TEST_SITE_ORIGIN}/sitemap.xml`,
     });
-    expect(sitemapUrls.slice(0, 3)).toEqual([
+    expect(sitemapUrls.slice(0, 4)).toEqual([
       TEST_SITE_ORIGIN,
+      `${TEST_SITE_ORIGIN}/about`,
       `${TEST_SITE_ORIGIN}/privacy`,
       `${TEST_SITE_ORIGIN}/terms`,
     ]);
+    expect(sitemapUrls.filter((url) => url === `${TEST_SITE_ORIGIN}/about`)).toHaveLength(1);
     expect(sitemapUrls.join("\n")).not.toContain("/admin");
     expect(sitemapUrls.join("\n")).not.toContain("/auth/");
     expect(sitemapUrls.join("\n")).not.toContain("/mypage");

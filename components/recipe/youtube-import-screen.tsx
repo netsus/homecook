@@ -406,13 +406,6 @@ function getApiErrorMessage(defaultMessage: string, message?: string | null) {
   return message?.trim() || defaultMessage;
 }
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 const YOUTUBE_STEP_LABELS = [
   { id: "url-input", label: "링크 입력" },
   { id: "preview", label: "미리보기" },
@@ -3414,7 +3407,7 @@ export function YoutubeImportScreen({
     return (
       <div className="web-menu-add-shell">
         <WebShell>
-          <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
+          <WebTopNav activeId="planner" />
           <nav aria-label="유튜브 가져오기 경로" className="web-breadcrumb">
             <button
               className="web-breadcrumb-link"

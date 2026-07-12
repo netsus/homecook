@@ -1473,7 +1473,6 @@ describe("MypageScreen", () => {
       "남은 요리",
       "다먹은 요리",
       "환경설정",
-      "도움말",
     ]);
     expect(within(skeleton).queryByTestId("mypage-loading-panel")).toBeNull();
     expect(within(skeleton).queryAllByTestId("mypage-loading-panel-card")).toHaveLength(0);

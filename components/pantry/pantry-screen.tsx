@@ -70,13 +70,6 @@ type PantryDisplayItem = {
 
 const TOAST_DURATION_MS = 3000;
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 export interface PantryScreenProps {
   initialAuthenticated?: boolean;
 }
@@ -787,7 +780,6 @@ export function PantryScreen({
       <WebShell className="web-pantry-shell">
         <WebTopNav
           activeId="pantry"
-          items={WEB_NAV_ITEMS}
           rightSlot={<ProfileSummaryButton autoLoad isAuthenticated variant="web" />}
         />
         <div className="web-screen web-pantry-screen">
@@ -1098,7 +1090,7 @@ function WebPantryInlineLoading() {
 function PantryDesktopLoadingShell() {
   return (
     <WebShell className="web-pantry-shell">
-      <WebTopNav activeId="pantry" items={WEB_NAV_ITEMS} />
+      <WebTopNav activeId="pantry" />
       <div className="web-screen web-pantry-screen" data-testid="pantry-skeleton">
         <header className="web-pantry-head">
           <div>

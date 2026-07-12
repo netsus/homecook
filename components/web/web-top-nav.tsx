@@ -2,20 +2,16 @@ import Link from "next/link";
 import * as React from "react";
 
 import { cn } from "@/components/web/utils";
-import { PRIMARY_WEB_NAV_ITEMS } from "@/lib/navigation/app-nav";
-
-export interface WebTopNavItem {
-  href: string;
-  id: string;
-  label: string;
-}
+import {
+  PRIMARY_WEB_NAV_ITEMS,
+  type PrimaryWebNavId,
+} from "@/lib/navigation/app-nav";
 
 export interface WebTopNavProps {
-  activeId?: string;
+  activeId?: PrimaryWebNavId | "login";
   brandHref?: string;
   brandLabel?: string;
   className?: string;
-  items?: readonly WebTopNavItem[];
   rightSlot?: React.ReactNode;
 }
 
@@ -24,7 +20,6 @@ export function WebTopNav({
   brandHref = "/",
   brandLabel = "집밥",
   className,
-  items = PRIMARY_WEB_NAV_ITEMS,
   rightSlot,
 }: WebTopNavProps) {
   return (
@@ -35,7 +30,7 @@ export function WebTopNav({
           <span>{brandLabel}</span>
         </Link>
         <nav aria-label="데스크탑 주요 메뉴" className="web-topnav-tabs">
-          {items.map((item) => {
+          {PRIMARY_WEB_NAV_ITEMS.map((item) => {
             const active = item.id === activeId;
 
             return (

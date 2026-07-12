@@ -72,13 +72,6 @@ export interface MealScreenProps {
 
 // Status data preserved for logic; visual badges removed per Wave1 port.
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 function formatDateLong(planDate: string) {
   return formatKoreaDate(planDate, {
     month: "long",
@@ -824,7 +817,6 @@ function MealWebView({
     <WebShell className="web-meal" wide>
       <WebTopNav
         activeId="planner"
-        items={WEB_NAV_ITEMS}
         rightSlot={<MealWebProfileButton isAuthenticated={authState === "authenticated"} />}
       />
       <div className="web-screen web-meal-screen">

@@ -42,7 +42,7 @@ function collectMatches(pattern: RegExp) {
 
 describe("theme token usage", () => {
   it("keeps app and component color usage behind global CSS tokens", () => {
-    const directHex = collectMatches(/(?<!&)#[0-9A-Fa-f]{3,8}/g);
+    const directHex = collectMatches(/(?<!&)#[0-9A-Fa-f]{3,8}(?![0-9A-Za-z_-])/g);
     const directRgb = collectMatches(/\brgba?\([^)]*\)/g);
     const directTailwindPalette = collectMatches(
       /(?<!-)\b(?:hover:|active:|focus:|disabled:|placeholder:)?(?:bg|text|border|ring|outline|divide|shadow|accent|caret|decoration|fill|stroke|from|to|via)-(?:white|black|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:[-/][A-Za-z0-9]+)?\b/g,

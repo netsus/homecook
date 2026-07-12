@@ -41,7 +41,6 @@ import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
 import { KOREA_TIME_ZONE } from "@/lib/korean-date";
-import { PRIMARY_WEB_NAV_ITEMS } from "@/lib/navigation/app-nav";
 import {
   filterSafeDisplayItems,
   isSafeDisplayText,
@@ -49,6 +48,7 @@ import {
 import { resolveRecipeImage } from "@/lib/recipe-image";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
+import { rememberAboutReturn } from "@/lib/navigation/about-return";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
 import { useAuthGateStore } from "@/stores/ui-store";
 import type {
@@ -565,16 +565,10 @@ export function HomeScreen() {
       : hasActiveFilters
       ? "검색 결과"
       : "모든 레시피";
-  const showInitialDiscoverySkeleton =
-    !hasActiveFilters && themeState === "loading";
-  const shouldShowMobileThemeCarousel =
-    !hasResultPriorityContext &&
-    !showInitialDiscoverySkeleton &&
-    discoveryThemes.length > 0;
-  const mobileThemeInsertAfterIndex = Math.min(
-    3,
-    Math.max(0, displayedRecipes.length - 1),
-  );
+  const showDiscoveryRailSkeleton =
+    !hasResultPriorityContext && themeState === "loading";
+  const showInitialRecipeSkeleton =
+    !hasResultPriorityContext && screenState === "loading";
   const showEmptyState =
     (screenState === "ready" || screenState === "empty") &&
     displayedRecipes.length === 0;
@@ -932,19 +926,17 @@ export function HomeScreen() {
 
             {!hasResultPriorityContext ? <HomeQuickLinks variant="mobile" /> : null}
 
-            {!hasResultPriorityContext && showInitialDiscoverySkeleton ? (
-              <ThemeCarouselSkeleton />
-            ) : null}
+            {showDiscoveryRailSkeleton ? <HomeDiscoveryRailSkeleton /> : null}
 
-            {screenState === "error" && shouldShowMobileThemeCarousel ? (
-              <ThemeCarousel
+            {!hasResultPriorityContext && themeState !== "loading" ? (
+              <HomeDiscoveryRail
                 activeThemeId={activeThemeId}
                 onSelectTheme={selectTheme}
-                themes={discoveryThemes}
+                themes={themeState === "ready" ? discoveryThemes : []}
               />
             ) : null}
 
-            {showInitialDiscoverySkeleton ? (
+            {showInitialRecipeSkeleton ? (
               <section aria-label="레시피 목록 불러오는 중">
                 <div className="flex items-center justify-between px-4 pb-2">
                   <div className="space-y-2">
@@ -959,7 +951,7 @@ export function HomeScreen() {
               </section>
             ) : null}
 
-            {screenState === "error" && !showInitialDiscoverySkeleton ? (
+            {screenState === "error" ? (
               <div className="px-4 pb-4">
                 <ContentState
                   actionLabel="다시 시도"
@@ -972,7 +964,7 @@ export function HomeScreen() {
               </div>
             ) : null}
 
-            {screenState !== "error" && !showInitialDiscoverySkeleton ? (
+            {screenState !== "error" && !showInitialRecipeSkeleton ? (
               <section aria-label={listTitle}>
                 <p
                   aria-live="polite"
@@ -1021,24 +1013,14 @@ export function HomeScreen() {
 
                 {screenState === "ready" && displayedRecipes.length ? (
                   <div className="grid grid-cols-1 gap-4 px-4">
-                    {displayedRecipes.map((recipe, index) => (
-                      <React.Fragment key={recipe.id}>
-                        <RecipeCard
-                          isSaved={homeSaveFlow.savedRecipeIds.has(recipe.id)}
-                          onOpen={() => incrementRecipeViewCount(recipe.id)}
-                          onSave={homeSaveFlow.openRecipeSaveModal}
-                          recipe={recipe}
-                        />
-                        {index === mobileThemeInsertAfterIndex &&
-                        shouldShowMobileThemeCarousel ? (
-                          <ThemeCarousel
-                            activeThemeId={activeThemeId}
-                            embedded
-                            onSelectTheme={selectTheme}
-                            themes={discoveryThemes}
-                          />
-                        ) : null}
-                      </React.Fragment>
+                    {displayedRecipes.map((recipe) => (
+                      <RecipeCard
+                        isSaved={homeSaveFlow.savedRecipeIds.has(recipe.id)}
+                        key={recipe.id}
+                        onOpen={() => incrementRecipeViewCount(recipe.id)}
+                        onSave={homeSaveFlow.openRecipeSaveModal}
+                        recipe={recipe}
+                      />
                     ))}
                   </div>
                 ) : null}
@@ -1200,7 +1182,6 @@ function HomeWebScreen({
     <WebShell className="web-home" wide>
       <WebTopNav
         activeId="home"
-        items={PRIMARY_WEB_NAV_ITEMS}
         rightSlot={
           <ProfileSummaryButton
             gamification={gamification}
@@ -1827,27 +1808,22 @@ function HomeTagRail({
   );
 }
 
-function ThemeCarousel({
+function HomeDiscoveryRail({
   activeThemeId,
-  embedded = false,
   onSelectTheme,
   themes,
 }: {
   activeThemeId: string | null;
-  embedded?: boolean;
   onSelectTheme: (themeId: string) => void;
   themes: RecipeTheme[];
 }) {
   return (
     <section
-      aria-label="이번 주 추천 테마"
-      className={[
-        "home-mobile-theme-section",
-        embedded ? "home-mobile-theme-section-embedded" : "",
-      ].join(" ")}
+      aria-label="집밥 둘러보기"
+      className="home-mobile-theme-section"
     >
       <div className="home-mobile-theme-header">
-        <h2 className="home-mobile-theme-title">이번 주 추천 테마</h2>
+        <h2 className="home-mobile-theme-title">집밥 둘러보기</h2>
         {activeThemeId ? (
           <button
             className="home-mobile-theme-reset"
@@ -1858,7 +1834,13 @@ function ThemeCarousel({
           </button>
         ) : null}
       </div>
-      <div className="home-mobile-theme-rail scrollbar-hide">
+      <div
+        className={[
+          "home-mobile-theme-rail scrollbar-hide",
+          themes.length === 0 ? "home-mobile-theme-rail-guide-only" : "",
+        ].join(" ")}
+      >
+        <HomeGuideCard />
         {themes.map((theme, index) => (
           <ThemeCarouselCard
             isActive={activeThemeId === theme.id}
@@ -1870,6 +1852,26 @@ function ThemeCarousel({
         ))}
       </div>
     </section>
+  );
+}
+
+function HomeGuideCard() {
+  return (
+    <Link
+      aria-label="집밥 가이드 보기"
+      className="home-mobile-theme-card home-mobile-guide-card"
+      href="/about#how-to"
+      onClick={rememberAboutReturn}
+    >
+      <span className="home-mobile-guide-graphic" aria-hidden="true">
+        <GuidePathIcon />
+      </span>
+      <span className="home-mobile-guide-copy">
+        <span className="home-mobile-guide-badge">가이드</span>
+        <strong>집밥, 이렇게 써요</strong>
+        <small>레시피부터 장보기까지 5단계</small>
+      </span>
+    </Link>
   );
 }
 
@@ -1962,24 +1964,36 @@ function WebBookmarkIcon({ filled = false }: { filled?: boolean }) {
   );
 }
 
-function ThemeCarouselSkeleton() {
+function HomeDiscoveryRailSkeleton() {
   return (
     <section
-      aria-label="이번 주 추천 테마 불러오는 중"
+      aria-label="집밥 둘러보기 불러오는 중"
       className="home-mobile-theme-section"
     >
       <div className="home-mobile-theme-header">
         <Skeleton className="h-6 w-36 rounded-full" />
       </div>
       <div className="home-mobile-theme-rail overflow-hidden">
-        {Array.from({ length: 3 }).map((_, index) => (
+        <Skeleton className="home-mobile-theme-card home-mobile-guide-card-placeholder" />
+        {Array.from({ length: 2 }).map((_, index) => (
           <Skeleton
             key={index}
-            className="h-[154px] w-[min(76vw,320px)] shrink-0 rounded-[var(--radius-card)]"
+            className="home-mobile-theme-card"
           />
         ))}
       </div>
     </section>
+  );
+}
+
+function GuidePathIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 56 56">
+      <circle cx="12" cy="42" r="5" fill="currentColor" opacity="0.34" />
+      <circle cx="43" cy="13" r="5" fill="currentColor" />
+      <path d="M16 39c5-4 4-11 10-13s8 0 13-7" stroke="currentColor" strokeLinecap="round" strokeWidth="3" />
+      <path d="m34 17 6 2-1-6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
+    </svg>
   );
 }
 

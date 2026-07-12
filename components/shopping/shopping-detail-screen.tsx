@@ -44,13 +44,6 @@ interface UpdateState {
   type: "check" | "exclude";
 }
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 export function ShoppingDetailScreen({
   listId,
   initialAuthenticated,
@@ -776,7 +769,6 @@ export function ShoppingDetailScreen({
     <WebShell className="web-shopping-shell" wide>
       <WebTopNav
         activeId={navActiveId}
-        items={WEB_NAV_ITEMS}
         rightSlot={
           initialAuthenticated ? (
             <ProfileSummaryButton autoLoad isAuthenticated variant="web" />
@@ -1080,7 +1072,6 @@ function ShoppingDetailSkeleton({
       <WebShell className="web-shopping-shell" wide>
         <WebTopNav
           activeId={navActiveId}
-          items={WEB_NAV_ITEMS}
           rightSlot={
             showProfileSummary ? (
               <ProfileSummaryButton autoLoad isAuthenticated variant="web" />

@@ -50,13 +50,6 @@ const LEFTOVERS_DESCRIPTION =
   "요리한 음식 기록을 확인하고, 남은 음식은 다른 끼니에 추가할 수 있어요. 다 먹은 음식은 다먹음 버튼으로 정리해 주세요.";
 const LEFTOVER_LIST_PLANNER_ADD_LABEL = "플래너에 추가";
 const LEFTOVER_PLANNER_ADD_CONFIRM_LABEL = "날짜 끼니에 추가";
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 export interface LeftoversScreenProps {
   initialAuthenticated?: boolean;
 }
@@ -686,7 +679,6 @@ export function LeftoversScreen({
     <WebShell className="web-leftovers-shell" wide>
       <WebTopNav
         activeId="mypage"
-        items={WEB_NAV_ITEMS}
         rightSlot={<div className="web-profile-button">JY</div>}
       />
       <div className="web-leftovers-screen" data-testid="leftovers-screen">
