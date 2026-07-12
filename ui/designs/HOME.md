@@ -5,6 +5,8 @@
 > 최종 갱신: 2026-04-17 (H1 home-first-impression Stage 4 — carousel strip 전환)
 > Wave1 mobile 100% parity note: fixed prototype reference and `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersede this document's older C2/h6/h7 visual target notes for mobile re-porting.
 
+> **2026-07-12 사용자 승인 superseding addendum:** 기존 fixed prototype/exact-reference-ready authority는 유지하되, `service-about-guide`의 공식 HOME 계약이 **rail 위치, `집밥 둘러보기` heading, 첫 guide card, guide-only fallback, compact rail geometry**에 한해서 이를 대체한다. 이 좁은 차이는 기능 계약상 필수 차이이며 prototype parity 결함으로 채점하지 않는다. app bar, hero/search/tag/quick links, recipe cards, bottom tabs, token/type/material과 rail 밖 geometry는 기존 fixed prototype authority를 계속 따른다.
+
 ---
 
 ## 레이아웃 와이어프레임 (v1.4.0 — H1 carousel strip)
@@ -518,3 +520,137 @@ Capture 파일 경로: `qa/visual/parity/baemin-prototype-home-parity/<viewport>
 - Foundation evidence: `ui/designs/evidence/baemin-prototype-parity-foundation/`
 - Visual-verdict artifact (Stage 4 생성): `ui/designs/evidence/baemin-prototype-home-parity/visual-verdict`
 - Authority report (Stage 4 생성): `ui/designs/authority/HOME-parity-authority.md`
+
+---
+
+## Service About Guide HOME Anchor Extension Addendum
+
+> 추가일: 2026-07-12
+> 사용자 승인: `/about` 공개 가이드 + 기존 추천 테마 rail의 `집밥 둘러보기` 확장
+> 공식 기준: 화면정의서 v1.5.18 §1 HOME / 요구사항 기준선 v1.7.11 §1-1 / 유저Flow맵 v1.3.18 §①-a
+> 관련 slice: `service-about-guide`
+
+### 좁은 supersession 범위
+
+이 addendum은 기존 HOME fixed prototype/exact-reference-ready 기준 중 아래 다섯 항목만 대체한다.
+
+1. 기존 추천 테마 rail 위치를 `빠른 이동` 다음, `모든 레시피` 이전으로 옮긴다.
+2. heading을 `이번 주 추천 테마`에서 `집밥 둘러보기`로 바꾼다.
+3. rail 첫 항목에 `집밥 가이드` navigation card를 추가한다.
+4. theme empty/error에서도 guide-only rail을 유지한다.
+5. recipe entry를 과도하게 밀지 않는 compact rail geometry를 적용한다.
+
+rail 밖의 app bar, hero, search, tag rail, quick links, recipe cards, bottom tabs, 색상, 타입, material과 상호작용은 기존 fixed prototype authority를 유지한다. 기존 prototype 자체를 refreeze하지 않으며, 위 다섯 차이는 공식 기능 계약 필수 차이로 authority ledger에 기록한다.
+
+### 모바일 initial section order
+
+```text
+HomeAppBar
+오늘 뭐 먹지? hero
+검색 / 재료 검색 / tag rail
+빠른 이동
+집밥 둘러보기 horizontal rail
+모든 레시피 heading + recipe list
+BottomTabBar
+```
+
+desktop HOME에는 guide rail/card를 추가하지 않는다. desktop은 공통 `PRIMARY_WEB_NAV_ITEMS`의 `집밥 가이드`로 진입한다.
+
+### Rail wireframe — 390px
+
+```text
+┌──────────────────────────────────────┐
+│ 빠른 이동                            │
+│ [식단 짜기] [장보기 준비] ...        │
+│                                      │
+│ 집밥 둘러보기                        │
+│ ┌──────────────┐ ┌──────────────┐ ┌─│
+│ │ 가이드       │ │ theme image  │ │p│  localized x-scroll
+│ │ 집밥,        │ │ 요즘 딸기에  │ │e│  next-card peek
+│ │ 이렇게 써요  │ │ 많이 담은…   │ │e│
+│ │ 5단계 안내 → │ │ 7개 레시피   │ │k│
+│ └──────────────┘ └──────────────┘ └─│
+│                                      │
+│ 모든 레시피                 조회수순 │
+└──────────────────────────────────────┘
+```
+
+### Geometry 잠금
+
+| 항목 | 390px | 320px |
+| --- | --- | --- |
+| section outer height | `220px 이하` | `220px 이하` |
+| card height | `144px` baseline | `136–144px` 범위 |
+| card width | `min(58vw, 240px)` | `min(58vw, 240px)`; 다음 카드 peek 유지 |
+| card gap | `8–12px` | `8px` |
+| touch target | 최소 `44px` | 최소 `44px` |
+| rail overflow | rail 내부 `overflow-x: auto` | rail 내부 `overflow-x: auto` |
+| page overflow | `0` | `0` |
+
+- guide와 theme card는 동일한 outer geometry를 사용한다.
+- 첫 화면에서 다음 카드가 일부 보여 swipe 가능성을 알 수 있어야 한다.
+- rail은 scroll snap과 기존 fade/peek affordance를 유지한다.
+- guide-only 상태에서는 존재하지 않는 다음 카드를 암시하지 않도록 우측 fade/peek를 제거하고 rail을 정지된 단일 카드 영역으로 표현한다.
+- section에 큰 고정 `min-height`를 두지 않는다. heading, rail, 여백 합계가 220px를 넘지 않게 한다.
+- page wrapper 또는 body에 가로 스크롤을 만들지 않는다.
+
+### 혼합 role 계약
+
+#### Guide card
+
+- semantic: `Link`
+- `href="/about#how-to"`
+- `aria-label="집밥 가이드 보기"`
+- badge: `가이드`
+- title: `집밥, 이렇게 써요`
+- supporting text: `레시피부터 장보기까지 5단계`
+- brand soft surface와 단순 guide graphic을 사용한다.
+- `aria-pressed`를 사용하지 않는다.
+
+#### Theme card
+
+- semantic: 기존 `button[type="button"]`
+- 기존 `aria-pressed` 선택 상태와 filter 동작을 유지한다.
+- 기존 `discoveryThemes` 순서를 guide card 뒤에서 그대로 유지한다.
+- title, recipe count, image/overlay 처리 등 기존 theme content를 유지한다.
+
+한 rail에 Link와 button이 함께 있으므로 외형만으로 역할을 구분하지 않고 접근성 이름과 상태를 정확히 제공한다.
+
+### 상태 규칙
+
+| 상태 | `집밥 둘러보기` 표현 |
+| --- | --- |
+| initial ready | guide Link + theme buttons |
+| theme loading | guide placeholder + theme placeholders; page 전체를 막지 않음 |
+| theme empty | 실제 guide Link만 있는 guide-only rail |
+| theme error | 실제 guide Link만 있는 guide-only rail |
+| recipe error + theme ready | guide + themes 유지 후 recipe error 표시 |
+| search active | quick links와 rail 모두 숨김, 검색 결과 우선 |
+| ingredient filter active | quick links와 rail 모두 숨김, 필터 결과 우선 |
+| tag/theme filter active | quick links와 rail 모두 숨김, 결과 우선 |
+
+Guide 진입은 theme API 성공에 의존하지 않는다. loading 종료 뒤 guide card를 skeleton으로 남기지 않는다.
+
+### 320px sentinel
+
+- 390px과 같은 순서와 역할을 유지한다.
+- guide title/supporting copy가 card 밖으로 넘치거나 theme title과 겹치지 않는다.
+- 다음 card peek를 유지하되 card의 실제 터치 폭을 44px 미만으로 줄이지 않는다.
+- rail 내부 swipe만 허용하며 `document.documentElement.scrollWidth === clientWidth`를 만족한다.
+- rail을 올린 뒤에도 `모든 레시피` heading 또는 첫 recipe 진입이 과도하게 아래로 밀리지 않아야 한다.
+
+### Authority evidence 계획
+
+현재 상태 기준 캡처:
+
+- `ui/designs/evidence/service-about-guide/HOME-before-390.png`
+- `ui/designs/evidence/service-about-guide/HOME-before-320.png`
+
+Stage 4 필수 after 캡처:
+
+- `ui/designs/evidence/service-about-guide/HOME-after-390.png`
+- `ui/designs/evidence/service-about-guide/HOME-after-320.png`
+- `ui/designs/evidence/service-about-guide/HOME-guide-only-390.png`
+- `ui/designs/evidence/service-about-guide/HOME-filter-hidden-320.png`
+
+비교 시 rail 위치, section 높이, card geometry, next-card peek, `모든 레시피` 진입, page-level overflow 0, mixed role semantic, guide-only fallback을 검사한다. HOME은 anchor extension이므로 screenshot 기반 authority report 없이 confirmed로 닫지 않는다.
