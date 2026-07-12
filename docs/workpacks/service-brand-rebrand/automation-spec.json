@@ -1,0 +1,126 @@
+{
+  "slice_id": "service-brand-rebrand",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-shape-change",
+      "no-db-migration-or-row-rewrite",
+      "new-or-empty-nickname-fallback-only",
+      "existing-nickname-preserved",
+      "read-time-system-notification-canonicalization",
+      "stored-notification-copy-unchanged",
+      "api-envelope-and-error-contract-preserved"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workpack",
+      "pnpm validate:workflow-v2",
+      "git diff --check"
+    ],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/",
+      "/about",
+      "/login",
+      "/mypage",
+      "/privacy",
+      "/terms"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized",
+      "official-full-name",
+      "short-appbar-name",
+      "new-empty-nickname-fallback",
+      "existing-nickname-preserved",
+      "system-notification-canonicalized",
+      "user-content-preserved",
+      "home-theme-empty-error-guide-only",
+      "home-filter-active-rail-hidden"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workpack",
+      "pnpm validate:workflow-v2",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "official-docs-v1.7.12-v1.5.19-v1.3.19-v1.2.21",
+      "db-v1.3.16-unchanged",
+      "canonical-copy-matrix",
+      "nickname-fallback-preserves-existing-values",
+      "notification-read-time-canonicalization-no-rewrite",
+      "technical-identifiers-preserved",
+      "historical-docs-prototypes-evidence-preserved",
+      "home-before-after-390",
+      "home-before-after-320",
+      "home-guide-only-320",
+      "home-authority-report",
+      "about-desktop-1280"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "HOME"
+      ],
+      "required_screens": [
+        "HOME"
+      ],
+      "generator_required": false,
+      "generator_artifact": "ui/designs/HOME.md",
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/service-brand-rebrand/HOME-before-390.png",
+        "ui/designs/evidence/service-brand-rebrand/HOME-before-320.png",
+        "ui/designs/evidence/service-brand-rebrand/HOME-after-390.png",
+        "ui/designs/evidence/service-brand-rebrand/HOME-after-320.png",
+        "ui/designs/evidence/service-brand-rebrand/HOME-guide-only-after-320.png",
+        "ui/designs/evidence/service-brand-rebrand/ABOUT-after-1280.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/HOME-service-brand-rebrand-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "implementation-before-dependencies-merge",
+    "new-english-brand-added",
+    "dependency-added",
+    "db-migration-or-row-rewrite-added",
+    "api-endpoint-field-enum-status-added",
+    "existing-nickname-rewritten",
+    "stored-notification-row-rewritten",
+    "user-content-or-generic-jipbap-rewritten",
+    "homecook-homecook-identifier-renamed",
+    "cookie-header-event-storage-key-renamed",
+    "package-repository-supabase-omo-key-renamed",
+    "historical-official-doc-modified",
+    "merged-prototype-or-evidence-modified",
+    "image-logo-or-mascot-added",
+    "home-authority-evidence-missing",
+    "home-copy-outside-geometry-drift",
+    "unresolved-authority-blocker"
+  ],
+  "max_fix_rounds": {
+    "backend": 3,
+    "frontend": 4
+  },
+  "notes": "User-approved 2026-07-13 contract-evolution. Full name is 무엇을 먹든; short AppBar/wordmark/nav name is 무먹. Text wordmark only. HOME is an anchor-extension requiring 390/320 before-after evidence and authority review. Claude Stage 1 ownership is replaced by this role-separated Codex session."
+}
