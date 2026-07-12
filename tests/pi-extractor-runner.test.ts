@@ -1,8 +1,9 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { spawnSync } from "node:child_process";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -19,6 +20,8 @@ const visualModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/pi-extractor/
 const freezeModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/pi-extractor/freeze-pi-extraction.mjs")).href;
 const datasetProfileModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/recipe-loop/lib/dataset-profile.mjs")).href;
 const comparisonHtmlModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/pi-extractor/render-comparison-html.mjs")).href;
+const freezeGuardModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/recipe-loop/lib/freeze-guard.mjs")).href;
+const promotionGatesModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/recipe-loop/lib/promotion-gates.mjs")).href;
 
 type TestSource = {
   schemaVersion: number;
@@ -416,7 +419,11 @@ describe("pi recipe extractor MVP runner", () => {
       profileId: "single-recipe-v1",
       expectedRecipeCountPerVideo: 1,
       splits: {
-        train: { expectedCount: 2, ids: ["case-a", "case-b"] },
+        train: {
+          expectedCount: 2,
+          ids: ["case-a", "case-b"],
+          gates: { semantic: { averageScore: 4, bottomKMeanScore: 3.5 } },
+        },
       },
     });
 
@@ -430,6 +437,7 @@ describe("pi recipe extractor MVP runner", () => {
       ids: ["case-b"],
       expectedCount: 1,
       profileExpectedCount: 2,
+      gates: { semantic: { averageScore: 4, bottomKMeanScore: 3.5 } },
     });
     await expect(loadDatasetProfile({
       projectRoot: workdir,
@@ -6468,6 +6476,350 @@ describe("pi recipe extractor MVP runner", () => {
     expect(freeze.cases[0].readEvents.map((event: { path: string }) => path.basename(event.path))).toEqual(["source.json", "pi-response.json"]);
   });
 
+  it("refuses to freeze extraction output when access evidence is missing or unknown", async () => {
+    const { runFreeze } = await import(freezeModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const runDir = path.join(caseDir, "runs/leak-unsafe");
+    writeJson(path.join(runDir, "result.json"), { videoId: "case-a", recipes: [] });
+
+    await expect(runFreeze({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "leak-unsafe",
+    }, { projectRoot: workdir })).rejects.toThrow("file-access-manifest");
+
+    writeJson(path.join(runDir, "file-access-manifest.json"), {
+      status: "unknown",
+      unknownReadBoundary: true,
+      readEvents: [],
+      forbiddenReadEvents: [],
+    });
+    await expect(runFreeze({
+      split: "train",
+      ids: "case-a",
+      "out-tag": "leak-unsafe",
+    }, { projectRoot: workdir })).rejects.toThrow("access boundary is not clean");
+
+    for (const status of [undefined, "dirty", "leak_detected", "garbage"]) {
+      writeJson(path.join(runDir, "file-access-manifest.json"), {
+        ...(status ? { status } : {}),
+        unknownReadBoundary: false,
+        readEvents: [],
+        forbiddenReadEvents: [],
+      });
+      await expect(runFreeze({
+        split: "train",
+        ids: "case-a",
+        "out-tag": "leak-unsafe",
+      }, { projectRoot: workdir })).rejects.toThrow("access boundary is not clean");
+    }
+  });
+
+  it("requires a matching freeze hash before an evaluator may read golden", async () => {
+    const { runFreeze } = await import(freezeModuleUrl);
+    const { assertFrozenResults } = await import(freezeGuardModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const runDir = path.join(caseDir, "runs/freeze-guarded");
+    writeJson(path.join(runDir, "result.json"), { videoId: "case-a", recipes: [] });
+    writeJson(path.join(runDir, "file-access-manifest.json"), {
+      status: "clean",
+      unknownReadBoundary: false,
+      readEvents: [],
+      forbiddenReadEvents: [],
+    });
+
+    const input = {
+      projectRoot: workdir,
+      split: "train",
+      outTag: "freeze-guarded",
+      ids: ["case-a"],
+    };
+    await expect(assertFrozenResults(input)).rejects.toThrow("freeze is required");
+
+    await runFreeze({ split: "train", ids: "case-a", "out-tag": "freeze-guarded" }, { projectRoot: workdir });
+    await expect(assertFrozenResults(input)).resolves.toMatchObject({ outTag: "freeze-guarded" });
+
+    writeJson(path.join(runDir, "result.json"), { videoId: "case-a", recipes: [{ title: "changed" }] });
+    await expect(assertFrozenResults(input)).rejects.toThrow("frozen result hash mismatch");
+  });
+
+  it("blocks deterministic grading before the extraction freeze exists", () => {
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const runDir = path.join(caseDir, "runs/unfrozen-grade");
+    writeJson(path.join(runDir, "result.json"), {
+      videoId: "case-a",
+      recipes: [{ title: "양파 볶음", ingredients: [{ name: "양파" }], steps: ["양파를 볶는다."] }],
+    });
+    writeJson(path.join(runDir, "file-access-manifest.json"), {
+      status: "clean",
+      unknownReadBoundary: false,
+      readEvents: [],
+      forbiddenReadEvents: [],
+    });
+    writeJson(path.join(caseDir, "golden.json"), {
+      reviewStatus: "approved",
+      recipes: [{ title: "양파 볶음", ingredients: [{ name: "양파" }], steps: ["양파를 볶는다."] }],
+    });
+
+    const grade = spawnSync(process.execPath, [
+      path.join(repoRoot, "scripts/recipe-loop/grade-extraction.mjs"),
+      "--split", "train",
+      "--out-tag", "unfrozen-grade",
+      "--ids", "case-a",
+    ], { cwd: workdir, encoding: "utf8" });
+
+    expect(grade.status).toBe(1);
+    expect(`${grade.stdout}\n${grade.stderr}`).toContain("freeze is required before golden evaluation");
+  });
+
+  it("fails deterministic grading when a protected-split canary leaks", async () => {
+    const { runFreeze } = await import(freezeModuleUrl);
+    const videoId = "YZ8KSZboJeM";
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/validation", videoId);
+    const runDir = path.join(caseDir, "runs/canary-leak");
+    writeJson(path.join(runDir, "result.json"), {
+      videoId,
+      recipes: [{
+        title: "초코 마들렌",
+        ingredients: [{ name: "박력분" }, { name: "락토핏 골드" }],
+        steps: ["가루를 섞고 굽는다."],
+      }],
+    });
+    writeJson(path.join(runDir, "file-access-manifest.json"), {
+      status: "clean",
+      unknownReadBoundary: false,
+      readEvents: [],
+      forbiddenReadEvents: [],
+    });
+    writeJson(path.join(caseDir, "golden.json"), {
+      reviewStatus: "approved",
+      recipes: [{
+        title: "초코 마들렌",
+        ingredients: [
+          { name: "박력분" },
+          {
+            name: "락토핏 골드",
+            amountBasis: "leak-canary",
+            isLeakCanary: true,
+            canaryId: "canary_validation_YZ8KSZboJeM_01",
+          },
+        ],
+        steps: [{ order: 1, instruction: "가루를 섞고 굽는다." }],
+      }],
+    });
+    const manifestPath = path.join(workdir, "notebooks/recipe_loop_data/manifest.single-recipe.json");
+    writeJson(manifestPath, {
+      schemaVersion: 1,
+      profileId: "single-recipe-v1",
+      expectedRecipeCountPerVideo: 1,
+      splits: { validation: { expectedCount: 1, ids: [videoId] } },
+    });
+    await runFreeze({
+      split: "validation",
+      "out-tag": "canary-leak",
+      "dataset-manifest": manifestPath,
+    }, { projectRoot: workdir });
+
+    const grade = spawnSync(process.execPath, [
+      path.join(repoRoot, "scripts/recipe-loop/grade-extraction.mjs"),
+      "--split", "validation",
+      "--out-tag", "canary-leak",
+      "--dataset-manifest", manifestPath,
+    ], { cwd: workdir, encoding: "utf8" });
+
+    expect(grade.status).toBe(1);
+    const summary = JSON.parse(readFileSync(
+      path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.canary-leak.json"),
+      "utf8",
+    ));
+    expect(summary.aggregate).toMatchObject({
+      success: false,
+      canaryLeak: { success: false, status: "leak_detected", hit_count: 1 },
+    });
+    expect(summary.perVideo).toBeUndefined();
+    expect(existsSync(path.join(runDir, "grade.json"))).toBe(false);
+    expect(grade.stdout).not.toContain(videoId);
+  });
+
+  it("fails semantic grading when calibrated score thresholds are missed", async () => {
+    const { runFreeze } = await import(freezeModuleUrl);
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
+    const runDir = path.join(caseDir, "runs/semantic-low");
+    writeJson(path.join(runDir, "result.json"), {
+      videoId: "case-a",
+      recipes: [{ title: "양파 볶음", ingredients: [{ name: "양파" }], steps: ["양파를 볶는다."] }],
+      __semanticJudge: {
+        cases: [{
+          title: "양파 볶음",
+          ingredient_score: 2,
+          step_score: 2,
+          reason: "fixture low score",
+        }],
+      },
+    });
+    writeJson(path.join(runDir, "file-access-manifest.json"), {
+      status: "clean",
+      unknownReadBoundary: false,
+      readEvents: [],
+      forbiddenReadEvents: [],
+    });
+    writeJson(path.join(caseDir, "golden.json"), {
+      reviewStatus: "approved",
+      recipes: [{
+        title: "양파 볶음",
+        ingredients: [{ name: "양파" }],
+        steps: [{ order: 1, instruction: "양파를 볶는다." }],
+      }],
+    });
+    writeJson(path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"), {
+      schemaVersion: 1,
+      thresholds: { minCaseScore: 3, averageScore: 3 },
+      samples: [{ id: "fixture-low", judgeCaseScore: 2 }],
+    });
+    await runFreeze({ split: "train", ids: "case-a", "out-tag": "semantic-low" }, { projectRoot: workdir });
+
+    const grade = spawnSync(process.execPath, [
+      path.join(repoRoot, "scripts/recipe-loop/grade-semantic.mjs"),
+      "--split", "train",
+      "--out-tag", "semantic-low",
+      "--ids", "case-a",
+      "--expected-count", "1",
+      "--judge-provider", "fixture",
+      "--judge-model", "fixture-local",
+      "--calibration", "notebooks/recipe_loop_data/semantic_calibration.json",
+    ], { cwd: workdir, encoding: "utf8" });
+
+    expect(grade.status).toBe(1);
+    const summary = JSON.parse(readFileSync(
+      path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.semantic-low.json"),
+      "utf8",
+    ));
+    expect(summary.aggregate).toMatchObject({ success: false, threshold_success: false });
+
+    const manifestPath = path.join(workdir, "notebooks/recipe_loop_data/manifest.single-recipe.json");
+    writeJson(manifestPath, {
+      schemaVersion: 1,
+      profileId: "single-recipe-v1",
+      expectedRecipeCountPerVideo: 1,
+      splits: {
+        train: {
+          expectedCount: 1,
+          ids: ["case-a"],
+          gates: { semantic: { averageScore: 2, bottomKMeanScore: 2 } },
+        },
+      },
+    });
+    await runFreeze({
+      split: "train",
+      "out-tag": "semantic-low",
+      "dataset-manifest": manifestPath,
+    }, { projectRoot: workdir });
+    const profileGrade = spawnSync(process.execPath, [
+      path.join(repoRoot, "scripts/recipe-loop/grade-semantic.mjs"),
+      "--split", "train",
+      "--out-tag", "semantic-low",
+      "--dataset-manifest", manifestPath,
+      "--judge-provider", "fixture",
+      "--judge-model", "fixture-local",
+      "--calibration", "notebooks/recipe_loop_data/semantic_calibration.json",
+    ], { cwd: workdir, encoding: "utf8" });
+    expect(profileGrade.status).toBe(0);
+    const profileSummary = JSON.parse(readFileSync(
+      path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.semantic-low.json"),
+      "utf8",
+    ));
+    expect(profileSummary.aggregate).toMatchObject({
+      success: true,
+      threshold_success: true,
+      thresholds: { averageScore: 2, bottomKMeanScore: 2 },
+      thresholdSource: "dataset-profile",
+    });
+  });
+
+  it("keeps protected semantic grading aggregate-only", async () => {
+    const { runFreeze } = await import(freezeModuleUrl);
+    const videoId = "YZ8KSZboJeM";
+    const caseDir = path.join(workdir, "notebooks/recipe_loop_data/validation", videoId);
+    const runDir = path.join(caseDir, "runs/semantic-protected");
+    writeJson(path.join(runDir, "result.json"), {
+      videoId,
+      recipes: [{ title: "초코 마들렌", ingredients: [{ name: "박력분" }], steps: ["가루를 섞고 굽는다."] }],
+      __semanticJudge: {
+        cases: [{
+          title: "초코 마들렌",
+          ingredient_score: 5,
+          step_score: 5,
+          reason: "fixture pass",
+        }],
+      },
+    });
+    writeJson(path.join(runDir, "file-access-manifest.json"), {
+      status: "clean",
+      unknownReadBoundary: false,
+      readEvents: [],
+      forbiddenReadEvents: [],
+    });
+    writeJson(path.join(caseDir, "golden.json"), {
+      reviewStatus: "approved",
+      recipes: [{
+        title: "초코 마들렌",
+        ingredients: [
+          { name: "박력분" },
+          {
+            name: "락토핏 골드",
+            amountBasis: "leak-canary",
+            isLeakCanary: true,
+            canaryId: "canary_validation_YZ8KSZboJeM_01",
+          },
+        ],
+        steps: [{ order: 1, instruction: "가루를 섞고 굽는다." }],
+      }],
+    });
+    writeJson(path.join(workdir, "notebooks/recipe_loop_data/semantic_calibration.json"), {
+      schemaVersion: 1,
+      thresholds: { minCaseScore: 3, averageScore: 3 },
+      samples: [{ id: "fixture-pass", judgeCaseScore: 5 }],
+    });
+    const manifestPath = path.join(workdir, "notebooks/recipe_loop_data/manifest.single-recipe.json");
+    writeJson(manifestPath, {
+      schemaVersion: 1,
+      profileId: "single-recipe-v1",
+      expectedRecipeCountPerVideo: 1,
+      splits: { validation: { expectedCount: 1, ids: [videoId] } },
+    });
+    await runFreeze({
+      split: "validation",
+      "out-tag": "semantic-protected",
+      "dataset-manifest": manifestPath,
+    }, { projectRoot: workdir });
+
+    const grade = spawnSync(process.execPath, [
+      path.join(repoRoot, "scripts/recipe-loop/grade-semantic.mjs"),
+      "--split", "validation",
+      "--out-tag", "semantic-protected",
+      "--dataset-manifest", manifestPath,
+      "--judge-provider", "fixture",
+      "--judge-model", "fixture-local",
+      "--calibration", "notebooks/recipe_loop_data/semantic_calibration.json",
+    ], { cwd: workdir, encoding: "utf8" });
+
+    expect(grade.status).toBe(0);
+    const summary = JSON.parse(readFileSync(
+      path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.semantic-protected.json"),
+      "utf8",
+    ));
+    expect(summary).toMatchObject({
+      aggregate: {
+        success: true,
+        aggregateOnly: true,
+        canaryLeak: { success: true, status: "clean" },
+      },
+    });
+    expect(summary.perVideo).toBeUndefined();
+    expect(existsSync(path.join(runDir, "grade_semantic.json"))).toBe(false);
+    expect(grade.stdout).not.toContain(videoId);
+  });
+
   it("freezes exactly the ids selected by the dataset profile", async () => {
     const { runFreeze } = await import(freezeModuleUrl);
     const manifestPath = path.join(workdir, "notebooks/recipe_loop_data/manifest.single-recipe.json");
@@ -6480,6 +6832,15 @@ describe("pi recipe extractor MVP runner", () => {
     writeJson(
       path.join(workdir, "notebooks/recipe_loop_data/train/case-a/runs/profile-freeze/result.json"),
       { videoId: "case-a", recipes: [{ candidateId: "r1", title: "테스트", ingredients: [], steps: [] }] },
+    );
+    writeJson(
+      path.join(workdir, "notebooks/recipe_loop_data/train/case-a/runs/profile-freeze/file-access-manifest.json"),
+      {
+        status: "clean",
+        unknownReadBoundary: false,
+        readEvents: [],
+        forbiddenReadEvents: [],
+      },
     );
 
     const result = await runFreeze({
@@ -6500,6 +6861,132 @@ describe("pi recipe extractor MVP runner", () => {
     expect(freeze.cases.map((entry: { videoId: string }) => entry.videoId)).toEqual(["case-a"]);
   });
 
+  it("binds a freeze to the exact dataset manifest used for extraction and grading", async () => {
+    const { runFreeze } = await import(freezeModuleUrl);
+    const { assertFrozenResults } = await import(freezeGuardModuleUrl);
+    const { loadDatasetProfile } = await import(datasetProfileModuleUrl);
+    const manifestPath = path.join(workdir, "notebooks/recipe_loop_data/manifest.single-recipe.json");
+    const writeManifest = (amountMatchRate: number) => writeJson(manifestPath, {
+      schemaVersion: 1,
+      profileId: "single-recipe-v1",
+      expectedRecipeCountPerVideo: 1,
+      splits: {
+        train: {
+          expectedCount: 1,
+          ids: ["case-a"],
+          gates: { deterministic: { amountMatchRate } },
+        },
+      },
+    });
+    writeManifest(0.5);
+    const runDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a/runs/manifest-bound");
+    writeJson(path.join(runDir, "result.json"), {
+      videoId: "case-a",
+      recipes: [{ candidateId: "r1", title: "테스트", ingredients: [], steps: [] }],
+    });
+    writeJson(path.join(runDir, "file-access-manifest.json"), {
+      status: "clean",
+      unknownReadBoundary: false,
+      readEvents: [],
+      forbiddenReadEvents: [],
+    });
+    await runFreeze({
+      split: "train",
+      "out-tag": "manifest-bound",
+      "dataset-manifest": manifestPath,
+    }, { projectRoot: workdir });
+
+    writeManifest(0.1);
+    const changedProfile = await loadDatasetProfile({
+      projectRoot: workdir,
+      manifestPath,
+      split: "train",
+    });
+    await expect(assertFrozenResults({
+      projectRoot: workdir,
+      split: "train",
+      outTag: "manifest-bound",
+      ids: ["case-a"],
+      datasetProfile: changedProfile,
+    })).rejects.toThrow("dataset manifest hash mismatch");
+  });
+
+  it("rejects protected-split dataset profile subsets that turn aggregates into per-case oracles", async () => {
+    const { loadDatasetProfile } = await import(datasetProfileModuleUrl);
+    const manifestPath = path.join(workdir, "notebooks/recipe_loop_data/manifest.single-recipe.json");
+    writeJson(manifestPath, {
+      schemaVersion: 1,
+      profileId: "single-recipe-v1",
+      expectedRecipeCountPerVideo: 1,
+      splits: {
+        validation: { expectedCount: 2, ids: ["case-a", "case-b"] },
+        holdout: { expectedCount: 2, ids: ["case-c", "case-d"] },
+      },
+    });
+
+    await expect(loadDatasetProfile({
+      projectRoot: workdir,
+      manifestPath,
+      split: "validation",
+      requestedIds: ["case-a"],
+    })).rejects.toThrow("protected split requires the complete dataset profile");
+    await expect(loadDatasetProfile({
+      projectRoot: workdir,
+      manifestPath,
+      split: "holdout",
+      requestedIds: ["case-c"],
+    })).rejects.toThrow("protected split requires the complete dataset profile");
+  });
+
+  it("enforces every predeclared accuracy, timing, and model-call promotion gate", async () => {
+    const { evaluatePromotionGates } = await import(promotionGatesModuleUrl);
+    const gates = {
+      deterministic: {
+        recipeCountMatchRate: 1,
+        ingredientF1: 0.86,
+        amountMatchRate: 0.723,
+        amountCoverage: 0.779,
+        stepCoverage: 0.44,
+      },
+      semantic: { averageScore: 3.438, bottomKMeanScore: 2 },
+      timing: { runType: "cold", p50MaxSeconds: 95, p95ExclusiveMaxSeconds: 219.5 },
+      modelCallCountMax: 2,
+    };
+    const passingInput = {
+      gates,
+      deterministic: {
+        success: true,
+        recipeCountMatchRate: 1,
+        ingredientF1: 0.9,
+        amountMatchRate: 0.75,
+        amountCoverage: 0.8,
+        stepCoverage: 0.5,
+      },
+      semantic: { success: true, averageScore: 3.5, bottomKMeanScore: 2 },
+      timing: { runType: "cold", sampleCount: 5, p50: 90, p95: 219.4 },
+      modelCallCounts: [2, 2, 1, 2, 2],
+      expectedCount: 5,
+    };
+
+    expect(evaluatePromotionGates(passingInput)).toMatchObject({ success: true, failures: [] });
+    expect(evaluatePromotionGates({
+      ...passingInput,
+      timing: { ...passingInput.timing, p95: 219.5 },
+    })).toMatchObject({ success: false, failures: expect.arrayContaining(["timing.p95ExclusiveMaxSeconds"]) });
+    expect(evaluatePromotionGates({
+      ...passingInput,
+      timing: { ...passingInput.timing, sampleCount: 0 },
+    })).toMatchObject({ success: false, failures: expect.arrayContaining(["timing.sampleCount"]) });
+    expect(evaluatePromotionGates({
+      ...passingInput,
+      modelCallCounts: [2, 3, 1, 2, 2],
+    })).toMatchObject({ success: false, failures: expect.arrayContaining(["modelCallCountMax"]) });
+    expect(evaluatePromotionGates({
+      ...passingInput,
+      deterministic: { ...passingInput.deterministic, ingredientF1: 0.85 },
+    })).toMatchObject({ success: false, failures: expect.arrayContaining(["deterministic.ingredientF1"]) });
+  });
+
   it("blocks detailed comparison HTML for protected splits even without a dataset manifest", async () => {
     const { renderComparisonHtml } = await import(comparisonHtmlModuleUrl);
 
@@ -6515,9 +7002,10 @@ describe("pi recipe extractor MVP runner", () => {
     }, { projectRoot: workdir })).rejects.toThrow("aggregate-only");
   });
 
-  it("allows an explicit user-authorized validation comparison report", async () => {
+  it("rejects self-authorized detailed comparison reports for protected splits", async () => {
     const { renderComparisonHtml } = await import(comparisonHtmlModuleUrl);
     const output = path.join(workdir, ".omx/plans/validation-detail.html");
+    const runDir = path.join(workdir, "notebooks/recipe_loop_data/validation/case-a/runs/fresh-baseline");
     writeJson(
       path.join(workdir, "notebooks/recipe_loop_data/validation/case-a/runs/fresh-baseline/run-progress.json"),
       {
@@ -6529,24 +7017,146 @@ describe("pi recipe extractor MVP runner", () => {
       },
     );
     writeJson(
-      path.join(workdir, "notebooks/recipe_loop_data/validation/case-a/runs/fresh-baseline/result.json"),
-      { videoId: "case-a", recipes: [], meta: { total_fresh_ms: 42123 } },
+      path.join(runDir, "result.json"),
+      {
+        videoId: "case-a",
+        recipes: [],
+        meta: {
+          total_fresh_ms: 42123,
+          sourceVideoCacheHit: false,
+          frameCacheHit: false,
+          selectorCacheHit: false,
+          visionCacheHit: false,
+          declaredRunType: "cold",
+          observedRunType: "cold",
+          runTypeMatches: true,
+          coldTimingEligible: true,
+        },
+      },
     );
+    writeJson(path.join(runDir, "file-access-manifest.json"), {
+      status: "clean",
+      unknownReadBoundary: false,
+      readEvents: [],
+      forbiddenReadEvents: [],
+    });
 
-    await expect(renderComparisonHtml({
+    const renderArgs = {
       split: "validation",
-      "out-tag": "protected-detail",
+      "out-tag": "fresh-baseline",
       ids: "case-a",
       "allow-protected-detail": true,
       "timing-out-tag": "fresh-baseline",
+      "timing-run-type": "cold",
       output,
-    }, { projectRoot: workdir })).resolves.toMatchObject({ outputPath: output });
-    expect(readFileSync(output, "utf8")).toContain("split: <code>validation</code>");
-    expect(readFileSync(output, "utf8")).toContain("fresh P50 42.123s");
-    expect(readFileSync(output, "utf8")).toContain("fresh 42.123s");
-    expect(readFileSync(output, "utf8")).toContain(
-      '<a class="youtube-link" href="https://www.youtube.com/watch?v=case-a" target="_blank" rel="noopener noreferrer">유튜브 원본 영상 보기 ↗</a>',
-    );
+    };
+    await expect(renderComparisonHtml(renderArgs, { projectRoot: workdir })).rejects.toThrow("aggregate-only");
+  });
+
+  it("excludes partial Codex Vision cache reuse from cold timing summaries", async () => {
+    const { freshTiming, timingSummary } = await import(comparisonHtmlModuleUrl);
+    const progress = {
+      events: [
+        { phase: "started", at: "2026-07-12T00:00:00.000Z" },
+        { phase: "completed", at: "2026-07-12T00:00:42.000Z" },
+      ],
+    };
+
+    const cold = freshTiming(progress, {
+      meta: {
+        total_fresh_ms: 42_123,
+        sourceVideoCacheHit: false,
+        frameCacheHit: false,
+        selectorCacheHit: false,
+        visionCacheHit: false,
+        declaredRunType: "cold",
+        observedRunType: "cold",
+        runTypeMatches: true,
+        coldTimingEligible: true,
+        executionConfigSignature: "fast12-config",
+      },
+    });
+    const selectorWarm = freshTiming(progress, {
+      meta: {
+        total_fresh_ms: 1_234,
+        frameCacheHit: true,
+        selectorCacheHit: true,
+        visionCacheHit: false,
+        observedRunType: "selector-warm",
+        coldTimingEligible: false,
+      },
+    });
+    const staleFullCache = freshTiming(progress, {
+      meta: {
+        total_fresh_ms: 99_999,
+        frameCacheHit: true,
+        visionCacheHit: true,
+      },
+    });
+    const missingColdTiming = freshTiming({ events: [] }, {
+      meta: {
+        total_fresh_ms: null,
+        frameCacheHit: false,
+        selectorCacheHit: false,
+        visionCacheHit: false,
+        observedRunType: "cold",
+        coldTimingEligible: true,
+      },
+    });
+    const legacyTiming = freshTiming(progress, {
+      meta: { total_fresh_ms: 10_000 },
+    }, { requestedRunType: "cold" });
+
+    expect(cold).toMatchObject({ seconds: 42.123, runType: "cold" });
+    expect(selectorWarm).toBeNull();
+    expect(staleFullCache).toBeNull();
+    expect(missingColdTiming).toBeNull();
+    expect(legacyTiming).toBeNull();
+    expect(timingSummary([cold, selectorWarm, staleFullCache])).toMatchObject({
+      p50: 42.123,
+      p95: 42.123,
+      sampleCount: 1,
+    });
+  });
+
+  it("rejects timing percentiles assembled from different execution configurations", async () => {
+    const { freshTiming, timingSummary } = await import(comparisonHtmlModuleUrl);
+    const progress = {
+      events: [
+        { phase: "started", at: "2026-07-12T00:00:00.000Z" },
+        { phase: "completed", at: "2026-07-12T00:00:42.000Z" },
+      ],
+    };
+    const timingA = freshTiming(progress, {
+      meta: {
+        total_fresh_ms: 42_000,
+        sourceVideoCacheHit: false,
+        frameCacheHit: false,
+        selectorCacheHit: false,
+        visionCacheHit: false,
+        declaredRunType: "cold",
+        observedRunType: "cold",
+        runTypeMatches: true,
+        coldTimingEligible: true,
+        executionConfigSignature: "fast12-config-a",
+      },
+    });
+    const timingB = freshTiming(progress, {
+      meta: {
+        total_fresh_ms: 45_000,
+        sourceVideoCacheHit: false,
+        frameCacheHit: false,
+        selectorCacheHit: false,
+        visionCacheHit: false,
+        declaredRunType: "cold",
+        observedRunType: "cold",
+        runTypeMatches: true,
+        coldTimingEligible: true,
+        executionConfigSignature: "fast12-config-b",
+      },
+    });
+
+    expect(() => timingSummary([timingA, timingB], "cold")).toThrow("execution configuration mismatch");
   });
 
   it("runs the train wrapper with staged fast compact defaults and freeze", async () => {

@@ -134,6 +134,7 @@ export function createLlmForProvider(provider, args = {}, factories = {}) {
       frameMode: typeof args["frame-mode"] === "string" ? args["frame-mode"] : undefined,
       interval: optionalNumber(args.interval),
       hybridAnchorBudget: optionalNumber(args["hybrid-anchor-budget"]),
+      runType: typeof args["run-type"] === "string" ? args["run-type"] : undefined,
     });
   }
 
@@ -310,6 +311,23 @@ export async function runExtraction(rawArgs = {}, options = {}) {
         singleRecipeContractFailureCount: 0,
       };
       await mkdir(outDir, { recursive: true });
+      if (provider === "codex-vision" || provider === "codex-vision-keyframes") {
+        const boundaryStatus = result.meta.modelReadBoundaryStatus ?? "unknown";
+        await writeFile(
+          path.join(outDir, "file-access-manifest.json"),
+          JSON.stringify({
+            schemaVersion: 1,
+            kind: "codex-model-read-boundary",
+            status: boundaryStatus,
+            enforcement: result.meta.modelReadBoundaryEnforcement ?? null,
+            sourcePath,
+            readEvents: [{ path: sourcePath, source: "runner" }],
+            forbiddenReadEvents: [],
+            unknownReadBoundary: boundaryStatus !== "clean",
+          }, null, 2) + "\n",
+          "utf8",
+        );
+      }
       if (publicSource) {
         await writeFile(path.join(outDir, "public-source.json"), JSON.stringify(publicSource, null, 2) + "\n", "utf8");
       }

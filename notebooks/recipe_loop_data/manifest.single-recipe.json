@@ -17,10 +17,18 @@
         "QF0gBfW3od4",
         "rKfLY_Lg1-Q",
         "eJyoszbyNNQ"
-      ]
+      ],
+      "gates": {
+        "deterministic": { "recipeCountMatchRate": 1, "ingredientF1": 0.945, "amountMatchRate": 0.498, "stepCoverage": 0.675 },
+        "semantic": { "averageScore": 4, "bottomKMeanScore": 3.5 },
+        "timing": { "runType": "cold", "p50MaxSeconds": 80.1, "p95MaxSeconds": 126.7 },
+        "modelCallCountMax": 2,
+        "longVideoSceneScanImprovementMin": 0.3
+      }
     },
     "validation": {
       "expectedCount": 8,
+      "canary": { "required": true, "tokens": [] },
       "ids": [
         "Egpjve8caK0",
         "rkOEBmECi_o",
@@ -30,17 +38,35 @@
         "oe_WhcK2X4Q",
         "jenDETSgvz4",
         "nE7ANT3uGMQ"
-      ]
+      ],
+      "gates": {
+        "deterministic": { "recipeCountMatchRate": 1, "ingredientF1": 0.86, "amountMatchRate": 0.723, "amountCoverage": 0.779, "stepCoverage": 0.44 },
+        "semantic": { "averageScore": 3.438, "bottomKMeanScore": 2 },
+        "timing": { "runType": "cold", "p50MaxSeconds": 95, "p95ExclusiveMaxSeconds": 219.5 },
+        "modelCallCountMax": 2
+      }
     },
     "holdout": {
       "expectedCount": 5,
+      "canary": {
+        "required": true,
+        "tokens": [
+          { "id": "holdout-profile-canary-v1", "category": "profile_token", "value": "__HOMECOOK_HOLDOUT_EVAL_CANARY_V1__" }
+        ]
+      },
       "ids": [
         "2FF9ayF_d3w",
         "oqJzB3OD0eI",
         "mlN1SdVf0yo",
         "jghNqyzxWWE",
         "3kvXys6npBM"
-      ]
+      ],
+      "gates": {
+        "deterministic": { "recipeCountMatchRate": 1, "ingredientF1": 0.86, "amountMatchRate": 0.723, "amountCoverage": 0.779, "stepCoverage": 0.44 },
+        "semantic": { "averageScore": 3.438, "bottomKMeanScore": 2 },
+        "timing": { "runType": "cold", "p50MaxSeconds": 95, "p95ExclusiveMaxSeconds": 219.5 },
+        "modelCallCountMax": 2
+      }
     }
   },
   "excludedCases": [

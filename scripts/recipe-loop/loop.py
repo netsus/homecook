@@ -1473,6 +1473,48 @@ def assert_holdout_not_consumed() -> None:
 GATE_AXES = ["deterministic_validation", "semantic_validation", "subprocess_health", "leakage_guard"]
 
 
+def extraction_candidate_sha256() -> str:
+    paths = [
+        MODULE_DIR / "extract.mjs",
+        MODULE_DIR / "prompt.mjs",
+        PROJECT_ROOT / "scripts" / "recipe-loop" / "run-extraction.mjs",
+        PROJECT_ROOT / "scripts" / "recipe-loop" / "extract-video-frames.py",
+        PROJECT_ROOT / "scripts" / "recipe-loop" / "lib" / "codex-vision-client.mjs",
+        PROJECT_ROOT / "scripts" / "recipe-loop" / "lib" / "codex-vision-keyframes-client.mjs",
+    ]
+    digest = hashlib.sha256()
+    for path in paths:
+        digest.update(str(path.relative_to(PROJECT_ROOT)).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def validation_authorization(out_tag: str) -> dict:
+    manifest_path = DATA_ROOT / "manifest.single-recipe.json"
+    promotion_path = DATA_ROOT / "validation" / f"_promotion_summary.{out_tag}.json"
+    if not manifest_path.exists() or not promotion_path.exists():
+        return {}
+    promotion = read_json(promotion_path, {})
+    execution_signature = promotion.get("aggregate", {}).get("timing", {}).get("executionConfigSignature")
+    if not isinstance(execution_signature, str) or not execution_signature:
+        return {}
+    return {
+        "out_tag": out_tag,
+        "dataset_manifest_path": display_path(manifest_path),
+        "dataset_manifest_sha256": file_sha256(manifest_path),
+        "promotion_summary_path": display_path(promotion_path),
+        "promotion_summary_sha256": file_sha256(promotion_path),
+        "execution_config_signature": execution_signature,
+        "candidate_code_sha256": extraction_candidate_sha256(),
+    }
+
+
+def bind_validation_authorization(decision: dict, out_tag: str) -> dict:
+    return {**decision, "validation_authorization": validation_authorization(out_tag)}
+
+
 def load_validation_decision(decision_path: str | None) -> dict:
     """holdout 소비를 인가하는 validation decision(05_decision.json)을 읽어 통과 여부를 확인한다.
 
@@ -1508,7 +1550,56 @@ def load_validation_decision(decision_path: str | None) -> dict:
     if decision.get("passed") is not True or failed_axes:
         return {"path": display_path(path), "passed": False,
                 "reason": "validation decision did not pass all gate axes", "failed_axes": failed_axes}
-    return {"path": display_path(path), "passed": True, "checked_axes": GATE_AXES}
+    authorization = decision.get("validation_authorization")
+    if not isinstance(authorization, dict):
+        return {"path": display_path(path), "passed": False,
+                "reason": "validation authorization is missing"}
+    out_tag = authorization.get("out_tag")
+    if not isinstance(out_tag, str) or not out_tag:
+        return {"path": display_path(path), "passed": False,
+                "reason": "validation authorization out_tag is missing"}
+    manifest_path = DATA_ROOT / "manifest.single-recipe.json"
+    promotion_path = DATA_ROOT / "validation" / f"_promotion_summary.{out_tag}.json"
+    if not manifest_path.exists() or not promotion_path.exists():
+        return {"path": display_path(path), "passed": False,
+                "reason": "validation authorization artifacts are missing"}
+    if authorization.get("dataset_manifest_path") != display_path(manifest_path):
+        return {"path": display_path(path), "passed": False,
+                "reason": "dataset manifest path mismatch"}
+    if authorization.get("dataset_manifest_sha256") != file_sha256(manifest_path):
+        return {"path": display_path(path), "passed": False,
+                "reason": "dataset manifest hash mismatch"}
+    if authorization.get("promotion_summary_path") != display_path(promotion_path):
+        return {"path": display_path(path), "passed": False,
+                "reason": "promotion summary path mismatch"}
+    if authorization.get("promotion_summary_sha256") != file_sha256(promotion_path):
+        return {"path": display_path(path), "passed": False,
+                "reason": "promotion summary hash mismatch"}
+    execution_signature = authorization.get("execution_config_signature")
+    if not isinstance(execution_signature, str) or not execution_signature:
+        return {"path": display_path(path), "passed": False,
+                "reason": "validation execution signature is missing"}
+    if authorization.get("candidate_code_sha256") != extraction_candidate_sha256():
+        return {"path": display_path(path), "passed": False,
+                "reason": "validation candidate code hash mismatch"}
+    promotion = read_json(promotion_path, {})
+    promotion_signature = promotion.get("aggregate", {}).get("timing", {}).get("executionConfigSignature")
+    if execution_signature != promotion_signature:
+        return {"path": display_path(path), "passed": False,
+                "reason": "validation execution signature mismatch"}
+    if promotion.get("aggregate", {}).get("success") is not True:
+        return {"path": display_path(path), "passed": False,
+                "reason": "validation promotion did not pass"}
+    return {
+        "path": display_path(path),
+        "passed": True,
+        "checked_axes": GATE_AXES,
+        "validation_out_tag": out_tag,
+        "dataset_manifest_sha256": authorization["dataset_manifest_sha256"],
+        "promotion_summary_sha256": authorization["promotion_summary_sha256"],
+        "execution_config_signature": execution_signature,
+        "candidate_code_sha256": authorization["candidate_code_sha256"],
+    }
 
 
 def git_commit() -> str | None:
@@ -1811,6 +1902,10 @@ def canary_token_scan_from_summaries(summaries: dict) -> dict:
 
 
 def split_expected_count(split: str) -> int:
+    single_manifest = read_json(DATA_ROOT / "manifest.single-recipe.json", {})
+    single_split = single_manifest.get("splits", {}).get(split, {}) if isinstance(single_manifest, dict) else {}
+    if isinstance(single_split.get("expectedCount"), int):
+        return int(single_split["expectedCount"])
     manifest = read_json(DATA_ROOT / "manifest.json", {})
     if isinstance(manifest.get(split), list):
         return len(manifest[split])
@@ -1819,23 +1914,16 @@ def split_expected_count(split: str) -> int:
 
 
 def deterministic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[bool, dict]:
-    # 구조 무결성만 하드 게이트로 둔다. 재료/분량/단계 같은 품질 지표는
-    # 글자 매칭의 거짓 감점(예: 링귀네면↔링귀니, 간장↔진간장)에 취약해 advisory로 내리고,
-    # 재료/단계 정확성은 의미 judge(ingredient_score/step_score)가 게이팅한다.
     hard_checks = {
         "summary_success": aggregate.get("success") is True,
+        "threshold_success": aggregate.get("threshold_success") is True,
         "recipeCountMatchRate": (aggregate.get("recipeCountMatchRate") or 0) >= cfg.det_recipe_count_min,
         "missing_result_count": (aggregate.get("missing_result_count") or 0) == 0,
         "missing_golden_count": (aggregate.get("missing_golden_count") or 0) == 0,
         "unapproved_golden_count": (aggregate.get("unapproved_golden_count") or 0) == 0,
         "expected_count_mismatch": aggregate.get("expected_count_mismatch") is False,
     }
-    advisory_checks = {
-        "ingredientF1": (aggregate.get("ingredientF1") or 0) >= cfg.det_f1_min,
-        "amountMatchRate": (aggregate.get("amountMatchRate") or 0) >= cfg.det_amount_min,
-        "stepCoverage": (aggregate.get("stepCoverage") or 0) >= cfg.det_step_min,
-    }
-    return all(hard_checks.values()), {**hard_checks, "advisory": advisory_checks}
+    return all(hard_checks.values()), hard_checks
 
 
 def semantic_validation_success(cfg: LoopConfig, aggregate: dict) -> tuple[bool, dict]:
@@ -2265,8 +2353,29 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
 
     stage(f"[ITER {iteration}] 3. 확정 검증 (추출 실행 + 하드코딩/스키마 점검)")
     no_hardcode, hardcode_report = check_no_hardcoded_answers()
-    ext_train = run_node("run-extraction.mjs", "--split", cfg.train_split, "--out-tag", out_tag, "--model", cfg.model)
-    ext_val = run_node("run-extraction.mjs", "--split", cfg.val_split, "--out-tag", out_tag, "--model", cfg.model)
+    single_manifest_path = str(DATA_ROOT / "manifest.single-recipe.json")
+    extraction_profile_args = (
+        "--dataset-manifest", single_manifest_path,
+        "--single-recipe-only",
+        "--no-cache",
+        "--run-type", "cold",
+    )
+    ext_train = run_node(
+        "run-extraction.mjs", "--split", cfg.train_split, "--out-tag", out_tag,
+        "--model", cfg.model, *extraction_profile_args,
+    )
+    ext_val = run_node(
+        "run-extraction.mjs", "--split", cfg.val_split, "--out-tag", out_tag,
+        "--model", cfg.model, *extraction_profile_args,
+    )
+    freeze_train = run_node(
+        "../pi-extractor/freeze-pi-extraction.mjs", "--split", cfg.train_split,
+        "--out-tag", out_tag, "--dataset-manifest", single_manifest_path,
+    )
+    freeze_val = run_node(
+        "../pi-extractor/freeze-pi-extraction.mjs", "--split", cfg.val_split,
+        "--out-tag", out_tag, "--dataset-manifest", single_manifest_path,
+    )
     print(ext_train.stdout[-800:])
     verify_payload = {
         "no_hardcoded_answers": no_hardcode, "hardcode_scan": hardcode_report,
@@ -2280,19 +2389,45 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
     stage(f"[ITER {iteration}] 4. 채점 (결정적 + AI 의미)")
     train_expected = str(split_expected_count(cfg.train_split))
     val_expected = str(split_expected_count(cfg.val_split))
-    train_det_grade = run_node("grade-extraction.mjs", "--split", cfg.train_split, "--out-tag", out_tag, "--expected-count", train_expected)
-    val_det_grade = run_node("grade-extraction.mjs", "--split", cfg.val_split, "--out-tag", out_tag, "--expected-count", val_expected)
-    train_sem_grade = run_node("grade-semantic.mjs", *semantic_grader_args(cfg, cfg.train_split, out_tag, train_expected))
-    val_sem_grade = run_node("grade-semantic.mjs", *semantic_grader_args(cfg, cfg.val_split, out_tag, val_expected))
+    train_det_grade = run_node(
+        "grade-extraction.mjs", "--split", cfg.train_split, "--out-tag", out_tag,
+        "--dataset-manifest", single_manifest_path,
+    )
+    val_det_grade = run_node(
+        "grade-extraction.mjs", "--split", cfg.val_split, "--out-tag", out_tag,
+        "--dataset-manifest", single_manifest_path,
+    )
+    train_sem_grade = run_node(
+        "grade-semantic.mjs", *semantic_grader_args(cfg, cfg.train_split, out_tag, train_expected),
+        "--dataset-manifest", single_manifest_path,
+    )
+    val_sem_grade = run_node(
+        "grade-semantic.mjs", *semantic_grader_args(cfg, cfg.val_split, out_tag, val_expected),
+        "--dataset-manifest", single_manifest_path,
+    )
+    val_promotion = run_node(
+        "evaluate-promotion.mjs", "--split", cfg.val_split, "--out-tag", out_tag,
+        "--dataset-manifest", single_manifest_path,
+    )
 
     stage(f"[ITER {iteration}] 5. 판정 (코드)")
     summaries = grade_summaries(cfg, out_tag)
     subprocess_health = {
-        "success": ext_val.returncode == 0 and val_det_grade.returncode == 0 and val_sem_grade.returncode == 0,
+        "success": (
+            ext_val.returncode == 0
+            and freeze_train.returncode == 0
+            and freeze_val.returncode == 0
+            and val_det_grade.returncode == 0
+            and val_sem_grade.returncode == 0
+            and val_promotion.returncode == 0
+        ),
         "validation_extraction_rc": ext_val.returncode,
+        "validation_freeze_rc": freeze_val.returncode,
         "validation_deterministic_grader_rc": val_det_grade.returncode,
         "validation_semantic_grader_rc": val_sem_grade.returncode,
+        "validation_promotion_rc": val_promotion.returncode,
         "train_extraction_rc": ext_train.returncode,
+        "train_freeze_rc": freeze_train.returncode,
         "train_deterministic_grader_rc": train_det_grade.returncode,
         "train_semantic_grader_rc": train_sem_grade.returncode,
         "train_failures_are_diagnostic_only": True,
@@ -2330,6 +2465,7 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
         "leakage_guard": leakage_guard,
         "implementation_access_guard": implementation_access_guard,
     })
+    decision = bind_validation_authorization(decision, out_tag)
     decision_text = json.dumps(decision, ensure_ascii=False, indent=2)
     decision_scan = scan_texts_for_protected_answers([{"scope": "05_decision_payload", "text": decision_text}])
     if not decision_scan["success"]:
@@ -2345,6 +2481,7 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
             "leakage_guard": leakage_guard,
             "implementation_access_guard": implementation_access_guard,
         })
+        decision = bind_validation_authorization(decision, out_tag)
         decision_text = json.dumps(decision, ensure_ascii=False, indent=2)
     else:
         output_scan = merge_redaction_scans([output_scan_before_decision, decision_scan])
@@ -2359,6 +2496,7 @@ def run_iteration(cfg: LoopConfig, run_dir: Path, iteration: int, feedback: str,
             "leakage_guard": leakage_guard,
             "implementation_access_guard": implementation_access_guard,
         })
+        decision = bind_validation_authorization(decision, out_tag)
         decision_text = json.dumps(decision, ensure_ascii=False, indent=2)
     write_text(iter_dir / "05_decision.json", decision_text)
     print(json.dumps(decision["checks"], ensure_ascii=False, indent=2))
@@ -2679,7 +2817,6 @@ def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None,
                 f"{json.dumps(validation, ensure_ascii=False)}"
             )
         assert_holdout_not_consumed()
-        preclaim = preclaim_holdout_consumption(out_tag, validation, started_at)
     if dry_run:
         expected = str(split_expected_count("holdout"))
         result = {
@@ -2699,12 +2836,63 @@ def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None,
 
     try:
         expected = str(split_expected_count("holdout"))
-        ext = run_node("run-extraction.mjs", "--split", "holdout", "--out-tag", out_tag, "--model", cfg.model)
-        det = run_node("grade-extraction.mjs", "--split", "holdout", "--out-tag", out_tag, "--expected-count", expected)
-        sem = run_node("grade-semantic.mjs", *semantic_grader_args(cfg, "holdout", out_tag, expected))
+        manifest_path = str(DATA_ROOT / "manifest.single-recipe.json")
+        ext = run_node(
+            "run-extraction.mjs",
+            "--split", "holdout",
+            "--out-tag", out_tag,
+            "--model", cfg.model,
+            "--dataset-manifest", manifest_path,
+            "--single-recipe-only",
+            "--no-cache",
+            "--run-type", "cold",
+        )
+        if ext.returncode != 0:
+            raise RuntimeError(f"holdout extraction failed before freeze: rc={ext.returncode}")
+        freeze = run_node(
+            "../pi-extractor/freeze-pi-extraction.mjs",
+            "--split", "holdout",
+            "--out-tag", out_tag,
+            "--dataset-manifest", manifest_path,
+        )
+        if freeze.returncode != 0:
+            raise RuntimeError(f"holdout freeze failed before golden evaluation: rc={freeze.returncode}")
+        manifest = read_json(Path(manifest_path), {})
+        holdout_ids = manifest.get("splits", {}).get("holdout", {}).get("ids", [])
+        holdout_signatures = {
+            read_json(DATA_ROOT / "holdout" / video_id / "runs" / out_tag / "result.json", {})
+            .get("meta", {})
+            .get("executionConfigSignature")
+            for video_id in holdout_ids
+        }
+        expected_signature = validation.get("execution_config_signature")
+        if holdout_signatures != {expected_signature}:
+            raise RuntimeError(
+                "holdout execution signature does not match the authorized validation candidate"
+            )
+        assert_holdout_not_consumed()
+        preclaim = preclaim_holdout_consumption(out_tag, validation, started_at)
+        det = run_node(
+            "grade-extraction.mjs",
+            "--split", "holdout",
+            "--out-tag", out_tag,
+            "--dataset-manifest", manifest_path,
+        )
+        sem = run_node(
+            "grade-semantic.mjs",
+            *semantic_grader_args(cfg, "holdout", out_tag, expected),
+            "--dataset-manifest", manifest_path,
+        )
+        promotion = run_node(
+            "evaluate-promotion.mjs",
+            "--split", "holdout",
+            "--out-tag", out_tag,
+            "--dataset-manifest", manifest_path,
+        )
         summaries = {
             "deterministic": read_json(DATA_ROOT / "holdout" / f"_grade_summary.{out_tag}.json", {}),
             "semantic": read_json(DATA_ROOT / "holdout" / f"_semantic_summary.{out_tag}.json", {}),
+            "promotion": read_json(DATA_ROOT / "holdout" / f"_promotion_summary.{out_tag}.json", {}),
         }
         redaction_scan = merge_redaction_scans([
             scan_semantic_artifacts_for_protected_answers("holdout", out_tag),
@@ -2735,7 +2923,14 @@ def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None,
             }
             write_holdout_consumed_marker(out_tag, failed_result, dry_run=False)
         raise
-    success = ext.returncode == 0 and det.returncode == 0 and sem.returncode == 0 and redaction_scan["success"]
+    success = (
+        ext.returncode == 0
+        and freeze.returncode == 0
+        and det.returncode == 0
+        and sem.returncode == 0
+        and promotion.returncode == 0
+        and redaction_scan["success"]
+    )
     result = {
         "success": success,
         "dry_run": False,
@@ -2752,12 +2947,15 @@ def run_holdout_final(cfg: LoopConfig | None = None, out_tag: str | None = None,
         "holdout_semantic_summary_path": display_path(DATA_ROOT / "holdout" / f"_semantic_summary.{out_tag}.json"),
         "returncodes": {
             "extraction": ext.returncode,
+            "freeze": freeze.returncode,
             "deterministic": det.returncode,
             "semantic": sem.returncode,
+            "promotion": promotion.returncode,
         },
         "summaries": {
             "deterministic_aggregate": summaries["deterministic"].get("aggregate", {}),
             "semantic_aggregate": summaries["semantic"].get("aggregate", {}),
+            "promotion_aggregate": summaries["promotion"].get("aggregate", {}),
         },
         "redaction_scan": redaction_scan,
     }

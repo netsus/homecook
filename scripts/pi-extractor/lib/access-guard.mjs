@@ -40,6 +40,8 @@ export function createAccessManifest({ projectRoot = process.cwd(), allowedReads
   const allowedReadPaths = allowedReads.map((filePath) => resolveAccessPath(filePath, projectRoot));
   return {
     version: 1,
+    status: "unknown",
+    unknownReadBoundary: true,
     projectRoot: resolveAccessPath(projectRoot, projectRoot),
     allowedReadPaths,
     readEvents: [],
@@ -70,6 +72,8 @@ export function recordRead(manifest, filePath, reason = "read") {
   };
   manifest.readEvents.push(event);
   if (!allowed || forbiddenReason) {
+    manifest.status = "leak_detected";
+    manifest.unknownReadBoundary = false;
     manifest.forbiddenReadEvents.push(event);
     throw new Error(`source-only guard blocked read: ${resolved}${forbiddenReason ? ` (${forbiddenReason})` : ""}`);
   }
@@ -92,5 +96,7 @@ export function assertNoForbiddenReads(manifest) {
     const first = manifest.forbiddenReadEvents[0];
     throw new Error(`forbidden read recorded: ${first.path}`);
   }
+  manifest.status = "clean";
+  manifest.unknownReadBoundary = false;
   return true;
 }

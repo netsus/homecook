@@ -1,7 +1,11 @@
-import { mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import {
+  spawnSync as nodeSpawnSync,
+  type SpawnSyncOptionsWithStringEncoding,
+  type SpawnSyncReturns,
+} from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -9,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 const repoRoot = path.resolve(__dirname, "..");
 const gradeExtractionScript = path.join(repoRoot, "scripts/recipe-loop/grade-extraction.mjs");
 const gradeSemanticScript = path.join(repoRoot, "scripts/recipe-loop/grade-semantic.mjs");
+const freezeScript = path.join(repoRoot, "scripts/pi-extractor/freeze-pi-extraction.mjs");
 const gradingModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/recipe-loop/lib/grading.mjs")).href;
 const semanticFeedbackModuleUrl = pathToFileURL(
   path.join(repoRoot, "scripts/recipe-loop/lib/semantic-feedback-aggregator.mjs"),
@@ -26,12 +31,94 @@ function writeJson(filePath: string, value: unknown) {
   writeFileSync(filePath, JSON.stringify(value, null, 2) + "\n", "utf8");
 }
 
-function splitCase(root: string, id: string) {
-  return path.join(root, "notebooks/recipe_loop_data/validation", id);
+function argValue(args: readonly string[], name: string, fallback: string) {
+  const index = args.indexOf(name);
+  return index >= 0 && typeof args[index + 1] === "string" ? args[index + 1] : fallback;
 }
 
-function splitCaseFor(root: string, split: string, id: string) {
-  return path.join(root, "notebooks/recipe_loop_data", split, id);
+function spawnSync(
+  command: string,
+  args: readonly string[],
+  options: SpawnSyncOptionsWithStringEncoding,
+): SpawnSyncReturns<string> {
+  const script = args[0];
+  let commandArgs = [...args];
+  if (command === "node" && (script === gradeExtractionScript || script === gradeSemanticScript)) {
+    const cwd = String(options?.cwd ?? process.cwd());
+    let split = argValue(args, "--split", "train");
+    const outTag = script === gradeSemanticScript
+      ? argValue(args, "--result-out-tag", argValue(args, "--out-tag", "latest"))
+      : argValue(args, "--out-tag", "latest");
+    let splitDir = path.join(cwd, "notebooks/recipe_loop_data", split);
+    const trainSplitDir = path.join(cwd, "notebooks/recipe_loop_data/train");
+    if (split === "validation" && !existsSync(splitDir) && existsSync(trainSplitDir)) {
+      split = "train";
+      splitDir = trainSplitDir;
+      const splitIndex = commandArgs.indexOf("--split");
+      if (splitIndex >= 0) commandArgs[splitIndex + 1] = "train";
+    }
+    const idsArg = argValue(args, "--ids", "");
+    const ids = idsArg
+      ? idsArg.split(",").map((id) => id.trim()).filter(Boolean)
+      : (existsSync(splitDir)
+        ? readdirSync(splitDir, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name)
+        : []);
+    const protectedSplit = split === "validation" || split === "holdout";
+    let datasetManifestPath: string | null = null;
+    if (protectedSplit) {
+      datasetManifestPath = path.join(cwd, "notebooks/recipe_loop_data/manifest.test-profile.json");
+      writeJson(datasetManifestPath, {
+        schemaVersion: 1,
+        profileId: "local-integrity-test-profile",
+        expectedRecipeCountPerVideo: 1,
+        splits: {
+          [split]: {
+            expectedCount: ids.length,
+            ids,
+            canary: { required: ids.includes(validationCanaryVideoId), tokens: [] },
+          },
+        },
+      });
+      const withoutProtectedOverrides: string[] = [];
+      for (let index = 0; index < commandArgs.length; index += 1) {
+        if (commandArgs[index] === "--allow-protected-detail") continue;
+        if (commandArgs[index] === "--ids") { index += 1; continue; }
+        withoutProtectedOverrides.push(commandArgs[index]);
+      }
+      commandArgs = [...withoutProtectedOverrides, "--dataset-manifest", datasetManifestPath];
+    }
+    const completed = ids.length > 0 && ids.every((id) =>
+      existsSync(path.join(splitDir, id, "runs", outTag, "result.json")));
+    if (completed) {
+      for (const id of ids) {
+        const manifestPath = path.join(splitDir, id, "runs", outTag, "file-access-manifest.json");
+        if (!existsSync(manifestPath)) {
+          writeJson(manifestPath, {
+            status: "clean",
+            unknownReadBoundary: false,
+            readEvents: [],
+            forbiddenReadEvents: [],
+          });
+        }
+      }
+      const frozen = nodeSpawnSync("node", [
+        freezeScript,
+        "--split", split,
+        "--out-tag", outTag,
+        ...(datasetManifestPath
+          ? ["--dataset-manifest", datasetManifestPath]
+          : ["--ids", ids.join(",")]),
+      ], { cwd, encoding: "utf8" });
+      if (frozen.status !== 0) {
+        throw new Error(`test freeze failed: ${frozen.stderr || frozen.stdout}`);
+      }
+    }
+  }
+  return nodeSpawnSync(command, commandArgs, options);
+}
+
+function splitCase(root: string, id: string) {
+  return path.join(root, "notebooks/recipe_loop_data/train", id);
 }
 
 function codexCalibration(overrides: Record<string, unknown> = {}) {
@@ -378,7 +465,7 @@ describe("recipe-loop local integrity gates", () => {
 
 
 
-  it("records missing deterministic artifacts as explicit failed rows", () => {
+  it("blocks deterministic grading before golden access when an extraction is incomplete", () => {
     writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
     writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), matchingResult());
     writeJson(path.join(splitCase(workdir, "case-missing"), "golden.json"), approvedGolden());
@@ -390,25 +477,11 @@ describe("recipe-loop local integrity gates", () => {
     );
 
     expect(result.status).toBe(1);
-    const summary = JSON.parse(
-      readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
-        "utf8",
-      ),
-    );
-    expect(summary.aggregate).toMatchObject({
-      success: false,
-      expected_count: 2,
-      actual_count: 2,
-      missing_result_count: 1,
-      unapproved_golden_count: 0,
-      expected_count_mismatch: false,
-      failed_row_count: 1,
-    });
-    expect(summary.perVideo.find((row: { videoId: string }) => row.videoId === "case-missing")).toMatchObject({
-      success: false,
-      failureReason: "missing_result",
-    });
+    expect(result.stderr).toContain("freeze is required before golden evaluation");
+    expect(existsSync(path.join(
+      workdir,
+      "notebooks/recipe_loop_data/train/_grade_summary.latest.json",
+    ))).toBe(false);
   });
 
   it("fails deterministic grading when a gate golden is not approved", () => {
@@ -424,7 +497,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.status).toBe(1);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_grade_summary.latest.json"),
         "utf8",
       ),
     );
@@ -450,7 +523,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.status).toBe(1);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_grade_summary.latest.json"),
         "utf8",
       ),
     );
@@ -541,7 +614,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.status).toBe(0);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_grade_summary.latest.json"),
         "utf8",
       ),
     );
@@ -549,6 +622,36 @@ describe("recipe-loop local integrity gates", () => {
     expect(rows["name-false-positive"]).toMatchObject({ ingredientRecall: 0, ingredientF1: 0 });
     expect(rows["amount-missing"]).toMatchObject({ ingredientRecall: 1, amountMatchRate: 0 });
     expect(rows["one-bag-step"].stepCoverage).toBeLessThan(1);
+  });
+
+  it("treats common English plural cooking units as their Korean equivalents", async () => {
+    const { gradeDeterministic } = await import(gradingModuleUrl);
+    const golden = {
+      recipes: [{
+        title: "단위 정규화",
+        ingredients: [
+          { name: "오일", amount: "2", unit: "Tablespoons" },
+          { name: "물", amount: "2", unit: "Cups" },
+          { name: "마늘", amount: "2", unit: "Cloves" },
+          { name: "채소", amount: "1", unit: "Handful" },
+        ],
+        steps: [{ order: 1, instruction: "재료를 섞는다" }],
+      }],
+    };
+    const result = {
+      recipes: [{
+        title: "단위 정규화",
+        ingredients: [
+          { name: "오일", amount: "2", unit: "큰술" },
+          { name: "물", amount: "2", unit: "컵" },
+          { name: "마늘", amount: "2", unit: "쪽" },
+          { name: "채소", amount: "1", unit: "한 줌" },
+        ],
+        steps: ["재료를 섞는다"],
+      }],
+    };
+
+    expect(gradeDeterministic(result, golden).amountMatchRate).toBe(1);
   });
 
   it("records deduction reason aggregates without leaking golden answer text", () => {
@@ -647,7 +750,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.status).toBe(0);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_grade_summary.latest.json"),
         "utf8",
       ),
     );
@@ -666,7 +769,7 @@ describe("recipe-loop local integrity gates", () => {
 
     const row = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/step-near/runs/latest/grade.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/step-near/runs/latest/grade.json"),
         "utf8",
       ),
     );
@@ -703,7 +806,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.status).toBe(0);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_grade_summary.latest.json"),
         "utf8",
       ),
     );
@@ -748,15 +851,15 @@ describe("recipe-loop local integrity gates", () => {
       { cwd: workdir, encoding: "utf8" },
     );
 
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_grade_summary.latest.json"),
         "utf8",
       ),
     );
     expect(summary.aggregate).toMatchObject({
-      success: true,
+      success: false,
       ingredientRecall: 1,
       ingredientPrecision: 1,
       canaryLeak: {
@@ -767,8 +870,8 @@ describe("recipe-loop local integrity gates", () => {
       },
     });
     expect(summary.aggregate.canaryLeak.hits[0]).toMatchObject({
-      scope: "validation/YZ8KSZboJeM/runs/latest/result.json",
-      split: "validation",
+      scope: "train/YZ8KSZboJeM/runs/latest/result.json",
+      split: "train",
       videoId: validationCanaryVideoId,
       canaryId: validationCanaryId,
       category: "ingredient_name",
@@ -776,92 +879,72 @@ describe("recipe-loop local integrity gates", () => {
     expect(JSON.stringify(summary)).not.toContain(validationCanaryName);
   });
 
-  it("fails closed when the configured validation canary case loses its flagged golden ingredient", () => {
-    writeJson(path.join(splitCase(workdir, validationCanaryVideoId), "golden.json"), {
-      ...approvedCanaryGolden(),
-      recipes: [
-        {
-          title: "진한 초코 마들렌",
-          ingredients: [{ name: "박력분", amount: "90", unit: "g" }],
-          steps: [{ order: 1, instruction: "가루를 섞고 굽는다" }],
-        },
-      ],
+  it("fails closed when a protected profile requires canary coverage but none is applicable", async () => {
+    const grading = await import(gradingModuleUrl);
+    const summary = grading.summarizeCanaryLeaks({
+      split: "validation",
+      ids: ["case-a"],
+      rows: [{
+        videoId: "case-a",
+        canaryLeak: { success: true, status: "not_applicable", hit_count: 0, hits: [], redacted_hits: [] },
+      }],
+      required: true,
     });
-    writeJson(
-      path.join(splitCase(workdir, validationCanaryVideoId), "runs/latest/result.json"),
-      canaryMatchingResult(false),
-    );
 
-    const result = spawnSync(
-      "node",
-      [
-        gradeExtractionScript,
-        "--split",
-        "validation",
-        "--out-tag",
-        "latest",
-        "--ids",
-        validationCanaryVideoId,
-        "--expected-count",
-        "1",
-      ],
-      { cwd: workdir, encoding: "utf8" },
-    );
-
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("canary drift");
+    expect(summary).toMatchObject({ success: false, status: "not_covered", hit_count: 0 });
   });
 
-  it("marks canary coverage as not_covered for validation subsets and not_applicable for splits without canaries", () => {
-    writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
-    writeJson(path.join(splitCase(workdir, "case-a"), "runs/latest/result.json"), matchingResult());
-    writeJson(path.join(splitCaseFor(workdir, "train", "train-a"), "golden.json"), {
-      ...approvedGolden(),
-      videoId: "train-a",
+  it("marks canary coverage as not_applicable when the profile does not require it", async () => {
+    const grading = await import(gradingModuleUrl);
+    const summary = grading.summarizeCanaryLeaks({
+      split: "train",
+      ids: ["train-a"],
+      rows: [{
+        videoId: "train-a",
+        canaryLeak: { success: true, status: "not_applicable", hit_count: 0, hits: [], redacted_hits: [] },
+      }],
+      required: false,
     });
-    writeJson(path.join(splitCaseFor(workdir, "train", "train-a"), "runs/latest/result.json"), matchingResult());
+    expect(summary).toMatchObject({ success: true, status: "not_applicable", hit_count: 0 });
+  });
 
-    const validationSubset = spawnSync(
-      "node",
-      [
-        gradeExtractionScript,
-        "--split",
-        "validation",
-        "--out-tag",
-        "latest",
-        "--ids",
-        "case-a",
-        "--expected-count",
-        "1",
-      ],
-      { cwd: workdir, encoding: "utf8" },
+  it("does not count manifest-only canary tokens as covered unless the golden actually contains them", async () => {
+    const grading = await import(gradingModuleUrl);
+    const externalCanary = {
+      canaryId: "holdout-profile-canary",
+      category: "profile_token",
+      normalizedNames: ["평가전용가짜재료"],
+    };
+    const ordinaryGolden = approvedCanaryGolden();
+    ordinaryGolden.recipes[0].ingredients = ordinaryGolden.recipes[0].ingredients.filter(
+      (ingredient: { isLeakCanary?: boolean }) => ingredient.isLeakCanary !== true,
     );
-    const train = spawnSync(
-      "node",
-      [gradeExtractionScript, "--split", "train", "--out-tag", "latest", "--expected-count", "1"],
-      { cwd: workdir, encoding: "utf8" },
-    );
+    const absent = grading.prepareCanaryGradingInputs({
+      split: "holdout",
+      videoId: "holdout-a",
+      golden: ordinaryGolden,
+      result: canaryMatchingResult(false),
+      resultScope: "holdout/holdout-a/runs/latest/result.json",
+      externalCanaries: [externalCanary],
+    });
+    expect(absent.canaryLeak).toMatchObject({ success: true, status: "not_applicable" });
 
-    expect(validationSubset.status).toBe(0);
-    expect(train.status).toBe(0);
-    const validationSummary = JSON.parse(
-      readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_grade_summary.latest.json"),
-        "utf8",
-      ),
-    );
-    const trainSummary = JSON.parse(
-      readFileSync(path.join(workdir, "notebooks/recipe_loop_data/train/_grade_summary.latest.json"), "utf8"),
-    );
-    expect(validationSummary.aggregate.canaryLeak).toMatchObject({
-      success: false,
-      status: "not_covered",
-      hit_count: 0,
+    const plantedGolden = structuredClone(ordinaryGolden);
+    plantedGolden.recipes[0].ingredients.push({
+      name: "평가전용가짜재료",
+      amount: "1",
+      unit: "개",
     });
-    expect(trainSummary.aggregate.canaryLeak).toMatchObject({
-      status: "not_applicable",
-      hit_count: 0,
+    const present = grading.prepareCanaryGradingInputs({
+      split: "holdout",
+      videoId: "holdout-a",
+      golden: plantedGolden,
+      result: canaryMatchingResult(false),
+      resultScope: "holdout/holdout-a/runs/latest/result.json",
+      externalCanaries: [externalCanary],
     });
+    expect(present.canaryLeak).toMatchObject({ success: true, status: "clean" });
+    expect(JSON.stringify(present.cleanGolden)).not.toContain("평가전용가짜재료");
   });
 
   it("uses one predicted-only canary helper for stripping and rejects golden scans", async () => {
@@ -935,21 +1018,21 @@ describe("recipe-loop local integrity gates", () => {
       { cwd: workdir, encoding: "utf8" },
     );
 
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.latest.json"),
         "utf8",
       ),
     );
     const row = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/YZ8KSZboJeM/runs/latest/grade_semantic.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/YZ8KSZboJeM/runs/latest/grade_semantic.json"),
         "utf8",
       ),
     );
     expect(summary.aggregate).toMatchObject({
-      success: true,
+      success: false,
       averageScore: 5,
       canaryLeak: {
         success: false,
@@ -962,7 +1045,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(JSON.stringify(row)).not.toContain(validationCanaryName);
   });
 
-  it("records semantic missing artifacts without calling the provider", () => {
+  it("blocks semantic grading before golden access when extraction is missing", () => {
     writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
 
     const result = spawnSync(
@@ -972,30 +1055,14 @@ describe("recipe-loop local integrity gates", () => {
     );
 
     expect(result.status).toBe(1);
-    const summary = JSON.parse(
-      readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
-        "utf8",
-      ),
-    );
-    expect(summary.aggregate).toMatchObject({
-      success: false,
-      expected_count: 1,
-      actual_count: 1,
-      provider_error_count: 0,
-      parse_error_count: 0,
-      empty_case_count: 0,
-      expected_count_mismatch: false,
-      failed_row_count: 1,
-    });
-    expect(summary.perVideo[0]).toMatchObject({
-      videoId: "case-a",
-      success: false,
-      failureReason: "missing_result",
-    });
+    expect(result.stderr).toContain("freeze is required before golden evaluation");
+    expect(existsSync(path.join(
+      workdir,
+      "notebooks/recipe_loop_data/train/_semantic_summary.latest.json",
+    ))).toBe(false);
   });
 
-  it("fails semantic grading on expected count mismatch without calling the provider", () => {
+  it("does not grade an expected-count mismatch before extraction freeze", () => {
     writeJson(path.join(splitCase(workdir, "case-a"), "golden.json"), approvedGolden());
 
     const result = spawnSync(
@@ -1005,22 +1072,11 @@ describe("recipe-loop local integrity gates", () => {
     );
 
     expect(result.status).toBe(1);
-    const summary = JSON.parse(
-      readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
-        "utf8",
-      ),
-    );
-    expect(summary.aggregate).toMatchObject({
-      success: false,
-      expected_count: 2,
-      actual_count: 1,
-      provider_error_count: 0,
-      parse_error_count: 0,
-      empty_case_count: 0,
-      expected_count_mismatch: true,
-      failed_row_count: 1,
-    });
+    expect(result.stderr).toContain("freeze is required before golden evaluation");
+    expect(existsSync(path.join(
+      workdir,
+      "notebooks/recipe_loop_data/train/_semantic_summary.latest.json",
+    ))).toBe(false);
   });
 
   it("applies semantic judge provider separation and calibrated thresholds", () => {
@@ -1073,10 +1129,10 @@ describe("recipe-loop local integrity gates", () => {
       { cwd: workdir, encoding: "utf8" },
     );
 
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.latest.json"),
         "utf8",
       ),
     );
@@ -1132,7 +1188,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(first.status).toBe(0);
     const firstSummary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.latest.json"),
         "utf8",
       ),
     );
@@ -1176,7 +1232,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(second.status).toBe(0);
     const secondSummary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.latest.json"),
         "utf8",
       ),
     );
@@ -1265,13 +1321,13 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.status).toBe(0);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.latest.json"),
         "utf8",
       ),
     );
     const row = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/case-a/runs/latest/grade_semantic.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/case-a/runs/latest/grade_semantic.json"),
         "utf8",
       ),
     );
@@ -1362,7 +1418,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.status).toBe(0);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.latest.json"),
         "utf8",
       ),
     );
@@ -1411,7 +1467,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.status).toBe(1);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.latest.json"),
         "utf8",
       ),
     );
@@ -1466,7 +1522,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.status).toBe(1);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.latest.json"),
         "utf8",
       ),
     );
@@ -1535,7 +1591,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(first.status).toBe(0);
     const firstSummary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.latest.json"),
         "utf8",
       ),
     );
@@ -1564,7 +1620,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(second.status).toBe(0);
     const secondSummary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.latest.json"),
         "utf8",
       ),
     );
@@ -1621,7 +1677,7 @@ describe("recipe-loop local integrity gates", () => {
     expect(result.status).toBe(0);
     const summary = JSON.parse(
       readFileSync(
-        path.join(workdir, "notebooks/recipe_loop_data/validation/_semantic_summary.latest.json"),
+        path.join(workdir, "notebooks/recipe_loop_data/train/_semantic_summary.latest.json"),
         "utf8",
       ),
     );
@@ -1650,6 +1706,7 @@ base_summaries = {
     "ai": {"aggregate": {}},
     "val_det": {"aggregate": {
         "success": True,
+        "threshold_success": True,
         "ingredientF1": 0.92,
         "amountMatchRate": 0.85,
         "stepCoverage": 0.85,
@@ -1658,6 +1715,7 @@ base_summaries = {
         "missing_golden_count": 0,
         "unapproved_golden_count": 0,
         "expected_count_mismatch": False,
+        "threshold_success": True,
     }},
     "val_ai": {"aggregate": {
         "success": True,
@@ -1697,7 +1755,7 @@ print(json.dumps(cases))
     }
   });
 
-  it("treats ingredientF1 as advisory, not a hard deterministic gate", () => {
+  it("treats the predeclared deterministic threshold result as a hard gate", () => {
     const result = runLoopPython(`
 cfg = loop.LoopConfig()
 base = {
@@ -1710,29 +1768,25 @@ base = {
     "missing_golden_count": 0,
     "unapproved_golden_count": 0,
     "expected_count_mismatch": False,
+    "threshold_success": False,
 }
 ok_low_f1, details_low_f1 = loop.deterministic_validation_success(cfg, base)
 struct = dict(base)
 struct["ingredientF1"] = 0.99
+struct["threshold_success"] = True
 struct["recipeCountMatchRate"] = 0.5
 ok_struct, _ = loop.deterministic_validation_success(cfg, struct)
 print(json.dumps({
     "low_f1_pass": ok_low_f1,
-    "low_f1_advisory_ingredientF1": details_low_f1["advisory"]["ingredientF1"],
-    "low_f1_has_top_ingredientF1": "ingredientF1" in details_low_f1,
+    "threshold_check": details_low_f1["threshold_success"],
     "struct_violation_pass": ok_struct,
 }))
 `);
 
     expect(result.status).toBe(0);
     const out = JSON.parse(result.stdout);
-    // 재료F1만 낮아도 deterministic 게이트는 통과해야 한다(advisory).
-    expect(out.low_f1_pass).toBe(true);
-    // ingredientF1은 advisory에 위치하며 값(미달=false)이 보존된다.
-    expect(out.low_f1_advisory_ingredientF1).toBe(false);
-    // 더 이상 최상위(hard) 키가 아니다.
-    expect(out.low_f1_has_top_ingredientF1).toBe(false);
-    // 구조 무결성(recipeCountMatchRate) 위반은 여전히 게이트를 막는다.
+    expect(out.low_f1_pass).toBe(false);
+    expect(out.threshold_check).toBe(false);
     expect(out.struct_violation_pass).toBe(false);
   });
 
@@ -1949,7 +2003,7 @@ print(json.dumps(cases, ensure_ascii=False))
     }
   });
 
-  it("keeps deterministic amount and step metrics advisory without weakening fail-closed checks", () => {
+  it("keeps deterministic threshold and fail-closed integrity checks hard", () => {
     const result = runLoopPython(`
 cfg = loop.LoopConfig()
 base = {
@@ -1962,6 +2016,7 @@ base = {
     "missing_golden_count": 0,
     "unapproved_golden_count": 0,
     "expected_count_mismatch": False,
+    "threshold_success": False,
 }
 ok, checks = loop.deterministic_validation_success(cfg, base)
 missing = dict(base)
@@ -1977,11 +2032,8 @@ print(json.dumps({
 
     expect(result.status).toBe(0);
     const report = JSON.parse(result.stdout);
-    expect(report.ok).toBe(true);
-    expect(report.checks.advisory).toMatchObject({
-      amountMatchRate: false,
-      stepCoverage: false,
-    });
+    expect(report.ok).toBe(false);
+    expect(report.checks.threshold_success).toBe(false);
     expect(report.missing_ok).toBe(false);
     expect(report.missing_checks.missing_result_count).toBe(false);
   });
@@ -2177,6 +2229,7 @@ summaries = {
     "ai": {"aggregate": {}},
     "val_det": {"aggregate": {
         "success": True,
+        "threshold_success": True,
         "ingredientF1": 0.92,
         "amountMatchRate": 0.85,
         "stepCoverage": 0.85,
@@ -2185,6 +2238,7 @@ summaries = {
         "missing_golden_count": 0,
         "unapproved_golden_count": 0,
         "expected_count_mismatch": False,
+        "threshold_success": True,
     }},
     "val_ai": {"aggregate": {
         "success": True,
@@ -2410,11 +2464,20 @@ root = Path(${JSON.stringify(workdir)})
 loop.DATA_ROOT = root / "notebooks" / "recipe_loop_data"
 loop.DATA_ROOT.mkdir(parents=True, exist_ok=True)
 loop.RUN_ROOT = root / "notebooks" / "recipe_loop_runs"
+manifest_path = loop.DATA_ROOT / "manifest.single-recipe.json"
+manifest_path.write_text(json.dumps({"profileId": "single-recipe-v1"}), encoding="utf-8")
 
 ALL_PASS = {axis: True for axis in loop.GATE_AXES}
 ONE_FAIL = {**ALL_PASS, "deterministic_validation": False}
 
 def decision_file(run, passed, axes):
+    out_tag = f"{run}-validation"
+    promotion_path = loop.DATA_ROOT / "validation" / f"_promotion_summary.{out_tag}.json"
+    promotion_path.parent.mkdir(parents=True, exist_ok=True)
+    promotion_path.write_text(json.dumps({"aggregate": {
+        "success": passed,
+        "timing": {"executionConfigSignature": "validation-signature"},
+    }}), encoding="utf-8")
     d = loop.RUN_ROOT / run / "iteration-01"
     d.mkdir(parents=True, exist_ok=True)
     p = d / "05_decision.json"
@@ -2423,6 +2486,15 @@ def decision_file(run, passed, axes):
         "gate_mode": "local_hardening",
         "passed": passed,
         "checks": axes,
+        "validation_authorization": {
+            "out_tag": out_tag,
+            "dataset_manifest_path": loop.display_path(manifest_path),
+            "dataset_manifest_sha256": loop.file_sha256(manifest_path),
+            "promotion_summary_path": loop.display_path(promotion_path),
+            "promotion_summary_sha256": loop.file_sha256(promotion_path),
+            "execution_config_signature": "validation-signature",
+            "candidate_code_sha256": loop.extraction_candidate_sha256(),
+        },
     }), encoding="utf-8")
     return p
 
@@ -2454,6 +2526,19 @@ marker_after_refusal = loop.holdout_marker_path().exists()
 
 # genuine passing run-artifact decision → dry-run preview authorized
 pass_path = decision_file("run-pass", True, ALL_PASS)
+initial_pass = loop.load_validation_decision(str(pass_path))
+signature_mismatch_payload = json.loads(pass_path.read_text(encoding="utf-8"))
+signature_mismatch_payload["validation_authorization"]["execution_config_signature"] = "wrong-signature"
+pass_path.write_text(json.dumps(signature_mismatch_payload), encoding="utf-8")
+signature_mismatch = loop.load_validation_decision(str(pass_path))
+pass_path = decision_file("run-pass", True, ALL_PASS)
+promotion_path = loop.DATA_ROOT / "validation" / "_promotion_summary.run-pass-validation.json"
+promotion_path.write_text(json.dumps({"aggregate": {
+    "success": False,
+    "timing": {"executionConfigSignature": "validation-signature"},
+}}), encoding="utf-8")
+tampered = loop.load_validation_decision(str(pass_path))
+pass_path = decision_file("run-pass", True, ALL_PASS)
 preview = loop.run_holdout_final(out_tag="t4", dry_run=True, validation_decision_path=str(pass_path))
 
 print(json.dumps({
@@ -2462,6 +2547,11 @@ print(json.dumps({
     "malformed_passed": malformed["passed"],
     "malformed_reason": malformed["reason"],
     "refused_failed_axis": refused_failed_axis,
+    "initial_pass": initial_pass["passed"],
+    "signature_mismatch_pass": signature_mismatch["passed"],
+    "signature_mismatch_reason": signature_mismatch.get("reason"),
+    "tampered_pass": tampered["passed"],
+    "tampered_reason": tampered.get("reason"),
     "marker_after_refusal": marker_after_refusal,
     "preview_validation_passed": preview["validation_passed"],
     "preview_decision_path": preview["validation_decision_path"],
@@ -2476,13 +2566,18 @@ print(json.dumps({
     expect(report.malformed_passed).toBe(false);
     expect(report.malformed_reason).toBe("file is not a decision object");
     expect(report.refused_failed_axis).toBe(true);
+    expect(report.initial_pass).toBe(true);
+    expect(report.signature_mismatch_pass).toBe(false);
+    expect(report.signature_mismatch_reason).toContain("execution signature mismatch");
+    expect(report.tampered_pass).toBe(false);
+    expect(report.tampered_reason).toContain("promotion summary hash mismatch");
     expect(report.marker_after_refusal).toBe(false);
     expect(report.preview_validation_passed).toBe(true);
     expect(report.preview_decision_path).toContain("05_decision.json");
     expect(report.marker_after_dry).toBe(false);
   });
 
-  it("preclaims holdout consumption before running subprocesses", () => {
+  it("does not consume holdout when extraction fails before freeze", () => {
     const result = runLoopPython(`
 import json
 from pathlib import Path
@@ -2492,6 +2587,14 @@ loop.DATA_ROOT.mkdir(parents=True, exist_ok=True)
 loop.RUN_ROOT = root / "notebooks" / "recipe_loop_runs"
 
 ALL_PASS = {axis: True for axis in loop.GATE_AXES}
+manifest_path = loop.DATA_ROOT / "manifest.single-recipe.json"
+manifest_path.write_text(json.dumps({"profileId": "single-recipe-v1"}), encoding="utf-8")
+promotion_path = loop.DATA_ROOT / "validation" / "_promotion_summary.run-pass-validation.json"
+promotion_path.parent.mkdir(parents=True, exist_ok=True)
+promotion_path.write_text(json.dumps({"aggregate": {
+    "success": True,
+    "timing": {"executionConfigSignature": "validation-signature"},
+}}), encoding="utf-8")
 decision_dir = loop.RUN_ROOT / "run-pass" / "iteration-01"
 decision_dir.mkdir(parents=True, exist_ok=True)
 pass_path = decision_dir / "05_decision.json"
@@ -2500,6 +2603,15 @@ pass_path.write_text(json.dumps({
     "gate_mode": "local_hardening",
     "passed": True,
     "checks": ALL_PASS,
+    "validation_authorization": {
+        "out_tag": "run-pass-validation",
+        "dataset_manifest_path": loop.display_path(manifest_path),
+        "dataset_manifest_sha256": loop.file_sha256(manifest_path),
+        "promotion_summary_path": loop.display_path(promotion_path),
+        "promotion_summary_sha256": loop.file_sha256(promotion_path),
+        "execution_config_signature": "validation-signature",
+        "candidate_code_sha256": loop.extraction_candidate_sha256(),
+    },
 }), encoding="utf-8")
 
 def boom(*args, **kwargs):
@@ -2535,12 +2647,12 @@ print(json.dumps({
     expect(result.status).toBe(0);
     const report = JSON.parse(result.stdout);
     expect(report.failed).toBe(true);
-    expect(report.marker_exists).toBe(true);
-    expect(report.status).toBe("failed");
-    expect(report.out_tag).toBe("preclaim-smoke");
-    expect(report.success).toBe(false);
-    expect(report.validation_passed).toBe(true);
-    expect(report.preclaimed_at).toBeTruthy();
+    expect(report.marker_exists).toBe(false);
+    expect(report.status).toBeNull();
+    expect(report.out_tag).toBeNull();
+    expect(report.success).toBeNull();
+    expect(report.validation_passed).toBeNull();
+    expect(report.preclaimed_at).toBeNull();
     expect(report.second_refused).toBe(true);
   });
 
@@ -3011,6 +3123,7 @@ summaries = {
     "ai": {"aggregate": {}},
     "val_det": {"aggregate": {
         "success": True,
+        "threshold_success": True,
         "ingredientF1": 0.92,
         "amountMatchRate": 0.85,
         "stepCoverage": 0.85,

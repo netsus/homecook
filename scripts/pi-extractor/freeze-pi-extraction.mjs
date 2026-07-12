@@ -5,7 +5,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { freezePiExtraction } from "./lib/artifacts.mjs";
-import { loadDatasetProfile } from "../recipe-loop/lib/dataset-profile.mjs";
+import { assertProtectedDatasetProfile, loadDatasetProfile } from "../recipe-loop/lib/dataset-profile.mjs";
 
 const PROJECT_ROOT = process.cwd();
 
@@ -47,6 +47,7 @@ export async function runFreeze(rawArgs = {}, options = {}) {
       requestedIds,
     })
     : null;
+  assertProtectedDatasetProfile({ split, datasetProfile, requestedIds });
   return freezePiExtraction({
     projectRoot,
     dataRoot: options.dataRoot ?? "notebooks/recipe_loop_data",
