@@ -4,6 +4,14 @@
 담당자: 채실장
 날짜: 6월 17
 
+> **2026-07-12 addendum — 서비스 가이드 진입 flow**
+>
+> | # | 변경 내용 | 영향 범위 |
+> | --- | --- | --- |
+> | 1 | 웹 공통 `집밥 가이드` 메뉴에서 `/about`으로 진입한다 | 전역 웹 flow |
+> | 2 | 모바일 HOME의 `빠른 이동` 다음 `집밥 둘러보기` 첫 카드에서 `/about#how-to`로 진입한다 | ① 탐색 / 신규 ①-a 가이드 |
+> | 3 | legacy `/mypage?tab=help`는 `/about#faq`로 이동하며 MYPAGE에 도움말 탭을 남기지 않는다 | ⑪ 저장/관리 |
+
 > **2026-07-10 addendum — social auth provider memory / linking flow**
 >
 > | # | 변경 내용 | 영향 범위 |
@@ -264,6 +272,49 @@ HOME (홈)
 ### 관련 화면
 
 `HOME` → `INGREDIENT_FILTER_MODAL` → `RECIPE_DETAIL`
+
+---
+
+## ①-a 서비스 가이드 여정
+
+> 처음 방문한 사용자가 서비스 전체 흐름을 이해하고 레시피 탐색 또는 플래너로 이동하거나, 기존 사용자가 FAQ를 확인하는 여정
+
+### 진입 경로
+
+- desktop web: 공통 상단 `집밥 가이드`
+- mobile HOME initial state: `빠른 이동` → `집밥 둘러보기` 첫 가이드 카드
+- direct URL: `/about`, `/about#how-to`, `/about#faq`
+- legacy: `/mypage?tab=help` → `/about#faq`
+
+### 플로우
+
+```text
+공통 웹 내비게이션 / HOME 가이드 카드 / direct URL
+  │
+  ▼
+ABOUT_SERVICE_GUIDE (/about)
+  ├─ Hero에서 핵심 가치 확인
+  ├─ [사용법부터 보기] → #how-to
+  ├─ 5단계 흐름 확인
+  ├─ 기능별 가이드 / FAQ accordion 확인
+  ├─ [레시피 둘러보기] → HOME
+  └─ [플래너 시작하기] → 기존 PLANNER_WEEK 인증 flow
+```
+
+### 상태 / 회복
+
+- `/about`은 정적 콘텐츠를 기본으로 렌더링하며 API loading/error에 의존하지 않는다.
+- 문의 이메일이 설정되지 않으면 가짜 링크를 만들지 않고 문의 CTA를 비활성/대체 안내로 처리한다.
+- 모바일 back action은 히스토리가 없으면 HOME(`/`)으로 복귀한다.
+
+### 종료 조건
+
+- 사용자가 가이드/FAQ를 확인하고 HOME이나 PLANNER_WEEK로 이동
+- 또는 직접 URL 방문 후 mobile back/Home affordance로 복귀
+
+### 관련 화면
+
+`HOME` → `ABOUT_SERVICE_GUIDE` → `HOME` / `PLANNER_WEEK`
 
 ---
 
@@ -1458,6 +1509,7 @@ SHOPPING_FLOW 안내 문구:
 | 화면 ID                 | 소속 여정                                     |
 | ----------------------- | --------------------------------------------- |
 | HOME                    | ① 탐색                                        |
+| ABOUT_SERVICE_GUIDE     | ①-a 서비스 가이드                         |
 | INGREDIENT_FILTER_MODAL | ① 탐색                                        |
 | RECIPE_DETAIL           | ① 탐색, ⑧ 독립 요리, ⑪ 저장/관리              |
 | LOGIN                   | ② 로그인                                      |
