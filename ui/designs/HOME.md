@@ -7,13 +7,15 @@
 
 > **2026-07-12 사용자 승인 superseding addendum:** 기존 fixed prototype/exact-reference-ready authority는 유지하되, `service-about-guide`의 공식 HOME 계약이 **rail 위치, `집밥 둘러보기` heading, 첫 guide card, guide-only fallback, compact rail geometry**에 한해서 이를 대체한다. 이 좁은 차이는 기능 계약상 필수 차이이며 prototype parity 결함으로 채점하지 않는다. app bar, hero/search/tag/quick links, recipe cards, bottom tabs, token/type/material과 rail 밖 geometry는 기존 fixed prototype authority를 계속 따른다.
 
+> **2026-07-13 서비스 브랜드 superseding addendum:** 정식명은 `무엇을 먹든`, HOME AppBar 텍스트 워드마크와 좁은 표시는 `무먹`이다. 아래 living contract의 `HOMECOOK`/`집밥 가이드`/`집밥 둘러보기`/system source badge `집밥 추천` 브랜드 표시는 각각 `무먹`/`무먹 가이드`/`무먹 둘러보기`/`무먹 추천`으로 대체한다. 이 변경은 승인된 브랜드 고정 copy만 supersede하며 `AppHeader`, source key, route, geometry, token, material, interaction, `homecook:*`/`HOMECOOK_*` 기술 식별자, 기존 prototype/evidence 파일은 바꾸지 않는다. HOME direct modification은 anchor-extension이므로 Stage 4에서 390px/320px before/after와 authority report가 필요하다.
+
 ---
 
 ## 레이아웃 와이어프레임 (v1.4.0 — H1 carousel strip)
 
 ```
 ┌─────────────────────────────────────────┐  ← 375px (모바일 기준)
-│  HOMECOOK                               │  ← 공통 브랜드 헤더
+│  무먹                                   │  ← 공통 텍스트 워드마크
 │                                         │
 │  ┌─────────────────────────────────┐    │  ← discovery panel (glass-panel)
 │  │  🔍  레시피 제목 검색           │    │  ← search bar, min-h-14
@@ -122,7 +124,7 @@ first viewport 390px:
 ```
 
 - **기본 상태**: 썸네일 + source badge + 태그 + 제목 + 통계 row
-- **source badge 라벨**: `system → 집밥 추천`, `youtube → 유튜브`, `manual → 직접 등록`
+- **source badge 라벨**: `system → 무먹 추천`, `youtube → 유튜브`, `manual → 직접 등록`
 - **Loading**: 스켈레톤 카드 (썸네일 영역 회색 블록, 텍스트 영역 줄 스켈레톤 2줄)
 - **썸네일 없음**: --background 배경 + 음식 아이콘 중앙 배치
 - **태그 배치**: 제목 위 보조 row, 배경 없는 text tag로 유지
@@ -247,8 +249,8 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 
 - **전체 구조**: 공통 브랜드 헤더 / discovery panel / 테마 섹션 / `모든 레시피` 리스트 / `position: fixed` 하단 탭바
 - **콘텐츠 영역**: 일반 세로 스크롤. discovery panel은 첫 화면 안에 남기되, 별도 fixed app bar처럼 분리하지 않는다.
-- **브랜드 헤더**: `HOMECOOK` 로고는 공통 `AppHeader`를 사용하며, `PLANNER_WEEK`와 동일한 top shell을 공유한다.
-- **small-mobile 기준**: `HOMECOOK` 헤더 + discovery panel 조합에서도 작은 모바일 sentinel에서 제목 검색 입력과 `재료로 검색` 버튼이 first viewport 안에 함께 보여야 한다.
+- **브랜드 헤더**: `무먹` 텍스트 워드마크는 공통 `AppHeader`를 사용하며, `PLANNER_WEEK`와 동일한 top shell을 공유한다.
+- **small-mobile 기준**: `무먹` 헤더 + discovery panel 조합에서도 작은 모바일 sentinel에서 제목 검색 입력과 `재료로 검색` 버튼이 first viewport 안에 함께 보여야 한다.
 - **정렬 위치**: 정렬 컨트롤은 검색 패널이 아니라 `모든 레시피` 섹션에 속한다. 테마 섹션은 별도 정렬 대상이 아니다.
 
 ---
@@ -278,7 +280,7 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 
 ## 디자인 결정 사항
 
-1. **공통 브랜드 헤더 사용**: `HOMECOOK` 로고는 공통 `AppHeader`를 사용해 HOME / PLANNER_WEEK / DETAIL의 상단 좌상단 구조를 맞춘다. 로고는 항상 `/` 링크로 동작한다.
+1. **공통 브랜드 헤더 사용**: `무먹` 텍스트 워드마크는 공통 `AppHeader`를 사용해 HOME / PLANNER_WEEK / DETAIL의 상단 좌상단 구조를 맞춘다. 워드마크는 항상 `/` 링크로 동작한다.
 
 2. **재료 필터와 정렬 패턴 통일**: `INGREDIENT_FILTER_MODAL`과 mobile 정렬 선택은 모두 bottom sheet 계열의 선택 패턴을 사용한다. 헤더 위계, 닫기 버튼, 선택 요약, 하단 액션 배치를 맞춰 같은 계열의 인터랙션으로 느껴지게 한다.
 
@@ -382,7 +384,7 @@ Loading/Empty/Error 상태   →    보존 (ContentState 기반)
 
 ```
 ┌─────────────────────────────────────────┐  ← 375px (모바일 기준)
-│  HOMECOOK                               │  ← AppHeader: --surface bg, --shadow-1
+│  무먹                                   │  ← AppHeader: --surface bg, --shadow-1
 │                                         │     brand text: --foreground, hover: --brand-deep
 │  ┌─────────────────────────────────┐    │  ← discovery panel: token surface/border/shadow
 │  │  🔍  레시피 제목 검색           │    │  ← --surface bg, --line border, --shadow-1
@@ -526,7 +528,7 @@ Capture 파일 경로: `qa/visual/parity/baemin-prototype-home-parity/<viewport>
 ## Service About Guide HOME Anchor Extension Addendum
 
 > 추가일: 2026-07-12
-> 사용자 승인: `/about` 공개 가이드 + 기존 추천 테마 rail의 `집밥 둘러보기` 확장
+> 사용자 승인: `/about` 공개 가이드 + 기존 추천 테마 rail의 `무먹 둘러보기` 확장
 > 공식 기준: 화면정의서 v1.5.18 §1 HOME / 요구사항 기준선 v1.7.11 §1-1 / 유저Flow맵 v1.3.18 §①-a
 > 관련 slice: `service-about-guide`
 
@@ -535,8 +537,8 @@ Capture 파일 경로: `qa/visual/parity/baemin-prototype-home-parity/<viewport>
 이 addendum은 기존 HOME fixed prototype/exact-reference-ready 기준 중 아래 다섯 항목만 대체한다.
 
 1. 기존 추천 테마 rail 위치를 `빠른 이동` 다음, `모든 레시피` 이전으로 옮긴다.
-2. heading을 `이번 주 추천 테마`에서 `집밥 둘러보기`로 바꾼다.
-3. rail 첫 항목에 `집밥 가이드` navigation card를 추가한다.
+2. heading을 `이번 주 추천 테마`에서 `무먹 둘러보기`로 바꾼다.
+3. rail 첫 항목에 `무먹 가이드` navigation card를 추가한다.
 4. theme empty/error에서도 guide-only rail을 유지한다.
 5. recipe entry를 과도하게 밀지 않는 compact rail geometry를 적용한다.
 
@@ -549,12 +551,12 @@ HomeAppBar
 오늘 뭐 먹지? hero
 검색 / 재료 검색 / tag rail
 빠른 이동
-집밥 둘러보기 horizontal rail
+무먹 둘러보기 horizontal rail
 모든 레시피 heading + recipe list
 BottomTabBar
 ```
 
-desktop HOME에는 guide rail/card를 추가하지 않는다. desktop은 공통 `PRIMARY_WEB_NAV_ITEMS`의 `집밥 가이드`로 진입한다.
+desktop HOME에는 guide rail/card를 추가하지 않는다. desktop은 공통 `PRIMARY_WEB_NAV_ITEMS`의 `무먹 가이드`로 진입한다.
 
 ### Rail wireframe — 390px
 
@@ -563,10 +565,10 @@ desktop HOME에는 guide rail/card를 추가하지 않는다. desktop은 공통 
 │ 빠른 이동                            │
 │ [식단 짜기] [장보기 준비] ...        │
 │                                      │
-│ 집밥 둘러보기                        │
+│ 무먹 둘러보기                        │
 │ ┌──────────────┐ ┌──────────────┐ ┌─│
 │ │ 가이드       │ │ theme image  │ │p│  localized x-scroll
-│ │ 집밥,        │ │ 요즘 딸기에  │ │e│  next-card peek
+│ │ 무먹,        │ │ 요즘 딸기에  │ │e│  next-card peek
 │ │ 이렇게 써요  │ │ 많이 담은…   │ │e│
 │ │ 5단계 안내 → │ │ 7개 레시피   │ │k│
 │ └──────────────┘ └──────────────┘ └─│
@@ -600,9 +602,9 @@ desktop HOME에는 guide rail/card를 추가하지 않는다. desktop은 공통 
 
 - semantic: `Link`
 - `href="/about#how-to"`
-- `aria-label="집밥 가이드 보기"`
+- `aria-label="무먹 가이드 보기"`
 - badge: `가이드`
-- title: `집밥, 이렇게 써요`
+- title: `무먹, 이렇게 써요`
 - supporting text: `레시피부터 장보기까지 5단계`
 - brand soft surface와 단순 guide graphic을 사용한다.
 - `aria-pressed`를 사용하지 않는다.
@@ -618,7 +620,7 @@ desktop HOME에는 guide rail/card를 추가하지 않는다. desktop은 공통 
 
 ### 상태 규칙
 
-| 상태 | `집밥 둘러보기` 표현 |
+| 상태 | `무먹 둘러보기` 표현 |
 | --- | --- |
 | initial ready | guide Link + theme buttons |
 | theme loading | guide placeholder + theme placeholders; page 전체를 막지 않음 |

@@ -138,7 +138,7 @@
   - after screenshots: recent provider, provider-switch dialog, email/account error, connected providers, link pending/error at 390px + 320px
   - desktop 1440px LOGIN/MYPAGE
 - Authority report: `ui/designs/authority/AUTH_PROVIDER_MEMORY_LINKING-authority.md`
-- Authority status: required
+- Authority status: reviewed
 
 ## Design Status
 

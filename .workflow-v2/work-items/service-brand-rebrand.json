@@ -1,0 +1,103 @@
+{
+  "id": "service-brand-rebrand",
+  "title": "Service brand contract evolution to 무엇을 먹든 and 무먹",
+  "summary": "정식명 무엇을 먹든, 짧은명 무먹, 신규·빈 nickname fallback, system notification read-time copy 호환을 API/DB shape 변화 없이 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 모든 공식 브랜드 surface에서 무엇을 먹든/무먹을 일관되게 보되 기존 nickname, stored notification, 사용자 콘텐츠, 기술 식별자와 과거 evidence는 그대로 보존한다.",
+  "owners": {
+    "claude": "forbidden for this slice by explicit user approval; the exception does not change global workflow actors",
+    "codex": "role-separated new sessions own Stage 1 docs, Stage 3 backend review, Stage 4 frontend implementation, internal docs repair/final ownership, and authority-required final authority; Stage 1/4 authoring or implementation sessions cannot self-approve",
+    "workers": []
+  },
+  "dependencies": [
+    "service-about-guide docs PR #978 and FE PR #979 merged; current-head conflict check remains",
+    "auth-provider-memory-linking PR #967 merged; current-head conflict check remains",
+    "user-approved service brand contract-evolution 2026-07-13"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.12.md",
+      "docs/화면정의서-v1.5.19.md",
+      "docs/유저flow맵-v1.3.19.md",
+      "docs/db설계-v1.3.16.md",
+      "docs/api문서-v1.2.21.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/service-brand-rebrand/README.md",
+      "docs/workpacks/service-brand-rebrand/acceptance.md",
+      "docs/workpacks/service-brand-rebrand/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "ui/designs/HOME.md",
+      "ui/designs/ABOUT.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 3,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workpack",
+      "pnpm validate:workflow-v2",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workpack",
+      "pnpm validate:workflow-v2",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-doc-versions-and-sot-synchronized",
+      "db-v1.3.16-unchanged",
+      "canonical-copy-matrix-complete",
+      "home-system-source-badge-mumeok-recommendation-key-shape-preserved",
+      "new-empty-nickname-only-fallback",
+      "system-notification-read-time-canonicalization-no-rewrite",
+      "technical-identifiers-and-user-content-preserved",
+      "historical-official-docs-prototypes-evidence-preserved",
+      "home-anchor-authority-evidence-plan-present",
+      "no-new-english-brand-dependency-logo-or-mascot"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "New English service brand, dependency, font, token, image logo, or mascot",
+    "DB migration, stored row rewrite, endpoint, response field, enum, status, or error addition",
+    "Rename of homecook/HOMECOOK, cookie, header, event, storage, package, repository, Supabase, OMO, or stored keys",
+    "Global replacement of user content or generic noun 집밥",
+    "Retroactive edits to historical official versions, merged evidence, prototypes, or reference artifacts",
+    "Route, information architecture, interaction model, or domain state transition changes"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 contract and workpack prepared on docs/service-brand-rebrand-contract under explicit user approval forbidding Claude for this slice. Role-separated new Codex sessions replace Stage 1 docs, Stage 3 backend review, Stage 4 frontend implementation, internal docs repair/final ownership, and authority-required final authority; Stage 1/4 authoring or implementation sessions cannot self-approve. Predecessors are merged via auth PR #967 and guide docs #978/FE #979, so only current-head conflict checks remain. Roadmap status is docs while workflow lifecycle remains planned because the schema has no docs enum. No implementation, push, PR, or merge is part of this change."
+}

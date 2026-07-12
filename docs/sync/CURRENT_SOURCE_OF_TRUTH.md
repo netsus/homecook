@@ -1,17 +1,32 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.11.md`
-- `docs/화면정의서-v1.5.18.md`
-- `docs/유저flow맵-v1.3.18.md`
+- `docs/요구사항기준선-v1.7.12.md`
+- `docs/화면정의서-v1.5.19.md`
+- `docs/유저flow맵-v1.3.19.md`
 - `docs/db설계-v1.3.16.md`
-- `docs/api문서-v1.2.20.md`
+- `docs/api문서-v1.2.21.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Service Brand Rebrand Contract-Evolution `2026-07-13`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.12 | 정식명 `무엇을 먹든`, 짧은명 `무먹`, 고정 copy, 신규·빈 nickname `무먹러` fallback, 기술 식별자·사용자 콘텐츠·과거 자료 보존을 추가 |
+| 화면정의서 v1.5.19 | AppBar/텍스트 워드마크, HOME/ABOUT/MYPAGE copy와 HOME anchor-extension authority evidence 계획을 갱신 |
+| 유저플로우 v1.3.19 | HOME/가이드/로그인/성장 여정의 브랜드 표시, nickname 분기, notification read-time canonicalization을 추가 |
+| API v1.2.21 | endpoint/field/DB shape 변화 없이 신규·빈 nickname fallback과 system notification exact-copy read-time canonicalization을 고정 |
+| DB v1.3.16 | 변경 없음. migration/rewrite 없이 기존 schema와 stored rows를 유지 |
+
+> 사용자가 2026-07-13에 기존 Claude 담당을 별도 Codex Stage 1 문서 계약 세션으로 대체하고 이 contract-evolution을 명시적으로 승인했다.
+> 법적/SEO/서비스 최초 정의는 `무엇을 먹든`, 텍스트 워드마크·AppBar·좁은 내비게이션은 `무먹`을 사용한다. 신규 또는 trim 후 빈 nickname만 `무먹러` fallback을 쓰며 기존 저장 nickname은 변경하지 않는다.
+> `homecook:*`, `HOMECOOK_*`, cookie/header/event/storage/package/repository/Supabase/OMO/stored key, 사용자 콘텐츠와 일반명사 `집밥`, 과거 공식 버전과 merged evidence/prototype은 보존한다.
+> 새 영문 브랜드, dependency, DB migration, endpoint/response field, 이미지 로고·마스코트는 추가하지 않는다.
 
 ## Public Service Guide Addendum `2026-07-12`
 

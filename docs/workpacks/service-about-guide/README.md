@@ -100,7 +100,7 @@
 - Authority reports:
   - `ui/designs/authority/ABOUT_SERVICE_GUIDE-authority.md`
   - `ui/designs/authority/HOME-service-about-guide-authority.md`
-- Authority status: `required`
+- Authority status: `reviewed`
 
 ## Design Status
 
