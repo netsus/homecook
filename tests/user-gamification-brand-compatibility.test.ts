@@ -40,16 +40,24 @@ describe("system notification brand compatibility", () => {
     expect(result.payload.label).toBe(canonicalCopy);
   });
 
-  it("canonicalizes the exact legacy first-cook copy at read time", () => {
-    const row = buildNotificationRow("achievement_unlocked", {
-      achievement_key: "tutorial_cooking_complete",
-      title: "첫 집밥 완성",
+  it("canonicalizes the legacy first-cook badge row without rewriting stored payload", () => {
+    const payload = {
+      badge_key: "first_cook_done",
+      label: "첫 집밥 완성",
+    };
+    const row = buildNotificationRow("badge_unlocked", payload);
+
+    const first = toNotificationData(row);
+    const second = toNotificationData(row);
+
+    expect(first).toEqual(second);
+    expect(first.payload.label).toBe("첫 요리 완성");
+    expect(first.body).toBe("마이페이지에서 새 배지를 확인해 보세요.");
+    expect(row.payload_json).toBe(payload);
+    expect(payload).toEqual({
+      badge_key: "first_cook_done",
+      label: "첫 집밥 완성",
     });
-
-    const result = toNotificationData(row);
-
-    expect(result.body).toBe("첫 요리 완성 배지를 획득했어요.");
-    expect(result.payload.title).toBe("첫 요리 완성");
   });
 
   it("preserves substrings, unmapped copy, and the stored payload across repeated reads", () => {
