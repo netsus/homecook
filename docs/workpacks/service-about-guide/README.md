@@ -104,9 +104,9 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 설계 잠금, Stage 4 구현 전
-- [ ] 리뷰 대기 (pending-review) — Stage 4 + authority precheck 완료 후
-- [ ] 확정 (confirmed) — Stage 5 및 별도 Codex final authority 통과 후
+- [ ] 임시 UI (temporary) — Stage 1 설계 잠금, Stage 4 구현 전
+- [ ] 리뷰 대기 (pending-review) — Stage 4 구현 완료, 독립 authority precheck 대기
+- [x] 확정 (confirmed) — Stage 5 및 별도 Codex final authority 통과 후
 - [ ] N/A — BE-only 슬라이스
 
 ## Source Links
@@ -195,17 +195,17 @@
 
 > FE-only 슬라이스다. Stage 2/3은 건너뛰고 Stage 1 docs merge + internal docs gate pass 후 별도 Codex Stage 4 세션이 구현한다.
 
-- [ ] `/about` 정적 콘텐츠 모델과 공개 route 구현 <!-- omo:id=delivery-about-route-content;stage=4;scope=frontend;review=5,6 -->
-- [ ] ABOUT desktop/mobile shell, anchor, CTA, accordion 구현 <!-- omo:id=delivery-about-responsive-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] `PRIMARY_WEB_NAV_ITEMS` 5메뉴와 web/mobile nav 타입 경계 고정 <!-- omo:id=delivery-web-nav-single-source;stage=4;scope=shared;review=5,6 -->
-- [ ] 일반 웹 화면 local primary nav 복제 제거와 legal 보조 nav 분리 <!-- omo:id=delivery-web-nav-cleanup;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME `집밥 둘러보기` rail 위치·guide Link·theme button 동작 구현 <!-- omo:id=delivery-home-discovery-rail;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME loading/empty/error/filter state와 guide 독립성 고정 <!-- omo:id=delivery-home-rail-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] rail ≤220px, card 136~144px, 320px peek, page overflow 0 검증 <!-- omo:id=delivery-home-rail-geometry;stage=4;scope=frontend;review=5,6 -->
-- [ ] MYPAGE 도움말 surface/dead CSS 제거와 legacy redirect 구현 <!-- omo:id=delivery-mypage-help-retirement;stage=4;scope=frontend;review=5,6 -->
-- [ ] `/about` metadata/canonical/OpenGraph/sitemap 공개 계약 구현 <!-- omo:id=delivery-about-seo;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest/Playwright/a11y/keyboard 회귀 자동화 <!-- omo:id=delivery-test-automation;stage=4;scope=frontend;review=5,6 -->
-- [ ] exploratory QA + qa eval 결과 기록 <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
-- [ ] ABOUT 320/390/1280 및 HOME before/after 320/390 evidence 생성 <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] ABOUT/HOME 독립 authority report blocker 0 확인 <!-- omo:id=delivery-authority-closeout;stage=4;scope=frontend;review=5,6 -->
-- [ ] API/DB/auth/global token/community 범위 무변경 확인 <!-- omo:id=delivery-scope-guard;stage=4;scope=shared;review=6 -->
+- [x] `/about` 정적 콘텐츠 모델과 공개 route 구현 <!-- omo:id=delivery-about-route-content;stage=4;scope=frontend;review=5,6 -->
+- [x] ABOUT desktop/mobile shell, anchor, CTA, accordion 구현 <!-- omo:id=delivery-about-responsive-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] `PRIMARY_WEB_NAV_ITEMS` 5메뉴와 web/mobile nav 타입 경계 고정 <!-- omo:id=delivery-web-nav-single-source;stage=4;scope=shared;review=5,6 -->
+- [x] 일반 웹 화면 local primary nav 복제 제거와 legal 보조 nav 분리 <!-- omo:id=delivery-web-nav-cleanup;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME `집밥 둘러보기` rail 위치·guide Link·theme button 동작 구현 <!-- omo:id=delivery-home-discovery-rail;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME loading/empty/error/filter state와 guide 독립성 고정 <!-- omo:id=delivery-home-rail-states;stage=4;scope=frontend;review=5,6 -->
+- [x] rail ≤220px, card 136~144px, 320px peek, page overflow 0 검증 <!-- omo:id=delivery-home-rail-geometry;stage=4;scope=frontend;review=5,6 -->
+- [x] MYPAGE 도움말 surface/dead CSS 제거와 legacy redirect 구현 <!-- omo:id=delivery-mypage-help-retirement;stage=4;scope=frontend;review=5,6 -->
+- [x] `/about` metadata/canonical/OpenGraph/sitemap 공개 계약 구현 <!-- omo:id=delivery-about-seo;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest/Playwright/a11y/keyboard 회귀 자동화 <!-- omo:id=delivery-test-automation;stage=4;scope=frontend;review=5,6 -->
+- [x] exploratory QA + qa eval 결과 기록 <!-- omo:id=delivery-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
+- [x] ABOUT 320/390/1280 및 HOME before/after 320/390 evidence 생성 <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] ABOUT/HOME 독립 authority report blocker 0 확인 <!-- omo:id=delivery-authority-closeout;stage=4;scope=frontend;review=5,6 -->
+- [x] API/DB/auth/global token/community 범위 무변경 확인 <!-- omo:id=delivery-scope-guard;stage=4;scope=shared;review=6 -->
