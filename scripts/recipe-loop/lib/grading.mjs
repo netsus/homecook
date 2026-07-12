@@ -2,9 +2,6 @@
 // AI 의미 채점과 별개로, 코드만으로 확정 가능한 지표를 담당한다.
 
 const norm = (value) => String(value ?? "").replace(/\s+/g, "").toLowerCase();
-const CANARY_CASES = {
-  validation: new Set(["YZ8KSZboJeM"]),
-};
 const REDACTED_CANARY_HIT = "leak canary token redacted";
 const REMOVED_CANARY = Symbol("removed-canary");
 const AMOUNT_REASON_KEYS = ["unit_mismatch", "value_out_of_band", "model_missing", "amountBasis_band_diff"];
@@ -13,18 +10,6 @@ const STEP_COVERAGE_THRESHOLD = 0.4;
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value ?? null));
-}
-
-function configuredCanaryIds(split) {
-  return CANARY_CASES[split] ?? new Set();
-}
-
-export function hasConfiguredCanarySplit(split) {
-  return configuredCanaryIds(split).size > 0;
-}
-
-export function isConfiguredCanaryCase(split, videoId) {
-  return configuredCanaryIds(split).has(videoId);
 }
 
 function normalizedContainsAny(value, canaries) {
@@ -61,12 +46,19 @@ export function canaryTokensFromRemoved(removed) {
   }).filter((canary) => canary.normalizedNames.length > 0);
 }
 
+export function canaryTokensFromConfig(config) {
+  return (config?.tokens ?? []).map((entry, index) => {
+    const value = typeof entry === "string" ? entry : entry?.value;
+    return {
+      canaryId: typeof entry === "string" ? `profile_canary_${index + 1}` : (entry?.id ?? `profile_canary_${index + 1}`),
+      category: typeof entry === "string" ? "profile_token" : (entry?.category ?? "profile_token"),
+      normalizedNames: [norm(value)].filter(Boolean),
+    };
+  }).filter((canary) => canary.normalizedNames.length > 0);
+}
+
 export function stripCanaryByFlag(golden, { split, videoId } = {}) {
-  const expectedCanary = isConfiguredCanaryCase(split, videoId);
   const removed = collectFlaggedCanaries(golden);
-  if (expectedCanary && removed.length === 0) {
-    throw new Error(`canary drift: ${split}/${videoId} missing flagged leak canary ingredient`);
-  }
 
   const cleanGolden = cloneJson(golden);
   for (const recipe of cleanGolden?.recipes ?? []) {
@@ -74,9 +66,6 @@ export function stripCanaryByFlag(golden, { split, videoId } = {}) {
   }
 
   const tokens = canaryTokensFromRemoved(removed);
-  if (expectedCanary && tokens.length === 0) {
-    throw new Error(`canary drift: ${split}/${videoId} flagged leak canary has no scannable token`);
-  }
   if (tokens.length > 0 && normalizedContainsAny(cleanGolden?.recipes ?? [], tokens)) {
     throw new Error(`canary strip failed: ${split}/${videoId} clean golden still contains canary token`);
   }
@@ -131,10 +120,12 @@ export function stripCanaryByToken(value, canaries) {
   return strip(cloneJson(value));
 }
 
-export function prepareCanaryGradingInputs({ split, videoId, golden, result, resultScope }) {
-  const { cleanGolden, removed } = stripCanaryByFlag(golden, { split, videoId });
-  const tokens = canaryTokensFromRemoved(removed);
-  const canaryLeak = scanForCanaries({
+export function prepareCanaryGradingInputs({ split, videoId, golden, result, resultScope, externalCanaries = [] }) {
+  const { cleanGolden: flagCleanGolden, removed } = stripCanaryByFlag(golden, { split, videoId });
+  const plantedExternalCanaries = externalCanaries.filter((canary) => normalizedContainsAny(golden, [canary]));
+  const tokens = [...canaryTokensFromRemoved(removed), ...plantedExternalCanaries];
+  const cleanGolden = stripCanaryByToken(flagCleanGolden, plantedExternalCanaries);
+  const canaryLeak = tokens.length === 0 ? emptyCanaryLeak("not_applicable", true) : scanForCanaries({
     sourceKind: "predicted",
     scope: resultScope,
     split,
@@ -159,18 +150,16 @@ function emptyCanaryLeak(status, success) {
   };
 }
 
-export function summarizeCanaryLeaks({ split, ids, rows }) {
-  const configured = configuredCanaryIds(split);
-  if (configured.size === 0) return emptyCanaryLeak("not_applicable", true);
-  const coveredConfiguredIds = ids.filter((id) => configured.has(id));
-  if (coveredConfiguredIds.length === 0) return emptyCanaryLeak("not_covered", false);
-
+export function summarizeCanaryLeaks({ ids, rows, required = false }) {
   const rowById = new Map(rows.map((row) => [row.videoId, row]));
-  const missingCovered = coveredConfiguredIds.some((id) => !rowById.get(id)?.canaryLeak);
-  if (missingCovered) return emptyCanaryLeak("not_covered", false);
+  if (ids.some((id) => !rowById.get(id)?.canaryLeak)) return emptyCanaryLeak("not_covered", false);
+  const applicableRows = rows.filter((row) => row.canaryLeak?.status !== "not_applicable");
+  if (applicableRows.length === 0) {
+    return required ? emptyCanaryLeak("not_covered", false) : emptyCanaryLeak("not_applicable", true);
+  }
 
   const hitsByKey = new Map();
-  for (const row of rows) {
+  for (const row of applicableRows) {
     for (const hit of row.canaryLeak?.hits ?? []) {
       hitsByKey.set([hit.scope, hit.split, hit.videoId, hit.canaryId, hit.category].join("\u0000"), hit);
     }
@@ -232,12 +221,12 @@ function ingredientMatches(goldenIng, predIng) {
 
 // 단위 정규화 (동의어 통합).
 const UNIT_ALIAS = {
-  "큰술": "tbsp", "밥숟갈": "tbsp", "숟갈": "tbsp", "숟가락": "tbsp", "스푼": "tbsp", "t": "tbsp", "tbsp": "tbsp", "왕큰술": "tbsp",
-  "작은술": "tsp", "tsp": "tsp", "티스푼": "tsp",
-  "컵": "cup", "cup": "cup",
-  "g": "g", "그램": "g", "kg": "kg",
-  "ml": "ml", "리터": "l", "l": "l",
-  "개": "ea", "알": "ea", "쪽": "ea", "장": "sheet", "줄": "ea", "팩": "pack", "줌": "handful", "꼬집": "pinch",
+  "큰술": "tbsp", "밥숟갈": "tbsp", "숟갈": "tbsp", "숟가락": "tbsp", "스푼": "tbsp", "t": "tbsp", "tbsp": "tbsp", "왕큰술": "tbsp", "tablespoon": "tbsp", "tablespoons": "tbsp",
+  "작은술": "tsp", "tsp": "tsp", "티스푼": "tsp", "teaspoon": "tsp", "teaspoons": "tsp",
+  "컵": "cup", "cup": "cup", "cups": "cup",
+  "g": "g", "그램": "g", "gram": "g", "grams": "g", "kg": "kg",
+  "ml": "ml", "milliliter": "ml", "milliliters": "ml", "리터": "l", "l": "l",
+  "개": "ea", "알": "ea", "쪽": "ea", "clove": "ea", "cloves": "ea", "장": "sheet", "줄": "ea", "팩": "pack", "줌": "handful", "한줌": "handful", "handful": "handful", "handfuls": "handful", "꼬집": "pinch",
 };
 function canonicalUnit(unit) {
   if (!unit) return null;

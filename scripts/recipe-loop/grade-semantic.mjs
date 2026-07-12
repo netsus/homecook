@@ -12,8 +12,9 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { createCodexJudgeClient } from "./lib/codex-judge-client.mjs";
-import { loadDatasetProfile } from "./lib/dataset-profile.mjs";
-import { prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
+import { assertProtectedDatasetProfile, isProtectedSplit, loadDatasetProfile } from "./lib/dataset-profile.mjs";
+import { assertFrozenResults } from "./lib/freeze-guard.mjs";
+import { canaryTokensFromConfig, prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
 import { summarizeReasonFrequencies } from "./lib/semantic-feedback-aggregator.mjs";
 
 const PROJECT_ROOT = process.cwd();
@@ -498,11 +499,14 @@ function classifyError(error) {
   return "provider_error";
 }
 
-async function writeSummary(splitDir, outTag, aggregate, rows) {
+async function writeSummary(splitDir, outTag, aggregate, rows, aggregateOnly = false) {
   await mkdir(splitDir, { recursive: true });
+  const summary = aggregateOnly
+    ? { aggregate: { ...aggregate, aggregateOnly: true } }
+    : { aggregate, perVideo: rows };
   await writeFile(
     path.join(splitDir, `_semantic_summary.${outTag}.json`),
-    JSON.stringify({ aggregate, perVideo: rows }, null, 2) + "\n",
+    JSON.stringify(summary, null, 2) + "\n",
     "utf8",
   );
 }
@@ -510,6 +514,7 @@ async function writeSummary(splitDir, outTag, aggregate, rows) {
 async function main() {
   const args = parseCliArgs(process.argv.slice(2));
   const split = typeof args.split === "string" ? args.split : "train";
+  const aggregateOnly = isProtectedSplit(split);
   const outTag = typeof args["out-tag"] === "string" ? args["out-tag"] : "latest";
   const resultOutTag = typeof args["result-out-tag"] === "string" ? args["result-out-tag"] : outTag;
   const expectedCountArg = toInt(args["expected-count"]);
@@ -527,8 +532,34 @@ async function main() {
       requestedIds,
     })
     : null;
+  assertProtectedDatasetProfile({
+    split,
+    datasetProfile,
+    requestedIds,
+    expectedCount: expectedCountArg,
+  });
+  const profileSemanticGates = datasetProfile?.gates?.semantic;
+  const effectiveThresholds = profileSemanticGates
+    && Number.isFinite(Number(profileSemanticGates.averageScore))
+    && Number.isFinite(Number(profileSemanticGates.bottomKMeanScore))
+    ? {
+      ...calibration.thresholds,
+      averageScore: Number(profileSemanticGates.averageScore),
+      bottomKMeanScore: Number(profileSemanticGates.bottomKMeanScore),
+      minCaseScore: Number(profileSemanticGates.minCaseScore ?? profileSemanticGates.bottomKMeanScore),
+    }
+    : calibration.thresholds;
+  const thresholdSource = effectiveThresholds === calibration.thresholds ? "calibration" : "dataset-profile";
   const ids = datasetProfile?.ids ?? requestedIds
     ?? (await readdir(splitDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name).sort();
+  await assertFrozenResults({
+    projectRoot: PROJECT_ROOT,
+    dataRoot: DATA_ROOT,
+    split,
+    outTag: resultOutTag,
+    ids,
+    datasetProfile,
+  });
 
   const rows = [];
   let cacheHitCount = 0;
@@ -544,14 +575,14 @@ async function main() {
     const hasGolden = existsSync(goldenPath);
     if (!hasResult || !hasGolden) {
       const reason = !hasResult && !hasGolden ? "missing_result_and_golden" : (!hasResult ? "missing_result" : "missing_golden");
-      console.error(`[FAIL] ${split}/${id}: ${reason}`);
+      if (!aggregateOnly) console.error(`[FAIL] ${split}/${id}: ${reason}`);
       rows.push(failedRow(id, reason));
       continue;
     }
     const result = JSON.parse(await readFile(resultPath, "utf8"));
     const golden = JSON.parse(await readFile(goldenPath, "utf8"));
     if (golden.reviewStatus !== "approved") {
-      console.error(`[FAIL] ${split}/${id}: unapproved_golden`);
+      if (!aggregateOnly) console.error(`[FAIL] ${split}/${id}: unapproved_golden`);
       rows.push(failedRow(id, "unapproved_golden"));
       continue;
     }
@@ -562,10 +593,11 @@ async function main() {
       golden,
       result,
       resultScope,
+      externalCanaries: canaryTokensFromConfig(datasetProfile?.canary),
     });
     if (judge.provider === "codex" && calibration.summary.valid !== true) {
       const message = calibration.summary.failure_reason || "invalid calibration";
-      console.error(`[FAIL] ${split}/${id}: calibration_invalid (${message})`);
+      if (!aggregateOnly) console.error(`[FAIL] ${split}/${id}: calibration_invalid (${message})`);
       rows.push({ ...failedRow(id, "calibration_invalid", message), canaryLeak });
       continue;
     }
@@ -581,7 +613,7 @@ async function main() {
       const { grade } = gradeResult;
       if (grade.cases.length === 0) {
         rows.push(failedRow(id, "empty_case"));
-        console.error(`[FAIL] ${split}/${id}: empty_case`);
+        if (!aggregateOnly) console.error(`[FAIL] ${split}/${id}: empty_case`);
         continue;
       }
       cacheHitCount += gradeResult.cacheHits ?? (gradeResult.cached ? 1 : 0);
@@ -601,13 +633,15 @@ async function main() {
         canaryLeak,
       };
       rows.push(row);
-      await mkdir(outputDir, { recursive: true });
-      await writeFile(path.join(outputDir, "grade_semantic.json"), JSON.stringify(row, null, 2) + "\n", "utf8");
+      if (!aggregateOnly) {
+        await mkdir(outputDir, { recursive: true });
+        await writeFile(path.join(outputDir, "grade_semantic.json"), JSON.stringify(row, null, 2) + "\n", "utf8");
+      }
       const minCase = grade.cases.length ? Math.min(...grade.cases.map((c) => c.case_score)) : 0;
-      console.log(`[OK] ${split}/${id}: avg ${grade.average_score}, min case ${minCase}`);
+      if (!aggregateOnly) console.log(`[OK] ${split}/${id}: avg ${grade.average_score}, min case ${minCase}`);
     } catch (error) {
       const reason = classifyError(error);
-      console.error(`[FAIL] ${split}/${id}: ${error.message}`);
+      if (!aggregateOnly) console.error(`[FAIL] ${split}/${id}: ${error.message}`);
       rows.push(failedRow(id, reason, error.message));
     }
   }
@@ -630,10 +664,10 @@ async function main() {
   const minCaseScore = caseScores.length ? Math.min(...caseScores) : 0;
   const bottomKMeanScore = bottomKMean(caseScores, calibration.bottomK);
   const thresholdSuccess = calibration.scorePolicy === "bottomK-mean"
-    ? averageScore >= calibration.thresholds.averageScore
-      && bottomKMeanScore >= calibration.thresholds.bottomKMeanScore
-    : averageScore >= calibration.thresholds.averageScore
-      && minCaseScore >= calibration.thresholds.minCaseScore;
+    ? averageScore >= effectiveThresholds.averageScore
+      && bottomKMeanScore >= effectiveThresholds.bottomKMeanScore
+    : averageScore >= effectiveThresholds.averageScore
+      && minCaseScore >= effectiveThresholds.minCaseScore;
   const executionSuccess = providerErrorCount === 0
     && parseErrorCount === 0
     && schemaErrorCount === 0
@@ -641,8 +675,18 @@ async function main() {
     && calibrationErrorCount === 0
     && failedRowCount === 0
     && !expectedCountMismatch;
-  const success = failedRowCount === 0 && !expectedCountMismatch && thresholdSuccess;
-  const canaryLeak = summarizeCanaryLeaks({ split, ids, rows });
+  const canaryLeak = summarizeCanaryLeaks({
+    split,
+    ids,
+    rows,
+    required: datasetProfile?.canary?.required === true,
+  });
+  const canarySuccess = aggregateOnly
+    ? canaryLeak.success === true && canaryLeak.status === "clean"
+    : canaryLeak.status !== "leak_detected";
+  const success = executionSuccess
+    && thresholdSuccess
+    && canarySuccess;
   const agg = {
     success,
     split,
@@ -676,15 +720,16 @@ async function main() {
     averageScore,
     minCaseScore,
     bottomKMeanScore,
-    thresholds: calibration.thresholds,
+    thresholds: effectiveThresholds,
+    thresholdSource,
     borderline: calibration.borderline,
     threshold_success: thresholdSuccess,
     calibration: calibration.summary,
     canaryLeak,
   };
-  await writeSummary(splitDir, outTag, agg, rows);
+  await writeSummary(splitDir, outTag, agg, rows, aggregateOnly);
   console.log(`\n=== ${split}/${outTag} 의미채점: 평균 ${agg.averageScore}, 하위${agg.bottom_k}평균 ${agg.bottomKMeanScore}, 최저 case ${agg.minCaseScore} (n=${agg.count})`);
-  if (!executionSuccess) process.exit(1);
+  if (!success) process.exit(1);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

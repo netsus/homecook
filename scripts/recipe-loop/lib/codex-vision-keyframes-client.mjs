@@ -31,7 +31,7 @@ const FINAL_RAW_RECOVERY_VERSION = "final-raw-recovery-v1";
 const SEGMENT_BRIDGE_FRAME_VERSION = "segment-bridge-frame-v1";
 const SEGMENT_PHASE_ANCHOR_FRAME_VERSION = "segment-phase-anchor-frame-v2";
 const FINAL_PROMPT_VERSION = "keyframe-final-v32-single-four-source";
-const MODEL_SOURCE_BOUNDARY_VERSION = "model-source-boundary-v1";
+const MODEL_SOURCE_BOUNDARY_VERSION = "model-source-boundary-v3-unique-attachment-alias";
 const ONSCREEN_TEXT_PRIORITY_VERSION = "onscreen-text-priority-v1";
 const VISUAL_IDENTITY_GUARD_VERSION = "visual-identity-guard-ledger-repair-v2-dehardcoded";
 const SEGMENTED_REPAIR_PROMPT_VERSION = "keyframe-source-gap-repair-v7-dehardcoded";
@@ -5144,7 +5144,7 @@ async function runSegmentedRepairPatchPass({
   };
 }
 
-function buildCodexVisionKeyframesCacheKey({
+export function buildCodexVisionKeyframesCacheKey({
   model,
   selectorModel,
   prompt,
@@ -5156,6 +5156,7 @@ function buildCodexVisionKeyframesCacheKey({
   selectorCandidateLimit,
   frameOptions,
   singleRecipeOnly,
+  sourceFingerprint,
 }) {
   return hashKey({
     provider: PROVIDER,
@@ -5170,9 +5171,11 @@ function buildCodexVisionKeyframesCacheKey({
     selectorCandidateLimit,
     frameOptions,
     singleRecipeOnly,
+    sourceFingerprint,
     clientVersion: CLIENT_VERSION,
     selectorPromptVersion: SELECTOR_PROMPT_VERSION,
     finalPromptVersion: FINAL_PROMPT_VERSION,
+    modelSourceBoundaryVersion: MODEL_SOURCE_BOUNDARY_VERSION,
   });
 }
 
@@ -5197,6 +5200,7 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
   recipeEvidenceLedgerPrompt,
   visualFrameLedgerPrompt,
   visualFrameLedgerBatchSize,
+  sourceFingerprint,
 }) {
   const keyPayload = {
     provider: PROVIDER,
@@ -5207,6 +5211,7 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
     promptHash: hashText(prompt),
     cacheTextHash: hashText(cacheText),
     frameManifest,
+    sourceFingerprint,
     candidatePlanHash,
     frameOptions,
     segmentOptions,
@@ -5260,6 +5265,12 @@ function buildCodexVisionSegmentedKeyframesCacheKey({
   return hashKey(keyPayload);
 }
 
+function resultDirectory(cacheDir, resultKey, noCache) {
+  if (!noCache) return path.join(cacheDir, resultKey);
+  const runKey = hashKey({ resultKey, pid: process.pid, startedAt: Date.now(), nonce: Math.random() });
+  return path.join(cacheDir, "_runs", runKey);
+}
+
 function frameLookup(frames) {
   const byFile = new Map();
   const byPath = new Map();
@@ -5291,6 +5302,12 @@ function resolveSelectedFrame(rawFile, candidateFrames, lookup) {
   const file = path.basename(String(rawFile));
   const exact = lookup.byFile.get(file) ?? lookup.byPath.get(String(rawFile)) ?? lookup.byFile.get(String(rawFile));
   if (exact) return { frame: exact, resolutionSource: "exact", evidenceAllowed: true };
+
+  const safeAttachmentIndex = file.match(/^attachment-(\d+)\.[a-z0-9]+$/iu);
+  if (safeAttachmentIndex) {
+    const frame = candidateFrames[Number(safeAttachmentIndex[1]) - 1];
+    if (frame) return { frame, resolutionSource: "safe-attachment-index", evidenceAllowed: true };
+  }
 
   const timestamp = timestampFromFrameFileName(file);
   if (!Number.isFinite(timestamp)) return null;
@@ -5392,6 +5409,46 @@ function sourceAvailability(sourceText, evidenceSummary) {
     authorComment: text.includes("[SOURCE: author_comment]"),
     transcript: text.includes("[SOURCE: transcript("),
     onscreen: evidenceSummary.onscreenCueCount > 0 || evidenceSummary.quantityCueCount > 0,
+  };
+}
+
+function runCacheMeta({ frameResult, selectorCacheHit, visionCacheHit, declaredRunType = null }) {
+  const sourceVideoCacheHit = Boolean(frameResult?.sourceVideoCacheHit);
+  const frameCacheHit = Boolean(frameResult?.frameCacheHit);
+  const observedRunType = visionCacheHit
+    ? "full-cache"
+    : selectorCacheHit
+      ? "selector-warm"
+      : frameCacheHit
+        ? "frame-warm"
+        : sourceVideoCacheHit
+          ? "source-warm"
+          : "cold";
+  const runTypeMatches = declaredRunType === null ? null : declaredRunType === observedRunType;
+  return {
+    sourceVideoCacheHit,
+    frameCacheHit,
+    selectorCacheHit: Boolean(selectorCacheHit),
+    visionCacheHit: Boolean(visionCacheHit),
+    declaredRunType,
+    observedRunType,
+    runTypeMatches,
+    runTypeWarning: runTypeMatches === false
+      ? `run type mismatch: declared ${declaredRunType}, observed ${observedRunType}`
+      : null,
+    coldTimingEligible: observedRunType === "cold" && runTypeMatches !== false,
+  };
+}
+
+function runTimingMeta(frameResult) {
+  const timings = frameResult?.runTimings ?? {};
+  const timing = (key) => typeof timings[key] === "number" && Number.isFinite(timings[key])
+    ? timings[key]
+    : null;
+  return {
+    source_prepare_ms: timing("source_prepare_ms"),
+    scene_scan_ms: timing("scene_scan_ms"),
+    frame_write_ms: timing("frame_write_ms"),
   };
 }
 
@@ -5603,6 +5660,7 @@ async function runSegmentedKeyframesFlow({
   segmentPhaseAnchorFrames = DEFAULT_SEGMENT_PHASE_ANCHOR_FRAMES,
   segmentSelectorAutoSelect = false,
   evidencePacketBundle = null,
+  sourceFingerprint = null,
 }) {
   if (segmentedFinalMode !== "combined" && segmentedRepairMode !== "none") {
     throw new Error("segmented repair mode는 combined final에서만 지원합니다.");
@@ -5633,8 +5691,9 @@ async function runSegmentedKeyframesFlow({
     recipeEvidenceLedgerPrompt: recipeEvidenceLedgerPromptEnabled,
     visualFrameLedgerPrompt,
     visualFrameLedgerBatchSize,
+    sourceFingerprint,
   });
-  const resultDir = path.join(cacheDir, resultKey);
+  const resultDir = resultDirectory(cacheDir, resultKey, Boolean(options.noCache));
   const finalJsonPath = path.join(resultDir, "final.json");
   const sourceCueMeta = sourceCuePackets
     ? {
@@ -6399,6 +6458,7 @@ export function createCodexVisionKeyframesClient(options = {}) {
   const segmentedFinalMode = segmentedFinalModeFrom(options.segmentedFinalMode ?? process.env.RECIPE_LOOP_CODEX_VISION_SEGMENTED_FINAL_MODE);
   const segmentedRepairMode = segmentedRepairModeFrom(options.segmentedRepairMode ?? process.env.RECIPE_LOOP_CODEX_VISION_SEGMENTED_REPAIR_MODE);
   const cacheDir = options.cacheDir || CACHE_DIR;
+  const declaredRunType = typeof options.runType === "string" ? options.runType : null;
   const frameOptions = {
     mode: options.frameMode || (singleRecipeOnly ? SINGLE_FAST_FRAME_MODE : "scene"),
     maxFrames: positiveInt(options.maxFrames, DEFAULT_MAX_FRAMES),
@@ -6454,7 +6514,37 @@ export function createCodexVisionKeyframesClient(options = {}) {
     false,
   );
   const codexExec = options.codexExec ?? runCodexExec;
+  const modelReadBoundaryEnforced = options.modelReadBoundaryEnforced ?? codexExec === runCodexExec;
   const extractFrames = options.extractFrames ?? defaultExtractFrames;
+  const executionConfigSignature = hashText(JSON.stringify({
+    clientVersion: CLIENT_VERSION,
+    selectorPromptVersion: SELECTOR_PROMPT_VERSION,
+    finalPromptVersion: FINAL_PROMPT_VERSION,
+    modelSourceBoundaryVersion: MODEL_SOURCE_BOUNDARY_VERSION,
+    model,
+    selectorModel,
+    segmentModel,
+    codexEffort: options.codexEffort ?? null,
+    selectorEffort: options.selectorEffort ?? options.codexEffort ?? null,
+    singleRecipeOnly,
+    keyframeMode,
+    requestedKeyframeMode,
+    segmentedFinalMode,
+    segmentedRepairMode,
+    frameOptions,
+    selectorCandidateLimit,
+    keyframeTotalLimit,
+    keyframesPerRecipe,
+    segmentOptions,
+    sourceCuePackets,
+    recipeEvidenceLedger,
+    recipeEvidenceLedgerPrompt,
+    visualFrameLedgerPrompt,
+    visualFrameLedgerBatchSize,
+    segmentBridgeFrames,
+    segmentPhaseAnchorFrames,
+    segmentSelectorAutoSelect,
+  }));
 
   return {
     async generate({ prompt, videoUrl = null, cacheText = "", evidencePacketBundle = null }) {
@@ -6467,6 +6557,7 @@ export function createCodexVisionKeyframesClient(options = {}) {
         cacheDir,
         frameOptions,
         timeoutMs,
+        noCache: Boolean(options.noCache),
         runCommandImpl: options.runCommand,
       });
       const frameExtractMs = Date.now() - frameStartedAt;
@@ -6503,6 +6594,7 @@ export function createCodexVisionKeyframesClient(options = {}) {
           segmentPhaseAnchorFrames,
           segmentSelectorAutoSelect,
           evidencePacketBundle,
+          sourceFingerprint: frameResult.sourceFingerprint ?? null,
         });
       }
 
@@ -6520,8 +6612,9 @@ export function createCodexVisionKeyframesClient(options = {}) {
         selectorCandidateLimit,
         frameOptions,
         singleRecipeOnly,
+        sourceFingerprint: frameResult.sourceFingerprint ?? null,
       });
-      const resultDir = path.join(cacheDir, resultKey);
+      const resultDir = resultDirectory(cacheDir, resultKey, Boolean(options.noCache));
       const finalJsonPath = path.join(resultDir, "final.json");
 
       if (!options.noCache && !options.refreshFinal && existsSync(finalJsonPath)) {
@@ -6535,8 +6628,13 @@ export function createCodexVisionKeyframesClient(options = {}) {
             ...(cached.meta ?? {}),
             provider: PROVIDER,
             cached: true,
-            frameCacheHit: frameResult.frameCacheHit,
-            visionCacheHit: true,
+            ...runCacheMeta({ frameResult, selectorCacheHit: true, visionCacheHit: true, declaredRunType }),
+            ...runTimingMeta(frameResult),
+            modelCallCount: 0,
+            frame_extract_ms: frameExtractMs,
+            selector_ms: null,
+            final_ms: null,
+            total_fresh_ms: null,
             codexVisionKeyframesCacheDir: resultDir,
           },
         };
@@ -6562,10 +6660,12 @@ export function createCodexVisionKeyframesClient(options = {}) {
         await writeFile(selectorPromptPath, selectorPrompt, "utf8");
 
         let selectorJson;
+        let selectorCacheHit = false;
         let modelCallCount = 0;
         const selectorStartedAt = Date.now();
         if (!options.noCache && existsSync(selectorJsonPath)) {
           selectorJson = JSON.parse(await readFile(selectorJsonPath, "utf8"));
+          selectorCacheHit = true;
         } else {
           modelCallCount += 1;
           const selectorRaw = await codexExec({
@@ -6581,7 +6681,7 @@ export function createCodexVisionKeyframesClient(options = {}) {
           selectorJson = extractJsonFromText(selectorRaw);
           await writeFile(selectorJsonPath, JSON.stringify(selectorJson, null, 2) + "\n", "utf8");
         }
-        const selectorMs = Date.now() - selectorStartedAt;
+        const selectorMs = selectorCacheHit ? null : Date.now() - selectorStartedAt;
 
         const selectedFrames = normalizeSelectedFrames(selectorJson, candidateFrames, {
           totalLimit: keyframeTotalLimit,
@@ -6671,6 +6771,7 @@ export function createCodexVisionKeyframesClient(options = {}) {
           clientVersion: CLIENT_VERSION,
           selectorPromptVersion: SELECTOR_PROMPT_VERSION,
           finalPromptVersion: FINAL_PROMPT_VERSION,
+          executionConfigSignature,
           cached: false,
           usedVisual: true,
           frameCount: frames.length,
@@ -6682,7 +6783,10 @@ export function createCodexVisionKeyframesClient(options = {}) {
           frameMode: frameOptions.mode,
           interval: frameOptions.interval,
           hybridAnchorBudget: frameOptions.hybridAnchorBudget,
+          sourceFingerprint: frameResult.sourceFingerprint ?? null,
           modelCallCount,
+          modelReadBoundaryStatus: modelReadBoundaryEnforced ? "clean" : "unknown",
+          modelReadBoundaryEnforcement: modelReadBoundaryEnforced ? "macos-sandbox-exec" : null,
           frame_extract_ms: frameExtractMs,
           selector_ms: selectorMs,
           final_ms: finalMs,
@@ -6696,8 +6800,8 @@ export function createCodexVisionKeyframesClient(options = {}) {
           timelineCoverageRatio: extractionStats.timeline_coverage_ratio ?? null,
           lastFrameSec: extractionStats.last_frame_sec ?? null,
           durationSec: extractionStats.duration_sec ?? null,
-          frameCacheHit: frameResult.frameCacheHit,
-          visionCacheHit: false,
+          ...runCacheMeta({ frameResult, selectorCacheHit, visionCacheHit: false, declaredRunType }),
+          ...runTimingMeta(frameResult),
           frameCacheDir: frameResult.frameDir,
           codexVisionKeyframesCacheDir: resultDir,
           extractionStats,

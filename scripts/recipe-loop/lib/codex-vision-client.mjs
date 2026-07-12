@@ -3,14 +3,14 @@
 
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 
 const PROJECT_ROOT = process.cwd();
 const CACHE_DIR = path.join(PROJECT_ROOT, "notebooks/recipe_loop_data/cache/codex-vision");
 const CLIENT_VERSION = "codex-vision-client-v1";
-const FRAME_EXTRACTOR_VERSION = "extract-video-frames-v3-hybrid";
 const DEFAULT_MODEL = "gpt-5.4";
 const DEFAULT_MAX_FRAMES = 80;
 const DEFAULT_STORYBOARD_MAX_FRAMES = 0;
@@ -82,6 +82,7 @@ export function buildCodexVisionCacheKey({
   prompt,
   cacheText,
   frameManifestHash,
+  sourceFingerprint = null,
   clientVersion = CLIENT_VERSION,
 }) {
   return hashKey({
@@ -90,16 +91,8 @@ export function buildCodexVisionCacheKey({
     promptHash: hashText(prompt),
     cacheTextHash: hashText(cacheText),
     frameManifestHash,
+    sourceFingerprint,
     clientVersion,
-  });
-}
-
-function buildFrameCacheKey({ videoUrl, videoId, frameOptions }) {
-  return hashKey({
-    videoUrl,
-    videoId,
-    frameOptions,
-    extractorVersion: FRAME_EXTRACTOR_VERSION,
   });
 }
 
@@ -286,10 +279,16 @@ function commandToString(command, args) {
   return [command, ...args].map((part) => (/\s/.test(part) ? JSON.stringify(part) : part)).join(" ");
 }
 
-async function runCommand(command, args, { input = "", cwd = PROJECT_ROOT, timeoutMs = DEFAULT_TIMEOUT_MS, logPath = null } = {}) {
+async function runCommand(command, args, {
+  input = "",
+  cwd = PROJECT_ROOT,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  logPath = null,
+  env = process.env,
+} = {}) {
   await mkdir(path.dirname(logPath ?? path.join(PROJECT_ROOT, ".tmp-log")), { recursive: true });
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(command, args, { cwd, env, stdio: ["pipe", "pipe", "pipe"] });
     let output = "";
     let settled = false;
     const timer = setTimeout(() => {
@@ -319,26 +318,154 @@ async function runCommand(command, args, { input = "", cwd = PROJECT_ROOT, timeo
   });
 }
 
-export async function runCodexExec({ prompt, images = [], model, codexEffort = null, outputPath, logPath, timeoutMs }) {
-  const args = [
-    "exec",
-    "--ephemeral",
-    "--ignore-rules",
-    "--sandbox",
-    "read-only",
-    "-m",
-    model,
-    "-C",
-    PROJECT_ROOT,
-    "--output-last-message",
-    outputPath,
+function sandboxLiteral(value) {
+  return String(value).replace(/\\/gu, "\\\\").replace(/"/gu, '\\"');
+}
+
+function canonicalSandboxPath(value) {
+  if (value === "/var" || value.startsWith("/var/")) return `/private${value}`;
+  if (value === "/tmp" || value.startsWith("/tmp/")) return `/private${value}`;
+  return value;
+}
+
+export function buildLeakSafeSandboxProfile({ safeDir, homeDir = homedir() } = {}) {
+  if (!safeDir) throw new Error("safeDir is required for a source-only sandbox profile");
+  const blockedRoots = [path.join(homeDir, ".codex", "sessions")];
+  const safeRoots = [...new Set([safeDir, canonicalSandboxPath(safeDir)])];
+  const systemReadRoots = [
+    "/System", "/usr", "/bin", "/sbin", "/Library", "/private", "/dev",
+    path.join(homeDir, ".local", "bin", "codex"),
+    path.join(homeDir, ".codex", "packages", "standalone"),
   ];
-  if (codexEffort) args.push("-c", `model_reasoning_effort="${codexEffort}"`);
-  for (const imagePath of images) args.push("--image", imagePath);
-  args.push("-");
-  await runCommand("codex", args, { input: prompt, cwd: PROJECT_ROOT, timeoutMs, logPath });
-  if (existsSync(outputPath)) return readFile(outputPath, "utf8");
-  return readFile(logPath, "utf8");
+  return {
+    blockedRoots,
+    profile: [
+      "(version 1)",
+      "(deny default)",
+      "(allow process*)",
+      "(allow signal)",
+      "(allow network*)",
+      "(allow sysctl-read)",
+      "(allow mach-lookup)",
+      "(allow file-read-metadata)",
+      "(allow file-map-executable)",
+      '(allow file-read-data (literal "/"))',
+      '(allow file-write* (literal "/dev/null"))',
+      ...safeRoots.map((root) => `(allow file-read* (subpath "${sandboxLiteral(root)}"))`),
+      ...safeRoots.map((root) => `(allow file-write* (subpath "${sandboxLiteral(root)}"))`),
+      ...systemReadRoots.map((root) => `(allow file-read* (subpath "${sandboxLiteral(root)}"))`),
+      ...blockedRoots.map((root) => `(deny file-read* (subpath "${sandboxLiteral(root)}"))`),
+    ].join("\n"),
+  };
+}
+
+export async function runCodexExec({
+  prompt,
+  images = [],
+  model,
+  codexEffort = null,
+  outputPath,
+  logPath,
+  timeoutMs,
+  runCommandImpl = runCommand,
+  platform = process.platform,
+  sandboxExecPath = "/usr/bin/sandbox-exec",
+  sandboxAvailable = null,
+  codexAuthPath = null,
+}) {
+  const effectiveSandboxAvailable = sandboxAvailable ?? (platform === "darwin" && existsSync(sandboxExecPath));
+  if (!effectiveSandboxAvailable) {
+    throw new Error("LEAK_SAFE_EXECUTION_UNAVAILABLE: macOS sandbox-exec is required for Codex Vision extraction");
+  }
+
+  const safeDir = await mkdtemp(path.join(tmpdir(), "recipe-loop-codex-safe-"));
+  await mkdir(path.join(safeDir, ".codex"), { recursive: true });
+  const sourceAuthPath = codexAuthPath ?? path.join(homedir(), ".codex", "auth.json");
+  const ephemeralAuthPath = path.join(safeDir, ".codex", "auth.json");
+  if (!existsSync(sourceAuthPath)) {
+    throw new Error("LEAK_SAFE_EXECUTION_UNAVAILABLE: Codex auth.json is required for isolated execution");
+  }
+  await cp(sourceAuthPath, ephemeralAuthPath);
+  const safeOutputPath = path.join(safeDir, "last-message.md");
+  const boundaryPath = `${outputPath}.model-read-boundary.json`;
+    const { profile, blockedRoots } = buildLeakSafeSandboxProfile({ safeDir });
+  try {
+    const safeImages = [];
+    const usedImageNames = new Set();
+    for (const [index, imagePath] of images.entries()) {
+      const extension = path.extname(imagePath) || ".jpg";
+      let safeName = `attachment-${String(index + 1).padStart(3, "0")}${extension}`;
+      let collision = 1;
+      while (usedImageNames.has(safeName)) {
+        safeName = `attachment-${String(index + 1).padStart(3, "0")}-${collision}${extension}`;
+        collision += 1;
+      }
+      usedImageNames.add(safeName);
+      const safeImagePath = path.join(safeDir, safeName);
+      await cp(imagePath, safeImagePath);
+      safeImages.push(safeImagePath);
+    }
+
+    const codexArgs = [
+      "exec",
+      "--skip-git-repo-check",
+      "--ephemeral",
+      "--ignore-user-config",
+      "--ignore-rules",
+      "--disable", "plugins",
+      "--disable", "apps",
+      "--disable", "browser_use",
+      "--disable", "in_app_browser",
+      "--disable", "multi_agent",
+      "--disable", "shell_tool",
+      "--disable", "hooks",
+      "--sandbox",
+      "read-only",
+      "-m",
+      model,
+      "-C",
+      safeDir,
+      "--output-last-message",
+      safeOutputPath,
+    ];
+    if (codexEffort) codexArgs.push("-c", `model_reasoning_effort="${codexEffort}"`);
+    for (const imagePath of safeImages) codexArgs.push("--image", imagePath);
+    codexArgs.push("-");
+
+    await runCommandImpl(sandboxExecPath, ["-p", profile, "codex", ...codexArgs], {
+      input: prompt,
+      cwd: safeDir,
+      timeoutMs,
+      logPath,
+      env: {
+        ...process.env,
+        HOME: safeDir,
+        CODEX_HOME: path.join(safeDir, ".codex"),
+      },
+    });
+    const output = existsSync(safeOutputPath)
+      ? await readFile(safeOutputPath, "utf8")
+      : await readFile(logPath, "utf8");
+    await writeFile(outputPath, output, "utf8");
+    await writeFile(
+      boundaryPath,
+      JSON.stringify({
+        version: "model-read-boundary-v1",
+        status: "clean",
+        enforcement: "macos-sandbox-exec",
+        blockedRoots,
+        sourceTextTransport: "stdin",
+        visibleImageCount: safeImages.length,
+        modelViewHasGit: false,
+        modelViewHasGolden: false,
+        ephemeralCredentialScope: "temporary-codex-home",
+      }, null, 2) + "\n",
+      "utf8",
+    );
+    return output;
+  } finally {
+    await rm(safeDir, { recursive: true, force: true });
+  }
 }
 
 export async function defaultExtractFrames({
@@ -347,31 +474,34 @@ export async function defaultExtractFrames({
   cacheDir,
   frameOptions,
   timeoutMs,
+  noCache = false,
   runCommandImpl = runCommand,
 }) {
   if (!videoUrl) throw new Error("codex-vision provider는 videoUrl이 필요합니다.");
-
-  const key = buildFrameCacheKey({ videoUrl, videoId, frameOptions });
-  const frameDir = path.join(cacheDir, "_frames", key);
-  const framesPath = path.join(frameDir, "frames.json");
-  const statsPath = path.join(frameDir, "extraction_stats.json");
-  const logPath = path.join(frameDir, "extract-video-frames.log");
-
-  if (existsSync(framesPath) && existsSync(statsPath)) {
-    const frames = JSON.parse(await readFile(framesPath, "utf8"));
-    const extractionStats = JSON.parse(await readFile(statsPath, "utf8"));
-    return { frameCacheHit: true, frameDir, frames, extractionStats };
-  }
-
-  await mkdir(frameDir, { recursive: true });
+  const requestKey = hashKey({
+    videoId,
+    frameOptions,
+    noCache,
+    pid: process.pid,
+    startedAt: Date.now(),
+    nonce: Math.random(),
+  });
+  const requestDir = path.join(cacheDir, "_requests", requestKey);
+  const resultPath = path.join(requestDir, "frame-result.json");
+  const logPath = path.join(requestDir, "extract-video-frames.log");
+  await mkdir(requestDir, { recursive: true });
   const scriptPath = path.join(PROJECT_ROOT, "scripts/recipe-loop/extract-video-frames.py");
   const args = [
     scriptPath,
     videoUrl,
     "--video-id",
     videoId ?? "unknown",
-    "--out-dir",
-    frameDir,
+    "--cache-root",
+    cacheDir,
+    "--result-json",
+    resultPath,
+    "--request-key",
+    requestKey,
     "--mode",
     frameOptions.mode,
     "--max-frames",
@@ -387,10 +517,28 @@ export async function defaultExtractFrames({
     "--hybrid-anchor-budget",
     String(frameOptions.hybridAnchorBudget ?? 72),
   ];
+  if (noCache) args.push("--no-cache");
   await runCommandImpl("python3", args, { cwd: PROJECT_ROOT, timeoutMs, logPath });
+  const managedResult = JSON.parse(await readFile(resultPath, "utf8"));
+  const frameDir = managedResult.frameDir;
+  if (!frameDir) throw new Error("managed frame extractor가 frameDir을 반환하지 않았습니다.");
+  const framesPath = path.join(frameDir, "frames.json");
+  const statsPath = path.join(frameDir, "extraction_stats.json");
   const frames = JSON.parse(await readFile(framesPath, "utf8"));
   const extractionStats = JSON.parse(await readFile(statsPath, "utf8"));
-  return { frameCacheHit: false, frameDir, frames, extractionStats };
+  return {
+    sourceFingerprint: managedResult.sourceFingerprint ?? extractionStats.source_fingerprint ?? null,
+    sourceVideoCacheHit: Boolean(managedResult.sourceVideoCacheHit),
+    frameCacheHit: Boolean(managedResult.frameCacheHit),
+    frameDir,
+    frames,
+    extractionStats,
+    runTimings: managedResult.runTimings ?? {
+      source_prepare_ms: null,
+      scene_scan_ms: null,
+      frame_write_ms: null,
+    },
+  };
 }
 
 async function writeFailure(resultDir, error, extra = {}) {
@@ -432,14 +580,23 @@ export function createCodexVisionClient(options = {}) {
         cacheDir,
         frameOptions,
         timeoutMs,
+        noCache: Boolean(options.noCache),
         runCommandImpl: options.runCommand,
       });
       const frames = frameResult.frames ?? [];
       if (!Array.isArray(frames) || frames.length === 0) throw new Error("Codex Vision 프레임 추출 결과가 비었습니다.");
 
       const manifestHash = frameManifestHash(frames);
-      const resultKey = buildCodexVisionCacheKey({ model, prompt, cacheText, frameManifestHash: manifestHash });
-      const resultDir = path.join(cacheDir, resultKey);
+      const resultKey = buildCodexVisionCacheKey({
+        model,
+        prompt,
+        cacheText,
+        frameManifestHash: manifestHash,
+        sourceFingerprint: frameResult.sourceFingerprint ?? null,
+      });
+      const resultDir = options.noCache
+        ? path.join(cacheDir, "_runs", hashKey({ resultKey, pid: process.pid, startedAt: Date.now(), nonce: Math.random() }))
+        : path.join(cacheDir, resultKey);
       const finalJsonPath = path.join(resultDir, "final.json");
 
       if (!options.noCache && !options.refreshFinal && existsSync(finalJsonPath)) {

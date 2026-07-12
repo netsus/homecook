@@ -1,8 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { spawnSync } from "node:child_process";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -95,9 +96,302 @@ describe("recipe-loop codex-vision provider", () => {
       cacheText: "source",
       frameManifestHash: "frames",
     });
+    const changedSource = buildCodexVisionCacheKey({
+      model: "gpt-5.4",
+      prompt: "prompt",
+      cacheText: "source",
+      frameManifestHash: "frames",
+      sourceFingerprint: "changed-source",
+    });
 
     expect(first).toBe(second);
     expect(changed).not.toBe(first);
+    expect(changedSource).not.toBe(first);
+  });
+
+  it("separates cached frame artifact timings from the current extraction call", async () => {
+    const { defaultExtractFrames } = await import(codexVisionModuleUrl);
+    const cacheDir = path.join(workdir, "frame-timing-cache");
+    let commandCalls = 0;
+    const frameOptions = {
+      mode: "hybrid",
+      maxFrames: 80,
+      storyboardMaxFrames: 0,
+      sceneDetail: "dense",
+      sceneSelection: "balanced",
+      interval: 4,
+      hybridAnchorBudget: 36,
+    };
+    const runCommandImpl = async (_command: string, args: string[]) => {
+      commandCalls += 1;
+      const resultPath = args[args.indexOf("--result-json") + 1];
+      const forcedCold = args.includes("--no-cache");
+      const frameDir = forcedCold
+        ? path.join(cacheDir, "_frame-runs", `forced-${commandCalls}`)
+        : path.join(cacheDir, "_frames/content-key");
+      mkdirSync(path.join(frameDir, "frames"), { recursive: true });
+      const framePath = path.join(frameDir, "frames/frame_0001_00000.000.jpg");
+      writeFileSync(framePath, "fake", "utf8");
+      writeJson(path.join(frameDir, "frames.json"), [{
+        index: 1,
+        timestamp_sec: 0,
+        timestamp: "00:00.000",
+        path: framePath,
+        reason: "scene:first",
+      }]);
+      writeJson(path.join(frameDir, "extraction_stats.json"), {
+        scene_selected: 1,
+        source_prepare_ms: 11,
+        scene_scan_ms: 22,
+        frame_write_ms: 33,
+      });
+      const cacheHit = commandCalls === 2;
+      writeJson(resultPath, {
+        frameDir,
+        sourceFingerprint: "a".repeat(64),
+        sourceVideoCacheHit: cacheHit,
+        frameCacheHit: cacheHit,
+        runTimings: cacheHit
+          ? { source_prepare_ms: null, scene_scan_ms: null, frame_write_ms: null }
+          : { source_prepare_ms: 11, scene_scan_ms: 22, frame_write_ms: 33 },
+      });
+    };
+    const input = {
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      videoId: "abc123",
+      cacheDir,
+      frameOptions,
+      timeoutMs: 10_000,
+      runCommandImpl,
+    };
+
+    const fresh = await defaultExtractFrames(input);
+    const cached = await defaultExtractFrames(input);
+    const forcedCold = await defaultExtractFrames({ ...input, noCache: true });
+
+    expect(commandCalls).toBe(3);
+    expect(fresh).toMatchObject({
+      frameCacheHit: false,
+      runTimings: { source_prepare_ms: 11, scene_scan_ms: 22, frame_write_ms: 33 },
+    });
+    expect(cached).toMatchObject({
+      frameCacheHit: true,
+      runTimings: { source_prepare_ms: null, scene_scan_ms: null, frame_write_ms: null },
+    });
+    expect(cached.extractionStats).toMatchObject({
+      source_prepare_ms: 11,
+      scene_scan_ms: 22,
+      frame_write_ms: 33,
+    });
+    expect(forcedCold).toMatchObject({
+      frameCacheHit: false,
+      runTimings: { source_prepare_ms: 11, scene_scan_ms: 22, frame_write_ms: 33 },
+    });
+  });
+
+  it("prepares a content-fingerprinted local source cache before loading computer-vision libraries", () => {
+    const sourcePath = path.join(workdir, "source-input.mp4");
+    const outDir = path.join(workdir, "source-cache");
+    const scriptPath = path.join(repoRoot, "scripts/recipe-loop/extract-video-frames.py");
+    writeFileSync(sourcePath, "video-version-one", "utf8");
+    const args = [
+      scriptPath,
+      sourcePath,
+      "--video-id", "local-test",
+      "--out-dir", outDir,
+      "--prepare-only",
+    ];
+
+    const first = spawnSync("python3", args, { cwd: repoRoot, encoding: "utf8" });
+    const second = spawnSync("python3", args, { cwd: repoRoot, encoding: "utf8" });
+    const firstMeta = JSON.parse(readFileSync(path.join(outDir, "source-preparation.json"), "utf8"));
+    expect(first.status).toBe(0);
+    expect(second.status).toBe(0);
+    expect(firstMeta.sourceFingerprint).toMatch(/^[a-f0-9]{64}$/u);
+    expect(JSON.parse(second.stdout)).toMatchObject({ sourceVideoCacheHit: true });
+
+    writeFileSync(sourcePath, "video-version-two", "utf8");
+    const changed = spawnSync("python3", args, { cwd: repoRoot, encoding: "utf8" });
+    const changedMeta = JSON.parse(readFileSync(path.join(outDir, "source-preparation.json"), "utf8"));
+    expect(changed.status).toBe(0);
+    expect(JSON.parse(changed.stdout)).toMatchObject({ sourceVideoCacheHit: false });
+    expect(changedMeta.sourceFingerprint).not.toBe(firstMeta.sourceFingerprint);
+  });
+
+  it("delegates source fingerprint and frame-cache ownership to one extractor invocation", async () => {
+    const { defaultExtractFrames } = await import(codexVisionModuleUrl);
+    const cacheDir = path.join(workdir, "managed-frame-cache");
+    let commandCalls = 0;
+    const result = await defaultExtractFrames({
+      videoUrl: "https://www.youtube.com/watch?v=managed123",
+      videoId: "managed123",
+      cacheDir,
+      frameOptions: {
+        mode: "hybrid",
+        maxFrames: 12,
+        storyboardMaxFrames: 0,
+        sceneDetail: "dense",
+        sceneSelection: "balanced",
+        interval: 4,
+        hybridAnchorBudget: 36,
+      },
+      timeoutMs: 10_000,
+      runCommandImpl: async (_command: string, args: string[]) => {
+        commandCalls += 1;
+        expect(args).toContain("--cache-root");
+        expect(args).toContain("--result-json");
+        const resultPath = args[args.indexOf("--result-json") + 1];
+        const frameDir = path.join(cacheDir, "_frames/content-key");
+        const framePath = path.join(frameDir, "frames/frame_0001.jpg");
+        mkdirSync(path.dirname(framePath), { recursive: true });
+        writeFileSync(framePath, "fake", "utf8");
+        writeJson(path.join(frameDir, "frames.json"), [{
+          index: 1,
+          timestamp_sec: 0,
+          timestamp: "00:00.000",
+          path: framePath,
+          reason: "scene:first",
+        }]);
+        writeJson(path.join(frameDir, "extraction_stats.json"), { scene_selected: 1 });
+        writeJson(resultPath, {
+          frameDir,
+          sourceFingerprint: "a".repeat(64),
+          sourceVideoCacheHit: false,
+          frameCacheHit: false,
+          runTimings: { source_prepare_ms: 11, scene_scan_ms: 22, frame_write_ms: 33 },
+        });
+      },
+    });
+
+    expect(commandCalls).toBe(1);
+    expect(result).toMatchObject({
+      sourceFingerprint: "a".repeat(64),
+      sourceVideoCacheHit: false,
+      frameCacheHit: false,
+      runTimings: { source_prepare_ms: 11, scene_scan_ms: 22, frame_write_ms: 33 },
+    });
+  });
+
+  it("runs Codex in a temporary source-only view with workspace reads denied", async () => {
+    const { runCodexExec } = await import(codexVisionModuleUrl);
+    const imagePath = path.join(workdir, "frame.jpg");
+    const outputPath = path.join(workdir, "selector.raw.md");
+    const logPath = path.join(workdir, "selector.log");
+    const authPath = path.join(workdir, "auth.json");
+    writeFileSync(imagePath, "fake-image", "utf8");
+    writeFileSync(authPath, "{}", "utf8");
+    let safeCwd = "";
+    let copiedImagePath = "";
+
+    const result = await runCodexExec({
+      prompt: "공개 소스만 사용해 JSON을 출력하라.",
+      images: [imagePath],
+      model: "fixture-model",
+      outputPath,
+      logPath,
+      timeoutMs: 10_000,
+      platform: "darwin",
+      sandboxExecPath: "/usr/bin/sandbox-exec",
+      sandboxAvailable: true,
+      codexAuthPath: authPath,
+      runCommandImpl: async (command: string, args: string[], options: { cwd: string; input: string }) => {
+        expect(command).toBe("/usr/bin/sandbox-exec");
+        expect(args).toContain("codex");
+        expect(args).toContain("--ignore-user-config");
+        expect(args).toContain("--skip-git-repo-check");
+        const disabledFeatures = args.flatMap((arg, index) => arg === "--disable" ? [args[index + 1]] : []);
+        expect(disabledFeatures).toEqual(expect.arrayContaining(["plugins", "shell_tool", "hooks", "multi_agent"]));
+        const profile = args[args.indexOf("-p") + 1];
+        expect(profile).toContain("deny file-read*");
+        expect(profile).toContain("(deny default)");
+        expect(profile).not.toContain("(allow default)");
+        expect(profile).toContain(path.join(homedir(), ".codex", "sessions"));
+        safeCwd = options.cwd;
+        expect(safeCwd).not.toContain(repoRoot);
+        expect(existsSync(path.join(safeCwd, ".git"))).toBe(false);
+        expect(existsSync(path.join(safeCwd, "golden.json"))).toBe(false);
+        copiedImagePath = args[args.indexOf("--image") + 1];
+        expect(path.dirname(copiedImagePath)).toBe(safeCwd);
+        expect(existsSync(copiedImagePath)).toBe(true);
+        const safeOutputPath = args[args.indexOf("--output-last-message") + 1];
+        expect(path.dirname(safeOutputPath)).toBe(safeCwd);
+        writeFileSync(safeOutputPath, "{\"recipes\":[]}", "utf8");
+        return "ok";
+      },
+    });
+
+    expect(result).toBe("{\"recipes\":[]}");
+    expect(readFileSync(outputPath, "utf8")).toBe(result);
+    expect(existsSync(safeCwd)).toBe(false);
+    expect(existsSync(copiedImagePath)).toBe(false);
+    const boundary = JSON.parse(readFileSync(`${outputPath}.model-read-boundary.json`, "utf8"));
+    expect(boundary).toMatchObject({
+      status: "clean",
+      enforcement: "macos-sandbox-exec",
+      sourceTextTransport: "stdin",
+      visibleImageCount: 1,
+      modelViewHasGit: false,
+      modelViewHasGolden: false,
+    });
+  });
+
+  it("blocks real subprocess reads outside the source-only directory", async () => {
+    if (process.platform !== "darwin" || !existsSync("/usr/bin/sandbox-exec")) return;
+    const { buildLeakSafeSandboxProfile } = await import(codexVisionModuleUrl);
+    const safeDir = mkdtempSync(path.join(tmpdir(), "recipe-loop-codex-safe-"));
+    const forbiddenPath = path.join(homedir(), `.recipe-loop-outside-golden-${process.pid}.json`);
+    mkdirSync(safeDir, { recursive: true });
+    writeFileSync(path.join(safeDir, "public-source.json"), "public", "utf8");
+    writeFileSync(forbiddenPath, "secret-golden", "utf8");
+    const { profile } = buildLeakSafeSandboxProfile({ safeDir });
+
+    const allowed = spawnSync("/usr/bin/sandbox-exec", [
+      "-p", profile, "/bin/cat", path.join(safeDir, "public-source.json"),
+    ], { cwd: safeDir, encoding: "utf8" });
+    const denied = spawnSync("/usr/bin/sandbox-exec", [
+      "-p", profile, "/bin/cat", forbiddenPath,
+    ], { cwd: safeDir, encoding: "utf8" });
+
+    expect(allowed.status, allowed.stderr).toBe(0);
+    expect(allowed.stdout).toBe("public");
+    expect(denied.status).not.toBe(0);
+    expect(denied.stdout).not.toContain("secret-golden");
+    rmSync(safeDir, { recursive: true, force: true });
+    rmSync(forbiddenPath, { force: true });
+  });
+
+  it("copies colliding image basenames to unique attachment aliases", async () => {
+    const { runCodexExec } = await import(codexVisionModuleUrl);
+    const first = path.join(workdir, "a", "frame-002.jpg");
+    const second = path.join(workdir, "b", "frame-002.jpg");
+    mkdirSync(path.dirname(first), { recursive: true });
+    mkdirSync(path.dirname(second), { recursive: true });
+    writeFileSync(first, "first", "utf8");
+    writeFileSync(second, "second", "utf8");
+    const authPath = path.join(workdir, "collision-auth.json");
+    writeFileSync(authPath, "{}", "utf8");
+
+    await runCodexExec({
+      prompt: "JSON",
+      images: [first, second],
+      model: "fixture-model",
+      outputPath: path.join(workdir, "collision.raw.md"),
+      logPath: path.join(workdir, "collision.log"),
+      timeoutMs: 10_000,
+      platform: "darwin",
+      sandboxExecPath: "/usr/bin/sandbox-exec",
+      sandboxAvailable: true,
+      codexAuthPath: authPath,
+      runCommandImpl: async (_command: string, args: string[]) => {
+        const imagePaths = args.flatMap((arg, index) => arg === "--image" ? [args[index + 1]] : []);
+        expect(new Set(imagePaths.map((value) => path.basename(value))).size).toBe(2);
+        expect(readFileSync(imagePaths[0], "utf8")).toBe("first");
+        expect(readFileSync(imagePaths[1], "utf8")).toBe("second");
+        const safeOutputPath = args[args.indexOf("--output-last-message") + 1];
+        writeFileSync(safeOutputPath, "{\"recipes\":[]}", "utf8");
+        return "ok";
+      },
+    });
   });
 
   it("builds bounded source cue packets from raw source text while skipping source noise", async () => {
@@ -746,6 +1040,240 @@ describe("recipe-loop codex-vision provider", () => {
     expect(existsSync(path.join(first.meta.codexVisionKeyframesCacheDir, "selector.json"))).toBe(true);
     expect(existsSync(path.join(first.meta.codexVisionKeyframesCacheDir, "selected_frames.json"))).toBe(true);
     expect(existsSync(path.join(first.meta.codexVisionKeyframesCacheDir, "final.json"))).toBe(true);
+  });
+
+  it("classifies selector cache reuse separately from a cold keyframes run", async () => {
+    const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir, 3);
+    let extractCalls = 0;
+    const modelCalls: string[] = [];
+    const client = createCodexVisionKeyframesClient({
+      cacheDir: path.join(workdir, "keyframes-cache-run-type"),
+      model: "fixture-final-model",
+      selectorModel: "fixture-selector-model",
+      selectorCandidateLimit: 3,
+      keyframeTotalLimit: 2,
+      keyframesPerRecipe: 2,
+      refreshFinal: true,
+      runType: "cold",
+      modelReadBoundaryEnforced: true,
+      extractFrames: async () => {
+        const cacheHit = extractCalls > 0;
+        extractCalls += 1;
+        return {
+          sourceVideoCacheHit: cacheHit,
+          frameCacheHit: cacheHit,
+          runTimings: cacheHit
+            ? { source_prepare_ms: null, scene_scan_ms: null, frame_write_ms: null }
+            : { source_prepare_ms: 10, scene_scan_ms: 20, frame_write_ms: 30 },
+          frameDir,
+          frames,
+          extractionStats: { scene_selected: 3 },
+        };
+      },
+      codexExec: async ({ model, outputPath, logPath }: { model: string; outputPath: string; logPath: string }) => {
+        modelCalls.push(model);
+        const output = model === "fixture-selector-model"
+          ? JSON.stringify({
+            selectedFrames: [
+              { file: path.basename(frames[1].path), recipeHint: "테스트 요리", reason: "중간 과정" },
+              { file: path.basename(frames[2].path), recipeHint: "테스트 요리", reason: "완성 과정" },
+            ],
+          })
+          : JSON.stringify({
+            recipes: [{
+              title: "테스트 요리",
+              ingredients: [{ name: "주재료", amount: null, unit: null }],
+              steps: ["주재료를 익힌다."],
+            }],
+          });
+        writeFileSync(outputPath, output, "utf8");
+        writeFileSync(logPath, "ok", "utf8");
+        return output;
+      },
+    });
+
+    const input = {
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=abc123",
+      cacheText: "테스트 요리",
+    };
+    const cold = await client.generate(input);
+    const selectorWarm = await client.generate(input);
+
+    expect(cold.meta).toMatchObject({
+      sourceVideoCacheHit: false,
+      frameCacheHit: false,
+      selectorCacheHit: false,
+      visionCacheHit: false,
+      observedRunType: "cold",
+      declaredRunType: "cold",
+      runTypeMatches: true,
+      coldTimingEligible: true,
+      modelCallCount: 2,
+      modelReadBoundaryStatus: "clean",
+      modelReadBoundaryEnforcement: "macos-sandbox-exec",
+      source_prepare_ms: 10,
+      scene_scan_ms: 20,
+      frame_write_ms: 30,
+    });
+    expect(selectorWarm.meta).toMatchObject({
+      sourceVideoCacheHit: true,
+      frameCacheHit: true,
+      selectorCacheHit: true,
+      visionCacheHit: false,
+      observedRunType: "selector-warm",
+      declaredRunType: "cold",
+      runTypeMatches: false,
+      coldTimingEligible: false,
+      modelCallCount: 1,
+      source_prepare_ms: null,
+      scene_scan_ms: null,
+      frame_write_ms: null,
+    });
+    expect(cold.meta.selector_ms).toEqual(expect.any(Number));
+    expect(selectorWarm.meta.selector_ms).toBeNull();
+    expect(selectorWarm.meta.runTypeWarning).toContain("declared cold");
+    expect(cold.meta.executionConfigSignature).toMatch(/^[a-f0-9]{24}$/u);
+    expect(selectorWarm.meta.executionConfigSignature).toBe(cold.meta.executionConfigSignature);
+    expect(modelCalls).toEqual([
+      "fixture-selector-model",
+      "fixture-final-model",
+      "fixture-final-model",
+    ]);
+
+    const fullCacheClient = createCodexVisionKeyframesClient({
+      cacheDir: path.join(workdir, "keyframes-cache-run-type"),
+      model: "fixture-final-model",
+      selectorModel: "fixture-selector-model",
+      selectorCandidateLimit: 3,
+      keyframeTotalLimit: 2,
+      keyframesPerRecipe: 2,
+      runType: "cold",
+      extractFrames: async () => ({
+        sourceVideoCacheHit: true,
+        frameCacheHit: true,
+        runTimings: { source_prepare_ms: null, scene_scan_ms: null, frame_write_ms: null },
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 3 },
+      }),
+      codexExec: async () => {
+        throw new Error("full cache hit must not call a model");
+      },
+    });
+    const fullCache = await fullCacheClient.generate(input);
+
+    expect(fullCache.meta).toMatchObject({
+      sourceVideoCacheHit: true,
+      frameCacheHit: true,
+      selectorCacheHit: true,
+      visionCacheHit: true,
+      observedRunType: "full-cache",
+      declaredRunType: "cold",
+      runTypeMatches: false,
+      coldTimingEligible: false,
+      modelCallCount: 0,
+      selector_ms: null,
+      final_ms: null,
+      total_fresh_ms: null,
+    });
+    expect(fullCache.meta.executionConfigSignature).toBe(cold.meta.executionConfigSignature);
+  });
+
+  it("propagates the prepared source fingerprint into the keyframe result cache key", async () => {
+    const { buildCodexVisionKeyframesCacheKey } = await import(codexVisionKeyframesModuleUrl);
+    const common = {
+      model: "fixture-final",
+      selectorModel: "fixture-selector",
+      prompt: "extract",
+      cacheText: "public sources",
+      frameManifest: "same-frame-manifest",
+      candidateManifest: "same-candidates",
+      keyframeTotalLimit: 8,
+      keyframesPerRecipe: 8,
+      selectorCandidateLimit: 12,
+      frameOptions: { mode: "hybrid", interval: 4 },
+      singleRecipeOnly: true,
+    };
+
+    expect(buildCodexVisionKeyframesCacheKey({ ...common, sourceFingerprint: "a".repeat(64) }))
+      .not.toBe(buildCodexVisionKeyframesCacheKey({ ...common, sourceFingerprint: "b".repeat(64) }));
+  });
+
+  it("isolates every no-cache keyframe model run in its own result directory", async () => {
+    const { createCodexVisionKeyframesClient } = await import(codexVisionKeyframesModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir, 2);
+    const client = createCodexVisionKeyframesClient({
+      cacheDir: path.join(workdir, "no-cache-result-isolation"),
+      model: "fixture-final-model",
+      selectorModel: "fixture-selector-model",
+      selectorCandidateLimit: 2,
+      keyframeTotalLimit: 1,
+      keyframesPerRecipe: 1,
+      noCache: true,
+      extractFrames: async () => ({
+        sourceFingerprint: "a".repeat(64),
+        sourceVideoCacheHit: false,
+        frameCacheHit: false,
+        runTimings: { source_prepare_ms: 1, scene_scan_ms: 2, frame_write_ms: 3 },
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 2 },
+      }),
+      codexExec: async ({ model }: { model: string }) => model === "fixture-selector-model"
+        ? JSON.stringify({ selectedFrames: [{ file: "attachment-001.jpg", reason: "재료" }] })
+        : JSON.stringify({
+          recipes: [{ title: "테스트", ingredients: [{ name: "재료" }], steps: ["조리한다."] }],
+        }),
+    });
+    const input = {
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=no-cache",
+      cacheText: "테스트",
+    };
+
+    const first = await client.generate(input);
+    const second = await client.generate(input);
+
+    expect(first.meta.codexVisionKeyframesCacheDir).not.toBe(second.meta.codexVisionKeyframesCacheDir);
+    expect(first.meta.codexVisionKeyframesCacheDir).toContain(`${path.sep}_runs${path.sep}`);
+    expect(second.meta.codexVisionKeyframesCacheDir).toContain(`${path.sep}_runs${path.sep}`);
+  });
+
+  it("isolates every no-cache basic Codex Vision run in its own result directory", async () => {
+    const { createCodexVisionClient } = await import(codexVisionModuleUrl);
+    const { frameDir, frames } = makeFrameFixture(workdir, 1);
+    const client = createCodexVisionClient({
+      cacheDir: path.join(workdir, "basic-no-cache-result-isolation"),
+      model: "fixture-final-model",
+      batchSize: 1,
+      noCache: true,
+      extractFrames: async () => ({
+        sourceFingerprint: "a".repeat(64),
+        sourceVideoCacheHit: false,
+        frameCacheHit: false,
+        runTimings: { source_prepare_ms: 1, scene_scan_ms: 2, frame_write_ms: 3 },
+        frameDir,
+        frames,
+        extractionStats: { scene_selected: 1 },
+      }),
+      codexExec: async ({ images }: { images: string[] }) => images.length
+        ? "프레임에서 재료와 조리 장면을 확인했다."
+        : JSON.stringify({ recipes: [{ title: "테스트", ingredients: [], steps: ["조리한다."] }] }),
+    });
+    const input = {
+      prompt: "JSON만 출력",
+      videoUrl: "https://www.youtube.com/watch?v=basic-no-cache",
+      cacheText: "테스트",
+    };
+
+    const first = await client.generate(input);
+    const second = await client.generate(input);
+
+    expect(first.meta.codexVisionCacheDir).not.toBe(second.meta.codexVisionCacheDir);
+    expect(first.meta.codexVisionCacheDir).toContain(`${path.sep}_runs${path.sep}`);
+    expect(second.meta.codexVisionCacheDir).toContain(`${path.sep}_runs${path.sep}`);
   });
 
   it("builds source-derived candidate hints without promoting obvious non-recipes", async () => {
@@ -4138,7 +4666,12 @@ describe("recipe-loop codex-vision provider", () => {
             cached: false,
             model: "fixture-final-model",
             provider: "codex-vision-keyframes",
-            meta: { provider: "codex-vision-keyframes", selectedFrameCount: 2 },
+            meta: {
+              provider: "codex-vision-keyframes",
+              selectedFrameCount: 2,
+              modelReadBoundaryStatus: "clean",
+              modelReadBoundaryEnforcement: "macos-sandbox-exec",
+            },
             json: {
               recipes: [
                 {
@@ -4157,6 +4690,15 @@ describe("recipe-loop codex-vision provider", () => {
     const output = JSON.parse(readFileSync(path.join(caseDir, "runs/keyframes-test/result.json"), "utf8"));
     expect(output.meta.provider).toBe("codex-vision-keyframes");
     expect(output.recipes[0].title).toBe("메밀 후토마끼");
+    const accessManifest = JSON.parse(readFileSync(
+      path.join(caseDir, "runs/keyframes-test/file-access-manifest.json"),
+      "utf8",
+    ));
+    expect(accessManifest).toMatchObject({
+      status: "clean",
+      enforcement: "macos-sandbox-exec",
+      forbiddenReadEvents: [],
+    });
   });
 
   it("passes segmented keyframe options from run-extraction without reading golden.json", async () => {

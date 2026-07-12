@@ -10,8 +10,10 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import { gradeDeterministic, mergeDeductionReasonSummaries, prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
-import { loadDatasetProfile } from "./lib/dataset-profile.mjs";
+import { canaryTokensFromConfig, gradeDeterministic, mergeDeductionReasonSummaries, prepareCanaryGradingInputs, summarizeCanaryLeaks } from "./lib/grading.mjs";
+import { assertProtectedDatasetProfile, isProtectedSplit, loadDatasetProfile } from "./lib/dataset-profile.mjs";
+import { assertFrozenResults } from "./lib/freeze-guard.mjs";
+import { evaluatePromotionGates } from "./lib/promotion-gates.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
@@ -64,6 +66,7 @@ function failedRow(id, reason) {
 async function main() {
   const args = parseCliArgs(process.argv.slice(2));
   const split = typeof args.split === "string" ? args.split : "train";
+  const aggregateOnly = isProtectedSplit(split);
   const outTag = typeof args["out-tag"] === "string" ? args["out-tag"] : "latest";
   const expectedCountArg = toInt(args["expected-count"]);
   const splitDir = path.join(PROJECT_ROOT, DATA_ROOT, split);
@@ -78,8 +81,22 @@ async function main() {
       requestedIds,
     })
     : null;
+  assertProtectedDatasetProfile({
+    split,
+    datasetProfile,
+    requestedIds,
+    expectedCount: expectedCountArg,
+  });
   const ids = datasetProfile?.ids ?? requestedIds
     ?? (await readdir(splitDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name).sort();
+  await assertFrozenResults({
+    projectRoot: PROJECT_ROOT,
+    dataRoot: DATA_ROOT,
+    split,
+    outTag,
+    ids,
+    datasetProfile,
+  });
 
   const rows = [];
   for (const id of ids) {
@@ -89,14 +106,14 @@ async function main() {
     const hasGolden = existsSync(goldenPath);
     if (!hasResult || !hasGolden) {
       const reason = !hasResult && !hasGolden ? "missing_result_and_golden" : (!hasResult ? "missing_result" : "missing_golden");
-      console.error(`[FAIL] ${id}: ${reason}`);
+      if (!aggregateOnly) console.error(`[FAIL] ${id}: ${reason}`);
       rows.push(failedRow(id, reason));
       continue;
     }
     const result = JSON.parse(await readFile(resultPath, "utf8"));
     const golden = JSON.parse(await readFile(goldenPath, "utf8"));
     if (golden.reviewStatus !== "approved") {
-      console.error(`[FAIL] ${id}: unapproved_golden`);
+      if (!aggregateOnly) console.error(`[FAIL] ${id}: unapproved_golden`);
       rows.push(failedRow(id, "unapproved_golden"));
       continue;
     }
@@ -107,11 +124,14 @@ async function main() {
       golden,
       result,
       resultScope,
+      externalCanaries: canaryTokensFromConfig(datasetProfile?.canary),
     });
     const score = gradeDeterministic(cleanResult, cleanGolden);
     const row = { videoId: id, success: true, ...score, canaryLeak };
     rows.push(row);
-    await writeFile(path.join(splitDir, id, "runs", outTag, "grade.json"), JSON.stringify(row, null, 2) + "\n", "utf8");
+    if (!aggregateOnly) {
+      await writeFile(path.join(splitDir, id, "runs", outTag, "grade.json"), JSON.stringify(row, null, 2) + "\n", "utf8");
+    }
   }
 
   const expectedCount = expectedCountArg ?? datasetProfile?.expectedCount ?? ids.length;
@@ -120,8 +140,18 @@ async function main() {
   const unapprovedGoldenCount = rows.filter((r) => r.failureReason === "unapproved_golden").length;
   const failedRowCount = rows.filter((r) => r.success === false).length;
   const expectedCountMismatch = rows.length !== expectedCount;
-  const success = failedRowCount === 0 && !expectedCountMismatch;
-  const canaryLeak = summarizeCanaryLeaks({ split, ids, rows });
+  const canaryLeak = summarizeCanaryLeaks({
+    split,
+    ids,
+    rows,
+    required: datasetProfile?.canary?.required === true,
+  });
+  const canarySuccess = aggregateOnly
+    ? canaryLeak.success === true && canaryLeak.status === "clean"
+    : canaryLeak.status !== "leak_detected";
+  let success = failedRowCount === 0
+    && !expectedCountMismatch
+    && canarySuccess;
   const agg = {
     success,
     split,
@@ -148,9 +178,22 @@ async function main() {
     deductionReasons: mergeDeductionReasonSummaries(rows.map((r) => r.deductionReasons)),
     canaryLeak,
   };
+  const deterministicGate = datasetProfile?.gates?.deterministic
+    ? evaluatePromotionGates({
+      gates: { deterministic: datasetProfile.gates.deterministic },
+      deterministic: agg,
+    })
+    : { success: true, checks: {}, failures: [] };
+  success = success && deterministicGate.success;
+  agg.success = success;
+  agg.threshold_success = deterministicGate.success;
+  agg.thresholdSource = datasetProfile?.gates?.deterministic ? "dataset-profile" : "none";
+  agg.thresholds = datasetProfile?.gates?.deterministic ?? null;
+  agg.thresholdFailures = deterministicGate.failures;
 
   const summaryPath = path.join(splitDir, `_grade_summary.${outTag}.json`);
-  await writeFile(summaryPath, JSON.stringify({ aggregate: agg, perVideo: rows }, null, 2) + "\n", "utf8");
+  const summary = aggregateOnly ? { aggregate: { ...agg, aggregateOnly: true } } : { aggregate: agg, perVideo: rows };
+  await writeFile(summaryPath, JSON.stringify(summary, null, 2) + "\n", "utf8");
 
   console.log(`\n=== ${split} / ${outTag} 집계 (n=${agg.count}) ===`);
   console.log(`레시피 개수 일치율: ${agg.recipeCountMatchRate} (누락 ${agg.recipesMissedTotal}, 초과 ${agg.recipesExtraTotal})`);
@@ -158,13 +201,15 @@ async function main() {
   console.log(`분량 일치율: ${agg.amountMatchRate}`);
   console.log(`분량 커버리지: ${agg.amountCoverage}`);
   console.log(`단계 커버리지: ${agg.stepCoverage}`);
-  console.log(`\n케이스별:`);
-  for (const row of rows) {
-    if (row.success === false) {
-      console.log(`  ${row.videoId}: FAIL ${row.failureReason}`);
-      continue;
+  if (!aggregateOnly) {
+    console.log(`\n케이스별:`);
+    for (const row of rows) {
+      if (row.success === false) {
+        console.log(`  ${row.videoId}: FAIL ${row.failureReason}`);
+        continue;
+      }
+      console.log(`  ${row.videoId}: F1 ${row.ingredientF1}, 분량 ${row.amountMatchRate}, 단계 ${row.stepCoverage}, 레시피 ${row.recipesMatched}/${row.recipeCountGolden}${row.recipeCountMatch ? "" : ` (예측 ${row.recipeCountPredicted})`}`);
     }
-    console.log(`  ${row.videoId}: F1 ${row.ingredientF1}, 분량 ${row.amountMatchRate}, 단계 ${row.stepCoverage}, 레시피 ${row.recipesMatched}/${row.recipeCountGolden}${row.recipeCountMatch ? "" : ` (예측 ${row.recipeCountPredicted})`}`);
   }
   console.log(`\n요약 저장: ${path.relative(PROJECT_ROOT, summaryPath)}`);
   if (!success) process.exit(1);

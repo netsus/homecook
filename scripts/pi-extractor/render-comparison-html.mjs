@@ -6,6 +6,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadDatasetProfile } from "../recipe-loop/lib/dataset-profile.mjs";
+import { assertFrozenResults } from "../recipe-loop/lib/freeze-guard.mjs";
 
 function parseCliArgs(argv) {
   const args = {};
@@ -87,17 +88,41 @@ function boolText(value) {
   return value === true ? "true" : value === false ? "false" : "-";
 }
 
-function freshTiming(progress, result) {
+export function freshTiming(progress, result, { requestedRunType = null } = {}) {
   const events = Array.isArray(progress?.events) ? progress.events : [];
   const completedIndex = events.findLastIndex((event) => event?.phase === "completed");
   const failedAttemptCount = events
     .slice(0, completedIndex >= 0 ? completedIndex + 1 : events.length)
     .filter((event) => event?.phase === "failed").length;
-  const totalFreshMs = Number(result?.meta?.total_fresh_ms);
+  const meta = result?.meta ?? {};
+  const cacheFlags = [
+    meta.sourceVideoCacheHit,
+    meta.frameCacheHit,
+    meta.selectorCacheHit,
+    meta.visionCacheHit,
+  ];
+  const hasCompleteCacheClassification = cacheFlags.every((value) => typeof value === "boolean");
+  const hasRunClassification = typeof meta.declaredRunType === "string"
+    && typeof meta.observedRunType === "string"
+    && meta.runTypeMatches === true
+    && typeof meta.coldTimingEligible === "boolean"
+    && typeof meta.executionConfigSignature === "string"
+    && meta.executionConfigSignature.length > 0;
+  if (!hasCompleteCacheClassification || !hasRunClassification) return null;
+  const coldTimingEligible = typeof meta.coldTimingEligible === "boolean"
+    ? meta.coldTimingEligible
+    : !cacheFlags.some((value) => value === true);
+  if (!coldTimingEligible) return null;
+  if (requestedRunType && meta.declaredRunType && meta.declaredRunType !== requestedRunType) return null;
+  if (requestedRunType && meta.observedRunType && meta.observedRunType !== requestedRunType) return null;
+
+  const totalFreshMs = typeof meta.total_fresh_ms === "number" ? meta.total_fresh_ms : Number.NaN;
   if (Number.isFinite(totalFreshMs) && totalFreshMs >= 0) {
     return {
       seconds: Math.round(totalFreshMs) / 1000,
       failedAttemptCount,
+      runType: meta.observedRunType,
+      executionConfigSignature: meta.executionConfigSignature ?? null,
     };
   }
   if (completedIndex < 0) return null;
@@ -109,6 +134,8 @@ function freshTiming(progress, result) {
   return {
     seconds: Math.round((completedAt - startedAt) / 1000),
     failedAttemptCount,
+    runType: meta.observedRunType,
+    executionConfigSignature: meta.executionConfigSignature ?? null,
   };
 }
 
@@ -122,12 +149,21 @@ function percentile(values, ratio) {
   return Math.round((sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower)) * 10) / 10;
 }
 
-function timingSummary(timings) {
-  const seconds = timings.map((timing) => timing?.seconds).filter(Number.isFinite);
+export function timingSummary(timings, runType = "cold") {
+  const validTimings = timings.filter((timing) => Number.isFinite(timing?.seconds));
+  const seconds = validTimings.map((timing) => timing.seconds);
+  const signatures = validTimings.map((timing) => timing.executionConfigSignature ?? null);
+  const knownSignatures = new Set(signatures.filter(Boolean));
+  if (knownSignatures.size > 1 || (knownSignatures.size === 1 && signatures.some((value) => !value))) {
+    throw new Error("timing execution configuration mismatch");
+  }
   return {
     p50: percentile(seconds, 0.5),
     p95: percentile(seconds, 0.95),
     failedAttemptCount: timings.reduce((sum, timing) => sum + (timing?.failedAttemptCount ?? 0), 0),
+    sampleCount: seconds.length,
+    runType,
+    executionConfigSignature: knownSignatures.values().next().value ?? null,
   };
 }
 
@@ -633,7 +669,7 @@ function videoHtml({
         <span>det F1 ${metric(det?.ingredientF1)} · amount ${metric(det?.amountMatchRate)} · coverage ${metric(det?.amountCoverage)} · steps ${metric(det?.stepCoverage)}</span>
       <span>forbidden reads ${manifest?.forbiddenReadEvents?.length ?? 0}</span>
       <span>contract failures ${manifest?.visualEvidenceContractFailureCount ?? 0}</span>
-      <span>fresh ${freshTimingResult ? `${metric(freshTimingResult.seconds)}s` : "-"}${freshTimingResult?.failedAttemptCount ? ` · retry failures ${freshTimingResult.failedAttemptCount}` : ""}</span>
+      <span>${esc(freshTimingResult?.runType ?? "timing")} ${freshTimingResult ? `${metric(freshTimingResult.seconds)}s` : "-"}${freshTimingResult?.failedAttemptCount ? ` · retry failures ${freshTimingResult.failedAttemptCount}` : ""}</span>
       </div>
       ${understandingUsageHtml({ candidateDrafts, videoUnderstandingUsage, videoUnderstandingFailure })}
       ${wholeVideoRecipeMapHtml({ wholeVideoRecipeMap, wholeVideoRecipeMapAudit, candidateMapAdherenceAudit })}
@@ -662,7 +698,7 @@ function summaryTable({ ids, freeze, grade, semantic, timing }) {
   const forbiddenReads = freeze?.forbiddenReadCount ?? aggregate.forbiddenReadCount ?? 0;
   return `
     <table class="summary">
-      <thead><tr><th>영상</th><th>freeze</th><th>forbidden reads</th><th>semantic 평균</th><th>bottom2</th><th>최저</th><th>semantic gate</th><th>재료 F1</th><th>분량 match</th><th>분량 coverage</th><th>단계 coverage</th><th>fresh P50</th><th>fresh P95</th><th>실패 후 재시도</th></tr></thead>
+      <thead><tr><th>영상</th><th>freeze</th><th>forbidden reads</th><th>semantic 평균</th><th>bottom2</th><th>최저</th><th>semantic gate</th><th>재료 F1</th><th>분량 match</th><th>분량 coverage</th><th>단계 coverage</th><th>${esc(timing.runType)} P50</th><th>${esc(timing.runType)} P95</th><th>실패 후 재시도</th></tr></thead>
       <tbody><tr>
         <td>${ids.length}</td>
         <td>${freeze?.completedCount ?? aggregate.actual_count ?? "-"}/${freeze?.caseCount ?? aggregate.expected_count ?? ids.length}</td>
@@ -675,8 +711,8 @@ function summaryTable({ ids, freeze, grade, semantic, timing }) {
         <td>${metric(aggregate.amountMatchRate)}</td>
         <td>${metric(aggregate.amountCoverage)}</td>
         <td>${metric(aggregate.stepCoverage)}</td>
-        <td>fresh P50 ${timing.p50 === null ? "-" : `${metric(timing.p50)}s`}</td>
-        <td>fresh P95 ${timing.p95 === null ? "-" : `${metric(timing.p95)}s`}</td>
+        <td>${esc(timing.runType)} P50 (n=${timing.sampleCount}) ${timing.p50 === null ? "-" : `${metric(timing.p50)}s`}</td>
+        <td>${esc(timing.runType)} P95 (n=${timing.sampleCount}) ${timing.p95 === null ? "-" : `${metric(timing.p95)}s`}</td>
         <td>${timing.failedAttemptCount}</td>
       </tr></tbody>
     </table>
@@ -689,8 +725,7 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
   const split = typeof args.split === "string" ? args.split : "train";
   const outTag = args["out-tag"];
   if (!outTag) throw new Error("--out-tag is required");
-  const protectedDetailExplicitlyAllowed = split === "validation" && args["allow-protected-detail"] === true;
-  if (split !== "train" && !protectedDetailExplicitlyAllowed) {
+  if (split !== "train") {
     throw new Error("protected split comparison HTML is aggregate-only; detailed rendering is allowed for train only");
   }
   const dataRoot = path.join(projectRoot, "notebooks/recipe_loop_data", split);
@@ -709,6 +744,11 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
     ?? (await readdir(dataRoot, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
   const outputPath = path.resolve(projectRoot, args.output ?? `.omx/plans/${outTag}-vs-golden.html`);
   const timingOutTag = typeof args["timing-out-tag"] === "string" ? args["timing-out-tag"] : outTag;
+  const timingRunType = typeof args["timing-run-type"] === "string" ? args["timing-run-type"] : "cold";
+  await assertFrozenResults({ projectRoot, split, outTag, ids, datasetProfile });
+  if (timingOutTag !== outTag) {
+    await assertFrozenResults({ projectRoot, split, outTag: timingOutTag, ids, datasetProfile });
+  }
   const grade = await readJson(path.join(dataRoot, `_grade_summary.${outTag}.json`), { aggregate: {}, perVideo: [] });
   const semantic = await readJson(path.join(dataRoot, `_semantic_summary.${outTag}.json`), { aggregate: {}, perVideo: [] });
   const freeze = await readJson(path.join(dataRoot, `_pi_freeze.${outTag}.json`), null);
@@ -721,6 +761,7 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
     const freshTimingResult = freshTiming(
       await readJson(path.join(timingRunDir, "run-progress.json"), null),
       await readJson(path.join(timingRunDir, "result.json"), null),
+      { requestedRunType: timingRunType },
     );
     timings.push(freshTimingResult);
     cases.push(videoHtml({
@@ -762,9 +803,10 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
 <header>
 <h1>${esc(outTag)} 추출 결과 vs golden 정답 비교</h1>
 <p class="note">split: <code>${esc(split)}</code> · run tag: <code>${esc(outTag)}</code> · 생성: ${esc(kstNow())} KST · 추출 중에는 <code>source.json</code>/공개 입력만 사용했고, 이 HTML은 freeze 이후 golden을 읽어 만든 비교표입니다.</p>
+<p class="note">timing run: <code>${esc(timingOutTag)}</code> · requested run type: <code>${esc(timingRunType)}</code></p>
 <p class="note">Visual estimate 근거는 영상별 접이식 영역에 넣었습니다. null/실패/미적용 결과도 숨기지 않습니다.</p>
 <p class="legend">case_score: <span class="lgood">≥4 양호</span><span class="lmid">3~4 보통</span><span class="llow">&lt;3 약함</span></p>
-${summaryTable({ ids, freeze, grade, semantic, timing: timingSummary(timings) })}
+${summaryTable({ ids, freeze, grade, semantic, timing: timingSummary(timings, timingRunType) })}
 <div class="controls"><button id="btn-all" class="active" onclick="flt('all')">전체</button><button id="btn-prob" onclick="flt('prob')">case&lt;4만</button><button onclick="tog(true)">모두 펼치기</button><button onclick="tog(false)">모두 접기</button></div>
 </header>
 <main>

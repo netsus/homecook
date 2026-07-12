@@ -2026,6 +2026,18 @@ export async function freezePiExtraction({
     if (existsSync(manifestPath)) {
       manifest = JSON.parse(await readFile(manifestPath, "utf8"));
     }
+    if (files["result.json"].exists && !manifest) {
+      throw new Error(`file-access-manifest is required before freeze: ${path.relative(projectRoot, runDir)}`);
+    }
+    if (manifest && (manifest.status !== "clean" || manifest.unknownReadBoundary !== false)) {
+      throw new Error(`access boundary is not clean: ${path.relative(projectRoot, manifestPath)}`);
+    }
+    if (manifest && !Array.isArray(manifest.forbiddenReadEvents)) {
+      throw new Error(`forbiddenReadEvents must be an array: ${path.relative(projectRoot, manifestPath)}`);
+    }
+    if ((manifest?.forbiddenReadEvents?.length ?? 0) > 0) {
+      throw new Error(`forbidden reads prevent freeze: ${path.relative(projectRoot, manifestPath)}`);
+    }
     cases.push({
       videoId: id,
       runDir: path.relative(projectRoot, runDir),
@@ -2042,6 +2054,7 @@ export async function freezePiExtraction({
     outTag,
     datasetProfileId: datasetProfile?.profileId ?? null,
     datasetManifestPath: datasetProfile?.manifestPathRelative ?? null,
+    datasetManifestSha256: datasetProfile?.manifestSha256 ?? null,
     expectedCount: datasetProfile?.expectedCount ?? resolvedIds.length,
     frozenAt: new Date().toISOString(),
     policy: {
