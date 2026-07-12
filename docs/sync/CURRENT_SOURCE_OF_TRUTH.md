@@ -13,6 +13,17 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 
+## Public Service Guide Addendum `2026-07-12`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.11 | 공개 `/about` 서비스 가이드, 웹 공통 5개 메뉴, HOME `집밥 둘러보기`, MYPAGE 임시 도움말 제거를 추가 |
+| 화면정의서 v1.5.18 | `ABOUT_SERVICE_GUIDE` 화면, HOME guide+theme rail 순서/상태/접근성, desktop/mobile 내비게이션 계약을 추가 |
+| 유저플로우 v1.3.18 | 웹 메뉴, HOME 카드, direct/legacy URL에서 가이드로 진입하고 HOME/플래너로 복귀하는 여정을 추가 |
+
+> 사용자가 2026-07-12에 `/about` 가이드, `PRIMARY_WEB_NAV_ITEMS` 공통화, HOME `집밥 둘러보기` 가로 rail 구성, MYPAGE 도움말 제거를 명시적으로 승인했다.
+> API/DB 문서 변경은 없다. `함께 만드는 집밥` 커뮤니티/제안 게시판은 별도 후속 슬라이스로 제외한다.
+
 ## Social Auth Provider Memory And Identity Linking Addendum `2026-07-10`
 
 | 문서 | 변경 내용 |

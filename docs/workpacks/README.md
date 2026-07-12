@@ -45,6 +45,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 - **Launch blocker 예외**: `launch-readiness-blockers`는 광고/배포를 직접 막는 release-hotfix workpack이다. 선행 slice 일부가 미완료여도 fake contact/legal 404, hydration/console error, missing security headers, mixed-content, audit failure를 먼저 닫기 위해 진행한다. 이 예외는 해당 workpack에만 적용되며 product contract, required checks, authority evidence, current-head CI green gate를 완화하지 않는다.
 - **Codex-only 예외**: `launch-readiness-blockers`는 사용자 지시에 따라 Claude를 사용하지 않는다. 기존 Claude 담당 Stage 1/3/4/final authority 역할은 같은 세션이 아니라 별도 Codex 세션으로 분리하고, 구현 세션은 자기 작업을 approve하지 않는다.
 - **Codex docs-owner 예외**: `auth-provider-memory-linking`은 사용자가 Claude 사용을 중단하고 별도 Codex 세션이 Stage 1 docs-owner 역할을 대신하도록 명시적으로 승인했다. 이후 구현과 리뷰도 역할별 별도 Codex 세션으로 분리하며, 구현 세션은 자기 변경을 최종 승인하지 않는다.
+- **Codex-only 서비스 가이드 예외**: `service-about-guide`는 사용자가 Claude 사용 중단과 기존 Claude 담당 단계의 새 Codex 세션 대체를 명시적으로 승인했다. 공식 계약 PR 병합 후 Stage 1 docs owner, Stage 4 구현 owner, internal docs repair/final authority owner를 서로 다른 Codex 세션으로 분리하고, Stage 1/4 작성 세션은 자기 변경을 최종 승인하지 않는다.
 - `workflow-v2` / `OMO` 대상 product slice는 Stage 1 전에 **slice ID / goal / 분기 경로를 고정**한다.
 - `planned` 상태 slice에 `착수 시점에 분할 여부 결정` 메모를 남기지 않는다. 분할이 필요하면 roadmap PR에서 `08a/08b`처럼 먼저 쪼갠다.
 - 예외: `docs/engineering/` 아래의 repo-engineering automation, workflow tooling, agent 운영 규칙 변경은 제품 workpack roadmap 바깥이다.
@@ -145,6 +146,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `36e-recipe-tags-frontend` | ready-for-review | MANUAL_RECIPE_CREATE/YT_IMPORT 태그 추천·검수 UI와 HOME 태그 검색/filter/theme chip UX 구현 |
 | `launch-readiness-blockers` | docs | 광고/배포 차단 release-hotfix 예외: legal/trust/SEO 404와 fake contact, HOME hydration/guest console noise, security headers, FoodSafety mixed-content, PostCSS audit blocker를 Codex-only 세션 분리로 닫음 |
 | `auth-provider-memory-linking` | in-progress | 세 provider 이메일 필수, built-in Kakao/Naver 표준 claim gate, 최근 provider 기억/전환 확인, same-user identity linking과 different-user conflict 보호, 수동 provider 연결 |
+| `service-about-guide` | planned | 공개 `/about` 서비스 가이드, `PRIMARY_WEB_NAV_ITEMS` 웹 공통 5메뉴, HOME `집밥 둘러보기` guide+theme rail, MYPAGE 임시 도움말 제거. 커뮤니티/제안 게시판은 후속 슬라이스 |
 
 ## Design Decision Gates
 
