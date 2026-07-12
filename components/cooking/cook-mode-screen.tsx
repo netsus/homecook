@@ -478,7 +478,7 @@ export function CookModeScreen({
 
 function PlannerCookModeDesktopLoading() {
   return (
-    <WebShell className="web-cooking-shell web-cooking-shell-dark" wide>
+    <WebShell className="web-cooking-shell web-cooking-shell-dark" footer={false} wide>
       <WebTopNav
         activeId="planner"
         items={WEB_NAV_ITEMS}

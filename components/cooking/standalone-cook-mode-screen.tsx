@@ -473,7 +473,7 @@ function StandaloneCookModeDesktopState({
   recipeId: string;
 }) {
   return (
-    <WebShell className="web-cooking-shell" wide>
+    <WebShell className="web-cooking-shell" footer={false} wide>
       <WebTopNav
         items={WEB_NAV_ITEMS}
         rightSlot={<div className="web-profile-button">◎</div>}
@@ -501,7 +501,7 @@ function StandaloneCookModeDesktopLoading({
   title: string;
 }) {
   return (
-    <WebShell className="web-cooking-shell web-cooking-shell-dark" wide>
+    <WebShell className="web-cooking-shell web-cooking-shell-dark" footer={false} wide>
       <WebTopNav
         items={WEB_NAV_ITEMS}
         rightSlot={<div className="web-profile-button">◎</div>}

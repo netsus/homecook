@@ -6,6 +6,8 @@ import { resolve } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { WebShell } from "@/components/web";
+
 const OLD_PREVIEW_ORIGIN = "https://homecook-flame.vercel.app";
 const TEST_SITE_ORIGIN = "https://zipbap.example";
 
@@ -50,8 +52,12 @@ describe("launch readiness legal and SEO routes", () => {
     expect(html).toContain("개인정보처리방침");
     expect(html).toContain("수집하는 개인정보");
     expect(html).toContain("보유 및 이용 기간");
+    expect(html).toContain("개인정보 처리의 법적 근거");
     expect(html).toContain("제3자 제공");
-    expect(html).toContain("위탁 및 국외 이전");
+    expect(html).toContain("개인정보 처리위탁");
+    expect(html).toContain("개인정보의 국외 이전");
+    expect(html).toContain("만 14세 미만 아동의 개인정보");
+    expect(html).toContain("권익침해 구제방법");
     expect(html).toContain("help@zipbap.example");
   });
 
@@ -66,9 +72,55 @@ describe("launch readiness legal and SEO routes", () => {
     expect(html).toContain("이용약관");
     expect(html).toContain("서비스 범위");
     expect(html).toContain("계정과 탈퇴");
+    expect(html).toContain("사용자 콘텐츠의 권리");
     expect(html).toContain("금지행위");
-    expect(html).toContain("책임의 제한");
+    expect(html).toContain("서비스 변경 및 중단");
+    expect(html).toContain("면책고지 및 책임의 제한");
     expect(html).toContain("help@zipbap.example");
+  });
+
+  it("leaves unknown legal facts blank instead of publishing placeholder copy", async () => {
+    vi.resetModules();
+    delete process.env.NEXT_PUBLIC_LEGAL_OPERATOR_NAME;
+    delete process.env.NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE;
+    delete process.env.NEXT_PUBLIC_PRIVACY_OFFICER_NAME;
+    delete process.env.NEXT_PUBLIC_PRIVACY_OFFICER_CONTACT;
+    delete process.env.NEXT_PUBLIC_LEGAL_PROCESSING_CONSIGNMENT;
+    delete process.env.NEXT_PUBLIC_LEGAL_OVERSEAS_TRANSFER_RECIPIENT;
+
+    const { getLegalInfo } = await import("@/lib/legal-info");
+    const legal = getLegalInfo();
+
+    expect(legal.operatorName).toBe("");
+    expect(legal.effectiveDate).toBe("");
+    expect(legal.privacyOfficerName).toBe("");
+    expect(legal.processingConsignment).toBe("");
+    expect(legal.overseasTransferRecipient).toBe("");
+    expect(Object.values(legal)).not.toContain("운영 정보 확인 필요");
+  });
+
+  it("exposes privacy and terms links in the shared web footer", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(WebShell, null, React.createElement("main", null, "내용")),
+    );
+
+    expect(html).toContain("서비스 정보");
+    expect(html).toContain('href="/privacy"');
+    expect(html).toContain('href="/terms"');
+  });
+
+  it("allows focused fullscreen surfaces to omit the shared web footer", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(
+        WebShell,
+        { footer: false },
+        React.createElement("main", null, "집중 화면"),
+      ),
+    );
+
+    expect(html).not.toContain("서비스 정보");
+    expect(html).not.toContain('href="/privacy"');
+    expect(html).not.toContain('href="/terms"');
   });
 
   it("publishes robots.txt and sitemap.xml from the configured public site URL", async () => {

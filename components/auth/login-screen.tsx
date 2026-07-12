@@ -129,6 +129,17 @@ export function LoginScreen({
             nextPath={safeNextPath}
           />
         </div>
+        <p className="text-center text-xs leading-5 text-[var(--text-3)]">
+          로그인 전에{" "}
+          <Link className="font-semibold underline underline-offset-2" href="/terms">
+            이용약관
+          </Link>
+          과{" "}
+          <Link className="font-semibold underline underline-offset-2" href="/privacy">
+            개인정보처리방침
+          </Link>
+          을 확인해 주세요.
+        </p>
         <Link
           className="inline-flex min-h-[var(--control-height-md)] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
           href="/"

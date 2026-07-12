@@ -1,14 +1,17 @@
 import * as React from "react";
 
+import { WebFooter } from "@/components/web/web-footer";
 import { cn } from "@/components/web/utils";
 
 export interface WebShellProps extends React.HTMLAttributes<HTMLDivElement> {
+  footer?: boolean;
   wide?: boolean;
 }
 
 export function WebShell({
   children,
   className,
+  footer = true,
   wide = false,
   ...props
 }: WebShellProps) {
@@ -19,6 +22,7 @@ export function WebShell({
           {children}
         </div>
       </div>
+      {footer ? <WebFooter /> : null}
     </div>
   );
 }

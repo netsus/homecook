@@ -1816,6 +1816,10 @@
   background: var(--background);
 }
 
+.web-footer {
+  display: none;
+}
+
 .legal-shell .web-page {
   min-height: 100dvh;
   padding-top: 0;
@@ -1976,6 +1980,27 @@
   gap: 3px;
 }
 
+.legal-document .legal-facts {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.legal-document .legal-facts div {
+  gap: 6px;
+  padding: 12px 14px;
+}
+
+.legal-document .legal-facts div + div {
+  border-top: 1px solid var(--line);
+}
+
+.legal-document .legal-facts dd:empty {
+  min-height: 1.5em;
+}
+
 .legal-document dt {
   color: var(--text-3);
   font-size: 12px;
@@ -2049,6 +2074,55 @@
   .legal-meta {
     position: sticky;
     top: calc(var(--web-nav-h) + 24px);
+  }
+
+  .web-footer {
+    display: block;
+    border-top: 1px solid var(--web-line);
+    background: var(--web-surface);
+  }
+
+  .web-footer-inner {
+    display: flex;
+    min-height: 112px;
+    max-width: var(--web-content-wide);
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+    margin: 0 auto;
+    padding: 24px 32px;
+  }
+
+  .web-footer-inner > div {
+    display: grid;
+    gap: 4px;
+  }
+
+  .web-footer-inner strong {
+    color: var(--foreground);
+    font-size: 16px;
+    font-weight: 900;
+  }
+
+  .web-footer-inner span {
+    color: var(--web-text-3);
+    font-size: 13px;
+  }
+
+  .web-footer-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .web-footer-links a {
+    color: var(--web-text-2);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .web-footer-links a:hover {
+    color: var(--web-brand);
   }
 }
 

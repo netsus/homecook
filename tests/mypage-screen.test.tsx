@@ -914,6 +914,29 @@ describe("MypageScreen", () => {
     expect(leftoversIcon.className).not.toContain("bg-[var(--surface-fill)]");
   });
 
+  it("opens legal information below mobile preferences and links both documents", async () => {
+    installMatchMedia(true);
+    const user = userEvent.setup();
+
+    render(<MypageScreen initialAuthenticated />);
+
+    await screen.findByText("집밥러");
+    const menuCard = screen.getByTestId("mypage-menu-card");
+    const settingsRow = within(menuCard).getByTestId("mypage-menu-row-settings");
+    const legalRow = within(menuCard).getByTestId("mypage-menu-row-legal");
+
+    expect(settingsRow.compareDocumentPosition(legalRow) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+
+    await user.click(legalRow);
+
+    expect(screen.getByRole("heading", { name: "법적 정보" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "개인정보처리방침" }).getAttribute("href"))
+      .toBe("/privacy");
+    expect(screen.getByRole("link", { name: "이용약관" }).getAttribute("href"))
+      .toBe("/terms");
+  });
+
   it("keeps core MYPAGE usable when only progress fetch fails", async () => {
     mockFetchUserProgress.mockRejectedValueOnce(new Error("progress unavailable"));
 

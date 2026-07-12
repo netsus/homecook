@@ -136,6 +136,15 @@ describe("login screen", () => {
     expect(screen.getByText("social-buttons:/planner:none:none")).toBeTruthy();
   });
 
+  it("shows legal documents before social login starts", () => {
+    render(<LoginScreen />);
+
+    expect(screen.getByRole("link", { name: "개인정보처리방침" }).getAttribute("href"))
+      .toBe("/privacy");
+    expect(screen.getByRole("link", { name: "이용약관" }).getAttribute("href"))
+      .toBe("/terms");
+  });
+
   it("renders the desktop web login panel at 1024px and above", () => {
     installMatchMedia(true);
 
