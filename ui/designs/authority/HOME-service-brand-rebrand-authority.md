@@ -1,9 +1,14 @@
-# HOME Service Brand Rebrand — Stage 4 Authority Precheck
+# HOME Service Brand Rebrand — Stage 5 + Independent Final Authority
 
 - verdict: `pass`
+- public Stage 5: `APPROVE`
+- independent final authority: `pass`
+- reviewed head: `7e51a5d162f25393ebe21df53dd6f40621acf8bd`
+- reviewed at: `2026-07-13`
 - visual-verdict: `98 / 100` (iteration 2)
-- unresolved blocker: `0`
-- stage boundary: Stage 4 evidence/precheck only. Stage 5 review와 final authority `confirmed`는 수행하지 않음.
+- blocker / major / minor: `0 / 0 / 0`
+- Design Status: `confirmed`
+- stage boundary: Stage 5 public review와 역할 분리된 Codex final authority만 확정했다. Stage 6, Ready 전환, CI merge gate, merge는 수행하지 않음.
 
 > evidence:
 > - `ui/designs/evidence/service-brand-rebrand/HOME-before-390.png`
@@ -47,4 +52,4 @@
 
 ## Recommendation
 
-Stage 4 구현과 검증을 계속할 수 있다. 이 보고서는 독립 Stage 5 디자인 리뷰 또는 final authority 승인을 대신하지 않는다.
+Stage 5 public `APPROVE`와 독립 final authority `pass`를 근거로 Design Status를 `confirmed`로 확정한다. 다음 단계는 Stage 6이며, 이 판정은 Ready 전환·CI 확인·merge 완료를 뜻하지 않는다.
