@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const socialImageAlt = "집밥 — 레시피부터 장보기, 요리 기록까지";
+export const socialImageAlt = "무엇을 먹든 — 레시피부터 장보기, 요리 기록까지";
 export const socialImageSize = { height: 630, width: 1200 };
 export const socialImageContentType = "image/png";
 
@@ -35,7 +35,7 @@ export function createDefaultSocialImage() {
           }}
         >
           <div style={{ color: "#ff6b24", display: "flex", fontSize: 34, fontWeight: 800 }}>
-            HOMECOOK
+            무엇을 먹든
           </div>
           <div style={{ display: "flex", fontSize: 92, fontWeight: 900, letterSpacing: -3, marginTop: 12 }}>
             GOOD FOOD,

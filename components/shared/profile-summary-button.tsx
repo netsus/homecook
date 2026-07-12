@@ -514,8 +514,8 @@ function buildProfileSummary({
     ...base,
     archivePreview,
     cookingCount: progress?.event_counts.cooking_completed ?? 0,
-    displayName: profile?.nickname ?? "집밥러",
-    gradeLabel: gamification?.grade?.label ?? "새싹 집밥러",
+    displayName: profile?.nickname ?? "무먹러",
+    gradeLabel: gamification?.grade?.label ?? "새싹 무먹러",
     level: gamification?.level.current_level ?? progress?.level.current_level ?? 1,
     notificationMessage:
       tutorialGuide?.body ??

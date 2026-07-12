@@ -490,12 +490,12 @@ function SettingsSurface({
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-[14px] font-extrabold text-[var(--brand)]"
                 data-testid="settings-mobile-account-profile-fallback"
               >
-                {(profile?.nickname ?? "집밥러").slice(0, 1)}
+                {(profile?.nickname ?? "무먹러").slice(0, 1)}
               </span>
             )}
             <span className="min-w-0 flex-1">
               <strong className="block truncate text-[15px] font-extrabold text-[var(--foreground)]">
-                {profile?.nickname ?? "집밥러버"}
+                {profile?.nickname ?? "무먹러"}
               </strong>
               <em className="mt-0.5 block truncate text-[12px] font-medium not-italic text-[var(--text-3)]">
                 {formatProviderLabel(profile?.social_provider)}

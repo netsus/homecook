@@ -17,14 +17,14 @@ test.describe("service about guide", () => {
     test.skip(isMobile(testInfo.project.use.viewport?.width), "desktop navigation only");
 
     await page.goto("/");
-    await page.getByRole("link", { name: "집밥 가이드" }).click();
+    await page.getByRole("link", { name: "무먹 가이드" }).click();
 
     await expect(page).toHaveURL(/\/about$/);
-    await expect(page.getByRole("heading", { level: 1, name: "집밥, 이렇게 써요" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "무엇을 먹든, 계획은 한곳에서" })).toBeVisible();
     await expect(page.locator('a[aria-current="page"][href="/about"]')).toBeVisible();
 
     await page.goto("/privacy");
-    await expect(page.getByRole("link", { name: "집밥 가이드" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "무먹 가이드" })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "법적 문서" })).toBeVisible();
 
     await page.goto("/about");
@@ -47,8 +47,8 @@ test.describe("service about guide", () => {
 
     await page.goto("/");
     const quickLinks = page.getByRole("navigation", { name: "홈 빠른 이동" });
-    const rail = page.getByRole("region", { name: "집밥 둘러보기" });
-    const guide = page.getByRole("link", { name: "집밥 가이드 보기" });
+    const rail = page.getByRole("region", { name: "무먹 둘러보기" });
+    const guide = page.getByRole("link", { name: "무먹 가이드 보기" });
 
     await expect(quickLinks).toBeVisible();
     await expect(rail).toBeVisible();
@@ -110,8 +110,8 @@ test.describe("service about guide", () => {
     });
     await page.goto("/");
 
-    const emptyRail = page.getByRole("region", { name: "집밥 둘러보기" });
-    await expect(emptyRail.getByRole("link", { name: "집밥 가이드 보기" })).toBeVisible();
+    const emptyRail = page.getByRole("region", { name: "무먹 둘러보기" });
+    await expect(emptyRail.getByRole("link", { name: "무먹 가이드 보기" })).toBeVisible();
     await expect(emptyRail.getByRole("button")).toHaveCount(0);
 
     await page.unroute("**/api/v1/recipes/themes");
@@ -127,8 +127,8 @@ test.describe("service about guide", () => {
     });
     await page.reload();
 
-    const errorRail = page.getByRole("region", { name: "집밥 둘러보기" });
-    await expect(errorRail.getByRole("link", { name: "집밥 가이드 보기" })).toBeVisible();
+    const errorRail = page.getByRole("region", { name: "무먹 둘러보기" });
+    await expect(errorRail.getByRole("link", { name: "무먹 가이드 보기" })).toBeVisible();
     await expect(errorRail.getByRole("button")).toHaveCount(0);
   });
 

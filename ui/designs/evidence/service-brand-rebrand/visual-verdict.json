@@ -1,0 +1,12 @@
+{
+  "score": 98,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "승인된 브랜드 copy만 바뀌었고 HOME 레이아웃, 간격, 색상, 컴포넌트 재질 차이는 발견되지 않음"
+  ],
+  "suggestions": [
+    "Stage 5 독립 리뷰에서 동일 evidence와 background audit을 재확인"
+  ],
+  "reasoning": "동시 dev server의 .next 충돌을 제거한 단일 clean server에서 390px/320px HOME을 재캡처했다. computed background는 흰색이고 PNG 원본도 copy-only 범위를 유지한다."
+}

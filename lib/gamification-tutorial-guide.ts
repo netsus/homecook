@@ -57,7 +57,7 @@ const TUTORIAL_GUIDE_BY_ACHIEVEMENT_KEY: Record<
   tutorial_cooking_complete: {
     body: "장보기 완료한 끼니에서 요리하기를 누르면 요리모드에 들어갈 수 있어요.",
     questKey: "first_cook_done",
-    title: "첫 집밥 완료하기",
+    title: "첫 요리 완료하기",
   },
   tutorial_recipebook_created: {
     body: "마이페이지에서 나만의 새 레시피북을 만들어보세요.",

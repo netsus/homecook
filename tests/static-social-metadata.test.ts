@@ -8,7 +8,7 @@ describe("static public social metadata", () => {
   } as const;
 
   it.each([
-    ["about", "/about", "집밥 가이드"],
+    ["about", "/about", "무먹 가이드"],
     ["privacy", "/privacy", "개인정보처리방침"],
     ["terms", "/terms", "이용약관"],
   ] as const)("keeps the default social image on %s", async (pageName, url, title) => {

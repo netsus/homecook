@@ -6,36 +6,36 @@ import { getPublicSiteOrigin } from "@/lib/legal-info";
 import "./globals.css";
 
 const siteUrl = getPublicSiteOrigin();
-const siteDescription = "레시피 찾기, 식단 계획, 장보기, 요리 기록까지 이어지는 집밥 서비스";
+const siteDescription = "레시피 찾기, 식단 계획, 장보기, 요리 기록까지 이어지는 무엇을 먹든 서비스";
 
 export const metadata: Metadata = {
-  applicationName: "집밥",
+  applicationName: "무엇을 먹든",
   description: siteDescription,
   metadataBase: new URL(siteUrl),
   openGraph: {
     description: siteDescription,
     images: [
       {
-        alt: "집밥 — 레시피부터 장보기, 요리 기록까지",
+        alt: "무엇을 먹든 — 레시피부터 장보기, 요리 기록까지",
         height: 630,
         url: "/opengraph-image",
         width: 1200,
       },
     ],
     locale: "ko_KR",
-    siteName: "집밥",
-    title: "집밥",
+    siteName: "무엇을 먹든",
+    title: "무엇을 먹든",
     type: "website",
   },
   title: {
-    default: "집밥",
-    template: "%s | 집밥",
+    default: "무엇을 먹든",
+    template: "%s | 무엇을 먹든",
   },
   twitter: {
     card: "summary_large_image",
     description: siteDescription,
     images: ["/twitter-image"],
-    title: "집밥",
+    title: "무엇을 먹든",
   },
 };
 

@@ -78,7 +78,7 @@ describe("MypageProgressCard", () => {
     render(<MypageProgressCard progress={ZERO_PROGRESS} state="ready" />);
 
     expect(screen.getByText("Lv.1")).toBeTruthy();
-    expect(screen.getByText("첫 집밥 기록을 시작해 보세요")).toBeTruthy();
+    expect(screen.getByText("첫 끼니 기록을 시작해 보세요")).toBeTruthy();
     expect(screen.getByText("누적 0 XP")).toBeTruthy();
     expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("0");
   });

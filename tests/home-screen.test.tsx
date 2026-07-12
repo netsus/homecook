@@ -306,7 +306,7 @@ describe("home screen", () => {
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
     expect(screen.getByText("오늘도,")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "집밥" }).className).toContain(
+    expect(screen.getByRole("heading", { name: "무먹" }).className).toContain(
       "text-[var(--brand)]",
     );
     expect(screen.getByText("레시피 제목으로 검색하거나, 재료로 좁혀 보세요.")).toBeTruthy();
@@ -316,7 +316,7 @@ describe("home screen", () => {
     expect(screen.queryByRole("button", { name: "국물요리" })).toBeNull();
     expect(screen.queryByRole("button", { name: "양파" })).toBeNull();
     expect(
-      screen.getByRole("heading", { level: 2, name: "집밥 둘러보기" }).className,
+      screen.getByRole("heading", { level: 2, name: "무먹 둘러보기" }).className,
     ).toContain("home-mobile-theme-title");
     expect(ruleBody(".home-mobile-theme-title")).toContain("color: var(--foreground);");
     expect(screen.queryByRole("link", { name: /이번 주 식단 플래너/ })).toBeNull();
@@ -337,7 +337,7 @@ describe("home screen", () => {
       screen.getByRole("heading", { level: 2, name: "모든 레시피" }).className,
     ).toContain("text-[var(--foreground)]");
     const quickLinks = screen.getByRole("navigation", { name: "홈 빠른 이동" });
-    const themeHeading = screen.getByRole("heading", { level: 2, name: "집밥 둘러보기" });
+    const themeHeading = screen.getByRole("heading", { level: 2, name: "무먹 둘러보기" });
     const recipeHeading = screen.getByRole("heading", { level: 2, name: "모든 레시피" });
 
     expect(
@@ -352,7 +352,7 @@ describe("home screen", () => {
       themeHeading.compareDocumentPosition(recipeHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    const guideLink = screen.getByRole("link", { name: "집밥 가이드 보기" });
+    const guideLink = screen.getByRole("link", { name: "무먹 가이드 보기" });
     expect(guideLink.getAttribute("href")).toBe("/about#how-to");
     expect(guideLink.hasAttribute("aria-pressed")).toBe(false);
     expect(screen.queryByText(`(${getMockRecipeList().items.length})`)).toBeNull();
@@ -734,9 +734,9 @@ describe("home screen", () => {
     });
     const themeHeading = screen.getByRole("heading", {
       level: 2,
-      name: "집밥 둘러보기",
+      name: "무먹 둘러보기",
     });
-    const guideLink = screen.getByRole("link", { name: "집밥 가이드 보기" });
+    const guideLink = screen.getByRole("link", { name: "무먹 가이드 보기" });
     const themeButton = screen.getByRole("button", { name: /중간 인기 테마/ });
 
     expect(
@@ -823,7 +823,7 @@ describe("home screen", () => {
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
     expect(screen.getByText("오늘도,")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "집밥" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "무먹" })).toBeTruthy();
     expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
     expect(
       screen.getAllByRole("button", { name: /재료로 검색/ }),
@@ -879,6 +879,67 @@ describe("home screen", () => {
     expect(container.querySelector(".web-recipe-card-meta")?.textContent).not.toContain("유튜브");
     expect(container.querySelector(".web-recipe-card-tags")?.textContent).toContain("한식");
     expect(container.querySelector(".web-recipe-card-tags")?.textContent).toContain("찌개");
+  });
+
+  it("shows the canonical system source badge on web recipe cards", async () => {
+    installMatchMedia(true);
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      return Promise.resolve({
+        items: [
+          {
+            ...MOCK_RECIPE_CARD,
+            id: "recipe-system",
+            source_type: "system" as const,
+          },
+        ],
+        next_cursor: null,
+        has_next: false,
+      });
+    });
+
+    const { container } = render(<HomeScreen />);
+
+    await screen.findByText(MOCK_RECIPE_CARD.title);
+    expect(container.querySelector(".web-recipe-card-badge")?.textContent).toBe("무먹 추천");
+  });
+
+  it("keeps manual web recipe cards free of a newly introduced source badge", async () => {
+    installMatchMedia(true);
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/ingredients")) {
+        return Promise.resolve({ items: INGREDIENT_ITEMS });
+      }
+
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.resolve({ themes: [] });
+      }
+
+      return Promise.resolve({
+        items: [
+          {
+            ...MOCK_RECIPE_CARD,
+            id: "recipe-manual",
+            source_type: "manual" as const,
+            save_count: 20,
+          },
+        ],
+        next_cursor: null,
+        has_next: false,
+      });
+    });
+
+    const { container } = render(<HomeScreen />);
+
+    await screen.findByText(MOCK_RECIPE_CARD.title);
+    expect(container.querySelector(".web-recipe-card-badge")).toBeNull();
   });
 
   it("keeps hydrated saved bookmarks visible after HOME reload", async () => {
@@ -978,7 +1039,7 @@ describe("home screen", () => {
     await user.type(await screen.findByPlaceholderText("레시피 제목 검색"), "김치");
 
     expect(screen.queryByRole("navigation", { name: "홈 빠른 이동" })).toBeNull();
-    expect(screen.queryByRole("heading", { level: 2, name: "집밥 둘러보기" })).toBeNull();
+    expect(screen.queryByRole("heading", { level: 2, name: "무먹 둘러보기" })).toBeNull();
     await waitFor(() => {
       expect(
         screen.getAllByRole("status").some((status) =>
@@ -1401,7 +1462,7 @@ describe("home screen", () => {
 
     await screen.findByRole("heading", {
       level: 2,
-      name: "집밥 둘러보기",
+      name: "무먹 둘러보기",
     });
 
     const initialThemeCalls = fetchJson.mock.calls.filter(([input]) => {
@@ -1412,7 +1473,7 @@ describe("home screen", () => {
     await user.click(screen.getByText("저장순"));
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 2, name: "집밥 둘러보기" })).toBeTruthy();
+      expect(screen.getByRole("heading", { level: 2, name: "무먹 둘러보기" })).toBeTruthy();
       expect(
         fetchJson.mock.calls.some(([input]) => {
           if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
@@ -1519,7 +1580,7 @@ describe("home screen", () => {
     expect(
       screen.queryByRole("heading", { name: "레시피를 불러오지 못했어요" }),
     ).toBeNull();
-    expect(screen.getByRole("link", { name: "집밥 가이드 보기" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "무먹 가이드 보기" })).toBeTruthy();
   });
 
   it("shows ready recipes while the discovery themes are still loading", async () => {
@@ -1541,7 +1602,7 @@ describe("home screen", () => {
 
     expect(await screen.findByText(MOCK_RECIPE_CARD.title)).toBeTruthy();
     expect(
-      screen.getByRole("region", { name: "집밥 둘러보기 불러오는 중" }),
+      screen.getByRole("region", { name: "무먹 둘러보기 불러오는 중" }),
     ).toBeTruthy();
   });
 
@@ -1566,7 +1627,7 @@ describe("home screen", () => {
       await screen.findByRole("heading", { name: "레시피를 불러오지 못했어요" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("region", { name: "집밥 둘러보기 불러오는 중" }),
+      screen.getByRole("region", { name: "무먹 둘러보기 불러오는 중" }),
     ).toBeTruthy();
   });
 
@@ -1588,7 +1649,7 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     expect(
-      await screen.findByRole("heading", { level: 2, name: "집밥 둘러보기" }),
+      await screen.findByRole("heading", { level: 2, name: "무먹 둘러보기" }),
     ).toBeTruthy();
     expect(
       screen.getByRole("region", { name: "레시피 목록 불러오는 중" }),
@@ -1616,7 +1677,7 @@ describe("home screen", () => {
     ).toBeTruthy();
     const themeHeading = screen.getByRole("heading", {
       level: 2,
-      name: "집밥 둘러보기",
+      name: "무먹 둘러보기",
     });
     const errorHeading = screen.getByRole("heading", {
       name: "레시피를 불러오지 못했어요",

@@ -5,7 +5,7 @@ export const metadata = {
   alternates: {
     canonical: "/",
   },
-  description: "레시피를 찾고 식단, 장보기, 요리 기록으로 이어가는 집밥 홈",
+  description: "레시피를 찾고 식단, 장보기, 요리 기록으로 이어가는 무엇을 먹든 홈",
   openGraph: {
     url: "/",
   },

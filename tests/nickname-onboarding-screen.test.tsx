@@ -88,6 +88,8 @@ describe("nickname onboarding screen", () => {
     render(<NicknameOnboardingScreen nextPath="/planner" />);
 
     expect(await screen.findByRole("heading", { name: "닉네임을 정해 주세요" })).toBeTruthy();
+    expect(screen.getByText("무먹")).toBeTruthy();
+    expect(screen.getByLabelText("닉네임").getAttribute("placeholder")).toBe("예: 무먹러");
     const description = screen.getByTestId("nickname-onboarding-description");
     const descriptionLines = Array.from(description.querySelectorAll("span")).map(
       (line) => line.textContent,

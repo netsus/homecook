@@ -9,8 +9,8 @@ import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
 export const metadata = {
-  description: "유튜브 링크를 분석해 집밥 레시피로 등록하는 화면",
-  title: "유튜브 레시피 가져오기 · 집밥",
+  description: "유튜브 링크를 분석해 무엇을 먹든 레시피로 등록하는 화면",
+  title: "유튜브 레시피 가져오기 · 무엇을 먹든",
 };
 
 export const dynamic = "force-dynamic";

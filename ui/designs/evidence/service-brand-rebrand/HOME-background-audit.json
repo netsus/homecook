@@ -1,0 +1,48 @@
+{
+  "capture_environment": {
+    "base_url": "http://127.0.0.1:3000",
+    "servers": "single clean dev:qa-fixtures server",
+    "color_scheme": "light",
+    "device_scale_factor": 1,
+    "before_after_fixture_match": "same dev:qa-fixtures route data, Chromium, viewport, and 4000ms stabilization"
+  },
+  "root_cause": "3000/3100 dev servers shared and invalidated the same .next cache; production CSS was unchanged",
+  "guide_only_decode_check": {
+    "method": "macOS sips 24-bit BMP decode",
+    "total_pixels": 181760,
+    "rgb_below_32_pixels": 0,
+    "rgb_below_64_pixels": 2323,
+    "rgb_below_64_ratio": "1.28% (normal text pixels)",
+    "conclusion": "the transient black region was a view_image display artifact, not PNG pixels"
+  },
+  "routine_e2e_evidence_guard": {
+    "result": "canonical hashes and mtimes unchanged after assertions-only Playwright",
+    "home_after_390_sha256": "a8152d5538044d22f0f73f3970173b14be3db0fe2f362613f28207719da64892",
+    "home_after_320_sha256": "416ba89524e3d5fd931256b56eea6083d300bd484a0c484311fa0ff5cf769bb7",
+    "home_guide_only_after_320_sha256": "11d6147c7a9a64a11c65d00be05df24a0bbc81537e4e200079afc656dad3131b"
+  },
+  "viewports": {
+    "390x844": {
+      "html_background": "rgb(255, 255, 255)",
+      "home_root_background": "rgb(255, 255, 255)",
+      "sticky_header_background": "rgb(255, 255, 255)",
+      "rail_background": "rgb(247, 249, 250)",
+      "background_image": "none",
+      "page_overflow_px": 0
+    },
+    "320x568": {
+      "html_background": "rgb(255, 255, 255)",
+      "home_root_background": "rgb(255, 255, 255)",
+      "sticky_header_background": "rgb(255, 255, 255)",
+      "rail_background": "rgb(247, 249, 250)",
+      "background_image": "none",
+      "page_overflow_px": 0
+    },
+    "guide_only_320x568": {
+      "html_background": "rgb(255, 255, 255)",
+      "home_root_background": "rgb(255, 255, 255)",
+      "page_overflow_px": 0,
+      "theme_button_count": 0
+    }
+  }
+}

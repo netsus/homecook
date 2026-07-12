@@ -14,7 +14,7 @@ describe("app navigation chrome rules", () => {
       ["플래너", "/planner"],
       ["팬트리", "/pantry"],
       ["마이페이지", "/mypage"],
-      ["집밥 가이드", "/about"],
+      ["무먹 가이드", "/about"],
     ]);
     expect(PRIMARY_MOBILE_TAB_ITEMS.map((item) => item.href)).toEqual([
       "/",

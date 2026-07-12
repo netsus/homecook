@@ -7,9 +7,9 @@ export const metadata = {
   alternates: {
     canonical: "/privacy",
   },
-  description: "집밥 서비스 개인정보 수집, 이용, 보관, 파기 기준",
+  description: "무엇을 먹든 서비스 개인정보 수집, 이용, 보관, 파기 기준",
   openGraph: {
-    description: "집밥 서비스 개인정보 수집, 이용, 보관, 파기 기준",
+    description: "무엇을 먹든 서비스 개인정보 수집, 이용, 보관, 파기 기준",
     images: ["/opengraph-image"],
     title: "개인정보처리방침",
     type: "website",
@@ -24,7 +24,7 @@ export default function PrivacyPage() {
   return (
     <LegalDocumentPage
       activeId="privacy"
-      description="집밥이 개인정보를 어떤 목적으로 처리하고, 얼마나 보관하며, 이용자가 어떻게 권리를 행사할 수 있는지 안내합니다."
+      description="무엇을 먹든이 개인정보를 어떤 목적으로 처리하고, 얼마나 보관하며, 이용자가 어떻게 권리를 행사할 수 있는지 안내합니다."
       eyebrow="Privacy"
       meta={[
         { label: "운영자", value: legal.operatorName },

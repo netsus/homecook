@@ -9,7 +9,7 @@ import { getServerAuthUser } from "@/lib/supabase/server";
 
 export const metadata = {
   description: "직접 입력한 재료와 조리 과정을 저장해 내 레시피로 등록하는 화면",
-  title: "직접 레시피 등록 · 집밥",
+  title: "직접 레시피 등록 · 무엇을 먹든",
 };
 
 interface ManualRecipeCreatePageProps {

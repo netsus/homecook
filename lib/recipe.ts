@@ -24,7 +24,7 @@ export function formatCount(value: number) {
 export function formatRecipeSourceLabel(sourceType: RecipeCardItem["source_type"]) {
   switch (sourceType) {
     case "system":
-      return "집밥 추천";
+      return "무먹 추천";
     case "youtube":
       return "유튜브";
     case "manual":

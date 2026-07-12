@@ -36,14 +36,14 @@ export function AboutScreen({ contactEmail = "" }: AboutScreenProps) {
       <WebTopNav activeId="about" className="about-desktop-nav" />
       <header className="about-mobile-bar">
         <AppBackButton className="about-mobile-back" onClick={handleBack} />
-        <strong>집밥 가이드</strong>
+        <strong>무먹 가이드</strong>
         <span aria-hidden="true" className="about-mobile-spacer" />
       </header>
 
       <main className="about-page">
         <section aria-labelledby="about-title" className="about-hero">
-          <p className="about-hero-line">레시피에서 끝나지 않는 집밥 계획</p>
-          <h1 id="about-title">집밥, 이렇게 써요</h1>
+          <p className="about-hero-line">무먹 가이드</p>
+          <h1 id="about-title">무엇을 먹든, 계획은 한곳에서</h1>
           <p className="about-hero-description">
             오늘 만들 메뉴를 찾고 식단에 담으면, 장보기부터 요리와 남은 음식 기록까지
             한 흐름으로 이어져요.
@@ -58,7 +58,7 @@ export function AboutScreen({ contactEmail = "" }: AboutScreenProps) {
           </div>
         </section>
 
-        <nav aria-label="집밥 가이드 목차" className="about-anchor-nav">
+        <nav aria-label="무먹 가이드 목차" className="about-anchor-nav">
           <Link href="#how-to">사용 순서</Link>
           <Link href="#features">핵심 기능</Link>
           <Link href="#guides">기능별 가이드</Link>
@@ -69,7 +69,7 @@ export function AboutScreen({ contactEmail = "" }: AboutScreenProps) {
           <SectionHeading
             description="레시피를 고르는 순간부터 남은 음식까지, 다섯 단계가 자연스럽게 연결돼요."
             eyebrow="HOW IT WORKS"
-            title="집밥은 이렇게 이어져요"
+            title="한 끼는 이렇게 이어져요"
           />
           <ol className="about-step-list">
             {SERVICE_GUIDE_STEPS.map((step, index) => (
@@ -87,8 +87,8 @@ export function AboutScreen({ contactEmail = "" }: AboutScreenProps) {
         <section className="about-section" id="features">
           <SectionHeading
             description="필요한 재료와 기록을 흩어 두지 않고, 실제 집밥 순서에 맞춰 정리해요."
-            eyebrow="WHY ZIPBAP"
-            title="집밥이 편해지는 이유"
+            eyebrow="WHY IT WORKS"
+            title="끼니 계획이 편해지는 이유"
           />
           <div className="about-feature-grid">
             {SERVICE_GUIDE_FEATURES.map((feature) => (

@@ -135,7 +135,7 @@ export function NicknameOnboardingScreen({
         <UserIcon />
       </div>
       <p className="mx-auto mt-4 inline-flex rounded-[var(--radius-full)] bg-[var(--brand-soft)] px-3 py-1 text-[12px] font-extrabold tracking-[0.08em] text-[var(--brand)]">
-        집밥
+        무먹
       </p>
       <h1 className="mt-5 text-[26px] font-bold leading-[1.35] text-[var(--foreground)]">
         닉네임을 정해 주세요
@@ -166,7 +166,7 @@ export function NicknameOnboardingScreen({
             setNickname(event.target.value);
             setErrorMessage(null);
           }}
-          placeholder="예: 집밥러"
+          placeholder="예: 무먹러"
           value={nickname}
         />
         <p

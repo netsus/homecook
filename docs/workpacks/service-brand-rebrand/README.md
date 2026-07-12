@@ -108,8 +108,8 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 브랜드 계약 잠금, 후속 구현 전
-- [ ] 리뷰 대기 (pending-review) — Stage 4 구현/evidence 완료
+- [ ] 임시 UI (temporary) — Stage 1 브랜드 계약 잠금, 후속 구현 전
+- [x] 리뷰 대기 (pending-review) — Stage 4 구현/evidence 완료
 - [ ] 확정 (confirmed) — Stage 5와 독립 final authority에서 blocker 0
 - [ ] N/A — FE 화면 없음
 
@@ -202,12 +202,22 @@
 - [x] 신규·빈 nickname `무먹러` fallback과 기존 nickname 보존 구현 <!-- omo:id=brand-delivery-nickname-fallback;stage=2;scope=backend;review=3,6 -->
 - [x] system notification exact-copy read-time canonicalization 구현 <!-- omo:id=brand-delivery-notification-canonicalization;stage=2;scope=backend;review=3,6 -->
 - [x] notification/nickname DB rewrite 및 API shape 변화 없음 검증 <!-- omo:id=brand-delivery-backend-scope-guard;stage=2;scope=shared;review=3,6 -->
-- [ ] AppBar/wordmark/nav의 정식명·짧은명 surface 분리 구현 <!-- omo:id=brand-delivery-shell-copy;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME/ABOUT/MYPAGE 고정 copy matrix 구현 <!-- omo:id=brand-delivery-fixed-copy;stage=4;scope=frontend;review=5,6 -->
-- [ ] 사용자 콘텐츠·일반명사 `집밥` 보존 source guard 구현 <!-- omo:id=brand-delivery-content-preservation;stage=4;scope=shared;review=6 -->
-- [ ] 기술 식별자와 과거 official/evidence/prototype 보존 검사 <!-- omo:id=brand-delivery-identifier-history-guard;stage=4;scope=shared;review=6 -->
-- [ ] 기존 loading/empty/error/read-only/unauthorized 상태 회귀 점검 <!-- omo:id=brand-delivery-state-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] unit/component/Playwright 자동화 범위 분리 <!-- omo:id=brand-delivery-test-split;stage=4;scope=shared;review=6 -->
-- [ ] HOME 390/320 before/after와 guide-only evidence 생성 <!-- omo:id=brand-delivery-home-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME authority report blocker 0 확인 <!-- omo:id=brand-delivery-authority-closeout;stage=4;scope=frontend;review=5,6 -->
-- [ ] API/DB/dependency/logo/mascot out-of-scope guard 최종 확인 <!-- omo:id=brand-delivery-final-scope-guard;stage=4;scope=shared;review=6 -->
+- [x] AppBar/wordmark/nav의 정식명·짧은명 surface 분리 구현 <!-- omo:id=brand-delivery-shell-copy;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME/ABOUT/MYPAGE 고정 copy matrix 구현 <!-- omo:id=brand-delivery-fixed-copy;stage=4;scope=frontend;review=5,6 -->
+- [x] 사용자 콘텐츠·일반명사 `집밥` 보존 source guard 구현 <!-- omo:id=brand-delivery-content-preservation;stage=4;scope=shared;review=6 -->
+- [x] 기술 식별자와 과거 official/evidence/prototype 보존 검사 <!-- omo:id=brand-delivery-identifier-history-guard;stage=4;scope=shared;review=6 -->
+- [x] 기존 loading/empty/error/read-only/unauthorized 상태 회귀 점검 <!-- omo:id=brand-delivery-state-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] unit/component/Playwright 자동화 범위 분리 <!-- omo:id=brand-delivery-test-split;stage=4;scope=shared;review=6 -->
+- [x] HOME 390/320 before/after와 guide-only evidence 생성 <!-- omo:id=brand-delivery-home-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME authority report blocker 0 확인 <!-- omo:id=brand-delivery-authority-closeout;stage=4;scope=frontend;review=5,6 -->
+- [x] API/DB/dependency/logo/mascot out-of-scope guard 최종 확인 <!-- omo:id=brand-delivery-final-scope-guard;stage=4;scope=shared;review=6 -->
+
+## Stage 4 Frontend Evidence `2026-07-13`
+
+- RED/GREEN: metadata/SEO, AppBar/nav, HOME/ABOUT/MYPAGE/onboarding, source badge, 성장 copy, 사용자 콘텐츠·기술 식별자 보존을 분리해 먼저 실패를 확인한 뒤 최소 copy-only 구현으로 GREEN 전환했다. targeted Vitest는 17 files / 233 tests, 전체 Vitest는 267 files / 2768 tests를 통과했다.
+- source badge: web HOME은 기존 YouTube badge 동작을 유지하면서 `system`에만 `무먹 추천`을 추가한다. manual/custom에는 새 badge가 생기지 않는 회귀 테스트를 둔다.
+- Playwright: HOME/guide/ABOUT/account assertions를 3 project, single worker에서 11 passed / 7 skipped로 확인했다. 이후 brand assertions-only spec은 1 passed / 2 skipped이며 canonical PNG SHA-256과 mtime이 실행 전후 불변이다.
+- visual: 동일한 `dev:qa-fixtures`, Chromium light mode, device scale factor 1 조건에서 HOME before/after 390·320, guide-only 320, ABOUT 1280, MYPAGE 390을 보존했다. `ui/designs/evidence/service-brand-rebrand/HOME-background-audit.json`은 html/root/header `rgb(255, 255, 255)`, rail `rgb(247, 249, 250)`, page overflow 0을 기록한다.
+- visual verdict: `ui/designs/evidence/service-brand-rebrand/visual-verdict.json`은 98점/pass, `ui/designs/authority/HOME-service-brand-rebrand-authority.md`는 unresolved blocker 0의 Stage 4 precheck다. guide-only PNG의 24-bit BMP decode는 RGB<32 픽셀 0개를 확인했다. Stage 5 승인과 `confirmed` 전환은 남겨 둔다.
+- residual audit: legacy 검색 결과는 current official 계약의 mapping, 과거 official/evidence/prototype, `homecook`/`HOMECOOK` 기술 식별자, 기존 nickname·사용자 콘텐츠, 일반명사 `집밥`으로 분류했다. 현재 브랜드 surface의 금지 copy는 source guard가 차단한다.
+- scope guard: change file list에 API route, DB/schema/migration, dependency/lockfile, logo/mascot/public asset 변경이 없다.

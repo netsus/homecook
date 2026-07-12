@@ -119,7 +119,7 @@ export function MypageProgressCard({
   const levelLabel = `Lv.${current_level}`;
   const progressCopy =
     total_xp === 0
-      ? "첫 집밥 기록을 시작해 보세요"
+      ? "첫 끼니 기록을 시작해 보세요"
       : `다음 레벨까지 ${formatXp(xp_to_next_level)} XP`;
 
   if (isInline) {

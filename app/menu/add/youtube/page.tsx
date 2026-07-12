@@ -10,7 +10,7 @@ import { getServerAuthUser } from "@/lib/supabase/server";
 
 export const metadata = {
   description: "유튜브 링크에서 레시피 정보를 가져와 플래너나 레시피북에 저장하는 화면",
-  title: "유튜브 레시피 가져오기 · 집밥",
+  title: "유튜브 레시피 가져오기 · 무엇을 먹든",
 };
 
 export const dynamic = "force-dynamic";

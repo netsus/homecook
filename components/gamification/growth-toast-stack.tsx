@@ -245,7 +245,7 @@ function toToastView(
         ? `${toText(payload.title) || toText(payload.label) || "새 업적"} 배지를 획득했어요.`
         : "마이페이지에서 새 배지를 확인해 보세요.");
     } else {
-      const label = toText(payload.label) || "집밥 활동";
+      const label = toText(payload.label) || "끼니 활동";
       const xpDelta = toNumber(payload.xp_delta);
       title = title || (xpDelta ? `+${xpDelta} XP 획득` : "XP 획득");
       body = body || `${label} XP`;

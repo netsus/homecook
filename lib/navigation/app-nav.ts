@@ -3,7 +3,7 @@ export const PRIMARY_WEB_NAV_ITEMS = [
   { id: "planner", href: "/planner", label: "플래너" },
   { id: "pantry", href: "/pantry", label: "팬트리" },
   { id: "mypage", href: "/mypage", label: "마이페이지" },
-  { id: "about", href: "/about", label: "집밥 가이드" },
+  { id: "about", href: "/about", label: "무먹 가이드" },
 ] as const;
 
 export const PRIMARY_MOBILE_TAB_ITEMS = [
