@@ -663,7 +663,7 @@ test.describe("QA visual regression", () => {
     const logoutDialog = page.getByRole("alertdialog", { name: "로그아웃 할까요?" });
     await expect(logoutDialog).toBeVisible();
     await stabilizeVisualSnapshot(page);
-    await expect(logoutDialog).toHaveScreenshot("qa-settings-logout-modal.png", {
+    await expect.soft(logoutDialog).toHaveScreenshot("qa-settings-logout-modal.png", {
       animations: "disabled",
     });
 
@@ -674,7 +674,7 @@ test.describe("QA visual regression", () => {
     });
     await expect(accountDeleteDialog).toBeVisible();
     await stabilizeVisualSnapshot(page);
-    await expect(accountDeleteDialog).toHaveScreenshot(
+    await expect.soft(accountDeleteDialog).toHaveScreenshot(
       "qa-settings-account-delete-modal.png",
       { animations: "disabled" },
     );
