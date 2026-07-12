@@ -1,0 +1,136 @@
+{
+  "slice_id": "service-about-guide",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-auth-contract-change",
+      "existing-api-envelope-preserved"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/about",
+      "/",
+      "/mypage?tab=help",
+      "/privacy",
+      "/terms"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized",
+      "static-public-about",
+      "theme-loading-guide-placeholder",
+      "theme-empty-guide-only",
+      "theme-error-guide-only",
+      "filter-active-rail-hidden",
+      "legacy-help-redirect"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/app-nav.test.ts tests/bottom-tabs.test.tsx tests/home-screen.test.tsx tests/mypage-screen.test.tsx tests/launch-readiness-legal-seo.test.tsx tests/static-social-metadata.test.ts",
+      "pnpm exec playwright test tests/e2e/service-about-guide.spec.ts",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
+      "pnpm qa:explore -- --slice service-about-guide",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-about-guide",
+      "node scripts/validate-automation-spec.mjs --slice service-about-guide",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "about-desktop-1280",
+      "about-mobile-390",
+      "about-mobile-320",
+      "about-faq-keyboard-focus",
+      "home-before-after-390",
+      "home-before-after-320",
+      "home-theme-loading-guide-placeholder",
+      "home-theme-empty-error-guide-only",
+      "home-filter-active-rail-hidden",
+      "home-rail-height-card-height-peek-overflow-audit",
+      "web-nav-desktop-1280",
+      "legacy-help-redirect",
+      "authority-report-about",
+      "authority-report-home",
+      "exploratory-qa-report",
+      "qa-eval-result"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "HOME"
+      ],
+      "required_screens": [
+        "ABOUT_SERVICE_GUIDE",
+        "HOME"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/ABOUT.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/ABOUT-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/service-about-guide/ABOUT-after-1280.png",
+        "ui/designs/evidence/service-about-guide/ABOUT-after-390.png",
+        "ui/designs/evidence/service-about-guide/ABOUT-after-320.png",
+        "ui/designs/evidence/service-about-guide/ABOUT-faq-focus-320.png",
+        "ui/designs/evidence/service-about-guide/HOME-before-390.png",
+        "ui/designs/evidence/service-about-guide/HOME-before-320.png",
+        "ui/designs/evidence/service-about-guide/HOME-after-390.png",
+        "ui/designs/evidence/service-about-guide/HOME-after-320.png",
+        "ui/designs/evidence/service-about-guide/HOME-guide-only-390.png",
+        "ui/designs/evidence/service-about-guide/HOME-filter-hidden-320.png",
+        "ui/designs/evidence/service-about-guide/WEB-NAV-after-1280.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/ABOUT_SERVICE_GUIDE-authority.md",
+        "ui/designs/authority/HOME-service-about-guide-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "implementation-started-before-stage1-docs-merge",
+    "claude-used-for-any-stage",
+    "stage1-or-stage4-session-self-approves",
+    "community-or-404-publication-added",
+    "api-db-auth-contract-changed",
+    "mobile-bottom-tab-count-changed",
+    "web-nav-local-copy-remains",
+    "home-rail-outside-approved-position",
+    "home-rail-height-above-220px",
+    "home-card-height-outside-136-144px",
+    "home-next-card-peek-missing",
+    "home-page-level-horizontal-overflow",
+    "guide-link-theme-button-role-conflict",
+    "theme-empty-or-error-hides-guide",
+    "filter-active-shows-rail",
+    "home-prototype-changed-outside-narrow-supersession",
+    "global-token-replacement",
+    "legacy-help-redirect-after-auth-init",
+    "required-authority-evidence-missing",
+    "unresolved-authority-blocker",
+    "current-head-ci-not-green"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  },
+  "notes": "FE-only new-screen + HOME anchor-extension. Stage 2/3 skipped. User-approved 2026-07-12 addendum supersedes HOME fixed prototype only for rail position, guide-first card, heading, guide-only fallback, and compact geometry; all other exact-reference-ready HOME surfaces remain governed by the fixed prototype. Claude is forbidden; role-separated Codex sessions own docs, implementation, review, authority, and closeout."
+}

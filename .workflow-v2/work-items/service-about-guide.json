@@ -1,0 +1,112 @@
+{
+  "id": "service-about-guide",
+  "title": "Public service guide and HOME discovery entry",
+  "summary": "비로그인 공개 /about 가이드, PRIMARY_WEB_NAV_ITEMS 5메뉴, HOME 집밥 둘러보기 guide+theme rail, MYPAGE 임시 도움말 제거를 FE-only로 구현한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "처음 방문한 사용자가 서비스의 5단계 흐름을 이해하고 웹 공통 메뉴나 HOME에서 같은 공개 가이드로 진입하며, 기존 사용자가 중복 MYPAGE 도움말 없이 FAQ를 찾게 한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; user discontinued Claude",
+    "codex": "stage1 docs owner in this session; stage4 implementation, stage5-6 review, docs repair, final authority, and closeout must use role-separated Codex sessions",
+    "workers": []
+  },
+  "dependencies": [
+    "01-discovery-detail-auth",
+    "baemin-prototype-home-parity",
+    "desktop-mypage-parity",
+    ".omx/plans/about-service-guide-implementation-plan-20260712.md",
+    "contract-evolution PR #977 merged"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.11.md",
+      "docs/화면정의서-v1.5.18.md",
+      "docs/유저flow맵-v1.3.18.md",
+      "docs/db설계-v1.3.16.md",
+      "docs/api문서-v1.2.20.md"
+    ],
+    "governing_docs": [
+      ".omx/plans/about-service-guide-implementation-plan-20260712.md",
+      "docs/workpacks/service-about-guide/README.md",
+      "docs/workpacks/service-about-guide/acceptance.md",
+      "docs/workpacks/service-about-guide/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/design-tokens.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "ui/designs/WAVE1_MOBILE_APP_BASELINE.md",
+      "ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md",
+      "ui/designs/ABOUT.md",
+      "ui/designs/HOME.md",
+      "ui/designs/critiques/ABOUT-critique.md",
+      "ui/designs/critiques/HOME-service-about-guide-critique.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-about-guide",
+      "node scripts/validate-automation-spec.mjs --slice service-about-guide",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-about-guide",
+      "node scripts/validate-automation-spec.mjs --slice service-about-guide",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-contract-pr-977-merged",
+      "about-design-and-critique-present",
+      "home-narrow-prototype-supersession-explicit",
+      "before-evidence-preserved",
+      "stage4-about-home-authority-plan-present",
+      "community-404-publication-out-of-scope",
+      "codex-role-separation-explicit"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Community, suggestion board, comments, voting, reports, moderation",
+    "Public conversion of existing 404 feedback",
+    "Fifth mobile bottom tab or separate HOME guide banner",
+    "API, DB, schema, auth contract changes",
+    "CMS, MDX, help search, analytics",
+    "Unverified marketing metrics or fake contact channel",
+    "HOME fixed prototype refreeze or global token replacement",
+    "HOME visual changes outside the user-approved discovery rail supersession"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs prepared on docs/service-about-guide after PR #977 merged and approved by a separate Codex internal docs-gate reviewer after required validators passed. The lifecycle remains planned until the docs PR merges; FE-only Stage 2/3 stay skipped. User-approved addendum narrowly supersedes HOME exact prototype only for the discovery rail position and guide card contract. automation-spec generic generator_artifact/critic_artifact point to the canonical ABOUT screen artifacts; required_screens includes ABOUT_SERVICE_GUIDE and HOME, while HOME auxiliary authority is governed by ui/designs/HOME.md and ui/designs/critiques/HOME-service-about-guide-critique.md. Claude is forbidden; writing/implementation sessions cannot self-approve and repair/final authority use separate Codex sessions."
+}

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-06-29T18:11:46+09:00",
+  "updated_at": "2026-07-12T19:42:08+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1850,6 +1850,22 @@
         "git diff --check"
       ],
       "notes": "Stage 1 contract-evolution docs prepared by a separate Codex docs-owner session under explicit user approval after Claude was discontinued. Kakao defaults to built-in kakao; custom:naver reuses the existing no-store /api/auth/oauth-userinfo/naver adapter and E3 must verify non-empty email plus stable/distinct sub. Implementation and review must remain role-separated Codex sessions."
+    },
+    {
+      "id": "service-about-guide",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/service-about-guide",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice service-about-guide",
+        "node scripts/validate-automation-spec.mjs --slice service-about-guide",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs were prepared on docs/service-about-guide after the user-approved contract-evolution PR #977 merged and approved by a separate Codex internal docs-gate reviewer after required validators passed. Lifecycle remains planned until the docs PR merges. This is FE-only: Stage 2/3 are skipped. Claude is forbidden by explicit user instruction; Stage 1 docs, Stage 4 implementation, docs repair, review, final authority, and closeout use role-separated Codex sessions, and authoring sessions cannot self-approve. Community and 404 feedback publication remain out of scope."
     }
   ]
 }
