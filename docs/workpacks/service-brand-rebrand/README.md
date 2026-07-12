@@ -140,6 +140,13 @@
 - system notification exact legacy copy 4종과 mapping 비대상 사용자 콘텐츠/일반명사 `집밥` fixture.
 - HOME/ABOUT/app shell의 desktop 1280, mobile 390, narrow 320 상태와 HOME theme loading/empty/error/filter-active fixture를 재사용한다.
 
+### Stage 2 implementation evidence `2026-07-13`
+
+- nickname fallback/보존: `tests/user-bootstrap.test.ts`, callback 회귀 `tests/auth-callback.test.ts`.
+- notification exact mapping/substring 보존/반복 조회 불변: `tests/user-gamification-brand-compatibility.test.ts`.
+- gamification 조리 업적 copy와 archive/read-model 회귀: `tests/user-gamification-definitions.test.ts`, `tests/user-gamification-archive-helper.test.ts`, `tests/user-gamification-route.test.ts`.
+- PR #967/#978/#979 merge commit은 기준 HEAD `38ed28862af2ac0cf4021ec7d06b790e408a99f7`의 ancestor이며, DB migration/seed/API route/type 변경 파일은 없다.
+
 ### Real browser / environment
 
 - Stage 4에서 fixture browser 또는 `pnpm dev:demo`로 HOME/ABOUT/LOGIN/MYPAGE와 법적/SEO surface를 확인한다.
@@ -192,15 +199,15 @@
 
 ## Delivery Checklist
 
-- [ ] 신규·빈 nickname `무먹러` fallback과 기존 nickname 보존 구현 <!-- omo:id=brand-delivery-nickname-fallback;stage=2;scope=backend;review=3,6 -->
-- [ ] system notification exact-copy read-time canonicalization 구현 <!-- omo:id=brand-delivery-notification-canonicalization;stage=2;scope=backend;review=3,6 -->
-- [ ] notification/nickname DB rewrite 및 API shape 변화 없음 검증 <!-- omo:id=brand-delivery-backend-scope-guard;stage=2;scope=shared;review=3,6 -->
+- [x] 신규·빈 nickname `무먹러` fallback과 기존 nickname 보존 구현 <!-- omo:id=brand-delivery-nickname-fallback;stage=2;scope=backend;review=3,6 -->
+- [x] system notification exact-copy read-time canonicalization 구현 <!-- omo:id=brand-delivery-notification-canonicalization;stage=2;scope=backend;review=3,6 -->
+- [x] notification/nickname DB rewrite 및 API shape 변화 없음 검증 <!-- omo:id=brand-delivery-backend-scope-guard;stage=2;scope=shared;review=3,6 -->
 - [ ] AppBar/wordmark/nav의 정식명·짧은명 surface 분리 구현 <!-- omo:id=brand-delivery-shell-copy;stage=4;scope=frontend;review=5,6 -->
 - [ ] HOME/ABOUT/MYPAGE 고정 copy matrix 구현 <!-- omo:id=brand-delivery-fixed-copy;stage=4;scope=frontend;review=5,6 -->
 - [ ] 사용자 콘텐츠·일반명사 `집밥` 보존 source guard 구현 <!-- omo:id=brand-delivery-content-preservation;stage=4;scope=shared;review=6 -->
 - [ ] 기술 식별자와 과거 official/evidence/prototype 보존 검사 <!-- omo:id=brand-delivery-identifier-history-guard;stage=4;scope=shared;review=6 -->
 - [ ] 기존 loading/empty/error/read-only/unauthorized 상태 회귀 점검 <!-- omo:id=brand-delivery-state-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] unit/component/Playwright 자동화 범위 분리 <!-- omo:id=brand-delivery-test-split;stage=4;scope=shared;review=5,6 -->
+- [ ] unit/component/Playwright 자동화 범위 분리 <!-- omo:id=brand-delivery-test-split;stage=4;scope=shared;review=6 -->
 - [ ] HOME 390/320 before/after와 guide-only evidence 생성 <!-- omo:id=brand-delivery-home-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] HOME authority report blocker 0 확인 <!-- omo:id=brand-delivery-authority-closeout;stage=4;scope=frontend;review=5,6 -->
 - [ ] API/DB/dependency/logo/mascot out-of-scope guard 최종 확인 <!-- omo:id=brand-delivery-final-scope-guard;stage=4;scope=shared;review=6 -->

@@ -219,7 +219,7 @@ describe("user gamification definitions", () => {
     expect(data.featured_badges).toEqual([
       {
         badge_key: "first_cook_done",
-        label: "첫 집밥 완성",
+        label: "첫 요리 완성",
         description: "첫 요리 완료를 기록했어요.",
         category: "cooking",
         shape_key: "pot",
