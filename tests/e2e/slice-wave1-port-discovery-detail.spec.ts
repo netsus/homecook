@@ -82,6 +82,7 @@ test.describe("wave1 port discovery detail", () => {
 
     if (isMobileViewport(page)) {
       const recipeListSection = page.locator('section[aria-label="모든 레시피"]');
+      const discoveryRail = page.locator('section[aria-label="집밥 둘러보기"]');
       await expect(
         page.locator("button:visible").filter({ hasText: "재료로 검색" }).first(),
       ).toBeVisible();
@@ -92,7 +93,7 @@ test.describe("wave1 port discovery detail", () => {
         recipeListSection.getByRole("button", { name: /^다이어트$/ }),
       ).toHaveCount(0);
       await expect(
-        recipeListSection.getByRole("button", { name: /다이어트 식단/ }),
+        discoveryRail.getByRole("button", { name: /다이어트 식단/ }),
       ).toBeVisible();
     } else {
       await expect(
