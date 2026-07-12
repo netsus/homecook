@@ -148,13 +148,6 @@ interface RecipeDetailScreenProps {
 }
 
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 export function RecipeDetailScreen({
   recipeId,
   authError,
@@ -1804,7 +1797,6 @@ function RecipeDetailWebView({
     <WebShell className="web-recipe-detail" wide>
       <WebTopNav
         activeId="home"
-        items={WEB_NAV_ITEMS}
         rightSlot={<RecipeWebProfileButton isAuthenticated={isAuthenticated} />}
       />
       <div className="web-screen">
@@ -2261,7 +2253,6 @@ function RecipeDetailWebLoadingSkeleton({
     <WebShell className="web-recipe-detail" wide>
       <WebTopNav
         activeId="home"
-        items={WEB_NAV_ITEMS}
         rightSlot={<RecipeWebProfileButton isAuthenticated={isAuthenticated} />}
       />
       <div className="web-screen" data-testid="recipe-detail-web-loading">

@@ -151,10 +151,7 @@ type AuthState = "checking" | "authenticated" | "unauthorized";
 type ViewState = "loading" | "error" | "ready";
 type SavedRecipesState = "idle" | "loading" | "ready" | "empty" | "error";
 type LeftoverTabState = "idle" | "loading" | "ready" | "empty" | "error";
-type MypageTab =
-  | MypageRestoreTab
-  | "preferences"
-  | "help";
+type MypageTab = MypageRestoreTab | "preferences";
 
 const TOAST_DURATION_MS = 3000;
 const SHOPPING_PAGE_SIZE = 10;
@@ -177,7 +174,6 @@ const WEB_MYPAGE_LOADING_TAB_LABELS = [
   "남은 요리",
   "다먹은 요리",
   "환경설정",
-  "도움말",
 ] as const;
 
 function buildMypageSavedRecipeHref(recipeId: string) {
@@ -255,13 +251,6 @@ function buildMypageLeftoverRecipeHref(
     returnTo: `/mypage?tab=${isEaten ? "eaten" : "leftovers"}`,
   });
 }
-
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
 
 const SOCIAL_PROVIDER_LABELS: Record<string, string> = {
   kakao: "카카오 로그인",
@@ -1877,7 +1866,6 @@ export function MypageScreen({
     <WebShell className="web-mypage-shell" wide>
       <WebTopNav
         activeId="mypage"
-        items={WEB_NAV_ITEMS}
         rightSlot={
           <ProfileSummaryButton
             gamification={profileSummaryGamification}
@@ -1969,16 +1957,6 @@ export function MypageScreen({
               <SettingsIcon />
             </WebTabIcon>
             환경설정
-          </WebTabButton>
-          <WebTabButton
-            active={activeTab === "help"}
-            aria-label="도움말"
-            onClick={() => switchDesktopTab("help")}
-          >
-            <WebTabIcon>
-              <HelpIcon />
-            </WebTabIcon>
-            도움말
           </WebTabButton>
         </WebTabs>
 
@@ -2081,7 +2059,6 @@ export function MypageScreen({
               onToggleWakeLock={() => void handleToggleWakeLock()}
             />
           ) : null}
-          {activeTab === "help" ? <MyPageHelpSurface /> : null}
           {activeTab === "recipebooks" ? (
             <RecipeBookTabContent
               createInputRef={createInputRef}
@@ -2980,47 +2957,6 @@ function NicknameEditSheet({
   );
 }
 
-function MyPageHelpSurface() {
-  const contactEmail = process.env.NEXT_PUBLIC_SERVICE_CONTACT_EMAIL?.trim();
-  const faqs = [
-    ["레시피북은 어떻게 정리되나요?", "내가 추가한 레시피, 저장한 레시피, 좋아요한 레시피는 자동으로 정리되고 커스텀 북은 직접 만들 수 있어요."],
-    ["장보기 기록은 어디서 보나요?", "저장한 레시피 탭 하단의 장보기 기록에서 진행 중인 리스트와 완료된 리스트를 확인할 수 있어요."],
-    ["팬트리와 플래너는 연결되나요?", "팬트리에 있는 재료는 장보기에서 제외할 수 있고, 플래너의 끼니와 함께 이어집니다."],
-    ["계정을 바꾸면 데이터가 유지되나요?", "저장 데이터는 로그인 계정 기준으로 관리돼요."],
-    ["문제가 생기면 어디에 문의하나요?", "앱 내 문의 채널 또는 이메일로 상황을 남겨주세요."],
-  ];
-
-  return (
-    <div className="web-mypage-subsurface" data-testid="mypage-help-tab">
-      <div className="web-mypage-section-head">
-        <h2>도움말</h2>
-        <p>자주 묻는 질문과 문의 채널을 모았습니다.</p>
-      </div>
-      <WebCard className="web-mypage-faq-card">
-        {faqs.map(([question, answer], index) => (
-          <div className="web-mypage-faq-row" key={question}>
-            <div>
-              <strong>{question}</strong>
-              {index === 0 ? <p>{answer}</p> : null}
-            </div>
-            <ChevronRightIcon />
-          </div>
-        ))}
-      </WebCard>
-      <WebCard className="web-mypage-contact-card">
-        <strong>문의하기</strong>
-        {contactEmail ? (
-          <p>
-            <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
-          </p>
-        ) : (
-          <p>문의처는 정식 운영 정보 확정 후 공개됩니다.</p>
-        )}
-      </WebCard>
-    </div>
-  );
-}
-
 function PreferenceSwitchRow({
   checked = false,
   description,
@@ -3372,7 +3308,6 @@ function MypageDesktopLoadingShell() {
     <WebShell className="web-mypage-shell" wide>
       <WebTopNav
         activeId="mypage"
-        items={WEB_NAV_ITEMS}
         rightSlot={
           <ProfileSummaryButton
             isAuthenticated
@@ -4768,8 +4703,7 @@ function getMypageTabFromQuery(value: string | null): MypageTab | null {
     value === "shopping" ||
     value === "leftovers" ||
     value === "eaten" ||
-    value === "preferences" ||
-    value === "help"
+    value === "preferences"
   ) {
     return value;
   }
@@ -4864,15 +4798,6 @@ function TrashIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
       <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-    </svg>
-  );
-}
-
-function HelpIcon(props: SvgIconProps = {}) {
-  return (
-    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16" {...props}>
-      <path d="M12 17h.01M9.2 9a3 3 0 1 1 4.6 2.5c-1 .68-1.8 1.2-1.8 2.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
     </svg>
   );
 }

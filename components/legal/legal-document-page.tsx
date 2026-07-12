@@ -3,10 +3,9 @@ import React from "react";
 
 import { WebShell, WebTopNav } from "@/components/web";
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "privacy", href: "/privacy", label: "개인정보" },
-  { id: "terms", href: "/terms", label: "약관" },
+const LEGAL_DOCUMENT_NAV_ITEMS = [
+  { id: "privacy", href: "/privacy", label: "개인정보처리방침" },
+  { id: "terms", href: "/terms", label: "이용약관" },
 ] as const;
 
 interface LegalDocumentPageProps {
@@ -31,11 +30,7 @@ export function LegalDocumentPage({
 }: LegalDocumentPageProps) {
   return (
     <WebShell className="legal-shell" wide>
-      <WebTopNav
-        activeId={activeId}
-        className="legal-desktop-nav"
-        items={WEB_NAV_ITEMS}
-      />
+      <WebTopNav className="legal-desktop-nav" />
       <header className="legal-mobile-header">
         <Link className="legal-mobile-brand" href="/">
           집밥
@@ -45,6 +40,18 @@ export function LegalDocumentPage({
         </Link>
       </header>
       <main className="legal-page">
+        <nav aria-label="법적 문서" className="legal-document-nav">
+          {LEGAL_DOCUMENT_NAV_ITEMS.map((item) => (
+            <Link
+              aria-current={item.id === activeId ? "page" : undefined}
+              className={item.id === activeId ? "legal-document-nav-active" : undefined}
+              href={item.href}
+              key={item.id}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
         <section className="legal-hero" aria-labelledby="legal-page-title">
           <p className="legal-eyebrow">{eyebrow}</p>
           <h1 id="legal-page-title">{title}</h1>

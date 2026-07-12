@@ -13,6 +13,13 @@ export interface MypageRestoreState {
 
 type SearchParamRecord = Record<string, string | string[] | undefined>;
 
+export function resolveMypageLegacyRedirect(params: SearchParamRecord) {
+  const tab = params.tab;
+  const values = Array.isArray(tab) ? tab : tab ? [tab] : [];
+
+  return values.includes("help") ? "/about#faq" : null;
+}
+
 interface SearchParamReader {
   get(name: string): string | null;
 }

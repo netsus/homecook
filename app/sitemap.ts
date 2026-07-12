@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 import { getPublicSiteOrigin } from "@/lib/legal-info";
 import { createPublicDataClient } from "@/lib/supabase/server";
 
-const PUBLIC_STATIC_PATHS = ["/", "/privacy", "/terms"] as const;
+const PUBLIC_STATIC_PATHS = ["/", "/about", "/privacy", "/terms"] as const;
 const MAX_SITEMAP_RECIPES = 49_000;
 const SITEMAP_PAGE_SIZE = 1_000;
 

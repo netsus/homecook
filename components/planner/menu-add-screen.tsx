@@ -52,13 +52,6 @@ type PickerMode =
   | "manual"
   | "youtube";
 
-const WEB_NAV_ITEMS = [
-  { id: "home", href: "/", label: "홈" },
-  { id: "planner", href: "/planner", label: "플래너" },
-  { id: "pantry", href: "/pantry", label: "팬트리" },
-  { id: "mypage", href: "/mypage", label: "마이페이지" },
-] as const;
-
 const MENU_ADD_OPTIONS = [
   { id: "search", emoji: "🔍", label: "레시피 검색" },
   { id: "recipebook", emoji: "📖", label: "레시피북" },
@@ -638,7 +631,7 @@ export function MenuAddScreen({
       {shouldRenderWebView ? (
         <div className="hidden lg:block">
           <WebShell wide className="web-menu-add-shell">
-            <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
+            <WebTopNav activeId="planner" />
             <div className="web-menu-add-screen">
             <div className="web-menu-add-hero">
               <div>
