@@ -160,7 +160,9 @@ function normalizeMetadata(value: unknown) {
 }
 
 function normalizeNickname(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+  const normalized = typeof value === "string" ? value.trim() : "";
+
+  return normalized || "무먹러";
 }
 
 export function normalizeUserEmail(value: unknown) {

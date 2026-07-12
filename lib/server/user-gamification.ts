@@ -337,6 +337,20 @@ export const USER_NOTIFICATION_PRIORITIES: Record<UserGamificationNotificationTy
   xp_awarded: 4,
 };
 
+const SYSTEM_BRAND_COPY_MAP: Readonly<Record<string, string>> = {
+  "집밥 기록": "끼니 기록",
+  "집밥 활동": "끼니 활동",
+  "집밥 성장": "끼니 성장",
+  "첫 집밥 완성": "첫 요리 완성",
+};
+
+const SYSTEM_NOTIFICATION_COPY_FIELDS = new Set([
+  "label",
+  "title",
+  "body",
+  "description",
+]);
+
 export const USER_BADGE_METADATA: Record<string, {
   category: UserGamificationBadgeCategory;
   shape_key: UserGamificationBadgeDataShapeKey;
@@ -403,7 +417,7 @@ export const USER_BADGE_DEFINITIONS: UserBadgeDefinition[] = [
   },
   {
     badge_key: "first_cook_done",
-    label: "첫 집밥 완성",
+    label: "첫 요리 완성",
     description: "첫 요리 완료를 기록했어요.",
     metric: "cooking_completed",
     target: 1,
@@ -1860,7 +1874,7 @@ function toQuestData(
 }
 
 export function toNotificationData(row: UserProgressNotificationRow): UserGamificationNotificationData {
-  const payload = normalizePayload(row.payload_json);
+  const payload = canonicalizeSystemNotificationPayload(normalizePayload(row.payload_json));
   const presentation = buildNotificationPresentation(row.notification_type, payload);
 
   return {
@@ -1877,6 +1891,20 @@ export function toNotificationData(row: UserProgressNotificationRow): UserGamifi
     created_at: row.created_at,
     seen_at: row.seen_at,
   };
+}
+
+function canonicalizeSystemNotificationPayload(
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(payload).map(([key, value]) => {
+      if (!SYSTEM_NOTIFICATION_COPY_FIELDS.has(key) || typeof value !== "string") {
+        return [key, value];
+      }
+
+      return [key, SYSTEM_BRAND_COPY_MAP[value] ?? value];
+    }),
+  );
 }
 
 function compareEarnedBadges(

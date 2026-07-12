@@ -6,8 +6,8 @@
 
 - [ ] 법적·SEO·서비스 최초 정의에서 정식명 `무엇을 먹든`을 표시한다 <!-- omo:id=brand-accept-official-name;stage=4;scope=frontend;review=5,6 -->
 - [ ] AppBar·텍스트 워드마크·좁은 내비게이션에서 짧은명 `무먹`을 표시한다 <!-- omo:id=brand-accept-short-name;stage=4;scope=frontend;review=5,6 -->
-- [ ] 신규·빈 nickname은 `무먹러`, 기존 저장 nickname은 원래 값으로 표시된다 <!-- omo:id=brand-accept-nickname-policy;stage=2;scope=shared;review=3,6 -->
-- [ ] 과거 system notification은 DB rewrite 없이 canonical copy로 표시된다 <!-- omo:id=brand-accept-notification-read-time;stage=2;scope=backend;review=3,6 -->
+- [x] 신규·빈 nickname은 `무먹러`, 기존 저장 nickname은 원래 값으로 표시된다 <!-- omo:id=brand-accept-nickname-policy;stage=2;scope=shared;review=3,6 -->
+- [x] 과거 system notification은 DB rewrite 없이 canonical copy로 표시된다 <!-- omo:id=brand-accept-notification-read-time;stage=2;scope=backend;review=3,6 -->
 
 ## Canonical Copy
 
@@ -17,17 +17,17 @@
 - [ ] how-to heading은 `한 끼는 이렇게 이어져요`다 <!-- omo:id=brand-accept-copy-howto;stage=4;scope=frontend;review=5,6 -->
 - [ ] features heading은 `끼니 계획이 편해지는 이유`다 <!-- omo:id=brand-accept-copy-features;stage=4;scope=frontend;review=5,6 -->
 - [ ] 성장 label은 `끼니 기록 / 끼니 활동 / 끼니 성장`이다 <!-- omo:id=brand-accept-copy-growth;stage=4;scope=frontend;review=5,6 -->
-- [ ] 조리 업적 label은 `첫 요리 완성`이다 <!-- omo:id=brand-accept-copy-first-cook;stage=2;scope=shared;review=3,6 -->
+- [x] 조리 업적 label은 `첫 요리 완성`이다 <!-- omo:id=brand-accept-copy-first-cook;stage=2;scope=shared;review=3,6 -->
 - [ ] HOME system source badge는 `무먹 추천`을 표시하고 `system` key/API shape는 유지한다 <!-- omo:id=brand-accept-copy-system-source-badge;stage=4;scope=shared;review=5,6 -->
 - [ ] 설명 섹션 영문 label은 `WHY IT WORKS`이며 새 영문 서비스명으로 사용하지 않는다 <!-- omo:id=brand-accept-copy-why;stage=4;scope=frontend;review=5,6 -->
 
 ## Nickname / Notification Policy
 
-- [ ] `null`/누락/whitespace-only 신규 nickname만 `무먹러` fallback 대상이다 <!-- omo:id=brand-accept-nickname-empty-only;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 비어 있지 않은 nickname은 `집밥러` 같은 과거 값도 그대로 보존한다 <!-- omo:id=brand-accept-nickname-existing;stage=2;scope=backend;review=3,6 -->
-- [ ] exact legacy system copy 4종만 read-time mapping하고 mapping 밖 문자열은 바꾸지 않는다 <!-- omo:id=brand-accept-notification-exact-map;stage=2;scope=backend;review=3,6 -->
-- [ ] notification 조회 반복은 멱등하며 stored row/payload가 변경되지 않는다 <!-- omo:id=brand-accept-notification-idempotent;stage=2;scope=backend;review=3,6 -->
-- [ ] nickname·사용자 작성 콘텐츠·일반명사 `집밥`에는 notification mapping을 적용하지 않는다 <!-- omo:id=brand-accept-no-user-content-map;stage=2;scope=shared;review=3,6 -->
+- [x] `null`/누락/whitespace-only 신규 nickname만 `무먹러` fallback 대상이다 <!-- omo:id=brand-accept-nickname-empty-only;stage=2;scope=backend;review=3,6 -->
+- [x] 기존 비어 있지 않은 nickname은 `집밥러` 같은 과거 값도 그대로 보존한다 <!-- omo:id=brand-accept-nickname-existing;stage=2;scope=backend;review=3,6 -->
+- [x] exact legacy system copy 4종만 read-time mapping하고 mapping 밖 문자열은 바꾸지 않는다 <!-- omo:id=brand-accept-notification-exact-map;stage=2;scope=backend;review=3,6 -->
+- [x] notification 조회 반복은 멱등하며 stored row/payload가 변경되지 않는다 <!-- omo:id=brand-accept-notification-idempotent;stage=2;scope=backend;review=3,6 -->
+- [x] nickname·사용자 작성 콘텐츠·일반명사 `집밥`에는 notification mapping을 적용하지 않는다 <!-- omo:id=brand-accept-no-user-content-map;stage=2;scope=shared;review=3,6 -->
 
 ## State / Policy
 
@@ -36,13 +36,13 @@
 - [ ] error 상태의 브랜드 copy와 기존 error/retry 의미가 함께 유지된다 <!-- omo:id=brand-accept-error;stage=4;scope=frontend;review=5,6 -->
 - [ ] read-only 화면은 copy 변경 후에도 쓰기 action을 새로 만들지 않는다 <!-- omo:id=brand-accept-read-only;stage=4;scope=frontend;review=5,6 -->
 - [ ] unauthorized/login gate와 return-to-action 계약이 유지된다 <!-- omo:id=brand-accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] 도메인 상태 전이·권한·소유권·멱등성 규칙이 바뀌지 않는다 <!-- omo:id=brand-accept-domain-policy;stage=2;scope=shared;review=3,6 -->
+- [x] 도메인 상태 전이·권한·소유권·멱등성 규칙이 바뀌지 않는다 <!-- omo:id=brand-accept-domain-policy;stage=2;scope=shared;review=3,6 -->
 
 ## API / DB / Compatibility Guard
 
-- [ ] 신규 endpoint, request/response field, enum, status, error code가 없다 <!-- omo:id=brand-accept-no-api-shape;stage=2;scope=backend;review=3,6 -->
-- [ ] DB schema/migration/backfill/rewrite가 없다 <!-- omo:id=brand-accept-no-db-change;stage=2;scope=backend;review=3,6 -->
-- [ ] `{ success, data, error }` envelope와 기존 field type이 유지된다 <!-- omo:id=brand-accept-envelope-types;stage=2;scope=backend;review=3,6 -->
+- [x] 신규 endpoint, request/response field, enum, status, error code가 없다 <!-- omo:id=brand-accept-no-api-shape;stage=2;scope=backend;review=3,6 -->
+- [x] DB schema/migration/backfill/rewrite가 없다 <!-- omo:id=brand-accept-no-db-change;stage=2;scope=backend;review=3,6 -->
+- [x] `{ success, data, error }` envelope와 기존 field type이 유지된다 <!-- omo:id=brand-accept-envelope-types;stage=2;scope=backend;review=3,6 -->
 - [ ] `homecook:*`, `HOMECOOK_*`, cookie/header/event/storage key가 바뀌지 않는다 <!-- omo:id=brand-accept-runtime-identifiers;stage=4;scope=shared;review=6 -->
 - [ ] package/repository/Supabase/OMO/stored key가 바뀌지 않는다 <!-- omo:id=brand-accept-system-identifiers;stage=4;scope=shared;review=6 -->
 - [ ] 새 dependency, 영문 브랜드, 이미지 로고, 마스코트가 없다 <!-- omo:id=brand-accept-no-new-assets-deps;stage=4;scope=shared;review=6 -->
@@ -66,16 +66,16 @@
 
 ## Data Setup / Preconditions
 
-- [ ] 신규 null/빈 nickname과 기존 저장 nickname fixture가 준비된다 <!-- omo:id=brand-accept-fixture-nickname;stage=2;scope=shared;review=3,6 -->
-- [ ] exact legacy notification copy와 사용자 콘텐츠 보존 fixture가 준비된다 <!-- omo:id=brand-accept-fixture-notification;stage=2;scope=shared;review=3,6 -->
-- [ ] 신규 DB seed/bootstrap/system row가 필요하지 않음을 확인한다 <!-- omo:id=brand-accept-no-bootstrap;stage=2;scope=shared;review=3,6 -->
-- [ ] `auth-provider-memory-linking` PR #967과 `service-about-guide` docs #978/FE #979 merge 증거가 일치하고 후속 구현 current-head conflict가 0이다 <!-- omo:id=brand-accept-dependency-gate;stage=2;scope=shared;review=3,6 -->
+- [x] 신규 null/빈 nickname과 기존 저장 nickname fixture가 준비된다 <!-- omo:id=brand-accept-fixture-nickname;stage=2;scope=shared;review=3,6 -->
+- [x] exact legacy notification copy와 사용자 콘텐츠 보존 fixture가 준비된다 <!-- omo:id=brand-accept-fixture-notification;stage=2;scope=shared;review=3,6 -->
+- [x] 신규 DB seed/bootstrap/system row가 필요하지 않음을 확인한다 <!-- omo:id=brand-accept-no-bootstrap;stage=2;scope=shared;review=3,6 -->
+- [x] `auth-provider-memory-linking` PR #967과 `service-about-guide` docs #978/FE #979 merge 증거가 일치하고 후속 구현 current-head conflict가 0이다 <!-- omo:id=brand-accept-dependency-gate;stage=2;scope=shared;review=3,6 -->
 
 ## Automation Split
 
 ### Vitest
 
-- [ ] nickname fallback/existing-value 보존과 notification exact mapping을 unit test로 고정한다 <!-- omo:id=brand-accept-vitest-backend;stage=2;scope=backend;review=3,6 -->
+- [x] nickname fallback/existing-value 보존과 notification exact mapping을 unit test로 고정한다 <!-- omo:id=brand-accept-vitest-backend;stage=2;scope=backend;review=3,6 -->
 - [ ] brand copy matrix, nav/AppBar, HOME/ABOUT/MYPAGE surface를 unit/component test로 고정한다 <!-- omo:id=brand-accept-vitest-frontend;stage=4;scope=frontend;review=5,6 -->
 - [ ] technical identifier와 historical artifact 변경 금지 source guard를 둔다 <!-- omo:id=brand-accept-vitest-guards;stage=4;scope=shared;review=6 -->
 

@@ -294,6 +294,51 @@ describe("user bootstrap", () => {
     expect(client.state.users[0]?.social_provider).toBe("google");
   });
 
+  it.each([
+    ["누락", {}],
+    ["null", { nickname: null }],
+    ["공백", { nickname: "   " }],
+  ])("uses 무먹러 only when a new user's nickname is %s", async (_case, userMetadata) => {
+    const client = createMemoryBootstrapClient({});
+
+    const row = await ensurePublicUserRow(client as never, {
+      id: `user-${_case}`,
+      email: "cook@example.com",
+      app_metadata: { provider: "google" },
+      user_metadata: userMetadata,
+    });
+
+    expect(row.nickname).toBe("무먹러");
+    expect(client.state.users[0]?.nickname).toBe("무먹러");
+  });
+
+  it("preserves an existing non-empty stored nickname without applying the fallback", async () => {
+    const existingUser: MemoryUserRow = {
+      id: "user-1",
+      nickname: "집밥러",
+      email: "cook@example.com",
+      profile_image_url: null,
+      social_provider: "google",
+      social_id: "social-1",
+      settings_json: {},
+      created_at: "2026-04-01T00:00:00.000Z",
+      updated_at: "2026-04-01T00:00:00.000Z",
+      deleted_at: null,
+    };
+    const client = createMemoryBootstrapClient({ users: [existingUser] });
+
+    const row = await ensurePublicUserRow(client as never, {
+      id: "user-1",
+      email: "cook@example.com",
+      app_metadata: { provider: "google" },
+      user_metadata: { nickname: "무먹러" },
+    });
+
+    expect(row).toBe(existingUser);
+    expect(row.nickname).toBe("집밥러");
+    expect(client.state.users).toEqual([existingUser]);
+  });
+
   it("normalizes email before persisting a public user row", async () => {
     const client = createMemoryBootstrapClient({});
 
