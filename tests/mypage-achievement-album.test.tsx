@@ -157,7 +157,7 @@ const MOCK_GAMIFICATION: UserGamificationData = {
           {
             achievement_key: "tutorial_cooking_complete",
             track_key: "tutorial",
-            title: "첫 요리 완료하기",
+            title: "첫 요리 완성",
             description: "첫 요리 완료를 기록해 보세요.",
             current: 0,
             target: 1,

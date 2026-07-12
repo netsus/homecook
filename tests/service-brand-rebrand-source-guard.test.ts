@@ -48,6 +48,7 @@ describe("service brand rebrand source guard", () => {
     }
 
     expect(currentBrandSources).not.toContain('title: "첫 집밥 완료하기"');
+    expect(currentBrandSources).not.toContain('title: "첫 집밥 완료"');
 
     expect(runtimeSources).toContain("HOMECOOK_GAMIFICATION_REFRESH_EVENT");
     expect(runtimeSources).toContain("NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES");

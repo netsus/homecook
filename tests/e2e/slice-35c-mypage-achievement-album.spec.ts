@@ -178,7 +178,7 @@ function buildGamification(archivePreview = notifications) {
             milestone("tutorial_planner_registered", "첫 식단 등록하기", "active", 3, 5, "ribbon"),
             milestone("tutorial_shopping_list_complete", "첫 장보기 완료하기", "locked", 0, 1, "bowl"),
             milestone("tutorial_shopping_list_create", "첫 장보기 목록 만들기", "locked", 0, 1, "leaf"),
-            milestone("tutorial_cooking_complete", "첫 요리 완료하기", "locked", 0, 1, "pot"),
+            milestone("tutorial_cooking_complete", "첫 요리 완성", "locked", 0, 1, "pot"),
             milestone("tutorial_recipebook_created", "첫 레시피북 만들기", "locked", 0, 1, "plate"),
             milestone("tutorial_complete", "튜토리얼 완료", "earned", 6, 6, "ribbon"),
           ],

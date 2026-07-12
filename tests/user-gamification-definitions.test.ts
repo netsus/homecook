@@ -95,6 +95,15 @@ describe("user gamification definitions", () => {
         title: "첫 요리 완료하기",
       }),
     ]));
+    const tutorialMilestones = data.achievement_album.categories.find(
+      (category) => category.category_key === "tutorial",
+    )?.milestones;
+    expect(tutorialMilestones).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        achievement_key: "tutorial_cooking_complete",
+        title: "첫 요리 완성",
+      }),
+    ]));
   });
 
   it("advances the active tutorial step after the first tutorial achievement is earned", () => {

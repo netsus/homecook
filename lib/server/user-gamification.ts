@@ -569,7 +569,7 @@ export const USER_ACHIEVEMENT_DEFINITIONS: UserAchievementDefinition[] = [
     achievement_key: "tutorial_cooking_complete",
     category_key: "tutorial",
     track_key: "tutorial",
-    title: "첫 집밥 완료",
+    title: "첫 요리 완성",
     description: "첫 요리 완료를 기록했어요.",
     metric: "cooking_completed",
     target: 1,
