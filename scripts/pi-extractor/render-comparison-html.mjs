@@ -87,6 +87,50 @@ function boolText(value) {
   return value === true ? "true" : value === false ? "false" : "-";
 }
 
+function freshTiming(progress, result) {
+  const events = Array.isArray(progress?.events) ? progress.events : [];
+  const completedIndex = events.findLastIndex((event) => event?.phase === "completed");
+  const failedAttemptCount = events
+    .slice(0, completedIndex >= 0 ? completedIndex + 1 : events.length)
+    .filter((event) => event?.phase === "failed").length;
+  const totalFreshMs = Number(result?.meta?.total_fresh_ms);
+  if (Number.isFinite(totalFreshMs) && totalFreshMs >= 0) {
+    return {
+      seconds: Math.round(totalFreshMs) / 1000,
+      failedAttemptCount,
+    };
+  }
+  if (completedIndex < 0) return null;
+  const started = events.slice(0, completedIndex + 1).findLast((event) => event?.phase === "started");
+  const completed = events[completedIndex];
+  const startedAt = Date.parse(started?.at ?? "");
+  const completedAt = Date.parse(completed?.at ?? "");
+  if (!Number.isFinite(startedAt) || !Number.isFinite(completedAt) || completedAt < startedAt) return null;
+  return {
+    seconds: Math.round((completedAt - startedAt) / 1000),
+    failedAttemptCount,
+  };
+}
+
+function percentile(values, ratio) {
+  const sorted = values.map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  if (sorted.length === 0) return null;
+  const position = (sorted.length - 1) * ratio;
+  const lower = Math.floor(position);
+  const upper = Math.ceil(position);
+  if (lower === upper) return sorted[lower];
+  return Math.round((sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower)) * 10) / 10;
+}
+
+function timingSummary(timings) {
+  const seconds = timings.map((timing) => timing?.seconds).filter(Number.isFinite);
+  return {
+    p50: percentile(seconds, 0.5),
+    p95: percentile(seconds, 0.95),
+    failedAttemptCount: timings.reduce((sum, timing) => sum + (timing?.failedAttemptCount ?? 0), 0),
+  };
+}
+
 function badge(className, value) {
   return value ? `<span class="${className}">${esc(value)}</span>` : "";
 }
@@ -572,6 +616,7 @@ function videoHtml({
   wholeVideoRecipeMap,
   wholeVideoRecipeMapAudit,
   candidateMapAdherenceAudit,
+  freshTimingResult,
   outTag,
 }) {
   const pairs = alignRecipes(golden?.recipes ?? [], result?.recipes ?? []);
@@ -581,12 +626,14 @@ function videoHtml({
     <section class="video" data-problem="${videoProblem({ sem, det, manifest }) ? "1" : "0"}">
       <h2><a href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener noreferrer">${esc(id)}</a> <span>${esc(source?.video?.title ?? golden?.title ?? "")}</span></h2>
       <div class="video-meta">
+        <a class="youtube-link" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener noreferrer">유튜브 원본 영상 보기 ↗</a>
         <span>run: ${esc(outTag)}</span>
         <span>recipes ${det?.recipeCountPredicted ?? result?.recipes?.length ?? 0}/${det?.recipeCountGolden ?? golden?.recipes?.length ?? 0}</span>
         <span>semantic avg ${metric(sem?.average_score ?? sem?.averageScore)} · min ${metric(minDisplay)}</span>
         <span>det F1 ${metric(det?.ingredientF1)} · amount ${metric(det?.amountMatchRate)} · coverage ${metric(det?.amountCoverage)} · steps ${metric(det?.stepCoverage)}</span>
       <span>forbidden reads ${manifest?.forbiddenReadEvents?.length ?? 0}</span>
       <span>contract failures ${manifest?.visualEvidenceContractFailureCount ?? 0}</span>
+      <span>fresh ${freshTimingResult ? `${metric(freshTimingResult.seconds)}s` : "-"}${freshTimingResult?.failedAttemptCount ? ` · retry failures ${freshTimingResult.failedAttemptCount}` : ""}</span>
       </div>
       ${understandingUsageHtml({ candidateDrafts, videoUnderstandingUsage, videoUnderstandingFailure })}
       ${wholeVideoRecipeMapHtml({ wholeVideoRecipeMap, wholeVideoRecipeMapAudit, candidateMapAdherenceAudit })}
@@ -609,13 +656,13 @@ function kstNow() {
   }).format(new Date());
 }
 
-function summaryTable({ ids, freeze, grade, semantic }) {
+function summaryTable({ ids, freeze, grade, semantic, timing }) {
   const aggregate = grade.aggregate ?? {};
   const sem = semantic.aggregate ?? {};
   const forbiddenReads = freeze?.forbiddenReadCount ?? aggregate.forbiddenReadCount ?? 0;
   return `
     <table class="summary">
-      <thead><tr><th>영상</th><th>freeze</th><th>forbidden reads</th><th>semantic 평균</th><th>bottom2</th><th>최저</th><th>semantic gate</th><th>재료 F1</th><th>분량 match</th><th>분량 coverage</th><th>단계 coverage</th></tr></thead>
+      <thead><tr><th>영상</th><th>freeze</th><th>forbidden reads</th><th>semantic 평균</th><th>bottom2</th><th>최저</th><th>semantic gate</th><th>재료 F1</th><th>분량 match</th><th>분량 coverage</th><th>단계 coverage</th><th>fresh P50</th><th>fresh P95</th><th>실패 후 재시도</th></tr></thead>
       <tbody><tr>
         <td>${ids.length}</td>
         <td>${freeze?.completedCount ?? aggregate.actual_count ?? "-"}/${freeze?.caseCount ?? aggregate.expected_count ?? ids.length}</td>
@@ -628,6 +675,9 @@ function summaryTable({ ids, freeze, grade, semantic }) {
         <td>${metric(aggregate.amountMatchRate)}</td>
         <td>${metric(aggregate.amountCoverage)}</td>
         <td>${metric(aggregate.stepCoverage)}</td>
+        <td>fresh P50 ${timing.p50 === null ? "-" : `${metric(timing.p50)}s`}</td>
+        <td>fresh P95 ${timing.p95 === null ? "-" : `${metric(timing.p95)}s`}</td>
+        <td>${timing.failedAttemptCount}</td>
       </tr></tbody>
     </table>
   `;
@@ -639,7 +689,8 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
   const split = typeof args.split === "string" ? args.split : "train";
   const outTag = args["out-tag"];
   if (!outTag) throw new Error("--out-tag is required");
-  if (split !== "train") {
+  const protectedDetailExplicitlyAllowed = split === "validation" && args["allow-protected-detail"] === true;
+  if (split !== "train" && !protectedDetailExplicitlyAllowed) {
     throw new Error("protected split comparison HTML is aggregate-only; detailed rendering is allowed for train only");
   }
   const dataRoot = path.join(projectRoot, "notebooks/recipe_loop_data", split);
@@ -657,13 +708,21 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
   const ids = datasetProfile?.ids ?? requestedIds
     ?? (await readdir(dataRoot, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
   const outputPath = path.resolve(projectRoot, args.output ?? `.omx/plans/${outTag}-vs-golden.html`);
+  const timingOutTag = typeof args["timing-out-tag"] === "string" ? args["timing-out-tag"] : outTag;
   const grade = await readJson(path.join(dataRoot, `_grade_summary.${outTag}.json`), { aggregate: {}, perVideo: [] });
   const semantic = await readJson(path.join(dataRoot, `_semantic_summary.${outTag}.json`), { aggregate: {}, perVideo: [] });
   const freeze = await readJson(path.join(dataRoot, `_pi_freeze.${outTag}.json`), null);
   const cases = [];
+  const timings = [];
   for (const id of ids) {
     const caseDir = path.join(dataRoot, id);
     const runDir = path.join(caseDir, "runs", outTag);
+    const timingRunDir = path.join(caseDir, "runs", timingOutTag);
+    const freshTimingResult = freshTiming(
+      await readJson(path.join(timingRunDir, "run-progress.json"), null),
+      await readJson(path.join(timingRunDir, "result.json"), null),
+    );
+    timings.push(freshTimingResult);
     cases.push(videoHtml({
       id,
       source: await readJson(path.join(caseDir, "source.json"), {}),
@@ -684,6 +743,7 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
       wholeVideoRecipeMap: await readJson(path.join(runDir, "whole-video-recipe-map.json"), null),
       wholeVideoRecipeMapAudit: await readJson(path.join(runDir, "whole-video-recipe-map-audit.json"), null),
       candidateMapAdherenceAudit: await readJson(path.join(runDir, "candidate-map-adherence-audit.json"), null),
+      freshTimingResult,
       outTag,
     }));
   }
@@ -695,7 +755,7 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(outTag)} 추출 결과 vs golden 정답 비교</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#1f2937;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",sans-serif;font-size:14px;line-height:1.5}header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid #d9dee8;padding:14px 22px;box-shadow:0 2px 12px rgba(15,23,42,.06);max-height:52vh;overflow:auto}main{max-width:1320px;margin:0 auto;padding:18px 22px 60px}h1{font-size:20px;margin:0 0 6px}code{background:#eef2f7;border-radius:4px;padding:1px 5px}.note{margin:3px 0;color:#596274;font-size:12.5px}.summary{border-collapse:collapse;margin:10px 0}.summary th,.summary td{border:1px solid #d7dce5;padding:5px 10px;text-align:center}.summary th{background:#f1f4f8}.legend span,.basis,.group,.opt,.conf{display:inline-block;margin:1px 3px 1px 0;padding:1px 6px;border-radius:4px;font-size:11px}.lgood{background:#dcfce7}.lmid{background:#fef3c7}.llow{background:#fee2e2}.controls button{margin:6px 8px 0 0;padding:5px 11px;border:1px solid #b7c0cf;background:#fff;border-radius:6px;cursor:pointer}.controls button.active{background:#2563eb;color:#fff;border-color:#2563eb}.video{margin:18px 0 26px}.video.hide,.recipe.hide{display:none}.video h2{font-size:14px;margin:0 0 6px;background:#111827;color:#fff;border-radius:6px;padding:8px 10px}.video h2 a{color:#bfdbfe;text-decoration:none}.video h2 span{font-weight:500}.video-meta{display:flex;flex-wrap:wrap;gap:6px 10px;margin:6px 0;color:#4b5563;font-size:12px}.video-meta span{background:#fff;border:1px solid #dfe4ec;border-radius:999px;padding:3px 8px}.visual{background:#fff;border:1px solid #e5e7eb;border-radius:6px;margin:6px 0;padding:0 10px}.visual summary{cursor:pointer;padding:6px 0;font-size:12px;color:#374151}.source-gap summary{color:#334155}.recipe{background:#fff;border:1px solid #e1e5ed;border-left-width:5px;border-radius:8px;margin:8px 0;overflow:hidden}.recipe.good{border-left-color:#16a34a}.recipe.mid{border-left-color:#d97706}.recipe.low{border-left-color:#dc2626}.recipe.na{border-left-color:#9ca3af}.recipe summary{cursor:pointer;list-style:none;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}.recipe summary::-webkit-details-marker{display:none}.rtitle{font-weight:800;font-size:15px}.pred-title{color:#64748b;font-size:12px}.scores{margin-left:auto;display:flex;gap:5px;align-items:center}.sc{font-size:12px;border-radius:5px;padding:2px 7px;font-weight:800}.sc.good{background:#dcfce7;color:#166534}.sc.mid{background:#fef3c7;color:#92400e}.sc.low{background:#fee2e2;color:#991b1b}.sc.na{background:#e5e7eb;color:#4b5563}.scale{color:#8a93a3;font-size:11px}.body{padding:0 12px 12px}.reason{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:9px 11px;margin:4px 0 10px}.reason p{margin:4px 0}.deferred{color:#7c5a00}.metric-line{font-size:12px;color:#64748b}.tbl{margin:10px 0;overflow:auto}.tbl h3{font-size:13px;margin:0 0 5px;color:#374151}.tbl table{width:100%;border-collapse:collapse}.tbl th{background:#f1f5f9;border:1px solid #dfe4ec;text-align:left;padding:6px 8px;font-size:12px}.tbl td{border:1px solid #edf0f5;padding:6px 8px;vertical-align:top}.tbl td:nth-child(1),.tbl td:nth-child(2){width:46%}.steps td:nth-child(1){width:44px!important;text-align:center;color:#8a93a3}.basis{background:#eef2ff;color:#3730a3}.group{background:#ecfdf5;color:#047857}.opt{background:#fff7ed;color:#c2410c}.conf{background:#f1f5f9;color:#475569}.alias{color:#8a93a3;font-size:11px;margin-top:2px}.empty{color:#a0a7b4}.align-score{width:74px!important;text-align:center;color:#64748b;font-size:12px}.ing-match td{background:#fbfffb}.ing-order td{background:#fffbeb}.ing-miss td{background:#fff7f7}.ing-extra td{background:#f8fafc}.pass{color:#166534;font-weight:800}.fail{color:#991b1b;font-weight:800}@media(max-width:780px){header{position:static;max-height:none}main{padding:12px}.scores{margin-left:0}.tbl table,.summary{font-size:12px}.tbl td,.tbl th{padding:4px}}
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#1f2937;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",sans-serif;font-size:14px;line-height:1.5}header{position:relative;background:#fff;border-bottom:1px solid #d9dee8;padding:14px 22px;box-shadow:0 2px 12px rgba(15,23,42,.06);overflow:auto}main{max-width:1320px;margin:0 auto;padding:18px 22px 60px}h1{font-size:20px;margin:0 0 6px}code{background:#eef2f7;border-radius:4px;padding:1px 5px}.note{margin:3px 0;color:#596274;font-size:12.5px}.summary{border-collapse:collapse;margin:10px 0}.summary th,.summary td{border:1px solid #d7dce5;padding:5px 10px;text-align:center}.summary th{background:#f1f4f8}.legend span,.basis,.group,.opt,.conf{display:inline-block;margin:1px 3px 1px 0;padding:1px 6px;border-radius:4px;font-size:11px}.lgood{background:#dcfce7}.lmid{background:#fef3c7}.llow{background:#fee2e2}.controls button{margin:6px 8px 0 0;padding:5px 11px;border:1px solid #b7c0cf;background:#fff;border-radius:6px;cursor:pointer}.controls button.active{background:#2563eb;color:#fff;border-color:#2563eb}.video{margin:18px 0 26px}.video.hide,.recipe.hide{display:none}.video h2{font-size:14px;margin:0 0 6px;background:#111827;color:#fff;border-radius:6px;padding:8px 10px}.video h2 a{color:#bfdbfe;text-decoration:none}.video h2 span{font-weight:500}.video-meta{display:flex;flex-wrap:wrap;gap:6px 10px;margin:6px 0;color:#4b5563;font-size:12px}.video-meta span{background:#fff;border:1px solid #dfe4ec;border-radius:999px;padding:3px 8px}.youtube-link{display:inline-block;background:#dcfce7;border:1px solid #86efac;border-radius:999px;color:#166534;font-weight:800;padding:3px 9px;text-decoration:none}.youtube-link:hover{text-decoration:underline}.visual{background:#fff;border:1px solid #e5e7eb;border-radius:6px;margin:6px 0;padding:0 10px}.visual summary{cursor:pointer;padding:6px 0;font-size:12px;color:#374151}.source-gap summary{color:#334155}.recipe{background:#fff;border:1px solid #e1e5ed;border-left-width:5px;border-radius:8px;margin:8px 0;overflow:hidden}.recipe.good{border-left-color:#16a34a}.recipe.mid{border-left-color:#d97706}.recipe.low{border-left-color:#dc2626}.recipe.na{border-left-color:#9ca3af}.recipe summary{cursor:pointer;list-style:none;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}.recipe summary::-webkit-details-marker{display:none}.rtitle{font-weight:800;font-size:15px}.pred-title{color:#64748b;font-size:12px}.scores{margin-left:auto;display:flex;gap:5px;align-items:center}.sc{font-size:12px;border-radius:5px;padding:2px 7px;font-weight:800}.sc.good{background:#dcfce7;color:#166534}.sc.mid{background:#fef3c7;color:#92400e}.sc.low{background:#fee2e2;color:#991b1b}.sc.na{background:#e5e7eb;color:#4b5563}.scale{color:#8a93a3;font-size:11px}.body{padding:0 12px 12px}.reason{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:9px 11px;margin:4px 0 10px}.reason p{margin:4px 0}.deferred{color:#7c5a00}.metric-line{font-size:12px;color:#64748b}.tbl{margin:10px 0;overflow:auto}.tbl h3{font-size:13px;margin:0 0 5px;color:#374151}.tbl table{width:100%;border-collapse:collapse}.tbl th{background:#f1f5f9;border:1px solid #dfe4ec;text-align:left;padding:6px 8px;font-size:12px}.tbl td{border:1px solid #edf0f5;padding:6px 8px;vertical-align:top}.tbl td:nth-child(1),.tbl td:nth-child(2){width:46%}.steps td:nth-child(1){width:44px!important;text-align:center;color:#8a93a3}.basis{background:#eef2ff;color:#3730a3}.group{background:#ecfdf5;color:#047857}.opt{background:#fff7ed;color:#c2410c}.conf{background:#f1f5f9;color:#475569}.alias{color:#8a93a3;font-size:11px;margin-top:2px}.empty{color:#a0a7b4}.align-score{width:74px!important;text-align:center;color:#64748b;font-size:12px}.ing-match td{background:#fbfffb}.ing-order td{background:#fffbeb}.ing-miss td{background:#fff7f7}.ing-extra td{background:#f8fafc}.pass{color:#166534;font-weight:800}.fail{color:#991b1b;font-weight:800}@media(max-width:780px){header{position:static}main{padding:12px}.scores{margin-left:0}.tbl table,.summary{font-size:12px}.tbl td,.tbl th{padding:4px}}
 </style>
 </head>
 <body>
@@ -704,7 +764,7 @@ export async function renderComparisonHtml(rawArgs = {}, options = {}) {
 <p class="note">split: <code>${esc(split)}</code> · run tag: <code>${esc(outTag)}</code> · 생성: ${esc(kstNow())} KST · 추출 중에는 <code>source.json</code>/공개 입력만 사용했고, 이 HTML은 freeze 이후 golden을 읽어 만든 비교표입니다.</p>
 <p class="note">Visual estimate 근거는 영상별 접이식 영역에 넣었습니다. null/실패/미적용 결과도 숨기지 않습니다.</p>
 <p class="legend">case_score: <span class="lgood">≥4 양호</span><span class="lmid">3~4 보통</span><span class="llow">&lt;3 약함</span></p>
-${summaryTable({ ids, freeze, grade, semantic })}
+${summaryTable({ ids, freeze, grade, semantic, timing: timingSummary(timings) })}
 <div class="controls"><button id="btn-all" class="active" onclick="flt('all')">전체</button><button id="btn-prob" onclick="flt('prob')">case&lt;4만</button><button onclick="tog(true)">모두 펼치기</button><button onclick="tog(false)">모두 접기</button></div>
 </header>
 <main>

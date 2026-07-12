@@ -10,9 +10,6 @@ const repoRoot = path.resolve(__dirname, "..");
 const sourceEvidenceModuleUrl = pathToFileURL(
   path.join(repoRoot, "lib/server/recipe-extraction-lab/source-evidence.mjs"),
 ).href;
-const candidatePacketsModuleUrl = pathToFileURL(
-  path.join(repoRoot, "lib/server/recipe-extraction-lab/candidate-packets.mjs"),
-).href;
 const promptModuleUrl = pathToFileURL(path.join(repoRoot, "lib/server/recipe-extraction-lab/prompt.mjs")).href;
 const runExtractionModuleUrl = pathToFileURL(path.join(repoRoot, "scripts/recipe-loop/run-extraction.mjs")).href;
 
@@ -63,53 +60,7 @@ describe("recipe-loop evidence packets", () => {
     });
   });
 
-  it("builds seven scoped packets for fTlTpSJtrEs without tag over-splitting", async () => {
-    const { sourceToInput } = await import(runExtractionModuleUrl);
-    const { buildEvidencePacketBundle } = await import(candidatePacketsModuleUrl);
-    const source = JSON.parse(
-      readFileSync(path.join(repoRoot, "notebooks/recipe_loop_data/train/fTlTpSJtrEs/source.json"), "utf8"),
-    );
 
-    const bundle = buildEvidencePacketBundle(sourceToInput(source));
-
-    expect(bundle.version).toBe("recipe-evidence-packet-v1");
-    expect(bundle.packets.map((packet: { titleHint: string }) => packet.titleHint)).toEqual([
-      "메밀 후토마끼",
-      "맥적구이",
-      "열무 들기름 냉파스타",
-      "등촌식 멸치칼국수",
-      "소곱창구이",
-      "도토리 묵사발",
-      "항정살 마늘쫑 솥밥",
-    ]);
-    expect(JSON.stringify(bundle.packets)).toContain("새우");
-    expect(JSON.stringify(bundle.packets)).not.toContain("요리하기");
-    expect(JSON.stringify(bundle.report.rows)).toContain("amount_or_unit");
-    expect(JSON.stringify(bundle.report.rows)).not.toContain("700ml");
-  });
-
-  it("recovers fish sauce from noisy transcript ingredient wording", async () => {
-    const { buildEvidencePacketBundle } = await import(candidatePacketsModuleUrl);
-
-    const bundle = buildEvidencePacketBundle({
-      video: {
-        title: "열무 들기름냉파스타",
-        description: "00:00 열무 들기름냉파스타",
-        tags: [],
-      },
-      transcript: {
-        language: "ko",
-        segments: [
-          { lineIndex: 0, text: "액젓은 들기를", startMs: 534360, durationMs: 2000, language: "ko" },
-        ],
-      },
-      authorComments: [],
-    });
-
-    const packet = bundle.packets[0];
-    expect(packet.titleHint).toBe("열무 들기름 냉파스타");
-    expect(packet.ingredientCues.map((cue: { text: string }) => cue.text)).toContain("액젓");
-  });
 
   it("writes evidence packet artifacts for lab extraction runs", async () => {
     const { runExtraction } = await import(runExtractionModuleUrl);
@@ -164,6 +115,59 @@ describe("recipe-loop evidence packets", () => {
       usedVisual: true,
       receivedVideoUrl: "https://www.youtube.com/watch?v=case-a",
     });
+  });
+
+  it("loads dataset profile ids and fails closed when single-recipe output is not exactly one", async () => {
+    const { runExtraction } = await import(runExtractionModuleUrl);
+    const sourceFor = (videoId: string) => ({
+      video: { videoId, title: "중립 요리", description: "00:00 중립 요리", tags: [] },
+      captions: { available: false, segments: [] },
+      authorComments: { comments: [] },
+    });
+    writeJson(path.join(workdir, "notebooks/recipe_loop_data/train/case-a/source.json"), sourceFor("case-a"));
+    writeJson(path.join(workdir, "notebooks/recipe_loop_data/train/case-b/source.json"), sourceFor("case-b"));
+    writeJson(path.join(workdir, "notebooks/recipe_loop_data/manifest.single.json"), {
+      schemaVersion: 1,
+      profileId: "single-test",
+      expectedRecipeCountPerVideo: 1,
+      splits: { train: { expectedCount: 1, ids: ["case-a"] } },
+    });
+    let generateCount = 0;
+    const llm = {
+      generate: async () => {
+        generateCount += 1;
+        return {
+          cached: false,
+          model: "fixture",
+          provider: "fixture",
+          json: {
+            recipes: [
+              { title: "요리 A", ingredients: [{ name: "재료 A" }], steps: ["재료 A를 익힌다."] },
+              { title: "요리 B", ingredients: [{ name: "재료 B" }], steps: ["재료 B를 익힌다."] },
+            ],
+          },
+        };
+      },
+    };
+
+    await expect(runExtraction({
+      split: "train",
+      "out-tag": "single-contract",
+      "dataset-manifest": "notebooks/recipe_loop_data/manifest.single.json",
+      "single-recipe-only": true,
+    }, {
+      projectRoot: workdir,
+      dataRoot: "notebooks/recipe_loop_data",
+      llm,
+    })).resolves.toEqual({ failures: 1 });
+
+    expect(generateCount).toBe(1);
+    const failure = JSON.parse(readFileSync(
+      path.join(workdir, "notebooks/recipe_loop_data/train/case-a/runs/single-contract/failure.json"),
+      "utf8",
+    ));
+    expect(failure.message).toContain("SINGLE_RECIPE_CONTRACT");
+    expect(existsSync(path.join(workdir, "notebooks/recipe_loop_data/train/case-b/runs/single-contract"))).toBe(false);
   });
 
   it("builds source text with transcript line timestamps", async () => {

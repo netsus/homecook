@@ -19,8 +19,8 @@ import {
 const PROJECT_ROOT = process.cwd();
 const PROVIDER = "codex-vision-keyframes";
 const CACHE_DIR = path.join(PROJECT_ROOT, "notebooks/recipe_loop_data/cache/codex-vision-keyframes");
-const CLIENT_VERSION = "codex-vision-keyframes-client-v1";
-const SELECTOR_PROMPT_VERSION = "keyframe-selector-v1";
+const CLIENT_VERSION = "codex-vision-keyframes-client-v4-single-fast12";
+const SELECTOR_PROMPT_VERSION = "keyframe-selector-v3-single-visual-evidence";
 const CANDIDATE_SPLITTER_VERSION = "candidate-splitter-v5";
 const SEGMENT_PROMPT_VERSION = "keyframe-segment-plan-v4";
 const SEGMENT_PLAN_COMPATIBLE_REUSE_VERSION = "segment-plan-compatible-reuse-v1";
@@ -30,14 +30,14 @@ const SEGMENT_SELECTOR_DETERMINISTIC_SELECTION_VERSION = "segment-selector-deter
 const FINAL_RAW_RECOVERY_VERSION = "final-raw-recovery-v1";
 const SEGMENT_BRIDGE_FRAME_VERSION = "segment-bridge-frame-v1";
 const SEGMENT_PHASE_ANCHOR_FRAME_VERSION = "segment-phase-anchor-frame-v2";
-const FINAL_PROMPT_VERSION = "keyframe-final-v30";
+const FINAL_PROMPT_VERSION = "keyframe-final-v32-single-four-source";
 const MODEL_SOURCE_BOUNDARY_VERSION = "model-source-boundary-v1";
 const ONSCREEN_TEXT_PRIORITY_VERSION = "onscreen-text-priority-v1";
-const VISUAL_IDENTITY_GUARD_VERSION = "visual-identity-guard-ledger-repair-v1";
-const SEGMENTED_REPAIR_PROMPT_VERSION = "keyframe-source-gap-repair-v6";
-const SEGMENTED_REPAIR_PATCH_PROMPT_VERSION = "keyframe-source-gap-patch-repair-v6";
-const SEGMENTED_REPAIR_TARGETED_PATCH_PROMPT_VERSION = "keyframe-source-gap-targeted-patch-repair-v6";
-const SEGMENTED_REPAIR_VERIFIED_PATCH_PROMPT_VERSION = "keyframe-source-gap-patch-verified-repair-v7";
+const VISUAL_IDENTITY_GUARD_VERSION = "visual-identity-guard-ledger-repair-v2-dehardcoded";
+const SEGMENTED_REPAIR_PROMPT_VERSION = "keyframe-source-gap-repair-v7-dehardcoded";
+const SEGMENTED_REPAIR_PATCH_PROMPT_VERSION = "keyframe-source-gap-patch-repair-v7-dehardcoded";
+const SEGMENTED_REPAIR_TARGETED_PATCH_PROMPT_VERSION = "keyframe-source-gap-targeted-patch-repair-v7-dehardcoded";
+const SEGMENTED_REPAIR_VERIFIED_PATCH_PROMPT_VERSION = "keyframe-source-gap-patch-verified-repair-v8-dehardcoded";
 const TIMELINE_PARENT_RANGE_VERSION = "timeline-parent-range-v1";
 const BUNDLE_CHILD_SEGMENT_VERSION = "bundle-child-segment-v2";
 const DESCRIPTION_MENU_PARENT_RANGE_VERSION = "description-menu-parent-range-v1";
@@ -45,13 +45,13 @@ const FINAL_INPUT_POLICY_VERSION = "final-input-policy-v1";
 const SEGMENTED_FINAL_BASE_PROMPT_POLICY_VERSION = "segmented-final-base-prompt-policy-v1";
 const SOURCE_CUE_PACKET_VERSION = "source-cue-packet-v5";
 const RECIPE_EVIDENCE_LEDGER_VERSION = "recipe-evidence-ledger-v3";
-const VISUAL_FRAME_LEDGER_VERSION = "visual-frame-ledger-v9";
+const VISUAL_FRAME_LEDGER_VERSION = "visual-frame-ledger-v10-dehardcoded";
 const VISUAL_FRAME_LEDGER_RAW_RECOVERY_VERSION = "visual-frame-ledger-raw-recovery-v1";
 const VISUAL_FRAME_LEDGER_BATCH_CONTEXT_VERSION = "visual-frame-ledger-batch-context-v1";
 const VISUAL_FRAME_LEDGER_FALLBACK_VERSION = "visual-frame-ledger-fallback-v1";
 const VISUAL_FRAME_LEDGER_TIMEOUT_CAP_MS = 5 * 60 * 1000;
 const RECIPE_MUST_CONSIDER_FACTS_VERSION = "recipe-must-consider-facts-v8";
-const TITLE_VISUAL_BRIDGE_FACTS_VERSION = "title-visual-bridge-facts-v5";
+const TITLE_VISUAL_BRIDGE_FACTS_VERSION = "title-visual-bridge-facts-v6-dehardcoded";
 const EVIDENCE_PACKET_SOURCE_CUE_BRIDGE_VERSION = "evidence-packet-source-cue-bridge-v6";
 const PER_SEGMENT_TITLE_NORMALIZATION_VERSION = "per-segment-title-normalization-v1";
 const PER_SEGMENT_SOURCE_TIME_FILTER_VERSION = "per-segment-source-time-filter-v1";
@@ -66,6 +66,11 @@ const DEFAULT_STORYBOARD_MAX_FRAMES = 0;
 const DEFAULT_SELECTOR_CANDIDATE_LIMIT = 96;
 const DEFAULT_KEYFRAME_TOTAL_LIMIT = 60;
 const DEFAULT_KEYFRAMES_PER_RECIPE = 8;
+const SINGLE_FAST_FRAME_MODE = "hybrid";
+const SINGLE_FAST_INTERVAL_SEC = 4;
+const SINGLE_FAST_HYBRID_ANCHOR_BUDGET = 36;
+const SINGLE_FAST_SELECTOR_CANDIDATE_LIMIT = 12;
+const SINGLE_FAST_KEYFRAME_TOTAL_LIMIT = 8;
 const DEFAULT_KEYFRAME_MODE = "global";
 const DEFAULT_SEGMENT_PADDING_SEC = 8;
 const DEFAULT_SEGMENT_MIN_FRAMES = 8;
@@ -783,7 +788,41 @@ function sampleEvenly(frames, limit) {
   return selected;
 }
 
-function buildSelectorPrompt({ sourceText, candidateFrames, totalLimit, perRecipeLimit }) {
+function buildSelectorPrompt({ sourceText, candidateFrames, totalLimit, perRecipeLimit, singleRecipeOnly = false }) {
+  if (singleRecipeOnly) {
+    return [
+      "너는 단일 요리 영상의 핵심 프레임과 화면 글자 근거를 고르는 담당자다.",
+      "첨부 이미지는 같은 영상에서 시간순으로 뽑은 후보 프레임이다. 최종 레시피를 작성하지 않는다.",
+      "재료명·분량·단위가 적힌 화면 자막, 재료 투입, 조리 상태 변화를 우선한다.",
+      "이벤트·광고·BGM·구독·구매 문구와 얼굴/잡담/완성샷 반복은 제외한다.",
+      "파일명은 후보 목록의 file 값을 정확히 복사하고 새 파일명을 만들지 않는다.",
+      `selectedFrames는 최대 ${totalLimit}개다. 시간축 앞·중간·끝의 실제 공정 근거를 고르게 남긴다.`,
+      "observed, onscreenText, quantityCues에는 실제 화면에서 읽거나 확인한 원문만 넣고 추측하지 않는다.",
+      "confidence는 0~1이다. 화면 글자가 없으면 세 배열을 비우고 confidence는 null로 둔다.",
+      "",
+      "출력은 설명 없이 JSON만 한다.",
+      "스키마:",
+      "{",
+      "  \"selectedFrames\": [{",
+      "    \"file\": \"frame_0001_00000.000.jpg\",",
+      "    \"reason\": \"재료/단계/화면 자막 근거\",",
+      "    \"visualEvidence\": {",
+      "      \"observed\": [\"양파\"],",
+      "      \"onscreenText\": [\"양파 1/2개\"],",
+      "      \"quantityCues\": [\"양파 1/2개\"],",
+      "      \"confidence\": 0.9",
+      "    }",
+      "  }]",
+      "}",
+      "",
+      "텍스트 소스:",
+      sourceText || "(텍스트 소스 없음)",
+      "",
+      "후보 프레임 목록:",
+      ...candidateFrames.map(frameDisplayLine),
+    ].join("\n");
+  }
+
   return [
     "너는 요리 영상 레시피 추출을 돕는 프레임 선별 담당자다.",
     "첨부 이미지는 같은 유튜브 영상에서 시간순으로 뽑은 후보 프레임이다.",
@@ -812,8 +851,39 @@ function buildSelectorPrompt({ sourceText, candidateFrames, totalLimit, perRecip
   ].join("\n");
 }
 
-function buildFinalPrompt({ prompt, sourceText, selectedFrames, selectorJson }) {
+function formatVisualEvidenceLine(frame, index) {
+  const evidence = frame.visualEvidence ?? { observed: [], onscreenText: [], quantityCues: [], confidence: null };
+  return [
+    `- ${index + 1}. file=${frameBasename(frame)}, timestamp=${frame.timestamp ?? frame.timestamp_sec ?? "?"}, resolutionSource=${frame.resolutionSource ?? "none"}`,
+    `  observed=${JSON.stringify(evidence.observed)}`,
+    `  onscreenText=${JSON.stringify(evidence.onscreenText)}`,
+    `  quantityCues=${JSON.stringify(evidence.quantityCues)}`,
+    `  confidence=${evidence.confidence ?? "null"}`,
+  ].join("\n");
+}
+
+function buildFinalPrompt({ prompt, sourceText, selectedFrames, selectorJson, singleRecipeOnly = false }) {
   const selectedFrameLines = selectedFrames.map((frame, index) => frameDisplayLine(frame, index));
+  if (singleRecipeOnly) {
+    return [
+      prompt,
+      "",
+      "추가 입력: selector가 고른 실제 프레임과 그 프레임에 연결된 화면 근거다.",
+      "화면 근거는 resolutionSource가 exact 또는 unique-timestamp인 항목만 사용한다.",
+      "설명란·작성자 댓글의 명시 분량 > 발화 자막 > 화면 자막 > 시각 추정 순서를 지킨다.",
+      "amountBasis=onscreen은 같은 프레임의 onscreenText 또는 quantityCues에 재료명과 수량이 함께 있을 때만 쓴다.",
+      "영상에 없는 재료·단계는 요리 상식으로 추가하지 않고 recipes[]에는 정확히 한 레시피만 출력한다.",
+      "",
+      "선택 프레임 화면 근거:",
+      ...selectedFrames.map(formatVisualEvidenceLine),
+      "",
+      "텍스트 소스 원문 재확인:",
+      sourceText || "(텍스트 소스 없음)",
+      "",
+      "위 정보를 바탕으로 기존 스키마의 JSON만 출력한다.",
+    ].join("\n");
+  }
+
   return [
     prompt,
     "",
@@ -3073,14 +3143,14 @@ function buildTitleVisualBridgeFacts(titleHint, visualTexts) {
     text,
   });
 
-  if (/(김밥|후토마끼|초밥)/u.test(title) && /(말이|롤|단면|흰색|밥|쌀|곡물|층)/u.test(visualText)) {
+  if (/(김밥|말이|초밥)/u.test(title) && /(말이|롤|단면|흰색|밥|쌀|곡물|층)/u.test(visualText)) {
     push("제목은 말이형 밥 요리이고 화면에 말이/단면/흰색 층 단서가 있다. 프레임에서 곡물층이 확인되면 밥을 재료와 말기 단계에 포함하되, 바깥 wrapper는 source/onscreen/강한 화면 근거가 없으면 납작어묵·김·피 같은 구체 재료로 단정하지 않는다.");
   }
   if (/(파스타|국수|면|우동|라면|소바|냉면)/u.test(title) && /(면|noodle|스파게티|긴|삶|끓)/iu.test(visualText)) {
     push("제목은 면 요리이고 화면에 면/삶기/합치기 단서가 있다. 보이는 면 재료와 면 삶기, 소스나 국물에 합치는 단계를 빠뜨리지 않는다.");
   }
 
-  if (/(해장|볶이|매운|떡볶이|닭갈비|고추)/u.test(title) && /(붉|빨간|매운|고추|국물|소스|양념|졸)/u.test(visualText)) {
+  if (/(해장|볶이|매운|고추)/u.test(title) && /(붉|빨간|매운|고추|국물|소스|양념|졸)/u.test(visualText)) {
     push("제목과 화면 모두 붉은/매운 베이스를 시사한다. source/onscreen 근거 없이 토마토소스·고추장 같은 특정 소스로 단정하지 말고, 불확실하면 붉은/매운 양념 베이스처럼 generic하게 보존한다.");
   }
 
@@ -3527,7 +3597,7 @@ function onscreenTextPriorityLines(contextLabel) {
 function visualIdentityGuardLines(contextLabel) {
   return [
     `visual identity guard (${VISUAL_IDENTITY_GUARD_VERSION}, ${contextLabel}):`,
-    "- 말이류/김밥류/후토마끼류는 조립 프레임과 단면 프레임을 함께 보고 속재료를 식별한다.",
+    "- 말이류/김밥류는 조립 프레임과 단면 프레임을 함께 보고 속재료를 식별한다.",
     "- 넓고 납작한 주황색 생선살처럼 보이는 속재료는 얇은 당근채로 쉽게 바꾸지 않는다. 확실하면 연어/생선살로, 불확실하면 '주황색 생선살로 보이는 속재료'처럼 보수적으로 적는다.",
     "- 노란 직사각형 달걀말이/오믈렛처럼 보이는 속재료는 얇은 단무지로 쉽게 바꾸지 않는다. 확실하면 달걀말이/계란으로, 불확실하면 '노란 달걀류 속재료'처럼 보수적으로 적는다.",
     "- 솥밥/덮밥/고기 토핑류에서 고기 표면에 붉은색·갈색 양념 코팅, 소스층, 양념 자막/오버레이가 보이면 plain grilled meat로 단순화하지 말고 양념 베이스와 양념/코팅 단계를 남긴다.",
@@ -3634,7 +3704,7 @@ function buildSegmentSelectorPrompt({ sourceText, segment, candidateFrames, sour
     "10. source cue는 정답이 아니므로, cue가 이 candidate 화면과 맞지 않으면 억지로 고르지 않는다.",
     "11. 비슷한 완성샷·서빙샷이 여러 장이면 하나만 남기고 조리 중간 상태 전환 프레임을 고른다.",
     "12. shared segment rule: 같은 시간 구간에 둘 이상의 레시피가 붙어 있으면 titleHint와 직접 맞는 재료/양념/조리 상태 프레임을 먼저 고른다.",
-    "13. sibling contamination guard: titleHint가 맥적이면 열무 들기름냉파스타 중심 프레임을, titleHint가 소곱창구이면 등촌칼국수 중심 프레임을 핵심 근거로 고르지 않는다. 다른 형제 요리도 같은 원칙을 적용한다.",
+    "13. sibling contamination guard: 현재 titleHint와 다른 형제 요리의 프레임을 핵심 근거로 고르지 않는다.",
     "14. final mixed plating frame은 타깃 재료/완성 형태가 함께 보일 때만 보조로 고르고, 그 전에 early/mid cooking frame을 먼저 채운다.",
     "15. 파일명은 아래 목록의 file 값을 정확히 복사한다.",
     `16. selectedFrames는 최대 ${budget}개다.`,
@@ -4645,7 +4715,7 @@ function buildSegmentedRepairPatchPrompt({
     "{",
     "  \"patches\": [",
     "    {",
-    "      \"recipeTitle\": \"닭갈비\",",
+    "      \"recipeTitle\": \"요리 A\",",
     "      \"operation\": \"addIngredient\",",
     ...(includeTargetedChecklist ? ["      \"targetedGap\": \"missing-seasoning-base\","] : []),
     "      \"ingredient\": { \"name\": \"양파\", \"amount\": \"1\", \"unit\": \"개\", \"amountBasis\": \"visual-estimate\" },",
@@ -4658,7 +4728,7 @@ function buildSegmentedRepairPatchPrompt({
     "      \"confidence\": \"high\"",
     "    },",
     "    {",
-    "      \"recipeTitle\": \"닭갈비\",",
+    "      \"recipeTitle\": \"요리 A\",",
     "      \"operation\": \"addStepAfter\",",
     ...(includeTargetedChecklist ? ["      \"targetedGap\": \"missing-step-transition\","] : []),
     "      \"afterStepIndex\": 2,",
@@ -5084,6 +5154,8 @@ function buildCodexVisionKeyframesCacheKey({
   keyframeTotalLimit,
   keyframesPerRecipe,
   selectorCandidateLimit,
+  frameOptions,
+  singleRecipeOnly,
 }) {
   return hashKey({
     provider: PROVIDER,
@@ -5096,6 +5168,8 @@ function buildCodexVisionKeyframesCacheKey({
     keyframeTotalLimit,
     keyframesPerRecipe,
     selectorCandidateLimit,
+    frameOptions,
+    singleRecipeOnly,
     clientVersion: CLIENT_VERSION,
     selectorPromptVersion: SELECTOR_PROMPT_VERSION,
     finalPromptVersion: FINAL_PROMPT_VERSION,
@@ -5213,31 +5287,23 @@ function timestampFromFrameFileName(fileName) {
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
-function nearestFrameByTimestamp(frames, targetTimestamp) {
-  if (!Number.isFinite(targetTimestamp)) return null;
-  let nearest = null;
-  let nearestDelta = Infinity;
-  for (const frame of frames) {
-    const timestamp = frameTimestampSec(frame);
-    if (!Number.isFinite(timestamp)) continue;
-    const delta = Math.abs(timestamp - targetTimestamp);
-    if (delta < nearestDelta) {
-      nearest = frame;
-      nearestDelta = delta;
-    }
-  }
-  return nearestDelta <= FRAME_TIMESTAMP_TOLERANCE_SEC ? nearest : null;
-}
-
 function resolveSelectedFrame(rawFile, candidateFrames, lookup) {
   const file = path.basename(String(rawFile));
   const exact = lookup.byFile.get(file) ?? lookup.byPath.get(String(rawFile)) ?? lookup.byFile.get(String(rawFile));
-  if (exact) return exact;
+  if (exact) return { frame: exact, resolutionSource: "exact", evidenceAllowed: true };
 
   const timestamp = timestampFromFrameFileName(file);
-  const timestampKey = frameTimestampKey(timestamp);
-  return (timestampKey ? lookup.byTimestamp.get(timestampKey) : null)
-    ?? nearestFrameByTimestamp(candidateFrames, timestamp);
+  if (!Number.isFinite(timestamp)) return null;
+  const matches = candidateFrames
+    .map((frame) => ({ frame, delta: Math.abs((frameTimestampSec(frame) ?? Infinity) - timestamp) }))
+    .filter((entry) => entry.delta <= FRAME_TIMESTAMP_TOLERANCE_SEC)
+    .sort((a, b) => a.delta - b.delta);
+  if (matches.length === 0) return null;
+  return {
+    frame: matches[0].frame,
+    resolutionSource: matches.length === 1 ? "unique-timestamp" : "ambiguous-timestamp",
+    evidenceAllowed: matches.length === 1,
+  };
 }
 
 function selectedFrameFile(entry) {
@@ -5249,6 +5315,24 @@ function selectedFrameFile(entry) {
 function selectedFrameRecipe(entry) {
   if (!isObject(entry)) return "전체";
   return String(entry.recipeHint ?? entry.recipe ?? entry.title ?? entry.dish ?? "전체").trim() || "전체";
+}
+
+function normalizedTextArray(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((item) => compact(item)).filter(Boolean))];
+}
+
+function normalizeVisualEvidence(value, allowed) {
+  if (!allowed || !isObject(value)) {
+    return { observed: [], onscreenText: [], quantityCues: [], confidence: null };
+  }
+  const confidence = Number(value.confidence);
+  return {
+    observed: normalizedTextArray(value.observed),
+    onscreenText: normalizedTextArray(value.onscreenText),
+    quantityCues: normalizedTextArray(value.quantityCues),
+    confidence: Number.isFinite(confidence) ? Math.min(1, Math.max(0, confidence)) : null,
+  };
 }
 
 function normalizeSelectedFrames(selectorJson, candidateFrames, { totalLimit, perRecipeLimit }) {
@@ -5263,14 +5347,20 @@ function normalizeSelectedFrames(selectorJson, candidateFrames, { totalLimit, pe
   for (const entry of rawEntries) {
     const rawFile = selectedFrameFile(entry);
     if (!rawFile) continue;
-    const frame = resolveSelectedFrame(rawFile, candidateFrames, lookup);
+    const resolved = resolveSelectedFrame(rawFile, candidateFrames, lookup);
+    const frame = resolved?.frame;
     if (!frame || seenPaths.has(frame.path)) continue;
 
     const recipe = selectedFrameRecipe(entry);
     const count = recipeCounts.get(recipe) ?? 0;
     if (count >= perRecipeLimit) continue;
 
-    selected.push(frame);
+    selected.push({
+      ...frame,
+      selectionReason: compact(isObject(entry) ? entry.reason : "") || null,
+      resolutionSource: resolved.resolutionSource,
+      visualEvidence: normalizeVisualEvidence(isObject(entry) ? entry.visualEvidence : null, resolved.evidenceAllowed),
+    });
     seenPaths.add(frame.path);
     recipeCounts.set(recipe, count + 1);
     if (selected.length >= totalLimit) break;
@@ -5280,6 +5370,65 @@ function normalizeSelectedFrames(selectorJson, candidateFrames, { totalLimit, pe
     throw new Error("Codex Vision keyframes selector가 사용할 수 있는 프레임을 하나도 고르지 못했습니다.");
   }
   return selected;
+}
+
+function selectedFrameEvidenceSummary(selectedFrames) {
+  const evidenceRows = selectedFrames.map((frame) => frame.visualEvidence ?? {});
+  return {
+    selectedFrameCount: selectedFrames.length,
+    cueBearingFrameCount: evidenceRows.filter((evidence) => (
+      (evidence.onscreenText?.length ?? 0) > 0 || (evidence.quantityCues?.length ?? 0) > 0
+    )).length,
+    observedCueCount: evidenceRows.reduce((sum, evidence) => sum + (evidence.observed?.length ?? 0), 0),
+    onscreenCueCount: evidenceRows.reduce((sum, evidence) => sum + (evidence.onscreenText?.length ?? 0), 0),
+    quantityCueCount: evidenceRows.reduce((sum, evidence) => sum + (evidence.quantityCues?.length ?? 0), 0),
+  };
+}
+
+function sourceAvailability(sourceText, evidenceSummary) {
+  const text = String(sourceText ?? "");
+  return {
+    description: text.includes("[SOURCE: description]"),
+    authorComment: text.includes("[SOURCE: author_comment]"),
+    transcript: text.includes("[SOURCE: transcript("),
+    onscreen: evidenceSummary.onscreenCueCount > 0 || evidenceSummary.quantityCueCount > 0,
+  };
+}
+
+function validateOnscreenAmountEvidence(json, selectedFrames) {
+  const cueTexts = selectedFrames.flatMap((frame) => [
+    ...(frame.visualEvidence?.onscreenText ?? []),
+    ...(frame.visualEvidence?.quantityCues ?? []),
+  ]);
+  const conflicts = [];
+
+  for (const [recipeIndex, recipe] of (json.recipes ?? []).entries()) {
+    for (const [ingredientIndex, ingredient] of (recipe.ingredients ?? []).entries()) {
+      if (ingredient?.amountBasis !== "onscreen") continue;
+      const ingredientKey = keyOf(ingredient.name);
+      const amountKey = keyOf(ingredient.amount);
+      const supportingCue = cueTexts.find((text) => {
+        const cueKey = keyOf(text);
+        return ingredientKey && cueKey.includes(ingredientKey) && (!amountKey || cueKey.includes(amountKey));
+      });
+      if (supportingCue) continue;
+
+      conflicts.push({
+        recipeIndex,
+        ingredientIndex,
+        ingredientName: ingredient.name ?? null,
+        amount: ingredient.amount ?? null,
+        unit: ingredient.unit ?? null,
+        rejectedBasis: "onscreen",
+        reason: "canonical selected frame의 onscreenText/quantityCues에 재료명과 분량이 함께 연결되지 않음",
+      });
+      ingredient.amount = null;
+      ingredient.unit = null;
+      ingredient.amountBasis = null;
+    }
+  }
+
+  return { json, conflicts };
 }
 
 function frameTime(frame) {
@@ -5751,7 +5900,7 @@ async function runSegmentedKeyframesFlow({
       for (const entry of rawSelectorEntries) {
         const rawFile = selectedFrameFile(entry);
         if (!rawFile) continue;
-        const frame = resolveSelectedFrame(rawFile, candidateFrames, selectorLookup);
+        const frame = resolveSelectedFrame(rawFile, candidateFrames, selectorLookup)?.frame;
         if (frame) rawEntryByFramePath.set(frame.path, entry);
       }
       const normalizedSelectedFrames = normalizeSelectedFrames(selectorJson, candidateFrames, {
@@ -6244,20 +6393,32 @@ export function createCodexVisionKeyframesClient(options = {}) {
   const model = options.model || process.env.RECIPE_LOOP_CODEX_VISION_MODEL || DEFAULT_FINAL_MODEL;
   const selectorModel = options.selectorModel || process.env.RECIPE_LOOP_CODEX_VISION_SELECTOR_MODEL || DEFAULT_SELECTOR_MODEL;
   const segmentModel = options.segmentModel || process.env.RECIPE_LOOP_CODEX_VISION_SEGMENT_MODEL || DEFAULT_SEGMENT_MODEL;
-  const keyframeMode = keyframeModeFrom(options.keyframeMode ?? process.env.RECIPE_LOOP_CODEX_VISION_KEYFRAME_MODE);
+  const singleRecipeOnly = Boolean(options.singleRecipeOnly);
+  const requestedKeyframeMode = keyframeModeFrom(options.keyframeMode ?? process.env.RECIPE_LOOP_CODEX_VISION_KEYFRAME_MODE);
+  const keyframeMode = singleRecipeOnly ? "global" : requestedKeyframeMode;
   const segmentedFinalMode = segmentedFinalModeFrom(options.segmentedFinalMode ?? process.env.RECIPE_LOOP_CODEX_VISION_SEGMENTED_FINAL_MODE);
   const segmentedRepairMode = segmentedRepairModeFrom(options.segmentedRepairMode ?? process.env.RECIPE_LOOP_CODEX_VISION_SEGMENTED_REPAIR_MODE);
   const cacheDir = options.cacheDir || CACHE_DIR;
   const frameOptions = {
-    mode: options.frameMode || "scene",
+    mode: options.frameMode || (singleRecipeOnly ? SINGLE_FAST_FRAME_MODE : "scene"),
     maxFrames: positiveInt(options.maxFrames, DEFAULT_MAX_FRAMES),
     storyboardMaxFrames: Number(options.storyboardMaxFrames ?? DEFAULT_STORYBOARD_MAX_FRAMES),
     sceneDetail: options.sceneDetail || "dense",
     sceneSelection: options.sceneSelection || "balanced",
-    interval: Number(options.interval ?? 10),
+    interval: Number(options.interval ?? (singleRecipeOnly ? SINGLE_FAST_INTERVAL_SEC : 10)),
+    hybridAnchorBudget: positiveInt(
+      options.hybridAnchorBudget,
+      singleRecipeOnly ? SINGLE_FAST_HYBRID_ANCHOR_BUDGET : 72,
+    ),
   };
-  const selectorCandidateLimit = positiveInt(options.selectorCandidateLimit, DEFAULT_SELECTOR_CANDIDATE_LIMIT);
-  const keyframeTotalLimit = positiveInt(options.keyframeTotalLimit, DEFAULT_KEYFRAME_TOTAL_LIMIT);
+  const selectorCandidateLimit = positiveInt(
+    options.selectorCandidateLimit,
+    singleRecipeOnly ? SINGLE_FAST_SELECTOR_CANDIDATE_LIMIT : DEFAULT_SELECTOR_CANDIDATE_LIMIT,
+  );
+  const keyframeTotalLimit = positiveInt(
+    options.keyframeTotalLimit,
+    singleRecipeOnly ? SINGLE_FAST_KEYFRAME_TOTAL_LIMIT : DEFAULT_KEYFRAME_TOTAL_LIMIT,
+  );
   const keyframesPerRecipe = positiveInt(options.keyframesPerRecipe, DEFAULT_KEYFRAMES_PER_RECIPE);
   const segmentOptions = {
     paddingSec: nonNegativeNumber(options.segmentPaddingSec, DEFAULT_SEGMENT_PADDING_SEC),
@@ -6297,7 +6458,9 @@ export function createCodexVisionKeyframesClient(options = {}) {
 
   return {
     async generate({ prompt, videoUrl = null, cacheText = "", evidencePacketBundle = null }) {
+      const totalStartedAt = Date.now();
       const videoId = videoIdFromUrl(videoUrl) ?? hashText(videoUrl, 12);
+      const frameStartedAt = Date.now();
       const frameResult = await extractFrames({
         videoUrl,
         videoId,
@@ -6306,6 +6469,7 @@ export function createCodexVisionKeyframesClient(options = {}) {
         timeoutMs,
         runCommandImpl: options.runCommand,
       });
+      const frameExtractMs = Date.now() - frameStartedAt;
       const frames = frameResult.frames ?? [];
       if (!Array.isArray(frames) || frames.length === 0) throw new Error("Codex Vision keyframes 프레임 추출 결과가 비었습니다.");
 
@@ -6354,6 +6518,8 @@ export function createCodexVisionKeyframesClient(options = {}) {
         keyframeTotalLimit,
         keyframesPerRecipe,
         selectorCandidateLimit,
+        frameOptions,
+        singleRecipeOnly,
       });
       const resultDir = path.join(cacheDir, resultKey);
       const finalJsonPath = path.join(resultDir, "final.json");
@@ -6387,6 +6553,7 @@ export function createCodexVisionKeyframesClient(options = {}) {
           candidateFrames,
           totalLimit: keyframeTotalLimit,
           perRecipeLimit: keyframesPerRecipe,
+          singleRecipeOnly,
         });
         const selectorPromptPath = path.join(resultDir, "selector.prompt.md");
         const selectorRawPath = path.join(resultDir, "selector.raw.md");
@@ -6395,9 +6562,12 @@ export function createCodexVisionKeyframesClient(options = {}) {
         await writeFile(selectorPromptPath, selectorPrompt, "utf8");
 
         let selectorJson;
+        let modelCallCount = 0;
+        const selectorStartedAt = Date.now();
         if (!options.noCache && existsSync(selectorJsonPath)) {
           selectorJson = JSON.parse(await readFile(selectorJsonPath, "utf8"));
         } else {
+          modelCallCount += 1;
           const selectorRaw = await codexExec({
             prompt: selectorPrompt,
             images: candidateFrames.map((frame) => frame.path),
@@ -6411,6 +6581,7 @@ export function createCodexVisionKeyframesClient(options = {}) {
           selectorJson = extractJsonFromText(selectorRaw);
           await writeFile(selectorJsonPath, JSON.stringify(selectorJson, null, 2) + "\n", "utf8");
         }
+        const selectorMs = Date.now() - selectorStartedAt;
 
         const selectedFrames = normalizeSelectedFrames(selectorJson, candidateFrames, {
           totalLimit: keyframeTotalLimit,
@@ -6428,20 +6599,35 @@ export function createCodexVisionKeyframesClient(options = {}) {
               timestamp: frame.timestamp,
               file: frameBasename(frame),
               path: frame.path,
-              reason: frame.reason ?? null,
+              reason: frame.selectionReason ?? frame.reason ?? null,
               scene_score: frame.scene_score ?? null,
+              resolutionSource: frame.resolutionSource ?? null,
+              visualEvidence: frame.visualEvidence ?? {
+                observed: [],
+                onscreenText: [],
+                quantityCues: [],
+                confidence: null,
+              },
             })),
           }, null, 2) + "\n",
           "utf8",
         );
 
         stage = "final";
-        const finalPrompt = buildFinalPrompt({ prompt, sourceText: cacheText, selectedFrames, selectorJson });
+        const finalPrompt = buildFinalPrompt({
+          prompt,
+          sourceText: cacheText,
+          selectedFrames,
+          selectorJson,
+          singleRecipeOnly,
+        });
         const finalPromptPath = path.join(resultDir, "final.prompt.md");
         const finalRawPath = path.join(resultDir, "final.raw.md");
         const finalLogPath = path.join(resultDir, "final.log");
         await writeFile(finalPromptPath, finalPrompt, "utf8");
 
+        const finalStartedAt = Date.now();
+        modelCallCount += 1;
         const finalRaw = await codexExec({
           prompt: finalPrompt,
           images: selectedFrames.map((frame) => frame.path),
@@ -6451,18 +6637,37 @@ export function createCodexVisionKeyframesClient(options = {}) {
           logPath: finalLogPath,
           timeoutMs,
         });
+        const finalMs = Date.now() - finalStartedAt;
         await writeFile(finalRawPath, finalRaw, "utf8");
 
-        const json = extractJsonFromText(finalRaw);
-        if (!isObject(json) || !Array.isArray(json.recipes)) {
+        const rawJson = extractJsonFromText(finalRaw);
+        if (!isObject(rawJson) || !Array.isArray(rawJson.recipes)) {
           throw new Error("Codex Vision keyframes 최종 JSON은 { recipes: [...] } 형식이어야 합니다.");
         }
+        if (singleRecipeOnly && rawJson.recipes.length !== 1) {
+          throw new Error(`SINGLE_RECIPE_CONTRACT: expected exactly 1 recipe, received ${rawJson.recipes.length}`);
+        }
+        const validation = validateOnscreenAmountEvidence(rawJson, selectedFrames);
+        const json = validation.json;
+        await writeFile(
+          path.join(resultDir, "source-conflicts.json"),
+          JSON.stringify({ conflictCount: validation.conflicts.length, conflicts: validation.conflicts }, null, 2) + "\n",
+          "utf8",
+        );
+
+        const evidenceSummary = selectedFrameEvidenceSummary(selectedFrames);
+        const extractionStats = frameResult.extractionStats ?? {};
+        const availability = sourceAvailability(cacheText, evidenceSummary);
+        const totalFreshMs = Date.now() - totalStartedAt;
 
         const meta = {
           provider: PROVIDER,
           model,
           selectorModel,
           keyframeMode,
+          requestedKeyframeMode,
+          singleRecipeOnly,
+          singleRecipeProfile: singleRecipeOnly ? "fast12-v3" : null,
           clientVersion: CLIENT_VERSION,
           selectorPromptVersion: SELECTOR_PROMPT_VERSION,
           finalPromptVersion: FINAL_PROMPT_VERSION,
@@ -6470,14 +6675,32 @@ export function createCodexVisionKeyframesClient(options = {}) {
           usedVisual: true,
           frameCount: frames.length,
           candidateFrameCount: candidateFrames.length,
+          selectorCandidateLimit,
+          selectorInputImageCount: candidateFrames.length,
           selectedFrameCount: selectedFrames.length,
           selectedFrameHash,
           frameMode: frameOptions.mode,
+          interval: frameOptions.interval,
+          hybridAnchorBudget: frameOptions.hybridAnchorBudget,
+          modelCallCount,
+          frame_extract_ms: frameExtractMs,
+          selector_ms: selectorMs,
+          final_ms: finalMs,
+          total_fresh_ms: totalFreshMs,
+          selectedFrameEvidenceSummary: evidenceSummary,
+          sourceAvailability: availability,
+          sourceConflictCount: validation.conflicts.length,
+          sceneCandidateCount: extractionStats.scene_candidate_count ?? extractionStats.scene_candidates ?? null,
+          intervalAnchorCount: extractionStats.interval_anchor_count ?? 0,
+          hybridDedupedCount: extractionStats.hybrid_deduped_count ?? 0,
+          timelineCoverageRatio: extractionStats.timeline_coverage_ratio ?? null,
+          lastFrameSec: extractionStats.last_frame_sec ?? null,
+          durationSec: extractionStats.duration_sec ?? null,
           frameCacheHit: frameResult.frameCacheHit,
           visionCacheHit: false,
           frameCacheDir: frameResult.frameDir,
           codexVisionKeyframesCacheDir: resultDir,
-          extractionStats: frameResult.extractionStats ?? {},
+          extractionStats,
         };
         await writeFile(finalJsonPath, JSON.stringify({ key: resultKey, model, selectorModel, json, meta }, null, 2) + "\n", "utf8");
         await writeFile(

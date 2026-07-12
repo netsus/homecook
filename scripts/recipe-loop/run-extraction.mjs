@@ -20,6 +20,7 @@ import { collectPublicSourceVisualAssist } from "./lib/public-source-visual-assi
 import { buildEvidencePacketBundle } from "../../lib/server/recipe-extraction-lab/candidate-packets.mjs";
 import { extractRecipeFromSources } from "../../lib/server/recipe-extraction-lab/extract.mjs";
 import { buildPublicSourcePacketBundle } from "../../lib/server/recipe-extraction-lab/public-source-packets.mjs";
+import { loadDatasetProfile } from "./lib/dataset-profile.mjs";
 
 const PROJECT_ROOT = process.cwd();
 const DATA_ROOT = "notebooks/recipe_loop_data";
@@ -129,6 +130,10 @@ export function createLlmForProvider(provider, args = {}, factories = {}) {
       segmentBridgeFrames: args["segment-bridge-frames"] === true,
       segmentPhaseAnchorFrames: args["segment-phase-anchor-frames"] === true,
       segmentSelectorAutoSelect: args["segment-selector-auto-select"] === true,
+      singleRecipeOnly: args["single-recipe-only"] === true,
+      frameMode: typeof args["frame-mode"] === "string" ? args["frame-mode"] : undefined,
+      interval: optionalNumber(args.interval),
+      hybridAnchorBudget: optionalNumber(args["hybrid-anchor-budget"]),
     });
   }
 
@@ -201,9 +206,23 @@ export async function runExtraction(rawArgs = {}, options = {}) {
   const dataRoot = options.dataRoot ?? DATA_ROOT;
   const splitDir = path.join(projectRoot, dataRoot, split);
 
-  let ids = typeof args.ids === "string"
+  const requestedIds = typeof args.ids === "string"
     ? args.ids.split(",").map((s) => s.trim()).filter(Boolean)
-    : (await readdir(splitDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
+    : null;
+  const datasetProfile = typeof args["dataset-manifest"] === "string"
+    ? await loadDatasetProfile({
+      projectRoot,
+      manifestPath: args["dataset-manifest"],
+      split,
+      requestedIds,
+    })
+    : null;
+  const singleRecipeOnly = args["single-recipe-only"] === true;
+  if (singleRecipeOnly && datasetProfile && datasetProfile.expectedRecipeCountPerVideo !== 1) {
+    throw new Error("single-recipe-only requires expectedRecipeCountPerVideo=1");
+  }
+  let ids = datasetProfile?.ids ?? requestedIds
+    ?? (await readdir(splitDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
   ids = ids.sort();
 
   const llm = options.llm ?? createLlmForProvider(provider, args, options.factories);
@@ -234,7 +253,9 @@ export async function runExtraction(rawArgs = {}, options = {}) {
       const input = sourceToInput(source);
       const sourceMode = provider === PUBLIC_SOURCE_PROVIDER ? "public-source" : "source-text";
       await writeRunProgress(outDir, { phase: "input-built", sourceMode });
-      const evidencePacketBundle = sourceMode === "public-source" ? null : buildEvidencePacketBundle(input);
+      const evidencePacketBundle = sourceMode === "public-source" || singleRecipeOnly
+        ? null
+        : buildEvidencePacketBundle(input);
       if (evidencePacketBundle) {
         await writeRunProgress(outDir, {
           phase: "evidence-packets-built",
@@ -272,10 +293,22 @@ export async function runExtraction(rawArgs = {}, options = {}) {
         llm,
         useVisual: sourceMode === "public-source" ? false : useVisual,
         sourceMode,
-        useEvidencePackets: sourceMode !== "public-source",
+        recipeMode: singleRecipeOnly ? "single" : "multi",
+        useEvidencePackets: sourceMode !== "public-source" && !singleRecipeOnly,
         packetPromptTextOnly: false,
         publicSourceBundle,
       });
+      if (singleRecipeOnly && result.recipes.length !== 1) {
+        throw new Error(`SINGLE_RECIPE_CONTRACT: expected exactly 1 recipe, received ${result.recipes.length}`);
+      }
+      result.meta = {
+        ...result.meta,
+        datasetProfileId: datasetProfile?.profileId ?? null,
+        datasetManifestPath: datasetProfile?.manifestPathRelative ?? null,
+        singleRecipeOnly,
+        expectedRecipeCount: singleRecipeOnly ? 1 : null,
+        singleRecipeContractFailureCount: 0,
+      };
       await mkdir(outDir, { recursive: true });
       if (publicSource) {
         await writeFile(path.join(outDir, "public-source.json"), JSON.stringify(publicSource, null, 2) + "\n", "utf8");

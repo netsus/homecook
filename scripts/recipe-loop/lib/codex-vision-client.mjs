@@ -10,7 +10,7 @@ import path from "node:path";
 const PROJECT_ROOT = process.cwd();
 const CACHE_DIR = path.join(PROJECT_ROOT, "notebooks/recipe_loop_data/cache/codex-vision");
 const CLIENT_VERSION = "codex-vision-client-v1";
-const FRAME_EXTRACTOR_VERSION = "extract-video-frames-v2";
+const FRAME_EXTRACTOR_VERSION = "extract-video-frames-v3-hybrid";
 const DEFAULT_MODEL = "gpt-5.4";
 const DEFAULT_MAX_FRAMES = 80;
 const DEFAULT_STORYBOARD_MAX_FRAMES = 0;
@@ -384,6 +384,8 @@ export async function defaultExtractFrames({
     frameOptions.sceneSelection,
     "--interval",
     String(frameOptions.interval),
+    "--hybrid-anchor-budget",
+    String(frameOptions.hybridAnchorBudget ?? 72),
   ];
   await runCommandImpl("python3", args, { cwd: PROJECT_ROOT, timeoutMs, logPath });
   const frames = JSON.parse(await readFile(framesPath, "utf8"));
@@ -414,6 +416,7 @@ export function createCodexVisionClient(options = {}) {
     sceneDetail: options.sceneDetail || "dense",
     sceneSelection: options.sceneSelection || "balanced",
     interval: Number(options.interval ?? 10),
+    hybridAnchorBudget: Number(options.hybridAnchorBudget ?? 72),
   };
   const batchSize = Number(options.batchSize ?? DEFAULT_BATCH_SIZE);
   const timeoutMs = Number(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);

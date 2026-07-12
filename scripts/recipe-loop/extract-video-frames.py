@@ -66,8 +66,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("source", help="YouTube URL or local video path")
     parser.add_argument("--video-id", default="unknown")
     parser.add_argument("--out-dir", type=Path, required=True)
-    parser.add_argument("--mode", choices=["scene", "interval"], default="scene")
+    parser.add_argument("--mode", choices=["scene", "interval", "hybrid"], default="scene")
     parser.add_argument("--interval", type=float, default=10.0)
+    parser.add_argument("--hybrid-anchor-budget", type=int, default=72)
     parser.add_argument("--scene-detail", choices=["normal", "dense", "exhaustive"], default="dense")
     parser.add_argument("--scene-threshold", type=float, default=None)
     parser.add_argument("--min-scene-gap", type=float, default=None)
@@ -420,6 +421,83 @@ def extract_scene_frames(cv2, video_path: Path, out_dir: Path, args: argparse.Na
     return frames, stats
 
 
+def interval_anchor_candidates(duration: float, anchor_budget: int) -> list[SceneCandidate]:
+    if anchor_budget <= 0:
+        return []
+    if duration <= 0 or anchor_budget == 1:
+        return [make_scene_candidate(0.0, "hybrid:interval", None)]
+
+    tail = max(0.0, duration - min(0.1, duration * 0.001))
+    return [
+        make_scene_candidate(tail * index / (anchor_budget - 1), "hybrid:interval", None)
+        for index in range(anchor_budget)
+    ]
+
+
+def select_hybrid_candidates(
+    scene_candidates: list[SceneCandidate],
+    duration: float,
+    anchor_budget: int,
+    max_frames: int,
+    dedupe_tolerance: float = 0.25,
+):
+    anchors = interval_anchor_candidates(duration, anchor_budget)
+    if max_frames > 0 and len(anchors) > max_frames:
+        anchors = select_scene_candidates(anchors, max_frames, "balanced")
+
+    selected = list(anchors)
+    for candidate in sorted(
+        scene_candidates,
+        key=lambda item: (-(item.scene_score or 0.0), item.timestamp_sec),
+    ):
+        if any(abs(existing.timestamp_sec - candidate.timestamp_sec) <= dedupe_tolerance for existing in selected):
+            continue
+        selected.append(candidate)
+        if max_frames > 0 and len(selected) >= max_frames:
+            break
+
+    selected.sort(key=lambda item: item.timestamp_sec)
+    last_timestamp = selected[-1].timestamp_sec if selected else 0.0
+    coverage_ratio = min(1.0, last_timestamp / duration) if duration > 0 else 1.0
+    stats = {
+        "scene_candidate_count": len(scene_candidates),
+        "interval_anchor_count": len(anchors),
+        "hybrid_deduped_count": len(scene_candidates) + len(anchors) - len(selected),
+        "hybrid_selected_count": len(selected),
+        "timeline_coverage_ratio": round(coverage_ratio, 4),
+        "last_frame_sec": round(last_timestamp, 3),
+    }
+    return selected, stats
+
+
+def extract_hybrid_frames(cv2, video_path: Path, out_dir: Path, args: argparse.Namespace):
+    scene_candidates, stats = collect_scene_candidates(
+        cv2,
+        video_path,
+        args.scene_threshold,
+        args.min_scene_gap,
+        args.scene_scan_interval,
+    )
+    selected, hybrid_stats = select_hybrid_candidates(
+        scene_candidates,
+        duration=float(stats.get("duration_sec") or 0),
+        anchor_budget=args.hybrid_anchor_budget,
+        max_frames=args.max_frames,
+    )
+    frames = save_scene_frames(cv2, video_path, out_dir, selected, downselected=False)
+    stats.update(hybrid_stats)
+    stats.update(
+        {
+            "scene_candidates": len(scene_candidates),
+            "scene_selected": sum(1 for item in selected if item.reason.startswith("scene")),
+            "scene_selection": "hybrid",
+            "scene_downselected": len(scene_candidates) + hybrid_stats["interval_anchor_count"] > len(selected),
+            "hybrid_anchor_budget": args.hybrid_anchor_budget,
+        }
+    )
+    return frames, stats
+
+
 def extract_interval_frames(cv2, video_path: Path, out_dir: Path, interval: float, max_frames: int):
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
@@ -543,6 +621,8 @@ def main() -> None:
         fail("--interval은 0보다 커야 합니다.")
     if args.max_frames < 0:
         fail("--max-frames는 0 이상이어야 합니다.")
+    if args.hybrid_anchor_budget < 1:
+        fail("--hybrid-anchor-budget은 1 이상이어야 합니다.")
     if args.storyboard_max_frames is not None and args.storyboard_max_frames < 0:
         fail("--storyboard-max-frames는 0 이상이어야 합니다.")
     if args.scene_threshold <= 0:
@@ -562,15 +642,17 @@ def main() -> None:
         frames, stats = extract_storyboard_frames(cv2, args.source, args.out_dir, storyboard_max_frames)
     elif args.mode == "scene":
         frames, stats = extract_scene_frames(cv2, video_path, args.out_dir, args)
-    else:
+    elif args.mode == "interval":
         frames, stats = extract_interval_frames(cv2, video_path, args.out_dir, args.interval, args.max_frames)
+    else:
+        frames, stats = extract_hybrid_frames(cv2, video_path, args.out_dir, args)
 
     if not frames:
         fail("추출된 프레임이 없습니다.")
 
     stats.update(
         {
-            "extractor_version": "extract-video-frames-v2",
+            "extractor_version": "extract-video-frames-v3-hybrid",
             "video_id": args.video_id,
             "mode": args.mode,
             "scene_detail": args.scene_detail,
@@ -579,6 +661,7 @@ def main() -> None:
             "scene_scan_interval": args.scene_scan_interval,
             "max_frames": args.max_frames,
             "storyboard_max_frames": args.storyboard_max_frames,
+            "hybrid_anchor_budget": args.hybrid_anchor_budget,
         }
     )
     (args.out_dir / "frames.json").write_text(

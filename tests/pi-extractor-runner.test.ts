@@ -6515,6 +6515,40 @@ describe("pi recipe extractor MVP runner", () => {
     }, { projectRoot: workdir })).rejects.toThrow("aggregate-only");
   });
 
+  it("allows an explicit user-authorized validation comparison report", async () => {
+    const { renderComparisonHtml } = await import(comparisonHtmlModuleUrl);
+    const output = path.join(workdir, ".omx/plans/validation-detail.html");
+    writeJson(
+      path.join(workdir, "notebooks/recipe_loop_data/validation/case-a/runs/fresh-baseline/run-progress.json"),
+      {
+        videoId: "case-a",
+        events: [
+          { phase: "started", at: "2026-07-12T00:00:00.000Z" },
+          { phase: "completed", at: "2026-07-12T00:00:42.000Z" },
+        ],
+      },
+    );
+    writeJson(
+      path.join(workdir, "notebooks/recipe_loop_data/validation/case-a/runs/fresh-baseline/result.json"),
+      { videoId: "case-a", recipes: [], meta: { total_fresh_ms: 42123 } },
+    );
+
+    await expect(renderComparisonHtml({
+      split: "validation",
+      "out-tag": "protected-detail",
+      ids: "case-a",
+      "allow-protected-detail": true,
+      "timing-out-tag": "fresh-baseline",
+      output,
+    }, { projectRoot: workdir })).resolves.toMatchObject({ outputPath: output });
+    expect(readFileSync(output, "utf8")).toContain("split: <code>validation</code>");
+    expect(readFileSync(output, "utf8")).toContain("fresh P50 42.123s");
+    expect(readFileSync(output, "utf8")).toContain("fresh 42.123s");
+    expect(readFileSync(output, "utf8")).toContain(
+      '<a class="youtube-link" href="https://www.youtube.com/watch?v=case-a" target="_blank" rel="noopener noreferrer">유튜브 원본 영상 보기 ↗</a>',
+    );
+  });
+
   it("runs the train wrapper with staged fast compact defaults and freeze", async () => {
     const { runPiTrainExtraction } = await import(trainRunnerModuleUrl);
     const caseDir = path.join(workdir, "notebooks/recipe_loop_data/train/case-a");
