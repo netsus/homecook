@@ -207,7 +207,7 @@
 - [ ] 사용자 콘텐츠·일반명사 `집밥` 보존 source guard 구현 <!-- omo:id=brand-delivery-content-preservation;stage=4;scope=shared;review=6 -->
 - [ ] 기술 식별자와 과거 official/evidence/prototype 보존 검사 <!-- omo:id=brand-delivery-identifier-history-guard;stage=4;scope=shared;review=6 -->
 - [ ] 기존 loading/empty/error/read-only/unauthorized 상태 회귀 점검 <!-- omo:id=brand-delivery-state-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] unit/component/Playwright 자동화 범위 분리 <!-- omo:id=brand-delivery-test-split;stage=4;scope=shared;review=5,6 -->
+- [ ] unit/component/Playwright 자동화 범위 분리 <!-- omo:id=brand-delivery-test-split;stage=4;scope=shared;review=6 -->
 - [ ] HOME 390/320 before/after와 guide-only evidence 생성 <!-- omo:id=brand-delivery-home-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] HOME authority report blocker 0 확인 <!-- omo:id=brand-delivery-authority-closeout;stage=4;scope=frontend;review=5,6 -->
 - [ ] API/DB/dependency/logo/mascot out-of-scope guard 최종 확인 <!-- omo:id=brand-delivery-final-scope-guard;stage=4;scope=shared;review=6 -->

@@ -18,7 +18,7 @@
 - [ ] features heading은 `끼니 계획이 편해지는 이유`다 <!-- omo:id=brand-accept-copy-features;stage=4;scope=frontend;review=5,6 -->
 - [ ] 성장 label은 `끼니 기록 / 끼니 활동 / 끼니 성장`이다 <!-- omo:id=brand-accept-copy-growth;stage=4;scope=frontend;review=5,6 -->
 - [x] 조리 업적 label은 `첫 요리 완성`이다 <!-- omo:id=brand-accept-copy-first-cook;stage=2;scope=shared;review=3,6 -->
-- [ ] HOME system source badge는 `무먹 추천`을 표시하고 `system` key/API shape는 유지한다 <!-- omo:id=brand-accept-copy-system-source-badge;stage=4;scope=shared;review=5,6 -->
+- [ ] HOME system source badge는 `무먹 추천`을 표시하고 `system` key/API shape는 유지한다 <!-- omo:id=brand-accept-copy-system-source-badge;stage=4;scope=shared;review=6 -->
 - [ ] 설명 섹션 영문 label은 `WHY IT WORKS`이며 새 영문 서비스명으로 사용하지 않는다 <!-- omo:id=brand-accept-copy-why;stage=4;scope=frontend;review=5,6 -->
 
 ## Nickname / Notification Policy
