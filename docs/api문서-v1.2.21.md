@@ -3484,7 +3484,7 @@ POST /api/v1/admin/page-view
 
 ---
 
-## 엔드포인트 전체 목록 (71개) `v1.2.20`
+## 엔드포인트 전체 목록 (73개) `v1.2.21`
 
 | #        | Method     | Path                                   | 화면                     | 인증   | v1.2 변경                        |
 | -------- | ---------- | -------------------------------------- | ------------------------ | ------ | -------------------------------- |
@@ -3562,6 +3562,7 @@ POST /api/v1/admin/page-view
 | 15-3     | GET        | /api/v1/admin/audit-logs               | ADMIN_AUDIT_LOGS         | 🔐     | v1.2.12 신규                     |
 | **15-4** | **POST**   | **/api/v1/admin/page-view**            | **ADMIN_DASHBOARD**      | **🔐** | **launch-readiness 신규**        |
 
+> **v1.2.21 총계**: 73개 (서비스 브랜드 copy contract-evolution, 신규 endpoint 없음)
 > **2026-06-20 LEFTOVERS stale review server-sync addendum 총계**: 73개 (`POST /leftovers/{id}/keep` 1개 추가)
 > **2026-06-20 404 feedback addendum 총계**: 72개 (`POST /api/v1/feedback/404` 1개 추가. 신규 DB table 없음)
 > **v1.2.20 총계**: 71개 (`GET /tags`, `POST /recipes/tag-suggestions` 2개 추가. recipe 목록/YouTube/manual register는 기존 endpoint 확장)
