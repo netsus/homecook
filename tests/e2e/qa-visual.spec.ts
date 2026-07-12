@@ -644,7 +644,7 @@ test.describe("QA visual regression", () => {
     await page.getByRole("tab", { name: /장보기 기록/ }).click();
     await expect(page.getByRole("heading", { name: "장보기 기록" })).toBeVisible();
     await stabilizeVisualSnapshot(page);
-    await expect.soft(page).toHaveScreenshot("qa-mypage-shopping-history.png", {
+    await expect(page).toHaveScreenshot("qa-mypage-shopping-history.png", {
       animations: "disabled",
       fullPage: true,
       maxDiffPixels: ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
@@ -653,7 +653,7 @@ test.describe("QA visual regression", () => {
     await page.goto(SETTINGS_VISUAL_PATH);
     await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
     await stabilizeVisualSnapshot(page);
-    await expect.soft(page).toHaveScreenshot("qa-settings.png", {
+    await expect(page).toHaveScreenshot("qa-settings.png", {
       animations: "disabled",
       fullPage: true,
       maxDiffPixels: ACCOUNT_LIBRARY_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
@@ -663,11 +663,9 @@ test.describe("QA visual regression", () => {
     const logoutDialog = page.getByRole("alertdialog", { name: "로그아웃 할까요?" });
     await expect(logoutDialog).toBeVisible();
     await stabilizeVisualSnapshot(page);
-    await expect
-      .soft(logoutDialog)
-      .toHaveScreenshot("qa-settings-logout-modal.png", {
-        animations: "disabled",
-      });
+    await expect(logoutDialog).toHaveScreenshot("qa-settings-logout-modal.png", {
+      animations: "disabled",
+    });
 
     await logoutDialog.getByRole("button", { name: "취소" }).click();
     await page.getByRole("button", { name: "계정 삭제하기" }).click();
@@ -676,7 +674,7 @@ test.describe("QA visual regression", () => {
     });
     await expect(accountDeleteDialog).toBeVisible();
     await stabilizeVisualSnapshot(page);
-    await expect.soft(accountDeleteDialog).toHaveScreenshot(
+    await expect(accountDeleteDialog).toHaveScreenshot(
       "qa-settings-account-delete-modal.png",
       { animations: "disabled" },
     );
