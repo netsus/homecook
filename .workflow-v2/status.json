@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-13T05:21:28+09:00",
+  "updated_at": "2026-07-13T16:16:58+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1881,6 +1881,22 @@
         "git diff --check"
       ],
       "notes": "Canonical closeout: .workflow-v2/work-items/service-brand-rebrand.json#closeout. Stage 6 independent Codex review approved PR #988 at 59deb209a830fccfd00d7483acc170de08a65888 with actionable findings 0; current-head started checks including full-regression and Lighthouse were green. Design Status confirmed and final authority pass with blocker/major/minor 0/0/0. Manual Only remains user copy/taste, deployed metadata/social preview, and production DB read-only sampling; these do not block merge. closeout_phase=completed | closeout_recovery=manual_patch:1|ci_resync:3|manual_handoff | closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #988 and current-head checks,Stage 6 independent Codex review,ui/designs/authority/HOME-service-brand-rebrand-authority.md,.artifacts/qa/service-brand-rebrand/stage4 | last_recovery_at=2026-07-13T01:32:06Z"
+    },
+    {
+      "id": "service-brand-home-lockup",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/mumeok-home-lockup-contract",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice service-brand-home-lockup",
+        "node scripts/validate-automation-spec.mjs --slice service-brand-home-lockup",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 contract-evolution docs prepared by a role-separated Codex docs-owner session under explicit user approval. HOME mobile HomeAppBar and desktop HOME WebTopNav brand area use a vertical 무먹 / 무엇을 먹든 lockup; non-HOME short-name-only behavior and desktop nav geometry/interaction remain unchanged. FE-only Stage 2/3 skip. HOME direct modification requires new 390/320/1280 evidence and independent authority review; historical evidence is immutable."
     }
   ]
 }

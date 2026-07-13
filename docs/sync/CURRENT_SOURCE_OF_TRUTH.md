@@ -1,8 +1,8 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.12.md`
-- `docs/화면정의서-v1.5.19.md`
+- `docs/요구사항기준선-v1.7.13.md`
+- `docs/화면정의서-v1.5.20.md`
 - `docs/유저flow맵-v1.3.19.md`
 - `docs/db설계-v1.3.16.md`
 - `docs/api문서-v1.2.21.md`
@@ -12,6 +12,21 @@
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## HOME Service Name Lockup Contract-Evolution `2026-07-13`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.13 | HOME 모바일 `HomeAppBar`와 desktop HOME `WebTopNav` 브랜드 영역에 큰 `무먹` 아래 작은 `무엇을 먹든`을 세로 2단으로 표시하는 예외 계약 추가 |
+| 화면정의서 v1.5.20 | HOME 전용 2단 lockup의 반응형·접근성 계약과 390/320/1280 authority evidence 요구 추가 |
+| 유저플로우 v1.3.19 | 변경 없음. route, 진입, 상태 전이, 사용자 action은 기존과 동일 |
+| API v1.2.21 | 변경 없음. endpoint/field/response shape 변화 없음 |
+| DB v1.3.16 | 변경 없음. schema/migration/stored row 변화 없음 |
+
+> 사용자가 2026-07-13에 인지도가 낮은 짧은명 `무먹`의 뜻을 HOME에서 함께 학습할 수 있도록 이 세로 2단 lockup을 명시적으로 승인했다.
+> HOME 외 AppBar·텍스트 워드마크·좁은 내비게이션은 `무먹` 단독을 유지하며, 두 이름의 오른쪽 inline 배치는 허용하지 않는다.
+> 이번 변경은 새 화면/interaction 없는 low-risk visual change지만 HOME direct modification이므로 `anchor-extension`과 authority-required다. 기존 screenshot/evidence는 보존하고 새 workpack 경로에 390px/320px 및 desktop 1280px before/after와 authority report를 추가한다.
+> API/DB/dependency/기술 식별자/이미지 로고/마스코트에는 변화가 없다.
 
 ## Service Brand Rebrand Contract-Evolution `2026-07-13`
 

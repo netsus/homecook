@@ -41,8 +41,8 @@ tools:
 ## 필수 입력
 
 1. `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-2. 관련 `docs/요구사항기준선-v1.7.12.md`
-3. 관련 `docs/화면정의서-v1.5.19.md`
+2. 관련 `docs/요구사항기준선-v1.7.13.md`
+3. 관련 `docs/화면정의서-v1.5.20.md`
 4. 관련 `docs/유저flow맵-v1.3.19.md`
 5. `docs/design/design-tokens.md`
 6. `docs/design/mobile-ux-rules.md`

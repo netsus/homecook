@@ -9,14 +9,16 @@
 
 > **2026-07-13 서비스 브랜드 superseding addendum:** 정식명은 `무엇을 먹든`, HOME AppBar 텍스트 워드마크와 좁은 표시는 `무먹`이다. 아래 living contract의 `HOMECOOK`/`집밥 가이드`/`집밥 둘러보기`/system source badge `집밥 추천` 브랜드 표시는 각각 `무먹`/`무먹 가이드`/`무먹 둘러보기`/`무먹 추천`으로 대체한다. 이 변경은 승인된 브랜드 고정 copy만 supersede하며 `AppHeader`, source key, route, geometry, token, material, interaction, `homecook:*`/`HOMECOOK_*` 기술 식별자, 기존 prototype/evidence 파일은 바꾸지 않는다. HOME direct modification은 anchor-extension이므로 Stage 4에서 390px/320px before/after와 authority report가 필요하다.
 
+> **2026-07-13 HOME 서비스명 lockup superseding addendum:** HOME에 한해 mobile `HomeAppBar`와 desktop HOME `WebTopNav`의 브랜드 영역을 `무먹` 아래 작은 `무엇을 먹든`이 놓이는 세로 2단 lockup으로 확장한다. 오른쪽 inline 배치는 사용하지 않는다. 다른 화면 AppBar/WebTopNav/좁은 내비게이션은 `무먹` 단독을 유지한다. mobile 320px에서 보조 이름 한 줄·WCAG AA 대비·중복 낭독 방지, desktop nav 높이/탭 위치/interaction 보존을 잠근다. 기존 evidence는 수정하지 않고 `service-brand-home-lockup` Stage 4의 390/320/1280 before/after와 별도 authority report로 검증한다.
+
 ---
 
 ## 레이아웃 와이어프레임 (v1.4.0 — H1 carousel strip)
 
 ```
 ┌─────────────────────────────────────────┐  ← 375px (모바일 기준)
-│  무먹                                   │  ← 공통 텍스트 워드마크
-│                                         │
+│  무먹                                   │  ← HOME 전용 primary wordmark
+│  무엇을 먹든                            │  ← smaller supporting name
 │  ┌─────────────────────────────────┐    │  ← discovery panel (glass-panel)
 │  │  🔍  레시피 제목 검색           │    │  ← search bar, min-h-14
 │  │  [재료로 검색]                  │    │  ← 재료 필터 단독 행, min-h-11
@@ -249,8 +251,9 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 
 - **전체 구조**: 공통 브랜드 헤더 / discovery panel / 테마 섹션 / `모든 레시피` 리스트 / `position: fixed` 하단 탭바
 - **콘텐츠 영역**: 일반 세로 스크롤. discovery panel은 첫 화면 안에 남기되, 별도 fixed app bar처럼 분리하지 않는다.
-- **브랜드 헤더**: `무먹` 텍스트 워드마크는 공통 `AppHeader`를 사용하며, `PLANNER_WEEK`와 동일한 top shell을 공유한다.
-- **small-mobile 기준**: `무먹` 헤더 + discovery panel 조합에서도 작은 모바일 sentinel에서 제목 검색 입력과 `재료로 검색` 버튼이 first viewport 안에 함께 보여야 한다.
+- **브랜드 헤더**: HOME의 mobile `HomeAppBar`와 desktop `WebTopNav` brand area만 `무먹` + 아래 작은 `무엇을 먹든` 2단 lockup을 사용한다. 다른 화면의 공통 `AppHeader`/`WebTopNav`는 `무먹` 단독을 유지한다.
+- **small-mobile 기준**: 320px에서 `무엇을 먹든`은 한 줄과 충분한 대비를 유지하고, 2단 lockup + discovery panel 조합에서도 제목 검색 입력과 `재료로 검색` 버튼이 first viewport 안에 함께 보여야 한다.
+- **desktop 기준**: HOME brand area 안에서만 두 줄을 쌓고 기존 web nav 높이, tab 위치, active state, right slot과 interaction을 바꾸지 않는다.
 - **정렬 위치**: 정렬 컨트롤은 검색 패널이 아니라 `모든 레시피` 섹션에 속한다. 테마 섹션은 별도 정렬 대상이 아니다.
 
 ---
@@ -280,7 +283,7 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 
 ## 디자인 결정 사항
 
-1. **공통 브랜드 헤더 사용**: `무먹` 텍스트 워드마크는 공통 `AppHeader`를 사용해 HOME / PLANNER_WEEK / DETAIL의 상단 좌상단 구조를 맞춘다. 워드마크는 항상 `/` 링크로 동작한다.
+1. **HOME 전용 서비스명 lockup**: HOME은 mobile `HomeAppBar`와 desktop `WebTopNav` brand area에서 `무먹` 아래 작은 `무엇을 먹든`을 표시한다. 다른 화면은 `무먹` 단독을 유지한다. 기존 HOME 링크/heading semantics와 focus 동작은 보존하고 접근성 읽기 순서는 `무먹, 무엇을 먹든`으로 맞춘다.
 
 2. **재료 필터와 정렬 패턴 통일**: `INGREDIENT_FILTER_MODAL`과 mobile 정렬 선택은 모두 bottom sheet 계열의 선택 패턴을 사용한다. 헤더 위계, 닫기 버튼, 선택 요약, 하단 액션 배치를 맞춰 같은 계열의 인터랙션으로 느껴지게 한다.
 
@@ -384,8 +387,8 @@ Loading/Empty/Error 상태   →    보존 (ContentState 기반)
 
 ```
 ┌─────────────────────────────────────────┐  ← 375px (모바일 기준)
-│  무먹                                   │  ← AppHeader: --surface bg, --shadow-1
-│                                         │     brand text: --foreground, hover: --brand-deep
+│  무먹                                   │  ← HOME-only primary name
+│  무엇을 먹든                            │  ← smaller supporting name, vertical lockup
 │  ┌─────────────────────────────────┐    │  ← discovery panel: token surface/border/shadow
 │  │  🔍  레시피 제목 검색           │    │  ← --surface bg, --line border, --shadow-1
 │  │  [재료로 검색]                  │    │  ← color-mix(brand) inactive / --olive active
@@ -462,7 +465,7 @@ h6 retrofit 결과물(현재 production baseline)을 Baemin prototype 기준 nea
 아래 정보 구조는 화면정의서 v1.5.1 §1 기준으로 **변경하지 않는다**:
 
 ```
-공통 브랜드 헤더 (AppHeader)
+HOME 전용 서비스명 2단 lockup (mobile HomeAppBar / desktop WebTopNav brand area)
 └─ Discovery panel
    ├─ 제목 검색바
    └─ [재료로 검색] 버튼 → INGREDIENT_FILTER_MODAL
