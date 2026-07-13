@@ -479,10 +479,11 @@ type YoutubeQuantityConfirmationStatus =
 - 계산 가능한 값이 하나 이상 있으면 `calculation_quality`는 `direct / estimated / mixed`이며 completeness와 독립이다. 대표 `VOLUME_G6/G10/G15/G20/G25` 환산을 하나라도 사용하면 `direct`가 될 수 없다. 전체 `calculation_status='unavailable'`이면 `calculation_quality=null`이다.
 - 대표 환산값은 충분한 내부 정밀도로 계산하고 표시 직전에 g 정수 반올림한다. UI는 `약/예상`을 붙인다.
 - aggregate에서 partial `known_amount`를 합산하면 결과도 `partial/minimum`이다. unavailable entry는 0으로 합산하지 않고 `incomplete_entry_count`에 포함한다.
-- `sources[]` item은 `provider`, `dataset`, `license`, `source_url`로 구성된 승인 attribution 요약이다. API key, 인증 query, raw fetch URL, raw provider response, 내부 manifest storage path는 반환하지 않는다.
+- `sources[]` item은 `provider`, `dataset`, `source_version`, `data_basis_date`, `license`, `source_url` 6개 field로 구성된 승인 attribution 요약이다. API key, 인증 query, raw fetch URL, raw provider response, 내부 manifest storage path는 반환하지 않는다.
 - `visibility='public' AND source_type='public_dataset'` 제품의 영양에 공공 dataset 값이 직접 기여했다면 `sources`는 반드시 non-empty이며, 승인된 실제 attribution만 반환한다. `sources=[]`는 attribution 가능한 public source가 실제로 하나도 기여하지 않은 경우에만 허용한다.
-- private manual 제품은 `sources`에 `{ "provider": "user_label", "dataset": null, "license": null, "source_url": null }`만 반환하고 다른 사용자 식별자는 포함하지 않는다.
-- planner aggregate는 pin된 recipe/product 영양의 `sources`를 합집합하고 `(provider, dataset, license, source_url)` stable tuple로 중복 제거한다. 같은 attribution이 여러 entry에 기여해도 각 range/day/column payload에는 한 번만 반환한다.
+- public source의 `source_version`은 non-null이며 pin된 `nutrition_sources.source_version`을 그대로 반환한다. `data_basis_date`는 같은 pin row의 값이고 원 source가 별도 기준일을 제공하지 않으면 null이다. 응답 시 live source 페이지를 다시 조회하거나 현재값으로 재작성하지 않는다. 아래 public 예시의 `source_version='2025-12-05'`도 승인·pin된 `nutrition_sources` 예시이며 runtime live 조회값이 아니다.
+- private manual 제품은 `sources`에 `{ "provider": "user_label", "dataset": null, "source_version": null, "data_basis_date": null, "license": null, "source_url": null }`만 반환하고 다른 사용자 식별자는 포함하지 않는다.
+- planner aggregate는 pin된 recipe/product 영양의 `sources`를 합집합하고 `(provider, dataset, source_version, data_basis_date, license, source_url)` stable tuple로 중복 제거한다. 같은 tuple이 여러 entry에 기여해도 각 range/day/column payload에는 한 번만 반환하며, `source_version`이 다른 pin source는 절대 합치지 않는다.
 - 공통 필수 field는 `basis`, 핵심 5종 `values`, `calculation_status`, `calculation_quality`, `warnings`, `sources`다. `reflected_ingredient_count`/`target_ingredient_count`/`snapshot_id`/`calculated_at`은 recipe context에서만, `incomplete_entry_count`는 aggregate context에서만 제공하며 적용되지 않는 context에서 거짓 0이나 임의 ID로 채우지 않는다. Product version 식별자는 parent의 `nutrition_version_id`로 제공한다.
 
 **단위 우선순위**
@@ -1034,7 +1035,7 @@ GET /planner
         "calculation_quality": "direct",
         "warnings": [],
         "sources": [
-          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "source_version": "2025-12-05", "data_basis_date": null, "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
         ]
       }
     }
@@ -1171,7 +1172,7 @@ GET /planner/nutrition
       "incomplete_entry_count": 2,
       "warnings": [],
       "sources": [
-        { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+        { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "source_version": "2025-12-05", "data_basis_date": null, "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
       ]
     },
     "recipe_entry_count": 12,
@@ -1194,7 +1195,7 @@ GET /planner/nutrition
         "incomplete_entry_count": 0,
         "warnings": [],
         "sources": [
-          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "source_version": "2025-12-05", "data_basis_date": null, "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
         ]
       },
       "columns": [
@@ -1214,7 +1215,7 @@ GET /planner/nutrition
             "incomplete_entry_count": 0,
             "warnings": [],
             "sources": [
-              { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+              { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "source_version": "2025-12-05", "data_basis_date": null, "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
             ]
           }
         }
@@ -1230,7 +1231,7 @@ GET /planner/nutrition
 - Meal snapshot이 null이거나 product nutrient가 결측이면 해당 nutrient/entry를 0으로 더하지 않는다.
 - partial `known_amount`가 하나라도 포함되면 결과는 `partial/minimum`이다. 모든 entry가 unavailable이면 nutrient amount와 known_amount는 null이다.
 - 계산 가능한 entry가 있을 때 `calculation_quality`는 모두 direct이면 direct, 모두 estimated이면 estimated, 나머지는 mixed다. 모든 entry가 unavailable이면 null이다.
-- `sources`는 각 범위에 실제로 포함된 pin된 recipe/product attribution의 합집합이다. 동일 `(provider, dataset, license, source_url)` tuple은 range/day/column별로 한 번만 반환하며, attribution 가능한 public source가 하나도 기여하지 않은 범위에서만 `[]`를 반환한다.
+- `sources`는 각 범위에 실제로 포함된 pin된 recipe/product attribution의 합집합이다. 동일 `(provider, dataset, source_version, data_basis_date, license, source_url)` tuple은 range/day/column별로 한 번만 반환하고 `source_version`이 다른 pin source는 합치지 않으며, attribution 가능한 public source가 하나도 기여하지 않은 범위에서만 `[]`를 반환한다.
 - 범위는 최대 7일이며 서버는 batch query로 계산한다. 날짜/끼니별 N+1 query를 허용하지 않는다.
 - 응답과 UI label은 `계획 영양`이며 실제 섭취·목표 달성·의료 조언을 뜻하지 않는다.
 
@@ -1306,7 +1307,7 @@ GET /meals
         "calculation_quality": "direct",
         "warnings": [],
         "sources": [
-          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "source_version": "2025-12-05", "data_basis_date": null, "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
         ]
       }
     }
@@ -1427,7 +1428,7 @@ GET /food-products
         "calculation_quality": "direct",
         "warnings": [],
         "sources": [
-          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "source_version": "2025-12-05", "data_basis_date": null, "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
         ]
       }
     }
@@ -1494,7 +1495,7 @@ POST /food-products
       "calculation_quality": "direct",
       "warnings": [],
       "sources": [
-        { "provider": "user_label", "dataset": null, "license": null, "source_url": null }
+        { "provider": "user_label", "dataset": null, "source_version": null, "data_basis_date": null, "license": null, "source_url": null }
       ]
     }
   }
@@ -1593,7 +1594,7 @@ POST /product-planner-entries
       "calculation_quality": "direct",
       "warnings": [],
       "sources": [
-        { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+        { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "source_version": "2025-12-05", "data_basis_date": null, "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
       ]
     }
   }
