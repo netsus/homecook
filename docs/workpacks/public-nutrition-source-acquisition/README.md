@@ -59,7 +59,7 @@
 | 1 | 농촌진흥청 `국가표준식품성분 DB 10.4(2026)` Excel/검색 | 농·축산 원재료 영양의 우선 source. versioned file batch와 검색 검수 | key 없음, 활용신청 없음 | Excel의 공공누리 제1유형과 출처표시 evidence가 확인된 snapshot만 후보 |
 | 2 | 식약처 `식품영양성분DB정보` OpenAPI `15127578` | 가공식품·완제품 영양, 기준량, 식품중량, 품목제조보고번호, 업체명 취득 | 공공데이터포털 계정 + 별도 활용신청 필수, `DATA_GO_KR_API_KEY` | complete pagination + schema/license review가 끝난 batch만 후보 |
 | 3 | `전국통합식품영양성분정보표준데이터` `15100064` | 원재료·수산물·가공식품 누락 탐색과 source 간 reconciliation | 초기 file download는 key 없음; API 자동 대조 시 별도 활용신청 | 원기관 partition을 보존하고 직접 source보다 낮은 우선순위로만 연결 |
-| 4 | 농촌진흥청 양념재료 계량표/영양가 검색 | 간장·식초·된장·고추장·꿀·올리브유/기름류 등 대표 `VOLUME_G6/G10/G15/G20/G25` 검수용 소량 관측 evidence | key 없음, 웹/검색 수동 검수 | 원문 복제 없이 제한된 사실 evidence만 다음 slice에 전달 |
+| 4 | 농촌진흥청 양념재료 계량표/영양가 계산 | 간장·식초·된장·고추장·꿀·참기름 등 실제 관측·이용조건 evidence가 확인된 항목의 대표 `VOLUME_G6/G10/G15/G20/G25` 검수용 소량 관측 evidence | key 없음, 웹/검색 수동 검수 | 원문 복제 없이 제한된 사실 evidence만 다음 slice에 전달. 올리브유·기타 기름류는 별도 실제 관측 evidence 확보 전 후보/승인 금지 |
 
 ### 기본 경로에서 제외하는 활성 RDA 10.0 OpenAPI
 
@@ -120,11 +120,12 @@
 - `source_version`(필수), `data_basis_date`(source가 제공하지 않으면 null), `fetched_at`
 - 인증 parameter가 제거된 `query`
 - source별 `license`, `license_url`, `license_evidence_url`, `license_verified_at`
-- `row_count`, raw payload/file `sha256`, `adapter_schema_version`
-- pagination이면 reported total, accumulated rows, page count, page identity checksum
-- batch status와 failed/quarantined row count
+- `fetched_raw_count`, `unique_input_count`, `normalized_count`, `deduplicated_identical_count`, `quarantined_count`
+- raw payload/file `sha256`, `adapter_schema_version`
+- pagination이면 provider reported total, accumulated `fetched_raw_count`, page count, page identity checksum
+- batch status와 failed/quarantined reason count
 
-같은 provider/dataset/source_version/raw checksum/adapter schema version은 같은 logical batch id와 normalized content hash를 만든다. `fetched_at` 또는 output path는 content identity에 포함하지 않는다.
+같은 provider/dataset/source_version/raw checksum/adapter schema version은 같은 logical batch id, row-accounting count tuple, normalized content hash를 만든다. `fetched_at` 또는 output path는 content identity에 포함하지 않는다.
 
 ### Safe Batch And Retry Contract
 
@@ -133,7 +134,7 @@
 - 기본 backoff는 1초, 2초, 4초의 bounded exponential 순서다. 유효한 `Retry-After`가 있으면 이를 우선하되 30초 상한을 둔다.
 - 다른 `4xx`, provider error payload, malformed JSON/XML, schema drift는 즉시 fail-closed다.
 - 테스트는 clock/sleep/fetch를 주입해 backoff와 timeout을 실제 대기 없이 결정론적으로 검증한다.
-- `reported total count == accumulated unique row count`를 만족해야 한다. 빈 중간 page, page 반복, total count 변경, external item key 충돌은 batch 전체를 차단한다.
+- pagination completeness는 `provider reported total count == accumulated fetched_raw_count`로 판정한다. 같은 page identity 또는 page token 반복은 pagination loop 오류로 batch 전체를 실패/quarantine하며, 아래의 정상적인 identical row dedupe와 구분한다. 빈 중간 page, total count 변경, external item key 충돌도 batch 전체를 차단한다.
 - key rotation으로 quota를 우회하지 않는다. 이 pipeline은 정확히 `DATA_GO_KR_API_KEY` 하나만 사용하며 429 소진 시 중단한다.
 
 ### Normalization Contract
@@ -149,15 +150,15 @@
 - `sugars_g`, `saturated_fat_g`, `fiber_g`는 source 값이 있을 때만 optional row로 보존한다.
 - 기준량 text를 `basis_amount + basis_unit`으로 parse하고 원문을 provenance에 제한 보존한다. parse 실패를 `100g`으로 추정하지 않는다.
 - `-`, trace, 미검출, 빈값, field 부재는 서로 구분한 missing reason이며 0으로 정규화하지 않는다. 실제 source 숫자 0만 값 0이다.
-- 모든 raw row는 normalized row 또는 명시적 quarantine/rejection record 중 하나로 계상한다. `raw_count == normalized_count + quarantined_count`가 handoff gate다.
-- 동일 source/version/external key의 완전 동일 row는 fingerprint로 dedupe하고 count를 남긴다. 내용이 다른 충돌 row, 음수값, 단위 불일치, malformed row는 격리한다.
+- row accounting은 `fetched_raw_count = unique_input_count + deduplicated_identical_count`, `unique_input_count = normalized_count + quarantined_count`로 고정한다. 따라서 `fetched_raw_count = normalized_count + quarantined_count + deduplicated_identical_count`가 handoff gate다.
+- 동일 source/version/business key와 checksum이 모두 같은 row만 fingerprint로 dedupe하고 `deduplicated_identical_count`에 집계한다. 같은 business key의 내용/checksum이 다른 conflicting duplicate는 dedupe하지 않고 `quarantined_count`에 집계하며, 음수값·단위 불일치·malformed row도 격리한다.
 - 직접 source와 통합표준 source는 identity를 합치지 않는다. 직접 source를 우선하고 통합 row는 reconciliation provenance로만 연결한다.
 
 ### Review, Idempotency, And Write Boundary
 
 - review status는 `pending / approved / rejected / needs_review / needs_source_check`를 구분한다.
 - explicit approved decision과 blocker 0인 source/row만 promotion input에 들어간다.
-- 동일 input/decision 재실행은 같은 row ordering, fingerprint, content hash, approved item set을 만든다.
+- 동일 input/decision 재실행은 같은 row ordering, fingerprint, row-accounting count tuple, raw/normalized checksum, approved item set을 만든다.
 - 이미 생성된 approved/pinned artifact를 append 또는 overwrite하지 않는다. source/version/값 변경은 새 immutable candidate bundle을 만든다.
 - 이 slice의 모든 실행 summary는 `production_db_writes: 0`을 증명해야 한다.
 
@@ -166,7 +167,7 @@
 - 공개 페이지라는 이유만으로 저작권이 사라지거나 자유 재배포가 가능하다고 단정하지 않는다.
 - 계량표 페이지에 공공누리 제1유형 표시가 확인되지 않으면 국립식량과학원 저작권정책에 따라 원문 이용은 fail-closed로 보고, 이용조건 evidence와 제한된 사실 관측만 남긴다.
 - 원문 표·문장·행/열 배치·페이지 이미지·전체 dataset, 대량 scraping 결과를 repository/artifact/API로 복제하지 않는다.
-- 간장·식초·된장·고추장·꿀·올리브유/기름류 등 MVP에 필요한 소량 항목만 검수한다.
+- 간장·식초·된장·고추장·꿀·참기름 등 실제 관측값과 이용조건 evidence가 확보된 MVP 소량 항목만 대표 등급 후보로 검수한다. 올리브유·기타 기름류는 별도 실제 관측 evidence를 확보하기 전 자동 후보 또는 승인 대상으로 삼지 않는다.
 - 한 evidence row는 최소 아래 값을 가진다.
   - `source_url`, `accessed_at`, `ingredient_or_category_id`
   - `source_observed_unit`, `observed_g` 또는 `observed_g_per_15ml`
@@ -214,6 +215,7 @@
 - 농진청 국가표준식품성분표 개요/검색:
   - `https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562`
   - `https://www.nics.go.kr/food/kfi/fct/fctFoodSrch/list`
+- 농진청 영양가 계산: `https://www.nics.go.kr/food/kfi/fct/fctNutCal/list`
 - 농진청 양념재료 계량표: `https://www.nics.go.kr/food/kfi/hsMarinade/list_03`
 - 농진청 저작권정책: `https://nics.go.kr/contents/page.do?contentsId=3&homepageSeCode=nics&m=100000165`
 - 활성 RDA 10.0 OpenAPI 비교 근거: `https://www.data.go.kr/data/15143598/openapi.do`
@@ -247,7 +249,7 @@
 
 - MFDS live smoke는 활용신청과 server-only key가 준비된 operator 환경에서만 최소 page로 실행한다.
 - RDA 10.4 source version/공공누리 제1유형 evidence와 양념 계량표의 이용조건 disposition은 별도 수동 검수 기록으로 남긴다.
-- live smoke는 raw/normalized/approved count, key 노출 0, production DB write 0을 확인한다. 실제 key 값 자체는 evidence에 기록하지 않는다.
+- live smoke는 다섯 row-accounting count와 approved count, key 노출 0, production DB write 0을 확인한다. 실제 key 값 자체는 evidence에 기록하지 않는다.
 - real DB smoke/seed/reset: N/A. 이 slice는 DB를 읽거나 쓰지 않으며, DB table 준비는 다음 slice의 blocker다.
 
 ### Blocker conditions
@@ -265,7 +267,7 @@
 - 공공 source는 runtime 사용자 요청에 직결하지 않는다.
 - 필수 활용신청은 MFDS `15127578` 하나다. RDA `15143598`은 활성 OpenAPI지만 10.0/KOGL4이므로 기본 경로가 아니다.
 - secret은 정확히 `DATA_GO_KR_API_KEY` 하나이며 server/operator boundary 밖으로 나가지 않는다.
-- 결측은 0이 아니며 raw row loss도 허용하지 않는다. 모든 row는 normalized 또는 quarantine으로 계상한다.
+- 결측은 0이 아니며 raw row loss도 허용하지 않는다. fetched raw row는 normalized, quarantine, identical dedupe 중 하나로 계상한다.
 - source/version/license/checksum이 pin되지 않은 값은 다음 slice에 전달하지 않는다.
 - 승인되지 않은 row, failed/partial batch, duplicate conflict, contaminated row는 promotion input에 들어가지 않는다.
 - 농진청 계량자료는 소량 사실 evidence만 보존하고 실제 assignment 결정은 다음 slice로 넘긴다.
@@ -281,8 +283,8 @@
 이 slice에는 직접 사용자 화면이 없다. 사용자 가치로 이어지는 primary path는 운영자 매개 흐름이다.
 
 1. 운영자가 source별 이용조건·version을 확인하고 MFDS 사용 시 server-only key를 준비한다.
-2. fetch/file ingest가 raw snapshot과 sanitized manifest를 만들고 pagination·checksum을 검증한다.
-3. normalize가 핵심 5종/기준량/결측을 결정론적으로 변환하고 모든 raw row를 normalized 또는 quarantine으로 계상한다.
+2. fetch/file ingest가 raw snapshot과 sanitized manifest를 만들고 provider total 대비 `fetched_raw_count`, page identity, checksum을 검증한다.
+3. normalize가 핵심 5종/기준량/결측을 결정론적으로 변환하고 모든 fetched raw row를 normalized, quarantine, identical dedupe 중 하나로 계상한다.
 4. reviewer가 schema·중복·충돌·license·delta와 제한 계량 evidence를 검수한다.
 5. approved decision만 pinned handoff bundle로 만들고 `ingredient-nutrition-conversion-model`이 이를 소비한다.
 
@@ -292,12 +294,12 @@
 
 1. approved source manifest: provider, dataset, `source_version`, `data_basis_date`, license evidence, checksum
 2. normalized source item/value bundle: stable external key, 기준량, 핵심 5종과 optional 값, missing reason, provenance fingerprint
-3. quarantine/review report: malformed/partial/duplicate/conflict/schema/license rejection 사유와 count
+3. quarantine/review report: 다섯 row-accounting count, malformed/partial/identical duplicate/conflicting duplicate/schema/license 사유와 count
 4. public attribution bundle: 정확히 6 field(`provider`, `dataset`, `source_version`, `data_basis_date`, `license`, `source_url`)
 5. 제한된 RDA measurement evidence: 관측 사실, 후보 대표 등급, 오차, review/license disposition
-6. reproducibility evidence: 동일 input/decision의 동일 content hash, secret leak 0, production DB write 0
+6. reproducibility evidence: 동일 input/decision의 동일 row-accounting count tuple과 raw/normalized checksum, secret leak 0, production DB write 0
 
-handoff gate는 `raw_count == normalized_count + quarantined_count`, blocker 0, approved decision 외 row 0, license/source pin 결손 0, 실제 key/auth query 노출 0을 모두 만족할 때만 열린다.
+handoff gate는 `fetched_raw_count = unique_input_count + deduplicated_identical_count`, `unique_input_count = normalized_count + quarantined_count`와 그에 따른 `fetched_raw_count = normalized_count + quarantined_count + deduplicated_identical_count`, blocker 0, approved decision 외 row 0, license/source pin 결손 0, 실제 key/auth query 노출 0을 모두 만족할 때만 열린다.
 
 ## Delivery Checklist
 

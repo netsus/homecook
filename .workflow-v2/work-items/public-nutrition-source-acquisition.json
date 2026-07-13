@@ -89,7 +89,7 @@
   "status": {
     "lifecycle": "planned",
     "approval_state": "not_started",
-    "verification_status": "passed",
+    "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,

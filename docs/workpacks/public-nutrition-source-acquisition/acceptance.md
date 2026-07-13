@@ -10,7 +10,7 @@
 - [ ] complete raw batch가 staged -> normalized -> reviewed -> approved_pinned 순서로만 이동한다 <!-- omo:id=accept-artifact-lifecycle;stage=2;scope=backend;review=3 -->
 - [ ] 핵심 5종이 `energy_kcal/kcal`, `carbohydrate_g/g`, `protein_g/g`, `fat_g/g`, `sodium_mg/mg`로 정규화된다 <!-- omo:id=accept-core-five-schema;stage=2;scope=backend;review=3 -->
 - [ ] explicit approved decision이 있는 row만 `approved-promotion-input.json`에 들어간다 <!-- omo:id=accept-approved-only-promotion;stage=2;scope=backend;review=3 -->
-- [ ] 동일 input/decision을 재실행하면 ordering, fingerprint, approved item set, content hash가 같다 <!-- omo:id=accept-deterministic-rerun;stage=2;scope=backend;review=3 -->
+- [ ] 동일 input/decision을 재실행하면 ordering, fingerprint, 다섯 row-accounting count, raw/normalized checksum, approved item set이 같다 <!-- omo:id=accept-deterministic-rerun;stage=2;scope=backend;review=3 -->
 - [ ] 성공 summary가 `production_db_writes: 0`과 다음 slice용 handoff checksum을 제공한다 <!-- omo:id=accept-zero-db-write-handoff;stage=2;scope=shared;review=3 -->
 
 ## Source / Application / Credential Policy
@@ -26,7 +26,7 @@
 
 - [ ] failed/quarantined batch가 `approved_pinned`으로 부분 성공 처리되지 않는다 <!-- omo:id=accept-no-partial-promotion;stage=2;scope=backend;review=3 -->
 - [ ] approved/pinned artifact는 append/overwrite하지 않고 source/version/value 변경 시 새 bundle을 만든다 <!-- omo:id=accept-immutable-approved-bundle;stage=2;scope=backend;review=3 -->
-- [ ] 같은 source/version/external key의 identical row와 conflicting row를 구분해 dedupe 또는 quarantine한다 <!-- omo:id=accept-duplicate-conflict-policy;stage=2;scope=backend;review=3 -->
+- [ ] 같은 source/version/business key+checksum의 identical row만 `deduplicated_identical_count`로 dedupe하고, 같은 business key의 checksum/content가 다른 conflicting duplicate는 `quarantined_count`로 격리한다 <!-- omo:id=accept-duplicate-conflict-policy;stage=2;scope=backend;review=3 -->
 - [ ] 직접 source와 통합표준 row의 identity를 합치지 않고 통합 row를 reconciliation evidence로만 연결한다 <!-- omo:id=accept-direct-source-priority;stage=2;scope=backend;review=3 -->
 - [ ] 사용자 runtime 외부 호출, cron 자동 수집, 자동 production 승격 경로가 없다 <!-- omo:id=accept-operator-batch-only;stage=2;scope=backend;review=3 -->
 - [ ] public endpoint/field와 `{ success, data, error }` API 계약이 변경되지 않는다 <!-- omo:id=accept-no-public-api-change;stage=2;scope=shared;review=3 -->
@@ -37,19 +37,19 @@
 - [ ] retry는 timeout/network/408/429/5xx만 initial 포함 최대 4회 수행한다 <!-- omo:id=accept-retry-allowlist;stage=2;scope=backend;review=3 -->
 - [ ] backoff가 1/2/4초이며 valid `Retry-After` 우선 + 30초 상한을 지킨다 <!-- omo:id=accept-backoff-policy;stage=2;scope=backend;review=3 -->
 - [ ] non-retry 4xx, provider error, malformed payload, schema drift는 즉시 fail-closed다 <!-- omo:id=accept-nonretry-fail-closed;stage=2;scope=backend;review=3 -->
-- [ ] total count, accumulated unique row count, page count, page identity가 모두 맞아야 batch가 complete다 <!-- omo:id=accept-pagination-accounting;stage=2;scope=backend;review=3 -->
-- [ ] 빈 중간 page, duplicate page, total count drift, pagination 중단은 approved artifact를 만들지 않는다 <!-- omo:id=accept-pagination-failure-cases;stage=2;scope=backend;review=3 -->
+- [ ] provider reported total과 accumulated `fetched_raw_count`, page count, page identity가 모두 맞아야 batch가 complete다 <!-- omo:id=accept-pagination-accounting;stage=2;scope=backend;review=3 -->
+- [ ] 빈 중간 page, 같은 page identity/token 반복, total count drift, pagination 중단은 정상 identical row dedupe와 구분해 batch를 실패/quarantine하고 approved artifact를 만들지 않는다 <!-- omo:id=accept-pagination-failure-cases;stage=2;scope=backend;review=3 -->
 - [ ] retry/backoff 테스트가 injected fetch/clock/sleep으로 실제 대기 없이 결정론적으로 실행된다 <!-- omo:id=accept-retry-deterministic-test;stage=2;scope=backend;review=3 -->
 
 ## Normalization / Data Integrity
 
 - [ ] `source_version`은 public source에서 non-null이고 `data_basis_date` null 여부가 source evidence로 설명된다 <!-- omo:id=accept-version-basis-date;stage=2;scope=backend;review=3 -->
-- [ ] manifest가 provider/dataset/sanitized URL/query/license/row count/sha256/adapter schema version을 가진다 <!-- omo:id=accept-manifest-required-fields;stage=2;scope=backend;review=3 -->
+- [ ] manifest가 provider/dataset/sanitized URL/query/license, 다섯 row-accounting count, raw sha256, adapter schema version을 가진다 <!-- omo:id=accept-manifest-required-fields;stage=2;scope=backend;review=3 -->
 - [ ] raw checksum 불일치 또는 adapter schema mismatch가 normalization을 차단한다 <!-- omo:id=accept-checksum-schema-pin;stage=2;scope=backend;review=3 -->
 - [ ] basis text parse 실패를 `100g`으로 추정하지 않고 quarantine/missing reason으로 남긴다 <!-- omo:id=accept-no-basis-guess;stage=2;scope=backend;review=3 -->
 - [ ] 결측, 빈값, trace, 미검출을 0으로 바꾸지 않고 실제 source 숫자 0만 0으로 보존한다 <!-- omo:id=accept-missing-not-zero;stage=2;scope=backend;review=3 -->
 - [ ] 음수 nutrient, 단위 불일치, malformed row, stable key 충돌이 격리된다 <!-- omo:id=accept-contamination-quarantine;stage=2;scope=backend;review=3 -->
-- [ ] 모든 raw row가 normalized 또는 quarantined로 계상되어 `raw_count == normalized_count + quarantined_count`다 <!-- omo:id=accept-raw-row-loss-zero;stage=2;scope=backend;review=3 -->
+- [ ] `fetched_raw_count = unique_input_count + deduplicated_identical_count`, `unique_input_count = normalized_count + quarantined_count`, 따라서 `fetched_raw_count = normalized_count + quarantined_count + deduplicated_identical_count`다 <!-- omo:id=accept-raw-row-loss-zero;stage=2;scope=backend;review=3 -->
 - [ ] public attribution bundle item이 정확히 `provider/dataset/source_version/data_basis_date/license/source_url` 6 field만 가진다 <!-- omo:id=accept-source-attribution-six-fields;stage=2;scope=shared;review=3 -->
 - [ ] public attribution에 key, auth query, raw fetch URL/response, internal storage path가 없다 <!-- omo:id=accept-public-attribution-redaction;stage=2;scope=shared;review=3 -->
 
@@ -59,7 +59,7 @@
 - [ ] evidence가 selected representative grade 후보, 오차, review result, 이용조건 evidence를 가진다 <!-- omo:id=accept-rda-grade-review-evidence;stage=2;scope=backend;review=3 -->
 - [ ] 양념 계량표의 원문 표·문장·행/열 배치·페이지 이미지·전체 dataset을 복제하지 않는다 <!-- omo:id=accept-rda-no-republication;stage=2;scope=backend;review=3 -->
 - [ ] 공공누리 표시가 확인되지 않은 페이지를 자유이용 가능으로 가정하지 않고 license disposition 결손을 차단한다 <!-- omo:id=accept-rda-license-fail-closed;stage=2;scope=backend;review=3 -->
-- [ ] evidence 대상이 간장·식초·된장·고추장·꿀·올리브유/기름류 등 필요한 소량 subset으로 제한된다 <!-- omo:id=accept-rda-limited-subset;stage=2;scope=backend;review=3 -->
+- [ ] 간장·식초·된장·고추장·꿀·참기름 등 실제 관측·이용조건 evidence가 확보된 소량 subset만 대표 등급 후보이며, 올리브유·기타 기름류는 별도 실제 관측 evidence 확보 전 자동 후보/승인되지 않는다 <!-- omo:id=accept-rda-limited-subset;stage=2;scope=backend;review=3 -->
 - [ ] 실제 2.5g threshold 승인/profile assignment/이름 기반 자동배정 판단을 만들지 않고 다음 slice로 넘긴다 <!-- omo:id=accept-rda-assignment-deferred;stage=2;scope=shared;review=3 -->
 
 ## Error / Permission
@@ -81,9 +81,9 @@
 ## Handoff Gate
 
 - [ ] approved manifest와 normalized item/value bundle의 checksum이 서로 참조된다 <!-- omo:id=accept-handoff-checksum-links;stage=2;scope=shared;review=3 -->
-- [ ] quarantine/review report가 malformed/partial/duplicate/conflict/schema/license count를 제공한다 <!-- omo:id=accept-handoff-review-report;stage=2;scope=shared;review=3 -->
+- [ ] quarantine/review report가 다섯 row-accounting count와 malformed/partial/identical duplicate/conflicting duplicate/schema/license 사유별 count를 제공한다 <!-- omo:id=accept-handoff-review-report;stage=2;scope=shared;review=3 -->
 - [ ] source attribution 6-field bundle과 제한 measurement evidence가 handoff에 포함된다 <!-- omo:id=accept-handoff-attribution-measurement;stage=2;scope=shared;review=3 -->
-- [ ] blocker 0, unapproved row 0, secret exposure 0, production DB write 0일 때만 handoff가 pass다 <!-- omo:id=accept-handoff-zero-gate;stage=2;scope=shared;review=3 -->
+- [ ] row-accounting 등식 통과, blocker 0, unapproved row 0, secret exposure 0, production DB write 0일 때만 handoff가 pass다 <!-- omo:id=accept-handoff-zero-gate;stage=2;scope=shared;review=3 -->
 - [ ] 다음 slice가 source/version/license/provenance를 재추론하지 않고 pinned bundle을 읽을 수 있다 <!-- omo:id=accept-next-slice-consumable;stage=2;scope=shared;review=3 -->
 
 ## Stage 1.5 Independent Codex Reviewer Checklist
