@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-13T19:00:37+09:00",
+  "updated_at": "2026-07-13T21:11:41+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1901,18 +1901,20 @@
     {
       "id": "public-nutrition-source-acquisition",
       "preset": "vertical-slice-strict",
-      "branch": "docs/public-nutrition-source-acquisition",
-      "lifecycle": "planned",
+      "branch": "feature/be-public-nutrition-source-acquisition",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
+        "pnpm exec vitest run tests/public-nutrition-source-acquisition.test.ts tests/public-nutrition-source-cli.test.ts tests/public-nutrition-license-boundary.test.ts",
+        "pnpm verify:backend",
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack -- --slice public-nutrition-source-acquisition",
         "node scripts/validate-automation-spec.mjs --slice public-nutrition-source-acquisition",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs were authored by a role-separated Codex docs-owner session from contract merge 046eb7fd. A separate Codex Stage 1.5 reviewer approved the fcb1164e content and master integration with unresolved content blocker 0. This is not author self-approval; authoring, repair, integration, review, and this closeout are role-separated sessions. The docs gate is closed, but roadmap status remains docs and workflow lifecycle remains planned until the PR actually merges. MFDS 15127578 remains the only required API application; active RDA 15143598 remains excluded from the 10.4-based default path. Stage 2 implementation and Stage 3 review must be owned by separate new Codex sessions.",
+      "notes": "Stage 2 implementation is complete on feature/be-public-nutrition-source-acquisition at implementation head dbce5dd4dc1c3ad12d1a092a772253163b18c790. Deterministic local checks pass; four Manual Only external gates remain open, and a separate Codex Stage 3 review is required. This Stage 2 owner records no Stage 3 approval.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

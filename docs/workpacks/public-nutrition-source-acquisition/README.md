@@ -305,13 +305,13 @@ handoff gate는 `fetched_raw_count = unique_input_count + deduplicated_identical
 
 > 이 BE/data-tooling only slice는 Stage 2가 구현하고 독립 Stage 3 Codex reviewer가 닫는다. Stage 4~6은 N/A다.
 
-- [ ] 이름용 adapter와 분리된 영양 source adapter/CLI 4종 구현 <!-- omo:id=delivery-nutrition-adapters-cli;stage=2;scope=backend;review=3 -->
-- [ ] manifest/provenance/license/checksum/version pinning 구현 <!-- omo:id=delivery-source-manifest-pinning;stage=2;scope=backend;review=3 -->
-- [ ] `DATA_GO_KR_API_KEY` server-only 주입과 credential redaction 테스트 <!-- omo:id=delivery-credential-redaction;stage=2;scope=backend;review=3 -->
-- [ ] pagination/timeout/retry/backoff/rate-limit fail-closed 처리 <!-- omo:id=delivery-safe-batch-retry;stage=2;scope=backend;review=3 -->
-- [ ] 핵심 5종/기준량/결측 정규화와 raw row accounting 구현 <!-- omo:id=delivery-normalization-accounting;stage=2;scope=backend;review=3 -->
-- [ ] duplicate/conflict/contamination quarantine와 approved-only promotion 구현 <!-- omo:id=delivery-review-promotion-gate;stage=2;scope=backend;review=3 -->
-- [ ] 동일 input/decision 재실행 hash와 중복 방지 테스트 <!-- omo:id=delivery-idempotent-rerun;stage=2;scope=backend;review=3 -->
-- [ ] 농진청 계량자료 소량 evidence/저작권 경계 validator 구현 <!-- omo:id=delivery-rda-limited-evidence;stage=2;scope=backend;review=3 -->
-- [ ] malformed/partial/timeout/429/schema/license 결손 fixture 회귀 테스트 <!-- omo:id=delivery-failure-fixtures;stage=2;scope=backend;review=3 -->
-- [ ] 다음 slice용 approved/pinned handoff bundle과 production DB write 0 증거 <!-- omo:id=delivery-next-slice-handoff;stage=2;scope=shared;review=3 -->
+- [x] 이름용 adapter와 분리된 영양 source adapter/CLI 4종 구현 <!-- omo:id=delivery-nutrition-adapters-cli;stage=2;scope=backend;review=3 -->
+- [x] manifest/provenance/license/checksum/version pinning 구현 <!-- omo:id=delivery-source-manifest-pinning;stage=2;scope=backend;review=3 -->
+- [x] `DATA_GO_KR_API_KEY` server-only 주입과 credential redaction 테스트 <!-- omo:id=delivery-credential-redaction;stage=2;scope=backend;review=3 -->
+- [x] pagination/timeout/retry/backoff/rate-limit fail-closed 처리 <!-- omo:id=delivery-safe-batch-retry;stage=2;scope=backend;review=3 -->
+- [x] 핵심 5종/기준량/결측 정규화와 raw row accounting 구현 <!-- omo:id=delivery-normalization-accounting;stage=2;scope=backend;review=3 -->
+- [x] duplicate/conflict/contamination quarantine와 approved-only promotion 구현 <!-- omo:id=delivery-review-promotion-gate;stage=2;scope=backend;review=3 -->
+- [x] 동일 input/decision 재실행 hash와 중복 방지 테스트 <!-- omo:id=delivery-idempotent-rerun;stage=2;scope=backend;review=3 -->
+- [x] 농진청 계량자료 소량 evidence/저작권 경계 validator 구현 <!-- omo:id=delivery-rda-limited-evidence;stage=2;scope=backend;review=3 -->
+- [x] malformed/partial/timeout/429/schema/license 결손 fixture 회귀 테스트 <!-- omo:id=delivery-failure-fixtures;stage=2;scope=backend;review=3 -->
+- [x] 다음 slice용 approved/pinned handoff bundle과 production DB write 0 증거 <!-- omo:id=delivery-next-slice-handoff;stage=2;scope=shared;review=3 -->

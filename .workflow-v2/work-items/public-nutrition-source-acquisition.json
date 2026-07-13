@@ -10,7 +10,7 @@
   "goal": "사용자에게 노출되는 영양 계산과 catalog가 출처, 버전, 이용조건, checksum이 확인된 공공 데이터만 소비하도록 operator batch acquisition과 approval handoff 경계를 잠근다.",
   "owners": {
     "claude": "replaced for this nutrition slice by explicit user approval; the global stage-owner SOP is unchanged",
-    "codex": "this role-separated session owns Stage 1 authoring only; separate Codex sessions own Stage 1.5 review/repair-final, Stage 2 implementation, and Stage 3 review, and no authoring session may self-approve",
+    "codex": "role-separated Codex sessions own Stage 1 authoring, Stage 1.5 review/repair-final, Stage 2 implementation, and Stage 3 review; this session owns Stage 2 only and cannot self-approve Stage 3",
     "workers": []
   },
   "dependencies": [
@@ -58,6 +58,8 @@
   },
   "verification": {
     "required_checks": [
+      "pnpm exec vitest run tests/public-nutrition-source-acquisition.test.ts tests/public-nutrition-source-cli.test.ts tests/public-nutrition-license-boundary.test.ts",
+      "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "pnpm validate:workpack -- --slice public-nutrition-source-acquisition",
@@ -65,6 +67,8 @@
       "git diff --check"
     ],
     "verify_commands": [
+      "pnpm exec vitest run tests/public-nutrition-source-acquisition.test.ts tests/public-nutrition-source-cli.test.ts tests/public-nutrition-license-boundary.test.ts",
+      "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "pnpm validate:workpack -- --slice public-nutrition-source-acquisition",
@@ -87,7 +91,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "codex_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
@@ -108,5 +112,5 @@
     "RDA 15143598 10.0 KOGL4 OpenAPI as a default normalization source"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs were authored on docs/public-nutrition-source-acquisition from origin/master contract merge 046eb7fd. A separate Codex Stage 1.5 reviewer approved the fcb1164e content and master integration with unresolved content blocker 0. This is not author self-approval; authoring, repair, integration, review, and this closeout are role-separated sessions. The docs gate is closed, but roadmap status remains docs and workflow lifecycle remains planned until the PR actually merges. Stage 2 implementation and Stage 3 review must be owned by separate new Codex sessions."
+  "notes": "Stage 1 docs were authored on docs/public-nutrition-source-acquisition and independently approved before merge. Stage 2 is implemented on feature/be-public-nutrition-source-acquisition at implementation head dbce5dd4dc1c3ad12d1a092a772253163b18c790 with deterministic fixture acquisition, fail-closed promotion, exact attribution, credential redaction, and production_db_writes=0. Local required checks pass. Four Manual Only gates remain open: portal/application approval, credentialed MFDS smoke, RDA 10.4 version/KOGL1 evidence, and RDA measurement license disposition. A separate Codex Stage 3 reviewer must review the implementation; this Stage 2 owner records no Stage 3 approval."
 }
