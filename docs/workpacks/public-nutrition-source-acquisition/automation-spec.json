@@ -1,0 +1,99 @@
+{
+  "slice_id": "public-nutrition-source-acquisition",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "operator-batch-only-no-user-runtime-provider-call",
+      "mfds-15127578-only-required-api-application",
+      "single-server-only-data-go-kr-api-key",
+      "actual-credential-and-auth-query-exposure-zero",
+      "rda-10-4-and-measurement-sources-keyless",
+      "active-rda-10-0-kogl4-openapi-excluded-from-default-path",
+      "raw-staged-normalized-reviewed-approved-pinned-order",
+      "no-partial-batch-promotion",
+      "bounded-timeout-retry-backoff-and-rate-limit-handling",
+      "pagination-total-and-unique-row-accounting",
+      "manifest-provenance-license-checksum-version-pinning",
+      "core-five-nutrient-code-and-unit-schema",
+      "missing-is-not-zero",
+      "duplicate-conflict-and-contamination-quarantine",
+      "raw-row-loss-zero",
+      "same-input-decision-same-content-hash",
+      "approved-only-handoff-artifact",
+      "public-source-attribution-exact-six-fields",
+      "no-key-auth-query-raw-response-or-storage-path-in-public-contract",
+      "rda-measurement-limited-fact-evidence-only",
+      "rda-original-table-text-layout-and-dataset-republication-forbidden",
+      "profile-assignment-and-2-5g-threshold-deferred-to-next-slice",
+      "production-database-writes-zero",
+      "no-public-api-schema-or-frontend-change"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/public-nutrition-source-acquisition.test.ts tests/public-nutrition-source-cli.test.ts tests/public-nutrition-license-boundary.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice public-nutrition-source-acquisition",
+      "node scripts/validate-automation-spec.mjs --slice public-nutrition-source-acquisition",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/public-nutrition-source-acquisition.test.ts",
+      "tests/public-nutrition-source-cli.test.ts",
+      "tests/public-nutrition-license-boundary.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "frontend-design-accessibility-playwright-n-a-data-acquisition-only"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "manual:mfds-15127578-minimal-live-page-with-server-only-key",
+    "manual:rda-10-4-version-and-kogl1-source-evidence",
+    "manual:rda-measurement-limited-fact-and-license-disposition-review"
+  ],
+  "blocked_conditions": [
+    "official-five-doc-or-approved-plan-conflict",
+    "stage1-author-self-approval-or-missing-independent-reviewer",
+    "mfds-live-smoke-claimed-without-use-application-or-server-secret",
+    "actual-key-auth-query-or-secret-present-in-committed-artifact-log-response-fixture-or-client",
+    "source-version-data-basis-disposition-license-evidence-or-checksum-missing",
+    "pagination-total-page-identity-or-raw-row-accounting-mismatch",
+    "timeout-rate-limit-malformed-partial-or-schema-drift-batch-promoted",
+    "unapproved-duplicate-conflicting-negative-or-unit-mismatched-row-promoted",
+    "rda-10-0-kogl4-openapi-used-as-default-normalization-source",
+    "rda-measurement-original-table-text-layout-image-or-full-dataset-reproduced",
+    "rda-measurement-license-disposition-missing",
+    "profile-assignment-2-5g-approval-or-name-only-auto-assignment-implemented-in-this-slice",
+    "public-source-attribution-not-exact-six-field-schema",
+    "raw-provider-response-or-internal-storage-path-exposed-in-public-api",
+    "production-database-write-or-migration-added",
+    "public-api-or-frontend-surface-changed",
+    "next-slice-handoff-bundle-not-reproducible"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 0
+  },
+  "notes": "BE/data-tooling only. Stage 1 author cannot self-approve; a separate Codex Stage 1.5 reviewer and repair/final owner must close the docs gate. MFDS 15127578 is the only required API application. RDA 15143598 remains active but is 10.0/KOGL4 and is excluded from the 10.4-based default path. Stage 4-6, Design, Accessibility, Playwright, and real DB smoke are N/A with explicit no-screen/no-DB reasons."
+}

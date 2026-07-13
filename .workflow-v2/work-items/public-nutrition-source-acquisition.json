@@ -1,0 +1,112 @@
+{
+  "id": "public-nutrition-source-acquisition",
+  "title": "Public nutrition source acquisition",
+  "summary": "공공 영양 source를 versioned raw snapshot과 manifest로 취득하고 schema, pagination, license, secret redaction을 fail-closed 검증해 다음 slice용 approved/pinned input을 만든다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "external-integration",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자에게 노출되는 영양 계산과 catalog가 출처, 버전, 이용조건, checksum이 확인된 공공 데이터만 소비하도록 operator batch acquisition과 approval handoff 경계를 잠근다.",
+  "owners": {
+    "claude": "replaced for this nutrition slice by explicit user approval; the global stage-owner SOP is unchanged",
+    "codex": "this role-separated session owns Stage 1 authoring only; separate Codex sessions own Stage 1.5 review/repair-final, Stage 2 implementation, and Stage 3 review, and no authoring session may self-approve",
+    "workers": []
+  },
+  "dependencies": [
+    "28-external-ingredient-data-ingest-gate merged",
+    "nutrition contract-evolution PR #992 merged at 046eb7fd7f207149ff1eb0c6a98a9830cac62efb",
+    "nutrition-products-planner expansion plan approved on 2026-07-13"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.14.md",
+      "docs/화면정의서-v1.5.21.md",
+      "docs/유저flow맵-v1.3.20.md",
+      "docs/db설계-v1.3.17.md",
+      "docs/api문서-v1.2.22.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/public-nutrition-source-acquisition/README.md",
+      "docs/workpacks/public-nutrition-source-acquisition/acceptance.md",
+      "docs/workpacks/public-nutrition-source-acquisition/automation-spec.json",
+      "docs/workpacks/28-external-ingredient-data-ingest-gate/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/omo-canonical-closeout-state.md",
+      "/Users/shj/2025/2026/homecook1/.worktrees/nutrition-products-planner-plan/.omx/plans/nutrition-products-planner-expansion-20260713.md",
+      "https://github.com/netsus/homecook/pull/992"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:mfds-15127578-minimal-live-page-with-server-only-key",
+      "manual:rda-10-4-version-and-kogl1-source-evidence",
+      "manual:rda-measurement-limited-fact-and-license-disposition-review"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice public-nutrition-source-acquisition",
+      "node scripts/validate-automation-spec.mjs --slice public-nutrition-source-acquisition",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice public-nutrition-source-acquisition",
+      "node scripts/validate-automation-spec.mjs --slice public-nutrition-source-acquisition",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-five-docs-and-pr-992-pinned",
+      "source-priority-and-use-application-boundary-locked",
+      "active-rda-10-0-kogl4-default-exclusion-accurate",
+      "single-server-only-key-and-redaction-contract",
+      "manifest-provenance-license-checksum-version-contract",
+      "safe-pagination-timeout-retry-backoff-rate-limit-contract",
+      "core-five-missing-not-zero-and-row-accounting-contract",
+      "rda-limited-measurement-evidence-and-no-republication-contract",
+      "next-slice-handoff-gate-locked",
+      "frontend-design-accessibility-playwright-and-real-db-na-grounded",
+      "independent-stage1-5-review-required"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Product code, UI, routes, client fetch, Playwright, and design authority",
+    "Database migration or production write into nutrition and conversion tables",
+    "Ingredient nutrition profile creation or approval",
+    "Measurement conversion profile assignment and the 2.5g per 15mL approval threshold",
+    "Recipe nutrition calculation, snapshots, and display",
+    "Prepared food catalog and planner nutrition aggregation",
+    "User-request runtime provider calls, cron ingestion, and automatic production promotion",
+    "RDA measurement source table, text, layout, image, or full dataset republication",
+    "RDA 15143598 10.0 KOGL4 OpenAPI as a default normalization source"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs are authored on docs/public-nutrition-source-acquisition from origin/master contract merge 046eb7fd. Roadmap status is docs while workflow lifecycle remains planned because workflow-status has no docs enum. Approval remains not_started until a separate Codex Stage 1.5 reviewer and repair/final owner close the docs gate. The authoring session does not self-approve, mark Ready, merge, or implement product/runtime files."
+}
