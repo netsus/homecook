@@ -104,6 +104,67 @@ describe("public nutrition source network and CLI", () => {
     expect(clientAttempts).toBe(1);
   });
 
+  it("stops after four 429 attempts and redacts provider/network details", async () => {
+    const { requestJsonWithRetry } = await loadPipeline();
+    const sleeps: number[] = [];
+    let attempts = 0;
+    const secret = "<FAKE_TEST_KEY_ONLY>";
+    let caught: unknown;
+    try {
+      await requestJsonWithRetry({
+        endpoint: "https://example.test/nutrition",
+        query: {},
+        apiKey: secret,
+        fetchImpl: async () => {
+          attempts += 1;
+          return response({ provider_message: secret }, 429, { "Retry-After": "1" });
+        },
+        sleep: async (ms: number) => { sleeps.push(ms); },
+        now: () => 0,
+        createTimeoutSignal: () => new AbortController().signal,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toMatchObject({
+      code: "RETRY_EXHAUSTED",
+      details: { last_reason_code: "RATE_LIMITED", attempts: 4 },
+    });
+    expect(JSON.stringify(caught)).not.toContain(secret);
+    expect(attempts).toBe(4);
+    expect(sleeps).toEqual([1000, 1000, 1000]);
+  });
+
+  it("fails closed on malformed JSON, provider errors, and response schema drift", async () => {
+    const { fetchMfdsBatch, requestJsonWithRetry } = await loadPipeline();
+    await expect(requestJsonWithRetry({
+      endpoint: "https://example.test/nutrition",
+      query: {},
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchImpl: async () => new Response("{", { status: 200 }),
+      sleep: async () => undefined,
+      now: () => 0,
+      createTimeoutSignal: () => new AbortController().signal,
+    })).rejects.toMatchObject({ code: "MALFORMED_PAYLOAD" });
+
+    for (const payload of [
+      { response: { header: { resultCode: "99" }, body: { totalCount: 0, items: [] } } },
+      { response: { header: { resultCode: "00" }, unexpected: {} } },
+    ]) {
+      await expect(fetchMfdsBatch({
+        apiKey: "<FAKE_TEST_KEY_ONLY>",
+        fetchedAt: "2026-07-13T00:00:00.000Z",
+        fetchImpl: async () => response(payload),
+        sleep: async () => undefined,
+        now: () => 0,
+        createTimeoutSignal: () => new AbortController().signal,
+      })).rejects.toMatchObject({
+        code: payload.response.header.resultCode === "99" ? "PROVIDER_ERROR" : "SCHEMA_DRIFT",
+      });
+    }
+  });
+
   it("injects serviceKey only at the send boundary and returns no auth query or secret", async () => {
     const { fetchMfdsBatch } = await loadPipeline();
     const sentUrls: string[] = [];
@@ -151,6 +212,13 @@ describe("public nutrition source network and CLI", () => {
       { page_no: 1, total_count: 2, next_page_token: "a", items: [{ external_item_key: "A" }] },
       { page_no: 2, total_count: 3, next_page_token: null, items: [{ external_item_key: "B" }] },
     ], "PAGINATION_TOTAL_DRIFT"],
+    ["partial final page", [
+      { page_no: 1, total_count: 2, next_page_token: null, items: [{ external_item_key: "A" }] },
+    ], "PAGINATION_INCOMPLETE"],
+    ["cross-page item key collision", [
+      { page_no: 1, total_count: 2, next_page_token: "a", items: [{ external_item_key: "A", value: 1 }] },
+      { page_no: 2, total_count: 2, next_page_token: null, items: [{ external_item_key: "A", value: 2 }] },
+    ], "PAGINATION_ITEM_KEY_COLLISION"],
   ])("fails closed for %s", async (_name, pages, code) => {
     const { buildRawBatch, SOURCE_REGISTRY } = await loadPipeline();
 
@@ -212,5 +280,11 @@ describe("public nutrition source network and CLI", () => {
     expect(first).toBe(second);
     expect(handoff).toMatchObject({ status: "approved_pinned", production_db_writes: 0 });
     expect(handoff.handoff_checksum).toMatch(/^[a-f0-9]{64}$/);
+
+    expect(run("promote", ["--input-dir", reviewedDir, "--output-dir", approvedOne]).status).toBe(0);
+    writeFileSync(join(approvedOne, "approved-promotion-input.json"), "{}\n");
+    const immutable = run("promote", ["--input-dir", reviewedDir, "--output-dir", approvedOne]);
+    expect(immutable.status).not.toBe(0);
+    expect(`${immutable.stdout}\n${immutable.stderr}`).toContain("ARTIFACT_IMMUTABLE");
   });
 });

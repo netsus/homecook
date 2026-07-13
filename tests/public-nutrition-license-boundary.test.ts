@@ -26,8 +26,11 @@ function filesUnder(root: string): string[] {
 describe("public nutrition source and license boundary", () => {
   it("keeps MFDS as the only required application and RDA paths keyless", async () => {
     const { SOURCE_REGISTRY } = await loadPipeline();
+    const sources = Object.values(SOURCE_REGISTRY) as Array<{
+      application_required?: boolean;
+    }>;
 
-    expect(Object.values(SOURCE_REGISTRY).filter((source: any) => source.application_required)).toEqual([
+    expect(sources.filter((source) => source.application_required)).toEqual([
       expect.objectContaining({ id: "mfds-15127578", secret_env: "DATA_GO_KR_API_KEY" }),
     ]);
     expect(SOURCE_REGISTRY["rda-10.4"]).toMatchObject({ keyless: true, default_path: true });
@@ -97,6 +100,14 @@ describe("public nutrition source and license boundary", () => {
       "source_url",
     ]);
     expect(JSON.stringify(attribution)).not.toMatch(/serviceKey|apiKey|secret|raw|storage/i);
+    expect(() => createPublicAttribution({
+      provider: "식품의약품안전처",
+      dataset: "식품영양성분DB정보",
+      source_version: null,
+      data_basis_date: null,
+      license: "이용허락범위 제한 없음",
+      source_url: "https://example.test/source",
+    })).toThrowError(expect.objectContaining({ code: "SOURCE_VERSION_MISSING" }));
   });
 
   it("keeps operator adapters and DATA_GO_KR_API_KEY out of client/browser modules", () => {

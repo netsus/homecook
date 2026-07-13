@@ -232,4 +232,61 @@ describe("public nutrition source acquisition core", () => {
       measurementEvidence: [],
     }))).toBe("PROMOTION_BLOCKED");
   });
+
+  it("rejects a review that is not pinned to the normalized bundle being promoted", async () => {
+    const {
+      buildApprovedPinnedHandoff,
+      buildNutritionReview,
+      buildRawBatch,
+      normalizeNutritionBatch,
+    } = await loadPipeline();
+    const input = fixture("mfds-source-sample.json");
+    const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    const normalized = normalizeNutritionBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "nutrition-source-row-v1",
+    });
+    const review = buildNutritionReview({
+      normalizedBundle: normalized,
+      decisions: [{ fingerprint: normalized.rows[0].fingerprint, status: "approved" }],
+    });
+    const otherBundle = structuredClone(normalized);
+    otherBundle.normalized_content_hash = "0".repeat(64);
+
+    expect(errorCode(() => buildApprovedPinnedHandoff({
+      manifest: raw.manifest,
+      normalizedBundle: otherBundle,
+      reviewReport: review,
+      measurementEvidence: [],
+    }))).toBe("REVIEW_CONTENT_MISMATCH");
+  });
+
+  it("excludes fetched_at from content identity and scopes fingerprints by source", async () => {
+    const { buildRawBatch, normalizeNutritionBatch } = await loadPipeline();
+    const input = fixture("mfds-source-sample.json");
+    const first = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    const second = buildRawBatch({ ...input, fetchedAt: "2026-07-14T00:00:00.000Z" });
+    expect(first.manifest.logical_batch_id).toBe(second.manifest.logical_batch_id);
+    expect(first.manifest.sha256).toBe(second.manifest.sha256);
+
+    const direct = normalizeNutritionBatch({
+      rawSnapshot: first.rawSnapshot,
+      manifest: first.manifest,
+      adapterSchemaVersion: "nutrition-source-row-v1",
+    });
+    const reconciliationInput = structuredClone(input);
+    reconciliationInput.source.provider = "전국통합식품영양성분정보표준데이터";
+    reconciliationInput.source.dataset = "15100064-reconciliation";
+    const reconciliationRaw = buildRawBatch({
+      ...reconciliationInput,
+      fetchedAt: "2026-07-13T00:00:00.000Z",
+    });
+    const reconciliation = normalizeNutritionBatch({
+      rawSnapshot: reconciliationRaw.rawSnapshot,
+      manifest: reconciliationRaw.manifest,
+      adapterSchemaVersion: "nutrition-source-row-v1",
+    });
+    expect(direct.rows[0].fingerprint).not.toBe(reconciliation.rows[0].fingerprint);
+  });
 });
