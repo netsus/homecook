@@ -47,6 +47,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 - **Codex docs-owner 예외**: `auth-provider-memory-linking`은 사용자가 Claude 사용을 중단하고 별도 Codex 세션이 Stage 1 docs-owner 역할을 대신하도록 명시적으로 승인했다. 이후 구현과 리뷰도 역할별 별도 Codex 세션으로 분리하며, 구현 세션은 자기 변경을 최종 승인하지 않는다.
 - **Codex-only 서비스 가이드 예외**: `service-about-guide`는 사용자가 Claude 사용 중단과 기존 Claude 담당 단계의 새 Codex 세션 대체를 명시적으로 승인했다. 공식 계약 PR 병합 후 Stage 1 docs owner, Stage 4 구현 owner, internal docs repair/final authority owner를 서로 다른 Codex 세션으로 분리하고, Stage 1/4 작성 세션은 자기 변경을 최종 승인하지 않는다.
 - **Codex-only 서비스 브랜드 예외**: `service-brand-rebrand`는 사용자가 Claude 미사용과 기존 Claude 담당의 Stage 1 docs owner, Stage 3 backend review, Stage 4 frontend implementation, internal docs repair/final owner, authority-required final authority를 각각 역할 분리된 새 Codex 세션으로 대체하도록 명시 승인했다. Stage 1/4 작성·구현 세션은 자기 변경을 최종 승인하지 않는다. 이 예외는 `service-brand-rebrand`에만 적용하며 전역 workflow actor 규칙을 바꾸지 않는다.
+- **Codex-only HOME lockup 예외**: `service-brand-home-lockup`은 사용자가 Claude 미사용을 유지하고 Stage 1 docs owner, Stage 4 frontend implementation, internal docs repair/final owner, authority-required final authority를 역할 분리된 새 Codex 세션으로 대체하도록 승인했다. Stage 1/4 작성·구현 세션은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용한다.
 - `workflow-v2` / `OMO` 대상 product slice는 Stage 1 전에 **slice ID / goal / 분기 경로를 고정**한다.
 - `planned` 상태 slice에 `착수 시점에 분할 여부 결정` 메모를 남기지 않는다. 분할이 필요하면 roadmap PR에서 `08a/08b`처럼 먼저 쪼갠다.
 - 예외: `docs/engineering/` 아래의 repo-engineering automation, workflow tooling, agent 운영 규칙 변경은 제품 workpack roadmap 바깥이다.
@@ -149,6 +150,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `auth-provider-memory-linking` | merged | 세 provider 이메일 필수, built-in Kakao/Naver 표준 claim gate, 최근 provider 기억/전환 확인, same-user identity linking과 different-user conflict 보호, 수동 provider 연결. PR #967 merge |
 | `service-about-guide` | merged | 공개 `/about` 서비스 가이드, `PRIMARY_WEB_NAV_ITEMS` 웹 공통 5메뉴, HOME `집밥 둘러보기` guide+theme rail, MYPAGE 임시 도움말 제거. docs PR #978 + FE PR #979 merge. 커뮤니티/제안 게시판은 후속 슬라이스 |
 | `service-brand-rebrand` | merged | 정식명 `무엇을 먹든`, 짧은명 `무먹`, 신규·빈 nickname `무먹러`, system notification read-time copy 호환을 API/DB shape와 기술 식별자 변화 없이 잠금 |
+| `service-brand-home-lockup` | docs | HOME mobile `HomeAppBar`와 desktop HOME `WebTopNav` brand area에 큰 `무먹` 아래 작은 `무엇을 먹든`을 세로 2단으로 표시. non-HOME 단독 표시와 nav geometry/interaction 보존 |
 
 ## Design Decision Gates
 

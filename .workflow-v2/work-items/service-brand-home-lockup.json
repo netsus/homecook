@@ -1,0 +1,105 @@
+{
+  "id": "service-brand-home-lockup",
+  "title": "HOME vertical service-name lockup",
+  "summary": "HOME mobile/desktop brand area에 큰 무먹 아래 작은 무엇을 먹든을 세로 2단으로 표시하고 non-HOME 단독 표기를 보존한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 HOME에서 짧은명 무먹과 정식명 무엇을 먹든의 관계를 즉시 이해하되 기존 navigation geometry, 접근성, 상태, API/DB와 다른 화면의 짧은명 표시는 그대로 유지한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; user discontinued Claude",
+    "codex": "role-separated new sessions own Stage 1 docs, Stage 4 implementation, Stage 5/6 review, docs repair, and final authority; Stage 1/4 sessions cannot self-approve",
+    "workers": []
+  },
+  "dependencies": [
+    "service-brand-rebrand merged through docs PR #985, backend PR #987, frontend PR #988",
+    "HOME confirmed baseline and historical evidence preserved",
+    "user-approved HOME vertical lockup contract-evolution 2026-07-13"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.13.md",
+      "docs/화면정의서-v1.5.20.md",
+      "docs/유저flow맵-v1.3.19.md",
+      "docs/db설계-v1.3.16.md",
+      "docs/api문서-v1.2.21.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/service-brand-home-lockup/README.md",
+      "docs/workpacks/service-brand-home-lockup/acceptance.md",
+      "docs/workpacks/service-brand-home-lockup/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "ui/designs/HOME.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-brand-home-lockup",
+      "node scripts/validate-automation-spec.mjs --slice service-brand-home-lockup",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-brand-home-lockup",
+      "node scripts/validate-automation-spec.mjs --slice service-brand-home-lockup",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-doc-versions-v1.7.13-v1.5.20-and-sot-synchronized",
+      "home-mobile-and-desktop-vertical-lockup-contract",
+      "non-home-short-name-only-boundary",
+      "tdd-red-green-plan",
+      "mobile-390-320-and-desktop-1280-before-after-plan",
+      "accessibility-and-geometry-audit-plan",
+      "home-authority-report-plan",
+      "historical-evidence-preservation",
+      "no-api-db-dependency-logo-or-mascot-change",
+      "codex-role-separation-explicit"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Full-name supporting line on non-HOME AppBar, WebTopNav, wordmark, or narrow navigation",
+    "Inline-right or equal-size dual-name lockup",
+    "Desktop web nav height, tab position, active state, right slot, or interaction changes",
+    "HOME route, information architecture, search, filter, rail, card, state, auth, or bottom-tab changes",
+    "API, DB, schema, migration, seed, stored row, auth, or domain state transition changes",
+    "New dependency, font, token, image logo, mascot, or brand asset",
+    "Technical identifier, user content, generic noun 집밥, historical official version, prototype, or evidence edits"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 contract prepared on docs/mumeok-home-lockup-contract under explicit user approval. Roadmap status is docs while workflow lifecycle remains planned because the schema has no docs enum. This is a small FE-only visual change but HOME direct modification keeps risk high, merge_policy manual, and authority review required. Stage 2/3 are skipped. Existing screenshot/evidence is immutable; Stage 4 creates new evidence only under service-brand-home-lockup."
+}

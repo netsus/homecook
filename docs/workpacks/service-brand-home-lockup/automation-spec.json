@@ -1,0 +1,128 @@
+{
+  "slice_id": "service-brand-home-lockup",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-schema-migration-seed-or-write",
+      "existing-api-envelope-and-auth-contract-preserved"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/",
+      "/planner",
+      "/pantry",
+      "/mypage",
+      "/about"
+    ],
+    "required_states": [
+      "home-mobile-vertical-lockup",
+      "home-desktop-vertical-lockup",
+      "non-home-short-name-only",
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized",
+      "filter-active",
+      "mobile-320-single-line",
+      "desktop-nav-geometry-preserved",
+      "accessible-reading-order-no-duplicate-name"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/home-screen.test.tsx tests/app-header.test.tsx tests/web-top-nav.test.tsx",
+      "pnpm exec playwright test tests/e2e/service-brand-home-lockup.spec.ts",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
+      "pnpm qa:explore -- --slice service-brand-home-lockup",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-brand-home-lockup",
+      "node scripts/validate-automation-spec.mjs --slice service-brand-home-lockup",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "official-docs-v1.7.13-v1.5.20",
+      "home-mobile-lockup-short-over-full",
+      "home-desktop-lockup-short-over-full",
+      "non-home-short-name-only",
+      "vertical-not-inline-placement",
+      "mobile-390-before-after",
+      "mobile-320-before-after",
+      "desktop-1280-before-after",
+      "mobile-320-full-name-single-line",
+      "small-text-aa-contrast",
+      "accessible-reading-order-no-duplicate-name",
+      "desktop-nav-height-tab-position-preserved",
+      "home-state-regression-green",
+      "home-accessibility-geometry-audit",
+      "visual-verdict",
+      "home-authority-report",
+      "historical-evidence-preserved",
+      "no-api-db-dependency-logo-mascot-change"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "HOME"
+      ],
+      "required_screens": [
+        "HOME"
+      ],
+      "generator_required": false,
+      "generator_artifact": "ui/designs/HOME.md",
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/service-brand-home-lockup/HOME-before-390.png",
+        "ui/designs/evidence/service-brand-home-lockup/HOME-before-320.png",
+        "ui/designs/evidence/service-brand-home-lockup/HOME-desktop-before-1280.png",
+        "ui/designs/evidence/service-brand-home-lockup/HOME-after-390.png",
+        "ui/designs/evidence/service-brand-home-lockup/HOME-after-320.png",
+        "ui/designs/evidence/service-brand-home-lockup/HOME-desktop-after-1280.png",
+        "ui/designs/evidence/service-brand-home-lockup/HOME-accessibility-geometry-audit.json",
+        "ui/designs/evidence/service-brand-home-lockup/visual-verdict.json"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/HOME-service-brand-home-lockup-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "implementation-started-before-stage1-docs-merge",
+    "stage1-or-stage4-author-self-approves",
+    "home-mobile-or-desktop-lockup-missing",
+    "home-lockup-rendered-inline-right",
+    "non-home-full-name-line-added",
+    "mobile-320-full-name-wrap-clipping-overlap-or-overflow",
+    "small-text-contrast-below-aa",
+    "duplicate-accessible-name-or-focus-regression",
+    "desktop-nav-height-tab-position-right-slot-or-interaction-drift",
+    "home-first-viewport-search-or-filter-hidden",
+    "home-state-or-interaction-regression",
+    "historical-official-doc-or-evidence-modified",
+    "api-db-dependency-font-token-logo-mascot-or-identifier-change",
+    "required-authority-evidence-missing",
+    "unresolved-authority-blocker",
+    "current-head-ci-not-green"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  },
+  "notes": "User-approved 2026-07-13 FE-only HOME service-name lockup. Mobile HomeAppBar and desktop HOME WebTopNav brand area show primary 무먹 above smaller 무엇을 먹든; no inline-right variant. Non-HOME AppBar/WebTopNav/narrow navigation remain short-name-only. The visual delta is small but HOME direct modification remains anchor-extension and authority-required. Stage 2/3 are skipped. Role-separated Codex sessions replace Claude-owned stages per user instruction; authoring/implementation sessions cannot self-approve. Existing evidence is immutable and new 390/320/1280 evidence is written only under service-brand-home-lockup."
+}
