@@ -3983,7 +3983,7 @@ POST /api/v1/admin/page-view
 | 15-3     | GET        | /api/v1/admin/audit-logs               | ADMIN_AUDIT_LOGS         | 🔐     | v1.2.12 신규                     |
 | **15-4** | **POST**   | **/api/v1/admin/page-view**            | **ADMIN_DASHBOARD**      | **🔐** | **launch-readiness 신규**        |
 
-> **v1.2.22 목록 총계**: 81개 (`GET /planner/nutrition` 1개 + 완제품 catalog/entry 7개 추가. active 80개 + 삭제된 `2-4` tombstone 1개. 기존 recipe/planner/meals endpoint는 additive 확장)
+> **v1.2.22 총계**: 81개 (`GET /planner/nutrition` 1개 + 완제품 catalog/entry 7개 추가. active 80개 + 삭제된 `2-4` tombstone 1개. 기존 recipe/planner/meals endpoint는 additive 확장)
 > **v1.2.21 총계**: 73개 (서비스 브랜드 copy contract-evolution, 신규 endpoint 없음)
 > **2026-06-20 LEFTOVERS stale review server-sync addendum 총계**: 73개 (`POST /leftovers/{id}/keep` 1개 추가)
 > **2026-06-20 404 feedback addendum 총계**: 72개 (`POST /api/v1/feedback/404` 1개 추가. 신규 DB table 없음)
