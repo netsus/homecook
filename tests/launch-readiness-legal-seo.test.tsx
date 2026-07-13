@@ -185,6 +185,23 @@ describe("launch readiness legal and SEO routes", () => {
     expect(homeSource).toContain('url: "/"');
   });
 
+  it("uses the official service name across metadata, legal info, and social images", async () => {
+    const [{ getLegalInfo }, socialImage] = await Promise.all([
+      import("@/lib/legal-info"),
+      import("@/lib/seo/default-social-image"),
+    ]);
+    const layoutSource = readSource("app/layout.tsx");
+
+    expect(layoutSource).toContain('applicationName: "무엇을 먹든"');
+    expect(layoutSource).toContain('siteName: "무엇을 먹든"');
+    expect(layoutSource).toContain('default: "무엇을 먹든"');
+    expect(layoutSource).toContain('template: "%s | 무엇을 먹든"');
+    expect(getLegalInfo().serviceName).toBe("무엇을 먹든");
+    expect(socialImage.socialImageAlt).toContain("무엇을 먹든");
+    expect(readSource("lib/seo/default-social-image.tsx")).toContain("무엇을 먹든");
+    expect(readSource("lib/seo/default-social-image.tsx")).not.toContain("HOMECOOK");
+  });
+
   it("does not ship stale preview domains or fake contact strings in launch surfaces", () => {
     const layoutSource = readSource("app/layout.tsx");
     const mypageSource = readSource("components/mypage/mypage-screen.tsx");

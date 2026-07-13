@@ -246,7 +246,7 @@ export function MypageGamificationCard({
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[13px] font-extrabold leading-[1.3] text-[var(--foreground)]">
-              집밥 성장
+              끼니 성장
             </p>
             <p className="mt-0.5 truncate text-[11px] font-semibold leading-[1.3] text-[var(--text-3)]">
               배지와 퀘스트는 자동으로 쌓여요
@@ -267,7 +267,7 @@ export function MypageGamificationCard({
             data-testid="mypage-gamification-empty"
           >
             <p className="text-[12px] font-extrabold text-[var(--foreground)]">
-              첫 배지는 첫 집밥 기록에서 시작돼요
+              첫 배지는 첫 끼니 기록에서 시작돼요
             </p>
             <p className="mt-1 text-[11px] font-semibold leading-[1.4] text-[var(--text-2)]">
               레시피 저장, 장보기 완료, 요리 완료 중 하나를 해보세요.

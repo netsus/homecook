@@ -437,7 +437,7 @@ export function MypageGrowthProfile({
   const headline =
     gradeLabel && levelLabel
       ? `${gradeLabel} · ${levelLabel}`
-      : gradeLabel ?? levelLabel ?? "집밥 성장";
+      : gradeLabel ?? levelLabel ?? "끼니 성장";
   const progressCopy = hasProgress
     ? `다음 레벨까지 ${formatXp(progress.level.xp_to_next_level)} XP`
     : null;

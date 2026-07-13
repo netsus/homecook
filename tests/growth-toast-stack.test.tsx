@@ -634,7 +634,7 @@ describe("GrowthToastStack", () => {
             id: "tutorial-cooking",
             notification_type: "achievement_unlocked",
             priority: 2,
-            title: "첫 집밥 완료",
+            title: "첫 요리 완성",
             body: "튜토리얼 업적을 달성했어요.",
             category: "tutorial",
             payload: {
@@ -660,7 +660,7 @@ describe("GrowthToastStack", () => {
       expect(screen.getAllByTestId("growth-toast")).toHaveLength(3);
     });
     expect(screen.getByText("요리 완료 1")).toBeTruthy();
-    expect(screen.getByText("첫 집밥 완료")).toBeTruthy();
+    expect(screen.getByText("첫 요리 완성")).toBeTruthy();
     expect(screen.getByText("요리 완료 +60 XP")).toBeTruthy();
   });
 

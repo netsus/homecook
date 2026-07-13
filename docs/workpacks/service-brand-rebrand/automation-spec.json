@@ -123,5 +123,5 @@
     "backend": 3,
     "frontend": 4
   },
-  "notes": "User-approved 2026-07-13 contract-evolution. Full name is 무엇을 먹든; short AppBar/wordmark/nav name is 무먹. Text wordmark only. HOME is an anchor-extension requiring 390/320 before-after evidence and authority review. Claude Stage 1 ownership is replaced by this role-separated Codex session."
+  "notes": "User-approved 2026-07-13 contract-evolution. Full name is 무엇을 먹든; short AppBar/wordmark/nav name is 무먹. Text wordmark only. HOME is an anchor-extension requiring 390/320 before-after evidence and authority review. Claude Stage 1 ownership is replaced by this role-separated Codex session. Stage 6 independently approved PR #988 at 59deb209a830fccfd00d7483acc170de08a65888 with actionable findings 0, current-head started checks green, Design Status confirmed, and final authority pass. Manual Only is limited to user copy/taste, deployed metadata/social preview, and production DB read-only sampling and does not block merge. Canonical closeout: .workflow-v2/work-items/service-brand-rebrand.json#closeout."
 }

@@ -37,8 +37,11 @@ describe("AboutScreen", () => {
   it("renders the public guide hierarchy and approved destinations", () => {
     const { container } = render(<AboutScreen contactEmail="help@zipbap.example" />);
 
-    expect(screen.getAllByRole("heading", { level: 1, name: "집밥, 이렇게 써요" })).toHaveLength(1);
-    expect(screen.getByText("레시피에서 끝나지 않는 집밥 계획")).toBeTruthy();
+    expect(screen.getAllByRole("heading", { level: 1, name: "무엇을 먹든, 계획은 한곳에서" })).toHaveLength(1);
+    expect(screen.getByText("한 끼는 이렇게 이어져요")).toBeTruthy();
+    expect(screen.getByText("끼니 계획이 편해지는 이유")).toBeTruthy();
+    expect(screen.getByText("WHY IT WORKS")).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "무먹 가이드 목차" })).toBeTruthy();
     for (const id of ["how-to", "features", "guides", "faq"]) {
       expect(container.querySelector(`#${id}`)).toBeTruthy();
     }

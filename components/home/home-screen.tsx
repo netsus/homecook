@@ -1531,7 +1531,10 @@ function HomeWebRecipeCard({
 }) {
   const imageSrc = resolveRecipeImage(recipe);
   const sourceLabel = formatRecipeSourceLabel(recipe.source_type);
-  const sourceBadge = recipe.source_type === "youtube" ? sourceLabel : null;
+  const sourceBadge =
+    recipe.source_type === "system" || recipe.source_type === "youtube"
+      ? sourceLabel
+      : null;
   const { hiddenTagCount, visibleTags } = getWebHomeTagPreview(recipe.tags);
   const hasTags = visibleTags.length > 0 || hiddenTagCount > 0;
 
@@ -1679,7 +1682,7 @@ function HomeAppBar({
 }) {
   return (
     <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center justify-between border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
-      <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">집밥</h1>
+      <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">무먹</h1>
       <ProfileSummaryButton
         gamification={gamification}
         isAuthenticated={isAuthenticated}
@@ -1819,11 +1822,11 @@ function HomeDiscoveryRail({
 }) {
   return (
     <section
-      aria-label="집밥 둘러보기"
+      aria-label="무먹 둘러보기"
       className="home-mobile-theme-section"
     >
       <div className="home-mobile-theme-header">
-        <h2 className="home-mobile-theme-title">집밥 둘러보기</h2>
+        <h2 className="home-mobile-theme-title">무먹 둘러보기</h2>
         {activeThemeId ? (
           <button
             className="home-mobile-theme-reset"
@@ -1858,7 +1861,7 @@ function HomeDiscoveryRail({
 function HomeGuideCard() {
   return (
     <Link
-      aria-label="집밥 가이드 보기"
+      aria-label="무먹 가이드 보기"
       className="home-mobile-theme-card home-mobile-guide-card"
       href="/about#how-to"
       onClick={rememberAboutReturn}
@@ -1868,7 +1871,7 @@ function HomeGuideCard() {
       </span>
       <span className="home-mobile-guide-copy">
         <span className="home-mobile-guide-badge">가이드</span>
-        <strong>집밥, 이렇게 써요</strong>
+        <strong>무먹 가이드</strong>
         <small>레시피부터 장보기까지 5단계</small>
       </span>
     </Link>
@@ -1967,7 +1970,7 @@ function WebBookmarkIcon({ filled = false }: { filled?: boolean }) {
 function HomeDiscoveryRailSkeleton() {
   return (
     <section
-      aria-label="집밥 둘러보기 불러오는 중"
+      aria-label="무먹 둘러보기 불러오는 중"
       className="home-mobile-theme-section"
     >
       <div className="home-mobile-theme-header">

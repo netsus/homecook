@@ -18,7 +18,7 @@ export interface WebTopNavProps {
 export function WebTopNav({
   activeId,
   brandHref = "/",
-  brandLabel = "집밥",
+  brandLabel = "무먹",
   className,
   rightSlot,
 }: WebTopNavProps) {

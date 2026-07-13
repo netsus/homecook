@@ -24,9 +24,9 @@ describe("app shell", () => {
       </AppShell>,
     );
 
-    const brandLink = screen.getByRole("link", { name: "집밥 홈" });
+    const brandLink = screen.getByRole("link", { name: "무먹 홈" });
     expect(brandLink.getAttribute("href")).toBe("/");
-    expect(brandLink.textContent).toBe("집밥");
+    expect(brandLink.textContent).toBe("무먹");
     expect(brandLink.className).toContain("text-[22px]");
     expect(brandLink.className).not.toContain("uppercase");
     expect(screen.queryByText("오늘 집밥 메뉴를 찾는 주방")).toBeNull();
@@ -42,7 +42,7 @@ describe("app shell", () => {
       </AppShell>,
     );
 
-    expect(screen.queryByText("집밥")).toBeNull();
+    expect(screen.queryByText("무먹")).toBeNull();
     expect(screen.getByText("content")).toBeTruthy();
   });
 
@@ -93,7 +93,7 @@ describe("app shell", () => {
 
     const shell = container.firstElementChild as HTMLElement;
     expect(shell.className).not.toContain("bottom-safe");
-    expect(screen.queryByText("집밥")).toBeNull();
+    expect(screen.queryByText("무먹")).toBeNull();
     expect(screen.queryByText(/bottom-tabs:/)).toBeNull();
     expect(screen.getByText("content")).toBeTruthy();
   });

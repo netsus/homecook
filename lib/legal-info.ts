@@ -66,7 +66,7 @@ export function getLegalInfo() {
       readPublicEnv("NEXT_PUBLIC_LEGAL_PROCESSING_CONSIGNMENT") ?? MISSING_LEGAL_VALUE,
     processingConsignmentWork:
       readPublicEnv("NEXT_PUBLIC_LEGAL_PROCESSING_CONSIGNMENT_WORK") ?? MISSING_LEGAL_VALUE,
-    serviceName: "집밥",
+    serviceName: "무엇을 먹든",
     thirdPartySharing:
       readPublicEnv("NEXT_PUBLIC_LEGAL_THIRD_PARTY_SHARING") ?? MISSING_LEGAL_VALUE,
     thirdPartySharingItems:

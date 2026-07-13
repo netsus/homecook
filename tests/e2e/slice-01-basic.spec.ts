@@ -32,7 +32,7 @@ test.describe("Slice 01 basic flow", () => {
       page
         .locator("h2:visible")
         .filter({
-          hasText: isMobileViewport(page) ? "집밥 둘러보기" : "모든 레시피",
+          hasText: isMobileViewport(page) ? "무먹 둘러보기" : "모든 레시피",
         })
         .first(),
     ).toBeVisible({ timeout: 15000 });

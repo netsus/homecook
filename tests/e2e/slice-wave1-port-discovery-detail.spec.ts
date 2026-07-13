@@ -82,7 +82,7 @@ test.describe("wave1 port discovery detail", () => {
 
     if (isMobileViewport(page)) {
       const recipeListSection = page.locator('section[aria-label="모든 레시피"]');
-      const discoveryRail = page.locator('section[aria-label="집밥 둘러보기"]');
+      const discoveryRail = page.locator('section[aria-label="무먹 둘러보기"]');
       await expect(
         page.locator("button:visible").filter({ hasText: "재료로 검색" }).first(),
       ).toBeVisible();
@@ -107,10 +107,10 @@ test.describe("wave1 port discovery detail", () => {
   }) => {
     await page.goto("/");
     if (isMobileViewport(page)) {
-      await expect(page.getByRole("heading", { name: "집밥" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "무먹" })).toBeVisible();
     } else {
       await expect(
-        page.getByRole("link", { name: "집밥", exact: true }),
+        page.getByRole("link", { name: "무먹", exact: true }),
       ).toBeVisible();
       await expect(
         page.getByRole("navigation", { name: "데스크탑 주요 메뉴" }),

@@ -157,7 +157,7 @@ const MOCK_GAMIFICATION: UserGamificationData = {
           {
             achievement_key: "tutorial_cooking_complete",
             track_key: "tutorial",
-            title: "첫 집밥 완료하기",
+            title: "첫 요리 완성",
             description: "첫 요리 완료를 기록해 보세요.",
             current: 0,
             target: 1,
@@ -1019,7 +1019,7 @@ describe("MYPAGE achievement album UI", () => {
     expect(within(notificationDialog).getByText(/플래너에 끼니 등록하기/)).toBeTruthy();
     expect(within(notificationDialog).getByText(/첫 장보기 목록 만들기/)).toBeTruthy();
     expect(within(notificationDialog).getByText(/첫 장보기 완료하기/)).toBeTruthy();
-    expect(within(notificationDialog).getByText(/첫 집밥 완료하기/)).toBeTruthy();
+    expect(within(notificationDialog).getByText(/첫 요리 완료하기/)).toBeTruthy();
     expect(within(notificationDialog).getByText(/나만의 레시피북 생성하기/)).toBeTruthy();
   });
 

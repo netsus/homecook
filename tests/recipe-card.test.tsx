@@ -116,7 +116,7 @@ describe("recipe card", () => {
 
     const { container, rerender } = render(<RecipeCard recipe={variants[0]} />);
     let cardScope = within(container.firstElementChild as HTMLElement);
-    expect(cardScope.getByText("집밥 추천")).toBeTruthy();
+    expect(cardScope.getByText("무먹 추천")).toBeTruthy();
     expect(cardScope.queryByText(/^system$/i)).toBeNull();
 
     rerender(<RecipeCard recipe={variants[1]} />);

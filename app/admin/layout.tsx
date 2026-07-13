@@ -28,7 +28,7 @@ interface AdminMembershipClient {
 }
 
 export const metadata = {
-  title: "관리자 | 집밥",
+  title: "관리자 | 무엇을 먹든",
 };
 
 async function enforceAdminRouteAccess() {

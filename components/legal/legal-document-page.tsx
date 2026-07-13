@@ -33,7 +33,7 @@ export function LegalDocumentPage({
       <WebTopNav className="legal-desktop-nav" />
       <header className="legal-mobile-header">
         <Link className="legal-mobile-brand" href="/">
-          집밥
+          무먹
         </Link>
         <Link className="legal-mobile-home" href="/">
           홈

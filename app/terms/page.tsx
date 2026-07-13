@@ -7,9 +7,9 @@ export const metadata = {
   alternates: {
     canonical: "/terms",
   },
-  description: "집밥 서비스 이용 조건과 계정, 탈퇴, 금지행위 기준",
+  description: "무엇을 먹든 서비스 이용 조건과 계정, 탈퇴, 금지행위 기준",
   openGraph: {
-    description: "집밥 서비스 이용 조건과 계정, 탈퇴, 금지행위 기준",
+    description: "무엇을 먹든 서비스 이용 조건과 계정, 탈퇴, 금지행위 기준",
     images: ["/opengraph-image"],
     title: "이용약관",
     type: "website",
@@ -24,7 +24,7 @@ export default function TermsPage() {
   return (
     <LegalDocumentPage
       activeId="terms"
-      description="집밥을 이용하기 전에 확인해야 하는 서비스 범위, 계정, 책임 기준입니다."
+      description="무엇을 먹든을 이용하기 전에 확인해야 하는 서비스 범위, 계정, 책임 기준입니다."
       eyebrow="Terms"
       meta={[
         { label: "서비스", value: legal.serviceName },
@@ -37,7 +37,7 @@ export default function TermsPage() {
       <section>
         <h2>목적과 적용</h2>
         <p>
-          이 약관은 운영자가 제공하는 집밥 서비스의 이용 조건과 운영자 및
+          이 약관은 운영자가 제공하는 무엇을 먹든 서비스의 이용 조건과 운영자 및
           이용자의 권리·의무를 정합니다. 이용자는 로그인이나 회원 기능을
           사용하기 전에 이 약관을 확인할 수 있습니다.
         </p>
@@ -45,7 +45,7 @@ export default function TermsPage() {
       <section>
         <h2>서비스 범위</h2>
         <p>
-          집밥은 레시피 탐색, 직접 레시피 등록, 식단 계획, 장보기 목록,
+          무엇을 먹든은 레시피 탐색, 직접 레시피 등록, 식단 계획, 장보기 목록,
           팬트리, 요리 기록, 남은 요리 기록을 제공하는 개인용 식생활 관리
           서비스입니다.
         </p>
@@ -103,7 +103,7 @@ export default function TermsPage() {
       <section>
         <h2>면책고지 및 책임의 제한</h2>
         <p>
-          집밥은 레시피와 식단 관리를 돕는 도구이며 의료, 영양, 식품 안전에
+          무엇을 먹든은 레시피와 식단 관리를 돕는 도구이며 의료, 영양, 식품 안전에
           대한 전문 자문을 대체하지 않습니다. 알레르기, 식재료 상태, 보관 방법,
           가열 정도와 개인의 건강 상태는 이용자가 별도로 확인해야 합니다.
         </p>

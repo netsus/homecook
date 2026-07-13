@@ -202,6 +202,41 @@ describe("user gamification event projection", () => {
     expect(notificationRows.some((row) => row.notification_type === "level_up")).toBe(false);
   });
 
+  it("projects the canonical first-cook achievement title into a new notification", async () => {
+    const { dbClient, notificationsTable } = createGamificationProjectionDb();
+    const progress = createProgressData(1);
+    progress.event_counts.cooking_completed = 1;
+
+    const result = await projectUserGamificationAfterProgressEvent(
+      dbClient as unknown as UserGamificationDbClient,
+      {
+        userId: "user-1",
+        progressEventId: "progress-event-first-cook",
+        awardInput: {
+          userId: "user-1",
+          eventType: "cooking_completed",
+          sourceTable: "leftover_dishes",
+          sourceId: "leftover-first-cook",
+          occurredAt: "2026-06-10T10:00:00.000Z",
+        },
+        xpDelta: 60,
+        previousLevel: 1,
+        progress,
+      },
+    );
+
+    expect(result.error).toBeNull();
+    expect(notificationsTable.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        notification_type: "achievement_unlocked",
+        payload_json: expect.objectContaining({
+          achievement_key: "tutorial_cooking_complete",
+          title: "첫 요리 완성",
+        }),
+      }),
+    );
+  });
+
   it("creates only the final level-up notification when one live XP event jumps multiple levels", async () => {
     const { dbClient, notificationsTable } = createGamificationProjectionDb();
 
