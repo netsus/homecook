@@ -5,6 +5,8 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildPublicDataUrl } from "./lib/public-data-url.mjs";
+
 const MFDS_ENDPOINT = "https://api.data.go.kr/openapi/tn_pubr_public_nutri_process_info_api";
 const RDA_ENDPOINT =
   "https://apis.data.go.kr/1390803/AgriFood/NationStdFood/V2/getKoreanFoodNationStdList";
@@ -206,23 +208,6 @@ function createPublicDataPortalKeyRing(keyOptions) {
       return null;
     },
   };
-}
-
-function buildPublicDataUrl(endpoint, key, params) {
-  const restParams = new URLSearchParams(params).toString();
-
-  if (/%[0-9a-f]{2}/i.test(key)) {
-    return `${endpoint}?serviceKey=${key}&${restParams}`;
-  }
-
-  const url = new URL(endpoint);
-  url.searchParams.set("serviceKey", key);
-
-  for (const [name, value] of Object.entries(params)) {
-    url.searchParams.set(name, value);
-  }
-
-  return url.toString();
 }
 
 async function readMockResponse(mockDir, fileName) {

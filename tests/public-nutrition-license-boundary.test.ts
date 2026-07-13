@@ -1,4 +1,6 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -43,8 +45,12 @@ describe("public nutrition source and license boundary", () => {
       active: true,
       source_version: "10.0",
       license: "KOGL4",
+      application_requirement: "separate_application_when_enabled",
+      secret_env: "DATA_GO_KR_API_KEY",
+      keyless: false,
       default_path: false,
     });
+    expect(SOURCE_REGISTRY["rda-15143598"]).not.toHaveProperty("application_required");
   });
 
   it("validates only the limited six-row observation schema without approving assignment", async () => {
@@ -67,22 +73,48 @@ describe("public nutrition source and license boundary", () => {
 
   it("rejects missing license disposition, original-table replication fields, and automatic oil candidates", async () => {
     const { validateMeasurementEvidence } = await loadPipeline();
-    const [base] = JSON.parse(readFileSync(EVIDENCE_PATH, "utf8"));
+    const evidence = JSON.parse(readFileSync(EVIDENCE_PATH, "utf8"));
+    const [base] = evidence;
 
     expect(() => validateMeasurementEvidence([{
       ...base,
       license_disposition: FAILURE_FIXTURE.missing_license_disposition,
-    }])).toThrowError(
+    }, ...evidence.slice(1)])).toThrowError(
       expect.objectContaining({ code: "RDA_LICENSE_DISPOSITION_MISSING" }),
     );
-    expect(() => validateMeasurementEvidence([{ ...base, original_table: "forbidden" }])).toThrowError(
+    expect(() => validateMeasurementEvidence([
+      { ...base, original_table: "forbidden" },
+      ...evidence.slice(1),
+    ])).toThrowError(
       expect.objectContaining({ code: "RDA_EVIDENCE_SCHEMA_VIOLATION" }),
     );
     expect(() => validateMeasurementEvidence([{
       ...base,
       ingredient_or_category_id: "olive-oil",
       review_result: "candidate",
-    }])).toThrowError(expect.objectContaining({ code: "RDA_OIL_AUTO_CANDIDATE_FORBIDDEN" }));
+    }, ...evidence.slice(1)])).toThrowError(
+      expect.objectContaining({ code: "RDA_EVIDENCE_FACT_MISMATCH" }),
+    );
+  });
+
+  it.each([
+    ["arbitrary ingredient", { ingredient_or_category_id: "mystery-sauce" }],
+    ["observed value", { observed_g_per_15ml: 17.8 }],
+    ["source URL", { source_url: "https://example.test/not-rda" }],
+    ["observed unit", { source_observed_unit: "15mL" }],
+    ["candidate status", { review_result: "candidate" }],
+    ["approved status", { review_result: "approved" }],
+    ["license disposition", { license_disposition: "approved" }],
+    ["representative grade", { selected_representative_grade: "VOLUME_G15" }],
+    ["absolute error", { absolute_error_g_per_15ml: 2.2 }],
+  ])("fails closed when the limited RDA fact changes: %s", async (_name, mutation) => {
+    const { validateMeasurementEvidence } = await loadPipeline();
+    const evidence = JSON.parse(readFileSync(EVIDENCE_PATH, "utf8"));
+
+    expect(() => validateMeasurementEvidence([
+      { ...evidence[0], ...mutation },
+      ...evidence.slice(1),
+    ])).toThrowError(expect.objectContaining({ code: "RDA_EVIDENCE_FACT_MISMATCH" }));
   });
 
   it("sanitizes auth parameters and enforces the exact six-field public attribution", async () => {
@@ -117,7 +149,7 @@ describe("public nutrition source and license boundary", () => {
     })).toThrowError(expect.objectContaining({ code: "SOURCE_VERSION_MISSING" }));
   });
 
-  it("keeps operator adapters and DATA_GO_KR_API_KEY out of client/browser modules", () => {
+  it("keeps operator adapters and DATA_GO_KR_API_KEY out of every client import graph", async () => {
     const roots = ["app", "components", "stores"].map((dir) => join(process.cwd(), dir));
     const clientText = roots
       .flatMap(filesUnder)
@@ -126,5 +158,26 @@ describe("public nutrition source and license boundary", () => {
       .join("\n");
 
     expect(clientText).not.toMatch(/public-nutrition-pipeline|DATA_GO_KR_API_KEY/);
+    const { assertNoClientNutritionImports } = await import(
+      pathToFileURL(join(process.cwd(), "scripts/lib/public-nutrition-client-boundary.mjs")).href
+    );
+    expect(() => assertNoClientNutritionImports(process.cwd())).not.toThrow();
+  });
+
+  it("rejects a client entry that reaches the operator pipeline through a lib re-export", async () => {
+    const { assertNoClientNutritionImports } = await import(
+      pathToFileURL(join(process.cwd(), "scripts/lib/public-nutrition-client-boundary.mjs")).href
+    );
+    const root = mkdtempSync(join(tmpdir(), "nutrition-client-graph-"));
+    mkdirSync(join(root, "app"), { recursive: true });
+    mkdirSync(join(root, "lib"), { recursive: true });
+    mkdirSync(join(root, "scripts/lib"), { recursive: true });
+    writeFileSync(join(root, "app/client.tsx"), '"use client";\nexport { leak } from "@/lib/reexport";\n');
+    writeFileSync(join(root, "lib/reexport.ts"), 'export { leak } from "../scripts/lib/public-nutrition-pipeline.mjs";\n');
+    writeFileSync(join(root, "scripts/lib/public-nutrition-pipeline.mjs"), "export const leak = true;\n");
+
+    expect(() => assertNoClientNutritionImports(root)).toThrowError(
+      expect.objectContaining({ code: "CLIENT_OPERATOR_IMPORT_FORBIDDEN" }),
+    );
   });
 });

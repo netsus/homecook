@@ -1,4 +1,12 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -28,6 +36,49 @@ function run(command: string, args: string[], env: Record<string, string> = {}) 
 
 function response(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), { status, headers });
+}
+
+function failureBundlePath(result: ReturnType<typeof run>): string {
+  const lines = result.stderr.trim().split("\n");
+  const report = JSON.parse(lines.at(-1) ?? "{}");
+  expect(report).toMatchObject({ success: false, failure_bundle_path: expect.any(String) });
+  return report.failure_bundle_path;
+}
+
+function readTree(root: string): string {
+  if (!existsSync(root)) return "";
+  return readdirSync(root).sort().map((name) => {
+    const file = join(root, name);
+    return statSync(file).isDirectory() ? readTree(file) : readFileSync(file, "utf8");
+  }).join("\n");
+}
+
+function prepareLifecycle(tempDir: string) {
+  const fixtureDir = join(process.cwd(), "tests/fixtures/public-nutrition-source");
+  const rawDir = join(tempDir, "raw");
+  const normalizedDir = join(tempDir, "normalized");
+  const reviewedDir = join(tempDir, "reviewed");
+  expect(run("fetch", [
+    "--input", join(fixtureDir, "mfds-source-sample.json"),
+    "--output-dir", rawDir,
+    "--fetched-at", "2026-07-13T00:00:00.000Z",
+  ]).status).toBe(0);
+  expect(run("normalize", ["--input-dir", rawDir, "--output-dir", normalizedDir]).status).toBe(0);
+  const normalized = JSON.parse(readFileSync(join(normalizedDir, "normalized-bundle.json"), "utf8"));
+  const decisionsPath = join(tempDir, "decisions.json");
+  writeFileSync(decisionsPath, JSON.stringify({
+    decisions: normalized.rows.map((row: { fingerprint: string }) => ({
+      fingerprint: row.fingerprint,
+      status: "approved",
+    })),
+  }));
+  expect(run("review", [
+    "--input-dir", normalizedDir,
+    "--decisions", decisionsPath,
+    "--measurement-evidence", join(fixtureDir, "rda-measurement-limited-evidence.json"),
+    "--output-dir", reviewedDir,
+  ]).status).toBe(0);
+  return { fixtureDir, rawDir, normalizedDir, reviewedDir, decisionsPath };
 }
 
 describe("public nutrition source network and CLI", () => {
@@ -208,6 +259,81 @@ describe("public nutrition source network and CLI", () => {
     expect(persisted).not.toContain("<FAKE_TEST_KEY_ONLY>");
   });
 
+  it("sends decoded and already-encoded data.go.kr keys with exactly one URL encoding pass", async () => {
+    const { requestJsonWithRetry } = await loadPipeline();
+    const cases = [
+      { key: "decoded+key/value=", encoded: "decoded%2Bkey%2Fvalue%3D" },
+      { key: "encoded%2Bkey%2Fvalue%3D", encoded: "encoded%2Bkey%2Fvalue%3D" },
+    ];
+
+    for (const item of cases) {
+      let sentUrl = "";
+      await requestJsonWithRetry({
+        endpoint: "https://example.test/nutrition",
+        query: { pageNo: 1 },
+        apiKey: item.key,
+        fetchImpl: async (url: string) => {
+          sentUrl = url;
+          return response({ ok: true });
+        },
+        sleep: async () => undefined,
+        now: () => 0,
+        createTimeoutSignal: () => new AbortController().signal,
+      });
+      expect(sentUrl).toContain(`serviceKey=${item.encoded}`);
+      expect(sentUrl).not.toContain("serviceKey=encoded%252B");
+    }
+  });
+
+  it("pins the actual MFDS page range and page size into manifest identity", async () => {
+    const { buildRawBatch, fetchMfdsBatch } = await loadPipeline();
+    const requests: Array<Record<string, string>> = [];
+    const result = await fetchMfdsBatch({
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchedAt: "2026-07-13T00:00:00.000Z",
+      pageSize: 37,
+      fetchImpl: async (value: string) => {
+        const url = new URL(value);
+        const pageNo = Number(url.searchParams.get("pageNo"));
+        requests.push(Object.fromEntries(url.searchParams.entries()));
+        const count = pageNo === 1 ? 37 : 1;
+        return response({ response: {
+          header: { resultCode: "00" },
+          body: {
+            pageNo,
+            totalCount: 38,
+            items: Array.from({ length: count }, (_, index) => ({
+              FOOD_CD: `P${pageNo}-${index}`,
+            })),
+          },
+        } });
+      },
+      sleep: async () => undefined,
+      now: () => 0,
+      createTimeoutSignal: () => new AbortController().signal,
+    });
+
+    expect(requests.map(({ pageNo, numOfRows, type }) => ({ pageNo, numOfRows, type }))).toEqual([
+      { pageNo: "1", numOfRows: "37", type: "json" },
+      { pageNo: "2", numOfRows: "37", type: "json" },
+    ]);
+    expect(result.manifest.query).toEqual({
+      pageNo_start: "1",
+      pageNo_end: "2",
+      numOfRows: "37",
+      type: "json",
+    });
+    expect(JSON.stringify(result.manifest.query)).not.toContain("serviceKey");
+
+    const fixture = JSON.parse(readFileSync(join(
+      process.cwd(),
+      "tests/fixtures/public-nutrition-source/mfds-source-sample.json",
+    ), "utf8"));
+    const one = buildRawBatch({ ...fixture, query: { pageNo_start: 1, pageNo_end: 1, numOfRows: 37, type: "json" }, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    const two = buildRawBatch({ ...fixture, query: { pageNo_start: 1, pageNo_end: 1, numOfRows: 38, type: "json" }, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    expect(one.manifest.logical_batch_id).not.toBe(two.manifest.logical_batch_id);
+  });
+
   it.each([
     ["empty intermediate page", [
       { page_no: 1, total_count: 2, next_page_token: "next", items: [] },
@@ -328,5 +454,205 @@ describe("public nutrition source network and CLI", () => {
     const immutable = run("promote", ["--input-dir", reviewedDir, "--output-dir", approvedOne]);
     expect(immutable.status).not.toBe(0);
     expect(`${immutable.stdout}\n${immutable.stderr}`).toContain("ARTIFACT_IMMUTABLE");
+  }, 20_000);
+
+  it("persists only sanitized reviewed measurement evidence", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "nutrition-review-secret-"));
+    const { fixtureDir, normalizedDir, decisionsPath } = prepareLifecycle(join(tempDir, "setup"));
+    const evidence = JSON.parse(readFileSync(
+      join(fixtureDir, "rda-measurement-limited-evidence.json"),
+      "utf8",
+    ));
+    evidence[0].source_url += "?serviceKey=FAKE_SERVICE_VALUE";
+    evidence[0].license_evidence_url += "&access_token=FAKE_ACCESS_VALUE";
+    const evidencePath = join(tempDir, "evidence.json");
+    writeFileSync(evidencePath, JSON.stringify(evidence));
+    const outputDir = join(tempDir, "reviewed");
+
+    const result = run("review", [
+      "--input-dir", normalizedDir,
+      "--decisions", decisionsPath,
+      "--measurement-evidence", evidencePath,
+      "--output-dir", outputDir,
+    ]);
+    expect(result.status).toBe(0);
+    expect(readTree(outputDir)).not.toMatch(/serviceKey|apiKey|access_token|FAKE_SERVICE_VALUE|FAKE_ACCESS_VALUE/i);
+    const reviewed = JSON.parse(readFileSync(join(outputDir, "review-report.json"), "utf8"));
+    const persistedEvidence = JSON.parse(readFileSync(join(outputDir, "measurement-evidence.json"), "utf8"));
+    expect(persistedEvidence).toEqual(reviewed.measurement_evidence);
   });
+
+  it("rejects auth-shaped values anywhere in the complete artifact set before publishing", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "nutrition-artifact-secret-"));
+    const fixture = JSON.parse(readFileSync(join(
+      process.cwd(),
+      "tests/fixtures/public-nutrition-source/mfds-source-sample.json",
+    ), "utf8"));
+    fixture.pages[0].items[0].apiKey = "FAKE_API_VALUE";
+    fixture.pages[0].items[0].access_token = "FAKE_ACCESS_VALUE";
+    const inputPath = join(tempDir, "input.json");
+    const outputDir = join(tempDir, "raw");
+    writeFileSync(inputPath, JSON.stringify(fixture));
+
+    const result = run("fetch", [
+      "--input", inputPath,
+      "--output-dir", outputDir,
+      "--fetched-at", "2026-07-13T00:00:00.000Z",
+    ]);
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}\n${result.stderr}\n${readTree(outputDir)}`).not.toMatch(
+      /apiKey|access_token|FAKE_API_VALUE|FAKE_ACCESS_VALUE/i,
+    );
+  });
+
+  it("preflights every target so late collisions leave no consumable partial bundle", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "nutrition-collision-"));
+    const lifecycle = prepareLifecycle(join(tempDir, "setup"));
+    const commands = [
+      ["fetch", ["--input", join(lifecycle.fixtureDir, "mfds-source-sample.json"), "--fetched-at", "2026-07-13T00:00:00.000Z"]],
+      ["normalize", ["--input-dir", lifecycle.rawDir]],
+      ["review", ["--input-dir", lifecycle.normalizedDir, "--decisions", lifecycle.decisionsPath, "--measurement-evidence", join(lifecycle.fixtureDir, "rda-measurement-limited-evidence.json")]],
+      ["promote", ["--input-dir", lifecycle.reviewedDir]],
+    ] as const;
+
+    for (const [name, args] of commands) {
+      const outputDir = join(tempDir, `collision-${name}`);
+      mkdirSync(outputDir);
+      writeFileSync(join(outputDir, "summary.json"), "{\"late\":true}\n");
+      const result = run(name, [...args, "--output-dir", outputDir]);
+      expect(result.status).not.toBe(0);
+      expect(readdirSync(outputDir)).toEqual(["summary.json"]);
+      expect(readFileSync(join(outputDir, "summary.json"), "utf8")).toBe("{\"late\":true}\n");
+    }
+
+    const promoteDir = join(tempDir, "promote-late-handoff");
+    mkdirSync(promoteDir);
+    writeFileSync(join(promoteDir, "handoff-manifest.json"), "{\"late\":true}\n");
+    const promote = run("promote", ["--input-dir", lifecycle.reviewedDir, "--output-dir", promoteDir]);
+    expect(promote.status).not.toBe(0);
+    expect(readdirSync(promoteDir)).toEqual(["handoff-manifest.json"]);
+    expect(existsSync(join(promoteDir, "approved-promotion-input.json"))).toBe(false);
+  }, 20_000);
+
+  it("removes the temporary sibling when an injected later write fails", async () => {
+    const modulePath = join(process.cwd(), "scripts/lib/public-nutrition-artifacts.mjs");
+    expect(existsSync(modulePath)).toBe(true);
+    const { publishArtifactBundle } = await import(pathToFileURL(modulePath).href);
+    const parent = mkdtempSync(join(tmpdir(), "nutrition-write-failure-"));
+    const outputDir = join(parent, "bundle");
+    let writes = 0;
+
+    await expect(publishArtifactBundle(outputDir, {
+      "first.json": "{}\n",
+      "second.json": "{}\n",
+    }, {
+      writeFileImpl: async (...args: unknown[]) => {
+        writes += 1;
+        if (writes === 2) throw new Error("injected write failure");
+        const { writeFile } = await import("node:fs/promises");
+        return writeFile(...(args as Parameters<typeof writeFile>));
+      },
+    })).rejects.toThrow("injected write failure");
+    expect(existsSync(outputDir)).toBe(false);
+    expect(readdirSync(parent)).toEqual([]);
+  });
+
+  it("forbids nested artifact paths and never replaces a concurrently-created output", async () => {
+    const { publishArtifactBundle } = await import(pathToFileURL(
+      join(process.cwd(), "scripts/lib/public-nutrition-artifacts.mjs"),
+    ).href);
+    const nestedParent = mkdtempSync(join(tmpdir(), "nutrition-nested-artifact-"));
+    await expect(publishArtifactBundle(join(nestedParent, "bundle"), {
+      "nested/value.json": "{}\n",
+    })).rejects.toMatchObject({ code: "ARTIFACT_PATH_INVALID" });
+    expect(readdirSync(nestedParent)).toEqual([]);
+
+    const raceParent = mkdtempSync(join(tmpdir(), "nutrition-publish-race-"));
+    const outputDir = join(raceParent, "bundle");
+    await expect(publishArtifactBundle(outputDir, { "value.json": "{}\n" }, {
+      publishPointerImpl: async (...args: unknown[]) => {
+        mkdirSync(outputDir);
+        const { symlink } = await import("node:fs/promises");
+        return symlink(...(args as Parameters<typeof symlink>));
+      },
+    })).rejects.toMatchObject({ code: "EEXIST" });
+    expect(readdirSync(outputDir)).toEqual([]);
+    expect(readdirSync(raceParent)).toEqual(["bundle"]);
+  });
+
+  it("atomically persists fatal fetch, normalize, and review failure bundles", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "nutrition-failure-lifecycle-"));
+    const fixtureDir = join(process.cwd(), "tests/fixtures/public-nutrition-source");
+    const base = JSON.parse(readFileSync(join(fixtureDir, "mfds-source-sample.json"), "utf8"));
+    base.pages = FAILURE_FIXTURE.partial_pages;
+    const partialPath = join(tempDir, "partial.json");
+    writeFileSync(partialPath, JSON.stringify(base));
+    const failedFetchDir = join(tempDir, "failed-fetch");
+    const failedFetch = run("fetch", [
+      "--input", partialPath,
+      "--output-dir", failedFetchDir,
+      "--fetched-at", "2026-07-13T00:00:00.000Z",
+    ]);
+    expect(failedFetch.status).not.toBe(0);
+    expect(existsSync(failedFetchDir)).toBe(false);
+    const failedFetchBundle = failureBundlePath(failedFetch);
+    expect(failedFetchBundle).toMatch(new RegExp(`${failedFetchDir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.failure-`));
+    const fetchFailure = JSON.parse(readFileSync(join(failedFetchBundle, "failure-manifest.json"), "utf8"));
+    expect(fetchFailure).toMatchObject({
+      status: "failed",
+      command: "fetch",
+      reason_counts: { PAGINATION_INCOMPLETE: 1 },
+      received_context: { received_page_count: FAILURE_FIXTURE.partial_pages.length },
+      production_db_writes: 0,
+    });
+    const retry = run("fetch", [
+      "--input", join(fixtureDir, "mfds-source-sample.json"),
+      "--output-dir", failedFetchDir,
+      "--fetched-at", "2026-07-13T00:00:00.000Z",
+    ]);
+    expect(retry.status).toBe(0);
+    const secondFailure = run("fetch", [
+      "--input", partialPath,
+      "--output-dir", failedFetchDir,
+      "--fetched-at", "2026-07-13T00:00:00.000Z",
+    ]);
+    expect(secondFailure.status).not.toBe(0);
+    expect(failureBundlePath(secondFailure)).not.toBe(failedFetchBundle);
+
+    const lifecycle = prepareLifecycle(join(tempDir, "setup"));
+    const badManifest = JSON.parse(readFileSync(join(lifecycle.rawDir, "manifest.json"), "utf8"));
+    badManifest.adapter_schema_version = "tampered-schema";
+    writeFileSync(join(lifecycle.rawDir, "manifest.json"), JSON.stringify(badManifest));
+    const failedNormalizeDir = join(tempDir, "failed-normalize");
+    const failedNormalize = run("normalize", ["--input-dir", lifecycle.rawDir, "--output-dir", failedNormalizeDir]);
+    expect(failedNormalize.status).not.toBe(0);
+    const failedNormalizeBundle = failureBundlePath(failedNormalize);
+    expect(JSON.parse(readFileSync(join(failedNormalizeBundle, "failure-manifest.json"), "utf8"))).toMatchObject({
+      status: "quarantined",
+      command: "normalize",
+      reason_counts: { ADAPTER_SCHEMA_MISMATCH: 1 },
+    });
+
+    const badEvidence = JSON.parse(readFileSync(join(fixtureDir, "rda-measurement-limited-evidence.json"), "utf8"));
+    badEvidence[0].license_disposition = "";
+    const badEvidencePath = join(tempDir, "bad-evidence.json");
+    writeFileSync(badEvidencePath, JSON.stringify(badEvidence));
+    const failedReviewDir = join(tempDir, "failed-review");
+    const failedReview = run("review", [
+      "--input-dir", lifecycle.normalizedDir,
+      "--decisions", lifecycle.decisionsPath,
+      "--measurement-evidence", badEvidencePath,
+      "--output-dir", failedReviewDir,
+    ]);
+    expect(failedReview.status).not.toBe(0);
+    const failedReviewBundle = failureBundlePath(failedReview);
+    expect(JSON.parse(readFileSync(join(failedReviewBundle, "failure-manifest.json"), "utf8"))).toMatchObject({
+      status: "quarantined",
+      command: "review",
+      reason_counts: { RDA_LICENSE_DISPOSITION_MISSING: 1 },
+    });
+    const forbidden = run("promote", ["--input-dir", failedReviewBundle, "--output-dir", join(tempDir, "forbidden")]);
+    expect(forbidden.status).not.toBe(0);
+    expect(existsSync(join(tempDir, "forbidden", "approved-promotion-input.json"))).toBe(false);
+  }, 20_000);
 });

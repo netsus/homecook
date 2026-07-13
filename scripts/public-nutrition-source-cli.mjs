@@ -1,7 +1,8 @@
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { publishArtifactBundle } from "./lib/public-nutrition-artifacts.mjs";
 import {
   NutritionPipelineError,
   buildApprovedPinnedHandoff,
@@ -51,26 +52,8 @@ function jsonText(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-async function writeImmutableText(filePath, content) {
-  await mkdir(path.dirname(filePath), { recursive: true });
-  if (existsSync(filePath)) {
-    const existing = await readFile(filePath, "utf8");
-    if (existing !== content) {
-      throw new NutritionPipelineError("ARTIFACT_IMMUTABLE", { artifact: path.basename(filePath) });
-    }
-    return "reused";
-  }
-  await writeFile(filePath, content, { flag: "wx" });
-  return "created";
-}
-
-async function writeImmutableJson(filePath, value) {
-  return writeImmutableText(filePath, jsonText(value));
-}
-
-async function writeJsonLines(filePath, rows) {
-  const content = rows.length > 0 ? `${rows.map((row) => JSON.stringify(row)).join("\n")}\n` : "";
-  return writeImmutableText(filePath, content);
+function jsonLines(rows) {
+  return rows.length > 0 ? `${rows.map((row) => JSON.stringify(row)).join("\n")}\n` : "";
 }
 
 function successSummary(currentCommand, extra = {}) {
@@ -89,9 +72,11 @@ async function runFetch(args) {
       ? args["fetched-at"]
       : new Date().toISOString();
   let raw;
+  let apiKey = "";
   if (args.live) {
+    apiKey = process.env.DATA_GO_KR_API_KEY ?? "";
     raw = await fetchMfdsBatch({
-      apiKey: process.env.DATA_GO_KR_API_KEY ?? "",
+      apiKey,
       fetchedAt,
     });
   } else {
@@ -100,15 +85,17 @@ async function runFetch(args) {
       fetchedAt,
     });
   }
-  await writeImmutableJson(path.join(outputDir, "raw-snapshot.json"), raw.rawSnapshot);
-  await writeImmutableJson(path.join(outputDir, "manifest.json"), raw.manifest);
   const summary = successSummary("fetch", {
     status: "raw",
     logical_batch_id: raw.manifest.logical_batch_id,
     fetched_raw_count: raw.manifest.fetched_raw_count,
     raw_sha256: raw.manifest.sha256,
   });
-  await writeImmutableJson(path.join(outputDir, "summary.json"), summary);
+  await publishArtifactBundle(outputDir, {
+    "raw-snapshot.json": jsonText(raw.rawSnapshot),
+    "manifest.json": jsonText(raw.manifest),
+    "summary.json": jsonText(summary),
+  }, { secretValues: [apiKey] });
   return summary;
 }
 
@@ -132,24 +119,27 @@ async function runNormalize(args) {
     failed_reason_counts: normalized.quarantine_reason_counts,
     production_db_writes: 0,
   };
-  await writeImmutableJson(path.join(outputDir, "source-manifest.json"), manifest);
-  await writeImmutableJson(path.join(outputDir, "normalized-manifest.json"), normalizedManifest);
-  await writeJsonLines(path.join(outputDir, "staged-rows.jsonl"), normalized.staged_rows);
-  await writeJsonLines(path.join(outputDir, "normalized-rows.jsonl"), normalized.rows);
-  await writeImmutableJson(path.join(outputDir, "normalized-bundle.json"), normalized);
-  await writeImmutableJson(path.join(outputDir, "quarantine-report.json"), {
+  const quarantineReport = {
     counts: normalized.counts,
     reason_counts: normalized.quarantine_reason_counts,
     rows: normalized.quarantined,
     production_db_writes: 0,
-  });
+  };
   const summary = successSummary("normalize", {
     status: "normalized",
     logical_batch_id: normalized.logical_batch_id,
     counts: normalized.counts,
     normalized_content_hash: normalized.normalized_content_hash,
   });
-  await writeImmutableJson(path.join(outputDir, "summary.json"), summary);
+  await publishArtifactBundle(outputDir, {
+    "source-manifest.json": jsonText(manifest),
+    "normalized-manifest.json": jsonText(normalizedManifest),
+    "staged-rows.jsonl": jsonLines(normalized.staged_rows),
+    "normalized-rows.jsonl": jsonLines(normalized.rows),
+    "normalized-bundle.json": jsonText(normalized),
+    "quarantine-report.json": jsonText(quarantineReport),
+    "summary.json": jsonText(summary),
+  });
   return summary;
 }
 
@@ -178,18 +168,20 @@ async function runReview(args) {
     failed_reason_counts: normalized.quarantine_reason_counts,
     production_db_writes: 0,
   };
-  await writeImmutableJson(path.join(outputDir, "source-manifest.json"), manifest);
-  await writeImmutableJson(path.join(outputDir, "normalized-bundle.json"), normalized);
-  await writeImmutableJson(path.join(outputDir, "review-report.json"), review);
-  await writeImmutableJson(path.join(outputDir, "reviewed-manifest.json"), reviewedManifest);
-  await writeImmutableJson(path.join(outputDir, "measurement-evidence.json"), evidence);
   const summary = successSummary("review", {
     status: "reviewed",
     logical_batch_id: review.logical_batch_id,
     blocker_count: review.blocker_count,
     review_checksum: review.review_checksum,
   });
-  await writeImmutableJson(path.join(outputDir, "summary.json"), summary);
+  await publishArtifactBundle(outputDir, {
+    "source-manifest.json": jsonText(manifest),
+    "normalized-bundle.json": jsonText(normalized),
+    "review-report.json": jsonText(review),
+    "reviewed-manifest.json": jsonText(reviewedManifest),
+    "measurement-evidence.json": jsonText(review.measurement_evidence),
+    "summary.json": jsonText(summary),
+  });
   return summary;
 }
 
@@ -206,24 +198,89 @@ async function runPromote(args) {
     reviewReport: review,
     measurementEvidence: evidence,
   });
-  await writeImmutableJson(path.join(outputDir, "approved-promotion-input.json"), handoff);
-  await writeImmutableJson(
-    path.join(outputDir, "public-source-attribution.json"),
-    handoff.public_attribution,
-  );
-  await writeImmutableJson(path.join(outputDir, "handoff-manifest.json"), handoff);
   const summary = successSummary("promote", {
     status: "approved_pinned",
     logical_batch_id: handoff.logical_batch_id,
     approved_count: handoff.approved_items.length,
     handoff_checksum: handoff.handoff_checksum,
   });
-  await writeImmutableJson(path.join(outputDir, "summary.json"), summary);
+  await publishArtifactBundle(outputDir, {
+    "approved-promotion-input.json": jsonText(handoff),
+    "public-source-attribution.json": jsonText(handoff.public_attribution),
+    "handoff-manifest.json": jsonText(handoff),
+    "summary.json": jsonText(summary),
+  });
   return summary;
 }
 
+function safeFailureDetails(value, secretValues = []) {
+  if (Array.isArray(value)) return value.map((item) => safeFailureDetails(item, secretValues));
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value)
+      .filter(([key]) => !/(?:serviceKey|apiKey|api_key|access_token|authorization)/i.test(key))
+      .map(([key, item]) => [key, safeFailureDetails(item, secretValues)]));
+  }
+  if (typeof value !== "string") return value;
+  if (secretValues.some((secret) => secret && value.includes(secret))) return "[redacted]";
+  if (/(?:serviceKey|apiKey|api_key|access_token|authorization)/i.test(value)) return "[redacted]";
+  return value;
+}
+
+async function persistFailure(commandName, args, error) {
+  const requestedOutput = typeof args["output-dir"] === "string" ? args["output-dir"] : null;
+  if (requestedOutput === null) return null;
+  const secretValues = [process.env.DATA_GO_KR_API_KEY ?? ""].filter(Boolean);
+  const code = typeof error?.code === "string" ? error.code : "UNEXPECTED_ERROR";
+  const details = safeFailureDetails(error?.details ?? {}, secretValues);
+  let receivedContext = details;
+  if (typeof args["input-dir"] === "string") {
+    for (const manifestName of ["manifest.json", "source-manifest.json"]) {
+      try {
+        const manifest = await readJson(path.join(args["input-dir"], manifestName));
+        receivedContext = {
+          ...details,
+          logical_batch_id: manifest.logical_batch_id,
+          source_url: safeFailureDetails(manifest.endpoint_or_file_url, secretValues),
+          received_page_count: manifest.page_count,
+          raw_sha256: manifest.sha256,
+          adapter_schema_version: manifest.adapter_schema_version,
+        };
+        break;
+      } catch {
+        // The failure bundle remains valid even when the upstream manifest itself is unreadable.
+      }
+    }
+  }
+  const status = commandName === "fetch" || commandName === "promote" ? "failed" : "quarantined";
+  const failure = {
+    schema_version: "public-nutrition-failure-v1",
+    status,
+    lifecycle: [status],
+    command: commandName,
+    reason_code: code,
+    reason_counts: { [code]: 1 },
+    received_context: receivedContext,
+    production_db_writes: 0,
+  };
+  const summary = {
+    success: false,
+    command: commandName,
+    status,
+    error: { code },
+    reason_counts: failure.reason_counts,
+    production_db_writes: 0,
+  };
+  const failureOutput = `${requestedOutput}.failure-${randomUUID()}`;
+  await publishArtifactBundle(failureOutput, {
+    "failure-manifest.json": jsonText(failure),
+    "summary.json": jsonText(summary),
+  }, { secretValues });
+  return failureOutput;
+}
+
+const args = parseArgs(process.argv.slice(3));
+
 async function main() {
-  const args = parseArgs(process.argv.slice(3));
   const runners = {
     fetch: runFetch,
     normalize: runNormalize,
@@ -236,13 +293,21 @@ async function main() {
   process.stdout.write(`${JSON.stringify(summary)}\n`);
 }
 
-main().catch((error) => {
-  const code = error instanceof NutritionPipelineError ? error.code : "UNEXPECTED_ERROR";
-  const details = error instanceof NutritionPipelineError ? error.details : {};
+main().catch(async (error) => {
+  const code = typeof error?.code === "string" ? error.code : "UNEXPECTED_ERROR";
+  const secretValues = [process.env.DATA_GO_KR_API_KEY ?? ""].filter(Boolean);
+  const details = safeFailureDetails(error?.details ?? {}, secretValues);
+  let failureBundlePath = null;
+  try {
+    failureBundlePath = await persistFailure(command, args, error);
+  } catch {
+    failureBundlePath = null;
+  }
   process.stderr.write(`${JSON.stringify({
     success: false,
     command,
     error: { code, details },
+    failure_bundle_path: failureBundlePath,
     production_db_writes: 0,
   })}\n`);
   process.exitCode = 1;

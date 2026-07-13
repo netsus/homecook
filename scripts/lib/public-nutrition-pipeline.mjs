@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { buildPublicDataUrl } from "./public-data-url.mjs";
+
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_ATTEMPTS = 4;
 const BACKOFF_MS = [1_000, 2_000, 4_000];
@@ -78,8 +80,8 @@ export const SOURCE_REGISTRY = Object.freeze({
   }),
   "rda-15143598": Object.freeze({
     id: "rda-15143598",
-    application_required: false,
-    secret_env: null,
+    application_requirement: "separate_application_when_enabled",
+    secret_env: "DATA_GO_KR_API_KEY",
     keyless: false,
     active: true,
     source_version: "10.0",
@@ -293,7 +295,14 @@ function validatePages(inputPages) {
   };
 }
 
-export function buildRawBatch({ source, input_shape, adapter_schema_version, pages, fetchedAt }) {
+export function buildRawBatch({
+  source,
+  input_shape,
+  adapter_schema_version,
+  pages,
+  query = {},
+  fetchedAt,
+}) {
   const normalizedSource = validateSource(source);
   const inputShape = requiredText(input_shape, "INPUT_SHAPE_MISSING");
   if (!INPUT_SHAPES.has(inputShape)) {
@@ -303,7 +312,22 @@ export function buildRawBatch({ source, input_shape, adapter_schema_version, pag
     adapter_schema_version,
     "ADAPTER_SCHEMA_VERSION_MISSING",
   );
-  const pagination = validatePages(pages);
+  const publicQuery = sanitizeQuery(query);
+  let pagination;
+  try {
+    pagination = validatePages(pages);
+  } catch (error) {
+    if (error instanceof NutritionPipelineError) {
+      throw new NutritionPipelineError(error.code, {
+        ...error.details,
+        received_page_count: Array.isArray(pages) ? pages.length : 0,
+        source_id: normalizedSource.id,
+        source_url: normalizedSource.endpoint_or_file_url,
+        query: publicQuery,
+      });
+    }
+    throw error;
+  }
   const rawSnapshot = {
     schema_version: "public-nutrition-raw-v1",
     source_id: normalizedSource.id,
@@ -322,7 +346,7 @@ export function buildRawBatch({ source, input_shape, adapter_schema_version, pag
     source_version: normalizedSource.source_version,
     data_basis_date: normalizedSource.data_basis_date,
     endpoint_or_file_url: normalizedSource.endpoint_or_file_url,
-    query: {},
+    query: publicQuery,
     license: normalizedSource.license,
     license_url: normalizedSource.license_url,
     license_evidence_url: normalizedSource.license_evidence_url,
@@ -345,7 +369,7 @@ export function buildRawBatch({ source, input_shape, adapter_schema_version, pag
       source_version: normalizedSource.source_version,
       data_basis_date: normalizedSource.data_basis_date,
       fetched_at: requiredText(fetchedAt, "FETCHED_AT_MISSING"),
-      query: {},
+      query: publicQuery,
       license: normalizedSource.license,
       license_url: normalizedSource.license_url,
       license_evidence_url: normalizedSource.license_evidence_url,
@@ -616,20 +640,45 @@ const EVIDENCE_KEYS = new Set([
   "license_checked_at",
   "license_disposition",
 ]);
-const REPRESENTATIVE_GRADES = new Set([
-  "VOLUME_G6",
-  "VOLUME_G10",
-  "VOLUME_G15",
-  "VOLUME_G20",
-  "VOLUME_G25",
+const RDA_MEASUREMENT_SOURCE_URL = "https://www.nics.go.kr/food/kfi/hsMarinade/list_03";
+const RDA_LICENSE_EVIDENCE_URL =
+  "https://nics.go.kr/contents/page.do?contentsId=3&homepageSeCode=nics&m=100000165";
+const RDA_MEASUREMENT_FACTS = Object.freeze({
+  "soy-sauce": 17.7,
+  vinegar: 15.3,
+  "soybean-paste": 18,
+  gochujang: 19,
+  honey: 24,
+  "sesame-oil": 14.1,
+});
+const REPRESENTATIVE_GRADES = Object.freeze([
+  Object.freeze({ id: "VOLUME_G6", grams: 6 }),
+  Object.freeze({ id: "VOLUME_G10", grams: 10 }),
+  Object.freeze({ id: "VOLUME_G15", grams: 15 }),
+  Object.freeze({ id: "VOLUME_G20", grams: 20 }),
+  Object.freeze({ id: "VOLUME_G25", grams: 25 }),
 ]);
-const FORBIDDEN_OIL_CANDIDATES = /^(?:olive|other|canola|vegetable|cooking)-oil$/;
+
+function factMismatch() {
+  throw new NutritionPipelineError("RDA_EVIDENCE_FACT_MISMATCH");
+}
+
+function representativeGrade(observed) {
+  const selected = REPRESENTATIVE_GRADES.reduce((best, candidate) =>
+    Math.abs(candidate.grams - observed) < Math.abs(best.grams - observed) ? candidate : best,
+  );
+  return {
+    grade: selected.id,
+    error: Number(Math.abs(selected.grams - observed).toFixed(10)),
+  };
+}
 
 export function validateMeasurementEvidence(input) {
-  if (!Array.isArray(input) || input.length > 20) {
+  if (!Array.isArray(input) || (input.length !== 0 && input.length !== 6)) {
     throw new NutritionPipelineError("RDA_EVIDENCE_SCHEMA_VIOLATION");
   }
-  return input.map((row) => {
+  const seen = new Set();
+  const evidence = input.map((row) => {
     if (!isRecord(row) || Object.keys(row).some((key) => !EVIDENCE_KEYS.has(key))) {
       throw new NutritionPipelineError("RDA_EVIDENCE_SCHEMA_VIOLATION");
     }
@@ -642,51 +691,48 @@ export function validateMeasurementEvidence(input) {
       row.ingredient_or_category_id,
       "RDA_EVIDENCE_SCHEMA_VIOLATION",
     );
+    const observed = RDA_MEASUREMENT_FACTS[ingredientId];
+    if (observed === undefined || seen.has(ingredientId)) factMismatch();
+    seen.add(ingredientId);
+    const computed = representativeGrade(observed);
     const reviewResult = requiredText(row.review_result, "RDA_EVIDENCE_SCHEMA_VIOLATION");
-    if (!["candidate", "needs_source_check", "rejected"].includes(reviewResult)) {
-      throw new NutritionPipelineError("RDA_ASSIGNMENT_DEFERRED");
-    }
-    if (FORBIDDEN_OIL_CANDIDATES.test(ingredientId) && reviewResult === "candidate") {
-      throw new NutritionPipelineError("RDA_OIL_AUTO_CANDIDATE_FORBIDDEN");
-    }
-    const observedG = row.observed_g;
-    const observedPer15 = row.observed_g_per_15ml;
-    const observedCount = [observedG, observedPer15].filter(
-      (value) => typeof value === "number" && Number.isFinite(value) && value > 0,
-    ).length;
-    if (observedCount !== 1) {
-      throw new NutritionPipelineError("RDA_EVIDENCE_SCHEMA_VIOLATION");
-    }
+    const sourceUrl = sanitizeUrl(row.source_url);
+    const licenseEvidenceUrl = sanitizeUrl(
+      requiredText(row.license_evidence_url, "RDA_EVIDENCE_SCHEMA_VIOLATION"),
+    );
     if (
-      !REPRESENTATIVE_GRADES.has(row.selected_representative_grade) ||
+      sourceUrl !== RDA_MEASUREMENT_SOURCE_URL ||
+      licenseEvidenceUrl !== RDA_LICENSE_EVIDENCE_URL ||
+      row.source_observed_unit !== "1 tbsp (15mL)" ||
+      row.observed_g !== undefined ||
+      row.observed_g_per_15ml !== observed ||
+      reviewResult !== "needs_source_check" ||
+      licenseDisposition !== "human_review_required" ||
+      row.selected_representative_grade !== computed.grade ||
       typeof row.absolute_error_g_per_15ml !== "number" ||
-      row.absolute_error_g_per_15ml < 0
-    ) {
-      throw new NutritionPipelineError("RDA_EVIDENCE_SCHEMA_VIOLATION");
-    }
+      Math.abs(row.absolute_error_g_per_15ml - computed.error) > 1e-9
+    ) factMismatch();
     return {
-      source_url: sanitizeUrl(row.source_url),
+      source_url: sourceUrl,
       accessed_at: ensureIsoDate(row.accessed_at, "RDA_EVIDENCE_SCHEMA_VIOLATION"),
       ingredient_or_category_id: ingredientId,
-      source_observed_unit: requiredText(
-        row.source_observed_unit,
-        "RDA_EVIDENCE_SCHEMA_VIOLATION",
-      ),
-      ...(observedG !== undefined ? { observed_g: observedG } : {}),
-      ...(observedPer15 !== undefined ? { observed_g_per_15ml: observedPer15 } : {}),
-      selected_representative_grade: row.selected_representative_grade,
-      absolute_error_g_per_15ml: row.absolute_error_g_per_15ml,
-      review_result: reviewResult,
-      license_evidence_url: sanitizeUrl(
-        requiredText(row.license_evidence_url, "RDA_EVIDENCE_SCHEMA_VIOLATION"),
-      ),
+      source_observed_unit: "1 tbsp (15mL)",
+      observed_g_per_15ml: observed,
+      selected_representative_grade: computed.grade,
+      absolute_error_g_per_15ml: computed.error,
+      review_result: "needs_source_check",
+      license_evidence_url: licenseEvidenceUrl,
       license_checked_at: ensureIsoDate(
         row.license_checked_at,
         "RDA_EVIDENCE_SCHEMA_VIOLATION",
       ),
-      license_disposition: licenseDisposition,
+      license_disposition: "human_review_required",
     };
   });
+  if (evidence.length > 0 && seen.size !== Object.keys(RDA_MEASUREMENT_FACTS).length) {
+    factMismatch();
+  }
+  return evidence;
 }
 
 export function buildNutritionReview({ normalizedBundle, decisions, measurementEvidence = [] }) {
@@ -913,6 +959,9 @@ export function buildApprovedPinnedHandoff({
   const approved = new Set(reviewReport.approved_fingerprints);
   const approvedItems = normalizedBundle.rows.filter((row) => approved.has(row.fingerprint));
   if (approvedItems.length === 0) throw new NutritionPipelineError("NO_APPROVED_ROWS");
+  if (sha256(measurementEvidence) !== sha256(reviewReport.measurement_evidence)) {
+    throw new NutritionPipelineError("REVIEW_EVIDENCE_MISMATCH");
+  }
   const evidence = validateMeasurementEvidence(measurementEvidence);
   const reviewedEvidence = validateMeasurementEvidence(reviewReport.measurement_evidence);
   if (sha256(evidence) !== sha256(reviewedEvidence)) {
@@ -941,6 +990,7 @@ export function buildApprovedPinnedHandoff({
       license_url: manifest.license_url,
       license_evidence_url: manifest.license_evidence_url,
       license_verified_at: manifest.license_verified_at,
+      query: manifest.query,
       raw_sha256: manifest.sha256,
       input_shape: manifest.input_shape,
       adapter_schema_version: manifest.adapter_schema_version,
@@ -989,12 +1039,10 @@ export async function requestJsonWithRetry({
   }
   const publicQuery = sanitizeQuery(query);
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-    const url = new URL(endpoint);
-    for (const [key, value] of Object.entries(publicQuery)) url.searchParams.set(key, value);
-    url.searchParams.set("serviceKey", apiKey);
+    const url = buildPublicDataUrl(endpoint, apiKey, publicQuery);
     let response;
     try {
-      response = await fetchImpl(url.toString(), {
+      response = await fetchImpl(url, {
         method: "GET",
         signal: createTimeoutSignal(REQUEST_TIMEOUT_MS),
         headers: { Accept: "application/json" },
@@ -1101,6 +1149,12 @@ export async function fetchMfdsBatch({
     adapter_schema_version: "nutrition-source-row-v1",
     input_shape: "mfds-provider-v1",
     pages,
+    query: {
+      pageNo_start: 1,
+      pageNo_end: pages.length,
+      numOfRows: pageSize,
+      type: "json",
+    },
     fetchedAt,
   });
 }
