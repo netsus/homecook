@@ -227,4 +227,12 @@
 - public Stage 5 독립 Codex review는 `APPROVE`, unresolved finding `0`, blocker/major/minor `0 / 0 / 0`이었다.
 - final authority는 이전 검토 head `95d0bdfa9fababacf17bbc450576363ac2b9832a`에서 조리 tutorial achievement의 legacy title 1건을 major로 발견해 `REQUEST_CHANGES`했다. 수정 head `7e51a5d162f25393ebe21df53dd6f40621acf8bd`는 achievement album title과 신규 achievement notification payload를 `첫 요리 완성`으로 고정하고 source guard를 보강했다.
 - 역할 분리된 Codex final authority 재검토에서 관련 9 files / 77 tests, lint, typecheck, source-of-truth/workpack/workflow-v2/authority/closeout/automation-spec validator와 `git diff --check`를 통과했다. generic `집밥`, 기존 사용자 데이터, exact legacy notification mapping, quest `첫 요리 완료하기`는 보존됐다.
-- authority verdict는 `pass`, blocker/major/minor는 `0 / 0 / 0`이며 Design Status를 `confirmed`로 전환한다. Stage 6, Draft 해제, Ready 전환, CI merge gate, roadmap `merged`, merge 완료는 아직 남아 있다.
+- authority verdict는 `pass`, blocker/major/minor는 `0 / 0 / 0`이며 Design Status를 `confirmed`로 전환했다. Draft 해제와 Ready 전환 뒤 PR #988의 검토 head `59deb209a830fccfd00d7483acc170de08a65888`에서 full-regression을 포함한 started checks가 모두 green이었다.
+
+## Stage 6 / Internal 6.5 Closeout Evidence `2026-07-13`
+
+- 독립 Stage 6 Codex review는 PR #988 전체 diff, 관련 구현·테스트, 5개 UI 상태, API/DB/auth/return-to-action 경계, exploratory QA/eval, HOME/final authority, 보안·성능·디자인 영향, Lore commit과 current-head check를 재검토해 `APPROVE`, actionable finding `0`으로 판정했다.
+- 성능 집중 검토: `needs:performance-review` 라벨 기준 새 fetch, dependency, client boundary, 렌더 루프, 이미지 runtime asset이 없고 Lighthouse check가 green이다.
+- canonical closeout owner는 `.workflow-v2/work-items/service-brand-rebrand.json#closeout`이며 roadmap/status/acceptance/automation-spec/PR body projection을 `merged / dual_approved / passed`에 맞췄다.
+- Manual Only는 사용자 최종 copy/taste, 배포 preview metadata/OpenGraph/social preview, 운영 DB 기존 nickname/notification row read-only 표본 확인 3종이다. 자동화 불가 운영 확인이므로 merge blocker가 아니다.
+- PR #988의 실제 merge와 merge 후 `omo-report.md` 생성은 오케스트레이터의 별도 단계로 남긴다.

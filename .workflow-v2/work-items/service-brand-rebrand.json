@@ -81,14 +81,86 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": ".artifacts/qa/service-brand-rebrand/stage4/eval-result.json",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/HOME-service-brand-rebrand-authority.md"
+      ],
+      "actual_verification_refs": [
+        "docs PR #985",
+        "backend PR #987",
+        "frontend PR #988 reviewed head 59deb209a830fccfd00d7483acc170de08a65888",
+        "PR #988 current-head started checks including full-regression and Lighthouse green",
+        "Stage 6 independent Codex review: approve, actionable findings 0",
+        ".artifacts/qa/service-brand-rebrand/stage4/exploratory-report.json",
+        ".artifacts/qa/service-brand-rebrand/stage4/eval-result.json",
+        "ui/designs/evidence/service-brand-rebrand/visual-verdict.json",
+        "ui/designs/authority/HOME-service-brand-rebrand-authority.md",
+        "pnpm vitest run related 9 files",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:closeout-sync",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:exploratory-qa-evidence",
+        "pnpm validate:authority-evidence-presence",
+        "pnpm validate:real-smoke-presence",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack",
+        "git diff --check"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "59deb209a830fccfd00d7483acc170de08a65888",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": true,
+      "stale_lock_count": 0,
+      "ci_resync_count": 3,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-13T01:32:06Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage6_closeout_projection_sync",
+      "evidence_sources": [
+        "GitHub PR #988 and current-head checks",
+        "Stage 6 independent Codex review",
+        "ui/designs/authority/HOME-service-brand-rebrand-authority.md",
+        ".artifacts/qa/service-brand-rebrand/stage4"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-13T01:32:06Z",
+      "status_synced_at": "2026-07-13T01:32:06Z",
+      "pr_body_synced_at": "2026-07-13T01:32:06Z"
+    }
   },
   "out_of_scope": [
     "New English service brand, dependency, font, token, image logo, or mascot",

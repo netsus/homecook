@@ -96,3 +96,10 @@
 - 사용자 최종 브랜드 copy/taste 확인
 - 배포 preview의 실제 metadata/OpenGraph/social preview 확인
 - 운영 DB의 기존 nickname/notification row가 rewrite되지 않았다는 read-only 표본 확인
+
+## Stage 6 Closeout `2026-07-13`
+
+- PR #988 검토 head `59deb209a830fccfd00d7483acc170de08a65888`: 독립 Codex `APPROVE`, actionable finding 0.
+- full-regression과 Lighthouse를 포함한 current-head started checks: all green.
+- Design Status `confirmed`, final authority `pass`, blocker/major/minor `0 / 0 / 0`.
+- 위 Manual Only 3종은 자동화 불가 운영 확인이며 merge를 막지 않는다.
