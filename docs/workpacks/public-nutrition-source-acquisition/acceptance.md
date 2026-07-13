@@ -134,9 +134,11 @@ Stage 1 작성자는 아래 판정을 직접 approve하지 않는다. 별도 Cod
 
 ### Manual Only
 
-- [ ] 공공데이터포털 계정 생성과 MFDS `15127578` 활용신청 승인 상태
-- [ ] 실제 operator secret을 사용한 MFDS 최소 live page smoke와 현재 provider schema/traffic 확인
+- [x] 공공데이터포털 계정 생성과 MFDS `15127578` 활용신청 승인 상태 — 2026-07-14 실제 승인 key 호출의 HTTP 200 / provider result `00`으로 확인
+- [x] 실제 operator secret을 사용한 MFDS 최소 live page smoke와 현재 provider schema/traffic 확인 — 2026-07-14 page 1 / size 1, direct top-level envelope, item 1건, total 302629, 핵심 필드 존재, production parser 통과, secret/auth query 보존 0, production DB write 0
 - [x] RDA 10.4 Excel/검색의 현재 version·공공누리 제1유형 출처 evidence 확인 — 2026-07-13 검색 페이지(`10.4(2026)`)와 개요 페이지(DB Excel/KOGL1)의 각 공식 URL·조회일 보존
 - [x] 양념 계량표의 공공누리 표시 여부/저작권정책에 따른 제한 이용 disposition 사람 검수 — 2026-07-13 사용자 승인으로 숫자 사실 6개만 내부 evidence에 제한 사용, 원문 복제·재배포 금지
 
 > 양념 수동 검수 완료는 이용허락 확정이나 row/profile 승격이 아니다. 공식 저작권정책의 사전 협의 경계를 유지하며 evidence row는 `needs_source_check` / `human_review_required`로 남고, 대표 profile assignment와 production promotion은 다음 slice의 별도 검수 대상이다.
+>
+> MFDS Manual Only 완료는 page 1 / size 1의 transport/schema smoke에 한정된다. exact full pagination, full-batch row accounting, approved promotion, source row 승인 또는 production 적재는 실행하거나 완료로 주장하지 않는다.

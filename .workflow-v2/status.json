@@ -1903,7 +1903,7 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/be-public-nutrition-source-acquisition",
       "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
+      "approval_state": "not_started",
       "verification_status": "passed",
       "required_checks": [
         "pnpm exec vitest run tests/public-nutrition-source-acquisition.test.ts tests/public-nutrition-source-cli.test.ts tests/public-nutrition-license-boundary.test.ts",
@@ -1915,10 +1915,10 @@
         "git diff --check"
       ],
       "pr_path": "https://github.com/netsus/homecook/pull/995",
-      "notes": "Independent Codex Stage 3 reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad approved reviewed head f191072d9c0c4870f1bcbc2a850815bc42d40d26 with STAGE3_APPROVED_MANUAL_GATES_OPEN and important findings 0. The RDA search page separately verified version 10.4(2026), the overview page verified DB Excel/KOGL1, and the user-approved six-fact-only seasoning disposition was manually verified on 2026-07-13; this is not a license-clearance, row promotion, or profile assignment approval, so needs_source_check/human_review_required remains. MFDS application and actual-secret live smoke remain open; PR #995 stays Draft and auto-merge is disabled. closeout_phase=projecting closeout_recovery=manual_patch:1|manual_handoff closeout_repair=codex:2|claude:0|manual_decision:1|human_escalation:0|post_merge_stale:0|sources:independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad,official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs,GitHub PR #995 reviewed-head checks,docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition last_recovery_at=2026-07-13T14:42:32Z",
-      "evaluation_status": "passed",
-      "evaluation_round": 3,
-      "last_evaluator_result": "STAGE3_APPROVED_MANUAL_GATES_OPEN at f191072d9c0c4870f1bcbc2a850815bc42d40d26",
+      "notes": "Historical Stage 3 approval applies only to reviewed head f191072d9c0c4870f1bcbc2a850815bc42d40d26. Stage 2 follow-up head f6596817d5cc9f2c35ab1b4833082e82623af5f9 fixes the actual MFDS direct envelope and requires a new independent Stage 3 review. The 2026-07-14 account/application and actual operator-secret page 1 / size 1 smoke passed with HTTP 200, provider result 00, direct envelope, one item, reported total 302629, core fields present, parser accepted, retained secret/auth query 0, and production DB writes 0; full pagination/promotion was not run. PR #995 remains Draft. closeout_phase=projecting closeout_recovery=manual_patch:2|manual_handoff closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad,official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs,GitHub PR #995 reviewed-head checks,docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition,TDD regression and production MFDS page 1 / size 1 operator smoke on 2026-07-14 last_recovery_at=2026-07-13T15:32:52Z",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     }

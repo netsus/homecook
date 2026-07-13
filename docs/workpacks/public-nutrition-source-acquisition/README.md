@@ -70,8 +70,8 @@
 
 ## API Key / Use Application Checklist
 
-- [ ] 공공데이터포털 계정을 준비한다.
-- [ ] 식약처 `식품영양성분DB정보` OpenAPI `15127578` 개발계정 활용신청을 완료한다.
+- [x] 공공데이터포털 계정을 준비한다. — 2026-07-14 실제 승인 key의 MFDS live 응답으로 계정 사용 가능 상태를 확인했다.
+- [x] 식약처 `식품영양성분DB정보` OpenAPI `15127578` 개발계정 활용신청을 완료한다. — 2026-07-14 실제 호출이 HTTP 200 / provider result `00`을 반환했다.
 - [ ] 발급 key는 server/operator secret `DATA_GO_KR_API_KEY` 하나에만 저장한다.
 - [ ] 실제 key는 문서, repository, client/browser bundle, test fixture/snapshot, log, error, response, manifest, persisted query string에 넣지 않는다.
 - [ ] provider가 `serviceKey` query parameter를 요구하면 send boundary에서만 주입하고, 기록되는 URL/query에서는 인증 parameter를 제거하거나 `[REDACTED]`로 바꾼다.
@@ -247,9 +247,9 @@
 
 ### External/manual smoke
 
-- MFDS live smoke는 활용신청과 server-only key가 준비된 operator 환경에서만 최소 page로 실행한다.
+- MFDS live smoke는 활용신청과 server-only key가 준비된 operator 환경에서만 최소 page로 실행한다. 2026-07-14 page 1 / size 1 호출에서 HTTP 200, provider result `00`, direct top-level envelope, item 1건, total 302629, 핵심 필드 존재, production parser 통과를 확인했다.
 - RDA 10.4 source version/공공누리 제1유형 evidence와 양념 계량표의 이용조건 disposition은 별도 수동 검수 기록으로 남긴다.
-- live smoke는 다섯 row-accounting count와 approved count, key 노출 0, production DB write 0을 확인한다. 실제 key 값 자체는 evidence에 기록하지 않는다.
+- 이번 Manual Only 최소 live page smoke는 transport와 현재 provider envelope/schema만 확인한다. exact full pagination CLI와 full-batch 다섯 row-accounting/approved count는 실행하거나 통과로 주장하지 않으며, 실제 key·raw payload·raw row·인증 query는 evidence에 기록하지 않는다. production DB write는 0이다.
 - real DB smoke/seed/reset: N/A. 이 slice는 DB를 읽거나 쓰지 않으며, DB table 준비는 다음 slice의 blocker다.
 
 ### Manual evidence disposition — 2026-07-13
@@ -258,7 +258,7 @@
 - RDA 이용조건: 별도 [국가표준식품성분 DB 개요](https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562) 페이지에서 매년 갱신되는 DB Excel과 공공누리 제1유형(출처표시) 안내를 확인했다. 두 확인은 RDA 10.4 file/search source의 version·이용조건 evidence로만 사용하며 각 공식 URL과 조회일 `2026-07-13`을 보존한다.
 - 양념 계량표: 국립식량과학원 [양념재료 계량표](https://www.nics.go.kr/food/kfi/hsMarinade/list_03)에서 `1T=15mL`와 간장 `17.7`, 식초 `15.3`, 된장 `18`, 고추장 `19`, 꿀 `24`, 참기름 `14.1 g/15mL`의 제한 사실 6개를 확인했다. [저작권정책](https://nics.go.kr/contents/page.do?contentsId=3&homepageSeCode=nics&m=100000165)은 공공누리 표시가 없는 자료의 이용에 사전 협의를 요구하므로 자유이용 또는 법률상 권리 확보로 단정하지 않는다.
 - 사용자 승인 정책 disposition: 위 숫자 사실 6개만 내부 검수 evidence로 제한 사용하고 source URL과 조회일 `2026-07-13`을 보존한다. 표·문구·행열 배치·이미지·전체 dataset은 복제·재배포하지 않는다. 이 결정은 이용허락 확정, 대표 profile assignment 또는 production promotion 승인이 아니며, evidence row의 `review_result=needs_source_check`와 `license_disposition=human_review_required` 계약 및 다음 slice의 별도 검수를 유지한다.
-- 아직 열린 수동 gate는 공공데이터포털 계정/MFDS `15127578` 활용신청과 실제 `DATA_GO_KR_API_KEY`를 사용한 최소 live page smoke 2건이다.
+- 공공데이터포털 계정/MFDS `15127578` 활용신청과 실제 operator secret 최소 live page smoke 2건은 2026-07-14 닫혔다. 이 증거는 page 1 / size 1 transport/schema smoke에 한정되며 complete pagination, full-batch promotion, source row 승인 또는 production 적재를 증명하지 않는다.
 
 ### Blocker conditions
 

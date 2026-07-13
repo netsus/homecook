@@ -92,11 +92,11 @@
   },
   "status": {
     "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
+    "approval_state": "not_started",
     "verification_status": "passed",
-    "evaluation_status": "passed",
-    "evaluation_round": 3,
-    "last_evaluator_result": "STAGE3_APPROVED_MANUAL_GATES_OPEN at f191072d9c0c4870f1bcbc2a850815bc42d40d26",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -112,7 +112,7 @@
     },
     "verification_projection": {
       "required_checks": "passed",
-      "external_smokes": "pending",
+      "external_smokes": "passed",
       "authority_reports": [],
       "actual_verification_refs": [
         "Independent Codex Stage 3 reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad: STAGE3_APPROVED_MANUAL_GATES_OPEN at reviewed head f191072d9c0c4870f1bcbc2a850815bc42d40d26; important findings 0",
@@ -124,40 +124,43 @@
         "pnpm exec vitest run tests/public-nutrition-source-acquisition.test.ts tests/public-nutrition-source-cli.test.ts tests/public-nutrition-license-boundary.test.ts (67 passed)",
         "pnpm verify:backend (107 files / 1406 tests, build, security E2E 12 passed)",
         "pnpm test (272 files / 2840 tests passed)",
-        "PR #995 reviewed-head CI: 13 success, 2 expected skipped"
+        "PR #995 reviewed-head CI: 13 success, 2 expected skipped",
+        "2026-07-14 TDD live-envelope fix at f6596817d5cc9f2c35ab1b4833082e82623af5f9: direct top-level envelope and ambiguous dual-envelope RED reproduced, then 69 targeted tests and pnpm verify:backend passed",
+        "2026-07-14 MFDS 15127578 actual operator-secret page 1 / size 1 smoke: HTTP 200, provider result 00, direct top-level envelope, item count 1, reported total 302629, core fields present, production parser accepted, raw payload/row/secret/auth query not retained, production DB writes 0; complete pagination and promotion not claimed"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "f191072d9c0c4870f1bcbc2a850815bc42d40d26",
-      "approval_state": "codex_approved",
-      "all_checks_green": true
+      "current_head_sha": "f6596817d5cc9f2c35ab1b4833082e82623af5f9",
+      "approval_state": "not_started",
+      "all_checks_green": false
     },
     "recovery_summary": {
-      "manual_patch_count": 1,
+      "manual_patch_count": 2,
       "manual_handoff": true,
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": "2026-07-13T14:42:32Z"
+      "last_recovery_at": "2026-07-13T15:32:52Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 2,
+      "codex_repairable_count": 3,
       "claude_repairable_count": 0,
-      "manual_decision_required_count": 1,
+      "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": "stage3_approved_manual_gates_open",
+      "latest_reason_code": "live_envelope_fix_ready_for_independent_review",
       "evidence_sources": [
         "independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad",
         "official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs",
         "GitHub PR #995 reviewed-head checks",
-        "docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition"
+        "docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition",
+        "TDD regression and production MFDS page 1 / size 1 operator smoke on 2026-07-14"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-07-13T14:42:32Z",
-      "status_synced_at": "2026-07-13T14:42:32Z",
-      "pr_body_synced_at": "2026-07-13T14:42:32Z"
+      "docs_synced_at": "2026-07-13T15:32:52Z",
+      "status_synced_at": "2026-07-13T15:32:52Z",
+      "pr_body_synced_at": "2026-07-13T15:32:52Z"
     }
   },
   "pr_path": "https://github.com/netsus/homecook/pull/995",
@@ -173,5 +176,5 @@
     "RDA 15143598 10.0 KOGL4 OpenAPI as a default normalization source"
   ],
   "open_questions": [],
-  "notes": "Independent Codex Stage 3 reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad approved reviewed head f191072d9c0c4870f1bcbc2a850815bc42d40d26 with STAGE3_APPROVED_MANUAL_GATES_OPEN and important findings 0. The RDA search page separately verified version 10.4(2026), the overview page verified DB Excel/KOGL1, and the user-approved six-fact-only seasoning disposition was manually verified on 2026-07-13; this is not a license-clearance, row promotion, or profile assignment approval, so needs_source_check/human_review_required remains. MFDS application and actual-secret live smoke remain open; PR #995 stays Draft and auto-merge is disabled. closeout_phase=projecting closeout_recovery=manual_patch:1|manual_handoff closeout_repair=codex:2|claude:0|manual_decision:1|human_escalation:0|post_merge_stale:0|sources:independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad,official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs,GitHub PR #995 reviewed-head checks,docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition last_recovery_at=2026-07-13T14:42:32Z"
+  "notes": "Historical Stage 3 approval remains evidence for reviewed head f191072d9c0c4870f1bcbc2a850815bc42d40d26 only. Stage 2 follow-up head f6596817d5cc9f2c35ab1b4833082e82623af5f9 fixes the actual MFDS direct envelope with TDD and must receive a new independent Stage 3 review. On 2026-07-14 the account/application and actual operator-secret page 1 / size 1 smoke passed with HTTP 200, provider result 00, one item, reported total 302629, core fields present, parser accepted, secret/auth query retained 0, and production DB writes 0. Full pagination, promotion, row approval, and production load were not run or claimed. PR #995 stays Draft and auto-merge is disabled. closeout_phase=projecting closeout_recovery=manual_patch:2|manual_handoff closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:historical independent Stage 3 review,RDA manual evidence,TDD regression,MFDS minimal live page smoke last_recovery_at=2026-07-13T15:32:52Z"
 }
