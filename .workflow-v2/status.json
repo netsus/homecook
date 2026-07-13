@@ -1915,10 +1915,10 @@
         "git diff --check"
       ],
       "pr_path": "https://github.com/netsus/homecook/pull/995",
-      "notes": "Independent Stage 3 returned STAGE3_CHANGES_REQUIRED at a093dcc959a642f421ea50a4f2f246401a1f47f4. Review fixes are implemented at 0798c0ef5b8c46ad1a9b8172832d3603bbe7dce1 with local targeted, backend, and full quality verification passing. Four Manual Only gates remain open, PR #995 remains Draft, and a fresh independent Codex Stage 3 review is required; this owner records no Stage 3 approval.",
+      "notes": "Fresh independent Stage 3 returned STAGE3_CHANGES_REQUIRED at 824ecda2c8a728f6f7efc82c5ded4a8344472d3c. Review round 2 fixes are implemented at 912b5996f243f32bc9a728cb8a63171f6ac70d26 with 67 targeted tests, verify:backend, the full 2840-test suite, all validators, and deterministic /tmp CLI evidence passing. The affected Acceptance 4 and Delivery 2 items are rechecked from this evidence. Four Manual Only gates remain open, PR #995 remains Draft, a fresh independent Stage 3 review is required, and this owner records no Stage 3 approval.",
       "evaluation_status": "fixable",
-      "evaluation_round": 1,
-      "last_evaluator_result": "STAGE3_CHANGES_REQUIRED at a093dcc959a642f421ea50a4f2f246401a1f47f4",
+      "evaluation_round": 2,
+      "last_evaluator_result": "STAGE3_CHANGES_REQUIRED at 824ecda2c8a728f6f7efc82c5ded4a8344472d3c",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     }

@@ -95,8 +95,8 @@
     "approval_state": "codex_approved",
     "verification_status": "passed",
     "evaluation_status": "fixable",
-    "evaluation_round": 1,
-    "last_evaluator_result": "STAGE3_CHANGES_REQUIRED at a093dcc959a642f421ea50a4f2f246401a1f47f4",
+    "evaluation_round": 2,
+    "last_evaluator_result": "STAGE3_CHANGES_REQUIRED at 824ecda2c8a728f6f7efc82c5ded4a8344472d3c",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -113,5 +113,5 @@
     "RDA 15143598 10.0 KOGL4 OpenAPI as a default normalization source"
   ],
   "open_questions": [],
-  "notes": "Independent Stage 3 returned STAGE3_CHANGES_REQUIRED at a093dcc959a642f421ea50a4f2f246401a1f47f4. Review fixes are implemented on feature/be-public-nutrition-source-acquisition at implementation commit 0798c0ef5b8c46ad1a9b8172832d3603bbe7dce1: whole-bundle secret scanning, exact six-fact RDA validation, atomic no-clobber publication, versioned failure lifecycle, MFDS request-query pinning, encoded-key handling, and transitive client isolation. Targeted tests, verify:backend, and full quality tests pass locally. Four Manual Only gates remain open, PR #995 stays Draft, and a fresh independent Codex Stage 3 review is required; this owner records no Stage 3 approval."
+  "notes": "Fresh independent Stage 3 returned STAGE3_CHANGES_REQUIRED at 824ecda2c8a728f6f7efc82c5ded4a8344472d3c. Review round 2 fixes are implemented at 912b5996f243f32bc9a728cb8a63171f6ac70d26: all-mode runtime-secret equivalence scanning, TypeScript-AST client import graphs, page-by-page MFDS fail-fast validation, and sanitized versioned failure context. The affected Acceptance 4 and Delivery 2 items are rechecked only after 67 targeted tests, verify:backend, the full 2840-test suite, all validators, and deterministic /tmp CLI evidence passed. Four Manual Only gates remain open, PR #995 stays Draft, a fresh independent Stage 3 review is required, and this owner records no Stage 3 approval."
 }
