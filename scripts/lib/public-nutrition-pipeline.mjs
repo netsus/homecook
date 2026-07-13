@@ -6,6 +6,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_ATTEMPTS = 4;
 const BACKOFF_MS = [1_000, 2_000, 4_000];
 const MAX_RETRY_AFTER_MS = 30_000;
+const MAX_PAGES = 100_000;
 const INPUT_SHAPES = new Set(["adapted-row-v1", "mfds-provider-v1"]);
 const AUTH_QUERY_KEYS = new Set([
   "servicekey",
@@ -220,7 +221,7 @@ function externalItemKey(item) {
   return null;
 }
 
-function validatePages(inputPages) {
+function validatePages(inputPages, { allowIncomplete = false } = {}) {
   if (!Array.isArray(inputPages) || inputPages.length === 0) {
     throw new NutritionPipelineError("PAGINATION_SCHEMA_INVALID");
   }
@@ -280,7 +281,7 @@ function validatePages(inputPages) {
     });
   }
 
-  if (accumulated !== reportedTotal) {
+  if (!allowIncomplete && accumulated !== reportedTotal) {
     throw new NutritionPipelineError("PAGINATION_INCOMPLETE", {
       reported_total: reportedTotal,
       accumulated,
@@ -1113,10 +1114,34 @@ function parseMfdsPage(payload, expectedPageNo) {
   };
 }
 
+function mfdsFailureContext(pages, requestedPageNo, pageSize) {
+  return {
+    received_page_count: pages.length,
+    received_page_range: pages.length > 0
+      ? { start: pages[0].page_no, end: pages.at(-1).page_no }
+      : null,
+    requested_page_no: requestedPageNo,
+    source_id: SOURCE_REGISTRY["mfds-15127578"].id,
+    source_url: sanitizeUrl(SOURCE_REGISTRY["mfds-15127578"].request_endpoint),
+    query: sanitizeQuery({ pageNo: requestedPageNo, numOfRows: pageSize, type: "json" }),
+  };
+}
+
+function throwMfdsFailureWithContext(error, pages, requestedPageNo, pageSize) {
+  if (error instanceof NutritionPipelineError) {
+    throw new NutritionPipelineError(error.code, {
+      ...error.details,
+      ...mfdsFailureContext(pages, requestedPageNo, pageSize),
+    });
+  }
+  throw error;
+}
+
 export async function fetchMfdsBatch({
   apiKey,
   fetchedAt,
   pageSize = 100,
+  maxPages = MAX_PAGES,
   fetchImpl = globalThis.fetch,
   sleep,
   now,
@@ -1125,24 +1150,47 @@ export async function fetchMfdsBatch({
   if (typeof apiKey !== "string" || apiKey.length === 0) {
     throw new NutritionPipelineError("MISSING_API_KEY", { env: "DATA_GO_KR_API_KEY" });
   }
+  if (!Number.isInteger(maxPages) || maxPages < 1) {
+    throw new NutritionPipelineError("PAGINATION_SCHEMA_INVALID", {
+      ...mfdsFailureContext([], 1, pageSize),
+      max_pages: maxPages,
+    });
+  }
   const pages = [];
   let accumulated = 0;
   let total = null;
-  for (let pageNo = 1; pageNo <= 100_000; pageNo += 1) {
-    const payload = await requestJsonWithRetry({
-      endpoint: SOURCE_REGISTRY["mfds-15127578"].request_endpoint,
-      query: { pageNo, numOfRows: pageSize, type: "json" },
-      apiKey,
-      fetchImpl,
-      sleep,
-      now,
-      createTimeoutSignal,
-    });
-    const page = parseMfdsPage(payload, pageNo);
+  let complete = false;
+  for (let pageNo = 1; pageNo <= maxPages; pageNo += 1) {
+    let page;
+    try {
+      const payload = await requestJsonWithRetry({
+        endpoint: SOURCE_REGISTRY["mfds-15127578"].request_endpoint,
+        query: { pageNo, numOfRows: pageSize, type: "json" },
+        apiKey,
+        fetchImpl,
+        sleep,
+        now,
+        createTimeoutSignal,
+      });
+      page = parseMfdsPage(payload, pageNo);
+      const pagination = validatePages([...pages, page], { allowIncomplete: true });
+      accumulated = pagination.accumulated;
+      total = pagination.reportedTotal;
+    } catch (error) {
+      throwMfdsFailureWithContext(error, pages, pageNo, pageSize);
+    }
     pages.push(page);
-    if (total === null) total = page.total_count;
-    accumulated += page.items.length;
-    if (accumulated >= total) break;
+    if (accumulated === total) {
+      complete = true;
+      break;
+    }
+  }
+  if (!complete) {
+    throw new NutritionPipelineError("PAGINATION_INCOMPLETE", {
+      reported_total: total,
+      accumulated,
+      ...mfdsFailureContext(pages, maxPages + 1, pageSize),
+    });
   }
   return buildRawBatch({
     source: SOURCE_REGISTRY["mfds-15127578"].manifest_source,

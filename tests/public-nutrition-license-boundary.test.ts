@@ -180,4 +180,39 @@ describe("public nutrition source and license boundary", () => {
       expect.objectContaining({ code: "CLIENT_OPERATOR_IMPORT_FORBIDDEN" }),
     );
   });
+
+  it("rejects a semicolonless client directive and require chain through alias, index, export, and dynamic import", async () => {
+    const { assertNoClientNutritionImports } = await import(
+      pathToFileURL(join(process.cwd(), "scripts/lib/public-nutrition-client-boundary.mjs")).href
+    );
+    const root = mkdtempSync(join(tmpdir(), "nutrition-client-require-graph-"));
+    mkdirSync(join(root, "app"), { recursive: true });
+    mkdirSync(join(root, "lib"), { recursive: true });
+    mkdirSync(join(root, "scripts/lib"), { recursive: true });
+    writeFileSync(join(root, "app/client.tsx"), '"use client"\nconst barrel = require("@/lib")\nvoid barrel\n');
+    writeFileSync(join(root, "lib/index.ts"), 'export * from "./barrel"\n');
+    writeFileSync(join(root, "lib/barrel.ts"), 'void import("../scripts/lib/public-nutrition-pipeline.mjs")\n');
+    writeFileSync(join(root, "scripts/lib/public-nutrition-pipeline.mjs"), "export const leak = true;\n");
+
+    expect(() => assertNoClientNutritionImports(root)).toThrowError(
+      expect.objectContaining({ code: "CLIENT_OPERATOR_IMPORT_FORBIDDEN" }),
+    );
+  });
+
+  it("ignores import-like text inside client strings and comments", async () => {
+    const { assertNoClientNutritionImports } = await import(
+      pathToFileURL(join(process.cwd(), "scripts/lib/public-nutrition-client-boundary.mjs")).href
+    );
+    const root = mkdtempSync(join(tmpdir(), "nutrition-client-false-positive-"));
+    mkdirSync(join(root, "app"), { recursive: true });
+    writeFileSync(join(root, "app/client.tsx"), [
+      '"use client";',
+      'const example = \'require("../scripts/lib/public-nutrition-pipeline.mjs")\';',
+      '// import("../scripts/lib/public-nutrition-pipeline.mjs")',
+      'export const value = example;',
+      '',
+    ].join("\n"));
+
+    expect(() => assertNoClientNutritionImports(root)).not.toThrow();
+  });
 });

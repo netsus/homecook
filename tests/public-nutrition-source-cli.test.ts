@@ -22,6 +22,16 @@ const FAILURE_FIXTURE = JSON.parse(readFileSync(join(
   "tests/fixtures/public-nutrition-source/failure-scenarios.json",
 ), "utf8"));
 
+type MutableNutritionFixture = {
+  source: {
+    provider: string;
+    dataset: string;
+    endpoint_or_file_url: string;
+  };
+  query?: Record<string, unknown>;
+  pages: Array<{ items: Array<Record<string, unknown>> }>;
+};
+
 async function loadPipeline() {
   return import(PIPELINE_MODULE);
 }
@@ -334,6 +344,258 @@ describe("public nutrition source network and CLI", () => {
     expect(one.manifest.logical_batch_id).not.toBe(two.manifest.logical_batch_id);
   });
 
+  it("fails on an empty intermediate page before issuing another request", async () => {
+    const { fetchMfdsBatch } = await loadPipeline();
+    let calls = 0;
+
+    await expect(fetchMfdsBatch({
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchedAt: "2026-07-13T00:00:00.000Z",
+      fetchImpl: async () => {
+        calls += 1;
+        if (calls > 1) throw new TypeError("must not request another page");
+        return response({ response: {
+          header: { resultCode: "00" },
+          body: { pageNo: 1, totalCount: 1, items: [] },
+        } });
+      },
+      sleep: async () => undefined,
+      now: () => 0,
+      createTimeoutSignal: () => new AbortController().signal,
+    })).rejects.toMatchObject({ code: "PAGINATION_EMPTY_INTERMEDIATE" });
+    expect(calls).toBe(1);
+  });
+
+  it("preserves successful-page context when the next MFDS page has schema drift", async () => {
+    const { fetchMfdsBatch, SOURCE_REGISTRY } = await loadPipeline();
+    let calls = 0;
+    let caught: unknown;
+
+    try {
+      await fetchMfdsBatch({
+        apiKey: "<FAKE_TEST_KEY_ONLY>",
+        fetchedAt: "2026-07-13T00:00:00.000Z",
+        pageSize: 2,
+        fetchImpl: async () => {
+          calls += 1;
+          return calls === 1
+            ? response({ response: {
+              header: { resultCode: "00" },
+              body: { pageNo: 1, totalCount: 2, items: [{ FOOD_CD: "P1" }] },
+            } })
+            : response({ response: {
+              header: { resultCode: "00" },
+              body: { pageNo: 2, totalCount: 2 },
+            } });
+        },
+        sleep: async () => undefined,
+        now: () => 0,
+        createTimeoutSignal: () => new AbortController().signal,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toMatchObject({
+      code: "SCHEMA_DRIFT",
+      details: {
+        received_page_count: 1,
+        received_page_range: { start: 1, end: 1 },
+        requested_page_no: 2,
+        source_id: "mfds-15127578",
+        source_url: SOURCE_REGISTRY["mfds-15127578"].request_endpoint,
+        query: { pageNo: "2", numOfRows: "2", type: "json" },
+      },
+    });
+    expect(calls).toBe(2);
+    expect(JSON.stringify(caught)).not.toMatch(/serviceKey|apiKey|<FAKE_TEST_KEY_ONLY>/i);
+  });
+
+  it("persists live page context in a versioned failure bundle that cannot occupy the requested output", async () => {
+    const { fetchMfdsBatch } = await loadPipeline();
+    let calls = 0;
+    let caught: unknown;
+    try {
+      await fetchMfdsBatch({
+        apiKey: "<FAKE_TEST_KEY_ONLY>",
+        fetchedAt: "2026-07-13T00:00:00.000Z",
+        pageSize: 2,
+        fetchImpl: async () => {
+          calls += 1;
+          return calls === 1
+            ? response({ response: {
+              header: { resultCode: "00" },
+              body: { pageNo: 1, totalCount: 2, items: [{ FOOD_CD: "P1" }] },
+            } })
+            : response({ response: {
+              header: { resultCode: "00" },
+              body: { pageNo: 2, totalCount: 2 },
+            } });
+        },
+        sleep: async () => undefined,
+        now: () => 0,
+        createTimeoutSignal: () => new AbortController().signal,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    const failureModulePath = join(process.cwd(), "scripts/lib/public-nutrition-failure.mjs");
+    expect(existsSync(failureModulePath)).toBe(true);
+    const { persistNutritionFailure } = await import(pathToFileURL(failureModulePath).href);
+    const parent = mkdtempSync(join(tmpdir(), "nutrition-live-failure-context-"));
+    const requestedOutput = join(parent, "raw");
+    const failureDir = await persistNutritionFailure("fetch", {
+      "output-dir": requestedOutput,
+    }, caught, { secretValues: ["<FAKE_TEST_KEY_ONLY>"] });
+    const manifest = JSON.parse(readFileSync(join(failureDir, "failure-manifest.json"), "utf8"));
+
+    expect(existsSync(requestedOutput)).toBe(false);
+    expect(failureDir).toMatch(new RegExp(`${requestedOutput.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.failure-`));
+    expect(manifest).toMatchObject({
+      status: "failed",
+      reason_code: "SCHEMA_DRIFT",
+      received_context: {
+        received_page_count: 1,
+        received_page_range: { start: 1, end: 1 },
+        requested_page_no: 2,
+        query: { pageNo: "2", numOfRows: "2", type: "json" },
+      },
+    });
+    expect(JSON.stringify(manifest)).not.toMatch(/serviceKey|apiKey|<FAKE_TEST_KEY_ONLY>/i);
+  });
+
+  it("preserves successful-page context when the next MFDS page exhausts network retries", async () => {
+    const { fetchMfdsBatch } = await loadPipeline();
+    let calls = 0;
+    let caught: unknown;
+
+    try {
+      await fetchMfdsBatch({
+        apiKey: "<FAKE_TEST_KEY_ONLY>",
+        fetchedAt: "2026-07-13T00:00:00.000Z",
+        pageSize: 2,
+        fetchImpl: async () => {
+          calls += 1;
+          if (calls === 1) {
+            return response({ response: {
+              header: { resultCode: "00" },
+              body: { pageNo: 1, totalCount: 2, items: [{ FOOD_CD: "P1" }] },
+            } });
+          }
+          throw new TypeError("hidden network detail");
+        },
+        sleep: async () => undefined,
+        now: () => 0,
+        createTimeoutSignal: () => new AbortController().signal,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toMatchObject({
+      code: "RETRY_EXHAUSTED",
+      details: {
+        last_reason_code: "NETWORK_ERROR",
+        attempts: 4,
+        received_page_count: 1,
+        received_page_range: { start: 1, end: 1 },
+        requested_page_no: 2,
+        query: { pageNo: "2", numOfRows: "2", type: "json" },
+      },
+    });
+    expect(calls).toBe(5);
+    expect(JSON.stringify(caught)).not.toMatch(/serviceKey|apiKey|<FAKE_TEST_KEY_ONLY>/i);
+  });
+
+  it.each([
+    ["total drift", [
+      { pageNo: 1, totalCount: 2, items: [{ FOOD_CD: "P1" }] },
+      { pageNo: 2, totalCount: 3, items: [{ FOOD_CD: "P2" }] },
+    ], "PAGINATION_TOTAL_DRIFT", 2],
+    ["page sequence", [
+      { pageNo: 2, totalCount: 0, items: [] },
+    ], "PAGINATION_SCHEMA_INVALID", 1],
+    ["duplicate page", [
+      { pageNo: 1, totalCount: 2, items: [{ FOOD_CD: "SAME" }] },
+      { pageNo: 2, totalCount: 2, items: [{ FOOD_CD: "SAME" }] },
+    ], "PAGINATION_LOOP", 2],
+  ])("fails fast for live %s with sanitized page context", async (_name, bodies, code, failingPage) => {
+    const { fetchMfdsBatch } = await loadPipeline();
+    let calls = 0;
+    let caught: unknown;
+    try {
+      await fetchMfdsBatch({
+        apiKey: "<FAKE_TEST_KEY_ONLY>",
+        fetchedAt: "2026-07-13T00:00:00.000Z",
+        pageSize: 1,
+        fetchImpl: async () => {
+          const body = bodies[calls];
+          calls += 1;
+          return response({ response: { header: { resultCode: "00" }, body } });
+        },
+        sleep: async () => undefined,
+        now: () => 0,
+        createTimeoutSignal: () => new AbortController().signal,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toMatchObject({
+      code,
+      details: {
+        requested_page_no: failingPage,
+        source_id: "mfds-15127578",
+        query: { pageNo: String(failingPage), numOfRows: "1", type: "json" },
+      },
+    });
+    expect(calls).toBe(failingPage);
+    expect(JSON.stringify(caught)).not.toMatch(/serviceKey|apiKey|<FAKE_TEST_KEY_ONLY>/i);
+  });
+
+  it("allows a zero-total empty first page and fails explicitly when the page cap is incomplete", async () => {
+    const { fetchMfdsBatch } = await loadPipeline();
+    const empty = await fetchMfdsBatch({
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchedAt: "2026-07-13T00:00:00.000Z",
+      fetchImpl: async () => response({ response: {
+        header: { resultCode: "00" },
+        body: { pageNo: 1, totalCount: 0, items: [] },
+      } }),
+      sleep: async () => undefined,
+      now: () => 0,
+      createTimeoutSignal: () => new AbortController().signal,
+    });
+    expect(empty.manifest).toMatchObject({ provider_reported_total: 0, page_count: 1 });
+
+    let calls = 0;
+    await expect(fetchMfdsBatch({
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchedAt: "2026-07-13T00:00:00.000Z",
+      pageSize: 1,
+      maxPages: 2,
+      fetchImpl: async () => {
+        calls += 1;
+        return response({ response: {
+          header: { resultCode: "00" },
+          body: { pageNo: calls, totalCount: 3, items: [{ FOOD_CD: `P${calls}` }] },
+        } });
+      },
+      sleep: async () => undefined,
+      now: () => 0,
+      createTimeoutSignal: () => new AbortController().signal,
+    })).rejects.toMatchObject({
+      code: "PAGINATION_INCOMPLETE",
+      details: {
+        received_page_count: 2,
+        received_page_range: { start: 1, end: 2 },
+        requested_page_no: 3,
+      },
+    });
+    expect(calls).toBe(2);
+  });
+
   it.each([
     ["empty intermediate page", [
       { page_no: 1, total_count: 2, next_page_token: "next", items: [] },
@@ -503,6 +765,77 @@ describe("public nutrition source network and CLI", () => {
     expect(`${result.stdout}\n${result.stderr}\n${readTree(outputDir)}`).not.toMatch(
       /apiKey|access_token|FAKE_API_VALUE|FAKE_ACCESS_VALUE/i,
     );
+  });
+
+  it("rejects raw, decoded, encoded, and percent-escaped auth secrets in non-live artifacts", () => {
+    const secret = "REVIEW_FAKE_KEY_123+value=";
+    const encoded = encodeURIComponent(secret);
+    const doubleEncoded = encodeURIComponent(encoded);
+    const fixturePath = join(
+      process.cwd(),
+      "tests/fixtures/public-nutrition-source/mfds-source-sample.json",
+    );
+    const cases = [
+      ["provider raw", secret, (input: MutableNutritionFixture) => { input.source.provider = secret; }],
+      ["dataset encoded", secret, (input: MutableNutritionFixture) => { input.source.dataset = encoded; }],
+      ["decoded from encoded env", encoded, (input: MutableNutritionFixture) => { input.source.provider = secret; }],
+      ["source URL encoded", secret, (input: MutableNutritionFixture) => {
+        input.source.endpoint_or_file_url += `?note=${encoded}`;
+      }],
+      ["query encoded", secret, (input: MutableNutritionFixture) => { input.query = { note: encoded }; }],
+      ["nested row encoded", secret, (input: MutableNutritionFixture) => {
+        input.pages[0].items[0].nested = { token: doubleEncoded };
+      }],
+      ["percent-escaped auth marker", secret, (input: MutableNutritionFixture) => {
+        input.pages[0].items[0].note = `service%4Bey%3D${encoded}`;
+      }],
+    ] as const;
+
+    for (const [name, envSecret, mutate] of cases) {
+      const tempDir = mkdtempSync(join(tmpdir(), `nutrition-non-live-secret-${name.replaceAll(" ", "-")}-`));
+      const input = JSON.parse(readFileSync(fixturePath, "utf8")) as MutableNutritionFixture;
+      mutate(input);
+      const inputPath = join(tempDir, "input.json");
+      const outputDir = join(tempDir, "raw");
+      writeFileSync(inputPath, JSON.stringify(input));
+
+      const result = run("fetch", [
+        "--input", inputPath,
+        "--output-dir", outputDir,
+        "--fetched-at", "2026-07-13T00:00:00.000Z",
+      ], { DATA_GO_KR_API_KEY: envSecret });
+      expect(result.status, name).not.toBe(0);
+      expect(existsSync(outputDir), name).toBe(false);
+      const failureDir = failureBundlePath(result);
+      expect(`${result.stdout}\n${result.stderr}\n${readTree(failureDir)}`, name)
+        .not.toMatch(new RegExp([secret, encoded, doubleEncoded, "service%4Bey"].join("|"), "i"));
+    }
+  }, 20_000);
+
+  it("redacts encoded runtime secrets from non-live failure context and persisted failure bundles", () => {
+    const secret = "REVIEW_FAKE_KEY_123+value=";
+    const encoded = encodeURIComponent(secret);
+    const doubleEncoded = encodeURIComponent(encoded);
+    const tempDir = mkdtempSync(join(tmpdir(), "nutrition-failure-secret-equivalent-"));
+    const input = JSON.parse(readFileSync(join(
+      process.cwd(),
+      "tests/fixtures/public-nutrition-source/mfds-source-sample.json",
+    ), "utf8"));
+    input.query = { note: encoded };
+    input.pages = FAILURE_FIXTURE.partial_pages;
+    const inputPath = join(tempDir, "input.json");
+    const outputDir = join(tempDir, "failed");
+    writeFileSync(inputPath, JSON.stringify(input));
+
+    const result = run("fetch", [
+      "--input", inputPath,
+      "--output-dir", outputDir,
+      "--fetched-at", "2026-07-13T00:00:00.000Z",
+    ], { DATA_GO_KR_API_KEY: secret });
+    expect(result.status).not.toBe(0);
+    const failureDir = failureBundlePath(result);
+    expect(`${result.stdout}\n${result.stderr}\n${readTree(failureDir)}`)
+      .not.toMatch(new RegExp([secret, encoded, doubleEncoded].join("|"), "i"));
   });
 
   it("preflights every target so late collisions leave no consumable partial bundle", () => {

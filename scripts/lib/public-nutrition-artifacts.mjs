@@ -4,6 +4,51 @@ import path from "node:path";
 
 const AUTH_MARKER = /(?:serviceKey|apiKey|api_key|access_token|authorization)/i;
 
+function decodePercentEscapes(value) {
+  return value.replace(/(?:%[0-9a-f]{2})+/gi, (encoded) => {
+    try {
+      return decodeURIComponent(encoded);
+    } catch {
+      return encoded;
+    }
+  });
+}
+
+function textRepresentations(value) {
+  const values = new Set([String(value)]);
+  let decoded = String(value);
+  for (let depth = 0; depth < 3; depth += 1) {
+    const next = decodePercentEscapes(decoded);
+    values.add(next);
+    if (next === decoded) break;
+    decoded = next;
+  }
+  return [...values];
+}
+
+export function expandSecretValues(secretValues = []) {
+  const values = new Set();
+  for (const secret of secretValues) {
+    if (typeof secret !== "string" || secret.length === 0) continue;
+    for (const representation of textRepresentations(secret)) {
+      values.add(representation);
+      let encoded = representation;
+      for (let depth = 0; depth < 2; depth += 1) {
+        encoded = encodeURIComponent(encoded);
+        values.add(encoded);
+      }
+    }
+  }
+  return [...values].filter((value) => value.length > 0);
+}
+
+export function containsAuthLeak(content, { secretValues = [] } = {}) {
+  const secrets = expandSecretValues(secretValues);
+  return textRepresentations(content).some((text) =>
+    AUTH_MARKER.test(text) || secrets.some((secret) => text.includes(secret))
+  );
+}
+
 export class ArtifactPublishError extends Error {
   constructor(code, details = {}) {
     super(code);
@@ -15,11 +60,7 @@ export class ArtifactPublishError extends Error {
 
 export function assertArtifactSetSafe(files, { secretValues = [] } = {}) {
   for (const [name, content] of Object.entries(files)) {
-    const text = String(content);
-    if (
-      AUTH_MARKER.test(text) ||
-      secretValues.some((secret) => typeof secret === "string" && secret.length > 0 && text.includes(secret))
-    ) {
+    if (containsAuthLeak(content, { secretValues })) {
       throw new ArtifactPublishError("SECRET_EXPOSURE_DETECTED", { artifact: name });
     }
   }

@@ -1,8 +1,11 @@
-import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { publishArtifactBundle } from "./lib/public-nutrition-artifacts.mjs";
+import {
+  persistNutritionFailure,
+  sanitizeFailureDetails,
+} from "./lib/public-nutrition-failure.mjs";
 import {
   NutritionPipelineError,
   buildApprovedPinnedHandoff,
@@ -65,6 +68,10 @@ function successSummary(currentCommand, extra = {}) {
   };
 }
 
+function runtimeSecretValues() {
+  return [process.env.DATA_GO_KR_API_KEY ?? ""].filter(Boolean);
+}
+
 async function runFetch(args) {
   const outputDir = requireArg(args, "output-dir");
   const fetchedAt =
@@ -72,9 +79,9 @@ async function runFetch(args) {
       ? args["fetched-at"]
       : new Date().toISOString();
   let raw;
-  let apiKey = "";
+  const secretValues = runtimeSecretValues();
+  const apiKey = secretValues[0] ?? "";
   if (args.live) {
-    apiKey = process.env.DATA_GO_KR_API_KEY ?? "";
     raw = await fetchMfdsBatch({
       apiKey,
       fetchedAt,
@@ -95,7 +102,7 @@ async function runFetch(args) {
     "raw-snapshot.json": jsonText(raw.rawSnapshot),
     "manifest.json": jsonText(raw.manifest),
     "summary.json": jsonText(summary),
-  }, { secretValues: [apiKey] });
+  }, { secretValues });
   return summary;
 }
 
@@ -139,7 +146,7 @@ async function runNormalize(args) {
     "normalized-bundle.json": jsonText(normalized),
     "quarantine-report.json": jsonText(quarantineReport),
     "summary.json": jsonText(summary),
-  });
+  }, { secretValues: runtimeSecretValues() });
   return summary;
 }
 
@@ -181,7 +188,7 @@ async function runReview(args) {
     "reviewed-manifest.json": jsonText(reviewedManifest),
     "measurement-evidence.json": jsonText(review.measurement_evidence),
     "summary.json": jsonText(summary),
-  });
+  }, { secretValues: runtimeSecretValues() });
   return summary;
 }
 
@@ -209,73 +216,8 @@ async function runPromote(args) {
     "public-source-attribution.json": jsonText(handoff.public_attribution),
     "handoff-manifest.json": jsonText(handoff),
     "summary.json": jsonText(summary),
-  });
+  }, { secretValues: runtimeSecretValues() });
   return summary;
-}
-
-function safeFailureDetails(value, secretValues = []) {
-  if (Array.isArray(value)) return value.map((item) => safeFailureDetails(item, secretValues));
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value)
-      .filter(([key]) => !/(?:serviceKey|apiKey|api_key|access_token|authorization)/i.test(key))
-      .map(([key, item]) => [key, safeFailureDetails(item, secretValues)]));
-  }
-  if (typeof value !== "string") return value;
-  if (secretValues.some((secret) => secret && value.includes(secret))) return "[redacted]";
-  if (/(?:serviceKey|apiKey|api_key|access_token|authorization)/i.test(value)) return "[redacted]";
-  return value;
-}
-
-async function persistFailure(commandName, args, error) {
-  const requestedOutput = typeof args["output-dir"] === "string" ? args["output-dir"] : null;
-  if (requestedOutput === null) return null;
-  const secretValues = [process.env.DATA_GO_KR_API_KEY ?? ""].filter(Boolean);
-  const code = typeof error?.code === "string" ? error.code : "UNEXPECTED_ERROR";
-  const details = safeFailureDetails(error?.details ?? {}, secretValues);
-  let receivedContext = details;
-  if (typeof args["input-dir"] === "string") {
-    for (const manifestName of ["manifest.json", "source-manifest.json"]) {
-      try {
-        const manifest = await readJson(path.join(args["input-dir"], manifestName));
-        receivedContext = {
-          ...details,
-          logical_batch_id: manifest.logical_batch_id,
-          source_url: safeFailureDetails(manifest.endpoint_or_file_url, secretValues),
-          received_page_count: manifest.page_count,
-          raw_sha256: manifest.sha256,
-          adapter_schema_version: manifest.adapter_schema_version,
-        };
-        break;
-      } catch {
-        // The failure bundle remains valid even when the upstream manifest itself is unreadable.
-      }
-    }
-  }
-  const status = commandName === "fetch" || commandName === "promote" ? "failed" : "quarantined";
-  const failure = {
-    schema_version: "public-nutrition-failure-v1",
-    status,
-    lifecycle: [status],
-    command: commandName,
-    reason_code: code,
-    reason_counts: { [code]: 1 },
-    received_context: receivedContext,
-    production_db_writes: 0,
-  };
-  const summary = {
-    success: false,
-    command: commandName,
-    status,
-    error: { code },
-    reason_counts: failure.reason_counts,
-    production_db_writes: 0,
-  };
-  const failureOutput = `${requestedOutput}.failure-${randomUUID()}`;
-  await publishArtifactBundle(failureOutput, {
-    "failure-manifest.json": jsonText(failure),
-    "summary.json": jsonText(summary),
-  }, { secretValues });
-  return failureOutput;
 }
 
 const args = parseArgs(process.argv.slice(3));
@@ -295,11 +237,11 @@ async function main() {
 
 main().catch(async (error) => {
   const code = typeof error?.code === "string" ? error.code : "UNEXPECTED_ERROR";
-  const secretValues = [process.env.DATA_GO_KR_API_KEY ?? ""].filter(Boolean);
-  const details = safeFailureDetails(error?.details ?? {}, secretValues);
+  const secretValues = runtimeSecretValues();
+  const details = sanitizeFailureDetails(error?.details ?? {}, secretValues);
   let failureBundlePath = null;
   try {
-    failureBundlePath = await persistFailure(command, args, error);
+    failureBundlePath = await persistNutritionFailure(command, args, error, { secretValues });
   } catch {
     failureBundlePath = null;
   }
