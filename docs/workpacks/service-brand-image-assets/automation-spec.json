@@ -1,0 +1,96 @@
+{
+  "slice_id": "service-brand-image-assets",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-schema-migration-seed-or-write",
+      "existing-auth-envelope-and-state-contract-preserved"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": ["/", "/planner", "/pantry", "/mypage", "/about"],
+    "required_states": [
+      "home-symbol-with-two-level-name",
+      "non-home-symbol-with-short-name-only",
+      "mobile-320-no-overflow",
+      "accessible-name-no-duplicate",
+      "favicon-install-apple-icons",
+      "canonical-og-twitter-images",
+      "home-loading-empty-error-filter-active-preserved",
+      "desktop-nav-geometry-preserved"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/app-header.test.tsx tests/web-top-nav.test.tsx tests/static-social-metadata.test.ts tests/service-brand-image-assets.test.ts",
+      "pnpm exec playwright test tests/e2e/service-brand-image-assets.spec.ts",
+      "CI=1 pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-brand-image-assets",
+      "node scripts/validate-automation-spec.mjs --slice service-brand-image-assets",
+      "git diff --check"
+    ],
+    "playwright_projects": ["desktop-chrome", "mobile-chrome", "mobile-ios-small"],
+    "artifact_assertions": [
+      "official-docs-v1.7.15-v1.5.22",
+      "canonical-source-sha256",
+      "selected-export-only",
+      "home-and-non-home-header-boundary",
+      "favicon-install-apple-manifest",
+      "og-twitter-1200x630",
+      "mobile-390-320-desktop-1280-before-after",
+      "accessibility-geometry-audit",
+      "visual-verdict",
+      "home-authority-report",
+      "historical-evidence-preserved",
+      "no-api-db-dependency-identifier-change"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": ["HOME"],
+      "required_screens": ["HOME"],
+      "generator_required": false,
+      "generator_artifact": "ui/designs/HOME.md",
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/service-brand-image-assets/HOME-before-390.png",
+        "ui/designs/evidence/service-brand-image-assets/HOME-before-320.png",
+        "ui/designs/evidence/service-brand-image-assets/HOME-desktop-before-1280.png",
+        "ui/designs/evidence/service-brand-image-assets/HOME-after-390.png",
+        "ui/designs/evidence/service-brand-image-assets/HOME-after-320.png",
+        "ui/designs/evidence/service-brand-image-assets/HOME-desktop-after-1280.png",
+        "ui/designs/evidence/service-brand-image-assets/accessibility-geometry-audit.json",
+        "ui/designs/evidence/service-brand-image-assets/visual-verdict.json"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/HOME-service-brand-image-assets-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "implementation-started-before-docs-merge",
+    "author-self-approval",
+    "canonical-source-hash-mismatch",
+    "screenshot-or-unselected-variant-used",
+    "home-or-non-home-brand-boundary-regression",
+    "mobile-overflow-or-duplicate-accessible-name",
+    "metadata-or-manifest-missing-canonical-assets",
+    "desktop-nav-or-home-state-regression",
+    "historical-evidence-modified",
+    "api-db-dependency-or-identifier-change",
+    "authority-evidence-missing-or-blocked",
+    "current-head-ci-not-green"
+  ],
+  "max_fix_rounds": {"backend": 0, "frontend": 4},
+  "notes": "User-approved 2026-07-13 image brand asset follow-up. Canonical selected blue 무먹 symbol and generated favicon/install/Apple/OG/Twitter assets replace the prior text-only/no-image contract. HOME keeps the existing two-level name beside the symbol; non-HOME keeps short-name-only beside the symbol. API/DB/dependency/technical identifiers and historical evidence remain unchanged."
+}
