@@ -486,6 +486,49 @@ describe("public nutrition source acquisition core", () => {
     }))).toBe("PROMOTION_BLOCKED");
   });
 
+  it("requires the reviewed fingerprint set to exactly match normalized rows", async () => {
+    const {
+      buildApprovedPinnedHandoff,
+      buildNutritionReview,
+      buildRawBatch,
+      normalizeNutritionBatch,
+      sha256,
+    } = await loadPipeline();
+    const input = fixture("mfds-source-sample.json");
+    const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    const normalized = normalizeNutritionBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "nutrition-source-row-v1",
+    });
+    const review = buildNutritionReview({
+      normalizedBundle: normalized,
+      decisions: normalized.rows.map((row: { fingerprint: string }) => ({
+        fingerprint: row.fingerprint,
+        status: "approved",
+      })),
+    });
+    const tampered = structuredClone(review);
+    tampered.reviewed_rows = [
+      { fingerprint: normalized.rows[0].fingerprint, status: "approved" },
+      { fingerprint: "f".repeat(64), status: "approved" },
+    ];
+    tampered.approved_fingerprints = tampered.reviewed_rows
+      .map((row: { fingerprint: string }) => row.fingerprint)
+      .sort();
+    const reviewBase = Object.fromEntries(
+      Object.entries(tampered).filter(([key]) => key !== "review_checksum"),
+    );
+    tampered.review_checksum = sha256(reviewBase);
+
+    expect(errorCode(() => buildApprovedPinnedHandoff({
+      manifest: raw.manifest,
+      normalizedBundle: normalized,
+      reviewReport: tampered,
+      measurementEvidence: [],
+    }))).toBe("PROMOTION_BLOCKED");
+  });
+
   it("excludes fetched_at from content identity and scopes fingerprints by source", async () => {
     const { buildRawBatch, normalizeNutritionBatch } = await loadPipeline();
     const input = fixture("mfds-source-sample.json");

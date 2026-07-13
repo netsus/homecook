@@ -893,13 +893,20 @@ export function buildApprovedPinnedHandoff({
   if (reviewReport.review_checksum !== sha256(reviewBase)) {
     throw new NutritionPipelineError("REVIEW_CHECKSUM_MISMATCH");
   }
+  const reviewedFingerprints = Array.isArray(reviewReport.reviewed_rows)
+    ? reviewReport.reviewed_rows.map((row) => row.fingerprint).toSorted()
+    : [];
+  const normalizedFingerprints = normalizedBundle.rows
+    .map((row) => row.fingerprint)
+    .toSorted();
   if (
     !Array.isArray(reviewReport.reviewed_rows) ||
     !Array.isArray(reviewReport.approved_fingerprints) ||
     reviewReport.reviewed_rows.length !== normalizedBundle.rows.length ||
     reviewReport.reviewed_rows.some((row) => row.status !== "approved") ||
     canonicalStringify(reviewReport.approved_fingerprints.toSorted()) !==
-      canonicalStringify(reviewReport.reviewed_rows.map((row) => row.fingerprint).toSorted())
+      canonicalStringify(reviewedFingerprints) ||
+    canonicalStringify(reviewedFingerprints) !== canonicalStringify(normalizedFingerprints)
   ) {
     throw new NutritionPipelineError("PROMOTION_BLOCKED");
   }
