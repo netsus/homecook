@@ -82,14 +82,88 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
-    "approval_state": "codex_approved",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": ".artifacts/qa/service-brand-home-lockup/2026-07-13T07-51-24-163Z/eval-result.json",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/HOME-service-brand-home-lockup-authority.md"
+      ],
+      "actual_verification_refs": [
+        "docs PR #990",
+        "frontend PR #991 reviewed implementation head 066ee6c5105586dd2233cb9536713c85964f0257",
+        "PR #991 Ready current-head run 29240116832 including full-regression and Lighthouse green",
+        "independent Codex final authority: approve, blocker/major/minor 0/0/0",
+        "independent Codex Stage 6 re-review: approve, actionable findings 0",
+        ".artifacts/qa/service-brand-home-lockup/2026-07-13T07-51-24-163Z/exploratory-report.json",
+        ".artifacts/qa/service-brand-home-lockup/2026-07-13T07-51-24-163Z/eval-result.json",
+        "ui/designs/evidence/service-brand-home-lockup/visual-verdict.json",
+        "ui/designs/authority/HOME-service-brand-home-lockup-authority.md",
+        "pnpm test:product",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm build",
+        "pnpm validate:closeout-sync",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:exploratory-qa-evidence",
+        "pnpm validate:authority-evidence-presence",
+        "pnpm validate:real-smoke-presence",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice service-brand-home-lockup",
+        "node scripts/validate-automation-spec.mjs --slice service-brand-home-lockup",
+        "git diff --check"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "066ee6c5105586dd2233cb9536713c85964f0257",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": true,
+      "stale_lock_count": 0,
+      "ci_resync_count": 4,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-13T10:00:37Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 6,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage6_closeout_projection_sync",
+      "evidence_sources": [
+        "GitHub PR #991 and current-head checks",
+        "independent Codex final authority and Stage 6 re-review",
+        "ui/designs/authority/HOME-service-brand-home-lockup-authority.md",
+        ".artifacts/qa/service-brand-home-lockup/2026-07-13T07-51-24-163Z"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-13T10:00:37Z",
+      "status_synced_at": "2026-07-13T10:00:37Z",
+      "pr_body_synced_at": "2026-07-13T10:00:37Z"
+    }
   },
   "out_of_scope": [
     "Full-name supporting line on non-HOME AppBar, WebTopNav, wordmark, or narrow navigation",
@@ -101,5 +175,5 @@
     "Technical identifier, user content, generic noun 집밥, historical official version, prototype, or evidence edits"
   ],
   "open_questions": [],
-  "notes": "Stage 1 contract merged through docs PR #990. Stage 4 HOME-only implementation, immutable before evidence, 390/320/1280 audit, exploratory QA, and visual harness stabilization are complete on feature/fe-service-brand-home-lockup. Independent Codex final authority approved with blocker/major/minor 0/0/0, and Stage 6 independent code re-review approved after all required findings were repaired. Local product, build, smoke, accessibility, Darwin/Linux visual, and validator gates passed; current-head PR CI is pending. Stage 2/3 are skipped."
+  "notes": "Stage 1 contract merged through docs PR #990. Stage 4 HOME-only implementation, immutable before evidence, 390/320/1280 audit, exploratory QA, and visual harness stabilization are complete on feature/fe-service-brand-home-lockup. Independent Codex final authority approved with blocker/major/minor 0/0/0, and Stage 6 independent code re-review approved after all required findings were repaired. Local product, build, smoke, accessibility, Darwin/Linux visual, validator gates, and PR #991 Ready implementation-head checks including full-regression and Lighthouse passed. Stage 2/3 are skipped; Manual Only remains deployed preview zoom 200% and the user's subjective brand-feel confirmation."
 }
