@@ -479,8 +479,10 @@ type YoutubeQuantityConfirmationStatus =
 - 계산 가능한 값이 하나 이상 있으면 `calculation_quality`는 `direct / estimated / mixed`이며 completeness와 독립이다. 대표 `VOLUME_G6/G10/G15/G20/G25` 환산을 하나라도 사용하면 `direct`가 될 수 없다. 전체 `calculation_status='unavailable'`이면 `calculation_quality=null`이다.
 - 대표 환산값은 충분한 내부 정밀도로 계산하고 표시 직전에 g 정수 반올림한다. UI는 `약/예상`을 붙인다.
 - aggregate에서 partial `known_amount`를 합산하면 결과도 `partial/minimum`이다. unavailable entry는 0으로 합산하지 않고 `incomplete_entry_count`에 포함한다.
-- `sources`는 승인된 attribution 요약만 반환한다. API key, 인증 query, raw fetch URL, raw provider response, 내부 manifest storage path는 반환하지 않는다.
+- `sources[]` item은 `provider`, `dataset`, `license`, `source_url`로 구성된 승인 attribution 요약이다. API key, 인증 query, raw fetch URL, raw provider response, 내부 manifest storage path는 반환하지 않는다.
+- `visibility='public' AND source_type='public_dataset'` 제품의 영양에 공공 dataset 값이 직접 기여했다면 `sources`는 반드시 non-empty이며, 승인된 실제 attribution만 반환한다. `sources=[]`는 attribution 가능한 public source가 실제로 하나도 기여하지 않은 경우에만 허용한다.
 - private manual 제품은 `sources`에 `{ "provider": "user_label", "dataset": null, "license": null, "source_url": null }`만 반환하고 다른 사용자 식별자는 포함하지 않는다.
+- planner aggregate는 pin된 recipe/product 영양의 `sources`를 합집합하고 `(provider, dataset, license, source_url)` stable tuple로 중복 제거한다. 같은 attribution이 여러 entry에 기여해도 각 range/day/column payload에는 한 번만 반환한다.
 - 공통 필수 field는 `basis`, 핵심 5종 `values`, `calculation_status`, `calculation_quality`, `warnings`, `sources`다. `reflected_ingredient_count`/`target_ingredient_count`/`snapshot_id`/`calculated_at`은 recipe context에서만, `incomplete_entry_count`는 aggregate context에서만 제공하며 적용되지 않는 context에서 거짓 0이나 임의 ID로 채우지 않는다. Product version 식별자는 parent의 `nutrition_version_id`로 제공한다.
 
 **단위 우선순위**
@@ -857,7 +859,26 @@ GET /recipes/{recipe_id}
 > 비로그인 시 `user_status`는 null. 조회 시 `increment_recipe_view_count(p_recipe_id)`로 `view_count += 1`을 원자적으로 반영한 뒤 응답한다.
 > `component_label`은 nullable이다. 값이 있으면 UI는 인접 항목의 label 변경 지점에만 섹션 소제목을 표시한다. 같은 label prefix가 본문에 있으면 중복 표시하지 않는다.
 > `photos`는 상세 화면 갤러리용 additive 필드다. `thumbnail_url`을 대표 후보로 포함하고, 공공 레시피는 `recipe_sources.extraction_meta_json.image_candidates`의 license-cleared public image 후보를 중복 제거해 함께 내려줄 수 있다. `role`은 `primary` / `alternate` / `step` / `unknown` 중 하나다.
-> `nutrition`은 additive nullable field다. current snapshot이 없으면 `nutrition.calculation_status='unavailable'`, 핵심 nutrient amount null로 반환하며 `0 kcal`로 대체하지 않는다. 기존 client는 이 field를 무시해도 레시피 상세 동작이 유지돼야 한다.
+> `nutrition`은 additive object field이며 null을 반환하지 않는다. current snapshot이 없어도 아래 공통 필수 payload 객체를 반환하고 `0 kcal`로 대체하지 않는다. 기존 client는 이 additive field를 무시해도 레시피 상세 동작이 유지돼야 한다.
+>
+> ```json
+> {
+>   "basis": { "amount": 1, "unit": "serving" },
+>   "values": {
+>     "energy_kcal": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null },
+>     "carbohydrate_g": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null },
+>     "protein_g": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null },
+>     "fat_g": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null },
+>     "sodium_mg": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null }
+>   },
+>   "calculation_status": "unavailable",
+>   "calculation_quality": null,
+>   "warnings": ["RECIPE_NUTRITION_SNAPSHOT_MISSING"],
+>   "sources": []
+> }
+> ```
+>
+> snapshot이 없으므로 `snapshot_id`, `calculated_at`, 반영/대상 수 등 존재하지 않는 recipe context metadata는 생략한다.
 
 ### 2-2. 좋아요 토글
 
@@ -1012,7 +1033,9 @@ GET /planner
         "calculation_status": "complete",
         "calculation_quality": "direct",
         "warnings": [],
-        "sources": []
+        "sources": [
+          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+        ]
       }
     }
   ]
@@ -1147,7 +1170,9 @@ GET /planner/nutrition
       "calculation_quality": "mixed",
       "incomplete_entry_count": 2,
       "warnings": [],
-      "sources": []
+      "sources": [
+        { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+      ]
     },
     "recipe_entry_count": 12,
     "product_entry_count": 4
@@ -1168,7 +1193,9 @@ GET /planner/nutrition
         "calculation_quality": "mixed",
         "incomplete_entry_count": 0,
         "warnings": [],
-        "sources": []
+        "sources": [
+          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+        ]
       },
       "columns": [
         {
@@ -1186,7 +1213,9 @@ GET /planner/nutrition
             "calculation_quality": "mixed",
             "incomplete_entry_count": 0,
             "warnings": [],
-            "sources": []
+            "sources": [
+              { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+            ]
           }
         }
       ]
@@ -1201,6 +1230,7 @@ GET /planner/nutrition
 - Meal snapshot이 null이거나 product nutrient가 결측이면 해당 nutrient/entry를 0으로 더하지 않는다.
 - partial `known_amount`가 하나라도 포함되면 결과는 `partial/minimum`이다. 모든 entry가 unavailable이면 nutrient amount와 known_amount는 null이다.
 - 계산 가능한 entry가 있을 때 `calculation_quality`는 모두 direct이면 direct, 모두 estimated이면 estimated, 나머지는 mixed다. 모든 entry가 unavailable이면 null이다.
+- `sources`는 각 범위에 실제로 포함된 pin된 recipe/product attribution의 합집합이다. 동일 `(provider, dataset, license, source_url)` tuple은 range/day/column별로 한 번만 반환하며, attribution 가능한 public source가 하나도 기여하지 않은 범위에서만 `[]`를 반환한다.
 - 범위는 최대 7일이며 서버는 batch query로 계산한다. 날짜/끼니별 N+1 query를 허용하지 않는다.
 - 응답과 UI label은 `계획 영양`이며 실제 섭취·목표 달성·의료 조언을 뜻하지 않는다.
 
@@ -1275,7 +1305,9 @@ GET /meals
         "calculation_status": "complete",
         "calculation_quality": "direct",
         "warnings": [],
-        "sources": []
+        "sources": [
+          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+        ]
       }
     }
   ]
@@ -1394,7 +1426,9 @@ GET /food-products
         "calculation_status": "complete",
         "calculation_quality": "direct",
         "warnings": [],
-        "sources": []
+        "sources": [
+          { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+        ]
       }
     }
   ],
@@ -1406,6 +1440,7 @@ GET /food-products
 - 결과 범위는 active `public` 제품과 현재 사용자 소유 active `private` 제품이다. 다른 사용자의 private 제품은 scope-filtered 404/검색 비노출로 존재 여부를 숨긴다.
 - soft-deleted 제품은 검색과 신규 entry 생성에서 제외한다.
 - public catalog는 승인 source/제품 식별자/기준량/핵심 영양값이 온전한 검수 subset만 노출한다. 이름+브랜드 유사성만으로 제품을 합치지 않는다.
+- `visibility='public' AND source_type='public_dataset'` 제품의 `nutrition.sources`는 해당 영양값에 직접 기여한 승인 공공 attribution을 반드시 한 건 이상 포함한다. raw fetch URL, API key/인증 query, 내부 manifest path는 포함하지 않는다.
 
 ### 5-6. 내 완제품 등록
 
@@ -1557,7 +1592,9 @@ POST /product-planner-entries
       "calculation_status": "complete",
       "calculation_quality": "direct",
       "warnings": [],
-      "sources": []
+      "sources": [
+        { "provider": "식품의약품안전처", "dataset": "식품영양성분DB정보", "license": "이용허락범위 제한 없음", "source_url": "https://www.data.go.kr/data/15127578/openapi.do" }
+      ]
     }
   }
 }
