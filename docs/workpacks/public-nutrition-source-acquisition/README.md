@@ -252,6 +252,14 @@
 - live smoke는 다섯 row-accounting count와 approved count, key 노출 0, production DB write 0을 확인한다. 실제 key 값 자체는 evidence에 기록하지 않는다.
 - real DB smoke/seed/reset: N/A. 이 slice는 DB를 읽거나 쓰지 않으며, DB table 준비는 다음 slice의 blocker다.
 
+### Manual evidence disposition — 2026-07-13
+
+- RDA version: 국립식량과학원 [국가표준식품성분 검색](https://www.nics.go.kr/food/kfi/fct/fctFoodSrch/list) 페이지에서 현재 표시가 `10.4(2026)`임을 확인했다.
+- RDA 이용조건: 별도 [국가표준식품성분 DB 개요](https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562) 페이지에서 매년 갱신되는 DB Excel과 공공누리 제1유형(출처표시) 안내를 확인했다. 두 확인은 RDA 10.4 file/search source의 version·이용조건 evidence로만 사용하며 각 공식 URL과 조회일 `2026-07-13`을 보존한다.
+- 양념 계량표: 국립식량과학원 [양념재료 계량표](https://www.nics.go.kr/food/kfi/hsMarinade/list_03)에서 `1T=15mL`와 간장 `17.7`, 식초 `15.3`, 된장 `18`, 고추장 `19`, 꿀 `24`, 참기름 `14.1 g/15mL`의 제한 사실 6개를 확인했다. [저작권정책](https://nics.go.kr/contents/page.do?contentsId=3&homepageSeCode=nics&m=100000165)은 공공누리 표시가 없는 자료의 이용에 사전 협의를 요구하므로 자유이용 또는 법률상 권리 확보로 단정하지 않는다.
+- 사용자 승인 정책 disposition: 위 숫자 사실 6개만 내부 검수 evidence로 제한 사용하고 source URL과 조회일 `2026-07-13`을 보존한다. 표·문구·행열 배치·이미지·전체 dataset은 복제·재배포하지 않는다. 이 결정은 이용허락 확정, 대표 profile assignment 또는 production promotion 승인이 아니며, evidence row의 `review_result=needs_source_check`와 `license_disposition=human_review_required` 계약 및 다음 slice의 별도 검수를 유지한다.
+- 아직 열린 수동 gate는 공공데이터포털 계정/MFDS `15127578` 활용신청과 실제 `DATA_GO_KR_API_KEY`를 사용한 최소 live page smoke 2건이다.
+
 ### Blocker conditions
 
 - 공식 5종과 Stage 1 문서의 source/version/license 경계 충돌

@@ -1915,10 +1915,10 @@
         "git diff --check"
       ],
       "pr_path": "https://github.com/netsus/homecook/pull/995",
-      "notes": "Fresh independent Stage 3 returned STAGE3_CHANGES_REQUIRED at 824ecda2c8a728f6f7efc82c5ded4a8344472d3c. Review round 2 fixes are implemented at 912b5996f243f32bc9a728cb8a63171f6ac70d26 with 67 targeted tests, verify:backend, the full 2840-test suite, all validators, and deterministic /tmp CLI evidence passing. The affected Acceptance 4 and Delivery 2 items are rechecked from this evidence. Four Manual Only gates remain open, PR #995 remains Draft, a fresh independent Stage 3 review is required, and this owner records no Stage 3 approval.",
-      "evaluation_status": "fixable",
-      "evaluation_round": 2,
-      "last_evaluator_result": "STAGE3_CHANGES_REQUIRED at 824ecda2c8a728f6f7efc82c5ded4a8344472d3c",
+      "notes": "Independent Codex Stage 3 reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad approved reviewed head f191072d9c0c4870f1bcbc2a850815bc42d40d26 with STAGE3_APPROVED_MANUAL_GATES_OPEN and important findings 0. The RDA search page separately verified version 10.4(2026), the overview page verified DB Excel/KOGL1, and the user-approved six-fact-only seasoning disposition was manually verified on 2026-07-13; this is not a license-clearance, row promotion, or profile assignment approval, so needs_source_check/human_review_required remains. MFDS application and actual-secret live smoke remain open; PR #995 stays Draft and auto-merge is disabled. closeout_phase=projecting closeout_recovery=manual_patch:1|manual_handoff closeout_repair=codex:2|claude:0|manual_decision:1|human_escalation:0|post_merge_stale:0|sources:independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad,official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs,GitHub PR #995 reviewed-head checks,docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition last_recovery_at=2026-07-13T14:42:32Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 3,
+      "last_evaluator_result": "STAGE3_APPROVED_MANUAL_GATES_OPEN at f191072d9c0c4870f1bcbc2a850815bc42d40d26",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     }

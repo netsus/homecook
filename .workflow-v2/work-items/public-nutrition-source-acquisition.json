@@ -94,11 +94,71 @@
     "lifecycle": "in_progress",
     "approval_state": "codex_approved",
     "verification_status": "passed",
-    "evaluation_status": "fixable",
-    "evaluation_round": 2,
-    "last_evaluator_result": "STAGE3_CHANGES_REQUIRED at 824ecda2c8a728f6f7efc82c5ded4a8344472d3c",
+    "evaluation_status": "passed",
+    "evaluation_round": 3,
+    "last_evaluator_result": "STAGE3_APPROVED_MANUAL_GATES_OPEN at f191072d9c0c4870f1bcbc2a850815bc42d40d26",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "projecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "in_progress",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "pending",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "Independent Codex Stage 3 reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad: STAGE3_APPROVED_MANUAL_GATES_OPEN at reviewed head f191072d9c0c4870f1bcbc2a850815bc42d40d26; important findings 0",
+        "https://www.nics.go.kr/food/kfi/fct/fctFoodSrch/list accessed 2026-07-13: current version displayed as 10.4(2026)",
+        "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562 accessed 2026-07-13: annually updated DB Excel and KOGL1 attribution evidence",
+        "https://www.nics.go.kr/food/kfi/hsMarinade/list_03 accessed 2026-07-13: 1T=15mL and six limited seasoning measurement facts",
+        "https://nics.go.kr/contents/page.do?contentsId=3&homepageSeCode=nics&m=100000165 accessed 2026-07-13: prior-consultation boundary for material without a KOGL mark",
+        "User-approved policy disposition: preserve only the six numeric facts as internal review evidence; no source table/text/layout/image/full-dataset republication; next-slice row/profile review remains required",
+        "pnpm exec vitest run tests/public-nutrition-source-acquisition.test.ts tests/public-nutrition-source-cli.test.ts tests/public-nutrition-license-boundary.test.ts (67 passed)",
+        "pnpm verify:backend (107 files / 1406 tests, build, security E2E 12 passed)",
+        "pnpm test (272 files / 2840 tests passed)",
+        "PR #995 reviewed-head CI: 13 success, 2 expected skipped"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "f191072d9c0c4870f1bcbc2a850815bc42d40d26",
+      "approval_state": "codex_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": true,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-13T14:42:32Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 1,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage3_approved_manual_gates_open",
+      "evidence_sources": [
+        "independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad",
+        "official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs",
+        "GitHub PR #995 reviewed-head checks",
+        "docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-13T14:42:32Z",
+      "status_synced_at": "2026-07-13T14:42:32Z",
+      "pr_body_synced_at": "2026-07-13T14:42:32Z"
+    }
   },
   "pr_path": "https://github.com/netsus/homecook/pull/995",
   "out_of_scope": [
@@ -113,5 +173,5 @@
     "RDA 15143598 10.0 KOGL4 OpenAPI as a default normalization source"
   ],
   "open_questions": [],
-  "notes": "Fresh independent Stage 3 returned STAGE3_CHANGES_REQUIRED at 824ecda2c8a728f6f7efc82c5ded4a8344472d3c. Review round 2 fixes are implemented at 912b5996f243f32bc9a728cb8a63171f6ac70d26: all-mode runtime-secret equivalence scanning, TypeScript-AST client import graphs, page-by-page MFDS fail-fast validation, and sanitized versioned failure context. The affected Acceptance 4 and Delivery 2 items are rechecked only after 67 targeted tests, verify:backend, the full 2840-test suite, all validators, and deterministic /tmp CLI evidence passed. Four Manual Only gates remain open, PR #995 stays Draft, a fresh independent Stage 3 review is required, and this owner records no Stage 3 approval."
+  "notes": "Independent Codex Stage 3 reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad approved reviewed head f191072d9c0c4870f1bcbc2a850815bc42d40d26 with STAGE3_APPROVED_MANUAL_GATES_OPEN and important findings 0. The RDA search page separately verified version 10.4(2026), the overview page verified DB Excel/KOGL1, and the user-approved six-fact-only seasoning disposition was manually verified on 2026-07-13; this is not a license-clearance, row promotion, or profile assignment approval, so needs_source_check/human_review_required remains. MFDS application and actual-secret live smoke remain open; PR #995 stays Draft and auto-merge is disabled. closeout_phase=projecting closeout_recovery=manual_patch:1|manual_handoff closeout_repair=codex:2|claude:0|manual_decision:1|human_escalation:0|post_merge_stale:0|sources:independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad,official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs,GitHub PR #995 reviewed-head checks,docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition last_recovery_at=2026-07-13T14:42:32Z"
 }
