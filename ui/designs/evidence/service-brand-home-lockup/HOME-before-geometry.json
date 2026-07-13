@@ -1,0 +1,132 @@
+{
+  "320": {
+    "accessibleName": "무먹",
+    "brand": {
+      "bottom": 34.5,
+      "height": 18,
+      "left": 16,
+      "right": 47.140625,
+      "top": 16.5,
+      "width": 31.140625
+    },
+    "firstTab": null,
+    "nav": {
+      "bottom": 52,
+      "height": 52,
+      "left": 0,
+      "right": 320,
+      "top": 0,
+      "width": 320
+    },
+    "overflowX": 0,
+    "primary": {
+      "rect": null,
+      "style": null
+    },
+    "search": {
+      "bottom": 230.46875,
+      "height": 22.5,
+      "left": 63,
+      "right": 173.875,
+      "top": 207.96875,
+      "width": 110.875
+    },
+    "supporting": {
+      "rect": null,
+      "style": null
+    },
+    "viewport": {
+      "height": 568,
+      "width": 320
+    }
+  },
+  "390": {
+    "accessibleName": "무먹",
+    "brand": {
+      "bottom": 34.5,
+      "height": 18,
+      "left": 16,
+      "right": 47.140625,
+      "top": 16.5,
+      "width": 31.140625
+    },
+    "firstTab": null,
+    "nav": {
+      "bottom": 52,
+      "height": 52,
+      "left": 0,
+      "right": 390,
+      "top": 0,
+      "width": 390
+    },
+    "overflowX": 0,
+    "primary": {
+      "rect": null,
+      "style": null
+    },
+    "search": {
+      "bottom": 207.21875,
+      "height": 22.5,
+      "left": 63,
+      "right": 243.875,
+      "top": 184.71875,
+      "width": 180.875
+    },
+    "supporting": {
+      "rect": null,
+      "style": null
+    },
+    "viewport": {
+      "height": 844,
+      "width": 390
+    }
+  },
+  "1280": {
+    "accessibleName": "무먹",
+    "brand": {
+      "bottom": 42.5,
+      "height": 22,
+      "left": 32,
+      "right": 83.265625,
+      "top": 20.5,
+      "width": 51.265625
+    },
+    "firstTab": {
+      "bottom": 52.75,
+      "height": 42.5,
+      "left": 123.265625,
+      "right": 167.953125,
+      "top": 10.25,
+      "width": 44.6875
+    },
+    "nav": {
+      "bottom": 64,
+      "height": 64,
+      "left": 0,
+      "right": 1280,
+      "top": 0,
+      "width": 1280
+    },
+    "overflowX": 0,
+    "primary": {
+      "rect": null,
+      "style": null
+    },
+    "search": {
+      "bottom": 221.21875,
+      "height": 22.5,
+      "left": 79,
+      "right": 573,
+      "top": 198.71875,
+      "width": 494
+    },
+    "supporting": {
+      "rect": null,
+      "style": null
+    },
+    "viewport": {
+      "height": 900,
+      "width": 1280
+    }
+  }
+}

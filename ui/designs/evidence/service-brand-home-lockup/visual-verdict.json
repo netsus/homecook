@@ -1,0 +1,8 @@
+{
+  "score": 98,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [],
+  "suggestions": [],
+  "reasoning": "390px, 320px, 1280px 모두 짧은명 위 정식명 아래의 세로 위계가 명확하며, 최종 audit에서 overflow 0, AA 대비 10.05:1, desktop nav와 첫 탭 전체 좌표의 before/after 일치를 확인했다."
+}

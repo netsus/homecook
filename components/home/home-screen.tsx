@@ -1182,6 +1182,7 @@ function HomeWebScreen({
     <WebShell className="web-home" wide>
       <WebTopNav
         activeId="home"
+        brandSupportingLabel="무엇을 먹든"
         rightSlot={
           <ProfileSummaryButton
             gamification={gamification}
@@ -1682,7 +1683,17 @@ function HomeAppBar({
 }) {
   return (
     <header className="sticky top-0 z-20 flex min-h-[var(--control-height-xl)] items-center justify-between border-b border-[var(--line-strong)] bg-[var(--surface)] px-4" style={{ borderBottomWidth: "0.5px" }}>
-      <h1 className="text-[18px] font-bold leading-none text-[var(--brand)]">무먹</h1>
+      <h1
+        aria-label="무먹, 무엇을 먹든"
+        className="home-app-brand-lockup"
+      >
+        <span aria-hidden="true" className="home-app-brand-primary">
+          무먹
+        </span>
+        <span aria-hidden="true" className="home-app-brand-supporting">
+          무엇을 먹든
+        </span>
+      </h1>
       <ProfileSummaryButton
         gamification={gamification}
         isAuthenticated={isAuthenticated}

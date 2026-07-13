@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-13T16:16:58+09:00",
+  "updated_at": "2026-07-13T19:00:37+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1885,10 +1885,10 @@
     {
       "id": "service-brand-home-lockup",
       "preset": "vertical-slice-strict",
-      "branch": "docs/mumeok-home-lockup-contract",
-      "lifecycle": "planned",
-      "approval_state": "codex_approved",
-      "verification_status": "pending",
+      "branch": "feature/fe-service-brand-home-lockup",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -1896,7 +1896,7 @@
         "node scripts/validate-automation-spec.mjs --slice service-brand-home-lockup",
         "git diff --check"
       ],
-      "notes": "Stage 1 contract-evolution docs prepared by a role-separated Codex docs-owner session under explicit user approval. HOME mobile HomeAppBar and desktop HOME WebTopNav brand area use a vertical 무먹 / 무엇을 먹든 lockup; non-HOME short-name-only behavior and desktop nav geometry/interaction remain unchanged. FE-only Stage 2/3 skip. HOME direct modification requires new 390/320/1280 evidence and independent authority review; historical evidence is immutable."
+      "notes": "Canonical closeout: .workflow-v2/work-items/service-brand-home-lockup.json#closeout. Independent Codex final authority approved blocker/major/minor 0/0/0 and Stage 6 re-review approved actionable findings 0 at implementation head 066ee6c5105586dd2233cb9536713c85964f0257. PR #991 Ready current-head run 29240116832 passed full-regression, Lighthouse, visual, accessibility, and smoke. Design Status confirmed; Manual Only remains deployed preview zoom 200% and user brand-feel confirmation, which do not block merge. closeout_phase=completed | closeout_recovery=manual_patch:1|ci_resync:4|manual_handoff | closeout_repair=codex:6|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #991 and current-head checks,independent Codex final authority and Stage 6 re-review,ui/designs/authority/HOME-service-brand-home-lockup-authority.md,.artifacts/qa/service-brand-home-lockup/2026-07-13T07-51-24-163Z | last_recovery_at=2026-07-13T10:00:37Z"
     }
   ]
 }
