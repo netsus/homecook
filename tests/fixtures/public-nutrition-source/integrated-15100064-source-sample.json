@@ -1,0 +1,37 @@
+{
+  "source": {
+    "id": "integrated-15100064",
+    "provider": "전국통합식품영양성분정보표준데이터",
+    "dataset": "15100064 reconciliation fixture",
+    "source_version": "15100064-fixture-only",
+    "data_basis_date": null,
+    "endpoint_or_file_url": "https://www.data.go.kr/data/15100064/standard.do",
+    "license": "fixture-only; live source disposition not asserted",
+    "license_url": "https://www.data.go.kr/data/15100064/standard.do",
+    "license_evidence_url": "https://www.data.go.kr/data/15100064/standard.do",
+    "license_verified_at": "2026-07-13"
+  },
+  "input_shape": "adapted-row-v1",
+  "adapter_schema_version": "nutrition-source-row-v1",
+  "pages": [
+    {
+      "page_no": 1,
+      "total_count": 1,
+      "next_page_token": null,
+      "items": [
+        {
+          "external_item_key": "INTEGRATED-FICTIONAL-001",
+          "external_name": "가상 통합표준 대조 식품",
+          "basis_text": "100 g",
+          "nutrients": {
+            "energy": { "value": "202", "unit": "kcal" },
+            "carbohydrate": { "value": "30.2", "unit": "g" },
+            "protein": { "value": "4.2", "unit": "g" },
+            "fat": { "value": "2.2", "unit": "g" },
+            "sodium": { "value": "22", "unit": "mg" }
+          }
+        }
+      ]
+    }
+  ]
+}

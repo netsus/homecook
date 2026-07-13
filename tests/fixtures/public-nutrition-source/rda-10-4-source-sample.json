@@ -1,0 +1,37 @@
+{
+  "source": {
+    "id": "rda-10.4",
+    "provider": "농촌진흥청",
+    "dataset": "국가표준식품성분DB 10.4 fixture",
+    "source_version": "10.4-fixture-only",
+    "data_basis_date": null,
+    "endpoint_or_file_url": "https://www.nics.go.kr/food/kfi/fct/fctFoodSrch/list",
+    "license": "fixture-only; live KOGL disposition pending human review",
+    "license_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+    "license_evidence_url": "https://www.nics.go.kr/food/kfi/fct/fctIntro/list?menuId=PS03562",
+    "license_verified_at": "2026-07-13"
+  },
+  "input_shape": "adapted-row-v1",
+  "adapter_schema_version": "nutrition-source-row-v1",
+  "pages": [
+    {
+      "page_no": 1,
+      "total_count": 1,
+      "next_page_token": null,
+      "items": [
+        {
+          "external_item_key": "RDA-FICTIONAL-001",
+          "external_name": "가상 RDA 검수 원재료",
+          "basis_text": "100 g",
+          "nutrients": {
+            "energy": { "value": "101", "unit": "kcal" },
+            "carbohydrate": { "value": "20.1", "unit": "g" },
+            "protein": { "value": "3.1", "unit": "g" },
+            "fat": { "value": "1.1", "unit": "g" },
+            "sodium": { "value": "11", "unit": "mg" }
+          }
+        }
+      ]
+    }
+  ]
+}

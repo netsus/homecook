@@ -4,6 +4,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_ATTEMPTS = 4;
 const BACKOFF_MS = [1_000, 2_000, 4_000];
 const MAX_RETRY_AFTER_MS = 30_000;
+const INPUT_SHAPES = new Set(["adapted-row-v1", "mfds-provider-v1"]);
 const AUTH_QUERY_KEYS = new Set([
   "servicekey",
   "apikey",
@@ -157,7 +158,10 @@ function validateSource(source) {
     provider: requiredText(source.provider, "SOURCE_PROVIDER_MISSING"),
     dataset: requiredText(source.dataset, "SOURCE_DATASET_MISSING"),
     source_version: requiredText(source.source_version, "SOURCE_VERSION_MISSING"),
-    data_basis_date: source.data_basis_date ?? null,
+    data_basis_date:
+      source.data_basis_date === null || source.data_basis_date === undefined
+        ? null
+        : ensureIsoDate(source.data_basis_date, "DATA_BASIS_DATE_INVALID"),
     endpoint_or_file_url: endpoint,
     license: requiredText(source.license, "SOURCE_LICENSE_MISSING"),
     license_url: sanitizeUrl(requiredText(source.license_url, "LICENSE_URL_MISSING")),
@@ -166,6 +170,38 @@ function validateSource(source) {
     ),
     license_verified_at: ensureIsoDate(source.license_verified_at, "LICENSE_VERIFIED_AT_MISSING"),
   };
+}
+
+function logicalBatchId({
+  provider,
+  dataset,
+  source_version,
+  data_basis_date,
+  endpoint_or_file_url,
+  query,
+  license,
+  license_url,
+  license_evidence_url,
+  license_verified_at,
+  raw_sha256,
+  input_shape,
+  adapter_schema_version,
+}) {
+  return sha256({
+    provider,
+    dataset,
+    source_version,
+    data_basis_date,
+    endpoint_or_file_url,
+    query,
+    license,
+    license_url,
+    license_evidence_url,
+    license_verified_at,
+    raw_sha256,
+    input_shape,
+    adapter_schema_version,
+  });
 }
 
 function pageIdentity(items) {
@@ -257,8 +293,12 @@ function validatePages(inputPages) {
   };
 }
 
-export function buildRawBatch({ source, adapter_schema_version, pages, fetchedAt }) {
+export function buildRawBatch({ source, input_shape, adapter_schema_version, pages, fetchedAt }) {
   const normalizedSource = validateSource(source);
+  const inputShape = requiredText(input_shape, "INPUT_SHAPE_MISSING");
+  if (!INPUT_SHAPES.has(inputShape)) {
+    throw new NutritionPipelineError("INPUT_SHAPE_UNSUPPORTED");
+  }
   const adapterSchemaVersion = requiredText(
     adapter_schema_version,
     "ADAPTER_SCHEMA_VERSION_MISSING",
@@ -267,6 +307,7 @@ export function buildRawBatch({ source, adapter_schema_version, pages, fetchedAt
   const rawSnapshot = {
     schema_version: "public-nutrition-raw-v1",
     source_id: normalizedSource.id,
+    input_shape: inputShape,
     pages: pagination.pages.map((page) => ({
       page_no: page.page_no,
       total_count: page.total_count,
@@ -275,11 +316,19 @@ export function buildRawBatch({ source, adapter_schema_version, pages, fetchedAt
     })),
   };
   const rawSha256 = sha256(rawSnapshot);
-  const logicalBatchId = sha256({
+  const batchId = logicalBatchId({
     provider: normalizedSource.provider,
     dataset: normalizedSource.dataset,
     source_version: normalizedSource.source_version,
+    data_basis_date: normalizedSource.data_basis_date,
+    endpoint_or_file_url: normalizedSource.endpoint_or_file_url,
+    query: {},
+    license: normalizedSource.license,
+    license_url: normalizedSource.license_url,
+    license_evidence_url: normalizedSource.license_evidence_url,
+    license_verified_at: normalizedSource.license_verified_at,
     raw_sha256: rawSha256,
+    input_shape: inputShape,
     adapter_schema_version: adapterSchemaVersion,
   });
 
@@ -287,7 +336,7 @@ export function buildRawBatch({ source, adapter_schema_version, pages, fetchedAt
     rawSnapshot,
     manifest: {
       schema_version: "public-nutrition-manifest-v1",
-      logical_batch_id: logicalBatchId,
+      logical_batch_id: batchId,
       status: "raw",
       lifecycle: ["raw"],
       provider: normalizedSource.provider,
@@ -307,6 +356,7 @@ export function buildRawBatch({ source, adapter_schema_version, pages, fetchedAt
       deduplicated_identical_count: 0,
       quarantined_count: 0,
       sha256: rawSha256,
+      input_shape: inputShape,
       adapter_schema_version: adapterSchemaVersion,
       provider_reported_total: pagination.reportedTotal,
       page_count: pagination.pages.length,
@@ -406,6 +456,38 @@ function normalizeRow(row, sourceScope) {
   };
 }
 
+function adaptMfdsProviderRow(row) {
+  if (!isRecord(row)) return row;
+  const nutrients = {
+    energy: { value: row.AMT_NUM1, unit: "kcal" },
+    protein: { value: row.AMT_NUM3, unit: "g" },
+    fat: { value: row.AMT_NUM4, unit: "g" },
+    carbohydrate: { value: row.AMT_NUM6, unit: "g" },
+    sodium: { value: row.AMT_NUM13, unit: "mg" },
+  };
+  if (Object.hasOwn(row, "AMT_NUM7")) {
+    nutrients.sugars = { value: row.AMT_NUM7, unit: "g" };
+  }
+  if (Object.hasOwn(row, "AMT_NUM8")) {
+    nutrients.fiber = { value: row.AMT_NUM8, unit: "g" };
+  }
+  if (Object.hasOwn(row, "AMT_NUM24")) {
+    nutrients.saturated_fat = { value: row.AMT_NUM24, unit: "g" };
+  }
+  return {
+    external_item_key: row.FOOD_CD,
+    external_name: row.FOOD_NM_KR,
+    basis_text: row.SERVING_SIZE,
+    nutrients,
+  };
+}
+
+function adaptInputRow(row, inputShape) {
+  if (inputShape === "adapted-row-v1") return row;
+  if (inputShape === "mfds-provider-v1") return adaptMfdsProviderRow(row);
+  throw new NutritionPipelineError("INPUT_SHAPE_UNSUPPORTED");
+}
+
 function countReasons(rows) {
   const counts = {};
   for (const row of rows) counts[row.reason_code] = (counts[row.reason_code] ?? 0) + 1;
@@ -428,6 +510,12 @@ export function normalizeNutritionBatch({ rawSnapshot, manifest, adapterSchemaVe
   if (!isRecord(rawSnapshot) || !Array.isArray(rawSnapshot.pages)) {
     throw new NutritionPipelineError("RAW_SNAPSHOT_INVALID");
   }
+  if (
+    !INPUT_SHAPES.has(manifest.input_shape) ||
+    rawSnapshot.input_shape !== manifest.input_shape
+  ) {
+    throw new NutritionPipelineError("INPUT_SHAPE_MISMATCH");
+  }
 
   const sourceScope = `${manifest.provider}:${manifest.dataset}:${manifest.source_version}`;
   const stagedRows = rawSnapshot.pages.flatMap((page) => page.items);
@@ -438,7 +526,10 @@ export function normalizeNutritionBatch({ rawSnapshot, manifest, adapterSchemaVe
 
   for (const [rowIndex, stagedRow] of stagedRows.entries()) {
     try {
-      const normalized = normalizeRow(stagedRow, sourceScope);
+      const normalized = normalizeRow(
+        adaptInputRow(stagedRow, manifest.input_shape),
+        sourceScope,
+      );
       const existing = firstByBusinessKey.get(normalized.business_key);
       if (existing?.content_hash === normalized.content_hash) {
         identicalCount += 1;
@@ -499,6 +590,7 @@ export function normalizeNutritionBatch({ rawSnapshot, manifest, adapterSchemaVe
     },
     raw_sha256: manifest.sha256,
     adapter_schema_version: manifest.adapter_schema_version,
+    input_shape: manifest.input_shape,
     staged_content_hash: sha256(stagedRows),
     normalized_content_hash: normalizedContentHash,
     staged_rows: stagedRows,
@@ -621,7 +713,9 @@ export function buildNutritionReview({ normalizedBundle, decisions, measurementE
     .filter((row) => row.status === "approved")
     .map((row) => row.fingerprint)
     .sort();
-  const blockerCount = normalizedBundle.counts.quarantined_count > 0 ? 1 : 0;
+  const blockerCount =
+    normalizedBundle.counts.quarantined_count +
+    reviewedRows.filter((row) => row.status !== "approved").length;
   const evidence = validateMeasurementEvidence(measurementEvidence);
   const reportBase = {
     schema_version: "public-nutrition-review-v1",
@@ -658,6 +752,81 @@ function assertNoAuthLeak(value) {
   }
 }
 
+function validatePromotionManifest(manifest) {
+  try {
+    const endpoint = sanitizeUrl(requiredText(
+      manifest.endpoint_or_file_url,
+      "MANIFEST_PROVENANCE_INVALID",
+    ));
+    const licenseUrl = sanitizeUrl(requiredText(
+      manifest.license_url,
+      "MANIFEST_PROVENANCE_INVALID",
+    ));
+    const licenseEvidenceUrl = sanitizeUrl(requiredText(
+      manifest.license_evidence_url,
+      "MANIFEST_PROVENANCE_INVALID",
+    ));
+    if (
+      endpoint !== manifest.endpoint_or_file_url ||
+      licenseUrl !== manifest.license_url ||
+      licenseEvidenceUrl !== manifest.license_evidence_url ||
+      !isRecord(manifest.query) ||
+      canonicalStringify(sanitizeQuery(manifest.query)) !== canonicalStringify(manifest.query)
+    ) {
+      throw new NutritionPipelineError("MANIFEST_PROVENANCE_INVALID");
+    }
+    const countFields = [
+      "fetched_raw_count",
+      "unique_input_count",
+      "normalized_count",
+      "deduplicated_identical_count",
+      "quarantined_count",
+      "provider_reported_total",
+      "page_count",
+    ];
+    if (
+      countFields.some((key) => !Number.isInteger(manifest[key]) || manifest[key] < 0) ||
+      !/^[a-f0-9]{64}$/.test(manifest.sha256) ||
+      !/^[a-f0-9]{64}$/.test(manifest.page_identity_checksum) ||
+      !INPUT_SHAPES.has(manifest.input_shape) ||
+      manifest.adapter_schema_version !== "nutrition-source-row-v1" ||
+      manifest.status !== "raw" ||
+      canonicalStringify(manifest.lifecycle) !== canonicalStringify(["raw"]) ||
+      !isRecord(manifest.failed_reason_counts) ||
+      manifest.production_db_writes !== 0
+    ) {
+      throw new NutritionPipelineError("MANIFEST_PROVENANCE_INVALID");
+    }
+    requiredText(manifest.fetched_at, "MANIFEST_PROVENANCE_INVALID");
+    return {
+      provider: requiredText(manifest.provider, "MANIFEST_PROVENANCE_INVALID"),
+      dataset: requiredText(manifest.dataset, "MANIFEST_PROVENANCE_INVALID"),
+      source_version: requiredText(
+        manifest.source_version,
+        "MANIFEST_PROVENANCE_INVALID",
+      ),
+      data_basis_date:
+        manifest.data_basis_date === null
+          ? null
+          : ensureIsoDate(manifest.data_basis_date, "MANIFEST_PROVENANCE_INVALID"),
+      endpoint_or_file_url: endpoint,
+      query: sanitizeQuery(manifest.query),
+      license: requiredText(manifest.license, "MANIFEST_PROVENANCE_INVALID"),
+      license_url: licenseUrl,
+      license_evidence_url: licenseEvidenceUrl,
+      license_verified_at: ensureIsoDate(
+        manifest.license_verified_at,
+        "MANIFEST_PROVENANCE_INVALID",
+      ),
+      raw_sha256: manifest.sha256,
+      input_shape: manifest.input_shape,
+      adapter_schema_version: manifest.adapter_schema_version,
+    };
+  } catch {
+    throw new NutritionPipelineError("MANIFEST_PROVENANCE_INVALID");
+  }
+}
+
 export function buildApprovedPinnedHandoff({
   manifest,
   normalizedBundle,
@@ -665,12 +834,55 @@ export function buildApprovedPinnedHandoff({
   measurementEvidence = [],
 }) {
   if (
+    !isRecord(manifest) ||
+    !isRecord(normalizedBundle) ||
     !isRecord(reviewReport) ||
+    normalizedBundle.status !== "normalized" ||
     reviewReport.status !== "reviewed" ||
     reviewReport.blocker_count > 0 ||
     normalizedBundle.counts.quarantined_count > 0
   ) {
     throw new NutritionPipelineError("PROMOTION_BLOCKED");
+  }
+  const manifestIdentity = validatePromotionManifest(manifest);
+  if (manifest.logical_batch_id !== logicalBatchId(manifestIdentity)) {
+    throw new NutritionPipelineError("BATCH_PIN_MISMATCH");
+  }
+  if (
+    manifest.logical_batch_id !== normalizedBundle.logical_batch_id ||
+    manifest.logical_batch_id !== reviewReport.logical_batch_id ||
+    manifest.sha256 !== normalizedBundle.raw_sha256 ||
+    manifest.adapter_schema_version !== normalizedBundle.adapter_schema_version ||
+    manifest.input_shape !== normalizedBundle.input_shape
+  ) {
+    throw new NutritionPipelineError("BATCH_PIN_MISMATCH");
+  }
+  const normalizedSource = {
+    provider: normalizedBundle.source?.provider,
+    dataset: normalizedBundle.source?.dataset,
+    source_version: normalizedBundle.source?.source_version,
+    data_basis_date: normalizedBundle.source?.data_basis_date,
+    license: normalizedBundle.source?.license,
+    source_url: normalizedBundle.source?.source_url,
+  };
+  const manifestSource = {
+    provider: manifest.provider,
+    dataset: manifest.dataset,
+    source_version: manifest.source_version,
+    data_basis_date: manifest.data_basis_date,
+    license: manifest.license,
+    source_url: manifest.endpoint_or_file_url,
+  };
+  if (canonicalStringify(normalizedSource) !== canonicalStringify(manifestSource)) {
+    throw new NutritionPipelineError("SOURCE_PIN_MISMATCH");
+  }
+  const recomputedContentHash = sha256({
+    rows: normalizedBundle.rows,
+    quarantined: normalizedBundle.quarantined,
+    counts: normalizedBundle.counts,
+  });
+  if (recomputedContentHash !== normalizedBundle.normalized_content_hash) {
+    throw new NutritionPipelineError("NORMALIZED_CONTENT_HASH_MISMATCH");
   }
   if (reviewReport.normalized_content_hash !== normalizedBundle.normalized_content_hash) {
     throw new NutritionPipelineError("REVIEW_CONTENT_MISMATCH");
@@ -681,10 +893,24 @@ export function buildApprovedPinnedHandoff({
   if (reviewReport.review_checksum !== sha256(reviewBase)) {
     throw new NutritionPipelineError("REVIEW_CHECKSUM_MISMATCH");
   }
+  if (
+    !Array.isArray(reviewReport.reviewed_rows) ||
+    !Array.isArray(reviewReport.approved_fingerprints) ||
+    reviewReport.reviewed_rows.length !== normalizedBundle.rows.length ||
+    reviewReport.reviewed_rows.some((row) => row.status !== "approved") ||
+    canonicalStringify(reviewReport.approved_fingerprints.toSorted()) !==
+      canonicalStringify(reviewReport.reviewed_rows.map((row) => row.fingerprint).toSorted())
+  ) {
+    throw new NutritionPipelineError("PROMOTION_BLOCKED");
+  }
   const approved = new Set(reviewReport.approved_fingerprints);
   const approvedItems = normalizedBundle.rows.filter((row) => approved.has(row.fingerprint));
   if (approvedItems.length === 0) throw new NutritionPipelineError("NO_APPROVED_ROWS");
   const evidence = validateMeasurementEvidence(measurementEvidence);
+  const reviewedEvidence = validateMeasurementEvidence(reviewReport.measurement_evidence);
+  if (sha256(evidence) !== sha256(reviewedEvidence)) {
+    throw new NutritionPipelineError("REVIEW_EVIDENCE_MISMATCH");
+  }
   const attribution = createPublicAttribution({
     provider: manifest.provider,
     dataset: manifest.dataset,
@@ -699,6 +925,7 @@ export function buildApprovedPinnedHandoff({
     lifecycle: ["raw", "staged", "normalized", "reviewed", "approved_pinned"],
     logical_batch_id: manifest.logical_batch_id,
     approved_manifest: {
+      logical_batch_id: manifest.logical_batch_id,
       provider: manifest.provider,
       dataset: manifest.dataset,
       source_version: manifest.source_version,
@@ -708,6 +935,8 @@ export function buildApprovedPinnedHandoff({
       license_evidence_url: manifest.license_evidence_url,
       license_verified_at: manifest.license_verified_at,
       raw_sha256: manifest.sha256,
+      input_shape: manifest.input_shape,
+      adapter_schema_version: manifest.adapter_schema_version,
       normalized_content_hash: normalizedBundle.normalized_content_hash,
       review_checksum: reviewReport.review_checksum,
       counts: normalizedBundle.counts,
@@ -863,6 +1092,7 @@ export async function fetchMfdsBatch({
   return buildRawBatch({
     source: SOURCE_REGISTRY["mfds-15127578"].manifest_source,
     adapter_schema_version: "nutrition-source-row-v1",
+    input_shape: "mfds-provider-v1",
     pages,
     fetchedAt,
   });

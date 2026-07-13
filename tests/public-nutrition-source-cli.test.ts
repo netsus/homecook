@@ -9,6 +9,10 @@ import { describe, expect, it } from "vitest";
 const PIPELINE_MODULE = pathToFileURL(
   join(process.cwd(), "scripts/lib/public-nutrition-pipeline.mjs"),
 ).href;
+const FAILURE_FIXTURE = JSON.parse(readFileSync(join(
+  process.cwd(),
+  "tests/fixtures/public-nutrition-source/failure-scenarios.json",
+), "utf8"));
 
 async function loadPipeline() {
   return import(PIPELINE_MODULE);
@@ -50,7 +54,11 @@ describe("public nutrition source network and CLI", () => {
       fetchImpl: async () => {
         attempt += 1;
         if (attempt === 1) return response({}, 500);
-        if (attempt === 2) throw Object.assign(new Error("hidden"), { name: "TimeoutError" });
+        if (attempt === 2) {
+          throw Object.assign(new Error("hidden"), {
+            name: FAILURE_FIXTURE.timeout_error_name,
+          });
+        }
         if (attempt === 3) throw new TypeError("hidden network detail");
         return response({ ok: true });
       },
@@ -117,7 +125,11 @@ describe("public nutrition source network and CLI", () => {
         apiKey: secret,
         fetchImpl: async () => {
           attempts += 1;
-          return response({ provider_message: secret }, 429, { "Retry-After": "1" });
+          return response(
+            { provider_message: secret },
+            FAILURE_FIXTURE.rate_limit.status,
+            { "Retry-After": FAILURE_FIXTURE.rate_limit.retry_after },
+          );
         },
         sleep: async (ms: number) => { sleeps.push(ms); },
         now: () => 0,
@@ -142,15 +154,15 @@ describe("public nutrition source network and CLI", () => {
       endpoint: "https://example.test/nutrition",
       query: {},
       apiKey: "<FAKE_TEST_KEY_ONLY>",
-      fetchImpl: async () => new Response("{", { status: 200 }),
+      fetchImpl: async () => new Response(FAILURE_FIXTURE.malformed_json, { status: 200 }),
       sleep: async () => undefined,
       now: () => 0,
       createTimeoutSignal: () => new AbortController().signal,
     })).rejects.toMatchObject({ code: "MALFORMED_PAYLOAD" });
 
     for (const payload of [
-      { response: { header: { resultCode: "99" }, body: { totalCount: 0, items: [] } } },
-      { response: { header: { resultCode: "00" }, unexpected: {} } },
+      FAILURE_FIXTURE.provider_error_payload,
+      FAILURE_FIXTURE.schema_drift_payload,
     ]) {
       await expect(fetchMfdsBatch({
         apiKey: "<FAKE_TEST_KEY_ONLY>",
@@ -212,9 +224,7 @@ describe("public nutrition source network and CLI", () => {
       { page_no: 1, total_count: 2, next_page_token: "a", items: [{ external_item_key: "A" }] },
       { page_no: 2, total_count: 3, next_page_token: null, items: [{ external_item_key: "B" }] },
     ], "PAGINATION_TOTAL_DRIFT"],
-    ["partial final page", [
-      { page_no: 1, total_count: 2, next_page_token: null, items: [{ external_item_key: "A" }] },
-    ], "PAGINATION_INCOMPLETE"],
+    ["partial final page", FAILURE_FIXTURE.partial_pages, "PAGINATION_INCOMPLETE"],
     ["cross-page item key collision", [
       { page_no: 1, total_count: 2, next_page_token: "a", items: [{ external_item_key: "A", value: 1 }] },
       { page_no: 2, total_count: 2, next_page_token: null, items: [{ external_item_key: "A", value: 2 }] },
@@ -224,6 +234,7 @@ describe("public nutrition source network and CLI", () => {
 
     expect(() => buildRawBatch({
       source: SOURCE_REGISTRY["mfds-15127578"].manifest_source,
+      input_shape: "adapted-row-v1",
       adapter_schema_version: "nutrition-source-row-v1",
       pages,
       fetchedAt: "2026-07-13T00:00:00.000Z",
@@ -239,6 +250,37 @@ describe("public nutrition source network and CLI", () => {
     expect(combined).toContain("MISSING_API_KEY");
     expect(combined).not.toContain("serviceKey");
     expect(combined).not.toContain("DATA_GO_KR_API_KEY=");
+  });
+
+  it.each([
+    ["RDA 10.4", "rda-10-4-source-sample.json", "농촌진흥청"],
+    ["integrated 15100064", "integrated-15100064-source-sample.json", "전국통합식품영양성분정보표준데이터"],
+  ])("acquires and normalizes the minimal fake %s file source", (_name, fixtureName, provider) => {
+    const tempDir = mkdtempSync(join(tmpdir(), "nutrition-keyless-file-"));
+    const rawDir = join(tempDir, "raw");
+    const normalizedDir = join(tempDir, "normalized");
+    const fixturePath = join(
+      process.cwd(),
+      "tests/fixtures/public-nutrition-source",
+      fixtureName,
+    );
+
+    expect(run("fetch", [
+      "--input", fixturePath,
+      "--output-dir", rawDir,
+      "--fetched-at", "2026-07-13T00:00:00.000Z",
+    ]).status).toBe(0);
+    expect(run("normalize", [
+      "--input-dir", rawDir,
+      "--output-dir", normalizedDir,
+    ]).status).toBe(0);
+
+    const normalized = JSON.parse(
+      readFileSync(join(normalizedDir, "normalized-bundle.json"), "utf8"),
+    );
+    expect(normalized.source.provider).toBe(provider);
+    expect(normalized.rows).toHaveLength(1);
+    expect(normalized.counts).toMatchObject({ normalized_count: 1, quarantined_count: 0 });
   });
 
   it("runs raw -> normalized -> reviewed -> approved_pinned deterministically with fake fixtures", () => {

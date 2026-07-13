@@ -1,0 +1,48 @@
+{
+  "source": {
+    "id": "mfds-15127578",
+    "provider": "식품의약품안전처",
+    "dataset": "식품영양성분DB정보",
+    "source_version": "2025-12-05-provider-fixture",
+    "data_basis_date": null,
+    "endpoint_or_file_url": "https://www.data.go.kr/data/15127578/openapi.do",
+    "license": "이용허락범위 제한 없음",
+    "license_url": "https://www.data.go.kr/data/15127578/openapi.do",
+    "license_evidence_url": "https://www.data.go.kr/data/15127578/openapi.do",
+    "license_verified_at": "2026-07-13"
+  },
+  "input_shape": "mfds-provider-v1",
+  "adapter_schema_version": "nutrition-source-row-v1",
+  "pages": [
+    {
+      "page_no": 1,
+      "total_count": 2,
+      "next_page_token": null,
+      "items": [
+        {
+          "FOOD_CD": "MFDS-PROVIDER-001",
+          "FOOD_NM_KR": "공식 필드 검수 두부",
+          "SERVING_SIZE": "100 g",
+          "AMT_NUM1": "84",
+          "AMT_NUM3": "9.3",
+          "AMT_NUM4": "4.7",
+          "AMT_NUM6": "2.4",
+          "AMT_NUM7": "0.7",
+          "AMT_NUM8": "1.2",
+          "AMT_NUM13": "5",
+          "AMT_NUM24": "0.8"
+        },
+        {
+          "FOOD_CD": "MFDS-PROVIDER-002",
+          "FOOD_NM_KR": "공식 필드 결측 검수식품",
+          "SERVING_SIZE": "100 g",
+          "AMT_NUM1": "0",
+          "AMT_NUM3": "-",
+          "AMT_NUM4": "trace",
+          "AMT_NUM6": "",
+          "AMT_NUM13": "미검출"
+        }
+      ]
+    }
+  ]
+}

@@ -81,6 +81,41 @@ describe("public nutrition source acquisition core", () => {
     expect(values.sodium_mg).toMatchObject({ amount: null, missing_reason: "not_detected" });
   });
 
+  it("preserves raw MFDS provider rows and adapts official fields at normalization", async () => {
+    const { buildRawBatch, normalizeNutritionBatch } = await loadPipeline();
+    const input = fixture("mfds-provider-shaped-sample.json");
+    const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    const normalized = normalizeNutritionBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "nutrition-source-row-v1",
+    });
+
+    expect(raw.rawSnapshot.pages[0].items).toEqual(input.pages[0].items);
+    expect(raw.manifest.input_shape).toBe("mfds-provider-v1");
+    expect(normalized.rows[0]).toMatchObject({
+      external_item_key: "MFDS-PROVIDER-001",
+      external_name: "공식 필드 검수 두부",
+      values: {
+        energy_kcal: { amount: 84, unit: "kcal" },
+        carbohydrate_g: { amount: 2.4, unit: "g" },
+        protein_g: { amount: 9.3, unit: "g" },
+        fat_g: { amount: 4.7, unit: "g" },
+        sodium_mg: { amount: 5, unit: "mg" },
+        sugars_g: { amount: 0.7, unit: "g" },
+        fiber_g: { amount: 1.2, unit: "g" },
+        saturated_fat_g: { amount: 0.8, unit: "g" },
+      },
+    });
+    expect(normalized.rows[1].values).toMatchObject({
+      energy_kcal: { amount: 0, missing_reason: null },
+      carbohydrate_g: { amount: null, missing_reason: "blank" },
+      protein_g: { amount: null, missing_reason: "dash" },
+      fat_g: { amount: null, missing_reason: "trace" },
+      sodium_mg: { amount: null, missing_reason: "not_detected" },
+    });
+  });
+
   it("quarantines basis parse, negative, unit mismatch, and malformed rows without guessing 100g", async () => {
     const { buildRawBatch, normalizeNutritionBatch } = await loadPipeline();
     const input = fixture("mfds-source-failure-sample.json");
@@ -172,7 +207,7 @@ describe("public nutrition source acquisition core", () => {
     });
     const decisions = [
       { fingerprint: normalized.rows[0].fingerprint, status: "approved" },
-      { fingerprint: normalized.rows[1].fingerprint, status: "rejected" },
+      { fingerprint: normalized.rows[1].fingerprint, status: "approved" },
     ];
     const review = buildNutritionReview({ normalizedBundle: normalized, decisions, measurementEvidence: evidence });
     const first = buildApprovedPinnedHandoff({
@@ -188,7 +223,7 @@ describe("public nutrition source acquisition core", () => {
       measurementEvidence: evidence,
     });
 
-    expect(first.approved_items).toHaveLength(1);
+    expect(first.approved_items).toHaveLength(2);
     expect(first.approved_items[0].fingerprint).toBe(normalized.rows[0].fingerprint);
     expect(first.public_attribution).toHaveLength(1);
     expect(Object.keys(first.public_attribution[0])).toEqual([
@@ -249,17 +284,206 @@ describe("public nutrition source acquisition core", () => {
     });
     const review = buildNutritionReview({
       normalizedBundle: normalized,
-      decisions: [{ fingerprint: normalized.rows[0].fingerprint, status: "approved" }],
+      decisions: normalized.rows.map((row: { fingerprint: string }) => ({
+        fingerprint: row.fingerprint,
+        status: "approved",
+      })),
     });
-    const otherBundle = structuredClone(normalized);
-    otherBundle.normalized_content_hash = "0".repeat(64);
+    const otherReview = structuredClone(review);
+    otherReview.normalized_content_hash = "0".repeat(64);
 
     expect(errorCode(() => buildApprovedPinnedHandoff({
       manifest: raw.manifest,
-      normalizedBundle: otherBundle,
-      reviewReport: review,
+      normalizedBundle: normalized,
+      reviewReport: otherReview,
       measurementEvidence: [],
     }))).toBe("REVIEW_CONTENT_MISMATCH");
+  });
+
+  it("rejects measurement evidence that differs from the reviewed evidence", async () => {
+    const {
+      buildApprovedPinnedHandoff,
+      buildNutritionReview,
+      buildRawBatch,
+      normalizeNutritionBatch,
+    } = await loadPipeline();
+    const input = fixture("mfds-source-sample.json");
+    const evidence = fixture("rda-measurement-limited-evidence.json");
+    const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    const normalized = normalizeNutritionBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "nutrition-source-row-v1",
+    });
+    const review = buildNutritionReview({
+      normalizedBundle: normalized,
+      decisions: normalized.rows.map((row: { fingerprint: string }) => ({
+        fingerprint: row.fingerprint,
+        status: "approved",
+      })),
+      measurementEvidence: evidence,
+    });
+    const tamperedEvidence = structuredClone(evidence);
+    tamperedEvidence[0].observed_g_per_15ml = 99;
+
+    expect(errorCode(() => buildApprovedPinnedHandoff({
+      manifest: raw.manifest,
+      normalizedBundle: normalized,
+      reviewReport: review,
+      measurementEvidence: tamperedEvidence,
+    }))).toBe("REVIEW_EVIDENCE_MISMATCH");
+  });
+
+  it("recomputes normalized content identity before promotion", async () => {
+    const {
+      buildApprovedPinnedHandoff,
+      buildNutritionReview,
+      buildRawBatch,
+      normalizeNutritionBatch,
+    } = await loadPipeline();
+    const input = fixture("mfds-source-sample.json");
+    const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    const normalized = normalizeNutritionBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "nutrition-source-row-v1",
+    });
+    const review = buildNutritionReview({
+      normalizedBundle: normalized,
+      decisions: normalized.rows.map((row: { fingerprint: string }) => ({
+        fingerprint: row.fingerprint,
+        status: "approved",
+      })),
+    });
+    const tampered = structuredClone(normalized);
+    tampered.rows[0].values.energy_kcal.amount = 999;
+
+    expect(errorCode(() => buildApprovedPinnedHandoff({
+      manifest: raw.manifest,
+      normalizedBundle: tampered,
+      reviewReport: review,
+      measurementEvidence: [],
+    }))).toBe("NORMALIZED_CONTENT_HASH_MISMATCH");
+  });
+
+  it("requires manifest, normalized, and review batch/raw/schema pins to agree", async () => {
+    const {
+      buildApprovedPinnedHandoff,
+      buildNutritionReview,
+      buildRawBatch,
+      normalizeNutritionBatch,
+    } = await loadPipeline();
+    const input = fixture("mfds-source-sample.json");
+    const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    const normalized = normalizeNutritionBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "nutrition-source-row-v1",
+    });
+    const review = buildNutritionReview({
+      normalizedBundle: normalized,
+      decisions: normalized.rows.map((row: { fingerprint: string }) => ({
+        fingerprint: row.fingerprint,
+        status: "approved",
+      })),
+    });
+    const cases = [
+      { manifest: { ...raw.manifest, logical_batch_id: "other" }, normalized, review },
+      { manifest: raw.manifest, normalized: { ...normalized, logical_batch_id: "other" }, review },
+      { manifest: raw.manifest, normalized: { ...normalized, raw_sha256: "other" }, review },
+      { manifest: raw.manifest, normalized: { ...normalized, adapter_schema_version: "other" }, review },
+      { manifest: raw.manifest, normalized, review: { ...review, logical_batch_id: "other" } },
+    ];
+
+    for (const current of cases) {
+      expect(errorCode(() => buildApprovedPinnedHandoff({
+        manifest: current.manifest,
+        normalizedBundle: current.normalized,
+        reviewReport: current.review,
+        measurementEvidence: [],
+      }))).toBe("BATCH_PIN_MISMATCH");
+    }
+  });
+
+  it("recomputes logical identity and pins normalized source provenance to the manifest", async () => {
+    const {
+      buildApprovedPinnedHandoff,
+      buildNutritionReview,
+      buildRawBatch,
+      normalizeNutritionBatch,
+    } = await loadPipeline();
+    const input = fixture("mfds-source-sample.json");
+    const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    const normalized = normalizeNutritionBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "nutrition-source-row-v1",
+    });
+    const review = buildNutritionReview({
+      normalizedBundle: normalized,
+      decisions: normalized.rows.map((row: { fingerprint: string }) => ({
+        fingerprint: row.fingerprint,
+        status: "approved",
+      })),
+    });
+    const promote = (manifest: unknown, bundle: unknown) => buildApprovedPinnedHandoff({
+      manifest,
+      normalizedBundle: bundle,
+      reviewReport: review,
+      measurementEvidence: [],
+    });
+
+    expect(errorCode(() => promote(
+      { ...raw.manifest, provider: "변조된 기관" },
+      normalized,
+    ))).toBe("BATCH_PIN_MISMATCH");
+    expect(errorCode(() => promote(
+      { ...raw.manifest, license: "변조된 이용조건" },
+      { ...normalized, source: { ...normalized.source, license: "변조된 이용조건" } },
+    ))).toBe("BATCH_PIN_MISMATCH");
+    expect(errorCode(() => promote(
+      raw.manifest,
+      { ...normalized, source: { ...normalized.source, dataset: "변조된 dataset" } },
+    ))).toBe("SOURCE_PIN_MISMATCH");
+    expect(errorCode(() => promote(
+      { ...raw.manifest, license_evidence_url: "" },
+      normalized,
+    ))).toBe("MANIFEST_PROVENANCE_INVALID");
+    expect(errorCode(() => promote(
+      { ...raw.manifest, endpoint_or_file_url: "https://example.test/data?serviceKey=secret" },
+      normalized,
+    ))).toBe("MANIFEST_PROVENANCE_INVALID");
+  });
+
+  it("blocks promotion unless every normalized row is explicitly approved", async () => {
+    const {
+      buildApprovedPinnedHandoff,
+      buildNutritionReview,
+      buildRawBatch,
+      normalizeNutritionBatch,
+    } = await loadPipeline();
+    const input = fixture("mfds-source-sample.json");
+    const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    const normalized = normalizeNutritionBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "nutrition-source-row-v1",
+    });
+    const review = buildNutritionReview({
+      normalizedBundle: normalized,
+      decisions: [{ fingerprint: normalized.rows[0].fingerprint, status: "approved" }],
+    });
+
+    expect(review.reviewed_rows).toEqual([
+      expect.objectContaining({ status: "approved" }),
+      expect.objectContaining({ status: "pending" }),
+    ]);
+    expect(errorCode(() => buildApprovedPinnedHandoff({
+      manifest: raw.manifest,
+      normalizedBundle: normalized,
+      reviewReport: review,
+      measurementEvidence: [],
+    }))).toBe("PROMOTION_BLOCKED");
   });
 
   it("excludes fetched_at from content identity and scopes fingerprints by source", async () => {

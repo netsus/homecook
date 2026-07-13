@@ -11,6 +11,10 @@ const EVIDENCE_PATH = join(
   process.cwd(),
   "tests/fixtures/public-nutrition-source/rda-measurement-limited-evidence.json",
 );
+const FAILURE_FIXTURE = JSON.parse(readFileSync(join(
+  process.cwd(),
+  "tests/fixtures/public-nutrition-source/failure-scenarios.json",
+), "utf8"));
 
 async function loadPipeline() {
   return import(PIPELINE_MODULE);
@@ -65,7 +69,10 @@ describe("public nutrition source and license boundary", () => {
     const { validateMeasurementEvidence } = await loadPipeline();
     const [base] = JSON.parse(readFileSync(EVIDENCE_PATH, "utf8"));
 
-    expect(() => validateMeasurementEvidence([{ ...base, license_disposition: "" }])).toThrowError(
+    expect(() => validateMeasurementEvidence([{
+      ...base,
+      license_disposition: FAILURE_FIXTURE.missing_license_disposition,
+    }])).toThrowError(
       expect.objectContaining({ code: "RDA_LICENSE_DISPOSITION_MISSING" }),
     );
     expect(() => validateMeasurementEvidence([{ ...base, original_table: "forbidden" }])).toThrowError(
