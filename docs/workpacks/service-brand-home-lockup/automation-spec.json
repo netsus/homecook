@@ -91,9 +91,7 @@
         "ui/designs/evidence/service-brand-home-lockup/HOME-desktop-before-1280.png",
         "ui/designs/evidence/service-brand-home-lockup/HOME-after-390.png",
         "ui/designs/evidence/service-brand-home-lockup/HOME-after-320.png",
-        "ui/designs/evidence/service-brand-home-lockup/HOME-desktop-after-1280.png",
-        "ui/designs/evidence/service-brand-home-lockup/HOME-accessibility-geometry-audit.json",
-        "ui/designs/evidence/service-brand-home-lockup/visual-verdict.json"
+        "ui/designs/evidence/service-brand-home-lockup/HOME-desktop-after-1280.png"
       ],
       "authority_report_paths": [
         "ui/designs/authority/HOME-service-brand-home-lockup-authority.md"
