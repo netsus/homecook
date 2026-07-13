@@ -82,7 +82,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "ready_for_review",
     "approval_state": "codex_approved",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -101,5 +101,5 @@
     "Technical identifier, user content, generic noun 집밥, historical official version, prototype, or evidence edits"
   ],
   "open_questions": [],
-  "notes": "Stage 1 contract prepared on docs/mumeok-home-lockup-contract under explicit user approval. Roadmap status is docs while workflow lifecycle remains planned because the schema has no docs enum. This is a small FE-only visual change but HOME direct modification keeps risk high, merge_policy manual, and authority review required. Stage 2/3 are skipped. Existing screenshot/evidence is immutable; Stage 4 creates new evidence only under service-brand-home-lockup."
+  "notes": "Stage 1 contract merged through docs PR #990. Stage 4 HOME-only implementation, immutable before evidence, 390/320/1280 audit, exploratory QA, and visual harness stabilization are complete on feature/fe-service-brand-home-lockup. Independent Codex final authority approved with blocker/major/minor 0/0/0, and Stage 6 independent code re-review approved after all required findings were repaired. Local product, build, smoke, accessibility, Darwin/Linux visual, and validator gates passed; current-head PR CI is pending. Stage 2/3 are skipped."
 }

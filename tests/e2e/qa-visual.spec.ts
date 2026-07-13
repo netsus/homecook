@@ -168,6 +168,17 @@ async function stabilizeFixedHeaderForScrolledFullPageSnapshot(page: Page) {
         position: absolute !important;
         top: 0 !important;
       }
+
+      header.sticky,
+      .home-mobile-discovery-search {
+        position: static !important;
+      }
+
+      nav:has([data-slot="bottom-tab-container"]) {
+        position: absolute !important;
+        top: calc(100vh - 80px) !important;
+        bottom: auto !important;
+      }
     `,
   });
 }

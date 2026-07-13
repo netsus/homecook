@@ -56,7 +56,12 @@ test("checks canonical brand surfaces without changing HOME geometry", async ({ 
     const { context, page } = await openPage(browser, viewport);
     await installDiscoveryRoutes(page);
     await page.goto("/");
-    await expect(page.getByRole("heading", { exact: true, name: "무먹" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        exact: true,
+        name: "무먹, 무엇을 먹든",
+      }),
+    ).toBeVisible();
     await expect(page.getByRole("region", { name: "무먹 둘러보기" })).toBeVisible();
     await expect(page.getByRole("link", { name: "무먹 가이드 보기" })).toBeVisible();
     await expect(page.getByText("무먹 추천").first()).toBeVisible();

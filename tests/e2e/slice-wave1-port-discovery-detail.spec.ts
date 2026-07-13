@@ -107,10 +107,18 @@ test.describe("wave1 port discovery detail", () => {
   }) => {
     await page.goto("/");
     if (isMobileViewport(page)) {
-      await expect(page.getByRole("heading", { name: "무먹" })).toBeVisible();
+      await expect(
+        page.getByRole("heading", {
+          exact: true,
+          name: "무먹, 무엇을 먹든",
+        }),
+      ).toBeVisible();
     } else {
       await expect(
-        page.getByRole("link", { name: "무먹", exact: true }),
+        page.getByRole("link", {
+          exact: true,
+          name: "무먹, 무엇을 먹든",
+        }),
       ).toBeVisible();
       await expect(
         page.getByRole("navigation", { name: "데스크탑 주요 메뉴" }),

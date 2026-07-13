@@ -1885,8 +1885,8 @@
     {
       "id": "service-brand-home-lockup",
       "preset": "vertical-slice-strict",
-      "branch": "docs/mumeok-home-lockup-contract",
-      "lifecycle": "planned",
+      "branch": "feature/fe-service-brand-home-lockup",
+      "lifecycle": "ready_for_review",
       "approval_state": "codex_approved",
       "verification_status": "pending",
       "required_checks": [
@@ -1896,7 +1896,7 @@
         "node scripts/validate-automation-spec.mjs --slice service-brand-home-lockup",
         "git diff --check"
       ],
-      "notes": "Stage 1 contract-evolution docs prepared by a role-separated Codex docs-owner session under explicit user approval. HOME mobile HomeAppBar and desktop HOME WebTopNav brand area use a vertical 무먹 / 무엇을 먹든 lockup; non-HOME short-name-only behavior and desktop nav geometry/interaction remain unchanged. FE-only Stage 2/3 skip. HOME direct modification requires new 390/320/1280 evidence and independent authority review; historical evidence is immutable."
+      "notes": "Stage 1 contract merged through docs PR #990. Stage 4 HOME-only implementation, immutable before evidence, 390/320/1280 audit, exploratory QA, and visual harness stabilization are complete on feature/fe-service-brand-home-lockup. Independent Codex final authority and Stage 6 code re-review approved after required repairs. Local product, build, smoke, accessibility, Darwin/Linux visual, and validator gates passed; current-head PR CI is pending."
     }
   ]
 }

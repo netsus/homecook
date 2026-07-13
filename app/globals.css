@@ -1014,6 +1014,29 @@
   line-height: 1.35;
 }
 
+.home-app-brand-lockup {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.home-app-brand-primary {
+  color: var(--brand);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.home-app-brand-supporting {
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .home-mobile-discovery-title {
   margin: 0;
   color: var(--foreground);
@@ -3375,6 +3398,28 @@ button {
     height: 6px;
     border-radius: var(--web-r-pill);
     background: var(--web-brand);
+  }
+
+  .web-topnav-brand-copy {
+    position: relative;
+    display: block;
+    transform: translateY(-6.5px);
+  }
+
+  .web-topnav-brand-primary {
+    line-height: 1;
+  }
+
+  .web-topnav-brand-supporting {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    color: var(--web-text-2);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .web-topnav-tabs {
