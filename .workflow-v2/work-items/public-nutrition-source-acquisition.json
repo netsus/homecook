@@ -94,9 +94,9 @@
     "lifecycle": "in_progress",
     "approval_state": "codex_approved",
     "verification_status": "passed",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "evaluation_status": "fixable",
+    "evaluation_round": 1,
+    "last_evaluator_result": "STAGE3_CHANGES_REQUIRED at a093dcc959a642f421ea50a4f2f246401a1f47f4",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -113,5 +113,5 @@
     "RDA 15143598 10.0 KOGL4 OpenAPI as a default normalization source"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs were authored on docs/public-nutrition-source-acquisition and independently approved before merge. Stage 2 is implemented on feature/be-public-nutrition-source-acquisition at implementation head dbce5dd4dc1c3ad12d1a092a772253163b18c790 with deterministic fixture acquisition, fail-closed promotion, exact attribution, credential redaction, and production_db_writes=0. Local required checks pass. Four Manual Only gates remain open: portal/application approval, credentialed MFDS smoke, RDA 10.4 version/KOGL1 evidence, and RDA measurement license disposition. A separate Codex Stage 3 reviewer must review the implementation; this Stage 2 owner records no Stage 3 approval."
+  "notes": "Independent Stage 3 returned STAGE3_CHANGES_REQUIRED at a093dcc959a642f421ea50a4f2f246401a1f47f4. Review fixes are implemented on feature/be-public-nutrition-source-acquisition at implementation commit 0798c0ef5b8c46ad1a9b8172832d3603bbe7dce1: whole-bundle secret scanning, exact six-fact RDA validation, atomic no-clobber publication, versioned failure lifecycle, MFDS request-query pinning, encoded-key handling, and transitive client isolation. Targeted tests, verify:backend, and full quality tests pass locally. Four Manual Only gates remain open, PR #995 stays Draft, and a fresh independent Codex Stage 3 review is required; this owner records no Stage 3 approval."
 }
