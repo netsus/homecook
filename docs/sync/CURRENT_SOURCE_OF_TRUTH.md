@@ -1,17 +1,34 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.13.md`
-- `docs/화면정의서-v1.5.20.md`
-- `docs/유저flow맵-v1.3.19.md`
-- `docs/db설계-v1.3.16.md`
-- `docs/api문서-v1.2.21.md`
+- `docs/요구사항기준선-v1.7.14.md`
+- `docs/화면정의서-v1.5.21.md`
+- `docs/유저flow맵-v1.3.20.md`
+- `docs/db설계-v1.3.17.md`
+- `docs/api문서-v1.2.22.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Nutrition, Prepared Food, And Planner Summary Contract-Evolution `2026-07-13`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.14 | 핵심 영양 5종, complete/partial/unavailable, direct/estimated/mixed, 결측≠0, 대표 환산 등급, immutable snapshot, 완제품/계획 영양 정책 추가 |
+| 화면정의서 v1.5.21 | RECIPE_DETAIL 예상 영양 카드, FOOD_PRODUCT_PICKER/CREATE, PLANNER_WEEK/MEAL_SCREEN 혼합 entry와 계획 영양 표시 계약 추가 |
+| 유저플로우 v1.3.20 | 공공/내 private 완제품 검색·manual 등록·플래너 추가, pin된 snapshot 합산, recipe workflow 제외 흐름 추가 |
+| DB v1.3.17 | 영양/source/환산/recipe snapshot/완제품/product planner entry 13개 additive table과 Meal snapshot pin/RLS/불변 제약 추가 |
+| API v1.2.22 | Nutrition 공통 shape, recipe/planner/meals additive field, 계획 영양 1개 + 완제품 catalog/entry 7개 endpoint 추가. 기존 tombstone 포함 목록 73→81개(active 72→80개) |
+
+> 사용자가 2026-07-13에 재료별 영양, 레시피 예상 영양, 완제품 planner entry, 끼니/날짜/주간 계획 영양 집계를 명시적으로 승인했다.
+> MVP 핵심 영양소는 열량·탄수화물·단백질·지방·나트륨이며, 결측은 0이 아니다. completeness와 계산 품질을 분리하고 partial은 `최소 X`, unavailable은 null/정보 준비 중으로 유지한다.
+> 큰술·작은술·컵·mL는 승인된 15mL당 약 6/10/15/20/25g 대표 등급을 사용하며 화면에 항상 `약/예상` 의미를 표시한다.
+> 농촌진흥청 공개 계량자료는 필요한 소량 관측 사실·출처·조회일·변환 결과만 대표 등급 검수 근거로 보존한다. 원문 표·문장·배치·전체 데이터셋은 복제하지 않으며 source provenance/license를 표시하고 key/secret은 노출하지 않는다.
+> 완제품은 Recipe/Meal과 별도 private/manual/public catalog로 관리하고 장보기·요리·남은요리·recipe metrics·`planner_registered` XP에서 제외한다. 플래너 합계는 생성 당시 pin된 immutable recipe/product snapshot만 사용한 `계획 영양`이다.
+> 이 기능군의 기존 Claude 담당 단계는 역할이 분리된 별도 Codex 앱 작업으로 대체한다. 작성·구현 작업은 자기 변경을 최종 승인하지 않으며 이 예외는 아래 nutrition 관련 신규 slice에만 적용한다.
 
 ## HOME Service Name Lockup Contract-Evolution `2026-07-13`
 
