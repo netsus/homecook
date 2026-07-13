@@ -464,18 +464,8 @@ type YoutubeQuantityConfirmationStatus =
   "calculation_quality": "mixed",
   "reflected_ingredient_count": 8,
   "target_ingredient_count": 10,
-  "incomplete_entry_count": 0,
   "warnings": ["TO_TASTE_EXCLUDED", "UNIT_CONVERSION_MISSING"],
-  "sources": [
-    {
-      "provider": "rda",
-      "dataset": "국가표준식품성분 DB",
-      "source_version": "10.4-2026",
-      "data_basis_date": "2026-01-01",
-      "license": "공공누리 제1유형",
-      "source_url": "https://official.example"
-    }
-  ],
+  "sources": [],
   "snapshot_id": "uuid",
   "calculated_at": "2026-07-13T00:00:00Z"
 }
@@ -1010,7 +1000,20 @@ GET /planner
       "quantity": { "amount": 1, "unit": "serving" },
       "workflow_status": null,
       "product_nutrition_version_id": "uuid",
-      "nutrition": { "calculation_status": "complete", "calculation_quality": "direct" }
+      "nutrition": {
+        "basis": { "amount": 1, "unit": "serving" },
+        "values": {
+          "energy_kcal": { "amount": 120, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "carbohydrate_g": { "amount": 14, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "protein_g": { "amount": 8, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "fat_g": { "amount": 4, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "sodium_mg": { "amount": 55, "known_amount": null, "status": "complete", "display_mode": "total" }
+        },
+        "calculation_status": "complete",
+        "calculation_quality": "direct",
+        "warnings": [],
+        "sources": []
+      }
     }
   ]
 }
@@ -1142,7 +1145,9 @@ GET /planner/nutrition
       },
       "calculation_status": "partial",
       "calculation_quality": "mixed",
-      "incomplete_entry_count": 2
+      "incomplete_entry_count": 2,
+      "warnings": [],
+      "sources": []
     },
     "recipe_entry_count": 12,
     "product_entry_count": 4
@@ -1150,11 +1155,39 @@ GET /planner/nutrition
   "days": [
     {
       "plan_date": "2026-03-01",
-      "nutrition": { "calculation_status": "complete", "calculation_quality": "mixed", "incomplete_entry_count": 0 },
+      "nutrition": {
+        "basis": { "amount": 1, "unit": "range" },
+        "values": {
+          "energy_kcal": { "amount": 1800, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "carbohydrate_g": { "amount": 230, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "protein_g": { "amount": 90, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "fat_g": { "amount": 60, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "sodium_mg": { "amount": 2200, "known_amount": null, "status": "complete", "display_mode": "total" }
+        },
+        "calculation_status": "complete",
+        "calculation_quality": "mixed",
+        "incomplete_entry_count": 0,
+        "warnings": [],
+        "sources": []
+      },
       "columns": [
         {
           "column_id": "uuid",
-          "nutrition": { "calculation_status": "complete", "calculation_quality": "mixed", "incomplete_entry_count": 0 }
+          "nutrition": {
+            "basis": { "amount": 1, "unit": "range" },
+            "values": {
+              "energy_kcal": { "amount": 600, "known_amount": null, "status": "complete", "display_mode": "total" },
+              "carbohydrate_g": { "amount": 75, "known_amount": null, "status": "complete", "display_mode": "total" },
+              "protein_g": { "amount": 30, "known_amount": null, "status": "complete", "display_mode": "total" },
+              "fat_g": { "amount": 20, "known_amount": null, "status": "complete", "display_mode": "total" },
+              "sodium_mg": { "amount": 700, "known_amount": null, "status": "complete", "display_mode": "total" }
+            },
+            "calculation_status": "complete",
+            "calculation_quality": "mixed",
+            "incomplete_entry_count": 0,
+            "warnings": [],
+            "sources": []
+          }
         }
       ]
     }
@@ -1204,7 +1237,20 @@ GET /meals
       "status": "registered",
       "is_leftover": false,
       "recipe_nutrition_snapshot_id": "uuid",
-      "nutrition": { "calculation_status": "partial", "calculation_quality": "mixed" }
+      "nutrition": {
+        "basis": { "amount": 2, "unit": "serving" },
+        "values": {
+          "energy_kcal": { "amount": null, "known_amount": 900, "status": "partial", "display_mode": "minimum" },
+          "carbohydrate_g": { "amount": null, "known_amount": 100, "status": "partial", "display_mode": "minimum" },
+          "protein_g": { "amount": null, "known_amount": 45, "status": "partial", "display_mode": "minimum" },
+          "fat_g": { "amount": null, "known_amount": 30, "status": "partial", "display_mode": "minimum" },
+          "sodium_mg": { "amount": null, "known_amount": 1500, "status": "partial", "display_mode": "minimum" }
+        },
+        "calculation_status": "partial",
+        "calculation_quality": "mixed",
+        "warnings": ["UNIT_CONVERSION_MISSING"],
+        "sources": []
+      }
     }
   ],
   "product_entries": [
@@ -1217,7 +1263,20 @@ GET /meals
       "quantity": { "amount": 1, "unit": "serving" },
       "workflow_status": null,
       "product_nutrition_version_id": "uuid",
-      "nutrition": { "calculation_status": "complete", "calculation_quality": "direct" }
+      "nutrition": {
+        "basis": { "amount": 1, "unit": "serving" },
+        "values": {
+          "energy_kcal": { "amount": 120, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "carbohydrate_g": { "amount": 14, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "protein_g": { "amount": 8, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "fat_g": { "amount": 4, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "sodium_mg": { "amount": 55, "known_amount": null, "status": "complete", "display_mode": "total" }
+        },
+        "calculation_status": "complete",
+        "calculation_quality": "direct",
+        "warnings": [],
+        "sources": []
+      }
     }
   ]
 }
@@ -1334,6 +1393,7 @@ GET /food-products
         },
         "calculation_status": "complete",
         "calculation_quality": "direct",
+        "warnings": [],
         "sources": []
       }
     }
@@ -1386,7 +1446,22 @@ POST /food-products
     "source_type": "manual",
     "editable": true,
     "nutrition_version_id": "uuid",
-    "nutrition": { "calculation_status": "partial", "calculation_quality": "direct" }
+    "nutrition": {
+      "basis": { "amount": 1, "unit": "serving" },
+      "values": {
+        "energy_kcal": { "amount": 120, "known_amount": null, "status": "complete", "display_mode": "total" },
+        "carbohydrate_g": { "amount": 14, "known_amount": null, "status": "complete", "display_mode": "total" },
+        "protein_g": { "amount": 8, "known_amount": null, "status": "complete", "display_mode": "total" },
+        "fat_g": { "amount": 4, "known_amount": null, "status": "complete", "display_mode": "total" },
+        "sodium_mg": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null }
+      },
+      "calculation_status": "partial",
+      "calculation_quality": "direct",
+      "warnings": [],
+      "sources": [
+        { "provider": "user_label", "dataset": null, "license": null, "source_url": null }
+      ]
+    }
   }
 }
 ```
@@ -1470,7 +1545,20 @@ POST /product-planner-entries
     "quantity": { "amount": 1, "unit": "serving" },
     "workflow_status": null,
     "product_nutrition_version_id": "uuid",
-    "nutrition": { "calculation_status": "complete", "calculation_quality": "direct" }
+    "nutrition": {
+      "basis": { "amount": 1, "unit": "serving" },
+      "values": {
+        "energy_kcal": { "amount": 120, "known_amount": null, "status": "complete", "display_mode": "total" },
+        "carbohydrate_g": { "amount": 14, "known_amount": null, "status": "complete", "display_mode": "total" },
+        "protein_g": { "amount": 8, "known_amount": null, "status": "complete", "display_mode": "total" },
+        "fat_g": { "amount": 4, "known_amount": null, "status": "complete", "display_mode": "total" },
+        "sodium_mg": { "amount": 55, "known_amount": null, "status": "complete", "display_mode": "total" }
+      },
+      "calculation_status": "complete",
+      "calculation_quality": "direct",
+      "warnings": [],
+      "sources": []
+    }
   }
 }
 ```
@@ -1509,7 +1597,11 @@ DELETE /product-planner-entries/{entry_id}
 
 🔒 로그인 필수
 
-**응답 (204)**: No Content
+**응답 (200)**: 공통 wrapper의 `data` payload
+
+```json
+{ "deleted": true, "entry_id": "uuid" }
+```
 
 - owner entry만 삭제한다. Recipe Meal과 product catalog/version은 변경하지 않는다.
 

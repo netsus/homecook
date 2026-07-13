@@ -548,7 +548,7 @@ UNIQUE (ingredient_id, preparation_state) WHERE is_primary = true AND review_sta
 | 컬럼 | 타입 | 제약 | 설명 |
 | --- | --- | --- | --- |
 | id | uuid | PK | profile ID |
-| code | varchar(30) | NOT NULL, UNIQUE | `VOLUME_G6/G10/G15/G20/G25` |
+| code | varchar(30) | NOT NULL | `VOLUME_G6/G10/G15/G20/G25` |
 | basis_volume_ml | numeric(8,3) | NOT NULL, DEFAULT 15 | 공통 기준 부피 |
 | representative_weight_g | numeric(8,3) | NOT NULL | 계산용 대표 g |
 | display_rounding_g | numeric(8,3) | NOT NULL, DEFAULT 1 | 표시 반올림 단위 |
@@ -560,7 +560,12 @@ UNIQUE (ingredient_id, preparation_state) WHERE is_primary = true AND review_sta
 CHECK (basis_volume_ml = 15)
 CHECK (representative_weight_g IN (6, 10, 15, 20, 25))
 UNIQUE (code, version)
+UNIQUE (code) WHERE is_active = true
 ```
+
+- profile의 계산 payload(`code`, `basis_volume_ml`, `representative_weight_g`, `display_rounding_g`, `version`)는 insert 후 수정·삭제하지 않는다. 운영 pointer인 `is_active`만 같은 code의 새 version 활성화 transaction에서 `true → false`로 전환할 수 있다.
+- 대표값이 바뀌면 한 transaction에서 새 version을 `is_active=false`로 insert하고, 이전 version을 `is_active=false`로 전환한 뒤, 새 version을 `is_active=true`로 전환해 `UNIQUE (code) WHERE is_active=true`를 만족한 상태로 commit한다.
+- 기존 snapshot과 assignment는 과거 `conversion_profile_id`를 계속 참조한다. 신규 assignment만 해당 code의 `is_active=true` version을 사용할 수 있다.
 
 ## 2A-8. ingredient_conversion_assignments
 
@@ -1118,7 +1123,7 @@ CHECK (duration_secondsISNULLOR duration_seconds>=0)
 | fixed_values_json | jsonb | NOT NULL, DEFAULT '{}' | `scalable=false` 고정 영양 벡터 |
 | nutrient_status_json | jsonb | NOT NULL, DEFAULT '{}' | 영양소별 `complete/partial/unavailable`, amount/known_amount |
 | calculation_status | varchar(20) | NOT NULL | 핵심 5종 요약 상태 |
-| calculation_quality | varchar(20) | NOT NULL | `direct/estimated/mixed` |
+| calculation_quality | varchar(20) | nullable | 계산 가능 시 `direct/estimated/mixed`, 전체 unavailable이면 null |
 | reflected_ingredient_count | int | NOT NULL | 반영한 정량 재료 수 |
 | target_ingredient_count | int | NOT NULL | 대상 정량 재료 수 |
 | missing_reasons | text[] | NOT NULL, DEFAULT '{}' | 누락/경고 reason code |
@@ -1130,14 +1135,20 @@ CHECK (duration_secondsISNULLOR duration_seconds>=0)
 CHECK (base_servings > 0)
 CHECK (reflected_ingredient_count >= 0)
 CHECK (target_ingredient_count >= reflected_ingredient_count)
-CHECK (calculation_status IN ('complete', 'partial', 'unavailable'))
-CHECK (calculation_quality IN ('direct', 'estimated', 'mixed'))
+CHECK (
+  (calculation_status = 'unavailable' AND calculation_quality IS NULL)
+  OR
+  (
+    calculation_status IN ('complete', 'partial')
+    AND calculation_quality IN ('direct', 'estimated', 'mixed')
+  )
+)
 UNIQUE (recipe_id, input_hash, calculation_version)
 UNIQUE (recipe_id) WHERE is_current = true
 ```
 
 - snapshot 계산 payload는 UPDATE/DELETE하지 않는다. 새 input 또는 calculation version은 새 row를 만들고 기존 row에서는 `is_current`만 false로 전환하는 원자 transaction을 사용한다.
-- `nutrient_status_json`에서 unavailable amount는 null이다. partial은 `known_amount`와 `display_mode='minimum'`을 보존하며 결측을 0으로 저장하지 않는다.
+- `nutrient_status_json`에서 unavailable amount와 known_amount는 null이고 전체 unavailable snapshot의 `calculation_quality`도 null이다. partial은 `known_amount`와 `display_mode='minimum'`을 보존하며 결측을 0으로 저장하지 않는다. unavailable/partial의 `missing_reasons`는 그대로 보존한다.
 - 이미 Meal에 pin된 snapshot은 current 전환과 무관하게 계속 조회 가능해야 한다.
 
 ---
