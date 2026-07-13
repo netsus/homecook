@@ -306,8 +306,16 @@ describe("home screen", () => {
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
     expect(screen.getByText("오늘도,")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "무먹" }).className).toContain(
-      "text-[var(--brand)]",
+    const mobileBrand = screen.getByRole("heading", {
+      level: 1,
+      name: "무먹, 무엇을 먹든",
+    });
+    expect(mobileBrand.className).toContain("home-app-brand-lockup");
+    expect(within(mobileBrand).getByText("무먹").className).toContain(
+      "home-app-brand-primary",
+    );
+    expect(within(mobileBrand).getByText("무엇을 먹든").className).toContain(
+      "home-app-brand-supporting",
     );
     expect(screen.getByText("레시피 제목으로 검색하거나, 재료로 좁혀 보세요.")).toBeTruthy();
     expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
@@ -823,7 +831,11 @@ describe("home screen", () => {
       await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
     ).toBeTruthy();
     expect(screen.getByText("오늘도,")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "무먹" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", {
+        name: "무먹, 무엇을 먹든",
+      }),
+    ).toBeTruthy();
     expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
     expect(
       screen.getAllByRole("button", { name: /재료로 검색/ }),
