@@ -88,8 +88,8 @@
   },
   "status": {
     "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -108,5 +108,5 @@
     "RDA 15143598 10.0 KOGL4 OpenAPI as a default normalization source"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs are authored on docs/public-nutrition-source-acquisition from origin/master contract merge 046eb7fd. Roadmap status is docs while workflow lifecycle remains planned because workflow-status has no docs enum. Approval remains not_started until a separate Codex Stage 1.5 reviewer and repair/final owner close the docs gate. The authoring session does not self-approve, mark Ready, merge, or implement product/runtime files."
+  "notes": "Stage 1 docs were authored on docs/public-nutrition-source-acquisition from origin/master contract merge 046eb7fd. A separate Codex Stage 1.5 reviewer approved the fcb1164e content and master integration with unresolved content blocker 0. This is not author self-approval; authoring, repair, integration, review, and this closeout are role-separated sessions. The docs gate is closed, but roadmap status remains docs and workflow lifecycle remains planned until the PR actually merges. Stage 2 implementation and Stage 3 review must be owned by separate new Codex sessions."
 }
