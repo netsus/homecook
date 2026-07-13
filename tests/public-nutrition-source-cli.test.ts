@@ -269,6 +269,66 @@ describe("public nutrition source network and CLI", () => {
     expect(persisted).not.toContain("<FAKE_TEST_KEY_ONLY>");
   });
 
+  it("accepts the direct top-level MFDS header/body envelope", async () => {
+    const { fetchMfdsBatch } = await loadPipeline();
+
+    const result = await fetchMfdsBatch({
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchedAt: "2026-07-13T00:00:00.000Z",
+      pageSize: 1,
+      fetchImpl: async () => response({
+        header: { resultCode: "00" },
+        body: {
+          pageNo: 1,
+          totalCount: 1,
+          items: [{ FOOD_CD: "MFDS-DIRECT-1" }],
+        },
+      }),
+      sleep: async () => undefined,
+      now: () => 0,
+      createTimeoutSignal: () => new AbortController().signal,
+    });
+
+    expect(result.manifest).toMatchObject({
+      provider_reported_total: 1,
+      fetched_raw_count: 1,
+      page_count: 1,
+      production_db_writes: 0,
+    });
+    expect(result.rawSnapshot.pages[0].items).toEqual([
+      { FOOD_CD: "MFDS-DIRECT-1" },
+    ]);
+  });
+
+  it("fails closed when direct and wrapped MFDS envelopes coexist", async () => {
+    const { fetchMfdsBatch } = await loadPipeline();
+
+    await expect(fetchMfdsBatch({
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchedAt: "2026-07-13T00:00:00.000Z",
+      pageSize: 1,
+      fetchImpl: async () => response({
+        header: { resultCode: "00" },
+        body: {
+          pageNo: 1,
+          totalCount: 1,
+          items: [{ FOOD_CD: "MFDS-DIRECT-1" }],
+        },
+        response: {
+          header: { resultCode: "00" },
+          body: {
+            pageNo: 1,
+            totalCount: 1,
+            items: [{ FOOD_CD: "MFDS-WRAPPED-1" }],
+          },
+        },
+      }),
+      sleep: async () => undefined,
+      now: () => 0,
+      createTimeoutSignal: () => new AbortController().signal,
+    })).rejects.toMatchObject({ code: "SCHEMA_DRIFT" });
+  });
+
   it("sends decoded and already-encoded data.go.kr keys with exactly one URL encoding pass", async () => {
     const { requestJsonWithRetry } = await loadPipeline();
     const cases = [

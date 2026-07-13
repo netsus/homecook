@@ -1086,7 +1086,15 @@ export async function requestJsonWithRetry({
 }
 
 function parseMfdsPage(payload, expectedPageNo) {
-  const response = payload?.response;
+  if (!isRecord(payload)) {
+    throw new NutritionPipelineError("SCHEMA_DRIFT");
+  }
+  const hasDirectEnvelope = Object.hasOwn(payload, "header") || Object.hasOwn(payload, "body");
+  const hasWrappedEnvelope = Object.hasOwn(payload, "response");
+  if (hasDirectEnvelope === hasWrappedEnvelope) {
+    throw new NutritionPipelineError("SCHEMA_DRIFT");
+  }
+  const response = hasWrappedEnvelope ? payload.response : payload;
   const header = response?.header;
   const body = response?.body;
   if (!isRecord(response) || !isRecord(header) || !isRecord(body)) {
