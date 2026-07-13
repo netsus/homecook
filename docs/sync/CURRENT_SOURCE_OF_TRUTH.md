@@ -1,8 +1,8 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.14.md`
-- `docs/화면정의서-v1.5.21.md`
+- `docs/요구사항기준선-v1.7.15.md`
+- `docs/화면정의서-v1.5.22.md`
 - `docs/유저flow맵-v1.3.20.md`
 - `docs/db설계-v1.3.17.md`
 - `docs/api문서-v1.2.22.md`
@@ -12,6 +12,21 @@
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Mumeok Image Brand Assets Contract-Evolution `2026-07-13`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.15 | 선택한 파란 `무먹` 이미지 심볼, HOME/non-HOME 표시 경계, favicon·설치 아이콘·OG/Twitter·보조 자산 사용 계약 추가 |
+| 화면정의서 v1.5.22 | 공통 header의 심볼 조합, HOME 2단 이름 유지, 이미지 비율·접근성·반응형·authority 검증 기준 추가 |
+| 유저플로우 v1.3.20 | 변경 없음. route, action, 상태 전이와 사용자 여정은 기존과 동일 |
+| API v1.2.22 | 변경 없음. endpoint/field/response/error 변화 없음 |
+| DB v1.3.17 | 변경 없음. schema/migration/seed/stored row 변화 없음 |
+
+> 사용자가 2026-07-13에 `ui/designs/brand/mumeok/exports/source/mumeok-symbol-selected-source-1254.png`의 파란색 둥근 사각형 + 흰색 `무먹` 글자 심볼을 공식 브랜드 심볼로 명시 승인했다.
+> 공식 심볼 source SHA-256은 `7ada6b0bcdd46a78a11b353c89e3506ac6288b31a20df321abe097b02738ffe4`이며 screenshot·미선택 후보·따옴표·점·장식 변형을 사용하지 않는다.
+> HOME은 공식 심볼 옆에 기존 `무먹`/`무엇을 먹든` 세로 이름 위계를 유지하고, non-HOME 공통 header는 공식 심볼 + `무먹`만 표시한다. favicon·설치/PWA·Apple touch·OG/Twitter metadata는 생성 완료본을 연결한다.
+> 기존 텍스트-only/no-image 문구는 이 addendum이 명시적으로 대체한다. API/DB/dependency/기술 식별자에는 변화가 없고 과거 공식 버전과 merged evidence는 그대로 보존한다.
 
 ## Nutrition, Prepared Food, And Planner Summary Contract-Evolution `2026-07-13`
 

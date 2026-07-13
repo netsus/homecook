@@ -1,0 +1,100 @@
+{
+  "id": "service-brand-image-assets",
+  "title": "Mumeok image brand assets",
+  "summary": "선택한 파란 무먹 심볼을 header, favicon, 설치/Apple 아이콘, OG/Twitter metadata에 적용하고 기존 이름·동작·API/DB 계약을 보존한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 앱·웹·브라우저·설치·공유 surface에서 같은 공식 무먹 이미지 브랜드를 보되 기존 HOME 이름 학습 위계와 서비스 동작은 그대로 유지한다.",
+  "owners": {
+    "claude": "replaced for this follow-up by the existing user-approved Codex-only service-brand exception; global workflow actors are unchanged",
+    "codex": "role-separated work owns Stage 1 docs, Stage 4 implementation, Stage 5/6 review, docs repair, and final authority; authoring and implementation work cannot self-approve",
+    "workers": []
+  },
+  "dependencies": [
+    "service-brand-rebrand merged through PRs #985/#987/#988",
+    "service-brand-home-lockup merged through PRs #990/#991",
+    "canonical image exports merged through image-only PR #996",
+    "user-approved image brand contract-evolution 2026-07-13"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.15.md",
+      "docs/화면정의서-v1.5.22.md",
+      "docs/유저flow맵-v1.3.20.md",
+      "docs/db설계-v1.3.17.md",
+      "docs/api문서-v1.2.22.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/service-brand-image-assets/README.md",
+      "docs/workpacks/service-brand-image-assets/acceptance.md",
+      "docs/workpacks/service-brand-image-assets/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "ui/designs/HOME.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {"backend": 0, "frontend": 4}
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-brand-image-assets",
+      "node scripts/validate-automation-spec.mjs --slice service-brand-image-assets",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-brand-image-assets",
+      "node scripts/validate-automation-spec.mjs --slice service-brand-image-assets",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-docs-v1.7.15-v1.5.22-and-sot-synchronized",
+      "canonical-source-hash-and-selected-export-matrix",
+      "home-symbol-and-two-level-name-contract",
+      "non-home-symbol-and-short-name-only-contract",
+      "favicon-install-apple-og-twitter-contract",
+      "accessibility-and-responsive-contract",
+      "tdd-and-authority-evidence-plan",
+      "historical-artifacts-preserved",
+      "no-api-db-dependency-or-identifier-change",
+      "codex-role-separation-explicit"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Screenshot, unselected candidate, quote, dot, decoration, or mascot variants",
+    "Symbol redraw, recolor, aspect-ratio distortion, or corner reprocessing",
+    "New dependency, font, token, English brand, API, DB, auth, route, interaction, or domain state change",
+    "Technical identifier rename or historical official version, workpack, prototype, or evidence edit"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 contract-evolution docs are authored on docs/mumeok-image-assets-contract and passed an independent Codex Stage 1.5 content review with Critical/Important 0 and Verdict APPROVE. Stage 4 must wait until this docs PR is merged. The selected source SHA-256 is locked, PR #996 exports are canonical, and HOME remains authority-required because the first-impression header changes."
+}
