@@ -1897,6 +1897,27 @@
         "git diff --check"
       ],
       "notes": "Canonical closeout: .workflow-v2/work-items/service-brand-home-lockup.json#closeout. Independent Codex final authority approved blocker/major/minor 0/0/0 and Stage 6 re-review approved actionable findings 0 at implementation head 066ee6c5105586dd2233cb9536713c85964f0257. PR #991 Ready current-head run 29240116832 passed full-regression, Lighthouse, visual, accessibility, and smoke. Design Status confirmed; Manual Only remains deployed preview zoom 200% and user brand-feel confirmation, which do not block merge. closeout_phase=completed | closeout_recovery=manual_patch:1|ci_resync:4|manual_handoff | closeout_repair=codex:6|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #991 and current-head checks,independent Codex final authority and Stage 6 re-review,ui/designs/authority/HOME-service-brand-home-lockup-authority.md,.artifacts/qa/service-brand-home-lockup/2026-07-13T07-51-24-163Z | last_recovery_at=2026-07-13T10:00:37Z"
+    },
+    {
+      "id": "public-nutrition-source-acquisition",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/public-nutrition-source-acquisition",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice public-nutrition-source-acquisition",
+        "node scripts/validate-automation-spec.mjs --slice public-nutrition-source-acquisition",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs were authored by a role-separated Codex docs-owner session from contract merge 046eb7fd. A separate Codex Stage 1.5 reviewer approved the fcb1164e content and master integration with unresolved content blocker 0. This is not author self-approval; authoring, repair, integration, review, and this closeout are role-separated sessions. The docs gate is closed, but roadmap status remains docs and workflow lifecycle remains planned until the PR actually merges. MFDS 15127578 remains the only required API application; active RDA 15143598 remains excluded from the 10.4-based default path. Stage 2 implementation and Stage 3 review must be owned by separate new Codex sessions.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }
