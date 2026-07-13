@@ -1,0 +1,13 @@
+{
+  "score": 98,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "HOME mobile과 desktop header에 선택한 파란 무먹 심볼이 추가됐다",
+    "기존 본문, 검색, quick links, card, desktop nav tab의 시각 위치 변화는 관찰되지 않는다"
+  ],
+  "suggestions": [
+    "non-HOME 정식명 부재 검사는 페이지 본문이 아니라 WebTopNav 내부로 범위를 한정한다"
+  ],
+  "reasoning": "390px, 320px, 1280px 모두 선택 심볼이 선명하게 표시되고 기존 이름 위계와 화면 geometry를 보존한다. 의도하지 않은 시각 drift나 blocker는 없다."
+}

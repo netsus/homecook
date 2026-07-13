@@ -11,6 +11,7 @@ import {
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { LoginGateModal } from "@/components/auth/login-gate-modal";
+import { MumeokBrandSymbol } from "@/components/brand/mumeok-brand-symbol";
 import { IngredientFilterModal } from "@/components/home/ingredient-filter-modal";
 import { RecipeCard } from "@/components/home/recipe-card";
 import { useHomeRecipeSaveFlow } from "@/components/home/use-home-recipe-save-flow";
@@ -1687,11 +1688,10 @@ function HomeAppBar({
         aria-label="무먹, 무엇을 먹든"
         className="home-app-brand-lockup"
       >
-        <span aria-hidden="true" className="home-app-brand-primary">
-          무먹
-        </span>
-        <span aria-hidden="true" className="home-app-brand-supporting">
-          무엇을 먹든
+        <MumeokBrandSymbol size={32} />
+        <span aria-hidden="true" className="home-app-brand-copy">
+          <span className="home-app-brand-primary">무먹</span>
+          <span className="home-app-brand-supporting">무엇을 먹든</span>
         </span>
       </h1>
       <ProfileSummaryButton

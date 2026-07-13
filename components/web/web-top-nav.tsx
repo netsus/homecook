@@ -1,6 +1,7 @@
 import Link from "next/link";
 import * as React from "react";
 
+import { MumeokBrandSymbol } from "@/components/brand/mumeok-brand-symbol";
 import { cn } from "@/components/web/utils";
 import {
   PRIMARY_WEB_NAV_ITEMS,
@@ -36,7 +37,7 @@ export function WebTopNav({
           className="web-topnav-brand"
           href={brandHref}
         >
-          <span aria-hidden="true" className="web-topnav-brand-dot" />
+          <MumeokBrandSymbol size={32} />
           {brandSupportingLabel ? (
             <span aria-hidden="true" className="web-topnav-brand-copy">
               <span className="web-topnav-brand-primary">{brandLabel}</span>

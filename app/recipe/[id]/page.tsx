@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/app-shell";
 import { RecipeDetailScreen } from "@/components/recipe/recipe-detail-screen";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
+import { defaultOpenGraphImagePath } from "@/lib/seo/default-social-image";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import {
   createPublicDataClient,
@@ -20,15 +21,15 @@ function normalizeMetadataDescription(description: string | null) {
 
 function normalizeSocialImage(imageUrl: string | null) {
   const normalized = normalizeFoodSafetyImageUrl(imageUrl);
-  if (!normalized) return "/opengraph-image";
+  if (!normalized) return defaultOpenGraphImagePath;
 
   try {
     const url = new URL(normalized);
     return url.protocol === "http:" || url.protocol === "https:"
       ? normalized
-      : "/opengraph-image";
+      : defaultOpenGraphImagePath;
   } catch {
-    return "/opengraph-image";
+    return defaultOpenGraphImagePath;
   }
 }
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import * as React from "react";
 
+import { MumeokBrandSymbol } from "@/components/brand/mumeok-brand-symbol";
 import { PRIMARY_WEB_NAV_ITEMS } from "@/lib/navigation/app-nav";
 
 interface AppHeaderProps {
@@ -15,9 +16,10 @@ export function AppHeader({
   const brandLink = (
     <Link
       aria-label="무먹 홈"
-      className="inline-flex text-[22px] font-bold leading-none transition-opacity hover:opacity-80"
+      className="inline-flex items-center gap-2 text-[22px] font-bold leading-none transition-opacity hover:opacity-80"
       href="/"
     >
+      <MumeokBrandSymbol size={32} />
       <span className="text-[var(--wave1-mint-contrast)]">무먹</span>
     </Link>
   );

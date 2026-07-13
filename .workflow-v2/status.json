@@ -64,7 +64,7 @@
     {
       "id": "omo-lite-phase7-budget-mode",
       "preset": "infra-governance",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1912,7 +1912,7 @@
         "node scripts/validate-automation-spec.mjs --slice service-brand-image-assets",
         "git diff --check"
       ],
-      "notes": "User-approved 2026-07-13 image brand follow-up. Contract-evolution docs v1.7.15/v1.5.22 passed independent Codex Stage 1.5 content review with Critical/Important 0 and must merge before Stage 4. Canonical PR #996 assets replace the prior text-only/no-image rule; HOME remains authority-required and API/DB/dependency/technical identifiers remain unchanged. Role-separated Codex work preserves the existing service-brand exception without changing global actors.",
+      "notes": "Docs PR #997 merged before Stage 4. Runtime assets, headers, metadata/manifest, RED/GREEN tests, production route smoke, 390/320/1280 evidence, and independent final authority APPROVE 0/0/0 are complete. Ubuntu/Linux visual baseline and current-head CI remain before merge; historical evidence and API/DB/dependency/technical identifiers are unchanged.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

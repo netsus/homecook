@@ -283,7 +283,7 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 
 ## 디자인 결정 사항
 
-1. **HOME 전용 서비스명 lockup**: HOME은 mobile `HomeAppBar`와 desktop `WebTopNav` brand area에서 `무먹` 아래 작은 `무엇을 먹든`을 표시한다. 다른 화면은 `무먹` 단독을 유지한다. 기존 HOME 링크/heading semantics와 focus 동작은 보존하고 접근성 읽기 순서는 `무먹, 무엇을 먹든`으로 맞춘다.
+1. **HOME 전용 이미지 심볼 + 서비스명 lockup**: HOME은 mobile `HomeAppBar`와 desktop `WebTopNav` brand area에서 선택한 파란 `무먹` 이미지 심볼 옆에 `무먹` 아래 작은 `무엇을 먹든`을 표시한다. 다른 화면은 같은 심볼 + `무먹` 단독을 유지한다. 심볼은 32px 정사각 비율로 왜곡 없이 표시하고 인접 텍스트가 이름을 전달하므로 빈 대체 텍스트로 중복 낭독을 막는다. 기존 HOME 링크/heading semantics와 focus 동작은 보존하고 접근성 읽기 순서는 `무먹, 무엇을 먹든`으로 맞춘다.
 
 2. **재료 필터와 정렬 패턴 통일**: `INGREDIENT_FILTER_MODAL`과 mobile 정렬 선택은 모두 bottom sheet 계열의 선택 패턴을 사용한다. 헤더 위계, 닫기 버튼, 선택 요약, 하단 액션 배치를 맞춰 같은 계열의 인터랙션으로 느껴지게 한다.
 

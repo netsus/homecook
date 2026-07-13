@@ -15,5 +15,13 @@ describe("AppHeader service name", () => {
     const brand = screen.getByRole("link", { name: "무먹 홈" });
     expect(brand.textContent).toBe("무먹");
     expect(screen.queryByText("무엇을 먹든")).toBeNull();
+
+    const symbol = brand.querySelector("img");
+    expect(symbol).not.toBeNull();
+    expect(symbol?.getAttribute("src")).toContain(
+      "/brand/mumeok-symbol-192.png",
+    );
+    expect(symbol?.getAttribute("alt")).toBe("");
+    expect(symbol?.getAttribute("aria-hidden")).toBe("true");
   });
 });

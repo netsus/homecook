@@ -177,12 +177,13 @@ describe("launch readiness legal and SEO routes", () => {
     const homeSource = readSource("app/page.tsx");
 
     expect(layoutSource).not.toContain("alternates: {\n    canonical: \"/\"");
-    expect(layoutSource).toContain('url: "/opengraph-image"');
-    expect(layoutSource).toContain("width: 1200");
-    expect(layoutSource).toContain("height: 630");
-    expect(layoutSource).toContain('images: ["/twitter-image"]');
+    expect(layoutSource).toContain("url: defaultOpenGraphImagePath");
+    expect(layoutSource).toContain("width: socialImageSize.width");
+    expect(layoutSource).toContain("height: socialImageSize.height");
+    expect(layoutSource).toContain("images: [defaultTwitterImagePath]");
     expect(homeSource).toContain('canonical: "/"');
     expect(homeSource).toContain('url: "/"');
+    expect(homeSource).toContain('type: "website"');
   });
 
   it("uses the official service name across metadata, legal info, and social images", async () => {
@@ -198,7 +199,16 @@ describe("launch readiness legal and SEO routes", () => {
     expect(layoutSource).toContain('template: "%s | 무엇을 먹든"');
     expect(getLegalInfo().serviceName).toBe("무엇을 먹든");
     expect(socialImage.socialImageAlt).toContain("무엇을 먹든");
+    expect(socialImage.defaultOpenGraphImagePath).toBe(
+      "/brand/og-image-1200x630.png",
+    );
+    expect(socialImage.defaultTwitterImagePath).toBe(
+      "/brand/twitter-image-1200x630.png",
+    );
     expect(readSource("lib/seo/default-social-image.tsx")).toContain("무엇을 먹든");
+    expect(readSource("lib/seo/default-social-image.tsx")).not.toContain(
+      "linear-gradient",
+    );
     expect(readSource("lib/seo/default-social-image.tsx")).not.toContain("HOMECOOK");
   });
 
