@@ -1,0 +1,72 @@
+{
+  "source": {
+    "id": "mfds-15127578",
+    "provider": "식품의약품안전처",
+    "dataset": "식품영양성분DB정보",
+    "source_version": "2025-12-05-fixture",
+    "data_basis_date": null,
+    "endpoint_or_file_url": "https://www.data.go.kr/data/15127578/openapi.do",
+    "license": "이용허락범위 제한 없음",
+    "license_url": "https://www.data.go.kr/data/15127578/openapi.do",
+    "license_evidence_url": "https://www.data.go.kr/data/15127578/openapi.do",
+    "license_verified_at": "2026-07-13"
+  },
+  "adapter_schema_version": "nutrition-source-row-v1",
+  "pages": [
+    {
+      "page_no": 1,
+      "total_count": 4,
+      "next_page_token": null,
+      "items": [
+        {
+          "external_item_key": "BAD-BASIS",
+          "external_name": "기준량 파싱 실패",
+          "basis_text": "적당량",
+          "nutrients": {
+            "energy": { "value": "10", "unit": "kcal" },
+            "carbohydrate": { "value": "1", "unit": "g" },
+            "protein": { "value": "1", "unit": "g" },
+            "fat": { "value": "1", "unit": "g" },
+            "sodium": { "value": "1", "unit": "mg" }
+          }
+        },
+        {
+          "external_item_key": "NEGATIVE",
+          "external_name": "음수 오염",
+          "basis_text": "100 g",
+          "nutrients": {
+            "energy": { "value": "-1", "unit": "kcal" },
+            "carbohydrate": { "value": "1", "unit": "g" },
+            "protein": { "value": "1", "unit": "g" },
+            "fat": { "value": "1", "unit": "g" },
+            "sodium": { "value": "1", "unit": "mg" }
+          }
+        },
+        {
+          "external_item_key": "WRONG-UNIT",
+          "external_name": "단위 불일치",
+          "basis_text": "100 g",
+          "nutrients": {
+            "energy": { "value": "10", "unit": "kJ" },
+            "carbohydrate": { "value": "1", "unit": "g" },
+            "protein": { "value": "1", "unit": "g" },
+            "fat": { "value": "1", "unit": "g" },
+            "sodium": { "value": "1", "unit": "mg" }
+          }
+        },
+        {
+          "external_item_key": "MALFORMED",
+          "external_name": "숫자 형식 불일치",
+          "basis_text": "100 g",
+          "nutrients": {
+            "energy": { "value": "열", "unit": "kcal" },
+            "carbohydrate": { "value": "1", "unit": "g" },
+            "protein": { "value": "1", "unit": "g" },
+            "fat": { "value": "1", "unit": "g" },
+            "sodium": { "value": "1", "unit": "mg" }
+          }
+        }
+      ]
+    }
+  ]
+}
