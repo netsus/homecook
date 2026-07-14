@@ -131,7 +131,7 @@ function runOwnedDatabaseAdapter(adapterPath, expectedPath, sql, environment) {
   const resolved = assertOwnedRegularFile(adapterPath, expectedPath);
   const adapterEnvironment = environment === "staging"
     ? Object.fromEntries(
-      ["PATH", "PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSWORD", "PGSSLMODE"]
+      ["PATH", "PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSFILE", "PGSSLMODE"]
         .filter((key) => typeof process.env[key] === "string")
         .map((key) => [key, process.env[key]]),
     )
