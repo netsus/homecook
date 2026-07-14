@@ -680,7 +680,11 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
       outcomes.filter((outcome) => outcome.status === 0).map((outcome) => outcome.label),
       outcomes.map((outcome) => outcome.stderr).join("\n"),
     ).toEqual([]);
-    expect(outcomes.every((outcome) => outcome.stderr.includes("INVALID_APPROVAL_FILE"))).toBe(true);
+    expect(
+      outcomes
+        .filter((outcome) => !outcome.stderr.includes("INVALID_APPROVAL_FILE"))
+        .map((outcome) => ({ label: outcome.label, stderr: outcome.stderr })),
+    ).toEqual([]);
 
     const missingStatusModel = structuredClone(modelInput());
     missingStatusModel.run_id = "model-postgres-missing-decision-status";
@@ -706,6 +710,142 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
       select count(*) from public.operational_events
       where metadata_json ->> 'idempotency_key' like 'postgres-duplicate-key-%'
         or metadata_json ->> 'idempotency_key' = 'postgres-missing-decision-status';
+    `)).toBe("0");
+  }, 30_000);
+
+  it("rejects ambiguous measurement lookup keys and orphan decisions before writes", () => {
+    const cases: Array<{
+      label: string;
+      model: ReturnType<typeof modelInput>;
+    }> = [];
+
+    for (const decisionKind of ["conversion", "piece"] as const) {
+      for (const reverse of [false, true]) {
+        const model = structuredClone(modelInput());
+        const label = `${decisionKind}-lookup-${reverse ? "reversed" : "forward"}`;
+        model.run_id = `model-postgres-${label}`;
+        model.idempotency_key = `postgres-${label}`;
+        model.source_payload_identity = `postgres-${label}-payload`;
+        model.decision_checksum = `postgres-${label}-decision`;
+        model.content_hash = `postgres-${label}-content`;
+
+        if (decisionKind === "conversion") {
+          const originalDecision = model.approval.conversion_decisions[0]!;
+          const originalCandidate = model.candidate_plan.conversion_candidates[0]!;
+          model.approval.conversion_decisions.push({
+            ...originalDecision,
+            preparation_state: "cooked",
+            candidate_identity: `${label}-identity`,
+            candidate_checksum: `${label}-checksum`,
+            reason: `${label} must fail closed`,
+          });
+          model.candidate_plan.conversion_candidates.push({
+            ...originalCandidate,
+            preparation_state: "cooked",
+            candidate_identity: `${label}-identity`,
+            candidate_checksum: `${label}-checksum`,
+          });
+          if (reverse) {
+            model.approval.conversion_decisions.reverse();
+            model.candidate_plan.conversion_candidates.reverse();
+          }
+        } else {
+          const originalDecision = model.approval.piece_decisions[0]!;
+          const originalCandidate = model.candidate_plan.piece_candidates[0]!;
+          model.approval.piece_decisions.push({
+            ...originalDecision,
+            preparation_state: "cooked",
+            candidate_identity: `${label}-identity`,
+            candidate_checksum: `${label}-checksum`,
+            reason: `${label} must fail closed`,
+          });
+          model.candidate_plan.piece_candidates.push({
+            ...originalCandidate,
+            preparation_state: "cooked",
+            candidate_identity: `${label}-identity`,
+            candidate_checksum: `${label}-checksum`,
+          });
+          if (reverse) {
+            model.approval.piece_decisions.reverse();
+            model.candidate_plan.piece_candidates.reverse();
+          }
+        }
+        cases.push({ label, model });
+      }
+
+      const orphanModel = structuredClone(modelInput());
+      const orphanLabel = `${decisionKind}-orphan`;
+      orphanModel.run_id = `model-postgres-${orphanLabel}`;
+      orphanModel.idempotency_key = `postgres-${orphanLabel}`;
+      orphanModel.source_payload_identity = `postgres-${orphanLabel}-payload`;
+      orphanModel.decision_checksum = `postgres-${orphanLabel}-decision`;
+      orphanModel.content_hash = `postgres-${orphanLabel}-content`;
+      if (decisionKind === "conversion") {
+        orphanModel.approval.conversion_decisions.push({
+          ...orphanModel.approval.conversion_decisions[0]!,
+          evidence_key: flourIngredientId,
+          ingredient_id: flourIngredientId,
+          candidate_identity: `${orphanLabel}-identity`,
+          candidate_checksum: `${orphanLabel}-checksum`,
+          reason: `${orphanLabel} must fail closed`,
+        });
+        orphanModel.candidate_plan.conversion_candidates.push({
+          ...orphanModel.candidate_plan.conversion_candidates[0]!,
+          evidence_key: flourIngredientId,
+          ingredient_id: flourIngredientId,
+          evidence_checksum: `${orphanLabel}-evidence-checksum`,
+          candidate_identity: `${orphanLabel}-identity`,
+          candidate_checksum: `${orphanLabel}-checksum`,
+        });
+      } else {
+        orphanModel.approval.piece_decisions.push({
+          ...orphanModel.approval.piece_decisions[0]!,
+          evidence_key: flourIngredientId,
+          ingredient_id: flourIngredientId,
+          size_code: "medium",
+          candidate_identity: `${orphanLabel}-identity`,
+          candidate_checksum: `${orphanLabel}-checksum`,
+          reason: `${orphanLabel} must fail closed`,
+        });
+        orphanModel.candidate_plan.piece_candidates.push({
+          ...orphanModel.candidate_plan.piece_candidates[0]!,
+          evidence_key: flourIngredientId,
+          ingredient_id: flourIngredientId,
+          evidence_checksum: `${orphanLabel}-evidence-checksum`,
+          size_code: "medium",
+          candidate_identity: `${orphanLabel}-identity`,
+          candidate_checksum: `${orphanLabel}-checksum`,
+        });
+      }
+      cases.push({ label: orphanLabel, model: orphanModel });
+    }
+
+    const outcomes = cases.map(({ label, model }) => {
+      const encoded = encodedJson(model);
+      const result = psqlResult(`
+        begin;
+        truncate public.measurement_source_evidence cascade;
+        select public.apply_ingredient_nutrition_model(
+          convert_from(decode('${encoded}', 'base64'), 'UTF8')::jsonb
+        )::text;
+        rollback;
+      `);
+      return { label, status: result.status, stderr: result.stderr };
+    });
+
+    expect(
+      outcomes.filter((outcome) => outcome.status === 0).map((outcome) => outcome.label),
+      outcomes.map((outcome) => outcome.stderr).join("\n"),
+    ).toEqual([]);
+    expect(
+      outcomes
+        .filter((outcome) => !outcome.stderr.includes("INVALID_APPROVAL_FILE"))
+        .map((outcome) => ({ label: outcome.label, stderr: outcome.stderr })),
+    ).toEqual([]);
+    expect(psql(`
+      select count(*) from public.operational_events
+      where metadata_json ->> 'idempotency_key' like 'postgres-%-lookup-%'
+        or metadata_json ->> 'idempotency_key' like 'postgres-%-orphan';
     `)).toBe("0");
   }, 30_000);
 

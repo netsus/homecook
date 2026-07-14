@@ -544,6 +544,7 @@ declare
   v_item jsonb;
   v_value record;
   v_decision jsonb;
+  v_decision_count integer := 0;
   v_evidence jsonb;
   v_lock_key text;
   v_writes integer := 0;
@@ -658,6 +659,25 @@ begin
             and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
             and candidate ->> 'review_status' = 'pending'
         ) <> 1
+        or (
+          select count(*)
+          from jsonb_array_elements(
+            p_model -> 'candidate_plan' -> 'conversion_candidates'
+          ) candidates(candidate)
+          join jsonb_array_elements(v_bundle -> 'measurement_evidence') evidence_items(evidence)
+            on evidence ->> 'evidence_kind' = 'volume_weight'
+            and evidence ->> 'ingredient_or_category_id' = decision ->> 'evidence_key'
+            and evidence ->> 'preparation_state' = decision ->> 'preparation_state'
+            and evidence ->> 'evidence_checksum' = candidate ->> 'evidence_checksum'
+          where candidate ->> 'evidence_key' = decision ->> 'evidence_key'
+            and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
+            and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
+            and candidate ->> 'conversion_profile_code' =
+              decision ->> 'conversion_profile_code'
+            and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
+            and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
+            and candidate ->> 'review_status' = 'pending'
+        ) <> 1
     )
     or exists (
       select 1
@@ -677,6 +697,27 @@ begin
             and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
             and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
             and candidate ->> 'size_code' = decision ->> 'size_code'
+            and candidate ->> 'weight_g' = decision ->> 'weight_g'
+            and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
+            and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
+            and candidate ->> 'review_status' = 'pending'
+        ) <> 1
+        or (
+          select count(*)
+          from jsonb_array_elements(
+            p_model -> 'candidate_plan' -> 'piece_candidates'
+          ) candidates(candidate)
+          join jsonb_array_elements(v_bundle -> 'measurement_evidence') evidence_items(evidence)
+            on evidence ->> 'evidence_kind' = 'piece_weight'
+            and evidence ->> 'ingredient_or_category_id' = decision ->> 'evidence_key'
+            and evidence ->> 'preparation_state' = decision ->> 'preparation_state'
+            and evidence ->> 'size_code' = decision ->> 'size_code'
+            and evidence ->> 'evidence_checksum' = candidate ->> 'evidence_checksum'
+          where candidate ->> 'evidence_key' = decision ->> 'evidence_key'
+            and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
+            and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
+            and candidate ->> 'size_code' = decision ->> 'size_code'
+            and candidate ->> 'weight_g' = decision ->> 'weight_g'
             and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
             and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
             and candidate ->> 'review_status' = 'pending'
@@ -702,6 +743,18 @@ begin
       select 1
       from jsonb_array_elements(v_approval -> 'nutrition_decisions') decisions(decision)
       group by decision ->> 'ingredient_id', decision ->> 'preparation_state'
+      having count(*) > 1
+    )
+    or exists (
+      select 1
+      from jsonb_array_elements(v_approval -> 'conversion_decisions') decisions(decision)
+      group by decision ->> 'evidence_key'
+      having count(*) > 1
+    )
+    or exists (
+      select 1
+      from jsonb_array_elements(v_approval -> 'piece_decisions') decisions(decision)
+      group by decision ->> 'evidence_key', decision ->> 'size_code'
       having count(*) > 1
     )
     or exists (
@@ -1164,33 +1217,50 @@ begin
   for v_evidence in select value from jsonb_array_elements(v_bundle -> 'measurement_evidence')
   loop
     v_decision := null;
-    select value into v_decision
-    from jsonb_array_elements(v_approval -> 'conversion_decisions')
-    where value ->> 'evidence_key' = v_evidence ->> 'ingredient_or_category_id'
-    limit 1;
-    if v_decision is null then
-      select value into v_decision
-      from jsonb_array_elements(v_approval -> 'piece_decisions')
-      where value ->> 'evidence_key' = v_evidence ->> 'ingredient_or_category_id'
-        and value ->> 'size_code' = v_evidence ->> 'size_code'
-      limit 1;
+    v_decision_count := 0;
+    if v_evidence ->> 'evidence_kind' = 'volume_weight' then
+      select count(*), jsonb_agg(decision) -> 0
+      into v_decision_count, v_decision
+      from jsonb_array_elements(v_approval -> 'conversion_decisions') decisions(decision)
+      join jsonb_array_elements(
+        p_model -> 'candidate_plan' -> 'conversion_candidates'
+      ) candidates(candidate)
+        on candidate ->> 'evidence_key' = decision ->> 'evidence_key'
+        and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
+        and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
+        and candidate ->> 'conversion_profile_code' =
+          decision ->> 'conversion_profile_code'
+        and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
+        and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
+        and candidate ->> 'review_status' = 'pending'
+      where decision ->> 'evidence_key' = v_evidence ->> 'ingredient_or_category_id'
+        and decision ->> 'preparation_state' = v_evidence ->> 'preparation_state'
+        and candidate ->> 'evidence_checksum' = v_evidence ->> 'evidence_checksum';
+    elsif v_evidence ->> 'evidence_kind' = 'piece_weight' then
+      select count(*), jsonb_agg(decision) -> 0
+      into v_decision_count, v_decision
+      from jsonb_array_elements(v_approval -> 'piece_decisions') decisions(decision)
+      join jsonb_array_elements(
+        p_model -> 'candidate_plan' -> 'piece_candidates'
+      ) candidates(candidate)
+        on candidate ->> 'evidence_key' = decision ->> 'evidence_key'
+        and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
+        and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
+        and candidate ->> 'size_code' = decision ->> 'size_code'
+        and candidate ->> 'weight_g' = decision ->> 'weight_g'
+        and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
+        and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
+        and candidate ->> 'review_status' = 'pending'
+      where decision ->> 'evidence_key' = v_evidence ->> 'ingredient_or_category_id'
+        and decision ->> 'preparation_state' = v_evidence ->> 'preparation_state'
+        and decision ->> 'size_code' = v_evidence ->> 'size_code'
+        and candidate ->> 'evidence_checksum' = v_evidence ->> 'evidence_checksum';
+    end if;
+    if v_decision_count > 1 then
+      raise exception 'INVALID_APPROVAL_FILE';
     end if;
     if v_decision is null then
       continue;
-    end if;
-    if not exists (
-      select 1
-      from jsonb_array_elements(
-        case when v_evidence ->> 'evidence_kind' = 'volume_weight'
-          then p_model -> 'candidate_plan' -> 'conversion_candidates'
-          else p_model -> 'candidate_plan' -> 'piece_candidates' end
-      ) candidate
-      where candidate ->> 'candidate_identity' = v_decision ->> 'candidate_identity'
-        and candidate ->> 'candidate_checksum' = v_decision ->> 'candidate_checksum'
-        and candidate ->> 'evidence_checksum' = v_evidence ->> 'evidence_checksum'
-        and candidate ->> 'review_status' = 'pending'
-    ) then
-      raise exception 'INVALID_MEASUREMENT_CANDIDATE_IDENTITY';
     end if;
     v_evidence_id := null;
     select id into v_evidence_id
