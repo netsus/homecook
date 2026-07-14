@@ -1,0 +1,119 @@
+{
+  "slice_id": "ingredient-nutrition-conversion-model",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-public-api-ui-or-route-expansion",
+      "approved-pinned-predecessor-bundle-only",
+      "mfds-priority-one-rda-10-4-priority-two-after-semantic-compatibility",
+      "source-priority-and-confidence-never-auto-approve",
+      "source-item-preserves-basis-serving-total-content-edible-portion",
+      "default-safe-mass-normalization-is-100g",
+      "source-nutrient-code-unit-and-missing-status-preserved",
+      "observed-zero-is-not-missing",
+      "source-profile-value-payloads-append-only-versioned",
+      "nutrition-link-candidate-approve-reject-revoke-supersede-history",
+      "measurement-evidence-profile-and-assignment-are-separate-records",
+      "volume-profiles-are-g6-g10-g15-g20-g25-per-15ml",
+      "tbsp-15ml-tsp-5ml-cup-200ml",
+      "nearest-profile-inclusive-maximum-distance-2-5g-per-15ml",
+      "exact-halfway-tie-never-auto-selects",
+      "approved-active-assignment-required-for-volume-to-gram",
+      "exact-approved-ingredient-size-preparation-piece-weight-required",
+      "generic-piece-conversion-forbidden",
+      "revoked-superseded-stale-and-inactive-rows-not-consumed",
+      "active-approved-primary-uniqueness-is-transactional",
+      "raw-artifact-is-immutable-read-only-and-not-stored-in-database",
+      "service-role-operator-write-only-anon-authenticated-and-admin-viewer-denied",
+      "decision-actor-reason-and-timestamp-audited",
+      "decision-status-requires-nonblank-reason-reviewed-by-and-reviewed-at",
+      "nondecision-status-does-not-require-null-audit-triplet-and-needs-source-check-reason-is-preserved",
+      "same-input-decision-same-idempotency-key-candidate-set-and-content-hash",
+      "dry-run-failure-invalid-input-and-unapproved-production-have-zero-writes",
+      "atomic-import-rollback-and-disable-without-payload-delete",
+      "sanitized-run-report-registry-checksum-and-affected-row-ids-required",
+      "pilot-scope-is-exactly-foodsafety-thirty-recipes-and-canonical-ingredient-closure",
+      "data-go-kr-api-key1-data-go-kr-api-key-auth-query-raw-payload-and-raw-row-exposure-zero",
+      "rda-measurement-original-table-text-layout-image-and-full-dataset-republication-forbidden",
+      "production-load-writes-zero-until-separate-approval"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/ingredient-nutrition-normalizer.test.ts tests/ingredient-nutrition-matching.test.ts tests/ingredient-conversion-profile.test.ts tests/ingredient-nutrition-import.test.ts tests/ingredient-nutrition-rls.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice ingredient-nutrition-conversion-model",
+      "node scripts/validate-automation-spec.mjs --slice ingredient-nutrition-conversion-model",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/ingredient-nutrition-normalizer.test.ts",
+      "tests/ingredient-nutrition-matching.test.ts",
+      "tests/ingredient-conversion-profile.test.ts",
+      "tests/ingredient-nutrition-import.test.ts",
+      "tests/ingredient-nutrition-rls.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "frontend-design-accessibility-playwright-n-a-be-data-model-only"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "manual:local-supabase-pilot-thirty-dry-run-apply-replay-report-disable",
+    "manual:independent-human-nutrition-conversion-piece-review-decisions",
+    "manual:production-load-approval-intentionally-withheld-zero-writes"
+  ],
+  "blocked_conditions": [
+    "predecessor-approved-pinned-bundle-or-exact-merge-base-missing",
+    "official-requirements-db-workpack-or-api-ui-no-expansion-boundary-conflict",
+    "stage1-author-self-approval-or-missing-independent-stage1-5-reviewer",
+    "migration-does-not-match-db-v1-3-18-ten-table-contract",
+    "source-version-checksum-license-or-freshness-missing",
+    "source-priority-applied-before-name-preparation-edible-portion-and-basis-compatibility",
+    "nutrition-candidate-confidence-or-name-only-auto-approved",
+    "missing-trace-blank-or-parse-error-normalized-to-zero",
+    "measurement-evidence-profile-and-assignment-combined-or-overwritten",
+    "nearest-profile-distance-over-2-5g-candidate-created",
+    "exact-halfway-tie-auto-selected",
+    "pending-rejected-revoked-superseded-or-inactive-row-consumed",
+    "generic-piece-weight-or-volume-profile-used-for-piece-conversion",
+    "active-approved-primary-uniqueness-or-review-transition-bypassed",
+    "decision-status-accepts-blank-reason-null-reviewed-by-or-null-reviewed-at",
+    "nondecision-status-forces-audit-triplet-null-or-discards-needs-source-check-drift-reason",
+    "anon-authenticated-or-admin-viewer-can-access-operator-tables",
+    "source-profile-value-evidence-payload-mutated-or-deleted",
+    "dry-run-failure-invalid-input-or-unapproved-production-commits-write",
+    "duplicate-import-creates-new-logical-row-version-or-active-pointer",
+    "run-report-registry-missing-mutated-or-row-identity-mismatched",
+    "pilot-recipe-count-not-exactly-thirty-or-ingredient-closure-expanded",
+    "actual-key-auth-query-secret-raw-provider-response-or-raw-row-in-db-log-report-fixture-pr-or-client",
+    "rda-measurement-original-table-text-layout-image-or-full-dataset-reproduced",
+    "public-api-response-route-ui-recipe-calculation-product-or-planner-scope-added",
+    "production-load-attempted-without-separate-operator-approval"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 0
+  },
+  "notes": "BE/data-model only. Stage 1 author cannot self-approve; a separate Codex Stage 1.5 reviewer must approve the docs contract before implementation, and Stage 3 must be independently reviewed. Public API/UI, Design, Accessibility, Playwright, recipe nutrition calculation, products, and planner are N/A/out of scope. DATA_GO_KR_API_KEY1 was predecessor developer-local smoke evidence only; this slice does not access secrets or providers. Production load stays at zero writes until separate approval."
+}

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-14T12:42:56Z",
+  "updated_at": "2026-07-14T13:16:51Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1958,6 +1958,29 @@
       ],
       "pr_path": "https://github.com/netsus/homecook/pull/995",
       "notes": "Independent Codex master-integration reviewer thread 019f5fb3-ea75-7242-a136-7dc0ed67ee6e approved exact implementation head 7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe with MASTER_INTEGRATION_APPROVED and Critical/Important/Suggestion 0/0/0. Canonical approval is codex_approved and verification is passed for that reviewed implementation head; the successor bookkeeping-only head requires a fresh independent current-head review and is not self-approved. The earlier STAGE3_LIVE_ENVELOPE_APPROVED result at c91c2aecf46bc339cb00ebaf2f1c39f6dba13054 remains historical evidence only. Manual Only remains 4/4 complete: the 2026-07-14 account/application and actual operator-secret page 1 / size 1 smoke passed with HTTP 200, provider result 00, direct envelope, one item, reported total 302629, core fields present, parser accepted, retained secret/auth query 0, and production DB writes 0; full pagination, promotion, and production load were not run. Reviewed-head evidence includes nutrition 3 files/69 tests, pnpm verify:backend with 107 files/1406 tests and security E2E 12/12, all designated validators green, GitHub 13 success plus 2 conditional skips, and secret-equivalent/auth-query/raw-row leak 0. PR #995 remains Draft and auto-merge is disabled. closeout_phase=projecting closeout_recovery=manual_patch:4|ci_resync:1|manual_handoff closeout_repair=codex:5|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad,official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs,GitHub PR #995 reviewed-head checks,docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition,TDD regression and production MFDS page 1 / size 1 operator smoke on 2026-07-14,Independent Stage 3 approval at exact head c91c2aecf46bc339cb00ebaf2f1c39f6dba13054,Semantic merge of origin/master 2b649eced528ebb734fc71d33d38736d01fdcc20,Independent Codex master-integration reviewer thread 019f5fb3-ea75-7242-a136-7dc0ed67ee6e: MASTER_INTEGRATION_APPROVED at exact implementation head 7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe,GitHub PR #995 exact reviewed-head checks: 13 success, full-regression/lighthouse conditional skipped 2, pending/fail/cancel 0 | latest_reason_code=bookkeeping_only_head_independent_review_pending | last_recovery_at=2026-07-14T08:37:21Z",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "ingredient-nutrition-conversion-model",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/ingredient-nutrition-conversion-model",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm exec vitest run tests/ingredient-nutrition-normalizer.test.ts tests/ingredient-nutrition-matching.test.ts tests/ingredient-conversion-profile.test.ts tests/ingredient-nutrition-import.test.ts tests/ingredient-nutrition-rls.test.ts",
+        "pnpm verify:backend",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice ingredient-nutrition-conversion-model",
+        "node scripts/validate-automation-spec.mjs --slice ingredient-nutrition-conversion-model",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs/contract-evolution Draft is being prepared from exact PR #995 merge f87ae75016a9b709ffc3b706e7ca3720a0940982. Independent Codex Stage 1.5 review is required before Stage 2; author self-approval is forbidden. Public API/UI are unchanged, DATA_GO_KR_API_KEY1 is not accessed, and production load remains zero writes until separate approval.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

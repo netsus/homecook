@@ -10,6 +10,9 @@
 
 ## Revision Notes
 
+- `v2` ingredient nutrition conversion Stage 1 (2026-07-14)
+  - roadmap canonical projection의 `public-nutrition-source-acquisition` `in-progress`는 보존한다. PR #995 merge commit `f87ae75016a9b709ffc3b706e7ca3720a0940982`는 신규 slice의 approved/pinned dependency 선행 완료 증거로만 기록한다.
+  - `ingredient-nutrition-conversion-model`의 공식 요구사항/DB contract-evolution과 Stage 1 workpack을 열어 상태를 `docs`로 전환했다. public API/UI는 늘리지 않는다.
 - `v2` nutrition/products/planner extension (2026-07-13)
   - 영양 source 수집 → 재료 영양/대표 환산 → 레시피 계산/표시 → 완제품 catalog/플래너 → 계획 영양 합계를 7개 planned slice로 분리했다.
   - 이 기능군에 한해 기존 Claude 담당 단계를 역할이 분리된 별도 Codex 앱 작업으로 대체하는 사용자 승인 예외를 기록했다.
@@ -160,7 +163,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `service-brand-image-assets` | merged | 선택한 파란 `무먹` 심볼을 HOME/non-HOME header, favicon, 설치/Apple 아이콘, OG/Twitter metadata에 적용하고 authority·탐색 QA·current-head 전체 CI를 통과 |
 | `service-brand-icon-edge-treatment` | merged | favicon은 투명 외곽, 설치/PWA·Apple 아이콘은 full-bleed 파란 배경으로 분리하고 source/header/OG/Twitter 승인본을 보존 |
 | `public-nutrition-source-acquisition` | in-progress | 공공 영양 source를 versioned raw snapshot + manifest로 수집하고 schema/pagination/license/key 비노출을 fail-closed 검증한 뒤 approved promotion 입력을 만든다 |
-| `ingredient-nutrition-conversion-model` | planned | 핵심 영양 profile과 15mL당 약 6/10/15/20/25g 대표 환산 등급, 관측 provenance, 개당 중량을 승인 기반 immutable model로 구현한다 |
+| `ingredient-nutrition-conversion-model` | docs | 핵심 영양 profile과 15mL당 약 6/10/15/20/25g 대표 환산 등급, 분리된 원문 evidence/assignment, 개당 중량을 승인 기반 immutable model로 구현한다 |
 | `recipe-nutrition-calculation` | planned | 레시피 재료·인분·대표 환산으로 영양소별 completeness와 quality를 계산하고 immutable recipe snapshot을 생성/pin/backfill한다 |
 | `recipe-nutrition-display` | planned | RECIPE_DETAIL에 1인분/선택 인분 예상 영양, partial/unavailable, 약/예상, source 설명을 authority evidence와 함께 표시한다 |
 | `prepared-food-catalog` | planned | 승인 public 완제품 + 사용자 private manual 제품 catalog, immutable nutrition version, owner/public read-only/soft-delete 정책을 구현한다 |
@@ -172,7 +175,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | Slice | Status | Required predecessors |
 | --- | --- | --- |
 | `public-nutrition-source-acquisition` | in-progress | `28-external-ingredient-data-ingest-gate` = merged, nutrition contract-evolution official docs = merged |
-| `ingredient-nutrition-conversion-model` | planned | `public-nutrition-source-acquisition` = merged |
+| `ingredient-nutrition-conversion-model` | docs | `public-nutrition-source-acquisition` = merged at `f87ae75016a9b709ffc3b706e7ca3720a0940982` |
 | `recipe-nutrition-calculation` | planned | `ingredient-nutrition-conversion-model` = merged |
 | `recipe-nutrition-display` | planned | `recipe-nutrition-calculation` = merged |
 | `prepared-food-catalog` | planned | `ingredient-nutrition-conversion-model` = merged |
