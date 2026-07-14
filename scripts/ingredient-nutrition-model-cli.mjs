@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   existsSync,
   lstatSync,
@@ -35,6 +36,8 @@ const PINNED_PILOT_SEED = path.resolve(
 const STAGING_DATABASE_ADAPTER = path.resolve(
   "scripts/lib/ingredient-nutrition-staging-database-adapter.mjs",
 );
+const STAGING_DATABASE_ADAPTER_SHA256 =
+  "a05cf6052fbef987ec31ef81751b06f58182d672a58fdf80672aca0d874efbfd";
 const TEST_DATABASE_ADAPTER = path.resolve(
   "tests/fixtures/ingredient-nutrition-database-adapter.mjs",
 );
@@ -103,7 +106,7 @@ function runLocalPsqlJson(sql) {
   }
 }
 
-function assertOwnedRegularFile(candidatePath, expectedPath) {
+function assertOwnedRegularFile(candidatePath, expectedPath, expectedSha256) {
   const resolved = path.resolve(candidatePath);
   let stat;
   let realPath;
@@ -124,11 +127,28 @@ function assertOwnedRegularFile(candidatePath, expectedPath) {
   ) {
     throw new IngredientNutritionImportError("DATABASE_ADAPTER_FORBIDDEN");
   }
+  try {
+    if (
+      expectedSha256 !== undefined &&
+      createHash("sha256").update(readFileSync(resolved)).digest("hex") !== expectedSha256
+    ) {
+      throw new IngredientNutritionImportError("DATABASE_ADAPTER_FORBIDDEN");
+    }
+  } catch (error) {
+    if (error instanceof IngredientNutritionImportError) throw error;
+    throw new IngredientNutritionImportError("DATABASE_ADAPTER_FORBIDDEN");
+  }
   return resolved;
 }
 
-function runOwnedDatabaseAdapter(adapterPath, expectedPath, sql, environment) {
-  const resolved = assertOwnedRegularFile(adapterPath, expectedPath);
+function runOwnedDatabaseAdapter(
+  adapterPath,
+  expectedPath,
+  sql,
+  environment,
+  expectedSha256,
+) {
+  const resolved = assertOwnedRegularFile(adapterPath, expectedPath, expectedSha256);
   const adapterEnvironment = environment === "staging"
     ? Object.fromEntries(
       ["PATH", "PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSFILE", "PGSSLMODE"]
@@ -187,6 +207,7 @@ function runDatabaseJson(environment, sql) {
       STAGING_DATABASE_ADAPTER,
       sql,
       "staging",
+      STAGING_DATABASE_ADAPTER_SHA256,
     );
   }
   return runLocalPsqlJson(sql);
@@ -444,4 +465,9 @@ const invokedUrl = process.argv[1] === undefined
   : pathToFileURL(path.resolve(process.argv[1])).href;
 if (import.meta.url === invokedUrl) await main();
 
-export { formatCliFailure, loadRegisteredReport, runTestDatabaseAdapter };
+export {
+  assertOwnedRegularFile,
+  formatCliFailure,
+  loadRegisteredReport,
+  runTestDatabaseAdapter,
+};

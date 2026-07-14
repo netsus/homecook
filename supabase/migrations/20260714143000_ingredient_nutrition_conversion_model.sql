@@ -514,7 +514,7 @@ create function public.apply_ingredient_nutrition_model(p_model jsonb)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, extensions
+set search_path = pg_catalog, extensions, public
 as $$
 declare
   v_bundle jsonb := p_model -> 'bundle';
@@ -760,7 +760,7 @@ begin
       'result', v_result
     );
     v_registry_metadata := v_registry_metadata || jsonb_build_object(
-      'registry_checksum', encode(digest(v_registry_metadata::text, 'sha256'), 'hex')
+      'registry_checksum', encode(extensions.digest(v_registry_metadata::text, 'sha256'), 'hex')
     );
     insert into public.operational_events (
       event_type, severity, source, actor_user_id, message_summary, metadata_json
@@ -892,6 +892,11 @@ begin
       ) then
         raise exception 'INVALID_NUTRITION_CANDIDATE_IDENTITY';
       end if;
+      perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
+        'ingredient_nutrition_profiles|' || (v_decision ->> 'ingredient_id') ||
+          '|' || (v_decision ->> 'preparation_state'),
+        0
+      ));
       v_previous_link_id := null;
       select id into v_previous_link_id
       from public.ingredient_nutrition_profiles
@@ -955,7 +960,7 @@ begin
     select max(value ->> 'accessed_at') into v_measurement_source_version
     from jsonb_array_elements(v_bundle -> 'measurement_evidence');
     v_measurement_manifest_sha := encode(
-      digest((v_bundle -> 'measurement_evidence')::text, 'sha256'),
+      extensions.digest((v_bundle -> 'measurement_evidence')::text, 'sha256'),
       'hex'
     );
 
@@ -1105,6 +1110,11 @@ begin
       select id into v_conversion_profile_id
       from public.measurement_conversion_profiles
       where code = v_decision ->> 'conversion_profile_code' and is_active;
+      perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
+        'ingredient_conversion_assignments|' || (v_decision ->> 'ingredient_id') ||
+          '|' || (v_decision ->> 'preparation_state'),
+        0
+      ));
       v_previous_assignment_id := null;
       select id into v_previous_assignment_id
       from public.ingredient_conversion_assignments
@@ -1157,6 +1167,12 @@ begin
           to_jsonb(v_assignment_id)
       );
     else
+      perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
+        'piece_unit_weights|' || (v_decision ->> 'ingredient_id') ||
+          '|' || (v_decision ->> 'size_code') ||
+          '|' || (v_decision ->> 'preparation_state'),
+        0
+      ));
       v_previous_piece_weight_id := null;
       select id into v_previous_piece_weight_id
       from public.piece_unit_weights
@@ -1240,7 +1256,7 @@ begin
     'result', v_result
   );
   v_registry_metadata := v_registry_metadata || jsonb_build_object(
-    'registry_checksum', encode(digest(v_registry_metadata::text, 'sha256'), 'hex')
+    'registry_checksum', encode(extensions.digest(v_registry_metadata::text, 'sha256'), 'hex')
   );
   insert into public.operational_events (
     event_type, severity, source, actor_user_id, message_summary, metadata_json
@@ -1262,7 +1278,7 @@ create function public.disable_ingredient_nutrition_model(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, extensions
+set search_path = pg_catalog, extensions, public
 as $$
 declare
   v_links integer := 0;
@@ -1381,7 +1397,7 @@ begin
       'result', v_result
     );
   v_disable_registry := v_disable_registry || jsonb_build_object(
-    'registry_checksum', encode(digest(v_disable_registry::text, 'sha256'), 'hex')
+    'registry_checksum', encode(extensions.digest(v_disable_registry::text, 'sha256'), 'hex')
   );
   insert into public.operational_events (
     event_type, severity, source, actor_user_id, message_summary, metadata_json
@@ -1397,7 +1413,7 @@ create function public.get_ingredient_nutrition_model_run(p_run_identifier text)
 returns jsonb
 language sql
 security definer
-set search_path = public, extensions
+set search_path = pg_catalog, extensions, public
 stable
 as $$
   select registry.metadata_json
@@ -1419,7 +1435,7 @@ as $$
     )
   ) registry
   where registry.metadata_json ->> 'registry_checksum' = encode(
-    digest((registry.metadata_json - 'registry_checksum')::text, 'sha256'),
+    extensions.digest((registry.metadata_json - 'registry_checksum')::text, 'sha256'),
     'hex'
   )
   order by registry.lookup_priority

@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -10,6 +10,7 @@ const actorId = "10000000-0000-4000-8000-000000000001";
 const ingredientId = "20000000-0000-4000-8000-000000000001";
 const flourIngredientId = "20000000-0000-4000-8000-000000000002";
 const volumeIngredientId = "20000000-0000-4000-8000-000000000003";
+const shadowIngredientId = "20000000-0000-4000-8000-000000000004";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -41,11 +42,38 @@ function psqlAll(sql: string): string {
   return result.stdout.trim();
 }
 
+function psqlAsync(sql: string): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("psql", [
+      "-h", host,
+      "-p", port,
+      "-U", "postgres",
+      "-d", database,
+      "-At",
+      "-v", "ON_ERROR_STOP=1",
+      "-c", sql,
+    ], {
+      env: {
+        PATH: process.env.PATH ?? "",
+        NODE_ENV: process.env.NODE_ENV ?? "test",
+      },
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.once("error", reject);
+    child.once("close", (status) => resolve({ status, stdout, stderr }));
+  });
+}
+
 function encodedJson(value: unknown): string {
   return Buffer.from(JSON.stringify(value), "utf8").toString("base64");
 }
 
-function modelInput(decisionVersion: "A" | "B" = "A") {
+function modelInput(decisionVersion: "A" | "B" | "C" | "D" = "A") {
   const decisionLabel = decisionVersion.toLowerCase();
   const evidence = {
     evidence_schema_version: "public-nutrition-measurement-evidence-v1",
@@ -184,6 +212,35 @@ function modelInput(decisionVersion: "A" | "B" = "A") {
   };
 }
 
+function digestShadowModelInput() {
+  const model = structuredClone(modelInput());
+  const replaceIngredient = (value: unknown): unknown => {
+    if (typeof value === "string") return value.replaceAll(ingredientId, shadowIngredientId);
+    if (Array.isArray(value)) return value.map(replaceIngredient);
+    if (value !== null && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, entry]) => [key, replaceIngredient(entry)]),
+      );
+    }
+    return value;
+  };
+  const isolated = replaceIngredient(model) as ReturnType<typeof modelInput>;
+  isolated.run_id = "model-postgres-digest-shadow-0001";
+  isolated.idempotency_key = "postgres-digest-shadow-key-0001";
+  isolated.source_payload_identity = "postgres-digest-shadow-payload-0001";
+  isolated.decision_checksum = "postgres-digest-shadow-decision-0001";
+  isolated.content_hash = "postgres-digest-shadow-content-0001";
+  isolated.bundle.approved_manifest.dataset = "Stage 3 digest shadow fixture";
+  isolated.bundle.approved_manifest.raw_sha256 = "digest-shadow-manifest-sha";
+  isolated.bundle.approved_items[0]!.external_name = "보안테스트두부";
+  isolated.bundle.measurement_evidence = [];
+  isolated.approval.conversion_decisions = [];
+  isolated.approval.piece_decisions = [];
+  isolated.candidate_plan.conversion_candidates = [];
+  isolated.candidate_plan.piece_candidates = [];
+  return isolated;
+}
+
 describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", () => {
   beforeAll(() => {
     expect(host).not.toBe("");
@@ -196,12 +253,60 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
       values
         ('${ingredientId}', '두부', '가공식품', 'g'),
         ('${flourIngredientId}', '밀가루', '가공식품', 'g'),
-        ('${volumeIngredientId}', '쌀가루', '가공식품', 'g');
+        ('${volumeIngredientId}', '쌀가루', '가공식품', 'g'),
+        ('${shadowIngredientId}', '보안테스트두부', '가공식품', 'g');
       insert into public.ingredient_synonyms (ingredient_id, synonym)
       values
         ('${flourIngredientId}', '중력분'),
         ('${volumeIngredientId}', '멥쌀가루');
     `);
+  });
+
+  it("never resolves attacker-controlled public.digest from security-definer entry points", () => {
+    psql(`
+      create role digest_shadow_attacker nologin;
+      grant create, usage on schema public to digest_shadow_attacker;
+      set role digest_shadow_attacker;
+      create table public.digest_shadow_calls (entry_point text not null);
+      create function public.digest(value text, algorithm text)
+      returns bytea
+      language plpgsql
+      as $digest_shadow$
+      begin
+        insert into public.digest_shadow_calls(entry_point) values (current_query());
+        return extensions.digest(value, algorithm);
+      end;
+      $digest_shadow$;
+      reset role;
+    `);
+
+    try {
+      const encoded = encodedJson(digestShadowModelInput());
+      expect(JSON.parse(psql(`
+        select public.apply_ingredient_nutrition_model(
+          convert_from(decode('${encoded}', 'base64'), 'UTF8')::jsonb
+        )::text;
+      `))).toMatchObject({ status: "applied", replayed: false });
+      expect(JSON.parse(psql(`
+        select public.get_ingredient_nutrition_model_run(
+          'postgres-digest-shadow-key-0001'
+        )::text;
+      `))).toMatchObject({ idempotency_key: "postgres-digest-shadow-key-0001" });
+      expect(JSON.parse(psql(`
+        select public.disable_ingredient_nutrition_model(
+          'postgres-digest-shadow-key-0001', 'postgres-digest-shadow-disable-0001',
+          '${actorId}', 'digest shadow security test', '2026-07-15T00:00:00.000Z'
+        )::text;
+      `))).toMatchObject({ replayed: false, revoked_count: 1 });
+      expect(psql("select count(*) from public.digest_shadow_calls;")).toBe("0");
+    } finally {
+      psql(`
+        drop function if exists public.digest(text, text);
+        drop table if exists public.digest_shadow_calls;
+        revoke all on schema public from digest_shadow_attacker;
+        drop role if exists digest_shadow_attacker;
+      `);
+    }
   });
 
   it("applies exactly the official ten-table migration and enforces real role denial", () => {
@@ -471,6 +576,91 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
       )::text;
     `));
     expect(disableReplay).toMatchObject({ replayed: true, writes_committed: 0 });
+  });
+
+  it("serializes concurrent approvals by each versioned natural key", async () => {
+    psql(`
+      create function public.delay_concurrent_nutrition_version_insert()
+      returns trigger
+      language plpgsql
+      as $concurrency_delay$
+      begin
+        if new.ingredient_id in ('${ingredientId}'::uuid, '${volumeIngredientId}'::uuid) then
+          perform pg_sleep(0.75);
+        end if;
+        return new;
+      end;
+      $concurrency_delay$;
+      create trigger delay_concurrent_nutrition_link
+        before insert on public.ingredient_nutrition_profiles
+        for each row execute function public.delay_concurrent_nutrition_version_insert();
+      create trigger delay_concurrent_conversion_assignment
+        before insert on public.ingredient_conversion_assignments
+        for each row execute function public.delay_concurrent_nutrition_version_insert();
+      create trigger delay_concurrent_piece_weight
+        before insert on public.piece_unit_weights
+        for each row execute function public.delay_concurrent_nutrition_version_insert();
+    `);
+
+    try {
+      const encodedC = encodedJson(modelInput("C"));
+      const encodedD = encodedJson(modelInput("D"));
+      const results = await Promise.all([
+        psqlAsync(`
+          select public.apply_ingredient_nutrition_model(
+            convert_from(decode('${encodedC}', 'base64'), 'UTF8')::jsonb
+          )::text;
+        `),
+        psqlAsync(`
+          select public.apply_ingredient_nutrition_model(
+            convert_from(decode('${encodedD}', 'base64'), 'UTF8')::jsonb
+          )::text;
+        `),
+      ]);
+
+      expect(
+        results.map((result) => result.status),
+        results.map((result) => result.stderr).join("\n"),
+      ).toEqual([0, 0]);
+      const summaries = results.map((result) => JSON.parse(
+        result.stdout.trim().split("\n").filter(Boolean).at(-1) ?? "null",
+      ));
+      expect(summaries).toEqual(expect.arrayContaining([
+        expect.objectContaining({ status: "applied", replayed: false }),
+        expect.objectContaining({ status: "applied", replayed: false }),
+      ]));
+
+      for (const [table, targetIngredientId] of [
+        ["ingredient_nutrition_profiles", ingredientId],
+        ["ingredient_conversion_assignments", volumeIngredientId],
+        ["piece_unit_weights", ingredientId],
+      ] as const) {
+        expect(JSON.parse(psql(`
+          select jsonb_agg(jsonb_build_object(
+            'version', version,
+            'review_status', review_status,
+            'is_active', is_active
+          ) order by version)::text
+          from public.${table}
+          where ingredient_id = '${targetIngredientId}';
+        `))).toEqual([
+          { version: 1, review_status: "superseded", is_active: false },
+          { version: 2, review_status: "revoked", is_active: false },
+          { version: 3, review_status: "superseded", is_active: false },
+          { version: 4, review_status: "approved", is_active: true },
+        ]);
+      }
+    } finally {
+      psql(`
+        drop trigger if exists delay_concurrent_nutrition_link
+          on public.ingredient_nutrition_profiles;
+        drop trigger if exists delay_concurrent_conversion_assignment
+          on public.ingredient_conversion_assignments;
+        drop trigger if exists delay_concurrent_piece_weight
+          on public.piece_unit_weights;
+        drop function if exists public.delay_concurrent_nutrition_version_insert();
+      `);
+    }
   });
 
   it("enforces append-only provenance, active uniqueness, and run ownership in PostgreSQL", () => {

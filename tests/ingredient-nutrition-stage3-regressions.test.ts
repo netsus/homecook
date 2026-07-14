@@ -1,5 +1,14 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import {
+  appendFileSync,
+  chmodSync,
+  copyFileSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -695,6 +704,38 @@ describe("Stage 3 group 3: staging boundary, RLS, and registry performance", () 
       expect(() => runTestDatabaseAdapter(adapterLink, "select 1")).toThrowError(
         expect.objectContaining({ code: "DATABASE_ADAPTER_FORBIDDEN" }),
       );
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("pins the staging adapter content while preserving the isolated test adapter boundary", async () => {
+    const { assertOwnedRegularFile } = await import(MODEL_CLI_URL);
+    const stagingDatabaseAdapterSha256 =
+      "a05cf6052fbef987ec31ef81751b06f58182d672a58fdf80672aca0d874efbfd";
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "nutrition-adapter-pin-"));
+    const adapterCopy = path.join(tempRoot, "ingredient-nutrition-staging-database-adapter.mjs");
+    copyFileSync(
+      "scripts/lib/ingredient-nutrition-staging-database-adapter.mjs",
+      adapterCopy,
+    );
+    chmodSync(adapterCopy, 0o600);
+    const canonicalAdapterCopy = realpathSync(adapterCopy);
+
+    try {
+      expect(assertOwnedRegularFile(
+        canonicalAdapterCopy,
+        canonicalAdapterCopy,
+        stagingDatabaseAdapterSha256,
+      )).toBe(canonicalAdapterCopy);
+
+      appendFileSync(adapterCopy, "\n");
+
+      expect(() => assertOwnedRegularFile(
+        canonicalAdapterCopy,
+        canonicalAdapterCopy,
+        stagingDatabaseAdapterSha256,
+      )).toThrowError(expect.objectContaining({ code: "DATABASE_ADAPTER_FORBIDDEN" }));
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }
