@@ -59,7 +59,7 @@
 | `service-brand-rebrand` | merged | [x] docs #985 / backend #987 / frontend #988 |
 | `service-brand-home-lockup` | merged | [x] docs #990 / frontend #991, HOME 2단 이름 위계 확정 |
 | selected brand exports | merged | [x] image-only PR #996, canonical source와 20개 최종 export |
-| image asset contract-evolution | docs | [ ] 공식 문서 v1.7.15/v1.5.22와 이 workpack이 main에 먼저 merge |
+| image asset contract-evolution | merged | [x] 공식 문서 v1.7.15/v1.5.22와 이 workpack이 docs PR #997로 선행 merge |
 
 > Stage 4는 이 docs PR merge와 internal 1.5 docs gate 통과 뒤에만 시작한다. 기존 evidence는 baseline으로 읽되 덮어쓰지 않는다.
 
@@ -94,13 +94,15 @@
   - `ui/designs/evidence/service-brand-image-assets/accessibility-geometry-audit.json`
   - `ui/designs/evidence/service-brand-image-assets/visual-verdict.json`
 - Authority report: `ui/designs/authority/HOME-service-brand-image-assets-authority.md`.
+- Authority status: `reviewed`
+- Notes: 독립 final authority `APPROVE`, blocker/major/minor `0/0/0`.
 - Evidence must prove: 선택 심볼 일치, 320px fit/overflow 0, text/image 중복 낭독 없음, nav geometry와 첫 viewport 보존, 미선택 장식 변형 부재.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 계약 잠금, Stage 4 구현 전
+- [ ] 임시 UI (temporary) — Stage 1 계약 잠금, Stage 4 구현 전
 - [ ] 리뷰 대기 (pending-review) — Stage 4 구현/evidence 완료
-- [ ] 확정 (confirmed) — 독립 authority와 Stage 6 blocker 0
+- [x] 확정 (confirmed) — 독립 authority와 Stage 6 blocker 0
 - [ ] N/A — FE 화면 없음
 
 ## Source Links
@@ -152,13 +154,28 @@
 
 ## Delivery Checklist
 
-- [ ] 공식 문서 v1.7.15/v1.5.22와 SoT를 docs PR로 먼저 merge <!-- omo:id=brand-image-delivery-contract;stage=1;scope=shared;review=1.5,6 -->
-- [ ] canonical runtime asset 복사본과 source hash guard 적용 <!-- omo:id=brand-image-delivery-assets;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME/non-HOME header 심볼 조합 적용 <!-- omo:id=brand-image-delivery-header;stage=4;scope=frontend;review=5,6 -->
-- [ ] favicon/install/Apple/manifest 적용 <!-- omo:id=brand-image-delivery-icons;stage=4;scope=frontend;review=5,6 -->
-- [ ] OG/Twitter canonical 공유 이미지 적용 <!-- omo:id=brand-image-delivery-social;stage=4;scope=frontend;review=5,6 -->
-- [ ] RED/GREEN component/static/E2E 회귀 검증 <!-- omo:id=brand-image-delivery-tests;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390/320/1280 before/after, audit, visual verdict, authority report 완료 <!-- omo:id=brand-image-delivery-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] 공식 문서 v1.7.15/v1.5.22와 SoT를 docs PR로 먼저 merge <!-- omo:id=brand-image-delivery-contract;stage=4;scope=shared;review=6 -->
+- [x] canonical runtime asset 복사본과 source hash guard 적용 <!-- omo:id=brand-image-delivery-assets;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME/non-HOME header 심볼 조합 적용 <!-- omo:id=brand-image-delivery-header;stage=4;scope=frontend;review=5,6 -->
+- [x] favicon/install/Apple/manifest 적용 <!-- omo:id=brand-image-delivery-icons;stage=4;scope=frontend;review=5,6 -->
+- [x] OG/Twitter canonical 공유 이미지 적용 <!-- omo:id=brand-image-delivery-social;stage=4;scope=frontend;review=5,6 -->
+- [x] RED/GREEN component/static/E2E 회귀 검증 <!-- omo:id=brand-image-delivery-tests;stage=4;scope=frontend;review=5,6 -->
+- [x] 390/320/1280 before/after, audit, visual verdict, authority report 완료 <!-- omo:id=brand-image-delivery-authority;stage=4;scope=frontend;review=5,6 -->
+
+### Stage 4 validation note (2026-07-14)
+
+- component/static RED에서 header 심볼, canonical metadata/manifest, HOME OG override 누락을 확인한 뒤 최소 구현으로 GREEN을 만들었다.
+- 선택 source/runtime hash와 32/180/192/512/1200×630 규격, production route status/content type, HOME/non-HOME 접근성 이름 경계를 자동화로 고정했다.
+- 390px/320px/1280 before/after와 geometry audit는 mobile overflow `0`, desktop nav/first-tab rect 동일, 심볼 natural size `192×192`를 확인한다.
+- 독립 final authority는 blocker/major/minor `0/0/0`으로 승인했고, 독립 코드 재리뷰의 구현 finding은 모두 수리했다. Ubuntu/Linux 웹·모바일 기준선은 원본과 재시도 2회가 화면별 동일 hash인 GitHub artifact로 갱신했다.
+- 로컬 `CI=1 pnpm verify:frontend:pr`, Lighthouse, 전체 접근성, 전체 visual, security smoke와 Draft current-head `3b4a9f65`의 quality/build/security/smoke/accessibility/visual/policy/governance/Vercel 검사가 통과했다. 전체 882건 로컬 regression은 기존 fixture/dev-server 불안정으로 타 슬라이스 화면이 데이터를 못 받는 실패가 반복되어 중단했으며, Ready 구현 head `5d2ecf20`의 QA run `29318302492` attempt 2에서 전체 regression·smoke·Lighthouse·visual·accessibility가 모두 통과했다.
+- 탐색 QA는 desktop/mobile/small-iOS 3종에서 acceptance와 필수 휴리스틱을 확인하고 blocker/major/minor `0/0/0`, coverage-sensitive eval `97/100`으로 통과했다. retained evidence는 `.artifacts/qa/service-brand-image-assets/2026-07-14T08-16-33-420Z/`에 둔다.
+
+### Stage 6 closeout note (2026-07-14)
+
+- canonical closeout은 `.workflow-v2/work-items/service-brand-image-assets.json#closeout`에 기록했다.
+- 독립 final authority와 lifecycle 복원 후 Stage 6 재리뷰가 모두 `APPROVE`, blocker/major/minor `0/0/0`으로 종료됐다.
+- 배포 후 브라우저/홈 화면 아이콘 cache와 외부 공유 crawler cache 확인만 `Manual Only`로 남으며 merge를 차단하지 않는다.
 
 ## Contract Evolution Candidates
 

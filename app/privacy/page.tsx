@@ -2,6 +2,7 @@ import React from "react";
 
 import { LegalDocumentPage } from "@/components/legal/legal-document-page";
 import { getLegalInfo } from "@/lib/legal-info";
+import { defaultOpenGraphImagePath } from "@/lib/seo/default-social-image";
 
 export const metadata = {
   alternates: {
@@ -10,7 +11,7 @@ export const metadata = {
   description: "무엇을 먹든 서비스 개인정보 수집, 이용, 보관, 파기 기준",
   openGraph: {
     description: "무엇을 먹든 서비스 개인정보 수집, 이용, 보관, 파기 기준",
-    images: ["/opengraph-image"],
+    images: [defaultOpenGraphImagePath],
     title: "개인정보처리방침",
     type: "website",
     url: "/privacy",

@@ -66,9 +66,7 @@
         "ui/designs/evidence/service-brand-image-assets/HOME-desktop-before-1280.png",
         "ui/designs/evidence/service-brand-image-assets/HOME-after-390.png",
         "ui/designs/evidence/service-brand-image-assets/HOME-after-320.png",
-        "ui/designs/evidence/service-brand-image-assets/HOME-desktop-after-1280.png",
-        "ui/designs/evidence/service-brand-image-assets/accessibility-geometry-audit.json",
-        "ui/designs/evidence/service-brand-image-assets/visual-verdict.json"
+        "ui/designs/evidence/service-brand-image-assets/HOME-desktop-after-1280.png"
       ],
       "authority_report_paths": [
         "ui/designs/authority/HOME-service-brand-image-assets-authority.md"

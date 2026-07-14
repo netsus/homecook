@@ -1,0 +1,312 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "service-brand-image-assets",
+  "generatedAt": "2026-07-14T08:16:33.422Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "sourceFiles": {
+    "readme": "docs/workpacks/service-brand-image-assets/README.md",
+    "acceptance": "docs/workpacks/service-brand-image-assets/acceptance.md"
+  },
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "primaryUserPath": [],
+  "testDataSetup": [
+    {
+      "title": "RED: `AppHeader`, HOME `HomeAppBar`, `WebTopNav`에서 공식 심볼이 없으면 실패한다.",
+      "steps": []
+    },
+    {
+      "title": "RED: root/page metadata가 canonical OG/Twitter와 favicon/install icon/manifest 경로를 참조하지 않으면 실패한다.",
+      "steps": []
+    },
+    {
+      "title": "GREEN: header accessible name, HOME/non-HOME 이름 경계, metadata/manifest 경로, source hash/runtime file 크기를 고정한다.",
+      "steps": []
+    },
+    {
+      "title": "old orange social image generator와 미선택 후보/screenshot 경로가 runtime source에 남지 않음을 검증한다.",
+      "steps": []
+    },
+    {
+      "title": "390px/320px HOME과 desktop 1280px HOME/non-HOME을 검증한다.",
+      "steps": []
+    },
+    {
+      "title": "header overflow 0, HOME first viewport, nav height/tab 위치/right slot, keyboard focus, 중복 accessible name을 확인한다.",
+      "steps": []
+    },
+    {
+      "title": "favicon/manifest/OG/Twitter URL이 200과 올바른 content type/dimension을 반환하는지 production build에서 확인한다.",
+      "steps": []
+    },
+    {
+      "title": "실제 배포 URL의 브라우저 탭/홈 화면 추가 아이콘 캐시 갱신 확인.",
+      "steps": []
+    },
+    {
+      "title": "카카오톡, X/Twitter 등 외부 crawler cache가 갱신된 뒤 공유 카드 표시 확인.",
+      "steps": []
+    }
+  ],
+  "checklistItems": [
+    {
+      "id": "canonical-asset-scope-1",
+      "section": "Canonical Asset / Scope",
+      "subsection": null,
+      "text": "선택 source SHA-256이 `7ada6b0bcdd46a78a11b353c89e3506ac6288b31a20df321abe097b02738ffe4`와 일치한다 <!-- omo:id=brand-image-accept-source-hash;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "canonical-asset-scope-2",
+      "section": "Canonical Asset / Scope",
+      "subsection": null,
+      "text": "runtime은 image-only PR #996의 선택 완료 export만 사용하고 screenshot·미선택 후보·따옴표/점/장식 변형을 사용하지 않는다 <!-- omo:id=brand-image-accept-selected-only;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "canonical-asset-scope-3",
+      "section": "Canonical Asset / Scope",
+      "subsection": null,
+      "text": "새 dependency/font/token/API/DB/schema/migration/seed/stored row/기술 식별자 변경이 없다 <!-- omo:id=brand-image-accept-scope;stage=4;scope=shared;review=6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "canonical-asset-scope-4",
+      "section": "Canonical Asset / Scope",
+      "subsection": null,
+      "text": "기존 공식 버전, workpack, prototype, merged evidence를 수정하지 않는다 <!-- omo:id=brand-image-accept-history;stage=4;scope=shared;review=6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "header-accessibility-1",
+      "section": "Header / Accessibility",
+      "subsection": null,
+      "text": "mobile HOME은 공식 심볼 옆에 `무먹` 아래 `무엇을 먹든`을 유지한다 <!-- omo:id=brand-image-accept-home-mobile;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "header-accessibility-2",
+      "section": "Header / Accessibility",
+      "subsection": null,
+      "text": "desktop HOME은 같은 조합을 사용하면서 nav 높이·tab·right slot·interaction을 보존한다 <!-- omo:id=brand-image-accept-home-desktop;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "header-accessibility-3",
+      "section": "Header / Accessibility",
+      "subsection": null,
+      "text": "non-HOME AppHeader/WebTopNav는 공식 심볼 + `무먹`만 표시하고 정식명 보조 줄을 추가하지 않는다 <!-- omo:id=brand-image-accept-non-home;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "header-accessibility-4",
+      "section": "Header / Accessibility",
+      "subsection": null,
+      "text": "심볼은 정사각 비율과 선택 색상을 유지하고 320px에서 잘림·겹침·page overflow가 없다 <!-- omo:id=brand-image-accept-responsive;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "header-accessibility-5",
+      "section": "Header / Accessibility",
+      "subsection": null,
+      "text": "인접 텍스트가 있는 심볼은 장식 처리되어 link/heading accessible name이 중복 낭독되지 않는다 <!-- omo:id=brand-image-accept-a11y;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "header-accessibility-6",
+      "section": "Header / Accessibility",
+      "subsection": null,
+      "text": "기존 HOME loading/empty/error/filter-active와 non-HOME auth/read-only/return-to-action이 유지된다 <!-- omo:id=brand-image-accept-state;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "metadata-install-social-1",
+      "section": "Metadata / Install / Social",
+      "subsection": null,
+      "text": "browser favicon이 canonical ICO/PNG export를 사용한다 <!-- omo:id=brand-image-accept-favicon;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "metadata-install-social-2",
+      "section": "Metadata / Install / Social",
+      "subsection": null,
+      "text": "metadata와 web manifest가 192/512 설치 아이콘과 180 Apple touch 아이콘을 올바른 size/type으로 연결한다 <!-- omo:id=brand-image-accept-install-icons;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "metadata-install-social-3",
+      "section": "Metadata / Install / Social",
+      "subsection": null,
+      "text": "root와 public static pages가 canonical 1200×630 OG/Twitter 이미지를 참조한다 <!-- omo:id=brand-image-accept-social;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "metadata-install-social-4",
+      "section": "Metadata / Install / Social",
+      "subsection": null,
+      "text": "이전 orange dynamic social image generator가 runtime 기본값으로 남지 않는다 <!-- omo:id=brand-image-accept-old-social-removed;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "tdd-verification-1",
+      "section": "TDD / Verification",
+      "subsection": null,
+      "text": "header·metadata·manifest 기대를 먼저 추가하고 구현 전 RED를 확인한다 <!-- omo:id=brand-image-accept-red;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "tdd-verification-2",
+      "section": "TDD / Verification",
+      "subsection": null,
+      "text": "component/static guard가 canonical 경로·hash·HOME/non-HOME 경계·접근성을 고정한다 <!-- omo:id=brand-image-accept-vitest;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "tdd-verification-3",
+      "section": "TDD / Verification",
+      "subsection": null,
+      "text": "production build에서 favicon/manifest/OG/Twitter URL, content type, dimensions를 확인한다 <!-- omo:id=brand-image-accept-route-smoke;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "tdd-verification-4",
+      "section": "TDD / Verification",
+      "subsection": null,
+      "text": "lint, typecheck, product tests, build, smoke, accessibility, visual core가 통과한다 <!-- omo:id=brand-image-accept-gates;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "authority-evidence-1",
+      "section": "Authority / Evidence",
+      "subsection": null,
+      "text": "구현 전 390px/320px/1280 before screenshot을 새 workpack evidence 경로에 저장하고 이후 수정하지 않는다 <!-- omo:id=brand-image-accept-before;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "authority-evidence-2",
+      "section": "Authority / Evidence",
+      "subsection": null,
+      "text": "같은 viewport의 after screenshot, accessibility/geometry audit, visual verdict를 생성한다 <!-- omo:id=brand-image-accept-after;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "authority-evidence-3",
+      "section": "Authority / Evidence",
+      "subsection": null,
+      "text": "authority report에 `> evidence:` block과 blocker/major/minor가 있고 unresolved blocker가 0이다 <!-- omo:id=brand-image-accept-authority;stage=4;scope=frontend;review=5,6 -->",
+      "priority": "normal"
+    },
+    {
+      "id": "manual-only-1",
+      "section": "Manual Only",
+      "subsection": null,
+      "text": "실제 배포 후 브라우저/홈 화면 추가 아이콘 cache 갱신 확인.",
+      "priority": "normal"
+    },
+    {
+      "id": "manual-only-2",
+      "section": "Manual Only",
+      "subsection": null,
+      "text": "외부 공유 서비스 crawler cache 갱신 후 OG/Twitter 카드 표시 확인.",
+      "priority": "normal"
+    },
+    {
+      "id": "heuristic-mobile-readability",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "모바일에서 정렬, 필터, CTA처럼 자주 쓰는 control의 텍스트가 읽기 어려울 정도로 작지 않은지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-small-viewport-cta",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "작은 높이 viewport(iPhone SE 급)에서 primary CTA가 가려지지 않고 짧은 스크롤 안에서 도달 가능한지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-duplicate-cta",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "같은 기능을 수행하는 CTA가 한 화면에 중복으로 노출되지 않는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-information-hierarchy",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "핵심 정보와 그 정보에 대한 액션이 물리적으로 멀리 떨어지지 않고 같은 맥락 안에 배치되는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-copy-sanity",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "h1/h2, 버튼, 상태 메시지 카피가 과하게 길거나 어색하지 않은지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-empty-noop",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "empty, loading, error 상태에서 사용자가 의미 없는 no-op CTA를 누를 수 없는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-placeholder-polish",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "아이콘, 버튼, 피드백 표현이 placeholder나 MVP 임시 UI처럼 보이지 않는지 확인한다.",
+      "priority": "high"
+    }
+  ],
+  "edgeCases": [
+    {
+      "id": "desktop-happy-path",
+      "text": "Desktop viewport에서 대표 사용자 흐름을 처음부터 끝까지 다시 검증한다."
+    },
+    {
+      "id": "mobile-happy-path",
+      "text": "Mobile viewport에서 동일 흐름을 다시 검증한다."
+    },
+    {
+      "id": "small-viewport-fold",
+      "text": "작은 iOS viewport(iPhone SE 급)에서 above-the-fold 영역과 하단 CTA 가시성을 확인한다."
+    },
+    {
+      "id": "hard-refresh",
+      "text": "중간 상태에서 hard refresh 후 상태 복원과 URL 정합성을 확인한다."
+    },
+    {
+      "id": "back-forward",
+      "text": "뒤로가기/앞으로가기 후 UI와 상태가 어긋나지 않는지 확인한다."
+    },
+    {
+      "id": "slow-network",
+      "text": "느린 네트워크에서 pending, skeleton, retry UX를 확인한다."
+    },
+    {
+      "id": "offline-recovery",
+      "text": "오프라인 또는 서버 오류에서 에러 메시지와 복구 동선을 확인한다."
+    },
+    {
+      "id": "keyboard-only",
+      "text": "키보드만으로 주요 동선과 모달 닫기/탐색이 가능한지 확인한다."
+    },
+    {
+      "id": "double-submit",
+      "text": "중복 탭/연속 클릭 시 중복 호출 방지와 최종 상태 일관성을 확인한다."
+    },
+    {
+      "id": "auth-return-to-action",
+      "text": "비로그인 보호 액션 후 로그인 복귀와 return-to-action 재실행을 확인한다."
+    },
+    {
+      "id": "read-only-bypass",
+      "text": "read-only 상태에서 우회 수정 시도와 409/차단 UX를 확인한다."
+    }
+  ]
+}

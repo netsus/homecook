@@ -1017,6 +1017,17 @@
 .home-app-brand-lockup {
   display: flex;
   min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.mumeok-brand-symbol {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.home-app-brand-copy {
+  display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 1px;
@@ -3376,7 +3387,7 @@ button {
     height: 100%;
     max-width: var(--web-content-wide);
     align-items: center;
-    gap: 40px;
+    gap: 14px;
     margin: 0 auto;
     padding: 0 32px;
   }
@@ -3390,14 +3401,6 @@ button {
     font-weight: 800;
     letter-spacing: -0.4px;
     line-height: 1;
-  }
-
-  .web-topnav-brand-dot {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: var(--web-r-pill);
-    background: var(--web-brand);
   }
 
   .web-topnav-brand-copy {

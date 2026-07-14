@@ -1,0 +1,182 @@
+{
+  "before": {
+    "320": {
+      "brand": {
+        "height": 30,
+        "left": 16,
+        "top": 10.5,
+        "width": 50.5625
+      },
+      "firstTab": null,
+      "nav": {
+        "height": 52,
+        "left": 0,
+        "top": 0,
+        "width": 320
+      },
+      "overflowX": 0,
+      "search": {
+        "height": 22.5,
+        "left": 63,
+        "top": 207.96875,
+        "width": 110.875
+      },
+      "viewport": {
+        "height": 568,
+        "width": 320
+      }
+    },
+    "390": {
+      "brand": {
+        "height": 30,
+        "left": 16,
+        "top": 10.5,
+        "width": 50.5625
+      },
+      "firstTab": null,
+      "nav": {
+        "height": 52,
+        "left": 0,
+        "top": 0,
+        "width": 390
+      },
+      "overflowX": 0,
+      "search": {
+        "height": 22.5,
+        "left": 63,
+        "top": 184.71875,
+        "width": 180.875
+      },
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    "1280": {
+      "brand": {
+        "height": 22,
+        "left": 32,
+        "top": 20.5,
+        "width": 51.265625
+      },
+      "firstTab": {
+        "height": 42.5,
+        "left": 123.265625,
+        "top": 10.25,
+        "width": 44.6875
+      },
+      "nav": {
+        "height": 64,
+        "left": 0,
+        "top": 0,
+        "width": 1280
+      },
+      "overflowX": 0,
+      "search": {
+        "height": 22.5,
+        "left": 79,
+        "top": 198.71875,
+        "width": 494
+      },
+      "viewport": {
+        "height": 900,
+        "width": 1280
+      }
+    }
+  },
+  "checks": {
+    "accessibleNameNoDuplicate": true,
+    "canonicalSymbolNaturalWidth": 192,
+    "desktopNavGeometryPreserved": true,
+    "homeNameHierarchyPreserved": true,
+    "mobileOverflowZero": true,
+    "nonHomeShortNameOnly": true
+  },
+  "phase": "after",
+  "result": "pass",
+  "viewports": {
+    "320": {
+      "brand": {
+        "height": 32,
+        "left": 16,
+        "top": 9.5,
+        "width": 90.5625
+      },
+      "firstTab": null,
+      "nav": {
+        "height": 52,
+        "left": 0,
+        "top": 0,
+        "width": 320
+      },
+      "overflowX": 0,
+      "search": {
+        "height": 22.5,
+        "left": 63,
+        "top": 207.96875,
+        "width": 110.875
+      },
+      "viewport": {
+        "height": 568,
+        "width": 320
+      }
+    },
+    "390": {
+      "brand": {
+        "height": 32,
+        "left": 16,
+        "top": 9.5,
+        "width": 90.5625
+      },
+      "firstTab": null,
+      "nav": {
+        "height": 52,
+        "left": 0,
+        "top": 0,
+        "width": 390
+      },
+      "overflowX": 0,
+      "search": {
+        "height": 22.5,
+        "left": 63,
+        "top": 184.71875,
+        "width": 180.875
+      },
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    },
+    "1280": {
+      "brand": {
+        "height": 32,
+        "left": 32,
+        "top": 15.5,
+        "width": 77.265625
+      },
+      "firstTab": {
+        "height": 42.5,
+        "left": 123.265625,
+        "top": 10.25,
+        "width": 44.6875
+      },
+      "nav": {
+        "height": 64,
+        "left": 0,
+        "top": 0,
+        "width": 1280
+      },
+      "overflowX": 0,
+      "search": {
+        "height": 22.5,
+        "left": 79,
+        "top": 198.71875,
+        "width": 494
+      },
+      "viewport": {
+        "height": 900,
+        "width": 1280
+      }
+    }
+  }
+}
