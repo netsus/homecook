@@ -8,6 +8,8 @@ const port = process.env.HOMECOOK_NUTRITION_PGPORT ?? "";
 const database = process.env.HOMECOOK_NUTRITION_PGDATABASE ?? "";
 const actorId = "10000000-0000-4000-8000-000000000001";
 const ingredientId = "20000000-0000-4000-8000-000000000001";
+const flourIngredientId = "20000000-0000-4000-8000-000000000002";
+const volumeIngredientId = "20000000-0000-4000-8000-000000000003";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -43,7 +45,8 @@ function encodedJson(value: unknown): string {
   return Buffer.from(JSON.stringify(value), "utf8").toString("base64");
 }
 
-function modelInput() {
+function modelInput(decisionVersion: "A" | "B" = "A") {
+  const decisionLabel = decisionVersion.toLowerCase();
   const evidence = {
     evidence_schema_version: "public-nutrition-measurement-evidence-v1",
     evidence_kind: "piece_weight",
@@ -59,12 +62,26 @@ function modelInput() {
     accessed_at: "2026-07-01",
     license_evidence_url: "https://example.test/license",
   };
+  const volumeEvidence = {
+    evidence_schema_version: "public-nutrition-measurement-evidence-v1",
+    evidence_kind: "volume_weight",
+    evidence_checksum: "volume-evidence-checksum",
+    ingredient_or_category_id: volumeIngredientId,
+    source_subject: "멥쌀가루",
+    preparation_state: "raw",
+    source_observed_unit: "1 tbsp (15mL)",
+    source_observed_amount: 1,
+    observed_g_per_15ml: 20,
+    source_url: "https://example.test/measurement",
+    accessed_at: "2026-07-01",
+    license_evidence_url: "https://example.test/license",
+  };
   return {
-    run_id: "model-postgres-integration-0001",
-    idempotency_key: "postgres-apply-key-0001",
+    run_id: `model-postgres-decision-${decisionLabel}-0001`,
+    idempotency_key: `postgres-apply-key-${decisionLabel}-0001`,
     source_payload_identity: "postgres-payload-identity-0001",
-    decision_checksum: "postgres-decision-checksum-0001",
-    content_hash: "postgres-content-hash-0001",
+    decision_checksum: `postgres-decision-checksum-${decisionLabel}-0001`,
+    content_hash: `postgres-content-hash-${decisionLabel}-0001`,
     bundle: {
       status: "approved_pinned",
       handoff_schema_checksum: "handoff-schema-checksum",
@@ -96,12 +113,12 @@ function modelInput() {
           },
         },
       }],
-      measurement_evidence: [evidence],
+      measurement_evidence: [evidence, volumeEvidence],
     },
     approval: {
       reviewed_by: actorId,
       reviewed_at: "2026-07-14T00:00:00.000Z",
-      decision_reason: "postgres integration approval",
+      decision_reason: `postgres integration approval ${decisionVersion}`,
       nutrition_decisions: [{
         fingerprint: "tofu-fingerprint-001",
         ingredient_id: ingredientId,
@@ -109,9 +126,18 @@ function modelInput() {
         candidate_identity: "nutrition-candidate-identity",
         candidate_checksum: "nutrition-candidate-checksum",
         status: "approved",
-        reason: "exact semantic fixture match",
+        reason: `exact semantic fixture match ${decisionVersion}`,
       }],
-      conversion_decisions: [],
+      conversion_decisions: [{
+        evidence_key: volumeIngredientId,
+        ingredient_id: volumeIngredientId,
+        preparation_state: "raw",
+        conversion_profile_code: "VOLUME_G20",
+        candidate_identity: "volume-candidate-identity",
+        candidate_checksum: "volume-candidate-checksum",
+        status: "approved",
+        reason: `exact volume fixture match ${decisionVersion}`,
+      }],
       piece_decisions: [{
         evidence_key: ingredientId,
         ingredient_id: ingredientId,
@@ -121,7 +147,7 @@ function modelInput() {
         candidate_identity: "piece-candidate-identity",
         candidate_checksum: "piece-candidate-checksum",
         status: "approved",
-        reason: "exact piece fixture match",
+        reason: `exact piece fixture match ${decisionVersion}`,
       }],
     },
     candidate_plan: {
@@ -133,7 +159,16 @@ function modelInput() {
         candidate_checksum: "nutrition-candidate-checksum",
         review_status: "pending",
       }],
-      conversion_candidates: [],
+      conversion_candidates: [{
+        evidence_key: volumeIngredientId,
+        ingredient_id: volumeIngredientId,
+        evidence_checksum: volumeEvidence.evidence_checksum,
+        preparation_state: "raw",
+        conversion_profile_code: "VOLUME_G20",
+        candidate_identity: "volume-candidate-identity",
+        candidate_checksum: "volume-candidate-checksum",
+        review_status: "pending",
+      }],
       piece_candidates: [{
         evidence_key: ingredientId,
         ingredient_id: ingredientId,
@@ -158,7 +193,14 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
       insert into public.users (id, nickname, social_provider, social_id)
       values ('${actorId}', 'stage3-operator', 'google', 'stage3-operator');
       insert into public.ingredients (id, standard_name, category, default_unit)
-      values ('${ingredientId}', '두부', '가공식품', 'g');
+      values
+        ('${ingredientId}', '두부', '가공식품', 'g'),
+        ('${flourIngredientId}', '밀가루', '가공식품', 'g'),
+        ('${volumeIngredientId}', '쌀가루', '가공식품', 'g');
+      insert into public.ingredient_synonyms (ingredient_id, synonym)
+      values
+        ('${flourIngredientId}', '중력분'),
+        ('${volumeIngredientId}', '멥쌀가루');
     `);
   });
 
@@ -184,7 +226,83 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
     expect(psql("set role service_role; select count(*) from public.nutrition_sources;")).toBe("0");
   });
 
-  it("runs apply, piece persistence, indexed registry replay, disable, and disable replay", () => {
+  it("rejects volume evidence for another subject while accepting an ingredient synonym", () => {
+    psql(`
+      insert into public.nutrition_sources (
+        id, provider_code, dataset_name, source_kind, source_version, fetched_at,
+        freshness_checked_at, freshness_status, priority_rank, source_url,
+        license_name, manifest_sha256, review_status, decision_reason,
+        reviewed_by, reviewed_at, is_active
+      ) values (
+        '30000000-0000-4000-8000-000000000010', 'RDA_10_4',
+        'Volume subject binding fixture', 'measurement_reference', '2026-07-01',
+        now(), now(), 'current', 2, 'https://example.test/volume-binding',
+        'test-only', 'volume-binding-manifest', 'approved', 'fixture approval',
+        '${actorId}', now(), true
+      );
+      insert into public.measurement_source_evidence (
+        id, source_id, evidence_kind, source_subject, preparation_state,
+        source_observed_unit, source_observed_amount, observed_volume_ml,
+        observed_weight_g, normalized_g_per_15ml, source_url, source_accessed_at,
+        evidence_fingerprint, review_status, decision_reason, reviewed_by,
+        reviewed_at, version, is_active
+      ) values
+        (
+          '40000000-0000-4000-8000-000000000010',
+          '30000000-0000-4000-8000-000000000010', 'volume_weight', '두부', 'raw',
+          '1 tbsp (15mL)', 1, 15, 20, 20, 'https://example.test/volume-binding',
+          '2026-07-01', 'volume-binding-mismatch', 'approved', 'fixture approval',
+          '${actorId}', now(), 1, true
+        ),
+        (
+          '40000000-0000-4000-8000-000000000011',
+          '30000000-0000-4000-8000-000000000010', 'volume_weight', '  중력분  ', 'raw',
+          '1 tbsp (15mL)', 1, 15, 20, 20, 'https://example.test/volume-binding',
+          '2026-07-01', 'volume-binding-synonym', 'approved', 'fixture approval',
+          '${actorId}', now(), 1, true
+        );
+    `);
+
+    const mismatchedSubject = psqlResult(`
+      insert into public.ingredient_conversion_assignments (
+        ingredient_id, conversion_profile_id, evidence_id, preparation_state,
+        distance_g_per_15ml, candidate_rank, assignment_reason, review_status,
+        reviewed_by, reviewed_at, version, is_active
+      ) values (
+        '${flourIngredientId}', '71000000-0000-4000-8000-000000000020',
+        '40000000-0000-4000-8000-000000000010', 'raw', 0, 1,
+        'subject mismatch must fail', 'approved', '${actorId}', now(), 1, true
+      );
+    `);
+    expect(mismatchedSubject.status).not.toBe(0);
+    expect(mismatchedSubject.stderr).toContain("INVALID_CONVERSION_ASSIGNMENT_CONTEXT");
+
+    psql(`
+      insert into public.ingredient_conversion_assignments (
+        ingredient_id, conversion_profile_id, evidence_id, preparation_state,
+        distance_g_per_15ml, candidate_rank, assignment_reason, review_status,
+        reviewed_by, reviewed_at, version, is_active
+      ) values (
+        '${flourIngredientId}', '71000000-0000-4000-8000-000000000020',
+        '40000000-0000-4000-8000-000000000011', 'raw', 0, 1,
+        'normalized synonym is valid', 'approved', '${actorId}', now(), 1, true
+      );
+    `);
+    expect(psql(`
+      select review_status || ':' || is_active
+      from public.ingredient_conversion_assignments
+      where evidence_id = '40000000-0000-4000-8000-000000000011';
+    `)).toBe("approved:true");
+  });
+
+  it("runs apply and disable with pgcrypto isolated in extensions, then replays both", () => {
+    expect(psql(`
+      select namespace.nspname
+      from pg_extension extension
+      join pg_namespace namespace on namespace.oid = extension.extnamespace
+      where extension.extname = 'pgcrypto';
+    `)).toBe("extensions");
+
     const encoded = encodedJson(modelInput());
     const applied = JSON.parse(psql(`
       select public.apply_ingredient_nutrition_model(
@@ -193,6 +311,7 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
     `));
     expect(applied).toMatchObject({ status: "applied", replayed: false });
     expect(applied.writes_committed).toBeGreaterThan(0);
+    expect(applied.affected_row_ids.conversion_assignment_ids).toHaveLength(1);
     expect(applied.affected_row_ids.piece_weight_ids).toHaveLength(1);
 
     const piece = JSON.parse(psql(`
@@ -212,6 +331,80 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
     `));
     expect(replay).toMatchObject({ replayed: true, writes_committed: 0 });
     expect(psql("select count(*) from public.piece_unit_weights;")).toBe("1");
+
+    const decisionBEncoded = encodedJson(modelInput("B"));
+    const decisionB = JSON.parse(psql(`
+      select public.apply_ingredient_nutrition_model(
+        convert_from(decode('${decisionBEncoded}', 'base64'), 'UTF8')::jsonb
+      )::text;
+    `));
+    expect(decisionB).toMatchObject({
+      status: "applied",
+      replayed: false,
+      superseded_count: 3,
+    });
+    expect(decisionB.writes_committed).toBeGreaterThan(0);
+
+    const decisionBReplay = JSON.parse(psql(`
+      select public.apply_ingredient_nutrition_model(
+        convert_from(decode('${decisionBEncoded}', 'base64'), 'UTF8')::jsonb
+      )::text;
+    `));
+    expect(decisionBReplay).toMatchObject({ replayed: true, writes_committed: 0 });
+    expect(JSON.parse(psql(`
+      select public.get_ingredient_nutrition_model_run(
+        'model-postgres-decision-b-0001'
+      )::text;
+    `))).toMatchObject({
+      run_id: "model-postgres-decision-b-0001",
+      idempotency_key: "postgres-apply-key-b-0001",
+      registry_checksum: expect.stringMatching(/^[a-f0-9]{64}$/),
+      summary: {
+        status: "applied",
+        affected_source_id: expect.any(String),
+      },
+    });
+    expect(JSON.parse(psql(`
+      select jsonb_agg(jsonb_build_object(
+        'version', version,
+        'review_status', review_status,
+        'is_active', is_active
+      ) order by version)::text
+      from public.ingredient_nutrition_profiles
+      where ingredient_id = '${ingredientId}' and preparation_state = 'raw';
+    `))).toEqual([
+      { version: 1, review_status: "superseded", is_active: false },
+      { version: 2, review_status: "approved", is_active: true },
+    ]);
+    expect(JSON.parse(psql(`
+      select jsonb_agg(jsonb_build_object(
+        'version', version,
+        'review_status', review_status,
+        'is_active', is_active
+      ) order by version)::text
+      from public.ingredient_conversion_assignments
+      where ingredient_id = '${volumeIngredientId}' and preparation_state = 'raw';
+    `))).toEqual([
+      { version: 1, review_status: "superseded", is_active: false },
+      { version: 2, review_status: "approved", is_active: true },
+    ]);
+    expect(JSON.parse(psql(`
+      select jsonb_agg(jsonb_build_object(
+        'version', version,
+        'review_status', review_status,
+        'is_active', is_active
+      ) order by version)::text
+      from public.piece_unit_weights
+      where ingredient_id = '${ingredientId}' and preparation_state = 'raw';
+    `))).toEqual([
+      { version: 1, review_status: "superseded", is_active: false },
+      { version: 2, review_status: "approved", is_active: true },
+    ]);
+    expect(psql(`
+      select count(*)
+      from public.measurement_source_evidence
+      where evidence_fingerprint in ('piece-evidence-checksum', 'volume-evidence-checksum');
+    `)).toBe("2");
 
     const driftModel = structuredClone(modelInput());
     driftModel.run_id = "model-postgres-drift-0001";
@@ -252,24 +445,28 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
       from public.operational_events
       where source = 'ingredient-nutrition-model'
         and event_type = 'ingredient_nutrition_model_applied'
-        and metadata_json ->> 'idempotency_key' = 'postgres-apply-key-0001';
+        and metadata_json ->> 'idempotency_key' = 'postgres-apply-key-a-0001';
     `);
     expect(registryPlan).toContain("ingredient_nutrition_run_registry_idempotency_idx");
 
     const disabled = JSON.parse(psql(`
       select public.disable_ingredient_nutrition_model(
-        'postgres-apply-key-0001', 'postgres-disable-key-0001', '${actorId}',
+        'postgres-apply-key-b-0001', 'postgres-disable-key-0001', '${actorId}',
         'integration disable', '2026-07-15T00:00:00.000Z'
       )::text;
     `));
-    expect(disabled).toMatchObject({ replayed: false, revoked_count: 2, payload_deleted: 0 });
-    expect(psql("select review_status || ':' || is_active from public.piece_unit_weights;")).toBe(
+    expect(disabled).toMatchObject({ replayed: false, revoked_count: 3, payload_deleted: 0 });
+    expect(psql(`
+      select review_status || ':' || is_active
+      from public.piece_unit_weights
+      where version = 2;
+    `)).toBe(
       "revoked:false",
     );
 
     const disableReplay = JSON.parse(psql(`
       select public.disable_ingredient_nutrition_model(
-        'postgres-apply-key-0001', 'postgres-disable-key-0001', '${actorId}',
+        'postgres-apply-key-b-0001', 'postgres-disable-key-0001', '${actorId}',
         'integration disable', '2026-07-15T00:00:00.000Z'
       )::text;
     `));

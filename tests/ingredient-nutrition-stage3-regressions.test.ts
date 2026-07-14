@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
-
-import { readFileSync } from "node:fs";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -421,27 +422,180 @@ describe("Stage 3 group 2: SQL ownership, piece persistence, and recovery", () =
   });
 
   it("preserves committed write truth when report publication fails and marks recovery pending", async () => {
-    const { publishRunWithRecovery } = await import(IMPORT_URL);
+    const { IngredientNutritionImportError, publishRunWithRecovery } = await import(IMPORT_URL);
+    const { formatCliFailure } = await import(MODEL_CLI_URL);
     const summary = {
       schema_version: "ingredient-nutrition-model-run-v1",
       run_id: "model-cccccccccccccccccccccccc",
+      status: "applied",
       idempotency_key: "run-c",
       content_hash: "content-c",
       writes_attempted: 7,
       writes_committed: 7,
     };
 
-    await expect(publishRunWithRecovery(summary, async () => {
+    const pending = await publishRunWithRecovery(summary, async () => {
       throw new Error("synthetic publication failure");
-    })).rejects.toMatchObject({
+    }).catch((error: unknown) => error);
+    expect(pending).toMatchObject({
       code: "REPORT_PUBLICATION_PENDING",
       summary: {
         run_id: summary.run_id,
+        status: "applied",
         writes_attempted: 7,
         writes_committed: 7,
         report_publication_status: "pending_recovery",
       },
     });
+    expect(formatCliFailure(pending)).toMatchObject({
+      status: "applied",
+      writes_attempted: 7,
+      writes_committed: 7,
+      report_publication_status: "pending_recovery",
+      error: { code: "REPORT_PUBLICATION_PENDING" },
+    });
+    expect(formatCliFailure(new IngredientNutritionImportError(
+      "IMPORT_TRANSACTION_FAILED",
+      {},
+      { ...summary, writes_committed: 0 },
+    ))).toMatchObject({
+      status: "rejected",
+      writes_committed: 0,
+      error: { code: "IMPORT_TRANSACTION_FAILED" },
+    });
+  });
+
+  it("propagates authoritative DB supersede counts into the operator summary", async () => {
+    const { runModelImport } = await import(IMPORT_URL);
+    const bundle = buildBundle();
+    const affectedRowIds = Object.fromEntries([
+      "nutrition_source_ids",
+      "nutrition_source_item_ids",
+      "nutrition_profile_ids",
+      "nutrition_value_keys",
+      "nutrition_link_ids",
+      "measurement_evidence_ids",
+      "conversion_assignment_ids",
+      "piece_weight_ids",
+    ].map((field) => [field, []]));
+    const summary = await runModelImport({
+      bundle,
+      mode: "apply",
+      environment: "local",
+      pilot_scope: "foodsafety-30",
+      actual_pilot_scope: expectedPilotScope,
+      expected_pilot_scope: expectedPilotScope,
+      canonical_ingredients: canonicalIngredients,
+      approval: approvalFor(bundle),
+      store: {
+        findRun: () => null,
+        applyModelBundle: async () => ({
+          status: "applied",
+          freshness_status: "current",
+          writes_committed: 6,
+          replayed: false,
+          source_id: "source-db",
+          affected_row_ids: affectedRowIds,
+          superseded_count: 3,
+        }),
+      },
+    });
+
+    expect(summary).toMatchObject({
+      status: "applied",
+      writes_attempted: 6,
+      writes_committed: 6,
+      superseded_count: 3,
+    });
+  });
+
+  it("recovers and disables an applied run from the indexed DB registry without a local report file", async () => {
+    const { disableModelRun } = await import(IMPORT_URL);
+    const { loadRegisteredReport } = await import(MODEL_CLI_URL);
+    const registryRoot = mkdtempSync(path.join(tmpdir(), "nutrition-report-recovery-"));
+    const affectedRowIds = {
+      nutrition_source_ids: ["source-recovery"],
+      nutrition_source_item_ids: ["item-recovery"],
+      nutrition_profile_ids: ["profile-recovery"],
+      nutrition_value_keys: ["profile-recovery:protein_g"],
+      nutrition_link_ids: ["link-recovery"],
+      measurement_evidence_ids: [],
+      conversion_assignment_ids: [],
+      piece_weight_ids: ["piece-recovery"],
+    };
+    const summary = {
+      schema_version: "ingredient-nutrition-model-run-v1",
+      run_id: "model-dddddddddddddddddddddddd",
+      environment: "local",
+      status: "applied",
+      idempotency_key: "run-recovery",
+      source_payload_identity: "payload-recovery",
+      decision_checksum: "decision-recovery",
+      content_hash: "content-recovery",
+      affected_source_id: "source-recovery",
+      affected_row_ids: affectedRowIds,
+      writes_attempted: 7,
+      writes_committed: 7,
+    };
+    const registry = {
+      registry_checksum: "d".repeat(64),
+      run_id: summary.run_id,
+      idempotency_key: summary.idempotency_key,
+      source_payload_identity: summary.source_payload_identity,
+      decision_checksum: summary.decision_checksum,
+      content_hash: summary.content_hash,
+      affected_source_id: summary.affected_source_id,
+      affected_row_ids: affectedRowIds,
+      writes_committed: summary.writes_committed,
+      summary,
+    };
+    const getRunRegistry = vi.fn((identifier: string) =>
+      [summary.run_id, summary.idempotency_key].includes(identifier) ? registry : null);
+    const publisher = vi.fn(async (recoveredSummary) => recoveredSummary);
+    const disableAppliedModel = vi.fn(async () => ({
+      writes_committed: 3,
+      payload_deleted: 0,
+      revoked_count: 2,
+    }));
+    const store = {
+      getRunRegistry,
+      findRun: () => null,
+      disableAppliedModel,
+    };
+
+    try {
+      const report = await loadRegisteredReport(summary.run_id, store, {
+        registryRoot,
+        publisher,
+      });
+      expect(report).toMatchObject({
+        run_id: summary.run_id,
+        status: "applied",
+        report_publication_status: "recovered",
+      });
+      expect(getRunRegistry).toHaveBeenCalledWith(summary.run_id);
+      expect(publisher).toHaveBeenCalledOnce();
+
+      const disabled = await disableModelRun({
+        report,
+        store,
+        environment: "local",
+        decision: {
+          reviewed_by: "operator-recovery",
+          reviewed_at: "2026-07-15T00:00:00.000Z",
+          reason: "recovered report disable",
+        },
+      });
+      expect(disabled).toMatchObject({
+        status: "disabled",
+        writes_committed: 3,
+        revoked_count: 2,
+        payload_deleted: 0,
+      });
+      expect(disableAppliedModel).toHaveBeenCalledOnce();
+    } finally {
+      rmSync(registryRoot, { recursive: true, force: true });
+    }
   });
 
   it("persists piece decisions and provenance while registering immutable run ownership in the same SQL transaction", () => {
@@ -467,7 +621,7 @@ describe("Stage 3 group 2: SQL ownership, piece persistence, and recovery", () =
 });
 
 describe("Stage 3 group 3: staging boundary, RLS, and registry performance", () => {
-  it("requires an explicit safe database adapter for staging and rejects unsafe adapter inputs", async () => {
+  it("uses only the package-owned staging adapter and rejects every external adapter option", async () => {
     const { parseModelCliArgs } = await import(IMPORT_URL);
     const base = [
       "--bundle", "bundle.json",
@@ -477,24 +631,18 @@ describe("Stage 3 group 3: staging boundary, RLS, and registry performance", () 
       "--environment", "staging",
     ];
 
-    expect(() => parseModelCliArgs("import", base)).toThrowError(
-      expect.objectContaining({ code: "STAGING_DATABASE_ADAPTER_REQUIRED" }),
-    );
-    expect(() => parseModelCliArgs("import", [
-      ...base,
-      "--database-adapter", "https://staging.example.test/query",
-    ])).toThrowError(expect.objectContaining({ code: "DATABASE_ADAPTER_FORBIDDEN" }));
-    expect(() => parseModelCliArgs("import", [
-      ...base,
-      "--database-adapter", ".env.staging",
-    ])).toThrowError(expect.objectContaining({ code: "DATABASE_ADAPTER_FORBIDDEN" }));
-    expect(parseModelCliArgs("import", [
-      ...base,
-      "--database-adapter", "scripts/local-nutrition-db-adapter.mjs",
-    ])).toMatchObject({
-      environment: "staging",
-      database_adapter: "scripts/local-nutrition-db-adapter.mjs",
-    });
+    expect(parseModelCliArgs("import", base)).toMatchObject({ environment: "staging" });
+    for (const adapter of [
+      "scripts/public-nutrition-source-cli.mjs",
+      "tests/fixtures/ingredient-nutrition-database-adapter.mjs",
+      "https://staging.example.test/query",
+      ".env.staging",
+    ]) {
+      expect(() => parseModelCliArgs("import", [
+        ...base,
+        "--database-adapter", adapter,
+      ])).toThrowError(expect.objectContaining({ code: "CLI_ARGUMENT_INVALID" }));
+    }
   });
 
   it("uses the indexed database registry instead of scanning every report directory", () => {
@@ -521,18 +669,34 @@ describe("Stage 3 group 3: staging boundary, RLS, and registry performance", () 
       "--pilot-scope", "foodsafety-30",
       "--approval-file", "approval.json",
       "--environment", "production",
-      "--database-adapter", "scripts/local-nutrition-db-adapter.mjs",
     ])).toThrowError(expect.objectContaining({
       code: "PRODUCTION_LOAD_APPROVAL_REQUIRED",
     }));
   });
 
-  it("executes the staging adapter through the versioned stdin/stdout boundary", async () => {
-    const { runExplicitDatabaseAdapter } = await import(MODEL_CLI_URL);
+  it("limits executable adapter injection to the exact regular test fixture and rejects symlinks", async () => {
+    const { runTestDatabaseAdapter } = await import(MODEL_CLI_URL);
+    const tempRoot = mkdtempSync(path.join(tmpdir(), "nutrition-adapter-link-"));
+    const adapterLink = path.join(tempRoot, "adapter-link.mjs");
+    symlinkSync(
+      path.resolve("tests/fixtures/ingredient-nutrition-database-adapter.mjs"),
+      adapterLink,
+    );
 
-    expect(runExplicitDatabaseAdapter(
-      "tests/fixtures/ingredient-nutrition-database-adapter.mjs",
-      "select 'safe fixture query'::text",
-    )).toEqual({ adapter_contract: "accepted" });
+    try {
+      expect(runTestDatabaseAdapter(
+        "tests/fixtures/ingredient-nutrition-database-adapter.mjs",
+        "select 'safe fixture query'::text",
+      )).toEqual({ adapter_contract: "accepted" });
+      expect(() => runTestDatabaseAdapter(
+        "scripts/public-nutrition-source-cli.mjs",
+        "select 1",
+      )).toThrowError(expect.objectContaining({ code: "DATABASE_ADAPTER_FORBIDDEN" }));
+      expect(() => runTestDatabaseAdapter(adapterLink, "select 1")).toThrowError(
+        expect.objectContaining({ code: "DATABASE_ADAPTER_FORBIDDEN" }),
+      );
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 });

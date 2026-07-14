@@ -661,6 +661,7 @@ export async function runModelImport(input) {
         writes_attempted: databaseResult.writes_committed,
         writes_committed: databaseResult.writes_committed,
         replayed: databaseResult.replayed,
+        superseded_count: databaseResult.superseded_count ?? appliedSummary.superseded_count,
         affected_source_id: databaseResult.source_id,
         affected_row_ids: databaseResult.affected_row_ids,
       };
@@ -961,16 +962,15 @@ const CLI_SPECS = Object.freeze({
       "pilot-scope",
       "approval-file",
       "environment",
-      "database-adapter",
     ]),
     required: new Set(["bundle", "mode", "pilot-scope"]),
   }),
   report: Object.freeze({
-    allowed: new Set(["run-id", "environment", "database-adapter"]),
+    allowed: new Set(["run-id", "environment"]),
     required: new Set(["run-id"]),
   }),
   disable: Object.freeze({
-    allowed: new Set(["run-id", "approval-file", "environment", "database-adapter"]),
+    allowed: new Set(["run-id", "approval-file", "environment"]),
     required: new Set(["run-id", "approval-file", "environment"]),
   }),
 });
@@ -1032,24 +1032,6 @@ export function parseModelCliArgs(command, argv) {
     !["local", "staging"].includes(parsed.environment)
   ) {
     throw new IngredientNutritionImportError("IMPORT_ENVIRONMENT_INVALID");
-  }
-  if (parsed.environment === "production" && Object.hasOwn(parsed, "database-adapter")) {
-    throw new IngredientNutritionImportError("PRODUCTION_LOAD_APPROVAL_REQUIRED");
-  }
-  if (parsed.environment === "staging" && !Object.hasOwn(parsed, "database-adapter")) {
-    throw new IngredientNutritionImportError("STAGING_DATABASE_ADAPTER_REQUIRED");
-  }
-  if (Object.hasOwn(parsed, "database-adapter")) {
-    const adapter = parsed["database-adapter"];
-    const safeRelativeExecutable =
-      /^(?!\.)(?!.*(?:^|\/)\.\.?(?:\/|$))(?:[a-z0-9._-]+\/)*[a-z0-9._-]+\.mjs$/i;
-    if (
-      !safeRelativeExecutable.test(adapter) ||
-      /(?:^|\/)(?:\.env(?:\.|$)|[^/]*(?:secret|servicekey|api[_-]?key)[^/]*)/i.test(adapter) ||
-      /^(?:https?|file):/i.test(adapter)
-    ) {
-      throw new IngredientNutritionImportError("DATABASE_ADAPTER_FORBIDDEN");
-    }
   }
   return Object.fromEntries(
     Object.entries(parsed).map(([key, value]) => [key.replaceAll("-", "_"), value]),

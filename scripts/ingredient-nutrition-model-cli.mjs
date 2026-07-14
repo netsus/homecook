@@ -3,7 +3,9 @@
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
+  lstatSync,
   readFileSync,
+  realpathSync,
 } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -29,6 +31,12 @@ const SAFE_RUN_ID = /^[a-z0-9][a-z0-9-]{7,79}$/;
 const SAFE_INPUT_BASENAME = /^(?!\.env(?:\.|$))(?!.*(?:secret|servicekey|api[_-]?key)).+$/i;
 const PINNED_PILOT_SEED = path.resolve(
   "supabase/migrations/20260626104000_seed_foodsafety_pilot_recipes.sql",
+);
+const STAGING_DATABASE_ADAPTER = path.resolve(
+  "scripts/lib/ingredient-nutrition-staging-database-adapter.mjs",
+);
+const TEST_DATABASE_ADAPTER = path.resolve(
+  "tests/fixtures/ingredient-nutrition-database-adapter.mjs",
 );
 
 function zeroWriteError(code) {
@@ -95,12 +103,39 @@ function runLocalPsqlJson(sql) {
   }
 }
 
-function runExplicitDatabaseAdapter(adapterPath, sql) {
-  const resolved = path.resolve(adapterPath);
-  const relative = path.relative(process.cwd(), resolved);
-  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+function assertOwnedRegularFile(candidatePath, expectedPath) {
+  const resolved = path.resolve(candidatePath);
+  let stat;
+  let realPath;
+  try {
+    stat = lstatSync(resolved);
+    realPath = realpathSync(resolved);
+  } catch {
     throw new IngredientNutritionImportError("DATABASE_ADAPTER_FORBIDDEN");
   }
+  const ownerMismatch = typeof process.getuid === "function" && stat.uid !== process.getuid();
+  if (
+    resolved !== expectedPath ||
+    realPath !== expectedPath ||
+    stat.isSymbolicLink() ||
+    !stat.isFile() ||
+    ownerMismatch ||
+    (stat.mode & 0o022) !== 0
+  ) {
+    throw new IngredientNutritionImportError("DATABASE_ADAPTER_FORBIDDEN");
+  }
+  return resolved;
+}
+
+function runOwnedDatabaseAdapter(adapterPath, expectedPath, sql, environment) {
+  const resolved = assertOwnedRegularFile(adapterPath, expectedPath);
+  const adapterEnvironment = environment === "staging"
+    ? Object.fromEntries(
+      ["PATH", "PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSWORD", "PGSSLMODE"]
+        .filter((key) => typeof process.env[key] === "string")
+        .map((key) => [key, process.env[key]]),
+    )
+    : {};
   const result = spawnSync(process.execPath, [resolved], {
     input: JSON.stringify({
       schema_version: "ingredient-nutrition-database-adapter-v1",
@@ -109,7 +144,7 @@ function runExplicitDatabaseAdapter(adapterPath, sql) {
     }),
     encoding: "utf8",
     timeout: 30_000,
-    env: {},
+    env: adapterEnvironment,
   });
   if (result.status !== 0 || result.error) {
     throw new IngredientNutritionImportError("STAGING_DATABASE_ADAPTER_FAILED");
@@ -130,19 +165,35 @@ function runExplicitDatabaseAdapter(adapterPath, sql) {
   }
 }
 
-function runDatabaseJson(environment, adapterPath, sql) {
+function runTestDatabaseAdapter(adapterPath, sql) {
+  if (process.env.VITEST !== "true" && process.env.NODE_ENV !== "test") {
+    throw new IngredientNutritionImportError("DATABASE_ADAPTER_FORBIDDEN");
+  }
+  return runOwnedDatabaseAdapter(
+    adapterPath,
+    TEST_DATABASE_ADAPTER,
+    sql,
+    "test",
+  );
+}
+
+function runDatabaseJson(environment, sql) {
   if (environment === "production") {
     throw new IngredientNutritionImportError("PRODUCTION_LOAD_APPROVAL_REQUIRED");
   }
-  if (adapterPath !== undefined) return runExplicitDatabaseAdapter(adapterPath, sql);
-  if (environment !== "local") {
-    throw new IngredientNutritionImportError("STAGING_DATABASE_ADAPTER_REQUIRED");
+  if (environment === "staging") {
+    return runOwnedDatabaseAdapter(
+      STAGING_DATABASE_ADAPTER,
+      STAGING_DATABASE_ADAPTER,
+      sql,
+      "staging",
+    );
   }
   return runLocalPsqlJson(sql);
 }
 
-function resolveFoodsafetyPilotScope(environment, adapterPath) {
-  return runDatabaseJson(environment, adapterPath, `
+function resolveFoodsafetyPilotScope(environment) {
+  return runDatabaseJson(environment, `
 with pilot_recipes as (
   select source.recipe_id
   from public.recipe_sources source
@@ -198,10 +249,10 @@ function readPinnedPilotContract() {
   return { recipe_ids: uniqueRecipeIds, ingredient_names: uniqueIngredientNames };
 }
 
-function resolvePinnedPilotScope(environment, adapterPath) {
+function resolvePinnedPilotScope(environment) {
   const pinned = readPinnedPilotContract();
   const encoded = Buffer.from(JSON.stringify(pinned.ingredient_names), "utf8").toString("base64");
-  const ingredientIds = runDatabaseJson(environment, adapterPath, `
+  const ingredientIds = runDatabaseJson(environment, `
 with expected_names as (
   select value as standard_name
   from jsonb_array_elements_text(
@@ -215,8 +266,8 @@ join expected_names expected on expected.standard_name = ingredient.standard_nam
   return { recipe_ids: pinned.recipe_ids, ingredient_ids: ingredientIds };
 }
 
-function createDatabaseStore(environment, adapterPath) {
-  const query = (sql) => runDatabaseJson(environment, adapterPath, sql);
+function createDatabaseStore(environment) {
+  const query = (sql) => runDatabaseJson(environment, sql);
   return {
     findRun(idempotencyKey) {
       const encoded = Buffer.from(idempotencyKey, "utf8").toString("base64");
@@ -254,9 +305,9 @@ select public.disable_ingredient_nutrition_model(
   };
 }
 
-async function publishRun(summary) {
+async function publishRun(summary, registryRoot = REGISTRY_ROOT) {
   const report = buildRunReport(summary);
-  const outputDir = path.join(REGISTRY_ROOT, summary.run_id);
+  const outputDir = path.join(registryRoot, summary.run_id);
   await publishArtifactBundle(outputDir, {
     "summary.json": `${JSON.stringify(summary, null, 2)}\n`,
     "report.json": `${JSON.stringify(report, null, 2)}\n`,
@@ -264,21 +315,57 @@ async function publishRun(summary) {
   return report;
 }
 
-async function loadRegisteredReport(runId, store) {
+async function loadRegisteredReport(runId, store, options = {}) {
   if (!SAFE_RUN_ID.test(runId)) {
     throw new IngredientNutritionImportError("INVALID_RUN_REPORT");
   }
-  const reportPath = path.join(REGISTRY_ROOT, runId, "report.json");
-  if (!existsSync(reportPath)) {
+  const registryRoot = options.registryRoot ?? REGISTRY_ROOT;
+  const reportPath = path.join(registryRoot, runId, "report.json");
+  const hasStore = store !== undefined;
+  const registry = !hasStore
+    ? null
+    : await store.getRunRegistry(runId);
+  if (existsSync(reportPath)) {
+    try {
+      const report = JSON.parse(readFileSync(reportPath, "utf8"));
+      const validated = validateRunReport(report);
+      return !hasStore
+        ? validated
+        : validateRunReportAgainstRegistry(validated, registry);
+    } catch (error) {
+      if (error instanceof IngredientNutritionImportError) throw error;
+      throw new IngredientNutritionImportError("INVALID_RUN_REPORT");
+    }
+  }
+  if (registry === null || typeof registry?.summary !== "object") {
     throw new IngredientNutritionImportError("INVALID_RUN_REPORT");
   }
-  const report = JSON.parse(readFileSync(reportPath, "utf8"));
-  const validated = validateRunReport(report);
-  if (store !== undefined) {
-    const registry = await store.getRunRegistry(validated.idempotency_key);
-    return validateRunReportAgainstRegistry(validated, registry);
-  }
-  return validated;
+  const recoveredSummary = {
+    ...registry.summary,
+    report_publication_status: "recovered",
+  };
+  const recoveredReport = validateRunReportAgainstRegistry(
+    buildRunReport(recoveredSummary),
+    registry,
+  );
+  const publisher = options.publisher ?? ((summary) => publishRun(summary, registryRoot));
+  await publishRunWithRecovery(recoveredSummary, publisher);
+  return recoveredReport;
+}
+
+function formatCliFailure(error) {
+  const code = error instanceof IngredientNutritionImportError
+    ? error.code
+    : "INGREDIENT_NUTRITION_MODEL_FAILED";
+  return error instanceof IngredientNutritionImportError && error.summary
+    ? {
+        ...error.summary,
+        status: code === "REPORT_PUBLICATION_PENDING"
+          ? error.summary.status
+          : "rejected",
+        error: { code },
+      }
+    : zeroWriteError(code);
 }
 
 async function importCommand(args) {
@@ -291,13 +378,11 @@ async function importCommand(args) {
   }
   const actualPilotContext = resolveFoodsafetyPilotScope(
     args.environment,
-    args.database_adapter,
   );
   const expectedPilotScope = resolvePinnedPilotScope(
     args.environment,
-    args.database_adapter,
   );
-  const store = createDatabaseStore(args.environment, args.database_adapter);
+  const store = createDatabaseStore(args.environment);
   const summary = await runModelImport({
     bundle,
     mode: args.mode,
@@ -319,12 +404,12 @@ async function importCommand(args) {
 async function reportCommand(args) {
   return loadRegisteredReport(
     args.run_id,
-    createDatabaseStore(args.environment ?? "local", args.database_adapter),
+    createDatabaseStore(args.environment ?? "local"),
   );
 }
 
 async function disableCommand(args) {
-  const store = createDatabaseStore(args.environment, args.database_adapter);
+  const store = createDatabaseStore(args.environment);
   const report = await loadRegisteredReport(args.run_id, store);
   const decision = await readJsonInput(args.approval_file);
   const summary = await disableModelRun({
@@ -349,13 +434,7 @@ async function main() {
         : await disableCommand(args);
     writeMachineJson(process.stdout, result);
   } catch (error) {
-    const code = error instanceof IngredientNutritionImportError
-      ? error.code
-      : "INGREDIENT_NUTRITION_MODEL_FAILED";
-    const summary = error instanceof IngredientNutritionImportError && error.summary
-      ? { ...error.summary, status: "rejected", error: { code } }
-      : zeroWriteError(code);
-    writeMachineJson(process.stderr, summary);
+    writeMachineJson(process.stderr, formatCliFailure(error));
     process.exitCode = 1;
   }
 }
@@ -365,4 +444,4 @@ const invokedUrl = process.argv[1] === undefined
   : pathToFileURL(path.resolve(process.argv[1])).href;
 if (import.meta.url === invokedUrl) await main();
 
-export { runExplicitDatabaseAdapter };
+export { formatCliFailure, loadRegisteredReport, runTestDatabaseAdapter };
