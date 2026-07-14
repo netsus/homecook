@@ -669,11 +669,46 @@ begin
             and evidence ->> 'ingredient_or_category_id' = decision ->> 'evidence_key'
             and evidence ->> 'preparation_state' = decision ->> 'preparation_state'
             and evidence ->> 'evidence_checksum' = candidate ->> 'evidence_checksum'
+          join public.measurement_conversion_profiles profile
+            on profile.code = decision ->> 'conversion_profile_code'
+            and profile.is_active
           where candidate ->> 'evidence_key' = decision ->> 'evidence_key'
             and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
             and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
             and candidate ->> 'conversion_profile_code' =
               decision ->> 'conversion_profile_code'
+            and candidate ->> 'evidence_id' = evidence ->> 'evidence_checksum'
+            and (
+              not (candidate ? 'display_qualifier')
+              or candidate ->> 'display_qualifier' = profile.display_qualifier
+            )
+            and case
+              when jsonb_typeof(candidate -> 'representative_weight_g') = 'number'
+              then (candidate ->> 'representative_weight_g')::numeric =
+                profile.representative_weight_g
+              else false
+            end
+            and case
+              when jsonb_typeof(candidate -> 'evidence_normalized_g_per_15ml') = 'number'
+                and jsonb_typeof(evidence -> 'observed_g_per_15ml') = 'number'
+              then (candidate ->> 'evidence_normalized_g_per_15ml')::numeric =
+                (evidence ->> 'observed_g_per_15ml')::numeric
+              else false
+            end
+            and case
+              when jsonb_typeof(candidate -> 'distance_g_per_15ml') = 'number'
+                and jsonb_typeof(evidence -> 'observed_g_per_15ml') = 'number'
+              then (candidate ->> 'distance_g_per_15ml')::numeric = round(abs(
+                (evidence ->> 'observed_g_per_15ml')::numeric -
+                profile.representative_weight_g
+              ), 4)
+              else false
+            end
+            and case
+              when jsonb_typeof(candidate -> 'candidate_rank') = 'number'
+              then (candidate ->> 'candidate_rank')::numeric = 1
+              else false
+            end
             and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
             and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
             and candidate ->> 'review_status' = 'pending'
@@ -697,7 +732,14 @@ begin
             and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
             and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
             and candidate ->> 'size_code' = decision ->> 'size_code'
-            and candidate ->> 'weight_g' = decision ->> 'weight_g'
+            and case
+              when jsonb_typeof(candidate -> 'weight_g') = 'number'
+                and jsonb_typeof(decision -> 'weight_g') = 'number'
+              then (candidate ->> 'weight_g')::numeric =
+                (decision ->> 'weight_g')::numeric
+                and (decision ->> 'weight_g')::numeric > 0
+              else false
+            end
             and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
             and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
             and candidate ->> 'review_status' = 'pending'
@@ -717,7 +759,17 @@ begin
             and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
             and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
             and candidate ->> 'size_code' = decision ->> 'size_code'
-            and candidate ->> 'weight_g' = decision ->> 'weight_g'
+            and case
+              when jsonb_typeof(candidate -> 'weight_g') = 'number'
+                and jsonb_typeof(decision -> 'weight_g') = 'number'
+                and jsonb_typeof(evidence -> 'observed_g') = 'number'
+              then (candidate ->> 'weight_g')::numeric =
+                (decision ->> 'weight_g')::numeric
+                and (decision ->> 'weight_g')::numeric =
+                  (evidence ->> 'observed_g')::numeric
+                and (decision ->> 'weight_g')::numeric > 0
+              else false
+            end
             and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
             and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
             and candidate ->> 'review_status' = 'pending'
@@ -1247,7 +1299,13 @@ begin
         and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
         and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
         and candidate ->> 'size_code' = decision ->> 'size_code'
-        and candidate ->> 'weight_g' = decision ->> 'weight_g'
+        and case
+          when jsonb_typeof(candidate -> 'weight_g') = 'number'
+            and jsonb_typeof(decision -> 'weight_g') = 'number'
+          then (candidate ->> 'weight_g')::numeric =
+            (decision ->> 'weight_g')::numeric
+          else false
+        end
         and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
         and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
         and candidate ->> 'review_status' = 'pending'

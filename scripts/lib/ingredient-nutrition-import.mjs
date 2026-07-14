@@ -498,6 +498,9 @@ function validateApproval(approval, expectedPilotScope, bundle, candidatePlan) {
     const candidate = matchingCandidates[0];
     return candidate?.review_status === "pending" &&
     matchingCandidates.length === 1 &&
+    Number.isFinite(candidate?.weight_g) &&
+    candidate.weight_g > 0 &&
+    candidate.weight_g === decision.weight_g &&
     ingredientIds.has(decision.ingredient_id) &&
     ["approved", "rejected"].includes(decision.status) &&
     nonEmptyText(decision.size_code) &&
@@ -566,14 +569,18 @@ export async function runModelImport(input) {
   }
 
   let approval = null;
-  if (input.mode === "apply") {
+  if (
+    input.mode === "apply" ||
+    (input.approval !== null && input.approval !== undefined)
+  ) {
     try {
-      approval = validateApproval(
+      const validatedApproval = validateApproval(
         input.approval,
         input.expected_pilot_scope,
         bundle,
         candidatePlan,
       );
+      if (input.mode === "apply") approval = validatedApproval;
     } catch (error) {
       throwWithSummary(error, baseSummary);
     }

@@ -85,7 +85,7 @@ function modelInput(decisionVersion: "A" | "B" | "C" | "D" = "A") {
     size_code: "large",
     source_observed_unit: "piece",
     source_observed_amount: 1,
-    observed_g: 40,
+    observed_g: 40.125,
     source_url: "https://example.test/measurement",
     accessed_at: "2026-07-01",
     license_evidence_url: "https://example.test/license",
@@ -99,7 +99,7 @@ function modelInput(decisionVersion: "A" | "B" | "C" | "D" = "A") {
     preparation_state: "raw",
     source_observed_unit: "1 tbsp (15mL)",
     source_observed_amount: 1,
-    observed_g_per_15ml: 20,
+    observed_g_per_15ml: 19.8765,
     source_url: "https://example.test/measurement",
     accessed_at: "2026-07-01",
     license_evidence_url: "https://example.test/license",
@@ -171,7 +171,7 @@ function modelInput(decisionVersion: "A" | "B" | "C" | "D" = "A") {
         ingredient_id: ingredientId,
         preparation_state: "raw",
         size_code: "large",
-        weight_g: 40,
+        weight_g: 40.125,
         candidate_identity: "piece-candidate-identity",
         candidate_checksum: "piece-candidate-checksum",
         status: "approved",
@@ -190,9 +190,15 @@ function modelInput(decisionVersion: "A" | "B" | "C" | "D" = "A") {
       conversion_candidates: [{
         evidence_key: volumeIngredientId,
         ingredient_id: volumeIngredientId,
+        evidence_id: volumeEvidence.evidence_checksum,
         evidence_checksum: volumeEvidence.evidence_checksum,
         preparation_state: "raw",
         conversion_profile_code: "VOLUME_G20",
+        representative_weight_g: 20,
+        display_qualifier: "approximate",
+        evidence_normalized_g_per_15ml: 19.8765,
+        distance_g_per_15ml: 0.1235,
+        candidate_rank: 1,
         candidate_identity: "volume-candidate-identity",
         candidate_checksum: "volume-candidate-checksum",
         review_status: "pending",
@@ -203,7 +209,7 @@ function modelInput(decisionVersion: "A" | "B" | "C" | "D" = "A") {
         evidence_checksum: evidence.evidence_checksum,
         preparation_state: "raw",
         size_code: "large",
-        weight_g: 40,
+        weight_g: 40.125,
         candidate_identity: "piece-candidate-identity",
         candidate_checksum: "piece-candidate-checksum",
         review_status: "pending",
@@ -476,7 +482,7 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
       )::text
       from public.piece_unit_weights;
     `));
-    expect(piece).toEqual({ weight_g: 40, review_status: "approved", is_active: true });
+    expect(piece).toEqual({ weight_g: 40.125, review_status: "approved", is_active: true });
 
     const replay = JSON.parse(psql(`
       select public.apply_ingredient_nutrition_model(
@@ -846,6 +852,104 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
       select count(*) from public.operational_events
       where metadata_json ->> 'idempotency_key' like 'postgres-%-lookup-%'
         or metadata_json ->> 'idempotency_key' like 'postgres-%-orphan';
+    `)).toBe("0");
+  }, 30_000);
+
+  it("rejects measurement candidates whose audited fields differ from stored semantics", () => {
+    const cases: Array<{ label: string; model: ReturnType<typeof modelInput> }> = [];
+    const addConversionTamper = (
+      label: string,
+      patch: Record<string, unknown>,
+    ) => {
+      const model = structuredClone(modelInput());
+      model.run_id = `model-postgres-semantic-${label}`;
+      model.idempotency_key = `postgres-semantic-${label}`;
+      model.source_payload_identity = `postgres-semantic-${label}-payload`;
+      model.decision_checksum = `postgres-semantic-${label}-decision`;
+      model.content_hash = `postgres-semantic-${label}-content`;
+      const candidate = model.candidate_plan.conversion_candidates[0]!;
+      Object.assign(candidate, patch, {
+        candidate_identity: `${label}-identity`,
+        candidate_checksum: `${label}-checksum`,
+      });
+      Object.assign(model.approval.conversion_decisions[0]!, {
+        candidate_identity: `${label}-identity`,
+        candidate_checksum: `${label}-checksum`,
+      });
+      cases.push({ label, model });
+    };
+
+    addConversionTamper("normalized", { evidence_normalized_g_per_15ml: 19 });
+    addConversionTamper("representative", { representative_weight_g: 19 });
+    addConversionTamper("distance", { distance_g_per_15ml: 1 });
+    addConversionTamper("distance-type", { distance_g_per_15ml: "0" });
+    addConversionTamper("rank", { candidate_rank: 2 });
+    addConversionTamper("display", { display_qualifier: "exact" });
+    addConversionTamper("evidence-id", { evidence_id: "wrong-evidence-id" });
+
+    const pieceModel = structuredClone(modelInput());
+    const pieceLabel = "piece-weight";
+    pieceModel.run_id = `model-postgres-semantic-${pieceLabel}`;
+    pieceModel.idempotency_key = `postgres-semantic-${pieceLabel}`;
+    pieceModel.source_payload_identity = `postgres-semantic-${pieceLabel}-payload`;
+    pieceModel.decision_checksum = `postgres-semantic-${pieceLabel}-decision`;
+    pieceModel.content_hash = `postgres-semantic-${pieceLabel}-content`;
+    Object.assign(pieceModel.candidate_plan.piece_candidates[0]!, {
+      weight_g: 41,
+      candidate_identity: `${pieceLabel}-identity`,
+      candidate_checksum: `${pieceLabel}-checksum`,
+    });
+    Object.assign(pieceModel.approval.piece_decisions[0]!, {
+      weight_g: 41,
+      candidate_identity: `${pieceLabel}-identity`,
+      candidate_checksum: `${pieceLabel}-checksum`,
+    });
+    cases.push({ label: pieceLabel, model: pieceModel });
+
+    const pieceTypeModel = structuredClone(modelInput());
+    const pieceTypeLabel = "piece-weight-type";
+    pieceTypeModel.run_id = `model-postgres-semantic-${pieceTypeLabel}`;
+    pieceTypeModel.idempotency_key = `postgres-semantic-${pieceTypeLabel}`;
+    pieceTypeModel.source_payload_identity = `postgres-semantic-${pieceTypeLabel}-payload`;
+    pieceTypeModel.decision_checksum = `postgres-semantic-${pieceTypeLabel}-decision`;
+    pieceTypeModel.content_hash = `postgres-semantic-${pieceTypeLabel}-content`;
+    Object.assign(pieceTypeModel.candidate_plan.piece_candidates[0]!, {
+      weight_g: "40.125",
+      candidate_identity: `${pieceTypeLabel}-identity`,
+      candidate_checksum: `${pieceTypeLabel}-checksum`,
+    });
+    Object.assign(pieceTypeModel.approval.piece_decisions[0]!, {
+      weight_g: "40.125",
+      candidate_identity: `${pieceTypeLabel}-identity`,
+      candidate_checksum: `${pieceTypeLabel}-checksum`,
+    });
+    cases.push({ label: pieceTypeLabel, model: pieceTypeModel });
+
+    const outcomes = cases.map(({ label, model }) => {
+      const encoded = encodedJson(model);
+      const result = psqlResult(`
+        begin;
+        truncate public.measurement_source_evidence cascade;
+        select public.apply_ingredient_nutrition_model(
+          convert_from(decode('${encoded}', 'base64'), 'UTF8')::jsonb
+        )::text;
+        rollback;
+      `);
+      return { label, status: result.status, stderr: result.stderr };
+    });
+
+    expect(
+      outcomes.filter((outcome) => outcome.status === 0).map((outcome) => outcome.label),
+      outcomes.map((outcome) => outcome.stderr).join("\n"),
+    ).toEqual([]);
+    expect(
+      outcomes
+        .filter((outcome) => !outcome.stderr.includes("INVALID_APPROVAL_FILE"))
+        .map((outcome) => ({ label: outcome.label, stderr: outcome.stderr })),
+    ).toEqual([]);
+    expect(psql(`
+      select count(*) from public.operational_events
+      where metadata_json ->> 'idempotency_key' like 'postgres-semantic-%';
     `)).toBe("0");
   }, 30_000);
 
