@@ -98,8 +98,8 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
     "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
@@ -117,5 +117,5 @@
     "Production load before separate operator approval"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs are authored on docs/ingredient-nutrition-conversion-model from exact predecessor merge f87ae75016a9b709ffc3b706e7ca3720a0940982. The Draft docs PR must receive independent Codex Stage 1.5 review before Stage 2. This slice consumes the predecessor approved/pinned bundle without fetching providers or accessing DATA_GO_KR_API_KEY1. Public API/UI remain unchanged, Design/Accessibility/Playwright are N/A, and production writes remain zero until separate approval."
+  "notes": "Stage 1 docs and independent Stage 1.5 review were merged through PR #999 at f8cb3ed10bd92f3832914512239c68325b3f06ad. Stage 2 started from that exact origin/master head. This slice consumes only predecessor approved/pinned bundle input without provider calls or credential access. Public API/UI remain unchanged, Design/Accessibility/Playwright are N/A, and production writes remain zero until separate approval."
 }
