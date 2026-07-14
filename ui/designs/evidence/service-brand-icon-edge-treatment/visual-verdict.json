@@ -1,0 +1,11 @@
+{
+  "score": 96,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "favicon의 흰 외곽 모서리가 제거되어 어두운 tab 배경에서 파란 rounded silhouette만 보인다",
+    "설치 아이콘은 다섯 규격 모두 full-bleed 파란 배경이며 내부 무먹 glyph의 위치와 비율이 유지된다"
+  ],
+  "suggestions": [],
+  "reasoning": "의도한 플랫폼별 외곽 처리 차이가 명확하고, 작은 favicon 가독성과 설치 아이콘의 브랜드 일관성이 모두 유지된다."
+}

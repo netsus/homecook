@@ -68,9 +68,9 @@
 | 선행 항목 | 상태 | 확인 |
 | --- | --- | --- |
 | `service-brand-image-assets` | merged | [x] image #996, docs #997, frontend #998 |
-| icon edge contract-evolution | in-progress | [ ] 공식 문서 v1.7.16/v1.5.23와 이 workpack의 docs PR merge 필요 |
+| icon edge contract-evolution | merged | [x] 공식 문서 v1.7.16/v1.5.23와 이 workpack이 docs PR #1000으로 선행 merge |
 
-> Stage 4는 이 docs PR이 merge된 뒤에만 시작한다.
+> Stage 4는 docs PR #1000 merge 뒤 별도 frontend branch에서 진행했다.
 
 ## Backend First Contract
 
@@ -96,8 +96,8 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 계약 잠금, Stage 4 구현 전
-- [ ] 리뷰 대기 (pending-review) — Stage 4 asset/evidence 완료
+- [ ] 임시 UI (temporary) — Stage 1 계약 잠금, Stage 4 구현 전
+- [x] 리뷰 대기 (pending-review) — Stage 4 asset/evidence와 독립 리뷰 완료, current-head PR CI/merge 대기
 - [ ] 확정 (confirmed) — 독립 Stage 5/6 review와 current-head gate 통과
 - [ ] N/A — FE 자산 변경 없음
 
@@ -118,9 +118,10 @@
 
 ### Vitest / static guard
 
-- PNG decoder로 favicon 네 corner의 alpha `0`, 반투명 경계의 흰색 matte/halo 부재를 검증한다.
-- 설치/PWA/Apple 180/192/256/512/1024 아이콘 네 corner가 불투명 브랜드 파란 계열이고 near-white가 아님을 검증한다.
-- ICO의 16/32/48/64 frame과 각 frame의 투명 corner를 검증한다.
+- 승인된 구현 전 target-size fixture 9개의 SHA-256을 생성기와 테스트의 고정 상수로 검증한다.
+- PNG decoder로 favicon의 border-connected 외곽 전체 alpha `0`과 2px 전이대의 흰색 matte/halo 부재를 검증한다.
+- 설치/PWA/Apple 180/192/256/512/1024 아이콘 외곽 전체가 불투명 브랜드 파란 계열이고 near-white가 아님을 검증한다.
+- ICO의 16/32/48/64 frame을 각 favicon PNG와 전체 decoded pixel 단위로 비교한다.
 - document 일반 icon 후보에는 투명 favicon만 있고 `mumeok-symbol-192.png`와 설치용 full-bleed 아이콘이 없음을 고정한다.
 - manifest 192/512 경로와 icon size/type을 고정하고 192가 header 심볼 경로를 재사용하지 않음을 검증한다.
 - 공식 source와 header/OG/Twitter 기존 hash가 바뀌지 않았음을 고정한다.
@@ -131,6 +132,7 @@
 - production build에서 `/favicon.ico`, favicon PNG, app-icon-192/512, Apple touch icon이 200과 올바른 content type/dimension을 반환하는지 전용 Playwright HTTP smoke로 확인한다.
 - before/after favicon을 같은 어두운 tab 배경에 합성하고 16/32px 가독성, 흰 corner/halo, 글자 형태를 visual verdict로 확인한다.
 - 설치용 180/192/256/512/1024 contact sheet에서 full-bleed 배경과 glyph 보존을 확인한다.
+- Formal exploratory QA는 N/A다. 화면 흐름·interaction을 바꾸지 않는 low-risk 정적 아이콘 외곽 수정이므로, 전체 픽셀 deterministic guard와 전용 production HTTP smoke, targeted visual verdict로 대체한다.
 
 ### Manual Only
 
@@ -156,14 +158,14 @@
 
 ## Delivery Checklist
 
-- [ ] 공식 문서 v1.7.16/v1.5.23, SoT와 후속 workpack을 docs PR로 먼저 merge <!-- omo:id=brand-icon-edge-delivery-contract;stage=4;scope=shared;review=6 -->
-- [ ] 현재 불투명 favicon corner와 manifest 경로 회귀 테스트 RED 확인 <!-- omo:id=brand-icon-edge-delivery-red;stage=4;scope=frontend;review=5,6 -->
-- [ ] favicon PNG/ICO 투명 외곽과 흰색 matte·halo 부재 구현 <!-- omo:id=brand-icon-edge-delivery-favicon;stage=4;scope=frontend;review=5,6 -->
-- [ ] 180/192/256/512/1024 설치용 full-bleed 파란 아이콘과 manifest 192 분리 <!-- omo:id=brand-icon-edge-delivery-install;stage=4;scope=frontend;review=5,6 -->
-- [ ] document 일반 icon 후보를 투명 favicon 계열로 제한 <!-- omo:id=brand-icon-edge-delivery-document-icons;stage=4;scope=frontend;review=5,6 -->
-- [ ] source/header/OG/Twitter hash와 glyph·비율 보존 guard 통과 <!-- omo:id=brand-icon-edge-delivery-preserve;stage=4;scope=frontend;review=5,6 -->
-- [ ] production static route와 manifest smoke 통과 <!-- omo:id=brand-icon-edge-delivery-smoke;stage=4;scope=frontend;review=5,6 -->
-- [ ] before/after contact sheet, visual verdict와 독립 asset review 완료 <!-- omo:id=brand-icon-edge-delivery-visual;stage=4;scope=frontend;review=5,6 -->
+- [x] 공식 문서 v1.7.16/v1.5.23, SoT와 후속 workpack을 docs PR로 먼저 merge <!-- omo:id=brand-icon-edge-delivery-contract;stage=4;scope=shared;review=6 -->
+- [x] 현재 불투명 favicon corner와 manifest 경로 회귀 테스트 RED 확인 <!-- omo:id=brand-icon-edge-delivery-red;stage=4;scope=frontend;review=5,6 -->
+- [x] favicon PNG/ICO 투명 외곽과 흰색 matte·halo 부재 구현 <!-- omo:id=brand-icon-edge-delivery-favicon;stage=4;scope=frontend;review=5,6 -->
+- [x] 180/192/256/512/1024 설치용 full-bleed 파란 아이콘과 manifest 192 분리 <!-- omo:id=brand-icon-edge-delivery-install;stage=4;scope=frontend;review=5,6 -->
+- [x] document 일반 icon 후보를 투명 favicon 계열로 제한 <!-- omo:id=brand-icon-edge-delivery-document-icons;stage=4;scope=frontend;review=5,6 -->
+- [x] source/header/OG/Twitter hash와 glyph·비율 보존 guard 통과 <!-- omo:id=brand-icon-edge-delivery-preserve;stage=4;scope=frontend;review=5,6 -->
+- [x] production static route와 manifest smoke 통과 <!-- omo:id=brand-icon-edge-delivery-smoke;stage=4;scope=frontend;review=5,6 -->
+- [x] before/after contact sheet, visual verdict와 독립 asset review 완료 <!-- omo:id=brand-icon-edge-delivery-visual;stage=4;scope=frontend;review=5,6 -->
 
 ## Contract Evolution Candidates
 
