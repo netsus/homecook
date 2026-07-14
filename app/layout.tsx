@@ -32,11 +32,6 @@ export const metadata: Metadata = {
         type: "image/png",
         url: "/brand/favicon-32.png",
       },
-      {
-        sizes: "192x192",
-        type: "image/png",
-        url: "/brand/mumeok-symbol-192.png",
-      },
     ],
   },
   metadataBase: new URL(siteUrl),

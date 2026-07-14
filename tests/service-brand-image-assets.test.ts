@@ -36,6 +36,9 @@ describe("service brand image assets", () => {
     ).toBe("7ada6b0bcdd46a78a11b353c89e3506ac6288b31a20df321abe097b02738ffe4");
 
     expect(sha256("public/brand/mumeok-symbol-192.png")).toBe(
+      sha256("ui/designs/brand/mumeok/exports/icons/header-symbol-192.png"),
+    );
+    expect(sha256("public/brand/app-icon-192.png")).toBe(
       sha256("ui/designs/brand/mumeok/exports/icons/app-icon-192.png"),
     );
     expect(sha256("public/brand/app-icon-512.png")).toBe(
@@ -60,6 +63,10 @@ describe("service brand image assets", () => {
 
   it("keeps runtime image dimensions aligned with metadata contracts", () => {
     expect(pngSize("public/brand/mumeok-symbol-192.png")).toEqual({
+      height: 192,
+      width: 192,
+    });
+    expect(pngSize("public/brand/app-icon-192.png")).toEqual({
       height: 192,
       width: 192,
     });
@@ -108,7 +115,8 @@ describe("service brand image assets", () => {
     expect(layout).toContain("url: defaultOpenGraphImagePath");
     expect(layout).toContain("images: [defaultTwitterImagePath]");
     expect(layout).toContain('url: "/brand/apple-touch-icon-180.png"');
-    expect(manifest).toContain('src: "/brand/mumeok-symbol-192.png"');
+    expect(manifest).toContain('src: "/brand/app-icon-192.png"');
+    expect(manifest).not.toContain('src: "/brand/mumeok-symbol-192.png"');
     expect(manifest).toContain('src: "/brand/app-icon-512.png"');
     expect(social).not.toContain("ImageResponse");
     expect(social).not.toContain("linear-gradient");
