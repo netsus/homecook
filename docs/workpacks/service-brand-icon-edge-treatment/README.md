@@ -91,7 +91,7 @@
 - Anchor screen dependency: 없음.
 - Visual artifact: `ui/designs/evidence/service-brand-icon-edge-treatment/favicon-dark-tab-before.png`, `favicon-dark-tab-after.png`, `icon-contact-sheet.png`, `visual-verdict.json`.
 - Generator/critic: 화면 generator·critic은 생략한다. favicon/app icon 편집은 image generation/editing workflow를 사용하고 pixel guard와 visual verdict로 검증한다.
-- Authority status: `not-required`.
+- Authority status: `not-required`
 - Notes: HOME/RECIPE_DETAIL/PLANNER_WEEK를 직접 수정하지 않아 anchor-extension이 아니다. 독립 Stage 5/6 asset review는 유지한다.
 
 ## Design Status
