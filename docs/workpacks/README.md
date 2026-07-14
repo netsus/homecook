@@ -157,7 +157,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `service-brand-rebrand` | merged | 정식명 `무엇을 먹든`, 짧은명 `무먹`, 신규·빈 nickname `무먹러`, system notification read-time copy 호환을 API/DB shape와 기술 식별자 변화 없이 잠금 |
 | `service-brand-home-lockup` | merged | HOME mobile `HomeAppBar`와 desktop HOME `WebTopNav` brand area에 큰 `무먹` 아래 작은 `무엇을 먹든`을 세로 2단으로 표시. non-HOME 단독 표시와 nav geometry/interaction 보존 |
 | `service-brand-image-assets` | merged | 선택한 파란 `무먹` 심볼을 HOME/non-HOME header, favicon, 설치/Apple 아이콘, OG/Twitter metadata에 적용하고 authority·탐색 QA·current-head 전체 CI를 통과 |
-| `public-nutrition-source-acquisition` | docs | 공공 영양 source를 versioned raw snapshot + manifest로 수집하고 schema/pagination/license/key 비노출을 fail-closed 검증한 뒤 approved promotion 입력을 만든다 |
+| `public-nutrition-source-acquisition` | in-progress | 공공 영양 source를 versioned raw snapshot + manifest로 수집하고 schema/pagination/license/key 비노출을 fail-closed 검증한 뒤 approved promotion 입력을 만든다 |
 | `ingredient-nutrition-conversion-model` | planned | 핵심 영양 profile과 15mL당 약 6/10/15/20/25g 대표 환산 등급, 관측 provenance, 개당 중량을 승인 기반 immutable model로 구현한다 |
 | `recipe-nutrition-calculation` | planned | 레시피 재료·인분·대표 환산으로 영양소별 completeness와 quality를 계산하고 immutable recipe snapshot을 생성/pin/backfill한다 |
 | `recipe-nutrition-display` | planned | RECIPE_DETAIL에 1인분/선택 인분 예상 영양, partial/unavailable, 약/예상, source 설명을 authority evidence와 함께 표시한다 |
@@ -169,7 +169,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 
 | Slice | Status | Required predecessors |
 | --- | --- | --- |
-| `public-nutrition-source-acquisition` | docs | `28-external-ingredient-data-ingest-gate` = merged, nutrition contract-evolution official docs = merged |
+| `public-nutrition-source-acquisition` | in-progress | `28-external-ingredient-data-ingest-gate` = merged, nutrition contract-evolution official docs = merged |
 | `ingredient-nutrition-conversion-model` | planned | `public-nutrition-source-acquisition` = merged |
 | `recipe-nutrition-calculation` | planned | `ingredient-nutrition-conversion-model` = merged |
 | `recipe-nutrition-display` | planned | `recipe-nutrition-calculation` = merged |
