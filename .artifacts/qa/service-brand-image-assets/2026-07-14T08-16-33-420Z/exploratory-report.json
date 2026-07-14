@@ -1,0 +1,199 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "service-brand-image-assets",
+  "generatedAt": "2026-07-14T08:20:00.000Z",
+  "baseUrl": "http://127.0.0.1:3100",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "summary": "QA fixture와 production build를 기준으로 1280px desktop, 390px mobile, 320px small iOS HOME 및 desktop non-HOME 브랜드 경계를 탐색했다. 선택 source/runtime hash, 공식 심볼 비율, HOME 2단 이름, non-HOME 짧은명, accessible name, overflow, nav geometry, favicon/install/Apple/OG/Twitter 경로를 자동 audit·스크린샷·브라우저 검증으로 확인했다. blocker/major/minor finding은 없으며 배포 후 icon cache와 외부 crawler cache 확인만 Manual Only로 남는다.",
+  "findings": [],
+  "remainingRisks": [
+    "실제 배포 후 브라우저 탭과 홈 화면 추가 아이콘 cache 갱신 확인은 Manual Only다.",
+    "카카오톡과 X/Twitter 등 외부 공유 서비스의 crawler cache 갱신 후 카드 표시는 Manual Only다."
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "canonical-asset-scope-1",
+      "status": "covered",
+      "notes": "tests/service-brand-image-assets.test.ts와 canonical source guard에서 SHA-256 7ada6b0b… 일치를 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "canonical-asset-scope-2",
+      "status": "covered",
+      "notes": "runtime hash 비교와 public/brand 경로 검토로 PR #996의 선택 export만 사용하며 screenshot·미선택·장식 변형이 없음을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "canonical-asset-scope-3",
+      "status": "covered",
+      "notes": "master 대비 diff에서 dependency, font, token, API, DB, migration, seed, stored row, 기술 식별자 변경이 없음을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "canonical-asset-scope-4",
+      "status": "covered",
+      "notes": "새 service-brand-image-assets evidence와 runtime 파일만 추가했고 기존 공식 버전·workpack·prototype·merged evidence는 보존했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "header-accessibility-1",
+      "status": "covered",
+      "notes": "ui/designs/evidence/service-brand-image-assets/HOME-after-390.png와 HOME-after-320.png에서 공식 심볼 옆 무먹/무엇을 먹든 2단 위계를 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "header-accessibility-2",
+      "status": "covered",
+      "notes": "HOME-desktop-after-1280.png와 accessibility-geometry-audit.json에서 desktop 심볼·2단 이름, nav 높이, first tab, right slot geometry 보존을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "header-accessibility-3",
+      "status": "covered",
+      "notes": "desktop non-HOME Playwright와 AppHeader/WebTopNav component guard에서 공식 심볼 + 무먹만 있고 보조 줄이 없음을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "header-accessibility-4",
+      "status": "covered",
+      "notes": "320px screenshot과 audit에서 natural size 192×192, 렌더 정사각 비율, 선택 색상, 겹침·잘림·overflowX 0을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "header-accessibility-5",
+      "status": "covered",
+      "notes": "심볼 alt 빈 값과 aria-hidden 처리, HOME `무먹, 무엇을 먹든` 및 non-HOME `무먹` accessible name 단일 낭독을 component/Playwright로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "header-accessibility-6",
+      "status": "covered",
+      "notes": "product tests, smoke, 전체 accessibility와 visual 실행에서 HOME loading/empty/error/filter-active 및 기존 non-HOME 동작 회귀가 없음을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "metadata-install-social-1",
+      "status": "covered",
+      "notes": "production route smoke에서 /favicon.ico와 /brand/favicon-32.png가 200 및 올바른 image content type으로 응답함을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "metadata-install-social-2",
+      "status": "covered",
+      "notes": "manifest와 layout metadata의 192/512 install 및 180 Apple touch 경로·size·type을 static guard와 production response로 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "metadata-install-social-3",
+      "status": "covered",
+      "notes": "root/about/privacy/terms metadata와 production HTML에서 canonical 1200×630 OG/Twitter 경로, alt, size, type을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "metadata-install-social-4",
+      "status": "covered",
+      "notes": "app/opengraph-image.tsx와 app/twitter-image.tsx 제거 및 social source guard에서 ImageResponse/gradient 부재를 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "tdd-verification-1",
+      "status": "covered",
+      "notes": "header 심볼·metadata/manifest·HOME OG override의 구현 전 RED와 최소 구현 후 GREEN 기록을 workpack Stage 4 note에서 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "tdd-verification-2",
+      "status": "covered",
+      "notes": "app-header, web-top-nav, static-social-metadata, service-brand-image-assets 테스트가 canonical 경로·hash·이름 경계·접근성을 고정한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "tdd-verification-3",
+      "status": "covered",
+      "notes": "Next production build route smoke에서 favicon, manifest, install/Apple/OG/Twitter URL의 status, content type, dimensions를 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "tdd-verification-4",
+      "status": "covered",
+      "notes": "lint, typecheck, product tests, build, security, smoke, accessibility, visual core와 Lighthouse가 local 및 GitHub에서 통과했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "authority-evidence-1",
+      "status": "covered",
+      "notes": "HOME-before-390.png, HOME-before-320.png, HOME-desktop-before-1280.png를 구현 전 기준 증거로 보존했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "authority-evidence-2",
+      "status": "covered",
+      "notes": "동일 viewport after 3개, accessibility-geometry-audit.json, visual-verdict.json을 ui/designs/evidence/service-brand-image-assets에 보존했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "authority-evidence-3",
+      "status": "covered",
+      "notes": "ui/designs/authority/HOME-service-brand-image-assets-authority.md의 evidence block과 독립 APPROVE, blocker/major/minor 0/0/0을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-only-1",
+      "status": "blocked",
+      "notes": "실제 배포 후 브라우저 및 홈 화면 아이콘 cache 갱신은 배포 환경에서 확인해야 한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-only-2",
+      "status": "blocked",
+      "notes": "외부 공유 서비스 crawler cache 갱신 후 카드 표시는 외부 cache 상태에 의존한다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-mobile-readability",
+      "status": "covered",
+      "notes": "390px/320px 화면에서 기존 control typography와 브랜드 2단 이름이 읽기 가능하고 잘림이 없음을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-small-viewport-cta",
+      "status": "covered",
+      "notes": "HOME-after-320.png에서 검색 입력과 재료 검색 action이 above-the-fold에 보이고 bottom navigation이 콘텐츠를 가리지 않음을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-duplicate-cta",
+      "status": "covered",
+      "notes": "새 CTA를 추가하지 않았고 390/320/1280 화면에서 기존 action의 불필요한 중복이 없음을 확인했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-information-hierarchy",
+      "status": "covered",
+      "notes": "HOME은 심볼 옆 짧은명 위·정식명 아래 위계를 유지하고 non-HOME은 짧은명만 노출해 정보 계층이 명확하다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-copy-sanity",
+      "status": "covered",
+      "notes": "공식 copy `무먹`/`무엇을 먹든`만 사용하며 h1, nav, 상태 문구에 새 장문 또는 어색한 copy가 추가되지 않았다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-empty-noop",
+      "status": "covered",
+      "notes": "표시 전용 브랜드 변경으로 새 action이 없고 기존 loading/empty/error CTA 회귀 테스트가 통과했다.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-placeholder-polish",
+      "status": "covered",
+      "notes": "사용자 확정 canonical 심볼과 생성 완료 icon/social export를 사용하며 screenshot, 임시 placeholder, 미선택 후보가 없다.",
+      "linked_findings": []
+    }
+  ]
+}

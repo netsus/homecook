@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-14T16:56:00+09:00",
+  "updated_at": "2026-07-14T17:20:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1912,10 +1912,10 @@
         "node scripts/validate-automation-spec.mjs --slice service-brand-image-assets",
         "git diff --check"
       ],
-      "notes": "Docs PR #997 merged before Stage 4. Runtime assets, headers, metadata/manifest, RED/GREEN tests, production route smoke, 390/320/1280 evidence, independent final authority APPROVE 0/0/0, stable Ubuntu/Linux visual baselines, and Draft current-head 3b4a9f65 core checks are complete. Ready full-regression and Lighthouse remain before terminal closeout and merge; historical evidence and API/DB/dependency/technical identifiers are unchanged.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
+      "notes": "Docs PR #997 merged before Stage 4. Runtime assets, headers, metadata/manifest, RED/GREEN tests, production route smoke, 390/320/1280 evidence, independent final authority APPROVE 0/0/0, stable Ubuntu/Linux visual baselines, Draft core checks, and exploratory QA eval 97/100 are complete. Ready current-head full-regression, full visual, and remaining checks stay required before terminal closeout and merge; historical evidence and API/DB/dependency/technical identifiers are unchanged.",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": ".artifacts/qa/service-brand-image-assets/2026-07-14T08-16-33-420Z/eval-result.json",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     },

@@ -168,6 +168,7 @@
 - 390px/320px/1280 before/after와 geometry audit는 mobile overflow `0`, desktop nav/first-tab rect 동일, 심볼 natural size `192×192`를 확인한다.
 - 독립 final authority는 blocker/major/minor `0/0/0`으로 승인했고, 독립 코드 재리뷰의 구현 finding은 모두 수리했다. Ubuntu/Linux 웹·모바일 기준선은 원본과 재시도 2회가 화면별 동일 hash인 GitHub artifact로 갱신했다.
 - 로컬 `CI=1 pnpm verify:frontend:pr`, Lighthouse, 전체 접근성, 전체 visual, security smoke와 Draft current-head `3b4a9f65`의 quality/build/security/smoke/accessibility/visual/policy/governance/Vercel 검사가 통과했다. 전체 882건 로컬 regression은 기존 fixture/dev-server 불안정으로 타 슬라이스 화면이 데이터를 못 받는 실패가 반복되어 중단했으며, 최종 판단은 Ready current-head의 full-regression과 Lighthouse를 포함한 전체 green으로 고정한다.
+- 탐색 QA는 desktop/mobile/small-iOS 3종에서 acceptance와 필수 휴리스틱을 확인하고 blocker/major/minor `0/0/0`, coverage-sensitive eval `97/100`으로 통과했다. retained evidence는 `.artifacts/qa/service-brand-image-assets/2026-07-14T08-16-33-420Z/`에 둔다.
 
 ## Contract Evolution Candidates
 
