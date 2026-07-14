@@ -1,0 +1,94 @@
+{
+  "id": "service-brand-icon-edge-treatment",
+  "title": "Mumeok icon edge treatment",
+  "summary": "파비콘의 흰 모서리를 투명하게 만들고 설치/PWA·Apple 아이콘은 full-bleed 파란 배경으로 분리하되 공식 source와 header·social 자산은 보존한다.",
+  "project_profile": "homecook",
+  "change_type": "ui-polish",
+  "surface": "frontend",
+  "risk": "medium",
+  "preset": "ui-polish",
+  "goal": "브라우저와 설치 surface에서 흰 외곽 없이 자연스러운 공식 무먹 아이콘을 제공한다.",
+  "owners": {
+    "claude": "replaced for this user-approved continuation by role-separated Codex docs, implementation, and review work; global workflow actors are unchanged",
+    "codex": "Stage 1 docs, Stage 4 implementation, and independent Stage 5/6 review are separated; authoring and implementation cannot self-approve",
+    "workers": []
+  },
+  "dependencies": [
+    "service-brand-image-assets merged through PRs #996/#997/#998",
+    "user-approved icon edge correction 2026-07-14"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.16.md",
+      "docs/화면정의서-v1.5.23.md",
+      "docs/유저flow맵-v1.3.20.md",
+      "docs/db설계-v1.3.17.md",
+      "docs/api문서-v1.2.22.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/service-brand-icon-edge-treatment/README.md",
+      "docs/workpacks/service-brand-icon-edge-treatment/acceptance.md",
+      "docs/workpacks/service-brand-icon-edge-treatment/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "evaluator_profile": "ui-polish",
+    "merge_policy": "manual",
+    "max_fix_rounds": {"frontend": 4}
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-brand-icon-edge-treatment",
+      "node scripts/validate-automation-spec.mjs --slice service-brand-icon-edge-treatment",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-brand-icon-edge-treatment",
+      "node scripts/validate-automation-spec.mjs --slice service-brand-icon-edge-treatment",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-docs-v1.7.16-v1.5.23-and-sot-synchronized",
+      "favicon-transparent-corner-and-no-halo-contract",
+      "install-apple-full-bleed-blue-contract",
+      "dedicated-manifest-app-icon-192-contract",
+      "transparent-favicon-only-document-icon-contract",
+      "protected-core-pixel-equality-and-fixed-preservation-hashes",
+      "production-icon-http-smoke-contract",
+      "canonical-source-header-and-social-preserved",
+      "pixel-tdd-and-visual-verdict-plan",
+      "no-api-db-dependency-route-interaction-change"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Canonical source, header symbol, social, horizontal, or monochrome asset changes",
+    "Glyph redraw, reposition, aspect-ratio change, recolor, or decoration",
+    "New dependency, API, DB, auth, route, interaction, or accessibility-name change",
+    "Historical official version, workpack, prototype, or merged evidence edits"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs contract passed source-of-truth/workflow/workpack/automation validation and independent review with blocker/major/minor 0/0/0. Stage 4 must wait for this docs PR to merge."
+}

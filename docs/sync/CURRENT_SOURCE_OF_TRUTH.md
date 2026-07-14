@@ -1,8 +1,8 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.16.md`
-- `docs/화면정의서-v1.5.22.md`
+- `docs/요구사항기준선-v1.7.17.md`
+- `docs/화면정의서-v1.5.23.md`
 - `docs/유저flow맵-v1.3.20.md`
 - `docs/db설계-v1.3.18.md`
 - `docs/api문서-v1.2.22.md`
@@ -17,9 +17,9 @@
 
 | 문서 | 변경 내용 |
 |------|----------|
-| 요구사항 기준선 v1.7.16 | 공공 영양 source item 원문 보존, 기본 `100g` normalize, MFDS→RDA 10.4 호환 후보 우선순위, evidence/profile/assignment 분리, 검수·version·pilot 30·production 0 writes 경계 추가 |
+| 요구사항 기준선 v1.7.17 | 공공 영양 source item 원문 보존, 기본 `100g` normalize, MFDS→RDA 10.4 호환 후보 우선순위, evidence/profile/assignment 분리, 검수·version·pilot 30·production 0 writes 경계 추가 |
 | DB v1.3.18 | `measurement_source_evidence` 추가, 영양 source/item/profile/value 및 재료 link·환산 assignment·piece weight의 freshness/결측/후보·승인·철회·대체/RLS 계약 구체화. 전체 target 49개 table |
-| 화면정의서 v1.5.22 | 변경 없음. 이번 슬라이스는 사용자 UI를 만들지 않음 |
+| 화면정의서 v1.5.23 | 변경 없음. 이번 슬라이스는 사용자 UI를 만들지 않음 |
 | 유저플로우 v1.3.20 | 변경 없음. 사용자 route/action/state transition을 늘리지 않음 |
 | API v1.2.22 | 변경 없음. public endpoint/field/response/error를 늘리지 않고 internal/admin import command만 후속 구현 |
 
@@ -27,6 +27,21 @@
 > 대표 부피 profile은 `VOLUME_G6/G10/G15/G20/G25`다. 15mL 관측값의 최소 거리가 `<=2.5g`인 후보만 생성하고 정확한 중간값 동률은 fail-closed하며, 사람 승인 후에만 active가 된다. `개→g`도 재료·크기·손질/가식부 상태가 일치하는 active approved piece weight가 없으면 금지한다.
 > 초기 범위는 `20260626104000_seed_foodsafety_pilot_recipes.sql`의 정확히 30개 레시피와 그 canonical 재료 closure다. `DATA_GO_KR_API_KEY1`은 이전 개발자 로컬 smoke 증거일 뿐이며, key/auth query/raw payload·원문 row는 저장·로그·report·PR 본문에 남기지 않는다. 별도 승인 전 production load는 0 writes다.
 > 이 contract-evolution은 사용자가 2026-07-14에 별도 Codex Stage 1 세션에 명시적으로 위임했다. 작성자와 구현자는 독립 Stage 1.5/3 검수자의 최종 승인을 대신할 수 없다.
+
+## Mumeok Icon Edge Treatment Contract-Evolution `2026-07-14`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.16 | favicon 투명 외곽, 180/192/256/512/1024 설치 계열 full-bleed 파란 배경, header/OG 원본 보존, 192 설치 아이콘 분리와 일반 icon 후보 제한 계약 추가 |
+| 화면정의서 v1.5.23 | browser/OS mask 특성, 흰색 matte·halo 금지, document icon 후보·corner alpha/RGBA 자동 검증과 배포 cache Manual Only 기준 추가 |
+| 유저플로우 v1.3.20 | 변경 없음. route, action, 상태 전이와 사용자 여정은 기존과 동일 |
+| API v1.2.22 | 변경 없음. endpoint/field/response/error 변화 없음 |
+| DB v1.3.17 | 변경 없음. schema/migration/seed/stored row 변화 없음 |
+
+> 사용자가 2026-07-14에 browser tab에서 favicon 모서리의 흰색이 보이는 문제를 확인하고 수정을 명시 승인했다.
+> favicon은 파란 둥근 사각형 밖을 실제 투명 alpha로 내보내며, 설치/PWA·Apple 아이콘은 OS mask를 위해 흰 모서리 없는 full-bleed 파란 배경으로 별도 파생한다. document의 일반 icon 후보에는 투명 favicon만 남겨 브라우저가 불투명 header/설치 아이콘을 tab icon으로 선택하지 않게 한다.
+> 공식 source와 SHA-256, header 심볼, OG/Twitter·가로형·흑백 자산은 변경하지 않는다. 이 예외는 파생 아이콘의 외곽 픽셀에만 적용하며 글자 재생성·재착색·비율 변경을 허용하지 않는다.
+> API/DB/dependency/route/interaction/접근성 이름/기술 식별자에는 변화가 없고 과거 공식 버전과 merged evidence는 그대로 보존한다.
 
 ## Mumeok Image Brand Assets Contract-Evolution `2026-07-13`
 

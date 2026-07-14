@@ -15,14 +15,14 @@
   },
   "dependencies": [
     "public-nutrition-source-acquisition merged through PR #995 at f87ae75016a9b709ffc3b706e7ca3720a0940982",
-    "requirements v1.7.16 and DB v1.3.18 contract-evolution approved by user on 2026-07-14",
+    "requirements v1.7.17, screens v1.5.23, and DB v1.3.18 contract-evolution approved by user on 2026-07-14",
     "FoodSafety pilot 30 recipes pinned by supabase/migrations/20260626104000_seed_foodsafety_pilot_recipes.sql"
   ],
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.16.md",
-      "docs/화면정의서-v1.5.22.md",
+      "docs/요구사항기준선-v1.7.17.md",
+      "docs/화면정의서-v1.5.23.md",
       "docs/유저flow맵-v1.3.20.md",
       "docs/db설계-v1.3.18.md",
       "docs/api문서-v1.2.22.md"
@@ -79,7 +79,7 @@
     ],
     "evaluator_commands": [],
     "artifact_assertions": [
-      "official-requirements-v1-7-16-db-v1-3-18-and-source-of-truth-synchronized",
+      "official-requirements-v1-7-17-screens-v1-5-23-db-v1-3-18-and-source-of-truth-synchronized",
       "predecessor-pr-995-exact-merge-pinned",
       "public-api-ui-and-flow-contract-unchanged",
       "nutrition-source-item-profile-value-and-link-contract",

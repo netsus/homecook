@@ -37,7 +37,7 @@
 > | 3 | 동일 이메일 연결은 app user id와 callback Supabase user id가 같은 경우에만 허용한다 | id가 다르면 bootstrap/merge/delete를 수행하지 않는다 |
 > | 4 | auth 실패 이벤트는 PII를 저장하지 않는다 | email, token, authorization code, provider payload, localStorage 값 저장 금지 |
 
-> 기준 문서: 요구사항 기준선 v1.7.16 / 화면정의서 v1.5.22 / API 설계 v1.2.22 / 유저 Flow맵 v1.3.20
+> 기준 문서: 요구사항 기준선 v1.7.17 / 화면정의서 v1.5.23 / API 설계 v1.2.22 / 유저 Flow맵 v1.3.20
 >
 >
 > 작성: 킴실장

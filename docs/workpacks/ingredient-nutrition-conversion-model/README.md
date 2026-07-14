@@ -56,7 +56,7 @@
 | 선행 항목 | 상태 | 확인 |
 | --- | --- | --- |
 | `public-nutrition-source-acquisition` | merged — PR #995, merge `f87ae75016a9b709ffc3b706e7ca3720a0940982` | [x] |
-| 영양 공식 계약 기준선 | `요구사항 v1.7.16`, `DB v1.3.18`, API/UI/Flow unchanged | [x] |
+| 영양 공식 계약 기준선 | `요구사항 v1.7.17`, `화면정의서 v1.5.23`, `DB v1.3.18`, API/UI/Flow unchanged | [x] |
 | FoodSafety pilot 30 seed | `20260626104000_seed_foodsafety_pilot_recipes.sql` | [x] |
 | 별도 Codex Stage 1.5 독립 검수 | required before Stage 2 | [ ] |
 
@@ -214,9 +214,9 @@ report에는 key, 인증 query, raw payload, 원문 row, 전체 계량표, priva
 ### Repository authority
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.16.md`
+- `docs/요구사항기준선-v1.7.17.md`
 - `docs/db설계-v1.3.18.md`
-- `docs/화면정의서-v1.5.22.md` — 변경 없음 확인용
+- `docs/화면정의서-v1.5.23.md` — 이번 nutrition slice의 UI 비확장 확인용
 - `docs/유저flow맵-v1.3.20.md` — 변경 없음 확인용
 - `docs/api문서-v1.2.22.md` — public contract 비확장 확인용
 - `docs/workpacks/public-nutrition-source-acquisition/`
