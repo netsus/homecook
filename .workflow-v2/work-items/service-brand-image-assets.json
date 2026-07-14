@@ -80,9 +80,9 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
+    "lifecycle": "ready_for_review",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -96,5 +96,5 @@
     "Technical identifier rename or historical official version, workpack, prototype, or evidence edit"
   ],
   "open_questions": [],
-  "notes": "Stage 1 contract-evolution merged through docs PR #997. Stage 4 runtime assets, headers, metadata/manifest, RED/GREEN tests, production route smoke, 390/320/1280 evidence, visual verdict, and authority report are complete. Independent final authority approved blocker/major/minor 0/0/0. Independent code re-review cleared implementation findings and leaves only Ubuntu/Linux visual baseline plus current-head CI before merge; lifecycle and verification remain in-progress/pending until that evidence is green."
+  "notes": "Stage 1 contract-evolution merged through docs PR #997. Stage 4 runtime assets, headers, metadata/manifest, RED/GREEN tests, production route smoke, 390/320/1280 evidence, visual verdict, and authority report are complete. Independent final authority approved blocker/major/minor 0/0/0. Independent code re-review findings are repaired. Ubuntu/Linux web and mobile visual baselines were captured from stable retry-identical artifacts, and Draft current-head 3b4a9f65 passed quality, build, security, smoke, accessibility, visual, policy, governance, and Vercel checks. Ready full-regression and Lighthouse remain before terminal closeout and merge."
 }
