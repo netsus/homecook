@@ -40,14 +40,45 @@ function sha256(value: unknown): string {
 }
 
 function buildBundle() {
+  const approvedItems = [{
+    external_item_key: "source-item-1",
+    external_name: "두부",
+    preparation_state: "raw",
+    edible_portion: "edible",
+    basis: { amount: 100, unit: "g", source_text: "100 g" },
+    values: {
+      protein_g: {
+        source_nutrient_code: "PROCNT",
+        amount: 8,
+        unit: "g",
+        missing_reason: null,
+        source_token: "8",
+      },
+    },
+    fingerprint: "fingerprint-1",
+    content_hash: sha256("source-item-1"),
+  }];
+  const counts = {
+    fetched_raw_count: 1,
+    unique_input_count: 1,
+    normalized_count: 1,
+    quarantined_count: 0,
+    deduplicated_identical_count: 0,
+  };
+  const normalizedContentHash = sha256({ rows: approvedItems, quarantined: [], counts });
   const base = {
     schema_version: "public-nutrition-handoff-v1",
+    handoff_schema_checksum: sha256({
+      schema_version: "public-nutrition-handoff-v1",
+      measurement_evidence_schema_version: "public-nutrition-measurement-evidence-v1",
+      lifecycle: ["raw", "staged", "normalized", "reviewed", "approved_pinned"],
+    }),
     status: "approved_pinned",
     lifecycle: ["raw", "staged", "normalized", "reviewed", "approved_pinned"],
     logical_batch_id: "logical-batch-1",
     approved_manifest: {
       logical_batch_id: "logical-batch-1",
-      provider: "Synthetic Provider",
+      provider: "MFDS",
       dataset: "Synthetic Nutrition Dataset",
       source_version: "test-v1",
       data_basis_date: "2026-07-01",
@@ -59,26 +90,13 @@ function buildBundle() {
       raw_sha256: sha256("synthetic-raw"),
       input_shape: "adapted-row-v1",
       adapter_schema_version: "nutrition-adapter-v1",
-      normalized_content_hash: sha256("synthetic-normalized"),
+      normalized_content_hash: normalizedContentHash,
       review_checksum: sha256("synthetic-review"),
-      counts: {
-        fetched_raw_count: 1,
-        staged_count: 1,
-        normalized_count: 1,
-        quarantined_count: 0,
-        deduped_count: 0,
-      },
+      counts,
     },
-    approved_items: [{
-      external_item_key: "source-item-1",
-      external_name: "두부",
-      basis: { amount: 100, unit: "g", source_text: "100 g" },
-      values: { protein_g: { amount: 8, unit: "g", missing_reason: null } },
-      fingerprint: "fingerprint-1",
-      content_hash: sha256("source-item-1"),
-    }],
+    approved_items: approvedItems,
     public_attribution: [{
-      provider: "Synthetic Provider",
+      provider: "MFDS",
       dataset: "Synthetic Nutrition Dataset",
       source_version: "test-v1",
       data_basis_date: "2026-07-01",
@@ -86,7 +104,7 @@ function buildBundle() {
       source_url: "https://example.test/source",
     }],
     measurement_evidence: [],
-    normalized_content_hash: sha256("synthetic-normalized"),
+    normalized_content_hash: normalizedContentHash,
     review_checksum: sha256("synthetic-review"),
     production_db_writes: 0,
   };
@@ -97,6 +115,27 @@ const pilotScope = {
   recipe_ids: Array.from({ length: 30 }, (_, index) => `recipe-${String(index + 1).padStart(2, "0")}`),
   ingredient_ids: ["ingredient-tofu"],
 };
+
+const canonicalIngredients = [{
+  id: "ingredient-tofu",
+  normalized_names: ["두부"],
+  preparation_state: "raw",
+  edible_portion: "edible",
+  basis_dimension: "mass",
+}];
+
+const approvedNutritionCandidate = {
+  fingerprint: "fingerprint-1",
+  ingredient_id: "ingredient-tofu",
+  preparation_state: "raw",
+  review_status: "pending",
+  is_active: false,
+  candidate_rank: 1,
+};
+const approvedNutritionCandidateIdentity = sha256({
+  kind: "nutrition",
+  ...approvedNutritionCandidate,
+});
 
 const approval = {
   schema_version: "ingredient-nutrition-review-v1",
@@ -110,6 +149,12 @@ const approval = {
     preparation_state: "raw",
     status: "approved",
     reason: "semantic match reviewed",
+    candidate_identity: approvedNutritionCandidateIdentity,
+    candidate_checksum: sha256({
+      candidate_identity: approvedNutritionCandidateIdentity,
+      source_checksum: buildBundle().handoff_checksum,
+      candidate: { kind: "nutrition", ...approvedNutritionCandidate },
+    }),
   }],
   conversion_decisions: [],
   piece_decisions: [],
@@ -146,7 +191,9 @@ describe("ingredient nutrition model import", () => {
       mode: "dry-run",
       environment: "local",
       pilot_scope: "foodsafety-30",
+      actual_pilot_scope: pilotScope,
       expected_pilot_scope: pilotScope,
+      canonical_ingredients: canonicalIngredients,
       approval: null,
       store,
     } as never) as Record<string, unknown>;
@@ -187,7 +234,9 @@ describe("ingredient nutrition model import", () => {
       mode: "dry-run",
       environment: "local",
       pilot_scope: "foodsafety-30",
+      actual_pilot_scope: pilotScope,
       expected_pilot_scope: pilotScope,
+      canonical_ingredients: canonicalIngredients,
       approval: null,
       store,
     } as never)).rejects.toMatchObject({
@@ -207,7 +256,9 @@ describe("ingredient nutrition model import", () => {
       mode: "apply",
       environment: "local",
       pilot_scope: "foodsafety-30",
+      actual_pilot_scope: pilotScope,
       expected_pilot_scope: pilotScope,
+      canonical_ingredients: canonicalIngredients,
       approval,
       store,
     };
@@ -243,7 +294,9 @@ describe("ingredient nutrition model import", () => {
       mode: "apply",
       environment: "local",
       pilot_scope: "foodsafety-30",
+      actual_pilot_scope: pilotScope,
       expected_pilot_scope: pilotScope,
+      canonical_ingredients: canonicalIngredients,
       approval,
       store,
     } as never)).resolves.toMatchObject({
@@ -261,7 +314,8 @@ describe("ingredient nutrition model import", () => {
     const importer = await loadImporter();
     const createMemoryModelStore = requireFunction(importer, "createMemoryModelStore");
     const runModelImport = requireFunction(importer, "runModelImport");
-    const evidence = {
+    const evidenceBase = {
+      evidence_schema_version: "public-nutrition-measurement-evidence-v1",
       evidence_kind: "volume_weight",
       ingredient_or_category_id: "ingredient-tofu",
       source_observed_unit: "tbsp",
@@ -269,7 +323,10 @@ describe("ingredient nutrition model import", () => {
       source_url: "https://example.test/measurement",
       accessed_at: "2026-07-01",
       license_evidence_url: "https://example.test/measurement-license",
+      review_result: "approved",
+      license_disposition: "approved_for_internal_evidence",
     };
+    const evidence = { ...evidenceBase, evidence_checksum: sha256(evidenceBase) };
     const baseBundle = buildBundle();
     const bundleWithoutChecksum = {
       ...baseBundle,
@@ -299,7 +356,9 @@ describe("ingredient nutrition model import", () => {
       mode: "apply",
       environment: "local",
       pilot_scope: "foodsafety-30",
+      actual_pilot_scope: pilotScope,
       expected_pilot_scope: pilotScope,
+      canonical_ingredients: canonicalIngredients,
       approval: unsafeApproval,
       store: createMemoryModelStore(),
     } as never)).rejects.toMatchObject({
@@ -319,7 +378,9 @@ describe("ingredient nutrition model import", () => {
       mode: "apply",
       environment: "production",
       pilot_scope: "foodsafety-30",
+      actual_pilot_scope: pilotScope,
       expected_pilot_scope: pilotScope,
+      canonical_ingredients: canonicalIngredients,
       approval,
       store,
     } as never)).rejects.toMatchObject({
@@ -369,7 +430,9 @@ describe("ingredient nutrition model import", () => {
         mode: "apply",
         environment: "local",
         pilot_scope: "foodsafety-30",
+        actual_pilot_scope: pilotScope,
         expected_pilot_scope: pilotScope,
+        canonical_ingredients: canonicalIngredients,
         approval: invalidApproval,
         store,
       } as never)).rejects.toMatchObject({
@@ -413,7 +476,9 @@ describe("ingredient nutrition model import", () => {
       mode: "apply",
       environment: "local",
       pilot_scope: "foodsafety-30",
+      actual_pilot_scope: pilotScope,
       expected_pilot_scope: pilotScope,
+      canonical_ingredients: canonicalIngredients,
       approval,
       store,
     } as never)).rejects.toMatchObject({
@@ -428,7 +493,9 @@ describe("ingredient nutrition model import", () => {
       mode: "apply",
       environment: "local",
       pilot_scope: "foodsafety-30",
+      actual_pilot_scope: pilotScope,
       expected_pilot_scope: pilotScope,
+      canonical_ingredients: canonicalIngredients,
       approval,
       store: healthyStore,
     } as never) as Record<string, unknown>;

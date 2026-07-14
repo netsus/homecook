@@ -85,14 +85,15 @@ describe("ingredient nutrition migration and RLS", () => {
     expect(sql).toMatch(/create function public\.disable_ingredient_nutrition_model\(/i);
     expect(sql).toContain("revoke all on function public.apply_ingredient_nutrition_model(jsonb) from public, anon, authenticated");
     expect(sql).toContain("grant execute on function public.apply_ingredient_nutrition_model(jsonb) to service_role");
-    expect(sql).toContain("revoke all on function public.disable_ingredient_nutrition_model(uuid, uuid, text, timestamptz, jsonb) from public, anon, authenticated");
+    expect(sql).toContain("revoke all on function public.disable_ingredient_nutrition_model(text, text, uuid, text, timestamptz) from public, anon, authenticated");
     expect(sql).toContain("'RDA_10_4', 'RDA limited measurement evidence', 'measurement_reference'");
-    expect(sql).toMatch(/disable_ingredient_nutrition_model\([\s\S]*p_affected_row_ids jsonb/i);
-    expect(disableSql).toContain("p_affected_row_ids -> 'nutrition_link_ids'");
-    expect(disableSql).toContain("p_affected_row_ids -> 'conversion_assignment_ids'");
-    expect(disableSql).toContain("p_affected_row_ids -> 'piece_weight_ids'");
-    expect(disableSql).not.toContain("item.source_id = p_source_id");
-    expect(disableSql).not.toContain("evidence.source_id = p_source_id");
+    expect(sql).toMatch(/disable_ingredient_nutrition_model\([\s\S]*p_model_run_key text/i);
+    expect(disableSql).toContain("metadata_json ->> 'idempotency_key' = p_model_run_key");
+    expect(disableSql).toContain("v_affected_row_ids -> 'nutrition_link_ids'");
+    expect(disableSql).toContain("v_affected_row_ids -> 'conversion_assignment_ids'");
+    expect(disableSql).toContain("v_affected_row_ids -> 'piece_weight_ids'");
+    expect(disableSql).toContain("item.source_id = v_source_id");
+    expect(disableSql).not.toContain("p_affected_row_ids");
   });
 
   it("records version/checksum drift as inactive needs_source_check until explicit supersede", () => {

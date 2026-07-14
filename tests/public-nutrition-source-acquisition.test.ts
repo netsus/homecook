@@ -241,6 +241,23 @@ describe("public nutrition source acquisition core", () => {
       handoff_checksum: second.handoff_checksum,
       normalized_content_hash: second.normalized_content_hash,
     });
+
+    const importer = await import(pathToFileURL(
+      join(process.cwd(), "scripts/lib/ingredient-nutrition-import.mjs"),
+    ).href);
+    expect(importer.validateHandoffBundle(first)).toMatchObject({
+      handoff_schema_checksum: first.handoff_schema_checksum,
+      handoff_checksum: first.handoff_checksum,
+      status: "approved_pinned",
+    });
+    for (const row of first.measurement_evidence) {
+      expect(row).toMatchObject({
+        evidence_schema_version: "public-nutrition-measurement-evidence-v1",
+        evidence_kind: expect.stringMatching(/^(volume_weight|piece_weight)$/),
+        evidence_checksum: expect.stringMatching(/^[a-f0-9]{64}$/),
+      });
+    }
+    expect(JSON.stringify(first)).not.toMatch(/AMT_NUM|provider_response|raw_row|raw_payload/);
   });
 
   it("blocks all promotion when any row is quarantined", async () => {

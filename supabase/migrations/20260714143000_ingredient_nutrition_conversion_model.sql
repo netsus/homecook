@@ -251,6 +251,30 @@ values
   ('71000000-0000-4000-8000-000000000020', 'VOLUME_G20', 15, 20, 1, 'approximate', 1, true),
   ('71000000-0000-4000-8000-000000000025', 'VOLUME_G25', 15, 25, 1, 'approximate', 1, true);
 
+create unique index ingredient_nutrition_run_registry_idempotency_idx
+  on public.operational_events ((metadata_json ->> 'idempotency_key'))
+  where source = 'ingredient-nutrition-model';
+create unique index ingredient_nutrition_run_registry_run_id_idx
+  on public.operational_events ((metadata_json ->> 'run_id'))
+  where source = 'ingredient-nutrition-model';
+
+create function public.protect_ingredient_nutrition_run_registry()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if old.source = 'ingredient-nutrition-model' then
+    raise exception 'IMMUTABLE_INGREDIENT_NUTRITION_RUN';
+  end if;
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
+
+create trigger protect_ingredient_nutrition_run_registry
+before update or delete on public.operational_events
+for each row execute function public.protect_ingredient_nutrition_run_registry();
+
 create function public.protect_nutrition_model_row()
 returns trigger
 language plpgsql
@@ -317,6 +341,163 @@ create trigger protect_measurement_source_evidence before update or delete on pu
 create trigger protect_ingredient_conversion_assignments before update or delete on public.ingredient_conversion_assignments for each row execute function public.protect_nutrition_model_row();
 create trigger protect_piece_unit_weights before update or delete on public.piece_unit_weights for each row execute function public.protect_nutrition_model_row();
 
+create function public.validate_ingredient_nutrition_model_insert()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_source public.nutrition_sources%rowtype;
+  v_source_item public.nutrition_source_items%rowtype;
+  v_evidence public.measurement_source_evidence%rowtype;
+  v_profile public.measurement_conversion_profiles%rowtype;
+  v_ingredient_name text;
+  v_raw_distance numeric;
+  v_nearest_distance numeric;
+  v_nearest_count integer;
+begin
+  if tg_table_name = 'nutrition_source_items' then
+    select * into v_source from public.nutrition_sources where id = new.source_id;
+    if v_source.id is null or v_source.freshness_status <> 'current'
+      or v_source.review_status <> 'approved' or not v_source.is_active
+      or new.provenance_json::text ~* '"(raw_payload|raw_row|provider_response|servicekey|api_key|secret)"'
+    then
+      raise exception 'INVALID_NUTRITION_SOURCE_ITEM_CONTEXT';
+    end if;
+  elsif tg_table_name = 'nutrition_profiles' then
+    if new.source_item_id is not null then
+      select item.* into v_source_item
+      from public.nutrition_source_items item
+      join public.nutrition_sources source on source.id = item.source_id
+      where item.id = new.source_item_id
+        and item.review_status = 'approved'
+        and source.freshness_status = 'current'
+        and source.review_status = 'approved'
+        and source.is_active;
+      if v_source_item.id is null
+        or (new.normalization_method = 'mass_100g' and
+            (new.basis_amount <> 100 or new.basis_unit <> 'g' or v_source_item.source_basis_unit <> 'g'))
+        or (new.normalization_method = 'volume_100ml' and
+            (new.basis_amount <> 100 or new.basis_unit <> 'ml' or v_source_item.source_basis_unit <> 'ml'))
+      then
+        raise exception 'INVALID_NUTRITION_PROFILE_CONTEXT';
+      end if;
+    end if;
+  elsif tg_table_name = 'nutrition_values' then
+    if nullif(btrim(new.source_nutrient_code), '') is null or not exists (
+      select 1
+      from public.nutrition_profiles profile
+      join public.nutrition_source_items item on item.id = profile.source_item_id
+      join public.nutrition_sources source on source.id = item.source_id
+      where profile.id = new.profile_id
+        and profile.review_status = 'approved'
+        and profile.is_active
+        and item.review_status = 'approved'
+        and source.freshness_status = 'current'
+        and source.review_status = 'approved'
+        and source.is_active
+    ) then
+      raise exception 'INVALID_NUTRITION_VALUE_CONTEXT';
+    end if;
+  elsif tg_table_name = 'ingredient_nutrition_profiles' then
+    select item.* into v_source_item
+    from public.nutrition_profiles profile
+    join public.nutrition_source_items item on item.id = profile.source_item_id
+    join public.nutrition_sources source on source.id = item.source_id
+    where profile.id = new.nutrition_profile_id
+      and profile.review_status = 'approved' and profile.is_active
+      and item.review_status = 'approved'
+      and source.freshness_status = 'current'
+      and source.review_status = 'approved' and source.is_active;
+    select standard_name into v_ingredient_name
+    from public.ingredients where id = new.ingredient_id;
+    if v_source_item.id is null
+      or v_source_item.preparation_state is distinct from new.preparation_state
+      or (v_source_item.edible_portion_percent is null and
+          nullif(btrim(v_source_item.edible_portion_text), '') is null)
+      or not (
+        lower(btrim(v_source_item.external_name)) = lower(btrim(v_ingredient_name))
+        or exists (
+          select 1 from public.ingredient_synonyms synonym
+          where synonym.ingredient_id = new.ingredient_id
+            and lower(btrim(synonym.synonym)) = lower(btrim(v_source_item.external_name))
+        )
+      )
+    then
+      raise exception 'INVALID_NUTRITION_LINK_CONTEXT';
+    end if;
+  elsif tg_table_name = 'measurement_source_evidence' then
+    select * into v_source from public.nutrition_sources where id = new.source_id;
+    if v_source.id is null or v_source.source_kind <> 'measurement_reference'
+      or v_source.freshness_status <> 'current'
+      or v_source.review_status <> 'approved' or not v_source.is_active
+    then
+      raise exception 'INVALID_MEASUREMENT_EVIDENCE_CONTEXT';
+    end if;
+  elsif tg_table_name = 'ingredient_conversion_assignments' then
+    select evidence.* into v_evidence
+    from public.measurement_source_evidence evidence
+    join public.nutrition_sources source on source.id = evidence.source_id
+    where evidence.id = new.evidence_id
+      and evidence.evidence_kind = 'volume_weight'
+      and evidence.review_status = 'approved' and evidence.is_active
+      and source.freshness_status = 'current'
+      and source.review_status = 'approved' and source.is_active;
+    select * into v_profile from public.measurement_conversion_profiles
+    where id = new.conversion_profile_id and is_active;
+    select min(abs(v_evidence.normalized_g_per_15ml - representative_weight_g))
+      into v_nearest_distance
+    from public.measurement_conversion_profiles where is_active;
+    select count(*) into v_nearest_count
+    from public.measurement_conversion_profiles
+    where is_active
+      and abs(v_evidence.normalized_g_per_15ml - representative_weight_g) = v_nearest_distance;
+    v_raw_distance := abs(v_evidence.normalized_g_per_15ml - v_profile.representative_weight_g);
+    if v_evidence.id is null or v_profile.id is null
+      or v_evidence.preparation_state <> new.preparation_state
+      or v_raw_distance > 2.5 or v_raw_distance <> v_nearest_distance
+      or new.distance_g_per_15ml <> v_raw_distance
+      or (new.review_status = 'approved' and v_nearest_count <> 1)
+    then
+      raise exception 'INVALID_CONVERSION_ASSIGNMENT_CONTEXT';
+    end if;
+  elsif tg_table_name = 'piece_unit_weights' then
+    select evidence.* into v_evidence
+    from public.measurement_source_evidence evidence
+    join public.nutrition_sources source on source.id = evidence.source_id
+    join public.ingredients ingredient on ingredient.id = new.ingredient_id
+    where evidence.id = new.evidence_id
+      and evidence.evidence_kind = 'piece_weight'
+      and evidence.review_status = 'approved' and evidence.is_active
+      and source.freshness_status = 'current'
+      and source.review_status = 'approved' and source.is_active
+      and evidence.preparation_state = new.preparation_state
+      and evidence.size_code = new.size_code
+      and evidence.observed_weight_g = new.weight_g
+      and (
+        lower(btrim(evidence.source_subject)) = lower(btrim(ingredient.standard_name))
+        or exists (
+          select 1 from public.ingredient_synonyms synonym
+          where synonym.ingredient_id = new.ingredient_id
+            and lower(btrim(synonym.synonym)) = lower(btrim(evidence.source_subject))
+        )
+      );
+    if v_evidence.id is null then
+      raise exception 'INVALID_PIECE_WEIGHT_CONTEXT';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger validate_nutrition_source_item_insert before insert on public.nutrition_source_items for each row execute function public.validate_ingredient_nutrition_model_insert();
+create trigger validate_nutrition_profile_insert before insert on public.nutrition_profiles for each row execute function public.validate_ingredient_nutrition_model_insert();
+create trigger validate_nutrition_value_insert before insert on public.nutrition_values for each row execute function public.validate_ingredient_nutrition_model_insert();
+create trigger validate_ingredient_nutrition_profile_insert before insert on public.ingredient_nutrition_profiles for each row execute function public.validate_ingredient_nutrition_model_insert();
+create trigger validate_measurement_evidence_insert before insert on public.measurement_source_evidence for each row execute function public.validate_ingredient_nutrition_model_insert();
+create trigger validate_conversion_assignment_insert before insert on public.ingredient_conversion_assignments for each row execute function public.validate_ingredient_nutrition_model_insert();
+create trigger validate_piece_weight_insert before insert on public.piece_unit_weights for each row execute function public.validate_ingredient_nutrition_model_insert();
+
 create function public.apply_ingredient_nutrition_model(p_model jsonb)
 returns jsonb
 language plpgsql
@@ -344,6 +525,7 @@ declare
   v_evidence_id uuid;
   v_conversion_profile_id uuid;
   v_assignment_id uuid;
+  v_piece_weight_id uuid;
   v_item jsonb;
   v_value record;
   v_decision jsonb;
@@ -352,6 +534,13 @@ declare
   v_basis_amount numeric;
   v_basis_unit text;
   v_value_status text;
+  v_run_id text := p_model ->> 'run_id';
+  v_idempotency_key text := p_model ->> 'idempotency_key';
+  v_source_payload_identity text := p_model ->> 'source_payload_identity';
+  v_decision_checksum text := p_model ->> 'decision_checksum';
+  v_content_hash text := p_model ->> 'content_hash';
+  v_registry_metadata jsonb;
+  v_result jsonb;
   v_affected_row_ids jsonb := jsonb_build_object(
     'nutrition_source_ids', '[]'::jsonb,
     'nutrition_source_item_ids', '[]'::jsonb,
@@ -368,6 +557,11 @@ begin
     or v_actor is null
     or v_reviewed_at is null
     or not exists (select 1 from public.users where id = v_actor)
+    or nullif(v_run_id, '') is null
+    or nullif(v_idempotency_key, '') is null
+    or nullif(v_source_payload_identity, '') is null
+    or nullif(v_decision_checksum, '') is null
+    or nullif(v_content_hash, '') is null
   then
     raise exception 'INVALID_MODEL_IMPORT';
   end if;
@@ -375,6 +569,22 @@ begin
     or coalesce(v_attribution ->> 'source_url', '') ~* '[?&](servicekey|api_key|authorization|access_token)='
   then
     raise exception 'SECRET_OR_RAW_DATA_LEAK';
+  end if;
+
+  select metadata_json into v_registry_metadata
+  from public.operational_events
+  where source = 'ingredient-nutrition-model'
+    and event_type = 'ingredient_nutrition_model_applied'
+    and metadata_json ->> 'idempotency_key' = v_idempotency_key;
+  if v_registry_metadata is not null then
+    if v_registry_metadata ->> 'source_payload_identity' <> v_source_payload_identity
+      or v_registry_metadata ->> 'decision_checksum' <> v_decision_checksum
+      or v_registry_metadata ->> 'content_hash' <> v_content_hash
+    then
+      raise exception 'DECISION_RUN_IDENTITY_CONFLICT';
+    end if;
+    return (v_registry_metadata -> 'result') ||
+      jsonb_build_object('writes_committed', 0, 'replayed', true);
   end if;
 
   select id, review_status into v_source_id, v_source_status
@@ -390,14 +600,6 @@ begin
       '{nutrition_source_ids}',
       jsonb_build_array(v_source_id)
     );
-    return jsonb_build_object(
-      'source_id', v_source_id,
-      'status', 'applied',
-      'freshness_status', 'current',
-      'affected_row_ids', v_affected_row_ids,
-      'writes_committed', 0,
-      'replayed', true
-    );
   elsif v_source_id is not null and v_source_status = 'needs_source_check' then
     v_affected_row_ids := jsonb_set(
       v_affected_row_ids,
@@ -405,55 +607,52 @@ begin
       jsonb_build_array(v_source_id)
     );
     if v_source_decision is null or v_source_decision ->> 'status' <> 'supersede' then
-      return jsonb_build_object(
+      v_result := jsonb_build_object(
         'source_id', v_source_id,
         'status', 'needs_source_check',
         'freshness_status', 'drifted',
         'reason_codes', jsonb_build_array('SOURCE_NOT_CURRENT'),
-        'affected_row_ids', v_affected_row_ids,
-        'writes_committed', 0,
-        'replayed', true
+        'affected_row_ids', v_affected_row_ids
       );
+    else
+      select id into v_existing_active_source_id
+      from public.nutrition_sources
+      where provider_code = v_manifest ->> 'provider'
+        and dataset_name = v_manifest ->> 'dataset'
+        and is_active
+        and id <> v_source_id;
+      if v_existing_active_source_id is null
+        or v_source_decision ->> 'previous_source_id' <> v_existing_active_source_id::text
+        or nullif(btrim(v_source_decision ->> 'reason'), '') is null
+      then
+        raise exception 'INVALID_SOURCE_SUPERSEDE_DECISION';
+      end if;
+      update public.nutrition_sources
+      set review_status = 'superseded', is_active = false, superseded_by_id = v_source_id,
+          decision_reason = v_source_decision ->> 'reason', reviewed_by = v_actor,
+          reviewed_at = v_reviewed_at
+      where id = v_existing_active_source_id;
+      v_writes := v_writes + 1;
+      v_affected_row_ids := jsonb_set(
+        v_affected_row_ids,
+        '{nutrition_source_ids}',
+        jsonb_build_array(v_existing_active_source_id, v_source_id)
+      );
+      update public.nutrition_sources
+      set freshness_status = 'current', freshness_checked_at = v_reviewed_at,
+          review_status = 'approved', is_active = true,
+          decision_reason = v_source_decision ->> 'reason', reviewed_by = v_actor,
+          reviewed_at = v_reviewed_at
+      where id = v_source_id;
+      v_writes := v_writes + 1;
     end if;
-    select id into v_existing_active_source_id
-    from public.nutrition_sources
-    where provider_code = v_manifest ->> 'provider'
-      and dataset_name = v_manifest ->> 'dataset'
-      and is_active
-      and id <> v_source_id;
-    if v_existing_active_source_id is null
-      or v_source_decision ->> 'previous_source_id' <> v_existing_active_source_id::text
-      or nullif(btrim(v_source_decision ->> 'reason'), '') is null
-    then
-      raise exception 'INVALID_SOURCE_SUPERSEDE_DECISION';
-    end if;
-    update public.nutrition_sources
-    set review_status = 'superseded', is_active = false, superseded_by_id = v_source_id,
-        decision_reason = v_source_decision ->> 'reason', reviewed_by = v_actor,
-        reviewed_at = v_reviewed_at
-    where id = v_existing_active_source_id;
-    v_writes := v_writes + 1;
-    v_affected_row_ids := jsonb_set(
-      v_affected_row_ids,
-      '{nutrition_source_ids}',
-      jsonb_build_array(v_existing_active_source_id, v_source_id)
-    );
-    update public.nutrition_sources
-    set freshness_status = 'current', freshness_checked_at = v_reviewed_at,
-        review_status = 'approved', is_active = true,
-        decision_reason = v_source_decision ->> 'reason', reviewed_by = v_actor,
-        reviewed_at = v_reviewed_at
-    where id = v_source_id;
-    v_writes := v_writes + 1;
   elsif v_source_id is not null then
-    return jsonb_build_object(
+    v_result := jsonb_build_object(
       'source_id', v_source_id,
       'status', v_source_status,
       'freshness_status', 'unknown',
       'reason_codes', jsonb_build_array('SOURCE_NOT_CURRENT'),
-      'affected_row_ids', v_affected_row_ids,
-      'writes_committed', 0,
-      'replayed', true
+      'affected_row_ids', v_affected_row_ids
     );
   end if;
 
@@ -482,19 +681,18 @@ begin
       v_manifest ->> 'raw_sha256', 'needs_source_check', 'SOURCE_DRIFT_REQUIRES_REVIEW',
       null, null, false
     ) returning id into v_source_id;
+    v_writes := v_writes + 1;
     v_affected_row_ids := jsonb_set(
       v_affected_row_ids,
       '{nutrition_source_ids}',
       jsonb_build_array(v_source_id)
     );
-    return jsonb_build_object(
+    v_result := jsonb_build_object(
       'source_id', v_source_id,
       'status', 'needs_source_check',
       'freshness_status', 'drifted',
       'reason_codes', jsonb_build_array('SOURCE_NOT_CURRENT'),
-      'affected_row_ids', v_affected_row_ids,
-      'writes_committed', 1,
-      'replayed', false
+      'affected_row_ids', v_affected_row_ids
     );
   elsif v_source_id is null then
     insert into public.nutrition_sources (
@@ -520,6 +718,42 @@ begin
     );
   end if;
 
+  if v_result is not null then
+    v_writes := v_writes + 1;
+    v_result := v_result || jsonb_build_object(
+      'writes_committed', v_writes,
+      'replayed', false
+    );
+    v_registry_metadata := jsonb_build_object(
+      'run_id', v_run_id,
+      'idempotency_key', v_idempotency_key,
+      'source_payload_identity', v_source_payload_identity,
+      'decision_checksum', v_decision_checksum,
+      'content_hash', v_content_hash,
+      'affected_source_id', v_source_id,
+      'affected_row_ids', v_affected_row_ids,
+      'writes_committed', v_writes,
+      'summary', coalesce(p_model -> 'run_summary', '{}'::jsonb) || v_result ||
+        jsonb_build_object(
+          'affected_source_id', v_source_id,
+          'affected_row_ids', v_affected_row_ids,
+          'writes_attempted', v_writes,
+          'writes_committed', v_writes
+        ),
+      'result', v_result
+    );
+    v_registry_metadata := v_registry_metadata || jsonb_build_object(
+      'registry_checksum', encode(digest(v_registry_metadata::text, 'sha256'), 'hex')
+    );
+    insert into public.operational_events (
+      event_type, severity, source, actor_user_id, message_summary, metadata_json
+    ) values (
+      'ingredient_nutrition_model_applied', 'warn', 'ingredient-nutrition-model',
+      v_actor, 'ingredient nutrition model review registry', v_registry_metadata
+    );
+    return v_result;
+  end if;
+
   for v_item in select value from jsonb_array_elements(v_bundle -> 'approved_items')
   loop
     v_basis_amount := (v_item -> 'basis' ->> 'amount')::numeric;
@@ -528,39 +762,75 @@ begin
       raise exception 'UNSAFE_NUTRITION_BASIS';
     end if;
 
-    insert into public.nutrition_source_items (
-      source_id, external_item_key, external_name, preparation_state,
-      source_basis_text, source_basis_amount, source_basis_unit, stable_fingerprint,
-      review_status, decision_reason, reviewed_by, reviewed_at, provenance_json
-    ) values (
-      v_source_id, v_item ->> 'external_item_key', v_item ->> 'external_name',
-      nullif(v_item ->> 'preparation_state', ''), v_item -> 'basis' ->> 'source_text',
-      v_basis_amount, v_basis_unit, v_item ->> 'fingerprint', 'approved', v_reason,
-      v_actor, v_reviewed_at, jsonb_build_object('content_hash', v_item ->> 'content_hash')
-    ) returning id into v_source_item_id;
-    v_writes := v_writes + 1;
+    v_source_item_id := null;
+    v_profile_id := null;
+    select id into v_source_item_id
+    from public.nutrition_source_items
+    where source_id = v_source_id
+      and external_item_key = v_item ->> 'external_item_key'
+      and stable_fingerprint = v_item ->> 'fingerprint';
+    if v_source_item_id is null then
+      insert into public.nutrition_source_items (
+        source_id, external_item_key, external_name, preparation_state,
+        source_basis_text, source_basis_amount, source_basis_unit,
+        source_serving_text, source_serving_amount, source_serving_unit,
+        source_total_content_text, source_total_content_amount, source_total_content_unit,
+        edible_portion_text, edible_portion_percent, stable_fingerprint,
+        review_status, decision_reason, reviewed_by, reviewed_at, provenance_json
+      ) values (
+        v_source_id, v_item ->> 'external_item_key', v_item ->> 'external_name',
+        nullif(v_item ->> 'preparation_state', ''), v_item -> 'basis' ->> 'source_text',
+        v_basis_amount, v_basis_unit, v_item -> 'serving' ->> 'source_text',
+        nullif(v_item -> 'serving' ->> 'amount', '')::numeric,
+        nullif(lower(v_item -> 'serving' ->> 'unit'), ''),
+        v_item -> 'total_content' ->> 'source_text',
+        nullif(v_item -> 'total_content' ->> 'amount', '')::numeric,
+        nullif(lower(v_item -> 'total_content' ->> 'unit'), ''),
+        coalesce(v_item -> 'edible_portion' ->> 'text', nullif(v_item ->> 'edible_portion', '')),
+        nullif(v_item -> 'edible_portion' ->> 'percent', '')::numeric,
+        v_item ->> 'fingerprint', 'approved', v_reason,
+        v_actor, v_reviewed_at, jsonb_build_object(
+          'content_hash', v_item ->> 'content_hash',
+          'handoff_schema_checksum', v_bundle ->> 'handoff_schema_checksum'
+        )
+      ) returning id into v_source_item_id;
+      v_writes := v_writes + 1;
+    end if;
     v_affected_row_ids := jsonb_set(
       v_affected_row_ids,
       '{nutrition_source_item_ids}',
       (v_affected_row_ids -> 'nutrition_source_item_ids') || to_jsonb(v_source_item_id)
     );
 
-    insert into public.nutrition_profiles (
-      source_item_id, profile_kind, normalization_method, basis_amount, basis_unit,
-      version, review_status, decision_reason, reviewed_by, reviewed_at, is_active
-    ) values (
-      v_source_item_id, 'ingredient_source',
-      case when v_basis_unit = 'g' then 'mass_100g' else 'volume_100ml' end,
-      100, v_basis_unit, 1, 'approved', v_reason, v_actor, v_reviewed_at, true
-    ) returning id into v_profile_id;
-    v_writes := v_writes + 1;
+    select id into v_profile_id
+    from public.nutrition_profiles
+    where source_item_id = v_source_item_id
+      and profile_kind = 'ingredient_source'
+      and is_active and review_status = 'approved';
+    if v_profile_id is null then
+      insert into public.nutrition_profiles (
+        source_item_id, profile_kind, normalization_method, basis_amount, basis_unit,
+        version, review_status, decision_reason, reviewed_by, reviewed_at, is_active
+      ) values (
+        v_source_item_id, 'ingredient_source',
+        case when v_basis_unit = 'g' then 'mass_100g' else 'volume_100ml' end,
+        100, v_basis_unit, 1, 'approved', v_reason, v_actor, v_reviewed_at, true
+      ) returning id into v_profile_id;
+      v_writes := v_writes + 1;
+    end if;
     v_affected_row_ids := jsonb_set(
       v_affected_row_ids,
       '{nutrition_profile_ids}',
       (v_affected_row_ids -> 'nutrition_profile_ids') || to_jsonb(v_profile_id)
     );
 
-    for v_value in select key, value from jsonb_each(v_item -> 'values') order by key
+    for v_value in
+      select key, value from jsonb_each(v_item -> 'values') value_row
+      where not exists (
+        select 1 from public.nutrition_values existing
+        where existing.profile_id = v_profile_id and existing.nutrient_code = value_row.key
+      )
+      order by key
     loop
       v_value_status := case
         when v_value.value ->> 'amount' is not null then 'observed'
@@ -569,9 +839,11 @@ begin
         else 'missing'
       end;
       insert into public.nutrition_values (
-        profile_id, nutrient_code, source_unit, amount, value_status, source_token
+        profile_id, nutrient_code, source_nutrient_code, source_unit,
+        amount, value_status, source_token
       ) values (
-        v_profile_id, v_value.key, v_value.value ->> 'unit',
+        v_profile_id, v_value.key, v_value.value ->> 'source_nutrient_code',
+        v_value.value ->> 'unit',
         case when v_value_status = 'observed'
           then ((v_value.value ->> 'amount')::numeric * 100 / v_basis_amount)
           else null end,
@@ -591,6 +863,18 @@ begin
     where value ->> 'fingerprint' = v_item ->> 'fingerprint'
     limit 1;
     if v_decision is not null then
+      if not exists (
+        select 1
+        from jsonb_array_elements(p_model -> 'candidate_plan' -> 'nutrition_candidates') candidate
+        where candidate ->> 'fingerprint' = v_decision ->> 'fingerprint'
+          and candidate ->> 'ingredient_id' = v_decision ->> 'ingredient_id'
+          and candidate ->> 'preparation_state' = v_decision ->> 'preparation_state'
+          and candidate ->> 'candidate_identity' = v_decision ->> 'candidate_identity'
+          and candidate ->> 'candidate_checksum' = v_decision ->> 'candidate_checksum'
+          and candidate ->> 'review_status' = 'pending'
+      ) then
+        raise exception 'INVALID_NUTRITION_CANDIDATE_IDENTITY';
+      end if;
       insert into public.ingredient_nutrition_profiles (
         ingredient_id, nutrition_profile_id, preparation_state, match_method,
         candidate_rank, is_primary, review_status, decision_reason, reviewed_by,
@@ -600,7 +884,12 @@ begin
         v_decision ->> 'preparation_state', 'manual',
         (select priority_rank from public.nutrition_sources where id = v_source_id),
         v_decision ->> 'status' = 'approved', v_decision ->> 'status',
-        v_decision ->> 'reason', v_actor, v_reviewed_at, 1,
+        v_decision ->> 'reason', v_actor, v_reviewed_at,
+        (select coalesce(max(existing.version), 0) + 1
+         from public.ingredient_nutrition_profiles existing
+         where existing.ingredient_id = (v_decision ->> 'ingredient_id')::uuid
+           and existing.nutrition_profile_id = v_profile_id
+           and existing.preparation_state = v_decision ->> 'preparation_state'),
         v_decision ->> 'status' = 'approved'
       ) returning id into v_link_id;
       v_writes := v_writes + 1;
@@ -613,7 +902,12 @@ begin
     v_decision := null;
   end loop;
 
-  if jsonb_array_length(v_bundle -> 'measurement_evidence') > 0 then
+  if jsonb_array_length(v_bundle -> 'measurement_evidence') > 0
+    and (
+      jsonb_array_length(v_approval -> 'conversion_decisions') > 0
+      or jsonb_array_length(v_approval -> 'piece_decisions') > 0
+    )
+  then
     select max(value ->> 'accessed_at') into v_measurement_source_version
     from jsonb_array_elements(v_bundle -> 'measurement_evidence');
     v_measurement_manifest_sha := encode(
@@ -665,28 +959,56 @@ begin
 
   for v_evidence in select value from jsonb_array_elements(v_bundle -> 'measurement_evidence')
   loop
+    v_decision := null;
     select value into v_decision
     from jsonb_array_elements(v_approval -> 'conversion_decisions')
     where value ->> 'evidence_key' = v_evidence ->> 'ingredient_or_category_id'
     limit 1;
     if v_decision is null then
+      select value into v_decision
+      from jsonb_array_elements(v_approval -> 'piece_decisions')
+      where value ->> 'evidence_key' = v_evidence ->> 'ingredient_or_category_id'
+        and value ->> 'size_code' = v_evidence ->> 'size_code'
+      limit 1;
+    end if;
+    if v_decision is null then
       continue;
     end if;
+    if not exists (
+      select 1
+      from jsonb_array_elements(
+        case when v_evidence ->> 'evidence_kind' = 'volume_weight'
+          then p_model -> 'candidate_plan' -> 'conversion_candidates'
+          else p_model -> 'candidate_plan' -> 'piece_candidates' end
+      ) candidate
+      where candidate ->> 'candidate_identity' = v_decision ->> 'candidate_identity'
+        and candidate ->> 'candidate_checksum' = v_decision ->> 'candidate_checksum'
+        and candidate ->> 'evidence_checksum' = v_evidence ->> 'evidence_checksum'
+        and candidate ->> 'review_status' = 'pending'
+    ) then
+      raise exception 'INVALID_MEASUREMENT_CANDIDATE_IDENTITY';
+    end if;
     insert into public.measurement_source_evidence (
-      source_id, evidence_kind, source_subject, preparation_state,
+      source_id, evidence_kind, source_subject, preparation_state, size_code,
       source_observed_unit, source_observed_amount, observed_volume_ml,
       observed_weight_g, normalized_g_per_15ml, source_url, source_accessed_at,
       evidence_fingerprint, review_status, decision_reason, reviewed_by,
       reviewed_at, version, is_active
     ) values (
-      v_measurement_source_id, 'volume_weight', v_evidence ->> 'ingredient_or_category_id',
-      v_decision ->> 'preparation_state', v_evidence ->> 'source_observed_unit', 1,
-      15, (v_evidence ->> 'observed_g_per_15ml')::numeric,
-      (v_evidence ->> 'observed_g_per_15ml')::numeric, v_evidence ->> 'source_url',
+      v_measurement_source_id, v_evidence ->> 'evidence_kind',
+      coalesce(v_evidence ->> 'source_subject', v_evidence ->> 'ingredient_or_category_id'),
+      v_decision ->> 'preparation_state', nullif(v_evidence ->> 'size_code', ''),
+      v_evidence ->> 'source_observed_unit',
+      coalesce(nullif(v_evidence ->> 'source_observed_amount', '')::numeric, 1),
+      case when v_evidence ->> 'evidence_kind' = 'volume_weight' then 15 else null end,
+      coalesce(nullif(v_evidence ->> 'observed_g_per_15ml', '')::numeric,
+        nullif(v_evidence ->> 'observed_g', '')::numeric),
+      case when v_evidence ->> 'evidence_kind' = 'volume_weight'
+        then (v_evidence ->> 'observed_g_per_15ml')::numeric else null end,
+      v_evidence ->> 'source_url',
       (v_evidence ->> 'accessed_at')::date,
-      encode(digest(v_evidence::text, 'sha256'), 'hex'), v_decision ->> 'status',
-      v_decision ->> 'reason', v_actor, v_reviewed_at, 1,
-      v_decision ->> 'status' = 'approved'
+      v_evidence ->> 'evidence_checksum', 'approved',
+      v_reason, v_actor, v_reviewed_at, 1, true
     ) returning id into v_evidence_id;
     v_writes := v_writes + 1;
     v_affected_row_ids := jsonb_set(
@@ -695,31 +1017,51 @@ begin
       (v_affected_row_ids -> 'measurement_evidence_ids') || to_jsonb(v_evidence_id)
     );
 
-    select id into v_conversion_profile_id
-    from public.measurement_conversion_profiles
-    where code = v_decision ->> 'conversion_profile_code' and is_active;
-    insert into public.ingredient_conversion_assignments (
-      ingredient_id, conversion_profile_id, evidence_id, preparation_state,
-      distance_g_per_15ml, candidate_rank, assignment_reason, review_status,
-      reviewed_by, reviewed_at, version, is_active
-    ) values (
-      (v_decision ->> 'ingredient_id')::uuid, v_conversion_profile_id, v_evidence_id,
-      v_decision ->> 'preparation_state',
-      abs((v_evidence ->> 'observed_g_per_15ml')::numeric -
-        (select representative_weight_g from public.measurement_conversion_profiles where id = v_conversion_profile_id)),
-      1, v_decision ->> 'reason', v_decision ->> 'status', v_actor,
-      v_reviewed_at, 1, v_decision ->> 'status' = 'approved'
-    ) returning id into v_assignment_id;
-    v_writes := v_writes + 1;
-    v_affected_row_ids := jsonb_set(
-      v_affected_row_ids,
-      '{conversion_assignment_ids}',
-      (v_affected_row_ids -> 'conversion_assignment_ids') || to_jsonb(v_assignment_id)
-    );
+    if v_evidence ->> 'evidence_kind' = 'volume_weight' then
+      select id into v_conversion_profile_id
+      from public.measurement_conversion_profiles
+      where code = v_decision ->> 'conversion_profile_code' and is_active;
+      insert into public.ingredient_conversion_assignments (
+        ingredient_id, conversion_profile_id, evidence_id, preparation_state,
+        distance_g_per_15ml, candidate_rank, assignment_reason, review_status,
+        reviewed_by, reviewed_at, version, is_active
+      ) values (
+        (v_decision ->> 'ingredient_id')::uuid, v_conversion_profile_id, v_evidence_id,
+        v_decision ->> 'preparation_state',
+        abs((v_evidence ->> 'observed_g_per_15ml')::numeric -
+          (select representative_weight_g from public.measurement_conversion_profiles where id = v_conversion_profile_id)),
+        1, v_decision ->> 'reason', v_decision ->> 'status', v_actor,
+        v_reviewed_at, 1, v_decision ->> 'status' = 'approved'
+      ) returning id into v_assignment_id;
+      v_writes := v_writes + 1;
+      v_affected_row_ids := jsonb_set(
+        v_affected_row_ids,
+        '{conversion_assignment_ids}',
+        (v_affected_row_ids -> 'conversion_assignment_ids') || to_jsonb(v_assignment_id)
+      );
+    else
+      insert into public.piece_unit_weights (
+        ingredient_id, evidence_id, size_code, preparation_state, weight_g,
+        review_status, decision_reason, reviewed_by, reviewed_at, version, is_active
+      ) values (
+        (v_decision ->> 'ingredient_id')::uuid, v_evidence_id,
+        v_decision ->> 'size_code', v_decision ->> 'preparation_state',
+        (v_evidence ->> 'observed_g')::numeric, v_decision ->> 'status',
+        v_decision ->> 'reason', v_actor, v_reviewed_at, 1,
+        v_decision ->> 'status' = 'approved'
+      ) returning id into v_piece_weight_id;
+      v_writes := v_writes + 1;
+      v_affected_row_ids := jsonb_set(
+        v_affected_row_ids,
+        '{piece_weight_ids}',
+        (v_affected_row_ids -> 'piece_weight_ids') || to_jsonb(v_piece_weight_id)
+      );
+    end if;
     v_decision := null;
   end loop;
 
-  return jsonb_build_object(
+  v_writes := v_writes + 1;
+  v_result := jsonb_build_object(
     'source_id', v_source_id,
     'status', 'applied',
     'freshness_status', 'current',
@@ -727,15 +1069,43 @@ begin
     'writes_committed', v_writes,
     'replayed', false
   );
+  v_registry_metadata := jsonb_build_object(
+    'run_id', v_run_id,
+    'idempotency_key', v_idempotency_key,
+    'source_payload_identity', v_source_payload_identity,
+    'decision_checksum', v_decision_checksum,
+    'content_hash', v_content_hash,
+    'affected_source_id', v_source_id,
+    'affected_row_ids', v_affected_row_ids,
+    'writes_committed', v_writes,
+    'summary', coalesce(p_model -> 'run_summary', '{}'::jsonb) || v_result ||
+      jsonb_build_object(
+        'affected_source_id', v_source_id,
+        'affected_row_ids', v_affected_row_ids,
+        'writes_attempted', v_writes,
+        'writes_committed', v_writes
+      ),
+    'result', v_result
+  );
+  v_registry_metadata := v_registry_metadata || jsonb_build_object(
+    'registry_checksum', encode(digest(v_registry_metadata::text, 'sha256'), 'hex')
+  );
+  insert into public.operational_events (
+    event_type, severity, source, actor_user_id, message_summary, metadata_json
+  ) values (
+    'ingredient_nutrition_model_applied', 'info', 'ingredient-nutrition-model',
+    v_actor, 'ingredient nutrition model apply registry', v_registry_metadata
+  );
+  return v_result;
 end;
 $$;
 
 create function public.disable_ingredient_nutrition_model(
-  p_source_id uuid,
+  p_model_run_key text,
+  p_disable_key text,
   p_actor uuid,
   p_reason text,
-  p_reviewed_at timestamptz,
-  p_affected_row_ids jsonb
+  p_reviewed_at timestamptz
 )
 returns jsonb
 language plpgsql
@@ -746,10 +1116,33 @@ declare
   v_links integer := 0;
   v_assignments integer := 0;
   v_pieces integer := 0;
+  v_registry jsonb;
+  v_affected_row_ids jsonb;
+  v_source_id uuid;
+  v_result jsonb;
+  v_disable_registry jsonb;
 begin
+  select metadata_json into v_registry
+  from public.operational_events
+  where source = 'ingredient-nutrition-model'
+    and event_type = 'ingredient_nutrition_model_disabled'
+    and metadata_json ->> 'idempotency_key' = p_disable_key;
+  if v_registry is not null then
+    return (v_registry -> 'result') ||
+      jsonb_build_object('writes_committed', 0, 'replayed', true);
+  end if;
+
+  select metadata_json into v_registry
+  from public.operational_events
+  where source = 'ingredient-nutrition-model'
+    and event_type = 'ingredient_nutrition_model_applied'
+    and metadata_json ->> 'idempotency_key' = p_model_run_key;
+  v_affected_row_ids := v_registry -> 'affected_row_ids';
+  v_source_id := (v_registry ->> 'affected_source_id')::uuid;
   if nullif(btrim(p_reason), '') is null or p_actor is null or p_reviewed_at is null
     or not exists (select 1 from public.users where id = p_actor)
-    or not exists (select 1 from public.nutrition_sources where id = p_source_id)
+    or v_registry is null
+    or not exists (select 1 from public.nutrition_sources where id = v_source_id)
   then
     raise exception 'INVALID_DISABLE_DECISION';
   end if;
@@ -760,11 +1153,16 @@ begin
   where exists (
     select 1
     from jsonb_array_elements_text(
-      coalesce(p_affected_row_ids -> 'nutrition_link_ids', '[]'::jsonb)
+      coalesce(v_affected_row_ids -> 'nutrition_link_ids', '[]'::jsonb)
     ) affected(id)
     where affected.id::uuid = link.id
     )
-    and link.review_status = 'approved' and link.is_active;
+    and link.review_status = 'approved' and link.is_active
+    and exists (
+      select 1 from public.nutrition_profiles profile
+      join public.nutrition_source_items item on item.id = profile.source_item_id
+      where profile.id = link.nutrition_profile_id and item.source_id = v_source_id
+    );
   get diagnostics v_links = row_count;
 
   update public.ingredient_conversion_assignments assignment
@@ -773,7 +1171,7 @@ begin
   where exists (
     select 1
     from jsonb_array_elements_text(
-      coalesce(p_affected_row_ids -> 'conversion_assignment_ids', '[]'::jsonb)
+      coalesce(v_affected_row_ids -> 'conversion_assignment_ids', '[]'::jsonb)
     ) affected(id)
     where affected.id::uuid = assignment.id
     )
@@ -786,25 +1184,83 @@ begin
   where exists (
     select 1
     from jsonb_array_elements_text(
-      coalesce(p_affected_row_ids -> 'piece_weight_ids', '[]'::jsonb)
+      coalesce(v_affected_row_ids -> 'piece_weight_ids', '[]'::jsonb)
     ) affected(id)
     where affected.id::uuid = piece.id
     )
     and piece.review_status = 'approved' and piece.is_active;
   get diagnostics v_pieces = row_count;
 
-  return jsonb_build_object(
-    'writes_committed', v_links + v_assignments + v_pieces,
+  v_result := jsonb_build_object(
+    'writes_committed', v_links + v_assignments + v_pieces + 1,
     'revoked_count', v_links + v_assignments + v_pieces,
-    'payload_deleted', 0
+    'payload_deleted', 0,
+    'replayed', false
   );
+  v_disable_registry := jsonb_build_object(
+      'run_id', 'disable-' || left(p_disable_key, 24),
+      'idempotency_key', p_disable_key,
+      'model_run_key', p_model_run_key,
+      'source_payload_identity', v_registry ->> 'source_payload_identity',
+      'decision_checksum', p_disable_key,
+      'content_hash', v_registry ->> 'content_hash',
+      'affected_source_id', v_source_id,
+      'affected_row_ids', v_affected_row_ids,
+      'writes_committed', v_links + v_assignments + v_pieces + 1,
+      'summary', jsonb_build_object(
+        'schema_version', 'ingredient-nutrition-model-run-v1',
+        'mode', 'disable',
+        'status', 'disabled',
+        'run_id', 'disable-' || left(p_disable_key, 24),
+        'idempotency_key', p_disable_key,
+        'model_run_key', p_model_run_key,
+        'source_payload_identity', v_registry ->> 'source_payload_identity',
+        'decision_checksum', p_disable_key,
+        'content_hash', v_registry ->> 'content_hash',
+        'affected_source_id', v_source_id,
+        'affected_row_ids', v_affected_row_ids,
+        'writes_attempted', v_links + v_assignments + v_pieces + 1,
+        'writes_committed', v_links + v_assignments + v_pieces + 1,
+        'payload_deleted', 0,
+        'production_db_writes', 0,
+        'provider_requests', 0,
+        'secret_leak_count', 0
+      ),
+      'result', v_result
+    );
+  v_disable_registry := v_disable_registry || jsonb_build_object(
+    'registry_checksum', encode(digest(v_disable_registry::text, 'sha256'), 'hex')
+  );
+  insert into public.operational_events (
+    event_type, severity, source, actor_user_id, message_summary, metadata_json
+  ) values (
+    'ingredient_nutrition_model_disabled', 'info', 'ingredient-nutrition-model',
+    p_actor, 'ingredient nutrition model disable registry', v_disable_registry
+  );
+  return v_result;
 end;
+$$;
+
+create function public.get_ingredient_nutrition_model_run(p_idempotency_key text)
+returns jsonb
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select metadata_json
+  from public.operational_events
+  where source = 'ingredient-nutrition-model'
+    and metadata_json ->> 'idempotency_key' = p_idempotency_key
+  limit 1
 $$;
 
 revoke all on function public.apply_ingredient_nutrition_model(jsonb) from public, anon, authenticated;
 grant execute on function public.apply_ingredient_nutrition_model(jsonb) to service_role;
-revoke all on function public.disable_ingredient_nutrition_model(uuid, uuid, text, timestamptz, jsonb) from public, anon, authenticated;
-grant execute on function public.disable_ingredient_nutrition_model(uuid, uuid, text, timestamptz, jsonb) to service_role;
+revoke all on function public.disable_ingredient_nutrition_model(text, text, uuid, text, timestamptz) from public, anon, authenticated;
+grant execute on function public.disable_ingredient_nutrition_model(text, text, uuid, text, timestamptz) to service_role;
+revoke all on function public.get_ingredient_nutrition_model_run(text) from public, anon, authenticated;
+grant execute on function public.get_ingredient_nutrition_model_run(text) to service_role;
 
 alter table public.nutrient_definitions enable row level security;
 revoke all on table public.nutrient_definitions from anon, authenticated;

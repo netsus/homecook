@@ -1,4 +1,10 @@
-import { canonicalStringify, sha256 } from "./public-nutrition-pipeline.mjs";
+import {
+  canonicalStringify,
+  sha256,
+  validateApprovedPinnedHandoff,
+} from "./public-nutrition-pipeline.mjs";
+import { generateVolumeCandidates } from "./ingredient-conversion-domain.mjs";
+import { rankNutritionCandidates } from "./ingredient-nutrition-matching.mjs";
 
 const HANDOFF_LIFECYCLE = Object.freeze([
   "raw",
@@ -27,33 +33,15 @@ function nonEmptyText(value) {
 }
 
 export function validateHandoffBundle(bundle) {
-  const manifest = bundle?.approved_manifest;
-  const checksumInput = isRecord(bundle) ? { ...bundle } : {};
-  delete checksumInput.handoff_checksum;
-  const valid =
-    isRecord(bundle) &&
-    bundle.schema_version === "public-nutrition-handoff-v1" &&
-    bundle.status === "approved_pinned" &&
-    canonicalStringify(bundle.lifecycle) === canonicalStringify(HANDOFF_LIFECYCLE) &&
-    isRecord(manifest) &&
-    nonEmptyText(bundle.logical_batch_id) &&
-    manifest.logical_batch_id === bundle.logical_batch_id &&
-    nonEmptyText(manifest.provider) &&
-    nonEmptyText(manifest.dataset) &&
-    nonEmptyText(manifest.source_version) &&
-    nonEmptyText(manifest.raw_sha256) &&
-    nonEmptyText(manifest.normalized_content_hash) &&
-    nonEmptyText(manifest.review_checksum) &&
-    bundle.normalized_content_hash === manifest.normalized_content_hash &&
-    bundle.review_checksum === manifest.review_checksum &&
-    Array.isArray(bundle.approved_items) &&
-    Array.isArray(bundle.public_attribution) &&
-    Array.isArray(bundle.measurement_evidence) &&
-    bundle.production_db_writes === 0 &&
-    nonEmptyText(bundle.handoff_checksum) &&
-    bundle.handoff_checksum === sha256(checksumInput);
-
-  if (!valid) {
+  try {
+    const validated = validateApprovedPinnedHandoff(bundle);
+    if (
+      canonicalStringify(validated.lifecycle) !== canonicalStringify(HANDOFF_LIFECYCLE) ||
+      !nonEmptyText(validated.logical_batch_id)
+    ) {
+      throw new Error("invalid lifecycle");
+    }
+  } catch {
     throw new IngredientNutritionImportError("INVALID_HANDOFF_BUNDLE");
   }
   assertPrSafeValue(bundle);
@@ -132,6 +120,10 @@ export function createMemoryModelStore(options = {}) {
       const summary = state.runs.get(idempotencyKey);
       return summary === undefined ? null : structuredClone(summary);
     },
+    getRunRegistry(idempotencyKey) {
+      const summary = state.runs.get(idempotencyKey);
+      return summary === undefined ? null : structuredClone(summary);
+    },
     async transaction(work) {
       const draft = structuredClone(state);
       let attempted = 0;
@@ -149,20 +141,27 @@ export function createMemoryModelStore(options = {}) {
         },
         registerRun(idempotencyKey, summary) {
           attempted += 1;
-          draft.runs.set(idempotencyKey, structuredClone(summary));
+          const registry = structuredClone(summary);
+          draft.runs.set(idempotencyKey, {
+            ...registry,
+            registry_checksum: sha256(registry),
+          });
           if (failAfterWrites !== null && attempted >= failAfterWrites) {
             throw new IngredientNutritionImportError("SYNTHETIC_STORE_FAILURE");
           }
         },
         updateWhere(collection, predicate, update) {
+          let updated = 0;
           for (const row of draft[collection]) {
             if (!predicate(row)) continue;
             attempted += 1;
+            updated += 1;
             Object.assign(row, update(row));
             if (failAfterWrites !== null && attempted >= failAfterWrites) {
               throw new IngredientNutritionImportError("SYNTHETIC_STORE_FAILURE");
             }
           }
+          return updated;
         },
       };
       const result = await work(transaction);
@@ -223,7 +222,7 @@ function zeroWriteSummary(overrides = {}) {
   };
 }
 
-function modelSummaryFields(bundle, approval, runId) {
+function modelSummaryFields(bundle, approval, runId, candidatePlan) {
   const values = bundle.approved_items.flatMap((item) => Object.values(item.values ?? {}));
   const decisions = approval === null
     ? bundle.approved_items.map(() => ({ status: "needs_review" }))
@@ -233,7 +232,6 @@ function modelSummaryFields(bundle, approval, runId) {
         ...approval.piece_decisions,
       ];
   const decisionCount = (status) => decisions.filter((decision) => decision.status === status).length;
-  const evidence = bundle.measurement_evidence ?? [];
   return {
     run_id: runId,
     pilot_scope: "foodsafety-30",
@@ -250,18 +248,22 @@ function modelSummaryFields(bundle, approval, runId) {
     nutrient_value_count: values.length,
     missing_value_count: values.filter((value) => value?.amount === null).length,
     zero_value_count: values.filter((value) => value?.amount === 0).length,
-    nutrition_candidate_count: bundle.approved_items.length,
-    conversion_candidate_count: evidence.filter((row) => row.evidence_kind === "volume_weight").length,
-    piece_candidate_count: evidence.filter((row) => row.evidence_kind === "piece_weight").length,
+    nutrition_candidate_count: candidatePlan.nutrition_candidates.length,
+    conversion_candidate_count: candidatePlan.conversion_candidates.length,
+    piece_candidate_count: candidatePlan.piece_candidates.length,
     approved_count: decisionCount("approved"),
     rejected_count: decisionCount("rejected"),
-    needs_review_count: decisionCount("needs_review"),
+    needs_review_count: approval === null
+      ? candidatePlan.nutrition_candidates.length +
+        candidatePlan.conversion_candidates.length + candidatePlan.piece_candidates.length
+      : decisionCount("needs_review"),
     revoked_count: decisionCount("revoked"),
     superseded_count: decisionCount("superseded"),
     secret_leak_count: 0,
     reason_counts: {},
     report_artifact: `.artifacts/ops/ingredient-nutrition-conversion-model/${runId}/summary.json`,
     rollback_artifact: null,
+    candidate_plan: candidatePlan,
   };
 }
 
@@ -281,7 +283,128 @@ function allUnique(values) {
   return new Set(values).size === values.length;
 }
 
-function validateApproval(approval, expectedPilotScope, bundle) {
+function providerCode(manifest) {
+  const provider = String(manifest?.provider ?? "").toUpperCase();
+  if (provider.includes("MFDS") || provider.includes("식품의약품안전처")) return "MFDS";
+  if (provider.includes("RDA") || provider.includes("농촌진흥청")) return "RDA_10_4";
+  return null;
+}
+
+function candidateWithIdentity(kind, candidate, sourceChecksum) {
+  const identityProjection = { kind, ...candidate };
+  const candidateIdentity = sha256(identityProjection);
+  return {
+    ...candidate,
+    candidate_identity: candidateIdentity,
+    candidate_checksum: sha256({
+      candidate_identity: candidateIdentity,
+      source_checksum: sourceChecksum,
+      candidate: identityProjection,
+    }),
+  };
+}
+
+export function buildModelCandidatePlan(bundle, canonicalIngredients) {
+  if (
+    !Array.isArray(canonicalIngredients) ||
+    canonicalIngredients.some((ingredient) =>
+      !isRecord(ingredient) || !nonEmptyText(ingredient.id) ||
+      !Array.isArray(ingredient.normalized_names),
+    )
+  ) {
+    throw new IngredientNutritionImportError("AUTHORITATIVE_INGREDIENT_CONTEXT_REQUIRED");
+  }
+  const sourceProviderCode = providerCode(bundle.approved_manifest);
+  const nutritionCandidates = [];
+  const reasonCodes = [];
+  for (const item of bundle.approved_items) {
+    for (const ingredient of canonicalIngredients) {
+      const ranked = rankNutritionCandidates({
+        ...ingredient,
+        preparation_state: ingredient.preparation_state ?? item.preparation_state ?? null,
+        edible_portion: ingredient.edible_portion ?? item.edible_portion ?? null,
+        basis_dimension: ingredient.basis_dimension ??
+          (String(item.basis.unit).toLowerCase() === "g" ? "mass" : "volume"),
+      }, [{
+        id: item.fingerprint,
+        normalized_name: item.external_name,
+        preparation_state: item.preparation_state ?? null,
+        edible_portion: item.edible_portion ?? null,
+        basis_dimension: String(item.basis.unit).toLowerCase() === "g" ? "mass" : "volume",
+        freshness_status: "current",
+        source_review_status: "approved",
+        source_is_active: true,
+        provider_code: sourceProviderCode,
+      }]);
+      reasonCodes.push(...ranked.reason_codes);
+      nutritionCandidates.push(...ranked.candidates.map((candidate) =>
+        candidateWithIdentity("nutrition", {
+          fingerprint: item.fingerprint,
+          ingredient_id: ingredient.id,
+          preparation_state: candidate.preparation_state,
+          review_status: candidate.review_status,
+          is_active: false,
+          candidate_rank: candidate.candidate_rank,
+        }, bundle.handoff_checksum),
+      ));
+    }
+  }
+
+  const conversionCandidates = [];
+  const pieceCandidates = [];
+  for (const evidence of bundle.measurement_evidence) {
+    const ingredient = canonicalIngredients.find(
+      (candidate) => candidate.id === evidence.ingredient_or_category_id,
+    );
+    if (!ingredient) {
+      reasonCodes.push("INCOMPATIBLE_MEASUREMENT_EVIDENCE");
+      continue;
+    }
+    const evidenceApproved = evidence.review_result === "approved" &&
+      evidence.license_disposition !== "human_review_required";
+    if (evidence.evidence_kind === "volume_weight") {
+      const generated = generateVolumeCandidates({
+        ingredient_id: ingredient.id,
+        evidence_id: evidence.evidence_checksum,
+        normalized_g_per_15ml: evidence.observed_g_per_15ml,
+        preparation_state: evidence.preparation_state ?? ingredient.preparation_state,
+        compatibility: evidence.compatibility ?? "compatible",
+        evidence_review_status: evidenceApproved ? "approved" : "needs_source_check",
+        evidence_is_active: evidenceApproved,
+        source_freshness_status: "current",
+        source_review_status: "approved",
+        source_is_active: true,
+      });
+      reasonCodes.push(...generated.reason_codes);
+      conversionCandidates.push(...generated.candidates.map((candidate) =>
+        candidateWithIdentity("conversion", {
+          ...candidate,
+          evidence_key: evidence.ingredient_or_category_id,
+          evidence_checksum: evidence.evidence_checksum,
+        }, bundle.handoff_checksum),
+      ));
+    } else if (evidence.evidence_kind === "piece_weight" && evidenceApproved) {
+      pieceCandidates.push(candidateWithIdentity("piece", {
+        ingredient_id: ingredient.id,
+        evidence_key: evidence.ingredient_or_category_id,
+        evidence_checksum: evidence.evidence_checksum,
+        size_code: evidence.size_code,
+        preparation_state: evidence.preparation_state ?? ingredient.preparation_state,
+        weight_g: evidence.observed_g,
+        review_status: "pending",
+        is_active: false,
+      }, bundle.handoff_checksum));
+    }
+  }
+  return {
+    nutrition_candidates: nutritionCandidates,
+    conversion_candidates: conversionCandidates,
+    piece_candidates: pieceCandidates,
+    reason_codes: [...new Set(reasonCodes)].sort(),
+  };
+}
+
+function validateApproval(approval, expectedPilotScope, bundle, candidatePlan) {
   const valid =
     isRecord(approval) &&
     approval.schema_version === "ingredient-nutrition-review-v1" &&
@@ -307,37 +430,53 @@ function validateApproval(approval, expectedPilotScope, bundle) {
       ingredientIds.has(decision.ingredient_id) &&
       ["approved", "rejected"].includes(decision.status) &&
       nonEmptyText(decision.preparation_state) &&
-      nonEmptyText(decision.reason),
+      nonEmptyText(decision.reason) &&
+      candidatePlan.nutrition_candidates.some((candidate) =>
+        candidate.fingerprint === decision.fingerprint &&
+        candidate.ingredient_id === decision.ingredient_id &&
+        candidate.preparation_state === decision.preparation_state &&
+        candidate.review_status === "pending" &&
+        candidate.candidate_identity === decision.candidate_identity &&
+        candidate.candidate_checksum === decision.candidate_checksum,
+      ),
     );
-  const volumeEvidenceKeys = new Set(
-    bundle.measurement_evidence
-      .filter((evidence) => evidence.evidence_kind === "volume_weight")
-      .map((evidence) => evidence.ingredient_or_category_id),
-  );
-  const pieceEvidenceKeys = new Set(
-    bundle.measurement_evidence
-      .filter((evidence) => evidence.evidence_kind === "piece_weight")
-      .map((evidence) => evidence.ingredient_or_category_id),
-  );
-  const conversionValid = approval.conversion_decisions.every((decision) =>
-    volumeEvidenceKeys.has(decision.evidence_key) &&
+  const conversionValid = approval.conversion_decisions.every((decision) => {
+    const evidenceCandidates = candidatePlan.conversion_candidates.filter((candidate) =>
+      candidate.evidence_key === decision.evidence_key &&
+      candidate.ingredient_id === decision.ingredient_id,
+    );
+    const candidate = evidenceCandidates.find((row) =>
+      row.conversion_profile_code === decision.conversion_profile_code,
+    );
+    return evidenceCandidates.length === 1 &&
+    candidate?.review_status === "pending" &&
+    candidate.candidate_identity === decision.candidate_identity &&
+    candidate.candidate_checksum === decision.candidate_checksum &&
     ingredientIds.has(decision.ingredient_id) &&
     ["approved", "rejected"].includes(decision.status) &&
     ["VOLUME_G6", "VOLUME_G10", "VOLUME_G15", "VOLUME_G20", "VOLUME_G25"]
       .includes(decision.conversion_profile_code) &&
     nonEmptyText(decision.preparation_state) &&
-    nonEmptyText(decision.reason),
-  );
-  const pieceValid = approval.piece_decisions.every((decision) =>
-    pieceEvidenceKeys.has(decision.evidence_key) &&
+    nonEmptyText(decision.reason);
+  });
+  const pieceValid = approval.piece_decisions.every((decision) => {
+    const candidate = candidatePlan.piece_candidates.find((row) =>
+      row.evidence_key === decision.evidence_key &&
+      row.ingredient_id === decision.ingredient_id &&
+      row.size_code === decision.size_code &&
+      row.preparation_state === decision.preparation_state,
+    );
+    return candidate?.review_status === "pending" &&
+    candidate.candidate_identity === decision.candidate_identity &&
+    candidate.candidate_checksum === decision.candidate_checksum &&
     ingredientIds.has(decision.ingredient_id) &&
     ["approved", "rejected"].includes(decision.status) &&
     nonEmptyText(decision.size_code) &&
     nonEmptyText(decision.preparation_state) &&
     Number.isFinite(decision.weight_g) &&
     decision.weight_g > 0 &&
-    nonEmptyText(decision.reason),
-  );
+    nonEmptyText(decision.reason);
+  });
   const activeKeys = [
     ...approval.nutrition_decisions
       .filter((decision) => decision.status === "approved")
@@ -377,6 +516,7 @@ export async function runModelImport(input) {
   });
   let bundle;
   let scopeCounts;
+  let candidatePlan;
   try {
     if (!["dry-run", "apply"].includes(input?.mode)) {
       throw new IngredientNutritionImportError("IMPORT_MODE_INVALID");
@@ -389,23 +529,53 @@ export async function runModelImport(input) {
     }
     bundle = validateHandoffBundle(input.bundle);
     scopeCounts = validatePilotScope(
-      input.expected_pilot_scope,
+      input.actual_pilot_scope,
       input.expected_pilot_scope,
     );
+    if (
+      !Array.isArray(input.canonical_ingredients) ||
+      !sameStringSet(
+        input.canonical_ingredients.map((ingredient) => ingredient.id),
+        input.actual_pilot_scope.ingredient_ids,
+      )
+    ) {
+      throw new IngredientNutritionImportError("PILOT_SCOPE_MISMATCH");
+    }
+    candidatePlan = buildModelCandidatePlan(bundle, input.canonical_ingredients);
   } catch (error) {
     throwWithSummary(error, baseSummary);
   }
 
+  let approval = null;
+  if (input.mode === "apply") {
+    try {
+      approval = validateApproval(
+        input.approval,
+        input.expected_pilot_scope,
+        bundle,
+        candidatePlan,
+      );
+    } catch (error) {
+      throwWithSummary(error, baseSummary);
+    }
+  }
+  const sourcePayloadIdentity = sha256({
+    schema_version: bundle.schema_version,
+    handoff_checksum: bundle.handoff_checksum,
+  });
+  const decisionChecksum = approval === null ? null : sha256(contentProjection(approval));
   const content = contentProjection({
     bundle,
     pilot_scope: input.expected_pilot_scope,
-    approval: input.mode === "apply" ? input.approval : null,
+    candidate_plan: candidatePlan,
+    approval,
   });
   const contentHash = sha256(content);
   const idempotencyKey = sha256({
     schema_version: "ingredient-nutrition-model-import-v1",
     environment: input.environment,
-    content_hash: contentHash,
+    source_payload_identity: sourcePayloadIdentity,
+    decision_checksum: decisionChecksum,
   });
   const runId = `model-${idempotencyKey.slice(0, 24)}`;
   const summary = zeroWriteSummary({
@@ -414,8 +584,11 @@ export async function runModelImport(input) {
     status: input.mode === "dry-run" ? "validated" : "applied",
     idempotency_key: idempotencyKey,
     content_hash: contentHash,
+    source_payload_identity: sourcePayloadIdentity,
+    decision_checksum: decisionChecksum,
     ...scopeCounts,
-    ...modelSummaryFields(bundle, input.mode === "apply" ? input.approval : null, runId),
+    ...modelSummaryFields(bundle, approval, runId, candidatePlan),
+    reason_codes: candidatePlan.reason_codes,
   });
   assertPrSafeValue(summary);
 
@@ -428,12 +601,6 @@ export async function runModelImport(input) {
     );
   }
 
-  let approval;
-  try {
-    approval = validateApproval(input.approval, input.expected_pilot_scope, bundle);
-  } catch (error) {
-    throwWithSummary(error, summary);
-  }
   const replay = input.store.findRun(idempotencyKey);
   if (replay !== null) {
     return { ...replay, writes_attempted: 0, writes_committed: 0, replayed: true };
@@ -444,6 +611,9 @@ export async function runModelImport(input) {
       external_item_key: item.external_item_key,
       external_name: item.external_name,
       basis: item.basis,
+      serving: item.serving ?? null,
+      total_content: item.total_content ?? null,
+      edible_portion: item.edible_portion ?? null,
       values: item.values,
       fingerprint: item.fingerprint,
       content_hash: item.content_hash,
@@ -470,8 +640,13 @@ export async function runModelImport(input) {
       const databaseResult = await input.store.applyModelBundle({
         bundle,
         approval,
+        candidate_plan: candidatePlan,
+        run_id: runId,
         idempotency_key: idempotencyKey,
         content_hash: contentHash,
+        source_payload_identity: sourcePayloadIdentity,
+        decision_checksum: decisionChecksum,
+        run_summary: appliedSummary,
       });
       const sourceCurrent = databaseResult.status === "applied";
       return {
@@ -503,15 +678,24 @@ export async function runModelImport(input) {
       nutritionLinks.forEach((row) => transaction.append("nutrition_links", row));
       approval.conversion_decisions.forEach((row) =>
         transaction.append("conversion_assignments", {
+          ...candidatePlan.conversion_candidates.find((candidate) =>
+            candidate.candidate_identity === row.candidate_identity),
           ...row,
           model_run_key: idempotencyKey,
         }),
       );
-      approval.piece_decisions.forEach((row) => transaction.append("piece_unit_weights", {
-        ...row,
-        model_run_key: idempotencyKey,
-      }));
-      transaction.registerRun(idempotencyKey, appliedSummary);
+      approval.piece_decisions.forEach((row) =>
+        transaction.append("piece_unit_weights", {
+          ...candidatePlan.piece_candidates.find((candidate) =>
+            candidate.candidate_identity === row.candidate_identity),
+          ...row,
+          model_run_key: idempotencyKey,
+        }),
+      );
+      transaction.registerRun(idempotencyKey, {
+        ...appliedSummary,
+        writes_committed: plannedWrites,
+      });
     });
     return { ...appliedSummary, writes_committed: transactionResult.writes_committed };
   } catch {
@@ -533,6 +717,8 @@ const REPORT_FIELDS = [
   "freshness_statuses",
   "idempotency_key",
   "content_hash",
+  "source_payload_identity",
+  "decision_checksum",
   "scope_recipe_count",
   "scope_ingredient_count",
   "writes_attempted",
@@ -560,6 +746,7 @@ const REPORT_FIELDS = [
   "rollback_artifact",
   "affected_source_id",
   "affected_row_ids",
+  "report_publication_status",
 ];
 
 const AFFECTED_ROW_ID_FIELDS = Object.freeze([
@@ -621,8 +808,51 @@ export function validateRunReport(report) {
   return report;
 }
 
+export function validateRunReportAgainstRegistry(report, registry) {
+  const validated = validateRunReport(report);
+  const fields = [
+    "run_id",
+    "idempotency_key",
+    "source_payload_identity",
+    "decision_checksum",
+    "content_hash",
+    "affected_source_id",
+    "affected_row_ids",
+    "writes_committed",
+  ];
+  if (
+    !isRecord(registry) ||
+    !/^[a-f0-9]{64}$/.test(registry.registry_checksum ?? "") ||
+    fields.some((field) =>
+      canonicalStringify(validated[field]) !== canonicalStringify(registry[field]),
+    )
+  ) {
+    throw new IngredientNutritionImportError("INVALID_RUN_REPORT");
+  }
+  return validated;
+}
+
+export async function publishRunWithRecovery(summary, publisher) {
+  try {
+    return await publisher(summary);
+  } catch {
+    throw new IngredientNutritionImportError(
+      "REPORT_PUBLICATION_PENDING",
+      {},
+      {
+        ...summary,
+        report_publication_status: "pending_recovery",
+      },
+    );
+  }
+}
+
 export async function disableModelRun(input) {
-  const report = validateRunReport(input?.report);
+  let report = validateRunReport(input?.report);
+  if (typeof input?.store?.getRunRegistry === "function") {
+    const registry = await input.store.getRunRegistry(report.idempotency_key);
+    report = validateRunReportAgainstRegistry(report, registry);
+  }
   if (!["local", "staging"].includes(input?.environment)) {
     throw new IngredientNutritionImportError("PRODUCTION_LOAD_APPROVAL_REQUIRED", {}, {
       writes_attempted: 0,
@@ -658,7 +888,11 @@ export async function disableModelRun(input) {
     status: "disabled",
     idempotency_key: disableKey,
     content_hash: report.content_hash,
+    source_payload_identity: report.source_payload_identity,
+    decision_checksum: disableKey,
     model_run_key: report.idempotency_key,
+    affected_source_id: report.affected_source_id,
+    affected_row_ids: report.affected_row_ids,
     writes_attempted: 0,
     writes_committed: 0,
     replayed: false,
@@ -671,7 +905,11 @@ export async function disableModelRun(input) {
     if (!nonEmptyText(report.affected_source_id)) {
       throw new IngredientNutritionImportError("INVALID_RUN_REPORT");
     }
-    const databaseResult = await input.store.disableAppliedModel({ report, decision });
+    const databaseResult = await input.store.disableAppliedModel({
+      report,
+      decision,
+      disable_key: disableKey,
+    });
     return {
       ...disabledSummary,
       writes_attempted: databaseResult.writes_committed,
@@ -681,12 +919,13 @@ export async function disableModelRun(input) {
     };
   }
   const result = await input.store.transaction(async (transaction) => {
+    let revokedCount = 0;
     for (const collection of [
       "nutrition_links",
       "conversion_assignments",
       "piece_unit_weights",
     ]) {
-      transaction.updateWhere(
+      revokedCount += transaction.updateWhere(
         collection,
         (row) => row.model_run_key === report.idempotency_key && row.is_active === true,
         (row) => ({
@@ -698,10 +937,17 @@ export async function disableModelRun(input) {
         }),
       );
     }
-    transaction.registerRun(disableKey, disabledSummary);
+    transaction.registerRun(disableKey, {
+      ...disabledSummary,
+      revoked_count: revokedCount,
+      writes_attempted: revokedCount + 1,
+      writes_committed: revokedCount + 1,
+    });
+    return revokedCount;
   });
   return {
     ...disabledSummary,
+    revoked_count: result.result,
     writes_attempted: result.writes_committed,
     writes_committed: result.writes_committed,
   };
@@ -709,15 +955,22 @@ export async function disableModelRun(input) {
 
 const CLI_SPECS = Object.freeze({
   import: Object.freeze({
-    allowed: new Set(["bundle", "mode", "pilot-scope", "approval-file", "environment"]),
+    allowed: new Set([
+      "bundle",
+      "mode",
+      "pilot-scope",
+      "approval-file",
+      "environment",
+      "database-adapter",
+    ]),
     required: new Set(["bundle", "mode", "pilot-scope"]),
   }),
   report: Object.freeze({
-    allowed: new Set(["run-id"]),
+    allowed: new Set(["run-id", "environment", "database-adapter"]),
     required: new Set(["run-id"]),
   }),
   disable: Object.freeze({
-    allowed: new Set(["run-id", "approval-file", "environment"]),
+    allowed: new Set(["run-id", "approval-file", "environment", "database-adapter"]),
     required: new Set(["run-id", "approval-file", "environment"]),
   }),
 });
@@ -767,9 +1020,36 @@ export function parseModelCliArgs(command, argv) {
     if (parsed.mode === "apply" && !Object.hasOwn(parsed, "approval-file")) {
       throw new IngredientNutritionImportError("APPROVAL_FILE_REQUIRED");
     }
+    if (parsed.mode === "apply" && parsed.environment === "production") {
+      throw new IngredientNutritionImportError("PRODUCTION_LOAD_APPROVAL_REQUIRED");
+    }
   }
   if (command === "disable" && !["local", "staging", "production"].includes(parsed.environment)) {
     throw new IngredientNutritionImportError("IMPORT_ENVIRONMENT_INVALID");
+  }
+  if (
+    command === "report" && parsed.environment !== undefined &&
+    !["local", "staging"].includes(parsed.environment)
+  ) {
+    throw new IngredientNutritionImportError("IMPORT_ENVIRONMENT_INVALID");
+  }
+  if (parsed.environment === "production" && Object.hasOwn(parsed, "database-adapter")) {
+    throw new IngredientNutritionImportError("PRODUCTION_LOAD_APPROVAL_REQUIRED");
+  }
+  if (parsed.environment === "staging" && !Object.hasOwn(parsed, "database-adapter")) {
+    throw new IngredientNutritionImportError("STAGING_DATABASE_ADAPTER_REQUIRED");
+  }
+  if (Object.hasOwn(parsed, "database-adapter")) {
+    const adapter = parsed["database-adapter"];
+    const safeRelativeExecutable =
+      /^(?!\.)(?!.*(?:^|\/)\.\.?(?:\/|$))(?:[a-z0-9._-]+\/)*[a-z0-9._-]+\.mjs$/i;
+    if (
+      !safeRelativeExecutable.test(adapter) ||
+      /(?:^|\/)(?:\.env(?:\.|$)|[^/]*(?:secret|servicekey|api[_-]?key)[^/]*)/i.test(adapter) ||
+      /^(?:https?|file):/i.test(adapter)
+    ) {
+      throw new IngredientNutritionImportError("DATABASE_ADAPTER_FORBIDDEN");
+    }
   }
   return Object.fromEntries(
     Object.entries(parsed).map(([key, value]) => [key.replaceAll("-", "_"), value]),

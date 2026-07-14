@@ -4,10 +4,10 @@ import { spawnSync } from "node:child_process";
 import {
   existsSync,
   readFileSync,
-  readdirSync,
 } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { publishArtifactBundle } from "./lib/public-nutrition-artifacts.mjs";
 import {
@@ -16,8 +16,10 @@ import {
   buildRunReport,
   disableModelRun,
   parseModelCliArgs,
+  publishRunWithRecovery,
   runModelImport,
   validateRunReport,
+  validateRunReportAgainstRegistry,
 } from "./lib/ingredient-nutrition-import.mjs";
 
 const REGISTRY_ROOT = path.resolve(
@@ -25,6 +27,9 @@ const REGISTRY_ROOT = path.resolve(
 );
 const SAFE_RUN_ID = /^[a-z0-9][a-z0-9-]{7,79}$/;
 const SAFE_INPUT_BASENAME = /^(?!\.env(?:\.|$))(?!.*(?:secret|servicekey|api[_-]?key)).+$/i;
+const PINNED_PILOT_SEED = path.resolve(
+  "supabase/migrations/20260626104000_seed_foodsafety_pilot_recipes.sql",
+);
 
 function zeroWriteError(code) {
   return {
@@ -90,11 +95,54 @@ function runLocalPsqlJson(sql) {
   }
 }
 
-function resolveFoodsafetyPilotScope(environment) {
+function runExplicitDatabaseAdapter(adapterPath, sql) {
+  const resolved = path.resolve(adapterPath);
+  const relative = path.relative(process.cwd(), resolved);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new IngredientNutritionImportError("DATABASE_ADAPTER_FORBIDDEN");
+  }
+  const result = spawnSync(process.execPath, [resolved], {
+    input: JSON.stringify({
+      schema_version: "ingredient-nutrition-database-adapter-v1",
+      operation: "query-json",
+      sql,
+    }),
+    encoding: "utf8",
+    timeout: 30_000,
+    env: {},
+  });
+  if (result.status !== 0 || result.error) {
+    throw new IngredientNutritionImportError("STAGING_DATABASE_ADAPTER_FAILED");
+  }
+  try {
+    const response = JSON.parse(result.stdout.trim());
+    if (
+      response?.schema_version !== "ingredient-nutrition-database-adapter-result-v1" ||
+      response?.status !== "ok"
+    ) {
+      throw new Error("invalid adapter result");
+    }
+    assertPrSafeValue(response.result);
+    return response.result;
+  } catch (error) {
+    if (error instanceof IngredientNutritionImportError) throw error;
+    throw new IngredientNutritionImportError("STAGING_DATABASE_ADAPTER_RESPONSE_INVALID");
+  }
+}
+
+function runDatabaseJson(environment, adapterPath, sql) {
+  if (environment === "production") {
+    throw new IngredientNutritionImportError("PRODUCTION_LOAD_APPROVAL_REQUIRED");
+  }
+  if (adapterPath !== undefined) return runExplicitDatabaseAdapter(adapterPath, sql);
   if (environment !== "local") {
     throw new IngredientNutritionImportError("STAGING_DATABASE_ADAPTER_REQUIRED");
   }
-  return runLocalPsqlJson(`
+  return runLocalPsqlJson(sql);
+}
+
+function resolveFoodsafetyPilotScope(environment, adapterPath) {
+  return runDatabaseJson(environment, adapterPath, `
 with pilot_recipes as (
   select source.recipe_id
   from public.recipe_sources source
@@ -104,56 +152,102 @@ with pilot_recipes as (
   select distinct ingredient.ingredient_id
   from public.recipe_ingredients ingredient
   join pilot_recipes recipe on recipe.recipe_id = ingredient.recipe_id
+), canonical_ingredients as (
+  select canonical.id,
+    jsonb_agg(name order by name) as normalized_names
+  from public.ingredients canonical
+  join pilot_ingredients pilot on pilot.ingredient_id = canonical.id
+  cross join lateral (
+    select canonical.standard_name as name
+    union
+    select synonym.synonym
+    from public.ingredient_synonyms synonym
+    where synonym.ingredient_id = canonical.id
+  ) names
+  group by canonical.id
 )
 select jsonb_build_object(
   'recipe_ids', (select jsonb_agg(recipe_id order by recipe_id) from pilot_recipes),
-  'ingredient_ids', (select jsonb_agg(ingredient_id order by ingredient_id) from pilot_ingredients)
+  'ingredient_ids', (select jsonb_agg(ingredient_id order by ingredient_id) from pilot_ingredients),
+  'canonical_ingredients', (
+    select jsonb_agg(jsonb_build_object(
+      'id', id,
+      'normalized_names', normalized_names
+    ) order by id)
+    from canonical_ingredients
+  )
 )::text;
 `);
 }
 
-function registrySummaryByIdempotency(idempotencyKey) {
-  if (!existsSync(REGISTRY_ROOT)) return null;
-  for (const entry of readdirSync(REGISTRY_ROOT)) {
-    const summaryPath = path.join(REGISTRY_ROOT, entry, "summary.json");
-    if (!existsSync(summaryPath)) continue;
-    try {
-      const summary = JSON.parse(readFileSync(summaryPath, "utf8"));
-      if (summary.idempotency_key === idempotencyKey) return summary;
-    } catch {
-      continue;
-    }
+function readPinnedPilotContract() {
+  const seed = readFileSync(PINNED_PILOT_SEED, "utf8");
+  const ingredientMarker = seed.indexOf("create temp table tmp_foodsafety_pilot_ingredients");
+  const recipeSection = seed.slice(0, ingredientMarker);
+  const ingredientSection = seed.slice(ingredientMarker);
+  const recipeIds = [...recipeSection.matchAll(/\('([0-9a-f-]{36})'::uuid,/gi)]
+    .map((match) => match[1]);
+  const ingredientNames = [...ingredientSection.matchAll(
+    /\('[0-9a-f-]{36}'::uuid,\s*\d+::integer,\s*'((?:''|[^'])+)'::text/gi,
+  )].map((match) => match[1].replaceAll("''", "'"));
+  const uniqueRecipeIds = [...new Set(recipeIds)].sort();
+  const uniqueIngredientNames = [...new Set(ingredientNames)].sort();
+  if (uniqueRecipeIds.length !== 30 || uniqueIngredientNames.length === 0) {
+    throw new IngredientNutritionImportError("PINNED_PILOT_CONTRACT_INVALID");
   }
-  return null;
+  return { recipe_ids: uniqueRecipeIds, ingredient_names: uniqueIngredientNames };
 }
 
-function createLocalDatabaseStore(environment) {
+function resolvePinnedPilotScope(environment, adapterPath) {
+  const pinned = readPinnedPilotContract();
+  const encoded = Buffer.from(JSON.stringify(pinned.ingredient_names), "utf8").toString("base64");
+  const ingredientIds = runDatabaseJson(environment, adapterPath, `
+with expected_names as (
+  select value as standard_name
+  from jsonb_array_elements_text(
+    convert_from(decode('${encoded}', 'base64'), 'UTF8')::jsonb
+  )
+)
+select coalesce(jsonb_agg(ingredient.id order by ingredient.id), '[]'::jsonb)::text
+from public.ingredients ingredient
+join expected_names expected on expected.standard_name = ingredient.standard_name;
+`);
+  return { recipe_ids: pinned.recipe_ids, ingredient_ids: ingredientIds };
+}
+
+function createDatabaseStore(environment, adapterPath) {
+  const query = (sql) => runDatabaseJson(environment, adapterPath, sql);
   return {
-    findRun: registrySummaryByIdempotency,
+    findRun(idempotencyKey) {
+      const encoded = Buffer.from(idempotencyKey, "utf8").toString("base64");
+      const registry = query(`select coalesce(public.get_ingredient_nutrition_model_run(convert_from(decode('${encoded}', 'base64'), 'UTF8')), 'null'::jsonb)::text;`);
+      return registry === null ? null : registry.summary;
+    },
+    getRunRegistry(idempotencyKey) {
+      const encoded = Buffer.from(idempotencyKey, "utf8").toString("base64");
+      return query(`select coalesce(public.get_ingredient_nutrition_model_run(convert_from(decode('${encoded}', 'base64'), 'UTF8')), 'null'::jsonb)::text;`);
+    },
     async applyModelBundle(model) {
-      if (environment !== "local") {
-        throw new IngredientNutritionImportError("STAGING_DATABASE_ADAPTER_REQUIRED");
-      }
       const encoded = Buffer.from(JSON.stringify(model), "utf8").toString("base64");
-      return runLocalPsqlJson(
+      return query(
         `select public.apply_ingredient_nutrition_model(convert_from(decode('${encoded}', 'base64'), 'UTF8')::jsonb)::text;`,
       );
     },
-    async disableAppliedModel({ report, decision }) {
-      if (environment !== "local") {
-        throw new IngredientNutritionImportError("STAGING_DATABASE_ADAPTER_REQUIRED");
-      }
-      const encoded = Buffer.from(JSON.stringify({ report, decision }), "utf8").toString("base64");
-      return runLocalPsqlJson(`
+    async disableAppliedModel({ report, decision, disable_key: disableKey }) {
+      const encoded = Buffer.from(
+        JSON.stringify({ report, decision, disable_key: disableKey }),
+        "utf8",
+      ).toString("base64");
+      return query(`
 with input as (
   select convert_from(decode('${encoded}', 'base64'), 'UTF8')::jsonb as value
 )
 select public.disable_ingredient_nutrition_model(
-  (value -> 'report' ->> 'affected_source_id')::uuid,
+  value -> 'report' ->> 'idempotency_key',
+  value ->> 'disable_key',
   (value -> 'decision' ->> 'reviewed_by')::uuid,
   value -> 'decision' ->> 'reason',
-  (value -> 'decision' ->> 'reviewed_at')::timestamptz,
-  value -> 'report' -> 'affected_row_ids'
+  (value -> 'decision' ->> 'reviewed_at')::timestamptz
 )::text from input;
 `);
     },
@@ -170,7 +264,7 @@ async function publishRun(summary) {
   return report;
 }
 
-function loadRegisteredReport(runId) {
+async function loadRegisteredReport(runId, store) {
   if (!SAFE_RUN_ID.test(runId)) {
     throw new IngredientNutritionImportError("INVALID_RUN_REPORT");
   }
@@ -179,7 +273,12 @@ function loadRegisteredReport(runId) {
     throw new IngredientNutritionImportError("INVALID_RUN_REPORT");
   }
   const report = JSON.parse(readFileSync(reportPath, "utf8"));
-  return validateRunReport(report);
+  const validated = validateRunReport(report);
+  if (store !== undefined) {
+    const registry = await store.getRunRegistry(validated.idempotency_key);
+    return validateRunReportAgainstRegistry(validated, registry);
+  }
+  return validated;
 }
 
 async function importCommand(args) {
@@ -190,29 +289,44 @@ async function importCommand(args) {
   if (args.mode === "apply" && args.environment === "production") {
     throw new IngredientNutritionImportError("PRODUCTION_LOAD_APPROVAL_REQUIRED");
   }
-  const expectedPilotScope = resolveFoodsafetyPilotScope(args.environment);
-  const store = createLocalDatabaseStore(args.environment);
+  const actualPilotContext = resolveFoodsafetyPilotScope(
+    args.environment,
+    args.database_adapter,
+  );
+  const expectedPilotScope = resolvePinnedPilotScope(
+    args.environment,
+    args.database_adapter,
+  );
+  const store = createDatabaseStore(args.environment, args.database_adapter);
   const summary = await runModelImport({
     bundle,
     mode: args.mode,
     environment: args.environment,
     pilot_scope: args.pilot_scope,
+    actual_pilot_scope: {
+      recipe_ids: actualPilotContext.recipe_ids,
+      ingredient_ids: actualPilotContext.ingredient_ids,
+    },
     expected_pilot_scope: expectedPilotScope,
+    canonical_ingredients: actualPilotContext.canonical_ingredients,
     approval,
     store,
   });
-  await publishRun(summary);
+  await publishRunWithRecovery(summary, publishRun);
   return summary;
 }
 
 async function reportCommand(args) {
-  return loadRegisteredReport(args.run_id);
+  return loadRegisteredReport(
+    args.run_id,
+    createDatabaseStore(args.environment ?? "local", args.database_adapter),
+  );
 }
 
 async function disableCommand(args) {
-  const report = loadRegisteredReport(args.run_id);
+  const store = createDatabaseStore(args.environment, args.database_adapter);
+  const report = await loadRegisteredReport(args.run_id, store);
   const decision = await readJsonInput(args.approval_file);
-  const store = createLocalDatabaseStore(args.environment);
   const summary = await disableModelRun({
     report,
     store,
@@ -220,7 +334,7 @@ async function disableCommand(args) {
     decision,
   });
   summary.run_id = `disable-${summary.idempotency_key.slice(0, 24)}`;
-  await publishRun(summary);
+  await publishRunWithRecovery(summary, publishRun);
   return summary;
 }
 
@@ -246,4 +360,9 @@ async function main() {
   }
 }
 
-await main();
+const invokedUrl = process.argv[1] === undefined
+  ? null
+  : pathToFileURL(path.resolve(process.argv[1])).href;
+if (import.meta.url === invokedUrl) await main();
+
+export { runExplicitDatabaseAdapter };

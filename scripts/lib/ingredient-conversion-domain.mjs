@@ -58,23 +58,23 @@ export function generateVolumeCandidates(evidence) {
 
   const distances = VOLUME_PROFILES.map((profile) => ({
     profile,
-    distance: roundedDistance(
-      Math.abs(evidence.normalized_g_per_15ml - profile.representative_weight_g),
+    rawDistance: Math.abs(
+      evidence.normalized_g_per_15ml - profile.representative_weight_g,
     ),
   }));
-  const nearestDistance = Math.min(...distances.map(({ distance }) => distance));
+  const nearestDistance = Math.min(...distances.map(({ rawDistance }) => rawDistance));
   if (nearestDistance > 2.5) {
     return { candidates: [], reason_codes: ["NO_PROFILE_WITHIN_DISTANCE"] };
   }
 
-  const nearest = distances.filter(({ distance }) => distance === nearestDistance);
+  const nearest = distances.filter(({ rawDistance }) => rawDistance === nearestDistance);
   const tied = nearest.length > 1;
   const ambiguous = evidence.compatibility === "ambiguous";
   const reasonCodes = [];
   if (tied) reasonCodes.push("TIED_CONVERSION_PROFILE");
   if (ambiguous) reasonCodes.push("AMBIGUOUS_MEASUREMENT_COMPATIBILITY");
   return {
-    candidates: nearest.map(({ profile, distance }) => ({
+    candidates: nearest.map(({ profile, rawDistance }) => ({
       ingredient_id: evidence.ingredient_id,
       evidence_id: evidence.evidence_id,
       preparation_state: evidence.preparation_state,
@@ -82,7 +82,7 @@ export function generateVolumeCandidates(evidence) {
       representative_weight_g: profile.representative_weight_g,
       display_qualifier: profile.display_qualifier,
       evidence_normalized_g_per_15ml: evidence.normalized_g_per_15ml,
-      distance_g_per_15ml: distance,
+      distance_g_per_15ml: roundedDistance(rawDistance),
       candidate_rank: 1,
       review_status: tied || ambiguous ? "needs_review" : "pending",
       is_active: false,

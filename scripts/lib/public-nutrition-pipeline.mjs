@@ -123,6 +123,15 @@ export function sha256(value) {
   return createHash("sha256").update(input).digest("hex");
 }
 
+export const PUBLIC_NUTRITION_HANDOFF_SCHEMA = Object.freeze({
+  schema_version: "public-nutrition-handoff-v1",
+  measurement_evidence_schema_version: "public-nutrition-measurement-evidence-v1",
+  lifecycle: Object.freeze(["raw", "staged", "normalized", "reviewed", "approved_pinned"]),
+});
+export const PUBLIC_NUTRITION_HANDOFF_SCHEMA_CHECKSUM = sha256(
+  PUBLIC_NUTRITION_HANDOFF_SCHEMA,
+);
+
 function requiredText(value, code) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new NutritionPipelineError(code);
@@ -456,9 +465,24 @@ function normalizeRow(row, sourceScope) {
   const externalKey = requiredText(row.external_item_key, "malformed_row");
   const externalName = requiredText(row.external_name, "malformed_row");
   const basis = parseBasis(row.basis_text);
+  const serving = row.serving ?? null;
+  const totalContent = row.total_content ?? null;
+  const ediblePortion = row.edible_portion ?? null;
+  if (
+    ediblePortion !== null &&
+    (!isRecord(ediblePortion) ||
+      (ediblePortion.percent !== null && ediblePortion.percent !== undefined &&
+        (!Number.isFinite(Number(ediblePortion.percent)) ||
+          Number(ediblePortion.percent) <= 0 || Number(ediblePortion.percent) > 100)))
+  ) {
+    throw new NutritionPipelineError("invalid_edible_portion");
+  }
   const values = {};
   for (const [code, definition] of Object.entries(CORE_NUTRIENTS)) {
-    values[code] = normalizeNutrientToken(row.nutrients[definition.source_key], definition.unit);
+    values[code] = {
+      ...normalizeNutrientToken(row.nutrients[definition.source_key], definition.unit),
+      source_nutrient_code: definition.source_key,
+    };
   }
   for (const [code, definition] of Object.entries(OPTIONAL_NUTRIENTS)) {
     const normalized = normalizeNutrientToken(
@@ -466,15 +490,32 @@ function normalizeRow(row, sourceScope) {
       definition.unit,
       { optional: true },
     );
-    if (normalized !== null) values[code] = normalized;
+    if (normalized !== null) {
+      values[code] = {
+        ...normalized,
+        source_nutrient_code: definition.source_key,
+      };
+    }
   }
   const businessKey = `${sourceScope}:${externalKey}`;
-  const contentHash = sha256({ externalKey, externalName, basis, values });
+  const contentHash = sha256({
+    externalKey,
+    externalName,
+    basis,
+    serving,
+    totalContent,
+    ediblePortion,
+    values,
+  });
   return {
     business_key: businessKey,
     external_item_key: externalKey,
     external_name: externalName,
+    preparation_state: row.preparation_state ?? null,
     basis,
+    serving,
+    total_content: totalContent,
+    edible_portion: ediblePortion,
     values,
     content_hash: contentHash,
     fingerprint: sha256({ business_key: businessKey, content_hash: contentHash }),
@@ -628,6 +669,9 @@ export function normalizeNutritionBatch({ rawSnapshot, manifest, adapterSchemaVe
 }
 
 const EVIDENCE_KEYS = new Set([
+  "evidence_schema_version",
+  "evidence_kind",
+  "evidence_checksum",
   "source_url",
   "accessed_at",
   "ingredient_or_category_id",
@@ -713,7 +757,9 @@ export function validateMeasurementEvidence(input) {
       typeof row.absolute_error_g_per_15ml !== "number" ||
       Math.abs(row.absolute_error_g_per_15ml - computed.error) > 1e-9
     ) factMismatch();
-    return {
+    const evidenceBase = {
+      evidence_schema_version: "public-nutrition-measurement-evidence-v1",
+      evidence_kind: "volume_weight",
       source_url: sourceUrl,
       accessed_at: ensureIsoDate(row.accessed_at, "RDA_EVIDENCE_SCHEMA_VIOLATION"),
       ingredient_or_category_id: ingredientId,
@@ -729,6 +775,15 @@ export function validateMeasurementEvidence(input) {
       ),
       license_disposition: "human_review_required",
     };
+    if (
+      (row.evidence_schema_version !== undefined &&
+        row.evidence_schema_version !== evidenceBase.evidence_schema_version) ||
+      (row.evidence_kind !== undefined && row.evidence_kind !== evidenceBase.evidence_kind) ||
+      (row.evidence_checksum !== undefined && row.evidence_checksum !== sha256(evidenceBase))
+    ) {
+      throw new NutritionPipelineError("RDA_EVIDENCE_SCHEMA_VIOLATION");
+    }
+    return { ...evidenceBase, evidence_checksum: sha256(evidenceBase) };
   });
   if (evidence.length > 0 && seen.size !== Object.keys(RDA_MEASUREMENT_FACTS).length) {
     factMismatch();
@@ -960,11 +1015,14 @@ export function buildApprovedPinnedHandoff({
   const approved = new Set(reviewReport.approved_fingerprints);
   const approvedItems = normalizedBundle.rows.filter((row) => approved.has(row.fingerprint));
   if (approvedItems.length === 0) throw new NutritionPipelineError("NO_APPROVED_ROWS");
-  if (sha256(measurementEvidence) !== sha256(reviewReport.measurement_evidence)) {
+  let evidence;
+  let reviewedEvidence;
+  try {
+    evidence = validateMeasurementEvidence(measurementEvidence);
+    reviewedEvidence = validateMeasurementEvidence(reviewReport.measurement_evidence);
+  } catch {
     throw new NutritionPipelineError("REVIEW_EVIDENCE_MISMATCH");
   }
-  const evidence = validateMeasurementEvidence(measurementEvidence);
-  const reviewedEvidence = validateMeasurementEvidence(reviewReport.measurement_evidence);
   if (sha256(evidence) !== sha256(reviewedEvidence)) {
     throw new NutritionPipelineError("REVIEW_EVIDENCE_MISMATCH");
   }
@@ -978,6 +1036,7 @@ export function buildApprovedPinnedHandoff({
   });
   const handoffBase = {
     schema_version: "public-nutrition-handoff-v1",
+    handoff_schema_checksum: PUBLIC_NUTRITION_HANDOFF_SCHEMA_CHECKSUM,
     status: "approved_pinned",
     lifecycle: ["raw", "staged", "normalized", "reviewed", "approved_pinned"],
     logical_batch_id: manifest.logical_batch_id,
@@ -1008,6 +1067,73 @@ export function buildApprovedPinnedHandoff({
   };
   assertNoAuthLeak(handoffBase);
   return { ...handoffBase, handoff_checksum: sha256(handoffBase) };
+}
+
+export function validateApprovedPinnedHandoff(bundle) {
+  if (!isRecord(bundle)) throw new NutritionPipelineError("INVALID_HANDOFF_BUNDLE");
+  const checksumInput = { ...bundle };
+  delete checksumInput.handoff_checksum;
+  const manifest = bundle.approved_manifest;
+  const counts = manifest?.counts;
+  const rowAccountingValid =
+    isRecord(counts) &&
+    counts.quarantined_count === 0 &&
+    counts.normalized_count === bundle.approved_items?.length &&
+    counts.unique_input_count === counts.normalized_count + counts.quarantined_count &&
+    counts.fetched_raw_count ===
+      counts.unique_input_count + counts.deduplicated_identical_count;
+  const normalizedContentHash = rowAccountingValid
+    ? sha256({ rows: bundle.approved_items, quarantined: [], counts })
+    : null;
+  const safeItems = Array.isArray(bundle.approved_items) && bundle.approved_items.every((item) =>
+    isRecord(item) &&
+    typeof item.external_item_key === "string" && item.external_item_key.trim() !== "" &&
+    typeof item.external_name === "string" && item.external_name.trim() !== "" &&
+    isRecord(item.basis) && Number.isFinite(item.basis.amount) && item.basis.amount > 0 &&
+    ["g", "ml"].includes(String(item.basis.unit).toLowerCase()) &&
+    isRecord(item.values) && Object.values(item.values).every((value) =>
+      isRecord(value) &&
+      (value.amount === null || (Number.isFinite(value.amount) && value.amount >= 0)),
+    ),
+  );
+  const valid =
+    bundle.schema_version === PUBLIC_NUTRITION_HANDOFF_SCHEMA.schema_version &&
+    bundle.handoff_schema_checksum === PUBLIC_NUTRITION_HANDOFF_SCHEMA_CHECKSUM &&
+    bundle.status === "approved_pinned" &&
+    canonicalStringify(bundle.lifecycle) ===
+      canonicalStringify(PUBLIC_NUTRITION_HANDOFF_SCHEMA.lifecycle) &&
+    isRecord(manifest) &&
+    manifest.logical_batch_id === bundle.logical_batch_id &&
+    manifest.normalized_content_hash === normalizedContentHash &&
+    bundle.normalized_content_hash === normalizedContentHash &&
+    manifest.review_checksum === bundle.review_checksum &&
+    rowAccountingValid &&
+    safeItems &&
+    Array.isArray(bundle.public_attribution) && bundle.public_attribution.length > 0 &&
+    Array.isArray(bundle.measurement_evidence) &&
+    bundle.production_db_writes === 0 &&
+    typeof bundle.handoff_checksum === "string" &&
+    bundle.handoff_checksum === sha256(checksumInput);
+  if (!valid) throw new NutritionPipelineError("INVALID_HANDOFF_BUNDLE");
+  const evidenceValid = bundle.measurement_evidence.every((evidence) => {
+    if (!isRecord(evidence)) return false;
+    const checksumInput = { ...evidence };
+    delete checksumInput.evidence_checksum;
+    const kindValid = evidence.evidence_kind === "volume_weight"
+      ? Number.isFinite(evidence.observed_g_per_15ml) && evidence.observed_g_per_15ml > 0
+      : evidence.evidence_kind === "piece_weight" &&
+        Number.isFinite(evidence.observed_g) && evidence.observed_g > 0 &&
+        typeof evidence.size_code === "string" && evidence.size_code.trim() !== "";
+    return evidence.evidence_schema_version ===
+        PUBLIC_NUTRITION_HANDOFF_SCHEMA.measurement_evidence_schema_version &&
+      kindValid &&
+      typeof evidence.evidence_checksum === "string" &&
+      evidence.evidence_checksum === sha256(checksumInput);
+  });
+  if (!evidenceValid) {
+    throw new NutritionPipelineError("INVALID_HANDOFF_BUNDLE");
+  }
+  return structuredClone(bundle);
 }
 
 function retryAfterMs(value, now) {
