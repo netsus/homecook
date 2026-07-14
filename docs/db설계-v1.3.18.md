@@ -641,7 +641,13 @@ CHECK (NOT is_active OR (is_primary AND review_status = 'approved'))
 
 ```
 CHECK (basis_volume_ml = 15)
+CHECK (code IN ('VOLUME_G6', 'VOLUME_G10', 'VOLUME_G15', 'VOLUME_G20', 'VOLUME_G25'))
 CHECK (representative_weight_g IN (6, 10, 15, 20, 25))
+CHECK ((code = 'VOLUME_G6' AND representative_weight_g = 6)
+    OR (code = 'VOLUME_G10' AND representative_weight_g = 10)
+    OR (code = 'VOLUME_G15' AND representative_weight_g = 15)
+    OR (code = 'VOLUME_G20' AND representative_weight_g = 20)
+    OR (code = 'VOLUME_G25' AND representative_weight_g = 25))
 CHECK (display_qualifier = 'approximate')
 UNIQUE (code, version)
 UNIQUE (code) WHERE is_active

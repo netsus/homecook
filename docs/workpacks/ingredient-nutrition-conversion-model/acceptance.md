@@ -13,6 +13,8 @@
 ## Schema / Source Lifecycle
 
 - [ ] **Given** fresh migration DB, **When** schema를 inspect, **Then** README의 10개 table·FK·CHECK·partial unique index가 `docs/db설계-v1.3.18.md`와 일치한다. <!-- omo:id=accept-schema-contract;stage=2;scope=backend;review=3 -->
+- [ ] **Given** fresh migration DB, **When** `measurement_conversion_profiles`에 `VOLUME_G6↔6`, `VOLUME_G10↔10`, `VOLUME_G15↔15`, `VOLUME_G20↔20`, `VOLUME_G25↔25`의 5개 대표 profile을 각각 입력, **Then** code allowlist와 code↔weight CHECK를 모두 통과해 commit된다. <!-- omo:id=accept-volume-profile-valid-code-weight-pairs;stage=2;scope=backend;review=3 -->
+- [ ] **Given** `VOLUME_G6↔25` 같은 교차 조합 또는 임의 code와 허용 weight의 조합, **When** `measurement_conversion_profiles`에 입력, **Then** schema-level code allowlist 또는 code↔weight CHECK가 transaction을 거부한다. <!-- omo:id=accept-volume-profile-invalid-code-weight-pairs;stage=2;scope=backend;review=3 -->
 - [ ] **Given** 같은 provider/dataset/source version/manifest checksum, **When** source를 두 번 import, **Then** 하나의 logical `nutrition_sources` row/idempotency identity만 존재하고 duplicate write가 없다. <!-- omo:id=accept-source-idempotency;stage=2;scope=backend;review=3 -->
 - [ ] **Given** checksum 또는 source version drift, **When** import, **Then** 기존 source payload를 덮어쓰지 않고 새 inactive `needs_source_check` row를 만들며 기존 active source를 자동 교체하지 않는다. <!-- omo:id=accept-source-drift;stage=2;scope=backend;review=3 -->
 - [ ] **Given** source가 `stale|drifted|unknown`, review 미승인, 또는 inactive, **When** candidate generation, **Then** `SOURCE_NOT_CURRENT`로 해당 source를 제외하고 신규 approved/active link를 만들지 않는다. <!-- omo:id=accept-source-freshness-gate;stage=2;scope=backend;review=3 -->
