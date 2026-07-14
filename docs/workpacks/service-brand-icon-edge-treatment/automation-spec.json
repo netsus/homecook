@@ -1,0 +1,91 @@
+{
+  "slice_id": "service-brand-icon-edge-treatment",
+  "execution_mode": "manual",
+  "risk_class": "medium",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-schema-migration-seed-or-write",
+      "existing-auth-envelope-and-state-contract-preserved"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": ["/", "/favicon.ico", "/brand/favicon-32.png", "/brand/app-icon-192.png", "/brand/app-icon-512.png", "/brand/apple-touch-icon-180.png"],
+    "required_states": [
+      "favicon-transparent-corners",
+      "favicon-no-white-matte-or-halo",
+      "ico-16-32-48-64-transparent-frames",
+      "install-icons-full-bleed-blue",
+      "manifest-dedicated-app-icon-192",
+      "document-icons-transparent-favicon-only",
+      "install-design-exports-192-256-512-1024",
+      "protected-core-pixel-equality-to-source-baseline",
+      "canonical-source-header-and-social-assets-unchanged"
+    ],
+    "verify_commands": [
+      "pnpm vitest run tests/service-brand-icon-edge-treatment.test.ts tests/service-brand-image-assets.test.ts tests/static-social-metadata.test.ts",
+      "pnpm exec playwright test tests/e2e/service-brand-icon-edge-treatment.spec.ts --project=desktop-chrome",
+      "pnpm build",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice service-brand-icon-edge-treatment",
+      "node scripts/validate-automation-spec.mjs --slice service-brand-icon-edge-treatment",
+      "git diff --check"
+    ],
+    "playwright_projects": ["desktop-chrome"],
+    "artifact_assertions": [
+      "official-docs-v1.7.16-v1.5.23",
+      "canonical-source-sha256-unchanged",
+      "favicon-transparent-corners-no-halo",
+      "ico-multi-size-transparent-frames",
+      "install-apple-full-bleed-blue",
+      "manifest-dedicated-app-icon-192",
+      "document-icons-transparent-favicon-only",
+      "protected-core-pixel-equality-to-source-baseline",
+      "header-og-twitter-unchanged",
+      "favicon-before-after-contact-sheet",
+      "visual-verdict",
+      "no-api-db-dependency-route-interaction-change"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/service-brand-icon-edge-treatment/favicon-dark-tab-before.png",
+        "ui/designs/evidence/service-brand-icon-edge-treatment/favicon-dark-tab-after.png",
+        "ui/designs/evidence/service-brand-icon-edge-treatment/icon-contact-sheet.png",
+        "ui/designs/evidence/service-brand-icon-edge-treatment/visual-verdict.json"
+      ],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "implementation-started-before-docs-merge",
+    "author-self-approval",
+    "canonical-source-header-or-social-hash-changed",
+    "favicon-corner-opaque-or-white-halo",
+    "install-icon-corner-white-or-transparent",
+    "glyph-shape-position-ratio-or-color-regression",
+    "manifest-192-reuses-header-symbol",
+    "document-icons-expose-header-or-install-candidate",
+    "api-db-dependency-route-interaction-change",
+    "visual-evidence-missing-or-blocked",
+    "current-head-ci-not-green"
+  ],
+  "max_fix_rounds": {"backend": 0, "frontend": 4},
+  "notes": "User-approved 2026-07-14 icon edge correction. Favicon uses transparent exterior pixels without white matte; install/PWA/Apple icons use full-bleed blue backgrounds. The canonical source, header, social assets, glyph, API/DB and product behavior remain unchanged."
+}

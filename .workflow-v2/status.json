@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-14T18:16:07+09:00",
+  "updated_at": "2026-07-14T20:17:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1414,8 +1414,8 @@
       "branch": "docs/27b-youtube-source-fallback",
       "pr_path": null,
       "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
@@ -1916,6 +1916,27 @@
       "evaluation_status": "passed",
       "evaluation_round": 1,
       "last_evaluator_result": ".artifacts/qa/service-brand-image-assets/2026-07-14T08-16-33-420Z/eval-result.json",
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "service-brand-icon-edge-treatment",
+      "preset": "ui-polish",
+      "branch": "docs/mumeok-icon-edge-contract",
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice service-brand-icon-edge-treatment",
+        "node scripts/validate-automation-spec.mjs --slice service-brand-icon-edge-treatment",
+        "git diff --check"
+      ],
+      "notes": "User-approved 2026-07-14 favicon/install icon edge-treatment contract. Stage 1 docs passed required validators and independent review with blocker/major/minor 0/0/0; implementation waits for docs merge.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     },
