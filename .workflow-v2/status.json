@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-14T21:18:30+09:00",
+  "updated_at": "2026-07-14T12:42:56Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1923,7 +1923,7 @@
       "id": "service-brand-icon-edge-treatment",
       "preset": "ui-polish",
       "branch": "feature/fe-service-brand-icon-edge-treatment",
-      "lifecycle": "ready_for_review",
+      "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1933,7 +1933,7 @@
         "node scripts/validate-automation-spec.mjs --slice service-brand-icon-edge-treatment",
         "git diff --check"
       ],
-      "notes": "Docs PR #1000 merged before implementation. Dedicated pixel/static/production HTTP checks and independent implementation review passed with blocker/major/minor 0/0/0; current-head PR CI and merge remain.",
+      "notes": "Canonical closeout: .workflow-v2/work-items/service-brand-icon-edge-treatment.json#closeout. Docs PR #1000 preceded Stage 4; frontend PR #1001 head 884cffe7 passed current-head quality, build, smoke, accessibility, visual, Lighthouse, security, policy, governance, Vercel, pixel/static/production HTTP guards, and independent review blocker/major/minor 0/0/0. Manual Only remains deployed favicon cache refresh and physical OS mask confirmation. closeout_phase=completed | closeout_recovery=manual_patch:4|ci_resync:4 | closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:GitHub PR #1001 and current-head checks,independent implementation re-review,ui/designs/evidence/service-brand-icon-edge-treatment/visual-verdict.json,PR #1001 final Closeout Sync and Merge Gate projection | last_recovery_at=2026-07-14T12:42:56Z",
       "evaluation_status": "passed",
       "evaluation_round": 1,
       "last_evaluator_result": "ui/designs/evidence/service-brand-icon-edge-treatment/visual-verdict.json",
