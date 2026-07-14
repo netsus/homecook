@@ -153,7 +153,7 @@
 
 ## Delivery Checklist
 
-- [x] 공식 문서 v1.7.15/v1.5.22와 SoT를 docs PR로 먼저 merge <!-- omo:id=brand-image-delivery-contract;stage=1;scope=shared;review=1.5,6 -->
+- [x] 공식 문서 v1.7.15/v1.5.22와 SoT를 docs PR로 먼저 merge <!-- omo:id=brand-image-delivery-contract;stage=4;scope=shared;review=6 -->
 - [x] canonical runtime asset 복사본과 source hash guard 적용 <!-- omo:id=brand-image-delivery-assets;stage=4;scope=frontend;review=5,6 -->
 - [x] HOME/non-HOME header 심볼 조합 적용 <!-- omo:id=brand-image-delivery-header;stage=4;scope=frontend;review=5,6 -->
 - [x] favicon/install/Apple/manifest 적용 <!-- omo:id=brand-image-delivery-icons;stage=4;scope=frontend;review=5,6 -->
