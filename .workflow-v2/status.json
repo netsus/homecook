@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-14T17:20:00+09:00",
+  "updated_at": "2026-07-14T18:16:07+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -64,7 +64,7 @@
     {
       "id": "omo-lite-phase7-budget-mode",
       "preset": "infra-governance",
-      "lifecycle": "in_progress",
+      "lifecycle": "planned",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1902,8 +1902,8 @@
       "id": "service-brand-image-assets",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-service-brand-image-assets",
-      "lifecycle": "ready_for_review",
-      "approval_state": "codex_approved",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
@@ -1912,7 +1912,7 @@
         "node scripts/validate-automation-spec.mjs --slice service-brand-image-assets",
         "git diff --check"
       ],
-      "notes": "Docs PR #997 merged before Stage 4. Runtime assets, headers, metadata/manifest, RED/GREEN tests, production route smoke, 390/320/1280 evidence, independent final authority APPROVE 0/0/0, stable Ubuntu/Linux visual baselines, Draft core checks, and exploratory QA eval 97/100 are complete. Ready current-head full-regression, full visual, and remaining checks stay required before terminal closeout and merge; historical evidence and API/DB/dependency/technical identifiers are unchanged.",
+      "notes": "Canonical closeout: .workflow-v2/work-items/service-brand-image-assets.json#closeout. Docs PR #997 preceded Stage 4; image-only PR #996 supplies the selected exports. PR #998 implementation head 5d2ecf20e9ff497e40638e8e526d323155424308 passed current-head QA run 29318302492 attempt 2 including full-regression, smoke, Lighthouse, visual, and accessibility. Independent final authority and Stage 6 re-review approved blocker/major/minor 0/0/0; exploratory QA eval passed 97/100. Manual Only remains deployed icon cache and external crawler cache confirmation. closeout_phase=completed | closeout_recovery=manual_patch:5|ci_resync:8|manual_handoff | closeout_repair=codex:8|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #998 and current-head checks,independent Codex final authority and Stage 6 re-review,ui/designs/authority/HOME-service-brand-image-assets-authority.md,.artifacts/qa/service-brand-image-assets/2026-07-14T08-16-33-420Z | last_recovery_at=2026-07-14T09:16:07Z",
       "evaluation_status": "passed",
       "evaluation_round": 1,
       "last_evaluator_result": ".artifacts/qa/service-brand-image-assets/2026-07-14T08-16-33-420Z/eval-result.json",

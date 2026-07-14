@@ -80,14 +80,90 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "passed",
     "evaluation_round": 1,
     "last_evaluator_result": ".artifacts/qa/service-brand-image-assets/2026-07-14T08-16-33-420Z/eval-result.json",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/HOME-service-brand-image-assets-authority.md"
+      ],
+      "actual_verification_refs": [
+        "canonical image-only PR #996",
+        "official contract docs PR #997",
+        "frontend PR #998 reviewed implementation head 5d2ecf20e9ff497e40638e8e526d323155424308",
+        "PR #998 current-head QA run 29318302492 attempt 2 including full-regression, smoke, Lighthouse, visual, and accessibility green",
+        "independent Codex final authority: approve, blocker/major/minor 0/0/0",
+        "independent Codex Stage 6 re-review after lifecycle restoration: approve, blocker/major/minor 0/0/0",
+        ".artifacts/qa/service-brand-image-assets/2026-07-14T08-16-33-420Z/exploratory-report.json",
+        ".artifacts/qa/service-brand-image-assets/2026-07-14T08-16-33-420Z/eval-result.json",
+        "ui/designs/evidence/service-brand-image-assets/visual-verdict.json",
+        "ui/designs/authority/HOME-service-brand-image-assets-authority.md",
+        "CI=1 pnpm verify:frontend:pr",
+        "pnpm test:e2e:a11y",
+        "pnpm test:e2e:visual",
+        "pnpm test:e2e:security",
+        "pnpm test:lighthouse:run",
+        "pnpm validate:closeout-sync",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:exploratory-qa-evidence",
+        "pnpm validate:authority-evidence-presence",
+        "pnpm validate:real-smoke-presence",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice service-brand-image-assets",
+        "node scripts/validate-automation-spec.mjs --slice service-brand-image-assets",
+        "git diff --check"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "5d2ecf20e9ff497e40638e8e526d323155424308",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 5,
+      "manual_handoff": true,
+      "stale_lock_count": 0,
+      "ci_resync_count": 8,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-14T09:16:07Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 8,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage6_closeout_projection_sync",
+      "evidence_sources": [
+        "GitHub PR #998 and current-head checks",
+        "independent Codex final authority and Stage 6 re-review",
+        "ui/designs/authority/HOME-service-brand-image-assets-authority.md",
+        ".artifacts/qa/service-brand-image-assets/2026-07-14T08-16-33-420Z"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-14T09:16:07Z",
+      "status_synced_at": "2026-07-14T09:16:07Z",
+      "pr_body_synced_at": "2026-07-14T09:16:07Z"
+    }
   },
   "out_of_scope": [
     "Screenshot, unselected candidate, quote, dot, decoration, or mascot variants",
@@ -96,5 +172,5 @@
     "Technical identifier rename or historical official version, workpack, prototype, or evidence edit"
   ],
   "open_questions": [],
-  "notes": "Stage 1 contract-evolution merged through docs PR #997. Stage 4 runtime assets, headers, metadata/manifest, RED/GREEN tests, production route smoke, 390/320/1280 evidence, visual verdict, and authority report are complete. Independent final authority approved blocker/major/minor 0/0/0. Independent code re-review findings are repaired. Ubuntu/Linux web and mobile visual baselines were captured from stable artifacts. Exploratory QA covers desktop/mobile/small-iOS with blocker/major/minor 0/0/0 and coverage-sensitive eval 97/100 pass. Ready current-head full-regression, full visual, and remaining checks stay required before terminal closeout and merge."
+  "notes": "Canonical closeout is complete. Docs PR #997 preceded implementation, selected exports from image-only PR #996 are the only runtime assets, and PR #998 implementation head 5d2ecf20 passed current-head full regression, smoke, Lighthouse, visual, accessibility, security, local product/build gates, authority, and exploratory eval 97/100. Independent final authority and Stage 6 re-review approved blocker/major/minor 0/0/0. Manual Only remains deployed icon cache and external crawler cache confirmation."
 }
