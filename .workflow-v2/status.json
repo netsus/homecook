@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-13T22:00:42+09:00",
+  "updated_at": "2026-07-13T22:36:27+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1211,7 +1211,7 @@
       "branch": "docs/ux-latency-resolution",
       "lifecycle": "planned",
       "approval_state": "not_started",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:frontend",
         "pnpm lint",
@@ -1899,12 +1899,33 @@
       "notes": "Canonical closeout: .workflow-v2/work-items/service-brand-home-lockup.json#closeout. Independent Codex final authority approved blocker/major/minor 0/0/0 and Stage 6 re-review approved actionable findings 0 at implementation head 066ee6c5105586dd2233cb9536713c85964f0257. PR #991 Ready current-head run 29240116832 passed full-regression, Lighthouse, visual, accessibility, and smoke. Design Status confirmed; Manual Only remains deployed preview zoom 200% and user brand-feel confirmation, which do not block merge. closeout_phase=completed | closeout_recovery=manual_patch:1|ci_resync:4|manual_handoff | closeout_repair=codex:6|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #991 and current-head checks,independent Codex final authority and Stage 6 re-review,ui/designs/authority/HOME-service-brand-home-lockup-authority.md,.artifacts/qa/service-brand-home-lockup/2026-07-13T07-51-24-163Z | last_recovery_at=2026-07-13T10:00:37Z"
     },
     {
+      "id": "service-brand-image-assets",
+      "preset": "vertical-slice-strict",
+      "branch": "feature/fe-service-brand-image-assets",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice service-brand-image-assets",
+        "node scripts/validate-automation-spec.mjs --slice service-brand-image-assets",
+        "git diff --check"
+      ],
+      "notes": "User-approved 2026-07-13 image brand follow-up. Contract-evolution docs v1.7.15/v1.5.22 passed independent Codex Stage 1.5 content review with Critical/Important 0 and must merge before Stage 4. Canonical PR #996 assets replace the prior text-only/no-image rule; HOME remains authority-required and API/DB/dependency/technical identifiers remain unchanged. Role-separated Codex work preserves the existing service-brand exception without changing global actors.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
       "id": "public-nutrition-source-acquisition",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-public-nutrition-source-acquisition",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
-      "verification_status": "passed",
+      "verification_status": "pending",
       "required_checks": [
         "pnpm exec vitest run tests/public-nutrition-source-acquisition.test.ts tests/public-nutrition-source-cli.test.ts tests/public-nutrition-license-boundary.test.ts",
         "pnpm verify:backend",
@@ -1915,7 +1936,7 @@
         "git diff --check"
       ],
       "pr_path": "https://github.com/netsus/homecook/pull/995",
-      "notes": "Historical Stage 3 approval applies only to reviewed head f191072d9c0c4870f1bcbc2a850815bc42d40d26. Stage 2 follow-up head f6596817d5cc9f2c35ab1b4833082e82623af5f9 fixes the actual MFDS direct envelope and requires a new independent Stage 3 review. The 2026-07-14 account/application and actual operator-secret page 1 / size 1 smoke passed with HTTP 200, provider result 00, direct envelope, one item, reported total 302629, core fields present, parser accepted, retained secret/auth query 0, and production DB writes 0; full pagination/promotion was not run. PR #995 remains Draft. closeout_phase=projecting closeout_recovery=manual_patch:2|manual_handoff closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad,official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs,GitHub PR #995 reviewed-head checks,docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition,TDD regression and production MFDS page 1 / size 1 operator smoke on 2026-07-14 last_recovery_at=2026-07-13T15:32:52Z",
+      "notes": "Independent Stage 3 result STAGE3_LIVE_ENVELOPE_APPROVED with Critical/Important/Suggestion 0 applies only to exact head c91c2aecf46bc339cb00ebaf2f1c39f6dba13054. The next PR head integrates origin/master 2b649eced528ebb734fc71d33d38736d01fdcc20 by merge commit and must receive a fresh independent review plus current-head checks; approval and verification are intentionally not carried forward. Manual Only remains 4/4 complete: the 2026-07-14 account/application and actual operator-secret page 1 / size 1 smoke passed with HTTP 200, provider result 00, direct envelope, one item, reported total 302629, core fields present, parser accepted, retained secret/auth query 0, and production DB writes 0; full pagination/promotion was not run. PR #995 remains Draft and auto-merge is disabled. closeout_phase=projecting closeout_recovery=manual_patch:3|ci_resync:1|manual_handoff closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad,official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs,GitHub PR #995 reviewed-head checks,docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition,TDD regression and production MFDS page 1 / size 1 operator smoke on 2026-07-14,Independent Stage 3 approval at exact head c91c2aecf46bc339cb00ebaf2f1c39f6dba13054,Semantic merge of origin/master 2b649eced528ebb734fc71d33d38736d01fdcc20 | last_recovery_at=2026-07-14T08:02:08Z",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
