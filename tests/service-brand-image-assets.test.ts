@@ -85,6 +85,19 @@ describe("service brand image assets", () => {
     });
   });
 
+  it("keeps concrete manifest colors aligned with global CSS tokens", async () => {
+    const { default: manifest } = await import("@/app/manifest");
+    const appManifest = manifest();
+    const globalCss = source("app/globals.css").toLowerCase();
+
+    expect(globalCss).toContain(
+      `--background: ${appManifest.background_color};`,
+    );
+    expect(globalCss).toContain(
+      `--brand-primary: ${appManifest.theme_color};`,
+    );
+  });
+
   it("wires canonical icon and social paths without the old image generator", () => {
     const layout = source("app/layout.tsx");
     const manifest = source("app/manifest.ts");

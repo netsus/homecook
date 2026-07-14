@@ -5,7 +5,11 @@ import { describe, expect, it } from "vitest";
 
 const codeRoots = ["app", "components"];
 const codeExtensions = new Set([".js", ".jsx", ".ts", ".tsx"]);
-const excludedFiles = new Set(["app/globals.css"]);
+const excludedFiles = new Set([
+  "app/globals.css",
+  // Web app manifests require concrete color values; CSS variables are invalid there.
+  "app/manifest.ts",
+]);
 
 function listCodeFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
