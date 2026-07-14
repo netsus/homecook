@@ -60,9 +60,9 @@
 | FoodSafety pilot 30 seed | `20260626104000_seed_foodsafety_pilot_recipes.sql` | [x] |
 | 별도 Codex Stage 1.5 독립 검수 | required before Stage 2 | [ ] |
 
-> predecessor의 workpack 기록은 소급 수정하지 않는다. 이 slice의 base commit 자체가 PR #995의 merge commit이므로 approved/pinned handoff 계약의 merge를 증명한다.
+> predecessor의 workpack 기록은 소급 수정하지 않는다. PR #995의 merge commit `f87ae75016a9b709ffc3b706e7ca3720a0940982`는 이 slice base `7543b9e06659b9f3e34ffea7e3314065412a1a82`의 ancestry에 포함되며, 위 exact dependency pin이 approved/pinned handoff 계약의 merge를 증명한다.
 
-## Contract Boundary
+## Backend First Contract
 
 ### Public Contract
 
@@ -74,6 +74,12 @@
 ### Internal/Admin Import Contract
 
 `nutrition:model:import`는 merged predecessor의 approved/pinned bundle과 explicit review decision file만 입력으로 받는다. provider URL 호출, API key 조회, production credential 접근을 하지 않는다.
+
+- request/input 경계: approved/pinned bundle, `foodsafety-30` scope, mode/environment, 명시적 review 또는 disable decision만 받는다.
+- output 경계: 성공/실패 모두 아래 고정 machine-readable summary와 sanitized report registry만 남긴다.
+- error 경계: `Failure And Reason Codes`의 fail-closed code와 non-zero exit를 사용하며 실패 transaction은 전부 rollback한다.
+- permission 경계: `Permission / RLS`의 service-role/operator capability와 actor/reason 요구를 적용한다.
+- idempotency 경계: 같은 input/decision은 같은 idempotency key와 candidate set을 만들고 duplicate DB write를 만들지 않는다.
 
 | mode | 필수 입력 | 허용 write | 성공 조건 |
 | --- | --- | --- | --- |
@@ -185,6 +191,12 @@ report에는 key, 인증 query, raw payload, 원문 row, 전체 계량표, priva
 - 일반 사용자는 approved row도 직접 수정·삭제할 수 없다. public read projection은 이번 slice에서 만들지 않는다.
 - 승인/거절/disable은 actor와 reason이 없는 호출을 거부한다.
 
+## Frontend Delivery Mode
+
+- BE/data-model only이며 frontend route, client component, client state, public API를 추가하지 않는다.
+- 필수 UI 상태 `loading / empty / error / read-only / unauthorized`는 소비 화면 자체가 없으므로 모두 N/A다.
+- Stage 4~6, Design, Accessibility, Playwright는 N/A이며 frontend 산출물이나 가짜 checklist를 만들지 않는다.
+
 ## Design Authority
 
 - UI risk: `not-required`
@@ -258,7 +270,9 @@ Stage 2는 acceptance의 RED 목록을 먼저 작성하고 각 test가 의도한
 - dry-run/production guard/재시도/중복/실패는 write 경계가 검증 가능해야 한다.
 - pilot 30 밖 데이터, key/secret/raw, 신규 public API/UI는 scope 위반이다.
 
-## Primary Operator Path
+## Primary User Path
+
+사용자-facing 화면 흐름이 없는 슬라이스이므로 아래 primary path의 actor는 internal 운영자다.
 
 1. merged predecessor의 approved/pinned bundle과 30-recipe scope를 dry-run한다.
 2. report에서 source freshness, missing/zero, nutrition candidates, conversion tie/distance, piece candidates를 검토한다.
