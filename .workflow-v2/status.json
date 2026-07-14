@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-14T21:09:43+09:00",
+  "updated_at": "2026-07-14T21:18:30+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -137,7 +137,7 @@
       "preset": "infra-governance",
       "branch": "feature/omo-session-orchestrator",
       "pr_path": "https://github.com/netsus/homecook/pull/236",
-      "lifecycle": "ready_for_review",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
