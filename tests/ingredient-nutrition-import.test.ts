@@ -160,6 +160,27 @@ const approval = {
   piece_decisions: [],
 };
 
+function buildVolumeApprovalFixture() {
+  const evidenceBase = {
+    evidence_schema_version: "public-nutrition-measurement-evidence-v1",
+    evidence_kind: "volume_weight",
+    ingredient_or_category_id: "ingredient-tofu",
+    preparation_state: "raw",
+    source_observed_unit: "tbsp",
+    observed_g_per_15ml: 20,
+    source_url: "https://example.test/measurement",
+    accessed_at: "2026-07-01",
+    license_evidence_url: "https://example.test/measurement-license",
+    review_result: "approved",
+    license_disposition: "approved_for_internal_evidence",
+  };
+  const evidence = { ...evidenceBase, evidence_checksum: sha256(evidenceBase) };
+  const bundleBase = { ...buildBundle(), measurement_evidence: [evidence] };
+  delete (bundleBase as { handoff_checksum?: string }).handoff_checksum;
+  const bundle = { ...bundleBase, handoff_checksum: sha256(bundleBase) };
+  return { bundle };
+}
+
 describe("ingredient nutrition model import", () => {
   it("validates approved/pinned handoff status, manifest, lifecycle, and checksum", async () => {
     const importer = await loadImporter();
@@ -438,6 +459,65 @@ describe("ingredient nutrition model import", () => {
       } as never)).rejects.toMatchObject({
         code: "INVALID_APPROVAL_FILE",
         summary: { writes_attempted: 0, writes_committed: 0 },
+      });
+      expect(store.snapshot().writes).toBe(0);
+    }
+  });
+
+  it("rejects duplicate or conflicting conversion decisions regardless of status and array order", async () => {
+    const importer = await loadImporter();
+    const buildModelCandidatePlan = requireFunction(importer, "buildModelCandidatePlan");
+    const createMemoryModelStore = requireFunction(importer, "createMemoryModelStore");
+    const runModelImport = requireFunction(importer, "runModelImport");
+    const { bundle } = buildVolumeApprovalFixture();
+    const candidatePlan = buildModelCandidatePlan(
+      bundle as never,
+      canonicalIngredients as never,
+    ) as {
+      nutrition_candidates: Array<Record<string, unknown>>;
+      conversion_candidates: Array<Record<string, unknown>>;
+    };
+    const nutritionCandidate = candidatePlan.nutrition_candidates[0];
+    const candidate = candidatePlan.conversion_candidates[0];
+    const decision = {
+      evidence_key: candidate.evidence_key,
+      ingredient_id: candidate.ingredient_id,
+      conversion_profile_code: candidate.conversion_profile_code,
+      preparation_state: candidate.preparation_state,
+      candidate_identity: candidate.candidate_identity,
+      candidate_checksum: candidate.candidate_checksum,
+      status: "approved",
+      reason: "reviewed volume conversion",
+    };
+    const invalidDecisionSets = [
+      [{ ...decision, status: "rejected" }, { ...decision, status: "rejected" }],
+      [decision, { ...decision, status: "rejected" }],
+      [{ ...decision, status: "rejected" }, decision],
+    ];
+
+    for (const conversionDecisions of invalidDecisionSets) {
+      const store = createMemoryModelStore() as { snapshot: () => { writes: number } };
+      await expect(runModelImport({
+        bundle,
+        mode: "apply",
+        environment: "local",
+        pilot_scope: "foodsafety-30",
+        actual_pilot_scope: pilotScope,
+        expected_pilot_scope: pilotScope,
+        canonical_ingredients: canonicalIngredients,
+        approval: {
+          ...approval,
+          nutrition_decisions: [{
+            ...approval.nutrition_decisions[0],
+            candidate_identity: nutritionCandidate.candidate_identity,
+            candidate_checksum: nutritionCandidate.candidate_checksum,
+          }],
+          conversion_decisions: conversionDecisions,
+        },
+        store,
+      } as never)).rejects.toMatchObject({
+        code: "INVALID_APPROVAL_FILE",
+        summary: { writes_committed: 0 },
       });
       expect(store.snapshot().writes).toBe(0);
     }

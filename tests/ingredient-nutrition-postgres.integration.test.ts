@@ -212,6 +212,55 @@ function modelInput(decisionVersion: "A" | "B" | "C" | "D" = "A") {
   };
 }
 
+function multiNutritionModelInput(
+  label: "seed" | "C" | "D",
+  reverseNutritionOrder = false,
+) {
+  const model = structuredClone(modelInput(label === "D" ? "D" : "C"));
+  const identityLabel = label.toLowerCase();
+  model.run_id = `model-postgres-multi-${identityLabel}-0001`;
+  model.idempotency_key = `postgres-multi-key-${identityLabel}-0001`;
+  model.source_payload_identity = `postgres-multi-payload-${identityLabel}-0001`;
+  model.decision_checksum = `postgres-multi-decision-${identityLabel}-0001`;
+  model.content_hash = `postgres-multi-content-${identityLabel}-0001`;
+  const flourItem = {
+    ...model.bundle.approved_items[0]!,
+    external_item_key: "flour-001",
+    external_name: "밀가루",
+    fingerprint: "flour-fingerprint-001",
+  };
+  const flourDecision = {
+    ...model.approval.nutrition_decisions[0]!,
+    fingerprint: flourItem.fingerprint,
+    ingredient_id: flourIngredientId,
+    candidate_identity: "flour-nutrition-candidate-identity",
+    candidate_checksum: "flour-nutrition-candidate-checksum",
+  };
+  const flourCandidate = {
+    ...model.candidate_plan.nutrition_candidates[0]!,
+    fingerprint: flourItem.fingerprint,
+    ingredient_id: flourIngredientId,
+    candidate_identity: flourDecision.candidate_identity,
+    candidate_checksum: flourDecision.candidate_checksum,
+  };
+  model.bundle.approved_items.push(flourItem);
+  model.approval.nutrition_decisions.push(flourDecision);
+  model.candidate_plan.nutrition_candidates.push(flourCandidate);
+  if (label === "seed") {
+    model.bundle.measurement_evidence = [];
+    model.approval.conversion_decisions = [];
+    model.approval.piece_decisions = [];
+    model.candidate_plan.conversion_candidates = [];
+    model.candidate_plan.piece_candidates = [];
+  }
+  if (reverseNutritionOrder) {
+    model.bundle.approved_items.reverse();
+    model.approval.nutrition_decisions.reverse();
+    model.candidate_plan.nutrition_candidates.reverse();
+  }
+  return model;
+}
+
 function digestShadowModelInput() {
   const model = structuredClone(modelInput());
   const replaceIngredient = (value: unknown): unknown => {
@@ -576,16 +625,109 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
       )::text;
     `));
     expect(disableReplay).toMatchObject({ replayed: true, writes_committed: 0 });
-  });
+  }, 30_000);
+
+  it("rejects duplicate and conflicting decision multiplicity before direct SQL writes", () => {
+    const outcomes: Array<{ label: string; status: number | null; stderr: string }> = [];
+    for (const decisionKind of ["nutrition", "conversion", "piece"] as const) {
+      for (const [orderLabel, statuses] of [
+        ["same-status", ["rejected", "rejected"]],
+        ["approved-rejected", ["approved", "rejected"]],
+        ["rejected-approved", ["rejected", "approved"]],
+      ] as const) {
+        const model = structuredClone(modelInput());
+        const label = `${decisionKind}-${orderLabel}`;
+        model.run_id = `model-postgres-duplicate-${label}`;
+        model.idempotency_key = `postgres-duplicate-key-${label}`;
+        model.source_payload_identity = `postgres-duplicate-payload-${label}`;
+        model.decision_checksum = `postgres-duplicate-decision-${label}`;
+        model.content_hash = `postgres-duplicate-content-${label}`;
+        if (decisionKind === "nutrition") {
+          const original = model.approval.nutrition_decisions[0]!;
+          model.approval.nutrition_decisions = statuses.map((status) => ({
+            ...original,
+            status,
+            reason: `${label} must fail closed`,
+          }));
+        } else if (decisionKind === "conversion") {
+          const original = model.approval.conversion_decisions[0]!;
+          model.approval.conversion_decisions = statuses.map((status) => ({
+            ...original,
+            status,
+            reason: `${label} must fail closed`,
+          }));
+        } else {
+          const original = model.approval.piece_decisions[0]!;
+          model.approval.piece_decisions = statuses.map((status) => ({
+            ...original,
+            status,
+            reason: `${label} must fail closed`,
+          }));
+        }
+        const encoded = encodedJson(model);
+        const result = psqlResult(`
+          begin;
+          select public.apply_ingredient_nutrition_model(
+            convert_from(decode('${encoded}', 'base64'), 'UTF8')::jsonb
+          )::text;
+          rollback;
+        `);
+        outcomes.push({ label, status: result.status, stderr: result.stderr });
+      }
+    }
+
+    expect(
+      outcomes.filter((outcome) => outcome.status === 0).map((outcome) => outcome.label),
+      outcomes.map((outcome) => outcome.stderr).join("\n"),
+    ).toEqual([]);
+    expect(outcomes.every((outcome) => outcome.stderr.includes("INVALID_APPROVAL_FILE"))).toBe(true);
+
+    const missingStatusModel = structuredClone(modelInput());
+    missingStatusModel.run_id = "model-postgres-missing-decision-status";
+    missingStatusModel.idempotency_key = "postgres-missing-decision-status";
+    missingStatusModel.source_payload_identity = "postgres-missing-status-payload";
+    missingStatusModel.decision_checksum = "postgres-missing-status-decision";
+    missingStatusModel.content_hash = "postgres-missing-status-content";
+    delete (missingStatusModel.approval.nutrition_decisions[0] as {
+      status?: string;
+    }).status;
+    const missingStatusEncoded = encodedJson(missingStatusModel);
+    const missingStatusResult = psqlResult(`
+      begin;
+      select public.apply_ingredient_nutrition_model(
+        convert_from(decode('${missingStatusEncoded}', 'base64'), 'UTF8')::jsonb
+      )::text;
+      rollback;
+    `);
+    expect(missingStatusResult.status).not.toBe(0);
+    expect(missingStatusResult.stderr).toContain("INVALID_APPROVAL_FILE");
+
+    expect(psql(`
+      select count(*) from public.operational_events
+      where metadata_json ->> 'idempotency_key' like 'postgres-duplicate-key-%'
+        or metadata_json ->> 'idempotency_key' = 'postgres-missing-decision-status';
+    `)).toBe("0");
+  }, 30_000);
 
   it("serializes concurrent approvals by each versioned natural key", async () => {
+    const seedEncoded = encodedJson(multiNutritionModelInput("seed"));
+    expect(JSON.parse(psql(`
+      select public.apply_ingredient_nutrition_model(
+        convert_from(decode('${seedEncoded}', 'base64'), 'UTF8')::jsonb
+      )::text;
+    `))).toMatchObject({ status: "applied", replayed: false });
+
     psql(`
       create function public.delay_concurrent_nutrition_version_insert()
       returns trigger
       language plpgsql
       as $concurrency_delay$
       begin
-        if new.ingredient_id in ('${ingredientId}'::uuid, '${volumeIngredientId}'::uuid) then
+        if new.ingredient_id in (
+          '${ingredientId}'::uuid,
+          '${flourIngredientId}'::uuid,
+          '${volumeIngredientId}'::uuid
+        ) then
           perform pg_sleep(0.75);
         end if;
         return new;
@@ -603,8 +745,8 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
     `);
 
     try {
-      const encodedC = encodedJson(modelInput("C"));
-      const encodedD = encodedJson(modelInput("D"));
+      const encodedC = encodedJson(multiNutritionModelInput("C"));
+      const encodedD = encodedJson(multiNutritionModelInput("D", true));
       const results = await Promise.all([
         psqlAsync(`
           select public.apply_ingredient_nutrition_model(
@@ -630,8 +772,26 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
         expect.objectContaining({ status: "applied", replayed: false }),
       ]));
 
+      expect(JSON.parse(psql(`
+        select jsonb_agg(jsonb_build_object(
+          'ingredient_id', ingredient_id,
+          'version', version,
+          'review_status', review_status,
+          'is_active', is_active
+        ) order by ingredient_id, version)::text
+        from public.ingredient_nutrition_profiles
+        where ingredient_id in ('${ingredientId}', '${flourIngredientId}');
+      `))).toEqual([
+        { ingredient_id: ingredientId, version: 1, review_status: "superseded", is_active: false },
+        { ingredient_id: ingredientId, version: 2, review_status: "revoked", is_active: false },
+        { ingredient_id: ingredientId, version: 3, review_status: "superseded", is_active: false },
+        { ingredient_id: ingredientId, version: 4, review_status: "superseded", is_active: false },
+        { ingredient_id: ingredientId, version: 5, review_status: "approved", is_active: true },
+        { ingredient_id: flourIngredientId, version: 1, review_status: "superseded", is_active: false },
+        { ingredient_id: flourIngredientId, version: 2, review_status: "superseded", is_active: false },
+        { ingredient_id: flourIngredientId, version: 3, review_status: "approved", is_active: true },
+      ]);
       for (const [table, targetIngredientId] of [
-        ["ingredient_nutrition_profiles", ingredientId],
         ["ingredient_conversion_assignments", volumeIngredientId],
         ["piece_unit_weights", ingredientId],
       ] as const) {
@@ -661,7 +821,7 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
         drop function if exists public.delay_concurrent_nutrition_version_insert();
       `);
     }
-  });
+  }, 30_000);
 
   it("enforces append-only provenance, active uniqueness, and run ownership in PostgreSQL", () => {
     const registryMutation = psqlResult(`

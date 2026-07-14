@@ -545,6 +545,7 @@ declare
   v_value record;
   v_decision jsonb;
   v_evidence jsonb;
+  v_lock_key text;
   v_writes integer := 0;
   v_basis_amount numeric;
   v_basis_unit text;
@@ -588,6 +589,138 @@ begin
     raise exception 'SECRET_OR_RAW_DATA_LEAK';
   end if;
 
+  if coalesce(jsonb_typeof(v_approval -> 'nutrition_decisions'), '') <> 'array'
+    or coalesce(jsonb_typeof(v_approval -> 'conversion_decisions'), '') <> 'array'
+    or coalesce(jsonb_typeof(v_approval -> 'piece_decisions'), '') <> 'array'
+    or coalesce(jsonb_typeof(v_bundle -> 'approved_items'), '') <> 'array'
+    or coalesce(jsonb_typeof(v_bundle -> 'measurement_evidence'), '') <> 'array'
+    or coalesce(jsonb_typeof(p_model -> 'candidate_plan' -> 'nutrition_candidates'), '') <> 'array'
+    or coalesce(jsonb_typeof(p_model -> 'candidate_plan' -> 'conversion_candidates'), '') <> 'array'
+    or coalesce(jsonb_typeof(p_model -> 'candidate_plan' -> 'piece_candidates'), '') <> 'array'
+  then
+    raise exception 'INVALID_APPROVAL_FILE';
+  end if;
+
+  if exists (
+      select 1
+      from jsonb_array_elements(v_bundle -> 'approved_items') items(item)
+      where (
+        select count(*)
+        from jsonb_array_elements(v_approval -> 'nutrition_decisions') decisions(decision)
+        where decision ->> 'fingerprint' = item ->> 'fingerprint'
+      ) <> 1
+    )
+    or exists (
+      select 1
+      from jsonb_array_elements(v_approval -> 'nutrition_decisions') decisions(decision)
+      where coalesce(decision ->> 'status', '') not in ('approved', 'rejected')
+        or nullif(btrim(decision ->> 'reason'), '') is null
+        or nullif(decision ->> 'ingredient_id', '') is null
+        or nullif(decision ->> 'preparation_state', '') is null
+        or (
+          select count(*)
+          from jsonb_array_elements(v_bundle -> 'approved_items') items(item)
+          where item ->> 'fingerprint' = decision ->> 'fingerprint'
+        ) <> 1
+        or (
+          select count(*)
+          from jsonb_array_elements(
+            p_model -> 'candidate_plan' -> 'nutrition_candidates'
+          ) candidates(candidate)
+          where candidate ->> 'fingerprint' = decision ->> 'fingerprint'
+            and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
+            and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
+            and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
+            and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
+            and candidate ->> 'review_status' = 'pending'
+        ) <> 1
+    )
+    or exists (
+      select 1
+      from jsonb_array_elements(v_approval -> 'conversion_decisions') decisions(decision)
+      where coalesce(decision ->> 'status', '') not in ('approved', 'rejected')
+        or nullif(btrim(decision ->> 'reason'), '') is null
+        or nullif(decision ->> 'ingredient_id', '') is null
+        or nullif(decision ->> 'preparation_state', '') is null
+        or nullif(decision ->> 'evidence_key', '') is null
+        or nullif(decision ->> 'conversion_profile_code', '') is null
+        or (
+          select count(*)
+          from jsonb_array_elements(
+            p_model -> 'candidate_plan' -> 'conversion_candidates'
+          ) candidates(candidate)
+          where candidate ->> 'evidence_key' = decision ->> 'evidence_key'
+            and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
+            and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
+            and candidate ->> 'conversion_profile_code' =
+              decision ->> 'conversion_profile_code'
+            and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
+            and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
+            and candidate ->> 'review_status' = 'pending'
+        ) <> 1
+    )
+    or exists (
+      select 1
+      from jsonb_array_elements(v_approval -> 'piece_decisions') decisions(decision)
+      where coalesce(decision ->> 'status', '') not in ('approved', 'rejected')
+        or nullif(btrim(decision ->> 'reason'), '') is null
+        or nullif(decision ->> 'ingredient_id', '') is null
+        or nullif(decision ->> 'preparation_state', '') is null
+        or nullif(decision ->> 'evidence_key', '') is null
+        or nullif(decision ->> 'size_code', '') is null
+        or (
+          select count(*)
+          from jsonb_array_elements(
+            p_model -> 'candidate_plan' -> 'piece_candidates'
+          ) candidates(candidate)
+          where candidate ->> 'evidence_key' = decision ->> 'evidence_key'
+            and candidate ->> 'ingredient_id' = decision ->> 'ingredient_id'
+            and candidate ->> 'preparation_state' = decision ->> 'preparation_state'
+            and candidate ->> 'size_code' = decision ->> 'size_code'
+            and candidate ->> 'candidate_identity' = decision ->> 'candidate_identity'
+            and candidate ->> 'candidate_checksum' = decision ->> 'candidate_checksum'
+            and candidate ->> 'review_status' = 'pending'
+        ) <> 1
+    )
+    or exists (
+      select 1
+      from (
+        select decision ->> 'candidate_identity' as candidate_identity,
+          decision ->> 'candidate_checksum' as candidate_checksum
+        from jsonb_array_elements(v_approval -> 'nutrition_decisions') decisions(decision)
+        union all
+        select decision ->> 'candidate_identity', decision ->> 'candidate_checksum'
+        from jsonb_array_elements(v_approval -> 'conversion_decisions') decisions(decision)
+        union all
+        select decision ->> 'candidate_identity', decision ->> 'candidate_checksum'
+        from jsonb_array_elements(v_approval -> 'piece_decisions') decisions(decision)
+      ) decision_candidates
+      group by candidate_identity, candidate_checksum
+      having count(*) > 1
+    )
+    or exists (
+      select 1
+      from jsonb_array_elements(v_approval -> 'nutrition_decisions') decisions(decision)
+      group by decision ->> 'ingredient_id', decision ->> 'preparation_state'
+      having count(*) > 1
+    )
+    or exists (
+      select 1
+      from jsonb_array_elements(v_approval -> 'conversion_decisions') decisions(decision)
+      group by decision ->> 'ingredient_id', decision ->> 'preparation_state'
+      having count(*) > 1
+    )
+    or exists (
+      select 1
+      from jsonb_array_elements(v_approval -> 'piece_decisions') decisions(decision)
+      group by decision ->> 'ingredient_id', decision ->> 'size_code',
+        decision ->> 'preparation_state'
+      having count(*) > 1
+    )
+  then
+    raise exception 'INVALID_APPROVAL_FILE';
+  end if;
+
   select metadata_json into v_registry_metadata
   from public.operational_events
   where source = 'ingredient-nutrition-model'
@@ -603,6 +736,33 @@ begin
     return (v_registry_metadata -> 'result') ||
       jsonb_build_object('writes_committed', 0, 'replayed', true);
   end if;
+
+  for v_lock_key in
+    select lock_key
+    from (
+      select 'nutrition|' || jsonb_build_array(
+        decision ->> 'ingredient_id', decision ->> 'preparation_state'
+      )::text as lock_key
+      from jsonb_array_elements(v_approval -> 'nutrition_decisions') decisions(decision)
+      union
+      select 'conversion|' || jsonb_build_array(
+        decision ->> 'ingredient_id', decision ->> 'preparation_state'
+      )::text
+      from jsonb_array_elements(v_approval -> 'conversion_decisions') decisions(decision)
+      union
+      select 'piece|' || jsonb_build_array(
+        decision ->> 'ingredient_id', decision ->> 'size_code',
+        decision ->> 'preparation_state'
+      )::text
+      from jsonb_array_elements(v_approval -> 'piece_decisions') decisions(decision)
+    ) versioned_natural_keys
+    order by lock_key
+  loop
+    perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
+      'ingredient-nutrition-model-lock-v1|' || v_lock_key,
+      0
+    ));
+  end loop;
 
   select id, review_status into v_source_id, v_source_status
   from public.nutrition_sources
@@ -892,11 +1052,6 @@ begin
       ) then
         raise exception 'INVALID_NUTRITION_CANDIDATE_IDENTITY';
       end if;
-      perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
-        'ingredient_nutrition_profiles|' || (v_decision ->> 'ingredient_id') ||
-          '|' || (v_decision ->> 'preparation_state'),
-        0
-      ));
       v_previous_link_id := null;
       select id into v_previous_link_id
       from public.ingredient_nutrition_profiles
@@ -1110,11 +1265,6 @@ begin
       select id into v_conversion_profile_id
       from public.measurement_conversion_profiles
       where code = v_decision ->> 'conversion_profile_code' and is_active;
-      perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
-        'ingredient_conversion_assignments|' || (v_decision ->> 'ingredient_id') ||
-          '|' || (v_decision ->> 'preparation_state'),
-        0
-      ));
       v_previous_assignment_id := null;
       select id into v_previous_assignment_id
       from public.ingredient_conversion_assignments
@@ -1167,12 +1317,6 @@ begin
           to_jsonb(v_assignment_id)
       );
     else
-      perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
-        'piece_unit_weights|' || (v_decision ->> 'ingredient_id') ||
-          '|' || (v_decision ->> 'size_code') ||
-          '|' || (v_decision ->> 'preparation_state'),
-        0
-      ));
       v_previous_piece_weight_id := null;
       select id into v_previous_piece_weight_id
       from public.piece_unit_weights

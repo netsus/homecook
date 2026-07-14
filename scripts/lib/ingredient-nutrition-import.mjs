@@ -422,36 +422,62 @@ function validateApproval(approval, expectedPilotScope, bundle, candidatePlan) {
   const nutritionDecisionFingerprints = approval.nutrition_decisions.map(
     (decision) => decision.fingerprint,
   );
+  const decisionCandidateKeys = [
+    ...approval.nutrition_decisions,
+    ...approval.conversion_decisions,
+    ...approval.piece_decisions,
+  ].map((decision) => canonicalStringify([
+    decision?.candidate_identity,
+    decision?.candidate_checksum,
+  ]));
+  const nutritionNaturalKeys = approval.nutrition_decisions.map((decision) =>
+    canonicalStringify([decision?.ingredient_id, decision?.preparation_state])
+  );
+  const conversionNaturalKeys = approval.conversion_decisions.map((decision) =>
+    canonicalStringify([decision?.ingredient_id, decision?.preparation_state])
+  );
+  const pieceNaturalKeys = approval.piece_decisions.map((decision) =>
+    canonicalStringify([
+      decision?.ingredient_id,
+      decision?.size_code,
+      decision?.preparation_state,
+    ])
+  );
   const nutritionValid =
     approval.nutrition_decisions.length === fingerprints.size &&
     allUnique(nutritionDecisionFingerprints) &&
     nutritionDecisionFingerprints.every((fingerprint) => fingerprints.has(fingerprint)) &&
     approval.nutrition_decisions.every((decision) =>
+      isRecord(decision) &&
       ingredientIds.has(decision.ingredient_id) &&
       ["approved", "rejected"].includes(decision.status) &&
       nonEmptyText(decision.preparation_state) &&
       nonEmptyText(decision.reason) &&
-      candidatePlan.nutrition_candidates.some((candidate) =>
+      candidatePlan.nutrition_candidates.filter((candidate) =>
         candidate.fingerprint === decision.fingerprint &&
         candidate.ingredient_id === decision.ingredient_id &&
         candidate.preparation_state === decision.preparation_state &&
         candidate.review_status === "pending" &&
         candidate.candidate_identity === decision.candidate_identity &&
         candidate.candidate_checksum === decision.candidate_checksum,
-      ),
+      ).length === 1,
     );
   const conversionValid = approval.conversion_decisions.every((decision) => {
+    if (!isRecord(decision)) return false;
     const evidenceCandidates = candidatePlan.conversion_candidates.filter((candidate) =>
       candidate.evidence_key === decision.evidence_key &&
       candidate.ingredient_id === decision.ingredient_id,
     );
-    const candidate = evidenceCandidates.find((row) =>
-      row.conversion_profile_code === decision.conversion_profile_code,
+    const matchingCandidates = evidenceCandidates.filter((row) =>
+      row.conversion_profile_code === decision.conversion_profile_code &&
+      row.preparation_state === decision.preparation_state &&
+      row.candidate_identity === decision.candidate_identity &&
+      row.candidate_checksum === decision.candidate_checksum
     );
+    const candidate = matchingCandidates[0];
     return evidenceCandidates.length === 1 &&
+    matchingCandidates.length === 1 &&
     candidate?.review_status === "pending" &&
-    candidate.candidate_identity === decision.candidate_identity &&
-    candidate.candidate_checksum === decision.candidate_checksum &&
     ingredientIds.has(decision.ingredient_id) &&
     ["approved", "rejected"].includes(decision.status) &&
     ["VOLUME_G6", "VOLUME_G10", "VOLUME_G15", "VOLUME_G20", "VOLUME_G25"]
@@ -460,15 +486,18 @@ function validateApproval(approval, expectedPilotScope, bundle, candidatePlan) {
     nonEmptyText(decision.reason);
   });
   const pieceValid = approval.piece_decisions.every((decision) => {
-    const candidate = candidatePlan.piece_candidates.find((row) =>
+    if (!isRecord(decision)) return false;
+    const matchingCandidates = candidatePlan.piece_candidates.filter((row) =>
       row.evidence_key === decision.evidence_key &&
       row.ingredient_id === decision.ingredient_id &&
       row.size_code === decision.size_code &&
-      row.preparation_state === decision.preparation_state,
+      row.preparation_state === decision.preparation_state &&
+      row.candidate_identity === decision.candidate_identity &&
+      row.candidate_checksum === decision.candidate_checksum
     );
+    const candidate = matchingCandidates[0];
     return candidate?.review_status === "pending" &&
-    candidate.candidate_identity === decision.candidate_identity &&
-    candidate.candidate_checksum === decision.candidate_checksum &&
+    matchingCandidates.length === 1 &&
     ingredientIds.has(decision.ingredient_id) &&
     ["approved", "rejected"].includes(decision.status) &&
     nonEmptyText(decision.size_code) &&
@@ -477,19 +506,6 @@ function validateApproval(approval, expectedPilotScope, bundle, candidatePlan) {
     decision.weight_g > 0 &&
     nonEmptyText(decision.reason);
   });
-  const activeKeys = [
-    ...approval.nutrition_decisions
-      .filter((decision) => decision.status === "approved")
-      .map((decision) => `nutrition:${decision.ingredient_id}:${decision.preparation_state}`),
-    ...approval.conversion_decisions
-      .filter((decision) => decision.status === "approved")
-      .map((decision) => `conversion:${decision.ingredient_id}:${decision.preparation_state}`),
-    ...approval.piece_decisions
-      .filter((decision) => decision.status === "approved")
-      .map((decision) =>
-        `piece:${decision.ingredient_id}:${decision.size_code}:${decision.preparation_state}`,
-      ),
-  ];
   const sourceDecisionValid = approval.source_decision === undefined || (
     isRecord(approval.source_decision) &&
     approval.source_decision.status === "supersede" &&
@@ -501,7 +517,10 @@ function validateApproval(approval, expectedPilotScope, bundle, candidatePlan) {
     !conversionValid ||
     !pieceValid ||
     !sourceDecisionValid ||
-    !allUnique(activeKeys)
+    !allUnique(decisionCandidateKeys) ||
+    !allUnique(nutritionNaturalKeys) ||
+    !allUnique(conversionNaturalKeys) ||
+    !allUnique(pieceNaturalKeys)
   ) {
     throw new IngredientNutritionImportError("INVALID_APPROVAL_FILE");
   }
