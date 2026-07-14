@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-14T20:48:43+09:00",
+  "updated_at": "2026-07-14T21:49:31+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -137,7 +137,7 @@
       "preset": "infra-governance",
       "branch": "feature/omo-session-orchestrator",
       "pr_path": "https://github.com/netsus/homecook/pull/236",
-      "lifecycle": "ready_for_review",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -1922,10 +1922,10 @@
     {
       "id": "service-brand-icon-edge-treatment",
       "preset": "ui-polish",
-      "branch": "docs/mumeok-icon-edge-contract",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-service-brand-icon-edge-treatment",
+      "lifecycle": "ready_for_review",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -1933,10 +1933,10 @@
         "node scripts/validate-automation-spec.mjs --slice service-brand-icon-edge-treatment",
         "git diff --check"
       ],
-      "notes": "User-approved 2026-07-14 favicon/install icon edge-treatment contract. Stage 1 docs passed required validators and independent review with blocker/major/minor 0/0/0; implementation waits for docs merge.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
+      "notes": "Docs PR #1000 merged before implementation. Dedicated pixel/static/production HTTP checks and independent implementation review passed with blocker/major/minor 0/0/0; current-head PR CI and merge remain.",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": "ui/designs/evidence/service-brand-icon-edge-treatment/visual-verdict.json",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     },

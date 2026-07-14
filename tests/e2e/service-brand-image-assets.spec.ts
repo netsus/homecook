@@ -164,6 +164,7 @@ test("captures and audits the selected Mumeok image brand", async ({ browser, re
     ["/favicon.ico", "image/x-icon"],
     ["/brand/favicon-32.png", "image/png"],
     ["/brand/mumeok-symbol-192.png", "image/png"],
+    ["/brand/app-icon-192.png", "image/png"],
     ["/brand/app-icon-512.png", "image/png"],
     ["/brand/apple-touch-icon-180.png", "image/png"],
     ["/brand/og-image-1200x630.png", "image/png"],

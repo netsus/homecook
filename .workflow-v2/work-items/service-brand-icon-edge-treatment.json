@@ -75,11 +75,11 @@
   },
   "status": {
     "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "ui/designs/evidence/service-brand-icon-edge-treatment/visual-verdict.json",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -90,5 +90,5 @@
     "Historical official version, workpack, prototype, or merged evidence edits"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs contract passed source-of-truth/workflow/workpack/automation validation and independent review with blocker/major/minor 0/0/0. Stage 4 must wait for this docs PR to merge."
+  "notes": "Docs PR #1000 merged before Stage 4. The implementation now separates transparent favicon and full-bleed install assets, preserves the fixed source/header/social hashes and protected core, passes dedicated pixel/static/production HTTP checks, and has independent implementation approval with blocker/major/minor 0/0/0. Current-head PR CI and merge remain."
 }

@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       {
         sizes: "192x192",
-        src: "/brand/mumeok-symbol-192.png",
+        src: "/brand/app-icon-192.png",
         type: "image/png",
       },
       {
