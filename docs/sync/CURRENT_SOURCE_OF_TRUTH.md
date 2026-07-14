@@ -1,10 +1,10 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.15.md`
+- `docs/요구사항기준선-v1.7.16.md`
 - `docs/화면정의서-v1.5.22.md`
 - `docs/유저flow맵-v1.3.20.md`
-- `docs/db설계-v1.3.17.md`
+- `docs/db설계-v1.3.18.md`
 - `docs/api문서-v1.2.22.md`
 
 ## Notes
@@ -12,6 +12,21 @@
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Ingredient Nutrition Conversion Model Contract-Evolution `2026-07-14`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.16 | 공공 영양 source item 원문 보존, 기본 `100g` normalize, MFDS→RDA 10.4 호환 후보 우선순위, evidence/profile/assignment 분리, 검수·version·pilot 30·production 0 writes 경계 추가 |
+| DB v1.3.18 | `measurement_source_evidence` 추가, 영양 source/item/profile/value 및 재료 link·환산 assignment·piece weight의 freshness/결측/후보·승인·철회·대체/RLS 계약 구체화. 전체 target 49개 table |
+| 화면정의서 v1.5.22 | 변경 없음. 이번 슬라이스는 사용자 UI를 만들지 않음 |
+| 유저플로우 v1.3.20 | 변경 없음. 사용자 route/action/state transition을 늘리지 않음 |
+| API v1.2.22 | 변경 없음. public endpoint/field/response/error를 늘리지 않고 internal/admin import command만 후속 구현 |
+
+> 공공 원문 계량 evidence, 서비스 대표 환산 profile, 재료별 승인 assignment를 별도 record로 보존한다. evidence를 검수했다고 assignment를 자동 승인하지 않으며 원문값과 대표값을 서로 덮어쓰지 않는다.
+> 대표 부피 profile은 `VOLUME_G6/G10/G15/G20/G25`다. 15mL 관측값의 최소 거리가 `<=2.5g`인 후보만 생성하고 정확한 중간값 동률은 fail-closed하며, 사람 승인 후에만 active가 된다. `개→g`도 재료·크기·손질/가식부 상태가 일치하는 active approved piece weight가 없으면 금지한다.
+> 초기 범위는 `20260626104000_seed_foodsafety_pilot_recipes.sql`의 정확히 30개 레시피와 그 canonical 재료 closure다. `DATA_GO_KR_API_KEY1`은 이전 개발자 로컬 smoke 증거일 뿐이며, key/auth query/raw payload·원문 row는 저장·로그·report·PR 본문에 남기지 않는다. 별도 승인 전 production load는 0 writes다.
+> 이 contract-evolution은 사용자가 2026-07-14에 별도 Codex Stage 1 세션에 명시적으로 위임했다. 작성자와 구현자는 독립 Stage 1.5/3 검수자의 최종 승인을 대신할 수 없다.
 
 ## Mumeok Image Brand Assets Contract-Evolution `2026-07-13`
 

@@ -18,10 +18,10 @@
 
 ## 2. Source Of Truth
 
-- 요구사항: [요구사항기준선-v1.7.15.md](../../../요구사항기준선-v1.7.15.md)
+- 요구사항: [요구사항기준선-v1.7.16.md](../../../요구사항기준선-v1.7.16.md)
 - 화면 정의: [화면정의서-v1.5.22.md](../../../화면정의서-v1.5.22.md)
 - 유저 flow: [유저flow맵-v1.3.20.md](../../../유저flow맵-v1.3.20.md)
-- DB/Schema: [db설계-v1.3.17.md](../../../db설계-v1.3.17.md)
+- DB/Schema: [db설계-v1.3.18.md](../../../db설계-v1.3.18.md)
 - API 문서: [api문서-v1.2.22.md](../../../api문서-v1.2.22.md)
 - 현재 운영 규칙: [AGENTS.md](../../../AGENTS.md), [agent-workflow-overview.md](../agent-workflow-overview.md), [slice-workflow.md](../slice-workflow.md)
 
