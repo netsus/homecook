@@ -282,4 +282,4 @@ Stage 2는 acceptance의 RED 목록을 먼저 작성하고 각 test가 의도한
 - [ ] idempotent import/dry-run/production guard/report 테스트 <!-- omo:id=delivery-import-safety-tests;stage=2;scope=backend;review=3 -->
 - [ ] FoodSafety 30 recipe scope local DB smoke <!-- omo:id=delivery-pilot-smoke;stage=2;scope=backend;review=3 -->
 - [ ] secret/auth query/raw row leak scan 0건 <!-- omo:id=delivery-secret-boundary;stage=2;scope=backend;review=3 -->
-- [ ] Stage 3 독립 구현 검수 및 current-head checks green <!-- omo:id=delivery-stage3-independent-review;stage=3;scope=shared;review=3 -->
+- [ ] Stage 3 독립 구현 검수 및 current-head checks green <!-- omo:id=delivery-stage3-independent-review;stage=2;scope=shared;review=3 -->

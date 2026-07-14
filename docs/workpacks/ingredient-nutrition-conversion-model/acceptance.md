@@ -135,7 +135,7 @@ Stage 2는 아래 test를 구현보다 먼저 추가하고, 각 항목이 예상
 - environment: local Supabase only; actual secret/env access 없음
 - scenarios: migration/reset, dry-run, local approved apply, duplicate replay, RLS denial, revoke/disable, report/leak scan
 
-## Manual Only
+### Manual Only
 
 - [ ] 별도 Codex Stage 1.5 reviewer가 이 문서 계약을 승인한다.
 - [ ] 사람이 nutrition candidate의 승인/거절/대체 decision과 reason을 작성한다.
