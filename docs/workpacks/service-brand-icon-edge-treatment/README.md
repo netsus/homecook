@@ -91,14 +91,14 @@
 - Anchor screen dependency: 없음.
 - Visual artifact: `ui/designs/evidence/service-brand-icon-edge-treatment/favicon-dark-tab-before.png`, `favicon-dark-tab-after.png`, `icon-contact-sheet.png`, `visual-verdict.json`.
 - Generator/critic: 화면 generator·critic은 생략한다. favicon/app icon 편집은 image generation/editing workflow를 사용하고 pixel guard와 visual verdict로 검증한다.
-- Authority status: `not-required`.
+- Authority status: `not-required`
 - Notes: HOME/RECIPE_DETAIL/PLANNER_WEEK를 직접 수정하지 않아 anchor-extension이 아니다. 독립 Stage 5/6 asset review는 유지한다.
 
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 계약 잠금, Stage 4 구현 전
-- [x] 리뷰 대기 (pending-review) — Stage 4 asset/evidence와 독립 리뷰 완료, current-head PR CI/merge 대기
-- [ ] 확정 (confirmed) — 독립 Stage 5/6 review와 current-head gate 통과
+- [ ] 리뷰 대기 (pending-review) — Stage 4 asset/evidence와 독립 리뷰 완료, current-head PR CI/merge 대기
+- [x] 확정 (confirmed) — 독립 Stage 5/6 review 승인과 PR #1001 current-head 전체 gate 통과 후 merge
 - [ ] N/A — FE 자산 변경 없음
 
 ## Source Links
