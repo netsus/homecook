@@ -1,8 +1,8 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.15.md`
-- `docs/화면정의서-v1.5.22.md`
+- `docs/요구사항기준선-v1.7.16.md`
+- `docs/화면정의서-v1.5.23.md`
 - `docs/유저flow맵-v1.3.20.md`
 - `docs/db설계-v1.3.17.md`
 - `docs/api문서-v1.2.22.md`
@@ -12,6 +12,21 @@
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Mumeok Icon Edge Treatment Contract-Evolution `2026-07-14`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.16 | favicon 투명 외곽, 180/192/256/512/1024 설치 계열 full-bleed 파란 배경, header/OG 원본 보존, 192 설치 아이콘 분리와 일반 icon 후보 제한 계약 추가 |
+| 화면정의서 v1.5.23 | browser/OS mask 특성, 흰색 matte·halo 금지, document icon 후보·corner alpha/RGBA 자동 검증과 배포 cache Manual Only 기준 추가 |
+| 유저플로우 v1.3.20 | 변경 없음. route, action, 상태 전이와 사용자 여정은 기존과 동일 |
+| API v1.2.22 | 변경 없음. endpoint/field/response/error 변화 없음 |
+| DB v1.3.17 | 변경 없음. schema/migration/seed/stored row 변화 없음 |
+
+> 사용자가 2026-07-14에 browser tab에서 favicon 모서리의 흰색이 보이는 문제를 확인하고 수정을 명시 승인했다.
+> favicon은 파란 둥근 사각형 밖을 실제 투명 alpha로 내보내며, 설치/PWA·Apple 아이콘은 OS mask를 위해 흰 모서리 없는 full-bleed 파란 배경으로 별도 파생한다. document의 일반 icon 후보에는 투명 favicon만 남겨 브라우저가 불투명 header/설치 아이콘을 tab icon으로 선택하지 않게 한다.
+> 공식 source와 SHA-256, header 심볼, OG/Twitter·가로형·흑백 자산은 변경하지 않는다. 이 예외는 파생 아이콘의 외곽 픽셀에만 적용하며 글자 재생성·재착색·비율 변경을 허용하지 않는다.
+> API/DB/dependency/route/interaction/접근성 이름/기술 식별자에는 변화가 없고 과거 공식 버전과 merged evidence는 그대로 보존한다.
 
 ## Mumeok Image Brand Assets Contract-Evolution `2026-07-13`
 
