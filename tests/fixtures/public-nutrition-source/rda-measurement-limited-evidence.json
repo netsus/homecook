@@ -1,0 +1,80 @@
+[
+  {
+    "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+    "accessed_at": "2026-07-13",
+    "ingredient_or_category_id": "soy-sauce",
+    "source_observed_unit": "1 tbsp (15mL)",
+    "observed_g_per_15ml": 17.7,
+    "selected_representative_grade": "VOLUME_G20",
+    "absolute_error_g_per_15ml": 2.3,
+    "review_result": "needs_source_check",
+    "license_evidence_url": "https://nics.go.kr/contents/page.do?contentsId=3&homepageSeCode=nics&m=100000165",
+    "license_checked_at": "2026-07-13",
+    "license_disposition": "human_review_required"
+  },
+  {
+    "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+    "accessed_at": "2026-07-13",
+    "ingredient_or_category_id": "vinegar",
+    "source_observed_unit": "1 tbsp (15mL)",
+    "observed_g_per_15ml": 15.3,
+    "selected_representative_grade": "VOLUME_G15",
+    "absolute_error_g_per_15ml": 0.3,
+    "review_result": "needs_source_check",
+    "license_evidence_url": "https://nics.go.kr/contents/page.do?contentsId=3&homepageSeCode=nics&m=100000165",
+    "license_checked_at": "2026-07-13",
+    "license_disposition": "human_review_required"
+  },
+  {
+    "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+    "accessed_at": "2026-07-13",
+    "ingredient_or_category_id": "soybean-paste",
+    "source_observed_unit": "1 tbsp (15mL)",
+    "observed_g_per_15ml": 18,
+    "selected_representative_grade": "VOLUME_G20",
+    "absolute_error_g_per_15ml": 2,
+    "review_result": "needs_source_check",
+    "license_evidence_url": "https://nics.go.kr/contents/page.do?contentsId=3&homepageSeCode=nics&m=100000165",
+    "license_checked_at": "2026-07-13",
+    "license_disposition": "human_review_required"
+  },
+  {
+    "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+    "accessed_at": "2026-07-13",
+    "ingredient_or_category_id": "gochujang",
+    "source_observed_unit": "1 tbsp (15mL)",
+    "observed_g_per_15ml": 19,
+    "selected_representative_grade": "VOLUME_G20",
+    "absolute_error_g_per_15ml": 1,
+    "review_result": "needs_source_check",
+    "license_evidence_url": "https://nics.go.kr/contents/page.do?contentsId=3&homepageSeCode=nics&m=100000165",
+    "license_checked_at": "2026-07-13",
+    "license_disposition": "human_review_required"
+  },
+  {
+    "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+    "accessed_at": "2026-07-13",
+    "ingredient_or_category_id": "honey",
+    "source_observed_unit": "1 tbsp (15mL)",
+    "observed_g_per_15ml": 24,
+    "selected_representative_grade": "VOLUME_G25",
+    "absolute_error_g_per_15ml": 1,
+    "review_result": "needs_source_check",
+    "license_evidence_url": "https://nics.go.kr/contents/page.do?contentsId=3&homepageSeCode=nics&m=100000165",
+    "license_checked_at": "2026-07-13",
+    "license_disposition": "human_review_required"
+  },
+  {
+    "source_url": "https://www.nics.go.kr/food/kfi/hsMarinade/list_03",
+    "accessed_at": "2026-07-13",
+    "ingredient_or_category_id": "sesame-oil",
+    "source_observed_unit": "1 tbsp (15mL)",
+    "observed_g_per_15ml": 14.1,
+    "selected_representative_grade": "VOLUME_G15",
+    "absolute_error_g_per_15ml": 0.9,
+    "review_result": "needs_source_check",
+    "license_evidence_url": "https://nics.go.kr/contents/page.do?contentsId=3&homepageSeCode=nics&m=100000165",
+    "license_checked_at": "2026-07-13",
+    "license_disposition": "human_review_required"
+  }
+]

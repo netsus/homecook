@@ -1,0 +1,29 @@
+{
+  "timeout_error_name": "TimeoutError",
+  "rate_limit": {
+    "status": 429,
+    "retry_after": "1"
+  },
+  "malformed_json": "{",
+  "provider_error_payload": {
+    "response": {
+      "header": { "resultCode": "99" },
+      "body": { "totalCount": 0, "items": [] }
+    }
+  },
+  "schema_drift_payload": {
+    "response": {
+      "header": { "resultCode": "00" },
+      "unexpected": {}
+    }
+  },
+  "partial_pages": [
+    {
+      "page_no": 1,
+      "total_count": 2,
+      "next_page_token": null,
+      "items": [{ "external_item_key": "FAKE-PARTIAL-001" }]
+    }
+  ],
+  "missing_license_disposition": ""
+}
