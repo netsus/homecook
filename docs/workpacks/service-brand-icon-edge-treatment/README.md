@@ -132,6 +132,7 @@
 - production build에서 `/favicon.ico`, favicon PNG, app-icon-192/512, Apple touch icon이 200과 올바른 content type/dimension을 반환하는지 전용 Playwright HTTP smoke로 확인한다.
 - before/after favicon을 같은 어두운 tab 배경에 합성하고 16/32px 가독성, 흰 corner/halo, 글자 형태를 visual verdict로 확인한다.
 - 설치용 180/192/256/512/1024 contact sheet에서 full-bleed 배경과 glyph 보존을 확인한다.
+- Formal exploratory QA는 N/A다. 화면 흐름·interaction을 바꾸지 않는 low-risk 정적 아이콘 외곽 수정이므로, 전체 픽셀 deterministic guard와 전용 production HTTP smoke, targeted visual verdict로 대체한다.
 
 ### Manual Only
 
