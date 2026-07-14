@@ -678,10 +678,9 @@ begin
             and candidate ->> 'conversion_profile_code' =
               decision ->> 'conversion_profile_code'
             and candidate ->> 'evidence_id' = evidence ->> 'evidence_checksum'
-            and (
-              not (candidate ? 'display_qualifier')
-              or candidate ->> 'display_qualifier' = profile.display_qualifier
-            )
+            and candidate ? 'display_qualifier'
+            and jsonb_typeof(candidate -> 'display_qualifier') = 'string'
+            and candidate ->> 'display_qualifier' = profile.display_qualifier
             and case
               when jsonb_typeof(candidate -> 'representative_weight_g') = 'number'
               then (candidate ->> 'representative_weight_g')::numeric =

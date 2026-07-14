@@ -860,6 +860,7 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
     const addConversionTamper = (
       label: string,
       patch: Record<string, unknown>,
+      removedFields: string[] = [],
     ) => {
       const model = structuredClone(modelInput());
       model.run_id = `model-postgres-semantic-${label}`;
@@ -872,6 +873,9 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
         candidate_identity: `${label}-identity`,
         candidate_checksum: `${label}-checksum`,
       });
+      for (const field of removedFields) {
+        delete (candidate as Record<string, unknown>)[field];
+      }
       Object.assign(model.approval.conversion_decisions[0]!, {
         candidate_identity: `${label}-identity`,
         candidate_checksum: `${label}-checksum`,
@@ -885,6 +889,7 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
     addConversionTamper("distance-type", { distance_g_per_15ml: "0" });
     addConversionTamper("rank", { candidate_rank: 2 });
     addConversionTamper("display", { display_qualifier: "exact" });
+    addConversionTamper("display-missing", {}, ["display_qualifier"]);
     addConversionTamper("evidence-id", { evidence_id: "wrong-evidence-id" });
 
     const pieceModel = structuredClone(modelInput());
