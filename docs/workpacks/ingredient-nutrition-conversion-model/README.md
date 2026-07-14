@@ -58,7 +58,7 @@
 | `public-nutrition-source-acquisition` | merged — PR #995, merge `f87ae75016a9b709ffc3b706e7ca3720a0940982` | [x] |
 | 영양 공식 계약 기준선 | `요구사항 v1.7.17`, `화면정의서 v1.5.23`, `DB v1.3.18`, API/UI/Flow unchanged | [x] |
 | FoodSafety pilot 30 seed | `20260626104000_seed_foodsafety_pilot_recipes.sql` | [x] |
-| 별도 Codex Stage 1.5 독립 검수 | required before Stage 2 | [ ] |
+| 별도 Codex Stage 1.5 독립 검수 | PR #999 merge로 승인 계약 반영 | [x] |
 
 > predecessor의 workpack 기록은 소급 수정하지 않는다. PR #995의 merge commit `f87ae75016a9b709ffc3b706e7ca3720a0940982`는 이 slice base `7543b9e06659b9f3e34ffea7e3314065412a1a82`의 ancestry에 포함되며, 위 exact dependency pin이 approved/pinned handoff 계약의 merge를 증명한다.
 
@@ -285,15 +285,15 @@ Stage 2는 acceptance의 RED 목록을 먼저 작성하고 각 test가 의도한
 
 > Stage 1.5 독립 문서 검수 후 Stage 2/3만 수행한다. BE-only이므로 Stage 4~6, Design, Accessibility, Playwright는 N/A다.
 
-- [ ] Stage 1.5 독립 문서 계약 검수 통과 <!-- omo:id=delivery-stage1-independent-review;stage=2;scope=shared;review=3 -->
-- [ ] DB migration과 10개 table 제약/RLS 반영 <!-- omo:id=delivery-data-model;stage=2;scope=backend;review=3 -->
-- [ ] internal import/report/disable command 계약 반영 <!-- omo:id=delivery-internal-command-contract;stage=2;scope=backend;review=3 -->
-- [ ] source/item/profile/value normalize와 missing≠zero 테스트 <!-- omo:id=delivery-normalization-tests;stage=2;scope=backend;review=3 -->
-- [ ] 영양 후보·우선순위·승인/거절/철회/대체 테스트 <!-- omo:id=delivery-nutrition-link-tests;stage=2;scope=backend;review=3 -->
-- [ ] evidence/profile/assignment 분리와 2.5/tie 테스트 <!-- omo:id=delivery-conversion-tests;stage=2;scope=backend;review=3 -->
-- [ ] exact piece weight 및 unsupported piece 테스트 <!-- omo:id=delivery-piece-tests;stage=2;scope=backend;review=3 -->
-- [ ] RLS/append-only/active uniqueness/rollback 테스트 <!-- omo:id=delivery-integrity-tests;stage=2;scope=backend;review=3 -->
-- [ ] idempotent import/dry-run/production guard/report 테스트 <!-- omo:id=delivery-import-safety-tests;stage=2;scope=backend;review=3 -->
+- [x] Stage 1.5 독립 문서 계약 검수 통과 <!-- omo:id=delivery-stage1-independent-review;stage=2;scope=shared;review=3 -->
+- [x] DB migration과 10개 table 제약/RLS 반영 <!-- omo:id=delivery-data-model;stage=2;scope=backend;review=3 -->
+- [x] internal import/report/disable command 계약 반영 <!-- omo:id=delivery-internal-command-contract;stage=2;scope=backend;review=3 -->
+- [x] source/item/profile/value normalize와 missing≠zero 테스트 <!-- omo:id=delivery-normalization-tests;stage=2;scope=backend;review=3 -->
+- [x] 영양 후보·우선순위·승인/거절/철회/대체 테스트 <!-- omo:id=delivery-nutrition-link-tests;stage=2;scope=backend;review=3 -->
+- [x] evidence/profile/assignment 분리와 2.5/tie 테스트 <!-- omo:id=delivery-conversion-tests;stage=2;scope=backend;review=3 -->
+- [x] exact piece weight 및 unsupported piece 테스트 <!-- omo:id=delivery-piece-tests;stage=2;scope=backend;review=3 -->
+- [x] RLS/append-only/active uniqueness/rollback 테스트 <!-- omo:id=delivery-integrity-tests;stage=2;scope=backend;review=3 -->
+- [x] idempotent import/dry-run/production guard/report 테스트 <!-- omo:id=delivery-import-safety-tests;stage=2;scope=backend;review=3 -->
 - [ ] FoodSafety 30 recipe scope local DB smoke <!-- omo:id=delivery-pilot-smoke;stage=2;scope=backend;review=3 -->
-- [ ] secret/auth query/raw row leak scan 0건 <!-- omo:id=delivery-secret-boundary;stage=2;scope=backend;review=3 -->
+- [x] secret/auth query/raw row leak scan 0건 <!-- omo:id=delivery-secret-boundary;stage=2;scope=backend;review=3 -->
 - [ ] Stage 3 독립 구현 검수 및 current-head checks green <!-- omo:id=delivery-stage3-independent-review;stage=2;scope=shared;review=3 -->
