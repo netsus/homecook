@@ -74,7 +74,7 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
+    "lifecycle": "merged",
     "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "passed",
@@ -83,6 +83,80 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "official contract docs PR #1000",
+        "frontend PR #1001 reviewed implementation head 884cffe789fafd0443b833d1ec456b77f4bcd43f",
+        "PR #1001 CI run 29332578865 quality/build green",
+        "PR #1001 QA run 29332578763 smoke/accessibility/visual/Lighthouse green; full-regression skipped by changes detector",
+        "PR #1001 Security Smoke run 29332578741 green",
+        "PR #1001 Policy run 29332603084 green",
+        "PR #1001 PR Governance run 29332603375 green",
+        "independent implementation re-review: approve, blocker/major/minor 0/0/0",
+        "ui/designs/evidence/service-brand-icon-edge-treatment/visual-verdict.json",
+        "pnpm test:product: 107 files / 1406 tests passed",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm build",
+        "pnpm exec vitest run tests/service-brand-icon-edge-treatment.test.ts: 14/14 passed",
+        "dedicated production Playwright icon HTTP smoke: 1/1 passed",
+        "pnpm validate:closeout-sync",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:exploratory-qa-evidence",
+        "pnpm validate:authority-evidence-presence",
+        "pnpm validate:real-smoke-presence",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice service-brand-icon-edge-treatment",
+        "node scripts/validate-automation-spec.mjs --slice service-brand-icon-edge-treatment",
+        "git diff --check"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "884cffe789fafd0443b833d1ec456b77f4bcd43f",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 4,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 4,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-14T12:42:56Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 4,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 1,
+      "latest_reason_code": "stage6_closeout_projection_sync",
+      "evidence_sources": [
+        "GitHub PR #1001 and current-head checks",
+        "independent implementation re-review",
+        "ui/designs/evidence/service-brand-icon-edge-treatment/visual-verdict.json",
+        "PR #1001 final Closeout Sync and Merge Gate projection"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-14T12:38:13Z",
+      "status_synced_at": "2026-07-14T12:42:56Z",
+      "pr_body_synced_at": "2026-07-14T12:42:56Z"
+    }
+  },
   "out_of_scope": [
     "Canonical source, header symbol, social, horizontal, or monochrome asset changes",
     "Glyph redraw, reposition, aspect-ratio change, recolor, or decoration",
@@ -90,5 +164,5 @@
     "Historical official version, workpack, prototype, or merged evidence edits"
   ],
   "open_questions": [],
-  "notes": "Docs PR #1000 merged before Stage 4. The implementation now separates transparent favicon and full-bleed install assets, preserves the fixed source/header/social hashes and protected core, passes dedicated pixel/static/production HTTP checks, and has independent implementation approval with blocker/major/minor 0/0/0. Current-head PR CI and merge remain."
+  "notes": "Canonical closeout is complete. Docs PR #1000 preceded Stage 4, and frontend PR #1001 head 884cffe7 passed current-head quality, build, smoke, accessibility, visual, Lighthouse, security, policy, governance, Vercel, pixel/static/production HTTP guards, plus independent implementation approval with blocker/major/minor 0/0/0. Manual Only remains deployed favicon cache refresh and physical iOS/Android/PWA mask confirmation."
 }

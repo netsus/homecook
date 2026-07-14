@@ -97,8 +97,8 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 계약 잠금, Stage 4 구현 전
-- [x] 리뷰 대기 (pending-review) — Stage 4 asset/evidence와 독립 리뷰 완료, current-head PR CI/merge 대기
-- [ ] 확정 (confirmed) — 독립 Stage 5/6 review와 current-head gate 통과
+- [ ] 리뷰 대기 (pending-review) — Stage 4 asset/evidence와 독립 리뷰 완료, current-head PR CI/merge 대기
+- [x] 확정 (confirmed) — 독립 Stage 5/6 review 승인과 PR #1001 current-head 전체 gate 통과 후 merge
 - [ ] N/A — FE 자산 변경 없음
 
 ## Source Links
