@@ -51,6 +51,58 @@ alter table public.meals
 create index meals_recipe_nutrition_snapshot_idx
   on public.meals (recipe_nutrition_snapshot_id);
 
+create function public.decode_recipe_nutrition_query_key(p_key text)
+returns text
+language plpgsql
+immutable
+strict
+set search_path = pg_catalog
+as $$
+declare
+  v_decoded text := p_key;
+  v_next text;
+  v_result text;
+  v_hex text;
+  v_byte integer;
+  v_index integer;
+  v_depth integer;
+begin
+  for v_depth in 1..8
+  loop
+    exit when position('%' in v_decoded) = 0;
+    v_result := '';
+    v_index := 1;
+    while v_index <= length(v_decoded)
+    loop
+      if substr(v_decoded, v_index, 1) = '%' then
+        v_hex := substr(v_decoded, v_index + 1, 2);
+        if length(v_hex) <> 2 or v_hex !~ '^[0-9A-Fa-f]{2}$' then
+          return null;
+        end if;
+        v_byte := ('x' || v_hex)::bit(8)::integer;
+        if v_byte > 127 then
+          return null;
+        end if;
+        v_result := v_result || chr(v_byte);
+        v_index := v_index + 3;
+      else
+        v_result := v_result || substr(v_decoded, v_index, 1);
+        v_index := v_index + 1;
+      end if;
+    end loop;
+    v_next := v_result;
+    if v_next = v_decoded then
+      return null;
+    end if;
+    v_decoded := v_next;
+  end loop;
+  if position('%' in v_decoded) > 0 then
+    return null;
+  end if;
+  return v_decoded;
+end;
+$$;
+
 create function public.validate_recipe_nutrition_snapshot_payload(p_snapshot jsonb)
 returns void
 language plpgsql
@@ -67,6 +119,7 @@ declare
   v_source jsonb;
   v_source_keys text[];
   v_query_key text;
+  v_decoded_query_key text;
   v_normalized_query_key text;
   v_canonical_sources jsonb;
   v_value record;
@@ -148,8 +201,12 @@ begin
       select match[1]
       from regexp_matches(v_source ->> 'source_url', '[?&]([^=&#]+)=', 'g') match
     loop
+      v_decoded_query_key := public.decode_recipe_nutrition_query_key(v_query_key);
+      if v_decoded_query_key is null then
+        raise exception 'UNSAFE_SNAPSHOT_SOURCE';
+      end if;
       v_normalized_query_key := regexp_replace(
-        replace(replace(lower(v_query_key), '%2d', '-'), '%5f', '_'),
+        lower(v_decoded_query_key),
         '[^a-z0-9]',
         '',
         'g'
@@ -328,6 +385,287 @@ create trigger protect_recipe_nutrition_snapshot
 before update or delete on public.recipe_nutrition_snapshots
 for each row execute function public.protect_recipe_nutrition_snapshot();
 
+create function public.recipe_nutrition_recipe_lock_key(p_recipe_id uuid)
+returns bigint
+language sql
+immutable
+strict
+set search_path = pg_catalog
+as $$
+  select hashtextextended('homecook:recipe-nutrition:recipe:' || p_recipe_id::text, 0);
+$$;
+
+create function public.recipe_nutrition_ingredient_lock_key(p_ingredient_id uuid)
+returns bigint
+language sql
+immutable
+strict
+set search_path = pg_catalog
+as $$
+  select hashtextextended('homecook:recipe-nutrition:ingredient:' || p_ingredient_id::text, 0);
+$$;
+
+create function public.lock_recipe_nutrition_recipe_ids(p_recipe_ids uuid[])
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_recipe_id uuid;
+begin
+  for v_recipe_id in
+    select recipe_id
+    from (
+      select distinct recipe_id
+      from unnest(coalesce(p_recipe_ids, '{}'::uuid[])) recipe_ids(recipe_id)
+      where recipe_id is not null
+    ) ids
+    order by recipe_id::text collate "C"
+  loop
+    perform pg_advisory_xact_lock(public.recipe_nutrition_recipe_lock_key(v_recipe_id));
+  end loop;
+end;
+$$;
+
+create function public.lock_recipe_nutrition_ingredient_ids(
+  p_ingredient_ids uuid[],
+  p_shared boolean default false
+)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_ingredient_id uuid;
+begin
+  for v_ingredient_id in
+    select ingredient_id
+    from (
+      select distinct ingredient_id
+      from unnest(coalesce(p_ingredient_ids, '{}'::uuid[])) ingredient_ids(ingredient_id)
+      where ingredient_id is not null
+    ) ids
+    order by ingredient_id::text collate "C"
+  loop
+    if p_shared then
+      perform pg_advisory_xact_lock_shared(
+        public.recipe_nutrition_ingredient_lock_key(v_ingredient_id)
+      );
+    else
+      perform pg_advisory_xact_lock(
+        public.recipe_nutrition_ingredient_lock_key(v_ingredient_id)
+      );
+    end if;
+  end loop;
+end;
+$$;
+
+create function public.lock_recipe_nutrition_recipe_ingredient_mutation()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_transition_sql text;
+  v_recipe_ids uuid[];
+  v_ingredient_ids uuid[];
+begin
+  v_transition_sql := case tg_op
+    when 'INSERT' then 'select recipe_id, ingredient_id from new_rows'
+    when 'UPDATE' then
+      'select recipe_id, ingredient_id from old_rows union all ' ||
+      'select recipe_id, ingredient_id from new_rows'
+    when 'DELETE' then 'select recipe_id, ingredient_id from old_rows'
+  end;
+
+  execute format(
+    'select array_agg(recipe_id order by recipe_id::text collate "C") ' ||
+    'from (select distinct recipe_id from (%s) changed where recipe_id is not null) ids',
+    v_transition_sql
+  ) into v_recipe_ids;
+  execute format(
+    'select array_agg(ingredient_id order by ingredient_id::text collate "C") ' ||
+    'from (select distinct ingredient_id from (%s) changed where ingredient_id is not null) ids',
+    v_transition_sql
+  ) into v_ingredient_ids;
+
+  perform public.lock_recipe_nutrition_recipe_ids(v_recipe_ids);
+  perform public.lock_recipe_nutrition_ingredient_ids(v_ingredient_ids, false);
+  return null;
+end;
+$$;
+
+create trigger lock_recipe_nutrition_recipe_ingredient_insert
+after insert on public.recipe_ingredients
+referencing new table as new_rows
+for each statement execute function public.lock_recipe_nutrition_recipe_ingredient_mutation();
+create trigger lock_recipe_nutrition_recipe_ingredient_update
+after update on public.recipe_ingredients
+referencing old table as old_rows new table as new_rows
+for each statement execute function public.lock_recipe_nutrition_recipe_ingredient_mutation();
+create trigger lock_recipe_nutrition_recipe_ingredient_delete
+after delete on public.recipe_ingredients
+referencing old table as old_rows
+for each statement execute function public.lock_recipe_nutrition_recipe_ingredient_mutation();
+
+create function public.lock_recipe_nutrition_predecessor_mutation()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_key_column text;
+  v_transition_sql text;
+  v_changed_ids uuid[];
+  v_ingredient_ids uuid[];
+begin
+  v_key_column := case tg_table_name
+    when 'nutrition_values' then 'profile_id'
+    when 'ingredient_nutrition_profiles' then 'ingredient_id'
+    when 'ingredient_conversion_assignments' then 'ingredient_id'
+    when 'piece_unit_weights' then 'ingredient_id'
+    else 'id'
+  end;
+  v_transition_sql := case tg_op
+    when 'INSERT' then format('select %I as changed_id from new_rows', v_key_column)
+    when 'UPDATE' then
+      format('select %I as changed_id from old_rows union all ', v_key_column) ||
+      format('select %I as changed_id from new_rows', v_key_column)
+    when 'DELETE' then format('select %I as changed_id from old_rows', v_key_column)
+  end;
+  execute format(
+    'select array_agg(changed_id order by changed_id::text collate "C") ' ||
+    'from (select distinct changed_id from (%s) changed where changed_id is not null) ids',
+    v_transition_sql
+  ) into v_changed_ids;
+
+  if tg_table_name = 'nutrition_sources' then
+    select array_agg(ingredient_id order by ingredient_id::text collate "C")
+      into v_ingredient_ids
+      from (
+        select distinct link.ingredient_id
+        from public.ingredient_nutrition_profiles link
+        join public.nutrition_profiles profile on profile.id = link.nutrition_profile_id
+        join public.nutrition_source_items source_item on source_item.id = profile.source_item_id
+        where source_item.source_id = any(v_changed_ids)
+        union
+        select assignment.ingredient_id
+        from public.ingredient_conversion_assignments assignment
+        join public.measurement_source_evidence evidence on evidence.id = assignment.evidence_id
+        where evidence.source_id = any(v_changed_ids)
+        union
+        select piece.ingredient_id
+        from public.piece_unit_weights piece
+        join public.measurement_source_evidence evidence on evidence.id = piece.evidence_id
+        where evidence.source_id = any(v_changed_ids)
+      ) affected;
+  elsif tg_table_name = 'nutrition_source_items' then
+    select array_agg(ingredient_id order by ingredient_id::text collate "C")
+      into v_ingredient_ids
+      from (
+        select distinct link.ingredient_id
+        from public.ingredient_nutrition_profiles link
+        join public.nutrition_profiles profile on profile.id = link.nutrition_profile_id
+        where profile.source_item_id = any(v_changed_ids)
+      ) affected;
+  elsif tg_table_name in ('nutrition_profiles', 'nutrition_values') then
+    select array_agg(ingredient_id order by ingredient_id::text collate "C")
+      into v_ingredient_ids
+      from (
+        select distinct link.ingredient_id
+        from public.ingredient_nutrition_profiles link
+        where link.nutrition_profile_id = any(v_changed_ids)
+      ) affected;
+  elsif tg_table_name = 'ingredient_nutrition_profiles' then
+    v_ingredient_ids := v_changed_ids;
+  elsif tg_table_name = 'measurement_conversion_profiles' then
+    select array_agg(ingredient_id order by ingredient_id::text collate "C")
+      into v_ingredient_ids
+      from (
+        select distinct assignment.ingredient_id
+        from public.ingredient_conversion_assignments assignment
+        where assignment.conversion_profile_id = any(v_changed_ids)
+      ) affected;
+  elsif tg_table_name = 'measurement_source_evidence' then
+    select array_agg(ingredient_id order by ingredient_id::text collate "C")
+      into v_ingredient_ids
+      from (
+        select distinct assignment.ingredient_id
+        from public.ingredient_conversion_assignments assignment
+        where assignment.evidence_id = any(v_changed_ids)
+        union
+        select piece.ingredient_id
+        from public.piece_unit_weights piece
+        where piece.evidence_id = any(v_changed_ids)
+      ) affected;
+  elsif tg_table_name in ('ingredient_conversion_assignments', 'piece_unit_weights') then
+    v_ingredient_ids := v_changed_ids;
+  end if;
+
+  perform public.lock_recipe_nutrition_ingredient_ids(v_ingredient_ids, false);
+  return null;
+end;
+$$;
+
+create trigger lock_recipe_nutrition_sources_insert after insert on public.nutrition_sources
+referencing new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_sources_update after update on public.nutrition_sources
+referencing old table as old_rows new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_sources_delete after delete on public.nutrition_sources
+referencing old table as old_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_source_items_insert after insert on public.nutrition_source_items
+referencing new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_source_items_update after update on public.nutrition_source_items
+referencing old table as old_rows new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_source_items_delete after delete on public.nutrition_source_items
+referencing old table as old_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_profiles_insert after insert on public.nutrition_profiles
+referencing new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_profiles_update after update on public.nutrition_profiles
+referencing old table as old_rows new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_profiles_delete after delete on public.nutrition_profiles
+referencing old table as old_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_values_insert after insert on public.nutrition_values
+referencing new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_values_update after update on public.nutrition_values
+referencing old table as old_rows new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_values_delete after delete on public.nutrition_values
+referencing old table as old_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_links_insert after insert on public.ingredient_nutrition_profiles
+referencing new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_links_update after update on public.ingredient_nutrition_profiles
+referencing old table as old_rows new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_links_delete after delete on public.ingredient_nutrition_profiles
+referencing old table as old_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_conversion_profiles_insert after insert on public.measurement_conversion_profiles
+referencing new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_conversion_profiles_update after update on public.measurement_conversion_profiles
+referencing old table as old_rows new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_conversion_profiles_delete after delete on public.measurement_conversion_profiles
+referencing old table as old_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_evidence_insert after insert on public.measurement_source_evidence
+referencing new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_evidence_update after update on public.measurement_source_evidence
+referencing old table as old_rows new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_evidence_delete after delete on public.measurement_source_evidence
+referencing old table as old_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_assignments_insert after insert on public.ingredient_conversion_assignments
+referencing new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_assignments_update after update on public.ingredient_conversion_assignments
+referencing old table as old_rows new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_assignments_delete after delete on public.ingredient_conversion_assignments
+referencing old table as old_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_piece_weights_insert after insert on public.piece_unit_weights
+referencing new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_piece_weights_update after update on public.piece_unit_weights
+referencing old table as old_rows new table as new_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+create trigger lock_recipe_nutrition_piece_weights_delete after delete on public.piece_unit_weights
+referencing old table as old_rows for each statement execute function public.lock_recipe_nutrition_predecessor_mutation();
+
 create function public.build_recipe_nutrition_input_guard(p_recipe_id uuid)
 returns jsonb
 language sql
@@ -376,7 +714,29 @@ as $$
             'preparation_state', link.preparation_state,
             'normalization_method', profile.normalization_method,
             'basis_amount', profile.basis_amount,
-            'basis_unit', profile.basis_unit
+            'basis_unit', profile.basis_unit,
+            'nutrition_values', (
+              select coalesce(
+                jsonb_agg(
+                  jsonb_build_object(
+                    'nutrient_code', value.nutrient_code,
+                    'amount', value.amount,
+                    'value_status', value.value_status
+                  ) order by value.nutrient_code collate "C"
+                ),
+                '[]'::jsonb
+              )
+              from public.nutrition_values value
+              where value.profile_id = profile.id
+            ),
+            'source', jsonb_build_object(
+              'provider', source.provider_code,
+              'dataset', source.dataset_name,
+              'source_version', source.source_version,
+              'data_basis_date', source.data_basis_date,
+              'license', source.license_name,
+              'source_url', source.source_url
+            )
           ) order by link.id::text collate "C"
         ),
         '[]'::jsonb
@@ -408,6 +768,15 @@ as $$
       and source.review_status = 'approved'
       and source.freshness_status = 'current'
       and source.is_active
+      and not exists (
+        select 1
+        from public.nutrition_values value
+        where value.profile_id = profile.id
+          and value.nutrient_code <> all(array[
+            'energy_kcal', 'carbohydrate_g', 'protein_g', 'fat_g', 'sodium_mg',
+            'sugars_g', 'saturated_fat_g', 'fiber_g'
+          ])
+      )
   ) nutrition on true
   left join lateral (
     select
@@ -418,7 +787,19 @@ as $$
             'profile_id', profile.id,
             'evidence_id', evidence.id,
             'source_id', source.id,
-            'preparation_state', assignment.preparation_state
+            'preparation_state', assignment.preparation_state,
+            'profile_code', profile.code,
+            'basis_volume_ml', profile.basis_volume_ml,
+            'representative_weight_g', profile.representative_weight_g,
+            'evidence_preparation_state', evidence.preparation_state,
+            'source', jsonb_build_object(
+              'provider', source.provider_code,
+              'dataset', source.dataset_name,
+              'source_version', source.source_version,
+              'data_basis_date', source.data_basis_date,
+              'license', source.license_name,
+              'source_url', source.source_url
+            )
           ) order by assignment.id::text collate "C"
         ),
         '[]'::jsonb
@@ -485,6 +866,99 @@ as $$
   where ingredient.recipe_id = p_recipe_id;
 $$;
 
+create function public.build_recipe_nutrition_contributing_sources(p_input_guard jsonb)
+returns jsonb
+language sql
+immutable
+strict
+set search_path = pg_catalog
+as $$
+  with guard_ingredients as (
+    select ingredient
+    from jsonb_array_elements(
+      coalesce(p_input_guard -> 'recipe_ingredients', '[]'::jsonb)
+    ) ingredient
+  ), selected as (
+    select
+      guard_ingredient.ingredient,
+      nutrition.candidate as nutrition_candidate,
+      conversion.candidate as conversion_candidate,
+      lower(btrim(coalesce(guard_ingredient.ingredient ->> 'unit', ''))) as unit,
+      coalesce((guard_ingredient.ingredient ->> 'amount')::numeric, 0) as amount
+    from guard_ingredients guard_ingredient
+    left join lateral (
+      select candidates.candidate
+      from jsonb_array_elements(
+        coalesce(guard_ingredient.ingredient -> 'nutrition_candidates', '[]'::jsonb)
+      ) as candidates(candidate)
+      where (candidates.candidate ->> 'link_id') =
+        (guard_ingredient.ingredient ->> 'selected_nutrition_link_id')
+      limit 1
+    ) nutrition on true
+    left join lateral (
+      select candidates.candidate
+      from jsonb_array_elements(
+        coalesce(guard_ingredient.ingredient -> 'conversion_candidates', '[]'::jsonb)
+      ) as candidates(candidate)
+      where (candidates.candidate ->> 'assignment_id') =
+        (guard_ingredient.ingredient ->> 'selected_conversion_assignment_id')
+      limit 1
+    ) conversion on true
+  ), contributing as (
+    select
+      selected.*,
+      case
+        when selected.unit in ('g', 'kg')
+          and (selected.nutrition_candidate ->> 'basis_unit') = 'g'
+          then 'direct'
+        when selected.unit in ('ml', 'l', 'tbsp', 'tsp', 'cup')
+          and (selected.nutrition_candidate ->> 'basis_unit') = 'ml'
+          then 'direct'
+        when selected.unit in ('ml', 'l', 'tbsp', 'tsp', 'cup')
+          and (selected.nutrition_candidate ->> 'basis_unit') = 'g'
+          and selected.conversion_candidate is not null
+          and (selected.conversion_candidate ->> 'preparation_state') =
+            (selected.nutrition_candidate ->> 'preparation_state')
+          and (selected.conversion_candidate ->> 'evidence_preparation_state') =
+            (selected.nutrition_candidate ->> 'preparation_state')
+          then 'conversion'
+        else null
+      end as resolution_kind
+    from selected
+    where selected.ingredient ->> 'ingredient_type' = 'QUANT'
+      and selected.amount > 0
+      and selected.nutrition_candidate is not null
+      and exists (
+        select 1
+        from jsonb_array_elements(
+          coalesce(selected.nutrition_candidate -> 'nutrition_values', '[]'::jsonb)
+        ) value
+        where value ->> 'value_status' = 'observed'
+          and value -> 'amount' <> 'null'::jsonb
+      )
+  ), source_rows as (
+    select nutrition_candidate -> 'source' as source
+    from contributing
+    where resolution_kind is not null
+    union all
+    select conversion_candidate -> 'source' as source
+    from contributing
+    where resolution_kind = 'conversion'
+  )
+  select coalesce(
+    jsonb_agg(source order by
+      source ->> 'provider' collate "C" asc nulls first,
+      source ->> 'dataset' collate "C" asc nulls first,
+      source ->> 'source_version' collate "C" asc nulls first,
+      source ->> 'data_basis_date' collate "C" asc nulls first,
+      source ->> 'license' collate "C" asc nulls first,
+      source ->> 'source_url' collate "C" asc nulls first
+    ),
+    '[]'::jsonb
+  )
+  from (select distinct source from source_rows where source is not null) canonical;
+$$;
+
 create function public.write_recipe_nutrition_snapshot(
   p_recipe_id uuid,
   p_snapshot jsonb,
@@ -504,18 +978,11 @@ declare
   v_existing public.recipe_nutrition_snapshots%rowtype;
   v_recipe_updated_at timestamptz;
   v_recipe_base_servings numeric;
+  v_ingredient_ids uuid[];
+  v_actual_input_guard jsonb;
+  v_actual_sources jsonb;
 begin
-  perform public.validate_recipe_nutrition_snapshot_payload(p_snapshot);
-  perform pg_advisory_xact_lock(hashtextextended(p_recipe_id::text, 0));
-  v_snapshot_hex := md5(
-    p_recipe_id::text || chr(31) || (p_snapshot ->> 'input_hash') || chr(31) ||
-    (p_snapshot ->> 'calculation_version')
-  );
-  v_deterministic_snapshot_id := (
-    substr(v_snapshot_hex, 1, 8) || '-' || substr(v_snapshot_hex, 9, 4) || '-' ||
-    substr(v_snapshot_hex, 13, 4) || '-' || substr(v_snapshot_hex, 17, 4) || '-' ||
-    substr(v_snapshot_hex, 21, 12)
-  )::uuid;
+  perform public.lock_recipe_nutrition_recipe_ids(array[p_recipe_id]);
   select updated_at, base_servings into v_recipe_updated_at, v_recipe_base_servings
   from public.recipes
   where id = p_recipe_id
@@ -526,11 +993,37 @@ begin
   if v_recipe_updated_at is distinct from p_expected_recipe_updated_at then
     raise exception 'RECIPE_NUTRITION_INPUT_STALE';
   end if;
+
+  select array_agg(ingredient_id order by ingredient_id::text collate "C")
+    into v_ingredient_ids
+    from (
+      select distinct ingredient_id
+      from public.recipe_ingredients
+      where recipe_id = p_recipe_id
+    ) ingredients;
+  perform public.lock_recipe_nutrition_ingredient_ids(v_ingredient_ids, true);
+
+  perform public.validate_recipe_nutrition_snapshot_payload(p_snapshot);
+  v_actual_input_guard := public.build_recipe_nutrition_input_guard(p_recipe_id);
   if v_recipe_base_servings is distinct from (p_snapshot ->> 'base_servings')::numeric
-    or public.build_recipe_nutrition_input_guard(p_recipe_id) is distinct from p_input_guard
+    or v_actual_input_guard is distinct from p_input_guard
   then
     raise exception 'RECIPE_NUTRITION_INPUT_STALE';
   end if;
+  v_actual_sources := public.build_recipe_nutrition_contributing_sources(v_actual_input_guard);
+  if v_actual_sources is distinct from p_snapshot -> 'sources' then
+    raise exception 'SNAPSHOT_SOURCE_MISMATCH';
+  end if;
+
+  v_snapshot_hex := md5(
+    p_recipe_id::text || chr(31) || (p_snapshot ->> 'input_hash') || chr(31) ||
+    (p_snapshot ->> 'calculation_version')
+  );
+  v_deterministic_snapshot_id := (
+    substr(v_snapshot_hex, 1, 8) || '-' || substr(v_snapshot_hex, 9, 4) || '-' ||
+    substr(v_snapshot_hex, 13, 4) || '-' || substr(v_snapshot_hex, 17, 4) || '-' ||
+    substr(v_snapshot_hex, 21, 12)
+  )::uuid;
   perform set_config('homecook.recipe_nutrition_writer', 'on', true);
 
   insert into public.recipe_nutrition_snapshots (
@@ -616,7 +1109,7 @@ as $$
 declare
   v_current_snapshot_id uuid;
 begin
-  perform pg_advisory_xact_lock(hashtextextended(p_recipe_id::text, 0));
+  perform public.lock_recipe_nutrition_recipe_ids(array[p_recipe_id]);
   select id into v_current_snapshot_id
   from public.recipe_nutrition_snapshots
   where recipe_id = p_recipe_id and is_current;
@@ -798,7 +1291,34 @@ revoke all on table public.recipe_nutrition_snapshots from anon, authenticated;
 revoke insert, update, delete on table public.recipe_nutrition_snapshots from service_role;
 grant select on table public.recipe_nutrition_snapshots to service_role;
 
+revoke truncate on table public.recipe_ingredients from anon, authenticated, service_role;
+revoke truncate on table
+  public.nutrition_sources,
+  public.nutrition_source_items,
+  public.nutrition_profiles,
+  public.nutrition_values,
+  public.ingredient_nutrition_profiles,
+  public.measurement_conversion_profiles,
+  public.measurement_source_evidence,
+  public.ingredient_conversion_assignments,
+  public.piece_unit_weights
+from anon, authenticated, service_role;
+
 revoke all on function public.protect_recipe_nutrition_snapshot()
+  from public, anon, authenticated, service_role;
+revoke all on function public.decode_recipe_nutrition_query_key(text)
+  from public, anon, authenticated, service_role;
+revoke all on function public.recipe_nutrition_recipe_lock_key(uuid)
+  from public, anon, authenticated, service_role;
+revoke all on function public.recipe_nutrition_ingredient_lock_key(uuid)
+  from public, anon, authenticated, service_role;
+revoke all on function public.lock_recipe_nutrition_recipe_ids(uuid[])
+  from public, anon, authenticated, service_role;
+revoke all on function public.lock_recipe_nutrition_ingredient_ids(uuid[], boolean)
+  from public, anon, authenticated, service_role;
+revoke all on function public.lock_recipe_nutrition_recipe_ingredient_mutation()
+  from public, anon, authenticated, service_role;
+revoke all on function public.lock_recipe_nutrition_predecessor_mutation()
   from public, anon, authenticated, service_role;
 revoke all on function public.pin_current_recipe_nutrition_snapshot_on_meal_insert()
   from public, anon, authenticated, service_role;
@@ -808,6 +1328,8 @@ revoke all on function public.validate_recipe_nutrition_snapshot_payload(jsonb)
   from public, anon, authenticated;
 revoke all on function public.build_recipe_nutrition_input_guard(uuid)
   from public, anon, authenticated, service_role;
+revoke all on function public.build_recipe_nutrition_contributing_sources(jsonb)
+  from public, anon, authenticated, service_role;
 revoke all on function public.write_recipe_nutrition_snapshot(uuid, jsonb, timestamptz, jsonb)
   from public, anon, authenticated;
 revoke all on function public.restore_recipe_nutrition_snapshot_current(uuid, uuid, uuid)
@@ -815,6 +1337,7 @@ revoke all on function public.restore_recipe_nutrition_snapshot_current(uuid, uu
 revoke all on function public.backfill_foodsafety_recipe_nutrition_meal_pins(boolean, uuid, integer)
   from public, anon, authenticated;
 grant execute on function public.validate_recipe_nutrition_snapshot_payload(jsonb) to service_role;
+grant execute on function public.decode_recipe_nutrition_query_key(text) to service_role;
 grant execute on function public.write_recipe_nutrition_snapshot(uuid, jsonb, timestamptz, jsonb)
   to service_role;
 grant execute on function public.restore_recipe_nutrition_snapshot_current(uuid, uuid, uuid) to service_role;
