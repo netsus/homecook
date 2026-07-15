@@ -10,6 +10,10 @@
     ],
     "invariants": [
       "only-active-current-approved-source-profile-ingredient-link-conversion-assignment-and-exact-piece-weight-are-consumed",
+      "recipe-ingredient-amount-and-unit-mean-actual-edible-use-without-a-second-edible-portion-factor-or-new-state-columns",
+      "state-unspecified-direct-mass-or-compatible-volume-selects-a-complete-current-approved-source-profile-active-approved-primary-link-chain-only-when-exactly-one-exists-across-all-states",
+      "volume-conversion-selects-an-active-approved-assignment-evidence-source-chain-only-when-exactly-one-exists-across-all-states",
+      "piece-or-sheet-conversion-requires-exact-size-code-and-preparation-state-input-and-approved-evidence-while-direct-mass-does-not-require-size",
       "runtime-public-api-unreviewed-promotion-fuzzy-name-fallback-and-generic-density-are-forbidden",
       "missing-trace-blank-to-taste-and-unconvertible-input-are-never-normalized-to-zero",
       "mass-direct-matching-100ml-approved-volume-class-and-exact-piece-paths-follow-the-official-priority",
@@ -28,7 +32,8 @@
       "same-recipe-input-hash-calculation-version-is-idempotent-and-recipe-has-at-most-one-current-snapshot",
       "new-recipe-meal-pins-the-current-snapshot-nullably-and-existing-pins-are-never-silently-repinned",
       "post-meals-remains-recipe-only-and-meal-status-remains-registered-shopping-done-cook-done",
-      "get-recipe-nutrition-is-additive-non-null-and-no-snapshot-is-a-200-unavailable-state",
+      "get-recipe-nutrition-is-additive-non-null-and-no-snapshot-is-a-200-unavailable-state-with-availability-reason-missing",
+      "recipe-nutrition-availability-reason-is-null-for-any-normally-read-snapshot-row-and-temporarily-unavailable-for-query-db-or-malformed-read-failure",
       "snapshot-writes-and-meal-pins-preserve-owner-rls-and-cannot-be-client-selected",
       "backfill-is-bounded-to-the-foodsafety-thirty-scope-and-production-writes-require-separate-approval",
       "api-key-auth-query-cookie-raw-provider-payload-row-private-path-and-other-user-identifiers-never-leak",
@@ -45,8 +50,11 @@
     ],
     "required_test_targets": [
       "calculator-direct-mass-and-matching-100ml-volume",
+      "actual-edible-use-amount-without-double-edible-portion-conversion",
+      "exactly-one-direct-profile-chain-across-all-states-and-zero-or-multiple-fail-closed",
+      "exactly-one-volume-conversion-chain-across-all-states-and-zero-or-multiple-fail-closed",
       "approved-volume-g6-g10-g15-g20-g25-and-quality",
-      "exact-piece-and-to-taste-missing-boundaries",
+      "exact-size-code-preparation-state-piece-and-direct-mass-no-size-and-to-taste-missing-boundaries",
       "missing-versus-observed-zero-and-optional-nutrients",
       "complete-partial-unavailable-and-direct-estimated-mixed",
       "scalable-fixed-vector-and-selected-servings-formula",
@@ -55,7 +63,7 @@
       "immutable-snapshot-idempotent-replay-and-atomic-current-switch",
       "meal-nullable-pin-origin-one-time-backfill-and-no-silent-repin",
       "postgres-constraints-rls-owner-concurrency-and-transaction-rollback",
-      "recipe-detail-additive-complete-partial-unavailable-and-no-snapshot",
+      "recipe-detail-additive-normal-row-null-no-snapshot-missing-and-query-db-malformed-temporarily-unavailable",
       "existing-recipe-api-meal-status-auth-error-and-standalone-cook-regression",
       "food-safety-thirty-bounded-backfill-report-replay-and-rollback",
       "secret-raw-data-leak-zero-and-read-query-count-bound"
@@ -71,6 +79,9 @@
       "partial",
       "unavailable",
       "error",
+      "availability-missing",
+      "availability-temporarily-unavailable-retry",
+      "availability-normal-snapshot-null",
       "low-quality-estimated",
       "read-only",
       "unauthorized-return-to-action"
@@ -138,17 +149,21 @@
     "manual:production-promotion-approval-intentionally-withheld-zero-writes"
   ],
   "blocked_conditions": [
-    "official-five-documents-or-source-of-truth-are-not-v1-7-19-v1-5-25-v1-3-22-v1-3-20-v1-2-24",
+    "official-five-documents-or-source-of-truth-are-not-v1-7-20-v1-5-26-v1-3-23-v1-3-21-v1-2-25",
     "predecessor-pr-1005-or-pr-1006-exact-merge-reviewed-head-or-ancestry-is-missing",
     "final-pilot-logical-batch-or-approved-handoff-checksum-does-not-match",
     "stage1-author-self-approves-or-independent-codex-stage1-5-review-is-missing",
     "runtime-provider-call-unreviewed-promotion-fuzzy-name-fallback-or-generic-density-is-added",
     "inactive-unapproved-revoked-superseded-stale-drifted-or-needs-source-check-row-is-consumed",
     "missing-trace-blank-to-taste-unconvertible-or-unavailable-value-is-normalized-to-zero",
-    "piece-conversion-does-not-exactly-match-ingredient-size-preparation-and-edible-state",
-    "volume-conversion-uses-a-nonapproved-profile-or-a-cup-other-than-200ml",
+    "recipe-ingredient-state-or-size-columns-are-added-or-actual-edible-use-amount-is-treated-as-gross-shopping-weight-or-edible-portion-is-applied-twice",
+    "state-unspecified-direct-profile-chain-is-selected-when-zero-or-multiple-complete-approved-primary-chains-exist-across-all-states",
+    "piece-conversion-lacks-exact-size-code-and-preparation-state-input-or-direct-mass-is-rejected-only-for-missing-size",
+    "volume-conversion-does-not-have-exactly-one-approved-assignment-evidence-source-chain-or-uses-a-cup-other-than-200ml",
     "estimated-path-is-labelled-direct-or-ui-omits-approximate-expected-meaning",
     "partial-is-promoted-to-total-or-unavailable-amount-is-non-null",
+    "availability-reason-missing-is-used-when-a-snapshot-row-was-read-or-temporarily-unavailable-is-not-used-for-query-db-malformed-read-failure",
+    "normal-snapshot-row-with-unavailable-calculation-status-has-a-nonnull-availability-reason-or-temporary-state-blocks-the-recipe-detail-body",
     "scalable-fixed-vector-integrity-or-selected-servings-formula-is-violated",
     "snapshot-payload-or-warning-order-is-mutated-deleted-or-recomputed-during-read",
     "snapshot-source-attribution-is-derived-from-live-current-relations-or-is-mutated-deleted-or-reordered-during-read",
@@ -173,5 +188,5 @@
     "backend": 4,
     "frontend": 4
   },
-  "notes": "Full-stack recipe nutrition slice only. Product catalog, product planner entries, and planner nutrition aggregation are excluded. Existing RECIPE_DETAIL is an anchor-extension, so Stage 1 generator/critic are intentionally false but Stage 4 390/320/desktop evidence and Stage 5/final authority are required. Claude-owned stages are replaced only for the user-approved nutrition/products/planner program by role-separated fresh Codex sessions; author and implementer cannot self-approve."
+  "notes": "Full-stack recipe nutrition slice only. Recipe amount and unit are actual edible-use quantity; no recipe state or size columns are added. State-unspecified direct and conversion paths require exactly one fully eligible chain across all states, while piece or sheet conversion requires exact size_code plus preparation_state and otherwise fails closed. Recipe Detail distinguishes a missing row from temporary query, DB, or malformed read failure through the additive nullable availability_reason. Product catalog, product planner entries, and planner nutrition aggregation are excluded. Existing RECIPE_DETAIL is an anchor-extension, so Stage 1 generator/critic are intentionally false but Stage 4 390/320/desktop evidence and Stage 5/final authority are required. Claude-owned stages are replaced only for the user-approved nutrition/products/planner program by role-separated fresh Codex sessions; author and implementer cannot self-approve."
 }
