@@ -9,6 +9,14 @@ const host = process.env.HOMECOOK_RECIPE_NUTRITION_PGHOST ?? "";
 const port = process.env.HOMECOOK_RECIPE_NUTRITION_PGPORT ?? "";
 const database = process.env.HOMECOOK_RECIPE_NUTRITION_PGDATABASE ?? "";
 const actorId = "10000000-0000-4000-8000-000000000001";
+const guardIngredientId = "60000000-0000-4000-8000-000000000001";
+const guardSourceId = "61000000-0000-4000-8000-000000000001";
+const guardSourceItemId = "62000000-0000-4000-8000-000000000001";
+const guardProfileId = "63000000-0000-4000-8000-000000000001";
+const guardLinkId = "64000000-0000-4000-8000-000000000001";
+const alternateSourceItemId = "62000000-0000-4000-8000-000000000002";
+const alternateProfileId = "63000000-0000-4000-8000-000000000002";
+const alternateLinkId = "64000000-0000-4000-8000-000000000002";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -111,15 +119,28 @@ function snapshot(seed: string, energy = 100) {
   };
 }
 
-function writeSnapshotSql(recipeId: string, value: unknown, expectedRecipeVersion?: string) {
+function writeSnapshotSql(
+  recipeId: string,
+  value: unknown,
+  expectedRecipeVersion?: string,
+  inputGuard?: unknown,
+) {
   const version = expectedRecipeVersion ??
     psql(`select updated_at from public.recipes where id = '${recipeId}';`);
+  const guard = inputGuard ?? JSON.parse(psql(
+    `select public.build_recipe_nutrition_input_guard('${recipeId}')::text;`,
+  ));
   const expectedVersionSql = `'${version}'::timestamptz`;
-  return `set role service_role; select public.write_recipe_nutrition_snapshot('${recipeId}', ${jsonExpression(value)}, ${expectedVersionSql})::text;`;
+  return `set role service_role; select public.write_recipe_nutrition_snapshot('${recipeId}', ${jsonExpression(value)}, ${expectedVersionSql}, ${jsonExpression(guard)})::text;`;
 }
 
 function seedRecipe(recipeId: string, title: string) {
-  psql(`insert into public.recipes (id, title, base_servings) values ('${recipeId}', '${title}', 2);`);
+  psql(`
+    insert into public.recipes (id, title, base_servings) values ('${recipeId}', '${title}', 2);
+    insert into public.recipe_ingredients (
+      recipe_id, ingredient_id, amount, unit, ingredient_type, scalable, sort_order
+    ) values ('${recipeId}', '${guardIngredientId}', 100, 'g', 'QUANT', true, 0);
+  `);
 }
 
 describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () => {
@@ -128,16 +149,61 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
       insert into public.users (id, nickname, social_provider, social_id)
       values ('${actorId}', 'reviewer', 'test', 'recipe-nutrition-reviewer');
       insert into public.nutrition_sources (
-        provider_code, dataset_name, source_kind, source_version, data_basis_date,
+        id, provider_code, dataset_name, source_kind, source_version, data_basis_date,
         fetched_at, freshness_checked_at, freshness_status, priority_rank,
         source_url, license_name, license_url, manifest_sha256, review_status,
         decision_reason, reviewed_by, reviewed_at, is_active
       ) values (
-        'MFDS', 'Recipe snapshot fixture', 'nutrition_dataset', '2026-07-01', '2026-07-01',
+        '${guardSourceId}', 'MFDS', 'Recipe snapshot fixture', 'nutrition_dataset', '2026-07-01', '2026-07-01',
         now(), now(), 'current', 1, 'https://example.test/nutrition', 'test-only',
         'https://example.test/license', repeat('a', 64), 'approved',
         'isolated integration fixture', '${actorId}', now(), true
       );
+      insert into public.ingredients (id, standard_name, category, default_unit)
+      values ('${guardIngredientId}', 'writer guard fixture ingredient', 'test', 'g');
+      insert into public.nutrition_source_items (
+        id, source_id, external_item_key, external_name, preparation_state,
+        source_basis_text, source_basis_amount, source_basis_unit, edible_portion_percent,
+        stable_fingerprint, review_status, decision_reason, reviewed_by, reviewed_at
+      ) values
+        ('${guardSourceItemId}', '${guardSourceId}', 'writer-guard-raw', 'writer guard fixture ingredient', 'raw-edible',
+          '100 g', 100, 'g', 100, repeat('d', 64), 'approved',
+          'isolated integration fixture', '${actorId}', now()),
+        ('${alternateSourceItemId}', '${guardSourceId}', 'writer-guard-cooked', 'writer guard fixture ingredient', 'cooked',
+          '100 g', 100, 'g', 100, repeat('e', 64), 'approved',
+          'isolated integration fixture', '${actorId}', now());
+      insert into public.nutrition_profiles (
+        id, source_item_id, profile_kind, normalization_method, basis_amount, basis_unit,
+        version, review_status, decision_reason, reviewed_by, reviewed_at, is_active
+      ) values
+        ('${guardProfileId}', '${guardSourceItemId}', 'ingredient_source', 'mass_100g', 100, 'g',
+          1, 'approved', 'isolated integration fixture', '${actorId}', now(), true),
+        ('${alternateProfileId}', '${alternateSourceItemId}', 'ingredient_source', 'mass_100g', 100, 'g',
+          1, 'approved', 'isolated integration fixture', '${actorId}', now(), true);
+      insert into public.nutrition_values (
+        profile_id, nutrient_code, source_nutrient_code, source_unit, amount, value_status
+      )
+      select profile_id, nutrient_code, nutrient_code, source_unit, amount, 'observed'
+      from (values
+        ('${guardProfileId}'::uuid, 'energy_kcal', 'kcal', 100::numeric),
+        ('${guardProfileId}'::uuid, 'carbohydrate_g', 'g', 20::numeric),
+        ('${guardProfileId}'::uuid, 'protein_g', 'g', 10::numeric),
+        ('${guardProfileId}'::uuid, 'fat_g', 'g', 5::numeric),
+        ('${guardProfileId}'::uuid, 'sodium_mg', 'mg', 50::numeric),
+        ('${alternateProfileId}'::uuid, 'energy_kcal', 'kcal', 110::numeric),
+        ('${alternateProfileId}'::uuid, 'carbohydrate_g', 'g', 21::numeric),
+        ('${alternateProfileId}'::uuid, 'protein_g', 'g', 11::numeric),
+        ('${alternateProfileId}'::uuid, 'fat_g', 'g', 6::numeric),
+        ('${alternateProfileId}'::uuid, 'sodium_mg', 'mg', 55::numeric)
+      ) values(profile_id, nutrient_code, source_unit, amount);
+      insert into public.ingredient_nutrition_profiles (
+        id, ingredient_id, nutrition_profile_id, preparation_state, match_method,
+        is_primary, review_status, decision_reason, reviewed_by, reviewed_at, version, is_active
+      ) values
+        ('${guardLinkId}', '${guardIngredientId}', '${guardProfileId}', 'raw-edible', 'exact_standard_name',
+          true, 'approved', 'isolated integration fixture', '${actorId}', now(), 1, true),
+        ('${alternateLinkId}', '${guardIngredientId}', '${alternateProfileId}', 'cooked', 'exact_standard_name',
+          false, 'pending', null, null, null, 1, false);
     `);
   });
 
@@ -280,6 +346,47 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     expect(psql(`select count(*) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe("0");
   });
 
+  it("persists optional-only nutrients as partial with non-null provenance", () => {
+    const recipeId = "20000000-0000-4000-8000-00000000000c";
+    seedRecipe(recipeId, "optional-only fixture");
+    const value = snapshot("c") as unknown as {
+      nutrient_status: Record<string, {
+        status: string;
+        amount: number | null;
+        known_amount: number | null;
+        display_mode: string | null;
+      }>;
+      scalable_values: Record<string, number>;
+      fixed_values: Record<string, number>;
+      calculation_status: string;
+    };
+    value.nutrient_status = Object.fromEntries([
+      "energy_kcal", "carbohydrate_g", "protein_g", "fat_g", "sodium_mg",
+    ].map((code) => [code, {
+      status: "unavailable",
+      amount: null,
+      known_amount: null,
+      display_mode: null,
+    }]));
+    value.nutrient_status.sugars_g = {
+      status: "complete",
+      amount: 3,
+      known_amount: null,
+      display_mode: "total",
+    };
+    value.scalable_values = { sugars_g: 3 };
+    value.fixed_values = { sugars_g: 0 };
+    value.calculation_status = "partial";
+
+    psql(writeSnapshotSql(recipeId, value));
+
+    expect(psql(`
+      select calculation_status || ':' || calculation_quality || ':' ||
+        jsonb_array_length(sources_json)::text
+      from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';
+    `)).toBe("partial:direct:1");
+  });
+
   it("fails closed for extra source fields, unsafe URLs, vector drift, and status contradictions", () => {
     const recipeId = "20000000-0000-4000-8000-000000000002";
     seedRecipe(recipeId, "validator fixture");
@@ -287,6 +394,9 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     extraSource.sources[0].raw_provider_row = "forbidden";
     const unsafeUrl = snapshot("d");
     unsafeUrl.sources[0].source_url = "https://example.test/nutrition?api_key=secret";
+    const subscriptionUrl = snapshot("a");
+    subscriptionUrl.sources[0].source_url =
+      "https://example.test/nutrition?subscription-key=redacted-value";
     const vectorDrift = snapshot("e");
     vectorDrift.scalable_values.energy_kcal = 99;
     const contradiction = snapshot("f");
@@ -295,6 +405,7 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     for (const [value, error] of [
       [extraSource, "UNSAFE_SNAPSHOT_SOURCE"],
       [unsafeUrl, "UNSAFE_SNAPSHOT_SOURCE"],
+      [subscriptionUrl, "UNSAFE_SNAPSHOT_SOURCE"],
       [vectorDrift, "SNAPSHOT_VECTOR_SUM_MISMATCH"],
       [contradiction, "INVALID_SNAPSHOT_STATUS"],
     ] as const) {
@@ -412,5 +523,44 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     expect(rolledBack).toMatchObject({ snapshot_id: null, is_current: false });
     expect(psql(`select count(*) || ':' || count(*) filter (where is_current) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe("1:0");
     expect(psql(`select id from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe(written.snapshot_id);
+  });
+
+  it("rejects link revocation, a new eligible candidate, and recipe ingredient mutation after load", () => {
+    const recipeId = "20000000-0000-4000-8000-00000000000b";
+    seedRecipe(recipeId, "input guard race fixture");
+    const staleVersion = psql(`select updated_at from public.recipes where id = '${recipeId}';`);
+    const staleGuard = JSON.parse(psql(
+      `select public.build_recipe_nutrition_input_guard('${recipeId}')::text;`,
+    ));
+    const expectStaleWrite = (mutationSql: string) => {
+      const result = psqlResult(
+        `begin; ${mutationSql} ${writeSnapshotSql(recipeId, snapshot("b"), staleVersion, staleGuard)}`,
+      );
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("RECIPE_NUTRITION_INPUT_STALE");
+      expect(psql(`select count(*) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe("0");
+    };
+
+    expectStaleWrite(`
+      update public.ingredient_nutrition_profiles
+      set review_status = 'revoked', is_active = false, is_primary = false,
+        decision_reason = 'race fixture revocation', reviewed_at = now()
+      where id = '${guardLinkId}';
+    `);
+
+    expectStaleWrite(`
+      update public.ingredient_nutrition_profiles
+      set review_status = 'approved', is_active = true, is_primary = true,
+        decision_reason = 'new eligible race fixture', reviewed_by = '${actorId}', reviewed_at = now()
+      where id = '${alternateLinkId}';
+    `);
+
+    expectStaleWrite(
+      `update public.recipe_ingredients set amount = 125 where recipe_id = '${recipeId}';`,
+    );
+
+    expect(psql(
+      `select (public.build_recipe_nutrition_input_guard('${recipeId}') = ${jsonExpression(staleGuard)})::text;`,
+    )).toBe("true");
   });
 });

@@ -46,6 +46,9 @@ describe("recipe nutrition snapshot database contract", () => {
     }
     expect(sql).toMatch(/UNSAFE_SNAPSHOT_SOURCE/);
     expect(sql).toMatch(/x-amz-signature/i);
+    for (const credentialKey of ["password", "subscriptionkey", "accesskey", "credential"]) {
+      expect(sql).toContain(credentialKey);
+    }
     expect(sql).toMatch(/source_url[^\n]*~[^\n]*@/i);
     expect(sql).toMatch(/source_url[^\n]*~[^\n]*#/i);
     expect(sql).toMatch(/SNAPSHOT_VECTOR_SUM_MISMATCH/);
@@ -80,6 +83,27 @@ describe("recipe nutrition snapshot database contract", () => {
     expect(sql).not.toMatch(/delete from public\.recipe_nutrition_snapshots/i);
   });
 
+  it("recomputes the canonical ingredient and predecessor guard inside the writer transaction", () => {
+    const sql = migrationSql();
+
+    expect(sql).toMatch(/create function public\.build_recipe_nutrition_input_guard\(p_recipe_id uuid\)/i);
+    expect(sql).toMatch(/p_input_guard jsonb/i);
+    expect(sql).toMatch(/build_recipe_nutrition_input_guard\(p_recipe_id\)[\s\S]*is distinct from p_input_guard/i);
+    expect(sql).toMatch(/RECIPE_NUTRITION_INPUT_STALE/i);
+    for (const relation of [
+      "recipe_ingredients",
+      "ingredient_nutrition_profiles",
+      "nutrition_profiles",
+      "nutrition_source_items",
+      "nutrition_sources",
+      "ingredient_conversion_assignments",
+      "measurement_conversion_profiles",
+      "measurement_source_evidence",
+    ]) {
+      expect(sql).toContain(`public.${relation}`);
+    }
+  });
+
   it("makes snapshot rows append-only and denies direct anon or authenticated access", () => {
     const sql = migrationSql();
 
@@ -90,7 +114,7 @@ describe("recipe nutrition snapshot database contract", () => {
     expect(sql).toMatch(/revoke insert, update, delete on table public\.recipe_nutrition_snapshots from service_role/i);
     expect(sql).toMatch(/grant select on table public\.recipe_nutrition_snapshots to service_role/i);
     expect(sql).toMatch(
-      /revoke all on function public\.write_recipe_nutrition_snapshot\(uuid, jsonb, timestamptz\)[\s\S]*from public, anon, authenticated/i,
+      /revoke all on function public\.write_recipe_nutrition_snapshot\(uuid, jsonb, timestamptz, jsonb\)[\s\S]*from public, anon, authenticated/i,
     );
     expect(sql).toMatch(/grant execute on function public\.write_recipe_nutrition_snapshot[\s\S]*to service_role/i);
     for (const triggerFunction of [

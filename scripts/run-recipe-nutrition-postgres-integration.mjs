@@ -149,6 +149,21 @@ create table public.recipes (
   base_servings integer not null default 2 check (base_servings > 0),
   updated_at timestamptz not null default now()
 );
+create type public.recipe_ingredient_type as enum ('QUANT', 'TO_TASTE');
+create table public.recipe_ingredients (
+  id uuid primary key default gen_random_uuid(),
+  recipe_id uuid not null references public.recipes(id) on delete cascade,
+  ingredient_id uuid not null references public.ingredients(id),
+  amount numeric(10, 2),
+  unit varchar(20),
+  ingredient_type public.recipe_ingredient_type not null,
+  sort_order integer not null default 0,
+  scalable boolean not null default true,
+  check (
+    (ingredient_type = 'QUANT' and amount is not null and amount > 0 and unit is not null)
+    or (ingredient_type = 'TO_TASTE' and amount is null and unit is null and not scalable)
+  )
+);
 create table public.recipe_sources (
   id uuid primary key default gen_random_uuid(),
   recipe_id uuid not null unique references public.recipes(id) on delete cascade,

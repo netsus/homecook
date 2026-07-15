@@ -66,6 +66,8 @@ declare
   v_actual_keys text[];
   v_source jsonb;
   v_source_keys text[];
+  v_query_key text;
+  v_normalized_query_key text;
   v_canonical_sources jsonb;
   v_value record;
   v_value_keys text[];
@@ -84,7 +86,7 @@ declare
     'REPRESENTATIVE_VOLUME_CONVERSION_USED', 'PIECE_WEIGHT_CONVERSION_USED'
   ];
   v_core_complete integer := 0;
-  v_core_available integer := 0;
+  v_any_available integer := 0;
 begin
   if jsonb_typeof(p_snapshot) <> 'object' then
     raise exception 'INVALID_SNAPSHOT_PAYLOAD';
@@ -142,6 +144,22 @@ begin
     ] then
       raise exception 'UNSAFE_SNAPSHOT_SOURCE';
     end if;
+    for v_query_key in
+      select match[1]
+      from regexp_matches(v_source ->> 'source_url', '[?&]([^=&#]+)=', 'g') match
+    loop
+      v_normalized_query_key := regexp_replace(
+        replace(replace(lower(v_query_key), '%2d', '-'), '%5f', '_'),
+        '[^a-z0-9]',
+        '',
+        'g'
+      );
+      if v_normalized_query_key in ('key', 'pass', 'auth', 'authorization')
+        or v_normalized_query_key ~ '(password|passwd|passphrase|secret|token|credential|apikey|accesskey|subscriptionkey|servicekey|signature|cookie)'
+      then
+        raise exception 'UNSAFE_SNAPSHOT_SOURCE';
+      end if;
+    end loop;
     if nullif(btrim(v_source ->> 'provider'), '') is null
       or nullif(btrim(v_source ->> 'dataset'), '') is null
       or nullif(btrim(v_source ->> 'source_version'), '') is null
@@ -245,6 +263,7 @@ begin
     end if;
 
     if v_status <> 'unavailable' then
+      v_any_available := v_any_available + 1;
       if jsonb_typeof(p_snapshot -> 'scalable_values' -> v_value.key) <> 'number'
         or jsonb_typeof(p_snapshot -> 'fixed_values' -> v_value.key) <> 'number'
       then
@@ -261,7 +280,6 @@ begin
       'energy_kcal', 'carbohydrate_g', 'protein_g', 'fat_g', 'sodium_mg'
     ]) then
       if v_status = 'complete' then v_core_complete := v_core_complete + 1; end if;
-      if v_status <> 'unavailable' then v_core_available := v_core_available + 1; end if;
     end if;
   end loop;
 
@@ -276,8 +294,8 @@ begin
   end if;
 
   if (p_snapshot ->> 'calculation_status' = 'complete' and v_core_complete <> 5)
-    or (p_snapshot ->> 'calculation_status' = 'unavailable' and v_core_available <> 0)
-    or (p_snapshot ->> 'calculation_status' = 'partial' and (v_core_available = 0 or v_core_complete = 5))
+    or (p_snapshot ->> 'calculation_status' = 'unavailable' and v_any_available <> 0)
+    or (p_snapshot ->> 'calculation_status' = 'partial' and (v_any_available = 0 or v_core_complete = 5))
     or (p_snapshot ->> 'calculation_status' = 'unavailable' and jsonb_typeof(p_snapshot -> 'calculation_quality') <> 'null')
     or (p_snapshot ->> 'calculation_status' = 'unavailable' and jsonb_array_length(p_snapshot -> 'sources') <> 0)
     or (p_snapshot ->> 'calculation_status' <> 'unavailable' and coalesce(p_snapshot ->> 'calculation_quality', '') not in ('direct', 'estimated', 'mixed'))
@@ -310,10 +328,168 @@ create trigger protect_recipe_nutrition_snapshot
 before update or delete on public.recipe_nutrition_snapshots
 for each row execute function public.protect_recipe_nutrition_snapshot();
 
+create function public.build_recipe_nutrition_input_guard(p_recipe_id uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $$
+  select jsonb_build_object(
+    'recipe_ingredients',
+    coalesce(
+      jsonb_agg(
+        jsonb_build_object(
+          'id', ingredient.id,
+          'ingredient_id', ingredient.ingredient_id,
+          'amount', ingredient.amount,
+          'unit', ingredient.unit,
+          'ingredient_type', ingredient.ingredient_type,
+          'scalable', ingredient.scalable,
+          'sort_order', ingredient.sort_order,
+          'nutrition_candidates', nutrition.candidates,
+          'conversion_candidates', conversion.candidates,
+          'selected_nutrition_link_id', selected.link_id,
+          'selected_conversion_assignment_id',
+            case
+              when selected.basis_unit = 'g'
+                and selected.is_volume_input
+                and conversion.candidate_count = 1
+              then conversion.single_assignment_id
+              else null
+            end
+        ) order by ingredient.id::text collate "C"
+      ),
+      '[]'::jsonb
+    )
+  )
+  from public.recipe_ingredients ingredient
+  left join lateral (
+    select
+      coalesce(
+        jsonb_agg(
+          jsonb_build_object(
+            'link_id', link.id,
+            'profile_id', profile.id,
+            'source_item_id', source_item.id,
+            'source_id', source.id,
+            'preparation_state', link.preparation_state,
+            'normalization_method', profile.normalization_method,
+            'basis_amount', profile.basis_amount,
+            'basis_unit', profile.basis_unit
+          ) order by link.id::text collate "C"
+        ),
+        '[]'::jsonb
+      ) as candidates,
+      count(*) filter (where profile.basis_unit = 'g') as mass_count,
+      count(*) filter (where profile.basis_unit = 'ml') as volume_count,
+      (array_agg(link.id order by link.id::text collate "C")
+        filter (where profile.basis_unit = 'g'))[1] as single_mass_link_id,
+      (array_agg(link.id order by link.id::text collate "C")
+        filter (where profile.basis_unit = 'ml'))[1] as single_volume_link_id
+    from public.ingredient_nutrition_profiles link
+    join public.nutrition_profiles profile on profile.id = link.nutrition_profile_id
+    join public.nutrition_source_items source_item on source_item.id = profile.source_item_id
+    join public.nutrition_sources source on source.id = source_item.source_id
+    where link.ingredient_id = ingredient.ingredient_id
+      and link.review_status = 'approved'
+      and link.is_active
+      and link.is_primary
+      and profile.profile_kind = 'ingredient_source'
+      and profile.normalization_method in ('mass_100g', 'volume_100ml')
+      and profile.review_status = 'approved'
+      and profile.is_active
+      and profile.basis_amount = 100
+      and (
+        (profile.normalization_method = 'mass_100g' and profile.basis_unit = 'g')
+        or (profile.normalization_method = 'volume_100ml' and profile.basis_unit = 'ml')
+      )
+      and source_item.review_status = 'approved'
+      and source.review_status = 'approved'
+      and source.freshness_status = 'current'
+      and source.is_active
+  ) nutrition on true
+  left join lateral (
+    select
+      coalesce(
+        jsonb_agg(
+          jsonb_build_object(
+            'assignment_id', assignment.id,
+            'profile_id', profile.id,
+            'evidence_id', evidence.id,
+            'source_id', source.id,
+            'preparation_state', assignment.preparation_state
+          ) order by assignment.id::text collate "C"
+        ),
+        '[]'::jsonb
+      ) as candidates,
+      count(*) as candidate_count,
+      (array_agg(assignment.id order by assignment.id::text collate "C"))[1]
+        as single_assignment_id
+    from public.ingredient_conversion_assignments assignment
+    join public.measurement_conversion_profiles profile
+      on profile.id = assignment.conversion_profile_id
+    join public.measurement_source_evidence evidence on evidence.id = assignment.evidence_id
+    join public.nutrition_sources source on source.id = evidence.source_id
+    where assignment.ingredient_id = ingredient.ingredient_id
+      and assignment.review_status = 'approved'
+      and assignment.is_active
+      and profile.is_active
+      and profile.basis_volume_ml = 15
+      and (
+        (profile.code = 'VOLUME_G6' and profile.representative_weight_g = 6)
+        or (profile.code = 'VOLUME_G10' and profile.representative_weight_g = 10)
+        or (profile.code = 'VOLUME_G15' and profile.representative_weight_g = 15)
+        or (profile.code = 'VOLUME_G20' and profile.representative_weight_g = 20)
+        or (profile.code = 'VOLUME_G25' and profile.representative_weight_g = 25)
+      )
+      and evidence.evidence_kind = 'volume_weight'
+      and evidence.preparation_state = assignment.preparation_state
+      and evidence.review_status = 'approved'
+      and evidence.is_active
+      and source.review_status = 'approved'
+      and source.freshness_status = 'current'
+      and source.is_active
+  ) conversion on true
+  cross join lateral (
+    select
+      lower(btrim(coalesce(ingredient.unit, ''))) in ('ml', 'l', 'tbsp', 'tsp', 'cup')
+        as is_volume_input,
+      case
+        when lower(btrim(coalesce(ingredient.unit, ''))) in ('ml', 'l', 'tbsp', 'tsp', 'cup')
+          and nutrition.volume_count = 1
+          then nutrition.single_volume_link_id
+        when lower(btrim(coalesce(ingredient.unit, ''))) in ('ml', 'l', 'tbsp', 'tsp', 'cup')
+          and nutrition.volume_count = 0
+          and nutrition.mass_count = 1
+          then nutrition.single_mass_link_id
+        when lower(btrim(coalesce(ingredient.unit, ''))) not in ('ml', 'l', 'tbsp', 'tsp', 'cup')
+          and nutrition.mass_count = 1
+          then nutrition.single_mass_link_id
+        else null
+      end as link_id,
+      case
+        when lower(btrim(coalesce(ingredient.unit, ''))) in ('ml', 'l', 'tbsp', 'tsp', 'cup')
+          and nutrition.volume_count = 1
+          then 'ml'
+        when lower(btrim(coalesce(ingredient.unit, ''))) in ('ml', 'l', 'tbsp', 'tsp', 'cup')
+          and nutrition.volume_count = 0
+          and nutrition.mass_count = 1
+          then 'g'
+        when lower(btrim(coalesce(ingredient.unit, ''))) not in ('ml', 'l', 'tbsp', 'tsp', 'cup')
+          and nutrition.mass_count = 1
+          then 'g'
+        else null
+      end as basis_unit
+  ) selected
+  where ingredient.recipe_id = p_recipe_id;
+$$;
+
 create function public.write_recipe_nutrition_snapshot(
   p_recipe_id uuid,
   p_snapshot jsonb,
-  p_expected_recipe_updated_at timestamptz
+  p_expected_recipe_updated_at timestamptz,
+  p_input_guard jsonb
 )
 returns jsonb
 language plpgsql
@@ -327,6 +503,7 @@ declare
   v_created boolean := false;
   v_existing public.recipe_nutrition_snapshots%rowtype;
   v_recipe_updated_at timestamptz;
+  v_recipe_base_servings numeric;
 begin
   perform public.validate_recipe_nutrition_snapshot_payload(p_snapshot);
   perform pg_advisory_xact_lock(hashtextextended(p_recipe_id::text, 0));
@@ -339,7 +516,7 @@ begin
     substr(v_snapshot_hex, 13, 4) || '-' || substr(v_snapshot_hex, 17, 4) || '-' ||
     substr(v_snapshot_hex, 21, 12)
   )::uuid;
-  select updated_at into v_recipe_updated_at
+  select updated_at, base_servings into v_recipe_updated_at, v_recipe_base_servings
   from public.recipes
   where id = p_recipe_id
   for share;
@@ -347,6 +524,11 @@ begin
     raise exception 'RECIPE_NOT_FOUND';
   end if;
   if v_recipe_updated_at is distinct from p_expected_recipe_updated_at then
+    raise exception 'RECIPE_NUTRITION_INPUT_STALE';
+  end if;
+  if v_recipe_base_servings is distinct from (p_snapshot ->> 'base_servings')::numeric
+    or public.build_recipe_nutrition_input_guard(p_recipe_id) is distinct from p_input_guard
+  then
     raise exception 'RECIPE_NUTRITION_INPUT_STALE';
   end if;
   perform set_config('homecook.recipe_nutrition_writer', 'on', true);
@@ -624,14 +806,17 @@ revoke all on function public.protect_meal_recipe_nutrition_pin()
   from public, anon, authenticated, service_role;
 revoke all on function public.validate_recipe_nutrition_snapshot_payload(jsonb)
   from public, anon, authenticated;
-revoke all on function public.write_recipe_nutrition_snapshot(uuid, jsonb, timestamptz)
+revoke all on function public.build_recipe_nutrition_input_guard(uuid)
+  from public, anon, authenticated, service_role;
+revoke all on function public.write_recipe_nutrition_snapshot(uuid, jsonb, timestamptz, jsonb)
   from public, anon, authenticated;
 revoke all on function public.restore_recipe_nutrition_snapshot_current(uuid, uuid, uuid)
   from public, anon, authenticated;
 revoke all on function public.backfill_foodsafety_recipe_nutrition_meal_pins(boolean, uuid, integer)
   from public, anon, authenticated;
 grant execute on function public.validate_recipe_nutrition_snapshot_payload(jsonb) to service_role;
-grant execute on function public.write_recipe_nutrition_snapshot(uuid, jsonb, timestamptz) to service_role;
+grant execute on function public.write_recipe_nutrition_snapshot(uuid, jsonb, timestamptz, jsonb)
+  to service_role;
 grant execute on function public.restore_recipe_nutrition_snapshot_current(uuid, uuid, uuid) to service_role;
 grant execute on function public.backfill_foodsafety_recipe_nutrition_meal_pins(boolean, uuid, integer)
   to service_role;
