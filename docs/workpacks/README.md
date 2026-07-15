@@ -10,9 +10,11 @@
 
 ## Revision Notes
 
+- `v2` nutrition predecessor canonical closeout repair (2026-07-15)
+  - `public-nutrition-source-acquisition`은 PR #995 merge `f87ae75016a9b709ffc3b706e7ca3720a0940982`와 exact PR head `e88d7c7a6daf51d958c5f63e314c2d98fcadb066`을 근거로 `merged` projection으로 정정했다.
+  - `ingredient-nutrition-conversion-model`은 PR #1004 merge `574c078e98a080d0f4812bc593f4a6aa524efcf2`, PR #1005 merge `3866952c3e81bedfd80593f576e5ed6183ec7538`, retained local-pilot evidence, 격리 PostgreSQL migration reset 2회 및 admin viewer denial을 근거로 `merged` projection으로 정정했다. Supabase/PostgreSQL 17 동등성은 남은 위험으로 보존한다.
 - `v2` ingredient nutrition conversion Stage 1 (2026-07-14)
-  - roadmap canonical projection의 `public-nutrition-source-acquisition` `in-progress`는 보존한다. PR #995 merge commit `f87ae75016a9b709ffc3b706e7ca3720a0940982`는 신규 slice의 approved/pinned dependency 선행 완료 증거로만 기록한다.
-  - `ingredient-nutrition-conversion-model`의 공식 요구사항/DB contract-evolution과 Stage 1 workpack을 열어 상태를 `docs`로 전환했다. public API/UI는 늘리지 않는다.
+  - 당시에는 roadmap canonical projection의 `public-nutrition-source-acquisition` `in-progress`를 보존했고, `ingredient-nutrition-conversion-model` Stage 1을 `docs`로 열었다. 위 2026-07-15 closeout repair가 실제 merge·검증 근거로 현재 projection을 대체한다.
 - `v2` nutrition/products/planner extension (2026-07-13)
   - 영양 source 수집 → 재료 영양/대표 환산 → 레시피 계산/표시 → 완제품 catalog/플래너 → 계획 영양 합계를 7개 planned slice로 분리했다.
   - 이 기능군에 한해 기존 Claude 담당 단계를 역할이 분리된 별도 Codex 앱 작업으로 대체하는 사용자 승인 예외를 기록했다.
@@ -162,8 +164,8 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `service-brand-home-lockup` | merged | HOME mobile `HomeAppBar`와 desktop HOME `WebTopNav` brand area에 큰 `무먹` 아래 작은 `무엇을 먹든`을 세로 2단으로 표시. non-HOME 단독 표시와 nav geometry/interaction 보존 |
 | `service-brand-image-assets` | merged | 선택한 파란 `무먹` 심볼을 HOME/non-HOME header, favicon, 설치/Apple 아이콘, OG/Twitter metadata에 적용하고 authority·탐색 QA·current-head 전체 CI를 통과 |
 | `service-brand-icon-edge-treatment` | merged | favicon은 투명 외곽, 설치/PWA·Apple 아이콘은 full-bleed 파란 배경으로 분리하고 source/header/OG/Twitter 승인본을 보존 |
-| `public-nutrition-source-acquisition` | in-progress | 공공 영양 source를 versioned raw snapshot + manifest로 수집하고 schema/pagination/license/key 비노출을 fail-closed 검증한 뒤 approved promotion 입력을 만든다 |
-| `ingredient-nutrition-conversion-model` | in-progress | 핵심 영양 profile과 15mL당 약 6/10/15/20/25g 대표 환산 등급, 분리된 원문 evidence/assignment, 개당 중량을 승인 기반 immutable model로 구현한다 |
+| `public-nutrition-source-acquisition` | merged | 공공 영양 source를 versioned raw snapshot + manifest로 수집하고 schema/pagination/license/key 비노출을 fail-closed 검증한 뒤 approved promotion 입력을 만든다 |
+| `ingredient-nutrition-conversion-model` | merged | 핵심 영양 profile과 15mL당 약 6/10/15/20/25g 대표 환산 등급, 분리된 원문 evidence/assignment, 개당 중량을 승인 기반 immutable model로 구현한다 |
 | `recipe-nutrition-calculation` | planned | 레시피 재료·인분·대표 환산으로 영양소별 completeness와 quality를 계산하고 immutable recipe snapshot을 생성/pin/backfill한다 |
 | `recipe-nutrition-display` | planned | RECIPE_DETAIL에 1인분/선택 인분 예상 영양, partial/unavailable, 약/예상, source 설명을 authority evidence와 함께 표시한다 |
 | `prepared-food-catalog` | planned | 승인 public 완제품 + 사용자 private manual 제품 catalog, immutable nutrition version, owner/public read-only/soft-delete 정책을 구현한다 |
@@ -174,8 +176,8 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 
 | Slice | Status | Required predecessors |
 | --- | --- | --- |
-| `public-nutrition-source-acquisition` | in-progress | `28-external-ingredient-data-ingest-gate` = merged, nutrition contract-evolution official docs = merged |
-| `ingredient-nutrition-conversion-model` | docs | `public-nutrition-source-acquisition` = merged at `f87ae75016a9b709ffc3b706e7ca3720a0940982` |
+| `public-nutrition-source-acquisition` | merged | `28-external-ingredient-data-ingest-gate` = merged, nutrition contract-evolution official docs = merged |
+| `ingredient-nutrition-conversion-model` | merged | `public-nutrition-source-acquisition` = merged at `f87ae75016a9b709ffc3b706e7ca3720a0940982` |
 | `recipe-nutrition-calculation` | planned | `ingredient-nutrition-conversion-model` = merged |
 | `recipe-nutrition-display` | planned | `recipe-nutrition-calculation` = merged |
 | `prepared-food-catalog` | planned | `ingredient-nutrition-conversion-model` = merged |

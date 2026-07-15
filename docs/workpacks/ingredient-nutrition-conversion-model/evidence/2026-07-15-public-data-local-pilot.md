@@ -103,6 +103,15 @@ disable 뒤 source item payload 13건은 보존됐고 active nutrition link, con
 - local PostgreSQL override는 loopback이더라도 기본 `5432/postgres`를 거부한다. 전용 `homecook_*` database에서는 `-X`, `ON_ERROR_STOP=1`을 적용한 같은 `psql` 연결에서 DB 내부 sentinel gate를 먼저 실행하고, 통과한 경우에만 요청 SQL을 이어서 실행한다. psql meta-command는 process 시작 전에 거부하며 child `psql`은 service/password option을 상속하지 않는 최소 환경을 쓴다.
 - 최신 PostgreSQL 14.5 격리 runner 재검증은 root와 별도 verifier 모두 1 file, 11/11 pass, exit 0이었다. 각 실행의 임시 cluster는 정상 종료·정리됐고 PostgreSQL 17 동등성 위험은 그대로 남는다.
 
+## Canonical closeout reconciliation
+
+- 구현 lineage는 PR #1004의 exact head `829f4e15e0a1fd038cc6323a4efb3ca71fff7800`, merge `574c078e98a080d0f4812bc593f4a6aa524efcf2`이고, 실제 공공 데이터 파일럿 lineage는 PR #1005의 reviewed head `028c6e8f13d3c8586bbbfaa9dad42f0ae65c1420`, merge `3866952c3e81bedfd80593f576e5ed6183ec7538`이다.
+- closeout repair는 기존 사용자 서비스와 분리한 PostgreSQL 14.5 임시 cluster, 전용 socket/port, fresh database 2개를 사용했다. 두 회차 모두 migration `65/65`, 영양 table `10/10`, active representative profile `5`, RLS table `10/10`, 핵심 partial unique index `2/2`를 확인하고 exit 0으로 끝났다.
+- 별도 fresh migration 실행에서 `admin_members.role='viewer'`인 authenticated user의 `nutrition_sources` INSERT가 `permission denied`로 거부됨을 확인했다.
+- 모든 repair cluster/process/data directory는 실행 종료 trap으로 제거했다. 기존 PostgreSQL, Docker container, database, volume에는 연결하거나 쓰거나 중단하지 않았다.
+- Supabase CLI의 PostgreSQL 17 Docker bootstrap은 repair가 만든 container가 `Created`에서 시작되지 않아 검증할 수 없었다. repair가 만든 container만 제거했으며, PostgreSQL 17/Supabase 동등성은 남은 위험이다.
+- 이 reconciliation은 13/124 ingredient coverage, 사람의 nutrition/conversion/piece 판단 미완료, production/staging writes 0이라는 기존 경계를 완화하지 않는다.
+
 ## 남은 위험과 다음 dependency
 
 - 이번 exact bundle은 `13/124` ingredient coverage다. 남은 111 canonical ingredient와 9개 레시피에는 승인된 영양 link가 하나도 없을 수 있으며 사람이 검수한 추가 source item이 필요하다.
