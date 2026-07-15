@@ -6,7 +6,8 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_ATTEMPTS = 4;
 const BACKOFF_MS = [1_000, 2_000, 4_000];
 const MAX_RETRY_AFTER_MS = 30_000;
-const MAX_PAGES = 100_000;
+export const MFDS_MAX_PAGE_SIZE = 100;
+export const MFDS_MAX_LIVE_PAGES = 10;
 const INPUT_SHAPES = new Set(["adapted-row-v1", "mfds-provider-v1"]);
 const MFDS_FILTER_KEYS = new Set([
   "FOOD_NM_KR",
@@ -1305,7 +1306,7 @@ export async function fetchMfdsBatch({
   apiKey,
   fetchedAt,
   pageSize = 100,
-  maxPages = MAX_PAGES,
+  maxPages = MFDS_MAX_LIVE_PAGES,
   filters = {},
   fetchImpl = globalThis.fetch,
   sleep,
@@ -1316,9 +1317,17 @@ export async function fetchMfdsBatch({
     throw new NutritionPipelineError("MISSING_API_KEY", { env: "DATA_GO_KR_API_KEY" });
   }
   const officialFilters = validateMfdsFilters(filters);
-  if (!Number.isInteger(maxPages) || maxPages < 1) {
+  if (
+    !Number.isInteger(pageSize) ||
+    pageSize < 1 ||
+    pageSize > MFDS_MAX_PAGE_SIZE ||
+    !Number.isInteger(maxPages) ||
+    maxPages < 1 ||
+    maxPages > MFDS_MAX_LIVE_PAGES
+  ) {
     throw new NutritionPipelineError("PAGINATION_SCHEMA_INVALID", {
       ...mfdsFailureContext([], 1, pageSize, officialFilters),
+      page_size: pageSize,
       max_pages: maxPages,
     });
   }

@@ -48,16 +48,18 @@ function runRequired(command, args, options = {}) {
 }
 
 async function reservePort() {
-  const server = createServer();
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-  const address = server.address();
-  const port = typeof address === "object" && address !== null ? address.port : null;
-  await new Promise((resolve) => server.close(resolve));
-  if (port === null) throw new Error("Unable to reserve a PostgreSQL test port");
-  return port;
+  while (true) {
+    const server = createServer();
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    const port = typeof address === "object" && address !== null ? address.port : null;
+    await new Promise((resolve) => server.close(resolve));
+    if (port === null) throw new Error("Unable to reserve a PostgreSQL test port");
+    if (port !== 5432) return port;
+  }
 }
 
 function runFixtureFallback() {
@@ -152,6 +154,10 @@ grant usage on schema public to anon, authenticated, service_role;
     runRequired(path.join(postgresBin, "psql"), [
       ...connectionArgs,
       "-c", bootstrapSql,
+    ]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...connectionArgs,
+      "-c", `comment on database ${database} is 'homecook-isolated-local-v1';`,
     ]);
     runRequired(path.join(postgresBin, "psql"), [
       ...connectionArgs,

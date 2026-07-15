@@ -317,6 +317,57 @@ describe.runIf(enabled)("ingredient nutrition isolated PostgreSQL integration", 
     `);
   });
 
+  it("executes local override SQL only after verifying the isolated database sentinel", async () => {
+    const { runLocalPsqlJson } = await import("../scripts/lib/ingredient-nutrition-local-db.mjs");
+    expect(runLocalPsqlJson(
+      "select json_build_object('database', current_database())::text;",
+      {
+        NODE_ENV: "test",
+        PATH: process.env.PATH ?? "",
+        HOMECOOK_LOCAL_PGHOST: host,
+        HOMECOOK_LOCAL_PGPORT: port,
+        HOMECOOK_LOCAL_PGDATABASE: database,
+        HOMECOOK_LOCAL_PGUSER: "postgres",
+      },
+    )).toEqual({ database });
+  });
+
+  it("does not execute requested mutation when the isolated database sentinel is wrong", async () => {
+    const { runLocalPsqlJson } = await import("../scripts/lib/ingredient-nutrition-local-db.mjs");
+    expect(database).toMatch(/^homecook_[a-z0-9_]+$/);
+    const databaseIdentifier = `"${database}"`;
+    psql(`
+      drop table if exists public.local_override_sentinel_probe;
+      create table public.local_override_sentinel_probe (value integer not null);
+    `);
+
+    try {
+      psql(`comment on database ${databaseIdentifier} is 'wrong-sentinel';`);
+      expect(() => runLocalPsqlJson(
+        `with inserted as (
+          insert into public.local_override_sentinel_probe (value)
+          values (1)
+          returning value
+        )
+        select json_build_object('inserted', count(*))::text from inserted;`,
+        {
+          NODE_ENV: "test",
+          PATH: process.env.PATH ?? "",
+          HOMECOOK_LOCAL_PGHOST: host,
+          HOMECOOK_LOCAL_PGPORT: port,
+          HOMECOOK_LOCAL_PGDATABASE: database,
+          HOMECOOK_LOCAL_PGUSER: "postgres",
+        },
+      )).toThrowError(expect.objectContaining({ code: "LOCAL_DATABASE_SENTINEL_INVALID" }));
+      expect(psql("select count(*) from public.local_override_sentinel_probe;")).toBe("0");
+    } finally {
+      psql(`
+        comment on database ${databaseIdentifier} is 'homecook-isolated-local-v1';
+        drop table if exists public.local_override_sentinel_probe;
+      `);
+    }
+  });
+
   it("never resolves attacker-controlled public.digest from security-definer entry points", () => {
     psql(`
       create role digest_shadow_attacker nologin;

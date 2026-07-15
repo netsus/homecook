@@ -13,7 +13,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { publishArtifactBundle } from "./lib/public-nutrition-artifacts.mjs";
-import { buildLocalPsqlInvocation } from "./lib/ingredient-nutrition-local-db.mjs";
+import { runLocalPsqlJson } from "./lib/ingredient-nutrition-local-db.mjs";
 import {
   buildFoodsafetyScopeSql,
   parseFoodsafetyPinnedSeed,
@@ -79,24 +79,6 @@ async function readJsonInput(filePath) {
   } catch (error) {
     if (error instanceof IngredientNutritionImportError) throw error;
     throw new IngredientNutritionImportError("INPUT_FILE_INVALID");
-  }
-}
-
-function runLocalPsqlJson(sql) {
-  const invocation = buildLocalPsqlInvocation(process.env);
-  const result = spawnSync(
-    invocation.command,
-    invocation.args,
-    { input: sql, encoding: "utf8", timeout: 30_000 },
-  );
-  if (result.status !== 0 || result.error) {
-    throw new IngredientNutritionImportError("LOCAL_DATABASE_UNAVAILABLE");
-  }
-  const output = result.stdout.trim().split("\n").filter(Boolean).at(-1);
-  try {
-    return JSON.parse(output);
-  } catch {
-    throw new IngredientNutritionImportError("LOCAL_DATABASE_RESPONSE_INVALID");
   }
 }
 

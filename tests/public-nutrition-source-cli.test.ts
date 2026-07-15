@@ -348,6 +348,64 @@ describe("public nutrition source network and CLI", () => {
       .toThrowError(expect.objectContaining({ code: "MFDS_FILTER_INVALID" }));
   });
 
+  it("enforces the MFDS live request budget at both CLI and core boundaries", async () => {
+    const { mfdsLiveOptions } = await loadCli();
+    expect(mfdsLiveOptions({
+      FOOD_NM_KR: "시험 식품",
+      "num-of-rows": "100",
+      "max-pages": "10",
+    })).toMatchObject({ pageSize: 100, maxPages: 10 });
+    for (const args of [
+      { FOOD_NM_KR: "시험 식품", "num-of-rows": "0" },
+      { FOOD_NM_KR: "시험 식품", "num-of-rows": "101" },
+      { FOOD_NM_KR: "시험 식품", "max-pages": "0" },
+      { FOOD_NM_KR: "시험 식품", "max-pages": "11" },
+    ]) {
+      expect(() => mfdsLiveOptions(args)).toThrowError(
+        expect.objectContaining({ code: "CLI_ARGUMENT_INVALID" }),
+      );
+    }
+
+    const { fetchMfdsBatch } = await loadPipeline();
+    let requests = 0;
+    const fetchImpl = async () => {
+      requests += 1;
+      return response({ response: {
+        header: { resultCode: "00" },
+        body: {
+          pageNo: 1,
+          totalCount: 1,
+          items: [{ FOOD_CD: "MFDS-BUDGET-1" }],
+        },
+      } });
+    };
+    for (const options of [
+      { pageSize: 0, maxPages: 1 },
+      { pageSize: 101, maxPages: 1 },
+      { pageSize: 100, maxPages: 0 },
+      { pageSize: 100, maxPages: 11 },
+    ]) {
+      await expect(fetchMfdsBatch({
+        apiKey: "<FAKE_TEST_KEY_ONLY>",
+        fetchedAt: "2026-07-15T00:00:00.000Z",
+        filters: { FOOD_NM_KR: "시험 식품" },
+        fetchImpl,
+        ...options,
+      })).rejects.toMatchObject({ code: "PAGINATION_SCHEMA_INVALID" });
+    }
+    expect(requests).toBe(0);
+
+    await expect(fetchMfdsBatch({
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchedAt: "2026-07-15T00:00:00.000Z",
+      filters: { FOOD_NM_KR: "시험 식품" },
+      pageSize: 100,
+      maxPages: 10,
+      fetchImpl,
+    })).resolves.toMatchObject({ manifest: { fetched_raw_count: 1 } });
+    expect(requests).toBe(1);
+  });
+
   it("rejects unsupported and blank MFDS CLI filters before any provider request", () => {
     const directory = mkdtempSync(join(tmpdir(), "mfds-cli-filter-boundary-"));
     const env = { DATA_GO_KR_API_KEY: "<FAKE_TEST_KEY_ONLY>" };

@@ -10,6 +10,11 @@ import {
 
 const RDA_SHEET_NAME = "국가표준식품성분 Database 10.4";
 const RDA_FILE_NAME = "식품성분표(10개정판).xlsx";
+const RDA_OFFICIAL_FILE_SIZE_BYTES = 13_348_408;
+const RDA_OFFICIAL_FILE_SHA256 =
+  "271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50";
+const RDA_OFFICIAL_DATA_ROW_COUNT = 3_366;
+const RDA_STABLE_KEY_HEADER = "DB10.4색인";
 const RDA_EDIBLE_PORTION_TEXT = "가식부 100g 당 (per 100g Edible Portion)";
 const RDA_SOURCE = Object.freeze({
   id: "rda-10.4",
@@ -106,12 +111,18 @@ function requiredCell(row, column) {
   return value.trim();
 }
 
-function validateHeader(rows) {
+function validateHeader(rows, { requireStableKeyHeader = false } = {}) {
   if (requiredCell(rows.get(1), "D") !== RDA_EDIBLE_PORTION_TEXT) {
     fail("RDA_WORKBOOK_SCHEMA_INVALID", { column: "D1" });
   }
   const headers = rows.get(2);
   const units = rows.get(3);
+  if (
+    requireStableKeyHeader &&
+    requiredCell(headers, "A").replaceAll(/\s/g, "") !== RDA_STABLE_KEY_HEADER
+  ) {
+    fail("RDA_WORKBOOK_SCHEMA_INVALID", { column: "A" });
+  }
   const expectedHeaders = new Map([
     ["D", "식품명"],
     ["F", "에너지"],
@@ -139,6 +150,30 @@ function validateHeader(rows) {
   }
 }
 
+function validateOfficialDataRows(dataRows) {
+  if (
+    dataRows.length !== RDA_OFFICIAL_DATA_ROW_COUNT ||
+    dataRows.some(([rowNumber], index) => rowNumber !== index + 4)
+  ) {
+    fail("RDA_WORKBOOK_SCHEMA_INVALID", {
+      expected_data_row_count: RDA_OFFICIAL_DATA_ROW_COUNT,
+      received_data_row_count: dataRows.length,
+    });
+  }
+}
+
+export function assertRda104OfficialWorksheetSchema({
+  worksheetXml,
+  sharedStringsXml,
+}) {
+  const sharedStrings = parseSharedStrings(sharedStringsXml);
+  const rows = parseRows(worksheetXml, sharedStrings);
+  validateHeader(rows, { requireStableKeyHeader: true });
+  validateOfficialDataRows(
+    [...rows].filter(([rowNumber]) => rowNumber >= 4),
+  );
+}
+
 function validateSourceFile(sourceFile) {
   const valid =
     sourceFile !== null &&
@@ -150,6 +185,28 @@ function validateSourceFile(sourceFile) {
     /^[a-f0-9]{64}$/.test(sourceFile.sha256);
   if (!valid) fail("RDA_SOURCE_FILE_INVALID");
   return sourceFile;
+}
+
+export function assertRda104OfficialSourceFile(sourceFile) {
+  const validated = validateSourceFile(sourceFile);
+  if (
+    validated.size_bytes !== RDA_OFFICIAL_FILE_SIZE_BYTES ||
+    validated.sha256 !== RDA_OFFICIAL_FILE_SHA256
+  ) {
+    fail("RDA_SOURCE_FILE_INVALID");
+  }
+  return validated;
+}
+
+export function assertRdaSourceFileUnchanged(before, after) {
+  if (
+    before.name !== after.name ||
+    before.size_bytes !== after.size_bytes ||
+    before.sha256 !== after.sha256
+  ) {
+    fail("RDA_SOURCE_FILE_CHANGED");
+  }
+  return after;
 }
 
 function validateScope(selectedItemKeys) {
@@ -166,23 +223,27 @@ function validateScope(selectedItemKeys) {
   return new Set(normalized);
 }
 
-export function adaptRda104Worksheet({
+function adaptWorksheet({
   worksheetXml,
   sharedStringsXml,
   sourceFile,
   fetchedAt,
   selectedItemKeys = null,
-}) {
-  const pinnedFile = validateSourceFile(sourceFile);
+}, { official = false } = {}) {
+  const pinnedFile = official
+    ? assertRda104OfficialSourceFile(sourceFile)
+    : validateSourceFile(sourceFile);
   const scope = validateScope(selectedItemKeys);
   const sharedStrings = parseSharedStrings(sharedStringsXml);
   const rows = parseRows(worksheetXml, sharedStrings);
-  validateHeader(rows);
+  validateHeader(rows, { requireStableKeyHeader: official });
+
+  const dataRows = [...rows].filter(([rowNumber]) => rowNumber >= 4);
+  if (official) validateOfficialDataRows(dataRows);
 
   const items = [];
   const seenKeys = new Set();
-  for (const [rowNumber, row] of rows) {
-    if (rowNumber < 4) continue;
+  for (const [rowNumber, row] of dataRows) {
     const externalItemKey = requiredCell(row, "A");
     if (seenKeys.has(externalItemKey)) {
       fail("RDA_WORKBOOK_ITEM_KEY_COLLISION", { row_number: rowNumber });
@@ -229,6 +290,9 @@ export function adaptRda104Worksheet({
       official_file_name: pinnedFile.name,
       official_file_sha256: pinnedFile.sha256,
       official_file_size_bytes: pinnedFile.size_bytes,
+      ...(official
+        ? { official_file_row_count: RDA_OFFICIAL_DATA_ROW_COUNT }
+        : {}),
       scope_item_keys_sha256: createHash("sha256")
         .update(JSON.stringify(items.map((item) => item.external_item_key).toSorted()))
         .digest("hex"),
@@ -238,6 +302,14 @@ export function adaptRda104Worksheet({
     },
     fetchedAt,
   });
+}
+
+export function adaptRda104Worksheet(options) {
+  return adaptWorksheet(options);
+}
+
+function adaptRda104OfficialWorksheet(options) {
+  return adaptWorksheet(options, { official: true });
 }
 
 function unzipMember(filePath, member) {
@@ -273,7 +345,7 @@ export function sourceFileEvidence(filePath) {
     const bytes = readFileSync(filePath);
     return {
       name: path.basename(filePath),
-      size_bytes: stat.size,
+      size_bytes: bytes.length,
       sha256: createHash("sha256").update(bytes).digest("hex"),
     };
   } catch (error) {
@@ -286,7 +358,9 @@ export function loadRda104Workbook(filePath, {
   fetchedAt,
   selectedItemKeys = null,
 } = {}) {
-  const sourceFile = sourceFileEvidence(filePath);
+  const sourceFileBeforeRead = assertRda104OfficialSourceFile(
+    sourceFileEvidence(filePath),
+  );
   const workbookXml = unzipMember(filePath, "xl/workbook.xml");
   const relationshipsXml = unzipMember(filePath, "xl/_rels/workbook.xml.rels");
   const worksheetXml = unzipMember(
@@ -294,7 +368,11 @@ export function loadRda104Workbook(filePath, {
     worksheetMember(workbookXml, relationshipsXml),
   );
   const sharedStringsXml = unzipMember(filePath, "xl/sharedStrings.xml");
-  return adaptRda104Worksheet({
+  const sourceFile = assertRdaSourceFileUnchanged(
+    sourceFileBeforeRead,
+    assertRda104OfficialSourceFile(sourceFileEvidence(filePath)),
+  );
+  return adaptRda104OfficialWorksheet({
     worksheetXml,
     sharedStringsXml,
     sourceFile,
@@ -303,4 +381,10 @@ export function loadRda104Workbook(filePath, {
   });
 }
 
-export { RDA_FILE_NAME, RDA_SHEET_NAME };
+export {
+  RDA_FILE_NAME,
+  RDA_OFFICIAL_DATA_ROW_COUNT,
+  RDA_OFFICIAL_FILE_SHA256,
+  RDA_OFFICIAL_FILE_SIZE_BYTES,
+  RDA_SHEET_NAME,
+};

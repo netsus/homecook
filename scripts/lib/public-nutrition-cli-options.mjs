@@ -1,4 +1,8 @@
-import { NutritionPipelineError } from "./public-nutrition-pipeline.mjs";
+import {
+  MFDS_MAX_LIVE_PAGES,
+  MFDS_MAX_PAGE_SIZE,
+  NutritionPipelineError,
+} from "./public-nutrition-pipeline.mjs";
 
 const MFDS_FILTER_KEYS = Object.freeze([
   "FOOD_NM_KR",
@@ -17,10 +21,10 @@ const MFDS_GENERAL_KEYS = new Set([
   "max-pages",
 ]);
 
-function positiveIntegerArg(args, key, fallback) {
+function boundedPositiveIntegerArg(args, key, fallback, maximum) {
   if (args[key] === undefined) return fallback;
   const value = Number(args[key]);
-  if (!Number.isInteger(value) || value < 1) {
+  if (!Number.isInteger(value) || value < 1 || value > maximum) {
     throw new NutritionPipelineError("CLI_ARGUMENT_INVALID", { argument: key });
   }
   return value;
@@ -46,7 +50,17 @@ export function mfdsLiveOptions(args) {
   }
   return {
     filters,
-    pageSize: positiveIntegerArg(args, "num-of-rows", 100),
-    maxPages: positiveIntegerArg(args, "max-pages", 10),
+    pageSize: boundedPositiveIntegerArg(
+      args,
+      "num-of-rows",
+      MFDS_MAX_PAGE_SIZE,
+      MFDS_MAX_PAGE_SIZE,
+    ),
+    maxPages: boundedPositiveIntegerArg(
+      args,
+      "max-pages",
+      MFDS_MAX_LIVE_PAGES,
+      MFDS_MAX_LIVE_PAGES,
+    ),
   };
 }

@@ -95,6 +95,14 @@ disable 뒤 source item payload 13건은 보존됐고 active nutrition link, con
 - PostgreSQL integration 9 tests가 anon/authenticated RLS 거부, security-definer search path, audit 필수값, append-only, active uniqueness, concurrent approval serialization, apply/disable replay, injected transaction rollback을 실제 DB에서 통과했다.
 - full RDA bundle의 unapproved/quarantined row를 포함한 promotion은 `PROMOTION_BLOCKED`였다.
 
+## PR #1005 독립 리뷰 repair 재검증
+
+- MFDS live fetch는 CLI와 core 양쪽에서 `numOfRows=1..100`, `maxPages=1..10`만 허용한다. 0과 상한 초과 입력은 provider request 0회로 거부되며 실제 API를 다시 호출하지 않았다.
+- RDA production loader는 파일명, `13,348,408` bytes, 원본 SHA-256, 대상 sheet, A열 header를 공백/줄바꿈 제거 후 canonical `DB10.4색인`으로, data row를 3,366개 연속 행으로 고정한다. unzip 전후 file evidence도 동일해야 한다.
+- 같은 공식 원본을 최신 loader로 재검증한 결과 full은 3,366행, scoped bundle은 13행, `official_file_row_count`는 3,366이며 scope keys SHA-256은 최종 pin `95b9fc67cd41cfb05e124a127884d5c385a796ff8a3e4251c74ec4c448b922d9`와 같았다. 가식부 근거는 계속 text-only이며 percent field는 0건이다.
+- local PostgreSQL override는 loopback이더라도 기본 `5432/postgres`를 거부한다. 전용 `homecook_*` database에서는 `-X`, `ON_ERROR_STOP=1`을 적용한 같은 `psql` 연결에서 DB 내부 sentinel gate를 먼저 실행하고, 통과한 경우에만 요청 SQL을 이어서 실행한다. psql meta-command는 process 시작 전에 거부하며 child `psql`은 service/password option을 상속하지 않는 최소 환경을 쓴다.
+- 최신 PostgreSQL 14.5 격리 runner 재검증은 root와 별도 verifier 모두 1 file, 11/11 pass, exit 0이었다. 각 실행의 임시 cluster는 정상 종료·정리됐고 PostgreSQL 17 동등성 위험은 그대로 남는다.
+
 ## 남은 위험과 다음 dependency
 
 - 이번 exact bundle은 `13/124` ingredient coverage다. 남은 111 canonical ingredient와 9개 레시피에는 승인된 영양 link가 하나도 없을 수 있으며 사람이 검수한 추가 source item이 필요하다.
