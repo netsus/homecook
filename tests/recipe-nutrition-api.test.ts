@@ -33,7 +33,7 @@ async function postMeal(body: Record<string, unknown>) {
 }
 
 function queryResult<T>(data: T, error: unknown = null, count?: number) {
-  const result = { data, error, count };
+  let result = { data, error, count };
   const query = {
     select: vi.fn(() => query),
     eq: vi.fn(() => query),
@@ -41,6 +41,9 @@ function queryResult<T>(data: T, error: unknown = null, count?: number) {
     limit: vi.fn(() => query),
     in: vi.fn(() => query),
     maybeSingle: vi.fn(async () => result),
+    setResult(nextData: T, nextError: unknown = null, nextCount?: number) {
+      result = { data: nextData, error: nextError, count: nextCount };
+    },
     then(
       onFulfilled?: (value: typeof result) => unknown,
       onRejected?: (reason: unknown) => unknown,
@@ -157,7 +160,7 @@ describe("recipe nutrition API boundaries", () => {
       fat_g: { amount: 5, known_amount: null, status: "complete", display_mode: "total" },
       sodium_mg: { amount: 50, known_amount: null, status: "complete", display_mode: "total" },
     };
-    const snapshotQuery = queryResult({
+    const snapshotRow = {
       id: "snapshot-1",
       base_servings: 2,
       scalable_values_json: {
@@ -189,7 +192,8 @@ describe("recipe nutrition API boundaries", () => {
         source_url: "https://example.test/nutrition",
       }],
       calculated_at: "2026-07-16T00:00:00.000Z",
-    });
+    };
+    const snapshotQuery = queryResult<typeof snapshotRow | null>(snapshotRow);
     const from = vi.fn((table: string) => {
       if (table === "recipes") return recipeQuery;
       if (table === "recipe_sources") return sourceQuery;
@@ -248,5 +252,49 @@ describe("recipe nutrition API boundaries", () => {
     expect(snapshotQuery.eq).toHaveBeenCalledWith("is_current", true);
     expect(from.mock.calls.map(([table]) => table)).not.toContain("nutrition_values");
     expect(from.mock.calls.map(([table]) => table)).not.toContain("ingredient_nutrition_profiles");
+
+    snapshotQuery.setResult({
+      ...snapshotRow,
+      nutrient_status_json: {
+        ...values,
+        energy_kcal: {
+          amount: null,
+          known_amount: 80,
+          status: "partial",
+          display_mode: "minimum",
+        },
+      },
+      calculation_status: "partial",
+      calculation_quality: "mixed",
+      reflected_ingredient_count: 1,
+      target_ingredient_count: 2,
+      warnings_json: ["MISSING_INGREDIENT_NUTRITION"],
+    });
+
+    const partialResponse = await GET(
+      new Request("http://localhost:3000/api/v1/recipes/recipe-1"),
+      { params: Promise.resolve({ id: "recipe-1" }) },
+    );
+    const partialBody = await partialResponse.json();
+    expect(partialResponse.status).toBe(200);
+    expect(partialBody.data.nutrition.calculation_status).toBe("partial");
+    expect(partialBody.data.nutrition.values.energy_kcal).toEqual({
+      amount: null,
+      known_amount: 80,
+      status: "partial",
+      display_mode: "minimum",
+    });
+
+    snapshotQuery.setResult(null, { code: "SNAPSHOT_READ_FAILED" });
+    const readErrorResponse = await GET(
+      new Request("http://localhost:3000/api/v1/recipes/recipe-1"),
+      { params: Promise.resolve({ id: "recipe-1" }) },
+    );
+    const readErrorBody = await readErrorResponse.json();
+    expect(readErrorResponse.status).toBe(200);
+    expect(readErrorBody.data.nutrition.calculation_status).toBe("unavailable");
+    expect(readErrorBody.data.nutrition.warnings).toEqual([
+      "RECIPE_NUTRITION_SNAPSHOT_MISSING",
+    ]);
   });
 });
