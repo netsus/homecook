@@ -443,7 +443,8 @@ language plpgsql
 set search_path = pg_catalog, public
 as $$
 begin
-  if old.recipe_nutrition_snapshot_id is not distinct from new.recipe_nutrition_snapshot_id
+  if old.recipe_id is not distinct from new.recipe_id
+    and old.recipe_nutrition_snapshot_id is not distinct from new.recipe_nutrition_snapshot_id
     and old.nutrition_snapshot_origin is not distinct from new.nutrition_snapshot_origin
   then
     return new;
@@ -466,7 +467,7 @@ end;
 $$;
 
 create trigger protect_meal_recipe_nutrition_pin
-before update of recipe_nutrition_snapshot_id, nutrition_snapshot_origin on public.meals
+before update of recipe_id, recipe_nutrition_snapshot_id, nutrition_snapshot_origin on public.meals
 for each row execute function public.protect_meal_recipe_nutrition_pin();
 
 create function public.backfill_foodsafety_recipe_nutrition_meal_pins(

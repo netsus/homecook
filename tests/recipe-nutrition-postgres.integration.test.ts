@@ -218,6 +218,10 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     const clientPin = psqlResult(`insert into public.meals (id, recipe_id, recipe_nutrition_snapshot_id, nutrition_snapshot_origin) values ('30000000-0000-4000-8000-000000000003', '${pinnedRecipeId}', '${first.snapshot_id}', 'created');`);
     expect(clientPin.status).not.toBe(0);
     expect(clientPin.stderr).toContain("CLIENT_SELECTED_NUTRITION_SNAPSHOT_NOT_ALLOWED");
+
+    const recipeSwap = psqlResult(`update public.meals set recipe_id = '${emptyRecipeId}' where id = '${mealId}';`);
+    expect(recipeSwap.status).not.toBe(0);
+    expect(recipeSwap.stderr).toContain("IMMUTABLE_MEAL_NUTRITION_SNAPSHOT_PIN");
   });
 
   it("backfills only FoodSafety-30 null pins with dry-run and replay safety", () => {
