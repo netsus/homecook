@@ -363,6 +363,7 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
       assignment.profile.basis_volume_ml === 15 &&
       expectedWeight !== undefined &&
       assignment.profile.representative_weight_g === expectedWeight &&
+      assignment.evidence &&
       approvedEvidence(assignment.evidence)
     ) {
       const estimatedGrams = milliliters * expectedWeight / 15;
@@ -370,7 +371,7 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
         factor: estimatedGrams / profile.basis_amount,
         quality: "estimated",
         warning: "REPRESENTATIVE_VOLUME_CONVERSION_USED",
-        measurementSource: assignment.evidence!.source,
+        measurementSource: assignment.evidence.source,
       };
     }
   }
@@ -385,6 +386,7 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
       piece.edible_state === ingredient.edible_state &&
       piece.review_status === "approved" &&
       piece.is_active &&
+      piece.evidence &&
       approvedEvidence(piece.evidence) &&
       Number.isFinite(piece.weight_g) &&
       piece.weight_g > 0
@@ -393,7 +395,7 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
         factor: amount * piece.weight_g / profile.basis_amount,
         quality: "estimated",
         warning: "PIECE_WEIGHT_CONVERSION_USED",
-        measurementSource: piece.evidence!.source,
+        measurementSource: piece.evidence.source,
       };
     }
   }

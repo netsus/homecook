@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { RecipeNutritionCalculation } from "@/lib/nutrition/recipe-nutrition-calculator";
+import type { RecipeNutritionSnapshotRow } from "@/lib/server/recipe-nutrition-snapshot";
 import {
   mapRecipeNutritionSnapshot,
   validateRecipeNutritionSnapshot,
@@ -142,7 +143,7 @@ describe("recipe nutrition snapshot writer", () => {
   });
 
   it("projects only the pinned snapshot payload without rebuilding live source relations", () => {
-    const row = {
+    const row: RecipeNutritionSnapshotRow = {
       id: "snapshot-1",
       base_servings: 2,
       scalable_values_json: { energy_kcal: 80 },
