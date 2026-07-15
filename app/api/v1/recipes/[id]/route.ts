@@ -12,7 +12,10 @@ import {
   normalizeRecipeSteps,
 } from "@/lib/recipe-detail";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
-import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
+import {
+  buildTemporarilyUnavailableRecipeNutrition,
+  buildUnavailableRecipeNutrition,
+} from "@/lib/nutrition/recipe-nutrition-presentation";
 import {
   mapRecipeNutritionSnapshot,
   type RecipeNutritionSnapshotRow,
@@ -79,11 +82,10 @@ async function readCurrentRecipeNutritionSnapshot(
 }
 
 function projectRecipeNutritionSnapshot(value: unknown) {
-  if (!value) return buildUnavailableRecipeNutrition();
   try {
     return mapRecipeNutritionSnapshot(value as RecipeNutritionSnapshotRow);
   } catch {
-    return buildUnavailableRecipeNutrition();
+    return buildTemporarilyUnavailableRecipeNutrition();
   }
 }
 
@@ -399,9 +401,11 @@ export async function GET(request: Request, context: RouteContext) {
       cook_count: recipeResult.data.cook_count,
       ingredients,
       steps,
-      nutrition: nutritionSnapshotResult.error || !nutritionSnapshotResult.data
-        ? buildUnavailableRecipeNutrition()
-        : projectRecipeNutritionSnapshot(nutritionSnapshotResult.data),
+      nutrition: nutritionSnapshotResult.error
+        ? buildTemporarilyUnavailableRecipeNutrition()
+        : nutritionSnapshotResult.data
+          ? projectRecipeNutritionSnapshot(nutritionSnapshotResult.data)
+          : buildUnavailableRecipeNutrition(),
       user_status: userStatus,
     };
 

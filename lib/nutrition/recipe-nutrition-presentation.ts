@@ -8,7 +8,9 @@ const CORE_NUTRIENT_CODES = [
   "sodium_mg",
 ] as const;
 
-export function buildUnavailableRecipeNutrition(): RecipeNutrition {
+function buildUnavailableRecipeNutritionForReason(
+  availabilityReason: "missing" | "temporarily_unavailable",
+): RecipeNutrition {
   return {
     basis: { amount: 1, unit: "serving" },
     values: Object.fromEntries(
@@ -21,7 +23,18 @@ export function buildUnavailableRecipeNutrition(): RecipeNutrition {
     ),
     calculation_status: "unavailable",
     calculation_quality: null,
-    warnings: ["RECIPE_NUTRITION_SNAPSHOT_MISSING"],
+    availability_reason: availabilityReason,
+    warnings: availabilityReason === "missing"
+      ? ["RECIPE_NUTRITION_SNAPSHOT_MISSING"]
+      : [],
     sources: [],
   };
+}
+
+export function buildUnavailableRecipeNutrition(): RecipeNutrition {
+  return buildUnavailableRecipeNutritionForReason("missing");
+}
+
+export function buildTemporarilyUnavailableRecipeNutrition(): RecipeNutrition {
+  return buildUnavailableRecipeNutritionForReason("temporarily_unavailable");
 }

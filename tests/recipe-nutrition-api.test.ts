@@ -129,6 +129,7 @@ describe("recipe nutrition API boundaries", () => {
       },
       calculation_status: "unavailable",
       calculation_quality: null,
+      availability_reason: "missing",
       warnings: ["RECIPE_NUTRITION_SNAPSHOT_MISSING"],
       sources: [],
     });
@@ -180,6 +181,7 @@ describe("recipe nutrition API boundaries", () => {
       nutrient_status_json: values,
       calculation_status: "complete",
       calculation_quality: "direct",
+      availability_reason: null,
       reflected_ingredient_count: 1,
       target_ingredient_count: 1,
       warnings_json: [],
@@ -241,6 +243,7 @@ describe("recipe nutrition API boundaries", () => {
       },
       calculation_status: "complete",
       calculation_quality: "direct",
+      availability_reason: null,
       reflected_ingredient_count: 1,
       target_ingredient_count: 1,
       warnings: [],
@@ -278,6 +281,7 @@ describe("recipe nutrition API boundaries", () => {
     const partialBody = await partialResponse.json();
     expect(partialResponse.status).toBe(200);
     expect(partialBody.data.nutrition.calculation_status).toBe("partial");
+    expect(partialBody.data.nutrition.availability_reason).toBeNull();
     expect(partialBody.data.nutrition.values.energy_kcal).toEqual({
       amount: null,
       known_amount: 80,
@@ -293,8 +297,43 @@ describe("recipe nutrition API boundaries", () => {
     const readErrorBody = await readErrorResponse.json();
     expect(readErrorResponse.status).toBe(200);
     expect(readErrorBody.data.nutrition.calculation_status).toBe("unavailable");
-    expect(readErrorBody.data.nutrition.warnings).toEqual([
-      "RECIPE_NUTRITION_SNAPSHOT_MISSING",
-    ]);
+    expect(readErrorBody.data.nutrition.availability_reason).toBe("temporarily_unavailable");
+    expect(readErrorBody.data.nutrition.warnings).toEqual([]);
+
+    snapshotQuery.setResult({ ...snapshotRow, nutrient_status_json: null });
+    const malformedResponse = await GET(
+      new Request("http://localhost:3000/api/v1/recipes/recipe-1"),
+      { params: Promise.resolve({ id: "recipe-1" }) },
+    );
+    const malformedBody = await malformedResponse.json();
+    expect(malformedResponse.status).toBe(200);
+    expect(malformedBody.data.nutrition.availability_reason).toBe("temporarily_unavailable");
+
+    snapshotQuery.setResult({
+      ...snapshotRow,
+      scalable_values_json: {},
+      fixed_values_json: {},
+      nutrient_status_json: Object.fromEntries(
+        Object.keys(values).map((code) => [code, {
+          amount: null,
+          known_amount: null,
+          status: "unavailable",
+          display_mode: null,
+        }]),
+      ),
+      calculation_status: "unavailable",
+      calculation_quality: null,
+      reflected_ingredient_count: 0,
+      target_ingredient_count: 1,
+      warnings_json: ["NUTRITION_PROFILE_MISSING"],
+      sources_json: [],
+    });
+    const unavailableSnapshotResponse = await GET(
+      new Request("http://localhost:3000/api/v1/recipes/recipe-1"),
+      { params: Promise.resolve({ id: "recipe-1" }) },
+    );
+    const unavailableSnapshotBody = await unavailableSnapshotResponse.json();
+    expect(unavailableSnapshotBody.data.nutrition.calculation_status).toBe("unavailable");
+    expect(unavailableSnapshotBody.data.nutrition.availability_reason).toBeNull();
   });
 });

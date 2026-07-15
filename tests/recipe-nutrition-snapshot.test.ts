@@ -223,6 +223,7 @@ describe("recipe nutrition snapshot writer", () => {
       fixed_values: row.fixed_values_json,
       calculation_status: "complete",
       calculation_quality: "direct",
+      availability_reason: null,
       reflected_ingredient_count: 1,
       target_ingredient_count: 1,
       warnings: ["PINNED_WARNING"],

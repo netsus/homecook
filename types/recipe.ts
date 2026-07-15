@@ -156,6 +156,7 @@ export interface RecipePhoto {
 
 export type RecipeNutritionStatus = "complete" | "partial" | "unavailable";
 export type RecipeNutritionQuality = "direct" | "estimated" | "mixed";
+export type RecipeNutritionAvailabilityReason = "missing" | "temporarily_unavailable" | null;
 
 export interface RecipeNutritionValue {
   amount: number | null;
@@ -181,6 +182,7 @@ export interface RecipeNutrition {
   fixed_values?: Record<string, number>;
   calculation_status: RecipeNutritionStatus;
   calculation_quality: RecipeNutritionQuality | null;
+  availability_reason: RecipeNutritionAvailabilityReason;
   reflected_ingredient_count?: number;
   target_ingredient_count?: number;
   warnings: string[];

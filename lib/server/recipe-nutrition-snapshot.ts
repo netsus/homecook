@@ -296,6 +296,31 @@ export interface RecipeNutritionSnapshotRow {
 }
 
 export function mapRecipeNutritionSnapshot(row: RecipeNutritionSnapshotRow): RecipeNutrition {
+  if (typeof row.id !== "string" || row.id.trim().length === 0 ||
+    !Number.isFinite(row.base_servings) || row.base_servings <= 0 ||
+    !isRecord(row.scalable_values_json) || !isRecord(row.fixed_values_json) ||
+    !isRecord(row.nutrient_status_json) ||
+    !["complete", "partial", "unavailable"].includes(row.calculation_status) ||
+    (row.calculation_status === "unavailable"
+      ? row.calculation_quality !== null
+      : !["direct", "estimated", "mixed"].includes(row.calculation_quality ?? "")) ||
+    !Number.isInteger(row.reflected_ingredient_count) || row.reflected_ingredient_count < 0 ||
+    !Number.isInteger(row.target_ingredient_count) ||
+    row.target_ingredient_count < row.reflected_ingredient_count ||
+    !Array.isArray(row.warnings_json) ||
+    row.warnings_json.some((warning) => typeof warning !== "string") ||
+    !Array.isArray(row.sources_json) ||
+    typeof row.calculated_at !== "string" || row.calculated_at.trim().length === 0) {
+    throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_PROJECTION");
+  }
+  for (const code of CORE_NUTRIENT_CODES) {
+    const value = row.nutrient_status_json[code];
+    if (!value || !validateNutrientValue(value)) {
+      throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_PROJECTION");
+    }
+  }
+  for (const source of row.sources_json) validateSource(source);
+
   const calculation = {
     basis: { amount: row.base_servings, unit: "serving" as const },
     base_servings: row.base_servings,
@@ -304,6 +329,7 @@ export function mapRecipeNutritionSnapshot(row: RecipeNutritionSnapshotRow): Rec
     fixed_values: row.fixed_values_json,
     calculation_status: row.calculation_status,
     calculation_quality: row.calculation_quality,
+    availability_reason: null,
     reflected_ingredient_count: row.reflected_ingredient_count,
     target_ingredient_count: row.target_ingredient_count,
     warnings: row.warnings_json,
