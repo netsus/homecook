@@ -32,7 +32,7 @@
 - [x] **Given** source nutrient code/unit와 내부 nutrient mapping, **When** normalize, **Then** 내부 `nutrient_code`, canonical unit, 제한된 `source_nutrient_code`, `source_unit`을 함께 보존한다. <!-- omo:id=accept-nutrient-code-unit;stage=2;scope=backend;review=3 -->
 - [x] **Given** 원문 숫자 `0`, **When** parse, **Then** `amount=0`, `value_status=observed`이며 missing count에 포함하지 않는다. <!-- omo:id=accept-observed-zero;stage=2;scope=backend;review=3 -->
 - [x] **Given** `-`, trace, 빈 문자열, field 부재, parse error, **When** normalize, **Then** 각각 `amount=null`과 `missing|trace|parse_error` 상태를 남기고 숫자 0으로 바꾸지 않는다. <!-- omo:id=accept-missing-not-zero;stage=2;scope=backend;review=3 -->
-- [ ] **Given** 음수 영양값, 비호환 unit, edible portion `<=0` 또는 `>100`, **When** normalize, **Then** invalid row를 승인 profile에 넣지 않고 reason count와 non-success disposition을 남긴다. <!-- omo:id=accept-normalizer-invalid-values;stage=2;scope=backend;review=3 -->
+- [x] **Given** 음수 영양값, 비호환 unit, edible portion `<=0` 또는 `>100`, **When** normalize, **Then** invalid row를 승인 profile에 넣지 않고 reason count와 non-success disposition을 남긴다. <!-- omo:id=accept-normalizer-invalid-values;stage=2;scope=backend;review=3 -->
 
 ### Ingredient Nutrition Candidate / Decision
 
@@ -41,8 +41,8 @@
 - [x] **Given** 같은 rank/score의 호환 영양 후보가 여러 개, **When** candidate generation, **Then** `AMBIGUOUS_NUTRITION_MATCH`, 각 후보 `needs_review`, active primary 0으로 fail-closed한다. <!-- omo:id=accept-ambiguous-nutrition-fail-closed;stage=2;scope=backend;review=3 -->
 - [x] **Given** exact name 또는 confidence 1.0인 단일 후보, **When** candidate generation, **Then** 자동 승인하지 않고 `pending`, `is_active=false`로 저장한다. <!-- omo:id=accept-confidence-never-auto-approves;stage=2;scope=backend;review=3 -->
 - [x] **Given** pending 후보와 actor/reason이 있는 approve decision, **When** apply, **Then** `approved + is_primary + is_active`가 되고 같은 ingredient/preparation의 active primary는 정확히 하나다. <!-- omo:id=accept-nutrition-approval-activation;stage=2;scope=backend;review=3 -->
-- [ ] **Given** pending/needs_review 후보와 reject decision, **When** apply, **Then** immutable candidate를 `rejected` 결정 이력으로 남기고 active primary로 선택하지 않는다. <!-- omo:id=accept-nutrition-rejection-history;stage=2;scope=backend;review=3 -->
-- [ ] **Given** 기존 active approved link와 새 replacement approval, **When** apply, **Then** 새 link와 old `superseded` 이력을 한 transaction으로 기록하고 원 source item/profile은 변경하지 않는다. <!-- omo:id=accept-nutrition-replacement-history;stage=2;scope=backend;review=3 -->
+- [x] **Given** pending/needs_review 후보와 reject decision, **When** apply, **Then** immutable candidate를 `rejected` 결정 이력으로 남기고 active primary로 선택하지 않는다. <!-- omo:id=accept-nutrition-rejection-history;stage=2;scope=backend;review=3 -->
+- [x] **Given** 기존 active approved link와 새 replacement approval, **When** apply, **Then** 새 link와 old `superseded` 이력을 한 transaction으로 기록하고 원 source item/profile은 변경하지 않는다. <!-- omo:id=accept-nutrition-replacement-history;stage=2;scope=backend;review=3 -->
 - [x] **Given** active approved link, **When** revoke decision을 적용, **Then** `revoked`, inactive가 되고 후속 selector는 그 row를 반환하지 않으며 원 profile/value는 보존한다. <!-- omo:id=accept-revoked-nutrition-link;stage=2;scope=backend;review=3 -->
 - [x] **Given** `approved → pending`, `rejected → approved` 직접 변경, actor/reason 없는 승인 등 허용되지 않은 전이, **When** apply, **Then** `INVALID_REVIEW_TRANSITION`과 transaction rollback이다. <!-- omo:id=accept-invalid-nutrition-transition;stage=2;scope=backend;review=3 -->
 
@@ -100,7 +100,7 @@
 
 - [x] **Given** `anon`, **When** raw/source/item/profile/value/evidence/candidate/decision table SELECT/INSERT/UPDATE/DELETE, **Then** 모두 거부된다. <!-- omo:id=accept-anon-rls-denial;stage=2;scope=backend;review=3 -->
 - [x] **Given** 일반 `authenticated` user, **When** 같은 operation, **Then** approved row를 포함해 직접 접근/수정/삭제가 거부된다. <!-- omo:id=accept-authenticated-rls-denial;stage=2;scope=backend;review=3 -->
-- [ ] **Given** 기존 `admin_members` viewer만 가진 user, **When** 검수 write, **Then** operator capability로 승격되지 않고 거부된다. <!-- omo:id=accept-admin-viewer-no-write;stage=2;scope=backend;review=3 -->
+- [x] **Given** 기존 `admin_members` viewer만 가진 user, **When** 검수 write, **Then** operator capability로 승격되지 않고 거부된다. <!-- omo:id=accept-admin-viewer-no-write;stage=2;scope=backend;review=3 -->
 - [x] **Given** service-role/operator command, **When** actor/reason 없는 approve/reject/revoke/supersede, **Then** 거부하고 audit 빈칸을 허용하지 않는다. <!-- omo:id=accept-audit-actor-reason-required;stage=2;scope=backend;review=3 -->
 - [x] **Given** approved source/profile/value/evidence payload, **When** UPDATE/DELETE 시도, **Then** 허용된 decision/active/superseded field 외 변경은 거부되고 correction은 새 version으로만 가능하다. <!-- omo:id=accept-payload-immutability;stage=2;scope=backend;review=3 -->
 - [x] **Given** 같은 ingredient/preparation에 두 active approved primary nutrition links 또는 volume assignments, **When** commit, **Then** partial unique 제약이 transaction을 거부한다. <!-- omo:id=accept-active-uniqueness;stage=2;scope=backend;review=3 -->
@@ -115,7 +115,7 @@
 ## Data Setup / Preconditions
 
 - [x] **Given** synthetic fixture suite, **When** tests 실행, **Then** 실제 key/raw row 없이 MFDS/RDA 호환·불일치, missing/zero, 2.5/tie, piece, drift, failure cases를 모두 재현한다. <!-- omo:id=accept-fixture-baseline;stage=2;scope=backend;review=3 -->
-- [ ] **Given** local Supabase reset, **When** migration 적용, **Then** 10개 table seed/profile 제약/RLS/index가 깨끗하게 생성되고 repeat reset이 성공한다. <!-- omo:id=accept-local-db-bootstrap;stage=2;scope=backend;review=3 -->
+- [x] **Given** local Supabase-compatible reset, **When** 격리 PostgreSQL에 동일 migration을 적용, **Then** 10개 table seed/profile 제약/RLS/index가 깨끗하게 생성되고 repeat reset이 성공한다. Supabase/PostgreSQL 17 동등성은 별도 위험으로 기록한다. <!-- omo:id=accept-local-db-bootstrap;stage=2;scope=backend;review=3 -->
 - [x] **Given** local DB pilot flow, **When** dry-run → explicit approved apply → duplicate replay → report → disable 순서로 실행, **Then** 각 count/write/active/audit 상태가 이 acceptance와 일치한다. <!-- omo:id=accept-local-db-smoke;stage=2;scope=backend;review=3 -->
 - [x] **Given** 이번 BE-only slice, **When** closeout, **Then** frontend route/component/API public contract가 변하지 않았고 Design/Accessibility/Playwright가 근거 있는 N/A다. <!-- omo:id=accept-be-only-boundary;stage=2;scope=shared;review=3 -->
 

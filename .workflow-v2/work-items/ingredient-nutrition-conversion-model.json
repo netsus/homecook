@@ -98,15 +98,73 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
+    "lifecycle": "merged",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "GitHub PR #1004 merged on 2026-07-15 at 574c078e98a080d0f4812bc593f4a6aa524efcf2 from exact final implementation head 829f4e15e0a1fd038cc6323a4efb3ca71fff7800; 13 current-head checks succeeded and 2 intended path-filter checks skipped",
+        "PR #1004 Actual Verification: targeted Stage 3/import 30/30, nutrition/public regression 8 files/114 tests, product 107 files/1406 tests, pnpm lint, pnpm typecheck, build, security E2E 12/12, isolated PostgreSQL 14.5 migration/RPC/RLS and hardening checks green",
+        "GitHub PR #1005 merged on 2026-07-15 at 3866952c3e81bedfd80593f576e5ed6183ec7538 from reviewed head 028c6e8f13d3c8586bbbfaa9dad42f0ae65c1420; independent review Critical/Important/Minor 0 and all non-skipped current-head checks green",
+        "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-07-15-public-data-local-pilot.md: exact FoodSafety recipe 30/30 and ingredient closure 124/124, approved nutrition links 13/124, recipe link coverage 21/30, dry-run/apply/replay/report/disable/replay verified, production/staging writes 0",
+        "2026-07-15 closeout repair isolated PostgreSQL 14.5 reset: fresh temporary cluster databases twice, each 65/65 migrations, 10 nutrition tables, 5 active representative profiles, RLS enabled on all 10 tables, 2 critical partial unique indexes; both passes exit 0",
+        "2026-07-15 closeout repair admin_members viewer write smoke: authenticated viewer INSERT into nutrition_sources denied after 65/65 migrations; temporary cluster/process/data removed; existing user services untouched",
+        "Supabase Docker/PostgreSQL 17 equivalence was not verified because new Docker containers remained Created and could not start; only containers created by the repair were removed, and the limitation remains explicit"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "829f4e15e0a1fd038cc6323a4efb3ca71fff7800",
+      "approval_state": "codex_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": true,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-15T10:55:12Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 3,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "post_merge_projection_reconciled",
+      "evidence_sources": [
+        "GitHub PR #1004 merge 574c078e98a080d0f4812bc593f4a6aa524efcf2 and exact implementation head 829f4e15e0a1fd038cc6323a4efb3ca71fff7800",
+        "GitHub PR #1005 merge 3866952c3e81bedfd80593f576e5ed6183ec7538 and reviewed head 028c6e8f13d3c8586bbbfaa9dad42f0ae65c1420",
+        "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-07-15-public-data-local-pilot.md",
+        "2026-07-15 isolated PostgreSQL 14.5 two-reset and admin viewer write-denial closeout smoke"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-15T10:55:12Z",
+      "status_synced_at": "2026-07-15T10:55:12Z",
+      "pr_body_synced_at": "2026-07-15T00:06:58Z"
+    }
+  },
+  "pr_path": "https://github.com/netsus/homecook/pull/1004",
   "out_of_scope": [
     "Public API endpoint, response field, route, frontend component, or user-facing UI",
     "Recipe nutrition calculation, immutable recipe snapshots, and RECIPE_DETAIL nutrition display",
@@ -117,5 +175,5 @@
     "Production load before separate operator approval"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs and independent Stage 1.5 review were merged through PR #999 at f8cb3ed10bd92f3832914512239c68325b3f06ad. Stage 2 started from that exact origin/master head. This slice consumes only predecessor approved/pinned bundle input without provider calls or credential access. Public API/UI remain unchanged, Design/Accessibility/Playwright are N/A, and production writes remain zero until separate approval."
+  "notes": "Stage 1 docs and independent Stage 1.5 review merged through PR #999 at f8cb3ed10bd92f3832914512239c68325b3f06ad. Stage 2 merged through PR #1004 at 574c078e98a080d0f4812bc593f4a6aa524efcf2 from exact implementation head 829f4e15e0a1fd038cc6323a4efb3ca71fff7800. The actual public-data FoodSafety-30 pilot and retained evidence merged through PR #1005 at 3866952c3e81bedfd80593f576e5ed6183ec7538. Canonical lifecycle is merged, approval is codex_approved under the user-approved Codex-only nutrition exception, and verification is passed. A closeout repair reran all 65 migrations in two fresh isolated PostgreSQL 14.5 databases and verified 10 nutrition tables, 5 active profiles, RLS on all 10 tables, 2 critical partial unique indexes, plus an authenticated admin viewer write denial. Supabase Docker/PostgreSQL 17 equivalence remains unverified and explicit. Human nutrition/conversion/piece review and production load remain Manual Only follow-ups; production/staging writes are 0, public API/UI are unchanged, and Design/Accessibility/Playwright are N/A."
 }

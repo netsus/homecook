@@ -72,12 +72,12 @@
 
 - [x] 공공데이터포털 계정을 준비한다. — 2026-07-14 실제 승인 key의 MFDS live 응답으로 계정 사용 가능 상태를 확인했다.
 - [x] 식약처 `식품영양성분DB정보` OpenAPI `15127578` 개발계정 활용신청을 완료한다. — 2026-07-14 실제 호출이 HTTP 200 / provider result `00`을 반환했다.
-- [ ] 발급 key는 server/operator secret `DATA_GO_KR_API_KEY` 하나에만 저장한다.
-- [ ] 실제 key는 문서, repository, client/browser bundle, test fixture/snapshot, log, error, response, manifest, persisted query string에 넣지 않는다.
-- [ ] provider가 `serviceKey` query parameter를 요구하면 send boundary에서만 주입하고, 기록되는 URL/query에서는 인증 parameter를 제거하거나 `[REDACTED]`로 바꾼다.
-- [ ] fixture는 실제 key와 구분되는 명시적 fake token만 사용하고 secret scanner가 실제 key 0건을 확인한다.
-- [ ] 농진청 10.4 Excel/검색과 양념 계량표는 key 없는 취득·검수 source로 유지한다.
-- [ ] RDA 10.0 OpenAPI `15143598`은 기본 경로에서 신청/호출하지 않는다.
+- [x] 발급 key는 server/operator secret `DATA_GO_KR_API_KEY` 하나에만 저장한다.
+- [x] 실제 key는 문서, repository, client/browser bundle, test fixture/snapshot, log, error, response, manifest, persisted query string에 넣지 않는다.
+- [x] provider가 `serviceKey` query parameter를 요구하면 send boundary에서만 주입하고, 기록되는 URL/query에서는 인증 parameter를 제거하거나 `[REDACTED]`로 바꾼다.
+- [x] fixture는 실제 key와 구분되는 명시적 fake token만 사용하고 secret scanner가 실제 key 0건을 확인한다.
+- [x] 농진청 10.4 Excel/검색과 양념 계량표는 key 없는 취득·검수 source로 유지한다.
+- [x] RDA 10.0 OpenAPI `15143598`은 기본 경로에서 신청/호출하지 않는다.
 
 ## Backend First Contract
 

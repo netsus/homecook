@@ -91,7 +91,7 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
+    "lifecycle": "merged",
     "approval_state": "codex_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
@@ -101,9 +101,9 @@
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "projecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
+      "roadmap_lifecycle": "merged",
       "design_status": "N/A",
       "delivery_checklist": "complete",
       "design_authority": "not_required",
@@ -128,11 +128,12 @@
         "2026-07-14 TDD live-envelope fix at f6596817d5cc9f2c35ab1b4833082e82623af5f9: direct top-level envelope and ambiguous dual-envelope RED reproduced, then 69 targeted tests and pnpm verify:backend passed",
         "2026-07-14 MFDS 15127578 actual operator-secret page 1 / size 1 smoke: HTTP 200, provider result 00, direct top-level envelope, item count 1, reported total 302629, core fields present, production parser accepted, raw payload/row/secret/auth query not retained, production DB writes 0; complete pagination and promotion not claimed",
         "Independent Stage 3 review at exact head c91c2aecf46bc339cb00ebaf2f1c39f6dba13054: STAGE3_LIVE_ENVELOPE_APPROVED with Critical/Important/Suggestion 0; this result remains historical evidence only after master integration",
-        "Independent Codex master-integration reviewer thread 019f5fb3-ea75-7242-a136-7dc0ed67ee6e: MASTER_INTEGRATION_APPROVED at exact implementation head 7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe with Critical/Important/Suggestion 0/0/0; nutrition 3 files/69 tests, pnpm verify:backend lint/typecheck/107 files/1406 tests/build/security E2E 12/12, all designated validators green, GitHub 13 success plus full-regression/lighthouse conditional skipped 2 with pending/fail/cancel 0, secret-equivalent/auth-query/raw-row leak 0, and reviewed artifact/PR body 5168 bytes identical at SHA-256 2837dd8b83c1caf90ee301d54a9de9ca78c128b3aed1a024774dffe5a1c83e8d; the successor bookkeeping-only head requires independent review"
+        "Independent Codex master-integration reviewer thread 019f5fb3-ea75-7242-a136-7dc0ed67ee6e: MASTER_INTEGRATION_APPROVED at exact implementation head 7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe with Critical/Important/Suggestion 0/0/0; nutrition 3 files/69 tests, pnpm verify:backend lint/typecheck/107 files/1406 tests/build/security E2E 12/12, all designated validators green, GitHub 13 success plus full-regression/lighthouse conditional skipped 2 with pending/fail/cancel 0, secret-equivalent/auth-query/raw-row leak 0, and reviewed artifact/PR body 5168 bytes identical at SHA-256 2837dd8b83c1caf90ee301d54a9de9ca78c128b3aed1a024774dffe5a1c83e8d",
+        "GitHub PR #995 merged on 2026-07-14 at merge commit f87ae75016a9b709ffc3b706e7ca3720a0940982 from final PR head e88d7c7a6daf51d958c5f63e314c2d98fcadb066"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe",
+      "current_head_sha": "e88d7c7a6daf51d958c5f63e314c2d98fcadb066",
       "approval_state": "codex_approved",
       "all_checks_green": true
     },
@@ -142,15 +143,15 @@
       "stale_lock_count": 0,
       "ci_resync_count": 1,
       "artifact_missing": false,
-      "last_recovery_at": "2026-07-14T08:37:21Z"
+      "last_recovery_at": "2026-07-15T10:55:12Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 5,
+      "codex_repairable_count": 0,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": "bookkeeping_only_head_independent_review_pending",
+      "latest_reason_code": "post_merge_projection_reconciled",
       "evidence_sources": [
         "independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad",
         "official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs",
@@ -160,13 +161,14 @@
         "Independent Stage 3 approval at exact head c91c2aecf46bc339cb00ebaf2f1c39f6dba13054",
         "Semantic merge of origin/master 2b649eced528ebb734fc71d33d38736d01fdcc20",
         "Independent Codex master-integration reviewer thread 019f5fb3-ea75-7242-a136-7dc0ed67ee6e: MASTER_INTEGRATION_APPROVED at exact implementation head 7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe",
-        "GitHub PR #995 exact reviewed-head checks: 13 success, full-regression/lighthouse conditional skipped 2, pending/fail/cancel 0"
+        "GitHub PR #995 exact reviewed-head checks: 13 success, full-regression/lighthouse conditional skipped 2, pending/fail/cancel 0",
+        "GitHub PR #995 merge f87ae75016a9b709ffc3b706e7ca3720a0940982 and final PR head e88d7c7a6daf51d958c5f63e314c2d98fcadb066"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-07-14T08:37:21Z",
-      "status_synced_at": "2026-07-14T08:37:21Z",
-      "pr_body_synced_at": "2026-07-14T08:37:21Z"
+      "docs_synced_at": "2026-07-15T10:55:12Z",
+      "status_synced_at": "2026-07-15T10:55:12Z",
+      "pr_body_synced_at": "2026-07-14T09:28:11Z"
     }
   },
   "pr_path": "https://github.com/netsus/homecook/pull/995",
@@ -182,5 +184,5 @@
     "RDA 15143598 10.0 KOGL4 OpenAPI as a default normalization source"
   ],
   "open_questions": [],
-  "notes": "Independent Codex master-integration reviewer thread 019f5fb3-ea75-7242-a136-7dc0ed67ee6e returned MASTER_INTEGRATION_APPROVED for exact implementation head 7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe with Critical/Important/Suggestion 0/0/0. Canonical approval is codex_approved, verification is passed, reviewed-head checks are green, lifecycle remains in_progress before merge, evaluation remains not_started because no separate evaluator ran, and auto-merge remains disabled. The successor bookkeeping-only head is not the approved implementation head and requires a fresh independent current-head review. The c91c2aecf46bc339cb00ebaf2f1c39f6dba13054 approval remains historical evidence. Manual Only is 4/4 complete; the live boundary remains page 1 / size 1 with production DB writes 0, while full pagination, promotion, source-row approval, and production load were not run or claimed. PR #995 stays Draft. closeout_phase=projecting closeout_recovery=manual_patch:4|ci_resync:1|manual_handoff closeout_repair=codex:5|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|latest_reason_code:bookkeeping_only_head_independent_review_pending|sources:historical c91 Stage 3 review,independent Codex master-integration reviewer thread 019f5fb3-ea75-7242-a136-7dc0ed67ee6e,RDA manual evidence,TDD regression,MFDS minimal live page smoke,origin/master semantic integration,GitHub PR #995 exact reviewed-head checks"
+  "notes": "PR #995 merged on 2026-07-14 at f87ae75016a9b709ffc3b706e7ca3720a0940982 from final PR head e88d7c7a6daf51d958c5f63e314c2d98fcadb066. The independently approved implementation head 7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe and exact reviewed-head checks remain retained evidence; the later bookkeeping projection is reconciled here from the actual GitHub merge lineage. Canonical lifecycle is merged, approval is codex_approved under the user-approved Codex-only nutrition exception, verification is passed, evaluation remains not_started, and auto-merge remains disabled. The live boundary remains MFDS page 1 / size 1 with production DB writes 0; full pagination, promotion, source-row approval, and production load were not run or claimed. closeout_phase=completed closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|latest_reason_code:post_merge_projection_reconciled"
 }
