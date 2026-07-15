@@ -44,7 +44,7 @@ export interface RecipeNutritionIngredientInput {
   unit: string | null;
   ingredient_type: "QUANT" | "TO_TASTE";
   scalable: boolean;
-  preparation_state: string;
+  preparation_state: string | null;
   size_code?: string | null;
   edible_state?: string | null;
   nutrition?: {
@@ -117,7 +117,7 @@ export interface RecipeNutritionIngredientInput {
 
 export interface RecipeNutritionCalculatorInput {
   recipe_id: string;
-  recipe_version: number;
+  recipe_version: number | string;
   base_servings: number;
   calculation_version?: string;
   rounding_policy_version?: string;
