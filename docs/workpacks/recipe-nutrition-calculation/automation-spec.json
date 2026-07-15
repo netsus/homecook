@@ -1,0 +1,169 @@
+{
+  "slice_id": "recipe-nutrition-calculation",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /recipes/{recipe_id}",
+      "POST /meals"
+    ],
+    "invariants": [
+      "only-active-current-approved-source-profile-ingredient-link-conversion-assignment-and-exact-piece-weight-are-consumed",
+      "runtime-public-api-unreviewed-promotion-fuzzy-name-fallback-and-generic-density-are-forbidden",
+      "missing-trace-blank-to-taste-and-unconvertible-input-are-never-normalized-to-zero",
+      "mass-direct-matching-100ml-approved-volume-class-and-exact-piece-paths-follow-the-official-priority",
+      "tbsp-is-15ml-tsp-is-5ml-and-domestic-cooking-cup-is-200ml",
+      "representative-volume-profile-results-are-estimated-and-cannot-be-direct-quality",
+      "core-five-nutrients-have-independent-complete-partial-unavailable-status",
+      "partial-preserves-known-amount-and-minimum-display-while-unavailable-preserves-null",
+      "scalable-and-fixed-vectors-sum-to-amount-or-known-amount-for-calculable-nutrients",
+      "selected-servings-use-scalable-times-selected-over-base-plus-fixed",
+      "canonical-input-and-calculation-version-produce-a-deterministic-input-hash-and-warning-order",
+      "recipe-nutrition-snapshot-payload-is-immutable-and-current-switch-is-atomic",
+      "same-recipe-input-hash-calculation-version-is-idempotent-and-recipe-has-at-most-one-current-snapshot",
+      "new-recipe-meal-pins-the-current-snapshot-nullably-and-existing-pins-are-never-silently-repinned",
+      "post-meals-remains-recipe-only-and-meal-status-remains-registered-shopping-done-cook-done",
+      "get-recipe-nutrition-is-additive-non-null-and-no-snapshot-is-a-200-unavailable-state",
+      "snapshot-writes-and-meal-pins-preserve-owner-rls-and-cannot-be-client-selected",
+      "backfill-is-bounded-to-the-foodsafety-thirty-scope-and-production-writes-require-separate-approval",
+      "api-key-auth-query-cookie-raw-provider-payload-row-private-path-and-other-user-identifiers-never-leak",
+      "recipe-detail-reads-current-snapshot-without-per-ingredient-n-plus-one-queries"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/recipe-nutrition-calculator.test.ts tests/recipe-nutrition-snapshot.test.ts tests/recipe-nutrition-api.test.ts tests/recipe-nutrition-rls.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice recipe-nutrition-calculation",
+      "node scripts/validate-automation-spec.mjs --slice recipe-nutrition-calculation",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "calculator-direct-mass-and-matching-100ml-volume",
+      "approved-volume-g6-g10-g15-g20-g25-and-quality",
+      "exact-piece-and-to-taste-missing-boundaries",
+      "missing-versus-observed-zero-and-optional-nutrients",
+      "complete-partial-unavailable-and-direct-estimated-mixed",
+      "scalable-fixed-vector-and-selected-servings-formula",
+      "deterministic-hash-version-rounding-and-warning-order",
+      "immutable-snapshot-idempotent-replay-and-atomic-current-switch",
+      "meal-nullable-pin-origin-one-time-backfill-and-no-silent-repin",
+      "postgres-constraints-rls-owner-concurrency-and-transaction-rollback",
+      "recipe-detail-additive-complete-partial-unavailable-and-no-snapshot",
+      "existing-recipe-api-meal-status-auth-error-and-standalone-cook-regression",
+      "food-safety-thirty-bounded-backfill-report-replay-and-rollback",
+      "secret-raw-data-leak-zero-and-read-query-count-bound"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/recipes/{recipe_id}"
+    ],
+    "required_states": [
+      "loading",
+      "complete",
+      "partial",
+      "unavailable",
+      "error",
+      "low-quality-estimated",
+      "read-only",
+      "unauthorized-return-to-action"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/recipe-nutrition-ui.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
+      "pnpm test:e2e:regression:ci -- --grep recipe-nutrition-calculation",
+      "pnpm validate:authority-evidence-presence -- --slice recipe-nutrition-calculation",
+      "pnpm validate:closeout-sync -- --slice recipe-nutrition-calculation",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "recipe-detail-before-after-390px",
+      "recipe-detail-before-after-320px",
+      "recipe-detail-before-after-desktop",
+      "partial-minimum-and-estimated-copy-screenshot",
+      "unavailable-information-pending-screenshot",
+      "loading-and-soft-error-state-screenshot",
+      "no-page-horizontal-overflow-or-primary-cta-regression",
+      "ingredients-and-steps-hierarchy-remains-readable",
+      "selected-servings-scales-only-scalable-vector",
+      "cook-mode-has-no-serving-control",
+      "authority-report-blocker-zero",
+      "real-db-smoke-and-deterministic-fixture-evidence-are-distinguished"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "RECIPE_DETAIL"
+      ],
+      "required_screens": [
+        "RECIPE_DETAIL"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-before-390.png",
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-after-390.png",
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-before-320.png",
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-after-320.png",
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-before-desktop.png",
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-after-desktop.png",
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-partial.png",
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-unavailable.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/RECIPE_DETAIL-recipe-nutrition-calculation-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "manual:isolated-local-db-foodsafety-thirty-dry-run-apply-replay-current-switch-meal-pin-rollback",
+    "manual:recipe-detail-390-320-desktop-complete-partial-unavailable-estimated-and-error",
+    "manual:independent-human-review-of-expected-minimum-approximate-and-source-limitation-copy",
+    "manual:production-promotion-approval-intentionally-withheld-zero-writes"
+  ],
+  "blocked_conditions": [
+    "official-five-documents-or-source-of-truth-are-not-v1-7-18-v1-5-24-v1-3-21-v1-3-19-v1-2-23",
+    "predecessor-pr-1005-or-pr-1006-exact-merge-reviewed-head-or-ancestry-is-missing",
+    "final-pilot-logical-batch-or-approved-handoff-checksum-does-not-match",
+    "stage1-author-self-approves-or-independent-codex-stage1-5-review-is-missing",
+    "runtime-provider-call-unreviewed-promotion-fuzzy-name-fallback-or-generic-density-is-added",
+    "inactive-unapproved-revoked-superseded-stale-drifted-or-needs-source-check-row-is-consumed",
+    "missing-trace-blank-to-taste-unconvertible-or-unavailable-value-is-normalized-to-zero",
+    "piece-conversion-does-not-exactly-match-ingredient-size-preparation-and-edible-state",
+    "volume-conversion-uses-a-nonapproved-profile-or-a-cup-other-than-200ml",
+    "estimated-path-is-labelled-direct-or-ui-omits-approximate-expected-meaning",
+    "partial-is-promoted-to-total-or-unavailable-amount-is-non-null",
+    "scalable-fixed-vector-integrity-or-selected-servings-formula-is-violated",
+    "snapshot-payload-or-warning-order-is-mutated-deleted-or-recomputed-during-read",
+    "current-switch-is-not-atomic-or-more-than-one-current-snapshot-can-exist",
+    "duplicate-input-version-creates-duplicate-logical-snapshot",
+    "meal-creation-fails-only-because-snapshot-is-null-or-existing-meal-is-silently-repinned",
+    "post-meals-accepts-product-or-client-selected-snapshot-fields",
+    "meal-status-shopping-cooking-leftover-xp-or-deleted-endpoint-domain-rules-change",
+    "food-product-product-planner-or-planner-aggregate-scope-is-added",
+    "anon-authenticated-or-cross-owner-can-write-snapshot-current-or-meal-pin",
+    "api-key-auth-query-cookie-raw-provider-payload-row-private-path-or-other-user-data-leaks",
+    "backfill-is-unbounded-or-writes-outside-foodsafety-thirty-scope",
+    "production-or-staging-data-write-occurs-without-separate-operator-approval",
+    "recipe-detail-read-performs-per-ingredient-n-plus-one-query",
+    "cook-mode-serving-control-is-added",
+    "390-320-desktop-before-after-or-authority-report-is-missing",
+    "authority-blocker-is-unresolved-or-design-status-is-confirmed-without-final-authority"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  },
+  "notes": "Full-stack recipe nutrition slice only. Product catalog, product planner entries, and planner nutrition aggregation are excluded. Existing RECIPE_DETAIL is an anchor-extension, so Stage 1 generator/critic are intentionally false but Stage 4 390/320/desktop evidence and Stage 5/final authority are required. Claude-owned stages are replaced only for the user-approved nutrition/products/planner program by role-separated fresh Codex sessions; author and implementer cannot self-approve."
+}

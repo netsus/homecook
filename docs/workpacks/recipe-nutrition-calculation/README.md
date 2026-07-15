@@ -1,0 +1,319 @@
+# Slice: recipe-nutrition-calculation
+
+## Goal
+
+승인된 재료 영양·계량 데이터만 사용해 레시피의 예상 영양을 결정론적으로 계산하고, 과거 식단이 나중의 데이터 변경으로 흔들리지 않도록 불변 snapshot으로 고정한다. 사용자는 `RECIPE_DETAIL`에서 1인분 기준값과 선택 인분 전체값의 핵심 영양소를 `complete / partial / unavailable` 및 `direct / estimated / mixed` 품질과 함께 확인하며, 누락된 값은 0이 아니라 `최소 X` 또는 `정보 준비 중`으로 이해할 수 있다.
+
+이 슬라이스는 recipe nutrition 계산·snapshot·Recipe Detail 표시와 신규 Recipe Meal의 nullable snapshot pin까지만 닫는다. 완제품 catalog, 완제품 planner entry, recipe/product 합계는 후속 슬라이스다.
+
+## Branches
+
+- 문서: `docs/recipe-nutrition-calculation-workpack`
+- 백엔드: `feature/be-recipe-nutrition-calculation`
+- 프론트엔드: `feature/fe-recipe-nutrition-calculation`
+
+## In Scope
+
+- 화면:
+  - 기존 confirmed anchor screen `RECIPE_DETAIL`의 additive `예상 영양` 영역
+  - `1인분 기준 예상 영양`과 상세 화면에서 이미 선택한 인분의 전체값 표시
+  - `loading / complete / partial / unavailable / error / low-quality` 상태와 출처·한계 설명
+- API:
+  - 기존 `GET /recipes/{recipe_id}`의 additive non-null `nutrition` object
+  - 기존 recipe-only `POST /meals` 응답의 nullable `recipe_nutrition_snapshot_id`
+  - 신규 endpoint 없음
+- 상태 전이:
+  - recipe 계산 input 또는 calculation version 변경 → 새 immutable snapshot 생성 → current pointer 원자 전환
+  - 신규 Meal 생성 시 당시 current snapshot을 nullable pin
+  - 기존 unpinned Meal은 summary 출시 전 current snapshot으로 한 번만 `backfill` pin 가능
+  - `meals.status`는 기존 `registered -> shopping_done -> cook_done`만 유지하고 영양 계산은 이 전이를 바꾸지 않음
+- DB 영향:
+  - `recipe_nutrition_snapshots`
+  - `meals.recipe_nutrition_snapshot_id`, `meals.nutrition_snapshot_origin`
+  - read-only predecessor: `recipes`, `recipe_ingredients`, `ingredients`, `nutrition_sources`, `nutrition_profiles`, `nutrition_values`, `ingredient_nutrition_profiles`, `measurement_conversion_profiles`, `ingredient_conversion_assignments`, `piece_unit_weights`
+- 계산기와 운영 경로:
+  - 순수 계산 함수, canonical input hash, `calculation_version`
+  - manual/YouTube recipe write 완료 후 snapshot 생성·재생성 경로
+  - 기존 FoodSafety-30 recipe bounded backfill dry-run/apply/report/rollback 경로
+  - current snapshot을 join한 batch read로 Recipe Detail의 N+1 방지
+- Schema Change:
+  - [ ] 없음
+  - [x] 있음 → `supabase/migrations/<timestamp>_add_recipe_nutrition_snapshots.sql` 및 Meal nullable pin/guard가 필요
+
+## Out of Scope
+
+- `food_products`, `food_product_nutrition_versions`, public/private 완제품 catalog와 수동 제품 등록
+- `product_planner_entries`, 제품 수량 변경·삭제, Recipe Meal/ProductPlannerEntry 통합 adapter
+- 끼니·날짜·주간 recipe/product `계획 영양` 합계와 `GET /planner/nutrition`
+- 기존 planner read의 `product_entries` projection
+- 장보기, cooking session, leftover, XP/activity의 제품 제외 구현
+- 의료 처방·질환 코칭·목표 섭취량·실제 섭취 기록·먹음/건너뜀 상태
+- 바코드·OCR·외식·밀키트·조리 수율·영양 잔존율·국물 폐기율·튀김유 흡수율 정밀 추정
+- runtime 공공 API 호출, source refresh, 무검수 promotion, fuzzy/name-only 영양 또는 환산 fallback
+- 범용 밀도, 범용 `개→g`, 관계 chaining, 승인되지 않은 source/profile/link/assignment/piece weight 사용
+- `COOK_MODE` 인분 조절 UI. 기존 금지 규칙을 유지한다.
+- 삭제된 `DELETE /recipes/{id}/save` 복원
+
+## Dependencies
+
+| 선행 항목 | 상태 | 확인 |
+| --- | --- | --- |
+| public data local pilot PR #1005 | merged — merge `3866952c3e81bedfd80593f576e5ed6183ec7538`, reviewed head `028c6e8f13d3c8586bbbfaa9dad42f0ae65c1420` | [x] |
+| nutrition/products/planner contract PR #1006 | merged/base — merge `6d01d8ac9f4861036ade4e6b97b20275c7f2a6c8`, reviewed head `81ddb4d5c4bbd320c01f9a91a40d89632193e619` | [x] |
+| `ingredient-nutrition-conversion-model` | merged implementation in PR #1004 lineage; public-data pilot exact bundle is the calculation input | [x] |
+| FoodSafety-30 exact pilot bundle | approved/pinned 13 nutrition links for 124 canonical ingredients; 21/30 recipes have at least one link | [x] |
+| independent Codex Stage 1.5 docs gate | pending — author와 다른 새 Codex 작업이 current head를 검수 | [ ] |
+
+> 최종 pilot dependency는 logical batch `7ede683988d9c23d0a89416d9b237df6b01e3a2720f045b96dbf11253ff833bc`, approved handoff checksum `457b70404e88564ab0e3d26d7d7e0d35db87babfa607b9472d1ac683538e1dcf`다. 이전 pre-fix bundle이나 `edible_portion_percent=100` 해석은 소비하지 않는다. 현재 coverage가 `13/124`인 것은 정상적인 sparse baseline이며 complete를 만들기 위해 승인되지 않은 후보를 보충하지 않는다.
+
+## Proposal Critic Decision
+
+목표는 계산의 재현성과 과거 Meal 안정성을 보장하면서 Recipe Detail 조회 비용을 제한하는 것이다.
+
+| 선택지 | 단순성 | 정확성·안전성 | 되돌리기·유지보수 | 성능·현 코드 정합성 | 판정 |
+| --- | --- | --- | --- | --- | --- |
+| 조회 시마다 현재 재료/profile로 동적 계산 | writer는 단순 | 동일 Meal 값이 source/current 변경에 따라 변하고 runtime fallback 유혹이 큼 | 과거 값 복원과 감사가 어려움 | Recipe Detail마다 다중 join/N+1 위험 | 거부 |
+| recipe row에 현재 합계만 overwrite | 조회는 단순 | partial 사유·벡터·source version 이력과 과거 pin을 잃음 | 정정 전 값을 복구하기 어려움 | 기존 immutable 계약과 충돌 | 거부 |
+| immutable snapshot + atomic current switch + nullable Meal pin | 생성 경로가 더 명시적 | input/version 재현, sparse 결측과 warning 보존, 과거 Meal 안정 | 새 version 추가와 pointer 전환으로 clean rollback 가능 | `recipe_nutrition_snapshots`와 API/DB 공식 계약에 정확히 맞음 | 채택 |
+
+채택안은 계산을 write/backfill 시점에 수행하고 read는 current/pinned snapshot을 projection한다. 동일 `(recipe_id, input_hash, calculation_version)`은 같은 logical snapshot으로 멱등 처리하며 payload는 UPDATE/DELETE하지 않는다.
+
+## Backend First Contract
+
+### Public API Boundary
+
+- 모든 JSON 응답은 기존 `{ success, data, error }`, error는 `{ code, message, fields[] }`를 유지한다.
+- `GET /recipes/{recipe_id}`는 기존 필드를 바꾸지 않고 `nutrition`을 additive object로 반환한다. snapshot이 없어도 `nutrition=null`이나 `0 kcal`가 아니라 필수 핵심 5종이 `unavailable`인 object를 반환한다. API의 `basis`/`values`는 계산 당시 기본 인분 전체 snapshot이고, UI의 1인분 기준값과 선택 인분 전체값은 같은 vector 공식으로 파생한다.
+- current snapshot이 있으면 `nutrition`은 `basis`, `base_servings`, `values`, `scalable_values`, `fixed_values`, `calculation_status`, `calculation_quality`, `reflected_ingredient_count`, `target_ingredient_count`, `warnings`, `sources`, `snapshot_id`, `calculated_at`를 공식 shape대로 투영한다.
+- snapshot이 없으면 `basis`, 핵심 5종 `values`, `calculation_status='unavailable'`, `calculation_quality=null`, `warnings=['RECIPE_NUTRITION_SNAPSHOT_MISSING']`, `sources=[]`를 반환한다. 존재하지 않는 snapshot ID·시각·count·vector는 거짓 0으로 채우지 않고 생략한다.
+- `POST /meals` request는 계속 `recipe_id`, `plan_date`, `column_id`, `planned_servings`, optional `leftover_dish_id/source_path`만 받는다. product field는 `422 VALIDATION_ERROR`다.
+- `POST /meals`는 current snapshot이 있으면 `recipe_nutrition_snapshot_id`를 pin하고 없으면 null로 생성에 성공한다. endpoint는 Recipe Meal 전용이고 status/ownership/idempotency 기존 계약을 완화하지 않는다.
+
+### Nutrition Payload And Formula
+
+- 핵심 5종: `energy_kcal`, `carbohydrate_g`, `protein_g`, `fat_g`, `sodium_mg`.
+- optional: `sugars_g`, `saturated_fat_g`, `fiber_g`; source 값이 있을 때만 key를 제공한다.
+- 기본 인분 전체에서 계산 가능한 nutrient 구성요소를 `scalable_values`와 `fixed_values`로 분리한다.
+  - complete: 두 vector의 합 = `values[key].amount`
+  - partial: 두 vector의 합 = `values[key].known_amount`; `amount=null`, `display_mode='minimum'`
+  - unavailable: `amount/known_amount=null`, vector 양쪽에서 key 생략
+  - 검증된 실제 기여 0만 숫자 0으로 허용
+- 선택 인분 계산은 nutrient별로 `scalable_values[key] * selected_servings / base_servings + fixed_values[key]`다. 누락 vector를 0으로 보충하거나 1인분 값을 단순 곱하지 않는다.
+- client는 snapshot의 nutrient status·display mode·warnings를 authority로 소비한다. `COOK_MODE`에는 selected servings control을 추가하지 않는다.
+
+### Calculator Input And Unit Order
+
+계산기는 recipe와 아래 **active current approved** predecessor row만 canonical 정렬해 input hash에 포함한다.
+
+- recipe ID/version, `base_servings`, 정량 recipe ingredient ID·amount·unit·ingredient type·`scalable`, 크기·손질/가식 상태
+- `nutrition_sources` current/freshness 및 approved normalized `nutrition_profiles/nutrition_values`
+- active approved primary `ingredient_nutrition_profiles`
+- active approved `ingredient_conversion_assignments`가 pin한 `measurement_conversion_profiles`
+- ingredient+size+preparation/edible state가 exact match인 active approved `piece_unit_weights`
+- calculation version과 rounding policy version
+
+단위 경로 우선순위:
+
+1. `g/kg`은 질량 기준 profile로 직접 계산한다.
+2. profile 기준이 `100mL`이고 입력이 `mL/L/tbsp/tsp/cup`이면 부피 기준으로 직접 계산한다.
+3. 그 밖의 부피는 `tbsp=15mL`, `tsp=5mL`, 국내 조리용 `cup=200mL`로 정규화하고 active approved `VOLUME_G6/G10/G15/G20/G25`만 적용한다. 예상 질량은 `mL * representative_g / 15`다.
+4. `개`는 ingredient·크기·손질/가식 상태가 exact match인 active approved piece weight만 사용한다.
+5. `TO_TASTE`, amount 결측, 미지원 단위, 변환 경로 없음, inactive/revoked/superseded/stale/needs_source_check는 계산하지 않고 missing reason을 남긴다.
+
+`TO_TASTE`와 계산 불가 기여는 0이 아니다. 대표 부피 환산을 하나라도 사용한 nutrient는 `direct`가 될 수 없으며 직접 경로만이면 `direct`, 대표 경로만이면 `estimated`, 혼합이면 `mixed`, 전체 unavailable이면 quality는 null이다.
+
+### Deterministic Snapshot Contract
+
+snapshot은 다음을 불변 보존한다.
+
+- `input_hash`, `calculation_version`, `base_servings`
+- `nutrition_profile_id`, `scalable_values_json`, `fixed_values_json`
+- nutrient별 amount/known amount/status/display mode, 전체 `calculation_status`
+- `calculation_quality`, reflected/target ingredient count
+- 정렬·중복 제거된 `missing_reasons`, 순서가 의미 있는 `warnings_json`
+- 기여한 approved source attribution과 계산·반올림 전 내부 정밀도
+- `calculated_at`
+
+MVP 화면 반올림은 표시 직전에 kcal·g·mg을 사용자 가독 단위로 수행하며 snapshot/vector 산술은 충분한 내부 정밀도로 유지한다. 반올림 정책 변경은 `calculation_version`을 올리고 새 snapshot을 만든다. 같은 canonical input과 version은 동일 hash·vector·status·warning 순서를 만든다.
+
+핵심 5종 모두 complete면 전체 complete, 하나라도 계산 가능하지만 불완전하면 partial, 모두 계산 불가면 unavailable이다. `partial`은 `known_amount`와 `최소 X`, `unavailable`은 amount null이다.
+
+### Writer, Current Switch, Backfill, Rollback
+
+- manual/YouTube recipe transaction이 recipe+ingredients를 성공 확정한 뒤 snapshot writer를 호출한다. 영양 writer 실패는 recipe 작성 자체를 거짓 성공으로 만들지 않도록 report/retry 대상이지만 미완전 public data를 fallback하지 않는다.
+- `(recipe_id, input_hash, calculation_version)` unique로 replay를 멱등 처리한다.
+- 새 snapshot insert와 기존 current의 `is_current=false`, 새 row `is_current=true` 전환은 한 transaction에서 수행한다.
+- snapshot payload는 UPDATE/DELETE하지 않는다. 이미 Meal에 pin된 row는 current가 아니어도 계속 조회 가능하다.
+- bounded backfill은 FoodSafety-30 exact scope로 dry-run → report → explicit apply 순서이며 batch size/cursor/checkpoint를 사용한다. 실패 batch는 rollback하고 성공한 이전 batch/Meal pin은 자동 변경하지 않는다.
+- rollback은 새 current를 비활성화하고 이전 immutable snapshot을 current로 원자 복원할 수 있다. 과거 Meal pin은 바꾸지 않는다.
+- 기존 unpinned Meal backfill은 summary 출시 전에 한 번만 실행하고 `nutrition_snapshot_origin='backfill'`을 기록한다. 새 Meal은 pin 시 `created`; snapshot null이면 origin도 null이다. pin된 Meal은 source/profile/recipe/current 변경으로 silent repin하지 않는다.
+
+### Permission / RLS / Security
+
+- public recipe의 current nutrition projection은 기존 recipe read 정책 안에서 읽을 수 있다. private/custom recipe는 기존 recipe 소유권을 그대로 적용한다.
+- recipe snapshot payload와 current 전환, Meal snapshot pin/backfill은 사용자 입력으로 임의 지정할 수 없다. 일반 `anon/authenticated` 사용자는 snapshot insert/update/delete나 다른 사용자의 Meal pin을 수행할 수 없다.
+- service/operator writer도 recipe·snapshot 관계, current uniqueness, audit origin, approved/current predecessor 조건을 DB guard와 transaction에서 다시 검증한다.
+- `POST /meals`는 column/recipe/leftover 소유권과 기존 401/403/404/409/422 경계를 유지한다. client가 보낸 snapshot ID는 받지 않는다.
+- API response, log, report, source attribution, browser bundle에 API key·인증 query·cookie·raw provider payload/row·private filesystem path·다른 사용자 식별자를 노출하지 않는다.
+- public data attribution은 승인된 `provider/dataset/source_version/data_basis_date/license/source_url` 최소 projection만 stable dedupe해 반환한다.
+
+### Error And Reason Codes
+
+기존 public error envelope를 유지하며 새 public endpoint/code를 만들지 않는다. `GET /recipes/{id}`의 snapshot 부재·partial·unavailable은 정상 200 상태다.
+
+| 상황 | 처리 |
+| --- | --- |
+| 비로그인 보호 Meal 생성 | 기존 `401` 로그인 안내와 return-to-action |
+| 타 사용자 column/leftover/recipe mutation | 기존 `403` |
+| recipe/snapshot 대상 없음 | 기존 `404`; detail snapshot 부재 자체는 200 unavailable |
+| Meal 상태/column 충돌 | 기존 `409` |
+| invalid servings/unit/product field/snapshot ID 주입 | `422 VALIDATION_ERROR` |
+| 계산 input 결측·변환 불가 | snapshot `partial/unavailable` + missing reason/warning; API error로 위장하지 않음 |
+| unapproved/inactive predecessor 소비 시도 | writer/backfill fail-closed, 0 snapshot/current writes, sanitized reason report |
+| concurrent current switch | transaction/unique guard로 current 1개; loser는 idempotent replay 또는 rollback |
+
+## Frontend Delivery Mode
+
+- Stage 4는 기존 `RECIPE_DETAIL`의 interaction model, CTA 순서, 재료/조리 단계 위계를 보존하는 기능 가능한 additive UI로 구현한다.
+- 필수 표시 상태:
+  - `loading`: 영양 영역 skeleton이 기존 상세 CTA·재료를 밀어내거나 가리지 않음
+  - `complete`: 카드 제목 `1인분 기준 예상 영양`, 1인분 기준값, 선택 인분 전체값, 핵심 5종, 직접/예상 품질
+  - `partial`: nutrient별 `최소 X`, 반영 수/대상 수, 누락 사유
+  - `unavailable`/empty: `정보 준비 중`; 0 kcal 금지
+  - `error`: 기존 상세 내용은 유지하고 영양 영역만 재시도/안내
+  - `low-quality`: 대표 환산이 포함되면 `약`/`예상`과 간단한 한계 설명
+  - `read-only`: 영양은 정보 표시이며 일반 사용자가 source/snapshot을 수정하지 않음
+  - `unauthorized`: Recipe Detail public read는 기존 정책, Meal 추가 보호 액션은 기존 로그인 안내 + return-to-action
+- 인분 control은 기존 Recipe Detail 상세 context에서만 값을 다시 계산한다. fixed vector를 비례시키지 않으며 `COOK_MODE`에는 control을 추가하지 않는다.
+- 공공 source attribution은 API 최소 projection만 표시하고 내부 검수 row나 raw data를 노출하지 않는다.
+
+## Design Authority
+
+- UI risk: `anchor-extension`
+- Anchor screen dependency: `RECIPE_DETAIL`
+- Visual artifact: Stage 4 before/after screenshot evidence를 `ui/designs/evidence/recipe-nutrition-calculation/`에 390px, 320px, desktop으로 저장할 예정
+- Authority status: `required`
+- Notes:
+  - 기존 confirmed `RECIPE_DETAIL`에 additive 정보 영역을 넣어 정보 위계와 스크롤 길이가 바뀌므로 low-risk가 아니다.
+  - 신규 화면이나 interaction model 변경은 아니므로 Stage 1 design-generator와 design-critic은 의도적으로 생략한다. generator/critic artifact는 null이다.
+  - Stage 4에서 동일 fixture의 before/after 390px·320px·desktop screenshot, loading/partial/unavailable 상태, no-horizontal-overflow와 CTA/재료/스텝 위계 보존 evidence를 남긴다.
+  - Stage 5와 final authority는 `ui/designs/authority/RECIPE_DETAIL-recipe-nutrition-calculation-authority.md`에서 blocker 0을 확인해야 한다.
+
+## Design Status
+
+- [x] 임시 UI (temporary) — Stage 1 계약 잠금 상태; Stage 4에서 기능 가능한 additive UI 구현 후 pending-review로 전환
+- [ ] 리뷰 대기 (pending-review)
+- [ ] 확정 (confirmed)
+- [ ] N/A
+
+> Design Status 전이: `temporary` → `pending-review` → authority-required Stage 5/final authority blocker 0 이후 `confirmed`.
+
+## Source Links
+
+- `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
+- `docs/요구사항기준선-v1.7.18.md`
+- `docs/화면정의서-v1.5.24.md`
+- `docs/유저flow맵-v1.3.21.md`
+- `docs/db설계-v1.3.19.md`
+- `docs/api문서-v1.2.23.md`
+- `docs/workpacks/ingredient-nutrition-conversion-model/README.md`
+- `docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-07-15-public-data-local-pilot.md`
+- `docs/engineering/tdd-vitest.md`
+- `docs/engineering/qa-system.md`
+- `docs/engineering/playwright-e2e.md`
+- `docs/engineering/product-design-authority.md`
+- `docs/design/mobile-ux-rules.md`
+- `docs/design/anchor-screens.md`
+
+## QA / Test Data Plan
+
+### Fixture Baseline
+
+- calculator fixtures는 direct g/kg, matching 100mL, each approved volume class, exact piece, scalable+fixed, optional nutrient, verified zero, missing/trace, `TO_TASTE`, unsupported unit, revoked/stale predecessor를 포함한다.
+- API fixture는 complete, partial/mixed, unavailable/no snapshot, error를 분리하고 기존 Recipe Detail fields가 nutrition 추가 전과 동일함을 잠근다.
+- frontend fixture는 base/selected servings, partial minimum, low-quality 약/예상, unavailable, loading/error를 안정적으로 재현한다.
+
+### Real DB Smoke
+
+- `pnpm dev:local-supabase` 또는 격리된 local Supabase/PostgreSQL에서 모든 migration과 FoodSafety-30 seed를 적용한다.
+- predecessor exact bundle/handoff만 local DB에 적용하고 production/staging은 별도 승인 없이 0 writes를 유지한다.
+- dry-run으로 30 recipe/124 ingredient closure와 예상 candidate/snapshot count를 보고한 뒤 bounded apply, replay, current switch, Meal pin, rollback을 검증한다.
+- owner/private recipe, anon/authenticated RLS, concurrent current switch, transaction injection rollback을 실제 DB에서 확인한다.
+- real browser는 `pnpm dev:demo` 또는 local Supabase 환경에서 390/320/desktop Recipe Detail을 확인한다.
+
+### Seed / Reset / Blockers
+
+- seed: `supabase/migrations/20260626104000_seed_foodsafety_pilot_recipes.sql`의 exact 30 recipes.
+- approved nutrition baseline: exact 13 links/124 ingredients; zero conversion/piece active assignment도 합법적인 sparse fixture다.
+- reset은 이 slice가 만든 격리 local DB와 gitignored report/evidence만 대상으로 하며 사용자 기존 DB/container/volume을 건드리지 않는다.
+- 시스템 bootstrap row 추가 의존은 없다. Meal smoke는 기존 로그인/bootstrap이 만든 owner user와 `meal_plan_columns`를 사용하고, owning flow가 column을 생성했는지 먼저 검증한다.
+- blocker:
+  - 공식 v1.7.18/v1.5.24/v1.3.21/v1.3.19/v1.2.23와 shape 불일치
+  - exact predecessor merge/checksum 또는 approved/current gate 부재
+  - `recipe_nutrition_snapshots`/Meal pin migration 또는 RLS guard 미적용
+  - complete 오탐, missing→0, fixed vector scaling, silent repin
+  - production write, secret/raw data leak
+  - 390/320/desktop authority evidence 또는 actual real DB smoke 부재
+
+## Key Rules
+
+- 계산 입력은 active current approved predecessor만 사용한다. runtime provider 호출, fuzzy guessing, nearest fallback은 금지한다.
+- sparse coverage는 정상이다. `13/124`를 complete로 꾸미지 않으며 결측은 0이 아니다.
+- snapshot payload와 warning 순서는 불변이고 current 전환만 허용한다.
+- Meal pin은 nullable이며 없다고 Meal 등록을 실패시키지 않는다. 이미 pin된 Meal은 silent repin하지 않는다.
+- 선택 인분 공식은 `scalable * selected/base + fixed`다.
+- Recipe Detail 영양은 `예상`이고 partial은 `최소`, 대표 환산은 `약`이다.
+- 영양 카드가 기존 CTA·재료·조리 단계보다 강한 primary action처럼 보이면 안 된다.
+- 제품·planner aggregate·실제 섭취 의미를 이 슬라이스에 섞지 않는다.
+
+## Rollout, Backfill, Rollback, Known Limitations
+
+1. migration과 calculator를 local/CI에 배포하고 fixture/DB/RLS를 검증한다.
+2. FoodSafety-30 dry-run report에서 exact scope, snapshot status 분포, missing reason, secret count 0을 검수한다.
+3. bounded apply로 current snapshot을 만들고 replay가 0 duplicate write인지 확인한다.
+4. Recipe Detail additive API/UI를 feature gate 또는 deploy order로 연다. snapshot이 없어도 unavailable payload로 안전하게 동작한다.
+5. summary 출시 전 기존 unpinned Meal을 한 번만 backfill하고 origin/count를 검수한다.
+6. 문제 시 UI projection을 내리고 current pointer를 이전 immutable snapshot으로 복원한다. snapshot payload와 과거 Meal pin은 삭제/재작성하지 않는다.
+
+알려진 한계:
+
+- 현재 exact coverage는 13/124 ingredient이고 승인 link를 하나 이상 가진 recipe는 21/30이다. 완전한 30-recipe coverage가 아니다.
+- 계량 evidence 6건은 `needs_source_check/human_review_required`; active conversion/piece assignment가 0일 수 있다.
+- 조리 손실·잔존·흡수·폐기율을 모델링하지 않아 재료 투입 기준 예상치다.
+- local pilot의 PostgreSQL 14.5 증거는 production/Supabase PostgreSQL 17 동등성을 완전히 증명하지 않는다.
+- source 값이나 rounding policy가 바뀌면 새 calculation version/snapshot이 필요하다.
+
+## Contract Evolution Candidates
+
+없음. 이번 범위는 PR #1006으로 merge된 공식 계약을 그대로 구현하며 새로운 public field, endpoint, 상태, 오류 code를 제안하지 않는다.
+
+## Primary User Path
+
+1. 사용자가 `RECIPE_DETAIL`을 열면 기존 상세와 함께 현재 immutable snapshot의 `예상 영양`을 본다.
+2. 상세 화면에서 인분을 바꾸면 client는 `scalable * selected/base + fixed`로 계산 가능한 값만 표시하고 partial/unavailable 상태는 유지한다.
+3. 대표 환산이 있으면 `약/예상`, 누락이 있으면 `최소 X`·반영 수·사유를 확인한다.
+4. 로그인 보호 플래너 추가를 실행하면 로그인 후 return-to-action을 거쳐 Recipe Meal이 생성되고 당시 current snapshot이 있으면 nullable pin된다.
+5. 이후 recipe/source/profile이 바뀌어도 기존 Meal의 pin은 유지되고 새 조회/새 Meal만 새 current snapshot을 사용한다.
+
+## Delivery Checklist
+
+> 이 체크리스트는 Stage 2~6 living closeout이다. Stage 1 작성 세션은 자기 산출물을 최종 승인하지 않으며 독립 Codex Stage 1.5 review가 필요하다.
+
+- [ ] 순수 calculator와 canonical input hash/calculation version 고정 <!-- omo:id=delivery-calculator-hash;stage=2;scope=backend;review=3,6 -->
+- [ ] approved/current predecessor selection과 unit priority 고정 <!-- omo:id=delivery-approved-unit-paths;stage=2;scope=backend;review=3,6 -->
+- [ ] immutable snapshot writer/current atomic switch/idempotent replay 구현 <!-- omo:id=delivery-snapshot-writer;stage=2;scope=backend;review=3,6 -->
+- [ ] scalable/fixed vector와 selected servings 공식 구현 <!-- omo:id=delivery-serving-vectors;stage=2;scope=shared;review=3,6 -->
+- [ ] nutrient completeness/quality/missing/warning/rounding 구현 <!-- omo:id=delivery-status-quality;stage=2;scope=backend;review=3,6 -->
+- [ ] `GET /recipes/{id}` additive nutrition projection과 no-snapshot unavailable 구현 <!-- omo:id=delivery-recipe-api;stage=2;scope=backend;review=3,6 -->
+- [ ] recipe-only `POST /meals` nullable snapshot pin과 silent-repin guard 구현 <!-- omo:id=delivery-meal-pin;stage=2;scope=backend;review=3,6 -->
+- [ ] DB constraint/RLS/ownership/append-only/current uniqueness 테스트 <!-- omo:id=delivery-db-security;stage=2;scope=backend;review=3,6 -->
+- [ ] FoodSafety-30 bounded backfill/report/replay/rollback과 real DB smoke <!-- omo:id=delivery-backfill-smoke;stage=2;scope=backend;review=3,6 -->
+- [ ] 기존 recipe API/Meal status/authorization/error 회귀 테스트 <!-- omo:id=delivery-backend-regression;stage=2;scope=shared;review=3,6 -->
+- [ ] Recipe Detail loading/complete/partial/unavailable/error/low-quality UI 연결 <!-- omo:id=delivery-recipe-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [ ] selected servings vector UI와 COOK_MODE control 비추가 확인 <!-- omo:id=delivery-serving-ui;stage=4;scope=frontend;review=5,6 -->
+- [ ] 한국어 `1인분 기준 예상 영양`/`약`/`최소`/`정보 준비 중`과 attribution 안내 확인 <!-- omo:id=delivery-korean-copy;stage=4;scope=frontend;review=5,6 -->
+- [ ] Vitest/Playwright/manual QA 범위와 fixture/real DB smoke 분리 <!-- omo:id=delivery-test-split;stage=4;scope=shared;review=5,6 -->
+- [ ] 390px/320px/desktop before-after와 상태별 screenshot evidence <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [ ] anchor authority report와 final authority blocker 0 <!-- omo:id=delivery-authority-gate;stage=4;scope=frontend;review=5,6 -->
+- [ ] secret/raw data leak 0, N+1 방지, bounded backfill 증거 <!-- omo:id=delivery-security-performance;stage=2;scope=shared;review=3,6 -->
+- [ ] rollout/rollback/known-limitations와 current-head closeout evidence 동기화 <!-- omo:id=delivery-closeout;stage=4;scope=shared;review=6 -->
