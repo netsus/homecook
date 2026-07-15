@@ -34,6 +34,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:nutrition-model:postgres": "node scripts/run-ingredient-nutrition-postgres-integration.mjs",
+    "test:recipe-nutrition:postgres": "node scripts/run-recipe-nutrition-postgres-integration.mjs",
     "test:youtube-corpus": "vitest run tests/youtube-corpus.test.ts",
     "test:youtube-dictionary": "vitest run tests/youtube-dictionary-resolution.test.ts",
     "test:youtube-readiness": "vitest run tests/youtube-readiness-score.test.ts",
