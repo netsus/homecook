@@ -16,17 +16,18 @@
   "dependencies": [
     "public data pilot PR #1005 merged at 3866952c3e81bedfd80593f576e5ed6183ec7538 with reviewed head 028c6e8f13d3c8586bbbfaa9dad42f0ae65c1420",
     "nutrition products planner contract PR #1006 merged at 6d01d8ac9f4861036ade4e6b97b20275c7f2a6c8 with reviewed head 81ddb4d5c4bbd320c01f9a91a40d89632193e619",
+    "user-approved recipe snapshot attribution repair dated 2026-07-15 is locked in official v1.7.19/v1.5.25/v1.3.22/v1.3.20/v1.2.24",
     "ingredient nutrition conversion model implementation lineage merged through PR #1004",
     "final FoodSafety-30 pilot logical batch 7ede683988d9c23d0a89416d9b237df6b01e3a2720f045b96dbf11253ff833bc and approved handoff checksum 457b70404e88564ab0e3d26d7d7e0d35db87babfa607b9472d1ac683538e1dcf"
   ],
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.18.md",
-      "docs/화면정의서-v1.5.24.md",
-      "docs/유저flow맵-v1.3.21.md",
-      "docs/db설계-v1.3.19.md",
-      "docs/api문서-v1.2.23.md"
+      "docs/요구사항기준선-v1.7.19.md",
+      "docs/화면정의서-v1.5.25.md",
+      "docs/유저flow맵-v1.3.22.md",
+      "docs/db설계-v1.3.20.md",
+      "docs/api문서-v1.2.24.md"
     ],
     "governing_docs": [
       "docs/workpacks/recipe-nutrition-calculation/README.md",
@@ -92,7 +93,7 @@
     ],
     "evaluator_commands": [],
     "artifact_assertions": [
-      "official-five-docs-and-source-of-truth-v1-7-18-v1-5-24-v1-3-21-v1-3-19-v1-2-23",
+      "official-five-docs-and-source-of-truth-v1-7-19-v1-5-25-v1-3-22-v1-3-20-v1-2-24",
       "predecessor-pr-1005-and-pr-1006-exact-merge-and-reviewed-heads",
       "final-pilot-batch-and-approved-handoff-checksum",
       "approved-current-only-calculator-input-without-runtime-provider-or-fuzzy-fallback",
@@ -100,6 +101,8 @@
       "missing-not-zero-and-complete-partial-unavailable-direct-estimated-mixed",
       "deterministic-hash-calculation-version-scalable-fixed-vectors-and-rounding",
       "immutable-snapshot-warning-order-idempotency-and-atomic-current-switch",
+      "immutable-snapshot-exact-six-field-actual-contributor-sources-and-no-live-attribution-rebuild",
+      "snapshot-nutrient-status-vectors-base-servings-single-authority-without-recipe-calculation-profile",
       "nullable-meal-pin-origin-one-time-backfill-and-no-silent-repin",
       "recipe-only-post-meals-and-existing-domain-status-error-ownership-regression",
       "food-safety-thirty-bounded-backfill-real-db-rls-concurrency-and-rollback",
