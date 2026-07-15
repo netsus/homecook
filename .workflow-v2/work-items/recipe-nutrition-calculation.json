@@ -114,14 +114,14 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
+    "lifecycle": "blocked",
+    "approval_state": "needs_revision",
+    "verification_status": "failed",
+    "evaluation_status": "blocked",
     "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "last_evaluator_result": "Stage 3 changes requested: runtime predecessor inputs and nutrition read-error semantics require contract evolution; real Supabase DB smoke remains incomplete.",
     "auto_merge_eligible": false,
-    "blocked_reason_code": null
+    "blocked_reason_code": "recipe-nutrition-contract-evolution-required"
   },
   "out_of_scope": [
     "Prepared food public or private catalog and immutable product nutrition versions",

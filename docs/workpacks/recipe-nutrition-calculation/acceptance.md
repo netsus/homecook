@@ -108,7 +108,7 @@
 - [x] 순수 calculator 산술, unit priority, representative classes, exact piece, missing/zero, vector formula를 단위 테스트로 고정한다 <!-- omo:id=accept-vitest-calculator;stage=2;scope=backend;review=3,6 -->
 - [x] hash/idempotency/current switch/warning order/backfill/rollback을 service/integration test로 고정한다 <!-- omo:id=accept-vitest-snapshot;stage=2;scope=backend;review=3,6 -->
 - [x] PostgreSQL integration에서 constraints/RLS/owner/concurrency/transaction rollback을 검증한다 <!-- omo:id=accept-db-integration;stage=2;scope=backend;review=3,6 -->
-- [x] API complete/partial/unavailable/no-snapshot/error와 기존 recipe response 회귀를 검증한다 <!-- omo:id=accept-api-integration;stage=2;scope=backend;review=3,6 -->
+- [ ] API complete/partial/unavailable/no-snapshot/error와 기존 recipe response 회귀를 검증한다 <!-- omo:id=accept-api-integration;stage=2;scope=backend;review=3,6 -->
 - [ ] frontend component에서 한국어 copy, status, selected servings, read-only/error fallback을 검증한다 <!-- omo:id=accept-frontend-vitest;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright

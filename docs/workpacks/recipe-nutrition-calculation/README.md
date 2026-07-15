@@ -307,14 +307,14 @@ MVP 화면 반올림은 표시 직전에 kcal·g·mg을 사용자 가독 단위�
 > 이 체크리스트는 Stage 2~6 living closeout이다. Stage 1 작성 세션은 자기 산출물을 최종 승인하지 않으며 독립 Codex Stage 1.5 review가 필요하다. 구현 최종 closeout 전에는 `.workflow-v2/work-items/recipe-nutrition-calculation.json#closeout`을 실제 검증 증거로 추가하고 canonical projection을 동기화한다.
 
 - [x] 순수 calculator와 canonical input hash/calculation version 고정 <!-- omo:id=delivery-calculator-hash;stage=2;scope=backend;review=3,6 -->
-- [x] approved/current predecessor selection과 unit priority 고정 <!-- omo:id=delivery-approved-unit-paths;stage=2;scope=backend;review=3,6 -->
+- [ ] approved/current predecessor selection과 unit priority 고정 <!-- omo:id=delivery-approved-unit-paths;stage=2;scope=backend;review=3,6 -->
 - [x] immutable snapshot writer/current atomic switch/idempotent replay 구현 <!-- omo:id=delivery-snapshot-writer;stage=2;scope=backend;review=3,6 -->
 - [x] scalable/fixed vector와 selected servings 공식 구현 <!-- omo:id=delivery-serving-vectors;stage=2;scope=shared;review=3,6 -->
 - [x] nutrient completeness/quality/missing/warning/rounding 구현 <!-- omo:id=delivery-status-quality;stage=2;scope=backend;review=3,6 -->
 - [x] `GET /recipes/{id}` additive nutrition projection과 no-snapshot unavailable 구현 <!-- omo:id=delivery-recipe-api;stage=2;scope=backend;review=3,6 -->
 - [x] recipe-only `POST /meals` nullable snapshot pin과 silent-repin guard 구현 <!-- omo:id=delivery-meal-pin;stage=2;scope=backend;review=3,6 -->
 - [x] DB constraint/RLS/ownership/append-only/current uniqueness 테스트 <!-- omo:id=delivery-db-security;stage=2;scope=backend;review=3,6 -->
-- [x] FoodSafety-30 bounded backfill/report/replay/rollback과 real DB smoke <!-- omo:id=delivery-backfill-smoke;stage=2;scope=backend;review=3,6 -->
+- [ ] FoodSafety-30 bounded backfill/report/replay/rollback과 real DB smoke <!-- omo:id=delivery-backfill-smoke;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 recipe API/Meal status/authorization/error 회귀 테스트 <!-- omo:id=delivery-backend-regression;stage=2;scope=shared;review=3,6 -->
 - [ ] Recipe Detail loading/complete/partial/unavailable/error/low-quality UI 연결 <!-- omo:id=delivery-recipe-ui-states;stage=4;scope=frontend;review=5,6 -->
 - [ ] selected servings vector UI와 COOK_MODE control 비추가 확인 <!-- omo:id=delivery-serving-ui;stage=4;scope=frontend;review=5,6 -->
