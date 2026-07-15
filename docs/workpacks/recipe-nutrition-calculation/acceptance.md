@@ -40,6 +40,8 @@
 - [ ] `(recipe_id,input_hash,calculation_version)` replay는 duplicate logical snapshot/write를 만들지 않는다 <!-- omo:id=accept-snapshot-idempotency;stage=2;scope=backend;review=3,6 -->
 - [ ] 새 snapshot insert와 current false/true 전환은 한 transaction이며 recipe별 current가 최대 1개다 <!-- omo:id=accept-current-atomic;stage=2;scope=backend;review=3,6 -->
 - [ ] snapshot payload와 `warnings_json`은 UPDATE/DELETE되지 않고 API warnings와 순서·값까지 1:1이다 <!-- omo:id=accept-snapshot-immutable-warning;stage=2;scope=backend;review=3,6 -->
+- [ ] snapshot `sources_json`은 실제 기여한 승인 nutrition/conversion/piece evidence source만 exact 6-field canonical tuple로 pin하고 UPDATE/DELETE되지 않는다 <!-- omo:id=accept-snapshot-immutable-sources;stage=2;scope=backend;review=3,6 -->
+- [ ] recipe 계산 authority는 snapshot nutrient status + scalable/fixed vector + base servings며 `nutrition_profile_id`/`recipe_calculation` profile row에 의존하지 않는다 <!-- omo:id=accept-snapshot-single-authority;stage=2;scope=backend;review=3,6 -->
 - [ ] complete vector 합=amount, partial vector 합=known amount DB constraint/service validation이 적용된다 <!-- omo:id=accept-vector-db-integrity;stage=2;scope=backend;review=3,6 -->
 - [ ] reflected count는 target count를 넘지 않고 unavailable quality는 null이라는 DB constraint가 적용된다 <!-- omo:id=accept-status-db-integrity;stage=2;scope=backend;review=3,6 -->
 - [ ] current 변경/rollback 후에도 이미 Meal에 pin된 과거 snapshot을 계속 조회할 수 있다 <!-- omo:id=accept-pinned-history;stage=2;scope=backend;review=3,6 -->
@@ -66,7 +68,8 @@
 - [ ] 기존 401/403/404/409/422 envelope과 fields shape가 유지된다 <!-- omo:id=accept-error-contract;stage=2;scope=backend;review=3,6 -->
 - [ ] invalid servings/unit/non-finite amount가 snapshot/current write 전에 거부된다 <!-- omo:id=accept-invalid-calculation-input;stage=2;scope=backend;review=3,6 -->
 - [ ] key/auth query/cookie/raw provider payload·row/private path/타 사용자 식별자가 DB report/log/API/browser bundle에 남지 않는다 <!-- omo:id=accept-secret-raw-boundary;stage=2;scope=shared;review=3,6 -->
-- [ ] source attribution은 승인된 최소 projection만 stable dedupe해 반환한다 <!-- omo:id=accept-source-attribution;stage=2;scope=backend;review=3,6 -->
+- [ ] source attribution은 pin된 `provider/dataset/source_version/data_basis_date/license/source_url` exact 6-field projection만 null-first Unicode ordinal tuple로 stable dedupe/order해 반환한다 <!-- omo:id=accept-source-attribution;stage=2;scope=backend;review=3,6 -->
+- [ ] source/profile/evidence current가 나중에 바뀌어도 기존 Meal은 pin된 snapshot 출처를 유지하고 read 시 live relation으로 재생성하지 않는다 <!-- omo:id=accept-pinned-source-history;stage=2;scope=backend;review=3,6 -->
 
 ## Frontend States / Accessibility / Authority
 
@@ -90,7 +93,7 @@
 
 ## Data Setup / Preconditions
 
-- [ ] official five docs와 SOT가 v1.7.18/v1.5.24/v1.3.21/v1.3.19/v1.2.23로 일치한다 <!-- omo:id=accept-official-docs;stage=2;scope=shared;review=3,6 -->
+- [ ] official five docs와 SOT가 v1.7.19/v1.5.25/v1.3.22/v1.3.20/v1.2.24로 일치한다 <!-- omo:id=accept-official-docs;stage=2;scope=shared;review=3,6 -->
 - [ ] PR #1005 merge/reviewed head와 PR #1006 merge/reviewed head exact ancestry를 검증한다 <!-- omo:id=accept-predecessor-commits;stage=2;scope=shared;review=3,6 -->
 - [ ] exact pilot logical batch/handoff checksum과 30 recipe/124 ingredient closure를 검증한다 <!-- omo:id=accept-pilot-pin;stage=2;scope=backend;review=3,6 -->
 - [ ] calculator/API/frontend complete/partial/unavailable fixture가 준비된다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->

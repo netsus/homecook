@@ -1,17 +1,32 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.18.md`
-- `docs/화면정의서-v1.5.24.md`
-- `docs/유저flow맵-v1.3.21.md`
-- `docs/db설계-v1.3.19.md`
-- `docs/api문서-v1.2.23.md`
+- `docs/요구사항기준선-v1.7.19.md`
+- `docs/화면정의서-v1.5.25.md`
+- `docs/유저flow맵-v1.3.22.md`
+- `docs/db설계-v1.3.20.md`
+- `docs/api문서-v1.2.24.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Recipe Nutrition Snapshot Attribution Repair Contract-Evolution `2026-07-15`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.19 | recipe 계산 결과와 실제 기여 source attribution을 함께 불변 pin하고 snapshot payload를 단일 authority로 재잠금 |
+| 화면정의서 v1.5.25 | RECIPE_DETAIL이 current source를 다시 조회하지 않고 snapshot에 pin된 출처만 표시하도록 동기화. UI field/state/action 변경 없음 |
+| 유저플로우 v1.3.22 | writer가 영양 source와 실제 사용한 부피/개당 중량 evidence source를 pin하고 read/aggregate가 과거 attribution을 재생성하지 않는 flow를 고정 |
+| DB v1.3.20 | 미구현 `recipe_nutrition_snapshots` target에서 `nutrition_profile_id`를 제거하고 immutable `sources_json` 6-field canonical array를 추가. target 49 tables 유지 |
+| API v1.2.24 | 기존 `sources[]` 6개 field의 실제 기여 source pin, stable tuple dedupe/order, secret/raw/auth-query/internal-path 금지를 잠금. 81개(active 80 + tombstone 1) 유지 |
+
+> 사용자는 2026-07-15에 이 최소 contract-evolution 수정안을 명시적으로 승인했다. `recipe_nutrition_snapshots` target은 아직 구현되지 않아 기존 snapshot row 이관은 필요 없다.
+> 실행 시점 current ingredient/source relation에서 attribution을 재생성하는 대안은 과거 Meal의 출처를 바꾸므로 거부했다. `recipe_calculation` profile과 새 source link를 만드는 대안은 기존 profile의 단일 source 모델로 다중 기여 source를 완전하게 표현하지 못하고, snapshot vector/status authority를 중복하며, predecessor read-only 범위를 넓히므로 거부했다.
+> snapshot의 `base_servings`, `nutrient_status_json`, `scalable_values_json`, `fixed_values_json`이 recipe 계산 결과의 단일 authority다. `sources_json`은 당시 실제 기여한 active current approved 영양 source와 사용된 conversion/piece evidence source의 exact 6-field projection을 canonical tuple로 dedupe/order해 불변 보존한다.
+> `nutrition_profiles`/`nutrition_values`는 read-only predecessor를 유지하고 `recipe_calculation` enum은 이 슬라이스에서 예약·미사용한다. public endpoint·field·status·error/UI는 변경하지 않고 API key·auth query·cookie·raw provider row/payload·manifest/internal path·검수 actor를 snapshot/API/log/report에 남기지 않는다.
 
 ## Recipe Nutrition, Prepared Food Catalog, And Product Planner Contract-Evolution `2026-07-15`
 

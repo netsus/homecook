@@ -10,6 +10,9 @@
 
 ## Revision Notes
 
+- `v2` recipe nutrition snapshot attribution contract repair (2026-07-15)
+  - 사용자가 recipe snapshot의 계산 결과와 실제 기여 source를 함께 불변 pin하는 최소 contract-evolution을 명시 승인했다.
+  - 미구현 target의 `nutrition_profile_id`를 제거하고 exact 6-field `sources_json`을 추가했다. `nutrition_profiles`/`nutrition_values`는 read-only를 유지하며 public API shape·endpoint/status와 target 49 tables는 늘리지 않는다.
 - `v2` recipe nutrition calculation Stage 1 (2026-07-15)
   - PR #1005 public-data pilot merge `3866952c3e81bedfd80593f576e5ed6183ec7538`와 PR #1006 공식 계약 merge `6d01d8ac9f4861036ade4e6b97b20275c7f2a6c8`를 exact predecessor로 고정했다.
   - `recipe-nutrition-calculation`을 `docs`로 전환하고 deterministic calculator, immutable snapshot, nullable Meal pin, additive Recipe Detail API와 최소 상태 UI/authority 계약을 잠갔다. 제품 catalog/entry와 planner aggregate는 후속 slice에 남긴다.
