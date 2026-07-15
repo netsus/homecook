@@ -2008,7 +2008,7 @@
         "node scripts/validate-automation-spec.mjs --slice recipe-nutrition-calculation",
         "git diff --check"
       ],
-      "notes": "Fresh Codex Stage 1 docs authoring from exact base 6d01d8ac9f4861036ade4e6b97b20275c7f2a6c8. Independent current-head Codex Stage 1.5 review/repair-final is required before merge or implementation. The slice consumes only approved/current predecessor data, preserves sparse partial/unavailable coverage, and is limited to recipe calculation, immutable snapshots, Recipe Detail projection, and nullable Recipe Meal pin. Products and planner aggregate are excluded. RECIPE_DETAIL is an authority-required anchor extension with Stage 4 390/320/desktop evidence; Stage 1 generator/critic are intentionally not required.",
+      "notes": "Fresh Codex Stage 1 docs were authored from contract base 6d01d8ac9f4861036ade4e6b97b20275c7f2a6c8 and rebased onto predecessor-closeout master 842093048f7b5cc9996bc85e886405ad6788e9c5. Independent current-head Codex Stage 1.5 review/repair-final is required before merge or implementation. The slice consumes only approved/current predecessor data, preserves sparse partial/unavailable coverage, and is limited to recipe calculation, immutable snapshots, Recipe Detail projection, and nullable Recipe Meal pin. Products and planner aggregate are excluded. RECIPE_DETAIL is an authority-required anchor extension with Stage 4 390/320/desktop evidence; Stage 1 generator/critic are intentionally not required.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
