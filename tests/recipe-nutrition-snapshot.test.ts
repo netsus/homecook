@@ -1,0 +1,176 @@
+import { describe, expect, it, vi } from "vitest";
+
+import type { RecipeNutritionCalculation } from "@/lib/nutrition/recipe-nutrition-calculator";
+import {
+  mapRecipeNutritionSnapshot,
+  validateRecipeNutritionSnapshot,
+  writeRecipeNutritionSnapshot,
+} from "@/lib/server/recipe-nutrition-snapshot";
+
+const SOURCE = {
+  provider: "식품의약품안전처",
+  dataset: "식품영양성분DB정보",
+  source_version: "2025-12-05",
+  data_basis_date: null,
+  license: "이용허락범위 제한 없음",
+  source_url: "https://www.data.go.kr/data/15127578/openapi.do",
+};
+
+function completeCalculation(): RecipeNutritionCalculation {
+  const values = {
+    energy_kcal: { amount: 100, known_amount: null, status: "complete", display_mode: "total" },
+    carbohydrate_g: { amount: 20, known_amount: null, status: "complete", display_mode: "total" },
+    protein_g: { amount: 10, known_amount: null, status: "complete", display_mode: "total" },
+    fat_g: { amount: 5, known_amount: null, status: "complete", display_mode: "total" },
+    sodium_mg: { amount: 50, known_amount: null, status: "complete", display_mode: "total" },
+  } as const;
+
+  return {
+    basis: { amount: 2, unit: "serving" },
+    base_servings: 2,
+    values,
+    scalable_values: {
+      energy_kcal: 80,
+      carbohydrate_g: 15,
+      protein_g: 8,
+      fat_g: 4,
+      sodium_mg: 40,
+    },
+    fixed_values: {
+      energy_kcal: 20,
+      carbohydrate_g: 5,
+      protein_g: 2,
+      fat_g: 1,
+      sodium_mg: 10,
+    },
+    calculation_status: "complete",
+    calculation_quality: "direct",
+    reflected_ingredient_count: 1,
+    target_ingredient_count: 1,
+    missing_reasons: [],
+    warnings: [],
+    sources: [SOURCE],
+    input_hash: "a".repeat(64),
+    calculation_version: "recipe-nutrition-v1",
+    rounding_policy_version: "display-v1",
+  };
+}
+
+describe("recipe nutrition snapshot writer", () => {
+  it("accepts the official single-authority payload and sends only immutable snapshot fields", async () => {
+    const rpc = vi.fn(async () => ({
+      data: {
+        snapshot_id: "snapshot-1",
+        created: true,
+        is_current: true,
+      },
+      error: null,
+    }));
+    const calculation = completeCalculation();
+
+    const result = await writeRecipeNutritionSnapshot({ rpc }, "recipe-1", calculation, {
+      calculatedAt: "2026-07-16T00:00:00.000Z",
+    });
+
+    expect(result).toEqual({ snapshot_id: "snapshot-1", created: true, is_current: true });
+    expect(rpc).toHaveBeenCalledWith("write_recipe_nutrition_snapshot", {
+      p_recipe_id: "recipe-1",
+      p_snapshot: {
+        base_servings: 2,
+        input_hash: "a".repeat(64),
+        calculation_version: "recipe-nutrition-v1",
+        scalable_values: calculation.scalable_values,
+        fixed_values: calculation.fixed_values,
+        nutrient_status: calculation.values,
+        calculation_status: "complete",
+        calculation_quality: "direct",
+        reflected_ingredient_count: 1,
+        target_ingredient_count: 1,
+        missing_reasons: [],
+        warnings: [],
+        sources: [SOURCE],
+        calculated_at: "2026-07-16T00:00:00.000Z",
+      },
+    });
+    expect(JSON.stringify(rpc.mock.calls[0])).not.toContain("nutrition_profile_id");
+    expect(JSON.stringify(rpc.mock.calls[0])).not.toContain("source_calculation_hash");
+  });
+
+  it("rejects vector mismatches and non-finite values before the database write", () => {
+    const invalid = completeCalculation();
+    invalid.fixed_values.energy_kcal = Number.POSITIVE_INFINITY;
+
+    expect(() => validateRecipeNutritionSnapshot(invalid)).toThrowError(
+      expect.objectContaining({ code: "INVALID_SNAPSHOT_VECTOR" }),
+    );
+
+    invalid.fixed_values.energy_kcal = 19;
+    expect(() => validateRecipeNutritionSnapshot(invalid)).toThrowError(
+      expect.objectContaining({ code: "SNAPSHOT_VECTOR_SUM_MISMATCH" }),
+    );
+  });
+
+  it("rejects source extra fields, auth query data, internal paths, raw rows and secrets", () => {
+    const unsafeCases: unknown[] = [
+      { ...SOURCE, reviewed_by: "user-1" },
+      { ...SOURCE, source_url: "https://example.test/data?serviceKey=secret" },
+      { ...SOURCE, source_url: "file:///private/provider/raw.json" },
+      { ...SOURCE, source_url: "/internal/storage/raw.json" },
+      { ...SOURCE, dataset: "raw_provider_row" },
+    ];
+
+    for (const source of unsafeCases) {
+      const invalid = completeCalculation();
+      invalid.sources = [source as typeof SOURCE];
+      expect(() => validateRecipeNutritionSnapshot(invalid)).toThrowError(
+        expect.objectContaining({ code: "UNSAFE_SNAPSHOT_SOURCE" }),
+      );
+    }
+  });
+
+  it("requires canonical exact-tuple dedupe and null-first Unicode ordinal source ordering", () => {
+    const invalid = completeCalculation();
+    invalid.sources = [
+      { ...SOURCE, provider: "a-provider", data_basis_date: "2026-01-01" },
+      { ...SOURCE, provider: "Z-provider", data_basis_date: null },
+      { ...SOURCE, provider: "Z-provider", data_basis_date: null },
+    ];
+
+    expect(() => validateRecipeNutritionSnapshot(invalid)).toThrowError(
+      expect.objectContaining({ code: "NON_CANONICAL_SNAPSHOT_SOURCES" }),
+    );
+  });
+
+  it("projects only the pinned snapshot payload without rebuilding live source relations", () => {
+    const row = {
+      id: "snapshot-1",
+      base_servings: 2,
+      scalable_values_json: { energy_kcal: 80 },
+      fixed_values_json: { energy_kcal: 20 },
+      nutrient_status_json: completeCalculation().values,
+      calculation_status: "complete",
+      calculation_quality: "direct",
+      reflected_ingredient_count: 1,
+      target_ingredient_count: 1,
+      warnings_json: ["PINNED_WARNING"],
+      sources_json: [SOURCE],
+      calculated_at: "2026-07-16T00:00:00.000Z",
+    };
+
+    expect(mapRecipeNutritionSnapshot(row)).toEqual({
+      basis: { amount: 2, unit: "serving" },
+      base_servings: 2,
+      values: row.nutrient_status_json,
+      scalable_values: row.scalable_values_json,
+      fixed_values: row.fixed_values_json,
+      calculation_status: "complete",
+      calculation_quality: "direct",
+      reflected_ingredient_count: 1,
+      target_ingredient_count: 1,
+      warnings: ["PINNED_WARNING"],
+      sources: [SOURCE],
+      snapshot_id: "snapshot-1",
+      calculated_at: "2026-07-16T00:00:00.000Z",
+    });
+  });
+});
