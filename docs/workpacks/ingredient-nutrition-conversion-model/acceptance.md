@@ -142,12 +142,12 @@ Stage 2는 아래 test를 구현보다 먼저 추가하고, 각 항목이 예상
 ## Manual QA
 
 - verifier: Stage 2 구현자와 다른 Codex Stage 3 reviewer
-- environment: local Supabase only; actual secret/env access 없음
+- environment: 기존 사용자 서비스와 분리된 실제 PostgreSQL 14.5 임시 cluster. Supabase Docker/PostgreSQL 17 동등성은 검증하지 못했으며 actual secret/env access 없음
 - scenarios: migration/reset, dry-run, local approved apply, duplicate replay, RLS denial, revoke/disable, report/leak scan
 
 ### Manual Only
 
-- [ ] 별도 Codex Stage 1.5 reviewer가 이 문서 계약을 승인한다.
+- [x] 별도 Codex Stage 1.5 reviewer가 이 문서 계약을 승인한다. — [PR #999](https://github.com/netsus/homecook/pull/999) exact reviewed head `59c9ad293bbaf63130cee8128f0cc6fb02d77377`, merge `f8cb3ed10bd92f3832914512239c68325b3f06ad`
 - [ ] 사람이 nutrition candidate의 승인/거절/대체 decision과 reason을 작성한다.
 - [ ] 사람이 measurement evidence의 license disposition과 conversion assignment를 승인/거절한다.
 - [ ] 사람이 재료·크기·손질/가식부별 piece weight를 승인/거절한다.

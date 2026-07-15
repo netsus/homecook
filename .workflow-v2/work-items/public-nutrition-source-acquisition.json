@@ -138,15 +138,15 @@
       "all_checks_green": true
     },
     "recovery_summary": {
-      "manual_patch_count": 4,
+      "manual_patch_count": 5,
       "manual_handoff": true,
       "stale_lock_count": 0,
       "ci_resync_count": 1,
       "artifact_missing": false,
-      "last_recovery_at": "2026-07-15T10:55:12Z"
+      "last_recovery_at": "2026-07-15T11:11:15Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 0,
+      "codex_repairable_count": 6,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
@@ -162,12 +162,13 @@
         "Semantic merge of origin/master 2b649eced528ebb734fc71d33d38736d01fdcc20",
         "Independent Codex master-integration reviewer thread 019f5fb3-ea75-7242-a136-7dc0ed67ee6e: MASTER_INTEGRATION_APPROVED at exact implementation head 7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe",
         "GitHub PR #995 exact reviewed-head checks: 13 success, full-regression/lighthouse conditional skipped 2, pending/fail/cancel 0",
-        "GitHub PR #995 merge f87ae75016a9b709ffc3b706e7ca3720a0940982 and final PR head e88d7c7a6daf51d958c5f63e314c2d98fcadb066"
+        "GitHub PR #995 merge f87ae75016a9b709ffc3b706e7ca3720a0940982 and final PR head e88d7c7a6daf51d958c5f63e314c2d98fcadb066",
+        "GitHub PR #1008 exact-head closeout review and cumulative projection repair"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-07-15T10:55:12Z",
-      "status_synced_at": "2026-07-15T10:55:12Z",
+      "docs_synced_at": "2026-07-15T11:11:15Z",
+      "status_synced_at": "2026-07-15T11:11:15Z",
       "pr_body_synced_at": "2026-07-14T09:28:11Z"
     }
   },
@@ -184,5 +185,5 @@
     "RDA 15143598 10.0 KOGL4 OpenAPI as a default normalization source"
   ],
   "open_questions": [],
-  "notes": "PR #995 merged on 2026-07-14 at f87ae75016a9b709ffc3b706e7ca3720a0940982 from final PR head e88d7c7a6daf51d958c5f63e314c2d98fcadb066. The independently approved implementation head 7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe and exact reviewed-head checks remain retained evidence; the later bookkeeping projection is reconciled here from the actual GitHub merge lineage. Canonical lifecycle is merged, approval is codex_approved under the user-approved Codex-only nutrition exception, verification is passed, evaluation remains not_started, and auto-merge remains disabled. The live boundary remains MFDS page 1 / size 1 with production DB writes 0; full pagination, promotion, source-row approval, and production load were not run or claimed. closeout_phase=completed closeout_repair=codex:0|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|latest_reason_code:post_merge_projection_reconciled"
+  "notes": "PR #995 merged on 2026-07-14 at f87ae75016a9b709ffc3b706e7ca3720a0940982 from final PR head e88d7c7a6daf51d958c5f63e314c2d98fcadb066. The independently approved implementation head 7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe and exact reviewed-head checks remain retained evidence; the later bookkeeping projection is reconciled here from the actual GitHub merge lineage. Canonical lifecycle is merged, approval is codex_approved under the user-approved Codex-only nutrition exception, verification is passed, evaluation remains not_started, and auto-merge remains disabled. The live boundary remains MFDS page 1 / size 1 with production DB writes 0; full pagination, promotion, source-row approval, and production load were not run or claimed. closeout_phase=completed closeout_recovery=manual_patch:5|ci_resync:1|manual_handoff closeout_repair=codex:6|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:independent Codex reviewer thread 019f5bd9-a8ac-77f3-ab2d-7efd012a71ad,official RDA search/version, overview/KOGL1, seasoning measurement, and copyright-policy URLs,GitHub PR #995 reviewed-head checks,docs/workpacks/public-nutrition-source-acquisition/README.md manual evidence disposition,TDD regression and production MFDS page 1 / size 1 operator smoke on 2026-07-14,Independent Stage 3 approval at exact head c91c2aecf46bc339cb00ebaf2f1c39f6dba13054,Semantic merge of origin/master 2b649eced528ebb734fc71d33d38736d01fdcc20,Independent Codex master-integration reviewer thread 019f5fb3-ea75-7242-a136-7dc0ed67ee6e: MASTER_INTEGRATION_APPROVED at exact implementation head 7ffb17d0d48f7a66c2b4380c1b6b2757981f08fe,GitHub PR #995 exact reviewed-head checks: 13 success, full-regression/lighthouse conditional skipped 2, pending/fail/cancel 0,GitHub PR #995 merge f87ae75016a9b709ffc3b706e7ca3720a0940982 and final PR head e88d7c7a6daf51d958c5f63e314c2d98fcadb066,GitHub PR #1008 exact-head closeout review and cumulative projection repair | latest_reason_code=post_merge_projection_reconciled | last_recovery_at=2026-07-15T11:11:15Z"
 }

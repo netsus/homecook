@@ -142,10 +142,10 @@
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": "2026-07-15T10:55:12Z"
+      "last_recovery_at": "2026-07-15T11:11:15Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 0,
+      "codex_repairable_count": 1,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 3,
       "human_escalation_count": 0,
@@ -155,12 +155,13 @@
         "GitHub PR #1004 merge 574c078e98a080d0f4812bc593f4a6aa524efcf2 and exact implementation head 829f4e15e0a1fd038cc6323a4efb3ca71fff7800",
         "GitHub PR #1005 merge 3866952c3e81bedfd80593f576e5ed6183ec7538 and reviewed head 028c6e8f13d3c8586bbbfaa9dad42f0ae65c1420",
         "docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-07-15-public-data-local-pilot.md",
-        "2026-07-15 isolated PostgreSQL 14.5 two-reset and admin viewer write-denial closeout smoke"
+        "2026-07-15 isolated PostgreSQL 14.5 two-reset and admin viewer write-denial closeout smoke",
+        "GitHub PR #1008 exact-head closeout review and cumulative projection repair"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-07-15T10:55:12Z",
-      "status_synced_at": "2026-07-15T10:55:12Z",
+      "docs_synced_at": "2026-07-15T11:11:15Z",
+      "status_synced_at": "2026-07-15T11:11:15Z",
       "pr_body_synced_at": "2026-07-15T00:06:58Z"
     }
   },
@@ -175,5 +176,5 @@
     "Production load before separate operator approval"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs and independent Stage 1.5 review merged through PR #999 at f8cb3ed10bd92f3832914512239c68325b3f06ad. Stage 2 merged through PR #1004 at 574c078e98a080d0f4812bc593f4a6aa524efcf2 from exact implementation head 829f4e15e0a1fd038cc6323a4efb3ca71fff7800. The actual public-data FoodSafety-30 pilot and retained evidence merged through PR #1005 at 3866952c3e81bedfd80593f576e5ed6183ec7538. Canonical lifecycle is merged, approval is codex_approved under the user-approved Codex-only nutrition exception, and verification is passed. A closeout repair reran all 65 migrations in two fresh isolated PostgreSQL 14.5 databases and verified 10 nutrition tables, 5 active profiles, RLS on all 10 tables, 2 critical partial unique indexes, plus an authenticated admin viewer write denial. Supabase Docker/PostgreSQL 17 equivalence remains unverified and explicit. Human nutrition/conversion/piece review and production load remain Manual Only follow-ups; production/staging writes are 0, public API/UI are unchanged, and Design/Accessibility/Playwright are N/A."
+  "notes": "Stage 1 docs and independent Stage 1.5 review merged through PR #999 at f8cb3ed10bd92f3832914512239c68325b3f06ad. Stage 2 merged through PR #1004 at 574c078e98a080d0f4812bc593f4a6aa524efcf2 from exact implementation head 829f4e15e0a1fd038cc6323a4efb3ca71fff7800. The actual public-data FoodSafety-30 pilot and retained evidence merged through PR #1005 at 3866952c3e81bedfd80593f576e5ed6183ec7538. Canonical lifecycle is merged, approval is codex_approved under the user-approved Codex-only nutrition exception, and verification is passed. A closeout repair reran all 65 migrations in two fresh isolated PostgreSQL 14.5 databases and verified 10 nutrition tables, 5 active profiles, RLS on all 10 tables, 2 critical partial unique indexes, plus an authenticated admin viewer write denial. Supabase Docker/PostgreSQL 17 equivalence remains unverified and explicit. Human nutrition/conversion/piece review and production load remain Manual Only follow-ups; production/staging writes are 0, public API/UI are unchanged, and Design/Accessibility/Playwright are N/A. closeout_phase=completed closeout_recovery=manual_patch:1|manual_handoff closeout_repair=codex:1|claude:0|manual_decision:3|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1004 merge 574c078e98a080d0f4812bc593f4a6aa524efcf2 and exact implementation head 829f4e15e0a1fd038cc6323a4efb3ca71fff7800,GitHub PR #1005 merge 3866952c3e81bedfd80593f576e5ed6183ec7538 and reviewed head 028c6e8f13d3c8586bbbfaa9dad42f0ae65c1420,docs/workpacks/ingredient-nutrition-conversion-model/evidence/2026-07-15-public-data-local-pilot.md,2026-07-15 isolated PostgreSQL 14.5 two-reset and admin viewer write-denial closeout smoke,GitHub PR #1008 exact-head closeout review and cumulative projection repair | latest_reason_code=post_merge_projection_reconciled | last_recovery_at=2026-07-15T11:11:15Z"
 }
