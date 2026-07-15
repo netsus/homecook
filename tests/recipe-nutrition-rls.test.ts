@@ -45,9 +45,19 @@ describe("recipe nutrition snapshot database contract", () => {
       expect(sql).toContain(`'${key}'`);
     }
     expect(sql).toMatch(/UNSAFE_SNAPSHOT_SOURCE/);
+    expect(sql).toMatch(/x-amz-signature/i);
+    expect(sql).toMatch(/source_url[^\n]*~[^\n]*@/i);
+    expect(sql).toMatch(/source_url[^\n]*~[^\n]*#/i);
     expect(sql).toMatch(/SNAPSHOT_VECTOR_SUM_MISMATCH/);
     expect(sql).toMatch(/INVALID_SNAPSHOT_NUTRIENT_STATUS/);
+    for (const code of ["sugars_g", "saturated_fat_g", "fiber_g"]) {
+      expect(sql).toContain(`'${code}'`);
+    }
+    expect(sql).toMatch(/v_value\.key\s*<>\s*all/i);
     expect(sql).toMatch(/INVALID_SNAPSHOT_STATUS/);
+    expect(sql).toMatch(/REPRESENTATIVE_VOLUME_CONVERSION_USED/);
+    expect(sql).toMatch(/NUTRIENT_VALUE_MISSING/);
+    expect(sql).toMatch(/calculation_status[^\n]*unavailable[^\n]*jsonb_array_length/i);
     expect(sql).toMatch(/collate "C"/i);
   });
 
@@ -56,10 +66,17 @@ describe("recipe nutrition snapshot database contract", () => {
 
     expect(sql).toMatch(/create function public\.write_recipe_nutrition_snapshot/i);
     expect(sql).toMatch(/pg_advisory_xact_lock/i);
+    expect(sql).toMatch(/p_expected_recipe_updated_at timestamptz/i);
+    expect(sql).toMatch(/select updated_at[\s\S]*for share/i);
+    expect(sql).toMatch(/RECIPE_NUTRITION_INPUT_STALE/);
+    expect(sql).toMatch(/md5\(\s*p_recipe_id::text \|\| chr\(31\)/i);
+    expect(sql).toMatch(/insert into public\.recipe_nutrition_snapshots \(\s*id,/i);
     expect(sql).toMatch(/set_config\('homecook\.recipe_nutrition_writer', 'on', true\)/i);
     expect(sql).toMatch(/update public\.recipe_nutrition_snapshots[\s\S]*set is_current = false/i);
     expect(sql).toMatch(/on conflict \(recipe_id, input_hash, calculation_version\)/i);
     expect(sql).toMatch(/create function public\.restore_recipe_nutrition_snapshot_current/i);
+    expect(sql).toMatch(/p_expected_current_snapshot_id uuid/i);
+    expect(sql).toMatch(/BACKFILL_CURRENT_DRIFT/);
     expect(sql).not.toMatch(/delete from public\.recipe_nutrition_snapshots/i);
   });
 
@@ -72,7 +89,20 @@ describe("recipe nutrition snapshot database contract", () => {
     expect(sql).toMatch(/revoke all on table public\.recipe_nutrition_snapshots from anon, authenticated/i);
     expect(sql).toMatch(/revoke insert, update, delete on table public\.recipe_nutrition_snapshots from service_role/i);
     expect(sql).toMatch(/grant select on table public\.recipe_nutrition_snapshots to service_role/i);
+    expect(sql).toMatch(
+      /revoke all on function public\.write_recipe_nutrition_snapshot\(uuid, jsonb, timestamptz\)[\s\S]*from public, anon, authenticated/i,
+    );
     expect(sql).toMatch(/grant execute on function public\.write_recipe_nutrition_snapshot[\s\S]*to service_role/i);
+    for (const triggerFunction of [
+      "protect_recipe_nutrition_snapshot",
+      "pin_current_recipe_nutrition_snapshot_on_meal_insert",
+      "protect_meal_recipe_nutrition_pin",
+    ]) {
+      expect(sql).toMatch(new RegExp(
+        `revoke all on function public\\.${triggerFunction}\\(\\)[\\s\\S]*from public, anon, authenticated, service_role`,
+        "i",
+      ));
+    }
   });
 
   it("pins current snapshot on Meal insert and permits only one-time bounded backfill", () => {
@@ -84,7 +114,11 @@ describe("recipe nutrition snapshot database contract", () => {
     expect(sql).toMatch(/CLIENT_SELECTED_NUTRITION_SNAPSHOT_NOT_ALLOWED/);
     expect(sql).toMatch(/nutrition_snapshot_origin := 'created'/i);
     expect(sql).toMatch(/create function public\.backfill_foodsafety_recipe_nutrition_meal_pins/i);
-    expect(sql).toContain("pilot_30_user_reviewed");
+    expect(sql).toContain("pilot_30_quality_corrected");
+    expect(sql).toContain("pilot_30_quality_corrected_replacement");
+    expect(sql).not.toContain("pilot_30_user_reviewed");
+    expect(sql).toMatch(/count\(distinct source\.recipe_id\)[\s\S]*<> 30/i);
+    expect(sql).not.toMatch(/skip locked/i);
     expect(sql).toMatch(/nutrition_snapshot_origin = 'backfill'/i);
     expect(sql).toMatch(/recipe_nutrition_snapshot_id is null/i);
   });

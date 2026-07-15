@@ -193,7 +193,7 @@ describe("recipe nutrition API boundaries", () => {
       }],
       calculated_at: "2026-07-16T00:00:00.000Z",
     };
-    const snapshotQuery = queryResult<typeof snapshotRow | null>(snapshotRow);
+    const snapshotQuery = queryResult<Record<string, unknown> | null>(snapshotRow);
     const from = vi.fn((table: string) => {
       if (table === "recipes") return recipeQuery;
       if (table === "recipe_sources") return sourceQuery;

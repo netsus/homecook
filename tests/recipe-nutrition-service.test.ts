@@ -62,6 +62,9 @@ describe("recipe nutrition snapshot service", () => {
 
     expect(result).toMatchObject({ snapshot_id: "snapshot-1", created: true, is_current: true });
     expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc.mock.calls[0][1]).toMatchObject({
+      p_expected_recipe_updated_at: "2026-07-16T00:00:00.000Z",
+    });
     const snapshotPayload = rpc.mock.calls[0][1].p_snapshot;
     expect(snapshotPayload).toMatchObject({
       calculation_status: "unavailable",

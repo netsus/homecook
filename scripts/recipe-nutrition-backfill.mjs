@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-import { chmodSync, readFileSync, writeFileSync } from "node:fs";
-
 import { createClient } from "@supabase/supabase-js";
 
 import {
@@ -9,14 +7,22 @@ import {
   createSupabaseRecipeNutritionBackfillRepository,
   rollbackFoodSafetyRecipeNutritionBackfill,
   runFoodSafetyRecipeNutritionBackfill,
+  sanitizeRecipeNutritionBackfillReport,
 } from "./lib/recipe-nutrition-backfill.mjs";
+import {
+  ensureMealPinBackfillCheckpoint,
+  initializeRecipeNutritionCheckpoint,
+  readRecipeNutritionCheckpoint,
+  writeMealPinBackfillCheckpoint,
+  writeRecipeNutritionCheckpoint,
+} from "./lib/recipe-nutrition-checkpoint.mjs";
 
 const HELP = `Usage:
   node scripts/recipe-nutrition-backfill.mjs recipe-dry-run [--batch-size 30] [--after <recipe-id>]
   node scripts/recipe-nutrition-backfill.mjs recipe-apply --checkpoint <path> --allow-write [--batch-size 30] [--after <recipe-id>]
   node scripts/recipe-nutrition-backfill.mjs recipe-rollback --checkpoint <path> --allow-write
   node scripts/recipe-nutrition-backfill.mjs meal-dry-run [--batch-size 250] [--after <meal-id>]
-  node scripts/recipe-nutrition-backfill.mjs meal-apply --allow-write [--batch-size 250] [--after <meal-id>]
+  node scripts/recipe-nutrition-backfill.mjs meal-apply --checkpoint <path> --allow-write [--batch-size 250] [--after <meal-id>]
 
 Write commands additionally require HOMECOOK_RECIPE_NUTRITION_WRITE_APPROVED=1.
 `;
@@ -56,10 +62,20 @@ function requireWriteApproval(options) {
   }
 }
 
-function createOperatorClient() {
+function isLoopbackOperatorUrl(value) {
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) &&
+      ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function createOperatorClient({ requireLocal }) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) {
+  if (!url || !serviceKey || (requireLocal && !isLoopbackOperatorUrl(url))) {
     throw new RecipeNutritionBackfillError("LOCAL_OPERATOR_ENV_REQUIRED");
   }
   return createClient(url, serviceKey, {
@@ -68,18 +84,7 @@ function createOperatorClient() {
 }
 
 function printReport(report) {
-  const safeReport = { ...report };
-  delete safeReport.checkpoints;
-  process.stdout.write(`${JSON.stringify(safeReport)}\n`);
-}
-
-function writeCheckpoint(checkpointPath, checkpoints) {
-  writeFileSync(checkpointPath, `${JSON.stringify({
-    schema_version: "recipe-nutrition-backfill-checkpoint-v1",
-    scope: "foodsafety-30",
-    checkpoints,
-  }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-  chmodSync(checkpointPath, 0o600);
+  process.stdout.write(`${JSON.stringify(sanitizeRecipeNutritionBackfillReport(report))}\n`);
 }
 
 async function runRecipeCommand(options, client) {
@@ -88,10 +93,9 @@ async function runRecipeCommand(options, client) {
     if (!options.checkpoint) {
       throw new RecipeNutritionBackfillError("BACKFILL_CHECKPOINT_REQUIRED");
     }
-    const checkpoint = JSON.parse(readFileSync(options.checkpoint, "utf8"));
     const result = await rollbackFoodSafetyRecipeNutritionBackfill({
       repository,
-      checkpoints: checkpoint.checkpoints,
+      checkpoints: readRecipeNutritionCheckpoint(options.checkpoint),
     });
     printReport(result);
     return;
@@ -104,11 +108,11 @@ async function runRecipeCommand(options, client) {
     batchSize: options.batchSize,
     afterRecipeId: options.after,
     onCheckpoint: mode === "apply"
-      ? async (checkpoints) => writeCheckpoint(options.checkpoint, checkpoints)
+      ? async (checkpoints) => writeRecipeNutritionCheckpoint(options.checkpoint, checkpoints)
       : undefined,
   });
   if (mode === "apply") {
-    writeCheckpoint(options.checkpoint, result.checkpoints);
+    writeRecipeNutritionCheckpoint(options.checkpoint, result.checkpoints);
   }
   printReport(result);
 }
@@ -117,13 +121,19 @@ async function runMealCommand(options, client) {
   if (!Number.isInteger(options.batchSize) || options.batchSize < 1 || options.batchSize > 1000) {
     throw new RecipeNutritionBackfillError("INVALID_BACKFILL_BATCH_SIZE");
   }
+  const checkpointCursor = options.command === "meal-apply"
+    ? ensureMealPinBackfillCheckpoint(options.checkpoint)
+    : null;
   const result = await client.rpc("backfill_foodsafety_recipe_nutrition_meal_pins", {
     p_dry_run: options.command === "meal-dry-run",
-    p_after_meal_id: options.after,
+    p_after_meal_id: options.after ?? checkpointCursor,
     p_batch_size: options.batchSize,
   });
   if (result.error || !result.data) {
     throw new RecipeNutritionBackfillError("MEAL_PIN_BACKFILL_FAILED");
+  }
+  if (options.command === "meal-apply") {
+    writeMealPinBackfillCheckpoint(options.checkpoint, result.data.next_cursor ?? null);
   }
   printReport(result.data);
 }
@@ -147,14 +157,16 @@ async function main() {
   if (options.command.endsWith("-apply") || options.command === "recipe-rollback") {
     requireWriteApproval(options);
   }
-  if ((options.command === "recipe-apply" || options.command === "recipe-rollback") &&
+  if ((options.command === "recipe-apply" || options.command === "recipe-rollback" ||
+    options.command === "meal-apply") &&
     !options.checkpoint) {
     throw new RecipeNutritionBackfillError("BACKFILL_CHECKPOINT_REQUIRED");
   }
+  const requiresWrite = options.command.endsWith("-apply") || options.command === "recipe-rollback";
+  const client = createOperatorClient({ requireLocal: requiresWrite });
   if (options.command === "recipe-apply") {
-    writeCheckpoint(options.checkpoint, []);
+    initializeRecipeNutritionCheckpoint(options.checkpoint);
   }
-  const client = createOperatorClient();
   if (options.command.startsWith("recipe-")) {
     await runRecipeCommand(options, client);
   } else {

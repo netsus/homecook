@@ -1,7 +1,9 @@
-import type {
-  RecipeNutritionCalculation,
-  RecipeNutritionSourceAttribution,
-  RecipeNutritionValue,
+import {
+  CORE_NUTRIENT_CODES,
+  OPTIONAL_NUTRIENT_CODES,
+  type RecipeNutritionCalculation,
+  type RecipeNutritionSourceAttribution,
+  type RecipeNutritionValue,
 } from "@/lib/nutrition/recipe-nutrition-calculator";
 import type { RecipeNutrition } from "@/types/recipe";
 
@@ -15,8 +17,27 @@ const SOURCE_KEYS = [
 ] as const;
 
 const FORBIDDEN_SOURCE_TEXT = /(?:raw[_-]?(?:payload|row|provider|response)|api[_-]?key|servicekey|secret|cookie|authorization|access[_-]?token|manifest[_-]?(?:sha|path)|(?:^|\/)private(?:\/|$)|(?:^|\/)internal(?:\/|$))/i;
-const AUTH_QUERY_KEYS = /^(?:api[_-]?key|servicekey|key|token|access[_-]?token|authorization|auth|secret|cookie)$/i;
+const AUTH_QUERY_KEYS = /^(?:api[_-]?key|servicekey|key|token|access[_-]?token|authorization|auth|secret|cookie|signature|credential|x-amz-(?:signature|credential|security-token))$/i;
 const VECTOR_EPSILON = 1e-9;
+const ALLOWED_NUTRIENT_CODES = new Set<string>([
+  ...CORE_NUTRIENT_CODES,
+  ...OPTIONAL_NUTRIENT_CODES,
+]);
+const ALLOWED_WARNINGS = new Set([
+  "PREDECESSOR_NOT_APPROVED",
+  "NUTRITION_PROFILE_MISSING",
+  "INVALID_QUANTITY",
+  "UNIT_CONVERSION_MISSING",
+  "PIECE_WEIGHT_REQUIRED",
+  "TO_TASTE_EXCLUDED",
+  "REPRESENTATIVE_VOLUME_CONVERSION_USED",
+  "PIECE_WEIGHT_CONVERSION_USED",
+]);
+const ESTIMATED_WARNINGS = new Set([
+  "REPRESENTATIVE_VOLUME_CONVERSION_USED",
+  "PIECE_WEIGHT_CONVERSION_USED",
+]);
+const MISSING_REASON_PATTERN = /^(?:(?:TO_TASTE_EXCLUDED|PREDECESSOR_NOT_APPROVED|NUTRITION_PROFILE_MISSING|INVALID_QUANTITY|UNIT_CONVERSION_MISSING|PIECE_WEIGHT_REQUIRED):[0-9A-Za-z-]+|NUTRIENT_VALUE_MISSING:[0-9A-Za-z-]+:(?:energy_kcal|carbohydrate_g|protein_g|fat_g|sodium_mg|sugars_g|saturated_fat_g|fiber_g))$/;
 
 export class RecipeNutritionSnapshotError extends Error {
   constructor(public readonly code: string) {
@@ -107,6 +128,9 @@ function validateSource(source: unknown): asserts source is RecipeNutritionSourc
   if (!['http:', 'https:'].includes(sourceUrl.protocol)) {
     throw new RecipeNutritionSnapshotError("UNSAFE_SNAPSHOT_SOURCE");
   }
+  if (sourceUrl.username !== "" || sourceUrl.password !== "" || sourceUrl.hash !== "") {
+    throw new RecipeNutritionSnapshotError("UNSAFE_SNAPSHOT_SOURCE");
+  }
   for (const key of sourceUrl.searchParams.keys()) {
     if (AUTH_QUERY_KEYS.test(key)) {
       throw new RecipeNutritionSnapshotError("UNSAFE_SNAPSHOT_SOURCE");
@@ -148,6 +172,26 @@ export function validateRecipeNutritionSnapshot(calculation: RecipeNutritionCalc
     throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_STATUS");
   }
 
+  const nutrientCodes = Object.keys(calculation.values);
+  if (CORE_NUTRIENT_CODES.some((code) => !nutrientCodes.includes(code)) ||
+    nutrientCodes.some((code) => !ALLOWED_NUTRIENT_CODES.has(code))) {
+    throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_NUTRIENT_STATUS");
+  }
+
+  const warnings = calculation.warnings;
+  const missingReasons = calculation.missing_reasons;
+  const hasEstimatedWarning = warnings.some((warning) => ESTIMATED_WARNINGS.has(warning));
+  if (warnings.some((warning) => !ALLOWED_WARNINGS.has(warning)) ||
+    new Set(warnings).size !== warnings.length ||
+    missingReasons.some((reason) => !MISSING_REASON_PATTERN.test(reason)) ||
+    new Set(missingReasons).size !== missingReasons.length ||
+    JSON.stringify([...missingReasons].sort()) !== JSON.stringify(missingReasons) ||
+    (calculation.calculation_quality === "direct" && hasEstimatedWarning) ||
+    (["estimated", "mixed"].includes(calculation.calculation_quality ?? "") && !hasEstimatedWarning) ||
+    (calculation.calculation_status === "unavailable" && calculation.sources.length > 0)) {
+    throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_STATUS");
+  }
+
   for (const [code, value] of Object.entries(calculation.values)) {
     if (!validateNutrientValue(value)) {
       throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_NUTRIENT_STATUS");
@@ -185,7 +229,11 @@ export function validateRecipeNutritionSnapshot(calculation: RecipeNutritionCalc
 interface SnapshotWriterClient {
   rpc(
     functionName: "write_recipe_nutrition_snapshot",
-    args: { p_recipe_id: string; p_snapshot: Record<string, unknown> },
+    args: {
+      p_recipe_id: string;
+      p_snapshot: Record<string, unknown>;
+      p_expected_recipe_updated_at: string;
+    },
   ): PromiseLike<{
     data: { snapshot_id: string; created: boolean; is_current: boolean } | null;
     error: unknown;
@@ -196,12 +244,17 @@ export async function writeRecipeNutritionSnapshot(
   dbClient: SnapshotWriterClient,
   recipeId: string,
   calculation: RecipeNutritionCalculation,
-  options: { calculatedAt?: string } = {},
+  options: { calculatedAt?: string; expectedRecipeVersion: string },
 ) {
   validateRecipeNutritionSnapshot(calculation);
+  if (typeof options.expectedRecipeVersion !== "string" ||
+    options.expectedRecipeVersion.trim().length === 0) {
+    throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_IDENTITY");
+  }
   const calculatedAt = options.calculatedAt ?? new Date().toISOString();
   const result = await dbClient.rpc("write_recipe_nutrition_snapshot", {
     p_recipe_id: recipeId,
+    p_expected_recipe_updated_at: options.expectedRecipeVersion,
     p_snapshot: {
       base_servings: calculation.base_servings,
       input_hash: calculation.input_hash,

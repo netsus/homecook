@@ -146,6 +146,31 @@ async function importRoute() {
 }
 
 describe("POST /api/v1/meals", () => {
+  it("returns the official 422 envelope for a JSON null body", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      from: vi.fn(),
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/meals", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "null",
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "요청 본문을 확인해 주세요.",
+        fields: [{ field: "body", reason: "invalid_json" }],
+      },
+    });
+  });
   beforeEach(() => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();

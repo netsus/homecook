@@ -2,6 +2,8 @@ import { spawn, spawnSync } from "node:child_process";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { deriveRecipeNutritionSnapshotId } from "@/scripts/lib/recipe-nutrition-backfill.mjs";
+
 const enabled = process.env.HOMECOOK_RECIPE_NUTRITION_PG_INTEGRATION === "1";
 const host = process.env.HOMECOOK_RECIPE_NUTRITION_PGHOST ?? "";
 const port = process.env.HOMECOOK_RECIPE_NUTRITION_PGPORT ?? "";
@@ -109,8 +111,11 @@ function snapshot(seed: string, energy = 100) {
   };
 }
 
-function writeSnapshotSql(recipeId: string, value: unknown) {
-  return `set role service_role; select public.write_recipe_nutrition_snapshot('${recipeId}', ${jsonExpression(value)})::text;`;
+function writeSnapshotSql(recipeId: string, value: unknown, expectedRecipeVersion?: string) {
+  const version = expectedRecipeVersion ??
+    psql(`select updated_at from public.recipes where id = '${recipeId}';`);
+  const expectedVersionSql = `'${version}'::timestamptz`;
+  return `set role service_role; select public.write_recipe_nutrition_snapshot('${recipeId}', ${jsonExpression(value)}, ${expectedVersionSql})::text;`;
 }
 
 function seedRecipe(recipeId: string, title: string) {
@@ -143,6 +148,11 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     const replay = JSON.parse(psql(writeSnapshotSql(recipeId, snapshot("a"))));
 
     expect(first.created).toBe(true);
+    expect(first.snapshot_id).toBe(deriveRecipeNutritionSnapshotId(
+      recipeId,
+      "a".repeat(64),
+      "recipe-nutrition-v1",
+    ));
     expect(replay).toMatchObject({ snapshot_id: first.snapshot_id, created: false, is_current: true });
     expect(psql(`select count(*) || ':' || count(*) filter (where is_current) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe("1:1");
 
@@ -150,10 +160,23 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     expect(second.created).toBe(true);
     expect(psql(`select count(*) || ':' || count(*) filter (where is_current) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe("2:1");
 
-    const restored = JSON.parse(psql(`set role service_role; select public.restore_recipe_nutrition_snapshot_current('${recipeId}', '${first.snapshot_id}')::text;`));
+    const restored = JSON.parse(psql(`set role service_role; select public.restore_recipe_nutrition_snapshot_current('${recipeId}', '${first.snapshot_id}', '${second.snapshot_id}')::text;`));
     expect(restored).toMatchObject({ snapshot_id: first.snapshot_id, is_current: true });
     expect(psql(`select id from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}' and is_current;`)).toBe(first.snapshot_id);
     expect(psql(`select count(*) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe("2");
+  });
+
+  it("rejects a stale writer after the recipe revision changes", () => {
+    const recipeId = "20000000-0000-4000-8000-00000000000a";
+    seedRecipe(recipeId, "stale writer fixture");
+    const staleVersion = psql(`select updated_at from public.recipes where id = '${recipeId}';`);
+    psql(`update public.recipes set updated_at = updated_at + interval '1 second' where id = '${recipeId}';`);
+
+    const result = psqlResult(writeSnapshotSql(recipeId, snapshot("a"), staleVersion));
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("RECIPE_NUTRITION_INPUT_STALE");
+    expect(psql(`select count(*) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe("0");
   });
 
   it("fails closed for extra source fields, unsafe URLs, vector drift, and status contradictions", () => {
@@ -230,8 +253,17 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     seedRecipe(scopedRecipeId, "scoped backfill fixture");
     seedRecipe(otherRecipeId, "other backfill fixture");
     psql(`
+      insert into public.recipes (id, title, base_servings)
+      select ('21000000-0000-4000-8000-' || lpad(value::text, 12, '0'))::uuid,
+        'exact scope filler ' || value,
+        2
+      from generate_series(1, 29) value;
+      insert into public.recipe_sources (recipe_id, extraction_meta_json)
+      select id, '{"reviewed_scope":"pilot_30_quality_corrected","source_provider":"foodsafety-cookrcp"}'::jsonb
+      from public.recipes
+      where title like 'exact scope filler %';
       insert into public.recipe_sources (recipe_id, extraction_meta_json) values
-        ('${scopedRecipeId}', '{"reviewed_scope":"pilot_30_user_reviewed"}'::jsonb),
+        ('${scopedRecipeId}', '{"reviewed_scope":"pilot_30_quality_corrected","source_provider":"foodsafety-cookrcp"}'::jsonb),
         ('${otherRecipeId}', '{}'::jsonb);
       insert into public.meals (id, recipe_id) values
         ('30000000-0000-4000-8000-000000000004', '${scopedRecipeId}'),
@@ -273,7 +305,7 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     const written = JSON.parse(psql(writeSnapshotSql(recipeId, snapshot("9", 170))));
 
     const rolledBack = JSON.parse(psql(
-      `set role service_role; select public.restore_recipe_nutrition_snapshot_current('${recipeId}', null)::text;`,
+      `set role service_role; select public.restore_recipe_nutrition_snapshot_current('${recipeId}', null, '${written.snapshot_id}')::text;`,
     ));
 
     expect(rolledBack).toMatchObject({ snapshot_id: null, is_current: false });

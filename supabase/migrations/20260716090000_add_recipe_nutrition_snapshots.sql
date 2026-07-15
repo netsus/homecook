@@ -74,6 +74,15 @@ declare
   v_fixed numeric;
   v_expected numeric;
   v_core_code text;
+  v_allowed_nutrient_codes text[] := array[
+    'energy_kcal', 'carbohydrate_g', 'protein_g', 'fat_g', 'sodium_mg',
+    'sugars_g', 'saturated_fat_g', 'fiber_g'
+  ];
+  v_allowed_warnings text[] := array[
+    'PREDECESSOR_NOT_APPROVED', 'NUTRITION_PROFILE_MISSING', 'INVALID_QUANTITY',
+    'UNIT_CONVERSION_MISSING', 'PIECE_WEIGHT_REQUIRED', 'TO_TASTE_EXCLUDED',
+    'REPRESENTATIVE_VOLUME_CONVERSION_USED', 'PIECE_WEIGHT_CONVERSION_USED'
+  ];
   v_core_complete integer := 0;
   v_core_available integer := 0;
 begin
@@ -107,9 +116,15 @@ begin
   if exists (
     select 1 from jsonb_array_elements(p_snapshot -> 'warnings') item
     where jsonb_typeof(item) <> 'string'
+      or item #>> '{}' <> all(v_allowed_warnings)
   ) or exists (
     select 1 from jsonb_array_elements(p_snapshot -> 'missing_reasons') item
     where jsonb_typeof(item) <> 'string'
+      or item #>> '{}' !~ '^(TO_TASTE_EXCLUDED|PREDECESSOR_NOT_APPROVED|NUTRITION_PROFILE_MISSING|INVALID_QUANTITY|UNIT_CONVERSION_MISSING|PIECE_WEIGHT_REQUIRED):[0-9A-Za-z-]+$|^NUTRIENT_VALUE_MISSING:[0-9A-Za-z-]+:(energy_kcal|carbohydrate_g|protein_g|fat_g|sodium_mg|sugars_g|saturated_fat_g|fiber_g)$'
+  ) or jsonb_array_length(p_snapshot -> 'warnings') <> (
+    select count(distinct item) from jsonb_array_elements(p_snapshot -> 'warnings') item
+  ) or jsonb_array_length(p_snapshot -> 'missing_reasons') <> (
+    select count(distinct item) from jsonb_array_elements(p_snapshot -> 'missing_reasons') item
   ) then
     raise exception 'INVALID_SNAPSHOT_PAYLOAD';
   end if;
@@ -134,7 +149,9 @@ begin
       or nullif(btrim(v_source ->> 'source_url'), '') is null
       or jsonb_typeof(v_source -> 'data_basis_date') not in ('string', 'null')
       or (v_source ->> 'source_url') !~ '^https?://'
-      or (v_source ->> 'source_url') ~* '[?&](servicekey|api[_-]?key|key|token|access[_-]?token|authorization|auth|secret|cookie)='
+      or (v_source ->> 'source_url') ~* '^https?://[^/?#]*@'
+      or (v_source ->> 'source_url') ~ '#'
+      or (v_source ->> 'source_url') ~* '[?&](servicekey|api[_-]?key|key|token|access[_-]?token|authorization|auth|secret|cookie|signature|credential|x-amz-signature|x-amz-credential|x-amz-security-token)='
       or v_source::text ~* '(raw[_-]?(payload|row|provider|response)|api[_-]?key|servicekey|secret|cookie|authorization|access[_-]?token|manifest[_-]?(sha|path)|(^|/)private(/|$)|(^|/)internal(/|$))'
       or not exists (
         select 1
@@ -182,7 +199,9 @@ begin
 
   for v_value in select key, value from jsonb_each(p_snapshot -> 'nutrient_status')
   loop
-    if jsonb_typeof(v_value.value) <> 'object' then
+    if v_value.key <> all(v_allowed_nutrient_codes)
+      or jsonb_typeof(v_value.value) <> 'object'
+    then
       raise exception 'INVALID_SNAPSHOT_NUTRIENT_STATUS';
     end if;
     select array_agg(key order by key collate "C")
@@ -260,8 +279,11 @@ begin
     or (p_snapshot ->> 'calculation_status' = 'unavailable' and v_core_available <> 0)
     or (p_snapshot ->> 'calculation_status' = 'partial' and (v_core_available = 0 or v_core_complete = 5))
     or (p_snapshot ->> 'calculation_status' = 'unavailable' and jsonb_typeof(p_snapshot -> 'calculation_quality') <> 'null')
+    or (p_snapshot ->> 'calculation_status' = 'unavailable' and jsonb_array_length(p_snapshot -> 'sources') <> 0)
     or (p_snapshot ->> 'calculation_status' <> 'unavailable' and coalesce(p_snapshot ->> 'calculation_quality', '') not in ('direct', 'estimated', 'mixed'))
     or (p_snapshot ->> 'calculation_status' <> 'unavailable' and jsonb_array_length(p_snapshot -> 'sources') = 0)
+    or (p_snapshot ->> 'calculation_quality' = 'direct' and (p_snapshot -> 'warnings') ?| array['REPRESENTATIVE_VOLUME_CONVERSION_USED', 'PIECE_WEIGHT_CONVERSION_USED'])
+    or (p_snapshot ->> 'calculation_quality' in ('estimated', 'mixed') and not ((p_snapshot -> 'warnings') ?| array['REPRESENTATIVE_VOLUME_CONVERSION_USED', 'PIECE_WEIGHT_CONVERSION_USED']))
   then
     raise exception 'INVALID_SNAPSHOT_STATUS';
   end if;
@@ -290,7 +312,8 @@ for each row execute function public.protect_recipe_nutrition_snapshot();
 
 create function public.write_recipe_nutrition_snapshot(
   p_recipe_id uuid,
-  p_snapshot jsonb
+  p_snapshot jsonb,
+  p_expected_recipe_updated_at timestamptz
 )
 returns jsonb
 language plpgsql
@@ -299,23 +322,43 @@ set search_path = pg_catalog, public
 as $$
 declare
   v_snapshot_id uuid;
+  v_deterministic_snapshot_id uuid;
+  v_snapshot_hex text;
   v_created boolean := false;
   v_existing public.recipe_nutrition_snapshots%rowtype;
+  v_recipe_updated_at timestamptz;
 begin
-  if not exists (select 1 from public.recipes where id = p_recipe_id) then
-    raise exception 'RECIPE_NOT_FOUND';
-  end if;
   perform public.validate_recipe_nutrition_snapshot_payload(p_snapshot);
   perform pg_advisory_xact_lock(hashtextextended(p_recipe_id::text, 0));
+  v_snapshot_hex := md5(
+    p_recipe_id::text || chr(31) || (p_snapshot ->> 'input_hash') || chr(31) ||
+    (p_snapshot ->> 'calculation_version')
+  );
+  v_deterministic_snapshot_id := (
+    substr(v_snapshot_hex, 1, 8) || '-' || substr(v_snapshot_hex, 9, 4) || '-' ||
+    substr(v_snapshot_hex, 13, 4) || '-' || substr(v_snapshot_hex, 17, 4) || '-' ||
+    substr(v_snapshot_hex, 21, 12)
+  )::uuid;
+  select updated_at into v_recipe_updated_at
+  from public.recipes
+  where id = p_recipe_id
+  for share;
+  if v_recipe_updated_at is null then
+    raise exception 'RECIPE_NOT_FOUND';
+  end if;
+  if v_recipe_updated_at is distinct from p_expected_recipe_updated_at then
+    raise exception 'RECIPE_NUTRITION_INPUT_STALE';
+  end if;
   perform set_config('homecook.recipe_nutrition_writer', 'on', true);
 
   insert into public.recipe_nutrition_snapshots (
-    recipe_id, base_servings, input_hash, calculation_version,
+    id, recipe_id, base_servings, input_hash, calculation_version,
     scalable_values_json, fixed_values_json, nutrient_status_json,
     calculation_status, calculation_quality, reflected_ingredient_count,
     target_ingredient_count, missing_reasons, warnings_json, sources_json,
     is_current, calculated_at
   ) values (
+    v_deterministic_snapshot_id,
     p_recipe_id,
     (p_snapshot ->> 'base_servings')::numeric,
     p_snapshot ->> 'input_hash',
@@ -380,15 +423,24 @@ $$;
 
 create function public.restore_recipe_nutrition_snapshot_current(
   p_recipe_id uuid,
-  p_snapshot_id uuid
+  p_snapshot_id uuid,
+  p_expected_current_snapshot_id uuid
 )
 returns jsonb
 language plpgsql
 security definer
 set search_path = pg_catalog, public
 as $$
+declare
+  v_current_snapshot_id uuid;
 begin
   perform pg_advisory_xact_lock(hashtextextended(p_recipe_id::text, 0));
+  select id into v_current_snapshot_id
+  from public.recipe_nutrition_snapshots
+  where recipe_id = p_recipe_id and is_current;
+  if v_current_snapshot_id is distinct from p_expected_current_snapshot_id then
+    raise exception 'BACKFILL_CURRENT_DRIFT';
+  end if;
   if p_snapshot_id is not null and not exists (
     select 1 from public.recipe_nutrition_snapshots
     where id = p_snapshot_id and recipe_id = p_recipe_id
@@ -483,9 +535,21 @@ as $$
 declare
   v_count integer := 0;
   v_next_cursor uuid;
+  v_scope_count integer;
 begin
   if p_batch_size < 1 or p_batch_size > 1000 then
     raise exception 'INVALID_BACKFILL_BATCH_SIZE';
+  end if;
+  select count(distinct source.recipe_id)
+    into v_scope_count
+    from public.recipe_sources source
+    where source.extraction_meta_json ->> 'reviewed_scope' in (
+        'pilot_30_quality_corrected',
+        'pilot_30_quality_corrected_replacement'
+      )
+      and source.extraction_meta_json ->> 'source_provider' = 'foodsafety-cookrcp';
+  if v_scope_count <> 30 then
+    raise exception 'INVALID_BACKFILL_SCOPE';
   end if;
   perform set_config('homecook.recipe_nutrition_backfill', 'on', true);
 
@@ -498,7 +562,11 @@ begin
         join public.recipe_sources source on source.recipe_id = meal.recipe_id
         join public.recipe_nutrition_snapshots snapshot
           on snapshot.recipe_id = meal.recipe_id and snapshot.is_current
-        where source.extraction_meta_json ->> 'reviewed_scope' = 'pilot_30_user_reviewed'
+        where source.extraction_meta_json ->> 'reviewed_scope' in (
+            'pilot_30_quality_corrected',
+            'pilot_30_quality_corrected_replacement'
+          )
+          and source.extraction_meta_json ->> 'source_provider' = 'foodsafety-cookrcp'
           and meal.recipe_nutrition_snapshot_id is null
           and (p_after_meal_id is null or meal.id > p_after_meal_id)
         order by meal.id
@@ -511,12 +579,16 @@ begin
       join public.recipe_sources source on source.recipe_id = meal.recipe_id
       join public.recipe_nutrition_snapshots snapshot
         on snapshot.recipe_id = meal.recipe_id and snapshot.is_current
-      where source.extraction_meta_json ->> 'reviewed_scope' = 'pilot_30_user_reviewed'
+      where source.extraction_meta_json ->> 'reviewed_scope' in (
+          'pilot_30_quality_corrected',
+          'pilot_30_quality_corrected_replacement'
+        )
+        and source.extraction_meta_json ->> 'source_provider' = 'foodsafety-cookrcp'
         and meal.recipe_nutrition_snapshot_id is null
         and (p_after_meal_id is null or meal.id > p_after_meal_id)
       order by meal.id
       limit p_batch_size
-      for update of meal skip locked
+      for update of meal
     ), updated as (
       update public.meals meal
       set recipe_nutrition_snapshot_id = candidate.snapshot_id,
@@ -544,16 +616,22 @@ revoke all on table public.recipe_nutrition_snapshots from anon, authenticated;
 revoke insert, update, delete on table public.recipe_nutrition_snapshots from service_role;
 grant select on table public.recipe_nutrition_snapshots to service_role;
 
+revoke all on function public.protect_recipe_nutrition_snapshot()
+  from public, anon, authenticated, service_role;
+revoke all on function public.pin_current_recipe_nutrition_snapshot_on_meal_insert()
+  from public, anon, authenticated, service_role;
+revoke all on function public.protect_meal_recipe_nutrition_pin()
+  from public, anon, authenticated, service_role;
 revoke all on function public.validate_recipe_nutrition_snapshot_payload(jsonb)
   from public, anon, authenticated;
-revoke all on function public.write_recipe_nutrition_snapshot(uuid, jsonb)
+revoke all on function public.write_recipe_nutrition_snapshot(uuid, jsonb, timestamptz)
   from public, anon, authenticated;
-revoke all on function public.restore_recipe_nutrition_snapshot_current(uuid, uuid)
+revoke all on function public.restore_recipe_nutrition_snapshot_current(uuid, uuid, uuid)
   from public, anon, authenticated;
 revoke all on function public.backfill_foodsafety_recipe_nutrition_meal_pins(boolean, uuid, integer)
   from public, anon, authenticated;
 grant execute on function public.validate_recipe_nutrition_snapshot_payload(jsonb) to service_role;
-grant execute on function public.write_recipe_nutrition_snapshot(uuid, jsonb) to service_role;
-grant execute on function public.restore_recipe_nutrition_snapshot_current(uuid, uuid) to service_role;
+grant execute on function public.write_recipe_nutrition_snapshot(uuid, jsonb, timestamptz) to service_role;
+grant execute on function public.restore_recipe_nutrition_snapshot_current(uuid, uuid, uuid) to service_role;
 grant execute on function public.backfill_foodsafety_recipe_nutrition_meal_pins(boolean, uuid, integer)
   to service_role;

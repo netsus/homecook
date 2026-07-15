@@ -40,7 +40,11 @@ export interface RecipeNutritionServiceClient {
   from(table: "recipe_ingredients"): IngredientQuery;
   rpc(
     functionName: "write_recipe_nutrition_snapshot",
-    args: { p_recipe_id: string; p_snapshot: Record<string, unknown> },
+    args: {
+      p_recipe_id: string;
+      p_snapshot: Record<string, unknown>;
+      p_expected_recipe_updated_at: string;
+    },
   ): PromiseLike<{
     data: { snapshot_id: string; created: boolean; is_current: boolean } | null;
     error: unknown;
@@ -139,5 +143,8 @@ export async function recalculateRecipeNutritionSnapshot(
     ingredients: ingredientsResult.data.map(toFailClosedCalculatorIngredient),
   });
 
-  return writeRecipeNutritionSnapshot(dbClient, recipeId, calculation, options);
+  return writeRecipeNutritionSnapshot(dbClient, recipeId, calculation, {
+    ...options,
+    expectedRecipeVersion: recipeResult.data.updated_at,
+  });
 }

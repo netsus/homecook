@@ -390,6 +390,21 @@ describe("recipe nutrition calculator", () => {
       sugars_g: undefined,
     })]));
     expect(noOptional.values).not.toHaveProperty("sugars_g");
+
+    const revokedOptional = directIngredient({
+      nutrition: {
+        ...directIngredient().nutrition!,
+        link: {
+          ...directIngredient().nutrition!.link,
+          review_status: "revoked",
+          is_active: false,
+        },
+      },
+    });
+    const unresolvedOptional = directIngredient({ unit: "cup" });
+    unresolvedOptional.conversion_assignment = null;
+    const noApprovedContribution = calculate(recipeInput([revokedOptional, unresolvedOptional]));
+    expect(noApprovedContribution.values).not.toHaveProperty("sugars_g");
   });
 
   it("derives complete, partial, unavailable and direct, estimated, mixed independently", async () => {

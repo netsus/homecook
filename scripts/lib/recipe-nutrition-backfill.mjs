@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 
 const CALCULATION_VERSION = "recipe-nutrition-v1";
 const ROUNDING_POLICY_VERSION = "display-v1";
+const FOODSAFETY_SCOPE_MARKERS = [
+  "pilot_30_quality_corrected",
+  "pilot_30_quality_corrected_replacement",
+];
 const CORE_NUTRIENTS = [
   "energy_kcal",
   "carbohydrate_g",
@@ -26,6 +30,30 @@ export class RecipeNutritionBackfillError extends Error {
     this.name = "RecipeNutritionBackfillError";
     this.code = code;
   }
+}
+
+export function deriveRecipeNutritionSnapshotId(recipeId, inputHash, calculationVersion) {
+  const hexadecimal = createHash("md5")
+    .update(`${recipeId}\u001f${inputHash}\u001f${calculationVersion}`)
+    .digest("hex");
+  return [
+    hexadecimal.slice(0, 8),
+    hexadecimal.slice(8, 12),
+    hexadecimal.slice(12, 16),
+    hexadecimal.slice(16, 20),
+    hexadecimal.slice(20),
+  ].join("-");
+}
+
+export function sanitizeRecipeNutritionBackfillReport(report) {
+  const safeReport = { ...report };
+  const nextCursor = safeReport.next_cursor;
+  delete safeReport.checkpoints;
+  delete safeReport.next_cursor;
+  return {
+    ...safeReport,
+    has_next_cursor: nextCursor !== null && nextCursor !== undefined,
+  };
 }
 
 function canonicalStringify(value) {
@@ -167,6 +195,52 @@ function validateBatchSize(batchSize) {
   }
 }
 
+function summarizeCalculations(calculations) {
+  const calculationStatusCounts = { complete: 0, partial: 0, unavailable: 0 };
+  const missingReasonCounts = new Map();
+  const sources = new Set();
+  const sensitivePattern = /api[_-]?key|servicekey|access[_-]?token|authorization|cookie|raw[_-]?(payload|row|provider|response)|[?&](key|token|auth|secret|signature|credential)=|\/(users|home|private)\//gi;
+  let secretCount = 0;
+  for (const calculation of calculations) {
+    calculationStatusCounts[calculation.calculation_status] += 1;
+    for (const reason of calculation.missing_reasons) {
+      const code = reason.split(":", 1)[0];
+      missingReasonCounts.set(code, (missingReasonCounts.get(code) ?? 0) + 1);
+    }
+    for (const source of calculation.sources) {
+      sources.add(canonicalStringify(source));
+    }
+    secretCount += JSON.stringify(calculation).match(sensitivePattern)?.length ?? 0;
+  }
+  return {
+    calculation_status_counts: calculationStatusCounts,
+    missing_reason_counts: Object.fromEntries(
+      [...missingReasonCounts].sort(([left], [right]) => compareUnicodeOrdinal(left, right)),
+    ),
+    source_count: sources.size,
+    secret_count: secretCount,
+  };
+}
+
+async function compensateAppliedSnapshots(repository, checkpoints) {
+  for (const checkpoint of [...checkpoints].reverse()) {
+    if (checkpoint.state !== "applied") continue;
+    try {
+      await repository.restoreCurrent(
+        checkpoint.recipe_id,
+        checkpoint.previous_snapshot_id,
+        checkpoint.applied_snapshot_id,
+      );
+    } catch {
+      throw new RecipeNutritionBackfillError("BACKFILL_ROLLBACK_FAILED");
+    }
+  }
+}
+
+function copyCheckpointJournal(checkpoints) {
+  return checkpoints.map((checkpoint) => ({ ...checkpoint }));
+}
+
 export async function runFoodSafetyRecipeNutritionBackfill({
   repository,
   mode,
@@ -180,6 +254,12 @@ export async function runFoodSafetyRecipeNutritionBackfill({
     throw new RecipeNutritionBackfillError("INVALID_BACKFILL_MODE");
   }
 
+  try {
+    await repository.assertExactScope();
+  } catch {
+    throw new RecipeNutritionBackfillError("INVALID_BACKFILL_SCOPE");
+  }
+
   const scopeRows = await repository.listScopeRecipeIds({ afterRecipeId, batchSize });
   const recipeIds = scopeRows.map((row) => row.recipe_id);
   if (new Set(recipeIds).size !== recipeIds.length || recipeIds.length > batchSize ||
@@ -187,13 +267,14 @@ export async function runFoodSafetyRecipeNutritionBackfill({
     throw new RecipeNutritionBackfillError("INVALID_BACKFILL_SCOPE");
   }
   const nextCursor = recipeIds.at(-1) ?? null;
-  if (mode === "dry-run" || recipeIds.length === 0) {
+  if (recipeIds.length === 0) {
     return {
       scope: "foodsafety-30",
       mode,
       candidate_count: recipeIds.length,
       processed_count: 0,
       next_cursor: nextCursor,
+      ...summarizeCalculations([]),
       checkpoints: [],
     };
   }
@@ -201,7 +282,7 @@ export async function runFoodSafetyRecipeNutritionBackfill({
   const [recipeRows, ingredientRows, currentRows] = await Promise.all([
     repository.loadRecipes(recipeIds),
     repository.loadIngredients(recipeIds),
-    repository.loadCurrentSnapshots(recipeIds),
+    mode === "apply" ? repository.loadCurrentSnapshots(recipeIds) : Promise.resolve([]),
   ]);
   const recipeMap = new Map(recipeRows.map((row) => [row.id, row]));
   const ingredientsByRecipe = new Map(recipeIds.map((recipeId) => [recipeId, []]));
@@ -213,28 +294,73 @@ export async function runFoodSafetyRecipeNutritionBackfill({
   if (recipeMap.size !== recipeIds.length) {
     throw new RecipeNutritionBackfillError("RECIPE_NUTRITION_INPUT_READ_FAILED");
   }
-  const currentMap = new Map(currentRows.map((row) => [row.recipe_id, row.id]));
+  const calculationMap = new Map(recipeIds.map((recipeId) => [
+    recipeId,
+    buildFailClosedRecipeNutritionCalculation(
+      recipeMap.get(recipeId),
+      ingredientsByRecipe.get(recipeId),
+    ),
+  ]));
+  const calculationSummary = summarizeCalculations([...calculationMap.values()]);
+  if (mode === "dry-run") {
+    return {
+      scope: "foodsafety-30",
+      mode,
+      candidate_count: recipeIds.length,
+      processed_count: 0,
+      next_cursor: nextCursor,
+      ...calculationSummary,
+      checkpoints: [],
+    };
+  }
+  const currentMap = new Map(currentRows.map((row) => [row.recipe_id, row]));
   const checkpoints = [];
 
   for (const recipeId of recipeIds) {
-    const calculation = buildFailClosedRecipeNutritionCalculation(
-      recipeMap.get(recipeId),
-      ingredientsByRecipe.get(recipeId),
-    );
-    let written;
+    const calculation = calculationMap.get(recipeId);
+    const previousSnapshotId = currentMap.get(recipeId)?.id ?? null;
+    const expectedSnapshotId = repository.deriveSnapshotId(recipeId, calculation);
+    const checkpoint = {
+      recipe_id: recipeId,
+      previous_snapshot_id: previousSnapshotId,
+      expected_input_hash: calculation.input_hash,
+      applied_snapshot_id: expectedSnapshotId,
+      state: "planned",
+    };
+    checkpoints.push(checkpoint);
     try {
-      written = await repository.writeSnapshot(recipeId, calculation, calculatedAt);
+      await onCheckpoint(copyCheckpointJournal(checkpoints));
     } catch {
+      await compensateAppliedSnapshots(repository, checkpoints);
       throw new RecipeNutritionBackfillError("BACKFILL_APPLY_FAILED");
     }
-    const previousSnapshotId = currentMap.get(recipeId) ?? null;
+    let written;
+    try {
+      written = await repository.writeSnapshot(
+        recipeId,
+        calculation,
+        calculatedAt,
+        recipeMap.get(recipeId).updated_at,
+      );
+      if (written.snapshot_id !== expectedSnapshotId) {
+        checkpoint.applied_snapshot_id = written.snapshot_id;
+        checkpoint.state = "applied";
+        throw new RecipeNutritionBackfillError("BACKFILL_SNAPSHOT_ID_MISMATCH");
+      }
+    } catch {
+      await compensateAppliedSnapshots(repository, checkpoints);
+      throw new RecipeNutritionBackfillError("BACKFILL_APPLY_FAILED");
+    }
     if (previousSnapshotId !== written.snapshot_id) {
-      checkpoints.push({
-        recipe_id: recipeId,
-        previous_snapshot_id: previousSnapshotId,
-        applied_snapshot_id: written.snapshot_id,
-      });
-      await onCheckpoint([...checkpoints]);
+      checkpoint.state = "applied";
+    } else {
+      checkpoints.pop();
+    }
+    try {
+      await onCheckpoint(copyCheckpointJournal(checkpoints));
+    } catch {
+      await compensateAppliedSnapshots(repository, checkpoints);
+      throw new RecipeNutritionBackfillError("BACKFILL_APPLY_FAILED");
     }
   }
 
@@ -244,6 +370,7 @@ export async function runFoodSafetyRecipeNutritionBackfill({
     candidate_count: recipeIds.length,
     processed_count: recipeIds.length,
     next_cursor: nextCursor,
+    ...calculationSummary,
     checkpoints,
   };
 }
@@ -255,25 +382,45 @@ export async function rollbackFoodSafetyRecipeNutritionBackfill({ repository, ch
   const recipeIds = checkpoints.map((checkpoint) => checkpoint.recipe_id);
   if (new Set(recipeIds).size !== recipeIds.length || checkpoints.some((checkpoint) =>
     typeof checkpoint.recipe_id !== "string" ||
+    typeof checkpoint.expected_input_hash !== "string" ||
+    !/^[0-9a-f]{64}$/.test(checkpoint.expected_input_hash) ||
     typeof checkpoint.applied_snapshot_id !== "string" ||
+    !["planned", "applied"].includes(checkpoint.state) ||
     (checkpoint.previous_snapshot_id !== null && typeof checkpoint.previous_snapshot_id !== "string")
   )) {
     throw new RecipeNutritionBackfillError("INVALID_BACKFILL_CHECKPOINT");
   }
 
+  try {
+    await repository.assertScopeRecipeIds(recipeIds);
+  } catch {
+    throw new RecipeNutritionBackfillError("INVALID_BACKFILL_SCOPE");
+  }
+
   const currentRows = await repository.loadCurrentSnapshots(recipeIds);
-  const currentMap = new Map(currentRows.map((row) => [row.recipe_id, row.id]));
-  if (checkpoints.some((checkpoint) =>
-    currentMap.get(checkpoint.recipe_id) !== checkpoint.applied_snapshot_id
-  )) {
+  const currentMap = new Map(currentRows.map((row) => [row.recipe_id, row]));
+  const resolvedCheckpoints = [];
+  for (const checkpoint of checkpoints) {
+    const current = currentMap.get(checkpoint.recipe_id);
+    if (checkpoint.state === "applied") {
+      if (current?.id !== checkpoint.applied_snapshot_id) {
+        throw new RecipeNutritionBackfillError("BACKFILL_CURRENT_DRIFT");
+      }
+      resolvedCheckpoints.push(checkpoint);
+    } else if (current?.id === checkpoint.applied_snapshot_id) {
+      resolvedCheckpoints.push({ ...checkpoint, state: "applied" });
+    }
+  }
+  if (resolvedCheckpoints.some((checkpoint) => !checkpoint.applied_snapshot_id)) {
     throw new RecipeNutritionBackfillError("BACKFILL_CURRENT_DRIFT");
   }
 
-  for (const checkpoint of [...checkpoints].reverse()) {
+  for (const checkpoint of [...resolvedCheckpoints].reverse()) {
     try {
       await repository.restoreCurrent(
         checkpoint.recipe_id,
         checkpoint.previous_snapshot_id,
+        checkpoint.applied_snapshot_id,
       );
     } catch {
       throw new RecipeNutritionBackfillError("BACKFILL_ROLLBACK_FAILED");
@@ -282,7 +429,7 @@ export async function rollbackFoodSafetyRecipeNutritionBackfill({ repository, ch
   return {
     scope: "foodsafety-30",
     mode: "rollback",
-    processed_count: checkpoints.length,
+    processed_count: resolvedCheckpoints.length,
   };
 }
 
@@ -314,15 +461,48 @@ function snapshotPayload(calculation, calculatedAt) {
 
 export function createSupabaseRecipeNutritionBackfillRepository(client) {
   return {
+    deriveSnapshotId(recipeId, calculation) {
+      return deriveRecipeNutritionSnapshotId(
+        recipeId,
+        calculation.input_hash,
+        calculation.calculation_version,
+      );
+    },
+    async assertExactScope() {
+      const rows = assertQueryResult(await client
+        .from("recipe_sources")
+        .select("recipe_id")
+        .eq("extraction_meta_json->>source_provider", "foodsafety-cookrcp")
+        .in("extraction_meta_json->>reviewed_scope", FOODSAFETY_SCOPE_MARKERS)
+        .limit(31));
+      const recipeIds = rows.map((row) => row.recipe_id);
+      if (recipeIds.length !== 30 || new Set(recipeIds).size !== 30) {
+        throw new RecipeNutritionBackfillError("INVALID_BACKFILL_SCOPE");
+      }
+    },
     async listScopeRecipeIds({ afterRecipeId, batchSize }) {
       let query = client
         .from("recipe_sources")
         .select("recipe_id")
-        .eq("extraction_meta_json->>reviewed_scope", "pilot_30_user_reviewed")
+        .eq("extraction_meta_json->>source_provider", "foodsafety-cookrcp")
+        .in("extraction_meta_json->>reviewed_scope", FOODSAFETY_SCOPE_MARKERS)
         .order("recipe_id", { ascending: true })
         .limit(batchSize);
       if (afterRecipeId) query = query.gt("recipe_id", afterRecipeId);
       return assertQueryResult(await query);
+    },
+    async assertScopeRecipeIds(recipeIds) {
+      if (recipeIds.length === 0) return;
+      const rows = assertQueryResult(await client
+        .from("recipe_sources")
+        .select("recipe_id")
+        .eq("extraction_meta_json->>source_provider", "foodsafety-cookrcp")
+        .in("extraction_meta_json->>reviewed_scope", FOODSAFETY_SCOPE_MARKERS)
+        .in("recipe_id", recipeIds));
+      const matchedIds = new Set(rows.map((row) => row.recipe_id));
+      if (matchedIds.size !== recipeIds.length || recipeIds.some((id) => !matchedIds.has(id))) {
+        throw new RecipeNutritionBackfillError("INVALID_BACKFILL_SCOPE");
+      }
     },
     async loadRecipes(recipeIds) {
       if (recipeIds.length === 0) return [];
@@ -350,20 +530,22 @@ export function createSupabaseRecipeNutritionBackfillRepository(client) {
         .in("recipe_id", recipeIds)
         .eq("is_current", true));
     },
-    async writeSnapshot(recipeId, calculation, calculatedAt) {
+    async writeSnapshot(recipeId, calculation, calculatedAt, expectedRecipeVersion) {
       const result = await client.rpc("write_recipe_nutrition_snapshot", {
         p_recipe_id: recipeId,
         p_snapshot: snapshotPayload(calculation, calculatedAt),
+        p_expected_recipe_updated_at: expectedRecipeVersion,
       });
       if (result.error || !result.data) {
         throw new RecipeNutritionBackfillError("BACKFILL_APPLY_FAILED");
       }
       return result.data;
     },
-    async restoreCurrent(recipeId, snapshotId) {
+    async restoreCurrent(recipeId, snapshotId, expectedCurrentSnapshotId) {
       const result = await client.rpc("restore_recipe_nutrition_snapshot_current", {
         p_recipe_id: recipeId,
         p_snapshot_id: snapshotId,
+        p_expected_current_snapshot_id: expectedCurrentSnapshotId,
       });
       if (result.error || !result.data) {
         throw new RecipeNutritionBackfillError("BACKFILL_ROLLBACK_FAILED");

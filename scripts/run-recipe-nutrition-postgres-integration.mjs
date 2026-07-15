@@ -146,7 +146,8 @@ create table public.operational_events (
 create table public.recipes (
   id uuid primary key default gen_random_uuid(),
   title text not null,
-  base_servings integer not null default 2 check (base_servings > 0)
+  base_servings integer not null default 2 check (base_servings > 0),
+  updated_at timestamptz not null default now()
 );
 create table public.recipe_sources (
   id uuid primary key default gen_random_uuid(),

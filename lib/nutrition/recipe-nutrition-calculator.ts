@@ -457,6 +457,7 @@ function compareSourceAttribution(
 function outputNutrientCodes(input: RecipeNutritionCalculatorInput) {
   const optional = OPTIONAL_NUTRIENT_CODES.filter((code) =>
     input.ingredients.some((ingredient) => {
+      if (!isApprovedNutrition(ingredient) || !resolveUnit(ingredient)) return false;
       const value = ingredient.nutrition?.profile.values[code];
       return value?.value_status === "observed" && value.amount !== null;
     })

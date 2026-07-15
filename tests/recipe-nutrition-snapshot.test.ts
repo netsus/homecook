@@ -71,11 +71,13 @@ describe("recipe nutrition snapshot writer", () => {
 
     const result = await writeRecipeNutritionSnapshot({ rpc }, "recipe-1", calculation, {
       calculatedAt: "2026-07-16T00:00:00.000Z",
+      expectedRecipeVersion: "2026-07-16T00:00:00.000Z",
     });
 
     expect(result).toEqual({ snapshot_id: "snapshot-1", created: true, is_current: true });
     expect(rpc).toHaveBeenCalledWith("write_recipe_nutrition_snapshot", {
       p_recipe_id: "recipe-1",
+      p_expected_recipe_updated_at: "2026-07-16T00:00:00.000Z",
       p_snapshot: {
         base_servings: 2,
         input_hash: "a".repeat(64),
@@ -115,6 +117,9 @@ describe("recipe nutrition snapshot writer", () => {
     const unsafeCases: unknown[] = [
       { ...SOURCE, reviewed_by: "user-1" },
       { ...SOURCE, source_url: "https://example.test/data?serviceKey=secret" },
+      { ...SOURCE, source_url: "https://user:password@example.test/data" },
+      { ...SOURCE, source_url: "https://example.test/data?X-Amz-Signature=secret" },
+      { ...SOURCE, source_url: "https://example.test/data#access_token=secret" },
       { ...SOURCE, source_url: "file:///private/provider/raw.json" },
       { ...SOURCE, source_url: "/internal/storage/raw.json" },
       { ...SOURCE, dataset: "raw_provider_row" },
@@ -125,6 +130,58 @@ describe("recipe nutrition snapshot writer", () => {
       invalid.sources = [source as typeof SOURCE];
       expect(() => validateRecipeNutritionSnapshot(invalid)).toThrowError(
         expect.objectContaining({ code: "UNSAFE_SNAPSHOT_SOURCE" }),
+      );
+    }
+  });
+
+  it("rejects nutrient keys outside the official core and optional eight", () => {
+    const invalid = completeCalculation();
+    (invalid.values as Record<string, unknown>).arbitrary_nutrient = {
+      amount: 1,
+      known_amount: null,
+      status: "complete",
+      display_mode: "total",
+    };
+    (invalid.scalable_values as Record<string, unknown>).arbitrary_nutrient = 1;
+    (invalid.fixed_values as Record<string, unknown>).arbitrary_nutrient = 0;
+
+    expect(() => validateRecipeNutritionSnapshot(invalid)).toThrowError(
+      expect.objectContaining({ code: "INVALID_SNAPSHOT_NUTRIENT_STATUS" }),
+    );
+  });
+
+  it("rejects arbitrary warning or missing-reason text and status/provenance contradictions", () => {
+    const arbitraryWarning = completeCalculation();
+    arbitraryWarning.warnings = ["secret=/private/provider/key"];
+
+    const arbitraryReason = completeCalculation();
+    arbitraryReason.missing_reasons = ["RAW_PROVIDER_ROW:/internal/secret"];
+
+    const directWithEstimatedWarning = completeCalculation();
+    directWithEstimatedWarning.warnings = ["REPRESENTATIVE_VOLUME_CONVERSION_USED"];
+
+    const unavailableWithSources = completeCalculation();
+    unavailableWithSources.values = Object.fromEntries(
+      Object.keys(unavailableWithSources.values).map((code) => [code, {
+        amount: null,
+        known_amount: null,
+        status: "unavailable",
+        display_mode: null,
+      }]),
+    ) as RecipeNutritionCalculation["values"];
+    unavailableWithSources.scalable_values = {};
+    unavailableWithSources.fixed_values = {};
+    unavailableWithSources.calculation_status = "unavailable";
+    unavailableWithSources.calculation_quality = null;
+
+    for (const invalid of [
+      arbitraryWarning,
+      arbitraryReason,
+      directWithEstimatedWarning,
+      unavailableWithSources,
+    ]) {
+      expect(() => validateRecipeNutritionSnapshot(invalid)).toThrowError(
+        expect.objectContaining({ code: "INVALID_SNAPSHOT_STATUS" }),
       );
     }
   });

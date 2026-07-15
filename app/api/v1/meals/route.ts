@@ -239,6 +239,10 @@ function parseMealListQuery(request: NextRequest) {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function buildCreateValidationFields(body: MealCreateBody) {
   const fields: Array<{ field: string; reason: string }> = [];
 
@@ -438,7 +442,11 @@ export async function POST(request: Request) {
   let body: MealCreateBody;
 
   try {
-    body = (await request.json()) as MealCreateBody;
+    const parsedBody: unknown = await request.json();
+    if (!isRecord(parsedBody)) {
+      throw new TypeError("INVALID_JSON_OBJECT");
+    }
+    body = parsedBody as MealCreateBody;
   } catch {
     return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
       { field: "body", reason: "invalid_json" },
