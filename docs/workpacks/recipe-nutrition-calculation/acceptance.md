@@ -68,7 +68,7 @@
 - [x] snapshot query throw/DB error 또는 malformed/unreadable row는 기존 detail 본문을 보존한 200 payload와 `availability_reason='temporarily_unavailable'`을 반환하고 `missing`으로 축소하지 않는다 <!-- omo:id=accept-temporary-snapshot-read-state;stage=2;scope=backend;review=3,6 -->
 - [x] snapshot row를 정상 조회하면 `calculation_status='unavailable'`이어도 `availability_reason=null`이다 <!-- omo:id=accept-normal-snapshot-availability-null;stage=2;scope=backend;review=3,6 -->
 - [ ] 비로그인 Meal 추가는 기존 401 로그인 안내 뒤 같은 recipe/planner action으로 복귀한다 <!-- omo:id=accept-login-return-action;stage=4;scope=frontend;review=5,6 -->
-- [x] 타 사용자 recipe/column/leftover/Meal/snapshot mutation은 RLS·service guard에서 거부된다 <!-- omo:id=accept-owner-rls;stage=2;scope=backend;review=3,6 -->
+- [ ] 타 사용자 recipe/column/leftover/Meal/snapshot mutation은 RLS·service guard에서 거부된다 — snapshot direct-access guard는 격리 PG에서 통과했지만 full owner/bootstrap smoke는 미완료 <!-- omo:id=accept-owner-rls;stage=2;scope=backend;review=3,6 -->
 - [x] anon/authenticated 사용자는 snapshot payload/current pointer/backfill origin을 임의 작성·수정·삭제할 수 없다 <!-- omo:id=accept-snapshot-write-guard;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 401/403/404/409/422 envelope과 fields shape가 유지된다 <!-- omo:id=accept-error-contract;stage=2;scope=backend;review=3,6 -->
 - [x] invalid servings/unit/non-finite amount가 snapshot/current write 전에 거부된다 <!-- omo:id=accept-invalid-calculation-input;stage=2;scope=backend;review=3,6 -->
@@ -113,7 +113,7 @@
 
 - [x] 순수 calculator의 실제 투입량, exactly-one direct/conversion chain, unit priority, exact piece fail-closed, missing/zero, vector formula를 단위 테스트로 고정한다 <!-- omo:id=accept-vitest-calculator;stage=2;scope=backend;review=3,6 -->
 - [x] hash/idempotency/current switch/warning order/backfill/rollback을 service/integration test로 고정한다 <!-- omo:id=accept-vitest-snapshot;stage=2;scope=backend;review=3,6 -->
-- [x] PostgreSQL integration에서 constraints/RLS/owner/concurrency/transaction rollback을 검증한다 <!-- omo:id=accept-db-integration;stage=2;scope=backend;review=3,6 -->
+- [ ] PostgreSQL integration에서 constraints/RLS/owner/concurrency/transaction rollback을 검증한다 — constraints/RLS/concurrency/rollback은 임시 PostgreSQL 14.5에서 통과했지만 owner와 PostgreSQL 17 검증은 미완료 <!-- omo:id=accept-db-integration;stage=2;scope=backend;review=3,6 -->
 - [x] API normal snapshot complete/partial/unavailable(null), no-snapshot(missing), query/DB/malformed failure(temporarily_unavailable)와 기존 recipe response 회귀를 검증한다 <!-- omo:id=accept-api-integration;stage=2;scope=backend;review=3,6 -->
 - [ ] frontend component에서 한국어 copy, status, selected servings, read-only/error fallback을 검증한다 <!-- omo:id=accept-frontend-vitest;stage=4;scope=frontend;review=5,6 -->
 
