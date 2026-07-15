@@ -262,4 +262,18 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     expect(psql(`select id from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}' and is_current;`)).toBe(before);
     expect(psql(`select count(*) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe("2");
   });
+
+  it("rolls a first snapshot back to no current row without deleting history", () => {
+    const recipeId = "20000000-0000-4000-8000-000000000009";
+    seedRecipe(recipeId, "first snapshot rollback fixture");
+    const written = JSON.parse(psql(writeSnapshotSql(recipeId, snapshot("9", 170))));
+
+    const rolledBack = JSON.parse(psql(
+      `set role service_role; select public.restore_recipe_nutrition_snapshot_current('${recipeId}', null)::text;`,
+    ));
+
+    expect(rolledBack).toMatchObject({ snapshot_id: null, is_current: false });
+    expect(psql(`select count(*) || ':' || count(*) filter (where is_current) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe("1:0");
+    expect(psql(`select id from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe(written.snapshot_id);
+  });
 });

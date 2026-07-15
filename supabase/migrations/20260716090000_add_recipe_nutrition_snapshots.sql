@@ -389,7 +389,7 @@ set search_path = pg_catalog, public
 as $$
 begin
   perform pg_advisory_xact_lock(hashtextextended(p_recipe_id::text, 0));
-  if not exists (
+  if p_snapshot_id is not null and not exists (
     select 1 from public.recipe_nutrition_snapshots
     where id = p_snapshot_id and recipe_id = p_recipe_id
   ) then
@@ -398,11 +398,16 @@ begin
   perform set_config('homecook.recipe_nutrition_writer', 'on', true);
   update public.recipe_nutrition_snapshots
     set is_current = false
-    where recipe_id = p_recipe_id and is_current and id <> p_snapshot_id;
+    where recipe_id = p_recipe_id
+      and is_current
+      and (p_snapshot_id is null or id <> p_snapshot_id);
   update public.recipe_nutrition_snapshots
     set is_current = true
-    where id = p_snapshot_id and not is_current;
-  return jsonb_build_object('snapshot_id', p_snapshot_id, 'is_current', true);
+    where p_snapshot_id is not null and id = p_snapshot_id and not is_current;
+  return jsonb_build_object(
+    'snapshot_id', p_snapshot_id,
+    'is_current', p_snapshot_id is not null
+  );
 end;
 $$;
 
