@@ -13,6 +13,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { publishArtifactBundle } from "./lib/public-nutrition-artifacts.mjs";
+import { runLocalPsqlJson } from "./lib/ingredient-nutrition-local-db.mjs";
+import {
+  buildFoodsafetyScopeSql,
+  parseFoodsafetyPinnedSeed,
+} from "./lib/foodsafety-pilot-contract.mjs";
 import {
   IngredientNutritionImportError,
   assertPrSafeValue,
@@ -74,35 +79,6 @@ async function readJsonInput(filePath) {
   } catch (error) {
     if (error instanceof IngredientNutritionImportError) throw error;
     throw new IngredientNutritionImportError("INPUT_FILE_INVALID");
-  }
-}
-
-function runLocalPsqlJson(sql) {
-  const result = spawnSync(
-    "docker",
-    [
-      "exec",
-      "-i",
-      "supabase_db_homecook",
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      "postgres",
-      "-At",
-      "-v",
-      "ON_ERROR_STOP=1",
-    ],
-    { input: sql, encoding: "utf8", timeout: 30_000 },
-  );
-  if (result.status !== 0 || result.error) {
-    throw new IngredientNutritionImportError("LOCAL_DATABASE_UNAVAILABLE");
-  }
-  const output = result.stdout.trim().split("\n").filter(Boolean).at(-1);
-  try {
-    return JSON.parse(output);
-  } catch {
-    throw new IngredientNutritionImportError("LOCAL_DATABASE_RESPONSE_INVALID");
   }
 }
 
@@ -214,77 +190,17 @@ function runDatabaseJson(environment, sql) {
 }
 
 function resolveFoodsafetyPilotScope(environment) {
-  return runDatabaseJson(environment, `
-with pilot_recipes as (
-  select source.recipe_id
-  from public.recipe_sources source
-  where source.extraction_meta_json ->> 'reviewed_scope' = 'pilot_30_user_reviewed'
-    and source.extraction_meta_json ->> 'source_provider' = 'foodsafety-cookrcp'
-), pilot_ingredients as (
-  select distinct ingredient.ingredient_id
-  from public.recipe_ingredients ingredient
-  join pilot_recipes recipe on recipe.recipe_id = ingredient.recipe_id
-), canonical_ingredients as (
-  select canonical.id,
-    jsonb_agg(name order by name) as normalized_names
-  from public.ingredients canonical
-  join pilot_ingredients pilot on pilot.ingredient_id = canonical.id
-  cross join lateral (
-    select canonical.standard_name as name
-    union
-    select synonym.synonym
-    from public.ingredient_synonyms synonym
-    where synonym.ingredient_id = canonical.id
-  ) names
-  group by canonical.id
-)
-select jsonb_build_object(
-  'recipe_ids', (select jsonb_agg(recipe_id order by recipe_id) from pilot_recipes),
-  'ingredient_ids', (select jsonb_agg(ingredient_id order by ingredient_id) from pilot_ingredients),
-  'canonical_ingredients', (
-    select jsonb_agg(jsonb_build_object(
-      'id', id,
-      'normalized_names', normalized_names
-    ) order by id)
-    from canonical_ingredients
-  )
-)::text;
-`);
+  const contract = readPinnedPilotContract();
+  return runDatabaseJson(environment, buildFoodsafetyScopeSql(contract).actual);
 }
 
 function readPinnedPilotContract() {
-  const seed = readFileSync(PINNED_PILOT_SEED, "utf8");
-  const ingredientMarker = seed.indexOf("create temp table tmp_foodsafety_pilot_ingredients");
-  const recipeSection = seed.slice(0, ingredientMarker);
-  const ingredientSection = seed.slice(ingredientMarker);
-  const recipeIds = [...recipeSection.matchAll(/\('([0-9a-f-]{36})'::uuid,/gi)]
-    .map((match) => match[1]);
-  const ingredientNames = [...ingredientSection.matchAll(
-    /\('[0-9a-f-]{36}'::uuid,\s*\d+::integer,\s*'((?:''|[^'])+)'::text/gi,
-  )].map((match) => match[1].replaceAll("''", "'"));
-  const uniqueRecipeIds = [...new Set(recipeIds)].sort();
-  const uniqueIngredientNames = [...new Set(ingredientNames)].sort();
-  if (uniqueRecipeIds.length !== 30 || uniqueIngredientNames.length === 0) {
-    throw new IngredientNutritionImportError("PINNED_PILOT_CONTRACT_INVALID");
-  }
-  return { recipe_ids: uniqueRecipeIds, ingredient_names: uniqueIngredientNames };
+  return parseFoodsafetyPinnedSeed(readFileSync(PINNED_PILOT_SEED, "utf8"));
 }
 
 function resolvePinnedPilotScope(environment) {
-  const pinned = readPinnedPilotContract();
-  const encoded = Buffer.from(JSON.stringify(pinned.ingredient_names), "utf8").toString("base64");
-  const ingredientIds = runDatabaseJson(environment, `
-with expected_names as (
-  select value as standard_name
-  from jsonb_array_elements_text(
-    convert_from(decode('${encoded}', 'base64'), 'UTF8')::jsonb
-  )
-)
-select coalesce(jsonb_agg(ingredient.id order by ingredient.id), '[]'::jsonb)::text
-from public.ingredients ingredient
-join expected_names expected on expected.standard_name = ingredient.standard_name;
-`);
-  return { recipe_ids: pinned.recipe_ids, ingredient_ids: ingredientIds };
+  const contract = readPinnedPilotContract();
+  return runDatabaseJson(environment, buildFoodsafetyScopeSql(contract).expected);
 }
 
 function createDatabaseStore(environment) {
@@ -374,6 +290,17 @@ async function loadRegisteredReport(runId, store, options = {}) {
   return recoveredReport;
 }
 
+async function publishCommandRun(summary, store, options = {}) {
+  const publisher = options.publisher ?? publishRun;
+  const reportLoader = options.reportLoader ?? loadRegisteredReport;
+  if (summary.replayed === true) {
+    await reportLoader(summary.run_id, store);
+    return summary;
+  }
+  await publishRunWithRecovery(summary, publisher);
+  return summary;
+}
+
 function formatCliFailure(error) {
   const code = error instanceof IngredientNutritionImportError
     ? error.code
@@ -418,7 +345,7 @@ async function importCommand(args) {
     approval,
     store,
   });
-  await publishRunWithRecovery(summary, publishRun);
+  await publishCommandRun(summary, store);
   return summary;
 }
 
@@ -440,7 +367,7 @@ async function disableCommand(args) {
     decision,
   });
   summary.run_id = `disable-${summary.idempotency_key.slice(0, 24)}`;
-  await publishRunWithRecovery(summary, publishRun);
+  await publishCommandRun(summary, store);
   return summary;
 }
 
@@ -469,5 +396,6 @@ export {
   assertOwnedRegularFile,
   formatCliFailure,
   loadRegisteredReport,
+  publishCommandRun,
   runTestDatabaseAdapter,
 };

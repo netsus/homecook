@@ -474,6 +474,30 @@ describe("Stage 3 group 2: SQL ownership, piece persistence, and recovery", () =
     });
   });
 
+  it("validates or recovers the immutable first-apply report for a zero-write replay", async () => {
+    const { publishCommandRun } = await import(MODEL_CLI_URL);
+    const publisher = vi.fn();
+    const reportLoader = vi.fn().mockResolvedValue({ mode: "report" });
+    const store = { getRunRegistry: vi.fn() };
+    const replay = {
+      schema_version: "ingredient-nutrition-model-run-v1",
+      run_id: "model-dddddddddddddddddddddddd",
+      status: "applied",
+      idempotency_key: "run-d",
+      content_hash: "content-d",
+      writes_attempted: 0,
+      writes_committed: 0,
+      replayed: true,
+    };
+
+    await expect(publishCommandRun(replay, store, {
+      publisher,
+      reportLoader,
+    })).resolves.toEqual(replay);
+    expect(reportLoader).toHaveBeenCalledWith(replay.run_id, store);
+    expect(publisher).not.toHaveBeenCalled();
+  });
+
   it("propagates authoritative DB supersede counts into the operator summary", async () => {
     const { runModelImport } = await import(IMPORT_URL);
     const bundle = buildBundle();

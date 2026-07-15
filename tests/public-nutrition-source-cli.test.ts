@@ -17,6 +17,9 @@ import { describe, expect, it } from "vitest";
 const PIPELINE_MODULE = pathToFileURL(
   join(process.cwd(), "scripts/lib/public-nutrition-pipeline.mjs"),
 ).href;
+const CLI_OPTIONS_MODULE = pathToFileURL(
+  join(process.cwd(), "scripts/lib/public-nutrition-cli-options.mjs"),
+).href;
 const FAILURE_FIXTURE = JSON.parse(readFileSync(join(
   process.cwd(),
   "tests/fixtures/public-nutrition-source/failure-scenarios.json",
@@ -34,6 +37,10 @@ type MutableNutritionFixture = {
 
 async function loadPipeline() {
   return import(PIPELINE_MODULE);
+}
+
+async function loadCli() {
+  return import(CLI_OPTIONS_MODULE);
 }
 
 function run(command: string, args: string[], env: Record<string, string> = {}) {
@@ -267,6 +274,159 @@ describe("public nutrition source network and CLI", () => {
     expect(sentUrls[0]).toContain("serviceKey=%3CFAKE_TEST_KEY_ONLY%3E");
     expect(persisted).not.toContain("serviceKey");
     expect(persisted).not.toContain("<FAKE_TEST_KEY_ONLY>");
+  });
+
+  it("sends only official MFDS filters and pins the bounded query in provenance", async () => {
+    const { fetchMfdsBatch } = await loadPipeline();
+    let sentUrl = "";
+    const result = await fetchMfdsBatch({
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchedAt: "2026-07-15T00:00:00.000Z",
+      pageSize: 1,
+      maxPages: 1,
+      filters: {
+        FOOD_NM_KR: "시험 식품",
+        ITEM_REPORT_NO: "202600000001",
+      },
+      fetchImpl: async (url: string) => {
+        sentUrl = url;
+        return response({ response: {
+          header: { resultCode: "00" },
+          body: {
+            pageNo: 1,
+            totalCount: 1,
+            items: [{ FOOD_CD: "MFDS-FILTERED-1" }],
+          },
+        } });
+      },
+      sleep: async () => undefined,
+      now: () => 0,
+      createTimeoutSignal: () => new AbortController().signal,
+    });
+
+    const url = new URL(sentUrl);
+    expect(Object.fromEntries(url.searchParams.entries())).toMatchObject({
+      FOOD_NM_KR: "시험 식품",
+      ITEM_REPORT_NO: "202600000001",
+      pageNo: "1",
+      numOfRows: "1",
+      type: "json",
+    });
+    expect(result.manifest.query).toEqual({
+      FOOD_NM_KR: "시험 식품",
+      ITEM_REPORT_NO: "202600000001",
+      pageNo_start: "1",
+      pageNo_end: "1",
+      numOfRows: "1",
+      type: "json",
+    });
+    await expect(fetchMfdsBatch({
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchedAt: "2026-07-15T00:00:00.000Z",
+      filters: { unsupported: "value" },
+    })).rejects.toMatchObject({ code: "MFDS_FILTER_INVALID" });
+  });
+
+  it("maps bounded official MFDS filters at the CLI boundary and rejects unsafe input", async () => {
+    const { mfdsLiveOptions } = await loadCli();
+    expect(mfdsLiveOptions({
+      FOOD_NM_KR: "시험 식품",
+      ITEM_REPORT_NO: "202600000001",
+      "num-of-rows": "1",
+      "max-pages": "1",
+    })).toEqual({
+      filters: {
+        FOOD_NM_KR: "시험 식품",
+        ITEM_REPORT_NO: "202600000001",
+      },
+      pageSize: 1,
+      maxPages: 1,
+    });
+    expect(() => mfdsLiveOptions({ FOOD_NM_KR: "" }))
+      .toThrowError(expect.objectContaining({ code: "MFDS_FILTER_INVALID" }));
+    expect(() => mfdsLiveOptions({ FOOD_NM_KR: "시험 식품", unsupported: "value" }))
+      .toThrowError(expect.objectContaining({ code: "MFDS_FILTER_INVALID" }));
+  });
+
+  it("enforces the MFDS live request budget at both CLI and core boundaries", async () => {
+    const { mfdsLiveOptions } = await loadCli();
+    expect(mfdsLiveOptions({
+      FOOD_NM_KR: "시험 식품",
+      "num-of-rows": "100",
+      "max-pages": "10",
+    })).toMatchObject({ pageSize: 100, maxPages: 10 });
+    for (const args of [
+      { FOOD_NM_KR: "시험 식품", "num-of-rows": "0" },
+      { FOOD_NM_KR: "시험 식품", "num-of-rows": "101" },
+      { FOOD_NM_KR: "시험 식품", "max-pages": "0" },
+      { FOOD_NM_KR: "시험 식품", "max-pages": "11" },
+    ]) {
+      expect(() => mfdsLiveOptions(args)).toThrowError(
+        expect.objectContaining({ code: "CLI_ARGUMENT_INVALID" }),
+      );
+    }
+
+    const { fetchMfdsBatch } = await loadPipeline();
+    let requests = 0;
+    const fetchImpl = async () => {
+      requests += 1;
+      return response({ response: {
+        header: { resultCode: "00" },
+        body: {
+          pageNo: 1,
+          totalCount: 1,
+          items: [{ FOOD_CD: "MFDS-BUDGET-1" }],
+        },
+      } });
+    };
+    for (const options of [
+      { pageSize: 0, maxPages: 1 },
+      { pageSize: 101, maxPages: 1 },
+      { pageSize: 100, maxPages: 0 },
+      { pageSize: 100, maxPages: 11 },
+    ]) {
+      await expect(fetchMfdsBatch({
+        apiKey: "<FAKE_TEST_KEY_ONLY>",
+        fetchedAt: "2026-07-15T00:00:00.000Z",
+        filters: { FOOD_NM_KR: "시험 식품" },
+        fetchImpl,
+        ...options,
+      })).rejects.toMatchObject({ code: "PAGINATION_SCHEMA_INVALID" });
+    }
+    expect(requests).toBe(0);
+
+    await expect(fetchMfdsBatch({
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchedAt: "2026-07-15T00:00:00.000Z",
+      filters: { FOOD_NM_KR: "시험 식품" },
+      pageSize: 100,
+      maxPages: 10,
+      fetchImpl,
+    })).resolves.toMatchObject({ manifest: { fetched_raw_count: 1 } });
+    expect(requests).toBe(1);
+  });
+
+  it("rejects unsupported and blank MFDS CLI filters before any provider request", () => {
+    const directory = mkdtempSync(join(tmpdir(), "mfds-cli-filter-boundary-"));
+    const env = { DATA_GO_KR_API_KEY: "<FAKE_TEST_KEY_ONLY>" };
+    const unsupported = run("fetch", [
+      "--live",
+      "--FOOD_NM_KR", "시험 식품",
+      "--unsupported", "value",
+      "--output-dir", join(directory, "unsupported"),
+    ], env);
+    const blank = run("fetch", [
+      "--live",
+      "--FOOD_NM_KR", " ",
+      "--output-dir", join(directory, "blank"),
+    ], env);
+
+    expect(unsupported.status).not.toBe(0);
+    expect(`${unsupported.stdout}\n${unsupported.stderr}`).toContain("MFDS_FILTER_INVALID");
+    expect(blank.status).not.toBe(0);
+    expect(`${blank.stdout}\n${blank.stderr}`).toContain("MFDS_FILTER_INVALID");
+    expect(existsSync(join(directory, "unsupported"))).toBe(false);
+    expect(existsSync(join(directory, "blank"))).toBe(false);
   });
 
   it("accepts the direct top-level MFDS header/body envelope", async () => {

@@ -6,8 +6,18 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_ATTEMPTS = 4;
 const BACKOFF_MS = [1_000, 2_000, 4_000];
 const MAX_RETRY_AFTER_MS = 30_000;
-const MAX_PAGES = 100_000;
+export const MFDS_MAX_PAGE_SIZE = 100;
+export const MFDS_MAX_LIVE_PAGES = 10;
 const INPUT_SHAPES = new Set(["adapted-row-v1", "mfds-provider-v1"]);
+const MFDS_FILTER_KEYS = new Set([
+  "FOOD_NM_KR",
+  "RESEARCH_YMD",
+  "MAKER_NM",
+  "FOOD_CAT1_NM",
+  "ITEM_REPORT_NO",
+  "UPDATE_DATE",
+  "DB_CLASS_NM",
+]);
 const AUTH_QUERY_KEYS = new Set([
   "servicekey",
   "apikey",
@@ -1248,7 +1258,23 @@ function parseMfdsPage(payload, expectedPageNo) {
   };
 }
 
-function mfdsFailureContext(pages, requestedPageNo, pageSize) {
+function validateMfdsFilters(filters) {
+  if (!isRecord(filters)) throw new NutritionPipelineError("MFDS_FILTER_INVALID");
+  const normalized = {};
+  for (const [key, value] of Object.entries(filters)) {
+    if (
+      !MFDS_FILTER_KEYS.has(key) ||
+      typeof value !== "string" ||
+      value.trim().length === 0
+    ) {
+      throw new NutritionPipelineError("MFDS_FILTER_INVALID");
+    }
+    normalized[key] = value.trim();
+  }
+  return normalized;
+}
+
+function mfdsFailureContext(pages, requestedPageNo, pageSize, filters = {}) {
   return {
     received_page_count: pages.length,
     received_page_range: pages.length > 0
@@ -1257,15 +1283,20 @@ function mfdsFailureContext(pages, requestedPageNo, pageSize) {
     requested_page_no: requestedPageNo,
     source_id: SOURCE_REGISTRY["mfds-15127578"].id,
     source_url: sanitizeUrl(SOURCE_REGISTRY["mfds-15127578"].request_endpoint),
-    query: sanitizeQuery({ pageNo: requestedPageNo, numOfRows: pageSize, type: "json" }),
+    query: sanitizeQuery({
+      ...filters,
+      pageNo: requestedPageNo,
+      numOfRows: pageSize,
+      type: "json",
+    }),
   };
 }
 
-function throwMfdsFailureWithContext(error, pages, requestedPageNo, pageSize) {
+function throwMfdsFailureWithContext(error, pages, requestedPageNo, pageSize, filters) {
   if (error instanceof NutritionPipelineError) {
     throw new NutritionPipelineError(error.code, {
       ...error.details,
-      ...mfdsFailureContext(pages, requestedPageNo, pageSize),
+      ...mfdsFailureContext(pages, requestedPageNo, pageSize, filters),
     });
   }
   throw error;
@@ -1275,7 +1306,8 @@ export async function fetchMfdsBatch({
   apiKey,
   fetchedAt,
   pageSize = 100,
-  maxPages = MAX_PAGES,
+  maxPages = MFDS_MAX_LIVE_PAGES,
+  filters = {},
   fetchImpl = globalThis.fetch,
   sleep,
   now,
@@ -1284,9 +1316,18 @@ export async function fetchMfdsBatch({
   if (typeof apiKey !== "string" || apiKey.length === 0) {
     throw new NutritionPipelineError("MISSING_API_KEY", { env: "DATA_GO_KR_API_KEY" });
   }
-  if (!Number.isInteger(maxPages) || maxPages < 1) {
+  const officialFilters = validateMfdsFilters(filters);
+  if (
+    !Number.isInteger(pageSize) ||
+    pageSize < 1 ||
+    pageSize > MFDS_MAX_PAGE_SIZE ||
+    !Number.isInteger(maxPages) ||
+    maxPages < 1 ||
+    maxPages > MFDS_MAX_LIVE_PAGES
+  ) {
     throw new NutritionPipelineError("PAGINATION_SCHEMA_INVALID", {
-      ...mfdsFailureContext([], 1, pageSize),
+      ...mfdsFailureContext([], 1, pageSize, officialFilters),
+      page_size: pageSize,
       max_pages: maxPages,
     });
   }
@@ -1299,7 +1340,12 @@ export async function fetchMfdsBatch({
     try {
       const payload = await requestJsonWithRetry({
         endpoint: SOURCE_REGISTRY["mfds-15127578"].request_endpoint,
-        query: { pageNo, numOfRows: pageSize, type: "json" },
+        query: {
+          ...officialFilters,
+          pageNo,
+          numOfRows: pageSize,
+          type: "json",
+        },
         apiKey,
         fetchImpl,
         sleep,
@@ -1311,7 +1357,7 @@ export async function fetchMfdsBatch({
       accumulated = pagination.accumulated;
       total = pagination.reportedTotal;
     } catch (error) {
-      throwMfdsFailureWithContext(error, pages, pageNo, pageSize);
+      throwMfdsFailureWithContext(error, pages, pageNo, pageSize, officialFilters);
     }
     pages.push(page);
     if (accumulated === total) {
@@ -1323,7 +1369,7 @@ export async function fetchMfdsBatch({
     throw new NutritionPipelineError("PAGINATION_INCOMPLETE", {
       reported_total: total,
       accumulated,
-      ...mfdsFailureContext(pages, maxPages + 1, pageSize),
+      ...mfdsFailureContext(pages, maxPages + 1, pageSize, officialFilters),
     });
   }
   return buildRawBatch({
@@ -1332,6 +1378,7 @@ export async function fetchMfdsBatch({
     input_shape: "mfds-provider-v1",
     pages,
     query: {
+      ...officialFilters,
       pageNo_start: 1,
       pageNo_end: pages.length,
       numOfRows: pageSize,

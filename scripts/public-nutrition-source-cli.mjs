@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { publishArtifactBundle } from "./lib/public-nutrition-artifacts.mjs";
+import { mfdsLiveOptions } from "./lib/public-nutrition-cli-options.mjs";
 import {
   persistNutritionFailure,
   sanitizeFailureDetails,
@@ -14,6 +15,7 @@ import {
   fetchMfdsBatch,
   normalizeNutritionBatch,
 } from "./lib/public-nutrition-pipeline.mjs";
+import { loadRda104Workbook } from "./lib/rda-nutrition-xlsx.mjs";
 
 const command = process.argv[2] ?? "";
 
@@ -21,6 +23,7 @@ function parseArgs(values) {
   const args = {};
   for (let index = 0; index < values.length; index += 1) {
     const token = values[index];
+    if (token === "--") continue;
     if (!token.startsWith("--")) continue;
     const key = token.slice(2);
     const next = values[index + 1];
@@ -82,15 +85,36 @@ async function runFetch(args) {
   const secretValues = runtimeSecretValues();
   const apiKey = secretValues[0] ?? "";
   if (args.live) {
+    const options = apiKey.length > 0
+      ? mfdsLiveOptions(args)
+      : {};
     raw = await fetchMfdsBatch({
       apiKey,
       fetchedAt,
+      ...options,
     });
   } else {
-    raw = buildRawBatch({
-      ...(await readJson(requireArg(args, "input"))),
-      fetchedAt,
-    });
+    const inputPath = requireArg(args, "input");
+    if (/\.xlsx$/i.test(inputPath)) {
+      const scope = typeof args["scope-file"] === "string"
+        ? await readJson(args["scope-file"])
+        : null;
+      if (
+        scope !== null &&
+        (!Array.isArray(scope.item_keys) || Object.keys(scope).some((key) => key !== "item_keys"))
+      ) {
+        throw new NutritionPipelineError("RDA_SCOPE_INVALID");
+      }
+      raw = loadRda104Workbook(inputPath, {
+        fetchedAt,
+        selectedItemKeys: scope?.item_keys ?? null,
+      });
+    } else {
+      raw = buildRawBatch({
+        ...(await readJson(inputPath)),
+        fetchedAt,
+      });
+    }
   }
   const summary = successSummary("fetch", {
     status: "raw",
