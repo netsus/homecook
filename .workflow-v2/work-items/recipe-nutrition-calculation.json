@@ -115,7 +115,7 @@
   },
   "status": {
     "lifecycle": "in_progress",
-    "approval_state": "not_started",
+    "approval_state": "codex_approved",
     "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
@@ -135,5 +135,5 @@
     "Deleted recipe save endpoint restoration"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs were authored in a fresh Codex session from contract base 6d01d8ac9f4861036ade4e6b97b20275c7f2a6c8, rebased onto predecessor-closeout master 842093048f7b5cc9996bc85e886405ad6788e9c5, and require a separate current-head Codex Stage 1.5 approval. Existing confirmed RECIPE_DETAIL is an anchor-extension: generator and critic are intentionally not required because no new screen or interaction model is introduced, while Stage 4 before/after evidence at 390px, 320px, desktop and Stage 5/final authority are required. Current public-data coverage is intentionally sparse at 13/124 ingredients and at least one link in 21/30 recipes; missing data must remain partial or unavailable."
+  "notes": "Stage 1 docs were authored in a fresh Codex session from contract base 6d01d8ac9f4861036ade4e6b97b20275c7f2a6c8 and rebased onto predecessor-closeout master 842093048f7b5cc9996bc85e886405ad6788e9c5. An author-separated Codex Stage 1.5 review approved current head 5f75afc4030facccebd4ea74314cab7d18032c44 with unresolved required findings 0 and required validators green. Stage 2 started on feature/be-recipe-nutrition-calculation. Existing confirmed RECIPE_DETAIL is an anchor-extension: generator and critic are intentionally not required because no new screen or interaction model is introduced, while Stage 4 before/after evidence at 390px, 320px, desktop and Stage 5/final authority are required. Current public-data coverage is intentionally sparse at 13/124 ingredients and at least one link in 21/30 recipes; missing data must remain partial or unavailable."
 }

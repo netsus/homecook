@@ -62,8 +62,8 @@
 | nutrition/products/planner contract PR #1006 | merged contract — merge `6d01d8ac9f4861036ade4e6b97b20275c7f2a6c8`, reviewed head `81ddb4d5c4bbd320c01f9a91a40d89632193e619`; branch rebased through predecessor closeout master `842093048f7b5cc9996bc85e886405ad6788e9c5` | [x] |
 | `ingredient-nutrition-conversion-model` | merged implementation in PR #1004 lineage; public-data pilot exact bundle is the calculation input | [x] |
 | FoodSafety-30 exact pilot bundle | approved/pinned 13 nutrition links for 124 canonical ingredients; 21/30 recipes have at least one link | [x] |
-| recipe snapshot attribution contract repair | 사용자 2026-07-15 명시 승인; official v1.7.19/v1.5.25/v1.3.22/v1.3.20/v1.2.24에서 미구현 target의 `nutrition_profile_id` 제거 + immutable `sources_json` 재잠금 | [x] |
-| independent Codex Stage 1.5 docs gate | pending — author와 다른 새 Codex 작업이 current head를 검수 | [ ] |
+| recipe snapshot attribution contract repair | 사용자 2026-07-15 명시 승인 후 PR #1009로 병합; official v1.7.19/v1.5.25/v1.3.22/v1.3.20/v1.2.24에서 미구현 target의 `nutrition_profile_id` 제거 + immutable `sources_json` 재잠금 | [x] |
+| independent Codex Stage 1.5 docs gate | approved — author와 분리된 Codex가 current head `5f75afc4030facccebd4ea74314cab7d18032c44`를 검수했고 unresolved required finding 0 및 required validator green 확인; 후속 contract repair도 별도 작성자/검토자 분리와 PR #1009 current-head 전체 green을 거침 | [x] |
 
 > 최종 pilot dependency는 logical batch `7ede683988d9c23d0a89416d9b237df6b01e3a2720f045b96dbf11253ff833bc`, approved handoff checksum `457b70404e88564ab0e3d26d7d7e0d35db87babfa607b9472d1ac683538e1dcf`다. 이전 pre-fix bundle이나 `edible_portion_percent=100` 해석은 소비하지 않는다. 현재 coverage가 `13/124`인 것은 정상적인 sparse baseline이며 complete를 만들기 위해 승인되지 않은 후보를 보충하지 않는다.
 
