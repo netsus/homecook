@@ -64,6 +64,11 @@ type CalculatorIngredient = {
       representative_weight_g: number;
       is_active: boolean;
     };
+    evidence?: {
+      review_status: string;
+      is_active: boolean;
+      source: NonNullable<CalculatorIngredient["nutrition"]>["source"];
+    };
   } | null;
   piece_weight?: {
     id: string;
@@ -74,6 +79,11 @@ type CalculatorIngredient = {
     weight_g: number;
     review_status: string;
     is_active: boolean;
+    evidence?: {
+      review_status: string;
+      is_active: boolean;
+      source: NonNullable<CalculatorIngredient["nutrition"]>["source"];
+    };
   } | null;
 };
 
@@ -180,6 +190,21 @@ function recipeInput(ingredients: CalculatorIngredient[]): CalculatorInput {
   };
 }
 
+function measurementEvidenceSource(provider = "RDA") {
+  return {
+    id: `measurement-source-${provider}`,
+    review_status: "approved",
+    freshness_status: "current",
+    is_active: true,
+    provider,
+    dataset: "양념재료 계량 참고",
+    source_version: "2026-07-01",
+    data_basis_date: null,
+    license: "공공누리",
+    source_url: "https://example.test/measurement",
+  };
+}
+
 async function calculatorModule() {
   try {
     return await import("@/lib/nutrition/recipe-nutrition-calculator");
@@ -216,6 +241,11 @@ describe("recipe nutrition calculator", () => {
         basis_volume_ml: 15,
         representative_weight_g: 25,
         is_active: true,
+      },
+      evidence: {
+        review_status: "approved",
+        is_active: true,
+        source: measurementEvidenceSource("RDA-direct-unused"),
       },
     };
 
@@ -263,6 +293,11 @@ describe("recipe nutrition calculator", () => {
         representative_weight_g: grams,
         is_active: true,
       },
+      evidence: {
+        review_status: "approved",
+        is_active: true,
+        source: measurementEvidenceSource(`RDA-${code}`),
+      },
     };
 
     const result = calculate(recipeInput([ingredient]));
@@ -295,6 +330,11 @@ describe("recipe nutrition calculator", () => {
       weight_g: 80,
       review_status: "approved",
       is_active: true,
+      evidence: {
+        review_status: "approved",
+        is_active: true,
+        source: measurementEvidenceSource("RDA-piece"),
+      },
     };
     const toTaste = directIngredient({
       id: "salt-to-taste",
@@ -371,6 +411,11 @@ describe("recipe nutrition calculator", () => {
         basis_volume_ml: 15,
         representative_weight_g: 15,
         is_active: true,
+      },
+      evidence: {
+        review_status: "approved",
+        is_active: true,
+        source: measurementEvidenceSource("RDA-mixed"),
       },
     };
 
@@ -449,6 +494,40 @@ describe("recipe nutrition calculator", () => {
       "Z-provider",
       "a-provider",
     ]);
+  });
+
+  it("pins only the approved measurement evidence source that enabled an actual contribution", async () => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult & {
+      sources: Array<{ provider: string }>;
+    }>(calculator, "calculateRecipeNutrition");
+    const ingredient = directIngredient({ amount: 1, unit: "tbsp" });
+    ingredient.conversion_assignment = {
+      id: "assignment-with-evidence",
+      ingredient_id: ingredient.ingredient_id,
+      preparation_state: ingredient.preparation_state,
+      review_status: "approved",
+      is_active: true,
+      profile: {
+        code: "VOLUME_G15",
+        basis_volume_ml: 15,
+        representative_weight_g: 15,
+        is_active: true,
+      },
+      evidence: {
+        review_status: "approved",
+        is_active: true,
+        source: measurementEvidenceSource(),
+      },
+    };
+
+    expect(calculate(recipeInput([ingredient])).sources.map((source) => source.provider))
+      .toEqual(["MFDS", "RDA"]);
+
+    ingredient.conversion_assignment.evidence!.review_status = "superseded";
+    const unavailable = calculate(recipeInput([ingredient]));
+    expect(unavailable.calculation_status).toBe("unavailable");
+    expect(unavailable.sources).toEqual([]);
   });
 
   it("fails closed for inactive, unapproved, revoked, superseded, stale or drifted predecessor rows", async () => {

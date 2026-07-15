@@ -82,6 +82,16 @@ export interface RecipeNutritionIngredientInput {
       representative_weight_g: number;
       is_active: boolean;
     };
+    evidence?: {
+      review_status: string;
+      is_active: boolean;
+      source: {
+        id: string;
+        review_status: string;
+        freshness_status: string;
+        is_active: boolean;
+      } & RecipeNutritionSourceAttribution;
+    };
   } | null;
   piece_weight?: {
     id: string;
@@ -92,6 +102,16 @@ export interface RecipeNutritionIngredientInput {
     weight_g: number;
     review_status: string;
     is_active: boolean;
+    evidence?: {
+      review_status: string;
+      is_active: boolean;
+      source: {
+        id: string;
+        review_status: string;
+        freshness_status: string;
+        is_active: boolean;
+      } & RecipeNutritionSourceAttribution;
+    };
   } | null;
 }
 
@@ -272,7 +292,33 @@ type UnitResolution = {
   factor: number;
   quality: "direct" | "estimated";
   warning: string | null;
+  measurementSource: RecipeNutritionSourceAttribution | null;
 };
+
+function approvedAttributionSource(source: {
+  review_status: string;
+  freshness_status: string;
+  is_active: boolean;
+} & RecipeNutritionSourceAttribution) {
+  return source.review_status === "approved" &&
+    source.freshness_status === "current" &&
+    source.is_active;
+}
+
+function approvedEvidence(
+  evidence: RecipeNutritionIngredientInput["conversion_assignment"] extends infer Assignment
+    ? Assignment extends { evidence?: infer Evidence } ? Evidence : never
+    : never,
+) {
+  return Boolean(
+    evidence &&
+    (evidence as { review_status: string }).review_status === "approved" &&
+    (evidence as { is_active: boolean }).is_active &&
+    approvedAttributionSource((evidence as {
+      source: Parameters<typeof approvedAttributionSource>[0];
+    }).source),
+  );
+}
 
 function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution | null {
   const nutrition = ingredient.nutrition;
@@ -284,7 +330,12 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
   const profile = nutrition.profile;
   const grams = massInGrams(amount, ingredient.unit);
   if (profile.basis_unit === "g" && grams !== null) {
-    return { factor: grams / profile.basis_amount, quality: "direct", warning: null };
+    return {
+      factor: grams / profile.basis_amount,
+      quality: "direct",
+      warning: null,
+      measurementSource: null,
+    };
   }
 
   const milliliters = volumeInMilliliters(amount, ingredient.unit);
@@ -293,6 +344,7 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
       factor: milliliters / profile.basis_amount,
       quality: "direct",
       warning: null,
+      measurementSource: null,
     };
   }
 
@@ -310,13 +362,15 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
       assignment.profile.is_active &&
       assignment.profile.basis_volume_ml === 15 &&
       expectedWeight !== undefined &&
-      assignment.profile.representative_weight_g === expectedWeight
+      assignment.profile.representative_weight_g === expectedWeight &&
+      approvedEvidence(assignment.evidence)
     ) {
       const estimatedGrams = milliliters * expectedWeight / 15;
       return {
         factor: estimatedGrams / profile.basis_amount,
         quality: "estimated",
         warning: "REPRESENTATIVE_VOLUME_CONVERSION_USED",
+        measurementSource: assignment.evidence!.source,
       };
     }
   }
@@ -331,6 +385,7 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
       piece.edible_state === ingredient.edible_state &&
       piece.review_status === "approved" &&
       piece.is_active &&
+      approvedEvidence(piece.evidence) &&
       Number.isFinite(piece.weight_g) &&
       piece.weight_g > 0
     ) {
@@ -338,6 +393,7 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
         factor: amount * piece.weight_g / profile.basis_amount,
         quality: "estimated",
         warning: "PIECE_WEIGHT_CONVERSION_USED",
+        measurementSource: piece.evidence!.source,
       };
     }
   }
@@ -498,6 +554,20 @@ export function calculateRecipeNutrition(
         source_url: ingredient.nutrition!.source.source_url,
       };
       sources.set(canonicalStringify(sourceTuple(attribution)), attribution);
+      if (unitResolution.measurementSource) {
+        const measurementAttribution: RecipeNutritionSourceAttribution = {
+          provider: unitResolution.measurementSource.provider,
+          dataset: unitResolution.measurementSource.dataset,
+          source_version: unitResolution.measurementSource.source_version,
+          data_basis_date: unitResolution.measurementSource.data_basis_date,
+          license: unitResolution.measurementSource.license,
+          source_url: unitResolution.measurementSource.source_url,
+        };
+        sources.set(
+          canonicalStringify(sourceTuple(measurementAttribution)),
+          measurementAttribution,
+        );
+      }
     }
   }
 
