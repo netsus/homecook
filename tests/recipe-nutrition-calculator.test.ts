@@ -477,6 +477,33 @@ describe("recipe nutrition calculator", () => {
     expect(noApprovedContribution.values).not.toHaveProperty("sugars_g");
   });
 
+  it("marks an optional-only observed contribution partial with a non-null quality", async () => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult & {
+      sources: Array<{ provider: string }>;
+    }>(calculator, "calculateRecipeNutrition");
+    const coreMissing = Object.fromEntries(
+      Object.keys(CORE_VALUES).map((code) => [
+        code,
+        code === "sugars_g"
+          ? { amount: 5, value_status: "observed" as const }
+          : { amount: null, value_status: "missing" as const },
+      ]),
+    ) as Partial<Record<NutrientCode, NutrientValue>>;
+
+    const result = calculate(recipeInput([directIngredient({}, coreMissing)]));
+
+    expect(result.calculation_status).toBe("partial");
+    expect(result.calculation_quality).toBe("direct");
+    expect(result.values.sugars_g).toEqual({
+      amount: 5,
+      known_amount: null,
+      status: "complete",
+      display_mode: "total",
+    });
+    expect(result.sources).toEqual([expect.objectContaining({ provider: "MFDS" })]);
+  });
+
   it("derives complete, partial, unavailable and direct, estimated, mixed independently", async () => {
     const calculator = await calculatorModule();
     const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(

@@ -16,6 +16,7 @@ const SOURCE = {
   license: "이용허락범위 제한 없음",
   source_url: "https://www.data.go.kr/data/15127578/openapi.do",
 };
+const INPUT_GUARD = { recipe_ingredients: [] };
 
 function completeCalculation(): RecipeNutritionCalculation {
   const values = {
@@ -57,6 +58,23 @@ function completeCalculation(): RecipeNutritionCalculation {
   };
 }
 
+function optionalOnlyCalculation(): RecipeNutritionCalculation {
+  const calculation = completeCalculation();
+  calculation.values = {
+    energy_kcal: { amount: null, known_amount: null, status: "unavailable", display_mode: null },
+    carbohydrate_g: { amount: null, known_amount: null, status: "unavailable", display_mode: null },
+    protein_g: { amount: null, known_amount: null, status: "unavailable", display_mode: null },
+    fat_g: { amount: null, known_amount: null, status: "unavailable", display_mode: null },
+    sodium_mg: { amount: null, known_amount: null, status: "unavailable", display_mode: null },
+    sugars_g: { amount: 3, known_amount: null, status: "complete", display_mode: "total" },
+  };
+  calculation.scalable_values = { sugars_g: 3 };
+  calculation.fixed_values = { sugars_g: 0 };
+  calculation.calculation_status = "partial";
+  calculation.calculation_quality = "direct";
+  return calculation;
+}
+
 describe("recipe nutrition snapshot writer", () => {
   it("accepts the official single-authority payload and sends only immutable snapshot fields", async () => {
     const rpc = vi.fn(async () => ({
@@ -72,12 +90,14 @@ describe("recipe nutrition snapshot writer", () => {
     const result = await writeRecipeNutritionSnapshot({ rpc }, "recipe-1", calculation, {
       calculatedAt: "2026-07-16T00:00:00.000Z",
       expectedRecipeVersion: "2026-07-16T00:00:00.000Z",
+      inputGuard: INPUT_GUARD,
     });
 
     expect(result).toEqual({ snapshot_id: "snapshot-1", created: true, is_current: true });
     expect(rpc).toHaveBeenCalledWith("write_recipe_nutrition_snapshot", {
       p_recipe_id: "recipe-1",
       p_expected_recipe_updated_at: "2026-07-16T00:00:00.000Z",
+      p_input_guard: INPUT_GUARD,
       p_snapshot: {
         base_servings: 2,
         input_hash: "a".repeat(64),
@@ -119,6 +139,20 @@ describe("recipe nutrition snapshot writer", () => {
       { ...SOURCE, source_url: "https://example.test/data?serviceKey=secret" },
       { ...SOURCE, source_url: "https://user:password@example.test/data" },
       { ...SOURCE, source_url: "https://example.test/data?X-Amz-Signature=secret" },
+      ...[
+        "password",
+        "pass",
+        "subscription-key",
+        "subscription_key",
+        "access_key",
+        "access-key",
+        "accesskey",
+        "client_credential",
+        "private-token",
+      ].map((key) => ({
+        ...SOURCE,
+        source_url: `https://example.test/data?${key}=redacted-value`,
+      })),
       { ...SOURCE, source_url: "https://example.test/data#access_token=secret" },
       { ...SOURCE, source_url: "file:///private/provider/raw.json" },
       { ...SOURCE, source_url: "/internal/storage/raw.json" },
@@ -186,6 +220,16 @@ describe("recipe nutrition snapshot writer", () => {
     }
   });
 
+  it("accepts optional-only partial data and rejects an overall status that contradicts nutrients", () => {
+    expect(() => validateRecipeNutritionSnapshot(optionalOnlyCalculation())).not.toThrow();
+
+    const contradictory = completeCalculation();
+    contradictory.calculation_status = "partial";
+    expect(() => validateRecipeNutritionSnapshot(contradictory)).toThrowError(
+      expect.objectContaining({ code: "INVALID_SNAPSHOT_STATUS" }),
+    );
+  });
+
   it("requires canonical exact-tuple dedupe and null-first Unicode ordinal source ordering", () => {
     const invalid = completeCalculation();
     invalid.sources = [
@@ -203,14 +247,14 @@ describe("recipe nutrition snapshot writer", () => {
     const row: RecipeNutritionSnapshotRow = {
       id: "snapshot-1",
       base_servings: 2,
-      scalable_values_json: { energy_kcal: 80 },
-      fixed_values_json: { energy_kcal: 20 },
+      scalable_values_json: completeCalculation().scalable_values,
+      fixed_values_json: completeCalculation().fixed_values,
       nutrient_status_json: completeCalculation().values,
       calculation_status: "complete",
       calculation_quality: "direct",
       reflected_ingredient_count: 1,
       target_ingredient_count: 1,
-      warnings_json: ["PINNED_WARNING"],
+      warnings_json: [],
       sources_json: [SOURCE],
       calculated_at: "2026-07-16T00:00:00.000Z",
     };
@@ -226,10 +270,75 @@ describe("recipe nutrition snapshot writer", () => {
       availability_reason: null,
       reflected_ingredient_count: 1,
       target_ingredient_count: 1,
-      warnings: ["PINNED_WARNING"],
+      warnings: [],
       sources: [SOURCE],
       snapshot_id: "snapshot-1",
       calculated_at: "2026-07-16T00:00:00.000Z",
     });
+  });
+
+  it("projects optional-only partial data without downgrading it to unavailable", () => {
+    const calculation = optionalOnlyCalculation();
+    const row: RecipeNutritionSnapshotRow = {
+      id: "snapshot-optional",
+      base_servings: calculation.base_servings,
+      scalable_values_json: calculation.scalable_values,
+      fixed_values_json: calculation.fixed_values,
+      nutrient_status_json: calculation.values,
+      calculation_status: "partial",
+      calculation_quality: "direct",
+      reflected_ingredient_count: 1,
+      target_ingredient_count: 1,
+      warnings_json: [],
+      sources_json: [SOURCE],
+      calculated_at: "2026-07-16T00:00:00.000Z",
+    };
+
+    expect(mapRecipeNutritionSnapshot(row)).toMatchObject({
+      calculation_status: "partial",
+      calculation_quality: "direct",
+      values: { sugars_g: expect.objectContaining({ amount: 3, status: "complete" }) },
+      sources: [SOURCE],
+    });
+  });
+
+  it("throws for semantically malformed persisted rows so the API can fail closed", () => {
+    const calculation = completeCalculation();
+    const valid: RecipeNutritionSnapshotRow = {
+      id: "snapshot-malformed",
+      base_servings: 2,
+      scalable_values_json: calculation.scalable_values,
+      fixed_values_json: calculation.fixed_values,
+      nutrient_status_json: calculation.values,
+      calculation_status: "complete",
+      calculation_quality: "direct",
+      reflected_ingredient_count: 1,
+      target_ingredient_count: 1,
+      warnings_json: [],
+      sources_json: [SOURCE],
+      calculated_at: "2026-07-16T00:00:00.000Z",
+    };
+    const extraVector = structuredClone(valid);
+    (extraVector.scalable_values_json as Record<string, number>).unknown = 1;
+    const contradictoryStatus = structuredClone(valid);
+    contradictoryStatus.calculation_status = "partial";
+    const invalidWarning = structuredClone(valid);
+    invalidWarning.warnings_json = ["MISSING_INGREDIENT_NUTRITION"];
+    const duplicateSources = structuredClone(valid);
+    duplicateSources.sources_json = [SOURCE, SOURCE];
+    const extraValueField = structuredClone(valid);
+    (extraValueField.nutrient_status_json.energy_kcal as unknown as Record<string, unknown>).raw = true;
+
+    for (const row of [
+      extraVector,
+      contradictoryStatus,
+      invalidWarning,
+      duplicateSources,
+      extraValueField,
+    ]) {
+      expect(() => mapRecipeNutritionSnapshot(row)).toThrowError(
+        expect.objectContaining({ code: "INVALID_SNAPSHOT_PROJECTION" }),
+      );
+    }
   });
 });

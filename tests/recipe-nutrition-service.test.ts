@@ -24,7 +24,7 @@ function ingredientResult(data: unknown[], error: unknown = null) {
 }
 
 function listResult(data: unknown[], error: unknown = null) {
-  const result = { data, error };
+  let result = { data, error };
   const query = {
     select: vi.fn((columns: string) => {
       void columns;
@@ -33,6 +33,20 @@ function listResult(data: unknown[], error: unknown = null) {
     in: vi.fn((column: string, values: string[]) => {
       void column;
       void values;
+      return query;
+    }),
+    eq: vi.fn((column: string, value: unknown) => {
+      void column;
+      void value;
+      return query;
+    }),
+    order: vi.fn((column: string, options: { ascending: boolean }) => {
+      void column;
+      void options;
+      return query;
+    }),
+    range: vi.fn((from: number, to: number) => {
+      result = { data: data.slice(from, to + 1), error };
       return query;
     }),
     then(
@@ -189,7 +203,10 @@ function serviceClient({
   const ingredientsQuery = ingredientResult(ingredients);
   const linksQuery = listResult(nutritionLinks);
   const assignmentsQuery = listResult(conversionAssignments);
-  const rpc = vi.fn(async (_name: string, args: { p_snapshot: Record<string, unknown> }) => ({
+  const rpc = vi.fn(async (_name: string, args: {
+    p_snapshot: Record<string, unknown>;
+    p_input_guard: Record<string, unknown>;
+  }) => ({
     data: {
       snapshot_id: "snapshot-1",
       created: true,
@@ -274,6 +291,76 @@ describe("recipe nutrition snapshot service", () => {
     });
   });
 
+  it("selects the direct profile by the recipe unit when mass and volume candidates both exist", async () => {
+    const massLink = approvedNutritionLink();
+    const volumeLink = approvedNutritionLink({
+      id: "link-volume",
+      profileId: "profile-volume",
+      preparationState: "liquid",
+      normalizationMethod: "volume_100ml",
+      basisUnit: "ml",
+    });
+    const massClient = serviceClient({
+      nutritionLinks: [massLink, volumeLink],
+    });
+    const volumeClient = serviceClient({
+      ingredients: [{
+        id: "recipe-ingredient-1",
+        ingredient_id: "ingredient-1",
+        amount: 100,
+        unit: "ml",
+        ingredient_type: "QUANT",
+        scalable: true,
+        sort_order: 0,
+      }],
+      nutritionLinks: [massLink, volumeLink],
+    });
+
+    await recalculateRecipeNutritionSnapshot(
+      { from: massClient.from, rpc: massClient.rpc } as never,
+      "recipe-1",
+    );
+    await recalculateRecipeNutritionSnapshot(
+      { from: volumeClient.from, rpc: volumeClient.rpc } as never,
+      "recipe-1",
+    );
+
+    expect(massClient.rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+      calculation_status: "complete",
+      calculation_quality: "direct",
+      scalable_values: expect.objectContaining({ energy_kcal: 100 }),
+    });
+    expect(volumeClient.rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+      calculation_status: "complete",
+      calculation_quality: "direct",
+      scalable_values: expect.objectContaining({ energy_kcal: 100 }),
+    });
+  });
+
+  it("falls back from no direct volume profile to one mass profile plus one conversion", async () => {
+    const { from, rpc } = serviceClient({
+      ingredients: [{
+        id: "recipe-ingredient-1",
+        ingredient_id: "ingredient-1",
+        amount: 1,
+        unit: "tbsp",
+        ingredient_type: "QUANT",
+        scalable: true,
+        sort_order: 0,
+      }],
+      nutritionLinks: [approvedNutritionLink()],
+      conversionAssignments: [approvedConversionAssignment()],
+    });
+
+    await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
+
+    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+      calculation_status: "complete",
+      calculation_quality: "estimated",
+      scalable_values: expect.objectContaining({ energy_kcal: 15 }),
+    });
+  });
+
   it("hydrates all canonical ingredients with one link query and one conversion query", async () => {
     const { from, rpc, linksQuery, assignmentsQuery } = serviceClient({
       ingredients: [
@@ -315,6 +402,114 @@ describe("recipe nutrition snapshot service", () => {
     expect(assignmentsQuery.in).toHaveBeenCalledOnce();
     expect(assignmentsQuery.select.mock.calls[0][0]).toContain("id, ingredient_id");
     expect(assignmentsQuery.select.mock.calls[0][0]).toContain("measurement_source_evidence(");
+    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+      calculation_status: "complete",
+      reflected_ingredient_count: 2,
+      target_ingredient_count: 2,
+    });
+  });
+
+  it("passes a canonical input guard so the writer can reject predecessor races", async () => {
+    const { from, rpc } = serviceClient({
+      ingredients: [{
+        id: "recipe-ingredient-1",
+        ingredient_id: "ingredient-1",
+        amount: 100,
+        unit: "g",
+        ingredient_type: "QUANT",
+        scalable: true,
+        sort_order: 0,
+      }],
+      nutritionLinks: [approvedNutritionLink()],
+      conversionAssignments: [approvedConversionAssignment()],
+    });
+
+    await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
+
+    expect(rpc.mock.calls[0][1].p_input_guard).toEqual({
+      recipe_ingredients: [{
+        id: "recipe-ingredient-1",
+        ingredient_id: "ingredient-1",
+        amount: 100,
+        unit: "g",
+        ingredient_type: "QUANT",
+        scalable: true,
+        sort_order: 0,
+        nutrition_candidates: [{
+          link_id: "link-1",
+          profile_id: "profile-1",
+          source_item_id: "item-profile-1",
+          source_id: "source-profile-1",
+          preparation_state: "raw-edible",
+          normalization_method: "mass_100g",
+          basis_amount: 100,
+          basis_unit: "g",
+        }],
+        conversion_candidates: [{
+          assignment_id: "assignment-1",
+          profile_id: "conversion-profile-1",
+          evidence_id: "evidence-assignment-1",
+          source_id: "measurement-source-assignment-1",
+          preparation_state: "raw-edible",
+        }],
+        selected_nutrition_link_id: "link-1",
+        selected_conversion_assignment_id: null,
+      }],
+    });
+  });
+
+  it("filters eligible predecessors server-side and paginates beyond the PostgREST row cap", async () => {
+    const fillerRows = Array.from({ length: 999 }, (_, index) => ({
+      id: `ineligible-${index}`,
+    }));
+    const { from, rpc, linksQuery, assignmentsQuery } = serviceClient({
+      ingredients: [
+        {
+          id: "recipe-ingredient-1",
+          ingredient_id: "ingredient-1",
+          amount: 100,
+          unit: "g",
+          ingredient_type: "QUANT",
+          scalable: true,
+          sort_order: 0,
+        },
+        {
+          id: "recipe-ingredient-2",
+          ingredient_id: "ingredient-2",
+          amount: 100,
+          unit: "g",
+          ingredient_type: "QUANT",
+          scalable: true,
+          sort_order: 1,
+        },
+      ],
+      nutritionLinks: [
+        approvedNutritionLink(),
+        ...fillerRows,
+        approvedNutritionLink({
+          id: "link-after-cap",
+          ingredientId: "ingredient-2",
+          profileId: "profile-after-cap",
+        }),
+      ],
+    });
+
+    await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
+
+    expect(linksQuery.eq.mock.calls).toEqual([
+      ["review_status", "approved"],
+      ["is_active", true],
+      ["is_primary", true],
+      ["review_status", "approved"],
+      ["is_active", true],
+      ["is_primary", true],
+    ]);
+    expect(linksQuery.range.mock.calls).toEqual([[0, 999], [1000, 1999]]);
+    expect(assignmentsQuery.eq.mock.calls).toEqual([
+      ["review_status", "approved"],
+      ["is_active", true],
+    ]);
+    expect(assignmentsQuery.range).toHaveBeenCalledWith(0, 999);
     expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
       calculation_status: "complete",
       reflected_ingredient_count: 2,
@@ -377,6 +572,37 @@ describe("recipe nutrition snapshot service", () => {
 
     expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
       calculation_status: "unavailable",
+      reflected_ingredient_count: 0,
+      warnings: ["UNIT_CONVERSION_MISSING"],
+      sources: [],
+    });
+  });
+
+  it("counts conversion candidates across all states before checking nutrition compatibility", async () => {
+    const { from, rpc } = serviceClient({
+      ingredients: [{
+        id: "recipe-ingredient-1",
+        ingredient_id: "ingredient-1",
+        amount: 1,
+        unit: "tbsp",
+        ingredient_type: "QUANT",
+        scalable: true,
+        sort_order: 0,
+      }],
+      conversionAssignments: [
+        approvedConversionAssignment(),
+        approvedConversionAssignment({
+          id: "assignment-cooked",
+          preparationState: "cooked",
+        }),
+      ],
+    });
+
+    await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
+
+    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+      calculation_status: "unavailable",
+      calculation_quality: null,
       reflected_ingredient_count: 0,
       warnings: ["UNIT_CONVERSION_MISSING"],
       sources: [],

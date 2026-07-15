@@ -615,11 +615,14 @@ export function calculateRecipeNutrition(
   }
 
   const coreStatuses = CORE_NUTRIENT_CODES.map((code) => values[code].status);
+  const hasCalculableNutrient = Object.values(values).some(
+    (value) => value.status !== "unavailable",
+  );
   const calculationStatus: NutrientStatus = coreStatuses.every((status) => status === "complete")
     ? "complete"
-    : coreStatuses.every((status) => status === "unavailable")
-      ? "unavailable"
-      : "partial";
+    : hasCalculableNutrient
+      ? "partial"
+      : "unavailable";
   const calculationQuality: CalculationQuality | null = calculationStatus === "unavailable"
     ? null
     : qualities.size === 2

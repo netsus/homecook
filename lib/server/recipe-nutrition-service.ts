@@ -3,6 +3,7 @@ import {
 } from "@/lib/nutrition/recipe-nutrition-calculator";
 import { writeRecipeNutritionSnapshot } from "@/lib/server/recipe-nutrition-snapshot";
 import {
+  buildRecipeNutritionInputGuard,
   hydrateRecipeNutritionIngredients,
   loadRecipeNutritionPredecessors,
 } from "@/scripts/lib/recipe-nutrition-predecessor.mjs";
@@ -29,9 +30,12 @@ interface MaybeSingleQuery<T> {
   maybeSingle(): PromiseLike<{ data: T | null; error: unknown }>;
 }
 
-interface ListQuery<T> {
+interface ListQuery<T> extends PromiseLike<{ data: T[] | null; error: unknown }> {
   select(columns: string): ListQuery<T>;
-  in(column: string, values: string[]): PromiseLike<{ data: T[] | null; error: unknown }>;
+  in(column: string, values: string[]): ListQuery<T>;
+  eq(column: string, value: string | boolean): ListQuery<T>;
+  order(column: string, options: { ascending: boolean }): ListQuery<T>;
+  range(from: number, to: number): ListQuery<T>;
 }
 
 interface IngredientQuery {
@@ -54,6 +58,7 @@ export interface RecipeNutritionServiceClient {
       p_recipe_id: string;
       p_snapshot: Record<string, unknown>;
       p_expected_recipe_updated_at: string;
+      p_input_guard: Record<string, unknown>;
     },
   ): PromiseLike<{
     data: { snapshot_id: string; created: boolean; is_current: boolean } | null;
@@ -150,5 +155,6 @@ export async function recalculateRecipeNutritionSnapshot(
   return writeRecipeNutritionSnapshot(dbClient, recipeId, calculation, {
     ...options,
     expectedRecipeVersion: recipeResult.data.updated_at,
+    inputGuard: buildRecipeNutritionInputGuard(ingredientsResult.data, predecessors),
   });
 }

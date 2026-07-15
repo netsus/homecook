@@ -267,11 +267,15 @@ describe("recipe nutrition API boundaries", () => {
           display_mode: "minimum",
         },
       },
+      fixed_values_json: {
+        ...snapshotRow.fixed_values_json,
+        energy_kcal: 0,
+      },
       calculation_status: "partial",
-      calculation_quality: "mixed",
+      calculation_quality: "direct",
       reflected_ingredient_count: 1,
       target_ingredient_count: 2,
-      warnings_json: ["MISSING_INGREDIENT_NUTRITION"],
+      warnings_json: [],
     });
 
     const partialResponse = await GET(
@@ -308,6 +312,16 @@ describe("recipe nutrition API boundaries", () => {
     const malformedBody = await malformedResponse.json();
     expect(malformedResponse.status).toBe(200);
     expect(malformedBody.data.nutrition.availability_reason).toBe("temporarily_unavailable");
+
+    snapshotQuery.setResult({ ...snapshotRow, calculation_status: "partial" });
+    const contradictoryResponse = await GET(
+      new Request("http://localhost:3000/api/v1/recipes/recipe-1"),
+      { params: Promise.resolve({ id: "recipe-1" }) },
+    );
+    const contradictoryBody = await contradictoryResponse.json();
+    expect(contradictoryBody.data.nutrition.availability_reason).toBe(
+      "temporarily_unavailable",
+    );
 
     snapshotQuery.setResult({
       ...snapshotRow,

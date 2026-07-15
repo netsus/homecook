@@ -7,7 +7,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   calculateRecipeNutrition,
-  type RecipeNutritionIngredientInput,
 } from "@/lib/nutrition/recipe-nutrition-calculator";
 import {
   buildRecipeNutritionCalculation,
@@ -64,39 +63,41 @@ const predecessorSource = {
   source_url: "https://example.test/nutrition",
 };
 
-function predecessors(): Map<string, Pick<
-  RecipeNutritionIngredientInput,
-  "preparation_state" | "nutrition" | "conversion_assignment" | "piece_weight"
->> {
+function predecessors() {
   return new Map([[
     "ingredient-a",
     {
-      preparation_state: "raw-edible",
-      nutrition: {
-        link: {
-          id: "link-a",
-          review_status: "approved",
-          is_active: true,
-          is_primary: true,
-          preparation_state: "raw-edible",
+      nutrition_candidates: [{
+        ingredientId: "ingredient-a",
+        preparationState: "raw-edible",
+        nutrition: {
+          link: {
+            id: "link-a",
+            review_status: "approved",
+            is_active: true,
+            is_primary: true,
+            preparation_state: "raw-edible",
+          },
+          profile: {
+            id: "profile-a",
+            source_item_id: "source-item-a",
+            normalization_method: "mass_100g",
+            basis_amount: 100,
+            basis_unit: "g" as const,
+            review_status: "approved",
+            is_active: true,
+            values: Object.fromEntries([
+              ["energy_kcal", 100],
+              ["carbohydrate_g", 20],
+              ["protein_g", 10],
+              ["fat_g", 5],
+              ["sodium_mg", 50],
+            ].map(([code, amount]) => [code, { amount, value_status: "observed" }])),
+          },
+          source: predecessorSource,
         },
-        profile: {
-          id: "profile-a",
-          basis_amount: 100,
-          basis_unit: "g",
-          review_status: "approved",
-          is_active: true,
-          values: Object.fromEntries([
-            ["energy_kcal", 100],
-            ["carbohydrate_g", 20],
-            ["protein_g", 10],
-            ["fat_g", 5],
-            ["sodium_mg", 50],
-          ].map(([code, amount]) => [code, { amount, value_status: "observed" }])),
-        },
-        source: predecessorSource,
-      },
-      conversion_assignment: null,
+      }],
+      conversion_candidates: [],
       piece_weight: null,
     },
   ]]);
@@ -112,7 +113,13 @@ function repository() {
     loadPredecessors: vi.fn(async () => predecessors()),
     loadCurrentSnapshots: vi.fn(async () => [{ recipe_id: "recipe-a", id: "previous-a" }]),
     assertScopeRecipeIds: vi.fn(async () => undefined),
-    writeSnapshot: vi.fn(async (recipeId: string) => ({
+    writeSnapshot: vi.fn(async (
+      recipeId: string,
+      _calculation: unknown,
+      _calculatedAt: unknown,
+      _expectedRecipeVersion: unknown,
+      _inputGuard: unknown,
+    ) => ({
       snapshot_id: `applied-${recipeId}`,
       created: true,
       is_current: true,
@@ -137,7 +144,10 @@ describe("FoodSafety-30 recipe nutrition backfill", () => {
         ingredient_type: "QUANT",
         scalable: recipeIngredients[0].scalable,
         size_code: null,
-        ...predecessors().get("ingredient-a")!,
+        preparation_state: "raw-edible",
+        nutrition: predecessors().get("ingredient-a")!.nutrition_candidates[0].nutrition,
+        conversion_assignment: null,
+        piece_weight: null,
       }],
     });
 
@@ -213,6 +223,12 @@ describe("FoodSafety-30 recipe nutrition backfill", () => {
     expect(repo.loadIngredients).toHaveBeenCalledWith(["recipe-a", "recipe-b"]);
     expect(repo.loadCurrentSnapshots).toHaveBeenCalledWith(["recipe-a", "recipe-b"]);
     expect(repo.writeSnapshot).toHaveBeenCalledTimes(2);
+    expect(repo.writeSnapshot.mock.calls[0][4]).toMatchObject({
+      recipe_ingredients: [{
+        id: "ingredient-row-a",
+        selected_nutrition_link_id: "link-a",
+      }],
+    });
     expect(onCheckpoint).toHaveBeenNthCalledWith(1, [{
       recipe_id: "recipe-a",
       previous_snapshot_id: "previous-a",

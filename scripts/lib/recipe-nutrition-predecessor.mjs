@@ -46,6 +46,8 @@ const ALLOWED_NUTRIENT_CODES = new Set([
   "fiber_g",
 ]);
 
+const PREDECESSOR_PAGE_SIZE = 1000;
+
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -168,6 +170,8 @@ function nutritionCandidate(row) {
       },
       profile: {
         id: profile.id,
+        source_item_id: sourceItem.id,
+        normalization_method: profile.normalization_method,
         basis_amount: basisAmount,
         basis_unit: profile.basis_unit,
         review_status: profile.review_status,
@@ -215,12 +219,14 @@ function conversionCandidate(row) {
       review_status: row.review_status,
       is_active: row.is_active,
       profile: {
+        id: profile.id,
         code: profile.code,
         basis_volume_ml: basisVolume,
         representative_weight_g: representativeWeight,
         is_active: profile.is_active,
       },
       evidence: {
+        id: evidence.id,
         review_status: evidence.review_status,
         is_active: evidence.is_active,
         source: {
@@ -253,48 +259,85 @@ function isVolumeUnit(unit) {
   );
 }
 
+function selectRecipeNutritionPredecessor(ingredient, predecessor) {
+  const massCandidates = predecessor.nutrition_candidates.filter((candidate) =>
+    candidate.nutrition.profile.basis_unit === "g"
+  );
+  const volumeCandidates = predecessor.nutrition_candidates.filter((candidate) =>
+    candidate.nutrition.profile.basis_unit === "ml"
+  );
+  const volumeInput = isVolumeUnit(ingredient.unit);
+  const nutrition = volumeInput
+    ? volumeCandidates.length === 1
+      ? volumeCandidates[0]
+      : volumeCandidates.length === 0 && massCandidates.length === 1
+        ? massCandidates[0]
+        : null
+    : massCandidates.length === 1
+      ? massCandidates[0]
+      : null;
+  const conversion = nutrition?.nutrition.profile.basis_unit === "g" && volumeInput &&
+      predecessor.conversion_candidates.length === 1
+    ? predecessor.conversion_candidates[0]
+    : null;
+  return { nutrition, conversion, volumeInput };
+}
+
+async function loadEligiblePredecessorPages(client, table, select, ids, filters) {
+  const rows = [];
+  for (let from = 0; ; from += PREDECESSOR_PAGE_SIZE) {
+    let query = client
+      .from(table)
+      .select(select)
+      .in("ingredient_id", ids);
+    for (const [column, value] of filters) {
+      query = query.eq(column, value);
+    }
+    const result = await query
+      .order("id", { ascending: true })
+      .range(from, from + PREDECESSOR_PAGE_SIZE - 1);
+    if (result?.error || !Array.isArray(result?.data)) {
+      throw new Error("RECIPE_NUTRITION_PREDECESSOR_READ_FAILED");
+    }
+    rows.push(...result.data);
+    if (result.data.length < PREDECESSOR_PAGE_SIZE) return rows;
+  }
+}
+
 export async function loadRecipeNutritionPredecessors(client, ingredientIds) {
   const ids = canonicalIngredientIds(ingredientIds);
   if (ids.length === 0) return new Map();
 
-  let linkResult;
-  let assignmentResult;
+  let linkRows;
+  let assignmentRows;
   try {
-    [linkResult, assignmentResult] = await Promise.all([
-      client
-        .from("ingredient_nutrition_profiles")
-        .select(NUTRITION_LINK_SELECT)
-        .in("ingredient_id", ids),
-      client
-        .from("ingredient_conversion_assignments")
-        .select(CONVERSION_ASSIGNMENT_SELECT)
-        .in("ingredient_id", ids),
+    [linkRows, assignmentRows] = await Promise.all([
+      loadEligiblePredecessorPages(
+        client,
+        "ingredient_nutrition_profiles",
+        NUTRITION_LINK_SELECT,
+        ids,
+        [["review_status", "approved"], ["is_active", true], ["is_primary", true]],
+      ),
+      loadEligiblePredecessorPages(
+        client,
+        "ingredient_conversion_assignments",
+        CONVERSION_ASSIGNMENT_SELECT,
+        ids,
+        [["review_status", "approved"], ["is_active", true]],
+      ),
     ]);
   } catch {
     throw new Error("RECIPE_NUTRITION_PREDECESSOR_READ_FAILED");
   }
-  if (linkResult?.error || assignmentResult?.error ||
-    !Array.isArray(linkResult?.data) || !Array.isArray(assignmentResult?.data)) {
-    throw new Error("RECIPE_NUTRITION_PREDECESSOR_READ_FAILED");
-  }
 
-  const nutritionByIngredient = groupByIngredient(linkResult.data, nutritionCandidate);
-  const conversionsByIngredient = groupByIngredient(assignmentResult.data, conversionCandidate);
+  const nutritionByIngredient = groupByIngredient(linkRows, nutritionCandidate);
+  const conversionsByIngredient = groupByIngredient(assignmentRows, conversionCandidate);
   const predecessors = new Map();
   for (const ingredientId of ids) {
-    const nutritionCandidates = nutritionByIngredient.get(ingredientId) ?? [];
-    const selectedNutrition = nutritionCandidates.length === 1 ? nutritionCandidates[0] : null;
-    const compatibleConversions = selectedNutrition
-      ? (conversionsByIngredient.get(ingredientId) ?? []).filter((candidate) =>
-        candidate.preparationState === selectedNutrition.preparationState
-      )
-      : [];
     predecessors.set(ingredientId, {
-      preparation_state: selectedNutrition?.preparationState ?? null,
-      nutrition: selectedNutrition?.nutrition,
-      conversion_assignment: compatibleConversions.length === 1
-        ? compatibleConversions[0].assignment
-        : null,
+      nutrition_candidates: nutritionByIngredient.get(ingredientId) ?? [],
+      conversion_candidates: conversionsByIngredient.get(ingredientId) ?? [],
       piece_weight: null,
     });
   }
@@ -304,11 +347,14 @@ export async function loadRecipeNutritionPredecessors(client, ingredientIds) {
 export function hydrateRecipeNutritionIngredients(ingredients, predecessors) {
   return ingredients.map((ingredient) => {
     const predecessor = predecessors.get(ingredient.ingredient_id) ?? {
-      preparation_state: null,
-      nutrition: undefined,
-      conversion_assignment: null,
+      nutrition_candidates: [],
+      conversion_candidates: [],
       piece_weight: null,
     };
+    const {
+      nutrition: selectedNutrition,
+      conversion: selectedConversion,
+    } = selectRecipeNutritionPredecessor(ingredient, predecessor);
     return {
       id: ingredient.id,
       ingredient_id: ingredient.ingredient_id,
@@ -316,14 +362,58 @@ export function hydrateRecipeNutritionIngredients(ingredients, predecessors) {
       unit: ingredient.unit,
       ingredient_type: ingredient.ingredient_type,
       scalable: ingredient.scalable,
-      preparation_state: predecessor.preparation_state,
+      preparation_state: selectedNutrition?.preparationState ?? null,
       size_code: null,
-      nutrition: predecessor.nutrition,
-      conversion_assignment: predecessor.nutrition?.profile.basis_unit === "g" &&
-          isVolumeUnit(ingredient.unit)
-        ? predecessor.conversion_assignment
-        : null,
+      nutrition: selectedNutrition?.nutrition,
+      conversion_assignment: selectedConversion?.assignment ?? null,
       piece_weight: null,
     };
   });
+}
+
+export function buildRecipeNutritionInputGuard(ingredients, predecessors) {
+  return {
+    recipe_ingredients: [...ingredients]
+      .sort((left, right) => compareUnicodeOrdinal(left.id, right.id))
+      .map((ingredient) => {
+        const predecessor = predecessors.get(ingredient.ingredient_id) ?? {
+          nutrition_candidates: [],
+          conversion_candidates: [],
+          piece_weight: null,
+        };
+        const selected = selectRecipeNutritionPredecessor(ingredient, predecessor);
+        return {
+          id: ingredient.id,
+          ingredient_id: ingredient.ingredient_id,
+          amount: ingredient.amount,
+          unit: ingredient.unit,
+          ingredient_type: ingredient.ingredient_type,
+          scalable: ingredient.scalable,
+          sort_order: ingredient.sort_order,
+          nutrition_candidates: predecessor.nutrition_candidates
+            .map((candidate) => ({
+              link_id: candidate.nutrition.link.id,
+              profile_id: candidate.nutrition.profile.id,
+              source_item_id: candidate.nutrition.profile.source_item_id,
+              source_id: candidate.nutrition.source.id,
+              preparation_state: candidate.preparationState,
+              normalization_method: candidate.nutrition.profile.normalization_method,
+              basis_amount: candidate.nutrition.profile.basis_amount,
+              basis_unit: candidate.nutrition.profile.basis_unit,
+            }))
+            .sort((left, right) => compareUnicodeOrdinal(left.link_id, right.link_id)),
+          conversion_candidates: predecessor.conversion_candidates
+            .map((candidate) => ({
+              assignment_id: candidate.assignment.id,
+              profile_id: candidate.assignment.profile.id,
+              evidence_id: candidate.assignment.evidence.id,
+              source_id: candidate.assignment.evidence.source.id,
+              preparation_state: candidate.preparationState,
+            }))
+            .sort((left, right) => compareUnicodeOrdinal(left.assignment_id, right.assignment_id)),
+          selected_nutrition_link_id: selected.nutrition?.nutrition.link.id ?? null,
+          selected_conversion_assignment_id: selected.conversion?.assignment.id ?? null,
+        };
+      }),
+  };
 }

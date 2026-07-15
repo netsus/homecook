@@ -17,7 +17,7 @@ const SOURCE_KEYS = [
 ] as const;
 
 const FORBIDDEN_SOURCE_TEXT = /(?:raw[_-]?(?:payload|row|provider|response)|api[_-]?key|servicekey|secret|cookie|authorization|access[_-]?token|manifest[_-]?(?:sha|path)|(?:^|\/)private(?:\/|$)|(?:^|\/)internal(?:\/|$))/i;
-const AUTH_QUERY_KEYS = /^(?:api[_-]?key|servicekey|key|token|access[_-]?token|authorization|auth|secret|cookie|signature|credential|x-amz-(?:signature|credential|security-token))$/i;
+const AUTH_QUERY_KEY_TEXT = /(?:password|passwd|passphrase|secret|token|credential|apikey|accesskey|subscriptionkey|servicekey|signature|cookie)/;
 const VECTOR_EPSILON = 1e-9;
 const ALLOWED_NUTRIENT_CODES = new Set<string>([
   ...CORE_NUTRIENT_CODES,
@@ -48,6 +48,12 @@ export class RecipeNutritionSnapshotError extends Error {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isCredentialLikeQueryKey(key: string) {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return normalized === "key" || normalized === "pass" || normalized === "auth" ||
+    normalized === "authorization" || AUTH_QUERY_KEY_TEXT.test(normalized);
 }
 
 function compareUnicodeOrdinal(left: string, right: string) {
@@ -132,20 +138,25 @@ function validateSource(source: unknown): asserts source is RecipeNutritionSourc
     throw new RecipeNutritionSnapshotError("UNSAFE_SNAPSHOT_SOURCE");
   }
   for (const key of sourceUrl.searchParams.keys()) {
-    if (AUTH_QUERY_KEYS.test(key)) {
+    if (isCredentialLikeQueryKey(key)) {
       throw new RecipeNutritionSnapshotError("UNSAFE_SNAPSHOT_SOURCE");
     }
   }
 }
 
-function validateNutrientValue(value: RecipeNutritionValue) {
+function validateNutrientValue(value: unknown): value is RecipeNutritionValue {
+  if (!isRecord(value) || JSON.stringify(Object.keys(value).sort(compareUnicodeOrdinal)) !==
+    JSON.stringify(["amount", "display_mode", "known_amount", "status"].sort(compareUnicodeOrdinal))) {
+    return false;
+  }
   if (value.status === "complete") {
-    return Number.isFinite(value.amount) && value.amount! >= 0 &&
+    return typeof value.amount === "number" && Number.isFinite(value.amount) && value.amount >= 0 &&
       value.known_amount === null && value.display_mode === "total";
   }
   if (value.status === "partial") {
-    return value.amount === null && Number.isFinite(value.known_amount) &&
-      value.known_amount! >= 0 && value.display_mode === "minimum";
+    return value.amount === null && typeof value.known_amount === "number" &&
+      Number.isFinite(value.known_amount) && value.known_amount >= 0 &&
+      value.display_mode === "minimum";
   }
   return value.status === "unavailable" && value.amount === null &&
     value.known_amount === null && value.display_mode === null;
@@ -176,6 +187,14 @@ export function validateRecipeNutritionSnapshot(calculation: RecipeNutritionCalc
   if (CORE_NUTRIENT_CODES.some((code) => !nutrientCodes.includes(code)) ||
     nutrientCodes.some((code) => !ALLOWED_NUTRIENT_CODES.has(code))) {
     throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_NUTRIENT_STATUS");
+  }
+  const vectorCodes = [
+    ...Object.keys(calculation.scalable_values),
+    ...Object.keys(calculation.fixed_values),
+  ];
+  if (vectorCodes.some((code) => !ALLOWED_NUTRIENT_CODES.has(code) ||
+    !Object.hasOwn(calculation.values, code))) {
+    throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_VECTOR");
   }
 
   const warnings = calculation.warnings;
@@ -214,6 +233,17 @@ export function validateRecipeNutritionSnapshot(calculation: RecipeNutritionCalc
     }
   }
 
+  const coreComplete = CORE_NUTRIENT_CODES.every(
+    (code) => calculation.values[code]?.status === "complete",
+  );
+  const anyAvailable = Object.values(calculation.values).some(
+    (value) => value.status !== "unavailable",
+  );
+  const expectedStatus = coreComplete ? "complete" : anyAvailable ? "partial" : "unavailable";
+  if (calculation.calculation_status !== expectedStatus) {
+    throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_STATUS");
+  }
+
   calculation.sources.forEach(validateSource);
   const canonicalSources = [...new Map(
     calculation.sources.map((source) => [tupleKey(source), source]),
@@ -233,6 +263,7 @@ interface SnapshotWriterClient {
       p_recipe_id: string;
       p_snapshot: Record<string, unknown>;
       p_expected_recipe_updated_at: string;
+      p_input_guard: Record<string, unknown>;
     },
   ): PromiseLike<{
     data: { snapshot_id: string; created: boolean; is_current: boolean } | null;
@@ -244,7 +275,11 @@ export async function writeRecipeNutritionSnapshot(
   dbClient: SnapshotWriterClient,
   recipeId: string,
   calculation: RecipeNutritionCalculation,
-  options: { calculatedAt?: string; expectedRecipeVersion: string },
+  options: {
+    calculatedAt?: string;
+    expectedRecipeVersion: string;
+    inputGuard: Record<string, unknown>;
+  },
 ) {
   validateRecipeNutritionSnapshot(calculation);
   if (typeof options.expectedRecipeVersion !== "string" ||
@@ -255,6 +290,7 @@ export async function writeRecipeNutritionSnapshot(
   const result = await dbClient.rpc("write_recipe_nutrition_snapshot", {
     p_recipe_id: recipeId,
     p_expected_recipe_updated_at: options.expectedRecipeVersion,
+    p_input_guard: options.inputGuard,
     p_snapshot: {
       base_servings: calculation.base_servings,
       input_hash: calculation.input_hash,
@@ -313,13 +349,28 @@ export function mapRecipeNutritionSnapshot(row: RecipeNutritionSnapshotRow): Rec
     typeof row.calculated_at !== "string" || row.calculated_at.trim().length === 0) {
     throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_PROJECTION");
   }
-  for (const code of CORE_NUTRIENT_CODES) {
-    const value = row.nutrient_status_json[code];
-    if (!value || !validateNutrientValue(value)) {
-      throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_PROJECTION");
-    }
+  const projectedCalculation: RecipeNutritionCalculation = {
+    basis: { amount: row.base_servings, unit: "serving" },
+    base_servings: row.base_servings,
+    values: row.nutrient_status_json,
+    scalable_values: row.scalable_values_json,
+    fixed_values: row.fixed_values_json,
+    calculation_status: row.calculation_status,
+    calculation_quality: row.calculation_quality,
+    reflected_ingredient_count: row.reflected_ingredient_count,
+    target_ingredient_count: row.target_ingredient_count,
+    missing_reasons: [],
+    warnings: row.warnings_json,
+    sources: row.sources_json,
+    input_hash: "0".repeat(64),
+    calculation_version: "snapshot-projection-v1",
+    rounding_policy_version: "display-v1",
+  };
+  try {
+    validateRecipeNutritionSnapshot(projectedCalculation);
+  } catch {
+    throw new RecipeNutritionSnapshotError("INVALID_SNAPSHOT_PROJECTION");
   }
-  for (const source of row.sources_json) validateSource(source);
 
   const calculation = {
     basis: { amount: row.base_servings, unit: "serving" as const },

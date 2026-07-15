@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import {
+  buildRecipeNutritionInputGuard,
   hydrateRecipeNutritionIngredients,
   loadRecipeNutritionPredecessors,
 } from "./recipe-nutrition-predecessor.mjs";
@@ -255,6 +256,10 @@ export async function runFoodSafetyRecipeNutritionBackfill({
       calculator,
     ),
   ]));
+  const inputGuardMap = new Map(recipeIds.map((recipeId) => [
+    recipeId,
+    buildRecipeNutritionInputGuard(ingredientsByRecipe.get(recipeId), predecessors),
+  ]));
   const calculationSummary = summarizeCalculations([...calculationMap.values()]);
   if (mode === "dry-run") {
     return {
@@ -295,6 +300,7 @@ export async function runFoodSafetyRecipeNutritionBackfill({
         calculation,
         calculatedAt,
         recipeMap.get(recipeId).updated_at,
+        inputGuardMap.get(recipeId),
       );
       if (written.snapshot_id !== expectedSnapshotId) {
         checkpoint.applied_snapshot_id = written.snapshot_id;
@@ -487,11 +493,12 @@ export function createSupabaseRecipeNutritionBackfillRepository(client) {
         .in("recipe_id", recipeIds)
         .eq("is_current", true));
     },
-    async writeSnapshot(recipeId, calculation, calculatedAt, expectedRecipeVersion) {
+    async writeSnapshot(recipeId, calculation, calculatedAt, expectedRecipeVersion, inputGuard) {
       const result = await client.rpc("write_recipe_nutrition_snapshot", {
         p_recipe_id: recipeId,
         p_snapshot: snapshotPayload(calculation, calculatedAt),
         p_expected_recipe_updated_at: expectedRecipeVersion,
+        p_input_guard: inputGuard,
       });
       if (result.error || !result.data) {
         throw new RecipeNutritionBackfillError("BACKFILL_APPLY_FAILED");
