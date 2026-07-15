@@ -75,7 +75,7 @@ type CalculatorIngredient = {
     ingredient_id: string;
     size_code: string;
     preparation_state: string;
-    edible_state: string;
+    edible_state?: string;
     weight_g: number;
     review_status: string;
     is_active: boolean;
@@ -361,6 +361,76 @@ describe("recipe nutrition calculator", () => {
       status: "unavailable",
     });
     expect(unavailable.scalable_values).not.toHaveProperty("energy_kcal");
+  });
+
+  it("fails closed for 장 without exact piece metadata while direct grams still need no size", async () => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
+      calculator,
+      "calculateRecipeNutrition",
+    );
+    const sheet = directIngredient({
+      id: "sheet-without-size",
+      amount: 2,
+      unit: "장",
+      size_code: null,
+      preparation_state: "raw-edible",
+      edible_state: null,
+      piece_weight: null,
+    });
+    const grams = directIngredient({
+      id: "grams-without-size",
+      amount: 60,
+      unit: "g",
+      size_code: null,
+      edible_state: null,
+    });
+
+    const result = calculate(recipeInput([sheet, grams]));
+
+    expect(result.values.energy_kcal).toEqual({
+      amount: null,
+      known_amount: 60,
+      status: "partial",
+      display_mode: "minimum",
+    });
+    expect(result.warnings).toContain("PIECE_WEIGHT_REQUIRED");
+    expect(result.missing_reasons).toContain("PIECE_WEIGHT_REQUIRED:sheet-without-size");
+  });
+
+  it("does not invent or require an edible_state field for an exact piece path", async () => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
+      calculator,
+      "calculateRecipeNutrition",
+    );
+    const piece = directIngredient({
+      id: "piece-with-official-fields",
+      amount: 1,
+      unit: "개",
+      size_code: "medium",
+      preparation_state: "peeled",
+      edible_state: "legacy-value-must-not-be-used",
+    });
+    piece.piece_weight = {
+      id: "piece-weight-official",
+      ingredient_id: piece.ingredient_id,
+      size_code: "medium",
+      preparation_state: "peeled",
+      weight_g: 80,
+      review_status: "approved",
+      is_active: true,
+      evidence: {
+        review_status: "approved",
+        is_active: true,
+        source: measurementEvidenceSource("RDA-piece-official"),
+      },
+    };
+
+    const result = calculate(recipeInput([piece]));
+
+    expect(result.calculation_status).toBe("complete");
+    expect(result.values.energy_kcal.amount).toBe(80);
   });
 
   it("keeps observed zero distinct from missing and omits absent optional nutrients", async () => {

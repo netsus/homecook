@@ -1,28 +1,15 @@
 import { createHash } from "node:crypto";
 
-const CALCULATION_VERSION = "recipe-nutrition-v1";
-const ROUNDING_POLICY_VERSION = "display-v1";
+import {
+  hydrateRecipeNutritionIngredients,
+  loadRecipeNutritionPredecessors,
+} from "./recipe-nutrition-predecessor.mjs";
+
 const FOODSAFETY_SCOPE_MARKERS = [
   "pilot_30_quality_corrected",
   "pilot_30_quality_corrected_replacement",
 ];
-const CORE_NUTRIENTS = [
-  "energy_kcal",
-  "carbohydrate_g",
-  "protein_g",
-  "fat_g",
-  "sodium_mg",
-];
-const WARNING_PRIORITY = [
-  "PREDECESSOR_NOT_APPROVED",
-  "NUTRITION_PROFILE_MISSING",
-  "INVALID_QUANTITY",
-  "UNIT_CONVERSION_MISSING",
-  "PIECE_WEIGHT_REQUIRED",
-  "TO_TASTE_EXCLUDED",
-  "REPRESENTATIVE_VOLUME_CONVERSION_USED",
-  "PIECE_WEIGHT_CONVERSION_USED",
-];
+let calculatorModulePromise;
 
 export class RecipeNutritionBackfillError extends Error {
   constructor(code) {
@@ -82,14 +69,6 @@ function compareUnicodeOrdinal(left, right) {
   return leftPoints.length - rightPoints.length;
 }
 
-function stableWarnings(values) {
-  return [...new Set(values)].sort((left, right) =>
-    (WARNING_PRIORITY.indexOf(left) === -1 ? Number.MAX_SAFE_INTEGER : WARNING_PRIORITY.indexOf(left)) -
-      (WARNING_PRIORITY.indexOf(right) === -1 ? Number.MAX_SAFE_INTEGER : WARNING_PRIORITY.indexOf(right)) ||
-    compareUnicodeOrdinal(left, right)
-  );
-}
-
 function isValidRecipe(recipe) {
   return recipe &&
     typeof recipe.id === "string" && recipe.id.length > 0 &&
@@ -112,81 +91,38 @@ function isValidIngredient(ingredient) {
     typeof ingredient.unit === "string" && ingredient.unit.trim().length > 0;
 }
 
-function calculatorIngredient(ingredient) {
-  return {
-    id: ingredient.id,
-    ingredient_id: ingredient.ingredient_id,
-    amount: ingredient.amount,
-    unit: ingredient.unit,
-    ingredient_type: ingredient.ingredient_type,
-    scalable: ingredient.scalable,
-    preparation_state: null,
-    size_code: null,
-    edible_state: null,
-    nutrition: undefined,
-    conversion_assignment: null,
-    piece_weight: null,
-  };
-}
-
-export function buildFailClosedRecipeNutritionCalculation(recipe, ingredients) {
+export function buildRecipeNutritionCalculation(
+  recipe,
+  ingredients,
+  predecessors,
+  calculateRecipeNutrition,
+) {
   if (!isValidRecipe(recipe) || !Array.isArray(ingredients) ||
-    ingredients.some((ingredient) => !isValidIngredient(ingredient) || ingredient.recipe_id !== recipe.id)) {
+    ingredients.some((ingredient) => !isValidIngredient(ingredient) || ingredient.recipe_id !== recipe.id) ||
+    !(predecessors instanceof Map) || typeof calculateRecipeNutrition !== "function") {
     throw new RecipeNutritionBackfillError("INVALID_RECIPE_NUTRITION_INPUT");
   }
 
-  const calculatorIngredients = ingredients
-    .map(calculatorIngredient)
+  const calculatorIngredients = hydrateRecipeNutritionIngredients(ingredients, predecessors)
     .sort((left, right) =>
       compareUnicodeOrdinal(left.id, right.id) ||
       compareUnicodeOrdinal(left.ingredient_id, right.ingredient_id)
     );
-  const warnings = [];
-  const missingReasons = [];
-  let targetIngredientCount = 0;
-  for (const ingredient of calculatorIngredients) {
-    if (ingredient.ingredient_type === "TO_TASTE") {
-      warnings.push("TO_TASTE_EXCLUDED");
-      missingReasons.push(`TO_TASTE_EXCLUDED:${ingredient.id}`);
-    } else {
-      targetIngredientCount += 1;
-      warnings.push("NUTRITION_PROFILE_MISSING");
-      missingReasons.push(`NUTRITION_PROFILE_MISSING:${ingredient.id}`);
-    }
-  }
-
-  const values = Object.fromEntries(CORE_NUTRIENTS.map((code) => [code, {
-    amount: null,
-    known_amount: null,
-    status: "unavailable",
-    display_mode: null,
-  }]));
-  const canonicalInput = {
+  return calculateRecipeNutrition({
     recipe_id: recipe.id,
     recipe_version: recipe.updated_at,
     base_servings: recipe.base_servings,
-    calculation_version: CALCULATION_VERSION,
-    rounding_policy_version: ROUNDING_POLICY_VERSION,
     ingredients: calculatorIngredients,
-  };
+  });
+}
 
-  return {
-    basis: { amount: recipe.base_servings, unit: "serving" },
-    base_servings: recipe.base_servings,
-    values,
-    scalable_values: {},
-    fixed_values: {},
-    calculation_status: "unavailable",
-    calculation_quality: null,
-    reflected_ingredient_count: 0,
-    target_ingredient_count: targetIngredientCount,
-    missing_reasons: [...new Set(missingReasons)].sort(),
-    warnings: stableWarnings(warnings),
-    sources: [],
-    input_hash: createHash("sha256").update(canonicalStringify(canonicalInput)).digest("hex"),
-    calculation_version: CALCULATION_VERSION,
-    rounding_policy_version: ROUNDING_POLICY_VERSION,
-  };
+async function loadSharedCalculator() {
+  calculatorModulePromise ??= import("../../lib/nutrition/recipe-nutrition-calculator.ts");
+  const calculatorModule = await calculatorModulePromise;
+  if (typeof calculatorModule.calculateRecipeNutrition !== "function") {
+    throw new RecipeNutritionBackfillError("RECIPE_NUTRITION_INPUT_READ_FAILED");
+  }
+  return calculatorModule.calculateRecipeNutrition;
 }
 
 function validateBatchSize(batchSize) {
@@ -248,6 +184,7 @@ export async function runFoodSafetyRecipeNutritionBackfill({
   afterRecipeId,
   calculatedAt = new Date().toISOString(),
   onCheckpoint = async () => undefined,
+  calculateRecipeNutrition = undefined,
 }) {
   validateBatchSize(batchSize);
   if (mode !== "dry-run" && mode !== "apply") {
@@ -294,11 +231,28 @@ export async function runFoodSafetyRecipeNutritionBackfill({
   if (recipeMap.size !== recipeIds.length) {
     throw new RecipeNutritionBackfillError("RECIPE_NUTRITION_INPUT_READ_FAILED");
   }
+  const ingredientIds = [...new Set(ingredientRows.map((row) => row.ingredient_id))]
+    .sort(compareUnicodeOrdinal);
+  let predecessors;
+  let calculator;
+  try {
+    [predecessors, calculator] = await Promise.all([
+      repository.loadPredecessors(ingredientIds),
+      calculateRecipeNutrition ? Promise.resolve(calculateRecipeNutrition) : loadSharedCalculator(),
+    ]);
+  } catch {
+    throw new RecipeNutritionBackfillError("RECIPE_NUTRITION_INPUT_READ_FAILED");
+  }
+  if (!(predecessors instanceof Map)) {
+    throw new RecipeNutritionBackfillError("RECIPE_NUTRITION_INPUT_READ_FAILED");
+  }
   const calculationMap = new Map(recipeIds.map((recipeId) => [
     recipeId,
-    buildFailClosedRecipeNutritionCalculation(
+    buildRecipeNutritionCalculation(
       recipeMap.get(recipeId),
       ingredientsByRecipe.get(recipeId),
+      predecessors,
+      calculator,
     ),
   ]));
   const calculationSummary = summarizeCalculations([...calculationMap.values()]);
@@ -521,6 +475,9 @@ export function createSupabaseRecipeNutritionBackfillRepository(client) {
         .order("recipe_id", { ascending: true })
         .order("sort_order", { ascending: true })
         .order("id", { ascending: true }));
+    },
+    async loadPredecessors(ingredientIds) {
+      return loadRecipeNutritionPredecessors(client, ingredientIds);
     },
     async loadCurrentSnapshots(recipeIds) {
       if (recipeIds.length === 0) return [];

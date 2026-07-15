@@ -46,7 +46,6 @@ export interface RecipeNutritionIngredientInput {
   scalable: boolean;
   preparation_state: string | null;
   size_code?: string | null;
-  edible_state?: string | null;
   nutrition?: {
     link: {
       id: string;
@@ -98,7 +97,6 @@ export interface RecipeNutritionIngredientInput {
     ingredient_id: string;
     size_code: string;
     preparation_state: string;
-    edible_state: string;
     weight_g: number;
     review_status: string;
     is_active: boolean;
@@ -151,11 +149,16 @@ export interface RecipeNutritionCalculation {
 }
 
 export class RecipeNutritionCalculationError extends Error {
+  public readonly code: string;
+  public readonly details: Record<string, unknown>;
+
   constructor(
-    public readonly code: string,
-    public readonly details: Record<string, unknown> = {},
+    code: string,
+    details: Record<string, unknown> = {},
   ) {
     super(code);
+    this.code = code;
+    this.details = details;
     this.name = "RecipeNutritionCalculationError";
   }
 }
@@ -267,7 +270,7 @@ function volumeInMilliliters(amount: number, unit: string | null) {
 }
 
 function isPieceUnit(unit: string | null) {
-  return ["개", "piece", "pieces"].includes(normalizedUnit(unit) ?? "");
+  return ["개", "장", "piece", "pieces"].includes(normalizedUnit(unit) ?? "");
 }
 
 function isApprovedNutrition(ingredient: RecipeNutritionIngredientInput) {
@@ -383,7 +386,6 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
       piece.ingredient_id === ingredient.ingredient_id &&
       piece.size_code === ingredient.size_code &&
       piece.preparation_state === ingredient.preparation_state &&
-      piece.edible_state === ingredient.edible_state &&
       piece.review_status === "approved" &&
       piece.is_active &&
       piece.evidence &&

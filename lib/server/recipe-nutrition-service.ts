@@ -1,8 +1,11 @@
 import {
   calculateRecipeNutrition,
-  type RecipeNutritionIngredientInput,
 } from "@/lib/nutrition/recipe-nutrition-calculator";
 import { writeRecipeNutritionSnapshot } from "@/lib/server/recipe-nutrition-snapshot";
+import {
+  hydrateRecipeNutritionIngredients,
+  loadRecipeNutritionPredecessors,
+} from "@/scripts/lib/recipe-nutrition-predecessor.mjs";
 
 interface RecipeNutritionRecipeRow {
   id: string;
@@ -26,6 +29,11 @@ interface MaybeSingleQuery<T> {
   maybeSingle(): PromiseLike<{ data: T | null; error: unknown }>;
 }
 
+interface ListQuery<T> {
+  select(columns: string): ListQuery<T>;
+  in(column: string, values: string[]): PromiseLike<{ data: T[] | null; error: unknown }>;
+}
+
 interface IngredientQuery {
   select(columns: string): IngredientQuery;
   eq(column: string, value: string): IngredientQuery;
@@ -38,6 +46,8 @@ interface IngredientQuery {
 export interface RecipeNutritionServiceClient {
   from(table: "recipes"): MaybeSingleQuery<RecipeNutritionRecipeRow>;
   from(table: "recipe_ingredients"): IngredientQuery;
+  from(table: "ingredient_nutrition_profiles"): ListQuery<Record<string, unknown>>;
+  from(table: "ingredient_conversion_assignments"): ListQuery<Record<string, unknown>>;
   rpc(
     functionName: "write_recipe_nutrition_snapshot",
     args: {
@@ -86,25 +96,6 @@ function isValidIngredient(row: RecipeNutritionIngredientRow) {
     isNonEmptyText(row.unit);
 }
 
-function toFailClosedCalculatorIngredient(
-  row: RecipeNutritionIngredientRow,
-): RecipeNutritionIngredientInput {
-  return {
-    id: row.id,
-    ingredient_id: row.ingredient_id,
-    amount: row.amount,
-    unit: row.unit,
-    ingredient_type: row.ingredient_type,
-    scalable: row.scalable,
-    preparation_state: null,
-    size_code: null,
-    edible_state: null,
-    nutrition: undefined,
-    conversion_assignment: null,
-    piece_weight: null,
-  };
-}
-
 export async function recalculateRecipeNutritionSnapshot(
   dbClient: RecipeNutritionServiceClient,
   recipeId: string,
@@ -136,11 +127,24 @@ export async function recalculateRecipeNutritionSnapshot(
     throw new RecipeNutritionServiceError("INVALID_RECIPE_NUTRITION_INPUT");
   }
 
+  let predecessors;
+  try {
+    predecessors = await loadRecipeNutritionPredecessors(
+      dbClient,
+      ingredientsResult.data.map((ingredient) => ingredient.ingredient_id),
+    );
+  } catch {
+    throw new RecipeNutritionServiceError("RECIPE_NUTRITION_INPUT_READ_FAILED");
+  }
+
   const calculation = calculateRecipeNutrition({
     recipe_id: recipeId,
     recipe_version: recipeResult.data.updated_at,
     base_servings: recipeResult.data.base_servings,
-    ingredients: ingredientsResult.data.map(toFailClosedCalculatorIngredient),
+    ingredients: hydrateRecipeNutritionIngredients(
+      ingredientsResult.data,
+      predecessors,
+    ),
   });
 
   return writeRecipeNutritionSnapshot(dbClient, recipeId, calculation, {

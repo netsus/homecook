@@ -141,6 +141,107 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     `);
   });
 
+  it("counts only one complete approved ingredient chain and exposes ambiguity or revocation", () => {
+    const ingredientId = "40000000-0000-4000-8000-000000000001";
+    const rawItemId = "41000000-0000-4000-8000-000000000001";
+    const cookedItemId = "41000000-0000-4000-8000-000000000002";
+    const rawProfileId = "42000000-0000-4000-8000-000000000001";
+    const cookedProfileId = "42000000-0000-4000-8000-000000000002";
+    const rawLinkId = "43000000-0000-4000-8000-000000000001";
+    const cookedLinkId = "43000000-0000-4000-8000-000000000002";
+    const sourceId = psql("select id from public.nutrition_sources where provider_code = 'MFDS';");
+    const eligibleCountSql = `
+      select count(*)
+      from public.ingredient_nutrition_profiles link
+      join public.nutrition_profiles profile on profile.id = link.nutrition_profile_id
+      join public.nutrition_source_items item on item.id = profile.source_item_id
+      join public.nutrition_sources source on source.id = item.source_id
+      where link.ingredient_id = '${ingredientId}'
+        and link.review_status = 'approved' and link.is_active and link.is_primary
+        and profile.profile_kind = 'ingredient_source'
+        and profile.normalization_method in ('mass_100g', 'volume_100ml')
+        and profile.review_status = 'approved' and profile.is_active
+        and item.review_status = 'approved'
+        and source.review_status = 'approved' and source.is_active
+        and source.freshness_status = 'current';
+    `;
+
+    psql(`
+      insert into public.ingredients (id, standard_name, category, default_unit)
+      values ('${ingredientId}', '통합 테스트 재료', '채소', 'g');
+      insert into public.nutrition_source_items (
+        id, source_id, external_item_key, external_name, preparation_state,
+        source_basis_text, source_basis_amount, source_basis_unit, edible_portion_percent,
+        stable_fingerprint, review_status, decision_reason, reviewed_by, reviewed_at
+      ) values
+        ('${rawItemId}', '${sourceId}', 'integration-raw', '통합 테스트 재료', 'raw',
+          '100 g', 100, 'g', 100, repeat('b', 64), 'approved',
+          'isolated integration fixture', '${actorId}', now()),
+        ('${cookedItemId}', '${sourceId}', 'integration-cooked', '통합 테스트 재료', 'cooked',
+          '100 g', 100, 'g', 100, repeat('c', 64), 'approved',
+          'isolated integration fixture', '${actorId}', now());
+      insert into public.nutrition_profiles (
+        id, source_item_id, profile_kind, normalization_method, basis_amount, basis_unit,
+        version, review_status, decision_reason, reviewed_by, reviewed_at, is_active
+      ) values
+        ('${rawProfileId}', '${rawItemId}', 'ingredient_source', 'mass_100g', 100, 'g',
+          1, 'approved', 'isolated integration fixture', '${actorId}', now(), true),
+        ('${cookedProfileId}', '${cookedItemId}', 'ingredient_source', 'mass_100g', 100, 'g',
+          1, 'approved', 'isolated integration fixture', '${actorId}', now(), true);
+      insert into public.nutrition_values (
+        profile_id, nutrient_code, source_nutrient_code, source_unit, amount, value_status
+      )
+      select profile_id, nutrient_code, nutrient_code, source_unit, amount, 'observed'
+      from (values
+        ('${rawProfileId}'::uuid, 'energy_kcal', 'kcal', 20::numeric),
+        ('${rawProfileId}'::uuid, 'carbohydrate_g', 'g', 4::numeric),
+        ('${rawProfileId}'::uuid, 'protein_g', 'g', 1::numeric),
+        ('${rawProfileId}'::uuid, 'fat_g', 'g', 0::numeric),
+        ('${rawProfileId}'::uuid, 'sodium_mg', 'mg', 5::numeric),
+        ('${cookedProfileId}'::uuid, 'energy_kcal', 'kcal', 25::numeric),
+        ('${cookedProfileId}'::uuid, 'carbohydrate_g', 'g', 5::numeric),
+        ('${cookedProfileId}'::uuid, 'protein_g', 'g', 1::numeric),
+        ('${cookedProfileId}'::uuid, 'fat_g', 'g', 0::numeric),
+        ('${cookedProfileId}'::uuid, 'sodium_mg', 'mg', 6::numeric)
+      ) values(profile_id, nutrient_code, source_unit, amount);
+      insert into public.ingredient_nutrition_profiles (
+        id, ingredient_id, nutrition_profile_id, preparation_state, match_method,
+        is_primary, review_status, decision_reason, reviewed_by, reviewed_at, version, is_active
+      ) values (
+        '${rawLinkId}', '${ingredientId}', '${rawProfileId}', 'raw', 'exact_standard_name',
+        true, 'approved', 'isolated integration fixture', '${actorId}', now(), 1, true
+      );
+    `);
+    expect(psql(eligibleCountSql)).toBe("1");
+
+    psql(`
+      insert into public.ingredient_nutrition_profiles (
+        id, ingredient_id, nutrition_profile_id, preparation_state, match_method,
+        is_primary, review_status, decision_reason, reviewed_by, reviewed_at, version, is_active
+      ) values (
+        '${cookedLinkId}', '${ingredientId}', '${cookedProfileId}', 'cooked', 'exact_standard_name',
+        true, 'approved', 'isolated integration fixture', '${actorId}', now(), 1, true
+      );
+    `);
+    expect(psql(eligibleCountSql)).toBe("2");
+
+    psql(`
+      update public.ingredient_nutrition_profiles
+      set review_status = 'revoked', is_active = false, is_primary = false,
+        decision_reason = 'isolated integration revocation', reviewed_at = now()
+      where id = '${cookedLinkId}';
+    `);
+    expect(psql(eligibleCountSql)).toBe("1");
+
+    psql(`
+      update public.ingredient_nutrition_profiles
+      set review_status = 'revoked', is_active = false, is_primary = false,
+        decision_reason = 'isolated integration revocation', reviewed_at = now()
+      where id = '${rawLinkId}';
+    `);
+    expect(psql(eligibleCountSql)).toBe("0");
+  });
+
   it("writes idempotently, supersedes atomically, and restores without deleting history", () => {
     const recipeId = "20000000-0000-4000-8000-000000000001";
     seedRecipe(recipeId, "writer fixture");

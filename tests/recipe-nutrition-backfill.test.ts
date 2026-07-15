@@ -5,9 +5,12 @@ import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { calculateRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-calculator";
 import {
-  buildFailClosedRecipeNutritionCalculation,
+  calculateRecipeNutrition,
+  type RecipeNutritionIngredientInput,
+} from "@/lib/nutrition/recipe-nutrition-calculator";
+import {
+  buildRecipeNutritionCalculation,
   sanitizeRecipeNutritionBackfillReport,
   rollbackFoodSafetyRecipeNutritionBackfill,
   runFoodSafetyRecipeNutritionBackfill,
@@ -48,6 +51,57 @@ const ingredients = [
   },
 ];
 
+const predecessorSource = {
+  id: "source-a",
+  review_status: "approved",
+  freshness_status: "current",
+  is_active: true,
+  provider: "mfds",
+  dataset: "fixture nutrition",
+  source_version: "2026-07-16",
+  data_basis_date: null,
+  license: "test-only",
+  source_url: "https://example.test/nutrition",
+};
+
+function predecessors(): Map<string, Pick<
+  RecipeNutritionIngredientInput,
+  "preparation_state" | "nutrition" | "conversion_assignment" | "piece_weight"
+>> {
+  return new Map([[
+    "ingredient-a",
+    {
+      preparation_state: "raw-edible",
+      nutrition: {
+        link: {
+          id: "link-a",
+          review_status: "approved",
+          is_active: true,
+          is_primary: true,
+          preparation_state: "raw-edible",
+        },
+        profile: {
+          id: "profile-a",
+          basis_amount: 100,
+          basis_unit: "g",
+          review_status: "approved",
+          is_active: true,
+          values: Object.fromEntries([
+            ["energy_kcal", 100],
+            ["carbohydrate_g", 20],
+            ["protein_g", 10],
+            ["fat_g", 5],
+            ["sodium_mg", 50],
+          ].map(([code, amount]) => [code, { amount, value_status: "observed" }])),
+        },
+        source: predecessorSource,
+      },
+      conversion_assignment: null,
+      piece_weight: null,
+    },
+  ]]);
+}
+
 function repository() {
   return {
     deriveSnapshotId: vi.fn((recipeId: string) => `applied-${recipeId}`),
@@ -55,6 +109,7 @@ function repository() {
     listScopeRecipeIds: vi.fn(async () => recipes.map(({ id: recipe_id }) => ({ recipe_id }))),
     loadRecipes: vi.fn(async () => recipes),
     loadIngredients: vi.fn(async () => ingredients),
+    loadPredecessors: vi.fn(async () => predecessors()),
     loadCurrentSnapshots: vi.fn(async () => [{ recipe_id: "recipe-a", id: "previous-a" }]),
     assertScopeRecipeIds: vi.fn(async () => undefined),
     writeSnapshot: vi.fn(async (recipeId: string) => ({
@@ -67,29 +122,31 @@ function repository() {
 }
 
 describe("FoodSafety-30 recipe nutrition backfill", () => {
-  it("keeps the standalone operator calculation exactly equal to the server fail-closed calculator", () => {
+  it("keeps the standalone operator calculation exactly equal to the hydrated server calculator", () => {
     const recipe = recipes[0];
     const recipeIngredients = ingredients.filter((row) => row.recipe_id === recipe.id);
     const expected = calculateRecipeNutrition({
       recipe_id: recipe.id,
       recipe_version: recipe.updated_at,
       base_servings: recipe.base_servings,
-      ingredients: recipeIngredients.map((row) => ({
-        id: row.id,
-        ingredient_id: row.ingredient_id,
-        amount: row.amount,
-        unit: row.unit,
-        ingredient_type: row.ingredient_type as "QUANT" | "TO_TASTE",
-        scalable: row.scalable,
-        preparation_state: null,
+      ingredients: [{
+        id: recipeIngredients[0].id,
+        ingredient_id: recipeIngredients[0].ingredient_id,
+        amount: recipeIngredients[0].amount,
+        unit: recipeIngredients[0].unit,
+        ingredient_type: "QUANT",
+        scalable: recipeIngredients[0].scalable,
         size_code: null,
-        edible_state: null,
-        conversion_assignment: null,
-        piece_weight: null,
-      })),
+        ...predecessors().get("ingredient-a")!,
+      }],
     });
 
-    expect(buildFailClosedRecipeNutritionCalculation(recipe, recipeIngredients)).toEqual(expected);
+    expect(buildRecipeNutritionCalculation(
+      recipe,
+      recipeIngredients,
+      predecessors(),
+      calculateRecipeNutrition,
+    )).toEqual(expected);
   });
 
   it("dry-runs a bounded exact scope without any snapshot write", async () => {
@@ -108,17 +165,18 @@ describe("FoodSafety-30 recipe nutrition backfill", () => {
       candidate_count: 2,
       processed_count: 0,
       next_cursor: "recipe-b",
-      calculation_status_counts: { complete: 0, partial: 0, unavailable: 2 },
+      calculation_status_counts: { complete: 1, partial: 0, unavailable: 1 },
       missing_reason_counts: {
-        NUTRITION_PROFILE_MISSING: 1,
         TO_TASTE_EXCLUDED: 1,
       },
-      source_count: 0,
+      source_count: 1,
       secret_count: 0,
       checkpoints: [],
     });
     expect(repo.loadRecipes).toHaveBeenCalledWith(["recipe-a", "recipe-b"]);
     expect(repo.loadIngredients).toHaveBeenCalledWith(["recipe-a", "recipe-b"]);
+    expect(repo.loadPredecessors).toHaveBeenCalledOnce();
+    expect(repo.loadPredecessors).toHaveBeenCalledWith(["ingredient-a", "ingredient-b"]);
     expect(repo.loadCurrentSnapshots).not.toHaveBeenCalled();
     expect(repo.writeSnapshot).not.toHaveBeenCalled();
     expect(repo.assertExactScope).toHaveBeenCalledOnce();

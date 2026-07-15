@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { spawnSync } from "node:child_process";
+
 import { createClient } from "@supabase/supabase-js";
 
 import {
@@ -161,6 +163,20 @@ async function main() {
     options.command === "meal-apply") &&
     !options.checkpoint) {
     throw new RecipeNutritionBackfillError("BACKFILL_CHECKPOINT_REQUIRED");
+  }
+  if (["recipe-dry-run", "recipe-apply"].includes(options.command) &&
+    !process.execArgv.includes("--experimental-strip-types")) {
+    const child = spawnSync(process.execPath, [
+      "--experimental-strip-types",
+      "--disable-warning=ExperimentalWarning",
+      "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
+      ...process.argv.slice(1),
+    ], {
+      env: process.env,
+      stdio: "inherit",
+    });
+    process.exitCode = child.status ?? 1;
+    return;
   }
   const requiresWrite = options.command.endsWith("-apply") || options.command === "recipe-rollback";
   const client = createOperatorClient({ requireLocal: requiresWrite });
