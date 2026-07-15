@@ -159,7 +159,9 @@ const WARNING_PRIORITY = [
   "PIECE_WEIGHT_CONVERSION_USED",
 ] as const;
 
-const WARNING_INDEX = new Map(WARNING_PRIORITY.map((warning, index) => [warning, index]));
+const WARNING_INDEX = new Map<string, number>(
+  WARNING_PRIORITY.map((warning, index) => [warning, index]),
+);
 
 function canonicalStringify(value: unknown): string {
   if (Array.isArray(value)) {
