@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -7,10 +9,17 @@ import { describe, expect, it } from "vitest";
 const PIPELINE_MODULE = pathToFileURL(
   join(process.cwd(), "scripts/lib/public-nutrition-pipeline.mjs"),
 ).href;
+const RDA_XLSX_MODULE = pathToFileURL(
+  join(process.cwd(), "scripts/lib/rda-nutrition-xlsx.mjs"),
+).href;
 const FIXTURE_DIR = join(process.cwd(), "tests/fixtures/public-nutrition-source");
 
 async function loadPipeline() {
   return import(PIPELINE_MODULE);
+}
+
+async function loadRdaXlsx() {
+  return import(RDA_XLSX_MODULE);
 }
 
 function fixture(name: string) {
@@ -28,6 +37,124 @@ function errorCode(run: () => unknown) {
 }
 
 describe("public nutrition source acquisition core", () => {
+  it("hashes the original RDA workbook bytes without an extracted-member proxy", async () => {
+    const { sourceFileEvidence } = await loadRdaXlsx();
+    const directory = mkdtempSync(join(tmpdir(), "rda-source-evidence-"));
+    const filePath = join(directory, "식품성분표(10개정판).xlsx");
+    const bytes = Buffer.from("original-workbook-bytes");
+    writeFileSync(filePath, bytes);
+
+    expect(sourceFileEvidence(filePath)).toEqual({
+      name: "식품성분표(10개정판).xlsx",
+      size_bytes: bytes.length,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    });
+    expect(() => sourceFileEvidence(join(directory, "missing.xlsx")))
+      .toThrowError(expect.objectContaining({ code: "RDA_SOURCE_FILE_INVALID" }));
+    expect(() => sourceFileEvidence(directory))
+      .toThrowError(expect.objectContaining({ code: "RDA_SOURCE_FILE_INVALID" }));
+  });
+
+  it("fails closed with a domain error when the pinned workbook cannot be unzipped", async () => {
+    const { loadRda104Workbook } = await loadRdaXlsx();
+    const directory = mkdtempSync(join(tmpdir(), "rda-corrupt-workbook-"));
+    const filePath = join(directory, "식품성분표(10개정판).xlsx");
+    writeFileSync(filePath, Buffer.from("not-an-xlsx"));
+
+    expect(() => loadRda104Workbook(filePath, {
+      fetchedAt: "2026-07-15T00:00:00.000Z",
+    })).toThrowError(expect.objectContaining({ code: "RDA_WORKBOOK_READ_FAILED" }));
+  });
+
+  it("adapts the pinned RDA 10.4 worksheet without losing official-file provenance", async () => {
+    const { adaptRda104Worksheet } = await loadRdaXlsx();
+    const sharedStringsXml = `<?xml version="1.0"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+      ${[
+        "DB10.4 색인", "식품명", "에너지", "단백질", "지방", "탄수화물", "나트륨",
+        "kcal", "g", "mg", "RDA-FOOD", "시험 식품",
+        "가식부 100g 당 (per 100g Edible Portion)",
+      ].map((value) => `<si><t>${value}</t></si>`).join("")}
+    </sst>`;
+    const worksheetXml = `<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
+      <row r="1"><c r="D1" t="s"><v>12</v></c></row>
+      <row r="2">
+        <c r="A2" t="s"><v>0</v></c><c r="D2" t="s"><v>1</v></c>
+        <c r="F2" t="s"><v>2</v></c><c r="H2" t="s"><v>3</v></c>
+        <c r="I2" t="s"><v>4</v></c><c r="K2" t="s"><v>5</v></c>
+        <c r="AA2" t="s"><v>6</v></c>
+      </row>
+      <row r="3">
+        <c r="F3" t="s"><v>7</v></c><c r="H3" t="s"><v>8</v></c>
+        <c r="I3" t="s"><v>8</v></c><c r="K3" t="s"><v>8</v></c>
+        <c r="AA3" t="s"><v>9</v></c>
+      </row>
+      <row r="4">
+        <c r="A4" t="s"><v>10</v></c><c r="D4" t="s"><v>11</v></c>
+        <c r="F4"><v>84</v></c><c r="H4"><v>9.3</v></c>
+        <c r="I4"><v>4.7</v></c><c r="K4"><v>2.4</v></c>
+        <c r="AA4"><v>5</v></c>
+      </row>
+    </sheetData></worksheet>`;
+
+    const result = adaptRda104Worksheet({
+      worksheetXml,
+      sharedStringsXml,
+      fetchedAt: "2026-07-15T00:00:00.000Z",
+      selectedItemKeys: ["RDA-FOOD"],
+      sourceFile: {
+        name: "식품성분표(10개정판).xlsx",
+        size_bytes: 123,
+        sha256: "a".repeat(64),
+      },
+    });
+
+    expect(result.manifest).toMatchObject({
+      provider: "농촌진흥청",
+      dataset: "국가표준식품성분 DB 10.4",
+      source_version: "10.4",
+      fetched_raw_count: 1,
+      input_shape: "adapted-row-v1",
+      query: {
+        acquisition_mode: "official-ui-post",
+        official_file_name: "식품성분표(10개정판).xlsx",
+        official_file_sha256: "a".repeat(64),
+        official_file_size_bytes: "123",
+        scope_item_keys_sha256: createHash("sha256")
+          .update(JSON.stringify(["RDA-FOOD"]))
+          .digest("hex"),
+        scope_selection: "selected_item_keys",
+        scope_item_count: "1",
+        workbook_sheet: "국가표준식품성분 Database 10.4",
+      },
+    });
+    expect(result.rawSnapshot.pages[0].items).toEqual([expect.objectContaining({
+      external_item_key: "RDA-FOOD",
+      external_name: "시험 식품",
+      basis_text: "100 g",
+      edible_portion: {
+        text: "가식부 100g 당 (per 100g Edible Portion)",
+      },
+      preparation_state: "as_published",
+      nutrients: {
+        energy: { value: "84", unit: "kcal" },
+        carbohydrate: { value: "2.4", unit: "g" },
+        protein: { value: "9.3", unit: "g" },
+        fat: { value: "4.7", unit: "g" },
+        sodium: { value: "5", unit: "mg" },
+      },
+    })]);
+    expect(() => adaptRda104Worksheet({
+      worksheetXml: worksheetXml.replace('<row r="1"><c r="D1" t="s"><v>12</v></c></row>', ""),
+      sharedStringsXml,
+      fetchedAt: "2026-07-15T00:00:00.000Z",
+      sourceFile: {
+        name: "식품성분표(10개정판).xlsx",
+        size_bytes: 123,
+        sha256: "a".repeat(64),
+      },
+    })).toThrowError(expect.objectContaining({ code: "RDA_WORKBOOK_ROW_INVALID" }));
+  });
+
   it("pins immutable raw metadata and normalizes the exact core-five code/unit schema", async () => {
     const { buildRawBatch, normalizeNutritionBatch } = await loadPipeline();
     const input = fixture("mfds-source-sample.json");

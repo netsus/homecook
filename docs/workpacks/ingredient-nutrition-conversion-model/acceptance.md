@@ -6,8 +6,8 @@
 
 ### Handoff / Command Boundary
 
-- [ ] **Given** predecessor status가 `approved_pinned`이고 manifest/checksum이 유효한 bundle, **When** `nutrition:model:import --mode dry-run --pilot-scope foodsafety-30`, **Then** exit 0과 고정 summary schema를 내고 `writes_attempted=0`, `writes_committed=0`이다. <!-- omo:id=accept-valid-handoff-dry-run;stage=2;scope=backend;review=3 -->
-- [ ] **Given** approved 상태·manifest·checksum 중 하나가 유효하지 않은 bundle, **When** 어느 import mode든 실행, **Then** `INVALID_HANDOFF_BUNDLE`, non-zero exit, DB transaction 시작 전 0 writes다. <!-- omo:id=accept-invalid-handoff;stage=2;scope=backend;review=3 -->
+- [x] **Given** predecessor status가 `approved_pinned`이고 manifest/checksum이 유효한 bundle, **When** `nutrition:model:import --mode dry-run --pilot-scope foodsafety-30`, **Then** exit 0과 고정 summary schema를 내고 `writes_attempted=0`, `writes_committed=0`이다. <!-- omo:id=accept-valid-handoff-dry-run;stage=2;scope=backend;review=3 -->
+- [x] **Given** approved 상태·manifest·checksum 중 하나가 유효하지 않은 bundle, **When** 어느 import mode든 실행, **Then** `INVALID_HANDOFF_BUNDLE`, non-zero exit, DB transaction 시작 전 0 writes다. <!-- omo:id=accept-invalid-handoff;stage=2;scope=backend;review=3 -->
 - [x] **Given** `apply`인데 `--approval-file`이 없거나 decision schema가 유효하지 않음, **When** 실행, **Then** `APPROVAL_FILE_REQUIRED`, non-zero exit, 0 writes다. <!-- omo:id=accept-approval-file-required;stage=2;scope=backend;review=3 -->
 - [x] **Given** 별도 production approval artifact가 없음, **When** `--mode apply --environment production`, **Then** `PRODUCTION_LOAD_APPROVAL_REQUIRED`로 transaction 전 종료하고 report의 production writes가 0이다. <!-- omo:id=accept-production-zero-write-guard;stage=2;scope=backend;review=3 -->
 - [x] **Given** CLI input에 지원하지 않는 mode/scope/environment/flag가 있음, **When** parse, **Then** 명시적 validation error와 non-zero exit를 내고 알 수 없는 값을 무시하지 않으며 0 writes다. <!-- omo:id=accept-cli-invalid-input;stage=2;scope=backend;review=3 -->
@@ -81,7 +81,7 @@
 
 - [x] **Given** 동일 bundle checksum, scope, decision checksum, schema version, **When** dry-run을 반복, **Then** 동일 idempotency key, row ordering, candidate/decision counts, content hash를 만들고 timestamp/path는 identity에 포함하지 않는다. <!-- omo:id=accept-dry-run-determinism;stage=2;scope=backend;review=3 -->
 - [x] **Given** 이미 성공한 local/staging apply와 동일 input/decision, **When** 재실행, **Then** duplicate rows/versions/active pointers가 생기지 않고 `writes_committed=0`인 idempotent replay report를 낸다. <!-- omo:id=accept-apply-idempotency;stage=2;scope=backend;review=3 -->
-- [ ] **Given** transaction 중 FK/CHECK/decision conflict, **When** apply 실패, **Then** 모든 row/active pointer가 rollback되고 non-zero exit 및 reason count가 남는다. <!-- omo:id=accept-atomic-import-rollback;stage=2;scope=backend;review=3 -->
+- [x] **Given** transaction 중 FK/CHECK/decision conflict, **When** apply 실패, **Then** 모든 row/active pointer가 rollback되고 non-zero exit 및 reason count가 남는다. <!-- omo:id=accept-atomic-import-rollback;stage=2;scope=backend;review=3 -->
 - [x] **Given** 실패 후 같은 수정된 유효 input으로 재시도, **When** apply, **Then** 실패 run과 새 run을 구분하고 partial residue 없이 한 번만 commit한다. <!-- omo:id=accept-failure-retry;stage=2;scope=backend;review=3 -->
 - [x] **Given** 성공/실패/dry-run/disable run id, **When** `nutrition:model:report`, **Then** README의 필수 summary field와 source/decision/count/write/rollback audit를 machine-readable하게 반환한다. <!-- omo:id=accept-run-report-contract;stage=2;scope=backend;review=3 -->
 - [x] **Given** report registry가 없거나 checksum/affected row ID가 변조됨, **When** report 또는 disable, **Then** `INVALID_RUN_REPORT`, non-zero exit, 0 DB writes이며 임의 row를 추정하지 않는다. <!-- omo:id=accept-run-report-integrity;stage=2;scope=backend;review=3 -->
@@ -90,20 +90,20 @@
 
 ### Pilot 30 Scope
 
-- [ ] **Given** `20260626104000_seed_foodsafety_pilot_recipes.sql`, **When** scope resolve, **Then** unique recipe ID가 정확히 30이고 report `scope_recipe_count=30`이다. <!-- omo:id=accept-pilot-exact-thirty;stage=2;scope=backend;review=3 -->
-- [ ] **Given** pilot recipe ingredients, **When** canonical closure를 계산, **Then** 그 30개 recipe가 참조하는 canonical ingredient만 대상이며 unrelated ingredient/source item은 candidate/apply count에 포함되지 않는다. <!-- omo:id=accept-pilot-ingredient-closure;stage=2;scope=backend;review=3 -->
+- [x] **Given** `20260626104000_seed_foodsafety_pilot_recipes.sql`, **When** scope resolve, **Then** unique recipe ID가 정확히 30이고 report `scope_recipe_count=30`이다. <!-- omo:id=accept-pilot-exact-thirty;stage=2;scope=backend;review=3 -->
+- [x] **Given** pilot recipe ingredients, **When** canonical closure를 계산, **Then** 그 30개 recipe가 참조하는 canonical ingredient만 대상이며 unrelated ingredient/source item은 candidate/apply count에 포함되지 않는다. <!-- omo:id=accept-pilot-ingredient-closure;stage=2;scope=backend;review=3 -->
 - [x] **Given** recipe 29/31개, unknown recipe ID, closure 밖 ingredient를 포함한 scope, **When** import, **Then** `PILOT_SCOPE_MISMATCH`, non-zero exit, 0 writes다. <!-- omo:id=accept-pilot-scope-mismatch;stage=2;scope=backend;review=3 -->
 
 ## Error / Permission
 
 ### Permission / RLS / Immutability
 
-- [ ] **Given** `anon`, **When** raw/source/item/profile/value/evidence/candidate/decision table SELECT/INSERT/UPDATE/DELETE, **Then** 모두 거부된다. <!-- omo:id=accept-anon-rls-denial;stage=2;scope=backend;review=3 -->
+- [x] **Given** `anon`, **When** raw/source/item/profile/value/evidence/candidate/decision table SELECT/INSERT/UPDATE/DELETE, **Then** 모두 거부된다. <!-- omo:id=accept-anon-rls-denial;stage=2;scope=backend;review=3 -->
 - [x] **Given** 일반 `authenticated` user, **When** 같은 operation, **Then** approved row를 포함해 직접 접근/수정/삭제가 거부된다. <!-- omo:id=accept-authenticated-rls-denial;stage=2;scope=backend;review=3 -->
 - [ ] **Given** 기존 `admin_members` viewer만 가진 user, **When** 검수 write, **Then** operator capability로 승격되지 않고 거부된다. <!-- omo:id=accept-admin-viewer-no-write;stage=2;scope=backend;review=3 -->
 - [x] **Given** service-role/operator command, **When** actor/reason 없는 approve/reject/revoke/supersede, **Then** 거부하고 audit 빈칸을 허용하지 않는다. <!-- omo:id=accept-audit-actor-reason-required;stage=2;scope=backend;review=3 -->
 - [x] **Given** approved source/profile/value/evidence payload, **When** UPDATE/DELETE 시도, **Then** 허용된 decision/active/superseded field 외 변경은 거부되고 correction은 새 version으로만 가능하다. <!-- omo:id=accept-payload-immutability;stage=2;scope=backend;review=3 -->
-- [ ] **Given** 같은 ingredient/preparation에 두 active approved primary nutrition links 또는 volume assignments, **When** commit, **Then** partial unique 제약이 transaction을 거부한다. <!-- omo:id=accept-active-uniqueness;stage=2;scope=backend;review=3 -->
+- [x] **Given** 같은 ingredient/preparation에 두 active approved primary nutrition links 또는 volume assignments, **When** commit, **Then** partial unique 제약이 transaction을 거부한다. <!-- omo:id=accept-active-uniqueness;stage=2;scope=backend;review=3 -->
 
 ### Secret / Raw / Copyright Boundary
 
@@ -116,7 +116,7 @@
 
 - [x] **Given** synthetic fixture suite, **When** tests 실행, **Then** 실제 key/raw row 없이 MFDS/RDA 호환·불일치, missing/zero, 2.5/tie, piece, drift, failure cases를 모두 재현한다. <!-- omo:id=accept-fixture-baseline;stage=2;scope=backend;review=3 -->
 - [ ] **Given** local Supabase reset, **When** migration 적용, **Then** 10개 table seed/profile 제약/RLS/index가 깨끗하게 생성되고 repeat reset이 성공한다. <!-- omo:id=accept-local-db-bootstrap;stage=2;scope=backend;review=3 -->
-- [ ] **Given** local DB pilot flow, **When** dry-run → explicit approved apply → duplicate replay → report → disable 순서로 실행, **Then** 각 count/write/active/audit 상태가 이 acceptance와 일치한다. <!-- omo:id=accept-local-db-smoke;stage=2;scope=backend;review=3 -->
+- [x] **Given** local DB pilot flow, **When** dry-run → explicit approved apply → duplicate replay → report → disable 순서로 실행, **Then** 각 count/write/active/audit 상태가 이 acceptance와 일치한다. <!-- omo:id=accept-local-db-smoke;stage=2;scope=backend;review=3 -->
 - [x] **Given** 이번 BE-only slice, **When** closeout, **Then** frontend route/component/API public contract가 변하지 않았고 Design/Accessibility/Playwright가 근거 있는 N/A다. <!-- omo:id=accept-be-only-boundary;stage=2;scope=shared;review=3 -->
 
 ## Automation Split
