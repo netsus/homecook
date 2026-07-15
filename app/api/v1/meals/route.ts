@@ -158,6 +158,13 @@ interface MealsDbClient {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const CLIENT_CONTROLLED_NUTRITION_FIELDS = new Set([
+  "recipe_nutrition_snapshot_id",
+  "nutrition_snapshot_origin",
+  "product_id",
+  "product_nutrition_version_id",
+  "quantity",
+]);
 
 function isUuid(value: string) {
   return UUID_PATTERN.test(value);
@@ -233,6 +240,13 @@ function parseMealListQuery(request: NextRequest) {
 
 function buildCreateValidationFields(body: MealCreateBody) {
   const fields: Array<{ field: string; reason: string }> = [];
+
+  Object.keys(body)
+    .filter((field) => CLIENT_CONTROLLED_NUTRITION_FIELDS.has(field))
+    .sort()
+    .forEach((field) => {
+      fields.push({ field, reason: "unexpected" });
+    });
 
   const recipeId = typeof body.recipe_id === "string" ? body.recipe_id.trim() : "";
   if (!recipeId) {

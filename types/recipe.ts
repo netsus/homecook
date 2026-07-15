@@ -154,6 +154,41 @@ export interface RecipePhoto {
   height?: number | null;
 }
 
+export type RecipeNutritionStatus = "complete" | "partial" | "unavailable";
+export type RecipeNutritionQuality = "direct" | "estimated" | "mixed";
+
+export interface RecipeNutritionValue {
+  amount: number | null;
+  known_amount: number | null;
+  status: RecipeNutritionStatus;
+  display_mode: "total" | "minimum" | null;
+}
+
+export interface RecipeNutritionSource {
+  provider: string;
+  dataset: string;
+  source_version: string;
+  data_basis_date: string | null;
+  license: string;
+  source_url: string;
+}
+
+export interface RecipeNutrition {
+  basis: { amount: number; unit: "serving" };
+  base_servings?: number;
+  values: Record<string, RecipeNutritionValue>;
+  scalable_values?: Record<string, number>;
+  fixed_values?: Record<string, number>;
+  calculation_status: RecipeNutritionStatus;
+  calculation_quality: RecipeNutritionQuality | null;
+  reflected_ingredient_count?: number;
+  target_ingredient_count?: number;
+  warnings: string[];
+  sources: RecipeNutritionSource[];
+  snapshot_id?: string;
+  calculated_at?: string;
+}
+
 export interface ManualRecipeIngredientInput {
   ingredient_id: string;
   standard_name: string;
@@ -589,5 +624,6 @@ export interface RecipeDetail {
   cook_count: number;
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
+  nutrition: RecipeNutrition;
   user_status: RecipeUserStatus | null;
 }

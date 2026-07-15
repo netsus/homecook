@@ -12,6 +12,7 @@ import {
   normalizeRecipeSteps,
 } from "@/lib/recipe-detail";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
+import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
 import {
   isMissingStepCookingMethodsRelation,
   RECIPE_STEP_SELECT_LEGACY,
@@ -197,8 +198,14 @@ export async function GET(request: Request, context: RouteContext) {
 
     return ok(
       authOverride === "authenticated"
-        ? getQaFixtureRecipeDetail()
-        : MOCK_RECIPE_DETAIL,
+        ? {
+            ...getQaFixtureRecipeDetail(),
+            nutrition: buildUnavailableRecipeNutrition(),
+          }
+        : {
+            ...MOCK_RECIPE_DETAIL,
+            nutrition: buildUnavailableRecipeNutrition(),
+          },
     );
   }
 
@@ -358,6 +365,7 @@ export async function GET(request: Request, context: RouteContext) {
       cook_count: recipeResult.data.cook_count,
       ingredients,
       steps,
+      nutrition: buildUnavailableRecipeNutrition(),
       user_status: userStatus,
     };
 
