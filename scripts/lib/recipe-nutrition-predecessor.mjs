@@ -102,11 +102,11 @@ function approvedSource(source) {
 
 function sourceProjection(source) {
   return {
-    provider: source.provider_code,
-    dataset: source.dataset_name,
+    provider: source.provider ?? source.provider_code,
+    dataset: source.dataset ?? source.dataset_name,
     source_version: source.source_version,
     data_basis_date: source.data_basis_date,
-    license: source.license_name,
+    license: source.license ?? source.license_name,
     source_url: source.source_url,
   };
 }
@@ -400,6 +400,16 @@ export function buildRecipeNutritionInputGuard(ingredients, predecessors) {
               normalization_method: candidate.nutrition.profile.normalization_method,
               basis_amount: candidate.nutrition.profile.basis_amount,
               basis_unit: candidate.nutrition.profile.basis_unit,
+              nutrition_values: Object.entries(candidate.nutrition.profile.values)
+                .map(([nutrientCode, value]) => ({
+                  nutrient_code: nutrientCode,
+                  amount: value.amount,
+                  value_status: value.value_status,
+                }))
+                .sort((left, right) =>
+                  compareUnicodeOrdinal(left.nutrient_code, right.nutrient_code)
+                ),
+              source: sourceProjection(candidate.nutrition.source),
             }))
             .sort((left, right) => compareUnicodeOrdinal(left.link_id, right.link_id)),
           conversion_candidates: predecessor.conversion_candidates
@@ -409,6 +419,11 @@ export function buildRecipeNutritionInputGuard(ingredients, predecessors) {
               evidence_id: candidate.assignment.evidence.id,
               source_id: candidate.assignment.evidence.source.id,
               preparation_state: candidate.preparationState,
+              profile_code: candidate.assignment.profile.code,
+              basis_volume_ml: candidate.assignment.profile.basis_volume_ml,
+              representative_weight_g: candidate.assignment.profile.representative_weight_g,
+              evidence_preparation_state: candidate.assignment.preparation_state,
+              source: sourceProjection(candidate.assignment.evidence.source),
             }))
             .sort((left, right) => compareUnicodeOrdinal(left.assignment_id, right.assignment_id)),
           selected_nutrition_link_id: selected.nutrition?.nutrition.link.id ?? null,

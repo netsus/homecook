@@ -153,6 +153,18 @@ describe("recipe nutrition snapshot writer", () => {
         ...SOURCE,
         source_url: `https://example.test/data?${key}=redacted-value`,
       })),
+      {
+        ...SOURCE,
+        source_url: "https://example.test/data?%70%61%73%73%77%6f%72%64=redacted-value",
+      },
+      {
+        ...SOURCE,
+        source_url: "https://example.test/data?%2570%2561%2573%2573%2577%256f%2572%2564=redacted-value",
+      },
+      {
+        ...SOURCE,
+        source_url: "https://example.test/data?p%2561ssword=redacted-value",
+      },
       { ...SOURCE, source_url: "https://example.test/data#access_token=secret" },
       { ...SOURCE, source_url: "file:///private/provider/raw.json" },
       { ...SOURCE, source_url: "/internal/storage/raw.json" },

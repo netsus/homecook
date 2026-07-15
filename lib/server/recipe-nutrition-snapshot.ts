@@ -51,7 +51,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isCredentialLikeQueryKey(key: string) {
-  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+  let decoded = key;
+  for (let depth = 0; depth < 8 && decoded.includes("%"); depth += 1) {
+    let next: string;
+    try {
+      next = decodeURIComponent(decoded);
+    } catch {
+      return true;
+    }
+    if (next === decoded) return true;
+    decoded = next;
+  }
+  if (decoded.includes("%")) return true;
+  const normalized = decoded.toLowerCase().replace(/[^a-z0-9]/g, "");
   return normalized === "key" || normalized === "pass" || normalized === "auth" ||
     normalized === "authorization" || AUTH_QUERY_KEY_TEXT.test(normalized);
 }
