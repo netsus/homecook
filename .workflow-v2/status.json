@@ -1967,9 +1967,9 @@
     {
       "id": "ingredient-nutrition-conversion-model",
       "preset": "vertical-slice-strict",
-      "branch": "docs/ingredient-nutrition-conversion-model",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
+      "branch": "feature/codex-ingredient-nutrition-conversion-model-stage2",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
       "verification_status": "pending",
       "required_checks": [
         "pnpm exec vitest run tests/ingredient-nutrition-normalizer.test.ts tests/ingredient-nutrition-matching.test.ts tests/ingredient-conversion-profile.test.ts tests/ingredient-nutrition-import.test.ts tests/ingredient-nutrition-rls.test.ts",
@@ -1980,7 +1980,7 @@
         "node scripts/validate-automation-spec.mjs --slice ingredient-nutrition-conversion-model",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs/contract-evolution Draft is being prepared from exact PR #995 merge f87ae75016a9b709ffc3b706e7ca3720a0940982. Independent Codex Stage 1.5 review is required before Stage 2; author self-approval is forbidden. Public API/UI are unchanged, DATA_GO_KR_API_KEY1 is not accessed, and production load remains zero writes until separate approval.",
+      "notes": "Stage 1 docs and independent Stage 1.5 review were merged through PR #999 at f8cb3ed10bd92f3832914512239c68325b3f06ad. Stage 2 started from that exact origin/master head on feature/codex-ingredient-nutrition-conversion-model-stage2. Public API/UI remain unchanged, credentials/providers are not accessed, and production load remains zero writes until separate approval.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
