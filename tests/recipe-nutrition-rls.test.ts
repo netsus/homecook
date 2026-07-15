@@ -46,6 +46,7 @@ describe("recipe nutrition snapshot database contract", () => {
     }
     expect(sql).toMatch(/UNSAFE_SNAPSHOT_SOURCE/);
     expect(sql).toMatch(/x-amz-signature/i);
+    expect(sql).toMatch(/create function public\.decode_recipe_nutrition_query_key/i);
     for (const credentialKey of ["password", "subscriptionkey", "accesskey", "credential"]) {
       expect(sql).toContain(credentialKey);
     }
@@ -99,9 +100,39 @@ describe("recipe nutrition snapshot database contract", () => {
       "ingredient_conversion_assignments",
       "measurement_conversion_profiles",
       "measurement_source_evidence",
+      "nutrition_values",
     ]) {
       expect(sql).toContain(`public.${relation}`);
     }
+    expect(sql).toMatch(/'nutrient_code'[\s\S]*'value_status'/i);
+    expect(sql).toMatch(/create function public\.build_recipe_nutrition_contributing_sources/i);
+    expect(sql).toMatch(/SNAPSHOT_SOURCE_MISMATCH/i);
+  });
+
+  it("shares ordered recipe and ingredient transaction locks with every input mutation", () => {
+    const sql = migrationSql();
+
+    expect(sql).toMatch(/create function public\.lock_recipe_nutrition_ingredient_ids/i);
+    expect(sql).toMatch(/pg_advisory_xact_lock_shared/i);
+    expect(sql).toMatch(/create function public\.lock_recipe_nutrition_predecessor_mutation/i);
+    expect(sql).toMatch(/referencing new table as new_rows/i);
+    expect(sql).toMatch(/referencing old table as old_rows/i);
+    expect(sql).toMatch(/revoke truncate on table[\s\S]*from anon, authenticated, service_role/i);
+    for (const relation of [
+      "recipe_ingredients",
+      "nutrition_sources",
+      "nutrition_source_items",
+      "nutrition_profiles",
+      "nutrition_values",
+      "ingredient_nutrition_profiles",
+      "measurement_conversion_profiles",
+      "measurement_source_evidence",
+      "ingredient_conversion_assignments",
+      "piece_unit_weights",
+    ]) {
+      expect(sql).toMatch(new RegExp(`on public\\.${relation}`, "i"));
+    }
+    expect(sql).toMatch(/pg_advisory_xact_lock[\s\S]*pg_advisory_xact_lock_shared[\s\S]*validate_recipe_nutrition_snapshot_payload/i);
   });
 
   it("makes snapshot rows append-only and denies direct anon or authenticated access", () => {

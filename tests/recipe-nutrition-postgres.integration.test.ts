@@ -17,6 +17,9 @@ const guardLinkId = "64000000-0000-4000-8000-000000000001";
 const alternateSourceItemId = "62000000-0000-4000-8000-000000000002";
 const alternateProfileId = "63000000-0000-4000-8000-000000000002";
 const alternateLinkId = "64000000-0000-4000-8000-000000000002";
+const measurementSourceId = "65000000-0000-4000-8000-000000000001";
+const measurementEvidenceId = "66000000-0000-4000-8000-000000000001";
+const pendingAssignmentId = "67000000-0000-4000-8000-000000000001";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -39,7 +42,10 @@ function psql(sql: string): string {
   return result.stdout.trim().split("\n").filter(Boolean).at(-1) ?? "";
 }
 
-function psqlAsync(sql: string): Promise<{ status: number | null; stdout: string; stderr: string }> {
+function psqlAsync(
+  sql: string,
+  applicationName = "recipe-nutrition-test-async",
+): Promise<{ status: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn("psql", [
       "-h", host,
@@ -49,7 +55,13 @@ function psqlAsync(sql: string): Promise<{ status: number | null; stdout: string
       "-At",
       "-v", "ON_ERROR_STOP=1",
       "-c", sql,
-    ], { env: { PATH: process.env.PATH ?? "", NODE_ENV: "test" } });
+    ], {
+      env: {
+        PATH: process.env.PATH ?? "",
+        NODE_ENV: "test",
+        PGAPPNAME: applicationName,
+      },
+    });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
@@ -59,6 +71,76 @@ function psqlAsync(sql: string): Promise<{ status: number | null; stdout: string
     child.once("error", reject);
     child.once("close", (status) => resolve({ status, stdout, stderr }));
   });
+}
+
+function openPsqlSession(applicationName: string) {
+  const child = spawn("psql", [
+    "-h", host,
+    "-p", port,
+    "-U", "postgres",
+    "-d", database,
+    "-At",
+    "-v", "ON_ERROR_STOP=1",
+  ], {
+    env: {
+      PATH: process.env.PATH ?? "",
+      NODE_ENV: "test",
+      PGAPPNAME: applicationName,
+    },
+  });
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  let stderr = "";
+  let markerSequence = 0;
+  child.stderr.on("data", (chunk) => { stderr += chunk; });
+
+  const run = (sql: string) => new Promise<void>((resolve, reject) => {
+    const marker = `__homecook_psql_marker_${markerSequence += 1}__`;
+    let stdout = "";
+    const onData = (chunk: string) => {
+      stdout += chunk;
+      if (!stdout.includes(marker)) return;
+      child.stdout.off("data", onData);
+      child.off("close", onClose);
+      resolve();
+    };
+    const onClose = (status: number | null) => {
+      child.stdout.off("data", onData);
+      reject(new Error(`psql session closed (${status}): ${stderr}`));
+    };
+    child.once("close", onClose);
+    child.stdout.on("data", onData);
+    child.stdin.write(`${sql}\n\\echo ${marker}\n`, (error) => {
+      if (!error) return;
+      child.stdout.off("data", onData);
+      child.off("close", onClose);
+      reject(error);
+    });
+  });
+
+  const close = () => new Promise<void>((resolve) => {
+    if (child.exitCode !== null) {
+      resolve();
+      return;
+    }
+    child.once("close", () => resolve());
+    child.stdin.end("\\q\n");
+  });
+
+  return { run, close };
+}
+
+async function waitForDatabaseLock(applicationName: string) {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    if (psql(`
+      select count(*)
+      from pg_stat_activity
+      where application_name = '${applicationName}' and wait_event_type = 'Lock';
+    `) === "1") return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`Timed out waiting for database lock: ${applicationName}`);
 }
 
 function encodedJson(value: unknown): string {
@@ -143,6 +225,183 @@ function seedRecipe(recipeId: string, title: string) {
   `);
 }
 
+async function expectMutationWinsSnapshotRace(options: {
+  recipeId: string;
+  title: string;
+  barrierKey: number;
+  mutationSql: string;
+  snapshotSeed: string;
+}) {
+  seedRecipe(options.recipeId, options.title);
+  const staleVersion = psql(
+    `select updated_at from public.recipes where id = '${options.recipeId}';`,
+  );
+  const staleGuard = JSON.parse(psql(
+    `select public.build_recipe_nutrition_input_guard('${options.recipeId}')::text;`,
+  ));
+  const suffix = options.recipeId.slice(-4);
+  const mutationApplication = `recipe-nutrition-race-mutation-${suffix}`;
+  const writerApplication = `recipe-nutrition-race-writer-${suffix}`;
+  const barrier = openPsqlSession(`recipe-nutrition-race-barrier-${suffix}`);
+  let barrierReleased = false;
+  let mutationPromise: ReturnType<typeof psqlAsync> | null = null;
+  let writerPromise: ReturnType<typeof psqlAsync> | null = null;
+
+  try {
+    await barrier.run(`select pg_advisory_lock(${options.barrierKey});`);
+    mutationPromise = psqlAsync(`
+      begin;
+      ${options.mutationSql}
+      select pg_advisory_xact_lock(${options.barrierKey});
+      commit;
+    `, mutationApplication);
+    await waitForDatabaseLock(mutationApplication);
+
+    writerPromise = psqlAsync(
+      writeSnapshotSql(
+        options.recipeId,
+        snapshot(options.snapshotSeed),
+        staleVersion,
+        staleGuard,
+      ),
+      writerApplication,
+    );
+    await waitForDatabaseLock(writerApplication);
+    expect(Number(psql(`
+      select count(*)
+      from pg_locks mutation_lock
+      join pg_stat_activity mutation_activity on mutation_activity.pid = mutation_lock.pid
+      join pg_locks writer_lock
+        on writer_lock.locktype = mutation_lock.locktype
+        and writer_lock.database = mutation_lock.database
+        and writer_lock.classid = mutation_lock.classid
+        and writer_lock.objid = mutation_lock.objid
+        and writer_lock.objsubid = mutation_lock.objsubid
+      join pg_stat_activity writer_activity on writer_activity.pid = writer_lock.pid
+      where mutation_activity.application_name = '${mutationApplication}'
+        and writer_activity.application_name = '${writerApplication}'
+        and mutation_lock.locktype = 'advisory'
+        and mutation_lock.mode = 'ExclusiveLock'
+        and mutation_lock.granted
+        and writer_lock.mode = 'ShareLock'
+        and not writer_lock.granted;
+    `))).toBe(1);
+
+    await barrier.run(`select pg_advisory_unlock(${options.barrierKey});`);
+    barrierReleased = true;
+    const [mutation, writer] = await Promise.all([mutationPromise, writerPromise]);
+
+    expect(mutation.status, mutation.stderr).toBe(0);
+    expect(writer.status).not.toBe(0);
+    expect(writer.stderr).toContain("RECIPE_NUTRITION_INPUT_STALE");
+    expect(psql(
+      `select count(*) from public.recipe_nutrition_snapshots where recipe_id = '${options.recipeId}';`,
+    )).toBe("0");
+  } finally {
+    if (!barrierReleased) {
+      await barrier.run(`select pg_advisory_unlock(${options.barrierKey});`).catch(() => undefined);
+    }
+    await barrier.close();
+    await Promise.allSettled([
+      ...(mutationPromise ? [mutationPromise] : []),
+      ...(writerPromise ? [writerPromise] : []),
+    ]);
+  }
+}
+
+async function expectWriterWinsSnapshotRace(options: {
+  recipeId: string;
+  title: string;
+  mutationSql: string;
+  snapshotSeed: string;
+}) {
+  seedRecipe(options.recipeId, options.title);
+  const recipeVersion = psql(
+    `select updated_at from public.recipes where id = '${options.recipeId}';`,
+  );
+  const inputGuard = JSON.parse(psql(
+    `select public.build_recipe_nutrition_input_guard('${options.recipeId}')::text;`,
+  ));
+  const suffix = options.recipeId.slice(-4);
+  const writerApplication = `recipe-nutrition-writer-first-${suffix}`;
+  const mutationApplication = `recipe-nutrition-writer-first-mutation-${suffix}`;
+  const writer = openPsqlSession(writerApplication);
+  let writerCommitted = false;
+  let mutationPromise: ReturnType<typeof psqlAsync> | null = null;
+
+  try {
+    await writer.run(`
+      begin;
+      set role service_role;
+      select public.write_recipe_nutrition_snapshot(
+        '${options.recipeId}',
+        ${jsonExpression(snapshot(options.snapshotSeed))},
+        '${recipeVersion}'::timestamptz,
+        ${jsonExpression(inputGuard)}
+      )::text;
+    `);
+    expect(psql(`
+      select count(*)
+      from pg_locks lock
+      join pg_stat_activity activity on activity.pid = lock.pid
+      where activity.application_name = '${writerApplication}'
+        and lock.locktype = 'advisory'
+        and lock.granted;
+    `)).toBe("2");
+    expect(psql(`
+      select string_agg(lock.mode, ',' order by lock.mode collate "C")
+      from pg_locks lock
+      join pg_stat_activity activity on activity.pid = lock.pid
+      where activity.application_name = '${writerApplication}'
+        and lock.locktype = 'advisory'
+        and lock.granted;
+    `)).toBe("ExclusiveLock,ShareLock");
+
+    mutationPromise = psqlAsync(options.mutationSql, mutationApplication);
+    await waitForDatabaseLock(mutationApplication);
+    expect(psql(`
+      select count(*)
+      from pg_locks writer_lock
+      join pg_stat_activity writer_activity on writer_activity.pid = writer_lock.pid
+      join pg_locks mutation_lock
+        on mutation_lock.locktype = writer_lock.locktype
+        and mutation_lock.database = writer_lock.database
+        and mutation_lock.classid = writer_lock.classid
+        and mutation_lock.objid = writer_lock.objid
+        and mutation_lock.objsubid = writer_lock.objsubid
+      join pg_stat_activity mutation_activity on mutation_activity.pid = mutation_lock.pid
+      where writer_activity.application_name = '${writerApplication}'
+        and mutation_activity.application_name = '${mutationApplication}'
+        and writer_lock.locktype = 'advisory'
+        and writer_lock.mode = 'ExclusiveLock'
+        and writer_lock.granted
+        and mutation_lock.mode = 'ExclusiveLock'
+        and not mutation_lock.granted;
+    `)).toBe("1");
+
+    await writer.run("commit;");
+    writerCommitted = true;
+    const mutation = await mutationPromise;
+    expect(mutation.status, mutation.stderr).toBe(0);
+
+    const staleReplay = psqlResult(writeSnapshotSql(
+      options.recipeId,
+      snapshot("1"),
+      recipeVersion,
+      inputGuard,
+    ));
+    expect(staleReplay.status).not.toBe(0);
+    expect(staleReplay.stderr).toContain("RECIPE_NUTRITION_INPUT_STALE");
+    expect(psql(
+      `select count(*) from public.recipe_nutrition_snapshots where recipe_id = '${options.recipeId}';`,
+    )).toBe("1");
+  } finally {
+    if (!writerCommitted) await writer.run("rollback;").catch(() => undefined);
+    await writer.close();
+    if (mutationPromise) await Promise.allSettled([mutationPromise]);
+  }
+}
+
 describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () => {
   beforeAll(() => {
     psql(`
@@ -159,8 +418,40 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
         'https://example.test/license', repeat('a', 64), 'approved',
         'isolated integration fixture', '${actorId}', now(), true
       );
+      insert into public.nutrition_sources (
+        id, provider_code, dataset_name, source_kind, source_version, data_basis_date,
+        fetched_at, freshness_checked_at, freshness_status, priority_rank,
+        source_url, license_name, license_url, manifest_sha256, review_status,
+        decision_reason, reviewed_by, reviewed_at, is_active
+      ) values (
+        '${measurementSourceId}', 'MEASURE', 'Recipe measurement fixture', 'measurement_reference',
+        '2026-07-02', '2026-07-02', now(), now(), 'current', 2,
+        'https://example.test/measurement', 'test-only', 'https://example.test/license',
+        repeat('f', 64), 'approved', 'isolated integration fixture',
+        '${actorId}', now(), true
+      );
       insert into public.ingredients (id, standard_name, category, default_unit)
       values ('${guardIngredientId}', 'writer guard fixture ingredient', 'test', 'g');
+      insert into public.measurement_source_evidence (
+        id, source_id, evidence_kind, source_subject, preparation_state,
+        source_observed_unit, source_observed_amount, observed_volume_ml, observed_weight_g,
+        normalized_g_per_15ml, source_url, source_accessed_at, evidence_fingerprint,
+        review_status, decision_reason, reviewed_by, reviewed_at, version, is_active
+      ) values (
+        '${measurementEvidenceId}', '${measurementSourceId}', 'volume_weight',
+        'writer guard fixture ingredient', 'raw-edible', 'tbsp', 1, 15, 15, 15,
+        'https://example.test/measurement', '2026-07-02', repeat('9', 64),
+        'approved', 'isolated integration fixture', '${actorId}', now(), 1, true
+      );
+      insert into public.ingredient_conversion_assignments (
+        id, ingredient_id, conversion_profile_id, evidence_id, preparation_state,
+        distance_g_per_15ml, candidate_rank, confidence_score, assignment_reason,
+        review_status, version, is_active
+      ) values (
+        '${pendingAssignmentId}', '${guardIngredientId}',
+        '71000000-0000-4000-8000-000000000015', '${measurementEvidenceId}',
+        'raw-edible', 0, 1, 1, null, 'pending', 1, false
+      );
       insert into public.nutrition_source_items (
         id, source_id, external_item_key, external_name, preparation_state,
         source_basis_text, source_basis_amount, source_basis_unit, edible_portion_percent,
@@ -387,6 +678,101 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     `)).toBe("partial:direct:1");
   });
 
+  it("derives only the exact sources that contributed an observed nutrient", () => {
+    const nutritionSource = snapshot("0").sources[0];
+    const measurementSource = {
+      provider: "MEASURE",
+      dataset: "Recipe measurement fixture",
+      source_version: "2026-07-02",
+      data_basis_date: "2026-07-02",
+      license: "test-only",
+      source_url: "https://example.test/measurement",
+    };
+    const inputGuard = (
+      unit: string | null,
+      basisUnit: "g" | "ml",
+      values: Array<{ nutrient_code: string; amount: number | null; value_status: string }>,
+      options: { ingredientType?: "QUANT" | "TO_TASTE"; conversion?: boolean } = {},
+    ) => ({
+      recipe_ingredients: [{
+        id: "source-matrix-recipe-ingredient",
+        ingredient_id: "source-matrix-ingredient",
+        amount: options.ingredientType === "TO_TASTE" ? null : 1,
+        unit: options.ingredientType === "TO_TASTE" ? null : unit,
+        ingredient_type: options.ingredientType ?? "QUANT",
+        scalable: true,
+        sort_order: 0,
+        nutrition_candidates: [{
+          link_id: "source-matrix-link",
+          profile_id: "source-matrix-profile",
+          source_item_id: "source-matrix-item",
+          source_id: guardSourceId,
+          preparation_state: "raw-edible",
+          normalization_method: basisUnit === "g" ? "mass_100g" : "volume_100ml",
+          basis_amount: 100,
+          basis_unit: basisUnit,
+          nutrition_values: values,
+          source: nutritionSource,
+        }],
+        conversion_candidates: options.conversion ? [{
+          assignment_id: "source-matrix-assignment",
+          profile_id: "source-matrix-conversion-profile",
+          evidence_id: "source-matrix-evidence",
+          source_id: measurementSourceId,
+          preparation_state: "raw-edible",
+          profile_code: "VOLUME_G15",
+          basis_volume_ml: 15,
+          representative_weight_g: 15,
+          evidence_preparation_state: "raw-edible",
+          source: measurementSource,
+        }] : [],
+        selected_nutrition_link_id: "source-matrix-link",
+        selected_conversion_assignment_id: options.conversion
+          ? "source-matrix-assignment"
+          : null,
+      }],
+    });
+    const observed = [{ nutrient_code: "energy_kcal", amount: 0, value_status: "observed" }];
+    const optionalOnly = [{ nutrient_code: "sugars_g", amount: 3, value_status: "observed" }];
+    const missingOnly = [{ nutrient_code: "energy_kcal", amount: null, value_status: "missing" }];
+    const contributingSources = (guard: unknown) => JSON.parse(psql(
+      `select public.build_recipe_nutrition_contributing_sources(${jsonExpression(guard)})::text;`,
+    ));
+
+    expect(contributingSources(inputGuard("g", "g", observed))).toEqual([nutritionSource]);
+    expect(contributingSources(inputGuard("ml", "ml", observed))).toEqual([nutritionSource]);
+    expect(contributingSources(inputGuard("tbsp", "g", observed, { conversion: true })))
+      .toEqual([measurementSource, nutritionSource]);
+    expect(contributingSources(inputGuard("g", "g", optionalOnly))).toEqual([nutritionSource]);
+    expect(contributingSources(inputGuard("g", "g", missingOnly))).toEqual([]);
+    expect(contributingSources(inputGuard("개", "g", observed))).toEqual([]);
+    expect(contributingSources(inputGuard(null, "g", observed, { ingredientType: "TO_TASTE" })))
+      .toEqual([]);
+  });
+
+  it("rejects an approved source that did not contribute to this snapshot", () => {
+    const recipeId = "20000000-0000-4000-8000-00000000000d";
+    seedRecipe(recipeId, "unrelated source fixture");
+    const forged = snapshot("d");
+    forged.sources = [{
+      provider: "MEASURE",
+      dataset: "Recipe measurement fixture",
+      source_version: "2026-07-02",
+      data_basis_date: "2026-07-02",
+      license: "test-only",
+      source_url: "https://example.test/measurement",
+    }];
+
+    const result = psqlResult(writeSnapshotSql(recipeId, forged));
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("SNAPSHOT_SOURCE_MISMATCH");
+    expect(psql(`select count(*) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`))
+      .toBe("0");
+  });
+
+  // Each malformed payload uses a fresh psql process so no failed transaction can mask the next case;
+  // 15 seconds covers that process isolation while remaining far below the two-minute command budget.
   it("fails closed for extra source fields, unsafe URLs, vector drift, and status contradictions", () => {
     const recipeId = "20000000-0000-4000-8000-000000000002";
     seedRecipe(recipeId, "validator fixture");
@@ -397,6 +783,15 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     const subscriptionUrl = snapshot("a");
     subscriptionUrl.sources[0].source_url =
       "https://example.test/nutrition?subscription-key=redacted-value";
+    const percentEncodedUrl = snapshot("1");
+    percentEncodedUrl.sources[0].source_url =
+      "https://example.test/nutrition?%70%61%73%73%77%6f%72%64=redacted-value";
+    const doubleEncodedUrl = snapshot("2");
+    doubleEncodedUrl.sources[0].source_url =
+      "https://example.test/nutrition?%2570%2561%2573%2573%2577%256f%2572%2564=redacted-value";
+    const partialEncodedUrl = snapshot("3");
+    partialEncodedUrl.sources[0].source_url =
+      "https://example.test/nutrition?p%2561ssword=redacted-value";
     const vectorDrift = snapshot("e");
     vectorDrift.scalable_values.energy_kcal = 99;
     const contradiction = snapshot("f");
@@ -406,6 +801,9 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
       [extraSource, "UNSAFE_SNAPSHOT_SOURCE"],
       [unsafeUrl, "UNSAFE_SNAPSHOT_SOURCE"],
       [subscriptionUrl, "UNSAFE_SNAPSHOT_SOURCE"],
+      [percentEncodedUrl, "UNSAFE_SNAPSHOT_SOURCE"],
+      [doubleEncodedUrl, "UNSAFE_SNAPSHOT_SOURCE"],
+      [partialEncodedUrl, "UNSAFE_SNAPSHOT_SOURCE"],
       [vectorDrift, "SNAPSHOT_VECTOR_SUM_MISMATCH"],
       [contradiction, "INVALID_SNAPSHOT_STATUS"],
     ] as const) {
@@ -414,7 +812,7 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
       expect(result.stderr).toContain(error);
     }
     expect(psql(`select count(*) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe("0");
-  });
+  }, 15_000);
 
   it("denies direct client access and keeps snapshot rows append-only", () => {
     const recipeId = "20000000-0000-4000-8000-000000000003";
@@ -555,6 +953,20 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
       where id = '${alternateLinkId}';
     `);
 
+    expectStaleWrite(`
+      update public.ingredient_conversion_assignments
+      set review_status = 'approved', is_active = true,
+        assignment_reason = 'new eligible assignment race fixture',
+        reviewed_by = '${actorId}', reviewed_at = now()
+      where id = '${pendingAssignmentId}';
+    `);
+
+    expectStaleWrite(`
+      insert into public.nutrition_values (
+        profile_id, nutrient_code, source_nutrient_code, source_unit, amount, value_status
+      ) values ('${guardProfileId}', 'sugars_g', 'sugars_g', 'g', 3, 'observed');
+    `);
+
     expectStaleWrite(
       `update public.recipe_ingredients set amount = 125 where recipe_id = '${recipeId}';`,
     );
@@ -562,5 +974,69 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     expect(psql(
       `select (public.build_recipe_nutrition_input_guard('${recipeId}') = ${jsonExpression(staleGuard)})::text;`,
     )).toBe("true");
+  });
+
+  it("holds the writer recipe lock through insert so a phantom ingredient waits and later guard reuse is stale", async () => {
+    const recipeId = "20000000-0000-4000-8000-00000000000e";
+    await expectWriterWinsSnapshotRace({
+      recipeId,
+      title: "phantom recipe ingredient race fixture",
+      snapshotSeed: "e",
+      mutationSql: `
+        insert into public.ingredients (id, standard_name, category, default_unit)
+        values (
+          '60000000-0000-4000-8000-000000000002',
+          'phantom recipe ingredient race canonical ingredient', 'test', 'g'
+        );
+        insert into public.recipe_ingredients (
+          id, recipe_id, ingredient_id, amount, unit, ingredient_type, scalable, sort_order
+        ) values (
+          '68000000-0000-4000-8000-000000000001', '${recipeId}',
+          '60000000-0000-4000-8000-000000000002', 25, 'g', 'QUANT', true, 1
+        );
+      `,
+    });
+    expect(psql(
+      `select count(*) from public.recipe_ingredients where recipe_id = '${recipeId}';`,
+    )).toBe("2");
+  }, 15_000);
+
+  it("makes a writer wait for a concurrent nutrition value insert and leaves zero snapshots", async () => {
+    const recipeId = "20000000-0000-4000-8000-00000000000f";
+    await expectMutationWinsSnapshotRace({
+      recipeId,
+      title: "nutrition value race fixture",
+      barrierKey: 701607160002,
+      snapshotSeed: "f",
+      mutationSql: `
+        insert into public.nutrition_values (
+          profile_id, nutrient_code, source_nutrient_code, source_unit, amount, value_status
+        ) values (
+          '${guardProfileId}', 'sugars_g', 'sugars_g', 'g', 3, 'observed'
+        );
+      `,
+    });
+    expect(psql(`
+      select count(*) from public.nutrition_values
+      where profile_id = '${guardProfileId}' and nutrient_code = 'sugars_g';
+    `)).toBe("1");
+  }, 15_000);
+
+  it("denies service-role TRUNCATE bypasses on every guarded input table", () => {
+    expect(psql(`
+      select bool_and(not has_table_privilege('service_role', relation, 'TRUNCATE'))::text
+      from unnest(array[
+        'public.recipe_ingredients',
+        'public.nutrition_sources',
+        'public.nutrition_source_items',
+        'public.nutrition_profiles',
+        'public.nutrition_values',
+        'public.ingredient_nutrition_profiles',
+        'public.measurement_conversion_profiles',
+        'public.measurement_source_evidence',
+        'public.ingredient_conversion_assignments',
+        'public.piece_unit_weights'
+      ]) relation;
+    `)).toBe("true");
   });
 });
