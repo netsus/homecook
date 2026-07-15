@@ -6,6 +6,7 @@ const createServiceRoleClient = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
+const recalculateRecipeNutritionSnapshot = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
   if (error instanceof Error) {
     return `formatted: ${error.message}`;
@@ -27,6 +28,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/recipe-nutrition-service", () => ({
+  recalculateRecipeNutritionSnapshot,
 }));
 
 interface QueryResult<T> {
@@ -71,11 +76,17 @@ describe("recipe API contracts", () => {
     hasSupabasePublicEnv.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
+    recalculateRecipeNutritionSnapshot.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
     hasSupabasePublicEnv.mockReturnValue(true);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    recalculateRecipeNutritionSnapshot.mockResolvedValue({
+      snapshot_id: "snapshot-manual",
+      created: true,
+      is_current: true,
+    });
     delete process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK;
   });
 
@@ -1903,6 +1914,10 @@ describe("recipe API contracts", () => {
     expect(recipesInsert).not.toHaveBeenCalled();
     expect(ingredientInsert).not.toHaveBeenCalled();
     expect(stepInsert).not.toHaveBeenCalled();
+    expect(recalculateRecipeNutritionSnapshot).toHaveBeenCalledWith(
+      expect.anything(),
+      "recipe-rpc",
+    );
     expect(response.status).toBe(201);
     expect(body.data).toEqual({
       id: "recipe-rpc",

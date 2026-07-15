@@ -35,7 +35,7 @@ interface IngredientQuery {
   ): PromiseLike<{ data: RecipeNutritionIngredientRow[] | null; error: unknown }>;
 }
 
-interface RecipeNutritionServiceClient {
+export interface RecipeNutritionServiceClient {
   from(table: "recipes"): MaybeSingleQuery<RecipeNutritionRecipeRow>;
   from(table: "recipe_ingredients"): IngredientQuery;
   rpc(
