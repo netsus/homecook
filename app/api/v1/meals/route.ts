@@ -73,6 +73,7 @@ interface MealInsertRow {
   status: "registered";
   is_leftover: boolean;
   leftover_dish_id: string | null;
+  recipe_nutrition_snapshot_id: string | null;
 }
 
 type MaybeSingleResult<T> = PromiseLike<{
@@ -305,6 +306,7 @@ function toMealCreateData(row: MealInsertRow): MealCreateData {
     status: normalizeMealStatus(row.status),
     is_leftover: row.is_leftover,
     leftover_dish_id: row.leftover_dish_id,
+    recipe_nutrition_snapshot_id: row.recipe_nutrition_snapshot_id,
   };
 }
 
@@ -563,7 +565,7 @@ export async function POST(request: Request) {
       shopping_list_id: null,
       cooked_at: null,
     })
-    .select("id, recipe_id, plan_date, column_id, planned_servings, status, is_leftover, leftover_dish_id")
+    .select("id, recipe_id, plan_date, column_id, planned_servings, status, is_leftover, leftover_dish_id, recipe_nutrition_snapshot_id")
     .maybeSingle();
 
   if (insertResult.error || !insertResult.data) {

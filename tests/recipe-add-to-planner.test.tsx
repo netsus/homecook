@@ -113,6 +113,7 @@ function buildMealCreateData(): MealCreateData {
     status: "registered",
     is_leftover: false,
     leftover_dish_id: null,
+    recipe_nutrition_snapshot_id: null,
   };
 }
 

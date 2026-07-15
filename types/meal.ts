@@ -33,6 +33,7 @@ export interface MealCreateData {
   status: MealStatus;
   is_leftover: boolean;
   leftover_dish_id: string | null;
+  recipe_nutrition_snapshot_id: string | null;
 }
 
 export interface MealUpdateBody {

@@ -862,6 +862,7 @@ export function createQaFixtureMeal({
     status: "registered",
     is_leftover: leftoverDishId !== null,
     leftover_dish_id: leftoverDishId,
+    recipe_nutrition_snapshot_id: null,
   };
 
   state.createdMeals = [...state.createdMeals, meal];

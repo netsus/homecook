@@ -32,6 +32,25 @@ async function postMeal(body: Record<string, unknown>) {
   return { response, body: await response.json() };
 }
 
+function queryResult<T>(data: T, error: unknown = null, count?: number) {
+  const result = { data, error, count };
+  const query = {
+    select: vi.fn(() => query),
+    eq: vi.fn(() => query),
+    order: vi.fn(() => query),
+    limit: vi.fn(() => query),
+    in: vi.fn(() => query),
+    maybeSingle: vi.fn(async () => result),
+    then(
+      onFulfilled?: (value: typeof result) => unknown,
+      onRejected?: (reason: unknown) => unknown,
+    ) {
+      return Promise.resolve(result).then(onFulfilled, onRejected);
+    },
+  };
+  return query;
+}
+
 describe("recipe nutrition API boundaries", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -111,4 +130,123 @@ describe("recipe nutrition API boundaries", () => {
       sources: [],
     });
   }, 15_000);
+
+  it("projects one current immutable snapshot without rebuilding live nutrition relations", async () => {
+    const recipeQuery = queryResult({
+      id: "recipe-1",
+      title: "영양 레시피",
+      description: null,
+      thumbnail_url: null,
+      base_servings: 2,
+      tags: [],
+      source_type: "system",
+      view_count: 1,
+      like_count: 0,
+      save_count: 0,
+      plan_count: 0,
+      cook_count: 0,
+    });
+    const sourceQuery = queryResult(null);
+    const ingredientsQuery = queryResult([]);
+    const stepsQuery = queryResult([]);
+    const mealsQuery = queryResult([], null, 0);
+    const values = {
+      energy_kcal: { amount: 100, known_amount: null, status: "complete", display_mode: "total" },
+      carbohydrate_g: { amount: 20, known_amount: null, status: "complete", display_mode: "total" },
+      protein_g: { amount: 10, known_amount: null, status: "complete", display_mode: "total" },
+      fat_g: { amount: 5, known_amount: null, status: "complete", display_mode: "total" },
+      sodium_mg: { amount: 50, known_amount: null, status: "complete", display_mode: "total" },
+    };
+    const snapshotQuery = queryResult({
+      id: "snapshot-1",
+      base_servings: 2,
+      scalable_values_json: {
+        energy_kcal: 80,
+        carbohydrate_g: 20,
+        protein_g: 10,
+        fat_g: 5,
+        sodium_mg: 50,
+      },
+      fixed_values_json: {
+        energy_kcal: 20,
+        carbohydrate_g: 0,
+        protein_g: 0,
+        fat_g: 0,
+        sodium_mg: 0,
+      },
+      nutrient_status_json: values,
+      calculation_status: "complete",
+      calculation_quality: "direct",
+      reflected_ingredient_count: 1,
+      target_ingredient_count: 1,
+      warnings_json: [],
+      sources_json: [{
+        provider: "MFDS",
+        dataset: "공식 fixture",
+        source_version: "2026-07-01",
+        data_basis_date: null,
+        license: "test-only",
+        source_url: "https://example.test/nutrition",
+      }],
+      calculated_at: "2026-07-16T00:00:00.000Z",
+    });
+    const from = vi.fn((table: string) => {
+      if (table === "recipes") return recipeQuery;
+      if (table === "recipe_sources") return sourceQuery;
+      if (table === "recipe_ingredients") return ingredientsQuery;
+      if (table === "recipe_steps") return stepsQuery;
+      if (table === "meals") return mealsQuery;
+      if (table === "recipe_nutrition_snapshots") return snapshotQuery;
+      throw new Error(`unexpected table: ${table}`);
+    });
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
+    });
+    createServiceRoleClient.mockReturnValue({
+      from,
+      rpc: vi.fn(() => ({
+        maybeSingle: vi.fn(async () => ({ data: { id: "recipe-1", view_count: 2 }, error: null })),
+      })),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/[id]/route");
+    const response = await GET(
+      new Request("http://localhost:3000/api/v1/recipes/recipe-1"),
+      { params: Promise.resolve({ id: "recipe-1" }) },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.nutrition).toEqual({
+      basis: { amount: 2, unit: "serving" },
+      base_servings: 2,
+      values,
+      scalable_values: {
+        energy_kcal: 80,
+        carbohydrate_g: 20,
+        protein_g: 10,
+        fat_g: 5,
+        sodium_mg: 50,
+      },
+      fixed_values: {
+        energy_kcal: 20,
+        carbohydrate_g: 0,
+        protein_g: 0,
+        fat_g: 0,
+        sodium_mg: 0,
+      },
+      calculation_status: "complete",
+      calculation_quality: "direct",
+      reflected_ingredient_count: 1,
+      target_ingredient_count: 1,
+      warnings: [],
+      sources: expect.arrayContaining([expect.objectContaining({ provider: "MFDS" })]),
+      snapshot_id: "snapshot-1",
+      calculated_at: "2026-07-16T00:00:00.000Z",
+    });
+    expect(snapshotQuery.eq).toHaveBeenCalledWith("recipe_id", "recipe-1");
+    expect(snapshotQuery.eq).toHaveBeenCalledWith("is_current", true);
+    expect(from.mock.calls.map(([table]) => table)).not.toContain("nutrition_values");
+    expect(from.mock.calls.map(([table]) => table)).not.toContain("ingredient_nutrition_profiles");
+  });
 });

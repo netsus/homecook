@@ -14,6 +14,10 @@ import {
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
 import {
+  mapRecipeNutritionSnapshot,
+  type RecipeNutritionSnapshotRow,
+} from "@/lib/server/recipe-nutrition-snapshot";
+import {
   isMissingStepCookingMethodsRelation,
   RECIPE_STEP_SELECT_LEGACY,
   RECIPE_STEP_SELECT_WITH_METHODS,
@@ -53,6 +57,34 @@ function normalizePositiveNumber(value: unknown) {
   }
 
   return numberValue;
+}
+
+async function readCurrentRecipeNutritionSnapshot(
+  dbClient: NonNullable<ReturnType<typeof createServiceRoleClient>> |
+    Awaited<ReturnType<typeof createRouteHandlerClient>>,
+  recipeId: string,
+) {
+  try {
+    return await dbClient
+      .from("recipe_nutrition_snapshots")
+      .select(
+        "id, base_servings, scalable_values_json, fixed_values_json, nutrient_status_json, calculation_status, calculation_quality, reflected_ingredient_count, target_ingredient_count, warnings_json, sources_json, calculated_at",
+      )
+      .eq("recipe_id", recipeId)
+      .eq("is_current", true)
+      .maybeSingle();
+  } catch {
+    return { data: null, error: { code: "SNAPSHOT_READ_FAILED" } };
+  }
+}
+
+function projectRecipeNutritionSnapshot(value: unknown) {
+  if (!value) return buildUnavailableRecipeNutrition();
+  try {
+    return mapRecipeNutritionSnapshot(value as RecipeNutritionSnapshotRow);
+  } catch {
+    return buildUnavailableRecipeNutrition();
+  }
 }
 
 function isUsableImageUrl(value: string, { allowDataUri = false } = {}) {
@@ -218,6 +250,7 @@ export async function GET(request: Request, context: RouteContext) {
       recipeResult,
       sourceResult,
       ingredientsResult,
+      nutritionSnapshotResult,
       authResult,
     ] = await Promise.all([
       dbClient
@@ -239,6 +272,7 @@ export async function GET(request: Request, context: RouteContext) {
         )
         .eq("recipe_id", id)
         .order("sort_order", { ascending: true }),
+      readCurrentRecipeNutritionSnapshot(dbClient, id),
       routeClient.auth.getUser(),
     ]);
 
@@ -365,7 +399,9 @@ export async function GET(request: Request, context: RouteContext) {
       cook_count: recipeResult.data.cook_count,
       ingredients,
       steps,
-      nutrition: buildUnavailableRecipeNutrition(),
+      nutrition: nutritionSnapshotResult.error || !nutritionSnapshotResult.data
+        ? buildUnavailableRecipeNutrition()
+        : projectRecipeNutritionSnapshot(nutritionSnapshotResult.data),
       user_status: userStatus,
     };
 

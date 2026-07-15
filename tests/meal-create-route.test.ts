@@ -123,6 +123,7 @@ function createMealsTable({
     status: "registered";
     is_leftover: boolean;
     leftover_dish_id: string | null;
+    recipe_nutrition_snapshot_id: string | null;
   } | null>>;
 }) {
   const insertQuery = {
@@ -322,6 +323,7 @@ describe("POST /api/v1/meals", () => {
             status: "registered",
             is_leftover: false,
             leftover_dish_id: null,
+            recipe_nutrition_snapshot_id: null,
           },
           error: null,
         },
@@ -399,6 +401,7 @@ describe("POST /api/v1/meals", () => {
             status: "registered",
             is_leftover: false,
             leftover_dish_id: null,
+            recipe_nutrition_snapshot_id: "snapshot-1",
           },
           error: null,
         },
@@ -440,6 +443,7 @@ describe("POST /api/v1/meals", () => {
         status: "registered",
         is_leftover: false,
         leftover_dish_id: null,
+        recipe_nutrition_snapshot_id: "snapshot-1",
       },
       error: null,
     });
@@ -493,6 +497,7 @@ describe("POST /api/v1/meals", () => {
             status: "registered",
             is_leftover: true,
             leftover_dish_id: "550e8400-e29b-41d4-a716-446655440042",
+            recipe_nutrition_snapshot_id: null,
           },
           error: null,
         },
