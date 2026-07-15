@@ -14,10 +14,13 @@
 ## Calculator / Unit Conversion
 
 - [ ] `g/kg` 질량 경로가 승인 profile 기준으로 정확 계산된다 <!-- omo:id=accept-unit-mass-direct;stage=2;scope=backend;review=3,6 -->
+- [ ] recipe `amount + unit`은 조리에 실제 투입한 가식부 사용량으로 계산하고 구매 총중량으로 재해석하거나 가식부율을 다시 곱하지 않는다 <!-- omo:id=accept-actual-edible-recipe-amount;stage=2;scope=backend;review=3,6 -->
+- [ ] 상태 미지정 direct 질량/호환 부피는 current approved source/profile + active approved primary ingredient link의 완전한 chain이 전체 상태에서 정확히 1개일 때만 선택하고 0개/복수면 fail-closed한다 <!-- omo:id=accept-unique-default-nutrition-chain;stage=2;scope=backend;review=3,6 -->
 - [ ] `100mL` profile과 `mL/L/tbsp/tsp/cup` 입력은 g 환산 없이 부피 기준으로 직접 계산된다 <!-- omo:id=accept-unit-volume-direct;stage=2;scope=backend;review=3,6 -->
 - [ ] 그 밖의 부피는 tbsp 15mL, tsp 5mL, cup 200mL와 승인 `VOLUME_G6/G10/G15/G20/G25`만 사용한다 <!-- omo:id=accept-unit-approved-volume-class;stage=2;scope=backend;review=3,6 -->
+- [ ] 부피 환산은 active approved assignment/evidence/source의 자격 있는 경로가 전체 상태에서 정확히 1개일 때만 사용하고 0개/복수면 fail-closed한다 <!-- omo:id=accept-unique-volume-conversion-chain;stage=2;scope=backend;review=3,6 -->
 - [ ] 대표 부피 예상 질량은 `mL * representative_g / 15`이고 representative 경로가 있으면 quality가 direct가 아니다 <!-- omo:id=accept-estimated-volume-quality;stage=2;scope=backend;review=3,6 -->
-- [ ] `개`는 ingredient·크기·손질/가식 상태가 모두 정확히 일치하는 active approved piece weight만 사용한다 <!-- omo:id=accept-unit-exact-piece;stage=2;scope=backend;review=3,6 -->
+- [ ] `개/장`은 recipe 입력과 ingredient의 exact `size_code + preparation_state`가 일치하는 active approved piece weight만 사용한다. 현재 recipe row에 두 입력 필드가 없으면 fail-closed하고 직접 `g/kg`에는 size를 요구하지 않는다 <!-- omo:id=accept-unit-exact-piece;stage=2;scope=backend;review=3,6 -->
 - [ ] `TO_TASTE`, amount 결측, 미지원 단위, 변환 경로 없음은 0이 아니라 missing reason으로 남는다 <!-- omo:id=accept-unit-missing-not-zero;stage=2;scope=backend;review=3,6 -->
 - [ ] inactive/revoked/superseded/stale/needs_source_check source·profile·link·assignment·piece row를 fallback으로 소비하지 않는다 <!-- omo:id=accept-approved-current-only;stage=2;scope=backend;review=3,6 -->
 - [ ] optional nutrient는 source 기여가 있을 때만 같은 vector/value key로 제공되고 누락 key를 0으로 만들지 않는다 <!-- omo:id=accept-optional-nutrients;stage=2;scope=backend;review=3,6 -->
@@ -61,7 +64,9 @@
 
 ## Error / Permission / Security
 
-- [ ] snapshot이 없는 recipe detail은 정상 200 unavailable payload이며 404/500 또는 0값으로 위장되지 않는다 <!-- omo:id=accept-no-snapshot-normal-state;stage=2;scope=backend;review=3,6 -->
+- [ ] current snapshot row가 실제로 없는 recipe detail만 정상 200 unavailable payload와 `availability_reason='missing'`을 반환하며 404/500 또는 0값으로 위장되지 않는다 <!-- omo:id=accept-no-snapshot-normal-state;stage=2;scope=backend;review=3,6 -->
+- [ ] snapshot query throw/DB error 또는 malformed/unreadable row는 기존 detail 본문을 보존한 200 payload와 `availability_reason='temporarily_unavailable'`을 반환하고 `missing`으로 축소하지 않는다 <!-- omo:id=accept-temporary-snapshot-read-state;stage=2;scope=backend;review=3,6 -->
+- [ ] snapshot row를 정상 조회하면 `calculation_status='unavailable'`이어도 `availability_reason=null`이다 <!-- omo:id=accept-normal-snapshot-availability-null;stage=2;scope=backend;review=3,6 -->
 - [ ] 비로그인 Meal 추가는 기존 401 로그인 안내 뒤 같은 recipe/planner action으로 복귀한다 <!-- omo:id=accept-login-return-action;stage=4;scope=frontend;review=5,6 -->
 - [ ] 타 사용자 recipe/column/leftover/Meal/snapshot mutation은 RLS·service guard에서 거부된다 <!-- omo:id=accept-owner-rls;stage=2;scope=backend;review=3,6 -->
 - [ ] anon/authenticated 사용자는 snapshot payload/current pointer/backfill origin을 임의 작성·수정·삭제할 수 없다 <!-- omo:id=accept-snapshot-write-guard;stage=2;scope=backend;review=3,6 -->
@@ -75,7 +80,8 @@
 
 - [ ] 영양 영역 loading skeleton이 기존 CTA·재료·스텝을 가리거나 큰 layout shift를 만들지 않는다 <!-- omo:id=accept-ui-loading;stage=4;scope=frontend;review=5,6 -->
 - [ ] complete/partial/unavailable/error/low-quality 상태가 fixture와 실제 브라우저에서 서로 구분된다 <!-- omo:id=accept-ui-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] 영양 API 오류가 기존 Recipe Detail 전체를 막지 않고 영양 영역에만 안내/재시도를 제공한다 <!-- omo:id=accept-ui-soft-error;stage=4;scope=frontend;review=5,6 -->
+- [ ] `missing`은 정보 준비 중, `temporarily_unavailable`은 영양 전용 재시도, null은 정상 snapshot 상태로 UI에서 구분된다 <!-- omo:id=accept-ui-availability-reason;stage=4;scope=frontend;review=5,6 -->
+- [ ] `temporarily_unavailable`이 기존 Recipe Detail 전체를 막지 않고 영양 영역에만 안내/재시도를 제공한다 <!-- omo:id=accept-ui-soft-error;stage=4;scope=frontend;review=5,6 -->
 - [ ] 영양 영역은 read-only이며 편집 가능한 source/profile/snapshot control을 노출하지 않는다 <!-- omo:id=accept-ui-read-only;stage=4;scope=frontend;review=5,6 -->
 - [ ] 핵심 상태·값·단위·예상/최소 의미가 색상만이 아니라 텍스트/접근 가능한 이름으로 전달된다 <!-- omo:id=accept-ui-a11y-semantics;stage=4;scope=frontend;review=5,6 -->
 - [ ] 390px와 320px에서 전체 가로 overflow, CTA 잘림, 핵심 copy 붕괴, touch target 축소가 없다 <!-- omo:id=accept-mobile-sentinels;stage=4;scope=frontend;review=5,6 -->
@@ -93,7 +99,7 @@
 
 ## Data Setup / Preconditions
 
-- [ ] official five docs와 SOT가 v1.7.19/v1.5.25/v1.3.22/v1.3.20/v1.2.24로 일치한다 <!-- omo:id=accept-official-docs;stage=2;scope=shared;review=3,6 -->
+- [ ] official five docs와 SOT가 v1.7.20/v1.5.26/v1.3.23/v1.3.21/v1.2.25로 일치한다 <!-- omo:id=accept-official-docs;stage=2;scope=shared;review=3,6 -->
 - [ ] PR #1005 merge/reviewed head와 PR #1006 merge/reviewed head exact ancestry를 검증한다 <!-- omo:id=accept-predecessor-commits;stage=2;scope=shared;review=3,6 -->
 - [ ] exact pilot logical batch/handoff checksum과 30 recipe/124 ingredient closure를 검증한다 <!-- omo:id=accept-pilot-pin;stage=2;scope=backend;review=3,6 -->
 - [ ] calculator/API/frontend complete/partial/unavailable fixture가 준비된다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
@@ -105,10 +111,10 @@
 
 ### Vitest / Unit / Integration
 
-- [ ] 순수 calculator 산술, unit priority, representative classes, exact piece, missing/zero, vector formula를 단위 테스트로 고정한다 <!-- omo:id=accept-vitest-calculator;stage=2;scope=backend;review=3,6 -->
+- [ ] 순수 calculator의 실제 투입량, exactly-one direct/conversion chain, unit priority, exact piece fail-closed, missing/zero, vector formula를 단위 테스트로 고정한다 <!-- omo:id=accept-vitest-calculator;stage=2;scope=backend;review=3,6 -->
 - [ ] hash/idempotency/current switch/warning order/backfill/rollback을 service/integration test로 고정한다 <!-- omo:id=accept-vitest-snapshot;stage=2;scope=backend;review=3,6 -->
 - [ ] PostgreSQL integration에서 constraints/RLS/owner/concurrency/transaction rollback을 검증한다 <!-- omo:id=accept-db-integration;stage=2;scope=backend;review=3,6 -->
-- [ ] API complete/partial/unavailable/no-snapshot/error와 기존 recipe response 회귀를 검증한다 <!-- omo:id=accept-api-integration;stage=2;scope=backend;review=3,6 -->
+- [ ] API normal snapshot complete/partial/unavailable(null), no-snapshot(missing), query/DB/malformed failure(temporarily_unavailable)와 기존 recipe response 회귀를 검증한다 <!-- omo:id=accept-api-integration;stage=2;scope=backend;review=3,6 -->
 - [ ] frontend component에서 한국어 copy, status, selected servings, read-only/error fallback을 검증한다 <!-- omo:id=accept-frontend-vitest;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright

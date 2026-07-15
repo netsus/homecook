@@ -10,6 +10,9 @@
 
 ## Revision Notes
 
+- `v2` recipe nutrition default selection and availability contract repair (2026-07-16)
+  - 사용자가 recipe row에 손질·크기·가식 상태를 추가하지 않고 실제 투입 가식부 사용량과 exactly-one 승인 profile/conversion 선택을 사용하는 최소 contract-evolution을 명시 승인했다.
+  - `개/장` exact `size_code + preparation_state` fail-closed와 Recipe Detail `availability_reason`의 missing/temporary/null 의미를 잠갔다. endpoint/status/error code와 target 49 tables는 늘리지 않으며 coverage 13/124, 21/30을 그대로 보존한다.
 - `v2` recipe nutrition snapshot attribution contract repair (2026-07-15)
   - 사용자가 recipe snapshot의 계산 결과와 실제 기여 source를 함께 불변 pin하는 최소 contract-evolution을 명시 승인했다.
   - 미구현 target의 `nutrition_profile_id`를 제거하고 exact 6-field `sources_json`을 추가했다. `nutrition_profiles`/`nutrition_values`는 read-only를 유지하며 public API shape·endpoint/status와 target 49 tables는 늘리지 않는다.

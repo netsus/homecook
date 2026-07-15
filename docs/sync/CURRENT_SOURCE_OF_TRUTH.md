@@ -1,17 +1,33 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.19.md`
-- `docs/화면정의서-v1.5.25.md`
-- `docs/유저flow맵-v1.3.22.md`
-- `docs/db설계-v1.3.20.md`
-- `docs/api문서-v1.2.24.md`
+- `docs/요구사항기준선-v1.7.20.md`
+- `docs/화면정의서-v1.5.26.md`
+- `docs/유저flow맵-v1.3.23.md`
+- `docs/db설계-v1.3.21.md`
+- `docs/api문서-v1.2.25.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Recipe Nutrition Default Selection And Availability Contract-Evolution `2026-07-16`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.20 | recipe 정량을 실제 투입 가식부 사용량으로 정의하고, 상태 미지정 직접 profile·부피 환산의 exactly-one 선택과 exact piece fail-closed를 잠금 |
+| 화면정의서 v1.5.26 | Recipe Detail의 snapshot 부재와 일시 조회 실패를 구분하고 영양 영역만 재시도하는 soft state를 추가 |
+| 유저플로우 v1.3.23 | 정상 snapshot, snapshot 부재, query/DB/malformed 실패 분기와 결정적 writer 선택 흐름을 동기화 |
+| DB v1.3.21 | `recipe_ingredients` 상태 컬럼을 늘리지 않는 service selection guard와 API 파생 field 비저장 계약을 추가. target 49 tables 유지 |
+| API v1.2.25 | `GET /recipes/{id}` nutrition에 nullable `availability_reason`을 additive 추가하고 200 success wrapper를 유지. 81개(active 80 + tombstone 1) 유지 |
+
+> 사용자는 2026-07-16에 recipe 입력을 늘리지 않는 최소 계약을 명시 승인했다. `recipe_ingredients`에 `preparation_state`, `size_code`, `edible_state`를 추가하지 않으며, `amount + unit`은 껍질·뼈 포함 구매 총중량이 아니라 조리에 실제 투입하는 가식부 사용량이다.
+> 직접 `g/kg` 또는 profile과 호환되는 직접 부피는 current approved source/profile과 active approved primary ingredient link가 canonical ingredient의 전체 상태에서 정확히 1개인 완전한 chain일 때만 선택한다. 부피 환산도 active approved assignment/evidence/source 경로가 정확히 1개일 때만 허용한다. 후보가 0개 또는 복수면 첫 row를 고르지 않고 `partial/unavailable`로 둔다.
+> `개/장`은 recipe 입력과 exact `size_code + preparation_state`가 일치하는 승인 piece weight가 필요하다. 현재 recipe row에는 두 입력 필드가 없으므로 일반적으로 fail-closed한다. 직접 질량 입력은 piece 크기를 요구하지 않는다. 조리 손실률·잔존율은 계속 미모델링 한계다.
+> `availability_reason='missing'`은 current snapshot row가 실제로 없을 때만 사용한다. query throw/DB error 또는 malformed/unreadable row payload는 `temporarily_unavailable`, 정상 row를 읽었으면 그 row의 `calculation_status='unavailable'`이어도 `availability_reason=null`이다. 기존 detail 본문과 HTTP 200 성공 wrapper를 유지하고 temporary 상태에서는 영양 영역만 재시도한다.
+> 새 endpoint·HTTP status·error code·DB table/column은 없다. immutable snapshot payload와 exact 6-field `sources_json` authority도 유지한다. approved exact ingredient coverage `13/124`, 최소 한 link가 있는 FoodSafety recipe `21/30`은 정상 sparse baseline이며 결측을 0 또는 거짓 complete로 만들지 않는다.
 
 ## Recipe Nutrition Snapshot Attribution Repair Contract-Evolution `2026-07-15`
 
