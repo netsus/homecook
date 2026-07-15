@@ -86,6 +86,27 @@ type CalculatorInput = {
   ingredients: CalculatorIngredient[];
 };
 
+type CalculatorValue = {
+  amount: number | null;
+  known_amount: number | null;
+  status: "complete" | "partial" | "unavailable";
+  display_mode: "total" | "minimum" | null;
+};
+
+type CalculatorResult = {
+  base_servings: number;
+  basis: { amount: number; unit: "serving" };
+  values: Record<string, CalculatorValue>;
+  scalable_values: Record<string, number>;
+  fixed_values: Record<string, number>;
+  calculation_status: "complete" | "partial" | "unavailable";
+  calculation_quality: "direct" | "estimated" | "mixed" | null;
+  reflected_ingredient_count: number;
+  target_ingredient_count: number;
+  missing_reasons: string[];
+  warnings: string[];
+};
+
 const CORE_VALUES: Record<NutrientCode, NutrientValue> = {
   energy_kcal: { amount: 100, value_status: "observed" },
   carbohydrate_g: { amount: 20, value_status: "observed" },
@@ -178,7 +199,7 @@ function requireFunction<T extends (...args: never[]) => unknown>(
 describe("recipe nutrition calculator", () => {
   it("uses direct g/kg mass and matching 100mL volume before representative conversion", async () => {
     const calculator = await calculatorModule();
-    const calculate = requireFunction<(input: CalculatorInput) => Record<string, any>>(
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
       calculator,
       "calculateRecipeNutrition",
     );
@@ -225,7 +246,7 @@ describe("recipe nutrition calculator", () => {
     ["VOLUME_G25", 25],
   ])("uses only approved %s representative volume and marks quality estimated", async (code, grams) => {
     const calculator = await calculatorModule();
-    const calculate = requireFunction<(input: CalculatorInput) => Record<string, any>>(
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
       calculator,
       "calculateRecipeNutrition",
     );
@@ -253,7 +274,7 @@ describe("recipe nutrition calculator", () => {
 
   it("uses an exact active approved piece weight and treats TO_TASTE or mismatches as missing, never zero", async () => {
     const calculator = await calculatorModule();
-    const calculate = requireFunction<(input: CalculatorInput) => Record<string, any>>(
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
       calculator,
       "calculateRecipeNutrition",
     );
@@ -304,7 +325,7 @@ describe("recipe nutrition calculator", () => {
 
   it("keeps observed zero distinct from missing and omits absent optional nutrients", async () => {
     const calculator = await calculatorModule();
-    const calculate = requireFunction<(input: CalculatorInput) => Record<string, any>>(
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
       calculator,
       "calculateRecipeNutrition",
     );
@@ -333,7 +354,7 @@ describe("recipe nutrition calculator", () => {
 
   it("derives complete, partial, unavailable and direct, estimated, mixed independently", async () => {
     const calculator = await calculatorModule();
-    const calculate = requireFunction<(input: CalculatorInput) => Record<string, any>>(
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
       calculator,
       "calculateRecipeNutrition",
     );
@@ -368,14 +389,14 @@ describe("recipe nutrition calculator", () => {
 
   it("keeps fixed contributions fixed when scaling selected servings", async () => {
     const calculator = await calculatorModule();
-    const calculate = requireFunction<(input: CalculatorInput) => Record<string, any>>(
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
       calculator,
       "calculateRecipeNutrition",
     );
     const scale = requireFunction<(
-      result: Record<string, any>,
+      result: CalculatorResult,
       selectedServings: number,
-    ) => Record<string, any>>(calculator, "scaleNutritionForServings");
+    ) => CalculatorResult>(calculator, "scaleNutritionForServings");
     const result = calculate(recipeInput([
       directIngredient({ id: "scalable", scalable: true, amount: 100 }),
       directIngredient({ id: "fixed", scalable: false, amount: 50 }),
@@ -391,7 +412,7 @@ describe("recipe nutrition calculator", () => {
 
   it("produces the same canonical hash and warning order regardless of ingredient input order", async () => {
     const calculator = await calculatorModule();
-    const calculate = requireFunction<(input: CalculatorInput) => Record<string, any>>(
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
       calculator,
       "calculateRecipeNutrition",
     );
@@ -412,7 +433,7 @@ describe("recipe nutrition calculator", () => {
 
   it("fails closed for inactive, unapproved, revoked, superseded, stale or drifted predecessor rows", async () => {
     const calculator = await calculatorModule();
-    const calculate = requireFunction<(input: CalculatorInput) => Record<string, any>>(
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
       calculator,
       "calculateRecipeNutrition",
     );
