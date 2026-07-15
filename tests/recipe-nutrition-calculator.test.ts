@@ -431,6 +431,26 @@ describe("recipe nutrition calculator", () => {
       .not.toBe(hash(recipeInput([a, b])));
   });
 
+  it("orders source tuples by null-first Unicode ordinal rules without locale dependence", async () => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult & {
+      sources: Array<{ provider: string; data_basis_date: string | null }>;
+    }>(calculator, "calculateRecipeNutrition");
+    const lowerAscii = directIngredient({ id: "lower-ascii" });
+    lowerAscii.nutrition!.source.provider = "a-provider";
+    lowerAscii.nutrition!.source.data_basis_date = "2026-01-01";
+    const upperAscii = directIngredient({ id: "upper-ascii" });
+    upperAscii.nutrition!.source.provider = "Z-provider";
+    upperAscii.nutrition!.source.data_basis_date = null;
+
+    const result = calculate(recipeInput([lowerAscii, upperAscii]));
+
+    expect(result.sources.map((source) => source.provider)).toEqual([
+      "Z-provider",
+      "a-provider",
+    ]);
+  });
+
   it("fails closed for inactive, unapproved, revoked, superseded, stale or drifted predecessor rows", async () => {
     const calculator = await calculatorModule();
     const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(

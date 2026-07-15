@@ -178,6 +178,20 @@ function canonicalStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function compareUnicodeOrdinal(left: string, right: string) {
+  const leftCodePoints = Array.from(left, (character) => character.codePointAt(0)!);
+  const rightCodePoints = Array.from(right, (character) => character.codePointAt(0)!);
+  const length = Math.min(leftCodePoints.length, rightCodePoints.length);
+
+  for (let index = 0; index < length; index += 1) {
+    if (leftCodePoints[index] !== rightCodePoints[index]) {
+      return leftCodePoints[index] - rightCodePoints[index];
+    }
+  }
+
+  return leftCodePoints.length - rightCodePoints.length;
+}
+
 function canonicalInput(input: RecipeNutritionCalculatorInput) {
   return {
     recipe_id: input.recipe_id,
@@ -188,7 +202,8 @@ function canonicalInput(input: RecipeNutritionCalculatorInput) {
     rounding_policy_version:
       input.rounding_policy_version ?? RECIPE_NUTRITION_ROUNDING_POLICY_VERSION,
     ingredients: [...input.ingredients].sort((left, right) =>
-      left.id.localeCompare(right.id) || left.ingredient_id.localeCompare(right.ingredient_id)
+      compareUnicodeOrdinal(left.id, right.id) ||
+      compareUnicodeOrdinal(left.ingredient_id, right.ingredient_id)
     ),
   };
 }
@@ -344,12 +359,41 @@ function stableWarnings(warnings: Iterable<string>) {
   return [...new Set(warnings)].sort((left, right) =>
     (WARNING_INDEX.get(left) ?? Number.MAX_SAFE_INTEGER) -
       (WARNING_INDEX.get(right) ?? Number.MAX_SAFE_INTEGER) ||
-    left.localeCompare(right)
+    compareUnicodeOrdinal(left, right)
   );
 }
 
 function sourceTuple(source: RecipeNutritionSourceAttribution) {
-  return canonicalStringify(source);
+  return [
+    source.provider,
+    source.dataset,
+    source.source_version,
+    source.data_basis_date,
+    source.license,
+    source.source_url,
+  ] as const;
+}
+
+function compareNullableUnicodeOrdinal(left: string | null, right: string | null) {
+  if (left === right) return 0;
+  if (left === null) return -1;
+  if (right === null) return 1;
+  return compareUnicodeOrdinal(left, right);
+}
+
+function compareSourceAttribution(
+  left: RecipeNutritionSourceAttribution,
+  right: RecipeNutritionSourceAttribution,
+) {
+  const leftTuple = sourceTuple(left);
+  const rightTuple = sourceTuple(right);
+
+  for (let index = 0; index < leftTuple.length; index += 1) {
+    const comparison = compareNullableUnicodeOrdinal(leftTuple[index], rightTuple[index]);
+    if (comparison !== 0) return comparison;
+  }
+
+  return 0;
 }
 
 function outputNutrientCodes(input: RecipeNutritionCalculatorInput) {
@@ -385,7 +429,8 @@ export function calculateRecipeNutrition(
   const qualities = new Set<"direct" | "estimated">();
   const sources = new Map<string, RecipeNutritionSourceAttribution>();
   const sortedIngredients = [...input.ingredients].sort((left, right) =>
-    left.id.localeCompare(right.id) || left.ingredient_id.localeCompare(right.ingredient_id)
+    compareUnicodeOrdinal(left.id, right.id) ||
+    compareUnicodeOrdinal(left.ingredient_id, right.ingredient_id)
   );
   let reflectedIngredientCount = 0;
   let targetIngredientCount = 0;
@@ -452,7 +497,7 @@ export function calculateRecipeNutrition(
         license: ingredient.nutrition!.source.license,
         source_url: ingredient.nutrition!.source.source_url,
       };
-      sources.set(sourceTuple(attribution), attribution);
+      sources.set(canonicalStringify(sourceTuple(attribution)), attribution);
     }
   }
 
@@ -520,9 +565,7 @@ export function calculateRecipeNutrition(
     target_ingredient_count: targetIngredientCount,
     missing_reasons: [...new Set(missingReasons)].sort(),
     warnings: stableWarnings(warnings),
-    sources: [...sources.entries()]
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([, source]) => source),
+    sources: [...sources.values()].sort(compareSourceAttribution),
     input_hash: hashRecipeNutritionInput(input),
     calculation_version:
       input.calculation_version ?? RECIPE_NUTRITION_CALCULATION_VERSION,
