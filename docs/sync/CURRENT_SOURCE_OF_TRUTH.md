@@ -1,17 +1,35 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.17.md`
-- `docs/화면정의서-v1.5.23.md`
-- `docs/유저flow맵-v1.3.20.md`
-- `docs/db설계-v1.3.18.md`
-- `docs/api문서-v1.2.22.md`
+- `docs/요구사항기준선-v1.7.18.md`
+- `docs/화면정의서-v1.5.24.md`
+- `docs/유저flow맵-v1.3.21.md`
+- `docs/db설계-v1.3.19.md`
+- `docs/api문서-v1.2.23.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Recipe Nutrition, Prepared Food Catalog, And Product Planner Contract-Evolution `2026-07-15`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.18 | Recipe Meal/완제품 분리 ADR, pinned ingredient predecessor, snapshot·계획 영양·결측·대표 환산·workflow 제외·호환/보안/비목표를 재잠금 |
+| 화면정의서 v1.5.24 | 영양/완제품 화면의 loading·empty·error·read-only·partial·unavailable, login return-to-action과 recipe/product action 경계를 공식화 |
+| 유저플로우 v1.3.21 | recipe/product 판별 흐름, additive read model, owner/read-only/login gate, shopping/cooking/leftover 구조적 제외와 계획 영양 합산 흐름을 동기화 |
+| DB v1.3.19 | 49개 table 유지. `warnings_json`, immutable product `basis_relations_json`, `meals.recipe_id NOT NULL`, version pin/RLS/column guard를 구체화 |
+| API v1.2.23 | endpoint 수 81개(active 80 + tombstone 1) 유지. recipe context `base_servings/scalable_values/fixed_values`, `basis_relations[]`, additive `product_entries`, no-duplicate read, wrapper/error/권한·멱등성·상태 경계를 재잠금 |
+
+> 사용자는 2026-07-13 `nutrition-products-planner-expansion-20260713.md` 전체 계획을 명시 승인하고 계획대로 진행하도록 지시했다. public data pilot PR #1005는 merge commit `3866952c3e81bedfd80593f576e5ed6183ec7538`(reviewed head `028c6e8f13d3c8586bbbfaa9dad42f0ae65c1420`)로 선행 merge됐다.
+> 이 계약은 아래 `Ingredient Nutrition Conversion Model Contract-Evolution 2026-07-14`를 pinned predecessor로 소비한다. 계산은 active current approved source/profile/ingredient link/conversion assignment/piece weight만 사용하고 runtime public API 호출이나 무검수 promotion을 허용하지 않는다.
+> 기존 `meals`와 `POST /meals`는 recipe workflow 전용이다. 완제품은 `food_products`, immutable `food_product_nutrition_versions`, `product_planner_entries`로 분리하며 public은 일반 사용자 read-only, private은 owner-only다. planner/meals의 기존 recipe 배열은 유지하고 `product_entries`를 additive 제공하며 같은 recipe row를 중복 반환하지 않는다.
+> product entry는 shopping preview/list, cooking session, leftover, recipe count·XP/activity와 `meals.status`에서 구조적으로 제외한다. 컬럼에 Recipe Meal 또는 ProductPlannerEntry가 하나라도 연결되면 기존 호환 `409 COLUMN_HAS_MEALS`를 유지한다.
+> `tbsp=15mL`, `tsp=5mL`, 국내 조리용 `cup=200mL`와 승인 `VOLUME_G6/G10/G15/G20/G25` 대표값을 사용한 결과는 `약/예상`이다. piece weight는 재료·크기·손질/가식 상태가 정확히 일치할 때만 사용한다. product의 `serving/package/g/ml` 교차 환산은 pin된 immutable version의 승인 `basis_relations[]` 직접 관계가 있을 때만 허용한다.
+> recipe snapshot은 input hash/calculation version/base servings/scalable·fixed vector/영양소별 상태와 known amount/reflected·target count/missing reason/quality/`warnings[]`를 불변 보존한다. `TO_TASTE`·결측·변환 불가는 0이 아니며 partial은 `최소 X`, unavailable은 amount null이다. 선택 인분 공식은 `scalable × selected/base + fixed`이고 요리모드 인분 조절 UI는 계속 금지한다.
+> 합계는 실제 섭취가 아닌 `계획 영양`이다. 의료 처방·질환 코칭·actual consumption·OCR·바코드·외식·밀키트는 MVP 비목표이며 기존 삭제 endpoint와 domain rule은 되살리거나 완화하지 않는다. 이 PR은 공식 계약/SOT만 소유하고 후속 workpack·acceptance와 제품 구현은 별도 Codex 작업으로 진행한다.
 
 ## Ingredient Nutrition Conversion Model Contract-Evolution `2026-07-14`
 

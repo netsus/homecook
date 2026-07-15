@@ -24,7 +24,7 @@ This plan fixes the process so future work cannot claim recipe extraction qualit
 - The user-facing artifact `.omx/artifacts/youtube-12-after-improvement-20260605/extraction-results.json` was produced by `.omx/artifacts/youtube-12-after-improvement-20260605/run-report.test.ts`.
 - `tests/youtube-recipio-parity.test.ts` builds visual recipe mock results from `tests/fixtures/youtube-recipio-parity/parity-v1.json`.
 - `lib/server/youtube-import.ts` restricts `setYoutubeVisualRecipeExtractorForTest` to tests, so the core shortcut was not in normal production provider selection.
-- `docs/api문서-v1.2.22.md` §6-2 forbids fixed recipe fixtures for specific `youtube_video_id` during extraction and forbids storing raw video, raw frames, raw provider responses, API keys, secrets, or Recipio data.
+- `docs/api문서-v1.2.23.md` §6-2 forbids fixed recipe fixtures for specific `youtube_video_id` during extraction and forbids storing raw video, raw frames, raw provider responses, API keys, secrets, or Recipio data.
 
 ## Principles
 
