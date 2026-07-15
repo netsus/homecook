@@ -58,7 +58,7 @@
   },
   "frontend": {
     "required_routes": [
-      "/recipes/[id]"
+      "/recipe/[id]"
     ],
     "required_states": [
       "loading",
