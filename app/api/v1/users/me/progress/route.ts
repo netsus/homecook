@@ -10,16 +10,31 @@ import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabas
 import type { UserProgressData } from "@/types/user-progress";
 
 export async function GET() {
-  const routeClient = await createRouteHandlerClient();
-  const authResult = await routeClient.auth.getUser();
+  let routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>;
+  try {
+    routeClient = await createRouteHandlerClient();
+  } catch {
+    return fail("INTERNAL_ERROR", "사용자 진도를 불러오지 못했어요.", 500);
+  }
+  let authResult;
+  try {
+    authResult = await routeClient.auth.getUser();
+  } catch {
+    return fail("INTERNAL_ERROR", "사용자 진도를 불러오지 못했어요.", 500);
+  }
   const user = authResult.data.user;
 
   if (!user) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    UserProgressDbClient & UserBootstrapDbClient;
+  let dbClient: UserProgressDbClient & UserBootstrapDbClient;
+  try {
+    dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+      UserProgressDbClient & UserBootstrapDbClient;
+  } catch {
+    return fail("INTERNAL_ERROR", "사용자 진도를 불러오지 못했어요.", 500);
+  }
 
   try {
     await ensurePublicUserRow(dbClient, user);

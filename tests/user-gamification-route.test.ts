@@ -87,6 +87,50 @@ describe("user gamification routes", () => {
     expect(readUserGamification).not.toHaveBeenCalled();
   });
 
+  it("returns the existing 500 envelope when the gamification client cannot initialize", async () => {
+    createRouteHandlerClient.mockRejectedValue(new Error("Supabase environment variables are missing"));
+
+    const { GET } = await importReadRoute();
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "사용자 성장 정보를 불러오지 못했어요.",
+        fields: [],
+      },
+    });
+    expect(readUserGamification).not.toHaveBeenCalled();
+  });
+
+  it("returns the existing 500 envelope when the gamification user lookup fails", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockRejectedValue(new Error("auth provider unavailable")),
+      },
+    });
+
+    const { GET } = await importReadRoute();
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "사용자 성장 정보를 불러오지 못했어요.",
+        fields: [],
+      },
+    });
+    expect(readUserGamification).not.toHaveBeenCalled();
+  });
+
   it("returns the documented gamification envelope for an authenticated user", async () => {
     const routeClient = {
       auth: {

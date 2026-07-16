@@ -50,7 +50,10 @@ export default async function MealScreenPage({
         ? false
         : Boolean(user);
 
-  if (hasSupabasePublicEnv() && !initialAuthenticated) {
+  if (
+    authOverride === "guest"
+    || (hasSupabasePublicEnv() && !initialAuthenticated)
+  ) {
     const returnParams = new URLSearchParams();
     if (slot) returnParams.set("slot", slot);
     if (pageSearchParams.productAction === "edit" || pageSearchParams.productAction === "delete") {

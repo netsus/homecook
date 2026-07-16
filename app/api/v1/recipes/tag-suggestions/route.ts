@@ -112,8 +112,14 @@ function serializeSuggestedTag(tag: RecipeTagWrite) {
 }
 
 export async function POST(request: Request) {
-  const routeClient = await createRouteHandlerClient();
-  const authResult = await routeClient.auth.getUser();
+  let authResult;
+
+  try {
+    const routeClient = await createRouteHandlerClient();
+    authResult = await routeClient.auth.getUser();
+  } catch {
+    return fail("INTERNAL_ERROR", "태그 추천을 불러오지 못했어요.", 500);
+  }
 
   if (!authResult.data.user) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);

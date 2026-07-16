@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
+import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -279,6 +281,7 @@ async function installRecipeDetailRoute(page: Page) {
           save_count: 8,
           plan_count: 4,
           cook_count: 3,
+          nutrition: buildUnavailableRecipeNutrition(),
           ingredients: [
             {
               id: "ingredient-kimchi",

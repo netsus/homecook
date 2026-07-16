@@ -5,6 +5,7 @@ import {
   getCookingMethodSynonyms,
   getCookingMethodTaxonomyMetadata,
 } from "@/lib/cooking-method-taxonomy";
+import { getQaFixtureCookingMethods, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { CookingMethodItem, CookingMethodListData } from "@/types/recipe";
 
@@ -131,27 +132,35 @@ async function readCookingMethodSynonyms(dbClient: CookingMethodsDbClient) {
 export async function GET(request: NextRequest) {
   void request;
 
-  const dbClient = (createServiceRoleClient() ?? await createRouteHandlerClient()) as unknown as CookingMethodsDbClient;
-  let result = await dbClient
-    .from("cooking_methods")
-    .select("id, code, label, color_key, category_code, is_system")
-    .order("display_order", { ascending: true })
-    .order("created_at", { ascending: true });
+  if (isQaFixtureModeEnabled()) {
+    return ok(getQaFixtureCookingMethods());
+  }
 
-  if (isSchemaCacheMiss(result.error)) {
-    result = await dbClient
+  try {
+    const dbClient = (createServiceRoleClient() ?? await createRouteHandlerClient()) as unknown as CookingMethodsDbClient;
+    let result = await dbClient
       .from("cooking_methods")
-      .select("id, code, label, color_key, is_system")
+      .select("id, code, label, color_key, category_code, is_system")
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: true });
-  }
 
-  if (result.error || !result.data) {
+    if (isSchemaCacheMiss(result.error)) {
+      result = await dbClient
+        .from("cooking_methods")
+        .select("id, code, label, color_key, is_system")
+        .order("display_order", { ascending: true })
+        .order("created_at", { ascending: true });
+    }
+
+    if (result.error || !result.data) {
+      return fail("INTERNAL_ERROR", "조리방법 목록을 불러오지 못했어요.", 500);
+    }
+
+    const synonymMap = buildSynonymMap(await readCookingMethodSynonyms(dbClient));
+    const methods = result.data.map((row) => normalizeCookingMethodRow(row, synonymMap));
+
+    return ok({ methods } satisfies CookingMethodListData);
+  } catch {
     return fail("INTERNAL_ERROR", "조리방법 목록을 불러오지 못했어요.", 500);
   }
-
-  const synonymMap = buildSynonymMap(await readCookingMethodSynonyms(dbClient));
-  const methods = result.data.map((row) => normalizeCookingMethodRow(row, synonymMap));
-
-  return ok({ methods } satisfies CookingMethodListData);
 }

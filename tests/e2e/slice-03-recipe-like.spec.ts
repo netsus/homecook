@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN =
@@ -31,6 +33,7 @@ function buildRecipeDetail({
     save_count: 89,
     plan_count: 52,
     cook_count: 34,
+    nutrition: buildUnavailableRecipeNutrition(),
     ingredients: [
       {
         id: "mock-ing-1",

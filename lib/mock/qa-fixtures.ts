@@ -1,8 +1,13 @@
 import fixtureData from "@/qa/fixtures/slices-01-05.json";
+import {
+  getCookingMethodSynonyms,
+  getCookingMethodTaxonomyMetadata,
+} from "@/lib/cooking-method-taxonomy";
 import { getIngredientTaxonomyMetadata } from "@/lib/ingredient-categories";
 import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
 import { sortPlannerColumns } from "@/lib/planner/fixed-slots";
 import type {
+  CookingMethodListData,
   IngredientItem,
   IngredientListData,
   RecipeBookCreateData,
@@ -270,6 +275,31 @@ export const MOCK_DISCOVERY_FILTER_GREEN_ONION_ID = fixtureData.ingredients[1]!.
 export const MOCK_DISCOVERY_FILTER_BEEF_ID = fixtureData.ingredients[2]!.id;
 export const QA_FIXTURE_MAIN_USER_ID = fixtureData.ids.mainFixtureUserId;
 export const QA_FIXTURE_OTHER_USER_ID = fixtureData.ids.otherFixtureUserId;
+
+export function getQaFixtureCookingMethods(): CookingMethodListData {
+  return {
+    methods: [...fixtureData.cookingMethods]
+      .sort((left, right) => left.displayOrder - right.displayOrder)
+      .map((method) => {
+        const taxonomy = getCookingMethodTaxonomyMetadata({ methodCode: method.code });
+        const item: CookingMethodListData["methods"][number] = {
+          id: method.id,
+          code: method.code,
+          label: method.label,
+          color_key: method.colorKey,
+          is_system: method.isSystem,
+        };
+
+        if (taxonomy.category_code) {
+          item.category_code = taxonomy.category_code;
+          item.category_label = taxonomy.category_label;
+          item.synonyms = getCookingMethodSynonyms(method.code);
+        }
+
+        return item;
+      }),
+  };
+}
 
 export function isQaFixtureModeEnabled() {
   return process.env.NODE_ENV !== "production" && process.env.HOMECOOK_ENABLE_QA_FIXTURES === "1";

@@ -44,7 +44,10 @@ export default async function MenuAddPage({ searchParams }: MenuAddPageProps) {
         ? false
         : Boolean(user);
 
-  if (hasSupabasePublicEnv() && !initialAuthenticated) {
+  if (
+    authOverride === "guest"
+    || (hasSupabasePublicEnv() && !initialAuthenticated)
+  ) {
     const menuAddParams = new URLSearchParams();
     if (date) menuAddParams.set("date", date);
     if (columnId) menuAddParams.set("columnId", columnId);

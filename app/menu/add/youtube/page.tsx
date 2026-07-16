@@ -47,7 +47,10 @@ export default async function YoutubeImportPage({ searchParams }: YoutubeImportP
         ? false
         : Boolean(user);
 
-  if (hasSupabasePublicEnv() && !initialAuthenticated) {
+  if (
+    authOverride === "guest"
+    || (hasSupabasePublicEnv() && !initialAuthenticated)
+  ) {
     const queryParts: string[] = [];
     if (date) queryParts.push(`date=${encodeURIComponent(date)}`);
     if (columnId) queryParts.push(`columnId=${encodeURIComponent(columnId)}`);
