@@ -313,13 +313,13 @@
 - request/response/error/type, schema/RLS/transaction, two read projections, column guard와 structural exclusions를 함께 구현한다.
 - implementation actor는 acceptance backend 항목과 evidence를 갱신하지만 자기 Stage 3 승인을 하지 않는다.
 
-#### Stage 2 Implementation Evidence — Pending Independent Stage 3 Review
+#### Stage 2 Implementation Evidence — Approved By Independent Stage 3 Review
 
 - RED: 최초 5개 파일 9개 테스트 중 계약 미구현에 해당하는 8개 실패를 확인했고, ProductPlannerEntry가 연결된 column 삭제가 200으로 잘못 통과하는 회귀 테스트도 별도로 409 기대 실패로 고정했다.
 - GREEN/REFACTOR: 신규 service/API/read/RLS/regression과 기존 planner/meals/column 회귀 묶음이 8 files, 66 tests로 통과했다.
 - real PostgreSQL: non-5432 ephemeral PostgreSQL에서 공식 6개 migration 순서, 실제 `ensureUserBootstrapState`, constraint/RLS/direct grant, atomic pin/old pin/delete, current-version create race와 column-delete/create race를 1 file, 11 tests로 검증했다. Stage 3 수리에서 test-only `AFTER INSERT` 예외 주입이 statement 전체를 rollback하고 scoped residual row가 0임을 확인했으며, 관측된 `0`은 `complete/0`, missing/null은 `unavailable/null`로 구분했다.
 - repository gate: `pnpm verify:backend`가 product 1,519 passed/22 skipped, production build, security Playwright 12 passed로 통과했다. source-of-truth/workflow-v2/workpack/automation-spec/OMO bookkeeping validator와 `git diff --check`도 통과했다.
-- 이 기록은 Stage 2 구현 증거이며 Stage 3 승인으로 간주하지 않는다. fresh reviewer가 새 exact PR head를 독립 검수해야 한다.
+- 이 Stage 2 구현 증거는 별도 수리 뒤 fresh independent Stage 3 reviewer가 exact head `25b56d1a767a8fc03f85024b418ead202e8d900b`에서 `STAGE3_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다. 이 승인은 backend Stage 3에만 해당하며 Stage 4 이후 승인을 대신하지 않는다.
 
 ### Stage 3 Backend Review
 
@@ -327,7 +327,10 @@
 - required finding은 별도 repair role이 처리하고 같은 reviewer가 새 exact head를 재검수한다.
 - reviewer 승인, actual verification, closeout sync, current-head checks green 전 backend merge 금지.
 - 첫 Stage 3 review는 implementation head `8137ef7c00e9c23fc09d0c2937650be351be780a`에서 `REQUEST_CHANGES`였다. required finding 2건은 실제 case-scoped FK 역순 reset/row-count assertion·insert 후 예외 rollback·observed-zero fixture 보강과 roadmap/workflow-v2 Stage 2/3 projection drift 수리다.
-- repair role은 자기 변경을 승인하지 않는다. real PostgreSQL 11/11 GREEN과 전체 backend/validator 재검증 뒤 fresh reviewer가 새 exact head를 다시 승인해야 한다.
+- repair role은 자기 변경을 승인하지 않았다. 별도 수리 commit `25b56d1a767a8fc03f85024b418ead202e8d900b`이 두 finding을 닫은 뒤 fresh independent reviewer가 같은 exact head를 `STAGE3_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다.
+- 승인 근거는 targeted 66/66, isolated PostgreSQL 11/11, `pnpm verify:backend` product 1,519 passed/22 intended skipped + production build + security Playwright 12/12, source-of-truth/workflow/workpack/automation/OMO/closeout validators green이다. GitHub exact reviewed-head checks도 success 16, intended skip 2, pending/fail/cancel 0이다.
+- post-closeout projection commit/head와 그 head의 checks는 아직 없으므로 backend merge gate의 `current_head_sha`는 pending이고 `all_checks_green=false`다. 오케스트레이터가 새 head를 push하고 그 exact head를 다시 검증하기 전 merge하지 않는다.
+- 이 승인은 Stage 3 backend review만 닫는다. Stage 4 UI, authority precheck, Stage 5, final authority, Stage 6은 pending이고 전체 lifecycle은 `in_progress`, `Design Status`는 `temporary`다.
 
 ### Stage 4 Frontend
 
@@ -358,6 +361,7 @@
 - [x] shopping/cooking/leftover/recipe counts/XP/activity에서 제품 entry가 구조적으로 제외된다 <!-- omo:id=delivery-product-entry-workflow-exclusion;stage=2;scope=shared;review=3,6 -->
 - [x] isolated PostgreSQL에서 constraint/RLS/two-session race/rollback/old pin/delete/cleanup이 통과한다 <!-- omo:id=delivery-product-entry-real-db;stage=2;scope=backend;review=3 -->
 - [x] public actual artifact/row와 production/staging write가 0이고 synthetic public fixture가 격리된다 <!-- omo:id=delivery-product-entry-zero-write;stage=2;scope=shared;review=3,6 -->
+- [x] fresh independent Stage 3 reviewer가 repair exact head `25b56d1a767a8fc03f85024b418ead202e8d900b`를 `STAGE3_APPROVED` 0/0/0으로 승인한다 <!-- omo:id=delivery-product-entry-stage3-review;stage=2;scope=backend;review=3 -->
 
 ### Frontend — Stage 4 / Review Stages 5 And 6
 

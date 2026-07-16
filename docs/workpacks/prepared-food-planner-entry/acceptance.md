@@ -145,7 +145,7 @@
 - [x] real old pin/current change/product delete/new create 409/existing entry retention을 검증한다 <!-- omo:id=accept-product-entry-pg-old-pin;stage=2;scope=backend;review=3 -->
 - [x] real column Recipe Meal/product entry/concurrent race guard와 cleanup을 검증한다 <!-- omo:id=accept-product-entry-pg-column-cleanup;stage=2;scope=backend;review=3 -->
 
-> Stage 3 repair evidence: isolated PostgreSQL 1 file/11 tests가 GREEN이다. 각 case 전후 scoped FK 역순 reset과 residual row 0 assertion, test-only `AFTER INSERT` 예외의 statement rollback, observed `complete/0`과 missing `unavailable/null` 구분을 포함한다. 이 증거는 repair 결과이며 fresh Stage 3 re-review 승인을 대신하지 않는다.
+> Stage 3 repair evidence: isolated PostgreSQL 1 file/11 tests가 GREEN이다. 각 case 전후 scoped FK 역순 reset과 residual row 0 assertion, test-only `AFTER INSERT` 예외의 statement rollback, observed `complete/0`과 missing `unavailable/null` 구분을 포함한다. fresh independent Stage 3 reviewer가 repair exact head `25b56d1a767a8fc03f85024b418ead202e8d900b`를 `STAGE3_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다. 이 승인은 backend Stage 3에만 해당하며 Stage 4 이후를 닫지 않는다.
 
 ### Playwright / UI
 
@@ -158,6 +158,7 @@
 ### Manual Only
 
 - [x] independent Stage 1.5 reviewer가 exact head `fe210b7169094edc77b64e91a730d86720d598ae`의 이 문서·README·automation/work-item/status/design artifacts를 `DOC_GATE_APPROVED` 0/0/0으로 승인했다
+- [x] independent Stage 3 reviewer가 exact backend head `25b56d1a767a8fc03f85024b418ead202e8d900b`를 targeted 66/66, isolated PostgreSQL 11/11, backend gate와 exact-head GitHub checks 근거로 `STAGE3_APPROVED` 0/0/0 승인했다
 - [ ] full repository migration stack + Supabase/PostgREST/auth claim 동등성을 plain isolated PostgreSQL과 비교한다
 - [ ] physical iOS/Android narrow device 및 실제 screen reader로 확인한다
 - [ ] 향후 approved public promotion artifact가 생기면 license/stable key/basis/core nutrition을 운영 승인 후 별도 load한다
