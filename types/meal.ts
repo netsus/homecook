@@ -1,5 +1,6 @@
 import type { ApiResponse } from "@/types/api";
 import type { MealStatus } from "@/types/planner";
+import type { MealProductPlannerEntryData } from "@/types/product-planner-entry";
 
 export interface MealListItemData {
   id: string;
@@ -13,6 +14,7 @@ export interface MealListItemData {
 
 export interface MealListData {
   items: MealListItemData[];
+  product_entries: MealProductPlannerEntryData[];
 }
 
 export interface MealCreateBody {

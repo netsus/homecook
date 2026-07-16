@@ -4,6 +4,7 @@ import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import { getQaFixturePlannerData, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
+import { dedupeProductPlannerEntries } from "@/lib/server/prepared-food-planner-entry";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { MealStatus, PlannerData, PlannerMealData } from "@/types/planner";
+import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 interface QueryError {
   message: string;
@@ -100,6 +102,10 @@ interface PlannerDbClient {
   from(table: "meals"): PlannerMealsTable;
   from(table: "recipes"): RecipesTable;
   from(table: "shopping_lists"): ShoppingListsTable;
+  rpc(
+    name: "list_product_planner_entries",
+    args: Record<string, unknown>,
+  ): PromiseLike<{ data: unknown; error: QueryError | null }>;
 }
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -245,6 +251,19 @@ export async function GET(request: NextRequest) {
     return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
   }
 
+  const productEntriesResult = await dbClient.rpc("list_product_planner_entries", {
+    p_user_id: user.id,
+    p_start_date: dateRange.startDate,
+    p_end_date: dateRange.endDate,
+    p_column_id: null,
+  });
+  if (productEntriesResult.error || !Array.isArray(productEntriesResult.data)) {
+    return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
+  }
+  const productEntries = dedupeProductPlannerEntries(
+    productEntriesResult.data as ProductPlannerEntryData[],
+  );
+
   const recipeIds = [...new Set(mealsResult.data.map((meal) => meal.recipe_id))];
   const shoppingListIds = [
     ...new Set(
@@ -301,6 +320,7 @@ export async function GET(request: NextRequest) {
         recipeMap,
         shoppingListMap,
       )),
+    product_entries: productEntries,
   };
 
   return ok(responseData);

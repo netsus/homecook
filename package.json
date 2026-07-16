@@ -36,6 +36,7 @@
     "test:nutrition-model:postgres": "node scripts/run-ingredient-nutrition-postgres-integration.mjs",
     "test:recipe-nutrition:postgres": "node scripts/run-recipe-nutrition-postgres-integration.mjs",
     "test:prepared-food-catalog:postgres": "node scripts/run-prepared-food-catalog-postgres-integration.mjs",
+    "test:prepared-food-planner-entry:postgres": "node scripts/run-prepared-food-planner-entry-postgres-integration.mjs",
     "nutrition:recipes:backfill": "node scripts/recipe-nutrition-backfill.mjs",
     "test:youtube-corpus": "vitest run tests/youtube-corpus.test.ts",
     "test:youtube-dictionary": "vitest run tests/youtube-dictionary-resolution.test.ts",

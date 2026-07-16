@@ -137,9 +137,66 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "closeout": null,
-  "branch": "docs/prepared-food-planner-entry",
-  "pr_path": "https://github.com/netsus/homecook/pull/1016",
+  "closeout": {
+    "phase": "projecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "in_progress",
+      "design_status": "temporary",
+      "delivery_checklist": "pending",
+      "design_authority": "pending",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "pending",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "Fresh independent Codex Stage 3 re-review approved exact PR #1017 backend head 25b56d1a767a8fc03f85024b418ead202e8d900b with Blocker/Important/Suggestion 0/0/0 after the separate repair closed the two required findings from head 8137ef7c00e9c23fc09d0c2937650be351be780a",
+        "Eight targeted Vitest files passed 66/66 for ProductPlannerEntry API, service, read models, RLS, regression, planner/meals compatibility, and column guards",
+        "tests/prepared-food-planner-entry-postgres.integration.test.ts via scripts/run-prepared-food-planner-entry-postgres-integration.mjs passed isolated PostgreSQL 11/11 with case-scoped FK-order reset, zero residual rows, test-only AFTER INSERT statement rollback, observed complete zero versus missing unavailable null, two-session pin and column races, RLS/direct grants, old pins, delete, and cleanup",
+        "pnpm verify:backend passed product tests 1519 with 22 intended skips, production build, and security Playwright 12/12",
+        "GitHub PR #1017 exact reviewed-head checks at 25b56d1a767a8fc03f85024b418ead202e8d900b: 16 success, 2 intended skips, pending/fail/cancel 0",
+        "Source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping, closeout sync, and git diff validators passed on the reviewed backend head",
+        "Approved public operational rows and production/staging writes remain 0",
+        "Full Supabase/PostgREST equivalence and production-scale query-plan/contention measurement remain Manual Only; Stage 4 UI, authority precheck, Stage 5, final authority, and Stage 6 remain pending"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-stage3-closeout-projection",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 1,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-16T16:26:39Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage3_findings_repaired_and_reapproved",
+      "evidence_sources": [
+        "GitHub PR #1017 independent Stage 3 review and exact-head re-review",
+        "commit 25b56d1a767a8fc03f85024b418ead202e8d900b Stage 3 repair",
+        "docs/workpacks/prepared-food-planner-entry/README.md Stage 2 and Stage 3 evidence",
+        "tests/prepared-food-planner-entry-postgres.integration.test.ts isolated PostgreSQL 11-case suite"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-16T16:26:39Z",
+      "status_synced_at": "2026-07-16T16:26:39Z",
+      "pr_body_synced_at": "pending-post-closeout-head"
+    }
+  },
+  "branch": "feature/be-prepared-food-planner-entry",
+  "pr_path": "https://github.com/netsus/homecook/pull/1017",
   "out_of_scope": [
     "GET planner nutrition and meal day week planned nutrition aggregation",
     "Prepared food catalog write implementation public importer operator CLI seed runtime provider lookup or promotion",
@@ -152,5 +209,5 @@
     "Any undocumented endpoint status error code request response field workflow status or database surface"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs remains the current repository roadmap state and the full workflow lifecycle remains in_progress. The first independent Stage 1.5 review at b137aa4e9d090827a80301ab47cc55710821a166 recorded Blocker/Important/Suggestion 0/6/0; one separate repair-final pass closed all six findings, and the fresh independent exact-head re-review approved fe210b7169094edc77b64e91a730d86720d598ae with DOC_GATE_APPROVED and 0/0/0. That exact head had 7 successful current-head checks, 5 intended docs skips, and 0 pending/fail checks. approval_state=codex_approved and verification_status=passed describe only the Stage 1 design-contract/docs gate; Stage 4 evidence, authority precheck, Stage 5, final authority, and Stage 6 remain pending, so Design Status stays temporary and the slice is not complete or auto-merge eligible. Exactly three mutation routes plus existing GET /planner and GET /meals additive product_entries are locked; recipe-only meals/items and old clients remain compatible and duplicate rows are forbidden. Create atomically pins the current immutable product nutrition version and name/brand snapshot, patch changes only quantity using the old pinned relation, and soft-deleted new create returns PRODUCT_DELETED while existing pins remain. Same-unit or exactly one direct pinned relation is allowed; inference and missing-as-zero are forbidden. MEAL_SCREEN expected energy uses the pinned entry quantity and preserves partial/unavailable/missing-not-zero. FOOD_PRODUCT_PICKER consumes the existing opaque cursor API with reset/dedupe/last-page/latest-query guards. The isolated DB plan uses the real ensureUserBootstrapState path and explicit cleanup. Product entries remain outside Meal status, shopping, cooking, leftovers, recipe counts, planner_registered XP, and meal_add_path_used activity. Current approved public artifacts and operational public rows are zero, synthetic public fixtures are isolated-only, and production/staging writes stay zero. PLANNER_WEEK, MEAL_SCREEN, and MENU_ADD require before+after at 390/320/desktop; picker/create require after evidence. Docs PR #1016 merge, full repository migration/Supabase/PostgREST equivalence, physical-device/screen-reader review, future public promotion, and production-scale contention/query plans remain Manual Only or later-stage work."
+  "notes": "Canonical Stage 3 backend projection: .workflow-v2/work-items/prepared-food-planner-entry.json#closeout. Stage 1 docs PR #1016 is merged and backend PR #1017 remains open on feature/be-prepared-food-planner-entry. The first independent Stage 3 review requested changes at exact implementation head 8137ef7c00e9c23fc09d0c2937650be351be780a with Blocker/Important/Suggestion 0/2/0. A separate repair role closed both findings in commit 25b56d1a767a8fc03f85024b418ead202e8d900b, and a fresh independent exact-head re-review returned STAGE3_APPROVED with 0/0/0. Targeted tests passed 66/66; isolated PostgreSQL passed 11/11; pnpm verify:backend passed product 1519 with 22 intended skips, production build, and security Playwright 12/12; exact reviewed-head GitHub checks passed 16 with 2 intended skips and pending/fail/cancel 0. Approved public operational rows and production/staging writes remain 0. This approval closes only Stage 3 backend review: lifecycle remains in_progress, Design Status stays temporary, and Stage 4 UI, authority precheck, Stage 5, final authority, and Stage 6 remain pending. Full Supabase/PostgREST equivalence and production-scale query-plan/contention measurement remain Manual Only. The post-closeout PR head and its checks do not exist yet, so merge_gate current_head_sha is pending and all_checks_green is false. closeout_phase=projecting closeout_recovery=ci_resync:1 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1017 independent Stage 3 review and exact-head re-review,commit 25b56d1a767a8fc03f85024b418ead202e8d900b Stage 3 repair,docs/workpacks/prepared-food-planner-entry/README.md Stage 2 and Stage 3 evidence,tests/prepared-food-planner-entry-postgres.integration.test.ts isolated PostgreSQL 11-case suite | latest_reason_code=stage3_findings_repaired_and_reapproved | last_recovery_at=2026-07-16T16:26:39Z"
 }

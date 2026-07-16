@@ -1,4 +1,5 @@
 import type { ApiResponse } from "@/types/api";
+import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 export type MealStatus = "registered" | "shopping_done" | "cook_done";
 export const DEFAULT_PLANNER_COLUMN_NAMES = ["아침", "점심", "저녁"] as const;
@@ -27,6 +28,7 @@ export interface PlannerMealData {
 export interface PlannerData {
   columns: PlannerColumnData[];
   meals: PlannerMealData[];
+  product_entries: ProductPlannerEntryData[];
 }
 
 export type PlannerResponse = ApiResponse<PlannerData>;

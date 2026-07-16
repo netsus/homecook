@@ -88,6 +88,16 @@ interface MealsTable {
 export interface PlannerColumnsDbClient {
   from(table: "meal_plan_columns"): PlannerColumnsTable;
   from(table: "meals"): MealsTable;
+  rpc(
+    name: "delete_owned_planner_column",
+    args: {
+      p_user_id: string;
+      p_column_id: string;
+    },
+  ): PromiseLike<{
+    data: unknown;
+    error: QueryError | null;
+  }>;
 }
 
 const PLANNER_COLUMN_NAME_MAX_LENGTH = 30;

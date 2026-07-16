@@ -43,9 +43,9 @@ export interface FoodProductPatchInput {
 
 export interface FoodProductNutrientValue {
   amount: number | null;
-  known_amount: null;
-  status: "complete" | "unavailable";
-  display_mode: "total" | null;
+  known_amount: number | null;
+  status: "complete" | "partial" | "unavailable";
+  display_mode: "total" | "minimum" | null;
 }
 
 export interface FoodProductSourceAttribution {
@@ -73,7 +73,7 @@ export interface FoodProductData {
     basis: { amount: number; unit: FoodProductBasisUnit };
     values: Record<string, FoodProductNutrientValue>;
     calculation_status: "complete" | "partial" | "unavailable";
-    calculation_quality: "direct" | null;
+    calculation_quality: "direct" | "estimated" | "mixed" | null;
     warnings: string[];
     sources: FoodProductSourceAttribution[];
   };
