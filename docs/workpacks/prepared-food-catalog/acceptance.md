@@ -50,17 +50,18 @@
 - [x] concurrent nutrition PATCH에서 한 writer만 성공하고 loser는 `409 NUTRITION_VERSION_CONFLICT`다 <!-- omo:id=accept-nutrition-version-conflict;stage=2;scope=backend;review=3 -->
 - [x] conflict나 injected failure가 orphan version/profile/value 또는 잘못된 pointer를 남기지 않고 이전 current를 보존한다 <!-- omo:id=accept-nutrition-update-rollback;stage=2;scope=backend;review=3 -->
 - [x] 이전 immutable version은 current 변경 뒤에도 보존된다 <!-- omo:id=accept-old-version-pin-retained;stage=2;scope=backend;review=3 -->
-- [ ] 이를 pin한 기존 planner entry가 current 변경 뒤에도 보존되는지는 후속 `prepared-food-planner-entry`에서 검증한다 <!-- omo:id=accept-existing-planner-pin-retained;stage=2;scope=backend;review=3 -->
+
+> 후속 이관: 이를 pin한 기존 planner entry의 보존은 `prepared-food-planner-entry` acceptance에서 검증한다. 이 catalog Stage 2의 완료 주장에 포함하지 않는다.
 
 ## Soft Delete / Idempotency
 
 - [x] `DELETE /food-products/{product_id}`는 본인 private 제품의 `deleted_at`만 설정하고 `{ deleted: true }`를 반환한다 <!-- omo:id=accept-product-soft-delete;stage=2;scope=backend;review=3 -->
 - [x] 이미 삭제된 본인 제품을 다시 삭제해도 같은 `200` 결과이고 추가 version/delete side effect가 없다 <!-- omo:id=accept-product-delete-idempotent;stage=2;scope=backend;review=3 -->
 - [x] soft-delete 후 old nutrition versions가 삭제·변경되지 않는다 <!-- omo:id=accept-product-delete-retains-history;stage=2;scope=backend;review=3 -->
-- [ ] soft-delete 후 기존 planner pins가 삭제·변경되지 않는지는 후속 `prepared-food-planner-entry`에서 검증한다 <!-- omo:id=accept-product-delete-retains-planner-pin;stage=2;scope=backend;review=3 -->
 - [x] 삭제 제품은 catalog read에서 제외된다 <!-- omo:id=accept-product-delete-hidden;stage=2;scope=backend;review=3 -->
-- [ ] 삭제 제품의 신규 entry 생성이 후속 entry endpoint에서 `409 PRODUCT_DELETED`를 반환하는지는 `prepared-food-planner-entry`에서 검증한다 <!-- omo:id=accept-product-delete-blocks-new-entry;stage=2;scope=backend;review=3 -->
 - [x] 이 슬라이스는 planner entry endpoint나 table behavior를 새로 구현하지 않는다 <!-- omo:id=accept-product-delete-no-planner-scope;stage=2;scope=shared;review=3 -->
+
+> 후속 이관: soft-delete 뒤 기존 planner pin 보존과 신규 entry의 `409 PRODUCT_DELETED`는 `prepared-food-planner-entry` acceptance에서 검증한다. 이 catalog Stage 2의 완료 주장에 포함하지 않는다.
 
 ## Permission / RLS / Security
 
@@ -104,7 +105,8 @@
 - [x] SOT가 요구사항 v1.7.20, 화면 v1.5.26, 유저 flow v1.3.23, DB v1.3.21, API v1.2.25로 일치한다 <!-- omo:id=accept-product-official-docs;stage=2;scope=shared;review=3 -->
 - [x] `ingredient-nutrition-conversion-model` predecessor가 merged이고 shared nutrition schema를 사용할 수 있다 <!-- omo:id=accept-product-predecessor;stage=2;scope=backend;review=3 -->
 - [x] isolated-test-only synthetic public distinct-stable-key pair, A/B private owner pair, deleted product, sparse nutrient, conflict writer fixture가 준비된다 <!-- omo:id=accept-product-fixtures;stage=2;scope=backend;review=3 -->
-- [ ] 사용자 기존 DB/container/volume과 분리된 isolated PostgreSQL에 전체 migration과 fixture가 적용된다 <!-- omo:id=accept-product-isolated-postgres;stage=2;scope=backend;review=3 -->
+
+> 현재 자동 증거는 사용자 기존 DB/container/volume과 분리된 PostgreSQL 17에 관련 predecessor와 catalog migration을 적용한 범위다. 전체 repository migration stack과 fixture는 아래 Manual Only에서 미완료로 유지한다.
 
 ## Automation Split
 
@@ -113,7 +115,7 @@
 - [x] list scope/cursor/projection과 public stable-key no-merge를 테스트한다 <!-- omo:id=accept-product-vitest-read;stage=2;scope=backend;review=3 -->
 - [x] manual name/nullable brand/basis/energy/exact optional nutrient/null-missing/404·422·unsupported nutrient validation을 테스트한다 <!-- omo:id=accept-product-vitest-validation;stage=2;scope=backend;review=3 -->
 - [x] atomic create, metadata-only update, immutable nutrition update, rollback을 테스트한다 <!-- omo:id=accept-product-vitest-versioning;stage=2;scope=backend;review=3 -->
-- [x] public/cross-owner denial, idempotent delete, deleted search/new-entry block prerequisite를 테스트한다 <!-- omo:id=accept-product-vitest-policy;stage=2;scope=backend;review=3 -->
+- [x] public/cross-owner denial, idempotent delete, deleted catalog search exclusion을 테스트한다 <!-- omo:id=accept-product-vitest-policy;stage=2;scope=backend;review=3 -->
 
 ### PostgreSQL Integration
 
@@ -125,5 +127,5 @@
 
 - [x] 독립 Stage 1.5 Codex reviewer가 README/acceptance/automation/work-item/status 계약을 승인한다
 - [ ] 독립 Stage 3 Codex reviewer가 exact current head의 contract, RLS, concurrency, rollback evidence를 승인한다
-- [ ] full Supabase/PostgREST 환경과 plain isolated PostgreSQL의 차이를 별도로 확인한다
+- [ ] 전체 repository migration stack과 fixture를 적용하고 full Supabase/PostgREST 환경과 plain isolated PostgreSQL의 차이를 별도로 확인한다
 - [ ] 현재 approved public promotion artifact 0건을 유지하고, 향후 운영 public catalog load 전 source별 license·stable key·basis·핵심 영양 검수와 promotion 승인을 별도로 수행한다

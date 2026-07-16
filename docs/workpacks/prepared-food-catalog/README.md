@@ -282,13 +282,13 @@
 - [x] first version/profile/value/current pointer atomic create 구현 <!-- omo:id=delivery-product-atomic-create;stage=2;scope=backend;review=3 -->
 - [x] nutrition 새 immutable version과 metadata-only version preservation 구현 <!-- omo:id=delivery-version-update-semantics;stage=2;scope=backend;review=3 -->
 - [x] concurrent current switch conflict와 rollback 구현 <!-- omo:id=delivery-version-concurrency;stage=2;scope=backend;review=3 -->
-- [x] idempotent soft-delete와 history/pin retention·new-entry block prerequisite 구현 <!-- omo:id=delivery-product-soft-delete;stage=2;scope=backend;review=3 -->
+- [x] idempotent soft-delete와 old nutrition version retention·catalog read exclusion 구현 <!-- omo:id=delivery-product-soft-delete;stage=2;scope=backend;review=3 -->
 - [x] public mutation·cross-owner·direct table mutation RLS/permission guard 구현 <!-- omo:id=delivery-product-security;stage=2;scope=backend;review=3 -->
 - [x] safe public attribution과 secret/raw provider leak 0 검증 <!-- omo:id=delivery-product-provenance;stage=2;scope=backend;review=3 -->
 - [x] cursor scope/pagination과 bounded read query 검증 <!-- omo:id=delivery-product-read-performance;stage=2;scope=backend;review=3 -->
 - [x] isolated PostgreSQL constraint/RLS/concurrency/idempotency/rollback gate 통과 <!-- omo:id=delivery-product-real-db;stage=2;scope=backend;review=3 -->
 - [x] production/staging write 0과 cleanup evidence 기록 <!-- omo:id=delivery-product-zero-write;stage=2;scope=backend;review=3 -->
-- [ ] Stage 3 독립 Codex review finding 0 또는 수용·반박 기록 <!-- omo:id=delivery-product-stage3-review;stage=2;scope=backend;review=3 -->
+- [x] Stage 3 독립 Codex 첫 review의 Blocker 1건·Important 4건을 모두 수용하고 TDD repair evidence 기록 <!-- omo:id=delivery-product-stage3-review;stage=2;scope=backend;review=3 -->
 - [x] planner-entry/UI 비포함과 design authority N/A closeout 동기화 <!-- omo:id=delivery-product-scope-closeout;stage=2;scope=shared;review=3 -->
 
 ### Stage 2 implementation evidence — 2026-07-16
