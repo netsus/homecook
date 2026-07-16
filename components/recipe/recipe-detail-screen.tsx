@@ -10,6 +10,7 @@ import { LoginGateModal } from "@/components/auth/login-gate-modal";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
+import { RecipeNutritionCard } from "@/components/recipe/recipe-nutrition-card";
 import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
@@ -73,6 +74,7 @@ type DetailErrorKind = "not-found" | "load-failed" | null;
 type LikeRequestState = "idle" | "pending";
 type FeedbackTone = "error" | "status";
 type SaveModalState = "idle" | "loading" | "ready" | "error";
+type NutritionRequestState = "idle" | "loading";
 type RecipeDetailTab = "ingredients" | "steps" | "reviews";
 
 function getStepCookingMethodAssistiveLabel(
@@ -156,6 +158,8 @@ export function RecipeDetailScreen({
   const [detailState, setDetailState] = useState<DetailState>("loading");
   const [detailErrorKind, setDetailErrorKind] = useState<DetailErrorKind>(null);
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
+  const [nutritionRequestState, setNutritionRequestState] =
+    useState<NutritionRequestState>("idle");
   const [selectedServings, setSelectedServings] = useState(1);
   const [activeTab, setActiveTab] = useState<RecipeDetailTab>("ingredients");
   const [isAuthenticated, setIsAuthenticated] = useState(initialAuthenticated);
@@ -190,13 +194,29 @@ export function RecipeDetailScreen({
   const saveBooksRequestRef = React.useRef<Promise<RecipeBookSummary[]> | null>(
     null,
   );
+  const nutritionRequestSequenceRef = React.useRef(0);
+  const currentRecipeIdRef = React.useRef(recipeId);
+  currentRecipeIdRef.current = recipeId;
 
   const loadRecipe = useCallback(async () => {
+    const requestedRecipeId = recipeId;
+    const requestSequence = nutritionRequestSequenceRef.current + 1;
+    nutritionRequestSequenceRef.current = requestSequence;
+
     try {
       setDetailState("loading");
+      setNutritionRequestState("idle");
       setDetailErrorKind(null);
-      const data = await fetchJson<RecipeDetail>(`/api/v1/recipes/${recipeId}`);
-      if (!isSafeDisplayText(data.title)) {
+      const data = await fetchJson<RecipeDetail>(
+        `/api/v1/recipes/${requestedRecipeId}`,
+      );
+      if (
+        requestSequence !== nutritionRequestSequenceRef.current ||
+        currentRecipeIdRef.current !== requestedRecipeId
+      ) {
+        return;
+      }
+      if (data.id !== requestedRecipeId || !isSafeDisplayText(data.title)) {
         setRecipe(null);
         setDetailErrorKind("not-found");
         setDetailState("error");
@@ -205,6 +225,12 @@ export function RecipeDetailScreen({
       setRecipe(data);
       setDetailState("ready");
     } catch (error) {
+      if (
+        requestSequence !== nutritionRequestSequenceRef.current ||
+        currentRecipeIdRef.current !== requestedRecipeId
+      ) {
+        return;
+      }
       setRecipe(null);
       setDetailErrorKind(
         isApiFetchError(error) && error.status === 404
@@ -215,17 +241,51 @@ export function RecipeDetailScreen({
     }
   }, [recipeId]);
 
+  const refreshNutrition = useCallback(async () => {
+    const requestedRecipeId = recipeId;
+    const requestSequence = nutritionRequestSequenceRef.current + 1;
+    nutritionRequestSequenceRef.current = requestSequence;
+    setNutritionRequestState("loading");
+
+    try {
+      const data = await fetchJson<RecipeDetail>(
+        `/api/v1/recipes/${requestedRecipeId}`,
+      );
+      if (
+        requestSequence !== nutritionRequestSequenceRef.current ||
+        currentRecipeIdRef.current !== requestedRecipeId ||
+        data.id !== requestedRecipeId ||
+        !isSafeDisplayText(data.title)
+      ) {
+        return;
+      }
+
+      setRecipe((current) => current
+        ? { ...current, nutrition: data.nutrition }
+        : current);
+    } catch {
+      // The existing temporary state stays visible after the card-only loading state.
+    } finally {
+      if (
+        requestSequence === nutritionRequestSequenceRef.current &&
+        currentRecipeIdRef.current === requestedRecipeId
+      ) {
+        setNutritionRequestState("idle");
+      }
+    }
+  }, [recipeId]);
+
   useEffect(() => {
     void loadRecipe();
   }, [loadRecipe, recipeId]);
 
   useEffect(() => {
-    if (!recipe) {
+    if (!recipe?.id || !recipe.base_servings) {
       return;
     }
 
     setSelectedServings(recipe.base_servings);
-  }, [recipe]);
+  }, [recipe?.base_servings, recipe?.id]);
 
   useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
@@ -957,6 +1017,7 @@ export function RecipeDetailScreen({
               setIsLightboxOpen(true);
             }}
             onProtectedAction={handleProtectedAction}
+            onRetryNutrition={() => void refreshNutrition()}
             onSelectedServingsChange={setSelectedServings}
             onShare={handleShare}
             plannerCountLabel={desktopPlannerCountLabel}
@@ -965,6 +1026,7 @@ export function RecipeDetailScreen({
             saveCountLabel={desktopSaveCountLabel}
             scaledIngredients={scaledIngredients}
             selectedServings={selectedServings}
+            isNutritionRefreshing={nutritionRequestState === "loading"}
           />
         </div>
       ) : null}
@@ -1318,7 +1380,7 @@ export function RecipeDetailScreen({
         >
           <button
             aria-label="뒤로 가기"
-            className="absolute left-4 top-[calc(12px+env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-alpha-92)] text-[var(--foreground)] shadow-[0_2px_8px_var(--shadow-color-strong)]"
+            className="absolute left-4 top-[calc(12px+env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-alpha-92)] text-[var(--foreground)] shadow-[0_2px_8px_var(--shadow-color-strong)]"
             onClick={appReturn.goBack}
             type="button"
           >
@@ -1497,7 +1559,7 @@ export function RecipeDetailScreen({
               <div className="flex items-center gap-2">
                 <button
                   aria-label="인분 줄이기"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] text-base font-medium text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] text-base font-medium text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={selectedServings <= 1}
                   onClick={() =>
                     setSelectedServings((value) => Math.max(1, value - 1))
@@ -1511,7 +1573,7 @@ export function RecipeDetailScreen({
                 </span>
                 <button
                   aria-label="인분 늘리기"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand)] text-base font-bold text-[var(--text-inverse)]"
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--brand)] text-base font-bold text-[var(--text-inverse)]"
                   onClick={() => setSelectedServings((value) => value + 1)}
                   type="button"
                 >
@@ -1519,6 +1581,13 @@ export function RecipeDetailScreen({
                 </button>
               </div>
             </div>
+
+            <RecipeNutritionCard
+              isRefreshing={nutritionRequestState === "loading"}
+              nutrition={recipe.nutrition}
+              onRetry={() => void refreshNutrition()}
+              selectedServings={selectedServings}
+            />
 
             <ul>
               {scaledIngredients.map((ingredient, idx) => {
@@ -1753,10 +1822,12 @@ function RecipeDetailWebView({
   cookCountLabel,
   isAuthenticated,
   isLikePending,
+  isNutritionRefreshing,
   likeCountLabel,
   onCook,
   onOpenLightbox,
   onProtectedAction,
+  onRetryNutrition,
   onSelectedServingsChange,
   onShare,
   plannerCountLabel,
@@ -1769,10 +1840,12 @@ function RecipeDetailWebView({
   cookCountLabel: string;
   isAuthenticated: boolean;
   isLikePending: boolean;
+  isNutritionRefreshing: boolean;
   likeCountLabel: string;
   onCook: () => void;
   onOpenLightbox: (index: number) => void;
   onProtectedAction: (type: "like" | "save" | "planner") => void;
+  onRetryNutrition: () => void;
   onSelectedServingsChange: (value: number | ((current: number) => number)) => void;
   onShare: () => void;
   plannerCountLabel: string;
@@ -1921,6 +1994,26 @@ function RecipeDetailWebView({
               </div>
             </section>
 
+            <section aria-label="인분별 예상 영양" className="web-recipe-nutrition-section">
+              <div className="web-recipe-nutrition-serving">
+                <div>
+                  <h2>인분 조절</h2>
+                  <p>선택한 인분에 맞춰 전체 영양값과 재료량을 함께 확인하세요.</p>
+                </div>
+                <WebStepper
+                  onChange={onSelectedServingsChange}
+                  value={selectedServings}
+                />
+              </div>
+              <RecipeNutritionCard
+                isRefreshing={isNutritionRefreshing}
+                nutrition={recipe.nutrition}
+                onRetry={onRetryNutrition}
+                selectedServings={selectedServings}
+                variant="web"
+              />
+            </section>
+
             <div className="web-recipe-reading-grid">
               <section className="web-reading-section web-reading-section-grid">
                 <div className="web-ingredient-section-head">
@@ -1928,10 +2021,6 @@ function RecipeDetailWebView({
                     <h2 className="web-reading-title">재료</h2>
                     <p>인분을 바꾸면 아래 재료량이 즉시 바뀝니다</p>
                   </div>
-                  <WebStepper
-                    onChange={onSelectedServingsChange}
-                    value={selectedServings}
-                  />
                 </div>
                 <ul className="web-ingredient-list">
                   {scaledIngredients.map((ingredient, idx) => {

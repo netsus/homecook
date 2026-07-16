@@ -1,0 +1,27 @@
+{
+  "verdict": "pass",
+  "score": 96,
+  "blocker_count": 0,
+  "findings": [],
+  "evidence": [
+    "recipe-detail-before-390-final.png",
+    "recipe-detail-after-390-approved.png",
+    "recipe-detail-before-320-final.png",
+    "recipe-detail-after-320-approved.png",
+    "recipe-detail-before-desktop.png",
+    "recipe-detail-after-desktop.png",
+    "recipe-detail-after-desktop-scrolled.png",
+    "recipe-detail-mobile-serving-card-390-final.png",
+    "recipe-detail-nutrition-card-390.png",
+    "recipe-detail-nutrition-card-320.png",
+    "recipe-detail-nutrition-card-desktop.png",
+    "recipe-detail-partial.png",
+    "recipe-detail-unavailable.png",
+    "recipe-detail-normal-unavailable.png",
+    "recipe-detail-temporarily-unavailable.png",
+    "recipe-detail-nutrition-loading.png",
+    "recipe-detail-nutrition-loading-context-desktop-final.png",
+    "recipe-detail-temporarily-unavailable-context-desktop-approved.png",
+    "recipe-detail-cook-mode-no-serving-control.png"
+  ]
+}

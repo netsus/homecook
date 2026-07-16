@@ -9,6 +9,7 @@
   /* ── 앱 브랜드 조절 토큰 ── */
   --brand-primary: #00A1FF;
   --brand-primary-hover: #0087d7;
+  --brand-primary-text: #0072bd;
   --brand-primary-accessible: #00A1FF;
   --brand-primary-accessible-hover: #0087d7;
   --brand-primary-soft: rgba(0, 161, 255, 0.08);
@@ -5876,6 +5877,41 @@ button {
     color: var(--web-brand);
   }
 
+  .web-recipe-nutrition-section {
+    display: grid;
+    gap: 16px;
+    margin-top: 24px;
+  }
+
+  .web-recipe-nutrition-serving {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    border-top: 1px solid var(--web-divider);
+    padding-top: 22px;
+  }
+
+  .web-recipe-nutrition-serving h2 {
+    margin: 0;
+    color: var(--web-text-1);
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .web-recipe-nutrition-serving p {
+    margin: 4px 0 0;
+    color: var(--web-text-3);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .web-recipe-nutrition-card {
+    border-color: var(--web-line);
+    box-shadow: var(--web-shadow-card);
+  }
+
   .web-reading-section {
     margin-top: 22px;
     border-top: 1px solid var(--web-divider);
@@ -5943,7 +5979,7 @@ button {
 
   .web-stepper {
     display: inline-flex;
-    height: 40px;
+    height: 44px;
     align-items: center;
     gap: 10px;
     overflow: visible;
@@ -5953,8 +5989,8 @@ button {
   }
 
   .web-stepper button {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border: 1px solid var(--web-line);
     border-radius: var(--web-r-pill);
     background: var(--web-surface);
