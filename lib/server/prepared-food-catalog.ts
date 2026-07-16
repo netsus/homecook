@@ -237,6 +237,7 @@ export function decodeProductCursor(value: string): ProductCursor | null {
     if (!UUID_PATTERN.test(parsed.id)) return null;
     const timestampMatch = POSTGRES_UTC_CURSOR_PATTERN.exec(parsed.created_at);
     if (!timestampMatch) return null;
+    if (timestampMatch[1].startsWith("0000-")) return null;
     const millisecondIso = `${timestampMatch[1]}.${timestampMatch[2].padEnd(3, "0").slice(0, 3)}Z`;
     const date = new Date(millisecondIso);
     if (Number.isNaN(date.getTime()) || date.toISOString() !== millisecondIso) return null;

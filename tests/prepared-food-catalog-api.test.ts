@@ -251,6 +251,34 @@ describe("prepared food catalog API contract", () => {
     expect(serviceDb.rpc).toHaveBeenCalledTimes(1);
   });
 
+  it("returns 422 for a year-zero opaque cursor without calling the database", async () => {
+    const serviceDb = serviceClient();
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: "user-1" }));
+    createServiceRoleClient.mockReturnValue(serviceDb);
+    const route = await importCollectionRoute();
+    expect(route).not.toBeNull();
+    if (!route) return;
+
+    const cursor = Buffer.from(JSON.stringify({
+      created_at: "0000-01-01T00:00:00.000000Z",
+      id: "550e8400-e29b-41d4-a716-446655440000",
+    }), "utf8").toString("base64url");
+    const response = await route.GET(new Request(
+      `http://localhost/api/v1/food-products?cursor=${cursor}`,
+    ));
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        fields: [{ field: "cursor", reason: "invalid_cursor" }],
+      },
+    });
+    expect(serviceDb.rpc).not.toHaveBeenCalled();
+  });
+
   it("returns 403 for public mutation and scope-filtered 404 for another owner", async () => {
     createRouteHandlerClient.mockResolvedValue(routeClient({ id: "user-1" }));
     const publicDb = serviceClient({

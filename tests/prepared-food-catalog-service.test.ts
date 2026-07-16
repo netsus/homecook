@@ -243,4 +243,31 @@ describe("prepared food catalog service contract", () => {
 
     expect(service.decodeProductCursor(encoded)).toEqual(cursor);
   });
+
+  it("rejects PostgreSQL-incompatible year zero while preserving the year-one boundary", async () => {
+    const service = await importCatalogService();
+    expect(service).not.toBeNull();
+    if (!service) return;
+
+    const id = "550e8400-e29b-41d4-a716-446655440000";
+    const yearZero = service.encodeProductCursor({
+      createdAt: "0000-01-01T00:00:00.000000Z",
+      id,
+    });
+    const yearOne = service.encodeProductCursor({
+      createdAt: "0001-01-01T00:00:00.000000Z",
+      id,
+    });
+
+    expect(service.decodeProductCursor(yearZero)).toBeNull();
+    expect(service.parseProductListQuery(new URLSearchParams({ cursor: yearZero }))).toEqual({
+      ok: false,
+      code: "VALIDATION_ERROR",
+      fields: [{ field: "cursor", reason: "invalid_cursor" }],
+    });
+    expect(service.decodeProductCursor(yearOne)).toEqual({
+      createdAt: "0001-01-01T00:00:00.000000Z",
+      id,
+    });
+  });
 });
