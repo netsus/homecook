@@ -34,8 +34,8 @@
       "metadata-only-update-preserves-the-current-nutrition-version",
       "nutrition-version-profile-value-and-relation-payloads-are-append-only",
       "concurrent-nutrition-update-has-one-winner-and-loser-returns-409-nutrition-version-conflict",
-      "soft-delete-is-idempotent-and-preserves-old-versions-and-existing-planner-pins",
-      "soft-deleted-product-is-blocked-from-new-entry-creation-with-the-existing-product-deleted-contract",
+      "soft-delete-is-idempotent-and-preserves-old-nutrition-versions",
+      "soft-deleted-product-is-excluded-from-catalog-read",
       "public-basis-relations-come-only-from-the-returned-approved-immutable-version",
       "manual-and-public-product-owner-visibility-source-type-combinations-are-db-constrained",
       "current-nutrition-version-is-nonnull-and-belongs-to-the-same-product-at-commit",
@@ -70,7 +70,7 @@
       "metadata-only-update-preserves-version-and-nutrition-update-appends-version",
       "two-session-current-version-conflict-single-winner-and-rollback",
       "immutable-version-profile-value-relation-update-delete-denial",
-      "idempotent-soft-delete-history-pin-retention-and-new-entry-block-prerequisite",
+      "idempotent-soft-delete-old-version-retention-and-catalog-read-exclusion",
       "public-mutation-cross-owner-read-modify-and-direct-table-mutation-denial",
       "isolated-postgresql-constraints-rls-concurrency-idempotency-and-transaction-rollback",
       "secret-raw-provider-leak-zero-production-staging-write-zero-and-cleanup",
@@ -124,8 +124,8 @@
     "nutrition-update-mutates-existing-version-profile-value-or-relation-payload",
     "metadata-only-update-creates-or-switches-a-nutrition-version",
     "concurrent-nutrition-update-does-not-return-nutrition-version-conflict-or-leaves-an-orphan-version",
-    "soft-delete-is-not-idempotent-or-deletes-old-version-or-existing-planner-pin",
-    "soft-deleted-product-remains-searchable-or-eligible-for-new-entry",
+    "soft-delete-is-not-idempotent-or-deletes-old-nutrition-version",
+    "soft-deleted-product-remains-searchable-in-catalog",
     "public-basis-relation-is-inferred-chained-or-read-from-another-version",
     "owner-visibility-source-type-stable-key-current-version-or-append-only-db-guard-is-missing",
     "cross-owner-public-or-immutable-direct-table-mutation-is-allowed",
@@ -140,5 +140,5 @@
     "backend": 4,
     "frontend": 0
   },
-  "notes": "Backend-only product catalog Stage 2/3 with review Stage 3 only. Predecessor MFDS evidence is page 1 / size 1 transport smoke and the approved public product promotion artifact count is zero, so Stage 2 adds no importer/operator CLI/seed and keeps real public rows/results fail-closed at zero; synthetic public products are isolated-test-only fixtures. Actual catalog writes/reads are private manual only. Manual create requires name, allows nullable brand, requires nonnegative energy, permits only the documented optional sugars_g/saturated_fat_g/fiber_g fields, preserves other null or missing nutrients rather than zero, and keeps basis_relations empty. Public attribution is nonempty with nonnull source_version. Existing 404 RESOURCE_NOT_FOUND and 422 VALIDATION_ERROR are locked. Immutable version, RLS, concurrency, rollback, idempotent soft delete, zero production/staging writes, and Stage 4 UI/design N/A boundaries remain mandatory. User-approved nutrition/products/planner Codex-only stages use fresh role-separated Codex tasks; author and implementer cannot self-approve."
+  "notes": "Backend-only product catalog Stage 2/3 with review Stage 3 only. Predecessor MFDS evidence is page 1 / size 1 transport smoke and the approved public product promotion artifact count is zero, so Stage 2 adds no importer/operator CLI/seed and keeps real public rows/results fail-closed at zero; synthetic public products are isolated-test-only fixtures. Actual catalog writes/reads are private manual only. Manual create requires name, allows nullable brand, requires nonnegative energy, permits only the documented optional sugars_g/saturated_fat_g/fiber_g fields, preserves other null or missing nutrients rather than zero, and keeps basis_relations empty. Public attribution is nonempty with nonnull source_version. Existing 404 RESOURCE_NOT_FOUND and 422 VALIDATION_ERROR are locked. Immutable version, RLS, concurrency, rollback, idempotent soft delete, zero production/staging writes, and Stage 4 UI/design N/A boundaries remain mandatory. Existing planner pin retention and deleted-product new-entry 409 PRODUCT_DELETED verification belong to the follow-up prepared-food-planner-entry slice and are not current catalog machine proof. User-approved nutrition/products/planner Codex-only stages use fresh role-separated Codex tasks; author and implementer cannot self-approve."
 }
