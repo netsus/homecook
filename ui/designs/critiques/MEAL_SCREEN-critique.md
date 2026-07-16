@@ -145,6 +145,8 @@
 
 ## 부록: Stage 4 evidence 체크포인트
 
+> **2026-07-16 prepared-food-planner-entry 재검수 필요:** 위 역사적 판정은 additive ProductPlannerEntry card/quantity/delete를 승인하지 않는다. fresh independent reviewer는 mobile baseline 375/구현 390, narrow 320, desktop, primary CTA, scroll containment, pinned old version, partial/unavailable/missing-not-zero와 PLANNER_WEEK anchor return을 별도로 판정해야 한다. 현재 successor 판정은 pending이다.
+
 workpack README `Design Authority` 항목에 따라 Stage 4 authority review에서 확인해야 할 항목:
 
 1. 식사 카드 목록이 길어질 때 리스트만 스크롤되고 앱바·하단 CTA가 고정되는지 스크린샷으로 확인

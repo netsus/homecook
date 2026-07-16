@@ -2040,6 +2040,37 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "prepared-food-planner-entry",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/prepared-food-planner-entry",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm exec vitest run tests/prepared-food-planner-entry-api.test.ts tests/prepared-food-planner-entry-service.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/prepared-food-planner-entry-rls.test.ts tests/prepared-food-planner-entry-regression.test.ts",
+        "pnpm test:prepared-food-planner-entry:postgres",
+        "pnpm verify:backend",
+        "pnpm exec vitest run tests/prepared-food-planner-entry-ui.test.tsx tests/prepared-food-planner-entry-client.test.ts",
+        "pnpm verify:frontend:pr",
+        "pnpm verify:frontend",
+        "pnpm test:e2e:regression:ci --grep prepared-food-planner-entry",
+        "pnpm validate:authority-evidence-presence -- --slice prepared-food-planner-entry",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/prepared-food-planner-entry pnpm validate:workpack -- --slice prepared-food-planner-entry",
+        "node scripts/validate-automation-spec.mjs --slice prepared-food-planner-entry",
+        "pnpm validate:omo-bookkeeping",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs branch for the high-risk full-stack prepared food planner entry slice. Workflow lifecycle remains planned with approval not_started and verification pending until a fresh independent Codex Stage 1.5 gate approves the docs and design artifacts. The contract locks exactly three product entry mutations plus additive existing planner/meals product_entries while preserving recipe-only arrays and forbidding duplicate rows or Meal-only fields. Create atomically pins immutable nutrition version and product snapshots, patch uses the old pin and changes quantity only, deleted-product new create returns PRODUCT_DELETED, and same-unit or exactly one direct pinned relation is the only conversion path. Product entries remain outside Meal status, shopping, cooking, leftovers, recipe counts, planner_registered XP, and meal_add_path_used activity. Approved public artifacts/operational rows and production/staging writes remain zero; synthetic public fixtures are isolated-only. PLANNER_WEEK anchor extension and new FOOD_PRODUCT_PICKER/CREATE require 390/320/desktop evidence and separated authority precheck, Stage 5, final authority, and Stage 6.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }

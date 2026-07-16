@@ -14,5 +14,7 @@
 
 ## Minor Notes
 
+> **2026-07-16 prepared-food-planner-entry 재검수 필요:** 위 역사적 판정은 `[완제품] -> FOOD_PRODUCT_PICKER/CREATE` 확장을 승인하지 않는다. fresh independent reviewer는 mobile baseline 375/구현 390, narrow 320, desktop, primary CTA, scroll containment, unauthorized return과 PLANNER_WEEK anchor context를 별도로 판정해야 한다. 현재 successor 판정은 pending이다.
+
 - placeholder 버튼은 실제 CTA처럼 보이지 않게 톤을 낮춰야 한다.
 - narrow 320에서 버튼 라벨 줄바꿈이 생기면 아이콘과 라벨 간격을 먼저 지키는 쪽이 안전하다.
