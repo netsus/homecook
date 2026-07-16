@@ -2034,7 +2034,7 @@
         "pnpm validate:omo-bookkeeping",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs branch for the backend-only prepared food catalog. Workflow lifecycle remains planned with approval not_started and verification pending until an independent fresh Codex Stage 1.5 gate approves the docs. Public catalog is approved stable-key read-only; private manual products are owner-only with immutable nutrition versions, atomic current switching, idempotent soft delete, isolated PostgreSQL verification, and zero production/staging writes. Frontend and design authority are N/A/not_required.",
+      "notes": "Stage 1 docs branch for the backend-only prepared food catalog. Workflow lifecycle remains planned with approval not_started and verification pending until an independent fresh Codex Stage 1.5 gate approves the docs. Predecessor MFDS evidence is page 1 / size 1 transport smoke and approved public product promotion artifacts are 0, so Stage 2 keeps public rows/results fail-closed at 0 with no importer/seed; synthetic public fixtures are isolated-test-only. Private manual products are the only actual write/read path and remain owner-only with immutable nutrition versions, atomic current switching, idempotent soft delete, isolated PostgreSQL verification, and zero production/staging writes. Frontend and design authority are N/A/not_required; implementation review metadata points only to Stage 3.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

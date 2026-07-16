@@ -1,13 +1,13 @@
 {
   "id": "prepared-food-catalog",
   "title": "Prepared food public/private catalog with immutable nutrition versions",
-  "summary": "승인 stable-key public 완제품과 owner-only private manual 완제품을 검색하고, manual label 영양을 immutable version과 atomic current pointer로 생성·수정·soft-delete하는 backend-only catalog다.",
+  "summary": "승인 artifact가 생기기 전 public row/result를 fail-closed 0건으로 유지하고, owner-only private manual 완제품을 검색하며 label 영양을 immutable version과 atomic current pointer로 생성·수정·soft-delete하는 backend-only catalog다.",
   "project_profile": "homecook",
   "change_type": "product",
   "surface": "backend",
   "risk": "high",
   "preset": "vertical-slice-strict",
-  "goal": "Public approved catalog는 read-only와 provenance를 지키고 private manual catalog는 owner-only와 결측 비제로 의미를 지키면서, 영양 변경 이력과 과거 planner pin이 보존되는 backend catalog 계약을 닫는다.",
+  "goal": "현재 approved public promotion artifact 0건 경계를 지켜 importer/seed 없이 public rows/results를 0건으로 닫고, private manual catalog의 owner-only·결측 비제로 의미와 영양 변경 이력·과거 planner pin을 보존하는 backend 계약을 닫는다.",
   "owners": {
     "claude": "replaced only for the user-approved nutrition/products/planner program; the global stage-owner policy is unchanged",
     "codex": "fresh role-separated Codex tasks own Stage 1 docs authoring, independent Stage 1.5 review and repair-final, Stage 2 backend TDD implementation, and independent exact-head Stage 3 review; no author or implementer self-approves",
@@ -22,6 +22,8 @@
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
       "docs/요구사항기준선-v1.7.20.md",
+      "docs/화면정의서-v1.5.26.md",
+      "docs/유저flow맵-v1.3.23.md",
       "docs/db설계-v1.3.21.md",
       "docs/api문서-v1.2.25.md"
     ],
@@ -43,6 +45,7 @@
     "review_loop": "required",
     "external_smokes": [
       "manual:isolated-postgresql-full-migration-owner-rls-constraints-two-session-concurrency-idempotent-delete-and-rollback",
+      "manual:approved-public-product-promotion-artifact-count-zero-and-stage-two-public-row-result-count-zero",
       "manual:production-and-staging-catalog-load-promotion-backfill-approval-intentionally-withheld-zero-writes"
     ],
     "execution_mode": "manual",
@@ -75,10 +78,14 @@
     ],
     "evaluator_commands": [],
     "artifact_assertions": [
-      "official-requirements-database-api-and-source-of-truth-contract-alignment",
-      "public-approved-stable-key-subset-read-only-and-name-brand-no-merge",
+      "official-five-documents-and-source-of-truth-contract-alignment",
+      "mfds-page-one-size-one-transport-smoke-is-not-a-promotable-artifact-and-approved-public-product-artifact-count-is-zero",
+      "no-public-importer-operator-cli-runtime-lookup-or-seed-and-public-row-result-count-fail-closed-zero",
+      "isolated-synthetic-public-fixture-only-plus-approved-stable-key-read-only-and-name-brand-no-merge-guards",
+      "public-attribution-sources-nonempty-and-source-version-nonnull",
       "private-manual-owner-only-and-cross-owner-scope-filtered-denial",
-      "required-nonnegative-energy-nullable-other-nutrients-and-missing-not-zero",
+      "required-name-nullable-brand-required-nonnegative-energy-exact-optional-nutrients-and-missing-not-zero",
+      "existing-404-resource-not-found-and-422-validation-error-contract",
       "positive-serving-package-g-ml-basis-and-manual-basis-relations-empty",
       "first-version-current-pointer-atomic-create-and-rollback",
       "immutable-nutrition-update-metadata-version-preservation-and-conflict-409",
@@ -110,9 +117,10 @@
     "Barcode OCR dining out meal kit actual consumption and medical guidance",
     "Client-supplied or inferred manual basis relations relation chaining generic density and arbitrary gram milliliter conversion",
     "Public product creation mutation deletion promotion or name brand fuzzy merge by general users",
-    "Runtime provider calls raw provider payload storage and unreviewed public promotion",
+    "Public importer operator CLI seed or row creation before a separately approved promotion artifact exists",
+    "Runtime provider calls raw provider payload storage synthetic fixture promotion and unreviewed public promotion",
     "Any undocumented endpoint status error code request response field or database surface"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs contract for a backend-only high-risk product surface. Roadmap projection is docs while workflow lifecycle stays planned until implementation begins. Public catalog is approved stable-key read-only; private manual products are owner-only. Energy is required and nonnegative, other nutrients preserve null or missing, manual basis_relations stay empty, and nutrition changes append immutable versions with atomic current switching and 409 conflict. Soft delete is idempotent and preserves history/pins. Isolated PostgreSQL Stage 3 evidence is mandatory, production/staging writes remain zero, and frontend/design authority is N/A/not_required."
+  "notes": "Stage 1 docs contract for a backend-only high-risk product surface with Stage 3 as its only implementation review. Roadmap projection is docs while workflow lifecycle stays planned until implementation begins. Predecessor MFDS evidence is page 1 / size 1 transport smoke and approved public product promotion artifacts are 0, so Stage 2 adds no importer/operator CLI/seed and keeps real public rows/results at 0; synthetic public fixtures are isolated-test-only. Private manual products alone are actually writable/readable, with required name, nullable brand, required nonnegative energy, exact optional sugars_g/saturated_fat_g/fiber_g, missing-not-zero, empty basis_relations, immutable versions, atomic switching, 409 conflict, idempotent soft delete, and owner/RLS guards. Public attribution requires nonempty sources and nonnull source_version. Existing 404 RESOURCE_NOT_FOUND and 422 VALIDATION_ERROR are locked. Isolated PostgreSQL Stage 3 evidence is mandatory, production/staging writes remain zero, and frontend/design authority is N/A/not_required."
 }
