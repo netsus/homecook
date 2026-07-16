@@ -385,7 +385,6 @@
 
 - [x] independent Stage 1.5 review/repair-final exact-head 승인 <!-- omo:id=delivery-product-entry-stage1-review;stage=2;scope=shared;review=3,6 -->
 - [x] docs PR #1016 merge <!-- omo:id=delivery-product-entry-docs-merge;stage=2;scope=shared;review=3,6 -->
-- [x] backend PR #1017과 frontend PR #1018 merge 및 current-head checks 확인
 - full repository migration stack 전체와 plain PostgreSQL 대비 Supabase/PostgREST/auth claim 동등성
 - 실제 physical iOS/Android narrow device와 screen reader 수동 확인
 - 현재 0건인 approved public promotion artifact의 향후 운영 승인·load·license 검수
