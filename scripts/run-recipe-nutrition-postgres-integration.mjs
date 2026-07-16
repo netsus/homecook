@@ -6,6 +6,8 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { buildRecipeNutritionPostgresVitestArgs } from "./lib/recipe-nutrition-postgres-runner-options.mjs";
+
 const POSTGRES_TOOLS = ["initdb", "pg_ctl", "createdb", "psql"];
 
 function commandResult(command, args, options = {}) {
@@ -198,7 +200,7 @@ grant usage on schema public to anon, authenticated, service_role;
 
     const test = commandResult(
       "pnpm",
-      ["exec", "vitest", "run", "tests/recipe-nutrition-postgres.integration.test.ts", "--pool=forks", "--maxWorkers=1"],
+      buildRecipeNutritionPostgresVitestArgs(),
       {
         stdio: "inherit",
         env: {
