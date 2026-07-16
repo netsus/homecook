@@ -56,6 +56,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import {
   buildCompatibleFoodProductUnits,
+  formatProductPlannerEntryErrorMessage,
   formatProductUnit,
   mergeMealScreenEntries,
 } from "@/lib/planner/product-planner-entry-presentation";
@@ -1580,7 +1581,7 @@ export function MealScreen({
         return;
       }
       const message = isProductPlannerEntryApiError(caught)
-        ? caught.message
+        ? formatProductPlannerEntryErrorMessage(caught)
         : "완제품 수량을 바꾸지 못했어요.";
       setEditingProduct((current) =>
         current ? { ...current, error: message } : null,

@@ -392,6 +392,22 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     await userEvent.click(screen.getByRole("button", { name: "최신 영양정보로 새로고침" }));
     await waitFor(() => expect(screen.getByTestId("food-product-quantity-step").textContent).toContain("예상 열량 120 kcal"));
   });
+
+  it("maps picker basis mismatch to the official UI copy without exposing the API message", async () => {
+    fetchFoodProducts.mockResolvedValue({ items: [createProduct()], next_cursor: null, has_next: false });
+    createProductPlannerEntry.mockRejectedValue(Object.assign(
+      new Error("이 수량 단위로 영양을 계산할 수 없어요."),
+      { status: 422, code: "NUTRITION_BASIS_MISMATCH", fields: [] },
+    ));
+
+    render(<FoodProductPicker columnId="column-1" onClose={() => undefined} onComplete={() => undefined} planDate="2026-07-17" slotName="아침" />);
+    await userEvent.click(await screen.findByRole("button", { name: /플레인 요거트/ }));
+    await userEvent.click(screen.getByRole("button", { name: "아침에 완제품 추가" }));
+
+    expect(await screen.findByText("이 기준으로는 수량을 바꿀 수 없어요")).toBeTruthy();
+    expect(screen.queryByText("이 수량 단위로 영양을 계산할 수 없어요.")).toBeNull();
+    expect(screen.getByTestId("food-product-quantity-step")).toBeTruthy();
+  });
 });
 
 describe("FOOD_PRODUCT_CREATE validation and privacy", () => {

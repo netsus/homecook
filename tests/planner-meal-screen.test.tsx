@@ -1003,4 +1003,40 @@ describe("MealScreen", () => {
     expect(decodeURIComponent(login.getAttribute("data-next-path") ?? "")).toContain("productEntryId=entry-auth");
     expect(decodeURIComponent(login.getAttribute("data-next-path") ?? "")).toContain("productAction=edit");
   });
+
+  it("maps PATCH basis mismatch to the official UI copy and keeps the edit dialog open", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = {
+      entry_type: "product" as const,
+      id: "entry-mismatch",
+      product_id: "product-1",
+      product_name: "플레인 요거트",
+      product_brand: null,
+      quantity: { amount: 1, unit: "serving" as const },
+      workflow_status: null,
+      product_nutrition_version_id: "version-1",
+      basis_relations: [],
+      nutrition: {
+        basis: { amount: 1, unit: "serving" as const },
+        values: { energy_kcal: { amount: 105, known_amount: null, status: "complete" as const, display_mode: "total" as const } },
+        calculation_status: "complete" as const,
+        calculation_quality: "direct" as const,
+        warnings: [], sources: [],
+      },
+    };
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    updateProductPlannerEntryQuantity.mockRejectedValue(Object.assign(
+      new Error("이 수량 단위로 영양을 계산할 수 없어요."),
+      { status: 422, code: "NUTRITION_BASIS_MISMATCH" },
+    ));
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await userEvent.click(await screen.findByRole("button", { name: "수량 변경" }));
+    const dialog = screen.getByRole("dialog", { name: "완제품 수량 변경" });
+    await userEvent.click(screen.getAllByRole("button", { name: "수량 변경" }).at(-1)!);
+
+    expect(await screen.findByText("이 기준으로는 수량을 바꿀 수 없어요")).toBeTruthy();
+    expect(screen.queryByText("이 수량 단위로 영양을 계산할 수 없어요.")).toBeNull();
+    expect(dialog.isConnected).toBe(true);
+  });
 });

@@ -126,7 +126,7 @@ async function installRoutes(
   page: Page,
   options: {
     catalogVersion?: "v2";
-    mutationError?: "basis" | "unauthorized" | "createUnauthorized" | "deleteUnauthorized" | "patchUnauthorized";
+    mutationError?: "basis" | "unauthorized" | "createUnauthorized" | "deleteUnauthorized" | "patchUnauthorized" | "patchBasis";
   } = {},
 ) {
   let productEntry: ProductEntry | null = createMealProductEntry();
@@ -135,6 +135,7 @@ async function installRoutes(
   let createUnauthorizedOnce = options.mutationError === "createUnauthorized";
   let deleteUnauthorizedOnce = options.mutationError === "deleteUnauthorized";
   let patchUnauthorizedOnce = options.mutationError === "patchUnauthorized";
+  let patchMismatchOnce = options.mutationError === "patchBasis";
 
   await page.route("**/api/v1/users/me**", async (route) => {
     const pathname = new URL(route.request().url()).pathname;
@@ -278,6 +279,22 @@ async function installRoutes(
             success: false,
             data: null,
             error: { code: "UNAUTHORIZED", message: "로그인이 필요해요.", fields: [] },
+          },
+        });
+        return;
+      }
+      if (patchMismatchOnce) {
+        patchMismatchOnce = false;
+        await route.fulfill({
+          status: 422,
+          json: {
+            success: false,
+            data: null,
+            error: {
+              code: "NUTRITION_BASIS_MISMATCH",
+              message: "이 수량 단위로 영양을 계산할 수 없어요.",
+              fields: [{ field: "quantity.unit", reason: "basis_mismatch" }],
+            },
           },
         });
         return;
@@ -523,6 +540,19 @@ test.describe("prepared-food-planner-entry", () => {
     await expect(productCard).not.toContainText("999");
   });
 
+  test("PATCH basis mismatch는 공식 안내를 보여 주고 수량 편집 단계에 머문다", async ({ page }) => {
+    await installRoutes(page, { mutationError: "patchBasis" });
+    await page.goto(MEAL_PATH);
+
+    const productCard = page.getByTestId("product-planner-entry-entry-yogurt").filter({ visible: true });
+    await productCard.getByRole("button", { name: "수량 변경" }).click();
+    const editDialog = page.getByRole("dialog", { name: "완제품 수량 변경" });
+    await editDialog.getByRole("button", { name: "수량 변경" }).click();
+
+    await expect(editDialog.getByText("이 기준으로는 수량을 바꿀 수 없어요", { exact: true })).toBeVisible();
+    await expect(editDialog).toBeVisible();
+  });
+
   test("opaque cursor를 이어 붙이고 basis mismatch에서 선택·수량 단계에 머문다", async ({ page }) => {
     await installRoutes(page, { mutationError: "basis" });
     await page.goto(`${MENU_PATH}&source=product`);
@@ -534,7 +564,7 @@ test.describe("prepared-food-planner-entry", () => {
 
     await page.getByText("플레인 요거트", { exact: true }).filter({ visible: true }).click();
     await page.getByRole("button", { name: "아침에 완제품 추가" }).click();
-    await expect(page.getByText("이 수량 단위로 영양을 계산할 수 없어요.", { exact: true })).toBeVisible();
+    await expect(page.getByText("이 기준으로는 수량을 바꿀 수 없어요", { exact: true })).toBeVisible();
     await expect(page.getByTestId("food-product-quantity-step")).toBeVisible();
   });
 
@@ -740,6 +770,23 @@ test.describe("prepared-food-planner-entry", () => {
     expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
   });
 
+  test("desktop FOOD_PRODUCT_CREATE의 등록 CTA가 1280×900 첫 화면 안에 보인다", async ({ browser }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-chrome", "exact desktop geometry runs once");
+    const context = await browser.newContext({ deviceScaleFactor: 1, viewport: { width: 1280, height: 900 } });
+    const desktopPage = await context.newPage();
+    await setAuthenticated(desktopPage);
+    await installRoutes(desktopPage);
+    await desktopPage.goto(`${MENU_PATH}&source=product`);
+    await desktopPage.getByRole("button", { name: "목록에 없나요? 새 완제품 등록" }).click();
+
+    const actions = desktopPage.getByTestId("food-product-create-actions");
+    await expect(actions).toBeVisible();
+    const actionBox = await actions.boundingBox();
+    expect(actionBox).not.toBeNull();
+    expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(900);
+    await context.close();
+  });
+
   test("product edit/delete dialogs trap focus, inert background, lock scroll, and return focus", async ({ page }) => {
     await installRoutes(page);
     await page.goto(MEAL_PATH);
@@ -907,7 +954,7 @@ test.describe("prepared-food-planner-entry", () => {
     await mismatchPage.goto(`${MENU_PATH}&source=product`);
     await mismatchPage.getByText("플레인 요거트", { exact: true }).filter({ visible: true }).click();
     await mismatchPage.getByRole("button", { name: "아침에 완제품 추가" }).click();
-    await expect(mismatchPage.getByText("이 수량 단위로 영양을 계산할 수 없어요.", { exact: true })).toBeVisible();
+    await expect(mismatchPage.getByText("이 기준으로는 수량을 바꿀 수 없어요", { exact: true })).toBeVisible();
     await mismatchPage.screenshot({ path: path.join(EVIDENCE_DIR, "FOOD_PRODUCT_PICKER-basis-mismatch.png"), scale: "css" });
     await mismatchContext.close();
 

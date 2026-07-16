@@ -13,6 +13,7 @@ import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
 import {
   buildCompatibleFoodProductUnits,
   formatFoodProductExpectedEnergy,
+  formatProductPlannerEntryErrorMessage,
   formatProductUnit,
   getFoodProductCoreNutritionLines,
 } from "@/lib/planner/product-planner-entry-presentation";
@@ -304,7 +305,7 @@ export function FoodProductPicker({
       } else if (caught.code === "NUTRITION_VERSION_CONFLICT") {
         setHasNutritionConflict(true);
       }
-      setEntryError(caught.message);
+      setEntryError(formatProductPlannerEntryErrorMessage(caught));
     } finally {
       setIsSubmitting(false);
     }
@@ -377,7 +378,7 @@ export function FoodProductPicker({
     return (
       <section
         aria-labelledby="food-product-create-title"
-        className="relative mx-auto flex h-[calc(100dvh-2rem)] max-h-[760px] w-full max-w-3xl flex-col overflow-hidden bg-[var(--surface)]"
+        className="relative mx-auto flex h-[calc(100dvh-2rem)] max-h-[760px] w-full max-w-3xl flex-col overflow-hidden bg-[var(--surface)] lg:h-[calc(100dvh-17rem)]"
         data-testid="food-product-create-shell"
         ref={createShellRef}
         onKeyDownCapture={(event) => {

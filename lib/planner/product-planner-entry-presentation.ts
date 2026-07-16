@@ -19,6 +19,17 @@ export type MealScreenDisplayEntry =
   | { key: string; entry_type: "recipe"; recipe: MealListItemData }
   | { key: string; entry_type: "product"; product: MealProductPlannerEntryData };
 
+const NUTRITION_BASIS_MISMATCH_COPY = "이 기준으로는 수량을 바꿀 수 없어요";
+
+export function formatProductPlannerEntryErrorMessage(error: {
+  code: string;
+  message: string;
+}) {
+  return error.code === "NUTRITION_BASIS_MISMATCH"
+    ? NUTRITION_BASIS_MISMATCH_COPY
+    : error.message;
+}
+
 function uniqueProducts<T extends { id: string }>(entries: T[]) {
   const seen = new Set<string>();
   return entries.filter((entry) => {
