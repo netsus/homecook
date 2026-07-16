@@ -1,14 +1,15 @@
-# Prepared Food Planner Entry Stage 5 Authority Review
+# Prepared Food Planner Entry Authority And Stage 6 Review
 
 > Status: **pass**
 > Slice: `prepared-food-planner-entry`
-> Stage: `5` implementation design review
+> Stage: `5` implementation design review + final authority + `6` comprehensive review
 > Risk level: `anchor-extension`
 > Review date: 2026-07-17
 > Reviewed exact head: `737c799600647bac8faf8016f5940e12df2535a0`
-> Design Status: **pending final authority**
+> Stage 6 reviewed exact head: `829a107d1fdf782beff241e52ab09076ec9feab4`
+> Design Status: **confirmed**
 
-이 문서는 fresh independent Stage 5 reviewer의 구현 검수 기록이다. `final authority` 확인이나 Stage 6 승인이 아니며, 이 판정만으로 `Design Status: confirmed`로 바꾸지 않는다.
+이 문서는 fresh independent Stage 5 reviewer의 구현 검수 기록과 이후 분리된 final authority 및 Stage 6 승인 기록을 순서대로 보존한다. 아래 Stage 5 당시의 pending 문구는 그 시점의 역사적 gate 상태이며, 현재 최종 판정은 문서 끝의 Stage 6 Approval Gate가 authority다.
 
 ## Evidence
 
@@ -128,3 +129,35 @@ fresh final authority review로 넘긴다. 이 문서의 결론은 **Stage 5 pas
 - 이 승인은 before-merge design gate 기록이며 Stage 6의 contract/accessibility/security/performance/exploratory QA/full verification 승인이나 merge approval을 대신하지 않는다.
 
 최종 권한 판정은 **Stage 5 pass + final authority approved + Stage 6 pending**이다.
+
+## Stage 6 Approval Gate
+
+> Reviewer separation: Stage 4 구현자, Stage 5 reviewer, final authority reviewer 및 repair 구현자와 분리된 fresh Codex Stage 6 re-reviewer
+> Review date: 2026-07-17
+> Reviewed exact implementation head: `829a107d1fdf782beff241e52ab09076ec9feab4`
+> Verdict: `STAGE6_APPROVED`
+> Blocker / Important / Suggestion: `0 / 0 / 0`
+
+### Independent Repair Re-review
+
+- 첫 Stage 6 review의 Important 2건을 exact repaired head에서 독립 재검수했다.
+- DELETE는 요청 중 entry별 ref guard와 disabled action으로 중복 실행·ESC/backdrop close를 막고, 500 실패 시 card와 dialog를 유지한 채 `role=alert` 오류와 같은 confirm button retry를 제공한다. 성공할 때만 entry/dialog를 제거하며 401 safe return-to-action도 유지한다.
+- nutrition conflict refresh는 시작 시점의 request generation, query, selected product ID를 함께 고정하고 await 뒤 success, empty/deleted, error 모든 결과를 적용하기 전에 현재성 검사를 통과해야 한다. 검색어 또는 선택이 바뀐 stale 응답은 최신 목록·선택·오류를 덮지 않는다.
+- API field/status/error, Recipe Meal/product 분리, pinned version/direct relation, missing-not-zero, owner/read-only, secret/external-write, N+1 경계에는 새 변경이 없다.
+
+### Stage 6 Verification
+
+- targeted Vitest: `5 files / 97 tests passed`
+- targeted Playwright: DELETE 401/500 recovery, `desktop-chrome` / `mobile-chrome` / `mobile-ios-small`, `6 passed`
+- typecheck: passed
+- lint: `0 errors`; unrelated existing `recipe-nutrition-backfill.test.ts` warnings 4
+- validators: source-of-truth, workflow-v2, workpack, automation-spec, authority evidence, OMO bookkeeping, exploratory QA evidence, real-smoke presence passed
+- current PR implementation head: `829a107d1fdf782beff241e52ab09076ec9feab4`
+
+### Honest Remaining Gate
+
+- 전체 slice E2E 실행은 `41 passed / 9 intended skipped / 1 failed`였고, 실패 1건은 evidence capture의 parallel auth-fixture 충돌이다. 정확한 `pnpm verify:frontend` aggregate가 green이 아니므로 workpack/acceptance의 exploratory/full verification checkbox는 체크하지 않는다.
+- 이 Stage 6 승인 기록을 담는 docs-only successor commit은 implementation head와 다른 새 head가 된다. 오케스트레이터는 그 head를 push한 뒤 current-head PR checks와 closeout projection을 다시 검수해야 한다.
+- successor exact head에 pending/fail/cancel check가 남아 있거나 closeout 문서가 실제 검증보다 앞서면 merge하지 않는다.
+
+최종 권한 판정은 **Stage 5 pass + final authority approved + Stage 6 approved / Design Status confirmed**이다. full aggregate checkbox와 docs-only successor current-head merge gate는 별도 미완료 상태로 유지한다.

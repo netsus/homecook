@@ -117,7 +117,7 @@
 - [x] page-level horizontal overflow가 없고 기존 PLANNER_WEEK scroll containment/navigation이 보존된다 <!-- omo:id=accept-product-entry-scroll-containment;stage=4;scope=frontend;review=5,6 -->
 - [x] primary CTA, keyboard/focus restoration, ESC/back, 44x44 touch target, axe가 통과한다 <!-- omo:id=accept-product-entry-accessibility;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA report/eval과 `pnpm verify:frontend`가 green이다 <!-- omo:id=accept-product-entry-exploratory;stage=4;scope=frontend;review=5,6 -->
-- [ ] fresh authority precheck/Stage 5/final authority/Stage 6에서 blocker/important 미해결 0이다 <!-- omo:id=accept-product-entry-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] fresh authority precheck/Stage 5/final authority/Stage 6에서 blocker/important 미해결 0이다 <!-- omo:id=accept-product-entry-authority;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Setup / Preconditions
 
