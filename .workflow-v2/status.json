@@ -2019,10 +2019,10 @@
     {
       "id": "prepared-food-catalog",
       "preset": "vertical-slice-strict",
-      "branch": "docs/prepared-food-catalog",
-      "pr_path": "https://github.com/netsus/homecook/pull/1014",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
+      "branch": "feature/be-prepared-food-catalog",
+      "pr_path": null,
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
       "verification_status": "pending",
       "required_checks": [
         "pnpm exec vitest run tests/prepared-food-catalog-api.test.ts tests/prepared-food-catalog-service.test.ts tests/prepared-food-catalog-rls.test.ts",
@@ -2034,7 +2034,7 @@
         "pnpm validate:omo-bookkeeping",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs branch for the backend-only prepared food catalog. Workflow lifecycle remains planned with approval not_started and verification pending until an independent fresh Codex Stage 1.5 gate approves the docs. Predecessor MFDS evidence is page 1 / size 1 transport smoke and approved public product promotion artifacts are 0, so Stage 2 keeps public rows/results fail-closed at 0 with no importer/seed; synthetic public fixtures are isolated-test-only. Private manual products are the only actual write/read path and remain owner-only with immutable nutrition versions, atomic current switching, idempotent soft delete, isolated PostgreSQL verification, and zero production/staging writes. Frontend and design authority are N/A/not_required; implementation review metadata points only to Stage 3.",
+      "notes": "Stage 2 backend TDD is in progress after independent Stage 1.5 approval. Targeted API/service/RLS Vitest and isolated PostgreSQL 17 relevant-migration-stack verification cover atomic create/update rollback, two-connection 409 conflict, owner/direct-role denial, append-only history, idempotent delete, set-based cursor query, approved stable-key synthetic public no-merge and stale-source exclusion. Approved operational public artifacts/rows and production/staging writes remain zero; test fixtures were deleted with the ephemeral cluster. Full repository migration stack and Supabase/PostgREST equivalence remain Manual Only, and independent Stage 3 exact-head review is pending.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

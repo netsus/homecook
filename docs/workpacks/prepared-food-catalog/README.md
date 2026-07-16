@@ -275,18 +275,28 @@
 
 > Stage 2/3 living closeout이다. Stage 1 작성 작업은 체크하지 않으며 독립 Stage 1.5 승인 후 구현 evidence가 생길 때만 갱신한다. frontend/authority 항목은 N/A다.
 
-- [ ] 네 food-products endpoint의 공식 request/response/error 계약 고정 <!-- omo:id=delivery-product-api-contract;stage=2;scope=backend;review=3 -->
-- [ ] public stable-key approved subset과 name-brand no-merge 고정 <!-- omo:id=delivery-public-admission;stage=2;scope=backend;review=3 -->
-- [ ] private manual owner-only create/read/update/delete 고정 <!-- omo:id=delivery-private-owner-scope;stage=2;scope=backend;review=3 -->
-- [ ] basis·energy·nullable nutrient·missing-not-zero validation 구현 <!-- omo:id=delivery-manual-nutrition-validation;stage=2;scope=backend;review=3 -->
-- [ ] first version/profile/value/current pointer atomic create 구현 <!-- omo:id=delivery-product-atomic-create;stage=2;scope=backend;review=3 -->
-- [ ] nutrition 새 immutable version과 metadata-only version preservation 구현 <!-- omo:id=delivery-version-update-semantics;stage=2;scope=backend;review=3 -->
-- [ ] concurrent current switch conflict와 rollback 구현 <!-- omo:id=delivery-version-concurrency;stage=2;scope=backend;review=3 -->
-- [ ] idempotent soft-delete와 history/pin retention·new-entry block prerequisite 구현 <!-- omo:id=delivery-product-soft-delete;stage=2;scope=backend;review=3 -->
-- [ ] public mutation·cross-owner·direct table mutation RLS/permission guard 구현 <!-- omo:id=delivery-product-security;stage=2;scope=backend;review=3 -->
-- [ ] safe public attribution과 secret/raw provider leak 0 검증 <!-- omo:id=delivery-product-provenance;stage=2;scope=backend;review=3 -->
-- [ ] cursor scope/pagination과 bounded read query 검증 <!-- omo:id=delivery-product-read-performance;stage=2;scope=backend;review=3 -->
-- [ ] isolated PostgreSQL constraint/RLS/concurrency/idempotency/rollback gate 통과 <!-- omo:id=delivery-product-real-db;stage=2;scope=backend;review=3 -->
-- [ ] production/staging write 0과 cleanup evidence 기록 <!-- omo:id=delivery-product-zero-write;stage=2;scope=backend;review=3 -->
+- [x] 네 food-products endpoint의 공식 request/response/error 계약 고정 <!-- omo:id=delivery-product-api-contract;stage=2;scope=backend;review=3 -->
+- [x] public stable-key approved subset과 name-brand no-merge 고정 <!-- omo:id=delivery-public-admission;stage=2;scope=backend;review=3 -->
+- [x] private manual owner-only create/read/update/delete 고정 <!-- omo:id=delivery-private-owner-scope;stage=2;scope=backend;review=3 -->
+- [x] basis·energy·nullable nutrient·missing-not-zero validation 구현 <!-- omo:id=delivery-manual-nutrition-validation;stage=2;scope=backend;review=3 -->
+- [x] first version/profile/value/current pointer atomic create 구현 <!-- omo:id=delivery-product-atomic-create;stage=2;scope=backend;review=3 -->
+- [x] nutrition 새 immutable version과 metadata-only version preservation 구현 <!-- omo:id=delivery-version-update-semantics;stage=2;scope=backend;review=3 -->
+- [x] concurrent current switch conflict와 rollback 구현 <!-- omo:id=delivery-version-concurrency;stage=2;scope=backend;review=3 -->
+- [x] idempotent soft-delete와 history/pin retention·new-entry block prerequisite 구현 <!-- omo:id=delivery-product-soft-delete;stage=2;scope=backend;review=3 -->
+- [x] public mutation·cross-owner·direct table mutation RLS/permission guard 구현 <!-- omo:id=delivery-product-security;stage=2;scope=backend;review=3 -->
+- [x] safe public attribution과 secret/raw provider leak 0 검증 <!-- omo:id=delivery-product-provenance;stage=2;scope=backend;review=3 -->
+- [x] cursor scope/pagination과 bounded read query 검증 <!-- omo:id=delivery-product-read-performance;stage=2;scope=backend;review=3 -->
+- [x] isolated PostgreSQL constraint/RLS/concurrency/idempotency/rollback gate 통과 <!-- omo:id=delivery-product-real-db;stage=2;scope=backend;review=3 -->
+- [x] production/staging write 0과 cleanup evidence 기록 <!-- omo:id=delivery-product-zero-write;stage=2;scope=backend;review=3 -->
 - [ ] Stage 3 독립 Codex review finding 0 또는 수용·반박 기록 <!-- omo:id=delivery-product-stage3-review;stage=2;scope=backend;review=3 -->
-- [ ] planner-entry/UI 비포함과 design authority N/A closeout 동기화 <!-- omo:id=delivery-product-scope-closeout;stage=2;scope=shared;review=3 -->
+- [x] planner-entry/UI 비포함과 design authority N/A closeout 동기화 <!-- omo:id=delivery-product-scope-closeout;stage=2;scope=shared;review=3 -->
+
+### Stage 2 implementation evidence — 2026-07-16
+
+- TDD RED: service/DB 계약 14건이 service module과 migration 부재로 실패했고, API 계약 7건이 collection/item Route Handler 부재로 실패했다.
+- GREEN: `tests/prepared-food-catalog-{api,service,rls}.test.ts` 22건과 격리 PostgreSQL 17 integration 7건이 통과했다.
+- repository regression: `pnpm verify:backend`에서 lint 0 error(기존 unrelated warning 4), typecheck, product test 1,518 pass/22 skip, Next.js production build, security Playwright 12건이 통과했다. SOT/workpack/automation/workflow-v2/bookkeeping/branch/diff 검증도 통과했다.
+- real DB는 별도 임시 cluster/database에 predecessor ingredient migration, recipe snapshot migration, catalog migration만 적용했다. first create와 nutrition PATCH injected failure 전체 rollback, 실제 두 connection single-winner/loser 409, RLS/직접 권한 거부, append-only, idempotent delete, stable-key public fixture와 stale-source fail-closed를 확인한 뒤 cluster directory를 삭제했다.
+- 승인된 public promotion artifact와 운영 public row는 계속 0건이다. synthetic public row는 위 임시 DB 테스트 안에서만 사용했고 importer/operator CLI/public seed를 만들지 않았다. production/staging write는 0건이다.
+- full repository migration stack 및 Supabase/PostgREST 동등성은 이 plain PostgreSQL bootstrap subset으로 증명하지 않았으며 Stage 3 Manual Only 위험으로 남긴다.
+- 독립 Stage 3 exact-head review는 아직 시작하지 않았으므로 해당 checklist는 미완료로 유지한다.

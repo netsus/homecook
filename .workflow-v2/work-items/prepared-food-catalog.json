@@ -97,8 +97,8 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
     "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
@@ -107,8 +107,8 @@
     "blocked_reason_code": null
   },
   "closeout": null,
-  "branch": "docs/prepared-food-catalog",
-  "pr_path": "https://github.com/netsus/homecook/pull/1014",
+  "branch": "feature/be-prepared-food-catalog",
+  "pr_path": null,
   "out_of_scope": [
     "Prepared food planner entry CRUD and product_entries planner projection",
     "Meal day and week planned nutrition aggregation",
@@ -122,5 +122,5 @@
     "Any undocumented endpoint status error code request response field or database surface"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs contract for a backend-only high-risk product surface with Stage 3 as its only implementation review. Roadmap projection is docs while workflow lifecycle stays planned until implementation begins. Predecessor MFDS evidence is page 1 / size 1 transport smoke and approved public product promotion artifacts are 0, so Stage 2 adds no importer/operator CLI/seed and keeps real public rows/results at 0; synthetic public fixtures are isolated-test-only. Private manual products alone are actually writable/readable, with required name, nullable brand, required nonnegative energy, exact optional sugars_g/saturated_fat_g/fiber_g, missing-not-zero, empty basis_relations, immutable versions, atomic switching, 409 conflict, idempotent soft delete, and owner/RLS guards. Public attribution requires nonempty sources and nonnull source_version. Existing 404 RESOURCE_NOT_FOUND and 422 VALIDATION_ERROR are locked. Isolated PostgreSQL Stage 3 evidence is mandatory, production/staging writes remain zero, and frontend/design authority is N/A/not_required."
+  "notes": "Stage 2 backend TDD implementation is in progress on feature/be-prepared-food-catalog after independent Stage 1.5 approval. Route/type/service and official two-table migration implement private manual atomic create, immutable nutrition replacement, metadata preservation, 409 compare-and-switch, idempotent soft delete, approved public stable-key read-only admission, safe attribution, owner/RLS and bounded set-based catalog projection. Targeted Vitest is green and an isolated PostgreSQL 17 cluster applied the relevant ingredient predecessor, recipe snapshot, and catalog migrations; actual two-connection conflict, create/update rollback, direct role denial, append-only, synthetic-public no-merge/stale-source exclusion, zero initial public rows, and cleanup passed. Approved public promotion artifacts and production/staging writes remain zero; no importer/operator CLI/public seed or UI/planner scope was added. Full repository migration stack and Supabase/PostgREST equivalence remain Manual Only. Independent Stage 3 exact-head review is still pending, so closeout is null and implementation is not self-approved."
 }
