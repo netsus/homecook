@@ -97,16 +97,74 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
+    "lifecycle": "merged",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "closeout": null,
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "pending",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "Independent fresh Codex Stage 3 re-review approved exact PR #1015 head c22d08b2d938a5c1aae4c9e096e1c6706765ef5a with Blocker/Important/Suggestion 0/0/0 after two separated repair passes closed seven confirmed findings",
+        "GitHub PR #1015 exact reviewed-head checks: 14 success, full-regression intended skip 1, pending/fail/cancel 0",
+        "tests/prepared-food-catalog-api.test.ts, tests/prepared-food-catalog-service.test.ts, and tests/prepared-food-catalog-rls.test.ts: targeted Vitest 29/29",
+        "tests/prepared-food-catalog-postgres.integration.test.ts via scripts/run-prepared-food-catalog-postgres-integration.mjs: isolated PostgreSQL 17 relevant-migration subset 11/11, two-connection conflict, rollback, RLS/direct-role denial, append-only history, idempotent delete, synthetic public admission, zero initial public rows, and ephemeral cleanup",
+        "pnpm verify:backend: lint 0 errors with 4 unrelated existing warnings, typecheck, product tests 1518 passed and 22 intended skips, Next.js production build, and security Playwright 12/12",
+        "docs/workpacks/prepared-food-catalog/README.md#stage-2-implementation-evidence--2026-07-16",
+        "Approved public promotion artifacts and operational public rows remain 0; production/staging writes remain 0 and no importer/operator CLI/public seed was added",
+        "Full repository migration stack and Supabase/PostgREST equivalence were not run and remain Manual Only"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-projection",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 2,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-16T12:54:32Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 7,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage3_findings_repaired_and_reapproved",
+      "evidence_sources": [
+        "GitHub PR #1015 independent Stage 3 review rounds and exact-head checks",
+        "commit 58c85a0457529deaba5824954138662714d740d3 Stage 3 first repair pass",
+        "commit 286ba85285687a6c63087d48a216a79c076b9cbd Stage 3 second repair pass",
+        "docs/workpacks/prepared-food-catalog/README.md Stage 2/3 evidence",
+        "tests/prepared-food-catalog-postgres.integration.test.ts and isolated PostgreSQL 17 runner"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-16T13:01:35Z",
+      "status_synced_at": "2026-07-16T13:01:35Z",
+      "pr_body_synced_at": "pending-post-closeout-head"
+    }
+  },
   "branch": "feature/be-prepared-food-catalog",
   "pr_path": "https://github.com/netsus/homecook/pull/1015",
   "out_of_scope": [
@@ -122,5 +180,5 @@
     "Any undocumented endpoint status error code request response field or database surface"
   ],
   "open_questions": [],
-  "notes": "Stage 2 backend TDD implementation is in progress on feature/be-prepared-food-catalog after independent Stage 1.5 approval. Route/type/service and official two-table migration implement private manual atomic create, immutable nutrition replacement, metadata preservation, 409 compare-and-switch, idempotent soft delete, approved public stable-key read-only admission, safe attribution, owner/RLS and bounded set-based catalog projection. Targeted Vitest is green and an isolated PostgreSQL 17 cluster applied the relevant ingredient predecessor, recipe snapshot, and catalog migrations; actual two-connection conflict, create/update rollback, direct role denial, append-only, synthetic-public no-merge/stale-source exclusion, zero initial public rows, and cleanup passed. Approved public promotion artifacts and production/staging writes remain zero; no importer/operator CLI/public seed or UI/planner scope was added. Full repository migration stack and Supabase/PostgREST equivalence remain Manual Only. Independent Stage 3 exact-head review is still pending, so closeout is null and implementation is not self-approved."
+  "notes": "Canonical closeout: .workflow-v2/work-items/prepared-food-catalog.json#closeout. Under the user-approved Codex-only nutrition exception, a fresh independent Stage 3 reviewer approved exact PR #1015 head c22d08b2d938a5c1aae4c9e096e1c6706765ef5a with Blocker/Important/Suggestion 0/0/0 after two separated repair passes closed seven confirmed findings. Targeted Vitest passed 29/29; isolated PostgreSQL 17 relevant-migration subset passed 11/11 with real two-connection conflict, rollback, RLS/direct-role denial, append-only history, idempotent delete, synthetic-public fail-closed admission, zero initial public rows, and cleanup; pnpm verify:backend passed product 1518 with 22 intended skips and security Playwright 12/12. Exact reviewed-head GitHub checks passed 14 with one intended full-regression skip and no pending/fail/cancel. Approved public promotion artifacts, operational public rows, and production/staging writes remain 0; no importer/operator CLI/public seed or UI/planner scope was added. Full repository migration stack, Supabase/PostgREST equivalence, future public promotion, and downstream planner pin/PRODUCT_DELETED entry behavior remain explicit Manual Only or follow-up scope. The post-closeout PR head and its checks do not exist yet, so merge_gate current_head_sha is pending and all_checks_green is false until the orchestrator commits, pushes, and revalidates that exact head. closeout_phase=completed closeout_recovery=ci_resync:2 closeout_repair=codex:7|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1015 independent Stage 3 review rounds and exact-head checks,commit 58c85a0457529deaba5824954138662714d740d3 Stage 3 first repair pass,commit 286ba85285687a6c63087d48a216a79c076b9cbd Stage 3 second repair pass,docs/workpacks/prepared-food-catalog/README.md Stage 2/3 evidence,tests/prepared-food-catalog-postgres.integration.test.ts and isolated PostgreSQL 17 runner | latest_reason_code=stage3_findings_repaired_and_reapproved | last_recovery_at=2026-07-16T12:54:32Z"
 }

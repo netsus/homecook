@@ -180,12 +180,18 @@
 
 ## Design Authority
 
-- `not_required` — 사용자 화면 변경이 없다.
-- anchor screen, generator, critic, authority report, Stage 4 evidence는 모두 빈 배열 또는 false다.
+- UI risk: `not-required`
+- Anchor screen dependency: 없음
+- Visual artifact: N/A
+- Authority status: `not-required`
+- Notes: backend-only Stage 2/3이며 사용자 화면 변경이 없다. anchor screen, generator, critic, authority report, Stage 4 evidence는 모두 빈 배열 또는 false다.
 
 ## Design Status
 
-- N/A
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [ ] 확정 (confirmed)
+- [x] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 ## Source Links
 
@@ -288,7 +294,7 @@
 - [x] cursor scope/pagination과 bounded read query 검증 <!-- omo:id=delivery-product-read-performance;stage=2;scope=backend;review=3 -->
 - [x] isolated PostgreSQL constraint/RLS/concurrency/idempotency/rollback gate 통과 <!-- omo:id=delivery-product-real-db;stage=2;scope=backend;review=3 -->
 - [x] production/staging write 0과 cleanup evidence 기록 <!-- omo:id=delivery-product-zero-write;stage=2;scope=backend;review=3 -->
-- [x] Stage 3 독립 Codex 첫 review의 Blocker 1건·Important 4건을 모두 수용하고 TDD repair evidence 기록 <!-- omo:id=delivery-product-stage3-review;stage=2;scope=backend;review=3 -->
+- [x] Stage 3 독립 Codex 두 차례 review의 확정 finding 7건을 두 fresh repair pass로 수리하고 exact head re-review를 Blocker/Important/Suggestion 0/0/0으로 승인 <!-- omo:id=delivery-product-stage3-review;stage=2;scope=backend;review=3 -->
 - [x] planner-entry/UI 비포함과 design authority N/A closeout 동기화 <!-- omo:id=delivery-product-scope-closeout;stage=2;scope=shared;review=3 -->
 
 ### Stage 2 implementation evidence — 2026-07-16
@@ -299,4 +305,6 @@
 - real DB는 별도 임시 cluster/database에 predecessor ingredient migration, recipe snapshot migration, catalog migration만 적용했다. first create와 nutrition PATCH injected failure 전체 rollback, 실제 두 connection single-winner/loser 409, RLS/직접 권한 거부, append-only, idempotent delete, stable-key public fixture와 stale-source fail-closed를 확인한 뒤 cluster directory를 삭제했다.
 - 승인된 public promotion artifact와 운영 public row는 계속 0건이다. synthetic public row는 위 임시 DB 테스트 안에서만 사용했고 importer/operator CLI/public seed를 만들지 않았다. production/staging write는 0건이다.
 - full repository migration stack 및 Supabase/PostgREST 동등성은 이 plain PostgreSQL bootstrap subset으로 증명하지 않았으며 Stage 3 Manual Only 위험으로 남긴다.
-- 독립 Stage 3 첫 review에서 확정된 5건은 fresh repair 역할이 TDD로 수리했으며, exact repaired head 재검토 전이므로 Stage 3 checklist는 미완료로 유지한다.
+- 독립 Stage 3 review가 첫 거절 5건과 두 번째 거절 2건을 확정했고, 구현자·reviewer와 분리된 fresh repair 역할이 두 pass로 모두 수리했다. fresh independent re-review는 exact PR head `c22d08b2d938a5c1aae4c9e096e1c6706765ef5a`를 Blocker/Important/Suggestion 0/0/0으로 승인했다.
+- exact reviewed head의 GitHub current-head check는 14건 성공, `full-regression` 의도된 skip 1건, pending/fail/cancel 0이었다. closeout projection을 담을 다음 PR head와 그 CI는 아직 생성되지 않았으므로 canonical merge gate는 `pending-pr-head-after-closeout-projection`, `all_checks_green=false`로 보존한다.
+- 전체 repository migration stack과 Supabase/PostgREST 동등성은 실행하지 않았고, 향후 public promotion과 downstream planner pin/`PRODUCT_DELETED` 신규 entry 검증도 각각 Manual Only와 `prepared-food-planner-entry` 후속 범위로 남긴다.

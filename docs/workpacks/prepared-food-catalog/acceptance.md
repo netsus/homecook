@@ -126,6 +126,6 @@
 ### Manual Only
 
 - [x] 독립 Stage 1.5 Codex reviewer가 README/acceptance/automation/work-item/status 계약을 승인한다
-- [ ] 독립 Stage 3 Codex reviewer가 exact current head의 contract, RLS, concurrency, rollback evidence를 승인한다
+- [x] 독립 Stage 3 Codex reviewer가 exact PR #1015 head `c22d08b2d938a5c1aae4c9e096e1c6706765ef5a`의 contract, RLS, concurrency, rollback evidence를 Blocker/Important/Suggestion 0/0/0으로 승인한다
 - [ ] 전체 repository migration stack과 fixture를 적용하고 full Supabase/PostgREST 환경과 plain isolated PostgreSQL의 차이를 별도로 확인한다
 - [ ] 현재 approved public promotion artifact 0건을 유지하고, 향후 운영 public catalog load 전 source별 license·stable key·basis·핵심 영양 검수와 promotion 승인을 별도로 수행한다

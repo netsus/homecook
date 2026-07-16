@@ -2021,9 +2021,9 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/be-prepared-food-catalog",
       "pr_path": "https://github.com/netsus/homecook/pull/1015",
-      "lifecycle": "in_progress",
+      "lifecycle": "merged",
       "approval_state": "codex_approved",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm exec vitest run tests/prepared-food-catalog-api.test.ts tests/prepared-food-catalog-service.test.ts tests/prepared-food-catalog-rls.test.ts",
         "pnpm verify:backend",
@@ -2034,7 +2034,7 @@
         "pnpm validate:omo-bookkeeping",
         "git diff --check"
       ],
-      "notes": "Stage 2 backend TDD is in progress after independent Stage 1.5 approval. Targeted API/service/RLS Vitest and isolated PostgreSQL 17 relevant-migration-stack verification cover atomic create/update rollback, two-connection 409 conflict, owner/direct-role denial, append-only history, idempotent delete, set-based cursor query, approved stable-key synthetic public no-merge and stale-source exclusion. Approved operational public artifacts/rows and production/staging writes remain zero; test fixtures were deleted with the ephemeral cluster. Full repository migration stack and Supabase/PostgREST equivalence remain Manual Only, and independent Stage 3 exact-head review is pending.",
+      "notes": "Canonical closeout: .workflow-v2/work-items/prepared-food-catalog.json#closeout. Fresh independent Codex Stage 3 re-review approved exact PR #1015 head c22d08b2d938a5c1aae4c9e096e1c6706765ef5a with Blocker/Important/Suggestion 0/0/0 after two repair passes closed seven findings. Targeted Vitest 29/29, isolated PostgreSQL 17 relevant-migration subset 11/11, pnpm verify:backend product 1518 pass/22 intended skip plus security Playwright 12/12, and exact reviewed-head GitHub checks 14 pass plus one intended full-regression skip are retained. Approved public artifacts/rows and production/staging writes remain 0. Full repository migration stack, Supabase/PostgREST equivalence, future public promotion, and downstream planner pin/PRODUCT_DELETED entry remain Manual Only or follow-up. The post-closeout head/checks are pending. closeout_phase=completed closeout_recovery=ci_resync:2 closeout_repair=codex:7|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1015 independent Stage 3 review rounds and exact-head checks,commit 58c85a0457529deaba5824954138662714d740d3 Stage 3 first repair pass,commit 286ba85285687a6c63087d48a216a79c076b9cbd Stage 3 second repair pass,docs/workpacks/prepared-food-catalog/README.md Stage 2/3 evidence,tests/prepared-food-catalog-postgres.integration.test.ts and isolated PostgreSQL 17 runner | last_recovery_at=2026-07-16T12:54:32Z",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
