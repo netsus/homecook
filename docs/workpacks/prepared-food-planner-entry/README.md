@@ -226,7 +226,7 @@
 - Stage 4 after evidence plan: `ui/designs/evidence/prepared-food-planner-entry/after/`
 - required viewport evidence: 기존 `PLANNER_WEEK`, `MEAL_SCREEN`, `MENU_ADD` 각각의 **before + after**를 390px, narrow 320px, desktop 1280px에서 모두 확보한다. 신규 `FOOD_PRODUCT_PICKER`, `FOOD_PRODUCT_CREATE`는 동일 3개 viewport의 after를 확보한다. 최초 진입, scroll 중, primary CTA, empty/error/unauthorized/basis mismatch, mixed recipe/product entry 상태도 별도 evidence로 남긴다.
 - authority report: `ui/designs/authority/PLANNER_WEEK-prepared-food-planner-entry-authority.md`
-- Authority status: `required`
+- Authority status: `reviewed`
 - fresh authority precheck와 분리된 Stage 5 review가 통과했고, 별도 final authority가 exact head `5dc6cb45402b75b9dc2befef56732a120e285253`를 `FINAL_AUTHORITY_APPROVED` 0/0/0으로 승인했다. 이어 fresh Stage 6 re-review가 repaired implementation head `829a107d1fdf782beff241e52ab09076ec9feab4`를 `STAGE6_APPROVED` 0/0/0으로 승인했다. 이후 전체 gate 안정화와 final review의 Important 3건을 TDD로 수리한 exact head `b592e804d411692f1dc9e7b5e6fa50408dec01f4`도 같은 독립 reviewer가 Blocker/Important/Suggestion `0/0/0`으로 재승인해 `Design Status: confirmed` 조건을 유지했다.
 - `PLANNER_WEEK`의 Baemin prototype navigation/day-card/scroll containment와 기존 Recipe Meal CTA/status hierarchy를 바꾸지 않는다. Product entry는 additive 정보로 밀도를 조절하며 page-level horizontal overflow를 만들지 않는다.
 
