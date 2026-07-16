@@ -604,6 +604,7 @@ export function getQaFixturePlannerData(startDate: string, endDate: string) {
         recipe_thumbnail_url: fixtureData.recipe.thumbnailUrl,
       })),
     ],
+    product_entries: [],
   } satisfies PlannerData;
 }
 
@@ -888,6 +889,7 @@ export function getQaFixtureMealsBySlot(planDate: string, columnId: string) {
         status: meal.status,
         is_leftover: meal.is_leftover,
       })),
+    product_entries: [],
   } satisfies MealListData;
 }
 

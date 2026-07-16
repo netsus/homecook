@@ -171,6 +171,7 @@ describe("GET /api/v1/planner", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
       from: vi.fn((table: string) => {
         if (table === "meal_plan_columns") return { select: vi.fn(() => mealPlanColumnsQuery) };
         if (table === "meals") return { select: vi.fn(() => mealsQuery) };
@@ -262,6 +263,7 @@ describe("GET /api/v1/planner", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
       from: vi.fn((table: string) => {
         if (table === "meal_plan_columns") return { select: vi.fn(() => mealPlanColumnsQuery) };
         if (table === "meals") return { select: vi.fn(() => mealsQuery) };
@@ -340,6 +342,7 @@ describe("GET /api/v1/planner", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
       from: vi.fn((table: string) => {
         if (table === "meal_plan_columns") return { select: vi.fn(() => mealPlanColumnsQuery) };
         if (table === "meals") return { select: vi.fn(() => mealsQuery) };

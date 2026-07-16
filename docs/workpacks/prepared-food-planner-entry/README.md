@@ -313,6 +313,14 @@
 - request/response/error/type, schema/RLS/transaction, two read projections, column guard와 structural exclusions를 함께 구현한다.
 - implementation actor는 acceptance backend 항목과 evidence를 갱신하지만 자기 Stage 3 승인을 하지 않는다.
 
+#### Stage 2 Implementation Evidence — Pending Independent Stage 3 Review
+
+- RED: 최초 5개 파일 9개 테스트 중 계약 미구현에 해당하는 8개 실패를 확인했고, ProductPlannerEntry가 연결된 column 삭제가 200으로 잘못 통과하는 회귀 테스트도 별도로 409 기대 실패로 고정했다.
+- GREEN/REFACTOR: 신규 service/API/read/RLS/regression과 기존 planner/meals/column 회귀 묶음이 8 files, 66 tests로 통과했다.
+- real PostgreSQL: non-5432 ephemeral PostgreSQL에서 공식 6개 migration 순서, 실제 `ensureUserBootstrapState`, constraint/RLS/direct grant, atomic pin/rollback/old pin/delete, current-version create race와 column-delete/create race를 1 file, 11 tests로 검증했다.
+- repository gate: `pnpm verify:backend`가 product 1,519 passed/22 skipped, production build, security Playwright 12 passed로 통과했다. source-of-truth/workflow-v2/workpack/automation-spec/OMO bookkeeping validator와 `git diff --check`도 통과했다.
+- 이 기록은 Stage 2 구현 증거이며 Stage 3 승인으로 간주하지 않는다. fresh reviewer가 새 exact PR head를 독립 검수해야 한다.
+
 ### Stage 3 Backend Review
 
 - implementation과 분리된 fresh reviewer가 exact PR head에서 contract/RLS/direct grants, two-session race, rollback, immutable pin, read dedupe/N+1, workflow exclusions를 검수한다.
@@ -336,18 +344,18 @@
 
 ### Backend — Stage 2 / Review Stage 3
 
-- [ ] 세 mutation endpoint가 공식 wrapper/body/response/error만 구현한다 <!-- omo:id=delivery-product-entry-three-mutations;stage=2;scope=backend;review=3 -->
-- [ ] `GET /planner` recipe-only `meals[]`와 additive deduped `product_entries[]`를 제공한다 <!-- omo:id=delivery-product-entry-planner-read;stage=2;scope=backend;review=3 -->
-- [ ] `GET /meals` recipe-only `items[]`와 additive deduped `product_entries[]`를 제공한다 <!-- omo:id=delivery-product-entry-meals-read;stage=2;scope=backend;review=3 -->
-- [ ] create가 current version + name/brand snapshot을 원자 pin하고 conflict/rollback을 지킨다 <!-- omo:id=delivery-product-entry-atomic-pin;stage=2;scope=backend;review=3 -->
-- [ ] same-unit 또는 exactly-one direct pinned relation만 정/역방향 환산한다 <!-- omo:id=delivery-product-entry-basis;stage=2;scope=backend;review=3 -->
-- [ ] PATCH가 quantity만 바꾸고 old pin/snapshot/current-change 안정성을 유지한다 <!-- omo:id=delivery-product-entry-patch-pin;stage=2;scope=backend;review=3 -->
-- [ ] DELETE가 owner row만 없애고 state-idempotency/공식 replay 404를 지킨다 <!-- omo:id=delivery-product-entry-delete;stage=2;scope=backend;review=3 -->
-- [ ] RLS/direct grants/route guard가 cross-owner leak/write와 immutable-field 우회를 0으로 만든다 <!-- omo:id=delivery-product-entry-security;stage=2;scope=backend;review=3 -->
-- [ ] column delete guard가 Recipe Meal과 ProductPlannerEntry 모두를 race-safe하게 막는다 <!-- omo:id=delivery-product-entry-column-guard;stage=2;scope=backend;review=3 -->
-- [ ] shopping/cooking/leftover/recipe counts/XP/activity에서 제품 entry가 구조적으로 제외된다 <!-- omo:id=delivery-product-entry-workflow-exclusion;stage=2;scope=shared;review=3,6 -->
-- [ ] isolated PostgreSQL에서 constraint/RLS/two-session race/rollback/old pin/delete/cleanup이 통과한다 <!-- omo:id=delivery-product-entry-real-db;stage=2;scope=backend;review=3 -->
-- [ ] public actual artifact/row와 production/staging write가 0이고 synthetic public fixture가 격리된다 <!-- omo:id=delivery-product-entry-zero-write;stage=2;scope=shared;review=3,6 -->
+- [x] 세 mutation endpoint가 공식 wrapper/body/response/error만 구현한다 <!-- omo:id=delivery-product-entry-three-mutations;stage=2;scope=backend;review=3 -->
+- [x] `GET /planner` recipe-only `meals[]`와 additive deduped `product_entries[]`를 제공한다 <!-- omo:id=delivery-product-entry-planner-read;stage=2;scope=backend;review=3 -->
+- [x] `GET /meals` recipe-only `items[]`와 additive deduped `product_entries[]`를 제공한다 <!-- omo:id=delivery-product-entry-meals-read;stage=2;scope=backend;review=3 -->
+- [x] create가 current version + name/brand snapshot을 원자 pin하고 conflict/rollback을 지킨다 <!-- omo:id=delivery-product-entry-atomic-pin;stage=2;scope=backend;review=3 -->
+- [x] same-unit 또는 exactly-one direct pinned relation만 정/역방향 환산한다 <!-- omo:id=delivery-product-entry-basis;stage=2;scope=backend;review=3 -->
+- [x] PATCH가 quantity만 바꾸고 old pin/snapshot/current-change 안정성을 유지한다 <!-- omo:id=delivery-product-entry-patch-pin;stage=2;scope=backend;review=3 -->
+- [x] DELETE가 owner row만 없애고 state-idempotency/공식 replay 404를 지킨다 <!-- omo:id=delivery-product-entry-delete;stage=2;scope=backend;review=3 -->
+- [x] RLS/direct grants/route guard가 cross-owner leak/write와 immutable-field 우회를 0으로 만든다 <!-- omo:id=delivery-product-entry-security;stage=2;scope=backend;review=3 -->
+- [x] column delete guard가 Recipe Meal과 ProductPlannerEntry 모두를 race-safe하게 막는다 <!-- omo:id=delivery-product-entry-column-guard;stage=2;scope=backend;review=3 -->
+- [x] shopping/cooking/leftover/recipe counts/XP/activity에서 제품 entry가 구조적으로 제외된다 <!-- omo:id=delivery-product-entry-workflow-exclusion;stage=2;scope=shared;review=3,6 -->
+- [x] isolated PostgreSQL에서 constraint/RLS/two-session race/rollback/old pin/delete/cleanup이 통과한다 <!-- omo:id=delivery-product-entry-real-db;stage=2;scope=backend;review=3 -->
+- [x] public actual artifact/row와 production/staging write가 0이고 synthetic public fixture가 격리된다 <!-- omo:id=delivery-product-entry-zero-write;stage=2;scope=shared;review=3,6 -->
 
 ### Frontend — Stage 4 / Review Stages 5 And 6
 
@@ -363,7 +371,7 @@
 ### Manual Only
 
 - [x] independent Stage 1.5 review/repair-final exact-head 승인
-- [ ] docs PR #1016 merge
+- [x] docs PR #1016 merge
 - full repository migration stack 전체와 plain PostgreSQL 대비 Supabase/PostgREST/auth claim 동등성
 - 실제 physical iOS/Android narrow device와 screen reader 수동 확인
 - 현재 0건인 approved public promotion artifact의 향후 운영 승인·load·license 검수

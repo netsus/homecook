@@ -152,6 +152,7 @@ describe("GET /api/v1/meals", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
       from: vi.fn((table: string) => {
         if (table === "meal_plan_columns") return { select: vi.fn(() => columnQuery) };
         if (table === "meals") return { select: vi.fn(() => mealsQuery) };
@@ -188,6 +189,7 @@ describe("GET /api/v1/meals", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
       from: vi.fn((table: string) => {
         if (table === "meal_plan_columns") return { select: vi.fn(() => columnQuery) };
         throw new Error(`unexpected table: ${table}`);
@@ -258,6 +260,7 @@ describe("GET /api/v1/meals", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
       from: vi.fn((table: string) => {
         if (table === "meal_plan_columns") return { select: vi.fn(() => columnQuery) };
         if (table === "meals") return { select: vi.fn(() => mealsQuery) };
@@ -342,6 +345,7 @@ describe("GET /api/v1/meals", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
       from: vi.fn((table: string) => {
         if (table === "meal_plan_columns") return { select: vi.fn(() => columnQuery) };
         if (table === "meals") return { select: vi.fn(() => mealsQuery) };

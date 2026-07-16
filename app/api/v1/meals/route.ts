@@ -11,6 +11,10 @@ import {
 } from "@/lib/mock/recipes";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import {
+  dedupeProductPlannerEntries,
+  toMealProductPlannerEntry,
+} from "@/lib/server/prepared-food-planner-entry";
+import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
@@ -27,6 +31,7 @@ import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { MealCreateBody, MealCreateData, MealListData, MealListItemData } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
+import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 interface QueryError {
   code?: string;
@@ -155,6 +160,10 @@ interface MealsDbClient {
   from(table: "meal_plan_columns"): PlannerColumnsTable;
   from(table: "leftover_dishes"): LeftoverDishesTable;
   from(table: "meals"): MealsTable;
+  rpc(
+    name: "list_product_planner_entries",
+    args: Record<string, unknown>,
+  ): PromiseLike<{ data: unknown; error: QueryError | null }>;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -397,6 +406,19 @@ export async function GET(request: NextRequest) {
     return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
   }
 
+  const productEntriesResult = await dbClient.rpc("list_product_planner_entries", {
+    p_user_id: user.id,
+    p_start_date: parsed.planDate,
+    p_end_date: parsed.planDate,
+    p_column_id: parsed.columnId,
+  });
+  if (productEntriesResult.error || !Array.isArray(productEntriesResult.data)) {
+    return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
+  }
+  const productEntries = dedupeProductPlannerEntries(
+    productEntriesResult.data as ProductPlannerEntryData[],
+  ).map(toMealProductPlannerEntry);
+
   const recipeIds = [...new Set(mealsResult.data.map((meal) => meal.recipe_id))];
   const recipeMap = new Map<string, RecipeSummaryRow>();
 
@@ -417,6 +439,7 @@ export async function GET(request: NextRequest) {
 
   return ok({
     items: mealsResult.data.map((meal) => toMealListItem(meal, recipeMap)),
+    product_entries: productEntries,
   } satisfies MealListData);
 }
 

@@ -13,7 +13,6 @@ import {
   hasDuplicateColumnName,
   isUuid,
   listOwnedPlannerColumns,
-  PLANNER_COLUMN_MIN_COUNT,
   readPlannerColumnPatch,
   sortPlannerColumnRows,
   toPlannerColumnData,
@@ -290,96 +289,33 @@ export async function DELETE(request: Request, context: RouteContext) {
       return fail("FORBIDDEN", "내 끼니 컬럼만 삭제할 수 있어요.", 403);
     }
 
-    const columns = await listOwnedPlannerColumns(auth.dbClient, auth.user.id);
-
-    if (columns.length <= PLANNER_COLUMN_MIN_COUNT) {
-      return fail("MIN_COLUMN_REQUIRED", "끼니 컬럼은 최소 1개가 필요해요.", 409);
-    }
-
-    const mealsResult = await auth.dbClient
-      .from("meals")
-      .select("id")
-      .eq("user_id", auth.user.id)
-      .eq("column_id", columnId)
-      .limit(1);
-
-    if (mealsResult.error || !mealsResult.data) {
-      return fail("INTERNAL_ERROR", "끼니 컬럼을 삭제하지 못했어요.", 500);
-    }
-
-    if (mealsResult.data.length > 0) {
-      return fail("COLUMN_HAS_MEALS", "식사가 등록된 컬럼은 삭제할 수 없어요.", 409);
-    }
-
-    const remainingColumns = sortPlannerColumnRows(
-      columns.filter((column) => column.id !== columnId),
-    );
-
-    const deleteResult = await auth.dbClient
-      .from("meal_plan_columns")
-      .delete()
-      .eq("id", columnId);
+    const deleteResult = await auth.dbClient.rpc("delete_owned_planner_column", {
+      p_user_id: auth.user.id,
+      p_column_id: columnId,
+    });
 
     if (deleteResult.error) {
+      if (deleteResult.error.message.includes("RESOURCE_NOT_FOUND")) {
+        return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
+      }
+
+      if (deleteResult.error.message.includes("FORBIDDEN")) {
+        return fail("FORBIDDEN", "내 끼니 컬럼만 삭제할 수 있어요.", 403);
+      }
+
+      if (deleteResult.error.message.includes("MIN_COLUMN_REQUIRED")) {
+        return fail("MIN_COLUMN_REQUIRED", "끼니 컬럼은 최소 1개가 필요해요.", 409);
+      }
+
+      if (deleteResult.error.message.includes("COLUMN_HAS_MEALS")) {
+        return fail("COLUMN_HAS_MEALS", "식사가 등록된 컬럼은 삭제할 수 없어요.", 409);
+      }
+
       return fail("INTERNAL_ERROR", "끼니 컬럼을 삭제하지 못했어요.", 500);
-    }
-
-    for (const [sortOrder, column] of remainingColumns.entries()) {
-      if (column.sort_order === sortOrder) {
-        continue;
-      }
-
-      const reorderResult = await auth.dbClient
-        .from("meal_plan_columns")
-        .update({ sort_order: sortOrder })
-        .eq("id", column.id);
-
-      if (reorderResult.error) {
-        await restorePlannerColumnDelete({
-          dbClient: auth.dbClient,
-          deletedColumn: targetColumn,
-          originalColumns: columns,
-        });
-
-        return fail("INTERNAL_ERROR", "끼니 컬럼을 삭제하지 못했어요.", 500);
-      }
     }
 
     return ok({ deleted: true } satisfies PlannerColumnDeleteData);
   } catch {
     return fail("INTERNAL_ERROR", "끼니 컬럼을 삭제하지 못했어요.", 500);
   }
-}
-
-async function restorePlannerColumnDelete({
-  dbClient,
-  deletedColumn,
-  originalColumns,
-}: {
-  dbClient: Parameters<typeof findPlannerColumnById>[0];
-  deletedColumn: NonNullable<Awaited<ReturnType<typeof findPlannerColumnById>>>;
-  originalColumns: NonNullable<Awaited<ReturnType<typeof listOwnedPlannerColumns>>>;
-}) {
-  for (const column of originalColumns) {
-    if (column.id === deletedColumn.id) {
-      continue;
-    }
-
-    await dbClient
-      .from("meal_plan_columns")
-      .update({ sort_order: column.sort_order })
-      .eq("id", column.id);
-  }
-
-  await dbClient
-    .from("meal_plan_columns")
-    .insert({
-      id: deletedColumn.id,
-      user_id: deletedColumn.user_id,
-      name: deletedColumn.name,
-      sort_order: deletedColumn.sort_order,
-      created_at: deletedColumn.created_at,
-    })
-    .select("id, user_id, name, sort_order, created_at")
-    .maybeSingle();
 }

@@ -466,6 +466,7 @@ describe("LeftoversScreen", () => {
         { id: "col-2", name: "점심", sort_order: 1 },
       ],
       meals: [],
+      product_entries: [],
     });
 
     render(<LeftoversScreen initialAuthenticated={true} />);
@@ -496,6 +497,7 @@ describe("LeftoversScreen", () => {
         { id: "col-2", name: "점심", sort_order: 1 },
       ],
       meals: [],
+      product_entries: [],
     });
     const createMealSpy = vi
       .spyOn(mealApi, "createMeal")

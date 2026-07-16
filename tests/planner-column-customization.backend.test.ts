@@ -32,6 +32,12 @@ interface MemoryMealRow {
   column_id: string;
 }
 
+interface MemoryProductEntryRow {
+  id: string;
+  user_id: string;
+  column_id: string;
+}
+
 const COLUMN_IDS = {
   breakfast: "550e8400-e29b-41d4-a716-446655440101",
   lunch: "550e8400-e29b-41d4-a716-446655440102",
@@ -44,13 +50,16 @@ const COLUMN_IDS = {
 function createMemoryPlannerColumnsClient({
   columns = [],
   meals = [],
+  productEntries = [],
 }: {
   columns?: MemoryPlannerColumnRow[];
   meals?: MemoryMealRow[];
+  productEntries?: MemoryProductEntryRow[];
 }) {
   const state = {
     columns: [...columns],
     meals: [...meals],
+    productEntries: [...productEntries],
   };
 
   function createSelectQuery<T extends MemoryPlannerColumnRow | MemoryMealRow>(rows: T[]) {
@@ -148,6 +157,30 @@ function createMemoryPlannerColumnsClient({
     auth: {
       getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
     },
+    rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+      if (name !== "delete_owned_planner_column") {
+        return { data: null, error: { message: "unexpected RPC" } };
+      }
+      const columnId = String(args.p_column_id);
+      const userId = String(args.p_user_id);
+      const column = state.columns.find((candidate) => candidate.id === columnId);
+      if (!column) return { data: null, error: { message: "RESOURCE_NOT_FOUND" } };
+      if (column.user_id !== userId) return { data: null, error: { message: "FORBIDDEN" } };
+      if (state.columns.filter((candidate) => candidate.user_id === userId).length <= 1) {
+        return { data: null, error: { message: "MIN_COLUMN_REQUIRED" } };
+      }
+      if (
+        state.meals.some((meal) => meal.user_id === userId && meal.column_id === columnId)
+        || state.productEntries.some((entry) => entry.user_id === userId && entry.column_id === columnId)
+      ) {
+        return { data: null, error: { message: "COLUMN_HAS_MEALS" } };
+      }
+      state.columns = state.columns
+        .filter((candidate) => candidate.id !== columnId)
+        .sort((left, right) => left.sort_order - right.sort_order || left.id.localeCompare(right.id))
+        .map((candidate, sort_order) => ({ ...candidate, sort_order }));
+      return { data: { deleted: true }, error: null };
+    }),
     from(table: "meal_plan_columns" | "meals") {
       if (table === "meals") {
         return {
@@ -587,6 +620,33 @@ describe("planner column customization backend", () => {
 
     expect(response.status).toBe(409);
     expect(body.error.code).toBe("COLUMN_HAS_MEALS");
+  });
+
+  it("blocks deleting a column that still has a product planner entry", async () => {
+    const dbClient = createMemoryPlannerColumnsClient({
+      columns: [
+        createColumn(COLUMN_IDS.breakfast, "아침", 0),
+        createColumn(COLUMN_IDS.lunch, "점심", 1),
+      ],
+      productEntries: [
+        { id: "product-entry-1", user_id: "user-1", column_id: COLUMN_IDS.lunch },
+      ],
+    });
+    createRouteHandlerClient.mockResolvedValue(dbClient);
+
+    const { DELETE } = await importMemberRoute();
+    const response = await DELETE(
+      new Request(`http://localhost:3000/api/v1/planner/columns/${COLUMN_IDS.lunch}`),
+      routeContext(COLUMN_IDS.lunch),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error.code).toBe("COLUMN_HAS_MEALS");
+    expect(dbClient.rpc).toHaveBeenCalledWith("delete_owned_planner_column", {
+      p_user_id: "user-1",
+      p_column_id: COLUMN_IDS.lunch,
+    });
   });
 
   it("blocks deleting another user's column", async () => {

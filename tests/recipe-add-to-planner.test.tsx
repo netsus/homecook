@@ -89,6 +89,7 @@ function buildPlannerData(): PlannerData {
       { id: "col-dinner", name: "저녁", sort_order: 4 },
     ],
     meals: [],
+    product_entries: [],
   };
 }
 
@@ -100,6 +101,7 @@ function buildPlannerDataWithColumns(names: string[]): PlannerData {
       sort_order: index + 1,
     })),
     meals: [],
+    product_entries: [],
   };
 }
 
