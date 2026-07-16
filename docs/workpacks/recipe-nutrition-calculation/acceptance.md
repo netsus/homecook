@@ -7,7 +7,7 @@
 - [x] `GET /recipes/{id}`가 기존 상세 field를 보존하면서 additive non-null `nutrition` object를 `{ success, data, error }` envelope로 반환한다 <!-- omo:id=accept-recipe-additive-envelope;stage=2;scope=backend;review=3,6 -->
 - [x] current snapshot이 있는 recipe는 핵심 5종, base servings, scalable/fixed vectors, status/quality/count/warnings/sources/snapshot metadata를 공식 shape로 반환한다 <!-- omo:id=accept-current-snapshot-payload;stage=2;scope=backend;review=3,6 -->
 - [x] 기본 인분의 complete amount 또는 partial known amount가 scalable/fixed vector 합과 일치한다 <!-- omo:id=accept-vector-base-sum;stage=2;scope=backend;review=3,6 -->
-- [ ] 선택 인분 값이 nutrient별 `scalable * selected/base + fixed`와 일치하고 fixed 기여는 비례하지 않는다 <!-- omo:id=accept-selected-serving-formula;stage=4;scope=shared;review=5,6 -->
+- [ ] 선택 인분 값이 nutrient별 `scalable * selected/base + fixed`와 일치하고 fixed 기여는 비례하지 않는다 <!-- omo:id=accept-selected-serving-formula;stage=4;scope=shared;review=6 -->
 - [x] `POST /meals`가 current snapshot이 있으면 ID를 pin하고 없으면 null로 Recipe Meal 생성에 성공한다 <!-- omo:id=accept-meal-nullable-pin;stage=2;scope=backend;review=3,6 -->
 - [ ] Recipe Detail이 `1인분 기준 예상 영양`, 1인분 기준값, 선택 인분 전체값을 보여주고 기존 CTA·재료·조리 단계 흐름을 유지한다 <!-- omo:id=accept-recipe-detail-card;stage=4;scope=frontend;review=5,6 -->
 
@@ -31,7 +31,7 @@
 - [x] nutrient별 complete/partial/unavailable이 target 기여 기준으로 독립 판정된다 <!-- omo:id=accept-nutrient-status;stage=2;scope=backend;review=3,6 -->
 - [x] 핵심 5종 모두 complete일 때만 전체 complete이고 하나 이상 계산 가능하지만 미완전하면 partial이다 <!-- omo:id=accept-overall-status;stage=2;scope=backend;review=3,6 -->
 - [x] 계산 가능한 기여가 전혀 없으면 전체 unavailable, quality null, amount/known amount null이다 <!-- omo:id=accept-unavailable-null;stage=2;scope=backend;review=3,6 -->
-- [ ] partial은 amount null, known amount, `display_mode='minimum'`을 보존하고 UI는 `최소 X`로 표시한다 <!-- omo:id=accept-partial-minimum;stage=4;scope=shared;review=5,6 -->
+- [ ] partial은 amount null, known amount, `display_mode='minimum'`을 보존하고 UI는 `최소 X`로 표시한다 <!-- omo:id=accept-partial-minimum;stage=4;scope=shared;review=6 -->
 - [x] direct/estimated/mixed quality가 completeness와 독립적으로 계산된다 <!-- omo:id=accept-quality-independent;stage=2;scope=backend;review=3,6 -->
 - [ ] 대표 환산 포함 값은 UI에서 `약`/`예상`으로 표시되고 정밀 실측값처럼 표현되지 않는다 <!-- omo:id=accept-estimated-copy;stage=4;scope=frontend;review=5,6 -->
 - [ ] unavailable은 `0 kcal`가 아니라 `정보 준비 중`으로 표시된다 <!-- omo:id=accept-unavailable-copy;stage=4;scope=frontend;review=5,6 -->
@@ -59,7 +59,7 @@
 - [x] Meal status는 `registered -> shopping_done -> cook_done`만 유지하고 영양 계산이 상태를 바꾸지 않는다 <!-- omo:id=accept-meal-status-unchanged;stage=2;scope=backend;review=3,6 -->
 - [x] 독립 요리는 Meal 상태/pin을 만들거나 바꾸지 않는다 <!-- omo:id=accept-standalone-cook-unchanged;stage=2;scope=backend;review=3,6 -->
 - [ ] `COOK_MODE`에는 인분 조절 UI가 추가되지 않는다 <!-- omo:id=accept-no-cook-serving-control;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 recipe detail 좋아요/저장/플래너/요리 액션과 삭제 endpoint tombstone이 회귀하지 않는다 <!-- omo:id=accept-recipe-actions-regression;stage=4;scope=shared;review=5,6 -->
+- [ ] 기존 recipe detail 좋아요/저장/플래너/요리 액션과 삭제 endpoint tombstone이 회귀하지 않는다 <!-- omo:id=accept-recipe-actions-regression;stage=4;scope=shared;review=6 -->
 - [x] 제품 catalog/planner/aggregate table·API·UI가 이 slice diff에 포함되지 않는다 <!-- omo:id=accept-product-scope-exclusion;stage=2;scope=shared;review=3,6 -->
 
 ## Error / Permission / Security
@@ -68,7 +68,8 @@
 - [x] snapshot query throw/DB error 또는 malformed/unreadable row는 기존 detail 본문을 보존한 200 payload와 `availability_reason='temporarily_unavailable'`을 반환하고 `missing`으로 축소하지 않는다 <!-- omo:id=accept-temporary-snapshot-read-state;stage=2;scope=backend;review=3,6 -->
 - [x] snapshot row를 정상 조회하면 `calculation_status='unavailable'`이어도 `availability_reason=null`이다 <!-- omo:id=accept-normal-snapshot-availability-null;stage=2;scope=backend;review=3,6 -->
 - [ ] 비로그인 Meal 추가는 기존 401 로그인 안내 뒤 같은 recipe/planner action으로 복귀한다 <!-- omo:id=accept-login-return-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] 타 사용자 recipe/column/leftover/Meal/snapshot mutation은 RLS·service guard에서 거부된다 — snapshot direct-access guard는 격리 PG에서 통과했지만 full owner/bootstrap smoke는 미완료 <!-- omo:id=accept-owner-rls;stage=2;scope=backend;review=3,6 -->
+- [x] 기존 recipe의 공개 read 정책, 사용자 생성 시 `created_by` ownership, 401/403/404 경계를 유지하고 공식 계약에 없는 recipe edit/delete endpoint를 추가하지 않는다 <!-- omo:id=accept-owner-rls;stage=2;scope=backend;review=3,6 -->
+- [x] 실제 PostgreSQL 17에서 A가 B의 column/leftover로 `POST /meals`를 호출하거나 B의 Meal을 `PATCH/DELETE`하면 403이고 row/write가 불변이며, authenticated/service direct snapshot mutation도 RLS·privilege에서 거부된다 <!-- omo:id=accept-owner-meal-snapshot-guards;stage=2;scope=backend;review=3,6 -->
 - [x] anon/authenticated 사용자는 snapshot payload/current pointer/backfill origin을 임의 작성·수정·삭제할 수 없다 <!-- omo:id=accept-snapshot-write-guard;stage=2;scope=backend;review=3,6 -->
 - [x] 기존 401/403/404/409/422 envelope과 fields shape가 유지된다 <!-- omo:id=accept-error-contract;stage=2;scope=backend;review=3,6 -->
 - [x] invalid servings/unit/non-finite amount가 snapshot/current write 전에 거부된다 <!-- omo:id=accept-invalid-calculation-input;stage=2;scope=backend;review=3,6 -->
@@ -95,16 +96,17 @@
 - [x] backfill은 batch size/cursor/checkpoint와 dry-run report를 사용하고 전체 table lock/무제한 메모리 적재를 피한다 <!-- omo:id=accept-backfill-performance;stage=2;scope=backend;review=3,6 -->
 - [x] concurrent snapshot writer가 recipe별 current 1개와 deterministic replay를 보존한다 <!-- omo:id=accept-concurrent-writer;stage=2;scope=backend;review=3,6 -->
 - [x] rollback은 snapshot payload/과거 Meal pin을 삭제하지 않고 이전 current를 복원한다 <!-- omo:id=accept-operational-rollback;stage=2;scope=backend;review=3,6 -->
-- [ ] known limitations에 13/124 coverage, 21/30 linked recipes, conversion/piece sparse, 조리 손실 미모델링, PG14.5/17 위험이 남는다 <!-- omo:id=accept-known-limitations;stage=4;scope=shared;review=6 -->
+- [ ] known limitations에 13/124 coverage, 21/30 linked recipes, conversion/piece sparse, 조리 손실 미모델링, plain PostgreSQL 17과 full Supabase/PostgREST의 차이, production-scale contention 미검증이 남는다 <!-- omo:id=accept-known-limitations;stage=4;scope=shared;review=6 -->
 
 ## Data Setup / Preconditions
 
 - [x] official five docs와 SOT가 v1.7.20/v1.5.26/v1.3.23/v1.3.21/v1.2.25로 일치한다 <!-- omo:id=accept-official-docs;stage=2;scope=shared;review=3,6 -->
 - [x] PR #1005 merge/reviewed head와 PR #1006 merge/reviewed head exact ancestry를 검증한다 <!-- omo:id=accept-predecessor-commits;stage=2;scope=shared;review=3,6 -->
 - [x] exact pilot logical batch/handoff checksum과 30 recipe/124 ingredient closure를 검증한다 <!-- omo:id=accept-pilot-pin;stage=2;scope=backend;review=3,6 -->
-- [ ] calculator/API/frontend complete/partial/unavailable fixture가 준비된다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB에 migration, FoodSafety seed, approved predecessor rows, RLS가 적용된다 <!-- omo:id=accept-real-db-ready;stage=2;scope=backend;review=3,6 -->
-- [ ] Meal smoke용 owner user와 기존 bootstrap `meal_plan_columns`가 owning flow로 생성됐음을 검증한다 <!-- omo:id=accept-bootstrap-column;stage=2;scope=backend;review=3,6 -->
+- [x] calculator/API complete/partial/unavailable fixture가 준비된다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [ ] frontend complete/partial/unavailable fixture가 준비된다 <!-- omo:id=accept-frontend-fixture-baseline;stage=4;scope=frontend;review=5,6 -->
+- [x] 격리 PostgreSQL 17.10 real DB에서 전체 migration 66/66, FoodSafety 30 recipe/124 canonical ingredient seed, guarded exact 13 predecessor apply/replay, active approved primary link 13개, 최소 1개 link가 있는 recipe 21/30, recipe nutrition RLS 정책 적용을 확인한다 <!-- omo:id=accept-real-db-ready;stage=2;scope=backend;review=3,6 -->
+- [x] actual `ensurePublicUserRow` + `ensureUserBootstrapState` owning flow가 owner user와 기본 `아침/점심/저녁` `meal_plan_columns`를 생성하고 정상 Meal 요청이 current snapshot을 pin함을 검증한다 <!-- omo:id=accept-bootstrap-column;stage=2;scope=backend;review=3,6 -->
 - [x] production/staging 별도 승인 없이는 snapshot/public data load write가 0이다 <!-- omo:id=accept-production-zero-writes;stage=2;scope=backend;review=3,6 -->
 
 ## Automation Split
@@ -113,7 +115,7 @@
 
 - [x] 순수 calculator의 실제 투입량, exactly-one direct/conversion chain, unit priority, exact piece fail-closed, missing/zero, vector formula를 단위 테스트로 고정한다 <!-- omo:id=accept-vitest-calculator;stage=2;scope=backend;review=3,6 -->
 - [x] hash/idempotency/current switch/warning order/backfill/rollback을 service/integration test로 고정한다 <!-- omo:id=accept-vitest-snapshot;stage=2;scope=backend;review=3,6 -->
-- [ ] PostgreSQL integration에서 constraints/RLS/owner/concurrency/transaction rollback을 검증한다 — constraints/RLS/concurrency/rollback은 임시 PostgreSQL 14.5에서 통과했지만 owner와 PostgreSQL 17 검증은 미완료 <!-- omo:id=accept-db-integration;stage=2;scope=backend;review=3,6 -->
+- [x] PostgreSQL 17 integration에서 constraints, RLS/privilege, cross-owner Meal service guard, append-only/current uniqueness, concurrency, transaction rollback을 검증한다 <!-- omo:id=accept-db-integration;stage=2;scope=backend;review=3,6 -->
 - [x] API normal snapshot complete/partial/unavailable(null), no-snapshot(missing), query/DB/malformed failure(temporarily_unavailable)와 기존 recipe response 회귀를 검증한다 <!-- omo:id=accept-api-integration;stage=2;scope=backend;review=3,6 -->
 - [ ] frontend component에서 한국어 copy, status, selected servings, read-only/error fallback을 검증한다 <!-- omo:id=accept-frontend-vitest;stage=4;scope=frontend;review=5,6 -->
 
@@ -127,6 +129,6 @@
 ### Manual Only
 
 - [ ] 사람 검수자가 partial 누락 사유와 `약/예상/최소/정보 준비 중` 문구가 의료적 정확성·실제 섭취를 암시하지 않는지 확인한다
-- [ ] 격리 real DB에서 FoodSafety-30 dry-run/apply/replay/current switch/Meal pin/rollback report를 확인한다
+- [x] 격리 real DB에서 FoodSafety-30 dry-run/apply/replay/current switch/Meal pin/rollback report를 확인한다
 - [ ] 운영 배포 전 source별 출처표시·라이선스 문구와 production promotion 승인을 별도로 확인한다
 - [ ] 실제 390px/320px 기기와 desktop에서 긴 recipe 제목/재료/영양 copy의 위계와 스크롤을 확인한다
