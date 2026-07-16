@@ -321,6 +321,53 @@ describe("planner week screen", () => {
     expect(screen.queryByRole("button", { name: "컬럼 추가" })).toBeNull();
   });
 
+  it.each([false, true])("shows the product badge once and keeps the %s quantity meta free of duplicate product copy", async (desktop) => {
+    setDesktopViewport(desktop);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue({
+      ...createPlannerData({}),
+      product_entries: [
+        {
+          entry_type: "product",
+          id: "entry-yogurt",
+          product_id: "product-yogurt",
+          product_name: "플레인 요거트",
+          product_brand: null,
+          plan_date: "2026-03-24",
+          column_id: "column-breakfast",
+          quantity: { amount: 1, unit: "serving" },
+          workflow_status: null,
+          product_nutrition_version_id: "version-yogurt",
+          basis_relations: [],
+          nutrition: {
+            basis: { amount: 1, unit: "serving" },
+            values: {
+              energy_kcal: {
+                amount: 105,
+                known_amount: null,
+                status: "complete",
+                display_mode: "total",
+              },
+            },
+            calculation_status: "complete",
+            calculation_quality: "direct",
+            warnings: [],
+            sources: [],
+          },
+        },
+      ],
+    });
+
+    render(<PlannerWeekScreen />);
+
+    const productCard = await screen.findByTestId(
+      `${desktop ? "planner-web" : "planner-mobile"}-product-entry-yogurt`,
+    );
+    expect(within(productCard).getAllByText("완제품")).toHaveLength(1);
+    expect(productCard.textContent).toContain("1회");
+    expect(productCard.textContent).not.toContain("완제품 ·");
+  });
+
   it("keeps Wave1 mobile navigation with a floating shopping CTA", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));

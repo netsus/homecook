@@ -38,8 +38,14 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { buildPlannerMealStatusStats } from "@/lib/planner-stats";
+import {
+  formatProductQuantity,
+  mergePlannerEntries,
+  type PlannerDisplayEntry,
+} from "@/lib/planner/product-planner-entry-presentation";
 import { usePlannerStore } from "@/stores/planner-store";
 import type { PlannerColumnData, PlannerMealData } from "@/types/planner";
+import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type MealAddSheetState = {
@@ -117,16 +123,17 @@ function getRangeContextLabel(startDate: string, defaultStartDate: string) {
   return startDate > defaultStartDate ? "다음주에요" : "지난주에요";
 }
 
-function buildMealMap(meals: PlannerMealData[]) {
-  const mealMap = new Map<string, PlannerMealData[]>();
-
-  meals.forEach((meal) => {
-    const key = `${meal.plan_date}:${meal.column_id}`;
-    const current = mealMap.get(key) ?? [];
-    mealMap.set(key, [...current, meal]);
+function buildPlannerEntryMap(
+  meals: PlannerMealData[],
+  productEntries: ProductPlannerEntryData[],
+) {
+  const entryMap = new Map<string, PlannerDisplayEntry[]>();
+  mergePlannerEntries(meals, productEntries).forEach((entry) => {
+    const value = entry.entry_type === "recipe" ? entry.recipe : entry.product;
+    const key = `${value.plan_date}:${value.column_id}`;
+    entryMap.set(key, [...(entryMap.get(key) ?? []), entry]);
   });
-
-  return mealMap;
+  return entryMap;
 }
 
 function getPlannerMealStatusClass(status: PlannerMealData["status"]) {
@@ -195,7 +202,7 @@ function PlannerWeekWebView({
   loadPlanner,
   mealStats,
   meals,
-  mealsByDateAndColumn,
+  entriesByDateAndColumn,
   plannerBodyMotionStyle,
   rangeContextLabel,
   rangeEndDate,
@@ -221,7 +228,7 @@ function PlannerWeekWebView({
     total: number;
   };
   meals: PlannerMealData[];
-  mealsByDateAndColumn: Map<string, PlannerMealData[]>;
+  entriesByDateAndColumn: Map<string, PlannerDisplayEntry[]>;
   plannerBodyMotionStyle: React.CSSProperties;
   rangeContextLabel: string;
   rangeEndDate: string;
@@ -443,9 +450,9 @@ function PlannerWeekWebView({
 
                         {columns.map((column) => {
                           const slotKey = `${dateKey}:${column.id}`;
-                          const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
-                          const visibleMeals = slotMeals.slice(0, 2);
-                          const overflowCount = Math.max(0, slotMeals.length - visibleMeals.length);
+                          const slotEntries = entriesByDateAndColumn.get(slotKey) ?? [];
+                          const visibleEntries = slotEntries.slice(0, 2);
+                          const overflowCount = Math.max(0, slotEntries.length - visibleEntries.length);
                           const addHref = getMealAddHrefForSlot(dateKey, column);
                           const mealHref = `/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`;
                           const isToday = dateKey === todayKey;
@@ -458,42 +465,52 @@ function PlannerWeekWebView({
                               ].join(" ")}
                               key={slotKey}
                             >
-                              {visibleMeals.map((meal) => (
-                                <Link
-                                  className={[
-                                    "web-planner-meal",
-                                    `web-planner-meal-${getPlannerMealStatusClass(meal.status)}`,
-                                  ].join(" ")}
-                                  href={mealHref}
-                                  key={meal.id}
-                                >
-                                  <span
-                                    aria-hidden="true"
-                                    className="web-planner-meal-thumb"
-                                    style={
-                                      meal.recipe_thumbnail_url
-                                        ? {
-                                            backgroundImage: `url(${meal.recipe_thumbnail_url})`,
-                                          }
-                                        : undefined
-                                    }
-                                  />
-                                  <span className="web-planner-meal-copy">
-                                    <span className="web-planner-meal-title">
-                                      {meal.recipe_title}
-                                    </span>
-                                    <span className="web-planner-meal-meta">
-                                      <span>{meal.planned_servings}인분</span>
-                                      <span
-                                        aria-label={getPlannerMealStatusAriaLabel(meal.status)}
-                                        className="sr-only"
-                                      >
-                                        {getPlannerMealStatusAriaLabel(meal.status)}
+                              {visibleEntries.map((entry) =>
+                                entry.entry_type === "recipe" ? (
+                                  <Link
+                                    className={[
+                                      "web-planner-meal",
+                                      `web-planner-meal-${getPlannerMealStatusClass(entry.recipe.status)}`,
+                                    ].join(" ")}
+                                    href={mealHref}
+                                    key={entry.key}
+                                  >
+                                    <span
+                                      aria-hidden="true"
+                                      className="web-planner-meal-thumb"
+                                      style={
+                                        entry.recipe.recipe_thumbnail_url
+                                          ? { backgroundImage: `url(${entry.recipe.recipe_thumbnail_url})` }
+                                          : undefined
+                                      }
+                                    />
+                                    <span className="web-planner-meal-copy">
+                                      <span className="web-planner-meal-title">{entry.recipe.recipe_title}</span>
+                                      <span className="web-planner-meal-meta">
+                                        <span>{entry.recipe.planned_servings}인분</span>
+                                        <span aria-label={getPlannerMealStatusAriaLabel(entry.recipe.status)} className="sr-only">
+                                          {getPlannerMealStatusAriaLabel(entry.recipe.status)}
+                                        </span>
                                       </span>
                                     </span>
-                                  </span>
-                                </Link>
-                              ))}
+                                  </Link>
+                                ) : (
+                                  <Link
+                                    className="web-planner-meal border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)]"
+                                    data-testid={`planner-web-product-${entry.product.id}`}
+                                    href={mealHref}
+                                    key={entry.key}
+                                  >
+                                    <span className="shrink-0 rounded-full bg-[var(--brand-primary-soft)] px-2 py-1 text-[10px] font-extrabold text-[var(--brand-primary-text)]">완제품</span>
+                                    <span className="web-planner-meal-copy">
+                                      <span className="web-planner-meal-title">{entry.product.product_name}</span>
+                                      <span className="web-planner-meal-meta">
+                                        <span>{formatProductQuantity(entry.product.quantity)}</span>
+                                      </span>
+                                    </span>
+                                  </Link>
+                                ),
+                              )}
                               {overflowCount > 0 ? (
                                 <Link className="web-planner-more" href={mealHref}>
                                   +{overflowCount}개 더 보기
@@ -503,12 +520,12 @@ function PlannerWeekWebView({
                                 aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
                                 className={[
                                   "web-planner-add",
-                                  slotMeals.length > 0 ? "web-planner-add-compact" : "",
+                                  slotEntries.length > 0 ? "web-planner-add-compact" : "",
                                 ].join(" ")}
                                 href={addHref}
                               >
                                 <PlusIcon />
-                                <span>{slotMeals.length > 0 ? "추가" : "식사 추가"}</span>
+                                <span>{slotEntries.length > 0 ? "추가" : "식사 추가"}</span>
                               </Link>
                             </div>
                           );
@@ -542,6 +559,7 @@ export function PlannerWeekScreen({
   const rangeEndDate = usePlannerStore((state) => state.rangeEndDate);
   const columns = usePlannerStore((state) => state.columns);
   const meals = usePlannerStore((state) => state.meals);
+  const productEntries = usePlannerStore((state) => state.productEntries);
   const screenState = usePlannerStore((state) => state.screenState);
   const isRefreshing = usePlannerStore((state) => state.isRefreshing);
   const errorMessage = usePlannerStore((state) => state.errorMessage);
@@ -564,7 +582,10 @@ export function PlannerWeekScreen({
     () => buildDateKeys(rangeStartDate, rangeEndDate),
     [rangeEndDate, rangeStartDate],
   );
-  const mealsByDateAndColumn = useMemo(() => buildMealMap(meals), [meals]);
+  const entriesByDateAndColumn = useMemo(
+    () => buildPlannerEntryMap(meals, productEntries),
+    [meals, productEntries],
+  );
   const mealStats = useMemo(() => buildPlannerMealStatusStats(meals), [meals]);
   const shoppingListLinks = useMemo(() => {
     const grouped = new Map<
@@ -1000,7 +1021,7 @@ export function PlannerWeekScreen({
     }
   }
 
-  function getMealAddHref(target: "search" | "recipebook" | "pantry" | "leftover" | "manual" | "youtube") {
+  function getMealAddHref(target: "search" | "recipebook" | "pantry" | "leftover" | "manual" | "youtube" | "product") {
     if (!mealAddSheet) {
       return "/planner";
     }
@@ -1015,7 +1036,7 @@ export function PlannerWeekScreen({
       return buildMealAddTargetHref(`/menu/add/youtube?${baseQuery}`, mealAddSheet);
     }
 
-    if (target === "search" || target === "recipebook" || target === "pantry" || target === "leftover") {
+    if (target === "search" || target === "recipebook" || target === "pantry" || target === "leftover" || target === "product") {
       return buildMealAddTargetHref(
         `/menu-add?${baseQuery}&source=${target}`,
         mealAddSheet,
@@ -1296,7 +1317,7 @@ export function PlannerWeekScreen({
               const isToday = dateKey === todayKey;
               const isSelected = dateKey === selectedDateKey;
               const dayMealCount = columns.filter((col) =>
-                mealsByDateAndColumn.has(`${dateKey}:${col.id}`),
+                entriesByDateAndColumn.has(`${dateKey}:${col.id}`),
               ).length;
 
               return (
@@ -1334,8 +1355,8 @@ export function PlannerWeekScreen({
                   <div>
                     {columns.map((column, columnIndex) => {
                       const slotKey = `${dateKey}:${column.id}`;
-                      const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
-                      const visibleMeals = slotMeals.slice(0, 2);
+                      const slotEntries = entriesByDateAndColumn.get(slotKey) ?? [];
+                      const visibleEntries = slotEntries.slice(0, 2);
 
                       return (
                         <div
@@ -1349,74 +1370,67 @@ export function PlannerWeekScreen({
                             {column.name}
                           </div>
 
-                          {visibleMeals.length > 0 ? (
+                          {visibleEntries.length > 0 ? (
                             <>
                               <Link
                                 className={[
                                   "mobile-planner-slot-meals min-w-0 flex-1",
-                                  visibleMeals.length > 1
+                                  visibleEntries.length > 1
                                     ? "mobile-planner-slot-meals-multiple"
                                     : "",
                                 ].join(" ")}
                                 data-testid={`planner-mobile-slot-${dateKey}-${column.id}`}
                                 href={`/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`}
                               >
-                                {visibleMeals.map((meal, mealIndex) => (
-                                  <span
-                                    className={[
-                                      "mobile-planner-meal-card relative min-w-0 overflow-hidden border border-l-4 border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--foreground)]",
-                                      getMobilePlannerMealStatusAccentClass(meal.status),
-                                    ].join(" ")}
-                                    data-testid={`planner-mobile-meal-${meal.id}`}
-                                    key={`${meal.id}-${mealIndex}`}
-                                  >
-                                    {meal.recipe_thumbnail_url ? (
-                                      <Image
-                                        alt=""
-                                        className="mobile-planner-meal-thumb shrink-0 object-cover"
-                                        height={50}
-                                        src={meal.recipe_thumbnail_url}
-                                        unoptimized
-                                        width={38}
-                                      />
-                                    ) : (
-                                      <span className="mobile-planner-meal-thumb flex shrink-0 items-center justify-center bg-[var(--brand-soft)] text-[13px] font-bold text-[var(--brand)]">
-                                        {column.name.charAt(0)}
-                                      </span>
-                                    )}
-                                    <span className="mobile-planner-meal-copy min-w-0 flex-1">
+                                {visibleEntries.map((entry, entryIndex) => {
+                                  if (entry.entry_type === "product") {
+                                    return (
                                       <span
-                                        className={`mobile-planner-meal-title block ${meal.is_leftover ? "text-[var(--brand-deep)]" : "text-[var(--foreground)]"}`}
+                                        className="mobile-planner-meal-card relative min-w-0 overflow-hidden border border-l-4 border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--foreground)]"
+                                        data-testid={`planner-mobile-product-${entry.product.id}`}
+                                        key={entry.key}
                                       >
-                                        {meal.recipe_title}
-                                      </span>
-                                      {meal.is_leftover ? (
-                                        <span aria-label="남은 요리 식사" className="sr-only">
-                                          남은 요리
+                                        <span className="shrink-0 rounded-full bg-[var(--brand-primary-soft)] px-2 py-1 text-[10px] font-extrabold text-[var(--brand-primary-text)]">완제품</span>
+                                        <span className="mobile-planner-meal-copy min-w-0 flex-1">
+                                          <span className="mobile-planner-meal-title block text-[var(--foreground)]">{entry.product.product_name}</span>
+                                          <span className="mt-px block truncate text-[10px] text-[var(--text-3)]">{formatProductQuantity(entry.product.quantity)}</span>
                                         </span>
+                                        {entryIndex === 1 && slotEntries.length > 2 ? (
+                                          <span aria-label={`외 ${slotEntries.length - 2}개 더 있음`} className="mobile-planner-overflow-badge absolute">+{slotEntries.length - 2}</span>
+                                        ) : null}
+                                      </span>
+                                    );
+                                  }
+
+                                  const meal = entry.recipe;
+                                  return (
+                                    <span
+                                      className={[
+                                        "mobile-planner-meal-card relative min-w-0 overflow-hidden border border-l-4 border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--foreground)]",
+                                        getMobilePlannerMealStatusAccentClass(meal.status),
+                                      ].join(" ")}
+                                      data-testid={`planner-mobile-meal-${meal.id}`}
+                                      key={entry.key}
+                                    >
+                                      {meal.recipe_thumbnail_url ? (
+                                        <Image alt="" className="mobile-planner-meal-thumb shrink-0 object-cover" height={50} src={meal.recipe_thumbnail_url} unoptimized width={38} />
+                                      ) : (
+                                        <span className="mobile-planner-meal-thumb flex shrink-0 items-center justify-center bg-[var(--brand-soft)] text-[13px] font-bold text-[var(--brand)]">{column.name.charAt(0)}</span>
+                                      )}
+                                      <span className="mobile-planner-meal-copy min-w-0 flex-1">
+                                        <span className={`mobile-planner-meal-title block ${meal.is_leftover ? "text-[var(--brand-deep)]" : "text-[var(--foreground)]"}`}>{meal.recipe_title}</span>
+                                        {meal.is_leftover ? <span aria-label="남은 요리 식사" className="sr-only">남은 요리</span> : null}
+                                        <span className="mt-px flex min-w-0 items-center gap-1">
+                                          <span className="truncate text-[10px] text-[var(--text-3)]">{meal.planned_servings}인분</span>
+                                          <span aria-label={getPlannerMealStatusAriaLabel(meal.status)} className="sr-only">{getPlannerMealStatusAriaLabel(meal.status)}</span>
+                                        </span>
+                                      </span>
+                                      {entryIndex === 1 && slotEntries.length > 2 ? (
+                                        <span aria-label={`외 ${slotEntries.length - 2}개 더 있음`} className="mobile-planner-overflow-badge absolute">+{slotEntries.length - 2}</span>
                                       ) : null}
-                                      <span className="mt-px flex min-w-0 items-center gap-1">
-                                        <span className="truncate text-[10px] text-[var(--text-3)]">
-                                          {meal.planned_servings}인분
-                                        </span>
-                                        <span
-                                          aria-label={getPlannerMealStatusAriaLabel(meal.status)}
-                                          className="sr-only"
-                                        >
-                                          {getPlannerMealStatusAriaLabel(meal.status)}
-                                        </span>
-                                      </span>
                                     </span>
-                                    {mealIndex === 1 && slotMeals.length > 2 ? (
-                                      <span
-                                        aria-label={`외 ${slotMeals.length - 2}개 더 있음`}
-                                        className="mobile-planner-overflow-badge absolute"
-                                      >
-                                        +{slotMeals.length - 2}
-                                      </span>
-                                    ) : null}
-                                  </span>
-                                ))}
+                                  );
+                                })}
                               </Link>
                               <button
                                 aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
@@ -1471,7 +1485,7 @@ export function PlannerWeekScreen({
             loadPlanner={loadPlanner}
             mealStats={mealStats}
             meals={meals}
-            mealsByDateAndColumn={mealsByDateAndColumn}
+            entriesByDateAndColumn={entriesByDateAndColumn}
             plannerBodyMotionStyle={plannerBodyMotionStyle}
             rangeContextLabel={rangeContextLabel}
             rangeEndDate={rangeEndDate}

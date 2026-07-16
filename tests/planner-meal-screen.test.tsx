@@ -17,6 +17,8 @@ const createMealSafe = vi.fn();
 const createCookingSession = vi.fn();
 const fetchRecipes = vi.fn();
 const fetchLeftovers = vi.fn();
+const updateProductPlannerEntryQuantity = vi.fn();
+const deleteProductPlannerEntry = vi.fn();
 const isMealApiError = vi.fn(
   (error: unknown): error is Error & { status: number; code: string } =>
     Boolean(error) &&
@@ -62,6 +64,13 @@ vi.mock("@/lib/api/recipe", () => ({
 vi.mock("@/lib/api/cooking", () => ({
   createCookingSession: (...args: unknown[]) => createCookingSession(...args),
   isCookingApiError: (error: unknown) => isCookingApiError(error),
+}));
+
+vi.mock("@/lib/api/product-planner-entry", () => ({
+  updateProductPlannerEntryQuantity: (...args: unknown[]) => updateProductPlannerEntryQuantity(...args),
+  deleteProductPlannerEntry: (...args: unknown[]) => deleteProductPlannerEntry(...args),
+  isProductPlannerEntryApiError: (error: unknown) =>
+    Boolean(error) && typeof error === "object" && "status" in (error as Record<string, unknown>),
 }));
 
 vi.mock("@/lib/supabase/env", () => ({
@@ -160,6 +169,8 @@ describe("MealScreen", () => {
     createCookingSession.mockReset();
     fetchRecipes.mockReset();
     fetchLeftovers.mockReset();
+    updateProductPlannerEntryQuantity.mockReset();
+    deleteProductPlannerEntry.mockReset();
     fetchRecipes.mockResolvedValue({
       success: true,
       data: {
@@ -928,5 +939,68 @@ describe("MealScreen", () => {
     expect(
       screen.queryByRole("dialog", { name: "유튜브 가져오기" }),
     ).toBeNull();
+  });
+
+  it.each([false, true])("uses the merge adapter in the real %s render and removes duplicate product response rows", async (desktop) => {
+    setDesktopViewport(desktop);
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = {
+      entry_type: "product" as const,
+      id: "entry-duplicate",
+      product_id: "product-1",
+      product_name: "플레인 요거트",
+      product_brand: null,
+      quantity: { amount: 1, unit: "serving" as const },
+      workflow_status: null,
+      product_nutrition_version_id: "version-1",
+      basis_relations: [],
+      nutrition: {
+        basis: { amount: 1, unit: "serving" as const },
+        values: { energy_kcal: { amount: 105, known_amount: null, status: "complete" as const, display_mode: "total" as const } },
+        calculation_status: "complete" as const,
+        calculation_quality: "direct" as const,
+        warnings: [],
+        sources: [],
+      },
+    };
+    fetchMeals.mockResolvedValue({ items: [buildMeal()], product_entries: [productEntry, productEntry] });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    expect(await screen.findAllByTestId("product-planner-entry-entry-duplicate")).toHaveLength(1);
+  });
+
+  it("moves PATCH 401 into the existing unauthorized return gate with the entry edit context", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = {
+      entry_type: "product" as const,
+      id: "entry-auth",
+      product_id: "product-1",
+      product_name: "플레인 요거트",
+      product_brand: null,
+      quantity: { amount: 1, unit: "serving" as const },
+      workflow_status: null,
+      product_nutrition_version_id: "version-1",
+      basis_relations: [],
+      nutrition: {
+        basis: { amount: 1, unit: "serving" as const },
+        values: { energy_kcal: { amount: 105, known_amount: null, status: "complete" as const, display_mode: "total" as const } },
+        calculation_status: "complete" as const,
+        calculation_quality: "direct" as const,
+        warnings: [], sources: [],
+      },
+    };
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    updateProductPlannerEntryQuantity.mockRejectedValue(Object.assign(new Error("로그인이 필요해요."), { status: 401, code: "UNAUTHORIZED" }));
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await userEvent.click(await screen.findByRole("button", { name: "수량 변경" }));
+    await userEvent.clear(screen.getByRole("spinbutton", { name: "완제품 변경 수량" }));
+    await userEvent.type(screen.getByRole("spinbutton", { name: "완제품 변경 수량" }), "2");
+    await userEvent.click(screen.getAllByRole("button", { name: "수량 변경" }).at(-1)!);
+
+    const login = await screen.findByTestId("social-login-buttons");
+    expect(decodeURIComponent(login.getAttribute("data-next-path") ?? "")).toContain("productEntryId=entry-auth");
+    expect(decodeURIComponent(login.getAttribute("data-next-path") ?? "")).toContain("productAction=edit");
   });
 });

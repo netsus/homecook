@@ -9,6 +9,7 @@ import {
   shiftPlannerRange,
 } from "@/lib/api/planner";
 import type { PlannerColumnData, PlannerMealData } from "@/types/planner";
+import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 export type PlannerScreenState =
   | "loading"
@@ -22,6 +23,7 @@ interface PlannerStoreState {
   rangeEndDate: string;
   columns: PlannerColumnData[];
   meals: PlannerMealData[];
+  productEntries: ProductPlannerEntryData[];
   screenState: PlannerScreenState;
   isRefreshing: boolean;
   errorMessage: string | null;
@@ -38,6 +40,7 @@ function buildInitialState() {
     rangeEndDate: endDate,
     columns: [] as PlannerColumnData[],
     meals: [] as PlannerMealData[],
+    productEntries: [] as ProductPlannerEntryData[],
     screenState: "loading" as PlannerScreenState,
     isRefreshing: false,
     errorMessage: null as string | null,
@@ -52,8 +55,11 @@ function resolveErrorMessage(error: unknown) {
   return "요청을 처리하지 못했어요.";
 }
 
-function resolveNextScreenState(meals: PlannerMealData[]): PlannerScreenState {
-  return meals.length > 0 ? "ready" : "empty";
+function resolveNextScreenState(
+  meals: PlannerMealData[],
+  productEntries: ProductPlannerEntryData[],
+): PlannerScreenState {
+  return meals.length > 0 || productEntries.length > 0 ? "ready" : "empty";
 }
 
 export const usePlannerStore = create<PlannerStoreState>((set, get) => ({
@@ -62,6 +68,7 @@ export const usePlannerStore = create<PlannerStoreState>((set, get) => ({
     const {
       columns,
       meals,
+      productEntries,
       rangeEndDate,
       rangeStartDate,
       screenState,
@@ -71,7 +78,7 @@ export const usePlannerStore = create<PlannerStoreState>((set, get) => ({
       startDate: rangeStartDate,
     };
     const hasVisibleContent =
-      columns.length > 0 || meals.length > 0 || screenState === "empty";
+      columns.length > 0 || meals.length > 0 || productEntries.length > 0 || screenState === "empty";
 
     set({
       errorMessage: null,
@@ -84,9 +91,10 @@ export const usePlannerStore = create<PlannerStoreState>((set, get) => ({
       set({
         columns: data.columns,
         meals: data.meals,
+        productEntries: data.product_entries ?? [],
         rangeStartDate: requestedRange.startDate,
         rangeEndDate: requestedRange.endDate,
-        screenState: resolveNextScreenState(data.meals),
+        screenState: resolveNextScreenState(data.meals, data.product_entries ?? []),
         isRefreshing: false,
         errorMessage: null,
       });

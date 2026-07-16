@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { MealAddOptionsSheet } from "@/components/planner/meal-add-options-sheet";
 import type {
@@ -13,6 +14,7 @@ import type {
   MealAddRouteMode,
 } from "@/components/planner/meal-add-options-sheet";
 import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
+import { ProductPlannerEntryCard } from "@/components/planner/product-planner-entry-card";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useAppReturn } from "@/components/shared/use-app-return";
@@ -42,12 +44,31 @@ import {
   updateMealServings,
 } from "@/lib/api/meal";
 import { createShoppingList, isShoppingApiError } from "@/lib/api/shopping";
+import {
+  deleteProductPlannerEntry,
+  isProductPlannerEntryApiError,
+  updateProductPlannerEntryQuantity,
+} from "@/lib/api/product-planner-entry";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { formatKoreaCompactDate, formatKoreaDate } from "@/lib/korean-date";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
+import {
+  buildCompatibleFoodProductUnits,
+  formatProductUnit,
+  mergeMealScreenEntries,
+} from "@/lib/planner/product-planner-entry-presentation";
+import {
+  clearProductPlannerReturnContext,
+  readProductPlannerReturnContext,
+  saveProductPlannerReturnContext,
+} from "@/lib/planner/product-planner-return-context";
 import type { MealListItemData } from "@/types/meal";
+import type {
+  MealProductPlannerEntryData,
+  ProductPlannerEntryQuantity,
+} from "@/types/product-planner-entry";
 import type {
   ShoppingListAllPantryCompletionSummary,
   ShoppingListAllPantrySummary,
@@ -86,6 +107,25 @@ function formatDateShort(planDate: string) {
 function buildNextPath(planDate: string, columnId: string, slotName: string) {
   const base = `/planner/${planDate}/${columnId}`;
   return slotName ? `${base}?slot=${encodeURIComponent(slotName)}` : base;
+}
+
+function buildProductEntryNextPath(
+  planDate: string,
+  columnId: string,
+  slotName: string,
+  entryId: string,
+  action: "edit" | "delete",
+  quantity?: ProductPlannerEntryQuantity,
+) {
+  const params = new URLSearchParams();
+  if (slotName) params.set("slot", slotName);
+  params.set("productAction", action);
+  params.set("productEntryId", entryId);
+  if (quantity) {
+    params.set("productAmount", String(quantity.amount));
+    params.set("productUnit", quantity.unit);
+  }
+  return `/planner/${planDate}/${columnId}?${params.toString()}`;
 }
 
 const mealVisualMeta: Record<
@@ -407,7 +447,7 @@ function MealCard({
             </span>
           ))}
           {hiddenCount > 0 ? (
-            <span className="rounded-full bg-[var(--surface-subtle)] px-2 py-[5px] text-[11px] font-semibold leading-[1.3] text-[var(--text-3)]">
+            <span className="rounded-full bg-[var(--surface-subtle)] px-2 py-[5px] text-[11px] font-semibold leading-[1.3] text-[var(--text-2)]">
               +{hiddenCount}
             </span>
           ) : null}
@@ -483,7 +523,7 @@ function getAppMealStatusClass(status: MealListItemData["status"]) {
     return "bg-[var(--planner-status-cooked-soft)] text-[var(--planner-status-cooked)]";
   }
 
-  return "bg-[var(--planner-status-registered-soft)] text-[var(--planner-status-registered-strong)]";
+  return "bg-[var(--planner-status-registered-soft)] text-[var(--brand-primary-text)]";
 }
 
 function isAllPantryCompletion(
@@ -767,6 +807,7 @@ function MealWebView({
   conflictErrors,
   errorMessage,
   meals,
+  productEntries,
   onAddMeal,
   onBack,
   onCreateShopping,
@@ -776,7 +817,10 @@ function MealWebView({
   onStartCook,
   onStepDown,
   onStepUp,
+  onProductDelete,
+  onProductEdit,
   pendingMealIds,
+  pendingProductIds,
   planDate,
   screenState,
   slotName,
@@ -787,6 +831,7 @@ function MealWebView({
   conflictErrors: Record<string, string>;
   errorMessage: string | null;
   meals: MealListItemData[];
+  productEntries: MealProductPlannerEntryData[];
   onAddMeal: () => void;
   onBack: () => void;
   onCreateShopping: (meal: MealListItemData) => void;
@@ -796,7 +841,10 @@ function MealWebView({
   onStartCook: (meal: MealListItemData) => void;
   onStepDown: (meal: MealListItemData) => void;
   onStepUp: (meal: MealListItemData) => void;
+  onProductDelete: (entry: MealProductPlannerEntryData) => void;
+  onProductEdit: (entry: MealProductPlannerEntryData) => void;
   pendingMealIds: Set<string>;
+  pendingProductIds: Set<string>;
   planDate: string;
   screenState: ScreenState;
   slotName: string;
@@ -865,7 +913,7 @@ function MealWebView({
           />
         ) : null}
 
-        {screenState === "ready" && meals.length > 0 ? (
+        {screenState === "ready" && (meals.length > 0 || productEntries.length > 0) ? (
           <div className="web-meal-layout web-meal-list-layout">
             <section aria-label="끼니 음식 목록" className="web-meal-main">
               <div className="web-meal-list web-meal-row-list" data-testid="web-meal-list">
@@ -883,6 +931,16 @@ function MealWebView({
                     onStepUp={() => onStepUp(meal)}
                   />
                 ))}
+                {productEntries.map((entry) => (
+                  <ProductPlannerEntryCard
+                    entry={entry}
+                    isPending={pendingProductIds.has(entry.id)}
+                    key={`product:${entry.id}`}
+                    onDelete={() => onProductDelete(entry)}
+                    onEditQuantity={() => onProductEdit(entry)}
+                    variant="web"
+                  />
+                ))}
               </div>
             </section>
 
@@ -895,7 +953,7 @@ function MealWebView({
                 <div className="web-meal-rail-stats">
                   <div>
                     <span>음식</span>
-                    <strong>{meals.length}개</strong>
+                    <strong>{meals.length + productEntries.length}개</strong>
                   </div>
                   <div>
                     <span>총 인분</span>
@@ -1029,16 +1087,14 @@ function TrashIcon() {
 
 interface CenterModalProps {
   children: React.ReactNode;
+  initialFocusRef?: React.RefObject<HTMLElement | null>;
   onClose: () => void;
   labelledBy?: string;
 }
 
-function CenterModal({ children, onClose, labelledBy }: CenterModalProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    contentRef.current?.focus();
-  }, []);
+function CenterModal({ children, initialFocusRef, onClose, labelledBy }: CenterModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogBoundary({ dialogRef, initialFocusRef, onClose });
 
   return (
     <div
@@ -1046,6 +1102,8 @@ function CenterModal({ children, onClose, labelledBy }: CenterModalProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby={labelledBy}
+      ref={dialogRef}
+      tabIndex={-1}
     >
       {/* backdrop */}
       <div
@@ -1055,9 +1113,7 @@ function CenterModal({ children, onClose, labelledBy }: CenterModalProps) {
       />
       {/* content */}
       <div
-        ref={contentRef}
         className="relative w-full max-w-sm rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_var(--shadow-color-strong)] lg:rounded-[var(--radius-sheet)] lg:p-5"
-        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex justify-center lg:hidden">
@@ -1078,6 +1134,7 @@ export function MealScreen({
   initialAuthenticated,
 }: MealScreenProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const appReturn = useAppReturn({ fallback: "/planner" });
   const isDesktopViewport = useDesktopViewport();
 
@@ -1086,10 +1143,22 @@ export function MealScreen({
   );
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [meals, setMeals] = useState<MealListItemData[]>([]);
+  const [productEntries, setProductEntries] = useState<MealProductPlannerEntryData[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [conflictErrors, setConflictErrors] = useState<Record<string, string>>({});
   const [modal, setModal] = useState<ModalState | null>(null);
   const [pendingMealIds, setPendingMealIds] = useState<Set<string>>(new Set());
+  const [pendingProductIds, setPendingProductIds] = useState<Set<string>>(new Set());
+  const [editingProduct, setEditingProduct] = useState<{
+    entry: MealProductPlannerEntryData;
+    amount: string;
+    unit: ProductPlannerEntryQuantity["unit"];
+    error: string | null;
+  } | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<MealProductPlannerEntryData | null>(null);
+  const [authReturnPath, setAuthReturnPath] = useState<string | null>(null);
+  const restoredProductContextRef = useRef(false);
+  const productEditInputRef = useRef<HTMLInputElement>(null);
   const [mealAddSheetOpen, setMealAddSheetOpen] = useState(false);
   const [mealAddPickerMode, setMealAddPickerMode] =
     useState<MealAddPickerMode | null>(null);
@@ -1166,7 +1235,12 @@ export function MealScreen({
     try {
       const data = await fetchMeals(planDate, columnId);
       setMeals(data.items);
-      setScreenState(data.items.length === 0 ? "empty" : "ready");
+      setProductEntries(data.product_entries ?? []);
+      setScreenState(
+        data.items.length === 0 && (data.product_entries ?? []).length === 0
+          ? "empty"
+          : "ready",
+      );
     } catch (error) {
       if (isMealApiError(error) && error.status === 401) {
         setAuthState("unauthorized");
@@ -1189,9 +1263,58 @@ export function MealScreen({
   // ── Sync screenState when meals list changes ──────────────────────────────
   useEffect(() => {
     if (screenState === "ready" || screenState === "empty") {
-      setScreenState(meals.length === 0 ? "empty" : "ready");
+      setScreenState(
+        meals.length === 0 && productEntries.length === 0 ? "empty" : "ready",
+      );
     }
-  }, [meals]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [meals, productEntries]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const mergedEntries = useMemo(
+    () => mergeMealScreenEntries(meals, productEntries),
+    [meals, productEntries],
+  );
+  const displayedMeals = useMemo(
+    () => mergedEntries.filter((entry) => entry.entry_type === "recipe").map((entry) => entry.recipe),
+    [mergedEntries],
+  );
+  const displayedProductEntries = useMemo(
+    () => mergedEntries.filter((entry) => entry.entry_type === "product").map((entry) => entry.product),
+    [mergedEntries],
+  );
+
+  useEffect(() => {
+    if (authState !== "authenticated" || restoredProductContextRef.current || screenState !== "ready") return;
+    const stored = readProductPlannerReturnContext();
+    const storedEntry = stored?.kind === "meal-entry" &&
+      stored.planDate === planDate && stored.columnId === columnId && stored.slotName === slotName
+      ? stored
+      : null;
+    const fallbackAction = searchParams.get("productAction");
+    const action = storedEntry?.action ?? (fallbackAction === "edit" || fallbackAction === "delete" ? fallbackAction : null);
+    const entryId = storedEntry?.entryId ?? searchParams.get("productEntryId");
+    if (!action || !entryId) return;
+    restoredProductContextRef.current = true;
+    const entry = displayedProductEntries.find((item) => item.id === entryId);
+    if (!entry) {
+      clearProductPlannerReturnContext();
+      return;
+    }
+    if (action === "delete") {
+      setDeletingProduct(entry);
+      return;
+    }
+    const amount = storedEntry?.quantityAmount ?? searchParams.get("productAmount") ?? String(entry.quantity.amount);
+    const unit = storedEntry?.quantityUnit ?? searchParams.get("productUnit") ?? entry.quantity.unit;
+    const compatible = buildCompatibleFoodProductUnits(entry);
+    setEditingProduct({
+      entry,
+      amount,
+      unit: compatible.includes(unit as ProductPlannerEntryQuantity["unit"])
+        ? unit as ProductPlannerEntryQuantity["unit"]
+        : entry.quantity.unit,
+      error: null,
+    });
+  }, [authState, columnId, displayedProductEntries, planDate, screenState, searchParams, slotName]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function clearConflictError(mealId: string) {
@@ -1395,6 +1518,120 @@ export function MealScreen({
     void applyDelete(mealId);
   }
 
+  function openProductQuantityEdit(entry: MealProductPlannerEntryData) {
+    setEditingProduct({
+      entry,
+      amount: String(entry.quantity.amount),
+      unit: entry.quantity.unit,
+      error: null,
+    });
+  }
+
+  async function handleProductQuantityConfirm() {
+    if (!editingProduct) return;
+    const amount = Number(editingProduct.amount);
+    if (
+      editingProduct.amount.trim() === "" ||
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      setEditingProduct((current) =>
+        current ? { ...current, error: "수량은 0보다 큰 숫자로 입력해 주세요." } : null,
+      );
+      return;
+    }
+
+    const entryId = editingProduct.entry.id;
+    setPendingProductIds((current) => new Set([...current, entryId]));
+    try {
+      const updated = await updateProductPlannerEntryQuantity(entryId, {
+        quantity: { amount, unit: editingProduct.unit },
+      });
+      setProductEntries((current) =>
+        current.map((entry) => (entry.id === entryId ? updated : entry)),
+      );
+      clearProductPlannerReturnContext();
+      setAuthReturnPath(null);
+      setEditingProduct(null);
+    } catch (caught) {
+      if (isProductPlannerEntryApiError(caught) && caught.status === 401) {
+        const context = {
+          version: 1 as const,
+          kind: "meal-entry" as const,
+          planDate,
+          columnId,
+          slotName,
+          entryId,
+          action: "edit" as const,
+          quantityAmount: editingProduct.amount,
+          quantityUnit: editingProduct.unit,
+        };
+        saveProductPlannerReturnContext(context);
+        setAuthReturnPath(buildProductEntryNextPath(
+          planDate,
+          columnId,
+          slotName,
+          entryId,
+          "edit",
+          { amount, unit: editingProduct.unit },
+        ));
+        setEditingProduct(null);
+        setAuthState("unauthorized");
+        return;
+      }
+      const message = isProductPlannerEntryApiError(caught)
+        ? caught.message
+        : "완제품 수량을 바꾸지 못했어요.";
+      setEditingProduct((current) =>
+        current ? { ...current, error: message } : null,
+      );
+    } finally {
+      setPendingProductIds((current) => {
+        const next = new Set(current);
+        next.delete(entryId);
+        return next;
+      });
+    }
+  }
+
+  async function handleProductDeleteConfirm() {
+    if (!deletingProduct) return;
+    const entryId = deletingProduct.id;
+    setDeletingProduct(null);
+    setPendingProductIds((current) => new Set([...current, entryId]));
+    try {
+      await deleteProductPlannerEntry(entryId);
+      setProductEntries((current) => current.filter((entry) => entry.id !== entryId));
+      clearProductPlannerReturnContext();
+      setAuthReturnPath(null);
+    } catch (caught) {
+      if (isProductPlannerEntryApiError(caught) && caught.status === 401) {
+        saveProductPlannerReturnContext({
+          version: 1,
+          kind: "meal-entry",
+          planDate,
+          columnId,
+          slotName,
+          entryId,
+          action: "delete",
+        });
+        setAuthReturnPath(buildProductEntryNextPath(planDate, columnId, slotName, entryId, "delete"));
+        setAuthState("unauthorized");
+        return;
+      }
+      const message = isProductPlannerEntryApiError(caught)
+        ? caught.message
+        : "완제품 계획을 삭제하지 못했어요.";
+      setErrorMessage(message);
+    } finally {
+      setPendingProductIds((current) => {
+        const next = new Set(current);
+        next.delete(entryId);
+        return next;
+      });
+    }
+  }
+
   function openMealAddSheet() {
     setMealAddSheetOpen(true);
     setMealAddPickerMode(null);
@@ -1450,11 +1687,11 @@ export function MealScreen({
   const titleShort = slotName
     ? `${formatDateShort(planDate)} · ${slotName}`
     : formatDateShort(planDate);
-  const totalServings = meals.reduce(
+  const totalServings = displayedMeals.reduce(
     (sum, meal) => sum + meal.planned_servings,
     0,
   );
-  const nextPath = buildNextPath(planDate, columnId, slotName);
+  const nextPath = authReturnPath ?? buildNextPath(planDate, columnId, slotName);
   const mealAddParams = new URLSearchParams({
     columnId,
     date: planDate,
@@ -1470,7 +1707,10 @@ export function MealScreen({
   });
   const mealAddTargetLabel = `${formatDateShort(planDate)}${slotName ? ` ${slotName}` : ""}`;
   function getMealAddRouteHref(mode: MealAddRouteMode) {
-    const targetPath = `/menu/add/${mode}?${mealAddQuery}`;
+    const targetPath =
+      mode === "product"
+        ? `/menu-add?${mealAddQuery}&source=product`
+        : `/menu/add/${mode}?${mealAddQuery}`;
 
     return buildReturnHref(targetPath, {
       returnTo: buildNextPath(planDate, columnId, slotName),
@@ -1504,7 +1744,9 @@ export function MealScreen({
               로그인하면 이 화면으로 돌아와요.
             </p>
           </div>
-          <SocialLoginButtons nextPath={nextPath} />
+          <div data-next-path={nextPath} data-testid="meal-auth-gate-login">
+            <SocialLoginButtons nextPath={nextPath} />
+          </div>
         </div>
       </div>
     );
@@ -1520,7 +1762,8 @@ export function MealScreen({
             authState={authState}
             conflictErrors={conflictErrors}
             errorMessage={errorMessage}
-            meals={meals}
+            meals={displayedMeals}
+            productEntries={displayedProductEntries}
             onAddMeal={() => router.push(addMealHref)}
             onBack={navigateToPlanner}
             onCreateShopping={(meal) => void createShoppingForMeal(meal)}
@@ -1530,7 +1773,10 @@ export function MealScreen({
             onStartCook={(meal) => void startMealCooking(meal)}
             onStepDown={(meal) => handleStepperTap(meal, -1)}
             onStepUp={(meal) => handleStepperTap(meal, 1)}
+            onProductDelete={setDeletingProduct}
+            onProductEdit={openProductQuantityEdit}
             pendingMealIds={pendingMealIds}
+            pendingProductIds={pendingProductIds}
             planDate={planDate}
             screenState={screenState}
             slotName={slotName}
@@ -1601,7 +1847,7 @@ export function MealScreen({
 
               {/* Meal cards */}
               {screenState === "ready"
-                ? meals.map((meal) => (
+                ? displayedMeals.map((meal) => (
                     <MealCard
                       key={meal.id}
                       conflictError={conflictErrors[meal.id] ?? null}
@@ -1617,9 +1863,21 @@ export function MealScreen({
                   ))
                 : null}
 
+              {screenState === "ready"
+                ? displayedProductEntries.map((entry) => (
+                    <ProductPlannerEntryCard
+                      entry={entry}
+                      isPending={pendingProductIds.has(entry.id)}
+                      key={`product:${entry.id}`}
+                      onDelete={() => setDeletingProduct(entry)}
+                      onEditQuantity={() => openProductQuantityEdit(entry)}
+                    />
+                  ))
+                : null}
+
               {screenState === "ready" ? (
                 <button
-                  className="mt-2 flex h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-4 text-base font-semibold text-[var(--brand)]"
+                  className="mt-2 flex h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand-primary-text)] bg-[var(--surface)] px-4 text-base font-semibold text-[var(--brand-primary-text)]"
                   data-testid="meal-screen-add-cta"
                   onClick={openMealAddSheet}
                   type="button"
@@ -1671,6 +1929,88 @@ export function MealScreen({
           onGoPlanner={handleAllPantryCompletionGoPlanner}
           onOpenShoppingList={handleAllPantryCompletionOpenList}
         />
+      ) : null}
+
+      {editingProduct ? (
+        <CenterModal initialFocusRef={productEditInputRef} labelledBy="product-quantity-title" onClose={() => { clearProductPlannerReturnContext(); setEditingProduct(null); }}>
+          <ModalHeader
+            onClose={() => setEditingProduct(null)}
+            title="완제품 수량 변경"
+            titleId="product-quantity-title"
+          />
+          <p className="mt-2 text-sm text-[var(--text-2)]">
+            {editingProduct.entry.product_name}의 저장된 영양 기준에 맞는 단위만 선택할 수 있어요.
+          </p>
+          <div className="mt-4 grid grid-cols-[minmax(0,1fr)_112px] gap-2">
+            <label className="grid gap-1 text-xs font-bold text-[var(--text-2)]">
+              수량
+              <input
+                aria-label="완제품 변경 수량"
+                className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none"
+                inputMode="decimal"
+                min="0.01"
+                onChange={(event) =>
+                  setEditingProduct((current) =>
+                    current ? { ...current, amount: event.target.value, error: null } : null,
+                  )
+                }
+                step="any"
+                ref={productEditInputRef}
+                type="number"
+                value={editingProduct.amount}
+              />
+            </label>
+            <label className="grid gap-1 text-xs font-bold text-[var(--text-2)]">
+              단위
+              <select
+                aria-label="완제품 변경 수량 단위"
+                className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none"
+                onChange={(event) =>
+                  setEditingProduct((current) =>
+                    current
+                      ? {
+                          ...current,
+                          unit: event.target.value as ProductPlannerEntryQuantity["unit"],
+                          error: null,
+                        }
+                      : null,
+                  )
+                }
+                value={editingProduct.unit}
+              >
+                {buildCompatibleFoodProductUnits(editingProduct.entry).map((unit) => (
+                  <option key={unit} value={unit}>{formatProductUnit(unit)}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {editingProduct.error ? (
+            <p className="mt-3 rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-sm font-semibold text-[var(--danger)]" role="alert">
+              {editingProduct.error}
+            </p>
+          ) : null}
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold" onClick={() => { clearProductPlannerReturnContext(); setEditingProduct(null); }} type="button">취소</button>
+            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand)] font-bold text-[var(--text-inverse)]" onClick={() => void handleProductQuantityConfirm()} type="button">수량 변경</button>
+          </div>
+        </CenterModal>
+      ) : null}
+
+      {deletingProduct ? (
+        <CenterModal labelledBy="product-delete-title" onClose={() => { clearProductPlannerReturnContext(); setDeletingProduct(null); }}>
+          <ModalHeader
+            onClose={() => setDeletingProduct(null)}
+            title="완제품 계획 삭제"
+            titleId="product-delete-title"
+          />
+          <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+            {deletingProduct.product_name}의 이 플래너 항목만 삭제할까요? 레시피 식사와 등록된 완제품 원본은 삭제되지 않아요.
+          </p>
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold" onClick={() => { clearProductPlannerReturnContext(); setDeletingProduct(null); }} type="button">취소</button>
+            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--danger)] font-bold text-[var(--text-inverse)]" data-testid="product-delete-confirm" onClick={() => void handleProductDeleteConfirm()} type="button">삭제</button>
+          </div>
+        </CenterModal>
       ) : null}
 
       {/* Serving-change confirmation modal */}

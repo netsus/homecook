@@ -11,7 +11,7 @@ export type MealAddPickerMode =
   | "recipebook"
   | "pantry"
   | "leftover";
-export type MealAddRouteMode = "youtube" | "manual";
+export type MealAddRouteMode = "youtube" | "manual" | "product";
 
 interface MealAddOptionsSheetProps {
   title: string;
@@ -123,6 +123,15 @@ export function MealAddOptionsSheet({
             testId={`meal-add-option-${option.id}`}
           />
         ))}
+
+        <Link
+          className={OPTION_TILE_CLASS}
+          data-testid="meal-add-option-product"
+          href={routeHrefFor("product")}
+          onClick={onClose}
+        >
+          <span className={OPTION_LABEL_CLASS}>완제품</span>
+        </Link>
 
         <Link
           className={OPTION_TILE_CLASS}
