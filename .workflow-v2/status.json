@@ -1374,7 +1374,7 @@
       "id": "28-external-ingredient-data-ingest-gate",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-28-external-ingredient-data-ingest-gate",
-      "pr_path": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/1015",
       "lifecycle": "ready_for_review",
       "approval_state": "dual_approved",
       "verification_status": "passed",
