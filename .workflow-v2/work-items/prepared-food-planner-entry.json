@@ -131,9 +131,9 @@
     "lifecycle": "in_progress",
     "approval_state": "codex_approved",
     "verification_status": "passed",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": ".artifacts/qa/prepared-food-planner-entry/2026-07-16T19-23-59-069Z/eval-result.json",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -141,16 +141,18 @@
     "phase": "projecting",
     "docs_projection": {
       "roadmap_lifecycle": "in_progress",
-      "design_status": "temporary",
-      "delivery_checklist": "pending",
-      "design_authority": "pending",
-      "acceptance": "pending",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
       "required_checks": "passed",
-      "external_smokes": "pending",
-      "authority_reports": [],
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/PLANNER_WEEK-prepared-food-planner-entry-authority.md"
+      ],
       "actual_verification_refs": [
         "Fresh independent Codex Stage 3 re-review approved exact PR #1017 backend head 25b56d1a767a8fc03f85024b418ead202e8d900b with Blocker/Important/Suggestion 0/0/0 after the separate repair closed the two required findings from head 8137ef7c00e9c23fc09d0c2937650be351be780a",
         "Eight targeted Vitest files passed 66/66 for ProductPlannerEntry API, service, read models, RLS, regression, planner/meals compatibility, and column guards",
@@ -159,44 +161,57 @@
         "GitHub PR #1017 exact reviewed-head checks at 25b56d1a767a8fc03f85024b418ead202e8d900b: 16 success, 2 intended skips, pending/fail/cancel 0",
         "Source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping, closeout sync, and git diff validators passed on the reviewed backend head",
         "Approved public operational rows and production/staging writes remain 0",
-        "Full Supabase/PostgREST equivalence and production-scale query-plan/contention measurement remain Manual Only; Stage 4 UI, authority precheck, Stage 5, final authority, and Stage 6 remain pending"
+        "Full Supabase/PostgREST equivalence and production-scale query-plan/contention measurement remain Manual Only",
+        "Stage 4 shipped MENU_ADD picker/create plus MEAL_SCREEN and PLANNER_WEEK mixed recipe/product entries with 390px, 320px, and desktop evidence",
+        "Independent Stage 5 and final authority reviews approved the repaired UI with Blocker/Major/Minor 0/0/0",
+        "Fresh independent Stage 6 re-review approved implementation head 829a107d1fdf782beff241e52ab09076ec9feab4 with Blocker/Important/Suggestion 0/0/0 after DELETE recovery and stale refresh race repairs",
+        "Stage 6 targeted verification passed Vitest 97/97, targeted Playwright 6/6, typecheck, lint with 0 errors, and governing validators",
+        "Exploratory QA report/eval at .artifacts/qa/prepared-food-planner-entry/2026-07-16T19-23-59-069Z passed with score 100, coverage 86/87, blocked 0, and findings 0",
+        "Full-gate TDD repair commit ea6f3ad1c57bd7054d6168635c526ec9aec85295 covered QA auth initialization, recipe nutrition fixtures, cooking-method fixtures, Turbopack Playwright server consistency, tag-suggestion initialization, settings loading concurrency, and approved MENU_ADD visual baselines without changing the public contract",
+        "Exact CI=1 pnpm verify:frontend passed lint 0 errors with 4 pre-existing warnings, typecheck, product Vitest 1529 passed and 22 intended skipped, production build, Lighthouse 6 runs, slice Playwright 848 passed and 112 intended skipped with retries 0, accessibility 18 passed and 15 intended skipped, visual 23 passed and 22 intended skipped, and security 12/12"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending-pr-head-after-stage3-closeout-projection",
+      "current_head_sha": "22cac11f80b833d9522d16fa69171842c50915de",
       "approval_state": "codex_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
-      "manual_patch_count": 0,
+      "manual_patch_count": 3,
       "manual_handoff": false,
       "stale_lock_count": 0,
-      "ci_resync_count": 1,
+      "ci_resync_count": 5,
       "artifact_missing": false,
-      "last_recovery_at": "2026-07-16T16:26:39Z"
+      "last_recovery_at": "2026-07-16T22:12:59Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 2,
+      "codex_repairable_count": 10,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": "stage3_findings_repaired_and_reapproved",
+      "latest_reason_code": "full_frontend_gate_repaired_and_green_current_head_checks_pending",
       "evidence_sources": [
         "GitHub PR #1017 independent Stage 3 review and exact-head re-review",
         "commit 25b56d1a767a8fc03f85024b418ead202e8d900b Stage 3 repair",
         "docs/workpacks/prepared-food-planner-entry/README.md Stage 2 and Stage 3 evidence",
-        "tests/prepared-food-planner-entry-postgres.integration.test.ts isolated PostgreSQL 11-case suite"
+        "tests/prepared-food-planner-entry-postgres.integration.test.ts isolated PostgreSQL 11-case suite",
+        "GitHub PR #1018 Stage 4, Stage 5, final authority, Stage 6 review and exact-head re-review",
+        "commit 829a107d1fdf782beff241e52ab09076ec9feab4 Stage 6 findings repair",
+        "ui/designs/authority/PLANNER_WEEK-prepared-food-planner-entry-authority.md",
+        ".artifacts/qa/prepared-food-planner-entry/2026-07-16T19-23-59-069Z exploratory QA and eval",
+        "commit ea6f3ad1c57bd7054d6168635c526ec9aec85295 full-gate repairs",
+        "CI=1 pnpm verify:frontend full green run on 2026-07-16"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-07-16T16:26:39Z",
-      "status_synced_at": "2026-07-16T16:26:39Z",
-      "pr_body_synced_at": "pending-post-closeout-head"
+      "docs_synced_at": "2026-07-16T22:12:59Z",
+      "status_synced_at": "2026-07-16T22:12:59Z",
+      "pr_body_synced_at": "2026-07-16T20:58:34Z"
     }
   },
-  "branch": "feature/be-prepared-food-planner-entry",
-  "pr_path": "https://github.com/netsus/homecook/pull/1017",
+  "branch": "feature/fe-prepared-food-planner-entry",
+  "pr_path": "https://github.com/netsus/homecook/pull/1018",
   "out_of_scope": [
     "GET planner nutrition and meal day week planned nutrition aggregation",
     "Prepared food catalog write implementation public importer operator CLI seed runtime provider lookup or promotion",
@@ -209,5 +224,5 @@
     "Any undocumented endpoint status error code request response field workflow status or database surface"
   ],
   "open_questions": [],
-  "notes": "Canonical Stage 3 backend projection: .workflow-v2/work-items/prepared-food-planner-entry.json#closeout. Stage 1 docs PR #1016 is merged and backend PR #1017 remains open on feature/be-prepared-food-planner-entry. The first independent Stage 3 review requested changes at exact implementation head 8137ef7c00e9c23fc09d0c2937650be351be780a with Blocker/Important/Suggestion 0/2/0. A separate repair role closed both findings in commit 25b56d1a767a8fc03f85024b418ead202e8d900b, and a fresh independent exact-head re-review returned STAGE3_APPROVED with 0/0/0. Targeted tests passed 66/66; isolated PostgreSQL passed 11/11; pnpm verify:backend passed product 1519 with 22 intended skips, production build, and security Playwright 12/12; exact reviewed-head GitHub checks passed 16 with 2 intended skips and pending/fail/cancel 0. Approved public operational rows and production/staging writes remain 0. This approval closes only Stage 3 backend review: lifecycle remains in_progress, Design Status stays temporary, and Stage 4 UI, authority precheck, Stage 5, final authority, and Stage 6 remain pending. Full Supabase/PostgREST equivalence and production-scale query-plan/contention measurement remain Manual Only. The post-closeout PR head and its checks do not exist yet, so merge_gate current_head_sha is pending and all_checks_green is false. closeout_phase=projecting closeout_recovery=ci_resync:1 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1017 independent Stage 3 review and exact-head re-review,commit 25b56d1a767a8fc03f85024b418ead202e8d900b Stage 3 repair,docs/workpacks/prepared-food-planner-entry/README.md Stage 2 and Stage 3 evidence,tests/prepared-food-planner-entry-postgres.integration.test.ts isolated PostgreSQL 11-case suite | latest_reason_code=stage3_findings_repaired_and_reapproved | last_recovery_at=2026-07-16T16:26:39Z"
+  "notes": "Canonical closeout: .workflow-v2/work-items/prepared-food-planner-entry.json#closeout. Stage 1 docs PR #1016 and backend PR #1017 are merged. Fresh Stage 3 backend re-review, Stage 5, final authority, and fresh Stage 6 re-review are approved with unresolved Blocker/Important 0. Stage 4 evidence covers 390, 320, and desktop, and Design Status is confirmed. Exploratory QA/eval passed with score 100, coverage 86/87, blocked 0, findings 0. After TDD repairs to local QA/auth/fixture/server stability surfaces, exact CI=1 pnpm verify:frontend passed product Vitest 1529/22 intended skipped, build, Lighthouse 6 runs, Playwright slice 848/112 intended skipped/retries 0, accessibility 18/15 intended skipped, visual 23/22 intended skipped, and security 12/12. Approved public operational rows and production/staging writes remain 0. Full Supabase/PostgREST equivalence, physical devices/screen readers, future approved public promotion, and production-scale contention/query plans remain Manual Only. PR #1018 stays unmergeable until the repaired successor head is pushed and every check started for that exact head is terminal green. closeout_phase=projecting closeout_recovery=manual_patch:3|ci_resync:5 closeout_repair=codex:10|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1017 backend approval and merge,GitHub PR #1018 independent authority and Stage 6 approvals,ui/designs/authority/PLANNER_WEEK-prepared-food-planner-entry-authority.md,.artifacts/qa/prepared-food-planner-entry/2026-07-16T19-23-59-069Z,CI=1 pnpm verify:frontend | latest_reason_code=full_frontend_gate_repaired_and_green_current_head_checks_pending | last_recovery_at=2026-07-16T22:12:59Z"
 }

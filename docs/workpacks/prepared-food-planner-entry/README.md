@@ -346,8 +346,9 @@
 - 별도 final authority는 exact docs head `5dc6cb45402b75b9dc2befef56732a120e285253`에서 PNG 26개와 current-head checks를 독립 확인하고 `FINAL_AUTHORITY_APPROVED` B/M/m 0/0/0을 판정했다. `confirmed_allowed: true`이지만 Stage 6 전에는 `Design Status: confirmed`로 바꾸지 않는다.
 - 첫 fresh Stage 6 review는 exact head `f6b7eee832f4cb0a886aa6e9c245d98f352e28db`에서 DELETE 일반 오류 복구와 nutrition conflict refresh race 2건을 Important로 판정했고, 구현자는 별도 repair commit `829a107d1fdf782beff241e52ab09076ec9feab4`로 수리했다.
 - 구현에 참여하지 않은 fresh Stage 6 re-reviewer가 exact repaired head `829a107d1fdf782beff241e52ab09076ec9feab4`를 다시 검수해 `STAGE6_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다. DELETE 500 뒤 card/dialog/`role=alert`/retry 유지, duplicate pending guard와 DELETE 401 return, stale refresh success/empty/error 폐기를 확인했다.
-- Stage 6 targeted 검증은 Vitest 5 files/97 tests, DELETE 401/500 Playwright 3 projects/6 tests, typecheck, lint 0 errors, source-of-truth/workflow/workpack/automation/authority/bookkeeping/exploratory/real-smoke validators green이다. 전체 slice E2E 실행은 41 passed/9 intended skipped 뒤 evidence auth-fixture 충돌 1건이 있어 `pnpm verify:frontend` aggregate green으로 기록하지 않는다.
-- 이 기록은 reviewed implementation head의 Stage 6 승인이다. 아래 docs-only successor head는 오케스트레이터가 push한 뒤 그 exact head의 PR checks와 closeout projection을 다시 검수해야 하며, 그 전에는 merge하지 않는다.
+- Stage 6 targeted 검증은 Vitest 5 files/97 tests, DELETE 401/500 Playwright 3 projects/6 tests, typecheck, lint 0 errors, source-of-truth/workflow/workpack/automation/authority/bookkeeping/exploratory/real-smoke validators green이다. 이어 full gate에서 발견한 QA fixture auth 초기화, recipe nutrition fixture, cooking-method fixture, Playwright dev server, tag-suggestion 초기화, settings loading race, 현행 MENU_ADD visual baseline을 TDD로 수리했다.
+- 최종 `CI=1 pnpm verify:frontend` 연속 실행은 lint 0 errors(기존 backfill warning 4), typecheck, product Vitest 1,529 passed/22 intended skipped, production build, Lighthouse 6 runs, slice Playwright 848 passed/112 intended skipped/재시도 0, accessibility 18 passed/15 intended skipped, visual 23 passed/22 intended skipped, security 12/12를 모두 통과했다. exploratory QA report/eval도 score 100, coverage 86/87, blocked 0, findings 0으로 green이다.
+- 이 기록은 reviewed Stage 6 implementation head와 그 뒤의 full-gate repair를 함께 닫는 로컬 successor다. 오케스트레이터가 push한 뒤 그 exact head의 PR checks와 closeout projection을 다시 검수해야 하며, 그 전에는 merge하지 않는다.
 
 ## Delivery Checklist
 
@@ -375,7 +376,7 @@
 - [x] basis mismatch가 수량 단계와 선택 context를 보존한다 <!-- omo:id=delivery-product-entry-basis-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] guest return-to-action이 검색어·날짜·끼니·선택·quantity context를 복원한다 <!-- omo:id=delivery-product-entry-return;stage=4;scope=frontend;review=5,6 -->
 - [x] 390px/320px/desktop browser evidence와 scroll/CTA/accessibility 회귀가 닫힌다 <!-- omo:id=delivery-product-entry-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] exploratory QA/eval과 frontend full verification이 green이다 <!-- omo:id=delivery-product-entry-qa;stage=4;scope=frontend;review=5,6 -->
+- [x] exploratory QA/eval과 frontend full verification이 green이다 <!-- omo:id=delivery-product-entry-qa;stage=4;scope=frontend;review=5,6 -->
 - [x] fresh authority precheck/Stage 5/final authority/Stage 6에서 unresolved blocker 0이다 <!-- omo:id=delivery-product-entry-authority;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
@@ -389,7 +390,12 @@
 
 ## Design Status
 
-`confirmed` — fresh authority precheck, 분리된 Stage 5, 별도 final authority와 구현 비참여 fresh Stage 6 re-review가 모두 blocker/important 0으로 통과했다. 다만 `pnpm verify:frontend` aggregate는 parallel auth-fixture 충돌로 green이 아니므로 관련 QA checkbox는 의도적으로 미체크이며, docs-only successor exact head의 current-head checks와 closeout projection 재검수가 merge 전에 남아 있다.
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed) — fresh authority precheck, 분리된 Stage 5, 별도 final authority와 구현 비참여 fresh Stage 6 re-review가 모두 blocker/important 0으로 통과
+- [ ] N/A
+
+> 로컬 `CI=1 pnpm verify:frontend`와 exploratory QA/eval은 green이다. 다만 이 closeout 문서를 포함한 successor head를 push한 뒤 그 exact PR head의 전체 GitHub checks가 green인지 다시 확인하기 전에는 merge하지 않는다.
 
 ## Key Rules
 
