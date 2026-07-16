@@ -91,31 +91,31 @@
 
 ## Frontend Primary Flow / States
 
-- [ ] `MENU_ADD -> FOOD_PRODUCT_PICKER -> 선택 -> 수량 -> ProductPlannerEntry -> MEAL_SCREEN -> PLANNER_WEEK`가 동작한다 <!-- omo:id=accept-product-entry-ui-primary-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] 검색 empty에서 `FOOD_PRODUCT_CREATE`로 private product를 등록하고 선택된 picker로 복귀한다 <!-- omo:id=accept-product-entry-ui-create-return;stage=4;scope=frontend;review=5,6 -->
-- [ ] MEAL_SCREEN/PLANNER_WEEK가 Recipe Meal과 product entry를 시각·타입으로 구분하고 product status chip/action을 표시하지 않는다 <!-- omo:id=accept-product-entry-ui-type;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading/empty/error/read-only/unauthorized 상태가 서로 구분된다 <!-- omo:id=accept-product-entry-ui-required-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] partial/unavailable가 최소/정보 준비 중 의미를 유지하고 결측을 0으로 표시하지 않는다 <!-- omo:id=accept-product-entry-ui-missing;stage=4;scope=frontend;review=5,6 -->
-- [ ] basis mismatch가 inline validation을 보이고 수량/선택 단계에 머문다 <!-- omo:id=accept-product-entry-ui-basis-mismatch;stage=4;scope=frontend;review=5,6 -->
-- [ ] guest login return-to-action이 검색어·날짜·끼니·선택 product·quantity context를 복원한다 <!-- omo:id=accept-product-entry-ui-return-to-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] PATCH는 old pinned basis를 소비하고 current 변경 뒤 UI 값/허용 unit이 조용히 바뀌지 않는다 <!-- omo:id=accept-product-entry-ui-old-pin;stage=4;scope=frontend;review=5,6 -->
-- [ ] delete confirmation이 product entry만 제거하고 Recipe Meal/catalog UI를 바꾸지 않는다 <!-- omo:id=accept-product-entry-ui-delete;stage=4;scope=frontend;review=5,6 -->
-- [ ] MEAL_SCREEN product card가 pin된 version + entry quantity의 energy를 `예상 열량 X kcal`, partial은 `예상 열량 최소 X kcal`, unavailable은 `예상 열량 정보 준비 중`으로 표시하고 observed complete 0 외 missing/null을 0으로 표시하지 않는다 <!-- omo:id=accept-product-entry-ui-expected-energy;stage=4;scope=frontend;review=5,6 -->
-- [ ] FOOD_PRODUCT_PICKER가 기존 `GET /food-products`의 opaque `next_cursor`/`has_next`로 page를 이어 붙이고 product ID dedupe·last-page 종료를 지킨다 <!-- omo:id=accept-product-entry-ui-cursor-pagination;stage=4;scope=frontend;review=5,6 -->
-- [ ] 검색어 변경은 items/cursor/has_next를 reset하고 느린 이전 query 응답을 무시해 최신 query만 표시하며 새 endpoint를 만들지 않는다 <!-- omo:id=accept-product-entry-ui-search-race;stage=4;scope=frontend;review=5,6 -->
+- [x] `MENU_ADD -> FOOD_PRODUCT_PICKER -> 선택 -> 수량 -> ProductPlannerEntry -> MEAL_SCREEN -> PLANNER_WEEK`가 동작한다 <!-- omo:id=accept-product-entry-ui-primary-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 검색 empty에서 `FOOD_PRODUCT_CREATE`로 private product를 등록하고 선택된 picker로 복귀한다 <!-- omo:id=accept-product-entry-ui-create-return;stage=4;scope=frontend;review=5,6 -->
+- [x] MEAL_SCREEN/PLANNER_WEEK가 Recipe Meal과 product entry를 시각·타입으로 구분하고 product status chip/action을 표시하지 않는다 <!-- omo:id=accept-product-entry-ui-type;stage=4;scope=frontend;review=5,6 -->
+- [x] loading/empty/error/read-only/unauthorized 상태가 서로 구분된다 <!-- omo:id=accept-product-entry-ui-required-states;stage=4;scope=frontend;review=5,6 -->
+- [x] partial/unavailable가 최소/정보 준비 중 의미를 유지하고 결측을 0으로 표시하지 않는다 <!-- omo:id=accept-product-entry-ui-missing;stage=4;scope=frontend;review=5,6 -->
+- [x] basis mismatch가 inline validation을 보이고 수량/선택 단계에 머문다 <!-- omo:id=accept-product-entry-ui-basis-mismatch;stage=4;scope=frontend;review=5,6 -->
+- [x] guest login return-to-action이 검색어·날짜·끼니·선택 product·quantity context를 복원한다 <!-- omo:id=accept-product-entry-ui-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] PATCH는 old pinned basis를 소비하고 current 변경 뒤 UI 값/허용 unit이 조용히 바뀌지 않는다 <!-- omo:id=accept-product-entry-ui-old-pin;stage=4;scope=frontend;review=5,6 -->
+- [x] delete confirmation이 product entry만 제거하고 Recipe Meal/catalog UI를 바꾸지 않는다 <!-- omo:id=accept-product-entry-ui-delete;stage=4;scope=frontend;review=5,6 -->
+- [x] MEAL_SCREEN product card가 pin된 version + entry quantity의 energy를 `예상 열량 X kcal`, partial은 `예상 열량 최소 X kcal`, unavailable은 `예상 열량 정보 준비 중`으로 표시하고 observed complete 0 외 missing/null을 0으로 표시하지 않는다 <!-- omo:id=accept-product-entry-ui-expected-energy;stage=4;scope=frontend;review=5,6 -->
+- [x] FOOD_PRODUCT_PICKER가 기존 `GET /food-products`의 opaque `next_cursor`/`has_next`로 page를 이어 붙이고 product ID dedupe·last-page 종료를 지킨다 <!-- omo:id=accept-product-entry-ui-cursor-pagination;stage=4;scope=frontend;review=5,6 -->
+- [x] 검색어 변경은 items/cursor/has_next를 reset하고 느린 이전 query 응답을 무시해 최신 query만 표시하며 새 endpoint를 만들지 않는다 <!-- omo:id=accept-product-entry-ui-search-race;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual QA
 
 ### Browser / Authority / Accessibility
 
-- [ ] Stage 4 전에 PLANNER_WEEK/MEAL_SCREEN/MENU_ADD 각각의 current-state before screenshot을 390/320/desktop 1280에서 확보한다 <!-- omo:id=accept-product-entry-before-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK/MEAL_SCREEN/MENU_ADD 각각의 after screenshot도 390/320/desktop 1280에서 확보하고 before와 짝지어 비교한다 <!-- omo:id=accept-product-entry-anchor-after-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] 신규 FOOD_PRODUCT_PICKER/FOOD_PRODUCT_CREATE는 390/320/desktop 1280 after screenshot을 확보한다 <!-- omo:id=accept-product-entry-new-surface-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px에서 picker/create/mixed-entry/quantity/mismatch/return flow evidence가 있다 <!-- omo:id=accept-product-entry-evidence-390;stage=4;scope=frontend;review=5,6 -->
-- [ ] 320px narrow에서 CTA/keyboard/footer/touch target/문구가 잘리거나 가려지지 않는다 <!-- omo:id=accept-product-entry-evidence-320;stage=4;scope=frontend;review=5,6 -->
-- [ ] desktop 1280px에서 nested surface와 PLANNER_WEEK/MEAL_SCREEN hierarchy가 안정적이다 <!-- omo:id=accept-product-entry-evidence-desktop;stage=4;scope=frontend;review=5,6 -->
-- [ ] page-level horizontal overflow가 없고 기존 PLANNER_WEEK scroll containment/navigation이 보존된다 <!-- omo:id=accept-product-entry-scroll-containment;stage=4;scope=frontend;review=5,6 -->
-- [ ] primary CTA, keyboard/focus restoration, ESC/back, 44x44 touch target, axe가 통과한다 <!-- omo:id=accept-product-entry-accessibility;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 전에 PLANNER_WEEK/MEAL_SCREEN/MENU_ADD 각각의 current-state before screenshot을 390/320/desktop 1280에서 확보한다 <!-- omo:id=accept-product-entry-before-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK/MEAL_SCREEN/MENU_ADD 각각의 after screenshot도 390/320/desktop 1280에서 확보하고 before와 짝지어 비교한다 <!-- omo:id=accept-product-entry-anchor-after-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] 신규 FOOD_PRODUCT_PICKER/FOOD_PRODUCT_CREATE는 390/320/desktop 1280 after screenshot을 확보한다 <!-- omo:id=accept-product-entry-new-surface-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px에서 picker/create/mixed-entry/quantity/mismatch/return flow evidence가 있다 <!-- omo:id=accept-product-entry-evidence-390;stage=4;scope=frontend;review=5,6 -->
+- [x] 320px narrow에서 CTA/keyboard/footer/touch target/문구가 잘리거나 가려지지 않는다 <!-- omo:id=accept-product-entry-evidence-320;stage=4;scope=frontend;review=5,6 -->
+- [x] desktop 1280px에서 nested surface와 PLANNER_WEEK/MEAL_SCREEN hierarchy가 안정적이다 <!-- omo:id=accept-product-entry-evidence-desktop;stage=4;scope=frontend;review=5,6 -->
+- [x] page-level horizontal overflow가 없고 기존 PLANNER_WEEK scroll containment/navigation이 보존된다 <!-- omo:id=accept-product-entry-scroll-containment;stage=4;scope=frontend;review=5,6 -->
+- [x] primary CTA, keyboard/focus restoration, ESC/back, 44x44 touch target, axe가 통과한다 <!-- omo:id=accept-product-entry-accessibility;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA report/eval과 `pnpm verify:frontend`가 green이다 <!-- omo:id=accept-product-entry-exploratory;stage=4;scope=frontend;review=5,6 -->
 - [ ] fresh authority precheck/Stage 5/final authority/Stage 6에서 blocker/important 미해결 0이다 <!-- omo:id=accept-product-entry-authority;stage=4;scope=frontend;review=5,6 -->
 
@@ -149,11 +149,11 @@
 
 ### Playwright / UI
 
-- [ ] real browser primary flow, manual product create return, PATCH/delete를 검증한다 <!-- omo:id=accept-product-entry-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] real browser auth return, basis mismatch, loading/empty/error/read-only/partial/unavailable를 검증한다 <!-- omo:id=accept-product-entry-playwright-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] FOOD_PRODUCT_PICKER query reset, cursor append/dedupe, last page, slow previous response ignore를 검증한다 <!-- omo:id=accept-product-entry-playwright-pagination;stage=4;scope=frontend;review=5,6 -->
-- [ ] MEAL_SCREEN의 complete/partial/unavailable/observed-zero 예상 열량 copy와 pin/current-version 회귀를 검증한다 <!-- omo:id=accept-product-entry-playwright-energy;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390/320/desktop visual/a11y/scroll/focus evidence를 검증한다 <!-- omo:id=accept-product-entry-playwright-devices;stage=4;scope=frontend;review=5,6 -->
+- [x] real browser primary flow, manual product create return, PATCH/delete를 검증한다 <!-- omo:id=accept-product-entry-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] real browser auth return, basis mismatch, loading/empty/error/read-only/partial/unavailable를 검증한다 <!-- omo:id=accept-product-entry-playwright-states;stage=4;scope=frontend;review=5,6 -->
+- [x] FOOD_PRODUCT_PICKER query reset, cursor append/dedupe, last page, slow previous response ignore를 검증한다 <!-- omo:id=accept-product-entry-playwright-pagination;stage=4;scope=frontend;review=5,6 -->
+- [x] MEAL_SCREEN의 complete/partial/unavailable/observed-zero 예상 열량 copy와 pin/current-version 회귀를 검증한다 <!-- omo:id=accept-product-entry-playwright-energy;stage=4;scope=frontend;review=5,6 -->
+- [x] 390/320/desktop visual/a11y/scroll/focus evidence를 검증한다 <!-- omo:id=accept-product-entry-playwright-devices;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 

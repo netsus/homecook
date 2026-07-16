@@ -366,12 +366,12 @@
 
 ### Frontend — Stage 4 / Review Stages 5 And 6
 
-- [ ] MENU_ADD에서 FOOD_PRODUCT_PICKER, 없으면 CREATE, 선택 복귀, 수량, entry, PLANNER_WEEK flow가 동작한다 <!-- omo:id=delivery-product-entry-primary-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK/MEAL_SCREEN이 Recipe Meal과 product entry를 중복 없이 구분하고 product workflow status/action을 표시하지 않는다 <!-- omo:id=delivery-product-entry-type-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading/empty/error/read-only/unauthorized/partial/unavailable를 분리하고 missing을 0으로 표시하지 않는다 <!-- omo:id=delivery-product-entry-ui-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] basis mismatch가 수량 단계와 선택 context를 보존한다 <!-- omo:id=delivery-product-entry-basis-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] guest return-to-action이 검색어·날짜·끼니·선택·quantity context를 복원한다 <!-- omo:id=delivery-product-entry-return;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px/desktop browser evidence와 scroll/CTA/accessibility 회귀가 닫힌다 <!-- omo:id=delivery-product-entry-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] MENU_ADD에서 FOOD_PRODUCT_PICKER, 없으면 CREATE, 선택 복귀, 수량, entry, PLANNER_WEEK flow가 동작한다 <!-- omo:id=delivery-product-entry-primary-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK/MEAL_SCREEN이 Recipe Meal과 product entry를 중복 없이 구분하고 product workflow status/action을 표시하지 않는다 <!-- omo:id=delivery-product-entry-type-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] loading/empty/error/read-only/unauthorized/partial/unavailable를 분리하고 missing을 0으로 표시하지 않는다 <!-- omo:id=delivery-product-entry-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] basis mismatch가 수량 단계와 선택 context를 보존한다 <!-- omo:id=delivery-product-entry-basis-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] guest return-to-action이 검색어·날짜·끼니·선택·quantity context를 복원한다 <!-- omo:id=delivery-product-entry-return;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px/320px/desktop browser evidence와 scroll/CTA/accessibility 회귀가 닫힌다 <!-- omo:id=delivery-product-entry-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA/eval과 frontend full verification이 green이다 <!-- omo:id=delivery-product-entry-qa;stage=4;scope=frontend;review=5,6 -->
 - [ ] fresh authority precheck/Stage 5/final authority/Stage 6에서 unresolved blocker 0이다 <!-- omo:id=delivery-product-entry-authority;stage=4;scope=frontend;review=5,6 -->
 
@@ -386,7 +386,7 @@
 
 ## Design Status
 
-`temporary` — Stage 1 설계 계약과 independent Stage 1.5 critique는 exact head `fe210b7169094edc77b64e91a730d86720d598ae`에서 승인됐다. Stage 4 evidence·authority precheck·Stage 5·final authority·Stage 6은 아직 대기이므로 `confirmed`가 아니다.
+`pending-review` — Stage 4 evidence·자동화와 fresh authority precheck(B/I/S 0/0/0)는 준비됐지만, 구현자는 자기 디자인/최종 승인을 하지 않는다. Stage 5·final authority·Stage 6이 아직 대기이므로 `confirmed`가 아니다.
 
 ## Key Rules
 
