@@ -201,3 +201,165 @@ export async function bootstrapProductEntryPlannerUser(
   } as unknown as UserBootstrapDbClient;
   return ensureUserBootstrapState(client, userId);
 }
+
+export function installProductEntryAfterInsertFailure(
+  connection: ProductEntryPostgresConnection,
+  scope: { userId: string; planDate: string },
+) {
+  return productEntryPsql(connection, `
+    create schema if not exists test_support;
+    create or replace function test_support.fail_product_entry_after_insert()
+    returns trigger
+    language plpgsql
+    set search_path = pg_catalog, public
+    as $$
+    begin
+      raise exception 'TEST_PRODUCT_ENTRY_AFTER_INSERT_FAILURE';
+    end;
+    $$;
+    drop trigger if exists test_product_entry_after_insert_failure
+      on public.product_planner_entries;
+    create trigger test_product_entry_after_insert_failure
+      after insert on public.product_planner_entries
+      for each row
+      when (
+        new.user_id = '${scope.userId}'::uuid
+        and new.plan_date = '${scope.planDate}'::date
+      )
+      execute function test_support.fail_product_entry_after_insert();
+  `);
+}
+
+export function removeProductEntryAfterInsertFailure(
+  connection: ProductEntryPostgresConnection,
+) {
+  return productEntryPsql(connection, `
+    drop trigger if exists test_product_entry_after_insert_failure
+      on public.product_planner_entries;
+    drop function if exists test_support.fail_product_entry_after_insert();
+    drop schema if exists test_support;
+  `);
+}
+
+export interface ProductEntryPostgresCaseScope {
+  userIds: string[];
+  publicExternalKeyPrefix: string;
+  privateProductNamePrefix: string;
+  recipeTitlePrefix: string;
+}
+
+function caseScopeSql(scope: ProductEntryPostgresCaseScope) {
+  if (scope.userIds.length === 0) throw new Error("Product entry PostgreSQL case scope requires users");
+  const users = `array[${scope.userIds.map((userId) => `${textSql(userId)}::uuid`).join(", ")}]::uuid[]`;
+  const externalKeyPattern = textSql(`${scope.publicExternalKeyPrefix}%`);
+  const privateProductNamePattern = textSql(`${scope.privateProductNamePrefix}%`);
+  const recipeTitlePattern = textSql(`${scope.recipeTitlePrefix}%`);
+  return { users, externalKeyPattern, privateProductNamePattern, recipeTitlePattern };
+}
+
+export function assertProductEntryPostgresCaseRowsEmpty(
+  connection: ProductEntryPostgresConnection,
+  scope: ProductEntryPostgresCaseScope,
+) {
+  const { users, externalKeyPattern, privateProductNamePattern, recipeTitlePattern } = caseScopeSql(scope);
+  const result = productEntryPsql(connection, `
+    with products as (
+      select id from public.food_products
+      where (owner_user_id = any(${users}) and name like ${privateProductNamePattern})
+         or external_product_key like ${externalKeyPattern}
+    ), items as (
+      select id from public.nutrition_source_items where external_item_key like ${externalKeyPattern}
+    ), profiles as (
+      select id from public.nutrition_profiles where source_item_id in (select id from items)
+      union select nutrition_profile_id from public.food_product_nutrition_versions
+        where product_id in (select id from products)
+    )
+    select json_build_object(
+      'entries', (select count(*) from public.product_planner_entries where product_id in (select id from products)),
+      'products', (select count(*) from products),
+      'versions', (select count(*) from public.food_product_nutrition_versions where product_id in (select id from products) or source_item_id in (select id from items)),
+      'profiles', (select count(*) from profiles),
+      'values', (select count(*) from public.nutrition_values where profile_id in (select id from profiles)),
+      'sourceItems', (select count(*) from items),
+      'sources', (select count(*) from public.nutrition_sources where dataset_name like ${textSql(`isolated-${scope.publicExternalKeyPrefix}%`)}),
+      'meals', (select count(*) from public.meals where recipe_id in (select id from public.recipes where title like ${recipeTitlePattern})),
+      'recipes', (select count(*) from public.recipes where title like ${recipeTitlePattern})
+    )::text;
+  `);
+  if (result.status !== 0) throw new Error(result.stderr.trim() || "Product entry case row count failed");
+  const counts = parseJsonOutput<Record<string, number>>(result.stdout);
+  const residual = Object.entries(counts).filter(([, count]) => count !== 0);
+  if (residual.length > 0) {
+    throw new Error(`Product entry PostgreSQL case leaked rows: ${JSON.stringify(counts)}`);
+  }
+}
+
+export function resetProductEntryPostgresCase(
+  connection: ProductEntryPostgresConnection,
+  scope: ProductEntryPostgresCaseScope,
+) {
+  const { users, externalKeyPattern, privateProductNamePattern, recipeTitlePattern } = caseScopeSql(scope);
+  const disabled = productEntryPsql(connection, `
+    alter table public.food_product_nutrition_versions
+      disable trigger protect_food_product_nutrition_version;
+    alter table public.nutrition_values disable trigger protect_nutrition_values;
+    alter table public.nutrition_profiles disable trigger protect_nutrition_profiles;
+    alter table public.nutrition_source_items disable trigger protect_nutrition_source_items;
+    alter table public.nutrition_sources disable trigger protect_nutrition_sources;
+  `);
+  if (disabled.status !== 0) throw new Error(disabled.stderr.trim() || "Product entry reset setup failed");
+
+  let result;
+  try {
+    result = productEntryPsql(connection, `
+    begin;
+    set constraints all deferred;
+
+    create temporary table test_case_products on commit drop as
+      select id from public.food_products
+      where (owner_user_id = any(${users}) and name like ${privateProductNamePattern})
+         or external_product_key like ${externalKeyPattern};
+    create temporary table test_case_profiles on commit drop as
+      select nutrition_profile_id as id from public.food_product_nutrition_versions
+      where product_id in (select id from test_case_products)
+      union
+      select id from public.nutrition_profiles where source_item_id in (
+        select id from public.nutrition_source_items where external_item_key like ${externalKeyPattern}
+      );
+
+    delete from public.product_planner_entries
+      where product_id in (select id from test_case_products);
+    delete from public.meals where recipe_id in (
+      select id from public.recipes where title like ${recipeTitlePattern}
+    );
+    delete from public.recipes where title like ${recipeTitlePattern};
+    delete from public.food_product_nutrition_versions
+      where product_id in (select id from test_case_products)
+         or source_item_id in (
+           select id from public.nutrition_source_items where external_item_key like ${externalKeyPattern}
+         );
+    delete from public.food_products where id in (select id from test_case_products);
+    delete from public.nutrition_values
+      where profile_id in (select id from test_case_profiles);
+    delete from public.nutrition_profiles
+      where id in (select id from test_case_profiles);
+    delete from public.nutrition_source_items
+      where external_item_key like ${externalKeyPattern};
+    delete from public.nutrition_sources
+      where dataset_name like ${textSql(`isolated-${scope.publicExternalKeyPrefix}%`)};
+
+    commit;
+    `);
+  } finally {
+    const enabled = productEntryPsql(connection, `
+      alter table public.nutrition_sources enable trigger protect_nutrition_sources;
+      alter table public.nutrition_source_items enable trigger protect_nutrition_source_items;
+      alter table public.nutrition_profiles enable trigger protect_nutrition_profiles;
+      alter table public.nutrition_values enable trigger protect_nutrition_values;
+      alter table public.food_product_nutrition_versions
+        enable trigger protect_food_product_nutrition_version;
+    `);
+    if (enabled.status !== 0) throw new Error(enabled.stderr.trim() || "Product entry reset teardown failed");
+  }
+  if (result.status !== 0) throw new Error(result.stderr.trim() || "Product entry case reset failed");
+}

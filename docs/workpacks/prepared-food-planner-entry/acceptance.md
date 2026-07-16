@@ -145,6 +145,8 @@
 - [x] real old pin/current change/product delete/new create 409/existing entry retention을 검증한다 <!-- omo:id=accept-product-entry-pg-old-pin;stage=2;scope=backend;review=3 -->
 - [x] real column Recipe Meal/product entry/concurrent race guard와 cleanup을 검증한다 <!-- omo:id=accept-product-entry-pg-column-cleanup;stage=2;scope=backend;review=3 -->
 
+> Stage 3 repair evidence: isolated PostgreSQL 1 file/11 tests가 GREEN이다. 각 case 전후 scoped FK 역순 reset과 residual row 0 assertion, test-only `AFTER INSERT` 예외의 statement rollback, observed `complete/0`과 missing `unavailable/null` 구분을 포함한다. 이 증거는 repair 결과이며 fresh Stage 3 re-review 승인을 대신하지 않는다.
+
 ### Playwright / UI
 
 - [ ] real browser primary flow, manual product create return, PATCH/delete를 검증한다 <!-- omo:id=accept-product-entry-playwright-flow;stage=4;scope=frontend;review=5,6 -->

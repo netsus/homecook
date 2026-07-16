@@ -1,11 +1,15 @@
 import { randomUUID } from "node:crypto";
 
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  assertProductEntryPostgresCaseRowsEmpty,
   bootstrapProductEntryPlannerUser,
+  installProductEntryAfterInsertFailure,
   productEntryPsql,
   productEntryPsqlAsync,
+  removeProductEntryAfterInsertFailure,
+  resetProductEntryPostgresCase,
   type ProductEntryPostgresConnection,
 } from "@/tests/fixtures/prepared-food-planner-entry-postgres-harness";
 
@@ -17,6 +21,12 @@ const connection: ProductEntryPostgresConnection = {
 };
 const USER_A = "10000000-0000-4000-8000-000000000001";
 const USER_B = "10000000-0000-4000-8000-000000000002";
+const CASE_SCOPE = {
+  userIds: [USER_A, USER_B],
+  publicExternalKeyPrefix: "planner-",
+  privateProductNamePrefix: "planner-case:",
+  recipeTitlePrefix: "planner-entry-case:",
+};
 let columnA = "";
 let privateProduct: { id: string; nutrition_version_id: string };
 let privateEntry: Record<string, unknown>;
@@ -180,7 +190,7 @@ describe.runIf(enabled)("prepared food planner entry isolated PostgreSQL integra
         '${USER_A}', '고정 이름 요거트', '고정 브랜드',
         ${jsonSql({
           basis: { amount: 1, unit: "serving" },
-          values: { energy_kcal: 120, sodium_mg: null },
+          values: { energy_kcal: 120, protein_g: 0, sodium_mg: null },
         })}
       )::text;
     `)));
@@ -190,6 +200,21 @@ describe.runIf(enabled)("prepared food planner entry isolated PostgreSQL integra
         1, 'serving', '${privateProduct.nutrition_version_id}'
       )::text;
     `)));
+  });
+
+  beforeEach(() => {
+    resetProductEntryPostgresCase(connection, CASE_SCOPE);
+    assertProductEntryPostgresCaseRowsEmpty(connection, CASE_SCOPE);
+  });
+
+  afterEach(() => {
+    removeProductEntryAfterInsertFailure(connection);
+    resetProductEntryPostgresCase(connection, CASE_SCOPE);
+    assertProductEntryPostgresCaseRowsEmpty(connection, CASE_SCOPE);
+  });
+
+  afterAll(() => {
+    assertProductEntryPostgresCaseRowsEmpty(connection, CASE_SCOPE);
   });
 
   it("applies the official schema on an isolated non-default port", () => {
@@ -242,6 +267,10 @@ describe.runIf(enabled)("prepared food planner entry isolated PostgreSQL integra
       values: Record<string, { amount: number | null; status: string }>;
     };
     expect(nutrition.values.energy_kcal.amount).toBe(120);
+    expect(nutrition.values.protein_g).toEqual(expect.objectContaining({
+      amount: 0,
+      status: "complete",
+    }));
     expect(nutrition.values.sodium_mg).toEqual(expect.objectContaining({
       amount: null,
       status: "unavailable",
@@ -318,16 +347,26 @@ describe.runIf(enabled)("prepared food planner entry isolated PostgreSQL integra
     expect(inferredUnit.stderr).toContain("NUTRITION_BASIS_MISMATCH");
   });
 
-  it("rolls a scoped probe back and leaves zero residual entry rows", () => {
+  it("rolls the statement back when a post-insert fixture failure is injected", () => {
     const probeDate = "2026-07-30";
-    psql(serviceSql(`
-      begin;
-      select public.create_product_planner_entry(
-        '${USER_A}', '${privateProduct.id}', '${probeDate}', '${columnA}',
-        1, 'serving', '${privateProduct.nutrition_version_id}'
-      );
-      rollback;
-    `));
+    const installed = installProductEntryAfterInsertFailure(connection, {
+      userId: USER_A,
+      planDate: probeDate,
+    });
+    expect(installed.status, installed.stderr).toBe(0);
+    try {
+      const injectedFailure = productEntryPsql(connection, serviceSql(`
+        select public.create_product_planner_entry(
+          '${USER_A}', '${privateProduct.id}', '${probeDate}', '${columnA}',
+          1, 'serving', '${privateProduct.nutrition_version_id}'
+        );
+      `));
+      expect(injectedFailure.status).not.toBe(0);
+      expect(injectedFailure.stderr).toContain("TEST_PRODUCT_ENTRY_AFTER_INSERT_FAILURE");
+    } finally {
+      const removed = removeProductEntryAfterInsertFailure(connection);
+      expect(removed.status, removed.stderr).toBe(0);
+    }
     expect(psql(`
       select count(*) from public.product_planner_entries
       where user_id = '${USER_A}' and plan_date = '${probeDate}';
@@ -448,7 +487,7 @@ describe.runIf(enabled)("prepared food planner entry isolated PostgreSQL integra
     const recipeId = randomUUID();
     psql(`
       insert into public.recipes (id, title, source_type)
-      values ('${recipeId}', '컬럼 보호 레시피', 'manual');
+      values ('${recipeId}', 'planner-entry-case: 컬럼 보호 레시피', 'manual');
       insert into public.meals (
         user_id, recipe_id, plan_date, column_id, planned_servings,
         is_leftover, leftover_dish_id
@@ -473,7 +512,7 @@ describe.runIf(enabled)("prepared food planner entry isolated PostgreSQL integra
   it("serializes a current-version race and leaves zero partial entry rows", async () => {
     const product = JSON.parse(psql(serviceSql(`
       select public.create_manual_food_product(
-        '${USER_A}', 'current race 제품', null,
+        '${USER_A}', 'planner-case: current race 제품', null,
         ${jsonSql({
           basis: { amount: 1, unit: "serving" },
           values: { energy_kcal: 100 },
@@ -514,7 +553,7 @@ describe.runIf(enabled)("prepared food planner entry isolated PostgreSQL integra
   it("serializes column delete against entry create without orphan rows", async () => {
     const product = JSON.parse(psql(serviceSql(`
       select public.create_manual_food_product(
-        '${USER_B}', 'column race 제품', null,
+        '${USER_B}', 'planner-case: column race 제품', null,
         ${jsonSql({
           basis: { amount: 1, unit: "serving" },
           values: { energy_kcal: 80 },

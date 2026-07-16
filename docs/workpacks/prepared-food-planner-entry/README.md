@@ -317,7 +317,7 @@
 
 - RED: 최초 5개 파일 9개 테스트 중 계약 미구현에 해당하는 8개 실패를 확인했고, ProductPlannerEntry가 연결된 column 삭제가 200으로 잘못 통과하는 회귀 테스트도 별도로 409 기대 실패로 고정했다.
 - GREEN/REFACTOR: 신규 service/API/read/RLS/regression과 기존 planner/meals/column 회귀 묶음이 8 files, 66 tests로 통과했다.
-- real PostgreSQL: non-5432 ephemeral PostgreSQL에서 공식 6개 migration 순서, 실제 `ensureUserBootstrapState`, constraint/RLS/direct grant, atomic pin/rollback/old pin/delete, current-version create race와 column-delete/create race를 1 file, 11 tests로 검증했다.
+- real PostgreSQL: non-5432 ephemeral PostgreSQL에서 공식 6개 migration 순서, 실제 `ensureUserBootstrapState`, constraint/RLS/direct grant, atomic pin/old pin/delete, current-version create race와 column-delete/create race를 1 file, 11 tests로 검증했다. Stage 3 수리에서 test-only `AFTER INSERT` 예외 주입이 statement 전체를 rollback하고 scoped residual row가 0임을 확인했으며, 관측된 `0`은 `complete/0`, missing/null은 `unavailable/null`로 구분했다.
 - repository gate: `pnpm verify:backend`가 product 1,519 passed/22 skipped, production build, security Playwright 12 passed로 통과했다. source-of-truth/workflow-v2/workpack/automation-spec/OMO bookkeeping validator와 `git diff --check`도 통과했다.
 - 이 기록은 Stage 2 구현 증거이며 Stage 3 승인으로 간주하지 않는다. fresh reviewer가 새 exact PR head를 독립 검수해야 한다.
 
@@ -326,6 +326,8 @@
 - implementation과 분리된 fresh reviewer가 exact PR head에서 contract/RLS/direct grants, two-session race, rollback, immutable pin, read dedupe/N+1, workflow exclusions를 검수한다.
 - required finding은 별도 repair role이 처리하고 같은 reviewer가 새 exact head를 재검수한다.
 - reviewer 승인, actual verification, closeout sync, current-head checks green 전 backend merge 금지.
+- 첫 Stage 3 review는 implementation head `8137ef7c00e9c23fc09d0c2937650be351be780a`에서 `REQUEST_CHANGES`였다. required finding 2건은 실제 case-scoped FK 역순 reset/row-count assertion·insert 후 예외 rollback·observed-zero fixture 보강과 roadmap/workflow-v2 Stage 2/3 projection drift 수리다.
+- repair role은 자기 변경을 승인하지 않는다. real PostgreSQL 11/11 GREEN과 전체 backend/validator 재검증 뒤 fresh reviewer가 새 exact head를 다시 승인해야 한다.
 
 ### Stage 4 Frontend
 
