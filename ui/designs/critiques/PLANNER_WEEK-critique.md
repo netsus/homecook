@@ -49,4 +49,13 @@
 
 > **2026-07-16 prepared-food-planner-entry 재검수 필요:** 위 역사적 판정은 새 product entry anchor extension을 승인하지 않는다. fresh independent reviewer는 mobile baseline 375/구현 390, narrow 320, desktop, primary CTA, scroll containment, Recipe Meal/product 구분, workflow status 부재와 PLANNER_WEEK anchor 회귀를 별도로 판정해야 한다. 현재 successor 판정은 pending이다.
 
-Stage 1 산출물로 사용 가능하다. 구현 전 blocking issue는 없고, 위 마이너 이슈 3건은 slice06 Stage 4 authority precheck / public review에서 함께 잠그면 충분하다.
+### Independent Stage 1.5 Review Record — prepared-food-planner-entry
+
+- reviewed head: `b137aa4e9d090827a80301ab47cc55710821a166`
+- decision: `REQUEST_CHANGES` — Important 6건
+- 이 화면 관련 finding: anchor extension evidence를 기존/신규 화면별로 구분하지 않아 PLANNER_WEEK before+after 390/320/desktop 보장이 충분히 machine-readable하지 않았다.
+- repair disposition: PLANNER_WEEK의 before+after 6개 exact path를 유지·명시하고, MEAL_SCREEN/MENU_ADD도 같은 6-way matrix로 확장했다. 신규 picker/create는 after-only 3-way matrix로 분리했다.
+- 전역 finding disposition: MEAL_SCREEN 예상 열량, picker cursor, real DB bootstrap/reset/cleanup, 5개 critique provenance, roadmap/status 정합성도 owning artifact에서 수정했다.
+- approval: **pending independent exact-head re-review**. 역사적 🟡 판정은 이번 successor anchor extension 승인으로 간주하지 않는다.
+
+위 문장은 역사적 slice06 판정에만 해당한다. `prepared-food-planner-entry` successor는 repair 반영 뒤에도 독립 exact-head 재검수 전까지 승인되지 않았고 Stage 2 진입이 차단된다.

@@ -2046,8 +2046,8 @@
       "preset": "vertical-slice-strict",
       "branch": "docs/prepared-food-planner-entry",
       "pr_path": null,
-      "lifecycle": "planned",
-      "approval_state": "not_started",
+      "lifecycle": "in_progress",
+      "approval_state": "needs_revision",
       "verification_status": "pending",
       "required_checks": [
         "pnpm exec vitest run tests/prepared-food-planner-entry-api.test.ts tests/prepared-food-planner-entry-service.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/prepared-food-planner-entry-rls.test.ts tests/prepared-food-planner-entry-regression.test.ts",
@@ -2065,7 +2065,7 @@
         "pnpm validate:omo-bookkeeping",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs branch for the high-risk full-stack prepared food planner entry slice. Workflow lifecycle remains planned with approval not_started and verification pending until a fresh independent Codex Stage 1.5 gate approves the docs and design artifacts. The contract locks exactly three product entry mutations plus additive existing planner/meals product_entries while preserving recipe-only arrays and forbidding duplicate rows or Meal-only fields. Create atomically pins immutable nutrition version and product snapshots, patch uses the old pin and changes quantity only, deleted-product new create returns PRODUCT_DELETED, and same-unit or exactly one direct pinned relation is the only conversion path. Product entries remain outside Meal status, shopping, cooking, leftovers, recipe counts, planner_registered XP, and meal_add_path_used activity. Approved public artifacts/operational rows and production/staging writes remain zero; synthetic public fixtures are isolated-only. PLANNER_WEEK anchor extension and new FOOD_PRODUCT_PICKER/CREATE require 390/320/desktop evidence and separated authority precheck, Stage 5, final authority, and Stage 6.",
+      "notes": "Repository roadmap state is docs and workflow lifecycle is in_progress. Independent Stage 1.5 review requested changes at exact head b137aa4e9d090827a80301ab47cc55710821a166 with six Important findings; the separate repair-final recorded their disposition, while approval stays needs_revision and verification pending until exact-head re-review. The repaired contract locks pinned-quantity MEAL_SCREEN expected energy with partial/unavailable/missing-not-zero, existing GET /food-products opaque cursor reset/dedupe/last-page/latest-query behavior, an executable isolated PostgreSQL real ensureUserBootstrapState/reset/cleanup plan, and PLANNER_WEEK/MEAL_SCREEN/MENU_ADD before+after evidence at 390/320/desktop. Exactly three entry mutations and additive existing planner/meals product_entries remain locked with Recipe Meal compatibility, atomic immutable pins, owner guards, workflow exclusions, zero approved public operational rows, and zero production/staging writes. Picker/create still require 390/320/desktop after evidence and separated authority precheck, Stage 5, final authority, and Stage 6.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

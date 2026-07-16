@@ -50,6 +50,9 @@
       "approved-public-promotion-artifact-and-operational-public-row-count-remain-zero",
       "synthetic-public-products-are-isolated-test-fixtures-only-and-never-operational-or-promotion-evidence",
       "production-and-staging-writes-remain-zero",
+      "isolated-postgresql-runner-uses-a-non-5432-ephemeral-database-explicit-migration-order-and-finally-process-socket-directory-cleanup",
+      "owner-planner-columns-are-created-by-the-real-ensure-user-bootstrap-state-path-not-direct-column-seeding-and-bootstrap-is-idempotent",
+      "transaction-rollback-or-scoped-fk-order-reset-leaves-zero-case-rows-before-the-next-real-db-scenario",
       "planner-nutrition-summary-ocr-barcode-dining-out-meal-kit-actual-consumption-medical-coaching-and-generic-prep-size-edible-fields-remain-out-of-scope",
       "no-undocumented-endpoint-status-error-code-request-response-field-workflow-status-or-database-surface-is-added"
     ],
@@ -84,6 +87,9 @@
       "shopping-preview-list-cooking-session-leftover-recipe-count-xp-activity-product-entry-exclusion",
       "existing-recipe-meal-status-owner-read-only-error-and-client-regression",
       "bounded-owner-date-column-query-and-product-version-profile-value-source-relation-no-n-plus-one",
+      "non-5432-ephemeral-runner-explicit-core-cover-nutrition-recipe-snapshot-catalog-product-entry-migrations-and-finally-cleanup",
+      "actual-ensure-user-bootstrap-state-owner-default-columns-idempotency-without-direct-meal-plan-column-seeding",
+      "transaction-rollback-and-committed-race-case-scoped-reset-leave-zero-fixture-rows",
       "secret-raw-provider-leak-zero-public-actual-row-zero-production-staging-write-zero-and-ephemeral-cleanup"
     ]
   },
@@ -102,9 +108,11 @@
       "partial-minimum-not-zero",
       "unavailable-information-pending",
       "basis-mismatch-stays-on-quantity",
+      "cursor-pagination-query-reset-product-id-dedupe-last-page-and-latest-query-wins",
       "mixed-recipe-and-product-entries",
       "pinned-old-version-after-current-change",
-      "deleted-product-existing-entry"
+      "deleted-product-existing-entry",
+      "expected-energy-complete-partial-unavailable-and-observed-zero"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/prepared-food-planner-entry-ui.test.tsx tests/prepared-food-planner-entry-client.test.ts",
@@ -131,9 +139,10 @@
       "pinned-old-version-quantity-update-and-deleted-product-existing-entry-stability",
       "loading-empty-error-read-only-unauthorized-partial-unavailable-evidence",
       "missing-nutrient-never-renders-as-zero",
-      "planner-week-meal-screen-menu-add-before-after-390px",
-      "planner-week-meal-screen-menu-add-picker-create-before-after-320px",
-      "planner-week-meal-screen-menu-add-picker-create-before-after-desktop-1280px",
+      "meal-screen-product-card-uses-pinned-version-and-entry-quantity-for-expected-energy-complete-partial-unavailable-and-observed-zero-copy",
+      "food-product-picker-consumes-existing-get-food-products-opaque-cursor-with-query-reset-id-dedupe-last-page-and-latest-query-wins",
+      "planner-week-meal-screen-menu-add-each-have-before-and-after-at-390-320-and-desktop-1280",
+      "food-product-picker-and-create-have-after-at-390-320-and-desktop-1280",
       "no-page-horizontal-overflow-scroll-containment-primary-cta-focus-keyboard-escape-back-and-44px-touch-target",
       "exploratory-qa-and-eval-evidence",
       "fresh-authority-precheck-stage-five-final-authority-and-stage-six-blocker-zero",
@@ -163,9 +172,18 @@
         "ui/designs/evidence/prepared-food-planner-entry/after/PLANNER_WEEK-320.png",
         "ui/designs/evidence/prepared-food-planner-entry/before/PLANNER_WEEK-desktop-1280.png",
         "ui/designs/evidence/prepared-food-planner-entry/after/PLANNER_WEEK-desktop-1280.png",
+        "ui/designs/evidence/prepared-food-planner-entry/before/MEAL_SCREEN-390.png",
         "ui/designs/evidence/prepared-food-planner-entry/after/MEAL_SCREEN-mixed-entry-390.png",
+        "ui/designs/evidence/prepared-food-planner-entry/before/MEAL_SCREEN-320.png",
         "ui/designs/evidence/prepared-food-planner-entry/after/MEAL_SCREEN-mixed-entry-320.png",
+        "ui/designs/evidence/prepared-food-planner-entry/before/MEAL_SCREEN-desktop-1280.png",
+        "ui/designs/evidence/prepared-food-planner-entry/after/MEAL_SCREEN-mixed-entry-desktop-1280.png",
+        "ui/designs/evidence/prepared-food-planner-entry/before/MENU_ADD-390.png",
         "ui/designs/evidence/prepared-food-planner-entry/after/MENU_ADD-product-entry-390.png",
+        "ui/designs/evidence/prepared-food-planner-entry/before/MENU_ADD-320.png",
+        "ui/designs/evidence/prepared-food-planner-entry/after/MENU_ADD-product-entry-320.png",
+        "ui/designs/evidence/prepared-food-planner-entry/before/MENU_ADD-desktop-1280.png",
+        "ui/designs/evidence/prepared-food-planner-entry/after/MENU_ADD-product-entry-desktop-1280.png",
         "ui/designs/evidence/prepared-food-planner-entry/after/FOOD_PRODUCT_PICKER-390.png",
         "ui/designs/evidence/prepared-food-planner-entry/after/FOOD_PRODUCT_PICKER-320.png",
         "ui/designs/evidence/prepared-food-planner-entry/after/FOOD_PRODUCT_PICKER-desktop-1280.png",
@@ -213,6 +231,9 @@
     "planner-nutrition-summary-actual-consumption-medical-ocr-barcode-dining-out-meal-kit-or-generic-prep-size-edible-scope-is-added",
     "undocumented-endpoint-status-error-code-field-workflow-status-or-database-surface-is-added",
     "stage4-real-browser-auth-return-basis-mismatch-or-required-state-evidence-is-missing",
+    "meal-screen-expected-energy-does-not-use-the-pinned-entry-quantity-or-missing-null-unavailable-is-rendered-as-zero",
+    "food-product-picker-does-not-consume-existing-opaque-cursor-pagination-or-query-reset-dedupe-last-page-latest-query-guards-are-missing",
+    "real-db-fixture-directly-seeds-meal-plan-columns-instead-of-using-ensure-user-bootstrap-state-or-reset-cleanup-is-not-executable",
     "390-320-desktop-before-after-evidence-is-missing",
     "page-level-horizontal-overflow-primary-cta-accessibility-or-focus-regression-remains",
     "fresh-authority-precheck-stage-five-final-authority-or-stage-six-is-missing-or-has-unresolved-blocker"
@@ -221,5 +242,5 @@
     "backend": 4,
     "frontend": 4
   },
-  "notes": "Full-stack prepared food planner entry slice. It adds exactly three mutation endpoints and modifies only the existing GET /planner and GET /meals read models with additive product_entries arrays while preserving recipe-only meals/items and forbidding duplicate rows or Meal-only fields. Create atomically pins current immutable product nutrition version plus name/brand snapshots; same-unit scaling or exactly one direct relation from that pinned version is allowed, while inference and chaining fail closed. Patch changes quantity only and delete preserves the existing 404 replay boundary. Product entries are structurally excluded from Recipe Meal status, shopping, cooking, leftovers, recipe counts, planner_registered XP, and meal_add_path_used activity. Current approved public promotion artifacts and operational public rows are zero; synthetic public fixtures are isolated-only and production/staging writes remain zero. PLANNER_WEEK is an anchor extension and FOOD_PRODUCT_PICKER/CREATE are new high-risk surfaces, so 390/320/desktop evidence and separated authority precheck, Stage 5, final authority, and Stage 6 are mandatory. User-approved nutrition/products/planner stages use fresh role-separated Codex tasks and no author or implementer self-approves."
+  "notes": "Full-stack prepared food planner entry slice. It adds exactly three mutation endpoints and modifies only the existing GET /planner and GET /meals read models with additive product_entries arrays while preserving recipe-only meals/items and forbidding duplicate rows or Meal-only fields. Create atomically pins current immutable nutrition version plus name/brand snapshots; same-unit scaling or exactly one direct relation from that pinned version is allowed, while inference and chaining fail closed. Patch changes quantity only and delete preserves the existing 404 replay boundary. MEAL_SCREEN expected energy consumes the pinned entry quantity result and preserves partial/unavailable/missing-not-zero; FOOD_PRODUCT_PICKER consumes the existing GET /food-products opaque cursor with query reset, product-ID dedupe, last-page, and latest-query guards. Stage 2 real DB uses an isolated non-5432 runner, explicit migrations, actual ensureUserBootstrapState default columns, rollback/scoped reset, and finally cleanup. Product entries are structurally excluded from Recipe Meal status, shopping, cooking, leftovers, recipe counts, planner_registered XP, and meal_add_path_used activity. Current approved public promotion artifacts and operational public rows are zero; synthetic public fixtures are isolated-only and production/staging writes remain zero. PLANNER_WEEK, MEAL_SCREEN, and MENU_ADD each require before+after at 390/320/desktop; new FOOD_PRODUCT_PICKER/CREATE require after at those viewports plus separated authority precheck, Stage 5, final authority, and Stage 6. User-approved nutrition/products/planner stages use fresh role-separated Codex tasks and no author or implementer self-approves."
 }

@@ -80,6 +80,15 @@
 - 다른 사용자 private와 soft-deleted product는 card/empty count/search hint 어디에도 나타나지 않는다.
 - 현재 approved public promotion artifact와 운영 public row는 0이므로 actual Stage 4 local data에서는 private manual path가 정상 기본이다. synthetic public card는 isolated QA fixture로만 표시하고 evidence caption에 이를 명시한다.
 
+## Existing Catalog Cursor Contract
+
+- 새 검색 endpoint를 만들지 않고 기존 `GET /food-products?q&cursor&limit`만 호출한다.
+- 첫 요청과 검색어 변경 요청에는 cursor를 보내지 않는다. 검색어가 바뀌는 즉시 기존 items, `next_cursor`, `has_next`를 reset하고 첫 page loading으로 전환한다.
+- 다음 page는 응답 `next_cursor`를 파싱하지 않는 opaque 값으로 그대로 전달한다. 서버 순서대로 append하고 stable `product.id`가 이미 있으면 뒤의 중복만 버린다.
+- `has_next=false` 또는 `next_cursor=null`이면 마지막 page다. 더 불러오기 observer/CTA를 비활성화하고 추가 요청을 보내지 않는다.
+- request generation 또는 `AbortController`로 이전 query/page 응답을 무시한다. 느린 이전 검색이 늦게 끝나도 최신 검색어 items/cursor를 덮어쓸 수 없다.
+- initial loading, next-page loading, empty, retry를 분리해 기존 결과를 pagination spinner로 가리지 않는다.
+
 ## Selection And Quantity Contract
 
 - quantity amount는 양수만 허용한다.
@@ -135,6 +144,7 @@
 - keyboard: ESC/back은 이전 `MENU_ADD`; Enter는 선택 결과에서 동작하되 quantity validation을 우회하지 않는다.
 - focus: open → search, select → quantity, validation error → invalid control, create success → new product selection, entry success → `MEAL_SCREEN` new card.
 - 중복 submit 방지, response race에서 latest query만 표시, abort된 검색 결과로 선택 상태를 덮어쓰지 않는다.
+- pagination append는 product ID dedupe 뒤에도 server first-occurrence order를 유지하고 last page에서 observer를 종료한다.
 - 결과 card 전체를 44px 이상 target으로 사용하고 내부 read-only label이 별도 오작동 target이 되지 않게 한다.
 
 ## Stage 4 Evidence

@@ -147,6 +147,15 @@
 
 > **2026-07-16 prepared-food-planner-entry 재검수 필요:** 위 역사적 판정은 additive ProductPlannerEntry card/quantity/delete를 승인하지 않는다. fresh independent reviewer는 mobile baseline 375/구현 390, narrow 320, desktop, primary CTA, scroll containment, pinned old version, partial/unavailable/missing-not-zero와 PLANNER_WEEK anchor return을 별도로 판정해야 한다. 현재 successor 판정은 pending이다.
 
+### Independent Stage 1.5 Review Record — prepared-food-planner-entry
+
+- reviewed head: `b137aa4e9d090827a80301ab47cc55710821a166`
+- decision: `REQUEST_CHANGES` — Important 6건
+- 이 화면 관련 finding: Product card의 공식 `예상 열량` 표시가 잠기지 않았고, MEAL_SCREEN before/after가 390/320/desktop 전체에서 machine-required가 아니었다.
+- repair disposition: pinned version + entry quantity response를 authority로 `예상 열량 X kcal` / `예상 열량 최소 X kcal` / `예상 열량 정보 준비 중`을 잠갔다. observed complete 0만 0이며 missing/null/unavailable은 0이 아니다. MEAL_SCREEN before+after 6개 path를 automation contract에 추가했다.
+- 전역 finding disposition: picker cursor, real DB bootstrap/reset/cleanup, 5개 critique provenance, roadmap/status 정합성도 owning artifact에서 수정했다.
+- approval: **pending independent exact-head re-review**. 이 기록은 역사적 critique나 repair-final의 자기 승인이 아니다.
+
 workpack README `Design Authority` 항목에 따라 Stage 4 authority review에서 확인해야 할 항목:
 
 1. 식사 카드 목록이 길어질 때 리스트만 스크롤되고 앱바·하단 CTA가 고정되는지 스크린샷으로 확인

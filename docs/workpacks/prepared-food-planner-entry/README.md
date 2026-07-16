@@ -182,6 +182,8 @@
 ## Frontend Delivery Mode
 
 - Stage 4는 기존 `PLANNER_WEEK`, `MEAL_SCREEN`, `MENU_ADD`의 navigation·scroll·Recipe Meal interaction model을 보존하면서 product 흐름만 additive로 구현한다.
+- `FOOD_PRODUCT_PICKER`는 predecessor의 기존 `GET /food-products?q&cursor&limit`만 소비한다. `next_cursor`는 해석하지 않는 opaque 값으로 다음 요청에 그대로 전달하고, `has_next=false` 또는 `next_cursor=null`이면 마지막 page로 종료한다.
+- 검색어가 바뀌면 누적 item·cursor·`has_next`를 즉시 초기화하고 첫 page부터 다시 요청한다. 다음 page는 기존 순서를 보존해 append하되 stable `product.id`로 중복 제거하며, 이전 검색/느린 요청 응답은 request generation 또는 abort guard로 무시해 최신 검색어 결과만 화면에 반영한다. 새 검색 endpoint는 만들지 않는다.
 - 필수 상태:
   - `loading`: product 검색/entry mutation 영역만 skeleton/pending 처리하고 기존 Recipe Meal 목록을 가리지 않음
   - `empty`: 검색 결과 없음과 끼니 entry 없음은 분리; 검색 empty에는 `[직접 등록]`
@@ -192,6 +194,7 @@
   - `unavailable`: amount `null`을 `정보 준비 중`으로 표시
 - `NUTRITION_BASIS_MISMATCH`면 수량 단계에 머물고 선택/검색 context를 보존한다.
 - Product entry는 Recipe Meal과 시각적으로 구분하고 status chip, 장보기, 요리하기, 남은요리 action을 표시하지 않는다.
+- `MEAL_SCREEN` Product entry card는 entry가 pin한 version과 현재 entry quantity로 서버가 산출한 `nutrition.values.energy_kcal`만 사용해 `예상 열량`을 표시한다. `complete`의 non-null `amount`는 `예상 열량 X kcal`, `partial`의 non-null `known_amount`는 `예상 열량 최소 X kcal`, null/unavailable은 `예상 열량 정보 준비 중`이다. 관측된 complete `0`만 `0 kcal`이며 missing/null/unavailable을 0으로 대체하지 않고 current product version을 다시 조회·계산하지 않는다.
 - `PLANNER_WEEK`/`MEAL_SCREEN`은 existing recipe 배열과 additive product 배열을 client adapter에서 한 번만 합치며 key/type 충돌 없이 렌더한다.
 - `FOOD_PRODUCT_CREATE` 성공은 새 private 제품을 선택한 `FOOD_PRODUCT_PICKER` 상태로 복귀한다. 이어서 수량을 확정한 뒤 `MEAL_SCREEN`, 최종적으로 `PLANNER_WEEK` 흐름으로 돌아간다.
 - 디자인 상태는 Stage 1에서 `temporary`, Stage 4 구현 후 `pending-review`, 독립 Stage 5 + final authority + Stage 6에서 blocker 0일 때만 `confirmed`다.
@@ -221,7 +224,7 @@
   - `ui/designs/FOOD_PRODUCT_CREATE.md`
 - current-state before evidence plan: `ui/designs/evidence/prepared-food-planner-entry/before/`
 - Stage 4 after evidence plan: `ui/designs/evidence/prepared-food-planner-entry/after/`
-- required viewport evidence: 각 핵심 flow의 390px, narrow 320px, desktop 1280px; 최초 진입, scroll 중, primary CTA, empty/error/unauthorized/basis mismatch, mixed recipe/product entry
+- required viewport evidence: 기존 `PLANNER_WEEK`, `MEAL_SCREEN`, `MENU_ADD` 각각의 **before + after**를 390px, narrow 320px, desktop 1280px에서 모두 확보한다. 신규 `FOOD_PRODUCT_PICKER`, `FOOD_PRODUCT_CREATE`는 동일 3개 viewport의 after를 확보한다. 최초 진입, scroll 중, primary CTA, empty/error/unauthorized/basis mismatch, mixed recipe/product entry 상태도 별도 evidence로 남긴다.
 - authority report: `ui/designs/authority/PLANNER_WEEK-prepared-food-planner-entry-authority.md`
 - Authority status: `required / pending independent authority`. Stage 4 implementation 전에 current-state screenshot을 확보하고, fresh authority precheck → Stage 5 → 별도 final authority gate → Stage 6 순서를 지킨다.
 - `PLANNER_WEEK`의 Baemin prototype navigation/day-card/scroll containment와 기존 Recipe Meal CTA/status hierarchy를 바꾸지 않는다. Product entry는 additive 정보로 밀도를 조절하며 page-level horizontal overflow를 만들지 않는다.
@@ -253,7 +256,11 @@
 
 ### Stage 2 Real Isolated PostgreSQL
 
-- 사용자 기존 DB/container/volume 및 5432와 분리된 ephemeral PostgreSQL에서 관련 predecessor + catalog + product entry migration을 적용한다.
+- Stage 2는 `scripts/run-prepared-food-planner-entry-postgres-integration.mjs`, `tests/fixtures/prepared-food-planner-entry-postgres-harness.ts`, `tests/prepared-food-planner-entry-postgres.integration.test.ts`를 만들고 `package.json`에 `test:prepared-food-planner-entry:postgres`를 연결한다. 단일 실행 명령은 `pnpm test:prepared-food-planner-entry:postgres`다.
+- runner는 기존 `scripts/run-prepared-food-catalog-postgres-integration.mjs`의 `mkdtemp -> non-5432 port 예약 -> initdb -> pg_ctl -> createdb -> finally pg_ctl stop + rmSync` lifecycle과 `tests/fixtures/recipe-nutrition-postgres17-closeout-harness.ts`의 실제 bootstrap adapter 패턴을 재사용한다. 사용자의 기존 DB/container/volume, production/staging URL은 읽거나 쓰지 않는다.
+- isolated DB에는 auth roles/`auth.uid()` test shim을 만든 뒤 `20260301000000_core_schema_bootstrap.sql`, `20260610170000_recipe_book_cover_metadata.sql`, `20260714143000_ingredient_nutrition_conversion_model.sql`, `20260716090000_add_recipe_nutrition_snapshots.sql`, `20260716120000_prepared_food_catalog.sql`, Stage 2의 product entry migration을 순서대로 적용한다. 대상 DB name/comment와 non-5432 port를 test 시작 시 assert한다.
+- A/B는 `public.users` row까지만 fixture로 준비한 다음 repo의 실제 `ensureUserBootstrapState`를 harness adapter로 호출한다. `meal_plan_columns`를 SQL로 직접 seed하지 않으며, 각 owner에 `아침/점심/저녁` 3개가 생기고 두 번째 bootstrap이 멱등임을 먼저 검증한 뒤 그 실제 column ID를 모든 entry/column guard test가 사용한다.
+- fixture product/version/recipe/Meal/entry는 case별 고정 UUID namespace로 준비한다. 일반 case는 test transaction rollback, 두-session race처럼 commit이 필요한 case는 scoped FK 역순 reset을 사용하고 다음 case 전에 owner/product/entry count 0을 assert한다. 전체 종료는 runner `finally`가 process/socket/data directory를 제거한다.
 - route/service와 실제 DB constraint/RLS/direct grants를 모두 검증한다.
 - 두 connection으로 current version pin race를 재현해 하나의 consistent 결과 또는 공식 409만 허용하고 partial entry 0을 확인한다.
 - transaction 중 snapshot/version/entry insert 실패를 주입해 atomic rollback을 확인한다.
