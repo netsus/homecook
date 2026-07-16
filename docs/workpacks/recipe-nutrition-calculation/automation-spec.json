@@ -90,7 +90,7 @@
       "pnpm exec vitest run tests/recipe-nutrition-ui.test.tsx",
       "pnpm verify:frontend:pr",
       "pnpm verify:frontend",
-      "pnpm test:e2e:regression:ci -- --grep recipe-nutrition-calculation",
+      "pnpm test:e2e:regression:ci --grep recipe-nutrition-calculation",
       "pnpm validate:authority-evidence-presence -- --slice recipe-nutrition-calculation",
       "pnpm validate:closeout-sync -- --slice recipe-nutrition-calculation",
       "git diff --check"
@@ -128,10 +128,10 @@
       "critic_artifact": null,
       "authority_required": true,
       "stage4_evidence_requirements": [
-        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-before-390.png",
-        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-after-390.png",
-        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-before-320.png",
-        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-after-320.png",
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-before-390-final.png",
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-after-390-approved.png",
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-before-320-final.png",
+        "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-after-320-approved.png",
         "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-before-desktop.png",
         "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-after-desktop.png",
         "ui/designs/evidence/recipe-nutrition-calculation/recipe-detail-partial.png",

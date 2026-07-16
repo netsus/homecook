@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -105,6 +105,43 @@ function buildRecipeDetail(overrides?: Partial<RecipeDetail>): RecipeDetail {
       saved_book_ids: [],
     },
     ...overrides,
+  };
+}
+
+function buildCompleteNutrition(): RecipeDetail["nutrition"] {
+  const values = {
+    energy_kcal: { amount: 800, known_amount: 800, status: "complete" as const, display_mode: "total" as const },
+    carbohydrate_g: { amount: 100, known_amount: 100, status: "complete" as const, display_mode: "total" as const },
+    protein_g: { amount: 40, known_amount: 40, status: "complete" as const, display_mode: "total" as const },
+    fat_g: { amount: 20, known_amount: 20, status: "complete" as const, display_mode: "total" as const },
+    sodium_mg: { amount: 1_200, known_amount: 1_200, status: "complete" as const, display_mode: "total" as const },
+  };
+
+  return {
+    basis: { amount: 2, unit: "serving" },
+    base_servings: 2,
+    values,
+    scalable_values: {
+      energy_kcal: 600,
+      carbohydrate_g: 80,
+      protein_g: 32,
+      fat_g: 16,
+      sodium_mg: 900,
+    },
+    fixed_values: {
+      energy_kcal: 200,
+      carbohydrate_g: 20,
+      protein_g: 8,
+      fat_g: 4,
+      sodium_mg: 300,
+    },
+    calculation_status: "complete",
+    calculation_quality: "direct",
+    availability_reason: null,
+    reflected_ingredient_count: 4,
+    target_ingredient_count: 4,
+    warnings: [],
+    sources: [],
   };
 }
 
@@ -219,6 +256,265 @@ describe("recipe detail screen", () => {
     });
     hasSupabasePublicEnv.mockReturnValue(true);
   });
+
+  it("places nutrition after the serving control and updates selected totals", async () => {
+    fetchJson.mockResolvedValue(
+      buildRecipeDetail({ nutrition: buildCompleteNutrition() }),
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const card = await screen.findByTestId("recipe-nutrition-card-app");
+    const servingControl = screen.getByText("인분 조절").closest("div.mb-5");
+    const firstIngredient = screen.getByText(
+      MOCK_RECIPE_DETAIL.ingredients[0]?.standard_name ?? "",
+    );
+
+    expect(servingControl).not.toBeNull();
+    if (!servingControl) {
+      throw new Error("인분 조절 영역을 찾지 못했습니다.");
+    }
+    expect(
+      servingControl.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      card.compareDocumentPosition(firstIngredient) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "인분 늘리기" }));
+
+    expect(screen.getByRole("columnheader", { name: "선택 3인분 전체" })).toBeTruthy();
+    expect(screen.getByText("1,100 kcal")).toBeTruthy();
+  }, 10_000);
+
+  it("retries only nutrition while preserving the recipe body and fixed CTA", async () => {
+    const completeDetail = buildRecipeDetail({ nutrition: buildCompleteNutrition() });
+    const temporaryDetail = buildRecipeDetail({
+      nutrition: {
+        ...buildCompleteNutrition(),
+        values: Object.fromEntries(
+          Object.keys(buildCompleteNutrition().values).map((code) => [code, {
+            amount: null,
+            known_amount: null,
+            status: "unavailable" as const,
+            display_mode: null,
+          }]),
+        ),
+        scalable_values: undefined,
+        fixed_values: undefined,
+        calculation_status: "unavailable",
+        calculation_quality: null,
+        availability_reason: "temporarily_unavailable",
+      },
+    });
+    const retry = createDeferred<RecipeDetail>();
+    fetchJson
+      .mockResolvedValueOnce(temporaryDetail)
+      .mockReturnValueOnce(retry.promise);
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "영양 정보 다시 시도" }),
+    );
+
+    expect(screen.getByTestId("recipe-nutrition-loading-skeleton")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: MOCK_RECIPE_DETAIL.title })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "요리하기" })).toBeTruthy();
+
+    retry.resolve(completeDetail);
+
+    await waitFor(() => {
+      expect(screen.getByText("400 kcal")).toBeTruthy();
+    });
+    expect(fetchJson).toHaveBeenLastCalledWith(
+      `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`,
+    );
+  }, 10_000);
+
+  it("keeps the selected servings after a nutrition-only retry succeeds", async () => {
+    const completeDetail = buildRecipeDetail({ nutrition: buildCompleteNutrition() });
+    const temporaryDetail = buildRecipeDetail({
+      nutrition: {
+        ...buildCompleteNutrition(),
+        calculation_status: "unavailable",
+        calculation_quality: null,
+        availability_reason: "temporarily_unavailable",
+      },
+    });
+    const retry = createDeferred<RecipeDetail>();
+    fetchJson
+      .mockResolvedValueOnce(temporaryDetail)
+      .mockReturnValueOnce(retry.promise);
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "인분 늘리기" }));
+    expect(screen.getByText("3인분")).toBeTruthy();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "영양 정보 다시 시도" }),
+    );
+    retry.resolve(completeDetail);
+
+    await waitFor(() => {
+      expect(screen.getByRole("columnheader", { name: "선택 3인분 전체" })).toBeTruthy();
+    });
+    expect(screen.queryByRole("columnheader", { name: "선택 2인분 전체" })).toBeNull();
+  }, 15_000);
+
+  it("ignores a late nutrition retry from the previous recipe", async () => {
+    const firstRecipeId = "recipe-first";
+    const nextRecipeId = "recipe-next";
+    const firstTemporary = buildRecipeDetail({
+      id: firstRecipeId,
+      title: "첫 번째 레시피",
+      nutrition: {
+        ...buildCompleteNutrition(),
+        calculation_status: "unavailable",
+        calculation_quality: null,
+        availability_reason: "temporarily_unavailable",
+      },
+    });
+    const nextNutrition = {
+      ...buildCompleteNutrition(),
+      values: {
+        ...buildCompleteNutrition().values,
+        energy_kcal: {
+          amount: 200,
+          known_amount: 200,
+          status: "complete" as const,
+          display_mode: "total" as const,
+        },
+      },
+      scalable_values: {
+        ...buildCompleteNutrition().scalable_values,
+        energy_kcal: 160,
+      },
+      fixed_values: {
+        ...buildCompleteNutrition().fixed_values,
+        energy_kcal: 40,
+      },
+    };
+    const nextRecipe = buildRecipeDetail({
+      id: nextRecipeId,
+      title: "다음 레시피",
+      nutrition: nextNutrition,
+    });
+    const lateRetry = createDeferred<RecipeDetail>();
+    let firstRecipeRequestCount = 0;
+    fetchJson.mockImplementation((url: string) => {
+      if (url.endsWith(`/${firstRecipeId}`)) {
+        firstRecipeRequestCount += 1;
+        return firstRecipeRequestCount === 1
+          ? Promise.resolve(firstTemporary)
+          : lateRetry.promise;
+      }
+
+      return Promise.resolve(nextRecipe);
+    });
+
+    const { rerender } = render(<RecipeDetailScreen recipeId={firstRecipeId} />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "영양 정보 다시 시도" }),
+    );
+    expect(screen.getByTestId("recipe-nutrition-loading-skeleton")).toBeTruthy();
+
+    rerender(<RecipeDetailScreen recipeId={nextRecipeId} />);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "다음 레시피" }),
+    ).toBeTruthy();
+    expect(await screen.findByText("100 kcal")).toBeTruthy();
+
+    lateRetry.resolve(buildRecipeDetail({
+      id: firstRecipeId,
+      title: "첫 번째 레시피",
+      nutrition: buildCompleteNutrition(),
+    }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("recipe-nutrition-loading-skeleton")).toBeNull();
+      expect(screen.getByText("100 kcal")).toBeTruthy();
+    });
+    expect(screen.queryByText("400 kcal")).toBeNull();
+  }, 10_000);
+
+  it("ignores a late initial detail response from the previous recipe", async () => {
+    const firstRecipeId = "recipe-first-initial";
+    const nextRecipeId = "recipe-next-initial";
+    const lateFirstRecipe = createDeferred<RecipeDetail>();
+    const nextRecipe = buildRecipeDetail({
+      id: nextRecipeId,
+      title: "다음 초기 레시피",
+    });
+
+    fetchJson.mockImplementation((url: string) => {
+      if (url.endsWith(`/${firstRecipeId}`)) {
+        return lateFirstRecipe.promise;
+      }
+      if (url.endsWith(`/${nextRecipeId}`)) {
+        return Promise.resolve(nextRecipe);
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+
+    const { rerender } = render(<RecipeDetailScreen recipeId={firstRecipeId} />);
+    await waitFor(() => {
+      expect(fetchJson).toHaveBeenCalledWith(`/api/v1/recipes/${firstRecipeId}`);
+    });
+
+    rerender(<RecipeDetailScreen recipeId={nextRecipeId} />);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "다음 초기 레시피" }),
+    ).toBeTruthy();
+
+    await act(async () => {
+      lateFirstRecipe.resolve(buildRecipeDetail({
+        id: firstRecipeId,
+        title: "느린 첫 번째 레시피",
+      }));
+      await lateFirstRecipe.promise;
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("느린 첫 번째 레시피")).toBeNull();
+      expect(screen.getByText("다음 초기 레시피")).toBeTruthy();
+    });
+  }, 10_000);
+
+  it("keeps the mobile back button touch target at least 44px", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const backButton = await screen.findByRole("button", { name: "뒤로 가기" });
+    expect(backButton.className).toContain("h-11");
+    expect(backButton.className).toContain("w-11");
+  });
+
+  it("keeps the soft nutrition error and recipe body when retry fails", async () => {
+    const temporaryDetail = buildRecipeDetail({
+      nutrition: {
+        ...buildCompleteNutrition(),
+        calculation_status: "unavailable",
+        calculation_quality: null,
+        availability_reason: "temporarily_unavailable",
+      },
+    });
+    fetchJson
+      .mockResolvedValueOnce(temporaryDetail)
+      .mockRejectedValueOnce(new Error("temporary failure"));
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "영양 정보 다시 시도" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("영양 정보를 잠시 불러오지 못했어요")).toBeTruthy();
+    });
+    expect(screen.getByRole("heading", { level: 1, name: MOCK_RECIPE_DETAIL.title })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "요리하기" })).toBeTruthy();
+  }, 10_000);
 
   it("opens the login gate when a protected action is clicked by a guest", async () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
@@ -1605,16 +1901,16 @@ describe("recipe detail screen", () => {
     });
 
     const readingGrid = container.querySelector(".web-recipe-reading-grid");
-    const servingsSection = container.querySelector(".web-servings-section");
+    const servingsSection = container.querySelector(".web-recipe-nutrition-serving");
     const ingredientSection = container.querySelector(".web-reading-section-grid");
     expect(readingGrid).not.toBeNull();
-    expect(servingsSection).toBeNull();
+    expect(servingsSection).not.toBeNull();
     expect(ingredientSection).not.toBeNull();
     expect(readingGrid?.textContent).toContain("재료");
     expect(readingGrid?.textContent).toContain("만들기");
     expect(ingredientSection?.textContent).toContain("인분을 바꾸면 아래 재료량이 즉시 바뀝니다");
     expect(
-      within(ingredientSection as HTMLElement).getByRole("button", {
+      within(servingsSection as HTMLElement).getByRole("button", {
         name: "인분 늘리기",
       }),
     ).toBeTruthy();
