@@ -226,7 +226,8 @@
 - Stage 4 after evidence plan: `ui/designs/evidence/prepared-food-planner-entry/after/`
 - required viewport evidence: 기존 `PLANNER_WEEK`, `MEAL_SCREEN`, `MENU_ADD` 각각의 **before + after**를 390px, narrow 320px, desktop 1280px에서 모두 확보한다. 신규 `FOOD_PRODUCT_PICKER`, `FOOD_PRODUCT_CREATE`는 동일 3개 viewport의 after를 확보한다. 최초 진입, scroll 중, primary CTA, empty/error/unauthorized/basis mismatch, mixed recipe/product entry 상태도 별도 evidence로 남긴다.
 - authority report: `ui/designs/authority/PLANNER_WEEK-prepared-food-planner-entry-authority.md`
-- Authority status: `required / pending independent authority`. Stage 4 implementation 전에 current-state screenshot을 확보하고, fresh authority precheck → Stage 5 → 별도 final authority gate → Stage 6 순서를 지킨다.
+- Authority status: `required`
+- Independent authority는 아직 pending이다. Stage 4 implementation 전에 current-state screenshot을 확보하고, fresh authority precheck → Stage 5 → 별도 final authority gate → Stage 6 순서를 지킨다.
 - `PLANNER_WEEK`의 Baemin prototype navigation/day-card/scroll containment와 기존 Recipe Meal CTA/status hierarchy를 바꾸지 않는다. Product entry는 additive 정보로 밀도를 조절하며 page-level horizontal overflow를 만들지 않는다.
 
 ## Source Links
@@ -376,8 +377,8 @@
 
 ### Manual Only
 
-- [x] independent Stage 1.5 review/repair-final exact-head 승인
-- [x] docs PR #1016 merge
+- [x] independent Stage 1.5 review/repair-final exact-head 승인 <!-- omo:id=delivery-product-entry-stage1-review;stage=2;scope=shared;review=3,6 -->
+- [x] docs PR #1016 merge <!-- omo:id=delivery-product-entry-docs-merge;stage=2;scope=shared;review=3,6 -->
 - full repository migration stack 전체와 plain PostgreSQL 대비 Supabase/PostgREST/auth claim 동등성
 - 실제 physical iOS/Android narrow device와 screen reader 수동 확인
 - 현재 0건인 approved public promotion artifact의 향후 운영 승인·load·license 검수
