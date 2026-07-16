@@ -176,7 +176,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `public-nutrition-source-acquisition` | merged | 공공 영양 source를 versioned raw snapshot + manifest로 수집하고 schema/pagination/license/key 비노출을 fail-closed 검증한 뒤 approved promotion 입력을 만든다 |
 | `ingredient-nutrition-conversion-model` | merged | 핵심 영양 profile과 15mL당 약 6/10/15/20/25g 대표 환산 등급, 분리된 원문 evidence/assignment, 개당 중량을 승인 기반 immutable model로 구현한다 |
 | `recipe-nutrition-calculation` | merged | 레시피 재료·인분·대표 환산으로 completeness/quality와 scalable/fixed vectors를 계산하고 immutable snapshot을 생성/pin/backfill하며 Recipe Detail additive API와 최소 상태 UI를 제공한다 |
-| `prepared-food-catalog` | docs | 승인 public 완제품 + 사용자 private manual 제품 catalog, immutable nutrition version, owner/public read-only/soft-delete 정책을 구현한다 |
+| `prepared-food-catalog` | merged | 승인 public 완제품 + 사용자 private manual 제품 catalog, immutable nutrition version, owner/public read-only/soft-delete 정책을 구현한다 |
 | `prepared-food-planner-entry` | planned | 완제품을 Recipe Meal과 분리해 플래너에 추가/수정/삭제하고 shopping/cooking/leftover/XP에서 구조적으로 제외한다 |
 | `planner-nutrition-summary` | planned | pin된 recipe/product snapshot만 끼니·날짜·주간 `계획 영양`으로 합산하고 결측/partial/quality를 보존한다 |
 
@@ -187,7 +187,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `public-nutrition-source-acquisition` | merged | `28-external-ingredient-data-ingest-gate` = merged, nutrition contract-evolution official docs = merged |
 | `ingredient-nutrition-conversion-model` | merged | `public-nutrition-source-acquisition` = merged at `f87ae75016a9b709ffc3b706e7ca3720a0940982` |
 | `recipe-nutrition-calculation` | merged | `ingredient-nutrition-conversion-model` + PR #1005 pilot + PR #1006 official contract = merged |
-| `prepared-food-catalog` | docs | `ingredient-nutrition-conversion-model` = merged |
+| `prepared-food-catalog` | merged | `ingredient-nutrition-conversion-model` = merged |
 | `prepared-food-planner-entry` | planned | `prepared-food-catalog` = merged, `05-planner-week-core` = merged |
 | `planner-nutrition-summary` | planned | `recipe-nutrition-calculation` = merged, `prepared-food-planner-entry` = merged |
 
