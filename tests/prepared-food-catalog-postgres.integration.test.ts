@@ -394,6 +394,149 @@ describe.runIf(enabled)("prepared food catalog isolated PostgreSQL integration",
     expect(stale.items).toEqual([]);
   });
 
+  it("rejects an authenticated JWT role spoof without leaking another owner's catalog", () => {
+    const created = createManual("역할 위조 보호 제품");
+    const spoofedRead = psqlResult(`
+      set role authenticated;
+      set request.jwt.claim.sub = '${userB}';
+      set request.jwt.claim.role = 'service_role';
+      select public.list_food_products('${userA}', '역할 위조 보호 제품', null, null, 20);
+    `);
+    expect(spoofedRead.status).not.toBe(0);
+    expect(spoofedRead.stderr).toContain("FORBIDDEN");
+    expect(psql(`select count(*) from public.food_products where id = '${created.id}';`)).toBe("1");
+  });
+
+  it("rejects an authenticated JWT role spoof without changing another owner's product", () => {
+    const created = createManual("역할 위조 쓰기 보호 제품");
+    const spoofedWrite = psqlResult(`
+      set role authenticated;
+      set request.jwt.claim.sub = '${userB}';
+      set request.jwt.claim.role = 'service_role';
+      select public.update_manual_food_product(
+        '${userA}', '${created.id}', '{"name":"위조된 변경"}'::jsonb,
+        '${created.nutrition_version_id}'
+      );
+    `);
+    expect(spoofedWrite.status).not.toBe(0);
+    expect(spoofedWrite.stderr).toContain("FORBIDDEN");
+    expect(psql(`select count(*) from public.food_products where id = '${created.id}' and name = '위조된 변경';`)).toBe("0");
+  });
+
+  it("keeps every row when a cursor page boundary shares one millisecond", () => {
+    psql(serviceSql(`
+      select public.create_manual_food_product(
+        '${userA}', '동일 밀리초 페이지 A', null, ${jsonExpression(nutrition(10))}
+      );
+      select public.create_manual_food_product(
+        '${userA}', '동일 밀리초 페이지 B', null, ${jsonExpression(nutrition(20))}
+      );
+    `));
+    const ids = JSON.parse(psql(`
+      select jsonb_object_agg(name, id)::text
+      from public.food_products
+      where name in ('동일 밀리초 페이지 A', '동일 밀리초 페이지 B');
+    `)) as Record<string, string>;
+    psql(`
+      set session_replication_role = replica;
+      update public.food_products
+      set created_at = case id
+        when '${ids["동일 밀리초 페이지 A"]}' then '2026-07-16T12:34:56.123600Z'::timestamptz
+        when '${ids["동일 밀리초 페이지 B"]}' then '2026-07-16T12:34:56.123500Z'::timestamptz
+      end
+      where id in (
+        '${ids["동일 밀리초 페이지 A"]}',
+        '${ids["동일 밀리초 페이지 B"]}'
+      );
+      set session_replication_role = origin;
+    `);
+    expect(psql(`
+      select string_agg(to_char(created_at at time zone 'UTC', 'HH24:MI:SS.US'), ',' order by created_at desc)
+      from public.food_products
+      where id in ('${ids["동일 밀리초 페이지 A"]}', '${ids["동일 밀리초 페이지 B"]}');
+    `)).toBe("12:34:56.123600,12:34:56.123500");
+
+    const firstPage = JSON.parse(psql(serviceSql(`
+      select public.list_food_products('${userA}', '동일 밀리초 페이지', null, null, 1)::text;
+    `)));
+    expect(firstPage.items).toHaveLength(1);
+    expect(firstPage.has_next).toBe(true);
+    expect(firstPage.items[0].id).toBe(ids["동일 밀리초 페이지 A"]);
+    const cursor = decodeProductCursor(firstPage.next_cursor);
+    expect(cursor?.createdAt).toBe("2026-07-16T12:34:56.123600Z");
+
+    const secondPage = JSON.parse(psql(serviceSql(`
+      select public.list_food_products(
+        '${userA}', '동일 밀리초 페이지', '${cursor?.createdAt}'::timestamptz, '${cursor?.id}', 1
+      )::text;
+    `)));
+    expect(secondPage.items).toHaveLength(1);
+    expect(secondPage.items[0].id).toBe(ids["동일 밀리초 페이지 B"]);
+  });
+
+  it("rejects public as-labeled admission when profile and pinned source basis differ", () => {
+    const mismatch = psqlResult(`
+      begin;
+      set constraints all deferred;
+      insert into public.nutrition_sources (
+        id, provider_code, dataset_name, source_kind, source_version,
+        fetched_at, freshness_checked_at, freshness_status, priority_rank,
+        source_url, license_name, manifest_sha256, review_status,
+        decision_reason, reviewed_by, reviewed_at, is_active
+      ) values (
+        '81000000-0000-4000-8000-000000000010', 'MFDS', 'isolated-basis-mismatch',
+        'nutrition_dataset', '2026-07-16', now(), now(), 'current', 1,
+        'https://example.test/official', 'test-only', 'synthetic-basis-mismatch',
+        'approved', 'isolated test fixture only', '${userA}', now(), true
+      );
+      insert into public.nutrition_source_items (
+        id, source_id, external_item_key, external_name, source_basis_text,
+        source_basis_amount, source_basis_unit, stable_fingerprint, review_status,
+        decision_reason, reviewed_by, reviewed_at, provenance_json
+      ) values (
+        '82000000-0000-4000-8000-000000000010', '81000000-0000-4000-8000-000000000010',
+        'stable-basis-mismatch', '기준 불일치', '100 g', 100, 'g',
+        'synthetic-basis-mismatch', 'approved', 'isolated test fixture only',
+        '${userA}', now(), '{}'::jsonb
+      );
+      insert into public.nutrition_profiles (
+        id, source_item_id, profile_kind, normalization_method, basis_amount, basis_unit,
+        version, review_status, decision_reason, reviewed_by, reviewed_at, is_active
+      ) values (
+        '83000000-0000-4000-8000-000000000010', '82000000-0000-4000-8000-000000000010',
+        'product_label', 'as_labeled', 1, 'serving', 1, 'approved',
+        'isolated test fixture only', '${userA}', now(), true
+      );
+      insert into public.nutrition_values (
+        profile_id, nutrient_code, source_nutrient_code, source_unit,
+        amount, value_status, source_token
+      ) values
+        ('83000000-0000-4000-8000-000000000010', 'energy_kcal', 'energy_kcal', 'kcal', 10, 'observed', '10'),
+        ('83000000-0000-4000-8000-000000000010', 'carbohydrate_g', 'carbohydrate_g', 'g', 1, 'observed', '1'),
+        ('83000000-0000-4000-8000-000000000010', 'protein_g', 'protein_g', 'g', 1, 'observed', '1'),
+        ('83000000-0000-4000-8000-000000000010', 'fat_g', 'fat_g', 'g', 1, 'observed', '1'),
+        ('83000000-0000-4000-8000-000000000010', 'sodium_mg', 'sodium_mg', 'mg', 1, 'observed', '1');
+      insert into public.food_products (
+        id, owner_user_id, visibility, source_type, name, external_product_key,
+        current_nutrition_version_id
+      ) values (
+        '84000000-0000-4000-8000-000000000010', null, 'public', 'public_dataset',
+        '기준 불일치', 'stable-basis-mismatch', '85000000-0000-4000-8000-000000000010'
+      );
+      insert into public.food_product_nutrition_versions (
+        id, product_id, nutrition_profile_id, version, basis_relations_json, source_item_id
+      ) values (
+        '85000000-0000-4000-8000-000000000010', '84000000-0000-4000-8000-000000000010',
+        '83000000-0000-4000-8000-000000000010', 1, '[]'::jsonb,
+        '82000000-0000-4000-8000-000000000010'
+      );
+      commit;
+    `);
+    expect(mismatch.status).not.toBe(0);
+    expect(mismatch.stderr).toContain("INVALID_PUBLIC_PRODUCT_VERSION");
+    expect(psql("select count(*) from public.food_products where id = '84000000-0000-4000-8000-000000000010';")).toBe("0");
+  });
+
   it("enforces owner RLS, public read-only, append-only history, and idempotent soft delete", () => {
     const created = createManual("삭제 제품");
     const hidden = psql(`

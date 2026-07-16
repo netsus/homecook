@@ -135,6 +135,66 @@ describe("prepared food catalog API contract", () => {
     expect(serviceDb.rpc).not.toHaveBeenCalled();
   });
 
+  it("returns 422 for numeric range overflow before calling the database", async () => {
+    const serviceDb = serviceClient();
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: "user-1" }));
+    createServiceRoleClient.mockReturnValue(serviceDb);
+    const route = await importCollectionRoute();
+    expect(route).not.toBeNull();
+    if (!route) return;
+
+    const response = await route.POST(new Request("http://localhost/api/v1/food-products", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "범위 초과 제품",
+        nutrition: {
+          basis: { amount: 100_000_000, unit: "g" },
+          values: { energy_kcal: 100_000_000 },
+        },
+      }),
+    }));
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "VALIDATION_ERROR" },
+    });
+    expect(serviceDb.rpc).not.toHaveBeenCalled();
+  });
+
+  it("maps a database numeric overflow to the official 422 validation envelope", async () => {
+    const serviceDb = serviceClient({
+      rpcResults: {
+        create_manual_food_product: {
+          data: null,
+          error: { code: "22003", message: "numeric field overflow" },
+        },
+      },
+    });
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: "user-1" }));
+    createServiceRoleClient.mockReturnValue(serviceDb);
+    const route = await importCollectionRoute();
+    expect(route).not.toBeNull();
+    if (!route) return;
+
+    const response = await route.POST(new Request("http://localhost/api/v1/food-products", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "반올림 경계 제품",
+        nutrition: {
+          basis: { amount: 1, unit: "serving" },
+          values: { energy_kcal: 99_999_999.9999999 },
+        },
+      }),
+    }));
+
+    expect(response.status).toBe(422);
+    expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("creates one private manual product through the atomic RPC and preserves the wrapper", async () => {
     const serviceDb = serviceClient({
       rpcResults: { create_manual_food_product: { data: product, error: null } },
@@ -267,6 +327,44 @@ describe("prepared food catalog API contract", () => {
     }), { params: Promise.resolve({ product_id: product.id }) });
     expect(response.status).toBe(409);
     expect((await response.json()).error.code).toBe("NUTRITION_VERSION_CONFLICT");
+  });
+
+  it("maps a nutrition patch database overflow to the official 422 validation envelope", async () => {
+    const serviceDb = serviceClient({
+      productState: {
+        id: product.id,
+        owner_user_id: "user-1",
+        visibility: "private",
+        source_type: "manual",
+        deleted_at: null,
+        current_nutrition_version_id: product.nutrition_version_id,
+      },
+      rpcResults: {
+        update_manual_food_product: {
+          data: null,
+          error: { code: "22003", message: "numeric field overflow" },
+        },
+      },
+    });
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: "user-1" }));
+    createServiceRoleClient.mockReturnValue(serviceDb);
+    const route = await importItemRoute();
+    expect(route).not.toBeNull();
+    if (!route) return;
+
+    const response = await route.PATCH(new Request("http://localhost", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        nutrition: {
+          basis: { amount: 1, unit: "serving" },
+          values: { energy_kcal: 99_999_999.9999999 },
+        },
+      }),
+    }), { params: Promise.resolve({ product_id: product.id }) });
+
+    expect(response.status).toBe(422);
+    expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
   });
 
   it("keeps delete idempotent for an already deleted owned private product", async () => {

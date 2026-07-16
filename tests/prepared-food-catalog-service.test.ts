@@ -79,6 +79,35 @@ describe("prepared food catalog service contract", () => {
     });
   });
 
+  it("rejects values outside the database numeric range while accepting the documented maximum boundary", async () => {
+    const service = await importCatalogService();
+    expect(service).not.toBeNull();
+    if (!service) return;
+
+    expect(service.parseProductCreateBody({
+      name: "범위 초과 제품",
+      nutrition: {
+        basis: { amount: 100_000_000, unit: "g" },
+        values: { energy_kcal: 100_000_000 },
+      },
+    })).toEqual({
+      ok: false,
+      code: "VALIDATION_ERROR",
+      fields: [
+        { field: "nutrition.basis.amount", reason: "numeric_range" },
+        { field: "nutrition.values.energy_kcal", reason: "numeric_range" },
+      ],
+    });
+
+    expect(service.parseProductCreateBody({
+      name: "최대 경계 제품",
+      nutrition: {
+        basis: { amount: 99_999_999.9999, unit: "g" },
+        values: { energy_kcal: 99_999_999.999999 },
+      },
+    })).toMatchObject({ ok: true });
+  });
+
   it("allows only the exact documented optional nutrients and reports unsupported codes separately", async () => {
     const service = await importCatalogService();
     expect(service).not.toBeNull();
@@ -199,5 +228,19 @@ describe("prepared food catalog service contract", () => {
       ok: false,
       code: "VALIDATION_ERROR",
     });
+  });
+
+  it("preserves a PostgreSQL microsecond timestamp in the opaque cursor", async () => {
+    const service = await importCatalogService();
+    expect(service).not.toBeNull();
+    if (!service) return;
+
+    const cursor = {
+      createdAt: "2026-07-16T00:00:00.123456Z",
+      id: "550e8400-e29b-41d4-a716-446655440000",
+    };
+    const encoded = service.encodeProductCursor(cursor);
+
+    expect(service.decodeProductCursor(encoded)).toEqual(cursor);
   });
 });

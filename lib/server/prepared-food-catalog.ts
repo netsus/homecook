@@ -20,6 +20,8 @@ const ALLOWED_NUTRIENTS = new Set<string>([
   ...FOOD_PRODUCT_OPTIONAL_NUTRIENTS,
 ]);
 const ALLOWED_BASIS_UNITS = new Set<string>(FOOD_PRODUCT_BASIS_UNITS);
+const DATABASE_NUMERIC_MAX_EXCLUSIVE = 100_000_000;
+const POSTGRES_UTC_CURSOR_PATTERN = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\.(\d{1,6})Z$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -80,6 +82,8 @@ function parseNutrition(value: unknown):
   const basisAmount = basis.amount;
   if (typeof basisAmount !== "number" || !Number.isFinite(basisAmount) || basisAmount <= 0) {
     fields.push({ field: "nutrition.basis.amount", reason: "positive_number_required" });
+  } else if (basisAmount >= DATABASE_NUMERIC_MAX_EXCLUSIVE) {
+    fields.push({ field: "nutrition.basis.amount", reason: "numeric_range" });
   }
 
   const basisUnit = basis.unit;
@@ -118,6 +122,10 @@ function parseNutrition(value: unknown):
           ? "finite_nonnegative_number_required"
           : "finite_nonnegative_number_or_null",
       });
+      continue;
+    }
+    if (nutrientValue >= DATABASE_NUMERIC_MAX_EXCLUSIVE) {
+      fields.push({ field: `nutrition.values.${code}`, reason: "numeric_range" });
       continue;
     }
     normalizedValues[code] = nutrientValue;
@@ -227,8 +235,11 @@ export function decodeProductCursor(value: string): ProductCursor | null {
       return null;
     }
     if (!UUID_PATTERN.test(parsed.id)) return null;
-    const date = new Date(parsed.created_at);
-    if (Number.isNaN(date.getTime()) || date.toISOString() !== parsed.created_at) return null;
+    const timestampMatch = POSTGRES_UTC_CURSOR_PATTERN.exec(parsed.created_at);
+    if (!timestampMatch) return null;
+    const millisecondIso = `${timestampMatch[1]}.${timestampMatch[2].padEnd(3, "0").slice(0, 3)}Z`;
+    const date = new Date(millisecondIso);
+    if (Number.isNaN(date.getTime()) || date.toISOString() !== millisecondIso) return null;
     return { createdAt: parsed.created_at, id: parsed.id };
   } catch {
     return null;

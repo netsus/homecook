@@ -30,6 +30,9 @@ function mapDatabaseError(error: RpcError | null, fallbackMessage: string) {
   if (/FORBIDDEN/i.test(detail)) {
     return fail("FORBIDDEN", "이 완제품을 변경할 수 없어요.", 403);
   }
+  if (/VALIDATION_ERROR|22003/i.test(detail)) {
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422);
+  }
   return fail("INTERNAL_ERROR", fallbackMessage, 500);
 }
 

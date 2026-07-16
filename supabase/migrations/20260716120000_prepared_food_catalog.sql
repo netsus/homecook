@@ -252,6 +252,9 @@ begin
         join public.nutrition_sources source on source.id = item.source_id
         where item.id = v_version.source_item_id
           and item.external_item_key = new.external_product_key
+          and item.source_basis_amount is not null
+          and item.source_basis_amount = v_profile.basis_amount
+          and item.source_basis_unit = v_profile.basis_unit
           and item.review_status = 'approved'
           and source.review_status = 'approved'
           and source.freshness_status = 'current'
@@ -278,13 +281,9 @@ security definer
 set search_path = pg_catalog, auth
 as $$
 declare
-  v_claim_role text := coalesce(
-    current_setting('request.jwt.claim.role', true),
-    current_setting('role', true),
-    ''
-  );
+  v_session_role text := current_setting('role', true);
 begin
-  if auth.uid() is distinct from p_user_id and v_claim_role <> 'service_role' then
+  if auth.uid() is distinct from p_user_id and v_session_role <> 'service_role' then
     raise exception 'FORBIDDEN';
   end if;
 end;
@@ -329,7 +328,9 @@ begin
       raise exception 'VALIDATION_ERROR';
     end if;
     v_amount := (v_value #>> '{}')::numeric;
-    if v_amount < 0 then raise exception 'VALIDATION_ERROR'; end if;
+    if v_amount < 0 or round(v_amount, 6) >= 100000000 then
+      raise exception 'VALIDATION_ERROR';
+    end if;
     insert into public.nutrition_values (
       profile_id, nutrient_code, source_nutrient_code, source_unit,
       amount, value_status, source_token
@@ -457,6 +458,7 @@ begin
     or jsonb_typeof(v_basis) <> 'object'
     or jsonb_typeof(v_basis -> 'amount') <> 'number'
     or (v_basis ->> 'amount')::numeric <= 0
+    or round((v_basis ->> 'amount')::numeric, 4) >= 100000000
     or v_basis ->> 'unit' not in ('serving', 'package', 'g', 'ml')
   then
     raise exception 'VALIDATION_ERROR';
@@ -552,6 +554,7 @@ begin
     if jsonb_typeof(v_basis) <> 'object'
       or jsonb_typeof(v_basis -> 'amount') <> 'number'
       or (v_basis ->> 'amount')::numeric <= 0
+      or round((v_basis ->> 'amount')::numeric, 4) >= 100000000
       or v_basis ->> 'unit' not in ('serving', 'package', 'g', 'ml')
     then raise exception 'VALIDATION_ERROR'; end if;
     v_profile_id := gen_random_uuid();
@@ -655,9 +658,13 @@ begin
               and admitted_version.product_id = product.id
               and admitted_profile.source_item_id = admitted_item.id
               and admitted_profile.profile_kind = 'product_label'
+              and admitted_profile.normalization_method = 'as_labeled'
               and admitted_profile.review_status = 'approved'
               and admitted_profile.is_active
               and admitted_item.external_item_key = product.external_product_key
+              and admitted_item.source_basis_amount is not null
+              and admitted_item.source_basis_amount = admitted_profile.basis_amount
+              and admitted_item.source_basis_unit = admitted_profile.basis_unit
               and admitted_item.review_status = 'approved'
               and admitted_source.review_status = 'approved'
               and admitted_source.freshness_status = 'current'
@@ -801,7 +808,7 @@ begin
   if v_has_next then
     v_cursor := translate(rtrim(regexp_replace(encode(convert_to(
       jsonb_build_object(
-        'created_at', to_char(v_last_created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+        'created_at', to_char(v_last_created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
         'id', v_last_id
       )::text,
       'UTF8'
