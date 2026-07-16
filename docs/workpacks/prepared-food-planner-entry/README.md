@@ -227,7 +227,7 @@
 - required viewport evidence: 기존 `PLANNER_WEEK`, `MEAL_SCREEN`, `MENU_ADD` 각각의 **before + after**를 390px, narrow 320px, desktop 1280px에서 모두 확보한다. 신규 `FOOD_PRODUCT_PICKER`, `FOOD_PRODUCT_CREATE`는 동일 3개 viewport의 after를 확보한다. 최초 진입, scroll 중, primary CTA, empty/error/unauthorized/basis mismatch, mixed recipe/product entry 상태도 별도 evidence로 남긴다.
 - authority report: `ui/designs/authority/PLANNER_WEEK-prepared-food-planner-entry-authority.md`
 - Authority status: `required`
-- Independent authority는 아직 pending이다. Stage 4 implementation 전에 current-state screenshot을 확보하고, fresh authority precheck → Stage 5 → 별도 final authority gate → Stage 6 순서를 지킨다.
+- fresh authority precheck와 분리된 Stage 5 review가 통과했고, 별도 final authority가 exact head `5dc6cb45402b75b9dc2befef56732a120e285253`를 `FINAL_AUTHORITY_APPROVED` 0/0/0으로 승인했다. `confirmed_allowed: true`이지만 Stage 6이 pending이므로 아직 `confirmed`가 아니다.
 - `PLANNER_WEEK`의 Baemin prototype navigation/day-card/scroll containment와 기존 Recipe Meal CTA/status hierarchy를 바꾸지 않는다. Product entry는 additive 정보로 밀도를 조절하며 page-level horizontal overflow를 만들지 않는다.
 
 ## Source Links
@@ -341,10 +341,10 @@
 
 ### Stage 5 / Final Authority / Stage 6
 
-- fresh authority precheck가 screenshot/Figma evidence와 official flow를 비교한다.
-- 분리된 Stage 5 design reviewer가 scope=frontend review=5 항목을 검수한다.
-- 별도 final authority가 blocker 0과 390/320/desktop evidence를 승인하기 전 `Design Status: confirmed` 금지.
-- fresh Stage 6 reviewer가 full contract, accessibility/security/performance, exploratory QA/eval, current-head checks, closeout projection을 최종 검수한다.
+- fresh authority precheck는 screenshot evidence와 official flow를 비교해 B/I/S 0/0/0으로 통과했다.
+- 분리된 Stage 5 design reviewer는 repair implementation head `737c799600647bac8faf8016f5940e12df2535a0`를 B/M/m 0/0/0으로 통과시켰다.
+- 별도 final authority는 exact docs head `5dc6cb45402b75b9dc2befef56732a120e285253`에서 PNG 26개와 current-head checks를 독립 확인하고 `FINAL_AUTHORITY_APPROVED` B/M/m 0/0/0을 판정했다. `confirmed_allowed: true`이지만 Stage 6 전에는 `Design Status: confirmed`로 바꾸지 않는다.
+- fresh Stage 6 reviewer의 full contract, accessibility/security/performance, exploratory QA/eval, current-head checks, closeout projection 최종 검수는 pending이다.
 
 ## Delivery Checklist
 
@@ -386,7 +386,7 @@
 
 ## Design Status
 
-`pending-review` — Stage 4 evidence·자동화와 fresh authority precheck(B/I/S 0/0/0)는 준비됐지만, 구현자는 자기 디자인/최종 승인을 하지 않는다. Stage 5·final authority·Stage 6이 아직 대기이므로 `confirmed`가 아니다.
+`pending-review` — Stage 4 evidence·자동화, fresh authority precheck, 분리된 Stage 5, 별도 final authority가 모두 blocker 0으로 통과했다. `confirmed_allowed: true`이지만 Stage 6이 아직 pending이므로 `confirmed`가 아니다.
 
 ## Key Rules
 

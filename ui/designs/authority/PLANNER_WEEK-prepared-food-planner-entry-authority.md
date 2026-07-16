@@ -100,3 +100,31 @@
 ## Next Action
 
 fresh final authority review로 넘긴다. 이 문서의 결론은 **Stage 5 pass / Design Status pending final authority / Stage 6 pending**이다.
+
+## Final Authority Gate
+
+> Reviewer separation: Stage 4 구현자 및 Stage 5 reviewer와 분리된 fresh Codex final authority reviewer
+> Review date: 2026-07-17
+> Reviewed exact head: `5dc6cb45402b75b9dc2befef56732a120e285253`
+> Verdict: `FINAL_AUTHORITY_APPROVED`
+> Blocker / Major / Minor: `0 / 0 / 0`
+> confirmed_allowed: `true`; pending Stage 6
+
+### Independent Evidence Review
+
+- automation contract의 PNG 26개를 final authority reviewer가 모두 직접 열어 확인했다. `PLANNER_WEEK`, `MEAL_SCREEN`, `MENU_ADD`의 before/after와 `FOOD_PRODUCT_PICKER`, `FOOD_PRODUCT_CREATE`의 after가 `390x844`, `320x568`, `1280x900` 계약을 지킨다.
+- `FOOD_PRODUCT_CREATE-desktop-1280.png`에서 `목록으로`와 primary CTA `등록하고 선택`이 `1280x900` 첫 viewport 안에 함께 보인다. mobile `390`/`320` sticky action도 본문과 겹치거나 잘리지 않는다.
+- `FOOD_PRODUCT_PICKER-basis-mismatch.png`에서 공식 문구 `이 기준으로는 수량을 바꿀 수 없어요`와 선택 상품·수량 단계 보존을 확인했다. presentation mapping은 API code/status/message/fields 계약을 바꾸지 않는다.
+- recipe meal과 product entry는 PLANNER_WEEK/MEAL_SCREEN에서 중복 없이 구분되며, product entry에는 Recipe Meal workflow status/action이 나타나지 않는다.
+- `737c799600647bac8faf8016f5940e12df2535a0` 이후 reviewed head까지의 변경은 Stage 5 authority report와 5개 critique 문서뿐이며 product code/evidence 변경은 없다.
+- PR #1018의 head가 reviewed exact head와 일치하고, current-head checks는 success 17, 의도된 skip 2, pending/fail/cancel 0으로 모두 terminal이다.
+
+### Final Authority Decision
+
+- Blocker: 없음
+- Major: 없음
+- Minor: 없음
+- `confirmed_allowed: true`는 final authority 조건만 충족했다는 뜻이다. workpack의 `Design Status`는 Stage 6 blocker 0과 최종 검증 전까지 `pending-review`로 유지하고, delivery authority checkbox도 닫지 않는다.
+- 이 승인은 before-merge design gate 기록이며 Stage 6의 contract/accessibility/security/performance/exploratory QA/full verification 승인이나 merge approval을 대신하지 않는다.
+
+최종 권한 판정은 **Stage 5 pass + final authority approved + Stage 6 pending**이다.
