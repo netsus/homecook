@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-16T09:58:29Z",
+  "updated_at": "2026-07-16T10:07:52Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1993,7 +1993,7 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-recipe-nutrition-calculation",
       "pr_path": "https://github.com/netsus/homecook/pull/1013",
-      "lifecycle": "ready_for_review",
+      "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -2009,7 +2009,7 @@
         "node scripts/validate-automation-spec.mjs --slice recipe-nutrition-calculation",
         "git diff --check"
       ],
-      "notes": "PR #1012 merged the independently reviewed Stage 2/3 backend. PR #1013 contains the Stage 4 Recipe Detail UI and current-head closeout. Isolated PostgreSQL 17 real DB evidence covers all migrations, FoodSafety-30 seed, actual owner/bootstrap, cross-owner 403/0 writes, snapshot pin, rollback, and cleanup. Stage 4 Vitest 80/80, 390px/320px/desktop Playwright evidence, accessibility, source/XSS/race guards, and independent visual authority 96/100 with blocker 0 passed. Sparse coverage stays 13/124 ingredients and 21/30 recipes with at least one link; missing remains partial/unavailable, and production/staging writes remain zero. closeout_phase=collecting closeout_recovery=manual_patch:4|ci_resync:4 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1013 current-head checks,ui/designs/authority/RECIPE_DETAIL-recipe-nutrition-calculation-authority.md,ui/designs/evidence/recipe-nutrition-calculation/visual-verdict.json last_recovery_at=2026-07-16T09:58:29Z",
+      "notes": "PR #1012 merged the independently reviewed Stage 2/3 backend. PR #1013 Stage 4 Recipe Detail UI passed independent Stage 6 at exact head 7d73d0da90a523abe316211a9a6ce3e79930b709 with Blocker/Important/Suggestion 0/0/0. Isolated PostgreSQL 17 real DB evidence covers all migrations, FoodSafety-30 seed, actual owner/bootstrap, cross-owner 403/0 writes, snapshot pin, rollback, and cleanup. Stage 4 Vitest 80/80, 390px/320px/desktop Playwright evidence, accessibility, source/XSS/race guards, independent visual authority 96/100 with blocker 0, and exact-head GitHub checks passed. Sparse coverage stays 13/124 ingredients and 21/30 recipes with at least one link; missing remains partial/unavailable, and production/staging writes remain zero. closeout_phase=completed closeout_recovery=manual_patch:4|ci_resync:4 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1013 current-head checks,ui/designs/authority/RECIPE_DETAIL-recipe-nutrition-calculation-authority.md,ui/designs/evidence/recipe-nutrition-calculation/visual-verdict.json last_recovery_at=2026-07-16T09:58:29Z",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
