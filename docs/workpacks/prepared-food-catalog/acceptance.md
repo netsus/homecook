@@ -49,14 +49,17 @@
 - [x] 새 version insert와 product current pointer 전환은 한 transaction이다 <!-- omo:id=accept-nutrition-current-atomic;stage=2;scope=backend;review=3 -->
 - [x] concurrent nutrition PATCH에서 한 writer만 성공하고 loser는 `409 NUTRITION_VERSION_CONFLICT`다 <!-- omo:id=accept-nutrition-version-conflict;stage=2;scope=backend;review=3 -->
 - [x] conflict나 injected failure가 orphan version/profile/value 또는 잘못된 pointer를 남기지 않고 이전 current를 보존한다 <!-- omo:id=accept-nutrition-update-rollback;stage=2;scope=backend;review=3 -->
-- [x] 이전 immutable version과 이를 pin한 기존 planner entry는 current 변경 뒤에도 보존된다 <!-- omo:id=accept-old-version-pin-retained;stage=2;scope=backend;review=3 -->
+- [x] 이전 immutable version은 current 변경 뒤에도 보존된다 <!-- omo:id=accept-old-version-pin-retained;stage=2;scope=backend;review=3 -->
+- [ ] 이를 pin한 기존 planner entry가 current 변경 뒤에도 보존되는지는 후속 `prepared-food-planner-entry`에서 검증한다 <!-- omo:id=accept-existing-planner-pin-retained;stage=2;scope=backend;review=3 -->
 
 ## Soft Delete / Idempotency
 
 - [x] `DELETE /food-products/{product_id}`는 본인 private 제품의 `deleted_at`만 설정하고 `{ deleted: true }`를 반환한다 <!-- omo:id=accept-product-soft-delete;stage=2;scope=backend;review=3 -->
 - [x] 이미 삭제된 본인 제품을 다시 삭제해도 같은 `200` 결과이고 추가 version/delete side effect가 없다 <!-- omo:id=accept-product-delete-idempotent;stage=2;scope=backend;review=3 -->
-- [x] soft-delete 후 old nutrition versions와 기존 planner pins가 삭제·변경되지 않는다 <!-- omo:id=accept-product-delete-retains-history;stage=2;scope=backend;review=3 -->
-- [x] 삭제 제품은 catalog read와 신규 entry 대상에서 제외되고 후속 entry endpoint prerequisite가 `409 PRODUCT_DELETED`를 보존한다 <!-- omo:id=accept-product-delete-blocks-new-entry;stage=2;scope=backend;review=3 -->
+- [x] soft-delete 후 old nutrition versions가 삭제·변경되지 않는다 <!-- omo:id=accept-product-delete-retains-history;stage=2;scope=backend;review=3 -->
+- [ ] soft-delete 후 기존 planner pins가 삭제·변경되지 않는지는 후속 `prepared-food-planner-entry`에서 검증한다 <!-- omo:id=accept-product-delete-retains-planner-pin;stage=2;scope=backend;review=3 -->
+- [x] 삭제 제품은 catalog read에서 제외된다 <!-- omo:id=accept-product-delete-hidden;stage=2;scope=backend;review=3 -->
+- [ ] 삭제 제품의 신규 entry 생성이 후속 entry endpoint에서 `409 PRODUCT_DELETED`를 반환하는지는 `prepared-food-planner-entry`에서 검증한다 <!-- omo:id=accept-product-delete-blocks-new-entry;stage=2;scope=backend;review=3 -->
 - [x] 이 슬라이스는 planner entry endpoint나 table behavior를 새로 구현하지 않는다 <!-- omo:id=accept-product-delete-no-planner-scope;stage=2;scope=shared;review=3 -->
 
 ## Permission / RLS / Security

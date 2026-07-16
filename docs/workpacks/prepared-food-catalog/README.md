@@ -294,9 +294,9 @@
 ### Stage 2 implementation evidence — 2026-07-16
 
 - TDD RED: service/DB 계약 14건이 service module과 migration 부재로 실패했고, API 계약 7건이 collection/item Route Handler 부재로 실패했다.
-- GREEN: `tests/prepared-food-catalog-{api,service,rls}.test.ts` 22건과 격리 PostgreSQL 17 integration 7건이 통과했다.
+- GREEN: `tests/prepared-food-catalog-{api,service,rls}.test.ts` 27건과 격리 PostgreSQL 17 integration 11건이 통과했다. Stage 3 repair는 JWT role claim 위조 차단, microsecond cursor 보존, public source/profile basis exact admission, numeric 범위 422 경계를 추가로 고정했다.
 - repository regression: `pnpm verify:backend`에서 lint 0 error(기존 unrelated warning 4), typecheck, product test 1,518 pass/22 skip, Next.js production build, security Playwright 12건이 통과했다. SOT/workpack/automation/workflow-v2/bookkeeping/branch/diff 검증도 통과했다.
 - real DB는 별도 임시 cluster/database에 predecessor ingredient migration, recipe snapshot migration, catalog migration만 적용했다. first create와 nutrition PATCH injected failure 전체 rollback, 실제 두 connection single-winner/loser 409, RLS/직접 권한 거부, append-only, idempotent delete, stable-key public fixture와 stale-source fail-closed를 확인한 뒤 cluster directory를 삭제했다.
 - 승인된 public promotion artifact와 운영 public row는 계속 0건이다. synthetic public row는 위 임시 DB 테스트 안에서만 사용했고 importer/operator CLI/public seed를 만들지 않았다. production/staging write는 0건이다.
 - full repository migration stack 및 Supabase/PostgREST 동등성은 이 plain PostgreSQL bootstrap subset으로 증명하지 않았으며 Stage 3 Manual Only 위험으로 남긴다.
-- 독립 Stage 3 exact-head review는 아직 시작하지 않았으므로 해당 checklist는 미완료로 유지한다.
+- 독립 Stage 3 첫 review에서 확정된 5건은 fresh repair 역할이 TDD로 수리했으며, exact repaired head 재검토 전이므로 Stage 3 checklist는 미완료로 유지한다.
