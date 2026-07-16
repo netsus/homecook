@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const RECIPE_ID = "mock-kimchi-jjigae";
 const RECIPE_TITLE = "집밥 김치찌개";
@@ -66,6 +68,7 @@ function buildRecipeDetail() {
     save_count: 89,
     plan_count: 52,
     cook_count: 34,
+    nutrition: buildUnavailableRecipeNutrition(),
     ingredients: [],
     steps: [],
     user_status: {
