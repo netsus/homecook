@@ -167,7 +167,7 @@
         "Fresh independent Stage 6 re-review approved implementation head 829a107d1fdf782beff241e52ab09076ec9feab4 with Blocker/Important/Suggestion 0/0/0 after DELETE recovery and stale refresh race repairs",
         "Stage 6 targeted verification passed Vitest 97/97, targeted Playwright 6/6, typecheck, lint with 0 errors, and governing validators",
         "Exploratory QA report/eval at .artifacts/qa/prepared-food-planner-entry/2026-07-16T19-23-59-069Z passed with score 100, coverage 86/87, blocked 0, and findings 0",
-        "Full-gate TDD repair commit ea6f3ad1c57bd7054d6168635c526ec9aec85295 covered QA auth initialization, recipe nutrition fixtures, cooking-method fixtures, Turbopack Playwright server consistency, tag-suggestion initialization, settings loading concurrency, and approved MENU_ADD visual baselines without changing the public contract",
+        "The full-gate TDD repair commit covered QA auth initialization, recipe nutrition fixtures, cooking-method fixtures, Turbopack Playwright server consistency, tag-suggestion initialization, settings loading concurrency, and approved MENU_ADD visual baselines without changing the public contract",
         "Exact CI=1 pnpm verify:frontend passed lint 0 errors with 4 pre-existing warnings, typecheck, product Vitest 1529 passed and 22 intended skipped, production build, Lighthouse 6 runs, slice Playwright 848 passed and 112 intended skipped with retries 0, accessibility 18 passed and 15 intended skipped, visual 23 passed and 22 intended skipped, and security 12/12"
       ]
     },
@@ -200,7 +200,7 @@
         "commit 829a107d1fdf782beff241e52ab09076ec9feab4 Stage 6 findings repair",
         "ui/designs/authority/PLANNER_WEEK-prepared-food-planner-entry-authority.md",
         ".artifacts/qa/prepared-food-planner-entry/2026-07-16T19-23-59-069Z exploratory QA and eval",
-        "commit ea6f3ad1c57bd7054d6168635c526ec9aec85295 full-gate repairs",
+        "fix(planner): Keep frontend verification honest without weakening contracts",
         "CI=1 pnpm verify:frontend full green run on 2026-07-16"
       ]
     },
