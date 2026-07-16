@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-15T10:55:12Z",
+  "updated_at": "2026-07-16T09:44:37Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1991,10 +1991,11 @@
     {
       "id": "recipe-nutrition-calculation",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-recipe-nutrition-calculation",
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
-      "verification_status": "pending",
+      "branch": "feature/fe-recipe-nutrition-calculation",
+      "pr_path": "https://github.com/netsus/homecook/pull/1013",
+      "lifecycle": "ready_for_review",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm exec vitest run tests/recipe-nutrition-calculator.test.ts tests/recipe-nutrition-snapshot.test.ts tests/recipe-nutrition-api.test.ts tests/recipe-nutrition-rls.test.ts",
         "pnpm verify:backend",
@@ -2008,7 +2009,7 @@
         "node scripts/validate-automation-spec.mjs --slice recipe-nutrition-calculation",
         "git diff --check"
       ],
-      "notes": "Fresh Codex Stage 1 docs were authored from contract base 6d01d8ac9f4861036ade4e6b97b20275c7f2a6c8 and rebased onto predecessor-closeout master 842093048f7b5cc9996bc85e886405ad6788e9c5. An author-separated Codex Stage 1.5 review approved current head 5f75afc4030facccebd4ea74314cab7d18032c44 with unresolved required findings 0 and required validators green. Stage 2 is active on feature/be-recipe-nutrition-calculation. The slice consumes only approved/current predecessor data, preserves sparse partial/unavailable coverage, and is limited to recipe calculation, immutable snapshots, Recipe Detail projection, and nullable Recipe Meal pin. Products and planner aggregate are excluded. RECIPE_DETAIL is an authority-required anchor extension with Stage 4 390/320/desktop evidence; Stage 1 generator/critic are intentionally not required.",
+      "notes": "PR #1012 merged the independently reviewed Stage 2/3 backend. PR #1013 contains the Stage 4 Recipe Detail UI and current-head closeout. Isolated PostgreSQL 17 real DB evidence covers all migrations, FoodSafety-30 seed, actual owner/bootstrap, cross-owner 403/0 writes, snapshot pin, rollback, and cleanup. Stage 4 Vitest 80/80, 390px/320px/desktop Playwright evidence, accessibility, source/XSS/race guards, and independent visual authority 96/100 with blocker 0 passed. Sparse coverage stays 13/124 ingredients and 21/30 recipes with at least one link; missing remains partial/unavailable, and production/staging writes remain zero. closeout_phase=collecting closeout_recovery=manual_patch:3|ci_resync:3 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1013 current-head checks,ui/designs/authority/RECIPE_DETAIL-recipe-nutrition-calculation-authority.md,ui/designs/evidence/recipe-nutrition-calculation/visual-verdict.json last_recovery_at=2026-07-16T09:44:37Z",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
