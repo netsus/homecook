@@ -142,7 +142,7 @@ describe("recipe nutrition snapshot database contract", () => {
     expect(sql).toMatch(/IMMUTABLE_RECIPE_NUTRITION_SNAPSHOT/);
     expect(sql).toMatch(/alter table public\.recipe_nutrition_snapshots enable row level security/i);
     expect(sql).toMatch(/revoke all on table public\.recipe_nutrition_snapshots from anon, authenticated/i);
-    expect(sql).toMatch(/revoke insert, update, delete on table public\.recipe_nutrition_snapshots from service_role/i);
+    expect(sql).toMatch(/revoke all on table public\.recipe_nutrition_snapshots from service_role/i);
     expect(sql).toMatch(/grant select on table public\.recipe_nutrition_snapshots to service_role/i);
     expect(sql).toMatch(
       /revoke all on function public\.write_recipe_nutrition_snapshot\(uuid, jsonb, timestamptz, jsonb\)[\s\S]*from public, anon, authenticated/i,

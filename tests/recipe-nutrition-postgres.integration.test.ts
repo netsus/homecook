@@ -151,6 +151,16 @@ function jsonExpression(value: unknown): string {
   return `convert_from(decode('${encodedJson(value)}', 'base64'), 'UTF8')::jsonb`;
 }
 
+function textExpression(value: string): string {
+  return `convert_from(decode('${Buffer.from(value, "utf8").toString("base64")}', 'base64'), 'UTF8')`;
+}
+
+function percentEncodeEveryAsciiCharacter(value: string): string {
+  return [...value]
+    .map((character) => `%${character.charCodeAt(0).toString(16).padStart(2, "0")}`)
+    .join("");
+}
+
 function snapshot(seed: string, energy = 100) {
   const nutrient = (amount: number) => ({
     status: "complete",
@@ -813,6 +823,74 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     }
     expect(psql(`select count(*) from public.recipe_nutrition_snapshots where recipe_id = '${recipeId}';`)).toBe("0");
   }, 15_000);
+
+  it("rejects every bare or repeatedly encoded credential query segment", () => {
+    const safeSourceUrl = "https://example.test/nutrition";
+    const credentialKey = ["pass", "word"].join("");
+    const tokenKey = ["to", "ken"].join("");
+    const fullyEncodedPair = percentEncodeEveryAsciiCharacter(`${credentialKey}=fixture`);
+    const unsafeSourceUrls = [
+      `https://example.test/nutrition?${credentialKey}`,
+      `https://example.test/nutrition?${tokenKey}`,
+      `https://example.test/nutrition?${percentEncodeEveryAsciiCharacter(credentialKey)}`,
+      `https://example.test/nutrition?${percentEncodeEveryAsciiCharacter(percentEncodeEveryAsciiCharacter(tokenKey))}`,
+      `https://example.test/nutrition?${fullyEncodedPair}`,
+      `https://example.test/nutrition?${percentEncodeEveryAsciiCharacter(fullyEncodedPair)}`,
+    ];
+
+    try {
+      unsafeSourceUrls.forEach((sourceUrl, index) => {
+        const recipeId = `70000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+        seedRecipe(recipeId, `unsafe-query-segment-${index}`);
+        psql(`
+          set session_replication_role = replica;
+          update public.nutrition_sources
+          set source_url = ${textExpression(sourceUrl)}
+          where id = '${guardSourceId}';
+          set session_replication_role = origin;
+        `);
+        const value = snapshot(String(index + 1));
+        value.sources[0].source_url = sourceUrl;
+
+        const rejected = psqlResult(writeSnapshotSql(recipeId, value));
+        expect(rejected.status, `credential query segment ${index} was accepted`).not.toBe(0);
+        expect(rejected.stderr).toContain("UNSAFE_SNAPSHOT_SOURCE");
+      });
+    } finally {
+      psql(`
+        set session_replication_role = replica;
+        update public.nutrition_sources
+        set source_url = ${textExpression(safeSourceUrl)}
+        where id = '${guardSourceId}';
+        set session_replication_role = origin;
+      `);
+    }
+  });
+
+  it("limits service-role snapshot table access to SELECT and preserves rows after rejected TRUNCATE", () => {
+    const recipeId = "70000000-0000-4000-8000-000000000010";
+    seedRecipe(recipeId, "snapshot-service-role-read-only");
+    const written = JSON.parse(psql(writeSnapshotSql(recipeId, snapshot("e"))));
+
+    expect(psql(`
+      select concat_ws(':',
+        has_table_privilege('service_role', 'public.recipe_nutrition_snapshots', 'INSERT')::text,
+        has_table_privilege('service_role', 'public.recipe_nutrition_snapshots', 'UPDATE')::text,
+        has_table_privilege('service_role', 'public.recipe_nutrition_snapshots', 'DELETE')::text,
+        has_table_privilege('service_role', 'public.recipe_nutrition_snapshots', 'TRUNCATE')::text
+      );
+    `)).toBe("false:false:false:false");
+
+    const rejected = psqlResult(
+      "set role service_role; truncate table public.recipe_nutrition_snapshots;",
+    );
+    expect(rejected.status).not.toBe(0);
+    expect(psql(`
+      select count(*)
+      from public.recipe_nutrition_snapshots
+      where id = '${written.snapshot_id}';
+    `)).toBe("1");
+  });
 
   it("denies direct client access and keeps snapshot rows append-only", () => {
     const recipeId = "20000000-0000-4000-8000-000000000003";

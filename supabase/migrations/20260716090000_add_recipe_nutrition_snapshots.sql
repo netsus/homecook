@@ -118,6 +118,8 @@ declare
   v_actual_keys text[];
   v_source jsonb;
   v_source_keys text[];
+  v_query_segment text;
+  v_decoded_query_segment text;
   v_query_key text;
   v_decoded_query_key text;
   v_normalized_query_key text;
@@ -197,10 +199,23 @@ begin
     ] then
       raise exception 'UNSAFE_SNAPSHOT_SOURCE';
     end if;
-    for v_query_key in
-      select match[1]
-      from regexp_matches(v_source ->> 'source_url', '[?&]([^=&#]+)=', 'g') match
+    for v_query_segment in
+      select segment
+      from regexp_split_to_table(
+        substring(
+          v_source ->> 'source_url'
+          from position('?' in v_source ->> 'source_url') + 1
+        ),
+        '&'
+      ) segment
+      where position('?' in v_source ->> 'source_url') > 0
+        and segment <> ''
     loop
+      v_decoded_query_segment := public.decode_recipe_nutrition_query_key(v_query_segment);
+      if v_decoded_query_segment is null then
+        raise exception 'UNSAFE_SNAPSHOT_SOURCE';
+      end if;
+      v_query_key := split_part(v_decoded_query_segment, '=', 1);
       v_decoded_query_key := public.decode_recipe_nutrition_query_key(v_query_key);
       if v_decoded_query_key is null then
         raise exception 'UNSAFE_SNAPSHOT_SOURCE';
@@ -1288,7 +1303,7 @@ $$;
 
 alter table public.recipe_nutrition_snapshots enable row level security;
 revoke all on table public.recipe_nutrition_snapshots from anon, authenticated;
-revoke insert, update, delete on table public.recipe_nutrition_snapshots from service_role;
+revoke all on table public.recipe_nutrition_snapshots from service_role;
 grant select on table public.recipe_nutrition_snapshots to service_role;
 
 revoke truncate on table public.recipe_ingredients from anon, authenticated, service_role;
