@@ -1,0 +1,126 @@
+{
+  "id": "prepared-food-catalog",
+  "title": "Prepared food public/private catalog with immutable nutrition versions",
+  "summary": "승인 artifact가 생기기 전 public row/result를 fail-closed 0건으로 유지하고, owner-only private manual 완제품을 검색하며 label 영양을 immutable version과 atomic current pointer로 생성·수정·soft-delete하는 backend-only catalog다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "현재 approved public promotion artifact 0건 경계를 지켜 importer/seed 없이 public rows/results를 0건으로 닫고, private manual catalog의 owner-only·결측 비제로 의미와 영양 변경 이력·과거 planner pin을 보존하는 backend 계약을 닫는다.",
+  "owners": {
+    "claude": "replaced only for the user-approved nutrition/products/planner program; the global stage-owner policy is unchanged",
+    "codex": "fresh role-separated Codex tasks own Stage 1 docs authoring, independent Stage 1.5 review and repair-final, Stage 2 backend TDD implementation, and independent exact-head Stage 3 review; no author or implementer self-approves",
+    "workers": []
+  },
+  "dependencies": [
+    "ingredient-nutrition-conversion-model is merged and provides the shared approved nutrition source profile and value model",
+    "nutrition products planner contract is locked in official requirements v1.7.20 database v1.3.21 and API v1.2.25",
+    "independent fresh Codex Stage 1.5 approval is required before Stage 2 starts"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.20.md",
+      "docs/화면정의서-v1.5.26.md",
+      "docs/유저flow맵-v1.3.23.md",
+      "docs/db설계-v1.3.21.md",
+      "docs/api문서-v1.2.25.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/prepared-food-catalog/README.md",
+      "docs/workpacks/prepared-food-catalog/acceptance.md",
+      "docs/workpacks/prepared-food-catalog/automation-spec.json",
+      "docs/workpacks/ingredient-nutrition-conversion-model/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/omo-canonical-closeout-state.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:isolated-postgresql-full-migration-owner-rls-constraints-two-session-concurrency-idempotent-delete-and-rollback",
+      "manual:approved-public-product-promotion-artifact-count-zero-and-stage-two-public-row-result-count-zero",
+      "manual:production-and-staging-catalog-load-promotion-backfill-approval-intentionally-withheld-zero-writes"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm exec vitest run tests/prepared-food-catalog-api.test.ts tests/prepared-food-catalog-service.test.ts tests/prepared-food-catalog-rls.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/prepared-food-catalog pnpm validate:workpack -- --slice prepared-food-catalog",
+      "node scripts/validate-automation-spec.mjs --slice prepared-food-catalog",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/prepared-food-catalog-api.test.ts tests/prepared-food-catalog-service.test.ts tests/prepared-food-catalog-rls.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/prepared-food-catalog pnpm validate:workpack -- --slice prepared-food-catalog",
+      "node scripts/validate-automation-spec.mjs --slice prepared-food-catalog",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-five-documents-and-source-of-truth-contract-alignment",
+      "mfds-page-one-size-one-transport-smoke-is-not-a-promotable-artifact-and-approved-public-product-artifact-count-is-zero",
+      "no-public-importer-operator-cli-runtime-lookup-or-seed-and-public-row-result-count-fail-closed-zero",
+      "isolated-synthetic-public-fixture-only-plus-approved-stable-key-read-only-and-name-brand-no-merge-guards",
+      "public-attribution-sources-nonempty-and-source-version-nonnull",
+      "private-manual-owner-only-and-cross-owner-scope-filtered-denial",
+      "required-name-nullable-brand-required-nonnegative-energy-exact-optional-nutrients-and-missing-not-zero",
+      "existing-404-resource-not-found-and-422-validation-error-contract",
+      "positive-serving-package-g-ml-basis-and-manual-basis-relations-empty",
+      "first-version-current-pointer-atomic-create-and-rollback",
+      "immutable-nutrition-update-metadata-version-preservation-and-conflict-409",
+      "idempotent-soft-delete-old-version-pin-retention-and-new-entry-block-prerequisite",
+      "isolated-postgresql-constraint-rls-concurrency-idempotency-and-rollback-evidence",
+      "safe-public-attribution-secret-raw-leak-zero-and-production-staging-write-zero",
+      "catalog-bounded-query-no-n-plus-one-and-existing-domain-regression",
+      "prepared-food-planner-entry-and-stage-four-ui-excluded-design-authority-not-required"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "branch": "docs/prepared-food-catalog",
+  "pr_path": "https://github.com/netsus/homecook/pull/1014",
+  "out_of_scope": [
+    "Prepared food planner entry CRUD and product_entries planner projection",
+    "Meal day and week planned nutrition aggregation",
+    "Stage 4 UI frontend routes states Playwright screenshots and design authority artifacts",
+    "Shopping cooking leftover recipe count XP and activity product exclusion implementation",
+    "Barcode OCR dining out meal kit actual consumption and medical guidance",
+    "Client-supplied or inferred manual basis relations relation chaining generic density and arbitrary gram milliliter conversion",
+    "Public product creation mutation deletion promotion or name brand fuzzy merge by general users",
+    "Public importer operator CLI seed or row creation before a separately approved promotion artifact exists",
+    "Runtime provider calls raw provider payload storage synthetic fixture promotion and unreviewed public promotion",
+    "Any undocumented endpoint status error code request response field or database surface"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs contract for a backend-only high-risk product surface with Stage 3 as its only implementation review. Roadmap projection is docs while workflow lifecycle stays planned until implementation begins. Predecessor MFDS evidence is page 1 / size 1 transport smoke and approved public product promotion artifacts are 0, so Stage 2 adds no importer/operator CLI/seed and keeps real public rows/results at 0; synthetic public fixtures are isolated-test-only. Private manual products alone are actually writable/readable, with required name, nullable brand, required nonnegative energy, exact optional sugars_g/saturated_fat_g/fiber_g, missing-not-zero, empty basis_relations, immutable versions, atomic switching, 409 conflict, idempotent soft delete, and owner/RLS guards. Public attribution requires nonempty sources and nonnull source_version. Existing 404 RESOURCE_NOT_FOUND and 422 VALIDATION_ERROR are locked. Isolated PostgreSQL Stage 3 evidence is mandatory, production/staging writes remain zero, and frontend/design authority is N/A/not_required."
+}

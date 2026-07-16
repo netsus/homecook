@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-16T10:07:52Z",
+  "updated_at": "2026-07-16T10:42:25Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2010,6 +2010,31 @@
         "git diff --check"
       ],
       "notes": "PR #1012 merged the independently reviewed Stage 2/3 backend. PR #1013 Stage 4 Recipe Detail UI passed independent Stage 6 at exact head 7d73d0da90a523abe316211a9a6ce3e79930b709 with Blocker/Important/Suggestion 0/0/0. Isolated PostgreSQL 17 real DB evidence covers all migrations, FoodSafety-30 seed, actual owner/bootstrap, cross-owner 403/0 writes, snapshot pin, rollback, and cleanup. Stage 4 Vitest 80/80, 390px/320px/desktop Playwright evidence, accessibility, source/XSS/race guards, independent visual authority 96/100 with blocker 0, and exact-head GitHub checks passed. Sparse coverage stays 13/124 ingredients and 21/30 recipes with at least one link; missing remains partial/unavailable, and production/staging writes remain zero. closeout_phase=completed closeout_recovery=manual_patch:4|ci_resync:4 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1013 current-head checks,ui/designs/authority/RECIPE_DETAIL-recipe-nutrition-calculation-authority.md,ui/designs/evidence/recipe-nutrition-calculation/visual-verdict.json last_recovery_at=2026-07-16T09:58:29Z",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "prepared-food-catalog",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/prepared-food-catalog",
+      "pr_path": "https://github.com/netsus/homecook/pull/1014",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm exec vitest run tests/prepared-food-catalog-api.test.ts tests/prepared-food-catalog-service.test.ts tests/prepared-food-catalog-rls.test.ts",
+        "pnpm verify:backend",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/prepared-food-catalog pnpm validate:workpack -- --slice prepared-food-catalog",
+        "node scripts/validate-automation-spec.mjs --slice prepared-food-catalog",
+        "pnpm validate:omo-bookkeeping",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs branch for the backend-only prepared food catalog. Workflow lifecycle remains planned with approval not_started and verification pending until an independent fresh Codex Stage 1.5 gate approves the docs. Predecessor MFDS evidence is page 1 / size 1 transport smoke and approved public product promotion artifacts are 0, so Stage 2 keeps public rows/results fail-closed at 0 with no importer/seed; synthetic public fixtures are isolated-test-only. Private manual products are the only actual write/read path and remain owner-only with immutable nutrition versions, atomic current switching, idempotent soft delete, isolated PostgreSQL verification, and zero production/staging writes. Frontend and design authority are N/A/not_required; implementation review metadata points only to Stage 3.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
