@@ -272,3 +272,67 @@ slot row 구조: `[끼니명 고정폭] [식사명 flex-1 truncate] [인분 chip
 | empty state | `PLANNER_WEEK-empty-state.png` |
 | unauthorized state | `PLANNER_WEEK-unauthorized-state.png` |
 | scrolled day cards | `PLANNER_WEEK-scrolled-day-cards.png` |
+
+---
+
+## Prepared Food Planner Entry Anchor Extension Addendum
+
+> 추가일: 2026-07-16
+> workpack: `prepared-food-planner-entry`
+> 상태: Stage 1 design artifact / independent critique·authority pending
+
+### Contract Boundary
+
+- `GET /planner.meals[]`의 Recipe Meal shape/status는 유지하고 additive `product_entries[]`만 client adapter에서 합친다.
+- 같은 row를 두 type/array로 중복 표시하지 않는다.
+- ProductPlannerEntry는 `workflow_status=null`이며 Recipe status chip, 장보기, 요리하기, 남은요리 action을 갖지 않는다.
+- product entry의 이름·브랜드·영양은 생성 순간 pin된 snapshot/version을 표시하며 current product로 조용히 교체하지 않는다.
+- missing/partial/unavailable은 0으로 표시하지 않는다.
+
+### 390px / Mobile Baseline 375 Compatibility
+
+```text
+┌─────────────────────────────────────┐
+│ 기존 PLANNER_WEEK app bar/주간 이동 │
+│ 기존 primary CTA: 장보기/요리/남은요리│
+├─────────────────────────────────────┤
+│ 오늘 · 계획 항목 2                  │
+│ 아침                                │
+│  [recipe] 김치찌개 · 2인분 · 등록   │
+│  [product] 플레인 요거트 · 1회      │  status chip 없음
+│ 점심  + 식사 추가                   │
+└─────────────────────────────────────┘
+```
+
+- Product row는 별도 card를 중첩하지 않고 기존 slot row 안의 compact secondary entry로 배치한다.
+- product type label/icon + product name + quantity만 우선 표시한다. nutrition summary는 후속 `planner-nutrition-summary` 소유이므로 이 addendum에서 새 합계 UI를 만들지 않는다.
+- Recipe Meal status hierarchy와 상단 primary CTA를 product label이 압도하지 않는다.
+
+### Narrow 320px
+
+- 한 slot의 recipe/product row는 각자 한 줄 또는 최대 2행이다.
+- product name truncate 뒤에도 quantity와 product type 구분이 남는다.
+- status 없는 product에 빈 chip/`없음`/`null` 문자열을 표시하지 않는다.
+- day-card와 localized planner scroll containment는 기존 prototype authority를 유지하며 page-level horizontal scroll 금지다.
+
+### Desktop 1280px
+
+- 기존 planner week grid/day-card geometry를 유지한다.
+- product row density가 recipe row보다 높아져 column height가 급증하지 않게 metadata를 압축한다.
+- desktop hover/focus에서 product row는 `MEAL_SCREEN` 진입만 제공하고 Recipe Detail/요리 action으로 오인시키지 않는다.
+
+### States And Interaction
+
+- loading: product projection만 늦을 때 기존 recipe rows를 유지하고 slot 내부 product skeleton/soft error를 사용한다.
+- empty: recipe/product 모두 없을 때만 기존 empty affordance. product 배열만 비었다고 전체 slot을 empty로 바꾸지 않는다.
+- error: additive product projection 실패가 기존 recipe rows를 사라지게 하지 않는다.
+- unauthorized: PLANNER_WEEK auth gate 뒤 날짜/column context를 복원한다.
+- partial/unavailable: 이 Stage 4에서는 compact 상태만 표시하고 missing을 0 kcal로 만들지 않는다.
+- slot tap → `MEAL_SCREEN`; product 추가는 `MEAL_SCREEN -> MENU_ADD`를 통해 진행한다.
+
+### Primary CTA / Scroll Containment / Anchor Guard
+
+- primary CTA와 week navigation을 변경하지 않는다.
+- product row 추가로 first viewport의 day overview가 과도하게 밀리면 row metadata를 줄이지 day-card/scroll mental model을 교체하지 않는다.
+- `PLANNER_WEEK` anchor의 current-state before 390/320/desktop을 Stage 4 전에 캡처한다.
+- Stage 4 후 mixed recipe/product, product-only slot, empty/error/unauthorized evidence를 같은 viewport로 비교한다.

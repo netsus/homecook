@@ -2040,6 +2040,37 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "prepared-food-planner-entry",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/prepared-food-planner-entry",
+      "pr_path": "https://github.com/netsus/homecook/pull/1016",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm exec vitest run tests/prepared-food-planner-entry-api.test.ts tests/prepared-food-planner-entry-service.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/prepared-food-planner-entry-rls.test.ts tests/prepared-food-planner-entry-regression.test.ts",
+        "pnpm test:prepared-food-planner-entry:postgres",
+        "pnpm verify:backend",
+        "pnpm exec vitest run tests/prepared-food-planner-entry-ui.test.tsx tests/prepared-food-planner-entry-client.test.ts",
+        "pnpm verify:frontend:pr",
+        "pnpm verify:frontend",
+        "pnpm test:e2e:regression:ci --grep prepared-food-planner-entry",
+        "pnpm validate:authority-evidence-presence -- --slice prepared-food-planner-entry",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/prepared-food-planner-entry pnpm validate:workpack -- --slice prepared-food-planner-entry",
+        "node scripts/validate-automation-spec.mjs --slice prepared-food-planner-entry",
+        "pnpm validate:omo-bookkeeping",
+        "git diff --check"
+      ],
+      "notes": "Repository roadmap state remains docs and the full workflow lifecycle remains in_progress. The first independent Stage 1.5 review at b137aa4e9d090827a80301ab47cc55710821a166 recorded Blocker/Important/Suggestion 0/6/0; one separate repair-final pass closed the findings, and fresh independent re-review approved exact head fe210b7169094edc77b64e91a730d86720d598ae as DOC_GATE_APPROVED with 0/0/0. That head had 7 successful current-head checks, 5 intended docs skips, and 0 pending/fail checks. codex_approved/passed applies only to the Stage 1 design-contract/docs gate; Stage 4 evidence, authority precheck, Stage 5, final authority, and Stage 6 remain pending, Design Status stays temporary, and auto-merge remains false. The approved contract locks pinned-quantity MEAL_SCREEN expected energy with partial/unavailable/missing-not-zero, existing GET /food-products opaque cursor reset/dedupe/last-page/latest-query behavior, an executable isolated PostgreSQL real ensureUserBootstrapState/reset/cleanup plan, and PLANNER_WEEK/MEAL_SCREEN/MENU_ADD before+after evidence at 390/320/desktop. Exactly three entry mutations and additive existing planner/meals product_entries remain locked with Recipe Meal compatibility, atomic immutable pins, owner guards, workflow exclusions, zero approved public operational rows, and zero production/staging writes. Picker/create still require 390/320/desktop after evidence. Docs PR #1016 merge and later real-DB/browser/authority/manual checks remain pending.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }

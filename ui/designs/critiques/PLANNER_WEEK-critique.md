@@ -47,4 +47,22 @@
 
 ## 결론
 
-Stage 1 산출물로 사용 가능하다. 구현 전 blocking issue는 없고, 위 마이너 이슈 3건은 slice06 Stage 4 authority precheck / public review에서 함께 잠그면 충분하다.
+> **2026-07-16 prepared-food-planner-entry Stage 1 계약 승인:** 위 역사적 판정은 새 product entry anchor extension의 구현 화면을 승인하지 않는다. fresh independent Stage 1.5 reviewer는 설계 계약만 exact head에서 승인했으며, mobile baseline 375/구현 390, narrow 320, desktop, primary CTA, scroll containment, Recipe Meal/product 구분, workflow status 부재와 PLANNER_WEEK anchor 회귀의 실제 구현 판정은 Stage 4·5·final authority에서 pending이다.
+
+### Independent Stage 1.5 Review Record — prepared-food-planner-entry
+
+- reviewed head: `b137aa4e9d090827a80301ab47cc55710821a166`
+- decision: `REQUEST_CHANGES` — Important 6건
+- 이 화면 관련 finding: anchor extension evidence를 기존/신규 화면별로 구분하지 않아 PLANNER_WEEK before+after 390/320/desktop 보장이 충분히 machine-readable하지 않았다.
+- repair disposition: PLANNER_WEEK의 before+after 6개 exact path를 유지·명시하고, MEAL_SCREEN/MENU_ADD도 같은 6-way matrix로 확장했다. 신규 picker/create는 after-only 3-way matrix로 분리했다.
+- 전역 finding disposition: MEAL_SCREEN 예상 열량, picker cursor, real DB bootstrap/reset/cleanup, 5개 critique provenance, roadmap/status 정합성도 owning artifact에서 수정했다.
+- repair-final은 자기 변경을 승인하지 않았다.
+
+### Independent Exact-Head Re-review — prepared-food-planner-entry
+
+- reviewed head: `fe210b7169094edc77b64e91a730d86720d598ae`
+- decision: `DOC_GATE_APPROVED` — Blocker/Important/Suggestion `0/0/0`
+- provenance: 첫 review `0/6/0`, 별도 repair-final 1회, fresh independent re-review `0/0/0`
+- scope: PLANNER_WEEK product-entry anchor extension의 Stage 1 설계 계약과 future evidence 요구만 승인한다. Stage 4 실제 UI와 authority precheck/Stage 5/final authority/Stage 6은 pending이며 역사적 🟡 판정을 successor 구현 승인으로 간주하지 않는다.
+
+위 문장은 역사적 slice06 판정에만 해당한다. `prepared-food-planner-entry` successor의 Stage 1 설계 계약은 exact-head 재검수에서 승인됐지만, Stage 2 진입은 docs PR #1016 merge 전까지 차단되고 실제 UI 권위 판정은 후속 단계에 남는다.

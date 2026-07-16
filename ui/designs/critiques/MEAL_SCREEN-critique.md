@@ -145,6 +145,24 @@
 
 ## 부록: Stage 4 evidence 체크포인트
 
+> **2026-07-16 prepared-food-planner-entry Stage 1 계약 승인:** 위 역사적 판정은 additive ProductPlannerEntry 구현 화면을 승인하지 않는다. fresh independent Stage 1.5 reviewer는 설계 계약만 exact head에서 승인했으며, mobile baseline 375/구현 390, narrow 320, desktop, primary CTA, scroll containment, pinned old version, partial/unavailable/missing-not-zero와 PLANNER_WEEK anchor return의 실제 구현 판정은 Stage 4·5·final authority에서 pending이다.
+
+### Independent Stage 1.5 Review Record — prepared-food-planner-entry
+
+- reviewed head: `b137aa4e9d090827a80301ab47cc55710821a166`
+- decision: `REQUEST_CHANGES` — Important 6건
+- 이 화면 관련 finding: Product card의 공식 `예상 열량` 표시가 잠기지 않았고, MEAL_SCREEN before/after가 390/320/desktop 전체에서 machine-required가 아니었다.
+- repair disposition: pinned version + entry quantity response를 authority로 `예상 열량 X kcal` / `예상 열량 최소 X kcal` / `예상 열량 정보 준비 중`을 잠갔다. observed complete 0만 0이며 missing/null/unavailable은 0이 아니다. MEAL_SCREEN before+after 6개 path를 automation contract에 추가했다.
+- 전역 finding disposition: picker cursor, real DB bootstrap/reset/cleanup, 5개 critique provenance, roadmap/status 정합성도 owning artifact에서 수정했다.
+- repair-final은 자기 변경을 승인하지 않았다.
+
+### Independent Exact-Head Re-review — prepared-food-planner-entry
+
+- reviewed head: `fe210b7169094edc77b64e91a730d86720d598ae`
+- decision: `DOC_GATE_APPROVED` — Blocker/Important/Suggestion `0/0/0`
+- provenance: 첫 review `0/6/0`, 별도 repair-final 1회, fresh independent re-review `0/0/0`
+- scope: MEAL_SCREEN product-entry addendum의 Stage 1 설계 계약과 future evidence 요구만 승인한다. Stage 4 실제 UI와 authority precheck/Stage 5/final authority/Stage 6은 pending이며 역사적 🟡 판정을 successor 구현 승인으로 재사용하지 않는다.
+
 workpack README `Design Authority` 항목에 따라 Stage 4 authority review에서 확인해야 할 항목:
 
 1. 식사 카드 목록이 길어질 때 리스트만 스크롤되고 앱바·하단 CTA가 고정되는지 스크린샷으로 확인

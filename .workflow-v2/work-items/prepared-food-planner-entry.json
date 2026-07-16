@@ -1,0 +1,156 @@
+{
+  "id": "prepared-food-planner-entry",
+  "title": "Prepared food planner entries with immutable product nutrition pins",
+  "summary": "완제품을 Recipe Meal과 분리해 날짜·끼니에 수량으로 추가하고 생성 순간 immutable nutrition version과 이름·브랜드를 pin하며, 기존 planner/meals read model에는 중복 없는 additive product_entries로 제공한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 public 또는 본인 private 완제품을 플래너에 안전하게 추가·수정·삭제하되 과거 nutrition pin과 기존 Recipe Meal shopping/cooking/leftover/status/XP workflow가 흔들리지 않게 한다.",
+  "owners": {
+    "claude": "replaced only for the user-approved nutrition/products/planner program; the global stage-owner policy is unchanged",
+    "codex": "fresh role-separated Codex tasks own Stage 1 docs, independent Stage 1.5 review and repair-final, Stage 2 backend TDD, independent Stage 3 review, Stage 4 frontend, authority precheck, Stage 5 and final authority, and Stage 6; no author or implementer self-approves",
+    "workers": []
+  },
+  "dependencies": [
+    "prepared-food-catalog PR #1015 merged at b095f257a9a99f0f4952029ffd11a1036104f40f and provides owner-only private products plus immutable nutrition versions",
+    "05-planner-week-core is merged and provides recipe-only Meal planner columns and read foundations",
+    "nutrition products planner contract is locked in official requirements v1.7.20 screen v1.5.26 flow v1.3.23 database v1.3.21 and API v1.2.25",
+    "independent fresh Codex Stage 1.5 approval is required before Stage 2 starts"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.20.md",
+      "docs/화면정의서-v1.5.26.md",
+      "docs/유저flow맵-v1.3.23.md",
+      "docs/db설계-v1.3.21.md",
+      "docs/api문서-v1.2.25.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/prepared-food-planner-entry/README.md",
+      "docs/workpacks/prepared-food-planner-entry/acceptance.md",
+      "docs/workpacks/prepared-food-planner-entry/automation-spec.json",
+      "docs/workpacks/prepared-food-catalog/README.md",
+      "docs/workpacks/prepared-food-catalog/acceptance.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/playwright-e2e.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/omo-canonical-closeout-state.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:isolated-postgresql-related-migrations-owner-rls-direct-grants-two-session-current-version-pin-race-atomic-rollback-old-pin-product-delete-column-guard-and-cleanup",
+      "manual:real-browser-menu-add-picker-create-quantity-entry-meal-screen-planner-week-auth-return-and-basis-mismatch-at-390-320-desktop",
+      "manual:independent-product-design-authority-review-of-recipe-product-distinction-scroll-containment-primary-cta-and-missing-not-zero-copy",
+      "manual:approved-public-product-artifact-and-operational-row-count-zero-with-synthetic-public-fixtures-isolated-only",
+      "manual:production-and-staging-write-approval-intentionally-withheld-zero-writes"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm exec vitest run tests/prepared-food-planner-entry-api.test.ts tests/prepared-food-planner-entry-service.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/prepared-food-planner-entry-rls.test.ts tests/prepared-food-planner-entry-regression.test.ts",
+      "pnpm test:prepared-food-planner-entry:postgres",
+      "pnpm verify:backend",
+      "pnpm exec vitest run tests/prepared-food-planner-entry-ui.test.tsx tests/prepared-food-planner-entry-client.test.ts",
+      "pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
+      "pnpm test:e2e:regression:ci --grep prepared-food-planner-entry",
+      "pnpm validate:authority-evidence-presence -- --slice prepared-food-planner-entry",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/prepared-food-planner-entry pnpm validate:workpack -- --slice prepared-food-planner-entry",
+      "node scripts/validate-automation-spec.mjs --slice prepared-food-planner-entry",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/prepared-food-planner-entry-api.test.ts tests/prepared-food-planner-entry-service.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/prepared-food-planner-entry-rls.test.ts tests/prepared-food-planner-entry-regression.test.ts",
+      "pnpm test:prepared-food-planner-entry:postgres",
+      "pnpm verify:backend",
+      "pnpm exec vitest run tests/prepared-food-planner-entry-ui.test.tsx tests/prepared-food-planner-entry-client.test.ts",
+      "pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
+      "pnpm test:e2e:regression:ci --grep prepared-food-planner-entry",
+      "pnpm validate:authority-evidence-presence -- --slice prepared-food-planner-entry",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/prepared-food-planner-entry pnpm validate:workpack -- --slice prepared-food-planner-entry",
+      "node scripts/validate-automation-spec.mjs --slice prepared-food-planner-entry",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-five-documents-and-source-of-truth-contract-alignment",
+      "prepared-food-catalog-exact-merge-predecessor-and-old-version-pin-handoff",
+      "exact-three-mutations-plus-two-existing-additive-read-models-without-new-read-endpoint",
+      "recipe-only-meals-items-client-compatibility-additive-product-entries-and-zero-duplicate-rows",
+      "product-entry-has-workflow-status-null-and-no-meal-shopping-cooking-leftover-fields",
+      "positive-serving-package-g-ml-quantity-and-column-route-database-owner-guards",
+      "atomic-current-version-name-brand-snapshot-pin-two-session-conflict-and-rollback",
+      "soft-deleted-new-create-product-deleted-and-existing-old-pin-retention",
+      "same-unit-or-exactly-one-direct-pinned-relation-forward-reverse-and-all-inference-fail-closed",
+      "quantity-only-patch-old-pin-current-change-and-deleted-existing-product-stability",
+      "owner-delete-state-idempotency-with-existing-404-replay-boundary",
+      "recipe-and-product-column-delete-guard-with-concurrent-race-no-orphan",
+      "owner-rls-direct-grant-security-definer-and-cross-owner-leak-write-zero",
+      "shopping-cooking-leftover-recipe-count-planner-registered-xp-and-meal-add-path-used-structural-exclusion",
+      "existing-recipe-meal-status-owner-read-only-error-and-client-regression-zero",
+      "bounded-planner-meals-read-no-n-plus-one",
+      "missing-not-zero-and-pinned-complete-partial-unavailable-direct-estimated-mixed-semantics",
+      "non-5432-ephemeral-runner-applies-core-cover-nutrition-recipe-snapshot-catalog-and-product-entry-migrations-with-finally-cleanup",
+      "actual-ensure-user-bootstrap-state-creates-owner-default-columns-idempotently-without-direct-column-seeding-and-case-reset-leaves-zero-rows",
+      "approved-public-artifact-and-operational-row-zero-synthetic-public-isolated-only-production-staging-write-zero",
+      "real-browser-primary-create-return-auth-return-basis-mismatch-and-required-state-evidence",
+      "meal-screen-pinned-quantity-expected-energy-complete-partial-unavailable-observed-zero-display",
+      "food-product-picker-existing-get-food-products-opaque-cursor-query-reset-dedupe-last-page-and-latest-query-wins",
+      "planner-week-meal-screen-menu-add-each-before-and-after-390-320-desktop-plus-picker-create-after",
+      "fresh-authority-precheck-stage-five-final-authority-and-stage-six-blocker-zero",
+      "planner-summary-and-other-future-scope-excluded"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "branch": "docs/prepared-food-planner-entry",
+  "pr_path": "https://github.com/netsus/homecook/pull/1016",
+  "out_of_scope": [
+    "GET planner nutrition and meal day week planned nutrition aggregation",
+    "Prepared food catalog write implementation public importer operator CLI seed runtime provider lookup or promotion",
+    "Product workflow status recipe ID shopping list ID cooked at or leftover dish ID fields",
+    "Product entry through POST meals or fake Recipe Meal creation",
+    "Actual consumption eaten skipped medical disease coaching and goal attainment",
+    "OCR barcode dining out meal kit generic preparation size edible fields",
+    "Relation chaining cross-product cross-version name brand generic density or arbitrary gram milliliter inference",
+    "Production or staging writes",
+    "Any undocumented endpoint status error code request response field workflow status or database surface"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs remains the current repository roadmap state and the full workflow lifecycle remains in_progress. The first independent Stage 1.5 review at b137aa4e9d090827a80301ab47cc55710821a166 recorded Blocker/Important/Suggestion 0/6/0; one separate repair-final pass closed all six findings, and the fresh independent exact-head re-review approved fe210b7169094edc77b64e91a730d86720d598ae with DOC_GATE_APPROVED and 0/0/0. That exact head had 7 successful current-head checks, 5 intended docs skips, and 0 pending/fail checks. approval_state=codex_approved and verification_status=passed describe only the Stage 1 design-contract/docs gate; Stage 4 evidence, authority precheck, Stage 5, final authority, and Stage 6 remain pending, so Design Status stays temporary and the slice is not complete or auto-merge eligible. Exactly three mutation routes plus existing GET /planner and GET /meals additive product_entries are locked; recipe-only meals/items and old clients remain compatible and duplicate rows are forbidden. Create atomically pins the current immutable product nutrition version and name/brand snapshot, patch changes only quantity using the old pinned relation, and soft-deleted new create returns PRODUCT_DELETED while existing pins remain. Same-unit or exactly one direct pinned relation is allowed; inference and missing-as-zero are forbidden. MEAL_SCREEN expected energy uses the pinned entry quantity and preserves partial/unavailable/missing-not-zero. FOOD_PRODUCT_PICKER consumes the existing opaque cursor API with reset/dedupe/last-page/latest-query guards. The isolated DB plan uses the real ensureUserBootstrapState path and explicit cleanup. Product entries remain outside Meal status, shopping, cooking, leftovers, recipe counts, planner_registered XP, and meal_add_path_used activity. Current approved public artifacts and operational public rows are zero, synthetic public fixtures are isolated-only, and production/staging writes stay zero. PLANNER_WEEK, MEAL_SCREEN, and MENU_ADD require before+after at 390/320/desktop; picker/create require after evidence. Docs PR #1016 merge, full repository migration/Supabase/PostgREST equivalence, physical-device/screen-reader review, future public promotion, and production-scale contention/query plans remain Manual Only or later-stage work."
+}
