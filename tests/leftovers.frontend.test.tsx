@@ -508,6 +508,7 @@ describe("LeftoversScreen", () => {
         status: "registered",
         is_leftover: true,
         leftover_dish_id: "ld-1",
+        recipe_nutrition_snapshot_id: null,
       });
 
     render(<LeftoversScreen initialAuthenticated={true} />);

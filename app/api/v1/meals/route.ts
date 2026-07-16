@@ -73,6 +73,7 @@ interface MealInsertRow {
   status: "registered";
   is_leftover: boolean;
   leftover_dish_id: string | null;
+  recipe_nutrition_snapshot_id: string | null;
 }
 
 type MaybeSingleResult<T> = PromiseLike<{
@@ -158,6 +159,13 @@ interface MealsDbClient {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const CLIENT_CONTROLLED_NUTRITION_FIELDS = new Set([
+  "recipe_nutrition_snapshot_id",
+  "nutrition_snapshot_origin",
+  "product_id",
+  "product_nutrition_version_id",
+  "quantity",
+]);
 
 function isUuid(value: string) {
   return UUID_PATTERN.test(value);
@@ -231,8 +239,19 @@ function parseMealListQuery(request: NextRequest) {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function buildCreateValidationFields(body: MealCreateBody) {
   const fields: Array<{ field: string; reason: string }> = [];
+
+  Object.keys(body)
+    .filter((field) => CLIENT_CONTROLLED_NUTRITION_FIELDS.has(field))
+    .sort()
+    .forEach((field) => {
+      fields.push({ field, reason: "unexpected" });
+    });
 
   const recipeId = typeof body.recipe_id === "string" ? body.recipe_id.trim() : "";
   if (!recipeId) {
@@ -291,6 +310,7 @@ function toMealCreateData(row: MealInsertRow): MealCreateData {
     status: normalizeMealStatus(row.status),
     is_leftover: row.is_leftover,
     leftover_dish_id: row.leftover_dish_id,
+    recipe_nutrition_snapshot_id: row.recipe_nutrition_snapshot_id,
   };
 }
 
@@ -422,7 +442,11 @@ export async function POST(request: Request) {
   let body: MealCreateBody;
 
   try {
-    body = (await request.json()) as MealCreateBody;
+    const parsedBody: unknown = await request.json();
+    if (!isRecord(parsedBody)) {
+      throw new TypeError("INVALID_JSON_OBJECT");
+    }
+    body = parsedBody as MealCreateBody;
   } catch {
     return fail("VALIDATION_ERROR", "요청 본문을 확인해 주세요.", 422, [
       { field: "body", reason: "invalid_json" },
@@ -549,7 +573,7 @@ export async function POST(request: Request) {
       shopping_list_id: null,
       cooked_at: null,
     })
-    .select("id, recipe_id, plan_date, column_id, planned_servings, status, is_leftover, leftover_dish_id")
+    .select("id, recipe_id, plan_date, column_id, planned_servings, status, is_leftover, leftover_dish_id, recipe_nutrition_snapshot_id")
     .maybeSingle();
 
   if (insertResult.error || !insertResult.data) {

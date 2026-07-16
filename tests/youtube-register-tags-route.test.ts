@@ -6,6 +6,7 @@ const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((_: unknown, fallbackMessage: string) => fallbackMessage);
 const recordUserGrowthActivityEvent = vi.fn();
+const recalculateRecipeNutritionSnapshot = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
@@ -20,6 +21,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 
 vi.mock("@/lib/server/user-growth-activity", () => ({
   recordUserGrowthActivityEvent,
+}));
+
+vi.mock("@/lib/server/recipe-nutrition-service", () => ({
+  recalculateRecipeNutritionSnapshot,
 }));
 
 interface QueryResult<T> {
@@ -208,8 +213,14 @@ describe("36b YouTube recipe register tag write path", () => {
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     recordUserGrowthActivityEvent.mockReset();
+    recalculateRecipeNutritionSnapshot.mockReset();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    recalculateRecipeNutritionSnapshot.mockResolvedValue({
+      snapshot_id: "snapshot-youtube",
+      created: true,
+      is_current: true,
+    });
     createRouteHandlerClient.mockResolvedValue({
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
@@ -229,10 +240,27 @@ describe("36b YouTube recipe register tag write path", () => {
     }));
 
     expect(response.status).toBe(201);
+    expect(recalculateRecipeNutritionSnapshot).toHaveBeenCalledWith(dbClient, recipeId);
     expect(dbClient.rpc).toHaveBeenCalledWith("register_youtube_recipe_from_session", expect.objectContaining({
       p_tags: null,
       p_tag_source: "system_suggested",
     }));
+  });
+
+  it("keeps the committed YouTube recipe response stable when snapshot creation needs retry", async () => {
+    const dbClient = createDbClient();
+    createServiceRoleClient.mockReturnValue(dbClient);
+    recalculateRecipeNutritionSnapshot.mockRejectedValueOnce(new Error("private database detail"));
+
+    const { POST } = await importRegisterRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildRegisterBody()),
+    }));
+
+    expect(response.status).toBe(201);
+    expect(recalculateRecipeNutritionSnapshot).toHaveBeenCalledWith(dbClient, recipeId);
   });
 
   it("accepts reviewed tags and sends normalized labels to the register RPC", async () => {

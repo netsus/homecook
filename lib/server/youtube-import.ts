@@ -39,6 +39,10 @@ import {
 import { cleanYoutubeTitle } from "@/lib/youtube-title";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import {
+  recalculateRecipeNutritionSnapshot,
+  type RecipeNutritionServiceClient,
+} from "@/lib/server/recipe-nutrition-service";
+import {
   buildTextSegments,
   joinSegmentText,
   summarizeSourceSegments,
@@ -10545,6 +10549,22 @@ export async function handleYoutubeRegister(request: Request) {
     recipe_id: registerResult.data.recipe_id,
     title: registerResult.data.title,
   };
+
+  try {
+    await recalculateRecipeNutritionSnapshot(
+      dbClient as unknown as RecipeNutritionServiceClient,
+      data.recipe_id,
+    );
+  } catch {
+    await recordOperationalEventFromServiceRole({
+      event_type: "recipe_nutrition_snapshot_retry_required",
+      severity: "warn",
+      source: "recipe-nutrition-calculation",
+      error_code: "SNAPSHOT_WRITE_FAILED",
+      message_summary: "YouTube recipe nutrition snapshot requires bounded retry.",
+      metadata_json: { recipe_id: data.recipe_id, source_type: "youtube" },
+    });
+  }
 
   const session = sessionResult.data;
   const registeredAt = new Date().toISOString();

@@ -27,6 +27,11 @@ import {
 } from "@/lib/server/user-growth-activity";
 import { parseRecipeImagePublicUrl } from "@/lib/server/recipe-media";
 import {
+  recalculateRecipeNutritionSnapshot,
+  type RecipeNutritionServiceClient,
+} from "@/lib/server/recipe-nutrition-service";
+import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
+import {
   buildSuggestedRecipeTags,
   normalizeReviewedRecipeTagLabels,
   toRecipeTagLabels,
@@ -515,6 +520,24 @@ function toManualRecipeCreateData(row: ManualRecipeRow): ManualRecipeCreateData 
     created_by: row.created_by,
     base_servings: row.base_servings,
   };
+}
+
+async function writeManualRecipeNutritionSnapshot(
+  dbClient: RecipeNutritionServiceClient,
+  recipeId: string,
+) {
+  try {
+    await recalculateRecipeNutritionSnapshot(dbClient, recipeId);
+  } catch {
+    await recordOperationalEventFromServiceRole({
+      event_type: "recipe_nutrition_snapshot_retry_required",
+      severity: "warn",
+      source: "recipe-nutrition-calculation",
+      error_code: "SNAPSHOT_WRITE_FAILED",
+      message_summary: "Manual recipe nutrition snapshot requires bounded retry.",
+      metadata_json: { recipe_id: recipeId, source_type: "manual" },
+    });
+  }
 }
 
 function buildIngredientInsertRows(recipeId: string, ingredients: ManualRecipeIngredientInput[]) {
@@ -1155,6 +1178,11 @@ export async function POST(request: Request) {
       return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
     }
 
+    await writeManualRecipeNutritionSnapshot(
+      dbClient as unknown as RecipeNutritionServiceClient,
+      recipeResult.data.id,
+    );
+
     try {
       await recordUserGrowthActivityEvent(dbClient, {
         userId: user.id,
@@ -1204,6 +1232,11 @@ export async function POST(request: Request) {
   if (stepInsertResult.error) {
     return fail("INTERNAL_ERROR", "레시피 만들기를 등록하지 못했어요.", 500);
   }
+
+  await writeManualRecipeNutritionSnapshot(
+    dbClient as unknown as RecipeNutritionServiceClient,
+    recipeResult.data.id,
+  );
 
   try {
     await recordUserGrowthActivityEvent(dbClient, {

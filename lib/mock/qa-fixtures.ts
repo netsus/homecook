@@ -1,5 +1,6 @@
 import fixtureData from "@/qa/fixtures/slices-01-05.json";
 import { getIngredientTaxonomyMetadata } from "@/lib/ingredient-categories";
+import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
 import { sortPlannerColumns } from "@/lib/planner/fixed-slots";
 import type {
   IngredientItem,
@@ -349,6 +350,7 @@ function buildRecipeDetailFromState(state: QaFixtureState): RecipeDetail {
         duration_text: step.durationText,
       };
     }),
+    nutrition: buildUnavailableRecipeNutrition(),
     user_status: buildRecipeUserStatusFromState(state),
   };
 }
@@ -860,6 +862,7 @@ export function createQaFixtureMeal({
     status: "registered",
     is_leftover: leftoverDishId !== null,
     leftover_dish_id: leftoverDishId,
+    recipe_nutrition_snapshot_id: null,
   };
 
   state.createdMeals = [...state.createdMeals, meal];

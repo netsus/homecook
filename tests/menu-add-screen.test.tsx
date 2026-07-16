@@ -1104,6 +1104,7 @@ describe("MenuAddScreen", () => {
         status: "registered",
         is_leftover: true,
         leftover_dish_id: "leftover-1",
+        recipe_nutrition_snapshot_id: null,
       },
       error: null,
     });
