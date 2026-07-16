@@ -350,7 +350,7 @@
 - full-gate repair 뒤 독립 final review는 head `248a810a6b81fd804a97a357334a1968f6696922`에서 catalog 401 로그인 복귀, auth-restored dialog context 소비, PATCH 동시 클릭 방지 3건을 Important로 판정했다. 별도 TDD repair commit `b592e804d411692f1dc9e7b5e6fa50408dec01f4`가 initial/cursor/refresh 401, secret/raw row 거부, close/success 뒤 URL context 제거, in-flight PATCH 단일 실행을 고정했다.
 - 같은 독립 reviewer가 exact repaired head `b592e804d411692f1dc9e7b5e6fa50408dec01f4`를 재검수해 `FINAL_REVIEW_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다. targeted 검증은 Vitest 5 files/104 tests, Playwright critical 15/15, typecheck, scoped ESLint, governing validators green이다.
 - exact repaired head의 `CI=1 pnpm verify:frontend`는 lint 0 errors(기존 backfill warning 4), typecheck, product Vitest 1,532 passed/22 intended skipped, production build 69 pages, Lighthouse 6 runs, accessibility 18 passed/15 intended skipped, visual 23 passed/22 intended skipped, security 12/12를 통과했다. 동시에 실행 중이던 reviewer Playwright와 포트·fixture 자원을 경합한 첫 full-regression에는 unrelated 3 flaky가 기록됐고, 다른 runner를 모두 종료한 격리 재실행은 969 cases 중 857 passed/112 intended skipped/재시도 0으로 끝났다. exploratory QA report/eval도 score 100, coverage 86/87, blocked 0, findings 0으로 green이다.
-- 이 기록은 reviewed Stage 6 implementation head와 그 뒤의 full-gate 및 final-review repair를 함께 닫는 로컬 successor다. 오케스트레이터가 push한 뒤 그 exact head의 PR checks와 closeout projection을 다시 검수해야 하며, 그 전에는 merge하지 않는다.
+- PR #1018의 final implementation head `54078582fd81e7023932bb0af8f7487dbe7a0eab`는 Ready 상태에서 build, quality, smoke, accessibility, visual, Lighthouse, security, policy, governance 검사를 통과했고 final docs-only head의 full-regression만 의도대로 skip됐다. 같은 구현 계보의 isolated full regression 857/112 intended skipped/재시도 0을 보존한 채 2026-07-16 merge commit `9ed5871fdf5ac4c85efe1b8bbdeb514fb60a72a8`로 병합됐다.
 
 ## Delivery Checklist
 
@@ -397,7 +397,7 @@
 - [x] 확정 (confirmed) — fresh authority precheck, 분리된 Stage 5, 별도 final authority와 구현 비참여 fresh Stage 6 re-review가 모두 blocker/important 0으로 통과
 - [ ] N/A
 
-> 로컬 `CI=1 pnpm verify:frontend`와 exploratory QA/eval은 green이다. 다만 이 closeout 문서를 포함한 successor head를 push한 뒤 그 exact PR head의 전체 GitHub checks가 green인지 다시 확인하기 전에는 merge하지 않는다.
+> 로컬 `CI=1 pnpm verify:frontend`, isolated retries-0 regression, exploratory QA/eval과 PR #1018 Ready current-head checks가 green이고 merge `9ed5871fdf5ac4c85efe1b8bbdeb514fb60a72a8`의 `origin/master` ancestry도 확인했다.
 
 ## Key Rules
 
