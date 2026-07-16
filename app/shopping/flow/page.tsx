@@ -26,7 +26,10 @@ export default async function ShoppingFlowPage() {
         ? false
         : Boolean(user);
 
-  if (hasSupabasePublicEnv() && !initialAuthenticated) {
+  if (
+    authOverride === "guest"
+    || (hasSupabasePublicEnv() && !initialAuthenticated)
+  ) {
     const returnPath = resolveNextPath("/shopping/flow");
     redirect(`/login?next=${encodeURIComponent(returnPath)}`);
   }

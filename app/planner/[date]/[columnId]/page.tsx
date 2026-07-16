@@ -21,7 +21,13 @@ export async function generateMetadata({ params, searchParams }: MealScreenPageP
 
 interface MealScreenPageProps {
   params: Promise<{ date: string; columnId: string }>;
-  searchParams: Promise<{ slot?: string }>;
+  searchParams: Promise<{
+    slot?: string;
+    productAction?: string;
+    productEntryId?: string;
+    productAmount?: string;
+    productUnit?: string;
+  }>;
 }
 
 export default async function MealScreenPage({
@@ -29,7 +35,8 @@ export default async function MealScreenPage({
   searchParams,
 }: MealScreenPageProps) {
   const { date, columnId } = await params;
-  const { slot } = await searchParams;
+  const pageSearchParams = await searchParams;
+  const { slot } = pageSearchParams;
   const cookieStore = await cookies();
   const authOverride = readE2EAuthOverrideCookie(cookieStore);
   const user =
@@ -43,9 +50,20 @@ export default async function MealScreenPage({
         ? false
         : Boolean(user);
 
-  if (hasSupabasePublicEnv() && !initialAuthenticated) {
-    const slotSuffix = slot ? `?slot=${encodeURIComponent(slot)}` : "";
-    const returnPath = resolveNextPath(`/planner/${date}/${columnId}${slotSuffix}`);
+  if (
+    authOverride === "guest"
+    || (hasSupabasePublicEnv() && !initialAuthenticated)
+  ) {
+    const returnParams = new URLSearchParams();
+    if (slot) returnParams.set("slot", slot);
+    if (pageSearchParams.productAction === "edit" || pageSearchParams.productAction === "delete") {
+      returnParams.set("productAction", pageSearchParams.productAction);
+    }
+    if (pageSearchParams.productEntryId) returnParams.set("productEntryId", pageSearchParams.productEntryId);
+    if (pageSearchParams.productAmount) returnParams.set("productAmount", pageSearchParams.productAmount);
+    if (pageSearchParams.productUnit) returnParams.set("productUnit", pageSearchParams.productUnit);
+    const suffix = returnParams.size ? `?${returnParams.toString()}` : "";
+    const returnPath = resolveNextPath(`/planner/${date}/${columnId}${suffix}`);
     redirect(`/login?next=${encodeURIComponent(returnPath)}`);
   }
 

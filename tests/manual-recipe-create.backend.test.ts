@@ -224,6 +224,56 @@ describe("18 manual recipe create backend", () => {
     expect(cookingMethodsTable.__query.order).toHaveBeenCalledWith("created_at", { ascending: true });
   });
 
+  it("GET /api/v1/cooking-methods returns QA fixture methods before initializing a database client", async () => {
+    vi.stubEnv("HOMECOOK_ENABLE_QA_FIXTURES", "1");
+    createRouteHandlerClient.mockRejectedValue(new Error("missing Supabase environment"));
+
+    const { GET } = await importCookingMethodsRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/cooking-methods"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: { methods: expect.any(Array) },
+      error: null,
+    });
+    expect(body.data.methods[0]).toEqual({
+      id: fixtureData.cookingMethods[0]!.id,
+      code: "stir_fry",
+      label: "볶기",
+      color_key: "orange",
+      category_code: "pan_oil",
+      category_label: "팬/기름 조리",
+      is_system: true,
+      synonyms: ["팬에 볶기"],
+    });
+    expect(body.data.methods.map((method: { code: string }) => method.code)).toEqual(
+      fixtureData.cookingMethods.map((method) => method.code),
+    );
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
+  });
+
+  it("GET /api/v1/cooking-methods wraps database client initialization failures", async () => {
+    createRouteHandlerClient.mockRejectedValue(new Error("missing Supabase environment"));
+
+    const { GET } = await importCookingMethodsRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/cooking-methods"));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "조리방법 목록을 불러오지 못했어요.",
+        fields: [],
+      },
+    });
+  });
+
   it("fixture baseline includes manual recipe ingredient and cooking method choices", () => {
     const methodCodes = fixtureData.cookingMethods.map((method) => method.code);
 

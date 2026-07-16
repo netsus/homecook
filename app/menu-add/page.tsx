@@ -17,6 +17,10 @@ interface MenuAddPageProps {
     columnId?: string;
     date?: string;
     restore?: string;
+    productAmount?: string;
+    productId?: string;
+    productQuery?: string;
+    productUnit?: string;
     returnSurface?: string;
     returnTo?: string;
     slot?: string;
@@ -25,8 +29,8 @@ interface MenuAddPageProps {
 }
 
 export default async function MenuAddPage({ searchParams }: MenuAddPageProps) {
-  const { date, columnId, restore, returnSurface, returnTo, slot, source } =
-    await searchParams;
+  const params = await searchParams;
+  const { date, columnId, restore, returnSurface, returnTo, slot, source } = params;
   const cookieStore = await cookies();
   const authOverride = readE2EAuthOverrideCookie(cookieStore);
   const user =
@@ -40,7 +44,10 @@ export default async function MenuAddPage({ searchParams }: MenuAddPageProps) {
         ? false
         : Boolean(user);
 
-  if (hasSupabasePublicEnv() && !initialAuthenticated) {
+  if (
+    authOverride === "guest"
+    || (hasSupabasePublicEnv() && !initialAuthenticated)
+  ) {
     const menuAddParams = new URLSearchParams();
     if (date) menuAddParams.set("date", date);
     if (columnId) menuAddParams.set("columnId", columnId);
@@ -49,6 +56,10 @@ export default async function MenuAddPage({ searchParams }: MenuAddPageProps) {
     if (returnTo) menuAddParams.set("returnTo", returnTo);
     if (returnSurface) menuAddParams.set("returnSurface", returnSurface);
     if (restore) menuAddParams.set("restore", restore);
+    if (params.productQuery) menuAddParams.set("productQuery", params.productQuery);
+    if (params.productId) menuAddParams.set("productId", params.productId);
+    if (params.productAmount) menuAddParams.set("productAmount", params.productAmount);
+    if (params.productUnit) menuAddParams.set("productUnit", params.productUnit);
     const queryString = menuAddParams.toString();
     const returnPath = resolveNextPath(
       queryString ? `/menu-add?${queryString}` : "/menu-add",

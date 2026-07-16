@@ -54,7 +54,7 @@ export function Wave1MobileBottomTab({
               className={[
                 "bottom-tab-link flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-[3px] py-1 text-[11px] transition-colors",
                 active
-                  ? "bottom-tab-active-link font-extrabold text-[var(--brand)]"
+                  ? "bottom-tab-active-link font-extrabold text-[var(--brand-primary-text)]"
                   : "font-semibold text-[var(--wave1-text-3)] hover:text-[var(--wave1-text-2)]",
               ].join(" ")}
               href={item.href}

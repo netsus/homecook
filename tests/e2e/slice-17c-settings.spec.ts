@@ -876,9 +876,12 @@ test.describe("SETTINGS planner column management", () => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
 
-    const deferred: { resolve: (() => void) | null } = { resolve: null };
+    let releaseColumns!: () => void;
+    const columnsGate = new Promise<void>((resolve) => {
+      releaseColumns = resolve;
+    });
     await page.route("**/api/v1/planner/columns", async (route) => {
-      await new Promise<void>((resolve) => { deferred.resolve = resolve; });
+      await columnsGate;
       await route.fulfill({
         json: { success: true, data: { columns: makeDefaultColumns() }, error: null },
       });
@@ -887,7 +890,7 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("columns-loading")).toBeVisible();
-    deferred.resolve?.();
+    releaseColumns();
     await expect(page.getByTestId("column-list")).toBeVisible();
   });
 

@@ -16,6 +16,7 @@ export {
   getMockRecipeList,
   getMockRecipeThemes,
   getQaFixtureDateWindow,
+  getQaFixtureCookingMethods,
   getQaFixtureDiscoveryIngredients,
   getQaFixtureIds,
   getQaFixtureRecipeDetail,

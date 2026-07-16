@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { LeftoverPicker } from "@/components/planner/leftover-picker";
+import { FoodProductPicker } from "@/components/planner/food-product-picker";
 import { MealAddTargetBadge } from "@/components/planner/meal-add-target-badge";
 import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
 import { RecipeBookDetailPicker } from "@/components/planner/recipe-book-detail-picker";
@@ -49,6 +50,7 @@ type PickerMode =
   | "recipebook-detail"
   | "pantry"
   | "leftover"
+  | "product"
   | "manual"
   | "youtube";
 
@@ -57,6 +59,7 @@ const MENU_ADD_OPTIONS = [
   { id: "recipebook", emoji: "📖", label: "레시피북" },
   { id: "pantry", emoji: "🧊", label: "팬트리에서 찾기" },
   { id: "leftover", emoji: "🍱", label: "남은 요리" },
+  { id: "product", emoji: "", label: "완제품" },
   { id: "youtube", emoji: "🎬", label: "유튜브" },
   { id: "manual", emoji: "✏️", label: "직접 등록" },
 ] as const;
@@ -99,6 +102,7 @@ export function MenuAddScreen({
     if (initialSource === "recipebook") return "recipebook-selector";
     if (initialSource === "pantry") return "pantry";
     if (initialSource === "leftover") return "leftover";
+    if (initialSource === "product") return "product";
     if (initialSource === "manual") return "manual";
     if (initialSource === "youtube") return "youtube";
     return "none";
@@ -380,6 +384,14 @@ export function MenuAddScreen({
     setSelectedLeftover(null);
   }, [appReturn, initialSource, isMealAddModalOrigin]);
 
+  const handleProductClick = useCallback(() => {
+    setPickerMode("product");
+  }, []);
+
+  const handleProductComplete = useCallback(async () => {
+    navigateToMealScreen("replace");
+  }, [navigateToMealScreen]);
+
   const handleManualRecipeClick = useCallback(() => {
     if (isDesktopViewport) {
       setPickerMode("manual");
@@ -432,6 +444,8 @@ export function MenuAddScreen({
           ? "팬트리 추천"
           : pickerMode === "leftover"
             ? "남은 요리"
+            : pickerMode === "product"
+              ? "완제품"
             : pickerMode === "manual"
               ? "직접 등록"
               : pickerMode === "youtube"
@@ -444,6 +458,7 @@ export function MenuAddScreen({
       recipebook: handleRecipeBookClick,
       pantry: handlePantryClick,
       leftover: handleLeftoverClick,
+      product: handleProductClick,
       manual: handleManualRecipeClick,
       youtube: handleYoutubeRecipeClick,
     };
@@ -459,6 +474,7 @@ export function MenuAddScreen({
           pickerMode === "recipebook-detail")) ||
       (id === "pantry" && pickerMode === "pantry") ||
       (id === "leftover" && pickerMode === "leftover") ||
+      (id === "product" && pickerMode === "product") ||
       (id === "manual" && pickerMode === "manual") ||
       (id === "youtube" && pickerMode === "youtube"),
     [pickerMode],
@@ -477,6 +493,8 @@ export function MenuAddScreen({
         if (id === "recipebook") {
           setSelectedBook(null);
           setPickerMode("recipebook-selector");
+        } else if (id === "product") {
+          setPickerMode("product");
         } else {
           setPickerMode("search");
         }
@@ -572,6 +590,26 @@ export function MenuAddScreen({
       );
     }
 
+    if (pickerMode === "product") {
+      return (
+        <div className="min-h-screen bg-[var(--surface-fill)] px-4 pb-24 pt-4">
+          <FoodProductPicker
+            columnId={columnId}
+            initialProductId={searchParams.get("productId")}
+            initialQuantityAmount={searchParams.get("productAmount") ?? "1"}
+            initialQuantityUnit={
+              (searchParams.get("productUnit") as "serving" | "package" | "g" | "ml" | null)
+            }
+            initialQuery={searchParams.get("productQuery") ?? ""}
+            onClose={handlePickerBackToMenu}
+            onComplete={handleProductComplete}
+            planDate={planDate}
+            slotName={slotName}
+          />
+        </div>
+      );
+    }
+
     if (pickerMode === "youtube") {
       return (
         <YoutubeImportScreen
@@ -660,9 +698,9 @@ export function MenuAddScreen({
                         onClick={() => handleWebOptionClick(option.id)}
                         type="button"
                       >
-                        <span className="web-menu-add-card-icon" aria-hidden="true">
-                          {option.emoji}
-                        </span>
+                        {option.id === "product" ? null : (
+                          <span className="web-menu-add-card-icon" aria-hidden="true">{option.emoji}</span>
+                        )}
                         <span className="web-menu-add-card-copy">
                           <span>{option.label}</span>
                         </span>
@@ -754,6 +792,23 @@ export function MenuAddScreen({
                   />
                 )}
 
+                {pickerMode === "product" && (
+                  <FoodProductPicker
+                    columnId={columnId}
+                    initialProductId={searchParams.get("productId")}
+                    initialQuantityAmount={searchParams.get("productAmount") ?? "1"}
+                    initialQuantityUnit={
+                      (searchParams.get("productUnit") as "serving" | "package" | "g" | "ml" | null)
+                    }
+                    initialQuery={searchParams.get("productQuery") ?? ""}
+                    key={`product-${pickerNonce}`}
+                    onClose={handlePickerBackToMenu}
+                    onComplete={handleProductComplete}
+                    planDate={planDate}
+                    slotName={slotName}
+                  />
+                )}
+
                 {pickerMode === "manual" && (
                   <ManualRecipeCreateScreen
                     onRequestClose={handlePickerBackToMenu}
@@ -804,6 +859,10 @@ function MenuAddOptionIcon({
         data-testid="menu-add-option-recipebook-cover"
       />
     );
+  }
+
+  if (option.id === "product") {
+    return null;
   }
 
   return (

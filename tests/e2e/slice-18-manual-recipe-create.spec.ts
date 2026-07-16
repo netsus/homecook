@@ -1,5 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
@@ -190,6 +192,7 @@ async function installRecipeDetailRoute(page: Page, recipeId: string) {
           save_count: 0,
           plan_count: 0,
           cook_count: 0,
+          nutrition: buildUnavailableRecipeNutrition(),
           ingredients: [],
           steps: [],
           user_status: null,

@@ -2949,7 +2949,7 @@ button {
 }
 
 .bottom-tab-active-link {
-  color: var(--brand);
+  color: var(--brand-primary-text);
 }
 
 .recipe-overview-compact {
@@ -3397,7 +3397,7 @@ button {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: var(--web-brand);
+    color: var(--brand-primary-text);
     font-size: 22px;
     font-weight: 800;
     letter-spacing: -0.4px;
@@ -3448,7 +3448,7 @@ button {
   }
 
   .web-topnav-tab-active {
-    color: var(--web-brand);
+    color: var(--brand-primary-text);
     font-weight: 700;
   }
 
@@ -3535,9 +3535,9 @@ button {
   }
 
   .web-button-secondary {
-    border: 1px solid var(--web-brand);
+    border: 1px solid var(--brand-primary-text);
     background: transparent;
-    color: var(--web-brand);
+    color: var(--brand-primary-text);
   }
 
   .web-button-secondary:hover:not(:disabled) {
@@ -4692,7 +4692,7 @@ button {
 
   .web-meal-status-registered {
     background: var(--planner-status-registered-soft);
-    color: var(--planner-status-registered-strong);
+    color: var(--brand-primary-text);
   }
 
   .web-meal-status-shopped {
@@ -6816,7 +6816,7 @@ button {
 
   .web-menu-add-hero .web-menu-add-date {
     margin: 8px 0 0;
-    color: var(--web-brand);
+    color: var(--brand-primary-text);
     font-size: 17px;
     font-weight: 800;
     letter-spacing: -0.2px;

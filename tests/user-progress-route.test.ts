@@ -66,6 +66,50 @@ describe("GET /api/v1/users/me/progress", () => {
     expect(readUserProgress).not.toHaveBeenCalled();
   });
 
+  it("returns the existing 500 envelope when the Supabase client cannot initialize", async () => {
+    createRouteHandlerClient.mockRejectedValue(new Error("Supabase environment variables are missing"));
+
+    const { GET } = await importRoute();
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "사용자 진도를 불러오지 못했어요.",
+        fields: [],
+      },
+    });
+    expect(readUserProgress).not.toHaveBeenCalled();
+  });
+
+  it("returns the existing 500 envelope when the authenticated user lookup fails", async () => {
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockRejectedValue(new Error("auth provider unavailable")),
+      },
+    });
+
+    const { GET } = await importRoute();
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "사용자 진도를 불러오지 못했어요.",
+        fields: [],
+      },
+    });
+    expect(readUserProgress).not.toHaveBeenCalled();
+  });
+
   it("returns level 1 / 0 XP for a new user without prior progress", async () => {
     const routeClient = {
       auth: {

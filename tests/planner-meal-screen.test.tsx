@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MealScreen } from "@/components/planner/meal-screen";
+import { PRODUCT_PLANNER_RETURN_CONTEXT_KEY } from "@/lib/planner/product-planner-return-context";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
@@ -17,6 +18,8 @@ const createMealSafe = vi.fn();
 const createCookingSession = vi.fn();
 const fetchRecipes = vi.fn();
 const fetchLeftovers = vi.fn();
+const updateProductPlannerEntryQuantity = vi.fn();
+const deleteProductPlannerEntry = vi.fn();
 const isMealApiError = vi.fn(
   (error: unknown): error is Error & { status: number; code: string } =>
     Boolean(error) &&
@@ -62,6 +65,13 @@ vi.mock("@/lib/api/recipe", () => ({
 vi.mock("@/lib/api/cooking", () => ({
   createCookingSession: (...args: unknown[]) => createCookingSession(...args),
   isCookingApiError: (error: unknown) => isCookingApiError(error),
+}));
+
+vi.mock("@/lib/api/product-planner-entry", () => ({
+  updateProductPlannerEntryQuantity: (...args: unknown[]) => updateProductPlannerEntryQuantity(...args),
+  deleteProductPlannerEntry: (...args: unknown[]) => deleteProductPlannerEntry(...args),
+  isProductPlannerEntryApiError: (error: unknown) =>
+    Boolean(error) && typeof error === "object" && "status" in (error as Record<string, unknown>),
 }));
 
 vi.mock("@/lib/supabase/env", () => ({
@@ -117,11 +127,50 @@ function buildMeal(overrides: Partial<{
   };
 }
 
+function buildProductEntry(id: string) {
+  return {
+    entry_type: "product" as const,
+    id,
+    product_id: "product-1",
+    product_name: "플레인 요거트",
+    product_brand: null,
+    quantity: { amount: 1, unit: "serving" as const },
+    workflow_status: null,
+    product_nutrition_version_id: "version-1",
+    basis_relations: [],
+    nutrition: {
+      basis: { amount: 1, unit: "serving" as const },
+      values: {
+        energy_kcal: {
+          amount: 105,
+          known_amount: null,
+          status: "complete" as const,
+          display_mode: "total" as const,
+        },
+      },
+      calculation_status: "complete" as const,
+      calculation_quality: "direct" as const,
+      warnings: [],
+      sources: [],
+    },
+  };
+}
+
 function createMealApiError(status: number, message = "오류가 발생했어요.") {
   const error = new Error(message) as Error & { status: number; code: string };
   error.status = status;
   error.code = "ERROR";
   return error;
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+  return { promise, reject, resolve };
 }
 
 const DEFAULT_PROPS = {
@@ -160,6 +209,8 @@ describe("MealScreen", () => {
     createCookingSession.mockReset();
     fetchRecipes.mockReset();
     fetchLeftovers.mockReset();
+    updateProductPlannerEntryQuantity.mockReset();
+    deleteProductPlannerEntry.mockReset();
     fetchRecipes.mockResolvedValue({
       success: true,
       data: {
@@ -174,6 +225,7 @@ describe("MealScreen", () => {
     mockRouterReplace.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
+    window.sessionStorage.clear();
     setDesktopViewport(false);
     isMealApiError.mockImplementation(
       (error: unknown): error is Error & { status: number; code: string } =>
@@ -928,5 +980,254 @@ describe("MealScreen", () => {
     expect(
       screen.queryByRole("dialog", { name: "유튜브 가져오기" }),
     ).toBeNull();
+  });
+
+  it.each([false, true])("uses the merge adapter in the real %s render and removes duplicate product response rows", async (desktop) => {
+    setDesktopViewport(desktop);
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = {
+      entry_type: "product" as const,
+      id: "entry-duplicate",
+      product_id: "product-1",
+      product_name: "플레인 요거트",
+      product_brand: null,
+      quantity: { amount: 1, unit: "serving" as const },
+      workflow_status: null,
+      product_nutrition_version_id: "version-1",
+      basis_relations: [],
+      nutrition: {
+        basis: { amount: 1, unit: "serving" as const },
+        values: { energy_kcal: { amount: 105, known_amount: null, status: "complete" as const, display_mode: "total" as const } },
+        calculation_status: "complete" as const,
+        calculation_quality: "direct" as const,
+        warnings: [],
+        sources: [],
+      },
+    };
+    fetchMeals.mockResolvedValue({ items: [buildMeal()], product_entries: [productEntry, productEntry] });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    expect(await screen.findAllByTestId("product-planner-entry-entry-duplicate")).toHaveLength(1);
+  });
+
+  it("moves PATCH 401 into the existing unauthorized return gate with the entry edit context", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = {
+      entry_type: "product" as const,
+      id: "entry-auth",
+      product_id: "product-1",
+      product_name: "플레인 요거트",
+      product_brand: null,
+      quantity: { amount: 1, unit: "serving" as const },
+      workflow_status: null,
+      product_nutrition_version_id: "version-1",
+      basis_relations: [],
+      nutrition: {
+        basis: { amount: 1, unit: "serving" as const },
+        values: { energy_kcal: { amount: 105, known_amount: null, status: "complete" as const, display_mode: "total" as const } },
+        calculation_status: "complete" as const,
+        calculation_quality: "direct" as const,
+        warnings: [], sources: [],
+      },
+    };
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    updateProductPlannerEntryQuantity.mockRejectedValue(Object.assign(new Error("로그인이 필요해요."), { status: 401, code: "UNAUTHORIZED" }));
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await userEvent.click(await screen.findByRole("button", { name: "수량 변경" }));
+    await userEvent.clear(screen.getByRole("spinbutton", { name: "완제품 변경 수량" }));
+    await userEvent.type(screen.getByRole("spinbutton", { name: "완제품 변경 수량" }), "2");
+    await userEvent.click(screen.getAllByRole("button", { name: "수량 변경" }).at(-1)!);
+
+    const login = await screen.findByTestId("social-login-buttons");
+    expect(decodeURIComponent(login.getAttribute("data-next-path") ?? "")).toContain("productEntryId=entry-auth");
+    expect(decodeURIComponent(login.getAttribute("data-next-path") ?? "")).toContain("productAction=edit");
+  });
+
+  it("clears restored product edit context when the header close button dismisses the dialog", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = buildProductEntry("entry-restored-close");
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    window.sessionStorage.setItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY, JSON.stringify({
+      version: 1,
+      kind: "meal-entry",
+      planDate: DEFAULT_PROPS.planDate,
+      columnId: DEFAULT_PROPS.columnId,
+      slotName: DEFAULT_PROPS.slotName,
+      entryId: productEntry.id,
+      action: "edit",
+      quantityAmount: "2",
+      quantityUnit: "serving",
+    }));
+
+    const view = render(<MealScreen {...DEFAULT_PROPS} />);
+    const restoredDialog = await screen.findByRole("dialog", { name: "완제품 수량 변경" });
+    await userEvent.click(within(restoredDialog).getByRole("button", { name: "닫기" }));
+
+    expect(window.sessionStorage.getItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY)).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "완제품 수량 변경" })).toBeNull();
+    view.unmount();
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await screen.findByTestId(`product-planner-entry-${productEntry.id}`);
+    expect(screen.queryByRole("dialog", { name: "완제품 수량 변경" })).toBeNull();
+  });
+
+  it("allows only one product quantity PATCH while the first request is in flight", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = buildProductEntry("entry-patch-guard");
+    const pendingPatch = createDeferred<typeof productEntry>();
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    updateProductPlannerEntryQuantity.mockReturnValue(pendingPatch.promise);
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await userEvent.click(await screen.findByRole("button", { name: "수량 변경" }));
+    const dialog = screen.getByRole("dialog", { name: "완제품 수량 변경" });
+    const input = within(dialog).getByRole("spinbutton", { name: "완제품 변경 수량" });
+    const confirm = within(dialog).getByRole("button", { name: "수량 변경" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "2");
+    fireEvent.click(confirm);
+    fireEvent.change(input, { target: { value: "3" } });
+    fireEvent.click(confirm);
+
+    expect(updateProductPlannerEntryQuantity).toHaveBeenCalledTimes(1);
+    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+    expect((input as HTMLInputElement).disabled).toBe(true);
+
+    pendingPatch.resolve({ ...productEntry, quantity: { amount: 2, unit: "serving" } });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "완제품 수량 변경" })).toBeNull());
+  });
+
+  it("cleans only product edit query fields after a restored PATCH succeeds", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = buildProductEntry("entry-success-cleanup");
+    const restoredParams = new URLSearchParams({
+      slot: DEFAULT_PROPS.slotName,
+      productAction: "edit",
+      productEntryId: productEntry.id,
+      productAmount: "2",
+      productUnit: "serving",
+      returnTo: "/planner?week=next",
+      returnSurface: "planner-week",
+      restore: "meal-card",
+      keep: "unrelated",
+    });
+    navigationMocks.searchParams.mockReturnValue(restoredParams);
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    updateProductPlannerEntryQuantity.mockResolvedValue({
+      ...productEntry,
+      quantity: { amount: 2, unit: "serving" },
+    });
+    window.sessionStorage.setItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY, JSON.stringify({
+      version: 1,
+      kind: "meal-entry",
+      planDate: DEFAULT_PROPS.planDate,
+      columnId: DEFAULT_PROPS.columnId,
+      slotName: DEFAULT_PROPS.slotName,
+      entryId: productEntry.id,
+      action: "edit",
+      quantityAmount: "2",
+      quantityUnit: "serving",
+    }));
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    const dialog = await screen.findByRole("dialog", { name: "완제품 수량 변경" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "수량 변경" }));
+
+    await waitFor(() => expect(mockRouterReplace).toHaveBeenCalledTimes(1));
+    const expectedParams = new URLSearchParams(restoredParams);
+    for (const key of ["productAction", "productEntryId", "productAmount", "productUnit"]) {
+      expectedParams.delete(key);
+    }
+    expect(mockRouterReplace).toHaveBeenCalledWith(
+      `/planner/${DEFAULT_PROPS.planDate}/${DEFAULT_PROPS.columnId}?${expectedParams.toString()}`,
+    );
+    expect(window.sessionStorage.getItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY)).toBeNull();
+  });
+
+  it("maps PATCH basis mismatch to the official UI copy and keeps the edit dialog open", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = {
+      entry_type: "product" as const,
+      id: "entry-mismatch",
+      product_id: "product-1",
+      product_name: "플레인 요거트",
+      product_brand: null,
+      quantity: { amount: 1, unit: "serving" as const },
+      workflow_status: null,
+      product_nutrition_version_id: "version-1",
+      basis_relations: [],
+      nutrition: {
+        basis: { amount: 1, unit: "serving" as const },
+        values: { energy_kcal: { amount: 105, known_amount: null, status: "complete" as const, display_mode: "total" as const } },
+        calculation_status: "complete" as const,
+        calculation_quality: "direct" as const,
+        warnings: [], sources: [],
+      },
+    };
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    updateProductPlannerEntryQuantity.mockRejectedValue(Object.assign(
+      new Error("이 수량 단위로 영양을 계산할 수 없어요."),
+      { status: 422, code: "NUTRITION_BASIS_MISMATCH" },
+    ));
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await userEvent.click(await screen.findByRole("button", { name: "수량 변경" }));
+    const dialog = screen.getByRole("dialog", { name: "완제품 수량 변경" });
+    await userEvent.click(screen.getAllByRole("button", { name: "수량 변경" }).at(-1)!);
+
+    expect(await screen.findByText("이 기준으로는 수량을 바꿀 수 없어요")).toBeTruthy();
+    expect(screen.queryByText("이 수량 단위로 영양을 계산할 수 없어요.")).toBeNull();
+    expect(dialog.isConnected).toBe(true);
+  });
+
+  it("keeps a failed product delete visible and retries it from the same dialog", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = {
+      entry_type: "product" as const,
+      id: "entry-delete-retry",
+      product_id: "product-1",
+      product_name: "플레인 요거트",
+      product_brand: null,
+      quantity: { amount: 1, unit: "serving" as const },
+      workflow_status: null,
+      product_nutrition_version_id: "version-1",
+      basis_relations: [],
+      nutrition: {
+        basis: { amount: 1, unit: "serving" as const },
+        values: { energy_kcal: { amount: 105, known_amount: null, status: "complete" as const, display_mode: "total" as const } },
+        calculation_status: "complete" as const,
+        calculation_quality: "direct" as const,
+        warnings: [], sources: [],
+      },
+    };
+    const firstDelete = createDeferred<unknown>();
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    deleteProductPlannerEntry
+      .mockReturnValueOnce(firstDelete.promise)
+      .mockResolvedValueOnce({ deleted: true, entry_id: productEntry.id });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    const card = await screen.findByTestId("product-planner-entry-entry-delete-retry");
+    await userEvent.click(within(card).getByRole("button", { name: /완제품 계획 삭제/ }));
+    const dialog = screen.getByRole("dialog", { name: "완제품 계획 삭제" });
+    const confirm = within(dialog).getByTestId("product-delete-confirm");
+    await userEvent.click(confirm);
+
+    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+    expect(card.isConnected).toBe(true);
+    expect(dialog.isConnected).toBe(true);
+    firstDelete.reject(createMealApiError(500, "삭제 서버 오류가 발생했어요."));
+
+    expect((await within(dialog).findByRole("alert")).textContent).toBe("삭제 서버 오류가 발생했어요.");
+    expect((confirm as HTMLButtonElement).disabled).toBe(false);
+    expect(card.isConnected).toBe(true);
+    await userEvent.click(confirm);
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "완제품 계획 삭제" })).toBeNull());
+    expect(screen.queryByTestId("product-planner-entry-entry-delete-retry")).toBeNull();
+    expect(deleteProductPlannerEntry).toHaveBeenCalledTimes(2);
   });
 });

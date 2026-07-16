@@ -62,7 +62,7 @@ export default defineConfig({
         "NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS=kakao,naver,google",
         "NEXT_PUBLIC_NAVER_SUPABASE_PROVIDER=custom:naver",
         `NEXT_PUBLIC_APP_URL=${webServerUrl.origin}`,
-        `corepack pnpm exec next dev --hostname ${webServerHost} --port ${webServerPort}`,
+        `corepack pnpm exec next dev --turbopack --hostname ${webServerHost} --port ${webServerPort}`,
       ].join(" "),
     url: baseURL,
     reuseExistingServer: shouldReuseExistingServer,

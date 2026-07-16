@@ -10,8 +10,26 @@ import type { UserProgressDbClient } from "@/lib/server/user-progress";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 export async function createAuthedGamificationClient(fallbackMessage: string) {
-  const routeClient = await createRouteHandlerClient();
-  const authResult = await routeClient.auth.getUser();
+  let routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>;
+  try {
+    routeClient = await createRouteHandlerClient();
+  } catch {
+    return {
+      response: fail("INTERNAL_ERROR", fallbackMessage, 500),
+      dbClient: null,
+      user: null,
+    };
+  }
+  let authResult;
+  try {
+    authResult = await routeClient.auth.getUser();
+  } catch {
+    return {
+      response: fail("INTERNAL_ERROR", fallbackMessage, 500),
+      dbClient: null,
+      user: null,
+    };
+  }
   const user = authResult.data.user;
 
   if (!user) {
@@ -22,8 +40,17 @@ export async function createAuthedGamificationClient(fallbackMessage: string) {
     };
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    UserGamificationDbClient & UserProgressDbClient & UserBootstrapDbClient;
+  let dbClient: UserGamificationDbClient & UserProgressDbClient & UserBootstrapDbClient;
+  try {
+    dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+      UserGamificationDbClient & UserProgressDbClient & UserBootstrapDbClient;
+  } catch {
+    return {
+      response: fail("INTERNAL_ERROR", fallbackMessage, 500),
+      dbClient: null,
+      user: null,
+    };
+  }
 
   try {
     await ensurePublicUserRow(dbClient, user);

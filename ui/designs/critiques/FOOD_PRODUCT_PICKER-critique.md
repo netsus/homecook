@@ -1,6 +1,6 @@
 # FOOD_PRODUCT_PICKER independent critique handoff
 
-> 상태: **Stage 1 설계 계약 exact-head 승인 / Stage 4·5·final authority 대기**. 이 승인은 구현 화면의 🟢/🟡 또는 `Design Status: confirmed` 판정이 아니다.
+> 상태: **Stage 5 구현 검수 pass / final authority·Stage 6 대기**. `Design Status`는 아직 `pending-review`이며 `confirmed` 판정이 아니다.
 
 ## Independent Stage 1.5 Review Record
 
@@ -33,3 +33,13 @@
 - 필수 수정 사항: Stage 1 required finding 0; Stage 4 이후 실제 cursor/화면 authority 검수 필요
 - 권장 사항: fresh authority precheck에서 실제 scroll observer·focus return 확인
 - 차단 여부: Stage 1.5 문서 차단은 해제됐지만 docs PR merge 전 Stage 2 시작은 차단
+
+## Stage 5 Implementation Review — prepared-food-planner-entry
+
+- review date: `2026-07-17`
+- reviewed exact head: `737c799600647bac8faf8016f5940e12df2535a0`
+- decision: `PASS` — Blocker/Major/Minor `0/0/0`
+- `390`, `320`, `1280` evidence에서 검색 결과, public/private label, 선택 상품, 수량, primary CTA의 순서와 scroll containment가 유지된다.
+- POST의 `NUTRITION_BASIS_MISMATCH`는 공식 UI 문구 `이 기준으로는 수량을 바꿀 수 없어요`로 표시되고 선택/수량 단계에 머문다. raw API error 계약은 바꾸지 않는다.
+- unauthorized return/focus가 보존되고 raw provider 또는 generic 손질·크기·가식 상태 입력을 노출하지 않는다.
+- 이 판정은 Stage 5 구현 검수만 통과시킨다. final authority와 Stage 6은 별도 역할의 독립 승인 대상이다.

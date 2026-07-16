@@ -226,8 +226,8 @@
 - Stage 4 after evidence plan: `ui/designs/evidence/prepared-food-planner-entry/after/`
 - required viewport evidence: 기존 `PLANNER_WEEK`, `MEAL_SCREEN`, `MENU_ADD` 각각의 **before + after**를 390px, narrow 320px, desktop 1280px에서 모두 확보한다. 신규 `FOOD_PRODUCT_PICKER`, `FOOD_PRODUCT_CREATE`는 동일 3개 viewport의 after를 확보한다. 최초 진입, scroll 중, primary CTA, empty/error/unauthorized/basis mismatch, mixed recipe/product entry 상태도 별도 evidence로 남긴다.
 - authority report: `ui/designs/authority/PLANNER_WEEK-prepared-food-planner-entry-authority.md`
-- Authority status: `required`
-- Independent authority는 아직 pending이다. Stage 4 implementation 전에 current-state screenshot을 확보하고, fresh authority precheck → Stage 5 → 별도 final authority gate → Stage 6 순서를 지킨다.
+- Authority status: `reviewed`
+- fresh authority precheck와 분리된 Stage 5 review가 통과했고, 별도 final authority가 exact head `5dc6cb45402b75b9dc2befef56732a120e285253`를 `FINAL_AUTHORITY_APPROVED` 0/0/0으로 승인했다. 이어 fresh Stage 6 re-review가 repaired implementation head `829a107d1fdf782beff241e52ab09076ec9feab4`를 `STAGE6_APPROVED` 0/0/0으로 승인했다. 이후 전체 gate 안정화와 final review의 Important 3건을 TDD로 수리한 exact head `b592e804d411692f1dc9e7b5e6fa50408dec01f4`도 같은 독립 reviewer가 Blocker/Important/Suggestion `0/0/0`으로 재승인해 `Design Status: confirmed` 조건을 유지했다.
 - `PLANNER_WEEK`의 Baemin prototype navigation/day-card/scroll containment와 기존 Recipe Meal CTA/status hierarchy를 바꾸지 않는다. Product entry는 additive 정보로 밀도를 조절하며 page-level horizontal overflow를 만들지 않는다.
 
 ## Source Links
@@ -341,10 +341,16 @@
 
 ### Stage 5 / Final Authority / Stage 6
 
-- fresh authority precheck가 screenshot/Figma evidence와 official flow를 비교한다.
-- 분리된 Stage 5 design reviewer가 scope=frontend review=5 항목을 검수한다.
-- 별도 final authority가 blocker 0과 390/320/desktop evidence를 승인하기 전 `Design Status: confirmed` 금지.
-- fresh Stage 6 reviewer가 full contract, accessibility/security/performance, exploratory QA/eval, current-head checks, closeout projection을 최종 검수한다.
+- fresh authority precheck는 screenshot evidence와 official flow를 비교해 B/I/S 0/0/0으로 통과했다.
+- 분리된 Stage 5 design reviewer는 repair implementation head `737c799600647bac8faf8016f5940e12df2535a0`를 B/M/m 0/0/0으로 통과시켰다.
+- 별도 final authority는 exact docs head `5dc6cb45402b75b9dc2befef56732a120e285253`에서 PNG 26개와 current-head checks를 독립 확인하고 `FINAL_AUTHORITY_APPROVED` B/M/m 0/0/0을 판정했다. `confirmed_allowed: true`이지만 Stage 6 전에는 `Design Status: confirmed`로 바꾸지 않는다.
+- 첫 fresh Stage 6 review는 exact head `f6b7eee832f4cb0a886aa6e9c245d98f352e28db`에서 DELETE 일반 오류 복구와 nutrition conflict refresh race 2건을 Important로 판정했고, 구현자는 별도 repair commit `829a107d1fdf782beff241e52ab09076ec9feab4`로 수리했다.
+- 구현에 참여하지 않은 fresh Stage 6 re-reviewer가 exact repaired head `829a107d1fdf782beff241e52ab09076ec9feab4`를 다시 검수해 `STAGE6_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다. DELETE 500 뒤 card/dialog/`role=alert`/retry 유지, duplicate pending guard와 DELETE 401 return, stale refresh success/empty/error 폐기를 확인했다.
+- Stage 6 targeted 검증은 Vitest 5 files/97 tests, DELETE 401/500 Playwright 3 projects/6 tests, typecheck, lint 0 errors, source-of-truth/workflow/workpack/automation/authority/bookkeeping/exploratory/real-smoke validators green이다. 이어 full gate에서 발견한 QA fixture auth 초기화, recipe nutrition fixture, cooking-method fixture, Playwright dev server, tag-suggestion 초기화, settings loading race, 현행 MENU_ADD visual baseline을 TDD로 수리했다.
+- full-gate repair 뒤 독립 final review는 head `248a810a6b81fd804a97a357334a1968f6696922`에서 catalog 401 로그인 복귀, auth-restored dialog context 소비, PATCH 동시 클릭 방지 3건을 Important로 판정했다. 별도 TDD repair commit `b592e804d411692f1dc9e7b5e6fa50408dec01f4`가 initial/cursor/refresh 401, secret/raw row 거부, close/success 뒤 URL context 제거, in-flight PATCH 단일 실행을 고정했다.
+- 같은 독립 reviewer가 exact repaired head `b592e804d411692f1dc9e7b5e6fa50408dec01f4`를 재검수해 `FINAL_REVIEW_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다. targeted 검증은 Vitest 5 files/104 tests, Playwright critical 15/15, typecheck, scoped ESLint, governing validators green이다.
+- exact repaired head의 `CI=1 pnpm verify:frontend`는 lint 0 errors(기존 backfill warning 4), typecheck, product Vitest 1,532 passed/22 intended skipped, production build 69 pages, Lighthouse 6 runs, accessibility 18 passed/15 intended skipped, visual 23 passed/22 intended skipped, security 12/12를 통과했다. 동시에 실행 중이던 reviewer Playwright와 포트·fixture 자원을 경합한 첫 full-regression에는 unrelated 3 flaky가 기록됐고, 다른 runner를 모두 종료한 격리 재실행은 969 cases 중 857 passed/112 intended skipped/재시도 0으로 끝났다. exploratory QA report/eval도 score 100, coverage 86/87, blocked 0, findings 0으로 green이다.
+- 이 기록은 reviewed Stage 6 implementation head와 그 뒤의 full-gate 및 final-review repair를 함께 닫는 로컬 successor다. 오케스트레이터가 push한 뒤 그 exact head의 PR checks와 closeout projection을 다시 검수해야 하며, 그 전에는 merge하지 않는다.
 
 ## Delivery Checklist
 
@@ -366,14 +372,14 @@
 
 ### Frontend — Stage 4 / Review Stages 5 And 6
 
-- [ ] MENU_ADD에서 FOOD_PRODUCT_PICKER, 없으면 CREATE, 선택 복귀, 수량, entry, PLANNER_WEEK flow가 동작한다 <!-- omo:id=delivery-product-entry-primary-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK/MEAL_SCREEN이 Recipe Meal과 product entry를 중복 없이 구분하고 product workflow status/action을 표시하지 않는다 <!-- omo:id=delivery-product-entry-type-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading/empty/error/read-only/unauthorized/partial/unavailable를 분리하고 missing을 0으로 표시하지 않는다 <!-- omo:id=delivery-product-entry-ui-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] basis mismatch가 수량 단계와 선택 context를 보존한다 <!-- omo:id=delivery-product-entry-basis-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] guest return-to-action이 검색어·날짜·끼니·선택·quantity context를 복원한다 <!-- omo:id=delivery-product-entry-return;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px/desktop browser evidence와 scroll/CTA/accessibility 회귀가 닫힌다 <!-- omo:id=delivery-product-entry-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] exploratory QA/eval과 frontend full verification이 green이다 <!-- omo:id=delivery-product-entry-qa;stage=4;scope=frontend;review=5,6 -->
-- [ ] fresh authority precheck/Stage 5/final authority/Stage 6에서 unresolved blocker 0이다 <!-- omo:id=delivery-product-entry-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] MENU_ADD에서 FOOD_PRODUCT_PICKER, 없으면 CREATE, 선택 복귀, 수량, entry, PLANNER_WEEK flow가 동작한다 <!-- omo:id=delivery-product-entry-primary-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK/MEAL_SCREEN이 Recipe Meal과 product entry를 중복 없이 구분하고 product workflow status/action을 표시하지 않는다 <!-- omo:id=delivery-product-entry-type-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] loading/empty/error/read-only/unauthorized/partial/unavailable를 분리하고 missing을 0으로 표시하지 않는다 <!-- omo:id=delivery-product-entry-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] basis mismatch가 수량 단계와 선택 context를 보존한다 <!-- omo:id=delivery-product-entry-basis-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] guest return-to-action이 검색어·날짜·끼니·선택·quantity context를 복원한다 <!-- omo:id=delivery-product-entry-return;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px/320px/desktop browser evidence와 scroll/CTA/accessibility 회귀가 닫힌다 <!-- omo:id=delivery-product-entry-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] exploratory QA/eval과 frontend full verification이 green이다 <!-- omo:id=delivery-product-entry-qa;stage=4;scope=frontend;review=5,6 -->
+- [x] fresh authority precheck/Stage 5/final authority/Stage 6에서 unresolved blocker 0이다 <!-- omo:id=delivery-product-entry-authority;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 
@@ -386,7 +392,12 @@
 
 ## Design Status
 
-`temporary` — Stage 1 설계 계약과 independent Stage 1.5 critique는 exact head `fe210b7169094edc77b64e91a730d86720d598ae`에서 승인됐다. Stage 4 evidence·authority precheck·Stage 5·final authority·Stage 6은 아직 대기이므로 `confirmed`가 아니다.
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed) — fresh authority precheck, 분리된 Stage 5, 별도 final authority와 구현 비참여 fresh Stage 6 re-review가 모두 blocker/important 0으로 통과
+- [ ] N/A
+
+> 로컬 `CI=1 pnpm verify:frontend`와 exploratory QA/eval은 green이다. 다만 이 closeout 문서를 포함한 successor head를 push한 뒤 그 exact PR head의 전체 GitHub checks가 green인지 다시 확인하기 전에는 merge하지 않는다.
 
 ## Key Rules
 

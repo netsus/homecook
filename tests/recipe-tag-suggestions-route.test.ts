@@ -80,4 +80,31 @@ describe("36b recipe tag suggestions route", () => {
       error: { code: "UNAUTHORIZED" },
     });
   });
+
+  it("returns the existing internal error envelope when auth client initialization fails", async () => {
+    createRouteHandlerClient.mockRejectedValueOnce(
+      new Error("missing Supabase environment"),
+    );
+
+    const { POST } = await importTagSuggestionsRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes/tag-suggestions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: "김치찌개" }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "태그 추천을 불러오지 못했어요.",
+        fields: [],
+      },
+    });
+  });
 });
