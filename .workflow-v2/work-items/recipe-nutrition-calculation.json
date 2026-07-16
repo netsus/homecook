@@ -157,25 +157,25 @@
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "ab31db54b365b132762685a562c6a033db7d17ea",
+      "current_head_sha": "7ef7ae04e852a854a10060f2b84d48204f49db46",
       "approval_state": "dual_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
-      "manual_patch_count": 3,
+      "manual_patch_count": 4,
       "manual_handoff": false,
       "stale_lock_count": 0,
-      "ci_resync_count": 3,
+      "ci_resync_count": 4,
       "artifact_missing": false,
-      "last_recovery_at": "2026-07-16T09:44:37Z"
+      "last_recovery_at": "2026-07-16T09:58:29Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 3,
+      "codex_repairable_count": 4,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": "ci_smoke_fixture_sync_after_stage6_evidence_repair",
+      "latest_reason_code": "closeout_authority_projection_repaired",
       "evidence_sources": [
         "GitHub PR #1013 current-head checks",
         "ui/designs/authority/RECIPE_DETAIL-recipe-nutrition-calculation-authority.md",
@@ -183,9 +183,9 @@
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-07-16T09:44:37Z",
-      "status_synced_at": "2026-07-16T09:44:37Z",
-      "pr_body_synced_at": "2026-07-16T09:44:37Z"
+      "docs_synced_at": "2026-07-16T09:58:29Z",
+      "status_synced_at": "2026-07-16T09:58:29Z",
+      "pr_body_synced_at": "2026-07-16T09:58:29Z"
     }
   },
   "branch": "feature/fe-recipe-nutrition-calculation",
@@ -202,5 +202,5 @@
     "Deleted recipe save endpoint restoration"
   ],
   "open_questions": [],
-  "notes": "Recipe nutrition Stage 2/3 backend merged through PR #1012 and Stage 4 Recipe Detail UI is under current-head review in PR #1013. The approved contract treats recipe amount and unit as actual edible-use quantity without new recipe state or size columns; state-unspecified direct and conversion paths require exactly one eligible chain, exact piece paths require size_code plus preparation_state, and missing data stays partial or unavailable rather than zero. Isolated PostgreSQL 17 real DB closeout applied all migrations and FoodSafety-30 seed, preserved approved coverage 13/124 and at least one link in 21/30 recipes, verified actual owner/bootstrap and cross-owner 403/0 writes, current snapshot pin, rollback, and cleanup. Stage 4 Vitest 80/80, 390px/320px/desktop Playwright evidence, accessibility, source/XSS/race guards, and independent visual authority 96/100 with blocker 0 passed. Production/staging writes stayed zero; full Supabase/PostgREST equivalence, physical-device review, production license promotion, and production-scale contention remain Manual Only. closeout_phase=collecting closeout_recovery=manual_patch:3|ci_resync:3 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1013 current-head checks,ui/designs/authority/RECIPE_DETAIL-recipe-nutrition-calculation-authority.md,ui/designs/evidence/recipe-nutrition-calculation/visual-verdict.json | latest_reason_code=ci_smoke_fixture_sync_after_stage6_evidence_repair | last_recovery_at=2026-07-16T09:44:37Z"
+  "notes": "Recipe nutrition Stage 2/3 backend merged through PR #1012 and Stage 4 Recipe Detail UI is under current-head review in PR #1013. The approved contract treats recipe amount and unit as actual edible-use quantity without new recipe state or size columns; state-unspecified direct and conversion paths require exactly one eligible chain, exact piece paths require size_code plus preparation_state, and missing data stays partial or unavailable rather than zero. Isolated PostgreSQL 17 real DB closeout applied all migrations and FoodSafety-30 seed, preserved approved coverage 13/124 and at least one link in 21/30 recipes, verified actual owner/bootstrap and cross-owner 403/0 writes, current snapshot pin, rollback, and cleanup. Stage 4 Vitest 80/80, 390px/320px/desktop Playwright evidence, accessibility, source/XSS/race guards, and independent visual authority 96/100 with blocker 0 passed. Production/staging writes stayed zero; full Supabase/PostgREST equivalence, physical-device review, production license promotion, and production-scale contention remain Manual Only. closeout_phase=collecting closeout_recovery=manual_patch:4|ci_resync:4 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1013 current-head checks,ui/designs/authority/RECIPE_DETAIL-recipe-nutrition-calculation-authority.md,ui/designs/evidence/recipe-nutrition-calculation/visual-verdict.json | latest_reason_code=closeout_authority_projection_repaired | last_recovery_at=2026-07-16T09:58:29Z"
 }
