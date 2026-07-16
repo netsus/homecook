@@ -37,10 +37,12 @@ vi.mock("@/lib/api/product-planner-entry", () => ({
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((nextResolve) => {
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
     resolve = nextResolve;
+    reject = nextReject;
   });
-  return { promise, resolve };
+  return { promise, reject, resolve };
 }
 
 function createProduct(overrides: Partial<FoodProductData> = {}): FoodProductData {
@@ -391,6 +393,67 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     expect(screen.getByTestId("food-product-quantity-step").textContent).toContain("예상 열량 105 kcal");
     await userEvent.click(screen.getByRole("button", { name: "최신 영양정보로 새로고침" }));
     await waitFor(() => expect(screen.getByTestId("food-product-quantity-step").textContent).toContain("예상 열량 120 kcal"));
+  });
+
+  it("discards a stale refresh success after the query and selection generation change", async () => {
+    const current = createProduct();
+    const staleRefresh = createDeferred<{ items: FoodProductData[]; next_cursor: null; has_next: false }>();
+    const latest = createProduct({ id: "latest", name: "최신 두부" });
+    fetchFoodProducts
+      .mockResolvedValueOnce({ items: [current], next_cursor: null, has_next: false })
+      .mockImplementationOnce(() => staleRefresh.promise)
+      .mockResolvedValueOnce({ items: [latest], next_cursor: null, has_next: false });
+    createProductPlannerEntry.mockRejectedValue(Object.assign(new Error("영양 정보가 먼저 변경됐어요."), {
+      status: 409,
+      code: "NUTRITION_VERSION_CONFLICT",
+      fields: [],
+    }));
+
+    render(<FoodProductPicker columnId="column-1" onClose={() => undefined} onComplete={() => undefined} planDate="2026-07-17" slotName="아침" />);
+    await userEvent.click(await screen.findByRole("button", { name: /플레인 요거트/ }));
+    await userEvent.click(screen.getByRole("button", { name: "아침에 완제품 추가" }));
+    await userEvent.click(screen.getByRole("button", { name: "최신 영양정보로 새로고침" }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "완제품 검색" }), { target: { value: "최신" } });
+    expect(await screen.findByText("최신 두부")).toBeTruthy();
+
+    staleRefresh.resolve({
+      items: [createProduct({ nutrition_version_id: "stale-version", name: "오래된 요거트" })],
+      next_cursor: null,
+      has_next: false,
+    });
+
+    await waitFor(() => expect(screen.queryByText("오래된 요거트")).toBeNull());
+    expect(screen.getByText("최신 두부")).toBeTruthy();
+    expect(screen.queryByTestId("food-product-quantity-step")).toBeNull();
+  });
+
+  it("discards a stale refresh error after a newer query succeeds", async () => {
+    const current = createProduct();
+    const staleRefresh = createDeferred<{ items: FoodProductData[]; next_cursor: null; has_next: false }>();
+    const latest = createProduct({ id: "latest", name: "최신 두부" });
+    fetchFoodProducts
+      .mockResolvedValueOnce({ items: [current], next_cursor: null, has_next: false })
+      .mockImplementationOnce(() => staleRefresh.promise)
+      .mockResolvedValueOnce({ items: [latest], next_cursor: null, has_next: false });
+    createProductPlannerEntry.mockRejectedValue(Object.assign(new Error("영양 정보가 먼저 변경됐어요."), {
+      status: 409,
+      code: "NUTRITION_VERSION_CONFLICT",
+      fields: [],
+    }));
+
+    render(<FoodProductPicker columnId="column-1" onClose={() => undefined} onComplete={() => undefined} planDate="2026-07-17" slotName="아침" />);
+    await userEvent.click(await screen.findByRole("button", { name: /플레인 요거트/ }));
+    await userEvent.click(screen.getByRole("button", { name: "아침에 완제품 추가" }));
+    await userEvent.click(screen.getByRole("button", { name: "최신 영양정보로 새로고침" }));
+    fireEvent.change(screen.getByRole("searchbox", { name: "완제품 검색" }), { target: { value: "최신" } });
+    expect(await screen.findByText("최신 두부")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: /최신 두부/ }));
+
+    staleRefresh.reject(Object.assign(new Error("오래된 새로고침 오류"), { status: 500 }));
+
+    await waitFor(() => expect(screen.queryByText("오래된 새로고침 오류")).toBeNull());
+    expect(screen.getByText("최신 두부")).toBeTruthy();
+    expect(screen.getByTestId("food-product-quantity-step").textContent).toContain("최신 두부 수량");
   });
 
   it("maps picker basis mismatch to the official UI copy without exposing the API message", async () => {

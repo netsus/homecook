@@ -126,7 +126,7 @@ async function installRoutes(
   page: Page,
   options: {
     catalogVersion?: "v2";
-    mutationError?: "basis" | "unauthorized" | "createUnauthorized" | "deleteUnauthorized" | "patchUnauthorized" | "patchBasis";
+    mutationError?: "basis" | "unauthorized" | "createUnauthorized" | "deleteUnauthorized" | "deleteFailure" | "patchUnauthorized" | "patchBasis";
   } = {},
 ) {
   let productEntry: ProductEntry | null = createMealProductEntry();
@@ -134,6 +134,7 @@ async function installRoutes(
   let entryUnauthorizedOnce = options.mutationError === "unauthorized";
   let createUnauthorizedOnce = options.mutationError === "createUnauthorized";
   let deleteUnauthorizedOnce = options.mutationError === "deleteUnauthorized";
+  let deleteFailureOnce = options.mutationError === "deleteFailure";
   let patchUnauthorizedOnce = options.mutationError === "patchUnauthorized";
   let patchMismatchOnce = options.mutationError === "patchBasis";
 
@@ -339,6 +340,18 @@ async function installRoutes(
         });
         return;
       }
+      if (deleteFailureOnce) {
+        deleteFailureOnce = false;
+        await route.fulfill({
+          status: 500,
+          json: {
+            success: false,
+            data: null,
+            error: { code: "INTERNAL_ERROR", message: "삭제 서버 오류가 발생했어요.", fields: [] },
+          },
+        });
+        return;
+      }
       productEntry = null;
       await route.fulfill({
         json: { success: true, data: { deleted: true, entry_id: "entry-yogurt" }, error: null },
@@ -471,6 +484,25 @@ test.describe("prepared-food-planner-entry", () => {
     await expect(productCard).toHaveCount(0);
     await expect(page.getByText("김치찌개", { exact: true }).filter({ visible: true })).toBeVisible();
     expect(await page.evaluate(() => window.sessionStorage.getItem("homecook.food-product-planner-return-context.v1"))).toBeNull();
+  });
+
+  test("DELETE 500 뒤 대화상자와 카드를 유지하고 같은 버튼으로 재시도한다", async ({ page }) => {
+    await installRoutes(page, { mutationError: "deleteFailure" });
+    await page.goto(MEAL_PATH);
+
+    const productCard = page.getByTestId("product-planner-entry-entry-yogurt").filter({ visible: true });
+    await productCard.getByRole("button", { name: /완제품 계획 삭제/ }).click();
+    const deleteDialog = page.getByRole("dialog", { name: "완제품 계획 삭제" });
+    const confirm = deleteDialog.getByTestId("product-delete-confirm");
+    await confirm.click();
+
+    await expect(deleteDialog.getByRole("alert")).toHaveText("삭제 서버 오류가 발생했어요.");
+    await expect(productCard).toBeVisible();
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
+
+    await expect(deleteDialog).toHaveCount(0);
+    await expect(productCard).toHaveCount(0);
   });
 
   test("PATCH 401 gate가 safe edit context와 data-next-path를 보존하고 같은 편집을 복원한다", async ({ page }) => {

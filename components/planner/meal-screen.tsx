@@ -1157,8 +1157,10 @@ export function MealScreen({
     error: string | null;
   } | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<MealProductPlannerEntryData | null>(null);
+  const [deleteProductError, setDeleteProductError] = useState<string | null>(null);
   const [authReturnPath, setAuthReturnPath] = useState<string | null>(null);
   const restoredProductContextRef = useRef(false);
+  const pendingProductDeleteIdsRef = useRef<Set<string>>(new Set());
   const productEditInputRef = useRef<HTMLInputElement>(null);
   const [mealAddSheetOpen, setMealAddSheetOpen] = useState(false);
   const [mealAddPickerMode, setMealAddPickerMode] =
@@ -1301,6 +1303,7 @@ export function MealScreen({
       return;
     }
     if (action === "delete") {
+      setDeleteProductError(null);
       setDeletingProduct(entry);
       return;
     }
@@ -1528,6 +1531,18 @@ export function MealScreen({
     });
   }
 
+  function openProductDelete(entry: MealProductPlannerEntryData) {
+    setDeleteProductError(null);
+    setDeletingProduct(entry);
+  }
+
+  function closeProductDelete() {
+    if (deletingProduct && pendingProductDeleteIdsRef.current.has(deletingProduct.id)) return;
+    clearProductPlannerReturnContext();
+    setDeleteProductError(null);
+    setDeletingProduct(null);
+  }
+
   async function handleProductQuantityConfirm() {
     if (!editingProduct) return;
     const amount = Number(editingProduct.amount);
@@ -1598,13 +1613,16 @@ export function MealScreen({
   async function handleProductDeleteConfirm() {
     if (!deletingProduct) return;
     const entryId = deletingProduct.id;
-    setDeletingProduct(null);
+    if (pendingProductDeleteIdsRef.current.has(entryId)) return;
+    pendingProductDeleteIdsRef.current.add(entryId);
+    setDeleteProductError(null);
     setPendingProductIds((current) => new Set([...current, entryId]));
     try {
       await deleteProductPlannerEntry(entryId);
       setProductEntries((current) => current.filter((entry) => entry.id !== entryId));
       clearProductPlannerReturnContext();
       setAuthReturnPath(null);
+      setDeletingProduct(null);
     } catch (caught) {
       if (isProductPlannerEntryApiError(caught) && caught.status === 401) {
         saveProductPlannerReturnContext({
@@ -1617,14 +1635,16 @@ export function MealScreen({
           action: "delete",
         });
         setAuthReturnPath(buildProductEntryNextPath(planDate, columnId, slotName, entryId, "delete"));
+        setDeletingProduct(null);
         setAuthState("unauthorized");
         return;
       }
       const message = isProductPlannerEntryApiError(caught)
         ? caught.message
         : "완제품 계획을 삭제하지 못했어요.";
-      setErrorMessage(message);
+      setDeleteProductError(message);
     } finally {
+      pendingProductDeleteIdsRef.current.delete(entryId);
       setPendingProductIds((current) => {
         const next = new Set(current);
         next.delete(entryId);
@@ -1774,7 +1794,7 @@ export function MealScreen({
             onStartCook={(meal) => void startMealCooking(meal)}
             onStepDown={(meal) => handleStepperTap(meal, -1)}
             onStepUp={(meal) => handleStepperTap(meal, 1)}
-            onProductDelete={setDeletingProduct}
+            onProductDelete={openProductDelete}
             onProductEdit={openProductQuantityEdit}
             pendingMealIds={pendingMealIds}
             pendingProductIds={pendingProductIds}
@@ -1870,7 +1890,7 @@ export function MealScreen({
                       entry={entry}
                       isPending={pendingProductIds.has(entry.id)}
                       key={`product:${entry.id}`}
-                      onDelete={() => setDeletingProduct(entry)}
+                      onDelete={() => openProductDelete(entry)}
                       onEditQuantity={() => openProductQuantityEdit(entry)}
                     />
                   ))
@@ -1998,18 +2018,23 @@ export function MealScreen({
       ) : null}
 
       {deletingProduct ? (
-        <CenterModal labelledBy="product-delete-title" onClose={() => { clearProductPlannerReturnContext(); setDeletingProduct(null); }}>
+        <CenterModal labelledBy="product-delete-title" onClose={closeProductDelete}>
           <ModalHeader
-            onClose={() => setDeletingProduct(null)}
+            onClose={closeProductDelete}
             title="완제품 계획 삭제"
             titleId="product-delete-title"
           />
           <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
             {deletingProduct.product_name}의 이 플래너 항목만 삭제할까요? 레시피 식사와 등록된 완제품 원본은 삭제되지 않아요.
           </p>
+          {deleteProductError ? (
+            <p className="mt-3 rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-sm font-semibold text-[var(--danger)]" role="alert">
+              {deleteProductError}
+            </p>
+          ) : null}
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold" onClick={() => { clearProductPlannerReturnContext(); setDeletingProduct(null); }} type="button">취소</button>
-            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--danger)] font-bold text-[var(--text-inverse)]" data-testid="product-delete-confirm" onClick={() => void handleProductDeleteConfirm()} type="button">삭제</button>
+            <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold disabled:opacity-50" disabled={pendingProductIds.has(deletingProduct.id)} onClick={closeProductDelete} type="button">취소</button>
+            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--danger)] font-bold text-[var(--text-inverse)] disabled:opacity-50" data-testid="product-delete-confirm" disabled={pendingProductIds.has(deletingProduct.id)} onClick={() => void handleProductDeleteConfirm()} type="button">삭제</button>
           </div>
         </CenterModal>
       ) : null}

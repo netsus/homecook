@@ -166,12 +166,16 @@ export function FoodProductPicker({
   const [createExitTarget, setCreateExitTarget] = useState<CreateExitTarget | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const generationRef = useRef(0);
+  const queryRef = useRef(query);
+  const selectedProductIdRef = useRef<string | null>(selectedProduct?.id ?? null);
   const restoreProductIdRef = useRef(pickerReturn?.productId ?? initialProductId);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const createShellRef = useRef<HTMLElement>(null);
   const discardDialogRef = useRef<HTMLDivElement>(null);
   const discardContinueRef = useRef<HTMLButtonElement>(null);
+  queryRef.current = query;
+  selectedProductIdRef.current = selectedProduct?.id ?? null;
 
   const loadFirstPage = useCallback(async (activeQuery: string, generation: number) => {
     setListState("loading");
@@ -313,12 +317,20 @@ export function FoodProductPicker({
 
   const refreshSelectedProduct = async () => {
     if (!selectedProduct || isRefreshingSelection) return;
+    const generation = generationRef.current;
+    const refreshQuery = query;
+    const productId = selectedProduct.id;
+    const isCurrentRefresh = () =>
+      generationRef.current === generation &&
+      queryRef.current === refreshQuery &&
+      selectedProductIdRef.current === productId;
     setIsRefreshingSelection(true);
     try {
-      const data = await fetchProductPagesUntil(query, selectedProduct.id);
-      const refreshed = data.items.find((product) => product.id === selectedProduct.id);
+      const data = await fetchProductPagesUntil(refreshQuery, productId);
+      if (!isCurrentRefresh()) return;
+      const refreshed = data.items.find((product) => product.id === productId);
       if (!refreshed) {
-        setItems((current) => current.filter((item) => item.id !== selectedProduct.id));
+        setItems((current) => current.filter((item) => item.id !== productId));
         setSelectedProduct(null);
         setQuantityUnit(null);
         setEntryError("완제품이 삭제되었거나 더 이상 사용할 수 없어요. 다시 선택해 주세요.");
@@ -329,6 +341,7 @@ export function FoodProductPicker({
       setEntryError(null);
       setHasNutritionConflict(false);
     } catch (caught) {
+      if (!isCurrentRefresh()) return;
       setEntryError(isFoodProductApiError(caught) ? caught.message : "최신 영양정보를 불러오지 못했어요.");
     } finally {
       setIsRefreshingSelection(false);

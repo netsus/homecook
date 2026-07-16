@@ -133,6 +133,16 @@ function createMealApiError(status: number, message = "오류가 발생했어요
   return error;
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+  return { promise, reject, resolve };
+}
+
 const DEFAULT_PROPS = {
   planDate: "2026-04-18",
   columnId: "550e8400-e29b-41d4-a716-446655440050",
@@ -1038,5 +1048,53 @@ describe("MealScreen", () => {
     expect(await screen.findByText("이 기준으로는 수량을 바꿀 수 없어요")).toBeTruthy();
     expect(screen.queryByText("이 수량 단위로 영양을 계산할 수 없어요.")).toBeNull();
     expect(dialog.isConnected).toBe(true);
+  });
+
+  it("keeps a failed product delete visible and retries it from the same dialog", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = {
+      entry_type: "product" as const,
+      id: "entry-delete-retry",
+      product_id: "product-1",
+      product_name: "플레인 요거트",
+      product_brand: null,
+      quantity: { amount: 1, unit: "serving" as const },
+      workflow_status: null,
+      product_nutrition_version_id: "version-1",
+      basis_relations: [],
+      nutrition: {
+        basis: { amount: 1, unit: "serving" as const },
+        values: { energy_kcal: { amount: 105, known_amount: null, status: "complete" as const, display_mode: "total" as const } },
+        calculation_status: "complete" as const,
+        calculation_quality: "direct" as const,
+        warnings: [], sources: [],
+      },
+    };
+    const firstDelete = createDeferred<unknown>();
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    deleteProductPlannerEntry
+      .mockReturnValueOnce(firstDelete.promise)
+      .mockResolvedValueOnce({ deleted: true, entry_id: productEntry.id });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    const card = await screen.findByTestId("product-planner-entry-entry-delete-retry");
+    await userEvent.click(within(card).getByRole("button", { name: /완제품 계획 삭제/ }));
+    const dialog = screen.getByRole("dialog", { name: "완제품 계획 삭제" });
+    const confirm = within(dialog).getByTestId("product-delete-confirm");
+    await userEvent.click(confirm);
+
+    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+    expect(card.isConnected).toBe(true);
+    expect(dialog.isConnected).toBe(true);
+    firstDelete.reject(createMealApiError(500, "삭제 서버 오류가 발생했어요."));
+
+    expect((await within(dialog).findByRole("alert")).textContent).toBe("삭제 서버 오류가 발생했어요.");
+    expect((confirm as HTMLButtonElement).disabled).toBe(false);
+    expect(card.isConnected).toBe(true);
+    await userEvent.click(confirm);
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "완제품 계획 삭제" })).toBeNull());
+    expect(screen.queryByTestId("product-planner-entry-entry-delete-retry")).toBeNull();
+    expect(deleteProductPlannerEntry).toHaveBeenCalledTimes(2);
   });
 });
