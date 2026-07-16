@@ -43,6 +43,32 @@ describe("prepared food planner safe auth return context", () => {
     expect(readProductPlannerReturnContext()).toBeNull();
   });
 
+  it("round-trips a list-only picker state without inventing a product or unit", () => {
+    saveProductPlannerReturnContext({
+      version: 1,
+      kind: "picker",
+      planDate: "2026-07-17",
+      columnId: "column-1",
+      slotName: "아침",
+      query: "간식",
+      productId: null,
+      quantityAmount: "1",
+      quantityUnit: null,
+    });
+
+    expect(readProductPlannerReturnContext()).toEqual({
+      version: 1,
+      kind: "picker",
+      planDate: "2026-07-17",
+      columnId: "column-1",
+      slotName: "아침",
+      query: "간식",
+      productId: null,
+      quantityAmount: "1",
+      quantityUnit: null,
+    });
+  });
+
   it("rejects injected provider rows, secrets, and unknown fields fail-closed", () => {
     window.sessionStorage.setItem(
       PRODUCT_PLANNER_RETURN_CONTEXT_KEY,

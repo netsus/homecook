@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MealScreen } from "@/components/planner/meal-screen";
+import { PRODUCT_PLANNER_RETURN_CONTEXT_KEY } from "@/lib/planner/product-planner-return-context";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
@@ -126,6 +127,35 @@ function buildMeal(overrides: Partial<{
   };
 }
 
+function buildProductEntry(id: string) {
+  return {
+    entry_type: "product" as const,
+    id,
+    product_id: "product-1",
+    product_name: "플레인 요거트",
+    product_brand: null,
+    quantity: { amount: 1, unit: "serving" as const },
+    workflow_status: null,
+    product_nutrition_version_id: "version-1",
+    basis_relations: [],
+    nutrition: {
+      basis: { amount: 1, unit: "serving" as const },
+      values: {
+        energy_kcal: {
+          amount: 105,
+          known_amount: null,
+          status: "complete" as const,
+          display_mode: "total" as const,
+        },
+      },
+      calculation_status: "complete" as const,
+      calculation_quality: "direct" as const,
+      warnings: [],
+      sources: [],
+    },
+  };
+}
+
 function createMealApiError(status: number, message = "오류가 발생했어요.") {
   const error = new Error(message) as Error & { status: number; code: string };
   error.status = status;
@@ -195,6 +225,7 @@ describe("MealScreen", () => {
     mockRouterReplace.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
+    window.sessionStorage.clear();
     setDesktopViewport(false);
     isMealApiError.mockImplementation(
       (error: unknown): error is Error & { status: number; code: string } =>
@@ -1012,6 +1043,108 @@ describe("MealScreen", () => {
     const login = await screen.findByTestId("social-login-buttons");
     expect(decodeURIComponent(login.getAttribute("data-next-path") ?? "")).toContain("productEntryId=entry-auth");
     expect(decodeURIComponent(login.getAttribute("data-next-path") ?? "")).toContain("productAction=edit");
+  });
+
+  it("clears restored product edit context when the header close button dismisses the dialog", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = buildProductEntry("entry-restored-close");
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    window.sessionStorage.setItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY, JSON.stringify({
+      version: 1,
+      kind: "meal-entry",
+      planDate: DEFAULT_PROPS.planDate,
+      columnId: DEFAULT_PROPS.columnId,
+      slotName: DEFAULT_PROPS.slotName,
+      entryId: productEntry.id,
+      action: "edit",
+      quantityAmount: "2",
+      quantityUnit: "serving",
+    }));
+
+    const view = render(<MealScreen {...DEFAULT_PROPS} />);
+    const restoredDialog = await screen.findByRole("dialog", { name: "완제품 수량 변경" });
+    await userEvent.click(within(restoredDialog).getByRole("button", { name: "닫기" }));
+
+    expect(window.sessionStorage.getItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY)).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "완제품 수량 변경" })).toBeNull();
+    view.unmount();
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await screen.findByTestId(`product-planner-entry-${productEntry.id}`);
+    expect(screen.queryByRole("dialog", { name: "완제품 수량 변경" })).toBeNull();
+  });
+
+  it("allows only one product quantity PATCH while the first request is in flight", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = buildProductEntry("entry-patch-guard");
+    const pendingPatch = createDeferred<typeof productEntry>();
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    updateProductPlannerEntryQuantity.mockReturnValue(pendingPatch.promise);
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await userEvent.click(await screen.findByRole("button", { name: "수량 변경" }));
+    const dialog = screen.getByRole("dialog", { name: "완제품 수량 변경" });
+    const input = within(dialog).getByRole("spinbutton", { name: "완제품 변경 수량" });
+    const confirm = within(dialog).getByRole("button", { name: "수량 변경" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "2");
+    fireEvent.click(confirm);
+    fireEvent.change(input, { target: { value: "3" } });
+    fireEvent.click(confirm);
+
+    expect(updateProductPlannerEntryQuantity).toHaveBeenCalledTimes(1);
+    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+    expect((input as HTMLInputElement).disabled).toBe(true);
+
+    pendingPatch.resolve({ ...productEntry, quantity: { amount: 2, unit: "serving" } });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "완제품 수량 변경" })).toBeNull());
+  });
+
+  it("cleans only product edit query fields after a restored PATCH succeeds", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    const productEntry = buildProductEntry("entry-success-cleanup");
+    const restoredParams = new URLSearchParams({
+      slot: DEFAULT_PROPS.slotName,
+      productAction: "edit",
+      productEntryId: productEntry.id,
+      productAmount: "2",
+      productUnit: "serving",
+      returnTo: "/planner?week=next",
+      returnSurface: "planner-week",
+      restore: "meal-card",
+      keep: "unrelated",
+    });
+    navigationMocks.searchParams.mockReturnValue(restoredParams);
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+    updateProductPlannerEntryQuantity.mockResolvedValue({
+      ...productEntry,
+      quantity: { amount: 2, unit: "serving" },
+    });
+    window.sessionStorage.setItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY, JSON.stringify({
+      version: 1,
+      kind: "meal-entry",
+      planDate: DEFAULT_PROPS.planDate,
+      columnId: DEFAULT_PROPS.columnId,
+      slotName: DEFAULT_PROPS.slotName,
+      entryId: productEntry.id,
+      action: "edit",
+      quantityAmount: "2",
+      quantityUnit: "serving",
+    }));
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    const dialog = await screen.findByRole("dialog", { name: "완제품 수량 변경" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "수량 변경" }));
+
+    await waitFor(() => expect(mockRouterReplace).toHaveBeenCalledTimes(1));
+    const expectedParams = new URLSearchParams(restoredParams);
+    for (const key of ["productAction", "productEntryId", "productAmount", "productUnit"]) {
+      expectedParams.delete(key);
+    }
+    expect(mockRouterReplace).toHaveBeenCalledWith(
+      `/planner/${DEFAULT_PROPS.planDate}/${DEFAULT_PROPS.columnId}?${expectedParams.toString()}`,
+    );
+    expect(window.sessionStorage.getItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY)).toBeNull();
   });
 
   it("maps PATCH basis mismatch to the official UI copy and keeps the edit dialog open", async () => {

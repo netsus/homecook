@@ -34,9 +34,9 @@ interface BaseReturnContext {
 export interface ProductPickerReturnContext extends BaseReturnContext {
   kind: "picker";
   query: string;
-  productId: string;
+  productId: string | null;
   quantityAmount: string;
-  quantityUnit: FoodProductBasisUnit;
+  quantityUnit: FoodProductBasisUnit | null;
 }
 
 export interface ProductCreateReturnContext extends BaseReturnContext {
@@ -116,9 +116,9 @@ function parseContext(value: unknown): ProductPlannerReturnContext | null {
     ])) return null;
     if (
       !isSafeText(value.query, 200) ||
-      !isSafeText(value.productId, 160) ||
+      (value.productId !== null && !isSafeText(value.productId, 160)) ||
       !isSafeText(value.quantityAmount, 40) ||
-      !isUnit(value.quantityUnit)
+      (value.quantityUnit !== null && !isUnit(value.quantityUnit))
     ) return null;
     return value as unknown as ProductPickerReturnContext;
   }

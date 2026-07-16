@@ -80,6 +80,12 @@ function buildPickerNextPath({
   return `/menu-add?${params.toString()}`;
 }
 
+function beginLoginReturn(context: ProductPlannerReturnContext, nextPath: string) {
+  saveProductPlannerReturnContext(context);
+  document.cookie = createPostAuthNextCookie(nextPath);
+  window.location.assign(`/login?next=${encodeURIComponent(nextPath)}`);
+}
+
 async function fetchProductPagesUntil(query: string, productId: string | null) {
   let page = await fetchFoodProducts({ q: query, limit: PAGE_LIMIT });
   let items = appendUniqueProducts([], page.items);
@@ -169,6 +175,8 @@ export function FoodProductPicker({
   const queryRef = useRef(query);
   const selectedProductIdRef = useRef<string | null>(selectedProduct?.id ?? null);
   const restoreProductIdRef = useRef(pickerReturn?.productId ?? initialProductId);
+  const quantityAmountRef = useRef(quantityAmount);
+  const quantityUnitRef = useRef(quantityUnit);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const createShellRef = useRef<HTMLElement>(null);
@@ -176,6 +184,32 @@ export function FoodProductPicker({
   const discardContinueRef = useRef<HTMLButtonElement>(null);
   queryRef.current = query;
   selectedProductIdRef.current = selectedProduct?.id ?? null;
+  quantityAmountRef.current = quantityAmount;
+  quantityUnitRef.current = quantityUnit;
+
+  const beginPickerLoginReturn = useCallback((activeQuery: string, productId?: string | null) => {
+    const selectedId = productId ?? selectedProductIdRef.current ?? restoreProductIdRef.current;
+    const nextPath = buildPickerNextPath({
+      columnId,
+      planDate,
+      productId: selectedId,
+      quantityAmount: quantityAmountRef.current,
+      quantityUnit: quantityUnitRef.current,
+      query: activeQuery,
+      slotName,
+    });
+    beginLoginReturn({
+      version: 1,
+      kind: "picker",
+      planDate,
+      columnId,
+      slotName,
+      query: activeQuery,
+      productId: selectedId,
+      quantityAmount: quantityAmountRef.current,
+      quantityUnit: quantityUnitRef.current,
+    }, nextPath);
+  }, [columnId, planDate, slotName]);
 
   const loadFirstPage = useCallback(async (activeQuery: string, generation: number) => {
     setListState("loading");
@@ -198,10 +232,14 @@ export function FoodProductPicker({
       }
     } catch (caught) {
       if (generationRef.current !== generation) return;
+      if (isFoodProductApiError(caught) && caught.status === 401) {
+        beginPickerLoginReturn(activeQuery);
+        return;
+      }
       setListState("error");
       setListError(isFoodProductApiError(caught) ? caught.message : "완제품 목록을 불러오지 못했어요.");
     }
-  }, []);
+  }, [beginPickerLoginReturn]);
 
   useEffect(() => {
     const generation = generationRef.current + 1;
@@ -242,6 +280,10 @@ export function FoodProductPicker({
       setHasNext(data.has_next);
     } catch (caught) {
       if (generationRef.current === generation) {
+        if (isFoodProductApiError(caught) && caught.status === 401) {
+          beginPickerLoginReturn(query);
+          return;
+        }
         setListError(isFoodProductApiError(caught) ? caught.message : "다음 완제품을 불러오지 못했어요.");
       }
     } finally {
@@ -255,12 +297,6 @@ export function FoodProductPicker({
     setQuantityUnit(buildCompatibleFoodProductUnits(product)[0] ?? product.nutrition.basis.unit);
     setEntryError(null);
     setHasNutritionConflict(false);
-  };
-
-  const beginLoginReturn = (context: ProductPlannerReturnContext, nextPath: string) => {
-    saveProductPlannerReturnContext(context);
-    document.cookie = createPostAuthNextCookie(nextPath);
-    window.location.assign(`/login?next=${encodeURIComponent(nextPath)}`);
   };
 
   const handleSubmit = async () => {
@@ -342,6 +378,10 @@ export function FoodProductPicker({
       setHasNutritionConflict(false);
     } catch (caught) {
       if (!isCurrentRefresh()) return;
+      if (isFoodProductApiError(caught) && caught.status === 401) {
+        beginPickerLoginReturn(refreshQuery, productId);
+        return;
+      }
       setEntryError(isFoodProductApiError(caught) ? caught.message : "최신 영양정보를 불러오지 못했어요.");
     } finally {
       setIsRefreshingSelection(false);

@@ -125,11 +125,13 @@ async function simulateLoginReturn(page: Page) {
 async function installRoutes(
   page: Page,
   options: {
+    catalogUnauthorized?: true;
     catalogVersion?: "v2";
     mutationError?: "basis" | "unauthorized" | "createUnauthorized" | "deleteUnauthorized" | "deleteFailure" | "patchUnauthorized" | "patchBasis";
   } = {},
 ) {
   let productEntry: ProductEntry | null = createMealProductEntry();
+  let catalogUnauthorizedOnce = options.catalogUnauthorized === true;
   let mismatchOnce = options.mutationError === "basis";
   let entryUnauthorizedOnce = options.mutationError === "unauthorized";
   let createUnauthorizedOnce = options.mutationError === "createUnauthorized";
@@ -154,6 +156,18 @@ async function installRoutes(
   });
 
   await page.route("**/api/v1/food-products?*", async (route) => {
+    if (catalogUnauthorizedOnce) {
+      catalogUnauthorizedOnce = false;
+      await route.fulfill({
+        status: 401,
+        json: {
+          success: false,
+          data: null,
+          error: { code: "UNAUTHORIZED", message: "로그인이 필요해요.", fields: [] },
+        },
+      });
+      return;
+    }
     const url = new URL(route.request().url());
     const cursor = url.searchParams.get("cursor");
     const query = url.searchParams.get("q") ?? "";
@@ -429,6 +443,29 @@ test.describe("prepared-food-planner-entry", () => {
     await setAuthenticated(page);
   });
 
+  test("GET product catalog 401 preserves picker context and returns through login", async ({ page }) => {
+    await installRoutes(page, { catalogUnauthorized: true });
+    const requestedUrls: string[] = [];
+    page.on("request", (request) => requestedUrls.push(request.url()));
+    await page.goto(`${MENU_PATH}&source=product&productQuery=${encodeURIComponent("간식")}`);
+
+    await expect.poll(() => requestedUrls.some((url) => url.includes("/login?next="))).toBe(true);
+    await expect(page).toHaveURL(/\/menu-add\?/);
+    const storedContext = await page.evaluate(() => JSON.parse(
+      window.sessionStorage.getItem("homecook.food-product-planner-return-context.v1") ?? "null",
+    ));
+    expect(storedContext).toMatchObject({
+      kind: "picker",
+      query: "간식",
+      productId: null,
+      quantityAmount: "1",
+      quantityUnit: null,
+    });
+
+    await expect(page.getByTestId("food-product-picker")).toBeVisible();
+    await expect(page.getByRole("searchbox", { name: "완제품 검색" })).toHaveValue("간식");
+  });
+
   test("MENU_ADD에서 완제품을 추가하고 pinned 영양 수량을 수정·삭제한다", async ({ page }) => {
     const routes = await installRoutes(page);
     routes.setProductEntry(null);
@@ -536,7 +573,8 @@ test.describe("prepared-food-planner-entry", () => {
     });
 
     await setAuthenticated(page);
-    await page.goto(nextPath!);
+    const restoredPath = `${nextPath!}&returnTo=${encodeURIComponent("/planner?week=next")}&returnSurface=planner-week&restore=meal-card`;
+    await page.goto(restoredPath);
     const restoredDialog = page.getByRole("dialog", { name: "완제품 수량 변경" });
     await expect(restoredDialog).toBeVisible();
     await expect(restoredDialog.getByLabel("완제품 변경 수량", { exact: true })).toHaveValue("300");
@@ -545,6 +583,100 @@ test.describe("prepared-food-planner-entry", () => {
     await restoredDialog.getByRole("button", { name: "수량 변경" }).click();
     await expect(productCard).toContainText("300g");
     expect(await page.evaluate(() => window.sessionStorage.getItem("homecook.food-product-planner-return-context.v1"))).toBeNull();
+    await expect.poll(() => {
+      const currentUrl = new URL(page.url());
+      return ["productAction", "productEntryId", "productAmount", "productUnit"]
+        .some((key) => currentUrl.searchParams.has(key));
+    }).toBe(false);
+    const cleanedUrl = new URL(page.url());
+    expect(cleanedUrl.searchParams.get("slot")).toBe(SLOT_NAME);
+    expect(cleanedUrl.searchParams.get("returnTo")).toBe("/planner?week=next");
+    expect(cleanedUrl.searchParams.get("returnSurface")).toBe("planner-week");
+    expect(cleanedUrl.searchParams.get("restore")).toBe("meal-card");
+    for (const key of ["productAction", "productEntryId", "productAmount", "productUnit"]) {
+      expect(cleanedUrl.searchParams.has(key)).toBe(false);
+    }
+    await page.reload();
+    await expect(page.getByTestId("product-planner-entry-entry-yogurt").filter({ visible: true })).toContainText("300g");
+    await expect(page.getByRole("dialog", { name: "완제품 수량 변경" })).toHaveCount(0);
+  });
+
+  test("auth-restored product edit header close clears return context and stays closed after reload", async ({ page }) => {
+    await installRoutes(page);
+    await page.goto(MEAL_PATH);
+    await page.evaluate(({ key, planDate, columnId, slotName }) => {
+      window.sessionStorage.setItem(key, JSON.stringify({
+        version: 1,
+        kind: "meal-entry",
+        planDate,
+        columnId,
+        slotName,
+        entryId: "entry-yogurt",
+        action: "edit",
+        quantityAmount: "2",
+        quantityUnit: "serving",
+      }));
+    }, {
+      key: "homecook.food-product-planner-return-context.v1",
+      planDate: PLAN_DATE,
+      columnId: COLUMN_ID,
+      slotName: SLOT_NAME,
+    });
+    await page.goto(`${MEAL_PATH}&productAction=edit&productEntryId=entry-yogurt&productAmount=2&productUnit=serving`);
+
+    const restoredDialog = page.getByRole("dialog", { name: "완제품 수량 변경" });
+    await expect(restoredDialog).toBeVisible();
+    await restoredDialog.getByRole("button", { name: "닫기" }).click();
+
+    await expect(restoredDialog).toHaveCount(0);
+    expect(await page.evaluate(() => window.sessionStorage.getItem("homecook.food-product-planner-return-context.v1"))).toBeNull();
+    await expect(page).toHaveURL(MEAL_PATH);
+    await page.reload();
+    await expect(page.getByTestId("product-planner-entry-entry-yogurt").filter({ visible: true })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "완제품 수량 변경" })).toHaveCount(0);
+  });
+
+  test("product quantity PATCH disables confirmation and ignores repeated in-flight clicks", async ({ page }) => {
+    await installRoutes(page);
+    let patchRequests = 0;
+    let releasePatch!: () => void;
+    const patchGate = new Promise<void>((resolve) => {
+      releasePatch = resolve;
+    });
+    await page.route("**/api/v1/product-planner-entries/entry-yogurt", async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.fallback();
+        return;
+      }
+      patchRequests += 1;
+      await patchGate;
+      const updated = createMealProductEntry({ quantity: { amount: 2, unit: "serving" } });
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { entry: createPlannerProductEntry(updated) },
+          error: null,
+        },
+      });
+    });
+    await page.goto(MEAL_PATH);
+
+    const productCard = page.getByTestId("product-planner-entry-entry-yogurt").filter({ visible: true });
+    await productCard.getByRole("button", { name: "수량 변경" }).click();
+    const dialog = page.getByRole("dialog", { name: "완제품 수량 변경" });
+    const input = dialog.getByLabel("완제품 변경 수량", { exact: true });
+    const confirm = dialog.getByRole("button", { name: "수량 변경" });
+    await input.fill("2");
+    await confirm.click();
+
+    await expect(confirm).toBeDisabled();
+    await expect(input).toBeDisabled();
+    await confirm.evaluate((button) => button.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(patchRequests).toBe(1);
+
+    releasePatch();
+    await expect(dialog).toHaveCount(0);
+    await expect(productCard).toContainText("2회");
   });
 
   test("pinned v1 entry는 catalog v2와 무관하게 v1 relation과 영양 snapshot으로 수정된다", async ({ page }) => {

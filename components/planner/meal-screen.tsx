@@ -129,6 +129,26 @@ function buildProductEntryNextPath(
   return `/planner/${planDate}/${columnId}?${params.toString()}`;
 }
 
+const PRODUCT_ENTRY_RETURN_QUERY_KEYS = [
+  "productAction",
+  "productEntryId",
+  "productAmount",
+  "productUnit",
+] as const;
+
+function buildProductEntryReturnClearedPath(
+  planDate: string,
+  columnId: string,
+  searchParams: { toString(): string },
+) {
+  const params = new URLSearchParams(searchParams.toString());
+  const hasProductReturnQuery = PRODUCT_ENTRY_RETURN_QUERY_KEYS.some((key) => params.has(key));
+  if (!hasProductReturnQuery) return null;
+  for (const key of PRODUCT_ENTRY_RETURN_QUERY_KEYS) params.delete(key);
+  const query = params.toString();
+  return `/planner/${planDate}/${columnId}${query ? `?${query}` : ""}`;
+}
+
 const mealVisualMeta: Record<
   string,
   { bg: string; chips: string[]; emoji: string; minutes: number }
@@ -1160,6 +1180,7 @@ export function MealScreen({
   const [deleteProductError, setDeleteProductError] = useState<string | null>(null);
   const [authReturnPath, setAuthReturnPath] = useState<string | null>(null);
   const restoredProductContextRef = useRef(false);
+  const pendingProductEditIdsRef = useRef<Set<string>>(new Set());
   const pendingProductDeleteIdsRef = useRef<Set<string>>(new Set());
   const productEditInputRef = useRef<HTMLInputElement>(null);
   const [mealAddSheetOpen, setMealAddSheetOpen] = useState(false);
@@ -1531,6 +1552,19 @@ export function MealScreen({
     });
   }
 
+  function closeProductQuantityEdit() {
+    if (editingProduct && pendingProductEditIdsRef.current.has(editingProduct.entry.id)) return;
+    clearProductQuantityEditReturnState();
+    setEditingProduct(null);
+  }
+
+  function clearProductQuantityEditReturnState() {
+    clearProductPlannerReturnContext();
+    setAuthReturnPath(null);
+    const nextPath = buildProductEntryReturnClearedPath(planDate, columnId, searchParams);
+    if (nextPath) router.replace(nextPath);
+  }
+
   function openProductDelete(entry: MealProductPlannerEntryData) {
     setDeleteProductError(null);
     setDeletingProduct(entry);
@@ -1558,6 +1592,8 @@ export function MealScreen({
     }
 
     const entryId = editingProduct.entry.id;
+    if (pendingProductEditIdsRef.current.has(entryId)) return;
+    pendingProductEditIdsRef.current.add(entryId);
     setPendingProductIds((current) => new Set([...current, entryId]));
     try {
       const updated = await updateProductPlannerEntryQuantity(entryId, {
@@ -1566,8 +1602,7 @@ export function MealScreen({
       setProductEntries((current) =>
         current.map((entry) => (entry.id === entryId ? updated : entry)),
       );
-      clearProductPlannerReturnContext();
-      setAuthReturnPath(null);
+      clearProductQuantityEditReturnState();
       setEditingProduct(null);
     } catch (caught) {
       if (isProductPlannerEntryApiError(caught) && caught.status === 401) {
@@ -1602,6 +1637,7 @@ export function MealScreen({
         current ? { ...current, error: message } : null,
       );
     } finally {
+      pendingProductEditIdsRef.current.delete(entryId);
       setPendingProductIds((current) => {
         const next = new Set(current);
         next.delete(entryId);
@@ -1953,9 +1989,10 @@ export function MealScreen({
       ) : null}
 
       {editingProduct ? (
-        <CenterModal initialFocusRef={productEditInputRef} labelledBy="product-quantity-title" onClose={() => { clearProductPlannerReturnContext(); setEditingProduct(null); }}>
+        <CenterModal initialFocusRef={productEditInputRef} labelledBy="product-quantity-title" onClose={closeProductQuantityEdit}>
           <ModalHeader
-            onClose={() => setEditingProduct(null)}
+            closeDisabled={pendingProductIds.has(editingProduct.entry.id)}
+            onClose={closeProductQuantityEdit}
             title="완제품 수량 변경"
             titleId="product-quantity-title"
           />
@@ -1968,6 +2005,7 @@ export function MealScreen({
               <input
                 aria-label="완제품 변경 수량"
                 className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none"
+                disabled={pendingProductIds.has(editingProduct.entry.id)}
                 inputMode="decimal"
                 min="0.01"
                 onChange={(event) =>
@@ -1986,6 +2024,7 @@ export function MealScreen({
               <select
                 aria-label="완제품 변경 수량 단위"
                 className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none"
+                disabled={pendingProductIds.has(editingProduct.entry.id)}
                 onChange={(event) =>
                   setEditingProduct((current) =>
                     current
@@ -2011,8 +2050,8 @@ export function MealScreen({
             </p>
           ) : null}
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold" onClick={() => { clearProductPlannerReturnContext(); setEditingProduct(null); }} type="button">취소</button>
-            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand)] font-bold text-[var(--text-inverse)]" onClick={() => void handleProductQuantityConfirm()} type="button">수량 변경</button>
+            <button className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] font-bold disabled:opacity-50" disabled={pendingProductIds.has(editingProduct.entry.id)} onClick={closeProductQuantityEdit} type="button">취소</button>
+            <button className="min-h-11 rounded-[var(--radius-control)] bg-[var(--brand)] font-bold text-[var(--text-inverse)] disabled:opacity-50" disabled={pendingProductIds.has(editingProduct.entry.id)} onClick={() => void handleProductQuantityConfirm()} type="button">수량 변경</button>
           </div>
         </CenterModal>
       ) : null}

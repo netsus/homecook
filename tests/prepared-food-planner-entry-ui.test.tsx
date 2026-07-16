@@ -214,6 +214,41 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
 
   afterEach(() => cleanup());
 
+  it("moves a product list 401 into the existing login return flow with a safe picker context", async () => {
+    fetchFoodProducts.mockRejectedValue(Object.assign(new Error("로그인이 필요해요."), {
+      status: 401,
+      code: "UNAUTHORIZED",
+      fields: [],
+    }));
+
+    render(
+      <FoodProductPicker
+        columnId="column-1"
+        initialQuery="간식"
+        onClose={() => undefined}
+        onComplete={() => undefined}
+        planDate="2026-07-17"
+        slotName="아침"
+      />,
+    );
+
+    await waitFor(() => expect(window.sessionStorage.getItem(
+      PRODUCT_PLANNER_RETURN_CONTEXT_KEY,
+    )).not.toBeNull());
+    expect(JSON.parse(window.sessionStorage.getItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY)!)).toEqual({
+      version: 1,
+      kind: "picker",
+      planDate: "2026-07-17",
+      columnId: "column-1",
+      slotName: "아침",
+      query: "간식",
+      productId: null,
+      quantityAmount: "1",
+      quantityUnit: null,
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("appends opaque-cursor pages, dedupes by product id, and stops on the last page", async () => {
     fetchFoodProducts
       .mockResolvedValueOnce({
@@ -247,6 +282,48 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
       cursor: "opaque-next+/=",
       limit: 20,
     });
+  });
+
+  it("moves an opaque-cursor page 401 into login with the selected product context", async () => {
+    fetchFoodProducts
+      .mockResolvedValueOnce({
+        items: [createProduct()],
+        next_cursor: "opaque-next+/=",
+        has_next: true,
+      })
+      .mockRejectedValueOnce(Object.assign(new Error("로그인이 필요해요."), {
+        status: 401,
+        code: "UNAUTHORIZED",
+        fields: [],
+      }));
+
+    render(
+      <FoodProductPicker
+        columnId="column-1"
+        onClose={() => undefined}
+        onComplete={() => undefined}
+        planDate="2026-07-17"
+        slotName="아침"
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: /플레인 요거트/ }));
+    await userEvent.click(screen.getByRole("button", { name: "완제품 더 불러오기" }));
+
+    await waitFor(() => expect(fetchFoodProducts).toHaveBeenCalledTimes(2));
+    expect(fetchFoodProducts).toHaveBeenNthCalledWith(2, {
+      q: "",
+      cursor: "opaque-next+/=",
+      limit: 20,
+    });
+    expect(JSON.parse(window.sessionStorage.getItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY)!)).toMatchObject({
+      kind: "picker",
+      query: "",
+      productId: "product-1",
+      quantityAmount: "1",
+      quantityUnit: "serving",
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("clears old results immediately and ignores a slower previous query", async () => {
@@ -393,6 +470,49 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     expect(screen.getByTestId("food-product-quantity-step").textContent).toContain("예상 열량 105 kcal");
     await userEvent.click(screen.getByRole("button", { name: "최신 영양정보로 새로고침" }));
     await waitFor(() => expect(screen.getByTestId("food-product-quantity-step").textContent).toContain("예상 열량 120 kcal"));
+  });
+
+  it("moves a nutrition refresh 401 into login with the current quantity context", async () => {
+    fetchFoodProducts
+      .mockResolvedValueOnce({ items: [createProduct()], next_cursor: null, has_next: false })
+      .mockRejectedValueOnce(Object.assign(new Error("로그인이 필요해요."), {
+        status: 401,
+        code: "UNAUTHORIZED",
+        fields: [],
+      }));
+    createProductPlannerEntry.mockRejectedValue(Object.assign(
+      new Error("영양 정보가 먼저 변경됐어요."),
+      { status: 409, code: "NUTRITION_VERSION_CONFLICT", fields: [] },
+    ));
+
+    render(
+      <FoodProductPicker
+        columnId="column-1"
+        initialQuery="요거트"
+        onClose={() => undefined}
+        onComplete={() => undefined}
+        planDate="2026-07-17"
+        slotName="아침"
+      />,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /플레인 요거트/ }));
+    const quantityInput = screen.getByRole("spinbutton", { name: "완제품 수량" });
+    await userEvent.clear(quantityInput);
+    await userEvent.type(quantityInput, "2.5");
+    await userEvent.click(screen.getByRole("button", { name: "아침에 완제품 추가" }));
+    await userEvent.click(await screen.findByRole("button", { name: "최신 영양정보로 새로고침" }));
+
+    await waitFor(() => expect(fetchFoodProducts).toHaveBeenCalledTimes(2));
+    expect(fetchFoodProducts).toHaveBeenNthCalledWith(2, { q: "요거트", limit: 20 });
+    expect(createProductPlannerEntry).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(window.sessionStorage.getItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY)!)).toMatchObject({
+      kind: "picker",
+      query: "요거트",
+      productId: "product-1",
+      quantityAmount: "2.5",
+      quantityUnit: "serving",
+    });
+    expect(screen.getByTestId("food-product-quantity-step")).toBeTruthy();
   });
 
   it("discards a stale refresh success after the query and selection generation change", async () => {
