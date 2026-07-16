@@ -33,7 +33,7 @@ export function RecipeNutritionCard({
         action={
           <button
             aria-label="영양 정보 다시 시도"
-            className="mt-4 min-h-11 rounded-[var(--radius-control)] border border-[var(--brand-primary-border)] bg-[var(--surface)] px-4 py-2.5 text-[14px] font-bold text-[var(--brand-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
+            className="mt-4 min-h-11 rounded-[var(--radius-control)] border border-[var(--brand-primary-border)] bg-[var(--surface)] px-4 py-2.5 text-[14px] font-bold text-[var(--brand-primary-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
             onClick={onRetry}
             type="button"
           >
@@ -70,7 +70,7 @@ export function RecipeNutritionCard({
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--brand-primary-hover)]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--brand-primary-text)]">
             예상값
           </p>
           <h2
@@ -81,7 +81,7 @@ export function RecipeNutritionCard({
           </h2>
         </div>
         {display.qualityText ? (
-          <span className="max-w-full rounded-[var(--radius-full)] bg-[var(--brand-primary-soft)] px-2.5 py-1 text-[11px] font-bold leading-4 text-[var(--brand-primary-hover)]">
+          <span className="max-w-full rounded-[var(--radius-full)] bg-[var(--brand-primary-soft)] px-2.5 py-1 text-[11px] font-bold leading-4 text-[var(--brand-primary-text)]">
             {display.qualityText}
           </span>
         ) : null}
@@ -275,7 +275,7 @@ function NutritionStateCard({
 }) {
   return (
     <section className={cardClassName(variant)} data-testid={testId}>
-      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--brand-primary-hover)]">
+      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--brand-primary-text)]">
         예상 영양
       </p>
       <h2 className="mt-1 text-[17px] font-extrabold tracking-[-0.02em] text-[var(--foreground)]">

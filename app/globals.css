@@ -9,6 +9,7 @@
   /* ── 앱 브랜드 조절 토큰 ── */
   --brand-primary: #00A1FF;
   --brand-primary-hover: #0087d7;
+  --brand-primary-text: #0072bd;
   --brand-primary-accessible: #00A1FF;
   --brand-primary-accessible-hover: #0087d7;
   --brand-primary-soft: rgba(0, 161, 255, 0.08);
