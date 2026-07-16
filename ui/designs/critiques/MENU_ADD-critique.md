@@ -14,7 +14,7 @@
 
 ## Minor Notes
 
-> **2026-07-16 prepared-food-planner-entry 재검수 필요:** 위 역사적 판정은 `[완제품] -> FOOD_PRODUCT_PICKER/CREATE` 확장을 승인하지 않는다. fresh independent reviewer는 mobile baseline 375/구현 390, narrow 320, desktop, primary CTA, scroll containment, unauthorized return과 PLANNER_WEEK anchor context를 별도로 판정해야 한다. 현재 successor 판정은 pending이다.
+> **2026-07-16 prepared-food-planner-entry Stage 1 계약 승인:** 위 역사적 판정은 `[완제품] -> FOOD_PRODUCT_PICKER/CREATE` 구현 화면을 승인하지 않는다. fresh independent Stage 1.5 reviewer는 설계 계약만 exact head에서 승인했으며, mobile baseline 375/구현 390, narrow 320, desktop, primary CTA, scroll containment, unauthorized return과 PLANNER_WEEK anchor context의 실제 구현 판정은 Stage 4·5·final authority에서 pending이다.
 
 ### Independent Stage 1.5 Review Record — prepared-food-planner-entry
 
@@ -23,7 +23,14 @@
 - 이 화면 관련 finding: 기존 anchor-adjacent MENU_ADD의 before/after viewport evidence가 불완전했고 successor critique provenance가 pending placeholder뿐이었다.
 - repair disposition: MENU_ADD before+after를 390/320/desktop에서 각각 machine-required로 추가했다. `[완제품]` 진입, unauthorized return, picker/create 연결은 fresh authority review 대상으로 유지한다.
 - 전역 finding disposition: MEAL_SCREEN 예상 열량, picker cursor, real DB bootstrap/reset/cleanup, roadmap/status 정합성은 owning artifact에서 수정했다.
-- approval: **pending independent exact-head re-review**. 기존 2026-04-24 판단은 successor 승인으로 재사용하지 않는다.
+- repair-final은 자기 변경을 승인하지 않았다.
+
+### Independent Exact-Head Re-review — prepared-food-planner-entry
+
+- reviewed head: `fe210b7169094edc77b64e91a730d86720d598ae`
+- decision: `DOC_GATE_APPROVED` — Blocker/Important/Suggestion `0/0/0`
+- provenance: 첫 review `0/6/0`, 별도 repair-final 1회, fresh independent re-review `0/0/0`
+- scope: MENU_ADD product-entry addendum의 Stage 1 설계 계약과 future evidence 요구만 승인한다. Stage 4 실제 UI와 authority precheck/Stage 5/final authority/Stage 6은 pending이며 기존 2026-04-24 판단을 successor 구현 승인으로 재사용하지 않는다.
 
 - placeholder 버튼은 실제 CTA처럼 보이지 않게 톤을 낮춰야 한다.
 - narrow 320에서 버튼 라벨 줄바꿈이 생기면 아이콘과 라벨 간격을 먼저 지키는 쪽이 안전하다.

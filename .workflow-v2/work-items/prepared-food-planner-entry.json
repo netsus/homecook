@@ -129,8 +129,8 @@
   },
   "status": {
     "lifecycle": "in_progress",
-    "approval_state": "needs_revision",
-    "verification_status": "pending",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -139,7 +139,7 @@
   },
   "closeout": null,
   "branch": "docs/prepared-food-planner-entry",
-  "pr_path": null,
+  "pr_path": "https://github.com/netsus/homecook/pull/1016",
   "out_of_scope": [
     "GET planner nutrition and meal day week planned nutrition aggregation",
     "Prepared food catalog write implementation public importer operator CLI seed runtime provider lookup or promotion",
@@ -152,5 +152,5 @@
     "Any undocumented endpoint status error code request response field workflow status or database surface"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs is the current repository roadmap state; workflow lifecycle is in_progress and approval needs_revision after the independent exact-head b137aa4e9d090827a80301ab47cc55710821a166 request-changes review. The separate repair-final has addressed the six Important findings, but approval remains pending exact-head re-review. Exactly three mutation routes plus existing GET /planner and GET /meals additive product_entries are locked; recipe-only meals/items and old clients remain compatible and duplicate rows are forbidden. Create atomically pins the current immutable product nutrition version and name/brand snapshot, patch changes only quantity using the old pinned relation, and soft-deleted new create returns PRODUCT_DELETED while existing pins remain. Same-unit or exactly one direct pinned relation is allowed; inference and missing-as-zero are forbidden. MEAL_SCREEN expected energy uses the pinned entry quantity and preserves partial/unavailable/missing-not-zero. FOOD_PRODUCT_PICKER consumes the existing opaque cursor API with reset/dedupe/last-page/latest-query guards. The isolated DB plan uses the real ensureUserBootstrapState path and explicit cleanup. Product entries remain outside Meal status, shopping, cooking, leftovers, recipe counts, planner_registered XP, and meal_add_path_used activity. Current approved public artifacts and operational public rows are zero, synthetic public fixtures are isolated-only, and production/staging writes stay zero. PLANNER_WEEK, MEAL_SCREEN, and MENU_ADD require before+after at 390/320/desktop; picker/create require after evidence and separated authority precheck, Stage 5, final authority, and Stage 6."
+  "notes": "Stage 1 docs remains the current repository roadmap state and the full workflow lifecycle remains in_progress. The first independent Stage 1.5 review at b137aa4e9d090827a80301ab47cc55710821a166 recorded Blocker/Important/Suggestion 0/6/0; one separate repair-final pass closed all six findings, and the fresh independent exact-head re-review approved fe210b7169094edc77b64e91a730d86720d598ae with DOC_GATE_APPROVED and 0/0/0. That exact head had 7 successful current-head checks, 5 intended docs skips, and 0 pending/fail checks. approval_state=codex_approved and verification_status=passed describe only the Stage 1 design-contract/docs gate; Stage 4 evidence, authority precheck, Stage 5, final authority, and Stage 6 remain pending, so Design Status stays temporary and the slice is not complete or auto-merge eligible. Exactly three mutation routes plus existing GET /planner and GET /meals additive product_entries are locked; recipe-only meals/items and old clients remain compatible and duplicate rows are forbidden. Create atomically pins the current immutable product nutrition version and name/brand snapshot, patch changes only quantity using the old pinned relation, and soft-deleted new create returns PRODUCT_DELETED while existing pins remain. Same-unit or exactly one direct pinned relation is allowed; inference and missing-as-zero are forbidden. MEAL_SCREEN expected energy uses the pinned entry quantity and preserves partial/unavailable/missing-not-zero. FOOD_PRODUCT_PICKER consumes the existing opaque cursor API with reset/dedupe/last-page/latest-query guards. The isolated DB plan uses the real ensureUserBootstrapState path and explicit cleanup. Product entries remain outside Meal status, shopping, cooking, leftovers, recipe counts, planner_registered XP, and meal_add_path_used activity. Current approved public artifacts and operational public rows are zero, synthetic public fixtures are isolated-only, and production/staging writes stay zero. PLANNER_WEEK, MEAL_SCREEN, and MENU_ADD require before+after at 390/320/desktop; picker/create require after evidence. Docs PR #1016 merge, full repository migration/Supabase/PostgREST equivalence, physical-device/screen-reader review, future public promotion, and production-scale contention/query plans remain Manual Only or later-stage work."
 }

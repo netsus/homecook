@@ -155,7 +155,7 @@
 
 ### Manual Only
 
-- [ ] independent Stage 1.5 reviewer가 이 문서·README·automation/work-item/status/design artifacts를 승인한다
+- [x] independent Stage 1.5 reviewer가 exact head `fe210b7169094edc77b64e91a730d86720d598ae`의 이 문서·README·automation/work-item/status/design artifacts를 `DOC_GATE_APPROVED` 0/0/0으로 승인했다
 - [ ] full repository migration stack + Supabase/PostgREST/auth claim 동등성을 plain isolated PostgreSQL과 비교한다
 - [ ] physical iOS/Android narrow device 및 실제 screen reader로 확인한다
 - [ ] 향후 approved public promotion artifact가 생기면 license/stable key/basis/core nutrition을 운영 승인 후 별도 load한다

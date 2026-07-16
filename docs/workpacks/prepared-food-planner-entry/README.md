@@ -63,7 +63,7 @@
 | `prepared-food-catalog` | merged — PR #1015 merge `b095f257a9a99f0f4952029ffd11a1036104f40f`; private manual catalog와 immutable nutrition version 제공 | [x] |
 | `05-planner-week-core` | merged — planner column, Recipe Meal week/read model foundation | [x] |
 | nutrition/products/planner official contract | merged — 요구사항 v1.7.20, 화면 v1.5.26, flow v1.3.23, DB v1.3.21, API v1.2.25 | [x] |
-| independent Codex Stage 1.5 docs gate | 이 작성 작업과 분리된 fresh Codex review/repair-final 필요 | [ ] |
+| independent Codex Stage 1.5 docs gate | 첫 review `b137aa4e` 0/6/0 → 별도 repair 1회 → fresh re-review `fe210b71` `DOC_GATE_APPROVED` 0/0/0 | [x] |
 
 > 사용자 승인 nutrition/products/planner Codex-only 예외에 따라 Stage 1 author, Stage 1.5 reviewer/repair-final, Stage 2 implementer, Stage 3 reviewer, Stage 4 implementer, authority precheck, Stage 5/final authority, Stage 6 reviewer는 fresh 역할로 분리한다. 작성자와 구현자는 자기 변경을 최종 승인하지 않는다.
 
@@ -299,6 +299,14 @@
 - separate repair-final role: accepted finding만 수정하고 reviewer가 새 exact head를 재검수.
 - unresolved required finding 0, doc gate/validators green, docs PR merge 전 Stage 2 시작 금지.
 
+#### Stage 1.5 Approval Projection
+
+- 첫 독립 review head `b137aa4e9d090827a80301ab47cc55710821a166`: Blocker/Important/Suggestion `0/6/0`, `REQUEST_CHANGES`.
+- 별도 repair-final 역할이 Important 6건을 한 차례 수정했고 자기 변경을 승인하지 않았다.
+- fresh independent re-review head `fe210b7169094edc77b64e91a730d86720d598ae`: `DOC_GATE_APPROVED`, Blocker/Important/Suggestion `0/0/0`.
+- 같은 exact head의 current-head checks는 success 7, 의도된 docs skip 5, pending/fail 0이다.
+- 이 승인은 Stage 1 설계 계약과 문서 gate에만 해당한다. Stage 4 screenshot/browser evidence, authority precheck, Stage 5, final authority, Stage 6은 아직 대기이며 `Design Status`는 `temporary`다.
+
 ### Stage 2 Backend TDD
 
 - fresh implementer가 RED → GREEN → REFACTOR를 기록한다.
@@ -354,7 +362,8 @@
 
 ### Manual Only
 
-- independent Stage 1.5 review/repair-final과 docs PR merge
+- [x] independent Stage 1.5 review/repair-final exact-head 승인
+- [ ] docs PR #1016 merge
 - full repository migration stack 전체와 plain PostgreSQL 대비 Supabase/PostgREST/auth claim 동등성
 - 실제 physical iOS/Android narrow device와 screen reader 수동 확인
 - 현재 0건인 approved public promotion artifact의 향후 운영 승인·load·license 검수
@@ -362,7 +371,7 @@
 
 ## Design Status
 
-`temporary` — Stage 1 설계 문서 작성 완료, independent Stage 1.5/design critique와 Stage 4 evidence·Stage 5/final authority·Stage 6 대기.
+`temporary` — Stage 1 설계 계약과 independent Stage 1.5 critique는 exact head `fe210b7169094edc77b64e91a730d86720d598ae`에서 승인됐다. Stage 4 evidence·authority precheck·Stage 5·final authority·Stage 6은 아직 대기이므로 `confirmed`가 아니다.
 
 ## Key Rules
 
