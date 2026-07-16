@@ -101,7 +101,7 @@
   },
   "closeout": null,
   "branch": "docs/prepared-food-catalog",
-  "pr_path": null,
+  "pr_path": "https://github.com/netsus/homecook/pull/1014",
   "out_of_scope": [
     "Prepared food planner entry CRUD and product_entries planner projection",
     "Meal day and week planned nutrition aggregation",
