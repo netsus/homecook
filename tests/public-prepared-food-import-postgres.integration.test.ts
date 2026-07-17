@@ -449,7 +449,9 @@ describe.runIf(enabled)("public prepared food catalog import isolated PostgreSQL
               approvedRowCount: 2,
               targetFingerprint: "partial-target",
             });
-            const queryWithoutCheckpoint = { ...bundle.approved_manifest.query };
+            const queryWithoutCheckpoint: Record<string, unknown> = {
+              ...bundle.approved_manifest.query,
+            };
             delete queryWithoutCheckpoint.approval_checkpoint;
             return {
               ...bundle,
