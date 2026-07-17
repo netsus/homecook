@@ -58,5 +58,5 @@
 
 ### Manual Only
 
-- [ ] 실제 845개(또는 실행 시점 inventory 전수)의 source 선택과 strict excluded 근거를 사람이 검수한다.
+- [x] 실제 845개 inventory 전수의 source 선택과 strict excluded 근거를 검수하고 local apply/replay evidence를 고정했다. (`evidence/2026-07-18-local-full-coverage.md`)
 - [ ] production/staging write는 sanitized dry-run, checkpoint, target fingerprint와 별도 operator approval을 대조한 뒤 실행한다.

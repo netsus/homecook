@@ -149,7 +149,7 @@ describe("ingredient nutrition local database invocation", () => {
       expect(calls[0].env).toEqual({ PATH: "/test/bin", PGPASSFILE: "/dev/null" });
     }
 
-    const calls: Array<{ input?: string }> = [];
+    const calls: Array<{ input?: string; maxBuffer?: number }> = [];
     const spawn = (_command: string, _args: string[], options: typeof calls[number]) => {
       calls.push(options);
       return {
@@ -162,6 +162,7 @@ describe("ingredient nutrition local database invocation", () => {
 
     expect(runLocalPsqlJson(mutation, env, spawn)).toEqual({ applied: true });
     expect(calls).toHaveLength(1);
+    expect(calls[0].maxBuffer).toBe(32 * 1024 * 1024);
     expect(calls[0].input).toContain(mutation);
     expect(calls[0].input!.indexOf("current_database()"))
       .toBeLessThan(calls[0].input!.indexOf(mutation));

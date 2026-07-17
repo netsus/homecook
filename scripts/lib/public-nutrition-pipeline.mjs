@@ -40,6 +40,10 @@ const OPTIONAL_NUTRIENTS = Object.freeze({
   saturated_fat_g: Object.freeze({ source_key: "saturated_fat", unit: "g" }),
   fiber_g: Object.freeze({ source_key: "fiber", unit: "g" }),
 });
+const MFDS_EDIBLE_PORTION_TEXT = Object.freeze({
+  g: "가식부 100g 기준",
+  ml: "가식부 100mL 기준",
+});
 
 const MFDS_SOURCE = Object.freeze({
   id: "mfds-15127578",
@@ -536,6 +540,7 @@ function normalizeRow(row, sourceScope) {
 
 function adaptMfdsProviderRow(row) {
   if (!isRecord(row)) return row;
+  const basisText = row.SERVING_SIZE;
   const nutrients = {
     energy: { value: row.AMT_NUM1, unit: "kcal" },
     protein: { value: row.AMT_NUM3, unit: "g" },
@@ -552,11 +557,21 @@ function adaptMfdsProviderRow(row) {
   if (Object.hasOwn(row, "AMT_NUM24")) {
     nutrients.saturated_fat = { value: row.AMT_NUM24, unit: "g" };
   }
+  let ediblePortion = null;
+  try {
+    const basis = parseBasis(basisText);
+    if (basis.amount === 100 && Object.hasOwn(MFDS_EDIBLE_PORTION_TEXT, basis.unit)) {
+      ediblePortion = { text: MFDS_EDIBLE_PORTION_TEXT[basis.unit] };
+    }
+  } catch {
+    ediblePortion = null;
+  }
   return {
     external_item_key: row.FOOD_CD,
     external_name: row.FOOD_NM_KR,
     preparation_state: "as_published",
-    basis_text: row.SERVING_SIZE,
+    basis_text: basisText,
+    edible_portion: ediblePortion,
     nutrients,
   };
 }

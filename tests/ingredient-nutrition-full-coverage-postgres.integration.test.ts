@@ -520,10 +520,13 @@ describe.skipIf(!enabled)("ingredient nutrition full coverage postgres integrati
     const { runModelImport, buildRunReport, disableModelRun } = await import(IMPORT_URL);
     const { buildInventoryArtifact } = await import(COVERAGE_URL);
     const secondEligibleIngredientId = "20000000-0000-4000-8000-000000000031";
+    const sharedSourceIngredientId = "20000000-0000-4000-8000-000000000032";
 
     psql(`
       insert into public.ingredients (id, standard_name, category, default_unit)
-      values ('${secondEligibleIngredientId}', 'Stage2 밀가루', '가공식품', 'g')
+      values
+        ('${secondEligibleIngredientId}', 'Stage2 밀가루', '가공식품', 'g'),
+        ('${sharedSourceIngredientId}', 'Stage2 중력분', '가공식품', 'g')
       on conflict (id) do nothing;
     `);
 
@@ -540,6 +543,14 @@ describe.skipIf(!enabled)("ingredient nutrition full coverage postgres integrati
         {
           ingredient_id: secondEligibleIngredientId,
           canonical_name: "Stage2 밀가루",
+          category_code: "가공식품",
+          category_name: "가공식품",
+          default_unit: "g",
+          synonyms: [],
+        },
+        {
+          ingredient_id: sharedSourceIngredientId,
+          canonical_name: "Stage2 중력분",
           category_code: "가공식품",
           category_name: "가공식품",
           default_unit: "g",
@@ -564,7 +575,7 @@ describe.skipIf(!enabled)("ingredient nutrition full coverage postgres integrati
       dataset: "Ingredient Full Coverage Fixture RDA",
       raw_sha256: "full-coverage-raw-rda-001",
       external_item_key: "full-coverage-flour-001",
-      external_name: "Stage2 밀가루",
+      external_name: "공인 Stage2 제분용 밀가루",
       fingerprint: "full-coverage-fingerprint-rda-001",
       content_hash_seed: "full-coverage-content-hash-rda-001",
     });
@@ -584,6 +595,13 @@ describe.skipIf(!enabled)("ingredient nutrition full coverage postgres integrati
         },
         {
           ingredient_id: secondEligibleIngredientId,
+          classification: "eligible",
+          provider_code: "RDA_10_4",
+          external_item_key: "full-coverage-flour-001",
+          source_item_fingerprint: "full-coverage-fingerprint-rda-001",
+        },
+        {
+          ingredient_id: sharedSourceIngredientId,
           classification: "eligible",
           provider_code: "RDA_10_4",
           external_item_key: "full-coverage-flour-001",
@@ -624,6 +642,13 @@ describe.skipIf(!enabled)("ingredient nutrition full coverage postgres integrati
           basis_dimension: null,
         },
         {
+          id: sharedSourceIngredientId,
+          normalized_names: ["Stage2 중력분"],
+          preparation_state: null,
+          edible_portion: "edible",
+          basis_dimension: null,
+        },
+        {
           id: excludedIngredientId,
           normalized_names: ["Stage2 육수"],
           preparation_state: null,
@@ -637,8 +662,8 @@ describe.skipIf(!enabled)("ingredient nutrition full coverage postgres integrati
 
     expect(summary).toMatchObject({
       pilot_scope: "all-active",
-      denominator_count: 3,
-      approved_exactly_one_count: 2,
+      denominator_count: 4,
+      approved_exactly_one_count: 3,
       excluded_count: 1,
       affected_source_ids: expect.arrayContaining([expect.any(String), expect.any(String)]),
       affected_row_ids: {
@@ -647,6 +672,15 @@ describe.skipIf(!enabled)("ingredient nutrition full coverage postgres integrati
       replayed: false,
     });
     expect((summary.affected_source_ids as unknown[]).length).toBe(2);
+    expect(psql(`
+      select count(*)::text
+      from public.ingredient_synonyms
+      where ingredient_id in (
+        '${secondEligibleIngredientId}'::uuid,
+        '${sharedSourceIngredientId}'::uuid
+      )
+        and synonym = '공인 Stage2 제분용 밀가루';
+    `)).toBe("0");
     expect(psql(`
       select json_build_object(
         'source_item_preparation_state', item.preparation_state,
@@ -687,7 +721,7 @@ describe.skipIf(!enabled)("ingredient nutrition full coverage postgres integrati
     expect(disabled).toMatchObject({
       mode: "disable",
       affected_source_ids: expect.arrayContaining(summary.affected_source_ids as string[]),
-      revoked_count: 2,
+      revoked_count: 3,
       replayed: false,
     });
     expect(replay).toMatchObject({
