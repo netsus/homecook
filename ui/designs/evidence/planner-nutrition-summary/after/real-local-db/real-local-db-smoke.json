@@ -1,0 +1,116 @@
+{
+  "schemaVersion": "1.0",
+  "environment": "local-supabase",
+  "fixtureMode": false,
+  "bootstrap": {
+    "seededUserPresent": true,
+    "requiredColumnNames": [
+      "아침",
+      "점심",
+      "저녁"
+    ],
+    "requiredColumnsPresent": true
+  },
+  "browser": {
+    "authenticatedLocalAccount": true,
+    "plannerWeekSummaryVisible": true,
+    "plannerWeekSummarySettled": true,
+    "mealScreenSummaryVisible": true,
+    "mealScreenSummarySettled": true,
+    "mealPathRestored": "/planner/2026-07-14/550e8400-e29b-41d4-a716-446655440050?slot=%EC%95%84%EC%B9%A8",
+    "screenshots": [
+      "ui/designs/evidence/planner-nutrition-summary/after/real-local-db/PLANNER_WEEK-local-supabase-390.png",
+      "ui/designs/evidence/planner-nutrition-summary/after/real-local-db/MEAL_SCREEN-local-supabase-390.png"
+    ]
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/planner/nutrition",
+    "queryFields": [
+      "end_date",
+      "start_date"
+    ],
+    "status": 200,
+    "success": true,
+    "dataKeys": [
+      "days",
+      "range",
+      "summary"
+    ],
+    "summaryKeys": [
+      "nutrition",
+      "product_entry_count",
+      "recipe_entry_count"
+    ],
+    "calculationStatus": "unavailable",
+    "unavailableRenderedAsFalseZero": false,
+    "mealSummaryRenderedAsFalseZero": false
+  },
+  "readOnly": {
+    "targetTables": {
+      "users": {
+        "beforeCount": 2,
+        "afterCount": 2,
+        "digestUnchanged": true
+      },
+      "meal_plan_columns": {
+        "beforeCount": 4,
+        "afterCount": 4,
+        "digestUnchanged": true
+      },
+      "meals": {
+        "beforeCount": 6,
+        "afterCount": 6,
+        "digestUnchanged": true
+      },
+      "product_planner_entries": {
+        "beforeCount": 0,
+        "afterCount": 0,
+        "digestUnchanged": true
+      },
+      "recipe_nutrition_snapshots": {
+        "beforeCount": 0,
+        "afterCount": 0,
+        "digestUnchanged": true
+      },
+      "food_products": {
+        "beforeCount": 0,
+        "afterCount": 0,
+        "digestUnchanged": true
+      },
+      "food_product_nutrition_versions": {
+        "beforeCount": 0,
+        "afterCount": 0,
+        "digestUnchanged": true
+      },
+      "nutrition_profiles": {
+        "beforeCount": 0,
+        "afterCount": 0,
+        "digestUnchanged": true
+      },
+      "nutrition_values": {
+        "beforeCount": 0,
+        "afterCount": 0,
+        "digestUnchanged": true
+      },
+      "nutrition_source_items": {
+        "beforeCount": 0,
+        "afterCount": 0,
+        "digestUnchanged": true
+      },
+      "nutrition_sources": {
+        "beforeCount": 0,
+        "afterCount": 0,
+        "digestUnchanged": true
+      }
+    },
+    "changedTables": [],
+    "targetWriteCount": 0
+  },
+  "safety": {
+    "productionWriteCount": 0,
+    "stagingWriteCount": 0,
+    "externalProviderWriteCount": 0,
+    "rawProviderRowsPrintedOrCommitted": false
+  }
+}

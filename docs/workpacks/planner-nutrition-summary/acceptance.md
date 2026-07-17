@@ -109,7 +109,7 @@
 
 ### Cross-slice Closeout
 
-- [ ] full local Supabase/PostgREST/auth claim real browser smoke <!-- omo:id=accept-planner-nutrition-local-supabase-browser;stage=2;scope=shared;review=6 -->
+- [x] full local Supabase/PostgREST/auth claim real browser smoke <!-- omo:id=accept-planner-nutrition-local-supabase-browser;stage=2;scope=shared;review=6 -->
 
 ### Manual Only
 
@@ -118,9 +118,11 @@
 - [ ] physical iOS/Android narrow device와 실제 screen reader 확인
 - [ ] production-scale query plan/large entry count/RLS cost 측정
 
-> Stage 4 implementation evidence: targeted Vitest 4 files/99, fixture Playwright 3 projects 12/12, `pnpm verify:frontend:pr`, full a11y 18/15, full visual 23/22, security 12/12가 통과했다. 이후 역할 분리 repair와 exact-head 재검증으로 `CI=1 pnpm verify:frontend`도 lint/typecheck/build, product `1,587 passed/24 skipped`, regression `872 passed/112 skipped`, Lighthouse 6 runs, accessibility `18/15`, visual `23/22`, security `12/12`까지 green이다. full local Supabase smoke는 `127.0.0.1` 전용 검증 스크립트를 준비했으나 Docker daemon이 현재 프로젝트 DB 컨테이너를 시작하지 못해 환경 blocker다. isolated PostgreSQL 17.10 2/2와 fixture browser를 그 대체 증거로 간주하지 않는다.
+> Stage 4 implementation evidence: targeted Vitest 4 files/99, fixture Playwright 3 projects 12/12, `pnpm verify:frontend:pr`, full a11y 18/15, full visual 23/22, security 12/12가 통과했다. 이후 역할 분리 repair와 exact-head 재검증으로 `CI=1 pnpm verify:frontend`도 lint/typecheck/build, product `1,587 passed/24 skipped`, regression `872 passed/112 skipped`, Lighthouse 6 runs, accessibility `18/15`, visual `23/22`, security `12/12`까지 green이다.
 >
-> 2026-07-17 final exact-head evidence: exact targeted Vitest는 `planner-nutrition-api` 11, `planner-nutrition-ui` 17, `planner-week-screen` 37, `planner-meal-screen` 44, `qa-planner-nutrition-fixture` 4로 5 files/113이며, fixture Playwright 3 projects 15/15, 관련 planner/prepared-food 동시 stress 96/96, typecheck와 lint 0 errors가 통과했다. list loading/error 동안의 임시 빈 visible arrays는 ready nutrition을 빈 계획으로 오인하지 않고, list가 성공해 empty로 확정된 경우에만 `entryCount=0`을 적용한다. 다른 범위 loading, 같은 범위 MEAL soft-error, week/meal 최초 error 근거와 390/320/desktop comparison을 유지한다. 역할 분리된 Stage 5와 final authority는 Blocker/Major/Minor `0/0/0`, Stage 6는 Blocker/Important/Suggestion `0/0/0`으로 exact implementation head `21538d71b66b673e6aaea77027a02af6342bce9f`를 승인했다. Design Status는 confirmed다. real local DB, physical device/실제 screen reader, production-scale query 측정은 계속 pending이다.
+> 2026-07-17 final exact-head evidence: exact targeted Vitest는 `planner-nutrition-api` 11, `planner-nutrition-ui` 17, `planner-week-screen` 37, `planner-meal-screen` 44, `qa-planner-nutrition-fixture` 4로 5 files/113이며, fixture Playwright 3 projects 15/15, 관련 planner/prepared-food 동시 stress 96/96, typecheck와 lint 0 errors가 통과했다. list loading/error 동안의 임시 빈 visible arrays는 ready nutrition을 빈 계획으로 오인하지 않고, list가 성공해 empty로 확정된 경우에만 `entryCount=0`을 적용한다. 다른 범위 loading, 같은 범위 MEAL soft-error, week/meal 최초 error 근거와 390/320/desktop comparison을 유지한다. 역할 분리된 Stage 5와 final authority는 Blocker/Major/Minor `0/0/0`, Stage 6는 Blocker/Important/Suggestion `0/0/0`으로 exact implementation head `21538d71b66b673e6aaea77027a02af6342bce9f`를 승인했다. Design Status는 confirmed다.
+>
+> 2026-07-17 cross-slice closeout에서 Docker Desktop을 재시작하고 volume을 보존한 채 local Supabase 컨테이너를 재생성했다. DB/Auth/Storage 등 12개 구성요소가 running 또는 healthy인 상태에서 `pnpm local:reset:demo` 후 실제 local auth 로그인, PostgREST, `GET /api/v1/planner/nutrition` 200, user row와 `아침/점심/저녁` columns, PLANNER_WEEK/MEAL_SCREEN 확정 상태, target 11개 table digest 불변, production/staging/provider write 0을 검증했다. evidence는 `ui/designs/evidence/planner-nutrition-summary/after/real-local-db/`에 있고 fixture가 아니다. local demo가 unavailable 중심인 한계 때문에 mixed/old-pin 상세는 기존 isolated PostgreSQL 17.10 2/2 증거와 함께 판정한다. physical device/실제 screen reader와 production-scale query 측정은 Manual Only로 남는다.
 
 ## Scope Guard
 

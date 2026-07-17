@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { chromium } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
@@ -75,6 +76,29 @@ function assertLocalUrl(value, label) {
   }
 }
 
+export function isPlannerNutritionSummarySettled(text) {
+  const normalizedText = typeof text === "string" ? text.trim() : "";
+  return normalizedText.length > 0 && !normalizedText.includes("계획 영양 불러오는 중");
+}
+
+export async function waitForPlannerNutritionSummarySettled(
+  summary,
+  { pollIntervalMs = 50, timeoutMs = 10_000 } = {},
+) {
+  await summary.waitFor({ state: "visible" });
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() <= deadline) {
+    const text = await summary.textContent();
+    if (isPlannerNutritionSummarySettled(text)) {
+      return text;
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+
+  throw new Error("planner nutrition summary did not leave loading state");
+}
+
 async function main() {
   assertLocalUrl(baseUrl, "app base URL");
   const localEnv = readLocalSupabaseEnv();
@@ -123,7 +147,7 @@ async function main() {
     }
 
     const weekSummary = page.getByTestId("planner-week-nutrition-summary");
-    await weekSummary.waitFor({ state: "visible" });
+    const weekSummaryText = await waitForPlannerNutritionSummarySettled(weekSummary);
     const before = await snapshotTables(supabase);
     const nutritionUrl = new URL(initialNutritionResponse.url());
     const directResult = await page.evaluate(async (requestPath) => {
@@ -141,7 +165,6 @@ async function main() {
       throw new Error("direct planner nutrition GET failed");
     }
 
-    const weekSummaryText = await weekSummary.textContent();
     const falseZeroVisible = /(?:^|\s)0(?:\.0+)?\s*kcal(?:\s|$)/u.test(weekSummaryText ?? "");
     if (falseZeroVisible && directResult.calculationStatus === "unavailable") {
       throw new Error("unavailable nutrition rendered as false zero");
@@ -165,8 +188,7 @@ async function main() {
       throw new Error("authenticated meal nutrition request failed");
     }
     const mealSummary = page.getByTestId("meal-nutrition-summary");
-    await mealSummary.waitFor({ state: "visible" });
-    const mealSummaryText = await mealSummary.textContent();
+    const mealSummaryText = await waitForPlannerNutritionSummarySettled(mealSummary);
     const mealScreenshot = path.join(evidenceDir, "MEAL_SCREEN-local-supabase-390.png");
     await page.screenshot({ path: mealScreenshot, fullPage: true });
     const after = await snapshotTables(supabase);
@@ -189,7 +211,9 @@ async function main() {
       browser: {
         authenticatedLocalAccount: true,
         plannerWeekSummaryVisible: true,
+        plannerWeekSummarySettled: isPlannerNutritionSummarySettled(weekSummaryText),
         mealScreenSummaryVisible: true,
+        mealScreenSummarySettled: isPlannerNutritionSummarySettled(mealSummaryText),
         mealPathRestored: mealHref,
         screenshots: [
           path.relative(process.cwd(), weekScreenshot),
@@ -238,7 +262,13 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-});
+const isDirectRun = process.argv[1]
+  ? import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+  : false;
+
+if (isDirectRun) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}
