@@ -20,21 +20,65 @@ function hasPostgresTools(directory) {
   return POSTGRES_TOOLS.every((tool) => existsSync(path.join(directory, tool)));
 }
 
+function canRunTool(command, args) {
+  const result = commandResult(command, args, {
+    env: {
+      ...process.env,
+      LC_ALL: "C",
+    },
+  });
+  return result.status === 0 && !result.error;
+}
+
+function canUsePostgresBin(directory) {
+  if (!hasPostgresTools(directory) || !existsSync(path.join(directory, "postgres"))) {
+    return false;
+  }
+  return [
+    ["postgres", ["-V"]],
+    ["initdb", ["--version"]],
+    ["createdb", ["--version"]],
+    ["psql", ["--version"]],
+  ].every(([tool, args]) => canRunTool(path.join(directory, tool), args));
+}
+
 function findPostgresBin() {
-  const pgConfig = commandResult("pg_config", ["--bindir"]);
   const candidates = [];
-  if (pgConfig.status === 0) candidates.push(pgConfig.stdout.trim());
+  const seen = new Set();
+  const pushCandidate = (directory) => {
+    if (typeof directory !== "string") return;
+    const trimmed = directory.trim();
+    if (trimmed === "" || seen.has(trimmed)) return;
+    seen.add(trimmed);
+    candidates.push(trimmed);
+  };
+  const pgConfig = commandResult("pg_config", ["--bindir"]);
+  if (pgConfig.status === 0) pushCandidate(pgConfig.stdout.trim());
   for (const root of ["/usr/lib/postgresql", "/opt/homebrew/bin", "/usr/local/bin"]) {
     if (!existsSync(root)) continue;
     if (root.endsWith("postgresql")) {
-      candidates.push(...readdirSync(root)
+      for (const directory of readdirSync(root)
         .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }))
-        .map((version) => path.join(root, version, "bin")));
-    } else {
-      candidates.push(root);
+        .map((version) => path.join(root, version, "bin"))) {
+        pushCandidate(directory);
+      }
+      continue;
+    }
+    pushCandidate(root);
+  }
+  for (const cellarRoot of ["/opt/homebrew/Cellar", "/usr/local/Cellar"]) {
+    if (!existsSync(cellarRoot)) continue;
+    for (const packageName of readdirSync(cellarRoot)
+      .filter((name) => /^postgresql(?:@[\d.]+)?$/.test(name))
+      .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }))) {
+      const versionsRoot = path.join(cellarRoot, packageName);
+      for (const version of readdirSync(versionsRoot)
+        .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }))) {
+        pushCandidate(path.join(versionsRoot, version, "bin"));
+      }
     }
   }
-  return candidates.find((candidate) => hasPostgresTools(candidate)) ?? null;
+  return candidates.find((candidate) => canUsePostgresBin(candidate)) ?? null;
 }
 
 function runRequired(command, args, options = {}) {
@@ -165,7 +209,15 @@ grant usage on schema public to anon, authenticated, service_role;
     ]);
     const test = commandResult(
       "pnpm",
-      ["exec", "vitest", "run", "tests/ingredient-nutrition-postgres.integration.test.ts", "--pool=forks", "--maxWorkers=1"],
+      [
+        "exec",
+        "vitest",
+        "run",
+        "tests/ingredient-nutrition-postgres.integration.test.ts",
+        "tests/ingredient-nutrition-full-coverage-postgres.integration.test.ts",
+        "--pool=forks",
+        "--maxWorkers=1",
+      ],
       {
         stdio: "inherit",
         env: {

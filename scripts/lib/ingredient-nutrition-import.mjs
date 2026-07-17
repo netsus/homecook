@@ -3,6 +3,7 @@ import {
   sha256,
   validateApprovedPinnedHandoff,
 } from "./public-nutrition-pipeline.mjs";
+import { validateCoverageDecisionArtifact } from "./ingredient-nutrition-coverage.mjs";
 import { generateVolumeCandidates } from "./ingredient-conversion-domain.mjs";
 import { rankNutritionCandidates } from "./ingredient-nutrition-matching.mjs";
 
@@ -175,6 +176,26 @@ export function createMemoryModelStore(options = {}) {
         runs: [...state.runs.values()],
       });
     },
+    async getCoverageStats({
+      inventory_ids: inventoryIds,
+      excluded_ingredient_ids: excludedIngredientIds,
+    }) {
+      const activePrimaryCountByIngredientId = new Map();
+      for (const row of state.nutrition_links) {
+        if (row.review_status !== "approved" || row.is_active !== true || row.is_primary !== true) {
+          continue;
+        }
+        activePrimaryCountByIngredientId.set(
+          row.ingredient_id,
+          (activePrimaryCountByIngredientId.get(row.ingredient_id) ?? 0) + 1,
+        );
+      }
+      return summarizeAllActiveCoverage({
+        inventoryIds,
+        excludedIngredientIds,
+        activePrimaryCountByIngredientId,
+      });
+    },
   };
 }
 
@@ -201,6 +222,37 @@ function contentProjection(value) {
   );
 }
 
+function summarizeAllActiveCoverage({
+  inventoryIds,
+  excludedIngredientIds,
+  activePrimaryCountByIngredientId,
+}) {
+  const denominatorCount = inventoryIds.length;
+  const excludedSet = new Set(excludedIngredientIds);
+  const eligibleIds = inventoryIds.filter((ingredientId) => !excludedSet.has(ingredientId));
+  const approvedExactlyOneCount = eligibleIds.filter(
+    (ingredientId) => (activePrimaryCountByIngredientId.get(ingredientId) ?? 0) === 1,
+  ).length;
+  const eligibleWithoutProfile = eligibleIds.filter(
+    (ingredientId) => (activePrimaryCountByIngredientId.get(ingredientId) ?? 0) === 0,
+  ).length;
+  const multipleQualifiedPrimary = eligibleIds.filter(
+    (ingredientId) => (activePrimaryCountByIngredientId.get(ingredientId) ?? 0) > 1,
+  ).length;
+  const classificationConflict = [...excludedSet].filter(
+    (ingredientId) => (activePrimaryCountByIngredientId.get(ingredientId) ?? 0) > 0,
+  ).length;
+  return {
+    denominator_count: denominatorCount,
+    approved_exactly_one_count: approvedExactlyOneCount,
+    excluded_count: excludedSet.size,
+    eligible_without_profile: eligibleWithoutProfile,
+    unclassified: denominatorCount - excludedSet.size - approvedExactlyOneCount,
+    classification_conflict: classificationConflict,
+    multiple_qualified_primary: multipleQualifiedPrimary,
+  };
+}
+
 function zeroWriteSummary(overrides = {}) {
   return {
     schema_version: "ingredient-nutrition-model-run-v1",
@@ -222,7 +274,13 @@ function zeroWriteSummary(overrides = {}) {
   };
 }
 
-function modelSummaryFields(bundle, approval, runId, candidatePlan) {
+function sanitizeDiagnosticCode(value) {
+  return typeof value === "string" && /^[A-Z0-9_]{1,64}$/.test(value)
+    ? value
+    : null;
+}
+
+function modelSummaryFields(bundle, approval, runId, candidatePlan, pilotScope) {
   const values = bundle.approved_items.flatMap((item) => Object.values(item.values ?? {}));
   const decisions = approval === null
     ? bundle.approved_items.map(() => ({ status: "needs_review" }))
@@ -234,7 +292,7 @@ function modelSummaryFields(bundle, approval, runId, candidatePlan) {
   const decisionCount = (status) => decisions.filter((decision) => decision.status === status).length;
   return {
     run_id: runId,
-    pilot_scope: "foodsafety-30",
+    pilot_scope: pilotScope,
     input_checksum: bundle.handoff_checksum,
     source_versions: [...new Set([
       bundle.approved_manifest.source_version,
@@ -531,6 +589,108 @@ function validateApproval(approval, expectedPilotScope, bundle, candidatePlan) {
   return approval;
 }
 
+function buildAllActiveCandidatePlan(bundle, decision) {
+  const approvedItemsByKey = new Map(
+    bundle.approved_items.map((item) => [
+      `${item.external_item_key}::${item.fingerprint}`,
+      item,
+    ]),
+  );
+  return {
+    nutrition_candidates: decision.decisions
+      .filter((entry) => entry.classification === "eligible")
+      .map((entry) => {
+        const item = approvedItemsByKey.get(
+          `${entry.external_item_key}::${entry.source_item_fingerprint}`,
+        );
+        return candidateWithIdentity("nutrition", {
+          fingerprint: entry.source_item_fingerprint,
+          ingredient_id: entry.ingredient_id,
+          preparation_state: item?.preparation_state ?? null,
+          review_status: "pending",
+          is_active: false,
+          candidate_rank: 1,
+        }, bundle.handoff_checksum);
+      }),
+    conversion_candidates: [],
+    piece_candidates: [],
+    reason_codes: [],
+  };
+}
+
+function synthesizeAllActiveApproval(decision, candidatePlan) {
+  if (
+    !isRecord(decision) ||
+    !nonEmptyText(decision.reviewed_by) ||
+    !nonEmptyText(decision.reviewed_at) ||
+    !Number.isFinite(Date.parse(decision.reviewed_at)) ||
+    !nonEmptyText(decision.decision_reason) ||
+    !Array.isArray(decision.decisions)
+  ) {
+    throw new IngredientNutritionImportError("INVALID_APPROVAL_FILE");
+  }
+
+  const candidateByKey = new Map(
+    candidatePlan.nutrition_candidates.map((candidate) => [
+      `${candidate.ingredient_id}::${candidate.fingerprint}`,
+      candidate,
+    ]),
+  );
+
+  return {
+    schema_version: "ingredient-nutrition-review-v1",
+    reviewed_by: decision.reviewed_by,
+    reviewed_at: decision.reviewed_at,
+    decision_reason: decision.decision_reason,
+    pilot_scope: {
+      recipe_ids: [],
+      ingredient_ids: decision.decisions.map((entry) => entry.ingredient_id),
+    },
+    nutrition_decisions: decision.decisions
+      .filter((entry) => entry.classification === "eligible")
+      .map((entry) => {
+        const candidate = candidateByKey.get(
+          `${entry.ingredient_id}::${entry.source_item_fingerprint}`,
+        );
+        if (!candidate) {
+          throw new IngredientNutritionImportError("INVALID_APPROVAL_FILE");
+        }
+        return {
+          fingerprint: entry.source_item_fingerprint,
+          ingredient_id: entry.ingredient_id,
+          preparation_state: candidate.preparation_state,
+          status: "approved",
+          reason: decision.decision_reason,
+          candidate_identity: candidate.candidate_identity,
+          candidate_checksum: candidate.candidate_checksum,
+        };
+      }),
+    conversion_decisions: [],
+    piece_decisions: [],
+  };
+}
+
+export function validateAllActiveInventorySnapshot(input) {
+  if (
+    !isRecord(input) ||
+    !isRecord(input.inventory) ||
+    !isRecord(input.decision) ||
+    !nonEmptyText(input.live_inventory_checksum)
+  ) {
+    throw new IngredientNutritionImportError("INVENTORY_CHECKSUM_MISMATCH");
+  }
+  if (
+    input.inventory.checksum !== input.live_inventory_checksum ||
+    input.decision.inventory_checksum !== input.inventory.checksum
+  ) {
+    throw new IngredientNutritionImportError("INVENTORY_CHECKSUM_MISMATCH");
+  }
+  return {
+    inventory_checksum: input.inventory.checksum,
+    live_inventory_checksum: input.live_inventory_checksum,
+  };
+}
+
 export async function runModelImport(input) {
   const baseSummary = zeroWriteSummary({
     mode: input?.mode ?? null,
@@ -539,6 +699,8 @@ export async function runModelImport(input) {
   let bundle;
   let scopeCounts;
   let candidatePlan;
+  let coverageSummary = null;
+  let expectedScope = null;
   try {
     if (!["dry-run", "apply"].includes(input?.mode)) {
       throw new IngredientNutritionImportError("IMPORT_MODE_INVALID");
@@ -546,54 +708,93 @@ export async function runModelImport(input) {
     if (!["local", "staging", "production"].includes(input?.environment)) {
       throw new IngredientNutritionImportError("IMPORT_ENVIRONMENT_INVALID");
     }
-    if (input.pilot_scope !== "foodsafety-30") {
+    if (!["foodsafety-30", "all-active"].includes(input.pilot_scope)) {
       throw new IngredientNutritionImportError("PILOT_SCOPE_MISMATCH");
     }
     bundle = validateHandoffBundle(input.bundle);
-    scopeCounts = validatePilotScope(
-      input.actual_pilot_scope,
-      input.expected_pilot_scope,
-    );
-    if (
-      !Array.isArray(input.canonical_ingredients) ||
-      !sameStringSet(
-        input.canonical_ingredients.map((ingredient) => ingredient.id),
-        input.actual_pilot_scope.ingredient_ids,
-      )
-    ) {
-      throw new IngredientNutritionImportError("PILOT_SCOPE_MISMATCH");
+    if (input.pilot_scope === "foodsafety-30") {
+      scopeCounts = validatePilotScope(
+        input.actual_pilot_scope,
+        input.expected_pilot_scope,
+      );
+      expectedScope = input.expected_pilot_scope;
+      if (
+        !Array.isArray(input.canonical_ingredients) ||
+        !sameStringSet(
+          input.canonical_ingredients.map((ingredient) => ingredient.id),
+          input.actual_pilot_scope.ingredient_ids,
+        )
+      ) {
+        throw new IngredientNutritionImportError("PILOT_SCOPE_MISMATCH");
+      }
+      candidatePlan = buildModelCandidatePlan(bundle, input.canonical_ingredients);
+    } else {
+      coverageSummary = validateCoverageDecisionArtifact({
+        inventory: input.inventory,
+        decision: input.decision,
+        approved_items: bundle.approved_items,
+        expected_provider_code: providerCode(bundle.approved_manifest),
+      });
+      expectedScope = { ingredient_ids: input.inventory.rows.map((row) => row.ingredient_id) };
+      scopeCounts = {
+        scope_recipe_count: 0,
+        scope_ingredient_count: input.inventory.row_count,
+      };
+      if (
+        !Array.isArray(input.canonical_ingredients) ||
+        !sameStringSet(
+          input.canonical_ingredients.map((ingredient) => ingredient.id),
+          expectedScope.ingredient_ids,
+        )
+      ) {
+        throw new IngredientNutritionImportError("PILOT_SCOPE_MISMATCH");
+      }
+      candidatePlan = buildAllActiveCandidatePlan(bundle, input.decision);
     }
-    candidatePlan = buildModelCandidatePlan(bundle, input.canonical_ingredients);
   } catch (error) {
     throwWithSummary(error, baseSummary);
   }
 
   let approval = null;
-  if (
+  if (input.pilot_scope === "all-active") {
+    if (input.mode === "apply") {
+      try {
+        approval = synthesizeAllActiveApproval(input.decision, candidatePlan);
+      } catch (error) {
+        throwWithSummary(error, baseSummary);
+      }
+    }
+  } else if (
     input.mode === "apply" ||
     (input.approval !== null && input.approval !== undefined)
   ) {
-    try {
-      const validatedApproval = validateApproval(
-        input.approval,
-        input.expected_pilot_scope,
-        bundle,
-        candidatePlan,
-      );
-      if (input.mode === "apply") approval = validatedApproval;
-    } catch (error) {
-      throwWithSummary(error, baseSummary);
+      try {
+        const validatedApproval = validateApproval(
+          input.approval,
+          expectedScope,
+          bundle,
+          candidatePlan,
+        );
+        if (input.mode === "apply") approval = validatedApproval;
+      } catch (error) {
+        throwWithSummary(error, baseSummary);
+      }
     }
-  }
   const sourcePayloadIdentity = sha256({
     schema_version: bundle.schema_version,
     handoff_checksum: bundle.handoff_checksum,
   });
+  const coverageFields = coverageSummary === null
+    ? {}
+    : Object.fromEntries(
+        Object.entries(coverageSummary).filter(([key]) => key !== "schema_version"),
+      );
   const decisionChecksum = approval === null ? null : sha256(contentProjection(approval));
   const content = contentProjection({
     bundle,
-    pilot_scope: input.expected_pilot_scope,
+    pilot_scope: expectedScope,
     candidate_plan: candidatePlan,
+    coverage: coverageSummary,
     approval,
   });
   const contentHash = sha256(content);
@@ -613,12 +814,39 @@ export async function runModelImport(input) {
     source_payload_identity: sourcePayloadIdentity,
     decision_checksum: decisionChecksum,
     ...scopeCounts,
-    ...modelSummaryFields(bundle, approval, runId, candidatePlan),
+    ...modelSummaryFields(bundle, approval, runId, candidatePlan, input.pilot_scope),
+    ...coverageFields,
     reason_codes: candidatePlan.reason_codes,
   });
   assertPrSafeValue(summary);
+  const allActiveCoverageArgs = input.pilot_scope === "all-active"
+    ? {
+        inventory_ids: input.inventory.rows.map((row) => row.ingredient_id),
+        excluded_ingredient_ids: input.decision.decisions
+          .filter((entry) => entry.classification === "excluded")
+          .map((entry) => entry.ingredient_id),
+      }
+    : null;
 
-  if (input.mode === "dry-run") return summary;
+  if (input.mode === "dry-run") {
+    const actualCoverage = (
+      allActiveCoverageArgs !== null &&
+      typeof input.store?.getCoverageStats === "function"
+    )
+      ? await input.store.getCoverageStats(allActiveCoverageArgs)
+      : {};
+    return {
+      ...summary,
+      ...actualCoverage,
+    };
+  }
+  if (input.pilot_scope === "all-active" && input.environment !== "local") {
+    throw new IngredientNutritionImportError(
+      "PRODUCTION_LOAD_APPROVAL_REQUIRED",
+      {},
+      summary,
+    );
+  }
   if (input.environment === "production") {
     throw new IngredientNutritionImportError(
       "PRODUCTION_LOAD_APPROVAL_REQUIRED",
@@ -629,7 +857,19 @@ export async function runModelImport(input) {
 
   const replay = input.store.findRun(idempotencyKey);
   if (replay !== null) {
-    return { ...replay, writes_attempted: 0, writes_committed: 0, replayed: true };
+    const replayCoverage = (
+      allActiveCoverageArgs !== null &&
+      typeof input.store.getCoverageStats === "function"
+    )
+      ? await input.store.getCoverageStats(allActiveCoverageArgs)
+      : {};
+    return {
+      ...replay,
+      ...replayCoverage,
+      writes_attempted: 0,
+      writes_committed: 0,
+      replayed: true,
+    };
   }
 
   const payloadRows = bundle.approved_items
@@ -648,6 +888,7 @@ export async function runModelImport(input) {
   const nutritionLinks = approval.nutrition_decisions
     .map((decision) => ({
       ...decision,
+      is_primary: decision.status === "approved",
       review_status: decision.status,
       is_active: decision.status === "approved",
       reviewed_by: approval.reviewed_by,
@@ -674,9 +915,16 @@ export async function runModelImport(input) {
         decision_checksum: decisionChecksum,
         run_summary: appliedSummary,
       });
+      const actualCoverage = (
+        allActiveCoverageArgs !== null &&
+        typeof input.store.getCoverageStats === "function"
+      )
+        ? await input.store.getCoverageStats(allActiveCoverageArgs)
+        : {};
       const sourceCurrent = databaseResult.status === "applied";
       return {
         ...appliedSummary,
+        ...actualCoverage,
         status: databaseResult.status,
         freshness_statuses: [databaseResult.freshness_status],
         reason_codes: databaseResult.reason_codes ?? [],
@@ -691,10 +939,15 @@ export async function runModelImport(input) {
         affected_source_id: databaseResult.source_id,
         affected_row_ids: databaseResult.affected_row_ids,
       };
-    } catch {
+    } catch (error) {
       throw new IngredientNutritionImportError(
         "IMPORT_TRANSACTION_FAILED",
-        {},
+        error instanceof Error
+          ? {
+              cause_name: error.name,
+              cause_code: sanitizeDiagnosticCode(error.code),
+            }
+          : {},
         { ...appliedSummary, writes_committed: 0 },
       );
     }
@@ -724,11 +977,26 @@ export async function runModelImport(input) {
         writes_committed: plannedWrites,
       });
     });
-    return { ...appliedSummary, writes_committed: transactionResult.writes_committed };
-  } catch {
+    const actualCoverage = (
+      allActiveCoverageArgs !== null &&
+      typeof input.store.getCoverageStats === "function"
+    )
+      ? await input.store.getCoverageStats(allActiveCoverageArgs)
+      : {};
+    return {
+      ...appliedSummary,
+      ...actualCoverage,
+      writes_committed: transactionResult.writes_committed,
+    };
+  } catch (error) {
     throw new IngredientNutritionImportError(
       "IMPORT_TRANSACTION_FAILED",
-      {},
+      error instanceof Error
+        ? {
+          cause_name: error.name,
+          cause_code: sanitizeDiagnosticCode(error.code),
+        }
+        : {},
       { ...appliedSummary, writes_committed: 0 },
     );
   }
@@ -771,6 +1039,13 @@ const REPORT_FIELDS = [
   "reason_codes",
   "report_artifact",
   "rollback_artifact",
+  "denominator_count",
+  "approved_exactly_one_count",
+  "excluded_count",
+  "eligible_without_profile",
+  "unclassified",
+  "classification_conflict",
+  "multiple_qualified_primary",
   "affected_source_id",
   "affected_row_ids",
   "report_publication_status",
@@ -876,6 +1151,12 @@ export async function publishRunWithRecovery(summary, publisher) {
 
 export async function disableModelRun(input) {
   let report = validateRunReport(input?.report);
+  if (report.pilot_scope === "all-active" && input?.environment === "staging") {
+    throw new IngredientNutritionImportError("PRODUCTION_LOAD_APPROVAL_REQUIRED", {}, {
+      writes_attempted: 0,
+      writes_committed: 0,
+    });
+  }
   if (typeof input?.store?.getRunRegistry === "function") {
     const registry = await input.store.getRunRegistry(report.idempotency_key);
     report = validateRunReportAgainstRegistry(report, registry);
@@ -981,11 +1262,17 @@ export async function disableModelRun(input) {
 }
 
 const CLI_SPECS = Object.freeze({
+  inventory: Object.freeze({
+    allowed: new Set(["environment"]),
+    required: new Set([]),
+  }),
   import: Object.freeze({
     allowed: new Set([
       "bundle",
       "mode",
       "pilot-scope",
+      "inventory-file",
+      "decision-file",
       "approval-file",
       "environment",
     ]),
@@ -1036,14 +1323,24 @@ export function parseModelCliArgs(command, argv) {
     if (!["dry-run", "apply"].includes(parsed.mode)) {
       throw new IngredientNutritionImportError("IMPORT_MODE_INVALID");
     }
-    if (parsed["pilot-scope"] !== "foodsafety-30") {
+    if (!["foodsafety-30", "all-active"].includes(parsed["pilot-scope"])) {
       throw new IngredientNutritionImportError("PILOT_SCOPE_MISMATCH");
     }
     parsed.environment ??= "local";
     if (!["local", "staging", "production"].includes(parsed.environment)) {
       throw new IngredientNutritionImportError("IMPORT_ENVIRONMENT_INVALID");
     }
-    if (parsed.mode === "apply" && !Object.hasOwn(parsed, "approval-file")) {
+    if (parsed["pilot-scope"] === "all-active" && !Object.hasOwn(parsed, "inventory-file")) {
+      throw new IngredientNutritionImportError("INVENTORY_FILE_REQUIRED");
+    }
+    if (parsed["pilot-scope"] === "all-active" && !Object.hasOwn(parsed, "decision-file")) {
+      throw new IngredientNutritionImportError("DECISION_FILE_REQUIRED");
+    }
+    if (
+      parsed.mode === "apply" &&
+      parsed["pilot-scope"] !== "all-active" &&
+      !Object.hasOwn(parsed, "approval-file")
+    ) {
       throw new IngredientNutritionImportError("APPROVAL_FILE_REQUIRED");
     }
     if (parsed.mode === "apply" && parsed.environment === "production") {

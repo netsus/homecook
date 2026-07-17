@@ -16,6 +16,16 @@ async function loadImporter(): Promise<Record<string, unknown>> {
   }
 }
 
+async function loadCoverage(): Promise<Record<string, unknown>> {
+  try {
+    return await import(
+      pathToFileURL(`${process.cwd()}/scripts/lib/ingredient-nutrition-coverage.mjs`).href
+    );
+  } catch {
+    return {};
+  }
+}
+
 function requireFunction(
   module: Record<string, unknown>,
   name: string,
@@ -317,6 +327,204 @@ describe("ingredient nutrition model import", () => {
     });
   });
 
+  it("supports all-active dry-run with inventory and exact coverage decisions without Foodsafety scope reduction", async () => {
+    const importer = await loadImporter();
+    const coverage = await loadCoverage();
+    const createMemoryModelStore = requireFunction(importer, "createMemoryModelStore");
+    const runModelImport = requireFunction(importer, "runModelImport");
+    const buildInventoryArtifact = requireFunction(coverage, "buildInventoryArtifact");
+    const store = createMemoryModelStore() as { snapshot: () => { writes: number } };
+
+    const inventory = buildInventoryArtifact({
+      ingredients: [{
+        ingredient_id: "ingredient-tofu",
+        canonical_name: "두부",
+        category_code: "BEAN",
+        category_name: "콩류",
+        default_unit: "g",
+        synonyms: ["부침두부"],
+      }],
+      query_version: "inventory-sql-v1",
+    } as never) as Record<string, unknown>;
+
+    const summary = await runModelImport({
+      bundle: buildBundle(),
+      mode: "dry-run",
+      environment: "local",
+      pilot_scope: "all-active",
+      inventory,
+      decision: {
+        schema_version: "ingredient-nutrition-decision-v1",
+        inventory_checksum: inventory.checksum,
+        reviewed_by: "operator-1",
+        reviewed_at: "2026-07-17T15:00:00.000Z",
+        decision_reason: "exact tofu mapping reviewed",
+        decisions: [{
+          ingredient_id: "ingredient-tofu",
+          classification: "eligible",
+          provider_code: "MFDS",
+          external_item_key: "source-item-1",
+          source_item_fingerprint: buildBundle().approved_items[0].fingerprint,
+        }],
+      },
+      canonical_ingredients: canonicalIngredients,
+      approval: null,
+      store,
+    } as never) as Record<string, unknown>;
+
+    expect(summary).toMatchObject({
+      schema_version: "ingredient-nutrition-model-run-v1",
+      mode: "dry-run",
+      environment: "local",
+      pilot_scope: "all-active",
+      scope_recipe_count: 0,
+      scope_ingredient_count: 1,
+      denominator_count: 1,
+      approved_exactly_one_count: 0,
+      excluded_count: 0,
+      eligible_without_profile: 1,
+      unclassified: 1,
+      classification_conflict: 0,
+      multiple_qualified_primary: 0,
+      writes_attempted: 0,
+      writes_committed: 0,
+    });
+    expect(store.snapshot().writes).toBe(0);
+  });
+
+  it("applies all-active exact coverage decisions and replays the same input with zero writes", async () => {
+    const importer = await loadImporter();
+    const coverage = await loadCoverage();
+    const createMemoryModelStore = requireFunction(importer, "createMemoryModelStore");
+    const runModelImport = requireFunction(importer, "runModelImport");
+    const buildInventoryArtifact = requireFunction(coverage, "buildInventoryArtifact");
+    const store = createMemoryModelStore() as unknown;
+
+    const inventory = buildInventoryArtifact({
+      ingredients: [{
+        ingredient_id: "ingredient-tofu",
+        canonical_name: "두부",
+        category_code: "BEAN",
+        category_name: "콩류",
+        default_unit: "g",
+        synonyms: ["부침두부"],
+      }],
+      query_version: "inventory-sql-v1",
+    } as never) as Record<string, unknown>;
+    const decision = {
+      schema_version: "ingredient-nutrition-decision-v1",
+      inventory_checksum: inventory.checksum,
+      reviewed_by: "operator-1",
+      reviewed_at: "2026-07-17T15:00:00.000Z",
+      decision_reason: "exact tofu mapping reviewed",
+      decisions: [{
+        ingredient_id: "ingredient-tofu",
+        classification: "eligible",
+        provider_code: "MFDS",
+        external_item_key: "source-item-1",
+        source_item_fingerprint: buildBundle().approved_items[0].fingerprint,
+      }],
+    };
+
+    const first = await runModelImport({
+      bundle: buildBundle(),
+      mode: "apply",
+      environment: "local",
+      pilot_scope: "all-active",
+      inventory,
+      decision,
+      canonical_ingredients: canonicalIngredients,
+      approval: null,
+      store,
+    } as never) as Record<string, unknown>;
+
+    const replay = await runModelImport({
+      bundle: buildBundle(),
+      mode: "apply",
+      environment: "local",
+      pilot_scope: "all-active",
+      inventory,
+      decision,
+      canonical_ingredients: canonicalIngredients,
+      approval: null,
+      store,
+    } as never) as Record<string, unknown>;
+
+    expect(first).toMatchObject({
+      schema_version: "ingredient-nutrition-model-run-v1",
+      pilot_scope: "all-active",
+      denominator_count: 1,
+      approved_exactly_one_count: 1,
+      writes_committed: 3,
+      replayed: false,
+    });
+    expect(replay).toMatchObject({
+      idempotency_key: first.idempotency_key,
+      writes_committed: 0,
+      replayed: true,
+    });
+  });
+
+  it("sanitizes database apply failures instead of echoing raw error text", async () => {
+    const importer = await loadImporter();
+    const coverage = await loadCoverage();
+    const runModelImport = requireFunction(importer, "runModelImport");
+    const buildInventoryArtifact = requireFunction(coverage, "buildInventoryArtifact");
+
+    const inventory = buildInventoryArtifact({
+      ingredients: [{
+        ingredient_id: "ingredient-tofu",
+        canonical_name: "두부",
+        category_code: "BEAN",
+        category_name: "콩류",
+        default_unit: "g",
+        synonyms: ["부침두부"],
+      }],
+      query_version: "inventory-sql-v1",
+    } as never) as Record<string, unknown>;
+
+    await expect(runModelImport({
+      bundle: buildBundle(),
+      mode: "apply",
+      environment: "local",
+      pilot_scope: "all-active",
+      inventory,
+      decision: {
+        schema_version: "ingredient-nutrition-decision-v1",
+        inventory_checksum: inventory.checksum,
+        reviewed_by: "operator-1",
+        reviewed_at: "2026-07-17T15:00:00.000Z",
+        decision_reason: "exact tofu mapping reviewed",
+        decisions: [{
+          ingredient_id: "ingredient-tofu",
+          classification: "eligible",
+          provider_code: "MFDS",
+          external_item_key: "source-item-1",
+          source_item_fingerprint: buildBundle().approved_items[0].fingerprint,
+        }],
+      },
+      canonical_ingredients: canonicalIngredients,
+      approval: null,
+      store: {
+        findRun: () => null,
+        applyModelBundle: async () => {
+          throw Object.assign(new Error("servicekey=top-secret raw provider row"), {
+            code: "PG_FAILURE?servicekey=top-secret",
+          });
+        },
+      },
+    } as never)).rejects.toMatchObject({
+      code: "IMPORT_TRANSACTION_FAILED",
+      details: {
+        cause_name: "Error",
+        cause_code: null,
+      },
+      summary: {
+        writes_committed: 0,
+      },
+    });
+  });
+
   it("reports a database-detected source drift without activating candidates", async () => {
     const importer = await loadImporter();
     const runModelImport = requireFunction(importer, "runModelImport");
@@ -510,6 +718,155 @@ describe("ingredient nutrition model import", () => {
       summary: { writes_attempted: 0, writes_committed: 0 },
     });
     expect(store.snapshot().writes).toBe(0);
+  });
+
+  it("rejects all-active staging apply before any store write", async () => {
+    const importer = await loadImporter();
+    const coverage = await loadCoverage();
+    const createMemoryModelStore = requireFunction(importer, "createMemoryModelStore");
+    const runModelImport = requireFunction(importer, "runModelImport");
+    const buildInventoryArtifact = requireFunction(coverage, "buildInventoryArtifact");
+    const store = createMemoryModelStore() as { snapshot: () => { writes: number } };
+
+    const inventory = buildInventoryArtifact({
+      ingredients: [{
+        ingredient_id: "ingredient-tofu",
+        canonical_name: "두부",
+        category_code: "BEAN",
+        category_name: "콩류",
+        default_unit: "g",
+        synonyms: ["부침두부"],
+      }],
+      query_version: "inventory-sql-v1",
+    } as never) as Record<string, unknown>;
+
+    await expect(runModelImport({
+      bundle: buildBundle(),
+      mode: "apply",
+      environment: "staging",
+      pilot_scope: "all-active",
+      inventory,
+      decision: {
+        schema_version: "ingredient-nutrition-decision-v1",
+        inventory_checksum: inventory.checksum,
+        reviewed_by: "operator-1",
+        reviewed_at: "2026-07-17T15:00:00.000Z",
+        decision_reason: "exact tofu mapping reviewed",
+        decisions: [{
+          ingredient_id: "ingredient-tofu",
+          classification: "eligible",
+          provider_code: "MFDS",
+          external_item_key: "source-item-1",
+          source_item_fingerprint: buildBundle().approved_items[0].fingerprint,
+        }],
+      },
+      canonical_ingredients: canonicalIngredients,
+      approval: null,
+      store,
+    } as never)).rejects.toMatchObject({
+      code: "PRODUCTION_LOAD_APPROVAL_REQUIRED",
+      summary: { writes_attempted: 0, writes_committed: 0 },
+    });
+    expect(store.snapshot().writes).toBe(0);
+  });
+
+  it("allows all-active staging dry-run because it is read-only", async () => {
+    const importer = await loadImporter();
+    const coverage = await loadCoverage();
+    const createMemoryModelStore = requireFunction(importer, "createMemoryModelStore");
+    const runModelImport = requireFunction(importer, "runModelImport");
+    const buildInventoryArtifact = requireFunction(coverage, "buildInventoryArtifact");
+    const store = createMemoryModelStore() as { snapshot: () => { writes: number } };
+
+    const inventory = buildInventoryArtifact({
+      ingredients: [{
+        ingredient_id: "ingredient-tofu",
+        canonical_name: "두부",
+        category_code: "BEAN",
+        category_name: "콩류",
+        default_unit: "g",
+        synonyms: ["부침두부"],
+      }],
+      query_version: "inventory-sql-v1",
+    } as never) as Record<string, unknown>;
+
+    await expect(runModelImport({
+      bundle: buildBundle(),
+      mode: "dry-run",
+      environment: "staging",
+      pilot_scope: "all-active",
+      inventory,
+      decision: {
+        schema_version: "ingredient-nutrition-decision-v1",
+        inventory_checksum: inventory.checksum,
+        reviewed_by: "operator-1",
+        reviewed_at: "2026-07-17T15:00:00.000Z",
+        decision_reason: "exact tofu mapping reviewed",
+        decisions: [{
+          ingredient_id: "ingredient-tofu",
+          classification: "eligible",
+          provider_code: "MFDS",
+          external_item_key: "source-item-1",
+          source_item_fingerprint: buildBundle().approved_items[0].fingerprint,
+        }],
+      },
+      canonical_ingredients: canonicalIngredients,
+      approval: null,
+      store,
+    } as never)).resolves.toMatchObject({
+      mode: "dry-run",
+      environment: "staging",
+      pilot_scope: "all-active",
+      writes_attempted: 0,
+      writes_committed: 0,
+    });
+    expect(store.snapshot().writes).toBe(0);
+  });
+
+  it("rejects stale all-active inventory or decision checksums before any store access", async () => {
+    const importer = await loadImporter();
+    const validateAllActiveInventorySnapshot = requireFunction(
+      importer,
+      "validateAllActiveInventorySnapshot",
+    );
+    const coverage = await loadCoverage();
+    const buildInventoryArtifact = requireFunction(coverage, "buildInventoryArtifact");
+
+    const inventory = buildInventoryArtifact({
+      ingredients: [{
+        ingredient_id: "ingredient-tofu",
+        canonical_name: "두부",
+        category_code: "BEAN",
+        category_name: "콩류",
+        default_unit: "g",
+        synonyms: ["부침두부"],
+      }],
+      query_version: "inventory-sql-v1",
+    } as never) as Record<string, unknown>;
+
+    expect(() => validateAllActiveInventorySnapshot({
+      inventory,
+      decision: {
+        schema_version: "ingredient-nutrition-decision-v1",
+        inventory_checksum: inventory.checksum,
+        decisions: [],
+      },
+      live_inventory_checksum: "stale-live-checksum",
+    } as never)).toThrowError(
+      expect.objectContaining({ code: "INVENTORY_CHECKSUM_MISMATCH" }),
+    );
+
+    expect(() => validateAllActiveInventorySnapshot({
+      inventory,
+      decision: {
+        schema_version: "ingredient-nutrition-decision-v1",
+        inventory_checksum: "stale-decision-checksum",
+        decisions: [],
+      },
+      live_inventory_checksum: inventory.checksum,
+    } as never)).toThrowError(
+      expect.objectContaining({ code: "INVENTORY_CHECKSUM_MISMATCH" }),
+    );
   });
 
   it("accepts exactly 30 pilot recipes and canonical closure and rejects 29/31 or outside ingredients", async () => {
@@ -719,10 +1076,156 @@ describe("ingredient nutrition model import", () => {
     expect(disabled).toMatchObject({ mode: "disable", payload_deleted: 0 });
   });
 
+  it("keeps all-active actual coverage fields in report artifacts", async () => {
+    const importer = await loadImporter();
+    const buildRunReport = requireFunction(importer, "buildRunReport");
+
+    const report = buildRunReport({
+      schema_version: "ingredient-nutrition-model-run-v1",
+      run_id: "model-all-active-report-001",
+      environment: "local",
+      status: "applied",
+      pilot_scope: "all-active",
+      input_checksum: "input-checksum-001",
+      source_versions: ["test-v1"],
+      freshness_statuses: ["current"],
+      idempotency_key: "idempotency-001",
+      content_hash: "content-hash-001",
+      source_payload_identity: "payload-identity-001",
+      decision_checksum: "decision-checksum-001",
+      scope_recipe_count: 0,
+      scope_ingredient_count: 2,
+      writes_attempted: 3,
+      writes_committed: 3,
+      replayed: false,
+      source_item_count: 1,
+      profile_count: 1,
+      nutrient_value_count: 1,
+      missing_value_count: 0,
+      zero_value_count: 0,
+      nutrition_candidate_count: 1,
+      conversion_candidate_count: 0,
+      piece_candidate_count: 0,
+      approved_count: 1,
+      rejected_count: 0,
+      needs_review_count: 0,
+      revoked_count: 0,
+      superseded_count: 0,
+      production_db_writes: 0,
+      provider_requests: 0,
+      secret_leak_count: 0,
+      reason_counts: {},
+      reason_codes: [],
+      report_artifact: ".artifacts/ops/ingredient-nutrition-conversion-model/model-all-active-report-001/summary.json",
+      rollback_artifact: null,
+      denominator_count: 2,
+      approved_exactly_one_count: 1,
+      excluded_count: 1,
+      eligible_without_profile: 0,
+      unclassified: 0,
+      classification_conflict: 0,
+      multiple_qualified_primary: 0,
+    } as never) as Record<string, unknown>;
+
+    expect(report).toMatchObject({
+      denominator_count: 2,
+      approved_exactly_one_count: 1,
+      excluded_count: 1,
+      eligible_without_profile: 0,
+      unclassified: 0,
+      classification_conflict: 0,
+      multiple_qualified_primary: 0,
+    });
+  });
+
+  it("rejects all-active staging disable before calling the store", async () => {
+    const importer = await loadImporter();
+    const coverage = await loadCoverage();
+    const createMemoryModelStore = requireFunction(importer, "createMemoryModelStore");
+    const runModelImport = requireFunction(importer, "runModelImport");
+    const buildRunReport = requireFunction(importer, "buildRunReport");
+    const disableModelRun = requireFunction(importer, "disableModelRun");
+    const buildInventoryArtifact = requireFunction(coverage, "buildInventoryArtifact");
+    const store = createMemoryModelStore() as unknown;
+
+    const inventory = buildInventoryArtifact({
+      ingredients: [{
+        ingredient_id: "ingredient-tofu",
+        canonical_name: "두부",
+        category_code: "BEAN",
+        category_name: "콩류",
+        default_unit: "g",
+        synonyms: ["부침두부"],
+      }],
+      query_version: "inventory-sql-v1",
+    } as never) as Record<string, unknown>;
+    const summary = await runModelImport({
+      bundle: buildBundle(),
+      mode: "apply",
+      environment: "local",
+      pilot_scope: "all-active",
+      inventory,
+      decision: {
+        schema_version: "ingredient-nutrition-decision-v1",
+        inventory_checksum: inventory.checksum,
+        reviewed_by: "operator-1",
+        reviewed_at: "2026-07-17T15:00:00.000Z",
+        decision_reason: "exact tofu mapping reviewed",
+        decisions: [{
+          ingredient_id: "ingredient-tofu",
+          classification: "eligible",
+          provider_code: "MFDS",
+          external_item_key: "source-item-1",
+          source_item_fingerprint: buildBundle().approved_items[0].fingerprint,
+        }],
+      },
+      canonical_ingredients: canonicalIngredients,
+      approval: null,
+      store,
+    } as never) as Record<string, unknown>;
+    const report = buildRunReport({
+      ...summary,
+      affected_source_id: "00000000-0000-4000-8000-000000000010",
+      affected_row_ids: {
+        nutrition_source_ids: ["00000000-0000-4000-8000-000000000010"],
+        nutrition_source_item_ids: [],
+        nutrition_profile_ids: [],
+        nutrition_value_keys: [],
+        nutrition_link_ids: [],
+        measurement_evidence_ids: [],
+        conversion_assignment_ids: [],
+        piece_weight_ids: [],
+      },
+    } as never) as Record<string, unknown>;
+    let disableCalled = false;
+
+    await expect(disableModelRun({
+      report,
+      store: {
+        findRun: () => null,
+        disableAppliedModel: async () => {
+          disableCalled = true;
+          return { writes_committed: 1, payload_deleted: 0, revoked_count: 1 };
+        },
+      },
+      environment: "staging",
+      decision: {
+        reviewed_by: "operator-2",
+        reviewed_at: "2026-07-17T16:00:00.000Z",
+        reason: "staging disable must be gated",
+      },
+    } as never)).rejects.toMatchObject({
+      code: "PRODUCTION_LOAD_APPROVAL_REQUIRED",
+      summary: { writes_attempted: 0, writes_committed: 0 },
+    });
+    expect(disableCalled).toBe(false);
+  });
+
   it("registers strict import/report/disable package commands", () => {
     const pkg = JSON.parse(readFileSync(`${process.cwd()}/package.json`, "utf8"));
 
     expect(pkg.scripts).toMatchObject({
+      "nutrition:model:inventory": expect.stringContaining("ingredient-nutrition-model-cli.mjs inventory"),
       "nutrition:model:import": expect.stringContaining("ingredient-nutrition-model-cli.mjs import"),
       "nutrition:model:report": expect.stringContaining("ingredient-nutrition-model-cli.mjs report"),
       "nutrition:model:disable": expect.stringContaining("ingredient-nutrition-model-cli.mjs disable"),
@@ -745,6 +1248,8 @@ describe("ingredient nutrition model import", () => {
     });
     expect(parseModelCliArgs("report" as never, ["--", "--run-id", "model-12345678"] as never))
       .toEqual({ run_id: "model-12345678" });
+    expect(parseModelCliArgs("inventory" as never, ["--environment", "local"] as never))
+      .toEqual({ environment: "local" });
     expect(() => parseModelCliArgs("import" as never, ["--unknown", "value"] as never))
       .toThrowError(expect.objectContaining({ code: "CLI_ARGUMENT_INVALID" }));
     expect(() => parseModelCliArgs("import" as never, [
@@ -753,5 +1258,45 @@ describe("ingredient nutrition model import", () => {
       "--pilot-scope", "foodsafety-30",
       "--environment", "local",
     ] as never)).toThrowError(expect.objectContaining({ code: "APPROVAL_FILE_REQUIRED" }));
+
+    expect(parseModelCliArgs("import" as never, [
+      "--bundle", "bundle.json",
+      "--mode", "dry-run",
+      "--pilot-scope", "all-active",
+      "--inventory-file", "inventory.json",
+      "--decision-file", "decision.json",
+    ] as never)).toMatchObject({
+      bundle: "bundle.json",
+      mode: "dry-run",
+      pilot_scope: "all-active",
+      inventory_file: "inventory.json",
+      decision_file: "decision.json",
+      environment: "local",
+    });
+    expect(() => parseModelCliArgs("import" as never, [
+      "--bundle", "bundle.json",
+      "--mode", "dry-run",
+      "--pilot-scope", "all-active",
+      "--decision-file", "decision.json",
+    ] as never)).toThrowError(expect.objectContaining({ code: "INVENTORY_FILE_REQUIRED" }));
+    expect(() => parseModelCliArgs("import" as never, [
+      "--bundle", "bundle.json",
+      "--mode", "dry-run",
+      "--pilot-scope", "all-active",
+      "--inventory-file", "inventory.json",
+    ] as never)).toThrowError(expect.objectContaining({ code: "DECISION_FILE_REQUIRED" }));
+    expect(parseModelCliArgs("import" as never, [
+      "--bundle", "bundle.json",
+      "--mode", "apply",
+      "--pilot-scope", "all-active",
+      "--inventory-file", "inventory.json",
+      "--decision-file", "decision.json",
+    ] as never)).toMatchObject({
+      mode: "apply",
+      pilot_scope: "all-active",
+      inventory_file: "inventory.json",
+      decision_file: "decision.json",
+      environment: "local",
+    });
   });
 });
