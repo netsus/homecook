@@ -46,7 +46,7 @@
   },
   "verification": {
     "required_checks": [
-      "pnpm exec vitest run tests/ingredient-nutrition-coverage.test.ts tests/ingredient-nutrition-full-coverage-postgres.integration.test.ts",
+      "pnpm exec vitest run tests/ingredient-nutrition-coverage.test.ts tests/ingredient-nutrition-import.test.ts tests/ingredient-nutrition-matching.test.ts tests/ingredient-nutrition-full-coverage-postgres.integration.test.ts",
       "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
@@ -55,7 +55,7 @@
       "git diff --check"
     ],
     "verify_commands": [
-      "pnpm exec vitest run tests/ingredient-nutrition-coverage.test.ts tests/ingredient-nutrition-full-coverage-postgres.integration.test.ts",
+      "pnpm exec vitest run tests/ingredient-nutrition-coverage.test.ts tests/ingredient-nutrition-import.test.ts tests/ingredient-nutrition-matching.test.ts tests/ingredient-nutrition-full-coverage-postgres.integration.test.ts",
       "pnpm verify:backend"
     ],
     "evaluator_commands": [],
