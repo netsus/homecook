@@ -165,7 +165,7 @@
 - Visual artifacts: `ui/designs/PLANNER_WEEK.md`, `ui/designs/MEAL_SCREEN.md`
 - Stage 1 critique brief: `ui/designs/critiques/planner-nutrition-summary-critique.md`
 - Stage 4 evidence root: `ui/designs/evidence/planner-nutrition-summary/`
-- Future authority report: `ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md`
+- Stage 5 authority report: `ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md` — exact frontend head `cebb385d9cc00e1ab988432aff39983310b5b0ec`, `STAGE5_APPROVED`, Blocker/Major/Minor `0/0/0`; final authority와 Stage 6는 pending
 - Authority status: `required`
 - Notes: 기존 prepared-food-planner-entry의 day card, slot row, mixed entry, primary CTA, localized scroll, anchor return을 보존한다. 영양 summary가 첫 화면 day overview를 과도하게 밀면 summary metadata를 더 compact하게 만들고 planner mental model을 교체하지 않는다.
 
@@ -243,7 +243,15 @@
 - real local Supabase/PostgREST/auth browser smoke는 `127.0.0.1`만 허용하는 `scripts/verify-planner-nutrition-local-db.mjs`를 준비했지만, 현재 Docker daemon이 `supabase_db_homecook`을 `Created`에서 시작하지 못하고 `docker start`도 응답하지 않아 1회 재시도 뒤 환경 blocker로 남겼다. Stage 2 isolated PostgreSQL 17.10 read-only 2/2와 fixture browser는 이 미실행 항목의 대체 증거가 아니다. Docker가 회복되면 최종 cross-slice QA에서 한 번 재시도한다.
 - 2026-07-17 current-head repair는 범위 변경 로딩에서 이전 범위 영양을 숨기고, 같은 범위 mutation 재조회 오류에서만 기존 영양을 유지한다. 최초 오류는 empty가 아닌 retry error로 표시하며, 성공한 recipe/product 추가·변경·삭제 뒤 nutrition을 non-blocking 재조회한다. 중앙 fixture는 화면 목록과 영양 집계가 같은 recipe/product ID·수량을 사용한다. list가 `ready/empty`로 확정되기 전의 임시 빈 배열은 실제 ready nutrition을 빈 계획으로 바꾸지 않는다. exact targeted Vitest는 `planner-nutrition-api` 11, `planner-nutrition-ui` 17, `planner-week-screen` 37, `planner-meal-screen` 44, `qa-planner-nutrition-fixture` 4로 5 files/113이며, fixture Playwright 3 projects 15/15, typecheck와 lint 0 errors가 통과했다. 앞선 full Vitest 311 files/3,222 근거는 유지한다.
 - repair state evidence는 `after/states/planner-range-loading-hides-prior-data.png`, `after/states/meal-soft-error-preserves-data.png`, `after/states/planner-initial-error-390.png`, `after/states/meal-initial-error-390.png`다. 폐기된 반대 동작 이미지는 제거했고, `comparison.png`와 `visual-verdict.json`은 current fixture의 동일 viewport before/current 쌍으로 갱신했다.
-- Design Status는 `pending-review`다. 현재 Stage 4 구현자는 authority를 자기 승인하지 않으며 fresh authority precheck, Stage 5, final authority, Stage 6와 physical device/screen reader는 pending이다.
+- Design Status는 `pending-review`다. 현재 Stage 4 구현자는 authority를 자기 승인하지 않았고 fresh authority precheck와 Stage 5는 역할을 분리해 완료했다. Design Status를 `confirmed`로 바꾸는 final authority와 Stage 6, physical device/screen reader는 pending이다.
+
+#### Stage 5 Design Review — Independently Approved
+
+- 역할이 분리된 fresh Codex Stage 5 reviewer가 exact frontend head `cebb385d9cc00e1ab988432aff39983310b5b0ec`를 `STAGE5_APPROVED`, Blocker/Major/Minor `0/0/0`으로 승인했다. 판정 보고서는 `ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md`다.
+- current-run QA fixture 근거는 `.artifacts/authority/planner-nutrition-summary/stage5-20260717T071035Z/`에 남겼다. `PLANNER_WEEK`와 `MEAL_SCREEN`을 각각 `320 / 390 / desktop 1280`에서 다시 캡처하고, initial error, 다른 범위 loading, 같은 범위 soft error, empty, warning dialog/focus 복원, 동일 viewport before/current composite를 직접 검토했다.
+- 모든 current-run ready/state 화면에서 page-level horizontal overflow는 없었다. MEAL_SCREEN CTA는 320/390에서 52px, desktop에서 44px이며 scroll content와 겹치지 않았다. warning dialog는 `닫기`로 focus가 이동하고 ESC 뒤 `확인 필요 안내 1개 보기` trigger로 복원됐다.
+- exact-head fixture Playwright `tests/e2e/slice-planner-nutrition-summary.spec.ts --project=desktop-chrome`는 `5 passed`다.
+- 이 판정은 Stage 5 frontend design review에만 적용된다. Design Status는 `pending-review`이며 combined authority checklist/acceptance, final authority, Stage 6, current-head 전체 CI, real local Supabase browser, physical device/screen reader는 pending이다.
 
 ## Primary User Path
 
