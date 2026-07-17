@@ -190,7 +190,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `recipe-nutrition-calculation` | merged | 레시피 재료·인분·대표 환산으로 completeness/quality와 scalable/fixed vectors를 계산하고 immutable snapshot을 생성/pin/backfill하며 Recipe Detail additive API와 최소 상태 UI를 제공한다 |
 | `prepared-food-catalog` | merged | 승인 public 완제품 + 사용자 private manual 제품 catalog, immutable nutrition version, owner/public read-only/soft-delete 정책을 구현한다 |
 | `prepared-food-planner-entry` | merged | 완제품을 Recipe Meal과 분리해 플래너에 추가/수정/삭제하고 shopping/cooking/leftover/XP에서 구조적으로 제외한다 |
-| `planner-nutrition-summary` | in-progress — Stage 4 pending-review | pin된 recipe/product snapshot만 끼니·날짜·주간 `계획 영양`으로 합산하고 결측/partial/quality를 보존한다 |
+| `planner-nutrition-summary` | in-progress — authority passed, local verification green | pin된 recipe/product snapshot만 끼니·날짜·주간 `계획 영양`으로 합산하고 결측/partial/quality를 보존한다. real local DB와 수동·규모 검증은 pending |
 
 ## Nutrition / Products / Planner Dependency Chain
 
@@ -201,7 +201,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `recipe-nutrition-calculation` | merged | `ingredient-nutrition-conversion-model` + PR #1005 pilot + PR #1006 official contract = merged |
 | `prepared-food-catalog` | merged | `ingredient-nutrition-conversion-model` = merged |
 | `prepared-food-planner-entry` | merged | `prepared-food-catalog` = merged, `05-planner-week-core` = merged |
-| `planner-nutrition-summary` | in-progress — Stage 4 pending-review | `recipe-nutrition-calculation` = merged, `prepared-food-planner-entry` = merged through closeout `64d2b5145d1e96772eb7dfee4d4057cafcab8f64`; backend Stage 3 `0/0/0`; Stage 4 targeted 99/99 + fixture browser 12/12 + 320/390/1280 evidence 완료, authority/Stage 5/6·Linux current-head CI·local Supabase 재시도 pending |
+| `planner-nutrition-summary` | in-progress — Design Status confirmed | predecessors merged; backend Stage 3, Stage 5, final authority와 Stage 6 모두 `0/0/0`; final local frontend product `1,587/24 skipped`, regression `872/112 skipped`, Lighthouse 6, a11y `18/15`, visual `23/22`, security `12/12` green. PR current-head checks, local Supabase, physical device/screen reader와 production-scale query pending |
 
 > 각 slice는 자신의 Stage 1 workpack/acceptance/automation-spec이 별도 Codex docs-owner 작업에서 main에 merge되고 internal 1.5 gate가 닫힌 뒤에만 다음 stage를 시작한다. `recipe-nutrition-calculation`의 additive Recipe Detail UI와 `prepared-food-planner-entry`/`planner-nutrition-summary`의 PLANNER_WEEK 변경은 anchor-extension authority-required다.
 

@@ -89,8 +89,8 @@
 - [x] desktop 1280에서 기존 planner/meal hierarchy와 content width가 안정적이다 <!-- omo:id=accept-planner-nutrition-evidence-desktop;stage=4;scope=frontend;review=5,6 -->
 - [x] page-level horizontal overflow가 없고 기존 localized scroll/anchor return/focus가 보존된다 <!-- omo:id=accept-planner-nutrition-scroll-focus;stage=4;scope=frontend;review=5,6 -->
 - [x] axe, keyboard, screen-reader label, color 이외 incomplete 표현이 통과한다 <!-- omo:id=accept-planner-nutrition-accessibility;stage=4;scope=frontend;review=5,6 -->
-- [ ] exploratory QA report/eval과 `pnpm verify:frontend`가 green이다 <!-- omo:id=accept-planner-nutrition-exploratory;stage=4;scope=frontend;review=5,6 -->
-- [ ] fresh authority precheck/Stage 5/final authority/Stage 6에 unresolved blocker/important가 0이다 <!-- omo:id=accept-planner-nutrition-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] exploratory QA report/eval과 `pnpm verify:frontend`가 green이다 <!-- omo:id=accept-planner-nutrition-exploratory;stage=4;scope=frontend;review=5,6 -->
+- [x] fresh authority precheck/Stage 5/final authority/Stage 6에 unresolved blocker/important가 0이다 <!-- omo:id=accept-planner-nutrition-authority;stage=4;scope=frontend;review=5,6 -->
 
 ## Automation Split
 
@@ -115,9 +115,9 @@
 - [ ] physical iOS/Android narrow device와 실제 screen reader 확인
 - [ ] production-scale query plan/large entry count/RLS cost 측정
 
-> Stage 4 implementation evidence: targeted Vitest 4 files/99, fixture Playwright 3 projects 12/12, `pnpm verify:frontend:pr`, full a11y 18/15, full visual 23/22, security 12/12가 통과했다. full `pnpm verify:frontend`는 기존 `slice-17a-mypage` mobile-chrome 2건의 비결정적 실패 때문에 non-zero였지만 해당 2건 단독 재실행은 2/2 통과했다. full local Supabase smoke는 `127.0.0.1` 전용 검증 스크립트를 준비했으나 Docker daemon이 현재 프로젝트 DB 컨테이너를 시작하지 못해 환경 blocker다. isolated PostgreSQL 17.10 2/2와 fixture browser를 그 대체 증거로 간주하지 않는다. Stage 4는 `pending-review`이며 authority와 Stage 5/6을 자기 승인하지 않는다.
+> Stage 4 implementation evidence: targeted Vitest 4 files/99, fixture Playwright 3 projects 12/12, `pnpm verify:frontend:pr`, full a11y 18/15, full visual 23/22, security 12/12가 통과했다. 이후 역할 분리 repair와 exact-head 재검증으로 `CI=1 pnpm verify:frontend`도 lint/typecheck/build, product `1,587 passed/24 skipped`, regression `872 passed/112 skipped`, Lighthouse 6 runs, accessibility `18/15`, visual `23/22`, security `12/12`까지 green이다. full local Supabase smoke는 `127.0.0.1` 전용 검증 스크립트를 준비했으나 Docker daemon이 현재 프로젝트 DB 컨테이너를 시작하지 못해 환경 blocker다. isolated PostgreSQL 17.10 2/2와 fixture browser를 그 대체 증거로 간주하지 않는다.
 >
-> 2026-07-17 current-head repair evidence: exact targeted Vitest는 `planner-nutrition-api` 11, `planner-nutrition-ui` 17, `planner-week-screen` 37, `planner-meal-screen` 44, `qa-planner-nutrition-fixture` 4로 5 files/113이며, fixture Playwright 3 projects 15/15, typecheck와 lint 0 errors가 통과했다. list loading/error 동안의 임시 빈 visible arrays는 ready nutrition을 빈 계획으로 오인하지 않고, list가 성공해 empty로 확정된 경우에만 `entryCount=0`을 적용한다. 앞선 full Vitest 311 files/3,222 근거는 유지한다. 다른 범위 loading, 같은 범위 MEAL soft-error, week/meal 최초 error 증거는 각각 `after/states/planner-range-loading-hides-prior-data.png`, `after/states/meal-soft-error-preserves-data.png`, `after/states/planner-initial-error-390.png`, `after/states/meal-initial-error-390.png`이며, 폐기된 반대 동작 이미지는 제거했다. `comparison.png`와 `visual-verdict.json`은 current fixture의 recipe/product identity와 390/320/desktop ready 화면에 맞춰 갱신했다. Stage 5는 approved이며, full local DB, final authority와 Stage 6 상태는 계속 pending이다.
+> 2026-07-17 final exact-head evidence: exact targeted Vitest는 `planner-nutrition-api` 11, `planner-nutrition-ui` 17, `planner-week-screen` 37, `planner-meal-screen` 44, `qa-planner-nutrition-fixture` 4로 5 files/113이며, fixture Playwright 3 projects 15/15, 관련 planner/prepared-food 동시 stress 96/96, typecheck와 lint 0 errors가 통과했다. list loading/error 동안의 임시 빈 visible arrays는 ready nutrition을 빈 계획으로 오인하지 않고, list가 성공해 empty로 확정된 경우에만 `entryCount=0`을 적용한다. 다른 범위 loading, 같은 범위 MEAL soft-error, week/meal 최초 error 근거와 390/320/desktop comparison을 유지한다. 역할 분리된 Stage 5와 final authority는 Blocker/Major/Minor `0/0/0`, Stage 6는 Blocker/Important/Suggestion `0/0/0`으로 exact implementation head `21538d71b66b673e6aaea77027a02af6342bce9f`를 승인했다. Design Status는 confirmed다. real local DB, physical device/실제 screen reader, production-scale query 측정은 계속 pending이다.
 
 ## Scope Guard
 
