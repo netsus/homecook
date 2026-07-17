@@ -21,8 +21,9 @@
 - 분류: 각 ingredient는 `eligible` 결정 하나 또는 허용된 `excluded` 결정 하나만 가진다.
 - DB 영향: 기존 `ingredients`, `ingredient_synonyms`, `nutrition_sources`, `nutrition_source_items`, `nutrition_profiles`, `nutrition_values`, `ingredient_nutrition_profiles`, `operational_events`
 - Schema Change:
-  - [ ] 없음
-  - [x] 있음 → 새 table/status 없이 검수 decision checksum을 기존 link insert/apply guard가 확인하도록 additive 후속 migration
+  - [x] 없음 → 기존 table, constraint, RLS, `apply_ingredient_nutrition_model`/`disable_ingredient_nutrition_model` 계약 안에서만 처리
+  - [ ] 있음
+  - 신규 migration/table/column/index/status/function은 추가하지 않는다. 기존 apply payload의 checksum·candidate identity·approval guard를 재사용하고, 공식 schema 확장이 필요해지면 이 슬라이스를 중단해 별도 contract-evolution으로 분리한다.
 
 ## Out of Scope
 
