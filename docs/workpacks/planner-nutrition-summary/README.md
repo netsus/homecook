@@ -166,7 +166,7 @@
 - Stage 1 critique brief: `ui/designs/critiques/planner-nutrition-summary-critique.md`
 - Stage 4 evidence root: `ui/designs/evidence/planner-nutrition-summary/`
 - Stage 5/final authority/Stage 6 report: `ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md` — final reviewed implementation head `21538d71b66b673e6aaea77027a02af6342bce9f`; `STAGE5_APPROVED`와 `FINAL_AUTHORITY_APPROVED` Blocker/Major/Minor `0/0/0`, `STAGE6_APPROVED` Blocker/Important/Suggestion `0/0/0`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes: 기존 prepared-food-planner-entry의 day card, slot row, mixed entry, primary CTA, localized scroll, anchor return을 보존한다. 영양 summary가 첫 화면 day overview를 과도하게 밀면 summary metadata를 더 compact하게 만들고 planner mental model을 교체하지 않는다.
 
 ## Design Status

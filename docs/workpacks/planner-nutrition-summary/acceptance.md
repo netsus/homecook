@@ -107,11 +107,14 @@
 - [x] MEAL_SCREEN 핵심 5종/incomplete/quality/warning/soft-state를 검증한다 <!-- omo:id=accept-planner-nutrition-playwright-meal;stage=4;scope=frontend;review=5,6 -->
 - [x] 390/320/desktop visual/a11y/scroll/CTA evidence를 검증한다 <!-- omo:id=accept-planner-nutrition-playwright-devices;stage=4;scope=frontend;review=5,6 -->
 
+### Cross-slice Closeout
+
+- [ ] full local Supabase/PostgREST/auth claim real browser smoke <!-- omo:id=accept-planner-nutrition-local-supabase-browser;stage=2;scope=shared;review=6 -->
+
 ### Manual Only
 
 - [x] independent fresh Codex Stage 1.5 exact-head docs review/repair-final approval — 2026-07-17, repaired fingerprint `83f54e3942b40ceb46af2f917d6981f111a18060e4139ee7a96727651d05f315`, `RE_REVIEW_APPROVED 0/0/0`
 - [x] independent fresh Codex Stage 3 exact-head backend approval — 2026-07-17, head `624c57ed7ba2b154cabbb949d09732eed406b273`, `STAGE3_APPROVED 0/0/0`, current-head checks 0 fail/0 pending
-- [ ] full local Supabase/PostgREST/auth claim real browser smoke
 - [ ] physical iOS/Android narrow device와 실제 screen reader 확인
 - [ ] production-scale query plan/large entry count/RLS cost 측정
 
