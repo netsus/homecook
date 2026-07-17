@@ -2108,9 +2108,9 @@
     {
       "id": "ingredient-nutrition-full-coverage",
       "preset": "vertical-slice-strict",
-      "branch": "docs/ingredient-nutrition-full-coverage",
+      "branch": "feature/be-ingredient-nutrition-full-coverage",
       "pr_path": null,
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -2118,11 +2118,11 @@
         "pnpm verify:backend",
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=docs/ingredient-nutrition-full-coverage pnpm validate:workpack -- --slice ingredient-nutrition-full-coverage",
+        "BRANCH_NAME=feature/be-ingredient-nutrition-full-coverage pnpm validate:workpack -- --slice ingredient-nutrition-full-coverage",
         "node scripts/validate-automation-spec.mjs --slice ingredient-nutrition-full-coverage",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs drafted from official v1.7.21/v1.5.27/v1.3.24/v1.3.22/v1.2.26; independent review findings repaired by forbidding schema expansion and aligning the four required regression targets before Stage 2.",
+      "notes": "Stage 1 docs merged in PR #1027 and required findings were repaired in PR #1029 at 56dbd06df99428fd2e976e55b27c24909d121656. Stage 2 backend TDD is active on feature/be-ingredient-nutrition-full-coverage with all-active inventory/decision coverage work in progress.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

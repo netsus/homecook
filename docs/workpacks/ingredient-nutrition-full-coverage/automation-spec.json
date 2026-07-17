@@ -25,7 +25,7 @@
       "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/ingredient-nutrition-full-coverage pnpm validate:workpack -- --slice ingredient-nutrition-full-coverage",
+      "BRANCH_NAME=feature/be-ingredient-nutrition-full-coverage pnpm validate:workpack -- --slice ingredient-nutrition-full-coverage",
       "node scripts/validate-automation-spec.mjs --slice ingredient-nutrition-full-coverage",
       "git diff --check"
     ],

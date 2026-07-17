@@ -50,7 +50,7 @@
       "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/ingredient-nutrition-full-coverage pnpm validate:workpack -- --slice ingredient-nutrition-full-coverage",
+      "BRANCH_NAME=feature/be-ingredient-nutrition-full-coverage pnpm validate:workpack -- --slice ingredient-nutrition-full-coverage",
       "node scripts/validate-automation-spec.mjs --slice ingredient-nutrition-full-coverage",
       "git diff --check"
     ],
@@ -69,7 +69,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -86,5 +86,5 @@
     "unapproved staging or production writes"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs are being locked on the exact official contract. The observed local 845 count is evidence only; the deterministic inventory artifact owns the runtime denominator."
+  "notes": "Stage 1 docs merged in PR #1027 at 4e84de7fd864086d33d53308ef3e5aa45f19e9ac. Stage 2 backend TDD is active on feature/be-ingredient-nutrition-full-coverage with all-active inventory/decision coverage work in progress."
 }

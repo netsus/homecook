@@ -13,6 +13,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { publishArtifactBundle } from "./lib/public-nutrition-artifacts.mjs";
+import { buildInventoryArtifact } from "./lib/ingredient-nutrition-coverage.mjs";
 import { runLocalPsqlJson } from "./lib/ingredient-nutrition-local-db.mjs";
 import {
   buildFoodsafetyScopeSql,
@@ -26,6 +27,7 @@ import {
   parseModelCliArgs,
   publishRunWithRecovery,
   runModelImport,
+  validateAllActiveInventorySnapshot,
   validateRunReport,
   validateRunReportAgainstRegistry,
 } from "./lib/ingredient-nutrition-import.mjs";
@@ -189,6 +191,58 @@ function runDatabaseJson(environment, sql) {
   return runLocalPsqlJson(sql);
 }
 
+function resolveAllActiveScope(environment) {
+  return runDatabaseJson(environment, `
+select json_build_object(
+  'ingredients',
+  coalesce(
+    json_agg(
+      json_build_object(
+        'ingredient_id', ingredient.id::text,
+        'canonical_name', ingredient.standard_name,
+        'category_code', ingredient.category,
+        'category_name', ingredient.category,
+        'default_unit', ingredient.default_unit,
+        'synonyms', ingredient.synonyms
+      )
+      order by ingredient.id
+    ),
+    '[]'::json
+  ),
+  'canonical_ingredients',
+  coalesce(
+    json_agg(
+      json_build_object(
+        'id', ingredient.id::text,
+        'normalized_names',
+        array_remove(array_prepend(ingredient.standard_name, ingredient.synonyms), null),
+        'preparation_state', null,
+        'edible_portion', null,
+        'basis_dimension', null
+      )
+      order by ingredient.id
+    ),
+    '[]'::json
+  )
+)::text
+from (
+  select
+    ingredient.id,
+    ingredient.standard_name,
+    ingredient.category,
+    ingredient.default_unit,
+    coalesce(
+      array_agg(distinct synonym.synonym order by synonym.synonym)
+      filter (where synonym.synonym is not null),
+      '{}'::text[]
+    ) as synonyms
+  from public.ingredients ingredient
+  left join public.ingredient_synonyms synonym on synonym.ingredient_id = ingredient.id
+  group by ingredient.id, ingredient.standard_name, ingredient.category, ingredient.default_unit
+) ingredient;
+`);
+}
+
 function resolveFoodsafetyPilotScope(environment) {
   const contract = readPinnedPilotContract();
   return runDatabaseJson(environment, buildFoodsafetyScopeSql(contract).actual);
@@ -237,6 +291,94 @@ select public.disable_ingredient_nutrition_model(
   value -> 'decision' ->> 'reason',
   (value -> 'decision' ->> 'reviewed_at')::timestamptz
 )::text from input;
+`);
+    },
+    async getCoverageStats({ inventory_ids: inventoryIds, excluded_ingredient_ids: excludedIngredientIds }) {
+      const encoded = Buffer.from(
+        JSON.stringify({
+          inventory_ids: inventoryIds,
+          excluded_ingredient_ids: excludedIngredientIds,
+        }),
+        "utf8",
+      ).toString("base64");
+      return query(`
+with input as (
+  select convert_from(decode('${encoded}', 'base64'), 'UTF8')::jsonb as value
+),
+inventory as (
+  select jsonb_array_elements_text(value -> 'inventory_ids') as ingredient_id
+  from input
+),
+excluded as (
+  select jsonb_array_elements_text(value -> 'excluded_ingredient_ids') as ingredient_id
+  from input
+),
+qualified_primary_counts as (
+  select
+    inventory.ingredient_id,
+    count(*) filter (
+      where link.review_status = 'approved'
+        and link.is_active
+        and link.is_primary
+        and profile.review_status = 'approved'
+        and profile.is_active
+        and item.review_status = 'approved'
+        and source.freshness_status = 'current'
+        and source.review_status = 'approved'
+        and source.is_active
+    ) as active_primary_count
+  from inventory
+  left join public.ingredient_nutrition_profiles link
+    on link.ingredient_id::text = inventory.ingredient_id
+  left join public.nutrition_profiles profile
+    on profile.id = link.nutrition_profile_id
+  left join public.nutrition_source_items item
+    on item.id = profile.source_item_id
+  left join public.nutrition_sources source
+    on source.id = item.source_id
+  group by inventory.ingredient_id
+)
+select json_build_object(
+  'denominator_count',
+  (select count(*) from inventory),
+  'approved_exactly_one_count',
+  (
+    select count(*)
+    from qualified_primary_counts
+    where ingredient_id not in (select ingredient_id from excluded)
+      and active_primary_count = 1
+  ),
+  'excluded_count',
+  (select count(*) from excluded),
+  'eligible_without_profile',
+  (
+    select count(*)
+    from qualified_primary_counts
+    where ingredient_id not in (select ingredient_id from excluded)
+      and active_primary_count = 0
+  ),
+  'unclassified',
+  (
+    select count(*)
+    from qualified_primary_counts
+    where ingredient_id not in (select ingredient_id from excluded)
+      and active_primary_count <> 1
+  ),
+  'classification_conflict',
+  (
+    select count(*)
+    from qualified_primary_counts
+    where ingredient_id in (select ingredient_id from excluded)
+      and active_primary_count > 0
+  ),
+  'multiple_qualified_primary',
+  (
+    select count(*)
+    from qualified_primary_counts
+    where ingredient_id not in (select ingredient_id from excluded)
+      and active_primary_count > 1
+  )
+)::text;
 `);
     },
   };
@@ -324,6 +466,34 @@ async function importCommand(args) {
   if (args.mode === "apply" && args.environment === "production") {
     throw new IngredientNutritionImportError("PRODUCTION_LOAD_APPROVAL_REQUIRED");
   }
+  if (args.pilot_scope === "all-active") {
+    const inventory = await readJsonInput(args.inventory_file);
+    const decision = await readJsonInput(args.decision_file);
+    const allActiveContext = resolveAllActiveScope(args.environment);
+    const liveInventory = buildInventoryArtifact({
+      ingredients: allActiveContext.ingredients,
+      query_version: "all-active-inventory-sql-v1",
+    });
+    validateAllActiveInventorySnapshot({
+      inventory,
+      decision,
+      live_inventory_checksum: liveInventory.checksum,
+    });
+    const store = createDatabaseStore(args.environment);
+    const summary = await runModelImport({
+      bundle,
+      mode: args.mode,
+      environment: args.environment,
+      pilot_scope: args.pilot_scope,
+      inventory,
+      decision,
+      canonical_ingredients: allActiveContext.canonical_ingredients,
+      approval,
+      store,
+    });
+    await publishCommandRun(summary, store);
+    return summary;
+  }
   const actualPilotContext = resolveFoodsafetyPilotScope(
     args.environment,
   );
@@ -347,6 +517,14 @@ async function importCommand(args) {
   });
   await publishCommandRun(summary, store);
   return summary;
+}
+
+async function inventoryCommand(args) {
+  const allActiveContext = resolveAllActiveScope(args.environment ?? "local");
+  return buildInventoryArtifact({
+    ingredients: allActiveContext.ingredients,
+    query_version: "all-active-inventory-sql-v1",
+  });
 }
 
 async function reportCommand(args) {
@@ -375,11 +553,13 @@ async function main() {
   const command = process.argv[2];
   try {
     const args = parseModelCliArgs(command, process.argv.slice(3));
-    const result = command === "import"
-      ? await importCommand(args)
-      : command === "report"
-        ? await reportCommand(args)
-        : await disableCommand(args);
+    const result = command === "inventory"
+      ? await inventoryCommand(args)
+      : command === "import"
+        ? await importCommand(args)
+        : command === "report"
+          ? await reportCommand(args)
+          : await disableCommand(args);
     writeMachineJson(process.stdout, result);
   } catch (error) {
     writeMachineJson(process.stderr, formatCliFailure(error));
