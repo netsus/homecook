@@ -56,7 +56,7 @@
 
 > 사용자 승인 nutrition/products/planner Codex-only 예외에 따라 Stage 1 author, internal 1.5 reviewer/repair-final, Stage 2 backend TDD implementer, Stage 3 reviewer, Stage 4 implementer, authority precheck, Stage 5/final authority, Stage 6 reviewer를 fresh 역할로 분리한다. 작성자와 구현자는 자기 변경을 승인하지 않는다.
 >
-> Stage 4 UI/screenshots, authority precheck, Stage 5, final authority와 Stage 6는 역할을 분리해 완료했다. real local Supabase browser와 physical device/실제 screen reader, production-scale query 측정은 계속 pending이다.
+> Stage 4 UI/screenshots, authority precheck, Stage 5, final authority와 Stage 6는 역할을 분리해 완료했다. 2026-07-17 cross-slice closeout에서 real local Supabase browser도 완료했다. physical device/실제 screen reader와 production-scale query 측정은 Manual Only로 남는다.
 
 ## Proposal Decision
 
@@ -240,10 +240,10 @@
 - `ui/designs/evidence/planner-nutrition-summary/`에 두 화면의 동일 viewport `320 / 390 / desktop 1280` before/after, geometry, 상태 증거와 comparison을 남겼다. 320px `MEAL_SCREEN`에서 CTA가 viewport 밖으로 밀리던 exploratory finding을 bottom navigation 위 52px 고정 action shell로 수리했고 page-level overflow 0과 focus/ESC 복구를 재검증했다.
 - `pnpm verify:frontend:pr`는 lint 0 errors(기존 무관 warning 4개), typecheck, product 1,573 passed/24 intended skipped, build, smoke 58/8, a11y core 8/1, visual desktop 4/4·mobile 8/8로 통과했다. full a11y 18/15, full visual 23/22, security 12/12도 각각 통과했다.
 - 초기 full `pnpm verify:frontend`는 기존 `slice-17a-mypage` mobile-chrome flake로 non-zero였지만 이후 mypage 격리 repair가 선행 merge됐다. 최종 exact implementation head의 `CI=1 pnpm verify:frontend`는 product `1,587 passed/24 skipped`, regression `872 passed/112 skipped`, Lighthouse 6 runs, accessibility `18/15`, visual `23/22`, security `12/12`와 lint/typecheck/build를 모두 green으로 닫았다.
-- real local Supabase/PostgREST/auth browser smoke는 `127.0.0.1`만 허용하는 `scripts/verify-planner-nutrition-local-db.mjs`를 준비했지만, 현재 Docker daemon이 `supabase_db_homecook`을 `Created`에서 시작하지 못하고 `docker start`도 응답하지 않아 1회 재시도 뒤 환경 blocker로 남겼다. Stage 2 isolated PostgreSQL 17.10 read-only 2/2와 fixture browser는 이 미실행 항목의 대체 증거가 아니다. Docker가 회복되면 최종 cross-slice QA에서 한 번 재시도한다.
+- 2026-07-17 cross-slice closeout에서 Docker Desktop runtime을 재시작하고 volume을 보존한 채 멈춘 local Supabase 컨테이너를 재생성했다. DB/Auth/Storage 등 12개 구성요소가 running 또는 healthy인 상태에서 `pnpm local:reset:demo`와 `scripts/verify-planner-nutrition-local-db.mjs`가 통과했다. localhost-only 실제 auth/PostgREST/browser 흐름은 user row와 `아침/점심/저녁` columns, `GET /api/v1/planner/nutrition` 200, PLANNER_WEEK/MEAL_SCREEN 확정 상태, unavailable false-zero 없음, target 11개 table digest 불변과 production/staging/provider write 0을 검증했다. loading 중 조기 screenshot 회귀는 `tests/planner-nutrition-local-db-smoke-script.test.ts` RED 2/2 뒤 settled-state wait GREEN 2/2로 고정했다. evidence는 `ui/designs/evidence/planner-nutrition-summary/after/real-local-db/`에 있다.
 - 2026-07-17 current-head repair는 범위 변경 로딩에서 이전 범위 영양을 숨기고, 같은 범위 mutation 재조회 오류에서만 기존 영양을 유지한다. 최초 오류는 empty가 아닌 retry error로 표시하며, 성공한 recipe/product 추가·변경·삭제 뒤 nutrition을 non-blocking 재조회한다. 중앙 fixture는 화면 목록과 영양 집계가 같은 recipe/product ID·수량을 사용한다. list가 `ready/empty`로 확정되기 전의 임시 빈 배열은 실제 ready nutrition을 빈 계획으로 바꾸지 않는다. exact targeted Vitest는 `planner-nutrition-api` 11, `planner-nutrition-ui` 17, `planner-week-screen` 37, `planner-meal-screen` 44, `qa-planner-nutrition-fixture` 4로 5 files/113이며, fixture Playwright 3 projects 15/15, typecheck와 lint 0 errors가 통과했다. 앞선 full Vitest 311 files/3,222 근거는 유지한다.
 - repair state evidence는 `after/states/planner-range-loading-hides-prior-data.png`, `after/states/meal-soft-error-preserves-data.png`, `after/states/planner-initial-error-390.png`, `after/states/meal-initial-error-390.png`다. 폐기된 반대 동작 이미지는 제거했고, `comparison.png`와 `visual-verdict.json`은 current fixture의 동일 viewport before/current 쌍으로 갱신했다.
-- Design Status는 `confirmed`다. Stage 4 구현자, Stage 5 reviewer, final authority reviewer, Stage 6 reviewer와 repair 역할을 분리했고, final exact implementation head `21538d71b66b673e6aaea77027a02af6342bce9f`에서 authority와 Stage 6 unresolved finding이 각각 `0/0/0`이다. 이는 real local DB나 physical device/실제 screen reader 검증 완료를 뜻하지 않는다.
+- Design Status는 `confirmed`다. Stage 4 구현자, Stage 5 reviewer, final authority reviewer, Stage 6 reviewer와 repair 역할을 분리했고, final exact implementation head `21538d71b66b673e6aaea77027a02af6342bce9f`에서 authority와 Stage 6 unresolved finding이 각각 `0/0/0`이다. real local DB browser는 후속 cross-slice closeout에서 통과했지만, physical device/실제 screen reader 완료를 뜻하지는 않는다.
 
 #### Stage 5 Design Review — Independently Approved
 
@@ -254,7 +254,7 @@
 - 별도 final authority reviewer가 exact implementation head `21538d71b66b673e6aaea77027a02af6342bce9f`를 `FINAL_AUTHORITY_APPROVED`, Blocker/Major/Minor `0/0/0`, `confirmed_allowed=true`로 승인했다. 이어 구현·authority·repair와 분리된 fresh Stage 6 re-reviewer가 같은 head를 `STAGE6_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다.
 - full frontend 병렬 실행이 드러낸 E2E shared fixture mutation은 별도 TDD repair로 해당 planner nutrition spec 내부에 격리했다. planner nutrition 3-project `15/15`, planner/prepared-food 동시 stress `96/96`, targeted Vitest 5 files/113, typecheck, lint 0 errors와 PNG 23/23 checksum 유지 후 exact-head Stage 6/final authority 재검토가 다시 승인됐다.
 - `CI=1 pnpm verify:frontend` 최종 실행은 lint/typecheck/build, product `1,587/24 skipped`, regression `872/112 skipped`, Lighthouse 6 runs, accessibility `18/15`, visual `23/22`, security `12/12`로 green이다.
-- Design Status와 combined authority checklist는 닫지만, PR current-head checks와 real local Supabase browser, physical device/실제 screen reader, production-scale query 측정은 별도 pending gate로 남긴다.
+- PR #1024 implementation head `d7e661c2715c40a649e7602ad9c244db3f23e985`의 전체 started checks와 후속 cross-slice local Supabase browser smoke까지 닫았다. physical device/실제 screen reader와 production-scale query 측정은 Manual Only 후속 항목으로 남긴다.
 
 ## Primary User Path
 

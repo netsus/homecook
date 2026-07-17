@@ -133,9 +133,9 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
+    "lifecycle": "merged",
     "approval_state": "codex_approved",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "passed",
     "evaluation_round": 1,
     "last_evaluator_result": ".artifacts/qa/planner-nutrition-summary/2026-07-17T04-34-11-213Z/eval-result.json",
@@ -143,18 +143,18 @@
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "projecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
+      "roadmap_lifecycle": "merged",
       "design_status": "confirmed",
       "delivery_checklist": "complete",
       "design_authority": "passed",
-      "acceptance": "pending",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
-      "external_smokes": "pending",
+      "required_checks": "passed",
+      "external_smokes": "passed",
       "authority_reports": [
         "ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md"
       ],
@@ -170,7 +170,8 @@
         "Stage 4 retained paired PLANNER_WEEK and MEAL_SCREEN before/after evidence at 320, 390, and desktop 1280 plus complete, partial, unavailable, mixed, loading, error, empty, and stale-response states under ui/designs/evidence/planner-nutrition-summary",
         "pnpm verify:frontend:pr passed; full accessibility 18 passed/15 skipped, full visual 23 passed/22 skipped, and security 12/12 passed after intentional Darwin planner and meal baseline refresh",
         "The initial full pnpm verify:frontend run exposed pre-existing slice-17a-mypage mobile flakes; the mypage isolation repair was subsequently merged before final planner nutrition verification",
-        "The 127.0.0.1-only full local Supabase/PostgREST/auth smoke was attempted once after project-local stop/reset, but Docker left supabase_db_homecook in Created and docker start itself did not respond; isolated PostgreSQL 17.10 2/2 and fixture browser evidence are not substitutes, and final cross-slice QA will retry once after Docker daemon recovery",
+        "After Docker Desktop runtime restart and volume-preserving local container recreation, all 12 local Supabase services were running or healthy; pnpm local:reset:demo and the 127.0.0.1-only full local Supabase/PostgREST/auth browser smoke passed with the seeded user, breakfast/lunch/dinner columns, GET planner nutrition 200, settled PLANNER_WEEK and MEAL_SCREEN, unchanged target-table digests, and zero production/staging/provider writes",
+        "The local browser smoke evidence is retained under ui/designs/evidence/planner-nutrition-summary/after/real-local-db; a RED 2/2 then GREEN 2/2 script test ensures screenshots wait for settled nutrition content instead of transient loading UI",
         "The independent Stage 5 reviewer approved exact frontend head cebb385d9cc00e1ab988432aff39983310b5b0ec with STAGE5_APPROVED and Blocker/Major/Minor 0/0/0",
         "Fresh Stage 5 fixture review passed tests/e2e/slice-planner-nutrition-summary.spec.ts desktop-chrome 5/5 and inspected PLANNER_WEEK plus MEAL_SCREEN at 320, 390, and desktop 1280 with no page-level horizontal overflow, 52px mobile/44px desktop MEAL_SCREEN CTA, and warning focus restoration",
         "Stage 5 current-run artifacts are retained under .artifacts/authority/planner-nutrition-summary/stage5-20260717T071035Z/",
@@ -178,29 +179,30 @@
         "A separate fresh Stage 6 re-reviewer approved exact implementation head 21538d71b66b673e6aaea77027a02af6342bce9f with STAGE6_APPROVED and Blocker/Important/Suggestion 0/0/0 after the isolated E2E shared-fixture mutation repair",
         "Exact repaired-head planner nutrition Playwright passed 15/15 across three projects, concurrent planner and prepared-food stress passed 96/96, targeted Vitest passed 5 files and 113 tests, typecheck and lint with 0 errors passed, and tracked PNG checksums remained 23/23 unchanged",
         "CI=1 pnpm verify:frontend passed lint, typecheck, production build, 1587 product tests with 24 intended skips, regression Playwright 872 with 112 intended skips, Lighthouse 6 runs, accessibility 18 with 15 intended skips, visual 23 with 22 intended skips, and security 12/12",
-        "Design Status is confirmed and authority is passed, while PR successor current-head checks, the real local Supabase browser retry, physical-device and actual-screen-reader review, production-scale query measurement, and final merge closeout remain pending"
+        "PR #1024 exact implementation head d7e661c2715c40a649e7602ad9c244db3f23e985 merged as 39f0e158486d00bfcef51de1b4690b51ed9d5ca3 after every started check completed successfully or intentionally skipped",
+        "Design Status is confirmed, authority and required automated verification are passed, and the remaining physical-device/actual-screen-reader review plus production-scale query measurement are explicitly Manual Only"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending-post-closeout-head",
+      "current_head_sha": "d7e661c2715c40a649e7602ad9c244db3f23e985",
       "approval_state": "codex_approved",
-      "all_checks_green": false
+      "all_checks_green": true
     },
     "recovery_summary": {
-      "manual_patch_count": 4,
+      "manual_patch_count": 5,
       "manual_handoff": false,
       "stale_lock_count": 0,
-      "ci_resync_count": 3,
+      "ci_resync_count": 4,
       "artifact_missing": false,
-      "last_recovery_at": "2026-07-17T08:05:01Z"
+      "last_recovery_at": "2026-07-17T09:27:51Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 7,
+      "codex_repairable_count": 8,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
-      "post_merge_stale_count": 0,
-      "latest_reason_code": "stage6_and_final_authority_exact_head_approved",
+      "post_merge_stale_count": 1,
+      "latest_reason_code": "real_local_supabase_smoke_completed_after_docker_runtime_recovery",
       "evidence_sources": [
         "GitHub PR #1021 independent Stage 3 review rounds and exact-head checks",
         "commit bb6530563f45b904e9739f7ee12c1eb78042b746 Stage 3 closeout projection repair",
@@ -215,13 +217,16 @@
         "scripts/run-planner-nutrition-postgres-integration.mjs",
         "ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md",
         "commit 21538d71b66b673e6aaea77027a02af6342bce9f planner nutrition E2E shared-fixture isolation repair",
-        "CI=1 pnpm verify:frontend exact implementation-head green run on 2026-07-17"
+        "CI=1 pnpm verify:frontend exact implementation-head green run on 2026-07-17",
+        "GitHub PR #1024 exact implementation head d7e661c2715c40a649e7602ad9c244db3f23e985 and merge 39f0e158486d00bfcef51de1b4690b51ed9d5ca3 with all started checks completed",
+        "scripts/verify-planner-nutrition-local-db.mjs and tests/planner-nutrition-local-db-smoke-script.test.ts",
+        "ui/designs/evidence/planner-nutrition-summary/after/real-local-db"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-07-17T08:05:01Z",
-      "status_synced_at": "2026-07-17T08:05:01Z",
-      "pr_body_synced_at": "pending-post-closeout-head"
+      "docs_synced_at": "2026-07-17T09:27:51Z",
+      "status_synced_at": "2026-07-17T09:27:51Z",
+      "pr_body_synced_at": "pending-closeout-pr"
     }
   },
   "branch": "feature/fe-planner-nutrition-summary",
@@ -235,5 +240,5 @@
     "Production staging external provider writes and secret or raw provider output"
   ],
   "open_questions": [],
-  "notes": "Canonical pre-merge closeout projection: .workflow-v2/work-items/planner-nutrition-summary.json#closeout. Stage 3 backend remains independently approved at 624c57ed7ba2b154cabbb949d09732eed406b273. Stage 5 approved cebb385d9cc00e1ab988432aff39983310b5b0ec with Blocker/Major/Minor 0/0/0; role-separated final authority and Stage 6 approved exact implementation head 21538d71b66b673e6aaea77027a02af6342bce9f with FINAL_AUTHORITY_APPROVED and STAGE6_APPROVED, each 0/0/0. CI=1 pnpm verify:frontend is locally green with product 1587/24 skipped, regression 872/112 skipped, Lighthouse 6 runs, accessibility 18/15 skipped, visual 23/22 skipped, and security 12/12. Design Status is confirmed and local required checks are passed. lifecycle and verification remain in_progress/pending, acceptance remains pending, auto_merge=false, and current-head PR checks plus real local Supabase browser, physical-device/actual-screen-reader, production-scale query, and final merge closeout remain pending."
+  "notes": "Canonical closeout owner: .workflow-v2/work-items/planner-nutrition-summary.json#closeout. Stage 3 backend remains independently approved at 624c57ed7ba2b154cabbb949d09732eed406b273. Stage 5 approved cebb385d9cc00e1ab988432aff39983310b5b0ec with Blocker/Major/Minor 0/0/0; role-separated final authority and Stage 6 approved exact implementation head 21538d71b66b673e6aaea77027a02af6342bce9f with FINAL_AUTHORITY_APPROVED and STAGE6_APPROVED, each 0/0/0. PR #1024 exact implementation head d7e661c2715c40a649e7602ad9c244db3f23e985 merged as 39f0e158486d00bfcef51de1b4690b51ed9d5ca3 with every started check completed successfully or intentionally skipped. CI=1 pnpm verify:frontend and post-merge cross-slice QA are green. Docker runtime recovery enabled the localhost-only real Supabase/PostgREST/auth browser smoke, which passed with settled UI evidence, unchanged target-table digests, and zero production/staging/provider writes. lifecycle=merged, verification_status=passed, acceptance=complete, auto_merge=false. Physical-device/actual-screen-reader review and production-scale query measurement remain Manual Only."
 }
