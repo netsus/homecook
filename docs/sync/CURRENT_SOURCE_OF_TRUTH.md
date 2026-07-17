@@ -1,17 +1,36 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.20.md`
-- `docs/화면정의서-v1.5.26.md`
-- `docs/유저flow맵-v1.3.23.md`
-- `docs/db설계-v1.3.21.md`
-- `docs/api문서-v1.2.25.md`
+- `docs/요구사항기준선-v1.7.21.md`
+- `docs/화면정의서-v1.5.27.md`
+- `docs/유저flow맵-v1.3.24.md`
+- `docs/db설계-v1.3.22.md`
+- `docs/api문서-v1.2.26.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Nutrition Products Public Sharing Contract-Evolution `2026-07-17`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.21 | `manual` 내부 source를 유지한 채 신규 사용자 제품을 기본 public 공동 catalog로 전환하고, owner-only 수정/soft-delete, 비자동 공개 금지, 익명화 보존, 100g/100mL 비교, ingredient 전수 coverage, batch-only 공공 완제품 승격, 전체 recipe snapshot backfill을 잠근다 |
+| 화면정의서 v1.5.27 | 완제품 picker/create에 `공공 영양DB/사용자 등록` 태그, source filter, 신고 action, shared manual read-only 경계, 100g/100mL 비교와 1g/1mL 조절, legacy private 분기, 탈퇴 후 익명화 안내를 동기화한다 |
+| 유저플로우 v1.3.24 | public dataset/shared manual/legacy private 검색, shared manual 등록, 신고·숨김 분기, legacy private 비자동 공개, ingredient 승격 후 recipe snapshot 전체 backfill, 탈퇴 시 shared manual 익명화 흐름을 고정한다 |
+| DB v1.3.22 | `food_products`에 `manual/public` 조합과 `moderation_status`를 허용하고 `food_product_reports`를 추가한다. legacy private 유지, shared manual 익명화 보존, report uniqueness, moderation lock, target 50 tables를 정의한다 |
+| API v1.2.26 | `GET /food-products` source filter, shared manual 응답/권한, `POST/PATCH/DELETE /food-products`의 owner·moderation·legacy private 경계, `POST /food-products/{id}/report`, `label_basis_text`, 100g/100mL compare contract, total 82 endpoints(81 active + tombstone 1)를 잠근다 |
+
+> 사용자는 2026-07-17에 재료 영양 전수화·공공 완제품·사용자 공동 제품 확장 계획에 포함된 공식 계약 변경을 명시적으로 승인했다.
+> 신규 manual 제품은 내부 `source_type='manual'`을 유지하되 기본 `visibility='public'` 공동 catalog로 생성한다. owner만 수정·soft-delete할 수 있고, 다른 로그인 사용자는 검색/조회/플래너 추가만 할 수 있다. client는 owner/source/moderation/public stable key를 주입할 수 없다.
+> 기존 `private/manual` row는 자동 공개하지 않는다. 후속 owner opt-in contract가 생기기 전까지 owner에게만 보이며, 사용자 탈퇴 후 shared manual 제품은 `owner_user_id`를 익명화해 read-only public row로 남겨 기존 planner pin과 영양 version을 보존한다.
+> 신고 또는 운영 숨김된 shared manual 제품은 새 검색/새 planner 추가에서 제외하되 기존 planner entry와 pinned version은 보존한다. moderation 상태·report uniqueness·owner lock·RLS와 error code는 공식 DB/API 문서에서 동일하게 정의한다.
+> 고형 제품 비교 기준은 `100g`, 액체 제품 비교 기준은 `100mL`다. 플래너 기본 수량은 `100`, step은 `1g/1mL`다. 원 라벨 basis text와 immutable version은 보존하며, exact 직접 관계가 없으면 `serving/package`를 `g/ml`로 추정 환산하지 않는다. shared manual 공개 등록은 `g` 또는 `mL` 기준량을 요구한다.
+> ingredient coverage 완료는 모든 active canonical ingredient가 `eligible + approved primary 1개` 또는 명시적 excluded reason 중 하나를 갖는 상태다. 이름 유사도만으로 자동 승인하지 않고, 손질/크기/가식부 새 필수 입력을 열지 않으며 missing을 `0`으로 저장하지 않는다.
+> public prepared-food catalog는 versioned batch `raw → normalize → review → approved promotion`으로만 승격한다. runtime 외부 API 검색은 금지하며 stable key는 품목제조보고번호 우선, 없으면 provider food code를 쓴다. 최소 10,000건 pilot 검증 뒤 전체 유효 active row를 승격하고 immutable version/attribution/rollback을 유지한다.
+> ingredient promotion 후에는 모든 active recipe snapshot을 backfill하고 partial/unavailable 원인을 보존한다. 기존 recipe/product planner, shopping, cooking, leftover, XP 제외 계약은 완화하지 않는다.
 
 ## Recipe Nutrition Default Selection And Availability Contract-Evolution `2026-07-16`
 
