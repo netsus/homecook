@@ -1239,17 +1239,24 @@ function parseMfdsPage(payload, expectedPageNo) {
   if (String(header.resultCode) !== "00") {
     throw new NutritionPipelineError("PROVIDER_ERROR");
   }
+  const totalCount = typeof body.totalCount === "number"
+    ? body.totalCount
+    : typeof body.totalCount === "string" && /^\d+$/u.test(body.totalCount)
+      ? Number(body.totalCount)
+      : Number.NaN;
   const items = Array.isArray(body.items)
     ? body.items
     : Array.isArray(body.items?.item)
       ? body.items.item
-      : null;
-  if (items === null || !Number.isInteger(Number(body.totalCount))) {
+      : body.items === undefined && totalCount === 0
+        ? []
+        : null;
+  if (items === null || !Number.isInteger(totalCount)) {
     throw new NutritionPipelineError("SCHEMA_DRIFT");
   }
   return {
     page_no: Number(body.pageNo ?? expectedPageNo),
-    total_count: Number(body.totalCount),
+    total_count: totalCount,
     next_page_token:
       typeof body.nextPageToken === "string" && body.nextPageToken.trim().length > 0
         ? body.nextPageToken.trim()
