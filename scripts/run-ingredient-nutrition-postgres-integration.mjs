@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 const POSTGRES_TOOLS = ["initdb", "pg_ctl", "createdb", "psql"];
+const MIGRATIONS_DIR = path.join(process.cwd(), "supabase", "migrations");
 
 function commandResult(command, args, options = {}) {
   return spawnSync(command, args, {
@@ -118,6 +119,14 @@ function runFixtureFallback() {
   process.exitCode = result.status ?? 1;
 }
 
+function ingredientNutritionMigrationPaths() {
+  return readdirSync(MIGRATIONS_DIR)
+    .filter((entry) => entry.endsWith(".sql"))
+    .filter((entry) => entry.includes("ingredient_nutrition"))
+    .sort((left, right) => left.localeCompare(right, undefined, { numeric: true }))
+    .map((entry) => path.join("supabase", "migrations", entry));
+}
+
 const postgresBin = findPostgresBin();
 if (postgresBin === null) {
   runFixtureFallback();
@@ -203,10 +212,12 @@ grant usage on schema public to anon, authenticated, service_role;
       ...connectionArgs,
       "-c", `comment on database ${database} is 'homecook-isolated-local-v1';`,
     ]);
-    runRequired(path.join(postgresBin, "psql"), [
-      ...connectionArgs,
-      "-f", "supabase/migrations/20260714143000_ingredient_nutrition_conversion_model.sql",
-    ]);
+    for (const migrationPath of ingredientNutritionMigrationPaths()) {
+      runRequired(path.join(postgresBin, "psql"), [
+        ...connectionArgs,
+        "-f", migrationPath,
+      ]);
+    }
     const test = commandResult(
       "pnpm",
       [

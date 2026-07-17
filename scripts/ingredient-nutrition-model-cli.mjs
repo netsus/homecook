@@ -459,7 +459,12 @@ function formatCliFailure(error) {
 }
 
 async function importCommand(args) {
-  const bundle = await readJsonInput(args.bundle);
+  const bundleFiles = Array.isArray(args.bundles)
+    ? args.bundles
+    : args.bundle === undefined
+      ? []
+      : [args.bundle];
+  const bundles = await Promise.all(bundleFiles.map((file) => readJsonInput(file)));
   const approval = args.approval_file === undefined
     ? null
     : await readJsonInput(args.approval_file);
@@ -481,7 +486,7 @@ async function importCommand(args) {
     });
     const store = createDatabaseStore(args.environment);
     const summary = await runModelImport({
-      bundle,
+      ...(bundles.length === 1 ? { bundle: bundles[0] } : { bundles }),
       mode: args.mode,
       environment: args.environment,
       pilot_scope: args.pilot_scope,
@@ -502,7 +507,7 @@ async function importCommand(args) {
   );
   const store = createDatabaseStore(args.environment);
   const summary = await runModelImport({
-    bundle,
+    bundle: bundles[0],
     mode: args.mode,
     environment: args.environment,
     pilot_scope: args.pilot_scope,

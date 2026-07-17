@@ -13,7 +13,9 @@
 
 - [x] MFDS→RDA 우선순위는 compatible 후보 정렬에만 쓰고 자동 승인하지 않는다 <!-- omo:id=accept-source-priority;stage=2;scope=backend;review=3 -->
 - [x] exact external key/fingerprint 또는 명시적 operator decision 없이 active link가 생기지 않는다 <!-- omo:id=accept-exact-decision;stage=2;scope=backend;review=3 -->
+- [x] mixed-provider all-active는 `(provider_code, external_item_key, fingerprint)` exact triple과 canonical bundle ordering으로만 같은 run을 재현한다 <!-- omo:id=accept-multi-provider-triple;stage=2;scope=backend;review=3 -->
 - [x] 같은 apply/disable 재실행은 `writes_committed=0`이고 payload/version을 중복 생성하지 않는다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3 -->
+- [x] mixed-provider apply report/disable replay는 affected source ids 전체를 보존한다 <!-- omo:id=accept-affected-source-ids;stage=2;scope=backend;review=3 -->
 - [x] disable/rollback은 source item/profile/value를 삭제·수정하지 않는다 <!-- omo:id=accept-append-only-rollback;stage=2;scope=backend;review=3 -->
 
 ## Error / Permission

@@ -24,6 +24,7 @@ function requireFunction(
 
 function approvedItem(externalItemKey: string, fingerprint: string) {
   return {
+    provider_code: "MFDS",
     external_item_key: externalItemKey,
     fingerprint,
     values: {
@@ -178,6 +179,78 @@ describe("ingredient nutrition all-active inventory", () => {
     } as never)).toThrowError(
       expect.objectContaining({ code: "INVENTORY_CHECKSUM_MISMATCH" }),
     );
+  });
+
+  it("resolves all-active eligible decisions by provider code, external item key, and fingerprint", async () => {
+    const coverage = await loadCoverage();
+    const buildInventoryArtifact = requireFunction(coverage, "buildInventoryArtifact");
+    const validateCoverageDecisionArtifact = requireFunction(
+      coverage,
+      "validateCoverageDecisionArtifact",
+    );
+
+    const inventory = buildInventoryArtifact({
+      ingredients: [
+        {
+          ingredient_id: "ingredient-mfds",
+          canonical_name: "두부",
+          category_code: "BEAN",
+          category_name: "콩류",
+          default_unit: "g",
+          synonyms: [],
+        },
+        {
+          ingredient_id: "ingredient-rda",
+          canonical_name: "밀가루",
+          category_code: "GRAIN",
+          category_name: "곡류",
+          default_unit: "g",
+          synonyms: [],
+        },
+      ],
+      query_version: "inventory-sql-v1",
+    } as never) as Record<string, unknown>;
+
+    const summary = validateCoverageDecisionArtifact({
+      inventory,
+      decision: {
+        schema_version: "ingredient-nutrition-decision-v1",
+        inventory_checksum: inventory.checksum,
+        decisions: [
+          {
+            ingredient_id: "ingredient-mfds",
+            classification: "eligible",
+            provider_code: "MFDS",
+            external_item_key: "shared-key-001",
+            source_item_fingerprint: "shared-fingerprint-001",
+          },
+          {
+            ingredient_id: "ingredient-rda",
+            classification: "eligible",
+            provider_code: "RDA_10_4",
+            external_item_key: "shared-key-001",
+            source_item_fingerprint: "shared-fingerprint-001",
+          },
+        ],
+      },
+      approved_items: [
+        {
+          ...approvedItem("shared-key-001", "shared-fingerprint-001"),
+          provider_code: "MFDS",
+        },
+        {
+          ...approvedItem("shared-key-001", "shared-fingerprint-001"),
+          provider_code: "RDA_10_4",
+        },
+      ],
+    } as never) as Record<string, unknown>;
+
+    expect(summary).toMatchObject({
+      denominator_count: 2,
+      excluded_count: 0,
+      eligible_without_profile: 2,
+      unclassified: 2,
+    });
   });
 });
 
