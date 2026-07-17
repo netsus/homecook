@@ -329,6 +329,22 @@ describe("MealScreen", () => {
     expect(screen.getAllByTestId("meal-screen-loading-action")).toHaveLength(2);
   });
 
+  it.each([
+    ["loading", () => new Promise<never>(() => {})],
+    ["error", () => Promise.reject(createMealApiError(500))],
+  ])(
+    "keeps ready nutrition visible while the meal list is %s",
+    async (_listState, fetchMealsResult) => {
+      readE2EAuthOverride.mockReturnValue(true);
+      fetchMeals.mockImplementation(fetchMealsResult);
+
+      render(<MealScreen {...DEFAULT_PROPS} />);
+
+      expect(await screen.findByText("640 kcal")).toBeTruthy();
+      expect(screen.queryByText("계획 영양 정보 없음")).toBeNull();
+    },
+  );
+
   it("uses the final desktop meal layout for loading skeletons", async () => {
     setDesktopViewport(true);
     readE2EAuthOverride.mockReturnValue(true);

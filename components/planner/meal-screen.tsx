@@ -1780,7 +1780,11 @@ export function MealScreen({
   const nutritionStatus = nutritionRequest.status;
   const nutritionSummary = (
     <MealNutritionSummary
-      entryCount={displayedMeals.length + displayedProductEntries.length}
+      entryCount={
+        screenState === "ready" || screenState === "empty"
+          ? displayedMeals.length + displayedProductEntries.length
+          : undefined
+      }
       error={nutritionRequest.error}
       isRefreshing={nutritionRequest.isRefreshing}
       nutrition={currentColumnNutrition}
