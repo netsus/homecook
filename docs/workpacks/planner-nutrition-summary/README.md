@@ -166,7 +166,7 @@
 - Stage 1 critique brief: `ui/designs/critiques/planner-nutrition-summary-critique.md`
 - Stage 4 evidence root: `ui/designs/evidence/planner-nutrition-summary/`
 - Future authority report: `ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md`
-- Authority status: `required / pending`
+- Authority status: `required`
 - Notes: 기존 prepared-food-planner-entry의 day card, slot row, mixed entry, primary CTA, localized scroll, anchor return을 보존한다. 영양 summary가 첫 화면 day overview를 과도하게 밀면 summary metadata를 더 compact하게 만들고 planner mental model을 교체하지 않는다.
 
 ## Design Status
@@ -210,6 +210,16 @@
 - bootstrap과 fixture 준비가 끝난 뒤 write 측정을 시작한다. route/service가 A의 최대 7일 범위만 읽고 B row를 유출하지 않으며, current switch 후에도 A의 old pins 합계가 같고 nutrition request 전후 target/planner 관련 write가 0인지 확인한다. route/service는 `ensureUserBootstrapState`를 호출하지 않는다.
 - case 전후 scoped FK-order cleanup과 process/socket/temp directory `finally` cleanup을 검증한다. production/staging 접속 문자열은 허용하지 않는다.
 
+#### Stage 2/3 Backend Evidence — Independently Approved
+
+- RED: aggregate 첫 실행은 `@/lib/server/planner-nutrition-summary` 모듈 부재, read-model 4개는 `readPlannerNutritionSummary is not a function`, API 9개는 route 모듈 부재, PostgreSQL runner는 파일 부재로 각각 실패했다. 실패를 확인한 뒤 최소 구현을 추가했다.
+- GREEN/REFACTOR: 신규 aggregate/API/read-model/runner lifecycle과 기존 planner/meals/product/snapshot 회귀 묶음이 8 files, 55 tests로 통과했다.
+- real PostgreSQL: non-5432 ephemeral PostgreSQL `17.10`에서 관련 6개 migration, 실제 `ensureUserBootstrapState`, owner A/B, recipe direct/estimated/mixed/null pin, product complete/partial/unavailable direct pin, old/current pin, source-version 분리, cross-owner zero leak, request 전후 target write 0, process/socket/temp cleanup을 1 file, 2 tests로 검증했다. unavailable product는 현재 manual writer가 energy를 요구하므로 isolated legacy/corrupt fixture에서 해당 validation trigger만 준비 구간에 한해 끄고 다시 켰으며, 서비스 측정 경로는 그대로 read-only였다.
+- repository gate: `pnpm verify:backend`가 lint 0 errors(기존 무관 warning 4개), typecheck, product 1,560 passed/24 intended skipped, production build, security Playwright 12/12로 통과했다.
+- 새 endpoint/query/field/status/error/DB surface, generic 손질·크기·가식 필드, migration/RPC/dependency를 추가하지 않았다. production/staging/provider write는 0이다.
+- independent Stage 3 review는 initial `0/2/1`, second `0/2/0` findings를 역할 분리된 closeout/runner/tri-state repair가 닫은 뒤, fresh exact-head reviewer가 `624c57ed7ba2b154cabbb949d09732eed406b273`를 `STAGE3_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다. 해당 head의 시작된 PR checks도 0 fail/0 pending이다.
+- 이 승인은 backend Stage 3에만 해당한다. Stage 4 UI/browser/real local DB, authority precheck/Stage 5/final authority/Stage 6과 최종 closeout은 아직 pending이다.
+
 ### Stage 4 Browser / Exploratory / Real Local DB
 
 - Stage 4 전에 현재 master의 `PLANNER_WEEK`, `MEAL_SCREEN`을 각각 `390 / 320 / desktop 1280`에서 before 캡처한다.
@@ -231,14 +241,15 @@
 
 ## Delivery Checklist
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-planner-nutrition-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-planner-nutrition-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-planner-nutrition-types;stage=2;scope=shared;review=3,6 -->
-- [ ] range/day/column pinned aggregate TDD <!-- omo:id=delivery-planner-nutrition-aggregate-tdd;stage=2;scope=backend;review=3,6 -->
-- [ ] isolated PostgreSQL read-only smoke와 cleanup <!-- omo:id=delivery-planner-nutrition-real-db;stage=2;scope=backend;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-planner-nutrition-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 <!-- omo:id=delivery-planner-nutrition-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-planner-nutrition-types;stage=2;scope=shared;review=3,6 -->
+- [x] range/day/column pinned aggregate TDD <!-- omo:id=delivery-planner-nutrition-aggregate-tdd;stage=2;scope=backend;review=3,6 -->
+- [x] isolated PostgreSQL read-only smoke와 cleanup <!-- omo:id=delivery-planner-nutrition-real-db;stage=2;scope=backend;review=3,6 -->
+- [x] fresh independent Stage 3 reviewer가 exact backend head `624c57ed7ba2b154cabbb949d09732eed406b273`를 `STAGE3_APPROVED` 0/0/0으로 승인 <!-- omo:id=delivery-planner-nutrition-stage3-review;stage=2;scope=backend;review=3 -->
 - [ ] UI 연결 <!-- omo:id=delivery-planner-nutrition-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-planner-nutrition-test-split;stage=4;scope=shared;review=5,6 -->
-- [ ] fixture와 real local DB smoke 경로 구분 <!-- omo:id=delivery-planner-nutrition-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-planner-nutrition-test-split;stage=4;scope=shared;review=6 -->
+- [x] fixture와 real local DB smoke 경로 구분 <!-- omo:id=delivery-planner-nutrition-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [ ] loading / empty / error / unauthorized / partial / unavailable 상태 점검 <!-- omo:id=delivery-planner-nutrition-ui-states;stage=4;scope=frontend;review=5,6 -->
 - [ ] 390/320/desktop before-after와 scroll/CTA evidence <!-- omo:id=delivery-planner-nutrition-visual-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA / eval / authority evidence <!-- omo:id=delivery-planner-nutrition-authority;stage=4;scope=frontend;review=5,6 -->

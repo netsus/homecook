@@ -4,58 +4,60 @@
 
 ## Happy Path / Exact API
 
-- [ ] `GET /planner/nutrition?start_date=&end_date=` 하나만 추가되고 최대 7일 범위를 조회한다 <!-- omo:id=accept-planner-nutrition-endpoint;stage=2;scope=backend;review=3,6 -->
-- [ ] 응답은 `{ success, data, error }`와 공식 `range/summary/days/columns` exact shape를 따른다 <!-- omo:id=accept-planner-nutrition-shape;stage=2;scope=backend;review=3,6 -->
-- [ ] range summary에 `recipe_entry_count`와 `product_entry_count`가 중복 없는 실제 entry 수로 반환된다 <!-- omo:id=accept-planner-nutrition-entry-counts;stage=2;scope=backend;review=3,6 -->
-- [ ] range/day/column nutrition의 `basis`는 공식 `{ amount:1, unit:'range' }`이며 핵심 5종과 aggregate field만 포함한다 <!-- omo:id=accept-planner-nutrition-aggregate-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] Recipe Detail 전용 field나 새 product/entry 식별자가 aggregate에 추가되지 않는다 <!-- omo:id=accept-planner-nutrition-no-context-fields;stage=2;scope=backend;review=3,6 -->
+- [x] `GET /planner/nutrition?start_date=&end_date=` 하나만 추가되고 최대 7일 범위를 조회한다 <!-- omo:id=accept-planner-nutrition-endpoint;stage=2;scope=backend;review=3,6 -->
+- [x] 응답은 `{ success, data, error }`와 공식 `range/summary/days/columns` exact shape를 따른다 <!-- omo:id=accept-planner-nutrition-shape;stage=2;scope=backend;review=3,6 -->
+- [x] range summary에 `recipe_entry_count`와 `product_entry_count`가 중복 없는 실제 entry 수로 반환된다 <!-- omo:id=accept-planner-nutrition-entry-counts;stage=2;scope=backend;review=3,6 -->
+- [x] range/day/column nutrition의 `basis`는 공식 `{ amount:1, unit:'range' }`이며 핵심 5종과 aggregate field만 포함한다 <!-- omo:id=accept-planner-nutrition-aggregate-fields;stage=2;scope=backend;review=3,6 -->
+- [x] Recipe Detail 전용 field나 새 product/entry 식별자가 aggregate에 추가되지 않는다 <!-- omo:id=accept-planner-nutrition-no-context-fields;stage=2;scope=backend;review=3,6 -->
 
 ## Pinned Snapshot / Version Authority
 
-- [ ] Recipe Meal은 pin된 `recipe_nutrition_snapshot_id`만 사용하고 current snapshot으로 repin하지 않는다 <!-- omo:id=accept-planner-nutrition-recipe-pin;stage=2;scope=backend;review=3,6 -->
-- [ ] recipe 계획값은 pin된 scalable/fixed vector와 `planned_servings/base_servings` 공식으로 계산된다 <!-- omo:id=accept-planner-nutrition-recipe-serving-scale;stage=2;scope=backend;review=3,6 -->
-- [ ] null recipe snapshot은 Meal을 실패시키지 않고 unavailable/incomplete로 유지한다 <!-- omo:id=accept-planner-nutrition-null-recipe-pin;stage=2;scope=backend;review=3,6 -->
-- [ ] ProductPlannerEntry는 pin된 `product_nutrition_version_id`와 quantity만 사용한다 <!-- omo:id=accept-planner-nutrition-product-pin;stage=2;scope=backend;review=3,6 -->
-- [ ] product current version/metadata 변경·soft-delete 뒤에도 old entry 합계가 변하지 않는다 <!-- omo:id=accept-planner-nutrition-product-old-pin;stage=2;scope=backend;review=3,6 -->
-- [ ] 같은 recipe/product entry가 기존 read arrays나 adapter 결합으로 두 번 합산되지 않는다 <!-- omo:id=accept-planner-nutrition-entry-dedupe;stage=2;scope=shared;review=3,6 -->
+- [x] Recipe Meal은 pin된 `recipe_nutrition_snapshot_id`만 사용하고 current snapshot으로 repin하지 않는다 <!-- omo:id=accept-planner-nutrition-recipe-pin;stage=2;scope=backend;review=3,6 -->
+- [x] recipe 계획값은 pin된 scalable/fixed vector와 `planned_servings/base_servings` 공식으로 계산된다 <!-- omo:id=accept-planner-nutrition-recipe-serving-scale;stage=2;scope=backend;review=3,6 -->
+- [x] null recipe snapshot은 Meal을 실패시키지 않고 unavailable/incomplete로 유지한다 <!-- omo:id=accept-planner-nutrition-null-recipe-pin;stage=2;scope=backend;review=3,6 -->
+- [x] ProductPlannerEntry는 pin된 `product_nutrition_version_id`와 quantity만 사용한다 <!-- omo:id=accept-planner-nutrition-product-pin;stage=2;scope=backend;review=3,6 -->
+- [x] product current version/metadata 변경·soft-delete 뒤에도 old entry 합계가 변하지 않는다 <!-- omo:id=accept-planner-nutrition-product-old-pin;stage=2;scope=backend;review=3,6 -->
+- [x] 같은 recipe/product entry가 기존 read arrays나 adapter 결합으로 두 번 합산되지 않는다 <!-- omo:id=accept-planner-nutrition-entry-dedupe;stage=2;scope=shared;review=3,6 -->
 
 ## Completeness / Missing Is Not Zero
 
-- [ ] 핵심 5종은 `energy_kcal/carbohydrate_g/protein_g/fat_g/sodium_mg`로 고정된다 <!-- omo:id=accept-planner-nutrition-core-five;stage=2;scope=shared;review=3,6 -->
-- [ ] 실제 complete 0만 0으로 합산하고 missing/null/unavailable/conversion failure는 0이 아니다 <!-- omo:id=accept-planner-nutrition-missing-not-zero;stage=2;scope=shared;review=3,6 -->
-- [ ] complete만 있는 nutrient는 `amount/complete/total`이다 <!-- omo:id=accept-planner-nutrition-complete-total;stage=2;scope=backend;review=3,6 -->
-- [ ] partial 또는 일부 unavailable이 있고 known sum이 있으면 `amount=null/known_amount/partial/minimum`이다 <!-- omo:id=accept-planner-nutrition-partial-minimum;stage=2;scope=backend;review=3,6 -->
-- [ ] 모든 entry가 unavailable인 nutrient는 amount와 known_amount가 모두 null이다 <!-- omo:id=accept-planner-nutrition-all-unavailable;stage=2;scope=backend;review=3,6 -->
-- [ ] entry 0개 scope는 unavailable/null, quality null, incomplete 0, warnings/sources 빈 배열이며 false 0 kcal가 아니다 <!-- omo:id=accept-planner-nutrition-empty-scope;stage=2;scope=backend;review=3,6 -->
-- [ ] incomplete entry는 핵심 5종 전체가 complete가 아닐 때 scope별 entry당 한 번만 count된다 <!-- omo:id=accept-planner-nutrition-incomplete-count;stage=2;scope=backend;review=3,6 -->
+- [x] 핵심 5종은 `energy_kcal/carbohydrate_g/protein_g/fat_g/sodium_mg`로 고정된다 <!-- omo:id=accept-planner-nutrition-core-five;stage=2;scope=shared;review=3,6 -->
+- [x] 실제 complete 0만 0으로 합산하고 missing/null/unavailable/conversion failure는 0이 아니다 <!-- omo:id=accept-planner-nutrition-missing-not-zero;stage=2;scope=shared;review=3,6 -->
+- [x] complete만 있는 nutrient는 `amount/complete/total`이다 <!-- omo:id=accept-planner-nutrition-complete-total;stage=2;scope=backend;review=3,6 -->
+- [x] partial 또는 일부 unavailable이 있고 known sum이 있으면 `amount=null/known_amount/partial/minimum`이다 <!-- omo:id=accept-planner-nutrition-partial-minimum;stage=2;scope=backend;review=3,6 -->
+- [x] 모든 entry가 unavailable인 nutrient는 amount와 known_amount가 모두 null이다 <!-- omo:id=accept-planner-nutrition-all-unavailable;stage=2;scope=backend;review=3,6 -->
+- [x] entry 0개 scope는 unavailable/null, quality null, incomplete 0, warnings/sources 빈 배열이며 false 0 kcal가 아니다 <!-- omo:id=accept-planner-nutrition-empty-scope;stage=2;scope=backend;review=3,6 -->
+- [x] incomplete entry는 핵심 5종 전체가 complete가 아닐 때 scope별 entry당 한 번만 count된다 <!-- omo:id=accept-planner-nutrition-incomplete-count;stage=2;scope=backend;review=3,6 -->
 
 ## Quality / Warning / Attribution
 
-- [ ] all direct→direct, all estimated→estimated, 그 외/mixed→mixed 규칙을 지킨다 <!-- omo:id=accept-planner-nutrition-quality-merge;stage=2;scope=backend;review=3,6 -->
-- [ ] 모든 entry unavailable이면 `calculation_quality=null`이다 <!-- omo:id=accept-planner-nutrition-quality-null;stage=2;scope=backend;review=3,6 -->
-- [ ] pin된 warnings만 deterministic aggregate하며 current source/profile로 재생성하지 않는다 <!-- omo:id=accept-planner-nutrition-warning-pin;stage=2;scope=backend;review=3,6 -->
-- [ ] source item은 공식 exact 6 field만 가진다 <!-- omo:id=accept-planner-nutrition-source-six-fields;stage=2;scope=shared;review=3,6 -->
-- [ ] range/day/column별 exact 6-field tuple을 stable dedupe/order하고 다른 `source_version`은 합치지 않는다 <!-- omo:id=accept-planner-nutrition-source-dedupe;stage=2;scope=backend;review=3,6 -->
-- [ ] secret/auth query/cookie/raw provider payload/internal path/other-user ID leak가 0이다 <!-- omo:id=accept-planner-nutrition-secret-raw-zero;stage=2;scope=shared;review=3,6 -->
+- [x] all direct→direct, all estimated→estimated, 그 외/mixed→mixed 규칙을 지킨다 <!-- omo:id=accept-planner-nutrition-quality-merge;stage=2;scope=backend;review=3,6 -->
+- [x] 모든 entry unavailable이면 `calculation_quality=null`이다 <!-- omo:id=accept-planner-nutrition-quality-null;stage=2;scope=backend;review=3,6 -->
+- [x] pin된 warnings만 deterministic aggregate하며 current source/profile로 재생성하지 않는다 <!-- omo:id=accept-planner-nutrition-warning-pin;stage=2;scope=backend;review=3,6 -->
+- [x] source item은 공식 exact 6 field만 가진다 <!-- omo:id=accept-planner-nutrition-source-six-fields;stage=2;scope=shared;review=3,6 -->
+- [x] range/day/column별 exact 6-field tuple을 stable dedupe/order하고 다른 `source_version`은 합치지 않는다 <!-- omo:id=accept-planner-nutrition-source-dedupe;stage=2;scope=backend;review=3,6 -->
+- [x] secret/auth query/cookie/raw provider payload/internal path/other-user ID leak가 0이다 <!-- omo:id=accept-planner-nutrition-secret-raw-zero;stage=2;scope=shared;review=3,6 -->
 
 ## Validation / Authorization / Read-only
 
-- [ ] query 누락·invalid date·start>end·7일 초과가 기존 422 `VALIDATION_ERROR`다 <!-- omo:id=accept-planner-nutrition-query-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] 비로그인은 기존 401 `UNAUTHORIZED`이고 새 status/error code가 없다 <!-- omo:id=accept-planner-nutrition-unauthorized;stage=2;scope=backend;review=3,6 -->
-- [ ] auth owner의 범위 row만 조회하고 다른 사용자 count/snapshot/version/source가 노출되지 않는다 <!-- omo:id=accept-planner-nutrition-owner-scope;stage=2;scope=backend;review=3,6 -->
-- [ ] `ensurePublicUserRow`/`ensureUserBootstrapState`는 환경·테스트 사전 준비에서 nutrition 측정 전에 끝나며 GET route/service가 bootstrap을 호출하지 않는다 <!-- omo:id=accept-planner-nutrition-bootstrap-boundary;stage=2;scope=backend;review=3,6 -->
-- [ ] bootstrap 뒤 user row와 기본 `아침/점심/저녁` 3 columns를 확인하고, endpoint 호출 전후 user/column/Meal/product entry/snapshot/version/current/source write가 0이다 <!-- omo:id=accept-planner-nutrition-read-only;stage=2;scope=backend;review=3,6 -->
-- [ ] production/staging와 외부 provider write가 0이다 <!-- omo:id=accept-planner-nutrition-production-zero;stage=2;scope=shared;review=3,6 -->
+- [x] query 누락·invalid date·start>end·7일 초과가 기존 422 `VALIDATION_ERROR`다 <!-- omo:id=accept-planner-nutrition-query-validation;stage=2;scope=backend;review=3,6 -->
+- [x] 비로그인은 기존 401 `UNAUTHORIZED`이고 새 status/error code가 없다 <!-- omo:id=accept-planner-nutrition-unauthorized;stage=2;scope=backend;review=3,6 -->
+- [x] auth owner의 범위 row만 조회하고 다른 사용자 count/snapshot/version/source가 노출되지 않는다 <!-- omo:id=accept-planner-nutrition-owner-scope;stage=2;scope=backend;review=3,6 -->
+- [x] `ensurePublicUserRow`/`ensureUserBootstrapState`는 환경·테스트 사전 준비에서 nutrition 측정 전에 끝나며 GET route/service가 bootstrap을 호출하지 않는다 <!-- omo:id=accept-planner-nutrition-bootstrap-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] bootstrap 뒤 user row와 기본 `아침/점심/저녁` 3 columns를 확인하고, endpoint 호출 전후 user/column/Meal/product entry/snapshot/version/current/source write가 0이다 <!-- omo:id=accept-planner-nutrition-read-only;stage=2;scope=backend;review=3,6 -->
+- [x] production/staging와 외부 provider write가 0이다 <!-- omo:id=accept-planner-nutrition-production-zero;stage=2;scope=shared;review=3,6 -->
 
 ## Performance / Real DB
 
-- [ ] owner/date scope가 DB query 전에 적용된다 <!-- omo:id=accept-planner-nutrition-query-scope;stage=2;scope=backend;review=3,6 -->
-- [ ] meals range 1회 + recipe snapshot `.in` 1회 + 기존 product entry RPC 1회의 bounded read이며 날짜/column/entry별 N+1이 없다 <!-- omo:id=accept-planner-nutrition-no-n-plus-one;stage=2;scope=backend;review=3,6 -->
-- [ ] non-5432 isolated PostgreSQL 17 runner가 관련 migration과 실제 bootstrap을 적용한다 <!-- omo:id=accept-planner-nutrition-pg-runner;stage=2;scope=backend;review=3,6 -->
-- [ ] real DB에서 recipe direct/estimated/mixed snapshots, product complete/partial/unavailable direct pins, aggregate mixed, old/current pin, source-version 분리, cross-owner zero leak를 검증한다 <!-- omo:id=accept-planner-nutrition-pg-cases;stage=2;scope=backend;review=3,6 -->
-- [ ] current product DB에 없는 estimated/mixed quality/warning field를 fixture나 schema에 추가하지 않는다 <!-- omo:id=accept-planner-nutrition-product-fixture-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] case/process/socket/temp directory cleanup 뒤 scoped row/process가 남지 않는다 <!-- omo:id=accept-planner-nutrition-pg-cleanup;stage=2;scope=backend;review=3,6 -->
-- [ ] fixture browser는 `lib/mock/qa-fixtures.ts`와 `qa/fixtures/slices-01-05.json`을 `pnpm dev:qa-fixtures`로 실행하고 real local DB는 `pnpm local:reset:demo` 후 `pnpm dev:local-supabase`로 구분한다 <!-- omo:id=accept-planner-nutrition-fixture-reset-path;stage=4;scope=shared;review=5,6 -->
+- [x] owner/date scope가 DB query 전에 적용된다 <!-- omo:id=accept-planner-nutrition-query-scope;stage=2;scope=backend;review=3,6 -->
+- [x] meals range 1회 + recipe snapshot `.in` 1회 + 기존 product entry RPC 1회의 bounded read이며 날짜/column/entry별 N+1이 없다 <!-- omo:id=accept-planner-nutrition-no-n-plus-one;stage=2;scope=backend;review=3,6 -->
+- [x] non-5432 isolated PostgreSQL 17 runner가 관련 migration과 실제 bootstrap을 적용한다 <!-- omo:id=accept-planner-nutrition-pg-runner;stage=2;scope=backend;review=3,6 -->
+- [x] real DB에서 recipe direct/estimated/mixed snapshots, product complete/partial/unavailable direct pins, aggregate mixed, old/current pin, source-version 분리, cross-owner zero leak를 검증한다 <!-- omo:id=accept-planner-nutrition-pg-cases;stage=2;scope=backend;review=3,6 -->
+- [x] current product DB에 없는 estimated/mixed quality/warning field를 fixture나 schema에 추가하지 않는다 <!-- omo:id=accept-planner-nutrition-product-fixture-contract;stage=2;scope=backend;review=3,6 -->
+- [x] case/process/socket/temp directory cleanup 뒤 scoped row/process가 남지 않는다 <!-- omo:id=accept-planner-nutrition-pg-cleanup;stage=2;scope=backend;review=3,6 -->
+- [ ] fixture browser는 `lib/mock/qa-fixtures.ts`와 `qa/fixtures/slices-01-05.json`을 `pnpm dev:qa-fixtures`로 실행하고 real local DB는 `pnpm local:reset:demo` 후 `pnpm dev:local-supabase`로 구분한다 <!-- omo:id=accept-planner-nutrition-fixture-reset-path;stage=4;scope=shared;review=6 -->
+
+> Stage 3 review evidence: initial `0/2/1`과 second `0/2/0` findings를 역할 분리된 repair가 닫았고, fresh independent reviewer가 exact backend head `624c57ed7ba2b154cabbb949d09732eed406b273`를 `STAGE3_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다. targeted 8 files/55 tests, isolated PostgreSQL 17.10 2/2, `pnpm verify:backend` product 1,560 passed/24 intended skipped와 security 12/12, current-head PR checks 0 fail/0 pending을 확인했다. 이 승인은 Stage 3 backend에만 해당하며 Stage 4 이후를 닫지 않는다.
 
 ## PLANNER_WEEK UI
 
@@ -94,10 +96,10 @@
 
 ### Vitest / API / Service
 
-- [ ] aggregate nutrient/quality/source/incomplete pure logic을 단위 테스트한다 <!-- omo:id=accept-planner-nutrition-vitest-aggregate;stage=2;scope=backend;review=3,6 -->
-- [ ] route query/envelope/auth/exact shape/no-extra-field를 테스트한다 <!-- omo:id=accept-planner-nutrition-vitest-api;stage=2;scope=backend;review=3,6 -->
-- [ ] pin scaling/current-switch/dedupe/cross-owner/bounded query를 service/read-model 테스트로 고정한다 <!-- omo:id=accept-planner-nutrition-vitest-read-model;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 2 RED→GREEN 근거를 남기고 구현자가 자기 Stage 3 승인을 하지 않는다 <!-- omo:id=accept-planner-nutrition-tdd-role-split;stage=2;scope=shared;review=3,6 -->
+- [x] aggregate nutrient/quality/source/incomplete pure logic을 단위 테스트한다 <!-- omo:id=accept-planner-nutrition-vitest-aggregate;stage=2;scope=backend;review=3,6 -->
+- [x] route query/envelope/auth/exact shape/no-extra-field를 테스트한다 <!-- omo:id=accept-planner-nutrition-vitest-api;stage=2;scope=backend;review=3,6 -->
+- [x] pin scaling/current-switch/dedupe/cross-owner/bounded query를 service/read-model 테스트로 고정한다 <!-- omo:id=accept-planner-nutrition-vitest-read-model;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 2 RED→GREEN 근거를 남기고 구현자가 자기 Stage 3 승인을 하지 않는다 <!-- omo:id=accept-planner-nutrition-tdd-role-split;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright / UI
 
@@ -108,12 +110,13 @@
 ### Manual Only
 
 - [x] independent fresh Codex Stage 1.5 exact-head docs review/repair-final approval — 2026-07-17, repaired fingerprint `83f54e3942b40ceb46af2f917d6981f111a18060e4139ee7a96727651d05f315`, `RE_REVIEW_APPROVED 0/0/0`
+- [x] independent fresh Codex Stage 3 exact-head backend approval — 2026-07-17, head `624c57ed7ba2b154cabbb949d09732eed406b273`, `STAGE3_APPROVED 0/0/0`, current-head checks 0 fail/0 pending
 - [ ] full local Supabase/PostgREST/auth claim real browser smoke
 - [ ] physical iOS/Android narrow device와 실제 screen reader 확인
 - [ ] production-scale query plan/large entry count/RLS cost 측정
 
 ## Scope Guard
 
-- [ ] actual consumption/goal/medical/OCR/barcode/dining-out/meal-kit이 diff에 없다 <!-- omo:id=accept-planner-nutrition-future-excluded;stage=2;scope=shared;review=3,6 -->
-- [ ] generic prep/size/edible field, cooking-loss model, density, relation chain이 diff에 없다 <!-- omo:id=accept-planner-nutrition-model-expansion-excluded;stage=2;scope=shared;review=3,6 -->
-- [ ] 문서에 없는 endpoint/query/field/status/error/DB surface가 없다 <!-- omo:id=accept-planner-nutrition-contract-no-expansion;stage=2;scope=shared;review=3,6 -->
+- [x] actual consumption/goal/medical/OCR/barcode/dining-out/meal-kit이 diff에 없다 <!-- omo:id=accept-planner-nutrition-future-excluded;stage=2;scope=shared;review=3,6 -->
+- [x] generic prep/size/edible field, cooking-loss model, density, relation chain이 diff에 없다 <!-- omo:id=accept-planner-nutrition-model-expansion-excluded;stage=2;scope=shared;review=3,6 -->
+- [x] 문서에 없는 endpoint/query/field/status/error/DB surface가 없다 <!-- omo:id=accept-planner-nutrition-contract-no-expansion;stage=2;scope=shared;review=3,6 -->
