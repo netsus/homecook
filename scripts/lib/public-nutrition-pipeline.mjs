@@ -508,9 +508,11 @@ function normalizeRow(row, sourceScope) {
     }
   }
   const businessKey = `${sourceScope}:${externalKey}`;
+  const preparationState = row.preparation_state ?? null;
   const contentHash = sha256({
     externalKey,
     externalName,
+    preparationState,
     basis,
     serving,
     totalContent,
@@ -521,7 +523,7 @@ function normalizeRow(row, sourceScope) {
     business_key: businessKey,
     external_item_key: externalKey,
     external_name: externalName,
-    preparation_state: row.preparation_state ?? null,
+    preparation_state: preparationState,
     basis,
     serving,
     total_content: totalContent,
@@ -553,6 +555,7 @@ function adaptMfdsProviderRow(row) {
   return {
     external_item_key: row.FOOD_CD,
     external_name: row.FOOD_NM_KR,
+    preparation_state: "as_published",
     basis_text: row.SERVING_SIZE,
     nutrients,
   };

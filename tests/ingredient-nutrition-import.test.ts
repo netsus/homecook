@@ -121,6 +121,34 @@ function buildBundle() {
   return { ...base, handoff_checksum: sha256(base) };
 }
 
+function buildBundleWithPreparationState(preparationState: string | null) {
+  const bundle = buildBundle();
+  const approvedItems = bundle.approved_items.map((item) => ({
+    ...item,
+    preparation_state: preparationState,
+  }));
+  const counts = bundle.approved_manifest.counts;
+  const normalizedContentHash = sha256({
+    rows: approvedItems,
+    quarantined: [],
+    counts,
+  });
+  const bundleWithoutChecksum = {
+    ...bundle,
+    approved_manifest: {
+      ...bundle.approved_manifest,
+      normalized_content_hash: normalizedContentHash,
+    },
+    approved_items: approvedItems,
+    normalized_content_hash: normalizedContentHash,
+  };
+  delete (bundleWithoutChecksum as { handoff_checksum?: string }).handoff_checksum;
+  return {
+    ...bundleWithoutChecksum,
+    handoff_checksum: sha256(bundleWithoutChecksum),
+  };
+}
+
 function buildBundleVariant({
   provider,
   externalItemKey,
@@ -949,6 +977,56 @@ describe("ingredient nutrition model import", () => {
       store,
     } as never)).rejects.toMatchObject({
       code: "PRODUCTION_LOAD_APPROVAL_REQUIRED",
+      summary: { writes_attempted: 0, writes_committed: 0 },
+    });
+    expect(store.snapshot().writes).toBe(0);
+  });
+
+  it("rejects an all-active approved item without preparation state before any store write", async () => {
+    const importer = await loadImporter();
+    const coverage = await loadCoverage();
+    const createMemoryModelStore = requireFunction(importer, "createMemoryModelStore");
+    const runModelImport = requireFunction(importer, "runModelImport");
+    const buildInventoryArtifact = requireFunction(coverage, "buildInventoryArtifact");
+    const store = createMemoryModelStore() as { snapshot: () => { writes: number } };
+    const bundle = buildBundleWithPreparationState(null);
+    const inventory = buildInventoryArtifact({
+      ingredients: [{
+        ingredient_id: "ingredient-tofu",
+        canonical_name: "두부",
+        category_code: "BEAN",
+        category_name: "콩류",
+        default_unit: "g",
+        synonyms: ["부침두부"],
+      }],
+      query_version: "inventory-sql-v1",
+    } as never) as Record<string, unknown>;
+
+    await expect(runModelImport({
+      bundle,
+      mode: "apply",
+      environment: "local",
+      pilot_scope: "all-active",
+      inventory,
+      decision: {
+        schema_version: "ingredient-nutrition-decision-v1",
+        inventory_checksum: inventory.checksum,
+        reviewed_by: "operator-1",
+        reviewed_at: "2026-07-17T15:00:00.000Z",
+        decision_reason: "exact tofu mapping reviewed",
+        decisions: [{
+          ingredient_id: "ingredient-tofu",
+          classification: "eligible",
+          provider_code: "MFDS",
+          external_item_key: "source-item-1",
+          source_item_fingerprint: bundle.approved_items[0].fingerprint,
+        }],
+      },
+      canonical_ingredients: canonicalIngredients,
+      approval: null,
+      store,
+    } as never)).rejects.toMatchObject({
+      code: "INVALID_APPROVAL_FILE",
       summary: { writes_attempted: 0, writes_committed: 0 },
     });
     expect(store.snapshot().writes).toBe(0);

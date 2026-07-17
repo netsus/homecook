@@ -304,6 +304,7 @@ describe("public nutrition source acquisition core", () => {
     expect(normalized.rows[0]).toMatchObject({
       external_item_key: "MFDS-PROVIDER-001",
       external_name: "공식 필드 검수 두부",
+      preparation_state: "as_published",
       values: {
         energy_kcal: { amount: 84, unit: "kcal" },
         carbohydrate_g: { amount: 2.4, unit: "g" },
@@ -322,6 +323,27 @@ describe("public nutrition source acquisition core", () => {
       fat_g: { amount: null, missing_reason: "trace" },
       sodium_mg: { amount: null, missing_reason: "not_detected" },
     });
+  });
+
+  it("changes normalized identity when only preparation state changes", async () => {
+    const { buildRawBatch, normalizeNutritionBatch } = await loadPipeline();
+    const normalizeWithState = (preparationState: string) => {
+      const input = fixture("mfds-source-sample.json");
+      input.pages[0].items[0].preparation_state = preparationState;
+      const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+      return normalizeNutritionBatch({
+        rawSnapshot: raw.rawSnapshot,
+        manifest: raw.manifest,
+        adapterSchemaVersion: "nutrition-source-row-v1",
+      }).rows[0];
+    };
+
+    const raw = normalizeWithState("raw");
+    const cooked = normalizeWithState("cooked");
+
+    expect(raw.business_key).toBe(cooked.business_key);
+    expect(raw.content_hash).not.toBe(cooked.content_hash);
+    expect(raw.fingerprint).not.toBe(cooked.fingerprint);
   });
 
   it("quarantines basis parse, negative, unit mismatch, and malformed rows without guessing 100g", async () => {
