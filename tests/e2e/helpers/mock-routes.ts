@@ -689,6 +689,132 @@ function shiftDateKey(dateKey: string, dayDelta: number) {
   return date.toISOString().slice(0, 10);
 }
 
+function buildPlannerNutritionVisualAggregate({
+  energy,
+  incompleteEntryCount,
+}: {
+  energy: number;
+  incompleteEntryCount: number;
+}) {
+  return {
+    basis: { amount: 1, unit: "range" },
+    values: {
+      energy_kcal: {
+        amount: energy,
+        known_amount: null,
+        status: "complete",
+        display_mode: "total",
+      },
+      carbohydrate_g: incompleteEntryCount > 0
+        ? {
+            amount: null,
+            known_amount: Math.round(energy / 8),
+            status: "partial",
+            display_mode: "minimum",
+          }
+        : {
+            amount: Math.round(energy / 8),
+            known_amount: null,
+            status: "complete",
+            display_mode: "total",
+          },
+      protein_g: {
+        amount: Math.round(energy / 25),
+        known_amount: null,
+        status: "complete",
+        display_mode: "total",
+      },
+      fat_g: {
+        amount: Math.round(energy / 45),
+        known_amount: null,
+        status: "complete",
+        display_mode: "total",
+      },
+      sodium_mg: {
+        amount: Math.round(energy * 1.8),
+        known_amount: null,
+        status: "complete",
+        display_mode: "total",
+      },
+    },
+    calculation_status: incompleteEntryCount > 0 ? "partial" : "complete",
+    calculation_quality: incompleteEntryCount > 0 ? "mixed" : "direct",
+    incomplete_entry_count: incompleteEntryCount,
+    warnings: incompleteEntryCount > 0 ? ["NUTRITION_PROFILE_MISSING"] : [],
+    sources: [],
+  };
+}
+
+async function installPlannerNutritionVisualRoute(
+  page: Page,
+  { mealDetail = false }: { mealDetail?: boolean } = {},
+) {
+  await page.route("**/api/v1/planner/nutrition?*", async (route) => {
+    const url = new URL(route.request().url());
+    const startDate = url.searchParams.get("start_date") ?? MEAL_VISUAL_PLAN_DATE;
+    const endDate = url.searchParams.get("end_date") ?? startDate;
+
+    if (mealDetail) {
+      const nutrition = buildPlannerNutritionVisualAggregate({
+        energy: 520,
+        incompleteEntryCount: 1,
+      });
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            range: { start_date: startDate, end_date: endDate },
+            summary: {
+              nutrition,
+              recipe_entry_count: 2,
+              product_entry_count: 0,
+            },
+            days: [
+              {
+                plan_date: startDate,
+                nutrition,
+                columns: [{ column_id: MEAL_VISUAL_COLUMN_ID, nutrition }],
+              },
+            ],
+          },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const nutrition = buildPlannerNutritionVisualAggregate({
+        energy: 280 + index * 40,
+        incompleteEntryCount: index < 2 ? 1 : 0,
+      });
+      return {
+        plan_date: shiftDateKey(startDate, index),
+        nutrition,
+        columns: [],
+      };
+    });
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          range: { start_date: startDate, end_date: endDate },
+          summary: {
+            nutrition: buildPlannerNutritionVisualAggregate({
+              energy: 2_800,
+              incompleteEntryCount: 2,
+            }),
+            recipe_entry_count: 4,
+            product_entry_count: 0,
+          },
+          days,
+        },
+        error: null,
+      },
+    });
+  });
+}
+
 function buildRecipeItems(searchUrl: URL) {
   const query = searchUrl.searchParams.get("q")?.trim() ?? "";
   const ingredientIds = (searchUrl.searchParams.get("ingredient_ids") ?? "")
@@ -1011,6 +1137,7 @@ export async function installPlannerWeekRoutes(page: Page) {
       },
     });
   });
+  await installPlannerNutritionVisualRoute(page);
 }
 
 export async function installMealDetailRoutes(page: Page) {
@@ -1053,6 +1180,7 @@ export async function installMealDetailRoutes(page: Page) {
 
     await route.continue();
   });
+  await installPlannerNutritionVisualRoute(page, { mealDetail: true });
 }
 
 export async function installMenuAddVisualRoutes(page: Page) {

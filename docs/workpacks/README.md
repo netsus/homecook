@@ -10,6 +10,11 @@
 
 ## Revision Notes
 
+- `v2` planner nutrition summary Stage 4 pending review (2026-07-17)
+  - `PLANNER_WEEK` compact range/day kcal와 `MEAL_SCREEN` 핵심 5종·quality/warning을 exact read-only 계약에 연결하고 loading/error/empty/stale-response를 기존 content/CTA와 분리했다.
+  - targeted Vitest 99/99, fixture Playwright 12/12, frontend PR gate, full a11y/visual/security와 320/390/1280 before-after evidence를 확보했다. Design Status는 `pending-review`이며 fresh authority/Stage 5/6, Linux current-head CI, physical device/screen reader가 pending이다.
+  - full local Supabase browser smoke는 Docker daemon이 현재 프로젝트 DB 컨테이너를 시작하지 못해 최종 cross-slice QA 재시도로 넘겼다. Stage 2 isolated PostgreSQL과 fixture browser를 이 항목의 대체 증거로 보지 않는다.
+
 - `v2` planner nutrition summary Stage 3 backend approval (2026-07-17)
   - `planner-nutrition-summary`의 exact read-only `GET /planner/nutrition` backend를 별도 fresh Codex reviewer가 exact head `624c57ed7ba2b154cabbb949d09732eed406b273`에서 `STAGE3_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다.
   - targeted Vitest 55/55, isolated PostgreSQL 17.10 2/2, backend gate product 1,560 passed/24 intended skipped와 security 12/12, current-head PR checks 0 fail/0 pending을 기록했다. lifecycle은 `in-progress`, Design Status는 `temporary`이며 Stage 4 이후 UI/authority는 아직 pending이다.
@@ -185,7 +190,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `recipe-nutrition-calculation` | merged | 레시피 재료·인분·대표 환산으로 completeness/quality와 scalable/fixed vectors를 계산하고 immutable snapshot을 생성/pin/backfill하며 Recipe Detail additive API와 최소 상태 UI를 제공한다 |
 | `prepared-food-catalog` | merged | 승인 public 완제품 + 사용자 private manual 제품 catalog, immutable nutrition version, owner/public read-only/soft-delete 정책을 구현한다 |
 | `prepared-food-planner-entry` | merged | 완제품을 Recipe Meal과 분리해 플래너에 추가/수정/삭제하고 shopping/cooking/leftover/XP에서 구조적으로 제외한다 |
-| `planner-nutrition-summary` | in-progress | pin된 recipe/product snapshot만 끼니·날짜·주간 `계획 영양`으로 합산하고 결측/partial/quality를 보존한다 |
+| `planner-nutrition-summary` | in-progress — Stage 4 pending-review | pin된 recipe/product snapshot만 끼니·날짜·주간 `계획 영양`으로 합산하고 결측/partial/quality를 보존한다 |
 
 ## Nutrition / Products / Planner Dependency Chain
 
@@ -196,7 +201,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `recipe-nutrition-calculation` | merged | `ingredient-nutrition-conversion-model` + PR #1005 pilot + PR #1006 official contract = merged |
 | `prepared-food-catalog` | merged | `ingredient-nutrition-conversion-model` = merged |
 | `prepared-food-planner-entry` | merged | `prepared-food-catalog` = merged, `05-planner-week-core` = merged |
-| `planner-nutrition-summary` | in-progress | `recipe-nutrition-calculation` = merged, `prepared-food-planner-entry` = merged through closeout `64d2b5145d1e96772eb7dfee4d4057cafcab8f64`; exact backend head `624c57ed7ba2b154cabbb949d09732eed406b273` independent Stage 3 `0/0/0`, targeted 55/55 + isolated PostgreSQL 17.10 2/2; Stage 4 이후 pending |
+| `planner-nutrition-summary` | in-progress — Stage 4 pending-review | `recipe-nutrition-calculation` = merged, `prepared-food-planner-entry` = merged through closeout `64d2b5145d1e96772eb7dfee4d4057cafcab8f64`; backend Stage 3 `0/0/0`; Stage 4 targeted 99/99 + fixture browser 12/12 + 320/390/1280 evidence 완료, authority/Stage 5/6·Linux current-head CI·local Supabase 재시도 pending |
 
 > 각 slice는 자신의 Stage 1 workpack/acceptance/automation-spec이 별도 Codex docs-owner 작업에서 main에 merge되고 internal 1.5 gate가 닫힌 뒤에만 다음 stage를 시작한다. `recipe-nutrition-calculation`의 additive Recipe Detail UI와 `prepared-food-planner-entry`/`planner-nutrition-summary`의 PLANNER_WEEK 변경은 anchor-extension authority-required다.
 

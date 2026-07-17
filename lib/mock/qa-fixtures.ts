@@ -6,6 +6,7 @@ import {
 import { getIngredientTaxonomyMetadata } from "@/lib/ingredient-categories";
 import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
 import { sortPlannerColumns } from "@/lib/planner/fixed-slots";
+import { aggregatePlannerNutritionEntries } from "@/lib/server/planner-nutrition-summary";
 import type {
   CookingMethodListData,
   IngredientItem,
@@ -35,6 +36,11 @@ import type {
   PlannerData,
 } from "@/types/planner";
 import type { PantryItem, PantryListData } from "@/types/pantry";
+import type {
+  PlannerNutritionData,
+  PlannerNutritionQuality,
+  PlannerNutritionValue,
+} from "@/types/planner-nutrition";
 
 type DateAnchor = "start" | "mid" | "end";
 
@@ -636,6 +642,55 @@ export function getQaFixturePlannerData(startDate: string, endDate: string) {
     ],
     product_entries: [],
   } satisfies PlannerData;
+}
+
+export function getQaFixturePlannerNutrition(
+  startDate: string,
+  endDate: string,
+): PlannerNutritionData {
+  const columns = sortPlannerColumns(getQaFixtureState().plannerColumns);
+  const entries = fixtureData.planner.nutritionEntries.map((entry) => ({
+    storage_key: `${entry.entryType}:${entry.id}`,
+    plan_date: resolveAnchoredDate(startDate, endDate, entry.dateAnchor as DateAnchor),
+    column_id: entry.columnId,
+    values: clone(entry.values) as Record<string, PlannerNutritionValue>,
+    calculation_quality: entry.calculationQuality as PlannerNutritionQuality,
+    warnings: [...entry.warnings],
+    sources: clone(entry.sources),
+  }));
+  const days = Array.from({ length: inclusiveFixtureDayCount(startDate, endDate) }, (_, index) => {
+    const date = new Date(`${startDate}T00:00:00.000Z`);
+    date.setUTCDate(date.getUTCDate() + index);
+    return date.toISOString().slice(0, 10);
+  });
+
+  return {
+    range: { start_date: startDate, end_date: endDate },
+    summary: {
+      nutrition: aggregatePlannerNutritionEntries(entries),
+      recipe_entry_count: entries.filter((entry) => entry.storage_key.startsWith("recipe:")).length,
+      product_entry_count: entries.filter((entry) => entry.storage_key.startsWith("product:")).length,
+    },
+    days: days.map((planDate) => {
+      const dayEntries = entries.filter((entry) => entry.plan_date === planDate);
+      return {
+        plan_date: planDate,
+        nutrition: aggregatePlannerNutritionEntries(dayEntries),
+        columns: columns.map((column) => ({
+          column_id: column.id,
+          nutrition: aggregatePlannerNutritionEntries(
+            dayEntries.filter((entry) => entry.column_id === column.id),
+          ),
+        })),
+      };
+    }),
+  };
+}
+
+function inclusiveFixtureDayCount(startDate: string, endDate: string) {
+  const start = new Date(`${startDate}T00:00:00.000Z`).getTime();
+  const end = new Date(`${endDate}T00:00:00.000Z`).getTime();
+  return Math.floor((end - start) / 86_400_000) + 1;
 }
 
 export function getQaFixturePlannerColumns() {

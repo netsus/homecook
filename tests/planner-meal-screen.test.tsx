@@ -12,6 +12,7 @@ import { PRODUCT_PLANNER_RETURN_CONTEXT_KEY } from "@/lib/planner/product-planne
 
 const readE2EAuthOverride = vi.fn();
 const fetchMeals = vi.fn();
+const fetchPlannerNutrition = vi.fn();
 const updateMealServings = vi.fn();
 const deleteMeal = vi.fn();
 const createMealSafe = vi.fn();
@@ -41,6 +42,13 @@ const navigationMocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
+  withE2EAuthOverrideHeaders: (init?: RequestInit) => init ?? {},
+}));
+
+vi.mock("@/lib/api/planner-nutrition", () => ({
+  fetchPlannerNutrition: (...args: unknown[]) => fetchPlannerNutrition(...args),
+  isPlannerNutritionApiError: (error: unknown) =>
+    Boolean(error) && typeof error === "object" && "status" in (error as object),
 }));
 
 vi.mock("@/lib/api/meal", () => ({
@@ -163,6 +171,36 @@ function createMealApiError(status: number, message = "오류가 발생했어요
   return error;
 }
 
+function createPlannerNutritionData() {
+  const nutrition = {
+    basis: { amount: 1 as const, unit: "range" as const },
+    values: {
+      energy_kcal: { amount: 640, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      carbohydrate_g: { amount: 72, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      protein_g: { amount: 31, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      fat_g: { amount: 18, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      sodium_mg: { amount: 890, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+    },
+    calculation_status: "complete" as const,
+    calculation_quality: "direct" as const,
+    incomplete_entry_count: 0,
+    warnings: [],
+    sources: [],
+  };
+
+  return {
+    range: { start_date: DEFAULT_PROPS.planDate, end_date: DEFAULT_PROPS.planDate },
+    summary: { nutrition, recipe_entry_count: 1, product_entry_count: 0 },
+    days: [
+      {
+        plan_date: DEFAULT_PROPS.planDate,
+        nutrition,
+        columns: [{ column_id: DEFAULT_PROPS.columnId, nutrition }],
+      },
+    ],
+  };
+}
+
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason: unknown) => void;
@@ -203,6 +241,8 @@ describe("MealScreen", () => {
   beforeEach(() => {
     readE2EAuthOverride.mockReset();
     fetchMeals.mockReset();
+    fetchPlannerNutrition.mockReset();
+    fetchPlannerNutrition.mockResolvedValue(createPlannerNutritionData());
     updateMealServings.mockReset();
     deleteMeal.mockReset();
     createMealSafe.mockReset();

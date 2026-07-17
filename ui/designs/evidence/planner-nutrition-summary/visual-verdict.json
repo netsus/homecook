@@ -1,0 +1,15 @@
+{
+  "score": 94,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "PLANNER_WEEK의 새 compact 요약으로 모바일 날짜 카드 시작점이 약 80px 아래로 이동했지만 390px에서는 첫 날짜 식단이, 320px에서는 첫 날짜와 kcal·확인 필요 상태가 첫 화면에 남아 있다.",
+    "MEAL_SCREEN 320px에서는 핵심 5종 요약이 첫 화면 비중을 크게 차지해 entry card가 일부만 보이지만, entry 전용 스크롤 영역과 고정 식사 추가 CTA가 분리되어 콘텐츠나 버튼이 겹치지 않는다.",
+    "Desktop 두 화면은 기존 content width, planner grid, meal rail과 primary CTA 계층을 유지하면서 영양 요약을 상단 보조 정보로 추가했다."
+  ],
+  "suggestions": [
+    "Stage 5 authority review에서 320px 첫 화면의 정보 밀도와 스크롤 발견 가능성을 최종 확인한다.",
+    "실기기 또는 최종 authority 검토에서 하단 내비게이션 safe-area가 큰 기기에서도 CTA와 entry 스크롤 영역 분리가 유지되는지 확인한다."
+  ],
+  "reasoning": "6개 before/after 쌍에서 기존 planner/meal 계층, 카드, 내비게이션과 CTA를 보존했고 영양 상태를 명확히 추가했다. 320px의 높은 정보 밀도는 남지만 overflow가 없고 CTA와 스크롤 영역의 기하 조건 및 44px target이 자동 검증되어 Stage 5 검토로 넘길 수 있다."
+}

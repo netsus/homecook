@@ -135,10 +135,10 @@
   "status": {
     "lifecycle": "in_progress",
     "approval_state": "codex_approved",
-    "verification_status": "passed",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "verification_status": "pending",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": ".artifacts/qa/planner-nutrition-summary/2026-07-17T04-34-11-213Z/eval-result.json",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
@@ -146,14 +146,14 @@
     "phase": "projecting",
     "docs_projection": {
       "roadmap_lifecycle": "in_progress",
-      "design_status": "temporary",
+      "design_status": "pending-review",
       "delivery_checklist": "pending",
       "design_authority": "pending",
       "acceptance": "pending",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "passed",
+      "required_checks": "pending",
       "external_smokes": "pending",
       "authority_reports": [],
       "actual_verification_refs": [
@@ -164,11 +164,16 @@
         "Fresh independent Stage 3 reviewer approved exact backend head 624c57ed7ba2b154cabbb949d09732eed406b273 with STAGE3_APPROVED and Blocker/Important/Suggestion 0/0/0 after role-separated closeout, runner cleanup, and shutdown tri-state repairs",
         "GitHub PR #1021 started checks at exact head 624c57ed7ba2b154cabbb949d09732eed406b273 completed with 0 failed and 0 pending checks",
         "No migration, RPC, dependency, generic preparation/size/edible field, or unapproved endpoint/query/response/status/error surface was added; production/staging/provider writes remain 0",
-        "Stage 3 backend review is approved only; Stage 4 UI/browser/real local DB, authority precheck, Stage 5, final authority, Stage 6, and final closeout remain pending"
+        "Stage 4 targeted planner nutrition API/UI and existing screen regressions passed 4 files and 99 tests; QA fixture browser passed desktop, 390px, and 320px projects 12/12",
+        "Stage 4 retained paired PLANNER_WEEK and MEAL_SCREEN before/after evidence at 320, 390, and desktop 1280 plus complete, partial, unavailable, mixed, loading, error, empty, and stale-response states under ui/designs/evidence/planner-nutrition-summary",
+        "pnpm verify:frontend:pr passed; full accessibility 18 passed/15 skipped, full visual 23 passed/22 skipped, and security 12/12 passed after intentional Darwin planner and meal baseline refresh",
+        "The second full pnpm verify:frontend run reached regression 867 passed/112 skipped but returned non-zero for two pre-existing slice-17a-mypage mobile-chrome flakes; the exact two tests then passed 2/2 in isolation, so Linux current-head PR CI remains required rather than projecting green",
+        "The 127.0.0.1-only full local Supabase/PostgREST/auth smoke was attempted once after project-local stop/reset, but Docker left supabase_db_homecook in Created and docker start itself did not respond; isolated PostgreSQL 17.10 2/2 and fixture browser evidence are not substitutes, and final cross-slice QA will retry once after Docker daemon recovery",
+        "Stage 4 implementation is pending-review only; fresh authority precheck, Stage 5, final authority, Stage 6, current-head checks, physical-device/screen-reader review, and final closeout remain pending"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending-pr-head-after-stage3-closeout-projection",
+      "current_head_sha": "pending-frontend-commit",
       "approval_state": "codex_approved",
       "all_checks_green": false
     },
@@ -202,12 +207,12 @@
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-07-17T03:45:39Z",
-      "status_synced_at": "2026-07-17T03:45:39Z",
+      "docs_synced_at": "2026-07-17T05:17:21Z",
+      "status_synced_at": "2026-07-17T05:17:21Z",
       "pr_body_synced_at": "pending-post-closeout-head"
     }
   },
-  "branch": "feature/be-planner-nutrition-summary",
+  "branch": "feature/fe-planner-nutrition-summary",
   "out_of_scope": [
     "Actual consumption eaten skipped nutrition goals goal attainment and medical disease coaching",
     "Current recipe snapshot or product version repin backfill or immutable snapshot mutation",
@@ -218,5 +223,5 @@
     "Production staging external provider writes and secret or raw provider output"
   ],
   "open_questions": [],
-  "notes": "Canonical Stage 3 backend projection: .workflow-v2/work-items/planner-nutrition-summary.json#closeout. Backend PR #1021 remains open. Independent review rounds found 0/2/1 and 0/2/0; role-separated commits bb6530563f45b904e9739f7ee12c1eb78042b746, 03d3d59fea587c34a076454ceab2bb8f5c6cf28e, and 624c57ed7ba2b154cabbb949d09732eed406b273 repaired the closeout state, PostgreSQL lifecycle cleanup, Unicode regression, and shutdown tri-state preservation. A fresh exact-head reviewer then approved 624c57ed7ba2b154cabbb949d09732eed406b273 with STAGE3_APPROVED 0/0/0. Targeted tests passed 55/55, isolated PostgreSQL 17.10 passed 2/2, pnpm verify:backend passed product 1560 with 24 intended skips plus build and security 12/12, and exact reviewed-head GitHub checks finished 0 fail/0 pending. No migration/RPC/dependency or generic preparation/size/edible field was added; production/staging/provider writes remain zero. This approval closes only Stage 3 backend review. lifecycle remains in_progress, Design Status temporary, closeout_phase=projecting, and auto_merge=false. Stage 4 UI/browser/real local DB, authority precheck, Stage 5, final authority, Stage 6, and final closeout remain pending."
+  "notes": "Canonical Stage 4 frontend pending-review projection: .workflow-v2/work-items/planner-nutrition-summary.json#closeout. The independently approved Stage 3 backend head remains 624c57ed7ba2b154cabbb949d09732eed406b273. Stage 4 connects the exact read-only GET to compact PLANNER_WEEK range/day kcal and MEAL_SCREEN current-column core-five details while preserving missing-not-zero, quality, warning safety, existing content, CTA, and return context. Targeted Vitest passed 99/99, QA fixture browser passed 12/12 across desktop/390/320, pnpm verify:frontend:pr passed, and full a11y/visual/security suites passed. The second full frontend run had two unrelated slice-17a-mypage mobile-chrome flakes that passed 2/2 in isolation, so current-head Linux CI remains pending. The full local Supabase browser smoke is blocked by the local Docker daemon not starting the current project DB container; Stage 2 isolated PostgreSQL and fixture browser are not substitutes, and final cross-slice QA will retry once. lifecycle remains in_progress, Design Status pending-review, closeout_phase=projecting, auto_merge=false, required_checks pending, and authority precheck/Stage 5/final authority/Stage 6/final closeout remain pending."
 }

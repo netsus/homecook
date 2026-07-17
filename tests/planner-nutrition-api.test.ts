@@ -6,9 +6,17 @@ const createServiceRoleClient = vi.fn();
 const readPlannerNutritionSummary = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
+const getQaFixturePlannerNutrition = vi.fn();
+const isQaFixtureModeEnabled = vi.fn();
+const readE2EAuthOverrideHeader = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({ createRouteHandlerClient, createServiceRoleClient }));
 vi.mock("@/lib/server/planner-nutrition-summary", () => ({ readPlannerNutritionSummary }));
+vi.mock("@/lib/mock/recipes", () => ({
+  getQaFixturePlannerNutrition,
+  isQaFixtureModeEnabled,
+}));
+vi.mock("@/lib/auth/e2e-auth-override", () => ({ readE2EAuthOverrideHeader }));
 vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -44,6 +52,9 @@ beforeEach(() => {
   });
   ensurePublicUserRow.mockReset();
   ensureUserBootstrapState.mockReset();
+  getQaFixturePlannerNutrition.mockReset();
+  isQaFixtureModeEnabled.mockReset().mockReturnValue(false);
+  readE2EAuthOverrideHeader.mockReset();
 });
 
 async function request(query: string) {
@@ -52,6 +63,42 @@ async function request(query: string) {
 }
 
 describe("GET /api/v1/planner/nutrition", () => {
+  it("returns the exact read-only QA fixture response without opening a database client", async () => {
+    const fixture = {
+      range: { start_date: "2026-07-17", end_date: "2026-07-17" },
+      summary: { nutrition: EMPTY_NUTRITION, recipe_entry_count: 1, product_entry_count: 1 },
+      days: [{ plan_date: "2026-07-17", nutrition: EMPTY_NUTRITION, columns: [] }],
+    };
+    isQaFixtureModeEnabled.mockReturnValue(true);
+    readE2EAuthOverrideHeader.mockReturnValue("authenticated");
+    getQaFixturePlannerNutrition.mockReturnValue(fixture);
+
+    const response = await request("?start_date=2026-07-17&end_date=2026-07-17");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, data: fixture, error: null });
+    expect(getQaFixturePlannerNutrition).toHaveBeenCalledWith("2026-07-17", "2026-07-17");
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
+    expect(readPlannerNutritionSummary).not.toHaveBeenCalled();
+  });
+
+  it("keeps QA fixture nutrition behind the existing authenticated override", async () => {
+    isQaFixtureModeEnabled.mockReturnValue(true);
+    readE2EAuthOverrideHeader.mockReturnValue("guest");
+
+    const response = await request("?start_date=2026-07-17&end_date=2026-07-17");
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({
+      success: false,
+      data: null,
+      error: { code: "UNAUTHORIZED", message: "로그인이 필요해요.", fields: [] },
+    });
+    expect(getQaFixturePlannerNutrition).not.toHaveBeenCalled();
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["missing start", "?end_date=2026-07-17", "start_date"],
     ["invalid date", "?start_date=2026-02-30&end_date=2026-03-01", "start_date"],

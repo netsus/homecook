@@ -1,0 +1,22 @@
+{
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "document": {
+    "clientWidth": 1280,
+    "scrollWidth": 1280,
+    "pageLevelHorizontalOverflow": false
+  },
+  "addCta": {
+    "x": 989,
+    "y": 365.1875,
+    "width": 238,
+    "height": 44,
+    "top": 365.1875,
+    "right": 1227,
+    "bottom": 409.1875,
+    "left": 989
+  },
+  "plannerBody": null
+}

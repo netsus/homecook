@@ -171,8 +171,8 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 계약만 잠금, 구현·evidence·authority pending
-- [ ] 리뷰 대기 (pending-review)
+- [ ] 임시 UI (temporary)
+- [x] 리뷰 대기 (pending-review) — Stage 4 구현·fixture browser·before/after evidence 완료, fresh authority pending
 - [ ] 확정 (confirmed)
 - [ ] N/A
 
@@ -232,6 +232,17 @@
 - fixture evidence와 real local DB evidence를 명확히 구분한다.
 - physical device, external OAuth, production-scale query plan은 Manual Only이며 기본 gate를 대체하지 않는다.
 
+#### Stage 4 Frontend Evidence — Pending Review
+
+- `PLANNER_WEEK`에는 주간/날짜별 compact 계획 열량과 확인 필요 indicator를, `MEAL_SCREEN`에는 현재 column 핵심 5종·품질·안전한 warning 안내를 연결했다. nutrition summary에는 mutation/repin control을 추가하지 않았다.
+- client/adapter는 공식 단일 GET과 envelope를 그대로 소비하고 abort + latest-request guard를 둔다. loading/error는 기존 planner/meal content와 CTA를 지우지 않으며 empty/unavailable을 false `0`으로 표시하지 않는다.
+- targeted Vitest는 planner nutrition API/UI와 기존 두 화면 회귀 4 files, 99 tests가 통과했다. fixture Playwright는 desktop/390/320 3 projects, 12/12가 통과했고 complete/partial/unavailable/mixed/loading/error/retry/empty/stale-response를 구분했다.
+- `ui/designs/evidence/planner-nutrition-summary/`에 두 화면의 동일 viewport `320 / 390 / desktop 1280` before/after, geometry, 상태 증거와 comparison을 남겼다. 320px `MEAL_SCREEN`에서 CTA가 viewport 밖으로 밀리던 exploratory finding을 bottom navigation 위 52px 고정 action shell로 수리했고 page-level overflow 0과 focus/ESC 복구를 재검증했다.
+- `pnpm verify:frontend:pr`는 lint 0 errors(기존 무관 warning 4개), typecheck, product 1,573 passed/24 intended skipped, build, smoke 58/8, a11y core 8/1, visual desktop 4/4·mobile 8/8로 통과했다. full a11y 18/15, full visual 23/22, security 12/12도 각각 통과했다.
+- full `pnpm verify:frontend`의 두 번째 실행은 regression 867 passed/112 skipped 뒤 기존 `slice-17a-mypage` mobile-chrome 2건의 비결정적 실패로 non-zero였고, 같은 2건을 단독 재실행하면 2/2 통과했다. 이 결과를 이 슬라이스의 green이나 authority 승인으로 바꾸지 않으며 current-head PR CI에서 Linux baseline 포함 전체 checks를 다시 확인한다.
+- real local Supabase/PostgREST/auth browser smoke는 `127.0.0.1`만 허용하는 `scripts/verify-planner-nutrition-local-db.mjs`를 준비했지만, 현재 Docker daemon이 `supabase_db_homecook`을 `Created`에서 시작하지 못하고 `docker start`도 응답하지 않아 1회 재시도 뒤 환경 blocker로 남겼다. Stage 2 isolated PostgreSQL 17.10 read-only 2/2와 fixture browser는 이 미실행 항목의 대체 증거가 아니다. Docker가 회복되면 최종 cross-slice QA에서 한 번 재시도한다.
+- Design Status는 `pending-review`다. 현재 Stage 4 구현자는 authority를 자기 승인하지 않으며 fresh authority precheck, Stage 5, final authority, Stage 6와 physical device/screen reader는 pending이다.
+
 ## Primary User Path
 
 1. 로그인 사용자가 `PLANNER_WEEK`에서 주간 범위와 날짜별 compact `계획 영양`을 확인한다.
@@ -247,10 +258,10 @@
 - [x] range/day/column pinned aggregate TDD <!-- omo:id=delivery-planner-nutrition-aggregate-tdd;stage=2;scope=backend;review=3,6 -->
 - [x] isolated PostgreSQL read-only smoke와 cleanup <!-- omo:id=delivery-planner-nutrition-real-db;stage=2;scope=backend;review=3,6 -->
 - [x] fresh independent Stage 3 reviewer가 exact backend head `624c57ed7ba2b154cabbb949d09732eed406b273`를 `STAGE3_APPROVED` 0/0/0으로 승인 <!-- omo:id=delivery-planner-nutrition-stage3-review;stage=2;scope=backend;review=3 -->
-- [ ] UI 연결 <!-- omo:id=delivery-planner-nutrition-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-planner-nutrition-test-split;stage=4;scope=shared;review=6 -->
+- [x] UI 연결 <!-- omo:id=delivery-planner-nutrition-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-planner-nutrition-test-split;stage=4;scope=shared;review=6 -->
 - [x] fixture와 real local DB smoke 경로 구분 <!-- omo:id=delivery-planner-nutrition-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] loading / empty / error / unauthorized / partial / unavailable 상태 점검 <!-- omo:id=delivery-planner-nutrition-ui-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390/320/desktop before-after와 scroll/CTA evidence <!-- omo:id=delivery-planner-nutrition-visual-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] loading / empty / error / unauthorized / partial / unavailable 상태 점검 <!-- omo:id=delivery-planner-nutrition-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] 390/320/desktop before-after와 scroll/CTA evidence <!-- omo:id=delivery-planner-nutrition-visual-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA / eval / authority evidence <!-- omo:id=delivery-planner-nutrition-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-planner-nutrition-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-planner-nutrition-manual-qa-handoff;stage=4;scope=frontend;review=6 -->

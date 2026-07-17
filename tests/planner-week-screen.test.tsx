@@ -10,6 +10,7 @@ import { resetPlannerStore } from "@/stores/planner-store";
 
 const readE2EAuthOverride = vi.fn();
 const fetchPlanner = vi.fn();
+const fetchPlannerNutrition = vi.fn();
 const fetchRecipes = vi.fn();
 const fetchRecipeBooks = vi.fn();
 const fetchRecipeBookRecipes = vi.fn();
@@ -32,6 +33,13 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
+  withE2EAuthOverrideHeaders: (init?: RequestInit) => init ?? {},
+}));
+
+vi.mock("@/lib/api/planner-nutrition", () => ({
+  fetchPlannerNutrition: (...args: unknown[]) => fetchPlannerNutrition(...args),
+  isPlannerNutritionApiError: (error: unknown) =>
+    Boolean(error) && typeof error === "object" && "status" in (error as object),
 }));
 
 vi.mock("@/lib/api/planner", () => ({
@@ -122,6 +130,32 @@ function createPlannerData({
   };
 }
 
+function createPlannerNutritionData() {
+  const nutrition = {
+    basis: { amount: 1 as const, unit: "range" as const },
+    values: {
+      energy_kcal: { amount: 640, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      carbohydrate_g: { amount: 72, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      protein_g: { amount: 31, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      fat_g: { amount: 18, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      sodium_mg: { amount: 890, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+    },
+    calculation_status: "complete" as const,
+    calculation_quality: "direct" as const,
+    incomplete_entry_count: 0,
+    warnings: [],
+    sources: [],
+  };
+
+  return {
+    range: { start_date: "2026-03-24", end_date: "2026-03-30" },
+    summary: { nutrition, recipe_entry_count: 1, product_entry_count: 0 },
+    days: [
+      { plan_date: "2026-03-24", nutrition, columns: [] },
+    ],
+  };
+}
+
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
   let reject!: (reason?: unknown) => void;
@@ -182,6 +216,8 @@ describe("planner week screen", () => {
   beforeEach(() => {
     readE2EAuthOverride.mockReset();
     fetchPlanner.mockReset();
+    fetchPlannerNutrition.mockReset();
+    fetchPlannerNutrition.mockResolvedValue(createPlannerNutritionData());
     fetchRecipes.mockReset();
     fetchRecipeBooks.mockReset();
     fetchRecipeBookRecipes.mockReset();

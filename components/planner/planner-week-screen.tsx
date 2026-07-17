@@ -12,6 +12,11 @@ import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-ta
 import { MealAddOptionsSheet } from "@/components/planner/meal-add-options-sheet";
 import type { MealAddPickerMode } from "@/components/planner/meal-add-options-sheet";
 import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
+import {
+  PlannerDayNutritionSummary,
+  PlannerWeekNutritionSummary,
+} from "@/components/planner/planner-nutrition-summary";
+import { usePlannerNutritionSummary } from "@/components/planner/use-planner-nutrition-summary";
 import { ContentState } from "@/components/shared/content-state";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
@@ -46,6 +51,7 @@ import {
 import { usePlannerStore } from "@/stores/planner-store";
 import type { PlannerColumnData, PlannerMealData } from "@/types/planner";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
+import type { PlannerNutritionAggregate } from "@/types/planner-nutrition";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type MealAddSheetState = {
@@ -202,6 +208,8 @@ function PlannerWeekWebView({
   loadPlanner,
   mealStats,
   meals,
+  nutritionByDate,
+  nutritionSummary,
   entriesByDateAndColumn,
   plannerBodyMotionStyle,
   rangeContextLabel,
@@ -228,6 +236,8 @@ function PlannerWeekWebView({
     total: number;
   };
   meals: PlannerMealData[];
+  nutritionByDate: Map<string, PlannerNutritionAggregate>;
+  nutritionSummary: React.ReactNode;
   entriesByDateAndColumn: Map<string, PlannerDisplayEntry[]>;
   plannerBodyMotionStyle: React.CSSProperties;
   rangeContextLabel: string;
@@ -394,6 +404,8 @@ function PlannerWeekWebView({
             className="web-planner-main"
             data-testid="planner-week-shell"
           >
+            {nutritionSummary}
+
             {screenState === "loading" ? (
               <div className="web-planner-skeleton-grid">
                 {Array.from({ length: 12 }).map((_, index) => (
@@ -446,6 +458,9 @@ function PlannerWeekWebView({
                         >
                           <span>{formatWeekdayLabel(dateKey)}</span>
                           <strong>{formatCompactDateLabel(dateKey)}</strong>
+                          <PlannerDayNutritionSummary
+                            nutrition={nutritionByDate.get(dateKey) ?? null}
+                          />
                         </div>
 
                         {columns.map((column) => {
@@ -577,6 +592,15 @@ export function PlannerWeekScreen({
   const [selectedDateKey, setSelectedDateKey] = useState<string>(() => todayKey);
   const mobileDayCardRefs = useRef<Record<string, HTMLElement | null>>({});
   const webDayCardRefs = useRef<Record<string, HTMLElement | null>>({});
+  const handleNutritionUnauthorized = useCallback(() => {
+    setAuthState("unauthorized");
+  }, []);
+  const nutritionRequest = usePlannerNutritionSummary({
+    enabled: authState === "authenticated",
+    endDate: rangeEndDate,
+    onUnauthorized: handleNutritionUnauthorized,
+    startDate: rangeStartDate,
+  });
 
   const dateKeys = useMemo(
     () => buildDateKeys(rangeStartDate, rangeEndDate),
@@ -587,6 +611,26 @@ export function PlannerWeekScreen({
     [meals, productEntries],
   );
   const mealStats = useMemo(() => buildPlannerMealStatusStats(meals), [meals]);
+  const nutritionByDate = useMemo(
+    () =>
+      new Map(
+        (nutritionRequest.data?.days ?? []).map((day) => [
+          day.plan_date,
+          day.nutrition,
+        ]),
+      ),
+    [nutritionRequest.data],
+  );
+  const nutritionSummary = (
+    <PlannerWeekNutritionSummary
+      days={nutritionRequest.data?.days ?? []}
+      error={nutritionRequest.error}
+      isRefreshing={nutritionRequest.isRefreshing}
+      nutrition={nutritionRequest.data?.summary.nutrition ?? null}
+      onRetry={() => void nutritionRequest.retry()}
+      status={nutritionRequest.status}
+    />
+  );
   const shoppingListLinks = useMemo(() => {
     const grouped = new Map<
       string,
@@ -1157,6 +1201,7 @@ export function PlannerWeekScreen({
             </div>
             </div>
           </div>
+          <div className="mt-3">{nutritionSummary}</div>
           {shoppingListLinks.length > 0 ? (
             <Link
               className="mt-3 flex min-h-10 items-center justify-between rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[14px] font-bold text-[var(--foreground)]"
@@ -1348,7 +1393,12 @@ export function PlannerWeekScreen({
                       {formatCompactDateLabel(dateKey)}
                     </p>
                     <span className="text-[12px] text-[var(--text-3)]">
-                      {dayMealCount}/{columns.length}
+                      <span className="sr-only">
+                        {dayMealCount}/{columns.length} 끼니 계획
+                      </span>
+                      <PlannerDayNutritionSummary
+                        nutrition={nutritionByDate.get(dateKey) ?? null}
+                      />
                     </span>
                   </div>
 
@@ -1485,6 +1535,8 @@ export function PlannerWeekScreen({
             loadPlanner={loadPlanner}
             mealStats={mealStats}
             meals={meals}
+            nutritionByDate={nutritionByDate}
+            nutritionSummary={nutritionSummary}
             entriesByDateAndColumn={entriesByDateAndColumn}
             plannerBodyMotionStyle={plannerBodyMotionStyle}
             rangeContextLabel={rangeContextLabel}

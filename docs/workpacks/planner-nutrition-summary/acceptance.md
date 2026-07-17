@@ -55,40 +55,40 @@
 - [x] real DB에서 recipe direct/estimated/mixed snapshots, product complete/partial/unavailable direct pins, aggregate mixed, old/current pin, source-version 분리, cross-owner zero leak를 검증한다 <!-- omo:id=accept-planner-nutrition-pg-cases;stage=2;scope=backend;review=3,6 -->
 - [x] current product DB에 없는 estimated/mixed quality/warning field를 fixture나 schema에 추가하지 않는다 <!-- omo:id=accept-planner-nutrition-product-fixture-contract;stage=2;scope=backend;review=3,6 -->
 - [x] case/process/socket/temp directory cleanup 뒤 scoped row/process가 남지 않는다 <!-- omo:id=accept-planner-nutrition-pg-cleanup;stage=2;scope=backend;review=3,6 -->
-- [ ] fixture browser는 `lib/mock/qa-fixtures.ts`와 `qa/fixtures/slices-01-05.json`을 `pnpm dev:qa-fixtures`로 실행하고 real local DB는 `pnpm local:reset:demo` 후 `pnpm dev:local-supabase`로 구분한다 <!-- omo:id=accept-planner-nutrition-fixture-reset-path;stage=4;scope=shared;review=6 -->
+- [x] fixture browser는 `lib/mock/qa-fixtures.ts`와 `qa/fixtures/slices-01-05.json`을 `pnpm dev:qa-fixtures`로 실행하고 real local DB는 `pnpm local:reset:demo` 후 `pnpm dev:local-supabase`로 구분한다 <!-- omo:id=accept-planner-nutrition-fixture-reset-path;stage=4;scope=shared;review=6 -->
 
 > Stage 3 review evidence: initial `0/2/1`과 second `0/2/0` findings를 역할 분리된 repair가 닫았고, fresh independent reviewer가 exact backend head `624c57ed7ba2b154cabbb949d09732eed406b273`를 `STAGE3_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다. targeted 8 files/55 tests, isolated PostgreSQL 17.10 2/2, `pnpm verify:backend` product 1,560 passed/24 intended skipped와 security 12/12, current-head PR checks 0 fail/0 pending을 확인했다. 이 승인은 Stage 3 backend에만 해당하며 Stage 4 이후를 닫지 않는다.
 
 ## PLANNER_WEEK UI
 
-- [ ] 주간 범위에 `계획 영양` label과 compact kcal/incomplete indicator가 있다 <!-- omo:id=accept-planner-nutrition-week-summary;stage=4;scope=frontend;review=5,6 -->
-- [ ] 날짜 카드에는 compact kcal/incomplete indicator만 있고 핵심 5종 표를 반복하지 않는다 <!-- omo:id=accept-planner-nutrition-day-compact;stage=4;scope=frontend;review=5,6 -->
-- [ ] complete/partial/unavailable가 `총량/최소/정보 준비 중`으로 구분되고 missing을 0으로 표시하지 않는다 <!-- omo:id=accept-planner-nutrition-week-missing-copy;stage=4;scope=frontend;review=5,6 -->
-- [ ] summary loading/error가 기존 week navigation/day cards/Recipe Meal/product rows를 지우지 않는다 <!-- omo:id=accept-planner-nutrition-week-soft-state;stage=4;scope=frontend;review=5,6 -->
-- [ ] 주 이동의 늦은 이전 응답이 현재 범위 summary를 덮지 않는다 <!-- omo:id=accept-planner-nutrition-week-request-race;stage=4;scope=frontend;review=5,6 -->
-- [ ] summary가 first viewport day overview와 기존 primary CTA를 과도하게 밀지 않는다 <!-- omo:id=accept-planner-nutrition-week-hierarchy;stage=4;scope=frontend;review=5,6 -->
+- [x] 주간 범위에 `계획 영양` label과 compact kcal/incomplete indicator가 있다 <!-- omo:id=accept-planner-nutrition-week-summary;stage=4;scope=frontend;review=5,6 -->
+- [x] 날짜 카드에는 compact kcal/incomplete indicator만 있고 핵심 5종 표를 반복하지 않는다 <!-- omo:id=accept-planner-nutrition-day-compact;stage=4;scope=frontend;review=5,6 -->
+- [x] complete/partial/unavailable가 `총량/최소/정보 준비 중`으로 구분되고 missing을 0으로 표시하지 않는다 <!-- omo:id=accept-planner-nutrition-week-missing-copy;stage=4;scope=frontend;review=5,6 -->
+- [x] summary loading/error가 기존 week navigation/day cards/Recipe Meal/product rows를 지우지 않는다 <!-- omo:id=accept-planner-nutrition-week-soft-state;stage=4;scope=frontend;review=5,6 -->
+- [x] 주 이동의 늦은 이전 응답이 현재 범위 summary를 덮지 않는다 <!-- omo:id=accept-planner-nutrition-week-request-race;stage=4;scope=frontend;review=5,6 -->
+- [x] summary가 first viewport day overview와 기존 primary CTA를 과도하게 밀지 않는다 <!-- omo:id=accept-planner-nutrition-week-hierarchy;stage=4;scope=frontend;review=5,6 -->
 
 ## MEAL_SCREEN UI
 
-- [ ] 선택 날짜 응답의 현재 `column_id` summary로 끼니 핵심 5종을 표시한다 <!-- omo:id=accept-planner-nutrition-meal-core-five;stage=4;scope=frontend;review=5,6 -->
-- [ ] `incomplete_entry_count`를 combined 확인 필요 count로 표시하고 문서 밖 별도 count field를 요구하지 않는다 <!-- omo:id=accept-planner-nutrition-meal-incomplete;stage=4;scope=frontend;review=5,6 -->
-- [ ] `direct/estimated/mixed/null`을 사용자용 품질 문구로 구분하고 estimated/mixed에 예상 의미를 보존한다 <!-- omo:id=accept-planner-nutrition-meal-quality;stage=4;scope=frontend;review=5,6 -->
-- [ ] aggregate warnings를 사용자용 누락/예상 안내로 표시하고 raw code/secret를 그대로 노출하지 않는다 <!-- omo:id=accept-planner-nutrition-meal-warnings;stage=4;scope=frontend;review=5,6 -->
-- [ ] summary loading/error가 기존 entry list와 sticky `[식사 추가]` CTA를 지우지 않는다 <!-- omo:id=accept-planner-nutrition-meal-soft-state;stage=4;scope=frontend;review=5,6 -->
-- [ ] 날짜/column 이동 또는 retry의 stale response가 현재 끼니를 덮지 않는다 <!-- omo:id=accept-planner-nutrition-meal-request-race;stage=4;scope=frontend;review=5,6 -->
-- [ ] entry가 하나도 없는 scope는 `계획 영양 정보 없음`이며 false `0 kcal`나 0 합계를 표시하지 않는다 <!-- omo:id=accept-planner-nutrition-ui-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] read-only nutrition summary 자체에는 mutation/repin control이 없고 기존 entry control만 기존 영역에 남는다 <!-- omo:id=accept-planner-nutrition-ui-read-only;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized는 기존 로그인 안내 뒤 week/date/column return context를 복원한다 <!-- omo:id=accept-planner-nutrition-ui-unauthorized-return;stage=4;scope=frontend;review=5,6 -->
+- [x] 선택 날짜 응답의 현재 `column_id` summary로 끼니 핵심 5종을 표시한다 <!-- omo:id=accept-planner-nutrition-meal-core-five;stage=4;scope=frontend;review=5,6 -->
+- [x] `incomplete_entry_count`를 combined 확인 필요 count로 표시하고 문서 밖 별도 count field를 요구하지 않는다 <!-- omo:id=accept-planner-nutrition-meal-incomplete;stage=4;scope=frontend;review=5,6 -->
+- [x] `direct/estimated/mixed/null`을 사용자용 품질 문구로 구분하고 estimated/mixed에 예상 의미를 보존한다 <!-- omo:id=accept-planner-nutrition-meal-quality;stage=4;scope=frontend;review=5,6 -->
+- [x] aggregate warnings를 사용자용 누락/예상 안내로 표시하고 raw code/secret를 그대로 노출하지 않는다 <!-- omo:id=accept-planner-nutrition-meal-warnings;stage=4;scope=frontend;review=5,6 -->
+- [x] summary loading/error가 기존 entry list와 sticky `[식사 추가]` CTA를 지우지 않는다 <!-- omo:id=accept-planner-nutrition-meal-soft-state;stage=4;scope=frontend;review=5,6 -->
+- [x] 날짜/column 이동 또는 retry의 stale response가 현재 끼니를 덮지 않는다 <!-- omo:id=accept-planner-nutrition-meal-request-race;stage=4;scope=frontend;review=5,6 -->
+- [x] entry가 하나도 없는 scope는 `계획 영양 정보 없음`이며 false `0 kcal`나 0 합계를 표시하지 않는다 <!-- omo:id=accept-planner-nutrition-ui-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] read-only nutrition summary 자체에는 mutation/repin control이 없고 기존 entry control만 기존 영역에 남는다 <!-- omo:id=accept-planner-nutrition-ui-read-only;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized는 기존 로그인 안내 뒤 week/date/column return context를 복원한다 <!-- omo:id=accept-planner-nutrition-ui-unauthorized-return;stage=4;scope=frontend;review=5,6 -->
 
 ## Browser / Authority / Accessibility
 
-- [ ] Stage 4 전에 PLANNER_WEEK/MEAL_SCREEN current-state before를 각각 390/320/desktop 1280에서 확보한다 <!-- omo:id=accept-planner-nutrition-before-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 4 후 두 화면의 after를 같은 390/320/desktop 1280에서 확보하고 before와 짝지어 비교한다 <!-- omo:id=accept-planner-nutrition-after-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] complete/partial/unavailable/mixed/loading/error/empty/stale-response state evidence가 있다 <!-- omo:id=accept-planner-nutrition-state-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] 320px에서 CTA/문구/핵심 5종/indicator가 잘리거나 겹치지 않고 touch target이 44px다 <!-- omo:id=accept-planner-nutrition-evidence-320;stage=4;scope=frontend;review=5,6 -->
-- [ ] desktop 1280에서 기존 planner/meal hierarchy와 content width가 안정적이다 <!-- omo:id=accept-planner-nutrition-evidence-desktop;stage=4;scope=frontend;review=5,6 -->
-- [ ] page-level horizontal overflow가 없고 기존 localized scroll/anchor return/focus가 보존된다 <!-- omo:id=accept-planner-nutrition-scroll-focus;stage=4;scope=frontend;review=5,6 -->
-- [ ] axe, keyboard, screen-reader label, color 이외 incomplete 표현이 통과한다 <!-- omo:id=accept-planner-nutrition-accessibility;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 전에 PLANNER_WEEK/MEAL_SCREEN current-state before를 각각 390/320/desktop 1280에서 확보한다 <!-- omo:id=accept-planner-nutrition-before-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 후 두 화면의 after를 같은 390/320/desktop 1280에서 확보하고 before와 짝지어 비교한다 <!-- omo:id=accept-planner-nutrition-after-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] complete/partial/unavailable/mixed/loading/error/empty/stale-response state evidence가 있다 <!-- omo:id=accept-planner-nutrition-state-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] 320px에서 CTA/문구/핵심 5종/indicator가 잘리거나 겹치지 않고 touch target이 44px다 <!-- omo:id=accept-planner-nutrition-evidence-320;stage=4;scope=frontend;review=5,6 -->
+- [x] desktop 1280에서 기존 planner/meal hierarchy와 content width가 안정적이다 <!-- omo:id=accept-planner-nutrition-evidence-desktop;stage=4;scope=frontend;review=5,6 -->
+- [x] page-level horizontal overflow가 없고 기존 localized scroll/anchor return/focus가 보존된다 <!-- omo:id=accept-planner-nutrition-scroll-focus;stage=4;scope=frontend;review=5,6 -->
+- [x] axe, keyboard, screen-reader label, color 이외 incomplete 표현이 통과한다 <!-- omo:id=accept-planner-nutrition-accessibility;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA report/eval과 `pnpm verify:frontend`가 green이다 <!-- omo:id=accept-planner-nutrition-exploratory;stage=4;scope=frontend;review=5,6 -->
 - [ ] fresh authority precheck/Stage 5/final authority/Stage 6에 unresolved blocker/important가 0이다 <!-- omo:id=accept-planner-nutrition-authority;stage=4;scope=frontend;review=5,6 -->
 
@@ -103,9 +103,9 @@
 
 ### Playwright / UI
 
-- [ ] PLANNER_WEEK week/day compact summary와 range navigation/stale guard를 검증한다 <!-- omo:id=accept-planner-nutrition-playwright-week;stage=4;scope=frontend;review=5,6 -->
-- [ ] MEAL_SCREEN 핵심 5종/incomplete/quality/warning/soft-state를 검증한다 <!-- omo:id=accept-planner-nutrition-playwright-meal;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390/320/desktop visual/a11y/scroll/CTA evidence를 검증한다 <!-- omo:id=accept-planner-nutrition-playwright-devices;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK week/day compact summary와 range navigation/stale guard를 검증한다 <!-- omo:id=accept-planner-nutrition-playwright-week;stage=4;scope=frontend;review=5,6 -->
+- [x] MEAL_SCREEN 핵심 5종/incomplete/quality/warning/soft-state를 검증한다 <!-- omo:id=accept-planner-nutrition-playwright-meal;stage=4;scope=frontend;review=5,6 -->
+- [x] 390/320/desktop visual/a11y/scroll/CTA evidence를 검증한다 <!-- omo:id=accept-planner-nutrition-playwright-devices;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 
@@ -114,6 +114,8 @@
 - [ ] full local Supabase/PostgREST/auth claim real browser smoke
 - [ ] physical iOS/Android narrow device와 실제 screen reader 확인
 - [ ] production-scale query plan/large entry count/RLS cost 측정
+
+> Stage 4 implementation evidence: targeted Vitest 4 files/99, fixture Playwright 3 projects 12/12, `pnpm verify:frontend:pr`, full a11y 18/15, full visual 23/22, security 12/12가 통과했다. full `pnpm verify:frontend`는 기존 `slice-17a-mypage` mobile-chrome 2건의 비결정적 실패 때문에 non-zero였지만 해당 2건 단독 재실행은 2/2 통과했다. full local Supabase smoke는 `127.0.0.1` 전용 검증 스크립트를 준비했으나 Docker daemon이 현재 프로젝트 DB 컨테이너를 시작하지 못해 환경 blocker다. isolated PostgreSQL 17.10 2/2와 fixture browser를 그 대체 증거로 간주하지 않는다. Stage 4는 `pending-review`이며 authority와 Stage 5/6을 자기 승인하지 않는다.
 
 ## Scope Guard
 
