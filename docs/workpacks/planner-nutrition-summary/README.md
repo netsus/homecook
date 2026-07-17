@@ -210,6 +210,15 @@
 - bootstrap과 fixture 준비가 끝난 뒤 write 측정을 시작한다. route/service가 A의 최대 7일 범위만 읽고 B row를 유출하지 않으며, current switch 후에도 A의 old pins 합계가 같고 nutrition request 전후 target/planner 관련 write가 0인지 확인한다. route/service는 `ensureUserBootstrapState`를 호출하지 않는다.
 - case 전후 scoped FK-order cleanup과 process/socket/temp directory `finally` cleanup을 검증한다. production/staging 접속 문자열은 허용하지 않는다.
 
+#### Stage 2 Implementation Evidence — Pending Independent Stage 3 Review
+
+- RED: aggregate 첫 실행은 `@/lib/server/planner-nutrition-summary` 모듈 부재, read-model 4개는 `readPlannerNutritionSummary is not a function`, API 9개는 route 모듈 부재, PostgreSQL runner는 파일 부재로 각각 실패했다. 실패를 확인한 뒤 최소 구현을 추가했다.
+- GREEN/REFACTOR: 신규 aggregate/API/read-model과 기존 planner/meals/product/snapshot 회귀 묶음이 7 files, 45 tests로 통과했다.
+- real PostgreSQL: non-5432 ephemeral PostgreSQL `17.10`에서 관련 6개 migration, 실제 `ensureUserBootstrapState`, owner A/B, recipe direct/estimated/mixed/null pin, product complete/partial/unavailable direct pin, old/current pin, source-version 분리, cross-owner zero leak, request 전후 target write 0, process/socket/temp cleanup을 1 file, 2 tests로 검증했다. unavailable product는 현재 manual writer가 energy를 요구하므로 isolated legacy/corrupt fixture에서 해당 validation trigger만 준비 구간에 한해 끄고 다시 켰으며, 서비스 측정 경로는 그대로 read-only였다.
+- repository gate: `pnpm verify:backend`가 lint 0 errors(기존 무관 warning 4개), typecheck, product 1,550 passed/24 intended skipped, production build, security Playwright 12/12로 통과했다.
+- 새 endpoint/query/field/status/error/DB surface, generic 손질·크기·가식 필드, migration/RPC/dependency를 추가하지 않았다. production/staging/provider write는 0이다.
+- 이 기록은 Stage 2 구현 증거이며 Stage 3 승인으로 간주하지 않는다. fresh reviewer가 새 exact PR head를 독립 검수해야 한다.
+
 ### Stage 4 Browser / Exploratory / Real Local DB
 
 - Stage 4 전에 현재 master의 `PLANNER_WEEK`, `MEAL_SCREEN`을 각각 `390 / 320 / desktop 1280`에서 before 캡처한다.
@@ -231,14 +240,14 @@
 
 ## Delivery Checklist
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-planner-nutrition-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-planner-nutrition-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-planner-nutrition-types;stage=2;scope=shared;review=3,6 -->
-- [ ] range/day/column pinned aggregate TDD <!-- omo:id=delivery-planner-nutrition-aggregate-tdd;stage=2;scope=backend;review=3,6 -->
-- [ ] isolated PostgreSQL read-only smoke와 cleanup <!-- omo:id=delivery-planner-nutrition-real-db;stage=2;scope=backend;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-planner-nutrition-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 <!-- omo:id=delivery-planner-nutrition-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-planner-nutrition-types;stage=2;scope=shared;review=3,6 -->
+- [x] range/day/column pinned aggregate TDD <!-- omo:id=delivery-planner-nutrition-aggregate-tdd;stage=2;scope=backend;review=3,6 -->
+- [x] isolated PostgreSQL read-only smoke와 cleanup <!-- omo:id=delivery-planner-nutrition-real-db;stage=2;scope=backend;review=3,6 -->
 - [ ] UI 연결 <!-- omo:id=delivery-planner-nutrition-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-planner-nutrition-test-split;stage=4;scope=shared;review=5,6 -->
-- [ ] fixture와 real local DB smoke 경로 구분 <!-- omo:id=delivery-planner-nutrition-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real local DB smoke 경로 구분 <!-- omo:id=delivery-planner-nutrition-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [ ] loading / empty / error / unauthorized / partial / unavailable 상태 점검 <!-- omo:id=delivery-planner-nutrition-ui-states;stage=4;scope=frontend;review=5,6 -->
 - [ ] 390/320/desktop before-after와 scroll/CTA evidence <!-- omo:id=delivery-planner-nutrition-visual-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA / eval / authority evidence <!-- omo:id=delivery-planner-nutrition-authority;stage=4;scope=frontend;review=5,6 -->

@@ -142,8 +142,65 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "closeout": null,
-  "branch": "docs/planner-nutrition-summary",
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "in_progress",
+      "design_status": "temporary",
+      "delivery_checklist": "pending",
+      "design_authority": "pending",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "pending",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "Stage 2 RED: missing aggregate module, undefined read model, missing route module, and missing isolated PostgreSQL runner each failed before implementation",
+        "Targeted aggregate/API/read-model plus existing planner/meals/product/snapshot regressions passed 7 files and 45 tests",
+        "tests/planner-nutrition-postgres.integration.test.ts via scripts/run-planner-nutrition-postgres-integration.mjs passed 2/2 on isolated non-5432 PostgreSQL 17.10 with real bootstrap, owner A/B, pinned recipe/product aggregates, old-pin stability, source-version separation, bounded reads, zero measured writes, and process/socket/temp cleanup",
+        "pnpm verify:backend passed lint with 0 errors and 4 unrelated existing warnings, typecheck, 1550 product tests with 24 intended skips, production build, and security Playwright 12/12",
+        "No migration, RPC, dependency, generic preparation/size/edible field, or unapproved endpoint/query/response/status/error surface was added; production/staging/provider writes remain 0",
+        "Stage 2 implementation is pending fresh independent Stage 3 exact-head review; Stage 4 UI/browser/authority evidence remains pending"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-independent-stage3-review",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-17T01:01:59Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": null,
+      "evidence_sources": [
+        "docs/workpacks/planner-nutrition-summary/README.md Stage 2 implementation evidence",
+        "tests/planner-nutrition-aggregate.test.ts",
+        "tests/planner-nutrition-api.test.ts",
+        "tests/planner-nutrition-read-model.test.ts",
+        "tests/planner-nutrition-postgres.integration.test.ts",
+        "scripts/run-planner-nutrition-postgres-integration.mjs"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-17T01:01:59Z",
+      "status_synced_at": "2026-07-17T01:01:59Z",
+      "pr_body_synced_at": "pending-independent-stage3-review"
+    }
+  },
+  "branch": "feature/be-planner-nutrition-summary",
   "out_of_scope": [
     "Actual consumption eaten skipped nutrition goals goal attainment and medical disease coaching",
     "Current recipe snapshot or product version repin backfill or immutable snapshot mutation",
@@ -154,5 +211,5 @@
     "Production staging external provider writes and secret or raw provider output"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs gate only. Roadmap projection remains docs and Design Status remains temporary. Initial independent review recorded B/I/S 0/5/0 at fingerprint e0e7f17c177f3f81df31e6b8a3c2995f9fd20fee6e3176010ec3a1f2b5558264; separate repair-final completed, then the independent reviewer issued RE_REVIEW_APPROVED on 2026-07-17 with B/I/S 0/0/0 at reviewed fingerprint 83f54e3942b40ceb46af2f917d6981f111a18060e4139ee7a96727651d05f315. Six-file Vitest passed 104/104 and source-of-truth, workflow-v2, workpack, automation-spec, bookkeeping and diff validators passed. lifecycle in_progress, approval codex_approved and verification passed apply only to repaired Stage 1 docs and the future evidence plan; auto_merge remains false and this is not merge approval. Stage 4 UI/screenshots/authority precheck, Stage 5, final authority and Stage 6 remain pending. The backend contract remains one read-only GET /planner/nutrition: bootstrap runs only before request measurement and yields the user plus breakfast/lunch/dinner columns; the route/service never bootstraps and request before/after target/planner writes are zero. Recipe fixtures cover direct/estimated/mixed snapshots, product fixtures cover only complete/partial/unavailable direct pins supported by the DB, and aggregate mixed comes from their composition without new product fields. Fixture browser state uses lib/mock/qa-fixtures.ts plus qa/fixtures/slices-01-05.json via pnpm dev:qa-fixtures; real local reset/start uses pnpm local:reset:demo then pnpm dev:local-supabase. Missing and empty are not zero, the summary has no mutation control, and unauthorized return preserves week/date/column. Production/staging/provider writes remain zero."
+  "notes": "Stage 2 backend TDD implementation is complete on feature/be-planner-nutrition-summary after the independent Stage 1.5 docs approval. RED was observed for the absent aggregate module, read model, route, and PostgreSQL runner before implementation. Targeted Vitest passed 7 files/45 tests; isolated non-5432 PostgreSQL 17.10 passed 2/2 with actual bootstrap, pinned recipe/product aggregation, current-switch old-pin stability, source-version separation, owner isolation, bounded reads, zero measured writes, and cleanup; pnpm verify:backend passed product 1550 with 24 intended skips, production build, and security 12/12. Only the exact read-only GET /planner/nutrition contract was implemented, with no migration/RPC/dependency or generic preparation/size/edible field and zero production/staging/provider writes. closeout_phase=collecting, auto_merge remains false, and this implementer has not approved Stage 3. Fresh independent Stage 3 exact-head review, Stage 4 UI/browser/real-local-DB evidence, authority reviews, and final closeout remain pending."
 }
