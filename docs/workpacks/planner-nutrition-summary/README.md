@@ -166,7 +166,7 @@
 - Stage 1 critique brief: `ui/designs/critiques/planner-nutrition-summary-critique.md`
 - Stage 4 evidence root: `ui/designs/evidence/planner-nutrition-summary/`
 - Future authority report: `ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md`
-- Authority status: `required / pending`
+- Authority status: `required`
 - Notes: 기존 prepared-food-planner-entry의 day card, slot row, mixed entry, primary CTA, localized scroll, anchor return을 보존한다. 영양 summary가 첫 화면 day overview를 과도하게 밀면 summary metadata를 더 compact하게 만들고 planner mental model을 교체하지 않는다.
 
 ## Design Status
@@ -246,7 +246,7 @@
 - [x] range/day/column pinned aggregate TDD <!-- omo:id=delivery-planner-nutrition-aggregate-tdd;stage=2;scope=backend;review=3,6 -->
 - [x] isolated PostgreSQL read-only smoke와 cleanup <!-- omo:id=delivery-planner-nutrition-real-db;stage=2;scope=backend;review=3,6 -->
 - [ ] UI 연결 <!-- omo:id=delivery-planner-nutrition-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-planner-nutrition-test-split;stage=4;scope=shared;review=5,6 -->
+- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-planner-nutrition-test-split;stage=4;scope=shared;review=6 -->
 - [x] fixture와 real local DB smoke 경로 구분 <!-- omo:id=delivery-planner-nutrition-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [ ] loading / empty / error / unauthorized / partial / unavailable 상태 점검 <!-- omo:id=delivery-planner-nutrition-ui-states;stage=4;scope=frontend;review=5,6 -->
 - [ ] 390/320/desktop before-after와 scroll/CTA evidence <!-- omo:id=delivery-planner-nutrition-visual-evidence;stage=4;scope=frontend;review=5,6 -->

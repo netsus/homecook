@@ -55,7 +55,7 @@
 - [x] real DB에서 recipe direct/estimated/mixed snapshots, product complete/partial/unavailable direct pins, aggregate mixed, old/current pin, source-version 분리, cross-owner zero leak를 검증한다 <!-- omo:id=accept-planner-nutrition-pg-cases;stage=2;scope=backend;review=3,6 -->
 - [x] current product DB에 없는 estimated/mixed quality/warning field를 fixture나 schema에 추가하지 않는다 <!-- omo:id=accept-planner-nutrition-product-fixture-contract;stage=2;scope=backend;review=3,6 -->
 - [x] case/process/socket/temp directory cleanup 뒤 scoped row/process가 남지 않는다 <!-- omo:id=accept-planner-nutrition-pg-cleanup;stage=2;scope=backend;review=3,6 -->
-- [ ] fixture browser는 `lib/mock/qa-fixtures.ts`와 `qa/fixtures/slices-01-05.json`을 `pnpm dev:qa-fixtures`로 실행하고 real local DB는 `pnpm local:reset:demo` 후 `pnpm dev:local-supabase`로 구분한다 <!-- omo:id=accept-planner-nutrition-fixture-reset-path;stage=4;scope=shared;review=5,6 -->
+- [ ] fixture browser는 `lib/mock/qa-fixtures.ts`와 `qa/fixtures/slices-01-05.json`을 `pnpm dev:qa-fixtures`로 실행하고 real local DB는 `pnpm local:reset:demo` 후 `pnpm dev:local-supabase`로 구분한다 <!-- omo:id=accept-planner-nutrition-fixture-reset-path;stage=4;scope=shared;review=6 -->
 
 ## PLANNER_WEEK UI
 
