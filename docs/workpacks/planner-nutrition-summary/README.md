@@ -56,7 +56,7 @@
 
 > 사용자 승인 nutrition/products/planner Codex-only 예외에 따라 Stage 1 author, internal 1.5 reviewer/repair-final, Stage 2 backend TDD implementer, Stage 3 reviewer, Stage 4 implementer, authority precheck, Stage 5/final authority, Stage 6 reviewer를 fresh 역할로 분리한다. 작성자와 구현자는 자기 변경을 승인하지 않는다.
 >
-> 이 승인은 repaired Stage 1 docs와 future evidence plan에만 적용된다. Stage 4 UI/screenshots/authority precheck, Stage 5, final authority, Stage 6는 아직 pending이다.
+> Stage 4 UI/screenshots, authority precheck, Stage 5, final authority와 Stage 6는 역할을 분리해 완료했다. real local Supabase browser와 physical device/실제 screen reader, production-scale query 측정은 계속 pending이다.
 
 ## Proposal Decision
 
@@ -165,15 +165,15 @@
 - Visual artifacts: `ui/designs/PLANNER_WEEK.md`, `ui/designs/MEAL_SCREEN.md`
 - Stage 1 critique brief: `ui/designs/critiques/planner-nutrition-summary-critique.md`
 - Stage 4 evidence root: `ui/designs/evidence/planner-nutrition-summary/`
-- Future authority report: `ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md`
-- Authority status: `required`
+- Stage 5/final authority/Stage 6 report: `ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md` — final reviewed implementation head `21538d71b66b673e6aaea77027a02af6342bce9f`; `STAGE5_APPROVED`와 `FINAL_AUTHORITY_APPROVED` Blocker/Major/Minor `0/0/0`, `STAGE6_APPROVED` Blocker/Important/Suggestion `0/0/0`
+- Authority status: `reviewed`
 - Notes: 기존 prepared-food-planner-entry의 day card, slot row, mixed entry, primary CTA, localized scroll, anchor return을 보존한다. 영양 summary가 첫 화면 day overview를 과도하게 밀면 summary metadata를 더 compact하게 만들고 planner mental model을 교체하지 않는다.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 계약만 잠금, 구현·evidence·authority pending
+- [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed) — 역할 분리된 Stage 5, final authority와 Stage 6가 exact implementation head를 unresolved finding `0/0/0`으로 승인
 - [ ] N/A
 
 ## Source Links
@@ -218,7 +218,7 @@
 - repository gate: `pnpm verify:backend`가 lint 0 errors(기존 무관 warning 4개), typecheck, product 1,560 passed/24 intended skipped, production build, security Playwright 12/12로 통과했다.
 - 새 endpoint/query/field/status/error/DB surface, generic 손질·크기·가식 필드, migration/RPC/dependency를 추가하지 않았다. production/staging/provider write는 0이다.
 - independent Stage 3 review는 initial `0/2/1`, second `0/2/0` findings를 역할 분리된 closeout/runner/tri-state repair가 닫은 뒤, fresh exact-head reviewer가 `624c57ed7ba2b154cabbb949d09732eed406b273`를 `STAGE3_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다. 해당 head의 시작된 PR checks도 0 fail/0 pending이다.
-- 이 승인은 backend Stage 3에만 해당한다. Stage 4 UI/browser/real local DB, authority precheck/Stage 5/final authority/Stage 6과 최종 closeout은 아직 pending이다.
+- 이 승인은 backend Stage 3에만 해당하며, 당시에는 Stage 4 UI/browser/real local DB, authority precheck/Stage 5/final authority/Stage 6과 최종 closeout이 pending이었다. 현재 후속 gate 상태는 아래 Stage 4/5 evidence와 Design Status가 authority다.
 
 ### Stage 4 Browser / Exploratory / Real Local DB
 
@@ -231,6 +231,30 @@
 - real local DB는 QA 문서와 `package.json`에 있는 `pnpm local:reset:demo`로 reset/start/seed한 뒤 `pnpm dev:local-supabase`로 실제 auth browser를 실행한다. bootstrap 결과 user row와 기본 `아침/점심/저녁` 3 columns를 먼저 확인하고, nutrition request 전후 target/planner write 0을 별도로 측정한다.
 - fixture evidence와 real local DB evidence를 명확히 구분한다.
 - physical device, external OAuth, production-scale query plan은 Manual Only이며 기본 gate를 대체하지 않는다.
+
+#### Stage 4 Frontend Evidence — Independently Approved
+
+- `PLANNER_WEEK`에는 주간/날짜별 compact 계획 열량과 확인 필요 indicator를, `MEAL_SCREEN`에는 현재 column 핵심 5종·품질·안전한 warning 안내를 연결했다. nutrition summary에는 mutation/repin control을 추가하지 않았다.
+- client/adapter는 공식 단일 GET과 envelope를 그대로 소비하고 abort + latest-request guard를 둔다. loading/error는 기존 planner/meal content와 CTA를 지우지 않으며 empty/unavailable을 false `0`으로 표시하지 않는다.
+- targeted Vitest는 planner nutrition API/UI와 기존 두 화면 회귀 4 files, 99 tests가 통과했다. fixture Playwright는 desktop/390/320 3 projects, 12/12가 통과했고 complete/partial/unavailable/mixed/loading/error/retry/empty/stale-response를 구분했다.
+- `ui/designs/evidence/planner-nutrition-summary/`에 두 화면의 동일 viewport `320 / 390 / desktop 1280` before/after, geometry, 상태 증거와 comparison을 남겼다. 320px `MEAL_SCREEN`에서 CTA가 viewport 밖으로 밀리던 exploratory finding을 bottom navigation 위 52px 고정 action shell로 수리했고 page-level overflow 0과 focus/ESC 복구를 재검증했다.
+- `pnpm verify:frontend:pr`는 lint 0 errors(기존 무관 warning 4개), typecheck, product 1,573 passed/24 intended skipped, build, smoke 58/8, a11y core 8/1, visual desktop 4/4·mobile 8/8로 통과했다. full a11y 18/15, full visual 23/22, security 12/12도 각각 통과했다.
+- 초기 full `pnpm verify:frontend`는 기존 `slice-17a-mypage` mobile-chrome flake로 non-zero였지만 이후 mypage 격리 repair가 선행 merge됐다. 최종 exact implementation head의 `CI=1 pnpm verify:frontend`는 product `1,587 passed/24 skipped`, regression `872 passed/112 skipped`, Lighthouse 6 runs, accessibility `18/15`, visual `23/22`, security `12/12`와 lint/typecheck/build를 모두 green으로 닫았다.
+- real local Supabase/PostgREST/auth browser smoke는 `127.0.0.1`만 허용하는 `scripts/verify-planner-nutrition-local-db.mjs`를 준비했지만, 현재 Docker daemon이 `supabase_db_homecook`을 `Created`에서 시작하지 못하고 `docker start`도 응답하지 않아 1회 재시도 뒤 환경 blocker로 남겼다. Stage 2 isolated PostgreSQL 17.10 read-only 2/2와 fixture browser는 이 미실행 항목의 대체 증거가 아니다. Docker가 회복되면 최종 cross-slice QA에서 한 번 재시도한다.
+- 2026-07-17 current-head repair는 범위 변경 로딩에서 이전 범위 영양을 숨기고, 같은 범위 mutation 재조회 오류에서만 기존 영양을 유지한다. 최초 오류는 empty가 아닌 retry error로 표시하며, 성공한 recipe/product 추가·변경·삭제 뒤 nutrition을 non-blocking 재조회한다. 중앙 fixture는 화면 목록과 영양 집계가 같은 recipe/product ID·수량을 사용한다. list가 `ready/empty`로 확정되기 전의 임시 빈 배열은 실제 ready nutrition을 빈 계획으로 바꾸지 않는다. exact targeted Vitest는 `planner-nutrition-api` 11, `planner-nutrition-ui` 17, `planner-week-screen` 37, `planner-meal-screen` 44, `qa-planner-nutrition-fixture` 4로 5 files/113이며, fixture Playwright 3 projects 15/15, typecheck와 lint 0 errors가 통과했다. 앞선 full Vitest 311 files/3,222 근거는 유지한다.
+- repair state evidence는 `after/states/planner-range-loading-hides-prior-data.png`, `after/states/meal-soft-error-preserves-data.png`, `after/states/planner-initial-error-390.png`, `after/states/meal-initial-error-390.png`다. 폐기된 반대 동작 이미지는 제거했고, `comparison.png`와 `visual-verdict.json`은 current fixture의 동일 viewport before/current 쌍으로 갱신했다.
+- Design Status는 `confirmed`다. Stage 4 구현자, Stage 5 reviewer, final authority reviewer, Stage 6 reviewer와 repair 역할을 분리했고, final exact implementation head `21538d71b66b673e6aaea77027a02af6342bce9f`에서 authority와 Stage 6 unresolved finding이 각각 `0/0/0`이다. 이는 real local DB나 physical device/실제 screen reader 검증 완료를 뜻하지 않는다.
+
+#### Stage 5 Design Review — Independently Approved
+
+- 역할이 분리된 fresh Codex Stage 5 reviewer가 exact frontend head `cebb385d9cc00e1ab988432aff39983310b5b0ec`를 `STAGE5_APPROVED`, Blocker/Major/Minor `0/0/0`으로 승인했다. 판정 보고서는 `ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md`다.
+- current-run QA fixture 근거는 `.artifacts/authority/planner-nutrition-summary/stage5-20260717T071035Z/`에 남겼다. `PLANNER_WEEK`와 `MEAL_SCREEN`을 각각 `320 / 390 / desktop 1280`에서 다시 캡처하고, initial error, 다른 범위 loading, 같은 범위 soft error, empty, warning dialog/focus 복원, 동일 viewport before/current composite를 직접 검토했다.
+- 모든 current-run ready/state 화면에서 page-level horizontal overflow는 없었다. MEAL_SCREEN CTA는 320/390에서 52px, desktop에서 44px이며 scroll content와 겹치지 않았다. warning dialog는 `닫기`로 focus가 이동하고 ESC 뒤 `확인 필요 안내 1개 보기` trigger로 복원됐다.
+- exact-head fixture Playwright `tests/e2e/slice-planner-nutrition-summary.spec.ts --project=desktop-chrome`는 `5 passed`다.
+- 별도 final authority reviewer가 exact implementation head `21538d71b66b673e6aaea77027a02af6342bce9f`를 `FINAL_AUTHORITY_APPROVED`, Blocker/Major/Minor `0/0/0`, `confirmed_allowed=true`로 승인했다. 이어 구현·authority·repair와 분리된 fresh Stage 6 re-reviewer가 같은 head를 `STAGE6_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다.
+- full frontend 병렬 실행이 드러낸 E2E shared fixture mutation은 별도 TDD repair로 해당 planner nutrition spec 내부에 격리했다. planner nutrition 3-project `15/15`, planner/prepared-food 동시 stress `96/96`, targeted Vitest 5 files/113, typecheck, lint 0 errors와 PNG 23/23 checksum 유지 후 exact-head Stage 6/final authority 재검토가 다시 승인됐다.
+- `CI=1 pnpm verify:frontend` 최종 실행은 lint/typecheck/build, product `1,587/24 skipped`, regression `872/112 skipped`, Lighthouse 6 runs, accessibility `18/15`, visual `23/22`, security `12/12`로 green이다.
+- Design Status와 combined authority checklist는 닫지만, PR current-head checks와 real local Supabase browser, physical device/실제 screen reader, production-scale query 측정은 별도 pending gate로 남긴다.
 
 ## Primary User Path
 
@@ -247,10 +271,10 @@
 - [x] range/day/column pinned aggregate TDD <!-- omo:id=delivery-planner-nutrition-aggregate-tdd;stage=2;scope=backend;review=3,6 -->
 - [x] isolated PostgreSQL read-only smoke와 cleanup <!-- omo:id=delivery-planner-nutrition-real-db;stage=2;scope=backend;review=3,6 -->
 - [x] fresh independent Stage 3 reviewer가 exact backend head `624c57ed7ba2b154cabbb949d09732eed406b273`를 `STAGE3_APPROVED` 0/0/0으로 승인 <!-- omo:id=delivery-planner-nutrition-stage3-review;stage=2;scope=backend;review=3 -->
-- [ ] UI 연결 <!-- omo:id=delivery-planner-nutrition-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-planner-nutrition-test-split;stage=4;scope=shared;review=6 -->
+- [x] UI 연결 <!-- omo:id=delivery-planner-nutrition-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=delivery-planner-nutrition-test-split;stage=4;scope=shared;review=6 -->
 - [x] fixture와 real local DB smoke 경로 구분 <!-- omo:id=delivery-planner-nutrition-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] loading / empty / error / unauthorized / partial / unavailable 상태 점검 <!-- omo:id=delivery-planner-nutrition-ui-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390/320/desktop before-after와 scroll/CTA evidence <!-- omo:id=delivery-planner-nutrition-visual-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] exploratory QA / eval / authority evidence <!-- omo:id=delivery-planner-nutrition-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-planner-nutrition-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] loading / empty / error / unauthorized / partial / unavailable 상태 점검 <!-- omo:id=delivery-planner-nutrition-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] 390/320/desktop before-after와 scroll/CTA evidence <!-- omo:id=delivery-planner-nutrition-visual-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] exploratory QA / eval / authority evidence <!-- omo:id=delivery-planner-nutrition-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-planner-nutrition-manual-qa-handoff;stage=4;scope=frontend;review=6 -->

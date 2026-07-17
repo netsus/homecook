@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-17T03:45:39Z",
+  "updated_at": "2026-07-17T05:17:21Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2075,10 +2075,10 @@
     {
       "id": "planner-nutrition-summary",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-planner-nutrition-summary",
+      "branch": "feature/fe-planner-nutrition-summary",
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
-      "verification_status": "passed",
+      "verification_status": "pending",
       "required_checks": [
         "pnpm exec vitest run tests/planner-nutrition-aggregate.test.ts tests/planner-nutrition-api.test.ts tests/planner-nutrition-read-model.test.ts tests/planner-route.test.ts tests/meals-route.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/recipe-nutrition-snapshot.test.ts",
         "node scripts/run-planner-nutrition-postgres-integration.mjs",
@@ -2098,10 +2098,10 @@
         "pnpm validate:omo-bookkeeping",
         "git diff --check"
       ],
-      "notes": "Canonical Stage 3 backend projection: .workflow-v2/work-items/planner-nutrition-summary.json#closeout. Fresh independent reviewer approved exact backend head 624c57ed7ba2b154cabbb949d09732eed406b273 with STAGE3_APPROVED 0/0/0 after 0/2/1 and 0/2/0 review findings were closed by role-separated repairs. Targeted tests passed 55/55, isolated PostgreSQL 17.10 passed 2/2, pnpm verify:backend passed product 1560 with 24 intended skips plus build and security 12/12, and exact-head PR checks finished 0 fail/0 pending. Exact read-only GET /planner/nutrition only; no migration/RPC/dependency or generic preparation/size/edible field, and production/staging/provider writes remain zero. This closes only Stage 3 backend review: lifecycle stays in_progress, Design Status temporary, auto_merge=false, and all Stage 4/authority/final closeout work remains pending. closeout_phase=projecting closeout_recovery=manual_patch:3|ci_resync:3 closeout_repair=codex:5|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1021 independent Stage 3 review rounds and exact-head checks,commit bb6530563f45b904e9739f7ee12c1eb78042b746 Stage 3 closeout projection repair,commit 03d3d59fea587c34a076454ceab2bb8f5c6cf28e Stage 3 PostgreSQL runner cleanup repair,commit 624c57ed7ba2b154cabbb949d09732eed406b273 Stage 3 shutdown tri-state repair,docs/workpacks/planner-nutrition-summary/README.md Stage 2 and Stage 3 backend evidence,tests/planner-nutrition-aggregate.test.ts,tests/planner-nutrition-api.test.ts,tests/planner-nutrition-read-model.test.ts,tests/planner-nutrition-postgres-runner.test.ts,tests/planner-nutrition-postgres.integration.test.ts,scripts/run-planner-nutrition-postgres-integration.mjs | latest_reason_code=stage3_repairs_and_current_head_recheck_complete | last_recovery_at=2026-07-17T03:45:39Z",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
+      "notes": "Canonical pre-merge closeout owner: .workflow-v2/work-items/planner-nutrition-summary.json#closeout. Stage 3 backend remains independently approved at 624c57ed7ba2b154cabbb949d09732eed406b273. Stage 5 approved cebb385d9cc00e1ab988432aff39983310b5b0ec with Blocker/Major/Minor 0/0/0; role-separated final authority and Stage 6 approved exact implementation head 21538d71b66b673e6aaea77027a02af6342bce9f with FINAL_AUTHORITY_APPROVED and STAGE6_APPROVED, each 0/0/0. CI=1 pnpm verify:frontend is locally green with product 1587/24 skipped, regression 872/112 skipped, Lighthouse 6 runs, accessibility 18/15 skipped, visual 23/22 skipped, and security 12/12. Design Status is confirmed and local verification is green, while canonical required_checks remain pending until successor current-head PR checks. lifecycle=in_progress, verification_status=pending, acceptance=pending, auto_merge=false, and real local Supabase browser, physical-device/actual-screen-reader, production-scale query, and final merge closeout remain pending. closeout_phase=projecting closeout_recovery=manual_patch:4|ci_resync:3 closeout_repair=codex:7|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:GitHub PR #1021 independent Stage 3 review rounds and exact-head checks,commit bb6530563f45b904e9739f7ee12c1eb78042b746 Stage 3 closeout projection repair,commit 03d3d59fea587c34a076454ceab2bb8f5c6cf28e Stage 3 PostgreSQL runner cleanup repair,commit 624c57ed7ba2b154cabbb949d09732eed406b273 Stage 3 shutdown tri-state repair,docs/workpacks/planner-nutrition-summary/README.md Stage 2 and Stage 3 backend evidence,tests/planner-nutrition-aggregate.test.ts,tests/planner-nutrition-api.test.ts,tests/planner-nutrition-read-model.test.ts,tests/planner-nutrition-postgres-runner.test.ts,tests/planner-nutrition-postgres.integration.test.ts,scripts/run-planner-nutrition-postgres-integration.mjs,ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md,commit 21538d71b66b673e6aaea77027a02af6342bce9f planner nutrition E2E shared-fixture isolation repair,CI=1 pnpm verify:frontend exact implementation-head green run on 2026-07-17 | latest_reason_code=stage6_and_final_authority_exact_head_approved | last_recovery_at=2026-07-17T08:05:01Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": ".artifacts/qa/planner-nutrition-summary/2026-07-17T04-34-11-213Z/eval-result.json",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     }

@@ -6,10 +6,15 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PlannerWeekScreen } from "@/components/planner/planner-week-screen";
+import {
+  PLANNER_WEEK_RETURN_CONTEXT_KEY,
+  readPlannerWeekReturnContext,
+} from "@/lib/planner/planner-week-return-context";
 import { resetPlannerStore } from "@/stores/planner-store";
 
 const readE2EAuthOverride = vi.fn();
 const fetchPlanner = vi.fn();
+const fetchPlannerNutrition = vi.fn();
 const fetchRecipes = vi.fn();
 const fetchRecipeBooks = vi.fn();
 const fetchRecipeBookRecipes = vi.fn();
@@ -32,6 +37,13 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
+  withE2EAuthOverrideHeaders: (init?: RequestInit) => init ?? {},
+}));
+
+vi.mock("@/lib/api/planner-nutrition", () => ({
+  fetchPlannerNutrition: (...args: unknown[]) => fetchPlannerNutrition(...args),
+  isPlannerNutritionApiError: (error: unknown) =>
+    Boolean(error) && typeof error === "object" && "status" in (error as object),
 }));
 
 vi.mock("@/lib/api/planner", () => ({
@@ -94,6 +106,12 @@ vi.mock("@/lib/supabase/browser", () => ({
   }),
 }));
 
+vi.mock("@/components/auth/social-login-buttons", () => ({
+  SocialLoginButtons: ({ nextPath }: { nextPath: string }) => (
+    <div data-testid="social-login-buttons" data-next-path={nextPath} />
+  ),
+}));
+
 function createPlannerData({
   meals = [],
 }: {
@@ -119,6 +137,32 @@ function createPlannerData({
       { id: "column-dinner", name: "저녁", sort_order: 3 },
     ],
     meals,
+  };
+}
+
+function createPlannerNutritionData() {
+  const nutrition = {
+    basis: { amount: 1 as const, unit: "range" as const },
+    values: {
+      energy_kcal: { amount: 640, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      carbohydrate_g: { amount: 72, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      protein_g: { amount: 31, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      fat_g: { amount: 18, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+      sodium_mg: { amount: 890, known_amount: null, status: "complete" as const, display_mode: "total" as const },
+    },
+    calculation_status: "complete" as const,
+    calculation_quality: "direct" as const,
+    incomplete_entry_count: 0,
+    warnings: [],
+    sources: [],
+  };
+
+  return {
+    range: { start_date: "2026-03-24", end_date: "2026-03-30" },
+    summary: { nutrition, recipe_entry_count: 1, product_entry_count: 0 },
+    days: [
+      { plan_date: "2026-03-24", nutrition, columns: [] },
+    ],
   };
 }
 
@@ -182,6 +226,8 @@ describe("planner week screen", () => {
   beforeEach(() => {
     readE2EAuthOverride.mockReset();
     fetchPlanner.mockReset();
+    fetchPlannerNutrition.mockReset();
+    fetchPlannerNutrition.mockResolvedValue(createPlannerNutritionData());
     fetchRecipes.mockReset();
     fetchRecipeBooks.mockReset();
     fetchRecipeBookRecipes.mockReset();
@@ -216,6 +262,7 @@ describe("planner week screen", () => {
     });
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
+    window.sessionStorage.clear();
     resetPlannerStore();
     setDesktopViewport(false);
   });
@@ -251,6 +298,45 @@ describe("planner week screen", () => {
     expect(
       await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" }),
     ).toBeTruthy();
+  });
+
+  it("restores the exact internal week context after a nutrition 401 without adding URL query fields", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+    fetchPlannerNutrition
+      .mockResolvedValueOnce(createPlannerNutritionData())
+      .mockRejectedValueOnce(Object.assign(new Error("unauthorized"), { status: 401 }));
+
+    const firstRender = render(<PlannerWeekScreen />);
+    await screen.findByRole("heading", { name: "주간 플래너" });
+    await userEvent.click(screen.getAllByRole("button", { name: "다음 주" })[0]!);
+
+    await screen.findByRole("heading", { name: "이 화면은 로그인이 필요해요" });
+    expect(readPlannerWeekReturnContext()).toEqual({
+      version: 1,
+      startDate: "2026-03-31",
+      endDate: "2026-04-06",
+      selectedDate: "2026-03-31",
+      columnId: null,
+      slotName: null,
+    });
+    expect(navigationMocks.replace).not.toHaveBeenCalled();
+    expect(new URL(screen.getByTestId("social-login-buttons").getAttribute("data-next-path") ?? "/planner", "http://homecook.local").searchParams.size).toBe(0);
+
+    firstRender.unmount();
+    resetPlannerStore();
+    fetchPlanner.mockClear();
+    fetchPlannerNutrition.mockReset();
+    fetchPlannerNutrition.mockResolvedValue({
+      ...createPlannerNutritionData(),
+      range: { start_date: "2026-03-31", end_date: "2026-04-06" },
+    });
+
+    render(<PlannerWeekScreen />);
+    await waitFor(() =>
+      expect(fetchPlanner).toHaveBeenCalledWith("2026-03-31", "2026-04-06"),
+    );
+    expect(window.sessionStorage.getItem(PLANNER_WEEK_RETURN_CONTEXT_KEY)).toBeNull();
   });
 
   it("uses the centered login gate state for guests on small screens", async () => {

@@ -15,6 +15,8 @@ import type {
 } from "@/components/planner/meal-add-options-sheet";
 import { MealAddPickerFlow } from "@/components/planner/meal-add-picker-flow";
 import { ProductPlannerEntryCard } from "@/components/planner/product-planner-entry-card";
+import { MealNutritionSummary } from "@/components/planner/planner-nutrition-summary";
+import { usePlannerNutritionSummary } from "@/components/planner/use-planner-nutrition-summary";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { ProfileSummaryButton } from "@/components/shared/profile-summary-button";
 import { useAppReturn } from "@/components/shared/use-app-return";
@@ -843,6 +845,7 @@ function MealWebView({
   pendingMealIds,
   pendingProductIds,
   planDate,
+  nutritionSummary,
   screenState,
   slotName,
   totalServings,
@@ -867,6 +870,7 @@ function MealWebView({
   pendingMealIds: Set<string>;
   pendingProductIds: Set<string>;
   planDate: string;
+  nutritionSummary: React.ReactNode;
   screenState: ScreenState;
   slotName: string;
   totalServings: number;
@@ -907,6 +911,8 @@ function MealWebView({
           <p>끼니 화면</p>
           <h1>{pageTitle}</h1>
         </div>
+
+        {nutritionSummary}
 
         {isLoading ? (
           <MealWebLoadingSkeleton planDate={planDate} slotName={slotName} />
@@ -1190,6 +1196,16 @@ export function MealScreen({
     useState<ShoppingListAllPantryCompletionSummary | ShoppingListAllPantrySummary | null>(
       null,
     );
+  const handleNutritionUnauthorized = useCallback(() => {
+    setAuthReturnPath(buildNextPath(planDate, columnId, slotName));
+    setAuthState("unauthorized");
+  }, [columnId, planDate, slotName]);
+  const nutritionRequest = usePlannerNutritionSummary({
+    enabled: authState === "authenticated",
+    endDate: planDate,
+    onUnauthorized: handleNutritionUnauthorized,
+    startDate: planDate,
+  });
 
   // ── Auth setup (identical pattern to PlannerWeekScreen) ──────────────────
   useEffect(() => {
@@ -1389,6 +1405,7 @@ export function MealScreen({
             : meal,
         ),
       );
+      void nutritionRequest.retry();
     } catch (error) {
       if (isMealApiError(error) && error.status === 401) {
         setAuthState("unauthorized");
@@ -1406,6 +1423,7 @@ export function MealScreen({
     try {
       await deleteMeal(mealId);
       setMeals((prev) => prev.filter((meal) => meal.id !== mealId));
+      void nutritionRequest.retry();
     } catch (error) {
       if (isMealApiError(error) && error.status === 401) {
         setAuthState("unauthorized");
@@ -1602,6 +1620,7 @@ export function MealScreen({
       setProductEntries((current) =>
         current.map((entry) => (entry.id === entryId ? updated : entry)),
       );
+      void nutritionRequest.retry();
       clearProductQuantityEditReturnState();
       setEditingProduct(null);
     } catch (caught) {
@@ -1656,6 +1675,7 @@ export function MealScreen({
     try {
       await deleteProductPlannerEntry(entryId);
       setProductEntries((current) => current.filter((entry) => entry.id !== entryId));
+      void nutritionRequest.retry();
       clearProductPlannerReturnContext();
       setAuthReturnPath(null);
       setDeletingProduct(null);
@@ -1711,6 +1731,7 @@ export function MealScreen({
     setMealAddPickerMode(null);
     setMealAddSheetOpen(false);
     await loadMeals();
+    void nutritionRequest.retry();
   }
 
   function handleAllPantryCompletionClose() {
@@ -1747,6 +1768,29 @@ export function MealScreen({
   const totalServings = displayedMeals.reduce(
     (sum, meal) => sum + meal.planned_servings,
     0,
+  );
+  const currentColumnNutrition = useMemo(
+    () =>
+      nutritionRequest.data?.days
+        .find((day) => day.plan_date === planDate)
+        ?.columns.find((column) => column.column_id === columnId)?.nutrition ??
+      null,
+    [columnId, nutritionRequest.data, planDate],
+  );
+  const nutritionStatus = nutritionRequest.status;
+  const nutritionSummary = (
+    <MealNutritionSummary
+      entryCount={
+        screenState === "ready" || screenState === "empty"
+          ? displayedMeals.length + displayedProductEntries.length
+          : undefined
+      }
+      error={nutritionRequest.error}
+      isRefreshing={nutritionRequest.isRefreshing}
+      nutrition={currentColumnNutrition}
+      onRetry={() => void nutritionRequest.retry()}
+      status={nutritionStatus}
+    />
   );
   const nextPath = authReturnPath ?? buildNextPath(planDate, columnId, slotName);
   const mealAddParams = new URLSearchParams({
@@ -1835,6 +1879,7 @@ export function MealScreen({
             pendingMealIds={pendingMealIds}
             pendingProductIds={pendingProductIds}
             planDate={planDate}
+            nutritionSummary={nutritionSummary}
             screenState={screenState}
             slotName={slotName}
             totalServings={totalServings}
@@ -1854,8 +1899,13 @@ export function MealScreen({
 
         {/* Scrollable content area */}
         <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div
+            className="flex-1 overflow-y-auto overflow-x-hidden"
+            data-testid="meal-screen-scroll-area"
+          >
             <div className="space-y-3 p-4">
+              {nutritionSummary}
+
               {/* Loading skeletons */}
               {isLoading ? <LoadingSkeleton /> : null}
 
@@ -1932,18 +1982,20 @@ export function MealScreen({
                   ))
                 : null}
 
-              {screenState === "ready" ? (
-                <button
-                  className="mt-2 flex h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand-primary-text)] bg-[var(--surface)] px-4 text-base font-semibold text-[var(--brand-primary-text)]"
-                  data-testid="meal-screen-add-cta"
-                  onClick={openMealAddSheet}
-                  type="button"
-                >
-                  + 식사 추가
-                </button>
-              ) : null}
             </div>
           </div>
+          {screenState === "ready" ? (
+            <div className="shrink-0 border-t border-[var(--line-strong)] bg-[var(--surface)] p-4">
+              <button
+                className="flex h-[var(--control-height-xl)] w-full items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand-primary-text)] bg-[var(--surface)] px-4 text-base font-semibold text-[var(--brand-primary-text)]"
+                data-testid="meal-screen-add-cta"
+                onClick={openMealAddSheet}
+                type="button"
+              >
+                + 식사 추가
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
       ) : null}

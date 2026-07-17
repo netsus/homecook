@@ -1,0 +1,23 @@
+{
+  "viewport": {
+    "width": 320,
+    "height": 568
+  },
+  "document": {
+    "clientWidth": 320,
+    "scrollWidth": 320,
+    "pageLevelHorizontalOverflow": false
+  },
+  "addCta": null,
+  "mealScrollArea": null,
+  "plannerBody": {
+    "x": 0,
+    "y": 409.484375,
+    "width": 320,
+    "height": 1978,
+    "top": 409.484375,
+    "right": 320,
+    "bottom": 2387.484375,
+    "left": 0
+  }
+}

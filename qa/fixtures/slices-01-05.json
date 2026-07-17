@@ -330,6 +330,119 @@
         "isLeftover": false,
         "dateAnchor": "end"
       }
+    ],
+    "productEntries": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440070",
+        "productId": "550e8400-e29b-41d4-a716-446655440071",
+        "productName": "플레인 요거트",
+        "productBrand": "집밥 테스트",
+        "columnId": "550e8400-e29b-41d4-a716-446655440050",
+        "dateAnchor": "start",
+        "quantity": { "amount": 2, "unit": "serving" },
+        "nutritionVersionId": "550e8400-e29b-41d4-a716-446655440072"
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440073",
+        "productId": "550e8400-e29b-41d4-a716-446655440074",
+        "productName": "영양 정보 준비 중 간식",
+        "productBrand": null,
+        "columnId": "550e8400-e29b-41d4-a716-446655440053",
+        "dateAnchor": "end",
+        "quantity": { "amount": 1, "unit": "serving" },
+        "nutritionVersionId": "550e8400-e29b-41d4-a716-446655440075"
+      }
+    ],
+    "nutritionEntries": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440060",
+        "entryType": "recipe",
+        "columnId": "550e8400-e29b-41d4-a716-446655440050",
+        "dateAnchor": "start",
+        "calculationQuality": "estimated",
+        "values": {
+          "energy_kcal": { "amount": 420, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "carbohydrate_g": { "amount": 38.5, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "protein_g": { "amount": 21.3, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "fat_g": { "amount": 19.4, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "sodium_mg": { "amount": 960, "known_amount": null, "status": "complete", "display_mode": "total" }
+        },
+        "warnings": ["UNIT_CONVERSION_MISSING"],
+        "sources": [
+          {
+            "provider": "MFDS",
+            "dataset": "식품영양성분DB",
+            "source_version": "2025",
+            "data_basis_date": "2025-12-31",
+            "license": "공공누리 제1유형",
+            "source_url": "https://various.foodsafetykorea.go.kr/nutrient/"
+          }
+        ]
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440070",
+        "entryType": "product",
+        "columnId": "550e8400-e29b-41d4-a716-446655440050",
+        "dateAnchor": "start",
+        "calculationQuality": "direct",
+        "values": {
+          "energy_kcal": { "amount": 160, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "carbohydrate_g": { "amount": 25, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "protein_g": { "amount": null, "known_amount": 3, "status": "partial", "display_mode": "minimum" },
+          "fat_g": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null },
+          "sodium_mg": { "amount": 410, "known_amount": null, "status": "complete", "display_mode": "total" }
+        },
+        "warnings": [],
+        "sources": []
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440061",
+        "entryType": "recipe",
+        "columnId": "550e8400-e29b-41d4-a716-446655440051",
+        "dateAnchor": "mid",
+        "calculationQuality": "direct",
+        "values": {
+          "energy_kcal": { "amount": 515, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "carbohydrate_g": { "amount": 62, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "protein_g": { "amount": 28, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "fat_g": { "amount": 18, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "sodium_mg": { "amount": 870, "known_amount": null, "status": "complete", "display_mode": "total" }
+        },
+        "warnings": [],
+        "sources": []
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440062",
+        "entryType": "recipe",
+        "columnId": "550e8400-e29b-41d4-a716-446655440052",
+        "dateAnchor": "end",
+        "calculationQuality": "mixed",
+        "values": {
+          "energy_kcal": { "amount": null, "known_amount": 380, "status": "partial", "display_mode": "minimum" },
+          "carbohydrate_g": { "amount": null, "known_amount": 45, "status": "partial", "display_mode": "minimum" },
+          "protein_g": { "amount": 24, "known_amount": null, "status": "complete", "display_mode": "total" },
+          "fat_g": { "amount": null, "known_amount": 12, "status": "partial", "display_mode": "minimum" },
+          "sodium_mg": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null }
+        },
+        "warnings": ["INGREDIENT_NUTRITION_MISSING"],
+        "sources": []
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440073",
+        "entryType": "product",
+        "columnId": "550e8400-e29b-41d4-a716-446655440053",
+        "dateAnchor": "end",
+        "calculationQuality": null,
+        "values": {
+          "energy_kcal": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null },
+          "carbohydrate_g": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null },
+          "protein_g": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null },
+          "fat_g": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null },
+          "sodium_mg": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null }
+        },
+        "warnings": [],
+        "sources": []
+      }
     ]
   }
 }

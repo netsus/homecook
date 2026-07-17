@@ -23,6 +23,7 @@ export {
   getQaFixtureRecipePath,
   getQaFixtureRecipeBooks,
   getQaFixturePlannerData,
+  getQaFixturePlannerNutrition,
   getQaFixturePlannerColumns,
   getQaFixturePantryItems,
   isDiscoveryFilterManualMockEnabled,

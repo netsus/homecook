@@ -1,6 +1,11 @@
 import { NextRequest } from "next/server";
 
+import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
+import {
+  getQaFixturePlannerNutrition,
+  isQaFixtureModeEnabled,
+} from "@/lib/mock/recipes";
 import {
   readPlannerNutritionSummary,
   type PlannerNutritionDbClient,
@@ -55,6 +60,15 @@ export async function GET(request: NextRequest) {
   const range = parseDateRange(request);
   if (!range.ok) {
     return fail("VALIDATION_ERROR", "날짜 범위를 확인해 주세요.", 422, range.fields);
+  }
+
+  if (isQaFixtureModeEnabled()) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
+    if (authOverride !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    return ok(getQaFixturePlannerNutrition(range.startDate, range.endDate));
   }
 
   try {
