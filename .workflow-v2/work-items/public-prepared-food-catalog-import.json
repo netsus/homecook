@@ -1,0 +1,93 @@
+{
+  "id": "public-prepared-food-catalog-import",
+  "title": "Public prepared food catalog import",
+  "summary": "식약처 가공식품 영양 표준데이터를 검수된 local public product catalog로 batch 승격한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "10,000개 이상 공공 제품 파일럿과 전체-valid 확장, immutable version, local-only search를 안전하게 구현한다.",
+  "owners": {
+    "claude": "replaced for this nutrition slice by explicit user approval",
+    "codex": "role-separated Codex sessions own docs, implementation, and independent review",
+    "workers": []
+  },
+  "dependencies": [
+    "nutrition/products public-sharing official contract PR #1026 merged at 403bf16c50cc4fd35c88a10510b4a216e866f991",
+    "prepared-food-catalog merged",
+    "public-nutrition-source-acquisition merged"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.21.md",
+      "docs/화면정의서-v1.5.27.md",
+      "docs/유저flow맵-v1.3.24.md",
+      "docs/db설계-v1.3.22.md",
+      "docs/api문서-v1.2.26.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/public-prepared-food-catalog-import/README.md",
+      "docs/workpacks/public-prepared-food-catalog-import/acceptance.md",
+      "docs/workpacks/public-prepared-food-catalog-import/automation-spec.json",
+      "docs/workpacks/prepared-food-catalog/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/qa-system.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": ["manual:official-snapshot-and-fresh-local-supabase-public-product-pilot"],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {"backend": 4}
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm exec vitest run tests/public-prepared-food-import.test.ts tests/public-prepared-food-import-postgres.integration.test.ts tests/prepared-food-catalog-api.test.ts tests/prepared-food-catalog-rls.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/public-prepared-food-catalog-import pnpm validate:workpack -- --slice public-prepared-food-catalog-import",
+      "node scripts/validate-automation-spec.mjs --slice public-prepared-food-catalog-import",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/public-prepared-food-import.test.ts tests/public-prepared-food-import-postgres.integration.test.ts tests/prepared-food-catalog-api.test.ts tests/prepared-food-catalog-rls.test.ts",
+      "pnpm verify:backend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "dataset-15100066-manifest-and-license",
+      "ten-thousand-pilot-then-all-valid",
+      "stable-key-attribution-and-immutable-version",
+      "missing-zero-and-dimension-safety",
+      "runtime-provider-call-zero",
+      "one-hundred-thousand-search-performance",
+      "independent-stage1-and-stage3-review"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "pr_path": null,
+  "out_of_scope": [
+    "community manual public sharing and moderation",
+    "frontend source badges and 100g quantity UX",
+    "runtime external provider search",
+    "unverified cross-dimension conversions",
+    "unapproved staging or production writes"
+  ],
+  "open_questions": [],
+  "notes": "Current official snapshot evidence is 20260626/298271 rows; the immutable run manifest revalidates source facts at execution time."
+}

@@ -1,0 +1,76 @@
+{
+  "slice_id": "public-prepared-food-catalog-import",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "dataset-15100066-versioned-snapshot-manifest-and-license",
+      "batch-only-local-catalog-no-runtime-provider-search",
+      "stable-key-item-report-number-first-else-food-code",
+      "blank-sentinel-and-missing-are-not-zero",
+      "100g-and-100ml-only-without-cross-dimension-estimation",
+      "original-serving-food-size-and-label-basis-text-preserved",
+      "five-core-observed-nutrients-required-for-public-promotion",
+      "stable-key-conflict-and-invalid-row-quarantined",
+      "immutable-version-update-and-planner-pin-preserved",
+      "same-content-replay-and-failed-gates-have-zero-writes",
+      "pilot-at-least-ten-thousand-then-all-valid",
+      "one-hundred-thousand-limit-twenty-search-p95-at-most-300ms",
+      "secret-auth-query-cookie-raw-row-and-private-path-exposure-zero",
+      "existing-public-api-shape-status-and-error-contract-unchanged"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/public-prepared-food-import.test.ts tests/public-prepared-food-import-postgres.integration.test.ts tests/prepared-food-catalog-api.test.ts tests/prepared-food-catalog-rls.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/public-prepared-food-catalog-import pnpm validate:workpack -- --slice public-prepared-food-catalog-import",
+      "node scripts/validate-automation-spec.mjs --slice public-prepared-food-catalog-import",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/public-prepared-food-import.test.ts",
+      "tests/public-prepared-food-import-postgres.integration.test.ts",
+      "tests/prepared-food-catalog-api.test.ts",
+      "tests/prepared-food-catalog-rls.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": ["frontend-design-accessibility-playwright-na-be-data-only"],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "manual:official-dataset-15100066-schema-count-checksum-license-without-raw-row-output",
+    "manual:fresh-local-supabase-ten-thousand-pilot-replay-search-update-disable",
+    "manual:production-or-staging-full-valid-promotion-after-checkpoint-and-target-approval"
+  ],
+  "blocked_conditions": [
+    "stage1-docs-or-independent-doc-review-not-merged",
+    "source-schema-checksum-or-license-drift",
+    "stable-key-conflict-core-nutrient-missing-or-basis-unsupported-promoted",
+    "missing-converted-to-zero-or-100ml-converted-to-100g",
+    "runtime-user-query-calls-provider",
+    "raw-provider-row-secret-auth-query-or-private-path-exposed",
+    "search-p95-over-300ms-on-one-hundred-thousand-fixture",
+    "external-write-without-exact-approval-checkpoint-and-target"
+  ],
+  "max_fix_rounds": {"backend": 4, "frontend": 0},
+  "notes": "BE/data-only batch import successor. Existing public food product endpoints remain unchanged. Stage 1/1.5 and Stage 2/3 are fresh role-separated Codex sessions under the user-approved nutrition exception."
+}
