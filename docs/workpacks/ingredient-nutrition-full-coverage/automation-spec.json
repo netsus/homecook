@@ -1,0 +1,75 @@
+{
+  "slice_id": "ingredient-nutrition-full-coverage",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "public-api-ui-unchanged",
+      "all-current-ingredients-are-the-inventory-denominator",
+      "inventory-and-decision-checksums-are-deterministic",
+      "each-ingredient-is-exactly-one-of-eligible-or-strict-excluded",
+      "eligible-has-exactly-one-qualified-active-approved-primary",
+      "no-match-ambiguity-source-missing-license-unknown-unit-unsupported-and-missing-nutrient-cannot-be-exclusion-reasons",
+      "mfds-priority-one-rda-10-4-priority-two-never-auto-approve",
+      "missing-trace-and-parse-error-are-not-zero",
+      "classification-conflict-and-multiple-qualified-primary-are-zero",
+      "dry-run-replay-failure-and-unapproved-external-write-have-zero-writes",
+      "source-item-profile-value-payloads-remain-append-only",
+      "secret-auth-query-cookie-raw-row-and-private-path-exposure-zero",
+      "no-new-required-preparation-size-or-edible-input-ui"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/ingredient-nutrition-coverage.test.ts tests/ingredient-nutrition-import.test.ts tests/ingredient-nutrition-matching.test.ts tests/ingredient-nutrition-full-coverage-postgres.integration.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/ingredient-nutrition-full-coverage pnpm validate:workpack -- --slice ingredient-nutrition-full-coverage",
+      "node scripts/validate-automation-spec.mjs --slice ingredient-nutrition-full-coverage",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/ingredient-nutrition-coverage.test.ts",
+      "tests/ingredient-nutrition-import.test.ts",
+      "tests/ingredient-nutrition-matching.test.ts",
+      "tests/ingredient-nutrition-full-coverage-postgres.integration.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": ["frontend-design-accessibility-playwright-na-be-data-only"],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "manual:fresh-local-supabase-all-active-inventory-dry-run-apply-replay-coverage-disable-replay",
+    "manual:independent-human-review-of-every-eligible-or-strict-excluded-decision",
+    "manual:production-or-staging-apply-only-after-checkpoint-and-target-approval"
+  ],
+  "blocked_conditions": [
+    "stage1-docs-or-independent-doc-review-not-merged",
+    "inventory-denominator-reduced-by-category-or-foodsafety-pilot",
+    "unclassified-eligible-without-profile-classification-conflict-or-multiple-primary-nonzero",
+    "name-similarity-confidence-or-source-priority-auto-approves",
+    "unresolved-source-or-nutrient-problem-is-used-as-exclusion",
+    "missing-is-converted-to-zero",
+    "secret-raw-provider-row-or-private-path-is-exposed",
+    "staging-or-production-write-without-exact-approval-checkpoint-and-target"
+  ],
+  "max_fix_rounds": {"backend": 4, "frontend": 0},
+  "notes": "BE/data-only successor. Stage 1 author and reviewer, Stage 2 implementer and Stage 3 reviewer are role-separated Codex sessions under the user-approved nutrition exception. No public API/UI or new table/status is introduced."
+}
