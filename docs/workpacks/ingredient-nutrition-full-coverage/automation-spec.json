@@ -16,6 +16,8 @@
       "missing-trace-and-parse-error-are-not-zero",
       "classification-conflict-and-multiple-qualified-primary-are-zero",
       "dry-run-replay-failure-and-unapproved-external-write-have-zero-writes",
+      "mixed-provider-all-active-uses-repeated-bundle-input-with-canonical-ordering",
+      "mixed-provider-run-report-and-disable-preserve-all-affected-source-ids",
       "source-item-profile-value-payloads-remain-append-only",
       "secret-auth-query-cookie-raw-row-and-private-path-exposure-zero",
       "no-new-required-preparation-size-or-edible-input-ui"

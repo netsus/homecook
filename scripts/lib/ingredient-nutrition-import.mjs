@@ -49,6 +49,46 @@ export function validateHandoffBundle(bundle) {
   return structuredClone(bundle);
 }
 
+function bundleSortKey(bundle) {
+  return [
+    providerCode(bundle?.approved_manifest) ?? "",
+    String(bundle?.approved_manifest?.source_version ?? ""),
+    String(bundle?.logical_batch_id ?? ""),
+    String(bundle?.handoff_checksum ?? ""),
+  ].join("::");
+}
+
+function canonicalizeBundles(bundles) {
+  return [...bundles].sort((left, right) => bundleSortKey(left).localeCompare(bundleSortKey(right)));
+}
+
+function collectValidatedBundles(input, pilotScope) {
+  const rawBundles = [
+    ...(input?.bundle === undefined ? [] : [input.bundle]),
+    ...(Array.isArray(input?.bundles) ? input.bundles : []),
+  ];
+  if (rawBundles.length === 0) {
+    throw new IngredientNutritionImportError("INVALID_HANDOFF_BUNDLE");
+  }
+  if (pilotScope !== "all-active" && rawBundles.length !== 1) {
+    throw new IngredientNutritionImportError("INVALID_HANDOFF_BUNDLE");
+  }
+  return canonicalizeBundles(rawBundles.map((bundle) => validateHandoffBundle(bundle)));
+}
+
+function flattenApprovedItems(bundles) {
+  return bundles.flatMap((bundle) => {
+    const bundleProviderCode = providerCode(bundle.approved_manifest);
+    return bundle.approved_items.map((item) => ({
+      ...item,
+      provider_code: bundleProviderCode,
+      source_version: bundle.approved_manifest.source_version,
+      logical_batch_id: bundle.logical_batch_id,
+      bundle_handoff_checksum: bundle.handoff_checksum,
+    }));
+  });
+}
+
 function sameStringSet(left, right) {
   if (!Array.isArray(left) || !Array.isArray(right)) return false;
   const leftSet = new Set(left);
@@ -281,9 +321,11 @@ function sanitizeDiagnosticCode(value) {
 }
 
 function modelSummaryFields(bundle, approval, runId, candidatePlan, pilotScope) {
-  const values = bundle.approved_items.flatMap((item) => Object.values(item.values ?? {}));
+  const bundles = Array.isArray(bundle) ? bundle : [bundle];
+  const approvedItems = bundles.flatMap((entry) => entry.approved_items);
+  const values = approvedItems.flatMap((item) => Object.values(item.values ?? {}));
   const decisions = approval === null
-    ? bundle.approved_items.map(() => ({ status: "needs_review" }))
+    ? approvedItems.map(() => ({ status: "needs_review" }))
     : [
         ...approval.nutrition_decisions,
         ...approval.conversion_decisions,
@@ -293,16 +335,18 @@ function modelSummaryFields(bundle, approval, runId, candidatePlan, pilotScope) 
   return {
     run_id: runId,
     pilot_scope: pilotScope,
-    input_checksum: bundle.handoff_checksum,
+    input_checksum: bundles.length === 1
+      ? bundles[0].handoff_checksum
+      : sha256(bundles.map((entry) => entry.handoff_checksum)),
     source_versions: [...new Set([
-      bundle.approved_manifest.source_version,
-      ...bundle.public_attribution.map((source) => source.source_version),
+      ...bundles.map((entry) => entry.approved_manifest.source_version),
+      ...bundles.flatMap((entry) => entry.public_attribution.map((source) => source.source_version)),
     ])].filter(nonEmptyText).sort(),
     freshness_statuses: [...new Set([
-      bundle.approved_manifest.freshness_status ?? "current",
+      ...bundles.map((entry) => entry.approved_manifest.freshness_status ?? "current"),
     ])].sort(),
-    source_item_count: bundle.approved_items.length,
-    profile_count: bundle.approved_items.length,
+    source_item_count: approvedItems.length,
+    profile_count: approvedItems.length,
     nutrient_value_count: values.length,
     missing_value_count: values.filter((value) => value?.amount === null).length,
     zero_value_count: values.filter((value) => value?.amount === 0).length,
@@ -589,10 +633,10 @@ function validateApproval(approval, expectedPilotScope, bundle, candidatePlan) {
   return approval;
 }
 
-function buildAllActiveCandidatePlan(bundle, decision) {
+function buildAllActiveCandidatePlan(bundles, decision) {
   const approvedItemsByKey = new Map(
-    bundle.approved_items.map((item) => [
-      `${item.external_item_key}::${item.fingerprint}`,
+    flattenApprovedItems(bundles).map((item) => [
+      `${item.provider_code}::${item.external_item_key}::${item.fingerprint}`,
       item,
     ]),
   );
@@ -601,16 +645,19 @@ function buildAllActiveCandidatePlan(bundle, decision) {
       .filter((entry) => entry.classification === "eligible")
       .map((entry) => {
         const item = approvedItemsByKey.get(
-          `${entry.external_item_key}::${entry.source_item_fingerprint}`,
+          `${entry.provider_code}::${entry.external_item_key}::${entry.source_item_fingerprint}`,
         );
         return candidateWithIdentity("nutrition", {
           fingerprint: entry.source_item_fingerprint,
+          provider_code: entry.provider_code,
+          external_item_key: entry.external_item_key,
+          source_bundle_checksum: item?.bundle_handoff_checksum ?? null,
           ingredient_id: entry.ingredient_id,
           preparation_state: item?.preparation_state ?? null,
           review_status: "pending",
           is_active: false,
           candidate_rank: 1,
-        }, bundle.handoff_checksum);
+        }, item?.bundle_handoff_checksum ?? sha256(`${entry.provider_code}:${entry.external_item_key}:${entry.source_item_fingerprint}`));
       }),
     conversion_candidates: [],
     piece_candidates: [],
@@ -632,7 +679,12 @@ function synthesizeAllActiveApproval(decision, candidatePlan) {
 
   const candidateByKey = new Map(
     candidatePlan.nutrition_candidates.map((candidate) => [
-      `${candidate.ingredient_id}::${candidate.fingerprint}`,
+      [
+        candidate.ingredient_id,
+        candidate.provider_code,
+        candidate.external_item_key,
+        candidate.fingerprint,
+      ].join("::"),
       candidate,
     ]),
   );
@@ -650,7 +702,12 @@ function synthesizeAllActiveApproval(decision, candidatePlan) {
       .filter((entry) => entry.classification === "eligible")
       .map((entry) => {
         const candidate = candidateByKey.get(
-          `${entry.ingredient_id}::${entry.source_item_fingerprint}`,
+          [
+            entry.ingredient_id,
+            entry.provider_code,
+            entry.external_item_key,
+            entry.source_item_fingerprint,
+          ].join("::"),
         );
         if (!candidate) {
           throw new IngredientNutritionImportError("INVALID_APPROVAL_FILE");
@@ -696,7 +753,7 @@ export async function runModelImport(input) {
     mode: input?.mode ?? null,
     environment: input?.environment ?? null,
   });
-  let bundle;
+  let bundles;
   let scopeCounts;
   let candidatePlan;
   let coverageSummary = null;
@@ -711,7 +768,7 @@ export async function runModelImport(input) {
     if (!["foodsafety-30", "all-active"].includes(input.pilot_scope)) {
       throw new IngredientNutritionImportError("PILOT_SCOPE_MISMATCH");
     }
-    bundle = validateHandoffBundle(input.bundle);
+    bundles = collectValidatedBundles(input, input.pilot_scope);
     if (input.pilot_scope === "foodsafety-30") {
       scopeCounts = validatePilotScope(
         input.actual_pilot_scope,
@@ -727,13 +784,12 @@ export async function runModelImport(input) {
       ) {
         throw new IngredientNutritionImportError("PILOT_SCOPE_MISMATCH");
       }
-      candidatePlan = buildModelCandidatePlan(bundle, input.canonical_ingredients);
+      candidatePlan = buildModelCandidatePlan(bundles[0], input.canonical_ingredients);
     } else {
       coverageSummary = validateCoverageDecisionArtifact({
         inventory: input.inventory,
         decision: input.decision,
-        approved_items: bundle.approved_items,
-        expected_provider_code: providerCode(bundle.approved_manifest),
+        approved_items: flattenApprovedItems(bundles),
       });
       expectedScope = { ingredient_ids: input.inventory.rows.map((row) => row.ingredient_id) };
       scopeCounts = {
@@ -749,7 +805,7 @@ export async function runModelImport(input) {
       ) {
         throw new IngredientNutritionImportError("PILOT_SCOPE_MISMATCH");
       }
-      candidatePlan = buildAllActiveCandidatePlan(bundle, input.decision);
+      candidatePlan = buildAllActiveCandidatePlan(bundles, input.decision);
     }
   } catch (error) {
     throwWithSummary(error, baseSummary);
@@ -772,7 +828,7 @@ export async function runModelImport(input) {
         const validatedApproval = validateApproval(
           input.approval,
           expectedScope,
-          bundle,
+          bundles[0],
           candidatePlan,
         );
         if (input.mode === "apply") approval = validatedApproval;
@@ -780,10 +836,18 @@ export async function runModelImport(input) {
         throwWithSummary(error, baseSummary);
       }
     }
-  const sourcePayloadIdentity = sha256({
-    schema_version: bundle.schema_version,
-    handoff_checksum: bundle.handoff_checksum,
-  });
+  const sourcePayloadIdentity = bundles.length === 1
+    ? sha256({
+      schema_version: bundles[0].schema_version,
+      handoff_checksum: bundles[0].handoff_checksum,
+    })
+    : sha256({
+      schema_version: "ingredient-nutrition-model-source-payload-v1",
+      bundles: bundles.map((bundle) => ({
+        provider_code: providerCode(bundle.approved_manifest),
+        handoff_checksum: bundle.handoff_checksum,
+      })),
+    });
   const coverageFields = coverageSummary === null
     ? {}
     : Object.fromEntries(
@@ -791,7 +855,7 @@ export async function runModelImport(input) {
       );
   const decisionChecksum = approval === null ? null : sha256(contentProjection(approval));
   const content = contentProjection({
-    bundle,
+    ...(bundles.length === 1 ? { bundle: bundles[0] } : { bundles }),
     pilot_scope: expectedScope,
     candidate_plan: candidatePlan,
     coverage: coverageSummary,
@@ -814,7 +878,7 @@ export async function runModelImport(input) {
     source_payload_identity: sourcePayloadIdentity,
     decision_checksum: decisionChecksum,
     ...scopeCounts,
-    ...modelSummaryFields(bundle, approval, runId, candidatePlan, input.pilot_scope),
+    ...modelSummaryFields(bundles, approval, runId, candidatePlan, input.pilot_scope),
     ...coverageFields,
     reason_codes: candidatePlan.reason_codes,
   });
@@ -872,7 +936,7 @@ export async function runModelImport(input) {
     };
   }
 
-  const payloadRows = bundle.approved_items
+  const payloadRows = flattenApprovedItems(bundles)
     .map((item) => ({
       external_item_key: item.external_item_key,
       external_name: item.external_name,
@@ -905,7 +969,7 @@ export async function runModelImport(input) {
   if (typeof input.store.applyModelBundle === "function") {
     try {
       const databaseResult = await input.store.applyModelBundle({
-        bundle,
+        ...(bundles.length === 1 ? { bundle: bundles[0] } : { bundles }),
         approval,
         candidate_plan: candidatePlan,
         run_id: runId,
@@ -936,7 +1000,10 @@ export async function runModelImport(input) {
         writes_committed: databaseResult.writes_committed,
         replayed: databaseResult.replayed,
         superseded_count: databaseResult.superseded_count ?? appliedSummary.superseded_count,
-        affected_source_id: databaseResult.source_id,
+        ...(databaseResult.source_id ? { affected_source_id: databaseResult.source_id } : {}),
+        ...(Array.isArray(databaseResult.source_ids)
+          ? { affected_source_ids: databaseResult.source_ids }
+          : {}),
         affected_row_ids: databaseResult.affected_row_ids,
       };
     } catch (error) {
@@ -1046,6 +1113,7 @@ const REPORT_FIELDS = [
   "unclassified",
   "classification_conflict",
   "multiple_qualified_primary",
+  "affected_source_ids",
   "affected_source_id",
   "affected_row_ids",
   "report_publication_status",
@@ -1068,13 +1136,31 @@ function hasValidAffectedRows(value) {
   );
 }
 
+function hasValidAffectedSources(value) {
+  return Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(nonEmptyText) &&
+    new Set(value).size === value.length;
+}
+
+function hasValidAffectedSourceSummary(value) {
+  if (!isRecord(value)) return false;
+  const hasSingle = value.affected_source_id !== undefined;
+  const hasMultiple = value.affected_source_ids !== undefined;
+  if (!hasSingle && !hasMultiple) return true;
+  if (!hasValidAffectedRows(value.affected_row_ids)) return false;
+  if (hasSingle && !nonEmptyText(value.affected_source_id)) return false;
+  if (hasMultiple && !hasValidAffectedSources(value.affected_source_ids)) return false;
+  return true;
+}
+
 export function buildRunReport(summary) {
   if (
     !isRecord(summary) ||
     summary.schema_version !== "ingredient-nutrition-model-run-v1" ||
     !nonEmptyText(summary.idempotency_key) ||
     !nonEmptyText(summary.content_hash) ||
-    (summary.affected_source_id !== undefined && !hasValidAffectedRows(summary.affected_row_ids))
+    !hasValidAffectedSourceSummary(summary)
   ) {
     throw new IngredientNutritionImportError("INVALID_RUN_REPORT");
   }
@@ -1101,7 +1187,7 @@ export function validateRunReport(report) {
     report.mode !== "report" ||
     !nonEmptyText(report.idempotency_key) ||
     !nonEmptyText(report.content_hash) ||
-    (report.affected_source_id !== undefined && !hasValidAffectedRows(report.affected_row_ids)) ||
+    !hasValidAffectedSourceSummary(report) ||
     report.report_checksum !== sha256(checksumInput)
   ) {
     throw new IngredientNutritionImportError("INVALID_RUN_REPORT");
@@ -1118,6 +1204,7 @@ export function validateRunReportAgainstRegistry(report, registry) {
     "source_payload_identity",
     "decision_checksum",
     "content_hash",
+    "affected_source_ids",
     "affected_source_id",
     "affected_row_ids",
     "writes_committed",
@@ -1199,7 +1286,10 @@ export async function disableModelRun(input) {
     source_payload_identity: report.source_payload_identity,
     decision_checksum: disableKey,
     model_run_key: report.idempotency_key,
-    affected_source_id: report.affected_source_id,
+    ...(report.affected_source_id ? { affected_source_id: report.affected_source_id } : {}),
+    ...(Array.isArray(report.affected_source_ids)
+      ? { affected_source_ids: report.affected_source_ids }
+      : {}),
     affected_row_ids: report.affected_row_ids,
     writes_attempted: 0,
     writes_committed: 0,
@@ -1210,7 +1300,10 @@ export async function disableModelRun(input) {
     secret_leak_count: 0,
   };
   if (typeof input.store.disableAppliedModel === "function") {
-    if (!nonEmptyText(report.affected_source_id)) {
+    if (
+      !nonEmptyText(report.affected_source_id) &&
+      !hasValidAffectedSources(report.affected_source_ids)
+    ) {
       throw new IngredientNutritionImportError("INVALID_RUN_REPORT");
     }
     const databaseResult = await input.store.disableAppliedModel({
@@ -1224,6 +1317,9 @@ export async function disableModelRun(input) {
       writes_committed: databaseResult.writes_committed,
       payload_deleted: databaseResult.payload_deleted,
       revoked_count: databaseResult.revoked_count,
+      ...(Array.isArray(databaseResult.source_ids)
+        ? { affected_source_ids: databaseResult.source_ids }
+        : {}),
     };
   }
   const result = await input.store.transaction(async (transaction) => {
@@ -1298,21 +1394,32 @@ export function parseModelCliArgs(command, argv) {
   for (let index = 0; index < tokens.length; index += 2) {
     const flag = tokens[index];
     const value = tokens[index + 1];
+    const key = typeof flag === "string" && flag.startsWith("--") ? flag.slice(2) : null;
     if (
       typeof flag !== "string" ||
       !flag.startsWith("--") ||
       !spec.allowed.has(flag.slice(2)) ||
       typeof value !== "string" ||
       value.trim() === "" ||
-      value.startsWith("--") ||
-      Object.hasOwn(parsed, flag.slice(2))
+      value.startsWith("--")
     ) {
       throw new IngredientNutritionImportError("CLI_ARGUMENT_INVALID");
     }
-    parsed[flag.slice(2)] = value;
+    if (key === "bundle" && command === "import") {
+      if (!Array.isArray(parsed.bundles)) parsed.bundles = [];
+      parsed.bundles.push(value);
+      continue;
+    }
+    if (Object.hasOwn(parsed, key)) {
+      throw new IngredientNutritionImportError("CLI_ARGUMENT_INVALID");
+    }
+    parsed[key] = value;
   }
   for (const required of spec.required) {
-    if (!Object.hasOwn(parsed, required)) {
+    const hasRequired = required === "bundle"
+      ? Array.isArray(parsed.bundles) && parsed.bundles.length > 0
+      : Object.hasOwn(parsed, required);
+    if (!hasRequired) {
       if (command === "import" && required === "bundle") {
         throw new IngredientNutritionImportError("BUNDLE_FILE_REQUIRED");
       }
@@ -1325,6 +1432,13 @@ export function parseModelCliArgs(command, argv) {
     }
     if (!["foodsafety-30", "all-active"].includes(parsed["pilot-scope"])) {
       throw new IngredientNutritionImportError("PILOT_SCOPE_MISMATCH");
+    }
+    if (
+      Array.isArray(parsed.bundles) &&
+      parsed.bundles.length > 1 &&
+      parsed["pilot-scope"] !== "all-active"
+    ) {
+      throw new IngredientNutritionImportError("CLI_ARGUMENT_INVALID");
     }
     parsed.environment ??= "local";
     if (!["local", "staging", "production"].includes(parsed.environment)) {
@@ -1345,6 +1459,10 @@ export function parseModelCliArgs(command, argv) {
     }
     if (parsed.mode === "apply" && parsed.environment === "production") {
       throw new IngredientNutritionImportError("PRODUCTION_LOAD_APPROVAL_REQUIRED");
+    }
+    if (Array.isArray(parsed.bundles) && parsed.bundles.length === 1) {
+      parsed.bundle = parsed.bundles[0];
+      delete parsed.bundles;
     }
   }
   if (command === "disable" && !["local", "staging", "production"].includes(parsed.environment)) {

@@ -281,6 +281,7 @@ function buildBundle() {
 }
 
 function buildBundleVariant(options: {
+  provider?: "MFDS" | "RDA_10_4";
   logical_batch_id: string;
   dataset: string;
   raw_sha256: string;
@@ -294,6 +295,7 @@ function buildBundleVariant(options: {
     throw new Error("pipeline helpers not loaded");
   }
   const base = buildBundle();
+  const provider = options.provider ?? "MFDS";
   const approvedItem = {
     ...base.approved_items[0],
     external_item_key: options.external_item_key,
@@ -318,6 +320,7 @@ function buildBundleVariant(options: {
     approved_manifest: {
       ...base.approved_manifest,
       logical_batch_id: options.logical_batch_id,
+      provider,
       dataset: options.dataset,
       raw_sha256: options.raw_sha256,
       normalized_content_hash: normalizedContentHash,
@@ -326,7 +329,7 @@ function buildBundleVariant(options: {
     },
     approved_items: [approvedItem],
     public_attribution: [{
-      provider: "MFDS",
+      provider,
       dataset: options.dataset,
       source_version: "2026-07-17",
       data_basis_date: "2026-07-17",
@@ -511,6 +514,187 @@ describe.skipIf(!enabled)("ingredient nutrition full coverage postgres integrati
       from public.ingredient_nutrition_profiles
       where ingredient_id = '${eligibleIngredientId}'::uuid;
     `)).toBe('{"active_links" : 0, "revoked_links" : 1}');
+  });
+
+  it("applies and disables mixed-provider all-active bundles atomically while reporting both source ids", async () => {
+    const { runModelImport, buildRunReport, disableModelRun } = await import(IMPORT_URL);
+    const { buildInventoryArtifact } = await import(COVERAGE_URL);
+    const secondEligibleIngredientId = "20000000-0000-4000-8000-000000000031";
+
+    psql(`
+      insert into public.ingredients (id, standard_name, category, default_unit)
+      values ('${secondEligibleIngredientId}', 'Stage2 밀가루', '가공식품', 'g')
+      on conflict (id) do nothing;
+    `);
+
+    const inventory = buildInventoryArtifact({
+      ingredients: [
+        {
+          ingredient_id: eligibleIngredientId,
+          canonical_name: "Stage2 두부",
+          category_code: "가공식품",
+          category_name: "가공식품",
+          default_unit: "g",
+          synonyms: ["스테이지2 부침두부"],
+        },
+        {
+          ingredient_id: secondEligibleIngredientId,
+          canonical_name: "Stage2 밀가루",
+          category_code: "가공식품",
+          category_name: "가공식품",
+          default_unit: "g",
+          synonyms: [],
+        },
+        {
+          ingredient_id: excludedIngredientId,
+          canonical_name: "Stage2 육수",
+          category_code: "기타",
+          category_name: "기타",
+          default_unit: "ml",
+          synonyms: [],
+        },
+      ],
+      query_version: "all-active-integration-v2",
+    } as never);
+
+    const mfdsBundle = buildBundle();
+    const rdaBundle = buildBundleVariant({
+      provider: "RDA_10_4",
+      logical_batch_id: "full-coverage-batch-rda-001",
+      dataset: "Ingredient Full Coverage Fixture RDA",
+      raw_sha256: "full-coverage-raw-rda-001",
+      external_item_key: "full-coverage-flour-001",
+      external_name: "Stage2 밀가루",
+      fingerprint: "full-coverage-fingerprint-rda-001",
+      content_hash_seed: "full-coverage-content-hash-rda-001",
+    });
+    const decision = {
+      schema_version: "ingredient-nutrition-decision-v1",
+      inventory_checksum: inventory.checksum,
+      reviewed_by: actorId,
+      reviewed_at: "2026-07-17T15:20:00.000Z",
+      decision_reason: "full coverage mixed provider review",
+      decisions: [
+        {
+          ingredient_id: eligibleIngredientId,
+          classification: "eligible",
+          provider_code: "MFDS",
+          external_item_key: "full-coverage-tofu-001",
+          source_item_fingerprint: "full-coverage-fingerprint-001",
+        },
+        {
+          ingredient_id: secondEligibleIngredientId,
+          classification: "eligible",
+          provider_code: "RDA_10_4",
+          external_item_key: "full-coverage-flour-001",
+          source_item_fingerprint: "full-coverage-fingerprint-rda-001",
+        },
+        {
+          ingredient_id: excludedIngredientId,
+          classification: "excluded",
+          reason_code: "UNBOUNDED_COMPOSITE",
+          reviewed_by: actorId,
+          reviewed_at: "2026-07-17T15:20:00.000Z",
+          reason: "stock base is intentionally non-canonical",
+        },
+      ],
+    };
+
+    const store = databaseStore();
+    const summary = await runModelImport({
+      bundles: [rdaBundle, mfdsBundle],
+      mode: "apply",
+      environment: "local",
+      pilot_scope: "all-active",
+      inventory,
+      decision,
+      canonical_ingredients: [
+        {
+          id: eligibleIngredientId,
+          normalized_names: ["Stage2 두부", "스테이지2 부침두부"],
+          preparation_state: null,
+          edible_portion: "edible",
+          basis_dimension: null,
+        },
+        {
+          id: secondEligibleIngredientId,
+          normalized_names: ["Stage2 밀가루"],
+          preparation_state: null,
+          edible_portion: "edible",
+          basis_dimension: null,
+        },
+        {
+          id: excludedIngredientId,
+          normalized_names: ["Stage2 육수"],
+          preparation_state: null,
+          edible_portion: "edible",
+          basis_dimension: null,
+        },
+      ],
+      approval: null,
+      store,
+    } as never) as Record<string, unknown>;
+
+    expect(summary).toMatchObject({
+      pilot_scope: "all-active",
+      denominator_count: 3,
+      approved_exactly_one_count: 2,
+      excluded_count: 1,
+      affected_source_ids: expect.arrayContaining([expect.any(String), expect.any(String)]),
+      affected_row_ids: {
+        nutrition_source_ids: expect.arrayContaining([expect.any(String), expect.any(String)]),
+      },
+      replayed: false,
+    });
+    expect((summary.affected_source_ids as unknown[]).length).toBe(2);
+
+    const report = buildRunReport(summary as never) as Record<string, unknown>;
+    expect(report).toMatchObject({
+      affected_source_ids: expect.arrayContaining(summary.affected_source_ids as string[]),
+    });
+
+    const disableDecision = {
+      reviewed_by: actorId,
+      reviewed_at: "2026-07-17T15:25:00.000Z",
+      reason: "full coverage mixed provider disable",
+    };
+    const disabled = await disableModelRun({
+      report,
+      store,
+      environment: "local",
+      decision: disableDecision,
+    } as never) as Record<string, unknown>;
+    const replay = await disableModelRun({
+      report,
+      store,
+      environment: "local",
+      decision: disableDecision,
+    } as never) as Record<string, unknown>;
+
+    expect(disabled).toMatchObject({
+      mode: "disable",
+      affected_source_ids: expect.arrayContaining(summary.affected_source_ids as string[]),
+      revoked_count: 2,
+      replayed: false,
+    });
+    expect(replay).toMatchObject({
+      idempotency_key: disabled.idempotency_key,
+      writes_committed: 0,
+      replayed: true,
+    });
+    const sourceIdList = (summary.affected_source_ids as string[])
+      .map((sourceId) => `'${sourceId}'::uuid`)
+      .join(", ");
+    expect(psql(`
+      select json_build_object(
+        'active_links',
+        count(*) filter (where link.is_active)
+      )::text
+      from public.ingredient_nutrition_profiles link
+      join public.nutrition_profiles profile on profile.id = link.nutrition_profile_id
+      join public.nutrition_source_items item on item.id = profile.source_item_id
+      where item.source_id in (${sourceIdList});
+    `)).toBe('{"active_links" : 0}');
   });
 
   it("treats drifted sources or revoked profiles as missing coverage instead of approved links", async () => {

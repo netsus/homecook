@@ -23,8 +23,8 @@ function canonicalTextArray(values) {
     .sort((left, right) => left.localeCompare(right));
 }
 
-function stableItemKey(externalItemKey, fingerprint) {
-  return `${externalItemKey}::${fingerprint}`;
+function stableItemKey(providerCode, externalItemKey, fingerprint) {
+  return `${providerCode ?? ""}::${externalItemKey}::${fingerprint}`;
 }
 
 function withChecksum(body) {
@@ -95,7 +95,7 @@ function validateDecisionEnvelope(decision) {
   return decision;
 }
 
-function validateEligibleDecision(entry, approvedItemKeys) {
+function validateEligibleDecision(entry, approvedItemKeys, expectedProviderCode) {
   if (
     !nonEmptyText(entry.provider_code) ||
     !nonEmptyText(entry.external_item_key) ||
@@ -106,7 +106,22 @@ function validateEligibleDecision(entry, approvedItemKeys) {
     });
   }
 
-  const key = stableItemKey(entry.external_item_key.trim(), entry.source_item_fingerprint.trim());
+  if (
+    expectedProviderCode !== undefined &&
+    entry.provider_code !== expectedProviderCode
+  ) {
+    throw new IngredientNutritionCoverageError("DECISION_PROVIDER_MISMATCH", {
+      ingredient_id: entry.ingredient_id,
+      expected_provider_code: expectedProviderCode,
+      provider_code: entry.provider_code,
+    });
+  }
+
+  const key = stableItemKey(
+    entry.provider_code.trim(),
+    entry.external_item_key.trim(),
+    entry.source_item_fingerprint.trim(),
+  );
   if (!approvedItemKeys.has(key)) {
     throw new IngredientNutritionCoverageError("ELIGIBLE_SOURCE_ITEM_NOT_FOUND", {
       ingredient_id: entry.ingredient_id,
@@ -173,7 +188,12 @@ export function validateCoverageDecisionArtifact(input) {
     if (!isRecord(item) || !nonEmptyText(item.external_item_key) || !nonEmptyText(item.fingerprint)) {
       throw new IngredientNutritionCoverageError("APPROVED_ITEM_INVALID");
     }
-    const key = stableItemKey(item.external_item_key.trim(), item.fingerprint.trim());
+    const provider = typeof item.provider_code === "string"
+      ? item.provider_code.trim()
+      : typeof input.expected_provider_code === "string"
+        ? input.expected_provider_code.trim()
+        : "";
+    const key = stableItemKey(provider, item.external_item_key.trim(), item.fingerprint.trim());
     if (approvedItemKeys.has(key)) {
       throw new IngredientNutritionCoverageError("ELIGIBLE_SOURCE_ITEM_AMBIGUOUS", {
         external_item_key: item.external_item_key,
@@ -199,18 +219,8 @@ export function validateCoverageDecisionArtifact(input) {
     seenIds.add(ingredientId);
 
     if (entry.classification === "eligible") {
-      validateEligibleDecision(entry, approvedItemKeys);
+      validateEligibleDecision(entry, approvedItemKeys, input.expected_provider_code);
       eligibleCount += 1;
-      if (
-        input.expected_provider_code
-        && entry.provider_code !== input.expected_provider_code
-      ) {
-        throw new IngredientNutritionCoverageError("DECISION_PROVIDER_MISMATCH", {
-          ingredient_id: ingredientId,
-          expected_provider_code: input.expected_provider_code,
-          provider_code: entry.provider_code,
-        });
-      }
       continue;
     }
 

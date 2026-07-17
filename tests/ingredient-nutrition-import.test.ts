@@ -121,6 +121,67 @@ function buildBundle() {
   return { ...base, handoff_checksum: sha256(base) };
 }
 
+function buildBundleVariant({
+  provider,
+  externalItemKey,
+  externalName,
+  fingerprint,
+  logicalBatchId,
+  sourceVersion,
+}: {
+  provider: "MFDS" | "RDA_10_4";
+  externalItemKey: string;
+  externalName: string;
+  fingerprint: string;
+  logicalBatchId: string;
+  sourceVersion: string;
+}) {
+  const base = buildBundle();
+  const approvedItems = [{
+    ...base.approved_items[0],
+    external_item_key: externalItemKey,
+    external_name: externalName,
+    fingerprint,
+    content_hash: sha256(`${provider}:${externalItemKey}:${fingerprint}`),
+  }];
+  const counts = {
+    fetched_raw_count: 1,
+    unique_input_count: 1,
+    normalized_count: 1,
+    quarantined_count: 0,
+    deduplicated_identical_count: 0,
+  };
+  const normalizedContentHash = sha256({ rows: approvedItems, quarantined: [], counts });
+  const bundleWithoutChecksum = {
+    ...base,
+    logical_batch_id: logicalBatchId,
+    approved_manifest: {
+      ...base.approved_manifest,
+      logical_batch_id: logicalBatchId,
+      provider,
+      dataset: `${provider} Synthetic Nutrition Dataset`,
+      source_version: sourceVersion,
+      normalized_content_hash: normalizedContentHash,
+      counts,
+    },
+    approved_items: approvedItems,
+    public_attribution: [{
+      provider,
+      dataset: `${provider} Synthetic Nutrition Dataset`,
+      source_version: sourceVersion,
+      data_basis_date: "2026-07-01",
+      license: "test-only",
+      source_url: `https://example.test/source/${provider.toLowerCase()}`,
+    }],
+    normalized_content_hash: normalizedContentHash,
+  };
+  delete (bundleWithoutChecksum as { handoff_checksum?: string }).handoff_checksum;
+  return {
+    ...bundleWithoutChecksum,
+    handoff_checksum: sha256(bundleWithoutChecksum),
+  };
+}
+
 const pilotScope = {
   recipe_ids: Array.from({ length: 30 }, (_, index) => `recipe-${String(index + 1).padStart(2, "0")}`),
   ingredient_ids: ["ingredient-tofu"],
@@ -462,6 +523,129 @@ describe("ingredient nutrition model import", () => {
       idempotency_key: first.idempotency_key,
       writes_committed: 0,
       replayed: true,
+    });
+  });
+
+  it("canonicalizes mixed-provider all-active bundles so dry-run idempotency is order-independent", async () => {
+    const importer = await loadImporter();
+    const coverage = await loadCoverage();
+    const createMemoryModelStore = requireFunction(importer, "createMemoryModelStore");
+    const runModelImport = requireFunction(importer, "runModelImport");
+    const buildInventoryArtifact = requireFunction(coverage, "buildInventoryArtifact");
+    const store = createMemoryModelStore() as unknown;
+    const mfdsBundle = buildBundleVariant({
+      provider: "MFDS",
+      externalItemKey: "mixed-tofu-001",
+      externalName: "두부",
+      fingerprint: "mfds-fingerprint-001",
+      logicalBatchId: "mfds-batch-001",
+      sourceVersion: "mfds-v1",
+    });
+    const rdaBundle = buildBundleVariant({
+      provider: "RDA_10_4",
+      externalItemKey: "mixed-flour-001",
+      externalName: "밀가루",
+      fingerprint: "rda-fingerprint-001",
+      logicalBatchId: "rda-batch-001",
+      sourceVersion: "rda-v1",
+    });
+    const inventory = buildInventoryArtifact({
+      ingredients: [
+        {
+          ingredient_id: "ingredient-tofu",
+          canonical_name: "두부",
+          category_code: "BEAN",
+          category_name: "콩류",
+          default_unit: "g",
+          synonyms: [],
+        },
+        {
+          ingredient_id: "ingredient-flour",
+          canonical_name: "밀가루",
+          category_code: "GRAIN",
+          category_name: "곡류",
+          default_unit: "g",
+          synonyms: [],
+        },
+      ],
+      query_version: "inventory-sql-v1",
+    } as never) as Record<string, unknown>;
+    const decision = {
+      schema_version: "ingredient-nutrition-decision-v1",
+      inventory_checksum: inventory.checksum,
+      reviewed_by: "operator-1",
+      reviewed_at: "2026-07-17T15:00:00.000Z",
+      decision_reason: "mixed provider mapping reviewed",
+      decisions: [
+        {
+          ingredient_id: "ingredient-tofu",
+          classification: "eligible",
+          provider_code: "MFDS",
+          external_item_key: "mixed-tofu-001",
+          source_item_fingerprint: "mfds-fingerprint-001",
+        },
+        {
+          ingredient_id: "ingredient-flour",
+          classification: "eligible",
+          provider_code: "RDA_10_4",
+          external_item_key: "mixed-flour-001",
+          source_item_fingerprint: "rda-fingerprint-001",
+        },
+      ],
+    };
+    const canonicalIngredients = [
+      {
+        id: "ingredient-tofu",
+        normalized_names: ["두부"],
+        preparation_state: "raw",
+        edible_portion: "edible",
+        basis_dimension: "mass",
+      },
+      {
+        id: "ingredient-flour",
+        normalized_names: ["밀가루"],
+        preparation_state: "raw",
+        edible_portion: "edible",
+        basis_dimension: "mass",
+      },
+    ];
+
+    const first = await runModelImport({
+      bundles: [rdaBundle, mfdsBundle],
+      mode: "dry-run",
+      environment: "local",
+      pilot_scope: "all-active",
+      inventory,
+      decision,
+      canonical_ingredients: canonicalIngredients,
+      approval: null,
+      store,
+    } as never) as Record<string, unknown>;
+    const second = await runModelImport({
+      bundles: [mfdsBundle, rdaBundle],
+      mode: "dry-run",
+      environment: "local",
+      pilot_scope: "all-active",
+      inventory,
+      decision,
+      canonical_ingredients: canonicalIngredients,
+      approval: null,
+      store,
+    } as never) as Record<string, unknown>;
+
+    expect(first).toMatchObject({
+      pilot_scope: "all-active",
+      scope_ingredient_count: 2,
+      source_item_count: 2,
+      source_versions: ["mfds-v1", "rda-v1"],
+      writes_attempted: 0,
+      writes_committed: 0,
+    });
+    expect(second).toMatchObject({
+      idempotency_key: first.idempotency_key,
+      content_hash: first.content_hash,
+      source_payload_identity: first.source_payload_identity,
+      source_versions: first.source_versions,
     });
   });
 
@@ -1273,6 +1457,21 @@ describe("ingredient nutrition model import", () => {
       decision_file: "decision.json",
       environment: "local",
     });
+    expect(parseModelCliArgs("import" as never, [
+      "--bundle", "mfds-bundle.json",
+      "--bundle", "rda-bundle.json",
+      "--mode", "dry-run",
+      "--pilot-scope", "all-active",
+      "--inventory-file", "inventory.json",
+      "--decision-file", "decision.json",
+    ] as never)).toMatchObject({
+      bundles: ["mfds-bundle.json", "rda-bundle.json"],
+      mode: "dry-run",
+      pilot_scope: "all-active",
+      inventory_file: "inventory.json",
+      decision_file: "decision.json",
+      environment: "local",
+    });
     expect(() => parseModelCliArgs("import" as never, [
       "--bundle", "bundle.json",
       "--mode", "dry-run",
@@ -1298,5 +1497,11 @@ describe("ingredient nutrition model import", () => {
       decision_file: "decision.json",
       environment: "local",
     });
+    expect(() => parseModelCliArgs("import" as never, [
+      "--bundle", "mfds-bundle.json",
+      "--bundle", "rda-bundle.json",
+      "--mode", "dry-run",
+      "--pilot-scope", "foodsafety-30",
+    ] as never)).toThrowError(expect.objectContaining({ code: "CLI_ARGUMENT_INVALID" }));
   });
 });
