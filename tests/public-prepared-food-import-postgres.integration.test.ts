@@ -120,6 +120,8 @@ function buildBundle({
   selectionMode,
   validRowCount = approvedRowCount,
   quarantinedCount = 0,
+  sourceUrl = "https://www.data.go.kr/data/15100066/standard.do",
+  firstSodiumAmount,
 }: {
   count?: number;
   energy?: number;
@@ -130,6 +132,8 @@ function buildBundle({
   selectionMode?: "pilot-min-10000" | "all-valid";
   validRowCount?: number;
   quarantinedCount?: number;
+  sourceUrl?: string;
+  firstSodiumAmount?: number;
 } = {}) {
   const approvedItems = Array.from({ length: count }, (_, index) => {
     const suffix = String(index).padStart(5, "0");
@@ -179,11 +183,17 @@ function buildBundle({
           source_token: String((index % 20) + 1),
         },
         sodium_mg: {
-          amount: (index % 500) + 1,
+          amount: index === 0 && firstSodiumAmount !== undefined
+            ? firstSodiumAmount
+            : (index % 500) + 1,
           source_nutrient_code: "nat",
           source_unit: "mg",
           value_status: "observed",
-          source_token: String((index % 500) + 1),
+          source_token: String(
+            index === 0 && firstSodiumAmount !== undefined
+              ? firstSodiumAmount
+              : (index % 500) + 1,
+          ),
         },
       },
     };
@@ -214,7 +224,7 @@ function buildBundle({
     dataset_id: "15100066",
     source_version: "2026-06-26",
     data_basis_date: "2026-06-26",
-    endpoint_or_file_url: "https://www.data.go.kr/data/15100066/standard.do",
+    endpoint_or_file_url: sourceUrl,
     license: "이용허락범위 제한 없음",
     license_url: "https://www.data.go.kr/data/15100066/standard.do",
     license_evidence_url: "https://www.data.go.kr/data/15100066/standard.do",
@@ -261,7 +271,7 @@ function buildBundle({
       source_version: "2026-06-26",
       data_basis_date: "2026-06-26",
       license: "이용허락범위 제한 없음",
-      source_url: "https://www.data.go.kr/data/15100066/standard.do",
+      source_url: sourceUrl,
     }],
     approved_fingerprint_checksum: reviewChecksum,
     normalized_content_hash: recomputedNormalizedContentHash,
@@ -514,6 +524,7 @@ describe.runIf(enabled)("public prepared food catalog import isolated PostgreSQL
           idempotency_key: "prepared-food-import-key-full-small",
           bundle: buildBundle({
             count: 2,
+            energy: 62,
             scope: "full",
             keyPrefix: "FULLSMALL",
             approvedRowCount: 2,
@@ -528,6 +539,58 @@ describe.runIf(enabled)("public prepared food catalog import isolated PostgreSQL
       source_item_count: 2,
       product_count: 2,
     });
+  });
+
+  it("rejects a self-consistent source URL with an authentication query before any write", () => {
+    const authQueryKey = ["service", "Key"].join("");
+    const rejected = psqlResult(`
+      select public.apply_public_prepared_food_catalog_import(
+        ${jsonExpression({
+          actor_user_id: actorId,
+          run_id: "prepared-food-import-run-auth-url",
+          idempotency_key: "prepared-food-import-key-auth-url",
+          bundle: buildBundle({
+            count: 2,
+            energy: 63,
+            scope: "full",
+            keyPrefix: "AUTHURL",
+            sourceUrl: `https://www.data.go.kr/data/15100066/standard.do?${authQueryKey}=synthetic-only`,
+          }),
+        })}
+      )::text;
+    `);
+
+    expect(rejected.status).not.toBe(0);
+    expect(rejected.stderr).toContain("INVALID_IMPORT_BUNDLE");
+    expect(psql(`
+      select count(*) from public.food_products
+      where external_product_key like 'item-report:AUTHURL-%';
+    `)).toBe("0");
+  });
+
+  it("rejects a self-consistent negative nutrient amount before any write", () => {
+    const rejected = psqlResult(`
+      select public.apply_public_prepared_food_catalog_import(
+        ${jsonExpression({
+          actor_user_id: actorId,
+          run_id: "prepared-food-import-run-negative-nutrient",
+          idempotency_key: "prepared-food-import-key-negative-nutrient",
+          bundle: buildBundle({
+            count: 2,
+            scope: "full",
+            keyPrefix: "NEGATIVE",
+            firstSodiumAmount: -1,
+          }),
+        })}
+      )::text;
+    `);
+
+    expect(rejected.status).not.toBe(0);
+    expect(rejected.stderr).toContain("INVALID_IMPORT_BUNDLE");
+    expect(psql(`
+      select count(*) from public.food_products
+      where external_product_key like 'item-report:NEGATIVE-%';
+    `)).toBe("0");
   });
 
   it("promotes every approved valid row while preserving nonzero quarantine accounting", () => {

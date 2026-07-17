@@ -145,7 +145,7 @@
 - [x] 10k pilot와 전체-valid checkpoint/rollback report <!-- omo:id=delivery-pilot-full;stage=2;scope=backend;review=3 -->
 - [x] 기존 공식 schema에서 100k limit-20 search/cursor p95 목표 검증 <!-- omo:id=delivery-search-performance;stage=2;scope=backend;review=3 -->
 - [x] user query external provider call 0, secret/raw-row 노출 0 <!-- omo:id=delivery-security-runtime-boundary;stage=2;scope=backend;review=3 -->
-- [ ] fresh local Supabase real DB lifecycle와 독립 Stage 3 review <!-- omo:id=delivery-real-db-review;stage=2;scope=shared;review=3 -->
+- [x] fresh local Supabase real DB lifecycle와 독립 Stage 3 review <!-- omo:id=delivery-real-db-review;stage=2;scope=shared;review=3 -->
 
 ## Contract Evolution Candidates
 

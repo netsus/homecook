@@ -77,14 +77,18 @@ Full source는 사용자가 실제 local 검색에 사용할 수 있도록 activ
 
 ## Automated verification
 
-- isolated PostgreSQL integration: `7/7` passed
+- isolated PostgreSQL integration: `9/9` passed
   - partial checkpoint fail-closed
   - streamed 10,000-row apply and staged transport
+  - self-consistent authentication-query URL and negative nutrient SQL-boundary rejection
   - immutable content update/replay/disable registry
   - RLS/read-only boundary
   - deterministic 10k/100k name prefix, substring, company, cursor limit-20 search p95 `<=300ms`
 - focused Vitest: `34/34` passed
 - TypeScript typecheck: passed
 - changed-file ESLint: passed
+- independent Stage 3 review: two SQL-boundary findings repaired with RED/GREEN tests, final `APPROVE`
 
 The integration runner creates and removes a separate temporary PostgreSQL instance, so the final 287,041-row local catalog is not reset by test execution.
+
+Remaining non-blocking performance risk: apply still hydrates the approved rows once in Node memory before streaming the same JSONL file to PostgreSQL. The input file is hard-capped below 1 GiB and the real 287,041-row run completed with an 8 GiB Node heap, but a future adapter should move digest validation to a fully incremental stream before substantially larger sources are accepted.

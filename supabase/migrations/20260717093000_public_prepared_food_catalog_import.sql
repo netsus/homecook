@@ -164,6 +164,21 @@ begin
     or nullif(btrim(v_manifest ->> 'license'), '') is null
     or v_manifest ->> 'license' not in ('이용허락범위 제한 없음', 'public-open-data')
     or nullif(btrim(v_manifest ->> 'endpoint_or_file_url'), '') is null
+    or v_manifest ->> 'endpoint_or_file_url' not in (
+      'https://www.data.go.kr/data/15100066/standard.do',
+      'https://api.data.go.kr/openapi/tn_pubr_public_nutri_process_info_api',
+      'https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do'
+    )
+    or nullif(btrim(v_manifest ->> 'license_url'), '') is null
+    or v_manifest ->> 'license_url' not in (
+      'https://www.data.go.kr/data/15100066/standard.do',
+      'https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do'
+    )
+    or nullif(btrim(v_manifest ->> 'license_evidence_url'), '') is null
+    or v_manifest ->> 'license_evidence_url' not in (
+      'https://www.data.go.kr/data/15100066/standard.do',
+      'https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do'
+    )
     or nullif(btrim(v_manifest ->> 'raw_sha256'), '') is null
     or v_manifest ->> 'raw_sha256' <> v_bundle ->> 'raw_sha256'
     or nullif(btrim(v_manifest ->> 'schema_fingerprint'), '') is null
@@ -372,6 +387,7 @@ begin
     if nullif(btrim(v_item ->> 'external_item_key'), '') is null
       or nullif(btrim(v_item ->> 'external_name'), '') is null
       or jsonb_typeof(v_item -> 'basis') <> 'object'
+      or jsonb_typeof(v_item -> 'basis' -> 'amount') <> 'number'
       or (v_item -> 'basis' ->> 'amount')::numeric <> 100
       or lower(v_item -> 'basis' ->> 'unit') not in ('g', 'ml')
       or jsonb_typeof(v_item -> 'values') <> 'object'
@@ -385,7 +401,30 @@ begin
           ('sodium_mg')
         ) required(code)
         where jsonb_typeof(v_item -> 'values' -> required.code) <> 'object'
-          or (v_item -> 'values' -> required.code ->> 'amount') is null
+          or jsonb_typeof(v_item -> 'values' -> required.code -> 'amount') <> 'number'
+      )
+      or exists (
+        select 1
+        from jsonb_each(
+          case
+            when jsonb_typeof(v_item -> 'values') = 'object' then v_item -> 'values'
+            else '{}'::jsonb
+          end
+        ) nutrient(code, payload)
+        where nutrient.code not in (
+            'energy_kcal', 'carbohydrate_g', 'protein_g', 'fat_g', 'sodium_mg',
+            'sugars_g', 'saturated_fat_g', 'fiber_g'
+          )
+          or jsonb_typeof(nutrient.payload) <> 'object'
+          or jsonb_typeof(nutrient.payload -> 'amount') <> 'number'
+          or (nutrient.payload ->> 'amount')::numeric < 0
+          or nutrient.payload ->> 'value_status' <> 'observed'
+          or nullif(btrim(nutrient.payload ->> 'source_nutrient_code'), '') is null
+          or nutrient.payload ->> 'source_unit' <> case nutrient.code
+            when 'energy_kcal' then 'kcal'
+            when 'sodium_mg' then 'mg'
+            else 'g'
+          end
       )
     then
       raise exception 'INVALID_IMPORT_BUNDLE';
