@@ -18,11 +18,11 @@
 
 ## 2. Source Of Truth
 
-- 요구사항: [요구사항기준선-v1.7.20.md](../../../요구사항기준선-v1.7.20.md)
-- 화면 정의: [화면정의서-v1.5.26.md](../../../화면정의서-v1.5.26.md)
-- 유저 flow: [유저flow맵-v1.3.23.md](../../../유저flow맵-v1.3.23.md)
-- DB/Schema: [db설계-v1.3.21.md](../../../db설계-v1.3.21.md)
-- API 문서: [api문서-v1.2.25.md](../../../api문서-v1.2.25.md)
+- 요구사항: [요구사항기준선-v1.7.21.md](../../../요구사항기준선-v1.7.21.md)
+- 화면 정의: [화면정의서-v1.5.27.md](../../../화면정의서-v1.5.27.md)
+- 유저 flow: [유저flow맵-v1.3.24.md](../../../유저flow맵-v1.3.24.md)
+- DB/Schema: [db설계-v1.3.22.md](../../../db설계-v1.3.22.md)
+- API 문서: [api문서-v1.2.26.md](../../../api문서-v1.2.26.md)
 - 현재 운영 규칙: [AGENTS.md](../../../AGENTS.md), [agent-workflow-overview.md](../agent-workflow-overview.md), [slice-workflow.md](../slice-workflow.md)
 
 우선순위:

@@ -84,7 +84,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 - **Codex-only HOME lockup 예외**: `service-brand-home-lockup`은 사용자가 Claude 미사용을 유지하고 Stage 1 docs owner, Stage 4 frontend implementation, internal docs repair/final owner, authority-required final authority를 역할 분리된 새 Codex 세션으로 대체하도록 승인했다. Stage 1/4 작성·구현 세션은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용한다.
 - **Codex-only 이미지 브랜드 자산 예외**: `service-brand-image-assets`는 사용자가 기존 브랜드 Codex-only 연속 작업에서 공식 계약 갱신과 실제 서비스 적용을 함께 요청한 후속 슬라이스다. Stage 1 docs owner, Stage 4 frontend implementation, internal docs repair/final owner, authority reviewer를 역할 분리된 Codex 작업으로 나누고 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용하며 전역 workflow actor 규칙을 바꾸지 않는다.
 - **Codex-only 아이콘 외곽 처리 예외**: `service-brand-icon-edge-treatment`는 사용자가 실제 favicon 흰 모서리를 확인하고 수정을 요청한 `service-brand-image-assets`의 연속 후속 슬라이스다. Stage 1 docs owner, Stage 4 frontend implementation, 독립 Stage 5/6 reviewer를 역할 분리하고 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용하며 전역 workflow actor 규칙을 바꾸지 않는다.
-- **Codex-only nutrition/products/planner 예외**: `public-nutrition-source-acquisition`, `ingredient-nutrition-conversion-model`, `recipe-nutrition-calculation`, `prepared-food-catalog`, `prepared-food-planner-entry`, `planner-nutrition-summary`는 사용자가 기존 Claude 담당 단계를 역할이 분리된 **별도 Codex 앱 작업**으로 대체하도록 승인했다. Stage 1 docs owner, internal 1.5 review/repair-final owner, Stage 2/3, Stage 4, authority precheck/Stage 5/final authority/Stage 6은 필요한 역할별 새 작업으로 분리하고, 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 같은 작업 안의 서브에이전트는 이 역할 분리의 대체물이 아니다. 이 예외는 위 6개 nutrition 관련 신규 slice에만 적용하며 전역 stage owner 규칙은 바꾸지 않는다.
+- **Codex-only nutrition/products/planner 예외**: `public-nutrition-source-acquisition`, `ingredient-nutrition-conversion-model`, `recipe-nutrition-calculation`, `prepared-food-catalog`, `prepared-food-planner-entry`, `planner-nutrition-summary`, `ingredient-nutrition-full-coverage`, `all-recipe-nutrition-recalculation`, `public-prepared-food-catalog-import`, `community-prepared-food-catalog`, `prepared-food-standard-basis-ux`, `nutrition-products-cross-slice-release-qa`는 사용자가 기존 Claude 담당 단계를 역할이 분리된 **별도 Codex 앱 작업**으로 대체하도록 승인했다. Stage 1 docs owner, internal 1.5 review/repair-final owner, Stage 2/3, Stage 4, authority precheck/Stage 5/final authority/Stage 6은 필요한 역할별 새 작업으로 분리하고, 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 같은 작업 안의 서브에이전트는 이 역할 분리의 대체물이 아니다. 각 successor slice도 별도 Stage 1 workpack docs PR이 main에 merge되기 전에는 구현을 시작할 수 없다. 이 예외는 위 nutrition/products/planner slice들에만 적용하며 전역 stage owner 규칙은 바꾸지 않는다.
 - `workflow-v2` / `OMO` 대상 product slice는 Stage 1 전에 **slice ID / goal / 분기 경로를 고정**한다.
 - `planned` 상태 slice에 `착수 시점에 분할 여부 결정` 메모를 남기지 않는다. 분할이 필요하면 roadmap PR에서 `08a/08b`처럼 먼저 쪼갠다.
 - 예외: `docs/engineering/` 아래의 repo-engineering automation, workflow tooling, agent 운영 규칙 변경은 제품 workpack roadmap 바깥이다.
@@ -196,19 +196,33 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `prepared-food-catalog` | merged | 승인 public 완제품 + 사용자 private manual 제품 catalog, immutable nutrition version, owner/public read-only/soft-delete 정책을 구현한다 |
 | `prepared-food-planner-entry` | merged | 완제품을 Recipe Meal과 분리해 플래너에 추가/수정/삭제하고 shopping/cooking/leftover/XP에서 구조적으로 제외한다 |
 | `planner-nutrition-summary` | merged | pin된 recipe/product snapshot만 끼니·날짜·주간 `계획 영양`으로 합산하고 결측/partial/quality를 보존한다. PR #1024 merge, authority·전체 QA·real local Supabase browser smoke를 통과했으며 수동 기기/규모 측정만 Manual Only로 남는다 |
+| `ingredient-nutrition-full-coverage` | planned | 모든 active canonical ingredient를 승인 nutrition profile 또는 명시적 제외 사유로 분류하고 coverage denominator와 unclassified 0 기준을 닫는다 |
+| `all-recipe-nutrition-recalculation` | planned | 전수 승격된 ingredient nutrition 결과로 모든 active recipe의 current nutrition snapshot을 재계산하고 complete/partial/unavailable reason report를 고정한다 |
+| `public-prepared-food-catalog-import` | planned | 검수된 공공 완제품을 batch-only local catalog로 승격하고 stable key, attribution, rollback을 보존한 검색 경로를 연다 |
+| `community-prepared-food-catalog` | planned | 새 사용자 등록 제품을 공동 검색 가능한 public catalog로 전환하되 owner-only 수정/soft-delete, 신고·hidden 경계, legacy private 비자동 공개를 보호한다 |
+| `prepared-food-standard-basis-ux` | planned | 제품 비교를 100g/100mL 기준으로 통일하고 planner 수량을 1g/1mL 단위로 조절하며 원 라벨 basis와 source tag를 일관되게 표시한다 |
+| `nutrition-products-cross-slice-release-qa` | planned | 영양 데이터, 권한, UI, 계산을 실제 local DB/browser/current-head checks 기준으로 교차 검증하고 Manual Only 잔여 위험을 문서화한다 |
 
 ## Nutrition / Products / Planner Dependency Chain
 
-| Slice | Status | Required predecessors |
-| --- | --- | --- |
-| `public-nutrition-source-acquisition` | merged | `28-external-ingredient-data-ingest-gate` = merged, nutrition contract-evolution official docs = merged |
-| `ingredient-nutrition-conversion-model` | merged | `public-nutrition-source-acquisition` = merged at `f87ae75016a9b709ffc3b706e7ca3720a0940982` |
-| `recipe-nutrition-calculation` | merged | `ingredient-nutrition-conversion-model` + PR #1005 pilot + PR #1006 official contract = merged |
-| `prepared-food-catalog` | merged | `ingredient-nutrition-conversion-model` = merged |
-| `prepared-food-planner-entry` | merged | `prepared-food-catalog` = merged, `05-planner-week-core` = merged |
-| `planner-nutrition-summary` | merged | predecessors와 PR #1024 merged; Design Status confirmed; backend Stage 3, Stage 5, final authority와 Stage 6 모두 `0/0/0`; final local frontend product `1,587/24 skipped`, regression `872/112 skipped`, Lighthouse 6, a11y `18/15`, visual `23/22`, security `12/12`와 real local Supabase auth/PostgREST/browser read-only smoke green. physical device/screen reader와 production-scale query는 Manual Only |
+| Slice | Status | Required predecessors | Note |
+| --- | --- | --- | --- |
+| `public-nutrition-source-acquisition` | merged | `28-external-ingredient-data-ingest-gate` = merged, nutrition contract-evolution official docs = merged | Historical predecessor retained as merged |
+| `ingredient-nutrition-conversion-model` | merged | `public-nutrition-source-acquisition` = merged at `f87ae75016a9b709ffc3b706e7ca3720a0940982` | Historical predecessor retained as merged |
+| `recipe-nutrition-calculation` | merged | `ingredient-nutrition-conversion-model` + PR #1005 pilot + PR #1006 official contract = merged | Historical predecessor retained as merged |
+| `prepared-food-catalog` | merged | `ingredient-nutrition-conversion-model` = merged | Historical predecessor retained as merged |
+| `prepared-food-planner-entry` | merged | `prepared-food-catalog` = merged, `05-planner-week-core` = merged | Historical predecessor retained as merged |
+| `planner-nutrition-summary` | merged | predecessors와 PR #1024 merged | Design Status confirmed; backend Stage 3, Stage 5, final authority와 Stage 6 모두 `0/0/0`; final local frontend product `1,587/24 skipped`, regression `872/112 skipped`, Lighthouse 6, a11y `18/15`, visual `23/22`, security `12/12`와 real local Supabase auth/PostgREST/browser read-only smoke green. physical device/screen reader와 production-scale query는 Manual Only |
+| `ingredient-nutrition-full-coverage` | planned | 2026-07-17 public-sharing official docs = merged, `public-nutrition-source-acquisition` = merged, `ingredient-nutrition-conversion-model` = merged | Successor 1; separate Stage 1 workpack docs PR merge required before implementation |
+| `all-recipe-nutrition-recalculation` | planned | `ingredient-nutrition-full-coverage` = merged, `recipe-nutrition-calculation` = merged | Successor 2; all-active recipe snapshot backfill must not start before its own Stage 1 docs PR merge |
+| `public-prepared-food-catalog-import` | planned | 2026-07-17 public-sharing official docs = merged, `prepared-food-catalog` = merged | Successor 3; batch import/promotion work must not start before its own Stage 1 docs PR merge |
+| `community-prepared-food-catalog` | planned | `public-prepared-food-catalog-import` = merged, `prepared-food-catalog` = merged | Successor 4; shared manual catalog implementation must not start before its own Stage 1 docs PR merge |
+| `prepared-food-standard-basis-ux` | planned | `community-prepared-food-catalog` = merged, `prepared-food-planner-entry` = merged, `planner-nutrition-summary` = merged | Successor 5; 100g/100mL UX work must not start before its own Stage 1 docs PR merge |
+| `nutrition-products-cross-slice-release-qa` | planned | `ingredient-nutrition-full-coverage` = merged, `all-recipe-nutrition-recalculation` = merged, `public-prepared-food-catalog-import` = merged, `community-prepared-food-catalog` = merged, `prepared-food-standard-basis-ux` = merged | Successor 6; release QA may start only after all prior successor slices merge and its own Stage 1 docs PR merge |
 
-> 각 slice는 자신의 Stage 1 workpack/acceptance/automation-spec이 별도 Codex docs-owner 작업에서 main에 merge되고 internal 1.5 gate가 닫힌 뒤에만 다음 stage를 시작한다. `recipe-nutrition-calculation`의 additive Recipe Detail UI와 `prepared-food-planner-entry`/`planner-nutrition-summary`의 PLANNER_WEEK 변경은 anchor-extension authority-required다.
+> 위 dependency chain의 2026-07-17 successor slice 순서는 새 공식 SOT와 `nutrition-products-public-data-expansion-20260717.md` 계획을 따른다. 기존 merged slice는 historical predecessor 기록으로 유지하며 planned로 되돌리지 않는다.
+>
+> 각 slice는 자신의 별도 Stage 1 `docs/workpacks/<slice>/README.md` + `acceptance.md` + 필요 시 `automation-spec` PR이 main에 merge되고 internal 1.5 gate가 닫힌 뒤에만 구현 stage를 시작한다. `recipe-nutrition-calculation`의 additive Recipe Detail UI와 `prepared-food-planner-entry`/`planner-nutrition-summary`, `prepared-food-standard-basis-ux`의 PLANNER_WEEK 변경은 anchor-extension authority-required다.
 
 ## Design Decision Gates
 
