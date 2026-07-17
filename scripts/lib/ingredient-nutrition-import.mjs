@@ -647,13 +647,16 @@ function buildAllActiveCandidatePlan(bundles, decision) {
         const item = approvedItemsByKey.get(
           `${entry.provider_code}::${entry.external_item_key}::${entry.source_item_fingerprint}`,
         );
+        if (!item || !nonEmptyText(item.preparation_state)) {
+          throw new IngredientNutritionImportError("INVALID_APPROVAL_FILE");
+        }
         return candidateWithIdentity("nutrition", {
           fingerprint: entry.source_item_fingerprint,
           provider_code: entry.provider_code,
           external_item_key: entry.external_item_key,
           source_bundle_checksum: item?.bundle_handoff_checksum ?? null,
           ingredient_id: entry.ingredient_id,
-          preparation_state: item?.preparation_state ?? null,
+          preparation_state: item.preparation_state,
           review_status: "pending",
           is_active: false,
           candidate_rank: 1,

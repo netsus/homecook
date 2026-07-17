@@ -211,7 +211,7 @@ function buildBundle() {
     external_item_key: "full-coverage-tofu-001",
     external_name: "Stage2 두부",
     business_key: "synthetic:full-coverage-tofu-001",
-    preparation_state: "raw",
+    preparation_state: "as_published",
     edible_portion: "edible",
     basis: { amount: 100, unit: "g", source_text: "100 g" },
     serving: { amount: 50, unit: "g", source_text: "50 g" },
@@ -647,6 +647,19 @@ describe.skipIf(!enabled)("ingredient nutrition full coverage postgres integrati
       replayed: false,
     });
     expect((summary.affected_source_ids as unknown[]).length).toBe(2);
+    expect(psql(`
+      select json_build_object(
+        'source_item_preparation_state', item.preparation_state,
+        'link_preparation_state', link.preparation_state
+      )::text
+      from public.ingredient_nutrition_profiles link
+      join public.nutrition_profiles profile on profile.id = link.nutrition_profile_id
+      join public.nutrition_source_items item on item.id = profile.source_item_id
+      where item.external_item_key = 'full-coverage-tofu-001'
+        and link.ingredient_id = '${eligibleIngredientId}'::uuid
+        and link.is_active
+      limit 1;
+    `)).toBe('{"source_item_preparation_state" : "as_published", "link_preparation_state" : "as_published"}');
 
     const report = buildRunReport(summary as never) as Record<string, unknown>;
     expect(report).toMatchObject({
