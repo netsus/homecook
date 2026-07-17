@@ -432,7 +432,7 @@
         "entryType": "product",
         "columnId": "550e8400-e29b-41d4-a716-446655440053",
         "dateAnchor": "end",
-        "calculationQuality": "direct",
+        "calculationQuality": null,
         "values": {
           "energy_kcal": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null },
           "carbohydrate_g": { "amount": null, "known_amount": null, "status": "unavailable", "display_mode": null },

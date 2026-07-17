@@ -644,6 +644,7 @@ function toQaFixtureProductPlannerEntry(
     : Object.fromEntries(
       PLANNER_NUTRITION_CORE_CODES.map((code) => [code, unavailablePlannerNutritionValue()]),
     );
+  const calculationStatus = fixtureCalculationStatus(values);
 
   return {
     entry_type: "product",
@@ -666,8 +667,10 @@ function toQaFixtureProductPlannerEntry(
         unit: value.quantity.unit as ProductPlannerEntryData["quantity"]["unit"],
       },
       values,
-      calculation_status: fixtureCalculationStatus(values),
-      calculation_quality: nutritionEntry
+      calculation_status: calculationStatus,
+      calculation_quality: calculationStatus === "unavailable"
+        ? null
+        : nutritionEntry
         ? nutritionEntry.calculationQuality as PlannerNutritionQuality
         : null,
       warnings: nutritionEntry ? [...nutritionEntry.warnings] : [],

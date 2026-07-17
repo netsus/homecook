@@ -49,6 +49,26 @@ describe("central QA planner nutrition fixture consistency", () => {
     expect(breakfastNutrition().values.energy_kcal.amount).toBe(580);
   });
 
+  it("fails closed unavailable product quality without downgrading calculable direct products or mixed aggregates", () => {
+    const planner = getQaFixturePlannerData(START_DATE, END_DATE);
+    const nutrition = getQaFixturePlannerNutrition(START_DATE, END_DATE);
+
+    const calculableProduct = planner.product_entries.find(
+      (entry) => entry.id === "550e8400-e29b-41d4-a716-446655440070",
+    )!;
+    expect(calculableProduct.nutrition.calculation_status).toBe("partial");
+    expect(calculableProduct.nutrition.calculation_quality).toBe("direct");
+
+    const unavailableProduct = planner.product_entries.find(
+      (entry) => entry.id === "550e8400-e29b-41d4-a716-446655440073",
+    )!;
+    expect(unavailableProduct.nutrition.calculation_status).toBe("unavailable");
+    expect(unavailableProduct.nutrition.calculation_quality).toBeNull();
+
+    expect(breakfastNutrition().calculation_quality).toBe("mixed");
+    expect(nutrition.summary.nutrition.calculation_quality).toBe("mixed");
+  });
+
   it("recalculates the same recipe identity after serving update and removes it after delete", () => {
     expect(
       updateQaFixtureMealServings({ mealId: BREAKFAST_MEAL_ID, plannedServings: 3 }).ok,
