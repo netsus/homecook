@@ -23,20 +23,24 @@ const BASIS_UNIT_MAP = new Map([
 ]);
 
 const CORE_NUTRIENTS = Object.freeze([
-  ["energy_kcal", { keys: ["enerc", "energyKcal", "energy_kcal"], unit: "kcal" }],
-  ["carbohydrate_g", { keys: ["chocdf", "carbohydrateG", "carbohydrate_g"], unit: "g" }],
-  ["protein_g", { keys: ["prot", "proteinG", "protein_g"], unit: "g" }],
-  ["fat_g", { keys: ["fatce", "fatG", "fat_g"], unit: "g" }],
-  ["sodium_mg", { keys: ["nat", "sodiumMg", "sodium_mg"], unit: "mg" }],
+  ["energy_kcal", { keys: ["enerc", "energyKcal", "energy_kcal", "에너지(kcal)"], unit: "kcal" }],
+  ["carbohydrate_g", { keys: ["chocdf", "carbohydrateG", "carbohydrate_g", "탄수화물(g)"], unit: "g" }],
+  ["protein_g", { keys: ["prot", "proteinG", "protein_g", "단백질(g)"], unit: "g" }],
+  ["fat_g", { keys: ["fatce", "fatG", "fat_g", "지방(g)"], unit: "g" }],
+  ["sodium_mg", { keys: ["nat", "sodiumMg", "sodium_mg", "나트륨(mg)"], unit: "mg" }],
 ]);
 
 const OPTIONAL_NUTRIENTS = Object.freeze([
-  ["sugars_g", { keys: ["sugars", "sugar", "sugarsG", "sugars_g"], unit: "g" }],
-  ["saturated_fat_g", { keys: ["fasat", "saturatedFatG", "saturated_fat_g"], unit: "g" }],
-  ["fiber_g", { keys: ["fibtg", "fiberG", "fiber_g"], unit: "g" }],
+  ["sugars_g", { keys: ["sugars", "sugar", "sugarsG", "sugars_g", "당류(g)"], unit: "g" }],
+  ["saturated_fat_g", { keys: ["fasat", "saturatedFatG", "saturated_fat_g", "포화지방산(g)"], unit: "g" }],
+  ["fiber_g", { keys: ["fibtg", "fiberG", "fiber_g", "식이섬유(g)"], unit: "g" }],
 ]);
 
 const REVIEWABLE_STATUSES = new Set(["pending", "approved", "rejected", "needs_review"]);
+
+export function serializePreparedFoodArtifactJson(value) {
+  return `${JSON.stringify(value)}\n`;
+}
 const ALLOWED_LICENSES = new Set(["이용허락범위 제한 없음", "public-open-data"]);
 const IMPORT_SCHEMA = Object.freeze({
   schema_version: "public-prepared-food-catalog-import-v1",
@@ -154,13 +158,17 @@ function paginationMetadataFromPages(pages) {
   };
 }
 
-function readField(row, keys) {
+function readFieldEntry(row, keys) {
   for (const key of keys) {
-    if (row[key] !== undefined && row[key] !== null) return row[key];
+    if (row[key] !== undefined && row[key] !== null) return { key, value: row[key] };
     const upper = key.toUpperCase();
-    if (row[upper] !== undefined && row[upper] !== null) return row[upper];
+    if (row[upper] !== undefined && row[upper] !== null) return { key: upper, value: row[upper] };
   }
-  return undefined;
+  return null;
+}
+
+function readField(row, keys) {
+  return readFieldEntry(row, keys)?.value;
 }
 
 function missingToken(value) {
@@ -207,18 +215,18 @@ function normalizeText(value) {
 
 function chooseCompany(row) {
   return {
-    manufacturer_name: normalizeText(readField(row, ["makerNm", "maker_nm"])),
-    distributor_name: normalizeText(readField(row, ["saleCorpNm", "sale_corp_nm", "distrbNm"])),
-    importer_name: normalizeText(readField(row, ["importerNm", "importer_nm", "importCorpNm"])),
+    manufacturer_name: normalizeText(readField(row, ["makerNm", "maker_nm", "제조사명", "업체명"])),
+    distributor_name: normalizeText(readField(row, ["saleCorpNm", "sale_corp_nm", "distrbNm", "유통업체명"])),
+    importer_name: normalizeText(readField(row, ["importerNm", "importer_nm", "importCorpNm", "수입업체명"])),
   };
 }
 
 function stableKey(row) {
-  const itemReport = normalizeText(readField(row, ["itemMnftrRptNo", "item_report_no"]));
+  const itemReport = normalizeText(readField(row, ["itemMnftrRptNo", "item_report_no", "품목제조보고번호"]));
   if (itemReport !== null) {
     return { external_item_key: `item-report:${itemReport}`, key_source: "itemMnftrRptNo" };
   }
-  const foodCode = normalizeText(readField(row, ["foodCd", "food_cd"]));
+  const foodCode = normalizeText(readField(row, ["foodCd", "food_cd", "식품코드"]));
   if (foodCode !== null) {
     return { external_item_key: `food-code:${foodCode}`, key_source: "foodCd" };
   }
@@ -228,7 +236,8 @@ function stableKey(row) {
 function normalizeValueMap(row) {
   const normalizedValues = {};
   for (const [code, meta] of [...CORE_NUTRIENTS, ...OPTIONAL_NUTRIENTS]) {
-    const raw = readField(row, meta.keys);
+    const field = readFieldEntry(row, meta.keys);
+    const raw = field?.value;
     const parsed = parseNumeric(raw);
     if (parsed.kind === "missing") {
       if (CORE_NUTRIENTS.some(([coreCode]) => coreCode === code)) {
@@ -241,7 +250,7 @@ function normalizeValueMap(row) {
     }
     normalizedValues[code] = {
       amount: parsed.value,
-      source_nutrient_code: meta.keys[0],
+      source_nutrient_code: field.key,
       source_unit: meta.unit,
       value_status: "observed",
       source_token: String(raw).trim(),
@@ -349,11 +358,11 @@ function normalizeCandidate(row, rowIndex) {
   if (key === null) {
     throw new PreparedFoodCatalogImportError("PRODUCT_STABLE_KEY_MISSING", { row_index: rowIndex });
   }
-  const external_name = normalizeText(readField(row, ["foodNm", "food_nm", "prdlstNm"]));
+  const external_name = normalizeText(readField(row, ["foodNm", "food_nm", "prdlstNm", "식품명"]));
   if (external_name === null) {
     throw new PreparedFoodCatalogImportError("PRODUCT_NAME_MISSING", { row_index: rowIndex });
   }
-  const basis = parseBasisText(readField(row, ["nutConSrtrQua", "nut_con_srtr_qua", "basisText"]));
+  const basis = parseBasisText(readField(row, ["nutConSrtrQua", "nut_con_srtr_qua", "basisText", "영양성분함량기준량"]));
   if (basis === null) {
     throw new PreparedFoodCatalogImportError("PRODUCT_BASIS_UNSUPPORTED", { row_index: rowIndex });
   }
@@ -369,8 +378,8 @@ function normalizeCandidate(row, rowIndex) {
     ...chooseCompany(row),
     basis,
     label_basis_text: basis.source_text,
-    source_serving_text: normalizeText(readField(row, ["servSize", "serv_size"])),
-    source_food_size_text: normalizeText(readField(row, ["foodSize", "food_size"])),
+    source_serving_text: normalizeText(readField(row, ["servSize", "serv_size", "1회 섭취참고량"])),
+    source_food_size_text: normalizeText(readField(row, ["foodSize", "food_size", "식품중량"])),
     values,
   });
 }
@@ -575,6 +584,36 @@ export function normalizePreparedFoodCatalogBatch({
   };
 }
 
+export function stripPreparedFoodNormalizedBundle(normalizedBundle) {
+  if (!isRecord(normalizedBundle) || normalizedBundle.status !== "normalized") {
+    throw new PreparedFoodCatalogImportError("NORMALIZED_BUNDLE_INVALID");
+  }
+  const rest = structuredClone(normalizedBundle);
+  delete rest.rows;
+  delete rest.quarantined;
+  return rest;
+}
+
+export function hydratePreparedFoodNormalizedBundle({
+  normalizedBundle,
+  rows,
+  quarantined = [],
+}) {
+  if (
+    !isRecord(normalizedBundle)
+    || normalizedBundle.status !== "normalized"
+    || !Array.isArray(rows)
+    || !Array.isArray(quarantined)
+  ) {
+    throw new PreparedFoodCatalogImportError("NORMALIZED_BUNDLE_INVALID");
+  }
+  return {
+    ...structuredClone(normalizedBundle),
+    rows: structuredClone(rows),
+    quarantined: structuredClone(quarantined),
+  };
+}
+
 export function buildPreparedFoodCatalogReview({ normalizedBundle, decisions }) {
   if (!isRecord(normalizedBundle) || normalizedBundle.status !== "normalized") {
     throw new PreparedFoodCatalogImportError("NORMALIZED_BUNDLE_INVALID");
@@ -603,9 +642,7 @@ export function buildPreparedFoodCatalogReview({ normalizedBundle, decisions }) 
     .filter((row) => row.status === "approved")
     .map((row) => row.fingerprint)
     .sort();
-  const blocker_count =
-    normalizedBundle.counts.quarantined_count +
-    reviewed_rows.filter((row) => row.status !== "approved").length;
+  const blocker_count = reviewed_rows.filter((row) => row.status !== "approved").length;
   const reportBase = {
     schema_version: "public-prepared-food-review-v1",
     status: "reviewed",
@@ -620,6 +657,52 @@ export function buildPreparedFoodCatalogReview({ normalizedBundle, decisions }) 
     production_db_writes: 0,
   };
   return { ...reportBase, review_checksum: sha256(reportBase) };
+}
+
+export function attachPreparedFoodApprovalCheckpoint({
+  manifest,
+  normalizedBundle,
+  reviewReport,
+  scope,
+  approvedAt,
+}) {
+  if (
+    !isRecord(manifest)
+    || !isRecord(normalizedBundle)
+    || !isRecord(reviewReport)
+    || (scope !== "pilot" && scope !== "full")
+  ) {
+    throw new PreparedFoodCatalogImportError("CHECKPOINT_MISMATCH");
+  }
+  const approved_at = ensureIsoTimestamp(approvedAt, "CHECKPOINT_MISMATCH");
+  const approved_row_count = reviewReport.approved_fingerprints?.length;
+  if (
+    reviewReport.blocker_count !== 0
+    || !Number.isInteger(approved_row_count)
+    || approved_row_count !== normalizedBundle.rows?.length
+    || approved_row_count <= 0
+  ) {
+    throw new PreparedFoodCatalogImportError("PROMOTION_BLOCKED");
+  }
+  if (scope === "pilot" && approved_row_count < MIN_PREPARED_FOOD_PILOT_ROWS) {
+    throw new PreparedFoodCatalogImportError("CHECKPOINT_MISMATCH");
+  }
+  const approval_checkpoint = {
+    scope,
+    approved_row_count,
+    selection_mode: scope === "pilot" ? "pilot-min-10000" : "all-valid",
+    ...(scope === "full" ? { valid_row_count: approved_row_count } : {}),
+    target_fingerprint: normalizedBundle.normalized_content_hash,
+    approved_at,
+  };
+  return {
+    ...manifest,
+    query: {
+      ...sanitizeQuery(manifest.query),
+      scope,
+      approval_checkpoint,
+    },
+  };
 }
 
 function canonicalApprovedItems(rows) {
@@ -640,7 +723,7 @@ export function buildPreparedFoodCatalogImportBundle({
   ) {
     throw new PreparedFoodCatalogImportError("PROMOTION_BLOCKED");
   }
-  if (normalizedBundle.counts.quarantined_count > 0 || reviewReport.blocker_count > 0) {
+  if (reviewReport.blocker_count > 0) {
     throw new PreparedFoodCatalogImportError("PROMOTION_BLOCKED");
   }
   if (manifest.source_id !== PREPARED_FOOD_SOURCE_ID || manifest.dataset_id !== PREPARED_FOOD_DATASET_ID) {
@@ -675,7 +758,7 @@ export function buildPreparedFoodCatalogImportBundle({
     unique_input_count: normalizedBundle.counts.unique_input_count,
     normalized_count: rows.length,
     deduplicated_identical_count: normalizedBundle.counts.deduplicated_identical_count,
-    quarantined_count: 0,
+    quarantined_count: normalizedBundle.counts.quarantined_count,
   };
   const approved_fingerprint_checksum = computePreparedFoodApprovedFingerprintChecksum(rows);
   const normalized_content_hash = computePreparedFoodNormalizedContentHash(rows, counts);
@@ -753,7 +836,8 @@ export function validatePreparedFoodCatalogImportBundle(bundle) {
   const counts = bundle.approved_manifest?.counts;
   const manifest = bundle.approved_manifest;
   const rowAccountingValid = isRecord(counts)
-    && counts.quarantined_count === 0
+    && Number.isInteger(counts.quarantined_count)
+    && counts.quarantined_count >= 0
     && counts.normalized_count === bundle.approved_items.length
     && counts.unique_input_count === counts.normalized_count + counts.quarantined_count
     && counts.fetched_raw_count === counts.unique_input_count + counts.deduplicated_identical_count;

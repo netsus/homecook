@@ -188,6 +188,28 @@ describe("public prepared food catalog import", () => {
     });
   });
 
+  it("serializes large prepared-food artifacts compactly so official full snapshots stay below the Node string limit", async () => {
+    const importer = await loadImporter();
+    const serializeArtifact = requireFunction(importer, "serializePreparedFoodArtifactJson");
+    const payload = {
+      rows: Array.from({ length: 1_000 }, (_, index) => ({
+        external_item_key: `item-report:${index}`,
+        external_name: `제품 ${index}`,
+        values: {
+          energy_kcal: { amount: index, source_unit: "kcal" },
+          protein_g: { amount: index % 20, source_unit: "g" },
+        },
+      })),
+    };
+
+    const serialized = serializeArtifact(payload as never) as string;
+    const pretty = `${JSON.stringify(payload, null, 2)}\n`;
+
+    expect(JSON.parse(serialized)).toEqual(payload);
+    expect(serialized.endsWith("\n")).toBe(true);
+    expect(serialized.length).toBeLessThan(pretty.length * 0.7);
+  });
+
   it("normalizes stable-key priority, strict 100g/100mL basis, and missing-is-not-zero", async () => {
     const importer = await loadImporter();
     const buildRawBatch = requireFunction(importer, "buildPreparedFoodRawBatch");
@@ -237,6 +259,204 @@ describe("public prepared food catalog import", () => {
       "PRODUCT_BASIS_UNSUPPORTED",
       "PRODUCT_CORE_NUTRIENT_MISSING",
     ]);
+  });
+
+  it("normalizes the official Korean CSV column names without losing source nutrient codes", async () => {
+    const importer = await loadImporter();
+    const parseCsv = requireFunction(importer, "parsePreparedFoodCsv");
+    const buildSnapshot = requireFunction(importer, "buildPreparedFoodSnapshotInput");
+    const buildRawBatch = requireFunction(importer, "buildPreparedFoodRawBatch");
+    const normalizeBatch = requireFunction(importer, "normalizePreparedFoodCatalogBatch");
+    const csv = [
+      [
+        "식품코드",
+        "식품명",
+        "영양성분함량기준량",
+        "에너지(kcal)",
+        "탄수화물(g)",
+        "단백질(g)",
+        "지방(g)",
+        "나트륨(mg)",
+        "당류(g)",
+        "식이섬유(g)",
+        "포화지방산(g)",
+        "1회 섭취참고량",
+        "식품중량",
+        "품목제조보고번호",
+        "제조사명",
+        "수입업체명",
+        "유통업체명",
+      ].join(","),
+      [
+        "KOREAN-FOOD-1",
+        "한글 헤더 제품",
+        "100g",
+        "321",
+        "42",
+        "12",
+        "9",
+        "210",
+        "7",
+        "3",
+        "2",
+        "30g",
+        "300g",
+        "KOREAN-REPORT-1",
+        "한글 제조사",
+        "한글 수입사",
+        "한글 유통사",
+      ].join(","),
+    ].join("\n");
+    const rows = parseCsv(csv as never) as Array<Record<string, string>>;
+    const snapshot = buildSnapshot({
+      ...syntheticSnapshot(),
+      rows,
+    } as never) as Record<string, unknown>;
+    const raw = buildRawBatch({
+      ...snapshot,
+      fetchedAt: "2026-07-17T00:00:00.000Z",
+    } as never) as Record<string, unknown>;
+    const normalized = normalizeBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "public-prepared-food-row-v1",
+    } as never) as {
+      rows: Array<Record<string, unknown>>;
+      counts: Record<string, number>;
+    };
+
+    expect(normalized.counts.normalized_count).toBe(1);
+    expect(normalized.rows[0]).toMatchObject({
+      external_item_key: "item-report:KOREAN-REPORT-1",
+      external_name: "한글 헤더 제품",
+      manufacturer_name: "한글 제조사",
+      importer_name: "한글 수입사",
+      distributor_name: "한글 유통사",
+      basis: { amount: 100, unit: "g", source_text: "100g" },
+      source_serving_text: "30g",
+      source_food_size_text: "300g",
+      values: {
+        energy_kcal: {
+          amount: 321,
+          source_nutrient_code: "에너지(kcal)",
+          source_unit: "kcal",
+        },
+        sodium_mg: {
+          amount: 210,
+          source_nutrient_code: "나트륨(mg)",
+          source_unit: "mg",
+        },
+      },
+    });
+  });
+
+  it("can externalize a normalized bundle without changing review semantics", async () => {
+    const importer = await loadImporter();
+    const buildRawBatch = requireFunction(importer, "buildPreparedFoodRawBatch");
+    const normalizeBatch = requireFunction(importer, "normalizePreparedFoodCatalogBatch");
+    const stripNormalizedBundle = requireFunction(importer, "stripPreparedFoodNormalizedBundle");
+    const hydrateNormalizedBundle = requireFunction(importer, "hydratePreparedFoodNormalizedBundle");
+    const buildReview = requireFunction(importer, "buildPreparedFoodCatalogReview");
+
+    const raw = buildRawBatch({
+      ...largeSyntheticSnapshot(10_000),
+      fetchedAt: "2026-07-17T00:00:00.000Z",
+    } as never) as Record<string, unknown>;
+    const normalized = normalizeBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "public-prepared-food-row-v1",
+    } as never) as {
+      rows: Array<{ fingerprint: string }>;
+      quarantined: Array<Record<string, unknown>>;
+      counts: Record<string, number>;
+      normalized_content_hash: string;
+    };
+
+    const stripped = stripNormalizedBundle(normalized as never) as Record<string, unknown>;
+    expect(stripped.rows).toBeUndefined();
+    expect(stripped.quarantined).toBeUndefined();
+    expect(stripped.counts).toMatchObject(normalized.counts);
+    expect(stripped.normalized_content_hash).toBe(normalized.normalized_content_hash);
+
+    const rebuilt = hydrateNormalizedBundle({
+      normalizedBundle: stripped,
+      rows: normalized.rows,
+      quarantined: normalized.quarantined,
+    } as never);
+
+    const originalReview = buildReview({
+      normalizedBundle: normalized,
+      decisions: buildApproval(normalized).decisions,
+    } as never);
+    const rebuiltReview = buildReview({
+      normalizedBundle: rebuilt,
+      decisions: buildApproval(normalized).decisions,
+    } as never);
+
+    expect(rebuiltReview).toEqual(originalReview);
+  });
+
+  it("promotes approved valid rows while keeping invalid source rows quarantined", async () => {
+    const importer = await loadImporter();
+    const buildRawBatch = requireFunction(importer, "buildPreparedFoodRawBatch");
+    const normalizeBatch = requireFunction(importer, "normalizePreparedFoodCatalogBatch");
+    const buildReview = requireFunction(importer, "buildPreparedFoodCatalogReview");
+    const attachCheckpoint = requireFunction(importer, "attachPreparedFoodApprovalCheckpoint");
+    const buildImportBundle = requireFunction(importer, "buildPreparedFoodCatalogImportBundle");
+    const validateImportBundle = requireFunction(importer, "validatePreparedFoodCatalogImportBundle");
+    const raw = buildRawBatch({
+      ...syntheticSnapshot(),
+      fetchedAt: "2026-07-17T00:00:00.000Z",
+    } as never) as Record<string, unknown>;
+    const normalized = normalizeBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "public-prepared-food-row-v1",
+    } as never) as {
+      rows: Array<{ fingerprint: string }>;
+      counts: Record<string, number>;
+    };
+    const review = buildReview({
+      normalizedBundle: normalized,
+      decisions: buildApproval(normalized).decisions,
+    } as never) as Record<string, unknown>;
+    const approvedManifest = attachCheckpoint({
+      manifest: raw.manifest,
+      normalizedBundle: normalized,
+      reviewReport: review,
+      scope: "full",
+      approvedAt: "2026-07-17T00:05:00.000Z",
+    } as never) as Record<string, unknown>;
+    const bundle = buildImportBundle({
+      manifest: approvedManifest,
+      normalizedBundle: normalized,
+      reviewReport: review,
+    } as never) as {
+      approved_items: Array<Record<string, unknown>>;
+      approved_manifest: {
+        counts: Record<string, number>;
+        query: Record<string, unknown>;
+      };
+    };
+
+    expect(bundle.approved_items).toHaveLength(2);
+    expect(bundle.approved_manifest.counts).toMatchObject({
+      fetched_raw_count: 4,
+      normalized_count: 2,
+      quarantined_count: 2,
+    });
+    expect(bundle.approved_manifest.query).toMatchObject({
+      scope: "full",
+      approval_checkpoint: {
+        approved_row_count: "2",
+        valid_row_count: "2",
+        selection_mode: "all-valid",
+        target_fingerprint: expect.any(String),
+        approved_at: "2026-07-17T00:05:00.000Z",
+      },
+    });
+    expect(() => validateImportBundle(bundle as never)).not.toThrow();
   });
 
   it("keeps a stable key quarantined for every later repeat after one A-B conflict regardless of order", async () => {

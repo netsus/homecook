@@ -119,6 +119,7 @@ function buildBundle({
   keyPrefix = "REPORT",
   selectionMode,
   validRowCount = approvedRowCount,
+  quarantinedCount = 0,
 }: {
   count?: number;
   energy?: number;
@@ -128,6 +129,7 @@ function buildBundle({
   keyPrefix?: string;
   selectionMode?: "pilot-min-10000" | "all-valid";
   validRowCount?: number;
+  quarantinedCount?: number;
 } = {}) {
   const approvedItems = Array.from({ length: count }, (_, index) => {
     const suffix = String(index).padStart(5, "0");
@@ -145,6 +147,7 @@ function buildBundle({
       source_serving_text: basisUnit === "ml" ? "1회 제공량 190mL" : "1회 제공량 30g",
       source_food_size_text: basisUnit === "ml" ? "총 내용량 190mL" : "총 내용량 300g",
       stable_fingerprint: `fingerprint-${energy}-${suffix}`,
+      fingerprint: `fingerprint-${energy}-${suffix}`,
       content_hash: `content-hash-${energy}-${suffix}`,
       values: {
         energy_kcal: {
@@ -188,14 +191,15 @@ function buildBundle({
   for (const item of approvedItems) {
     const digest = approvedItemDigest(item as unknown as Record<string, unknown>);
     item.stable_fingerprint = digest;
+    item.fingerprint = digest;
     item.content_hash = digest;
   }
   const counts = {
-    fetched_raw_count: count,
-    unique_input_count: count,
+    fetched_raw_count: count + quarantinedCount,
+    unique_input_count: count + quarantinedCount,
     normalized_count: count,
     deduplicated_identical_count: 0,
-    quarantined_count: 0,
+    quarantined_count: quarantinedCount,
   };
   const recomputedNormalizedContentHash = normalizedContentHash(
     approvedItems as unknown as Array<Record<string, unknown>>,
@@ -215,7 +219,7 @@ function buildBundle({
     license_url: "https://www.data.go.kr/data/15100066/standard.do",
     license_evidence_url: "https://www.data.go.kr/data/15100066/standard.do",
     license_verified_at: "2026-07-17",
-    raw_sha256: `raw-sha-${energy}-${count}`,
+    raw_sha256: `raw-sha-${energy}-${count}-${quarantinedCount}`,
     schema_fingerprint: "public-prepared-food-row-v1:itemMnftrRptNo,foodCd,foodNm,makerNm,saleCorpNm,importerNm,nutConSrtrQua,servSize,foodSize,enerc,chocdf,prot,fatce,nat",
     pagination_metadata: {
       mode: "fixture",
@@ -519,6 +523,37 @@ describe.runIf(enabled)("public prepared food catalog import isolated PostgreSQL
         })}
       )::text;
     `));
+    expect(applied).toMatchObject({
+      replayed: false,
+      source_item_count: 2,
+      product_count: 2,
+    });
+  });
+
+  it("promotes every approved valid row while preserving nonzero quarantine accounting", () => {
+    const stagedBundle = buildBundle({
+      count: 2,
+      scope: "full",
+      keyPrefix: "QUARANTINE",
+      quarantinedCount: 3,
+    });
+    const stagedItems = stagedBundle.approved_items;
+    const stagedBundleHeader = { ...stagedBundle } as Record<string, unknown>;
+    delete stagedBundleHeader.approved_items;
+    const applied = JSON.parse(psql(`
+      create temp table homecook_prepared_food_import_items (item jsonb);
+      insert into pg_temp.homecook_prepared_food_import_items(item)
+      select value from jsonb_array_elements(${jsonExpression(stagedItems)});
+      select public.apply_public_prepared_food_catalog_import(
+        ${jsonExpression({
+          actor_user_id: actorId,
+          run_id: "prepared-food-import-run-quarantine",
+          idempotency_key: "prepared-food-import-key-quarantine",
+          bundle: stagedBundleHeader,
+        })}
+      )::text;
+    `));
+
     expect(applied).toMatchObject({
       replayed: false,
       source_item_count: 2,

@@ -12,9 +12,9 @@
 
 ## In Scope
 
-- primary source: 공공데이터포털 dataset `15100066`, 전국통합식품영양성분정보(가공식품) 표준데이터
-  - current snapshot: `2026-06-26`, 298,271 source rows
-  - CSV snapshot 또는 `https://api.data.go.kr/openapi/tn_pubr_public_nutri_process_info_api` pagination(`numOfRows<=1000`)
+- primary source family: 공공데이터포털 dataset `15100066`, 전국통합식품영양성분정보(가공식품) 표준데이터
+  - verified bulk snapshot: 식품안전나라 K-FIND 공식 다운로드 `2026-06-26`, 298,288 source rows
+  - K-FIND XLSX/CSV snapshot 또는 `https://api.data.go.kr/openapi/tn_pubr_public_nutri_process_info_api` pagination(`numOfRows<=1000`)
 - internal operator pipeline: raw artifact + manifest → normalize/quarantine → review decision → approved promotion → report/disable
 - stable key: non-empty `itemMnftrRptNo` 우선, 없으면 non-empty `foodCd`; 둘 다 없으면 quarantine
 - mapped fields: product name, manufacturer/importer/distributor projection, nutrition basis, core nutrients, source/version/date/attribution, serving/food-size original text
@@ -53,7 +53,7 @@
 ### Source snapshot and manifest
 
 - dataset id, sanitized official URL, source version/date, fetched time, row count, SHA-256, license disposition, schema fingerprint, pagination/file metadata를 가진 immutable manifest를 만든다.
-- current official evidence: snapshot `20260626`, 298,271 rows, annual refresh, license restriction 없음. 숫자는 실행 manifest가 재검증한다.
+- current official evidence: snapshot `20260626`, 298,288 rows, annual refresh, license restriction 없음. 실행 manifest와 projection checksum이 숫자와 schema를 재검증했다.
 - raw CSV/response는 gitignored read-only operator storage에만 보존하고 DB/log/report/PR에 raw row를 복사하지 않는다.
 - API key가 없을 때 공식 public CSV download를 사용할 수 있다. secret은 manifest URL/command/report에 포함하지 않는다.
 
@@ -108,6 +108,8 @@
 - `docs/workpacks/public-nutrition-source-acquisition/`
 - `docs/workpacks/prepared-food-catalog/`
 - official dataset: `https://www.data.go.kr/data/15100066/standard.do`
+- official K-FIND bulk download: `https://various.foodsafetykorea.go.kr/nutrient/general/down/historyList.do`
+- execution evidence: `docs/workpacks/public-prepared-food-catalog-import/evidence/2026-07-17-local-pilot-full-import.md`
 
 ## QA / Test Data Plan
 
@@ -136,13 +138,13 @@
 
 ## Delivery Checklist
 
-- [ ] dataset 15100066 snapshot/manifest/checksum 수집 경계 <!-- omo:id=delivery-source-snapshot;stage=2;scope=backend;review=3 -->
-- [ ] field parser, missing/sentinel, 100g/100mL strict normalize <!-- omo:id=delivery-normalizer;stage=2;scope=backend;review=3 -->
-- [ ] stable key/fingerprint/quarantine/review contract <!-- omo:id=delivery-stable-key-review;stage=2;scope=backend;review=3 -->
-- [ ] immutable product nutrition version promotion과 replay/disable <!-- omo:id=delivery-promotion-lifecycle;stage=2;scope=backend;review=3 -->
-- [ ] 10k pilot와 전체-valid checkpoint/rollback report <!-- omo:id=delivery-pilot-full;stage=2;scope=backend;review=3 -->
-- [ ] 기존 공식 schema에서 100k limit-20 search/cursor p95 목표 검증 <!-- omo:id=delivery-search-performance;stage=2;scope=backend;review=3 -->
-- [ ] user query external provider call 0, secret/raw-row 노출 0 <!-- omo:id=delivery-security-runtime-boundary;stage=2;scope=backend;review=3 -->
+- [x] dataset 15100066 snapshot/manifest/checksum 수집 경계 <!-- omo:id=delivery-source-snapshot;stage=2;scope=backend;review=3 -->
+- [x] field parser, missing/sentinel, 100g/100mL strict normalize <!-- omo:id=delivery-normalizer;stage=2;scope=backend;review=3 -->
+- [x] stable key/fingerprint/quarantine/review contract <!-- omo:id=delivery-stable-key-review;stage=2;scope=backend;review=3 -->
+- [x] immutable product nutrition version promotion과 replay/disable <!-- omo:id=delivery-promotion-lifecycle;stage=2;scope=backend;review=3 -->
+- [x] 10k pilot와 전체-valid checkpoint/rollback report <!-- omo:id=delivery-pilot-full;stage=2;scope=backend;review=3 -->
+- [x] 기존 공식 schema에서 100k limit-20 search/cursor p95 목표 검증 <!-- omo:id=delivery-search-performance;stage=2;scope=backend;review=3 -->
+- [x] user query external provider call 0, secret/raw-row 노출 0 <!-- omo:id=delivery-security-runtime-boundary;stage=2;scope=backend;review=3 -->
 - [ ] fresh local Supabase real DB lifecycle와 독립 Stage 3 review <!-- omo:id=delivery-real-db-review;stage=2;scope=shared;review=3 -->
 
 ## Contract Evolution Candidates

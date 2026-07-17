@@ -1,12 +1,26 @@
 #!/usr/bin/env node
 
-import { readFile } from "node:fs/promises";
+import { createReadStream, createWriteStream, existsSync } from "node:fs";
+import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { once } from "node:events";
+import { tmpdir } from "node:os";
 import path from "node:path";
+import readline from "node:readline";
+import { finished } from "node:stream/promises";
 
-import { runLocalPsqlJson } from "./lib/ingredient-nutrition-local-db.mjs";
-import { publishArtifactBundle } from "./lib/public-nutrition-artifacts.mjs";
+import {
+  runLocalPsqlJson,
+  runLocalPsqlJsonFileFunction,
+} from "./lib/ingredient-nutrition-local-db.mjs";
+import {
+  ArtifactPublishError,
+  assertArtifactSetSafe,
+  containsAuthLeak,
+  publishArtifactBundle,
+} from "./lib/public-nutrition-artifacts.mjs";
 import {
   PreparedFoodCatalogImportError,
+  attachPreparedFoodApprovalCheckpoint,
   buildPreparedFoodRawBatch,
   buildPreparedFoodSnapshotInput,
   buildPreparedFoodCatalogImportBundle,
@@ -14,9 +28,12 @@ import {
   createMemoryPreparedFoodCatalogImportStore,
   fetchPreparedFoodCatalogLiveBatch,
   generatePreparedFoodCatalogPerfRows,
+  hydratePreparedFoodNormalizedBundle,
   normalizePreparedFoodCatalogBatch,
   parsePreparedFoodCsv,
   runPreparedFoodCatalogImport,
+  serializePreparedFoodArtifactJson,
+  stripPreparedFoodNormalizedBundle,
 } from "./lib/public-prepared-food-catalog-import.mjs";
 
 const command = process.argv[2] ?? "";
@@ -32,6 +49,8 @@ const DEFAULT_SOURCE = Object.freeze({
   license_evidence_url: "https://www.data.go.kr/data/15100066/standard.do",
   license_verified_at: "2026-07-17",
 });
+const NORMALIZED_ROWS_FILE = "normalized-rows.jsonl";
+const QUARANTINED_ROWS_FILE = "quarantined-rows.jsonl";
 
 function parseArgs(values) {
   const args = {};
@@ -69,6 +88,28 @@ async function readJson(filePath) {
   }
 }
 
+async function readJsonLines(filePath) {
+  const rows = [];
+  const stream = createReadStream(filePath, { encoding: "utf8" });
+  const lineReader = readline.createInterface({
+    input: stream,
+    crlfDelay: Infinity,
+  });
+  try {
+    for await (const line of lineReader) {
+      if (line.trim().length === 0) continue;
+      try {
+        rows.push(JSON.parse(line));
+      } catch {
+        throw new PreparedFoodCatalogImportError("MALFORMED_INPUT_FILE");
+      }
+    }
+  } finally {
+    lineReader.close();
+  }
+  return rows;
+}
+
 async function readInputRows(filePath) {
   const text = await readFile(filePath, "utf8");
   if (/\.csv$/i.test(filePath)) {
@@ -82,11 +123,89 @@ async function readInputRows(filePath) {
 }
 
 function jsonText(value) {
-  return `${JSON.stringify(value, null, 2)}\n`;
+  return serializePreparedFoodArtifactJson(value);
 }
 
-function jsonLines(rows) {
-  return rows.length > 0 ? `${rows.map((row) => JSON.stringify(row)).join("\n")}\n` : "";
+async function writeJsonLinesFile(filePath, rows, { secretValues = [] } = {}) {
+  const stream = createWriteStream(filePath, { flags: "wx", encoding: "utf8" });
+  try {
+    for (const row of rows) {
+      const line = `${JSON.stringify(row)}\n`;
+      if (containsAuthLeak(line, { secretValues })) {
+        throw new ArtifactPublishError("SECRET_EXPOSURE_DETECTED", { artifact: path.basename(filePath) });
+      }
+      if (!stream.write(line)) {
+        await once(stream, "drain");
+      }
+    }
+    stream.end();
+    await finished(stream);
+  } catch (error) {
+    stream.destroy();
+    throw error;
+  }
+}
+
+async function publishPreparedFoodLargeBundle(outputDir, {
+  textFiles,
+  jsonLineFiles = [],
+  copiedFiles = [],
+  secretValues = [],
+}) {
+  const normalizedFiles = Object.fromEntries(
+    Object.entries(textFiles).map(([name, content]) => {
+      if (path.isAbsolute(name) || path.basename(name) !== name) {
+        throw new ArtifactPublishError("ARTIFACT_PATH_INVALID", { artifact: name });
+      }
+      return [name, String(content)];
+    }),
+  );
+  assertArtifactSetSafe(normalizedFiles, { secretValues });
+
+  if (existsSync(outputDir)) {
+    throw new ArtifactPublishError("ARTIFACT_IMMUTABLE", { artifact: path.basename(outputDir) });
+  }
+
+  const parent = path.dirname(outputDir);
+  await mkdir(parent, { recursive: true });
+  const tempDir = await mkdtemp(path.join(parent, `.${path.basename(outputDir)}.tmp-`));
+  try {
+    for (const [name, content] of Object.entries(normalizedFiles)) {
+      await writeFile(path.join(tempDir, name), content, { flag: "wx" });
+    }
+    for (const artifact of jsonLineFiles) {
+      if (path.isAbsolute(artifact.name) || path.basename(artifact.name) !== artifact.name) {
+        throw new ArtifactPublishError("ARTIFACT_PATH_INVALID", { artifact: artifact.name });
+      }
+      await writeJsonLinesFile(path.join(tempDir, artifact.name), artifact.rows, { secretValues });
+    }
+    for (const artifact of copiedFiles) {
+      if (path.isAbsolute(artifact.name) || path.basename(artifact.name) !== artifact.name) {
+        throw new ArtifactPublishError("ARTIFACT_PATH_INVALID", { artifact: artifact.name });
+      }
+      await copyFile(artifact.from, path.join(tempDir, artifact.name));
+    }
+    await symlink(path.basename(tempDir), outputDir, "dir");
+    return "created";
+  } catch (error) {
+    await rm(tempDir, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+async function loadPreparedFoodNormalizedArtifacts(inputDir) {
+  const normalizedBundle = await readJson(path.join(inputDir, "normalized-bundle.json"));
+  if (Array.isArray(normalizedBundle.rows)) {
+    return normalizedBundle;
+  }
+  const rows = await readJsonLines(path.join(inputDir, NORMALIZED_ROWS_FILE));
+  const quarantinePath = path.join(inputDir, QUARANTINED_ROWS_FILE);
+  const quarantined = existsSync(quarantinePath) ? await readJsonLines(quarantinePath) : [];
+  return hydratePreparedFoodNormalizedBundle({
+    normalizedBundle,
+    rows,
+    quarantined,
+  });
 }
 
 function successSummary(currentCommand, extra = {}) {
@@ -96,10 +215,6 @@ function successSummary(currentCommand, extra = {}) {
     production_db_writes: 0,
     ...extra,
   };
-}
-
-function sqlJsonExpression(value) {
-  return `convert_from(decode('${Buffer.from(JSON.stringify(value), "utf8").toString("base64")}', 'base64'), 'UTF8')::jsonb`;
 }
 
 function sqlTextExpression(value) {
@@ -171,25 +286,30 @@ async function runNormalize(args) {
     counts: normalized.counts,
     normalized_content_hash: normalized.normalized_content_hash,
   });
-  await publishArtifactBundle(outputDir, {
-    "source-manifest.json": jsonText(manifest),
-    "normalized-bundle.json": jsonText(normalized),
-    "normalized-rows.jsonl": jsonLines(normalized.rows),
-    "quarantine-report.json": jsonText({
-      counts: normalized.counts,
-      reason_counts: normalized.quarantine_reason_counts,
-      rows: normalized.quarantined,
-      production_db_writes: 0,
-    }),
-    "summary.json": jsonText(summary),
-  }, { secretValues: [process.env.DATA_GO_KR_API_KEY ?? ""] });
+  await publishPreparedFoodLargeBundle(outputDir, {
+    textFiles: {
+      "source-manifest.json": jsonText(manifest),
+      "normalized-bundle.json": jsonText(stripPreparedFoodNormalizedBundle(normalized)),
+      "quarantine-report.json": jsonText({
+        counts: normalized.counts,
+        reason_counts: normalized.quarantine_reason_counts,
+        production_db_writes: 0,
+      }),
+      "summary.json": jsonText(summary),
+    },
+    jsonLineFiles: [
+      { name: NORMALIZED_ROWS_FILE, rows: normalized.rows },
+      { name: QUARANTINED_ROWS_FILE, rows: normalized.quarantined },
+    ],
+    secretValues: [process.env.DATA_GO_KR_API_KEY ?? ""],
+  });
   return summary;
 }
 
 async function runReview(args) {
   const inputDir = requireArg(args, "input-dir");
   const outputDir = requireArg(args, "output-dir");
-  const normalized = await readJson(path.join(inputDir, "normalized-bundle.json"));
+  const normalized = await loadPreparedFoodNormalizedArtifacts(inputDir);
   const review = buildPreparedFoodCatalogReview({
     normalizedBundle: normalized,
     decisions: (await readJson(requireArg(args, "decisions"))).decisions,
@@ -197,18 +317,34 @@ async function runReview(args) {
   const sourceManifest = await readJson(path.join(inputDir, "source-manifest.json")).catch(() =>
     readJson(path.join(inputDir, "manifest.json")),
   );
+  const checkpointManifest = attachPreparedFoodApprovalCheckpoint({
+    manifest: sourceManifest,
+    normalizedBundle: normalized,
+    reviewReport: review,
+    scope: requireArg(args, "scope"),
+    approvedAt: requireArg(args, "approved-at"),
+  });
   const summary = successSummary("review", {
     status: "reviewed",
     logical_batch_id: review.logical_batch_id,
     blocker_count: review.blocker_count,
     review_checksum: review.review_checksum,
+    scope: checkpointManifest.query.scope,
+    approved_row_count: checkpointManifest.query.approval_checkpoint.approved_row_count,
   });
-  await publishArtifactBundle(outputDir, {
-    "source-manifest.json": jsonText(sourceManifest),
-    "normalized-bundle.json": jsonText(normalized),
-    "review-report.json": jsonText(review),
-    "summary.json": jsonText(summary),
-  }, { secretValues: [process.env.DATA_GO_KR_API_KEY ?? ""] });
+  await publishPreparedFoodLargeBundle(outputDir, {
+    textFiles: {
+      "source-manifest.json": jsonText(checkpointManifest),
+      "normalized-bundle.json": jsonText(stripPreparedFoodNormalizedBundle(normalized)),
+      "review-report.json": jsonText(review),
+      "summary.json": jsonText(summary),
+    },
+    copiedFiles: [
+      { name: NORMALIZED_ROWS_FILE, from: path.join(inputDir, NORMALIZED_ROWS_FILE) },
+      { name: QUARANTINED_ROWS_FILE, from: path.join(inputDir, QUARANTINED_ROWS_FILE) },
+    ].filter((artifact) => existsSync(artifact.from)),
+    secretValues: [process.env.DATA_GO_KR_API_KEY ?? ""],
+  });
   return summary;
 }
 
@@ -217,7 +353,7 @@ async function runImport(args) {
   const manifest = await readJson(path.join(inputDir, "source-manifest.json")).catch(() =>
     readJson(path.join(inputDir, "manifest.json")),
   );
-  const normalizedBundle = await readJson(path.join(inputDir, "normalized-bundle.json"));
+  const normalizedBundle = await loadPreparedFoodNormalizedArtifacts(inputDir);
   const reviewReport = await readJson(path.join(inputDir, "review-report.json"));
   const bundle = buildPreparedFoodCatalogImportBundle({
     manifest,
@@ -239,16 +375,34 @@ async function runImport(args) {
       idempotency_key,
     });
   }
-  return runLocalPsqlJson(`
-    select public.apply_public_prepared_food_catalog_import(
-      ${sqlJsonExpression({
+  const requestDir = await mkdtemp(path.join(tmpdir(), "homecook-prepared-food-import-"));
+  const requestPath = path.join(requestDir, "request.json");
+  const bundledRowsPath = path.resolve(inputDir, NORMALIZED_ROWS_FILE);
+  const rowsFilePath = existsSync(bundledRowsPath)
+    ? bundledRowsPath
+    : path.join(requestDir, "approved-items.jsonl");
+  try {
+    if (!existsSync(bundledRowsPath)) {
+      await writeJsonLinesFile(rowsFilePath, bundle.approved_items);
+    }
+    const transportBundle = { ...bundle };
+    delete transportBundle.approved_items;
+    await writeFile(requestPath, serializePreparedFoodArtifactJson({
         actor_user_id,
         run_id,
         idempotency_key,
-        bundle,
-      })}
-    )::text;
-  `);
+        bundle: transportBundle,
+    }), { flag: "wx" });
+    return await runLocalPsqlJsonFileFunction(
+      "apply_public_prepared_food_catalog_import",
+      requestPath,
+      process.env,
+      undefined,
+      { timeoutMs: 60 * 60_000, rowsFilePath },
+    );
+  } finally {
+    await rm(requestDir, { recursive: true, force: true });
+  }
 }
 
 function runReport(args) {
@@ -308,12 +462,18 @@ async function runPerfFixture(args) {
     logical_batch_id: bundle.logical_batch_id,
     content_hash: bundle.content_hash,
   });
-  await publishArtifactBundle(outputDir, {
-    "manifest.json": jsonText(raw.manifest),
-    "normalized-bundle.json": jsonText(normalized),
-    "review-report.json": jsonText(review),
-    "approved-import-bundle.json": jsonText(bundle),
-    "summary.json": jsonText(summary),
+  await publishPreparedFoodLargeBundle(outputDir, {
+    textFiles: {
+      "manifest.json": jsonText(raw.manifest),
+      "normalized-bundle.json": jsonText(stripPreparedFoodNormalizedBundle(normalized)),
+      "review-report.json": jsonText(review),
+      "approved-import-bundle.json": jsonText(bundle),
+      "summary.json": jsonText(summary),
+    },
+    jsonLineFiles: [
+      { name: NORMALIZED_ROWS_FILE, rows: normalized.rows },
+      { name: QUARANTINED_ROWS_FILE, rows: normalized.quarantined },
+    ],
   });
   return summary;
 }

@@ -131,16 +131,19 @@ declare
   v_version_updates integer := 0;
   v_writes integer := 0;
   v_item_count integer := 0;
-  v_item_digest text;
-  v_item_digests text[] := '{}'::text[];
   v_sorted_item_digests text[] := '{}'::text[];
+  v_item_digests_valid boolean := false;
+  v_items_from_array boolean := false;
+  v_staged_items_table regclass;
   v_approved_fingerprint_checksum text;
   v_normalized_content_hash text;
   v_source_payload_identity text;
   v_content_hash text;
-  v_product_ids jsonb := '[]'::jsonb;
+  v_product_count integer := 0;
   v_source_ids jsonb := '[]'::jsonb;
 begin
+  v_items_from_array := jsonb_typeof(v_bundle -> 'approved_items') = 'array';
+  v_staged_items_table := to_regclass('pg_temp.homecook_prepared_food_import_items');
   if v_actor is null
     or not exists (select 1 from public.users where id = v_actor)
     or v_run_id is null
@@ -151,8 +154,6 @@ begin
       'e115c54746221b76356748ea6dcb3bd9d4c1461c3854454d53a3371813079b61'
     or v_bundle ->> 'status' <> 'approved_pinned'
     or (v_bundle ->> 'production_db_writes')::integer <> 0
-    or jsonb_typeof(v_bundle -> 'approved_items') <> 'array'
-    or jsonb_array_length(v_bundle -> 'approved_items') = 0
     or coalesce(v_bundle -> 'lifecycle', 'null'::jsonb) <> '["raw", "normalized", "reviewed", "approved_pinned"]'::jsonb
     or jsonb_typeof(v_manifest) <> 'object'
     or v_manifest ->> 'source_id' <> 'data-go-kr-15100066'
@@ -176,25 +177,51 @@ begin
   then
     raise exception 'INVALID_IMPORT_BUNDLE';
   end if;
-  for v_item in
-    select value
-    from jsonb_array_elements(v_bundle -> 'approved_items')
-  loop
-    v_item_count := v_item_count + 1;
-    v_item_digest := public.prepared_food_catalog_import_item_digest(v_item);
-    if v_item ->> 'stable_fingerprint' <> v_item_digest
-      or v_item ->> 'fingerprint' <> v_item_digest
-      or v_item ->> 'content_hash' <> v_item_digest
+  if v_items_from_array then
+    if jsonb_array_length(v_bundle -> 'approved_items') = 0
+      or v_staged_items_table is not null
     then
       raise exception 'INVALID_IMPORT_BUNDLE';
     end if;
-    v_item_digests := array_append(v_item_digests, v_item_digest);
-  end loop;
-  v_sorted_item_digests := array(
-    select digest_value
-    from unnest(v_item_digests) digest_value
-    order by digest_value
-  );
+    execute 'create temporary table homecook_prepared_food_import_items (item jsonb) on commit drop';
+    insert into pg_temp.homecook_prepared_food_import_items(item)
+    select value
+    from jsonb_array_elements(v_bundle -> 'approved_items');
+    v_staged_items_table := to_regclass('pg_temp.homecook_prepared_food_import_items');
+  elsif v_staged_items_table is null
+    or not exists (
+      select 1
+      from pg_catalog.pg_class relation
+      join pg_catalog.pg_attribute attribute
+        on attribute.attrelid = relation.oid
+       and attribute.attname = 'item'
+       and attribute.atttypid = 'jsonb'::regtype
+       and attribute.attnum > 0
+       and not attribute.attisdropped
+      where relation.oid = v_staged_items_table
+        and relation.relkind = 'r'
+    )
+  then
+    raise exception 'INVALID_IMPORT_BUNDLE';
+  end if;
+  select
+    count(*)::integer,
+    coalesce(array_agg(digest_value order by digest_value), '{}'::text[]),
+    coalesce(bool_and(
+      item ->> 'stable_fingerprint' = digest_value
+      and item ->> 'fingerprint' = digest_value
+      and item ->> 'content_hash' = digest_value
+    ), false)
+  into v_item_count, v_sorted_item_digests, v_item_digests_valid
+  from (
+    select
+      item,
+      public.prepared_food_catalog_import_item_digest(item) as digest_value
+    from pg_temp.homecook_prepared_food_import_items
+  ) digested_items;
+  if v_item_count = 0 or not v_item_digests_valid then
+    raise exception 'INVALID_IMPORT_BUNDLE';
+  end if;
   v_approved_fingerprint_checksum := encode(
     extensions.digest(coalesce(array_to_string(v_sorted_item_digests, E'\x1e'), ''), 'sha256'),
     'hex'
@@ -237,7 +264,7 @@ begin
     ),
     'hex'
   );
-  if v_count_quarantined <> 0
+  if v_count_quarantined < 0
     or v_count_normalized <> v_item_count
     or v_count_unique <> v_count_normalized + v_count_quarantined
     or v_count_fetched <> v_count_unique + v_count_deduplicated
@@ -339,8 +366,8 @@ begin
   v_writes := v_writes + 1;
 
   for v_item in
-    select value
-    from jsonb_array_elements(v_bundle -> 'approved_items')
+    select item
+    from pg_temp.homecook_prepared_food_import_items
   loop
     if nullif(btrim(v_item ->> 'external_item_key'), '') is null
       or nullif(btrim(v_item ->> 'external_name'), '') is null
@@ -493,7 +520,7 @@ begin
       null
     );
     v_writes := v_writes + 1;
-    v_product_ids := v_product_ids || to_jsonb(v_product_id);
+    v_product_count := v_product_count + 1;
   end loop;
 
   v_result := jsonb_build_object(
@@ -503,8 +530,8 @@ begin
     'idempotency_key', v_idempotency_key,
     'source_payload_identity', coalesce(v_bundle ->> 'source_payload_identity', ''),
     'content_hash', coalesce(v_bundle ->> 'content_hash', ''),
-    'source_item_count', jsonb_array_length(v_bundle -> 'approved_items'),
-    'product_count', jsonb_array_length(v_product_ids),
+    'source_item_count', v_item_count,
+    'product_count', v_product_count,
     'version_updates', v_version_updates,
     'affected_source_ids', v_source_ids,
     'writes_committed', v_writes + 1,

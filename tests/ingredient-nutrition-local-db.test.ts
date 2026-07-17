@@ -1,4 +1,8 @@
+import { EventEmitter } from "node:events";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PassThrough, Readable } from "node:stream";
 import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vitest";
@@ -168,6 +172,82 @@ describe("ingredient nutrition local database invocation", () => {
       stderr: "ERROR: relation does not exist\n",
       error: undefined,
     }))).toThrowError(expect.objectContaining({ code: "LOCAL_DATABASE_UNAVAILABLE" }));
+  });
+
+  it("allows a bounded longer timeout for large local-only import transactions", async () => {
+    const { runLocalPsqlJson } = await import(MODULE);
+    const calls: Array<{ timeout?: number }> = [];
+    const spawn = (_command: string, _args: string[], options: typeof calls[number]) => {
+      calls.push(options);
+      return {
+        status: 0,
+        stdout: `${JSON.stringify({ applied: true })}\n`,
+        stderr: "",
+        error: undefined,
+      };
+    };
+
+    expect(runLocalPsqlJson(
+      "select large_local_import()::text;",
+      {},
+      spawn,
+      { timeoutMs: 15 * 60_000 },
+    )).toEqual({ applied: true });
+    expect(calls[0]?.timeout).toBe(15 * 60_000);
+  });
+
+  it("streams a large JSON payload through a local-only psql copy without base64 expansion", async () => {
+    const { runLocalPsqlJsonFileFunction } = await import(MODULE);
+    const directory = mkdtempSync(join(tmpdir(), "homecook-local-json-"));
+    const payloadPath = join(directory, "payload.json");
+    const rowsPath = join(directory, "rows.jsonl");
+    const payload = { actor_user_id: "local-actor", bundle: { approved_items: [{ id: 1 }] } };
+    writeFileSync(payloadPath, `${JSON.stringify(payload)}\n`, "utf8");
+    const rows = [{ name: "따옴표 \" 보존" }, { name: "역슬래시 \\ 보존" }];
+    writeFileSync(rowsPath, `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`, "utf8");
+    let stdinText = "";
+
+    const spawn = () => {
+      const child = new EventEmitter() as EventEmitter & {
+        stdin: PassThrough;
+        stdout: Readable;
+        stderr: Readable;
+        kill: () => boolean;
+      };
+      child.stdin = new PassThrough();
+      child.stdout = Readable.from([`${JSON.stringify({ applied: true })}\n`]);
+      child.stderr = Readable.from([]);
+      child.kill = () => true;
+      child.stdin.on("data", (chunk) => {
+        stdinText += chunk.toString();
+      });
+      child.stdin.on("finish", () => {
+        queueMicrotask(() => child.emit("close", 0, null));
+      });
+      return child;
+    };
+
+    try {
+      await expect(runLocalPsqlJsonFileFunction(
+        "apply_public_prepared_food_catalog_import",
+        payloadPath,
+        {},
+        spawn,
+        { timeoutMs: 15 * 60_000, rowsFilePath: rowsPath },
+      )).resolves.toEqual({ applied: true });
+      expect(stdinText).toContain(
+        "\\copy pg_temp.homecook_local_json_payload(payload) from stdin with (format csv, delimiter E'\\x02', quote E'\\x01', escape E'\\x01')",
+      );
+      expect(stdinText).toContain(JSON.stringify(payload));
+      expect(stdinText).toContain(
+        "\\copy pg_temp.homecook_prepared_food_import_items(item) from stdin with (format csv, delimiter E'\\x02', quote E'\\x01', escape E'\\x01')",
+      );
+      expect(stdinText).toContain(rows.map((row) => JSON.stringify(row)).join("\n"));
+      expect(stdinText).toContain("public.apply_public_prepared_food_catalog_import");
+      expect(stdinText).not.toContain(Buffer.from(JSON.stringify(payload)).toString("base64"));
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it("rejects psql meta-commands before starting the local override process", async () => {
