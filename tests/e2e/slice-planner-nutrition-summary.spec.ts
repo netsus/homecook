@@ -239,6 +239,28 @@ test.describe("planner-nutrition-summary", () => {
   test("same-range meal refresh keeps the prior complete value on error and retry replaces it", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
     let responseMode: "initial" | "error" | "retry" = "initial";
+    let mealPatchCount = 0;
+    let mealPatchBody: unknown = null;
+    await page.route("**/api/v1/meals/*", async (route) => {
+      if (route.request().method() !== "PATCH") {
+        await route.continue();
+        return;
+      }
+
+      mealPatchCount += 1;
+      mealPatchBody = route.request().postDataJSON();
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            id: "550e8400-e29b-41d4-a716-446655440060",
+            planned_servings: 3,
+            status: "registered",
+          },
+          error: null,
+        },
+      });
+    });
     await page.route("**/api/v1/planner/nutrition?*", async (route) => {
       if (responseMode === "error") {
         await route.fulfill({
@@ -276,6 +298,8 @@ test.describe("planner-nutrition-summary", () => {
     await summary.getByRole("button", { name: "다시 시도" }).click();
     await expect(summary).toContainText("777 kcal");
     await expect(summary.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
+    expect(mealPatchCount).toBe(1);
+    expect(mealPatchBody).toEqual({ planned_servings: 3 });
   });
 
   test("range loading hides prior content and a stale response cannot replace the latest range", async ({ page }, testInfo) => {
