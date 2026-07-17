@@ -2,7 +2,9 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
-/** @typedef {{ status: number | null }} PlannerNutritionPostgresCommandResult */
+/** @typedef {{ status: number | null, error?: Error }} PlannerNutritionPostgresCommandResult */
+/** @typedef {"running" | "stopped" | "unknown"} PlannerNutritionPostgresClusterState */
+/** @typedef {"alive" | "dead" | "missing" | "unknown"} PlannerNutritionPostmasterPidState */
 /**
  * @typedef {{
  *   root: string,
@@ -33,18 +35,34 @@ function defaultProcessIsAlive(pid) {
   }
 }
 
-function readPostmasterPid(dataDirectory, pathExists, readText) {
+/** @returns {PlannerNutritionPostmasterPidState} */
+function probePostmasterPid(dataDirectory, pathExists, readText, isProcessAlive) {
   const pidPath = path.join(dataDirectory, "postmaster.pid");
-  if (!pathExists(pidPath)) return null;
+  if (!pathExists(pidPath)) return "missing";
   try {
-    const pid = Number.parseInt(readText(pidPath, "utf8").split("\n", 1)[0] ?? "", 10);
-    return Number.isSafeInteger(pid) && pid > 0 ? pid : null;
+    const pidText = (readText(pidPath, "utf8").split("\n", 1)[0] ?? "").trim();
+    if (!/^[1-9]\d*$/.test(pidText)) return "unknown";
+    const pid = Number.parseInt(pidText, 10);
+    if (!Number.isSafeInteger(pid) || pid <= 0) return "unknown";
+    return isProcessAlive(pid) ? "alive" : "dead";
   } catch {
-    return null;
+    return "unknown";
   }
 }
 
-function clusterIsRunning({
+function runCommandSafely(command, commandName, args) {
+  try {
+    return command(commandName, args);
+  } catch (error) {
+    return {
+      status: null,
+      error: error instanceof Error ? error : new Error("PostgreSQL command failed"),
+    };
+  }
+}
+
+/** @returns {PlannerNutritionPostgresClusterState} */
+function probeClusterState({
   dataDirectory,
   pgCtlPath,
   command,
@@ -52,10 +70,30 @@ function clusterIsRunning({
   readText,
   isProcessAlive,
 }) {
-  if (!pathExists(dataDirectory)) return false;
-  const status = command(pgCtlPath, ["-D", dataDirectory, "status"]);
-  const pid = readPostmasterPid(dataDirectory, pathExists, readText);
-  return status.status === 0 || (pid !== null && isProcessAlive(pid));
+  if (!pathExists(dataDirectory)) return "stopped";
+
+  const statusResult = runCommandSafely(
+    command,
+    pgCtlPath,
+    ["-D", dataDirectory, "status"],
+  );
+  const pidState = probePostmasterPid(
+    dataDirectory,
+    pathExists,
+    readText,
+    isProcessAlive,
+  );
+
+  if (pidState === "alive") return "running";
+  if (statusResult.error === undefined && statusResult.status === 0) return "running";
+  if (
+    statusResult.error === undefined &&
+    statusResult.status === 3 &&
+    (pidState === "missing" || pidState === "dead")
+  ) {
+    return "stopped";
+  }
+  return "unknown";
 }
 
 export async function runPlannerNutritionPostgresLifecycle({
@@ -86,7 +124,7 @@ export function cleanupPlannerNutritionPostgresCluster({
   isProcessAlive = defaultProcessIsAlive,
   removeRoot = (target) => rmSync(target, { recursive: true, force: true }),
 }) {
-  const probe = () => clusterIsRunning({
+  const probe = () => probeClusterState({
     dataDirectory,
     pgCtlPath,
     command,
@@ -97,20 +135,28 @@ export function cleanupPlannerNutritionPostgresCluster({
   const clusterMayExist = lifecycleState?.startAttempted === true ||
     lifecycleState?.started === true || pathExists(dataDirectory);
 
-  if (clusterMayExist && probe()) {
-    const fastStop = command(pgCtlPath, [
+  let clusterState = clusterMayExist ? probe() : "stopped";
+  if (clusterMayExist && clusterState !== "stopped") {
+    runCommandSafely(command, pgCtlPath, [
       "-D", dataDirectory, "-m", "fast", "-w", "stop",
     ]);
-    if (fastStop.status !== 0 || probe()) {
-      command(pgCtlPath, [
+    clusterState = probe();
+    if (clusterState !== "stopped") {
+      runCommandSafely(command, pgCtlPath, [
         "-D", dataDirectory, "-m", "immediate", "-w", "stop",
       ]);
+      clusterState = probe();
     }
   }
 
-  if (clusterMayExist && probe()) {
+  if (clusterMayExist && clusterState === "running") {
     throw new Error(
       `Planner nutrition PostgreSQL cleanup failed; live cluster data preserved at ${dataDirectory}`,
+    );
+  }
+  if (clusterMayExist && clusterState === "unknown") {
+    throw new Error(
+      `Planner nutrition PostgreSQL cleanup state could not be confirmed; data preserved at ${dataDirectory}`,
     );
   }
 

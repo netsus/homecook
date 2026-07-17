@@ -85,4 +85,151 @@ describe("planner nutrition PostgreSQL runner lifecycle", () => {
     ]);
     expect(removeRoot).not.toHaveBeenCalled();
   });
+
+  it("preserves the cluster when status is null and postmaster.pid is malformed", () => {
+    const removeRoot = vi.fn();
+    const command = vi.fn((_commandName: string, args: string[]) => {
+      if (args.includes("status")) return { status: null };
+      return { status: 1 };
+    });
+
+    expect(() => cleanupPlannerNutritionPostgresCluster({
+      root: "/tmp/planner-nutrition-null-status",
+      dataDirectory: "/tmp/planner-nutrition-null-status/data",
+      pgCtlPath: "/postgres/bin/pg_ctl",
+      lifecycleState: { startAttempted: true, started: false },
+      command,
+      pathExists: (target: string) => target.endsWith("data") || target.endsWith("postmaster.pid"),
+      readText: () => "not-a-pid\n",
+      isProcessAlive: vi.fn(),
+      removeRoot,
+    })).toThrow(
+      "Planner nutrition PostgreSQL cleanup state could not be confirmed; data preserved at /tmp/planner-nutrition-null-status/data",
+    );
+
+    expect(command.mock.calls.map((call) => call[1])).toContainEqual([
+      "-D", "/tmp/planner-nutrition-null-status/data", "-m", "fast", "-w", "stop",
+    ]);
+    expect(command.mock.calls.map((call) => call[1])).toContainEqual([
+      "-D", "/tmp/planner-nutrition-null-status/data", "-m", "immediate", "-w", "stop",
+    ]);
+    expect(removeRoot).not.toHaveBeenCalled();
+  });
+
+  it("preserves the cluster when the status command errors and postmaster.pid is missing", () => {
+    const removeRoot = vi.fn();
+    const command = vi.fn((_commandName: string, args: string[]) => {
+      if (args.includes("status")) throw new Error("spawn failed");
+      return { status: 1 };
+    });
+
+    expect(() => cleanupPlannerNutritionPostgresCluster({
+      root: "/tmp/planner-nutrition-status-error",
+      dataDirectory: "/tmp/planner-nutrition-status-error/data",
+      pgCtlPath: "/postgres/bin/pg_ctl",
+      lifecycleState: { startAttempted: true, started: false },
+      command,
+      pathExists: (target: string) => target.endsWith("data"),
+      readText: vi.fn(),
+      isProcessAlive: vi.fn(),
+      removeRoot,
+    })).toThrow(
+      "Planner nutrition PostgreSQL cleanup state could not be confirmed; data preserved at /tmp/planner-nutrition-status-error/data",
+    );
+
+    expect(command.mock.calls.map((call) => call[1])).toContainEqual([
+      "-D", "/tmp/planner-nutrition-status-error/data", "-m", "fast", "-w", "stop",
+    ]);
+    expect(command.mock.calls.map((call) => call[1])).toContainEqual([
+      "-D", "/tmp/planner-nutrition-status-error/data", "-m", "immediate", "-w", "stop",
+    ]);
+    expect(removeRoot).not.toHaveBeenCalled();
+  });
+
+  it("preserves the cluster for an unexpected status even when postmaster.pid is missing", () => {
+    const removeRoot = vi.fn();
+    const command = vi.fn((_commandName: string, args: string[]) => {
+      if (args.includes("status")) return { status: 1 };
+      return { status: 0 };
+    });
+
+    expect(() => cleanupPlannerNutritionPostgresCluster({
+      root: "/tmp/planner-nutrition-unexpected-status",
+      dataDirectory: "/tmp/planner-nutrition-unexpected-status/data",
+      pgCtlPath: "/postgres/bin/pg_ctl",
+      lifecycleState: { startAttempted: true, started: false },
+      command,
+      pathExists: (target: string) => target.endsWith("data"),
+      readText: vi.fn(),
+      isProcessAlive: vi.fn(),
+      removeRoot,
+    })).toThrow(
+      "Planner nutrition PostgreSQL cleanup state could not be confirmed; data preserved at /tmp/planner-nutrition-unexpected-status/data",
+    );
+
+    expect(removeRoot).not.toHaveBeenCalled();
+  });
+
+  it("does not accept a numeric-prefix malformed postmaster.pid as proof of a stopped cluster", () => {
+    const removeRoot = vi.fn();
+
+    expect(() => cleanupPlannerNutritionPostgresCluster({
+      root: "/tmp/planner-nutrition-malformed-pid",
+      dataDirectory: "/tmp/planner-nutrition-malformed-pid/data",
+      pgCtlPath: "/postgres/bin/pg_ctl",
+      lifecycleState: { startAttempted: true, started: false },
+      command: vi.fn(() => ({ status: 3 })),
+      pathExists: (target: string) => target.endsWith("data") || target.endsWith("postmaster.pid"),
+      readText: () => "4321garbage\n",
+      isProcessAlive: () => false,
+      removeRoot,
+    })).toThrow(
+      "Planner nutrition PostgreSQL cleanup state could not be confirmed; data preserved at /tmp/planner-nutrition-malformed-pid/data",
+    );
+
+    expect(removeRoot).not.toHaveBeenCalled();
+  });
+
+  it("removes a cluster only when status 3 and PID absence prove it is stopped", () => {
+    const removeRoot = vi.fn();
+    const command = vi.fn(() => ({ status: 3 }));
+
+    cleanupPlannerNutritionPostgresCluster({
+      root: "/tmp/planner-nutrition-stopped",
+      dataDirectory: "/tmp/planner-nutrition-stopped/data",
+      pgCtlPath: "/postgres/bin/pg_ctl",
+      lifecycleState: { startAttempted: true, started: false },
+      command,
+      pathExists: (target: string) => target.endsWith("data"),
+      readText: vi.fn(),
+      isProcessAlive: vi.fn(),
+      removeRoot,
+    });
+
+    expect(command).toHaveBeenCalledOnce();
+    expect(command).toHaveBeenCalledWith("/postgres/bin/pg_ctl", [
+      "-D", "/tmp/planner-nutrition-stopped/data", "status",
+    ]);
+    expect(removeRoot).toHaveBeenCalledWith("/tmp/planner-nutrition-stopped");
+  });
+
+  it("removes the temporary root before any cluster creation was attempted", () => {
+    const removeRoot = vi.fn();
+    const command = vi.fn();
+
+    cleanupPlannerNutritionPostgresCluster({
+      root: "/tmp/planner-nutrition-before-initdb",
+      dataDirectory: "/tmp/planner-nutrition-before-initdb/data",
+      pgCtlPath: "/postgres/bin/pg_ctl",
+      lifecycleState: { startAttempted: false, started: false },
+      command,
+      pathExists: () => false,
+      readText: vi.fn(),
+      isProcessAlive: vi.fn(),
+      removeRoot,
+    });
+
+    expect(command).not.toHaveBeenCalled();
+    expect(removeRoot).toHaveBeenCalledWith("/tmp/planner-nutrition-before-initdb");
+  });
 });
