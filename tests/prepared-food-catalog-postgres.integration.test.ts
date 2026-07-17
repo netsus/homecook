@@ -165,13 +165,8 @@ describe.runIf(enabled)("prepared food catalog isolated PostgreSQL integration",
     `);
   });
 
-  it("starts with zero approved public product rows and no catalog importer surface", () => {
+  it("starts with zero approved public product rows before any operator import", () => {
     expect(psql("select count(*) from public.food_products where visibility = 'public';")).toBe("0");
-    expect(psql(`
-      select count(*) from pg_proc
-      where pronamespace = 'public'::regnamespace
-        and proname ~ '(import|promote|seed).*food.*product';
-    `)).toBe("0");
   });
 
   it("atomically creates sparse private manual nutrition without false zero values", () => {
