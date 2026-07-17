@@ -1,0 +1,90 @@
+{
+  "id": "ingredient-nutrition-full-coverage",
+  "title": "Ingredient nutrition full coverage",
+  "summary": "모든 canonical ingredient를 승인 영양 profile 또는 strict excluded decision으로 완전 분류한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "전수 inventory의 unclassified와 eligible_without_profile을 0으로 만들되 missing을 0이나 임의 매핑으로 위조하지 않는다.",
+  "owners": {
+    "claude": "replaced for this nutrition slice by explicit user approval",
+    "codex": "role-separated Codex sessions own docs, implementation, and independent review",
+    "workers": []
+  },
+  "dependencies": [
+    "nutrition/products public-sharing official contract PR #1026 merged at 403bf16c50cc4fd35c88a10510b4a216e866f991",
+    "public-nutrition-source-acquisition merged",
+    "ingredient-nutrition-conversion-model merged"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.21.md",
+      "docs/화면정의서-v1.5.27.md",
+      "docs/유저flow맵-v1.3.24.md",
+      "docs/db설계-v1.3.22.md",
+      "docs/api문서-v1.2.26.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/ingredient-nutrition-full-coverage/README.md",
+      "docs/workpacks/ingredient-nutrition-full-coverage/acceptance.md",
+      "docs/workpacks/ingredient-nutrition-full-coverage/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/qa-system.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": ["manual:fresh-local-supabase-full-coverage-lifecycle"],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {"backend": 4}
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm exec vitest run tests/ingredient-nutrition-coverage.test.ts tests/ingredient-nutrition-full-coverage-postgres.integration.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/ingredient-nutrition-full-coverage pnpm validate:workpack -- --slice ingredient-nutrition-full-coverage",
+      "node scripts/validate-automation-spec.mjs --slice ingredient-nutrition-full-coverage",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/ingredient-nutrition-coverage.test.ts tests/ingredient-nutrition-full-coverage-postgres.integration.test.ts",
+      "pnpm verify:backend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "all-current-ingredients-inventory-checksum",
+      "eligible-or-strict-excluded-bijection",
+      "unclassified-and-conflict-zero",
+      "missing-not-zero",
+      "idempotent-apply-disable-and-external-write-gate",
+      "independent-stage1-and-stage3-review"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "pr_path": null,
+  "out_of_scope": [
+    "recipe snapshot recalculation and Recipe Detail UI",
+    "public API or frontend",
+    "generic density piece weight cooking loss or name-only approval",
+    "unapproved staging or production writes"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs are being locked on the exact official contract. The observed local 845 count is evidence only; the deterministic inventory artifact owns the runtime denominator."
+}
