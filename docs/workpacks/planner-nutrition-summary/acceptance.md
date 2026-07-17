@@ -57,6 +57,8 @@
 - [x] case/process/socket/temp directory cleanup 뒤 scoped row/process가 남지 않는다 <!-- omo:id=accept-planner-nutrition-pg-cleanup;stage=2;scope=backend;review=3,6 -->
 - [ ] fixture browser는 `lib/mock/qa-fixtures.ts`와 `qa/fixtures/slices-01-05.json`을 `pnpm dev:qa-fixtures`로 실행하고 real local DB는 `pnpm local:reset:demo` 후 `pnpm dev:local-supabase`로 구분한다 <!-- omo:id=accept-planner-nutrition-fixture-reset-path;stage=4;scope=shared;review=6 -->
 
+> Stage 3 review evidence: initial `0/2/1`과 second `0/2/0` findings를 역할 분리된 repair가 닫았고, fresh independent reviewer가 exact backend head `624c57ed7ba2b154cabbb949d09732eed406b273`를 `STAGE3_APPROVED`, Blocker/Important/Suggestion `0/0/0`으로 승인했다. targeted 8 files/55 tests, isolated PostgreSQL 17.10 2/2, `pnpm verify:backend` product 1,560 passed/24 intended skipped와 security 12/12, current-head PR checks 0 fail/0 pending을 확인했다. 이 승인은 Stage 3 backend에만 해당하며 Stage 4 이후를 닫지 않는다.
+
 ## PLANNER_WEEK UI
 
 - [ ] 주간 범위에 `계획 영양` label과 compact kcal/incomplete indicator가 있다 <!-- omo:id=accept-planner-nutrition-week-summary;stage=4;scope=frontend;review=5,6 -->
@@ -108,6 +110,7 @@
 ### Manual Only
 
 - [x] independent fresh Codex Stage 1.5 exact-head docs review/repair-final approval — 2026-07-17, repaired fingerprint `83f54e3942b40ceb46af2f917d6981f111a18060e4139ee7a96727651d05f315`, `RE_REVIEW_APPROVED 0/0/0`
+- [x] independent fresh Codex Stage 3 exact-head backend approval — 2026-07-17, head `624c57ed7ba2b154cabbb949d09732eed406b273`, `STAGE3_APPROVED 0/0/0`, current-head checks 0 fail/0 pending
 - [ ] full local Supabase/PostgREST/auth claim real browser smoke
 - [ ] physical iOS/Android narrow device와 실제 screen reader 확인
 - [ ] production-scale query plan/large entry count/RLS cost 측정

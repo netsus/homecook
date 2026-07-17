@@ -143,7 +143,7 @@
     "blocked_reason_code": null
   },
   "closeout": {
-    "phase": "collecting",
+    "phase": "projecting",
     "docs_projection": {
       "roadmap_lifecycle": "in_progress",
       "design_status": "temporary",
@@ -158,46 +158,53 @@
       "authority_reports": [],
       "actual_verification_refs": [
         "Stage 2 RED: missing aggregate module, undefined read model, missing route module, and missing isolated PostgreSQL runner each failed before implementation",
-        "Targeted aggregate/API/read-model plus existing planner/meals/product/snapshot regressions passed 7 files and 45 tests",
+        "Targeted aggregate/API/read-model/runner lifecycle plus existing planner/meals/product/snapshot regressions passed 8 files and 55 tests",
         "tests/planner-nutrition-postgres.integration.test.ts via scripts/run-planner-nutrition-postgres-integration.mjs passed 2/2 on isolated non-5432 PostgreSQL 17.10 with real bootstrap, owner A/B, pinned recipe/product aggregates, old-pin stability, source-version separation, bounded reads, zero measured writes, and process/socket/temp cleanup",
-        "pnpm verify:backend passed lint with 0 errors and 4 unrelated existing warnings, typecheck, 1550 product tests with 24 intended skips, production build, and security Playwright 12/12",
+        "pnpm verify:backend passed lint with 0 errors and 4 unrelated existing warnings, typecheck, 1560 product tests with 24 intended skips, production build, and security Playwright 12/12",
+        "Fresh independent Stage 3 reviewer approved exact backend head 624c57ed7ba2b154cabbb949d09732eed406b273 with STAGE3_APPROVED and Blocker/Important/Suggestion 0/0/0 after role-separated closeout, runner cleanup, and shutdown tri-state repairs",
+        "GitHub PR #1021 started checks at exact head 624c57ed7ba2b154cabbb949d09732eed406b273 completed with 0 failed and 0 pending checks",
         "No migration, RPC, dependency, generic preparation/size/edible field, or unapproved endpoint/query/response/status/error surface was added; production/staging/provider writes remain 0",
-        "Stage 2 implementation is pending fresh independent Stage 3 exact-head review; Stage 4 UI/browser/authority evidence remains pending"
+        "Stage 3 backend review is approved only; Stage 4 UI/browser/real local DB, authority precheck, Stage 5, final authority, Stage 6, and final closeout remain pending"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending-independent-stage3-review",
+      "current_head_sha": "pending-pr-head-after-stage3-closeout-projection",
       "approval_state": "codex_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
-      "manual_patch_count": 0,
+      "manual_patch_count": 3,
       "manual_handoff": false,
       "stale_lock_count": 0,
-      "ci_resync_count": 0,
+      "ci_resync_count": 3,
       "artifact_missing": false,
-      "last_recovery_at": "2026-07-17T01:01:59Z"
+      "last_recovery_at": "2026-07-17T03:45:39Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 0,
+      "codex_repairable_count": 5,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": null,
+      "latest_reason_code": "stage3_repairs_and_current_head_recheck_complete",
       "evidence_sources": [
-        "docs/workpacks/planner-nutrition-summary/README.md Stage 2 implementation evidence",
+        "GitHub PR #1021 independent Stage 3 review rounds and exact-head checks",
+        "commit bb6530563f45b904e9739f7ee12c1eb78042b746 Stage 3 closeout projection repair",
+        "commit 03d3d59fea587c34a076454ceab2bb8f5c6cf28e Stage 3 PostgreSQL runner cleanup repair",
+        "commit 624c57ed7ba2b154cabbb949d09732eed406b273 Stage 3 shutdown tri-state repair",
+        "docs/workpacks/planner-nutrition-summary/README.md Stage 2 and Stage 3 backend evidence",
         "tests/planner-nutrition-aggregate.test.ts",
         "tests/planner-nutrition-api.test.ts",
         "tests/planner-nutrition-read-model.test.ts",
+        "tests/planner-nutrition-postgres-runner.test.ts",
         "tests/planner-nutrition-postgres.integration.test.ts",
         "scripts/run-planner-nutrition-postgres-integration.mjs"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-07-17T01:01:59Z",
-      "status_synced_at": "2026-07-17T01:01:59Z",
-      "pr_body_synced_at": "pending-independent-stage3-review"
+      "docs_synced_at": "2026-07-17T03:45:39Z",
+      "status_synced_at": "2026-07-17T03:45:39Z",
+      "pr_body_synced_at": "pending-post-closeout-head"
     }
   },
   "branch": "feature/be-planner-nutrition-summary",
@@ -211,5 +218,5 @@
     "Production staging external provider writes and secret or raw provider output"
   ],
   "open_questions": [],
-  "notes": "Stage 2 backend TDD implementation is complete on feature/be-planner-nutrition-summary after the independent Stage 1.5 docs approval. RED was observed for the absent aggregate module, read model, route, and PostgreSQL runner before implementation. Targeted Vitest passed 7 files/45 tests; isolated non-5432 PostgreSQL 17.10 passed 2/2 with actual bootstrap, pinned recipe/product aggregation, current-switch old-pin stability, source-version separation, owner isolation, bounded reads, zero measured writes, and cleanup; pnpm verify:backend passed product 1550 with 24 intended skips, production build, and security 12/12. Only the exact read-only GET /planner/nutrition contract was implemented, with no migration/RPC/dependency or generic preparation/size/edible field and zero production/staging/provider writes. closeout_phase=collecting, auto_merge remains false, and this implementer has not approved Stage 3. Fresh independent Stage 3 exact-head review, Stage 4 UI/browser/real-local-DB evidence, authority reviews, and final closeout remain pending."
+  "notes": "Canonical Stage 3 backend projection: .workflow-v2/work-items/planner-nutrition-summary.json#closeout. Backend PR #1021 remains open. Independent review rounds found 0/2/1 and 0/2/0; role-separated commits bb6530563f45b904e9739f7ee12c1eb78042b746, 03d3d59fea587c34a076454ceab2bb8f5c6cf28e, and 624c57ed7ba2b154cabbb949d09732eed406b273 repaired the closeout state, PostgreSQL lifecycle cleanup, Unicode regression, and shutdown tri-state preservation. A fresh exact-head reviewer then approved 624c57ed7ba2b154cabbb949d09732eed406b273 with STAGE3_APPROVED 0/0/0. Targeted tests passed 55/55, isolated PostgreSQL 17.10 passed 2/2, pnpm verify:backend passed product 1560 with 24 intended skips plus build and security 12/12, and exact reviewed-head GitHub checks finished 0 fail/0 pending. No migration/RPC/dependency or generic preparation/size/edible field was added; production/staging/provider writes remain zero. This approval closes only Stage 3 backend review. lifecycle remains in_progress, Design Status temporary, closeout_phase=projecting, and auto_merge=false. Stage 4 UI/browser/real local DB, authority precheck, Stage 5, final authority, Stage 6, and final closeout remain pending."
 }
