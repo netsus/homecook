@@ -1,0 +1,200 @@
+{
+  "slice_id": "planner-nutrition-summary",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /planner/nutrition?start_date={date}&end_date={date}"
+    ],
+    "invariants": [
+      "exactly-one-new-read-only-get-planner-nutrition-endpoint-is-added",
+      "query-is-exactly-start-date-and-end-date-with-an-inclusive-maximum-seven-day-range",
+      "all-json-responses-preserve-success-data-error-and-code-message-fields-envelope-shapes",
+      "missing-invalid-reversed-or-over-seven-day-query-uses-existing-422-validation-error",
+      "unauthenticated-read-uses-existing-401-unauthorized-and-no-new-status-or-error-code",
+      "success-data-is-exactly-range-summary-days-and-nested-columns-with-official-field-shapes",
+      "every-range-day-and-column-nutrition-uses-basis-amount-one-unit-range-core-five-values-status-quality-incomplete-count-warnings-and-sources",
+      "recipe-detail-only-availability-base-serving-vector-snapshot-calculated-at-and-ingredient-count-fields-are-not-added-to-aggregate",
+      "recipe-entry-count-and-product-entry-count-are-range-level-deduped-storage-entry-counts",
+      "recipe-meal-uses-only-its-pinned-recipe-nutrition-snapshot-id-and-never-current-repin",
+      "recipe-planned-nutrition-uses-pinned-scalable-times-planned-servings-over-base-servings-plus-fixed",
+      "null-recipe-snapshot-remains-unavailable-and-incomplete-without-blocking-the-meal",
+      "product-entry-uses-only-its-pinned-product-nutrition-version-id-version-basis-relations-and-entry-quantity",
+      "product-current-version-metadata-change-or-soft-delete-never-changes-an-existing-entry-aggregate",
+      "same-recipe-or-product-storage-entry-is-never-counted-twice-through-existing-read-arrays-or-adapters",
+      "core-five-keys-are-energy-carbohydrate-protein-fat-and-sodium",
+      "only-observed-complete-zero-is-zero-and-missing-null-unreadable-conversion-failure-or-unavailable-is-never-zero",
+      "all-complete-nutrient-produces-complete-amount-total",
+      "partial-or-unavailable-with-a-known-sum-produces-partial-null-amount-known-amount-minimum",
+      "all-unavailable-nutrient-produces-null-amount-null-known-amount-unavailable",
+      "zero-entry-scope-produces-unavailable-null-values-null-quality-zero-incomplete-count-empty-warning-source-and-never-false-zero",
+      "incomplete-entry-count-counts-each-entry-at-most-once-per-range-day-or-column-when-any-core-nutrient-is-not-complete",
+      "quality-merges-all-direct-to-direct-all-estimated-to-estimated-and-any-other-calculable-combination-to-mixed",
+      "quality-is-null-when-all-entries-are-unavailable-and-remains-independent-from-completeness",
+      "warnings-are-deterministically-aggregated-from-pinned-payloads-without-mutating-or-rebuilding-them",
+      "source-items-have-exactly-provider-dataset-source-version-data-basis-date-license-and-source-url",
+      "source-tuples-are-deduped-per-range-day-and-column-with-null-first-unicode-ordinal-order-and-different-source-versions-never-merge",
+      "api-key-auth-query-cookie-token-raw-provider-row-payload-url-manifest-path-service-credential-and-other-user-id-leak-zero",
+      "owner-and-date-scope-are-applied-before-fetch-and-other-user-count-pin-version-source-leak-zero",
+      "bounded-read-shape-is-one-owner-date-meals-query-one-distinct-recipe-snapshot-in-query-and-one-existing-product-entry-rpc-without-date-column-or-entry-n-plus-one",
+      "ensure-public-user-row-and-ensure-user-bootstrap-state-complete-before-nutrition-request-measurement-and-are-never-called-by-the-get-route-or-service",
+      "bootstrap-produces-the-user-row-and-default-breakfast-lunch-dinner-columns-before-read-only-measurement",
+      "endpoint-call-performs-zero-user-column-meal-product-entry-snapshot-version-current-source-production-staging-or-provider-writes",
+      "no-new-table-column-index-trigger-rpc-or-other-database-surface-is-added",
+      "actual-consumption-goals-medical-coaching-cooking-loss-generic-prep-size-edible-fields-density-and-relation-chaining-remain-out-of-scope"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/planner-nutrition-aggregate.test.ts tests/planner-nutrition-api.test.ts tests/planner-nutrition-read-model.test.ts tests/planner-route.test.ts tests/meals-route.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/recipe-nutrition-snapshot.test.ts",
+      "node scripts/run-planner-nutrition-postgres-integration.mjs",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/planner-nutrition-summary pnpm validate:workpack -- --slice planner-nutrition-summary",
+      "node scripts/validate-automation-spec.mjs --slice planner-nutrition-summary",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "exact-endpoint-query-envelope-official-success-shape-and-no-extra-context-fields",
+      "missing-invalid-reversed-over-seven-day-422-and-unauthenticated-401-existing-contracts",
+      "range-day-column-projection-with-recipe-and-product-entry-counts",
+      "recipe-pinned-snapshot-scalable-planned-serving-plus-fixed-formula-and-null-pin-unavailable",
+      "product-pinned-version-quantity-old-pin-current-switch-metadata-change-and-soft-delete-stability",
+      "storage-identity-dedupe-across-recipe-product-and-existing-read-adapters",
+      "core-five-complete-partial-unavailable-known-minimum-and-observed-zero-versus-missing",
+      "zero-entry-scope-unavailable-null-quality-zero-incomplete-empty-warning-source-and-no-false-zero",
+      "scope-level-incomplete-entry-count-counts-one-entry-once-across-multiple-missing-nutrients",
+      "direct-estimated-mixed-and-all-unavailable-null-quality-merge",
+      "pinned-warning-determinism-and-exact-six-field-source-tuple-stable-dedupe-with-version-separation",
+      "owner-date-scope-cross-owner-leak-zero-and-bounded-query-count-without-n-plus-one",
+      "pre-request-bootstrap-user-and-three-default-columns-then-get-route-does-not-bootstrap-and-before-after-target-planner-write-zero",
+      "recipe-direct-estimated-mixed-snapshots-product-complete-partial-unavailable-direct-pins-and-aggregate-mixed-without-product-quality-warning-schema-expansion",
+      "read-only-call-before-after-zero-write-and-production-staging-provider-write-zero",
+      "non-5432-isolated-postgresql-17-migrations-current-switch-source-version-and-cleanup"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/planner",
+      "/planner/[date]/[columnId]"
+    ],
+    "required_states": [
+      "week-and-day-complete-total-energy",
+      "week-and-day-partial-minimum-energy-with-incomplete-indicator",
+      "week-and-day-unavailable-information-pending-not-zero",
+      "meal-core-five-complete-partial-unavailable",
+      "meal-direct-estimated-mixed-and-null-quality",
+      "meal-combined-incomplete-entry-count-and-aggregate-warning-guidance",
+      "summary-loading-with-existing-planner-or-entry-content-preserved",
+      "summary-error-inline-retry-with-existing-content-preserved",
+      "empty-no-entry-without-false-zero",
+      "read-only-summary-has-no-mutation-or-repin-control",
+      "unauthorized-return-to-current-week-date-and-column",
+      "latest-week-date-column-request-wins-over-stale-response"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/planner-nutrition-ui.test.tsx tests/planner-week-screen.test.tsx tests/planner-meal-screen.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm qa:explore -- --slice planner-nutrition-summary",
+      "pnpm qa:eval -- --checklist .artifacts/qa/planner-nutrition-summary/latest/exploratory-checklist.json --report .artifacts/qa/planner-nutrition-summary/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm test:e2e:regression:ci --grep planner-nutrition-summary",
+      "pnpm validate:authority-evidence-presence -- --slice planner-nutrition-summary",
+      "pnpm validate:closeout-sync -- --slice planner-nutrition-summary",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "mobile-chrome",
+      "mobile-ios-small",
+      "desktop-chrome"
+    ],
+    "artifact_assertions": [
+      "planner-week-range-and-day-compact-planned-energy-and-incomplete-indicator",
+      "planner-week-does-not-repeat-core-five-macro-tables-inside-day-cards",
+      "meal-screen-current-column-core-five-combined-incomplete-count-quality-and-warning-guidance",
+      "complete-partial-minimum-unavailable-information-pending-and-observed-zero-copy-never-confuse-missing-with-zero",
+      "summary-loading-and-error-retry-preserve-existing-week-navigation-day-cards-entry-list-and-primary-cta",
+      "empty-no-entry-shows-planned-nutrition-unavailable-and-never-zero-kcal",
+      "read-only-summary-exposes-no-mutation-or-repin-control-while-existing-entry-controls-remain-outside-it",
+      "unauthorized-login-guidance-restores-week-date-and-column-return-context",
+      "week-date-column-navigation-latest-request-wins-and-stale-response-does-not-overwrite",
+      "planned-nutrition-is-never-labeled-as-actual-consumption-goal-attainment-or-medical-advice",
+      "planner-week-and-meal-screen-each-have-before-and-after-at-390-320-and-desktop-1280",
+      "first-viewport-day-overview-primary-cta-localized-scroll-and-anchor-return-remain-intact",
+      "no-page-horizontal-overflow-44px-target-keyboard-focus-screen-reader-and-non-color-incomplete-cue",
+      "exploratory-qa-eval-and-real-local-db-browser-smoke-are-recorded-and-distinguished-from-fixtures",
+      "fresh-authority-precheck-stage-five-final-authority-and-stage-six-have-zero-unresolved-blocker-or-important"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [
+        "PLANNER_WEEK",
+        "MEAL_SCREEN"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/PLANNER_WEEK.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/planner-nutrition-summary-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/planner-nutrition-summary/before/PLANNER_WEEK-390.png",
+        "ui/designs/evidence/planner-nutrition-summary/after/PLANNER_WEEK-390.png",
+        "ui/designs/evidence/planner-nutrition-summary/before/PLANNER_WEEK-320.png",
+        "ui/designs/evidence/planner-nutrition-summary/after/PLANNER_WEEK-320.png",
+        "ui/designs/evidence/planner-nutrition-summary/before/PLANNER_WEEK-desktop-1280.png",
+        "ui/designs/evidence/planner-nutrition-summary/after/PLANNER_WEEK-desktop-1280.png",
+        "ui/designs/evidence/planner-nutrition-summary/before/MEAL_SCREEN-390.png",
+        "ui/designs/evidence/planner-nutrition-summary/after/MEAL_SCREEN-390.png",
+        "ui/designs/evidence/planner-nutrition-summary/before/MEAL_SCREEN-320.png",
+        "ui/designs/evidence/planner-nutrition-summary/after/MEAL_SCREEN-320.png",
+        "ui/designs/evidence/planner-nutrition-summary/before/MEAL_SCREEN-desktop-1280.png",
+        "ui/designs/evidence/planner-nutrition-summary/after/MEAL_SCREEN-desktop-1280.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/PLANNER_WEEK-planner-nutrition-summary-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "manual:non-5432-isolated-postgresql-17-related-migrations-pre-request-real-bootstrap-user-and-breakfast-lunch-dinner-columns-recipe-quality-product-direct-pins-aggregate-mixed-current-switch-source-version-owner-scope-request-zero-write-and-cleanup",
+    "manual:fixture-browser-lib-mock-qa-fixtures-and-qa-fixtures-slices-01-05-via-pnpm-dev-qa-fixtures-separated-from-real-db",
+    "manual:pnpm-local-reset-demo-then-pnpm-dev-local-supabase-authenticated-planner-week-and-meal-screen-read-only-browser-flow-request-zero-write-at-390-320-and-desktop",
+    "manual:independent-product-design-authority-review-of-compact-summary-first-viewport-scroll-primary-cta-missing-not-zero-and-anchor-return",
+    "manual:production-staging-and-external-provider-write-approval-intentionally-withheld-zero-writes"
+  ],
+  "blocked_conditions": [
+    "official-source-of-truth-is-not-v1-7-20-v1-5-26-v1-3-23-v1-3-21-v1-2-25",
+    "recipe-nutrition-calculation-or-prepared-food-planner-entry-is-not-merged-in-origin-master-ancestry",
+    "stage1-author-self-approves-or-independent-fresh-codex-stage1-5-review-is-missing",
+    "endpoint-is-not-exactly-get-planner-nutrition-or-undocumented-query-field-is-added",
+    "official-range-summary-days-columns-or-aggregate-nutrition-shape-is-changed",
+    "range-is-not-inclusive-maximum-seven-days-or-a-new-validation-status-error-code-is-added",
+    "recipe-current-snapshot-or-product-current-version-is-used-instead-of-the-entry-pin",
+    "recipe-serving-scaling-ignores-pinned-scalable-fixed-vectors-or-product-quantity-ignores-pinned-version-basis",
+    "same-entry-is-counted-twice-through-existing-planner-meals-arrays-or-adapters",
+    "missing-null-unreadable-conversion-failure-or-unavailable-is-normalized-to-zero",
+    "partial-known-amount-is-promoted-to-a-complete-total-or-all-unavailable-gets-a-nonnull-quality",
+    "incomplete-entry-count-counts-nutrients-instead-of-distinct-incomplete-entries",
+    "source-item-has-not-exactly-six-fields-or-different-source-version-tuples-are-merged",
+    "api-key-auth-query-cookie-raw-provider-data-manifest-internal-path-service-credential-or-other-user-id-leaks",
+    "owner-date-scope-is-applied-after-fetch-or-date-column-entry-n-plus-one-exists",
+    "endpoint-performs-any-meal-product-entry-snapshot-version-current-source-production-staging-or-provider-write",
+    "new-table-column-index-trigger-rpc-endpoint-field-status-error-or-workflow-surface-is-added",
+    "planner-week-repeats-macro-tables-or-summary-pushes-first-viewport-day-overview-and-primary-cta-out-of-hierarchy",
+    "summary-loading-error-or-stale-response-removes-or-overwrites-existing-planner-meal-content",
+    "planned-nutrition-is-presented-as-actual-consumption-goal-attainment-or-medical-advice",
+    "generic-preparation-size-edible-field-cooking-loss-density-relation-chain-ocr-barcode-dining-out-or-meal-kit-scope-is-added",
+    "390-320-desktop-before-after-exploratory-real-local-db-or-authority-evidence-is-missing",
+    "page-level-horizontal-overflow-touch-target-focus-accessibility-or-anchor-return-regression-remains",
+    "fresh-stage3-stage5-final-authority-or-stage6-review-is-missing-or-has-unresolved-blocker"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  },
+  "notes": "High-risk full-stack read-only planner nutrition aggregate. It adds exactly GET /planner/nutrition with start_date/end_date and the official maximum-seven-day range/summary/days/columns shape. Only Meal recipe snapshot pins and ProductPlannerEntry version pins are scaled and aggregated; current repin, duplicate arrays, missing-as-zero, undocumented fields/errors/database surfaces, and writes are forbidden. Bootstrap is a pre-request test/environment step that must yield the user row and breakfast/lunch/dinner columns; the measured GET route/service never calls bootstrap and performs zero target/planner writes. Recipe fixtures cover direct/estimated/mixed, while product fixtures cover only complete/partial/unavailable direct pins supported by the current DB; aggregate mixed comes from recipe/product composition without new product quality/warning fields. PLANNER_WEEK receives compact planned kcal plus incomplete indicators only, while MEAL_SCREEN receives the current column core five, combined incomplete count, quality, and aggregate warning guidance. Empty is unavailable rather than false zero, the summary has no mutation controls, and unauthorized return preserves week/date/column. Fixture browser state uses lib/mock/qa-fixtures.ts plus qa/fixtures/slices-01-05.json with pnpm dev:qa-fixtures; real local reset/start uses pnpm local:reset:demo then pnpm dev:local-supabase. Stage 2 is fresh-role test-first TDD with isolated PostgreSQL 17 evidence. PLANNER_WEEK is an anchor extension requiring before/after 390/320/desktop, exploratory QA/eval, real local DB browser smoke, fresh authority precheck, Stage 5, final authority, Stage 6, and zero production/staging/provider writes."
+}

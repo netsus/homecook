@@ -1,0 +1,158 @@
+{
+  "id": "planner-nutrition-summary",
+  "title": "Pinned recipe and product planned nutrition summaries",
+  "summary": "Recipe Meal의 pin된 recipe snapshot과 ProductPlannerEntry의 pin된 product version만 최대 7일 range/day/column 계획 영양으로 합산하고, PLANNER_WEEK compact 열량과 MEAL_SCREEN 핵심 5종 상세에서 partial/unavailable/quality를 보존한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 기존 Recipe Meal과 완제품 계획을 과거 pin 기준으로 재현 가능한 끼니·날짜·주간 계획 영양으로 확인하되 결측을 0이나 실제 섭취로 오해하지 않게 한다.",
+  "owners": {
+    "claude": "replaced only for the user-approved nutrition/products/planner program; the global stage-owner policy is unchanged",
+    "codex": "fresh role-separated Codex tasks own Stage 1 docs, independent Stage 1.5 review and repair-final, Stage 2 backend TDD, independent Stage 3 review, Stage 4 frontend, authority precheck, Stage 5 and final authority, and Stage 6; no author or implementer self-approves",
+    "workers": []
+  },
+  "dependencies": [
+    "recipe-nutrition-calculation backend and frontend are merged in origin/master ancestry and provide immutable recipe snapshots plus nullable Meal pins",
+    "prepared-food-planner-entry docs backend frontend and closeout are merged through 64d2b5145d1e96772eb7dfee4d4057cafcab8f64 and provide immutable product version pins",
+    "nutrition products planner contract is locked in official requirements v1.7.20 screen v1.5.26 flow v1.3.23 database v1.3.21 and API v1.2.25",
+    "independent fresh Codex Stage 1.5 approval is required before Stage 2 starts"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.20.md",
+      "docs/화면정의서-v1.5.26.md",
+      "docs/유저flow맵-v1.3.23.md",
+      "docs/db설계-v1.3.21.md",
+      "docs/api문서-v1.2.25.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/planner-nutrition-summary/README.md",
+      "docs/workpacks/planner-nutrition-summary/acceptance.md",
+      "docs/workpacks/planner-nutrition-summary/automation-spec.json",
+      "docs/workpacks/recipe-nutrition-calculation/README.md",
+      "docs/workpacks/prepared-food-planner-entry/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/playwright-e2e.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "ui/designs/PLANNER_WEEK.md",
+      "ui/designs/MEAL_SCREEN.md",
+      "ui/designs/critiques/planner-nutrition-summary-critique.md",
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/omo-canonical-closeout-state.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:non-5432-isolated-postgresql-17-related-migrations-pre-request-real-bootstrap-user-and-breakfast-lunch-dinner-columns-recipe-quality-product-direct-pins-aggregate-mixed-current-switch-source-version-owner-scope-request-zero-write-and-cleanup",
+      "manual:fixture-browser-lib-mock-qa-fixtures-and-qa-fixtures-slices-01-05-via-pnpm-dev-qa-fixtures-separated-from-real-db",
+      "manual:pnpm-local-reset-demo-then-pnpm-dev-local-supabase-authenticated-planner-week-and-meal-screen-read-only-browser-flow-request-zero-write-at-390-320-and-desktop",
+      "manual:independent-product-design-authority-review-of-compact-summary-first-viewport-scroll-primary-cta-missing-not-zero-and-anchor-return",
+      "manual:production-staging-and-external-provider-write-approval-intentionally-withheld-zero-writes"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm exec vitest run tests/planner-nutrition-aggregate.test.ts tests/planner-nutrition-api.test.ts tests/planner-nutrition-read-model.test.ts tests/planner-route.test.ts tests/meals-route.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/recipe-nutrition-snapshot.test.ts",
+      "node scripts/run-planner-nutrition-postgres-integration.mjs",
+      "pnpm verify:backend",
+      "pnpm exec vitest run tests/planner-nutrition-ui.test.tsx tests/planner-week-screen.test.tsx tests/planner-meal-screen.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm qa:explore -- --slice planner-nutrition-summary",
+      "pnpm qa:eval -- --checklist .artifacts/qa/planner-nutrition-summary/latest/exploratory-checklist.json --report .artifacts/qa/planner-nutrition-summary/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm test:e2e:regression:ci --grep planner-nutrition-summary",
+      "pnpm validate:authority-evidence-presence -- --slice planner-nutrition-summary",
+      "pnpm validate:closeout-sync -- --slice planner-nutrition-summary",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/planner-nutrition-summary pnpm validate:workpack -- --slice planner-nutrition-summary",
+      "node scripts/validate-automation-spec.mjs --slice planner-nutrition-summary",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/planner-nutrition-aggregate.test.ts tests/planner-nutrition-api.test.ts tests/planner-nutrition-read-model.test.ts tests/planner-route.test.ts tests/meals-route.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/recipe-nutrition-snapshot.test.ts",
+      "node scripts/run-planner-nutrition-postgres-integration.mjs",
+      "pnpm verify:backend",
+      "pnpm exec vitest run tests/planner-nutrition-ui.test.tsx tests/planner-week-screen.test.tsx tests/planner-meal-screen.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm qa:explore -- --slice planner-nutrition-summary",
+      "pnpm qa:eval -- --checklist .artifacts/qa/planner-nutrition-summary/latest/exploratory-checklist.json --report .artifacts/qa/planner-nutrition-summary/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm test:e2e:regression:ci --grep planner-nutrition-summary",
+      "pnpm validate:authority-evidence-presence -- --slice planner-nutrition-summary",
+      "pnpm validate:closeout-sync -- --slice planner-nutrition-summary",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/planner-nutrition-summary pnpm validate:workpack -- --slice planner-nutrition-summary",
+      "node scripts/validate-automation-spec.mjs --slice planner-nutrition-summary",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "official-five-documents-and-source-of-truth-contract-alignment",
+      "recipe-nutrition-calculation-and-prepared-food-planner-entry-merged-predecessor-ancestry",
+      "exact-single-get-planner-nutrition-start-end-maximum-seven-day-endpoint-and-envelope",
+      "official-range-summary-days-columns-and-aggregate-nutrition-exact-field-shapes",
+      "recipe-pinned-snapshot-planned-serving-scalable-fixed-formula-and-null-pin-unavailable",
+      "product-pinned-version-quantity-old-pin-current-change-and-soft-delete-stability",
+      "storage-entry-dedupe-and-range-recipe-product-counts",
+      "core-five-complete-partial-minimum-unavailable-and-observed-zero-versus-missing",
+      "scope-incomplete-entry-count-once-per-entry-and-direct-estimated-mixed-null-quality",
+      "pinned-warning-and-exact-six-field-source-version-aware-stable-dedupe",
+      "owner-date-pre-scope-bounded-meals-snapshot-product-rpc-reads-and-zero-n-plus-one",
+      "pre-request-bootstrap-user-and-breakfast-lunch-dinner-columns-then-get-route-does-not-bootstrap-and-request-before-after-target-planner-zero-write",
+      "recipe-direct-estimated-mixed-snapshots-product-complete-partial-unavailable-direct-pins-and-aggregate-mixed-without-product-quality-warning-schema-expansion",
+      "isolated-postgresql-17-current-switch-cross-owner-zero-write-and-cleanup",
+      "planner-week-compact-range-day-energy-without-repeated-macro-tables",
+      "meal-screen-current-column-core-five-combined-incomplete-quality-warning-with-existing-cards",
+      "summary-soft-loading-error-and-latest-request-wins-with-content-cta-preserved",
+      "empty-no-entry-unavailable-without-false-zero-read-only-summary-without-mutation-controls-and-unauthorized-week-date-column-return",
+      "fixture-browser-lib-mock-qa-fixtures-and-qa-fixtures-slices-01-05-via-pnpm-dev-qa-fixtures-separated-from-pnpm-local-reset-demo-and-pnpm-dev-local-supabase-real-db",
+      "planner-week-and-meal-screen-before-after-390-320-desktop-exploratory-and-real-local-db-evidence",
+      "fresh-authority-precheck-stage-five-final-authority-and-stage-six-blocker-zero",
+      "actual-consumption-goal-medical-generic-prep-size-edible-cooking-loss-new-contract-and-production-write-scope-excluded"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "branch": "docs/planner-nutrition-summary",
+  "out_of_scope": [
+    "Actual consumption eaten skipped nutrition goals goal attainment and medical disease coaching",
+    "Current recipe snapshot or product version repin backfill or immutable snapshot mutation",
+    "Existing GET planner GET meals POST meals or product entry mutation shape changes",
+    "New endpoint query response field HTTP status error code workflow status table column index trigger or RPC",
+    "Entry-level new missing-reason or partial-unavailable-count API fields",
+    "Cooking loss generic preparation size edible fields density relation chaining OCR barcode dining out and meal kit",
+    "Production staging external provider writes and secret or raw provider output"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs gate only. Roadmap projection remains docs and Design Status remains temporary. Initial independent review recorded B/I/S 0/5/0 at fingerprint e0e7f17c177f3f81df31e6b8a3c2995f9fd20fee6e3176010ec3a1f2b5558264; separate repair-final completed, then the independent reviewer issued RE_REVIEW_APPROVED on 2026-07-17 with B/I/S 0/0/0 at reviewed fingerprint 83f54e3942b40ceb46af2f917d6981f111a18060e4139ee7a96727651d05f315. Six-file Vitest passed 104/104 and source-of-truth, workflow-v2, workpack, automation-spec, bookkeeping and diff validators passed. lifecycle in_progress, approval codex_approved and verification passed apply only to repaired Stage 1 docs and the future evidence plan; auto_merge remains false and this is not merge approval. Stage 4 UI/screenshots/authority precheck, Stage 5, final authority and Stage 6 remain pending. The backend contract remains one read-only GET /planner/nutrition: bootstrap runs only before request measurement and yields the user plus breakfast/lunch/dinner columns; the route/service never bootstraps and request before/after target/planner writes are zero. Recipe fixtures cover direct/estimated/mixed snapshots, product fixtures cover only complete/partial/unavailable direct pins supported by the DB, and aggregate mixed comes from their composition without new product fields. Fixture browser state uses lib/mock/qa-fixtures.ts plus qa/fixtures/slices-01-05.json via pnpm dev:qa-fixtures; real local reset/start uses pnpm local:reset:demo then pnpm dev:local-supabase. Missing and empty are not zero, the summary has no mutation control, and unauthorized return preserves week/date/column. Production/staging/provider writes remain zero."
+}

@@ -336,3 +336,80 @@ slot row 구조: `[끼니명 고정폭] [식사명 flex-1 truncate] [인분 chip
 - product row 추가로 first viewport의 day overview가 과도하게 밀리면 row metadata를 줄이지 day-card/scroll mental model을 교체하지 않는다.
 - `PLANNER_WEEK` anchor의 current-state before 390/320/desktop을 Stage 4 전에 캡처한다.
 - Stage 4 후 mixed recipe/product, product-only slot, empty/error/unauthorized evidence를 같은 viewport로 비교한다.
+
+---
+
+## Planner Nutrition Summary Anchor Extension Addendum
+
+> 추가일: 2026-07-17
+> workpack: `planner-nutrition-summary`
+> 상태: Stage 1 temporary design contract / independent critique passed / implementation·authority pending
+
+### Information Boundary
+
+- 이 화면의 영양은 실제 섭취·먹음·목표 달성·의료 조언이 아니라 pin된 entry의 `계획 영양`이다.
+- 주간 범위와 날짜 카드에는 `energy_kcal` + `incomplete_entry_count`만 compact하게 표시한다.
+- 탄수화물·단백질·지방·나트륨 표와 aggregate warning 상세는 `MEAL_SCREEN`이 소유한다. day card마다 macro table을 반복하지 않는다.
+- missing/null/unavailable은 0 kcal가 아니다. observed `complete/amount=0`만 0으로 표시한다.
+- summary는 기존 Recipe Meal/ProductPlannerEntry row와 별도 read projection이며 같은 entry를 UI에서 다시 합산하지 않는다.
+
+### Compact Copy Contract
+
+| API 상태 | 주간/날짜 표시 | 금지 |
+| --- | --- | --- |
+| complete + amount | `계획 영양 1,800 kcal` | `섭취`, `달성` |
+| partial + known_amount | `계획 영양 최소 1,800 kcal` | 일반 총량처럼 표시 |
+| unavailable | `계획 영양 정보 준비 중` | `0 kcal` |
+| incomplete_entry_count > 0 | `N개 항목 확인 필요` | nutrient별 중복 count |
+
+- `estimated/mixed`가 포함된 값은 접근 가능한 보조 문구에 `예상 포함` 의미를 유지한다.
+- week summary와 day summary에 같은 장문의 설명을 중복하지 않는다. 범위 label은 `계획 영양` 한 번, 날짜 card는 compact 수치/상태를 우선한다.
+
+### 390px / Mobile Baseline 375 Compatibility
+
+```text
+┌─────────────────────────────────────┐
+│ 기존 app bar / primary CTA / 주 이동│
+├─────────────────────────────────────┤
+│ 7월 13일 ~ 7월 19일                 │
+│ 계획 영양 최소 8,320 kcal · 2개 확인│  ← 한 줄 우선
+│ 월  화  수  목  금  토  일          │
+├─────────────────────────────────────┤
+│ [금] 7월 17일                       │
+│ 최소 1,800 kcal · 1개 확인 필요     │  ← compact day summary
+│ 아침  김치찌개 · 2인분 · 등록       │
+│       플레인 요거트 · 1회 · 완제품  │
+│ 점심  비어 있음                     │
+└─────────────────────────────────────┘
+```
+
+- week summary는 week context 안의 보조 1행 또는 폭이 좁을 때 최대 2행이다. 별도 대형 hero/card를 추가하지 않는다.
+- day summary는 card header 바로 아래의 muted metadata 1행이다. slot row보다 시각적 무게가 크지 않다.
+- 390px 첫 화면에서 기존 day overview가 과도하게 밀리면 설명 문구를 줄이고 card/slot/scroll model은 바꾸지 않는다.
+
+### Narrow 320px
+
+- 수치와 indicator가 함께 한 줄에 들어가지 않으면 `계획 영양` 수치와 `N개 확인 필요`를 최대 2행으로만 분리한다.
+- summary 때문에 끼니명, product type, Recipe status, week navigation을 생략하지 않는다.
+- page-level horizontal overflow를 만들지 않고 기존 localized planner scroll containment를 유지한다.
+- 색상만으로 incomplete를 표현하지 않고 문구 또는 아이콘의 accessible label을 함께 제공한다.
+
+### Desktop 1280px
+
+- 기존 desktop planner geometry와 day-card width를 유지한다.
+- range summary를 별도 dashboard 통계 영역으로 확장하지 않는다.
+- hover-only detail을 만들지 않고 day/slot tap으로 기존 `MEAL_SCREEN` 진입을 유지한다.
+
+### Soft Loading / Error / Race
+
+- nutrition loading 중에도 week navigation, day cards, Recipe Meal/ProductPlannerEntry rows, primary CTA는 그대로 보인다. summary 자리만 짧은 skeleton을 쓴다.
+- nutrition error는 summary 영역 inline `계획 영양을 불러오지 못했어요 · 다시 시도`로 제한하고 기존 planner content를 지우지 않는다.
+- 주 이동 시 이전 range 요청을 abort하거나 request key를 비교해 늦은 이전 응답이 현재 주 summary를 덮지 않는다.
+- no-entry range를 false `0 kcal`로 만들지 않는다. 기존 planner empty state를 유지하고 summary는 `계획 영양 정보 없음` 또는 비노출 중 구현 단계에서 공식 상태 의미를 해치지 않는 compact 표현을 선택한다.
+
+### Stage 4 Evidence Plan
+
+- before/after 각각 `390`, `320`, `desktop 1280`을 `ui/designs/evidence/planner-nutrition-summary/{before,after}/`에 저장한다.
+- complete, partial/minimum, unavailable, mixed, loading, error/retry, empty/no-entry, stale-range guard를 포함한다.
+- 같은 viewport의 before/after를 나란히 비교해 first viewport day overview, week controls, primary CTA, localized scroll, page overflow를 판정한다.
+- 최종 authority report 전까지 이 addendum은 `temporary`이며 구현 pass나 `confirmed`를 의미하지 않는다.

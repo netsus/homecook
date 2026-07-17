@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-16T23:33:27Z",
+  "updated_at": "2026-07-16T23:56:33Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2069,6 +2069,39 @@
       "evaluation_status": "passed",
       "evaluation_round": 1,
       "last_evaluator_result": ".artifacts/qa/prepared-food-planner-entry/2026-07-16T19-23-59-069Z/eval-result.json",
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "planner-nutrition-summary",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/planner-nutrition-summary",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm exec vitest run tests/planner-nutrition-aggregate.test.ts tests/planner-nutrition-api.test.ts tests/planner-nutrition-read-model.test.ts tests/planner-route.test.ts tests/meals-route.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/recipe-nutrition-snapshot.test.ts",
+        "node scripts/run-planner-nutrition-postgres-integration.mjs",
+        "pnpm verify:backend",
+        "pnpm exec vitest run tests/planner-nutrition-ui.test.tsx tests/planner-week-screen.test.tsx tests/planner-meal-screen.test.tsx",
+        "pnpm verify:frontend:pr",
+        "pnpm qa:explore -- --slice planner-nutrition-summary",
+        "pnpm qa:eval -- --checklist .artifacts/qa/planner-nutrition-summary/latest/exploratory-checklist.json --report .artifacts/qa/planner-nutrition-summary/latest/exploratory-report.json",
+        "pnpm verify:frontend",
+        "pnpm test:e2e:regression:ci --grep planner-nutrition-summary",
+        "pnpm validate:authority-evidence-presence -- --slice planner-nutrition-summary",
+        "pnpm validate:closeout-sync -- --slice planner-nutrition-summary",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/planner-nutrition-summary pnpm validate:workpack -- --slice planner-nutrition-summary",
+        "node scripts/validate-automation-spec.mjs --slice planner-nutrition-summary",
+        "pnpm validate:omo-bookkeeping",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs gate only. Roadmap projection remains docs and Design Status remains temporary. Initial independent review recorded B/I/S 0/5/0 at fingerprint e0e7f17c177f3f81df31e6b8a3c2995f9fd20fee6e3176010ec3a1f2b5558264; separate repair-final completed, then the independent reviewer issued RE_REVIEW_APPROVED on 2026-07-17 with B/I/S 0/0/0 at reviewed fingerprint 83f54e3942b40ceb46af2f917d6981f111a18060e4139ee7a96727651d05f315. Six-file Vitest passed 104/104 and source-of-truth, workflow-v2, workpack, automation-spec, bookkeeping and diff validators passed. lifecycle in_progress, approval codex_approved and verification passed apply only to repaired Stage 1 docs and the future evidence plan; auto_merge remains false and this is not merge approval. Stage 4 UI/screenshots/authority precheck, Stage 5, final authority and Stage 6 remain pending. Bootstrap is pre-request only; GET /planner/nutrition never bootstraps and request before/after target/planner writes are zero. Recipe fixtures cover direct/estimated/mixed snapshots, product fixtures cover only complete/partial/unavailable direct pins supported by current DB, and aggregate mixed comes from composition without new product fields. Fixture browser uses lib/mock/qa-fixtures.ts plus qa/fixtures/slices-01-05.json via pnpm dev:qa-fixtures; real local reset/start uses pnpm local:reset:demo then pnpm dev:local-supabase. Empty is not false zero, summary is read-only without mutation controls, unauthorized return preserves week/date/column, and Stage 4 UI/evidence/authority remain unapproved.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     }
