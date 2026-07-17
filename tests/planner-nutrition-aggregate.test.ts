@@ -208,4 +208,34 @@ describe("planner nutrition aggregate", () => {
     expect(JSON.stringify(result)).not.toContain("must-not-leak");
     expect(JSON.stringify(result)).not.toContain("secret");
   });
+
+  it("sorts source tuples null-first by Unicode code point across case, Hangul, and non-BMP text", () => {
+    const source = (provider: string, sourceVersion: string | null) => ({
+      provider,
+      dataset: "dataset",
+      source_version: sourceVersion,
+      data_basis_date: null,
+      license: null,
+      source_url: null,
+    });
+    const sources = [
+      source("😀", "v1"),
+      source("가", "v1"),
+      source("a", "B"),
+      source("a", null),
+      source("A", "v1"),
+    ];
+
+    const result = aggregatePlannerNutritionEntries([
+      entry("unicode-order", { sources }),
+    ]);
+
+    expect(result.sources).toEqual([
+      source("A", "v1"),
+      source("a", null),
+      source("a", "B"),
+      source("가", "v1"),
+      source("😀", "v1"),
+    ]);
+  });
 });

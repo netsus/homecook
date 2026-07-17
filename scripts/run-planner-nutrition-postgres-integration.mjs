@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
+import {
+  cleanupPlannerNutritionPostgresCluster,
+  runPlannerNutritionPostgresLifecycle,
+} from "./lib/planner-nutrition-postgres-lifecycle.mjs";
 
 const REQUIRED_TOOLS = ["postgres", "initdb", "pg_ctl", "createdb", "psql"];
 const REQUIRED_MAJOR = 17;
@@ -76,33 +81,36 @@ if (!runtime) {
   );
   process.exitCode = 1;
 } else {
-  const root = mkdtempSync(path.join(existsSync("/tmp") ? "/tmp" : tmpdir(), "hcn-planner-nutrition-pg17-"));
-  const data = path.join(root, "data");
-  const socket = path.join(root, "socket");
-  const database = "homecook_planner_nutrition_test";
-  const port = await reserveNonDefaultPort();
-  if (port === 5432) throw new Error("Planner nutrition PostgreSQL port must not be 5432");
-  let started = false;
+  process.exitCode = await runPlannerNutritionPostgresLifecycle({
+    createRoot: () => mkdtempSync(
+      path.join(existsSync("/tmp") ? "/tmp" : tmpdir(), "hcn-planner-nutrition-pg17-"),
+    ),
+    reservePort: reserveNonDefaultPort,
+    run: async ({ root, port, state }) => {
+      const data = path.join(root, "data");
+      const socket = path.join(root, "socket");
+      const database = "homecook_planner_nutrition_test";
+      if (port === 5432) throw new Error("Planner nutrition PostgreSQL port must not be 5432");
 
-  try {
-    process.stdout.write(`Planner nutrition PostgreSQL ${runtime.version} on isolated port ${port}\n`);
-    required(path.join(runtime.directory, "initdb"), ["-D", data, "-U", "postgres", "-A", "trust"]);
-    mkdirSync(socket);
-    required(path.join(runtime.directory, "pg_ctl"), [
-      "-D", data,
-      "-o", `-p ${port} -h 127.0.0.1 -k ${socket}`,
-      "-l", path.join(root, "postgres.log"),
-      "-w", "start",
-    ]);
-    started = true;
-    required(path.join(runtime.directory, "createdb"), [
-      "-h", "127.0.0.1", "-p", String(port), "-U", "postgres", database,
-    ]);
-    const psqlArgs = [
-      "-h", "127.0.0.1", "-p", String(port), "-U", "postgres", "-d", database,
-      "-v", "ON_ERROR_STOP=1",
-    ];
-    const bootstrap = `
+      process.stdout.write(`Planner nutrition PostgreSQL ${runtime.version} on isolated port ${port}\n`);
+      required(path.join(runtime.directory, "initdb"), ["-D", data, "-U", "postgres", "-A", "trust"]);
+      mkdirSync(socket);
+      state.startAttempted = true;
+      required(path.join(runtime.directory, "pg_ctl"), [
+        "-D", data,
+        "-o", `-p ${port} -h 127.0.0.1 -k ${socket}`,
+        "-l", path.join(root, "postgres.log"),
+        "-w", "start",
+      ]);
+      state.started = true;
+      required(path.join(runtime.directory, "createdb"), [
+        "-h", "127.0.0.1", "-p", String(port), "-U", "postgres", database,
+      ]);
+      const psqlArgs = [
+        "-h", "127.0.0.1", "-p", String(port), "-U", "postgres", "-d", database,
+        "-v", "ON_ERROR_STOP=1",
+      ];
+      const bootstrap = `
 create schema extensions;
 create extension pgcrypto with schema extensions;
 create schema auth;
@@ -123,43 +131,44 @@ create table public.operational_events (
 );
 grant usage on schema public to anon, authenticated, service_role;
 `;
-    required(path.join(runtime.directory, "psql"), [...psqlArgs, "-c", bootstrap]);
-    required(path.join(runtime.directory, "psql"), [
-      ...psqlArgs,
-      "-c", `comment on database ${database} is 'homecook-isolated-planner-nutrition-pg17';`,
-    ]);
-    for (const migration of [
-      "supabase/migrations/20260301000000_core_schema_bootstrap.sql",
-      "supabase/migrations/20260610170000_recipe_book_cover_metadata.sql",
-      "supabase/migrations/20260714143000_ingredient_nutrition_conversion_model.sql",
-      "supabase/migrations/20260716090000_add_recipe_nutrition_snapshots.sql",
-      "supabase/migrations/20260716120000_prepared_food_catalog.sql",
-      "supabase/migrations/20260716150000_prepared_food_planner_entries.sql",
-    ]) {
-      required(path.join(runtime.directory, "psql"), [...psqlArgs, "-f", migration]);
-    }
+      required(path.join(runtime.directory, "psql"), [...psqlArgs, "-c", bootstrap]);
+      required(path.join(runtime.directory, "psql"), [
+        ...psqlArgs,
+        "-c", `comment on database ${database} is 'homecook-isolated-planner-nutrition-pg17';`,
+      ]);
+      for (const migration of [
+        "supabase/migrations/20260301000000_core_schema_bootstrap.sql",
+        "supabase/migrations/20260610170000_recipe_book_cover_metadata.sql",
+        "supabase/migrations/20260714143000_ingredient_nutrition_conversion_model.sql",
+        "supabase/migrations/20260716090000_add_recipe_nutrition_snapshots.sql",
+        "supabase/migrations/20260716120000_prepared_food_catalog.sql",
+        "supabase/migrations/20260716150000_prepared_food_planner_entries.sql",
+      ]) {
+        required(path.join(runtime.directory, "psql"), [...psqlArgs, "-f", migration]);
+      }
 
-    const test = command("pnpm", [
-      "exec", "vitest", "run", "tests/planner-nutrition-postgres.integration.test.ts",
-      "--pool=forks", "--maxWorkers=1", "--testTimeout=60000",
-    ], {
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        PATH: `${runtime.directory}${path.delimiter}${process.env.PATH ?? ""}`,
-        HOMECOOK_PLANNER_NUTRITION_PG_INTEGRATION: "1",
-        HOMECOOK_PLANNER_NUTRITION_PGHOST: "127.0.0.1",
-        HOMECOOK_PLANNER_NUTRITION_PGPORT: String(port),
-        HOMECOOK_PLANNER_NUTRITION_PGDATABASE: database,
-        HOMECOOK_PLANNER_NUTRITION_PG_VERSION: runtime.version,
-      },
-    });
-    process.exitCode = test.status ?? 1;
-  } finally {
-    if (started) {
-      command(path.join(runtime.directory, "pg_ctl"), ["-D", data, "-m", "fast", "-w", "stop"]);
-    }
-    rmSync(root, { recursive: true, force: true });
-    if (existsSync(root)) throw new Error("Planner nutrition PostgreSQL temporary directory cleanup failed");
-  }
+      const test = command("pnpm", [
+        "exec", "vitest", "run", "tests/planner-nutrition-postgres.integration.test.ts",
+        "--pool=forks", "--maxWorkers=1", "--testTimeout=60000",
+      ], {
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          PATH: `${runtime.directory}${path.delimiter}${process.env.PATH ?? ""}`,
+          HOMECOOK_PLANNER_NUTRITION_PG_INTEGRATION: "1",
+          HOMECOOK_PLANNER_NUTRITION_PGHOST: "127.0.0.1",
+          HOMECOOK_PLANNER_NUTRITION_PGPORT: String(port),
+          HOMECOOK_PLANNER_NUTRITION_PGDATABASE: database,
+          HOMECOOK_PLANNER_NUTRITION_PG_VERSION: runtime.version,
+        },
+      });
+      return test.status ?? 1;
+    },
+    cleanup: ({ root, state }) => cleanupPlannerNutritionPostgresCluster({
+      root,
+      dataDirectory: path.join(root, "data"),
+      pgCtlPath: path.join(runtime.directory, "pg_ctl"),
+      lifecycleState: state,
+    }),
+  });
 }
