@@ -868,7 +868,9 @@ describe("MypageScreen", () => {
       expect(mockFetchUserProgress).toHaveBeenCalledTimes(1);
       expect(mockFetchUserGamification).toHaveBeenCalledTimes(1);
     });
-    expect(screen.queryByTestId("mypage-mobile-loading")).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByTestId("mypage-mobile-loading")).toBeNull();
+    });
     const growthLoading = screen.getByTestId("mypage-growth-profile-loading");
     expect(growthLoading).toBeTruthy();
     expect(growthLoading.className).toContain("min-h-[340px]");
