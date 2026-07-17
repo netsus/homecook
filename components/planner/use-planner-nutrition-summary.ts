@@ -32,23 +32,38 @@ export function usePlannerNutritionSummary({
   const [status, setStatus] = useState<PlannerNutritionRequestStatus>("idle");
   const [requestRevision, setRequestRevision] = useState(0);
   const hasVisibleDataRef = useRef(false);
+  const loadedRangeKeyRef = useRef<string | null>(null);
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!enabled) {
+      requestIdRef.current += 1;
       abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+      hasVisibleDataRef.current = false;
+      loadedRangeKeyRef.current = null;
+      setData(null);
+      setError(null);
       setStatus("idle");
       setIsRefreshing(false);
       return;
     }
 
+    const requestRangeKey = `${startDate}:${endDate}`;
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    const hasVisibleData = hasVisibleDataRef.current;
+    const hasVisibleData =
+      hasVisibleDataRef.current && loadedRangeKeyRef.current === requestRangeKey;
+
+    if (!hasVisibleData) {
+      hasVisibleDataRef.current = false;
+      loadedRangeKeyRef.current = null;
+      setData(null);
+    }
 
     setError(null);
     setIsRefreshing(hasVisibleData);
@@ -62,6 +77,7 @@ export function usePlannerNutritionSummary({
 
         setData(nextData);
         hasVisibleDataRef.current = true;
+        loadedRangeKeyRef.current = requestRangeKey;
         setError(null);
         setIsRefreshing(false);
         setStatus(
@@ -78,7 +94,12 @@ export function usePlannerNutritionSummary({
         }
 
         if (isPlannerNutritionApiError(nextError) && nextError.status === 401) {
+          hasVisibleDataRef.current = false;
+          loadedRangeKeyRef.current = null;
+          setData(null);
+          setError(null);
           setIsRefreshing(false);
+          setStatus("idle");
           onUnauthorized?.();
           return;
         }

@@ -160,7 +160,7 @@ test.describe("planner-nutrition-summary", () => {
     await authenticate(page);
   });
 
-  test("QA fixture shows compact week/day totals and the current meal core five safely", async ({ page }) => {
+  test("QA fixture shows compact week/day totals and the current meal core five safely", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/planner");
 
@@ -174,7 +174,9 @@ test.describe("planner-nutrition-summary", () => {
     await expect(firstDay).toContainText("580 kcal");
     await expect(firstDay).toContainText("1개 확인 필요");
     await expectNoPageOverflow(page);
-    await page.screenshot({ path: path.join(EVIDENCE_DIR, "planner-week-partial-mixed-390.png") });
+    if (testInfo.project.name === "desktop-chrome") {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, "planner-week-partial-mixed-390.png") });
+    }
 
     await page.goto(MEAL_PATH);
     const mealSummary = page.getByTestId("meal-nutrition-summary");
@@ -194,7 +196,9 @@ test.describe("planner-nutrition-summary", () => {
     const dialog = page.getByRole("dialog", { name: "계획 영양 확인 안내" });
     await expect(dialog).toContainText("일부 재료나 단위의 영양값을 계산하지 못했어요.");
     await expect(page.getByRole("button", { name: "닫기" })).toBeFocused();
-    await page.screenshot({ path: path.join(EVIDENCE_DIR, "meal-warning-dialog-390.png") });
+    if (testInfo.project.name === "desktop-chrome") {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, "meal-warning-dialog-390.png") });
+    }
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
     await expect(warningButton).toBeFocused();
@@ -204,7 +208,9 @@ test.describe("planner-nutrition-summary", () => {
       .analyze();
     expect(accessibility.violations).toEqual([]);
     await expectNoPageOverflow(page);
-    await page.screenshot({ path: path.join(EVIDENCE_DIR, "meal-core-five-mixed-390.png") });
+    if (testInfo.project.name === "desktop-chrome") {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, "meal-core-five-mixed-390.png") });
+    }
 
     await page.setViewportSize({ width: 320, height: 568 });
     await expect(mealSummary).toBeVisible();
@@ -225,10 +231,13 @@ test.describe("planner-nutrition-summary", () => {
     expect(mobileGeometry.cta!.bottom).toBeLessThanOrEqual(mobileGeometry.viewportHeight);
     expect(mobileGeometry.scrollArea!.bottom).toBeLessThanOrEqual(mobileGeometry.cta!.top);
     await expectNoPageOverflow(page);
-    await page.screenshot({ path: path.join(EVIDENCE_DIR, "meal-core-five-mixed-320.png") });
+    if (testInfo.project.name === "desktop-chrome") {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, "meal-core-five-mixed-320.png") });
+    }
   });
 
-  test("soft error keeps the prior complete value and retry replaces it", async ({ page }) => {
+  test("same-range meal refresh keeps the prior complete value on error and retry replaces it", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
     let responseMode: "initial" | "error" | "retry" = "initial";
     await page.route("**/api/v1/planner/nutrition?*", async (route) => {
       if (responseMode === "error") {
@@ -252,14 +261,16 @@ test.describe("planner-nutrition-summary", () => {
       );
     });
 
-    await page.goto("/planner");
-    const summary = page.getByTestId("planner-week-nutrition-summary");
+    await page.goto(MEAL_PATH);
+    const summary = page.getByTestId("meal-nutrition-summary");
     await expect(summary).toContainText("640 kcal");
     responseMode = "error";
-    await page.getByRole("button", { name: "다음 주" }).first().click();
+    await page.getByRole("button", { name: "인분 증가" }).filter({ visible: true }).first().click();
     await expect(summary).toContainText("640 kcal");
     await expect(summary.getByRole("button", { name: "다시 시도" })).toBeVisible();
-    await page.screenshot({ path: path.join(EVIDENCE_DIR, "planner-soft-error-preserves-data.png") });
+    if (testInfo.project.name === "desktop-chrome") {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, "meal-soft-error-preserves-data.png") });
+    }
 
     responseMode = "retry";
     await summary.getByRole("button", { name: "다시 시도" }).click();
@@ -267,8 +278,8 @@ test.describe("planner-nutrition-summary", () => {
     await expect(summary.getByRole("button", { name: "다시 시도" })).toHaveCount(0);
   });
 
-  test("soft loading keeps prior content and a stale range response cannot replace the latest range", async ({ page }) => {
-    let requestCount = 0;
+  test("range loading hides prior content and a stale response cannot replace the latest range", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
     let releaseStale!: () => void;
     let markStaleStarted!: () => void;
     const staleGate = new Promise<void>((resolve) => {
@@ -279,14 +290,17 @@ test.describe("planner-nutrition-summary", () => {
     });
 
     await page.route("**/api/v1/planner/nutrition?*", async (route) => {
-      requestCount += 1;
-      if (requestCount === 2) {
+      const startDate = new URL(route.request().url()).searchParams.get("start_date");
+      if (startDate === "2026-07-20") {
         markStaleStarted();
         await staleGate;
         await fulfillNutrition(route, aggregate({ energy: 999 })).catch(() => undefined);
         return;
       }
-      await fulfillNutrition(route, aggregate({ energy: requestCount === 1 ? 640 : 777 }));
+      await fulfillNutrition(
+        route,
+        aggregate({ energy: startDate === "2026-07-13" ? 640 : 777 }),
+      );
     });
 
     await page.goto("/planner");
@@ -294,9 +308,12 @@ test.describe("planner-nutrition-summary", () => {
     await expect(summary).toContainText("640 kcal");
     await page.getByRole("button", { name: "다음 주" }).first().click();
     await staleStarted;
-    await expect(summary).toContainText("640 kcal");
+    await expect(summary).toContainText("불러오는 중");
+    await expect(summary).not.toContainText("640 kcal");
     await expect(summary).toHaveAttribute("aria-busy", "true");
-    await page.screenshot({ path: path.join(EVIDENCE_DIR, "planner-soft-loading-preserves-data.png") });
+    if (testInfo.project.name === "desktop-chrome") {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, "planner-range-loading-hides-prior-data.png") });
+    }
 
     await page.getByRole("button", { name: "다음 주" }).first().click();
     await expect(summary).toContainText("777 kcal");
@@ -304,10 +321,49 @@ test.describe("planner-nutrition-summary", () => {
     await page.waitForTimeout(450);
     await expect(summary).toContainText("777 kcal");
     await expect(summary).not.toContainText("999 kcal");
-    await page.screenshot({ path: path.join(EVIDENCE_DIR, "planner-latest-range-wins.png") });
+    if (testInfo.project.name === "desktop-chrome") {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, "planner-latest-range-wins.png") });
+    }
   });
 
-  test("empty range is unavailable information and never a false zero", async ({ page }) => {
+  test("initial nutrition failures show retry errors instead of empty information", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.route("**/api/v1/planner/nutrition?*", async (route) => {
+      await route.fulfill({
+        status: 500,
+        json: {
+          success: false,
+          data: null,
+          error: {
+            code: "INTERNAL_ERROR",
+            message: "계획 영양을 불러오지 못했어요.",
+            fields: [],
+          },
+        },
+      });
+    });
+
+    await page.goto("/planner");
+    const weekSummary = page.getByTestId("planner-week-nutrition-summary");
+    await expect(weekSummary).toContainText("계획 영양을 불러오지 못했어요");
+    await expect(weekSummary.getByRole("button", { name: "다시 시도" })).toBeVisible();
+    await expect(weekSummary).not.toContainText("계획 영양 정보 없음");
+    if (testInfo.project.name === "desktop-chrome") {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, "planner-initial-error-390.png") });
+    }
+
+    await page.goto(MEAL_PATH);
+    const mealSummary = page.getByTestId("meal-nutrition-summary");
+    await expect(mealSummary).toContainText("계획 영양을 불러오지 못했어요");
+    await expect(mealSummary.getByRole("button", { name: "다시 시도" })).toBeVisible();
+    await expect(mealSummary).not.toContainText("계획 영양 정보 없음");
+    if (testInfo.project.name === "desktop-chrome") {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, "meal-initial-error-390.png") });
+    }
+  });
+
+  test("empty range is unavailable information and never a false zero", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.route("**/api/v1/planner/nutrition?*", async (route) => {
       await fulfillNutrition(
         route,
@@ -320,6 +376,8 @@ test.describe("planner-nutrition-summary", () => {
     const summary = page.getByTestId("planner-week-nutrition-summary");
     await expect(summary).toContainText("계획 영양 정보 없음");
     await expect(summary).not.toContainText("0 kcal");
-    await page.screenshot({ path: path.join(EVIDENCE_DIR, "planner-empty-unavailable-not-zero.png") });
+    if (testInfo.project.name === "desktop-chrome") {
+      await page.screenshot({ path: path.join(EVIDENCE_DIR, "planner-empty-unavailable-not-zero.png") });
+    }
   });
 });

@@ -699,6 +699,11 @@ describe("MealScreen", () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal({ planned_servings: 2, status: "registered" })] });
     updateMealServings.mockResolvedValue({ id: "meal-1", planned_servings: 3, status: "registered" });
+    const pendingNutritionRefresh = createDeferred<ReturnType<typeof createPlannerNutritionData>>();
+    fetchPlannerNutrition
+      .mockReset()
+      .mockResolvedValueOnce(createPlannerNutritionData())
+      .mockReturnValueOnce(pendingNutritionRefresh.promise);
 
     const user = userEvent.setup();
     render(<MealScreen {...DEFAULT_PROPS} />);
@@ -712,6 +717,8 @@ describe("MealScreen", () => {
     await waitFor(() => {
       expect(updateMealServings).toHaveBeenCalledWith("meal-1", 3);
     });
+    await waitFor(() => expect(fetchPlannerNutrition).toHaveBeenCalledTimes(2));
+    expect(screen.getByText(/3인분 · \d+분/)).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -845,6 +852,11 @@ describe("MealScreen", () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal({ id: "meal-1", recipe_title: "김치찌개" })] });
     deleteMeal.mockResolvedValue(undefined);
+    const pendingNutritionRefresh = createDeferred<ReturnType<typeof createPlannerNutritionData>>();
+    fetchPlannerNutrition
+      .mockReset()
+      .mockResolvedValueOnce(createPlannerNutritionData())
+      .mockReturnValueOnce(pendingNutritionRefresh.promise);
 
     const user = userEvent.setup();
     render(<MealScreen {...DEFAULT_PROPS} />);
@@ -862,6 +874,8 @@ describe("MealScreen", () => {
     await waitFor(() => {
       expect(screen.queryByText("김치찌개")).toBeNull();
     });
+    await waitFor(() => expect(fetchPlannerNutrition).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("계획 영양 정보 없음")).toBeTruthy();
   });
 
   it("cancels delete modal without calling deleteMeal", async () => {
@@ -1006,6 +1020,67 @@ describe("MealScreen", () => {
     expect(screen.queryByTestId("meal-screen-meal-add-sheet")).toBeNull();
   });
 
+  it("refreshes nutrition without blocking the list after an inline recipe meal is added", async () => {
+    const existingMeal = buildMeal({ id: "meal-existing", recipe_title: "된장찌개" });
+    const addedMeal = buildMeal({ id: "meal-added", recipe_title: "김치찌개", planned_servings: 1 });
+    const pendingNutritionRefresh = createDeferred<ReturnType<typeof createPlannerNutritionData>>();
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals
+      .mockResolvedValueOnce({ items: [existingMeal], product_entries: [] })
+      .mockResolvedValueOnce({ items: [existingMeal, addedMeal], product_entries: [] });
+    fetchPlannerNutrition
+      .mockReset()
+      .mockResolvedValueOnce(createPlannerNutritionData())
+      .mockReturnValueOnce(pendingNutritionRefresh.promise);
+    fetchLeftovers.mockResolvedValue({
+      items: [
+        {
+          id: "leftover-1",
+          recipe_id: "recipe-1",
+          recipe_title: "김치찌개",
+          recipe_thumbnail_url: null,
+          status: "leftover",
+          cooked_at: "2026-04-17T00:00:00.000Z",
+          eaten_at: null,
+          cooking_servings: 1,
+          source_meal_label: "저녁",
+          source_planned_servings: 1,
+        },
+      ],
+    });
+    createMealSafe.mockResolvedValue({
+      success: true,
+      data: {
+        id: "meal-added",
+        recipe_id: "recipe-1",
+        plan_date: DEFAULT_PROPS.planDate,
+        column_id: DEFAULT_PROPS.columnId,
+        planned_servings: 1,
+        status: "registered",
+        is_leftover: true,
+        leftover_dish_id: "leftover-1",
+        recipe_nutrition_snapshot_id: null,
+      },
+      error: null,
+    });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await userEvent.click(await screen.findByTestId("meal-screen-add-cta"));
+    await userEvent.click(
+      within(screen.getByTestId("meal-screen-meal-add-sheet")).getByTestId(
+        "meal-add-option-leftover",
+      ),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "추가" }));
+    const servingsDialog = await screen.findByRole("dialog", { name: "계획 인분 입력" });
+    await userEvent.click(within(servingsDialog).getByRole("button", { name: "추가하기" }));
+
+    await waitFor(() => expect(fetchMeals).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetchPlannerNutrition).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("김치찌개")).toBeTruthy();
+    expect(screen.getByTestId("meal-screen-add-cta")).toBeTruthy();
+  });
+
   it("links the YouTube option directly to the full-screen import route from the app CTA", async () => {
     const user = userEvent.setup();
     readE2EAuthOverride.mockReturnValue(true);
@@ -1120,6 +1195,11 @@ describe("MealScreen", () => {
     const pendingPatch = createDeferred<typeof productEntry>();
     fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
     updateProductPlannerEntryQuantity.mockReturnValue(pendingPatch.promise);
+    const pendingNutritionRefresh = createDeferred<ReturnType<typeof createPlannerNutritionData>>();
+    fetchPlannerNutrition
+      .mockReset()
+      .mockResolvedValueOnce(createPlannerNutritionData())
+      .mockReturnValueOnce(pendingNutritionRefresh.promise);
 
     render(<MealScreen {...DEFAULT_PROPS} />);
     await userEvent.click(await screen.findByRole("button", { name: "수량 변경" }));
@@ -1138,6 +1218,8 @@ describe("MealScreen", () => {
 
     pendingPatch.resolve({ ...productEntry, quantity: { amount: 2, unit: "serving" } });
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "완제품 수량 변경" })).toBeNull());
+    await waitFor(() => expect(fetchPlannerNutrition).toHaveBeenCalledTimes(2));
+    expect(screen.getByText(/2회/)).toBeTruthy();
   });
 
   it("cleans only product edit query fields after a restored PATCH succeeds", async () => {
@@ -1248,6 +1330,11 @@ describe("MealScreen", () => {
     deleteProductPlannerEntry
       .mockReturnValueOnce(firstDelete.promise)
       .mockResolvedValueOnce({ deleted: true, entry_id: productEntry.id });
+    const pendingNutritionRefresh = createDeferred<ReturnType<typeof createPlannerNutritionData>>();
+    fetchPlannerNutrition
+      .mockReset()
+      .mockResolvedValueOnce(createPlannerNutritionData())
+      .mockReturnValueOnce(pendingNutritionRefresh.promise);
 
     render(<MealScreen {...DEFAULT_PROPS} />);
     const card = await screen.findByTestId("product-planner-entry-entry-delete-retry");
@@ -1269,5 +1356,7 @@ describe("MealScreen", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "완제품 계획 삭제" })).toBeNull());
     expect(screen.queryByTestId("product-planner-entry-entry-delete-retry")).toBeNull();
     expect(deleteProductPlannerEntry).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(fetchPlannerNutrition).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("계획 영양 정보 없음")).toBeTruthy();
   });
 });

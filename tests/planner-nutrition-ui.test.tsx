@@ -213,6 +213,61 @@ describe("planner nutrition presentation", () => {
     expect(screen.queryByText("0 kcal")).toBeNull();
     expect(screen.queryByRole("button", { name: /수정|삭제|다시 계산|고정/ })).toBeNull();
   });
+
+  it.each([
+    ["week", PlannerWeekNutritionSummary],
+    ["meal", MealNutritionSummary],
+  ] as const)("shows only retry guidance on an initial %s nutrition error", (_kind, Summary) => {
+    const props = {
+      error: "계획 영양을 불러오지 못했어요.",
+      isRefreshing: false,
+      nutrition: null,
+      onRetry: vi.fn(),
+      status: "error" as const,
+    };
+
+    render(
+      Summary === PlannerWeekNutritionSummary ? (
+        <PlannerWeekNutritionSummary {...props} days={[]} />
+      ) : (
+        <MealNutritionSummary {...props} />
+      ),
+    );
+
+    expect(screen.getByText("계획 영양을 불러오지 못했어요.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
+    expect(screen.queryByText("계획 영양 정보 없음")).toBeNull();
+  });
+
+  it("distinguishes a missing aggregate for existing entries from an empty meal column", () => {
+    const { rerender } = render(
+      <MealNutritionSummary
+        entryCount={1}
+        error={null}
+        isRefreshing={false}
+        nutrition={null}
+        onRetry={vi.fn()}
+        status="ready"
+      />,
+    );
+
+    expect(screen.getByText("계획 영양 정보 준비 중")).toBeTruthy();
+    expect(screen.queryByText("계획 영양 정보 없음")).toBeNull();
+
+    rerender(
+      <MealNutritionSummary
+        entryCount={0}
+        error={null}
+        isRefreshing={false}
+        nutrition={aggregate()}
+        onRetry={vi.fn()}
+        status="ready"
+      />,
+    );
+
+    expect(screen.getByText("계획 영양 정보 없음")).toBeTruthy();
+    expect(screen.queryByText("640 kcal")).toBeNull();
+  });
 });
 
 describe("usePlannerNutritionSummary", () => {
@@ -246,6 +301,31 @@ describe("usePlannerNutritionSummary", () => {
     expect(fetchPlannerNutrition.mock.calls[0]?.[2]).toBeInstanceOf(AbortSignal);
   });
 
+  it("hides data loaded for a different range while the new range is pending", async () => {
+    const nextRange = deferred<PlannerNutritionData>();
+    fetchPlannerNutrition
+      .mockResolvedValueOnce(dataForRange("2026-07-13"))
+      .mockReturnValueOnce(nextRange.promise);
+
+    const { result, rerender } = renderHook(
+      ({ startDate, endDate }) =>
+        usePlannerNutritionSummary({ enabled: true, startDate, endDate }),
+      {
+        initialProps: { startDate: "2026-07-13", endDate: "2026-07-13" },
+      },
+    );
+
+    await waitFor(() => expect(result.current.data?.range.start_date).toBe("2026-07-13"));
+    rerender({ startDate: "2026-07-20", endDate: "2026-07-20" });
+
+    await waitFor(() => expect(result.current.status).toBe("loading"));
+    expect(result.current.data).toBeNull();
+    expect(result.current.isRefreshing).toBe(false);
+
+    nextRange.resolve(dataForRange("2026-07-20"));
+    await waitFor(() => expect(result.current.data?.range.start_date).toBe("2026-07-20"));
+  });
+
   it("preserves visible data during a soft refresh error and retries the same range", async () => {
     fetchPlannerNutrition
       .mockResolvedValueOnce(dataForRange("2026-07-13"))
@@ -268,5 +348,60 @@ describe("usePlannerNutritionSummary", () => {
     await result.current.retry();
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.data?.summary.nutrition.calculation_quality).toBe("mixed");
+  });
+
+  it("clears private nutrition state while disabled before a later authentication", async () => {
+    const second = deferred<PlannerNutritionData>();
+    fetchPlannerNutrition
+      .mockResolvedValueOnce(dataForRange("2026-07-13"))
+      .mockReturnValueOnce(second.promise);
+
+    const { result, rerender } = renderHook(
+      ({ enabled }) =>
+        usePlannerNutritionSummary({
+          enabled,
+          startDate: "2026-07-13",
+          endDate: "2026-07-13",
+        }),
+      { initialProps: { enabled: true } },
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    rerender({ enabled: false });
+    await waitFor(() => expect(result.current.status).toBe("idle"));
+    expect(result.current.data).toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(result.current.isRefreshing).toBe(false);
+
+    rerender({ enabled: true });
+    await waitFor(() => expect(result.current.status).toBe("loading"));
+    expect(result.current.data).toBeNull();
+    second.resolve(dataForRange("2026-07-13", aggregate({ calculation_quality: "mixed" })));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+  });
+
+  it("clears visible nutrition before handing a 401 to the unauthorized gate", async () => {
+    const onUnauthorized = vi.fn();
+    const unauthorized = Object.assign(new Error("unauthorized"), { status: 401 });
+    fetchPlannerNutrition
+      .mockResolvedValueOnce(dataForRange("2026-07-13"))
+      .mockRejectedValueOnce(unauthorized);
+
+    const { result } = renderHook(() =>
+      usePlannerNutritionSummary({
+        enabled: true,
+        startDate: "2026-07-13",
+        endDate: "2026-07-13",
+        onUnauthorized,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    await result.current.retry();
+    await waitFor(() => expect(onUnauthorized).toHaveBeenCalledTimes(1));
+    expect(result.current.status).toBe("idle");
+    expect(result.current.data).toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(result.current.isRefreshing).toBe(false);
   });
 });

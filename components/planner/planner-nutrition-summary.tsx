@@ -34,6 +34,7 @@ export function PlannerWeekNutritionSummary({
   status,
 }: SharedSummaryProps & { days: PlannerNutritionDaySummary[] }) {
   const showInitialLoading = status === "loading" && nutrition === null;
+  const showInitialError = status === "error" && nutrition === null;
   const showEmpty = status === "empty";
 
   return (
@@ -48,6 +49,10 @@ export function PlannerWeekNutritionSummary({
           <p className="text-[12px] font-extrabold text-[var(--text-3)]">계획 영양</p>
           {showInitialLoading ? (
             <p className="mt-1 text-[14px] font-bold text-[var(--text-3)]">불러오는 중</p>
+          ) : showInitialError ? (
+            <p className="mt-1 text-[14px] font-bold text-[var(--danger)]">
+              {error ?? "계획 영양을 불러오지 못했어요."}
+            </p>
           ) : showEmpty || nutrition === null ? (
             <p className="mt-1 text-[14px] font-bold text-[var(--text-2)]">
               계획 영양 정보 없음
@@ -68,7 +73,7 @@ export function PlannerWeekNutritionSummary({
 
       {status === "error" ? (
         <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-2 text-[12px] text-[var(--text-3)]">
-          <span>{error ?? "계획 영양을 불러오지 못했어요."}</span>
+          <span>{showInitialError ? "" : error ?? "계획 영양을 불러오지 못했어요."}</span>
           <button
             className="min-h-11 shrink-0 rounded-[var(--radius-control)] px-3 font-bold text-[var(--brand-primary-text)]"
             onClick={onRetry}
@@ -149,12 +154,13 @@ function WarningDialog({
 }
 
 export function MealNutritionSummary({
+  entryCount,
   error,
   isRefreshing,
   nutrition,
   onRetry,
   status,
-}: SharedSummaryProps) {
+}: SharedSummaryProps & { entryCount?: number }) {
   const [warningOpen, setWarningOpen] = useState(false);
   const warningButtonRef = useRef<HTMLButtonElement>(null);
   const messages = buildPlannerNutritionWarningMessages(nutrition?.warnings ?? []);
@@ -177,7 +183,28 @@ export function MealNutritionSummary({
     );
   }
 
-  if (status === "empty" || nutrition === null) {
+  if (status === "error" && nutrition === null) {
+    return (
+      <section
+        className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--surface)] p-4"
+        data-testid="meal-nutrition-summary"
+      >
+        <p className="text-[13px] font-extrabold text-[var(--text-3)]">계획 영양</p>
+        <p className="mt-1 text-[14px] font-bold text-[var(--danger)]">
+          {error ?? "계획 영양을 불러오지 못했어요."}
+        </p>
+        <button
+          className="mt-2 min-h-11 rounded-[var(--radius-control)] px-3 font-bold text-[var(--brand-primary-text)]"
+          onClick={onRetry}
+          type="button"
+        >
+          다시 시도
+        </button>
+      </section>
+    );
+  }
+
+  if (status === "empty" || entryCount === 0) {
     return (
       <section
         className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4"
@@ -186,6 +213,20 @@ export function MealNutritionSummary({
         <p className="text-[13px] font-extrabold text-[var(--text-3)]">계획 영양</p>
         <p className="mt-1 text-[15px] font-bold text-[var(--foreground)]">
           계획 영양 정보 없음
+        </p>
+      </section>
+    );
+  }
+
+  if (nutrition === null) {
+    return (
+      <section
+        className="rounded-[var(--radius-card)] border border-[var(--line-strong)] bg-[var(--surface)] p-4"
+        data-testid="meal-nutrition-summary"
+      >
+        <p className="text-[13px] font-extrabold text-[var(--text-3)]">계획 영양</p>
+        <p className="mt-1 text-[15px] font-bold text-[var(--foreground)]">
+          계획 영양 정보 준비 중
         </p>
       </section>
     );

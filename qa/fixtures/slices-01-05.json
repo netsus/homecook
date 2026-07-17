@@ -331,9 +331,31 @@
         "dateAnchor": "end"
       }
     ],
+    "productEntries": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440070",
+        "productId": "550e8400-e29b-41d4-a716-446655440071",
+        "productName": "플레인 요거트",
+        "productBrand": "집밥 테스트",
+        "columnId": "550e8400-e29b-41d4-a716-446655440050",
+        "dateAnchor": "start",
+        "quantity": { "amount": 2, "unit": "serving" },
+        "nutritionVersionId": "550e8400-e29b-41d4-a716-446655440072"
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440073",
+        "productId": "550e8400-e29b-41d4-a716-446655440074",
+        "productName": "영양 정보 준비 중 간식",
+        "productBrand": null,
+        "columnId": "550e8400-e29b-41d4-a716-446655440053",
+        "dateAnchor": "end",
+        "quantity": { "amount": 1, "unit": "serving" },
+        "nutritionVersionId": "550e8400-e29b-41d4-a716-446655440075"
+      }
+    ],
     "nutritionEntries": [
       {
-        "id": "qa-recipe-nutrition-breakfast",
+        "id": "550e8400-e29b-41d4-a716-446655440060",
         "entryType": "recipe",
         "columnId": "550e8400-e29b-41d4-a716-446655440050",
         "dateAnchor": "start",
@@ -358,7 +380,7 @@
         ]
       },
       {
-        "id": "qa-product-nutrition-breakfast",
+        "id": "550e8400-e29b-41d4-a716-446655440070",
         "entryType": "product",
         "columnId": "550e8400-e29b-41d4-a716-446655440050",
         "dateAnchor": "start",
@@ -374,7 +396,7 @@
         "sources": []
       },
       {
-        "id": "qa-recipe-nutrition-lunch",
+        "id": "550e8400-e29b-41d4-a716-446655440061",
         "entryType": "recipe",
         "columnId": "550e8400-e29b-41d4-a716-446655440051",
         "dateAnchor": "mid",
@@ -390,7 +412,7 @@
         "sources": []
       },
       {
-        "id": "qa-recipe-nutrition-dinner",
+        "id": "550e8400-e29b-41d4-a716-446655440062",
         "entryType": "recipe",
         "columnId": "550e8400-e29b-41d4-a716-446655440052",
         "dateAnchor": "end",
@@ -406,7 +428,7 @@
         "sources": []
       },
       {
-        "id": "qa-product-nutrition-snack",
+        "id": "550e8400-e29b-41d4-a716-446655440073",
         "entryType": "product",
         "columnId": "550e8400-e29b-41d4-a716-446655440053",
         "dateAnchor": "end",

@@ -6,7 +6,10 @@ import {
 import { getIngredientTaxonomyMetadata } from "@/lib/ingredient-categories";
 import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutrition-presentation";
 import { sortPlannerColumns } from "@/lib/planner/fixed-slots";
-import { aggregatePlannerNutritionEntries } from "@/lib/server/planner-nutrition-summary";
+import {
+  aggregatePlannerNutritionEntries,
+  type PlannerNutritionEntryProjection,
+} from "@/lib/server/planner-nutrition-summary";
 import type {
   CookingMethodListData,
   IngredientItem,
@@ -24,6 +27,7 @@ import type {
   RecipeCardItem,
 } from "@/types/recipe";
 import type { MealCreateData, MealListData, MealMutationData } from "@/types/meal";
+import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 import type {
   LeftoverKeepData,
   LeftoverDishStatus,
@@ -36,10 +40,11 @@ import type {
   PlannerData,
 } from "@/types/planner";
 import type { PantryItem, PantryListData } from "@/types/pantry";
-import type {
-  PlannerNutritionData,
-  PlannerNutritionQuality,
-  PlannerNutritionValue,
+import {
+  PLANNER_NUTRITION_CORE_CODES,
+  type PlannerNutritionData,
+  type PlannerNutritionQuality,
+  type PlannerNutritionValue,
 } from "@/types/planner-nutrition";
 
 type DateAnchor = "start" | "mid" | "end";
@@ -615,6 +620,92 @@ function resolveAnchoredDate(startDate: string, endDate: string, anchor: DateAnc
   return middle.toISOString().slice(0, 10);
 }
 
+function getFixtureNutritionEntry(id: string, entryType: "recipe" | "product") {
+  return fixtureData.planner.nutritionEntries.find(
+    (entry) => entry.id === id && entry.entryType === entryType,
+  );
+}
+
+function fixtureCalculationStatus(values: Record<string, PlannerNutritionValue>) {
+  const statuses = PLANNER_NUTRITION_CORE_CODES.map((code) => values[code]?.status ?? "unavailable");
+  if (statuses.every((status) => status === "complete")) return "complete" as const;
+  if (statuses.every((status) => status === "unavailable")) return "unavailable" as const;
+  return "partial" as const;
+}
+
+function toQaFixtureProductPlannerEntry(
+  value: (typeof fixtureData.planner.productEntries)[number],
+  startDate: string,
+  endDate: string,
+): ProductPlannerEntryData {
+  const nutritionEntry = getFixtureNutritionEntry(value.id, "product");
+  const values = nutritionEntry
+    ? clone(nutritionEntry.values) as Record<string, PlannerNutritionValue>
+    : Object.fromEntries(
+      PLANNER_NUTRITION_CORE_CODES.map((code) => [code, unavailablePlannerNutritionValue()]),
+    );
+
+  return {
+    entry_type: "product",
+    id: value.id,
+    product_id: value.productId,
+    product_name: value.productName,
+    product_brand: value.productBrand,
+    plan_date: resolveAnchoredDate(startDate, endDate, value.dateAnchor as DateAnchor),
+    column_id: value.columnId,
+    quantity: {
+      amount: value.quantity.amount,
+      unit: value.quantity.unit as ProductPlannerEntryData["quantity"]["unit"],
+    },
+    workflow_status: null,
+    product_nutrition_version_id: value.nutritionVersionId,
+    basis_relations: [],
+    nutrition: {
+      basis: {
+        amount: value.quantity.amount,
+        unit: value.quantity.unit as ProductPlannerEntryData["quantity"]["unit"],
+      },
+      values,
+      calculation_status: fixtureCalculationStatus(values),
+      calculation_quality: nutritionEntry
+        ? nutritionEntry.calculationQuality as PlannerNutritionQuality
+        : null,
+      warnings: nutritionEntry ? [...nutritionEntry.warnings] : [],
+      sources: nutritionEntry
+        ? clone(nutritionEntry.sources) as ProductPlannerEntryData["nutrition"]["sources"]
+        : [],
+    },
+  };
+}
+
+function unavailablePlannerNutritionValue(): PlannerNutritionValue {
+  return {
+    amount: null,
+    known_amount: null,
+    status: "unavailable",
+    display_mode: null,
+  };
+}
+
+function unavailablePlannerNutritionValues() {
+  return Object.fromEntries(
+    PLANNER_NUTRITION_CORE_CODES.map((code) => [code, unavailablePlannerNutritionValue()]),
+  ) as Record<string, PlannerNutritionValue>;
+}
+
+function scaleFixtureNutritionValues(
+  values: Record<string, PlannerNutritionValue>,
+  scale: number,
+) {
+  return Object.fromEntries(
+    Object.entries(values).map(([code, value]) => [code, {
+      ...value,
+      amount: value.amount === null ? null : value.amount * scale,
+      known_amount: value.known_amount === null ? null : value.known_amount * scale,
+    }]),
+  ) as Record<string, PlannerNutritionValue>;
+}
+
 export function getQaFixturePlannerData(startDate: string, endDate: string) {
   const state = getQaFixtureState();
   const columns = sortPlannerColumns(state.plannerColumns);
@@ -640,7 +731,9 @@ export function getQaFixturePlannerData(startDate: string, endDate: string) {
         recipe_thumbnail_url: fixtureData.recipe.thumbnailUrl,
       })),
     ],
-    product_entries: [],
+    product_entries: fixtureData.planner.productEntries.map((entry) =>
+      toQaFixtureProductPlannerEntry(entry, startDate, endDate)
+    ),
   } satisfies PlannerData;
 }
 
@@ -648,16 +741,49 @@ export function getQaFixturePlannerNutrition(
   startDate: string,
   endDate: string,
 ): PlannerNutritionData {
-  const columns = sortPlannerColumns(getQaFixtureState().plannerColumns);
-  const entries = fixtureData.planner.nutritionEntries.map((entry) => ({
-    storage_key: `${entry.entryType}:${entry.id}`,
-    plan_date: resolveAnchoredDate(startDate, endDate, entry.dateAnchor as DateAnchor),
-    column_id: entry.columnId,
-    values: clone(entry.values) as Record<string, PlannerNutritionValue>,
-    calculation_quality: entry.calculationQuality as PlannerNutritionQuality,
-    warnings: [...entry.warnings],
-    sources: clone(entry.sources),
-  }));
+  const plannerData = getQaFixturePlannerData(startDate, endDate);
+  const columns = plannerData.columns;
+  const recipeEntries: PlannerNutritionEntryProjection[] = plannerData.meals.map((meal) => {
+    const nutritionEntry = getFixtureNutritionEntry(meal.id, "recipe");
+    const fixtureMeal = fixtureData.planner.meals.find((entry) => entry.id === meal.id);
+
+    if (!nutritionEntry || !fixtureMeal) {
+      return {
+        storage_key: `recipe:${meal.id}`,
+        plan_date: meal.plan_date,
+        column_id: meal.column_id,
+        values: unavailablePlannerNutritionValues(),
+        calculation_quality: null,
+        warnings: [],
+        sources: [],
+      };
+    }
+
+    return {
+      storage_key: `recipe:${meal.id}`,
+      plan_date: meal.plan_date,
+      column_id: meal.column_id,
+      values: scaleFixtureNutritionValues(
+        clone(nutritionEntry.values) as Record<string, PlannerNutritionValue>,
+        meal.planned_servings / fixtureMeal.plannedServings,
+      ),
+      calculation_quality: nutritionEntry.calculationQuality as PlannerNutritionQuality,
+      warnings: [...nutritionEntry.warnings],
+      sources: clone(nutritionEntry.sources),
+    };
+  });
+  const productEntries: PlannerNutritionEntryProjection[] = plannerData.product_entries.map(
+    (entry) => ({
+      storage_key: `product:${entry.id}`,
+      plan_date: entry.plan_date,
+      column_id: entry.column_id,
+      values: clone(entry.nutrition.values) as Record<string, PlannerNutritionValue>,
+      calculation_quality: entry.nutrition.calculation_quality,
+      warnings: [...entry.nutrition.warnings],
+      sources: clone(entry.nutrition.sources),
+    }),
+  );
+  const entries = [...recipeEntries, ...productEntries];
   const days = Array.from({ length: inclusiveFixtureDayCount(startDate, endDate) }, (_, index) => {
     const date = new Date(`${startDate}T00:00:00.000Z`);
     date.setUTCDate(date.getUTCDate() + index);
@@ -974,7 +1100,20 @@ export function getQaFixtureMealsBySlot(planDate: string, columnId: string) {
         status: meal.status,
         is_leftover: meal.is_leftover,
       })),
-    product_entries: [],
+    product_entries: plannerData.product_entries
+      .filter((entry) => entry.plan_date === planDate && entry.column_id === columnId)
+      .map((entry) => ({
+        entry_type: entry.entry_type,
+        id: entry.id,
+        product_id: entry.product_id,
+        product_name: entry.product_name,
+        product_brand: entry.product_brand,
+        quantity: entry.quantity,
+        workflow_status: entry.workflow_status,
+        product_nutrition_version_id: entry.product_nutrition_version_id,
+        basis_relations: entry.basis_relations,
+        nutrition: entry.nutrition,
+      })),
   } satisfies MealListData;
 }
 

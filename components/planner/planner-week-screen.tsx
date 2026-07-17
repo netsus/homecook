@@ -42,6 +42,11 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { buildReturnHref } from "@/lib/navigation/return-context";
+import {
+  clearPlannerWeekReturnContext,
+  readPlannerWeekReturnContext,
+  savePlannerWeekReturnContext,
+} from "@/lib/planner/planner-week-return-context";
 import { buildPlannerMealStatusStats } from "@/lib/planner-stats";
 import {
   formatProductQuantity,
@@ -592,9 +597,23 @@ export function PlannerWeekScreen({
   const [selectedDateKey, setSelectedDateKey] = useState<string>(() => todayKey);
   const mobileDayCardRefs = useRef<Record<string, HTMLElement | null>>({});
   const webDayCardRefs = useRef<Record<string, HTMLElement | null>>({});
+  const dateKeys = useMemo(
+    () => buildDateKeys(rangeStartDate, rangeEndDate),
+    [rangeEndDate, rangeStartDate],
+  );
   const handleNutritionUnauthorized = useCallback(() => {
+    savePlannerWeekReturnContext({
+      version: 1,
+      startDate: rangeStartDate,
+      endDate: rangeEndDate,
+      selectedDate: dateKeys.includes(selectedDateKey)
+        ? selectedDateKey
+        : rangeStartDate,
+      columnId: mealAddSheet?.columnId ?? null,
+      slotName: mealAddSheet?.slotName ?? null,
+    });
     setAuthState("unauthorized");
-  }, []);
+  }, [dateKeys, mealAddSheet, rangeEndDate, rangeStartDate, selectedDateKey]);
   const nutritionRequest = usePlannerNutritionSummary({
     enabled: authState === "authenticated",
     endDate: rangeEndDate,
@@ -602,10 +621,6 @@ export function PlannerWeekScreen({
     startDate: rangeStartDate,
   });
 
-  const dateKeys = useMemo(
-    () => buildDateKeys(rangeStartDate, rangeEndDate),
-    [rangeEndDate, rangeStartDate],
-  );
   const entriesByDateAndColumn = useMemo(
     () => buildPlannerEntryMap(meals, productEntries),
     [meals, productEntries],
@@ -933,7 +948,25 @@ export function PlannerWeekScreen({
       return;
     }
 
-    runPlannerAction(loadPlanner());
+    const returnContext = readPlannerWeekReturnContext();
+    if (!returnContext) {
+      runPlannerAction(loadPlanner());
+      return;
+    }
+
+    clearPlannerWeekReturnContext();
+    setSelectedDateKey(returnContext.selectedDate);
+    if (returnContext.columnId && returnContext.slotName) {
+      setMealAddSheet({
+        columnId: returnContext.columnId,
+        dateKey: returnContext.selectedDate,
+        slotName: returnContext.slotName,
+      });
+    }
+    runPlannerAction(loadPlanner({
+      startDate: returnContext.startDate,
+      endDate: returnContext.endDate,
+    }));
   }, [authState, loadPlanner]);
 
   useLayoutEffect(() => {

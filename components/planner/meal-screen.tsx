@@ -1405,6 +1405,7 @@ export function MealScreen({
             : meal,
         ),
       );
+      void nutritionRequest.retry();
     } catch (error) {
       if (isMealApiError(error) && error.status === 401) {
         setAuthState("unauthorized");
@@ -1422,6 +1423,7 @@ export function MealScreen({
     try {
       await deleteMeal(mealId);
       setMeals((prev) => prev.filter((meal) => meal.id !== mealId));
+      void nutritionRequest.retry();
     } catch (error) {
       if (isMealApiError(error) && error.status === 401) {
         setAuthState("unauthorized");
@@ -1618,6 +1620,7 @@ export function MealScreen({
       setProductEntries((current) =>
         current.map((entry) => (entry.id === entryId ? updated : entry)),
       );
+      void nutritionRequest.retry();
       clearProductQuantityEditReturnState();
       setEditingProduct(null);
     } catch (caught) {
@@ -1672,6 +1675,7 @@ export function MealScreen({
     try {
       await deleteProductPlannerEntry(entryId);
       setProductEntries((current) => current.filter((entry) => entry.id !== entryId));
+      void nutritionRequest.retry();
       clearProductPlannerReturnContext();
       setAuthReturnPath(null);
       setDeletingProduct(null);
@@ -1727,6 +1731,7 @@ export function MealScreen({
     setMealAddPickerMode(null);
     setMealAddSheetOpen(false);
     await loadMeals();
+    void nutritionRequest.retry();
   }
 
   function handleAllPantryCompletionClose() {
@@ -1772,12 +1777,10 @@ export function MealScreen({
       null,
     [columnId, nutritionRequest.data, planDate],
   );
-  const nutritionStatus =
-    nutritionRequest.status === "ready" && currentColumnNutrition === null
-      ? "empty"
-      : nutritionRequest.status;
+  const nutritionStatus = nutritionRequest.status;
   const nutritionSummary = (
     <MealNutritionSummary
+      entryCount={displayedMeals.length + displayedProductEntries.length}
       error={nutritionRequest.error}
       isRefreshing={nutritionRequest.isRefreshing}
       nutrition={currentColumnNutrition}
