@@ -816,6 +816,47 @@ describe("public nutrition source network and CLI", () => {
     expect(calls).toBe(2);
   });
 
+  it("accepts the provider zero-total shape when the items field is omitted", async () => {
+    const { fetchMfdsBatch } = await loadPipeline();
+
+    const empty = await fetchMfdsBatch({
+      apiKey: "<FAKE_TEST_KEY_ONLY>",
+      fetchedAt: "2026-07-17T00:00:00.000Z",
+      fetchImpl: async () => response({ response: {
+        header: { resultCode: "00" },
+        body: { pageNo: 1, totalCount: 0 },
+      } }),
+      sleep: async () => undefined,
+      now: () => 0,
+      createTimeoutSignal: () => new AbortController().signal,
+    });
+
+    expect(empty.manifest).toMatchObject({
+      provider_reported_total: 0,
+      page_count: 1,
+    });
+    expect(empty.rawSnapshot.pages[0].items).toEqual([]);
+  });
+
+  it.each([null, "", 1])(
+    "rejects an omitted items field when totalCount is malformed or non-zero (%s)",
+    async (totalCount) => {
+      const { fetchMfdsBatch } = await loadPipeline();
+
+      await expect(fetchMfdsBatch({
+        apiKey: "<FAKE_TEST_KEY_ONLY>",
+        fetchedAt: "2026-07-17T00:00:00.000Z",
+        fetchImpl: async () => response({ response: {
+          header: { resultCode: "00" },
+          body: { pageNo: 1, totalCount },
+        } }),
+        sleep: async () => undefined,
+        now: () => 0,
+        createTimeoutSignal: () => new AbortController().signal,
+      })).rejects.toMatchObject({ code: "SCHEMA_DRIFT" });
+    },
+  );
+
   it.each([
     ["empty intermediate page", [
       { page_no: 1, total_count: 2, next_page_token: "next", items: [] },
