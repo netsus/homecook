@@ -136,14 +136,22 @@ public API/UI 계약은 바꾸지 않는다. internal artifact와 CLI만 추가�
 
 ## Delivery Checklist
 
-- [ ] all-active inventory/checksum 계약과 CLI 고정 <!-- omo:id=delivery-inventory-contract;stage=2;scope=backend;review=3 -->
-- [ ] exact-key 후보·검수 decision·strict exclusion 구현 <!-- omo:id=delivery-decision-model;stage=2;scope=backend;review=3 -->
-- [ ] atomic apply/replay/report/disable와 production checkpoint guard <!-- omo:id=delivery-batch-lifecycle;stage=2;scope=backend;review=3 -->
-- [ ] missing≠0와 source payload/version 불변성 보존 <!-- omo:id=delivery-missing-immutability;stage=2;scope=backend;review=3 -->
-- [ ] coverage 4종 zero gate와 전체-state duplicate primary 방지 <!-- omo:id=delivery-coverage-gates;stage=2;scope=backend;review=3 -->
-- [ ] fixture와 fresh local Supabase real DB smoke 분리 <!-- omo:id=delivery-real-db-split;stage=2;scope=shared;review=3 -->
-- [ ] secret/raw-row/production write 안전선 테스트 <!-- omo:id=delivery-security-boundary;stage=2;scope=backend;review=3 -->
-- [ ] Stage 3 독립 reviewer가 exact head와 report를 승인 <!-- omo:id=delivery-independent-review;stage=2;scope=shared;review=3 -->
+- [x] all-active inventory/checksum 계약과 CLI 고정 <!-- omo:id=delivery-inventory-contract;stage=2;scope=backend;review=3 -->
+- [x] exact-key 후보·검수 decision·strict exclusion 구현 <!-- omo:id=delivery-decision-model;stage=2;scope=backend;review=3 -->
+- [x] atomic apply/replay/report/disable와 production checkpoint guard <!-- omo:id=delivery-batch-lifecycle;stage=2;scope=backend;review=3 -->
+- [x] missing≠0와 source payload/version 불변성 보존 <!-- omo:id=delivery-missing-immutability;stage=2;scope=backend;review=3 -->
+- [x] coverage 4종 zero gate와 전체-state duplicate primary 방지 <!-- omo:id=delivery-coverage-gates;stage=2;scope=backend;review=3 -->
+- [x] fixture와 fresh local Supabase real DB smoke 분리 <!-- omo:id=delivery-real-db-split;stage=2;scope=shared;review=3 -->
+- [x] secret/raw-row/production write 안전선 테스트 <!-- omo:id=delivery-security-boundary;stage=2;scope=backend;review=3 -->
+- [x] Stage 3 독립 reviewer가 exact head와 report를 승인 <!-- omo:id=delivery-independent-review;stage=2;scope=shared;review=3 -->
+
+### Stage 2/3 Evidence
+
+- 구현 tree: PR #1030 head `c5fb72327b32bdcfbfa15beb4e58e998a3457a8a`, merge `3f5d48f05aabbe3e7315d6eb581a60396437072a`
+- 독립 Stage 3 review: 구현자와 분리된 Codex reviewer가 동일 tree를 검토해 required finding 0, `APPROVE`
+- targeted Vitest: `35 passed`, `2 skipped`; 격리 PostgreSQL: `13 passed`
+- `pnpm verify:backend`: product `1,589 passed`, security E2E `12 passed`, build/typecheck/lint 통과. 기존 recipe backfill lint warning 4개만 유지
+- 이 체크 상태는 구현·fixture·격리 DB 검증을 뜻한다. 실제 inventory 전수의 source 선택 검수와 외부 write 승인은 아래 `Manual Only`로 계속 미완료이며, roadmap 상태도 `in-progress`를 유지한다.
 
 ## Contract Evolution Candidates
 

@@ -70,15 +70,15 @@
   },
   "status": {
     "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "pr_path": null,
+  "pr_path": "https://github.com/netsus/homecook/pull/1030",
   "out_of_scope": [
     "recipe snapshot recalculation and Recipe Detail UI",
     "public API or frontend",
@@ -86,5 +86,5 @@
     "unapproved staging or production writes"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs merged in PR #1027 at 4e84de7fd864086d33d53308ef3e5aa45f19e9ac. Stage 2 backend TDD is active on feature/be-ingredient-nutrition-full-coverage with all-active inventory/decision coverage work in progress."
+  "notes": "Stage 1 docs merged in PR #1027 and contract repair in PR #1029. Stage 2/3 implementation tree c5fb72327b32bdcfbfa15beb4e58e998a3457a8a merged as 3f5d48f05aabbe3e7315d6eb581a60396437072a in PR #1030; independent Codex Stage 3 review found required findings 0 and APPROVE. Targeted Vitest 35 passed/2 skipped, isolated PostgreSQL 13 passed, verify:backend product 1,589 passed and security E2E 12 passed. Real inventory-wide source decisions and any staging/production write remain Manual Only; lifecycle intentionally stays in_progress."
 }

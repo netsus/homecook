@@ -2109,10 +2109,10 @@
       "id": "ingredient-nutrition-full-coverage",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-ingredient-nutrition-full-coverage",
-      "pr_path": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/1030",
       "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm exec vitest run tests/ingredient-nutrition-coverage.test.ts tests/ingredient-nutrition-import.test.ts tests/ingredient-nutrition-matching.test.ts tests/ingredient-nutrition-full-coverage-postgres.integration.test.ts",
         "pnpm verify:backend",
@@ -2122,9 +2122,9 @@
         "node scripts/validate-automation-spec.mjs --slice ingredient-nutrition-full-coverage",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs merged in PR #1027 and required findings were repaired in PR #1029 at 56dbd06df99428fd2e976e55b27c24909d121656. Stage 2 backend TDD is active on feature/be-ingredient-nutrition-full-coverage with all-active inventory/decision coverage work in progress.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
+      "notes": "Stage 1 docs merged in PR #1027 and repaired in PR #1029. Stage 2/3 implementation tree c5fb72327b32bdcfbfa15beb4e58e998a3457a8a merged as 3f5d48f05aabbe3e7315d6eb581a60396437072a in PR #1030 and independent Codex Stage 3 review returned APPROVE with required findings 0. Targeted Vitest 35 passed/2 skipped, isolated PostgreSQL 13 passed, verify:backend product 1,589 passed and security E2E 12 passed. Real inventory-wide decisions and external writes remain Manual Only, so lifecycle remains in_progress.",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
