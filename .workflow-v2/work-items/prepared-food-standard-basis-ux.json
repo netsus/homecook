@@ -67,7 +67,7 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
+    "lifecycle": "merged",
     "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "passed",
@@ -86,5 +86,64 @@
     "unapproved-production-staging-provider-writes"
   ],
   "open_questions": [],
-  "notes": "Stage 1 PR #1048 merged. Stage 4 RED→GREEN repaired g/ml to min=1/step=1 while serving/package remains min=0.01/step=any. UI 83, backend 17, PostgreSQL 11, slice Playwright 3 pass/1 intentional skip, exploratory eval 97, actual local Supabase/Chrome 100→101g recalculation, 320/390/1280 evidence, independent code repair-final and authority PASS are complete. Stage 6 current-head checks remain before merge."
+  "notes": "Stage 1 docs PR #1048 and Stage 4/5/6 frontend PR #1049 are merged. Exact implementation head eae12222e2803ab5bc717921c53f2ca8bcb95db1 passed fresh independent code review and product design authority with blocker/major/minor 0/0/0, exploratory eval 97, real local Supabase and Chrome 100→101g recalculation, responsive 320/390/1280 evidence, and 13 successful current-head checks with two intentional policy skips before merge 1976ecc3d4008b51bbbcb33fa792cc7ccbd2b7ee. UI 83, backend read/service 17, local PostgreSQL 11, and slice Playwright 3 pass/1 intentional skip were retained. Production/staging/provider writes remained zero; physical-device screen reader and production-scale measurements remain Manual Only.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/PLANNER_WEEK-prepared-food-standard-basis-ux-authority.md"
+      ],
+      "actual_verification_refs": [
+        "PR #1049 exact implementation head eae12222e2803ab5bc717921c53f2ca8bcb95db1 merged as 1976ecc3d4008b51bbbcb33fa792cc7ccbd2b7ee after 13 successful current-head checks and two intentional policy skips",
+        "Fresh independent code review and ui/designs/authority/PLANNER_WEEK-prepared-food-standard-basis-ux-authority.md both returned PASS with blocker/major/minor 0/0/0",
+        "docs/workpacks/prepared-food-standard-basis-ux/evidence/2026-07-18-stage4-real-browser.md retains local Supabase and Chrome public solid 100g, public liquid 100mL, shared manual, legacy no-relation, and 100→101g planner recalculation evidence",
+        "Focused UI Vitest 83, backend read/service 17, local PostgreSQL integration 11, slice Playwright 3 pass/1 intentional skip, exploratory eval 97, build, core smoke, accessibility, and visual checks passed",
+        "The input-attribute-only repair introduced no new fetch, query, N+1, API, schema, status, error, or basis inference",
+        "Production/staging/provider writes remained zero; physical-device screen reader and production-scale measurements remain Manual Only"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "eae12222e2803ab5bc717921c53f2ca8bcb95db1",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 3,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 2,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-18T18:38:21Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 3,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "pr-body-closeout-projection-resync",
+      "evidence_sources": [
+        "docs/workpacks/prepared-food-standard-basis-ux/evidence/2026-07-18-stage4-real-browser.md",
+        "ui/designs/authority/PLANNER_WEEK-prepared-food-standard-basis-ux-authority.md",
+        "ui/designs/critiques/MEAL_SCREEN-prepared-food-standard-basis-ux-critique.md",
+        "PR #1049 Actual Verification and current-head checks",
+        "PR #1049 Closeout Sync updated at 2026-07-18T18:38:21Z"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-18T18:27:00Z",
+      "status_synced_at": "2026-07-18T18:38:49Z",
+      "pr_body_synced_at": "2026-07-18T18:38:21Z"
+    }
+  }
 }

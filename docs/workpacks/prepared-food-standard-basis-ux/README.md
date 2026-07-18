@@ -93,13 +93,13 @@
 - Visual artifact: `ui/designs/evidence/prepared-food-standard-basis-ux/{before,after}/meal-screen-quantity-edit-{320,390,1280}.png`
 - Authority report: `ui/designs/authority/PLANNER_WEEK-prepared-food-standard-basis-ux-authority.md`
 - Authority status: reviewed
-- Notes: predecessor authority가 아니라 exact implementation head에 대한 독립 authority PASS/blocker 0을 사용한다.
+- Notes: predecessor authority가 아니라 exact implementation head `eae12222e2803ab5bc717921c53f2ca8bcb95db1`에 대한 독립 authority PASS/blocker 0을 사용한다.
 
 ## Design Status
 
 - [ ] 임시 UI (temporary)
-- [x] 리뷰 대기 (pending-review) — exact implementation head authority PASS, Stage 6 merge 대기
-- [ ] 확정 (confirmed)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed) — exact implementation head authority PASS·Stage 6 current-head merge 완료
 - [ ] N/A
 
 ## QA / Test Data Plan
@@ -137,4 +137,15 @@
 - [x] MealScreen g/ml step repair and inherited UX regression green <!-- omo:id=delivery-standard-basis-repair-green;stage=4;scope=frontend;review=5,6 -->
 - [x] 320/390/1280 real local browser evidence <!-- omo:id=delivery-standard-basis-browser-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] independent Stage 5 code review and authority blocker 0 <!-- omo:id=delivery-standard-basis-stage5-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] current-head full checks and Stage 6 merge <!-- omo:id=delivery-standard-basis-stage6-merge;stage=2;scope=shared;review=6 -->
+- [x] current-head full checks and Stage 6 merge — PR #1049, merge `1976ecc3d4008b51bbbcb33fa792cc7ccbd2b7ee` <!-- omo:id=delivery-standard-basis-stage6-merge;stage=2;scope=shared;review=6 -->
+
+## Closeout Evidence
+
+- 상태: `merged` / Design Status `confirmed`
+- Stage 1: PR #1048 merge `0118be2ab401b36d7b1c60be299a60e8f9c5f965`
+- Stage 4/5/6: exact implementation head `eae12222e2803ab5bc717921c53f2ca8bcb95db1`, PR #1049 merge `1976ecc3d4008b51bbbcb33fa792cc7ccbd2b7ee`
+- independent review: code review `PASS`, authority `PASS`, blocker/major/minor `0/0/0`
+- real local evidence: `docs/workpacks/prepared-food-standard-basis-ux/evidence/2026-07-18-stage4-real-browser.md`; local Supabase/Chrome에서 고형 100g·액상 100mL·사용자 공유·legacy 비교 불가와 100→101g 재계산을 확인했다.
+- responsive: 320/390/1280에서 horizontal overflow 0, 수량 input·primary button 44px
+- current-head checks: 13 success, `full-regression` / `lighthouse`는 변경 분류 정책에 따른 intentional skip, pending/fail 0
+- Manual Only: production/staging/provider write, 물리 기기 screen reader, production-scale 측정. 이 항목들은 병합 완료를 되돌리지 않는다.
