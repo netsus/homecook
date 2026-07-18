@@ -164,6 +164,35 @@ function buildProductEntry(id: string) {
   };
 }
 
+function buildProductEntryWithQuantity({
+  amount = 1,
+  basisAmount = amount,
+  basisUnit,
+  id,
+  quantityUnit,
+  relation,
+}: {
+  id: string;
+  amount?: number;
+  basisAmount?: number;
+  basisUnit: "g" | "ml" | "serving" | "package";
+  quantityUnit: "g" | "ml" | "serving" | "package";
+  relation?: {
+    from: { amount: number; unit: "g" | "ml" | "serving" | "package" };
+    to: { amount: number; unit: "g" | "ml" | "serving" | "package" };
+  };
+}) {
+  return {
+    ...buildProductEntry(id),
+    quantity: { amount, unit: quantityUnit },
+    basis_relations: relation ? [relation] : [],
+    nutrition: {
+      ...buildProductEntry(id).nutrition,
+      basis: { amount: basisAmount, unit: basisUnit },
+    },
+  };
+}
+
 function createMealApiError(status: number, message = "오류가 발생했어요.") {
   const error = new Error(message) as Error & { status: number; code: string };
   error.status = status;
@@ -1174,6 +1203,119 @@ describe("MealScreen", () => {
     const login = await screen.findByTestId("social-login-buttons");
     expect(decodeURIComponent(login.getAttribute("data-next-path") ?? "")).toContain("productEntryId=entry-auth");
     expect(decodeURIComponent(login.getAttribute("data-next-path") ?? "")).toContain("productAction=edit");
+  });
+
+  it.each([
+    {
+      expectedMin: "1",
+      expectedStep: "1",
+      name: "g quantity entries",
+      productEntry: buildProductEntryWithQuantity({
+        id: "entry-g-step",
+        amount: 100,
+        basisAmount: 100,
+        basisUnit: "g",
+        quantityUnit: "g",
+        relation: { from: { amount: 1, unit: "serving" }, to: { amount: 100, unit: "g" } },
+      }),
+    },
+    {
+      expectedMin: "1",
+      expectedStep: "1",
+      name: "ml quantity entries",
+      productEntry: buildProductEntryWithQuantity({
+        id: "entry-ml-step",
+        amount: 100,
+        basisAmount: 100,
+        basisUnit: "ml",
+        quantityUnit: "ml",
+        relation: { from: { amount: 1, unit: "package" }, to: { amount: 100, unit: "ml" } },
+      }),
+    },
+    {
+      expectedMin: "0.01",
+      expectedStep: "any",
+      name: "serving quantity entries",
+      productEntry: buildProductEntryWithQuantity({
+        id: "entry-serving-step",
+        basisUnit: "serving",
+        quantityUnit: "serving",
+        relation: { from: { amount: 1, unit: "serving" }, to: { amount: 100, unit: "g" } },
+      }),
+    },
+    {
+      expectedMin: "0.01",
+      expectedStep: "any",
+      name: "package quantity entries",
+      productEntry: buildProductEntryWithQuantity({
+        id: "entry-package-step",
+        basisUnit: "package",
+        quantityUnit: "package",
+        relation: { from: { amount: 1, unit: "package" }, to: { amount: 100, unit: "ml" } },
+      }),
+    },
+  ])("uses browser-valid min and step semantics for $name", async ({ expectedMin, expectedStep, productEntry }) => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await userEvent.click(await screen.findByRole("button", { name: "수량 변경" }));
+
+    const dialog = screen.getByRole("dialog", { name: "완제품 수량 변경" });
+    const quantityInput = within(dialog).getByRole("spinbutton", { name: "완제품 변경 수량" }) as HTMLInputElement;
+
+    expect(quantityInput.getAttribute("min")).toBe(expectedMin);
+    expect(quantityInput.getAttribute("step")).toBe(expectedStep);
+    expect(quantityInput.validity.stepMismatch).toBe(false);
+    expect(quantityInput.validity.rangeUnderflow).toBe(false);
+    expect(quantityInput.validity.valid).toBe(true);
+  });
+
+  it.each([
+    {
+      fromUnit: "serving",
+      switchToUnit: "g",
+      productEntry: buildProductEntryWithQuantity({
+        id: "entry-serving-switch-step",
+        basisUnit: "serving",
+        quantityUnit: "serving",
+        relation: { from: { amount: 1, unit: "serving" }, to: { amount: 100, unit: "g" } },
+      }),
+    },
+    {
+      fromUnit: "package",
+      switchToUnit: "ml",
+      productEntry: buildProductEntryWithQuantity({
+        id: "entry-package-switch-step",
+        basisUnit: "package",
+        quantityUnit: "package",
+        relation: { from: { amount: 1, unit: "package" }, to: { amount: 100, unit: "ml" } },
+      }),
+    },
+  ])("updates the input min and step immediately when the unit changes from $fromUnit to $switchToUnit", async ({ productEntry, switchToUnit }) => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({ items: [], product_entries: [productEntry] });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+    await userEvent.click(await screen.findByRole("button", { name: "수량 변경" }));
+
+    const dialog = screen.getByRole("dialog", { name: "완제품 수량 변경" });
+    const quantityInput = within(dialog).getByRole("spinbutton", {
+      name: "완제품 변경 수량",
+    }) as HTMLInputElement;
+    const unitSelect = within(dialog).getByRole("combobox", { name: "완제품 변경 수량 단위" });
+
+    expect(quantityInput.getAttribute("min")).toBe("0.01");
+    expect(quantityInput.getAttribute("step")).toBe("any");
+    expect(quantityInput.validity.stepMismatch).toBe(false);
+    expect(quantityInput.validity.valid).toBe(true);
+
+    await userEvent.selectOptions(unitSelect, switchToUnit);
+    expect(quantityInput.getAttribute("min")).toBe("1");
+    expect(quantityInput.getAttribute("step")).toBe("1");
+    expect(quantityInput.validity.stepMismatch).toBe(false);
+    expect(quantityInput.validity.rangeUnderflow).toBe(false);
+    expect(quantityInput.validity.valid).toBe(true);
   });
 
   it("clears restored product edit context when the header close button dismisses the dialog", async () => {

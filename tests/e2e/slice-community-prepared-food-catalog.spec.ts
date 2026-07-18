@@ -216,6 +216,17 @@ async function installCommunityRoutes(page: Page, mutationError?: MutationError)
     const source = url.searchParams.get("source") ?? "all";
 
     const dataset = createProduct();
+    const datasetLiquid = createProduct({
+      id: "dataset-plum-drink",
+      name: "공공 매실 음료",
+      brand: "공공 음료",
+      nutrition_version_id: "nutrition-version-dataset-liquid",
+      nutrition: {
+        ...createProduct().nutrition,
+        basis: { amount: 100, unit: "ml" },
+        label_basis_text: "100mL",
+      },
+    });
     const sharedManual = createProduct({
       id: "shared-manual",
       name: "공유 두유",
@@ -285,7 +296,7 @@ async function installCommunityRoutes(page: Page, mutationError?: MutationError)
     }
     const items = source === "manual"
       ? manualItems
-      : [dataset, ...manualItems];
+      : [dataset, datasetLiquid, ...manualItems];
 
     await route.fulfill({
       json: {
@@ -619,7 +630,7 @@ async function captureViewportEvidence(
 }
 
 test.describe("community prepared food catalog Stage 4", () => {
-  test("shows source filter and badges, keeps 100g/100mL defaults, and avoids legacy inference @smoke-core", async ({ page }, testInfo) => {
+  test("prepared-food-standard-basis-ux shows source filter and badges, keeps 100g/100mL defaults, and avoids legacy inference @smoke-core", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-chrome", "community slice runs once with exact checks");
     await gotoPickerReady(page);
 
@@ -627,21 +638,37 @@ test.describe("community prepared food catalog Stage 4", () => {
     await expect(page.getByRole("button", { name: "공공 영양DB" })).toBeVisible();
     await expect(page.getByRole("button", { name: "사용자 등록" })).toBeVisible();
     await expect(page.getByRole("button", { name: "공공 요거트 선택" }).getByText("공공 영양DB")).toBeVisible();
+    await expect(page.getByRole("button", { name: "공공 매실 음료 선택" }).getByText("공공 영양DB")).toBeVisible();
     await expect(page.getByRole("button", { name: "공유 두유 선택" }).getByText("사용자 등록")).toBeVisible();
     await expect(page.getByRole("button", { name: "관계 없는 기존 간식 선택" }).getByText("비공개 보관")).toBeVisible();
+
+    await page.getByRole("button", { name: "공공 요거트 선택" }).click();
+    const quantityInput = page.getByRole("spinbutton", { name: "완제품 수량" });
+    await expect(quantityInput).toHaveValue("100");
+    await expect(quantityInput).toHaveAttribute("min", "1");
+    await expect(quantityInput).toHaveAttribute("step", "1");
+    await expect(page.getByRole("button", { name: "공공 요거트 선택" }).getByText("100g 기준")).toBeVisible();
+
+    await page.getByRole("button", { name: "공공 매실 음료 선택" }).click();
+    await expect(quantityInput).toHaveValue("100");
+    await expect(quantityInput).toHaveAttribute("min", "1");
+    await expect(quantityInput).toHaveAttribute("step", "1");
+    await expect(page.getByRole("button", { name: "공공 매실 음료 선택" }).getByText("100mL 기준")).toBeVisible();
 
     await page.getByRole("button", { name: "사용자 등록" }).click();
     await expect(page.getByText("공공 요거트")).toHaveCount(0);
     await expect(page.getByText("공유 두유")).toBeVisible();
 
     await page.getByRole("button", { name: "공유 두유 선택" }).click();
-    const quantityInput = page.getByRole("spinbutton", { name: "완제품 수량" });
     await expect(quantityInput).toHaveValue("100");
+    await expect(quantityInput).toHaveAttribute("min", "1");
     await expect(quantityInput).toHaveAttribute("step", "1");
     await expect(page.getByText("100mL 기준")).toBeVisible();
 
     await page.getByRole("button", { name: "관계 없는 기존 간식 선택" }).click();
     await expect(quantityInput).toHaveValue("1");
+    await expect(quantityInput).toHaveAttribute("min", "0.01");
+    await expect(quantityInput).toHaveAttribute("step", "any");
     await expect(page.getByText("100g/100mL 비교 불가")).toBeVisible();
     await expect(page.getByText("기준 1회")).toBeVisible();
   });

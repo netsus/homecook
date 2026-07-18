@@ -124,9 +124,9 @@
 - [x] Stage 1 scope and predecessor boundary drafted
 - [x] Stage 2 backend N/A rationale documented
 - [x] independent internal 1.5 review — APPROVE, blocker/major/minor 0/0/0
-- [ ] Stage 1 docs PR merged
-- [ ] Stage 4 RED test captured before implementation
-- [ ] MealScreen g/ml step repair and inherited UX regression green
-- [ ] 320/390/1280 real local browser evidence
-- [ ] independent Stage 5 code review and authority blocker 0
+- [x] Stage 1 docs PR merged — PR #1048, merge `0118be2ab401b36d7b1c60be299a60e8f9c5f965`
+- [x] Stage 4 RED test captured before implementation
+- [x] MealScreen g/ml step repair and inherited UX regression green
+- [x] 320/390/1280 real local browser evidence
+- [x] independent Stage 5 code review and authority blocker 0
 - [ ] current-head full checks and Stage 6 merge

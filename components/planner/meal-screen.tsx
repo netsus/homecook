@@ -2059,13 +2059,13 @@ export function MealScreen({
                 className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none"
                 disabled={pendingProductIds.has(editingProduct.entry.id)}
                 inputMode="decimal"
-                min="0.01"
+                min={editingProduct.unit === "g" || editingProduct.unit === "ml" ? "1" : "0.01"}
                 onChange={(event) =>
                   setEditingProduct((current) =>
                     current ? { ...current, amount: event.target.value, error: null } : null,
                   )
                 }
-                step="any"
+                step={editingProduct.unit === "g" || editingProduct.unit === "ml" ? "1" : "any"}
                 ref={productEditInputRef}
                 type="number"
                 value={editingProduct.amount}

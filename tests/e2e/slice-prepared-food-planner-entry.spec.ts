@@ -691,9 +691,15 @@ test.describe("prepared-food-planner-entry", () => {
     await expect(productCard).toContainText("예상 열량 105 kcal");
     await productCard.getByRole("button", { name: "수량 변경" }).click();
     const editDialog = page.getByRole("dialog", { name: "완제품 수량 변경" });
-    await expect(editDialog.getByLabel("완제품 변경 수량 단위", { exact: true }).locator("option")).toHaveText(["회", "g"]);
-    await editDialog.getByLabel("완제품 변경 수량", { exact: true }).fill("150");
-    await editDialog.getByLabel("완제품 변경 수량 단위", { exact: true }).selectOption("g");
+    const editQuantityInput = editDialog.getByLabel("완제품 변경 수량", { exact: true });
+    const editQuantityUnit = editDialog.getByLabel("완제품 변경 수량 단위", { exact: true });
+    await expect(editQuantityUnit.locator("option")).toHaveText(["회", "g"]);
+    await expect(editQuantityInput).toHaveAttribute("min", "0.01");
+    await expect(editQuantityInput).toHaveAttribute("step", "any");
+    await editQuantityInput.fill("150");
+    await editQuantityUnit.selectOption("g");
+    await expect(editQuantityInput).toHaveAttribute("min", "1");
+    await expect(editQuantityInput).toHaveAttribute("step", "1");
     const patchRequest = page.waitForRequest((request) =>
       request.method() === "PATCH" && request.url().includes("/api/v1/product-planner-entries/entry-yogurt"),
     );
@@ -702,6 +708,25 @@ test.describe("prepared-food-planner-entry", () => {
     await expect(productCard).toContainText("150g");
     await expect(productCard).toContainText("예상 열량 105 kcal");
     await expect(productCard).not.toContainText("999");
+  });
+
+  test("prepared-food-standard-basis-ux keeps serving decimal input and switches direct g relation to one-gram steps", async ({ page }) => {
+    await installRoutes(page);
+    await page.goto(MEAL_PATH);
+
+    const productCard = page.getByTestId("product-planner-entry-entry-yogurt").filter({ visible: true });
+    await productCard.getByRole("button", { name: "수량 변경" }).click();
+    const editDialog = page.getByRole("dialog", { name: "완제품 수량 변경" });
+    const editQuantityInput = editDialog.getByLabel("완제품 변경 수량", { exact: true });
+    const editQuantityUnit = editDialog.getByLabel("완제품 변경 수량 단위", { exact: true });
+
+    await expect(editQuantityInput).toHaveAttribute("min", "0.01");
+    await expect(editQuantityInput).toHaveAttribute("step", "any");
+    await editQuantityUnit.selectOption("g");
+    await expect(editQuantityInput).toHaveAttribute("min", "1");
+    await expect(editQuantityInput).toHaveAttribute("step", "1");
+    await editQuantityInput.fill("101");
+    expect(await editQuantityInput.evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(true);
   });
 
   test("PATCH basis mismatch는 공식 안내를 보여 주고 수량 편집 단계에 머문다", async ({ page }) => {

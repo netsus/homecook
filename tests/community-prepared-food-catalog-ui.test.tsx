@@ -629,7 +629,7 @@ describe("community prepared food catalog picker", () => {
     expect(screen.getByRole("button", { name: "공유 시리얼 선택" })).toBeTruthy();
   });
 
-  it("uses 100g for direct relation selection with step 1, but keeps non-related legacy serving as 1회", async () => {
+  it("uses browser-valid 100g for direct relation selection with step 1, but keeps legacy serving on 0.01/any", async () => {
     fetchFoodProducts.mockResolvedValue({
       items: [
         createProduct({
@@ -676,10 +676,20 @@ describe("community prepared food catalog picker", () => {
     await userEvent.click(await screen.findByRole("button", { name: "직접 관계 견과 선택" }));
     const quantityInput = screen.getByRole("spinbutton", { name: "완제품 수량" }) as HTMLInputElement;
     expect(quantityInput.value).toBe("100");
+    expect(quantityInput.min).toBe("1");
     expect(quantityInput.step).toBe("1");
+    expect(quantityInput.validity.stepMismatch).toBe(false);
+    expect(quantityInput.validity.rangeUnderflow).toBe(false);
+    expect(quantityInput.validity.valid).toBe(true);
 
     await userEvent.click(screen.getByRole("button", { name: "기존 간식 선택" }));
-    expect((screen.getByRole("spinbutton", { name: "완제품 수량" }) as HTMLInputElement).value).toBe("1");
+    const legacyQuantityInput = screen.getByRole("spinbutton", { name: "완제품 수량" }) as HTMLInputElement;
+    expect(legacyQuantityInput.value).toBe("1");
+    expect(legacyQuantityInput.min).toBe("0.01");
+    expect(legacyQuantityInput.step).toBe("any");
+    expect(legacyQuantityInput.validity.stepMismatch).toBe(false);
+    expect(legacyQuantityInput.validity.rangeUnderflow).toBe(false);
+    expect(legacyQuantityInput.validity.valid).toBe(true);
   });
 
   it("sends metadata-only PATCH without nutrition for legacy private edit even when nutrition fields are unavailable", async () => {
