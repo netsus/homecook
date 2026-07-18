@@ -493,6 +493,47 @@ describe.runIf(enabled)("community prepared food catalog isolated PostgreSQL int
       select product_nutrition_version_id::text from public.product_planner_entries
       where id = '${entry.id}';
     `)).toBe(created.nutrition_version_id);
+    const listed = JSON.parse(psql(serviceSql(`
+      select public.list_food_products(
+        '${userB}', '탈퇴 보존 제품', 'manual', null, null, 20
+      )::text;
+    `)));
+    expect(listed.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: created.id,
+          visibility: "public",
+          source_type: "manual",
+          editable: false,
+        }),
+      ]),
+    );
+    const nullActor = psqlResult(serviceSql(`
+      select public.list_food_products(
+        null, '탈퇴 보존 제품', 'manual', null, null, 20
+      )::text;
+    `));
+    expect(nullActor.status).not.toBe(0);
+    expect(nullActor.stderr).toContain("VALIDATION_ERROR");
+    const nullActorEditable = JSON.parse(psql(`
+      with context as (
+        select source_type, owner_user_id, moderation_status
+        from public.food_products
+        where id = '${created.id}'
+      )
+      select jsonb_build_object(
+        'editable',
+        (
+          select context.source_type = 'manual'
+            and context.owner_user_id is not null
+            and null::uuid is not null
+            and context.owner_user_id = null::uuid
+            and context.moderation_status = 'visible'
+          from context
+        )
+      )::text;
+    `));
+    expect(nullActorEditable.editable).toBe(false);
     expect(psql(`
       select
         (select count(*) from public.food_products where id = '26000000-0000-4000-8000-000000000011')
