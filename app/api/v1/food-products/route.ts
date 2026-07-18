@@ -55,6 +55,7 @@ export async function GET(request: Request) {
   const result = await db.rpc("list_food_products", {
     p_user_id: user.id,
     p_query: parsed.value.q || null,
+    p_source: parsed.value.source,
     p_cursor_created_at: parsed.value.cursor?.createdAt ?? null,
     p_cursor_id: parsed.value.cursor?.id ?? null,
     p_limit: parsed.value.limit,

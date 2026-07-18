@@ -17,6 +17,7 @@ interface ProductState {
   id: string;
   owner_user_id: string | null;
   visibility: "public" | "private";
+  moderation_status?: "visible" | "hidden_by_report" | "hidden_by_operator";
   deleted_at: string | null;
   current_nutrition_version_id: string | null;
 }
@@ -51,6 +52,9 @@ function databaseFailure(error: RpcError | null) {
   }
   if (/PRODUCT_DELETED/i.test(detail)) {
     return fail("PRODUCT_DELETED", "삭제된 완제품은 추가할 수 없어요.", 409);
+  }
+  if (/PRODUCT_HIDDEN/i.test(detail)) {
+    return fail("PRODUCT_HIDDEN", "숨김 처리된 완제품은 추가할 수 없어요.", 409);
   }
   if (/NUTRITION_BASIS_MISMATCH/i.test(detail)) {
     return fail("NUTRITION_BASIS_MISMATCH", "이 수량 단위로 영양을 계산할 수 없어요.", 422);
@@ -111,7 +115,7 @@ export async function POST(request: Request) {
 
   const productResult = await db
     .from("food_products")
-    .select("id, owner_user_id, visibility, deleted_at, current_nutrition_version_id")
+    .select("id, owner_user_id, visibility, moderation_status, deleted_at, current_nutrition_version_id")
     .eq("id", parsed.value.product_id)
     .maybeSingle();
   if (productResult.error) return databaseFailure(productResult.error);
@@ -124,6 +128,9 @@ export async function POST(request: Request) {
   }
   if (product.deleted_at) {
     return fail("PRODUCT_DELETED", "삭제된 완제품은 추가할 수 없어요.", 409);
+  }
+  if (product.visibility === "public" && product.moderation_status && product.moderation_status !== "visible") {
+    return fail("PRODUCT_HIDDEN", "숨김 처리된 완제품은 추가할 수 없어요.", 409);
   }
   if (!product.current_nutrition_version_id) {
     return fail("NUTRITION_VERSION_CONFLICT", "영양 정보가 준비되지 않았어요.", 409);

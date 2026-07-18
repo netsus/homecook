@@ -373,7 +373,7 @@ describe("17c settings/account backend", () => {
 
   it("adds an account deletion cleanup migration that preserves authored recipes", async () => {
     const migration = await readFile(
-      "supabase/migrations/20260524154000_account_delete_private_data.sql",
+      "supabase/migrations/20260718090000_community_prepared_food_catalog.sql",
       "utf8",
     );
 
@@ -384,6 +384,9 @@ describe("17c settings/account backend", () => {
     expect(migration).toContain("set like_count =");
     expect(migration).toContain("where created_by = p_user_id");
     expect(migration).not.toContain("delete from public.recipes");
+    expect(migration).toContain("owner_user_id = null");
+    expect(migration).toMatch(/visibility\s*=\s*'public'/);
+    expect(migration).toMatch(/source_type\s*=\s*'manual'/);
   });
 
   it("rejects unauthenticated settings, nickname, and delete account requests", async () => {

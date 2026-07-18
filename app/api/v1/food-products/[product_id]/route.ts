@@ -17,6 +17,7 @@ interface ProductState {
   owner_user_id: string | null;
   visibility: "public" | "private";
   source_type: "public_dataset" | "manual";
+  moderation_status: "visible" | "hidden_by_report" | "hidden_by_operator";
   deleted_at: string | null;
   current_nutrition_version_id: string;
 }
@@ -44,6 +45,9 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 
 function databaseFailure(error: RpcError | null, fallback: string) {
   const detail = `${error?.code ?? ""} ${error?.message ?? ""}`;
+  if (/PRODUCT_MODERATION_LOCKED/i.test(detail)) {
+    return fail("PRODUCT_MODERATION_LOCKED", "숨김 처리된 완제품은 수정할 수 없어요.", 409);
+  }
   if (/NUTRITION_VERSION_CONFLICT/i.test(detail)) {
     return fail("NUTRITION_VERSION_CONFLICT", "영양 정보가 먼저 변경됐어요.", 409);
   }
@@ -68,15 +72,20 @@ async function requireUser() {
 async function readProductState(db: CatalogMutationDbClient, productId: string) {
   return db
     .from("food_products")
-    .select("id, owner_user_id, visibility, source_type, deleted_at, current_nutrition_version_id")
+    .select("id, owner_user_id, visibility, source_type, moderation_status, deleted_at, current_nutrition_version_id")
     .eq("id", productId)
     .maybeSingle();
 }
 
-function authorizePrivateOwner(state: ProductState | null, userId: string) {
+function authorizeOwnerManualMutation(state: ProductState | null, userId: string) {
   if (!state) return "not_found" as const;
-  if (state.visibility === "public") return "forbidden" as const;
-  if (state.owner_user_id !== userId) return "not_found" as const;
+  if (state.source_type !== "manual") return "forbidden" as const;
+  if (state.owner_user_id !== userId) {
+    return state.visibility === "private" ? "not_found" as const : "forbidden" as const;
+  }
+  if (state.visibility !== "public" && state.visibility !== "private") return "forbidden" as const;
+  if (state.deleted_at) return "deleted" as const;
+  if ((state.moderation_status ?? "visible") !== "visible") return "locked" as const;
   return "allowed" as const;
 }
 
@@ -106,11 +115,14 @@ export async function PATCH(request: Request, context: RouteContext) {
   const stateResult = await readProductState(db, productId);
   if (stateResult.error) return fail("INTERNAL_ERROR", "완제품을 수정하지 못했어요.", 500);
   const state = stateResult.data;
-  const authorization = authorizePrivateOwner(state, user.id);
-  if (authorization === "forbidden") {
-    return fail("FORBIDDEN", "공개 완제품은 수정할 수 없어요.", 403);
+  const authorization = authorizeOwnerManualMutation(state, user.id);
+  if (authorization === "locked") {
+    return fail("PRODUCT_MODERATION_LOCKED", "숨김 처리된 완제품은 수정할 수 없어요.", 409);
   }
-  if (authorization === "not_found" || !state || state.deleted_at) {
+  if (authorization === "forbidden") {
+    return fail("FORBIDDEN", "이 완제품을 변경할 수 없어요.", 403);
+  }
+  if (authorization === "not_found" || authorization === "deleted" || !state) {
     return fail("RESOURCE_NOT_FOUND", "완제품을 찾을 수 없어요.", 404);
   }
 
@@ -138,9 +150,12 @@ export async function DELETE(_request: Request, context: RouteContext) {
   const db = (createServiceRoleClient() ?? routeClient) as unknown as CatalogMutationDbClient;
   const stateResult = await readProductState(db, productId);
   if (stateResult.error) return fail("INTERNAL_ERROR", "완제품을 삭제하지 못했어요.", 500);
-  const authorization = authorizePrivateOwner(stateResult.data, user.id);
+  const authorization = authorizeOwnerManualMutation(stateResult.data, user.id);
+  if (authorization === "locked") {
+    return fail("PRODUCT_MODERATION_LOCKED", "숨김 처리된 완제품은 삭제할 수 없어요.", 409);
+  }
   if (authorization === "forbidden") {
-    return fail("FORBIDDEN", "공개 완제품은 삭제할 수 없어요.", 403);
+    return fail("FORBIDDEN", "이 완제품을 변경할 수 없어요.", 403);
   }
   if (authorization === "not_found") {
     return fail("RESOURCE_NOT_FOUND", "완제품을 찾을 수 없어요.", 404);
