@@ -622,13 +622,14 @@ describe("FOOD_PRODUCT_CREATE validation and privacy", () => {
     render(<FoodProductCreateForm onCancel={() => undefined} onCreated={() => undefined} onUnauthorized={onUnauthorized} />);
 
     await userEvent.type(screen.getByRole("textbox", { name: /완제품 이름/ }), "내 두유");
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "단위" }), "g");
     await userEvent.type(screen.getByRole("spinbutton", { name: /열량/ }), "0");
     await userEvent.click(screen.getByRole("button", { name: "등록하고 선택" }));
 
     await waitFor(() => expect(onUnauthorized).toHaveBeenCalledWith(expect.objectContaining({
       name: "내 두유",
       energy: "0",
-      basisUnit: "serving",
+      basisUnit: "g",
     })));
   });
 });
