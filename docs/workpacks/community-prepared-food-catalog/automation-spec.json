@@ -1,0 +1,148 @@
+{
+  "slice_id": "community-prepared-food-catalog",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /food-products",
+      "POST /food-products",
+      "PATCH /food-products/{id}",
+      "DELETE /food-products/{id}",
+      "POST /food-products/{product_id}/report",
+      "POST /product-planner-entries",
+      "DELETE /users/me"
+    ],
+    "invariants": [
+      "new-manual-product-is-server-controlled-public-manual-visible-and-owned-by-auth-user",
+      "legacy-private-manual-products-are-never-auto-published",
+      "owner-null-anonymized-shared-manual-remains-read-only-public",
+      "catalog-source-filter-is-exactly-all-public-dataset-or-manual",
+      "catalog-order-is-public-dataset-then-shared-manual-then-self-legacy-private",
+      "other-owner-private-hidden-and-deleted-products-are-excluded-from-search",
+      "client-cannot-set-owner-visibility-source-moderation-external-key-or-basis-relations",
+      "shared-manual-basis-is-positive-g-or-ml-with-optional-label-basis-text",
+      "manual-energy-is-required-nonnegative-and-missing-nutrients-are-never-zero-filled",
+      "manual-nutrition-update-appends-immutable-version-and-metadata-only-update-preserves-current",
+      "only-visible-owner-manual-is-editable-or-soft-deletable",
+      "hidden-owner-manual-update-and-delete-return-product-moderation-locked",
+      "soft-delete-is-idempotent-and-preserves-existing-planner-pins",
+      "account-deletion-atomically-anonymizes-shared-manual-owner-and-preserves-public-row-versions-and-existing-pins",
+      "report-reason-is-one-of-six-official-values-and-detail-is-optional",
+      "report-is-append-only-and-general-user-cannot-change-report-or-moderation-status",
+      "self-report-is-forbidden-duplicate-is-product-already-reported-and-ineligible-is-product-report-not-allowed",
+      "hidden-and-deleted-products-are-blocked-from-new-planner-entry-while-old-pins-remain",
+      "product-entry-remains-excluded-from-recipe-meal-shopping-cooking-leftover-and-xp",
+      "no-runtime-provider-call-secret-raw-row-or-private-path-exposure",
+      "production-and-staging-writes-remain-zero-without-separate-approval",
+      "no-undocumented-endpoint-field-status-error-or-admin-http-surface"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/community-prepared-food-catalog-api.test.ts tests/community-prepared-food-catalog-service.test.ts tests/community-prepared-food-catalog-rls.test.ts tests/community-prepared-food-catalog-postgres.integration.test.ts tests/prepared-food-planner-entry-api.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/community-prepared-food-catalog pnpm validate:workpack -- --slice community-prepared-food-catalog",
+      "node scripts/validate-automation-spec.mjs --slice community-prepared-food-catalog",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "source-filter-scope-order-cursor-and-no-n-plus-one",
+      "public-manual-atomic-create-and-server-authority-field-rejection",
+      "g-ml-positive-basis-label-text-required-energy-and-missing-not-zero",
+      "owner-cross-owner-anonymized-public-and-legacy-private-guards",
+      "hidden-owner-moderation-lock-and-idempotent-soft-delete",
+      "immutable-nutrition-version-and-metadata-only-update",
+      "six-reasons-append-only-report-self-duplicate-and-ineligible-errors",
+      "report-rls-privilege-and-operator-boundary",
+      "hidden-deleted-new-entry-denial-and-existing-pin-retention",
+      "account-deletion-shared-manual-anonymization-read-only-public-retention-and-rollback",
+      "isolated-postgresql-and-fresh-local-supabase-auth-postgrest-smoke",
+      "secret-raw-leak-zero-and-production-staging-write-zero",
+      "recipe-meal-shopping-cooking-leftover-xp-regression"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "PLANNER_WEEK:FOOD_PRODUCT_PICKER",
+      "PLANNER_WEEK:FOOD_PRODUCT_CREATE",
+      "SETTINGS:ACCOUNT_DELETE"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized",
+      "conflict",
+      "moderation-race"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/community-prepared-food-catalog-ui.test.tsx tests/prepared-food-planner-entry-ui.test.tsx tests/planner-week-screen.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
+      "pnpm qa:explore -- --slice community-prepared-food-catalog",
+      "pnpm validate:exploratory-qa-evidence",
+      "pnpm validate:authority-evidence-presence"
+    ],
+    "playwright_projects": [
+      "chromium-390",
+      "chromium-320",
+      "chromium-desktop"
+    ],
+    "artifact_assertions": [
+      "exact-source-filter-and-badges",
+      "owner-edit-delete-and-other-user-report-actions",
+      "shared-create-g-ml-label-text-and-public-notice",
+      "hidden-deleted-and-existing-pin-boundary",
+      "settings-account-deletion-notice-and-shared-manual-anonymization",
+      "loading-empty-error-readonly-auth-and-moderation-recovery",
+      "no-horizontal-overflow-sticky-cta-focus-and-forty-four-pixel-targets"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": ["PLANNER_WEEK"],
+      "required_screens": ["FOOD_PRODUCT_PICKER", "FOOD_PRODUCT_CREATE", "SETTINGS"],
+      "generator_required": true,
+      "critic_required": true,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "390-before-after",
+        "320-before-after",
+        "1280-before-after",
+        "real-local-db-auth-a-b-browser-flow"
+        ,"settings-account-deletion-notice-and-shared-manual-anonymization"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/PLANNER_WEEK-community-prepared-food-catalog-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "manual:fresh-local-supabase-auth-a-b-postgrest-and-chrome-flow",
+    "manual:production-and-staging-migration-promotion-approval-intentionally-withheld-zero-writes"
+  ],
+  "blocked_conditions": [
+    "stage1-docs-design-or-independent-review-is-not-merged-and-approved",
+    "predecessor-catalog-or-public-import-is-not-merged",
+    "legacy-private-product-is-auto-published-or-other-owner-private-is-visible",
+    "client-can-set-owner-source-visibility-moderation-external-key-or-basis-relations",
+    "manual-create-allows-serving-package-nonpositive-basis-or-missing-energy",
+    "missing-nutrient-is-normalized-to-zero",
+    "hidden-owner-can-update-delete-or-hidden-deleted-product-can-be-newly-added",
+    "existing-planner-pin-is-rewritten-or-deleted",
+    "account-deletion-does-not-anonymize-shared-manual-owner-atomically-or-does-not-preserve-public-row-version-and-pin",
+    "report-reason-status-eligibility-uniqueness-or-append-only-guard-is-missing",
+    "general-user-can-change-report-status-or-product-moderation",
+    "source-filter-order-pagination-is-applied-after-unbounded-read-or-item-n-plus-one",
+    "secret-auth-query-cookie-raw-provider-row-or-private-path-leaks",
+    "production-or-staging-write-occurs-without-separate-approval",
+    "official-contract-outside-endpoint-field-status-error-or-admin-http-surface-is-added",
+    "stage4-real-browser-exploratory-or-390-320-1280-authority-evidence-is-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  },
+  "notes": "User-approved Codex-only successor. Community sharing, moderation, and account-deletion anonymization are implemented before the separate prepared-food-standard-basis-ux successor. This slice protects picker/planner g/ml default 100 and step 1 plus no unsafe conversion; create prefill is not locked. Full legacy/public 100g/100mL normalization remains successor-owned. Stage roles are separated and external writes remain zero without separate approval."
+}

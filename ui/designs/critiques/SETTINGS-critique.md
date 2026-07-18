@@ -12,6 +12,33 @@
 
 **한 줄 요약**: 화면정의서 SS 19-D의 4가지 설정 항목(요리모드 화면 꺼짐 방지 토글, 닉네임 변경, 로그아웃, 회원탈퇴)이 빠짐없이 반영되었다. 모든 API(PATCH /users/me/settings, PATCH /users/me, POST /auth/logout, DELETE /users/me)가 정확하게 매핑되었고, Loading/Error 상태, 닉네임 변경 바텀시트, 로그아웃/회원탈퇴 확인 다이얼로그, 320px 대응, 접근성 노트까지 포괄적으로 작성되었다. 크리티컬 이슈 0건, 마이너 이슈 2건으로 Stage 1 통과 판정한다.
 
+## 2026-07-18 community prepared-food account-deletion addendum repair-final
+
+- 범위: 이 섹션은 `community-prepared-food-catalog` Stage 1 repair-final 검토만 다룬다. 위 historical critique/authority 기록은 `17c-settings-account` 당시 판정으로 그대로 보존한다.
+- 기준 문서: 화면정의서 v1.5.27, 요구사항 v1.7.21, 유저flow v1.3.24의 shared manual 회원탈퇴 보존 계약
+- 별도 critic artifact 필요 여부: **아니오**. 기존 `ui/designs/critiques/SETTINGS-critique.md`에 addendum repair-final을 추가 기록하는 방식이면 Stage 1 critic artifact 요건을 충족한다.
+- addendum 등급: **Green**
+- addendum Blocker 수: **0**
+
+### addendum 확인 완료
+
+- [x] 회원탈퇴 dialog copy가 `모든 데이터 삭제` 단정 대신 `개인 기록 삭제 + 공개한 사용자 등록 완제품의 익명 read-only 보존` 의미를 반영했다. 근거: `ui/designs/SETTINGS.md` addendum 요약과 dialog copy [`8-15`, `139-160`].
+- [x] legacy private 자동 공개, shared manual 보존 해제, moderation 변경 control 같은 공식 밖 control을 추가하지 않았다. 근거: `ui/designs/SETTINGS.md:13`.
+- [x] 390/320/1280, dialog 내부 스크롤, sticky action, 44px target, focus 순서의 구현 후 검증 계획이 있다. 근거: `ui/designs/SETTINGS.md:15`.
+- [x] 새 API/status/control 추가 없이 기존 `DELETE /users/me` 경계 안에서 설명한다.
+
+### addendum 확인 추가
+
+- [x] `DELETE /users/me` 실패 복구가 dialog 유지 + 안내 보존 + action 위 inline error + 같은 `[다시 시도]`로 실제 인터랙션/컴포넌트 계약에 닫혔다. 근거: `ui/designs/SETTINGS.md` [`363-369`, `401-405`].
+- [x] retry는 동일 `DELETE /users/me` 재시도이며 pending 중 중복 submit 차단을 명시했다. 근거: `ui/designs/SETTINGS.md:369`.
+- [x] 320px에서도 두 안내를 생략하지 않고 줄바꿈/내부 스크롤로 처리한다. 근거: `ui/designs/SETTINGS.md:368`.
+
+### addendum 종합 판정
+
+- official contract copy 정합성, shared manual/legacy private 경계, retry 복구, 검증 계획이 현재 설계 본문과 일치한다.
+- historical `17c-settings-account` 판정은 그대로 유지하면서도, 이번 community addendum 범위는 별도 근거로 review trace를 남겼다.
+- **판정: addendum repair-final 통과. 구현 전 blocker 없음.**
+
 ## 크리티컬 이슈 (수정 필수)
 
 > 없음

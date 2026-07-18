@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-18T09:09:34Z",
+  "updated_at": "2026-07-18T10:15:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2176,6 +2176,25 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "community-prepared-food-catalog",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/community-prepared-food-catalog",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/community-prepared-food-catalog pnpm validate:workpack -- --slice community-prepared-food-catalog",
+        "node scripts/validate-automation-spec.mjs --slice community-prepared-food-catalog",
+        "git diff --check"
+      ],
+      "notes": "Roadmap status is docs while workflow lifecycle remains planned because workflow-v2 has no docs enum. Implementation is blocked until independent internal 1.5 APPROVE and docs PR merge."
     }
   ]
 }
