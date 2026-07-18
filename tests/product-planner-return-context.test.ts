@@ -22,6 +22,7 @@ describe("prepared food planner safe auth return context", () => {
       columnId: "column-1",
       slotName: "아침",
       query: "요거트",
+      source: "manual",
       productId: "product-later",
       quantityAmount: "2.5",
       quantityUnit: "package",
@@ -34,6 +35,7 @@ describe("prepared food planner safe auth return context", () => {
       columnId: "column-1",
       slotName: "아침",
       query: "요거트",
+      source: "manual",
       productId: "product-later",
       quantityAmount: "2.5",
       quantityUnit: "package",
@@ -51,6 +53,7 @@ describe("prepared food planner safe auth return context", () => {
       columnId: "column-1",
       slotName: "아침",
       query: "간식",
+      source: "all",
       productId: null,
       quantityAmount: "1",
       quantityUnit: null,
@@ -63,6 +66,7 @@ describe("prepared food planner safe auth return context", () => {
       columnId: "column-1",
       slotName: "아침",
       query: "간식",
+      source: "all",
       productId: null,
       quantityAmount: "1",
       quantityUnit: null,
@@ -99,18 +103,49 @@ describe("prepared food planner safe auth return context", () => {
       columnId: "column-1",
       slotName: "아침",
       query: "없는 제품",
+      source: "manual",
       draft: {
         name: "내 두유",
         brand: "",
-        basisAmount: "1",
-        basisUnit: "serving",
+        basisAmount: "100",
+        basisUnit: "g",
+        labelBasisText: "1팩(190mL)",
         energy: "0",
         nutrients: { protein_g: "7", sodium_mg: "" },
       },
     });
     expect(readProductPlannerReturnContext()).toMatchObject({
       kind: "create",
+      source: "manual",
       draft: { name: "내 두유", energy: "0", nutrients: { protein_g: "7", sodium_mg: "" } },
+    });
+
+    saveProductPlannerReturnContext({
+      version: 1,
+      kind: "create",
+      planDate: "2026-07-17",
+      columnId: "column-1",
+      slotName: "아침",
+      query: "그래놀라",
+      source: "manual",
+      productId: "manual-product-1",
+      action: "edit",
+      draft: {
+        name: "로그인 복원 그래놀라",
+        brand: "집밥 공방",
+        basisAmount: "100",
+        basisUnit: "g",
+        labelBasisText: "",
+        energy: "180",
+        nutrients: { protein_g: "7" },
+      },
+    });
+    expect(readProductPlannerReturnContext()).toMatchObject({
+      kind: "create",
+      source: "manual",
+      productId: "manual-product-1",
+      action: "edit",
+      draft: { name: "로그인 복원 그래놀라", energy: "180" },
     });
 
     saveProductPlannerReturnContext({
@@ -130,6 +165,68 @@ describe("prepared food planner safe auth return context", () => {
       action: "edit",
       quantityAmount: "2",
       quantityUnit: "serving",
+    });
+  });
+
+  it("reads older v1 picker and create payloads without source or labelBasisText as safe defaults", () => {
+    window.sessionStorage.setItem(
+      PRODUCT_PLANNER_RETURN_CONTEXT_KEY,
+      JSON.stringify({
+        version: 1,
+        kind: "picker",
+        planDate: "2026-07-17",
+        columnId: "column-1",
+        slotName: "아침",
+        query: "과자",
+        productId: null,
+        quantityAmount: "1",
+        quantityUnit: null,
+      }),
+    );
+
+    expect(readProductPlannerReturnContext()).toEqual({
+      version: 1,
+      kind: "picker",
+      planDate: "2026-07-17",
+      columnId: "column-1",
+      slotName: "아침",
+      query: "과자",
+      source: "all",
+      productId: null,
+      quantityAmount: "1",
+      quantityUnit: null,
+    });
+
+    window.sessionStorage.setItem(
+      PRODUCT_PLANNER_RETURN_CONTEXT_KEY,
+      JSON.stringify({
+        version: 1,
+        kind: "create",
+        planDate: "2026-07-17",
+        columnId: "column-1",
+        slotName: "아침",
+        query: "두유",
+        draft: {
+          name: "내 두유",
+          brand: "",
+          basisAmount: "100",
+          basisUnit: "g",
+          energy: "99",
+          nutrients: {},
+        },
+      }),
+    );
+
+    expect(readProductPlannerReturnContext()).toMatchObject({
+      kind: "create",
+      source: "all",
+      draft: {
+        name: "내 두유",
+        basisAmount: "100",
+        basisUnit: "g",
+        labelBasisText: "",
+        energy: "99",
+      },
     });
   });
 });

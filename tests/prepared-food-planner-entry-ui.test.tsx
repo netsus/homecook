@@ -242,6 +242,7 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
       columnId: "column-1",
       slotName: "아침",
       query: "간식",
+      source: "all",
       productId: null,
       quantityAmount: "1",
       quantityUnit: null,
@@ -279,6 +280,7 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     expect(screen.queryByRole("button", { name: "완제품 더 불러오기" })).toBeNull();
     expect(fetchFoodProducts).toHaveBeenNthCalledWith(2, {
       q: "",
+      source: "all",
       cursor: "opaque-next+/=",
       limit: 20,
     });
@@ -307,12 +309,13 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
       />,
     );
 
-    await userEvent.click(await screen.findByRole("button", { name: /플레인 요거트/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "플레인 요거트 선택" }));
     await userEvent.click(screen.getByRole("button", { name: "완제품 더 불러오기" }));
 
     await waitFor(() => expect(fetchFoodProducts).toHaveBeenCalledTimes(2));
     expect(fetchFoodProducts).toHaveBeenNthCalledWith(2, {
       q: "",
+      source: "all",
       cursor: "opaque-next+/=",
       limit: 20,
     });
@@ -462,14 +465,14 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     }));
 
     render(<FoodProductPicker columnId="column-1" onClose={() => undefined} onComplete={() => undefined} planDate="2026-07-17" slotName="아침" />);
-    await userEvent.click(await screen.findByRole("button", { name: /플레인 요거트/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "플레인 요거트 선택" }));
     await userEvent.click(screen.getByRole("button", { name: "아침에 완제품 추가" }));
 
     expect(screen.getByTestId("food-product-quantity-step")).toBeTruthy();
     expect(screen.getByText("영양 정보가 먼저 변경됐어요.")).toBeTruthy();
-    expect(screen.getByTestId("food-product-quantity-step").textContent).toContain("예상 열량 105 kcal");
+    expect(screen.getByTestId("food-product-selection-summary").textContent).toContain("예상 열량 105 kcal");
     await userEvent.click(screen.getByRole("button", { name: "최신 영양정보로 새로고침" }));
-    await waitFor(() => expect(screen.getByTestId("food-product-quantity-step").textContent).toContain("예상 열량 120 kcal"));
+    await waitFor(() => expect(screen.getByTestId("food-product-selection-summary").textContent).toContain("예상 열량 120 kcal"));
   });
 
   it("moves a nutrition refresh 401 into login with the current quantity context", async () => {
@@ -495,7 +498,7 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
         slotName="아침"
       />,
     );
-    await userEvent.click(await screen.findByRole("button", { name: /플레인 요거트/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "플레인 요거트 선택" }));
     const quantityInput = screen.getByRole("spinbutton", { name: "완제품 수량" });
     await userEvent.clear(quantityInput);
     await userEvent.type(quantityInput, "2.5");
@@ -503,7 +506,11 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     await userEvent.click(await screen.findByRole("button", { name: "최신 영양정보로 새로고침" }));
 
     await waitFor(() => expect(fetchFoodProducts).toHaveBeenCalledTimes(2));
-    expect(fetchFoodProducts).toHaveBeenNthCalledWith(2, { q: "요거트", limit: 20 });
+    expect(fetchFoodProducts).toHaveBeenNthCalledWith(2, {
+      q: "요거트",
+      source: "all",
+      limit: 20,
+    });
     expect(createProductPlannerEntry).toHaveBeenCalledTimes(1);
     expect(JSON.parse(window.sessionStorage.getItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY)!)).toMatchObject({
       kind: "picker",
@@ -530,7 +537,7 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     }));
 
     render(<FoodProductPicker columnId="column-1" onClose={() => undefined} onComplete={() => undefined} planDate="2026-07-17" slotName="아침" />);
-    await userEvent.click(await screen.findByRole("button", { name: /플레인 요거트/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "플레인 요거트 선택" }));
     await userEvent.click(screen.getByRole("button", { name: "아침에 완제품 추가" }));
     await userEvent.click(screen.getByRole("button", { name: "최신 영양정보로 새로고침" }));
     fireEvent.change(screen.getByRole("searchbox", { name: "완제품 검색" }), { target: { value: "최신" } });
@@ -562,12 +569,12 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     }));
 
     render(<FoodProductPicker columnId="column-1" onClose={() => undefined} onComplete={() => undefined} planDate="2026-07-17" slotName="아침" />);
-    await userEvent.click(await screen.findByRole("button", { name: /플레인 요거트/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "플레인 요거트 선택" }));
     await userEvent.click(screen.getByRole("button", { name: "아침에 완제품 추가" }));
     await userEvent.click(screen.getByRole("button", { name: "최신 영양정보로 새로고침" }));
     fireEvent.change(screen.getByRole("searchbox", { name: "완제품 검색" }), { target: { value: "최신" } });
     expect(await screen.findByText("최신 두부")).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: /최신 두부/ }));
+    await userEvent.click(screen.getByRole("button", { name: "최신 두부 선택" }));
 
     staleRefresh.reject(Object.assign(new Error("오래된 새로고침 오류"), { status: 500 }));
 
@@ -584,7 +591,7 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     ));
 
     render(<FoodProductPicker columnId="column-1" onClose={() => undefined} onComplete={() => undefined} planDate="2026-07-17" slotName="아침" />);
-    await userEvent.click(await screen.findByRole("button", { name: /플레인 요거트/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "플레인 요거트 선택" }));
     await userEvent.click(screen.getByRole("button", { name: "아침에 완제품 추가" }));
 
     expect(await screen.findByText("이 기준으로는 수량을 바꿀 수 없어요")).toBeTruthy();
@@ -602,14 +609,14 @@ describe("FOOD_PRODUCT_CREATE validation and privacy", () => {
 
   it("announces owner-only privacy and focuses the invalid field with described error", async () => {
     render(<FoodProductCreateForm onCancel={() => undefined} onCreated={() => undefined} />);
-    expect(screen.getByText(/나만 볼 수 있고 나만 수정할 수 있어요/)).toBeTruthy();
+    expect(screen.getByText(/다른 로그인 사용자도 검색하고 식단에 추가할 수 있어요/)).toBeTruthy();
 
     fireEvent.submit(screen.getByTestId("food-product-create-form"));
-    const name = screen.getByRole("textbox", { name: /완제품 이름/ });
+    const name = screen.getByRole("textbox", { name: /제품명/ });
     await waitFor(() => expect(document.activeElement).toBe(name));
     const describedBy = name.getAttribute("aria-describedby");
     expect(describedBy).toBeTruthy();
-    expect(document.getElementById(describedBy!)?.textContent).toBe("완제품 이름을 입력해 주세요.");
+    expect(document.getElementById(describedBy!)?.textContent).toBe("제품명을 입력해 주세요.");
   });
 
   it("hands a safe official-field draft to the auth return flow on create 401", async () => {
@@ -621,7 +628,7 @@ describe("FOOD_PRODUCT_CREATE validation and privacy", () => {
     }));
     render(<FoodProductCreateForm onCancel={() => undefined} onCreated={() => undefined} onUnauthorized={onUnauthorized} />);
 
-    await userEvent.type(screen.getByRole("textbox", { name: /완제품 이름/ }), "내 두유");
+    await userEvent.type(screen.getByRole("textbox", { name: /제품명/ }), "내 두유");
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "단위" }), "g");
     await userEvent.type(screen.getByRole("spinbutton", { name: /열량/ }), "0");
     await userEvent.click(screen.getByRole("button", { name: "등록하고 선택" }));

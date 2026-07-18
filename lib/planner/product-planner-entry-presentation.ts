@@ -99,6 +99,19 @@ export function buildCompatibleFoodProductUnits(
   });
 }
 
+export function getFoodProductComparisonQuantity(
+  product: Pick<FoodProductData, "basis_relations" | "nutrition">,
+) {
+  if (product.nutrition.basis.unit === "g" || product.nutrition.basis.unit === "ml") {
+    return { amount: 100, unit: product.nutrition.basis.unit };
+  }
+
+  const compatibleUnits = buildCompatibleFoodProductUnits(product);
+  const directComparableUnit = compatibleUnits.find((unit) => unit === "g" || unit === "ml");
+  if (!directComparableUnit) return null;
+  return { amount: 100, unit: directComparableUnit };
+}
+
 export function formatProductUnit(unit: FoodProductBasisUnit) {
   if (unit === "serving") return "회";
   if (unit === "package") return "팩";

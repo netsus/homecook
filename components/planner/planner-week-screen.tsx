@@ -456,7 +456,7 @@ function PlannerWeekWebView({
                         key={dateKey}
                       >
                         <div
-                          className={[
+                            className={[
                             "web-planner-date-row-head",
                             isToday ? "web-planner-date-row-head-today" : "",
                           ].join(" ")}
@@ -1199,45 +1199,45 @@ export function PlannerWeekScreen({
           <ProfileSummaryButton autoLoad isAuthenticated variant="mobile" />
         </div>
 
-        <section className="border-b border-[var(--surface-subtle)] bg-[var(--surface)] px-5 py-4">
-          <p className="mb-1 text-[20px] font-bold leading-[1.25] text-[var(--foreground)]">
+        <section className="border-b border-[var(--surface-subtle)] bg-[var(--surface)] px-5 py-4 max-[359px]:px-4 max-[359px]:py-2.5">
+          <p className="mb-1 text-[20px] font-bold leading-[1.25] text-[var(--foreground)] max-[359px]:text-[18px]">
             {formatMobileWeekRangeLabel(rangeStartDate, rangeEndDate)}
           </p>
-          <div className="mt-3">
-            <p className="mb-2 text-[13px] font-extrabold leading-[1.35] text-[var(--foreground)]">
+          <div className="mt-3 max-[359px]:mt-2">
+            <p className="mb-2 text-[13px] font-extrabold leading-[1.35] text-[var(--foreground)] max-[359px]:mb-1.5 max-[359px]:text-[12px]">
               이번 주 요약
             </p>
-            <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-registered-soft)] p-3 text-center">
-              <p className="text-[13px] font-bold leading-[1.15] text-[var(--planner-status-registered)]">
-                등록
-              </p>
-              <p className="mt-1 text-[22px] font-bold leading-none text-[var(--planner-status-registered-strong)]">
-                {mealStats.registered}개
-              </p>
-            </div>
-            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-shopping-soft)] p-3 text-center">
-              <p className="text-[13px] font-bold leading-[1.15] text-[var(--planner-status-shopping)]">
-                장보기
-              </p>
-              <p className="mt-1 text-[22px] font-bold leading-none text-[var(--planner-status-shopping)]">
-                {mealStats.shoppingDone}개
-              </p>
-            </div>
-            <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-cooked-soft)] p-3 text-center">
-              <p className="text-[13px] font-bold leading-[1.15] text-[var(--planner-status-cooked)]">
-                요리 완료
-              </p>
-              <p className="mt-1 text-[22px] font-bold leading-none text-[var(--planner-status-cooked)]">
-                {mealStats.cookDone}개
-              </p>
-            </div>
+            <div className="grid grid-cols-3 gap-2 max-[359px]:gap-1.5">
+              <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-registered-soft)] p-3 text-center max-[359px]:flex max-[359px]:items-center max-[359px]:justify-between max-[359px]:gap-1.5 max-[359px]:p-2">
+                <p className="text-[13px] font-bold leading-[1.15] text-[var(--planner-status-registered)] max-[359px]:text-[11px]">
+                  등록
+                </p>
+                <p className="mt-1 text-[22px] font-bold leading-none text-[var(--planner-status-registered-strong)] max-[359px]:mt-0 max-[359px]:text-[16px]">
+                  {mealStats.registered}개
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-shopping-soft)] p-3 text-center max-[359px]:flex max-[359px]:items-center max-[359px]:justify-between max-[359px]:gap-1.5 max-[359px]:p-2">
+                <p className="text-[13px] font-bold leading-[1.15] text-[var(--planner-status-shopping)] max-[359px]:text-[11px]">
+                  장보기
+                </p>
+                <p className="mt-1 text-[22px] font-bold leading-none text-[var(--planner-status-shopping)] max-[359px]:mt-0 max-[359px]:text-[16px]">
+                  {mealStats.shoppingDone}개
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-control)] bg-[var(--planner-status-cooked-soft)] p-3 text-center max-[359px]:flex max-[359px]:items-center max-[359px]:justify-between max-[359px]:gap-1.5 max-[359px]:p-2">
+                <p className="text-[13px] font-bold leading-[1.15] text-[var(--planner-status-cooked)] max-[359px]:text-[11px]">
+                  요리 완료
+                </p>
+                <p className="mt-1 text-[22px] font-bold leading-none text-[var(--planner-status-cooked)] max-[359px]:mt-0 max-[359px]:text-[16px]">
+                  {mealStats.cookDone}개
+                </p>
+              </div>
             </div>
           </div>
-          <div className="mt-3">{nutritionSummary}</div>
+          <div className="mt-3 max-[359px]:mt-2.5">{nutritionSummary}</div>
           {shoppingListLinks.length > 0 ? (
             <Link
-              className="mt-3 flex min-h-10 items-center justify-between rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[14px] font-bold text-[var(--foreground)]"
+              className="mt-3 flex min-h-10 items-center justify-between rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[14px] font-bold text-[var(--foreground)] max-[359px]:mt-2 max-[359px]:px-2.5 max-[359px]:text-[13px]"
               href={buildReturnHref("/mypage", {
                 restore: "shopping-history-tab",
                 returnSurface: "planner.week",
@@ -1253,10 +1253,10 @@ export function PlannerWeekScreen({
         </section>
 
         <section
-          className="sticky top-[52px] z-20 border-b border-[var(--line-strong)] bg-[var(--surface)] px-3.5 py-3"
+          className="sticky top-[52px] z-20 border-b border-[var(--line-strong)] bg-[var(--surface)] px-3.5 py-3 max-[359px]:px-3 max-[359px]:py-2"
           data-testid="planner-week-shell"
         >
-          <div className="mb-2 grid grid-cols-[30px_minmax(0,1fr)_30px] items-center gap-2">
+          <div className="mb-2 grid grid-cols-[30px_minmax(0,1fr)_30px] items-center gap-2 max-[359px]:mb-1.5 max-[359px]:gap-1.5">
             <button
               aria-label="이전 주"
               className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-fill)] text-[17px] leading-none text-[var(--text-2)]"
@@ -1327,8 +1327,8 @@ export function PlannerWeekScreen({
                           <button
                             aria-current={isSelected ? "date" : undefined}
                             aria-label={`${formatCompactDateLabel(dateKey)} ${formatWeekdayLabel(dateKey)} 식단으로 이동`}
-                            className={[
-                              "relative flex h-[54px] w-full min-w-0 flex-col items-center justify-center gap-px rounded-[var(--radius-card)] text-center transition-colors",
+                          className={[
+                              "relative flex h-[54px] w-full min-w-0 flex-col items-center justify-center gap-px rounded-[var(--radius-card)] text-center transition-colors max-[359px]:h-[48px]",
                               isSelected
                                 ? "border-2 border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)] shadow-[0_2px_8px_var(--brand-shadow-color)]"
                                 : "border border-[var(--line-strong)] bg-[var(--surface)] text-[var(--text-2)]",
@@ -1339,10 +1339,10 @@ export function PlannerWeekScreen({
                             {isToday ? (
                               <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-[var(--brand)]" />
                             ) : null}
-                            <span className="text-[10px] font-semibold leading-none">
+                            <span className="text-[10px] font-semibold leading-none max-[359px]:text-[11px]">
                               {formatWeekdayLabel(dateKey)}
                             </span>
-                            <span className="text-[19px] font-semibold leading-none">
+                            <span className="text-[19px] font-semibold leading-none max-[359px]:text-[17px]">
                               {dateKey.slice(8)}
                             </span>
                           </button>
@@ -1383,7 +1383,7 @@ export function PlannerWeekScreen({
         {screenState === "ready" || screenState === "empty" ? (
           <section
             aria-busy={isRefreshing}
-            className="space-y-3 px-4 py-4"
+            className="space-y-3 px-4 py-4 max-[359px]:space-y-2.5 max-[359px]:px-3 max-[359px]:py-3"
             data-testid="planner-week-body"
             style={plannerBodyMotionStyle}
           >
@@ -1413,19 +1413,19 @@ export function PlannerWeekScreen({
                     mobileDayCardRefs.current[dateKey] = node;
                   }}
                 >
-                  <div className="flex items-center border-b border-[var(--surface-subtle)] px-4 py-3">
+                  <div className="flex items-center border-b border-[var(--surface-subtle)] px-4 py-3 max-[359px]:px-3 max-[359px]:py-2.5">
                     <span
                       className={[
-                        "mr-2.5 flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold",
+                        "mr-2.5 flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold max-[359px]:mr-2 max-[359px]:h-7 max-[359px]:w-7 max-[359px]:text-[12px]",
                         isToday ? "bg-[var(--brand-contrast)] text-[var(--text-inverse)]" : "bg-[var(--surface-fill)] text-[var(--foreground)]",
                       ].join(" ")}
                     >
                       {formatWeekdayLabel(dateKey)}
                     </span>
-                    <p className="flex-1 text-[16px] font-semibold text-[var(--foreground)]">
+                    <p className="flex-1 text-[16px] font-semibold text-[var(--foreground)] max-[359px]:text-[15px]">
                       {formatCompactDateLabel(dateKey)}
                     </p>
-                    <span className="text-[12px] text-[var(--text-3)]">
+                    <span className="text-[12px] text-[var(--text-3)] max-[359px]:text-[11px]">
                       <span className="sr-only">
                         {dayMealCount}/{columns.length} 끼니 계획
                       </span>

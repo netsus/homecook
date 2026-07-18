@@ -303,6 +303,14 @@ describe("SettingsScreen", () => {
       "web-settings-reorder-button",
     );
     expect(screen.getByText("계정 삭제").className).toContain("text-[var(--danger)]");
+    expect(
+      screen.getByText(
+        "개인 기록은 삭제되고, 공개한 사용자 등록 완제품은 등록자 정보 없이 읽기 전용으로 남아 다른 사용자의 기존 식단 기록을 보호해요.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "계정 삭제하기" }).className).toContain(
+      "min-h-11",
+    );
   });
 
   it("reserves the mobile column-management layout while columns load", () => {
@@ -731,7 +739,7 @@ describe("SettingsScreen", () => {
       expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
       expect(
         screen.getByText(
-          "계정을 삭제하면 레시피북, 플래너, 장보기, 팬트리 기록은 삭제돼요. 되돌릴 수 없어요. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요.",
+          "레시피북, 플래너, 장보기, 팬트리 등 개인 기록은 삭제되며 되돌릴 수 없어요. 공개한 사용자 등록 완제품은 등록자 정보 없이 읽기 전용으로 남아 다른 사용자의 기존 식단 기록을 보호해요.",
         ),
       ).toBeTruthy();
     });
@@ -763,7 +771,7 @@ describe("SettingsScreen", () => {
       expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
     });
 
-    await user.click(within(screen.getByRole("alertdialog")).getByText("계정 삭제"));
+    await user.click(within(screen.getByRole("alertdialog")).getByText("탈퇴하기"));
 
     await waitFor(() => {
       expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
@@ -793,7 +801,7 @@ describe("SettingsScreen", () => {
       expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
     });
 
-    await user.click(within(screen.getByRole("alertdialog")).getByText("계정 삭제"));
+    await user.click(within(screen.getByRole("alertdialog")).getByText("탈퇴하기"));
 
     await waitFor(() => {
       expect(screen.getByTestId("dialog-error")).toBeTruthy();
@@ -825,7 +833,7 @@ describe("SettingsScreen", () => {
       expect(screen.getByText("정말 계정을 삭제할까요?")).toBeTruthy();
     });
 
-    await user.click(within(screen.getByRole("alertdialog")).getByText("계정 삭제"));
+    await user.click(within(screen.getByRole("alertdialog")).getByText("탈퇴하기"));
 
     await waitFor(() => {
       expect(screen.getByTestId("dialog-error")).toBeTruthy();

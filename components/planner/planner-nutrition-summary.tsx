@@ -41,38 +41,38 @@ export function PlannerWeekNutritionSummary({
     <section
       aria-busy={isRefreshing || showInitialLoading}
       aria-label={`${days.length}일 계획 영양`}
-      className="rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 py-2.5"
+      className="rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 py-2.5 max-[359px]:px-2.5 max-[359px]:py-2"
       data-testid="planner-week-nutrition-summary"
     >
       <div className="flex min-w-0 items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[12px] font-extrabold text-[var(--text-3)]">계획 영양</p>
+          <p className="text-[12px] font-extrabold text-[var(--text-3)] max-[359px]:text-[11px]">계획 영양</p>
           {showInitialLoading ? (
-            <p className="mt-1 text-[14px] font-bold text-[var(--text-3)]">불러오는 중</p>
+            <p className="mt-1 text-[14px] font-bold text-[var(--text-3)] max-[359px]:text-[13px]">불러오는 중</p>
           ) : showInitialError ? (
-            <p className="mt-1 text-[14px] font-bold text-[var(--danger)]">
+            <p className="mt-1 text-[14px] font-bold text-[var(--danger)] max-[359px]:text-[13px]">
               {error ?? "계획 영양을 불러오지 못했어요."}
             </p>
           ) : showEmpty || nutrition === null ? (
-            <p className="mt-1 text-[14px] font-bold text-[var(--text-2)]">
+            <p className="mt-1 text-[14px] font-bold text-[var(--text-2)] max-[359px]:text-[13px]">
               계획 영양 정보 없음
             </p>
           ) : (
-            <p className="mt-1 truncate text-[16px] font-extrabold text-[var(--foreground)]">
+            <p className="mt-1 truncate text-[16px] font-extrabold text-[var(--foreground)] max-[359px]:text-[15px]">
               {formatPlannerNutritionEnergy(nutrition.values.energy_kcal)}
             </p>
           )}
         </div>
 
         {nutrition && nutrition.incomplete_entry_count > 0 ? (
-          <span className="shrink-0 rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-[11px] font-extrabold text-[var(--brand-primary-text)]">
+          <span className="shrink-0 rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-[11px] font-extrabold text-[var(--brand-primary-text)] max-[359px]:px-2">
             {nutrition.incomplete_entry_count}개 확인 필요
           </span>
         ) : null}
       </div>
 
       {status === "error" ? (
-        <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-2 text-[12px] text-[var(--text-3)]">
+        <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-2 text-[12px] text-[var(--text-3)] max-[359px]:text-[11px]">
           <span>{showInitialError ? "" : error ?? "계획 영양을 불러오지 못했어요."}</span>
           <button
             className="min-h-11 shrink-0 rounded-[var(--radius-control)] px-3 font-bold text-[var(--brand-primary-text)]"

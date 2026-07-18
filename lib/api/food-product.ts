@@ -4,6 +4,9 @@ import type {
   FoodProductCreateInput,
   FoodProductData,
   FoodProductListData,
+  FoodProductListSource,
+  FoodProductPatchInput,
+  FoodProductReportCreateInput,
 } from "@/types/food-product";
 
 export interface FoodProductApiError extends Error {
@@ -56,12 +59,14 @@ export async function fetchFoodProducts({
   cursor,
   limit = 20,
   q = "",
+  source = "all",
 }: {
   cursor?: string | null;
   limit?: number;
   q?: string;
+  source?: FoodProductListSource;
 }) {
-  const params = new URLSearchParams({ limit: String(limit) });
+  const params = new URLSearchParams({ limit: String(limit), source });
   if (q.trim()) params.set("q", q.trim());
   if (cursor) params.set("cursor", cursor);
 
@@ -80,4 +85,36 @@ export async function createFoodProduct(body: FoodProductCreateInput) {
     },
   );
   return data.product;
+}
+
+export async function updateFoodProduct(productId: string, body: FoodProductPatchInput) {
+  const data = await requestFoodProduct<{ product: FoodProductData }>(
+    `/api/v1/food-products/${productId}`,
+    {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  return data.product;
+}
+
+export async function deleteFoodProduct(productId: string) {
+  return requestFoodProduct<{ deleted: true }>(`/api/v1/food-products/${productId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function reportFoodProduct(
+  productId: string,
+  body: FoodProductReportCreateInput,
+) {
+  return requestFoodProduct<{ reported: true }>(
+    `/api/v1/food-products/${productId}/report`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
 }
