@@ -83,7 +83,7 @@
 
 - [ ] picker/create/edit/delete/report/add와 auth/error/moderation race Playwright가 있다 <!-- omo:id=accept-community-playwright;stage=4;scope=frontend;review=5,6 -->
 - [ ] exploratory QA와 qa eval report가 있다 <!-- omo:id=accept-community-exploratory;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390/320/1280 before/after와 authority blocker 0 report가 있다 <!-- omo:id=accept-community-authority;stage=5;scope=frontend;review=6 -->
+- [ ] 390/320/1280 before/after와 authority blocker 0 report가 있다 <!-- omo:id=accept-community-authority;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 
