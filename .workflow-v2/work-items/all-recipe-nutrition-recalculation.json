@@ -81,7 +81,7 @@
       "missing-trace-to-taste-and-unconvertible-never-zero",
       "predecessor-missing-reasons-and-warnings-json-reused-without-new-status-or-reason-enum",
       "deterministic-bounded-all-public-recipes-checkpoint-dry-run-apply-replay-report-and-rollback",
-      "immutable-history-atomic-current-switch-and-same-input-zero-write-replay",
+      "per-recipe-atomic-snapshot-lifecycle-checkpointed-bounded-full-run-and-same-input-zero-write-replay",
       "rollback-restores-previous-current-without-history-delete",
       "existing-meal-snapshot-pins-unchanged",
       "api-schema-domain-status-and-error-contract-unchanged",
@@ -92,16 +92,16 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "pr_path": null,
+  "pr_path": "https://github.com/netsus/homecook/pull/1040",
   "out_of_scope": [
     "frontend ui or design authority work",
     "public api shape schema or domain contract changes",
@@ -111,5 +111,5 @@
     "staging or production writes without separate approval"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs slice. BE/data-only high-risk manual merge only, and backend ownership closes at Stage 3 independent review rather than Stage 6 closeout. Current source of truth remains official v1.7.21/v1.5.27/v1.3.24/v1.3.22/v1.2.26, and Stage 2 cannot start until this docs PR merges and the internal docs review closes. Allowed predecessor input is the merged recipe nutrition snapshot contract plus ingredient-nutrition-full-coverage PR #1038 merged at 3c737eae. The recalculation path must preserve immutable snapshot history, atomic current switching, replay zero-write behavior, rollback to previous current, unchanged historical Meal pins, unchanged API/schema/domain behavior, local-only execution guard, zero secret/raw/private-path exposure, reuse only predecessor snapshot `missing_reasons` and canonically ordered `warnings_json`, and never introduce a new report status or reason enum without separate approval for any external write."
+  "notes": "Stage 1 docs PR #1039 merged as eb61a6790482406e16316bf4cd75915b805070dd. Implementation PR #1040 is open in Draft for current-head CI. BE/data-only high-risk manual merge only, and backend ownership closes at Stage 3 independent review rather than Stage 6 closeout. Current source of truth remains official v1.7.21/v1.5.27/v1.3.24/v1.3.22/v1.2.26. Allowed predecessor input is the merged recipe nutrition snapshot contract plus ingredient-nutrition-full-coverage PR #1038 merged at 3c737eae. Automated Stage 2 verification passed on 2026-07-18: focused Vitest, fresh isolated PostgreSQL 17 integration tests, workflow/source-of-truth validators, diff check, and pnpm verify:backend were green; Stage 3 repair added RED/GREEN coverage for the shared bounded inventory loader and required non-leaking --output contract, followed by fresh independent APPROVE with blocker 0. Manual loopback-only operator lifecycle evidence at docs/workpacks/all-recipe-nutrition-recalculation/evidence/2026-07-18-local-all-recipe-lifecycle.md closed inventory 34 = complete 8 + partial 23 + unavailable 3, replay writes 0, rollback 34, restored current aggregate state, and unchanged Meal pins. The recalculation path preserves immutable history, per-recipe atomic snapshot write/current switch/rollback, checkpointed bounded full-run recovery rather than a global transaction, unchanged API/schema/domain behavior, local-only execution guard, zero secret/raw/private-path exposure, and predecessor-only missing_reasons/canonical warnings_json taxonomy. Production/staging writes remain 0 and require separate approval."
 }

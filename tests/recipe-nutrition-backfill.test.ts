@@ -16,8 +16,13 @@ import {
 } from "@/scripts/lib/recipe-nutrition-backfill.mjs";
 import {
   ensureMealPinBackfillCheckpoint,
+  initializeAllRecipeNutritionCheckpoint,
+  readAllRecipeNutritionCheckpoint,
+  readAllRecipeNutritionInventoryArtifact,
   readMealPinBackfillCheckpoint,
   readRecipeNutritionCheckpoint,
+  writeAllRecipeNutritionCheckpoint,
+  writeAllRecipeNutritionInventoryArtifact,
   writeMealPinBackfillCheckpoint,
   writeRecipeNutritionCheckpoint,
 } from "@/scripts/lib/recipe-nutrition-checkpoint.mjs";
@@ -120,6 +125,13 @@ function repository() {
       _expectedRecipeVersion: unknown,
       _inputGuard: unknown,
     ) => ({
+      ...(() => {
+        void _calculation;
+        void _calculatedAt;
+        void _expectedRecipeVersion;
+        void _inputGuard;
+        return {};
+      })(),
       snapshot_id: `applied-${recipeId}`,
       created: true,
       is_current: true,
@@ -593,5 +605,146 @@ describe("FoodSafety-30 recipe nutrition backfill", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("writes all-recipe inventory/checkpoint artifacts as owner-only regular files and supports more than 30 checkpoints", () => {
+    const root = mkdtempSync(join(tmpdir(), "homecook-all-recipe-artifacts-"));
+    const inventoryPath = join(root, "inventory.json");
+    const checkpointPath = join(root, "checkpoint.json");
+    const inventory = {
+      schema_version: "all-recipe-nutrition-inventory-v1",
+      scope: "all-public-recipes",
+      query_version: "all-recipes-inventory-sql-v1",
+      row_count: 64,
+      rows: Array.from({ length: 64 }, (_, index) => ({
+        recipe_id: `recipe-${index.toString().padStart(2, "0")}`,
+        base_servings: 2,
+        updated_at: "2026-07-18T00:00:00.000Z",
+      })),
+      checksum: "b".repeat(64),
+    };
+    const checkpoints = Array.from({ length: 64 }, (_, index) => ({
+      recipe_id: `recipe-${index.toString().padStart(2, "0")}`,
+      previous_snapshot_id: null,
+      expected_input_hash: "a".repeat(64),
+      applied_snapshot_id: `snapshot-${index.toString().padStart(2, "0")}`,
+      state: "applied",
+    }));
+
+    try {
+      writeAllRecipeNutritionInventoryArtifact(inventoryPath, inventory);
+      expect(statSync(inventoryPath).mode & 0o777).toBe(0o600);
+      expect(readAllRecipeNutritionInventoryArtifact(inventoryPath)).toEqual(inventory);
+
+      initializeAllRecipeNutritionCheckpoint(checkpointPath, inventory.checksum, inventory.row_count);
+      expect(readAllRecipeNutritionCheckpoint(checkpointPath)).toEqual({
+        inventory_checksum: inventory.checksum,
+        inventory_row_count: inventory.row_count,
+        checkpoints: [],
+      });
+
+      writeAllRecipeNutritionCheckpoint(
+        checkpointPath,
+        inventory.checksum,
+        inventory.row_count,
+        checkpoints,
+      );
+      expect(statSync(checkpointPath).mode & 0o777).toBe(0o600);
+      expect(readAllRecipeNutritionCheckpoint(checkpointPath)).toEqual({
+        inventory_checksum: inventory.checksum,
+        inventory_row_count: inventory.row_count,
+        checkpoints,
+      });
+
+      const symlinkPath = join(root, "inventory-link.json");
+      symlinkSync(inventoryPath, symlinkPath);
+      expect(() => writeAllRecipeNutritionInventoryArtifact(symlinkPath, inventory)).toThrowError(
+        expect.objectContaining({ code: "INVALID_BACKFILL_CHECKPOINT_PATH" }),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps all-recipes CLI fail-closed for missing inventory, unsafe after-cursor, remote URLs, and path/secret non-leakage", () => {
+    const missingInventoryOutput = spawnSync(process.execPath, [
+      "scripts/recipe-nutrition-backfill.mjs",
+      "all-recipes-inventory",
+    ], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: {
+        PATH: process.env.PATH ?? "",
+        NODE_ENV: "test",
+        NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+        SUPABASE_SERVICE_ROLE_KEY: "not-a-real-key",
+      },
+    });
+    expect(missingInventoryOutput.status).toBe(1);
+    expect(missingInventoryOutput.stdout).toBe("");
+    expect(missingInventoryOutput.stderr.trim()).toBe("ALL_RECIPE_INVENTORY_OUTPUT_REQUIRED");
+    expect(missingInventoryOutput.stderr).not.toMatch(/127\.0\.0\.1|not-a-real-key|service_role/i);
+
+    const help = spawnSync(process.execPath, [
+      "scripts/recipe-nutrition-backfill.mjs",
+      "--help",
+    ], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: { PATH: process.env.PATH ?? "", NODE_ENV: "test" },
+    });
+    expect(help.status).toBe(0);
+    expect(help.stdout).toContain("all-recipes-inventory --output <path>");
+    expect(help.stdout).not.toContain("all-recipes-inventory [--output <path>]");
+
+    const missingInventory = spawnSync(process.execPath, [
+      "scripts/recipe-nutrition-backfill.mjs",
+      "all-recipes-dry-run",
+    ], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: { PATH: process.env.PATH ?? "", NODE_ENV: "test" },
+    });
+    expect(missingInventory.status).toBe(1);
+    expect(missingInventory.stderr.trim()).toBe("ALL_RECIPE_INVENTORY_REQUIRED");
+
+    const unsafeAfter = spawnSync(process.execPath, [
+      "scripts/recipe-nutrition-backfill.mjs",
+      "all-recipes-dry-run",
+      "--inventory",
+      "/tmp/fake-inventory.json",
+      "--after",
+      "recipe-a",
+    ], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: { PATH: process.env.PATH ?? "", NODE_ENV: "test" },
+    });
+    expect(unsafeAfter.status).toBe(1);
+    expect(unsafeAfter.stderr.trim()).toBe("ALL_RECIPE_CURSOR_UNSAFE");
+    expect(unsafeAfter.stderr).not.toMatch(/\/tmp\/fake-inventory\.json|service_role|token|cookie/i);
+
+    const remoteWrite = spawnSync(process.execPath, [
+      "scripts/recipe-nutrition-backfill.mjs",
+      "all-recipes-rollback",
+      "--inventory",
+      "/tmp/fake-inventory.json",
+      "--checkpoint",
+      "/tmp/fake-checkpoint.json",
+      "--allow-write",
+    ], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: {
+        PATH: process.env.PATH ?? "",
+        NODE_ENV: "test",
+        HOMECOOK_RECIPE_NUTRITION_WRITE_APPROVED: "1",
+        NEXT_PUBLIC_SUPABASE_URL: "https://production.example.test",
+        SUPABASE_SERVICE_ROLE_KEY: "not-a-real-key",
+      },
+    });
+    expect(remoteWrite.status).toBe(1);
+    expect(remoteWrite.stderr.trim()).toBe("LOCAL_OPERATOR_ENV_REQUIRED");
+    expect(remoteWrite.stderr).not.toMatch(/production\.example\.test|not-a-real-key|\/tmp\/fake-checkpoint/i);
   });
 });
