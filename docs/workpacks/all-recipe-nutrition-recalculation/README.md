@@ -202,6 +202,7 @@ Apply와 rollback의 원자성 보장은 각 recipe의 snapshot write/current sw
 - repair: clarified per-recipe atomicity plus checkpointed bounded full-run, reused the shared bounded inventory loader, required non-leaking `--output`, and restored manual items to pending before the real operator run.
 - repair-final independent code/security/performance rereview: `APPROVE`, blocker `0`; focused, isolated PostgreSQL, full backend, and security gates passed on the repaired tree.
 - manual operator closeout: `evidence/2026-07-18-local-all-recipe-lifecycle.md` passed; production/staging writes remain `0` and Manual Only.
+- exact implementation head `3abfb2f6f6e154e7edf0064050ec630f0763ecde`의 started check가 모두 success 또는 의도된 skip으로 끝나고 fresh repair-final reviewer가 `APPROVE`, blocker `0`을 재확인한 뒤 PR #1040이 merge `a001f53d1a11d7b0e72035ca9d8655c6ed677b0a`로 병합됐다. merge tree는 reviewed head tree와 동일하고 해당 head는 `origin/master` ancestry에 포함된다.
 
 ## Contract Evolution Candidates
 
