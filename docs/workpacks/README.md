@@ -10,6 +10,10 @@
 
 ## Revision Notes
 
+- `v2` nutrition products/planner public prepared-food closeout (2026-07-18)
+  - `public-prepared-food-catalog-import` exact implementation head `7cea8644`가 independent Stage 3 review와 current-head checks를 통과한 뒤 PR #1035 merge `903e7082`로 병합됐음을 canonical closeout에 반영했다.
+  - official snapshot 298,288 rows 중 287,041개를 local public catalog로 승격했고, same-input replay `0` write, public external-key duplicate `0`, attribution missing `0`, secret/raw leak `0`을 고정했다. production/staging promotion은 Manual Only다.
+
 - `v2` nutrition products/planner all-recipe closeout (2026-07-18)
   - `all-recipe-nutrition-recalculation` implementation PR #1040의 exact head `3abfb2f6`가 모든 current-head check와 fresh independent repair-final review를 통과한 뒤 merge `a001f53d`로 병합됐다.
   - local inventory `34 = complete 8 + partial 23 + unavailable 3`, same-input replay `0` write, rollback `34`, current aggregate 복원, Meal pin 불변을 closeout 근거로 고정했다. production/staging writes는 계속 `0`이며 Manual Only다.

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-18T08:54:42Z",
+  "updated_at": "2026-07-18T09:09:34Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2157,10 +2157,10 @@
       "id": "public-prepared-food-catalog-import",
       "preset": "vertical-slice-strict",
       "branch": "docs/public-prepared-food-catalog-import",
-      "pr_path": null,
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1035",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm exec vitest run tests/public-prepared-food-import.test.ts tests/public-prepared-food-import-postgres.integration.test.ts tests/prepared-food-catalog-api.test.ts tests/prepared-food-catalog-rls.test.ts",
         "pnpm verify:backend",
@@ -2170,9 +2170,9 @@
         "node scripts/validate-automation-spec.mjs --slice public-prepared-food-catalog-import",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs drafted from official v1.7.21/v1.5.27/v1.3.24/v1.3.22/v1.2.26 and dataset 15100066; independent docs review is required before Stage 2.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
+      "notes": "Exact implementation head 7cea8644 passed independent APPROVE/blocker 0 and all current-head checks, then PR #1035 merged as 903e7082. Local official snapshot 298,288 = 287,041 approved + 1 identical duplicate + 11,246 quarantine; replay 0-write, duplicate public keys 0, missing attribution 0, secret/raw leak 0, external writes 0. production/staging remains Manual Only. closeout_phase=completed; closeout_recovery=manual_patch:1; last_recovery_at=2026-07-18T09:09:34Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null

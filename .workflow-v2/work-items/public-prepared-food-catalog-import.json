@@ -71,16 +71,16 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "pr_path": null,
+  "pr_path": "https://github.com/netsus/homecook/pull/1035",
   "out_of_scope": [
     "community manual public sharing and moderation",
     "frontend source badges and 100g quantity UX",
@@ -89,5 +89,46 @@
     "unapproved staging or production writes"
   ],
   "open_questions": [],
-  "notes": "Current official snapshot evidence is 20260626/298271 rows; the immutable run manifest revalidates source facts at execution time."
+  "notes": "Official snapshot 2026-06-26 contained 298,288 rows. Exact implementation head 7cea8644740f466eebb91f497c7988ca3aab9161 received fresh independent Stage 3/current-head APPROVE with blocker 0, every started check completed successfully or intentionally skipped, and PR #1035 merged as 903e70824bc2ee7061170f08fe9b3a36c0e852d1 with reviewed tree equality and master ancestry verified. Local promotion closed 287,041 approved public products + 1 identical duplicate + 11,246 quarantine, same-input replay writes 0, duplicate public external-key groups 0, missing attribution 0, and secret/raw leak 0. Production/staging promotion remains Manual Only.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "PR #1035 exact implementation head 7cea8644740f466eebb91f497c7988ca3aab9161 merged as 903e70824bc2ee7061170f08fe9b3a36c0e852d1 after every started current-head check completed successfully or intentionally skipped",
+        "Fresh independent Stage 3/current-head review returned APPROVE with blocker_count 0",
+        "docs/workpacks/public-prepared-food-catalog-import/evidence/2026-07-17-local-pilot-full-import.md: 298,288 raw = 287,041 approved + 1 identical duplicate + 11,246 quarantine; replay writes 0; duplicate public keys, missing attribution, secret/raw leak, and external writes all 0",
+        "Focused Vitest 34/34, isolated PostgreSQL integration 9/9, typecheck, lint, build, security, accessibility, visual, Lighthouse, smoke, and full-regression current-head checks passed",
+        "Production/staging promotion and changed-source adapter review remain explicitly Manual Only"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "7cea8644740f466eebb91f497c7988ca3aab9161",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-18T09:09:34Z"
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-18T09:09:34Z",
+      "status_synced_at": "2026-07-18T09:09:34Z",
+      "pr_body_synced_at": "2026-07-17T22:24:00Z"
+    }
+  }
 }

@@ -147,6 +147,14 @@
 - [x] user query external provider call 0, secret/raw-row 노출 0 <!-- omo:id=delivery-security-runtime-boundary;stage=2;scope=backend;review=3 -->
 - [x] fresh local Supabase real DB lifecycle와 독립 Stage 3 review <!-- omo:id=delivery-real-db-review;stage=2;scope=shared;review=3 -->
 
+## Stage 2/3 Evidence
+
+- TDD와 isolated PostgreSQL 검증에서 focused Vitest `34/34`, PostgreSQL integration `9/9`, typecheck와 changed-file ESLint가 통과했다.
+- local full promotion은 official snapshot `298,288` rows를 `287,041 approved + 1 identical duplicate + 11,246 quarantine`로 정확히 닫았고, 같은 입력 replay는 `0` write였다.
+- public products/current approved links `287,041`, five-core current values `1,435,205`, duplicate public external key groups `0`, missing attribution `0`, secret/raw leak `0`을 aggregate evidence로 고정했다.
+- fresh independent Stage 3/current-head review는 `APPROVE`, blocker `0`이었고 exact head `7cea8644740f466eebb91f497c7988ca3aab9161`의 모든 started check가 success 또는 의도된 skip으로 끝난 뒤 PR #1035가 merge `903e70824bc2ee7061170f08fe9b3a36c0e852d1`로 병합됐다. reviewed head tree와 merge tree가 같고 해당 head가 `origin/master` ancestry에 포함됨을 재확인했다.
+- production/staging 전체 promotion과 source 변경 adapter review는 계속 Manual Only다.
+
 ## Contract Evolution Candidates
 
 - 없음. 기존 official food-product API/DB 계약 안에서 batch data를 채운다.
