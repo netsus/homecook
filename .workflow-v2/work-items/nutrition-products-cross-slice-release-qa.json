@@ -1,0 +1,123 @@
+{
+  "id": "nutrition-products-cross-slice-release-qa",
+  "title": "Nutrition products cross-slice release QA",
+  "summary": "병합 완료된 nutrition/products/planner successor 전체를 fresh local DB, real Chrome, authority, security/performance, current-head checks 기준으로 다시 묶어 final release QA를 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "재료 845 coverage, recipe snapshot/Meal pin, 287,041 public product catalog, shared manual 권한/anonymization, product planner isolation, 100g/100mL UX, 보안/성능/authority/current-head evidence를 verification-only release gate로 다시 검증한다.",
+  "owners": {
+    "claude": "replaced for this nutrition successor by explicit user approval",
+    "codex": "role-separated Codex tasks own Stage 1 docs, Stage 1.5 review/repair-final, Stage 2/3 verification, Stage 4 browser and authority evidence, and Stage 6 final review",
+    "workers": []
+  },
+  "dependencies": [
+    "ingredient-nutrition-full-coverage merged at 3c737eae",
+    "all-recipe-nutrition-recalculation merged at a001f53d",
+    "public-prepared-food-catalog-import merged at 903e7082",
+    "community-prepared-food-catalog merged at 5c88cdae",
+    "prepared-food-standard-basis-ux merged at 1976ecc3",
+    "official v1.7.21/v1.5.27/v1.3.24/v1.3.22/v1.2.26 contract merged"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.21.md",
+      "docs/화면정의서-v1.5.27.md",
+      "docs/유저flow맵-v1.3.24.md",
+      "docs/db설계-v1.3.22.md",
+      "docs/api문서-v1.2.26.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/nutrition-products-cross-slice-release-qa/README.md",
+      "docs/workpacks/nutrition-products-cross-slice-release-qa/acceptance.md",
+      "docs/workpacks/nutrition-products-cross-slice-release-qa/automation-spec.json",
+      "docs/workpacks/ingredient-nutrition-full-coverage/README.md",
+      "docs/workpacks/all-recipe-nutrition-recalculation/README.md",
+      "docs/workpacks/public-prepared-food-catalog-import/README.md",
+      "docs/workpacks/community-prepared-food-catalog/README.md",
+      "docs/workpacks/prepared-food-standard-basis-ux/README.md",
+      "docs/workpacks/recipe-nutrition-calculation/README.md",
+      "docs/workpacks/prepared-food-planner-entry/README.md",
+      "docs/workpacks/planner-nutrition-summary/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/playwright-e2e.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/engineering/security-performance-design.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:fresh-local-supabase-full-migrations-rls-postgrest-auth-and-real-chrome-verification",
+      "manual:local-ingredient-845-approved-838-strict-excluded-7-with-zero-write-replay",
+      "manual:local-all-recipe-34-complete-8-partial-23-unavailable-3-and-meal-pin-invariance",
+      "manual:local-public-products-287041-shared-manual-auth-a-b-and-account-anonymization",
+      "manual:planner-add-edit-delete-100-to-101g-recipe-plus-product-nutrition-and-workflow-isolation",
+      "manual:independent-security-performance-code-authority-and-stage6-reviews",
+      "manual:production-staging-provider-writes-intentionally-zero"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "docs": 4,
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/nutrition-products-cross-slice-release-qa pnpm validate:workpack -- --slice nutrition-products-cross-slice-release-qa",
+      "node scripts/validate-automation-spec.mjs --slice nutrition-products-cross-slice-release-qa",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/nutrition-products-cross-slice-release-qa pnpm validate:workpack -- --slice nutrition-products-cross-slice-release-qa",
+      "node scripts/validate-automation-spec.mjs --slice nutrition-products-cross-slice-release-qa",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "ingredient-845-approved-838-strict-excluded-7-and-zero-write-replay",
+      "all-recipe-34-complete-8-partial-23-unavailable-3-and-unchanged-meal-pins",
+      "public-products-287041-source-tag-label-basis-and-no-inference",
+      "shared-manual-auth-a-b-report-and-account-anonymization-pin-retention",
+      "planner-product-add-edit-delete-100-to-101g-and-workflow-isolation",
+      "real-local-supabase-rls-postgrest-auth-and-zero-external-write",
+      "real-chrome-320-390-desktop-and-current-head-authority",
+      "independent-security-performance-code-and-stage6-reviews"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "runtime-app-code-fixes-inside-this-slice",
+    "new-api-schema-status-field-or-error-contracts",
+    "official-contract-evolution",
+    "production-staging-provider-writes",
+    "physical-device-screen-reader-and-true-production-scale-verification",
+    "discord-or-amphetamine-automation-before-final-merge-closeout"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs branch opened by Codex per explicit user instruction in dedicated worktree. This slice is verification-only and must not change runtime product code, API, DB schema, or official contracts. It starts from merged master ancestry 58a3f805864af9627616c50c117eb3c7f94f72a2 and re-verifies the merged successor chain: ingredient coverage 845 = 838 approved exactly once + 7 strict excluded with replay 0-write; all-recipe lifecycle 34 = complete 8 + partial 23 + unavailable 3 with rollback 34 and unchanged Meal pins; public product catalog 287,041 with source tags, label basis, shared-manual auth A/B, report, anonymization, and no inference; planner add/edit/delete with 100→101g recalculation and recipe/workflow isolation; fresh local Supabase full migrations/RLS/PostgREST/auth; real Chrome 320/390/desktop evidence; fresh authority; independent security/performance/code/Stage 6 review; and current-head started checks all success or intentional skip. Any defect must be fixed in a separate TDD repair PR and this release QA reruns on that repaired exact head."
+}
