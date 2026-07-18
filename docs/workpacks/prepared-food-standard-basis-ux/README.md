@@ -88,11 +88,19 @@
 ## Design Authority
 
 - UI risk: `anchor-extension`
-- Anchor screens: `PLANNER_WEEK`, `MEAL_SCREEN`
+- Anchor screen dependency: `PLANNER_WEEK`, `MEAL_SCREEN`
 - Stage 1 artifact: `ui/designs/MEAL_SCREEN.md`의 Standard Basis UX addendum
-- Stage 4 evidence: `ui/designs/evidence/prepared-food-standard-basis-ux/{before,after}/{390,320,1280}/`
+- Visual artifact: `ui/designs/evidence/prepared-food-standard-basis-ux/{before,after}/meal-screen-quantity-edit-{320,390,1280}.png`
 - Authority report: `ui/designs/authority/PLANNER_WEEK-prepared-food-standard-basis-ux-authority.md`
-- Status: pending — predecessor authority는 historical evidence이며 새 exact head 승인이 아니다.
+- Authority status: reviewed
+- Notes: predecessor authority가 아니라 exact implementation head에 대한 독립 authority PASS/blocker 0을 사용한다.
+
+## Design Status
+
+- [ ] 임시 UI (temporary)
+- [x] 리뷰 대기 (pending-review) — exact implementation head authority PASS, Stage 6 merge 대기
+- [ ] 확정 (confirmed)
+- [ ] N/A
 
 ## QA / Test Data Plan
 
@@ -121,12 +129,12 @@
 
 ## Delivery Checklist
 
-- [x] Stage 1 scope and predecessor boundary drafted
-- [x] Stage 2 backend N/A rationale documented
-- [x] independent internal 1.5 review — APPROVE, blocker/major/minor 0/0/0
-- [x] Stage 1 docs PR merged — PR #1048, merge `0118be2ab401b36d7b1c60be299a60e8f9c5f965`
-- [x] Stage 4 RED test captured before implementation
-- [x] MealScreen g/ml step repair and inherited UX regression green
-- [x] 320/390/1280 real local browser evidence
-- [x] independent Stage 5 code review and authority blocker 0
-- [ ] current-head full checks and Stage 6 merge
+- [x] Stage 1 scope and predecessor boundary drafted <!-- omo:id=delivery-standard-basis-stage1-scope;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 2 backend N/A rationale documented <!-- omo:id=delivery-standard-basis-backend-na;stage=2;scope=shared;review=3,6 -->
+- [x] independent internal 1.5 review — APPROVE, blocker/major/minor 0/0/0 <!-- omo:id=delivery-standard-basis-internal-review;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 1 docs PR merged — PR #1048, merge `0118be2ab401b36d7b1c60be299a60e8f9c5f965` <!-- omo:id=delivery-standard-basis-docs-merged;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 4 RED test captured before implementation <!-- omo:id=delivery-standard-basis-tdd-red;stage=4;scope=frontend;review=5,6 -->
+- [x] MealScreen g/ml step repair and inherited UX regression green <!-- omo:id=delivery-standard-basis-repair-green;stage=4;scope=frontend;review=5,6 -->
+- [x] 320/390/1280 real local browser evidence <!-- omo:id=delivery-standard-basis-browser-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] independent Stage 5 code review and authority blocker 0 <!-- omo:id=delivery-standard-basis-stage5-authority;stage=4;scope=frontend;review=5,6 -->
+- [ ] current-head full checks and Stage 6 merge <!-- omo:id=delivery-standard-basis-stage6-merge;stage=2;scope=shared;review=6 -->
