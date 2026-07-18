@@ -72,6 +72,90 @@ describe.runIf(enabled)("community prepared food catalog isolated PostgreSQL int
     expect(created.nutrition.label_basis_text).toBe("1회(150g)");
   });
 
+  it("installs visible trigram indexes and replaces the list function body without public_dataset EXISTS scans", () => {
+    expect(psql(`
+      select count(*) from pg_indexes
+      where schemaname = 'public'
+        and tablename = 'food_products'
+        and indexname = 'food_products_visible_brand_trgm_idx';
+    `)).toBe("1");
+    expect(psql(`
+      select count(*) from pg_indexes
+      where schemaname = 'public'
+        and tablename = 'food_products'
+        and indexname = 'food_products_visible_name_trgm_idx';
+    `)).toBe("1");
+
+    const nameIndexDef = psql(`
+      select indexdef
+      from pg_indexes
+      where schemaname = 'public'
+        and tablename = 'food_products'
+        and indexname = 'food_products_visible_name_trgm_idx';
+    `);
+    const brandIndexDef = psql(`
+      select indexdef
+      from pg_indexes
+      where schemaname = 'public'
+        and tablename = 'food_products'
+        and indexname = 'food_products_visible_brand_trgm_idx';
+    `);
+
+    expect(nameIndexDef).toMatch(/using gin \(lower\(\(name\)::text\) gin_trgm_ops\)/i);
+    expect(brandIndexDef).toMatch(/using gin \(lower\(\(coalesce\(brand, ''::character varying\)\)::text\) gin_trgm_ops\)/i);
+
+    expect(psql(`
+      select (
+        position(
+          'lower(product.name) like'
+          in lower(pg_get_functiondef(
+            'public.list_food_products(uuid,text,text,timestamptz,uuid,integer)'::regprocedure
+          ))
+        ) > 0
+      )::text;
+    `)).toBe("true");
+    expect(psql(`
+      select (
+        position(
+          'lower(coalesce(product.brand'
+          in lower(pg_get_functiondef(
+            'public.list_food_products(uuid,text,text,timestamptz,uuid,integer)'::regprocedure
+          ))
+        ) > 0
+      )::text;
+    `)).toBe("true");
+    expect(psql(`
+      select (
+        position(
+          'join lateral ('
+          in lower(pg_get_functiondef(
+            'public.list_food_products(uuid,text,text,timestamptz,uuid,integer)'::regprocedure
+          ))
+        ) > 0
+      )::text;
+    `)).toBe("true");
+    expect(psql(`
+      select (
+        position(
+          'from public.food_product_nutrition_versions admitted_version'
+          in lower(pg_get_functiondef(
+            'public.list_food_products(uuid,text,text,timestamptz,uuid,integer)'::regprocedure
+          ))
+        ) > 0
+      )::text;
+    `)).toBe("true");
+    expect(psql(`
+      select (
+        position(
+          'with admitted_public_dataset as materialized'
+          in lower(pg_get_functiondef(
+            'public.list_food_products(uuid,text,text,timestamptz,uuid,integer)'::regprocedure
+          ))
+        ) > 0
+      )::text;
+    `)).toBe("false");
+  });
+
   it("orders shared manual before self legacy private and never exposes authority fields", () => {
     const shared = JSON.parse(psql(serviceSql(`
       select public.create_manual_food_product(
