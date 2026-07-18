@@ -169,7 +169,7 @@ FoodSafety-30에서 검증한 operator batch를 all-public-recipes checkpoint in
 
 - initial rereview: `REQUEST_CHANGES` with blocker4 on report taxonomy / checkpoint wording / Stage state drift.
 - repair applied: predecessor `missing_reasons` + canonical ordered `warnings_json` reuse, all-public-recipes checkpoint wording, Meal read-only/no historical repin, bounded cursor + no per-ingredient N+1, and roadmap `planned` restoration were patched in this pass.
-- final rereview: pending. Stage 1 PR is not open yet, so this slice remains draft/planned until a docs PR exists.
+- final rereview: fresh independent Codex reviewer `APPROVE`, blocker `0`. Stage 1 docs PR #1039 is open; Stage 2 remains blocked until that PR merges.
 
 ## Contract Evolution Candidates
 
