@@ -2122,7 +2122,7 @@
         "node scripts/validate-automation-spec.mjs --slice ingredient-nutrition-full-coverage",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs merged in PR #1027 and repaired in PR #1029. Stage 2/3 implementation head 2faa3fc0 received independent Codex Stage 3 APPROVE with required findings 0, then merged as 3c737eae in PR #1038. Final local coverage checkpoint locked 845 inventory rows as 838 approved plus 7 strict excluded with replay zero-write confirmed. Targeted Vitest 35 passed/2 skipped, isolated PostgreSQL 13 passed, verify:backend product 1,589 passed and security E2E 12 passed. Real inventory-wide source decisions were reviewed before merge; any future staging/production write remains Manual Only.",
+      "notes": "Stage 1 docs merged in PR #1027 and repaired in PR #1029. Stage 2/3 implementation head 2faa3fc0 received independent Codex Stage 3 APPROVE with required findings 0, then merged as 3c737eae in PR #1038. Final local coverage checkpoint locked 845 inventory rows as 838 approved plus 7 strict excluded with replay zero-write confirmed. Targeted Vitest 35 passed/2 skipped, isolated PostgreSQL 13 passed, verify:backend product 1,589 passed and security E2E 12 passed. Real inventory-wide source decisions were reviewed before merge; any future staging/production write remains Manual Only. closeout_phase=completed; closeout_recovery=manual_patch:1; last_recovery_at=2026-07-18T07:09:10Z",
       "evaluation_status": "passed",
       "evaluation_round": 1,
       "last_evaluator_result": null,
