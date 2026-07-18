@@ -188,6 +188,51 @@ const SETTINGS_MOBILE_BASE_PROPS = {
   onNicknameInputChange: vi.fn(),
 };
 
+function renderMobileDeleteDialogHarness() {
+  function Harness() {
+    const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+
+    return (
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        onCloseDeleteDialog={() => setShowDeleteDialog(false)}
+        onOpenDeleteDialog={() => setShowDeleteDialog(true)}
+        showDeleteDialog={showDeleteDialog}
+      />
+    );
+  }
+
+  render(<Harness />);
+}
+
+function renderMobileLogoutDialogHarness() {
+  function Harness() {
+    const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
+
+    return (
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        onCloseLogoutDialog={() => setShowLogoutDialog(false)}
+        onOpenLogoutDialog={() => setShowLogoutDialog(true)}
+        showLogoutDialog={showLogoutDialog}
+      />
+    );
+  }
+
+  render(<Harness />);
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+}
+
 function installMatchMedia(matchesAppView: boolean) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
@@ -751,6 +796,36 @@ describe("SettingsScreen", () => {
     });
   });
 
+  it("keeps the mobile account delete confirm inside a dialog boundary", async () => {
+    const user = userEvent.setup();
+    renderMobileDeleteDialogHarness();
+
+    const deleteTrigger = screen.getByRole("button", { name: "계정 삭제하기" });
+    await user.click(deleteTrigger);
+
+    const dialog = screen.getByRole("alertdialog");
+    const cancel = within(dialog).getByRole("button", { name: "취소" });
+    const confirm = within(dialog).getByRole("button", { name: "탈퇴하기" });
+
+    expect(dialog.getAttribute("aria-labelledby")).toBe("settings-delete-title");
+    expect(dialog.getAttribute("aria-describedby")).toBe("settings-delete-description");
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
+    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.querySelector("main")?.getAttribute("aria-hidden")).toBe("true");
+
+    confirm.focus();
+    await user.tab();
+    expect(document.activeElement).toBe(cancel);
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(confirm);
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(deleteTrigger));
+    expect(document.body.style.overflow).toBe("");
+    expect(document.querySelector("main")?.getAttribute("aria-hidden")).toBeNull();
+  });
+
   it("deletes account, calls logout for cleanup, and navigates home", async () => {
     mockFetchUserProfile.mockResolvedValue(MOCK_PROFILE);
     mockDeleteAccount.mockResolvedValue({ deleted: true });
@@ -874,6 +949,191 @@ describe("SettingsScreen", () => {
       expect(mockRouterReplace).toHaveBeenCalledWith("/");
       expect(localStorage.getItem("homecook:last-auth-provider:v1")).toBe("naver");
     });
+  });
+
+  it("keeps the mobile logout confirm inside a dialog boundary", async () => {
+    const user = userEvent.setup();
+    renderMobileLogoutDialogHarness();
+
+    const logoutTrigger = screen.getByRole("button", { name: /로그아웃/ });
+    await user.click(logoutTrigger);
+
+    const dialog = screen.getByRole("alertdialog");
+    const cancel = within(dialog).getByRole("button", { name: "취소" });
+    const confirm = within(dialog).getByRole("button", { name: "로그아웃" });
+
+    expect(dialog.getAttribute("aria-labelledby")).toBe("settings-logout-title");
+    expect(dialog.getAttribute("aria-describedby")).toBe("settings-logout-description");
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
+    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.querySelector("main")?.getAttribute("aria-hidden")).toBe("true");
+
+    confirm.focus();
+    await user.tab();
+    expect(document.activeElement).toBe(cancel);
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(confirm);
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(logoutTrigger));
+    expect(document.body.style.overflow).toBe("");
+    expect(document.querySelector("main")?.getAttribute("aria-hidden")).toBeNull();
+  });
+
+  it("ignores Escape during pending account delete and keeps the dialog open after failure", async () => {
+    const deferred = createDeferred<void>();
+    const closeSpy = vi.fn();
+
+    function Harness() {
+      const [showDeleteDialog, setShowDeleteDialog] = React.useState(true);
+      const [isDeleting, setIsDeleting] = React.useState(false);
+      const [deleteError, setDeleteError] = React.useState<string | null>(null);
+
+      return (
+        <SettingsMobileScreen
+          {...SETTINGS_MOBILE_BASE_PROPS}
+          deleteError={deleteError}
+          isDeleting={isDeleting}
+          onCloseDeleteDialog={() => {
+            closeSpy();
+            setShowDeleteDialog(false);
+          }}
+          onConfirmDelete={() => {
+            setIsDeleting(true);
+            setDeleteError(null);
+            void deferred.promise.catch(() => {
+              setIsDeleting(false);
+              setDeleteError("탈퇴에 실패했어요.");
+            });
+          }}
+          showDeleteDialog={showDeleteDialog}
+        />
+      );
+    }
+
+    render(<Harness />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "탈퇴하기" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "탈퇴 처리 중..." }).hasAttribute("disabled")).toBe(true));
+
+    await user.keyboard("{Escape}");
+
+    expect(closeSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "정말 계정을 삭제할까요?" })).toBeTruthy();
+
+    deferred.reject(new Error("delete failed"));
+
+    await waitFor(() => expect(screen.getByText("탈퇴에 실패했어요.")).toBeTruthy());
+    expect(closeSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "정말 계정을 삭제할까요?" })).toBeTruthy();
+  });
+
+  it("ignores Escape during pending logout and keeps the dialog open after failure", async () => {
+    const deferred = createDeferred<void>();
+    const closeSpy = vi.fn();
+
+    function Harness() {
+      const [showLogoutDialog, setShowLogoutDialog] = React.useState(true);
+      const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+      const [logoutError, setLogoutError] = React.useState<string | null>(null);
+
+      return (
+        <SettingsMobileScreen
+          {...SETTINGS_MOBILE_BASE_PROPS}
+          isLoggingOut={isLoggingOut}
+          logoutError={logoutError}
+          onCloseLogoutDialog={() => {
+            closeSpy();
+            setShowLogoutDialog(false);
+          }}
+          onConfirmLogout={() => {
+            setIsLoggingOut(true);
+            setLogoutError(null);
+            void deferred.promise.catch(() => {
+              setIsLoggingOut(false);
+              setLogoutError("로그아웃에 실패했어요.");
+            });
+          }}
+          showLogoutDialog={showLogoutDialog}
+        />
+      );
+    }
+
+    render(<Harness />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "로그아웃" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "로그아웃 중..." }).hasAttribute("disabled")).toBe(true));
+
+    await user.keyboard("{Escape}");
+
+    expect(closeSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "로그아웃 할까요?" })).toBeTruthy();
+
+    deferred.reject(new Error("logout failed"));
+
+    await waitFor(() => expect(screen.getByText("로그아웃에 실패했어요.")).toBeTruthy());
+    expect(closeSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "로그아웃 할까요?" })).toBeTruthy();
+  });
+
+  it("ignores Escape during pending column delete and keeps the dialog open after failure", async () => {
+    const deferred = createDeferred<void>();
+    const closeSpy = vi.fn();
+
+    function Harness() {
+      const [deleteColumnTarget, setDeleteColumnTarget] = React.useState<{
+        id: string;
+        name: string;
+        sort_order: number;
+      } | null>({
+        id: "column-1",
+        name: "아침",
+        sort_order: 0,
+      });
+      const [isDeletingColumn, setIsDeletingColumn] = React.useState(false);
+      const [deleteColumnError, setDeleteColumnError] = React.useState<string | null>(null);
+
+      return (
+        <SettingsMobileScreen
+          {...SETTINGS_MOBILE_BASE_PROPS}
+          deleteColumnError={deleteColumnError}
+          deleteColumnTarget={deleteColumnTarget}
+          isDeletingColumn={isDeletingColumn}
+          onCloseDeleteColumnDialog={() => {
+            closeSpy();
+            setDeleteColumnTarget(null);
+          }}
+          onConfirmDeleteColumn={() => {
+            setIsDeletingColumn(true);
+            setDeleteColumnError(null);
+            void deferred.promise.catch(() => {
+              setIsDeletingColumn(false);
+              setDeleteColumnError("끼니를 삭제하지 못했어요.");
+            });
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "끼니 삭제" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "삭제 중..." }).hasAttribute("disabled")).toBe(true));
+
+    await user.keyboard("{Escape}");
+
+    expect(closeSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "끼니 삭제" })).toBeTruthy();
+
+    deferred.reject(new Error("column delete failed"));
+
+    await waitFor(() => expect(screen.getByText("끼니를 삭제하지 못했어요.")).toBeTruthy());
+    expect(closeSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "끼니 삭제" })).toBeTruthy();
   });
 
   it("shows error and stays on dialog when logout fails", async () => {

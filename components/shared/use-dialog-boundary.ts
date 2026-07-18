@@ -18,11 +18,13 @@ function focusableElements(dialog: HTMLElement) {
 
 export function useDialogBoundary({
   active = true,
+  closeOnEscape = true,
   dialogRef,
   initialFocusRef,
   onClose,
 }: {
   active?: boolean;
+  closeOnEscape?: boolean;
   dialogRef: RefObject<HTMLElement | null>;
   initialFocusRef?: RefObject<HTMLElement | null>;
   onClose: () => void;
@@ -77,7 +79,10 @@ export function useDialogBoundary({
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
-        closeRef.current();
+        event.stopImmediatePropagation();
+        if (closeOnEscape) {
+          closeRef.current();
+        }
         return;
       }
       if (event.key !== "Tab") return;
@@ -115,5 +120,5 @@ export function useDialogBoundary({
         }
       });
     };
-  }, [active, dialogRef, initialFocusRef]);
+  }, [active, closeOnEscape, dialogRef, initialFocusRef]);
 }
