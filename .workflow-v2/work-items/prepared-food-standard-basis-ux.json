@@ -1,0 +1,90 @@
+{
+  "id": "prepared-food-standard-basis-ux",
+  "title": "Prepared food standard basis UX",
+  "summary": "완제품은 100g/100mL로 안전하게 비교하고 플래너 g/mL 수량은 1단위씩 조절하되 원 라벨·출처·pin을 보존한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "이미 병합된 기준 비교 UX를 교차 잠그고 MealScreen g/mL 편집 step 불일치를 제거한다.",
+  "owners": {
+    "claude": "replaced for this nutrition slice by explicit user approval",
+    "codex": "role-separated Codex tasks own docs, implementation, review, and authority",
+    "workers": []
+  },
+  "dependencies": [
+    "community-prepared-food-catalog merged",
+    "prepared-food-planner-entry merged",
+    "planner-nutrition-summary merged",
+    "official v1.7.21/v1.5.27/v1.3.24/v1.3.22/v1.2.26 contract merged"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.21.md",
+      "docs/화면정의서-v1.5.27.md",
+      "docs/유저flow맵-v1.3.24.md",
+      "docs/db설계-v1.3.22.md",
+      "docs/api문서-v1.2.26.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/prepared-food-standard-basis-ux/README.md",
+      "docs/workpacks/prepared-food-standard-basis-ux/acceptance.md",
+      "docs/workpacks/prepared-food-standard-basis-ux/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": ["manual:fresh-local-supabase-and-chrome-flow"],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {"backend": 0, "frontend": 4}
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm exec vitest run tests/community-prepared-food-catalog-ui.test.tsx tests/prepared-food-planner-entry-ui.test.tsx tests/planner-meal-screen.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep prepared-food-standard-basis-ux",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/prepared-food-standard-basis-ux pnpm validate:workpack -- --slice prepared-food-standard-basis-ux",
+      "node scripts/validate-automation-spec.mjs --slice prepared-food-standard-basis-ux",
+      "git diff --check"
+    ],
+    "verify_commands": ["pnpm verify:frontend:pr"],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "meal-screen-gml-step-and-serving-package-boundary",
+      "comparison-source-label-no-inference-regression",
+      "real-local-320-390-1280-authority"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": "stage1-docs-pr-merge-pending"
+  },
+  "pr_path": null,
+  "out_of_scope": [
+    "new-backend-api-schema-status-field-or-error",
+    "create-form-prefill-or-integer-basis-contract",
+    "basis-relation-inference-or-chaining",
+    "catalog-import-sharing-moderation-or-account-deletion",
+    "recipe-workflow-inclusion",
+    "unapproved-production-staging-provider-writes"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs were independently reviewed with APPROVE and blocker/major/minor 0/0/0. Implementation remains blocked until this docs PR merges."
+}
