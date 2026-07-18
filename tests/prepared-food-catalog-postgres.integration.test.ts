@@ -325,7 +325,7 @@ describe.runIf(enabled)("prepared food catalog isolated PostgreSQL integration",
     expect(psql(`select count(*) from public.food_product_nutrition_versions where product_id = '${created.id}';`)).toBe("2");
   });
 
-  it("keeps isolated synthetic public stable keys distinct and returns only safe pinned attribution", () => {
+  it("keeps isolated synthetic public stable keys distinct and excludes stale public rows fail-closed", () => {
     seedSyntheticPublicPair();
     const listed = JSON.parse(psql(serviceSql(`
       select public.list_food_products('${userA}', '동일 이름', null, null, 20)::text;

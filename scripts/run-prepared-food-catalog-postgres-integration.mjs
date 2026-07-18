@@ -166,6 +166,7 @@ grant usage on schema public to anon, authenticated, service_role;
       "supabase/migrations/20260716120000_prepared_food_catalog.sql",
       "supabase/migrations/20260716150000_prepared_food_planner_entries.sql",
       "supabase/migrations/20260718090000_community_prepared_food_catalog.sql",
+      "supabase/migrations/20260718123000_community_prepared_food_catalog_list_perf.sql",
     ]) runRequired(path.join(postgresBin, "psql"), [...args, "-f", migration]);
 
     const test = commandResult("pnpm", [
