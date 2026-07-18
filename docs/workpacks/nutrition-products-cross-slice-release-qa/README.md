@@ -86,6 +86,9 @@
 4. local public product `287,041` rows, source filter/tag, shared manual / legacy private 경계, account anonymization pin 보존, query/route latency와 item-level N+1 부재를 확인한다.
 5. 독립 security / performance / code reviewer는 exact verification head를 읽고 blocker `0`이어야 한다.
 
+Stage 2 evidence: [evidence/2026-07-18-stage2-real-db.md](./evidence/2026-07-18-stage2-real-db.md)
+Stage 3 reviews: [evidence/2026-07-18-stage3-reviews.md](./evidence/2026-07-18-stage3-reviews.md)
+
 ### Stage 4 — Real Chrome / Responsive / Authority Verification
 
 1. fixture browser가 아니라 real local Supabase + real Chrome으로 auth A/B, `FOOD_PRODUCT_CREATE` create/search/edit/delete/report, `SETTINGS_ACCOUNT_DELETE_CONFIRM` account deletion anonymization, planner add/edit/delete, `RECIPE_DETAIL`, `PLANNER_WEEK`, `MEAL_SCREEN`을 다시 검증한다.
@@ -218,11 +221,11 @@
 > checklist metadata는 `stage=2|4`만 사용하고, `scope=shared` + `stage=4` 항목은 `review=6`만 사용한다.
 
 - [x] Stage 1 workpack/acceptance/automation/workflow-v2 docs lock <!-- omo:id=delivery-release-qa-stage1-lock;stage=2;scope=shared;review=3,6 -->
-- [ ] ingredient coverage exact count, replay zero-write, secret/raw leak zero 재검증 <!-- omo:id=delivery-release-qa-ingredient-coverage;stage=2;scope=shared;review=3,6 -->
-- [ ] all-recipe current lifecycle, rollback, missing-not-zero, Meal pin invariance 재검증 <!-- omo:id=delivery-release-qa-all-recipe-lifecycle;stage=2;scope=shared;review=3,6 -->
-- [ ] local public products 287041, source tag, label basis, no inference, auth A/B/anonymization 재검증 <!-- omo:id=delivery-release-qa-product-catalog;stage=2;scope=shared;review=3,6 -->
-- [ ] fresh local Supabase migrations, RLS, PostgREST, auth bootstrap, target digest, external write zero 확인 <!-- omo:id=delivery-release-qa-real-db-stack;stage=2;scope=shared;review=3,6 -->
-- [ ] independent security/performance/code reviews blocker zero <!-- omo:id=delivery-release-qa-independent-reviews;stage=2;scope=shared;review=3,6 -->
+- [x] ingredient coverage exact count, replay zero-write, secret/raw leak zero 재검증 <!-- omo:id=delivery-release-qa-ingredient-coverage;stage=2;scope=shared;review=3,6 -->
+- [x] all-recipe current lifecycle, rollback, missing-not-zero, Meal pin invariance 재검증 <!-- omo:id=delivery-release-qa-all-recipe-lifecycle;stage=2;scope=shared;review=3,6 -->
+- [x] local public products 287041, source tag, label basis, no inference, auth A/B/anonymization 재검증 <!-- omo:id=delivery-release-qa-product-catalog;stage=2;scope=shared;review=3,6 -->
+- [x] fresh local Supabase migrations, RLS, PostgREST, auth bootstrap, target digest, external write zero 확인 <!-- omo:id=delivery-release-qa-real-db-stack;stage=2;scope=shared;review=3,6 -->
+- [x] independent security/performance/code reviews blocker zero <!-- omo:id=delivery-release-qa-independent-reviews;stage=2;scope=shared;review=3,6 -->
 - [ ] real Chrome auth A/B, `FOOD_PRODUCT_CREATE` create/search/edit/delete/report, `SETTINGS_ACCOUNT_DELETE_CONFIRM` account deletion anonymization, planner add/edit/delete 검증 <!-- omo:id=delivery-release-qa-real-browser-flow;stage=4;scope=frontend;review=5,6 -->
 - [ ] RECIPE_DETAIL ready/partial/unavailable/temporary split과 모든 recipe `정보 준비 중` 뭉개짐 부재 검증 <!-- omo:id=delivery-release-qa-recipe-detail-states;stage=4;scope=frontend;review=5,6 -->
 - [ ] PLANNER_WEEK / MEAL_SCREEN recipe+product planned nutrition과 shopping/cooking/leftover/XP isolation 검증 <!-- omo:id=delivery-release-qa-planner-isolation;stage=4;scope=frontend;review=5,6 -->

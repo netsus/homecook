@@ -7,32 +7,32 @@
 
 ## Contract Boundary
 
-- [ ] 최신 공식 5종과 predecessor workpack을 다시 확인하고 새 endpoint/field/status/error/schema를 추가하지 않는다 <!-- omo:id=accept-release-qa-contract-boundary;stage=2;scope=shared;review=3,6 -->
-- [ ] verification-only slice라 defect는 separate TDD repair PR로만 수정하고, repaired exact head에서 release QA를 재실행한다 <!-- omo:id=accept-release-qa-repair-boundary;stage=2;scope=shared;review=3,6 -->
-- [ ] production/staging/provider write는 끝까지 `0`이고, runtime public/provider fetch를 하지 않는다 <!-- omo:id=accept-release-qa-external-write-zero;stage=2;scope=shared;review=3,6 -->
+- [x] 최신 공식 5종과 predecessor workpack을 다시 확인하고 새 endpoint/field/status/error/schema를 추가하지 않는다 <!-- omo:id=accept-release-qa-contract-boundary;stage=2;scope=shared;review=3,6 -->
+- [x] verification-only slice라 defect는 separate TDD repair PR로만 수정하고, repaired exact head에서 release QA를 재실행한다 <!-- omo:id=accept-release-qa-repair-boundary;stage=2;scope=shared;review=3,6 -->
+- [x] production/staging/provider write는 끝까지 `0`이고, runtime public/provider fetch를 하지 않는다 <!-- omo:id=accept-release-qa-external-write-zero;stage=2;scope=shared;review=3,6 -->
 
 ## Ingredient Coverage / Recipe Lifecycle
 
-- [ ] local ingredient inventory가 정확히 `845 = approved exactly once 838 + strict excluded 7`이고 `eligible_without_profile=0`, `unclassified=0`, `classification_conflict=0`, `multiple_qualified_primary=0`이다 <!-- omo:id=accept-release-qa-ingredient-counts;stage=2;scope=shared;review=3,6 -->
-- [ ] ingredient coverage 최초 apply 후 same-input replay는 `0` write이고 secret/auth query/cookie/raw row/private path leak는 `0`이다 <!-- omo:id=accept-release-qa-ingredient-replay-security;stage=2;scope=shared;review=3,6 -->
-- [ ] local all-recipe checkpoint가 정확히 `34 = ready(complete) 8 + partial 23 + unavailable 3`이고 replay `0` write, rollback `34`, current aggregate restore가 성립한다 <!-- omo:id=accept-release-qa-recipe-counts;stage=2;scope=shared;review=3,6 -->
-- [ ] missing/trace/to-taste/unconvertible/temporary는 0으로 정규화되지 않고 기존 `missing_reasons` / `warnings_json` taxonomy만 사용한다 <!-- omo:id=accept-release-qa-missing-not-zero;stage=2;scope=shared;review=3,6 -->
-- [ ] historical Meal pin은 unchanged이고 current recipe recalculation이 과거 Meal을 repin하지 않는다 <!-- omo:id=accept-release-qa-meal-pin;stage=2;scope=shared;review=3,6 -->
+- [x] local ingredient inventory가 정확히 `845 = approved exactly once 838 + strict excluded 7`이고 `eligible_without_profile=0`, `unclassified=0`, `classification_conflict=0`, `multiple_qualified_primary=0`이다 <!-- omo:id=accept-release-qa-ingredient-counts;stage=2;scope=shared;review=3,6 -->
+- [x] ingredient coverage 최초 apply 후 same-input replay는 `0` write이고 secret/auth query/cookie/raw row/private path leak는 `0`이다 <!-- omo:id=accept-release-qa-ingredient-replay-security;stage=2;scope=shared;review=3,6 -->
+- [x] local all-recipe checkpoint가 정확히 `34 = ready(complete) 8 + partial 23 + unavailable 3`이고 replay `0` write, rollback `34`, current aggregate restore가 성립한다 <!-- omo:id=accept-release-qa-recipe-counts;stage=2;scope=shared;review=3,6 -->
+- [x] missing/trace/to-taste/unconvertible/temporary는 0으로 정규화되지 않고 기존 `missing_reasons` / `warnings_json` taxonomy만 사용한다 <!-- omo:id=accept-release-qa-missing-not-zero;stage=2;scope=shared;review=3,6 -->
+- [x] historical Meal pin은 unchanged이고 current recipe recalculation이 과거 Meal을 repin하지 않는다 <!-- omo:id=accept-release-qa-meal-pin;stage=2;scope=shared;review=3,6 -->
 
 ## Product Catalog / Sharing / Basis
 
-- [ ] local public catalog row count가 `287,041`이고 runtime provider search 없이 local-only 검색이 동작한다 <!-- omo:id=accept-release-qa-product-row-count;stage=2;scope=shared;review=3,6 -->
-- [ ] source filter/tag가 `공공 영양DB / 사용자 등록 / 비공개 보관`을 유지하고 shared manual public과 owner-only legacy private manual 경계를 섞지 않는다 <!-- omo:id=accept-release-qa-source-tags;stage=2;scope=shared;review=3,6 -->
-- [ ] `label_basis_text`를 보존하고 고형은 `100g`, 액상은 `100mL`, exact direct relation only, no inference를 유지한다 <!-- omo:id=accept-release-qa-basis-contract;stage=2;scope=shared;review=3,6 -->
-- [ ] shared manual create/search/edit/delete/report에서 auth A/B owner/moderation/read-only 경계가 보존되고 신고는 append-only다 <!-- omo:id=accept-release-qa-shared-manual-auth;stage=2;scope=shared;review=3,6 -->
-- [ ] account deletion 후 shared manual row는 anonymized read-only public으로 남고 기존 planner pin은 유지된다 <!-- omo:id=accept-release-qa-anonymization-pin;stage=2;scope=shared;review=3,6 -->
-- [ ] local 287,041-row smoke에서 item-level N+1과 unexplained query/route regression이 없고 predecessor baseline(SQL 약 28ms, route 약 349-559ms) 대비 결과가 보고된다 <!-- omo:id=accept-release-qa-performance-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] local public catalog row count가 `287,041`이고 runtime provider search 없이 local-only 검색이 동작한다 <!-- omo:id=accept-release-qa-product-row-count;stage=2;scope=shared;review=3,6 -->
+- [x] source filter/tag가 `공공 영양DB / 사용자 등록 / 비공개 보관`을 유지하고 shared manual public과 owner-only legacy private manual 경계를 섞지 않는다 <!-- omo:id=accept-release-qa-source-tags;stage=2;scope=shared;review=3,6 -->
+- [x] `label_basis_text`를 보존하고 고형은 `100g`, 액상은 `100mL`, exact direct relation only, no inference를 유지한다 <!-- omo:id=accept-release-qa-basis-contract;stage=2;scope=shared;review=3,6 -->
+- [x] shared manual create/search/edit/delete/report에서 auth A/B owner/moderation/read-only 경계가 보존되고 신고는 append-only다 <!-- omo:id=accept-release-qa-shared-manual-auth;stage=2;scope=shared;review=3,6 -->
+- [x] account deletion 후 shared manual row는 anonymized read-only public으로 남고 기존 planner pin은 유지된다 <!-- omo:id=accept-release-qa-anonymization-pin;stage=2;scope=shared;review=3,6 -->
+- [x] local 287,041-row smoke에서 item-level N+1과 unexplained query/route regression이 없고 predecessor baseline(SQL 약 28ms, route 약 349-559ms) 대비 결과가 보고된다 <!-- omo:id=accept-release-qa-performance-baseline;stage=2;scope=shared;review=3,6 -->
 
 ## Real DB / Stack Verification
 
-- [ ] fresh local Supabase full migrations가 올라오고 DB/Auth/Storage 등 required services가 running 또는 healthy다 <!-- omo:id=accept-release-qa-local-stack;stage=2;scope=shared;review=3,6 -->
-- [ ] RLS, PostgREST, auth bootstrap, target table digest, owner scope, zero external write를 real DB에서 검증한다 <!-- omo:id=accept-release-qa-rls-postgrest;stage=2;scope=shared;review=3,6 -->
-- [ ] independent security / performance / code reviewers가 exact verification head를 읽고 unresolved blocker `0`이다 <!-- omo:id=accept-release-qa-independent-review;stage=2;scope=shared;review=3,6 -->
+- [x] fresh local Supabase full migrations가 올라오고 DB/Auth/Storage 등 required services가 running 또는 healthy다 <!-- omo:id=accept-release-qa-local-stack;stage=2;scope=shared;review=3,6 -->
+- [x] RLS, PostgREST, auth bootstrap, target table digest, owner scope, zero external write를 real DB에서 검증한다 <!-- omo:id=accept-release-qa-rls-postgrest;stage=2;scope=shared;review=3,6 -->
+- [x] independent security / performance / code reviewers가 exact verification head를 읽고 unresolved blocker `0`이다 <!-- omo:id=accept-release-qa-independent-review;stage=2;scope=shared;review=3,6 -->
 
 ## Real Browser / UI States
 
@@ -50,8 +50,8 @@
 
 ## Data Setup / Preconditions
 
-- [ ] `pnpm local:reset:demo`와 `pnpm dev:local-supabase`가 real DB baseline을 재현하고 fixture browser와 분리된다고 문서화되어 있다 <!-- omo:id=accept-release-qa-data-setup;stage=2;scope=shared;review=3,6 -->
-- [ ] test account A/B, breakfast/lunch/dinner columns, shared manual product, anonymization candidate, planner product entry baseline이 준비된다 <!-- omo:id=accept-release-qa-bootstrap;stage=2;scope=shared;review=3,6 -->
+- [x] `pnpm local:reset:demo`와 `pnpm dev:local-supabase`가 real DB baseline을 재현하고 fixture browser와 분리된다고 문서화되어 있다 <!-- omo:id=accept-release-qa-data-setup;stage=2;scope=shared;review=3,6 -->
+- [x] test account A/B, breakfast/lunch/dinner columns, shared manual product, anonymization candidate, planner product entry baseline이 준비된다 <!-- omo:id=accept-release-qa-bootstrap;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
@@ -66,8 +66,8 @@
 
 ### Stage 2 Deterministic / Integration
 
-- [ ] ingredient coverage / all-recipe / public import / community catalog / planner nutrition related backend tests와 validators를 실행한다 <!-- omo:id=accept-release-qa-backend-automation;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke는 fixture browser나 isolated-only evidence로 대체하지 않는다 <!-- omo:id=accept-release-qa-real-db-not-substituted;stage=2;scope=shared;review=3,6 -->
+- [x] ingredient coverage / all-recipe / public import / community catalog / planner nutrition related backend tests와 validators를 실행한다 <!-- omo:id=accept-release-qa-backend-automation;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke는 fixture browser나 isolated-only evidence로 대체하지 않는다 <!-- omo:id=accept-release-qa-real-db-not-substituted;stage=2;scope=shared;review=3,6 -->
 
 ### Stage 4 Browser / Authority
 
