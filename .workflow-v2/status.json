@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-18T08:32:25Z",
+  "updated_at": "2026-07-18T08:38:50Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2133,7 +2133,7 @@
       "id": "all-recipe-nutrition-recalculation",
       "preset": "vertical-slice-strict",
       "branch": "feature/be-all-recipe-nutrition-recalculation",
-      "pr_path": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/1040",
       "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
@@ -2146,7 +2146,7 @@
         "node scripts/validate-automation-spec.mjs --slice all-recipe-nutrition-recalculation",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs PR #1039 merged. Stage 2/3 automated verification, fresh independent Codex review, and loopback-only manual operator lifecycle passed; replay wrote 0, rollback restored current aggregate state, Meal pins stayed unchanged, and production/staging writes remained 0.",
+      "notes": "Stage 1 docs PR #1039 merged. Implementation PR #1040 is open in Draft. Stage 2/3 automated verification, fresh independent Codex review, and loopback-only manual operator lifecycle passed; replay wrote 0, rollback restored current aggregate state, Meal pins stayed unchanged, and production/staging writes remained 0.",
       "evaluation_status": "passed",
       "evaluation_round": 1,
       "last_evaluator_result": null,

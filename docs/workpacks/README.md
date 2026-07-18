@@ -11,7 +11,7 @@
 ## Revision Notes
 
 - `v2` nutrition products/planner all-recipe Stage 1 docs (2026-07-18)
-  - `ingredient-nutrition-full-coverage`는 PR #1038 merge `3c737eae` 근거로 `merged`이며, `all-recipe-nutrition-recalculation`은 Stage 1 docs PR #1039 merge 뒤 Stage 2/3 구현·독립 리뷰·수동 local lifecycle을 닫아 implementation PR 준비 상태다.
+  - `ingredient-nutrition-full-coverage`는 PR #1038 merge `3c737eae` 근거로 `merged`이며, `all-recipe-nutrition-recalculation`은 Stage 1 docs PR #1039 merge 뒤 Stage 2/3 구현·독립 리뷰·수동 local lifecycle을 닫고 Draft implementation PR #1040의 current-head CI를 추적한다.
   - current recipe schema에는 active/deleted marker가 없으므로 checkpoint 시점 `public.recipes` 전체를 전수 재계산 분모로 사용한다.
 
 - `v2` nutrition/products/planner cross-slice closeout (2026-07-17)
@@ -218,7 +218,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `prepared-food-planner-entry` | merged | `prepared-food-catalog` = merged, `05-planner-week-core` = merged | Historical predecessor retained as merged |
 | `planner-nutrition-summary` | merged | predecessors와 PR #1024 merged | Design Status confirmed; backend Stage 3, Stage 5, final authority와 Stage 6 모두 `0/0/0`; final local frontend product `1,587/24 skipped`, regression `872/112 skipped`, Lighthouse 6, a11y `18/15`, visual `23/22`, security `12/12`와 real local Supabase auth/PostgREST/browser read-only smoke green. physical device/screen reader와 production-scale query는 Manual Only |
 | `ingredient-nutrition-full-coverage` | merged | 2026-07-17 public-sharing official docs = merged, `public-nutrition-source-acquisition` = merged, `ingredient-nutrition-conversion-model` = merged, PR #1038 merge `3c737eae` | Successor 1; local inventory 845개 전수 검수·apply·0-write replay와 current-head 독립 review/CI/merge 완료 |
-| `all-recipe-nutrition-recalculation` | in-progress | `ingredient-nutrition-full-coverage` = merged, `recipe-nutrition-calculation` = merged | Successor 2; Stage 1 docs PR #1039 merged, Stage 2/3 and local operator lifecycle passed with independent Codex approval; implementation PR/CI/merge remains |
+| `all-recipe-nutrition-recalculation` | in-progress | `ingredient-nutrition-full-coverage` = merged, `recipe-nutrition-calculation` = merged | Successor 2; Stage 1 docs PR #1039 merged, Stage 2/3 and local operator lifecycle passed with independent Codex approval; Draft implementation PR #1040 current-head CI/merge remains |
 | `public-prepared-food-catalog-import` | merged | 2026-07-17 public-sharing official docs = merged, `prepared-food-catalog` = merged | Successor 3; PR #1035 merged. local public products 287,041, replay 0-write, independent Stage 3/current-head checks green |
 | `community-prepared-food-catalog` | planned | `public-prepared-food-catalog-import` = merged, `prepared-food-catalog` = merged | Successor 4; shared manual catalog implementation must not start before its own Stage 1 docs PR merge |
 | `prepared-food-standard-basis-ux` | planned | `community-prepared-food-catalog` = merged, `prepared-food-planner-entry` = merged, `planner-nutrition-summary` = merged | Successor 5; 100g/100mL UX work must not start before its own Stage 1 docs PR merge |
