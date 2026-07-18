@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-18T08:38:50Z",
+  "updated_at": "2026-07-18T08:54:42Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2134,8 +2134,8 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/be-all-recipe-nutrition-recalculation",
       "pr_path": "https://github.com/netsus/homecook/pull/1040",
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm exec vitest run tests/all-recipe-nutrition-recalculation.test.ts tests/all-recipe-nutrition-recalculation-postgres.integration.test.ts tests/recipe-nutrition-snapshot.test.ts tests/meals-route.test.ts",
@@ -2146,7 +2146,7 @@
         "node scripts/validate-automation-spec.mjs --slice all-recipe-nutrition-recalculation",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs PR #1039 merged. Implementation PR #1040 is open in Draft. Stage 2/3 automated verification, fresh independent Codex review, and loopback-only manual operator lifecycle passed; replay wrote 0, rollback restored current aggregate state, Meal pins stayed unchanged, and production/staging writes remained 0.",
+      "notes": "Stage 1 docs PR #1039 merged. Exact implementation head 3abfb2f6 received fresh independent APPROVE with blocker 0 and all current-head checks green, then PR #1040 merged as a001f53d. Loopback-only lifecycle closed inventory 34 = complete 8 + partial 23 + unavailable 3, replay 0-write, rollback/current restore, Meal pin immutability, and external writes 0. closeout_phase=completed; closeout_recovery=manual_patch:1|ci_resync:1; last_recovery_at=2026-07-18T08:54:42Z",
       "evaluation_status": "passed",
       "evaluation_round": 1,
       "last_evaluator_result": null,
