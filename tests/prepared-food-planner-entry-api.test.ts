@@ -255,6 +255,35 @@ describe("prepared food planner entry API contract", () => {
     expect(db.rpc).not.toHaveBeenCalled();
   });
 
+  it("fails closed for hidden public products before calling the atomic RPC", async () => {
+    const db = serviceClient({
+      columnState: ownedColumn(),
+      productState: activeProduct({
+        owner_user_id: OTHER_USER_ID,
+        visibility: "public",
+        moderation_status: "hidden_by_report",
+      }),
+    });
+    createRouteHandlerClient.mockResolvedValue(routeClient({ id: USER_ID }));
+    createServiceRoleClient.mockReturnValue(db);
+    const route = await importCollectionRoute();
+    expect(route).not.toBeNull();
+    if (!route) return;
+
+    const response = await route.POST(new Request("http://localhost", {
+      method: "POST",
+      body: JSON.stringify({
+        product_id: PRODUCT_ID,
+        plan_date: "2026-07-16",
+        column_id: COLUMN_ID,
+        quantity: { amount: 100, unit: "g" },
+      }),
+    }));
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe("PRODUCT_HIDDEN");
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["NUTRITION_VERSION_CONFLICT", 409],
     ["PRODUCT_DELETED", 409],

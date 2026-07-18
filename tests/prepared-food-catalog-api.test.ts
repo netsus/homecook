@@ -17,13 +17,14 @@ const product = {
   id: "550e8400-e29b-41d4-a716-446655440001",
   name: "내 요거트",
   brand: null,
-  visibility: "private",
+  visibility: "public",
   source_type: "manual",
   editable: true,
   nutrition_version_id: "550e8400-e29b-41d4-a716-446655440002",
   basis_relations: [],
   nutrition: {
-    basis: { amount: 1, unit: "serving" },
+    basis: { amount: 100, unit: "g" },
+    label_basis_text: null,
     values: {
       energy_kcal: { amount: 120, known_amount: null, status: "complete", display_mode: "total" },
       carbohydrate_g: { amount: null, known_amount: null, status: "unavailable", display_mode: null },
@@ -118,7 +119,7 @@ describe("prepared food catalog API contract", () => {
       body: JSON.stringify({
         name: "제품",
         nutrition: {
-          basis: { amount: 1, unit: "serving" },
+          basis: { amount: 100, unit: "g" },
           values: { energy_kcal: 100, cholesterol_mg: 2 },
         },
       }),
@@ -185,7 +186,7 @@ describe("prepared food catalog API contract", () => {
       body: JSON.stringify({
         name: "반올림 경계 제품",
         nutrition: {
-          basis: { amount: 1, unit: "serving" },
+          basis: { amount: 100, unit: "g" },
           values: { energy_kcal: 99_999_999.9999999 },
         },
       }),
@@ -195,7 +196,7 @@ describe("prepared food catalog API contract", () => {
     expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
   });
 
-  it("creates one private manual product through the atomic RPC and preserves the wrapper", async () => {
+  it("creates one shared public manual product through the atomic RPC and preserves the wrapper", async () => {
     const serviceDb = serviceClient({
       rpcResults: { create_manual_food_product: { data: product, error: null } },
     });
@@ -212,7 +213,7 @@ describe("prepared food catalog API contract", () => {
         name: "내 요거트",
         brand: null,
         nutrition: {
-          basis: { amount: 1, unit: "serving" },
+          basis: { amount: 100, unit: "g" },
           values: { energy_kcal: 120 },
         },
       }),
@@ -348,7 +349,7 @@ describe("prepared food catalog API contract", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         nutrition: {
-          basis: { amount: 1, unit: "serving" },
+          basis: { amount: 100, unit: "g" },
           values: { energy_kcal: 130 },
         },
       }),
@@ -385,7 +386,7 @@ describe("prepared food catalog API contract", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         nutrition: {
-          basis: { amount: 1, unit: "serving" },
+          basis: { amount: 100, unit: "g" },
           values: { energy_kcal: 99_999_999.9999999 },
         },
       }),

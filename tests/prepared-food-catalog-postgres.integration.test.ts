@@ -64,7 +64,7 @@ function serviceSql(sql: string) {
 
 function nutrition(energy: number, extra: Record<string, number | null> = {}) {
   return {
-    basis: { amount: 1, unit: "serving" },
+    basis: { amount: 100, unit: "g" },
     values: { energy_kcal: energy, ...extra },
   };
 }
@@ -165,13 +165,13 @@ describe.runIf(enabled)("prepared food catalog isolated PostgreSQL integration",
     `);
   });
 
-  it("starts with zero approved public product rows before any operator import", () => {
-    expect(psql("select count(*) from public.food_products where visibility = 'public';")).toBe("0");
+  it("starts with zero public-dataset rows before any operator import", () => {
+    expect(psql("select count(*) from public.food_products where source_type = 'public_dataset';")).toBe("0");
   });
 
-  it("atomically creates sparse private manual nutrition without false zero values", () => {
+  it("atomically creates sparse shared manual nutrition without false zero values", () => {
     const created = createManual("내 요거트", nutrition(0, { sodium_mg: null, fiber_g: 1.5 }));
-    expect(created.visibility).toBe("private");
+    expect(created.visibility).toBe("public");
     expect(created.source_type).toBe("manual");
     expect(created.basis_relations).toEqual([]);
     expect(created.nutrition.values.energy_kcal.amount).toBe(0);
@@ -532,14 +532,14 @@ describe.runIf(enabled)("prepared food catalog isolated PostgreSQL integration",
     expect(psql("select count(*) from public.food_products where id = '84000000-0000-4000-8000-000000000010';")).toBe("0");
   });
 
-  it("enforces owner RLS, public read-only, append-only history, and idempotent soft delete", () => {
+  it("enforces shared read access, owner-only writes, append-only history, and idempotent soft delete", () => {
     const created = createManual("삭제 제품");
     const hidden = psql(`
       set role authenticated;
       set request.jwt.claim.sub = '${userB}';
       select count(*) from public.food_products where id = '${created.id}';
     `);
-    expect(hidden).toBe("0");
+    expect(hidden).toBe("1");
 
     expect(psql(`
       set role authenticated;
@@ -607,7 +607,7 @@ describe.runIf(enabled)("prepared food catalog isolated PostgreSQL integration",
       );
     `);
     expect(crossOwner.status).not.toBe(0);
-    expect(crossOwner.stderr).toContain("RESOURCE_NOT_FOUND");
+    expect(crossOwner.stderr).toContain("FORBIDDEN");
 
     const publicMutation = psqlResult(serviceSql(`
       select public.delete_manual_food_product(

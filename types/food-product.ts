@@ -1,5 +1,18 @@
 export const FOOD_PRODUCT_BASIS_UNITS = ["serving", "package", "g", "ml"] as const;
 export type FoodProductBasisUnit = (typeof FOOD_PRODUCT_BASIS_UNITS)[number];
+export const FOOD_PRODUCT_MANUAL_BASIS_UNITS = ["g", "ml"] as const;
+export type FoodProductManualBasisUnit = (typeof FOOD_PRODUCT_MANUAL_BASIS_UNITS)[number];
+export const FOOD_PRODUCT_LIST_SOURCES = ["all", "public_dataset", "manual"] as const;
+export type FoodProductListSource = (typeof FOOD_PRODUCT_LIST_SOURCES)[number];
+export const FOOD_PRODUCT_REPORT_REASONS = [
+  "spam",
+  "incorrect_nutrition",
+  "duplicate",
+  "rights",
+  "unsafe",
+  "other",
+] as const;
+export type FoodProductReportReason = (typeof FOOD_PRODUCT_REPORT_REASONS)[number];
 
 export const FOOD_PRODUCT_CORE_NUTRIENTS = [
   "energy_kcal",
@@ -22,8 +35,9 @@ export type FoodProductNutrientCode =
 export interface FoodProductNutritionInput {
   basis: {
     amount: number;
-    unit: FoodProductBasisUnit;
+    unit: FoodProductManualBasisUnit;
   };
+  label_basis_text?: string | null;
   values: Partial<Record<FoodProductNutrientCode, number | null>> & {
     energy_kcal: number;
   };
@@ -71,6 +85,7 @@ export interface FoodProductData {
   }>;
   nutrition: {
     basis: { amount: number; unit: FoodProductBasisUnit };
+    label_basis_text?: string | null;
     values: Record<string, FoodProductNutrientValue>;
     calculation_status: "complete" | "partial" | "unavailable";
     calculation_quality: "direct" | "estimated" | "mixed" | null;
@@ -83,4 +98,9 @@ export interface FoodProductListData {
   items: FoodProductData[];
   next_cursor: string | null;
   has_next: boolean;
+}
+
+export interface FoodProductReportCreateInput {
+  reason_code: FoodProductReportReason;
+  detail_text: string | null;
 }

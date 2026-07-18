@@ -51,12 +51,12 @@ describe("prepared food planner frontend clients", () => {
     expect(requestUrl.searchParams.get("limit")).toBe("20");
   });
 
-  it("creates a private manual product with official fields only", async () => {
+  it("creates a shared manual product with official fields only", async () => {
     const body = {
       name: "내 요거트",
       brand: null,
       nutrition: {
-        basis: { amount: 1, unit: "serving" as const },
+        basis: { amount: 100, unit: "g" as const },
         values: { energy_kcal: 0, protein_g: null },
       },
     };

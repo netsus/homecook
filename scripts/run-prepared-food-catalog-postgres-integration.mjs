@@ -115,6 +115,9 @@ create table public.operational_events (
 create table public.recipes (
   id uuid primary key default gen_random_uuid(), title text not null,
   base_servings integer not null default 2 check (base_servings > 0),
+  created_by uuid references public.users(id) on delete set null,
+  save_count integer not null default 0,
+  like_count integer not null default 0,
   updated_at timestamptz not null default now()
 );
 create type public.recipe_ingredient_type as enum ('QUANT', 'TO_TASTE');
@@ -135,6 +138,24 @@ create table public.recipe_sources (
 create table public.meals (
   id uuid primary key default gen_random_uuid(), recipe_id uuid not null references public.recipes(id)
 );
+create table public.meal_plan_columns (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade
+);
+create table public.recipe_books (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade
+);
+create table public.recipe_book_items (
+  id uuid primary key default gen_random_uuid(),
+  book_id uuid not null references public.recipe_books(id) on delete cascade,
+  recipe_id uuid not null references public.recipes(id) on delete cascade
+);
+create table public.recipe_likes (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  recipe_id uuid not null references public.recipes(id) on delete cascade
+);
 grant usage on schema public to anon, authenticated, service_role;
 `;
     runRequired(path.join(postgresBin, "psql"), [...args, "-c", bootstrap]);
@@ -143,10 +164,14 @@ grant usage on schema public to anon, authenticated, service_role;
       "supabase/migrations/20260714143000_ingredient_nutrition_conversion_model.sql",
       "supabase/migrations/20260716090000_add_recipe_nutrition_snapshots.sql",
       "supabase/migrations/20260716120000_prepared_food_catalog.sql",
+      "supabase/migrations/20260716150000_prepared_food_planner_entries.sql",
+      "supabase/migrations/20260718090000_community_prepared_food_catalog.sql",
     ]) runRequired(path.join(postgresBin, "psql"), [...args, "-f", migration]);
 
     const test = commandResult("pnpm", [
-      "exec", "vitest", "run", "tests/prepared-food-catalog-postgres.integration.test.ts",
+      "exec", "vitest", "run",
+      "tests/prepared-food-catalog-postgres.integration.test.ts",
+      "tests/community-prepared-food-catalog-postgres.integration.test.ts",
       "--pool=forks", "--maxWorkers=1", "--testTimeout=30000",
     ], {
       stdio: "inherit",
@@ -157,6 +182,10 @@ grant usage on schema public to anon, authenticated, service_role;
         HOMECOOK_PRODUCT_CATALOG_PGHOST: "127.0.0.1",
         HOMECOOK_PRODUCT_CATALOG_PGPORT: String(port),
         HOMECOOK_PRODUCT_CATALOG_PGDATABASE: database,
+        HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PG_INTEGRATION: "1",
+        HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PGHOST: "127.0.0.1",
+        HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PGPORT: String(port),
+        HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PGDATABASE: database,
       },
     });
     process.exitCode = test.status ?? 1;

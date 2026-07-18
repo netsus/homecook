@@ -5,7 +5,7 @@ async function importCatalogService() {
 }
 
 const completeNutrition = {
-  basis: { amount: 1, unit: "serving" },
+  basis: { amount: 100, unit: "g" },
   values: {
     energy_kcal: 120,
     carbohydrate_g: 14,
@@ -39,7 +39,7 @@ describe("prepared food catalog service contract", () => {
     });
   });
 
-  it.each(["serving", "package", "g", "ml"])(
+  it.each(["g", "ml"])(
     "accepts the documented positive %s basis",
     async (unit) => {
       const service = await importCatalogService();
@@ -163,13 +163,13 @@ describe("prepared food catalog service contract", () => {
       nutrition: completeNutrition,
     })).toEqual({
       ok: false,
-      code: "VALIDATION_ERROR",
+      code: "UNSUPPORTED_FIELD",
       fields: [
-        { field: "basis_relations", reason: "unexpected" },
-        { field: "external_product_key", reason: "unexpected" },
-        { field: "owner_user_id", reason: "unexpected" },
-        { field: "source_type", reason: "unexpected" },
-        { field: "visibility", reason: "unexpected" },
+        { field: "basis_relations", reason: "unsupported_field" },
+        { field: "external_product_key", reason: "unsupported_field" },
+        { field: "owner_user_id", reason: "unsupported_field" },
+        { field: "source_type", reason: "unsupported_field" },
+        { field: "visibility", reason: "unsupported_field" },
       ],
     });
   });
@@ -218,6 +218,7 @@ describe("prepared food catalog service contract", () => {
           id: "550e8400-e29b-41d4-a716-446655440000",
         },
         limit: 50,
+        source: "all",
       },
     });
     expect(service.parseProductListQuery(new URLSearchParams({ limit: "51" }))).toMatchObject({

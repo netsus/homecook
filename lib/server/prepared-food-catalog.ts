@@ -1,16 +1,20 @@
 import {
-  FOOD_PRODUCT_BASIS_UNITS,
   FOOD_PRODUCT_CORE_NUTRIENTS,
+  FOOD_PRODUCT_LIST_SOURCES,
+  FOOD_PRODUCT_MANUAL_BASIS_UNITS,
   FOOD_PRODUCT_OPTIONAL_NUTRIENTS,
+  FOOD_PRODUCT_REPORT_REASONS,
   type FoodProductCreateInput,
   type FoodProductNutritionInput,
   type FoodProductPatchInput,
+  type FoodProductListSource,
+  type FoodProductReportCreateInput,
 } from "@/types/food-product";
 
 type ValidationField = { field: string; reason: string };
 type ValidationFailure = {
   ok: false;
-  code: "VALIDATION_ERROR" | "UNSUPPORTED_NUTRIENT";
+  code: "VALIDATION_ERROR" | "UNSUPPORTED_FIELD" | "UNSUPPORTED_NUTRIENT";
   fields: ValidationField[];
 };
 
@@ -19,9 +23,19 @@ const ALLOWED_NUTRIENTS = new Set<string>([
   ...FOOD_PRODUCT_CORE_NUTRIENTS,
   ...FOOD_PRODUCT_OPTIONAL_NUTRIENTS,
 ]);
-const ALLOWED_BASIS_UNITS = new Set<string>(FOOD_PRODUCT_BASIS_UNITS);
+const ALLOWED_BASIS_UNITS = new Set<string>(FOOD_PRODUCT_MANUAL_BASIS_UNITS);
+const ALLOWED_LIST_SOURCES = new Set<string>(FOOD_PRODUCT_LIST_SOURCES);
+const ALLOWED_REPORT_REASONS = new Set<string>(FOOD_PRODUCT_REPORT_REASONS);
 const DATABASE_NUMERIC_MAX_EXCLUSIVE = 100_000_000;
 const POSTGRES_UTC_CURSOR_PATTERN = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\.(\d{1,6})Z$/;
+const AUTHORITY_CONTROLLED_FIELDS = new Set([
+  "visibility",
+  "source_type",
+  "owner_user_id",
+  "moderation_status",
+  "external_product_key",
+  "basis_relations",
+]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -32,6 +46,13 @@ function unexpectedFields(body: Record<string, unknown>, allowed: Set<string>) {
     .filter((field) => !allowed.has(field))
     .sort()
     .map((field) => ({ field, reason: "unexpected" }));
+}
+
+function authorityFields(body: Record<string, unknown>) {
+  return Object.keys(body)
+    .filter((field) => AUTHORITY_CONTROLLED_FIELDS.has(field))
+    .sort()
+    .map((field) => ({ field, reason: "unsupported_field" }));
 }
 
 function normalizeName(value: unknown, field: string, fields: ValidationField[]) {
@@ -72,7 +93,7 @@ function parseNutrition(value: unknown):
     };
   }
 
-  const unexpectedNutrition = unexpectedFields(value, new Set(["basis", "values"]))
+  const unexpectedNutrition = unexpectedFields(value, new Set(["basis", "label_basis_text", "values"]))
     .map(({ field, reason }) => ({ field: `nutrition.${field}`, reason }));
   const fields: ValidationField[] = [...unexpectedNutrition];
   const basis = isRecord(value.basis) ? value.basis : {};
@@ -89,6 +110,14 @@ function parseNutrition(value: unknown):
   const basisUnit = basis.unit;
   if (typeof basisUnit !== "string" || !ALLOWED_BASIS_UNITS.has(basisUnit)) {
     fields.push({ field: "nutrition.basis.unit", reason: "unsupported_unit" });
+  }
+  const labelBasisText = value.label_basis_text;
+  if (
+    labelBasisText !== undefined
+    && labelBasisText !== null
+    && typeof labelBasisText !== "string"
+  ) {
+    fields.push({ field: "nutrition.label_basis_text", reason: "string_or_null" });
   }
 
   const values = isRecord(value.values) ? value.values : {};
@@ -145,6 +174,9 @@ function parseNutrition(value: unknown):
         amount: basisAmount as number,
         unit: basisUnit as FoodProductNutritionInput["basis"]["unit"],
       },
+      label_basis_text: typeof labelBasisText === "string"
+        ? (labelBasisText.trim() || null)
+        : null,
       values: normalizedValues as FoodProductNutritionInput["values"],
     },
   };
@@ -159,6 +191,11 @@ export function parseProductCreateBody(body: unknown):
       code: "VALIDATION_ERROR",
       fields: [{ field: "body", reason: "invalid_json" }],
     };
+  }
+
+  const authority = authorityFields(body);
+  if (authority.length > 0) {
+    return { ok: false, code: "UNSUPPORTED_FIELD", fields: authority };
   }
 
   const unexpected = unexpectedFields(body, new Set(["name", "brand", "nutrition"]));
@@ -190,6 +227,10 @@ export function parseProductPatchBody(body: unknown):
       code: "VALIDATION_ERROR",
       fields: [{ field: "body", reason: "invalid_json" }],
     };
+  }
+  const authority = authorityFields(body);
+  if (authority.length > 0) {
+    return { ok: false, code: "UNSUPPORTED_FIELD", fields: authority };
   }
   const unexpected = unexpectedFields(body, new Set(["name", "brand", "nutrition"]));
   if (unexpected.length > 0) {
@@ -248,10 +289,14 @@ export function decodeProductCursor(value: string): ProductCursor | null {
 }
 
 export function parseProductListQuery(params: URLSearchParams):
-  | { ok: true; value: { q: string; cursor: ProductCursor | null; limit: number } }
+  | { ok: true; value: { q: string; cursor: ProductCursor | null; limit: number; source: FoodProductListSource } }
   | ValidationFailure {
   const fields: ValidationField[] = [];
   const q = params.get("q")?.trim() ?? "";
+  const sourceValue = params.get("source")?.trim() ?? "all";
+  if (!ALLOWED_LIST_SOURCES.has(sourceValue)) {
+    fields.push({ field: "source", reason: "unsupported_source" });
+  }
   const cursorValue = params.get("cursor")?.trim() ?? "";
   const cursor = cursorValue ? decodeProductCursor(cursorValue) : null;
   if (cursorValue && cursor === null) {
@@ -267,5 +312,48 @@ export function parseProductListQuery(params: URLSearchParams):
   if (fields.length > 0) {
     return { ok: false, code: "VALIDATION_ERROR", fields };
   }
-  return { ok: true, value: { q, cursor, limit } };
+  return {
+    ok: true,
+    value: { q, cursor, limit, source: sourceValue as FoodProductListSource },
+  };
+}
+
+export function parseFoodProductReportBody(body: unknown):
+  | { ok: true; value: FoodProductReportCreateInput }
+  | ValidationFailure {
+  if (!isRecord(body)) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      fields: [{ field: "body", reason: "invalid_json" }],
+    };
+  }
+
+  const unexpected = unexpectedFields(body, new Set(["reason_code", "detail_text"]));
+  if (unexpected.length > 0) {
+    return { ok: false, code: "VALIDATION_ERROR", fields: unexpected };
+  }
+
+  const fields: ValidationField[] = [];
+  if (typeof body.reason_code !== "string" || !ALLOWED_REPORT_REASONS.has(body.reason_code)) {
+    fields.push({ field: "reason_code", reason: "unsupported_reason_code" });
+  }
+  if (
+    body.detail_text !== undefined
+    && body.detail_text !== null
+    && typeof body.detail_text !== "string"
+  ) {
+    fields.push({ field: "detail_text", reason: "string_or_null" });
+  }
+  if (fields.length > 0) {
+    return { ok: false, code: "VALIDATION_ERROR", fields };
+  }
+
+  return {
+    ok: true,
+    value: {
+      reason_code: body.reason_code as FoodProductReportCreateInput["reason_code"],
+      detail_text: typeof body.detail_text === "string" ? (body.detail_text.trim() || null) : null,
+    },
+  };
 }

@@ -114,6 +114,10 @@ export function FoodProductCreateForm({
       failField("basisAmount", "영양정보 기준량은 0보다 커야 해요.", basisRef.current);
       return;
     }
+    if (basisUnit !== "g" && basisUnit !== "ml") {
+      setFormError("사용자 등록 완제품의 기준 단위는 g 또는 mL만 사용할 수 있어요.");
+      return;
+    }
     if (energy.trim() === "" || !Number.isFinite(parsedEnergy) || parsedEnergy < 0) {
       failField("energy", "열량은 0 이상의 숫자로 입력해 주세요.", energyRef.current);
       return;
