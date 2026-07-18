@@ -7,6 +7,7 @@ import React from "react";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { useAppReturn } from "@/components/shared/use-app-return";
+import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { SettingsMobileColumnLoadingContent } from "@/components/settings/settings-mobile-loading";
 import type { UserProfileData } from "@/lib/api/mypage";
 import type { PlannerColumnData } from "@/types/planner";
@@ -158,6 +159,7 @@ export function SettingsMobileScreen({
           description="다시 로그인해야 식단·팬트리가 동기화돼요."
           disabled={isLoggingOut}
           errorMessage={logoutError}
+          idPrefix="settings-logout"
           onCancel={onCloseLogoutDialog}
           onConfirm={onConfirmLogout}
           title="로그아웃 할까요?"
@@ -172,6 +174,7 @@ export function SettingsMobileScreen({
           disabled={isDeleting}
           errorMessage={deleteError}
           extraWarning="삭제 후 같은 소셜 계정으로 다시 로그인해도 이전 개인 기록은 복구되지 않아요."
+          idPrefix="settings-delete"
           onCancel={onCloseDeleteDialog}
           onConfirm={onConfirmDelete}
           title="정말 계정을 삭제할까요?"
@@ -199,6 +202,7 @@ export function SettingsMobileScreen({
           description={`"${deleteColumnTarget.name}" 끼니를 삭제할까요? 식사가 있으면 삭제되지 않아요.`}
           disabled={isDeletingColumn}
           errorMessage={deleteColumnError}
+          idPrefix="settings-delete-column"
           onCancel={onCloseDeleteColumnDialog}
           onConfirm={onConfirmDeleteColumn}
           title="끼니 삭제"
@@ -763,6 +767,7 @@ function MobileConfirmSheet({
   disabled,
   errorMessage,
   extraWarning,
+  idPrefix,
   onCancel,
   onConfirm,
   title,
@@ -773,41 +778,61 @@ function MobileConfirmSheet({
   disabled?: boolean;
   errorMessage?: string | null;
   extraWarning?: string;
+  idPrefix: string;
   onCancel: () => void;
   onConfirm: () => void;
   title: string;
 }) {
+  const dialogRef = React.useRef<HTMLDivElement | null>(null);
+  const cancelRef = React.useRef<HTMLButtonElement | null>(null);
+  const titleId = `${idPrefix}-title`;
+  const descriptionId = `${idPrefix}-description`;
+
+  useDialogBoundary({
+    closeOnEscape: !disabled,
+    dialogRef,
+    initialFocusRef: cancelRef,
+    onClose: onCancel,
+  });
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)]">
       <div
+        aria-describedby={descriptionId}
+        aria-labelledby={titleId}
         aria-modal="true"
         className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2"
+        ref={dialogRef}
         role="alertdialog"
+        tabIndex={-1}
       >
         <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[var(--line-strong)]" />
-        <h2 className="text-[18px] font-extrabold text-[var(--foreground)]">
+        <h2 className="text-[18px] font-extrabold text-[var(--foreground)]" id={titleId}>
           {title}
         </h2>
-        {description ? (
-          <p className="mt-3 text-[13px] font-medium leading-5 text-[var(--text-2)]">
-            {description}
-          </p>
-        ) : null}
-        {extraWarning ? (
-          <p className="mt-4 rounded-[var(--radius-control)] bg-[var(--danger-soft)] px-3 py-2 text-[11px] font-bold leading-5 text-[var(--danger)]">
-            {extraWarning}
-          </p>
-        ) : null}
-        {errorMessage ? (
-          <p className="mt-3 text-[12px] font-bold text-[var(--danger)]" data-testid="dialog-error">
-            {errorMessage}
-          </p>
-        ) : null}
+        <div id={descriptionId}>
+          {description ? (
+            <p className="mt-3 text-[13px] font-medium leading-5 text-[var(--text-2)]">
+              {description}
+            </p>
+          ) : null}
+          {extraWarning ? (
+            <p className="mt-4 rounded-[var(--radius-control)] bg-[var(--danger-soft)] px-3 py-2 text-[11px] font-bold leading-5 text-[var(--danger)]">
+              {extraWarning}
+            </p>
+          ) : null}
+          {errorMessage ? (
+            <p className="mt-3 text-[12px] font-bold text-[var(--danger)]" data-testid="dialog-error">
+              {errorMessage}
+            </p>
+          ) : null}
+        </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
             className="h-[var(--control-height-md)] rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] text-[14px] font-extrabold text-[var(--text-2)]"
             disabled={disabled}
             onClick={onCancel}
+            ref={cancelRef}
             type="button"
           >
             취소
