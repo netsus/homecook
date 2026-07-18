@@ -46,7 +46,7 @@
 - [x] before/after evidence와 exploratory QA/eval report가 있다 <!-- omo:id=accept-standard-basis-exploratory;stage=4;scope=frontend;review=5,6 -->
 - [x] fresh independent code review가 blocker/important 0으로 승인한다 <!-- omo:id=accept-standard-basis-review;stage=4;scope=shared;review=6 -->
 - [x] exact implementation head authority report가 PASS/blocker 0이다 <!-- omo:id=accept-standard-basis-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] Ready current-head의 시작된 모든 check가 success 또는 의도된 skip이고 pending/fail이 0이다 <!-- omo:id=accept-standard-basis-current-head;stage=2;scope=shared;review=6 -->
+- [x] Ready current-head `eae12222e2803ab5bc717921c53f2ca8bcb95db1`의 시작된 모든 check가 13 success + 2 intentional skip이고 pending/fail이 0인 상태에서 PR #1049가 병합됐다 <!-- omo:id=accept-standard-basis-current-head;stage=2;scope=shared;review=6 -->
 
 ### Manual Only
 

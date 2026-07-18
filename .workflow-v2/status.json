@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-18T16:52:07Z",
+  "updated_at": "2026-07-18T18:38:49Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2205,8 +2205,8 @@
       "id": "prepared-food-standard-basis-ux",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-prepared-food-standard-basis-ux",
-      "pr_path": null,
-      "lifecycle": "ready_for_review",
+      "pr_path": "https://github.com/netsus/homecook/pull/1049",
+      "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -2220,7 +2220,7 @@
         "node scripts/validate-automation-spec.mjs --slice prepared-food-standard-basis-ux",
         "git diff --check"
       ],
-      "notes": "Stage 1 PR #1048 merged. Stage 4 RED→GREEN repaired g/ml to min=1/step=1 while serving/package remains min=0.01/step=any. UI 83, backend 17, PostgreSQL 11, slice Playwright 3 pass/1 intentional skip, exploratory eval 97, actual local Supabase/Chrome 100→101g recalculation, 320/390/1280 evidence, independent code repair-final and authority PASS are complete. Stage 6 current-head checks remain before merge.",
+      "notes": "PR #1049 exact head eae12222 passed independent code review and authority PASS with blocker/major/minor 0/0/0, exploratory eval 97, real local Supabase/Chrome 100→101g recalculation, 320/390/1280 evidence, and 13 successful current-head checks with two intentional policy skips before merge 1976ecc3. closeout_phase=completed; closeout_recovery=manual_patch:3|ci_resync:2|artifact_missing:false; closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:docs/workpacks/prepared-food-standard-basis-ux/evidence/2026-07-18-stage4-real-browser.md,ui/designs/authority/PLANNER_WEEK-prepared-food-standard-basis-ux-authority.md,ui/designs/critiques/MEAL_SCREEN-prepared-food-standard-basis-ux-critique.md,PR #1049 Actual Verification and current-head checks,PR #1049 Closeout Sync updated at 2026-07-18T18:38:21Z; last_recovery_at=2026-07-18T18:38:21Z",
       "evaluation_status": "passed",
       "evaluation_round": 1,
       "last_evaluator_result": null,
