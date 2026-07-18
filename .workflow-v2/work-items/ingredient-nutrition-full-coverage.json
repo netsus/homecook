@@ -69,8 +69,8 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "passed",
     "evaluation_round": 1,
@@ -78,7 +78,7 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "pr_path": "https://github.com/netsus/homecook/pull/1030",
+  "pr_path": "https://github.com/netsus/homecook/pull/1038",
   "out_of_scope": [
     "recipe snapshot recalculation and Recipe Detail UI",
     "public API or frontend",
@@ -86,5 +86,46 @@
     "unapproved staging or production writes"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs merged in PR #1027 and contract repair in PR #1029. Stage 2/3 implementation tree c5fb72327b32bdcfbfa15beb4e58e998a3457a8a merged as 3f5d48f05aabbe3e7315d6eb581a60396437072a in PR #1030; independent Codex Stage 3 review found required findings 0 and APPROVE. Targeted Vitest 35 passed/2 skipped, isolated PostgreSQL 13 passed, verify:backend product 1,589 passed and security E2E 12 passed. Real inventory-wide source decisions and any staging/production write remain Manual Only; lifecycle intentionally stays in_progress."
+  "notes": "Stage 1 docs merged in PR #1027 and contract repair in PR #1029. Stage 2/3 implementation head 2faa3fc0 received independent Codex Stage 3 APPROVE with required findings 0, then merged as 3c737eae in PR #1038. Final local coverage checkpoint locked 845 inventory rows as 838 approved plus 7 strict excluded with replay zero-write confirmed. Targeted Vitest 35 passed/2 skipped, isolated PostgreSQL 13 passed, verify:backend product 1,589 passed and security E2E 12 passed. Real inventory-wide source decisions were reviewed before merge; any future staging/production write remains Manual Only.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "PR #1038 exact implementation head 2faa3fc0f075a3e4a7896ca67e33a8050ceb4a51 merged as 3c737eae8a05b7fdfe112c93525cffe2a40abba6 after every started current-head check completed successfully or intentionally skipped",
+        "Fresh independent current-head code and security reviews returned APPROVE with blocker_count 0",
+        "docs/workpacks/ingredient-nutrition-full-coverage/evidence/2026-07-18-local-full-coverage.md: local inventory 845 = 838 approved exactly once + 7 strict excluded, all zero gates closed, first apply writes 7049, same-input replay writes 0, external writes 0",
+        "PR #1038 Actual Verification: focused unit, local DB, isolated PostgreSQL nutrition model, full product 1589, build, typecheck, lint, and security E2E 12/12 green",
+        "Production and staging writes plus production-scale recipe recalculation remain explicitly Manual Only"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "2faa3fc0f075a3e4a7896ca67e33a8050ceb4a51",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-18T07:09:10Z"
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-18T07:09:10Z",
+      "status_synced_at": "2026-07-18T07:09:10Z",
+      "pr_body_synced_at": "2026-07-18T07:09:10Z"
+    }
+  }
 }

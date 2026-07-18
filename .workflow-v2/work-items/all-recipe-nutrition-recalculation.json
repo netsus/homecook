@@ -1,0 +1,115 @@
+{
+  "id": "all-recipe-nutrition-recalculation",
+  "title": "All recipe nutrition recalculation",
+  "summary": "전수 승격된 ingredient nutrition 결과를 사용해 `public.recipes` 전체의 current nutrition snapshot을 local-only batch로 재계산하고 complete/partial/unavailable report를 고정한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "모든 recipe의 current nutrition snapshot을 결정론적으로 다시 계산하되 missing을 0으로 위장하지 않고 current switch, replay, rollback, historical Meal pin 안정성을 안전하게 닫는다.",
+  "owners": {
+    "claude": "replaced for this nutrition/products/planner successor slice by explicit user approval",
+    "codex": "role-separated Codex sessions own Stage 1 docs, Stage 1.5 independent docs review and repair-final, Stage 2 backend implementation, and Stage 3 independent review; no author or implementer self-approves",
+    "workers": []
+  },
+  "dependencies": [
+    "recipe-nutrition-calculation merged",
+    "ingredient-nutrition-full-coverage PR #1038 merged at 3c737eae"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.21.md",
+      "docs/화면정의서-v1.5.27.md",
+      "docs/유저flow맵-v1.3.24.md",
+      "docs/db설계-v1.3.22.md",
+      "docs/api문서-v1.2.26.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/all-recipe-nutrition-recalculation/README.md",
+      "docs/workpacks/all-recipe-nutrition-recalculation/acceptance.md",
+      "docs/workpacks/all-recipe-nutrition-recalculation/automation-spec.json",
+      "docs/workpacks/recipe-nutrition-calculation/README.md",
+      "docs/workpacks/ingredient-nutrition-full-coverage/README.md",
+      "docs/workpacks/ingredient-nutrition-full-coverage/evidence/2026-07-18-local-full-coverage.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/workflow-v2/README.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "manual:fresh-local-supabase-all-public-recipes-checkpoint-dry-run-apply-replay-report-current-switch-rollback",
+      "manual:production-promotion-approval-intentionally-withheld-zero-writes"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm exec vitest run tests/all-recipe-nutrition-recalculation.test.ts tests/all-recipe-nutrition-recalculation-postgres.integration.test.ts tests/recipe-nutrition-snapshot.test.ts tests/meals-route.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/all-recipe-nutrition-recalculation pnpm validate:workpack -- --slice all-recipe-nutrition-recalculation",
+      "node scripts/validate-automation-spec.mjs --slice all-recipe-nutrition-recalculation",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/all-recipe-nutrition-recalculation.test.ts tests/all-recipe-nutrition-recalculation-postgres.integration.test.ts tests/recipe-nutrition-snapshot.test.ts tests/meals-route.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/all-recipe-nutrition-recalculation pnpm validate:workpack -- --slice all-recipe-nutrition-recalculation",
+      "node scripts/validate-automation-spec.mjs --slice all-recipe-nutrition-recalculation",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "all-public-recipes-denominator-without-hidden-filter",
+      "complete-partial-unavailable-bijection-and-unclassified-zero",
+      "active-current-approved-source-profile-and-conversion-chain-only",
+      "actual-edible-amount-without-new-state-fields-or-double-edible-factor",
+      "missing-trace-to-taste-and-unconvertible-never-zero",
+      "predecessor-missing-reasons-and-warnings-json-reused-without-new-status-or-reason-enum",
+      "deterministic-bounded-all-public-recipes-checkpoint-dry-run-apply-replay-report-and-rollback",
+      "immutable-history-atomic-current-switch-and-same-input-zero-write-replay",
+      "rollback-restores-previous-current-without-history-delete",
+      "existing-meal-snapshot-pins-unchanged",
+      "api-schema-domain-status-and-error-contract-unchanged",
+      "local-only-guard-and-secret-raw-private-path-leak-zero",
+      "external-write-requires-separate-approval",
+      "bounded-cursor-checkpoint-processing-without-per-ingredient-n-plus-1",
+      "independent-stage1-and-stage3-review"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "pr_path": null,
+  "out_of_scope": [
+    "frontend ui or design authority work",
+    "public api shape schema or domain contract changes",
+    "new recipe state fields or new editable nutrition inputs",
+    "historical meal repinning or retrospective meal mutation",
+    "prepared food catalog planner aggregate or unrelated nutrition slices",
+    "staging or production writes without separate approval"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 docs slice. BE/data-only high-risk manual merge only, and backend ownership closes at Stage 3 independent review rather than Stage 6 closeout. Current source of truth remains official v1.7.21/v1.5.27/v1.3.24/v1.3.22/v1.2.26, and Stage 2 cannot start until this docs PR merges and the internal docs review closes. Allowed predecessor input is the merged recipe nutrition snapshot contract plus ingredient-nutrition-full-coverage PR #1038 merged at 3c737eae. The recalculation path must preserve immutable snapshot history, atomic current switching, replay zero-write behavior, rollback to previous current, unchanged historical Meal pins, unchanged API/schema/domain behavior, local-only execution guard, zero secret/raw/private-path exposure, reuse only predecessor snapshot `missing_reasons` and canonically ordered `warnings_json`, and never introduce a new report status or reason enum without separate approval for any external write."
+}
