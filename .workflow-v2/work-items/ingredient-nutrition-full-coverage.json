@@ -69,8 +69,8 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "passed",
     "evaluation_round": 1,
@@ -78,7 +78,7 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "pr_path": "https://github.com/netsus/homecook/pull/1030",
+  "pr_path": "https://github.com/netsus/homecook/pull/1038",
   "out_of_scope": [
     "recipe snapshot recalculation and Recipe Detail UI",
     "public API or frontend",
@@ -86,5 +86,5 @@
     "unapproved staging or production writes"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs merged in PR #1027 and contract repair in PR #1029. Stage 2/3 implementation tree c5fb72327b32bdcfbfa15beb4e58e998a3457a8a merged as 3f5d48f05aabbe3e7315d6eb581a60396437072a in PR #1030; independent Codex Stage 3 review found required findings 0 and APPROVE. Targeted Vitest 35 passed/2 skipped, isolated PostgreSQL 13 passed, verify:backend product 1,589 passed and security E2E 12 passed. Real inventory-wide source decisions and any staging/production write remain Manual Only; lifecycle intentionally stays in_progress."
+  "notes": "Stage 1 docs merged in PR #1027 and contract repair in PR #1029. Stage 2/3 implementation head 2faa3fc0 received independent Codex Stage 3 APPROVE with required findings 0, then merged as 3c737eae in PR #1038. Final local coverage checkpoint locked 845 inventory rows as 838 approved plus 7 strict excluded with replay zero-write confirmed. Targeted Vitest 35 passed/2 skipped, isolated PostgreSQL 13 passed, verify:backend product 1,589 passed and security E2E 12 passed. Real inventory-wide source decisions were reviewed before merge; any future staging/production write remains Manual Only."
 }

@@ -1,0 +1,103 @@
+{
+  "slice_id": "all-recipe-nutrition-recalculation",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "checkpoint-denominator-is-all-public-recipes-without-hidden-filter",
+      "each-recipe-is-exactly-one-of-complete-partial-or-unavailable-with-unclassified-zero",
+      "recalculation-consumes-only-active-current-approved-ingredient-source-profile-and-conversion-chains-valid-at-checkpoint",
+      "recipe-ingredient-actual-edible-amount-is-reused-without-new-state-fields-and-without-double-edible-factor",
+      "missing-trace-to-taste-and-unconvertible-values-are-never-normalized-to-zero",
+      "report-reuses-only-predecessor-snapshot-missing-reasons-and-canonical-warnings-json-order-without-new-status-or-reason-enum",
+      "all-public-recipes-checkpoint-dry-run-apply-replay-report-and-rollback-are-deterministic-bounded-and-canonically-ordered",
+      "snapshot-history-is-immutable-current-switch-is-atomic-and-same-input-replay-commits-zero-writes",
+      "concurrency-or-current-drift-fails-closed-without-partial-acceptance",
+      "rollback-restores-previous-current-without-deleting-historical-snapshots",
+      "existing-meal-snapshot-pins-remain-unchanged",
+      "existing-api-schema-domain-status-and-error-contracts-remain-unchanged",
+      "service-role-path-is-local-only-with-separate-approval-for-external-writes",
+      "secret-auth-query-cookie-raw-row-and-private-path-exposure-zero",
+      "bounded-cursor-checkpoint-processing-avoids-per-ingredient-n-plus-1-for-all-public-recipes",
+      "query-and-write-counts-stay-deterministic-for-the-same-checkpoint-input"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/all-recipe-nutrition-recalculation.test.ts tests/all-recipe-nutrition-recalculation-postgres.integration.test.ts tests/recipe-nutrition-snapshot.test.ts tests/meals-route.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/all-recipe-nutrition-recalculation pnpm validate:workpack -- --slice all-recipe-nutrition-recalculation",
+      "node scripts/validate-automation-spec.mjs --slice all-recipe-nutrition-recalculation",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "all-public-recipes-denominator-without-hidden-filter",
+      "complete-partial-unavailable-bijection-and-unclassified-zero",
+      "active-current-approved-source-profile-and-conversion-chain-only",
+      "actual-edible-amount-without-new-state-fields-or-double-edible-factor",
+      "missing-trace-to-taste-and-unconvertible-never-zero",
+      "predecessor-missing-reasons-and-warnings-json-reused-without-new-status-or-reason-enum",
+      "deterministic-bounded-all-public-recipes-checkpoint-dry-run-apply-replay-report-and-rollback",
+      "immutable-history-atomic-current-switch-and-same-input-zero-write-replay",
+      "concurrency-and-current-drift-fail-closed",
+      "rollback-restores-previous-current-without-history-delete",
+      "existing-meal-snapshot-pins-unchanged",
+      "api-schema-domain-status-and-error-contract-unchanged",
+      "local-only-guard-and-secret-raw-private-path-leak-zero",
+      "external-write-requires-separate-approval",
+      "bounded-cursor-checkpoint-processing-without-per-ingredient-n-plus-1",
+      "deterministic-query-and-write-counts-for-the-same-checkpoint-input"
+    ]
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "frontend-design-accessibility-playwright-na-be-data-only"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "manual:fresh-local-supabase-all-public-recipes-checkpoint-dry-run-apply-replay-report-current-switch-rollback",
+    "manual:production-promotion-approval-intentionally-withheld-zero-writes"
+  ],
+  "blocked_conditions": [
+    "stage1-docs-or-independent-doc-review-not-merged",
+    "checkpoint-denominator-excludes-any-public-recipes-row",
+    "complete-partial-unavailable-accounting-is-not-bijective-or-unclassified-is-nonzero",
+    "inactive-noncurrent-unapproved-or-stale-source-profile-conversion-chain-is-consumed",
+    "actual-edible-amount-is-reinterpreted-new-state-field-is-added-or-edible-factor-is-applied-twice",
+    "missing-trace-to-taste-or-unconvertible-value-is-normalized-to-zero",
+    "report-does-not-reuse-only-predecessor-missing-reasons-and-canonical-warnings-json-order-or-adds-new-status-or-reason-enum",
+    "all-public-recipes-checkpoint-dry-run-apply-replay-report-or-rollback-is-nondeterministic-unbounded-or-order-unstable",
+    "current-switch-is-nonatomic-same-input-replay-writes-or-concurrency-drift-is-silently-accepted",
+    "rollback-deletes-history-or-fails-to-restore-previous-current",
+    "existing-meal-pin-is-repinned-or-mutated",
+    "existing-api-schema-domain-status-or-error-contract-changes",
+    "service-role-path-is-not-local-only-or-target-scope-expands",
+    "secret-auth-query-cookie-raw-row-or-private-path-is-exposed",
+    "staging-or-production-write-occurs-without-separate-exact-approval",
+    "cursor-is-unbounded-or-per-ingredient-n-plus-1-query-pattern-appears-at-all-public-recipes-checkpoint",
+    "query-or-write-count-drifts-for-the-same-checkpoint-input-without-documented-reason"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 0
+  },
+  "notes": "BE/data-only successor slice. It recalculates current recipe nutrition snapshots from the merged recipe snapshot contract plus the merged full ingredient coverage input, without changing public API, schema, or domain rules. Report output must reuse only predecessor snapshot `missing_reasons` and canonically ordered `warnings_json`; no new status or reason enum is allowed. Stage 1 docs owner, Stage 1.5 independent docs reviewer, Stage 2 implementer, and Stage 3 reviewer are role-separated Codex sessions under the user-approved nutrition/products/planner exception. Local-only lifecycle evidence is required before any separately approved external write."
+}
