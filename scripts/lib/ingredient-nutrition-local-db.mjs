@@ -22,6 +22,7 @@ const LOCAL_UNSAFE_KEYS = [
 export const LOCAL_DATABASE_SENTINEL = "homecook-isolated-local-v1";
 const LOCAL_DATABASE_SENTINEL_ERROR_MARKER =
   "HOMECOOK_LOCAL_DATABASE_SENTINEL_INVALID";
+const LOCAL_PSQL_MAX_BUFFER_BYTES = 32 * 1024 * 1024;
 const LOCAL_JSON_FILE_FUNCTIONS = new Set([
   "apply_public_prepared_food_catalog_import",
 ]);
@@ -92,6 +93,7 @@ function execute(invocation, sql, spawn, timeoutMs) {
     input: sql,
     encoding: "utf8",
     timeout: timeoutMs,
+    maxBuffer: LOCAL_PSQL_MAX_BUFFER_BYTES,
     ...(invocation.env === undefined ? {} : { env: invocation.env }),
   });
   if (result.status !== 0 || result.error) {

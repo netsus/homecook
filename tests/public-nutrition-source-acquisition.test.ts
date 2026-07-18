@@ -325,6 +325,51 @@ describe("public nutrition source acquisition core", () => {
     });
   });
 
+  it("adds dataset-level edible-basis text only for exact 100 g MFDS provider rows without deriving percent", async () => {
+    const { buildRawBatch, normalizeNutritionBatch } = await loadPipeline();
+    const input = fixture("mfds-provider-shaped-sample.json");
+    input.pages[0].items[0].REFUSE = "15";
+    const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+    const normalized = normalizeNutritionBatch({
+      rawSnapshot: raw.rawSnapshot,
+      manifest: raw.manifest,
+      adapterSchemaVersion: "nutrition-source-row-v1",
+    });
+
+    expect(normalized.rows[0].edible_portion).toEqual({
+      text: "가식부 100g 기준",
+    });
+    expect(normalized.rows[0].edible_portion).not.toHaveProperty("percent");
+    expect(normalized.rows[0].content_hash).toBe(
+      "07d2239599965a7a270007b78573d34611505927dc885a679940e6862171bd2c",
+    );
+    expect(normalized.rows[0].fingerprint).toBe(
+      "f105da60d65ab3981f732e6aa114326b557afd90ada3ad79b6d92fc73a69b326",
+    );
+  });
+
+  it("keeps exact 100 mL MFDS rows as edible volume while failing closed for non-exact basis values", async () => {
+    const { buildRawBatch, normalizeNutritionBatch } = await loadPipeline();
+    const buildFirstRow = (servingSize: string) => {
+      const input = fixture("mfds-provider-shaped-sample.json");
+      input.pages[0].items[0].SERVING_SIZE = servingSize;
+      const raw = buildRawBatch({ ...input, fetchedAt: "2026-07-13T00:00:00.000Z" });
+      return normalizeNutritionBatch({
+        rawSnapshot: raw.rawSnapshot,
+        manifest: raw.manifest,
+        adapterSchemaVersion: "nutrition-source-row-v1",
+      }).rows[0];
+    };
+
+    expect(buildFirstRow("100 ml").edible_portion).toEqual({
+      text: "가식부 100mL 기준",
+    });
+
+    for (const servingSize of ["200 g", "200 ml", "1 serving"]) {
+      expect(buildFirstRow(servingSize).edible_portion).toBeNull();
+    }
+  });
+
   it("changes normalized identity when only preparation state changes", async () => {
     const { buildRawBatch, normalizeNutritionBatch } = await loadPipeline();
     const normalizeWithState = (preparationState: string) => {
