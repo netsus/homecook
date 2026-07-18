@@ -5,6 +5,7 @@ export function buildRecipeNutritionPostgresVitestArgs() {
     "exec",
     "vitest",
     "run",
+    "tests/all-recipe-nutrition-recalculation-postgres.integration.test.ts",
     "tests/recipe-nutrition-postgres.integration.test.ts",
     "--pool=forks",
     "--maxWorkers=1",

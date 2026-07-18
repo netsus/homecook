@@ -6,7 +6,11 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { buildRecipeNutritionPostgresVitestArgs } from "./lib/recipe-nutrition-postgres-runner-options.mjs";
+const TEST_FILES = [
+  "tests/recipe-nutrition-postgres.integration.test.ts",
+  "tests/all-recipe-nutrition-recalculation-postgres.integration.test.ts",
+];
+const TEST_TIMEOUT_MS = 30_000;
 
 const POSTGRES_TOOLS = ["initdb", "pg_ctl", "createdb", "psql"];
 
@@ -22,21 +26,41 @@ function hasPostgresTools(directory) {
   return POSTGRES_TOOLS.every((tool) => existsSync(path.join(directory, tool)));
 }
 
+function postgresToolchainUsable(directory) {
+  if (!hasPostgresTools(directory)) return false;
+  const postgresVersion = commandResult(path.join(directory, "postgres"), ["-V"]);
+  return postgresVersion.status === 0;
+}
+
 function findPostgresBin() {
   const pgConfig = commandResult("pg_config", ["--bindir"]);
   const candidates = [];
   if (pgConfig.status === 0) candidates.push(pgConfig.stdout.trim());
-  for (const root of ["/usr/lib/postgresql", "/opt/homebrew/bin", "/usr/local/bin"]) {
+  for (const root of [
+    "/usr/lib/postgresql",
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/opt/homebrew/Cellar",
+  ]) {
     if (!existsSync(root)) continue;
     if (root.endsWith("postgresql")) {
       candidates.push(...readdirSync(root)
         .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }))
         .map((version) => path.join(root, version, "bin")));
+    } else if (root.endsWith("Cellar")) {
+      candidates.push(...readdirSync(root)
+        .filter((name) => name === "postgresql" || name.startsWith("postgresql@"))
+        .flatMap((name) => {
+          const formulaRoot = path.join(root, name);
+          return readdirSync(formulaRoot)
+            .sort((left, right) => right.localeCompare(left, undefined, { numeric: true }))
+            .map((version) => path.join(formulaRoot, version, "bin"));
+        }));
     } else {
       candidates.push(root);
     }
   }
-  return candidates.find((candidate) => hasPostgresTools(candidate)) ?? null;
+  return candidates.find((candidate) => postgresToolchainUsable(candidate)) ?? null;
 }
 
 function runRequired(command, args, options = {}) {
@@ -76,41 +100,7 @@ function runFixtureFallback() {
   process.exitCode = result.status ?? 1;
 }
 
-const postgresBin = findPostgresBin();
-if (postgresBin === null) {
-  runFixtureFallback();
-} else {
-  const clusterTmpRoot = existsSync("/tmp") ? "/tmp" : tmpdir();
-  const root = mkdtempSync(path.join(clusterTmpRoot, "hcn-recipe-pg-"));
-  const dataDirectory = path.join(root, "data");
-  const socketDirectory = path.join(root, "socket");
-  const database = "homecook_recipe_nutrition_test";
-  const port = await reservePort();
-  let started = false;
-
-  try {
-    runRequired(path.join(postgresBin, "initdb"), [
-      "-D", dataDirectory,
-      "-U", "postgres",
-      "-A", "trust",
-    ]);
-    mkdirSync(socketDirectory);
-    runRequired(path.join(postgresBin, "pg_ctl"), [
-      "-D", dataDirectory,
-      "-o", `-p ${port} -h 127.0.0.1 -k ${socketDirectory}`,
-      "-l", path.join(root, "postgres.log"),
-      "-w",
-      "start",
-    ]);
-    started = true;
-    runRequired(path.join(postgresBin, "createdb"), [
-      "-h", "127.0.0.1",
-      "-p", String(port),
-      "-U", "postgres",
-      database,
-    ]);
-
-    const bootstrapSql = `
+const bootstrapSql = `
 create schema extensions;
 create extension pgcrypto with schema extensions;
 create role anon nologin;
@@ -177,6 +167,38 @@ create table public.meals (
 );
 grant usage on schema public to anon, authenticated, service_role;
 `;
+
+async function runIsolatedTestFile(postgresBin, testFile) {
+  const clusterTmpRoot = existsSync("/tmp") ? "/tmp" : tmpdir();
+  const root = mkdtempSync(path.join(clusterTmpRoot, "hcn-recipe-pg-"));
+  const dataDirectory = path.join(root, "data");
+  const socketDirectory = path.join(root, "socket");
+  const database = "homecook_recipe_nutrition_test";
+  const port = await reservePort();
+  let started = false;
+
+  try {
+    runRequired(path.join(postgresBin, "initdb"), [
+      "-D", dataDirectory,
+      "-U", "postgres",
+      "-A", "trust",
+    ]);
+    mkdirSync(socketDirectory);
+    runRequired(path.join(postgresBin, "pg_ctl"), [
+      "-D", dataDirectory,
+      "-o", `-p ${port} -h 127.0.0.1 -k ${socketDirectory}`,
+      "-l", path.join(root, "postgres.log"),
+      "-w",
+      "start",
+    ]);
+    started = true;
+    runRequired(path.join(postgresBin, "createdb"), [
+      "-h", "127.0.0.1",
+      "-p", String(port),
+      "-U", "postgres",
+      database,
+    ]);
+
     const connectionArgs = [
       "-h", "127.0.0.1",
       "-p", String(port),
@@ -198,9 +220,17 @@ grant usage on schema public to anon, authenticated, service_role;
       "-f", "supabase/migrations/20260716090000_add_recipe_nutrition_snapshots.sql",
     ]);
 
-    const test = commandResult(
+    return commandResult(
       "pnpm",
-      buildRecipeNutritionPostgresVitestArgs(),
+      [
+        "exec",
+        "vitest",
+        "run",
+        testFile,
+        "--pool=forks",
+        "--maxWorkers=1",
+        `--testTimeout=${TEST_TIMEOUT_MS}`,
+      ],
       {
         stdio: "inherit",
         env: {
@@ -213,7 +243,6 @@ grant usage on schema public to anon, authenticated, service_role;
         },
       },
     );
-    process.exitCode = test.status ?? 1;
   } finally {
     if (started) {
       commandResult(path.join(postgresBin, "pg_ctl"), [
@@ -225,4 +254,19 @@ grant usage on schema public to anon, authenticated, service_role;
     }
     rmSync(root, { recursive: true, force: true });
   }
+}
+
+const postgresBin = findPostgresBin();
+if (postgresBin === null) {
+  runFixtureFallback();
+} else {
+  let exitCode = 0;
+  for (const testFile of TEST_FILES) {
+    const result = await runIsolatedTestFile(postgresBin, testFile);
+    if ((result.status ?? 1) !== 0) {
+      exitCode = result.status ?? 1;
+      break;
+    }
+  }
+  process.exitCode = exitCode;
 }

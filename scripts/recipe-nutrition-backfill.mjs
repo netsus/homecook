@@ -5,13 +5,22 @@ import { spawnSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 
 import {
+  loadAllRecipeNutritionInventory,
   RecipeNutritionBackfillError,
   createSupabaseRecipeNutritionBackfillRepository,
+  rollbackAllRecipeNutritionRecalculation,
+  runAllRecipeNutritionRecalculationLifecycle,
   rollbackFoodSafetyRecipeNutritionBackfill,
   runFoodSafetyRecipeNutritionBackfill,
   sanitizeRecipeNutritionBackfillReport,
+  validateAllRecipeNutritionInventoryArtifact,
 } from "./lib/recipe-nutrition-backfill.mjs";
 import {
+  initializeAllRecipeNutritionCheckpoint,
+  readAllRecipeNutritionCheckpoint,
+  readAllRecipeNutritionInventoryArtifact,
+  writeAllRecipeNutritionInventoryArtifact,
+  writeAllRecipeNutritionCheckpoint,
   ensureMealPinBackfillCheckpoint,
   initializeRecipeNutritionCheckpoint,
   readRecipeNutritionCheckpoint,
@@ -25,6 +34,10 @@ const HELP = `Usage:
   node scripts/recipe-nutrition-backfill.mjs recipe-rollback --checkpoint <path> --allow-write
   node scripts/recipe-nutrition-backfill.mjs meal-dry-run [--batch-size 250] [--after <meal-id>]
   node scripts/recipe-nutrition-backfill.mjs meal-apply --checkpoint <path> --allow-write [--batch-size 250] [--after <meal-id>]
+  node scripts/recipe-nutrition-backfill.mjs all-recipes-inventory --output <path> [--inventory-page-size 250]
+  node scripts/recipe-nutrition-backfill.mjs all-recipes-dry-run --inventory <path> [--batch-size 30] [--inventory-page-size 250]
+  node scripts/recipe-nutrition-backfill.mjs all-recipes-apply --inventory <path> --checkpoint <path> --allow-write [--batch-size 30] [--inventory-page-size 250]
+  node scripts/recipe-nutrition-backfill.mjs all-recipes-rollback --inventory <path> --checkpoint <path> --allow-write [--inventory-page-size 250]
 
 Write commands additionally require HOMECOOK_RECIPE_NUTRITION_WRITE_APPROVED=1.
 `;
@@ -36,6 +49,9 @@ function parseArguments(argv) {
     after: null,
     batchSize: command?.startsWith("meal-") ? 250 : 30,
     checkpoint: null,
+    inventory: null,
+    inventoryPageSize: 250,
+    output: null,
     allowWrite: false,
   };
   for (let index = 0; index < rest.length; index += 1) {
@@ -50,6 +66,15 @@ function parseArguments(argv) {
       index += 1;
     } else if (value === "--checkpoint") {
       options.checkpoint = rest[index + 1] ?? null;
+      index += 1;
+    } else if (value === "--inventory") {
+      options.inventory = rest[index + 1] ?? null;
+      index += 1;
+    } else if (value === "--inventory-page-size") {
+      options.inventoryPageSize = Number(rest[index + 1]);
+      index += 1;
+    } else if (value === "--output") {
+      options.output = rest[index + 1] ?? null;
       index += 1;
     } else {
       throw new RecipeNutritionBackfillError("INVALID_BACKFILL_ARGUMENTS");
@@ -89,6 +114,20 @@ function printReport(report) {
   process.stdout.write(`${JSON.stringify(sanitizeRecipeNutritionBackfillReport(report))}\n`);
 }
 
+function readInventoryArtifact(inventoryPath) {
+  if (!inventoryPath) {
+    throw new RecipeNutritionBackfillError("ALL_RECIPE_INVENTORY_REQUIRED");
+  }
+  try {
+    return validateAllRecipeNutritionInventoryArtifact(
+      readAllRecipeNutritionInventoryArtifact(inventoryPath),
+    );
+  } catch (error) {
+    if (error instanceof RecipeNutritionBackfillError) throw error;
+    throw new RecipeNutritionBackfillError("ALL_RECIPE_INVENTORY_INVALID");
+  }
+}
+
 async function runRecipeCommand(options, client) {
   const repository = createSupabaseRecipeNutritionBackfillRepository(client);
   if (options.command === "recipe-rollback") {
@@ -117,6 +156,84 @@ async function runRecipeCommand(options, client) {
     writeRecipeNutritionCheckpoint(options.checkpoint, result.checkpoints);
   }
   printReport(result);
+}
+
+async function runAllRecipeCommand(options, client) {
+  const repository = createSupabaseRecipeNutritionBackfillRepository(client);
+
+  if (options.command === "all-recipes-inventory") {
+    const { inventory } = await loadAllRecipeNutritionInventory({
+      repository,
+      queryVersion: "all-recipes-inventory-sql-v1",
+      pageSize: options.inventoryPageSize,
+    });
+    writeAllRecipeNutritionInventoryArtifact(options.output, inventory);
+    process.stdout.write(`${JSON.stringify({
+      scope: inventory.scope,
+      row_count: inventory.row_count,
+      checksum: inventory.checksum,
+    })}\n`);
+    return;
+  }
+
+  const inventory = readInventoryArtifact(options.inventory);
+  if (options.after !== null) {
+    throw new RecipeNutritionBackfillError("ALL_RECIPE_CURSOR_UNSAFE");
+  }
+  if (options.command === "all-recipes-rollback") {
+    if (!options.checkpoint) {
+      throw new RecipeNutritionBackfillError("BACKFILL_CHECKPOINT_REQUIRED");
+    }
+    const checkpoint = readAllRecipeNutritionCheckpoint(options.checkpoint);
+    if (
+      checkpoint.inventory_checksum !== inventory.checksum ||
+      checkpoint.inventory_row_count !== inventory.row_count
+    ) {
+      throw new RecipeNutritionBackfillError("ALL_RECIPE_INVENTORY_DRIFT");
+    }
+    printReport(await rollbackAllRecipeNutritionRecalculation({
+      repository,
+      inventory,
+      checkpoints: checkpoint.checkpoints,
+      inventoryPageSize: options.inventoryPageSize,
+    }));
+    return;
+  }
+
+  const mode = options.command === "all-recipes-apply" ? "apply" : "dry-run";
+  if (mode === "apply") {
+    initializeAllRecipeNutritionCheckpoint(
+      options.checkpoint,
+      inventory.checksum,
+      inventory.row_count,
+    );
+  }
+  const totals = await runAllRecipeNutritionRecalculationLifecycle({
+    repository,
+    inventory,
+    mode,
+    batchSize: options.batchSize,
+    inventoryPageSize: options.inventoryPageSize,
+    onCheckpoint: mode === "apply"
+      ? async (batchJournal) => {
+        writeAllRecipeNutritionCheckpoint(
+          options.checkpoint,
+          inventory.checksum,
+          inventory.row_count,
+          batchJournal,
+        );
+      }
+      : undefined,
+  });
+  if (mode === "apply") {
+    writeAllRecipeNutritionCheckpoint(
+      options.checkpoint,
+      inventory.checksum,
+      inventory.row_count,
+      totals.checkpoints,
+    );
+  }
+  printReport(totals);
 }
 
 async function runMealCommand(options, client) {
@@ -152,19 +269,36 @@ async function main() {
     "recipe-rollback",
     "meal-dry-run",
     "meal-apply",
+    "all-recipes-inventory",
+    "all-recipes-dry-run",
+    "all-recipes-apply",
+    "all-recipes-rollback",
   ]);
   if (!commands.has(options.command)) {
     throw new RecipeNutritionBackfillError("INVALID_BACKFILL_MODE");
   }
-  if (options.command.endsWith("-apply") || options.command === "recipe-rollback") {
+  if (options.command.endsWith("-apply") || options.command === "recipe-rollback" ||
+    options.command === "all-recipes-rollback") {
     requireWriteApproval(options);
   }
   if ((options.command === "recipe-apply" || options.command === "recipe-rollback" ||
-    options.command === "meal-apply") &&
+    options.command === "meal-apply" || options.command === "all-recipes-apply" ||
+    options.command === "all-recipes-rollback") &&
     !options.checkpoint) {
     throw new RecipeNutritionBackfillError("BACKFILL_CHECKPOINT_REQUIRED");
   }
-  if (["recipe-dry-run", "recipe-apply"].includes(options.command) &&
+  if (options.command.startsWith("all-recipes-") && options.command !== "all-recipes-inventory") {
+    if (!options.inventory) {
+      throw new RecipeNutritionBackfillError("ALL_RECIPE_INVENTORY_REQUIRED");
+    }
+    if (options.after !== null) {
+      throw new RecipeNutritionBackfillError("ALL_RECIPE_CURSOR_UNSAFE");
+    }
+  }
+  if (options.command === "all-recipes-inventory" && !options.output) {
+    throw new RecipeNutritionBackfillError("ALL_RECIPE_INVENTORY_OUTPUT_REQUIRED");
+  }
+  if (["recipe-dry-run", "recipe-apply", "all-recipes-dry-run", "all-recipes-apply"].includes(options.command) &&
     !process.execArgv.includes("--experimental-strip-types")) {
     const child = spawnSync(process.execPath, [
       "--experimental-strip-types",
@@ -178,12 +312,17 @@ async function main() {
     process.exitCode = child.status ?? 1;
     return;
   }
-  const requiresWrite = options.command.endsWith("-apply") || options.command === "recipe-rollback";
-  const client = createOperatorClient({ requireLocal: requiresWrite });
+  const requiresWrite = options.command.endsWith("-apply") ||
+    options.command === "recipe-rollback" ||
+    options.command === "all-recipes-rollback";
+  const allRecipeCommand = options.command.startsWith("all-recipes-");
+  const client = createOperatorClient({ requireLocal: requiresWrite || allRecipeCommand });
   if (options.command === "recipe-apply") {
     initializeRecipeNutritionCheckpoint(options.checkpoint);
   }
-  if (options.command.startsWith("recipe-")) {
+  if (options.command.startsWith("all-recipes-")) {
+    await runAllRecipeCommand(options, client);
+  } else if (options.command.startsWith("recipe-")) {
     await runRecipeCommand(options, client);
   } else {
     await runMealCommand(options, client);

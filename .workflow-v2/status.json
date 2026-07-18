@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-18T06:41:00Z",
+  "updated_at": "2026-07-18T08:32:25Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2132,11 +2132,11 @@
     {
       "id": "all-recipe-nutrition-recalculation",
       "preset": "vertical-slice-strict",
-      "branch": "docs/all-recipe-nutrition-recalculation",
+      "branch": "feature/be-all-recipe-nutrition-recalculation",
       "pr_path": null,
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm exec vitest run tests/all-recipe-nutrition-recalculation.test.ts tests/all-recipe-nutrition-recalculation-postgres.integration.test.ts tests/recipe-nutrition-snapshot.test.ts tests/meals-route.test.ts",
         "pnpm verify:backend",
@@ -2146,9 +2146,9 @@
         "node scripts/validate-automation-spec.mjs --slice all-recipe-nutrition-recalculation",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs drafted from official v1.7.21/v1.5.27/v1.3.24/v1.3.22/v1.2.26. Stage 2 cannot start until this docs PR merges and internal docs review closes. Successor input is recipe-nutrition-calculation merged plus ingredient-nutrition-full-coverage PR #1038 merge 3c737eae, and the report must reuse only predecessor snapshot `missing_reasons` with canonically ordered `warnings_json` without introducing a new status or reason enum.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
+      "notes": "Stage 1 docs PR #1039 merged. Stage 2/3 automated verification, fresh independent Codex review, and loopback-only manual operator lifecycle passed; replay wrote 0, rollback restored current aggregate state, Meal pins stayed unchanged, and production/staging writes remained 0.",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
