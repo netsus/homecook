@@ -3,6 +3,7 @@ import {
   FOOD_PRODUCT_CORE_NUTRIENTS,
   FOOD_PRODUCT_OPTIONAL_NUTRIENTS,
   type FoodProductBasisUnit,
+  type FoodProductListSource,
   type FoodProductNutrientCode,
 } from "@/types/food-product";
 
@@ -20,6 +21,7 @@ export interface FoodProductDraftContext {
   brand: string;
   basisAmount: string;
   basisUnit: FoodProductBasisUnit;
+  labelBasisText: string;
   energy: string;
   nutrients: Partial<Record<Exclude<FoodProductNutrientCode, "energy_kcal">, string>>;
 }
@@ -34,6 +36,7 @@ interface BaseReturnContext {
 export interface ProductPickerReturnContext extends BaseReturnContext {
   kind: "picker";
   query: string;
+  source: FoodProductListSource;
   productId: string | null;
   quantityAmount: string;
   quantityUnit: FoodProductBasisUnit | null;
@@ -42,7 +45,10 @@ export interface ProductPickerReturnContext extends BaseReturnContext {
 export interface ProductCreateReturnContext extends BaseReturnContext {
   kind: "create";
   query: string;
+  source: FoodProductListSource;
   draft: FoodProductDraftContext;
+  productId?: string;
+  action?: "edit";
 }
 
 export interface ProductMealEntryReturnContext extends BaseReturnContext {
@@ -76,6 +82,10 @@ function isUnit(value: unknown): value is FoodProductBasisUnit {
   return typeof value === "string" && UNITS.has(value);
 }
 
+function isSource(value: unknown): value is FoodProductListSource {
+  return value === "all" || value === "public_dataset" || value === "manual";
+}
+
 function isBase(value: Record<string, unknown>) {
   return (
     value.version === 1 &&
@@ -87,7 +97,16 @@ function isBase(value: Record<string, unknown>) {
 
 function isDraft(value: unknown): value is FoodProductDraftContext {
   if (!isPlainRecord(value)) return false;
-  if (!hasExactKeys(value, ["name", "brand", "basisAmount", "basisUnit", "energy", "nutrients"])) {
+  const exactKeys = Object.keys(value).sort();
+  const modernKeys = ["name", "brand", "basisAmount", "basisUnit", "labelBasisText", "energy", "nutrients"].sort();
+  const legacyKeys = ["name", "brand", "basisAmount", "basisUnit", "energy", "nutrients"].sort();
+  const supportsModern =
+    exactKeys.length === modernKeys.length &&
+    exactKeys.every((key, index) => key === modernKeys[index]);
+  const supportsLegacy =
+    exactKeys.length === legacyKeys.length &&
+    exactKeys.every((key, index) => key === legacyKeys[index]);
+  if (!supportsModern && !supportsLegacy) {
     return false;
   }
   if (
@@ -95,6 +114,7 @@ function isDraft(value: unknown): value is FoodProductDraftContext {
     !isSafeText(value.brand, 120) ||
     !isSafeText(value.basisAmount, 40) ||
     !isUnit(value.basisUnit) ||
+    (value.labelBasisText !== undefined && !isSafeText(value.labelBasisText, 120)) ||
     !isSafeText(value.energy, 40) ||
     !isPlainRecord(value.nutrients)
   ) {
@@ -110,25 +130,56 @@ function parseContext(value: unknown): ProductPlannerReturnContext | null {
   if (!isPlainRecord(value) || !isBase(value) || typeof value.kind !== "string") return null;
 
   if (value.kind === "picker") {
-    if (!hasExactKeys(value, [
+    const modernKeys = [
+      "version", "kind", "planDate", "columnId", "slotName", "query", "source",
+      "productId", "quantityAmount", "quantityUnit",
+    ];
+    const legacyKeys = [
       "version", "kind", "planDate", "columnId", "slotName", "query",
       "productId", "quantityAmount", "quantityUnit",
-    ])) return null;
+    ];
+    if (!hasExactKeys(value, modernKeys) && !hasExactKeys(value, legacyKeys)) return null;
     if (
       !isSafeText(value.query, 200) ||
+      (value.source !== undefined && !isSource(value.source)) ||
       (value.productId !== null && !isSafeText(value.productId, 160)) ||
       !isSafeText(value.quantityAmount, 40) ||
       (value.quantityUnit !== null && !isUnit(value.quantityUnit))
     ) return null;
-    return value as unknown as ProductPickerReturnContext;
+    return {
+      ...value,
+      source: isSource(value.source) ? value.source : "all",
+    } as ProductPickerReturnContext;
   }
 
   if (value.kind === "create") {
-    if (!hasExactKeys(value, [
+    const modernKeys = [
+      "version", "kind", "planDate", "columnId", "slotName", "query", "source", "draft",
+    ];
+    const editKeys = [
+      "version", "kind", "planDate", "columnId", "slotName", "query", "source", "draft", "productId", "action",
+    ];
+    const legacyKeys = [
       "version", "kind", "planDate", "columnId", "slotName", "query", "draft",
-    ])) return null;
-    if (!isSafeText(value.query, 200) || !isDraft(value.draft)) return null;
-    return value as unknown as ProductCreateReturnContext;
+    ];
+    if (!hasExactKeys(value, modernKeys) && !hasExactKeys(value, legacyKeys) && !hasExactKeys(value, editKeys)) return null;
+    if (
+      !isSafeText(value.query, 200) ||
+      (value.source !== undefined && !isSource(value.source)) ||
+      !isDraft(value.draft) ||
+      (value.productId !== undefined && !isSafeText(value.productId, 160)) ||
+      (value.action !== undefined && value.action !== "edit") ||
+      ((value.productId === undefined) !== (value.action === undefined))
+    ) return null;
+    return {
+      ...value,
+      source: isSource(value.source) ? value.source : "all",
+      draft: {
+        ...value.draft,
+        labelBasisText:
+          typeof value.draft.labelBasisText === "string" ? value.draft.labelBasisText : "",
+      },
+    } as ProductCreateReturnContext;
   }
 
   if (value.kind === "meal-entry") {

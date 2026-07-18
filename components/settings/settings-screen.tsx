@@ -835,7 +835,7 @@ export function SettingsScreen({
           <WebCard className="web-settings-danger-card">
             <div>
               <strong>계정 삭제</strong>
-              <span>레시피북, 플래너, 장보기, 팬트리 기록이 영구적으로 삭제돼요.</span>
+              <span>개인 기록은 삭제되고, 공개한 사용자 등록 완제품은 익명 읽기 전용으로 남아 기존 식단 기록을 보호해요.</span>
             </div>
             <WebButton
               className="web-settings-danger-button"
@@ -865,9 +865,9 @@ export function SettingsScreen({
 
       {showDeleteDialog ? (
         <ConfirmDialog
-          confirmLabel={isDeleting ? "삭제 중..." : "계정 삭제"}
+          confirmLabel={isDeleting ? "탈퇴 처리 중..." : "탈퇴하기"}
           confirmTone="danger"
-          description="계정을 삭제하면 레시피북, 플래너, 장보기, 팬트리 기록은 삭제돼요. 되돌릴 수 없어요. 직접 등록한 레시피는 작성자 정보 없이 남을 수 있어요."
+          description="레시피북, 플래너, 장보기, 팬트리 등 개인 기록은 삭제되며 되돌릴 수 없어요. 공개한 사용자 등록 완제품은 등록자 정보 없이 읽기 전용으로 남아 다른 사용자의 기존 식단 기록을 보호해요."
           disabled={isDeleting}
           errorMessage={deleteError}
           onCancel={() => {

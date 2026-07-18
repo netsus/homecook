@@ -499,6 +499,20 @@ describe("planner week screen", () => {
     );
   });
 
+  it("adds narrow-screen density classes to the mobile overview, nutrition, and planner body", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    await screen.findByRole("heading", { name: "주간 플래너" });
+
+    expect(screen.getByTestId("planner-week-shell").className).toContain("max-[359px]:py-2");
+    expect(screen.getByTestId("planner-week-nutrition-summary").className).toContain("max-[359px]:px-2.5");
+    expect(screen.getByTestId("planner-week-body").className).toContain("max-[359px]:py-3");
+    expect(screen.getByTestId("planner-week-body").className).toContain("max-[359px]:px-3");
+  });
+
   it("renders the desktop planner header with the prototype's three week actions", async () => {
     const user = userEvent.setup();
 
