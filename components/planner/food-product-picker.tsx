@@ -971,7 +971,7 @@ export function FoodProductPicker({
           <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(96px,0.7fr)] gap-2">
             <label className="grid gap-1 text-xs font-bold text-[var(--text-2)]">
               수량
-              <input aria-label="완제품 수량" className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none" disabled={isSubmitting} inputMode="decimal" min="0.01" onChange={(event) => { setQuantityAmount(event.target.value); setEntryError(null); setHasNutritionConflict(false); }} ref={quantityInputRef} step={quantityUnit === "g" || quantityUnit === "ml" ? "1" : "any"} type="number" value={quantityAmount} />
+              <input aria-label="완제품 수량" className="min-h-11 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3 text-sm outline-none" disabled={isSubmitting} inputMode="decimal" min={quantityUnit === "g" || quantityUnit === "ml" ? "1" : "0.01"} onChange={(event) => { setQuantityAmount(event.target.value); setEntryError(null); setHasNutritionConflict(false); }} ref={quantityInputRef} step={quantityUnit === "g" || quantityUnit === "ml" ? "1" : "any"} type="number" value={quantityAmount} />
             </label>
             <label className="grid gap-1 text-xs font-bold text-[var(--text-2)]">
               단위

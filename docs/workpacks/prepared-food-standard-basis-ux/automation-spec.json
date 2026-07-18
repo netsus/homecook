@@ -58,10 +58,12 @@
       "critic_artifact": "ui/designs/critiques/MEAL_SCREEN-prepared-food-standard-basis-ux-critique.md",
       "authority_required": true,
       "stage4_evidence_requirements": [
-        "390-before-after",
-        "320-before-after",
-        "1280-before-after",
-        "real-local-supabase-and-browser-flow"
+        "ui/designs/evidence/prepared-food-standard-basis-ux/before/meal-screen-quantity-edit-320.png",
+        "ui/designs/evidence/prepared-food-standard-basis-ux/after/meal-screen-quantity-edit-320.png",
+        "ui/designs/evidence/prepared-food-standard-basis-ux/before/meal-screen-quantity-edit-390.png",
+        "ui/designs/evidence/prepared-food-standard-basis-ux/after/meal-screen-quantity-edit-390.png",
+        "ui/designs/evidence/prepared-food-standard-basis-ux/before/meal-screen-quantity-edit-1280.png",
+        "ui/designs/evidence/prepared-food-standard-basis-ux/after/meal-screen-quantity-edit-1280.png"
       ],
       "authority_report_paths": [
         "ui/designs/authority/PLANNER_WEEK-prepared-food-standard-basis-ux-authority.md"
