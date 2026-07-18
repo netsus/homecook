@@ -69,16 +69,16 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "pr_path": null,
+  "pr_path": "https://github.com/netsus/homecook/pull/1046",
   "out_of_scope": [
     "legacy-private-auto-publication",
     "general-user-moderation-admin-http",
@@ -87,5 +87,64 @@
     "unapproved-production-or-staging-writes"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs/design gate. Roadmap status is `docs`, while workflow lifecycle remains `planned` because workflow-v2 has no `docs` lifecycle enum. Implementation starts only after this docs PR and independent internal 1.5 review merge."
+  "notes": "Stage 1 docs PR #1043, Stage 2/3 backend PR #1044, performance hardening PR #1045, and Stage 4/5/6 frontend PR #1046 are merged. Exact frontend implementation head db9b70d472d93ed56d1355fcfe6a6db7091a1846 passed fresh independent code review APPROVE, design authority PASS with blocker 0, QA eval 100, real local Supabase auth A/B and Chrome verification, and 13 successful current-head checks with two intentional policy skips before merge 5c88cdae25f835f35a4ef118468035e9209d8a37. Local catalog SQL was about 28 ms on 287,041 public rows and route responses were generally 349-559 ms. Production/staging/provider writes remained zero and the remaining physical-device, screen-reader, and production-scale checks are Manual Only.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/PLANNER_WEEK-community-prepared-food-catalog-authority.md"
+      ],
+      "actual_verification_refs": [
+        "PR #1046 exact frontend implementation head db9b70d472d93ed56d1355fcfe6a6db7091a1846 merged as 5c88cdae25f835f35a4ef118468035e9209d8a37 after 13 successful current-head checks and two intentional policy skips",
+        "Fresh independent code review returned APPROVE with zero findings; ui/designs/authority/PLANNER_WEEK-community-prepared-food-catalog-authority.md returned PASS with blocker 0",
+        "PR #1046 QA evidence recorded exploratory eval 100/pass; docs/workpacks/community-prepared-food-catalog/evidence/2026-07-18-stage4-real-browser.md retains the real local Supabase auth A/B and Chrome flow",
+        "Focused Vitest 107/107, community Playwright 9/9, planner unit 38/38, lint, typecheck, and git diff checks passed",
+        "The local 287,041-row catalog returned SQL results in about 28 ms and real route responses generally in 349-559 ms without runtime provider calls or item-level N+1",
+        "Production/staging/provider writes remained zero; physical-device screen reader and production-scale checks remain Manual Only"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "db9b70d472d93ed56d1355fcfe6a6db7091a1846",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 1,
+      "artifact_missing": true,
+      "last_recovery_at": "2026-07-18T16:06:48Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 4,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "ready-policy-evidence-resync",
+      "evidence_sources": [
+        "docs/workpacks/community-prepared-food-catalog/evidence/2026-07-18-stage4-real-browser.md",
+        "ui/designs/authority/PLANNER_WEEK-community-prepared-food-catalog-authority.md",
+        "PR #1044 Stage 3 review",
+        "PR #1045 performance review",
+        "PR #1046 Actual Verification and current-head checks"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-18T16:15:24Z",
+      "status_synced_at": "2026-07-18T16:15:24Z",
+      "pr_body_synced_at": "2026-07-18T16:06:48Z"
+    }
+  }
 }

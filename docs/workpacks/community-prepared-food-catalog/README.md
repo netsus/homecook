@@ -118,7 +118,7 @@
 - UI risk: `anchor-extension` / `high-risk`
 - Anchor screen dependency: `PLANNER_WEEK`
 - Visual artifact: Stage 4 `ui/designs/evidence/community-prepared-food-catalog/<date>/{390,320,1280}/`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Generator: `ui/designs/FOOD_PRODUCT_PICKER.md`, `ui/designs/FOOD_PRODUCT_CREATE.md`, `ui/designs/SETTINGS.md` additive addendum
 - Critic: `ui/designs/critiques/FOOD_PRODUCT_PICKER-critique.md`, `ui/designs/critiques/FOOD_PRODUCT_CREATE-critique.md`, `ui/designs/critiques/SETTINGS-critique.md`
 - Notes: predecessor authority는 historical evidence일 뿐 이번 공동 catalog 확장을 승인하지 않는다.
@@ -209,3 +209,15 @@
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [x] loading / empty / error / read-only 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+
+## Closeout Evidence
+
+- 상태: `merged` / Design Status `confirmed`
+- Stage 1: PR #1043 merge `f3957d2018954d35457ea70c5623fbf53cc90048`
+- Stage 2/3: PR #1044 merge `672b695b1d5bcae2ebb66206b78307ee162246b5`
+- public-scale performance repair: PR #1045 merge `b77f008827cff8d322ac75bd50b80aeff0e7b779`
+- Stage 4/5/6: exact frontend head `db9b70d472d93ed56d1355fcfe6a6db7091a1846`, PR #1046 merge `5c88cdae25f835f35a4ef118468035e9209d8a37`
+- independent review: code review `APPROVE` finding 0, authority `PASS` blocker 0, exploratory eval `100 / pass`
+- real local evidence: `docs/workpacks/community-prepared-food-catalog/evidence/2026-07-18-stage4-real-browser.md`
+- current-head checks: 13 success, `full-regression` / `lighthouse`는 변경 분류 정책에 따른 intentional skip
+- Manual Only: production/staging/provider write, 물리 기기 screen reader, production-scale query. 이 항목들은 병합 완료를 되돌리지 않는다.
