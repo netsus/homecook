@@ -10,6 +10,10 @@
 
 ## Revision Notes
 
+- `v2` nutrition products/planner community catalog closeout (2026-07-19 KST, UTC+09:00)
+  - `community-prepared-food-catalog`의 Stage 1 docs PR #1043, Stage 2/3 backend PR #1044, performance PR #1045, Stage 4/5/6 frontend PR #1046이 모두 병합됐다.
+  - exact frontend head `db9b70d4`는 independent review와 authority PASS blocker 0, exploratory eval 100, local Supabase auth A/B·Chrome account-deletion/anonymized-pin flow, 13개 current-head success를 통과한 뒤 merge `5c88cdae`로 병합됐다. full-regression/Lighthouse는 정책상 skip이고 production/staging/provider write는 계속 0이다.
+
 - `v2` nutrition products/planner public prepared-food closeout (2026-07-18)
   - `public-prepared-food-catalog-import` exact implementation head `7cea8644`가 independent Stage 3 review와 current-head checks를 통과한 뒤 PR #1035 merge `903e7082`로 병합됐음을 canonical closeout에 반영했다.
   - official snapshot 298,288 rows 중 287,041개를 local public catalog로 승격했고, same-input replay `0` write, public external-key duplicate `0`, attribution missing `0`, secret/raw leak `0`을 고정했다. production/staging promotion은 Manual Only다.
@@ -211,7 +215,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `ingredient-nutrition-full-coverage` | merged | local inventory 845개를 approved exactly once 838 + strict excluded 7로 전수 분류하고 `unclassified=0`/replay 0-write를 닫았다. PR #1038 merge `3c737eae` |
 | `all-recipe-nutrition-recalculation` | merged | 전체 `public.recipes`를 bounded checkpoint로 재계산하고 partial/unavailable을 보존한 채 replay 0-write·rollback·Meal pin 불변을 닫았다. PR #1040 merge `a001f53d` |
 | `public-prepared-food-catalog-import` | merged | 검수된 공공 완제품 287,041개를 local catalog로 승격하고 stable key, attribution, rollback과 검색 경로를 닫았다. PR #1035 merge |
-| `community-prepared-food-catalog` | in-progress | Stage 2 백엔드가 공동 public/manual catalog, owner-only 수정·soft-delete, 신고·moderation, legacy private·기존 pin 보존을 구현하고 독립 Stage 3 승인을 받았다 |
+| `community-prepared-food-catalog` | merged | 공공 영양DB·사용자 등록·비공개 보관을 구분하고 공동 검색, owner-only 수정·삭제, 신고, 탈퇴 후 익명 read-only·기존 pin 보존을 구현했다. PR #1046 merge |
 | `prepared-food-standard-basis-ux` | planned | 제품 비교를 100g/100mL 기준으로 통일하고 planner 수량을 1g/1mL 단위로 조절하며 원 라벨 basis와 source tag를 일관되게 표시한다 |
 | `nutrition-products-cross-slice-release-qa` | planned | 영양 데이터, 권한, UI, 계산을 실제 local DB/browser/current-head checks 기준으로 교차 검증하고 Manual Only 잔여 위험을 문서화한다 |
 
@@ -228,7 +232,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `ingredient-nutrition-full-coverage` | merged | 2026-07-17 public-sharing official docs = merged, `public-nutrition-source-acquisition` = merged, `ingredient-nutrition-conversion-model` = merged, PR #1038 merge `3c737eae` | Successor 1; local inventory 845개 전수 검수·apply·0-write replay와 current-head 독립 review/CI/merge 완료 |
 | `all-recipe-nutrition-recalculation` | merged | `ingredient-nutrition-full-coverage` = merged, `recipe-nutrition-calculation` = merged | Successor 2; exact implementation head `3abfb2f6` independent APPROVE/blocker 0, current-head checks green, PR #1040 merge `a001f53d`; local replay 0-write·rollback 복원·Meal pin 불변 완료 |
 | `public-prepared-food-catalog-import` | merged | 2026-07-17 public-sharing official docs = merged, `prepared-food-catalog` = merged | Successor 3; PR #1035 merged. local public products 287,041, replay 0-write, independent Stage 3/current-head checks green |
-| `community-prepared-food-catalog` | in-progress | `public-prepared-food-catalog-import` = merged, `prepared-food-catalog` = merged | Successor 4; Stage 1 docs/design + independent 1.5 merged, Stage 2 backend와 독립 Stage 3 review green, Stage 4 frontend pending |
+| `community-prepared-food-catalog` | merged | `public-prepared-food-catalog-import` = merged, `prepared-food-catalog` = merged | Successor 4; PR #1043/#1044/#1045/#1046 merged. local A/B browser, authority, security/performance/current-head checks green |
 | `prepared-food-standard-basis-ux` | planned | `community-prepared-food-catalog` = merged, `prepared-food-planner-entry` = merged, `planner-nutrition-summary` = merged | Successor 5; 100g/100mL UX work must not start before its own Stage 1 docs PR merge |
 | `nutrition-products-cross-slice-release-qa` | planned | `ingredient-nutrition-full-coverage` = merged, `all-recipe-nutrition-recalculation` = merged, `public-prepared-food-catalog-import` = merged, `community-prepared-food-catalog` = merged, `prepared-food-standard-basis-ux` = merged | Successor 6; release QA may start only after all prior successor slices merge and its own Stage 1 docs PR merge |
 
