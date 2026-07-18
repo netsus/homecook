@@ -1,0 +1,169 @@
+{
+  "slice_id": "nutrition-products-cross-slice-release-qa",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "anchor_extension": true,
+  "anchor_screens": ["RECIPE_DETAIL", "PLANNER_WEEK"],
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /recipes/{id}",
+      "POST /meals",
+      "GET /food-products",
+      "POST /food-products",
+      "PATCH /food-products/{product_id}",
+      "DELETE /food-products/{product_id}",
+      "POST /food-products/{product_id}/report",
+      "POST /product-planner-entries",
+      "PATCH /product-planner-entries/{entry_id}",
+      "DELETE /product-planner-entries/{entry_id}",
+      "DELETE /users/me",
+      "GET /planner",
+      "GET /planner/nutrition",
+      "GET /meals"
+    ],
+    "invariants": [
+      "verification-only-slice-adds-no-new-api-schema-status-field-error-or-runtime-fix",
+      "local-ingredient-inventory-is-exactly-845-approved-838-strict-excluded-7-with-unclassified-zero",
+      "ingredient-coverage-replay-and-all-recipe-replay-commit-zero-writes-and-leak-zero-secrets-raw-private-paths",
+      "all-recipe-current-lifecycle-is-exactly-34-equals-complete-8-partial-23-unavailable-3-with-rollback-34-and-unchanged-meal-pins",
+      "missing-trace-to-taste-unconvertible-and-temporary-states-are-never-normalized-to-zero",
+      "local-public-product-catalog-is-exactly-287041-and-runtime-provider-search-remains-forbidden",
+      "shared-manual-owner-report-moderation-anonymization-and-existing-pin-retention-contracts-remain-unchanged",
+      "delete-users-me-cleans-personal-data-but-preserves-shared-manual-anonymized-read-only-rows-and-existing-pins",
+      "solid-products-compare-by-100g-liquid-products-by-100ml-label-basis-text-is-preserved-and-no-inference-or-chaining-is-allowed",
+      "product-planner-entries-remain-isolated-from-recipe-meal-status-shopping-cooking-leftover-and-xp",
+      "fresh-local-supabase-migrations-rls-postgrest-auth-and-target-digests-pass-with-production-staging-provider-write-zero",
+      "local-287041-row-performance-captures-sql-and-route-latency-without-item-level-n-plus-1",
+      "current-head-started-checks-must-all-succeed-or-be-intentional-skips-before-final-closeout"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/ingredient-nutrition-coverage.test.ts tests/ingredient-nutrition-import.test.ts tests/ingredient-nutrition-matching.test.ts tests/ingredient-nutrition-full-coverage-postgres.integration.test.ts tests/all-recipe-nutrition-recalculation.test.ts tests/all-recipe-nutrition-recalculation-postgres.integration.test.ts tests/recipe-nutrition-snapshot.test.ts tests/meals-route.test.ts tests/public-prepared-food-import.test.ts tests/public-prepared-food-import-postgres.integration.test.ts tests/community-prepared-food-catalog-api.test.ts tests/community-prepared-food-catalog-service.test.ts tests/community-prepared-food-catalog-rls.test.ts tests/community-prepared-food-catalog-postgres.integration.test.ts tests/prepared-food-planner-entry-api.test.ts tests/prepared-food-planner-entry-service.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/planner-nutrition-aggregate.test.ts tests/planner-nutrition-api.test.ts tests/planner-nutrition-read-model.test.ts tests/planner-route.test.ts",
+      "node scripts/run-planner-nutrition-postgres-integration.mjs",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/nutrition-products-cross-slice-release-qa pnpm validate:workpack -- --slice nutrition-products-cross-slice-release-qa",
+      "node scripts/validate-automation-spec.mjs --slice nutrition-products-cross-slice-release-qa",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "ingredient-845-approved-838-strict-excluded-7-and-replay-zero-write",
+      "all-recipe-34-complete-8-partial-23-unavailable-3-with-missing-not-zero-and-meal-pin-invariance",
+      "public-product-287041-local-catalog-and-no-runtime-provider-fetch",
+      "shared-manual-owner-report-anonymization-and-pin-retention",
+      "planner-product-isolation-and-direct-basis-only",
+      "fresh-local-supabase-rls-postgrest-digest-and-zero-external-write",
+      "security-performance-code-review-on-exact-verification-head"
+    ]
+  },
+  "frontend": {
+    "branch": "feature/fe-nutrition-products-cross-slice-release-qa",
+    "required_routes": [
+      "RECIPE_DETAIL:NUTRITION_STATE_CARD",
+      "FOOD_PRODUCT_PICKER:SEARCH_SOURCE_TAG_AND_BASIS",
+      "FOOD_PRODUCT_CREATE:SHARED_MANUAL_CREATE_AND_PICKER_RETURN",
+      "PLANNER_WEEK:PLANNED_NUTRITION_SUMMARY",
+      "MEAL_SCREEN:PRODUCT_ENTRY_QUANTITY_EDIT_AND_DELETE",
+      "SETTINGS_ACCOUNT_DELETE_CONFIRM:ACCOUNT_DELETION_CONFIRM_AND_ANONYMIZATION"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized",
+      "partial",
+      "unavailable",
+      "temporarily-unavailable",
+      "basis-mismatch"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/recipe-nutrition-ui.test.tsx tests/community-prepared-food-catalog-ui.test.tsx tests/prepared-food-planner-entry-ui.test.tsx tests/planner-nutrition-ui.test.tsx tests/planner-week-screen.test.tsx tests/planner-meal-screen.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm verify:frontend",
+      "pnpm test:e2e:regression:ci --grep 'recipe-nutrition-calculation|community-prepared-food-catalog|prepared-food-planner-entry|planner-nutrition-summary|prepared-food-standard-basis-ux'",
+      "pnpm qa:explore -- --slice nutrition-products-cross-slice-release-qa",
+      "pnpm qa:eval -- --checklist .artifacts/qa/nutrition-products-cross-slice-release-qa/latest/exploratory-checklist.json --report .artifacts/qa/nutrition-products-cross-slice-release-qa/latest/exploratory-report.json",
+      "pnpm validate:exploratory-qa-evidence",
+      "pnpm validate:authority-evidence-presence -- --slice nutrition-products-cross-slice-release-qa",
+      "pnpm validate:closeout-sync -- --slice nutrition-products-cross-slice-release-qa",
+      "git diff --check"
+    ],
+    "playwright_projects": ["chromium-390", "chromium-320", "chromium-desktop"],
+    "artifact_assertions": [
+      "recipe-detail-ready-partial-unavailable-temporary-split-without-collapsing-all-recipes-to-information-pending",
+      "public-dataset-shared-manual-and-legacy-private-source-tags-and-label-basis-text",
+      "solid-100g-liquid-100ml-and-no-inference-direct-relation-only",
+      "food-product-create-shared-manual-create-edit-delete-and-picker-return",
+      "shared-manual-auth-a-b-report-and-account-anonymization-read-only-pin-retention",
+      "planner-product-add-edit-delete-and-100-to-101g-recalculation",
+      "recipe-plus-product-planned-nutrition-with-shopping-cooking-leftover-xp-isolation",
+      "settings-account-delete-confirm-anonymization-and-pin-retention",
+      "screen-by-screen-real-chrome-320-390-desktop-overflow-zero-and-forty-four-pixel-targets",
+      "fresh-current-head-exploratory-eval-and-authority-report"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": ["RECIPE_DETAIL", "PLANNER_WEEK"],
+      "required_screens": ["RECIPE_DETAIL", "FOOD_PRODUCT_PICKER", "FOOD_PRODUCT_CREATE", "PLANNER_WEEK", "MEAL_SCREEN", "SETTINGS_ACCOUNT_DELETE_CONFIRM"],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/RECIPE_DETAIL-390.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/RECIPE_DETAIL-320.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/RECIPE_DETAIL-desktop-1280.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/FOOD_PRODUCT_PICKER-390.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/FOOD_PRODUCT_PICKER-320.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/FOOD_PRODUCT_PICKER-desktop-1280.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/FOOD_PRODUCT_CREATE-390.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/FOOD_PRODUCT_CREATE-320.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/FOOD_PRODUCT_CREATE-desktop-1280.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/PLANNER_WEEK-390.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/PLANNER_WEEK-320.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/PLANNER_WEEK-desktop-1280.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/MEAL_SCREEN-390.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/MEAL_SCREEN-320.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/MEAL_SCREEN-desktop-1280.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/SETTINGS_ACCOUNT_DELETE_CONFIRM-390.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/SETTINGS_ACCOUNT_DELETE_CONFIRM-320.png",
+        "ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/SETTINGS_ACCOUNT_DELETE_CONFIRM-desktop-1280.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/PLANNER_WEEK-nutrition-products-cross-slice-release-qa-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "manual:fresh-local-supabase-full-migrations-rls-postgrest-auth-and-real-chrome-verification",
+    "manual:local-ingredient-845-approved-838-strict-excluded-7-with-zero-write-replay-and-no-secret-raw-private-path-leak",
+    "manual:local-all-recipe-34-complete-8-partial-23-unavailable-3-replay-zero-write-rollback-34-and-meal-pin-invariance",
+    "manual:local-public-products-287041-source-tag-label-basis-no-inference-auth-a-b-food-product-create-edit-delete-report-and-account-anonymization",
+    "manual:planner-add-edit-delete-100-to-101g-recalculation-recipe-plus-product-nutrition-and-workflow-isolation",
+    "manual:real-chrome-recipe-detail-food-product-picker-food-product-create-planner-week-meal-screen-settings-account-delete-confirm-at-320-390-desktop-current-head-authority-and-exploratory-evidence",
+    "manual:independent-security-performance-code-and-stage6-review-on-current-head",
+    "manual:production-staging-provider-write-remains-intentionally-zero"
+  ],
+  "blocked_conditions": [
+    "verification-only-slice-introduces-runtime-code-api-db-or-official-contract-changes",
+    "ingredient-coverage-counts-drift-from-845-equals-838-plus-7-or-replay-is-nonzero",
+    "all-recipe-statuses-drift-from-34-equals-8-plus-23-plus-3-or-meal-pins-change",
+    "recipe-detail-collapses-snapshotted-recipes-into-information-pending",
+    "public-product-count-is-not-287041-or-source-tag-label-basis-no-inference-contract-breaks",
+    "shared-manual-owner-report-food-product-create-or-anonymization-pin-retention-flow-fails",
+    "fresh-local-supabase-migrations-rls-postgrest-auth-or-target-digest-cannot-be-verified",
+    "item-level-n-plus-1-runtime-provider-fetch-secret-raw-private-path-leak-or-external-write-appears",
+    "recipe-detail-food-product-picker-food-product-create-planner-week-meal-screen-or-settings-account-delete-confirm-320-390-desktop-evidence-or-authority-report-is-missing",
+    "current-head-started-checks-have-pending-or-failed-results",
+    "defect-is-fixed-inline-instead-of-through-a-separate-tdd-repair-pr-and-full-rerun"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  },
+  "notes": "Verification-only successor release QA for the merged nutrition/products/planner chain on master ancestry 58a3f805864af9627616c50c117eb3c7f94f72a2. Stage 2/3 replays the already-merged ingredient coverage, all-recipe recalculation, public product import, community sharing, planner nutrition, standard-basis, and DELETE /users/me account-deletion/anonymization invariants on fresh local Supabase with real DB, RLS, PostgREST, auth, security, and performance evidence. Stage 4 re-verifies the current merged UI in real Chrome at 390, 320, and desktop 1280, plus fresh authority evidence. If any blocker appears, the fix must ship in a separate TDD repair PR and this release QA reruns on that repaired exact head. Physical-device, screen-reader, true production-scale, and Discord/Amphetamine follow-ups remain Manual Only."
+}
