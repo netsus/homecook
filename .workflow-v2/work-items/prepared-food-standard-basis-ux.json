@@ -54,7 +54,7 @@
       "pnpm validate:authority-evidence-presence",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/prepared-food-standard-basis-ux pnpm validate:workpack -- --slice prepared-food-standard-basis-ux",
+      "BRANCH_NAME=feature/fe-prepared-food-standard-basis-ux pnpm validate:workpack -- --slice prepared-food-standard-basis-ux",
       "node scripts/validate-automation-spec.mjs --slice prepared-food-standard-basis-ux",
       "git diff --check"
     ],
@@ -67,16 +67,16 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "codex_approved",
+    "lifecycle": "ready_for_review",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
-    "blocked_reason_code": "stage1-docs-pr-merge-pending"
+    "blocked_reason_code": null
   },
-  "pr_path": null,
+  "pr_path": "https://github.com/netsus/homecook/pull/1049",
   "out_of_scope": [
     "new-backend-api-schema-status-field-or-error",
     "create-form-prefill-or-integer-basis-contract",
@@ -86,5 +86,5 @@
     "unapproved-production-staging-provider-writes"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs were independently reviewed with APPROVE and blocker/major/minor 0/0/0. Implementation remains blocked until this docs PR merges."
+  "notes": "Stage 1 PR #1048 merged. Stage 4 RED→GREEN repaired g/ml to min=1/step=1 while serving/package remains min=0.01/step=any. UI 83, backend 17, PostgreSQL 11, slice Playwright 3 pass/1 intentional skip, exploratory eval 97, actual local Supabase/Chrome 100→101g recalculation, 320/390/1280 evidence, independent code repair-final and authority PASS are complete. Stage 6 current-head checks remain before merge."
 }
