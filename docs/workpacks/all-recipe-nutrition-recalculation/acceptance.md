@@ -56,7 +56,7 @@
 
 - [x] Playwright는 N/A다. 이번 변경은 공개 UI/브라우저 흐름 추가가 없는 백엔드 내부 재계산 경로이므로, 브라우저 자동화 대신 Vitest와 PostgreSQL 실DB 검증이 권위 있는 자동화 수단이다. <!-- omo:id=arnr-acc-026;stage=2;scope=shared;review=3 -->
 
-## Manual Only
+### Manual Only
 
 - [ ] staging 또는 production 승인 환경에서 service role 실행 범위, 외부 승인 절차, 비밀값 취급 로그를 최종 점검한다.
 - [ ] staging 또는 production 승인 환경에서 실제 운영 데이터 기준 샘플 재계산 결과를 검토하고, 배포 승인 기록을 남긴다.
