@@ -179,6 +179,10 @@ describe("community prepared food catalog picker", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "사용자 등록" }));
 
+    expect(screen.getByRole("button", { name: "사용자 등록" }).className).toContain(
+      "text-[var(--foreground)]",
+    );
+
     await waitFor(() =>
       expect(fetchFoodProducts).toHaveBeenLastCalledWith({
         q: "",
@@ -189,7 +193,7 @@ describe("community prepared food catalog picker", () => {
     expect(screen.queryByText("공공 요거트")).toBeNull();
     expect(screen.getByText("공유 두유")).toBeTruthy();
     expect(screen.getByText("비공개 그래놀라")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "목록에 없나요? 새 완제품 등록" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "새 완제품 등록" })).toBeNull();
   });
 
   it("shows 100g or 100mL comparison first when the product has a direct comparable basis, and keeps legacy serving/package as not comparable otherwise", async () => {
@@ -302,6 +306,7 @@ describe("community prepared food catalog picker", () => {
     );
 
     const deleteButton = await screen.findByRole("button", { name: "내 그래놀라 삭제" });
+    expect(deleteButton.className).toContain("text-[var(--danger-strong)]");
     expect(screen.getByRole("button", { name: "내 그래놀라 수정" })).toBeTruthy();
     await userEvent.click(deleteButton);
     expect(screen.getByText('"내 그래놀라" 제품을 삭제할까요?')).toBeTruthy();

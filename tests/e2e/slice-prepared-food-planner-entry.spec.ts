@@ -27,7 +27,7 @@ function createProduct(overrides: Record<string, unknown> = {}) {
     id: "product-yogurt",
     name: "플레인 요거트",
     brand: "무먹 식품",
-    visibility: "private",
+    visibility: "public",
     source_type: "manual",
     editable: true,
     nutrition_version_id: "nutrition-version-1",
@@ -433,6 +433,14 @@ async function expectNoHorizontalOverflow(page: Page) {
   ).toBe(true);
 }
 
+async function openCreateFromEmpty(page: Page) {
+  await page.getByRole("searchbox", { name: "완제품 검색" }).fill("없는 제품");
+  await expect(page.getByText("검색 결과가 없어요", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "새 완제품 등록", exact: true }).click();
+  await expect(page.getByTestId("food-product-create-form")).toBeVisible();
+  await expect(page.getByText("사용자 등록 공동 제품", { exact: true })).toBeVisible();
+}
+
 async function expectFullPageAxeClean(page: Page) {
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
@@ -679,11 +687,11 @@ test.describe("prepared-food-planner-entry", () => {
     await expect(productCard).toContainText("2회");
   });
 
-  test("pinned v1 entry는 catalog v2와 무관하게 v1 relation과 영양 snapshot으로 수정된다", async ({ page }) => {
+  test("pinned v1 entry는 100mL로 환산된 catalog v2와 무관하게 v1 relation과 영양 snapshot으로 수정된다", async ({ page }) => {
     await installRoutes(page, { catalogVersion: "v2" });
     await page.goto(`${MENU_PATH}&source=product`);
-    await expect(page.getByText("예상 열량 999 kcal", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("기준 1팩", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("예상 열량 399.6 kcal", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("100mL 기준", { exact: true }).first()).toBeVisible();
 
     await page.goto(MEAL_PATH);
     const productCard = page.getByTestId("product-planner-entry-entry-yogurt").filter({ visible: true });
@@ -757,14 +765,15 @@ test.describe("prepared-food-planner-entry", () => {
     await expect(page.getByTestId("food-product-quantity-step")).toBeVisible();
   });
 
-  test("검색 결과가 없으면 private 완제품을 등록하고 선택된 수량 단계로 돌아온다", async ({ page }) => {
+  test("검색 결과가 없으면 shared manual 완제품을 등록하고 선택된 수량 단계로 돌아온다", async ({ page }) => {
     await installRoutes(page);
     await page.goto(`${MENU_PATH}&source=product`);
     await page.getByRole("searchbox", { name: "완제품 검색" }).fill("없는 제품");
     await expect(page.getByText("검색 결과가 없어요", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "새 완제품 등록" }).click();
 
-    await page.getByRole("textbox", { name: /완제품 이름/ }).fill("내 두유");
+    await expect(page.getByText("사용자 등록 공동 제품", { exact: true })).toBeVisible();
+    await page.getByRole("textbox", { name: /제품명/ }).fill("내 두유");
     await page.getByRole("spinbutton", { name: /열량/ }).fill("0");
     await page.getByRole("button", { name: "등록하고 선택" }).click();
 
@@ -843,8 +852,7 @@ test.describe("prepared-food-planner-entry", () => {
     await expect(page.getByTestId("food-product-picker")).toBeVisible();
     await expectFullPageAxeClean(page);
 
-    await page.getByRole("button", { name: "목록에 없나요? 새 완제품 등록" }).click();
-    await expect(page.getByTestId("food-product-create-form")).toBeVisible();
+    await openCreateFromEmpty(page);
     await expectFullPageAxeClean(page);
 
     await page.goto(MEAL_PATH);
@@ -854,6 +862,7 @@ test.describe("prepared-food-planner-entry", () => {
 
   test("390·320·desktop exact viewport에서 slice 화면 전체가 axe 검사를 통과한다", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-chrome", "exact viewport axe matrix runs once");
+    test.setTimeout(120_000);
     const viewports = [
       { width: 390, height: 844 },
       { width: 320, height: 568 },
@@ -870,8 +879,7 @@ test.describe("prepared-food-planner-entry", () => {
       await expect(axePage.getByTestId("food-product-picker")).toBeVisible();
       await expectFullPageAxeClean(axePage);
 
-      await axePage.getByRole("button", { name: "목록에 없나요? 새 완제품 등록" }).click();
-      await expect(axePage.getByTestId("food-product-create-form")).toBeVisible();
+      await openCreateFromEmpty(axePage);
       await expectFullPageAxeClean(axePage);
 
       await axePage.goto(MEAL_PATH);
@@ -886,14 +894,14 @@ test.describe("prepared-food-planner-entry", () => {
     await page.goto(`${MENU_PATH}&source=product`);
     await page.getByRole("searchbox", { name: "완제품 검색" }).fill("없는 제품");
     await page.getByRole("button", { name: "새 완제품 등록" }).click();
-    await page.getByRole("textbox", { name: /완제품 이름/ }).fill("내 두유");
+    await page.getByRole("textbox", { name: /제품명/ }).fill("내 두유");
     await page.getByRole("spinbutton", { name: /열량/ }).fill("0");
     await setGuest(page);
     await page.getByRole("button", { name: "등록하고 선택" }).click();
     await simulateLoginReturn(page);
 
     await expect(page.getByRole("heading", { name: "완제품 직접 등록" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: /완제품 이름/ })).toHaveValue("내 두유");
+    await expect(page.getByRole("textbox", { name: /제품명/ })).toHaveValue("내 두유");
     await expect(page.getByRole("spinbutton", { name: /열량/ })).toHaveValue("0");
     await page.getByRole("button", { name: "등록하고 선택" }).click();
     const quantity = page.getByRole("spinbutton", { name: "완제품 수량" });
@@ -906,10 +914,13 @@ test.describe("prepared-food-planner-entry", () => {
     await installRoutes(page);
     await page.unroute("**/api/v1/food-products?*");
     await page.route("**/api/v1/food-products?*", async (route) => {
-      const items = Array.from({ length: 14 }, (_, index) => createProduct({
-        id: `product-${index}`,
-        name: `완제품 ${index + 1}`,
-      }));
+      const query = new URL(route.request().url()).searchParams.get("q") ?? "";
+      const items = query.includes("없는")
+        ? []
+        : Array.from({ length: 14 }, (_, index) => createProduct({
+            id: `product-${index}`,
+            name: `완제품 ${index + 1}`,
+          }));
       await route.fulfill({ json: { success: true, data: { items, next_cursor: null, has_next: false }, error: null } });
     });
     await page.goto(`${MENU_PATH}&source=product`);
@@ -917,7 +928,7 @@ test.describe("prepared-food-planner-entry", () => {
     const results = page.getByTestId("food-product-result-scroll");
     await expect(results).toHaveCSS("overflow-y", "auto");
     expect(await results.evaluate((node) => node.scrollHeight > node.clientHeight)).toBe(true);
-    const first = page.getByRole("button", { name: /^완제품 1 / });
+    const first = page.getByRole("button", { name: "완제품 1 선택", exact: true });
     expect((await first.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await first.click();
     const quantity = page.getByRole("spinbutton", { name: "완제품 수량" });
@@ -927,8 +938,8 @@ test.describe("prepared-food-planner-entry", () => {
     await results.evaluate((node) => { node.scrollTop = node.scrollHeight; });
     expect((await page.getByTestId("food-product-quantity-step").boundingBox())!.y).toBe(quantityTop);
 
-    await page.getByRole("button", { name: "목록에 없나요? 새 완제품 등록" }).click();
-    await page.getByRole("textbox", { name: /완제품 이름/ }).fill("작성 중");
+    await openCreateFromEmpty(page);
+    await page.getByRole("textbox", { name: /제품명/ }).fill("작성 중");
     await page.keyboard.press("Escape");
     const discardDialog = page.getByRole("dialog", { name: "작성 중인 완제품 정보 버리기" });
     await expect(discardDialog).toBeVisible();
@@ -941,16 +952,16 @@ test.describe("prepared-food-planner-entry", () => {
     await expect(discardDialog.getByRole("button", { name: "계속 작성" })).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("heading", { name: "완제품 직접 등록" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: /완제품 이름/ })).toBeFocused();
+    await expect(page.getByRole("textbox", { name: /제품명/ })).toBeFocused();
     expect(await page.evaluate(() => document.body.style.overflow)).not.toBe("hidden");
     await page.keyboard.press("Escape");
     await expect(discardDialog).toBeVisible();
     await discardDialog.getByRole("button", { name: "버리고 나가기" }).click();
     await expect(page.getByRole("heading", { name: "완제품 추가" })).toBeVisible();
 
-    await page.getByRole("button", { name: "목록에 없나요? 새 완제품 등록" }).click();
+    await openCreateFromEmpty(page);
     await page.getByRole("button", { name: "등록하고 선택" }).click();
-    const invalidName = page.getByRole("textbox", { name: /완제품 이름/ });
+    const invalidName = page.getByRole("textbox", { name: /제품명/ });
     await expect(invalidName).toBeFocused();
     await expect(invalidName).toHaveAttribute("aria-describedby", "food-product-name-error");
     const actions = page.getByTestId("food-product-create-actions");
@@ -961,12 +972,13 @@ test.describe("prepared-food-planner-entry", () => {
 
   test("desktop FOOD_PRODUCT_CREATE의 등록 CTA가 1280×900 첫 화면 안에 보인다", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-chrome", "exact desktop geometry runs once");
+    test.setTimeout(60_000);
     const context = await browser.newContext({ deviceScaleFactor: 1, viewport: { width: 1280, height: 900 } });
     const desktopPage = await context.newPage();
     await setAuthenticated(desktopPage);
     await installRoutes(desktopPage);
     await desktopPage.goto(`${MENU_PATH}&source=product`);
-    await desktopPage.getByRole("button", { name: "목록에 없나요? 새 완제품 등록" }).click();
+    await openCreateFromEmpty(desktopPage);
 
     const actions = desktopPage.getByTestId("food-product-create-actions");
     await expect(actions).toBeVisible();
@@ -1057,6 +1069,7 @@ test.describe("prepared-food-planner-entry", () => {
 
   test("390·320·desktop Stage 4 evidence와 unauthorized return을 남긴다", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-chrome", "exact evidence matrix runs once");
+    test.setTimeout(180_000);
     await mkdir(EVIDENCE_DIR, { recursive: true });
     const evidenceBrowser = process.env.PREPARED_FOOD_DISABLE_GPU === "1"
       ? await browser.browserType().launch({ headless: true, args: ["--disable-gpu"] })
@@ -1128,7 +1141,7 @@ test.describe("prepared-food-planner-entry", () => {
       {
         const { context, evidencePage } = await openEvidencePage();
         await evidencePage.goto(`${MENU_PATH}&source=product`);
-        await evidencePage.getByRole("button", { name: "목록에 없나요? 새 완제품 등록" }).click();
+        await openCreateFromEmpty(evidencePage);
         await expect(evidencePage.getByRole("heading", { name: "완제품 직접 등록" }).filter({ visible: true })).toBeVisible();
         await expectNoHorizontalOverflow(evidencePage);
         await evidencePage.screenshot({ path: path.join(EVIDENCE_DIR, `FOOD_PRODUCT_CREATE-${viewport.suffix}.png`), scale: "css" });

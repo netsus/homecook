@@ -815,7 +815,7 @@ export function FoodProductPicker({
               className={[
                 "min-h-11 rounded-full border px-4 text-sm font-bold",
                 selected
-                  ? "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-text)]"
+                  ? "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--foreground)]"
                   : "border-[var(--line)] bg-[var(--surface-fill)] text-[var(--text-2)]",
               ].join(" ")}
               key={filter.value}
@@ -910,7 +910,7 @@ export function FoodProductPicker({
                             수정
                           </button>
                           <button
-                            className="min-h-11 rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 text-xs font-bold text-[var(--danger)]"
+                            className="min-h-11 rounded-[var(--radius-control)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 text-xs font-bold text-[var(--danger-strong)]"
                             aria-label={`${product.name} 삭제`}
                             onClick={(event) => {
                               event.stopPropagation();
