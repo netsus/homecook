@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -442,6 +442,117 @@ describe("SettingsScreen", () => {
     await user.click(backButton);
     expect(mockRouterReplace).toHaveBeenCalledWith("/mypage");
     expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it("ignores Escape during pending account deletion on mobile", async () => {
+    const onCloseDeleteDialog = vi.fn();
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        isDeleting
+        onCloseDeleteDialog={onCloseDeleteDialog}
+        showDeleteDialog
+      />,
+    );
+    const user = userEvent.setup();
+
+    expect(screen.getByRole("alertdialog", { name: "정말 계정을 삭제할까요?" })).toBeTruthy();
+
+    await user.keyboard("{Escape}");
+
+    expect(onCloseDeleteDialog).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "정말 계정을 삭제할까요?" })).toBeTruthy();
+  });
+
+  it("ignores backdrop clicks during pending account deletion on mobile", async () => {
+    const onCloseDeleteDialog = vi.fn();
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        isDeleting
+        onCloseDeleteDialog={onCloseDeleteDialog}
+        showDeleteDialog
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("alertdialog", { name: "정말 계정을 삭제할까요?" }).parentElement!);
+
+    expect(onCloseDeleteDialog).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "정말 계정을 삭제할까요?" })).toBeTruthy();
+  });
+
+  it("ignores Escape during pending logout on mobile", async () => {
+    const onCloseLogoutDialog = vi.fn();
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        isLoggingOut
+        onCloseLogoutDialog={onCloseLogoutDialog}
+        showLogoutDialog
+      />,
+    );
+    const user = userEvent.setup();
+
+    expect(screen.getByRole("alertdialog", { name: "로그아웃 할까요?" })).toBeTruthy();
+
+    await user.keyboard("{Escape}");
+
+    expect(onCloseLogoutDialog).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "로그아웃 할까요?" })).toBeTruthy();
+  });
+
+  it("ignores backdrop clicks during pending logout on mobile", async () => {
+    const onCloseLogoutDialog = vi.fn();
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        isLoggingOut
+        onCloseLogoutDialog={onCloseLogoutDialog}
+        showLogoutDialog
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("alertdialog", { name: "로그아웃 할까요?" }).parentElement!);
+
+    expect(onCloseLogoutDialog).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "로그아웃 할까요?" })).toBeTruthy();
+  });
+
+  it("ignores Escape during pending meal-column deletion on mobile", async () => {
+    const onCloseDeleteColumnDialog = vi.fn();
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        deleteColumnTarget={{ id: "col-2", name: "점심", sort_order: 1 }}
+        isDeletingColumn
+        onCloseDeleteColumnDialog={onCloseDeleteColumnDialog}
+      />,
+    );
+    const user = userEvent.setup();
+
+    expect(screen.getByRole("alertdialog", { name: "끼니 삭제" })).toBeTruthy();
+
+    await user.keyboard("{Escape}");
+
+    expect(onCloseDeleteColumnDialog).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "끼니 삭제" })).toBeTruthy();
+  });
+
+  it("ignores backdrop clicks during pending meal-column deletion on mobile", async () => {
+    const onCloseDeleteColumnDialog = vi.fn();
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        deleteColumnTarget={{ id: "col-2", name: "점심", sort_order: 1 }}
+        isDeletingColumn
+        onCloseDeleteColumnDialog={onCloseDeleteColumnDialog}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("alertdialog", { name: "끼니 삭제" }).parentElement!);
+
+    expect(onCloseDeleteColumnDialog).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "끼니 삭제" })).toBeTruthy();
   });
 
   // --- Loading ---

@@ -7,6 +7,7 @@ import React from "react";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { AppFeedbackToast } from "@/components/shared/app-feedback-toast";
 import { useAppReturn } from "@/components/shared/use-app-return";
+import { useDialogBoundary } from "@/components/shared/use-dialog-boundary";
 import { SettingsMobileColumnLoadingContent } from "@/components/settings/settings-mobile-loading";
 import type { UserProfileData } from "@/lib/api/mypage";
 import type { PlannerColumnData } from "@/types/planner";
@@ -777,15 +778,38 @@ function MobileConfirmSheet({
   onConfirm: () => void;
   title: string;
 }) {
+  const dialogRef = React.useRef<HTMLDivElement | null>(null);
+  const titleId = React.useId();
+  const handleBackdropClick = () => {
+    if (disabled) {
+      return;
+    }
+    onCancel();
+  };
+
+  useDialogBoundary({
+    closeOnEscape: !disabled,
+    dialogRef,
+    initialFocusRef: undefined,
+    onClose: onCancel,
+  });
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)]">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--overlay-40)]"
+      onClick={handleBackdropClick}
+    >
       <div
+        aria-labelledby={titleId}
         aria-modal="true"
         className="w-full rounded-t-[var(--radius-sheet)] bg-[var(--surface)] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2"
+        onClick={(event) => event.stopPropagation()}
+        ref={dialogRef}
         role="alertdialog"
+        tabIndex={-1}
       >
         <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[var(--line-strong)]" />
-        <h2 className="text-[18px] font-extrabold text-[var(--foreground)]">
+        <h2 className="text-[18px] font-extrabold text-[var(--foreground)]" id={titleId}>
           {title}
         </h2>
         {description ? (
