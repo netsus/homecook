@@ -101,7 +101,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "codex_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
@@ -119,5 +119,5 @@
     "discord-or-amphetamine-automation-before-final-merge-closeout"
   ],
   "open_questions": [],
-  "notes": "Stage 1 docs branch opened by Codex per explicit user instruction in dedicated worktree. This slice is verification-only and must not change runtime product code, API, DB schema, or official contracts. It starts from merged master ancestry 58a3f805864af9627616c50c117eb3c7f94f72a2 and re-verifies the merged successor chain: ingredient coverage 845 = 838 approved exactly once + 7 strict excluded with replay 0-write; all-recipe lifecycle 34 = complete 8 + partial 23 + unavailable 3 with rollback 34 and unchanged Meal pins; public product catalog 287,041 with source tags, label basis, shared-manual auth A/B, report, anonymization, and no inference; planner add/edit/delete with 100→101g recalculation and recipe/workflow isolation; fresh local Supabase full migrations/RLS/PostgREST/auth; real Chrome 320/390/desktop evidence; fresh authority; independent security/performance/code/Stage 6 review; and current-head started checks all success or intentional skip. Any defect must be fixed in a separate TDD repair PR and this release QA reruns on that repaired exact head."
+  "notes": "Stage 2/3 evidence PR #1053 merged as 05290f65 after repair PR #1052 exact-head rerun: ingredient 845 = 838 + 7 with replay 0-write; recipe 34 = 8 + 23 + 3 with rollback and unchanged Meal pins; public product catalog 287,041; shared-manual auth A/B, report, account anonymization and retained pin; normalized 100g/100mL basis; fresh local Supabase; warmed SQL/route performance; independent code/security/performance/integrated reviews with zero unresolved findings. Slice remains in_progress because Stage 4 real Chrome 320/390/desktop, authority, Stage 5/6 final review, and final current-head closeout are pending. Verification-only and zero production/staging/provider writes remain mandatory."
 }

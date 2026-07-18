@@ -10,6 +10,10 @@
 
 ## Revision Notes
 
+- `v2` nutrition products/planner release QA Stage 2/3 (2026-07-19 KST, UTC+09:00)
+  - repair PR #1052 merge `a3301e16` 이후 exact repaired head에서 ingredient `845`, recipe `34`, public products `287,041`, auth A/B anonymization/pin retention, SQL/route 성능을 처음부터 재검증했다.
+  - Stage 2/3 evidence PR #1053 merge `05290f65`와 independent code/security/performance/integrated review `0` findings를 반영해 slice 상태를 `in-progress`로 전환한다. Stage 4 real Chrome/authority와 Stage 5/6 closeout은 계속 pending이다.
+
 - `v2` nutrition products/planner release QA Stage 1 (2026-07-18)
   - `nutrition-products-cross-slice-release-qa`를 `docs`로 전환하고 verification-only 최종 release gate를 잠갔다. 기준 ancestry는 master `58a3f805864af9627616c50c117eb3c7f94f72a2`이며 predecessor/closeout는 모두 merged 상태다.
   - Stage 2/3은 fresh local Supabase full migrations/RLS/PostgREST/security/performance와 ingredient `845`, recipe `34`, public products `287,041` 실측 검증 lane, Stage 4는 real Chrome 320/390/desktop + authority evidence lane으로 정의했다. defect는 inline fix가 아니라 separate TDD repair PR 뒤 exact repaired head 재검증 규칙을 따른다.
@@ -225,7 +229,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `public-prepared-food-catalog-import` | merged | 검수된 공공 완제품 287,041개를 local catalog로 승격하고 stable key, attribution, rollback과 검색 경로를 닫았다. PR #1035 merge |
 | `community-prepared-food-catalog` | merged | 공공 영양DB·사용자 등록·비공개 보관을 구분하고 공동 검색, owner-only 수정·삭제, 신고, 탈퇴 후 익명 read-only·기존 pin 보존을 구현했다. PR #1046 merge |
 | `prepared-food-standard-basis-ux` | merged | 고형 100g·액상 100mL 비교, source/label, 추정 금지를 교차 잠그고 MEAL_SCREEN g/mL 수량을 1g/1mL 단위로 안전하게 편집하도록 수리했다. PR #1049 merge `1976ecc3` |
-| `nutrition-products-cross-slice-release-qa` | docs | 영양 데이터, 권한, UI, 계산을 실제 local DB/browser/current-head checks 기준으로 교차 검증하고 Manual Only 잔여 위험을 문서화한다 |
+| `nutrition-products-cross-slice-release-qa` | in-progress | 영양 데이터, 권한, UI, 계산을 실제 local DB/browser/current-head checks 기준으로 교차 검증하고 Manual Only 잔여 위험을 문서화한다. Stage 2/3 PR #1053 merge 완료, Stage 4/5/6 pending |
 
 ## Nutrition / Products / Planner Dependency Chain
 
@@ -242,7 +246,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `public-prepared-food-catalog-import` | merged | 2026-07-17 public-sharing official docs = merged, `prepared-food-catalog` = merged | Successor 3; PR #1035 merged. local public products 287,041, replay 0-write, independent Stage 3/current-head checks green |
 | `community-prepared-food-catalog` | merged | `public-prepared-food-catalog-import` = merged, `prepared-food-catalog` = merged | Successor 4; PR #1043/#1044/#1045/#1046 merged. local A/B browser, authority, security/performance/current-head checks green |
 | `prepared-food-standard-basis-ux` | merged | `community-prepared-food-catalog` = merged, `prepared-food-planner-entry` = merged, `planner-nutrition-summary` = merged | Successor 5; PR #1048/#1049 merged. local Supabase/Chrome 100→101g, 320/390/1280, independent review/authority, current-head checks green |
-| `nutrition-products-cross-slice-release-qa` | docs | `ingredient-nutrition-full-coverage` = merged, `all-recipe-nutrition-recalculation` = merged, `public-prepared-food-catalog-import` = merged, `community-prepared-food-catalog` = merged, `prepared-food-standard-basis-ux` = merged | Successor 6; release QA may start only after all prior successor slices merge and its own Stage 1 docs PR merge |
+| `nutrition-products-cross-slice-release-qa` | in-progress | `ingredient-nutrition-full-coverage` = merged, `all-recipe-nutrition-recalculation` = merged, `public-prepared-food-catalog-import` = merged, `community-prepared-food-catalog` = merged, `prepared-food-standard-basis-ux` = merged | Successor 6; Stage 2/3 PR #1053 merge 완료, Stage 4 real Chrome/authority 및 Stage 5/6 pending |
 
 > 위 dependency chain의 2026-07-17 successor slice 순서는 새 공식 SOT와 `nutrition-products-public-data-expansion-20260717.md` 계획을 따른다. 기존 merged slice는 historical predecessor 기록으로 유지하며 planned로 되돌리지 않는다.
 >

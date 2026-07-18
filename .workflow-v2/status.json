@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-18T19:04:23Z",
+  "updated_at": "2026-07-18T21:39:42Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2230,8 +2230,8 @@
     {
       "id": "nutrition-products-cross-slice-release-qa",
       "preset": "vertical-slice-strict",
-      "branch": "docs/nutrition-products-cross-slice-release-qa",
-      "lifecycle": "planned",
+      "branch": "feature/fe-nutrition-products-cross-slice-release-qa",
+      "lifecycle": "in_progress",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -2242,7 +2242,7 @@
         "pnpm validate:omo-bookkeeping",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs branch opened by Codex in the dedicated release-QA worktree. Scope: verification-only final release QA over merged nutrition/products/planner successors on master ancestry 58a3f805864af9627616c50c117eb3c7f94f72a2; ingredient 845=838+7 replay 0-write, recipe 34=8+23+3 Meal pin invariance, public products 287041, shared-manual auth A/B and account anonymization, 100→101g planner recalculation, real local Supabase/RLS/PostgREST/auth, real Chrome 320/390/desktop, authority, independent security/performance/code review, and current-head started checks. Any defect must be fixed in a separate TDD repair PR and release QA rerun on that repaired exact head."
+      "notes": "Stage 2/3 evidence PR #1053 merged as 05290f65 after repair PR #1052 exact-head rerun. Ingredient 845=838+7 replay 0-write, recipe 34=8+23+3 rollback/Meal pin invariance, public products 287041, shared-manual auth A/B/anonymization/pin retention, 100g/100mL, fresh local Supabase, SQL/route performance, and independent code/security/performance/integrated reviews passed with unresolved findings 0. Stage 4 real Chrome/authority and Stage 5/6 final closeout remain pending; zero production/staging/provider writes."
     }
   ]
 }
