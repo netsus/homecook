@@ -1,0 +1,88 @@
+{
+  "slice_id": "prepared-food-standard-basis-ux",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "anchor_extension": true,
+  "anchor_screens": ["PLANNER_WEEK", "MEAL_SCREEN"],
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "existing-pinned-version-and-exactly-one-direct-relation-contract-remains-unchanged",
+      "nutrition-basis-mismatch-remains-422-without-new-error-code",
+      "product-entry-remains-excluded-from-recipe-meal-shopping-cooking-leftover-and-xp",
+      "no-new-api-schema-status-field-endpoint-or-production-staging-write"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/prepared-food-planner-entry-service.test.ts tests/prepared-food-planner-entry-read-model.test.ts tests/planner-nutrition-read-model.test.ts",
+      "pnpm test:prepared-food-planner-entry:postgres"
+    ],
+    "required_test_targets": [
+      "exactly-one-direct-relation-and-no-inference-regression",
+      "pinned-version-and-recipe-workflow-isolation-regression"
+    ]
+  },
+  "frontend": {
+    "branch": "feature/fe-prepared-food-standard-basis-ux",
+    "required_routes": [
+      "PLANNER_WEEK:FOOD_PRODUCT_PICKER",
+      "MEAL_SCREEN:PRODUCT_QUANTITY_EDIT"
+    ],
+    "required_states": ["loading", "empty", "error", "read-only", "unauthorized", "basis-mismatch"],
+    "verify_commands": [
+      "pnpm exec vitest run tests/community-prepared-food-catalog-ui.test.tsx tests/prepared-food-planner-entry-ui.test.tsx tests/planner-meal-screen.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep prepared-food-standard-basis-ux",
+      "pnpm qa:explore -- --slice prepared-food-standard-basis-ux",
+      "pnpm validate:exploratory-qa-evidence",
+      "pnpm validate:authority-evidence-presence"
+    ],
+    "playwright_projects": ["chromium-390", "chromium-320", "chromium-desktop"],
+    "artifact_assertions": [
+      "solid-100g-and-liquid-100ml-comparison",
+      "g-ml-default-100-and-step-one",
+      "meal-screen-g-ml-edit-step-one-and-serving-package-any",
+      "label-basis-and-source-tags",
+      "legacy-no-relation-comparison-unavailable-without-inference",
+      "mismatch-context-preservation",
+      "no-horizontal-overflow-focus-and-forty-four-pixel-targets",
+      "real-local-db-browser-flow"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": ["PLANNER_WEEK", "MEAL_SCREEN"],
+      "required_screens": ["FOOD_PRODUCT_PICKER", "MEAL_SCREEN"],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/MEAL_SCREEN.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/MEAL_SCREEN-prepared-food-standard-basis-ux-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "390-before-after",
+        "320-before-after",
+        "1280-before-after",
+        "real-local-supabase-and-browser-flow"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/PLANNER_WEEK-prepared-food-standard-basis-ux-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "manual:fresh-local-supabase-and-chrome-public-manual-legacy-product-flow",
+    "manual:production-staging-provider-writes-intentionally-zero"
+  ],
+  "blocked_conditions": [
+    "stage1-docs-or-independent-review-not-merged",
+    "meal-screen-g-or-ml-edit-step-is-not-one",
+    "serving-or-package-is-coerced-to-100g-or-100ml",
+    "basis-relation-is-inferred-chained-or-ambiguous",
+    "create-form-prefill-or-basis-integer-is-added-as-new-contract",
+    "source-label-basis-missing-is-normalized-away-or-missing-is-zero-filled",
+    "product-entry-enters-recipe-workflows",
+    "new-api-schema-status-field-endpoint-or-external-write-is-added",
+    "current-head-review-browser-authority-or-responsive-evidence-is-missing"
+  ],
+  "max_fix_rounds": {"backend": 0, "frontend": 4},
+  "notes": "Frontend residual successor. Stage 2/3 backend is N/A because official pinned-version/direct-relation/mismatch contracts are already merged. Stage 4 uses TDD to repair only MealScreen g/ml edit step while revalidating inherited 100g/100mL comparison, source/label display, no inference, and domain isolation."
+}

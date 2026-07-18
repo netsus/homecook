@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-18T10:15:00Z",
+  "updated_at": "2026-07-18T16:52:07Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -1439,8 +1439,8 @@
       "branch": "docs/youtube-author-comment-fallback-contract",
       "pr_path": null,
       "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
@@ -2200,6 +2200,32 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "prepared-food-standard-basis-ux",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/prepared-food-standard-basis-ux",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm exec vitest run tests/community-prepared-food-catalog-ui.test.tsx tests/prepared-food-planner-entry-ui.test.tsx tests/planner-meal-screen.test.tsx",
+        "pnpm verify:frontend:pr",
+        "pnpm test:e2e:regression:ci --grep prepared-food-standard-basis-ux",
+        "pnpm validate:authority-evidence-presence",
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/prepared-food-standard-basis-ux pnpm validate:workpack -- --slice prepared-food-standard-basis-ux",
+        "node scripts/validate-automation-spec.mjs --slice prepared-food-standard-basis-ux",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs lock the already-approved 100g/100mL comparison, g/mL default 100 and step 1, source/label display, direct-relation-only and Recipe workflow isolation. The only implementation residual is MealScreen g/mL edit step; backend Stage 2/3 is N/A. Fresh independent internal 1.5 review returned APPROVE with blocker/major/minor 0/0/0; implementation remains blocked until the docs PR merges.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": "stage1-docs-pr-merge-pending"
     }
   ]
 }
