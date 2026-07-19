@@ -712,6 +712,7 @@ export function PlannerWeekScreen({
   const weekStripSettleTimerRef = useRef<number | null>(null);
   const isWeekStripInteractingRef = useRef(false);
   const isRecenteringWeekStripRef = useRef(false);
+  const weekStripInteractionTokenRef = useRef(0);
   const getActiveWeekStripViewport = useCallback(
     () => (isDesktopViewport ? webWeekStripViewportRef.current : mobileWeekStripViewportRef.current),
     [isDesktopViewport],
@@ -766,21 +767,6 @@ export function PlannerWeekScreen({
     weekStripSettleTimerRef.current = null;
   }
 
-  const recenterWeekStripViewport = useCallback(() => {
-    const viewport = getActiveWeekStripViewport();
-
-    if (!viewport) {
-      return;
-    }
-
-    const targetLeft = viewport.clientWidth * WEEK_PAGE_INDEX_CURRENT;
-    isRecenteringWeekStripRef.current = true;
-    viewport.scrollLeft = targetLeft;
-    window.requestAnimationFrame(() => {
-      isRecenteringWeekStripRef.current = false;
-    });
-  }, [getActiveWeekStripViewport]);
-
   function commitSettledWeekStripPage() {
     const viewport = getActiveWeekStripViewport();
 
@@ -830,6 +816,7 @@ export function PlannerWeekScreen({
   }
 
   function handleWeekStripInteractionStart() {
+    weekStripInteractionTokenRef.current += 1;
     isWeekStripInteractingRef.current = true;
     clearWeekStripSettleTimer();
   }
@@ -974,8 +961,75 @@ export function PlannerWeekScreen({
       return;
     }
 
-    recenterWeekStripViewport();
-  }, [authState, rangeEndDate, rangeStartDate, recenterWeekStripViewport]);
+    let cancelled = false;
+    let frameId: number | null = null;
+    const interactionTokenAtStart = weekStripInteractionTokenRef.current;
+    let waitedForViewportAvailability = false;
+
+    const recenterWeekStripViewport = (attempt: number) => {
+      if (cancelled) {
+        return;
+      }
+
+      if (weekStripInteractionTokenRef.current !== interactionTokenAtStart) {
+        isRecenteringWeekStripRef.current = false;
+        return;
+      }
+
+      const viewport = getActiveWeekStripViewport();
+
+      if (!viewport || viewport.clientWidth <= 0) {
+        waitedForViewportAvailability = true;
+        if (attempt < 8) {
+          frameId = window.requestAnimationFrame(() => {
+            recenterWeekStripViewport(attempt + 1);
+          });
+        }
+        return;
+      }
+
+      if (isWeekStripInteractingRef.current) {
+        if (attempt < 8) {
+          frameId = window.requestAnimationFrame(() => {
+            recenterWeekStripViewport(attempt + 1);
+          });
+        }
+        return;
+      }
+
+      const targetLeft = viewport.clientWidth * WEEK_PAGE_INDEX_CURRENT;
+      if (
+        waitedForViewportAvailability &&
+        viewport.scrollLeft !== 0 &&
+        viewport.scrollLeft !== targetLeft
+      ) {
+        isRecenteringWeekStripRef.current = false;
+        return;
+      }
+      if (viewport.scrollLeft === targetLeft) {
+        isRecenteringWeekStripRef.current = false;
+        return;
+      }
+      isRecenteringWeekStripRef.current = true;
+      viewport.scrollLeft = targetLeft;
+      frameId = window.requestAnimationFrame(() => {
+        if (cancelled) {
+          return;
+        }
+        isRecenteringWeekStripRef.current = false;
+      });
+    };
+
+    recenterWeekStripViewport(0);
+
+    return () => {
+      cancelled = true;
+      isRecenteringWeekStripRef.current = false;
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
+  }, [authState, getActiveWeekStripViewport, rangeEndDate, rangeStartDate]);
 
   useEffect(() => {
     return () => {
