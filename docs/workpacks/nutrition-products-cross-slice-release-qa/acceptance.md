@@ -45,8 +45,8 @@
 
 ## Merge Gate
 
-- [ ] exact verification head의 started checks는 모두 success 또는 intentional skip이고 pending/fail이 `0`이다 <!-- omo:id=accept-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
-- [ ] independent Stage 6 reviewer가 acceptance, review reports, authority evidence, actual verification refs를 읽고 unresolved finding `0`이다 <!-- omo:id=accept-release-qa-stage6;stage=4;scope=shared;review=6 -->
+- [x] exact verification head의 started checks는 모두 success 또는 intentional skip이고 pending/fail이 `0`이다 <!-- omo:id=accept-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
+- [x] independent Stage 6 reviewer가 acceptance, review reports, authority evidence, actual verification refs를 읽고 unresolved finding `0`이다 <!-- omo:id=accept-release-qa-stage6;stage=4;scope=shared;review=6 -->
 
 ## Data Setup / Preconditions
 
@@ -72,7 +72,7 @@
 ### Stage 4 Browser / Authority
 
 - [x] planner / product / recipe nutrition 관련 frontend Vitest, Playwright, exploratory QA/eval, authority evidence를 실행한다 <!-- omo:id=accept-release-qa-frontend-automation;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 4 shared closeout은 current-head checks / Stage 6 final review까지 포함해 frontend review와 분리 기록한다 <!-- omo:id=accept-release-qa-shared-closeout;stage=4;scope=shared;review=6 -->
+- [x] Stage 4 shared closeout은 current-head checks / Stage 6 final review까지 포함해 frontend review와 분리 기록한다 <!-- omo:id=accept-release-qa-shared-closeout;stage=4;scope=shared;review=6 -->
 
 ### Manual Only
 

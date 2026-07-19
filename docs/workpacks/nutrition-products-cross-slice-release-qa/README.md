@@ -104,6 +104,7 @@ Stage 3 reviews: [evidence/2026-07-18-stage3-reviews.md](./evidence/2026-07-18-s
 
 Stage 4 evidence: [evidence/2026-07-18-stage4-real-browser.md](./evidence/2026-07-18-stage4-real-browser.md)
 Stage 5 review: [evidence/2026-07-19-stage5-review.md](./evidence/2026-07-19-stage5-review.md)
+Stage 6 closeout: [evidence/2026-07-19-stage6-closeout.md](./evidence/2026-07-19-stage6-closeout.md)
 
 ## Backend First Contract
 
@@ -161,8 +162,8 @@ Stage 5 review: [evidence/2026-07-19-stage5-review.md](./evidence/2026-07-19-sta
 ## Design Status
 
 - [ ] 임시 UI (temporary)
-- [x] 리뷰 대기 (pending-review) — Stage 4 evidence와 Stage 5 authority는 통과했고 Stage 6 final review가 pending
-- [ ] 확정 (confirmed) — Stage 5 authority + Stage 6 final review + current-head checks green 후에만 가능
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed) — Stage 5 authority + independent Stage 6 review + current-head checks green
 - [ ] N/A
 
 ## Source Links
@@ -234,4 +235,4 @@ Stage 5 review: [evidence/2026-07-19-stage5-review.md](./evidence/2026-07-19-sta
 - [x] PLANNER_WEEK / MEAL_SCREEN recipe+product planned nutrition과 shopping/cooking/leftover/XP isolation 검증 <!-- omo:id=delivery-release-qa-planner-isolation;stage=4;scope=frontend;review=5,6 -->
 - [x] 100→101g, solid 100g, liquid 100mL, direct relation only evidence <!-- omo:id=delivery-release-qa-basis-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] `RECIPE_DETAIL` / `FOOD_PRODUCT_PICKER` / `FOOD_PRODUCT_CREATE` / `PLANNER_WEEK` / `MEAL_SCREEN` / `SETTINGS_ACCOUNT_DELETE_CONFIRM` 320/390/desktop evidence, exploratory QA/eval, authority report current-head 기준 확보 <!-- omo:id=delivery-release-qa-visual-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] current-head started checks all success or intentional skip, pending/fail zero <!-- omo:id=delivery-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
+- [x] current-head started checks all success or intentional skip, pending/fail zero <!-- omo:id=delivery-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
