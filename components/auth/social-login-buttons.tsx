@@ -52,12 +52,11 @@ export function SocialLoginButtons({
   const localGoogleOAuthEnabled = isLocalGoogleOAuthEnabled();
   const qaFixtureMode = isQaFixtureClientModeEnabled();
   const enabledProviders = getEnabledAuthProviders();
-  const availableProviders = localDevAuthEnabled && !localGoogleOAuthEnabled
-    ? []
-    : (qaFixtureMode
-        ? ensureFixtureProviders(enabledProviders)
-        : enabledProviders
-      );
+  const availableProviders = qaFixtureMode
+    ? ensureFixtureProviders(enabledProviders)
+    : localDevAuthEnabled && !localGoogleOAuthEnabled
+      ? []
+      : enabledProviders;
   const providers = availableProviders;
 
   useEffect(() => { setRecentProvider(readLastAuthProvider() ?? lastProvider); }, [lastProvider]);

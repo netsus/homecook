@@ -381,7 +381,7 @@ async function openAccountDeleteDialog(page: Page) {
 
 function accountDeleteConfirmButton(page: Page) {
   return page.getByRole("alertdialog").getByRole("button", {
-    name: "계정 삭제",
+    name: "탈퇴하기",
   });
 }
 
