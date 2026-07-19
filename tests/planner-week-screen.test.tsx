@@ -517,7 +517,7 @@ describe("planner week screen", () => {
     expect(currentWeekButton.className).not.toContain("rounded-full");
     expect(currentWeekButton.className).toContain("border-[var(--line-strong)]");
     expect(weekShell.querySelector(".grid")?.className).toContain(
-      "grid-cols-[30px_minmax(0,1fr)_30px]",
+      "grid-cols-[44px_minmax(0,1fr)_44px]",
     );
   });
 
@@ -1018,9 +1018,17 @@ describe("planner week screen", () => {
       within(screen.getByTestId("planner-mobile-meal-meal-1")).getByText("김치찌개").className,
     ).toContain("mobile-planner-meal-title");
     expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
-    expect(breakfastAddButton.className).toContain("border-[var(--line-strong)]");
     expect(breakfastAddButton.className).toContain("bg-transparent");
     expect(breakfastAddButton.className).toContain("text-[var(--text-3)]");
+    expect((breakfastAddButton.firstElementChild as HTMLElement | null)?.className).toContain(
+      "border-[var(--line-strong)]",
+    );
+    expect((breakfastAddButton.firstElementChild as HTMLElement | null)?.className).toContain(
+      "h-8",
+    );
+    expect((breakfastAddButton.firstElementChild as HTMLElement | null)?.className).toContain(
+      "w-8",
+    );
     expect(dinnerButton.className).toContain("border-[var(--line-strong)]");
     expect(dinnerButton.className).toContain("bg-transparent");
     expect(dinnerButton.className).toContain("text-[var(--text-3)]");
@@ -1528,6 +1536,31 @@ describe("planner week screen", () => {
     });
   });
 
+  it("keeps the mobile week controls at a 44px touch target without changing their compact visual style", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
+
+    const previousWeekButton = screen.getByRole("button", { name: "이전 주" });
+    const currentWeekButton = screen.getByRole("button", { name: "이번 주로 이동" });
+    const nextWeekButton = screen.getByRole("button", { name: "다음 주" });
+    const previousWeekInner = previousWeekButton.firstElementChild as HTMLElement | null;
+    const nextWeekInner = nextWeekButton.firstElementChild as HTMLElement | null;
+
+    expect(previousWeekButton.className).toContain("h-11");
+    expect(previousWeekButton.className).toContain("w-11");
+    expect(previousWeekInner?.className).toContain("h-[30px]");
+    expect(previousWeekInner?.className).toContain("w-[30px]");
+    expect(currentWeekButton.className).toContain("min-h-11");
+    expect(nextWeekButton.className).toContain("h-11");
+    expect(nextWeekButton.className).toContain("w-11");
+    expect(nextWeekInner?.className).toContain("h-[30px]");
+    expect(nextWeekInner?.className).toContain("w-[30px]");
+  });
+
   it("keeps empty state within the fixed four-slot card instead of showing column management", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
@@ -1703,6 +1736,12 @@ describe("planner week screen", () => {
 
     expect(filledAddButton.textContent?.trim()).toBe("+");
     expect(emptyAddButtons.filter((button) => button !== filledAddButton)).toHaveLength(3);
+    expect(filledAddButton.className).toContain("h-11");
+    expect(filledAddButton.className).toContain("w-11");
+
+    const emptyAddButton = emptyAddButtons.find((button) => button !== filledAddButton);
+    expect(emptyAddButton).toBeTruthy();
+    expect(emptyAddButton?.className).toContain("min-h-11");
   });
 
   it("uses the floating shopping CTA from the Wave1 mobile reference", async () => {

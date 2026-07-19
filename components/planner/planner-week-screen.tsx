@@ -1310,20 +1310,22 @@ export function PlannerWeekScreen({
           className="sticky top-[52px] z-20 border-b border-[var(--line-strong)] bg-[var(--surface)] px-3.5 py-3 max-[359px]:px-3 max-[359px]:py-2"
           data-testid="planner-week-shell"
         >
-          <div className="mb-2 grid grid-cols-[30px_minmax(0,1fr)_30px] items-center gap-2 max-[359px]:mb-1.5 max-[359px]:gap-1.5">
+          <div className="mb-2 grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 max-[359px]:mb-1.5 max-[359px]:gap-1.5">
             <button
               aria-label="이전 주"
-              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-fill)] text-[17px] leading-none text-[var(--text-2)]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[17px] leading-none text-[var(--text-2)]"
               onClick={() => runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS))}
               type="button"
             >
-              ‹
+              <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-fill)]">
+                ‹
+              </span>
             </button>
             <div className="flex min-w-0 justify-center">
               <button
                 aria-label="이번 주로 이동"
                 className={[
-                  "inline-flex h-[30px] shrink-0 items-center justify-center rounded-[var(--radius-control)] border px-3 text-[12px] font-bold",
+                  "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border px-3 text-[12px] font-bold",
                   isCurrentRange
                     ? "border-[var(--line-strong)] bg-[var(--surface-fill)] text-[var(--text-3)]"
                     : "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]",
@@ -1337,11 +1339,13 @@ export function PlannerWeekScreen({
             </div>
             <button
               aria-label="다음 주"
-              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-fill)] text-[17px] leading-none text-[var(--text-2)]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[17px] leading-none text-[var(--text-2)]"
               onClick={() => runPlannerAction(shiftRange(RANGE_SHIFT_DAYS))}
               type="button"
             >
-              ›
+              <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-fill)]">
+                ›
+              </span>
             </button>
           </div>
           <p className="sr-only" id="planner-week-strip-hint-mobile">
@@ -1571,17 +1575,19 @@ export function PlannerWeekScreen({
                               </Link>
                               <button
                                 aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
-                                className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--line-strong)] bg-transparent text-[20px] font-semibold leading-none text-[var(--text-3)]"
+                                className="ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-transparent text-[20px] font-semibold leading-none text-[var(--text-3)]"
                                 onClick={() => openMealAddSheet(dateKey, column)}
                                 type="button"
                               >
-                                +
+                                <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--line-strong)]">
+                                  +
+                                </span>
                               </button>
                             </>
                           ) : (
                             <button
                               aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
-                              className="flex h-[38px] flex-1 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--line-strong)] bg-transparent text-[20px] font-semibold leading-none text-[var(--text-3)]"
+                              className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--line-strong)] bg-transparent text-[20px] font-semibold leading-none text-[var(--text-3)]"
                               onClick={() => openMealAddSheet(dateKey, column)}
                               type="button"
                             >
