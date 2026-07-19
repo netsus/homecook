@@ -166,3 +166,26 @@
 
 - independent Stage 3 code/security/performance results are recorded in `2026-07-18-stage3-reviews.md`.
 - Stage 4 / 5 / 6 browser, authority, and merge-closeout evidence is intentionally not marked complete in this document.
+
+## 2026-07-19 latest-master aggregate / targeted recheck addendum
+
+- exact current master: `fefbc298420dbe863b8847f60d7db9409647a578`
+- 범위: 기존 Stage 2 전체 lifecycle을 다시 실행한 것이 아니라, latest master에서 서비스 상태와 사용자 노출 aggregate가 drift하지 않았는지 확인한 targeted recheck다.
+- local Supabase service state:
+  - containers up: `12`
+  - healthcheck healthy: `10`
+  - REST / edge runtime: `up` (healthcheck 상태 표시는 없음)
+- aggregate counts:
+  - ingredients: `845`
+  - recipes: `34`
+  - current recipe snapshots: complete `8` / partial `23` / unavailable `3`
+  - visible public dataset products: `287,041`
+  - visible shared manual products: `5`
+  - total visible public products: `287,046`
+  - visible private manual products: `0`
+- safety boundary:
+  - raw provider row output/commit: `0`
+  - secret/token/auth query output/commit: `0`
+  - production/staging/provider write: `0`
+
+이 addendum은 기존 Stage 2 full-run evidence를 대체하거나 전체 lifecycle 재실행을 주장하지 않는다. post-#1060 bounded rAF repair와 post-#1063 CSS hit-area repair가 DB/API 계약이나 aggregate dataset을 바꾸지 않았다는 targeted 확인만 추가한다. latest master fresh security/performance/code review 결과는 별도 review addendum에서 기록한다.

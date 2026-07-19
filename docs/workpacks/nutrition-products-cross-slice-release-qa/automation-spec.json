@@ -102,6 +102,7 @@
       "recipe-plus-product-planned-nutrition-with-shopping-cooking-leftover-xp-isolation",
       "settings-account-delete-confirm-anonymization-and-pin-retention",
       "screen-by-screen-real-chrome-320-390-desktop-overflow-zero-and-forty-four-pixel-targets",
+      "planner-week-initial-next-and-current-return-heading-visible-strip-and-day-card-ranges-match-at-320-390-and-desktop",
       "fresh-current-head-exploratory-eval-and-authority-report"
     ],
     "design_authority": {
@@ -144,6 +145,7 @@
     "manual:local-all-recipe-34-complete-8-partial-23-unavailable-3-replay-zero-write-rollback-34-and-meal-pin-invariance",
     "manual:local-public-products-287041-source-tag-label-basis-no-inference-auth-a-b-food-product-create-edit-delete-report-and-account-anonymization",
     "manual:planner-add-edit-delete-100-to-101g-recalculation-recipe-plus-product-nutrition-and-workflow-isolation",
+    "manual:planner-week-initial-next-and-current-return-heading-visible-strip-and-day-card-range-coherence-at-320-390-desktop",
     "manual:real-chrome-recipe-detail-food-product-picker-food-product-create-planner-week-meal-screen-settings-account-delete-confirm-at-320-390-desktop-current-head-authority-and-exploratory-evidence",
     "manual:independent-security-performance-code-and-stage6-review-on-current-head",
     "manual:production-staging-provider-write-remains-intentionally-zero"
@@ -157,6 +159,7 @@
     "shared-manual-owner-report-food-product-create-or-anonymization-pin-retention-flow-fails",
     "fresh-local-supabase-migrations-rls-postgrest-auth-or-target-digest-cannot-be-verified",
     "item-level-n-plus-1-runtime-provider-fetch-secret-raw-private-path-leak-or-external-write-appears",
+    "planner-week-heading-visible-strip-and-day-card-ranges-do-not-match-on-initial-next-or-current-return",
     "recipe-detail-food-product-picker-food-product-create-planner-week-meal-screen-or-settings-account-delete-confirm-320-390-desktop-evidence-or-authority-report-is-missing",
     "current-head-started-checks-have-pending-or-failed-results",
     "defect-is-fixed-inline-instead-of-through-a-separate-tdd-repair-pr-and-full-rerun"
@@ -165,5 +168,5 @@
     "backend": 4,
     "frontend": 4
   },
-  "notes": "Verification-only successor release QA for the merged nutrition/products/planner chain on master ancestry 58a3f805864af9627616c50c117eb3c7f94f72a2. Stage 2/3 replays the already-merged ingredient coverage, all-recipe recalculation, public product import, community sharing, planner nutrition, standard-basis, and DELETE /users/me account-deletion/anonymization invariants on fresh local Supabase with real DB, RLS, PostgREST, auth, security, and performance evidence. Stage 4 re-verifies the current merged UI in real Chrome at 390, 320, and desktop 1280, plus fresh authority evidence. If any blocker appears, the fix must ship in a separate TDD repair PR and this release QA reruns on that repaired exact head. Physical-device, screen-reader, true production-scale, and Discord/Amphetamine follow-ups remain Manual Only."
+  "notes": "Verification-only successor release QA for the merged nutrition/products/planner chain. Historical evidence PR #1059 merged as d05c81d8f0e88ed3dc97b1da4fae9271b0b683ca with a then-current PASS, but a post-merge integrated authority review reopened the slice with blocker 1: at 390 the heading/day cards showed 7/13-7/19 while the visible weekday strip showed 7/06-7/12. Separate TDD repair PR #1060 was reviewed at 73d471aeb1f0e1a9b000a5cf57ebf77751c94234 and merged as master d8a8aa496717ec2b304d070bde1f3f57a8725c5a. Test-only CI hardening #1061 b0a67b4926cebf01680b1e6324b6770f814fb631 and #1062 cedc214ccceee4f0e418cfc067bdff0aa344e99b did not change runtime/API/DB contracts. A fresh post-#1060 authority closed the week-mismatch defect but reopened the slice with blocker 1 because mobile planner controls still missed the 44px touch-target floor. Separate TDD repair PR #1063 was reviewed at cb5b8b76ff1b9abe209b55baa5ea7a59b6aefab3, moved from RED 2 failures to planner 42/42 PASS with outer 44px hit areas plus compact inner visuals, passed independent code review/typecheck/lint/diff/current-head regression, and merged by squash as master fefbc298420dbe863b8847f60d7db9409647a578. Latest master browser evidence is coherent for initial 7/13-7/19, next 7/20-7/26, and current-week return 7/13-7/19 at 320/390/1280 with OFS 갈비탕 101g, 67.7 kcal, and overflow 0. Fresh post-#1063 authority passed at blocker/major/minor 0/0/0 and fresh Stage 5 approved with unresolved finding 0 on exact master fefbc298420dbe863b8847f60d7db9409647a578. Stage 6 review and the final closeout PR current-head CI remain pending, so final closeout is not yet claimed. Physical-device, screen-reader, true production-scale, and Discord/Amphetamine follow-ups remain Manual Only."
 }

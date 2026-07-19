@@ -1,5 +1,7 @@
 # Nutrition / Products / Planner Cross-Slice Release QA Authority Review
 
+> current status: `CONFIRMED` — PR `#1059` 당시 PASS와 두 차례 post-merge reopen 이력을 아래에 보존하며, `#1060` 주간 정합성 repair와 `#1063` 모바일 44px 터치 타깃 repair 뒤 fresh independent authority review가 최종 PASS했다.
+
 > 대상 slice: `nutrition-products-cross-slice-release-qa`
 > 검토 범위: `RECIPE_DETAIL`, `FOOD_PRODUCT_PICKER`, `FOOD_PRODUCT_CREATE`, `PLANNER_WEEK`, `MEAL_SCREEN`, `SETTINGS_ACCOUNT_DELETE_CONFIRM`
 > evidence:
@@ -12,16 +14,23 @@
 > - 보조 상태: `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/RECIPE_DETAIL-PARTIAL-390.png`, `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/RECIPE_DETAIL-UNAVAILABLE-390.png`, `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/FOOD_PRODUCT_PICKER-LIQUID-100ML-desktop-1280.png`, `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/MEAL_SCREEN-RECIPE-PRODUCT-COMBINED-390.png`, `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/MEAL_SCREEN-ANONYMIZED-PIN-390.png`
 > 검토일: 2026-07-19
 > 검토자: product-design-authority (independent final exact-head re-review)
-> reviewed runtime exact head: `8a055a01fb77a28fd4f7c6e5e7587579ea74354f` (`origin/master` exact match at review time)
+> reviewed runtime exact head: `fefbc298420dbe863b8847f60d7db9409647a578` (`origin/master` exact match at final review time)
 > evidence packaging boundary: PR `#1059` contains evidence only; its final merged SHA and current-head checks are intentionally reserved for the independent Stage 6 closeout because a commit cannot include its own final hash.
 > repaired evidence: `SETTINGS_ACCOUNT_DELETE_CONFIRM-320.png`, `SETTINGS_ACCOUNT_DELETE_CONFIRM-390.png`, `SETTINGS_ACCOUNT_DELETE_CONFIRM-desktop-1280.png`, `PLANNER_WEEK-320.png`, `PLANNER_WEEK-390.png`, `PLANNER_WEEK-desktop-1280.png`
 
-## Verdict
+## Historical #1059 Verdict (superseded by post-merge reopen)
 
-- PASS / FAIL: **PASS**
-- verdict: `pass`
+- historical PASS / FAIL: **PASS**
+- historical verdict: `pass`
 - Blocker / Major / Minor: `0 / 0 / 0`
 - 한 줄 요약: `PLANNER_WEEK` 320/390/desktop이 모두 `7/18 점심 · OFS 갈비탕 · 101g · 67.7 kcal`로 일치하고, final exact head의 추가 변경도 QA fixture 로그인 분기와 stale E2E selector에 한정되어 계정 삭제 접근성 경계와 나머지 필수 화면의 위계·반응형·workflow 분리에 회귀가 없으므로 release authority를 통과한다.
+
+## Final post-#1063 Verdict
+
+- final PASS / FAIL: **PASS**
+- final verdict: `pass`
+- Blocker / Major / Minor: `0 / 0 / 0`
+- 한 줄 요약: `#1060`이 제목·날짜 strip·7개 날짜 카드의 주간 동기화를 복구하고 `#1063`이 모바일 주 이동과 식사 추가 control의 실제 hit area를 최소 `44×44px`로 확장했으며, exact master `fefbc298420dbe863b8847f60d7db9409647a578`의 320/390/1280 real Chrome evidence에서 `OFS 갈비탕 · 101g · 67.7 kcal`, 주 이동·복귀, 가로 overflow `0`이 모두 일치하므로 release authority를 최종 통과한다.
 
 ## Scorecard
 
@@ -45,6 +54,39 @@
 - exact head `adbf93d24ad9750640aab26c4f60b569ff8d7861`에서 같은 계정·주·날짜·끼니 상태를 real Chrome으로 다시 열고 320/390/desktop을 모두 재촬영했다.
 - 세 evidence 모두 주간 합계 `67.7 kcal`, 7/18 날짜 합계 `67.7 kcal`, 점심 `OFS 갈비탕 · 101g` row를 동일하게 보여 viewport별 누락·stale capture 의심이 해소됐다. 따라서 기존 blocker는 닫는다.
 
+### Second blocker: post-#1059 week-range mismatch
+
+- PR `#1059` merge `d05c81d8f0e88ed3dc97b1da4fae9271b0b683ca` 뒤 별도 integrated authority가 390 evidence를 다시 보면서 새 blocker `1`을 발견했다.
+- 화면 제목과 날짜 카드는 `7/13–7/19`였지만 사용자가 실제로 보는 상단 요일 strip은 `7/06–7/12`였다. 기존 authority는 제품 row와 영양 값 일치에 집중해 이 세 범위의 동기화를 별도 acceptance로 고정하지 못했다.
+- 별도 TDD repair PR `#1060`은 늦은 측정 retry, stale interaction guard, range-change recenter를 추가했다.
+  - reviewed repair head: `73d471aeb1f0e1a9b000a5cf57ebf77751c94234`
+  - merged repaired master: `d8a8aa496717ec2b304d070bde1f3f57a8725c5a`
+  - planner Vitest: `41/41` PASS
+- repaired master runtime DOM recheck:
+  - 320/390/1280 initial: heading / visible strip / day cards `7/13–7/19`
+  - next week: heading / visible strip / day cards `7/20–7/26`
+  - `이번 주` return: heading / visible strip / day cards `7/13–7/19`
+  - 320/390 page overflow: `0 / 0`
+  - product / nutrition: `OFS 갈비탕 · 101g`, `67.7 kcal`
+- runtime blocker와 evidence mismatch는 수정·재촬영됐고, fresh independent authority는 이 주간 정합성 blocker가 닫힌 것을 확인했다.
+
+### Third blocker: post-#1060 mobile touch targets
+
+- `#1060` merge 뒤 fresh authority는 주간 범위 불일치는 닫혔다고 판정했지만, 모바일의 이전/다음 주 `30×30px`, 이번 주 높이 `30px`, 채운 슬롯 추가 `32×32px`, 빈 슬롯 추가 높이 `38px`가 제품 디자인 최소 `44×44px`보다 작아 blocker `1`로 다시 열었다.
+- 별도 TDD repair PR `#1063`은 compact 시각 크기를 유지한 채 바깥 hit area만 확장했다.
+  - RED: touch-target 회귀 테스트 `2` failures
+  - reviewed repair head: `cb5b8b76ff1b9abe209b55baa5ea7a59b6aefab3`
+  - merged repaired master: `fefbc298420dbe863b8847f60d7db9409647a578`
+  - planner Vitest: `42/42` PASS
+  - independent code review: `APPROVE`, unresolved finding `0`
+  - current-head full regression: `12m42s` PASS
+- repaired master real Chrome geometry:
+  - 320/390 이전·다음 주: `44×44px`
+  - 320/390 이번 주: `71.71×44px`
+  - 채운 슬롯과 빈 슬롯 meal-add: 최소 `44×44px`
+  - compact inner visuals: 이전·다음 `30×30px`, 채운 슬롯 plus `32×32px` 유지
+- final fresh authority는 exact master와 새 320/390/1280 evidence를 재검토해 blocker / major / minor `0 / 0 / 0`, `PASS`로 판정했다.
+
 ## Major Issues
 
 | # | 위치 | 문제 | 수정 방향 |
@@ -62,6 +104,7 @@
 ### PLANNER_WEEK
 
 - 320과 390은 주간 범위, 상태 요약, `계획 영양 67.7 kcal`, 주 이동, 요일 strip, 날짜 card가 한 흐름으로 붙고 7/18 점심의 `완제품` chip + `OFS 갈비탕` + `101g`가 동일하게 읽힌다.
+- 320/390의 이전·다음 주, 이번 주, 채운 슬롯과 빈 슬롯 meal-add control은 모두 실제 hit area가 최소 `44×44px`이며, 작은 내부 시각 요소를 유지해 정보 밀도와 터치 안정성을 함께 지킨다.
 - 320/390 모두 첫 viewport에서 7/13 day card와 다음 날짜의 시작이 함께 보여 `2일 이상 summary`와 control proximity는 충족한다. 같은 날짜의 아침/점심/저녁도 한 day card 안에 유지된다.
 - desktop은 기존 주간 table mental model을 유지한다. 날짜/끼니 grid가 page wrapper를 넓히지 않고, 7/18 점심 제품 row와 날짜별 `67.7 kcal`가 compact하게 읽힌다.
 - 장보기 floating action과 bottom tab은 모바일 고정 영역으로 읽히며 day-card 콘텐츠는 세로 스크롤로 계속 접근할 수 있다. 320/390/desktop 모두 whole-page 가로 이동 징후는 없다.
@@ -112,16 +155,27 @@
 
 - 캡처의 검은 원형 `N`과 일부 mouse pointer는 local Next.js/Chrome 검증 도구 artifact이며 배포 제품 UI가 아니다. repaired 320/390 settings evidence에서는 `N`이 취소 버튼 가장자리에 겹치지만 버튼 label·focus outline·44px geometry 판독은 가능하다.
 - full-page screenshot은 fixed/sticky element를 현재 viewport 위치에 한 번 기록하므로, 페이지 아래쪽의 배경 내용이 같은 이미지에 이어 보일 수 있다. modal/CTA의 실제 viewport containment는 캡처와 구현 shell을 함께 판정했다.
+- Chrome full-page capture는 nested horizontal scroller를 runtime DOM의 `scrollLeft`와 다른 위치에서 렌더링하는 한계도 보였다. repaired 320/390 evidence는 같은 로컬 서비스가 실제 렌더링한 donor strip pixel만 base full-page의 strip 영역에 합성해 capture distortion을 보정했다. 날짜·수치·제품·layout을 새로 그린 것이 아니며, heading/visible strip/day-card 일치는 합성과 독립된 Chrome DOM geometry로 먼저 검증했다.
 - settings dialog boundary repair 후의 320/390/desktop account-delete evidence와 real Chrome focus/scroll/keyboard 결과를 final exact head에서도 유지 근거로 재검토했다.
-- `PLANNER_WEEK` 320/390/desktop은 `adbf93d24ad9750640aab26c4f60b569ff8d7861`의 동일한 real Chrome/local Supabase 상태로 새로 교체됐다. 이후 final exact head `8a055a01fb77a28fd4f7c6e5e7587579ea74354f`까지의 diff는 `components/auth/social-login-buttons.tsx`의 QA fixture provider 선택 순서와 account-delete E2E selector/test 기대 갱신뿐이며, 이 6개 대상 화면의 layout·copy·interaction runtime을 바꾸지 않는다.
+- `PLANNER_WEEK` 320/390/desktop은 final exact master `fefbc298420dbe863b8847f60d7db9409647a578`의 동일한 real Chrome/local Supabase 상태로 다시 교체됐다. 이 최종 evidence는 `#1060`의 strip recenter와 `#1063`의 44px hit area를 모두 포함한다.
+- 최신 모바일 full-page 캡처에서도 nested horizontal scroller가 capture 시점에 한 주 전으로 이동하는 도구 artifact가 재현됐다. 320/390은 같은 exact master의 next-week donor에서 브라우저가 실제 렌더링한 `7/13–7/19` 날짜 행 pixel만 current-week base의 동일 위치에 합성했다. 새 텍스트·수치·제품·layout을 그리지 않았고, 320×568 및 390×844 runtime DOM geometry와 주 이동·복귀를 합성과 독립적으로 검증했다.
+- 최신 evidence의 `QA FIXTURE MODE` panel, mouse pointer와 focus 흔적은 local 검증 도구 artifact이며 배포 제품 UI가 아니다. panel로 가려진 부분은 다른 viewport, desktop evidence와 DOM geometry로 교차 검증했다. 320 파일은 width `320px` responsive evidence이며 capture 동안 panel을 아래로 옮기기 위해 viewport height `1200px`를 사용했다.
 - 나머지 required screenshot도 carry-forward 검토했으며 final exact-head diff와 충돌하는 화면 계약 변화는 없다.
 - 실제 iOS/Android 기기, 실제 screen reader, virtual keyboard의 전체 조합, 확대/zoom, production-scale 성능은 이 시각 authority가 증명하지 않으며 별도 Manual Only 범위다.
-- 이 verification-only slice에서 runtime/app/API/DB 코드는 변경하지 않았다. 향후 runtime blocker가 발견되면 이 보고서에서 봉합하지 않고 별도 TDD repair PR 뒤 repaired exact head에서 Stage 4를 재실행해야 한다.
+- PR `#1059` verification-only evidence branch 자체에서는 runtime/app/API/DB 코드를 변경하지 않았다. 이후 발견된 runtime blocker는 이 보고서에서 봉합하지 않고 별도 TDD repair PR `#1060`으로 수정했다. `#1060`은 planner strip timing/recenter runtime을 변경했지만 API/DB/public contract는 변경하지 않았다. test-only `#1061`/`#1062`도 runtime 계약을 바꾸지 않았다.
 
-## Decision
+## Historical #1059 Decision
 
 - Stage 4 진행 가능 여부: **가능**
 - Stage 5 confirmed 가능 여부: **가능**
 - blocker: `0`
 - confirmed_allowed: `true`
 - 다음 행동: authority 관점의 추가 수정은 없다. Stage 6가 final exact head의 acceptance, exploratory QA와 모든 current-head check를 독립 확인한 뒤 closeout할 수 있다.
+
+## Current post-#1063 decision
+
+- fresh Stage 5 confirmed 가능 여부: **가능**
+- current verdict: `pass`
+- Blocker / Major / Minor: `0 / 0 / 0`
+- confirmed_allowed: `true`
+- 다음 행동: authority 관점의 추가 수정은 없다. 독립 Stage 5/6 reviewer가 final closeout diff와 current-head checks를 확인한 뒤 closeout PR을 merge할 수 있다.
