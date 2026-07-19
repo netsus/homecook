@@ -205,6 +205,28 @@ function primeWeekStripViewport(strip: HTMLElement) {
   };
 }
 
+function attachLateMeasuredWeekStripViewport(strip: HTMLElement, width: number) {
+  let scrollLeft = 0;
+
+  Object.defineProperty(strip, "clientWidth", {
+    configurable: true,
+    get: () => width,
+  });
+  Object.defineProperty(strip, "scrollLeft", {
+    configurable: true,
+    get: () => scrollLeft,
+    set: (value: number) => {
+      scrollLeft = value;
+    },
+  });
+
+  return {
+    getScrollLeft() {
+      return scrollLeft;
+    },
+  };
+}
+
 function setDesktopViewport(enabled: boolean) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
@@ -1339,6 +1361,76 @@ describe("planner week screen", () => {
     expect(screen.getByTestId("planner-week-strip-page-current").textContent ?? "").toContain("24");
     expect(screen.getByTestId("planner-week-strip-page-next").textContent ?? "").toContain("31");
     expect(plannerBody.getAttribute("style")).toContain("translateX(0px)");
+  });
+
+  it.each([320, 390])(
+    "recenters the current week strip after a %ipx viewport width becomes available post-mount",
+    async (width) => {
+      readE2EAuthOverride.mockReturnValue(true);
+      fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+      render(<PlannerWeekScreen />);
+
+      await screen.findByRole("heading", { name: "주간 플래너" });
+
+      const strip = screen.getByTestId("planner-week-strip-viewport");
+      const viewport = attachLateMeasuredWeekStripViewport(strip, width);
+
+      await new Promise((resolve) =>
+        window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)),
+      );
+
+      expect(viewport.getScrollLeft()).toBe(width);
+    },
+  );
+
+  it("recenters the strip to the current page after a next-week swipe settles and the new range loads", async () => {
+    const secondLoad = createDeferred<ReturnType<typeof createPlannerData>>();
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
+      .mockImplementationOnce(() => secondLoad.promise);
+
+    render(<PlannerWeekScreen />);
+
+    await screen.findByRole("heading", { name: "주간 플래너" });
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+
+    const strip = screen.getByTestId("planner-week-strip-viewport");
+    const viewport = primeWeekStripViewport(strip);
+
+    viewport.scrollToPage(2);
+    await new Promise((resolve) => window.setTimeout(resolve, 140));
+
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
+    });
+
+    secondLoad.resolve(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-next-week",
+            recipe_id: "recipe-next-week",
+            recipe_title: "된장찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-31",
+            column_id: "column-breakfast",
+            planned_servings: 1,
+            status: "registered",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    expect(await screen.findByText("된장찌개")).toBeTruthy();
+    await new Promise((resolve) =>
+      window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)),
+    );
+
+    expect(strip.scrollLeft).toBe(320);
   });
 
   it("keeps the previous planner content visible while the next week is refreshing", async () => {
