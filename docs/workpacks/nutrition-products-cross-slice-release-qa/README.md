@@ -6,7 +6,7 @@
 
 ## Goal
 
-모든 nutrition/products/planner successor가 이미 병합된 기준 master ancestry에서 실제 local DB, real Chrome, current-head checks를 다시 묶어 최종 출고 신호를 만든다. 현재 재검증 기준은 mobile touch-target TDD repair까지 병합된 master `fefbc298420dbe863b8847f60d7db9409647a578`다. 이 슬라이스는 재료 845개 전수 coverage, recipe nutrition snapshot/Meal pin, 287,041개 공공 데이터 제품과 공동 사용자 등록 제품, product planner isolation, 100g/100mL UX, 보안/성능/authority evidence를 한 번에 교차 검증하고 Manual Only 잔여 위험만 명시적으로 남긴다.
+모든 nutrition/products/planner successor가 이미 병합된 기준 master ancestry에서 실제 local DB, real Chrome, current-head checks를 다시 묶어 최종 출고 신호를 만든다. runtime 재검증 기준은 mobile touch-target TDD repair까지 병합된 master `fefbc298420dbe863b8847f60d7db9409647a578`이고, 최종 evidence PR `#1064`가 병합된 master는 `c931552015a51271273fb05040694d42cffaf46c`다. `#1064`는 문서·스크린샷만 바꿔 runtime tree를 유지했다. 이 슬라이스는 재료 845개 전수 coverage, recipe nutrition snapshot/Meal pin, 287,041개 공공 데이터 제품과 공동 사용자 등록 제품, product planner isolation, 100g/100mL UX, 보안/성능/authority evidence를 한 번에 교차 검증하고 Manual Only 잔여 위험만 명시적으로 남긴다.
 
 ## Branches
 
@@ -24,7 +24,8 @@
 6. 별도 TDD repair PR `#1063`은 reviewed head `cb5b8b76ff1b9abe209b55baa5ea7a59b6aefab3`에서 RED `2` failures를 planner `42/42` PASS로 되돌리고, outer `44px` hit area + compact inner visuals를 적용했다. independent code review `APPROVE`, `typecheck` / `lint` / `git diff --check`, current-head full regression `12m42s` PASS 뒤 squash merge로 master `fefbc298420dbe863b8847f60d7db9409647a578`가 됐다.
 7. latest master에서 320/390/1280의 제목·실제 보이는 strip·날짜 카드가 initial `7/13–7/19`, 다음 주 `7/20–7/26`, `이번 주` 복귀 `7/13–7/19` 모두 일치하고 `OFS 갈비탕 101g`, `67.7 kcal`, overflow `0`도 다시 확인했다.
 8. fresh independent product-design authority가 exact master `fefbc298420dbe863b8847f60d7db9409647a578`와 새 evidence를 재검토해 `PASS`, blocker / major / minor `0 / 0 / 0`으로 판정했다.
-9. 분리된 fresh Stage 5 evidence/code reviewer가 변경 13개를 재검토해 `APPROVE`, unresolved finding `0`으로 판정했다. 독립 Stage 6 review와 이 closeout PR의 current-head CI는 아직 `pending`이다.
+9. 분리된 fresh Stage 5 evidence/code reviewer가 변경 13개를 재검토해 `APPROVE`, unresolved finding `0`으로 판정했다.
+10. 분리된 fresh Stage 6 reviewer가 PR `#1064` exact head `9f70bd9a950b37ddb467fcb8d5effb13d668523b`를 `APPROVE`, unresolved finding `0`으로 판정했다. current-head check는 success `7`, intentional skip `5`, pending/fail/rerun `0`이었고 squash merge `c931552015a51271273fb05040694d42cffaf46c`로 병합됐다.
 
 ## In Scope
 
@@ -167,8 +168,9 @@ Stage 6 closeout: [evidence/2026-07-19-stage6-closeout.md](./evidence/2026-07-19
   - `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/SETTINGS_ACCOUNT_DELETE_CONFIRM-320.png`
   - `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/SETTINGS_ACCOUNT_DELETE_CONFIRM-desktop-1280.png`
 - Authority report: `ui/designs/authority/PLANNER_WEEK-nutrition-products-cross-slice-release-qa-authority.md`
-- Authority status: `confirmed — post-#1063 fresh review PASS, blocker / major / minor 0 / 0 / 0`
+- Authority status: `reviewed`
 - Notes:
+  - post-#1063 fresh review `PASS`, blocker / major / minor `0 / 0 / 0`
   - verification-only지만 최종 출고 gate라서 fresh authority evidence를 생략하지 않는다.
   - 신규 design-generator / design-critic 산출물은 만들지 않는다. 기존 merged screen contract를 current head screenshot으로만 재검증한다.
 
@@ -251,4 +253,4 @@ Stage 6 closeout: [evidence/2026-07-19-stage6-closeout.md](./evidence/2026-07-19
 - [x] PLANNER_WEEK initial / 다음 주 / 이번 주 복귀에서 제목 = 실제 보이는 strip = 날짜 카드 범위 일치 <!-- omo:id=delivery-release-qa-planner-week-range-coherence;stage=4;scope=frontend;review=5,6 -->
 - [x] 100→101g, solid 100g, liquid 100mL, direct relation only evidence <!-- omo:id=delivery-release-qa-basis-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] `RECIPE_DETAIL` / `FOOD_PRODUCT_PICKER` / `FOOD_PRODUCT_CREATE` / `PLANNER_WEEK` / `MEAL_SCREEN` / `SETTINGS_ACCOUNT_DELETE_CONFIRM` 320/390/desktop evidence, exploratory QA/eval, fresh authority report current-head 기준 확보 <!-- omo:id=delivery-release-qa-visual-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] final closeout PR current-head started checks all success or intentional skip, pending/fail zero <!-- omo:id=delivery-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
+- [x] final closeout PR current-head started checks all success or intentional skip, pending/fail zero <!-- omo:id=delivery-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->

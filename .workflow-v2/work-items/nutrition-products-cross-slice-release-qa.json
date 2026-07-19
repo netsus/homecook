@@ -102,14 +102,75 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/PLANNER_WEEK-nutrition-products-cross-slice-release-qa-authority.md"
+      ],
+      "actual_verification_refs": [
+        "PR #1064 exact head 9f70bd9a950b37ddb467fcb8d5effb13d668523b passed independent Stage 6 APPROVE with unresolved finding 0, 7 successful current-head checks and 5 intentional policy skips, then merged as c931552015a51271273fb05040694d42cffaf46c",
+        "Fresh post-#1063 product-design authority returned PASS with blocker/major/minor 0/0/0 on exact runtime master fefbc298420dbe863b8847f60d7db9409647a578",
+        "Separate TDD repairs #1060 and #1063 closed the week-strip mismatch and mobile 44px touch-target blocker without changing API, DB, or official contracts",
+        "docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-18-stage4-real-browser.md retains local Supabase and real Chrome 320/390/1280 ingredient, recipe, public/shared product, 100g/100mL, 100-to-101g planner, and workflow-isolation evidence",
+        "Ingredient 845 equals approved 838 plus strict excluded 7; recipe lifecycle 34 equals complete 8 plus partial 23 plus unavailable 3; public products 287041 plus 5 visible shared manual products; missing nutrition remained partial or unavailable rather than false zero",
+        "Planner Vitest 42, focused core 206, typecheck, lint, full regression, workpack, automation, workflow-v2, source-of-truth, OMO, closeout, authority, exploratory, real-smoke, diff, and commit-policy gates passed",
+        "Production/staging/provider writes remained zero; physical-device, real screen-reader, zoom, and true production-scale measurements remain Manual Only"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "9f70bd9a950b37ddb467fcb8d5effb13d668523b",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 9,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 4,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-19T06:20:12Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 9,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 2,
+      "latest_reason_code": "post-merge-authority-repair-and-final-revalidation",
+      "evidence_sources": [
+        "docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-18-stage2-real-db.md",
+        "docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-18-stage4-real-browser.md",
+        "docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-19-stage5-review.md",
+        "docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-19-stage6-closeout.md",
+        "ui/designs/authority/PLANNER_WEEK-nutrition-products-cross-slice-release-qa-authority.md",
+        "PR #1052 through #1064 lifecycle, review, repair, current-head checks, and merge metadata"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-19T06:22:42Z",
+      "status_synced_at": "2026-07-19T06:22:42Z",
+      "pr_body_synced_at": "2026-07-19T06:22:42Z"
+    }
   },
   "out_of_scope": [
     "runtime-app-code-fixes-inside-this-slice",
@@ -120,5 +181,5 @@
     "discord-or-amphetamine-automation-before-final-merge-closeout"
   ],
   "open_questions": [],
-  "notes": "Stage 2/3 evidence PR #1053 merged as 05290f65 after repair PR #1052 exact-head rerun: ingredient 845 = 838 + 7 with replay 0-write; recipe 34 = 8 + 23 + 3 with rollback and unchanged Meal pins; public product catalog 287,041; shared-manual auth A/B, report, account anonymization and retained pin; normalized 100g/100mL basis; fresh local Supabase; warmed SQL/route performance; independent code/security/performance/integrated reviews with zero unresolved findings. Historical evidence PR #1059 then merged as d05c81d8f0e88ed3dc97b1da4fae9271b0b683ca with PASS, but a post-merge integrated authority review reopened the slice with blocker 1 because the 390 heading/day cards were 7/13-7/19 while the visible strip was 7/06-7/12. Separate TDD repair PR #1060 was reviewed at 73d471aeb1f0e1a9b000a5cf57ebf77751c94234 and merged as d8a8aa496717ec2b304d070bde1f3f57a8725c5a; test-only CI hardening #1061 b0a67b4926cebf01680b1e6324b6770f814fb631 and #1062 cedc214ccceee4f0e418cfc067bdff0aa344e99b did not alter runtime/API/DB contracts. A fresh post-#1060 authority closed the week-mismatch defect but reopened the slice again with blocker 1 because mobile planner controls still missed the 44px touch-target floor. Separate TDD repair PR #1063 was reviewed at cb5b8b76ff1b9abe209b55baa5ea7a59b6aefab3, moved from RED 2 failures to planner 42/42 PASS with outer 44px hit areas plus compact inner visuals, passed independent code review/typecheck/lint/diff/current-head regression, and merged by squash as master fefbc298420dbe863b8847f60d7db9409647a578. Latest master browser evidence is coherent for initial 7/13-7/19, next 7/20-7/26, and current-week return 7/13-7/19 at 320/390/1280 with OFS 갈비탕 101g, 67.7 kcal, and overflow 0. Fresh post-#1063 authority passed with blocker/major/minor 0/0/0 and fresh Stage 5 approved with unresolved finding 0 on exact master fefbc298420dbe863b8847f60d7db9409647a578. Status remains in_progress/verification pending until Stage 6 and final closeout PR current-head checks are re-closed. Verification-only and zero production/staging/provider writes remain mandatory."
+  "notes": "Stage 2/3 evidence PR #1053 merged as 05290f65 after repair #1052. Historical evidence #1059 merged as d05c81d8, then two post-merge authority blockers were preserved instead of hidden: week-strip mismatch closed by TDD repair #1060, and mobile touch targets closed by TDD repair #1063. Exact repaired runtime master fefbc298 passed planner 42/42, focused core 206, typecheck, lint, current-head full regression, local Supabase and real Chrome 320/390/1280 verification. Fresh authority passed 0/0/0, Stage 5 and exact-head Stage 6 both approved with unresolved finding 0. Final evidence PR #1064 head 9f70bd9a passed 7 checks with 5 intentional skips and merged as c9315520. Ingredient 845=838+7, recipe 34=8+23+3, public products 287041 plus shared manual visibility, 100g/100mL and 100-to-101g planner behavior remain proven without false zero or external writes. closeout_phase=completed; closeout_recovery=manual_patch:9|ci_resync:4|artifact_missing:false; closeout_repair=codex:9|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:2|latest:post-merge-authority-repair-and-final-revalidation; last_recovery_at=2026-07-19T06:20:12Z. Physical-device, real screen-reader, zoom, and true production-scale checks remain Manual Only."
 }

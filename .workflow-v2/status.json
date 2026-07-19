@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-18T21:39:42Z",
+  "updated_at": "2026-07-19T06:22:42Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2231,8 +2231,9 @@
       "id": "nutrition-products-cross-slice-release-qa",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-nutrition-products-cross-slice-release-qa",
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
+      "pr_path": "https://github.com/netsus/homecook/pull/1064",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
@@ -2242,7 +2243,12 @@
         "pnpm validate:omo-bookkeeping",
         "git diff --check"
       ],
-      "notes": "Stage 2/3 evidence PR #1053 merged as 05290f65 after repair PR #1052 exact-head rerun. Ingredient 845=838+7 replay 0-write, recipe 34=8+23+3 rollback/Meal pin invariance, public products 287041, shared-manual auth A/B/anonymization/pin retention, 100g/100mL, fresh local Supabase, SQL/route performance, and independent code/security/performance/integrated reviews passed with unresolved findings 0. Stage 4 real Chrome/authority and Stage 5/6 final closeout remain pending; zero production/staging/provider writes."
+      "notes": "PR #1064 exact head 9f70bd9a passed fresh authority 0/0/0, Stage 5/6 APPROVE with unresolved finding 0, real local Supabase/Chrome 320/390/1280, and 7 successful current-head checks with 5 intentional skips before merge c9315520. Two post-merge authority blockers were closed through separate TDD repairs #1060 and #1063. Ingredient 845=838+7, recipe 34=8+23+3, public products 287041 plus shared manual visibility, 100g/100mL, 100-to-101g planner behavior, and zero external writes remain proven. closeout_phase=completed; closeout_recovery=manual_patch:9|ci_resync:4|artifact_missing:false; closeout_repair=codex:9|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:2|sources:docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-18-stage2-real-db.md,docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-18-stage4-real-browser.md,docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-19-stage5-review.md,docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-19-stage6-closeout.md,ui/designs/authority/PLANNER_WEEK-nutrition-products-cross-slice-release-qa-authority.md,PR #1052 through #1064 lifecycle, review, repair, current-head checks, and merge metadata; last_recovery_at=2026-07-19T06:20:12Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }
