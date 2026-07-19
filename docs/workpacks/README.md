@@ -229,7 +229,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `public-prepared-food-catalog-import` | merged | 검수된 공공 완제품 287,041개를 local catalog로 승격하고 stable key, attribution, rollback과 검색 경로를 닫았다. PR #1035 merge |
 | `community-prepared-food-catalog` | merged | 공공 영양DB·사용자 등록·비공개 보관을 구분하고 공동 검색, owner-only 수정·삭제, 신고, 탈퇴 후 익명 read-only·기존 pin 보존을 구현했다. PR #1046 merge |
 | `prepared-food-standard-basis-ux` | merged | 고형 100g·액상 100mL 비교, source/label, 추정 금지를 교차 잠그고 MEAL_SCREEN g/mL 수량을 1g/1mL 단위로 안전하게 편집하도록 수리했다. PR #1049 merge `1976ecc3` |
-| `nutrition-products-cross-slice-release-qa` | in-progress | 영양 데이터, 권한, UI, 계산을 실제 local DB/browser/current-head checks 기준으로 교차 검증하고 Manual Only 잔여 위험을 문서화한다. Stage 2/3 PR #1053 merge 완료, Stage 4/5/6 pending |
+| `nutrition-products-cross-slice-release-qa` | merged | 영양 데이터, 권한, UI, 계산을 실제 local DB/browser/current-head checks 기준으로 교차 검증했다. Stage 2/3 #1053, historical evidence #1059, TDD repairs #1060/#1063, final evidence/authority/Stage 5/6 #1064 merge `c9315520` 완료 |
 
 ## Nutrition / Products / Planner Dependency Chain
 
@@ -246,7 +246,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `public-prepared-food-catalog-import` | merged | 2026-07-17 public-sharing official docs = merged, `prepared-food-catalog` = merged | Successor 3; PR #1035 merged. local public products 287,041, replay 0-write, independent Stage 3/current-head checks green |
 | `community-prepared-food-catalog` | merged | `public-prepared-food-catalog-import` = merged, `prepared-food-catalog` = merged | Successor 4; PR #1043/#1044/#1045/#1046 merged. local A/B browser, authority, security/performance/current-head checks green |
 | `prepared-food-standard-basis-ux` | merged | `community-prepared-food-catalog` = merged, `prepared-food-planner-entry` = merged, `planner-nutrition-summary` = merged | Successor 5; PR #1048/#1049 merged. local Supabase/Chrome 100→101g, 320/390/1280, independent review/authority, current-head checks green |
-| `nutrition-products-cross-slice-release-qa` | in-progress | `ingredient-nutrition-full-coverage` = merged, `all-recipe-nutrition-recalculation` = merged, `public-prepared-food-catalog-import` = merged, `community-prepared-food-catalog` = merged, `prepared-food-standard-basis-ux` = merged | Successor 6; Stage 2/3 PR #1053 merge 완료, Stage 4 real Chrome/authority 및 Stage 5/6 pending |
+| `nutrition-products-cross-slice-release-qa` | merged | `ingredient-nutrition-full-coverage` = merged, `all-recipe-nutrition-recalculation` = merged, `public-prepared-food-catalog-import` = merged, `community-prepared-food-catalog` = merged, `prepared-food-standard-basis-ux` = merged | Successor 6; local DB/real Chrome/security/performance/authority/Stage 5/6와 PR #1064 current-head checks green, merge `c9315520` 완료 |
 
 > 위 dependency chain의 2026-07-17 successor slice 순서는 새 공식 SOT와 `nutrition-products-public-data-expansion-20260717.md` 계획을 따른다. 기존 merged slice는 historical predecessor 기록으로 유지하며 planned로 되돌리지 않는다.
 >

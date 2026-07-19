@@ -1,6 +1,6 @@
-# nutrition-products-cross-slice-release-qa Stage 6 closeout history and reopened status
+# nutrition-products-cross-slice-release-qa Stage 6 closeout history and final status
 
-> 아래 첫 `PASS`는 PR `#1059` 당시 역사적 closeout 결과다. 두 차례 post-merge blocker와 repair 이력을 보존하며, post-`#1063` fresh authority는 최종 `PASS`했다. final Stage 6 closeout은 current-head PR checks 전까지 `pending`이다.
+> 아래 첫 `PASS`는 PR `#1059` 당시 역사적 closeout 결과다. 두 차례 post-merge blocker와 repair 이력을 보존하며, post-`#1063` fresh authority, Stage 5/6, PR `#1064` current-head checks와 merge까지 최종 `PASS`했다.
 
 - 검토일: 2026-07-19
 - 검토 역할: independent final verifier
@@ -62,14 +62,17 @@
 6. 별도 TDD repair PR `#1063`이 reviewed head `cb5b8b76ff1b9abe209b55baa5ea7a59b6aefab3`에서 RED `2` failures를 planner `42/42` PASS로 되돌리고, outer `44px` hit area + compact inner visuals를 적용한 뒤 squash merge로 master `fefbc298420dbe863b8847f60d7db9409647a578`가 됐다.
 7. latest master에서 320/390/1280 initial `7/13–7/19`, next `7/20–7/26`, `이번 주` return `7/13–7/19`의 heading/visible strip/day-card coherence와 `OFS 갈비탕 101g`, `67.7 kcal`, mobile overflow `0`, prev/next `44x44`, current-week `71.71x44`, meal-add minimum `44x44`를 다시 확인했다.
 
-## Final closeout gates now pending
+## Final closeout gates
 
 - fresh independent product-design authority: `PASS`, blocker / major / minor `0 / 0 / 0`
 - fresh independent security/performance review: `closed PASS`
 - latest master runtime repair code review: `closed APPROVE`
 - fresh Stage 5 review: `APPROVE`, unresolved finding `0`
-- fresh independent Stage 6 review: `pending`
-- final closeout PR exact-head started checks pending/fail zero 확인: `pending`
-- final merged master integrated recheck: `pending`
+- fresh independent Stage 6 review: `APPROVE`, unresolved finding `0`
+- final closeout PR `#1064` exact head: `9f70bd9a950b37ddb467fcb8d5effb13d668523b`
+- started checks: success `7`, intentional skip `5`, pending / fail / rerun `0 / 0 / 0`
+- merge: squash `c931552015a51271273fb05040694d42cffaf46c`
+- squash integrity: PR head와 merge commit의 Git tree `362b9504f1ec8ab5cf657fe20a240b87e5feb0b2` 일치
+- final merged-master integrated recheck: docs-only merge로 runtime tree가 유지되고 local Supabase / real Chrome / security / performance evidence가 유효함을 재확인
 
-따라서 현재 상태는 `Stage 5 + authority closed / Stage 6 closeout pending`이다. Design Status는 `confirmed`지만 final closeout PR current-head checks와 Stage 6가 끝나기 전 Discord/Amphetamine 후속 automation을 실행해서는 안 된다.
+따라서 현재 상태는 `Stage 6 approved / merge gate closed / final release QA PASS`다. 자동·로컬 범위의 unresolved finding은 `0`이며, physical device / real screen reader / zoom / true production-scale 항목만 명시적 Manual Only로 남는다. Discord/Amphetamine 후속 automation은 OMO/internal 6.5 projection PR까지 병합하고 최종 master 상태를 다시 확인한 뒤에만 실행한다.

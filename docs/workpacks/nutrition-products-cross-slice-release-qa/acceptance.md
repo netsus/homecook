@@ -4,7 +4,7 @@
 > 체크는 exact current head의 real DB, real browser, review, authority, CI evidence가 생긴 뒤에만 한다.
 > `Manual Only`를 제외한 각 체크박스는 `stage=2|4`만 사용한다.
 > `scope=shared` + `stage=4` 항목은 `review=6`만 사용하고, frontend Stage 4만 `review=5,6`을 쓴다.
-> PR `#1059` 당시 PASS는 보존하지만, post-merge integrated authority의 주간 날짜 불일치와 post-`#1060` authority의 mobile touch-target blocker 때문에 fresh authority/Stage 5/6/closeout PR CI 항목은 다시 열었다.
+> PR `#1059` 당시 PASS와 이후 두 차례 blocker/repair 이력을 모두 보존했다. fresh authority, Stage 5/6, PR `#1064` exact-head checks와 merge `c931552015a51271273fb05040694d42cffaf46c`로 자동·로컬 acceptance를 다시 닫았다.
 
 ## Contract Boundary
 
@@ -47,8 +47,8 @@
 
 ## Merge Gate
 
-- [ ] final closeout PR exact head의 started checks는 모두 success 또는 intentional skip이고 pending/fail이 `0`이다 <!-- omo:id=accept-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
-- [ ] fresh independent Stage 6 reviewer가 acceptance, review reports, authority evidence, actual verification refs를 읽고 unresolved finding `0`이다 <!-- omo:id=accept-release-qa-stage6;stage=4;scope=shared;review=6 -->
+- [x] final closeout PR exact head의 started checks는 모두 success 또는 intentional skip이고 pending/fail이 `0`이다 <!-- omo:id=accept-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
+- [x] fresh independent Stage 6 reviewer가 acceptance, review reports, authority evidence, actual verification refs를 읽고 unresolved finding `0`이다 <!-- omo:id=accept-release-qa-stage6;stage=4;scope=shared;review=6 -->
 
 ## Data Setup / Preconditions
 
@@ -74,7 +74,7 @@
 ### Stage 4 Browser / Authority
 
 - [x] planner / product / recipe nutrition 관련 frontend Vitest, Playwright, exploratory QA/eval, authority evidence를 실행한다 <!-- omo:id=accept-release-qa-frontend-automation;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 4 shared closeout은 final closeout PR current-head checks / fresh Stage 6 final review까지 포함해 frontend review와 분리 기록한다 <!-- omo:id=accept-release-qa-shared-closeout;stage=4;scope=shared;review=6 -->
+- [x] Stage 4 shared closeout은 final closeout PR current-head checks / fresh Stage 6 final review까지 포함해 frontend review와 분리 기록한다 <!-- omo:id=accept-release-qa-shared-closeout;stage=4;scope=shared;review=6 -->
 
 ### Manual Only
 
