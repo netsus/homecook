@@ -12,7 +12,8 @@
 > - 보조 상태: `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/RECIPE_DETAIL-PARTIAL-390.png`, `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/RECIPE_DETAIL-UNAVAILABLE-390.png`, `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/FOOD_PRODUCT_PICKER-LIQUID-100ML-desktop-1280.png`, `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/MEAL_SCREEN-RECIPE-PRODUCT-COMBINED-390.png`, `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/MEAL_SCREEN-ANONYMIZED-PIN-390.png`
 > 검토일: 2026-07-19
 > 검토자: product-design-authority (independent final exact-head re-review)
-> reviewed exact head: `8a055a01fb77a28fd4f7c6e5e7587579ea74354f` (`origin/master` exact match)
+> reviewed runtime exact head: `8a055a01fb77a28fd4f7c6e5e7587579ea74354f` (`origin/master` exact match at review time)
+> evidence packaging boundary: PR `#1059` contains evidence only; its final merged SHA and current-head checks are intentionally reserved for the independent Stage 6 closeout because a commit cannot include its own final hash.
 > repaired evidence: `SETTINGS_ACCOUNT_DELETE_CONFIRM-320.png`, `SETTINGS_ACCOUNT_DELETE_CONFIRM-390.png`, `SETTINGS_ACCOUNT_DELETE_CONFIRM-desktop-1280.png`, `PLANNER_WEEK-320.png`, `PLANNER_WEEK-390.png`, `PLANNER_WEEK-desktop-1280.png`
 
 ## Verdict

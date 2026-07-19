@@ -5,7 +5,8 @@
 - Slice: `nutrition-products-cross-slice-release-qa`
 - Runtime app head at initial capture: `8c681b3acaca36b265e826cb589b528545b64f28`
 - Repaired exact head recheck: master `24b7ced4e0678c2fb4fc0537cca625d6f6bc4cc9` after TDD repair PR `#1055`
-- Final merged verification head: master `8a055a01fb77a28fd4f7c6e5e7587579ea74354f` after TDD repair PRs `#1057` and `#1058`
+- Final runtime verification head: master `8a055a01fb77a28fd4f7c6e5e7587579ea74354f` after TDD repair PRs `#1057` and `#1058`
+- Evidence packaging boundary: PR `#1059` adds only this report, the authority report, and screenshots. Its own commit cannot self-reference its final SHA; Stage 6 must record the merged evidence SHA and current-head CI separately before closeout.
 - Browser: the user's already-open Chrome tab, claimed through the Chrome control surface
 - Data: real local Supabase only; fixture browser data was not used as release evidence
 - Viewports: `320x720`, `390x844`, desktop `1280x900`
@@ -76,12 +77,12 @@ The merged exact head was then reopened in the user's real Chrome tab and rechec
 - `pnpm verify:frontend:pr`: PASS (`1,603 passed / 24 skipped` product tests, `59 passed / 10 skipped` smoke, `8 passed / 1 skipped` core accessibility, `12 passed` core visual)
 - `pnpm verify:frontend`: PASS (`1,603 passed / 24 skipped` product tests, `6` Lighthouse runs, `884 passed / 130 skipped` complete browser regression, `18 passed / 15 skipped` accessibility, `23 passed / 22 skipped` visual, `12 passed` security)
 - Cross-slice prepared-food/planner regression: PASS (`65 passed / 23 conditionally skipped`, failure `0`)
-- Exploratory QA / eval: PASS (`35/35` covered, blocked `0`, finding `0`, score `100`)
+- Exploratory QA / eval: PASS (`33/35` covered, blocked `2`, finding `0`, score `98`; the two blocked checklist items are the intentionally deferred evidence-PR merge gate and independent Stage 6 review)
 - Exploratory bundle: `.artifacts/qa/nutrition-products-cross-slice-release-qa/latest/exploratory-report.json`, `.artifacts/qa/nutrition-products-cross-slice-release-qa/latest/eval-result.json`
 - Independent product design authority: PASS, blocker / major / minor `0 / 0 / 0`
 - Authority report: `ui/designs/authority/PLANNER_WEEK-nutrition-products-cross-slice-release-qa-authority.md`
 
-The broad first `pnpm verify:frontend` attempt exposed stale account-delete selectors left behind by the accessibility copy repair. Separate TDD repair PR `#1058` aligned those deterministic tests with the current `탈퇴하기` label and restored QA fixture login providers. The final current-head rerun above is the passing result; the superseded failing run is not used as release evidence.
+The broad first `pnpm verify:frontend` attempt exposed stale account-delete selectors left behind by the accessibility copy repair. Separate TDD repair PR `#1058` aligned those deterministic tests with the current `탈퇴하기` label and restored QA fixture login providers. The final runtime-head rerun above is the passing result; the superseded failing run is not used as release evidence. PR `#1059` current-head checks are not claimed by this Stage 4 report and remain a Stage 6 merge gate.
 
 ## Manual-only limits
 
