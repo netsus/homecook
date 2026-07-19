@@ -294,14 +294,15 @@ test.describe("PANTRY screen", () => {
     );
     await page.goto("/pantry");
 
-    expect((await onionImageResponse).ok()).toBe(true);
-
     await expect(page.getByText(/양파/)).toBeVisible();
 
     const isMobile = isMobileViewport(page);
     const onionImage = isMobile
       ? page.getByRole("button", { exact: true, name: "양파" }).locator("img").first()
       : page.getByTestId("web-pantry-card-i1").locator("img").first();
+
+    await expect(onionImage).toBeVisible();
+    expect((await onionImageResponse).ok()).toBe(true);
 
     await expectSharpV2Sticker(onionImage, {
       expectedFile: "onion.webp",
