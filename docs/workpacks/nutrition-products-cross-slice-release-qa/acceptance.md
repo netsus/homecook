@@ -36,17 +36,17 @@
 
 ## Real Browser / UI States
 
-- [ ] real Chrome + real local Supabase에서 auth A/B `FOOD_PRODUCT_CREATE` create/search/edit/delete/report와 `SETTINGS_ACCOUNT_DELETE_CONFIRM` account anonymization flow가 통과한다 <!-- omo:id=accept-release-qa-browser-auth-flows;stage=4;scope=frontend;review=5,6 -->
-- [ ] ProductPlannerEntry add/edit/delete와 `100→101g` 재계산이 통과하고 Recipe Meal / shopping / cooking / leftover / XP와 섞이지 않는다 <!-- omo:id=accept-release-qa-browser-planner-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] `RECIPE_DETAIL`은 ready(complete) / partial / unavailable / temporarily unavailable을 구분하고 snapshot이 있는 모든 recipe를 `정보 준비 중`으로 뭉개지 않는다 <!-- omo:id=accept-release-qa-browser-recipe-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] `PLANNER_WEEK` / `MEAL_SCREEN`은 recipe + product planned nutrition, incomplete indicator, warning guidance를 유지하고 false zero를 보이지 않는다 <!-- omo:id=accept-release-qa-browser-planned-nutrition;stage=4;scope=frontend;review=5,6 -->
-- [ ] `RECIPE_DETAIL` / `FOOD_PRODUCT_PICKER` / `FOOD_PRODUCT_CREATE` / `PLANNER_WEEK` / `MEAL_SCREEN` / `SETTINGS_ACCOUNT_DELETE_CONFIRM`이 320 / 390 / desktop 1280에서 overflow 없이 읽히고 44px target을 유지한다 <!-- omo:id=accept-release-qa-responsive-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] exploratory QA / eval과 current-head authority report가 exact verification head 기준으로 다시 남아 있다 <!-- omo:id=accept-release-qa-exploratory-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] real Chrome + real local Supabase에서 auth A/B `FOOD_PRODUCT_CREATE` create/search/edit/delete/report와 `SETTINGS_ACCOUNT_DELETE_CONFIRM` account anonymization flow가 통과한다 <!-- omo:id=accept-release-qa-browser-auth-flows;stage=4;scope=frontend;review=5,6 -->
+- [x] ProductPlannerEntry add/edit/delete와 `100→101g` 재계산이 통과하고 Recipe Meal / shopping / cooking / leftover / XP와 섞이지 않는다 <!-- omo:id=accept-release-qa-browser-planner-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] `RECIPE_DETAIL`은 ready(complete) / partial / unavailable / temporarily unavailable을 구분하고 snapshot이 있는 모든 recipe를 `정보 준비 중`으로 뭉개지 않는다 <!-- omo:id=accept-release-qa-browser-recipe-states;stage=4;scope=frontend;review=5,6 -->
+- [x] `PLANNER_WEEK` / `MEAL_SCREEN`은 recipe + product planned nutrition, incomplete indicator, warning guidance를 유지하고 false zero를 보이지 않는다 <!-- omo:id=accept-release-qa-browser-planned-nutrition;stage=4;scope=frontend;review=5,6 -->
+- [x] `RECIPE_DETAIL` / `FOOD_PRODUCT_PICKER` / `FOOD_PRODUCT_CREATE` / `PLANNER_WEEK` / `MEAL_SCREEN` / `SETTINGS_ACCOUNT_DELETE_CONFIRM`이 320 / 390 / desktop 1280에서 overflow 없이 읽히고 44px target을 유지한다 <!-- omo:id=accept-release-qa-responsive-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] exploratory QA / eval과 current-head authority report가 exact verification head 기준으로 다시 남아 있다 <!-- omo:id=accept-release-qa-exploratory-authority;stage=4;scope=frontend;review=5,6 -->
 
 ## Merge Gate
 
-- [ ] exact verification head의 started checks는 모두 success 또는 intentional skip이고 pending/fail이 `0`이다 <!-- omo:id=accept-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
-- [ ] independent Stage 6 reviewer가 acceptance, review reports, authority evidence, actual verification refs를 읽고 unresolved finding `0`이다 <!-- omo:id=accept-release-qa-stage6;stage=4;scope=shared;review=6 -->
+- [x] exact verification head의 started checks는 모두 success 또는 intentional skip이고 pending/fail이 `0`이다 <!-- omo:id=accept-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
+- [x] independent Stage 6 reviewer가 acceptance, review reports, authority evidence, actual verification refs를 읽고 unresolved finding `0`이다 <!-- omo:id=accept-release-qa-stage6;stage=4;scope=shared;review=6 -->
 
 ## Data Setup / Preconditions
 
@@ -55,8 +55,8 @@
 
 ## Manual QA
 
-- verifier:
-- environment:
+- verifier: primary Codex orchestrator + separated product-design authority + independent Stage 5 evidence reviewer
+- environment: real local Supabase + the user's existing logged-in Chrome test-account session; fixture browser was not used as release evidence
 - scenarios:
   - fresh local Supabase + real Chrome auth A/B + `FOOD_PRODUCT_CREATE` + `SETTINGS_ACCOUNT_DELETE_CONFIRM`
   - ingredient coverage / all-recipe / public product / shared manual / planner / `RECIPE_DETAIL` cross-slice flow
@@ -71,8 +71,8 @@
 
 ### Stage 4 Browser / Authority
 
-- [ ] planner / product / recipe nutrition 관련 frontend Vitest, Playwright, exploratory QA/eval, authority evidence를 실행한다 <!-- omo:id=accept-release-qa-frontend-automation;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 4 shared closeout은 current-head checks / Stage 6 final review까지 포함해 frontend review와 분리 기록한다 <!-- omo:id=accept-release-qa-shared-closeout;stage=4;scope=shared;review=6 -->
+- [x] planner / product / recipe nutrition 관련 frontend Vitest, Playwright, exploratory QA/eval, authority evidence를 실행한다 <!-- omo:id=accept-release-qa-frontend-automation;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 shared closeout은 current-head checks / Stage 6 final review까지 포함해 frontend review와 분리 기록한다 <!-- omo:id=accept-release-qa-shared-closeout;stage=4;scope=shared;review=6 -->
 
 ### Manual Only
 

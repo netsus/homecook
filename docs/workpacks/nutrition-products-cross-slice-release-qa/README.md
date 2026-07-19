@@ -102,6 +102,10 @@ Stage 3 reviews: [evidence/2026-07-18-stage3-reviews.md](./evidence/2026-07-18-s
 - independent Stage 6 reviewer는 acceptance, review reports, current-head started checks를 읽고 pending/fail `0`, intentional skip은 정책 근거가 있어야 한다.
 - defect가 발견되면 이 slice에서 봉합하지 않고 separate TDD repair PR로 되돌린 뒤 exact repaired head에서 Stage 2/4를 전부 재실행한다.
 
+Stage 4 evidence: [evidence/2026-07-18-stage4-real-browser.md](./evidence/2026-07-18-stage4-real-browser.md)
+Stage 5 review: [evidence/2026-07-19-stage5-review.md](./evidence/2026-07-19-stage5-review.md)
+Stage 6 closeout: [evidence/2026-07-19-stage6-closeout.md](./evidence/2026-07-19-stage6-closeout.md)
+
 ## Backend First Contract
 
 - verification-only slice이므로 request/response/schema를 새로 만들지 않는다.
@@ -157,9 +161,9 @@ Stage 3 reviews: [evidence/2026-07-18-stage3-reviews.md](./evidence/2026-07-18-s
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — verification-only current-head evidence와 authority가 아직 pending
+- [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed) — Stage 5 authority + Stage 6 final review + current-head checks green 후에만 가능
+- [x] 확정 (confirmed) — Stage 5 authority + independent Stage 6 review + current-head checks green
 - [ ] N/A
 
 ## Source Links
@@ -226,9 +230,9 @@ Stage 3 reviews: [evidence/2026-07-18-stage3-reviews.md](./evidence/2026-07-18-s
 - [x] local public products 287041, source tag, label basis, no inference, auth A/B/anonymization 재검증 <!-- omo:id=delivery-release-qa-product-catalog;stage=2;scope=shared;review=3,6 -->
 - [x] fresh local Supabase migrations, RLS, PostgREST, auth bootstrap, target digest, external write zero 확인 <!-- omo:id=delivery-release-qa-real-db-stack;stage=2;scope=shared;review=3,6 -->
 - [x] independent security/performance/code reviews blocker zero <!-- omo:id=delivery-release-qa-independent-reviews;stage=2;scope=shared;review=3,6 -->
-- [ ] real Chrome auth A/B, `FOOD_PRODUCT_CREATE` create/search/edit/delete/report, `SETTINGS_ACCOUNT_DELETE_CONFIRM` account deletion anonymization, planner add/edit/delete 검증 <!-- omo:id=delivery-release-qa-real-browser-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL ready/partial/unavailable/temporary split과 모든 recipe `정보 준비 중` 뭉개짐 부재 검증 <!-- omo:id=delivery-release-qa-recipe-detail-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK / MEAL_SCREEN recipe+product planned nutrition과 shopping/cooking/leftover/XP isolation 검증 <!-- omo:id=delivery-release-qa-planner-isolation;stage=4;scope=frontend;review=5,6 -->
-- [ ] 100→101g, solid 100g, liquid 100mL, direct relation only evidence <!-- omo:id=delivery-release-qa-basis-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] `RECIPE_DETAIL` / `FOOD_PRODUCT_PICKER` / `FOOD_PRODUCT_CREATE` / `PLANNER_WEEK` / `MEAL_SCREEN` / `SETTINGS_ACCOUNT_DELETE_CONFIRM` 320/390/desktop evidence, exploratory QA/eval, authority report current-head 기준 확보 <!-- omo:id=delivery-release-qa-visual-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] current-head started checks all success or intentional skip, pending/fail zero <!-- omo:id=delivery-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
+- [x] real Chrome auth A/B, `FOOD_PRODUCT_CREATE` create/search/edit/delete/report, `SETTINGS_ACCOUNT_DELETE_CONFIRM` account deletion anonymization, planner add/edit/delete 검증 <!-- omo:id=delivery-release-qa-real-browser-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL ready/partial/unavailable/temporary split과 모든 recipe `정보 준비 중` 뭉개짐 부재 검증 <!-- omo:id=delivery-release-qa-recipe-detail-states;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK / MEAL_SCREEN recipe+product planned nutrition과 shopping/cooking/leftover/XP isolation 검증 <!-- omo:id=delivery-release-qa-planner-isolation;stage=4;scope=frontend;review=5,6 -->
+- [x] 100→101g, solid 100g, liquid 100mL, direct relation only evidence <!-- omo:id=delivery-release-qa-basis-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] `RECIPE_DETAIL` / `FOOD_PRODUCT_PICKER` / `FOOD_PRODUCT_CREATE` / `PLANNER_WEEK` / `MEAL_SCREEN` / `SETTINGS_ACCOUNT_DELETE_CONFIRM` 320/390/desktop evidence, exploratory QA/eval, authority report current-head 기준 확보 <!-- omo:id=delivery-release-qa-visual-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] current-head started checks all success or intentional skip, pending/fail zero <!-- omo:id=delivery-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
