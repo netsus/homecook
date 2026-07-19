@@ -299,9 +299,9 @@ describe("social login buttons", () => {
     expect(screen.queryByText("G")).toBeNull();
   });
 
-  it("hides dev-only login helpers during QA fixture runs", () => {
+  it("keeps fixture login providers while hiding dev-only helpers", () => {
     isLocalDevAuthEnabled.mockReturnValue(true);
-    isLocalGoogleOAuthEnabled.mockReturnValue(true);
+    isLocalGoogleOAuthEnabled.mockReturnValue(false);
     isQaFixtureClientModeEnabled.mockReturnValue(true);
 
     render(<SocialLoginButtons nextPath="/planner" />);

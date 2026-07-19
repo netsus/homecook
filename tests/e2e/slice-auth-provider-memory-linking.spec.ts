@@ -96,7 +96,7 @@ test("shows link outcomes and clears provider memory only after account deletion
     document.cookie = "homecook-last-auth-provider=google; Path=/; SameSite=Lax";
   });
   await page.getByRole("button", { name: "계정 삭제하기" }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "계정 삭제" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "탈퇴하기" }).click();
   await expect(page).toHaveURL("/");
   await expect.poll(() => page.evaluate(() => localStorage.getItem("homecook:last-auth-provider:v1"))).toBeNull();
   await expect.poll(() => page.evaluate(() => document.cookie.includes("homecook-last-auth-provider="))).toBe(false);
