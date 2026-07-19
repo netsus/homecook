@@ -211,6 +211,7 @@ async function expectSharpV2Sticker(
 
         return img.complete ? img.naturalWidth : 0;
       }),
+      { timeout: 15_000 },
     )
     .toBeGreaterThan(0);
 
@@ -281,7 +282,19 @@ test.describe("PANTRY screen", () => {
   }) => {
     await setAuthOverride(page, "authenticated");
     await installPantryRoutes(page);
+    await page.route("**/_next/image**", async (route) => {
+      const requestUrl = decodeURIComponent(route.request().url());
+      if (requestUrl.includes("/assets/plush-v2/onion.webp")) {
+        await new Promise((resolve) => setTimeout(resolve, 6_000));
+      }
+      await route.continue();
+    });
+    const onionImageResponse = page.waitForResponse((response) =>
+      decodeURIComponent(response.url()).includes("/assets/plush-v2/onion.webp"),
+    );
     await page.goto("/pantry");
+
+    expect((await onionImageResponse).ok()).toBe(true);
 
     await expect(page.getByText(/양파/)).toBeVisible();
 
