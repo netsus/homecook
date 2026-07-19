@@ -1,4 +1,6 @@
-# nutrition-products-cross-slice-release-qa Stage 6 closeout
+# nutrition-products-cross-slice-release-qa Stage 6 closeout history and reopened status
+
+> 아래 첫 `PASS`는 PR `#1059` 당시 역사적 closeout 결과다. 두 차례 post-merge blocker와 repair 이력을 보존하며, post-`#1063` fresh authority는 최종 `PASS`했다. final Stage 6 closeout은 current-head PR checks 전까지 `pending`이다.
 
 - 검토일: 2026-07-19
 - 검토 역할: independent final verifier
@@ -49,3 +51,25 @@
 - Stage 6 closeout: allowed
 - Design Status `confirmed`: allowed
 - Discord/Amphetamine: PR merge와 final master integrated recheck 이전에는 금지
+
+## Post-merge reopen chronology
+
+1. PR `#1059`는 merge `d05c81d8f0e88ed3dc97b1da4fae9271b0b683ca`로 병합됐다.
+2. 이후 integrated authority가 390에서 제목/날짜 카드 `7/13–7/19`와 visible strip `7/06–7/12`가 다른 blocker `1`을 발견해 기존 closeout을 `HOLD`로 재개했다.
+3. 별도 TDD repair PR `#1060`이 reviewed head `73d471aeb1f0e1a9b000a5cf57ebf77751c94234`에서 검증되고 master `d8a8aa496717ec2b304d070bde1f3f57a8725c5a`로 병합됐다.
+4. `#1061` (`b0a67b4926cebf01680b1e6324b6770f814fb631`)과 `#1062` (`cedc214ccceee4f0e418cfc067bdff0aa344e99b`)는 test-only CI hardening이며 runtime/API/DB/public contract를 변경하지 않았다.
+5. post-`#1060` fresh authority는 week mismatch는 닫았지만 모바일 planner controls의 touch target 미달 때문에 다시 `HOLD` blocker `1`을 기록했다.
+6. 별도 TDD repair PR `#1063`이 reviewed head `cb5b8b76ff1b9abe209b55baa5ea7a59b6aefab3`에서 RED `2` failures를 planner `42/42` PASS로 되돌리고, outer `44px` hit area + compact inner visuals를 적용한 뒤 squash merge로 master `fefbc298420dbe863b8847f60d7db9409647a578`가 됐다.
+7. latest master에서 320/390/1280 initial `7/13–7/19`, next `7/20–7/26`, `이번 주` return `7/13–7/19`의 heading/visible strip/day-card coherence와 `OFS 갈비탕 101g`, `67.7 kcal`, mobile overflow `0`, prev/next `44x44`, current-week `71.71x44`, meal-add minimum `44x44`를 다시 확인했다.
+
+## Final closeout gates now pending
+
+- fresh independent product-design authority: `PASS`, blocker / major / minor `0 / 0 / 0`
+- fresh independent security/performance review: `closed PASS`
+- latest master runtime repair code review: `closed APPROVE`
+- fresh Stage 5 review: `APPROVE`, unresolved finding `0`
+- fresh independent Stage 6 review: `pending`
+- final closeout PR exact-head started checks pending/fail zero 확인: `pending`
+- final merged master integrated recheck: `pending`
+
+따라서 현재 상태는 `Stage 5 + authority closed / Stage 6 closeout pending`이다. Design Status는 `confirmed`지만 final closeout PR current-head checks와 Stage 6가 끝나기 전 Discord/Amphetamine 후속 automation을 실행해서는 안 된다.

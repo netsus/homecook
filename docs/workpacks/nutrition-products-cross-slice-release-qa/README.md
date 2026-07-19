@@ -6,13 +6,25 @@
 
 ## Goal
 
-모든 nutrition/products/planner successor가 이미 병합된 기준 master `58a3f805864af9627616c50c117eb3c7f94f72a2` ancestry에서 실제 local DB, real Chrome, current-head checks를 다시 묶어 최종 출고 신호를 만든다. 이 슬라이스는 재료 845개 전수 coverage, recipe nutrition snapshot/Meal pin, 287,041개 public product catalog, shared manual 권한과 account anonymization, product planner isolation, 100g/100mL UX, 보안/성능/authority evidence를 한 번에 교차 검증하고 Manual Only 잔여 위험만 명시적으로 남긴다.
+모든 nutrition/products/planner successor가 이미 병합된 기준 master ancestry에서 실제 local DB, real Chrome, current-head checks를 다시 묶어 최종 출고 신호를 만든다. 현재 재검증 기준은 mobile touch-target TDD repair까지 병합된 master `fefbc298420dbe863b8847f60d7db9409647a578`다. 이 슬라이스는 재료 845개 전수 coverage, recipe nutrition snapshot/Meal pin, 287,041개 공공 데이터 제품과 공동 사용자 등록 제품, product planner isolation, 100g/100mL UX, 보안/성능/authority evidence를 한 번에 교차 검증하고 Manual Only 잔여 위험만 명시적으로 남긴다.
 
 ## Branches
 
 - 문서: `docs/nutrition-products-cross-slice-release-qa`
 - Stage 2/3 verification lane: `feature/be-nutrition-products-cross-slice-release-qa`
 - Stage 4 verification lane: `feature/fe-nutrition-products-cross-slice-release-qa`
+
+## Post-merge reopen chronology
+
+1. evidence PR `#1059`가 merge `d05c81d8f0e88ed3dc97b1da4fae9271b0b683ca`로 병합될 때 당시 Stage 4/5/6 검증은 PASS였다.
+2. 병합 뒤 별도 integrated authority가 390 evidence를 다시 대조하면서 blocker `1`을 발견했다. 제목과 날짜 카드 범위는 `7/13–7/19`였지만 사용자가 실제로 보는 상단 요일 strip은 `7/06–7/12`였다.
+3. 결함은 verification 문서에서 덮지 않고 별도 TDD repair PR `#1060`에서 수정했다. reviewed repair head는 `73d471aeb1f0e1a9b000a5cf57ebf77751c94234`, merge 뒤 master는 `d8a8aa496717ec2b304d070bde1f3f57a8725c5a`다.
+4. CI image readiness PR `#1061` (`b0a67b4926cebf01680b1e6324b6770f814fb631`)과 lazy-image wait ordering PR `#1062` (`cedc214ccceee4f0e418cfc067bdff0aa344e99b`)는 test-only hardening이며 제품 runtime/API/DB 계약을 바꾸지 않았다.
+5. post-`#1060` fresh authority는 주간 날짜 불일치는 닫았지만 모바일 planner controls의 touch target이 `44px` 미만이라며 다시 `HOLD` blocker `1`을 기록했다.
+6. 별도 TDD repair PR `#1063`은 reviewed head `cb5b8b76ff1b9abe209b55baa5ea7a59b6aefab3`에서 RED `2` failures를 planner `42/42` PASS로 되돌리고, outer `44px` hit area + compact inner visuals를 적용했다. independent code review `APPROVE`, `typecheck` / `lint` / `git diff --check`, current-head full regression `12m42s` PASS 뒤 squash merge로 master `fefbc298420dbe863b8847f60d7db9409647a578`가 됐다.
+7. latest master에서 320/390/1280의 제목·실제 보이는 strip·날짜 카드가 initial `7/13–7/19`, 다음 주 `7/20–7/26`, `이번 주` 복귀 `7/13–7/19` 모두 일치하고 `OFS 갈비탕 101g`, `67.7 kcal`, overflow `0`도 다시 확인했다.
+8. fresh independent product-design authority가 exact master `fefbc298420dbe863b8847f60d7db9409647a578`와 새 evidence를 재검토해 `PASS`, blocker / major / minor `0 / 0 / 0`으로 판정했다.
+9. 분리된 fresh Stage 5 evidence/code reviewer가 변경 13개를 재검토해 `APPROVE`, unresolved finding `0`으로 판정했다. 독립 Stage 6 review와 이 closeout PR의 current-head CI는 아직 `pending`이다.
 
 ## In Scope
 
@@ -95,6 +107,7 @@ Stage 3 reviews: [evidence/2026-07-18-stage3-reviews.md](./evidence/2026-07-18-s
 2. 320 / 390 / desktop 1280 evidence를 current head 기준으로 수집한다.
 3. `RECIPE_DETAIL`은 snapshot이 있는 recipe를 모두 `정보 준비 중`으로 뭉개지 않고 ready/partial/unavailable/temporary를 구분해야 한다.
 4. `PLANNER_WEEK` / `MEAL_SCREEN` / `FOOD_PRODUCT_PICKER` / `FOOD_PRODUCT_CREATE` / `RECIPE_DETAIL` / `SETTINGS_ACCOUNT_DELETE_CONFIRM` evidence를 current head 기준으로 다시 남긴다.
+5. `PLANNER_WEEK`는 initial, 다음 주 이동, `이번 주` 복귀 각각에서 주간 제목 = 실제 보이는 요일 strip = 날짜 카드 범위가 일치해야 한다.
 
 ### Stage 5 / Authority / Stage 6
 
@@ -154,7 +167,7 @@ Stage 6 closeout: [evidence/2026-07-19-stage6-closeout.md](./evidence/2026-07-19
   - `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/SETTINGS_ACCOUNT_DELETE_CONFIRM-320.png`
   - `ui/designs/evidence/nutrition-products-cross-slice-release-qa/stage4/SETTINGS_ACCOUNT_DELETE_CONFIRM-desktop-1280.png`
 - Authority report: `ui/designs/authority/PLANNER_WEEK-nutrition-products-cross-slice-release-qa-authority.md`
-- Authority status: `required`
+- Authority status: `confirmed — post-#1063 fresh review PASS, blocker / major / minor 0 / 0 / 0`
 - Notes:
   - verification-only지만 최종 출고 gate라서 fresh authority evidence를 생략하지 않는다.
   - 신규 design-generator / design-critic 산출물은 만들지 않는다. 기존 merged screen contract를 current head screenshot으로만 재검증한다.
@@ -163,7 +176,7 @@ Stage 6 closeout: [evidence/2026-07-19-stage6-closeout.md](./evidence/2026-07-19
 
 - [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [x] 확정 (confirmed) — Stage 5 authority + independent Stage 6 review + current-head checks green
+- [x] 확정 (confirmed) — fresh Stage 5 `APPROVE` + final authority `PASS`, blocker / major / minor `0 / 0 / 0`; Stage 6/current-head merge gate는 별도 closeout 상태로 유지
 - [ ] N/A
 
 ## Source Links
@@ -195,6 +208,7 @@ Stage 6 closeout: [evidence/2026-07-19-stage6-closeout.md](./evidence/2026-07-19
   - replay write non-zero, Meal pin drift, secret/raw/private-path leak, runtime provider fetch, production/staging/provider write
 - Stage 4 blocker:
   - auth A/B, shared manual create/search/edit/delete/report/account deletion anonymization, planner add/edit/delete, 100→101g recalculation, RECIPE_DETAIL state split, `RECIPE_DETAIL` / `FOOD_PRODUCT_PICKER` / `FOOD_PRODUCT_CREATE` / `PLANNER_WEEK` / `MEAL_SCREEN` / `SETTINGS_ACCOUNT_DELETE_CONFIRM`의 320/390/1280 evidence, authority report 중 하나라도 누락
+  - `PLANNER_WEEK`의 주간 제목, 실제 보이는 요일 strip, 날짜 카드 범위가 initial / 다음 주 / `이번 주` 복귀 중 하나라도 서로 다름
 - performance baseline:
   - community catalog predecessor 기준 local SQL 약 `28ms`, route response 약 `349-559ms`
   - release QA는 exact current head 값을 다시 기록하고 item-level N+1 또는 unexplained regression을 blocker로 본다
@@ -208,6 +222,7 @@ Stage 6 closeout: [evidence/2026-07-19-stage6-closeout.md](./evidence/2026-07-19
 - public product catalog는 local public `287,041` rows, source tag, `label_basis_text`, solid `100g`, liquid `100mL`, no inference를 유지해야 한다.
 - shared manual은 auth A/B, owner-only edit/delete, report append-only, account deletion anonymization, existing pin preservation을 모두 통과해야 한다.
 - ProductPlannerEntry는 shopping / cooking / leftover / XP / Recipe Meal status와 섞이면 fail이다.
+- `PLANNER_WEEK`는 320/390/1280에서 initial / 다음 주 / `이번 주` 복귀 모두 제목·실제 보이는 strip·날짜 카드가 같은 주를 가리켜야 한다.
 - current-head merge gate는 required check만이 아니라 시작된 모든 check가 success 또는 intentional skip인지로 판단한다.
 - physical device, 실제 screen reader, true production-scale, Discord/Amphetamine은 Manual Only이며 merge 전 기본 gate를 대체하지 않는다.
 
@@ -229,10 +244,11 @@ Stage 6 closeout: [evidence/2026-07-19-stage6-closeout.md](./evidence/2026-07-19
 - [x] all-recipe current lifecycle, rollback, missing-not-zero, Meal pin invariance 재검증 <!-- omo:id=delivery-release-qa-all-recipe-lifecycle;stage=2;scope=shared;review=3,6 -->
 - [x] local public products 287041, source tag, label basis, no inference, auth A/B/anonymization 재검증 <!-- omo:id=delivery-release-qa-product-catalog;stage=2;scope=shared;review=3,6 -->
 - [x] fresh local Supabase migrations, RLS, PostgREST, auth bootstrap, target digest, external write zero 확인 <!-- omo:id=delivery-release-qa-real-db-stack;stage=2;scope=shared;review=3,6 -->
-- [x] independent security/performance/code reviews blocker zero <!-- omo:id=delivery-release-qa-independent-reviews;stage=2;scope=shared;review=3,6 -->
+- [x] latest master fresh independent security/performance/code reviews blocker zero <!-- omo:id=delivery-release-qa-independent-reviews;stage=2;scope=shared;review=3,6 -->
 - [x] real Chrome auth A/B, `FOOD_PRODUCT_CREATE` create/search/edit/delete/report, `SETTINGS_ACCOUNT_DELETE_CONFIRM` account deletion anonymization, planner add/edit/delete 검증 <!-- omo:id=delivery-release-qa-real-browser-flow;stage=4;scope=frontend;review=5,6 -->
 - [x] RECIPE_DETAIL ready/partial/unavailable/temporary split과 모든 recipe `정보 준비 중` 뭉개짐 부재 검증 <!-- omo:id=delivery-release-qa-recipe-detail-states;stage=4;scope=frontend;review=5,6 -->
 - [x] PLANNER_WEEK / MEAL_SCREEN recipe+product planned nutrition과 shopping/cooking/leftover/XP isolation 검증 <!-- omo:id=delivery-release-qa-planner-isolation;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK initial / 다음 주 / 이번 주 복귀에서 제목 = 실제 보이는 strip = 날짜 카드 범위 일치 <!-- omo:id=delivery-release-qa-planner-week-range-coherence;stage=4;scope=frontend;review=5,6 -->
 - [x] 100→101g, solid 100g, liquid 100mL, direct relation only evidence <!-- omo:id=delivery-release-qa-basis-evidence;stage=4;scope=frontend;review=5,6 -->
-- [x] `RECIPE_DETAIL` / `FOOD_PRODUCT_PICKER` / `FOOD_PRODUCT_CREATE` / `PLANNER_WEEK` / `MEAL_SCREEN` / `SETTINGS_ACCOUNT_DELETE_CONFIRM` 320/390/desktop evidence, exploratory QA/eval, authority report current-head 기준 확보 <!-- omo:id=delivery-release-qa-visual-authority;stage=4;scope=frontend;review=5,6 -->
-- [x] current-head started checks all success or intentional skip, pending/fail zero <!-- omo:id=delivery-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
+- [x] `RECIPE_DETAIL` / `FOOD_PRODUCT_PICKER` / `FOOD_PRODUCT_CREATE` / `PLANNER_WEEK` / `MEAL_SCREEN` / `SETTINGS_ACCOUNT_DELETE_CONFIRM` 320/390/desktop evidence, exploratory QA/eval, fresh authority report current-head 기준 확보 <!-- omo:id=delivery-release-qa-visual-authority;stage=4;scope=frontend;review=5,6 -->
+- [ ] final closeout PR current-head started checks all success or intentional skip, pending/fail zero <!-- omo:id=delivery-release-qa-current-head-checks;stage=4;scope=shared;review=6 -->
