@@ -4,6 +4,26 @@
 담당자: 채실장
 날짜: 7월 17
 
+> **2026-07-21 contract-evolution — 영양 결측 검수 흐름**
+>
+> | # | 변경 내용 | 영향 범위 |
+> | --- | --- | --- |
+> | 1 | 운영 batch는 최신 local inventory를 일부 결측/profile 없음으로 분리하고 RDA 10.4, K-FIND/NIFS, MFDS 순으로 compatible 후보를 만든다 | operator data flow |
+> | 2 | 후보는 `raw → normalize → review HTML → explicit approval → local apply`를 따르며 HTML 검수 전 DB write는 0이다 | review gate |
+> | 3 | 승인 replacement는 새 immutable source/profile/value/link를 만들고 기존 active primary를 같은 transaction에서 supersede한다 | append-only activation |
+>
+> 이름 유사도, category, source rank만으로 자동 승인하지 않는다. 다른 source의 nutrient field를 섞지 않고 동일 식품·상태·가식부·기준량의 단일 row 전체를 검수하며, 결측과 관측 0을 계속 구분한다.
+
+> **2026-07-21 contract-evolution — 실측 계량 evidence 우선 계산 흐름**
+>
+> | # | 변경 내용 | 영향 범위 |
+> | --- | --- | --- |
+> | 1 | recipe snapshot writer는 exactly-one active approved assignment/evidence/source 경로의 `normalized_g_per_15ml`을 직접 사용한다 | snapshot writer |
+> | 2 | 실측값이 없거나 승인 경로가 0개·복수이면 대표 등급으로 보충하지 않고 해당 기여를 `partial/unavailable`로 둔다 | fail-closed flow |
+> | 3 | 특정 제품 식별자가 없는 canonical ingredient recipe에는 제품명 유사도만으로 제품별 밀도·영양값을 섞지 않는다 | product/generic boundary |
+>
+> 아래 이전 절의 `대표 등급 검수 evidence` 흐름은 과거 assignment 감사·호환 기록으로만 유지한다. 신규 계산 흐름의 값 authority는 승인 evidence의 실측 소수값이며, 결측≠0·immutable snapshot·source attribution 계약은 그대로다.
+
 > **2026-07-17 contract-evolution — 사용자 공동 제품·공공 완제품 flow 확장**
 >
 > | # | 변경 내용 | 영향 범위 |

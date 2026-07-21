@@ -4,6 +4,16 @@
 담당자: 킴실장
 날짜: 7월 17
 
+> **2026-07-21 contract-evolution — recipe 부피 환산 실측값 계산 보정**
+>
+> | # | 변경 내용 | 영향 범위 |
+> | --- | --- | --- |
+> | 1 | recipe snapshot writer는 승인 conversion assignment가 연결한 evidence의 `normalized_g_per_15ml` 실측 소수값으로 계산한다 | internal snapshot calculation |
+> | 2 | 실측값이 없거나 승인 경로가 모호하면 대표 profile로 보충하지 않고 기존 `UNIT_CONVERSION_MISSING`과 `partial/unavailable`을 유지한다 | warning/status compatibility |
+> | 3 | public endpoint·field·HTTP status·error code·warning code는 추가하지 않으며 기존 `REPRESENTATIVE_VOLUME_CONVERSION_USED`는 과거 snapshot 호환을 위해 값만 유지한다 | API compatibility |
+>
+> 아래 이전 절의 `VOLUME_G6/G10/G15/G20/G25` 계산 규정은 이 addendum이 대체한다. 새 계산식은 `입력 mL × normalized_g_per_15ml / 15`이며, g 입력과 100mL 영양 profile의 조합은 `입력 g × 15 / normalized_g_per_15ml`로 mL를 역산한다. 결과의 `estimated/mixed`, `약/예상`, immutable `warnings[]`와 6-field source attribution 계약은 유지한다.
+
 > **2026-07-17 contract-evolution — 사용자 공동 제품·공공 완제품 API 확장**
 >
 > | # | 변경 내용 | 영향 범위 |
@@ -550,10 +560,10 @@ type YoutubeQuantityConfirmationStatus =
 - MVP 핵심 key는 `energy_kcal`, `carbohydrate_g`, `protein_g`, `fat_g`, `sodium_mg`다. optional `sugars_g`, `saturated_fat_g`, `fiber_g`는 존재할 때만 추가한다.
 - `status`는 영양소별 `complete / partial / unavailable`이다. unavailable은 `amount=null`, partial은 `amount=null` + `known_amount` + `display_mode='minimum'`이다.
 - 결측 nutrient를 `amount=0`으로 만들어 반환하지 않는다. 실제 source 값 0만 `amount=0, status='complete'`가 될 수 있다.
-- 계산 가능한 값이 하나 이상 있으면 `calculation_quality`는 `direct / estimated / mixed`이며 completeness와 독립이다. 대표 `VOLUME_G6/G10/G15/G20/G25` 환산을 하나라도 사용하면 `direct`가 될 수 없다. 전체 `calculation_status='unavailable'`이면 `calculation_quality=null`이다.
+- 계산 가능한 값이 하나 이상 있으면 `calculation_quality`는 `direct / estimated / mixed`이며 completeness와 독립이다. generic 계량 evidence의 `normalized_g_per_15ml` 환산을 하나라도 사용하면 `direct`가 될 수 없다. 전체 `calculation_status='unavailable'`이면 `calculation_quality=null`이다.
 - `availability_reason`은 `GET /recipes/{id}`의 recipe nutrition context에만 항상 포함하는 nullable field다. 값은 정확히 `missing`, `temporarily_unavailable`, `null` 중 하나이며 product/planner aggregate nutrition에는 추가하지 않는다.
 - current snapshot row가 없으면 `availability_reason='missing'`, snapshot query throw/DB error 또는 malformed/unreadable snapshot payload면 `temporarily_unavailable`, 정상 snapshot row를 읽었으면 그 row의 `calculation_status`와 무관하게 null이다. 이 field는 계산 completeness가 아니라 조회 가용성을 표현한다.
-- 대표 환산값은 충분한 내부 정밀도로 계산하고 표시 직전에 g 정수 반올림한다. UI는 `약/예상`을 붙인다.
+- 승인 실측 환산값은 충분한 내부 정밀도로 계산하고 표시 직전에 g 정수 반올림한다. UI는 `약/예상`을 붙인다.
 - aggregate에서 partial `known_amount`를 합산하면 결과도 `partial/minimum`이다. unavailable entry는 0으로 합산하지 않고 `incomplete_entry_count`에 포함한다.
 - `sources[]` item은 `provider`, `dataset`, `source_version`, `data_basis_date`, `license`, `source_url` 6개 field로 구성된 승인 attribution 요약이다. API key, 인증 query, raw fetch URL, raw provider response, 내부 manifest storage path는 반환하지 않는다.
 - recipe context의 `sources[]`는 `recipe_nutrition_snapshots.sources_json`에 계산 당시 pin된 배열을 그대로 투영한다. read/current switch/Meal pin/planner aggregate 시점에 ingredient·source·profile relation을 다시 조회해 과거 attribution을 추가·삭제·교체하지 않는다.
@@ -576,8 +586,8 @@ type YoutubeQuantityConfirmationStatus =
 1. recipe 정량 `amount + unit`은 껍질·뼈 포함 구매 총중량이 아니라 실제 투입 가식부 사용량이며 가식부율을 다시 곱하지 않는다.
 2. g/kg은 상태 전체에서 완전한 승인 primary chain이 정확히 1개인 질량 profile로 직접 계산한다.
 3. 같은 exactly-one 규칙으로 선택된 profile 기준이 `100mL`이고 입력이 mL/L/tbsp/tsp/cup이면 부피로 직접 계산한다.
-4. 사용자가 입력한 정확한 g과 제품 표시 중량을 대표 등급보다 우선한다.
-5. 그 외 부피는 `tbsp=15mL`, `tsp=5mL`, `cup=200mL`로 정규화한 뒤 자격 있는 승인 conversion path가 전체 상태에서 정확히 1개일 때만 대표 등급으로 계산한다.
+4. 사용자가 입력한 정확한 g과 명시적으로 식별된 제품 표시 중량을 generic 계량 환산보다 우선한다.
+5. 그 외 부피는 `tbsp=15mL`, `tsp=5mL`, `cup=200mL`로 정규화한 뒤 자격 있는 승인 conversion path가 전체 상태에서 정확히 1개일 때만 evidence의 `normalized_g_per_15ml`로 계산한다.
 6. `개/장`은 recipe 입력과 `size_code + preparation_state`가 정확히 일치하는 승인 piece weight가 있을 때만 계산한다. recipe row가 exact 크기/상태를 제공하지 않으면 fail-closed이며, 직접 g/kg 입력에는 piece 크기가 필요 없다.
 7. 후보 또는 변환 경로가 없거나 복수이면 추측하지 않고 partial/unavailable을 반환한다.
 

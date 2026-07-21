@@ -4,6 +4,27 @@
 담당자: 채실장
 날짜: 7월 17
 
+> **2026-07-21 contract-evolution — 영양 profile 보완 경계**
+>
+> | # | 변경 내용 | 영향 범위 |
+> | --- | --- | --- |
+> | 1 | 영양 결측 보완은 기존 source/item/profile/value/link table에 새 immutable version을 append하고 기존 active primary link를 같은 transaction에서 `superseded` 처리한다 | append-only replacement |
+> | 2 | 다른 source의 nutrient field를 기존 profile에 합성하지 않으며 profile 하나는 source item 하나의 provenance를 유지한다 | source integrity |
+> | 3 | 이번 변경은 신규 table/column/index/enum을 추가하지 않고 target table 수 50개를 유지한다 | schema compatibility |
+>
+> candidate HTML 검수 전에는 write를 허용하지 않는다. local apply 실패는 신규 row와 active pointer 전환을 모두 rollback하며 같은 승인 bundle replay는 duplicate write를 만들지 않는다.
+
+> **2026-07-21 contract-evolution — 계량 실측값 계산 authority 보정**
+>
+> | # | 변경 내용 | 영향 범위 |
+> | --- | --- | --- |
+> | 1 | `measurement_source_evidence.normalized_g_per_15ml`을 recipe 부피→질량 계산의 값 authority로 사용한다 | measurement evidence |
+> | 2 | `ingredient_conversion_assignments`는 ingredient와 승인 evidence를 연결하는 검수 authority이며, 연결된 `measurement_conversion_profiles.representative_weight_g`는 신규 계산값으로 사용하지 않는다 | conversion assignment |
+> | 3 | 기존 profile/assignment row와 FK는 과거 감사·호환을 위해 보존하고 이번 보정에서는 table/column/target table 수를 변경하지 않는다 | schema compatibility |
+> | 4 | snapshot DB guard는 `normalized_g_per_15ml`을 input guard에 pin하고 `mL→g`와 `g→mL(100mL 영양 profile)` 양방향에서 같은 exactly-one 승인 경로·출처를 검증한다 | immutable input/source guard |
+>
+> 신규 계산은 `normalized_g_per_15ml > 0`인 active approved evidence와 active current approved source가 exactly one인 경우에만 허용한다. 제품별 값은 recipe ingredient의 product identity가 없으면 generic ingredient 계산에 합성하지 않는다. 아래 대표 profile 제약은 기존 row/import 호환 계약으로 남지만 recipe 계산식의 authority는 아니다.
+
 > **v1.3.21 → v1.3.22 contract-evolution — 사용자 공동 제품·공공 완제품·영양 전수화 확장**
 >
 > | # | 변경 내용 | 영향 범위 |
@@ -684,7 +705,7 @@ CHECK (NOT is_active OR (is_primary AND review_status = 'approved'))
 | id | uuid | PK | profile ID |
 | code | varchar(30) | NOT NULL | `VOLUME_G6/G10/G15/G20/G25` |
 | basis_volume_ml | numeric(8,3) | NOT NULL, DEFAULT 15 | 공통 기준 부피 |
-| representative_weight_g | numeric(8,3) | NOT NULL | 계산용 대표 g |
+| representative_weight_g | numeric(8,3) | NOT NULL | legacy 후보 분류·감사용 대표 g; 신규 계산에는 사용하지 않음 |
 | display_rounding_g | numeric(8,3) | NOT NULL, DEFAULT 1 | 표시 반올림 단위 |
 | display_qualifier | varchar(20) | NOT NULL, DEFAULT 'approximate' | 후속 소비자의 `약` 표시 신호 |
 | version | int | NOT NULL | profile version |
@@ -2195,8 +2216,8 @@ XP toast와 achievement/badge new 상태 표시를 위한 사용자별 notificat
 | nutrition_profiles 1 — N nutrition_values | 1:N | 영양소별 값; 결측은 `value_status`로 구분 |
 | nutrition_sources 1 — N measurement_source_evidence | 1:N | 제한 보존된 계량 원문 evidence |
 | measurement_source_evidence 1 — N ingredient_conversion_assignments | 1:N | evidence와 서비스 assignment 분리 |
-| ingredients 1 — N ingredient_conversion_assignments | 1:N | 대표 부피 등급 배정 |
-| measurement_conversion_profiles 1 — N ingredient_conversion_assignments | 1:N | 대표 등급 사용처 |
+| ingredients 1 — N ingredient_conversion_assignments | 1:N | 승인 계량 evidence 연결·검수 |
+| measurement_conversion_profiles 1 — N ingredient_conversion_assignments | 1:N | legacy 후보 분류·감사 연결 |
 | measurement_source_evidence 1 — N piece_unit_weights | 1:N | 개당 중량 provenance |
 | ingredients 1 — N piece_unit_weights | 1:N | 승인 개당 중량 |
 | food_products 1 — N food_product_nutrition_versions | 1:N | 제품 불변 영양 version |
@@ -2337,7 +2358,7 @@ XP toast와 achievement/badge new 상태 표시를 위한 사용자별 notificat
 | nutrition_values | `(profile_id, nutrient_code)` UNIQUE | profile 영양 벡터 조회 |
 | ingredient_nutrition_profiles | `(ingredient_id, preparation_state, is_active, review_status)` | active approved 재료 profile 선택 |
 | measurement_source_evidence | `(source_id, evidence_fingerprint, version)` UNIQUE | evidence import 멱등성 |
-| ingredient_conversion_assignments | `(ingredient_id, preparation_state, is_active, review_status)` | active approved 대표 등급 선택 |
+| ingredient_conversion_assignments | `(ingredient_id, preparation_state, is_active, review_status)` | active approved 계량 evidence 선택 |
 | piece_unit_weights | `(ingredient_id, size_code, preparation_state, is_active, review_status)` | 승인 `개→g` 선택 |
 | recipe_nutrition_snapshots | `(recipe_id, is_current, calculated_at DESC)` | current/이력 snapshot 조회 |
 | recipe_nutrition_snapshots | `(recipe_id, input_hash, calculation_version)` UNIQUE | 계산 idempotency |
@@ -2459,9 +2480,9 @@ XP toast와 achievement/badge new 상태 표시를 위한 사용자별 notificat
 | 39 | nutrition_profiles | immutable 영양 profile `v1.3.18` |
 | 40 | nutrition_values | 영양소별 값·결측 상태 `v1.3.18` |
 | 41 | ingredient_nutrition_profiles | 재료 영양 후보/승인 연결 `v1.3.18` |
-| 42 | measurement_conversion_profiles | 대표 부피 환산 등급 `v1.3.18` |
+| 42 | measurement_conversion_profiles | legacy 부피 후보 분류·감사 record `v1.3.18` |
 | 43 | measurement_source_evidence | 원문 계량 evidence `v1.3.18` |
-| 44 | ingredient_conversion_assignments | 재료별 대표 등급 후보/검수 `v1.3.18` |
+| 44 | ingredient_conversion_assignments | 재료별 계량 evidence 연결/검수 `v1.3.18` |
 | 45 | piece_unit_weights | 승인 개당 중량 `v1.3.18` |
 | 46 | recipe_nutrition_snapshots | 레시피 영양 snapshot `v1.3.17` |
 | 47 | food_products | 완제품 catalog `v1.3.17` |

@@ -8,7 +8,11 @@ const BACKOFF_MS = [1_000, 2_000, 4_000];
 const MAX_RETRY_AFTER_MS = 30_000;
 export const MFDS_MAX_PAGE_SIZE = 100;
 export const MFDS_MAX_LIVE_PAGES = 10;
-const INPUT_SHAPES = new Set(["adapted-row-v1", "mfds-provider-v1"]);
+const INPUT_SHAPES = new Set([
+  "adapted-row-v1",
+  "mfds-provider-v1",
+  "integrated-material-provider-v1",
+]);
 const MFDS_FILTER_KEYS = new Set([
   "FOOD_NM_KR",
   "RESEARCH_YMD",
@@ -84,6 +88,16 @@ export const SOURCE_REGISTRY = Object.freeze({
     keyless: true,
     default_path: true,
     mode: "file_reconciliation",
+  }),
+  "integrated-material-15100065": Object.freeze({
+    id: "integrated-material-15100065",
+    application_required: true,
+    secret_env: "DATA_GO_KR_API_KEY",
+    keyless: false,
+    default_path: true,
+    mode: "openapi_reconciliation",
+    request_endpoint:
+      "https://api.data.go.kr/openapi/tn_pubr_public_nutri_material_info_api",
   }),
   "rda-measurement": Object.freeze({
     id: "rda-measurement",
@@ -236,7 +250,13 @@ function pageIdentity(items) {
 
 function externalItemKey(item) {
   if (!isRecord(item)) return null;
-  for (const key of ["external_item_key", "FOOD_CD", "food_code", "ITEM_REPORT_NO"]) {
+  for (const key of [
+    "external_item_key",
+    "FOOD_CD",
+    "foodCd",
+    "food_code",
+    "ITEM_REPORT_NO",
+  ]) {
     const value = item[key];
     if (typeof value === "string" && value.trim().length > 0) return value.trim();
     if (typeof value === "number") return String(value);
@@ -576,9 +596,50 @@ function adaptMfdsProviderRow(row) {
   };
 }
 
+function adaptIntegratedMaterialProviderRow(row) {
+  if (!isRecord(row)) return row;
+  const basisText = row.nutConSrtrQua;
+  const nutrients = {
+    energy: { value: row.enerc, unit: "kcal" },
+    protein: { value: row.prot, unit: "g" },
+    fat: { value: row.fatce, unit: "g" },
+    carbohydrate: { value: row.chocdf, unit: "g" },
+    sodium: { value: row.nat, unit: "mg" },
+  };
+  if (Object.hasOwn(row, "sugar")) {
+    nutrients.sugars = { value: row.sugar, unit: "g" };
+  }
+  if (Object.hasOwn(row, "fibtg")) {
+    nutrients.fiber = { value: row.fibtg, unit: "g" };
+  }
+  if (Object.hasOwn(row, "fasat")) {
+    nutrients.saturated_fat = { value: row.fasat, unit: "g" };
+  }
+  let ediblePortion = null;
+  try {
+    const basis = parseBasis(basisText);
+    if (basis.amount === 100 && Object.hasOwn(MFDS_EDIBLE_PORTION_TEXT, basis.unit)) {
+      ediblePortion = { text: MFDS_EDIBLE_PORTION_TEXT[basis.unit] };
+    }
+  } catch {
+    ediblePortion = null;
+  }
+  return {
+    external_item_key: row.foodCd,
+    external_name: row.foodNm,
+    preparation_state: "as_published",
+    basis_text: basisText,
+    edible_portion: ediblePortion,
+    nutrients,
+  };
+}
+
 function adaptInputRow(row, inputShape) {
   if (inputShape === "adapted-row-v1") return row;
   if (inputShape === "mfds-provider-v1") return adaptMfdsProviderRow(row);
+  if (inputShape === "integrated-material-provider-v1") {
+    return adaptIntegratedMaterialProviderRow(row);
+  }
   throw new NutritionPipelineError("INPUT_SHAPE_UNSUPPORTED");
 }
 

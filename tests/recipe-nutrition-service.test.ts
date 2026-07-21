@@ -133,10 +133,14 @@ function approvedConversionAssignment({
   id = "assignment-1",
   preparationState = "raw-edible",
   active = true,
+  exactWeight = 15,
+  representativeWeight = 15,
 }: {
   id?: string;
   preparationState?: string;
   active?: boolean;
+  exactWeight?: number | null;
+  representativeWeight?: number;
 } = {}) {
   return {
     id,
@@ -148,15 +152,16 @@ function approvedConversionAssignment({
     is_active: active,
     measurement_conversion_profiles: {
       id: "conversion-profile-1",
-      code: "VOLUME_G15",
+      code: `VOLUME_G${representativeWeight}`,
       basis_volume_ml: 15,
-      representative_weight_g: 15,
+      representative_weight_g: representativeWeight,
       is_active: true,
     },
     measurement_source_evidence: {
       id: `evidence-${id}`,
       source_id: `measurement-source-${id}`,
       evidence_kind: "volume_weight",
+      normalized_g_per_15ml: exactWeight,
       preparation_state: preparationState,
       review_status: "approved",
       is_active: true,
@@ -337,6 +342,128 @@ describe("recipe nutrition snapshot service", () => {
     });
   });
 
+  it.each([
+    ["스푼", 15],
+    ["큰술", 15],
+    ["작은술", 5],
+    ["T", 15],
+    ["t", 5],
+  ])("selects a direct 100mL profile for the Korean volume unit %s", async (unit, expectedEnergy) => {
+    const volumeLink = approvedNutritionLink({
+      id: "link-volume",
+      profileId: "profile-volume",
+      preparationState: "liquid",
+      normalizationMethod: "volume_100ml",
+      basisUnit: "ml",
+    });
+    const { from, rpc } = serviceClient({
+      ingredients: [{
+        id: "recipe-ingredient-1",
+        ingredient_id: "ingredient-1",
+        amount: 1,
+        unit,
+        ingredient_type: "QUANT",
+        scalable: true,
+        sort_order: 0,
+      }],
+      nutritionLinks: [volumeLink],
+    });
+
+    await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
+
+    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+      calculation_status: "complete",
+      calculation_quality: "direct",
+      scalable_values: expect.objectContaining({ energy_kcal: expectedEnergy }),
+    });
+  });
+
+  it("selects a mass profile plus approved conversion for a Korean spoon unit", async () => {
+    const { from, rpc } = serviceClient({
+      ingredients: [{
+        id: "recipe-ingredient-1",
+        ingredient_id: "ingredient-1",
+        amount: 1,
+        unit: "스푼",
+        ingredient_type: "QUANT",
+        scalable: true,
+        sort_order: 0,
+      }],
+      nutritionLinks: [approvedNutritionLink()],
+      conversionAssignments: [approvedConversionAssignment()],
+    });
+
+    await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
+
+    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+      calculation_status: "complete",
+      calculation_quality: "estimated",
+      scalable_values: expect.objectContaining({ energy_kcal: 15 }),
+      warnings: ["REPRESENTATIVE_VOLUME_CONVERSION_USED"],
+    });
+  });
+
+  it("projects and uses the exact approved measurement instead of the legacy profile weight", async () => {
+    const { from, rpc } = serviceClient({
+      ingredients: [{
+        id: "recipe-ingredient-1",
+        ingredient_id: "ingredient-1",
+        amount: 1,
+        unit: "큰술",
+        ingredient_type: "QUANT",
+        scalable: true,
+        sort_order: 0,
+      }],
+      nutritionLinks: [approvedNutritionLink()],
+      conversionAssignments: [approvedConversionAssignment({
+        exactWeight: 17.7,
+        representativeWeight: 20,
+      })],
+    });
+
+    await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
+
+    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+      calculation_status: "complete",
+      calculation_quality: "estimated",
+      scalable_values: expect.objectContaining({ energy_kcal: 17.7 }),
+    });
+  });
+
+  it("selects a 100mL profile plus approved exact measurement for gram input", async () => {
+    const volumeLink = approvedNutritionLink({
+      id: "link-volume",
+      profileId: "profile-volume",
+      preparationState: "raw-edible",
+      normalizationMethod: "volume_100ml",
+      basisUnit: "ml",
+    });
+    const { from, rpc } = serviceClient({
+      ingredients: [{
+        id: "recipe-ingredient-1",
+        ingredient_id: "ingredient-1",
+        amount: 17.7,
+        unit: "g",
+        ingredient_type: "QUANT",
+        scalable: true,
+        sort_order: 0,
+      }],
+      nutritionLinks: [volumeLink],
+      conversionAssignments: [approvedConversionAssignment({
+        exactWeight: 17.7,
+        representativeWeight: 20,
+      })],
+    });
+
+    await recalculateRecipeNutritionSnapshot({ from, rpc } as never, "recipe-1");
+
+    expect(rpc.mock.calls[0][1].p_snapshot).toMatchObject({
+      calculation_status: "complete",
+      calculation_quality: "estimated",
+      scalable_values: expect.objectContaining({ energy_kcal: 15 }),
+    });
+  });
+
   it("falls back from no direct volume profile to one mass profile plus one conversion", async () => {
     const { from, rpc } = serviceClient({
       ingredients: [{
@@ -469,6 +596,7 @@ describe("recipe nutrition snapshot service", () => {
           profile_code: "VOLUME_G15",
           basis_volume_ml: 15,
           representative_weight_g: 15,
+          normalized_g_per_15ml: 15,
           evidence_preparation_state: "raw-edible",
           source: {
             provider: "rda",

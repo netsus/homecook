@@ -1,0 +1,5915 @@
+{
+  "schema_version": "nutrition-gap-final-review-v1",
+  "source_report_checksum": "dda9a0dceaad1c16f0d0c99fdfd006d7a4907a031e003a0eb8a0e13dd56c1630",
+  "rows": [
+    {
+      "ingredient_id": "e105f031-2cd2-4d42-ba5b-717e3cd3e5ab",
+      "ingredient_name": "가지",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "가지, 생것",
+        "values": {
+          "energy_kcal": 19,
+          "carbohydrate_g": 4.36,
+          "protein_g": 1.13,
+          "fat_g": 0.03,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "701",
+          "external_name": "가지, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 19,
+            "carbohydrate_g": 4.36,
+            "protein_g": 1.13,
+            "fat_g": 0.03,
+            "saturated_fat_g": 0.03,
+            "sugars_g": 2.32,
+            "fiber_g": 2.7,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "701",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "4ab3e941-7dcc-4f06-89cc-8764eee452d4",
+      "ingredient_name": "강낭콩",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "강낭콩, 생것",
+        "values": {
+          "energy_kcal": 174,
+          "carbohydrate_g": 32.35,
+          "protein_g": 8.8,
+          "fat_g": 0.86,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "540",
+          "external_name": "강낭콩, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 174,
+            "carbohydrate_g": 32.35,
+            "protein_g": 8.8,
+            "fat_g": 0.86,
+            "saturated_fat_g": 0.22,
+            "sugars_g": 1.65,
+            "fiber_g": 14.1,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "540",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "ee3b1938-c69f-4aea-bdb9-7b8859cf1cb6",
+      "ingredient_name": "강황가루",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "강황, 가루",
+        "values": {
+          "energy_kcal": 331,
+          "carbohydrate_g": 74.34,
+          "protein_g": 6.66,
+          "fat_g": 3.21,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 19
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "3423",
+          "external_name": "강황, 가루",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 331,
+            "carbohydrate_g": 74.34,
+            "protein_g": 6.66,
+            "fat_g": 3.21,
+            "saturated_fat_g": 1.9,
+            "sugars_g": 3.3,
+            "fiber_g": 17.9,
+            "sodium_mg": 19
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "3423",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "3db7c9f6-fc47-4a15-88cd-c1da2b0239f1",
+      "ingredient_name": "건새우",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "새우, 꽃새우, 삶아서 말린것",
+        "values": {
+          "energy_kcal": 307,
+          "carbohydrate_g": 4.1,
+          "protein_g": 55.5,
+          "fat_g": 5.9,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 3500
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2693",
+          "external_name": "새우, 꽃새우, 삶아서 말린것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 307,
+            "carbohydrate_g": 4.1,
+            "protein_g": 55.5,
+            "fat_g": 5.9,
+            "saturated_fat_g": null,
+            "sugars_g": null,
+            "fiber_g": 0,
+            "sodium_mg": 3500
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 6,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "2693",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "23767f88-a076-4bac-b2fa-186f02440534",
+      "ingredient_name": "계피가루",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "계피, 가루",
+        "values": {
+          "energy_kcal": 349,
+          "carbohydrate_g": 80.93,
+          "protein_g": 3.63,
+          "fat_g": 1.15,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 18
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "3016",
+          "external_name": "계피, 가루",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 349,
+            "carbohydrate_g": 80.93,
+            "protein_g": 3.63,
+            "fat_g": 1.15,
+            "saturated_fat_g": 0.23,
+            "sugars_g": 1.93,
+            "fiber_g": 59.5,
+            "sodium_mg": 18
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "3016",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "33378607-8c27-4e44-8ba2-6a84fb94cba2",
+      "ingredient_name": "고추",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "고추, 풋고추, 생것",
+        "values": {
+          "energy_kcal": 29,
+          "carbohydrate_g": 6.42,
+          "protein_g": 1.71,
+          "fat_g": 0.19,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "763",
+          "external_name": "고추, 풋고추, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 29,
+            "carbohydrate_g": 6.42,
+            "protein_g": 1.71,
+            "fat_g": 0.19,
+            "saturated_fat_g": 0.04,
+            "sugars_g": 1.8,
+            "fiber_g": 4.4,
+            "sodium_mg": 1
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "763",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "3f3c9220-6807-488e-863a-489ec8332380",
+      "ingredient_name": "고춧가루",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "고춧가루",
+        "values": {
+          "energy_kcal": 319,
+          "carbohydrate_g": 60.62,
+          "protein_g": 13.29,
+          "fat_g": 8.4,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 13
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "3022",
+          "external_name": "고춧가루",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 319,
+            "carbohydrate_g": 60.62,
+            "protein_g": 13.29,
+            "fat_g": 8.4,
+            "saturated_fat_g": 1.48,
+            "sugars_g": 17.45,
+            "fiber_g": 37.699999999999996,
+            "sodium_mg": 13
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "3022",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "e122eca0-2ce9-48c9-a899-a3bdb3f1f5ad",
+      "ingredient_name": "귀리밥",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "식품의약품안전처",
+        "source_dataset": "식품영양성분DB정보",
+        "source_version": "2025-12-05",
+        "external_name": "귀리밥_도정",
+        "values": {
+          "energy_kcal": 218,
+          "carbohydrate_g": 36.54,
+          "protein_g": 6.51,
+          "fat_g": 5.36,
+          "saturated_fat_g": 0.86,
+          "sugars_g": 0.42,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P123-201020300-3838",
+          "external_name": "통귀리밥 100",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 348,
+            "carbohydrate_g": 68,
+            "protein_g": 12,
+            "fat_g": 5.4,
+            "saturated_fat_g": 1,
+            "sugars_g": 2,
+            "fiber_g": 10,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "P123-201020300-3838",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "9dc0ee0f-7aab-416b-8eb7-4447a8139b0e",
+      "ingredient_name": "그릭 요거트",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_MANUAL_SOURCE"
+      ],
+      "current": {
+        "basis_label": "",
+        "source_provider": null,
+        "source_dataset": null,
+        "source_version": null,
+        "external_name": null,
+        "values": {
+          "energy_kcal": null,
+          "carbohydrate_g": null,
+          "protein_g": null,
+          "fat_g": null,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": null
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "KURLY_FOOD_CALORIE",
+          "provider_label": "컬리 식재료 영양정보",
+          "provider_rank": 2,
+          "source_version": "2026-07-22",
+          "external_item_key": "KURLY-GREEK-YOGURT-100G-20260722",
+          "external_name": "그릭 요거트",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 117,
+            "carbohydrate_g": 5.04,
+            "protein_g": 4.05,
+            "fat_g": 9.19,
+            "saturated_fat_g": null,
+            "sugars_g": 4.62,
+            "fiber_g": 0,
+            "sodium_mg": null
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 6,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "KURLY-GREEK-YOGURT-100G-20260722",
+        "reason_code": "USER_APPROVED_MANUAL_SOURCE"
+      }
+    },
+    {
+      "ingredient_id": "9a4a3b36-3e6f-4259-951b-fa477469f1af",
+      "ingredient_name": "느타리버섯",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "느타리버섯, 생것",
+        "values": {
+          "energy_kcal": 15,
+          "carbohydrate_g": 4.7,
+          "protein_g": 2.6,
+          "fat_g": 0.14,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 2
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1294",
+          "external_name": "느타리버섯, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 15,
+            "carbohydrate_g": 4.7,
+            "protein_g": 2.6,
+            "fat_g": 0.14,
+            "saturated_fat_g": 0.03,
+            "sugars_g": 0.74,
+            "fiber_g": 2.9,
+            "sodium_mg": 2
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1294",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "9935fd54-6916-4743-9783-06fb457dacca",
+      "ingredient_name": "다시다",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "",
+        "source_provider": null,
+        "source_dataset": null,
+        "source_version": null,
+        "external_name": null,
+        "values": {
+          "energy_kcal": null,
+          "carbohydrate_g": null,
+          "protein_g": null,
+          "fat_g": null,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": null
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P113-201020100-0836",
+          "external_name": "다시다링 소고기",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 250,
+            "carbohydrate_g": 34,
+            "protein_g": 13,
+            "fat_g": 7,
+            "saturated_fat_g": 2.8,
+            "sugars_g": 13,
+            "fiber_g": null,
+            "sodium_mg": 17360
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "P113-201020100-0836",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "76c93ac3-66f8-43dc-8a2b-16922da63753",
+      "ingredient_name": "다시마",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "식품의약품안전처",
+        "source_dataset": "식품영양성분DB정보",
+        "source_version": "2025-12-05",
+        "external_name": "다시마",
+        "values": {
+          "energy_kcal": null,
+          "carbohydrate_g": null,
+          "protein_g": null,
+          "fat_g": null,
+          "saturated_fat_g": 0.04,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": null
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "NIFS_KFIND",
+          "provider_label": "국립수산과학원 · K-FIND 통합 DB",
+          "provider_rank": 1,
+          "source_version": "2026-07-01",
+          "external_item_key": "R112-819013990-5402",
+          "external_name": "다시마류_다시마_전체_삶은것에 소금을 가한것_대표_평균",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 15,
+            "carbohydrate_g": 5.43,
+            "protein_g": 1.21,
+            "fat_g": 0.29,
+            "saturated_fat_g": 0.05,
+            "sugars_g": null,
+            "fiber_g": null,
+            "sodium_mg": 4598
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 6,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "R112-819013990-5402",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "c0aae468-7ff6-475f-a752-127faa515e2e",
+      "ingredient_name": "다진마늘",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "마늘, 다진것",
+        "values": {
+          "energy_kcal": 99,
+          "carbohydrate_g": 20.55,
+          "protein_g": 5,
+          "fat_g": 0.27,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 199
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "3298",
+          "external_name": "마늘, 다진것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 99,
+            "carbohydrate_g": 20.55,
+            "protein_g": 5,
+            "fat_g": 0.27,
+            "saturated_fat_g": 0.05,
+            "sugars_g": 2.11,
+            "fiber_g": 3,
+            "sodium_mg": 199
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "3298",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "7cc5bc3a-f015-46cc-adfc-5fe8569eed6e",
+      "ingredient_name": "다진생강",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "생강, 뿌리줄기, 생것",
+        "values": {
+          "energy_kcal": 42,
+          "carbohydrate_g": 9.82,
+          "protein_g": 0.97,
+          "fat_g": 0.15,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 4
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P113-501050100-0009",
+          "external_name": "청년의 품격 국내산 다진생강",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 80,
+            "carbohydrate_g": 17.77,
+            "protein_g": 1.82,
+            "fat_g": 0.75,
+            "saturated_fat_g": 0.2,
+            "sugars_g": 1.7,
+            "fiber_g": 2,
+            "sodium_mg": 13
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "P113-501050100-0009",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "aab574bc-cffa-5020-a0a1-c64e29990c7b",
+      "ingredient_name": "단호박",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "호박, 단호박, 생것",
+        "values": {
+          "energy_kcal": 57,
+          "carbohydrate_g": 13.63,
+          "protein_g": 1.19,
+          "fat_g": 0.65,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1270",
+          "external_name": "호박, 단호박, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 57,
+            "carbohydrate_g": 13.63,
+            "protein_g": 1.19,
+            "fat_g": 0.65,
+            "saturated_fat_g": 0.12,
+            "sugars_g": 4.74,
+            "fiber_g": 5,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1270",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "5dacfb6b-454d-4b45-89bf-547267d95317",
+      "ingredient_name": "달걀",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "달걀, 생것",
+        "values": {
+          "energy_kcal": 140,
+          "carbohydrate_g": 1.07,
+          "protein_g": 12.86,
+          "fat_g": 8.51,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 137
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2059",
+          "external_name": "달걀, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 140,
+            "carbohydrate_g": 1.07,
+            "protein_g": 12.86,
+            "fat_g": 8.51,
+            "saturated_fat_g": 2.8,
+            "sugars_g": 0.22,
+            "fiber_g": 0,
+            "sodium_mg": 137
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "2059",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "3301288f-3508-47c4-9e78-ec9740681c01",
+      "ingredient_name": "당근",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "당근, 뿌리, 생것",
+        "values": {
+          "energy_kcal": 33,
+          "carbohydrate_g": 7.65,
+          "protein_g": 0.78,
+          "fat_g": 0.18,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 25
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "820",
+          "external_name": "당근, 뿌리, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 33,
+            "carbohydrate_g": 7.65,
+            "protein_g": 0.78,
+            "fat_g": 0.18,
+            "saturated_fat_g": 0.03,
+            "sugars_g": 4.49,
+            "fiber_g": 2.9,
+            "sodium_mg": 25
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "820",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "23e77faf-2a7d-4229-9280-cdcc7c844af4",
+      "ingredient_name": "대파",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "파, 대파, 생것",
+        "values": {
+          "energy_kcal": 23,
+          "carbohydrate_g": 4.8,
+          "protein_g": 1.78,
+          "fat_g": 0.15,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1241",
+          "external_name": "파, 대파, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 23,
+            "carbohydrate_g": 4.8,
+            "protein_g": 1.78,
+            "fat_g": 0.15,
+            "saturated_fat_g": 0.07,
+            "sugars_g": 2.63,
+            "fiber_g": 1.6,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1241",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "2ff8f29e-1216-44ae-86a2-2cd3ad65659c",
+      "ingredient_name": "돼지고기",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "돼지고기, 살코기, 생것",
+        "values": {
+          "energy_kcal": 203,
+          "carbohydrate_g": 0,
+          "protein_g": 19.45,
+          "fat_g": 12.84,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 50
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1685",
+          "external_name": "돼지고기, 살코기, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 203,
+            "carbohydrate_g": 0,
+            "protein_g": 19.45,
+            "fat_g": 12.84,
+            "saturated_fat_g": 4.84,
+            "sugars_g": 0,
+            "fiber_g": 0,
+            "sodium_mg": 50
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1685",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "12d99de5-3def-4444-880a-731cf66712ee",
+      "ingredient_name": "두부",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "두부",
+        "values": {
+          "energy_kcal": 97,
+          "carbohydrate_g": 3.75,
+          "protein_g": 9.62,
+          "fat_g": 4.63,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "565",
+          "external_name": "두부",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 97,
+            "carbohydrate_g": 3.75,
+            "protein_g": 9.62,
+            "fat_g": 4.63,
+            "saturated_fat_g": 0.7,
+            "sugars_g": 0,
+            "fiber_g": 2.9,
+            "sodium_mg": 1
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "565",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "b2663a70-7e4f-4c4c-a062-0897786c52e2",
+      "ingredient_name": "들기름",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "들기름",
+        "values": {
+          "energy_kcal": 920,
+          "carbohydrate_g": 0.08,
+          "protein_g": 0,
+          "fat_g": 99.92,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2874",
+          "external_name": "들기름",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 920,
+            "carbohydrate_g": 0.08,
+            "protein_g": 0,
+            "fat_g": 99.92,
+            "saturated_fat_g": 8.81,
+            "sugars_g": 0,
+            "fiber_g": 0,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "2874",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "14f20c07-614a-5c49-a2de-16c34e21f3f1",
+      "ingredient_name": "딸기",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "딸기, 생것",
+        "values": {
+          "energy_kcal": 33,
+          "carbohydrate_g": 8.15,
+          "protein_g": 0.75,
+          "fat_g": 0.14,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1417",
+          "external_name": "딸기, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 33,
+            "carbohydrate_g": 8.15,
+            "protein_g": 0.75,
+            "fat_g": 0.14,
+            "saturated_fat_g": 0.02,
+            "sugars_g": 6.14,
+            "fiber_g": 1.5,
+            "sodium_mg": 1
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1417",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "8eb5e35d-975a-4d4a-8826-3b2156ced816",
+      "ingredient_name": "레몬즙",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "레몬 착즙",
+        "values": {
+          "energy_kcal": 18,
+          "carbohydrate_g": 6.07,
+          "protein_g": 0.45,
+          "fat_g": 0.05,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 2
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1429",
+          "external_name": "레몬 착즙",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 18,
+            "carbohydrate_g": 6.07,
+            "protein_g": 0.45,
+            "fat_g": 0.05,
+            "saturated_fat_g": 0.01,
+            "sugars_g": 0.97,
+            "fiber_g": 0.5,
+            "sodium_mg": 2
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1429",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "e10b3274-5b2e-46c2-a580-5ac4c7dff2b9",
+      "ingredient_name": "마늘",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "마늘, 생것",
+        "values": {
+          "energy_kcal": 128,
+          "carbohydrate_g": 26.42,
+          "protein_g": 7.45,
+          "fat_g": 0.16,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 3
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "861",
+          "external_name": "마늘, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 128,
+            "carbohydrate_g": 26.42,
+            "protein_g": 7.45,
+            "fat_g": 0.16,
+            "saturated_fat_g": 0.06,
+            "sugars_g": 0.23,
+            "fiber_g": 3.8,
+            "sodium_mg": 3
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "861",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "8f60c110-a53a-4810-a7a7-b6a25028bcab",
+      "ingredient_name": "마늘기름",
+      "classification": "keep_current",
+      "reason_codes": [
+        "USER_APPROVED_KEEP_CURRENT"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "식품의약품안전처",
+        "source_dataset": "식품영양성분DB정보",
+        "source_version": "2025-12-05",
+        "external_name": "마늘기름",
+        "values": {
+          "energy_kcal": 900,
+          "carbohydrate_g": 0,
+          "protein_g": 0,
+          "fat_g": 100,
+          "saturated_fat_g": 16,
+          "sugars_g": 0,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P107-302030200-0322",
+          "external_name": "마늘기름",
+          "source_state": "제품 표시값",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 900,
+            "carbohydrate_g": 0,
+            "protein_g": 0,
+            "fat_g": 100,
+            "saturated_fat_g": 16,
+            "sugars_g": 0,
+            "fiber_g": null,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "exact_external_name",
+          "match_score": 110
+        }
+      ],
+      "review_decision": {
+        "decision": "keep_current",
+        "external_item_key": "P107-302030200-0322",
+        "reason_code": "USER_APPROVED_KEEP_CURRENT"
+      }
+    },
+    {
+      "ingredient_id": "ef3b7dd1-da8d-4f35-a08a-c3ce52b4bd1c",
+      "ingredient_name": "매실청",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "매실청",
+        "values": {
+          "energy_kcal": 213,
+          "carbohydrate_g": 52.72,
+          "protein_g": 0.23,
+          "fat_g": 0.18,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1443",
+          "external_name": "매실청",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 213,
+            "carbohydrate_g": 52.72,
+            "protein_g": 0.23,
+            "fat_g": 0.18,
+            "saturated_fat_g": 0.01,
+            "sugars_g": 44.06,
+            "fiber_g": 0.3,
+            "sodium_mg": 1
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1443",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "b98d5bc9-9f1a-4cb7-b0ad-a144ccdaff16",
+      "ingredient_name": "멸치",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "식품의약품안전처",
+        "source_dataset": "식품영양성분DB정보",
+        "source_version": "2025-12-05",
+        "external_name": "멸치",
+        "values": {
+          "energy_kcal": null,
+          "carbohydrate_g": null,
+          "protein_g": null,
+          "fat_g": null,
+          "saturated_fat_g": 1.05,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": null
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "NIFS_KFIND",
+          "provider_label": "국립수산과학원 · K-FIND 통합 DB",
+          "provider_rank": 1,
+          "source_version": "2026-07-01",
+          "external_item_key": "R211-105033901-0004",
+          "external_name": "멸치_전체_생것_대표_4월",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 117,
+            "carbohydrate_g": 0.21,
+            "protein_g": 20.04,
+            "fat_g": 3.39,
+            "saturated_fat_g": 0.8,
+            "sugars_g": null,
+            "fiber_g": null,
+            "sodium_mg": 119
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 6,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "R211-105033901-0004",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "7d6331c0-832f-42df-93bc-427f955b6412",
+      "ingredient_name": "멸치액젓",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "멸치, 액젓",
+        "values": {
+          "energy_kcal": 31,
+          "carbohydrate_g": 1.13,
+          "protein_g": 6.53,
+          "fat_g": 0.02,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 8188
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2251",
+          "external_name": "멸치, 액젓",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 31,
+            "carbohydrate_g": 1.13,
+            "protein_g": 6.53,
+            "fat_g": 0.02,
+            "saturated_fat_g": 0,
+            "sugars_g": 0.11,
+            "fiber_g": 0,
+            "sodium_mg": 8188
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "2251",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "b5474e80-2330-42dd-99a2-dd16fd0fbf34",
+      "ingredient_name": "모시조개",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_MANUAL_SOURCE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "식품의약품안전처",
+        "source_dataset": "식품영양성분DB정보",
+        "source_version": "2025-12-05",
+        "external_name": "백합류,모시조개,전체,생것",
+        "values": {
+          "energy_kcal": 61,
+          "carbohydrate_g": 3.19,
+          "protein_g": 8.17,
+          "fat_g": 1.46,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": null
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "HOMECOOK_REVIEW",
+          "provider_label": "집밥 사용자 검수 결합 출처",
+          "provider_rank": 1,
+          "source_version": "2026-07-22",
+          "external_item_key": "HOMECOOK-MOSIJOGAE-MFDS-NAVER-20260722",
+          "external_name": "모시조개",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 61,
+            "carbohydrate_g": 3.19,
+            "protein_g": 8.17,
+            "fat_g": 1.46,
+            "saturated_fat_g": null,
+            "sugars_g": null,
+            "fiber_g": null,
+            "sodium_mg": 557
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 5,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "HOMECOOK-MOSIJOGAE-MFDS-NAVER-20260722",
+        "reason_code": "USER_APPROVED_MANUAL_SOURCE"
+      }
+    },
+    {
+      "ingredient_id": "dec5aa19-5954-4f6f-be60-4ea72ff0ca23",
+      "ingredient_name": "모짜렐라 치즈",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "치즈, 모차렐라",
+        "values": {
+          "energy_kcal": 236,
+          "carbohydrate_g": 3.15,
+          "protein_g": 17.34,
+          "fat_g": 16.49,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 243
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P119-900090100-1206",
+          "external_name": "모짜렐라 치즈",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 335,
+            "carbohydrate_g": 3,
+            "protein_g": 24,
+            "fat_g": 25,
+            "saturated_fat_g": 16,
+            "sugars_g": 3,
+            "fiber_g": null,
+            "sodium_mg": 600
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "P119-900090100-1206",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "550e8400-e29b-41d4-a716-446655440035",
+      "ingredient_name": "무",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "무, 조선무, 생것",
+        "values": {
+          "energy_kcal": 21,
+          "carbohydrate_g": 4.72,
+          "protein_g": 0.77,
+          "fat_g": 0.15,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 13
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "894",
+          "external_name": "무, 조선무, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 21,
+            "carbohydrate_g": 4.72,
+            "protein_g": 0.77,
+            "fat_g": 0.15,
+            "saturated_fat_g": 0.02,
+            "sugars_g": 2.96,
+            "fiber_g": 1.1,
+            "sodium_mg": 13
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "894",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "76c3b359-8c88-5e61-8cac-0fcd15193ae6",
+      "ingredient_name": "무순",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "무순, 싹, 생것",
+        "values": {
+          "energy_kcal": 20,
+          "carbohydrate_g": 1.82,
+          "protein_g": 1.89,
+          "fat_g": 1.01,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 15
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "899",
+          "external_name": "무순, 싹, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 20,
+            "carbohydrate_g": 1.82,
+            "protein_g": 1.89,
+            "fat_g": 1.01,
+            "saturated_fat_g": 0.09,
+            "sugars_g": 0.67,
+            "fiber_g": 1.7,
+            "sodium_mg": 15
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "899",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "794227ac-134c-4c30-8c1d-b76f0e5b7dbb",
+      "ingredient_name": "무염버터",
+      "classification": "keep_current",
+      "reason_codes": [
+        "USER_APPROVED_KEEP_CURRENT"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "버터, 무가염",
+        "values": {
+          "energy_kcal": 760,
+          "carbohydrate_g": 4.11,
+          "protein_g": 0.52,
+          "fat_g": 81,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 13
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P101-426000400-0385",
+          "external_name": "무염버터로 만든 소금빵",
+          "source_state": "제품 표시값",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 657,
+            "carbohydrate_g": 94.28,
+            "protein_g": 17.14,
+            "fat_g": 22.86,
+            "saturated_fat_g": 13.14,
+            "sugars_g": 9.14,
+            "fiber_g": null,
+            "sodium_mg": 57
+          },
+          "improvement_codes": [
+            "saturated_fat_g",
+            "sugars_g"
+          ],
+          "known_nutrient_count": 7,
+          "match_method": "provider_exact_filter_scope",
+          "match_score": 70
+        }
+      ],
+      "review_decision": {
+        "decision": "keep_current",
+        "external_item_key": null,
+        "reason_code": "USER_APPROVED_KEEP_CURRENT"
+      }
+    },
+    {
+      "ingredient_id": "08654960-dbd1-4cb5-9205-39929da7491c",
+      "ingredient_name": "물",
+      "classification": "keep_current",
+      "reason_codes": [
+        "USER_APPROVED_KEEP_CURRENT"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "생수",
+        "values": {
+          "energy_kcal": 0,
+          "carbohydrate_g": 0,
+          "protein_g": 0,
+          "fat_g": 0,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 3
+        }
+      },
+      "candidate_count": 0,
+      "shown_candidate_count": 0,
+      "candidates": [],
+      "review_decision": {
+        "decision": "keep_current",
+        "external_item_key": null,
+        "reason_code": "USER_APPROVED_KEEP_CURRENT"
+      }
+    },
+    {
+      "ingredient_id": "e50c094c-8ad8-5e62-9b6a-f0df5f36642b",
+      "ingredient_name": "미니파프리카",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "식품의약품안전처",
+        "source_dataset": "식품영양성분DB정보",
+        "source_version": "2025-12-05",
+        "external_name": "파프리카(착색단고추)_Raon red(미니파프리카)_빨간색_생것",
+        "values": {
+          "energy_kcal": 41,
+          "carbohydrate_g": 8.49,
+          "protein_g": 1.07,
+          "fat_g": 0.94,
+          "saturated_fat_g": 0.07,
+          "sugars_g": 7.45,
+          "fiber_g": null,
+          "sodium_mg": 2
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1250",
+          "external_name": "미니파프리카, 노란색, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 37,
+            "carbohydrate_g": 8.91,
+            "protein_g": 1.3,
+            "fat_g": 0.21,
+            "saturated_fat_g": 0.05,
+            "sugars_g": 5.19,
+            "fiber_g": 1.9,
+            "sodium_mg": 2
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1250",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "7d9c50d7-8d61-4394-80a6-d59288d6a453",
+      "ingredient_name": "민들레 잎",
+      "classification": "keep_current",
+      "reason_codes": [
+        "USER_APPROVED_KEEP_CURRENT"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "민들레, 생것",
+        "values": {
+          "energy_kcal": 29,
+          "carbohydrate_g": 5.48,
+          "protein_g": 2.44,
+          "fat_g": 0.44,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 0,
+      "shown_candidate_count": 0,
+      "candidates": [],
+      "review_decision": {
+        "decision": "keep_current",
+        "external_item_key": null,
+        "reason_code": "USER_APPROVED_KEEP_CURRENT"
+      }
+    },
+    {
+      "ingredient_id": "f54a5d8e-1bb2-5604-a39d-e07cd69a6226",
+      "ingredient_name": "발사믹 식초",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "식초, 발사믹",
+        "values": {
+          "energy_kcal": 165,
+          "carbohydrate_g": 40.42,
+          "protein_g": 0.62,
+          "fat_g": 0.04,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 25
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "3067",
+          "external_name": "식초, 발사믹",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 165,
+            "carbohydrate_g": 40.42,
+            "protein_g": 0.62,
+            "fat_g": 0.04,
+            "saturated_fat_g": 0.01,
+            "sugars_g": 33.67,
+            "fiber_g": 0,
+            "sodium_mg": 25
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "3067",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "9b27fda0-659c-4f4a-aae9-53abe2590c20",
+      "ingredient_name": "방울토마토",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "토마토, 방울토마토, 생것",
+        "values": {
+          "energy_kcal": 25,
+          "carbohydrate_g": 5.87,
+          "protein_g": 1,
+          "fat_g": 0.18,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 5
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1228",
+          "external_name": "토마토, 방울토마토, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 25,
+            "carbohydrate_g": 5.87,
+            "protein_g": 1,
+            "fat_g": 0.18,
+            "saturated_fat_g": 0.04,
+            "sugars_g": 4.21,
+            "fiber_g": 1.4,
+            "sodium_mg": 5
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1228",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "980a6496-fea0-5495-b955-0476ab4914a0",
+      "ingredient_name": "배추",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "배추, 생것",
+        "values": {
+          "energy_kcal": 15,
+          "carbohydrate_g": 3.32,
+          "protein_g": 1.25,
+          "fat_g": 0.06,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 8
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "932",
+          "external_name": "배추, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 15,
+            "carbohydrate_g": 3.32,
+            "protein_g": 1.25,
+            "fat_g": 0.06,
+            "saturated_fat_g": 0.01,
+            "sugars_g": 1.71,
+            "fiber_g": 1.3,
+            "sodium_mg": 8
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "932",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "180ec6e3-60a0-5469-b724-87f1bf75e5d3",
+      "ingredient_name": "백김치",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "김치, 백김치",
+        "values": {
+          "energy_kcal": 16,
+          "carbohydrate_g": 3,
+          "protein_g": 0.95,
+          "fat_g": 0.07,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 395
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "799",
+          "external_name": "김치, 백김치",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 16,
+            "carbohydrate_g": 3,
+            "protein_g": 0.95,
+            "fat_g": 0.07,
+            "saturated_fat_g": 0.01,
+            "sugars_g": 1.04,
+            "fiber_g": 1.9,
+            "sodium_mg": 395
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "799",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "9922aba7-e861-4583-95ca-d4e51ca0b58b",
+      "ingredient_name": "부추",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "식품의약품안전처",
+        "source_dataset": "식품영양성분DB정보",
+        "source_version": "2025-12-05",
+        "external_name": "부추_재래종_생것",
+        "values": {
+          "energy_kcal": 22,
+          "carbohydrate_g": 4.1,
+          "protein_g": 1.8,
+          "fat_g": 0.3,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 3
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "3299",
+          "external_name": "부추, 솔부추, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 21,
+            "carbohydrate_g": 4.32,
+            "protein_g": 1.58,
+            "fat_g": 0.25,
+            "saturated_fat_g": 0.04,
+            "sugars_g": 1.69,
+            "fiber_g": 1.3,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "3299",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "55e6b9a7-8345-4753-b84e-f3d2494e1d77",
+      "ingredient_name": "부침가루",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "밀, 부침가루",
+        "values": {
+          "energy_kcal": 368,
+          "carbohydrate_g": 75.52,
+          "protein_g": 9.8,
+          "fat_g": 0.98,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 786
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "173",
+          "external_name": "밀, 부침가루",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 368,
+            "carbohydrate_g": 75.52,
+            "protein_g": 9.8,
+            "fat_g": 0.98,
+            "saturated_fat_g": 0.24,
+            "sugars_g": 3.49,
+            "fiber_g": 2.5,
+            "sodium_mg": 786
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "173",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "781e4cf3-a54b-5286-8a90-d85b797ae31f",
+      "ingredient_name": "비지",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "비지",
+        "values": {
+          "energy_kcal": 51,
+          "carbohydrate_g": 4.61,
+          "protein_g": 4,
+          "fat_g": 1.93,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "570",
+          "external_name": "비지",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 51,
+            "carbohydrate_g": 4.61,
+            "protein_g": 4,
+            "fat_g": 1.93,
+            "saturated_fat_g": 0.24,
+            "sugars_g": 0.5,
+            "fiber_g": 4,
+            "sodium_mg": 1
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "570",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "4c22d101-7b1c-574e-bfeb-51347d9f5fad",
+      "ingredient_name": "비트",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "비트, 뿌리, 생것",
+        "values": {
+          "energy_kcal": 27,
+          "carbohydrate_g": 6.13,
+          "protein_g": 1.03,
+          "fat_g": 0.06,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 19
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "998",
+          "external_name": "비트, 뿌리, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 27,
+            "carbohydrate_g": 6.13,
+            "protein_g": 1.03,
+            "fat_g": 0.06,
+            "saturated_fat_g": 0.01,
+            "sugars_g": 4.09,
+            "fiber_g": 1.7,
+            "sodium_mg": 19
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "998",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "aaa39d6e-15ee-55e9-8dc9-50e579e5da5e",
+      "ingredient_name": "빵가루",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "밀, 빵가루",
+        "values": {
+          "energy_kcal": 392,
+          "carbohydrate_g": 77.04,
+          "protein_g": 11.95,
+          "fat_g": 2.05,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 306
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "174",
+          "external_name": "밀, 빵가루",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 392,
+            "carbohydrate_g": 77.04,
+            "protein_g": 11.95,
+            "fat_g": 2.05,
+            "saturated_fat_g": 0.76,
+            "sugars_g": 4.74,
+            "fiber_g": 4.2,
+            "sodium_mg": 306
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "174",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "8df87a79-443f-44b1-81e3-223c031b0e2e",
+      "ingredient_name": "사과",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "사과, 생것",
+        "values": {
+          "energy_kcal": 52,
+          "carbohydrate_g": 13.96,
+          "protein_g": 0.26,
+          "fat_g": 0.07,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1508",
+          "external_name": "사과, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 52,
+            "carbohydrate_g": 13.96,
+            "protein_g": 0.26,
+            "fat_g": 0.07,
+            "saturated_fat_g": 0.01,
+            "sugars_g": 10.62,
+            "fiber_g": 1.8,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1508",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "86e59201-20d0-4dbb-9e38-f9a567a78b03",
+      "ingredient_name": "삼겹살",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "돼지고기, 삼겹살, 생것",
+        "values": {
+          "energy_kcal": 372,
+          "carbohydrate_g": 0,
+          "protein_g": 13.9,
+          "fat_g": 33.31,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 56
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1710",
+          "external_name": "돼지고기, 삼겹살, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 372,
+            "carbohydrate_g": 0,
+            "protein_g": 13.9,
+            "fat_g": 33.31,
+            "saturated_fat_g": 13.27,
+            "sugars_g": 0,
+            "fiber_g": 0,
+            "sodium_mg": 56
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1710",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "d7f3be61-d96c-4bee-b83e-5d2632ea0ce3",
+      "ingredient_name": "새송이버섯",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_MANUAL_SOURCE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "큰느타리버섯(새송이버섯), 생것",
+        "values": {
+          "energy_kcal": 20,
+          "carbohydrate_g": 6.56,
+          "protein_g": 2.91,
+          "fat_g": 0.19,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 5
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2026-06-04",
+          "external_item_key": "P116-702070100-0427",
+          "external_name": "청년의 품격 새송이버섯",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 23,
+            "carbohydrate_g": 4.8,
+            "protein_g": 1.78,
+            "fat_g": 0.15,
+            "saturated_fat_g": 0,
+            "sugars_g": 2.63,
+            "fiber_g": null,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "P116-702070100-0427",
+        "reason_code": "USER_APPROVED_MANUAL_SOURCE"
+      }
+    },
+    {
+      "ingredient_id": "52d0eda1-8b3d-4bc1-b485-2e8d4e0e7042",
+      "ingredient_name": "새우젓",
+      "classification": "keep_current",
+      "reason_codes": [
+        "USER_APPROVED_KEEP_CURRENT"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "새우, 젓갈",
+        "values": {
+          "energy_kcal": 40,
+          "carbohydrate_g": 1.2,
+          "protein_g": 8.09,
+          "fat_g": 0.32,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 8003
+        }
+      },
+      "candidate_count": 5,
+      "shown_candidate_count": 3,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2725",
+          "external_name": "새우, 젓갈, 토굴오젓",
+          "source_state": " 젓갈  토굴오젓",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 57,
+            "carbohydrate_g": 2.5,
+            "protein_g": 10.8,
+            "fat_g": 0.4,
+            "saturated_fat_g": null,
+            "sugars_g": null,
+            "fiber_g": null,
+            "sodium_mg": 8634
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 5,
+          "match_method": "exact_name_component",
+          "match_score": 100
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2726",
+          "external_name": "새우, 젓갈, 토굴육젓",
+          "source_state": " 젓갈  토굴육젓",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 56,
+            "carbohydrate_g": 1.9,
+            "protein_g": 10.8,
+            "fat_g": 0.6,
+            "saturated_fat_g": null,
+            "sugars_g": null,
+            "fiber_g": null,
+            "sodium_mg": 8791
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 5,
+          "match_method": "exact_name_component",
+          "match_score": 100
+        },
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2727",
+          "external_name": "새우, 젓갈, 토굴추젓",
+          "source_state": " 젓갈  토굴추젓",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 46,
+            "carbohydrate_g": 1.5,
+            "protein_g": 8.9,
+            "fat_g": 0.5,
+            "saturated_fat_g": null,
+            "sugars_g": null,
+            "fiber_g": null,
+            "sodium_mg": 8794
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 5,
+          "match_method": "exact_name_component",
+          "match_score": 100
+        }
+      ],
+      "review_decision": {
+        "decision": "keep_current",
+        "external_item_key": "2725",
+        "reason_code": "USER_APPROVED_KEEP_CURRENT"
+      }
+    },
+    {
+      "ingredient_id": "e09ccd9b-e6f4-44ff-af26-df9c730968e1",
+      "ingredient_name": "생강청",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "생강청",
+        "values": {
+          "energy_kcal": 246,
+          "carbohydrate_g": 59.9,
+          "protein_g": 0.1,
+          "fat_g": 0.65,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 47
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2926",
+          "external_name": "생강청",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 246,
+            "carbohydrate_g": 59.9,
+            "protein_g": 0.1,
+            "fat_g": 0.65,
+            "saturated_fat_g": 0.01,
+            "sugars_g": 57.61,
+            "fiber_g": null,
+            "sodium_mg": 47
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "2926",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "b024e0f3-eaa5-4d53-b239-9e692f6c2e41",
+      "ingredient_name": "생크림",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "크림, 생크림",
+        "values": {
+          "energy_kcal": 368,
+          "carbohydrate_g": 4.98,
+          "protein_g": 2.03,
+          "fat_g": 37.81,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 25
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2868",
+          "external_name": "크림, 생크림",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 368,
+            "carbohydrate_g": 4.98,
+            "protein_g": 2.03,
+            "fat_g": 37.81,
+            "saturated_fat_g": 25.23,
+            "sugars_g": 0,
+            "fiber_g": 0,
+            "sodium_mg": 25
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "2868",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "6278e78c-c127-44f4-9516-d90a8be39ba5",
+      "ingredient_name": "소고기",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "소고기, 한우, 등심, 생것",
+        "values": {
+          "energy_kcal": 313,
+          "carbohydrate_g": 0,
+          "protein_g": 15.61,
+          "fat_g": 26.3,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 56
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1784",
+          "external_name": "소고기, 한우, 등심, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 313,
+            "carbohydrate_g": 0,
+            "protein_g": 15.61,
+            "fat_g": 26.3,
+            "saturated_fat_g": 10.83,
+            "sugars_g": 0,
+            "fiber_g": 0,
+            "sodium_mg": 56
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1784",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "6131a5c9-f7c8-4381-acfa-51917e6437e3",
+      "ingredient_name": "소금",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "소금, 정제염",
+        "values": {
+          "energy_kcal": 2,
+          "carbohydrate_g": 0.39,
+          "protein_g": 0,
+          "fat_g": 0.01,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 36025
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "3056",
+          "external_name": "소금, 정제염",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 2,
+            "carbohydrate_g": 0.39,
+            "protein_g": 0,
+            "fat_g": 0.01,
+            "saturated_fat_g": 0,
+            "sugars_g": 0,
+            "fiber_g": 0,
+            "sodium_mg": 36025
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "3056",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "74881b4e-8d71-4319-bb65-2ea1d024de2d",
+      "ingredient_name": "시금치",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "시금치, 생것",
+        "values": {
+          "energy_kcal": 29,
+          "carbohydrate_g": 4.86,
+          "protein_g": 3.35,
+          "fat_g": 0.39,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 23
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1060",
+          "external_name": "시금치, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 29,
+            "carbohydrate_g": 4.86,
+            "protein_g": 3.35,
+            "fat_g": 0.39,
+            "saturated_fat_g": 0.09,
+            "sugars_g": 0.4,
+            "fiber_g": 3.1,
+            "sodium_mg": 23
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1060",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "dc020c54-a097-5b73-81e7-15d5c988c920",
+      "ingredient_name": "아몬드",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "아몬드, 말린것",
+        "values": {
+          "energy_kcal": 581,
+          "carbohydrate_g": 20.09,
+          "protein_g": 23.44,
+          "fat_g": 49.96,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 6
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "663",
+          "external_name": "아몬드, 말린것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 581,
+            "carbohydrate_g": 20.09,
+            "protein_g": 23.44,
+            "fat_g": 49.96,
+            "saturated_fat_g": 3.82,
+            "sugars_g": 6.82,
+            "fiber_g": 14.5,
+            "sodium_mg": 6
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "663",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "591cb6de-c64b-5f5a-a645-78d7fcfd557e",
+      "ingredient_name": "아욱",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "아욱, 생것",
+        "values": {
+          "energy_kcal": 37,
+          "carbohydrate_g": 7.64,
+          "protein_g": 3.08,
+          "fat_g": 0.31,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 37
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1088",
+          "external_name": "아욱, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 37,
+            "carbohydrate_g": 7.64,
+            "protein_g": 3.08,
+            "fat_g": 0.31,
+            "saturated_fat_g": 0.07,
+            "sugars_g": 0,
+            "fiber_g": 4.5,
+            "sodium_mg": 37
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1088",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "60062917-f034-577c-9d79-51ff20a78a1f",
+      "ingredient_name": "애느타리버섯",
+      "classification": "keep_current",
+      "reason_codes": [
+        "USER_APPROVED_KEEP_CURRENT"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "애느타리버섯, 생것",
+        "values": {
+          "energy_kcal": 16,
+          "carbohydrate_g": 3.5,
+          "protein_g": 4.2,
+          "fat_g": 0.1,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 7
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1333",
+          "external_name": "애느타리버섯, 생것",
+          "source_state": " 생것",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 16,
+            "carbohydrate_g": 3.5,
+            "protein_g": 4.2,
+            "fat_g": 0.1,
+            "saturated_fat_g": null,
+            "sugars_g": null,
+            "fiber_g": null,
+            "sodium_mg": 7
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 5,
+          "match_method": "exact_name_component",
+          "match_score": 100
+        }
+      ],
+      "review_decision": {
+        "decision": "keep_current",
+        "external_item_key": "1333",
+        "reason_code": "USER_APPROVED_KEEP_CURRENT"
+      }
+    },
+    {
+      "ingredient_id": "016fd02b-eb43-4d88-945a-011695ffd97c",
+      "ingredient_name": "애호박",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "호박, 애호박, 생것",
+        "values": {
+          "energy_kcal": 22,
+          "carbohydrate_g": 5.14,
+          "protein_g": 1.07,
+          "fat_g": 0.09,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1273",
+          "external_name": "호박, 애호박, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 22,
+            "carbohydrate_g": 5.14,
+            "protein_g": 1.07,
+            "fat_g": 0.09,
+            "saturated_fat_g": 0.03,
+            "sugars_g": 2.43,
+            "fiber_g": 2.2,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1273",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "a60371c8-82ec-4953-a33b-f9c23b413c3a",
+      "ingredient_name": "양배추",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "양배추, 생것",
+        "values": {
+          "energy_kcal": 29,
+          "carbohydrate_g": 6.98,
+          "protein_g": 1.36,
+          "fat_g": 0.12,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 9
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1100",
+          "external_name": "양배추, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 29,
+            "carbohydrate_g": 6.98,
+            "protein_g": 1.36,
+            "fat_g": 0.12,
+            "saturated_fat_g": 0.03,
+            "sugars_g": 4.4,
+            "fiber_g": 2.5,
+            "sodium_mg": 9
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1100",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "4ec63b5e-5945-4230-9ee8-a11ea9da7a31",
+      "ingredient_name": "양상추",
+      "classification": "keep_current",
+      "reason_codes": [
+        "USER_APPROVED_KEEP_CURRENT"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "상추, 결구(양상추), 녹색, 생것",
+        "values": {
+          "energy_kcal": 14,
+          "carbohydrate_g": 3.37,
+          "protein_g": 0.72,
+          "fat_g": 0.08,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 4
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "3236",
+          "external_name": "햄버거, 소고기패티, 토마토, 양상추, 양파",
+          "source_state": " 소고기패티  토마토  양상추  양파",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 229,
+            "carbohydrate_g": 18.01,
+            "protein_g": 9.55,
+            "fat_g": 13.23,
+            "saturated_fat_g": 4.46,
+            "sugars_g": 4.78,
+            "fiber_g": 7.2,
+            "sodium_mg": 378
+          },
+          "improvement_codes": [
+            "fiber_g",
+            "saturated_fat_g",
+            "sugars_g"
+          ],
+          "known_nutrient_count": 8,
+          "match_method": "exact_name_component",
+          "match_score": 100
+        }
+      ],
+      "review_decision": {
+        "decision": "keep_current",
+        "external_item_key": "3236",
+        "reason_code": "USER_APPROVED_KEEP_CURRENT"
+      }
+    },
+    {
+      "ingredient_id": "4aa3e46e-9b04-4aea-a18b-d37b0d83afd4",
+      "ingredient_name": "양파",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "양파, 생것",
+        "values": {
+          "energy_kcal": 29,
+          "carbohydrate_g": 6.52,
+          "protein_g": 0.96,
+          "fat_g": 0.17,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 2
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1106",
+          "external_name": "양파, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 29,
+            "carbohydrate_g": 6.52,
+            "protein_g": 0.96,
+            "fat_g": 0.17,
+            "saturated_fat_g": 0.01,
+            "sugars_g": 4.71,
+            "fiber_g": 1.6,
+            "sodium_mg": 2
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1106",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "e33fe2cf-7b9f-5bc0-a12c-eb48383949b1",
+      "ingredient_name": "연근",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "연근, 생것",
+        "values": {
+          "energy_kcal": 75,
+          "carbohydrate_g": 17.28,
+          "protein_g": 1.63,
+          "fat_g": 0.07,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 21
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1125",
+          "external_name": "연근, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 75,
+            "carbohydrate_g": 17.28,
+            "protein_g": 1.63,
+            "fat_g": 0.07,
+            "saturated_fat_g": 0.02,
+            "sugars_g": 1.81,
+            "fiber_g": 3.3,
+            "sodium_mg": 21
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1125",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "e5bd5fbd-8435-502d-b5c1-fc91528f63a2",
+      "ingredient_name": "연두부",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "두부, 연두부",
+        "values": {
+          "energy_kcal": 50,
+          "carbohydrate_g": 1.93,
+          "protein_g": 4.66,
+          "fat_g": 2.51,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 55
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "568",
+          "external_name": "두부, 연두부",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 50,
+            "carbohydrate_g": 1.93,
+            "protein_g": 4.66,
+            "fat_g": 2.51,
+            "saturated_fat_g": 0.36,
+            "sugars_g": 0.74,
+            "fiber_g": 0.3,
+            "sodium_mg": 55
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "568",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "2893f935-83bc-5f47-873d-05f7ce35f9bc",
+      "ingredient_name": "연어",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "연어, 생것",
+        "values": {
+          "energy_kcal": 106,
+          "carbohydrate_g": 0.2,
+          "protein_g": 20.6,
+          "fat_g": 1.9,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 95
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "NIFS_KFIND",
+          "provider_label": "국립수산과학원 · K-FIND 통합 DB",
+          "provider_rank": 1,
+          "source_version": "2026-07-01",
+          "external_item_key": "R211-201174001-0000",
+          "external_name": "연어류_홍연어_육_생것_대표_평균",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 141,
+            "carbohydrate_g": 0.1,
+            "protein_g": 22.5,
+            "fat_g": 4.5,
+            "saturated_fat_g": 0.81,
+            "sugars_g": null,
+            "fiber_g": 0,
+            "sodium_mg": 57
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "R211-201174001-0000",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "1f1e8b32-2db9-5bec-b6bc-195a155abab3",
+      "ingredient_name": "열무 김치",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "김치, 열무 김치",
+        "values": {
+          "energy_kcal": 36,
+          "carbohydrate_g": 5.87,
+          "protein_g": 2.39,
+          "fat_g": 0.38,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 583
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "800",
+          "external_name": "김치, 열무 김치",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 36,
+            "carbohydrate_g": 5.87,
+            "protein_g": 2.39,
+            "fat_g": 0.38,
+            "saturated_fat_g": 0.06,
+            "sugars_g": 0.68,
+            "fiber_g": 2.7,
+            "sodium_mg": 583
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "800",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "b503761d-c935-4e19-b687-1ce24361a50c",
+      "ingredient_name": "오렌지 껍질",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_MANUAL_SOURCE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "식품의약품안전처",
+        "source_dataset": "식품영양성분DB정보",
+        "source_version": "2025-12-05",
+        "external_name": "오렌지필",
+        "values": {
+          "energy_kcal": 305,
+          "carbohydrate_g": 75,
+          "protein_g": 0.4,
+          "fat_g": 0.3,
+          "saturated_fat_g": 0.08,
+          "sugars_g": 58,
+          "fiber_g": null,
+          "sodium_mg": 10
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "LOGIFOODCOACH",
+          "provider_label": "LogiFoodCoach",
+          "provider_rank": 3,
+          "source_version": "2026-07-22",
+          "external_item_key": "LOGIFOODCOACH-ORANGE-ZEST-20260722",
+          "external_name": "오렌지 제스트",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 97,
+            "carbohydrate_g": 25,
+            "protein_g": 1.5,
+            "fat_g": 0.2,
+            "saturated_fat_g": 0.03,
+            "sugars_g": 1.7,
+            "fiber_g": 10.6,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "LOGIFOODCOACH-ORANGE-ZEST-20260722",
+        "reason_code": "USER_APPROVED_MANUAL_SOURCE"
+      }
+    },
+    {
+      "ingredient_id": "d2e9328e-456c-4ebc-9bc0-3838a90ea588",
+      "ingredient_name": "오렌지즙",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_MANUAL_SOURCE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "오렌지 착즙",
+        "values": {
+          "energy_kcal": 32,
+          "carbohydrate_g": 8.17,
+          "protein_g": 0.59,
+          "fat_g": 0.05,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "DONSIMON_LABEL",
+          "provider_label": "돈시몬 제품 표시값",
+          "provider_rank": 1,
+          "source_version": "2026-07-22",
+          "external_item_key": "DONSIMON-ORANGE-JUICE-100ML-20260722",
+          "external_name": "돈시몬 오렌지 주스",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "ml"
+          },
+          "values": {
+            "energy_kcal": 43,
+            "carbohydrate_g": 10,
+            "protein_g": 0.6,
+            "fat_g": 0.1,
+            "saturated_fat_g": 0,
+            "sugars_g": 10,
+            "fiber_g": null,
+            "sodium_mg": 10
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "DONSIMON-ORANGE-JUICE-100ML-20260722",
+        "reason_code": "USER_APPROVED_MANUAL_SOURCE"
+      }
+    },
+    {
+      "ingredient_id": "285afbdd-8ba6-5663-97c2-0bc006ddae59",
+      "ingredient_name": "오이",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "오이, 다다기, 생것",
+        "values": {
+          "energy_kcal": 13,
+          "carbohydrate_g": 2.79,
+          "protein_g": 1.06,
+          "fat_g": 0.05,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 3
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1139",
+          "external_name": "오이, 다다기, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 13,
+            "carbohydrate_g": 2.79,
+            "protein_g": 1.06,
+            "fat_g": 0.05,
+            "saturated_fat_g": 0.01,
+            "sugars_g": 1.51,
+            "fiber_g": 0.6,
+            "sodium_mg": 3
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1139",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "0fc14798-87c4-5492-8417-a313633db7b5",
+      "ingredient_name": "오이고추",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "고추, 오이고추, 생것",
+        "values": {
+          "energy_kcal": 23,
+          "carbohydrate_g": 5.51,
+          "protein_g": 0.99,
+          "fat_g": 0.12,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "766",
+          "external_name": "고추, 오이고추, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 23,
+            "carbohydrate_g": 5.51,
+            "protein_g": 0.99,
+            "fat_g": 0.12,
+            "saturated_fat_g": 0.03,
+            "sugars_g": 0.76,
+            "fiber_g": 2.6999999999999997,
+            "sodium_mg": 1
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "766",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "824b5bd2-af8f-5b55-979c-de6e38ba629c",
+      "ingredient_name": "오징어",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "오징어, 생것",
+        "values": {
+          "energy_kcal": 94,
+          "carbohydrate_g": 0.16,
+          "protein_g": 18.84,
+          "fat_g": 1.44,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 199
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2735",
+          "external_name": "오징어, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 94,
+            "carbohydrate_g": 0.16,
+            "protein_g": 18.84,
+            "fat_g": 1.44,
+            "saturated_fat_g": 0.36,
+            "sugars_g": 0,
+            "fiber_g": 0,
+            "sodium_mg": 199
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "2735",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "49dce915-fdd8-471b-a039-fea216e4c0bb",
+      "ingredient_name": "옥수수전분",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "전분, 옥수수, 가루",
+        "values": {
+          "energy_kcal": 366,
+          "carbohydrate_g": 89.6,
+          "protein_g": 0.19,
+          "fat_g": 0.56,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 6
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P116-705010100-0004",
+          "external_name": "옥수수전분",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 370,
+            "carbohydrate_g": 90,
+            "protein_g": 0,
+            "fat_g": 0.8,
+            "saturated_fat_g": 0,
+            "sugars_g": 0,
+            "fiber_g": null,
+            "sodium_mg": 5
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "P116-705010100-0004",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "09bde07d-9680-4fe3-818a-d5e714d69a8e",
+      "ingredient_name": "올리고당",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "시럽, 올리고당",
+        "values": {
+          "energy_kcal": 299,
+          "carbohydrate_g": 77.52,
+          "protein_g": 0.04,
+          "fat_g": 0,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "3465",
+          "external_name": "시럽, 올리고당",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 299,
+            "carbohydrate_g": 77.52,
+            "protein_g": 0.04,
+            "fat_g": 0,
+            "saturated_fat_g": 0,
+            "sugars_g": 30.63,
+            "fiber_g": 0,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "3465",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "aa65b086-b43c-45d7-85da-a9a0ef840661",
+      "ingredient_name": "올리브 오일",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "올리브유",
+        "values": {
+          "energy_kcal": 921,
+          "carbohydrate_g": 0,
+          "protein_g": 0,
+          "fat_g": 100,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2891",
+          "external_name": "올리브유",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 921,
+            "carbohydrate_g": 0,
+            "protein_g": 0,
+            "fat_g": 100,
+            "saturated_fat_g": 15.04,
+            "sugars_g": 0,
+            "fiber_g": 0,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "2891",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "e8b8e1e1-023c-503e-a50b-2a80e499b631",
+      "ingredient_name": "우엉",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "우엉, 생것",
+        "values": {
+          "energy_kcal": 69,
+          "carbohydrate_g": 15.29,
+          "protein_g": 2.61,
+          "fat_g": 0.06,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 6
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1146",
+          "external_name": "우엉, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 69,
+            "carbohydrate_g": 15.29,
+            "protein_g": 2.61,
+            "fat_g": 0.06,
+            "saturated_fat_g": 0.02,
+            "sugars_g": 2.87,
+            "fiber_g": 4.6,
+            "sodium_mg": 6
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1146",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "0e5142f6-bfed-4a54-b3b8-118c1a3a0d26",
+      "ingredient_name": "우유",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "우유",
+        "values": {
+          "energy_kcal": 67,
+          "carbohydrate_g": 4.86,
+          "protein_g": 3.09,
+          "fat_g": 3.85,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 40
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2846",
+          "external_name": "우유",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 67,
+            "carbohydrate_g": 4.86,
+            "protein_g": 3.09,
+            "fat_g": 3.85,
+            "saturated_fat_g": 2.17,
+            "sugars_g": 4.81,
+            "fiber_g": 0,
+            "sodium_mg": 40
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "2846",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "91b32d48-723e-45ab-acc2-48efddc10a71",
+      "ingredient_name": "유자청",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "유자청",
+        "values": {
+          "energy_kcal": 251,
+          "carbohydrate_g": 62.03,
+          "protein_g": 0.39,
+          "fat_g": 0.1,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 10
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2933",
+          "external_name": "유자청",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 251,
+            "carbohydrate_g": 62.03,
+            "protein_g": 0.39,
+            "fat_g": 0.1,
+            "saturated_fat_g": 0.01,
+            "sugars_g": 58.81,
+            "fiber_g": 2,
+            "sodium_mg": 10
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "2933",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "7c82b272-f3cb-4e90-b9d9-f563c68a35b8",
+      "ingredient_name": "적양배추",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "양배추, 적색, 생것",
+        "values": {
+          "energy_kcal": 35,
+          "carbohydrate_g": 7.69,
+          "protein_g": 2.23,
+          "fat_g": 0.21,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 6
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "R106-129010001-0000",
+          "external_name": "양배추_적양배추_생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 35,
+            "carbohydrate_g": 7.69,
+            "protein_g": 2.23,
+            "fat_g": 0.21,
+            "saturated_fat_g": 0.03,
+            "sugars_g": 4.14,
+            "fiber_g": 2.8,
+            "sodium_mg": 6
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "R106-129010001-0000",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "55f78e08-7727-47bd-8676-a4464fef16d4",
+      "ingredient_name": "쪽파",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "파, 쪽파, 생것",
+        "values": {
+          "energy_kcal": 26,
+          "carbohydrate_g": 5.8,
+          "protein_g": 1.69,
+          "fat_g": 0.17,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1240",
+          "external_name": "파, 쪽파, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 26,
+            "carbohydrate_g": 5.8,
+            "protein_g": 1.69,
+            "fat_g": 0.17,
+            "saturated_fat_g": 0.04,
+            "sugars_g": 3.32,
+            "fiber_g": 2.4,
+            "sodium_mg": 1
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1240",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "1ec375d4-d03d-4066-99ba-4b1bbe449b20",
+      "ingredient_name": "참기름",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "참기름",
+        "values": {
+          "energy_kcal": 920,
+          "carbohydrate_g": 0.13,
+          "protein_g": 0,
+          "fat_g": 99.84,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 0
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "2894",
+          "external_name": "참기름",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 920,
+            "carbohydrate_g": 0.13,
+            "protein_g": 0,
+            "fat_g": 99.84,
+            "saturated_fat_g": 14.89,
+            "sugars_g": 0,
+            "fiber_g": 0,
+            "sodium_mg": 0
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "2894",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "8f6ec2ec-9c8a-44e9-9cce-fb41dc3dff78",
+      "ingredient_name": "참깨",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "참깨, 흰색, 말린것",
+        "values": {
+          "energy_kcal": 556,
+          "carbohydrate_g": 21.77,
+          "protein_g": 25.41,
+          "fat_g": 45.31,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 4
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "677",
+          "external_name": "참깨, 흰색, 말린것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 556,
+            "carbohydrate_g": 21.77,
+            "protein_g": 25.41,
+            "fat_g": 45.31,
+            "saturated_fat_g": 6.68,
+            "sugars_g": 0,
+            "fiber_g": 14.9,
+            "sodium_mg": 4
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "677",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "4c97d81a-1095-482c-8832-a5f303a19154",
+      "ingredient_name": "참치",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "",
+        "source_provider": null,
+        "source_dataset": null,
+        "source_version": null,
+        "external_name": null,
+        "values": {
+          "energy_kcal": null,
+          "carbohydrate_g": null,
+          "protein_g": null,
+          "fat_g": null,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": null
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P120-009060000-F002-001",
+          "external_name": "참치통조림",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 210,
+            "carbohydrate_g": 0,
+            "protein_g": 19,
+            "fat_g": 15,
+            "saturated_fat_g": 1.3,
+            "sugars_g": 0,
+            "fiber_g": null,
+            "sodium_mg": 410
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "P120-009060000-F002-001",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "470752dd-63ad-45dc-b025-a1f91307aa09",
+      "ingredient_name": "청양고추",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "고추, 청양고추, 생것",
+        "values": {
+          "energy_kcal": 31,
+          "carbohydrate_g": 7.01,
+          "protein_g": 1.53,
+          "fat_g": 0.3,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "767",
+          "external_name": "고추, 청양고추, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 31,
+            "carbohydrate_g": 7.01,
+            "protein_g": 1.53,
+            "fat_g": 0.3,
+            "saturated_fat_g": 0.06,
+            "sugars_g": 0.34,
+            "fiber_g": 4.7,
+            "sodium_mg": 1
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "767",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "f009c2f4-c381-55ff-8eb0-5b22c86f761d",
+      "ingredient_name": "치커리",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "치커리, 잎, 생것",
+        "values": {
+          "energy_kcal": 19,
+          "carbohydrate_g": 3.32,
+          "protein_g": 1.85,
+          "fat_g": 0.33,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 58
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1204",
+          "external_name": "치커리, 잎, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 19,
+            "carbohydrate_g": 3.32,
+            "protein_g": 1.85,
+            "fat_g": 0.33,
+            "saturated_fat_g": 0.04,
+            "sugars_g": 0.51,
+            "fiber_g": 2.3,
+            "sodium_mg": 58
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1204",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "469319bd-26a5-5d69-9a80-8a3732446c1e",
+      "ingredient_name": "카레가루",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "카레 소스, 가루",
+        "values": {
+          "energy_kcal": 425,
+          "carbohydrate_g": 55.76,
+          "protein_g": 8.38,
+          "fat_g": 18.69,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 4059
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P113-100020100-F010-007",
+          "external_name": "카레가루",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 400,
+            "carbohydrate_g": 61,
+            "protein_g": 7,
+            "fat_g": 15,
+            "saturated_fat_g": 2.5,
+            "sugars_g": 21,
+            "fiber_g": 0,
+            "sodium_mg": 4200
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "P113-100020100-F010-007",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "b1c44903-446e-4ade-a423-83ecc6311a6d",
+      "ingredient_name": "칵테일새우",
+      "classification": "keep_current",
+      "reason_codes": [
+        "USER_APPROVED_KEEP_CURRENT"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "식품의약품안전처",
+        "source_dataset": "식품영양성분DB정보",
+        "source_version": "2025-12-05",
+        "external_name": "칵테일새우",
+        "values": {
+          "energy_kcal": 107,
+          "carbohydrate_g": 9,
+          "protein_g": 5.83,
+          "fat_g": 3.53,
+          "saturated_fat_g": 0,
+          "sugars_g": 0,
+          "fiber_g": null,
+          "sodium_mg": 249
+        }
+      },
+      "candidate_count": 49,
+      "shown_candidate_count": 3,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P120-302060000-0090",
+          "external_name": "칵테일새우",
+          "source_state": "제품 표시값",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 107,
+            "carbohydrate_g": 9,
+            "protein_g": 5.83,
+            "fat_g": 3.53,
+            "saturated_fat_g": 0,
+            "sugars_g": 0,
+            "fiber_g": null,
+            "sodium_mg": 249
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "exact_external_name",
+          "match_score": 110
+        },
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P120-600060000-1787",
+          "external_name": "생칵테일새우살",
+          "source_state": "제품 표시값",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 65,
+            "carbohydrate_g": 0,
+            "protein_g": 15,
+            "fat_g": 0.6,
+            "saturated_fat_g": 0,
+            "sugars_g": 0,
+            "fiber_g": null,
+            "sodium_mg": 540
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "provider_exact_filter_scope",
+          "match_score": 70
+        },
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P120-302060000-0550",
+          "external_name": "냉동생칵테일새우살",
+          "source_state": "제품 표시값",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 50,
+            "carbohydrate_g": 2,
+            "protein_g": 10,
+            "fat_g": 0,
+            "saturated_fat_g": 0,
+            "sugars_g": 0,
+            "fiber_g": null,
+            "sodium_mg": 540
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "provider_exact_filter_scope",
+          "match_score": 70
+        }
+      ],
+      "review_decision": {
+        "decision": "keep_current",
+        "external_item_key": "P120-302060000-0090",
+        "reason_code": "USER_APPROVED_KEEP_CURRENT"
+      }
+    },
+    {
+      "ingredient_id": "406a2443-5d39-5d9b-8287-065aca2c6ed2",
+      "ingredient_name": "크랜베리",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "크랜베리, 생것",
+        "values": {
+          "energy_kcal": 46,
+          "carbohydrate_g": 11.97,
+          "protein_g": 0.46,
+          "fat_g": 0.13,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 2
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1576",
+          "external_name": "크랜베리, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 46,
+            "carbohydrate_g": 11.97,
+            "protein_g": 0.46,
+            "fat_g": 0.13,
+            "saturated_fat_g": 0.008,
+            "sugars_g": 4.27,
+            "fiber_g": 3.6,
+            "sodium_mg": 2
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1576",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "7d4459c1-2651-4b4c-b1f5-97d324147cd3",
+      "ingredient_name": "크림치즈",
+      "classification": "keep_current",
+      "reason_codes": [
+        "USER_APPROVED_KEEP_CURRENT"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "치즈, 크림",
+        "values": {
+          "energy_kcal": 350,
+          "carbohydrate_g": 5.52,
+          "protein_g": 6.15,
+          "fat_g": 34.44,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 314
+        }
+      },
+      "candidate_count": 0,
+      "shown_candidate_count": 0,
+      "candidates": [],
+      "review_decision": {
+        "decision": "keep_current",
+        "external_item_key": null,
+        "reason_code": "USER_APPROVED_KEEP_CURRENT"
+      }
+    },
+    {
+      "ingredient_id": "a28529d6-81ca-4bd2-92b3-e7d7b216fca7",
+      "ingredient_name": "토마토",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "토마토, 생것",
+        "values": {
+          "energy_kcal": 19,
+          "carbohydrate_g": 4.27,
+          "protein_g": 0.77,
+          "fat_g": 0.19,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 2
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1224",
+          "external_name": "토마토, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 19,
+            "carbohydrate_g": 4.27,
+            "protein_g": 0.77,
+            "fat_g": 0.19,
+            "saturated_fat_g": 0.03,
+            "sugars_g": 2.68,
+            "fiber_g": 1,
+            "sodium_mg": 2
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1224",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "335eff99-f04c-4942-adee-5aea91c32dd9",
+      "ingredient_name": "통밀 식빵",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_MANUAL_SOURCE"
+      ],
+      "current": {
+        "basis_label": "",
+        "source_provider": null,
+        "source_dataset": null,
+        "source_version": null,
+        "external_name": null,
+        "values": {
+          "energy_kcal": null,
+          "carbohydrate_g": null,
+          "protein_g": null,
+          "fat_g": null,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": null
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "KURLY_FOOD_CALORIE",
+          "provider_label": "컬리 식재료 영양정보",
+          "provider_rank": 2,
+          "source_version": "2026-07-22",
+          "external_item_key": "KURLY-WHOLE-WHEAT-BREAD-100G-20260722",
+          "external_name": "통밀빵",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 259,
+            "carbohydrate_g": 47.14,
+            "protein_g": 9.13,
+            "fat_g": 4.11,
+            "saturated_fat_g": null,
+            "sugars_g": 5.49,
+            "fiber_g": 4.4,
+            "sodium_mg": null
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 6,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "KURLY-WHOLE-WHEAT-BREAD-100G-20260722",
+        "reason_code": "USER_APPROVED_MANUAL_SOURCE"
+      }
+    },
+    {
+      "ingredient_id": "52a3eb16-c1a2-4d27-8fd2-5020a1be8b85",
+      "ingredient_name": "파스타면",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "스파게티면, 말린것",
+        "values": {
+          "energy_kcal": 380,
+          "carbohydrate_g": 74.52,
+          "protein_g": 12.64,
+          "fat_g": 1.47,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 6
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "215",
+          "external_name": "스파게티면, 말린것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 380,
+            "carbohydrate_g": 74.52,
+            "protein_g": 12.64,
+            "fat_g": 1.47,
+            "saturated_fat_g": 0.36,
+            "sugars_g": 2.05,
+            "fiber_g": 2.7,
+            "sodium_mg": 6
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "215",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "708c4517-68cd-4dbf-b3c6-6bac345cf4e4",
+      "ingredient_name": "팽이버섯",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "팽이버섯, 생것",
+        "values": {
+          "energy_kcal": 21,
+          "carbohydrate_g": 7.08,
+          "protein_g": 2.48,
+          "fat_g": 0.52,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 3
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1350",
+          "external_name": "팽이버섯, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 21,
+            "carbohydrate_g": 7.08,
+            "protein_g": 2.48,
+            "fat_g": 0.52,
+            "saturated_fat_g": 0.04,
+            "sugars_g": 0.37,
+            "fiber_g": 3.8,
+            "sodium_mg": 3
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1350",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "34161c0c-a365-5e54-ad2d-c48a79f7825e",
+      "ingredient_name": "피망",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "피망, 초록색, 생것",
+        "values": {
+          "energy_kcal": 22,
+          "carbohydrate_g": 5.36,
+          "protein_g": 0.9,
+          "fat_g": 0.04,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "1255",
+          "external_name": "피망, 초록색, 생것",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 22,
+            "carbohydrate_g": 5.36,
+            "protein_g": 0.9,
+            "fat_g": 0.04,
+            "saturated_fat_g": 0.02,
+            "sugars_g": 1.35,
+            "fiber_g": 2.7,
+            "sodium_mg": 1
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "1255",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "a437bd3b-d912-4914-88cd-572ad975527c",
+      "ingredient_name": "홍고추",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "고추, 빨간색, 생것",
+        "values": {
+          "energy_kcal": 85,
+          "carbohydrate_g": 15.34,
+          "protein_g": 3.12,
+          "fat_g": 2.73,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 1
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P116-702070100-2492",
+          "external_name": "홍고추",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 85,
+            "carbohydrate_g": 15.34,
+            "protein_g": 3.12,
+            "fat_g": 2.73,
+            "saturated_fat_g": 0.49,
+            "sugars_g": 5.48,
+            "fiber_g": null,
+            "sodium_mg": 1
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 7,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "P116-702070100-2492",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    },
+    {
+      "ingredient_id": "1af09e8f-c9fb-40e9-9aad-67e2430a2bae",
+      "ingredient_name": "화이트크림",
+      "classification": "needs_review",
+      "reason_codes": [
+        "USER_DEFERRED_PRODUCT_SPECIFIC_ITEM"
+      ],
+      "current": {
+        "basis_label": "",
+        "source_provider": null,
+        "source_dataset": null,
+        "source_version": null,
+        "external_name": null,
+        "values": {
+          "energy_kcal": null,
+          "carbohydrate_g": null,
+          "protein_g": null,
+          "fat_g": null,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": null
+        }
+      },
+      "candidate_count": 24,
+      "shown_candidate_count": 3,
+      "candidates": [
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P101-405000400-2618",
+          "external_name": "화이트크림치즈",
+          "source_state": "제품 표시값",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 327,
+            "carbohydrate_g": 41.33,
+            "protein_g": 6.67,
+            "fat_g": 14.67,
+            "saturated_fat_g": 9.33,
+            "sugars_g": 8,
+            "fiber_g": null,
+            "sodium_mg": 253
+          },
+          "improvement_codes": [
+            "energy_kcal",
+            "carbohydrate_g",
+            "protein_g",
+            "fat_g",
+            "sodium_mg"
+          ],
+          "known_nutrient_count": 7,
+          "match_method": "provider_exact_filter_scope",
+          "match_score": 70
+        },
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P123-227020300-0104",
+          "external_name": "화이트크림소스",
+          "source_state": "제품 표시값",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 54,
+            "carbohydrate_g": 6.15,
+            "protein_g": 2.31,
+            "fat_g": 2.08,
+            "saturated_fat_g": 1.15,
+            "sugars_g": 2.31,
+            "fiber_g": null,
+            "sodium_mg": 108
+          },
+          "improvement_codes": [
+            "energy_kcal",
+            "carbohydrate_g",
+            "protein_g",
+            "fat_g",
+            "sodium_mg"
+          ],
+          "known_nutrient_count": 7,
+          "match_method": "provider_exact_filter_scope",
+          "match_score": 70
+        },
+        {
+          "provider_code": "MFDS",
+          "provider_label": "식품의약품안전처 식품영양성분DB정보",
+          "provider_rank": 1,
+          "source_version": "2025-12-05",
+          "external_item_key": "P101-409000400-3169",
+          "external_name": "화이트크림케이크",
+          "source_state": "제품 표시값",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 399,
+            "carbohydrate_g": 50,
+            "protein_g": 4.67,
+            "fat_g": 20,
+            "saturated_fat_g": 7,
+            "sugars_g": 37.78,
+            "fiber_g": null,
+            "sodium_mg": 156
+          },
+          "improvement_codes": [
+            "energy_kcal",
+            "carbohydrate_g",
+            "protein_g",
+            "fat_g",
+            "sodium_mg"
+          ],
+          "known_nutrient_count": 7,
+          "match_method": "provider_exact_filter_scope",
+          "match_score": 70
+        }
+      ],
+      "review_decision": {
+        "decision": "hold",
+        "external_item_key": "P123-227020300-0104",
+        "reason_code": "USER_DEFERRED_PRODUCT_SPECIFIC_ITEM"
+      }
+    },
+    {
+      "ingredient_id": "450e1377-5925-45a7-b03f-c8bcc5fb0b71",
+      "ingredient_name": "후추",
+      "classification": "approved_replacement",
+      "reason_codes": [
+        "USER_APPROVED_OFFICIAL_CANDIDATE"
+      ],
+      "current": {
+        "basis_label": "100g",
+        "source_provider": "농촌진흥청",
+        "source_dataset": "국가표준식품성분 DB 10.4",
+        "source_version": "10.4",
+        "external_name": "후추, 검은색, 가루",
+        "values": {
+          "energy_kcal": 362,
+          "carbohydrate_g": 66.33,
+          "protein_g": 12.87,
+          "fat_g": 5,
+          "saturated_fat_g": null,
+          "sugars_g": null,
+          "fiber_g": null,
+          "sodium_mg": 6
+        }
+      },
+      "candidate_count": 1,
+      "shown_candidate_count": 1,
+      "candidates": [
+        {
+          "provider_code": "RDA_10_4",
+          "provider_label": "농촌진흥청 국가표준식품성분 DB 10.4",
+          "provider_rank": 2,
+          "source_version": "10.4",
+          "external_item_key": "3108",
+          "external_name": "후추, 검은색, 가루",
+          "source_state": "as_published",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "values": {
+            "energy_kcal": 362,
+            "carbohydrate_g": 66.33,
+            "protein_g": 12.87,
+            "fat_g": 5,
+            "saturated_fat_g": 0.18,
+            "sugars_g": 0.65,
+            "fiber_g": 25.6,
+            "sodium_mg": 6
+          },
+          "improvement_codes": [],
+          "known_nutrient_count": 8,
+          "match_method": "human_review",
+          "match_score": 120
+        }
+      ],
+      "review_decision": {
+        "decision": "approve_candidate",
+        "external_item_key": "3108",
+        "reason_code": "USER_APPROVED_OFFICIAL_CANDIDATE"
+      }
+    }
+  ],
+  "generated_at": "2026-07-22T00:00:00.000+09:00",
+  "target_count": 95,
+  "classification_counts": {
+    "approved_replacement": 85,
+    "needs_review": 1,
+    "keep_current": 9,
+    "no_compatible_source": 0
+  },
+  "unclassified_count": 0,
+  "production_db_writes": 0,
+  "report_checksum": "0007c08eb63e62cf144a5708165e419b4d6682801adf1d375eba35a5e0d3cec1"
+}

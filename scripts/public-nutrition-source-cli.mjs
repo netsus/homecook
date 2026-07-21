@@ -15,6 +15,11 @@ import {
   fetchMfdsBatch,
   normalizeNutritionBatch,
 } from "./lib/public-nutrition-pipeline.mjs";
+import {
+  INTEGRATED_MATERIAL_MAX_LIVE_PAGES,
+  INTEGRATED_MATERIAL_MAX_PAGE_SIZE,
+  fetchIntegratedNutritionBatch,
+} from "./lib/integrated-nutrition-source.mjs";
 import { loadRda104Workbook } from "./lib/rda-nutrition-xlsx.mjs";
 
 const command = process.argv[2] ?? "";
@@ -85,14 +90,49 @@ async function runFetch(args) {
   const secretValues = runtimeSecretValues();
   const apiKey = secretValues[0] ?? "";
   if (args.live) {
-    const options = apiKey.length > 0
-      ? mfdsLiveOptions(args)
-      : {};
-    raw = await fetchMfdsBatch({
-      apiKey,
-      fetchedAt,
-      ...options,
-    });
+    const provider = typeof args.provider === "string"
+      ? args.provider
+      : "mfds-15127578";
+    if (provider === "integrated-material-15100065") {
+      const pageSize = args["num-of-rows"] === undefined
+        ? INTEGRATED_MATERIAL_MAX_PAGE_SIZE
+        : Number(args["num-of-rows"]);
+      const maxPages = args["max-pages"] === undefined
+        ? INTEGRATED_MATERIAL_MAX_LIVE_PAGES
+        : Number(args["max-pages"]);
+      const unsupported = Object.keys(args).filter((key) => ![
+        "live",
+        "output-dir",
+        "fetched-at",
+        "provider",
+        "num-of-rows",
+        "max-pages",
+      ].includes(key));
+      if (unsupported.length > 0) {
+        throw new NutritionPipelineError("CLI_ARGUMENT_INVALID", {
+          argument: unsupported[0],
+        });
+      }
+      raw = await fetchIntegratedNutritionBatch({
+        apiKey,
+        fetchedAt,
+        pageSize,
+        maxPages,
+      });
+    } else if (provider === "mfds-15127578") {
+      const mfdsArgs = { ...args };
+      delete mfdsArgs.provider;
+      const options = apiKey.length > 0
+        ? mfdsLiveOptions(mfdsArgs)
+        : {};
+      raw = await fetchMfdsBatch({
+        apiKey,
+        fetchedAt,
+        ...options,
+      });
+    } else {
+      throw new NutritionPipelineError("CLI_ARGUMENT_INVALID", { argument: "provider" });
+    }
   } else {
     const inputPath = requireArg(args, "input");
     if (/\.xlsx$/i.test(inputPath)) {

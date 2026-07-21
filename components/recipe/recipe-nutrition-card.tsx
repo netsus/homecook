@@ -317,7 +317,7 @@ const WARNING_COPY: Record<string, string> = {
   TO_TASTE_EXCLUDED:
     "‘약간’, ‘적당량’처럼 양이 정해지지 않은 재료는 계산에서 제외했어요.",
   REPRESENTATIVE_VOLUME_CONVERSION_USED:
-    "부피 단위는 공공 환산 기준의 대표 무게로 바꿔 계산했어요.",
+    "부피 단위는 승인된 계량값으로 무게를 환산해 계산했어요.",
   PIECE_WEIGHT_CONVERSION_USED:
     "개수 단위는 승인된 재료 무게 기준으로 바꿔 계산했어요.",
 };

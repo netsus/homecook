@@ -72,6 +72,41 @@ describe("ingredient nutrition candidate matching", () => {
     ]);
   });
 
+  it("ranks K-FIND rows by their original NIFS/MFDS provenance", async () => {
+    const matching = await loadMatching();
+    const rankNutritionCandidates = requireFunction(matching, "rankNutritionCandidates");
+
+    const result = rankNutritionCandidates(ingredient as never, [
+      {
+        id: "kfind-mfds",
+        provider_code: "MFDS_KFIND",
+        normalized_name: "두부",
+        preparation_state: "raw",
+        edible_portion: "edible",
+        basis_dimension: "mass",
+        freshness_status: "current",
+        source_review_status: "approved",
+        source_is_active: true,
+      },
+      {
+        id: "kfind-nifs",
+        provider_code: "NIFS_KFIND",
+        normalized_name: "tofu",
+        preparation_state: "raw",
+        edible_portion: "edible",
+        basis_dimension: "mass",
+        freshness_status: "current",
+        source_review_status: "approved",
+        source_is_active: true,
+      },
+    ] as never) as { candidates: Array<Record<string, unknown>> };
+
+    expect(result.candidates).toEqual([
+      expect.objectContaining({ id: "kfind-nifs", candidate_rank: 1 }),
+      expect.objectContaining({ id: "kfind-mfds", candidate_rank: 3 }),
+    ]);
+  });
+
   it("never auto-approves exact or confidence-1 candidates and fails closed on an ambiguous tie", async () => {
     const matching = await loadMatching();
     const rankNutritionCandidates = requireFunction(matching, "rankNutritionCandidates");

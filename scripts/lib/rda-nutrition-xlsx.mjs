@@ -129,14 +129,20 @@ function validateHeader(rows, { requireStableKeyHeader = false } = {}) {
     ["H", "단백질"],
     ["I", "지방"],
     ["K", "탄수화물"],
+    ["L", "당류"],
+    ["S", "총식이섬유"],
     ["AA", "나트륨"],
+    ["CM", "총포화지방산"],
   ]);
   const expectedUnits = new Map([
     ["F", "kcal"],
     ["H", "g"],
     ["I", "g"],
     ["K", "g"],
+    ["L", "g"],
+    ["S", "g"],
     ["AA", "mg"],
+    ["CM", "g"],
   ]);
   for (const [column, expected] of expectedHeaders) {
     if (requiredCell(headers, column).replaceAll(/\s/g, "") !== expected) {
@@ -264,6 +270,9 @@ function adaptWorksheet({
         protein: { value: row.get("H") ?? "", unit: "g" },
         fat: { value: row.get("I") ?? "", unit: "g" },
         sodium: { value: row.get("AA") ?? "", unit: "mg" },
+        sugars: { value: row.get("L") ?? "", unit: "g" },
+        fiber: { value: row.get("S") ?? "", unit: "g" },
+        saturated_fat: { value: row.get("CM") ?? "", unit: "g" },
       },
     });
   }

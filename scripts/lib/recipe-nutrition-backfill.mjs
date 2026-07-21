@@ -261,9 +261,23 @@ export function validateAllRecipeNutritionInventoryArtifact(inventory) {
   return { ...body, checksum: inventory.checksum };
 }
 
+const VOLUME_UNIT_ALIASES = new Map([
+  ["스푼", "tbsp"],
+  ["큰술", "tbsp"],
+  ["밥숟갈", "tbsp"],
+  ["숟갈", "tbsp"],
+  ["숟가락", "tbsp"],
+  ["왕큰술", "tbsp"],
+  ["작은술", "tsp"],
+  ["티스푼", "tsp"],
+  ["컵", "cup"],
+]);
+
 function isVolumeUnit(unit) {
+  const trimmed = typeof unit === "string" ? unit.trim() : "";
+  const normalized = trimmed === "T" ? "tbsp" : trimmed === "t" ? "tsp" : trimmed.toLowerCase();
   return ["ml", "l", "tbsp", "tsp", "cup"].includes(
-    typeof unit === "string" ? unit.trim().toLowerCase() : "",
+    VOLUME_UNIT_ALIASES.get(normalized) ?? normalized,
   );
 }
 

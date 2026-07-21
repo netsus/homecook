@@ -733,6 +733,7 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
           profile_code: "VOLUME_G15",
           basis_volume_ml: 15,
           representative_weight_g: 15,
+          normalized_g_per_15ml: 15,
           evidence_preparation_state: "raw-edible",
           source: measurementSource,
         }] : [],
@@ -752,6 +753,15 @@ describe.runIf(enabled)("recipe nutrition isolated PostgreSQL integration", () =
     expect(contributingSources(inputGuard("g", "g", observed))).toEqual([nutritionSource]);
     expect(contributingSources(inputGuard("ml", "ml", observed))).toEqual([nutritionSource]);
     expect(contributingSources(inputGuard("tbsp", "g", observed, { conversion: true })))
+      .toEqual([measurementSource, nutritionSource]);
+    expect(contributingSources(inputGuard("스푼", "ml", observed))).toEqual([nutritionSource]);
+    expect(contributingSources(inputGuard("큰술", "g", observed, { conversion: true })))
+      .toEqual([measurementSource, nutritionSource]);
+    expect(contributingSources(inputGuard("작은술", "g", observed, { conversion: true })))
+      .toEqual([measurementSource, nutritionSource]);
+    expect(contributingSources(inputGuard("T", "g", observed, { conversion: true })))
+      .toEqual([measurementSource, nutritionSource]);
+    expect(contributingSources(inputGuard("t", "g", observed, { conversion: true })))
       .toEqual([measurementSource, nutritionSource]);
     expect(contributingSources(inputGuard("g", "g", optionalOnly))).toEqual([nutritionSource]);
     expect(contributingSources(inputGuard("g", "g", missingOnly))).toEqual([]);

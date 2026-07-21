@@ -7,12 +7,28 @@ const MIGRATION_PATH = path.join(
   process.cwd(),
   "supabase/migrations/20260716090000_add_recipe_nutrition_snapshots.sql",
 );
+const EXACT_MEASUREMENT_CORRECTION_PATH = path.join(
+  process.cwd(),
+  "supabase/migrations/20260721213000_use_exact_measurement_bidirectionally.sql",
+);
 
 function migrationSql() {
   return fs.readFileSync(MIGRATION_PATH, "utf8");
 }
 
 describe("recipe nutrition snapshot database contract", () => {
+  it("selects one approved exact measurement for both volume-to-mass and mass-to-volume guards", () => {
+    const sql = fs.readFileSync(EXACT_MEASUREMENT_CORRECTION_PATH, "utf8");
+
+    expect(sql).toMatch(/create or replace function public\.build_recipe_nutrition_input_guard/i);
+    expect(sql).toMatch(/is_mass_input/i);
+    expect(sql).toMatch(/selected\.basis_unit = 'ml'[\s\S]*selected\.is_mass_input/i);
+    expect(sql).toMatch(/nutrition\.mass_count = 0[\s\S]*nutrition\.volume_count = 1/i);
+    expect(sql).toMatch(/normalized_g_per_15ml/i);
+    expect(sql).toMatch(/create or replace function public\.build_recipe_nutrition_contributing_sources/i);
+    expect(sql).toMatch(/selected\.unit in \('g', 'kg'\)[\s\S]*basis_unit'\) = 'ml'[\s\S]*conversion/i);
+  });
+
   it("creates the official snapshot payload without a second calculation authority", () => {
     const sql = migrationSql();
     const table = sql.match(

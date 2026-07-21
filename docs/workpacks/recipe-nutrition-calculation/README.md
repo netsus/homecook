@@ -1,5 +1,13 @@
 # Slice: recipe-nutrition-calculation
 
+## 2026-07-21 Exact Measurement Correction
+
+- 부피 입력은 exactly-one active approved assignment/evidence/source 경로의 `normalized_g_per_15ml`을 사용해 `mL × 실측 g/15mL ÷ 15`로 계산한다.
+- 레시피 입력이 `g/kg`이고 exactly-one 영양 profile이 `100mL` 기준뿐이면 같은 승인 실측값으로 `mL = 입력 g × 15 ÷ normalized_g_per_15ml`을 역산한다.
+- legacy `measurement_conversion_profiles.representative_weight_g`는 신규 계산에 사용하지 않는다.
+- 실측값이 없으면 대표 등급 또는 임의 1g 값으로 보충하지 않고 기존 `partial/unavailable` 경계를 유지한다.
+- generic 계량 실측의 제품 편차 때문에 calculation quality는 계속 `estimated/mixed`이며 출처를 snapshot에 pin한다.
+
 ## Goal
 
 승인된 재료 영양·계량 데이터만 사용해 레시피의 예상 영양을 결정론적으로 계산하고, 과거 식단이 나중의 데이터 변경으로 흔들리지 않도록 불변 snapshot으로 고정한다. 사용자는 `RECIPE_DETAIL`에서 1인분 기준값과 선택 인분 전체값의 핵심 영양소를 `complete / partial / unavailable` 및 `direct / estimated / mixed` 품질과 함께 확인하며, 누락된 값은 0이 아니라 `최소 X` 또는 `정보 준비 중`으로 이해할 수 있다.
@@ -121,11 +129,12 @@
 
 1. `g/kg`은 current approved source/profile과 active approved primary ingredient link를 모두 만족하는 완전한 chain이 canonical ingredient의 전체 `preparation_state`에서 정확히 1개일 때만 질량 기준 profile로 직접 계산한다.
 2. 같은 exactly-one chain의 profile 기준이 `100mL`이고 입력이 `mL/L/tbsp/tsp/cup`이면 부피 기준으로 직접 계산한다.
-3. 그 밖의 부피는 `tbsp=15mL`, `tsp=5mL`, 국내 조리용 `cup=200mL`로 정규화하고, active approved assignment/evidence/source의 자격 있는 경로가 전체 상태에서 정확히 1개일 때만 승인 `VOLUME_G6/G10/G15/G20/G25`를 적용한다. 예상 질량은 `mL * representative_g / 15`다.
-4. `개/장`은 recipe 입력과 ingredient의 exact `size_code + preparation_state`가 일치하는 active approved piece weight만 사용한다. 현재 recipe row에는 두 입력 필드가 없으므로 일반적으로 계산하지 않으며, `g/kg` 직접 질량에는 piece 크기가 필요 없다.
-5. `TO_TASTE`, amount 결측, 미지원 단위, 변환 경로 없음, inactive/revoked/superseded/stale/needs_source_check는 계산하지 않고 missing reason을 남긴다.
+3. 그 밖의 부피는 `tbsp=15mL`, `tsp=5mL`, 국내 조리용 `cup=200mL`로 정규화하고, active approved assignment/evidence/source의 자격 있는 경로가 전체 상태에서 정확히 1개일 때만 evidence의 `normalized_g_per_15ml`을 적용한다. 예상 질량은 `mL * normalized_g_per_15ml / 15`다.
+4. `g/kg` 입력인데 영양 profile이 `100mL` 기준뿐이면 같은 exactly-one 승인 경로로 `mL = 입력 g * 15 / normalized_g_per_15ml`을 역산한다.
+5. `개/장`은 recipe 입력과 ingredient의 exact `size_code + preparation_state`가 일치하는 active approved piece weight만 사용한다. 현재 recipe row에는 두 입력 필드가 없으므로 일반적으로 계산하지 않으며, `g/kg` 직접 질량에는 piece 크기가 필요 없다.
+6. `TO_TASTE`, amount 결측, 미지원 단위, 변환 경로 없음, inactive/revoked/superseded/stale/needs_source_check는 계산하지 않고 missing reason을 남긴다.
 
-`TO_TASTE`와 계산 불가 기여는 0이 아니다. 대표 부피 환산을 하나라도 사용한 nutrient는 `direct`가 될 수 없으며 직접 경로만이면 `direct`, 대표 경로만이면 `estimated`, 혼합이면 `mixed`, 전체 unavailable이면 quality는 null이다.
+`TO_TASTE`와 계산 불가 기여는 0이 아니다. generic 승인 계량값 환산을 하나라도 사용한 nutrient는 `direct`가 될 수 없으며 직접 경로만이면 `direct`, 계량 환산 경로만이면 `estimated`, 혼합이면 `mixed`, 전체 unavailable이면 quality는 null이다.
 
 ### Deterministic Snapshot Contract
 

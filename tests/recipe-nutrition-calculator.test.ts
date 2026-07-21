@@ -65,6 +65,7 @@ type CalculatorIngredient = {
       is_active: boolean;
     };
     evidence?: {
+      normalized_g_per_15ml?: number | null;
       review_status: string;
       is_active: boolean;
       source: NonNullable<CalculatorIngredient["nutrition"]>["source"];
@@ -243,6 +244,7 @@ describe("recipe nutrition calculator", () => {
         is_active: true,
       },
       evidence: {
+        normalized_g_per_15ml: 25,
         review_status: "approved",
         is_active: true,
         source: measurementEvidenceSource("RDA-direct-unused"),
@@ -266,6 +268,131 @@ describe("recipe nutrition calculator", () => {
       scalable_values: { energy_kcal: 400 },
       fixed_values: { energy_kcal: 0 },
     });
+  });
+
+  it.each([
+    ["스푼", 1, 15],
+    ["큰술", 1, 15],
+    ["작은술", 1, 5],
+    ["T", 1, 15],
+    ["t", 1, 5],
+  ])("normalizes the Korean volume unit %s before direct 100mL calculation", async (unit, amount, expectedEnergy) => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
+      calculator,
+      "calculateRecipeNutrition",
+    );
+    const ingredient = directIngredient({ amount, unit });
+    ingredient.nutrition!.profile.basis_unit = "ml";
+
+    const result = calculate(recipeInput([ingredient]));
+
+    expect(result.values.energy_kcal.amount).toBeCloseTo(expectedEnergy);
+    expect(result.calculation_status).toBe("complete");
+    expect(result.calculation_quality).toBe("direct");
+    expect(result.warnings).not.toContain("UNIT_CONVERSION_MISSING");
+  });
+
+  it("uses an approved exact measurement instead of the legacy representative weight", async () => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
+      calculator,
+      "calculateRecipeNutrition",
+    );
+    const ingredient = directIngredient({ amount: 1, unit: "스푼" });
+    ingredient.conversion_assignment = {
+      id: "assignment-korean-spoon",
+      ingredient_id: ingredient.ingredient_id,
+      preparation_state: ingredient.preparation_state,
+      review_status: "approved",
+      is_active: true,
+      profile: {
+        code: "VOLUME_G20",
+        basis_volume_ml: 15,
+        representative_weight_g: 20,
+        is_active: true,
+      },
+      evidence: {
+        normalized_g_per_15ml: 17.7,
+        review_status: "approved",
+        is_active: true,
+        source: measurementEvidenceSource("RDA-korean-spoon"),
+      },
+    };
+
+    const result = calculate(recipeInput([ingredient]));
+
+    expect(result.values.energy_kcal.amount).toBeCloseTo(17.7);
+    expect(result.calculation_quality).toBe("estimated");
+    expect(result.warnings).toContain("REPRESENTATIVE_VOLUME_CONVERSION_USED");
+  });
+
+  it("uses the approved exact measurement in reverse for gram input with a 100mL nutrition profile", async () => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
+      calculator,
+      "calculateRecipeNutrition",
+    );
+    const ingredient = directIngredient({ amount: 17.7, unit: "g" });
+    ingredient.nutrition!.profile.basis_unit = "ml";
+    ingredient.conversion_assignment = {
+      id: "assignment-gram-to-volume",
+      ingredient_id: ingredient.ingredient_id,
+      preparation_state: ingredient.preparation_state,
+      review_status: "approved",
+      is_active: true,
+      profile: {
+        code: "VOLUME_G20",
+        basis_volume_ml: 15,
+        representative_weight_g: 20,
+        is_active: true,
+      },
+      evidence: {
+        normalized_g_per_15ml: 17.7,
+        review_status: "approved",
+        is_active: true,
+        source: measurementEvidenceSource("RDA-gram-to-volume"),
+      },
+    };
+
+    const result = calculate(recipeInput([ingredient]));
+
+    expect(result.values.energy_kcal.amount).toBeCloseTo(15);
+    expect(result.calculation_quality).toBe("estimated");
+    expect(result.warnings).toContain("REPRESENTATIVE_VOLUME_CONVERSION_USED");
+  });
+
+  it("does not fall back to a legacy representative weight without an exact measurement", async () => {
+    const calculator = await calculatorModule();
+    const calculate = requireFunction<(input: CalculatorInput) => CalculatorResult>(
+      calculator,
+      "calculateRecipeNutrition",
+    );
+    const ingredient = directIngredient({ amount: 1, unit: "tbsp" });
+    ingredient.conversion_assignment = {
+      id: "assignment-without-exact-measurement",
+      ingredient_id: ingredient.ingredient_id,
+      preparation_state: ingredient.preparation_state,
+      review_status: "approved",
+      is_active: true,
+      profile: {
+        code: "VOLUME_G20",
+        basis_volume_ml: 15,
+        representative_weight_g: 20,
+        is_active: true,
+      },
+      evidence: {
+        review_status: "approved",
+        is_active: true,
+        source: measurementEvidenceSource("RDA-missing-exact"),
+      },
+    };
+
+    const result = calculate(recipeInput([ingredient]));
+
+    expect(result.calculation_status).toBe("unavailable");
+    expect(result.values.energy_kcal.amount).toBeNull();
+    expect(result.warnings).toContain("UNIT_CONVERSION_MISSING");
   });
 
   it.each([
@@ -294,6 +421,7 @@ describe("recipe nutrition calculator", () => {
         is_active: true,
       },
       evidence: {
+        normalized_g_per_15ml: grams,
         review_status: "approved",
         is_active: true,
         source: measurementEvidenceSource(`RDA-${code}`),
@@ -525,6 +653,7 @@ describe("recipe nutrition calculator", () => {
         is_active: true,
       },
       evidence: {
+        normalized_g_per_15ml: 15,
         review_status: "approved",
         is_active: true,
         source: measurementEvidenceSource("RDA-mixed"),
@@ -627,6 +756,7 @@ describe("recipe nutrition calculator", () => {
         is_active: true,
       },
       evidence: {
+        normalized_g_per_15ml: 15,
         review_status: "approved",
         is_active: true,
         source: measurementEvidenceSource(),

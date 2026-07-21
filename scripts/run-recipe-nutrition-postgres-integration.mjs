@@ -219,6 +219,18 @@ async function runIsolatedTestFile(postgresBin, testFile) {
       ...connectionArgs,
       "-f", "supabase/migrations/20260716090000_add_recipe_nutrition_snapshots.sql",
     ]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...connectionArgs,
+      "-f", "supabase/migrations/20260721184500_normalize_korean_recipe_nutrition_units.sql",
+    ]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...connectionArgs,
+      "-f", "supabase/migrations/20260721190000_normalize_compact_spoon_units.sql",
+    ]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...connectionArgs,
+      "-f", "supabase/migrations/20260721213000_use_exact_measurement_bidirectionally.sql",
+    ]);
 
     return commandResult(
       "pnpm",
