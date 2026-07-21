@@ -1,5 +1,48 @@
 # Slice: ingredient-nutrition-conversion-model
 
+## 2026-07-22 Final Held Items Follow-up
+
+- 사용자 후속 검수로 무염버터와 크림치즈는 현재값 유지, 그릭 요거트와 통밀 식빵은 컬리 식재료 영양정보 100g 기준 사용자 지정 출처로 확정했다. 컬리 페이지에 없는 포화지방·나트륨은 0으로 추정하지 않고 `missing`으로 보존한다.
+- 최신 결과는 `공식 후보 승인 79`, `사용자 지정 출처 6`, `현재값 유지 9`, `보류 1`이다. report checksum은 `0007c08eb63e62cf144a5708165e419b4d6682801adf1d375eba35a5e0d3cec1`, apply payload checksum은 `79eac06a2b227a00075f839b3412364976cc60c49cd67b85e801f361f4977882`다.
+- 변경된 payload apply는 기존 83개 승인 profile을 다시 versioning하지 않고 재사용했으며 새 profile 2개만 추가했다. 첫 실행은 `writes_committed=25`, 동일 payload replay는 `writes_committed=0`, `replayed=true`, remote/production write는 0이다.
+- 공개 레시피 43개를 다시 계산해 그릭 요거트·통밀 식빵을 함께 쓰는 레시피 snapshot 1건만 갱신했다. 계산 상태는 `complete=16`, `partial=23`, `unavailable=4`, conflict/multiple/unclassified는 모두 0이다.
+- 남은 보류 1건은 연어오븐구이에서 50g을 사용하는 `화이트크림`이다. 식재료 삭제는 해당 레시피 재료와 조리 단계의 대체·삭제 결정을 먼저 확정해야 하므로 이번 follow-up에서는 삭제하지 않았다.
+
+## 2026-07-22 User Review Apply Evidence
+
+- 사용자 검수 95건을 `공식 후보 승인 79`, `사용자 지정 출처 4`, `현재값 유지 7`, `제품별 영양 버전 설계까지 보류 5`로 확정했다. 최종 report checksum은 `807e2dc33da9fb57c10725480b78b7ebeed531645522da2a7457b5dbbb7b1026`, apply payload checksum은 `b18dda3a98b6c8142241b09060559461c89906916d30af8f80688540b188f066`이다.
+- 사용자 지정 4건은 모시조개(기존값 + 나트륨 `557mg/100g`), 새송이버섯(식약처 `P116-702070100-0427`, `100g`), 오렌지 껍질(LogiFoodCoach 오렌지 제스트, `100g`), 오렌지즙(돈시몬 제품 표시값, `100mL`)이다. 오렌지즙은 승인 밀도 없이 `100g`으로 바꾸지 않았다.
+- 모시조개는 이번 사용자 명시 승인에 한해서 기존 식약처 profile과 네이버 지식백과 나트륨을 결합한 새 immutable review profile을 만들었다. 원 profile/value는 수정하지 않았고 두 출처와 결합 사유를 item provenance에 남겼다. 이 예외는 일반적인 nutrient field 자동 혼합을 허용하지 않는다.
+- 로컬 apply는 83개를 반영해 기존 link 81개를 append-only `superseded` 이력으로 남기고 profile이 없던 2개를 새로 연결했다. 첫 실행은 `writes_committed=1150`, 동일 payload replay는 `writes_committed=0`, `replayed=true`, remote/production write는 0이다.
+- 적용 대상 83개 모두 `as_published` active approved primary가 정확히 1개이며 누락 0, 복수 0이다. 전체 active primary 중복도 0이다.
+- 공개 레시피 43개 snapshot을 새 profile 기준으로 재계산했다. dry-run conflict/multiple/unclassified는 모두 0이었고 apply는 snapshot 40건을 갱신했다(`complete=16`, `partial=23`, `unavailable=4`). 남은 불완전 계산은 보류 제품, piece weight, 미지원 단위 같은 별도 후속 항목이다.
+- 원본 후보 report/사용자 검수 입력은 같은 폴더의 `homecook-nutrition-candidate-report.source.json`과 `homecook-nutrition-candidate-review.source.json`으로 불변 보존한다. 최종 검수 HTML은 `homecook-nutrition-final-review.html`, 최종 report/decision은 `homecook-nutrition-final-review.json`과 `homecook-nutrition-final-review-decisions.json`, machine-readable apply 결과는 `homecook-nutrition-review-apply.json`과 `homecook-nutrition-review-apply-result.json`이다.
+- 검수 재생성은 `pnpm nutrition:review:finalize`, 로컬 DB 반영은 명시적 플래그와 환경 승인을 함께 둔 `HOMECOOK_NUTRITION_REVIEW_WRITE_APPROVED=1 pnpm nutrition:review:apply -- --allow-write`만 허용한다. source snapshot이 없는 clean checkout에서도 저장된 apply payload로 같은 결과를 재적용할 수 있다.
+
+## 2026-07-21 Official Source Candidate Checkpoint Evidence
+
+- 로컬 current snapshot에서 `partial_nutrient=90`, `missing_profile=5`, target `95`를 checksum `99c4104dab6c1b7e14488c197a21452c39810eb2e5e9f8709aeb1e23d554d34f`로 고정했다.
+- `.env.local` 기본 공공데이터 키는 redacted smoke에서 HTTP 403이었지만 기존 보조 키가 MFDS `15127578`과 통합 원재료 `15100065` 모두 provider `00`으로 인증됐다. secret 값은 artifact/HTML/report에 저장하지 않았다.
+- 농촌진흥청 공식 `식품성분표(10개정판).xlsx`는 `13,348,408 bytes`, SHA-256 `271cc431f2991b3c0c049ec6e05fb59a040319e984ab71468184530de61dec50`, 3,366행 pin과 일치했다. optional 3종을 포함해 3,206행을 정규화하고 160행은 원문 결측/비정상 token 규칙으로 quarantine했다.
+- 공공데이터포털 통합 원재료 `15100065`는 3,704행을 수집해 3,701행 정규화, 3행 quarantine했으며 `srcNm`의 국립수산과학원 provenance를 보존했다.
+- 식약처 제품 DB는 profile 없음 5개와 1차 exact 후보 없음 재료를 이름별 제한 query로만 보완했다. `물`처럼 범위가 과도한 query는 1,000행 cap에서 incomplete로 fail closed했고 부분 batch를 후보로 쓰지 않았다.
+- 최종 검수 report는 95개를 `needs_review=85`, `keep_current=5`, `no_compatible_source=5`, `approved_replacement=0`, `unclassified=0`으로 분류했다. report checksum은 `e725345adc67119b60d021b60df81d4bf2d9d6f33f3a9654495fbdefabfbd88f`이고 이 checkpoint의 DB write는 0이다.
+- 이 시점의 원본 machine-readable report는 `outputs/nutrition-review-20260721/homecook-nutrition-candidate-report.source.json`으로 보존한다. 승인 결과가 오기 전 local apply, snapshot backfill, mixed-display API/UI 구현은 시작하지 않는다.
+
+## 2026-07-21 Official Nutrient Gap Enrichment Follow-up
+
+- 최신 local review의 일부 결측 90개와 profile 없음 5개를 고정 inventory로 export한 뒤 official source candidate를 만든다.
+- RDA 10.4는 공식 workbook의 optional nutrient column을 schema/unit 검증 후 수집하고, 수산물은 K-FIND 통합 파일의 NIFS 원기관 provenance를 우선 검토한다.
+- 서로 다른 source의 nutrient field를 기존 profile에 섞지 않고 더 완전한 단일 source row의 immutable profile replacement만 허용한다.
+- candidate HTML의 explicit review 전 write 0, 승인 후 local append-only apply + atomic supersede, remote write 0을 유지한다.
+
+## 2026-07-21 Approved Consumer Correction
+
+- recipe nutrition consumer는 active approved assignment가 연결한 active approved `measurement_source_evidence.normalized_g_per_15ml`을 계산값으로 직접 사용한다.
+- `measurement_conversion_profiles`와 기존 `VOLUME_G*` row는 감사·과거 import 호환을 위해 보존하지만 신규 recipe 계산값을 결정하지 않는다.
+- 실측값이 없거나 비정상·미승인·stale·복수 경로이면 임의의 1g/대표 등급으로 보충하지 않는다.
+- 이 보정은 schema/table/public API를 늘리지 않으며 아래 최초 slice 기록의 대표 profile 후보 생성 acceptance를 소급 삭제하지 않는다.
+
 ## Goal
 
 `public-nutrition-source-acquisition`이 만든 approved/pinned bundle을 재료에 안전하게 연결할 수 있도록 영양 source/item/profile/value, 재료 매칭 후보, 계량 evidence, 대표 환산 profile/assignment, 개당 중량의 DB·import·검수 계약을 구현한다. 공공 원문 관측, 서비스의 실용 대표값, 개별 재료의 승인 결정을 분리해 원문을 덮어쓰지 않고, 오직 active approved row만 후속 슬라이스가 소비하게 한다.

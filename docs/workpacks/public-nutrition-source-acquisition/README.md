@@ -1,5 +1,13 @@
 # Slice: public-nutrition-source-acquisition
 
+## 2026-07-21 Local Nutrient Gap Follow-up
+
+- 기존 one-secret runtime 경계는 유지했다. 기본 `DATA_GO_KR_API_KEY` smoke가 403을 반환해도 adapter가 임의 key rotation을 하지 않으며, 이번 operator run에서만 이미 존재하던 보조 key를 process의 `DATA_GO_KR_API_KEY`로 명시 주입해 인증을 확인했다.
+- RDA 10.4 official workbook adapter는 기존 core 5에 `당류(L)`, `총 식이섬유(S)`, `총 포화지방산(CM)`을 추가했다. 공식 header/unit/file SHA pin이 달라지면 batch 전체가 fail closed한다.
+- `integrated-material-15100065` live adapter를 추가해 공공데이터포털의 원재료성 식품 3,704행을 raw provider shape로 보존하고, `srcNm`에 따라 NIFS provenance를 별도 candidate rank로 전달한다. 실제 안정 범위는 500행 × 8페이지였고 DB write는 0이다.
+- optional token도 기존 normalizer의 observed `0`/blank/dash/trace/not-detected 구분을 그대로 사용한다. provider row를 nutrient field 단위로 서로 섞지 않는다.
+- 이 follow-up의 candidate checkpoint evidence와 최종 95개 분류는 `ingredient-nutrition-conversion-model` workpack에 기록한다.
+
 ## Goal
 
 공공 영양 원본을 사용자 요청 시점에 호출하거나 곧바로 production에 넣지 않고, 운영자 batch에서 versioned raw snapshot과 manifest로 고정한 뒤 deterministic normalization·검수·승인 입력으로 만든다. 사용자는 다음 슬라이스부터 출처·버전·이용조건이 확인되고 결측을 0으로 오염시키지 않은 영양 데이터만 계산과 catalog에 반영되는 안전성을 얻게 된다.

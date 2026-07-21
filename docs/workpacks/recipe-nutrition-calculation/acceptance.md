@@ -1,5 +1,20 @@
 # Acceptance Checklist: recipe-nutrition-calculation
 
+## 2026-07-21 Mixed Recipe Quantity Display Follow-up
+
+- [ ] `GET /recipes/{id}`와 cook-mode ingredient가 nullable `estimated_weight { amount, unit:'g' }`를 additive 제공한다.
+- [ ] 승인 실측 `17.7g/15mL`과 원본 `1큰술`은 `1큰술 · 약 18g`으로 표시하며 내부 amount는 17.7을 유지한다.
+- [ ] 0~1g은 `<1g`, 원본 `g/kg`, `TO_TASTE`, 근거 없는 부피, exact piece 근거 없는 `개/장`은 보조 g을 표시하지 않는다.
+- [ ] 인분 scaling은 원본 수량과 estimated weight에 같은 비율을 적용하고 non-scalable은 둘 다 유지한다.
+- [ ] projection query 실패가 recipe/cook-mode 본문 500으로 번지지 않고 원본 수량만 유지한다.
+
+## 2026-07-21 Exact Measurement Correction
+
+- [x] 승인 evidence가 `17.7g/15mL`이고 legacy profile이 `20g/15mL`이어도 1큰술 계산에는 `17.7g`을 사용한다.
+- [x] evidence의 `normalized_g_per_15ml`이 없거나 양수가 아니면 legacy representative profile로 fallback하지 않는다.
+- [x] 실측 evidence를 사용한 결과는 measurement source를 pin하고 기존 `estimated/mixed` 품질과 `약/예상` 표시를 유지한다.
+- [x] `g/kg` 입력과 `100mL` 영양 profile 조합은 같은 승인 실측값으로 mL를 역산하며 DB input/source guard도 동일한 경로를 검증한다.
+
 > 이 acceptance는 Stage 2~6 living closeout이다. 체크는 테스트, real DB smoke, 브라우저 evidence가 생긴 뒤에만 한다. `Manual Only`를 제외한 모든 항목은 구현 merge 전에 닫혀야 한다.
 
 ## Happy Path
@@ -17,9 +32,9 @@
 - [x] recipe `amount + unit`은 조리에 실제 투입한 가식부 사용량으로 계산하고 구매 총중량으로 재해석하거나 가식부율을 다시 곱하지 않는다 <!-- omo:id=accept-actual-edible-recipe-amount;stage=2;scope=backend;review=3,6 -->
 - [x] 상태 미지정 direct 질량/호환 부피는 current approved source/profile + active approved primary ingredient link의 완전한 chain이 전체 상태에서 정확히 1개일 때만 선택하고 0개/복수면 fail-closed한다 <!-- omo:id=accept-unique-default-nutrition-chain;stage=2;scope=backend;review=3,6 -->
 - [x] `100mL` profile과 `mL/L/tbsp/tsp/cup` 입력은 g 환산 없이 부피 기준으로 직접 계산된다 <!-- omo:id=accept-unit-volume-direct;stage=2;scope=backend;review=3,6 -->
-- [x] 그 밖의 부피는 tbsp 15mL, tsp 5mL, cup 200mL와 승인 `VOLUME_G6/G10/G15/G20/G25`만 사용한다 <!-- omo:id=accept-unit-approved-volume-class;stage=2;scope=backend;review=3,6 -->
+- [x] 그 밖의 부피는 tbsp 15mL, tsp 5mL, cup 200mL로 정규화하고 exactly-one 승인 evidence의 `normalized_g_per_15ml`을 사용한다 <!-- omo:id=accept-unit-approved-volume-class;stage=2;scope=backend;review=3,6 -->
 - [x] 부피 환산은 active approved assignment/evidence/source의 자격 있는 경로가 전체 상태에서 정확히 1개일 때만 사용하고 0개/복수면 fail-closed한다 <!-- omo:id=accept-unique-volume-conversion-chain;stage=2;scope=backend;review=3,6 -->
-- [x] 대표 부피 예상 질량은 `mL * representative_g / 15`이고 representative 경로가 있으면 quality가 direct가 아니다 <!-- omo:id=accept-estimated-volume-quality;stage=2;scope=backend;review=3,6 -->
+- [x] generic 계량 예상 질량은 `mL * normalized_g_per_15ml / 15`이고 계량 환산 경로가 있으면 quality가 direct가 아니다 <!-- omo:id=accept-estimated-volume-quality;stage=2;scope=backend;review=3,6 -->
 - [x] `개/장`은 recipe 입력과 ingredient의 exact `size_code + preparation_state`가 일치하는 active approved piece weight만 사용한다. 현재 recipe row에 두 입력 필드가 없으면 fail-closed하고 직접 `g/kg`에는 size를 요구하지 않는다 <!-- omo:id=accept-unit-exact-piece;stage=2;scope=backend;review=3,6 -->
 - [x] `TO_TASTE`, amount 결측, 미지원 단위, 변환 경로 없음은 0이 아니라 missing reason으로 남는다 <!-- omo:id=accept-unit-missing-not-zero;stage=2;scope=backend;review=3,6 -->
 - [x] inactive/revoked/superseded/stale/needs_source_check source·profile·link·assignment·piece row를 fallback으로 소비하지 않는다 <!-- omo:id=accept-approved-current-only;stage=2;scope=backend;review=3,6 -->

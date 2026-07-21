@@ -1,5 +1,21 @@
 # Acceptance Checklist
 
+## 2026-07-21 Official Nutrient Gap Enrichment Follow-up
+
+- [x] 최신 inventory가 일부 결측 90개와 profile 없음 5개를 중복 없이 분류하고 checksum을 고정한다.
+- [x] RDA/K-FIND adapter가 optional nutrient의 observed 0과 blank/dash/trace/missing을 구분한다.
+- [x] 동일 식품·상태·가식부·basis를 만족하지 않는 후보와 동률 후보는 자동 승인하지 않는다.
+- [x] 다른 source의 nutrient field를 기존 profile에 섞지 않고 단일 source replacement만 검수 후보로 만든다.
+- [x] candidate HTML 검수 전 local/remote DB write 0과 `unclassified=0`을 증명한다.
+- [x] 사용자 승인 후 local apply가 적용 대상 83개 active primary 정확히 1개, replay write 0, remote write 0을 증명한다. (`payload_checksum=b18dda3a98b6c8142241b09060559461c89906916d30af8f80688540b188f066`)
+- [x] 후속 검수 payload가 그릭 요거트·통밀 식빵 profile 2개만 추가하고 기존 83개 승인 profile을 재-versioning하지 않으며, replay write 0과 보류 1건을 증명한다. (`payload_checksum=79eac06a2b227a00075f839b3412364976cc60c49cd67b85e801f361f4977882`)
+
+## 2026-07-21 Consumer Correction
+
+- [x] **Given** active approved assignment/evidence/source와 양수 `normalized_g_per_15ml`, **When** recipe nutrition consumer가 부피 단위를 계산, **Then** legacy representative profile이 아니라 실측 소수값을 그대로 사용한다.
+- [x] **Given** 실측값이 없거나 비정상·미승인·stale인 evidence, **When** recipe nutrition consumer가 부피 단위를 계산, **Then** 임의 1g/대표값으로 보충하지 않고 `UNIT_CONVERSION_MISSING`으로 fail closed한다.
+- [x] **Given** 특정 제품 식별자가 없는 canonical ingredient recipe, **When** 제품별 계량 또는 영양 record가 존재, **Then** 이름 유사도만으로 generic recipe 계산에 우선 적용하지 않는다.
+
 > 이 문서는 Stage 2 TDD와 Stage 3 독립 검수의 executable contract다. 각 항목은 실제 test/report/RLS/local DB evidence가 생긴 뒤에만 체크한다. 작성자는 Stage 1.5 또는 Stage 3 독립 승인을 대신할 수 없다.
 
 ## Happy Path
