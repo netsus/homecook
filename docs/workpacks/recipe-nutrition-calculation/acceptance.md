@@ -1,19 +1,11 @@
 # Acceptance Checklist: recipe-nutrition-calculation
 
-## 2026-07-21 Mixed Recipe Quantity Display Follow-up
-
-- [ ] `GET /recipes/{id}`와 cook-mode ingredient가 nullable `estimated_weight { amount, unit:'g' }`를 additive 제공한다.
-- [ ] 승인 실측 `17.7g/15mL`과 원본 `1큰술`은 `1큰술 · 약 18g`으로 표시하며 내부 amount는 17.7을 유지한다.
-- [ ] 0~1g은 `<1g`, 원본 `g/kg`, `TO_TASTE`, 근거 없는 부피, exact piece 근거 없는 `개/장`은 보조 g을 표시하지 않는다.
-- [ ] 인분 scaling은 원본 수량과 estimated weight에 같은 비율을 적용하고 non-scalable은 둘 다 유지한다.
-- [ ] projection query 실패가 recipe/cook-mode 본문 500으로 번지지 않고 원본 수량만 유지한다.
-
 ## 2026-07-21 Exact Measurement Correction
 
-- [x] 승인 evidence가 `17.7g/15mL`이고 legacy profile이 `20g/15mL`이어도 1큰술 계산에는 `17.7g`을 사용한다.
-- [x] evidence의 `normalized_g_per_15ml`이 없거나 양수가 아니면 legacy representative profile로 fallback하지 않는다.
-- [x] 실측 evidence를 사용한 결과는 measurement source를 pin하고 기존 `estimated/mixed` 품질과 `약/예상` 표시를 유지한다.
-- [x] `g/kg` 입력과 `100mL` 영양 profile 조합은 같은 승인 실측값으로 mL를 역산하며 DB input/source guard도 동일한 경로를 검증한다.
+- [x] 승인 evidence가 `17.7g/15mL`이고 legacy profile이 `20g/15mL`이어도 1큰술 계산에는 `17.7g`을 사용한다. <!-- omo:id=accept-exact-measurement-value-authority;stage=2;scope=backend;review=3 -->
+- [x] evidence의 `normalized_g_per_15ml`이 없거나 양수가 아니면 legacy representative profile로 fallback하지 않는다. <!-- omo:id=accept-exact-measurement-fail-closed;stage=2;scope=backend;review=3 -->
+- [x] 실측 evidence를 사용한 결과는 measurement source를 pin하고 기존 `estimated/mixed` 품질과 `약/예상` 표시를 유지한다. <!-- omo:id=accept-exact-measurement-source-quality;stage=2;scope=shared;review=3,6 -->
+- [x] `g/kg` 입력과 `100mL` 영양 profile 조합은 같은 승인 실측값으로 mL를 역산하며 DB input/source guard도 동일한 경로를 검증한다. <!-- omo:id=accept-exact-measurement-bidirectional;stage=2;scope=backend;review=3 -->
 
 > 이 acceptance는 Stage 2~6 living closeout이다. 체크는 테스트, real DB smoke, 브라우저 evidence가 생긴 뒤에만 한다. `Manual Only`를 제외한 모든 항목은 구현 merge 전에 닫혀야 한다.
 

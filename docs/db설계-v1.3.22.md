@@ -4,14 +4,13 @@
 담당자: 채실장
 날짜: 7월 17
 
-> **2026-07-21 contract-evolution — 혼합 표기 파생값과 영양 profile 보완 경계**
+> **2026-07-21 contract-evolution — 영양 profile 보완 경계**
 >
 > | # | 변경 내용 | 영향 범위 |
 > | --- | --- | --- |
-> | 1 | API `estimated_weight`는 `recipe_ingredients.amount/unit`과 exactly-one active approved `measurement_source_evidence.normalized_g_per_15ml`에서 파생하며 DB에 중복 저장하지 않는다 | non-persisted projection |
-> | 2 | 영양 결측 보완은 기존 source/item/profile/value/link table에 새 immutable version을 append하고 기존 active primary link를 같은 transaction에서 `superseded` 처리한다 | append-only replacement |
-> | 3 | 다른 source의 nutrient field를 기존 profile에 합성하지 않으며 profile 하나는 source item 하나의 provenance를 유지한다 | source integrity |
-> | 4 | 이번 변경은 신규 table/column/index/enum을 추가하지 않고 target table 수 50개를 유지한다 | schema compatibility |
+> | 1 | 영양 결측 보완은 기존 source/item/profile/value/link table에 새 immutable version을 append하고 기존 active primary link를 같은 transaction에서 `superseded` 처리한다 | append-only replacement |
+> | 2 | 다른 source의 nutrient field를 기존 profile에 합성하지 않으며 profile 하나는 source item 하나의 provenance를 유지한다 | source integrity |
+> | 3 | 이번 변경은 신규 table/column/index/enum을 추가하지 않고 target table 수 50개를 유지한다 | schema compatibility |
 >
 > candidate HTML 검수 전에는 write를 허용하지 않는다. local apply 실패는 신규 row와 active pointer 전환을 모두 rollback하며 같은 승인 bundle replay는 duplicate write를 만들지 않는다.
 

@@ -4,14 +4,13 @@
 담당자: 채실장
 날짜: 7월 17
 
-> **2026-07-21 contract-evolution — 혼합 수량 표시와 영양 결측 검수 흐름**
+> **2026-07-21 contract-evolution — 영양 결측 검수 흐름**
 >
 > | # | 변경 내용 | 영향 범위 |
 > | --- | --- | --- |
 > | 1 | 운영 batch는 최신 local inventory를 일부 결측/profile 없음으로 분리하고 RDA 10.4, K-FIND/NIFS, MFDS 순으로 compatible 후보를 만든다 | operator data flow |
 > | 2 | 후보는 `raw → normalize → review HTML → explicit approval → local apply`를 따르며 HTML 검수 전 DB write는 0이다 | review gate |
 > | 3 | 승인 replacement는 새 immutable source/profile/value/link를 만들고 기존 active primary를 같은 transaction에서 supersede한다 | append-only activation |
-> | 4 | RECIPE_DETAIL/COOK_MODE는 원본 수량을 표시한 뒤 exactly-one 승인 실측 경로가 있을 때만 `약 Ng`을 병기하고, 경로가 없거나 조회 실패면 원본 수량만 표시한다 | 사용자 조회 flow |
 >
 > 이름 유사도, category, source rank만으로 자동 승인하지 않는다. 다른 source의 nutrient field를 섞지 않고 동일 식품·상태·가식부·기준량의 단일 row 전체를 검수하며, 결측과 관측 0을 계속 구분한다.
 

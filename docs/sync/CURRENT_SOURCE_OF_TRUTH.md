@@ -13,17 +13,17 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 
-## Approved Mixed Recipe Quantity And Nutrient Gap Enrichment `2026-07-21`
+## Approved Nutrient Gap Enrichment `2026-07-21`
 
 | 문서 | 변경 내용 |
 |------|----------|
-| 요구사항 기준선 v1.7.21 | 원본 recipe 수량 + 승인 실측 기반 `약 Ng` 혼합 표기, 95개 local 영양 결측 inventory, 단일 source profile replacement와 검수 전 0 write를 잠근다 |
-| 화면정의서 v1.5.27 | RECIPE_DETAIL/COOK_MODE의 `1큰술 · 약 18g`, 1g 반올림·`<1g`, 근거 없음/TO_TASTE/piece fail-closed 표시를 확정한다 |
-| 유저플로우 v1.3.24 | official source candidate → HTML 검수 → explicit approval → local append-only apply와 nullable 보조 g flow를 고정한다 |
-| DB v1.3.22 | `estimated_weight` 비저장 파생값, 단일 source profile provenance, atomic supersede를 재잠그며 schema/table 수는 바꾸지 않는다 |
-| API v1.2.26 | recipe detail/cook-mode ingredient에 nullable additive `estimated_weight { amount, unit:'g' }`를 추가한다 |
+| 요구사항 기준선 v1.7.21 | 95개 local 영양 결측 inventory, 단일 source profile replacement와 검수 전 0 write를 잠근다 |
+| 화면정의서 v1.5.27 | 신규 영양 결측 UI를 열지 않고 기존 영양 카드의 `약/예상`·결측 표시 경계를 유지한다 |
+| 유저플로우 v1.3.24 | official source candidate → HTML 검수 → explicit approval → local append-only apply flow를 고정한다 |
+| DB v1.3.22 | 단일 source profile provenance와 atomic supersede를 재잠그며 schema/table 수는 바꾸지 않는다 |
+| API v1.2.26 | public field·endpoint를 늘리지 않고 검수된 profile을 기존 snapshot 계산 경로에서 소비한다 |
 
-> 사용자는 2026-07-21에 혼합 수량 표시와 공식 DB 기반 영양 결측 보완 계획의 실행을 승인했다. 이 결정은 아래 `보조 g 미표시` 임시 경계를 대체하되 exact measurement calculation, missing≠0, immutable source/profile/snapshot, local-first 검수 경계를 완화하지 않는다.
+> 사용자는 2026-07-21에 공식 DB 기반 영양 결측 보완 계획의 실행을 승인했다. 이 결정은 exact measurement calculation, missing≠0, immutable source/profile/snapshot, local-first 검수 경계를 완화하지 않는다. 레시피 원본 수량과 보조 g 혼합 표기는 이번 merge 범위에 포함하지 않는다.
 
 ## Approved Exact Measurement Conversion Correction `2026-07-21`
 

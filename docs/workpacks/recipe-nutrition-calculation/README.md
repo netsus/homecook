@@ -1,12 +1,5 @@
 # Slice: recipe-nutrition-calculation
 
-## 2026-07-21 Mixed Recipe Quantity Display Follow-up
-
-- recipe의 원래 `amount + unit`은 유지하고 exactly-one active approved 실측 경로가 있을 때만 nullable `estimated_weight`를 파생한다.
-- 계산/API의 실측 소수 정밀도는 유지하고 화면은 `원본 · 약 Ng`, 0~1g은 `<1g`으로 표시한다.
-- 원본 `g/kg`, `TO_TASTE`, 근거 없는/복수 경로, exact piece 근거 없음은 보조 g을 만들지 않는다.
-- RECIPE_DETAIL/COOK_MODE projection 실패는 원본 수량만 표시하는 soft-degrade이며 DB column은 추가하지 않는다.
-
 ## 2026-07-21 Exact Measurement Correction
 
 - 부피 입력은 exactly-one active approved assignment/evidence/source 경로의 `normalized_g_per_15ml`을 사용해 `mL × 실측 g/15mL ÷ 15`로 계산한다.

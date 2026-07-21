@@ -4,17 +4,6 @@
 담당자: 킴실장
 날짜: 7월 17
 
-> **2026-07-21 contract-evolution — recipe ingredient 혼합 표기 파생 field**
->
-> | # | 변경 내용 | 영향 범위 |
-> | --- | --- | --- |
-> | 1 | `GET /recipes/{id}`와 `GET /recipes/{id}/cook-mode`의 정량 ingredient에 nullable additive `estimated_weight: { amount, unit: 'g' }`를 제공한다 | recipe ingredient response |
-> | 2 | `estimated_weight.amount`는 exactly-one active approved 실측 경로의 소수값을 보존하고 UI가 `약 Ng`으로 반올림한다 | precision boundary |
-> | 3 | 원본 `g/kg`, `TO_TASTE`, 미지원/모호/미승인 경로, exact piece 근거 없음, projection query 실패는 `estimated_weight=null`이며 원본 `amount/unit/display_text`와 200 상세 응답을 유지한다 | nullable soft degrade |
-> | 4 | 신규 endpoint·HTTP status·error code·DB column은 추가하지 않고 기존 wrapper와 recipe/cook-mode action 계약을 유지한다 | API compatibility |
->
-> 예: `{"amount":1,"unit":"큰술","estimated_weight":{"amount":17.7,"unit":"g"}}`. 내부 evidence ID, density, review actor, raw source row, API key·인증 query는 public payload에 포함하지 않는다.
-
 > **2026-07-21 contract-evolution — recipe 부피 환산 실측값 계산 보정**
 >
 > | # | 변경 내용 | 영향 범위 |
