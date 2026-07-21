@@ -82,6 +82,7 @@ export interface RecipeNutritionIngredientInput {
       is_active: boolean;
     };
     evidence?: {
+      normalized_g_per_15ml?: number | null;
       review_status: string;
       is_active: boolean;
       source: {
@@ -163,14 +164,6 @@ export class RecipeNutritionCalculationError extends Error {
   }
 }
 
-const APPROVED_VOLUME_PROFILES = new Map([
-  ["VOLUME_G6", 6],
-  ["VOLUME_G10", 10],
-  ["VOLUME_G15", 15],
-  ["VOLUME_G20", 20],
-  ["VOLUME_G25", 25],
-]);
-
 const WARNING_PRIORITY = [
   "PREDECESSOR_NOT_APPROVED",
   "NUTRITION_PROFILE_MISSING",
@@ -237,8 +230,24 @@ export function hashRecipeNutritionInput(input: RecipeNutritionCalculatorInput) 
     .digest("hex");
 }
 
+const UNIT_ALIASES = new Map<string, string>([
+  ["스푼", "tbsp"],
+  ["큰술", "tbsp"],
+  ["밥숟갈", "tbsp"],
+  ["숟갈", "tbsp"],
+  ["숟가락", "tbsp"],
+  ["왕큰술", "tbsp"],
+  ["작은술", "tsp"],
+  ["티스푼", "tsp"],
+  ["컵", "cup"],
+]);
+
 function normalizedUnit(unit: string | null) {
-  return unit?.trim().toLowerCase() ?? null;
+  const trimmed = unit?.trim() ?? null;
+  if (trimmed === "T") return "tbsp";
+  if (trimmed === "t") return "tsp";
+  const normalized = trimmed?.toLowerCase() ?? null;
+  return normalized === null ? null : (UNIT_ALIASES.get(normalized) ?? normalized);
 }
 
 function massInGrams(amount: number, unit: string | null) {
@@ -351,27 +360,36 @@ function resolveUnit(ingredient: RecipeNutritionIngredientInput): UnitResolution
     };
   }
 
-  if (profile.basis_unit === "g" && milliliters !== null) {
-    const assignment = ingredient.conversion_assignment;
-    const expectedWeight = assignment
-      ? APPROVED_VOLUME_PROFILES.get(assignment.profile.code)
-      : undefined;
-    if (
-      assignment &&
-      assignment.ingredient_id === ingredient.ingredient_id &&
-      assignment.preparation_state === ingredient.preparation_state &&
-      assignment.review_status === "approved" &&
-      assignment.is_active &&
-      assignment.profile.is_active &&
-      assignment.profile.basis_volume_ml === 15 &&
-      expectedWeight !== undefined &&
-      assignment.profile.representative_weight_g === expectedWeight &&
-      assignment.evidence &&
-      approvedEvidence(assignment.evidence)
-    ) {
-      const estimatedGrams = milliliters * expectedWeight / 15;
+  const assignment = ingredient.conversion_assignment;
+  const exactWeight = assignment?.evidence?.normalized_g_per_15ml;
+  const hasApprovedExactMeasurement = Boolean(
+    assignment &&
+    assignment.ingredient_id === ingredient.ingredient_id &&
+    assignment.preparation_state === ingredient.preparation_state &&
+    assignment.review_status === "approved" &&
+    assignment.is_active &&
+    assignment.evidence &&
+    approvedEvidence(assignment.evidence) &&
+    typeof exactWeight === "number" &&
+    Number.isFinite(exactWeight) &&
+    exactWeight > 0,
+  );
+
+  if (hasApprovedExactMeasurement && assignment?.evidence && typeof exactWeight === "number") {
+    if (profile.basis_unit === "g" && milliliters !== null) {
+      const estimatedGrams = milliliters * exactWeight / 15;
       return {
         factor: estimatedGrams / profile.basis_amount,
+        quality: "estimated",
+        warning: "REPRESENTATIVE_VOLUME_CONVERSION_USED",
+        measurementSource: assignment.evidence.source,
+      };
+    }
+
+    if (profile.basis_unit === "ml" && grams !== null) {
+      const estimatedMilliliters = grams * 15 / exactWeight;
+      return {
+        factor: estimatedMilliliters / profile.basis_amount,
         quality: "estimated",
         warning: "REPRESENTATIVE_VOLUME_CONVERSION_USED",
         measurementSource: assignment.evidence.source,

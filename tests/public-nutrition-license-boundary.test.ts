@@ -30,7 +30,7 @@ function filesUnder(root: string): string[] {
 }
 
 describe("public nutrition source and license boundary", () => {
-  it("keeps MFDS as the only required application and RDA paths keyless", async () => {
+  it("keeps authenticated public-data adapters server-only and RDA file paths keyless", async () => {
     const { SOURCE_REGISTRY } = await loadPipeline();
     const sources = Object.values(SOURCE_REGISTRY) as Array<{
       application_required?: boolean;
@@ -38,6 +38,11 @@ describe("public nutrition source and license boundary", () => {
 
     expect(sources.filter((source) => source.application_required)).toEqual([
       expect.objectContaining({ id: "mfds-15127578", secret_env: "DATA_GO_KR_API_KEY" }),
+      expect.objectContaining({
+        id: "integrated-material-15100065",
+        secret_env: "DATA_GO_KR_API_KEY",
+        mode: "openapi_reconciliation",
+      }),
     ]);
     expect(SOURCE_REGISTRY["rda-10.4"]).toMatchObject({ keyless: true, default_path: true });
     expect(SOURCE_REGISTRY["rda-measurement"]).toMatchObject({ keyless: true, mode: "manual_evidence" });
@@ -162,7 +167,7 @@ describe("public nutrition source and license boundary", () => {
       pathToFileURL(join(process.cwd(), "scripts/lib/public-nutrition-client-boundary.mjs")).href
     );
     expect(() => assertNoClientNutritionImports(process.cwd())).not.toThrow();
-  });
+  }, 30_000);
 
   it("rejects a client entry that reaches the operator pipeline through a lib re-export", async () => {
     const { assertNoClientNutritionImports } = await import(

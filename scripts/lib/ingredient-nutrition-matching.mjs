@@ -1,6 +1,9 @@
 const SOURCE_RANK = new Map([
+  ["NIFS_KFIND", 1],
   ["MFDS", 1],
   ["RDA_10_4", 2],
+  ["MFDS_KFIND", 3],
+  ["K_FIND", 3],
 ]);
 
 export class NutritionMatchingError extends Error {

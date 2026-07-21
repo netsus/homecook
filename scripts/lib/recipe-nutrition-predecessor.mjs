@@ -19,7 +19,7 @@ const CONVERSION_ASSIGNMENT_SELECT = `
     id, code, basis_volume_ml, representative_weight_g, is_active
   ),
   measurement_source_evidence(
-    id, source_id, evidence_kind, preparation_state, review_status, is_active,
+    id, source_id, evidence_kind, preparation_state, normalized_g_per_15ml, review_status, is_active,
     nutrition_sources(
       id, provider_code, dataset_name, source_version, data_basis_date, license_name, source_url,
       review_status, freshness_status, is_active
@@ -198,12 +198,14 @@ function conversionCandidate(row) {
   const profile = singleRelation(row.measurement_conversion_profiles);
   const evidence = singleRelation(row.measurement_source_evidence);
   const source = evidence ? singleRelation(evidence.nutrition_sources) : null;
+  const normalizedWeight = evidence ? safeNumber(evidence.normalized_g_per_15ml) : null;
   const expectedWeight = profile ? APPROVED_VOLUME_PROFILES.get(profile.code) : undefined;
   const basisVolume = profile ? safeNumber(profile.basis_volume_ml) : null;
   const representativeWeight = profile ? safeNumber(profile.representative_weight_g) : null;
   if (!profile || profile.id !== row.conversion_profile_id || profile.is_active !== true ||
     expectedWeight === undefined || basisVolume !== 15 || representativeWeight !== expectedWeight ||
     !evidence || evidence.id !== row.evidence_id || evidence.evidence_kind !== "volume_weight" ||
+    normalizedWeight === null || normalizedWeight <= 0 ||
     evidence.preparation_state !== row.preparation_state || evidence.review_status !== "approved" ||
     evidence.is_active !== true || !source || source.id !== evidence.source_id || !approvedSource(source)) {
     return null;
@@ -227,6 +229,7 @@ function conversionCandidate(row) {
       },
       evidence: {
         id: evidence.id,
+        normalized_g_per_15ml: normalizedWeight,
         review_status: evidence.review_status,
         is_active: evidence.is_active,
         source: {
@@ -253,10 +256,29 @@ function groupByIngredient(rows, projector) {
   return result;
 }
 
+const VOLUME_UNIT_ALIASES = new Map([
+  ["스푼", "tbsp"],
+  ["큰술", "tbsp"],
+  ["밥숟갈", "tbsp"],
+  ["숟갈", "tbsp"],
+  ["숟가락", "tbsp"],
+  ["왕큰술", "tbsp"],
+  ["작은술", "tsp"],
+  ["티스푼", "tsp"],
+  ["컵", "cup"],
+]);
+
 function isVolumeUnit(unit) {
+  const trimmed = typeof unit === "string" ? unit.trim() : "";
+  const normalized = trimmed === "T" ? "tbsp" : trimmed === "t" ? "tsp" : trimmed.toLowerCase();
   return ["ml", "l", "tbsp", "tsp", "cup"].includes(
-    typeof unit === "string" ? unit.trim().toLowerCase() : "",
+    VOLUME_UNIT_ALIASES.get(normalized) ?? normalized,
   );
+}
+
+function isMassUnit(unit) {
+  const normalized = typeof unit === "string" ? unit.trim().toLowerCase() : "";
+  return normalized === "g" || normalized === "kg";
 }
 
 function selectRecipeNutritionPredecessor(ingredient, predecessor) {
@@ -267,6 +289,7 @@ function selectRecipeNutritionPredecessor(ingredient, predecessor) {
     candidate.nutrition.profile.basis_unit === "ml"
   );
   const volumeInput = isVolumeUnit(ingredient.unit);
+  const massInput = isMassUnit(ingredient.unit);
   const nutrition = volumeInput
     ? volumeCandidates.length === 1
       ? volumeCandidates[0]
@@ -275,12 +298,16 @@ function selectRecipeNutritionPredecessor(ingredient, predecessor) {
         : null
     : massCandidates.length === 1
       ? massCandidates[0]
-      : null;
-  const conversion = nutrition?.nutrition.profile.basis_unit === "g" && volumeInput &&
-      predecessor.conversion_candidates.length === 1
+      : massInput && massCandidates.length === 0 && volumeCandidates.length === 1
+        ? volumeCandidates[0]
+        : null;
+  const conversion = (
+    nutrition?.nutrition.profile.basis_unit === "g" && volumeInput ||
+    nutrition?.nutrition.profile.basis_unit === "ml" && massInput
+  ) && predecessor.conversion_candidates.length === 1
     ? predecessor.conversion_candidates[0]
     : null;
-  return { nutrition, conversion, volumeInput };
+  return { nutrition, conversion, volumeInput, massInput };
 }
 
 async function loadEligiblePredecessorPages(client, table, select, ids, filters) {
@@ -422,6 +449,8 @@ export function buildRecipeNutritionInputGuard(ingredients, predecessors) {
               profile_code: candidate.assignment.profile.code,
               basis_volume_ml: candidate.assignment.profile.basis_volume_ml,
               representative_weight_g: candidate.assignment.profile.representative_weight_g,
+              normalized_g_per_15ml:
+                candidate.assignment.evidence.normalized_g_per_15ml,
               evidence_preparation_state: candidate.assignment.preparation_state,
               source: sourceProjection(candidate.assignment.evidence.source),
             }))

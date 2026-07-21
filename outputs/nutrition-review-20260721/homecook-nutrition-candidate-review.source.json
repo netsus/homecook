@@ -1,0 +1,451 @@
+{
+  "version": 1,
+  "report_checksum": "dda9a0dceaad1c16f0d0c99fdfd006d7a4907a031e003a0eb8a0e13dd56c1630",
+  "exported_at": "2026-07-21T15:02:42.880Z",
+  "decisions": {
+    "e105f031-2cd2-4d42-ba5b-717e3cd3e5ab": {
+      "decision": "approve_candidate",
+      "external_item_key": "701"
+    },
+    "4ab3e941-7dcc-4f06-89cc-8764eee452d4": {
+      "decision": "approve_candidate",
+      "external_item_key": "540",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "ee3b1938-c69f-4aea-bdb9-7b8859cf1cb6": {
+      "decision": "approve_candidate",
+      "external_item_key": "3423",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "3db7c9f6-fc47-4a15-88cd-c1da2b0239f1": {
+      "decision": "approve_candidate",
+      "external_item_key": "2693",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "23767f88-a076-4bac-b2fa-186f02440534": {
+      "decision": "approve_candidate",
+      "external_item_key": "3016",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "33378607-8c27-4e44-8ba2-6a84fb94cba2": {
+      "decision": "approve_candidate",
+      "external_item_key": "763",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "3f3c9220-6807-488e-863a-489ec8332380": {
+      "decision": "approve_candidate",
+      "external_item_key": "3022",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "9a4a3b36-3e6f-4259-951b-fa477469f1af": {
+      "decision": "approve_candidate",
+      "external_item_key": "1294",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "c0aae468-7ff6-475f-a752-127faa515e2e": {
+      "decision": "approve_candidate",
+      "external_item_key": "3298",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "aab574bc-cffa-5020-a0a1-c64e29990c7b": {
+      "decision": "approve_candidate",
+      "external_item_key": "1270",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "5dacfb6b-454d-4b45-89bf-547267d95317": {
+      "decision": "approve_candidate",
+      "external_item_key": "2059",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "3301288f-3508-47c4-9e78-ec9740681c01": {
+      "decision": "approve_candidate",
+      "external_item_key": "820",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "23e77faf-2a7d-4229-9280-cdcc7c844af4": {
+      "decision": "approve_candidate",
+      "external_item_key": "1241",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "2ff8f29e-1216-44ae-86a2-2cd3ad65659c": {
+      "decision": "approve_candidate",
+      "external_item_key": "1685",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "12d99de5-3def-4444-880a-731cf66712ee": {
+      "decision": "approve_candidate",
+      "external_item_key": "565",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "b2663a70-7e4f-4c4c-a062-0897786c52e2": {
+      "decision": "approve_candidate",
+      "external_item_key": "2874",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "14f20c07-614a-5c49-a2de-16c34e21f3f1": {
+      "decision": "approve_candidate",
+      "external_item_key": "1417",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "8eb5e35d-975a-4d4a-8826-3b2156ced816": {
+      "decision": "approve_candidate",
+      "external_item_key": "1429",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "e10b3274-5b2e-46c2-a580-5ac4c7dff2b9": {
+      "decision": "approve_candidate",
+      "external_item_key": "861",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "ef3b7dd1-da8d-4f35-a08a-c3ce52b4bd1c": {
+      "decision": "approve_candidate",
+      "external_item_key": "1443",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "7d6331c0-832f-42df-93bc-427f955b6412": {
+      "decision": "approve_candidate",
+      "external_item_key": "2251",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "550e8400-e29b-41d4-a716-446655440035": {
+      "decision": "approve_candidate",
+      "external_item_key": "894",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "76c3b359-8c88-5e61-8cac-0fcd15193ae6": {
+      "decision": "approve_candidate",
+      "external_item_key": "899",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "f54a5d8e-1bb2-5604-a39d-e07cd69a6226": {
+      "decision": "approve_candidate",
+      "external_item_key": "3067",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "9b27fda0-659c-4f4a-aae9-53abe2590c20": {
+      "decision": "approve_candidate",
+      "external_item_key": "1228",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "980a6496-fea0-5495-b955-0476ab4914a0": {
+      "decision": "approve_candidate",
+      "external_item_key": "932",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "180ec6e3-60a0-5469-b724-87f1bf75e5d3": {
+      "decision": "approve_candidate",
+      "external_item_key": "799",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "55e6b9a7-8345-4753-b84e-f3d2494e1d77": {
+      "decision": "approve_candidate",
+      "external_item_key": "173",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "781e4cf3-a54b-5286-8a90-d85b797ae31f": {
+      "decision": "approve_candidate",
+      "external_item_key": "570",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "4c22d101-7b1c-574e-bfeb-51347d9f5fad": {
+      "decision": "approve_candidate",
+      "external_item_key": "998",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "aaa39d6e-15ee-55e9-8dc9-50e579e5da5e": {
+      "decision": "approve_candidate",
+      "external_item_key": "174",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "8df87a79-443f-44b1-81e3-223c031b0e2e": {
+      "decision": "approve_candidate",
+      "external_item_key": "1508",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "86e59201-20d0-4dbb-9e38-f9a567a78b03": {
+      "decision": "approve_candidate",
+      "external_item_key": "1710",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "e09ccd9b-e6f4-44ff-af26-df9c730968e1": {
+      "decision": "approve_candidate",
+      "external_item_key": "2926",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "b024e0f3-eaa5-4d53-b239-9e692f6c2e41": {
+      "decision": "approve_candidate",
+      "external_item_key": "2868",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "6278e78c-c127-44f4-9516-d90a8be39ba5": {
+      "decision": "approve_candidate",
+      "external_item_key": "1784",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "6131a5c9-f7c8-4381-acfa-51917e6437e3": {
+      "decision": "approve_candidate",
+      "external_item_key": "3056",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "74881b4e-8d71-4319-bb65-2ea1d024de2d": {
+      "decision": "approve_candidate",
+      "external_item_key": "1060",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "dc020c54-a097-5b73-81e7-15d5c988c920": {
+      "decision": "approve_candidate",
+      "external_item_key": "663",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "591cb6de-c64b-5f5a-a645-78d7fcfd557e": {
+      "decision": "approve_candidate",
+      "external_item_key": "1088",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "016fd02b-eb43-4d88-945a-011695ffd97c": {
+      "decision": "approve_candidate",
+      "external_item_key": "1273",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "a60371c8-82ec-4953-a33b-f9c23b413c3a": {
+      "decision": "approve_candidate",
+      "external_item_key": "1100",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "4aa3e46e-9b04-4aea-a18b-d37b0d83afd4": {
+      "decision": "approve_candidate",
+      "external_item_key": "1106",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "e33fe2cf-7b9f-5bc0-a12c-eb48383949b1": {
+      "decision": "approve_candidate",
+      "external_item_key": "1125",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "e5bd5fbd-8435-502d-b5c1-fc91528f63a2": {
+      "decision": "approve_candidate",
+      "external_item_key": "568",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "1f1e8b32-2db9-5bec-b6bc-195a155abab3": {
+      "decision": "approve_candidate",
+      "external_item_key": "800",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "285afbdd-8ba6-5663-97c2-0bc006ddae59": {
+      "decision": "approve_candidate",
+      "external_item_key": "1139",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "0fc14798-87c4-5492-8417-a313633db7b5": {
+      "decision": "approve_candidate",
+      "external_item_key": "766",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "824b5bd2-af8f-5b55-979c-de6e38ba629c": {
+      "decision": "approve_candidate",
+      "external_item_key": "2735",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "09bde07d-9680-4fe3-818a-d5e714d69a8e": {
+      "decision": "approve_candidate",
+      "external_item_key": "3465",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "aa65b086-b43c-45d7-85da-a9a0ef840661": {
+      "decision": "approve_candidate",
+      "external_item_key": "2891",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "e8b8e1e1-023c-503e-a50b-2a80e499b631": {
+      "decision": "approve_candidate",
+      "external_item_key": "1146",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "0e5142f6-bfed-4a54-b3b8-118c1a3a0d26": {
+      "decision": "approve_candidate",
+      "external_item_key": "2846",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "91b32d48-723e-45ab-acc2-48efddc10a71": {
+      "decision": "approve_candidate",
+      "external_item_key": "2933",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "55f78e08-7727-47bd-8676-a4464fef16d4": {
+      "decision": "approve_candidate",
+      "external_item_key": "1240",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "1ec375d4-d03d-4066-99ba-4b1bbe449b20": {
+      "decision": "approve_candidate",
+      "external_item_key": "2894",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "8f6ec2ec-9c8a-44e9-9cce-fb41dc3dff78": {
+      "decision": "approve_candidate",
+      "external_item_key": "677",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "470752dd-63ad-45dc-b025-a1f91307aa09": {
+      "decision": "approve_candidate",
+      "external_item_key": "767",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "f009c2f4-c381-55ff-8eb0-5b22c86f761d": {
+      "decision": "approve_candidate",
+      "external_item_key": "1204",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "406a2443-5d39-5d9b-8287-065aca2c6ed2": {
+      "decision": "approve_candidate",
+      "external_item_key": "1576",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "a28529d6-81ca-4bd2-92b3-e7d7b216fca7": {
+      "decision": "approve_candidate",
+      "external_item_key": "1224",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "52a3eb16-c1a2-4d27-8fd2-5020a1be8b85": {
+      "decision": "approve_candidate",
+      "external_item_key": "215",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "708c4517-68cd-4dbf-b3c6-6bac345cf4e4": {
+      "decision": "approve_candidate",
+      "external_item_key": "1350",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "34161c0c-a365-5e54-ad2d-c48a79f7825e": {
+      "decision": "approve_candidate",
+      "external_item_key": "1255",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "450e1377-5925-45a7-b03f-c8bcc5fb0b71": {
+      "decision": "approve_candidate",
+      "external_item_key": "3108",
+      "reason_code": "CURRENT_SOURCE_ITEM_VALUES_MATCH_AND_MISSING_VALUES_ADDED"
+    },
+    "469319bd-26a5-5d69-9a80-8a3732446c1e": {
+      "decision": "approve_candidate",
+      "external_item_key": "P113-100020100-F010-007"
+    },
+    "4c97d81a-1095-482c-8832-a5f303a19154": {
+      "decision": "approve_candidate",
+      "external_item_key": "P120-009060000-F002-001"
+    },
+    "7c82b272-f3cb-4e90-b9d9-f563c68a35b8": {
+      "decision": "approve_candidate",
+      "external_item_key": "R106-129010001-0000"
+    },
+    "49dce915-fdd8-471b-a039-fea216e4c0bb": {
+      "decision": "approve_candidate",
+      "external_item_key": "P116-705010100-0004"
+    },
+    "2893f935-83bc-5f47-873d-05f7ce35f9bc": {
+      "decision": "approve_candidate",
+      "external_item_key": "R211-201174001-0000"
+    },
+    "4ec63b5e-5945-4230-9ee8-a11ea9da7a31": {
+      "decision": "keep_current",
+      "external_item_key": "3236"
+    },
+    "d7f3be61-d96c-4bee-b83e-5d2632ea0ce3": {
+      "decision": "hold",
+      "external_item_key": "D110-476260000-0001"
+    },
+    "9922aba7-e861-4583-95ca-d4e51ca0b58b": {
+      "decision": "approve_candidate",
+      "external_item_key": "3299"
+    },
+    "e50c094c-8ad8-5e62-9b6a-f0df5f36642b": {
+      "decision": "approve_candidate",
+      "external_item_key": "1250"
+    },
+    "794227ac-134c-4c30-8c1d-b76f0e5b7dbb": {
+      "decision": "hold",
+      "external_item_key": "P101-426000400-0385"
+    },
+    "dec5aa19-5954-4f6f-be60-4ea72ff0ca23": {
+      "decision": "approve_candidate",
+      "external_item_key": "P119-900090100-1206"
+    },
+    "b98d5bc9-9f1a-4cb7-b0ad-a144ccdaff16": {
+      "decision": "approve_candidate",
+      "external_item_key": "R211-105033901-0004"
+    },
+    "7cc5bc3a-f015-46cc-adfc-5fe8569eed6e": {
+      "decision": "approve_candidate",
+      "external_item_key": "P113-501050100-0009"
+    },
+    "76c93ac3-66f8-43dc-8a2b-16922da63753": {
+      "decision": "hold",
+      "external_item_key": "R112-819013990-5402"
+    },
+    "9935fd54-6916-4743-9783-06fb457dacca": {
+      "decision": "approve_candidate",
+      "external_item_key": "P113-201020100-0836"
+    },
+    "9dc0ee0f-7aab-416b-8eb7-4447a8139b0e": {
+      "decision": "hold",
+      "external_item_key": "P119-202040200-1307"
+    },
+    "e122eca0-2ce9-48c9-a899-a3bdb3f1f5ad": {
+      "decision": "approve_candidate",
+      "external_item_key": "P123-201020300-3838"
+    },
+    "a437bd3b-d912-4914-88cd-572ad975527c": {
+      "decision": "approve_candidate",
+      "external_item_key": "P116-702070100-2492"
+    },
+    "335eff99-f04c-4942-adee-5aea91c32dd9": {
+      "decision": "hold",
+      "external_item_key": "P101-407000400-0764"
+    },
+    "1af09e8f-c9fb-40e9-9aad-67e2430a2bae": {
+      "decision": "hold",
+      "external_item_key": "P123-227020300-0104"
+    },
+    "08654960-dbd1-4cb5-9205-39929da7491c": {
+      "decision": "keep_current",
+      "external_item_key": null
+    },
+    "d2e9328e-456c-4ebc-9bc0-3838a90ea588": {
+      "decision": "hold",
+      "external_item_key": null
+    },
+    "7d4459c1-2651-4b4c-b1f5-97d324147cd3": {
+      "decision": "hold",
+      "external_item_key": null
+    },
+    "b503761d-c935-4e19-b687-1ce24361a50c": {
+      "decision": "hold",
+      "external_item_key": null
+    },
+    "7d9c50d7-8d61-4394-80a6-d59288d6a453": {
+      "decision": "keep_current",
+      "external_item_key": null
+    },
+    "60062917-f034-577c-9d79-51ff20a78a1f": {
+      "decision": "keep_current",
+      "external_item_key": "1333"
+    },
+    "b1c44903-446e-4ade-a423-83ecc6311a6d": {
+      "decision": "keep_current",
+      "external_item_key": "P120-302060000-0090"
+    },
+    "b5474e80-2330-42dd-99a2-dd16fd0fbf34": {
+      "decision": "hold",
+      "external_item_key": "R211-487053901-1201"
+    },
+    "8f60c110-a53a-4810-a7a7-b6a25028bcab": {
+      "decision": "keep_current",
+      "external_item_key": "P107-302030200-0322"
+    },
+    "52d0eda1-8b3d-4bc1-b485-2e8d4e0e7042": {
+      "decision": "keep_current",
+      "external_item_key": "2725"
+    }
+  }
+}

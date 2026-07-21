@@ -56,11 +56,13 @@ function officialRdaSchema({
         ${inlineCell("A2", stableKeyHeader)}${inlineCell("D2", "식품명")}
         ${inlineCell("F2", "에너지")}${inlineCell("H2", "단백질")}
         ${inlineCell("I2", "지방")}${inlineCell("K2", "탄수화물")}
-        ${inlineCell("AA2", "나트륨")}
+        ${inlineCell("L2", "당류")}${inlineCell("S2", "총 식이섬유")}
+        ${inlineCell("AA2", "나트륨")}${inlineCell("CM2", "총 포화지방산")}
       </row>
       <row r="3">
         ${inlineCell("F3", "kcal")}${inlineCell("H3", "g")}
-        ${inlineCell("I3", "g")}${inlineCell("K3", "g")}${inlineCell("AA3", "mg")}
+        ${inlineCell("I3", "g")}${inlineCell("K3", "g")}${inlineCell("L3", "g")}
+        ${inlineCell("S3", "g")}${inlineCell("AA3", "mg")}${inlineCell("CM3", "g")}
       </row>
       ${dataRows}
     </sheetData></worksheet>`,
@@ -154,6 +156,7 @@ describe("public nutrition source acquisition core", () => {
         "DB10.4 색인", "식품명", "에너지", "단백질", "지방", "탄수화물", "나트륨",
         "kcal", "g", "mg", "RDA-FOOD", "시험 식품",
         "가식부 100g 당 (per 100g Edible Portion)",
+        "당류", "총 식이섬유", "총 포화지방산",
       ].map((value) => `<si><t>${value}</t></si>`).join("")}
     </sst>`;
     const worksheetXml = `<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
@@ -162,18 +165,21 @@ describe("public nutrition source acquisition core", () => {
         <c r="A2" t="s"><v>0</v></c><c r="D2" t="s"><v>1</v></c>
         <c r="F2" t="s"><v>2</v></c><c r="H2" t="s"><v>3</v></c>
         <c r="I2" t="s"><v>4</v></c><c r="K2" t="s"><v>5</v></c>
-        <c r="AA2" t="s"><v>6</v></c>
+        <c r="L2" t="s"><v>13</v></c><c r="S2" t="s"><v>14</v></c>
+        <c r="AA2" t="s"><v>6</v></c><c r="CM2" t="s"><v>15</v></c>
       </row>
       <row r="3">
         <c r="F3" t="s"><v>7</v></c><c r="H3" t="s"><v>8</v></c>
         <c r="I3" t="s"><v>8</v></c><c r="K3" t="s"><v>8</v></c>
-        <c r="AA3" t="s"><v>9</v></c>
+        <c r="L3" t="s"><v>8</v></c><c r="S3" t="s"><v>8</v></c>
+        <c r="AA3" t="s"><v>9</v></c><c r="CM3" t="s"><v>8</v></c>
       </row>
       <row r="4">
         <c r="A4" t="s"><v>10</v></c><c r="D4" t="s"><v>11</v></c>
         <c r="F4"><v>84</v></c><c r="H4"><v>9.3</v></c>
         <c r="I4"><v>4.7</v></c><c r="K4"><v>2.4</v></c>
-        <c r="AA4"><v>5</v></c>
+        <c r="L4"><v>0.7</v></c><c r="S4"><v>1.2</v></c>
+        <c r="AA4"><v>5</v></c><c r="CM4"><v>0.8</v></c>
       </row>
     </sheetData></worksheet>`;
 
@@ -222,6 +228,9 @@ describe("public nutrition source acquisition core", () => {
         protein: { value: "9.3", unit: "g" },
         fat: { value: "4.7", unit: "g" },
         sodium: { value: "5", unit: "mg" },
+        sugars: { value: "0.7", unit: "g" },
+        fiber: { value: "1.2", unit: "g" },
+        saturated_fat: { value: "0.8", unit: "g" },
       },
     })]);
     expect(() => adaptRda104Worksheet({

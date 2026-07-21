@@ -458,7 +458,7 @@ describe("recipe nutrition display", () => {
     ["NUTRIENT_VALUE_MISSING", "연결된 재료에 일부 영양성분 값이 없어 해당 값은 최소치일 수 있어요."],
     ["UNIT_CONVERSION_MISSING", "재료 단위를 무게로 정확히 바꾸지 못해 일부 값이 빠질 수 있어요."],
     ["TO_TASTE_EXCLUDED", "‘약간’, ‘적당량’처럼 양이 정해지지 않은 재료는 계산에서 제외했어요."],
-    ["REPRESENTATIVE_VOLUME_CONVERSION_USED", "부피 단위는 공공 환산 기준의 대표 무게로 바꿔 계산했어요."],
+    ["REPRESENTATIVE_VOLUME_CONVERSION_USED", "부피 단위는 승인된 계량값으로 무게를 환산해 계산했어요."],
     ["PIECE_WEIGHT_CONVERSION_USED", "개수 단위는 승인된 재료 무게 기준으로 바꿔 계산했어요."],
     ["UNKNOWN_WARNING", "일부 영양값에는 추가 확인이 필요한 계산 조건이 있어요."],
   ])("maps %s to truthful user copy without exposing the raw code", (warning, copy) => {

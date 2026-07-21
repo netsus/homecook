@@ -1,0 +1,26 @@
+{
+  "success": true,
+  "mode": "apply",
+  "summary": {
+    "total_count": 95,
+    "apply_count": 85,
+    "approved_candidate_count": 79,
+    "manual_resolution_count": 6,
+    "keep_current_count": 9,
+    "hold_count": 1
+  },
+  "report_checksum": "0007c08eb63e62cf144a5708165e419b4d6682801adf1d375eba35a5e0d3cec1",
+  "payload_checksum": "79eac06a2b227a00075f839b3412364976cc60c49cd67b85e801f361f4977882",
+  "html_output": "outputs/nutrition-review-20260721/homecook-nutrition-final-review.html",
+  "report_output": "outputs/nutrition-review-20260721/homecook-nutrition-final-review.json",
+  "review_output": "outputs/nutrition-review-20260721/homecook-nutrition-final-review-decisions.json",
+  "patch_output": "outputs/nutrition-review-20260721/homecook-nutrition-review-apply.json",
+  "local_database_result": {
+    "status": "applied",
+    "replayed": true,
+    "applied_count": 85,
+    "superseded_count": 0,
+    "writes_committed": 0
+  },
+  "production_db_writes": 0
+}
