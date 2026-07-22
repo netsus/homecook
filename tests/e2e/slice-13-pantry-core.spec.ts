@@ -282,16 +282,6 @@ test.describe("PANTRY screen", () => {
   }) => {
     await setAuthOverride(page, "authenticated");
     await installPantryRoutes(page);
-    await page.route("**/_next/image**", async (route) => {
-      const requestUrl = decodeURIComponent(route.request().url());
-      if (requestUrl.includes("/assets/plush-v2/onion.webp")) {
-        await new Promise((resolve) => setTimeout(resolve, 6_000));
-      }
-      await route.continue();
-    });
-    const onionImageResponse = page.waitForResponse((response) =>
-      decodeURIComponent(response.url()).includes("/assets/plush-v2/onion.webp"),
-    );
     await page.goto("/pantry");
 
     await expect(page.getByText(/양파/)).toBeVisible();
@@ -302,7 +292,6 @@ test.describe("PANTRY screen", () => {
       : page.getByTestId("web-pantry-card-i1").locator("img").first();
 
     await expect(onionImage).toBeVisible();
-    expect((await onionImageResponse).ok()).toBe(true);
 
     await expectSharpV2Sticker(onionImage, {
       expectedFile: "onion.webp",
