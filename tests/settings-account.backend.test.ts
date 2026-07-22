@@ -326,8 +326,8 @@ describe("17c settings/account backend", () => {
       from: vi.fn((table: string) => {
         throw new Error(`unexpected table: ${table}`);
       }),
-      rpc: cleanupRpc,
     });
+    createServiceRoleClient.mockReturnValue({ rpc: cleanupRpc });
 
     const { DELETE } = await importUsersMeRoute();
     const response = await DELETE(
@@ -344,6 +344,31 @@ describe("17c settings/account backend", () => {
     expect(cleanupRpc).toHaveBeenCalledWith("delete_user_private_data", {
       p_user_id: "user-1",
     });
+  });
+
+  it("DELETE /users/me fails closed when the service-role client is unavailable", async () => {
+    const routeRpc = vi.fn();
+    setupAuthedClient({
+      from: vi.fn((table: string) => {
+        throw new Error(`unexpected table: ${table}`);
+      }),
+      rpc: routeRpc,
+    });
+    createServiceRoleClient.mockReturnValue(null);
+
+    const { DELETE } = await importUsersMeRoute();
+    const response = await DELETE(
+      new Request("http://localhost:3000/api/v1/users/me", { method: "DELETE" }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(routeRpc).not.toHaveBeenCalled();
   });
 
   it("DELETE /users/me surfaces cleanup failures before reporting account deletion success", async () => {

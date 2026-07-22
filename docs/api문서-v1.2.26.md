@@ -971,7 +971,7 @@ GET /recipes/{recipe_id}
 }
 ```
 
-> 비로그인 시 `user_status`는 null. 조회 시 `increment_recipe_view_count(p_recipe_id)`로 `view_count += 1`을 원자적으로 반영한 뒤 응답한다.
+> 비로그인 시 `user_status`는 null. 조회수 증가는 Route Handler의 service-role client만 `increment_recipe_view_count(p_recipe_id)`를 호출해 원자적으로 반영한다. anon/authenticated의 직접 RPC 실행은 거부한다. service-role client가 없으면 공개 조회 자체는 유지하되 mutation을 건너뛰고 현재 저장된 `view_count`를 반환한다.
 > `component_label`은 nullable이다. 값이 있으면 UI는 인접 항목의 label 변경 지점에만 섹션 소제목을 표시한다. 같은 label prefix가 본문에 있으면 중복 표시하지 않는다.
 > `photos`는 상세 화면 갤러리용 additive 필드다. `thumbnail_url`을 대표 후보로 포함하고, 공공 레시피는 `recipe_sources.extraction_meta_json.image_candidates`의 license-cleared public image 후보를 중복 제거해 함께 내려줄 수 있다. `role`은 `primary` / `alternate` / `step` / `unknown` 중 하나다.
 > `nutrition`은 additive object field이며 null을 반환하지 않는다. current snapshot이 없어도 아래 공통 필수 payload 객체를 반환하고 `0 kcal`로 대체하지 않는다. 기존 client는 additive `nutrition`과 `availability_reason`을 무시해도 레시피 상세 동작이 유지돼야 한다.
@@ -2120,8 +2120,12 @@ POST /api/v1/recipes/youtube/ingredient-registration
 - `category_code`: 있으면 active v2 category code여야 한다. `category`와 충돌하면 `category_code`를 우선하고 conflict reason을 로그/report에 기록한다
 - `default_unit`: null 또는 20자 이하 문자열
 - `synonym`: trim 후 저장, 영어는 lower-case
+- taxonomy mutation 시도는 사용자별 최근 10분 20회로 제한한다. service-role 전용 `consume_youtube_ingredient_registration_rate_limit(...)`가 사용자별 transaction advisory lock 아래 시도 provenance 저장과 한도 판정을 원자적으로 수행한다. 한도 확인 또는 provenance 저장에 실패하면 taxonomy RPC를 호출하지 않고 fail closed한다.
 
-**처리**: session 검증 → Postgres RPC `register_youtube_ingredient(...)` 원자적 실행
+**처리**: session 검증 → service-role 전용 rate-limit RPC로 시도 기록+한도 판정 → service-role 전용 Postgres RPC `register_youtube_ingredient(...)` 원자적 실행
+
+> `register_youtube_ingredient(...)`의 두 오버로드는 모두 service-role 전용이다. `auth.uid()`가 NULL이면 실행하지 않고 exact signature / grant / owner / safe `search_path` inventory를 통과한 경우에만 유지한다.
+> Route Handler는 `extraction_id`, `draft_ingredient_id`, caller user ID를 PII가 아닌 운영 provenance로 남긴 뒤 RPC를 호출한다. authenticated 사용자의 직접 PostgREST RPC는 거부한다.
 
 **RPC 원자적 처리**
 
@@ -2173,6 +2177,7 @@ POST /api/v1/recipes/youtube/ingredient-registration
 | 409 | CONFLICT | session 상태 불일치, draft row 불일치, 이미 resolved row |
 | 410 | SESSION_EXPIRED | 세션 만료 |
 | 422 | VALIDATION_ERROR | 표준명/카테고리/default_unit/synonym 입력 오류 |
+| 429 | RATE_LIMITED | 사용자별 최근 10분 taxonomy mutation 시도 20회 초과 |
 | 500 | INTERNAL_ERROR | DB/RPC 실패 |
 
 ### 6-3b. 다중 레시피 후보 초안 생성 (Step 3 후보 선택)
@@ -3817,6 +3822,7 @@ POST /users/me/gamification/tutorial-quests/{quest_key}/dismiss
 ## 13. 설정 (SETTINGS)
 
 > 화면: `SETTINGS`
+> `PATCH /users/me/settings`, `PATCH /users/me`는 authenticated-self mutation이다. `DELETE /users/me`는 route에서 authenticated-self를 확인한 뒤 service-role 전용 cleanup RPC를 호출한다. service-role client가 없을 때 authenticated client로 fallback하지 않으며 모든 mutation 경로는 fail closed한다.
 
 ### 13-1. 설정 업데이트
 
@@ -3854,7 +3860,7 @@ DELETE /users/me
 
 **서버 동작**
 
-1. 인증된 사용자 ID로 `delete_user_private_data(p_user_id)` RPC를 호출한다.
+1. 인증된 사용자 ID를 검증한 뒤 service-role client로 `delete_user_private_data(p_user_id)` RPC를 호출한다. service-role key가 없으면 authenticated route client로 fallback하지 않고 500으로 fail closed한다.
 2. `recipe_books`, `meals`, `shopping_lists`, `pantry_items`, `cooking_sessions`, `leftover_dishes`, `recipe_likes` 등 사용자 소유 데이터는 삭제된다.
 3. `recipes.created_by = p_user_id`인 레시피는 삭제하지 않는다. `created_by`는 `null`이 될 수 있다.
 4. 삭제된 저장/좋아요 row가 반영되도록 `recipes.save_count`, `recipes.like_count`를 재계산한다.
