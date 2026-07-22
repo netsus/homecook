@@ -1,17 +1,68 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.21.md`
-- `docs/화면정의서-v1.5.27.md`
-- `docs/유저flow맵-v1.3.24.md`
-- `docs/db설계-v1.3.22.md`
-- `docs/api문서-v1.2.26.md`
+- `docs/요구사항기준선-v1.7.22.md`
+- `docs/화면정의서-v1.5.28.md`
+- `docs/유저flow맵-v1.3.25.md`
+- `docs/db설계-v1.3.23.md`
+- `docs/api문서-v1.2.27.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Cooking Plan / Meal Log Contract-Evolution `2026-07-23`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.22 | 플래너를 `요리 계획 | 식사 기록`으로 분리하고 private personal recipe·사용 시점 content snapshot·cooked batch·실제 섭취 기록·legacy 보존과 account-generation 안전 경계를 잠근다 |
+| 화면정의서 v1.5.28 | 신규 `MEAL_LOG`, PLANNER_WEEK shell, COOK_MODE 중량, RECIPE_DETAIL fork/edit CTA와 loading/empty/error/read-only/권한·중량 결측 상태를 정의한다 |
+| 유저플로우 v1.3.25 | fork→사용 snapshot→요리 계획→v1/v2 cooking→cooked batch→식사 기록, future impact, shopping read-only, account cutover/quarantine와 image outbox 흐름을 고정한다 |
+| DB v1.3.23 | session-bound account generation, cutover capability/fence/Auth Hook, private recipe/content snapshot, product relation, batch ledger, meal event pointer, image registry/outbox와 실제 FK cleanup 순서를 additive/rollback-safe하게 정의한다 |
+| API v1.2.27 | 기존 v1 cooking shape 보존과 v2 session-attempt drain, recipe impact/write, batch, meal log, unified food search, image cancel, quarantine resolution 및 멱등/error 계약을 고정한다 |
+
+> 사용자는 2026-07-22~23에 승인된 1,018-line 마스터 계획(SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`)의 contract-evolution 범위와 순서를 명시적으로 승인했다. 이 계약은 현행 application-controlled SECURITY DEFINER hotfix가 production에 배포되고 8개 mutation의 anon `42501`·전후 무변경, provider-managed Data API 비노출, `/users/me` Route smoke, closeout merge가 확인된 뒤에만 열렸다.
+> Stage -1의 canonical 근거는 `docs/security/evidence/security-definer-mutation-authorization-closeout-20260723.json`과 그 `.sha256` manifest다. implementation #1067, production-safe runner #1068, QA repair #1069, dependency repair #1070, closeout #1071이 merge됐으며 closeout merge `9810406546120e047348d517b801aa2b2e16867e` 이후 production deployment까지 확인됐다.
+>
+> 용어 authority는 `요리 계획`(미래 레시피 사용 계획)과 `식사 기록`(실제 섭취)을 분리한다. `cook_done`은 섭취 완료가 아니며 기존 과거 Meal/product planner entry를 실제 섭취로 변환하지 않는다. HOME 검색은 레시피 전용을 유지하고 제품·재료 통합 검색은 식사 기록/개인 레시피 재료 선택 경로에서만 사용한다.
+>
+> 공개 레시피는 불변 원본으로 남고 `내 레시피로 수정`은 owner-only private fork를 만든다. 개인 레시피 개별 삭제는 soft delete이며 기존 계획·요리·과거 기록의 FK와 snapshot을 보존한다. hard delete는 session-bound account deletion cleanup에만 허용한다. tag visibility는 parent recipe의 public/not-deleted/quarantine upper bound에서만 파생한다.
+>
+> content snapshot은 recipe nutrition vector를 복제하지 않고 exact `recipe_nutrition_snapshot_id`를 pin하는 논리 authority다. Meal 전환은 nullable additive expand → compatibility rollback mirror(null-or-equal) → old-shape 0/reader 검증 → direct field contract/null의 순서이며, contract 뒤에는 rollback floor 아래 binary를 금지한다. cooked batch 영양은 content-only이고 append-only quantity/lifecycle event와 RPC-only mutation을 사용한다.
+>
+> account lifecycle은 UUID만으로 소유권을 판단하지 않는다. JWT의 verified `session_id`와 append-only account-generation watermark/binding을 모든 personal writer가 owner lifecycle lock 안에서 검증한다. cutover는 DB capability singleton, shared/exclusive transaction fence, Before User Created Hook, auth/public/personal staging, final authoritative count+digest barrier, quarantine classification/recovery, canonical atomic promote를 사용한다. owner lifecycle→recipe→Meal 순서의 공통 lock을 어기거나 advisory lock RPC 뒤 별도 REST write를 수행하지 않는다.
+>
+> future-plan impact token은 owner/session generation, base recipe revision, proposed content hash, 대상 Meal revision과 active cooking claim/session을 묶는다. `replace_all`은 stale/claim 존재 시 전체 무변경 409이며 `keep`은 기존 pin을 유지한다. 미완료 shopping list만 재계산할 수 있고 completed list는 항상 read-only다.
+>
+> cooking v1 `/sessions` body/response는 phase 1 optional stable key와 한 compatibility release telemetry를 거쳐 428을 적용해도 shape를 유지한다. v2 `/session-attempts`는 dormant reader/drain을 R과 R+1에 먼저 배포하고, R+2에서 personal/content-v2 creation을 함께 활성화한다. creation rollback 뒤 existing v2 read/cancel/complete는 계속 동작하며 새 v1 start 차단·terminal 0·별도 tombstone 계약 전 strict v1 제거는 금지한다.
+>
+> meal log는 `entry ↔ active consumption event`, record-time IANA timezone, immutable local-date grouping, exact product version/basis relation 또는 ingredient profile/conversion/piece evidence를 pin한다. exact unit conversion이 없으면 422이며 missing을 0으로 저장하지 않는다. 모든 write는 client UUID Idempotency-Key가 필수다.
+>
+> personal image는 private-only, publisher public image는 owner-neutral이다. pre-upload registry, quota/circuit breaker, generation-bound attempt lease/takeover/finalize CAS, signed URL 재발급, first-404 awaiting recheck, permanent compact tombstone과 outbox/dead-letter를 사용한다. legacy orphan inventory는 report-only이고 별도 승인 없이 enqueue/delete하지 않는다. MacBook product launchd는 ordered 300초 tick·heartbeat/SLO를 따르며 install/production secret은 Manual Only gate다.
+
+### Exact 15 successor workpacks and release-train gate
+
+| Order | Train | Slice | Required predecessors |
+| ---: | --- | --- | --- |
+| F0 | B | `account-session-generation-foundation` | contract gate; security hotfix merged/deployed |
+| 1 | A | `prepared-food-search-relevance` | contract gate; existing nutrition-products catalog release merged |
+| 2 | B | `product-ingredient-link-foundation` | F0 + #3 joint account-delete activation gate |
+| 3 | B | `recipe-visibility-read-hardening` | F0; `31-recipe-media-tags`; `36e-recipe-tags-frontend` merged |
+| 4 | B | `recipe-snapshot-authority-foundation` | #3; existing recipe nutrition snapshot release merged |
+| 5 | C | `personal-recipe-editor-decoupling` | #3; `31-recipe-media-tags`; `36e-recipe-tags-frontend` merged |
+| 6 | C | `personal-recipe-customization-write-core` | #2 + #3 + #4 + #5 |
+| 7 | C | `recipe-content-snapshot-future-propagation` | #4 + #6; `cook-mode-whole-board` merged |
+| 8 | D | `cooked-batch-weight-ledger` | #7; `cook-mode-whole-board` merged |
+| 9 | D | `meal-log-core` | #1 + #2 + #4 + #8 |
+| 10 | E | `planner-shell` | #9 |
+| 11 | E | `cooked-batch-weight-ui` | #8; `cook-mode-whole-board` merged |
+| 12 | E | `meal-log-ui` | #9 + #10 |
+| 13 | E | `legacy-product-compat` | #10 + #12 |
+| 14 | F | `cooking-meal-log-cross-slice-release-qa` | F0 and #1~#13 merged/current-head green |
+
+> 위 표가 exact ID·dependency authority다. 실행 순서는 공통 foundation F0를 먼저 닫은 뒤 독립 Train A, 이어서 Train B→C→D→E→F다. `#1`은 stable successor 번호이며 F0보다 먼저 실행하라는 뜻이 아니다. 각 slice는 별도 Stage 1 workpack/acceptance/automation/workflow item PR과 mandatory internal 1.5 docs gate를 merge한 뒤에만 구현한다. 신규 `MEAL_LOG`, high-risk `PLANNER_WEEK`·`COOK_MODE`, owner edit CTA를 추가하는 `RECIPE_DETAIL`은 Stage 1에서 wireframe, design critique, product-design-authority evidence 계획을 필수로 잠근다. `recipebook-diary-port`는 이 matrix의 선행조건이 아니다.
 
 ## Approved Nutrient Gap Enrichment `2026-07-21`
 
