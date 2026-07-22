@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-19T06:22:42Z",
+  "updated_at": "2026-07-22T20:49:42Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2246,6 +2246,44 @@
       "notes": "PR #1064 exact head 9f70bd9a passed fresh authority 0/0/0, Stage 5/6 APPROVE with unresolved finding 0, real local Supabase/Chrome 320/390/1280, and 7 successful current-head checks with 5 intentional skips before merge c9315520. Two post-merge authority blockers were closed through separate TDD repairs #1060 and #1063. Ingredient 845=838+7, recipe 34=8+23+3, public products 287041 plus shared manual visibility, 100g/100mL, 100-to-101g planner behavior, and zero external writes remain proven. closeout_phase=completed; closeout_recovery=manual_patch:9|ci_resync:4|artifact_missing:false; closeout_repair=codex:9|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:2|sources:docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-18-stage2-real-db.md,docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-18-stage4-real-browser.md,docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-19-stage5-review.md,docs/workpacks/nutrition-products-cross-slice-release-qa/evidence/2026-07-19-stage6-closeout.md,ui/designs/authority/PLANNER_WEEK-nutrition-products-cross-slice-release-qa-authority.md,PR #1052 through #1064 lifecycle, review, repair, current-head checks, and merge metadata; last_recovery_at=2026-07-19T06:20:12Z",
       "evaluation_status": "passed",
       "evaluation_round": 1,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "account-session-generation-foundation",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/account-session-generation-foundation",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/account-session-generation-foundation pnpm validate:workpack -- --slice account-session-generation-foundation",
+        "node scripts/validate-automation-spec.mjs --slice account-session-generation-foundation",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/account-session-generation-foundation.test.ts tests/account-session-generation-routes.test.ts tests/account-session-generation-inventory.test.ts tests/account-session-generation-security.test.ts tests/account-session-generation-scheduler.test.ts",
+        "pnpm test:account-session-generation:postgres",
+        "pnpm verify:backend",
+        "pnpm exec vitest run tests/account-quarantine-screen.test.tsx tests/account-generation-auth-gate.test.tsx tests/account-session-generation-client.test.ts",
+        "pnpm verify:frontend:pr",
+        "pnpm qa:explore -- --slice account-session-generation-foundation",
+        "pnpm qa:eval -- --checklist .artifacts/qa/account-session-generation-foundation/latest/exploratory-checklist.json --report .artifacts/qa/account-session-generation-foundation/latest/exploratory-report.json",
+        "pnpm verify:frontend",
+        "pnpm test:e2e:regression:ci --grep account-session-generation-foundation",
+        "pnpm validate:authority-evidence-presence -- --slice account-session-generation-foundation",
+        "pnpm validate:exploratory-qa-evidence -- --slice account-session-generation-foundation",
+        "pnpm validate:closeout-sync -- --slice account-session-generation-foundation",
+        "node scripts/verify-account-session-generation-remote.mjs --mode inventory",
+        "node scripts/verify-account-session-generation-remote.mjs --mode post-merge-dark-ship",
+        "pnpm account-maintenance:scheduler:verify -- --dry-run",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 core package was authored by a dedicated Codex docs session and ACCOUNT_QUARANTINE wireframe/critique by separate Codex design sessions under the explicit no-Claude override. Design critique Round 4 final passed with unresolved Blocker/Major/Minor 0/0/0; screenshot authority remains a future Stage 4 gate. Approval remains not_started until a separate Codex internal 1.5 reviewer approves all five core plus two design gate artifacts together. F0 completion is additive dark ship only: production capability=legacy, canonical lifecycle/watermark rows=0, and no generation/image joint activation before recipe-visibility-read-hardening (#3). F0-specific Vitest/PostgreSQL/remote-verifier/scheduler entries are planned Stage 2/4 artifacts locked by this Stage 1 contract, not commands claimed executable in the docs PR; Stage 2 must add them TDD-first and missing artifacts fail closed.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
