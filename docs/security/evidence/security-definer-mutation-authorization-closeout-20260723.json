@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "kind": "security-definer-mutation-authorization-closeout",
+  "generated_at": "2026-07-22T19:36:07Z",
+  "remote_state": "post-migration",
+  "source": {
+    "repository": "netsus/homecook",
+    "branch": "master",
+    "implementation": {
+      "pull_request": 1067,
+      "head_sha": "ba04a1fd43689cdc19a745c2a5c739999d4afe5a",
+      "merge_sha": "3e4a48864162052f2034ebdfa71a2dec43951fe2"
+    },
+    "production_safe_runner": {
+      "pull_request": 1068,
+      "head_sha": "1e2807d62e82bef944b1c8dd214f7afe353dabed",
+      "merge_sha": "cb10c8fc0a78253989cd4314d8eccf1017ecd0f4"
+    },
+    "qa_repair": {
+      "pull_request": 1069,
+      "head_sha": "420a67cfca7a72e4c9bde3ee00e68769e27b0b66",
+      "merge_sha": "9642587c7840ca5fe20f84051f3ff9ebf48504e5",
+      "ready_qa_run": 29946787481
+    },
+    "dependency_gate": {
+      "pull_request": 1070,
+      "head_sha": "621e04679aacca55ad215475a184dffbff5e1b2e",
+      "merge_sha": "9b23410c2cf4d59391518bed97ee18c1eb794bb5",
+      "ready_qa_run": 29949235700,
+      "merge_signature": {
+        "verified": true,
+        "reason": "valid"
+      }
+    },
+    "deployed_sha": "9b23410c2cf4d59391518bed97ee18c1eb794bb5"
+  },
+  "current_head_gates": {
+    "pull_request_ready_qa": {
+      "run": 29949235700,
+      "conclusion": "success",
+      "full_regression_duration": "13m26s"
+    },
+    "master_push": [
+      {
+        "workflow": "Security Smoke",
+        "run": 29950281155,
+        "conclusion": "success"
+      },
+      {
+        "workflow": "Policy",
+        "run": 29950280268,
+        "conclusion": "success"
+      },
+      {
+        "workflow": "Security Review",
+        "run": 29950280225,
+        "conclusion": "success",
+        "dependency_audit": "success"
+      },
+      {
+        "workflow": "CI",
+        "run": 29950280264,
+        "conclusion": "success"
+      },
+      {
+        "workflow": "QA",
+        "run": 29950280341,
+        "conclusion": "success",
+        "full_regression_duration": "13m3s"
+      }
+    ],
+    "pending_or_failed": 0
+  },
+  "production_deployment": {
+    "deployment_id": 5561475479,
+    "provider_deployment_id": "dpl_8xANjvTBPRSZPzumHXWhZHddu3rV",
+    "environment": "Production",
+    "target": "production",
+    "ready_state": "READY",
+    "conclusion": "success",
+    "deployed_sha": "9b23410c2cf4d59391518bed97ee18c1eb794bb5",
+    "route_lambda_present": "api/v1/users/me"
+  },
+  "migration": {
+    "cli_version": "2.109.1",
+    "file": "supabase/migrations/20260723090000_security_definer_mutation_authorization_hotfix.sql",
+    "sha256": "11ce0978dc11e64b1efcb4e8f2c371761e18aa31199463c1e04177d391eb2a38",
+    "dry_run_exact_files": [
+      "20260723090000_security_definer_mutation_authorization_hotfix.sql"
+    ],
+    "applied": true,
+    "migration_history": {
+      "local": "20260723090000",
+      "remote": "20260723090000"
+    },
+    "explicitly_excluded_unrelated_unapplied_migrations": [
+      "20260721184500_normalize_korean_recipe_nutrition_units.sql",
+      "20260721190000_normalize_compact_spoon_units.sql",
+      "20260721213000_use_exact_measurement_bidirectionally.sql",
+      "20260722090000_apply_reviewed_ingredient_nutrition.sql"
+    ]
+  },
+  "inventory": {
+    "file": "docs/security/security-definer-function-authorization-inventory.json",
+    "sha256": "08dae83811a23fcca429c4c6cba23687f8f8000aa2c05da758791811f20de50f",
+    "function_count": 82,
+    "application_controlled": 74,
+    "provider_extension_managed": 8,
+    "environment_states": {
+      "local": "post-migration",
+      "fresh": "post-migration",
+      "remote": "post-migration"
+    }
+  },
+  "remote_anon_mutation_role_matrix": {
+    "mode": "production-safe-read-only-transaction",
+    "expected_sqlstate": "42501",
+    "signatures_checked": 8,
+    "database_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+    "evidence": [
+      {
+        "signature": "public.complete_cooking_session(uuid, uuid, uuid[])",
+        "role": "anon",
+        "direct_call": "denied",
+        "sqlstate": "42501",
+        "before_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "after_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "unchanged": true
+      },
+      {
+        "signature": "public.complete_shopping_list(uuid, uuid, uuid[])",
+        "role": "anon",
+        "direct_call": "denied",
+        "sqlstate": "42501",
+        "before_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "after_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "unchanged": true
+      },
+      {
+        "signature": "public.complete_standalone_cooking(uuid, uuid, integer, uuid[])",
+        "role": "anon",
+        "direct_call": "denied",
+        "sqlstate": "42501",
+        "before_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "after_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "unchanged": true
+      },
+      {
+        "signature": "public.create_shopping_list_from_payload(uuid, text, date, date, boolean, uuid[], jsonb, jsonb, jsonb, jsonb, integer)",
+        "role": "anon",
+        "direct_call": "denied",
+        "sqlstate": "42501",
+        "before_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "after_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "unchanged": true
+      },
+      {
+        "signature": "public.delete_user_private_data(uuid)",
+        "role": "anon",
+        "direct_call": "denied",
+        "sqlstate": "42501",
+        "before_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "after_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "unchanged": true
+      },
+      {
+        "signature": "public.increment_recipe_view_count(uuid)",
+        "role": "anon",
+        "direct_call": "denied",
+        "sqlstate": "42501",
+        "before_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "after_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "unchanged": true
+      },
+      {
+        "signature": "public.register_youtube_ingredient(text, text, text, text)",
+        "role": "anon",
+        "direct_call": "denied",
+        "sqlstate": "42501",
+        "before_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "after_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "unchanged": true
+      },
+      {
+        "signature": "public.register_youtube_ingredient(text, text, text, text, text)",
+        "role": "anon",
+        "direct_call": "denied",
+        "sqlstate": "42501",
+        "before_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "after_checksum": "9931db6ed0e0e1778221546ee2f5284e7f467c5945fea899e2faa34892c91fc1",
+        "unchanged": true
+      }
+    ]
+  },
+  "provider_data_api_negative_smoke": [
+    {
+      "environment": "local",
+      "role": "anon",
+      "function": "net.http_get",
+      "status": 406,
+      "code": "PGRST106"
+    },
+    {
+      "environment": "local",
+      "role": "anon",
+      "function": "net.http_post",
+      "status": 406,
+      "code": "PGRST106"
+    },
+    {
+      "environment": "local",
+      "role": "authenticated",
+      "function": "net.http_get",
+      "status": 406,
+      "code": "PGRST106"
+    },
+    {
+      "environment": "local",
+      "role": "authenticated",
+      "function": "net.http_post",
+      "status": 406,
+      "code": "PGRST106"
+    },
+    {
+      "environment": "remote",
+      "role": "anon",
+      "function": "net.http_get",
+      "status": 406,
+      "code": "PGRST106"
+    },
+    {
+      "environment": "remote",
+      "role": "anon",
+      "function": "net.http_post",
+      "status": 406,
+      "code": "PGRST106"
+    },
+    {
+      "environment": "remote",
+      "role": "service_role",
+      "function": "net.http_get",
+      "status": 406,
+      "code": "PGRST106"
+    },
+    {
+      "environment": "remote",
+      "role": "service_role",
+      "function": "net.http_post",
+      "status": 406,
+      "code": "PGRST106"
+    }
+  ],
+  "deployed_route_smoke": {
+    "alias": "homecook-flame.vercel.app",
+    "endpoint": "/api/v1/users/me",
+    "get": {
+      "status": 401,
+      "error_code": "UNAUTHORIZED"
+    },
+    "delete": {
+      "status": 401,
+      "error_code": "UNAUTHORIZED",
+      "mutation_attempted": false
+    }
+  },
+  "release_verification": {
+    "command": "pnpm closeout:security-functions:remote",
+    "result": "success",
+    "inventory_validation": "local+remote",
+    "local_role_matrix": "success",
+    "remote_production_safe_role_matrix": "success",
+    "data_api_negative_smoke": "success"
+  },
+  "independent_reviews": {
+    "security": {
+      "decision": "APPROVE",
+      "p0": 0,
+      "p1": 0,
+      "p2": 0
+    },
+    "implementation_code_quality": {
+      "decision": "APPROVE",
+      "p0": 0,
+      "p1": 0,
+      "p2": 0
+    },
+    "dependency_security": {
+      "decision": "APPROVE",
+      "high_or_critical_advisories": 0,
+      "residual_low_advisories": 1,
+      "residual_scope": "dev-only @lhci/cli dependency chain"
+    },
+    "closeout_security": {
+      "decision": "APPROVE",
+      "p0": 0,
+      "p1": 0,
+      "p2": 0,
+      "p3": 1,
+      "p3_scope": "previously recorded dev-only low dependency advisory"
+    },
+    "closeout_five_axis": {
+      "decision": "APPROVE",
+      "p0": 0,
+      "p1": 0,
+      "p2": 0,
+      "p3": 0
+    }
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "manifest": "docs/security/evidence/security-definer-mutation-authorization-closeout-20260723.sha256",
+    "signed_source_commit": "9b23410c2cf4d59391518bed97ee18c1eb794bb5",
+    "signed_source_commit_verified": true,
+    "signed_source_commit_verification_reason": "valid"
+  }
+}

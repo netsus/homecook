@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-22T17:12:39.204Z",
+  "generated_at": "2026-07-22T19:33:53.331Z",
   "trusted_application_schema": "public",
   "data_api_exposed_schemas": [
     "graphql_public",
@@ -17,12 +17,12 @@
   "environment_baseline_sha256": {
     "local": "ed70522c7a3c56761307537233468a6cda1aeb1499201c9cd88c726b78eefd85",
     "fresh": "ed70522c7a3c56761307537233468a6cda1aeb1499201c9cd88c726b78eefd85",
-    "remote": "e4f4f7508139b7052e2c7f0a4637805bb127d55a08a8cb02801e9fea290a243f"
+    "remote": "2ed5f6877886dc099207ca3ae6d4b8619e9deaf8c58c61361d9fe12e42790a5c"
   },
   "environment_states": {
     "local": "post-migration",
     "fresh": "post-migration",
-    "remote": "pre-deployment"
+    "remote": "post-migration"
   },
   "functions": [
     {
@@ -110,7 +110,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, extensions, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, extensions, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -214,8 +214,8 @@
           "security_definer": true,
           "volatility": "v",
           "result_type": "jsonb",
-          "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, extensions, public\"}",
+          "proacl": "{postgres=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, extensions, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -232,12 +232,10 @@
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -319,8 +317,8 @@
           "security_definer": true,
           "volatility": "v",
           "result_type": "jsonb",
-          "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, extensions, public\"}",
+          "proacl": "{postgres=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, extensions, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -337,12 +335,10 @@
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -431,7 +427,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, extensions, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, extensions, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -617,7 +613,7 @@
           "volatility": "v",
           "result_type": "void",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, auth\"}",
+          "proconfig": "{\"search_path=pg_catalog, auth, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -726,7 +722,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -934,7 +930,7 @@
           "volatility": "s",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -1036,7 +1032,7 @@
           "security_definer": false,
           "volatility": "s",
           "result_type": "jsonb",
-          "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+          "proacl": "{postgres=X/postgres}",
           "proconfig": "{search_path=public}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
@@ -1054,12 +1050,10 @@
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -1150,17 +1144,17 @@
           "security_definer": true,
           "volatility": "v",
           "result_type": "jsonb",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
@@ -1172,7 +1166,6 @@
             }
           },
           "effective_data_api_callers": [
-            "anon",
             "authenticated",
             "service_role"
           ]
@@ -1266,17 +1259,17 @@
           "security_definer": true,
           "volatility": "v",
           "result_type": "jsonb",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
@@ -1288,7 +1281,6 @@
             }
           },
           "effective_data_api_callers": [
-            "anon",
             "authenticated",
             "service_role"
           ]
@@ -1382,17 +1374,17 @@
           "security_definer": true,
           "volatility": "v",
           "result_type": "jsonb",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
@@ -1404,7 +1396,6 @@
             }
           },
           "effective_data_api_callers": [
-            "anon",
             "authenticated",
             "service_role"
           ]
@@ -1488,7 +1479,37 @@
           ]
         },
         "remote": {
-          "present": false
+          "present": true,
+          "owner": "postgres",
+          "extension_name": null,
+          "extension_version": null,
+          "security_definer": true,
+          "volatility": "v",
+          "result_type": "jsonb",
+          "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
+          "schema_exposed_to_data_api": true,
+          "principal_privileges": {
+            "PUBLIC": {
+              "schema_usage": false,
+              "execute": false
+            },
+            "anon": {
+              "schema_usage": true,
+              "execute": false
+            },
+            "authenticated": {
+              "schema_usage": true,
+              "execute": false
+            },
+            "service_role": {
+              "schema_usage": true,
+              "execute": true
+            }
+          },
+          "effective_data_api_callers": [
+            "service_role"
+          ]
         }
       }
     },
@@ -1580,7 +1601,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -1695,7 +1716,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -1810,7 +1831,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -1924,17 +1945,17 @@
           "security_definer": true,
           "volatility": "v",
           "result_type": "jsonb",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
@@ -1946,7 +1967,6 @@
             }
           },
           "effective_data_api_callers": [
-            "anon",
             "authenticated",
             "service_role"
           ]
@@ -2031,7 +2051,7 @@
           "security_definer": false,
           "volatility": "i",
           "result_type": "text",
-          "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+          "proacl": "{postgres=X/postgres}",
           "proconfig": "{search_path=pg_catalog}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
@@ -2049,12 +2069,10 @@
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -2146,7 +2164,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -2261,7 +2279,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -2376,7 +2394,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -2487,21 +2505,21 @@
           "security_definer": true,
           "volatility": "v",
           "result_type": "jsonb",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "service_role": {
               "schema_usage": true,
@@ -2509,8 +2527,6 @@
             }
           },
           "effective_data_api_callers": [
-            "anon",
-            "authenticated",
             "service_role"
           ]
         }
@@ -2601,7 +2617,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, extensions, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, extensions, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -2712,7 +2728,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, extensions, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, extensions, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -2823,7 +2839,7 @@
           "volatility": "s",
           "result_type": "TABLE(recipe_id uuid, current_tags text[], suggested_tags text[], reason_codes text[])",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -2939,13 +2955,13 @@
           "security_definer": true,
           "volatility": "s",
           "result_type": "TABLE(recipe_id uuid)",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
@@ -3047,7 +3063,7 @@
           "volatility": "s",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -3156,7 +3172,7 @@
           "volatility": "s",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, extensions, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, extensions, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -3267,7 +3283,7 @@
           "volatility": "s",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, extensions, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, extensions, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -3377,21 +3393,21 @@
           "security_definer": true,
           "volatility": "v",
           "result_type": "TABLE(id uuid, view_count integer)",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "service_role": {
               "schema_usage": true,
@@ -3399,8 +3415,6 @@
             }
           },
           "effective_data_api_callers": [
-            "anon",
-            "authenticated",
             "service_role"
           ]
         }
@@ -3485,7 +3499,7 @@
           "volatility": "v",
           "result_type": "void",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -3597,7 +3611,7 @@
           "volatility": "s",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -3712,7 +3726,7 @@
           "volatility": "s",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -3829,13 +3843,13 @@
           "security_definer": true,
           "volatility": "s",
           "result_type": "TABLE(tag_normalized_key text, tag_label text, tag_slug text, theme_rank integer, recipe_rank integer, id uuid, title character varying, thumbnail_url text, tags text[], base_servings integer, view_count integer, like_count integer, save_count integer, source_type recipe_source_type)",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
@@ -3946,7 +3960,7 @@
           "volatility": "s",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -4063,13 +4077,13 @@
           "security_definer": true,
           "volatility": "s",
           "result_type": "TABLE(normalized_key text, label text, slug text, kind text, is_system boolean, theme_eligible boolean, usage_count integer)",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
@@ -4171,7 +4185,7 @@
           "volatility": "v",
           "result_type": "void",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -4274,7 +4288,7 @@
           "volatility": "v",
           "result_type": "trigger",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -4377,7 +4391,7 @@
           "volatility": "v",
           "result_type": "void",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -4480,7 +4494,7 @@
           "volatility": "v",
           "result_type": "trigger",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -4582,7 +4596,7 @@
           "security_definer": false,
           "volatility": "i",
           "result_type": "jsonb",
-          "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+          "proacl": "{postgres=X/postgres}",
           "proconfig": "{\"search_path=pg_catalog, public\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
@@ -4600,12 +4614,10 @@
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -4762,32 +4774,28 @@
           "security_definer": false,
           "volatility": "i",
           "result_type": "text",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proacl": "{postgres=X/postgres}",
           "proconfig": "",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "anon",
-            "authenticated",
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -4870,7 +4878,7 @@
           "volatility": "v",
           "result_type": "trigger",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -4972,32 +4980,28 @@
           "security_definer": false,
           "volatility": "i",
           "result_type": "text",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proacl": "{postgres=X/postgres}",
           "proconfig": "{\"search_path=pg_catalog, extensions, public\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "anon",
-            "authenticated",
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -5080,7 +5084,7 @@
           "volatility": "s",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -5183,7 +5187,7 @@
           "volatility": "s",
           "result_type": "numeric",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -5491,32 +5495,28 @@
           "security_definer": false,
           "volatility": "v",
           "result_type": "trigger",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proacl": "{postgres=X/postgres}",
           "proconfig": "{search_path=public}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "anon",
-            "authenticated",
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -5701,32 +5701,28 @@
           "security_definer": false,
           "volatility": "v",
           "result_type": "trigger",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proacl": "{postgres=X/postgres}",
           "proconfig": "{search_path=public}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "anon",
-            "authenticated",
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -5809,7 +5805,7 @@
           "volatility": "v",
           "result_type": "trigger",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -6330,7 +6326,7 @@
           "volatility": "v",
           "result_type": "TABLE(tag_id uuid, normalized_key text, label text, before_count integer, after_count integer, would_update boolean)",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -6440,21 +6436,21 @@
           "security_definer": true,
           "volatility": "v",
           "result_type": "jsonb",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "service_role": {
               "schema_usage": true,
@@ -6462,8 +6458,6 @@
             }
           },
           "effective_data_api_callers": [
-            "anon",
-            "authenticated",
             "service_role"
           ]
         }
@@ -6553,21 +6547,21 @@
           "security_definer": true,
           "volatility": "v",
           "result_type": "jsonb",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "service_role": {
               "schema_usage": true,
@@ -6575,8 +6569,6 @@
             }
           },
           "effective_data_api_callers": [
-            "anon",
-            "authenticated",
             "service_role"
           ]
         }
@@ -6670,7 +6662,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -6785,7 +6777,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -6897,7 +6889,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -7008,7 +7000,7 @@
           "volatility": "v",
           "result_type": "void",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -7112,32 +7104,28 @@
           "security_definer": true,
           "volatility": "v",
           "result_type": "trigger",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proacl": "{postgres=X/postgres}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "anon",
-            "authenticated",
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -7229,7 +7217,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -7344,7 +7332,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -7553,7 +7541,7 @@
           "volatility": "v",
           "result_type": "trigger",
           "proacl": "{postgres=X/postgres}",
-          "proconfig": "{search_path=public}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
@@ -7655,32 +7643,28 @@
           "security_definer": false,
           "volatility": "v",
           "result_type": "trigger",
-          "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+          "proacl": "{postgres=X/postgres}",
           "proconfig": "{search_path=public}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
               "schema_usage": false,
-              "execute": true
+              "execute": false
             },
             "anon": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "authenticated": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "anon",
-            "authenticated",
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -7865,7 +7849,7 @@
           "security_definer": false,
           "volatility": "v",
           "result_type": "void",
-          "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+          "proacl": "{postgres=X/postgres}",
           "proconfig": "{\"search_path=pg_catalog, public\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
@@ -7883,12 +7867,10 @@
             },
             "service_role": {
               "schema_usage": true,
-              "execute": true
+              "execute": false
             }
           },
-          "effective_data_api_callers": [
-            "service_role"
-          ]
+          "effective_data_api_callers": []
         }
       }
     },
@@ -7977,7 +7959,7 @@
           "volatility": "v",
           "result_type": "jsonb",
           "proacl": "{postgres=X/postgres,service_role=X/postgres}",
-          "proconfig": "{\"search_path=pg_catalog, public\"}",
+          "proconfig": "{\"search_path=pg_catalog, public, pg_temp\"}",
           "schema_exposed_to_data_api": true,
           "principal_privileges": {
             "PUBLIC": {
