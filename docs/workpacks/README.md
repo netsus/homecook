@@ -236,7 +236,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `community-prepared-food-catalog` | merged | 공공 영양DB·사용자 등록·비공개 보관을 구분하고 공동 검색, owner-only 수정·삭제, 신고, 탈퇴 후 익명 read-only·기존 pin 보존을 구현했다. PR #1046 merge |
 | `prepared-food-standard-basis-ux` | merged | 고형 100g·액상 100mL 비교, source/label, 추정 금지를 교차 잠그고 MEAL_SCREEN g/mL 수량을 1g/1mL 단위로 안전하게 편집하도록 수리했다. PR #1049 merge `1976ecc3` |
 | `nutrition-products-cross-slice-release-qa` | merged | 영양 데이터, 권한, UI, 계산을 실제 local DB/browser/current-head checks 기준으로 교차 검증했다. Stage 2/3 #1053, historical evidence #1059, TDD repairs #1060/#1063, final evidence/authority/Stage 5/6 #1064 merge `c9315520` 완료 |
-| `prepared-food-search-relevance` | planned | 브랜드+제품명 통합 정규화, public/private 분리 index, typed relevance와 정수 tuple cursor로 완제품 검색을 개선하고 287,041건 fixture의 품질·성능을 닫는다 |
+| `prepared-food-search-relevance` | docs | 브랜드+제품명 통합 정규화, public/private 분리 index, typed relevance와 정수 tuple cursor로 완제품 검색을 개선하고 287,041건 fixture의 품질·성능을 닫는다 |
 | `account-session-generation-foundation` | docs | JWT session-bound account generation, lifecycle watermark, DB cutover fence/Auth Hook/quarantine/outbox와 personal-writer inventory를 feature-off foundation으로 잠근다 |
 | `product-ingredient-link-foundation` | planned | 제품과 canonical ingredient의 검수 relation, RLS/admin promotion, pantry effective ingredient projection과 account-delete 결합 gate를 구현한다 |
 | `recipe-visibility-read-hardening` | planned | private personal recipe soft delete/public fork/tag visibility, quarantine visibility upper bound, generation-aware image registry·private storage·outbox를 먼저 잠근다 |
@@ -278,7 +278,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | Order | Release train | Slice | Status | Required predecessors |
 | ---: | --- | --- | --- | --- |
 | F0 | B | `account-session-generation-foundation` | docs | contract gate; security hotfix merged and deployed |
-| 1 | A | `prepared-food-search-relevance` | planned | contract gate; existing nutrition-products catalog release merged |
+| 1 | A | `prepared-food-search-relevance` | docs | contract gate; existing nutrition-products catalog release merged |
 | 2 | B | `product-ingredient-link-foundation` | planned | F0 + #3 joint account-delete activation gate |
 | 3 | B | `recipe-visibility-read-hardening` | planned | F0; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
 | 4 | B | `recipe-snapshot-authority-foundation` | planned | #3; existing recipe nutrition snapshot release merged |
