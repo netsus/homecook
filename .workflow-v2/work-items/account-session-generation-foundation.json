@@ -1,0 +1,147 @@
+{
+  "id": "account-session-generation-foundation",
+  "title": "Account session-generation foundation",
+  "summary": "JWT session과 auth identity epoch에 결합된 account generation, cutover fence/Hook/staging/quarantine/auth outbox를 additive dark-ship하고 #3 joint activation 전 production legacy authority를 유지한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "critical",
+  "preset": "vertical-slice-strict",
+  "goal": "탈퇴 전 세션 또는 UUID-only bootstrap이 동일 UUID의 새 계정 세대에 개인 데이터를 쓰지 못하도록 하면서, 기존 production 동작은 legacy 상태에서 그대로 보존한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for authoring, repair, implementation, review, security, authority, or closeout",
+    "codex": "separate sessions for Stage 1 author, design author/critic, internal 1.5 reviewer/repair-final over all five core plus two design gate artifacts, backend implementation, security/DB review, five-axis review, frontend implementation, screenshot design authority, and final closeout; no session approves its own work",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization-hotfix merged/deployed with PR #1071 closeout",
+    "cooking-meal-log-contract-evolution merged as PR #1072"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/account-session-generation-foundation/README.md",
+      "docs/workpacks/account-session-generation-foundation/acceptance.md",
+      "docs/workpacks/account-session-generation-foundation/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/approval-and-loops.md",
+      "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "node scripts/verify-account-session-generation-remote.mjs --mode inventory (read-only before merge)",
+      "node scripts/verify-account-session-generation-remote.mjs --mode post-merge-dark-ship (merged exact SHA only)",
+      "remote exact-principal Hook ACL and legacy allow smoke with supabase_auth_admin",
+      "remote personal-writer and auth.users inbound-FK inventory completeness",
+      "deployed DELETE /api/v1/users/me legacy compatibility smoke without destructive production account deletion",
+      "deployed POST /api/v1/users/me/cutover-quarantine-resolution unauthorized and legacy non-exposure smoke",
+      "pnpm account-maintenance:scheduler:verify -- --dry-run"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/account-session-generation-foundation pnpm validate:workpack -- --slice account-session-generation-foundation",
+      "node scripts/validate-automation-spec.mjs --slice account-session-generation-foundation",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/account-session-generation-foundation.test.ts tests/account-session-generation-routes.test.ts tests/account-session-generation-inventory.test.ts tests/account-session-generation-security.test.ts tests/account-session-generation-scheduler.test.ts",
+      "pnpm test:account-session-generation:postgres",
+      "pnpm verify:backend",
+      "pnpm exec vitest run tests/account-quarantine-screen.test.tsx tests/account-generation-auth-gate.test.tsx tests/account-session-generation-client.test.ts",
+      "pnpm verify:frontend:pr",
+      "pnpm qa:explore -- --slice account-session-generation-foundation",
+      "pnpm qa:eval -- --checklist .artifacts/qa/account-session-generation-foundation/latest/exploratory-checklist.json --report .artifacts/qa/account-session-generation-foundation/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm test:e2e:regression:ci --grep account-session-generation-foundation",
+      "pnpm validate:authority-evidence-presence -- --slice account-session-generation-foundation",
+      "pnpm validate:exploratory-qa-evidence -- --slice account-session-generation-foundation",
+      "pnpm validate:closeout-sync -- --slice account-session-generation-foundation",
+      "node scripts/verify-account-session-generation-remote.mjs --mode inventory",
+      "node scripts/verify-account-session-generation-remote.mjs --mode post-merge-dark-ship",
+      "pnpm account-maintenance:scheduler:verify -- --dry-run",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/account-session-generation-foundation pnpm validate:workpack -- --slice account-session-generation-foundation",
+      "node scripts/validate-automation-spec.mjs --slice account-session-generation-foundation",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of five core plus two design gate artifacts",
+      "separate Codex security/DB review",
+      "separate Codex five-axis code review",
+      "separate Codex ACCOUNT_QUARANTINE design authority review"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-plus-two-design-gate-artifacts",
+      "stage1-account-quarantine-design-critique-round4-pass-zero-findings",
+      "f0-production-legacy-and-canonical-zero",
+      "personal-writer-direct-dml-storage-service-callsite-inventory",
+      "local-remote-auth-users-inbound-fk-delete-action-inventory",
+      "shared-exclusive-fence-and-guard-signature-matrix",
+      "auth-hook-supabase-auth-admin-and-nologin-owner-role-matrix",
+      "staging-classification-count-digest-cas-and-abort-evidence",
+      "legacy-delete-receipt-and-auth-outbox-identity-cas-evidence",
+      "account-maintenance-launchd-skeleton-and-ordered-tick",
+      "local-existing-fresh-replay-and-concurrency-evidence",
+      "merged-exact-sha-remote-dark-ship-evidence",
+      "ACCOUNT_QUARANTINE-390-320-desktop-and-state-evidence",
+      "independent-codex-review-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Production cutover_maintenance entry or generation_active promote in F0 alone",
+    "Canonical lifecycle/watermark production backfill before the slice 3 joint gate",
+    "Recipe image registry, storage deletion outbox, direct Storage revoke, and browser remove replacement owned by recipe-visibility-read-hardening",
+    "Legacy image visibility copy/swap or orphan deletion",
+    "Actual MacBook launchd install or production secret injection",
+    "MYPAGE redesign beyond the minimal ACCOUNT_QUARANTINE lifecycle interstitial",
+    "Meal log, cooked batch, personal recipe, or snapshot-v2 feature activation"
+  ],
+  "open_questions": [],
+  "notes": "Stage 1 core is authored by a dedicated Codex documentation session and ACCOUNT_QUARANTINE wireframe/critique by separate Codex design sessions under the user's no-Claude override. The design critique Round 4 final passed with unresolved Blocker/Major/Minor 0/0/0; screenshot authority remains a future Stage 4 gate. Approval remains not_started until a separate Codex internal 1.5 reviewer passes all five core plus two design gate artifacts together. F0 completion is additive dark ship only: production state=legacy, canonical lifecycle/watermark rows=0, and joint account-generation/image activation is forbidden until recipe-visibility-read-hardening (#3) is prepared. F0-specific Vitest/PostgreSQL/remote-verifier/scheduler entries are planned Stage 2/4 artifacts locked by this Stage 1 contract, not commands claimed executable in the docs PR; Stage 2 must add them TDD-first and missing artifacts fail closed. The Stage 1 author must not commit, push, open a PR, merge, or approve its own work."
+}
