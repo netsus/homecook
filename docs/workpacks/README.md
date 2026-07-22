@@ -10,6 +10,11 @@
 
 ## Revision Notes
 
+- `v2` cooking plan / meal log contract-evolution roadmap (2026-07-23 KST, UTC+09:00)
+  - 사용자가 승인한 `요리 계획·식사 기록 분리, 커스텀 레시피, 완제품 검색` 마스터 계획을 정확히 15개 successor workpack(`F0` + #1~#14)과 release train A~F로 고정했다.
+  - Stage -1 SECURITY DEFINER 권한 hotfix의 production 배포·8개 anon mutation 무변경 검증·closeout merge를 계약 gate의 선행 증거로 고정한다.
+  - 각 successor는 별도 Stage 1 docs PR과 mandatory internal 1.5 gate가 merge되기 전 구현할 수 없으며, `MEAL_LOG`, `PLANNER_WEEK`, `COOK_MODE`, `RECIPE_DETAIL` 변경은 해당 Stage 1에서 요구되는 wireframe/design critique/authority evidence 계획을 먼저 잠근다.
+
 - `v2` nutrition products/planner release QA Stage 2/3 (2026-07-19 KST, UTC+09:00)
   - repair PR #1052 merge `a3301e16` 이후 exact repaired head에서 ingredient `845`, recipe `34`, public products `287,041`, auth A/B anonymization/pin retention, SQL/route 성능을 처음부터 재검증했다.
   - Stage 2/3 evidence PR #1053 merge `05290f65`와 independent code/security/performance/integrated review `0` findings를 반영해 slice 상태를 `in-progress`로 전환한다. Stage 4 real Chrome/authority와 Stage 5/6 closeout은 계속 pending이다.
@@ -113,6 +118,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 - **Codex-only 이미지 브랜드 자산 예외**: `service-brand-image-assets`는 사용자가 기존 브랜드 Codex-only 연속 작업에서 공식 계약 갱신과 실제 서비스 적용을 함께 요청한 후속 슬라이스다. Stage 1 docs owner, Stage 4 frontend implementation, internal docs repair/final owner, authority reviewer를 역할 분리된 Codex 작업으로 나누고 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용하며 전역 workflow actor 규칙을 바꾸지 않는다.
 - **Codex-only 아이콘 외곽 처리 예외**: `service-brand-icon-edge-treatment`는 사용자가 실제 favicon 흰 모서리를 확인하고 수정을 요청한 `service-brand-image-assets`의 연속 후속 슬라이스다. Stage 1 docs owner, Stage 4 frontend implementation, 독립 Stage 5/6 reviewer를 역할 분리하고 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용하며 전역 workflow actor 규칙을 바꾸지 않는다.
 - **Codex-only nutrition/products/planner 예외**: `public-nutrition-source-acquisition`, `ingredient-nutrition-conversion-model`, `recipe-nutrition-calculation`, `prepared-food-catalog`, `prepared-food-planner-entry`, `planner-nutrition-summary`, `ingredient-nutrition-full-coverage`, `all-recipe-nutrition-recalculation`, `public-prepared-food-catalog-import`, `community-prepared-food-catalog`, `prepared-food-standard-basis-ux`, `nutrition-products-cross-slice-release-qa`는 사용자가 기존 Claude 담당 단계를 역할이 분리된 **별도 Codex 앱 작업**으로 대체하도록 승인했다. Stage 1 docs owner, internal 1.5 review/repair-final owner, Stage 2/3, Stage 4, authority precheck/Stage 5/final authority/Stage 6은 필요한 역할별 새 작업으로 분리하고, 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 같은 작업 안의 서브에이전트는 이 역할 분리의 대체물이 아니다. 각 successor slice도 별도 Stage 1 workpack docs PR이 main에 merge되기 전에는 구현을 시작할 수 없다. 이 예외는 위 nutrition/products/planner slice들에만 적용하며 전역 stage owner 규칙은 바꾸지 않는다.
+- **Codex-only cooking/meal-log 예외**: `account-session-generation-foundation`, `prepared-food-search-relevance`, `product-ingredient-link-foundation`, `recipe-visibility-read-hardening`, `recipe-snapshot-authority-foundation`, `personal-recipe-editor-decoupling`, `personal-recipe-customization-write-core`, `recipe-content-snapshot-future-propagation`, `cooked-batch-weight-ledger`, `meal-log-core`, `planner-shell`, `cooked-batch-weight-ui`, `meal-log-ui`, `legacy-product-compat`, `cooking-meal-log-cross-slice-release-qa`는 사용자가 Claude를 사용하지 않고 기존 Claude 담당 단계마다 역할이 분리된 **별도 Codex 작업**을 사용하도록 승인했다. Stage 1 docs author, internal 1.5 reviewer/repair-final owner, 구현 owner, security/code/design authority reviewer를 분리하고 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 각 slice의 별도 Stage 1 docs PR과 mandatory internal 1.5 pass가 main에 merge되기 전에는 해당 구현을 시작하지 않는다.
 - `workflow-v2` / `OMO` 대상 product slice는 Stage 1 전에 **slice ID / goal / 분기 경로를 고정**한다.
 - `planned` 상태 slice에 `착수 시점에 분할 여부 결정` 메모를 남기지 않는다. 분할이 필요하면 roadmap PR에서 `08a/08b`처럼 먼저 쪼갠다.
 - 예외: `docs/engineering/` 아래의 repo-engineering automation, workflow tooling, agent 운영 규칙 변경은 제품 workpack roadmap 바깥이다.
@@ -230,6 +236,21 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `community-prepared-food-catalog` | merged | 공공 영양DB·사용자 등록·비공개 보관을 구분하고 공동 검색, owner-only 수정·삭제, 신고, 탈퇴 후 익명 read-only·기존 pin 보존을 구현했다. PR #1046 merge |
 | `prepared-food-standard-basis-ux` | merged | 고형 100g·액상 100mL 비교, source/label, 추정 금지를 교차 잠그고 MEAL_SCREEN g/mL 수량을 1g/1mL 단위로 안전하게 편집하도록 수리했다. PR #1049 merge `1976ecc3` |
 | `nutrition-products-cross-slice-release-qa` | merged | 영양 데이터, 권한, UI, 계산을 실제 local DB/browser/current-head checks 기준으로 교차 검증했다. Stage 2/3 #1053, historical evidence #1059, TDD repairs #1060/#1063, final evidence/authority/Stage 5/6 #1064 merge `c9315520` 완료 |
+| `prepared-food-search-relevance` | planned | 브랜드+제품명 통합 정규화, public/private 분리 index, typed relevance와 정수 tuple cursor로 완제품 검색을 개선하고 287,041건 fixture의 품질·성능을 닫는다 |
+| `account-session-generation-foundation` | planned | JWT session-bound account generation, lifecycle watermark, DB cutover fence/Auth Hook/quarantine/outbox와 personal-writer inventory를 feature-off foundation으로 잠근다 |
+| `product-ingredient-link-foundation` | planned | 제품과 canonical ingredient의 검수 relation, RLS/admin promotion, pantry effective ingredient projection과 account-delete 결합 gate를 구현한다 |
+| `recipe-visibility-read-hardening` | planned | private personal recipe soft delete/public fork/tag visibility, quarantine visibility upper bound, generation-aware image registry·private storage·outbox를 먼저 잠근다 |
+| `recipe-snapshot-authority-foundation` | planned | nutrition snapshot을 exact pin하는 content snapshot 단일 authority와 Meal expand→mirror→contract/null·rollback floor를 additive하게 구축한다 |
+| `personal-recipe-editor-decoupling` | planned | 공개 원본 불변 fork 및 owner-only 개인 레시피 편집 진입을 RECIPE_DETAIL 중심으로 분리하고 기존 MYPAGE/RECIPEBOOK 상세과의 소유권 충돌을 피한다 |
+| `personal-recipe-customization-write-core` | planned | 개인 레시피 create/PATCH/soft DELETE, owner→recipe lock, session generation과 idempotent single-RPC write를 구현한다 |
+| `recipe-content-snapshot-future-propagation` | planned | future-plan impact preview/token, replace_all/keep, active cooking claim, shopping open reconcile와 completed read-only를 같은 transaction 경계에 잠근다 |
+| `cooked-batch-weight-ledger` | planned | cooked batch content-only nutrition, 전체/잔량 중량, append-only quantity/lifecycle event, weighted/unweighed/unrecoverable와 RPC-only mutation을 구현한다 |
+| `meal-log-core` | planned | Meal event pointer, record-time timezone/local date, exact nutrition evidence와 batch/product/ingredient 실제 섭취 기록의 멱등 backend를 구현한다 |
+| `planner-shell` | planned | 플래너 내부를 `요리 계획 | 식사 기록` shell로 분리하고 계획 영양·신규 제품 계획 입력을 제거하되 legacy row 조회/삭제는 보존한다 |
+| `cooked-batch-weight-ui` | planned | COOK_MODE 완료 중량 입력과 weigh-later, 이후 exact weight/unrecoverable/discard/adjust UI를 ledger 계약에 연결한다 |
+| `meal-log-ui` | planned | 신규 MEAL_LOG의 날짜 중심 하루 합계·끼니 소계·음식 추가 sheet·수정/삭제·결측 상태를 구현한다 |
+| `legacy-product-compat` | planned | legacy product planner 조회/삭제, v1 session optional→required stable key, v2 dormant drain과 current/immediate-previous reader 호환·tombstone 전제조건을 검증한다 |
+| `cooking-meal-log-cross-slice-release-qa` | planned | F0와 #1~#13의 current-head local/remote DB·API·browser·security·performance·design·rollback/legacy 통합 gate를 닫는다 |
 
 ## Nutrition / Products / Planner Dependency Chain
 
@@ -251,6 +272,34 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 > 위 dependency chain의 2026-07-17 successor slice 순서는 새 공식 SOT와 `nutrition-products-public-data-expansion-20260717.md` 계획을 따른다. 기존 merged slice는 historical predecessor 기록으로 유지하며 planned로 되돌리지 않는다.
 >
 > 각 slice는 자신의 별도 Stage 1 `docs/workpacks/<slice>/README.md` + `acceptance.md` + 필요 시 `automation-spec` PR이 main에 merge되고 internal 1.5 gate가 닫힌 뒤에만 구현 stage를 시작한다. `recipe-nutrition-calculation`의 additive Recipe Detail UI와 `prepared-food-planner-entry`/`planner-nutrition-summary`, `prepared-food-standard-basis-ux`의 PLANNER_WEEK 변경은 anchor-extension authority-required다.
+
+## Cooking Plan / Meal Log Dependency Chain
+
+| Order | Release train | Slice | Status | Required predecessors |
+| ---: | --- | --- | --- | --- |
+| F0 | B | `account-session-generation-foundation` | planned | contract gate; security hotfix merged and deployed |
+| 1 | A | `prepared-food-search-relevance` | planned | contract gate; existing nutrition-products catalog release merged |
+| 2 | B | `product-ingredient-link-foundation` | planned | F0 + #3 joint account-delete activation gate |
+| 3 | B | `recipe-visibility-read-hardening` | planned | F0; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
+| 4 | B | `recipe-snapshot-authority-foundation` | planned | #3; existing recipe nutrition snapshot release merged |
+| 5 | C | `personal-recipe-editor-decoupling` | planned | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
+| 6 | C | `personal-recipe-customization-write-core` | planned | #2 + #3 + #4 + #5 |
+| 7 | C | `recipe-content-snapshot-future-propagation` | planned | #4 + #6; `cook-mode-whole-board` merged |
+| 8 | D | `cooked-batch-weight-ledger` | planned | #7; `cook-mode-whole-board` merged |
+| 9 | D | `meal-log-core` | planned | #1 + #2 + #4 + #8 |
+| 10 | E | `planner-shell` | planned | #9 |
+| 11 | E | `cooked-batch-weight-ui` | planned | #8; `cook-mode-whole-board` merged |
+| 12 | E | `meal-log-ui` | planned | #9 + #10 |
+| 13 | E | `legacy-product-compat` | planned | #10 + #12 |
+| 14 | F | `cooking-meal-log-cross-slice-release-qa` | planned | F0 and #1~#13 all merged/current-head green |
+
+> 이 표가 cooking/meal-log successor의 exact ID·dependency authority다. 실행 순서는 foundation F0 → 독립 Train A → Train B→C→D→E→F이며 `#1`은 stable successor 번호다. `recipebook-diary-port`는 선행조건이 아니며, #3/#5는 `31-recipe-media-tags`와 `36e-recipe-tags-frontend`를 되돌리거나 진행 중 MYPAGE/RECIPEBOOK_DETAIL 파일을 소유하지 않는다. 각 행은 독립 Stage 1 `README.md` + `acceptance.md` + `automation-spec.json` + workflow-v2 work item/status PR과 mandatory internal 1.5 pass가 main에 merge된 뒤에만 구현 상태로 전환한다.
+
+### Cooking / Meal Log Design Gate
+
+- `MEAL_LOG`는 신규 화면이므로 `meal-log-ui` Stage 1에서 mobile-first wireframe, design-critic 결과, product-design-authority evidence 계획을 필수로 잠근다.
+- `PLANNER_WEEK`와 `COOK_MODE` 변경은 high-risk anchor extension이므로 `planner-shell`과 `cooked-batch-weight-ui` Stage 1에서 mobile default+narrow evidence와 rollback-safe interaction을 잠근다.
+- owner edit CTA가 추가되는 `RECIPE_DETAIL`은 `personal-recipe-editor-decoupling` Stage 1에서 공개/개인/비로그인/삭제 상태별 CTA wireframe과 authority 계획을 잠근다.
 
 ## Design Decision Gates
 
