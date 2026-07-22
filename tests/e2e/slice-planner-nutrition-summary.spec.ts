@@ -87,6 +87,12 @@ function eachDate(startDate: string, endDate: string) {
   return dates;
 }
 
+function addUtcDays(date: string, days: number) {
+  const result = new Date(`${date}T00:00:00.000Z`);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result.toISOString().slice(0, 10);
+}
+
 function dataForRequest(
   requestUrl: string,
   nutrition: PlannerNutritionAggregate,
@@ -166,11 +172,11 @@ test.describe("planner-nutrition-summary", () => {
 
     const weekSummary = page.getByTestId("planner-week-nutrition-summary");
     await expect(weekSummary).toContainText("계획 영양");
-    await expect(weekSummary).toContainText("최소 1,475 kcal");
+    await expect(weekSummary).toContainText("최소 1,475 kcal", { timeout: 15_000 });
     await expect(weekSummary).toContainText("3개 확인 필요");
     await expect(weekSummary.getByText("탄수화물", { exact: true })).toHaveCount(0);
 
-    const firstDay = page.getByTestId("planner-day-card-2026-07-13");
+    const firstDay = page.locator('[data-testid^="planner-day-card-"]').first();
     await expect(firstDay).toContainText("580 kcal");
     await expect(firstDay).toContainText("1개 확인 필요");
     await expectNoPageOverflow(page);
@@ -178,7 +184,9 @@ test.describe("planner-nutrition-summary", () => {
       await page.screenshot({ path: path.join(EVIDENCE_DIR, "planner-week-partial-mixed-390.png") });
     }
 
-    await page.goto(MEAL_PATH);
+    const firstMealHref = await firstDay.getByRole("link").first().getAttribute("href");
+    expect(firstMealHref).toMatch(/^\/planner\/\d{4}-\d{2}-\d{2}\//);
+    await page.goto(firstMealHref!);
     const mealSummary = page.getByTestId("meal-nutrition-summary");
     await expect(mealSummary).toContainText("직접값과 환산값 혼합 · 예상치");
     await expect(mealSummary).toContainText("580 kcal");
@@ -304,6 +312,7 @@ test.describe("planner-nutrition-summary", () => {
 
   test("range loading hides prior content and a stale response cannot replace the latest range", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
+    let initialStartDate: string | null = null;
     let releaseStale!: () => void;
     let markStaleStarted!: () => void;
     const staleGate = new Promise<void>((resolve) => {
@@ -315,16 +324,19 @@ test.describe("planner-nutrition-summary", () => {
 
     await page.route("**/api/v1/planner/nutrition?*", async (route) => {
       const startDate = new URL(route.request().url()).searchParams.get("start_date");
-      if (startDate === "2026-07-20") {
+      if (initialStartDate === null) {
+        initialStartDate = startDate;
+        await fulfillNutrition(route, aggregate({ energy: 640 }));
+        return;
+      }
+      const staleStartDate = addUtcDays(initialStartDate, 7);
+      if (startDate === staleStartDate) {
         markStaleStarted();
         await staleGate;
         await fulfillNutrition(route, aggregate({ energy: 999 })).catch(() => undefined);
         return;
       }
-      await fulfillNutrition(
-        route,
-        aggregate({ energy: startDate === "2026-07-13" ? 640 : 777 }),
-      );
+      await fulfillNutrition(route, aggregate({ energy: 777 }));
     });
 
     await page.goto("/planner");

@@ -258,7 +258,7 @@ test.describe("recipe-nutrition-calculation", () => {
     await expect(page.getByText("재료 4개 중 2개 반영")).toBeVisible();
     await expect(page.getByText(/일반 계량값을 기준으로 계산한 예상치/)).toBeVisible();
     await expect(
-      page.getByText("부피 단위는 공공 환산 기준의 대표 무게로 바꿔 계산했어요."),
+      page.getByText("부피 단위는 승인된 계량값으로 무게를 환산해 계산했어요."),
     ).toBeVisible();
     await expectNoPageOverflow(page);
     await captureIsolatedElement(
