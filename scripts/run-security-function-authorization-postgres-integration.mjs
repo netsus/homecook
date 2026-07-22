@@ -4,6 +4,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { resolveSecurityFunctionLinkedRoot } from "./security-function-linked-root.mjs";
 
 const useLinkedRemote = process.argv.includes("--linked-remote");
+const useProductionSafe = process.argv.includes("--production-safe");
 const linkedRoot = useLinkedRemote
   ? resolveSecurityFunctionLinkedRoot()
   : process.cwd();
@@ -59,7 +60,17 @@ function runPsql(sql, { expectFailure = false } = {}) {
   const connectionArgs = databaseUrl ? [databaseUrl] : [];
   const result = spawnSync(
     "psql",
-    [...connectionArgs, "-X", "-At", "-v", "ON_ERROR_STOP=1", "-c", sql],
+    [
+      ...connectionArgs,
+      "-X",
+      "-At",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-v",
+      "VERBOSITY=verbose",
+      "-c",
+      sql,
+    ],
     { encoding: "utf8", env: databaseEnvironment },
   );
 
@@ -69,6 +80,9 @@ function runPsql(sql, { expectFailure = false } = {}) {
     }
     if (!/permission denied|requires service_role|FORBIDDEN/u.test(result.stderr)) {
       throw new Error(`unexpected PostgreSQL denial: ${result.stderr.trim()}`);
+    }
+    if (useProductionSafe && !/\b42501\b/u.test(result.stderr)) {
+      throw new Error(`expected SQLSTATE 42501 denial: ${result.stderr.trim()}`);
     }
     return result.stderr;
   }
@@ -159,7 +173,10 @@ function databaseChecksum() {
 const anonMutationEvidence = [];
 for (const { signature, sql } of anonMutationCalls) {
   const beforeChecksum = databaseChecksum();
-  runPsql(`begin; set local role anon; ${sql}; rollback;`, { expectFailure: true });
+  const transaction = useProductionSafe
+    ? `begin read only; set local role anon; ${sql}; rollback;`
+    : `begin; set local role anon; ${sql}; rollback;`;
+  runPsql(transaction, { expectFailure: true });
   const afterChecksum = databaseChecksum();
   if (afterChecksum !== beforeChecksum) {
     throw new Error(`anon mutation checksum changed: ${signature}`);
@@ -171,6 +188,15 @@ for (const { signature, sql } of anonMutationCalls) {
     after_checksum: afterChecksum,
     unchanged: true,
   });
+}
+
+if (useProductionSafe) {
+  console.warn(JSON.stringify({
+    mode: "production-safe",
+    anon_mutation_signatures_checked: anonMutationCalls.length,
+    anon_mutation_evidence: anonMutationEvidence,
+  }, null, 2));
+  process.exit(0);
 }
 
 runPsql(
