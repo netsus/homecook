@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-22T20:49:42Z",
+  "updated_at": "2026-07-22T22:23:02Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2282,6 +2282,38 @@
         "git diff --check"
       ],
       "notes": "Stage 1 core package was authored by a dedicated Codex docs session and ACCOUNT_QUARANTINE wireframe/critique by separate Codex design sessions under the explicit no-Claude override. Design critique Round 4 final passed with unresolved Blocker/Major/Minor 0/0/0; screenshot authority remains a future Stage 4 gate. Approval remains not_started until a separate Codex internal 1.5 reviewer approves all five core plus two design gate artifacts together. F0 completion is additive dark ship only: production capability=legacy, canonical lifecycle/watermark rows=0, and no generation/image joint activation before recipe-visibility-read-hardening (#3). F0-specific Vitest/PostgreSQL/remote-verifier/scheduler entries are planned Stage 2/4 artifacts locked by this Stage 1 contract, not commands claimed executable in the docs PR; Stage 2 must add them TDD-first and missing artifacts fail closed.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "prepared-food-search-relevance",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/prepared-food-search-relevance",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/prepared-food-search-relevance pnpm validate:workpack -- --slice prepared-food-search-relevance",
+        "node scripts/validate-automation-spec.mjs --slice prepared-food-search-relevance",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/prepared-food-search-relevance.test.ts tests/food-catalog-search-route.test.ts tests/food-catalog-search-security.test.ts tests/food-catalog-search-cursor.test.ts",
+        "pnpm test:prepared-food-search-relevance:postgres",
+        "pnpm perf:prepared-food-search-relevance",
+        "pnpm verify:backend",
+        "pnpm exec vitest run tests/food-catalog-search-client.test.tsx tests/food-catalog-search-ime.test.tsx",
+        "pnpm verify:frontend:pr",
+        "pnpm test:e2e:regression:ci --grep prepared-food-search-relevance",
+        "pnpm verify:frontend",
+        "node scripts/verify-prepared-food-search-remote.mjs --mode post-merge-read-only",
+        "git diff --check"
+      ],
+      "notes": "Approval remains not_started until a fresh, separate Codex internal 1.5 reviewer approves all five Stage 1 core artifacts. This Release Train A slice can ship independently after its own gates; F0 runtime activation is not a dependency. Search-specific Vitest/PostgreSQL/performance/client/E2E/remote-verifier entries are planned Stage 2/4/closeout artifacts locked by this Stage 1 contract and are not claimed executable in the docs PR. Stage 2 writes failing tests first and observes RED. UI scope is low-risk behavior-only with no layout or anchor-screen change.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

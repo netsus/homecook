@@ -1,0 +1,143 @@
+{
+  "id": "prepared-food-search-relevance",
+  "title": "Prepared food search relevance",
+  "summary": "제품·재료를 visibility scope 적용 뒤 하나의 typed union으로 정렬하고, 브랜드+제품명 coverage·정수 cursor·IME 요청 제어를 실제 287,041-row 품질/성능 gate와 함께 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "연세크림빵 같은 무공백 브랜드+제품명 검색이 private/moderation/current-nutrition 경계를 약화하지 않으면서 관련도 높은 제품과 재료를 한 page와 한 cursor로 안정적으로 반환하게 한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for authoring, repair, implementation, review, security, performance, or closeout",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, backend/data implementation, security/DB review, performance review, five-axis review, frontend implementation, Stage 5 review, and Stage 6 closeout; no session approves its own work",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization-hotfix deployed and closed by PR #1071",
+    "cooking-meal-log-contract-evolution merged as PR #1072",
+    "account-session-generation-foundation Stage 1 docs merged as PR #1073",
+    "nutrition-products-cross-slice-release-qa merged at c9315520",
+    "prepared-food-catalog, community-prepared-food-catalog, public-prepared-food-catalog-import, and prepared-food-standard-basis-ux merged"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/prepared-food-search-relevance/README.md",
+      "docs/workpacks/prepared-food-search-relevance/acceptance.md",
+      "docs/workpacks/prepared-food-search-relevance/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/security-performance-design.md",
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/approval-and-loops.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "node scripts/verify-prepared-food-search-remote.mjs --mode post-merge-read-only from merged exact SHA only",
+      "deployed GET /api/v1/food-catalog/search unauthorized, public, community, and mine scope smoke",
+      "remote ranked RPC exact-principal positive and PUBLIC/anon negative ACL matrix",
+      "remote v1/v2 cursor, current-nutrition, moderation, owner-private, and legacy /food-products compatibility smoke",
+      "remote writes and runtime provider requests remain zero"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/prepared-food-search-relevance pnpm validate:workpack -- --slice prepared-food-search-relevance",
+      "node scripts/validate-automation-spec.mjs --slice prepared-food-search-relevance",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/prepared-food-search-relevance.test.ts tests/food-catalog-search-route.test.ts tests/food-catalog-search-security.test.ts tests/food-catalog-search-cursor.test.ts",
+      "pnpm test:prepared-food-search-relevance:postgres",
+      "pnpm perf:prepared-food-search-relevance",
+      "pnpm verify:backend",
+      "pnpm exec vitest run tests/food-catalog-search-client.test.tsx tests/food-catalog-search-ime.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep prepared-food-search-relevance",
+      "pnpm verify:frontend",
+      "node scripts/verify-prepared-food-search-remote.mjs --mode post-merge-read-only",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/prepared-food-search-relevance pnpm validate:workpack -- --slice prepared-food-search-relevance",
+      "node scripts/validate-automation-spec.mjs --slice prepared-food-search-relevance",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of all five Stage 1 core artifacts",
+      "separate Codex security/DB review",
+      "separate Codex performance review of candidate cap, Recall/Precision, p95, and EXPLAIN evidence",
+      "separate Codex five-axis review",
+      "separate Codex Stage 5 behavior/accessibility review and Stage 6 closeout"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts",
+      "official-food-catalog-search-typed-union-contract",
+      "normalizer-public-private-index-and-ranked-rpc-replay",
+      "scope-before-ranking-and-exact-principal-acl-matrix",
+      "other-owner-hidden-reported-deleted-leak-zero",
+      "current-nutrition-version-chain-exact",
+      "v1-legacy-completion-and-v2-integer-tuple-fingerprint",
+      "same-score-boundary-duplicate-omission-zero",
+      "50-to-100-query-labeled-fixture-and-designated-three",
+      "recall90-precision75-db300-route600-gates",
+      "mandatory-explain-bounded-index-plans",
+      "debounce-ime-and-latest-generation-only-client",
+      "merged-exact-sha-remote-read-only-evidence",
+      "independent-codex-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "HOME recipe-only search behavior changes",
+    "Product-to-canonical-ingredient link and pantry effective ingredient owned by successor #2",
+    "Meal log writes, custom recipe product attach, and meal-log UI owned by successors #9 and #12",
+    "Initial-consonant search, automatic correction copy, external search engine, runtime provider search, or broad one-character typo matching",
+    "Client-side merge of ingredient and product pages",
+    "Unmerged migration application or production/staging data writes"
+  ],
+  "open_questions": [],
+  "notes": "Approval remains not_started until a fresh, separate Codex internal 1.5 reviewer approves the five Stage 1 core artifacts. This slice is Release Train A and may ship independently after its own current-head gates. F0 runtime activation is not a dependency. Stage 1 verify_commands contain only the executable docs-validator, focused workflow Vitest, lint, typecheck, dependency-audit, and diff-check subset. Search-specific Vitest/PostgreSQL/performance/client/E2E/remote-verifier entries are planned Stage 2/4/closeout artifacts locked by this docs contract, not commands claimed executable in the Stage 1 PR; Stage 2 must add failing tests first and observe RED. The Stage 1 author must not approve, merge, or close its own work."
+}

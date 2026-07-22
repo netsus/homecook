@@ -1,0 +1,171 @@
+{
+  "slice_id": "prepared-food-search-relevance",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/food-catalog/search"
+    ],
+    "invariants": [
+      "official-query-types-source-cursor-limit-only",
+      "client-visibility-parameter-denied",
+      "common-success-data-error-envelope",
+      "invalid-filter-or-cursor-fails-without-results",
+      "nfkc-lowercase-whitespace-collapse-and-compact-punctuation-normalization",
+      "measured-query-length-and-candidate-caps",
+      "short-query-no-fuzzy",
+      "no-space-four-plus-valid-two-plus-splits",
+      "brand-plus-name-full-coverage-before-one-fragment",
+      "exact-compact-all-fragment-trigram-order",
+      "query-relevance-before-source-type-recency",
+      "empty-query-legacy-stable-browse",
+      "ingredient-and-product-scope-before-union-ranking",
+      "public-community-and-owner-mine-visibility-server-derived",
+      "other-owner-hidden-reported-deleted-leak-zero",
+      "exact-current-approved-nutrition-version-chain",
+      "public-and-owner-private-candidate-paths-separated",
+      "bounded-indexed-candidates-before-ranking",
+      "ranked-rpc-read-only-and-application-controlled",
+      "ranked-rpc-public-anon-direct-execute-denied",
+      "exact-server-principal-positive-acl-only",
+      "security-definer-search-path-safe-and-deterministic",
+      "additive-existing-fresh-replay-safe-migration",
+      "v1-query-page-finishes-legacy-ordering",
+      "new-first-page-v2-only",
+      "v2-official-integer-tuple-and-query-filter-fingerprint",
+      "raw-float-and-db-plan-values-not-in-cursor",
+      "same-score-boundary-duplicate-omission-zero",
+      "legacy-food-products-source-moderation-owner-pagination-compatible",
+      "recall-at-20-at-least-90-percent",
+      "precision-at-20-at-least-75-percent",
+      "287041-row-db-p95-at-most-300ms",
+      "287041-row-route-p95-at-most-600ms",
+      "mandatory-explain-yeonsei-cream-bread-and-spaced-compound",
+      "mandatory-explain-one-to-two-character-no-fuzzy",
+      "mandatory-explain-unified-public-community-mine-filters",
+      "mandatory-explain-legacy-food-products-all-and-manual-filters",
+      "mandatory-explain-authenticated-owner-private-inclusive-query",
+      "mandatory-explain-uses-bounded-indexed-candidates",
+      "no-runtime-provider-search",
+      "no-unmerged-remote-migration-or-production-write",
+      "no-secrets-private-identifiers-or-raw-provider-payload-in-evidence"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/prepared-food-search-relevance.test.ts tests/food-catalog-search-route.test.ts tests/food-catalog-search-security.test.ts tests/food-catalog-search-cursor.test.ts",
+      "pnpm test:prepared-food-search-relevance:postgres",
+      "pnpm perf:prepared-food-search-relevance",
+      "pnpm verify:backend",
+      "node scripts/verify-prepared-food-search-remote.mjs --mode post-merge-read-only",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/prepared-food-search-relevance pnpm validate:workpack -- --slice prepared-food-search-relevance",
+      "node scripts/validate-automation-spec.mjs --slice prepared-food-search-relevance",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/prepared-food-search-relevance.test.ts",
+      "tests/food-catalog-search-route.test.ts",
+      "tests/food-catalog-search-security.test.ts",
+      "tests/food-catalog-search-cursor.test.ts",
+      "tests/prepared-food-search-relevance-postgres.integration.test.ts",
+      "50-to-100-query-sanitized-labeled-fixture",
+      "287041-row-relevance-performance-and-explain-evidence",
+      "mandatory explain matrix for compound, spaced, short, unified source, legacy source, and owner-private cases",
+      "local existing/fresh/replay migration and function checksum evidence",
+      "local and remote exact-principal role matrix evidence",
+      "merged-exact-SHA remote read-only compatibility evidence"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "approved product/ingredient search consumer (behavior-only; HOME excluded)",
+      "HOME recipe-only exclusion regression"
+    ],
+    "required_states": [
+      "loading",
+      "empty-only-after-actual-zero",
+      "error-retry",
+      "read-only",
+      "unauthorized-return-to-action",
+      "ime-composing-no-request",
+      "debouncing",
+      "latest-generation-only",
+      "stale-response-discarded",
+      "cursor-reset-on-query-source-type-change"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/food-catalog-search-client.test.tsx tests/food-catalog-search-ime.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep prepared-food-search-relevance",
+      "pnpm verify:frontend",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "debounce-200-to-300ms",
+      "ime-composition-no-intermediate-request",
+      "composition-end-one-current-request",
+      "late-response-never-replaces-or-appends-new-generation",
+      "single-server-ranked-typed-union-rendered-without-client-merge",
+      "loading-empty-error-read-only-unauthorized-regression",
+      "home-remains-recipe-only",
+      "no-layout-navigation-card-or-anchor-change"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "node scripts/verify-prepared-food-search-remote.mjs --mode post-merge-read-only from merged exact SHA only",
+    "deployed GET /api/v1/food-catalog/search unauthorized, public, community, and mine scope smoke",
+    "remote ranked RPC exact-principal positive and PUBLIC/anon negative ACL matrix",
+    "remote v1/v2 cursor, current-nutrition, moderation, owner-private, and legacy /food-products compatibility smoke",
+    "remote writes and runtime provider requests remain zero"
+  ],
+  "blocked_conditions": [
+    "stage1-five-core-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
+    "stage1-author-attempts-to-self-approve",
+    "claude-invoked-for-author-review-repair-implementation-or-closeout",
+    "official-doc-or-approved-plan-conflict",
+    "plan-sha-or-line-count-drift",
+    "official-route-filter-response-or-error-drift",
+    "ingredient-or-product-visibility-applied-after-ranking",
+    "other-owner-hidden-reported-deleted-row-visible-or-inferable",
+    "current-nutrition-version-provenance-not-exact",
+    "public-and-private-candidate-paths-not-separated",
+    "ranked-rpc-public-anon-executable-or-server-principal-overbroad",
+    "full-table-rank-scan-or-unbounded-candidate-path",
+    "one-fragment-match-outranks-available-full-coverage-match",
+    "raw-float-or-plan-dependent-value-in-cursor",
+    "v1-cursor-page-reordered-or-v2-boundary-duplicate-omission",
+    "recall-precision-db-p95-route-p95-gate-failed",
+    "mandatory-explain-case-missing",
+    "debounce-ime-or-latest-generation-control-missing",
+    "client-merges-separate-ingredient-and-product-pages",
+    "home-recipe-only-or-removed-product-planner-ui-regression",
+    "unmerged-migration-applied-to-remote",
+    "remote-verifier-sha-does-not-match-merged-source",
+    "runtime-provider-request-production-write-secret-or-private-identifier-in-evidence",
+    "current-head-check-pending-absent-stale-failed-or-cancelled"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  },
+  "notes": "Search-specific tests, PostgreSQL/performance runners, client/E2E coverage, and remote verifier are planned Stage 2/4/closeout artifacts. Stage 1 validates their contract and does not claim those commands exist yet. UI work is low-risk behavior-only and does not require a new design artifact unless implementation changes layout or an anchor screen."
+}
