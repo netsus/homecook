@@ -100,7 +100,7 @@
     "verify:backend": "pnpm lint && pnpm typecheck && pnpm test:product && pnpm build && pnpm test:e2e:security",
     "verify:security-functions": "node scripts/validate-security-function-authorization.mjs && pnpm test:security-functions:postgres",
     "verify:security-functions:data-api": "node scripts/run-security-function-data-api-negative-smoke.mjs",
-    "verify:security-functions:remote": "node scripts/validate-security-function-authorization.mjs --linked-remote && node scripts/run-security-function-authorization-postgres-integration.mjs --linked-remote && pnpm verify:security-functions:data-api",
+    "verify:security-functions:remote": "node scripts/validate-security-function-authorization.mjs --linked-remote && node scripts/run-security-function-authorization-postgres-integration.mjs --linked-remote --production-safe && pnpm verify:security-functions:data-api",
     "verify:security-functions:release": "pnpm verify:security-functions && pnpm verify:security-functions:remote",
     "closeout:security-functions:remote": "node scripts/validate-security-function-authorization.mjs --write --linked-remote --remote-state post-migration && pnpm verify:security-functions:release",
     "verify:frontend:pr": "pnpm lint && pnpm typecheck && pnpm test:product && pnpm build && pnpm test:e2e:smoke && pnpm test:e2e:a11y:core && pnpm test:e2e:visual:core",

@@ -11,6 +11,8 @@ const MIGRATION_PATH =
   "supabase/migrations/20260723090000_security_definer_mutation_authorization_hotfix.sql";
 const INVENTORY_PATH =
   "docs/security/security-definer-function-authorization-inventory.json";
+const CLOSEOUT_EVIDENCE_PATH =
+  "docs/security/evidence/security-definer-mutation-authorization-closeout-20260723.json";
 const POSTGRES_RUNNER_PATH =
   "scripts/run-security-function-authorization-postgres-integration.mjs";
 const VALIDATOR_PATH =
@@ -41,7 +43,15 @@ describe("SECURITY DEFINER mutation authorization hotfix", () => {
     )).toHaveLength(8);
     expect(inventory.environment_states.local).toBe("post-migration");
     expect(inventory.environment_states.fresh).toBe("post-migration");
-    expect(inventory.environment_states.remote).toBe("pre-deployment");
+    expect(["pre-deployment", "post-migration"]).toContain(
+      inventory.environment_states.remote,
+    );
+    if (inventory.environment_states.remote === "post-migration") {
+      const closeoutEvidence = JSON.parse(
+        await readFile(CLOSEOUT_EVIDENCE_PATH, "utf8"),
+      ) as { remote_state?: string };
+      expect(closeoutEvidence.remote_state).toBe("post-migration");
+    }
     expect(signatures).toEqual(expect.arrayContaining([
       "public.delete_user_private_data(uuid)",
       "public.complete_standalone_cooking(uuid, uuid, integer, uuid[])",
@@ -74,6 +84,9 @@ describe("SECURITY DEFINER mutation authorization hotfix", () => {
 
   it("records a separate denial and unchanged checksum for all eight formerly anon-callable mutations", async () => {
     const runner = await readFile(POSTGRES_RUNNER_PATH, "utf8");
+    const packageJson = JSON.parse(await readFile("package.json", "utf8")) as {
+      scripts: Record<string, string>;
+    };
     const anonCalls = runner.match(/const anonMutationCalls = \[([\s\S]*?)\n\];/)?.[1] ?? "";
 
     expect(anonCalls).toContain("complete_cooking_session");
@@ -90,6 +103,13 @@ describe("SECURITY DEFINER mutation authorization hotfix", () => {
     expect(runner).toContain('process.argv.includes("--linked-remote")');
     expect(runner).toContain("resolveSecurityFunctionLinkedRoot()");
     expect(runner).toContain('process.argv.includes("--check-linked-environment")');
+    expect(runner).toContain('process.argv.includes("--production-safe")');
+    expect(runner).toContain("begin read only; set local role anon");
+    expect(runner).toContain("expected SQLSTATE 42501");
+    expect(runner).toContain('mode: "production-safe"');
+    expect(packageJson.scripts["verify:security-functions:remote"]).toContain(
+      "--production-safe",
+    );
   });
 
   it("keeps pre-deployment remote baselines verifiable without enforcing unmerged grants", async () => {
