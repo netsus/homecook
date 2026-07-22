@@ -365,7 +365,7 @@ WHERE deleted_atISNULLAND emailISNOTNULL;
 
 ### 회원 탈퇴 cleanup RPC `v1.3.6 신규`
 
-`delete_user_private_data(p_user_id uuid)`는 회원 탈퇴 시 한 transaction 안에서 사용자 개인 데이터를 정리한다.
+`delete_user_private_data(p_user_id uuid)`는 회원 탈퇴 시 한 transaction 안에서 사용자 개인 데이터를 정리한다. 이 RPC는 application-controlled `SECURITY DEFINER` 함수로 분류하며 service-role만 실행할 수 있다. service-role이 아닌 호출은 fail closed하고, exact signature / grant / owner / safe `search_path` inventory를 통과한 경우에만 유지한다.
 
 | 대상 | 처리 |
 | --- | --- |
@@ -379,8 +379,8 @@ WHERE deleted_atISNULLAND emailISNOTNULL;
 
 권한 정책:
 
-- authenticated 호출자는 `auth.uid() = p_user_id`인 경우만 허용한다.
-- 서버 route는 service role client로 인증된 자기 자신의 `p_user_id`만 전달한다.
+- authenticated의 직접 RPC 실행 권한은 부여하지 않는다.
+- 서버 route가 authenticated caller와 `p_user_id`의 일치를 먼저 검증한 뒤 service-role client로 호출하며 authenticated fallback으로 우회하지 않는다.
 - anonymous 호출 권한은 부여하지 않는다.
 
 ---
@@ -962,8 +962,8 @@ CHECK (NOT is_active OR review_status = 'approved')
 
 ### 조회수 증가 RPC
 
-`increment_recipe_view_count(p_recipe_id uuid)`는 `recipes.view_count = recipes.view_count + 1`을 DB에서 원자적으로 실행하고 `id, view_count`를 반환한다.
-`GET /recipes/{recipe_id}`는 응답 전 이 RPC를 기다려 HOME의 조회수 정렬/카드 지표가 실제 저장값과 어긋나지 않게 한다.
+`increment_recipe_view_count(p_recipe_id uuid)`는 `recipes.view_count = recipes.view_count + 1`을 DB에서 원자적으로 실행하고 `id, view_count`를 반환하는 application-controlled `SECURITY DEFINER` 함수다. PUBLIC/anon/authenticated 실행은 회수하고 service-role에만 허용하며 안전한 `search_path` inventory를 통과해야 한다.
+`GET /recipes/{recipe_id}`는 service-role client가 있을 때 응답 전 이 RPC를 기다려 HOME의 조회수 정렬/카드 지표가 실제 저장값과 어긋나지 않게 한다. service-role client가 없으면 공개 read availability를 유지하고 조회수 mutation 없이 현재 저장값을 반환한다.
 
 ### CHECK
 
@@ -1227,7 +1227,7 @@ INDEX youtube_visual_extraction_events_user_day_idx ON youtube_visual_extraction
 
 ## 4-2d. register_youtube_ingredient(...) RPC `v1.3.5 신규`
 
-> YT_IMPORT 검수 단계에서 DB에 없는 재료를 사용자 확인 후 표준 재료로 등록하거나 기존 표준 재료를 재사용한다. `ingredients`와 optional `ingredient_synonyms` 처리를 하나의 transaction 안에서 수행한다.
+> YT_IMPORT 검수 단계에서 DB에 없는 재료를 사용자 확인 후 표준 재료로 등록하거나 기존 표준 재료를 재사용한다. `ingredients`와 optional `ingredient_synonyms` 처리를 하나의 transaction 안에서 수행한다. 동일 이름의 두 오버로드가 있더라도 모두 service-role 전용이며, exact signature / grant / owner / safe `search_path` inventory를 통과한 application-controlled `SECURITY DEFINER` 함수만 유지한다. anon/authenticated 직접 실행은 fail closed한다.
 
 ### 입력
 
@@ -1261,6 +1261,17 @@ INDEX youtube_visual_extraction_events_user_day_idx ON youtube_visual_extraction
 | synonym_status | text | `attached` / `already_attached` / `skipped_same_as_standard` / `skipped_ambiguous` / `not_requested` |
 
 > `ingredient_synonyms`에는 global `UNIQUE(synonym)`을 추가하지 않는다. 경합으로 같은 synonym이 여러 ingredient에 연결돼도 기존 `findIngredientIds` matching은 multi-candidate를 `needs_review`로 반환한다.
+> 두 RPC 오버로드는 service-role only다. Route Handler가 authenticated caller, extraction session 소유권/상태, 사용자별 최근 10분 20회 한도를 검증하고 caller/session provenance를 `operational_events`에 저장한 뒤에만 호출한다. authenticated/anon 직접 RPC와 provenance 저장 실패 시 mutation을 거부한다.
+
+### taxonomy mutation rate-limit RPC `v1.3.22 보안 보강`
+
+`consume_youtube_ingredient_registration_rate_limit(p_user_id uuid, p_extraction_id uuid, p_draft_ingredient_id uuid, p_request_path text)`는 application-controlled `SECURITY DEFINER` service-internal 함수다. PUBLIC/anon/authenticated 실행은 회수하고 service-role에만 허용한다.
+
+- `p_user_id`별 transaction advisory lock을 먼저 획득한다.
+- 같은 transaction에서 `youtube_ingredient_registration_attempt` provenance를 `operational_events`에 append하고 최근 10분 attempt 수를 계산한다.
+- `attempt_count <= 20`이면 `allowed=true`, 21번째부터 `allowed=false`를 반환한다.
+- `(actor_user_id, created_at DESC)` partial index는 해당 event type에만 적용한다.
+- Route Handler는 authenticated caller와 extraction session을 검증한 뒤 이 RPC를 호출하며, 오류·결과 없음·`allowed=false`이면 taxonomy mutation RPC를 호출하지 않는다.
 
 ## 4-3. recipe_sources `v1.3.4 변경`
 

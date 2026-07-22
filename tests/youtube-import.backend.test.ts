@@ -743,16 +743,29 @@ function createIngredientRegistrationDbClient({
     } satisfies YoutubeIngredientRegistrationRpcData,
     error: null,
   },
+  rateLimitResult = {
+    data: { allowed: true, attempt_count: 1 },
+    error: null,
+  },
 }: {
   sessionResult?: QueryResult<YoutubeSessionRow | null>;
   rpcResult?: QueryResult<YoutubeIngredientRegistrationRpcData | null>;
+  rateLimitResult?: QueryResult<{ allowed: boolean; attempt_count: number } | null>;
 } = {}) {
   const sessionsTable = createYoutubeSessionsTable({
     selectResult: sessionResult,
   });
-  const rpc = vi.fn(async () => rpcResult);
+  const operationalEventsTable = {
+    insert: vi.fn(async () => ({ data: null, error: null })),
+  };
+  const rpc = vi.fn(async (fn: string) => (
+    fn === "consume_youtube_ingredient_registration_rate_limit"
+      ? rateLimitResult
+      : rpcResult
+  ));
   const from = vi.fn((table: string) => {
     if (table === "youtube_extraction_sessions") return sessionsTable;
+    if (table === "operational_events") return operationalEventsTable;
     throw new Error(`unexpected table: ${table}`);
   });
   const dbClient = { from, rpc };
@@ -760,6 +773,7 @@ function createIngredientRegistrationDbClient({
   return {
     dbClient,
     from,
+    operationalEventsTable,
     rpc,
     sessionsTable,
   };
@@ -8324,6 +8338,12 @@ describe("20 youtube real import backend", () => {
       error: null,
     });
     expect(sessionsTable.__selectQuery.eq).toHaveBeenCalledWith("id", extractionId);
+    expect(rpc).toHaveBeenCalledWith("consume_youtube_ingredient_registration_rate_limit", {
+      p_draft_ingredient_id: draftIngredientId,
+      p_extraction_id: extractionId,
+      p_request_path: "/api/v1/recipes/youtube/ingredient-registration",
+      p_user_id: userId,
+    });
     expect(rpc).toHaveBeenCalledWith("register_youtube_ingredient", {
       p_standard_name: "연겨자 소스",
       p_category: "양념",
@@ -8331,6 +8351,62 @@ describe("20 youtube real import backend", () => {
       p_default_unit: "g",
       p_synonym: "soy sauce",
     });
+  });
+
+  it("POST /api/v1/recipes/youtube/ingredient-registration fails closed without service-role authority", async () => {
+    const routeClient = mockAuth();
+    const routeRpc = vi.fn();
+    (routeClient as typeof routeClient & { rpc: typeof routeRpc }).rpc = routeRpc;
+    createServiceRoleClient.mockReturnValue(null);
+
+    const { POST } = await importIngredientRegistrationRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/ingredient-registration", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildIngredientRegistrationBody()),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(routeRpc).not.toHaveBeenCalled();
+  });
+
+  it("POST /api/v1/recipes/youtube/ingredient-registration rate-limits taxonomy mutation attempts", async () => {
+    mockAuth();
+    const { dbClient, rpc } = createIngredientRegistrationDbClient({
+      rateLimitResult: {
+        data: { allowed: false, attempt_count: 21 },
+        error: null,
+      },
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const { POST } = await importIngredientRegistrationRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/ingredient-registration", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(buildIngredientRegistrationBody()),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "RATE_LIMITED" },
+    });
+    expect(rpc).toHaveBeenCalledWith("consume_youtube_ingredient_registration_rate_limit", {
+      p_draft_ingredient_id: draftIngredientId,
+      p_extraction_id: extractionId,
+      p_request_path: "/api/v1/recipes/youtube/ingredient-registration",
+      p_user_id: userId,
+    });
+    expect(rpc).not.toHaveBeenCalledWith("register_youtube_ingredient", expect.anything());
   });
 
   it("POST /api/v1/recipes/youtube/ingredient-registration accepts v2 category code additively", async () => {

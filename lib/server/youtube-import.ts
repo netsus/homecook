@@ -37,7 +37,11 @@ import {
   toRecipeTagLabels,
 } from "@/lib/server/recipe-tags";
 import { cleanYoutubeTitle } from "@/lib/youtube-title";
-import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
+import {
+  recordOperationalEvent,
+  recordOperationalEventFromServiceRole,
+  type OperationalEventsDbClient,
+} from "@/lib/server/admin-events";
 import {
   recalculateRecipeNutritionSnapshot,
   type RecipeNutritionServiceClient,
@@ -540,7 +544,24 @@ interface YoutubeIngredientRegistrationRpcData {
   warnings: string[] | null;
 }
 
+interface YoutubeIngredientRegistrationRateLimitData {
+  allowed: boolean;
+  attempt_count: number;
+}
+
 interface YoutubeIngredientRegistrationRpcClient {
+  rpc(
+    fn: "consume_youtube_ingredient_registration_rate_limit",
+    args: {
+      p_user_id: string;
+      p_extraction_id: string;
+      p_draft_ingredient_id: string;
+      p_request_path: string;
+    },
+  ): PromiseLike<{
+    data: YoutubeIngredientRegistrationRateLimitData | null;
+    error: QueryError | null;
+  }>;
   rpc(
     fn: "register_youtube_ingredient",
     args: {
@@ -10371,7 +10392,7 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
     return buildFeatureDisabledResponse();
   }
 
-  const { routeClient, user } = await requireUser();
+  const { user } = await requireUser();
 
   if (!user) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
@@ -10389,7 +10410,23 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient
+  const serviceRoleClient = createServiceRoleClient();
+  if (!serviceRoleClient) {
+    await recordOperationalEventFromServiceRole({
+      event_type: "youtube_ingredient_registration_failure",
+      severity: "critical",
+      source: "youtube",
+      actor_user_id: user.id,
+      request,
+      http_status: 500,
+      error_code: "YOUTUBE_INGREDIENT_SERVICE_ROLE_UNAVAILABLE",
+      message_summary: "YouTube ingredient registration service role is unavailable",
+      metadata_json: { extraction_id: parsed.extractionId },
+    });
+    return fail("INTERNAL_ERROR", "재료를 등록하지 못했어요.", 500);
+  }
+
+  const dbClient = serviceRoleClient as unknown as DbClient
     & YoutubeIngredientRegistrationRpcClient;
   const sessionResult = await findExtractionSession(dbClient, parsed.extractionId);
   if (sessionResult.error) {
@@ -10399,6 +10436,36 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
   const sessionFailure = validateSessionForIngredientRegistration(sessionResult.data, parsed, user.id);
   if (sessionFailure) {
     return sessionFailure;
+  }
+
+  const rateLimitResult = await dbClient.rpc(
+    "consume_youtube_ingredient_registration_rate_limit",
+    {
+      p_user_id: user.id,
+      p_extraction_id: parsed.extractionId,
+      p_draft_ingredient_id: parsed.draftIngredientId,
+      p_request_path: new URL(request.url).pathname,
+    },
+  );
+  if (rateLimitResult.error || !rateLimitResult.data) {
+    return fail("INTERNAL_ERROR", "재료 등록 한도를 확인하지 못했어요.", 500);
+  }
+  if (!rateLimitResult.data.allowed) {
+    await recordOperationalEvent(
+      serviceRoleClient as unknown as OperationalEventsDbClient,
+      {
+        event_type: "youtube_ingredient_registration_rate_limited",
+        severity: "warn",
+        source: "youtube",
+        actor_user_id: user.id,
+        request,
+        http_status: 429,
+        error_code: "RATE_LIMITED",
+        message_summary: "YouTube ingredient registration rate limited",
+        metadata_json: { extraction_id: parsed.extractionId },
+      },
+    );
+    return fail("RATE_LIMITED", "잠시 후 재료 등록을 다시 시도해 주세요.", 429);
   }
 
   const registrationResult = await dbClient.rpc("register_youtube_ingredient", {
@@ -10430,6 +10497,24 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
     synonym_status: registrationResult.data.synonym_status,
     warnings: registrationResult.data.warnings ?? [],
   };
+
+  await recordOperationalEvent(
+    serviceRoleClient as unknown as OperationalEventsDbClient,
+    {
+      event_type: "youtube_ingredient_registration_success",
+      severity: "info",
+      source: "youtube",
+      actor_user_id: user.id,
+      request,
+      http_status: 200,
+      message_summary: "YouTube ingredient registration completed",
+      metadata_json: {
+        extraction_id: parsed.extractionId,
+        draft_ingredient_id: parsed.draftIngredientId,
+        ingredient_id: registrationResult.data.ingredient_id,
+      },
+    },
+  );
 
   return ok(data);
 }

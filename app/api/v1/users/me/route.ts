@@ -266,7 +266,23 @@ export async function DELETE(request: Request) {
   }
 
   const serviceRoleClient = createServiceRoleClient();
-  const dbClient = (serviceRoleClient ?? routeClient) as unknown as UsersMeDeleteDbClient;
+  if (!serviceRoleClient) {
+    await recordOperationalEvent(null, {
+      event_type: "account_delete_failure",
+      severity: "critical",
+      source: "account",
+      actor_user_id: user.id,
+      target_user_id: user.id,
+      request,
+      http_status: 500,
+      error_code: "ACCOUNT_DELETE_CONFIGURATION_ERROR",
+      message_summary: "Account deletion service role is unavailable",
+    });
+
+    return fail("INTERNAL_ERROR", "회원 탈퇴를 처리하지 못했어요.", 500);
+  }
+
+  const dbClient = serviceRoleClient as unknown as UsersMeDeleteDbClient;
 
   const deleteResult = await dbClient.rpc("delete_user_private_data", {
     p_user_id: user.id,

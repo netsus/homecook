@@ -99,3 +99,36 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  security-function-authorization:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.32.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.109.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start fresh local Supabase and replay migrations
+        run: supabase start
+
+      - name: Validate fresh live state, recorded environment states, and role matrix
+        run: pnpm verify:security-functions
+        env:
+          SECURITY_FUNCTION_ENVIRONMENT: fresh
