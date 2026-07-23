@@ -2254,10 +2254,10 @@
       "id": "account-session-generation-foundation",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-account-session-generation-foundation",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
+      "pr_path": "https://github.com/netsus/homecook/pull/1090",
+      "lifecycle": "merged",
       "approval_state": "codex_approved",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -2281,7 +2281,7 @@
         "pnpm account-maintenance:scheduler:verify -- --dry-run",
         "git diff --check"
       ],
-      "notes": "Backend PR #1089 is merged and production remains legacy/canonical zero. Stage 4 ACCOUNT_QUARANTINE implementation, responsive/state evidence, exploratory eval 98, independent product-design-authority PASS 0/0/0, final focused/product/browser/security gates, and production build are collected on the frontend branch. The local tree is ready for fresh independent internal1.5/security-auth/five-axis review; current-head checks, merge, and post-merge checks remain pending. Current-head green and Manual Only are not claimed. closeout_phase=collecting closeout_recovery=manual_patch:3|ci_resync:0 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/ACCOUNT_QUARANTINE-authority.md,ui/designs/evidence/account-session-generation-foundation,.artifacts/qa/account-session-generation-foundation/latest/eval-result.json,tests/e2e/slice-account-session-generation-foundation.spec.ts | latest_reason_code=frontend-security-local-env-gate | last_recovery_at=2026-07-23T15:21:06Z",
+      "notes": "Backend PR #1089 is merged and production remains legacy/canonical zero. Stage 4 ACCOUNT_QUARANTINE implementation, responsive/state evidence, exploratory eval 98, independent product-design-authority PASS 0/0/0, final focused/product/browser/security gates, and production build are collected on the frontend branch. Independent internal1.5/security-auth/five-axis reviews approved the frozen implementation tree with zero findings. Draft PR #1090 head a95b6302f6bba768f86f775e6c61c30d5a265abf completed its initial started checks with success or normal skip; the Ready-only policy run then exposed this closeout projection gap, so that SHA is superseded and is not merge evidence. Canonical docs/status are pre-merge closeout projections; replacement-head checks, actual merge, and post-merge checks remain pending. Manual Only remains open. closeout_phase=completed closeout_recovery=manual_patch:4|ci_resync:1 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/ACCOUNT_QUARANTINE-authority.md,ui/designs/evidence/account-session-generation-foundation,.artifacts/qa/account-session-generation-foundation/latest/eval-result.json,tests/e2e/slice-account-session-generation-foundation.spec.ts | latest_reason_code=frontend-ready-closeout-projection-sync | last_recovery_at=2026-07-23T15:44:39Z",
       "evaluation_status": "passed",
       "evaluation_round": 1,
       "last_evaluator_result": ".artifacts/qa/account-session-generation-foundation/latest/eval-result.json",

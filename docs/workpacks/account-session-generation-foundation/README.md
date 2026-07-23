@@ -183,12 +183,17 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
   - before/current auth/MYPAGE capture: `ui/designs/evidence/account-session-generation-foundation/before/`
   - Stage 4 evidence: `ACCOUNT_QUARANTINE-mobile-390.png`, `ACCOUNT_QUARANTINE-mobile-320.png`, `ACCOUNT_QUARANTINE-desktop.png`, activate/delete/error/pending variants
   - authority report: `ui/designs/authority/ACCOUNT_QUARANTINE-authority.md`
-- Authority status: `passed`; Stage 1 markdown design critique와 Stage 4 구현 screenshot authority가 모두 Blocker/Major/Minor `0/0/0`, unresolved `0`으로 통과했다. 판정과 evidence 경로는 `ui/designs/authority/ACCOUNT_QUARANTINE-authority.md`에 고정한다.
+- Authority status: `reviewed`
+- Notes:
+  - Stage 1 markdown design critique와 Stage 4 구현 screenshot authority가 모두 Blocker/Major/Minor `0/0/0`, unresolved `0`으로 통과했다. 판정과 evidence 경로는 `ui/designs/authority/ACCOUNT_QUARANTINE-authority.md`에 고정한다.
 - blocker: 320px CTA 잘림, recovery/delete 위계 혼동, destructive delete 오조작, auth-absent CTA 노출, 일반 content 우회, 전체 페이지 가로 스크롤, 44px 미만 터치 target.
 
 ## Design Status
 
-`confirmed`. Stage 1 wireframe/critique Round 4 final `PASS`와 Stage 4 screenshot-based product-design-authority `PASS`를 모두 유지한다.
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed) — Stage 1 wireframe/critique Round 4 final `PASS`와 Stage 4 screenshot-based product-design-authority `PASS`를 모두 유지한다.
+- [ ] N/A
 
 ## Source Links
 

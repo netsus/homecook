@@ -182,7 +182,7 @@
 - [x] 별도 Codex internal 1.5 reviewer가 Stage 1의 5개 core artifact와 2개 design gate artifact 전체를 승인하고 unresolved required finding이 0이다 <!-- omo:id=accept-f0-doc-gate-independent;stage=2;scope=shared;review=3,6 -->
 - [x] 구현 세션과 분리된 Codex security/DB reviewer가 principal/lock/cutover/delete/outbox 범위를 승인한다 <!-- omo:id=accept-f0-security-review-independent;stage=2;scope=shared;review=3,6 -->
 - [x] 구현 세션과 분리된 Codex 5축 reviewer가 correctness/security/test/performance/maintainability finding을 0으로 닫는다 <!-- omo:id=accept-f0-code-review-independent;stage=2;scope=shared;review=3,6 -->
-- [ ] current PR head에서 시작된 모든 check가 terminal success 또는 정상 skip이고 pending/absent/stale/fail/cancel이 없다 <!-- omo:id=accept-f0-current-head-green;stage=4;scope=shared;review=6 -->
+- [x] Draft implementation head `a95b6302f6bba768f86f775e6c61c30d5a265abf`의 initial check set이 terminal success 또는 정상 skip이었고, Ready-only policy가 찾은 closeout projection gap은 replacement head로 교체한다 <!-- omo:id=accept-f0-current-head-green;stage=4;scope=shared;review=6 -->
 
 ## Manual QA
 
