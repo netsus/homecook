@@ -1,0 +1,192 @@
+{
+  "slice_id": "cooked-batch-weight-ledger",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "POST /cooking/session-attempts/{id}/complete snapshot-v2 exact pantry and weight completion",
+      "GET /cooked-batches owner batch read model",
+      "PATCH /cooked-batches/{id}/weight set original finished weight or mark unrecoverable",
+      "POST /cooked-batches/{id}/discard append discard event",
+      "POST /cooked-batches/{id}/adjust bounded known-weight adjustment",
+      "POST /cooked-batches/{id}/close-unweighed close or cancel current terminal closure",
+      "existing /leftovers readers consume compatibility projection",
+      "legacy v1 completion endpoints retain body response parser and consumed ingredient semantics"
+    ],
+    "invariants": [
+      "v2-complete-owner-in-progress-snapshot-v2-session-only",
+      "complete-uuid-idempotency-key-and-canonical-payload-hash",
+      "exact-one-set-finished-weight-positive-food-only-g-or-weigh-later-null",
+      "product-pin-exact-product-pantry-row-only",
+      "generic-pin-generic-or-approved-primary-represents-effective-row-only",
+      "duplicate-missing-other-owner-mismatch-whole-transaction-zero-write",
+      "selected-pantry-rows-only-deleted-equivalent-unselected-remain",
+      "pantry-batch-ledger-session-claim-meal-cook-count-xp-one-transaction-once",
+      "batch-content-snapshot-and-cooking-servings-only-no-direct-nutrition-pointer",
+      "known-missing-unrecoverable-and-available-depleted-reason-checks",
+      "known-zero-to-finished-bounds-missing-unrecoverable-null-weights",
+      "nutrition-scalable-times-cooking-over-base-plus-fixed-once",
+      "partial-unavailable-not-zero-or-mutable-current-recalculation",
+      "delayed-weight-original-finished-total-only-before-any-event",
+      "missing-to-unrecoverable-idempotent-append-only-irreversible",
+      "unrecoverable-weight-restore-marker-reversal-exact-error-zero-write",
+      "consumed-discarded-adjustment-marked-closed-reversal-append-only",
+      "event-update-delete-denied-account-cleanup-only-hard-delete",
+      "owner-operation-id-ordinal-unique-and-one-direct-reversal-per-target",
+      "row-lock-expected-revision-full-active-event-replay-and-checksum",
+      "discard-bounded-and-depletion-reason-derived-from-all-active-events",
+      "adjustment-known-available-reason-and-strict-positive-post-value",
+      "closed-unweighed-no-delta-no-nutrition-no-meal-entry",
+      "cancel-current-latest-active-closure-only-no-later-event",
+      "marked-unrecoverable-never-reversible",
+      "reader-before-writer-cutover-before-protected-update-revoke",
+      "legacy-eaten-only-consumed-or-consumed-unweighed",
+      "discard-mixed-never-eaten-auto-hide-or-leftover-eaten-xp",
+      "reversal-clears-eaten-auto-hide-no-xp-retraction-or-repeat-award",
+      "legacy-null-content-weight-preserved-no-servings-to-grams-backfill",
+      "generation-bound-common-lock-single-rpc-no-rest-dml-split",
+      "r-r1-current-previous-seeded-v2-drain-and-zero-new-write",
+      "r2-personal-and-v2-creation-joint-activation-only",
+      "rollback-preserves-existing-v2-read-cancel-complete-and-rows",
+      "v1-optional-key-one-release-zero-before-428",
+      "v1-body-response-parser-and-consumed-ingredient-semantics-unchanged",
+      "meal-log-linked-consumed-event-owned-by-slice9",
+      "final-leftovers-weight-design-owned-by-slice11",
+      "no-unofficial-contract-unmerged-migration-or-production-flag-write"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/cooked-batch-weight-ledger.test.ts tests/snapshot-v2-complete.test.ts tests/cooked-batch-security.test.ts tests/cooked-batch-compatibility.test.ts",
+      "pnpm test:cooked-batch-weight-ledger:postgres",
+      "pnpm verify:backend",
+      "pnpm test:e2e:regression:ci --grep cooked-batch-weight-ledger",
+      "node scripts/verify-cooked-batch-weight-ledger-remote.mjs --mode post-merge-read-only",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/cooked-batch-weight-ledger pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/cooked-batch-weight-ledger.test.ts",
+      "tests/snapshot-v2-complete.test.ts",
+      "tests/cooked-batch-security.test.ts",
+      "tests/cooked-batch-compatibility.test.ts",
+      "tests/cooked-batch-weight-ledger-postgres.integration.test.ts",
+      "exact-pantry-product-effective-row-and-selected-only-delete-evidence",
+      "completion-whole-transaction-idempotency-and-digest-evidence",
+      "known-missing-unrecoverable-state-matrix-evidence",
+      "append-only-event-reversal-replay-checksum-and-bounds-evidence",
+      "content-only-nutrition-partial-unavailable-evidence",
+      "reader-cutover-direct-update-denial-and-legacy-projection-evidence",
+      "xp-auto-hide-reversal-no-repeat-evidence",
+      "r-r1-seeded-v2-drain-v1-compatibility-and-zero-new-write-evidence",
+      "merged-exact-sha-remote-read-only-function-policy-capability-evidence"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "COOK_MODE snapshot-v2 functional completion sheet"
+    ],
+    "required_states": [
+      "actual-pantry-row-product-brand-selection",
+      "multiple-equivalent-rows-unselected-preserved",
+      "no-eligible-row-empty-complete-disabled",
+      "food-only-finished-weight-known",
+      "weigh-later-null-weight",
+      "loading-and-submit-pending-fail-closed",
+      "409-422-selection-preserved-error-focus-retry",
+      "stored-completion-replay-single-close",
+      "creation-off-existing-v2-complete-drain"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/cooked-batch-completion-sheet.test.tsx tests/cooked-batch-pantry-row-selection.test.tsx tests/cooked-batch-completion-replay.test.tsx",
+      "pnpm test:e2e:regression:ci --grep cooked-batch-weight-ledger",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice cooked-batch-weight-ledger",
+      "pnpm qa:eval -- --checklist .artifacts/qa/cooked-batch-weight-ledger/latest/exploratory-checklist.json --report .artifacts/qa/cooked-batch-weight-ledger/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm validate:exploratory-qa-evidence -- --slice cooked-batch-weight-ledger"
+    ],
+    "playwright_projects": [
+      "mobile-default",
+      "mobile-narrow"
+    ],
+    "artifact_assertions": [
+      "actual-row-product-brand-identity-not-generic-only",
+      "no-auto-selection-or-equivalent-row-deletion",
+      "food-only-original-weight-or-weigh-later-only",
+      "loading-empty-error-and-replay-fail-closed",
+      "existing-v2-complete-remains-after-creation-rollback",
+      "390-and-320-pixel-no-overflow-keyboard-or-focus-defect"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "COOK_MODE"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/COOK_MODE.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/COOK_MODE-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-complete-mobile-default.png",
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-complete-mobile-narrow.png",
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-complete-states-mobile-default.png",
+        "ui/designs/evidence/cooked-batch-weight-ledger/COOK_MODE-complete-states-mobile-narrow.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/COOK_MODE-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "merged-exact-SHA remote read-only batch event function ACL RLS policy constraint and capability inventory",
+    "two-owner exact pantry completion denial and before-after multi-table digests",
+    "same-key replay one completion and different-payload zero effect",
+    "known missing unrecoverable discard adjust close cancel projection checksum smoke",
+    "legacy reader compatibility and protected-column direct-update denial smoke",
+    "consumed-only eaten XP and reversal no-repeat smoke",
+    "R and R+1 current-previous seeded-v2 read-cancel-complete drain with zero new writes",
+    "v1 optional-key body-response compatibility and no premature 428",
+    "390px and 320px functional completion visual-a11y-design evidence"
+  ],
+  "blocked_conditions": [
+    "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
+    "stage1-author-self-approval-or-claude-use",
+    "official-doc-approved-plan-or-plan-hash-line-drift",
+    "runtime-predecessor-7-or-cook-mode-whole-board-not-merged-green-before-implementation",
+    "complete-authority-uses-mutable-recipe-or-client-generic-name",
+    "mismatched-or-unselected-pantry-row-deleted",
+    "completion-partially-commits-pantry-batch-session-claim-meal-xp",
+    "batch-direct-nutrition-pointer-or-vector-duplication",
+    "servings-current-remainder-or-missing-used-as-finished-weight",
+    "unrecoverable-restored-reversed-or-weighted",
+    "event-updated-deleted-or-projection-changed-outside-row-lock-rpc",
+    "adjustment-depletes-or-reopens-batch",
+    "closed-unweighed-creates-nutrition-or-meal-entry",
+    "generic-reopen-or-noncurrent-closure-cancel-allowed",
+    "direct-update-revoked-before-readers-and-writers-convert",
+    "discard-mixed-projected-as-eaten-or-awarded-xp",
+    "reversal-retracts-or-reawards-xp",
+    "legacy-row-fabricated-content-or-grams",
+    "r2-activation-before-two-release-drain-or-rollback-disables-existing-v2",
+    "v1-shape-parser-semantic-change-or-premature-428-removal",
+    "slice9-meal-log-or-slice11-final-ui-preclaimed",
+      "required-design-critic-authority-or-390-320-evidence-missing-before-r",
+      "legacy-cook-mode-design-critic-or-authority-artifact-reused-as-slice8-evidence",
+      "stage2-entered-before-canonical-cook-mode-slice8-design-refresh-and-independent-critic-pass",
+    "unofficial-contract-unmerged-migration-production-write-or-capability-change",
+    "remote-verifier-not-merged-exact-sha",
+    "current-head-check-pending-absent-stale-failed-or-cancelled"
+  ],
+  "max_fix_rounds": {
+    "backend": 6,
+    "frontend": 4
+  },
+  "notes": "DB/security/concurrency and high-risk COOK_MODE Stage 1 lock. Stage 1 runs only current docs validators, focused tests, lint, typecheck, audit and diff. The canonical COOK_MODE design and critique paths currently contain legacy artifacts: before Stage 2, refresh the design for #8 and obtain a new independent critique; after Stage 4 captures new 390px/320px evidence, replace the legacy authority report. Runtime/PostgreSQL/real DB/component/E2E/visual/remote/drain evidence is future. Implementation waits for #7 runtime and cook-mode-whole-board. #8 owns exact-pantry complete, batch ledger, functional weight UI and R/R+1 gate; #9 owns meal-log links, #11 final weight/LEFTOVERS design, and R+2 activation remains Manual Only."
+}
