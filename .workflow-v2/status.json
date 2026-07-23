@@ -2418,6 +2418,39 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "personal-recipe-editor-decoupling",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/personal-recipe-editor-decoupling",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/personal-recipe-editor-decoupling pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
+        "node scripts/validate-automation-spec.mjs --slice personal-recipe-editor-decoupling",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/personal-recipe-editor-shell.test.tsx tests/personal-recipe-editor-navigation.test.tsx tests/personal-recipe-editor-dirty-state.test.tsx tests/personal-recipe-editor-media-tags.test.tsx tests/recipe-detail-personal-actions.test.tsx",
+        "pnpm verify:frontend:pr",
+        "pnpm test:e2e:regression:ci --grep personal-recipe-editor-decoupling",
+        "pnpm test:e2e:a11y",
+        "pnpm test:e2e:visual",
+        "pnpm qa:explore -- --slice personal-recipe-editor-decoupling",
+        "pnpm qa:eval -- --checklist .artifacts/qa/personal-recipe-editor-decoupling/latest/exploratory-checklist.json --report .artifacts/qa/personal-recipe-editor-decoupling/latest/exploratory-report.json",
+        "pnpm verify:frontend",
+        "pnpm validate:exploratory-qa-evidence -- --slice personal-recipe-editor-decoupling",
+        "pnpm validate:closeout-sync -- --slice personal-recipe-editor-decoupling",
+        "git diff --check"
+      ],
+      "notes": "Roadmap status is docs while workflow lifecycle intentionally remains planned. Approval stays not_started until fresh separate Codex internal 1.5, security/ownership and five-axis reviewers approve with zero required findings. Stage 1 embeds the required RECIPE_DETAIL/editor wireframe; component/E2E/visual/a11y/exploratory and 390px/320px design-authority evidence are future Stage 4 artifacts, not commands claimed executable in this docs PR. Implementation waits for #3 runtime and merged media/tag predecessors. #5 owns editor composition/navigation only; #6 owns writes and external personal editor activation stays dark until the approved snapshot-v2 gate.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }
