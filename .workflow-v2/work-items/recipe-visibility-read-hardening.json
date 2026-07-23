@@ -1,0 +1,158 @@
+{
+  "id": "recipe-visibility-read-hardening",
+  "title": "Recipe visibility read hardening",
+  "summary": "private, deleted and quarantined-owner recipe/tag existence를 public read matrix에서 차단하고, generation-aware managed image registry와 ordered cleanup을 F0 lifecycle에 결합한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "public recipe/tag/cache/SEO와 managed image lifecycle이 parent recipe visibility와 session-bound account generation보다 넓어지지 않게 하면서 기존 pinned history와 owner-neutral public content를 보존한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for authoring, repair, implementation, review, security, DB, design, operations, or closeout",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, backend/data/storage implementation, security/DB review, five-axis review, existing-consumer implementation/review, and final closeout; no session approves its own work",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization-hotfix merged and deployed",
+    "cooking-meal-log contract-evolution merged as PR #1072",
+    "account-session-generation-foundation Stage 1 docs merged as PR #1073; runtime implementation is a Stage 2 predecessor",
+    "31-recipe-media-tags merged",
+    "36e-recipe-tags-frontend merged",
+    "product-ingredient-link-foundation Stage 1 docs merged as PR #1076",
+    "runtime activation requires F0 plus this slice joint cutover readiness; this does not block the approved Stage 0 docs sequence"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/recipe-visibility-read-hardening/README.md",
+      "docs/workpacks/recipe-visibility-read-hardening/acceptance.md",
+      "docs/workpacks/recipe-visibility-read-hardening/automation-spec.json",
+      "docs/workpacks/account-session-generation-foundation/README.md",
+      "docs/workpacks/31-recipe-media-tags/README.md",
+      "docs/workpacks/36e-recipe-tags-frontend/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/security-performance-design.md",
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/approval-and-loops.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "node scripts/verify-recipe-visibility-read-hardening-remote.mjs --mode post-merge-read-only from merged exact SHA only",
+      "deployed public list detail themes tags sitemap and cache non-disclosure smoke",
+      "remote RLS grant function trigger bucket policy and exact principal inventory",
+      "approved fixture Storage replay for upload takeover cancel attach first-404 late-object and compensation",
+      "legacy orphan inventory report proves enqueue and delete zero",
+      "Manual Only launchd install secret host power login sleep and external heartbeat evidence",
+      "production generation cutover database and storage writes remain zero until approved joint activation"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 6,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/recipe-visibility-read-hardening pnpm validate:workpack -- --slice recipe-visibility-read-hardening",
+      "node scripts/validate-automation-spec.mjs --slice recipe-visibility-read-hardening",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/recipe-visibility-read-hardening.test.ts tests/recipe-visibility-routes.test.ts tests/recipe-visibility-security.test.ts tests/recipe-image-registry.test.ts tests/recipe-image-lifecycle.test.ts tests/recipe-visibility-account-delete.test.ts",
+      "pnpm test:recipe-visibility-read-hardening:postgres",
+      "pnpm verify:backend",
+      "pnpm account-maintenance:scheduler:verify",
+      "pnpm exec vitest run tests/recipe-visibility-consumers.test.tsx tests/recipe-image-upload-client.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep recipe-visibility-read-hardening",
+      "pnpm qa:explore -- --slice recipe-visibility-read-hardening",
+      "pnpm qa:eval -- --checklist .artifacts/qa/recipe-visibility-read-hardening/latest/exploratory-checklist.json --report .artifacts/qa/recipe-visibility-read-hardening/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm validate:exploratory-qa-evidence -- --slice recipe-visibility-read-hardening",
+      "pnpm validate:closeout-sync -- --slice recipe-visibility-read-hardening",
+      "node scripts/verify-recipe-visibility-read-hardening-remote.mjs --mode post-merge-read-only",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/recipe-visibility-read-hardening pnpm validate:workpack -- --slice recipe-visibility-read-hardening",
+      "node scripts/validate-automation-spec.mjs --slice recipe-visibility-read-hardening",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of all five Stage 1 core artifacts plus roadmap and status projections",
+      "separate Codex security and DB review of public read matrix RLS grants lifecycle image CAS outbox quarantine and owner-neutral preservation",
+      "separate Codex five-axis review",
+      "separate Codex Stage 3 implementation review and final closeout review"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "official-recipe-visibility-tag-image-and-account-lifecycle-contract-only",
+      "public-private-deleted-quarantined-owner-read-matrix",
+      "historical-anchor-preservation-without-general-reader-bypass",
+      "parent-bounded-tag-direct-and-aggregate-nondisclosure",
+      "owner-generation-private-and-owner-neutral-public-image-shapes",
+      "server-only-storage-and-registry-mutation",
+      "idempotency-quota-lease-takeover-finalize-attach-cancel-race-matrix",
+      "first-404-recheck-late-object-and-permanent-tombstone",
+      "contiguous-generation-terminal-barrier-before-auth-deletion",
+      "legacy-positive-visibility-migration-and-orphan-delete-zero",
+      "launchd-ordered-tick-heartbeat-alert-recovery-manual-only-gate",
+      "existing-manual-recipe-create-behavior-only-consumer-regression",
+      "f0-plus-slice3-joint-activation-gate",
+      "merged-exact-sha-remote-read-only-evidence",
+      "independent-codex-required-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "RECIPE_DETAIL fork editor delete CTA or layout owned by successor #5",
+    "Content snapshot Meal authority personal write and propagation owned by successors #4 #6 and #7",
+    "ACCOUNT_QUARANTINE UI owned by F0",
+    "Recipe-book object picker UI or in-progress MYPAGE and RECIPEBOOK_DETAIL files",
+    "Legacy orphan deletion or deletion manifest approval",
+    "Arbitrary external URL conversion to managed object",
+    "Vercel Cron as P0 scheduler or claimed 24 by 7 availability",
+    "User-facing history trash restore or a new public restore endpoint",
+    "Unmerged remote migration production database or Storage writes"
+  ],
+  "open_questions": [],
+  "notes": "Roadmap status moves planned to docs in this Stage 1 PR while workflow lifecycle remains planned until Stage 2. Approval remains not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve with zero required findings. Stage 1 verify_commands are only current docs validators, focused workflow tests, lint, typecheck, dependency audit and diff check. Visibility, tag, image registry/lifecycle, PostgreSQL, Storage replay, scheduler, client, Playwright, exploratory QA and remote verifier commands are future Stage 2/4/closeout artifacts that must be created TDD-first. Stage 4 changes only existing MANUAL_RECIPE_CREATE behavior/states and adds no visual hierarchy. Implementation waits for F0 and the merged recipe media/tag predecessors; joint activation remains off until the release gates close."
+}
