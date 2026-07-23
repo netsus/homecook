@@ -18,6 +18,7 @@ describe("account session generation security function inventory", () => {
 
   it("validates the additive manifest without requiring a live database", () => {
     const manifest = JSON.parse(readFileSync(ADDITIVE_MANIFEST_PATH, "utf8")) as {
+      deployment_state: string;
       functions: unknown[];
     };
     const result = spawnSync(
@@ -36,7 +37,7 @@ describe("account session generation security function inventory", () => {
 
     expect(result.status, output).toBe(0);
     expect(output).toContain(
-      `${manifest.functions.length} pre-deployment additive application functions`,
+      `${manifest.functions.length} ${manifest.deployment_state} additive application functions`,
     );
   }, 15_000);
 

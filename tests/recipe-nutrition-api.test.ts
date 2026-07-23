@@ -196,20 +196,24 @@ describe("recipe nutrition API boundaries", () => {
       calculated_at: "2026-07-16T00:00:00.000Z",
     };
     const snapshotQuery = queryResult<Record<string, unknown> | null>(snapshotRow);
-    const from = vi.fn((table: string) => {
+    const routeFrom = vi.fn((table: string) => {
       if (table === "recipes") return recipeQuery;
       if (table === "recipe_sources") return sourceQuery;
       if (table === "recipe_ingredients") return ingredientsQuery;
       if (table === "recipe_steps") return stepsQuery;
       if (table === "meals") return mealsQuery;
+      throw new Error(`unexpected route table: ${table}`);
+    });
+    const serviceFrom = vi.fn((table: string) => {
       if (table === "recipe_nutrition_snapshots") return snapshotQuery;
-      throw new Error(`unexpected table: ${table}`);
+      throw new Error(`unexpected service table: ${table}`);
     });
     createRouteHandlerClient.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
+      from: routeFrom,
     });
     createServiceRoleClient.mockReturnValue({
-      from,
+      from: serviceFrom,
       rpc: vi.fn(() => ({
         maybeSingle: vi.fn(async () => ({ data: { id: "recipe-1", view_count: 2 }, error: null })),
       })),
@@ -253,8 +257,9 @@ describe("recipe nutrition API boundaries", () => {
     });
     expect(snapshotQuery.eq).toHaveBeenCalledWith("recipe_id", "recipe-1");
     expect(snapshotQuery.eq).toHaveBeenCalledWith("is_current", true);
-    expect(from.mock.calls.map(([table]) => table)).not.toContain("nutrition_values");
-    expect(from.mock.calls.map(([table]) => table)).not.toContain("ingredient_nutrition_profiles");
+    expect(routeFrom.mock.calls.map(([table]) => table)).not.toContain("nutrition_values");
+    expect(routeFrom.mock.calls.map(([table]) => table)).not.toContain("ingredient_nutrition_profiles");
+    expect(serviceFrom).toHaveBeenCalledWith("recipe_nutrition_snapshots");
 
     snapshotQuery.setResult({
       ...snapshotRow,

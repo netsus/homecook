@@ -48,7 +48,7 @@ describe("36c public tags route", () => {
         };
       }),
     };
-    createServiceRoleClient.mockReturnValue(dbClient);
+    createRouteHandlerClient.mockResolvedValue(dbClient);
 
     const { GET } = await importTagsRoute();
     const response = await GET(new NextRequest(
@@ -80,7 +80,7 @@ describe("36c public tags route", () => {
     const dbClient = {
       rpc: vi.fn(),
     };
-    createServiceRoleClient.mockReturnValue(dbClient);
+    createRouteHandlerClient.mockResolvedValue(dbClient);
 
     const { GET } = await importTagsRoute();
     const response = await GET(new NextRequest(

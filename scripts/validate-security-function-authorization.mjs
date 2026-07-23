@@ -4,6 +4,11 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 import { resolveSecurityFunctionLinkedRoot } from "./security-function-linked-root.mjs";
+import {
+  assertExpectedAdditiveDeploymentState,
+  assertHistoricalReplacementIdentity,
+  classifyAdditiveDeploymentState,
+} from "./security-function-additive-state.mjs";
 
 const REPO_ROOT = process.cwd();
 const MIGRATION_PATH = path.join(
@@ -15,16 +20,34 @@ const INVENTORY_PATH = process.env.SECURITY_FUNCTION_INVENTORY_PATH
     REPO_ROOT,
     "docs/security/security-definer-function-authorization-inventory.json",
   );
-const ADDITIVE_MANIFEST_PATH = process.env.SECURITY_FUNCTION_ADDITIVE_MANIFEST_PATH
-  ?? path.join(
-    REPO_ROOT,
-    "docs/security/account-session-generation-security-function-authorization-manifest.json",
-  );
-const ADDITIVE_MIGRATION_PATH = process.env.SECURITY_FUNCTION_ADDITIVE_MIGRATION_PATH
-  ?? path.join(
-    REPO_ROOT,
-    "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
-  );
+const ADDITIVE_SOURCES = [
+  {
+    manifestPath: process.env.SECURITY_FUNCTION_ADDITIVE_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/account-session-generation-security-function-authorization-manifest.json",
+      ),
+    migrationPath: process.env.SECURITY_FUNCTION_ADDITIVE_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+      ),
+  },
+  {
+    manifestPath:
+      process.env.SECURITY_FUNCTION_RECIPE_VISIBILITY_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/recipe-visibility-read-hardening-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_RECIPE_VISIBILITY_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
+      ),
+  },
+];
 const LOCAL_DATABASE_URL =
   process.env.SECURITY_FUNCTION_DATABASE_URL
   ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
@@ -207,6 +230,7 @@ function normalizeFunctionArgument(argument) {
   const trimmed = argument
     .replace(/--.*$/gmu, "")
     .replace(/\s+/gu, " ")
+    .replace(/\s+default\s+.*$/iu, "")
     .trim();
   if (!trimmed) return "";
 
@@ -230,14 +254,31 @@ function parseCreatedFunctionDefinitions(migration) {
     const argumentTypes = argumentsSql
       ? argumentsSql.split(",").map(normalizeFunctionArgument)
       : [];
-    const openingDelimiter = migration.indexOf("$function$", match.index);
+    const definitionTail = migration.slice(match.index);
+    const delimiterMatch = definitionTail.match(/\$[a-z_][a-z0-9_]*\$|\$\$/iu);
+    const delimiter = delimiterMatch?.[0] ?? null;
+    const openingDelimiter = delimiter
+      ? match.index + delimiterMatch.index
+      : -1;
     const closingDelimiter = openingDelimiter < 0
       ? -1
-      : migration.indexOf("$function$;", openingDelimiter + "$function$".length);
+      : migration.indexOf(
+        `${delimiter};`,
+        openingDelimiter + delimiter.length,
+      );
     if (openingDelimiter < 0 || closingDelimiter < 0) {
       throw new Error(`function body delimiter is missing for ${match[1]}`);
     }
-    const definitionSql = migration.slice(match.index, closingDelimiter + "$function$;".length);
+    const definitionSql = migration.slice(
+      match.index,
+      closingDelimiter + delimiter.length + 1,
+    );
+    const roleTransitions = [
+      ...migration
+        .slice(0, match.index)
+        .matchAll(/\b(set local role ([a-z_][a-z0-9_]*)|reset role)\s*;/giu),
+    ];
+    const latestRoleTransition = roleTransitions.at(-1);
     const searchPathMatch = definitionSql.match(/set\s+search_path\s*=\s*([^\n]+)\n/iu);
     if (!searchPathMatch) {
       throw new Error(`function search_path is missing for ${match[1]}`);
@@ -251,6 +292,10 @@ function parseCreatedFunctionDefinitions(migration) {
       safe_search_path: searchPathMatch[1]
         .split(",")
         .map((entry) => entry.trim().replace(/^"|"$/gu, "").toLowerCase()),
+      created_as_role:
+        latestRoleTransition?.[1].toLowerCase() === "reset role"
+          ? null
+          : latestRoleTransition?.[2]?.toLowerCase() ?? null,
     });
   }
 
@@ -296,7 +341,9 @@ function parseExecuteAcl(migration, signature) {
 
 function assertAdditiveContract(baseContract, manifest, migration) {
   if (manifest.schema_version !== 1
-    || manifest.deployment_state !== "pre-deployment"
+    || !new Set(["pre-deployment", "post-migration"]).has(
+      manifest.deployment_state,
+    )
     || manifest.baseline_application_contract_count !== baseContract.length) {
     throw new Error("additive security function manifest metadata is invalid");
   }
@@ -307,9 +354,31 @@ function assertAdditiveContract(baseContract, manifest, migration) {
     throw new Error("additive security function manifest signatures are empty or duplicated");
   }
   const baseSignatures = new Set(baseContract.map((entry) => entry.signature));
-  const overlap = signatures.filter((signature) => baseSignatures.has(signature));
-  if (overlap.length > 0) {
-    throw new Error(`additive security function overlaps the historical baseline: ${overlap.join(", ")}`);
+  const unapprovedOverlap = functions
+    .filter(
+      (entry) =>
+        baseSignatures.has(entry.signature)
+        && entry.replaces_baseline !== true,
+    )
+    .map((entry) => entry.signature);
+  const invalidReplacement = functions
+    .filter(
+      (entry) =>
+        !baseSignatures.has(entry.signature)
+        && entry.replaces_baseline !== undefined,
+    )
+    .map((entry) => entry.signature);
+  if (unapprovedOverlap.length > 0 || invalidReplacement.length > 0) {
+    throw new Error(
+      "additive baseline replacement contract is invalid; "
+        + `unapproved=${unapprovedOverlap.join(",") || "none"}; `
+        + `not-in-baseline=${invalidReplacement.join(",") || "none"}`,
+    );
+  }
+  if (!functions.some((entry) => entry.replaces_baseline !== true)) {
+    throw new Error(
+      "additive function contract requires at least one new deployment marker",
+    );
   }
 
   const definitions = parseCreatedFunctionDefinitions(migration);
@@ -328,7 +397,12 @@ function assertAdditiveContract(baseContract, manifest, migration) {
     const definition = definitionMap.get(entry.signature);
     if (entry.control_class !== "application-controlled"
       || !new Set(["read-only", "mutation", "trigger/internal", "auth-hook"]).has(entry.effect)
-      || !new Set(["service-internal", "auth-hook-internal"]).has(entry.exposure)
+      || !new Set([
+        "public",
+        "authenticated-self",
+        "service-internal",
+        "auth-hook-internal",
+      ]).has(entry.exposure)
       || !new Set(["definer", "invoker"]).has(entry.security_mode)
       || definition.security_mode !== entry.security_mode
       || JSON.stringify(definition.safe_search_path) !== JSON.stringify(entry.safe_search_path)
@@ -355,7 +429,9 @@ function assertAdditiveContract(baseContract, manifest, migration) {
       const ownerStatement = collapseSql(
         `alter function ${entry.signature} owner to ${entry.owner}`,
       );
-      if (!collapseSql(migration).includes(ownerStatement)) {
+      const normalizedMigration = collapseSql(migration);
+      if (!normalizedMigration.includes(ownerStatement)
+        && definition.created_as_role !== entry.owner) {
         throw new Error(`additive function owner drift for ${entry.signature}`);
       }
     }
@@ -570,15 +646,13 @@ function assertRecordedEnvironmentPolicy(inventory, environment) {
 }
 
 function assertAdditiveEnvironment(additiveContract, currentRows) {
+  const deploymentState = classifyAdditiveDeploymentState(
+    additiveContract,
+    currentRows,
+  );
+  if (deploymentState === "pre-deployment") return deploymentState;
+
   const currentMap = new Map(currentRows.map((row) => [row.signature, row]));
-  const present = additiveContract.filter((entry) => currentMap.has(entry.signature));
-  if (present.length === 0) return "pre-deployment";
-  if (present.length !== additiveContract.length) {
-    const missing = additiveContract
-      .filter((entry) => !currentMap.has(entry.signature))
-      .map((entry) => entry.signature);
-    throw new Error(`partially deployed additive function contract: ${missing.join(", ")}`);
-  }
 
   for (const entry of additiveContract) {
     const row = currentMap.get(entry.signature);
@@ -604,10 +678,16 @@ function assertAdditiveEnvironment(additiveContract, currentRows) {
     }
   }
 
-  return "post-migration";
+  return deploymentState;
 }
 
-function assertEnvironment(inventory, environment, currentRows, additiveContract) {
+function assertEnvironment(
+  inventory,
+  environment,
+  currentRows,
+  additiveContract,
+  deployedReplacementSignatures,
+) {
   const environmentState = inventory.environment_states?.[environment];
   const currentMap = new Map(currentRows.map((row) => [row.signature, row]));
   const inventorySignatures = new Set([
@@ -624,6 +704,15 @@ function assertEnvironment(inventory, environment, currentRows, additiveContract
   for (const entry of inventory.functions) {
     const row = currentMap.get(entry.signature);
     const expectedObservation = entry.observations[environment];
+    if (deployedReplacementSignatures.has(entry.signature)) {
+      assertHistoricalReplacementIdentity(
+        entry.signature,
+        expectedObservation,
+        row,
+      );
+      continue;
+    }
+
     const actualObservation = normalizeObservation(row);
 
     if (JSON.stringify(actualObservation) !== JSON.stringify(expectedObservation)) {
@@ -652,14 +741,27 @@ function assertEnvironment(inventory, environment, currentRows, additiveContract
 }
 
 const migration = await readFile(MIGRATION_PATH, "utf8");
-const additiveMigration = await readFile(ADDITIVE_MIGRATION_PATH, "utf8");
-const additiveManifest = JSON.parse(await readFile(ADDITIVE_MANIFEST_PATH, "utf8"));
-const applicationContract = parseApplicationContract(migration);
-const additiveContract = assertAdditiveContract(
-  applicationContract,
-  additiveManifest,
-  additiveMigration,
+const additiveSources = await Promise.all(
+  ADDITIVE_SOURCES.map(async ({ manifestPath, migrationPath }) => ({
+    manifest: JSON.parse(await readFile(manifestPath, "utf8")),
+    migration: await readFile(migrationPath, "utf8"),
+  })),
 );
+const applicationContract = parseApplicationContract(migration);
+const additiveContracts = additiveSources.map(({ manifest, migration: sourceMigration }) => ({
+  slice: manifest.slice,
+  expectedState: manifest.deployment_state,
+  functions: assertAdditiveContract(
+    applicationContract,
+    manifest,
+    sourceMigration,
+  ),
+}));
+const additiveContract = additiveContracts.flatMap(({ functions }) => functions);
+const additiveSignatures = additiveContract.map((entry) => entry.signature);
+if (new Set(additiveSignatures).size !== additiveSignatures.length) {
+  throw new Error("additive security function signatures overlap across manifests");
+}
 if (contractOnly) {
   if (mode !== "check" || useLinkedRemote) {
     throw new Error("--contract-only cannot be combined with write or remote modes");
@@ -677,9 +779,14 @@ if (recordedInventory) {
   }
 }
 if (contractOnly) {
+  const summary = additiveContracts
+    .map(
+      ({ slice, expectedState, functions }) =>
+        `${slice}:${functions.length} ${expectedState} additive application functions`,
+    )
+    .join(", ");
   console.warn(
-    "security function authorization contracts are valid; "
-      + `${additiveContract.length} pre-deployment additive application functions classified`,
+    `security function authorization contracts are valid; ${summary} classified`,
   );
   process.exit(0);
 }
@@ -702,14 +809,41 @@ if (mode === "write") {
   console.warn(`wrote ${inventory.functions.length} classified functions to ${INVENTORY_PATH}`);
 } else {
   const inventory = recordedInventory;
+  const deployedReplacementSignatures = new Map();
+  const additiveStates = [];
   for (const [environment, rows] of Object.entries(environments)) {
-    assertEnvironment(inventory, environment, rows, additiveContract);
+    const environmentReplacements = new Set();
+    for (const { slice, expectedState, functions } of additiveContracts) {
+      const actualState = assertAdditiveEnvironment(functions, rows);
+      assertExpectedAdditiveDeploymentState(
+        environment,
+        slice,
+        expectedState,
+        actualState,
+      );
+      if (actualState === "post-migration") {
+        for (const entry of functions) {
+          if (entry.replaces_baseline === true) {
+            environmentReplacements.add(entry.signature);
+          }
+        }
+      }
+      additiveStates.push(`${environment}/${slice}:${actualState}`);
+    }
+    deployedReplacementSignatures.set(environment, environmentReplacements);
   }
-  const additiveStates = Object.entries(environments).map(([environment, rows]) =>
-    `${environment}:${assertAdditiveEnvironment(additiveContract, rows)}`);
+  for (const [environment, rows] of Object.entries(environments)) {
+    assertEnvironment(
+      inventory,
+      environment,
+      rows,
+      additiveContract,
+      deployedReplacementSignatures.get(environment),
+    );
+  }
   console.warn(
     `security function authorization inventory is valid for ${Object.keys(environments).join("+")}; `
-      + `${additiveContract.length} pre-deployment additive application functions `
+      + `${additiveContract.length} additive application functions `
       + `classified (${additiveStates.join(",")})`,
   );
 }

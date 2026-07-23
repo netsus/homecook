@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slice": "account-session-generation-foundation",
   "migration": "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
-  "deployment_state": "pre-deployment",
+  "deployment_state": "post-migration",
   "baseline_application_contract_count": 74,
   "functions": [
     {

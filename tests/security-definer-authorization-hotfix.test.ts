@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 
 import { describe, expect, it } from "vitest";
 
+import { assertExpectedAdditiveDeploymentState } from "../scripts/security-function-additive-state.mjs";
 import { resolveSecurityFunctionLinkedRoot } from "../scripts/security-function-linked-root.mjs";
 
 const MIGRATION_PATH =
@@ -114,10 +115,53 @@ describe("SECURITY DEFINER mutation authorization hotfix", () => {
 
   it("keeps pre-deployment remote baselines verifiable without enforcing unmerged grants", async () => {
     const validator = await readFile(VALIDATOR_PATH, "utf8");
+    const additiveStateGuard = await readFile(
+      "scripts/security-function-additive-state.mjs",
+      "utf8",
+    );
 
     expect(validator).toContain('environmentState === "pre-deployment"');
     expect(validator).toContain(
-      "assertEnvironment(inventory, environment, rows, additiveContract)",
+      "deployedReplacementSignatures.get(environment)",
+    );
+    expect(validator).toContain(
+      "assertExpectedAdditiveDeploymentState(",
+    );
+    expect(validator).toContain(
+      "`${additiveContract.length} additive application functions `",
+    );
+    expect(validator).not.toContain(
+      "`${additiveContract.length} pre-deployment additive application functions `",
+    );
+    expect(additiveStateGuard).toContain('environment !== "remote"');
+    expect(additiveStateGuard).toContain("actualState !== expectedState");
+
+    expect(() =>
+      assertExpectedAdditiveDeploymentState(
+        "local",
+        "recipe-visibility-read-hardening",
+        "pre-deployment",
+        "post-migration",
+      )
+    ).not.toThrow();
+    expect(() =>
+      assertExpectedAdditiveDeploymentState(
+        "remote",
+        "recipe-visibility-read-hardening",
+        "pre-deployment",
+        "pre-deployment",
+      )
+    ).not.toThrow();
+    expect(() =>
+      assertExpectedAdditiveDeploymentState(
+        "remote",
+        "recipe-visibility-read-hardening",
+        "pre-deployment",
+        "post-migration",
+      )
+    ).toThrowError(
+      "remote additive deployment state drift for recipe-visibility-read-hardening: "
+        + "expected pre-deployment, observed post-migration",
     );
   });
 

@@ -133,7 +133,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -154,5 +154,5 @@
     "Unmerged remote migration production database or Storage writes"
   ],
   "open_questions": [],
-  "notes": "Roadmap status moves planned to docs in this Stage 1 PR while workflow lifecycle remains planned until Stage 2. Approval remains not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve with zero required findings. Stage 1 verify_commands are only current docs validators, focused workflow tests, lint, typecheck, dependency audit and diff check. Visibility, tag, image registry/lifecycle, PostgreSQL, Storage replay, scheduler, client, Playwright, exploratory QA and remote verifier commands are future Stage 2/4/closeout artifacts that must be created TDD-first. Stage 4 changes only existing MANUAL_RECIPE_CREATE behavior/states and adds no visual hierarchy. Implementation waits for F0 and the merged recipe media/tag predecessors; joint activation remains off until the release gates close."
+  "notes": "Stage 2 backend implementation is in progress on feature/be-recipe-visibility-read-hardening after F0 and the merged recipe media/tag predecessors. Approval remains not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve the frozen implementation tree with zero required findings. Public recipe/tag readers and the isolated PostgreSQL fresh/replay gate are the current small backend PR executable subset. verification.required_checks intentionally remains the full-slice closeout contract and is not a claim that deferred image registry/lifecycle, Storage replay, scheduler, existing-consumer, Playwright, exploratory QA or merged-exact-SHA remote verifier artifacts exist in this PR; those remain later owning-stage gates. Stage 4 changes only existing MANUAL_RECIPE_CREATE behavior/states and adds no visual hierarchy. Joint generation/account-delete activation remains off until F0 and this slice pass the complete release gate."
 }

@@ -2,7 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const limit = vi.fn();
 const range = vi.fn();
-const query = { limit, order: vi.fn(), range };
+const query = {
+  eq: vi.fn(),
+  is: vi.fn(),
+  limit,
+  order: vi.fn(),
+  range,
+};
+query.eq.mockReturnValue(query);
+query.is.mockReturnValue(query);
 query.order.mockReturnValue(query);
 const select = vi.fn(() => query);
 

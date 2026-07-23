@@ -4,8 +4,8 @@
 
 ## Happy Path
 
-- [ ] public list/HOME/theme/search/sitemap returns only public, not-deleted recipes whose user owner is not quarantined <!-- omo:id=accept-visibility-public-read;stage=2;scope=backend;review=3,6 -->
-- [ ] owner can read current private detail while anon and another owner receive indistinguishable 404 <!-- omo:id=accept-visibility-private-owner;stage=2;scope=backend;review=3,6 -->
+- [x] public list/HOME/theme/search/sitemap returns only public, not-deleted recipes whose user owner is not quarantined <!-- omo:id=accept-visibility-public-read;stage=2;scope=backend;review=3,6 -->
+- [x] owner can read current private detail while anon and another owner receive indistinguishable 404 <!-- omo:id=accept-visibility-private-owner;stage=2;scope=backend;review=3,6 -->
 - [ ] existing Meal/shopping/session/batch/meal-log/snapshot readers resolve pinned deleted recipe history for the authorized resource owner <!-- omo:id=accept-visibility-historical-anchor;stage=2;scope=backend;review=3,6 -->
 - [ ] recovery activate restores eligible stored visibility without creating new owner-neutral rows or changing system content <!-- omo:id=accept-visibility-quarantine-recovery;stage=2;scope=backend;review=3,6 -->
 - [ ] personal upload creates a private registry object, returns object ID plus short signed URL and reissues the URL on replay <!-- omo:id=accept-image-private-upload;stage=2;scope=backend;review=3,6 -->
@@ -14,7 +14,7 @@
 
 ## Visibility / State
 
-- [ ] private and deleted recipe/tag association never appears in `/tags`, tag filter, themes, usage count, cache, sitemap or SEO <!-- omo:id=accept-visibility-tag-matrix;stage=2;scope=backend;review=3,6 -->
+- [x] private and deleted recipe/tag association never appears in `/tags`, tag filter, themes, usage count, cache, sitemap or SEO <!-- omo:id=accept-visibility-tag-matrix;stage=2;scope=backend;review=3,6 -->
 - [ ] `recipe_tags.visibility` is derived from the locked parent and client/direct DML cannot widen it <!-- omo:id=accept-visibility-tag-derived;stage=2;scope=backend;review=3,6 -->
 - [ ] soft delete is idempotent, blocks new select/book/snapshot/start and leaves history FK/snapshot intact <!-- omo:id=accept-visibility-soft-delete;stage=2;scope=backend;review=3,6 -->
 - [ ] historical reader authority cannot be used to fetch general deleted/private detail or make a new plan/session <!-- omo:id=accept-visibility-history-no-bypass;stage=2;scope=backend;review=3,6 -->

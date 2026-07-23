@@ -37,6 +37,7 @@
     "account-maintenance:scheduler:uninstall": "node scripts/account-maintenance-scheduler-uninstall.mjs",
     "account-maintenance:scheduler:verify": "node scripts/account-maintenance-scheduler-verify.mjs",
     "test:account-session-generation:postgres": "node scripts/run-account-session-generation-postgres-integration.mjs",
+    "test:recipe-visibility-read-hardening:postgres": "node scripts/run-recipe-visibility-read-hardening-postgres-integration.mjs",
     "test:nutrition-model:postgres": "node scripts/run-ingredient-nutrition-postgres-integration.mjs",
     "test:recipe-nutrition:postgres": "node scripts/run-recipe-nutrition-postgres-integration.mjs",
     "test:prepared-food-catalog:postgres": "node scripts/run-prepared-food-catalog-postgres-integration.mjs",

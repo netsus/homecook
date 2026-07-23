@@ -16,7 +16,10 @@ import {
   readRecipeCardUserStatuses,
   type RecipeCardUserStatusDbClient,
 } from "@/lib/server/recipe-card-user-status";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createRouteHandlerClient,
+  createServiceRoleClient,
+} from "@/lib/supabase/server";
 import type { RecipeCardItem, RecipeThemesData } from "@/types/recipe";
 
 interface ThemeRecipeRow {
@@ -71,6 +74,7 @@ interface ThemeSelectQuery<T> {
   eq(column: string, value: string): ThemeSelectQuery<T>;
   gte(column: string, value: string): ThemeSelectQuery<T>;
   in(column: string, values: string[]): ThemeSelectQuery<T>;
+  is(column: string, value: null): ThemeSelectQuery<T>;
   limit(count: number): ThemeSelectQuery<T>;
   order(column: string, options?: { ascending?: boolean }): ThemeSelectQuery<T>;
   then: ArrayResult<T>["then"];
@@ -102,6 +106,7 @@ interface ThemeDbClient {
 const RECENT_PLANNER_THEME_DAYS = 3;
 const RECIPES_PER_THEME = 10;
 const CARD_QUERY_LIMIT = 100;
+const RECENT_PLANNER_ROW_LIMIT = 500;
 const RECIPE_CARD_COLUMNS =
   "id, title, thumbnail_url, tags, base_servings, view_count, like_count, save_count, source_type";
 
@@ -154,7 +159,10 @@ function getRecentPlannerSinceIso(now = new Date()) {
   ).toISOString();
 }
 
-function rankRecipeIdsByRecentPlannerUse(rows: MealThemeRow[]) {
+function rankRecipeIdsByRecentPlannerUse(
+  rows: MealThemeRow[],
+  limit = RECIPES_PER_THEME,
+) {
   const counts = new Map<string, number>();
 
   rows.forEach((row) => {
@@ -174,7 +182,7 @@ function rankRecipeIdsByRecentPlannerUse(rows: MealThemeRow[]) {
       return leftId.localeCompare(rightId);
     })
     .map(([recipeId]) => recipeId)
-    .slice(0, RECIPES_PER_THEME);
+    .slice(0, limit);
 }
 
 function normalizeMethodRows(rows: RecipeStepMethodRow[]): RecipeMethodCodeRow[] {
@@ -200,23 +208,44 @@ function sortRecipeIdsByCardPopularity(recipeIds: string[], rowById: Map<string,
     .slice(0, RECIPES_PER_THEME);
 }
 
-async function readRecipeCardsByIds(dbClient: ThemeDbClient, recipeIds: string[]) {
-  const ids = uniqueIds(recipeIds).slice(0, CARD_QUERY_LIMIT);
+async function readRecipeCardsByIds(
+  dbClient: ThemeDbClient,
+  recipeIds: string[],
+  maxRows = Number.POSITIVE_INFINITY,
+) {
+  const ids = uniqueIds(recipeIds);
 
   if (ids.length === 0) {
     return [];
   }
 
-  const result = await dbClient
-    .from("recipes")
-    .select(RECIPE_CARD_COLUMNS)
-    .in("id", ids);
+  const visibleRows: RecipeCardRow[] = [];
 
-  if (result.error || !result.data) {
-    return [];
+  for (let offset = 0; offset < ids.length; offset += CARD_QUERY_LIMIT) {
+    const result = await dbClient
+      .from("recipes")
+      .select(RECIPE_CARD_COLUMNS)
+      .eq("visibility", "public")
+      .is("deleted_at", null)
+      .in("id", ids.slice(offset, offset + CARD_QUERY_LIMIT));
+
+    if (result.error || !result.data) {
+      return [];
+    }
+
+    visibleRows.push(...result.data);
+
+    if (visibleRows.length >= maxRows) {
+      break;
+    }
   }
 
-  return result.data;
+  const rowById = new Map(visibleRows.map((row) => [row.id, row]));
+
+  return ids
+    .map((id) => rowById.get(id))
+    .filter((row): row is RecipeCardRow => Boolean(row))
+    .slice(0, maxRows);
 }
 
 function collectRecipeIngredientSets(rows: RecipeIngredientRow[]) {
@@ -365,8 +394,10 @@ export async function GET() {
 
   try {
     const routeClient = await createRouteHandlerClient();
-    const supabase = createServiceRoleClient() ?? routeClient;
+    const serviceClient = createServiceRoleClient() ?? routeClient;
+    const supabase = routeClient;
     const themeDbClient = supabase as unknown as ThemeDbClient;
+    const privateThemeDbClient = serviceClient as unknown as ThemeDbClient;
     const [
       baseRowsResult,
       youtubeRowsResult,
@@ -378,20 +409,26 @@ export async function GET() {
       .select(
         RECIPE_CARD_COLUMNS,
       )
+      .eq("visibility", "public")
+      .is("deleted_at", null)
       .order("view_count", { ascending: false })
       .order("id", { ascending: true })
         .limit(CARD_QUERY_LIMIT),
       themeDbClient
         .from("recipes")
         .select(RECIPE_CARD_COLUMNS)
+        .eq("visibility", "public")
+        .is("deleted_at", null)
         .eq("source_type", "youtube")
         .order("view_count", { ascending: false })
         .order("id", { ascending: true })
         .limit(RECIPES_PER_THEME),
-      themeDbClient
+      privateThemeDbClient
         .from("meals")
         .select("recipe_id")
-        .gte("created_at", getRecentPlannerSinceIso()),
+        .gte("created_at", getRecentPlannerSinceIso())
+        .order("created_at", { ascending: false })
+        .limit(RECENT_PLANNER_ROW_LIMIT),
       themeDbClient.rpc("list_home_theme_recipes", {
         p_tag_limit: 8,
         p_recipes_per_tag: 10,
@@ -404,9 +441,25 @@ export async function GET() {
 
     const rows = baseRowsResult.data ?? [];
     const youtubeRows = youtubeRowsResult.error ? [] : (youtubeRowsResult.data ?? []);
-    const recentPlannerRecipeIds = recentPlannerRowsResult.error
+    const recentPlannerRows = recentPlannerRowsResult.error
       ? []
-      : rankRecipeIdsByRecentPlannerUse(recentPlannerRowsResult.data ?? []);
+      : (recentPlannerRowsResult.data ?? []);
+    const visibleRecentPlannerRows = await readRecipeCardsByIds(
+      themeDbClient,
+      rankRecipeIdsByRecentPlannerUse(
+        recentPlannerRows,
+        RECENT_PLANNER_ROW_LIMIT,
+      ),
+      RECIPES_PER_THEME,
+    );
+    const visibleRecentPlannerIds = new Set(
+      visibleRecentPlannerRows.map((recipe) => recipe.id),
+    );
+    const recentPlannerRecipeIds = rankRecipeIdsByRecentPlannerUse(
+      recentPlannerRows.filter(
+        (row) => row.recipe_id !== null && visibleRecentPlannerIds.has(row.recipe_id),
+      ),
+    );
     const themeRows = themeRowsResult.error ? [] : (themeRowsResult.data ?? []);
     const methodRowsResult = rows.length === 0
       ? { data: [], error: null }
@@ -430,7 +483,6 @@ export async function GET() {
 
     const pantryRecipeIds = await readPantryMatchedRecipeIds(themeDbClient, userId);
     const supplementalRows = await readRecipeCardsByIds(themeDbClient, [
-      ...recentPlannerRecipeIds,
       ...pantryRecipeIds,
       ...noFlameRecipeIds,
     ]);
@@ -438,6 +490,7 @@ export async function GET() {
     [
       ...rows,
       ...youtubeRows,
+      ...visibleRecentPlannerRows,
       ...supplementalRows,
     ].forEach((row) => {
       rowById.set(row.id, row);
@@ -465,7 +518,7 @@ export async function GET() {
       ...themeRows.map((recipe) => recipe.id),
     ]);
     const userStatusByRecipeId = await readRecipeCardUserStatuses({
-      dbClient: supabase as unknown as RecipeCardUserStatusDbClient,
+      dbClient: serviceClient as unknown as RecipeCardUserStatusDbClient,
       recipeIds: allThemeRecipeIds,
       userId,
     });

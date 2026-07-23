@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "slice": "recipe-visibility-read-hardening",
+  "migration": "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.set_recipe_tags(uuid, jsonb, uuid, text)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ],
+      "replaces_baseline": true
+    },
+    {
+      "signature": "public.find_recipe_ids_by_public_tags(text, text)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "public",
+      "allowed_principals": [
+        "anon",
+        "authenticated"
+      ],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ],
+      "replaces_baseline": true
+    },
+    {
+      "signature": "public.list_public_recipe_tags(text, text, boolean, integer)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "public",
+      "allowed_principals": [
+        "anon",
+        "authenticated"
+      ],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ],
+      "replaces_baseline": true
+    },
+    {
+      "signature": "public.list_home_theme_recipes(integer, integer)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "public",
+      "allowed_principals": [
+        "anon",
+        "authenticated"
+      ],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ],
+      "replaces_baseline": true
+    },
+    {
+      "signature": "recipe_visibility_guard.is_owner_publicly_visible(uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "public",
+      "allowed_principals": [
+        "anon",
+        "authenticated"
+      ],
+      "security_mode": "definer",
+      "owner": "homecook_recipe_visibility_guard_owner",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    }
+  ]
+}

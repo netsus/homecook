@@ -976,7 +976,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_ingredients",
-      "line": 1221,
+      "line": 1226,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -990,7 +990,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_steps",
-      "line": 1229,
+      "line": 1234,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1004,7 +1004,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipes",
-      "line": 1204,
+      "line": 1209,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1634,7 +1634,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "create_manual_recipe",
-      "line": 1132,
+      "line": 1137,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1835,6 +1835,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-23T09:56:48.829Z",
-  "checksum": "9578e21b7c16177f310e703b7fcad802e73ce2e9776bbb9deee2b22865b4e679"
+  "generated_at": "2026-07-23T18:25:10.586Z",
+  "checksum": "b678ce0f3d9f480ddcb119cabc64d7dcb8c0d540b426837e9d5c4e0cd60c2289"
 }
