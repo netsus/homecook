@@ -2289,6 +2289,37 @@
       "blocked_reason_code": null
     },
     {
+      "id": "product-ingredient-link-foundation",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/product-ingredient-link-foundation",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/product-ingredient-link-foundation pnpm validate:workpack -- --slice product-ingredient-link-foundation",
+        "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/product-ingredient-link-foundation.test.ts tests/product-ingredient-link-routes.test.ts tests/product-ingredient-link-security.test.ts tests/product-ingredient-link-readers.test.ts tests/product-ingredient-link-account-delete.test.ts",
+        "pnpm test:product-ingredient-link-foundation:postgres",
+        "pnpm verify:backend",
+        "pnpm exec vitest run tests/product-ingredient-link-consumer.test.tsx",
+        "pnpm verify:frontend:pr",
+        "pnpm test:e2e:regression:ci --grep product-ingredient-link-foundation",
+        "pnpm verify:frontend",
+        "node scripts/verify-product-ingredient-link-remote.mjs --mode post-merge-read-only",
+        "git diff --check"
+      ],
+      "notes": "Roadmap status is docs while workflow lifecycle intentionally remains planned until Stage 2. Approval stays not_started until fresh, separate Codex internal 1.5, security/DB, and five-axis reviewers approve the Stage 1 artifacts with zero required findings. Link/reader/account-delete/consumer tests, PostgreSQL replay, backend/frontend verification, focused Playwright, and merged-exact-SHA remote read-only verification are planned Stage 2/4/closeout artifacts, not commands claimed executable in this docs PR. Stage 4 is behavior-only for existing HOME/PANTRY consumers and adds no visual scope. Implementation activation remains blocked until the F0 + #3 joint account-delete gate is satisfied.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
       "id": "prepared-food-search-relevance",
       "preset": "vertical-slice-strict",
       "branch": "docs/prepared-food-search-relevance",
