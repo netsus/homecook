@@ -17,6 +17,13 @@ import {
   parsePostAuthNextCookie,
   POST_AUTH_NEXT_COOKIE,
 } from "@/lib/auth/post-auth-next";
+import {
+  bootstrapAuthCallbackAccountGenerationIdentity,
+  readAuthCallbackAccountGenerationCapability,
+} from "@/lib/server/account-generation/auth-callback";
+import {
+  deriveVerifiedAccountGenerationSessionAuthority,
+} from "@/lib/server/account-generation/session-authority";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import {
   ensurePublicUserRow,
@@ -30,7 +37,14 @@ type AuthFailureCode =
   | "email_required"
   | "account_conflict"
   | "oauth_failed"
-  | "provider_resolution_failed";
+  | "provider_resolution_failed"
+  | "ACCOUNT_CUTOVER_QUARANTINED"
+  | "ACCOUNT_CUTOVER_UNCLASSIFIED"
+  | "ACCOUNT_DELETING"
+  | "ACCOUNT_DELETION_PENDING"
+  | "ACCOUNT_GENERATION_STALE"
+  | "ACCOUNT_LIFECYCLE_MAINTENANCE"
+  | "ACCOUNT_SESSION_STALE";
 
 interface ActiveUserRow {
   id: string;
@@ -62,6 +76,13 @@ function buildFailureRedirectUrl(
   const pathname = code === "account_conflict"
     || code === "provider_resolution_failed"
     || code === "email_required"
+    || code === "ACCOUNT_CUTOVER_QUARANTINED"
+    || code === "ACCOUNT_CUTOVER_UNCLASSIFIED"
+    || code === "ACCOUNT_DELETING"
+    || code === "ACCOUNT_DELETION_PENDING"
+    || code === "ACCOUNT_GENERATION_STALE"
+    || code === "ACCOUNT_LIFECYCLE_MAINTENANCE"
+    || code === "ACCOUNT_SESSION_STALE"
     ? "/login"
     : getFailurePath(nextPath);
   const redirectUrl = new URL(pathname, requestUrl.origin);
@@ -170,7 +191,10 @@ export async function GET(request: Request) {
       );
     }
 
-    const authResult = await supabase.auth.getUser();
+    const exchangedAccessToken = exchangeResult.data?.session?.access_token;
+    const authResult = exchangedAccessToken
+      ? await supabase.auth.getUser(exchangedAccessToken)
+      : await supabase.auth.getUser();
     const user = authResult.data.user;
     if (authResult.error || !user) {
       await recordAuthFailure(request, "OAUTH_USER_MISSING");
@@ -235,6 +259,82 @@ export async function GET(request: Request) {
         request,
         cookieStore,
       );
+    }
+
+    const capability = await readAuthCallbackAccountGenerationCapability(
+      serviceRoleClient,
+    );
+    if (!capability.ok) {
+      await recordAuthFailure(request, "ACCOUNT_GENERATION_CAPABILITY_UNAVAILABLE");
+      return clearPartialSession(
+        supabase,
+        clearAuthFlowCookies(NextResponse.redirect(
+          buildFailureRedirectUrl(requestUrl, nextPath, "oauth_failed"),
+        )),
+        request,
+        cookieStore,
+      );
+    }
+
+    if (capability.state === "cutover_maintenance") {
+      await recordAuthFailure(request, "ACCOUNT_LIFECYCLE_MAINTENANCE");
+      return clearPartialSession(
+        supabase,
+        clearAuthFlowCookies(NextResponse.redirect(
+          buildFailureRedirectUrl(
+            requestUrl,
+            nextPath,
+            "ACCOUNT_LIFECYCLE_MAINTENANCE",
+          ),
+        )),
+        request,
+        cookieStore,
+      );
+    }
+
+    if (capability.state === "generation_active") {
+      const sessionAuthority = exchangedAccessToken
+        ? deriveVerifiedAccountGenerationSessionAuthority({
+            accessToken: exchangedAccessToken,
+            user,
+          })
+        : null;
+      if (!sessionAuthority) {
+        await recordAuthFailure(request, "ACCOUNT_SESSION_STALE");
+        return clearPartialSession(
+          supabase,
+          clearAuthFlowCookies(NextResponse.redirect(
+            buildFailureRedirectUrl(requestUrl, nextPath, "ACCOUNT_SESSION_STALE"),
+          )),
+          request,
+          cookieStore,
+        );
+      }
+
+      const bootstrapResult =
+        await bootstrapAuthCallbackAccountGenerationIdentity(
+          serviceRoleClient,
+          sessionAuthority,
+        );
+      if (!bootstrapResult.ok) {
+        const errorCode = bootstrapResult.errorCode ?? "ACCOUNT_SESSION_STALE";
+        await recordAuthFailure(request, errorCode);
+        return clearPartialSession(
+          supabase,
+          clearAuthFlowCookies(NextResponse.redirect(
+            buildFailureRedirectUrl(requestUrl, nextPath, errorCode),
+          )),
+          request,
+          cookieStore,
+        );
+      }
+
+      const redirectUrl = shouldCollectNickname(bootstrapResult)
+        ? buildNicknameOnboardingRedirectUrl(requestUrl, nextPath)
+        : new URL(nextPath, requestUrl.origin);
+      const response = clearAuthFlowCookies(NextResponse.redirect(redirectUrl));
+      setLastAuthProviderCookie(response, actualProvider);
+      return response;
     }
 
     const existingUser = await findActiveUserByEmail(

@@ -5,6 +5,10 @@ import {
   RECIPE_IMAGE_BUCKET,
   RECIPE_IMAGE_MAX_BYTES,
 } from "@/lib/server/recipe-media";
+import {
+  runLegacyExternalWrite,
+  type ExternalWriteRpcClient,
+} from "@/lib/server/account-generation/external-write";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 interface StorageBucket {
@@ -24,6 +28,8 @@ interface StorageClient {
     from(bucket: typeof RECIPE_IMAGE_BUCKET): StorageBucket;
   };
 }
+
+type ServiceRoleStorageClient = StorageClient & ExternalWriteRpcClient;
 
 function isFile(value: FormDataEntryValue | null): value is File {
   return value instanceof File;
@@ -73,16 +79,43 @@ export async function POST(request: Request) {
     ]);
   }
 
-  const storageClient = (createServiceRoleClient() ?? routeClient) as unknown as StorageClient;
   const objectPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+  const serviceRoleClient = createServiceRoleClient() as unknown as
+    | ServiceRoleStorageClient
+    | null;
+  const storageClient = serviceRoleClient
+    ?? routeClient as unknown as StorageClient;
   const bucket = storageClient.storage.from(RECIPE_IMAGE_BUCKET);
-  const uploadResult = await bucket.upload(objectPath, image, {
-    contentType: image.type,
-    upsert: false,
-  });
+  const upload = async () => {
+    const uploadResult = await bucket.upload(objectPath, image, {
+      contentType: image.type,
+      upsert: false,
+    });
 
-  if (uploadResult.error) {
-    return fail("INTERNAL_ERROR", "이미지를 업로드하지 못했어요.", 500);
+    if (uploadResult.error) {
+      throw new Error("recipe image external write failed");
+    }
+
+    return uploadResult;
+  };
+
+  if (serviceRoleClient) {
+    const guardedWrite = await runLegacyExternalWrite({
+      client: serviceRoleClient,
+      objectPath,
+      ownerUuid: user.id,
+      write: upload,
+    });
+
+    if (!guardedWrite.ok) {
+      return fail("INTERNAL_ERROR", "이미지를 업로드하지 못했어요.", 500);
+    }
+  } else {
+    try {
+      await upload();
+    } catch {
+      return fail("INTERNAL_ERROR", "이미지를 업로드하지 못했어요.", 500);
+    }
   }
 
   const publicUrl = bucket.getPublicUrl(objectPath).data.publicUrl;

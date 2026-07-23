@@ -10,20 +10,33 @@ const MIGRATION_PATH = path.join(
   REPO_ROOT,
   "supabase/migrations/20260723090000_security_definer_mutation_authorization_hotfix.sql",
 );
-const INVENTORY_PATH = path.join(
-  REPO_ROOT,
-  "docs/security/security-definer-function-authorization-inventory.json",
-);
+const INVENTORY_PATH = process.env.SECURITY_FUNCTION_INVENTORY_PATH
+  ?? path.join(
+    REPO_ROOT,
+    "docs/security/security-definer-function-authorization-inventory.json",
+  );
+const ADDITIVE_MANIFEST_PATH = process.env.SECURITY_FUNCTION_ADDITIVE_MANIFEST_PATH
+  ?? path.join(
+    REPO_ROOT,
+    "docs/security/account-session-generation-security-function-authorization-manifest.json",
+  );
+const ADDITIVE_MIGRATION_PATH = process.env.SECURITY_FUNCTION_ADDITIVE_MIGRATION_PATH
+  ?? path.join(
+    REPO_ROOT,
+    "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+  );
 const LOCAL_DATABASE_URL =
   process.env.SECURITY_FUNCTION_DATABASE_URL
   ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const FRESH_DATABASE_URL = process.env.SECURITY_FUNCTION_FRESH_DATABASE_URL ?? null;
 const DATA_API_SCHEMAS = new Set(["public", "storage", "graphql_public"]);
 const PRINCIPALS = ["anon", "authenticated", "service_role"];
+const ADDITIVE_PRINCIPALS = [...PRINCIPALS, "supabase_auth_admin"];
 
 const args = new Set(process.argv.slice(2));
 const mode = args.has("--write") ? "write" : "check";
 const useLinkedRemote = args.has("--linked-remote");
+const contractOnly = args.has("--contract-only");
 const linkedRoot = useLinkedRemote
   ? resolveSecurityFunctionLinkedRoot()
   : REPO_ROOT;
@@ -87,7 +100,9 @@ with extension_membership as (
     pg_catalog.has_function_privilege('authenticated', procedure.oid, 'EXECUTE') as authenticated_execute,
     pg_catalog.has_schema_privilege('authenticated', namespace.oid, 'USAGE') as authenticated_schema_usage,
     pg_catalog.has_function_privilege('service_role', procedure.oid, 'EXECUTE') as service_role_execute,
-    pg_catalog.has_schema_privilege('service_role', namespace.oid, 'USAGE') as service_role_schema_usage
+    pg_catalog.has_schema_privilege('service_role', namespace.oid, 'USAGE') as service_role_schema_usage,
+    pg_catalog.has_function_privilege('supabase_auth_admin', procedure.oid, 'EXECUTE') as supabase_auth_admin_execute,
+    pg_catalog.has_schema_privilege('supabase_auth_admin', namespace.oid, 'USAGE') as supabase_auth_admin_schema_usage
   from pg_catalog.pg_proc procedure
   join pg_catalog.pg_namespace namespace on namespace.oid = procedure.pronamespace
   join pg_catalog.pg_roles owner on owner.oid = procedure.proowner
@@ -96,13 +111,16 @@ with extension_membership as (
 ), selected as (
   select *
   from function_rows
-  where schema_name = 'public'
+  where schema_name in ('public', 'account_generation_auth_hook')
     and extension_name is null
   union all
   select *
   from function_rows
   where prosecdef
-    and not (schema_name = 'public' and extension_name is null)
+    and not (
+      schema_name in ('public', 'account_generation_auth_hook')
+      and extension_name is null
+    )
 )
 select coalesce(jsonb_agg(to_jsonb(selected) order by signature), '[]'::jsonb)
 from selected;
@@ -183,6 +201,167 @@ function parseApplicationContract(migration) {
   }
 
   return rows;
+}
+
+function normalizeFunctionArgument(argument) {
+  const trimmed = argument
+    .replace(/--.*$/gmu, "")
+    .replace(/\s+/gu, " ")
+    .trim();
+  if (!trimmed) return "";
+
+  const withoutMode = trimmed.replace(/^(?:in|out|inout|variadic)\s+/iu, "");
+  const tokens = withoutMode.split(" ");
+  const type = tokens.length > 1 ? tokens.slice(1).join(" ") : tokens[0];
+  return type
+    .replace(/^timestamptz$/iu, "timestamp with time zone")
+    .replace(/^int8$/iu, "bigint")
+    .replace(/^int4$/iu, "integer")
+    .toLowerCase();
+}
+
+function parseCreatedFunctionDefinitions(migration) {
+  const definitionPattern =
+    /create\s+or\s+replace\s+function\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s*\(([\s\S]*?)\)\s*returns\b/giu;
+  const definitions = [];
+
+  for (const match of migration.matchAll(definitionPattern)) {
+    const argumentsSql = match[2].trim();
+    const argumentTypes = argumentsSql
+      ? argumentsSql.split(",").map(normalizeFunctionArgument)
+      : [];
+    const openingDelimiter = migration.indexOf("$function$", match.index);
+    const closingDelimiter = openingDelimiter < 0
+      ? -1
+      : migration.indexOf("$function$;", openingDelimiter + "$function$".length);
+    if (openingDelimiter < 0 || closingDelimiter < 0) {
+      throw new Error(`function body delimiter is missing for ${match[1]}`);
+    }
+    const definitionSql = migration.slice(match.index, closingDelimiter + "$function$;".length);
+    const searchPathMatch = definitionSql.match(/set\s+search_path\s*=\s*([^\n]+)\n/iu);
+    if (!searchPathMatch) {
+      throw new Error(`function search_path is missing for ${match[1]}`);
+    }
+
+    definitions.push({
+      signature: `${match[1].toLowerCase()}(${argumentTypes.join(", ")})`,
+      security_mode: /\bsecurity\s+definer\b/iu.test(definitionSql)
+        ? "definer"
+        : "invoker",
+      safe_search_path: searchPathMatch[1]
+        .split(",")
+        .map((entry) => entry.trim().replace(/^"|"$/gu, "").toLowerCase()),
+    });
+  }
+
+  return definitions;
+}
+
+function collapseSql(value) {
+  return value
+    .replace(/\s+/gu, " ")
+    .replace(/\(\s+/gu, "(")
+    .replace(/\s+\)/gu, ")")
+    .replace(/\s*,\s*/gu, ", ")
+    .trim()
+    .toLowerCase();
+}
+
+function parseExecuteAcl(migration, signature) {
+  const normalizedSignature = collapseSql(signature);
+  const statements = migration
+    .split(";")
+    .map(collapseSql)
+    .filter((statement) => statement.includes(`function ${normalizedSignature}`));
+  const allowed = new Set();
+  const revoked = new Set();
+
+  for (const statement of statements) {
+    const grant = statement.match(/\bgrant execute on function .+ to (.+)$/u);
+    if (grant) {
+      for (const role of grant[1].split(",").map((entry) => entry.trim())) {
+        allowed.add(role);
+      }
+    }
+    const revoke = statement.match(/\brevoke (?:all|execute) on function .+ from (.+)$/u);
+    if (revoke) {
+      for (const role of revoke[1].split(",").map((entry) => entry.trim())) {
+        revoked.add(role);
+      }
+    }
+  }
+
+  return { allowed: [...allowed].sort(), revoked };
+}
+
+function assertAdditiveContract(baseContract, manifest, migration) {
+  if (manifest.schema_version !== 1
+    || manifest.deployment_state !== "pre-deployment"
+    || manifest.baseline_application_contract_count !== baseContract.length) {
+    throw new Error("additive security function manifest metadata is invalid");
+  }
+
+  const functions = manifest.functions ?? [];
+  const signatures = functions.map((entry) => entry.signature);
+  if (functions.length === 0 || new Set(signatures).size !== functions.length) {
+    throw new Error("additive security function manifest signatures are empty or duplicated");
+  }
+  const baseSignatures = new Set(baseContract.map((entry) => entry.signature));
+  const overlap = signatures.filter((signature) => baseSignatures.has(signature));
+  if (overlap.length > 0) {
+    throw new Error(`additive security function overlaps the historical baseline: ${overlap.join(", ")}`);
+  }
+
+  const definitions = parseCreatedFunctionDefinitions(migration);
+  const definitionMap = new Map(definitions.map((entry) => [entry.signature, entry]));
+  const unclassified = definitions
+    .filter((entry) => !signatures.includes(entry.signature))
+    .map((entry) => entry.signature);
+  const missing = signatures.filter((signature) => !definitionMap.has(signature));
+  if (unclassified.length > 0 || missing.length > 0) {
+    throw new Error(
+      `additive function contract drift; unclassified=${unclassified.join(",") || "none"}; missing=${missing.join(",") || "none"}`,
+    );
+  }
+
+  for (const entry of functions) {
+    const definition = definitionMap.get(entry.signature);
+    if (entry.control_class !== "application-controlled"
+      || !new Set(["read-only", "mutation", "trigger/internal", "auth-hook"]).has(entry.effect)
+      || !new Set(["service-internal", "auth-hook-internal"]).has(entry.exposure)
+      || !new Set(["definer", "invoker"]).has(entry.security_mode)
+      || definition.security_mode !== entry.security_mode
+      || JSON.stringify(definition.safe_search_path) !== JSON.stringify(entry.safe_search_path)
+      || entry.safe_search_path[0] !== "pg_catalog"
+      || entry.safe_search_path.at(-1) !== "pg_temp") {
+      throw new Error(`additive function control metadata is invalid for ${entry.signature}`);
+    }
+    if (new Set(entry.allowed_principals).size !== entry.allowed_principals.length
+      || entry.allowed_principals.some((principal) => !ADDITIVE_PRINCIPALS.includes(principal))) {
+      throw new Error(`additive function principal contract is invalid for ${entry.signature}`);
+    }
+
+    const acl = parseExecuteAcl(migration, entry.signature);
+    if (JSON.stringify(acl.allowed) !== JSON.stringify([...entry.allowed_principals].sort())) {
+      throw new Error(`additive function grant drift for ${entry.signature}`);
+    }
+    for (const principal of ["public", ...PRINCIPALS]) {
+      if (!entry.allowed_principals.includes(principal) && !acl.revoked.has(principal)) {
+        throw new Error(`additive function revoke is missing for ${entry.signature}: ${principal}`);
+      }
+    }
+
+    if (entry.owner) {
+      const ownerStatement = collapseSql(
+        `alter function ${entry.signature} owner to ${entry.owner}`,
+      );
+      if (!collapseSql(migration).includes(ownerStatement)) {
+        throw new Error(`additive function owner drift for ${entry.signature}`);
+      }
+    }
+  }
+
+  return functions;
 }
 
 function providerClassification(signature) {
@@ -390,10 +569,51 @@ function assertRecordedEnvironmentPolicy(inventory, environment) {
   }
 }
 
-function assertEnvironment(inventory, environment, currentRows) {
+function assertAdditiveEnvironment(additiveContract, currentRows) {
+  const currentMap = new Map(currentRows.map((row) => [row.signature, row]));
+  const present = additiveContract.filter((entry) => currentMap.has(entry.signature));
+  if (present.length === 0) return "pre-deployment";
+  if (present.length !== additiveContract.length) {
+    const missing = additiveContract
+      .filter((entry) => !currentMap.has(entry.signature))
+      .map((entry) => entry.signature);
+    throw new Error(`partially deployed additive function contract: ${missing.join(", ")}`);
+  }
+
+  for (const entry of additiveContract) {
+    const row = currentMap.get(entry.signature);
+    const actualAllowed = ADDITIVE_PRINCIPALS.filter(
+      (principal) => row[`${principal}_execute`],
+    );
+    if (row.public_execute
+      || JSON.stringify(actualAllowed) !== JSON.stringify(entry.allowed_principals)) {
+      throw new Error(`additive exact principal drift for ${entry.signature}`);
+    }
+    if ((entry.security_mode === "definer") !== row.prosecdef) {
+      throw new Error(`additive security mode drift for ${entry.signature}`);
+    }
+    const searchPath = (row.proconfig.match(/search_path=([^}]*)/u)?.[1] ?? "")
+      .replace(/["}]/gu, "")
+      .split(",")
+      .map((value) => value.trim());
+    if (JSON.stringify(searchPath) !== JSON.stringify(entry.safe_search_path)) {
+      throw new Error(`additive function search_path drift for ${entry.signature}`);
+    }
+    if (entry.owner && row.owner !== entry.owner) {
+      throw new Error(`additive function owner drift for ${entry.signature}`);
+    }
+  }
+
+  return "post-migration";
+}
+
+function assertEnvironment(inventory, environment, currentRows, additiveContract) {
   const environmentState = inventory.environment_states?.[environment];
   const currentMap = new Map(currentRows.map((row) => [row.signature, row]));
-  const inventorySignatures = new Set(inventory.functions.map((entry) => entry.signature));
+  const inventorySignatures = new Set([
+    ...inventory.functions.map((entry) => entry.signature),
+    ...additiveContract.map((entry) => entry.signature),
+  ]);
   const unexpected = currentRows
     .filter((row) => !inventorySignatures.has(row.signature))
     .map((row) => row.signature);
@@ -432,7 +652,37 @@ function assertEnvironment(inventory, environment, currentRows) {
 }
 
 const migration = await readFile(MIGRATION_PATH, "utf8");
+const additiveMigration = await readFile(ADDITIVE_MIGRATION_PATH, "utf8");
+const additiveManifest = JSON.parse(await readFile(ADDITIVE_MANIFEST_PATH, "utf8"));
 const applicationContract = parseApplicationContract(migration);
+const additiveContract = assertAdditiveContract(
+  applicationContract,
+  additiveManifest,
+  additiveMigration,
+);
+if (contractOnly) {
+  if (mode !== "check" || useLinkedRemote) {
+    throw new Error("--contract-only cannot be combined with write or remote modes");
+  }
+}
+const recordedInventory = mode === "check"
+  ? JSON.parse(await readFile(INVENTORY_PATH, "utf8"))
+  : null;
+if (recordedInventory) {
+  assertApplicationContract(recordedInventory, applicationContract);
+  for (const environment of Object.keys(
+    recordedInventory.environment_baseline_sha256,
+  )) {
+    assertRecordedEnvironmentPolicy(recordedInventory, environment);
+  }
+}
+if (contractOnly) {
+  console.warn(
+    "security function authorization contracts are valid; "
+      + `${additiveContract.length} pre-deployment additive application functions classified`,
+  );
+  process.exit(0);
+}
 const environments = { [environmentName]: collectLocalMetadata() };
 if (mode === "write" && FRESH_DATABASE_URL) {
   environments.fresh = collectMetadata(process.env, FRESH_DATABASE_URL);
@@ -451,13 +701,15 @@ if (mode === "write") {
   await writeFile(INVENTORY_PATH, `${JSON.stringify(inventory, null, 2)}\n`, "utf8");
   console.warn(`wrote ${inventory.functions.length} classified functions to ${INVENTORY_PATH}`);
 } else {
-  const inventory = JSON.parse(await readFile(INVENTORY_PATH, "utf8"));
-  assertApplicationContract(inventory, applicationContract);
-  for (const environment of Object.keys(inventory.environment_baseline_sha256)) {
-    assertRecordedEnvironmentPolicy(inventory, environment);
-  }
+  const inventory = recordedInventory;
   for (const [environment, rows] of Object.entries(environments)) {
-    assertEnvironment(inventory, environment, rows);
+    assertEnvironment(inventory, environment, rows, additiveContract);
   }
-  console.warn(`security function authorization inventory is valid for ${Object.keys(environments).join("+")}`);
+  const additiveStates = Object.entries(environments).map(([environment, rows]) =>
+    `${environment}:${assertAdditiveEnvironment(additiveContract, rows)}`);
+  console.warn(
+    `security function authorization inventory is valid for ${Object.keys(environments).join("+")}; `
+      + `${additiveContract.length} pre-deployment additive application functions `
+      + `classified (${additiveStates.join(",")})`,
+  );
 }

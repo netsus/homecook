@@ -116,7 +116,9 @@ describe("SECURITY DEFINER mutation authorization hotfix", () => {
     const validator = await readFile(VALIDATOR_PATH, "utf8");
 
     expect(validator).toContain('environmentState === "pre-deployment"');
-    expect(validator).toContain("assertEnvironment(inventory, environment, rows)");
+    expect(validator).toContain(
+      "assertEnvironment(inventory, environment, rows, additiveContract)",
+    );
   });
 
   it("resolves the linked primary worktree from an isolated closeout worktree", async () => {

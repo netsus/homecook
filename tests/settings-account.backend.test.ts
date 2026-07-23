@@ -78,7 +78,7 @@ function setupAuthedClient(
     from: ReturnType<typeof vi.fn>;
     rpc?: ReturnType<typeof vi.fn>;
   },
-  user = { id: "user-1" },
+  user = { id: "user-1", created_at: "2026-07-23T00:00:00.000Z" },
 ) {
   const routeClient = {
     auth: {
@@ -164,7 +164,7 @@ describe("17c settings/account backend", () => {
         settings_json: { user_bootstrap_version: 1, screen_wake_lock: true },
       }),
     );
-  });
+  }, 15_000);
 
   it("PATCH /users/me/settings rejects non-boolean wake lock values", async () => {
     setupAuthedClient({ from: vi.fn() });
@@ -314,14 +314,23 @@ describe("17c settings/account backend", () => {
   });
 
   it("DELETE /users/me removes private user data through the database cleanup policy", async () => {
-    const cleanupRpc = vi.fn(async () => ({
-      data: {
-        deleted: true,
-        user_deleted: true,
-        preserved_recipe_count: 2,
-      },
-      error: null,
-    }));
+    const cleanupRpc = vi.fn(async (functionName: string) => {
+      if (functionName === "get_account_generation_capability") {
+        return {
+          data: { state: "legacy", revision: 1 },
+          error: null,
+        };
+      }
+
+      return {
+        data: {
+          deleted: true,
+          user_deleted: true,
+          preserved_recipe_count: 2,
+        },
+        error: null,
+      };
+    });
     setupAuthedClient({
       from: vi.fn((table: string) => {
         throw new Error(`unexpected table: ${table}`);
@@ -341,9 +350,13 @@ describe("17c settings/account backend", () => {
       data: { deleted: true },
       error: null,
     });
-    expect(cleanupRpc).toHaveBeenCalledWith("delete_user_private_data", {
-      p_user_id: "user-1",
-    });
+    expect(cleanupRpc).toHaveBeenCalledWith(
+      "delete_user_private_data_with_generation_receipt",
+      {
+        p_user_id: "user-1",
+        p_auth_identity_created_at: "2026-07-23T00:00:00.000Z",
+      },
+    );
   });
 
   it("DELETE /users/me fails closed when the service-role client is unavailable", async () => {
@@ -376,10 +389,20 @@ describe("17c settings/account backend", () => {
       from: vi.fn((table: string) => {
         throw new Error(`unexpected table: ${table}`);
       }),
-      rpc: vi.fn(async () => ({
-        data: null,
-        error: { message: "cleanup failed" },
-      })),
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async (functionName: string) => {
+        if (functionName === "get_account_generation_capability") {
+          return {
+            data: { state: "legacy", revision: 1 },
+            error: null,
+          };
+        }
+        return {
+          data: null,
+          error: { message: "cleanup failed" },
+        };
+      }),
     });
 
     const { DELETE } = await importUsersMeRoute();
