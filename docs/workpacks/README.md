@@ -249,7 +249,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `planner-shell` | docs | 플래너 내부를 `요리 계획 | 식사 기록` shell로 분리하고 계획 영양·신규 제품 계획 입력을 제거하되 legacy row 조회/삭제는 보존한다 |
 | `cooked-batch-weight-ui` | docs | COOK_MODE 완료 중량 입력과 weigh-later, 이후 exact weight/unrecoverable/discard/adjust UI를 ledger 계약에 연결한다 |
 | `meal-log-ui` | docs | 신규 MEAL_LOG의 날짜 중심 하루 합계·끼니 소계·음식 추가 sheet·수정/삭제·결측 상태를 구현한다 |
-| `legacy-product-compat` | planned | legacy product planner 조회/삭제, v1 session optional→required stable key, v2 dormant drain과 current/immediate-previous reader 호환·tombstone 전제조건을 검증한다 |
+| `legacy-product-compat` | docs | legacy product planner 조회/삭제, v1 session optional→required stable key, v2 dormant drain과 current/immediate-previous reader 호환·tombstone 전제조건을 검증한다 |
 | `cooking-meal-log-cross-slice-release-qa` | planned | F0와 #1~#13의 current-head local/remote DB·API·browser·security·performance·design·rollback/legacy 통합 gate를 닫는다 |
 
 ## Nutrition / Products / Planner Dependency Chain
@@ -290,7 +290,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 10 | E | `planner-shell` | docs | #9 |
 | 11 | E | `cooked-batch-weight-ui` | docs | #8; `cook-mode-whole-board` merged |
 | 12 | E | `meal-log-ui` | docs | #9 + #10 |
-| 13 | E | `legacy-product-compat` | planned | #10 + #12 |
+| 13 | E | `legacy-product-compat` | docs | #10 + #12 |
 | 14 | F | `cooking-meal-log-cross-slice-release-qa` | planned | F0 and #1~#13 all merged/current-head green |
 
 > 이 표가 cooking/meal-log successor의 exact ID·dependency authority다. 실행 순서는 foundation F0 → 독립 Train A → Train B→C→D→E→F이며 `#1`은 stable successor 번호다. `recipebook-diary-port`는 선행조건이 아니며, #3/#5는 `31-recipe-media-tags`와 `36e-recipe-tags-frontend`를 되돌리거나 진행 중 MYPAGE/RECIPEBOOK_DETAIL 파일을 소유하지 않는다. 각 행은 독립 Stage 1 `README.md` + `acceptance.md` + `automation-spec.json` + workflow-v2 work item/status PR과 mandatory internal 1.5 pass가 main에 merge된 뒤에만 구현 상태로 전환한다.

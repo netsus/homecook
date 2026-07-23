@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-23T04:56:58Z",
+  "updated_at": "2026-07-23T05:18:19Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2686,6 +2686,41 @@
         "git diff --check"
       ],
       "notes": "Roadmap is docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/API, five-axis and design reviews have zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/remote evidence is future. Implementation waits for #9 runtime and #10 shell, consumes #1 search and #8 batch authority, may link the eligible #11 weight action, and leaves #13/#14 as successors.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "legacy-product-compat",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/legacy-product-compat",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/legacy-product-compat pnpm validate:workpack -- --slice legacy-product-compat",
+        "node scripts/validate-automation-spec.mjs --slice legacy-product-compat",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/legacy-product-compat.test.ts tests/legacy-cooking-idempotency-rollout.test.ts tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts",
+        "pnpm verify:backend",
+        "pnpm verify:frontend:pr",
+        "pnpm test:e2e:regression:ci --grep legacy-product-compat",
+        "pnpm test:e2e:a11y",
+        "pnpm test:e2e:visual",
+        "pnpm qa:explore -- --slice legacy-product-compat",
+        "pnpm qa:eval -- --checklist .artifacts/qa/legacy-product-compat/latest/exploratory-checklist.json --report .artifacts/qa/legacy-product-compat/latest/exploratory-report.json",
+        "pnpm verify:frontend",
+        "pnpm validate:exploratory-qa-evidence -- --slice legacy-product-compat",
+        "pnpm validate:closeout-sync -- --slice legacy-product-compat",
+        "node scripts/verify-legacy-product-compat-remote.mjs --mode post-merge-read-only",
+        "git diff --check"
+      ],
+      "notes": "Roadmap is docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/compatibility, five-axis and design-impact reviews reach zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; runtime/E2E/browser/telemetry/remote evidence is future. Implementation waits for #10 and #12 runtime/current-head green. #13 preserves contracts and records prerequisites but does not authorize deletion or R+2 activation.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
