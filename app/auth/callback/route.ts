@@ -101,6 +101,15 @@ function buildNicknameOnboardingRedirectUrl(requestUrl: URL, nextPath: string) {
   return redirectUrl;
 }
 
+function buildAccountQuarantineRedirectUrl(
+  requestUrl: URL,
+  nextPath: string,
+) {
+  const redirectUrl = new URL("/account-quarantine", requestUrl.origin);
+  redirectUrl.searchParams.set("next", nextPath);
+  return redirectUrl;
+}
+
 function shouldCollectNickname(userRow: { nickname?: unknown }) {
   return typeof userRow.nickname === "string" && userRow.nickname.trim().length === 0;
 }
@@ -319,6 +328,14 @@ export async function GET(request: Request) {
       if (!bootstrapResult.ok) {
         const errorCode = bootstrapResult.errorCode ?? "ACCOUNT_SESSION_STALE";
         await recordAuthFailure(request, errorCode);
+        if (errorCode === "ACCOUNT_CUTOVER_QUARANTINED") {
+          const response = clearAuthFlowCookies(NextResponse.redirect(
+            buildAccountQuarantineRedirectUrl(requestUrl, nextPath),
+          ));
+          setLastAuthProviderCookie(response, actualProvider);
+          return response;
+        }
+
         return clearPartialSession(
           supabase,
           clearAuthFlowCookies(NextResponse.redirect(

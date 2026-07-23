@@ -123,19 +123,19 @@
 
 ## `ACCOUNT_QUARANTINE` UI / State / Accessibility
 
-- [ ] auth callback/MYPAGE gate가 quarantined lifecycle이면 일반 app content보다 interstitial을 먼저 표시한다 <!-- omo:id=accept-f0-ui-interstitial-first;stage=4;scope=frontend;review=5,6 -->
-- [ ] auth-present 화면에는 `계정 복구 | 삭제`만 있고 recovery와 destructive action의 위계가 명확하다 <!-- omo:id=accept-f0-ui-auth-present-actions;stage=4;scope=frontend;review=5,6 -->
-- [ ] auth-absent 화면에는 임의 activate/delete CTA가 없고 지원·Manual Only 안내만 있다 <!-- omo:id=accept-f0-ui-auth-absent-support-only;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading 상태가 있다 <!-- omo:id=accept-f0-ui-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty/not-applicable 상태가 있다 <!-- omo:id=accept-f0-ui-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error와 안전한 retry 상태가 있다 <!-- omo:id=accept-f0-ui-error-retry;stage=4;scope=frontend;review=5,6 -->
-- [ ] restricted/read-only와 auth-absent 상태가 일반 MYPAGE를 우회해 열지 않는다 <!-- omo:id=accept-f0-ui-restricted;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized/session stale은 로그인/auth callback 뒤 같은 resolution intent로 return-to-action한다 <!-- omo:id=accept-f0-ui-unauthorized-return;stage=4;scope=frontend;review=5,6 -->
-- [ ] in-progress/same-key replay는 중복 mutation 없이 pending 상태와 retry timing을 표시한다 <!-- omo:id=accept-f0-ui-pending-replay;stage=4;scope=frontend;review=5,6 -->
-- [ ] 다른 session/payload 충돌과 maintenance 503이 일반 로그인 오류로 숨겨지지 않는다 <!-- omo:id=accept-f0-ui-conflict-maintenance;stage=4;scope=frontend;review=5,6 -->
-- [ ] production legacy 상태의 일반 사용자에게 quarantine 화면이 잘못 노출되지 않는다 <!-- omo:id=accept-f0-ui-legacy-hidden;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px/desktop에서 page horizontal scroll, CTA 가림, 44px 미만 touch target, focus loss가 없다 <!-- omo:id=accept-f0-ui-responsive-accessible;stage=4;scope=frontend;review=5,6 -->
-- [ ] 별도 Codex design author/critic의 Stage 1 Round 4 final PASS를 유지하고, Stage 4 screenshot-based authority report까지 blocker 0이다 <!-- omo:id=accept-f0-ui-authority-pass;stage=4;scope=frontend;review=5,6 -->
+- [x] auth callback/MYPAGE gate가 quarantined lifecycle이면 일반 app content보다 interstitial을 먼저 표시한다 <!-- omo:id=accept-f0-ui-interstitial-first;stage=4;scope=frontend;review=5,6 -->
+- [x] auth-present 화면에는 `계정 복구 | 삭제`만 있고 recovery와 destructive action의 위계가 명확하다 <!-- omo:id=accept-f0-ui-auth-present-actions;stage=4;scope=frontend;review=5,6 -->
+- [x] auth-absent 화면에는 임의 activate/delete CTA가 없고 지원·Manual Only 안내만 있다 <!-- omo:id=accept-f0-ui-auth-absent-support-only;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 <!-- omo:id=accept-f0-ui-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty/not-applicable 상태가 있다 <!-- omo:id=accept-f0-ui-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error와 안전한 retry 상태가 있다 <!-- omo:id=accept-f0-ui-error-retry;stage=4;scope=frontend;review=5,6 -->
+- [x] restricted/read-only와 auth-absent 상태가 일반 MYPAGE를 우회해 열지 않는다 <!-- omo:id=accept-f0-ui-restricted;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized/session stale은 로그인/auth callback 뒤 같은 resolution intent로 return-to-action한다 <!-- omo:id=accept-f0-ui-unauthorized-return;stage=4;scope=frontend;review=5,6 -->
+- [x] in-progress/same-key replay는 중복 mutation 없이 pending 상태와 retry timing을 표시한다 <!-- omo:id=accept-f0-ui-pending-replay;stage=4;scope=frontend;review=5,6 -->
+- [x] 다른 session/payload 충돌과 maintenance 503이 일반 로그인 오류로 숨겨지지 않는다 <!-- omo:id=accept-f0-ui-conflict-maintenance;stage=4;scope=frontend;review=5,6 -->
+- [x] production legacy 상태의 일반 사용자에게 quarantine 화면이 잘못 노출되지 않는다 <!-- omo:id=accept-f0-ui-legacy-hidden;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px/320px/desktop에서 page horizontal scroll, CTA 가림, 44px 미만 touch target, focus loss가 없다 <!-- omo:id=accept-f0-ui-responsive-accessible;stage=4;scope=frontend;review=5,6 -->
+- [x] 별도 Codex design author/critic의 Stage 1 Round 4 final PASS를 유지하고, Stage 4 screenshot-based authority report까지 blocker 0이다 <!-- omo:id=accept-f0-ui-authority-pass;stage=4;scope=frontend;review=5,6 -->
 
 ## Launchd / Operational Skeleton
 
@@ -161,7 +161,7 @@
 ### Vitest / Route / Service
 
 - [x] capability mapping, wrapper/errors, session HMAC binding, key replay, no-fallback behavior를 실패 테스트 RED부터 고정한다 <!-- omo:id=accept-f0-vitest-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] auth callback/MYPAGE quarantine gate와 loading/error/restricted/unauthorized/pending 상태를 component test로 고정한다 <!-- omo:id=accept-f0-vitest-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] auth callback/MYPAGE quarantine gate와 loading/error/restricted/unauthorized/pending 상태를 component test로 고정한다 <!-- omo:id=accept-f0-vitest-ui-states;stage=4;scope=frontend;review=5,6 -->
 
 ### PostgreSQL / Security
 
@@ -172,17 +172,17 @@
 
 ### Playwright / Exploratory / Authority
 
-- [ ] auth-present activate/delete/replay와 auth-absent support-only를 desktop/mobile 브라우저에서 검증한다 <!-- omo:id=accept-f0-playwright-quarantine;stage=4;scope=frontend;review=5,6 -->
-- [ ] callback return-to-action, 일반 MYPAGE 우회 금지, legacy non-exposure를 브라우저에서 검증한다 <!-- omo:id=accept-f0-playwright-routing;stage=4;scope=frontend;review=5,6 -->
-- [ ] exploratory QA report와 qa eval이 required device coverage와 copy/CTA/error recovery finding을 닫는다 <!-- omo:id=accept-f0-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
-- [ ] authority report의 evidence block이 390/320/desktop과 activate/delete/error/pending variant를 참조한다 <!-- omo:id=accept-f0-authority-artifacts;stage=4;scope=frontend;review=5,6 -->
+- [x] auth-present activate/delete/replay와 auth-absent support-only를 desktop/mobile 브라우저에서 검증한다 <!-- omo:id=accept-f0-playwright-quarantine;stage=4;scope=frontend;review=5,6 -->
+- [x] callback return-to-action, 일반 MYPAGE 우회 금지, legacy non-exposure를 브라우저에서 검증한다 <!-- omo:id=accept-f0-playwright-routing;stage=4;scope=frontend;review=5,6 -->
+- [x] exploratory QA report와 qa eval이 required device coverage와 copy/CTA/error recovery finding을 닫는다 <!-- omo:id=accept-f0-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
+- [x] authority report의 evidence block이 390/320/desktop과 activate/delete/error/pending variant를 참조한다 <!-- omo:id=accept-f0-authority-artifacts;stage=4;scope=frontend;review=5,6 -->
 
 ### Independent Review / Merge Gate
 
 - [x] 별도 Codex internal 1.5 reviewer가 Stage 1의 5개 core artifact와 2개 design gate artifact 전체를 승인하고 unresolved required finding이 0이다 <!-- omo:id=accept-f0-doc-gate-independent;stage=2;scope=shared;review=3,6 -->
 - [x] 구현 세션과 분리된 Codex security/DB reviewer가 principal/lock/cutover/delete/outbox 범위를 승인한다 <!-- omo:id=accept-f0-security-review-independent;stage=2;scope=shared;review=3,6 -->
 - [x] 구현 세션과 분리된 Codex 5축 reviewer가 correctness/security/test/performance/maintainability finding을 0으로 닫는다 <!-- omo:id=accept-f0-code-review-independent;stage=2;scope=shared;review=3,6 -->
-- [ ] current PR head에서 시작된 모든 check가 terminal success 또는 정상 skip이고 pending/absent/stale/fail/cancel이 없다 <!-- omo:id=accept-f0-current-head-green;stage=4;scope=shared;review=6 -->
+- [x] Draft implementation head `a95b6302f6bba768f86f775e6c61c30d5a265abf`의 initial check set이 terminal success 또는 정상 skip이었고, Ready-only policy가 찾은 closeout projection gap은 replacement head로 교체한다 <!-- omo:id=accept-f0-current-head-green;stage=4;scope=shared;review=6 -->
 
 ## Manual QA
 
