@@ -1,0 +1,167 @@
+{
+  "id": "recipe-content-snapshot-future-propagation",
+  "title": "Recipe content snapshot future propagation",
+  "summary": "owner/session-bound impact token으로 개인 레시피 PATCH, 미래 Meal content pin, shopping reconcile와 snapshot-v2 start/cancel/read를 common-lock transaction에 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "preview한 exact draft와 Meal/claim target만 replace_all 또는 keep으로 원자 처리하고 v1/v2 dispatch를 dormant 배포해 historical/completed state와 rollback drain을 보존한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for authoring, repair, implementation, review, security, design, authority, operations, or closeout",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, backend/frontend implementation, security/DB review, five-axis review, design critic, product-design-authority, Stage 3/5/6 reviews and closeout; no session approves its own work",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization hotfix merged and deployed",
+    "cooking-meal-log contract-evolution merged as PR #1072",
+    "recipe-snapshot-authority-foundation Stage 1 docs merged as PR #1078; runtime remains an implementation predecessor",
+    "personal-recipe-customization-write-core Stage 1 docs merged as PR #1080; runtime remains an implementation predecessor",
+    "cook-mode-whole-board is currently implementation and must merge before #7 implementation",
+    "cooked-batch-weight-ledger #8 owns exact-pantry completion and the R/R+1 compatibility gate before R+2 activation"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/recipe-content-snapshot-future-propagation/README.md",
+      "docs/workpacks/recipe-content-snapshot-future-propagation/acceptance.md",
+      "docs/workpacks/recipe-content-snapshot-future-propagation/automation-spec.json",
+      "docs/workpacks/account-session-generation-foundation/README.md",
+      "docs/workpacks/recipe-snapshot-authority-foundation/README.md",
+      "docs/workpacks/personal-recipe-editor-decoupling/README.md",
+      "docs/workpacks/personal-recipe-customization-write-core/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "docs/engineering/workflow-v2/README.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "merged-exact-SHA remote read-only preview session function ACL RLS policy constraint and capability inventory",
+      "two-owner preview and PATCH non-disclosure matrix with exact before-after domain digests",
+      "stale draft revision target and active-claim whole-transaction zero-write smoke",
+      "keep versus replace-all plus deterministic incomplete and completed-read-only shopping smoke",
+      "common writer lock order and multi-recipe UUID-order concurrency smoke",
+      "same-Meal planner start one-winner and cancel-restart idempotency smoke",
+      "legacy-v1 snapshot-v2 explicit dispatch and creation-off seeded-drain smoke",
+      "current and immediate-previous flag-off zero new personal-v2 write smoke",
+      "390px and 320px impact start dispatch visual-a11y-design evidence"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 6,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/recipe-content-snapshot-future-propagation pnpm validate:workpack -- --slice recipe-content-snapshot-future-propagation",
+      "node scripts/validate-automation-spec.mjs --slice recipe-content-snapshot-future-propagation",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/recipe-content-snapshot-future-propagation.test.ts tests/recipe-future-impact-security.test.ts tests/snapshot-v2-session-attempts.test.ts tests/recipe-shopping-reconciliation.test.ts",
+      "pnpm test:recipe-content-snapshot-future-propagation:postgres",
+      "pnpm exec vitest run tests/recipe-future-impact-dialog.test.tsx tests/cooking-session-version-dispatch.test.tsx tests/cooking-start-navigation.test.tsx",
+      "pnpm verify:backend",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep recipe-content-snapshot-future-propagation",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice recipe-content-snapshot-future-propagation",
+      "pnpm qa:eval -- --checklist .artifacts/qa/recipe-content-snapshot-future-propagation/latest/exploratory-checklist.json --report .artifacts/qa/recipe-content-snapshot-future-propagation/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm validate:exploratory-qa-evidence -- --slice recipe-content-snapshot-future-propagation",
+      "pnpm validate:closeout-sync -- --slice recipe-content-snapshot-future-propagation",
+      "node scripts/verify-recipe-content-snapshot-future-propagation-remote.mjs --mode post-merge-read-only",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/recipe-content-snapshot-future-propagation pnpm validate:workpack -- --slice recipe-content-snapshot-future-propagation",
+      "node scripts/validate-automation-spec.mjs --slice recipe-content-snapshot-future-propagation",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of all five Stage 1 core artifacts plus roadmap and status projections",
+      "separate Codex security and DB review of token RLS ACL session generation common locks target claims shopping idempotency and dormant activation",
+      "separate Codex five-axis review",
+      "separate Codex design critic of RECIPE_DETAIL impact PLANNER_WEEK start and COOK_MODE dispatch states",
+      "separate Codex screenshot-or-Figma product-design-authority review before Design Status confirmed",
+      "separate Codex Stage 3 Stage 5 Stage 6 and final closeout reviews"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "roadmap-docs-workflow-lifecycle-planned-separation",
+      "preview-patch-single-canonicalizer-and-server-opaque-token-binding",
+      "owner-generation-session-recipe-revision-content-target-claim-expiry-revalidation",
+      "stale-and-active-claim-whole-transaction-zero-write",
+      "keep-no-repin-and-replace-all-eligible-future-only",
+      "common-lock-writer-inventory-and-multi-recipe-uuid-order",
+      "deterministic-incomplete-shopping-and-completed-read-only",
+      "recipe-plus-content-snapshot-grouping-key",
+      "planner-meal-pin-standalone-current-pin-and-one-claim-per-meal",
+      "generation-scoped-idempotent-start-cancel-and-cross-version-isolation",
+      "v1-v2-explicit-dispatch-no-navigation-before-session-success",
+      "creation-off-existing-v2-drain-and-slice8-complete-boundary",
+      "r-r1-before-r2-joint-activation-and-zero-new-write",
+      "stage1-impact-start-dispatch-wireframes",
+      "independent-design-critic-and-product-design-authority-required",
+      "merged-exact-sha-remote-read-only-evidence",
+      "stage1-current-vs-future-command-honesty",
+      "independent-codex-required-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Snapshot-v2 exact consumed pantry finished weight batch ledger cook count XP complete API and UI owned by #8",
+    "R and R+1 seeded full-drain acceptance and R+2 personal-v2 joint activation owned by #8 release gate",
+    "V1 required-key cutover new-start block or removal owned by #13 tombstone contract",
+    "Cooked batch meal log planner shell weight UI or meal-log UI owned by #8 through #12",
+    "Date-level target checkboxes extra shopping old-recipe new cooking partial PATCH or user restore endpoint",
+    "Past cook-done completed session completed shopping or meal-log repin",
+    "Direct nutrition pointer mutable recipe fallback or alternative snapshot authority",
+    "New public endpoint request response field status error code screen or client authority",
+    "Unmerged remote migration production database write or capability activation"
+  ],
+  "open_questions": [],
+  "notes": "Roadmap moves to docs while workflow lifecycle remains planned and approval not_started until separate Codex internal1.5, security/DB, five-axis and design reviews approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Runtime implementation waits for #4/#6 and cook-mode-whole-board. #7 owns dormant preview/PATCH propagation plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation. Design Status is temporary pending implementation evidence and authority approval."
+}
