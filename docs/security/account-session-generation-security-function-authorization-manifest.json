@@ -1,0 +1,306 @@
+{
+  "schema_version": 1,
+  "slice": "account-session-generation-foundation",
+  "migration": "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.protect_account_generation_watermark()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.protect_legacy_account_delete_receipt()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.protect_account_generation_capability_state()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.assert_legacy_account_generation_write()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.enforce_legacy_personal_mutation_fence()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "account_generation_storage_guard.allows_legacy_recipe_image_write()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": ["authenticated"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.get_account_generation_capability()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.delete_user_private_data_with_generation_receipt(uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "extensions",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.begin_account_generation_cutover(uuid, bigint)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.stage_account_generation_cutover_owner(uuid, bigint, uuid, timestamp with time zone, bigint, text, text, text, text, text)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.set_account_generation_cutover_snapshot(uuid, bigint, bigint, text, bigint, text, bigint, text, text, jsonb)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.promote_account_generation_cutover(uuid, bigint, bigint, text, bigint, text, bigint, text)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.abort_account_generation_cutover(uuid, bigint, text)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.start_legacy_external_write_attempt(uuid, text)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "public.finalize_legacy_external_write_attempt(uuid, text)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "public.cleanup_legacy_external_write_attempt(uuid, text)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "public.claim_auth_identity_deletion_outbox(uuid, uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.finalize_auth_identity_deletion_outbox(uuid, uuid, integer, text, text, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.bind_user_session_generation(uuid, bigint, text, integer, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.revoke_user_session_generation_binding(uuid, bigint, text, integer)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.set_account_generation_internal_writer_marker(uuid, boolean)",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.initiate_account_generation_delete(uuid, timestamp with time zone, text, integer, uuid, text)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "public.replay_account_generation_delete(uuid, text, integer, uuid, text)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "public.bootstrap_account_generation_identity(uuid, timestamp with time zone, text, integer, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.resolve_account_cutover_quarantine(uuid, timestamp with time zone, text, integer, uuid, text, text, text)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "auth", "extensions", "pg_temp"]
+    },
+    {
+      "signature": "account_generation_auth_hook.assert_identity_creation_allowed()",
+      "control_class": "application-controlled",
+      "effect": "auth-hook",
+      "exposure": "auth-hook-internal",
+      "allowed_principals": [
+        "supabase_auth_admin"
+      ],
+      "security_mode": "definer",
+      "owner": "homecook_auth_hook_guard_owner",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "account_generation_auth_hook.before_user_created(jsonb)",
+      "control_class": "application-controlled",
+      "effect": "auth-hook",
+      "exposure": "auth-hook-internal",
+      "allowed_principals": [
+        "supabase_auth_admin"
+      ],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "account_generation_auth_hook",
+        "pg_temp"
+      ]
+    }
+  ]
+}

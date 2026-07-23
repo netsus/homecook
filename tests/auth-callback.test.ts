@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const exchangeCodeForSession = vi.fn();
+const getSession = vi.fn();
 const getUser = vi.fn();
 const signOut = vi.fn();
 const createRouteHandlerClient = vi.fn();
@@ -11,17 +12,32 @@ const cookies = vi.fn();
 const cookieGet = vi.fn();
 const cookieGetAll = vi.fn();
 
-function createServiceRoleUserLookup(existingUser: { id: string; social_provider: string } | null = null) {
+function createServiceRoleUserLookup(
+  existingUser: { id: string; social_provider: string } | null = null,
+  capabilityResult: {
+    data: {
+      state: "legacy" | "cutover_maintenance" | "generation_active";
+      revision: number;
+    } | null;
+    error: { message: string } | null;
+  } = {
+    data: { state: "legacy", revision: 1 },
+    error: null,
+  },
+) {
   const usersQuery = {
     eq: vi.fn(() => usersQuery),
     is: vi.fn(() => usersQuery),
     maybeSingle: vi.fn().mockResolvedValue({ data: existingUser, error: null }),
   };
+  const rpc = vi.fn().mockResolvedValue(capabilityResult);
 
   return {
     client: {
       from: vi.fn(() => ({ select: vi.fn(() => usersQuery) })),
+      rpc,
     },
+    rpc,
     usersQuery,
   };
 }
@@ -49,8 +65,13 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 }));
 
 describe("auth callback", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
     exchangeCodeForSession.mockReset();
+    getSession.mockReset();
     getUser.mockReset();
     signOut.mockReset();
     createRouteHandlerClient.mockReset();
@@ -64,6 +85,7 @@ describe("auth callback", () => {
     const routeClient = {
       auth: {
         exchangeCodeForSession,
+        getSession,
         getUser,
         signOut,
       },
@@ -77,6 +99,10 @@ describe("auth callback", () => {
     });
     cookieGet.mockReturnValue(undefined);
     cookieGetAll.mockReturnValue([]);
+    getSession.mockResolvedValue({
+      data: { session: null },
+      error: null,
+    });
     getUser.mockResolvedValue({
       data: {
         user: {
@@ -410,6 +436,185 @@ describe("auth callback", () => {
     expect(new URL(response.headers.get("location") ?? "").searchParams.get("authError"))
       .toBe("oauth_failed");
     expect(ensurePublicUserRow).not.toHaveBeenCalled();
+  });
+
+  it("clears the partial session when the account capability cannot be read", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const lookup = createServiceRoleUserLookup(null, {
+      data: null,
+      error: { message: "capability unavailable" },
+    });
+    createServiceRoleClient.mockReturnValue(lookup.client);
+    cookieGetAll.mockReturnValue([
+      { name: "sb-homecook-auth-token", value: "partial-session" },
+    ]);
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner",
+    ));
+
+    const redirectUrl = new URL(response.headers.get("location") ?? "");
+    expect(redirectUrl.pathname).toBe("/planner");
+    expect(redirectUrl.searchParams.get("authError")).toBe("oauth_failed");
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(response.headers.get("set-cookie") ?? "")
+      .toMatch(/sb-homecook-auth-token=;.*Max-Age=0/i);
+    expect(lookup.usersQuery.maybeSingle).not.toHaveBeenCalled();
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+    expect(ensureUserBootstrapState).not.toHaveBeenCalled();
+  });
+
+  it("clears the partial session and exposes the exact maintenance signal", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const lookup = createServiceRoleUserLookup(null, {
+      data: { state: "cutover_maintenance", revision: 2 },
+      error: null,
+    });
+    createServiceRoleClient.mockReturnValue(lookup.client);
+    cookieGetAll.mockReturnValue([
+      { name: "sb-homecook-auth-token", value: "partial-session" },
+    ]);
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner",
+    ));
+
+    const redirectUrl = new URL(response.headers.get("location") ?? "");
+    expect(redirectUrl.pathname).toBe("/login");
+    expect(redirectUrl.searchParams.get("authError"))
+      .toBe("ACCOUNT_LIFECYCLE_MAINTENANCE");
+    expect(redirectUrl.searchParams.get("next")).toBe("/planner");
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(response.headers.get("set-cookie") ?? "")
+      .toMatch(/sb-homecook-auth-token=;.*Max-Age=0/i);
+    expect(lookup.usersQuery.maybeSingle).not.toHaveBeenCalled();
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+    expect(ensureUserBootstrapState).not.toHaveBeenCalled();
+  });
+
+  it("never falls back to UUID-only legacy bootstrap after generation activation", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const lookup = createServiceRoleUserLookup(null, {
+      data: { state: "generation_active", revision: 3 },
+      error: null,
+    });
+    createServiceRoleClient.mockReturnValue(lookup.client);
+    cookieGetAll.mockReturnValue([
+      { name: "sb-homecook-auth-token", value: "generation-session" },
+    ]);
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner",
+    ));
+
+    const redirectUrl = new URL(response.headers.get("location") ?? "");
+    expect(redirectUrl.pathname).toBe("/login");
+    expect(redirectUrl.searchParams.get("authError")).toBe("ACCOUNT_SESSION_STALE");
+    expect(redirectUrl.searchParams.get("next")).toBe("/planner");
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(response.headers.get("set-cookie") ?? "")
+      .toMatch(/sb-homecook-auth-token=;.*Max-Age=0/i);
+    expect(lookup.usersQuery.maybeSingle).not.toHaveBeenCalled();
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+    expect(ensureUserBootstrapState).not.toHaveBeenCalled();
+  });
+
+  it("bootstraps a verified post-cutover identity through the generation adapter", async () => {
+    const ownerUuid = "76000000-0000-4000-8000-000000000001";
+    const sessionId = "76000000-0000-4000-8000-000000000002";
+    const identityCreatedAt = "2026-07-23T10:00:00.000Z";
+    const issuedAt = Math.floor(Date.now() / 1_000) - 10;
+    const expiresAt = issuedAt + 3_600;
+    const accessToken = [
+      Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url"),
+      Buffer.from(JSON.stringify({
+        aud: "authenticated",
+        exp: expiresAt,
+        iat: issuedAt,
+        iss: "https://example.supabase.co/auth/v1",
+        session_id: sessionId,
+        sub: ownerUuid,
+      })).toString("base64url"),
+      "signature",
+    ].join(".");
+    const user = {
+      id: ownerUuid,
+      created_at: identityCreatedAt,
+      email: "post-cutover@example.com",
+      email_confirmed_at: identityCreatedAt,
+      app_metadata: { provider: "google" },
+      user_metadata: {
+        nickname: "새 집밥러",
+        sub: "post-cutover-social-id",
+      },
+      identities: [{
+        provider: "google",
+        identity_data: { email_verified: true },
+      }],
+    };
+    const lookup = createServiceRoleUserLookup(null, {
+      data: { state: "generation_active", revision: 3 },
+      error: null,
+    });
+    lookup.rpc.mockImplementation((name: string) => {
+      if (name === "get_account_generation_capability") {
+        return Promise.resolve({
+          data: { state: "generation_active", revision: 3 },
+          error: null,
+        });
+      }
+      if (name === "bootstrap_account_generation_identity") {
+        return Promise.resolve({
+          data: {
+            account_generation: 1,
+            nickname: "새 집밥러",
+          },
+          error: null,
+        });
+      }
+      throw new Error(`unexpected rpc: ${name}`);
+    });
+    exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: accessToken } },
+      error: null,
+    });
+    getSession.mockResolvedValue({
+      data: { session: { access_token: accessToken } },
+      error: null,
+    });
+    getUser.mockResolvedValue({
+      data: { user },
+      error: null,
+    });
+    createServiceRoleClient.mockReturnValue(lookup.client);
+    vi.stubEnv(
+      "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
+      "auth-callback-session-hmac-secret-32-bytes-minimum",
+    );
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner",
+    ));
+
+    expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
+    expect(lookup.rpc).toHaveBeenCalledWith(
+      "bootstrap_account_generation_identity",
+      expect.objectContaining({
+        p_auth_identity_created_at_snapshot: identityCreatedAt,
+        p_hmac_key_version: 1,
+        p_owner_uuid: ownerUuid,
+        p_session_issued_at: new Date(issuedAt * 1_000).toISOString(),
+        p_session_key_hash: expect.stringMatching(/^[0-9a-f]{64}$/),
+      }),
+    );
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+    expect(ensureUserBootstrapState).not.toHaveBeenCalled();
+    expect(signOut).not.toHaveBeenCalled();
   });
 
   it("fails provider resolution when query and cookie attempts conflict", async () => {

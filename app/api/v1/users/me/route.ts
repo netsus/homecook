@@ -11,6 +11,20 @@ import { recordOperationalEvent, type OperationalEventsDbClient } from "@/lib/se
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { UserDeleteData, UserProfileData } from "@/types/user";
 
+import {
+  executeAccountGenerationDelete,
+  executeAccountGenerationDeleteReplay,
+  failClosedGenerationDelete,
+  readVerifiedAccountGenerationSession,
+  readVerifiedAccountGenerationReplaySession,
+} from "./_account-generation-active";
+import {
+  createAccountLifecycleMaintenanceResponse,
+  createCapabilityUnavailableResponse,
+  readAccountGenerationCapability,
+  readRequiredIdempotencyKey,
+} from "./_account-generation";
+
 interface QueryError {
   message: string;
 }
@@ -64,8 +78,11 @@ interface UserDeletePolicyResult {
 
 interface UsersMeDeleteDbClient {
   rpc(
-    functionName: "delete_user_private_data",
-    values: { p_user_id: string },
+    functionName: "delete_user_private_data_with_generation_receipt",
+    values: {
+      p_user_id: string;
+      p_auth_identity_created_at: string;
+    },
   ): PromiseLike<{
     data: UserDeletePolicyResult | null;
     error: QueryError | null;
@@ -262,7 +279,39 @@ export async function DELETE(request: Request) {
   const user = authResult.data.user;
 
   if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    const verifiedReplaySession =
+      await readVerifiedAccountGenerationReplaySession(routeClient);
+    if (!verifiedReplaySession.ok) {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    const replayServiceRoleClient = createServiceRoleClient();
+    if (!replayServiceRoleClient) {
+      return fail("INTERNAL_ERROR", "회원 탈퇴를 처리하지 못했어요.", 500);
+    }
+
+    const replayCapability =
+      await readAccountGenerationCapability(replayServiceRoleClient);
+    if (!replayCapability.ok) {
+      return createCapabilityUnavailableResponse();
+    }
+    if (replayCapability.state === "cutover_maintenance") {
+      return createAccountLifecycleMaintenanceResponse();
+    }
+    if (replayCapability.state !== "generation_active") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    const replayIdempotencyKey = readRequiredIdempotencyKey(request);
+    if (!replayIdempotencyKey.ok) {
+      return replayIdempotencyKey.response;
+    }
+
+    return executeAccountGenerationDeleteReplay({
+      dbClient: replayServiceRoleClient,
+      idempotencyKey: replayIdempotencyKey.idempotencyKey,
+      sessionAuthority: verifiedReplaySession.sessionAuthority,
+    });
   }
 
   const serviceRoleClient = createServiceRoleClient();
@@ -283,10 +332,46 @@ export async function DELETE(request: Request) {
   }
 
   const dbClient = serviceRoleClient as unknown as UsersMeDeleteDbClient;
+  const capability = await readAccountGenerationCapability(serviceRoleClient);
 
-  const deleteResult = await dbClient.rpc("delete_user_private_data", {
-    p_user_id: user.id,
-  });
+  if (!capability.ok) {
+    return createCapabilityUnavailableResponse();
+  }
+
+  if (capability.state === "cutover_maintenance") {
+    return createAccountLifecycleMaintenanceResponse();
+  }
+
+  if (capability.state === "generation_active") {
+    const idempotencyKey = readRequiredIdempotencyKey(request);
+    if (!idempotencyKey.ok) {
+      return idempotencyKey.response;
+    }
+
+    const verifiedSession = await readVerifiedAccountGenerationSession(routeClient);
+    if (!verifiedSession.ok) {
+      return failClosedGenerationDelete({
+        dbClient: serviceRoleClient as unknown as OperationalEventsDbClient,
+        request,
+        userId: user.id,
+      });
+    }
+
+    return executeAccountGenerationDelete({
+      dbClient: serviceRoleClient,
+      idempotencyKey: idempotencyKey.idempotencyKey,
+      request,
+      sessionAuthority: verifiedSession.sessionAuthority,
+    });
+  }
+
+  const deleteResult = await dbClient.rpc(
+    "delete_user_private_data_with_generation_receipt",
+    {
+      p_user_id: user.id,
+      p_auth_identity_created_at: user.created_at,
+    },
+  );
 
   if (deleteResult.error || !deleteResult.data?.deleted) {
     await recordOperationalEvent(serviceRoleClient as unknown as OperationalEventsDbClient | null, {

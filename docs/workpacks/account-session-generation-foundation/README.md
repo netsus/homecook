@@ -279,18 +279,18 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
 
 > 이 Stage 1 문서는 구현 완료를 주장하지 않는다. 아래 non-Manual 항목은 evidence가 생기는 Stage 2/4와 독립 Codex review Stage 3/5/6에서만 체크한다.
 
-- [ ] additive F0 schema와 capability singleton을 migration으로 구현하고 existing/fresh/replay를 통과한다 <!-- omo:id=delivery-f0-additive-schema;stage=2;scope=backend;review=3,6 -->
-- [ ] production dark-ship에서 `state=legacy`, canonical lifecycle/watermark 0, existing behavior 보존을 증명한다 <!-- omo:id=delivery-f0-legacy-dark-ship;stage=2;scope=backend;review=3,6 -->
-- [ ] personal writer/direct DML/Storage/service external write와 local/remote auth inbound FK inventory를 100% 분류한다 <!-- omo:id=delivery-f0-writer-fk-inventory;stage=2;scope=backend;review=3,6 -->
-- [ ] shared/exclusive fence, volatile locking guard trigger, Storage predicate, external write lease를 구현한다 <!-- omo:id=delivery-f0-fence-guards;stage=2;scope=backend;review=3,6 -->
-- [ ] session HMAC binding과 generation-aware bind/revoke/dual-dispatch를 구현한다 <!-- omo:id=delivery-f0-session-binding;stage=2;scope=backend;review=3,6 -->
-- [ ] Hook invoker wrapper, NOLOGIN definer guard, exact `supabase_auth_admin` ACL과 negative role matrix를 구현한다 <!-- omo:id=delivery-f0-auth-hook-acl;stage=2;scope=backend;review=3,6 -->
-- [ ] staging/classification/digest CAS/quarantine/abort/atomic promote를 local testable state로 구현한다 <!-- omo:id=delivery-f0-cutover-core;stage=2;scope=backend;review=3,6 -->
-- [ ] legacy delete receipt, generation delete skeleton, auth outbox consumer, audit/FK cleanup을 구현한다 <!-- omo:id=delivery-f0-delete-outbox;stage=2;scope=backend;review=3,6 -->
-- [ ] `com.homecook.account-maintenance` 300초 launchd skeleton과 secret-free 검증 도구를 구현한다 <!-- omo:id=delivery-f0-launchd-skeleton;stage=2;scope=backend;review=3,6 -->
-- [ ] local existing/fresh/replay, lock race, exact principal role matrix와 read-only remote inventory를 통과한다 <!-- omo:id=delivery-f0-security-verification;stage=2;scope=shared;review=3,6 -->
+- [x] additive F0 schema와 capability singleton을 migration으로 구현하고 existing/fresh/replay를 통과한다 <!-- omo:id=delivery-f0-additive-schema;stage=2;scope=backend;review=3,6 -->
+- [x] production dark-ship에서 `state=legacy`, canonical lifecycle/watermark 0, existing behavior 보존을 증명한다 <!-- omo:id=delivery-f0-legacy-dark-ship;stage=2;scope=backend;review=3,6 -->
+- [x] personal writer/direct DML/Storage/service external write와 local/remote auth inbound FK inventory를 100% 분류한다 <!-- omo:id=delivery-f0-writer-fk-inventory;stage=2;scope=backend;review=3,6 -->
+- [x] shared/exclusive fence, volatile locking guard trigger, Storage predicate, external write lease를 구현한다 <!-- omo:id=delivery-f0-fence-guards;stage=2;scope=backend;review=3,6 -->
+- [x] session HMAC binding과 generation-aware bind/revoke/dual-dispatch를 구현한다 <!-- omo:id=delivery-f0-session-binding;stage=2;scope=backend;review=3,6 -->
+- [x] Hook invoker wrapper, NOLOGIN definer guard, exact `supabase_auth_admin` ACL과 negative role matrix를 구현한다 <!-- omo:id=delivery-f0-auth-hook-acl;stage=2;scope=backend;review=3,6 -->
+- [x] staging/classification/digest CAS/quarantine/abort/atomic promote를 local testable state로 구현한다 <!-- omo:id=delivery-f0-cutover-core;stage=2;scope=backend;review=3,6 -->
+- [x] legacy delete receipt, generation delete skeleton, auth outbox consumer, audit/FK cleanup을 구현한다 <!-- omo:id=delivery-f0-delete-outbox;stage=2;scope=backend;review=3,6 -->
+- [x] `com.homecook.account-maintenance` 300초 launchd skeleton과 secret-free 검증 도구를 구현한다 <!-- omo:id=delivery-f0-launchd-skeleton;stage=2;scope=backend;review=3,6 -->
+- [x] local existing/fresh/replay, lock race, exact principal role matrix와 read-only remote inventory를 통과한다 <!-- omo:id=delivery-f0-security-verification;stage=2;scope=shared;review=3,6 -->
 - [ ] `ACCOUNT_QUARANTINE` API client/type와 auth callback/MYPAGE lifecycle gate를 연결한다 <!-- omo:id=delivery-f0-quarantine-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] loading/empty/error/restricted/unauthorized/pending replay UI와 return-to-action을 구현한다 <!-- omo:id=delivery-f0-quarantine-states;stage=4;scope=frontend;review=5,6 -->
 - [ ] 390/320/desktop screenshot, exploratory QA/eval, separate Codex authority report를 남긴다 <!-- omo:id=delivery-f0-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] backend Vitest/PostgreSQL/security smoke와 frontend Vitest/Playwright 범위를 분리해 자동화한다 <!-- omo:id=delivery-f0-test-split;stage=2;scope=shared;review=3,6 -->
-- [ ] 독립 Codex security/DB review와 5축 code review의 required finding을 0으로 닫는다 <!-- omo:id=delivery-f0-independent-reviews;stage=2;scope=shared;review=3,6 -->
+- [x] backend Vitest/PostgreSQL/security smoke와 frontend Vitest/Playwright 범위를 분리해 자동화한다 <!-- omo:id=delivery-f0-test-split;stage=2;scope=shared;review=3,6 -->
+- [x] 독립 Codex security/DB review와 5축 code review의 required finding을 0으로 닫는다 <!-- omo:id=delivery-f0-independent-reviews;stage=2;scope=shared;review=3,6 -->
