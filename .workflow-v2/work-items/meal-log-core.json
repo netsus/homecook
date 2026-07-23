@@ -1,0 +1,152 @@
+{
+  "id": "meal-log-core",
+  "title": "Meal log core",
+  "summary": "실제 섭취를 batch, product, ingredient exact source와 저장 당시 날짜·timezone·nutrition evidence에 결합하는 멱등 backend를 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "Meal entry와 batch consumed event pointer, exact product/ingredient evidence, complete-partial-unavailable aggregate를 owner-generation RLS와 one-transaction replay authority로 구현한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for any stage",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, implementation, security/DB, five-axis, Stage 3/6 and closeout; no self-approval",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization hotfix merged and deployed",
+    "cooking-meal-log contract-evolution merged as PR #1072",
+    "prepared-food-search-relevance Stage 1 docs merged as PR #1074; runtime remains unified search predecessor",
+    "product-ingredient-link-foundation Stage 1 docs merged as PR #1076; runtime remains effective ingredient predecessor",
+    "recipe-snapshot-authority-foundation Stage 1 docs merged as PR #1078; runtime remains nutrition content predecessor",
+    "cooked-batch-weight-ledger Stage 1 docs merged as PR #1082; runtime remains batch event and projection predecessor",
+    "planner-shell #10 owns Planner navigation and meal-log-ui #12 owns MEAL_LOG UI and design"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/meal-log-core/README.md",
+      "docs/workpacks/meal-log-core/acceptance.md",
+      "docs/workpacks/meal-log-core/automation-spec.json",
+      "docs/workpacks/account-session-generation-foundation/README.md",
+      "docs/workpacks/prepared-food-search-relevance/README.md",
+      "docs/workpacks/product-ingredient-link-foundation/README.md",
+      "docs/workpacks/recipe-snapshot-authority-foundation/README.md",
+      "docs/workpacks/cooked-batch-weight-ledger/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/workflow-v2/README.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "merged-exact-SHA remote read-only meal-log schema function ACL RLS constraint capability inventory",
+      "two-owner three-source nondisclosure and multi-table digest smoke",
+      "idempotent create patch delete and different-payload zero-effect smoke",
+      "interleaved batch own-event reversal and full replay checksum smoke",
+      "timezone DST null-instant and historical no-regroup smoke",
+      "exact product ingredient evidence and aggregate-state smoke",
+      "account cleanup pointer event entry order smoke"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 6,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/meal-log-core pnpm validate:workpack -- --slice meal-log-core",
+      "node scripts/validate-automation-spec.mjs --slice meal-log-core",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/meal-log-core.test.ts tests/meal-log-security.test.ts tests/meal-log-batch-events.test.ts tests/meal-log-nutrition-aggregate.test.ts",
+      "pnpm test:meal-log-core:postgres",
+      "pnpm verify:backend",
+      "pnpm test:e2e:regression:ci --grep meal-log-core",
+      "pnpm validate:closeout-sync -- --slice meal-log-core",
+      "node scripts/verify-meal-log-core-remote.mjs --mode post-merge-read-only",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/meal-log-core pnpm validate:workpack -- --slice meal-log-core",
+      "node scripts/validate-automation-spec.mjs --slice meal-log-core",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of five core artifacts plus roadmap and status",
+      "separate Codex security and DB review of RLS exact-one evidence pointer locks replay cleanup and aggregate authority",
+      "separate Codex five-axis review",
+      "separate Codex Stage 3 Stage 6 and closeout reviews"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "roadmap-docs-workflow-lifecycle-planned-separation",
+      "owner-generation-rls-nondisclosure-and-cleanup-order",
+      "three-source-exact-one-and-server-pinned-evidence",
+      "stored-local-date-iana-zone-null-instant-no-regroup",
+      "deleted-slot-snapshot-and-new-write-denial",
+      "entry-event-pointer-deferred-constraint-and-own-event-reversal",
+      "generation-idempotency-revision-and-whole-operation-zero-write",
+      "slice8-row-lock-full-replay-bounds-checksum-concurrency",
+      "exact-product-basis-and-ingredient-profile-conversion-evidence",
+      "complete-partial-unavailable-slot-day-aggregate",
+      "legacy-consumed-only-eaten-xp-and-no-repeat",
+      "slice1-search-slice2-effective-link-slice8-batch-reader-boundary",
+      "slice10-shell-and-slice12-ui-design-boundary",
+      "merged-exact-sha-remote-read-only-evidence",
+      "stage1-current-vs-future-command-honesty",
+      "independent-required-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Planner shell navigation owned by #10",
+    "MEAL_LOG screen sheets recent frequent UX and design authority owned by #12",
+    "Weekly nutrition analysis goals medical advice or new bottom tab",
+    "Free-text external source or generalized food-items model",
+    "Estimated conversion mutable-current repin or client-authored evidence",
+    "Second batch remainder event search or aggregate authority",
+    "Direct protected DML ordinary hard delete or generic event reversal",
+    "New endpoint source type field aggregate state error screen or client authority",
+    "Unmerged remote migration production write or capability activation"
+  ],
+  "open_questions": [],
+  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/DB and five-axis reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; implementation evidence is future. Runtime waits for #1, #2, #4 and #8. #9 owns meal-log backend; #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and production activation remains Manual Only."
+}
