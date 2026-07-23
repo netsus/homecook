@@ -245,7 +245,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `personal-recipe-customization-write-core` | docs | 개인 레시피 create/PATCH/soft DELETE, owner→recipe lock, session generation과 idempotent single-RPC write를 구현한다 |
 | `recipe-content-snapshot-future-propagation` | docs | future-plan impact preview/token, replace_all/keep, active cooking claim, shopping open reconcile와 completed read-only를 같은 transaction 경계에 잠근다 |
 | `cooked-batch-weight-ledger` | docs | cooked batch content-only nutrition, 전체/잔량 중량, append-only quantity/lifecycle event, weighted/unweighed/unrecoverable와 RPC-only mutation을 구현한다 |
-| `meal-log-core` | planned | Meal event pointer, record-time timezone/local date, exact nutrition evidence와 batch/product/ingredient 실제 섭취 기록의 멱등 backend를 구현한다 |
+| `meal-log-core` | docs | Meal event pointer, record-time timezone/local date, exact nutrition evidence와 batch/product/ingredient 실제 섭취 기록의 멱등 backend를 구현한다 |
 | `planner-shell` | planned | 플래너 내부를 `요리 계획 | 식사 기록` shell로 분리하고 계획 영양·신규 제품 계획 입력을 제거하되 legacy row 조회/삭제는 보존한다 |
 | `cooked-batch-weight-ui` | planned | COOK_MODE 완료 중량 입력과 weigh-later, 이후 exact weight/unrecoverable/discard/adjust UI를 ledger 계약에 연결한다 |
 | `meal-log-ui` | planned | 신규 MEAL_LOG의 날짜 중심 하루 합계·끼니 소계·음식 추가 sheet·수정/삭제·결측 상태를 구현한다 |
@@ -286,7 +286,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 6 | C | `personal-recipe-customization-write-core` | docs | #2 + #3 + #4 + #5 |
 | 7 | C | `recipe-content-snapshot-future-propagation` | docs | #4 + #6; `cook-mode-whole-board` merged |
 | 8 | D | `cooked-batch-weight-ledger` | docs | #7; `cook-mode-whole-board` merged |
-| 9 | D | `meal-log-core` | planned | #1 + #2 + #4 + #8 |
+| 9 | D | `meal-log-core` | docs | #1 + #2 + #4 + #8 |
 | 10 | E | `planner-shell` | planned | #9 |
 | 11 | E | `cooked-batch-weight-ui` | planned | #8; `cook-mode-whole-board` merged |
 | 12 | E | `meal-log-ui` | planned | #9 + #10 |
