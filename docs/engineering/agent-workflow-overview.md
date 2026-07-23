@@ -29,6 +29,7 @@
 ### Change Type Rules
 
 - `product-backend`와 `product-frontend`는 product slice 절차를 따른다.
+- `product-backend` Stage 2를 작은 PR 여러 개로 분할할 수 있다. 각 Ready PR은 base 대비 checked 또는 유효한 reviewer waiver로 새로 닫은 Stage 2 checklist 항목을 최소 1개 포함하고, 남은 항목은 후속 PR을 위해 미체크로 유지한다. 전체 non-manual checklist 완료는 최종 merged closeout에서만 강제한다.
 - `product-frontend`에서 신규 화면, high-risk UI change, anchor extension은 `docs/engineering/product-design-authority.md` 기준 authority review를 optional이 아니라 사실상 required review로 취급한다.
 - Baemin prototype 적용 product-frontend는 `ui/designs/BAEMIN_STYLE_DIRECTION.md`의 classification vocabulary를 따른다. slice 13-19 화면은 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`의 screen/surface-level matrix를 먼저 확인한다.
 - `frontend.design_authority.generator_artifact`와 `critic_artifact`는 generic nullable fields다. string path는 required/reused artifact, `null`은 intentionally not applicable을 뜻한다.

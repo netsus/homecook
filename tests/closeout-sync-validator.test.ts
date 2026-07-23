@@ -1,10 +1,12 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";
 
 import { describe, expect, it } from "vitest";
 
 import { validateCloseoutSync } from "../scripts/lib/validate-closeout-sync.mjs";
+import { readWorkpackChecklistContract } from "../scripts/lib/omo-checklist-contract.mjs";
 
 function metadata(id: string, stage: 2 | 4, scope: "backend" | "frontend" | "shared", review: string) {
   return `<!-- omo:id=${id};stage=${stage};scope=${scope};review=${review} -->`;
@@ -194,6 +196,60 @@ function createFixture({
   }
 
   return rootDir;
+}
+
+type ChecklistFixtureItem = {
+  checked: boolean;
+  text: string;
+  meta?: string;
+};
+
+function createIncrementalBackendFixture({
+  baseDeliveryItems,
+  currentDeliveryItems,
+  baseAcceptanceItems = [],
+  currentAcceptanceItems = [],
+  currentWithAutomationSpec = true,
+}: {
+  baseDeliveryItems: ChecklistFixtureItem[];
+  currentDeliveryItems: ChecklistFixtureItem[];
+  baseAcceptanceItems?: ChecklistFixtureItem[];
+  currentAcceptanceItems?: ChecklistFixtureItem[];
+  currentWithAutomationSpec?: boolean;
+}) {
+  const baseRootDir = createFixture({
+    roadmapStatus: "docs",
+    designStatus: "temporary",
+    withAutomationSpec: true,
+    deliveryItems: baseDeliveryItems,
+    acceptanceItems: baseAcceptanceItems,
+  });
+  const rootDir = createFixture({
+    roadmapStatus: "in-progress",
+    designStatus: "temporary",
+    withAutomationSpec: currentWithAutomationSpec,
+    deliveryItems: currentDeliveryItems,
+    acceptanceItems: currentAcceptanceItems,
+  });
+
+  return { baseRootDir, rootDir };
+}
+
+function validateIncrementalBackendFixture(rootDir: string, baseRootDir: string) {
+  return validateCloseoutSync({
+    rootDir,
+    env: {
+      ...process.env,
+      BRANCH_NAME: "feature/be-05-planner-week-core",
+      PR_IS_DRAFT: "false",
+    },
+    changedFiles: [],
+    readBaseChecklistContract: () =>
+      readWorkpackChecklistContract({
+        rootDir: baseRootDir,
+        slice: "05-planner-week-core",
+      }),
+  });
 }
 
 describe("closeout sync validator", () => {
@@ -501,11 +557,370 @@ describe("closeout sync validator", () => {
     expect(results).toEqual([]);
   });
 
-  it("enforces Stage 2-owned checklist items for non-draft backend PRs under the metadata contract", () => {
+  it("accepts an incremental backend PR that newly closes part of the Stage 2 checklist", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "후속 백엔드 운영 경로",
+          meta: metadata("delivery-backend-operations", 2, "shared", "3,6"),
+        },
+        {
+          checked: false,
+          text: "UI 연결",
+          meta: metadata("delivery-ui", 4, "frontend", "5,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "후속 백엔드 운영 경로",
+          meta: metadata("delivery-backend-operations", 2, "shared", "3,6"),
+        },
+        {
+          checked: false,
+          text: "UI 연결",
+          meta: metadata("delivery-ui", 4, "frontend", "5,6"),
+        },
+      ],
+      baseAcceptanceItems: [
+        {
+          checked: false,
+          text: "API 응답 형식이 { success, data, error }를 따른다",
+          meta: metadata("accept-backend-api", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "loading 상태가 있다",
+          meta: metadata("accept-loading", 4, "frontend", "5,6"),
+        },
+      ],
+      currentAcceptanceItems: [
+        {
+          checked: false,
+          text: "API 응답 형식이 { success, data, error }를 따른다",
+          meta: metadata("accept-backend-api", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "loading 상태가 있다",
+          meta: metadata("accept-loading", 4, "frontend", "5,6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expect(results).toEqual([]);
+  });
+
+  it("reads the base checklist contract from origin/master in the policy runtime", () => {
     const rootDir = createFixture({
-      roadmapStatus: "in-progress",
+      roadmapStatus: "docs",
       designStatus: "temporary",
       withAutomationSpec: true,
+      deliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "후속 백엔드 운영 경로",
+          meta: metadata("delivery-backend-operations", 2, "shared", "3,6"),
+        },
+      ],
+      acceptanceItems: [],
+    });
+    execFileSync("git", ["init", "-b", "master"], { cwd: rootDir });
+    execFileSync("git", ["config", "user.name", "Closeout Test"], { cwd: rootDir });
+    execFileSync("git", ["config", "user.email", "closeout@example.invalid"], { cwd: rootDir });
+    execFileSync("git", ["add", "."], { cwd: rootDir });
+    execFileSync("git", ["commit", "-m", "seed base checklist"], { cwd: rootDir });
+    execFileSync("git", ["update-ref", "refs/remotes/origin/master", "HEAD"], { cwd: rootDir });
+
+    writeFixtureFile(
+      rootDir,
+      "docs/workpacks/README.md",
+      [
+        "# Workpack Roadmap v2",
+        "",
+        "## Slice Order",
+        "",
+        "| Slice | Status | Goal |",
+        "| --- | --- | --- |",
+        "| `05-planner-week-core` | in-progress | planner |",
+      ].join("\n"),
+    );
+    writeFixtureFile(
+      rootDir,
+      "docs/workpacks/05-planner-week-core/README.md",
+      buildReadme({
+        designStatus: "temporary",
+        deliveryItems: [
+          {
+            checked: true,
+            text: "백엔드 계약 고정",
+            meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+          },
+          {
+            checked: false,
+            text: "후속 백엔드 운영 경로",
+            meta: metadata("delivery-backend-operations", 2, "shared", "3,6"),
+          },
+        ],
+      }),
+    );
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BASE_REF: "master",
+        BRANCH_NAME: "feature/be-05-planner-week-core",
+        PR_IS_DRAFT: "false",
+      },
+      changedFiles: [],
+    });
+
+    expect(results).toEqual([]);
+  });
+
+  it("rejects a backend PR that does not newly close a Stage 2 checklist item", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+      baseAcceptanceItems: [
+        {
+          checked: false,
+          text: "후속 백엔드 운영 경로",
+          meta: metadata("accept-backend-operations", 2, "shared", "3,6"),
+        },
+      ],
+      currentAcceptanceItems: [
+        {
+          checked: false,
+          text: "후속 백엔드 운영 경로",
+          meta: metadata("accept-backend-operations", 2, "shared", "3,6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("newly close at least one Stage 2-owned checklist item"),
+        }),
+      ]),
+    );
+  });
+
+  it("rejects a backend PR that reopens a previously completed checklist item", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: true,
+          text: "기존 백엔드 계약",
+          meta: metadata("delivery-existing-backend", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "새 백엔드 계약",
+          meta: metadata("delivery-new-backend", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: false,
+          text: "기존 백엔드 계약",
+          meta: metadata("delivery-existing-backend", 2, "backend", "3,6"),
+        },
+        {
+          checked: true,
+          text: "새 백엔드 계약",
+          meta: metadata("delivery-new-backend", 2, "backend", "3,6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("must not reopen a checklist item"),
+        }),
+      ]),
+    );
+  });
+
+  it("rejects checklist contract drift on an incremental backend PR", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "shared", "3,6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("must not change checklist contract metadata"),
+        }),
+      ]),
+    );
+  });
+
+  it("rejects removing an existing waiver while closing another Stage 2 item", () => {
+    const waivedMetadata = metadata(
+      "delivery-waived-backend",
+      2,
+      "backend",
+      "3,6",
+    ).replace(
+      "-->",
+      ";waived=true;waived_by=claude;waived_stage=6;waived_reason=rebuttal_accepted -->",
+    );
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "검토로 닫힌 백엔드 항목",
+          meta: waivedMetadata,
+        },
+        {
+          checked: false,
+          text: "새 백엔드 계약",
+          meta: metadata("delivery-new-backend", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: false,
+          text: "검토로 닫힌 백엔드 항목",
+          meta: metadata("delivery-waived-backend", 2, "backend", "3,6"),
+        },
+        {
+          checked: true,
+          text: "새 백엔드 계약",
+          meta: metadata("delivery-new-backend", 2, "backend", "3,6"),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("must not reopen a checklist item"),
+        }),
+      ]),
+    );
+  });
+
+  it("treats a newly added valid waiver as incremental Stage 2 closure", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "검토로 닫을 백엔드 항목",
+          meta: metadata("delivery-waived-backend", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: false,
+          text: "검토로 닫을 백엔드 항목",
+          meta: metadata("delivery-waived-backend", 2, "backend", "3,6").replace(
+            "-->",
+            ";waived=true;waived_by=claude;waived_stage=6;waived_reason=rebuttal_accepted -->",
+          ),
+        },
+      ],
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expect(results).toEqual([]);
+  });
+
+  it("rejects removing automation-spec.json to bypass incremental backend validation", () => {
+    const { baseRootDir, rootDir } = createIncrementalBackendFixture({
+      baseDeliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+      currentDeliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+      ],
+      currentWithAutomationSpec: false,
+    });
+
+    const results = validateIncrementalBackendFixture(rootDir, baseRootDir);
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("must keep automation-spec.json"),
+        }),
+      ]),
+    );
+  });
+
+  it("does not require authority reports before frontend ready-for-review", () => {
+    const baseRootDir = createFixture({
+      roadmapStatus: "docs",
+      designStatus: "temporary",
+      withAutomationSpec: true,
+      authorityRequired: true,
+      authorityReportPaths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+      authorityStatus: "required",
+      visualArtifact: "Stage 4 screenshot evidence 예정",
       deliveryItems: [
         {
           checked: false,
@@ -531,27 +946,6 @@ describe("closeout sync validator", () => {
         },
       ],
     });
-
-    const results = validateCloseoutSync({
-      rootDir,
-      env: {
-        ...process.env,
-        BRANCH_NAME: "feature/be-05-planner-week-core",
-        PR_IS_DRAFT: "false",
-      },
-      changedFiles: [],
-    });
-
-    expect(results[0]?.errors).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          message: expect.stringContaining("Stage 2-owned checklist item must be checked"),
-        }),
-      ]),
-    );
-  });
-
-  it("does not require authority reports before frontend ready-for-review", () => {
     const rootDir = createFixture({
       roadmapStatus: "in-progress",
       designStatus: "temporary",
@@ -594,6 +988,11 @@ describe("closeout sync validator", () => {
         PR_IS_DRAFT: "false",
       },
       changedFiles: [],
+      readBaseChecklistContract: () =>
+        readWorkpackChecklistContract({
+          rootDir: baseRootDir,
+          slice: "05-planner-week-core",
+        }),
     });
 
     expect(results).toEqual([]);

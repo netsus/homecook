@@ -200,6 +200,7 @@ surface별로 generated / semi-generated / preserved가 다르다는 점이다.
 
 - reviewer-readable completion view
 - stage actor가 stage artifact를 제출하면 supervisor가 canonical closeout state를 갱신하고, acceptance는 projection/sync target으로 본다
+- Stage 2가 여러 backend PR로 분할되면 in-progress acceptance는 base 대비 각 PR이 checked 또는 유효한 reviewer waiver로 실제 닫은 항목만 누적하며, 남은 non-manual 항목은 최종 closeout 전까지 pending으로 유지한다
 - semi-generated sync target이다. acceptance status는 projection 대상이지만 전체 문서를 기계적으로 갈아엎지는 않는다.
 
 ### 6. `docs/workpacks/<slice>/automation-spec.json`

@@ -168,8 +168,9 @@ function buildChecklistItem({
   };
 }
 
-function parseDeliveryChecklist({ filePath }) {
-  if (!existsSync(filePath)) {
+function parseDeliveryChecklist({ filePath, contents = undefined }) {
+  const hasInlineContents = typeof contents === "string";
+  if (!hasInlineContents && !existsSync(filePath)) {
     return {
       items: [],
       errors: [
@@ -182,7 +183,7 @@ function parseDeliveryChecklist({ filePath }) {
     };
   }
 
-  const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+  const lines = (hasInlineContents ? contents : readFileSync(filePath, "utf8")).split(/\r?\n/);
   const sectionIndex = lines.findIndex((line) => line.trim() === "## Delivery Checklist");
   if (sectionIndex === -1) {
     return {
@@ -232,8 +233,9 @@ function parseDeliveryChecklist({ filePath }) {
   };
 }
 
-function parseAcceptanceChecklist({ filePath }) {
-  if (!existsSync(filePath)) {
+function parseAcceptanceChecklist({ filePath, contents = undefined }) {
+  const hasInlineContents = typeof contents === "string";
+  if (!hasInlineContents && !existsSync(filePath)) {
     return {
       items: [],
       errors: [
@@ -246,7 +248,7 @@ function parseAcceptanceChecklist({ filePath }) {
     };
   }
 
-  const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+  const lines = (hasInlineContents ? contents : readFileSync(filePath, "utf8")).split(/\r?\n/);
   const items = [];
   const errors = [];
   let currentSection = null;
@@ -446,13 +448,30 @@ export function readWorkpackChecklistContract({
     worktreePath,
     slice,
   });
+  return buildWorkpackChecklistContractFromSources({
+    readmePath,
+    acceptancePath,
+    automationSpecPath,
+    automationSpecExists: existsSync(automationSpecPath),
+  });
+}
+
+export function buildWorkpackChecklistContractFromSources({
+  readmePath,
+  acceptancePath,
+  automationSpecPath,
+  automationSpecExists,
+  readmeContents = undefined,
+  acceptanceContents = undefined,
+}) {
   const delivery = parseDeliveryChecklist({
     filePath: readmePath,
+    contents: readmeContents,
   });
   const acceptance = parseAcceptanceChecklist({
     filePath: acceptancePath,
+    contents: acceptanceContents,
   });
-  const automationSpecExists = existsSync(automationSpecPath);
   const items = [...delivery.items, ...acceptance.items];
   const contract = {
     mode: automationSpecExists ? "metadata_v1" : "legacy",

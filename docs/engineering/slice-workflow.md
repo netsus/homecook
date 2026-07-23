@@ -51,6 +51,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - product slice는 `Ready for Review` 전에 PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 비워두지 않는다.
 - exact closeout ownership / projection / repair semantics는 `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`를 따른다. `docs/engineering/bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface를 기록하는 compatibility note다.
 - Stage 2/4 구현 actor는 자신이 닫은 범위의 checklist / acceptance / PR evidence를 최신화하고, Stage 3/5/6 review actor는 mismatch를 closeout drift로 본다.
+- Stage 2를 여러 작은 backend PR로 나누면 각 PR은 base 대비 이번 PR에서 실제로 닫은 Stage 2 checklist만 `unchecked -> checked` 또는 유효한 reviewer waiver 추가로 바꾼다. 후속 PR 항목은 unchecked로 유지하며, 기존 계약 metadata/text 변경·완료 항목 재개방·기존 waiver 제거/변경은 별도 선행 docs PR 없이는 허용하지 않는다.
 - authority-required slice는 Claude `final_authority_gate`를 통과하기 전 최종 closeout이나 merge-ready 상태로 넘기지 않는다.
 - Stage 2/4 actor는 Draft PR을 Ready로 전환하기 전에 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode backend|frontend`로 PR body required sections, exploratory QA/eval evidence, authority evidence refs, real smoke evidence, pending Actual Verification placeholder를 한 번에 확인한다.
 - exact validator semantics와 미체크 허용 범위는 `pnpm validate:pr-ready`, `pnpm validate:closeout-sync`, `pnpm validate:exploratory-qa-evidence`, `pnpm validate:authority-evidence-presence`, `pnpm validate:real-smoke-presence`, canonical closeout doc를 따른다.
@@ -283,6 +284,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - `Schema Change: 없음`이어도 이 슬라이스가 읽는 기존 테이블이 real DB/local Supabase에 존재하는지 확인
 - 시스템 row/bootstrap 의존 슬라이스면 fixture만이 아니라 real DB smoke 또는 seed 검증 경로를 최소 1회 실행
 - README `Delivery Checklist`와 acceptance의 백엔드 범위를 PR 준비 전에 갱신
+- 작은 Stage 2 PR은 자신이 새로 만족한 항목만 체크하고 후속 구현 항목은 미체크로 유지한다. Ready gate는 base 대비 Stage 2 항목이 최소 1개 새로 닫혔는지(checked 또는 유효한 reviewer waiver), 기존 계약/완료/waiver 상태가 약화되지 않았는지 검증한다.
 - stage-result에는 이번 run에서 닫은 checklist id(`checklist_updates[]`)와 evidence ref를 남긴다
 - Claude review의 `required_fix_ids`가 잘못 짚은 항목이라고 판단되면 Codex는 `contested_fix_ids[]`와 `rebuttals[]`로 반박 근거를 제출할 수 있다
 - PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 Stage 2 범위 기준으로 최신화
