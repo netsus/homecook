@@ -293,7 +293,9 @@ Desktop 규칙:
 
 ## Design Status
 
-`temporary`
+`confirmed`
 
-Stage 4 구현과 screenshot-based authority evidence가 생기기 전까지는
-`confirmed`가 아니라 `authority-required` gate artifact로 유지한다.
+Stage 4 구현은 390px/320px/desktop 및 상태별 screenshot evidence를 남겼고,
+별도 Codex product-design-authority 재검토에서
+Blocker/Major/Minor `0/0/0`, unresolved `0`으로 통과했다.
+최종 판정은 `ui/designs/authority/ACCOUNT_QUARANTINE-authority.md`를 따른다.

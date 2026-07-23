@@ -183,12 +183,12 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
   - before/current auth/MYPAGE capture: `ui/designs/evidence/account-session-generation-foundation/before/`
   - Stage 4 evidence: `ACCOUNT_QUARANTINE-mobile-390.png`, `ACCOUNT_QUARANTINE-mobile-320.png`, `ACCOUNT_QUARANTINE-desktop.png`, activate/delete/error/pending variants
   - authority report: `ui/designs/authority/ACCOUNT_QUARANTINE-authority.md`
-- Authority status: `required`; Stage 1 markdown design critique는 통과했지만 구현 screenshot/Figma authority는 아직 미래 Stage 4 gate다. 별도 Codex authority 세션이 390px/320px/desktop과 상태별 screenshot evidence를 판정하기 전에는 `confirmed`로 승격하지 않는다.
+- Authority status: `passed`; Stage 1 markdown design critique와 Stage 4 구현 screenshot authority가 모두 Blocker/Major/Minor `0/0/0`, unresolved `0`으로 통과했다. 판정과 evidence 경로는 `ui/designs/authority/ACCOUNT_QUARANTINE-authority.md`에 고정한다.
 - blocker: 320px CTA 잘림, recovery/delete 위계 혼동, destructive delete 오조작, auth-absent CTA 노출, 일반 content 우회, 전체 페이지 가로 스크롤, 44px 미만 터치 target.
 
 ## Design Status
 
-`temporary`. Stage 1 wireframe/critique는 Round 4 final `PASS`로 잠겼다. Stage 4 구현과 screenshot authority evidence가 생기면 `pending-review`, 별도 Codex Stage 5/authority gate의 blocker 0 뒤에만 `confirmed`로 전환한다.
+`confirmed`. Stage 1 wireframe/critique Round 4 final `PASS`와 Stage 4 screenshot-based product-design-authority `PASS`를 모두 유지한다.
 
 ## Source Links
 
@@ -289,8 +289,8 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
 - [x] legacy delete receipt, generation delete skeleton, auth outbox consumer, audit/FK cleanup을 구현한다 <!-- omo:id=delivery-f0-delete-outbox;stage=2;scope=backend;review=3,6 -->
 - [x] `com.homecook.account-maintenance` 300초 launchd skeleton과 secret-free 검증 도구를 구현한다 <!-- omo:id=delivery-f0-launchd-skeleton;stage=2;scope=backend;review=3,6 -->
 - [x] local existing/fresh/replay, lock race, exact principal role matrix와 read-only remote inventory를 통과한다 <!-- omo:id=delivery-f0-security-verification;stage=2;scope=shared;review=3,6 -->
-- [ ] `ACCOUNT_QUARANTINE` API client/type와 auth callback/MYPAGE lifecycle gate를 연결한다 <!-- omo:id=delivery-f0-quarantine-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading/empty/error/restricted/unauthorized/pending replay UI와 return-to-action을 구현한다 <!-- omo:id=delivery-f0-quarantine-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390/320/desktop screenshot, exploratory QA/eval, separate Codex authority report를 남긴다 <!-- omo:id=delivery-f0-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] `ACCOUNT_QUARANTINE` API client/type와 auth callback/MYPAGE lifecycle gate를 연결한다 <!-- omo:id=delivery-f0-quarantine-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] loading/empty/error/restricted/unauthorized/pending replay UI와 return-to-action을 구현한다 <!-- omo:id=delivery-f0-quarantine-states;stage=4;scope=frontend;review=5,6 -->
+- [x] 390/320/desktop screenshot, exploratory QA/eval, separate Codex authority report를 남긴다 <!-- omo:id=delivery-f0-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] backend Vitest/PostgreSQL/security smoke와 frontend Vitest/Playwright 범위를 분리해 자동화한다 <!-- omo:id=delivery-f0-test-split;stage=2;scope=shared;review=3,6 -->
 - [x] 독립 Codex security/DB review와 5축 code review의 required finding을 0으로 닫는다 <!-- omo:id=delivery-f0-independent-reviews;stage=2;scope=shared;review=3,6 -->

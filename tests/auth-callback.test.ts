@@ -522,6 +522,94 @@ describe("auth callback", () => {
     expect(ensureUserBootstrapState).not.toHaveBeenCalled();
   });
 
+  it("preserves the verified session and return intent for quarantined accounts", async () => {
+    const ownerUuid = "76000000-0000-4000-8000-000000000001";
+    const sessionId = "76000000-0000-4000-8000-000000000002";
+    const identityCreatedAt = "2026-07-23T10:00:00.000Z";
+    const issuedAt = Math.floor(Date.now() / 1_000) - 10;
+    const expiresAt = issuedAt + 3_600;
+    const accessToken = [
+      Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url"),
+      Buffer.from(JSON.stringify({
+        aud: "authenticated",
+        exp: expiresAt,
+        iat: issuedAt,
+        iss: "https://example.supabase.co/auth/v1",
+        session_id: sessionId,
+        sub: ownerUuid,
+      })).toString("base64url"),
+      "signature",
+    ].join(".");
+    const user = {
+      id: ownerUuid,
+      created_at: identityCreatedAt,
+      email: "quarantined@example.com",
+      email_confirmed_at: identityCreatedAt,
+      app_metadata: { provider: "google" },
+      user_metadata: {
+        nickname: "격리 사용자",
+        sub: "quarantined-social-id",
+      },
+      identities: [{
+        provider: "google",
+        identity_data: { email_verified: true },
+      }],
+    };
+    const lookup = createServiceRoleUserLookup(null, {
+      data: { state: "generation_active", revision: 3 },
+      error: null,
+    });
+    lookup.rpc.mockImplementation((name: string) => {
+      if (name === "get_account_generation_capability") {
+        return Promise.resolve({
+          data: { state: "generation_active", revision: 3 },
+          error: null,
+        });
+      }
+      if (name === "bootstrap_account_generation_identity") {
+        return Promise.resolve({
+          data: null,
+          error: {
+            code: "P0001",
+            message: "ACCOUNT_CUTOVER_QUARANTINED",
+          },
+        });
+      }
+      throw new Error(`unexpected rpc: ${name}`);
+    });
+    exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: accessToken } },
+      error: null,
+    });
+    getUser.mockResolvedValue({
+      data: { user },
+      error: null,
+    });
+    createServiceRoleClient.mockReturnValue(lookup.client);
+    cookieGetAll.mockReturnValue([
+      { name: "sb-homecook-auth-token", value: "verified-session" },
+    ]);
+    vi.stubEnv(
+      "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
+      "auth-callback-session-hmac-secret-32-bytes-minimum",
+    );
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner",
+    ));
+
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/account-quarantine?next=%2Fplanner",
+    );
+    expect(signOut).not.toHaveBeenCalled();
+    expect(response.headers.get("set-cookie") ?? "")
+      .not.toContain("sb-homecook-auth-token=");
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+    expect(ensureUserBootstrapState).not.toHaveBeenCalled();
+  });
+
   it("bootstraps a verified post-cutover identity through the generation adapter", async () => {
     const ownerUuid = "76000000-0000-4000-8000-000000000001";
     const sessionId = "76000000-0000-4000-8000-000000000002";

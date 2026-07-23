@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-23T05:51:55Z",
+  "updated_at": "2026-07-23T15:21:06Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2253,10 +2253,10 @@
     {
       "id": "account-session-generation-foundation",
       "preset": "vertical-slice-strict",
-      "branch": "docs/account-session-generation-foundation",
+      "branch": "feature/fe-account-session-generation-foundation",
       "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
       "verification_status": "pending",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
@@ -2281,10 +2281,10 @@
         "pnpm account-maintenance:scheduler:verify -- --dry-run",
         "git diff --check"
       ],
-      "notes": "Stage 1 core package was authored by a dedicated Codex docs session and ACCOUNT_QUARANTINE wireframe/critique by separate Codex design sessions under the explicit no-Claude override. Design critique Round 4 final passed with unresolved Blocker/Major/Minor 0/0/0; screenshot authority remains a future Stage 4 gate. Approval remains not_started until a separate Codex internal 1.5 reviewer approves all five core plus two design gate artifacts together. F0 completion is additive dark ship only: production capability=legacy, canonical lifecycle/watermark rows=0, and no generation/image joint activation before recipe-visibility-read-hardening (#3). F0-specific Vitest/PostgreSQL/remote-verifier/scheduler entries are planned Stage 2/4 artifacts locked by this Stage 1 contract, not commands claimed executable in the docs PR; Stage 2 must add them TDD-first and missing artifacts fail closed.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
+      "notes": "Backend PR #1089 is merged and production remains legacy/canonical zero. Stage 4 ACCOUNT_QUARANTINE implementation, responsive/state evidence, exploratory eval 98, independent product-design-authority PASS 0/0/0, final focused/product/browser/security gates, and production build are collected on the frontend branch. The local tree is ready for fresh independent internal1.5/security-auth/five-axis review; current-head checks, merge, and post-merge checks remain pending. Current-head green and Manual Only are not claimed. closeout_phase=collecting closeout_recovery=manual_patch:3|ci_resync:0 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/ACCOUNT_QUARANTINE-authority.md,ui/designs/evidence/account-session-generation-foundation,.artifacts/qa/account-session-generation-foundation/latest/eval-result.json,tests/e2e/slice-account-session-generation-foundation.spec.ts | latest_reason_code=frontend-security-local-env-gate | last_recovery_at=2026-07-23T15:21:06Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": ".artifacts/qa/account-session-generation-foundation/latest/eval-result.json",
       "auto_merge_eligible": false,
       "blocked_reason_code": null
     },

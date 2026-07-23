@@ -124,14 +124,73 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
     "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": ".artifacts/qa/account-session-generation-foundation/latest/eval-result.json",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "in_progress",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "pending",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/ACCOUNT_QUARANTINE-authority.md"
+      ],
+      "actual_verification_refs": [
+        "Backend PR #1089 merged as 64f180e49976e73078cc90308c8938f8e74a8b70 with production legacy and canonical lifecycle/watermark zero",
+        "ACCOUNT_QUARANTINE focused Vitest passed 63/63 and dedicated desktop/mobile Playwright passed 19 with 2 canonical skips",
+        "Final product Vitest passed 1635 with 24 skips; lint, typecheck, production build, Lighthouse, smoke, a11y, visual, and security gates passed",
+        "Full Playwright regression completed; all 39 initial full-load failures passed unchanged under single-worker or exact isolated reruns",
+        "Exploratory QA eval passed with score 98, device coverage 100%, blocked 0, and findings 0",
+        "Independent product-design-authority passed after two TDD repair rounds with Blocker/Major/Minor 0/0/0 and unresolved 0",
+        "Current frontend PR head checks remain pending and are not projected as green"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": null,
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 3,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-23T15:21:06Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 3,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "frontend-security-local-env-gate",
+      "evidence_sources": [
+        "ui/designs/authority/ACCOUNT_QUARANTINE-authority.md",
+        "ui/designs/evidence/account-session-generation-foundation",
+        ".artifacts/qa/account-session-generation-foundation/latest/eval-result.json",
+        "tests/e2e/slice-account-session-generation-foundation.spec.ts"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-23T15:21:06Z",
+      "status_synced_at": "2026-07-23T15:21:06Z",
+      "pr_body_synced_at": "pending"
+    }
   },
   "out_of_scope": [
     "Production cutover_maintenance entry or generation_active promote in F0 alone",
@@ -143,5 +202,5 @@
     "Meal log, cooked batch, personal recipe, or snapshot-v2 feature activation"
   ],
   "open_questions": [],
-  "notes": "Stage 1 core is authored by a dedicated Codex documentation session and ACCOUNT_QUARANTINE wireframe/critique by separate Codex design sessions under the user's no-Claude override. The design critique Round 4 final passed with unresolved Blocker/Major/Minor 0/0/0; screenshot authority remains a future Stage 4 gate. Approval remains not_started until a separate Codex internal 1.5 reviewer passes all five core plus two design gate artifacts together. F0 completion is additive dark ship only: production state=legacy, canonical lifecycle/watermark rows=0, and joint account-generation/image activation is forbidden until recipe-visibility-read-hardening (#3) is prepared. F0-specific Vitest/PostgreSQL/remote-verifier/scheduler entries are planned Stage 2/4 artifacts locked by this Stage 1 contract, not commands claimed executable in the docs PR; Stage 2 must add them TDD-first and missing artifacts fail closed. The Stage 1 author must not commit, push, open a PR, merge, or approve its own work."
+  "notes": "Backend PR #1089 merged as 64f180e49976e73078cc90308c8938f8e74a8b70 and retained production legacy with canonical lifecycle/watermark zero. Stage 4 ACCOUNT_QUARANTINE implementation, 320/390/desktop and state evidence, exploratory QA eval 98, independent Codex product-design-authority PASS 0/0/0, final focused/product/browser/security gates, and production build are collected on feature/fe-account-session-generation-foundation. The local tree is ready for fresh independent internal1.5/security-auth/five-axis review; Draft/Ready current-head checks, merge, and post-merge checks remain required. Current-head green and all Manual Only items remain open. Production generation activation and #3-owned work remain forbidden. closeout_phase=collecting closeout_recovery=manual_patch:3|ci_resync:0 closeout_repair=codex:3|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/ACCOUNT_QUARANTINE-authority.md,ui/designs/evidence/account-session-generation-foundation,.artifacts/qa/account-session-generation-foundation/latest/eval-result.json,tests/e2e/slice-account-session-generation-foundation.spec.ts | latest_reason_code=frontend-security-local-env-gate | last_recovery_at=2026-07-23T15:21:06Z"
 }
