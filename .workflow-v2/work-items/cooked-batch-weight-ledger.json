@@ -1,0 +1,166 @@
+{
+  "id": "cooked-batch-weight-ledger",
+  "title": "Cooked batch weight ledger",
+  "summary": "snapshot-v2 exact pantry completion과 content-only batch 중량/잔량을 append-only event와 row-lock RPC authority로 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "요리 완료와 batch lifecycle을 session/content/exact pantry/weight/idempotency에 결합하고 legacy reader와 seeded-v2 drain을 보존한 채 R+2 공동 activation을 gate한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for any stage",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, implementation, security/DB, five-axis, design critic, product-design-authority, Stage 3/5/6 and closeout; no self-approval",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization hotfix merged and deployed",
+    "cooking-meal-log contract-evolution merged as PR #1072",
+    "recipe-snapshot-authority-foundation Stage 1 docs merged as PR #1078; runtime remains predecessor",
+    "product-ingredient-link-foundation Stage 1 docs merged as PR #1076; runtime remains exact effective ingredient predecessor",
+    "recipe-content-snapshot-future-propagation Stage 1 docs merged as PR #1081; runtime remains predecessor",
+    "cook-mode-whole-board is currently implementation and must merge before #8 implementation",
+    "meal-log-core #9 owns linked consumed entries and cooked-batch-weight-ui #11 owns final visual completion"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/cooked-batch-weight-ledger/README.md",
+      "docs/workpacks/cooked-batch-weight-ledger/acceptance.md",
+      "docs/workpacks/cooked-batch-weight-ledger/automation-spec.json",
+      "docs/workpacks/account-session-generation-foundation/README.md",
+      "docs/workpacks/product-ingredient-link-foundation/README.md",
+      "docs/workpacks/recipe-snapshot-authority-foundation/README.md",
+      "docs/workpacks/recipe-content-snapshot-future-propagation/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "docs/engineering/workflow-v2/README.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "merged-exact-SHA remote read-only batch event function ACL RLS policy constraint capability inventory",
+      "two-owner exact pantry complete denial and multi-table digest smoke",
+      "idempotent complete and batch event replay/checksum concurrency smoke",
+      "known missing unrecoverable and weighted-unweighed state matrix smoke",
+      "legacy reader projection protected-update denial and XP no-repeat smoke",
+      "R/R+1 seeded v2 drain with current-previous UI and zero new writes",
+      "v1 optional-key shape compatibility and no-premature-428 smoke",
+      "390px/320px COOK_MODE functional visual-a11y-design evidence"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 6,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/cooked-batch-weight-ledger pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/cooked-batch-weight-ledger.test.ts tests/snapshot-v2-complete.test.ts tests/cooked-batch-security.test.ts tests/cooked-batch-compatibility.test.ts",
+      "pnpm test:cooked-batch-weight-ledger:postgres",
+      "pnpm exec vitest run tests/cooked-batch-completion-sheet.test.tsx tests/cooked-batch-pantry-row-selection.test.tsx tests/cooked-batch-completion-replay.test.tsx",
+      "pnpm verify:backend",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep cooked-batch-weight-ledger",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice cooked-batch-weight-ledger",
+      "pnpm qa:eval -- --checklist .artifacts/qa/cooked-batch-weight-ledger/latest/exploratory-checklist.json --report .artifacts/qa/cooked-batch-weight-ledger/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm validate:exploratory-qa-evidence -- --slice cooked-batch-weight-ledger",
+      "pnpm validate:closeout-sync -- --slice cooked-batch-weight-ledger",
+      "node scripts/verify-cooked-batch-weight-ledger-remote.mjs --mode post-merge-read-only",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/cooked-batch-weight-ledger pnpm validate:workpack -- --slice cooked-batch-weight-ledger",
+      "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ledger",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of five core artifacts plus roadmap and status",
+      "separate Codex security and DB review of complete atomicity RLS ACL locks events replay cleanup and release gates",
+      "separate Codex five-axis review",
+      "separate Codex design critic of COOK_MODE exact-row and weight completion states",
+      "separate Codex screenshot-or-Figma product-design-authority before R",
+      "separate Codex Stage 3 Stage 5 Stage 6 and closeout reviews"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "roadmap-docs-workflow-lifecycle-planned-separation",
+      "snapshot-v2-exact-pantry-weight-completion-atomicity",
+      "product-exact-and-generic-approved-effective-row-matching",
+      "selected-only-delete-and-generation-idempotency",
+      "content-only-batch-nutrition-and-weight-state-checks",
+      "append-only-ledger-row-lock-full-replay-checksum",
+      "unrecoverable-irreversibility-and-adjustment-close-bounds",
+      "reader-before-writer-cutover-and-direct-update-denial",
+      "legacy-consumed-only-eaten-xp-and-no-repeat",
+      "r-r1-seeded-drain-zero-new-write-r2-joint-gate",
+      "v1-shape-optional-key-telemetry-and-tombstone-boundary",
+      "slice9-meal-log-and-slice11-final-ui-boundary",
+      "stage1-cook-mode-wireframe-and-390-320-authority-plan",
+      "merged-exact-sha-remote-read-only-evidence",
+      "stage1-current-vs-future-command-honesty",
+      "independent-required-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Meal-log entry schema API linked consumed pointer PATCH DELETE aggregate owned by #9",
+    "Planner shell navigation owned by #10",
+    "Final LEFTOVERS delayed-weight unrecoverable discard adjust and container-helper UX owned by #11",
+    "V1 strict route removal before separate #13 telemetry and tombstone contract",
+    "Servings-to-grams current-remainder substitution or mutable-current nutrition fallback",
+    "Generic reopen marked-unrecoverable reversal event update-delete or adjustment depletion",
+    "Discard mixed as eaten meal-log creation for unweighed closure or repeat XP",
+    "Existing legacy row fabricated content or weight backfill",
+    "New endpoint field status reason error screen or client authority",
+    "Unmerged remote migration production write or capability activation"
+  ],
+  "open_questions": [],
+  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/DB, five-axis and design reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; implementation evidence is future. Runtime waits for #7 and cook-mode-whole-board. #8 owns complete/ledger/functional COOK_MODE/R-R1 gate, #9 meal-log links, #11 final visual completion, and R+2 activation remains Manual Only."
+}

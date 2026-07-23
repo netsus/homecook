@@ -244,7 +244,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `personal-recipe-editor-decoupling` | docs | 공개 원본 불변 fork 및 owner-only 개인 레시피 편집 진입을 RECIPE_DETAIL 중심으로 분리하고 기존 MYPAGE/RECIPEBOOK 상세과의 소유권 충돌을 피한다 |
 | `personal-recipe-customization-write-core` | docs | 개인 레시피 create/PATCH/soft DELETE, owner→recipe lock, session generation과 idempotent single-RPC write를 구현한다 |
 | `recipe-content-snapshot-future-propagation` | docs | future-plan impact preview/token, replace_all/keep, active cooking claim, shopping open reconcile와 completed read-only를 같은 transaction 경계에 잠근다 |
-| `cooked-batch-weight-ledger` | planned | cooked batch content-only nutrition, 전체/잔량 중량, append-only quantity/lifecycle event, weighted/unweighed/unrecoverable와 RPC-only mutation을 구현한다 |
+| `cooked-batch-weight-ledger` | docs | cooked batch content-only nutrition, 전체/잔량 중량, append-only quantity/lifecycle event, weighted/unweighed/unrecoverable와 RPC-only mutation을 구현한다 |
 | `meal-log-core` | planned | Meal event pointer, record-time timezone/local date, exact nutrition evidence와 batch/product/ingredient 실제 섭취 기록의 멱등 backend를 구현한다 |
 | `planner-shell` | planned | 플래너 내부를 `요리 계획 | 식사 기록` shell로 분리하고 계획 영양·신규 제품 계획 입력을 제거하되 legacy row 조회/삭제는 보존한다 |
 | `cooked-batch-weight-ui` | planned | COOK_MODE 완료 중량 입력과 weigh-later, 이후 exact weight/unrecoverable/discard/adjust UI를 ledger 계약에 연결한다 |
@@ -285,7 +285,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 5 | C | `personal-recipe-editor-decoupling` | docs | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
 | 6 | C | `personal-recipe-customization-write-core` | docs | #2 + #3 + #4 + #5 |
 | 7 | C | `recipe-content-snapshot-future-propagation` | docs | #4 + #6; `cook-mode-whole-board` merged |
-| 8 | D | `cooked-batch-weight-ledger` | planned | #7; `cook-mode-whole-board` merged |
+| 8 | D | `cooked-batch-weight-ledger` | docs | #7; `cook-mode-whole-board` merged |
 | 9 | D | `meal-log-core` | planned | #1 + #2 + #4 + #8 |
 | 10 | E | `planner-shell` | planned | #9 |
 | 11 | E | `cooked-batch-weight-ui` | planned | #8; `cook-mode-whole-board` merged |
@@ -298,7 +298,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 ### Cooking / Meal Log Design Gate
 
 - `MEAL_LOG`는 신규 화면이므로 `meal-log-ui` Stage 1에서 mobile-first wireframe, design-critic 결과, product-design-authority evidence 계획을 필수로 잠근다.
-- `PLANNER_WEEK`와 `COOK_MODE` 변경은 high-risk anchor extension이므로 `planner-shell`과 `cooked-batch-weight-ui` Stage 1에서 mobile default+narrow evidence와 rollback-safe interaction을 잠근다.
+- `PLANNER_WEEK` 변경은 high-risk anchor extension이고 `COOK_MODE` 변경은 high-risk UI change이므로 `planner-shell`과 `cooked-batch-weight-ui` Stage 1에서 mobile default+narrow evidence와 rollback-safe interaction을 잠근다.
 - owner edit CTA가 추가되는 `RECIPE_DETAIL`은 `personal-recipe-editor-decoupling` Stage 1에서 공개/개인/비로그인/삭제 상태별 CTA wireframe과 authority 계획을 잠근다.
 
 ## Design Decision Gates
