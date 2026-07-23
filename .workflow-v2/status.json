@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-23T04:05:52Z",
+  "updated_at": "2026-07-23T04:28:34Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2614,6 +2614,42 @@
         "git diff --check"
       ],
       "notes": "Roadmap is docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/authorization/legacy, five-axis and design reviews have zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/remote evidence is future. Implementation waits for #9 runtime. #10 owns the existing Planner shell and PLANNER_WEEK plan-only composition, #12 owns MEAL_LOG UI, #13 owns compatibility tombstones.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "cooked-batch-weight-ui",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/cooked-batch-weight-ui",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/cooked-batch-weight-ui pnpm validate:workpack -- --slice cooked-batch-weight-ui",
+        "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ui",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/cooked-batch-weight-ui.test.tsx tests/cooked-batch-delayed-weight.test.tsx tests/cooked-batch-lifecycle-actions.test.tsx tests/cooked-batch-weight-ui-history.test.tsx",
+        "pnpm verify:backend",
+        "pnpm verify:frontend:pr",
+        "pnpm test:e2e:regression:ci --grep cooked-batch-weight-ui",
+        "pnpm test:e2e:a11y",
+        "pnpm test:e2e:visual",
+        "pnpm qa:explore -- --slice cooked-batch-weight-ui",
+        "pnpm qa:eval -- --checklist .artifacts/qa/cooked-batch-weight-ui/latest/exploratory-checklist.json --report .artifacts/qa/cooked-batch-weight-ui/latest/exploratory-report.json",
+        "pnpm verify:frontend",
+        "pnpm validate:exploratory-qa-evidence -- --slice cooked-batch-weight-ui",
+        "pnpm validate:authority-evidence-presence -- --slice cooked-batch-weight-ui",
+        "pnpm validate:closeout-sync -- --slice cooked-batch-weight-ui",
+        "node scripts/verify-cooked-batch-weight-ui-remote.mjs --mode post-merge-read-only",
+        "git diff --check"
+      ],
+      "notes": "Roadmap is docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/API, five-axis and design reviews have zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/remote evidence is future. Implementation waits for #8 runtime and cook-mode-whole-board. #11 reuses #8 mutations for COOK_MODE/LEFTOVERS presentation; #12 owns meal-log consumption UI.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

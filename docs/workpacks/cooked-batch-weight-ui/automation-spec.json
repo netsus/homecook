@@ -1,0 +1,171 @@
+{
+  "slice_id": "cooked-batch-weight-ui",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "POST /cooking/session-attempts/{id}/complete existing snapshot-v2 completion",
+      "GET /cooked-batches existing owner read model",
+      "PATCH /cooked-batches/{id}/weight existing delayed-weight or unrecoverable mutation",
+      "POST /cooked-batches/{id}/discard existing weighted discard mutation",
+      "POST /cooked-batches/{id}/adjust existing bounded adjustment mutation",
+      "POST /cooked-batches/{id}/close-unweighed existing close or current-closure cancel mutation"
+    ],
+    "invariants": [
+      "no-new-endpoint-field-status-event-or-mutation",
+      "owner-only-nondisclosure-and-return-context",
+      "uuid-idempotency-expected-revision-row-lock-full-replay",
+      "food-only-original-finished-weight-not-current-remainder",
+      "container-helper-local-only-no-persisted-tare",
+      "missing-to-unrecoverable-irreversible-no-gram-restore",
+      "discard-no-meal-entry-or-xp",
+      "adjust-known-available-strict-positive-post-value",
+      "unweighed-close-no-grams-nutrition-or-meal-entry",
+      "current-closure-cancel-only-no-generic-reopen",
+      "weighted-unweighed-depleted-reason-truth",
+      "reader-cutover-green-before-discard-adjust-close-exposure"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "node scripts/verify-cooked-batch-weight-ui-remote.mjs --mode post-merge-read-only",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/cooked-batch-weight-ui pnpm validate:workpack -- --slice cooked-batch-weight-ui",
+      "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ui",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/cooked-batch-weight-ui-api-contract.test.ts",
+      "owner-nondisclosure-and-zero-write-evidence",
+      "idempotency-revision-replay-and-conflict-evidence",
+      "unrecoverable-adjust-discard-close-cancel-projection-evidence",
+      "train-d-reader-cutover-and-action-exposure-evidence",
+      "merged-exact-sha-read-only-inventory"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "COOK_MODE snapshot-v2 completion sheet",
+      "LEFTOVERS batch list detail and action sheets"
+    ],
+    "required_states": [
+      "cook-complete-food-only-known",
+      "cook-complete-weigh-later",
+      "cook-complete-local-container-helper",
+      "cook-complete-loading-empty-pending-error-replay",
+      "leftovers-known-available-actions",
+      "leftovers-missing-delayed-weight",
+      "leftovers-unrecoverable-irreversible",
+      "leftovers-weighted-unweighed-depleted-reasons",
+      "leftovers-unweighed-close-and-current-cancel",
+      "leftovers-empty-and-depleted-read-only",
+      "unauthorized-other-owner-stale-revision-error"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/cooked-batch-weight-ui.test.tsx tests/cooked-batch-delayed-weight.test.tsx tests/cooked-batch-lifecycle-actions.test.tsx tests/cooked-batch-weight-ui-history.test.tsx",
+      "pnpm test:e2e:regression:ci --grep cooked-batch-weight-ui",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice cooked-batch-weight-ui",
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": ["mobile-default", "mobile-narrow", "desktop"],
+      "artifact_assertions": [
+      "food-only-known-later-and-container-helper-truth",
+      "exact-pantry-selection-and-replay-preserved",
+      "delayed-original-total-confirmation",
+      "unrecoverable-no-gram-control-or-restore",
+      "discard-adjust-close-cancel-safe-hierarchy",
+      "six-depleted-reason-labels-and-consumed-only-xp",
+      "slice12-consumed-amount-cta-not-rendered-before-slice12",
+      "cook-mode-and-leftovers-canonical-designs-and-independent-critiques-required",
+      "fresh-evidence-manifest-head-sha-captured-at-and-authority-report-order",
+      "390-320-desktop-dialog-focus-no-overflow"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": ["COOK_MODE", "LEFTOVERS"],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/COOK_MODE.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/COOK_MODE-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-default-known.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-default-weigh-later.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-default-container-helper.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-default-pending.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-default-error.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-default-replay.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-narrow-known.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-narrow-weigh-later.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-narrow-container-helper.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-narrow-pending.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-narrow-error.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-mobile-narrow-replay.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-desktop-known.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-desktop-weigh-later.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-desktop-container-helper.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-desktop-pending.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-desktop-error.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/COOK_MODE-desktop-replay.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-default-known-actions.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-default-missing-weight.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-default-unrecoverable.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-default-unweighed-close.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-default-depleted-reasons.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-default-error.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-narrow-known-actions.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-narrow-missing-weight.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-narrow-unrecoverable.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-narrow-unweighed-close.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-narrow-depleted-reasons.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-mobile-narrow-error.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-desktop-known-actions.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-desktop-missing-weight.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-desktop-unrecoverable.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-desktop-unweighed-close.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-desktop-depleted-reasons.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/LEFTOVERS-desktop-error.png",
+        "ui/designs/evidence/cooked-batch-weight-ui/manifest.json"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/COOK_MODE-authority.md",
+        "ui/designs/authority/LEFTOVERS-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "owner-only completion delayed-weight discard adjust close and cancel",
+    "same-key replay different-payload conflict and stale revision",
+    "unrecoverable no-weight-restore no-gram-log",
+    "six depleted reason labels and consumed-only eaten XP",
+    "Train D action exposure and current-previous reader compatibility",
+    "390px 320px desktop visual accessibility authority evidence"
+  ],
+  "blocked_conditions": [
+    "stage1-independent-reviews-not-zero",
+    "stage1-author-self-approval-or-claude-use",
+    "slice8-runtime-or-cook-mode-whole-board-not-green-before-implementation",
+    "new-endpoint-field-status-event-mutation-or-direct-dml-invented",
+    "container-helper-input-persisted-or-current-remainder-substituted",
+    "missing-weight-estimated-from-servings-or-zero-nutrition-shown",
+    "unrecoverable-restored-reversed-or-gram-action-exposed",
+    "discard-creates-meal-entry-xp-or-eaten-projection",
+    "adjustment-depletes-reopens-or-exceeds-bounds",
+    "unweighed-close-creates-grams-nutrition-or-meal-entry",
+    "generic-reopen-or-noncurrent-closure-cancel-exposed",
+    "discard-adjust-close-visible-before-train-d-reader-cutover",
+    "slice12-consumed-amount-cta-rendered-before-slice12",
+    "cook-mode-or-leftovers-canonical-design-or-independent-critique-missing-stale",
+    "evidence-manifest-head-sha-captured-at-or-authority-report-order-invalid",
+    "required-design-critic-authority-or-390-320-desktop-evidence-missing",
+    "remote-verifier-not-merged-exact-sha",
+    "current-head-check-pending-absent-stale-failed-or-cancelled"
+  ],
+  "max_fix_rounds": {"backend": 3, "frontend": 6},
+  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/browser/remote evidence is future. #11 owns COOK_MODE and LEFTOVERS weight/lifecycle presentation only, reuses #8 mutations, and leaves meal-log consumption UI to #12."
+}
