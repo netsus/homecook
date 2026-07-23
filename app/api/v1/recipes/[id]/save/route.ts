@@ -303,7 +303,7 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const recipeResult = await dbClient
+  const recipeResult = await (routeClient as unknown as RecipeSaveDbClient)
     .from("recipes")
     .select("id, save_count")
     .eq("id", id)

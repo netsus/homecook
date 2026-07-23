@@ -536,7 +536,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const recipeResult = await dbClient
+  const recipeResult = await (routeClient as unknown as MealsDbClient)
     .from("recipes")
     .select("id")
     .eq("id", parsed.recipeId)

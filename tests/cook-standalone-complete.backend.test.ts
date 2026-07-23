@@ -302,6 +302,48 @@ describe("15b cook standalone complete backend", () => {
     });
   });
 
+  it("keeps standalone cook-mode on the public RLS reader when service role is available", async () => {
+    const routeRecipeQuery = createMaybeSingleQuery([{ data: null, error: null }]);
+    const serviceRecipeQuery = createMaybeSingleQuery([
+      {
+        data: { id: recipeId, title: "숨김 레시피", base_servings: 2 },
+        error: null,
+      },
+    ]);
+    const ingredientsQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const stepsQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const routeFrom = vi.fn((table: string) => {
+      if (table === "recipes") return { select: vi.fn(() => routeRecipeQuery) };
+      throw new Error(`unexpected route table: ${table}`);
+    });
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "recipes") return { select: vi.fn(() => serviceRecipeQuery) };
+      if (table === "recipe_ingredients") return { select: vi.fn(() => ingredientsQuery) };
+      if (table === "recipe_steps") return { select: vi.fn(() => stepsQuery) };
+      throw new Error(`unexpected service table: ${table}`);
+    });
+
+    createRouteHandlerClient.mockResolvedValue({ from: routeFrom });
+    createServiceRoleClient.mockReturnValue({ from: serviceFrom });
+
+    const { GET } = await importRecipeCookModeRoute();
+    const response = await GET(
+      new Request(`http://localhost:3000/api/v1/recipes/${recipeId}/cook-mode?servings=2`),
+      createRecipeContext(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "RESOURCE_NOT_FOUND" },
+    });
+    expect(routeFrom).toHaveBeenCalledWith("recipes");
+    expect(serviceRecipeQuery.maybeSingle).not.toHaveBeenCalled();
+    expect(serviceFrom).not.toHaveBeenCalled();
+  });
+
   it("POST /cooking/standalone-complete returns 401 when the user is not authenticated", async () => {
     createRouteHandlerClient.mockResolvedValue({
       auth: {

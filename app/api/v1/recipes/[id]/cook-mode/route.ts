@@ -7,10 +7,7 @@ import {
   type CookingStepRow,
 } from "@/lib/server/cooking";
 import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
-import {
-  createRouteHandlerClient,
-  createServiceRoleClient,
-} from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import {
   COOK_MODE_STEP_SELECT_LEGACY,
   COOK_MODE_STEP_SELECT_WITH_METHODS,
@@ -137,8 +134,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   try {
     const routeClient = await createRouteHandlerClient();
-    const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-      StandaloneCookModeDbClient;
+    const dbClient = routeClient as unknown as StandaloneCookModeDbClient;
 
     const recipeResult = await dbClient
       .from("recipes")

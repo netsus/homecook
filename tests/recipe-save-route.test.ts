@@ -304,6 +304,77 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     });
   });
 
+  it("does not let service role widen a new recipe-book selection", async () => {
+    const routeRecipesTable = createRecipesTable({
+      selectResults: [{ data: null, error: null }],
+    });
+    const serviceRecipesTable = createRecipesTable({
+      selectResults: [
+        {
+          data: { id: "recipe-hidden", save_count: 3 },
+          error: null,
+        },
+      ],
+    });
+    const recipeBooksTable = createRecipeBooksTable({
+      selectResults: [
+        {
+          data: {
+            id: "book-1",
+            user_id: "user-1",
+            book_type: "liked",
+          },
+          error: null,
+        },
+      ],
+    });
+    const recipeBookItemsTable = createRecipeBookItemsTable({
+      insertResults: [],
+    });
+    const routeFrom = vi.fn((table: string) => {
+      if (table === "recipes") return routeRecipesTable;
+      throw new Error(`unexpected route table: ${table}`);
+    });
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "recipes") return serviceRecipesTable;
+      if (table === "recipe_books") return recipeBooksTable;
+      if (table === "recipe_book_items") return recipeBookItemsTable;
+      throw new Error(`unexpected service table: ${table}`);
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+      from: routeFrom,
+    });
+    createServiceRoleClient.mockReturnValue({ from: serviceFrom });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/hidden/save", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ book_id: "550e8400-e29b-41d4-a716-446655440010" }),
+    }), {
+      params: Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440023" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "RESOURCE_NOT_FOUND" },
+    });
+    expect(routeFrom).toHaveBeenCalledWith("recipes");
+    expect(serviceRecipesTable.select).not.toHaveBeenCalled();
+    expect(recipeBookItemsTable.insert).not.toHaveBeenCalled();
+  });
+
   it("returns 403 when trying to save into another user's recipe book", async () => {
     const recipesTable = createRecipesTable({
       selectResults: [
