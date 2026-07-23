@@ -2350,6 +2350,42 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "recipe-visibility-read-hardening",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/recipe-visibility-read-hardening",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/recipe-visibility-read-hardening pnpm validate:workpack -- --slice recipe-visibility-read-hardening",
+        "node scripts/validate-automation-spec.mjs --slice recipe-visibility-read-hardening",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/recipe-visibility-read-hardening.test.ts tests/recipe-visibility-routes.test.ts tests/recipe-visibility-security.test.ts tests/recipe-image-registry.test.ts tests/recipe-image-lifecycle.test.ts tests/recipe-visibility-account-delete.test.ts",
+        "pnpm test:recipe-visibility-read-hardening:postgres",
+        "pnpm verify:backend",
+        "pnpm account-maintenance:scheduler:verify",
+        "pnpm exec vitest run tests/recipe-visibility-consumers.test.tsx tests/recipe-image-upload-client.test.tsx",
+        "pnpm verify:frontend:pr",
+        "pnpm test:e2e:regression:ci --grep recipe-visibility-read-hardening",
+        "pnpm qa:explore -- --slice recipe-visibility-read-hardening",
+        "pnpm qa:eval -- --checklist .artifacts/qa/recipe-visibility-read-hardening/latest/exploratory-checklist.json --report .artifacts/qa/recipe-visibility-read-hardening/latest/exploratory-report.json",
+        "pnpm verify:frontend",
+        "pnpm validate:exploratory-qa-evidence -- --slice recipe-visibility-read-hardening",
+        "pnpm validate:closeout-sync -- --slice recipe-visibility-read-hardening",
+        "node scripts/verify-recipe-visibility-read-hardening-remote.mjs --mode post-merge-read-only",
+        "git diff --check"
+      ],
+      "notes": "Roadmap status is docs while workflow lifecycle intentionally remains planned until Stage 2. Approval stays not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve with zero required findings. Visibility, tag, image registry/lifecycle, PostgreSQL, Storage replay, scheduler, existing-consumer, Playwright, exploratory QA and merged-exact-SHA remote read-only verification are planned Stage 2/4/closeout artifacts, not commands claimed executable in this docs PR. Stage 4 changes only existing MANUAL_RECIPE_CREATE behavior and adds no visual hierarchy. Implementation waits for F0 and merged recipe media/tag predecessors; joint generation/account-delete activation remains off until both F0 and this slice are release-ready.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }
