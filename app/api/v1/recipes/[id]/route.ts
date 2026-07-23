@@ -245,23 +245,27 @@ export async function GET(request: Request, context: RouteContext) {
 
   try {
     const routeClient = await createRouteHandlerClient();
+    const recipeResult = await routeClient
+      .from("recipes")
+      .select(
+        "id, title, description, thumbnail_url, base_servings, tags, source_type, view_count, like_count, save_count, plan_count, cook_count",
+      )
+      .eq("id", id)
+      .maybeSingle();
+
+    if (recipeResult.error || !recipeResult.data) {
+      return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
+    }
+
     const serviceClient = createServiceRoleClient();
-    const dbClient = serviceClient ?? routeClient;
+    const dbClient = routeClient;
 
     const [
-      recipeResult,
       sourceResult,
       ingredientsResult,
       nutritionSnapshotResult,
       authResult,
     ] = await Promise.all([
-      dbClient
-        .from("recipes")
-        .select(
-          "id, title, description, thumbnail_url, base_servings, tags, source_type, view_count, like_count, save_count, plan_count, cook_count",
-        )
-        .eq("id", id)
-        .maybeSingle(),
       dbClient
         .from("recipe_sources")
         .select("youtube_url, youtube_video_id, extraction_meta_json")
@@ -274,7 +278,7 @@ export async function GET(request: Request, context: RouteContext) {
         )
         .eq("recipe_id", id)
         .order("sort_order", { ascending: true }),
-      readCurrentRecipeNutritionSnapshot(dbClient, id),
+      readCurrentRecipeNutritionSnapshot(serviceClient ?? routeClient, id),
       routeClient.auth.getUser(),
     ]);
 
@@ -295,11 +299,7 @@ export async function GET(request: Request, context: RouteContext) {
         .order("step_number", { ascending: true }) as {
           data: Parameters<typeof normalizeRecipeSteps>[0];
           error: unknown;
-        };
-    }
-
-    if (recipeResult.error || !recipeResult.data) {
-      return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
+      };
     }
 
     if (ingredientsResult.error || stepsResult.error) {

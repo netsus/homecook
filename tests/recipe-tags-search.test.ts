@@ -29,6 +29,8 @@ function createChainQuery<T>(result: QueryResult<T>) {
     order: vi.fn(() => query),
     in: vi.fn(() => query),
     ilike: vi.fn(() => query),
+    is: vi.fn(() => query),
+    eq: vi.fn(() => query),
     or: vi.fn(() => query),
     then: createAwaitableQuery(result).then,
   };
@@ -100,7 +102,12 @@ describe("36c recipe tag search route", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     };
-    createServiceRoleClient.mockReturnValue(dbClient);
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: null } })),
+      },
+      ...dbClient,
+    });
 
     const { GET } = await importRecipesRoute();
     const response = await GET(new NextRequest(
@@ -174,7 +181,12 @@ describe("36c recipe tag search route", () => {
         throw new Error(`unexpected table: ${table}`);
       }),
     };
-    createServiceRoleClient.mockReturnValue(dbClient);
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: null } })),
+      },
+      ...dbClient,
+    });
 
     const { GET } = await importRecipesRoute();
     const response = await GET(new NextRequest(

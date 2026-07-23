@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 
 import { ok } from "@/lib/api/response";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { RecipeTagItem, RecipeTagKind, RecipeTagListData } from "@/types/recipe";
 
 const TAG_LIMIT_DEFAULT = 30;
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const routeClient = await createRouteHandlerClient();
-    const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as TagsDbClient;
+    const dbClient = routeClient as unknown as TagsDbClient;
     const { data, error } = await dbClient.rpc("list_public_recipe_tags", {
       p_q: q,
       p_kind: kindResult.kind,

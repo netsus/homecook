@@ -23,6 +23,8 @@ async function getPublicRecipeEntries(siteOrigin: string): Promise<MetadataRoute
       const result = await supabase
         .from("recipes")
         .select("id, updated_at")
+        .eq("visibility", "public")
+        .is("deleted_at", null)
         .order("updated_at", { ascending: false })
         .order("id", { ascending: true })
         .range(offset, upperBound);

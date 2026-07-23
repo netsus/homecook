@@ -2354,9 +2354,9 @@
     {
       "id": "recipe-visibility-read-hardening",
       "preset": "vertical-slice-strict",
-      "branch": "docs/recipe-visibility-read-hardening",
+      "branch": "feature/be-recipe-visibility-read-hardening",
       "pr_path": "pending",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -2380,7 +2380,7 @@
         "node scripts/verify-recipe-visibility-read-hardening-remote.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Roadmap status is docs while workflow lifecycle intentionally remains planned until Stage 2. Approval stays not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve with zero required findings. Visibility, tag, image registry/lifecycle, PostgreSQL, Storage replay, scheduler, existing-consumer, Playwright, exploratory QA and merged-exact-SHA remote read-only verification are planned Stage 2/4/closeout artifacts, not commands claimed executable in this docs PR. Stage 4 changes only existing MANUAL_RECIPE_CREATE behavior and adds no visual hierarchy. Implementation waits for F0 and merged recipe media/tag predecessors; joint generation/account-delete activation remains off until both F0 and this slice are release-ready.",
+      "notes": "Stage 2 backend implementation is in progress on feature/be-recipe-visibility-read-hardening after F0 and the merged recipe media/tag predecessors. Approval stays not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve the frozen implementation tree with zero required findings. Public recipe/tag readers and the isolated PostgreSQL fresh/replay gate are the current small backend PR executable subset. required_checks intentionally remains the full-slice closeout contract and is not a claim that deferred image registry/lifecycle, Storage replay, scheduler, existing-consumer, Playwright, exploratory QA or merged-exact-SHA remote verification artifacts exist in this PR; those remain later owning-stage gates. Stage 4 changes only existing MANUAL_RECIPE_CREATE behavior and adds no visual hierarchy. Joint generation/account-delete activation remains off until both F0 and this slice are release-ready.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

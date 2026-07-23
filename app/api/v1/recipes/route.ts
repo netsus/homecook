@@ -91,6 +91,8 @@ interface IdLookupRow {
 }
 
 interface RecipeRowsQuery {
+  eq(column: string, value: string): RecipeRowsQuery;
+  is(column: string, value: null): RecipeRowsQuery;
   limit(count: number): RecipeRowsQuery;
   order(column: string, options: { ascending: boolean }): RecipeRowsQuery;
   in(column: string, values: string[]): RecipeRowsQuery;
@@ -729,6 +731,8 @@ async function readRecipeRows({
     .select(
       "id, title, thumbnail_url, tags, base_servings, view_count, like_count, save_count, plan_count, cook_count, created_at, source_type",
     )
+    .eq("visibility", "public")
+    .is("deleted_at", null)
     .limit(limit + 1);
 
   recipeQuery = applyRecipeListSort(recipeQuery, sort);
@@ -866,8 +870,9 @@ export async function GET(request: NextRequest) {
     }
 
     const routeClient = await createRouteHandlerClient();
-    const supabase = createServiceRoleClient() ?? routeClient;
-    const recipeSearchDbClient = supabase as unknown as RecipeSearchDbClient;
+    const serviceClient = createServiceRoleClient() ?? routeClient;
+    const supabase = routeClient;
+    const recipeSearchDbClient = routeClient as unknown as RecipeSearchDbClient;
     let filteredRecipeIds: string[] | null = null;
 
     if (listQuery.ingredient_ids?.length) {
@@ -951,7 +956,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userStatusByRecipeId = await readRecipeCardUserStatuses({
-      dbClient: supabase as unknown as RecipeCardUserStatusDbClient,
+      dbClient: serviceClient as unknown as RecipeCardUserStatusDbClient,
       recipeIds: pageRows.map((recipe) => recipe.id),
       userId,
     });

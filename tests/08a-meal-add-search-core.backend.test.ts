@@ -54,6 +54,7 @@ function createQuery<T>(result: QueryResult<T>) {
     limit: vi.fn(() => query),
     ilike: vi.fn(() => query),
     eq: vi.fn(() => query),
+    is: vi.fn(() => query),
     in: vi.fn(() => query),
     maybeSingle: vi.fn(() => createAwaitableQuery(result)),
     then(onFulfilled?: (value: QueryResult<T>) => unknown, onRejected?: (reason: unknown) => unknown) {
