@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-23T04:28:34Z",
+  "updated_at": "2026-07-23T04:56:58Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2650,6 +2650,42 @@
         "git diff --check"
       ],
       "notes": "Roadmap is docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/API, five-axis and design reviews have zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/remote evidence is future. Implementation waits for #8 runtime and cook-mode-whole-board. #11 reuses #8 mutations for COOK_MODE/LEFTOVERS presentation; #12 owns meal-log consumption UI.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "meal-log-ui",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/meal-log-ui",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/meal-log-ui pnpm validate:workpack -- --slice meal-log-ui",
+        "node scripts/validate-automation-spec.mjs --slice meal-log-ui",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/meal-log-ui.test.tsx tests/meal-log-add-sheet.test.tsx tests/meal-log-entry-mutations.test.tsx tests/meal-log-ui-history.test.tsx",
+        "pnpm verify:backend",
+        "pnpm verify:frontend:pr",
+        "pnpm test:e2e:regression:ci --grep meal-log-ui",
+        "pnpm test:e2e:a11y",
+        "pnpm test:e2e:visual",
+        "pnpm qa:explore -- --slice meal-log-ui",
+        "pnpm qa:eval -- --checklist .artifacts/qa/meal-log-ui/latest/exploratory-checklist.json --report .artifacts/qa/meal-log-ui/latest/exploratory-report.json",
+        "pnpm verify:frontend",
+        "pnpm validate:exploratory-qa-evidence -- --slice meal-log-ui",
+        "pnpm validate:authority-evidence-presence -- --slice meal-log-ui",
+        "pnpm validate:closeout-sync -- --slice meal-log-ui",
+        "node scripts/verify-meal-log-ui-remote.mjs --mode post-merge-read-only",
+        "git diff --check"
+      ],
+      "notes": "Roadmap is docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/API, five-axis and design reviews have zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/remote evidence is future. Implementation waits for #9 runtime and #10 shell, consumes #1 search and #8 batch authority, may link the eligible #11 weight action, and leaves #13/#14 as successors.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
