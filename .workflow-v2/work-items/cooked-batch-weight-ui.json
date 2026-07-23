@@ -1,0 +1,166 @@
+{
+  "id": "cooked-batch-weight-ui",
+  "title": "Cooked batch weight UI",
+  "summary": "COOK_MODE와 LEFTOVERS에서 음식-only 완성 중량, weigh-later, 지연 중량, unrecoverable, discard, adjust와 weighted/unweighed 종료 사유를 #8 ledger 계약에 연결한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "새 mutation 없이 cooked batch 중량·잔량 상태를 정확하고 접근 가능하게 표시하고, irreversible·destructive action을 안전한 확인과 Train D gate 뒤에만 노출한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for any stage",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, security and API reviewer, five-axis reviewer, design critic, product-design-authority, implementation, Stage 3/6 and closeout; no self-approval",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization hotfix merged and deployed",
+    "cooking-meal-log contract-evolution merged as PR #1072",
+    "cooked-batch-weight-ledger Stage 1 docs merged as PR #1082; its runtime is the implementation predecessor",
+    "cook-mode-whole-board must be merged and green before implementation; current roadmap implementation state does not satisfy this gate",
+    "meal-log-core #9 owns backend consumption links and meal-log-ui #12 owns consumed amount entry UI"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/cooked-batch-weight-ui/README.md",
+      "docs/workpacks/cooked-batch-weight-ui/acceptance.md",
+      "docs/workpacks/cooked-batch-weight-ui/automation-spec.json",
+      "docs/workpacks/cooked-batch-weight-ledger/README.md",
+      "docs/workpacks/meal-log-core/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "docs/engineering/workflow-v2/README.md",
+      "ui/designs/COOK_MODE.md",
+      "ui/designs/LEFTOVERS.md",
+      "ui/designs/critiques/COOK_MODE-critique.md",
+      "ui/designs/critiques/LEFTOVERS-critique.md",
+      "ui/designs/authority/COOK_MODE-authority.md",
+      "ui/designs/authority/LEFTOVERS-authority.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "owner-only completion delayed-weight discard adjust close and current cancel",
+      "same-key replay different-payload conflict stale revision and zero-write",
+      "unrecoverable no restore reversal or gram meal-log",
+      "weighted and unweighed six depleted labels with consumed-only eaten XP",
+      "Train D reader cutover before lifecycle action exposure",
+      "current and immediate-previous COOK_MODE LEFTOVERS compatibility",
+      "390px 320px desktop visual accessibility and product-design-authority evidence"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 3,
+      "frontend": 6
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/cooked-batch-weight-ui pnpm validate:workpack -- --slice cooked-batch-weight-ui",
+      "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ui",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/cooked-batch-weight-ui.test.tsx tests/cooked-batch-delayed-weight.test.tsx tests/cooked-batch-lifecycle-actions.test.tsx tests/cooked-batch-weight-ui-history.test.tsx",
+      "pnpm verify:backend",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep cooked-batch-weight-ui",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice cooked-batch-weight-ui",
+      "pnpm qa:eval -- --checklist .artifacts/qa/cooked-batch-weight-ui/latest/exploratory-checklist.json --report .artifacts/qa/cooked-batch-weight-ui/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm validate:exploratory-qa-evidence -- --slice cooked-batch-weight-ui",
+      "pnpm validate:authority-evidence-presence -- --slice cooked-batch-weight-ui",
+      "pnpm validate:closeout-sync -- --slice cooked-batch-weight-ui",
+      "node scripts/verify-cooked-batch-weight-ui-remote.mjs --mode post-merge-read-only",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/cooked-batch-weight-ui pnpm validate:workpack -- --slice cooked-batch-weight-ui",
+      "node scripts/validate-automation-spec.mjs --slice cooked-batch-weight-ui",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of five core artifacts plus roadmap and status",
+      "separate Codex security authorization and API boundary review",
+      "separate Codex five-axis review",
+      "separate Codex design critic review of refreshed COOK_MODE and LEFTOVERS contracts",
+      "separate Codex product-design-authority review of 390px 320px desktop runtime evidence",
+      "separate Codex Stage 3 Stage 6 and closeout reviews"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "roadmap-docs-workflow-lifecycle-planned-separation",
+      "no-new-api-field-status-event-mutation-or-direct-dml",
+      "food-only-original-weight-weigh-later-and-local-container-helper",
+      "exact-pantry-selection-pending-error-and-replay-preserved",
+      "delayed-weight-no-event-confirmation-and-server-authority",
+      "unrecoverable-irreversible-no-gram-control-restore-or-reversal",
+      "discard-adjust-close-cancel-existing-contract-only",
+      "six-depleted-reason-labels-and-consumed-only-eaten-xp",
+      "partial-unavailable-never-zero-or-estimated",
+      "train-d-reader-cutover-before-action-exposure",
+      "slice12-meal-log-consumption-ui-boundary",
+      "slice12-consumed-amount-cta-not-rendered-before-slice12",
+      "cook-mode-and-leftovers-high-risk-required-not-anchor",
+      "canonical-design-critic-and-two-authority-report-paths",
+      "fresh-evidence-manifest-head-sha-captured-at-and-authority-report-order",
+      "390-320-desktop-state-dialog-focus-and-no-overflow",
+      "stage1-current-vs-future-command-honesty",
+      "independent-required-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip",
+      "post-merge-master-qa-policy-security-vercel-green"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "New cooked batch endpoint field status event type mutation nutrition pointer or direct DML",
+    "Meal-log day screen consumed amount add edit delete recent frequent or batch-event replacement owned by #12",
+    "Servings-to-grams estimate mutable-current nutrition recalculation or container tare persistence",
+    "Generic reopen unrecoverable restore or marker reversal",
+    "Adjustment depletion discard XP automatic meal entry or unweighed nutrition",
+    "Action exposure before #8 Train D reader cutover",
+    "Unmerged remote migration production write or feature activation"
+  ],
+  "open_questions": [],
+  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/API, five-axis and design reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/remote evidence is future. Implementation waits for #8 runtime and cook-mode-whole-board. #11 reuses #8 mutations for COOK_MODE/LEFTOVERS presentation; #12 owns meal-log consumption UI."
+}

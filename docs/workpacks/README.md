@@ -247,7 +247,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `cooked-batch-weight-ledger` | docs | cooked batch content-only nutrition, 전체/잔량 중량, append-only quantity/lifecycle event, weighted/unweighed/unrecoverable와 RPC-only mutation을 구현한다 |
 | `meal-log-core` | docs | Meal event pointer, record-time timezone/local date, exact nutrition evidence와 batch/product/ingredient 실제 섭취 기록의 멱등 backend를 구현한다 |
 | `planner-shell` | docs | 플래너 내부를 `요리 계획 | 식사 기록` shell로 분리하고 계획 영양·신규 제품 계획 입력을 제거하되 legacy row 조회/삭제는 보존한다 |
-| `cooked-batch-weight-ui` | planned | COOK_MODE 완료 중량 입력과 weigh-later, 이후 exact weight/unrecoverable/discard/adjust UI를 ledger 계약에 연결한다 |
+| `cooked-batch-weight-ui` | docs | COOK_MODE 완료 중량 입력과 weigh-later, 이후 exact weight/unrecoverable/discard/adjust UI를 ledger 계약에 연결한다 |
 | `meal-log-ui` | planned | 신규 MEAL_LOG의 날짜 중심 하루 합계·끼니 소계·음식 추가 sheet·수정/삭제·결측 상태를 구현한다 |
 | `legacy-product-compat` | planned | legacy product planner 조회/삭제, v1 session optional→required stable key, v2 dormant drain과 current/immediate-previous reader 호환·tombstone 전제조건을 검증한다 |
 | `cooking-meal-log-cross-slice-release-qa` | planned | F0와 #1~#13의 current-head local/remote DB·API·browser·security·performance·design·rollback/legacy 통합 gate를 닫는다 |
@@ -288,7 +288,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 8 | D | `cooked-batch-weight-ledger` | docs | #7; `cook-mode-whole-board` merged |
 | 9 | D | `meal-log-core` | docs | #1 + #2 + #4 + #8 |
 | 10 | E | `planner-shell` | docs | #9 |
-| 11 | E | `cooked-batch-weight-ui` | planned | #8; `cook-mode-whole-board` merged |
+| 11 | E | `cooked-batch-weight-ui` | docs | #8; `cook-mode-whole-board` merged |
 | 12 | E | `meal-log-ui` | planned | #9 + #10 |
 | 13 | E | `legacy-product-compat` | planned | #10 + #12 |
 | 14 | F | `cooking-meal-log-cross-slice-release-qa` | planned | F0 and #1~#13 all merged/current-head green |
@@ -298,7 +298,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 ### Cooking / Meal Log Design Gate
 
 - `MEAL_LOG`는 신규 화면이므로 `meal-log-ui` Stage 1에서 mobile-first wireframe, design-critic 결과, product-design-authority evidence 계획을 필수로 잠근다.
-- `PLANNER_WEEK` 변경은 high-risk anchor extension이고 `COOK_MODE` 변경은 high-risk UI change이므로 `planner-shell`과 `cooked-batch-weight-ui` Stage 1에서 mobile default+narrow evidence와 rollback-safe interaction을 잠근다.
+- `PLANNER_WEEK` 변경은 high-risk anchor extension이고 `COOK_MODE`와 `LEFTOVERS` 변경은 공식 anchor가 아닌 high-risk required screen 변경이므로 `planner-shell`과 `cooked-batch-weight-ui` Stage 1에서 mobile default+narrow evidence와 rollback-safe interaction을 잠근다.
 - owner edit CTA가 추가되는 `RECIPE_DETAIL`은 `personal-recipe-editor-decoupling` Stage 1에서 공개/개인/비로그인/삭제 상태별 CTA wireframe과 authority 계획을 잠근다.
 
 ## Design Decision Gates
