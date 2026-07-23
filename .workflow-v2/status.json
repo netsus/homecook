@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-23T05:18:19Z",
+  "updated_at": "2026-07-23T05:51:55Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2721,6 +2721,44 @@
         "git diff --check"
       ],
       "notes": "Roadmap is docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/compatibility, five-axis and design-impact reviews reach zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; runtime/E2E/browser/telemetry/remote evidence is future. Implementation waits for #10 and #12 runtime/current-head green. #13 preserves contracts and records prerequisites but does not authorize deletion or R+2 activation.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "cooking-meal-log-cross-slice-release-qa",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/cooking-meal-log-cross-slice-release-qa",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/cooking-meal-log-cross-slice-release-qa pnpm validate:workpack -- --slice cooking-meal-log-cross-slice-release-qa",
+        "node scripts/validate-automation-spec.mjs --slice cooking-meal-log-cross-slice-release-qa",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/cooking-meal-log-cross-slice-release-qa.test.ts tests/account-session-generation-foundation.test.ts tests/product-search-and-effective-ingredient-release.test.ts tests/personal-recipe-snapshot-propagation-release.test.ts tests/cooking-version-dispatch-and-batch-ledger-release.test.ts tests/meal-log-aggregate-and-event-link-release.test.ts tests/legacy-rollback-and-tombstone-barrier-release.test.ts",
+        "pnpm local:reset:demo",
+        "pnpm verify:security-functions:release",
+        "pnpm verify:backend",
+        "pnpm verify:frontend:pr",
+        "pnpm test:e2e:regression:ci --grep cooking-meal-log-cross-slice-release-qa",
+        "pnpm test:e2e:a11y",
+        "pnpm test:e2e:visual",
+        "pnpm qa:explore -- --slice cooking-meal-log-cross-slice-release-qa",
+        "pnpm qa:eval -- --checklist .artifacts/qa/cooking-meal-log-cross-slice-release-qa/latest/exploratory-checklist.json --report .artifacts/qa/cooking-meal-log-cross-slice-release-qa/latest/exploratory-report.json",
+        "pnpm verify:frontend",
+        "pnpm validate:exploratory-qa-evidence -- --slice cooking-meal-log-cross-slice-release-qa",
+        "pnpm validate:authority-evidence-presence -- --slice cooking-meal-log-cross-slice-release-qa",
+        "pnpm validate:closeout-sync -- --slice cooking-meal-log-cross-slice-release-qa",
+        "node scripts/verify-cooking-meal-log-cross-slice-release-qa-remote.mjs --mode post-merge-read-only",
+        "git diff --check"
+      ],
+      "notes": "Roadmap is docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security-DB-operations, five-axis and design-authority-plan reviews reach zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; required_checks is the full-lifecycle gate while verify_commands is the current executable subset. Runtime verification waits for F0 and #1 through #13 implementation/closeout current-head green. Defects require a separate TDD repair PR and full exact-head rerun. No production/staging/provider write, R+2 activation, destructive tombstone, legacy orphan deletion or Manual Only installation is authorized.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
