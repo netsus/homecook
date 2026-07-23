@@ -1,0 +1,129 @@
+{
+  "slice_id": "planner-shell",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "existing Planner Meal shopping cooking routes unchanged",
+      "GET /planner/nutrition compatibility endpoint retained without new UI calls",
+      "legacy product planner GET and delete plus v1 cursor decode retained for at least one compatibility release and until slice13 approved compatibility evidence and tombstone contract"
+    ],
+    "invariants": [
+      "no-new-public-endpoint-or-writer",
+      "legacy-read-delete-owner-nondisclosure",
+      "planner-nutrition-and-v1-decoder-compat-floor",
+      "completed-shopping-read-only",
+      "no-home-food-search-widening"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "node scripts/verify-planner-shell-remote.mjs --mode post-merge-read-only",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/planner-shell pnpm validate:workpack -- --slice planner-shell",
+      "node scripts/validate-automation-spec.mjs --slice planner-shell",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/planner-shell-compatibility.test.ts",
+      "legacy-read-delete-and-nondisclosure-evidence",
+      "planner-nutrition-endpoint-retained-no-new-ui-call-evidence",
+      "merged-exact-sha-remote-read-only-inventory"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "existing Planner route with 요리 계획 and 식사 기록 segments"
+    ],
+    "required_states": [
+      "plan-loading-empty-error-unauthorized",
+      "shopping-read-only",
+      "legacy-product-read-only-detail-delete",
+      "meal-log-disabled-fail-closed",
+      "segment-date-scroll-input-isolation",
+      "route-deep-link-back-focus-restoration"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/planner-shell.test.tsx tests/planner-shell-history.test.tsx tests/planner-shell-legacy-product.test.tsx",
+      "pnpm test:e2e:regression:ci --grep planner-shell",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice planner-shell",
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": ["mobile-default", "mobile-narrow", "desktop"],
+    "artifact_assertions": [
+      "existing-route-and-bottom-tab-preserved",
+      "plan-log-state-and-aggregate-isolation",
+      "plan-nutrition-and-product-writer-ui-absent",
+      "legacy-readonly-detail-delete-only",
+      "home-recipe-only",
+      "390-320-desktop-density-focus-history-no-overflow"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": ["PLANNER_WEEK"],
+      "required_screens": ["PLANNER_WEEK"],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/PLANNER_WEEK.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/PLANNER_WEEK-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-default.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-loading.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-empty.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-error.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-unauthorized.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-shopping-read-only.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-legacy-read-only.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-meal-log-disabled.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-default-segment-back-focus-sequence.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-default.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-loading.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-empty.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-error.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-unauthorized.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-shopping-read-only.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-legacy-read-only.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-meal-log-disabled.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-mobile-narrow-segment-back-focus-sequence.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-default.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-loading.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-empty.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-error.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-unauthorized.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-shopping-read-only.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-legacy-read-only.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-meal-log-disabled.png",
+        "ui/designs/evidence/planner-shell/PLANNER_WEEK-desktop-segment-back-focus-sequence.png"
+      ],
+      "authority_report_paths": ["ui/designs/authority/PLANNER_WEEK-authority.md"]
+    }
+  },
+  "external_smokes": [
+    "existing Planner route bottom-tab segment deep-link and back",
+    "other-owner legacy product delete nondisclosure",
+    "planner nutrition endpoint and legacy GET-delete compatibility",
+    "HOME recipe-only search regression",
+    "390px 320px desktop visual-a11y-authority evidence"
+  ],
+  "blocked_conditions": [
+    "stage1-independent-reviews-not-zero",
+    "stage1-author-self-approval-or-claude-use",
+    "meal-log-core-runtime-not-merged-green-before-implementation",
+    "new-bottom-tab-route-api-field-status-or-writer-invented",
+    "plan-and-actual-log-row-total-cache-or-mutation-mixed",
+    "planner-nutrition-legacy-get-delete-or-v1-cursor-removed-before-one-compatibility-release-and-slice13-approved-evidence-tombstone",
+    "legacy-product-add-edit-auto-migrate-or-current-repin-exposed",
+    "completed-shopping-mutation-exposed",
+    "home-search-expanded-beyond-recipes",
+    "canonical-design-critic-or-authority-evidence-missing",
+    "remote-verifier-not-merged-exact-sha",
+    "current-head-check-pending-absent-stale-failed-or-cancelled"
+  ],
+  "max_fix_rounds": {"backend": 3, "frontend": 6},
+  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/browser/remote evidence is future. #10 owns Planner shell and plan-only PLANNER_WEEK composition; #12 owns MEAL_LOG content, #13 owns legacy tombstones."
+}
