@@ -1,0 +1,158 @@
+{
+  "id": "personal-recipe-editor-decoupling",
+  "title": "Personal recipe editor decoupling",
+  "summary": "planner-bound manual recipe form을 four-context editor shell과 pure primitives로 분리하고 RECIPE_DETAIL fork/edit/delete 진입·복귀·dirty·design authority를 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "public 원본 불변과 owner-private 권한을 유지하면서 planner-add, standalone create/edit, public fork가 하나의 form primitive를 안전하게 재사용하고 각 context의 identity·navigation·side effect를 섞지 않게 한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for authoring, repair, implementation, review, security, design, authority, operations, or closeout",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, frontend implementation, security/ownership review, five-axis review, design critic, product-design-authority, Stage 6 re-review and closeout; no session approves its own work",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization hotfix merged and deployed",
+    "cooking-meal-log contract-evolution merged as PR #1072",
+    "recipe-visibility-read-hardening Stage 1 docs merged as PR #1077; runtime implementation remains a #5 implementation predecessor",
+    "recipe-snapshot-authority-foundation Stage 1 docs merged as PR #1078",
+    "31-recipe-media-tags and 36e-recipe-tags-frontend merged before #5 implementation",
+    "recipebook-diary-port is explicitly not a predecessor and its screens remain untouched",
+    "#6 owns recipe persistence/RLS/RPC and #8 snapshot-v2 gate precedes external public-fork/personal-edit activation"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/personal-recipe-editor-decoupling/README.md",
+      "docs/workpacks/personal-recipe-editor-decoupling/acceptance.md",
+      "docs/workpacks/personal-recipe-editor-decoupling/automation-spec.json",
+      "docs/workpacks/recipe-visibility-read-hardening/README.md",
+      "docs/workpacks/recipe-snapshot-authority-foundation/README.md",
+      "docs/workpacks/31-recipe-media-tags/README.md",
+      "docs/workpacks/36e-recipe-tags-frontend/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "docs/engineering/workflow-v2/README.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "capability-off current and immediate-previous deployment exposes no external personal write",
+      "public anonymous login return restores same recipe and fork draft action",
+      "public source remains unchanged and fork result opens new owner-private detail",
+      "other-owner private/deleted/quarantined CTA and editor preload remain non-inferable",
+      "MYPAGE and RECIPEBOOK_DETAIL keep existing item-to-detail behavior",
+      "390px and 320px exact-head visual/a11y/design-authority evidence"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 2,
+      "frontend": 6
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/personal-recipe-editor-decoupling pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
+      "node scripts/validate-automation-spec.mjs --slice personal-recipe-editor-decoupling",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/personal-recipe-editor-shell.test.tsx tests/personal-recipe-editor-navigation.test.tsx tests/personal-recipe-editor-dirty-state.test.tsx tests/personal-recipe-editor-media-tags.test.tsx tests/recipe-detail-personal-actions.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep personal-recipe-editor-decoupling",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice personal-recipe-editor-decoupling",
+      "pnpm qa:eval -- --checklist .artifacts/qa/personal-recipe-editor-decoupling/latest/exploratory-checklist.json --report .artifacts/qa/personal-recipe-editor-decoupling/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm validate:exploratory-qa-evidence -- --slice personal-recipe-editor-decoupling",
+      "pnpm validate:closeout-sync -- --slice personal-recipe-editor-decoupling",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/personal-recipe-editor-decoupling pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
+      "node scripts/validate-automation-spec.mjs --slice personal-recipe-editor-decoupling",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of all five Stage 1 core artifacts plus roadmap and status projections",
+      "separate Codex security and ownership review of permission non-disclosure login return image cancel and activation boundaries",
+      "separate Codex five-axis review",
+      "separate Codex design critic before Stage 4 implementation",
+      "separate Codex screenshot/Figma product-design-authority review before Design Status confirmed",
+      "separate Codex Stage 5 and Stage 6 implementation reviews and final closeout review"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "roadmap-docs-workflow-lifecycle-planned-separation",
+      "planner-add-personal-create-personal-edit-public-fork-context-matrix",
+      "pure-form-primitives-and-shell-responsibility-separation",
+      "public-anon-owner-other-owner-deleted-quarantined-entry-matrix",
+      "login-return-same-recipe-and-fork-draft-action",
+      "same-id-save-explicit-new-id-and-public-fork-new-private-id",
+      "dirty-back-close-stay-discard-and-draft-preservation",
+      "managed-image-object-id-server-cancel-and-private-only-upload",
+      "tag-validation-and-parent-visibility-upper-bound-reuse",
+      "mypage-recipebook-detail-no-edit-ui-boundary",
+      "stage1-inline-wireframe-and-390-320-design-evidence-plan",
+      "independent-design-critic-and-product-design-authority-required",
+      "successor-write-and-snapshot-v2-activation-boundary",
+      "stage1-current-vs-future-command-honesty",
+      "independent-codex-required-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Recipe create fork PATCH soft-delete persistence RLS RPC optimistic concurrency and future impact token owned by #6 and #7",
+    "personal_recipe_v2 or snapshot-v2 external activation before #8 gate",
+    "MYPAGE RECIPEBOOK_DETAIL editing UI or recipebook cover picker upgrade",
+    "User-facing recipe history timeline trash restore or public publish UI",
+    "New public editor endpoint route query field status or error code",
+    "Public recipe mutation or client owner visibility public image path authority",
+    "Planner shell Cook Mode Meal Log or YouTube redesign",
+    "Browser direct Storage mutation or signed URL durable identity",
+    "Production code migration remote database or data write in this Stage 1 docs PR"
+  ],
+  "open_questions": [],
+  "notes": "Roadmap moves to docs while workflow lifecycle stays planned and approval remains not_started until fresh separate Codex internal 1.5, security/ownership and five-axis reviewers approve with zero required findings. This Stage 1 lock embeds the mandatory RECIPE_DETAIL/editor state wireframe and requires later design critic plus 390px/320px screenshot/Figma product-design authority. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/exploratory/design evidence is future Stage 4 work. #5 does not own #6 writes or #8 activation; external personal editor behavior remains dark until the approved capability and snapshot-v2 gate."
+}

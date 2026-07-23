@@ -1,0 +1,203 @@
+{
+  "slice_id": "personal-recipe-editor-decoupling",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /recipes/{id} existing RECIPE_DETAIL and editor preload authority",
+      "POST /recipes/images existing managed private upload dependency",
+      "POST /recipes/images/{image_object_id}/cancel existing owner cancel dependency",
+      "POST /recipes fork/create, PATCH /recipes/{id}, DELETE /recipes/{id} are official contracts owned by successor #6 and are not implemented by #5"
+    ],
+    "invariants": [
+      "slice5-frontend-composition-only-no-schema-or-write-rpc-ownership",
+      "recipe-visibility-reader-remains-server-authority",
+      "public-source-never-patched-by-public-fork-context",
+      "other-owner-private-deleted-and-quarantined-content-noninferable",
+      "personal-edit-primary-save-preserves-recipe-identity",
+      "explicit-save-as-new-alone-requests-new-private-identity",
+      "public-fork-success-requires-new-owner-private-id-and-origin-provenance",
+      "planner-add-alone-continues-to-plan-servings-and-meal-create",
+      "standalone-contexts-never-require-planner-fields-or-create-meal-implicitly",
+      "managed-image-object-id-is-durable-draft-authority-not-signed-url",
+      "personal-upload-private-only-with-no-client-visibility-selector",
+      "discard-remove-unmount-never-use-browser-storage-remove",
+      "existing-attached-image-not-deleted-on-editor-unmount",
+      "tag-visibility-never-wider-than-parent-recipe",
+      "success-data-error-envelope-and-official-errors-only",
+      "no-unofficial-route-query-field-status-error-or-endpoint",
+      "no-unmerged-remote-migration-or-production-write"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/personal-recipe-editor-permissions.test.ts tests/personal-recipe-editor-contract.test.ts",
+      "pnpm verify:backend",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/personal-recipe-editor-decoupling pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
+      "node scripts/validate-automation-spec.mjs --slice personal-recipe-editor-decoupling",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/personal-recipe-editor-permissions.test.ts",
+      "tests/personal-recipe-editor-contract.test.ts",
+      "public authenticated anonymous owner other-owner deleted quarantined entry matrix",
+      "public source mutation zero and new private fork identity",
+      "personal edit same-id and explicit save-as-new new-id contract",
+      "planner-only meal side-effect isolation",
+      "managed image object-id owner cancel and tag upper-bound regression"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "RECIPE_DETAIL existing recipe detail route",
+      "MANUAL_RECIPE_CREATE existing /menu/add/manual route and embedded planner panel",
+      "login return-to-action for the same public recipe and public-fork draft intent",
+      "no new stable public route or query contract is introduced by this Stage 1 lock"
+    ],
+    "required_states": [
+      "planner-add",
+      "personal-create",
+      "personal-edit",
+      "public-fork",
+      "public-authenticated-fork-cta",
+      "public-anonymous-login-return",
+      "owner-private-edit-delete-cta",
+      "other-owner-private-nondisclosure",
+      "deleted-or-quarantined-nondisclosure",
+      "permission-loading-personal-cta-fail-closed",
+      "empty-ingredient-add-affordance",
+      "empty-step-add-affordance",
+      "public-source-read-only",
+      "capability-off-read-only",
+      "unauthenticated-login-401-meaning",
+      "authenticated-inaccessible-404-nondisclosure",
+      "clean-cancel",
+      "dirty-stay-or-discard",
+      "submitting-duplicate-disabled",
+      "validation-error-draft-preserved",
+      "upload-in-progress",
+      "upload-live-replay-retry-after",
+      "upload-success-signed-url-reissued",
+      "upload-cancel-failure-recoverable",
+      "managed-image-reference-required",
+      "loading",
+      "error-retry",
+      "unauthorized-return-to-action",
+      "capability-off-dark-ship"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/personal-recipe-editor-shell.test.tsx tests/personal-recipe-editor-navigation.test.tsx tests/personal-recipe-editor-dirty-state.test.tsx tests/personal-recipe-editor-media-tags.test.tsx tests/recipe-detail-personal-actions.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep personal-recipe-editor-decoupling",
+      "pnpm qa:explore -- --slice personal-recipe-editor-decoupling",
+      "pnpm qa:eval -- --checklist .artifacts/qa/personal-recipe-editor-decoupling/latest/exploratory-checklist.json --report .artifacts/qa/personal-recipe-editor-decoupling/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm validate:exploratory-qa-evidence -- --slice personal-recipe-editor-decoupling",
+      "pnpm validate:closeout-sync -- --slice personal-recipe-editor-decoupling",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "shared-form-primitives-have-no-router-planner-auth-or-persistence-decision",
+      "four-context-shell-keeps-initial-data-submit-and-destination-separated",
+      "recipe-detail-public-owner-anon-deleted-state-matrix",
+      "recipe-detail-primary-secondary-destructive-cta-hierarchy",
+      "320-wrap-and-tab-order-planner-cook-fork-edit-delete",
+      "loading-empty-read-only-401-and-404-visual-states",
+      "login-return-restores-same-public-recipe-and-fork-draft-action",
+      "same-id-save-explicit-new-id-and-public-fork-new-id-not-conflated",
+      "dirty-browser-back-in-app-close-and-discard-use-one-accessible-guard",
+      "duplicate-submit-blocked-and-error-preserves-draft",
+      "managed-image-object-id-and-server-cancel-predecessor-reused",
+      "tag-suggestion-validation-and-visibility-upper-bound-reused",
+      "mypage-and-recipebook-detail-have-no-new-edit-ui",
+      "capability-off-exposes-no-external-personal-write",
+      "current-and-immediate-previous-ui-do-not-interpret-mutable-recipe-as-history",
+      "390-and-320-no-overflow-keyboard-occlusion-or-cta-collision",
+      "focus-label-dialog-touch-target-and-error-announcement-accessibility",
+      "independent-design-critic-and-product-design-authority-zero-blockers"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [
+        "RECIPE_DETAIL"
+      ],
+      "required_screens": [
+        "RECIPE_DETAIL public authenticated fork CTA",
+        "RECIPE_DETAIL public anonymous login return",
+        "RECIPE_DETAIL owner private edit delete CTA",
+        "shared editor four contexts",
+        "dirty discard confirmation",
+        "upload validation and error states",
+        "MYPAGE and RECIPEBOOK_DETAIL unchanged-navigation evidence"
+      ],
+      "generator_required": true,
+      "generator_artifact": "docs/workpacks/personal-recipe-editor-decoupling/README.md#stage-1-wireframe",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/personal-recipe-editor-decoupling-design-critic.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "ui/designs/evidence/personal-recipe-editor-decoupling/RECIPE_DETAIL-mobile-default.png",
+        "ui/designs/evidence/personal-recipe-editor-decoupling/RECIPE_DETAIL-mobile-narrow.png",
+        "ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_CONTEXTS-mobile-default.png",
+        "ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_CONTEXTS-mobile-narrow.png",
+        "ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_STATES-mobile-default.png",
+        "ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_STATES-mobile-narrow.png",
+        "ui/designs/evidence/personal-recipe-editor-decoupling/MYPAGE_RECIPEBOOK-no-edit-regression-mobile-default.png",
+        "ui/designs/evidence/personal-recipe-editor-decoupling/MYPAGE_RECIPEBOOK-no-edit-regression-mobile-narrow.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/personal-recipe-editor-decoupling-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "current and immediate-previous deployment keep personal editor capability dark until approved activation",
+    "public anonymous login round-trip restores same recipe and fork draft action",
+    "public source remains byte-for-byte/revision unchanged after fork fixture while new private detail opens",
+    "owner-private edit and delete CTA never appear to another owner or deleted/quarantined public reader",
+    "MYPAGE and RECIPEBOOK_DETAIL keep existing item-to-RECIPE_DETAIL navigation",
+    "390px and 320px screenshot/Figma authority evidence from exact implementation head",
+    "production write activation remains zero until #6 and snapshot-v2 gate"
+  ],
+  "blocked_conditions": [
+    "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
+    "stage1-author-attempts-to-self-approve",
+    "claude-invoked-for-any-stage",
+    "official-doc-or-approved-plan-conflict",
+    "plan-sha-or-line-count-drift",
+    "recipe-visibility-or-media-tag-predecessor-not-merged-before-implementation",
+    "recipe-detail-state-matrix-or-stage1-wireframe-missing",
+    "loading-empty-read-only-401-or-404-visual-state-missing",
+    "primary-secondary-destructive-hierarchy-or-320-wrap-order-missing",
+    "design-critic-or-product-design-authority-plan-missing",
+    "form-primitive-owns-router-planner-auth-persistence-or-destination",
+    "planner-context-leaks-meal-side-effect-into-standalone-context",
+    "public-fork-patches-public-source-or-does-not-create-new-private-id",
+    "personal-primary-save-creates-new-id-or-save-as-new-reuses-same-id",
+    "other-owner-private-deleted-or-quarantined-content-or-cta-inferable",
+    "login-return-loses-recipe-or-fork-draft-action",
+    "dirty-navigation-discards-without-confirmation-or-overwrites-local-draft",
+    "duplicate-submit-causes-more-than-one-navigation-or-write",
+    "browser-direct-storage-remove-or-client-public-upload-intent-restored",
+    "signed-url-or-service-bucket-url-treated-as-managed-image-identity",
+    "tag-client-widens-parent-visibility",
+    "mypage-or-recipebook-detail-edit-ui-added",
+    "unofficial-route-query-endpoint-field-status-error-or-restore-ui-added",
+    "personal-write-or-cta-activated-before-approved-capability-snapshot-v2-gate",
+    "320px-overflow-keyboard-occlusion-clipped-sticky-cta-or-sub-44px-target",
+    "unmerged-migration-or-production-write",
+    "current-head-check-pending-absent-stale-failed-or-cancelled"
+  ],
+  "max_fix_rounds": {
+    "backend": 2,
+    "frontend": 6
+  },
+  "notes": "This high-risk UI Stage 1 slice separates the existing manual recipe form from context shell/navigation and locks RECIPE_DETAIL CTA states. It does not implement #6 recipe writes, #7 future propagation or #8 activation. Stage 1 runs only current docs validators/focused workflow tests/lint/typecheck/audit/diff; component, Playwright, exploratory QA, visual/a11y and authority commands are future Stage 4 artifacts. Roadmap is docs while lifecycle remains planned, and external personal writes stay dark until the approved capability and snapshot-v2 gate."
+}

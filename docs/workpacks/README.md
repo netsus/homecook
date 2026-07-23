@@ -241,7 +241,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `product-ingredient-link-foundation` | docs | 제품과 canonical ingredient의 검수 relation, RLS/admin promotion, pantry effective ingredient projection과 account-delete 결합 gate를 구현한다 |
 | `recipe-visibility-read-hardening` | docs | private personal recipe soft delete/public fork/tag visibility, quarantine visibility upper bound, generation-aware image registry·private storage·outbox를 먼저 잠근다 |
 | `recipe-snapshot-authority-foundation` | docs | nutrition snapshot을 exact pin하는 content snapshot 단일 authority와 Meal expand→mirror→contract/null·rollback floor를 additive하게 구축한다 |
-| `personal-recipe-editor-decoupling` | planned | 공개 원본 불변 fork 및 owner-only 개인 레시피 편집 진입을 RECIPE_DETAIL 중심으로 분리하고 기존 MYPAGE/RECIPEBOOK 상세과의 소유권 충돌을 피한다 |
+| `personal-recipe-editor-decoupling` | docs | 공개 원본 불변 fork 및 owner-only 개인 레시피 편집 진입을 RECIPE_DETAIL 중심으로 분리하고 기존 MYPAGE/RECIPEBOOK 상세과의 소유권 충돌을 피한다 |
 | `personal-recipe-customization-write-core` | planned | 개인 레시피 create/PATCH/soft DELETE, owner→recipe lock, session generation과 idempotent single-RPC write를 구현한다 |
 | `recipe-content-snapshot-future-propagation` | planned | future-plan impact preview/token, replace_all/keep, active cooking claim, shopping open reconcile와 completed read-only를 같은 transaction 경계에 잠근다 |
 | `cooked-batch-weight-ledger` | planned | cooked batch content-only nutrition, 전체/잔량 중량, append-only quantity/lifecycle event, weighted/unweighed/unrecoverable와 RPC-only mutation을 구현한다 |
@@ -282,7 +282,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 2 | B | `product-ingredient-link-foundation` | docs | F0 + #3 joint account-delete activation gate |
 | 3 | B | `recipe-visibility-read-hardening` | docs | F0; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
 | 4 | B | `recipe-snapshot-authority-foundation` | docs | #3; existing recipe nutrition snapshot release merged |
-| 5 | C | `personal-recipe-editor-decoupling` | planned | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
+| 5 | C | `personal-recipe-editor-decoupling` | docs | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
 | 6 | C | `personal-recipe-customization-write-core` | planned | #2 + #3 + #4 + #5 |
 | 7 | C | `recipe-content-snapshot-future-propagation` | planned | #4 + #6; `cook-mode-whole-board` merged |
 | 8 | D | `cooked-batch-weight-ledger` | planned | #7; `cook-mode-whole-board` merged |
