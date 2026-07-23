@@ -1,0 +1,157 @@
+{
+  "id": "personal-recipe-customization-write-core",
+  "title": "Personal recipe customization write core",
+  "summary": "public 원본 불변과 history snapshot을 보존하면서 generation-bound owner-private create/fork/update/save-as-new/soft-delete를 single-RPC write core로 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "backend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "개인 레시피의 identity, provenance, session generation, revision, idempotency와 삭제 경계를 한 transaction authority로 고정하고 #7 propagation 및 #8 activation 전에 안전하게 dark-ship한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for authoring, repair, implementation, review, security, operations, or closeout",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, backend implementation, security/DB review, five-axis review, Stage 3 re-review and closeout; no session approves its own work",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization hotfix merged and deployed",
+    "cooking-meal-log contract-evolution merged as PR #1072",
+    "account-session-generation-foundation Stage 1 docs merged; runtime F0 remains an implementation predecessor",
+    "product-ingredient-link-foundation Stage 1 docs merged as PR #1076; runtime remains an implementation predecessor",
+    "recipe-visibility-read-hardening Stage 1 docs merged as PR #1077; runtime remains an implementation predecessor",
+    "recipe-snapshot-authority-foundation Stage 1 docs merged as PR #1078; runtime remains an implementation predecessor",
+    "personal-recipe-editor-decoupling Stage 1 docs merged as PR #1079; #5 owns UI composition",
+    "31-recipe-media-tags is currently in-progress and must be merged before implementation",
+    "36e-recipe-tags-frontend is currently ready-for-review and must be merged before implementation",
+    "recipe-content-snapshot-future-propagation #7 owns final PATCH impact integration",
+    "cooked-batch-weight-ledger #8 compatibility gate precedes R+2 activation"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/personal-recipe-customization-write-core/README.md",
+      "docs/workpacks/personal-recipe-customization-write-core/acceptance.md",
+      "docs/workpacks/personal-recipe-customization-write-core/automation-spec.json",
+      "docs/workpacks/account-session-generation-foundation/README.md",
+      "docs/workpacks/product-ingredient-link-foundation/README.md",
+      "docs/workpacks/recipe-visibility-read-hardening/README.md",
+      "docs/workpacks/recipe-snapshot-authority-foundation/README.md",
+      "docs/workpacks/personal-recipe-editor-decoupling/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/workflow-v2/README.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "merged-exact-SHA remote read-only function ACL RLS policy and capability inventory",
+      "two-owner direct-DML and non-disclosure role matrix with before-after digest",
+      "G1 delayed write delete G2 recreation race produces no cross-generation row",
+      "public source immutable fork and same-id versus new-id identity smoke",
+      "idempotency and same-revision concurrency exactly-once smoke",
+      "soft-delete new-selection denial and pinned-history preservation smoke",
+      "capability-off current and immediate-previous legacy compatibility with zero new personal mutation",
+      "production capability remains off until #7 and #8 release gates"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 6,
+      "frontend": 1
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/personal-recipe-customization-write-core pnpm validate:workpack -- --slice personal-recipe-customization-write-core",
+      "node scripts/validate-automation-spec.mjs --slice personal-recipe-customization-write-core",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/personal-recipe-customization-write-core.test.ts tests/personal-recipe-customization-write-security.test.ts tests/personal-recipe-customization-write-idempotency.test.ts tests/personal-recipe-customization-write-account-delete.test.ts",
+      "pnpm test:personal-recipe-customization-write-core:postgres",
+      "pnpm verify:backend",
+      "pnpm test:e2e:regression:ci --grep personal-recipe-customization-write-core",
+      "pnpm validate:closeout-sync -- --slice personal-recipe-customization-write-core",
+      "node scripts/verify-personal-recipe-customization-write-core-remote.mjs --mode post-merge-read-only",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/personal-recipe-customization-write-core pnpm validate:workpack -- --slice personal-recipe-customization-write-core",
+      "node scripts/validate-automation-spec.mjs --slice personal-recipe-customization-write-core",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of all five Stage 1 core artifacts plus roadmap and status projections",
+      "separate Codex security and DB review of RLS ACL session generation common locks idempotency soft delete cleanup and dark activation",
+      "separate Codex five-axis review",
+      "separate Codex Stage 3 implementation review and final closeout review"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "roadmap-docs-workflow-lifecycle-planned-separation",
+      "public-source-immutable-fork-new-private-origin-id",
+      "same-id-save-explicit-new-id-and-legacy-manual-compatibility",
+      "canonical-ingredient-product-version-step-tag-image-provenance",
+      "immutable-content-and-nutrition-snapshot-authority",
+      "owner-only-soft-delete-history-preservation-account-only-hard-delete",
+      "rls-acl-direct-dml-and-other-owner-nondisclosure",
+      "session-generation-capability-fence-common-lock-single-rpc",
+      "generation-scoped-idempotency-and-revision-concurrency",
+      "managed-image-atomic-attach-and-parent-tag-upper-bound",
+      "slice7-final-patch-and-slice8-activation-boundary",
+      "capability-off-zero-new-personal-mutation-and-legacy-compatibility",
+      "backend-only-design-not-required",
+      "merged-exact-sha-remote-read-only-evidence",
+      "stage1-current-vs-future-command-honesty",
+      "independent-codex-required-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Future-plan impact endpoint preview token replace-all keep target Meal shopping and active claim propagation owned by #7",
+    "Alternate or partial public PATCH contract before #7 integrates the official final body",
+    "Snapshot-v2 session-attempt start cancel complete exact pantry completion cooked batch and activation owned by #7 and #8",
+    "Recipe Detail editor shell CTA navigation state UI design wireframe or authority evidence owned by #5",
+    "Legacy planner manual create conversion or public manual row automatic privatization",
+    "User-facing history trash restore publish or MYPAGE RECIPEBOOK_DETAIL edit UI",
+    "Public recipe mutation other-owner existence disclosure or client-selected authority",
+    "New public endpoint request response field status or error code",
+    "Unmerged remote migration production database write or capability activation"
+  ],
+  "open_questions": [],
+  "notes": "Roadmap moves to docs while workflow lifecycle remains planned and approval not_started until separate Codex internal1.5, security/DB and five-axis reviews approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Backend migration/RPC/RLS/PostgreSQL/real DB/E2E/remote and release evidence are future artifacts. Design is N/A because #5 owns all UI. #6 may dark-ship recipe-local write core but must not expose an alternate PATCH; #7 integrates future impact and #8 gates R+2 activation."
+}

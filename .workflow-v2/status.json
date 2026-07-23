@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-22T22:23:02Z",
+  "updated_at": "2026-07-23T02:06:09Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2446,6 +2446,35 @@
         "git diff --check"
       ],
       "notes": "Roadmap status is docs while workflow lifecycle intentionally remains planned. Approval stays not_started until fresh separate Codex internal 1.5, security/ownership and five-axis reviewers approve with zero required findings. Stage 1 embeds the required RECIPE_DETAIL/editor wireframe; component/E2E/visual/a11y/exploratory and 390px/320px design-authority evidence are future Stage 4 artifacts, not commands claimed executable in this docs PR. Implementation waits for #3 runtime and merged media/tag predecessors. #5 owns editor composition/navigation only; #6 owns writes and external personal editor activation stays dark until the approved snapshot-v2 gate.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "personal-recipe-customization-write-core",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/personal-recipe-customization-write-core",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/personal-recipe-customization-write-core pnpm validate:workpack -- --slice personal-recipe-customization-write-core",
+        "node scripts/validate-automation-spec.mjs --slice personal-recipe-customization-write-core",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/personal-recipe-customization-write-core.test.ts tests/personal-recipe-customization-write-security.test.ts tests/personal-recipe-customization-write-idempotency.test.ts tests/personal-recipe-customization-write-account-delete.test.ts",
+        "pnpm test:personal-recipe-customization-write-core:postgres",
+        "pnpm verify:backend",
+        "pnpm test:e2e:regression:ci --grep personal-recipe-customization-write-core",
+        "pnpm validate:closeout-sync -- --slice personal-recipe-customization-write-core",
+        "node scripts/verify-personal-recipe-customization-write-core-remote.mjs --mode post-merge-read-only",
+        "git diff --check"
+      ],
+      "notes": "Roadmap status is docs while workflow lifecycle intentionally remains planned. Approval stays not_started until fresh separate Codex internal1.5, security/DB and five-axis reviewers approve with zero required findings. Stage 1 runs only current docs validators, focused workflow tests, lint, typecheck, audit and diff. Backend/PostgreSQL/real DB/E2E/remote evidence is future work. Design is N/A because #5 owns UI. #6 dark-ships recipe-local write core without an alternate PATCH; #7 owns impact integration and #8 owns the R/R+1 gate before R+2 activation.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
