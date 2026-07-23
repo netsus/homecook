@@ -1,0 +1,163 @@
+{
+  "slice_id": "product-ingredient-link-foundation",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /recipes/pantry-match (official contract; implementation route /api/v1/recipes/pantry-match)",
+      "GET /recipes/themes (official HOME pantry-cleanout contract; implementation route /api/v1/recipes/themes)",
+      "GET /api/v1/pantry",
+      "POST /api/v1/pantry",
+      "POST /api/v1/shopping/lists/{list_id}/complete",
+      "custom recipe product validation internal reader",
+      "meal-log product/ingredient picker internal reader"
+    ],
+    "invariants": [
+      "official-food-product-ingredient-links-additive-table-only",
+      "product-fk-on-delete-cascade",
+      "ingredient-fk-on-delete-restrict",
+      "relation-review-status-primary-active-source-provenance-timestamps",
+      "one-active-approved-primary-represents-per-product-partial-unique",
+      "production-matching-active-approved-primary-represents-only",
+      "contains-and-substitute-excluded-from-p0-recommendation-matching",
+      "missing-inactive-unapproved-secondary-or-ambiguous-link-fails-closed",
+      "deterministic-candidate-generation-separated-from-human-promotion",
+      "no-287041-row-name-based-bulk-link-or-auto-approval",
+      "normal-user-direct-link-mutation-and-promotion-denied",
+      "exact-internal-admin-principal-only-promotion",
+      "public-anon-authenticated-negative-acl-matrix",
+      "other-owner-private-product-and-link-non-inferable",
+      "link-provenance-carries-no-user-pii-secret-session-or-raw-provider-payload",
+      "brand-product-identifiers-never-enter-ingredient-synonyms",
+      "pantry-generic-ingredient-identity-not-overwritten",
+      "pantry-product-and-selected-nutrition-version-identity-preserved",
+      "effective-ingredient-generic-plus-approved-product-link-distinct-union",
+      "effective-ingredient-dedupe-does-not-collapse-exact-pantry-row-identity",
+      "pantry-match-home-cleanout-custom-recipe-pantry-add-and-meal-log-read-shared-projection",
+      "required-readers-never-read-raw-pantry-ingredient-id-only",
+      "brand-variable-product-remains-product-first-without-approved-link",
+      "white-cream-references-inventoried-before-hide-or-deprecate",
+      "referenced-broad-anchor-history-never-hard-deleted",
+      "private-owner-product-hard-delete-cascades-link",
+      "owner-null-public-shared-product-version-link-and-provenance-preserved",
+      "account-generation-cleanup-activation-waits-for-f0-plus-slice3-joint-gate",
+      "existing-fresh-replay-safe-migration",
+      "bounded-set-based-effective-reader-without-n-plus-one-or-unbounded-catalog-scan",
+      "common-success-data-error-envelope-preserved",
+      "no-new-public-endpoint-field-status-or-error",
+      "no-unmerged-remote-migration-or-production-staging-write"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/product-ingredient-link-foundation.test.ts tests/product-ingredient-link-routes.test.ts tests/product-ingredient-link-security.test.ts tests/product-ingredient-link-readers.test.ts tests/product-ingredient-link-account-delete.test.ts",
+      "pnpm test:product-ingredient-link-foundation:postgres",
+      "pnpm verify:backend",
+      "node scripts/verify-product-ingredient-link-remote.mjs --mode post-merge-read-only",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/product-ingredient-link-foundation pnpm validate:workpack -- --slice product-ingredient-link-foundation",
+      "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/product-ingredient-link-foundation.test.ts",
+      "tests/product-ingredient-link-routes.test.ts",
+      "tests/product-ingredient-link-security.test.ts",
+      "tests/product-ingredient-link-readers.test.ts",
+      "tests/product-ingredient-link-account-delete.test.ts",
+      "tests/product-ingredient-link-postgres.integration.test.ts",
+      "existing fresh and replay migration signature evidence",
+      "concurrent double-primary promotion evidence",
+      "A/B owner plus owner-null public/shared role matrix evidence",
+      "five required effective-reader raw-ingredient-only regression evidence",
+      "private cascade public preservation and ingredient restrict evidence",
+      "merged-exact-SHA remote read-only compatibility evidence"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "HOME pantry-cleanout recommendation existing consumer",
+      "PANTRY display and add existing consumer"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error-retry",
+      "read-only",
+      "unauthorized-return-to-action",
+      "exact-product-and-selected-nutrition-version-preserved",
+      "effective-ingredient-without-raw-ingredient-only-fallback"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/product-ingredient-link-consumer.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep product-ingredient-link-foundation",
+      "pnpm verify:frontend",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "no-new-screen-route-layout-navigation-or-anchor-change",
+      "existing-consumer-loading-empty-error-read-only-unauthorized-behavior-preserved",
+      "user-visible-changes-routed-to-owning-successor-design-gate"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "node scripts/verify-product-ingredient-link-remote.mjs --mode post-merge-read-only from merged exact SHA only",
+    "deployed /api/v1/recipes/pantry-match implementation route smoke for official GET /recipes/pantry-match, covering unauthorized and authenticated generic/product/mixed pantry reads",
+    "remote link-table FK partial-unique RLS grant and exact-principal read-only inventory",
+    "remote private-product cascade policy and owner-null public/shared preservation read-only evidence",
+    "remote writes data promotion and account-delete activation remain zero until approved release gates"
+  ],
+  "blocked_conditions": [
+    "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
+    "stage1-author-attempts-to-self-approve",
+    "claude-invoked-for-author-review-repair-implementation-or-closeout",
+    "official-doc-or-approved-plan-conflict",
+    "plan-sha-or-line-count-drift",
+    "product-or-ingredient-fk-delete-action-drift",
+    "more-than-one-active-approved-primary-represents-per-product",
+    "contains-or-substitute-used-in-p0-recommendation-matching",
+    "inactive-unapproved-secondary-or-ambiguous-link-selected",
+    "brand-product-id-written-to-ingredient-synonyms",
+    "product-or-brand-name-used-for-automatic-generic-ingredient-guess",
+    "bulk-catalog-link-or-auto-approval-attempted",
+    "pantry-product-or-nutrition-version-identity-lost-or-rewritten",
+    "generic-and-product-effective-ingredient-not-distinct-unioned",
+    "any-required-reader-uses-raw-pantry-ingredient-id-only",
+    "normal-user-can-mutate-or-promote-link",
+    "other-owner-private-product-or-link-visible-or-inferable",
+    "private-product-delete-leaves-link-or-public-shared-cleanup-deletes-preserved-link",
+    "ingredient-delete-bypasses-restrict",
+    "link-provenance-contains-user-pii-secret-session-or-raw-provider-payload",
+    "account-delete-activation-before-f0-plus-slice3-joint-gate",
+    "unbounded-catalog-scan-or-per-row-link-n-plus-one",
+    "new-public-endpoint-field-status-or-error-invented",
+    "unmerged-migration-applied-to-remote",
+    "remote-verifier-sha-does-not-match-merged-source",
+    "production-staging-write-or-data-promotion-before-approved-release-gate",
+    "current-head-check-pending-absent-stale-failed-or-cancelled"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  },
+  "notes": "This is a backend/data foundation with behavior-only Stage 4 regression for existing HOME/PANTRY consumers and no new visual scope. Link/reader/account-delete/consumer tests, PostgreSQL replay, backend/frontend verification, focused Playwright, and remote verification commands are planned Stage 2/4/closeout artifacts. Stage 1 runs only the currently executable docs validator subset and must not claim future commands exist. Implementation activation remains blocked until the F0 + recipe-visibility-read-hardening joint account-delete gate is satisfied."
+}

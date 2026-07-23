@@ -1,0 +1,145 @@
+{
+  "id": "product-ingredient-link-foundation",
+  "title": "Product ingredient link foundation",
+  "summary": "제품과 canonical ingredient의 사람 승인 대표 관계를 additive하게 잠그고, exact product/version identity를 보존한 DISTINCT effective-ingredient projection을 모든 required reader와 account-delete 경계에 적용한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "제품으로 보관한 팬트리 항목도 승인된 대표 재료가 있을 때만 recipe recommendation과 후속 validation에서 같은 canonical ingredient로 인식되게 하되, 제품과 영양 version provenance는 잃지 않는다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for authoring, repair, implementation, review, security, DB, or closeout",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, backend/data implementation, security/DB review, five-axis review, behavior-only existing-consumer implementation/review, and final closeout; no session approves its own work",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization-hotfix merged/deployed and closed by PR #1071",
+    "cooking-meal-log contract-evolution merged as PR #1072",
+    "account-session-generation-foundation Stage 1 docs merged as PR #1073",
+    "prepared-food-search-relevance Stage 1 docs merged as PR #1074",
+    "implementation activation requires F0 plus recipe-visibility-read-hardening (#3) joint account-delete gate; this does not block the approved Stage 0 docs sequence"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/product-ingredient-link-foundation/README.md",
+      "docs/workpacks/product-ingredient-link-foundation/acceptance.md",
+      "docs/workpacks/product-ingredient-link-foundation/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/security-performance-design.md",
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/approval-and-loops.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "node scripts/verify-product-ingredient-link-remote.mjs --mode post-merge-read-only from merged exact SHA only",
+      "deployed /api/v1/recipes/pantry-match implementation route smoke for official GET /recipes/pantry-match, covering unauthorized and authenticated generic/product/mixed pantry reads",
+      "remote link-table FK partial-unique RLS grant and exact-principal read-only inventory",
+      "remote private-product cascade policy and owner-null public/shared preservation read-only evidence",
+      "remote writes data promotion and account-delete activation remain zero until approved release gates"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/product-ingredient-link-foundation pnpm validate:workpack -- --slice product-ingredient-link-foundation",
+      "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/product-ingredient-link-foundation.test.ts tests/product-ingredient-link-routes.test.ts tests/product-ingredient-link-security.test.ts tests/product-ingredient-link-readers.test.ts tests/product-ingredient-link-account-delete.test.ts",
+      "pnpm test:product-ingredient-link-foundation:postgres",
+      "pnpm verify:backend",
+      "pnpm exec vitest run tests/product-ingredient-link-consumer.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep product-ingredient-link-foundation",
+      "pnpm verify:frontend",
+      "node scripts/verify-product-ingredient-link-remote.mjs --mode post-merge-read-only",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/product-ingredient-link-foundation pnpm validate:workpack -- --slice product-ingredient-link-foundation",
+      "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of all five Stage 1 core artifacts plus roadmap/status projections",
+      "separate Codex security/DB review of FK RLS grants promotion provenance and account-delete preservation",
+      "separate Codex five-axis review",
+      "separate Codex Stage 3 and closeout review after implementation"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "official-food-product-ingredient-link-contract-only",
+      "product-cascade-and-ingredient-restrict",
+      "one-active-approved-primary-represents-per-product",
+      "contains-and-substitute-p0-exclusion",
+      "deterministic-candidate-human-promotion-separation",
+      "no-bulk-name-link-and-no-product-identifier-synonym",
+      "pantry-exact-product-and-nutrition-version-preservation",
+      "generic-plus-approved-product-distinct-effective-projection",
+      "five-required-reader-raw-ingredient-only-regressions",
+      "existing-home-and-pantry-behavior-only-consumer-regression",
+      "private-cascade-public-shared-preservation",
+      "f0-plus-slice3-joint-account-delete-activation-gate",
+      "local-existing-fresh-replay-and-role-matrix-evidence",
+      "merged-exact-sha-remote-read-only-evidence",
+      "independent-codex-required-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Public product-link CRUD or admin HTTP endpoints",
+    "Automatic bulk linking or approval of the 287041-row catalog",
+    "Brand product identifiers in ingredient_synonyms",
+    "HOME product search or any new screen layout navigation or anchor-screen change",
+    "Prepared-food search relevance owned by successor #1",
+    "Personal recipe writes cooked-batch completion meal-log core or meal-log UI owned by later successors",
+    "Production account-generation or account-delete activation before F0 plus slice #3 joint gate",
+    "Unmerged remote migration production staging write or data promotion"
+  ],
+  "open_questions": [],
+  "notes": "Roadmap status moves planned to docs in this Stage 1 PR, while workflow lifecycle intentionally stays planned until Stage 2. Approval remains not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve with zero unresolved required findings. Stage 1 verify_commands are only current executable docs validators, focused workflow tests, lint, typecheck, dependency audit and diff check. Link/reader/account-delete/consumer tests, PostgreSQL replay, backend/frontend verification, focused Playwright and remote verifier are future Stage 2/4/closeout artifacts that must be created TDD-first. Stage 4 is behavior-only for existing HOME/PANTRY consumers and adds no visual scope. The Stage 1 author must not approve or merge its own work."
+}
