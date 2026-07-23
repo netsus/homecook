@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-23T03:40:00Z",
+  "updated_at": "2026-07-23T04:05:52Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2578,6 +2578,42 @@
         "git diff --check"
       ],
       "notes": "Roadmap is docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/DB and five-axis reviews have zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; runtime/DB/E2E/remote evidence is future. Implementation waits for #1, #2, #4 and #8 runtime. #9 owns meal-log backend; #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and production activation remains Manual Only.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "planner-shell",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/planner-shell",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/planner-shell pnpm validate:workpack -- --slice planner-shell",
+        "node scripts/validate-automation-spec.mjs --slice planner-shell",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/planner-shell.test.tsx tests/planner-shell-history.test.tsx tests/planner-shell-legacy-product.test.tsx",
+        "pnpm verify:backend",
+        "pnpm verify:frontend:pr",
+        "pnpm test:e2e:regression:ci --grep planner-shell",
+        "pnpm test:e2e:a11y",
+        "pnpm test:e2e:visual",
+        "pnpm qa:explore -- --slice planner-shell",
+        "pnpm qa:eval -- --checklist .artifacts/qa/planner-shell/latest/exploratory-checklist.json --report .artifacts/qa/planner-shell/latest/exploratory-report.json",
+        "pnpm verify:frontend",
+        "pnpm validate:exploratory-qa-evidence -- --slice planner-shell",
+        "pnpm validate:authority-evidence-presence -- --slice planner-shell",
+        "pnpm validate:closeout-sync -- --slice planner-shell",
+        "node scripts/verify-planner-shell-remote.mjs --mode post-merge-read-only",
+        "git diff --check"
+      ],
+      "notes": "Roadmap is docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/authorization/legacy, five-axis and design reviews have zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/remote evidence is future. Implementation waits for #9 runtime. #10 owns the existing Planner shell and PLANNER_WEEK plan-only composition, #12 owns MEAL_LOG UI, #13 owns compatibility tombstones.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

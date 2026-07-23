@@ -1,0 +1,162 @@
+{
+  "id": "planner-shell",
+  "title": "Planner shell",
+  "summary": "기존 Planner 경로와 하단 탭 안에서 요리 계획과 식사 기록을 분리하고, Recipe Meal 계획 동작과 과거 완제품 계획의 읽기·삭제 호환성을 보존한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "PLANNER_WEEK를 계획 전용 화면으로 유지하면서 내부 세그먼트 탐색, 화면별 상태 격리, 완료 장보기 read-only, 과거 완제품 계획의 제한된 호환 UI를 잠근다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for any stage",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, security and compatibility reviewer, five-axis reviewer, design critic, product-design-authority, implementation, Stage 3/6 and closeout; no self-approval",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization hotfix merged and deployed",
+    "cooking-meal-log contract-evolution merged as PR #1072",
+    "meal-log-core Stage 1 docs merged as PR #1083; its runtime is the implementation predecessor",
+    "meal-log-ui #12 owns MEAL_LOG content and interaction design",
+    "legacy-product-compat #13 owns compatibility telemetry and tombstones"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/planner-shell/README.md",
+      "docs/workpacks/planner-shell/acceptance.md",
+      "docs/workpacks/planner-shell/automation-spec.json",
+      "docs/workpacks/meal-log-core/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "docs/engineering/workflow-v2/README.md",
+      "ui/designs/PLANNER_WEEK.md",
+      "ui/designs/critiques/PLANNER_WEEK-critique.md",
+      "ui/designs/authority/PLANNER_WEEK-authority.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "existing Planner route bottom-tab segment deep-link back and focus restoration",
+      "plan and meal-log selected-date scroll input row total and cache isolation",
+      "completed shopping read-only regression",
+      "legacy product plan owner-only read detail and delete nondisclosure",
+      "planner nutrition endpoint and v1 decoder compatibility without new UI calls",
+      "HOME recipe-only search regression",
+      "390px 320px desktop visual accessibility and product-design-authority evidence"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 3,
+      "frontend": 6
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/planner-shell pnpm validate:workpack -- --slice planner-shell",
+      "node scripts/validate-automation-spec.mjs --slice planner-shell",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/planner-shell.test.tsx tests/planner-shell-history.test.tsx tests/planner-shell-legacy-product.test.tsx",
+      "pnpm verify:backend",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep planner-shell",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice planner-shell",
+      "pnpm qa:eval -- --checklist .artifacts/qa/planner-shell/latest/exploratory-checklist.json --report .artifacts/qa/planner-shell/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm validate:exploratory-qa-evidence -- --slice planner-shell",
+      "pnpm validate:authority-evidence-presence -- --slice planner-shell",
+      "pnpm validate:closeout-sync -- --slice planner-shell",
+      "node scripts/verify-planner-shell-remote.mjs --mode post-merge-read-only",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/planner-shell pnpm validate:workpack -- --slice planner-shell",
+      "node scripts/validate-automation-spec.mjs --slice planner-shell",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of five core artifacts plus roadmap and status",
+      "separate Codex security authorization and legacy compatibility review",
+      "separate Codex five-axis review",
+      "separate Codex design critic review before implementation",
+      "separate Codex product-design-authority review of 390px 320px desktop runtime evidence",
+      "separate Codex Stage 3 Stage 6 and closeout reviews"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "roadmap-docs-workflow-lifecycle-planned-separation",
+      "existing-planner-route-and-bottom-tab-preserved",
+      "internal-cooking-plan-and-meal-log-segments-only",
+      "plan-log-state-row-total-cache-and-mutation-isolation",
+      "planner-week-recipe-meal-actions-only",
+      "registered-shopping-done-cook-done-no-consumed-mixing",
+      "completed-shopping-read-only",
+      "planner-nutrition-card-and-new-ui-call-absent",
+      "legacy-product-read-detail-delete-only-with-owner-nondisclosure",
+      "legacy-no-auto-migrate-current-repin-shop-cook-leftovers-xp-or-status",
+      "home-recipe-only-and-no-product-plan-writer",
+      "slice12-meal-log-ui-and-slice13-compatibility-boundary",
+      "planner-week-anchor-refresh-before-critic",
+      "canonical-design-critic-authority-paths",
+      "390-320-desktop-density-focus-back-and-no-overflow",
+      "stage1-current-vs-future-command-honesty",
+      "independent-required-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip",
+      "post-merge-master-qa-policy-security-vercel-green"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "MEAL_LOG content sheets recent frequent picker and nutrition UI owned by #12",
+    "Legacy endpoint decoder or planner nutrition compatibility removal owned by #13",
+    "New bottom tab route public endpoint field status writer or data model",
+    "Product planning add edit shopping cooking leftovers XP or current-version repin",
+    "Automatic migration of legacy product planner rows into meal logs",
+    "HOME product or ingredient discovery",
+    "Weekly nutrition aggregate card goals analysis or medical advice",
+    "Unmerged remote migration production write or capability activation"
+  ],
+  "open_questions": [],
+  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/authorization/legacy, five-axis and design reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; component/E2E/visual/a11y/browser/remote evidence is future. Implementation waits for #9 runtime. #10 owns the existing Planner shell and PLANNER_WEEK plan-only composition, #12 owns MEAL_LOG UI, #13 owns compatibility tombstones."
+}
