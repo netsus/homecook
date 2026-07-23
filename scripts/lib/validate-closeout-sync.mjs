@@ -12,6 +12,7 @@ import {
 } from "./omo-bookkeeping.mjs";
 import { readAutomationSpec } from "./omo-automation-spec.mjs";
 import {
+  buildWorkpackChecklistContractFromSources,
   isChecklistContractActive,
   readWorkpackChecklistContract,
   resolveOwnedChecklistItems,
@@ -56,6 +57,63 @@ function listChangedFilesAgainstBase({ rootDir, baseRef }) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function resolveRemoteBaseRef(baseRef) {
+  const normalized = typeof baseRef === "string" ? baseRef.trim() : "";
+  if (normalized.startsWith("origin/") || normalized.startsWith("refs/")) {
+    return normalized;
+  }
+
+  return `origin/${normalized || "master"}`;
+}
+
+function readGitFileAtRef({ rootDir, gitRef, relativePath }) {
+  const result = spawnSync("git", ["show", `${gitRef}:${relativePath}`], {
+    cwd: rootDir,
+    encoding: "utf8",
+  });
+
+  return result.status === 0 ? result.stdout ?? "" : null;
+}
+
+function readBaseChecklistContractFromGit({
+  rootDir,
+  slice,
+  baseRef,
+}) {
+  const gitRef = resolveRemoteBaseRef(baseRef);
+  const readmePath = `docs/workpacks/${slice}/README.md`;
+  const acceptancePath = `docs/workpacks/${slice}/acceptance.md`;
+  const automationSpecPath = `docs/workpacks/${slice}/automation-spec.json`;
+  const readmeContents = readGitFileAtRef({
+    rootDir,
+    gitRef,
+    relativePath: readmePath,
+  });
+  const acceptanceContents = readGitFileAtRef({
+    rootDir,
+    gitRef,
+    relativePath: acceptancePath,
+  });
+
+  if (readmeContents === null || acceptanceContents === null) {
+    return null;
+  }
+
+  return buildWorkpackChecklistContractFromSources({
+    readmePath,
+    acceptancePath,
+    automationSpecPath,
+    automationSpecExists:
+      readGitFileAtRef({
+        rootDir,
+        gitRef,
+        relativePath: automationSpecPath,
+      }) !== null,
+    readmeContents,
+    acceptanceContents,
+  });
 }
 
 function resolveBranchContext(branchName) {
@@ -366,6 +424,173 @@ function buildScopedChecklistErrors({ items, reason }) {
   }));
 }
 
+function indexNonManualChecklistItems(contract) {
+  const items = Array.isArray(contract?.items) ? contract.items : [];
+  return new Map(
+    items
+      .filter(
+        (item) =>
+          !item?.manualOnly &&
+          typeof item?.metadata?.id === "string" &&
+          item.metadata.id.trim().length > 0,
+      )
+      .map((item) => [item.metadata.id.trim(), item]),
+  );
+}
+
+function checklistContractMetadata(item) {
+  return {
+    source: item?.source ?? null,
+    text: item?.text ?? null,
+    stage: item?.metadata?.stage ?? null,
+    scope: item?.metadata?.scope ?? null,
+    review: Array.isArray(item?.metadata?.review)
+      ? [...item.metadata.review].sort((left, right) => left - right)
+      : [],
+  };
+}
+
+function checklistWaiverMetadata(item) {
+  return {
+    waived: item?.metadata?.waived === true,
+    waived_by: item?.metadata?.waived_by ?? null,
+    waived_stage: item?.metadata?.waived_stage ?? null,
+    waived_reason: item?.metadata?.waived_reason ?? null,
+  };
+}
+
+function isChecklistItemClosed(item) {
+  return item?.checked === true || item?.metadata?.waived === true;
+}
+
+function validateIncrementalBackendChecklist({
+  slice,
+  currentContract,
+  baseContract,
+}) {
+  if (!baseContract) {
+    return [
+      {
+        path: `docs/workpacks/${slice}`,
+        message:
+          `Ready-for-review backend slice '${slice}' requires the base checklist contract to verify incremental Stage 2 progress.`,
+      },
+    ];
+  }
+
+  if (!isChecklistContractActive(baseContract)) {
+    return [
+      {
+        path: baseContract.automationSpecPath,
+        message:
+          `Ready-for-review backend slice '${slice}' requires automation-spec.json on the base branch before implementation.`,
+      },
+    ];
+  }
+
+  if (baseContract.errors.length > 0) {
+    return [
+      {
+        path: baseContract.automationSpecPath,
+        message:
+          `Ready-for-review backend slice '${slice}' cannot compare against an invalid base checklist contract.`,
+      },
+    ];
+  }
+
+  const errors = [];
+  const currentItems = indexNonManualChecklistItems(currentContract);
+  const baseItems = indexNonManualChecklistItems(baseContract);
+  const currentIds = [...currentItems.keys()].sort();
+  const baseIds = [...baseItems.keys()].sort();
+
+  if (JSON.stringify(currentIds) !== JSON.stringify(baseIds)) {
+    errors.push({
+      path: currentContract.automationSpecPath,
+      message:
+        "Incremental backend PRs must not add or remove checklist contract ids; update the Stage 1 contract in a preceding docs PR.",
+    });
+  }
+
+  const newlyClosedStage2Ids = [];
+  for (const [id, baseItem] of baseItems) {
+    const currentItem = currentItems.get(id);
+    if (!currentItem) {
+      continue;
+    }
+
+    if (
+      JSON.stringify(checklistContractMetadata(currentItem)) !==
+      JSON.stringify(checklistContractMetadata(baseItem))
+    ) {
+      errors.push({
+        path: `${currentItem.filePath}:${currentItem.lineNumber}`,
+        message:
+          `Incremental backend PRs must not change checklist contract metadata or text: ${id}`,
+      });
+      continue;
+    }
+
+    const baseClosed = isChecklistItemClosed(baseItem);
+    const currentClosed = isChecklistItemClosed(currentItem);
+    if (
+      baseItem.metadata.waived === true &&
+      JSON.stringify(checklistWaiverMetadata(currentItem)) !==
+        JSON.stringify(checklistWaiverMetadata(baseItem))
+    ) {
+      errors.push({
+        path: `${currentItem.filePath}:${currentItem.lineNumber}`,
+        message:
+          currentClosed
+            ? `Incremental backend PRs must not change or remove existing waiver metadata: ${id}`
+            : `Incremental backend PRs must not reopen a checklist item already completed on the base branch: ${id}`,
+      });
+      continue;
+    }
+
+    if (baseItem.checked === true && currentItem.checked === false) {
+      errors.push({
+        path: `${currentItem.filePath}:${currentItem.lineNumber}`,
+        message:
+          `Incremental backend PRs must not reopen a checklist item already completed on the base branch: ${id}`,
+      });
+      continue;
+    }
+
+    if (baseClosed === true && currentClosed === false) {
+      errors.push({
+        path: `${currentItem.filePath}:${currentItem.lineNumber}`,
+        message:
+          `Incremental backend PRs must not reopen a checklist item already completed on the base branch: ${id}`,
+      });
+      continue;
+    }
+
+    if (baseClosed === false && currentClosed === true) {
+      if (currentItem.metadata.stage !== 2) {
+        errors.push({
+          path: `${currentItem.filePath}:${currentItem.lineNumber}`,
+          message:
+            `Backend PRs can only newly check Stage 2-owned checklist items: ${id}`,
+        });
+        continue;
+      }
+
+      newlyClosedStage2Ids.push(id);
+    }
+  }
+
+  if (newlyClosedStage2Ids.length === 0) {
+    errors.push({
+      path: currentContract.automationSpecPath,
+      message:
+        "Ready-for-review backend PRs must newly close at least one Stage 2-owned checklist item relative to the base branch.",
+    });
+  }
+
+  return errors;
+}
+
 function resolveChecklistSurfaceStatus(items) {
   return resolveUncheckedChecklistItems(items).length > 0 ? "pending" : "complete";
 }
@@ -568,6 +793,7 @@ function validateChecklistContractSlice({
   slice,
   roadmapStatus,
   strictMode,
+  baseChecklistContract,
 }) {
   const errors = [];
   const designStatus = readWorkpackDesignStatus({
@@ -589,17 +815,13 @@ function validateChecklistContractSlice({
       });
     }
 
-    const uncheckedStage2Items = resolveUncheckedChecklistItems(
-      resolveOwnedChecklistItems(checklistContract, 2),
+    errors.push(
+      ...validateIncrementalBackendChecklist({
+        slice,
+        currentContract: checklistContract,
+        baseContract: baseChecklistContract,
+      }),
     );
-    if (uncheckedStage2Items.length > 0) {
-      errors.push(
-        ...buildScopedChecklistErrors({
-          items: uncheckedStage2Items,
-          reason: "Stage 2-owned checklist item must be checked before backend ready-for-review",
-        }),
-      );
-    }
   }
 
   if (strictMode === "ready-for-review") {
@@ -674,11 +896,26 @@ function validateStrictSlice({
   slice,
   roadmapStatus,
   strictMode,
+  baseChecklistContract,
 }) {
   const checklistContract = readWorkpackChecklistContract({
     rootDir,
     slice,
   });
+
+  if (
+    strictMode === "backend-ready-for-review" &&
+    isChecklistContractActive(baseChecklistContract) &&
+    !isChecklistContractActive(checklistContract)
+  ) {
+    return [
+      {
+        path: checklistContract.automationSpecPath,
+        message:
+          `Ready-for-review backend slice '${slice}' must keep automation-spec.json; removing it cannot downgrade the incremental checklist gate.`,
+      },
+    ];
+  }
 
   if (isChecklistContractActive(checklistContract)) {
     return validateChecklistContractSlice({
@@ -686,6 +923,7 @@ function validateStrictSlice({
       slice,
       roadmapStatus,
       strictMode,
+      baseChecklistContract,
     });
   }
 
@@ -764,12 +1002,18 @@ function validateStrictSlice({
  *   rootDir?: string;
  *   env?: NodeJS.ProcessEnv & { PR_IS_DRAFT?: string | boolean };
  *   changedFiles?: string[] | null;
+ *   readBaseChecklistContract?: (input: {
+ *     rootDir: string;
+ *     slice: string;
+ *     baseRef: string;
+ *   }) => ReturnType<typeof readWorkpackChecklistContract> | null;
  * }} [options]
  */
 export function validateCloseoutSync({
   rootDir = process.cwd(),
   env = process.env,
   changedFiles = null,
+  readBaseChecklistContract = readBaseChecklistContractFromGit,
 } = {}) {
   const branchName = resolveBranchName(rootDir, env);
   const branchContext = resolveBranchContext(branchName);
@@ -826,6 +1070,14 @@ export function validateCloseoutSync({
       slice,
       roadmapStatus,
       strictMode,
+      baseChecklistContract:
+        strictMode === "backend-ready-for-review"
+          ? readBaseChecklistContract({
+              rootDir,
+              slice,
+              baseRef,
+            })
+          : null,
     });
     errors.push(
       ...validateCanonicalCloseoutDocSurfaceSync({

@@ -53,7 +53,10 @@
 - [ ] old path deletion is a separate irreversible gate with reference 0, read smoke, rollback floor and dead-letter 0 <!-- omo:id=accept-image-old-path-gate;stage=2;scope=backend;review=3,6 -->
 - [ ] expected-owner signal uses only owner_id, strict allowlisted owner path or registry owner/generation and reaches union-zero before Auth deletion <!-- omo:id=accept-image-owner-signal;stage=2;scope=backend;review=3,6 -->
 - [ ] MacBook tick proves `StartInterval=300`, `RunAtLoad=true`, wrong-secret 401, heartbeat gap 15 minutes, cleanup target 24 hours, alert on 3 consecutive calls failed/oldest due over 15 minutes/any dead-letter, mode 600 env or Keychain secret, JSON log 10MB × 5 rotation and next-tick recovery <!-- omo:id=accept-image-launchd-runtime;stage=2;scope=shared;review=3,6 -->
-- [ ] actual launchd install, production secret, power/login/sleep and external heartbeat receiver evidence remain service-owner Manual Only <!-- omo:id=accept-image-manual-only;stage=2;scope=manual;review=6 -->
+
+### Manual Only
+
+- [ ] actual launchd install, production secret, power/login/sleep and external heartbeat receiver evidence remain service-owner Manual Only
 
 ## Frontend / Regression
 
