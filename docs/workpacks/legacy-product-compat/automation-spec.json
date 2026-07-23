@@ -1,0 +1,131 @@
+{
+  "slice_id": "legacy-product-compat",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /planner existing additive legacy product projection",
+      "GET /planner/nutrition existing compatibility endpoint",
+      "POST /product-planner-entries existing server compatibility only",
+      "PATCH /product-planner-entries/{entry_id} existing server compatibility only",
+      "DELETE /product-planner-entries/{entry_id} existing owner delete",
+      "POST /cooking/sessions existing legacy-v1 planner start",
+      "GET /cooking/sessions/{id}/cook-mode existing legacy-v1 read",
+      "POST /cooking/sessions/{id}/complete existing legacy-v1 complete",
+      "POST /cooking/sessions/{id}/cancel existing legacy-v1 cancel",
+      "POST /cooking/standalone-complete existing legacy-v1 standalone complete",
+      "GET /cooking/session-attempts/{id}/cook-mode existing snapshot-v2 drain",
+      "POST /cooking/session-attempts/{id}/cancel existing snapshot-v2 drain",
+      "POST /cooking/session-attempts/{id}/complete existing snapshot-v2 drain",
+      "GET /food-products existing v1 cursor dual decode"
+    ],
+    "invariants": [
+      "legacy-product-row-and-pinned-version-retained",
+      "planner-product-entries-additive-and-separate-from-recipe-meals",
+      "owner-delete-only-and-other-owner-nondisclosure",
+      "no-auto-hide-delete-migrate-or-current-repin",
+      "planner-nutrition-product-writers-and-v1-cursor-retained",
+      "v1-body-response-consumed-ingredient-semantics-retained",
+      "optional-stable-key-before-one-release-no-key-zero",
+      "post-zero-missing-key-428-with-mutation-zero",
+      "key-enforcement-separate-from-v1-route-removal",
+      "stored-contract-version-dispatch-no-body-guess",
+      "flag-off-existing-v2-read-cancel-complete-drain",
+      "rollback-keeps-existing-v2-drain",
+      "telemetry-zero-never-destructive-authority",
+      "separate-approved-contract-required-for-tombstone",
+      "no-new-api-field-status-error-migration-or-direct-dml"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "node scripts/verify-legacy-product-compat-remote.mjs --mode post-merge-read-only",
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/legacy-product-compat pnpm validate:workpack -- --slice legacy-product-compat",
+      "node scripts/validate-automation-spec.mjs --slice legacy-product-compat",
+      "pnpm validate:omo-bookkeeping",
+      "git diff --check"
+    ],
+    "required_test_targets": [
+      "tests/legacy-product-compat.test.ts",
+      "tests/legacy-cooking-idempotency-rollout.test.ts",
+      "tests/cooking-version-dispatch-compat.test.ts",
+      "tests/compatibility-tombstone-gates.test.ts",
+      "current-immediate-previous-client-matrix",
+      "seeded-v2-flag-off-drain-evidence",
+      "merged-exact-sha-read-only-inventory"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "existing Planner route PLANNER_WEEK legacy read-only section",
+      "existing COOK_MODE legacy-v1 and snapshot-v2 dispatch"
+    ],
+    "required_states": [
+      "legacy-present-empty-read-error-unauthorized",
+      "legacy-detail-and-delete-pending-error",
+      "v1-optional-key-and-no-key-pre-gate",
+      "v1-missing-key-428-post-zero",
+      "flag-off-existing-v2-drain",
+      "cross-version-404-409",
+      "telemetry-unavailable-fail-closed"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep legacy-product-compat",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice legacy-product-compat",
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": ["mobile-default", "mobile-narrow", "desktop"],
+    "artifact_assertions": [
+      "planner-legacy-read-detail-delete-only",
+      "current-immediate-previous-version-dispatch",
+      "seeded-v2-flag-off-drain-and-rollback",
+      "no-product-writer-or-planner-nutrition-ui-call",
+      "predecessor-planner-and-cook-mode-authority-remains-green",
+      "390-320-desktop-focus-confirmation-and-no-overflow"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "legacy product planner owner read pinned detail and delete",
+    "no add edit auto-migrate current-repin or planner nutrition UI call",
+    "optional stable key old-shape no-key telemetry and post-zero 428",
+    "current immediate-previous v1-v2 explicit dispatch",
+    "flag-off seeded-v2 read cancel complete and rollback drain",
+    "cursor v1 dual decode and compatibility endpoint inventory",
+    "tombstone denied without separately approved contract"
+  ],
+  "blocked_conditions": [
+    "stage1-independent-reviews-not-zero",
+    "stage1-author-self-approval-or-claude-use",
+    "slice10-or-slice12-runtime-not-green-before-implementation",
+    "legacy-row-endpoint-parser-or-cursor-removed-without-separate-contract",
+    "elapsed-release-or-zero-telemetry-treated-as-delete-authority",
+    "product-add-edit-auto-migrate-current-repin-or-new-detail-route-exposed",
+    "v1-key-required-before-full-release-no-key-zero",
+    "v1-body-response-consumed-ingredient-semantics-changed",
+    "version-inferred-from-body-or-parser-shared",
+    "flag-off-existing-v2-drain-blocked",
+    "r2-activation-or-destructive-tombstone-performed-by-slice13",
+    "compatibility-telemetry-leaks-secret-or-private-payload",
+    "remote-verifier-not-merged-exact-sha",
+    "current-head-check-pending-absent-stale-failed-or-cancelled"
+  ],
+  "max_fix_rounds": {"backend": 4, "frontend": 4},
+  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Runtime/E2E/browser/telemetry/remote evidence is future. #13 preserves legacy contracts and records tombstone prerequisites; it does not authorize deletion or R+2 activation. No new design artifact is required because #10/#7/#11 own the affected visual surfaces, but their authority evidence remains a regression gate."
+}

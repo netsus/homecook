@@ -1,0 +1,163 @@
+{
+  "id": "legacy-product-compat",
+  "title": "Legacy product compatibility",
+  "summary": "legacy product planner read/delete, v1 optional stable-key rollout, current/immediate-previous version dispatch와 flag-off seeded-v2 drain을 파괴적 tombstone 없이 검증한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "기존 planner/product/cooking 계약을 보존하면서 호환 telemetry와 rollback evidence를 만들고, 별도 승인 없는 row·endpoint·parser·cursor 제거를 fail closed한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for any stage",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, security and compatibility reviewer, five-axis reviewer, design-impact reviewer, implementation, Stage 3/6 and closeout; no self-approval",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization hotfix merged and deployed",
+    "cooking-meal-log contract-evolution merged as PR #1072",
+    "planner-shell Stage 1 docs merged as PR #1084; its runtime/current-head checks are a direct implementation predecessor",
+    "meal-log-ui Stage 1 docs/runtime closeout is a direct implementation predecessor; #13 Stage 1 may lock docs now but implementation still waits for its merged runtime/current-head green",
+    "existing version-dispatch batch and session contracts remain unchanged",
+    "cooking-meal-log-cross-slice-release-qa #14 is the successor"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/legacy-product-compat/README.md",
+      "docs/workpacks/legacy-product-compat/acceptance.md",
+      "docs/workpacks/legacy-product-compat/automation-spec.json",
+      "docs/workpacks/planner-shell/README.md",
+      "docs/workpacks/meal-log-ui/README.md",
+      "docs/workpacks/recipe-content-snapshot-future-propagation/README.md",
+      "docs/workpacks/cooked-batch-weight-ledger/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/engineering/workflow-v2/README.md",
+      "ui/designs/PLANNER_WEEK.md",
+      "ui/designs/COOK_MODE.md",
+      "ui/designs/authority/PLANNER_WEEK-authority.md",
+      "ui/designs/authority/COOK_MODE-authority.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "legacy product planner owner read pinned detail and delete",
+      "no add edit auto-migrate current-repin or planner nutrition UI call",
+      "optional stable key old-shape no-key telemetry and post-zero 428",
+      "current immediate-previous v1-v2 explicit dispatch",
+      "flag-off seeded-v2 read cancel complete and rollback drain",
+      "cursor v1 dual decode and compatibility endpoint inventory",
+      "tombstone denied without separately approved contract"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/legacy-product-compat pnpm validate:workpack -- --slice legacy-product-compat",
+      "node scripts/validate-automation-spec.mjs --slice legacy-product-compat",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/legacy-product-compat.test.ts tests/legacy-cooking-idempotency-rollout.test.ts tests/cooking-version-dispatch-compat.test.ts tests/compatibility-tombstone-gates.test.ts",
+      "pnpm verify:backend",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep legacy-product-compat",
+      "pnpm test:e2e:a11y",
+      "pnpm test:e2e:visual",
+      "pnpm qa:explore -- --slice legacy-product-compat",
+      "pnpm qa:eval -- --checklist .artifacts/qa/legacy-product-compat/latest/exploratory-checklist.json --report .artifacts/qa/legacy-product-compat/latest/exploratory-report.json",
+      "pnpm verify:frontend",
+      "pnpm validate:exploratory-qa-evidence -- --slice legacy-product-compat",
+      "pnpm validate:closeout-sync -- --slice legacy-product-compat",
+      "node scripts/verify-legacy-product-compat-remote.mjs --mode post-merge-read-only",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/legacy-product-compat pnpm validate:workpack -- --slice legacy-product-compat",
+      "node scripts/validate-automation-spec.mjs --slice legacy-product-compat",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of five core artifacts plus roadmap and status",
+      "separate Codex security authorization and compatibility review",
+      "separate Codex five-axis review",
+      "separate Codex design-impact review confirming no new visual authority surface",
+      "separate Codex Stage 3 Stage 6 and closeout reviews"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "roadmap-docs-workflow-lifecycle-planned-separation",
+      "legacy-product-row-read-delete-and-pinned-version-retained",
+      "planner-product-entries-additive-not-recipe-duplicate",
+      "no-product-add-edit-auto-migrate-current-repin-or-new-detail-route",
+      "elapsed-release-and-telemetry-zero-not-deletion-authority",
+      "planner-nutrition-product-writers-and-v1-cursor-compatibility-floor",
+      "v1-body-response-and-consumed-ingredient-semantics-retained",
+      "both-legacy-clients-optional-stable-key-first",
+      "one-release-no-key-zero-before-mutation-zero-428",
+      "key-enforcement-and-route-removal-separate",
+      "strict-v1-removal-needs-new-start-block-terminal-zero-and-separate-contract",
+      "current-immediate-previous-stored-version-dispatch",
+      "flag-off-seeded-v2-read-cancel-complete-and-rollback-drain",
+      "no-r2-activation-or-destructive-tombstone",
+      "compatibility-evidence-release-head-window-and-private-safe-telemetry",
+      "predecessor-planner-and-cook-mode-authority-remains-green",
+      "stage1-current-vs-future-command-honesty",
+      "independent-required-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip",
+      "post-merge-master-qa-policy-security-vercel-green"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Destructive row endpoint parser cursor or planner nutrition tombstone",
+    "Retention period background auto-delete migration or production cleanup job",
+    "Product planner add edit copy shopping cooking leftovers XP status or meal-log migration UI",
+    "New product detail route or mutable-current nutrition repin",
+    "Snapshot-v2 or personal recipe write activation",
+    "PLANNER_WEEK COOK_MODE HOME MEAL_LOG or batch lifecycle composition changes",
+    "New endpoint field status error enum migration or direct DML"
+  ],
+  "open_questions": [],
+  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/compatibility, five-axis and design-impact reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; runtime/E2E/browser/telemetry/remote evidence is future. Implementation waits for #10 and #12 runtime/current-head green. #13 preserves contracts and records prerequisites but does not authorize deletion or R+2 activation."
+}
