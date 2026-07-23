@@ -1,0 +1,156 @@
+{
+  "id": "recipe-snapshot-authority-foundation",
+  "title": "Recipe snapshot authority foundation",
+  "summary": "immutable content snapshot이 exact recipe nutrition snapshot만 pin하도록 하고 Meal direct nutrition을 expand→mirror→contract/null로 안전하게 단일화한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "recipe current 변화와 개인 soft delete 뒤에도 Meal·cooking·batch·history가 사용 당시 content와 exact nutrition authority를 재현하며 legacy rollback floor를 지키게 한다.",
+  "owners": {
+    "claude": "forbidden by explicit user instruction; do not invoke Claude for authoring, repair, implementation, review, security, DB, design, operations, or closeout",
+    "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, backend/data implementation, security/DB review, five-axis review, existing-consumer regression review, and closeout; no session approves its own work",
+    "workers": []
+  },
+  "dependencies": [
+    "security-definer-mutation-authorization-hotfix merged and deployed",
+    "cooking-meal-log contract-evolution merged as PR #1072",
+    "existing recipe nutrition snapshot release merged",
+    "recipe-visibility-read-hardening Stage 1 docs merged as PR #1077; its runtime implementation remains a Stage 2 predecessor",
+    "product-ingredient-link-foundation Stage 1 docs merged as PR #1076 for Train B integrated QA",
+    "this Stage 1 docs sequence does not activate schema migration or Meal contract cutover"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.22.md",
+      "docs/화면정의서-v1.5.28.md",
+      "docs/유저flow맵-v1.3.25.md",
+      "docs/db설계-v1.3.23.md",
+      "docs/api문서-v1.2.27.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/workpacks/README.md",
+      "docs/workpacks/recipe-snapshot-authority-foundation/README.md",
+      "docs/workpacks/recipe-snapshot-authority-foundation/acceptance.md",
+      "docs/workpacks/recipe-snapshot-authority-foundation/automation-spec.json",
+      "docs/workpacks/recipe-visibility-read-hardening/README.md",
+      "docs/workpacks/product-ingredient-link-foundation/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/qa-system.md",
+      "docs/engineering/security-performance-design.md",
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/approval-and-loops.md",
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "node scripts/verify-recipe-snapshot-authority-remote.mjs --mode post-merge-read-only from merged exact SHA only",
+      "remote table column FK unique check trigger grant and function inventory",
+      "current and immediate-previous content-aware reader compatibility smoke",
+      "one-full-release old-shape direct-only write zero and pair mismatch zero evidence",
+      "pre-contract rollback and post-contract content-aware rollback-floor rejection",
+      "private account cleanup FK-order fixture preserves owner-null public shared snapshots",
+      "Train B Storage outbox and pantry effective-ingredient integration smoke",
+      "production contract-null writes remain zero until approved compatibility gate"
+    ],
+    "execution_mode": "manual",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 6,
+      "frontend": 3
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/recipe-snapshot-authority-foundation pnpm validate:workpack -- --slice recipe-snapshot-authority-foundation",
+      "node scripts/validate-automation-spec.mjs --slice recipe-snapshot-authority-foundation",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/recipe-snapshot-authority.test.ts tests/recipe-snapshot-readers.test.ts tests/recipe-snapshot-security.test.ts tests/recipe-snapshot-account-delete.test.ts",
+      "pnpm test:recipe-snapshot-authority:postgres",
+      "pnpm verify:backend",
+      "pnpm exec vitest run tests/recipe-snapshot-consumers.test.tsx",
+      "pnpm verify:frontend:pr",
+      "pnpm test:e2e:regression:ci --grep recipe-snapshot-authority-foundation",
+      "pnpm verify:frontend",
+      "pnpm validate:closeout-sync -- --slice recipe-snapshot-authority-foundation",
+      "node scripts/verify-recipe-snapshot-authority-remote.mjs --mode post-merge-read-only",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm validate:workflow-v2",
+      "BRANCH_NAME=docs/recipe-snapshot-authority-foundation pnpm validate:workpack -- --slice recipe-snapshot-authority-foundation",
+      "node scripts/validate-automation-spec.mjs --slice recipe-snapshot-authority-foundation",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm audit --audit-level high",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex internal 1.5 review of all five Stage 1 core artifacts plus roadmap and status projections",
+      "separate Codex security and DB review of snapshot ownership immutability Meal migration rollback floor and account cleanup",
+      "separate Codex five-axis review",
+      "separate Codex Stage 3 implementation review and final closeout review"
+    ],
+    "artifact_assertions": [
+      "approved-plan-sha256-and-1018-line-lock",
+      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "content-exact-nutrition-id-only-single-authority",
+      "nutrition-not-null-restrict-ordinary-unique-current-index-and-writer-conflict-preserved",
+      "private-owner-recipe-pair-and-owner-null-public-shared-shape",
+      "ordinary-direct-mutation-denied-and-account-cleanup-only-private-delete",
+      "exact-account-cleanup-event-idempotency-claim-session-meal-batch-snapshot-product-order",
+      "soft-delete-history-preservation-and-new-snapshot-denial",
+      "reader-first-n-preserving-idempotent-expand-backfill",
+      "db-derived-null-or-equal-compatibility-mirror-and-content-null-legacy-fallback",
+      "one-release-zero-contract-null-xor-and-content-aware-rollback-floor",
+      "legacy-v1-preservation-and-snapshot-v2-conditional-immutable-pin",
+      "planner-session-meal-revision-match-active-claim-pk-and-generation-scoped-idempotency",
+      "leftover-batch-content-only-no-direct-nutrition-pointer",
+      "scalable-cooking-over-base-plus-fixed-once-and-missing-not-zero",
+      "existing-consumer-behavior-only-no-new-visual-scope",
+      "train-b-storage-outbox-and-pantry-effective-ingredient-integration",
+      "merged-exact-sha-remote-read-only-evidence",
+      "independent-codex-required-findings-zero",
+      "current-head-all-started-checks-terminal-green-or-intended-skip"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "Personal recipe editor fork save update soft-delete route and impact preview owned by successors #5 and #6",
+    "Future Meal propagation replace-all keep shopping reconcile and snapshot-v2 session-attempt RPC behavior and activation owned by #7; #4 owns their dark session-meal claim and idempotency schema foundation",
+    "Cooked batch weight ledger events and exact pantry completion owned by #8",
+    "Meal log core and UI owned by #9 and #12",
+    "Planner shell Cook Mode weight UI and Recipe Detail CTA owned by #10 #11 and #5",
+    "Existing v1 sessions removal or snapshot-v2 creation activation",
+    "Duplicate nutrition vector in content Meal or batch",
+    "Relaxed nutrition FK unique current index writer conflict or immutable trigger",
+    "New public endpoint field status error or visual hierarchy",
+    "Unmerged remote migration production database or data write"
+  ],
+  "open_questions": [],
+  "notes": "Roadmap moves to docs while workflow lifecycle stays planned and approval remains not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff check only. Snapshot migration/readers/account cleanup, PostgreSQL, compatibility telemetry, consumer/E2E and remote-verifier commands are future Stage 2/4/closeout artifacts. Implementation waits for #3 runtime and the merged nutrition baseline; contract/null waits for current+previous content-aware, one-release old-shape zero and pair-mismatch zero evidence."
+}

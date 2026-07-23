@@ -2386,6 +2386,38 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "recipe-snapshot-authority-foundation",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/recipe-snapshot-authority-foundation",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=docs/recipe-snapshot-authority-foundation pnpm validate:workpack -- --slice recipe-snapshot-authority-foundation",
+        "node scripts/validate-automation-spec.mjs --slice recipe-snapshot-authority-foundation",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/recipe-snapshot-authority.test.ts tests/recipe-snapshot-readers.test.ts tests/recipe-snapshot-security.test.ts tests/recipe-snapshot-account-delete.test.ts",
+        "pnpm test:recipe-snapshot-authority:postgres",
+        "pnpm verify:backend",
+        "pnpm exec vitest run tests/recipe-snapshot-consumers.test.tsx",
+        "pnpm verify:frontend:pr",
+        "pnpm test:e2e:regression:ci --grep recipe-snapshot-authority-foundation",
+        "pnpm verify:frontend",
+        "pnpm validate:closeout-sync -- --slice recipe-snapshot-authority-foundation",
+        "node scripts/verify-recipe-snapshot-authority-remote.mjs --mode post-merge-read-only",
+        "git diff --check"
+      ],
+      "notes": "Roadmap status is docs while workflow lifecycle intentionally remains planned. Approval stays not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve with zero required findings. Snapshot migration/readers/account cleanup, PostgreSQL, compatibility-release telemetry, consumer/E2E and merged-exact-SHA remote read-only verification are planned Stage 2/4/closeout artifacts, not commands claimed executable in this docs PR. UI work is behavior-only compatibility with no new visual hierarchy. Implementation waits for #3 runtime and the existing nutrition snapshot release; contract/null waits for the exact one-release compatibility gate.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
     }
   ]
 }
