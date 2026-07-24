@@ -7,6 +7,10 @@ const MIGRATION_PATH = path.join(
   process.cwd(),
   "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
 );
+const TAG_PARENT_VISIBILITY_MIGRATION_PATH = path.join(
+  process.cwd(),
+  "supabase/migrations/20260724090000_recipe_tag_parent_visibility_upper_bound.sql",
+);
 
 describe("recipe visibility read hardening migration", () => {
   it("adds the official visibility fields without reclassifying existing recipes as private", () => {
@@ -182,6 +186,36 @@ describe("recipe visibility read hardening migration", () => {
     );
     expect(sql).toMatch(
       /revoke execute on function public\.set_recipe_tags\(uuid, jsonb, uuid, text\)[\s\S]*from public, anon, authenticated, service_role[\s\S]*grant execute on function public\.set_recipe_tags\(uuid, jsonb, uuid, text\)[\s\S]*to service_role/i,
+    );
+  });
+
+  it("derives tag visibility under a locked parent and removes direct association writes", () => {
+    expect(existsSync(TAG_PARENT_VISIBILITY_MIGRATION_PATH)).toBe(true);
+
+    if (!existsSync(TAG_PARENT_VISIBILITY_MIGRATION_PATH)) {
+      return;
+    }
+
+    const sql = readFileSync(TAG_PARENT_VISIBILITY_MIGRATION_PATH, "utf8");
+    const writerMatch = sql.match(
+      /create or replace function public\.set_recipe_tags\([\s\S]*?\n\$function\$;/i,
+    );
+
+    expect(writerMatch, "parent-bounded set_recipe_tags override is missing").not.toBeNull();
+    expect(writerMatch?.[0]).toMatch(
+      /from public\.recipes as recipe[\s\S]*where recipe\.id = p_recipe_id[\s\S]*for update/i,
+    );
+    expect(writerMatch?.[0]).toMatch(
+      /v_parent_visibility <> 'public'[\s\S]*v_parent_deleted_at is not null[\s\S]*then 'private'/i,
+    );
+    expect(writerMatch?.[0]).toMatch(
+      /v_requested_visibility = 'public'[\s\S]*v_review_status <> 'approved'[\s\S]*then 'public_pending'/i,
+    );
+    expect(writerMatch?.[0]).toMatch(
+      /join public\.recipes as recipe[\s\S]*recipe\.visibility = 'public'[\s\S]*recipe\.deleted_at is null/i,
+    );
+    expect(sql).toMatch(
+      /revoke insert, update, delete[\s\S]*on table public\.recipe_tags[\s\S]*from public, anon, authenticated, service_role/i,
     );
   });
 

@@ -7,8 +7,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 const POSTGRES_TOOLS = ["initdb", "pg_ctl", "createdb", "psql"];
-const MIGRATION_PATH =
-  "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql";
+const MIGRATION_PATHS = [
+  "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
+  "supabase/migrations/20260724090000_recipe_tag_parent_visibility_upper_bound.sql",
+];
 
 function commandResult(command, args, options = {}) {
   return spawnSync(command, args, {
@@ -296,10 +298,12 @@ if (!postgresBin) {
     ]);
 
     for (let replay = 0; replay < 2; replay += 1) {
-      runRequired(path.join(postgresBin, "psql"), [
-        ...runnerArgs,
-        "-f", MIGRATION_PATH,
-      ]);
+      for (const migrationPath of MIGRATION_PATHS) {
+        runRequired(path.join(postgresBin, "psql"), [
+          ...runnerArgs,
+          "-f", migrationPath,
+        ]);
+      }
     }
 
     const test = commandResult("pnpm", [
