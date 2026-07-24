@@ -11,6 +11,8 @@ const MIGRATION_PATH =
   "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql";
 const MANAGED_IMAGE_REGISTRY_MIGRATION_PATH =
   "supabase/migrations/20260724110000_recipe_managed_image_registry_foundation.sql";
+const IMAGE_CLEANUP_OUTBOX_MIGRATION_PATH =
+  "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -32,6 +34,13 @@ const IMAGE_PUBLIC_SHARED = "00000000-0000-4000-8000-000000000302";
 const IMAGE_ATTEMPT_TOKEN = "00000000-0000-4000-8000-000000000303";
 const IMAGE_REFERENCE = "00000000-0000-4000-8000-000000000304";
 const IMAGE_CONSUMER = "00000000-0000-4000-8000-000000000305";
+const IMAGE_CLEANUP_FOUND = "00000000-0000-4000-8000-000000000308";
+const IMAGE_CLEANUP_ABSENT = "00000000-0000-4000-8000-000000000309";
+const IMAGE_CLEANUP_LEASE_ONE = "00000000-0000-4000-8000-000000000310";
+const IMAGE_CLEANUP_LEASE_TWO = "00000000-0000-4000-8000-000000000311";
+const IMAGE_CLEANUP_LEASE_THREE = "00000000-0000-4000-8000-000000000312";
+const IMAGE_CLEANUP_REFERENCE = "00000000-0000-4000-8000-000000000313";
+const IMAGE_CLEANUP_CONSUMER = "00000000-0000-4000-8000-000000000314";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -758,6 +767,342 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         )
       );
     `)).toBe("f:f:2:1");
+  });
+
+  it("keeps first-404 cleanup out of normal claims until an ordered recheck", () => {
+    expect(psqlResult(`
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation
+      ) values
+        (
+          '${IMAGE_CLEANUP_FOUND}',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/${IMAGE_CLEANUP_FOUND}.webp',
+          'private',
+          'cleanup_pending',
+          1
+        ),
+        (
+          '${IMAGE_CLEANUP_ABSENT}',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/${IMAGE_CLEANUP_ABSENT}.webp',
+          'private',
+          'cleanup_pending',
+          1
+        );
+    `).status).toBe(0);
+
+    const firstOutboxId = psql(`
+      begin;
+      set local role service_role;
+      select public.enqueue_recipe_image_cleanup(
+        '${IMAGE_CLEANUP_FOUND}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        'stale_upload'
+      );
+      commit;
+    `);
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select count(*)
+      from public.claim_recipe_image_cleanup(
+        1,
+        '${IMAGE_CLEANUP_LEASE_ONE}',
+        '2030-07-24T00:00:00Z'
+      );
+      commit;
+    `)).toBe("1");
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select public.authorize_recipe_image_cleanup_delete(
+        '${firstOutboxId}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        '${IMAGE_CLEANUP_LEASE_ONE}',
+        '2030-07-24T00:00:30Z'
+      );
+      rollback;
+    `)).toBe("t");
+
+    expect(psqlResult(`
+      insert into public.recipe_image_object_references (
+        id,
+        image_object_id,
+        reference_type,
+        consumer_id
+      ) values (
+        '${IMAGE_CLEANUP_REFERENCE}',
+        '${IMAGE_CLEANUP_FOUND}',
+        'recipe_thumbnail',
+        '${IMAGE_CLEANUP_CONSUMER}'
+      );
+    `).status).toBe(0);
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select public.authorize_recipe_image_cleanup_delete(
+        '${firstOutboxId}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        '${IMAGE_CLEANUP_LEASE_ONE}',
+        '2030-07-24T00:00:30Z'
+      );
+      rollback;
+    `)).toBe("f");
+
+    expect(psqlResult(`
+      delete from public.recipe_image_object_references
+      where id = '${IMAGE_CLEANUP_REFERENCE}';
+    `).status).toBe(0);
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select public.observe_recipe_image_cleanup_not_found(
+        '${firstOutboxId}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        '${IMAGE_CLEANUP_LEASE_ONE}',
+        '2030-07-24T00:01:00Z'
+      );
+      commit;
+    `)).toBe("t");
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        outbox.state,
+        outbox.lease_token is null,
+        outbox.next_attempt_at = '2030-07-24T00:16:00Z'::timestamptz,
+        object.state,
+        object.not_found_observed_at = '2030-07-24T00:01:00Z'::timestamptz,
+        object.late_upload_quarantine_until = '2030-07-24T00:16:00Z'::timestamptz
+      )
+      from public.storage_object_deletion_outbox as outbox
+      join public.recipe_image_objects as object
+        on object.bucket_id = outbox.bucket_id
+       and object.object_path = outbox.object_path
+      where outbox.id = '${firstOutboxId}';
+    `)).toBe(
+      "awaiting_not_found_recheck:t:t:not_found_observed:t:t",
+    );
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select count(*)
+      from public.claim_recipe_image_cleanup(
+        10,
+        '${IMAGE_CLEANUP_LEASE_TWO}',
+        '2030-07-24T00:02:00Z'
+      )
+      where outbox_id = '${firstOutboxId}';
+      rollback;
+    `)).toBe("0");
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select public.recheck_recipe_image_cleanup_not_found(
+        '${firstOutboxId}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        true,
+        '2030-07-24T00:16:00Z'
+      );
+      commit;
+    `)).toBe("pending");
+
+    expect(psql(`
+      select outbox.state || ':' || object.state
+      from public.storage_object_deletion_outbox as outbox
+      join public.recipe_image_objects as object
+        on object.bucket_id = outbox.bucket_id
+       and object.object_path = outbox.object_path
+      where outbox.id = '${firstOutboxId}';
+    `)).toBe("pending:cleanup_pending");
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select count(*)
+      from public.claim_recipe_image_cleanup(
+        1,
+        '${IMAGE_CLEANUP_LEASE_TWO}',
+        '2030-07-24T00:16:00Z'
+      )
+      where outbox_id = '${firstOutboxId}';
+      commit;
+    `)).toBe("1");
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select public.complete_recipe_image_cleanup_deleted(
+        '${firstOutboxId}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        '${IMAGE_CLEANUP_LEASE_TWO}',
+        '2030-07-24T00:17:00Z'
+      );
+      commit;
+    `)).toBe("t");
+
+    expect(psql(`
+      select outbox.state || ':' || outbox.terminal_result
+        || ':' || object.state
+      from public.storage_object_deletion_outbox as outbox
+      join public.recipe_image_objects as object
+        on object.bucket_id = outbox.bucket_id
+       and object.object_path = outbox.object_path
+      where outbox.id = '${firstOutboxId}';
+    `)).toBe("succeeded:deleted:deleted");
+
+    const secondOutboxId = psql(`
+      begin;
+      set local role service_role;
+      select public.enqueue_recipe_image_cleanup(
+        '${IMAGE_CLEANUP_ABSENT}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        'stale_upload'
+      );
+      commit;
+    `);
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select count(*)
+      from public.claim_recipe_image_cleanup(
+        1,
+        '${IMAGE_CLEANUP_LEASE_THREE}',
+        '2030-07-24T00:20:00Z'
+      )
+      where outbox_id = '${secondOutboxId}';
+      commit;
+    `)).toBe("1");
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select public.observe_recipe_image_cleanup_not_found(
+        '${secondOutboxId}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        '${IMAGE_CLEANUP_LEASE_THREE}',
+        '2030-07-24T00:21:00Z'
+      );
+      commit;
+    `)).toBe("t");
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select public.recheck_recipe_image_cleanup_not_found(
+        '${secondOutboxId}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        false,
+        '2030-07-24T00:36:00Z'
+      );
+      commit;
+    `)).toBe("verified_not_found");
+
+    expect(psql(`
+      select outbox.state || ':' || outbox.terminal_result
+        || ':' || object.state
+      from public.storage_object_deletion_outbox as outbox
+      join public.recipe_image_objects as object
+        on object.bucket_id = outbox.bucket_id
+       and object.object_path = outbox.object_path
+      where outbox.id = '${secondOutboxId}';
+    `)).toBe("succeeded:verified_not_found:verified_not_found");
+  });
+
+  it("fails cleanup lease and generation mismatches without mutation", () => {
+    const outboxId = psql(`
+      select id
+      from public.storage_object_deletion_outbox
+      where object_path = '${OWNER_ACTIVE}/1/${IMAGE_CLEANUP_FOUND}.webp';
+    `);
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select public.observe_recipe_image_cleanup_not_found(
+        '${outboxId}',
+        '${OWNER_ACTIVE}',
+        2,
+        1,
+        '${IMAGE_CLEANUP_LEASE_THREE}',
+        '2030-07-24T00:18:00Z'
+      );
+      rollback;
+    `)).toBe("f");
+
+    expect(psql(`
+      select state || ':' || terminal_result
+      from public.storage_object_deletion_outbox
+      where id = '${outboxId}';
+    `)).toBe("succeeded:deleted");
+  });
+
+  it("replays cleanup outbox DDL without granting direct mutation", () => {
+    const replay = psqlFileResult(IMAGE_CLEANUP_OUTBOX_MIGRATION_PATH);
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_table_privilege(
+          'service_role',
+          'public.storage_object_deletion_outbox',
+          'INSERT'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.claim_recipe_image_cleanup(integer,uuid,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.claim_recipe_image_cleanup(integer,uuid,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        (
+          select count(*)::text
+          from public.storage_object_deletion_outbox
+          where terminal_result in ('deleted', 'verified_not_found')
+        )
+      );
+    `)).toBe("f:f:t:2");
   });
 
   it("fails replay closed when the guard owner has an unexpected member", () => {

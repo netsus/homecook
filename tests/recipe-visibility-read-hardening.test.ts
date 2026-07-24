@@ -15,6 +15,10 @@ const MANAGED_IMAGE_REGISTRY_MIGRATION_PATH = path.join(
   process.cwd(),
   "supabase/migrations/20260724110000_recipe_managed_image_registry_foundation.sql",
 );
+const IMAGE_CLEANUP_OUTBOX_MIGRATION_PATH = path.join(
+  process.cwd(),
+  "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql",
+);
 
 describe("recipe visibility read hardening migration", () => {
   it("adds the official visibility fields without reclassifying existing recipes as private", () => {
@@ -296,6 +300,92 @@ describe("recipe visibility read hardening migration", () => {
     expect(sql).not.toMatch(/create policy[\s\S]*on storage\.objects/i);
     expect(sql).not.toMatch(
       /owner_uuid uuid references (?:auth\.users|public\.users)/i,
+    );
+  });
+
+  it("keeps first-404 cleanup durable and lease-bound without activating Storage", () => {
+    expect(existsSync(IMAGE_CLEANUP_OUTBOX_MIGRATION_PATH)).toBe(true);
+
+    if (!existsSync(IMAGE_CLEANUP_OUTBOX_MIGRATION_PATH)) {
+      return;
+    }
+
+    const sql = readFileSync(IMAGE_CLEANUP_OUTBOX_MIGRATION_PATH, "utf8");
+
+    expect(sql).toMatch(
+      /create table if not exists public\.storage_object_deletion_outbox/i,
+    );
+    expect(sql).toMatch(
+      /bucket_id text not null[\s\S]*object_path text not null[\s\S]*owner_uuid uuid not null[\s\S]*account_generation bigint not null[\s\S]*cleanup_generation bigint not null/i,
+    );
+    expect(sql).toMatch(
+      /pending[\s\S]*processing[\s\S]*awaiting_not_found_recheck[\s\S]*succeeded[\s\S]*failed[\s\S]*dead_letter/i,
+    );
+    expect(sql).toMatch(
+      /terminal_result text[\s\S]*deleted[\s\S]*verified_not_found/i,
+    );
+    expect(sql).toMatch(
+      /create or replace function public\.enqueue_recipe_image_cleanup\(/i,
+    );
+    expect(sql).toMatch(
+      /create or replace function public\.claim_recipe_image_cleanup\(/i,
+    );
+    expect(sql).toMatch(
+      /where outbox\.state = 'pending'[\s\S]*for update of outbox skip locked/i,
+    );
+    expect(sql).toMatch(
+      /create or replace function public\.observe_recipe_image_cleanup_not_found\(/i,
+    );
+    expect(sql).toMatch(
+      /create or replace function public\.authorize_recipe_image_cleanup_delete\(/i,
+    );
+    expect(sql).toMatch(
+      /authorize_recipe_image_cleanup_delete[\s\S]*state = 'processing'[\s\S]*lease_token = p_lease_token[\s\S]*not exists \([\s\S]*recipe_image_object_references/i,
+    );
+    expect(sql).toMatch(
+      /state = 'awaiting_not_found_recheck'[\s\S]*interval '15 minutes'/i,
+    );
+    expect(sql).toMatch(
+      /create or replace function public\.recheck_recipe_image_cleanup_not_found\(/i,
+    );
+    expect(sql).toMatch(
+      /p_object_found[\s\S]*state = 'pending'[\s\S]*terminal_result = 'verified_not_found'/i,
+    );
+    expect(sql).toMatch(
+      /create or replace function public\.complete_recipe_image_cleanup_deleted\(/i,
+    );
+    expect(sql).toMatch(
+      /alter table public\.storage_object_deletion_outbox enable row level security/i,
+    );
+    expect(sql).toMatch(
+      /revoke all on table public\.storage_object_deletion_outbox[\s\S]*from public, anon, authenticated, service_role/i,
+    );
+    expect(sql).toMatch(
+      /revoke all on function public\.claim_recipe_image_cleanup\(\s*integer,\s*uuid,\s*timestamptz\s*\)[\s\S]*from public, anon, authenticated, service_role[\s\S]*grant execute on function public\.claim_recipe_image_cleanup\(\s*integer,\s*uuid,\s*timestamptz\s*\)[\s\S]*to service_role/i,
+    );
+    for (const functionName of [
+      "enqueue_recipe_image_cleanup",
+      "claim_recipe_image_cleanup",
+      "authorize_recipe_image_cleanup_delete",
+      "observe_recipe_image_cleanup_not_found",
+      "recheck_recipe_image_cleanup_not_found",
+      "complete_recipe_image_cleanup_deleted",
+    ]) {
+      const functionMatch = sql.match(
+        new RegExp(
+          `create or replace function public\\.${functionName}\\([\\s\\S]*?\\n\\$function\\$;`,
+          "i",
+        ),
+      );
+      expect(functionMatch, `${functionName} is missing`).not.toBeNull();
+      expect(functionMatch?.[0]).toMatch(
+        /security definer[\s\S]*set search_path = pg_catalog, public, pg_temp/i,
+      );
+    }
+    expect(sql).not.toMatch(/insert into storage\.buckets/i);
+    expect(sql).not.toMatch(/create policy[\s\S]*on storage\.objects/i);
+    expect(sql).not.toMatch(
+      /update public\.account_generation_capability_state[\s\S]*generation_active/i,
     );
   });
 });
