@@ -9,6 +9,8 @@ const port = process.env.HOMECOOK_RECIPE_VISIBILITY_PGPORT ?? "";
 const database = process.env.HOMECOOK_RECIPE_VISIBILITY_PGDATABASE ?? "";
 const MIGRATION_PATH =
   "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql";
+const MANAGED_IMAGE_REGISTRY_MIGRATION_PATH =
+  "supabase/migrations/20260724110000_recipe_managed_image_registry_foundation.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -24,6 +26,12 @@ const RECIPE_REACTIVATED = "00000000-0000-4000-8000-000000000006";
 const TAG_SYSTEM = "00000000-0000-4000-8000-000000000101";
 const TAG_PRIVATE_ONLY = "00000000-0000-4000-8000-000000000102";
 const TAG_PENDING = "00000000-0000-4000-8000-000000000103";
+
+const IMAGE_PRIVATE = "00000000-0000-4000-8000-000000000301";
+const IMAGE_PUBLIC_SHARED = "00000000-0000-4000-8000-000000000302";
+const IMAGE_ATTEMPT_TOKEN = "00000000-0000-4000-8000-000000000303";
+const IMAGE_REFERENCE = "00000000-0000-4000-8000-000000000304";
+const IMAGE_CONSUMER = "00000000-0000-4000-8000-000000000305";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -480,6 +488,276 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
       RECIPE_ACTIVE_PUBLIC,
       RECIPE_REACTIVATED,
     ].sort().join(","));
+  });
+
+  it("keeps managed image registry tables dark-shipped behind RLS and table ACLs", () => {
+    expect(psql(`
+      select string_agg(
+        table_name || ':' || row_security,
+        ','
+        order by table_name
+      )
+      from (
+        select
+          class.relname as table_name,
+          class.relrowsecurity::text as row_security
+        from pg_catalog.pg_class as class
+        join pg_catalog.pg_namespace as namespace
+          on namespace.oid = class.relnamespace
+        where namespace.nspname = 'public'
+          and class.relname in (
+            'recipe_image_objects',
+            'recipe_image_object_references'
+          )
+      ) as registry_tables;
+    `)).toBe(
+      "recipe_image_object_references:true,recipe_image_objects:true",
+    );
+
+    for (const role of ["anon", "authenticated", "service_role"]) {
+      for (const table of [
+        "recipe_image_objects",
+        "recipe_image_object_references",
+      ]) {
+        expect(psql(`
+          select concat_ws(
+            ':',
+            has_table_privilege('${role}', 'public.${table}', 'SELECT'),
+            has_table_privilege('${role}', 'public.${table}', 'INSERT'),
+            has_table_privilege('${role}', 'public.${table}', 'UPDATE'),
+            has_table_privilege('${role}', 'public.${table}', 'DELETE')
+          );
+        `)).toBe("f:f:f:f");
+      }
+    }
+  });
+
+  it("enforces private generation ownership and owner-neutral shared paths", () => {
+    expect(psqlResult(`
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        upload_attempt_token,
+        cleanup_generation,
+        upload_lease_expires_at
+      ) values (
+        '${IMAGE_PRIVATE}',
+        '${OWNER_ACTIVE}',
+        1,
+        'recipe-images-private',
+        '${OWNER_ACTIVE}/1/${IMAGE_PRIVATE}.webp',
+        'private',
+        'pending_upload',
+        '${IMAGE_ATTEMPT_TOKEN}',
+        0,
+        now() + interval '5 minutes'
+      );
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        raw_sha256,
+        byte_size,
+        actual_mime_type,
+        visibility,
+        state,
+        cleanup_generation
+      ) values (
+        '${IMAGE_PUBLIC_SHARED}',
+        null,
+        null,
+        'recipe-images',
+        'shared/${IMAGE_PUBLIC_SHARED}.webp',
+        repeat('a', 64),
+        3,
+        'image/webp',
+        'public_shared',
+        'attached_public_shared',
+        0
+      );
+    `).status).toBe(0);
+
+    expect(psql(`
+      select string_agg(
+        id::text || ':' || coalesce(owner_uuid::text, 'neutral')
+          || ':' || coalesce(account_generation::text, 'neutral')
+          || ':' || visibility || ':' || state,
+        ','
+        order by id
+      )
+      from public.recipe_image_objects
+      where id in ('${IMAGE_PRIVATE}', '${IMAGE_PUBLIC_SHARED}');
+    `)).toBe([
+      `${IMAGE_PRIVATE}:${OWNER_ACTIVE}:1:private:pending_upload`,
+      `${IMAGE_PUBLIC_SHARED}:neutral:neutral:public_shared:attached_public_shared`,
+    ].join(","));
+
+    for (const invalidInsert of [
+      `
+        insert into public.recipe_image_objects (
+          owner_uuid, account_generation, bucket_id, object_path,
+          visibility, state, upload_attempt_token, upload_lease_expires_at
+        ) values (
+          null, null, 'recipe-images-private',
+          'missing-owner.webp', 'private', 'pending_upload',
+          gen_random_uuid(), now() + interval '5 minutes'
+        );
+      `,
+      `
+        insert into public.recipe_image_objects (
+          owner_uuid, account_generation, bucket_id, object_path,
+          raw_sha256, byte_size, actual_mime_type, visibility, state
+        ) values (
+          '${OWNER_ACTIVE}', 1, 'recipe-images',
+          'shared/' || gen_random_uuid()::text || '.webp',
+          repeat('b', 64), 3, 'image/webp',
+          'public_shared', 'attached_public_shared'
+        );
+      `,
+      `
+        insert into public.recipe_image_objects (
+          bucket_id, object_path, raw_sha256, byte_size,
+          actual_mime_type, visibility, state
+        ) values (
+          'recipe-images-private',
+          'shared/' || gen_random_uuid()::text || '.webp',
+          repeat('c', 64), 3, 'image/webp',
+          'public_shared', 'attached_public_shared'
+        );
+      `,
+      `
+        insert into public.recipe_image_objects (
+          id, bucket_id, object_path, visibility, state, cleanup_generation
+        ) values (
+          '00000000-0000-4000-8000-000000000306',
+          'recipe-images',
+          'shared/00000000-0000-4000-8000-000000000306.webp',
+          'public_shared',
+          'cleanup_pending',
+          1
+        );
+      `,
+      `
+        insert into public.recipe_image_objects (
+          id, bucket_id, object_path, visibility, state,
+          upload_attempt_token, upload_lease_expires_at
+        ) values (
+          '00000000-0000-4000-8000-000000000307',
+          'recipe-images',
+          'shared/00000000-0000-4000-8000-000000000307.webp',
+          'public_shared',
+          'pending_upload',
+          gen_random_uuid(),
+          now() + interval '5 minutes'
+        );
+      `,
+    ]) {
+      const result = psqlResult(`begin; ${invalidInsert} rollback;`);
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toMatch(/violates check constraint/i);
+    }
+  });
+
+  it("denies direct registry mutation and keeps references unique and restrictive", () => {
+    for (const role of ["authenticated", "service_role"]) {
+      const directMutation = psqlResult(`
+        begin;
+        set local role ${role};
+        insert into public.recipe_image_objects (
+          bucket_id,
+          object_path,
+          visibility,
+          state,
+          upload_attempt_token,
+          upload_lease_expires_at
+        ) values (
+          'recipe-images',
+          'shared/' || gen_random_uuid()::text || '.webp',
+          'public_shared',
+          'pending_upload',
+          gen_random_uuid(),
+          now() + interval '5 minutes'
+        );
+        rollback;
+      `);
+
+      expect(directMutation.status).not.toBe(0);
+      expect(directMutation.stderr).toMatch(/permission denied/i);
+    }
+
+    expect(psqlResult(`
+      insert into public.recipe_image_object_references (
+        id,
+        image_object_id,
+        reference_type,
+        consumer_id
+      ) values (
+        '${IMAGE_REFERENCE}',
+        '${IMAGE_PUBLIC_SHARED}',
+        'recipe_thumbnail',
+        '${IMAGE_CONSUMER}'
+      );
+    `).status).toBe(0);
+
+    const duplicateConsumer = psqlResult(`
+      insert into public.recipe_image_object_references (
+        image_object_id,
+        reference_type,
+        consumer_id
+      ) values (
+        '${IMAGE_PRIVATE}',
+        'recipe_thumbnail',
+        '${IMAGE_CONSUMER}'
+      );
+    `);
+    expect(duplicateConsumer.status).not.toBe(0);
+    expect(duplicateConsumer.stderr).toMatch(/duplicate key value/i);
+
+    const referencedDelete = psqlResult(`
+      delete from public.recipe_image_objects
+      where id = '${IMAGE_PUBLIC_SHARED}';
+    `);
+    expect(referencedDelete.status).not.toBe(0);
+    expect(referencedDelete.stderr).toMatch(/foreign key constraint/i);
+  });
+
+  it("replays the managed image registry migration without widening ACLs", () => {
+    const replay = psqlFileResult(MANAGED_IMAGE_REGISTRY_MIGRATION_PATH);
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_table_privilege(
+          'service_role',
+          'public.recipe_image_objects',
+          'INSERT'
+        ),
+        has_table_privilege(
+          'service_role',
+          'public.recipe_image_object_references',
+          'INSERT'
+        ),
+        (
+          select count(*)::text
+          from public.recipe_image_objects
+          where id in ('${IMAGE_PRIVATE}', '${IMAGE_PUBLIC_SHARED}')
+        ),
+        (
+          select count(*)::text
+          from public.recipe_image_object_references
+          where id = '${IMAGE_REFERENCE}'
+        )
+      );
+    `)).toBe("f:f:2:1");
   });
 
   it("fails replay closed when the guard owner has an unexpected member", () => {
