@@ -23,7 +23,7 @@
 
 ## Managed Image / Concurrency
 
-- [ ] private/pending/cleanup registry row requires owner+generation; public/shared neutral row requires both null and neutral path <!-- omo:id=accept-image-owner-shape;stage=2;scope=backend;review=3,6 -->
+- [x] private/pending/cleanup registry row requires owner+generation; public/shared neutral row requires both null and neutral path <!-- omo:id=accept-image-owner-shape;stage=2;scope=backend;review=3,6 -->
 - [ ] direct anon/authenticated Storage mutation and registry/reference/outbox/quota DML are denied <!-- omo:id=accept-image-direct-mutation-denied;stage=2;scope=backend;review=3,6 -->
 - [ ] before PUT, `image/jpeg|image/png|image/webp`, 5MB, `10 new uploads/10min`, `100MB/24h`, active 20 and backlog 500/oldest due over 15 minutes/any dead-letter circuit breaker are enforced; replay is not recharged <!-- omo:id=accept-image-preput-gate;stage=2;scope=backend;review=3,6 -->
 - [ ] live same-key replay returns 202+Retry-After and expired exact CAS winner alone takes over same `upsert=false` path <!-- omo:id=accept-image-live-takeover;stage=2;scope=backend;review=3,6 -->

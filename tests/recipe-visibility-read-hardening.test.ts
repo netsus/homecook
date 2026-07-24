@@ -11,6 +11,10 @@ const TAG_PARENT_VISIBILITY_MIGRATION_PATH = path.join(
   process.cwd(),
   "supabase/migrations/20260724090000_recipe_tag_parent_visibility_upper_bound.sql",
 );
+const MANAGED_IMAGE_REGISTRY_MIGRATION_PATH = path.join(
+  process.cwd(),
+  "supabase/migrations/20260724110000_recipe_managed_image_registry_foundation.sql",
+);
 
 describe("recipe visibility read hardening migration", () => {
   it("adds the official visibility fields without reclassifying existing recipes as private", () => {
@@ -230,6 +234,68 @@ describe("recipe visibility read hardening migration", () => {
     );
     expect(sql).not.toMatch(
       /grant select \([^)]*usage_count[^)]*\)[\s\S]*on table public\.tags[\s\S]*to anon, authenticated/i,
+    );
+  });
+
+  it("dark-ships the permanent managed image registry without widening Storage access", () => {
+    expect(existsSync(MANAGED_IMAGE_REGISTRY_MIGRATION_PATH)).toBe(true);
+
+    if (!existsSync(MANAGED_IMAGE_REGISTRY_MIGRATION_PATH)) {
+      return;
+    }
+
+    const sql = readFileSync(MANAGED_IMAGE_REGISTRY_MIGRATION_PATH, "utf8");
+
+    expect(sql).toMatch(
+      /create table if not exists public\.recipe_image_objects/i,
+    );
+    expect(sql).toMatch(
+      /owner_uuid uuid[\s\S]*account_generation bigint[\s\S]*bucket_id text not null[\s\S]*object_path text not null/i,
+    );
+    expect(sql).toMatch(
+      /raw_sha256 text[\s\S]*byte_size bigint[\s\S]*actual_mime_type text[\s\S]*visibility text not null[\s\S]*state text not null/i,
+    );
+    expect(sql).toMatch(
+      /upload_attempt_token uuid[\s\S]*cleanup_generation bigint[\s\S]*upload_lease_expires_at timestamptz[\s\S]*unlinked_cleanup_after timestamptz/i,
+    );
+    expect(sql).toMatch(
+      /not_found_observed_at timestamptz[\s\S]*late_upload_quarantine_until timestamptz[\s\S]*next_terminal_scan_at timestamptz/i,
+    );
+    expect(sql).toMatch(
+      /pending_upload[\s\S]*uploaded_unlinked[\s\S]*attached_private[\s\S]*attached_public_shared[\s\S]*cleanup_pending[\s\S]*not_found_observed[\s\S]*deleted[\s\S]*verified_not_found/i,
+    );
+    expect(sql).toMatch(
+      /visibility = 'private'[\s\S]*owner_uuid is not null[\s\S]*account_generation is not null[\s\S]*visibility = 'public_shared'[\s\S]*owner_uuid is null[\s\S]*account_generation is null/i,
+    );
+    expect(sql).toMatch(
+      /create table if not exists public\.recipe_image_object_references[\s\S]*image_object_id uuid not null[\s\S]*references public\.recipe_image_objects\(id\) on delete restrict[\s\S]*reference_type text not null[\s\S]*consumer_id uuid not null/i,
+    );
+    expect(sql).toMatch(
+      /unique \(reference_type, consumer_id\)/i,
+    );
+
+    for (const table of [
+      "recipe_image_objects",
+      "recipe_image_object_references",
+    ]) {
+      expect(sql).toMatch(
+        new RegExp(
+          `alter table public\\.${table} enable row level security`,
+          "i",
+        ),
+      );
+      expect(sql).toMatch(
+        new RegExp(
+          `revoke all on table public\\.${table}[\\s\\S]*from public, anon, authenticated, service_role`,
+          "i",
+        ),
+      );
+    }
+
+    expect(sql).not.toMatch(/insert into storage\.buckets/i);
+    expect(sql).not.toMatch(/create policy[\s\S]*on storage\.objects/i);
+    expect(sql).not.toMatch(
+      /owner_uuid uuid references (?:auth\.users|public\.users)/i,
     );
   });
 });
