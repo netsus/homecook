@@ -794,7 +794,7 @@
       "kind": "direct_dml",
       "operation": "delete",
       "target": "recipe_book_items",
-      "line": 633,
+      "line": 634,
       "source_file": "app/api/v1/recipe-books/[book_id]/recipes/[recipe_id]/route.ts",
       "route": "/api/v1/recipe-books/[book_id]/recipes/[recipe_id]",
       "owner_scope": "authenticated-user",
@@ -808,7 +808,7 @@
       "kind": "direct_dml",
       "operation": "delete",
       "target": "recipe_likes",
-      "line": 566,
+      "line": 567,
       "source_file": "app/api/v1/recipe-books/[book_id]/recipes/[recipe_id]/route.ts",
       "route": "/api/v1/recipe-books/[book_id]/recipes/[recipe_id]",
       "owner_scope": "authenticated-user",
@@ -822,7 +822,7 @@
       "kind": "direct_dml",
       "operation": "update",
       "target": "recipes",
-      "line": 536,
+      "line": 537,
       "source_file": "app/api/v1/recipe-books/[book_id]/recipes/[recipe_id]/route.ts",
       "route": "/api/v1/recipe-books/[book_id]/recipes/[recipe_id]",
       "owner_scope": "authenticated-user",
@@ -1835,6 +1835,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-23T18:25:10.586Z",
-  "checksum": "b678ce0f3d9f480ddcb119cabc64d7dcb8c0d540b426837e9d5c4e0cd60c2289"
+  "generated_at": "2026-07-23T23:31:11.269Z",
+  "checksum": "36e80073096d8e3afc4f075eb76edd19d4495564922908f171c6ad006b47ed4d"
 }

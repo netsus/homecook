@@ -279,6 +279,80 @@ describe("POST /api/v1/meals", () => {
     });
   });
 
+  it("uses the authenticated reader for new recipe selection when service role is available", async () => {
+    const routeRecipesTable = createRecipesTable({
+      selectResults: [{ data: null, error: null }],
+    });
+    const serviceRecipesTable = createRecipesTable({
+      selectResults: [{ data: { id: "recipe-hidden" }, error: null }],
+    });
+    const mealPlanColumnsTable = createMealPlanColumnsTable({
+      selectResults: [
+        {
+          data: { id: "column-1", user_id: "user-1", name: "점심" },
+          error: null,
+        },
+      ],
+    });
+    const mealsTable = createMealsTable({
+      insertResults: [
+        {
+          data: {
+            id: "meal-1",
+            recipe_id: "recipe-hidden",
+            plan_date: "2026-03-02",
+            column_id: "column-1",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+            leftover_dish_id: null,
+            recipe_nutrition_snapshot_id: null,
+          },
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return routeRecipesTable;
+        throw new Error(`unexpected route table: ${table}`);
+      }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return serviceRecipesTable;
+        if (table === "meal_plan_columns") return mealPlanColumnsTable;
+        if (table === "meals") return mealsTable;
+        throw new Error(`unexpected service table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/meals", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        recipe_id: "550e8400-e29b-41d4-a716-446655440061",
+        plan_date: "2026-03-02",
+        column_id: "550e8400-e29b-41d4-a716-446655440062",
+        planned_servings: 2,
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "RESOURCE_NOT_FOUND" },
+    });
+    expect(routeRecipesTable.select).toHaveBeenCalledWith("id");
+    expect(serviceRecipesTable.select).not.toHaveBeenCalled();
+    expect(mealsTable.insert).not.toHaveBeenCalled();
+  });
+
   it("returns 403 when the planner column belongs to another user", async () => {
     const recipesTable = createRecipesTable({
       selectResults: [{ data: { id: "recipe-1" }, error: null }],

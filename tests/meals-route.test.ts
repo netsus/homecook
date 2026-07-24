@@ -306,6 +306,82 @@ describe("GET /api/v1/meals", () => {
     expect(mealsQuery.order).toHaveBeenNthCalledWith(2, "id", { ascending: true });
   });
 
+  it("keeps deleted recipe metadata behind an owned Meal anchor", async () => {
+    const routeFrom = vi.fn();
+    const columnQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: "column-1",
+          user_id: "user-1",
+          name: "저녁",
+        },
+        error: null,
+      },
+    ]);
+    const mealsQuery = createThenableQuery([
+      {
+        data: [
+          {
+            id: "meal-anchored",
+            recipe_id: "recipe-deleted",
+            planned_servings: 2,
+            status: "shopping_done",
+            is_leftover: false,
+            created_at: "2026-03-01T18:00:00Z",
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipesQuery = createThenableQuery([
+      {
+        data: [
+          {
+            id: "recipe-deleted",
+            title: "삭제 전 된장찌개",
+            thumbnail_url: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "meal_plan_columns") return { select: vi.fn(() => columnQuery) };
+      if (table === "meals") return { select: vi.fn(() => mealsQuery) };
+      if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+      throw new Error(`unexpected service table: ${table}`);
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: routeFrom,
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc: vi.fn(async () => ({ data: [], error: null })),
+      from: serviceFrom,
+    });
+
+    const { GET } = await importRoute();
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/meals?plan_date=2026-03-01&column_id=550e8400-e29b-41d4-a716-446655440016"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items).toEqual([
+      expect.objectContaining({
+        id: "meal-anchored",
+        recipe_id: "recipe-deleted",
+        recipe_title: "삭제 전 된장찌개",
+      }),
+    ]);
+    expect(routeFrom).not.toHaveBeenCalled();
+    expect(mealsQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(recipesQuery.in).toHaveBeenCalledWith("id", ["recipe-deleted"]);
+  });
+
   it("returns meals for an owned custom planner column", async () => {
     const columnQuery = createMaybeSingleQuery([
       {

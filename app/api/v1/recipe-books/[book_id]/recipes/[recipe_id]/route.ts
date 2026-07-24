@@ -451,6 +451,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
     RecipeBookRecipeRemoveDbClient & UserBootstrapDbClient;
+  const recipeReaderClient = routeClient as unknown as RecipeBookRecipeRemoveDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -484,7 +485,7 @@ export async function GET(request: Request, context: RouteContext) {
     return fail("RESOURCE_NOT_FOUND", "레시피북에서 레시피를 찾을 수 없어요.", 404);
   }
 
-  const recipeResult = await readReaderRecipe(dbClient, recipeId);
+  const recipeResult = await readReaderRecipe(recipeReaderClient, recipeId);
 
   if (recipeResult.error || !recipeResult.data) {
     return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
@@ -501,8 +502,8 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const [ingredientsResult, stepsResult] = await Promise.all([
-    readReaderIngredients(dbClient, recipeId),
-    readReaderSteps(dbClient, recipeId),
+    readReaderIngredients(recipeReaderClient, recipeId),
+    readReaderSteps(recipeReaderClient, recipeId),
   ]);
 
   if (ingredientsResult.error || !ingredientsResult.data) {
@@ -728,6 +729,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
     RecipeBookRecipeRemoveAuthedDbClient;
+  const recipeReaderClient = routeClient as unknown as RecipeBookRecipeRemoveDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -748,6 +750,12 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   if (bookResult.data.user_id !== user.id) {
     return fail("FORBIDDEN", "내 레시피북만 수정할 수 있어요.", 403);
+  }
+
+  const recipeResult = await readReaderRecipe(recipeReaderClient, recipeId);
+
+  if (recipeResult.error || !recipeResult.data) {
+    return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
   }
 
   if (bookResult.data.book_type === "my_added") {

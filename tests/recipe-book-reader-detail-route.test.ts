@@ -262,4 +262,101 @@ describe("/api/v1/recipe-books/[book_id]/recipes/[recipe_id]", () => {
       "id, step_number, instruction, component_label, ingredients_used, heat_level, duration_seconds, duration_text, cooking_methods(id, code, label, color_key, category_code), recipe_step_cooking_methods(position, cooking_methods(id, code, label, color_key, category_code))",
     );
   });
+
+  it("GET does not treat recipe-book membership as a deleted-recipe history anchor", async () => {
+    const bookId = "11111111-1111-4111-8111-111111111111";
+    const recipeId = "22222222-2222-4222-8222-222222222222";
+    const routeRecipesTable = createMaybeSingleTable([
+      { data: null, error: null },
+    ]);
+    const serviceRecipesTable = createMaybeSingleTable([
+      {
+        data: {
+          id: recipeId,
+          title: "삭제된 레시피",
+          thumbnail_url: null,
+          tags: [],
+          view_count: 0,
+          base_servings: 2,
+          created_by: "user-1",
+          source_type: "manual",
+        },
+        error: null,
+      },
+    ]);
+    const serviceIngredientsTable = createArrayTable([
+      { data: [], error: null },
+    ]);
+    const serviceStepsTable = createArrayTable([
+      { data: [], error: null },
+    ]);
+    const routeFrom = vi.fn((table: string) => {
+      if (table === "recipes") return routeRecipesTable;
+      throw new Error(`unexpected route table: ${table}`);
+    });
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "recipe_books") {
+        return createMaybeSingleTable([
+          {
+            data: {
+              id: bookId,
+              user_id: "user-1",
+              book_type: "saved",
+            },
+            error: null,
+          },
+        ]);
+      }
+      if (table === "recipe_book_items") {
+        return createMaybeSingleTable([
+          {
+            data: {
+              id: "item-1",
+              added_at: "2026-06-10T09:00:00.000Z",
+            },
+            error: null,
+          },
+        ]);
+      }
+      if (table === "recipes") return serviceRecipesTable;
+      if (table === "recipe_ingredients") return serviceIngredientsTable;
+      if (table === "recipe_steps") return serviceStepsTable;
+      throw new Error(`unexpected service table: ${table}`);
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: {
+            user: { id: "user-1" },
+          },
+        })),
+      },
+      from: routeFrom,
+    });
+    createServiceRoleClient.mockReturnValue({ from: serviceFrom });
+
+    const { GET } = await importRoute();
+    const response = await GET(
+      new Request(`http://localhost:3000/api/v1/recipe-books/${bookId}/recipes/${recipeId}`),
+      {
+        params: Promise.resolve({
+          book_id: bookId,
+          recipe_id: recipeId,
+        }),
+      },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "RESOURCE_NOT_FOUND" },
+    });
+    expect(routeFrom).toHaveBeenCalledWith("recipes");
+    expect(serviceRecipesTable.select).not.toHaveBeenCalled();
+    expect(serviceIngredientsTable.select).not.toHaveBeenCalled();
+    expect(serviceStepsTable.select).not.toHaveBeenCalled();
+  });
 });

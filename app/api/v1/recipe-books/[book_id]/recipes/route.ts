@@ -278,13 +278,13 @@ async function readRecipeBook(dbClient: RecipeBookRecipesDbClient, bookId: strin
 }
 
 async function readBookSourceRows({
-  dbClient,
+  recipeReaderClient,
   book,
   cursor,
   limit,
   userId,
 }: {
-  dbClient: RecipeBookRecipesDbClient;
+  recipeReaderClient: RecipeBookRecipesDbClient;
   book: RecipeBookRow;
   cursor: string | null;
   limit: number;
@@ -293,9 +293,9 @@ async function readBookSourceRows({
   const initialLimit = cursor ? null : limit + 1;
 
   if (book.book_type === "liked") {
-    let likesQuery = dbClient
+    let likesQuery = recipeReaderClient
       .from("recipe_likes")
-      .select("id, recipe_id, created_at")
+      .select("id, recipe_id, created_at, recipes!inner(id)")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false });
@@ -313,7 +313,7 @@ async function readBookSourceRows({
   }
 
   if (book.book_type === "my_added") {
-    let recipesQuery = dbClient
+    let recipesQuery = recipeReaderClient
       .from("recipes")
       .select("id, title, thumbnail_url, tags, view_count, base_servings, created_at")
       .eq("created_by", userId)
@@ -330,9 +330,9 @@ async function readBookSourceRows({
     return recipesResult;
   }
 
-  let itemsQuery = dbClient
+  let itemsQuery = recipeReaderClient
     .from("recipe_book_items")
-    .select("id, recipe_id, added_at")
+    .select("id, recipe_id, added_at, recipes!inner(id)")
     .eq("book_id", book.id)
     .order("added_at", { ascending: false })
     .order("id", { ascending: false });
@@ -444,6 +444,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
     RecipeBookRecipesDbClient & UserBootstrapDbClient;
+  const recipeReaderClient = routeClient as unknown as RecipeBookRecipesDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -467,7 +468,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   const itemsResult = await readBookSourceRows({
-    dbClient,
+    recipeReaderClient,
     book: bookResult.data,
     cursor,
     limit,
@@ -484,7 +485,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   if (bookResult.data.book_type === "my_added") {
     return ok(await mapUserRecipeRows(
-      dbClient,
+      recipeReaderClient,
       itemsResult.data as UserRecipeRow[],
       cursor,
       limit,
@@ -502,7 +503,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   const recipeIds = [...new Set(pagedRows.map((row) => row.recipe_id))];
-  const recipesResult = await dbClient
+  const recipesResult = await recipeReaderClient
     .from("recipes")
     .select("id, title, thumbnail_url, tags, view_count, base_servings")
     .in("id", recipeIds);
@@ -515,10 +516,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   recipesResult.data.forEach((recipe) => {
     recipeMap.set(recipe.id, recipe);
   });
-  const durationMap = await readDurationMap(dbClient, recipeIds);
+  const visibleRows = pagedRows.filter((row) => recipeMap.has(row.recipe_id));
+  const visibleRecipeIds = [...new Set(visibleRows.map((row) => row.recipe_id))];
+  const durationMap = await readDurationMap(recipeReaderClient, visibleRecipeIds);
 
   return ok({
-    items: pagedRows.map((row) =>
+    items: visibleRows.map((row) =>
       mapRecipeBookItem({
         recipeId: row.recipe_id,
         recipe: recipeMap.get(row.recipe_id),

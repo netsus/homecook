@@ -246,6 +246,80 @@ describe("14 cook session start backend", () => {
     expect(mealsUpdate).not.toHaveBeenCalled();
   });
 
+  it("does not let service role widen new cooking-session recipe selection", async () => {
+    const routeRecipeQuery = createMaybeSingleQuery([{ data: null, error: null }]);
+    const serviceRecipeQuery = createMaybeSingleQuery([
+      {
+        data: { id: recipeId },
+        error: null,
+      },
+    ]);
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          { id: mealId1, user_id: "user-1", recipe_id: recipeId, status: "shopping_done" },
+        ],
+        error: null,
+      },
+    ]);
+    const sessionInsert = vi.fn(() =>
+      createInsertMaybeSingleQuery([
+        {
+          data: { id: sessionId, status: "in_progress" },
+          error: null,
+        },
+      ]),
+    );
+    const sessionMealInsert = vi.fn(() =>
+      createInsertSelectQuery([
+        {
+          data: [{ meal_id: mealId1, is_cooked: false }],
+          error: null,
+        },
+      ]),
+    );
+    const routeFrom = vi.fn((table: string) => {
+      if (table === "recipes") return { select: vi.fn(() => routeRecipeQuery) };
+      throw new Error(`unexpected route table: ${table}`);
+    });
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "recipes") return { select: vi.fn(() => serviceRecipeQuery) };
+      if (table === "meals") return { select: vi.fn(() => mealsQuery) };
+      if (table === "cooking_sessions") return { insert: sessionInsert };
+      if (table === "cooking_session_meals") return { insert: sessionMealInsert };
+      throw new Error(`unexpected service table: ${table}`);
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: routeFrom,
+    });
+    createServiceRoleClient.mockReturnValue({ from: serviceFrom });
+
+    const { POST } = await importSessionsRoute();
+    const response = await POST(
+      createJsonRequest("http://localhost:3000/api/v1/cooking/sessions", {
+        recipe_id: recipeId,
+        meal_ids: [mealId1],
+        cooking_servings: 2,
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "RESOURCE_NOT_FOUND" },
+    });
+    expect(routeFrom).toHaveBeenCalledWith("recipes");
+    expect(serviceRecipeQuery.maybeSingle).not.toHaveBeenCalled();
+    expect(sessionInsert).not.toHaveBeenCalled();
+    expect(sessionMealInsert).not.toHaveBeenCalled();
+  });
+
   it("POST /cooking/sessions rejects meals that are not shopping_done", async () => {
     const recipesQuery = createMaybeSingleQuery([{ data: { id: recipeId }, error: null }]);
     const mealsQuery = createArraySelectQuery([
