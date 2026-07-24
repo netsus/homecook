@@ -59,6 +59,20 @@ const ADDITIVE_SOURCES = [
       ? [process.env.SECURITY_FUNCTION_PREPARED_FOOD_SEARCH_MIGRATION_PATH]
       : null,
   },
+  {
+    manifestPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_CLEANUP_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/recipe-image-cleanup-outbox-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_CLEANUP_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql",
+      ),
+  },
 ];
 const LOCAL_DATABASE_URL =
   process.env.SECURITY_FUNCTION_DATABASE_URL

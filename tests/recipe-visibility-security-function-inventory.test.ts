@@ -13,6 +13,8 @@ import {
 
 const MANIFEST_PATH =
   "docs/security/recipe-visibility-read-hardening-security-function-authorization-manifest.json";
+const IMAGE_CLEANUP_MANIFEST_PATH =
+  "docs/security/recipe-image-cleanup-outbox-security-function-authorization-manifest.json";
 
 describe("recipe visibility security function inventory", () => {
   it("classifies the guard and every recreated baseline function", () => {
@@ -57,6 +59,61 @@ describe("recipe visibility security function inventory", () => {
         allowed_principals: ["anon", "authenticated"],
         security_mode: "definer",
         owner: "homecook_recipe_visibility_guard_owner",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
+    ]);
+  });
+
+  it("classifies every guarded image cleanup outbox function", () => {
+    expect(existsSync(IMAGE_CLEANUP_MANIFEST_PATH)).toBe(true);
+
+    const manifest = JSON.parse(
+      readFileSync(IMAGE_CLEANUP_MANIFEST_PATH, "utf8"),
+    ) as {
+      functions: Array<Record<string, unknown>>;
+    };
+
+    expect(manifest.functions).toEqual([
+      expect.objectContaining({
+        signature:
+          "public.enqueue_recipe_image_cleanup(uuid, uuid, bigint, bigint, text)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
+      expect.objectContaining({
+        signature:
+          "public.claim_recipe_image_cleanup(integer, uuid, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
+      expect.objectContaining({
+        signature:
+          "public.authorize_recipe_image_cleanup_delete(uuid, uuid, bigint, bigint, uuid, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
+      expect.objectContaining({
+        signature:
+          "public.observe_recipe_image_cleanup_not_found(uuid, uuid, bigint, bigint, uuid, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
+      expect.objectContaining({
+        signature:
+          "public.recheck_recipe_image_cleanup_not_found(uuid, uuid, bigint, bigint, boolean, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
+      expect.objectContaining({
+        signature:
+          "public.complete_recipe_image_cleanup_deleted(uuid, uuid, bigint, bigint, uuid, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
         safe_search_path: ["pg_catalog", "public", "pg_temp"],
       }),
     ]);
@@ -136,6 +193,9 @@ describe("recipe visibility security function inventory", () => {
     expect(result.status, output).toBe(0);
     expect(output).toContain(
       "recipe-visibility-read-hardening:5 pre-deployment additive application functions",
+    );
+    expect(output).toContain(
+      "recipe-image-cleanup-outbox:6 pre-deployment additive application functions",
     );
   }, 15_000);
 
