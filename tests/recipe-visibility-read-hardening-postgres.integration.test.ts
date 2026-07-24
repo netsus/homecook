@@ -305,6 +305,121 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     `, OWNER_QUARANTINED)).toBe("0");
   });
 
+  it("forces public tag intents private for private or deleted parents", () => {
+    const writerResult = psqlResult(`
+      begin;
+      set local role service_role;
+      select public.set_recipe_tags(
+        '${RECIPE_DELETED}',
+        jsonb_build_array(
+          jsonb_build_object(
+            'normalized_key', 'deleted-widen-attempt',
+            'label', 'Deleted widen attempt',
+            'kind', 'user',
+            'visibility', 'public',
+            'review_status', 'approved'
+          )
+        ),
+        '${OWNER_ACTIVE}',
+        'user_reviewed'
+      );
+      commit;
+    `);
+
+    expect(writerResult.status, writerResult.stderr).toBe(0);
+    expect(psql(`
+      select concat_ws(
+        ':',
+        (
+          select visibility
+          from public.recipe_tags
+          where recipe_id = '${RECIPE_ACTIVE_PRIVATE}'
+            and tag_id = '${TAG_PRIVATE_ONLY}'
+        ),
+        (
+          select recipe_tag.visibility
+          from public.recipe_tags as recipe_tag
+          join public.tags as tag
+            on tag.id = recipe_tag.tag_id
+          where recipe_tag.recipe_id = '${RECIPE_DELETED}'
+            and tag.normalized_key = 'deleted-widen-attempt'
+        ),
+        (
+          select usage_count
+          from public.tags
+          where id = '${TAG_PRIVATE_ONLY}'
+        )
+      );
+    `)).toBe("private:private:0");
+
+    const pendingWriterResult = psqlResult(`
+      begin;
+      set local role service_role;
+      select public.set_recipe_tags(
+        '${RECIPE_ACTIVE_PUBLIC}',
+        jsonb_build_array(
+          jsonb_build_object(
+            'normalized_key', 'pending-widen-attempt',
+            'label', 'Pending widen attempt',
+            'kind', 'user',
+            'visibility', 'public',
+            'review_status', 'pending'
+          )
+        ),
+        '${OWNER_ACTIVE}',
+        'user_reviewed'
+      );
+      commit;
+    `);
+
+    expect(pendingWriterResult.status, pendingWriterResult.stderr).toBe(0);
+    expect(psql(`
+      select recipe_tag.visibility
+      from public.recipe_tags as recipe_tag
+      join public.tags as tag
+        on tag.id = recipe_tag.tag_id
+      where recipe_tag.recipe_id = '${RECIPE_ACTIVE_PUBLIC}'
+        and tag.normalized_key = 'pending-widen-attempt';
+    `)).toBe("public_pending");
+
+    const restoreWriterResult = psqlResult(`
+      begin;
+      set local role service_role;
+      select public.set_recipe_tags(
+        '${RECIPE_ACTIVE_PUBLIC}',
+        jsonb_build_array(
+          jsonb_build_object(
+            'normalized_key', 'visible',
+            'label', 'Visible',
+            'kind', 'semantic',
+            'is_system', true,
+            'theme_eligible', true,
+            'visibility', 'public',
+            'review_status', 'approved'
+          )
+        ),
+        null,
+        'system_suggested'
+      );
+      commit;
+    `);
+    expect(restoreWriterResult.status, restoreWriterResult.stderr).toBe(0);
+
+    const directWriteResult = psqlResult(`
+      begin;
+      set local role service_role;
+      update public.recipe_tags
+      set visibility = 'public'
+      where recipe_id = '${RECIPE_ACTIVE_PRIVATE}';
+      rollback;
+    `);
+
+    expect(directWriteResult.status).not.toBe(0);
+    expect(directWriteResult.stderr).toContain(
+      "permission denied for table recipe_tags",
+    );
+  });
+
   it("keeps direct child and association reads bounded by the same parent", () => {
     for (const table of [
       "recipe_sources",

@@ -37,6 +37,10 @@ describe("recipe visibility PostgreSQL gate", () => {
       "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
     );
     expect(runner).toContain(
+      "supabase/migrations/20260724090000_recipe_tag_parent_visibility_upper_bound.sql",
+    );
+    expect(runner).toContain("for (const migrationPath of MIGRATION_PATHS)");
+    expect(runner).toContain(
       "tests/recipe-visibility-read-hardening-postgres.integration.test.ts",
     );
     expect(runner).toContain("rmSync(root, { recursive: true, force: true })");
