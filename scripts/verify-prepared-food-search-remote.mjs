@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import {
   assertPreparedFoodSearchMergedExactSource,
   assertPreparedFoodSearchRemoteVerificationResult,
+  buildPreparedFoodSearchPsqlRequest,
   buildPreparedFoodSearchRemoteVerificationPlan,
 } from "./lib/prepared-food-search-remote-verifier.mjs";
 
@@ -106,22 +107,19 @@ try {
   const databaseUrl = process.env.PREPARED_FOOD_SEARCH_DATABASE_URL;
   assertApprovedRemoteDatabase(databaseUrl);
   const actorId = readApprovedActorId();
+  const request = buildPreparedFoodSearchPsqlRequest({
+    actorId,
+    databaseUrl,
+    environment: process.env,
+    planSql: plan.sql,
+  });
   const rawResult = run(
     "psql",
-    ["-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-c", plan.sql],
+    request.args,
     {
       cwd: repositoryRoot,
-      env: {
-        ...process.env,
-        PGDATABASE: databaseUrl,
-        PGSSLMODE: "require",
-        PGOPTIONS: [
-          process.env.PGOPTIONS,
-          "-c role=service_role",
-          "-c default_transaction_read_only=on",
-          `-c homecook.prepared_food_search_actor_id=${actorId}`,
-        ].filter(Boolean).join(" "),
-      },
+      input: request.input,
+      env: request.environment,
     },
   );
   const result = JSON.parse(rawResult);

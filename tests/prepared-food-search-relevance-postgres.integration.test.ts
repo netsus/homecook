@@ -314,4 +314,32 @@ describe.runIf(enabled)("prepared food unified ranked search on isolated Postgre
       verifier.assertPreparedFoodSearchRemoteVerificationResult(result),
     ).toThrow(/smoke fixture is missing/i);
   });
+
+  it("does not treat a real RPC JSON null cursor as a pagination fixture", () => {
+    const result = JSON.parse(psql(serviceSql(`
+      with page as (
+        select public.search_food_catalog_ranked(
+          '${userA}',
+          '',
+          array['food_product']::text[],
+          'public',
+          null,
+          null,
+          '${"f".repeat(64)}',
+          50
+        ) as payload
+      )
+      select jsonb_build_object(
+        'cursor_type', jsonb_typeof(payload -> 'next_cursor_tuple'),
+        'fixture_cursor',
+          jsonb_typeof(payload -> 'next_cursor_tuple') = 'object'
+      )::text
+      from page;
+    `)));
+
+    expect(result).toEqual({
+      cursor_type: "null",
+      fixture_cursor: false,
+    });
+  });
 });
