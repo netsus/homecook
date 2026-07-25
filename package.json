@@ -184,9 +184,9 @@
       "lodash": "4.18.1",
       "lodash-es": "4.18.1",
       "micromatch>picomatch": "2.3.2",
-      "minimatch@3.1.5>brace-expansion": "1.1.16",
-      "minimatch@10.2.5>brace-expansion": "5.0.7",
-      "postcss": "8.5.15",
+      "minimatch@3.1.5>brace-expansion": "5.0.8",
+      "minimatch@10.2.5>brace-expansion": "5.0.8",
+      "postcss": "8.5.18",
       "tmp": "0.2.7",
       "@eslint/eslintrc>js-yaml": "4.3.0",
       "@lhci/cli>uuid": "11.1.1",
@@ -202,6 +202,9 @@
       "esbuild": "0.28.1",
       "undici": "7.28.0",
       "vite": "7.3.5"
+    },
+    "patchedDependencies": {
+      "minimatch@3.1.5": "patches/minimatch@3.1.5.patch"
     }
   }
 }
