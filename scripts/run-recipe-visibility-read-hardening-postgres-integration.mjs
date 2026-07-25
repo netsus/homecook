@@ -11,6 +11,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
   "supabase/migrations/20260724090000_recipe_tag_parent_visibility_upper_bound.sql",
   "supabase/migrations/20260724110000_recipe_managed_image_registry_foundation.sql",
+  "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql",
 ];
 
 function commandResult(command, args, options = {}) {
