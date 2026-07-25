@@ -13,6 +13,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724110000_recipe_managed_image_registry_foundation.sql",
   "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql",
   "supabase/migrations/20260724130000_recipe_image_upload_reservation.sql",
+  "supabase/migrations/20260724140000_recipe_image_private_storage_boundary.sql",
 ];
 
 function commandResult(command, args, options = {}) {
@@ -158,6 +159,7 @@ if (!postgresBin) {
       "-c", `
         create schema auth authorization migration_runner;
         create schema extensions authorization migration_runner;
+        create schema storage authorization migration_runner;
         create extension pgcrypto with schema extensions;
         create or replace function auth.uid()
         returns uuid
@@ -172,6 +174,81 @@ if (!postgresBin) {
         $function$;
         grant usage on schema auth to anon, authenticated;
         grant execute on function auth.uid() to anon, authenticated;
+
+        create table storage.buckets (
+          id text primary key,
+          name text not null,
+          public boolean not null default false,
+          file_size_limit bigint,
+          allowed_mime_types text[]
+        );
+        create table storage.objects (
+          id uuid primary key default gen_random_uuid(),
+          bucket_id text not null,
+          name text not null,
+          owner_id uuid
+        );
+        alter table storage.objects enable row level security;
+        grant usage on schema storage to anon, authenticated, service_role;
+        grant select, insert, update, delete on table storage.objects
+          to anon, authenticated, service_role;
+        create or replace function storage.foldername(name text)
+        returns text[]
+        language sql
+        immutable
+        set search_path = pg_catalog
+        as $function$
+          select string_to_array(name, '/')
+        $function$;
+        grant execute on function storage.foldername(text)
+          to anon, authenticated, service_role;
+
+        insert into storage.buckets (
+          id,
+          name,
+          public,
+          file_size_limit,
+          allowed_mime_types
+        ) values (
+          'recipe-images',
+          'recipe-images',
+          true,
+          5242880,
+          array['image/jpeg', 'image/png', 'image/webp']
+        );
+
+        create policy recipe_images_public_read
+          on storage.objects
+          for select
+          using (bucket_id = 'recipe-images');
+        create policy recipe_images_insert_own
+          on storage.objects
+          for insert
+          to authenticated
+          with check (
+            bucket_id = 'recipe-images'
+            and (storage.foldername(name))[1] = auth.uid()::text
+          );
+        create policy recipe_images_update_own
+          on storage.objects
+          for update
+          to authenticated
+          using (
+            bucket_id = 'recipe-images'
+            and (storage.foldername(name))[1] = auth.uid()::text
+          )
+          with check (
+            bucket_id = 'recipe-images'
+            and (storage.foldername(name))[1] = auth.uid()::text
+          );
+        create policy recipe_images_delete_own
+          on storage.objects
+          for delete
+          to authenticated
+          using (
+            bucket_id = 'recipe-images'
+            and (storage.foldername(name))[1] = auth.uid()::text
+          );
 
         create type public.recipe_source_type
           as enum ('system', 'youtube', 'manual');
