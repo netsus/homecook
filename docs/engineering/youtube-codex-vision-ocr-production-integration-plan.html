@@ -280,14 +280,14 @@
         <span class="pill">Strict parity</span>
       </div>
       <h1><code>cv-goal-i031-ocr</code> 실험환경을 localhost 서비스에 그대로 연결하는 계획</h1>
-      <p class="sub">현재 최선 iter를 고른 근거부터 exact 환경 복구, 임의 YouTube URL 테스트, 출시와 롤백 기준까지 초보 개발자 눈높이로 정리했습니다.</p>
+      <p class="sub">현재 최선 iter를 고른 근거, 완료된 exact 환경 복구, 임의 YouTube URL 테스트, 출시와 롤백 기준을 초보 개발자 눈높이로 정리했습니다.</p>
     </header>
 
     <main>
       <section class="card">
         <h2><span class="num">!</span>딱 한 줄 요약</h2>
-        <div class="tldr"><strong>Gemini나 최신 OCR 코드를 붙이는 일이 아닙니다.</strong> 당시 <code>i031</code>의 source 수집, 프레임 선택, 두 번의 Codex 모델 호출을 동일한 버전으로 복구해 서비스가 그 worker를 호출하게 만드는 작업입니다.</div>
-        <p><strong>비유:</strong> 우승한 빵의 레시피를 재현하려면 “비슷한 오븐”이 아니라 당시 밀가루, 온도, 굽는 시간까지 같아야 합니다. 지금은 완성된 빵의 점수표는 있지만, 중간에 쓴 정확한 오븐 설정 파일 일부가 보존되지 않아 먼저 복구해야 합니다.</p>
+        <div class="tldr"><strong>Gemini나 최신 OCR 코드를 붙이는 일이 아닙니다.</strong> 당시 <code>i031</code>의 source 수집, 프레임 선택, 두 번의 Codex 모델 호출에 쓰인 exact 파일과 옵션은 이미 복구했습니다. 이제 그 production subset을 서비스 내부에서 직접 실행하게 만듭니다.</div>
+        <p>동일 fingerprint와 실행 signature, exact CLI를 확인했고 fresh Validation은 PASS했습니다. Fresh Train은 단계 점수 문턱에 미달했으므로 localhost 검증과 production 승인을 분리합니다.</p>
       </section>
 
       <section class="card">
@@ -373,18 +373,18 @@
       </section>
 
       <section class="card">
-        <h2><span class="num">4</span>아직 바로 배포할 수 없는 이유</h2>
+        <h2><span class="num">4</span>복구된 것과 아직 배포할 수 없는 이유</h2>
         <div class="twocol">
           <div class="note danger">
-            <span class="label">Blocker A: exact code가 commit에 없음</span>
-            Candidate lock commit에는 client <code>v4</code>, final prompt <code>v32</code>가 있습니다. 실제 결과는 client <code>v19</code>, final prompt <code>v44</code>입니다.
+            <span class="label">복구 완료: exact code</span>
+            Candidate lock commit에 없던 client <code>v19</code>, final prompt <code>v44</code>, 실행 command를 session history에서 복구해 fingerprint를 exact match했습니다.
           </div>
           <div class="note warn">
             <span class="label">Blocker B: i031 Holdout 미실행</span>
             확인된 Holdout FAIL은 <code>iter27</code> lock 결과입니다. <code>i031</code> 자체 fresh sealed Holdout PASS 근거는 없습니다.
           </div>
         </div>
-        <h3>복구 후 반드시 같아야 할 identity</h3>
+        <h3>복구에서 확인한 identity</h3>
         <div class="table-wrap">
           <table>
             <thead><tr><th>항목</th><th>고정값</th><th>쉽게 말하면</th></tr></thead>
@@ -398,13 +398,14 @@
           </table>
         </div>
         <div class="tree">
-          <div class="branch go"><strong>모두 exact match</strong><span>Train 9건과 Validation 8건 cold replay를 진행합니다.</span></div>
-          <div class="branch wait"><strong>Identity match, promotion FAIL</strong><span>100% 환경은 복구됐지만 현재 모델 동작이 달라진 것이므로 새 후보로 재평가합니다.</span></div>
+          <div class="branch go"><strong>Identity exact match</strong><span>49-file fingerprint, manifest, CLI, 실행 option을 모두 확인했습니다.</span></div>
+          <div class="branch go"><strong>Fresh Validation PASS</strong><span>F1 .935, amount .730, step .573, semantic 3.875입니다.</span></div>
+          <div class="branch wait"><strong>Fresh Train threshold FAIL</strong><span>Step .655가 문턱 .675에 미달해 production 승인은 보류합니다.</span></div>
           <div class="branch stop"><strong>Fingerprint 불일치</strong><span>추측해서 구현하지 않고 strict parity 작업을 중단합니다.</span></div>
         </div>
         <div class="note warn">
-          <span class="label">추가 복구 항목</span>
-          당시 model effort와 timeout은 결과 파일에 별도 field로 남지 않았습니다. Lock commit의 default는 effort <code>low</code>, timeout <code>20분</code>이지만, strict 구현은 이를 가정하지 않고 command/session artifact 또는 exact fingerprint로 확인합니다.
+          <span class="label">복구한 숨은 옵션</span>
+          Selector/final effort는 <code>low</code>, timeout은 <code>20분</code>, CLI는 <code>@openai/codex 0.144.0-alpha.4</code>, 선택 frame limit은 <code>8</code>입니다.
         </div>
       </section>
 
@@ -460,9 +461,9 @@
             <tbody>
               <tr><td>API route</td><td>로그인, feature flag, 응답 wrapper</td><td>OCR/프레임 알고리즘 직접 구현</td></tr>
               <tr><td><code>youtube-import.ts</code></td><td>session·register orchestration</td><td>strict 실패를 Gemini로 조용히 대체</td></tr>
-              <tr><td>Parity runner</td><td>bundle 실행, timeout, cancel, identity 검사</td><td>shell 문자열 조합, 전체 env 전달</td></tr>
+              <tr><td>i031 runner</td><td>내부 runtime 실행, timeout, cancel, identity 검사</td><td>shell 문자열 조합, 전체 env 전달</td></tr>
               <tr><td>Result adapter</td><td>recipe JSON을 서비스 draft로 변환</td><td>미등록 재료 자동 INSERT</td></tr>
-              <tr><td>Experiment bundle</td><td>source snapshot, frame, selector, final</td><td>golden/grade/holdout 파일 포함</td></tr>
+              <tr><td>Exact production subset</td><td>source snapshot, frame, selector, final</td><td>golden/grade/holdout 파일 포함</td></tr>
             </tbody>
           </table>
         </div>
@@ -475,15 +476,15 @@
       <section class="card">
         <h2><span class="num">8</span>단계별 구현 순서</h2>
         <ul class="steps">
-          <li class="step"><span class="dot">0</span><h3>Exact bundle 복구</h3><p><code>v19</code>/<code>v44</code> bytes를 찾고 fingerprint와 signature를 맞춥니다. 예상 1~2일, 복구 실패 시 중단합니다.</p></li>
-          <li class="step"><span class="dot">1</span><h3>Train·Validation 재실행</h3><p>Train 9건, Validation 8건을 cold/no-cache로 실행해 promotion PASS를 다시 확인합니다. 예상 0.5~1일.</p></li>
-          <li class="step"><span class="dot">2</span><h3>공식 문서와 workpack</h3><p>Strict mode, 비동기 status, 오류, DB metadata를 contract-evolution에 반영합니다. 예상 1일.</p></li>
+          <li class="step"><span class="dot">0</span><h3>Exact runtime 복구 · 완료</h3><p><code>v19</code>/<code>v44</code> bytes, fingerprint, signature, CLI와 숨은 옵션을 exact match했습니다.</p></li>
+          <li class="step"><span class="dot">1</span><h3>Train·Validation 재실행 · 완료</h3><p>Cold/no-cache로 실행해 Validation PASS와 Train step threshold FAIL을 모두 기록했습니다.</p></li>
+          <li class="step"><span class="dot">2</span><h3>공식 문서와 workpack · 진행 중</h3><p>Localhost strict mode, 기존 오류 wrapper, 안전한 DB metadata를 이 contract-evolution에 반영합니다. 비동기 status는 후속 범위입니다.</p></li>
           <li class="step"><span class="dot">3</span><h3>Runner·adapter TDD</h3><p>먼저 실패/identity mismatch 테스트를 쓰고 service worker contract를 구현합니다. 예상 1~2일.</p></li>
           <li class="step"><span class="dot">4</span><h3>localhost 연결</h3><p>기존 YT_IMPORT에서 임의 링크를 넣고 진행 상태와 검수 화면까지 확인합니다. 예상 0.5~1일.</p></li>
           <li class="step"><span class="dot">5</span><h3>Production worker hardening</h3><p>Queue, timeout, cancel, secret, rate limit, 로그를 완성합니다. 예상 1~2일.</p></li>
           <li class="step"><span class="dot">6</span><h3>Holdout·단계적 출시</h3><p>fresh sealed Holdout PASS 뒤 localhost → 내부 → 5% → 25% → 전체 순으로 넓힙니다. 예상 0.5~1일.</p></li>
         </ul>
-        <div class="tldr">Stage 0 복구가 된다는 전제에서 총 <strong>4.5~8일</strong>입니다. Exact bytes가 없으면 비슷한 코드를 새로 쓰지 않습니다.</div>
+        <div class="tldr">복구와 재검증은 끝났습니다. Localhost 구현의 남은 예상은 <strong>2.5~4일</strong>이며 production worker와 Holdout은 별도 승인 범위입니다.</div>
       </section>
 
       <section class="card">
@@ -536,7 +537,7 @@
           <div class="risk"><strong>Source 수집 실패</strong><p>어느 단계에서 실패했는지 보여주고 strict run을 종료합니다.</p></div>
           <div class="risk"><strong>Codex 로그아웃·timeout</strong><p>프로세스를 종료하고 recipe draft를 저장하지 않습니다.</p></div>
           <div class="risk"><strong>미등록 재료</strong><p><code>unresolved</code> 또는 <code>needs_review</code>로 내려 사용자 확인을 받습니다.</p></div>
-          <div class="risk"><strong>누수 위험</strong><p>Worker에는 source만 mount하고 golden·grade·review 경로를 주지 않습니다.</p></div>
+          <div class="risk"><strong>누수 위험</strong><p>서비스 runtime에는 source 처리 코드만 포함하고 golden·grade·review 파일을 넣지 않습니다.</p></div>
           <div class="risk"><strong>비용 급증</strong><p>동시 실행 1, 대기열 3, 사용자/일일 quota로 시작합니다.</p></div>
           <div class="risk"><strong>긴 처리 시간</strong><p>단계 상태와 취소 기능을 제공하고 production은 queue worker로 분리합니다.</p></div>
         </div>
@@ -545,9 +546,9 @@
       <section class="card">
         <h2><span class="num">11</span>localhost에서 임의 링크 테스트</h2>
         <ol>
-          <li>Parity bundle 검증 command가 <code>PASS</code>인지 확인합니다.</li>
+          <li>서비스 내부 i031 runtime fingerprint 검증 command가 <code>PASS</code>인지 확인합니다.</li>
           <li>Codex CLI 로그인, Python 3, <code>yt_dlp</code>, OpenCV/FFmpeg를 확인합니다.</li>
-          <li><code>.env.local</code>에 Supabase 값, YouTube key, Apify token, bundle 경로를 넣습니다.</li>
+          <li><code>.env.local</code>에 Supabase 값, YouTube key, 조건부 Apify token, i031 mode를 넣습니다.</li>
           <li><code>pnpm dev</code>로 서비스를 켭니다.</li>
           <li><code>http://localhost:3000/menu/add/youtube</code>에 접속합니다.</li>
           <li>임의의 공개 단일 레시피 URL을 입력합니다.</li>
@@ -555,8 +556,7 @@
           <li>검수 화면에서 제목, 재료, 수량, 단계, review-required를 확인합니다.</li>
           <li>Result identity가 <code>i031</code> 고정값과 같은지 확인합니다.</li>
         </ol>
-        <pre><code>YOUTUBE_I031_STRICT_PARITY_ENABLED=true
-YOUTUBE_I031_PARITY_BUNDLE_ROOT=/absolute/path/to/frozen-cv-goal-i031-ocr
+        <pre><code>YOUTUBE_RECIPE_EXTRACTOR_MODE=i031_codex_vision
 YOUTUBE_API_KEY=server-only
 APIFY_TOKEN=server-only</code></pre>
         <div class="note good">
@@ -568,12 +568,12 @@ APIFY_TOKEN=server-only</code></pre>
       <section class="card">
         <h2><span class="num">12</span>공식 문서와 승인 순서</h2>
         <div class="tree">
-          <div class="branch go"><strong>사용자 결정</strong><span>“실험환경 100% 동일”을 contract-evolution의 방향 승인으로 기록합니다.</span></div>
-          <div class="branch wait"><strong>Claude Stage 1</strong><span>새 workpack, acceptance, automation spec, workflow item을 먼저 main에 merge합니다.</span></div>
-          <div class="branch wait"><strong>Contract evolution</strong><span>Strict mode, async status, error, DB metadata를 API/DB/User Flow 문서에 반영합니다.</span></div>
-          <div class="branch go"><strong>그 다음 구현</strong><span>공식 문서와 acceptance가 다시 잠긴 뒤 Codex Stage 2를 시작합니다.</span></div>
+          <div class="branch go"><strong>사용자 결정 · 완료</strong><span>“실험환경 100% 동일”을 contract-evolution의 방향 승인으로 기록했습니다.</span></div>
+          <div class="branch go"><strong>Contract evolution · 이 PR에서 완료</strong><span>Strict mode, 기존 error wrapper, 안전한 DB metadata, localhost-only 경계를 공식 API/DB/User Flow 문서에 반영했습니다.</span></div>
+          <div class="branch wait"><strong>Codex Stage 1 독립 검토</strong><span>새 workpack, acceptance, automation spec, workflow item을 별도 Codex critic이 검토하고 PASS하면 main에 merge합니다.</span></div>
+          <div class="branch go"><strong>그 다음 구현</strong><span>이 Stage 1 PR이 merge된 뒤 서비스 내부 i031 runtime 구현을 시작합니다.</span></div>
         </div>
-        <p>현재 공식 API는 YouTube Data API + Gemini structured fallback + visual enrichment를 기준으로 하며, strict parity worker와 async job status는 아직 계약에 없습니다.</p>
+        <p>이 PR 자체가 localhost 구현에 필요한 contract-evolution입니다. i031 strict mode는 기존 public endpoint와 화면을 유지하며 동기 실행으로 시작합니다. Production queue와 async job status는 별도 승인 전 구현하지 않습니다.</p>
       </section>
 
       <section class="card">
@@ -582,7 +582,8 @@ APIFY_TOKEN=server-only</code></pre>
           <li><code>v19</code>/<code>v44</code> exact bytes 복구</li>
           <li>Code fingerprint <code>17f475...</code> exact</li>
           <li>Execution signature <code>704359...</code> exact</li>
-          <li>Train 9건, Validation 8건 cold replay PASS</li>
+          <li>Train 9건, Validation 8건 cold replay 완료와 결과 공개</li>
+          <li>Fresh Validation PASS, fresh Train step threshold FAIL 기록</li>
           <li>공식 문서와 Stage 1 workpack merge</li>
           <li>Strict mode Gemini 호출 0회</li>
           <li>localhost 임의 공개 링크 3개 완료</li>
@@ -602,7 +603,7 @@ APIFY_TOKEN=server-only</code></pre>
     </main>
 
     <footer>
-      원문: /Users/cwj/01_vibe_coding/homecook/docs/engineering/youtube-codex-vision-ocr-production-integration-plan.md<br>
+      원문: docs/engineering/youtube-codex-vision-ocr-production-integration-plan.md<br>
       초보 개발자 이해용 단일 HTML · 외부 CSS/JavaScript/네트워크 자산 없음 · 생성일 2026-07-26
     </footer>
   </div>

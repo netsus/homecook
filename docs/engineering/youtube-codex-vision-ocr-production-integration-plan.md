@@ -4,13 +4,13 @@
 
 상태: 사용자 방향 승인 완료, 재현성·계약 선행 게이트 진행 중
 
-대상 서비스 저장소: `/Users/cwj/01_vibe_coding/homecook`
+대상 서비스 저장소: 이 문서가 포함된 `homecook` repository root
 
 실험/평가 근거 저장소: `/Users/cwj/01_vibe_coding/homecook-codex-vision-loop`
 
 ## 한 줄 결론
 
-현재 완료·검증된 Train+Validation 후보 중 가장 좋은 후보는 `cv-goal-i031-ocr`이지만, 서비스에 넣기 전에 **당시 고정되지 않은 extractor 코드를 복구해 동일 fingerprint로 재검증**해야 한다. 완전 동일한 localhost 흐름은 Gemini를 쓰지 않지만, 당시 `source.json` 수집 방식까지 같게 하려면 `YOUTUBE_API_KEY`와 경우에 따라 `APIFY_TOKEN`이 필요하다.
+현재 완료·검증된 Train+Validation 후보 중 가장 좋은 후보는 `cv-goal-i031-ocr`이다. 당시 extractor bytes와 실행 옵션을 복구해 fingerprint를 exact match했고, fresh Validation promotion도 PASS했다. 완전 동일한 localhost 흐름은 Gemini를 쓰지 않지만, 당시 `source.json` 수집 방식까지 같게 하려면 `YOUTUBE_API_KEY`와 경우에 따라 `APIFY_TOKEN`이 필요하다.
 
 ## 이번 계획의 정정 사항
 
@@ -37,11 +37,11 @@
 - `docs/engineering/slice-workflow.md`
 - `docs/engineering/git-workflow.md`
 - `docs/engineering/qa-system.md`
-- `docs/요구사항기준선-v1.7.22.md`
-- `docs/화면정의서-v1.5.28.md`
-- `docs/유저flow맵-v1.3.25.md`
-- `docs/db설계-v1.3.23.md`
-- `docs/api문서-v1.2.27.md`
+- `docs/요구사항기준선-v1.7.23.md`
+- `docs/화면정의서-v1.5.29.md`
+- `docs/유저flow맵-v1.3.26.md`
+- `docs/db설계-v1.3.24.md`
+- `docs/api문서-v1.2.28.md`
 - YouTube 관련 workpack `20`, `29`, `32`
 
 실험 저장소:
@@ -136,29 +136,30 @@ Train/Validation freeze 근거:
 | interval | `4s` |
 | hybrid anchor budget | `36` |
 | selector candidate limit | `12` |
-| keyframe total limit | lock commit의 single-recipe default `8`, 복구 bundle에서 재확인 필요 |
-| keyframes per recipe | lock commit의 default `8`, 복구 bundle에서 재확인 필요 |
+| keyframe total limit | `8` |
+| keyframes per recipe | `8` |
 | recipe mode | `singleRecipeOnly=true` |
 | run type | `cold`, `--no-cache` |
 | model call upper bound | `2` (`selector 1 + final 1`) |
 
-`result.json`과 candidate lock에는 당시 model reasoning effort와 timeout 값이 별도 field로 보존되지 않았다. Lock commit의 runner default는 final/selector effort `low`, client timeout `20분`이지만, strict parity 구현은 이 default를 사실로 가정하지 않고 당시 command/session artifact 또는 복구한 code fingerprint로 확인해야 한다.
+`result.json`과 candidate lock에 별도 field로 없던 값은 session artifact에서 복구했다. selector/final reasoning effort는 모두 `low`, client timeout은 `20분`, 실행 CLI는 `@openai/codex 0.144.0-alpha.4`다.
 
-### 100% 재현을 막는 현재 blocker
+### Exact runtime 복구와 fresh 재검증 결과
 
 Candidate lock의 `commitSha`는 `f7775f68cf7afa12079032b20f39039abaad4ba8`이다. 그러나 그 commit의 tracked client는 `codex-vision-keyframes-client-v4-single-fast12`, final prompt는 `keyframe-final-v32-single-four-source`다. 실제 `i031` 결과에는 각각 `v19-onscreen-amount-recovery`, `v44-explicit-action-clause`가 기록되어 있다.
 
-즉, 실험 결과를 만든 중간 extractor bytes가 해당 commit에 그대로 보존되지 않았다. 최신 experiment client는 이미 `v45`/`v59` 계열이므로 최신 코드를 호출하는 것도 동일 실행이 아니다.
+즉, 실험 결과를 만든 중간 extractor bytes가 해당 commit에는 그대로 보존되지 않았다. 최신 experiment client는 이미 `v45`/`v59` 계열이므로 최신 코드를 호출하는 것도 동일 실행이 아니다. 이번 작업에서는 Codex session history에서 당시 49개 파일과 실행 command를 복구했다.
 
-구현 선행 gate:
+완료한 재현 gate:
 
-1. local session/cache/patch artifact에서 `v19` extractor와 `v44` prompt bytes를 복구한다.
-2. 당시 command, model effort, timeout, environment override를 함께 복구한다.
-3. 별도 immutable parity bundle로 저장하고 SHA-256 manifest를 만든다.
-4. evaluator가 계산한 code fingerprint가 `17f475...`와 정확히 일치해야 한다.
-5. Train 9건과 Validation 8건을 cold/no-cache로 다시 실행한다.
-6. 모든 result identity가 위 표와 같고 Train/Validation promotion이 다시 PASS해야 한다.
-7. 하나라도 다르면 “100% parity” 명칭을 쓰지 않고 구현을 중단한다.
+1. `v19` extractor, `v44` prompt, 당시 command와 runtime option을 복구했다.
+2. 49-file bundle fingerprint `17f475...`, manifest `9a587...`, execution signature `704359...`가 exact match했다.
+3. exact CLI `@openai/codex 0.144.0-alpha.4`로 cold/no-cache Train 9건과 Validation 8건을 다시 실행했다.
+4. Fresh Validation은 ingredient F1 `.935`, amount `.730`, amount coverage `.783`, step `.573`, semantic average `3.875`로 promotion PASS했다.
+5. Fresh Train deterministic은 ingredient F1 `.958`, amount `.600`, amount coverage `.669`, step `.655`였고 step threshold `.675`에 미달해 FAIL했다.
+6. 누수 canary는 clean이었다.
+
+Exact identity는 복구됐지만 fresh Train 품질 drift가 있으므로 localhost 통합과 production 승인을 분리한다. 이번 구현은 localhost 임의 URL 검증까지 진행하고, preview/production enablement와 Holdout은 별도 승인 전 차단한다.
 
 모델 서비스의 비결정성 때문에 같은 환경이어도 recipe 문장이 byte-for-byte 같다는 보장은 없다. 여기서 100%는 코드·프롬프트·모델·옵션·source 수집 경계를 동일하게 고정한다는 뜻이며, 결과 품질은 promotion gate로 다시 확인한다.
 
@@ -183,7 +184,7 @@ Candidate lock의 `commitSha`는 `f7775f68cf7afa12079032b20f39039abaad4ba8`이�
 목표:
 
 - localhost의 기존 `YT_IMPORT` 화면에서 임의의 공개 단일 레시피 URL을 입력한다.
-- strict parity worker가 당시와 같은 source snapshot과 extractor identity로 `result.json`을 만든다.
+- 서비스 저장소에 포함된 exact i031 production runtime이 당시와 같은 source snapshot과 extractor identity로 결과를 만든다.
 - 서비스 adapter가 결과를 기존 draft/session/재료 검수 계약으로 변환한다.
 - Gemini visual/structured extractor로 조용히 우회하지 않는다.
 - 결과가 불완전하면 기존 review-required 규칙으로 사용자 확인을 요구한다.
@@ -230,7 +231,7 @@ flowchart TD
 
 ## 서비스 모듈 경계
 
-실험 harness 내부를 서비스 코드에 다시 구현하지 않는다. 복구된 parity bundle은 experiment repo가 소유하고, 서비스는 versioned worker contract만 호출한다.
+실험 harness 전체를 서비스에 복사하지 않는다. 복구된 exact bundle에서 source 수집, frame 추출, selector/final 호출에 필요한 production subset만 서비스 저장소의 server-only runtime으로 옮기고 fingerprint guard로 고정한다. grader, golden, dataset profile, promotion, review 파일은 포함하지 않는다.
 
 권장 경계:
 
@@ -241,16 +242,17 @@ flowchart TD
   - 기존 session/ingredient/register orchestration 유지
   - 현재 `youtube_ocr_extraction`이 Gemini provider를 여는 alias인 동작 제거
 - 신규 `lib/server/youtube-i031-parity-runner.ts`
-  - 고정 bundle path, command, timeout, 취소, stdout JSON contract 관리
+  - 저장소 내부 exact runtime command, timeout, 취소, stdout JSON contract 관리
   - shell 문자열 조합 대신 `spawn` argument array 사용
 - 신규 `lib/server/youtube-i031-result-adapter.ts`
   - harness `result.json`을 기존 `YoutubeRecipeExtractData`와 draft shape로 변환
   - extractor 원본 result와 서비스 표준명 매핑 결과를 분리
 - 신규 `lib/server/youtube-i031-observability.ts`
   - stage timing, exit reason, identity mismatch, 비용 요약 기록
-- experiment repo의 immutable parity bundle
-  - `snapshot-video`, frame extractor, v19 client, v44 prompt, runner, dependency manifest만 포함
-  - golden/grade/review/holdout 파일은 포함하지 않음
+- 신규 `lib/server/youtube-i031/runtime/`
+  - exact `snapshot-video`, frame extractor, v19 client, v44 prompt와 최소 transitive dependency만 포함
+  - bundle/file manifest hash를 test와 runtime preflight에서 검증
+  - golden/grade/review/holdout, dataset ID, batch harness 파일은 포함하지 않음
 
 서비스와 worker의 최소 JSON contract:
 
@@ -283,7 +285,7 @@ Identity가 다르면 adapter는 결과를 저장하지 않고 `PARITY_IDENTITY_
 
 ### Localhost 첫 완료선
 
-기존 `POST /api/v1/recipes/youtube/extract`를 유지하되, 개발 환경에서만 parity worker completion을 기다린다. outer timeout은 실험의 model timeout을 잘라내지 않도록 최소 25분으로 두고, 사용자가 취소하거나 브라우저 연결이 끊기면 child process group에 종료 신호를 보낸다.
+기존 `POST /api/v1/recipes/youtube/extract`를 유지하되, 개발 환경에서만 i031 runtime completion을 기다린다. 전체 timeout은 exact client 기본값과 같은 최대 20분으로 두고, 사용자가 취소하거나 브라우저 연결이 끊기면 child process group에 종료 신호를 보낸다.
 
 이 단계는 localhost 검증용이며 serverless production timeout에는 적합하지 않다.
 
@@ -292,7 +294,7 @@ Identity가 다르면 adapter는 결과를 저장하지 않고 `PARITY_IDENTITY_
 Production은 queue 기반 비동기 job으로 분리한다.
 
 1. `POST /recipes/youtube/extract`가 job을 만든다.
-2. macOS parity worker가 source snapshot과 extraction을 수행한다.
+2. macOS i031 worker가 서비스 저장소의 exact production runtime으로 source snapshot과 extraction을 수행한다.
 3. 완료 후 service adapter가 draft/session을 원자적으로 저장한다.
 4. UI는 `queued / collecting_source / extracting_frames / selecting_frames / extracting_recipe / mapping / completed / failed` 상태를 polling 또는 server event로 받는다.
 
@@ -416,22 +418,17 @@ Extractor 결과는 먼저 원문 그대로 보존하고, 그 다음 서비스 a
 
 ## 공식 문서 변경과 선행 승인
 
-현재 공식 API §6-2는 YouTube Data API, Gemini structured fallback, visual quantity enrichment를 기준으로 한다. `i031` strict mode와 async status는 공식 계약에 없다.
+이 Stage 1 변경의 공식 API §6-2와 관련 기준 문서는 기존 `legacy` 모드와 localhost 전용 `i031_codex_vision` strict 모드를 함께 정의한다. strict 모드는 기존 endpoint/error wrapper를 유지하고, 안전한 JSON metadata만 저장하며, Gemini/legacy/visual fallback을 금지한다.
 
-서비스 구현 전에 필요한 순서:
+localhost 구현 전에 필요한 순서와 현재 상태:
 
-1. 사용자의 “실험환경 100% 동일” 결정을 contract-evolution 승인 근거로 기록한다.
-2. Claude Stage 1이 새 product workpack의 `README.md`, `acceptance.md`, `automation-spec.json`, workflow item을 작성해 main에 merge한다.
-3. 별도 contract-evolution docs PR에서 아래를 정한다.
-   - strict extraction mode와 feature flag
-   - async job/status/polling 계약
-   - `PARITY_IDENTITY_MISMATCH`, worker unavailable, timeout error
-   - extraction metadata와 event 저장 범위
-   - localhost-only와 production macOS worker 경계
-4. 공식 API/DB/User Flow 문서와 `CURRENT_SOURCE_OF_TRUTH.md`를 갱신한다.
-5. 갱신된 공식 문서 기준으로 workpack acceptance를 다시 잠근 뒤에만 service 구현을 시작한다.
+1. 사용자의 “실험환경 100% 동일” 결정을 contract-evolution 승인 근거로 기록한다. **완료**
+2. 이 PR에서 workpack의 `README.md`, `acceptance.md`, `automation-spec.json`, workflow item을 작성한다. **완료**
+3. 이 PR에서 strict mode, 기존 error wrapper, 안전한 metadata 범위, localhost-only 경계를 공식 API/DB/User Flow 문서와 `CURRENT_SOURCE_OF_TRUTH.md`에 반영한다. **완료**
+4. 독립 native Codex critic의 internal 1.5 검토를 통과한다. **진행 중**
+5. 이 Stage 1 contract-evolution PR을 main에 merge한 뒤 service 구현을 시작한다.
 
-Localhost 내부 spike가 public API/DB shape를 바꾸지 않더라도, product route 동작을 바꾸므로 Stage 1 workpack은 선행한다.
+이 PR 자체가 localhost 구현에 필요한 contract-evolution이다. 비동기 job/status/polling과 production worker 운영은 승인 범위가 아니며, 필요해질 때 별도 contract-evolution을 거친다.
 
 ## 구현 순서와 예상 기간
 
@@ -439,15 +436,15 @@ Localhost 내부 spike가 public API/DB shape를 바꾸지 않더라도, product
 
 | 단계 | 작업 | 예상 |
 | --- | --- | ---: |
-| 0 | v19/v44 parity bundle 복구, fingerprint/identity 검증 | `1~2일`, artifact 미복구 시 중단 |
-| 1 | Train 9 + Validation 8 cold replay, promotion 재검증 | `0.5~1일` |
-| 2 | Stage 1 workpack + contract-evolution 문서 | `1일` |
+| 0 | v19/v44 exact runtime 복구, fingerprint/identity 검증 | **완료** |
+| 1 | Train 9 + Validation 8 cold replay, promotion 재검증 | **완료**, Validation PASS / Train threshold FAIL |
+| 2 | Stage 1 workpack + localhost contract-evolution 문서 | **진행 중** |
 | 3 | service runner/adapter/identity fail-closed TDD | `1~2일` |
 | 4 | localhost YT_IMPORT 연결, 임의 URL smoke | `0.5~1일` |
 | 5 | async worker, 보안/관측성/비용 gate | `1~2일` |
 | 6 | fresh sealed Holdout, 제한 rollout/rollback 검증 | `0.5~1일` |
 
-복구가 가능하다는 전제에서 총 `4.5~8일`이다. Stage 0에서 exact bytes를 찾지 못하면 기간을 늘려 추측 구현하지 않고 strict parity 목표를 blocked로 보고한다.
+Stage 0~1은 완료됐다. localhost 구현의 남은 예상은 Stage 2~4 기준 `2.5~4일`이며, production worker·Holdout·단계적 출시는 이번 승인 범위 밖의 후속 `1.5~3일` 이상 작업이다.
 
 ## 테스트 계획
 
@@ -511,7 +508,7 @@ pnpm verify:backend
 1. strict parity bundle 검증 command가 `PASS`인지 확인한다.
 2. `codex login status` 또는 동등한 방법으로 Codex CLI 로그인 상태를 확인한다.
 3. Python 3, `yt_dlp`, OpenCV/FFmpeg 의존성을 검증한다.
-4. `.env.local`에 Supabase 값, `YOUTUBE_API_KEY`, `APIFY_TOKEN`, strict feature flag와 parity bundle 절대경로를 넣는다.
+4. `.env.local`에 Supabase 값, `YOUTUBE_API_KEY`, 조건부 `APIFY_TOKEN`, strict extractor mode를 넣는다.
 5. `pnpm dev`로 서비스를 실행한다.
 6. `http://localhost:3000/menu/add/youtube`에 접속한다.
 7. 임의의 공개 단일 레시피 URL을 입력한다.
@@ -522,8 +519,7 @@ pnpm verify:backend
 예시 env 이름은 Stage 1에서 확정한다.
 
 ```dotenv
-YOUTUBE_I031_STRICT_PARITY_ENABLED=true
-YOUTUBE_I031_PARITY_BUNDLE_ROOT=/absolute/path/to/frozen-cv-goal-i031-ocr
+YOUTUBE_RECIPE_EXTRACTOR_MODE=i031_codex_vision
 YOUTUBE_API_KEY=server-only
 APIFY_TOKEN=server-only
 ```

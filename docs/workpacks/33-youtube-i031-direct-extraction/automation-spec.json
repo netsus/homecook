@@ -1,0 +1,87 @@
+{
+  "slice_id": "33-youtube-i031-direct-extraction",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes/youtube/extract",
+      "POST /api/v1/recipes/youtube/register"
+    ],
+    "invariants": [
+      "exact-i031-identity-locked",
+      "strict-no-fallback",
+      "existing-ingredient-mapper-reused",
+      "owner-authorization",
+      "session-ttl-and-state-transition",
+      "no-hardcoded-video-id-or-recipe",
+      "no-eval-answer-runtime",
+      "raw-media-ephemeral",
+      "secrets-server-only",
+      "safe-observability-only"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/youtube-i031-runtime.test.ts",
+      "tests/youtube-import.backend.test.ts"
+    ],
+    "eval_gates": {
+      "exact_identity_match": true,
+      "strict_fallback_calls": 0,
+      "known_video_hardcoding_count": 0,
+      "raw_media_persisted_count": 0,
+      "localhost_arbitrary_url_smoke": true
+    }
+  },
+  "frontend": {
+    "required_routes": [
+      "/recipes/new/youtube"
+    ],
+    "required_states": [
+      "loading",
+      "error",
+      "retry",
+      "review"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "screenshot",
+      "console-error-zero"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "youtube-i031-localhost-arbitrary-url"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "exact-runtime-drift",
+    "codex-login-missing",
+    "youtube-api-key-missing",
+    "media-tool-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 2
+  }
+}
