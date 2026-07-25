@@ -47,6 +47,20 @@ const ADDITIVE_SOURCES = [
         "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
       ),
   },
+  {
+    manifestPath:
+      process.env.SECURITY_FUNCTION_PREPARED_FOOD_SEARCH_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/prepared-food-search-relevance-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_PREPARED_FOOD_SEARCH_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260725120000_prepared_food_search_relevance_foundation.sql",
+      ),
+  },
 ];
 const LOCAL_DATABASE_URL =
   process.env.SECURITY_FUNCTION_DATABASE_URL
