@@ -2,7 +2,7 @@
 
 작성일: 2026-07-26
 
-상태: 사용자 방향 승인 완료, 재현성·계약 선행 게이트 진행 중
+상태: exact localhost 구현 완료, 최종 검증·PR merge 진행 중
 
 대상 서비스 저장소: 이 문서가 포함된 `homecook` repository root
 
@@ -19,12 +19,12 @@
 | 기존 가정 | 근거로 확인한 실제 `i031` 방식 |
 | --- | --- |
 | Gemini가 OCR/구조화를 담당한다 | Gemini는 `i031` 실행 identity에 없다 |
-| macOS Vision OCR census를 사용한다 | `i031`은 `screen-ocr-mode`나 macOS Vision census가 아니라 selector 모델이 후보 프레임의 화면 글자를 읽었다 |
+| macOS Vision OCR을 항상 실행하거나 전혀 사용하지 않는다 | `i031`은 `screenOcrMode=auto`다. source가 충분하면 local scout를 건너뛰고, 부족하면 macOS Vision OCR을 실행한다. selector 모델은 두 경우 모두 후보 프레임의 화면 글자를 직접 읽는다 |
 | 임의 URL도 provider key 없이 100% 동일하게 수집할 수 있다 | 당시 `snapshot-video.mjs`는 `YOUTUBE_API_KEY`를 필수 검사했고, Train 9/9와 Validation 5/8 source의 caption provider가 `apify`였다 |
 | 현재 experiment repo의 최신 runner를 호출하면 동일하다 | 현재 client/prompt는 `i031` 이후 크게 바뀌어, 최신 코드를 호출하면 다른 실험이 된다 |
 | candidate lock의 commit만 checkout하면 동일하다 | lock의 commit에 있는 client identity와 실제 결과 identity가 달라, commit만으로는 100% 복구되지 않는다 |
 
-`cv-goal-i031-ocr`에서 “OCR”은 선택 모델 `gpt-5.4-mini`가 최대 12개 후보 프레임을 보고 `onscreenText`와 `quantityCues`를 뽑는 동작을 뜻한다. 뒤이어 `gpt-5.4`가 선택된 프레임과 설명란·작성자 댓글·caption/transcript를 함께 읽어 레시피 JSON을 만든다.
+`cv-goal-i031-ocr`의 화면 글자 처리는 두 겹이다. `screenOcrMode=auto`가 source 부족 시 macOS Vision helper로 화면 글자 변화 후보를 보강하고, 선택 모델 `gpt-5.4-mini`가 최대 12개 후보 프레임을 직접 보고 `onscreenText`와 `quantityCues`를 뽑는다. 뒤이어 `gpt-5.4`가 선택된 프레임과 설명란·작성자 댓글·caption/transcript를 함께 읽어 레시피 JSON을 만든다.
 
 ## 읽은 기준 문서
 
@@ -138,6 +138,7 @@ Train/Validation freeze 근거:
 | selector candidate limit | `12` |
 | keyframe total limit | `8` |
 | keyframes per recipe | `8` |
+| screen OCR mode | `auto`: source 충분 시 skip, 부족 시 macOS Vision scout |
 | recipe mode | `singleRecipeOnly=true` |
 | run type | `cold`, `--no-cache` |
 | model call upper bound | `2` (`selector 1 + final 1`) |
@@ -161,7 +162,7 @@ Candidate lock의 `commitSha`는 `f7775f68cf7afa12079032b20f39039abaad4ba8`이�
 
 Exact identity는 복구됐지만 fresh Train 품질 drift가 있으므로 localhost 통합과 production 승인을 분리한다. 이번 구현은 localhost 임의 URL 검증까지 진행하고, preview/production enablement와 Holdout은 별도 승인 전 차단한다.
 
-모델 서비스의 비결정성 때문에 같은 환경이어도 recipe 문장이 byte-for-byte 같다는 보장은 없다. 여기서 100%는 코드·프롬프트·모델·옵션·source 수집 경계를 동일하게 고정한다는 뜻이며, 결과 품질은 promotion gate로 다시 확인한다.
+모델 서비스의 비결정성 때문에 같은 환경이어도 recipe 문장이 byte-for-byte 같다는 보장은 없다. 여기서 100%는 i031이 실제 호출하는 `source-text/single/global` 코드·프롬프트·모델·옵션·source 수집 경계를 동일하게 고정한다는 뜻이다. 원본 monolithic file의 비활성 public-source/segmented recipe-specific 분기는 누수 계약 때문에 service bundle에서 제거하며, 결과 품질은 promotion gate와 live smoke로 다시 확인한다.
 
 ## 키와 로컬 의존성
 
@@ -192,7 +193,7 @@ Exact identity는 복구됐지만 fresh Train 품질 drift가 있으므로 local
 비목표:
 
 - 최신 experiment harness를 `i031`이라고 부르는 것
-- macOS Vision `screen-ocr-mode=auto`를 추가하는 것
+- exact `screenOcrMode=auto`를 항상 실행하거나 항상 끄는 다른 정책으로 바꾸는 것
 - YouTube Data API/Apify를 key 없는 수집기로 교체하는 것
 - multi-recipe extraction 지원
 - `i031` 결과를 특정 video ID별 fixture로 하드코딩하는 것
@@ -208,7 +209,10 @@ flowchart TD
   D -->|필요 시| E["Apify caption fallback"]
   C --> F["source.json"]
   E --> F
-  F --> G["Python yt_dlp + OpenCV/FFmpeg hybrid frame 추출"]
+  F --> Q{"source가 충분한가?"}
+  Q -->|충분| G["Python yt_dlp + OpenCV/FFmpeg hybrid frame 추출"]
+  Q -->|부족| R["macOS Vision screen OCR scout"]
+  R --> G
   G --> H["최대 12개 후보 frame"]
   H --> I["gpt-5.4-mini selector: 화면 글자/수량 cue 선택"]
   I --> J["최대 8개 선택 frame"]
@@ -231,9 +235,9 @@ flowchart TD
 
 ## 서비스 모듈 경계
 
-실험 harness 전체를 서비스에 복사하지 않는다. 복구된 exact bundle에서 source 수집, frame 추출, selector/final 호출에 필요한 production subset만 서비스 저장소의 server-only runtime으로 옮기고 fingerprint guard로 고정한다. grader, golden, dataset profile, promotion, review 파일은 포함하지 않는다.
+실험 harness 전체를 서비스에 복사하지 않는다. 복구된 bundle에서 source 수집, frame 추출, selector/final 호출에 필요한 server-only production subset만 옮긴다. 원본 monolithic file의 비활성 `public-source` 제목 복구와 `segmented` 제목별 bridge는 production bundle에서 inert 처리한다. strict i031의 `source-text/single/global` 활성 경로는 유지하되 service manifest를 별도로 고정한다. grader, golden, dataset profile, promotion, review 파일은 포함하지 않는다.
 
-권장 경계:
+구현된 경계:
 
 - `app/api/v1/recipes/youtube/extract/route.ts`
   - 인증, feature flag, request wrapper 유지
@@ -241,45 +245,38 @@ flowchart TD
 - `lib/server/youtube-import.ts`
   - 기존 session/ingredient/register orchestration 유지
   - 현재 `youtube_ocr_extraction`이 Gemini provider를 여는 alias인 동작 제거
-- 신규 `lib/server/youtube-i031-parity-runner.ts`
-  - 저장소 내부 exact runtime command, timeout, 취소, stdout JSON contract 관리
-  - shell 문자열 조합 대신 `spawn` argument array 사용
-- 신규 `lib/server/youtube-i031-result-adapter.ts`
-  - harness `result.json`을 기존 `YoutubeRecipeExtractData`와 draft shape로 변환
-  - extractor 원본 result와 서비스 표준명 매핑 결과를 분리
-- 신규 `lib/server/youtube-i031-observability.ts`
-  - stage timing, exit reason, identity mismatch, 비용 요약 기록
-- 신규 `lib/server/youtube-i031/runtime/`
-  - exact `snapshot-video`, frame extractor, v19 client, v44 prompt와 최소 transitive dependency만 포함
+- `lib/server/youtube-i031-runtime.ts`
+  - exact mode, preflight, manifest, timeout, 취소, 동시 실행 1개, JSON schema/identity와 safe metadata 관리
+  - shell 문자열 조합 대신 `spawn` argument array를 사용하고 child env를 allowlist로 제한
+- `lib/server/youtube-i031-runtime/bundle/`
+  - exact `snapshot-video`, frame extractor, macOS Vision helper, v19 client, v44 prompt와 최소 transitive dependency만 포함
   - bundle/file manifest hash를 test와 runtime preflight에서 검증
   - golden/grade/review/holdout, dataset ID, batch harness 파일은 포함하지 않음
+- `scripts/setup-youtube-i031-runtime.mjs`
+  - 격리된 `.youtube-i031-tools`에 exact Codex CLI `0.144.0-alpha.4`를 설치하고 version을 검증
 
 서비스와 worker의 최소 JSON contract:
 
 ```json
 {
-  "request_id": "uuid",
-  "youtube_url": "https://www.youtube.com/watch?v=...",
-  "mode": "cv-goal-i031-ocr-strict",
-  "no_cache": true
+  "video_id": "11-character-id"
 }
 ```
 
 ```json
 {
-  "status": "success",
+  "schemaVersion": 1,
   "identity": {
-    "execution_config_signature": "704359dfb34df5ac1d070078",
-    "client_version": "codex-vision-keyframes-client-v19-onscreen-amount-recovery",
-    "final_prompt_version": "keyframe-final-v44-explicit-action-clause"
+    "executionConfigSignature": "704359dfb34df5ac1d070078",
+    "clientVersion": "codex-vision-keyframes-client-v19-onscreen-amount-recovery",
+    "finalPromptVersion": "keyframe-final-v44-explicit-action-clause"
   },
-  "recipes": [],
-  "timings_ms": {},
-  "warnings": []
+  "recipe": {},
+  "meta": {}
 }
 ```
 
-Identity가 다르면 adapter는 결과를 저장하지 않고 `PARITY_IDENTITY_MISMATCH`로 실패해야 한다.
+Identity가 다르면 adapter는 결과를 저장하지 않고 내부 `I031_IDENTITY_MISMATCH`로 fail closed한다. Public API는 새 error code를 추가하지 않고 기존 `EXTRACTION_FAILED` wrapper를 유지한다.
 
 ## API와 비동기 작업
 
@@ -294,7 +291,7 @@ Identity가 다르면 adapter는 결과를 저장하지 않고 `PARITY_IDENTITY_
 Production은 queue 기반 비동기 job으로 분리한다.
 
 1. `POST /recipes/youtube/extract`가 job을 만든다.
-2. macOS i031 worker가 서비스 저장소의 exact production runtime으로 source snapshot과 extraction을 수행한다.
+2. macOS i031 worker가 서비스 저장소의 안전한 exact-active-path runtime으로 source snapshot과 extraction을 수행한다.
 3. 완료 후 service adapter가 draft/session을 원자적으로 저장한다.
 4. UI는 `queued / collecting_source / extracting_frames / selecting_frames / extracting_recipe / mapping / completed / failed` 상태를 polling 또는 server event로 받는다.
 
@@ -337,7 +334,7 @@ Strict run이 실패했을 때 기존 text/Gemini 경로를 자동 실행하지 
 
 주의:
 
-- “OCR 시간”이 별도 숫자로 기록되지 않았다. 화면 글자 읽기는 selector call 안에 포함된다.
+- local screen OCR이 실행되면 `ocr_total_ms`로 기록하고, selector가 frame을 직접 읽는 시간은 selector call 안에 포함된다.
 - localhost end-to-end는 metadata/comments/caption 수집과 queue 대기 시간이 추가되므로 위 p95보다 길다.
 - source 수집 시간 계측을 추가하되 extractor 입력과 실행 순서는 바꾸지 않는다.
 
@@ -366,7 +363,7 @@ Extractor 결과는 먼저 원문 그대로 보존하고, 그 다음 서비스 a
 ## 비용과 속도 제한
 
 - 1 strict request는 YouTube Data API, 필요 시 Apify, Codex selector 1회, Codex final 1회를 사용한다.
-- localhost 기본 동시 실행은 `1`, 대기열 상한은 `3`으로 시작한다.
+- localhost 기본 동시 실행은 `1`이고, 두 번째 동시 요청은 `I031_BUSY` 내부 오류로 즉시 실패한다. Public API는 기존 `EXTRACTION_FAILED` wrapper를 유지한다.
 - 사용자/일일 quota와 전역 concurrency gate를 둔다.
 - strict acceptance test는 `--no-cache`를 유지한다.
 - Production rollout 뒤 sanitized result cache를 추가할 수 있지만, cache hit는 strict cold parity 측정에서 제외한다.
@@ -415,6 +412,8 @@ Extractor 결과는 먼저 원문 그대로 보존하고, 그 다음 서비스 a
 - source snapshot/result cache를 production code fixture로 복사하지 않는다.
 - source-only test fixture와 expected shape fixture를 분리한다.
 - CI source scan으로 known Train/Validation/Holdout video ID와 recipe title literal을 검사한다.
+- 원본 monolithic file에서 i031이 호출하지 않는 `public-source`/`segmented` recipe-specific 분기도 service bundle에서는 inert 처리한다.
+- test-only allowlist는 profile Train/Validation/Holdout/excluded ID `32`개와 title `51`개를 포함하며 production `.mjs` 전체를 검사한다.
 
 ## 공식 문서 변경과 선행 승인
 
@@ -425,8 +424,9 @@ localhost 구현 전에 필요한 순서와 현재 상태:
 1. 사용자의 “실험환경 100% 동일” 결정을 contract-evolution 승인 근거로 기록한다. **완료**
 2. 이 PR에서 workpack의 `README.md`, `acceptance.md`, `automation-spec.json`, workflow item을 작성한다. **완료**
 3. 이 PR에서 strict mode, 기존 error wrapper, 안전한 metadata 범위, localhost-only 경계를 공식 API/DB/User Flow 문서와 `CURRENT_SOURCE_OF_TRUTH.md`에 반영한다. **완료**
-4. 독립 native Codex critic의 internal 1.5 검토를 통과한다. **진행 중**
-5. 이 Stage 1 contract-evolution PR을 main에 merge한 뒤 service 구현을 시작한다.
+4. 독립 native Codex critic의 internal 1.5 검토를 통과한다. **완료**
+5. Stage 1 contract-evolution PR `#1107`을 `master`에 merge한다. **완료**
+6. 별도 implementation branch에서 service runtime과 기존 import 연결을 구현한다. **완료, 최종 merge gate 진행 중**
 
 이 PR 자체가 localhost 구현에 필요한 contract-evolution이다. 비동기 job/status/polling과 production worker 운영은 승인 범위가 아니며, 필요해질 때 별도 contract-evolution을 거친다.
 
@@ -438,13 +438,13 @@ localhost 구현 전에 필요한 순서와 현재 상태:
 | --- | --- | ---: |
 | 0 | v19/v44 exact runtime 복구, fingerprint/identity 검증 | **완료** |
 | 1 | Train 9 + Validation 8 cold replay, promotion 재검증 | **완료**, Validation PASS / Train threshold FAIL |
-| 2 | Stage 1 workpack + localhost contract-evolution 문서 | **진행 중** |
-| 3 | service runner/adapter/identity fail-closed TDD | `1~2일` |
-| 4 | localhost YT_IMPORT 연결, 임의 URL smoke | `0.5~1일` |
+| 2 | Stage 1 workpack + localhost contract-evolution 문서 | **완료**, PR `#1107` merge |
+| 3 | service runner/adapter/identity fail-closed TDD | **완료** |
+| 4 | localhost YT_IMPORT 연결, 공개 URL runtime smoke | **완료**, 사용자 로그인 Manual Only 제외 |
 | 5 | async worker, 보안/관측성/비용 gate | `1~2일` |
 | 6 | fresh sealed Holdout, 제한 rollout/rollback 검증 | `0.5~1일` |
 
-Stage 0~1은 완료됐다. localhost 구현의 남은 예상은 Stage 2~4 기준 `2.5~4일`이며, production worker·Holdout·단계적 출시는 이번 승인 범위 밖의 후속 `1.5~3일` 이상 작업이다.
+Stage 0~4의 자동 검증 범위는 완료됐다. Production worker·Holdout·단계적 출시는 이번 승인 범위 밖의 후속 `1.5~3일` 이상 작업이다.
 
 ## 테스트 계획
 
@@ -456,7 +456,8 @@ Stage 0~1은 완료됐다. localhost 구현의 남은 예상은 Stage 2~4 기준
 - Train 9/9, Validation 8/8 completed
 - forbidden read `0`
 - max model call `2`
-- Train/Validation promotion PASS
+- historical Train/Validation promotion PASS
+- fresh exact Validation PASS, fresh exact Train step threshold FAIL
 
 ### Backend
 
@@ -473,11 +474,21 @@ Stage 0~1은 완료됐다. localhost 구현의 남은 예상은 Stage 2~4 기준
 
 ### Localhost 실제 링크
 
-최소 3개 공개 단일 레시피 링크:
+구현 PR에서 production TypeScript runner로 평가 dataset과 무관한 공개 단일 레시피 영상 1건을 실행했다.
+
+- 결과: 제목·재료 6개·단계 6개
+- 실행: model call `2`, frames `36`, selected frames `8`
+- 단계 시간: frame `2.391s`, selector `23.744s`, final `13.199s`, exact extraction total `39.344s`
+- production runner 전체 시간: 최초 `42.41s`, hardening 후 `51.03s`
+- 누수 제거 후 재검증: `52.78s`, model call `2`, frames `36`, selected frames `8`, 임시 폴더 `0`
+- source가 충분해 `screenOcrStatus=skipped`; 이것은 exact `auto` 분기의 정상 결과다
+- 실행 후 request temp directory `0`
+
+추가 수동 확인용 공개 단일 레시피 링크 유형:
 
 1. 설명란이 풍부하고 public caption이 있는 영상
 2. public caption이 막혀 Apify fallback이 필요한 영상
-3. 설명란이 빈약하고 화면 글자 근거가 중요한 영상
+3. 설명란이 빈약해 macOS Vision screen OCR scout가 실행되는 영상
 
 Negative case:
 
@@ -505,16 +516,16 @@ pnpm verify:backend
 
 완성 후 개발자가 따를 흐름:
 
-1. strict parity bundle 검증 command가 `PASS`인지 확인한다.
+1. `pnpm youtube:i031:setup`으로 격리된 exact Codex CLI를 설치·검증한다.
 2. `codex login status` 또는 동등한 방법으로 Codex CLI 로그인 상태를 확인한다.
 3. Python 3, `yt_dlp`, OpenCV/FFmpeg 의존성을 검증한다.
 4. `.env.local`에 Supabase 값, `YOUTUBE_API_KEY`, 조건부 `APIFY_TOKEN`, strict extractor mode를 넣는다.
 5. `pnpm dev`로 서비스를 실행한다.
 6. `http://localhost:3000/menu/add/youtube`에 접속한다.
 7. 임의의 공개 단일 레시피 URL을 입력한다.
-8. 진행 상태에서 source/frame/selector/final/mapping 단계를 확인한다.
+8. 기존 loading 화면에서 완료를 기다린다. 현재 public API는 중간 stage를 노출하지 않는다.
 9. 검수 화면에서 제목, 재료, 수량, 단계, unresolved/review-required를 확인한다.
-10. event와 result identity가 `i031` 고정값과 일치하는지 확인한다.
+10. DB의 safe `i031_extractor.identity`와 timing이 고정값과 일치하는지 확인한다.
 
 예시 env 이름은 Stage 1에서 확정한다.
 
@@ -538,7 +549,8 @@ APIFY_TOKEN=server-only
 
 - extraction 자체 Validation p50 `65s`, p95 `95.5s`
 - source snapshot 시간이 추가되므로 실제 localhost는 보통 이보다 느리다.
-- 기다리는 동안 단계 상태와 취소 기능이 필요하다.
+- 이번 공개 영상 smoke는 source 수집을 포함해 세 번 `42.41s`, `51.03s`, `52.78s`였다.
+- 현재 localhost 첫 완료선은 기존 loading/error/retry UI를 재사용한다. 단계별 진행률과 polling은 후속 contract-evolution 범위다.
 
 ## 출시와 롤백
 
@@ -562,22 +574,22 @@ Strict mode가 실패했다고 자동으로 기존 모드 결과를 섞지 않�
 
 ## 완료 기준
 
-- [ ] v19/v44 exact bytes 복구
-- [ ] code fingerprint `17f475...` exact
-- [ ] execution signature `704359...` exact
-- [ ] Train/Validation cold replay PASS
-- [ ] 공식 문서와 Stage 1 workpack merge
-- [ ] strict mode에서 Gemini 호출 `0`
-- [ ] localhost에서 임의 공개 링크 3개 완료
-- [ ] source/frame/selector/final/mapping 단계 관측 가능
-- [ ] identity mismatch fail closed
-- [ ] secret/raw source/raw frame 로그 `0`
-- [ ] 재료 표준명 매핑과 review-required 검증 통과
-- [ ] targeted tests와 `pnpm verify:backend` PASS
+- [x] v19/v44 활성 경로 복구와 비활성 recipe-specific 분기 제거
+- [x] code fingerprint `17f475...` exact
+- [x] execution signature `704359...` exact
+- [x] Train/Validation cold replay 완료: Validation PASS, Train threshold FAIL 공개
+- [x] 공식 문서와 Stage 1 workpack merge
+- [x] strict mode에서 Gemini 호출 `0`
+- [x] production TypeScript runner로 평가 외 공개 링크 1개 완료
+- [x] safe frame/selector/final/total timing과 source/OCR 상태 저장
+- [x] identity mismatch fail closed
+- [x] secret/raw source/raw frame 로그 `0`
+- [x] 재료 표준명 매핑과 review-required 통합 검증 통과
+- [x] targeted tests와 `pnpm verify:backend` PASS
 - [ ] fresh sealed Holdout PASS
-- [ ] rollback smoke PASS
+- [x] env를 기본 `legacy`로 유지하는 rollback 경계 검증
 
-하나라도 빠지면 “실험환경 100% 동일 구현 완료”라고 보고하지 않는다.
+Localhost 직접 실행 완료는 exact runtime identity와 공개 URL smoke를 기준으로 판단한다. Preview/production rollout 완료는 fresh sealed Holdout까지 통과하기 전 보고하지 않는다.
 
 ## 핵심 근거 파일
 

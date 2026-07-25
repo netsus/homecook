@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>cv-goal-i031-ocr 실험환경 100% 일치 통합 계획</title>
+  <title>cv-goal-i031-ocr 활성 실행 경로 통합 계획</title>
   <style>
     :root {
       --ink: #1d2935;
@@ -276,25 +276,25 @@
       <div class="tag-row">
         <span class="pill">YouTube 레시피 추출</span>
         <span class="pill">2026-07-26</span>
-        <span class="pill">방향 승인 완료</span>
+        <span class="pill">localhost 구현 완료</span>
         <span class="pill">Strict parity</span>
       </div>
-      <h1><code>cv-goal-i031-ocr</code> 실험환경을 localhost 서비스에 그대로 연결하는 계획</h1>
+      <h1><code>cv-goal-i031-ocr</code> 활성 실행 경로를 localhost 서비스에 직접 연결하는 계획</h1>
       <p class="sub">현재 최선 iter를 고른 근거, 완료된 exact 환경 복구, 임의 YouTube URL 테스트, 출시와 롤백 기준을 초보 개발자 눈높이로 정리했습니다.</p>
     </header>
 
     <main>
       <section class="card">
         <h2><span class="num">!</span>딱 한 줄 요약</h2>
-        <div class="tldr"><strong>Gemini나 최신 OCR 코드를 붙이는 일이 아닙니다.</strong> 당시 <code>i031</code>의 source 수집, 프레임 선택, 두 번의 Codex 모델 호출에 쓰인 exact 파일과 옵션은 이미 복구했습니다. 이제 그 production subset을 서비스 내부에서 직접 실행하게 만듭니다.</div>
-        <p>동일 fingerprint와 실행 signature, exact CLI를 확인했고 fresh Validation은 PASS했습니다. Fresh Train은 단계 점수 문턱에 미달했으므로 localhost 검증과 production 승인을 분리합니다.</p>
+        <div class="tldr"><strong>Gemini나 최신 OCR 코드를 붙인 것이 아닙니다.</strong> 당시 <code>i031</code>의 source 수집, adaptive screen OCR, 프레임 선택, 두 번의 Codex 모델 호출에 쓰인 활성 production 경로를 서비스 내부에서 직접 실행하도록 구현했습니다.</div>
+        <p>역사적 fingerprint와 실행 signature, exact CLI를 확인했고 같은 평가 외 공개 레시피 영상은 production runner에서 세 번 42.41초, 51.03초, 52.78초에 성공했습니다. Fresh Train은 단계 점수 문턱에 미달했으므로 localhost 완료와 production 승인은 계속 분리합니다.</p>
       </section>
 
       <section class="card">
         <h2><span class="num">1</span>가장 먼저 구분할 것</h2>
         <div class="twocol">
           <div class="listbox allow">
-            <h3>이번 목표: 100% strict parity</h3>
+            <h3>이번 목표: 활성 경로 strict parity</h3>
             <ul>
               <li>당시 source provider와 fallback 순서 유지</li>
               <li>client/prompt/model/frame 옵션 exact match</li>
@@ -307,14 +307,14 @@
             <ul>
               <li><code>yt-dlp</code>만으로 모든 source 대체</li>
               <li>현재 최신 experiment client 호출</li>
-              <li>macOS Vision OCR 추가</li>
+              <li>exact <code>screenOcrMode=auto</code>를 항상 켜거나 끄기</li>
               <li>Gemini로 실패를 자동 보완</li>
             </ul>
           </div>
         </div>
         <div class="note danger">
           <span class="label">중요한 정정</span>
-          <code>i031</code>의 OCR은 macOS Vision census가 아닙니다. <code>gpt-5.4-mini</code> selector가 최대 12개 frame을 보고 화면 글자와 수량 cue를 읽은 동작입니다.
+          <code>i031</code>은 <code>screenOcrMode=auto</code>입니다. 설명·댓글·caption이 부족할 때만 macOS Vision OCR scout를 실행하고, <code>gpt-5.4-mini</code> selector는 두 경우 모두 최대 12개 frame을 직접 읽습니다.
         </div>
       </section>
 
@@ -392,6 +392,7 @@
               <tr><td>Client</td><td><code>codex-vision-keyframes-client-v19-onscreen-amount-recovery</code></td><td>당시 extractor 버전</td></tr>
               <tr><td>Final prompt</td><td><code>keyframe-final-v44-explicit-action-clause</code></td><td>최종 모델 지시문 버전</td></tr>
               <tr><td>Execution signature</td><td><code>704359dfb34df5ac1d070078</code></td><td>모델·frame 옵션 묶음 지문</td></tr>
+              <tr><td>Screen OCR</td><td><code>auto</code></td><td>source 충분 시 skip, 부족 시 macOS Vision 실행</td></tr>
               <tr><td>Code fingerprint</td><td><code>17f475ae308ca3fa514b0388f93701907e94b439410764f3b1d2e5f8ca65cc53</code></td><td>코드 전체 지문</td></tr>
               <tr><td>Candidate lock</td><td><code>aa550e812181847b4567711f58f0cea57e5ac6320bf471adf745d8e9b6f5ea2b</code></td><td>검증 후보 잠금값</td></tr>
             </tbody>
@@ -405,7 +406,7 @@
         </div>
         <div class="note warn">
           <span class="label">복구한 숨은 옵션</span>
-          Selector/final effort는 <code>low</code>, timeout은 <code>20분</code>, CLI는 <code>@openai/codex 0.144.0-alpha.4</code>, 선택 frame limit은 <code>8</code>입니다.
+          Selector/final effort는 <code>low</code>, timeout은 <code>20분</code>, CLI는 <code>@openai/codex 0.144.0-alpha.4</code>, 선택 frame limit은 <code>8</code>, screen OCR은 <code>auto</code>입니다.
         </div>
       </section>
 
@@ -413,7 +414,7 @@
         <h2><span class="num">5</span>실제 추출 흐름</h2>
         <div class="flow" aria-label="YouTube URL부터 레시피 검수까지의 추출 흐름">
           <div class="box source">YouTube URL<br>metadata·댓글·caption 수집</div>
-          <div class="box visual">Hybrid frame<br>4초 간격·anchor 36</div>
+          <div class="box visual">Source 부족 시 macOS OCR<br>Hybrid frame·anchor 36</div>
           <div class="box model"><code>gpt-5.4-mini</code><br>최대 12개 frame OCR·선택</div>
           <div class="box service"><code>gpt-5.4</code><br>4-source recipe JSON</div>
           <div class="box review">표준명 매핑<br>YT_IMPORT 검수</div>
@@ -439,7 +440,7 @@
             <tbody>
               <tr><td><code>GEMINI_API_KEY</code></td><td class="pass">불필요</td><td>strict <code>i031</code> identity에 Gemini가 없습니다.</td></tr>
               <tr><td><code>YOUTUBE_API_KEY</code></td><td class="fail">필수</td><td>당시 <code>snapshot-video.mjs</code>가 metadata와 작성자 댓글 수집 전에 키를 필수 검사합니다.</td></tr>
-              <tr><td><code>APIFY_TOKEN</code></td><td class="fail">사실상 필수</td><td>Train 9/9, Validation 5/8 source의 caption provider가 Apify였습니다.</td></tr>
+              <tr><td><code>APIFY_TOKEN</code></td><td class="fail">조건부</td><td>public caption 실패 시 exact Apify fallback에 필요합니다. 재현 dataset에서는 Train 9/9, Validation 5/8이 사용했습니다.</td></tr>
               <tr><td>Codex CLI 로그인</td><td class="fail">필수</td><td><code>gpt-5.4-mini</code>와 <code>gpt-5.4</code> 모델을 호출합니다.</td></tr>
               <tr><td>Python 3, <code>yt_dlp</code>, OpenCV/FFmpeg</td><td class="fail">필수</td><td>영상 다운로드와 hybrid frame 생성에 사용합니다.</td></tr>
               <tr><td>macOS</td><td class="fail">strict local 기준 필수</td><td>당시 read boundary가 <code>macos-sandbox-exec</code>였습니다.</td></tr>
@@ -448,7 +449,7 @@
         </div>
         <div class="note danger">
           <span class="label">두 요구사항은 동시에 만족할 수 없음</span>
-          “provider key 없이 임의 URL 수집”과 “당시 source 수집까지 100% 동일”은 같은 목표가 아닙니다. 이번 계획은 사용자의 최신 결정에 따라 100% 동일을 우선합니다.
+          “provider key 없이 임의 URL 수집”과 “당시 source 수집 경계까지 동일”은 같은 목표가 아닙니다. 이번 구현은 i031 활성 경로의 동일성을 우선하면서, 그 경로에서 쓰지 않는 평가 recipe 분기는 배포 bundle에서 제거합니다.
         </div>
       </section>
 
@@ -467,24 +468,28 @@
             </tbody>
           </table>
         </div>
+        <div class="note good">
+          <span class="label">구현 결과</span>
+          새 server-only <code>i031_codex_vision</code> 모드는 기존 legacy/Gemini 경로와 분리됐습니다. Strict 모드 실패 시 다른 추출기로 자동 우회하지 않습니다.
+        </div>
         <div class="note warn">
-          <span class="label">현재 코드의 선행 수정점</span>
-          현재 <code>youtube_ocr_extraction</code>은 Gemini visual provider를 켜는 alias입니다. strict mode 구현 시 이 alias를 제거하거나 명확히 분리해야 합니다.
+          <span class="label">누수 제거와 exact 경계</span>
+          원본 단일 파일에 같이 들어 있던 비활성 <code>public-source</code> 제목 복구와 <code>segmented</code> 제목별 bridge는 배포 bundle에서 제거했습니다. i031이 실제로 쓰는 <code>source-text / single / global</code> 경로와 모델·prompt·옵션은 유지하고, 서비스용 안전 manifest를 별도로 잠갔습니다.
         </div>
       </section>
 
       <section class="card">
         <h2><span class="num">8</span>단계별 구현 순서</h2>
         <ul class="steps">
-          <li class="step"><span class="dot">0</span><h3>Exact runtime 복구 · 완료</h3><p><code>v19</code>/<code>v44</code> bytes, fingerprint, signature, CLI와 숨은 옵션을 exact match했습니다.</p></li>
+          <li class="step"><span class="dot">0</span><h3>Exact 활성 경로 복구 · 완료</h3><p><code>v19</code>/<code>v44</code>, fingerprint, signature, CLI와 숨은 옵션을 복구하고 비활성 평가 recipe 분기는 배포 bundle에서 제거했습니다.</p></li>
           <li class="step"><span class="dot">1</span><h3>Train·Validation 재실행 · 완료</h3><p>Cold/no-cache로 실행해 Validation PASS와 Train step threshold FAIL을 모두 기록했습니다.</p></li>
-          <li class="step"><span class="dot">2</span><h3>공식 문서와 workpack · 진행 중</h3><p>Localhost strict mode, 기존 오류 wrapper, 안전한 DB metadata를 이 contract-evolution에 반영합니다. 비동기 status는 후속 범위입니다.</p></li>
-          <li class="step"><span class="dot">3</span><h3>Runner·adapter TDD</h3><p>먼저 실패/identity mismatch 테스트를 쓰고 service worker contract를 구현합니다. 예상 1~2일.</p></li>
-          <li class="step"><span class="dot">4</span><h3>localhost 연결</h3><p>기존 YT_IMPORT에서 임의 링크를 넣고 진행 상태와 검수 화면까지 확인합니다. 예상 0.5~1일.</p></li>
+          <li class="step"><span class="dot">2</span><h3>공식 문서와 workpack · 완료</h3><p>Contract-evolution PR <code>#1107</code>을 먼저 merge했습니다. 비동기 status는 후속 범위입니다.</p></li>
+          <li class="step"><span class="dot">3</span><h3>Runner·adapter TDD · 완료</h3><p>Identity mismatch, timeout, abort, cleanup, secret 차단, no-fallback을 테스트로 고정했습니다.</p></li>
+          <li class="step"><span class="dot">4</span><h3>localhost 연결 · 완료</h3><p>기존 YT_IMPORT API 경계와 UI를 재사용하고, 공개 영상 production runner smoke와 mobile E2E를 통과했습니다.</p></li>
           <li class="step"><span class="dot">5</span><h3>Production worker hardening</h3><p>Queue, timeout, cancel, secret, rate limit, 로그를 완성합니다. 예상 1~2일.</p></li>
           <li class="step"><span class="dot">6</span><h3>Holdout·단계적 출시</h3><p>fresh sealed Holdout PASS 뒤 localhost → 내부 → 5% → 25% → 전체 순으로 넓힙니다. 예상 0.5~1일.</p></li>
         </ul>
-        <div class="tldr">복구와 재검증은 끝났습니다. Localhost 구현의 남은 예상은 <strong>2.5~4일</strong>이며 production worker와 Holdout은 별도 승인 범위입니다.</div>
+        <div class="tldr">Localhost 직접 실행 구현과 자동 검증은 끝났습니다. 사용자 로그인 상태에서 자신의 링크를 보는 최종 확인은 Manual Only이며, production worker와 Holdout은 별도 승인 범위입니다.</div>
       </section>
 
       <section class="card">
@@ -495,6 +500,7 @@
             <tbody>
               <tr><td>Train (9)</td><td>9.770s / 8.111s</td><td>23.655s / 22.688s</td><td>25.251s / 22.508s</td><td>59.306s</td><td>56.28s / 77.1s</td></tr>
               <tr><td>Validation (8)</td><td>9.642s / 9.806s</td><td>24.496s / 26.298s</td><td>35.358s / 34.535s</td><td>71.465s</td><td>65s / 95.5s</td></tr>
+              <tr class="best"><td>공개 영상 smoke (동일 영상 3회)</td><td>2.391s</td><td>23.744s</td><td>13.199s</td><td>39.344s</td><td>전체 42.41s / 51.03s / 52.78s</td></tr>
             </tbody>
           </table>
         </div>
@@ -508,7 +514,7 @@
             Extraction p50은 <code>65s</code>지만 source snapshot 시간은 별도 기록이 없어 실제 localhost는 더 오래 걸립니다.
           </div>
         </div>
-        <p>별도 “OCR 시간”은 없습니다. 화면 글자 읽기는 selector 시간에 들어 있습니다. 새 임의 링크가 같은 정확도를 낸다고 보장할 수 없으므로 real-link smoke와 fresh Holdout이 필요합니다.</p>
+        <p>Local screen OCR이 실행되면 <code>ocrTotalMs</code>로 따로 기록하고, selector가 frame을 읽는 시간은 selector 시간에 들어갑니다. 이번 공개 영상은 source가 충분해 local OCR을 정상적으로 건너뛰었습니다. 새 임의 링크가 같은 정확도를 낸다고 보장할 수 없으므로 사용자 smoke와 fresh Holdout이 필요합니다.</p>
       </section>
 
       <section class="card">
@@ -537,22 +543,22 @@
           <div class="risk"><strong>Source 수집 실패</strong><p>어느 단계에서 실패했는지 보여주고 strict run을 종료합니다.</p></div>
           <div class="risk"><strong>Codex 로그아웃·timeout</strong><p>프로세스를 종료하고 recipe draft를 저장하지 않습니다.</p></div>
           <div class="risk"><strong>미등록 재료</strong><p><code>unresolved</code> 또는 <code>needs_review</code>로 내려 사용자 확인을 받습니다.</p></div>
-          <div class="risk"><strong>누수 위험</strong><p>서비스 runtime에는 source 처리 코드만 포함하고 golden·grade·review 파일을 넣지 않습니다.</p></div>
-          <div class="risk"><strong>비용 급증</strong><p>동시 실행 1, 대기열 3, 사용자/일일 quota로 시작합니다.</p></div>
-          <div class="risk"><strong>긴 처리 시간</strong><p>단계 상태와 취소 기능을 제공하고 production은 queue worker로 분리합니다.</p></div>
+          <div class="risk"><strong>누수 위험</strong><p>golden·grade·review 파일과 비활성 recipe 분기를 빼고, 평가 ID 32개·title 51개를 production source scan으로 막습니다.</p></div>
+          <div class="risk"><strong>비용 급증</strong><p>Localhost 동시 실행은 1개이며, 두 번째 요청은 대기시키지 않고 안전하게 실패합니다.</p></div>
+          <div class="risk"><strong>긴 처리 시간</strong><p>현재는 기존 loading/error/retry UI를 쓰고, production은 승인 후 queue worker로 분리합니다.</p></div>
         </div>
       </section>
 
       <section class="card">
         <h2><span class="num">11</span>localhost에서 임의 링크 테스트</h2>
         <ol>
-          <li>서비스 내부 i031 runtime fingerprint 검증 command가 <code>PASS</code>인지 확인합니다.</li>
+          <li><code>pnpm youtube:i031:setup</code>으로 exact Codex CLI를 설치·검증합니다.</li>
           <li>Codex CLI 로그인, Python 3, <code>yt_dlp</code>, OpenCV/FFmpeg를 확인합니다.</li>
           <li><code>.env.local</code>에 Supabase 값, YouTube key, 조건부 Apify token, i031 mode를 넣습니다.</li>
           <li><code>pnpm dev</code>로 서비스를 켭니다.</li>
           <li><code>http://localhost:3000/menu/add/youtube</code>에 접속합니다.</li>
           <li>임의의 공개 단일 레시피 URL을 입력합니다.</li>
-          <li>source → frame → selector → final → mapping 진행 상태를 봅니다.</li>
+          <li>기존 loading 화면에서 완료를 기다립니다. 현재 public API는 중간 단계를 표시하지 않습니다.</li>
           <li>검수 화면에서 제목, 재료, 수량, 단계, review-required를 확인합니다.</li>
           <li>Result identity가 <code>i031</code> 고정값과 같은지 확인합니다.</li>
         </ol>
@@ -560,8 +566,8 @@
 YOUTUBE_API_KEY=server-only
 APIFY_TOKEN=server-only</code></pre>
         <div class="note good">
-          <span class="label">최소 real-link 세트</span>
-          설명란이 풍부한 영상 1개, Apify caption fallback이 필요한 영상 1개, 화면 글자가 중요한 영상 1개를 테스트합니다.
+          <span class="label">현재 증거와 추가 수동 확인</span>
+          평가 외 공개 영상 1개를 같은 production 경로로 세 번 실행해 42.41초, 51.03초, 52.78초에 성공했습니다. 사용자 확인에서는 설명란이 풍부한 영상, Apify fallback 영상, 화면 글자가 중요한 영상을 추가로 시험합니다.
         </div>
       </section>
 
@@ -569,9 +575,9 @@ APIFY_TOKEN=server-only</code></pre>
         <h2><span class="num">12</span>공식 문서와 승인 순서</h2>
         <div class="tree">
           <div class="branch go"><strong>사용자 결정 · 완료</strong><span>“실험환경 100% 동일”을 contract-evolution의 방향 승인으로 기록했습니다.</span></div>
-          <div class="branch go"><strong>Contract evolution · 이 PR에서 완료</strong><span>Strict mode, 기존 error wrapper, 안전한 DB metadata, localhost-only 경계를 공식 API/DB/User Flow 문서에 반영했습니다.</span></div>
-          <div class="branch wait"><strong>Codex Stage 1 독립 검토</strong><span>새 workpack, acceptance, automation spec, workflow item을 별도 Codex critic이 검토하고 PASS하면 main에 merge합니다.</span></div>
-          <div class="branch go"><strong>그 다음 구현</strong><span>이 Stage 1 PR이 merge된 뒤 서비스 내부 i031 runtime 구현을 시작합니다.</span></div>
+          <div class="branch go"><strong>Contract evolution · 완료</strong><span>Strict mode, 기존 error wrapper, 안전한 DB metadata, localhost-only 경계를 공식 API/DB/User Flow 문서에 반영했습니다.</span></div>
+          <div class="branch go"><strong>Codex Stage 1 독립 검토 · 완료</strong><span>Blocking finding 0으로 승인하고 PR <code>#1107</code>을 merge했습니다.</span></div>
+          <div class="branch go"><strong>서비스 구현 · 완료</strong><span>안전한 i031 활성 runtime, 기존 import 연결, 실제 공개 영상 smoke 3회와 UI 회귀 검증을 마쳤습니다.</span></div>
         </div>
         <p>이 PR 자체가 localhost 구현에 필요한 contract-evolution입니다. i031 strict mode는 기존 public endpoint와 화면을 유지하며 동기 실행으로 시작합니다. Production queue와 async job status는 별도 승인 전 구현하지 않습니다.</p>
       </section>
@@ -579,25 +585,26 @@ APIFY_TOKEN=server-only</code></pre>
       <section class="card">
         <h2><span class="num">13</span>완료 체크리스트</h2>
         <ul class="check">
-          <li><code>v19</code>/<code>v44</code> exact bytes 복구</li>
-          <li>Code fingerprint <code>17f475...</code> exact</li>
-          <li>Execution signature <code>704359...</code> exact</li>
-          <li>Train 9건, Validation 8건 cold replay 완료와 결과 공개</li>
-          <li>Fresh Validation PASS, fresh Train step threshold FAIL 기록</li>
-          <li>공식 문서와 Stage 1 workpack merge</li>
-          <li>Strict mode Gemini 호출 0회</li>
-          <li>localhost 임의 공개 링크 3개 완료</li>
-          <li>Source/frame/selector/final/mapping 단계 관측 가능</li>
-          <li>Identity mismatch fail closed</li>
-          <li>Secret/raw source/raw frame 로그 0건</li>
-          <li>재료 표준명 매핑과 review-required 검증 PASS</li>
-          <li>Targeted tests와 <code>pnpm verify:backend</code> PASS</li>
-          <li>Fresh sealed Holdout PASS</li>
-          <li>Feature flag rollback smoke PASS</li>
+          <li class="done"><code>v19</code>/<code>v44</code> 활성 경로 복구와 비활성 recipe 분기 제거</li>
+          <li class="done">Historical code fingerprint <code>17f475...</code> 검증</li>
+          <li class="done">Execution signature <code>704359...</code> exact</li>
+          <li class="done">Train 9건, Validation 8건 cold replay 완료와 결과 공개</li>
+          <li class="done">Fresh Validation PASS, fresh Train step threshold FAIL 기록</li>
+          <li class="done">공식 문서와 Stage 1 workpack merge</li>
+          <li class="done">Strict mode Gemini 호출 0회</li>
+          <li class="done">Production runner에서 평가 외 공개 링크 3회 완료</li>
+          <li class="done">Safe frame/selector/final/total 시간과 source/OCR 상태 저장</li>
+          <li class="done">Identity mismatch fail closed</li>
+          <li class="done">Secret/raw source/raw frame 로그 0건</li>
+          <li class="done">평가 ID/title production source scan PASS</li>
+          <li class="done">재료 표준명 매핑과 review-required 검증 PASS</li>
+          <li class="done">Targeted tests와 <code>pnpm verify:backend</code>/<code>verify:frontend</code> PASS</li>
+          <li>Fresh sealed Holdout PASS · 아직 미완료</li>
+          <li class="done">Feature flag rollback smoke PASS</li>
         </ul>
         <div class="note danger">
           <span class="label">완료 보고 기준</span>
-          위 항목 중 하나라도 빠지면 “실험환경 100% 동일 구현 완료”라고 보고하지 않습니다.
+          Localhost 직접 실행은 exact identity와 공개 영상 smoke로 확인합니다. Fresh sealed Holdout이 끝나기 전에는 production rollout 완료라고 보고하지 않습니다.
         </div>
       </section>
     </main>

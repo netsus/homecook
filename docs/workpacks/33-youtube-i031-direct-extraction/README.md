@@ -36,9 +36,10 @@
 | client | `codex-vision-keyframes-client-v19-onscreen-amount-recovery` |
 | execution signature | `704359dfb34df5ac1d070078` |
 | frame extractor | `extract-video-frames-v7-adaptive-screen-ocr` |
-| exact runtime options | `singleRecipeOnly=true`, `sourceMode=source-text`, `frameMode=hybrid`, `interval=4`, `hybridAnchorBudget=36`, selector candidates `12`, selected frame limit `8`, selector/final effort `low`, local screen OCR scan `off`, cold model calls `2` |
-| exact candidate fingerprint | `17f475ae308ca3fa514b0388f93701907e94b439410764f3b1d2e5f8ca65cc53` |
-| exact bundle manifest | `9a587a879ba2ffbcd0a521587c460d2d42adff7b25951a143fa0c442890fae77` |
+| exact runtime options | `singleRecipeOnly=true`, `sourceMode=source-text`, `frameMode=hybrid`, `interval=4`, `hybridAnchorBudget=36`, selector candidates `12`, selected frame limit `8`, selector/final effort `low`, `screenOcrMode=auto`, cold model calls `2` |
+| historical exact candidate fingerprint | `17f475ae308ca3fa514b0388f93701907e94b439410764f3b1d2e5f8ca65cc53` |
+| historical experiment manifest | `9a587a879ba2ffbcd0a521587c460d2d42adff7b25951a143fa0c442890fae77` |
+| service safe-subset manifest | `9adc7876a02c2da55a92e3a65369bf4e803c78efb9a791717201eedc242c1908` |
 
 ## Evidence Baseline
 
@@ -51,6 +52,10 @@
 | leakage | known video ID/title/recipe hardcoding 금지, fixture allowlist 외 source scan 필수 |
 
 재현 bundle과 report는 구현 저장소에 runtime 코드로 그대로 복사하지 않는다. 복구 근거는 `/Users/cwj/01_vibe_coding/homecook-youtube-i031-parity-plan/.omx/logs/i031-exact-reproduction-20260726/`에 보존돼 있다.
+
+`screenOcrMode=auto`는 항상 로컬 OCR을 실행한다는 뜻이 아니다. 설명란·작성자 댓글·caption이 충분하면 local screen OCR scout를 건너뛰고, source가 부족할 때 exact macOS Vision helper를 실행한다. 어느 경우든 selector는 후보 frame을 직접 읽는다.
+
+서비스 번들은 원본 monolithic file에 함께 있던 비활성 `public-source` 제목 복구와 `segmented` 제목별 bridge를 inert 처리했다. 이 두 분기는 strict worker의 `sourceMode=source-text`, `recipeMode=single`, `singleRecipeOnly=true`에서 도달하지 않으므로 i031 활성 경로의 source/frame/selector/final 동작은 바뀌지 않는다. 대신 service manifest를 별도로 잠그고, test-only fixture의 profile Train/Validation/Holdout/excluded video ID 32개와 recipe title 51개가 production `.mjs`에 없음을 자동 검사한다.
 
 ## Scope
 
@@ -167,4 +172,4 @@ existing route
 
 ## Handoff
 
-Stage 1 docs PR과 internal 1.5 PASS가 `master`에 merge된 뒤 implementation branch를 새로 만든다. 구현은 TDD로 진행하고, 최종 merge 전 exact-mode localhost smoke evidence와 strict no-fallback assertion을 남긴다.
+Stage 1 docs PR `#1107`과 internal 1.5 PASS는 `master`에 merge됐다. 구현 branch는 safe production subset, runtime preflight/manifest/timeout/cleanup, 기존 import adapter와 tests를 포함한다. 2026-07-26 평가 외 공개 단일 레시피 영상 1건을 production TypeScript runner로 세 번 실행해 `42.41s`, hardening 후 `51.03s`, 누수 제거 후 `52.78s`에 recipe, 36 frames, 8 selected frames, model call 2회를 확인했고 임시 작업 폴더가 남지 않았다. 같은 날 localhost fixture E2E는 mobile Chrome/iPhone SE에서 10건 PASS했고 공식 `verify:frontend`도 전체 통과했다. 사용자 로그인 상태에서 자신의 임의 링크를 최종 확인하는 Manual Only 항목과 fresh sealed Holdout은 별도 완료선이다.
