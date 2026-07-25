@@ -170,6 +170,7 @@ Schema Change:
 
 ## Delivery Checklist
 
+- [ ] locked-down NFKC/compact normalization helper foundation <!-- omo:id=delivery-search-normalizer-foundation;stage=2;scope=backend;review=3,6 -->
 - [ ] additive normalizer/search-document/public-private index migration and replay safety <!-- omo:id=delivery-search-schema-index;stage=2;scope=backend;review=3,6 -->
 - [ ] official unified route/parser/filter/error wrapper only <!-- omo:id=delivery-search-route-contract;stage=2;scope=backend;review=3,6 -->
 - [ ] scope-before-ranking, current nutrition version, moderation and owner isolation <!-- omo:id=delivery-search-scope-security;stage=2;scope=backend;review=3,6 -->
