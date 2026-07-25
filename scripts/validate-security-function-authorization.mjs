@@ -54,12 +54,9 @@ const ADDITIVE_SOURCES = [
         REPO_ROOT,
         "docs/security/prepared-food-search-relevance-security-function-authorization-manifest.json",
       ),
-    migrationPath:
-      process.env.SECURITY_FUNCTION_PREPARED_FOOD_SEARCH_MIGRATION_PATH
-      ?? path.join(
-        REPO_ROOT,
-        "supabase/migrations/20260725120000_prepared_food_search_relevance_foundation.sql",
-      ),
+    migrationPaths: process.env.SECURITY_FUNCTION_PREPARED_FOOD_SEARCH_MIGRATION_PATH
+      ? [process.env.SECURITY_FUNCTION_PREPARED_FOOD_SEARCH_MIGRATION_PATH]
+      : null,
   },
 ];
 const LOCAL_DATABASE_URL =
@@ -756,10 +753,26 @@ function assertEnvironment(
 
 const migration = await readFile(MIGRATION_PATH, "utf8");
 const additiveSources = await Promise.all(
-  ADDITIVE_SOURCES.map(async ({ manifestPath, migrationPath }) => ({
-    manifest: JSON.parse(await readFile(manifestPath, "utf8")),
-    migration: await readFile(migrationPath, "utf8"),
-  })),
+  ADDITIVE_SOURCES.map(async ({ manifestPath, migrationPath, migrationPaths }) => {
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    const sourcePaths = migrationPaths
+      ?? (migrationPath ? [migrationPath] : manifest.migrations?.map(
+        (sourcePath) => path.join(REPO_ROOT, sourcePath),
+      ));
+    if (!sourcePaths || sourcePaths.length === 0) {
+      throw new Error(`additive security manifest has no migration source: ${manifest.slice}`);
+    }
+    return {
+      manifest,
+      migration: (
+      await Promise.all(
+        sourcePaths.map((sourcePath) =>
+          readFile(sourcePath, "utf8"),
+        ),
+      )
+    ).join("\n"),
+    };
+  }),
 );
 const applicationContract = parseApplicationContract(migration);
 const additiveContracts = additiveSources.map(({ manifest, migration: sourceMigration }) => ({

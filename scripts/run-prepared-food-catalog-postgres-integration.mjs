@@ -170,10 +170,102 @@ grant usage on schema public to anon, authenticated, service_role;
       "supabase/migrations/20260718133000_community_prepared_food_catalog_anonymized_editable_fix.sql",
     ]) runRequired(path.join(postgresBin, "psql"), [...args, "-f", migration]);
 
+    runRequired(path.join(postgresBin, "psql"), [
+      ...args,
+      "-c",
+      `
+        insert into public.ingredients (standard_name, category, default_unit)
+        select
+          '검색재료' || lpad(series::text, 6, '0'),
+          '격리검색',
+          'g'
+        from generate_series(1, 10000) as series;
+      `,
+    ]);
+
+    runRequired(path.join(postgresBin, "psql"), [
+      ...args,
+      "-f",
+      "supabase/migrations/20260725120000_prepared_food_search_relevance_foundation.sql",
+    ]);
+    runRequired("node", [
+      "scripts/apply-prepared-food-search-indexes-concurrently.mjs",
+      "--apply",
+      "--allow-isolated-test",
+    ], {
+      env: {
+        ...process.env,
+        PATH: `${postgresBin}${path.delimiter}${process.env.PATH ?? ""}`,
+        PREPARED_FOOD_SEARCH_DATABASE_URL:
+          `postgresql://postgres@127.0.0.1:${port}/${database}`,
+      },
+    });
+    runRequired(path.join(postgresBin, "psql"), [
+      ...args,
+      "--single-transaction",
+      "-f",
+      "supabase/migrations/20260725130000_prepared_food_search_relevance_indexes.sql",
+    ]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...args,
+      "-c",
+      `
+        do $$
+        begin
+          if (
+            select count(*)
+            from pg_catalog.pg_index index_state
+            join pg_catalog.pg_class index_class
+              on index_class.oid = index_state.indexrelid
+            where index_class.relname = any (array[
+              'ingredients_search_prefix_idx',
+              'ingredients_search_compact_trgm_idx',
+              'ingredients_search_short_ngram_idx',
+              'food_products_public_search_prefix_idx',
+              'food_products_public_search_compact_trgm_idx',
+              'food_products_public_search_short_ngram_idx',
+              'food_products_private_search_prefix_idx',
+              'food_products_private_search_compact_trgm_idx',
+              'food_products_private_search_short_ngram_idx'
+            ])
+              and index_state.indisready
+              and index_state.indisvalid
+          ) <> 9 then
+            raise exception 'CONCURRENT_PREBUILD_INDEX_COUNT_MISMATCH';
+          end if;
+        end
+        $$;
+
+        drop index
+          public.ingredients_search_prefix_idx,
+          public.ingredients_search_compact_trgm_idx,
+          public.ingredients_search_short_ngram_idx,
+          public.food_products_public_search_prefix_idx,
+          public.food_products_public_search_compact_trgm_idx,
+          public.food_products_public_search_short_ngram_idx,
+          public.food_products_private_search_prefix_idx,
+          public.food_products_private_search_compact_trgm_idx,
+          public.food_products_private_search_short_ngram_idx;
+      `,
+    ]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...args,
+      "--single-transaction",
+      "-f",
+      "supabase/migrations/20260725130000_prepared_food_search_relevance_indexes.sql",
+    ]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...args,
+      "--single-transaction",
+      "-f",
+      "supabase/migrations/20260725130000_prepared_food_search_relevance_indexes.sql",
+    ]);
+
     const test = commandResult("pnpm", [
       "exec", "vitest", "run",
       "tests/prepared-food-catalog-postgres.integration.test.ts",
       "tests/community-prepared-food-catalog-postgres.integration.test.ts",
+      "tests/prepared-food-search-indexes-postgres.integration.test.ts",
       "--pool=forks", "--maxWorkers=1", "--testTimeout=30000",
     ], {
       stdio: "inherit",
