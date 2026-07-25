@@ -782,7 +782,7 @@ test.describe("prepared-food-planner-entry", () => {
     await expect(quantityStep).toContainText("표시 기준과 직접 연결된 단위만 선택할 수 있어요.");
   });
 
-  test("느린 이전 검색은 무시하고 complete zero·partial·unavailable copy를 보존한다", async ({ page }) => {
+  test("prepared-food-search-relevance: 느린 이전 검색은 무시하고 complete zero·partial·unavailable copy를 보존한다", async ({ page }) => {
     await installRoutes(page);
     await page.unroute("**/api/v1/food-products?*");
     await page.route("**/api/v1/food-products?*", async (route) => {
@@ -1067,7 +1067,7 @@ test.describe("prepared-food-planner-entry", () => {
     if (evidenceBrowser !== browser) await evidenceBrowser.close();
   });
 
-  test("390·320·desktop Stage 4 evidence와 unauthorized return을 남긴다", async ({ browser }, testInfo) => {
+  test("prepared-food-search-relevance: 390·320·desktop Stage 4 evidence와 unauthorized return을 남긴다", async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-chrome", "exact evidence matrix runs once");
     test.setTimeout(180_000);
     await mkdir(EVIDENCE_DIR, { recursive: true });

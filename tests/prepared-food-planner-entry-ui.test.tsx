@@ -212,7 +212,82 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     window.sessionStorage.clear();
   });
 
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it.each(["query", "source"] as const)(
+    "drops an edit-return restore target when a new %s intent starts",
+    async (intent) => {
+      const initialPage = createDeferred<{
+        items: FoodProductData[];
+        next_cursor: string | null;
+        has_next: boolean;
+      }>();
+      window.sessionStorage.setItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY, JSON.stringify({
+        version: 1,
+        kind: "create",
+        planDate: "2026-07-17",
+        columnId: "column-1",
+        slotName: "아침",
+        query: "요거트",
+        source: "all",
+        productId: "edit-target",
+        action: "edit",
+        draft: {
+          name: "수정 제품",
+          brand: "",
+          basisAmount: "1",
+          basisUnit: "serving",
+          labelBasisText: "",
+          energy: "100",
+          nutrients: {},
+        },
+      }));
+      fetchFoodProducts
+        .mockImplementationOnce(() => initialPage.promise)
+        .mockResolvedValueOnce({
+          items: [createProduct({ id: "latest", name: "최신 제품" })],
+          next_cursor: "should-not-follow",
+          has_next: true,
+        })
+        .mockResolvedValueOnce({
+          items: [createProduct({ id: "edit-target", name: "이전 수정 제품" })],
+          next_cursor: null,
+          has_next: false,
+        });
+
+      render(
+        <FoodProductPicker
+          columnId="column-1"
+          onClose={() => undefined}
+          onComplete={() => undefined}
+          planDate="2026-07-17"
+          slotName="아침"
+        />,
+      );
+
+      if (intent === "query") {
+        fireEvent.change(screen.getByRole("searchbox", { name: "완제품 검색" }), {
+          target: { value: "최신" },
+        });
+      } else {
+        await userEvent.click(screen.getByRole("button", { name: "공공 영양DB" }));
+      }
+
+      expect(window.sessionStorage.getItem(PRODUCT_PLANNER_RETURN_CONTEXT_KEY)).toBeNull();
+      expect(await screen.findByText("최신 제품")).toBeTruthy();
+      expect(fetchFoodProducts).toHaveBeenCalledTimes(2);
+
+      initialPage.resolve({
+        items: [createProduct({ id: "edit-target", name: "이전 수정 제품" })],
+        next_cursor: null,
+        has_next: false,
+      });
+      await waitFor(() => expect(screen.queryByText("이전 수정 제품")).toBeNull());
+    },
+  );
 
   it("moves a product list 401 into the existing login return flow with a safe picker context", async () => {
     fetchFoodProducts.mockRejectedValue(Object.assign(new Error("로그인이 필요해요."), {
@@ -286,6 +361,103 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     });
   });
 
+  it("resets the cursor on a source change and ignores the previous source page", async () => {
+    const stalePage = createDeferred<{
+      items: FoodProductData[];
+      next_cursor: null;
+      has_next: false;
+    }>();
+    fetchFoodProducts
+      .mockResolvedValueOnce({
+        items: [createProduct()],
+        next_cursor: "opaque-next+/=",
+        has_next: true,
+      })
+      .mockImplementationOnce(() => stalePage.promise)
+      .mockResolvedValueOnce({
+        items: [createProduct({ id: "public-product", name: "공공 두유" })],
+        next_cursor: null,
+        has_next: false,
+      });
+
+    render(
+      <FoodProductPicker
+        columnId="column-1"
+        onClose={() => undefined}
+        onComplete={() => undefined}
+        planDate="2026-07-17"
+        slotName="아침"
+      />,
+    );
+
+    expect(await screen.findByText("플레인 요거트")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "완제품 더 불러오기" }));
+    await waitFor(() => expect(fetchFoodProducts).toHaveBeenCalledTimes(2));
+
+    await userEvent.click(screen.getByRole("button", { name: "공공 영양DB" }));
+    expect(screen.queryByText("플레인 요거트")).toBeNull();
+    expect(await screen.findByText("공공 두유")).toBeTruthy();
+    expect(fetchFoodProducts).toHaveBeenNthCalledWith(3, {
+      q: "",
+      source: "public_dataset",
+      limit: 20,
+    });
+
+    stalePage.resolve({
+      items: [createProduct({ id: "stale-product", name: "이전 출처 제품" })],
+      next_cursor: null,
+      has_next: false,
+    });
+    await waitFor(() => expect(screen.queryByText("이전 출처 제품")).toBeNull());
+  });
+
+  it("ignores an in-flight cursor page after a new query is committed", async () => {
+    const stalePage = createDeferred<{
+      items: FoodProductData[];
+      next_cursor: null;
+      has_next: false;
+    }>();
+    fetchFoodProducts
+      .mockResolvedValueOnce({
+        items: [createProduct()],
+        next_cursor: "opaque-next+/=",
+        has_next: true,
+      })
+      .mockImplementationOnce(() => stalePage.promise)
+      .mockResolvedValueOnce({
+        items: [createProduct({ id: "latest-product", name: "최신 두유" })],
+        next_cursor: null,
+        has_next: false,
+      });
+
+    render(
+      <FoodProductPicker
+        columnId="column-1"
+        onClose={() => undefined}
+        onComplete={() => undefined}
+        planDate="2026-07-17"
+        slotName="아침"
+      />,
+    );
+
+    expect(await screen.findByText("플레인 요거트")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "완제품 더 불러오기" }));
+    await waitFor(() => expect(fetchFoodProducts).toHaveBeenCalledTimes(2));
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "완제품 검색" }), {
+      target: { value: "최신" },
+    });
+    expect(screen.queryByText("플레인 요거트")).toBeNull();
+    expect(await screen.findByText("최신 두유")).toBeTruthy();
+
+    stalePage.resolve({
+      items: [createProduct({ id: "stale-product", name: "이전 검색 제품" })],
+      next_cursor: null,
+      has_next: false,
+    });
+    await waitFor(() => expect(screen.queryByText("이전 검색 제품")).toBeNull());
+  });
+
   it("moves an opaque-cursor page 401 into login with the selected product context", async () => {
     fetchFoodProducts
       .mockResolvedValueOnce({
@@ -354,6 +526,7 @@ describe("FOOD_PRODUCT_PICKER cursor and latest-query behavior", () => {
     const input = screen.getByRole("searchbox", { name: "완제품 검색" });
     fireEvent.change(input, { target: { value: "느린" } });
     await waitFor(() => expect(screen.queryByText("플레인 요거트")).toBeNull());
+    await waitFor(() => expect(fetchFoodProducts).toHaveBeenCalledTimes(2));
     fireEvent.change(input, { target: { value: "최신" } });
     expect(await screen.findByText("최신 두부")).toBeTruthy();
 

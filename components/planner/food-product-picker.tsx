@@ -39,6 +39,7 @@ import type {
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 const PAGE_LIMIT = 20;
+const SEARCH_DEBOUNCE_MS = 250;
 type ListState = "loading" | "ready" | "empty" | "error";
 type CreateExitTarget = "picker" | "close";
 
@@ -238,6 +239,8 @@ export function FoodProductPicker({
   const createReturn = scopedContext?.kind === "create" ? scopedContext : null;
   const restoredEditContext = createReturn?.action === "edit" ? createReturn : null;
   const [query, setQuery] = useState(pickerReturn?.query ?? createReturn?.query ?? initialQuery);
+  const [requestQuery, setRequestQuery] = useState(query);
+  const [requestRevision, setRequestRevision] = useState(0);
   const [selectedSource, setSelectedSource] = useState<FoodProductListSource>(
     pickerReturn?.source ?? createReturn?.source ?? "all",
   );
@@ -269,6 +272,9 @@ export function FoodProductPicker({
   const [reportFeedback, setReportFeedback] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const generationRef = useRef(0);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isComposingRef = useRef(false);
+  const compositionEndQueryRef = useRef<string | null>(null);
   const queryRef = useRef(query);
   const selectedProductIdRef = useRef<string | null>(selectedProduct?.id ?? null);
   const restoreProductIdRef = useRef(pickerReturn?.productId ?? initialProductId);
@@ -289,6 +295,47 @@ export function FoodProductPicker({
   selectedProductIdRef.current = selectedProduct?.id ?? null;
   quantityAmountRef.current = quantityAmount;
   quantityUnitRef.current = quantityUnit;
+
+  const clearDebounceTimer = () => {
+    if (debounceTimerRef.current === null) return;
+    clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = null;
+  };
+
+  const invalidateSearchResults = () => {
+    generationRef.current += 1;
+    setItems([]);
+    setNextCursor(null);
+    setHasNext(false);
+    setListState("loading");
+    setListError(null);
+    setIsLoadingMore(false);
+  };
+
+  const applyQueryInput = (nextQuery: string) => {
+    clearProductPlannerReturnContext();
+    restoreProductIdRef.current = null;
+    restoreEditProductIdRef.current = null;
+    setQuery(nextQuery);
+    invalidateSearchResults();
+    setSelectedProduct(null);
+    setEntryError(null);
+    setHasNutritionConflict(false);
+  };
+
+  const commitQuery = (value: string) => {
+    setRequestQuery(value);
+    setRequestRevision((current) => current + 1);
+  };
+
+  const scheduleQuery = (value: string) => {
+    clearDebounceTimer();
+    if (isComposingRef.current) return;
+    debounceTimerRef.current = setTimeout(() => {
+      debounceTimerRef.current = null;
+      commitQuery(value);
+    }, SEARCH_DEBOUNCE_MS);
+  };
 
   const beginPickerLoginReturn = useCallback((activeQuery: string, productId?: string | null) => {
     const selectedId = productId ?? selectedProductIdRef.current ?? restoreProductIdRef.current;
@@ -366,8 +413,16 @@ export function FoodProductPicker({
   useEffect(() => {
     const generation = generationRef.current + 1;
     generationRef.current = generation;
-    void loadFirstPage(query, selectedSource, generation);
-  }, [loadFirstPage, query, reloadKey, selectedSource]);
+    void loadFirstPage(requestQuery, selectedSource, generation);
+  }, [
+    loadFirstPage,
+    reloadKey,
+    requestQuery,
+    requestRevision,
+    selectedSource,
+  ]);
+
+  useEffect(() => () => clearDebounceTimer(), []);
 
   useEffect(() => {
     if (!isCreating) searchInputRef.current?.focus();
@@ -396,7 +451,7 @@ export function FoodProductPicker({
     setListError(null);
     try {
       const data = await fetchFoodProducts({
-        q: query,
+        q: requestQuery,
         source: selectedSource,
         cursor: nextCursor,
         limit: PAGE_LIMIT,
@@ -408,7 +463,7 @@ export function FoodProductPicker({
     } catch (caught) {
       if (generationRef.current === generation) {
         if (isFoodProductApiError(caught) && caught.status === 401) {
-          beginPickerLoginReturn(query);
+          beginPickerLoginReturn(requestQuery);
           return;
         }
         setListError(isFoodProductApiError(caught) ? caught.message : "다음 완제품을 불러오지 못했어요.");
@@ -710,7 +765,10 @@ export function FoodProductPicker({
             const nextSource = selectedSource === "public_dataset" ? "manual" : selectedSource;
             clearProductPlannerReturnContext();
             if (nextSource !== selectedSource) {
+              clearDebounceTimer();
+              invalidateSearchResults();
               setQuery(product.name);
+              commitQuery(product.name);
             }
             setItems((current) =>
               nextSource === selectedSource ? appendUniqueProducts([product], current) : [product]
@@ -788,11 +846,25 @@ export function FoodProductPicker({
           aria-label="완제품 검색"
           className="min-h-12 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-4 text-sm outline-none focus:border-[var(--brand-primary)]"
           onChange={(event) => {
-            restoreProductIdRef.current = null;
-            setQuery(event.target.value);
-            setSelectedProduct(null);
-            setEntryError(null);
-            setHasNutritionConflict(false);
+            const nextQuery = event.target.value;
+            const compositionEndQuery = compositionEndQueryRef.current;
+            compositionEndQueryRef.current = null;
+            if (compositionEndQuery === nextQuery) return;
+            applyQueryInput(nextQuery);
+            scheduleQuery(nextQuery);
+          }}
+          onCompositionEnd={(event) => {
+            const finalQuery = event.currentTarget.value;
+            isComposingRef.current = false;
+            clearDebounceTimer();
+            compositionEndQueryRef.current = finalQuery;
+            applyQueryInput(finalQuery);
+            commitQuery(finalQuery);
+          }}
+          onCompositionStart={() => {
+            isComposingRef.current = true;
+            compositionEndQueryRef.current = null;
+            clearDebounceTimer();
           }}
           placeholder="제품명 또는 브랜드 검색"
           ref={searchInputRef}
@@ -820,7 +892,12 @@ export function FoodProductPicker({
               ].join(" ")}
               key={filter.value}
               onClick={() => {
+                clearProductPlannerReturnContext();
                 restoreProductIdRef.current = null;
+                restoreEditProductIdRef.current = null;
+                clearDebounceTimer();
+                invalidateSearchResults();
+                commitQuery(query);
                 setSelectedSource(filter.value);
                 setSelectedProduct(null);
                 setEntryError(null);
