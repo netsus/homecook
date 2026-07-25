@@ -25,11 +25,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.23.md",
+      "docs/요구사항기준선-v1.7.24.md",
       "docs/화면정의서-v1.5.29.md",
       "docs/유저flow맵-v1.3.26.md",
-      "docs/db설계-v1.3.24.md",
-      "docs/api문서-v1.2.28.md"
+      "docs/db설계-v1.3.25.md",
+      "docs/api문서-v1.2.29.md"
     ],
     "governing_docs": [
       "docs/workpacks/33-youtube-i031-direct-extraction/README.md",

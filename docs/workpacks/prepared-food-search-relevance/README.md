@@ -1,6 +1,8 @@
 # prepared-food-search-relevance
 
-> Stage 1 contract lock. Approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines). Official baseline: requirements v1.7.22, screens v1.5.28, flow v1.3.25, DB v1.3.23, API v1.2.27.
+> Historical Stage 1 contract lock. Approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines). Original official baseline: requirements v1.7.22, screens v1.5.28, flow v1.3.25, DB v1.3.23, API v1.2.27.
+
+> 2026-07-26 contract consistency re-lock: requirements v1.7.24, DB v1.3.25, and API v1.2.29 use the v2 cursor tuple `(algorithm_version, match_bucket, coverage_bucket, quantized_score, source_partition, type_partition, created_at, stable_id)` and preserve query-empty stable browse. Screens v1.5.29 and flow v1.3.26 are unchanged. This removes an official-doc wording conflict without adding or relaxing any workpack scope, acceptance criterion, endpoint, field, status, error, visibility rule, schema, or performance gate.
 
 ## Goal
 
@@ -116,6 +118,9 @@ Schema Change:
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
+- current contract consistency authority: `docs/요구사항기준선-v1.7.24.md` G, `docs/db설계-v1.3.25.md` K, `docs/api문서-v1.2.29.md` I
+- unchanged current UI/flow authority: `docs/화면정의서-v1.5.29.md`, `docs/유저flow맵-v1.3.26.md`
+- original Stage 1 lock sources:
 - `docs/요구사항기준선-v1.7.22.md` G
 - `docs/화면정의서-v1.5.28.md` MEAL_LOG product/ingredient search behavior
 - `docs/유저flow맵-v1.3.25.md` ⓰
