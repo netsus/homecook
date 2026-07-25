@@ -71,6 +71,7 @@
     "youtube:smoke:live": "node scripts/youtube-live-smoke.mjs",
     "youtube:smoke:ui": "node scripts/youtube-smoke-ui.mjs",
     "youtube:smoke:validate": "node scripts/validate-youtube-live-extraction-report.mjs",
+    "youtube:i031:setup": "node scripts/setup-youtube-i031-runtime.mjs",
     "external:ingredients:dry-run": "node scripts/external-ingredient-file-dry-run.mjs",
     "external:ingredients:fix-load-risks": "node scripts/external-ingredient-load-risk-fix.mjs",
     "external:ingredients:generate-load-sql": "node scripts/external-ingredient-load-sql-generator.mjs",

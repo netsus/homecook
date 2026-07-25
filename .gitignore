@@ -1,5 +1,6 @@
 # dependencies
 node_modules/
+.youtube-i031-tools/
 
 # pnpm
 .pnpm-store/

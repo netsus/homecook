@@ -4,6 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import fixtureData from "@/qa/fixtures/slices-01-05.json";
 import { CANONICAL_COOKING_METHODS } from "@/lib/cooking-method-taxonomy";
+import {
+  I031_CODEX_CLI_VERSION,
+  I031_EXACT_IDENTITY,
+  type YoutubeI031ExtractionResult,
+  type YoutubeI031Extractor,
+} from "@/lib/server/youtube-i031-runtime";
 import type {
   YoutubeAuthorCommentProvider,
   YoutubeRecipeLlmExtractor,
@@ -638,6 +644,7 @@ const cookingTaxonomyDescription = [
 ].join("\n");
 const ORIGINAL_YOUTUBE_IMPORT_FLAG = process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT;
 const ORIGINAL_PUBLIC_YOUTUBE_IMPORT_FLAG = process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
+const ORIGINAL_YOUTUBE_EXTRACTOR_MODE = process.env.YOUTUBE_RECIPE_EXTRACTOR_MODE;
 
 function buildCookingTaxonomyMethodLookupRows() {
   return [
@@ -678,6 +685,12 @@ function restoreYoutubeImportEnv() {
     delete process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
   } else {
     process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT = ORIGINAL_PUBLIC_YOUTUBE_IMPORT_FLAG;
+  }
+
+  if (ORIGINAL_YOUTUBE_EXTRACTOR_MODE === undefined) {
+    delete process.env.YOUTUBE_RECIPE_EXTRACTOR_MODE;
+  } else {
+    process.env.YOUTUBE_RECIPE_EXTRACTOR_MODE = ORIGINAL_YOUTUBE_EXTRACTOR_MODE;
   }
 }
 
@@ -1256,6 +1269,20 @@ async function withYoutubeVisualRecipeExtractor<T>(
     return await callback();
   } finally {
     restoreVisualRecipeExtractor();
+  }
+}
+
+async function withYoutubeI031Extractor<T>(
+  extractor: YoutubeI031Extractor,
+  callback: () => Promise<T>,
+) {
+  const youtubeImport = await import("@/lib/server/youtube-import");
+  const restoreI031Extractor = youtubeImport.setYoutubeI031ExtractorForTest(extractor);
+
+  try {
+    return await callback();
+  } finally {
+    restoreI031Extractor();
   }
 }
 
@@ -1923,6 +1950,210 @@ describe("20 youtube real import backend", () => {
     )).toEqual(body.data.ingredients.map((ingredient: { draft_ingredient_id: string }) =>
       ingredient.draft_ingredient_id,
     ));
+  });
+
+  it("POST /api/v1/recipes/youtube/extract runs exact i031 without legacy or Gemini fallbacks", async () => {
+    vi.stubEnv("YOUTUBE_RECIPE_EXTRACTOR_MODE", "i031_codex_vision");
+    mockAuth();
+
+    const { dbClient, sessionsTable } = createTranscriptFallbackExtractDbClient({
+      ingredientLookupRows: [
+        { id: kimchiIngredientId, standard_name: "김치" },
+        { id: saltIngredientId, standard_name: "소금" },
+        { id: onionIngredientId, standard_name: "양파" },
+      ],
+      cookingMethodLookupRows: buildCookingTaxonomyMethodLookupRows(),
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
+
+    const i031Extractor: YoutubeI031Extractor = {
+      extract: vi.fn(async () => ({
+        identity: {
+          ...I031_EXACT_IDENTITY,
+          codexCliVersion: I031_CODEX_CLI_VERSION,
+        } as YoutubeI031ExtractionResult["identity"],
+        recipe: {
+          title: "i031 김치찌개",
+          ingredients: [
+            {
+              name: "김치",
+              amount: "200",
+              unit: "g",
+              optional: false,
+              groupLabel: "찌개",
+            },
+            {
+              name: "소금",
+              amount: null,
+              unit: null,
+              optional: false,
+              groupLabel: null,
+            },
+            {
+              name: "양파",
+              amount: "0.5",
+              unit: null,
+              optional: false,
+              groupLabel: null,
+            },
+          ],
+          steps: [
+            "김치를 한입 크기로 썬다.",
+            "냄비에 김치를 넣고 끓인다.",
+          ],
+        },
+        meta: {
+          modelCallCount: 2,
+          frameCount: 36,
+          selectedFrameCount: 8,
+          selectorBypassed: false,
+          screenOcrStatus: "skipped",
+          sourceAvailability: {
+            description: true,
+            authorComment: true,
+            transcript: true,
+            onscreen: false,
+          },
+          timings: {
+            frameExtractMs: 12_000,
+            selectorMs: 8_000,
+            finalMs: 20_000,
+            totalFreshMs: 40_000,
+            ocrTotalMs: null,
+          },
+        },
+      })),
+    };
+    const authorCommentProvider: YoutubeAuthorCommentProvider = {
+      name: "must-not-run",
+      fetchAuthorComments: vi.fn(async () => {
+        throw new Error("legacy author comment provider must not run");
+      }),
+    };
+    const transcriptProvider: YoutubeTranscriptProvider = {
+      name: "must-not-run",
+      fetchTranscript: vi.fn(async () => {
+        throw new Error("legacy transcript provider must not run");
+      }),
+    };
+    const llmExtractor: YoutubeRecipeLlmExtractor = {
+      name: "must-not-run",
+      fetchStructuredRecipe: vi.fn(async () => {
+        throw new Error("Gemini extractor must not run");
+      }),
+    };
+    const visualRecipeExtractor: YoutubeVisualRecipeExtractor = {
+      name: "must-not-run",
+      fetchVisualRecipe: vi.fn(async () => {
+        throw new Error("legacy visual recipe extractor must not run");
+      }),
+    };
+    const visualQuantityExtractor: YoutubeVisualQuantityExtractor = {
+      name: "must-not-run",
+      fetchVisualQuantities: vi.fn(async () => {
+        throw new Error("legacy visual quantity extractor must not run");
+      }),
+    };
+
+    const { response, body } = await withYoutubeI031Extractor(i031Extractor, () =>
+      withYoutubeAuthorCommentProvider(authorCommentProvider, () =>
+        withYoutubeTranscriptProvider(transcriptProvider, () =>
+          withYoutubeRecipeLlmExtractor(llmExtractor, () =>
+            withYoutubeVisualRecipeExtractor(visualRecipeExtractor, () =>
+              withYoutubeVisualQuantityExtractor(visualQuantityExtractor, () =>
+                postYoutubeExtract(recipeUrl),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        title: "i031 김치찌개",
+        base_servings: 2,
+        extraction_methods: ["description", "comment", "caption", "visual"],
+        blocking_issues: [],
+        ingredients: [
+          {
+            standard_name: "김치",
+            amount: 200,
+            unit: "g",
+            ingredient_type: "QUANT",
+            ingredient_id: kimchiIngredientId,
+            resolution_status: "resolved",
+            component_label: "찌개",
+          },
+          {
+            standard_name: "소금",
+            amount: null,
+            unit: null,
+            ingredient_type: "TO_TASTE",
+            display_text: "소금",
+            ingredient_id: saltIngredientId,
+            resolution_status: "resolved",
+          },
+          {
+            standard_name: "양파",
+            amount: 0.5,
+            unit: null,
+            ingredient_type: "QUANT",
+            display_text: "양파 0.5",
+            ingredient_id: onionIngredientId,
+            resolution_status: "resolved",
+            scalable: false,
+            quantity_review_required: true,
+          },
+        ],
+        steps: [
+          { instruction: "김치를 한입 크기로 썬다." },
+          { instruction: "냄비에 김치를 넣고 끓인다." },
+        ],
+      },
+      error: null,
+    });
+    expect(i031Extractor.extract).toHaveBeenCalledWith({
+      videoId: "recipe12345",
+      signal: expect.any(AbortSignal),
+    });
+    expect(authorCommentProvider.fetchAuthorComments).not.toHaveBeenCalled();
+    expect(transcriptProvider.fetchTranscript).not.toHaveBeenCalled();
+    expect(llmExtractor.fetchStructuredRecipe).not.toHaveBeenCalled();
+    expect(visualRecipeExtractor.fetchVisualRecipe).not.toHaveBeenCalled();
+    expect(visualQuantityExtractor.fetchVisualQuantities).not.toHaveBeenCalled();
+
+    expect(sessionsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      provider_version: "youtube-i031-direct-v1",
+      raw_source_text: "",
+      extraction_methods: ["description", "comment", "caption", "visual"],
+      source_providers: [
+        "youtube_videos_list",
+        "youtube_description",
+        "youtube_comment_threads",
+        "youtube_timedtext_or_apify",
+        "codex_vision_keyframes",
+      ],
+      extraction_meta_json: expect.objectContaining({
+        provider_version: "youtube-i031-direct-v1",
+        i031_extractor: expect.objectContaining({
+          identity: {
+            ...I031_EXACT_IDENTITY,
+            codexCliVersion: I031_CODEX_CLI_VERSION,
+          },
+          modelCallCount: 2,
+          frameCount: 36,
+          selectedFrameCount: 8,
+        }),
+      }),
+    }));
+    const insertedSession = sessionsTable.insert.mock.calls[0]?.[0] as {
+      extraction_meta_json: Record<string, unknown>;
+    };
+    expect(JSON.stringify(insertedSession.extraction_meta_json)).not.toContain("rawPrompt");
+    expect(JSON.stringify(insertedSession.extraction_meta_json)).not.toContain("/private/tmp");
   });
 
   it("POST /api/v1/recipes/youtube/extract does not bypass YouTube provider for known live sample IDs", async () => {
