@@ -12,6 +12,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724090000_recipe_tag_parent_visibility_upper_bound.sql",
   "supabase/migrations/20260724110000_recipe_managed_image_registry_foundation.sql",
   "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql",
+  "supabase/migrations/20260724130000_recipe_image_upload_reservation.sql",
 ];
 
 function commandResult(command, args, options = {}) {
@@ -156,6 +157,8 @@ if (!postgresBin) {
       ...runnerArgs,
       "-c", `
         create schema auth authorization migration_runner;
+        create schema extensions authorization migration_runner;
+        create extension pgcrypto with schema extensions;
         create or replace function auth.uid()
         returns uuid
         language sql
@@ -176,11 +179,52 @@ if (!postgresBin) {
         create table public.user_account_lifecycles (
           owner_uuid uuid not null,
           account_generation bigint not null,
+          auth_identity_created_at_snapshot timestamptz,
           status text not null,
           primary key (owner_uuid, account_generation)
         );
         alter table public.user_account_lifecycles enable row level security;
         revoke all on table public.user_account_lifecycles
+          from public, anon, authenticated, service_role;
+
+        create table public.user_session_generation_bindings (
+          session_key_hash text not null,
+          hmac_key_version integer not null,
+          owner_uuid uuid not null,
+          expected_account_generation bigint not null,
+          auth_identity_created_at_snapshot timestamptz not null,
+          revoked_at timestamptz,
+          primary key (hmac_key_version, session_key_hash),
+          foreign key (owner_uuid, expected_account_generation)
+            references public.user_account_lifecycles (
+              owner_uuid,
+              account_generation
+            )
+        );
+        alter table public.user_session_generation_bindings
+          enable row level security;
+        revoke all on table public.user_session_generation_bindings
+          from public, anon, authenticated, service_role;
+
+        create table public.account_generation_capability_state (
+          singleton boolean primary key default true check (singleton),
+          state text not null,
+          revision bigint not null,
+          current_cutover_attempt_id uuid,
+          updated_at timestamptz not null default now()
+        );
+        insert into public.account_generation_capability_state (
+          singleton,
+          state,
+          revision
+        ) values (
+          true,
+          'legacy',
+          1
+        );
+        alter table public.account_generation_capability_state
+          enable row level security;
+        revoke all on table public.account_generation_capability_state
           from public, anon, authenticated, service_role;
 
         create table public.recipes (

@@ -15,6 +15,8 @@ const MANIFEST_PATH =
   "docs/security/recipe-visibility-read-hardening-security-function-authorization-manifest.json";
 const IMAGE_CLEANUP_MANIFEST_PATH =
   "docs/security/recipe-image-cleanup-outbox-security-function-authorization-manifest.json";
+const IMAGE_UPLOAD_MANIFEST_PATH =
+  "docs/security/recipe-image-upload-reservation-security-function-authorization-manifest.json";
 
 describe("recipe visibility security function inventory", () => {
   it("classifies the guard and every recreated baseline function", () => {
@@ -119,6 +121,43 @@ describe("recipe visibility security function inventory", () => {
     ]);
   });
 
+  it("classifies every guarded image upload reservation function", () => {
+    expect(existsSync(IMAGE_UPLOAD_MANIFEST_PATH)).toBe(true);
+    if (!existsSync(IMAGE_UPLOAD_MANIFEST_PATH)) {
+      return;
+    }
+
+    const manifest = JSON.parse(
+      readFileSync(IMAGE_UPLOAD_MANIFEST_PATH, "utf8"),
+    ) as {
+      functions: Array<Record<string, unknown>>;
+    };
+
+    expect(manifest.functions).toEqual([
+      expect.objectContaining({
+        signature:
+          "public.reserve_recipe_image_upload(uuid, timestamp with time zone, text, integer, uuid, text, text, bigint, text, text, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "extensions", "pg_temp"],
+      }),
+      expect.objectContaining({
+        signature:
+          "public.finalize_recipe_image_upload(uuid, timestamp with time zone, text, integer, uuid, uuid, bigint, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "extensions", "pg_temp"],
+      }),
+      expect.objectContaining({
+        signature:
+          "public.release_recipe_image_upload_reservation(uuid, bigint, uuid, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
+    ]);
+  });
+
   it("uses new functions as deployment markers and rejects incomplete replacements", () => {
     const contract = [
       {
@@ -196,6 +235,9 @@ describe("recipe visibility security function inventory", () => {
     );
     expect(output).toContain(
       "recipe-image-cleanup-outbox:6 pre-deployment additive application functions",
+    );
+    expect(output).toContain(
+      "recipe-image-upload-reservation:3 pre-deployment additive application functions",
     );
   }, 15_000);
 

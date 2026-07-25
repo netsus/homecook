@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "slice": "recipe-image-upload-reservation",
+  "migration": "supabase/migrations/20260724130000_recipe_image_upload_reservation.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.reserve_recipe_image_upload(uuid, timestamp with time zone, text, integer, uuid, text, text, bigint, text, text, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "extensions",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.finalize_recipe_image_upload(uuid, timestamp with time zone, text, integer, uuid, uuid, bigint, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "extensions",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.release_recipe_image_upload_reservation(uuid, bigint, uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    }
+  ]
+}

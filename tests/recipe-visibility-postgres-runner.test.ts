@@ -45,6 +45,9 @@ describe("recipe visibility PostgreSQL gate", () => {
     expect(runner).toContain(
       "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql",
     );
+    expect(runner).toContain(
+      "supabase/migrations/20260724130000_recipe_image_upload_reservation.sql",
+    );
     expect(runner).toContain("for (const migrationPath of MIGRATION_PATHS)");
     expect(runner).toContain(
       "tests/recipe-visibility-read-hardening-postgres.integration.test.ts",
