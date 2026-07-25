@@ -172,15 +172,15 @@ Schema Change:
 
 - [x] locked-down NFKC/compact normalization helper foundation <!-- omo:id=delivery-search-normalizer-foundation;stage=2;scope=backend;review=3,6 -->
 - [x] transaction-compatible index DDL and exact-derived concurrent prebuild foundation <!-- omo:id=delivery-search-index-foundation;stage=2;scope=backend;review=3,6 -->
-- [ ] additive normalizer/search-document/public-private index migration and replay safety <!-- omo:id=delivery-search-schema-index;stage=2;scope=backend;review=3,6 -->
-- [ ] official unified route/parser/filter/error wrapper only <!-- omo:id=delivery-search-route-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] scope-before-ranking, current nutrition version, moderation and owner isolation <!-- omo:id=delivery-search-scope-security;stage=2;scope=backend;review=3,6 -->
-- [ ] v1 dual decode and integer v2 tuple/fingerprint pagination without duplicate/omission <!-- omo:id=delivery-search-cursor-v2;stage=2;scope=backend;review=3,6 -->
-- [ ] 50~100 labels, designated three, Recall/Precision and 287,041 p95/EXPLAIN gates <!-- omo:id=delivery-search-relevance-performance;stage=2;scope=backend;review=3,6 -->
-- [ ] legacy `/food-products` source/current-version/moderation/pagination regression <!-- omo:id=delivery-search-legacy-regression;stage=2;scope=shared;review=3,6 -->
+- [x] additive normalizer/search-document/public-private index migration and replay safety <!-- omo:id=delivery-search-schema-index;stage=2;scope=backend;review=3,6 -->
+- [x] official unified route/parser/filter/error wrapper only <!-- omo:id=delivery-search-route-contract;stage=2;scope=backend;review=3,6 -->
+- [x] scope-before-ranking, current nutrition version, moderation and owner isolation <!-- omo:id=delivery-search-scope-security;stage=2;scope=backend;review=3,6 -->
+- [x] v1 dual decode and integer v2 tuple/fingerprint pagination without duplicate/omission <!-- omo:id=delivery-search-cursor-v2;stage=2;scope=backend;review=3,6 -->
+- [x] 50~100 labels, designated three, Recall/Precision and 287,041 p95/EXPLAIN gates <!-- omo:id=delivery-search-relevance-performance;stage=2;scope=backend;review=3,6 -->
+- [x] legacy `/food-products` source/current-version/moderation/pagination regression <!-- omo:id=delivery-search-legacy-regression;stage=2;scope=shared;review=3,6 -->
 - [ ] client debounce, IME composition and latest-generation-only response handling <!-- omo:id=delivery-search-client-control;stage=4;scope=frontend;review=5,6 -->
 - [ ] loading/empty/error/read-only/unauthorized and no-layout/no-anchor regression <!-- omo:id=delivery-search-ui-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] local existing/fresh/replay, exact ACL/function inventory, secret/provider/write-zero evidence <!-- omo:id=delivery-search-security-evidence;stage=2;scope=shared;review=3,6 -->
+- [x] local existing/fresh/replay, exact ACL/function inventory, secret/provider/write-zero evidence <!-- omo:id=delivery-search-security-evidence;stage=2;scope=shared;review=3,6 -->
 - [ ] independent performance, security, five-axis, Stage 5 and Stage 6 approvals plus current-head checks <!-- omo:id=delivery-search-independent-closeout;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual Only
