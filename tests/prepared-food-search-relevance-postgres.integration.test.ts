@@ -276,4 +276,42 @@ describe.runIf(enabled)("prepared food unified ranked search on isolated Postgre
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("INVALID_SEARCH_FILTER");
   });
+
+  it("runs the post-merge remote verification SQL without exposing row data", async () => {
+    const verifier = await import(
+      "../scripts/lib/prepared-food-search-remote-verifier.mjs"
+    );
+    const plan = verifier.buildPreparedFoodSearchRemoteVerificationPlan({
+      mode: "post-merge-read-only",
+    });
+    const result = JSON.parse(psql(serviceSql(`
+      set homecook.prepared_food_search_actor_id = '${userA}';
+      ${plan.sql}
+    `)));
+
+    expect(
+      () => verifier.assertPreparedFoodSearchRemoteVerificationResult(result),
+      JSON.stringify(result),
+    ).not.toThrow();
+    expect(result).not.toHaveProperty("actor_id");
+    expect(result).not.toHaveProperty("product_id");
+  });
+
+  it("distinguishes a missing approved actor fixture from an implementation failure", async () => {
+    const verifier = await import(
+      "../scripts/lib/prepared-food-search-remote-verifier.mjs"
+    );
+    const plan = verifier.buildPreparedFoodSearchRemoteVerificationPlan({
+      mode: "post-merge-read-only",
+    });
+    const result = JSON.parse(psql(serviceSql(`
+      set homecook.prepared_food_search_actor_id = '${userB}';
+      ${plan.sql}
+    `)));
+
+    expect(result.fixture_ready).toBe(false);
+    expect(() =>
+      verifier.assertPreparedFoodSearchRemoteVerificationResult(result),
+    ).toThrow(/smoke fixture is missing/i);
+  });
 });
