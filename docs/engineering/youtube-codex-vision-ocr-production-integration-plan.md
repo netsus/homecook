@@ -1,15 +1,30 @@
-# YouTube Codex Vision OCR Production Integration Plan
+# YouTube `cv-goal-i031-ocr` Strict Parity Integration Plan
 
-작성일: 2026-07-25  
-상태: 계획 전용, 구현 금지  
-대상 서비스 저장소: `/Users/cwj/01_vibe_coding/homecook`  
+작성일: 2026-07-26
+
+상태: 사용자 방향 승인 완료, 재현성·계약 선행 게이트 진행 중
+
+대상 서비스 저장소: `/Users/cwj/01_vibe_coding/homecook`
+
 실험/평가 근거 저장소: `/Users/cwj/01_vibe_coding/homecook-codex-vision-loop`
 
-## 결론
+## 한 줄 결론
 
-현재 production 통합 후보는 `cv-goal-i031-ocr`이다. 최신 번호를 고른 것이 아니라, 미완료·실패·검증 전 실행을 제외하고 Train과 Validation promotion을 모두 통과한 후보 중 Validation 품질이 가장 균형적이기 때문에 선택한다.
+현재 완료·검증된 Train+Validation 후보 중 가장 좋은 후보는 `cv-goal-i031-ocr`이지만, 서비스에 넣기 전에 **당시 고정되지 않은 extractor 코드를 복구해 동일 fingerprint로 재검증**해야 한다. 완전 동일한 localhost 흐름은 Gemini를 쓰지 않지만, 당시 `source.json` 수집 방식까지 같게 하려면 `YOUTUBE_API_KEY`와 경우에 따라 `APIFY_TOKEN`이 필요하다.
 
-단, Holdout은 이 후보에 대해 아직 통과 근거가 없다. `cv-goal-i027-holdout-*`는 `iter27` candidate lock 기반 Holdout에서 실패했고, v3 Holdout challenge 통과 결과들은 Train/Validation lock과 직접 연결된 production 승격 근거로 보기 어렵다. 따라서 구현 전 선행 조건은 `cv-goal-i031-ocr` 계열 또는 그 production용 재현 후보를 fresh sealed Holdout에서 1회 검증하는 것이다.
+## 이번 계획의 정정 사항
+
+이 문서는 기존 계획의 아래 가정을 정정한다.
+
+| 기존 가정 | 근거로 확인한 실제 `i031` 방식 |
+| --- | --- |
+| Gemini가 OCR/구조화를 담당한다 | Gemini는 `i031` 실행 identity에 없다 |
+| macOS Vision OCR census를 사용한다 | `i031`은 `screen-ocr-mode`나 macOS Vision census가 아니라 selector 모델이 후보 프레임의 화면 글자를 읽었다 |
+| 임의 URL도 provider key 없이 100% 동일하게 수집할 수 있다 | 당시 `snapshot-video.mjs`는 `YOUTUBE_API_KEY`를 필수 검사했고, Train 9/9와 Validation 5/8 source의 caption provider가 `apify`였다 |
+| 현재 experiment repo의 최신 runner를 호출하면 동일하다 | 현재 client/prompt는 `i031` 이후 크게 바뀌어, 최신 코드를 호출하면 다른 실험이 된다 |
+| candidate lock의 commit만 checkout하면 동일하다 | lock의 commit에 있는 client identity와 실제 결과 identity가 달라, commit만으로는 100% 복구되지 않는다 |
+
+`cv-goal-i031-ocr`에서 “OCR”은 선택 모델 `gpt-5.4-mini`가 최대 12개 후보 프레임을 보고 `onscreenText`와 `quantityCues`를 뽑는 동작을 뜻한다. 뒤이어 `gpt-5.4`가 선택된 프레임과 설명란·작성자 댓글·caption/transcript를 함께 읽어 레시피 JSON을 만든다.
 
 ## 읽은 기준 문서
 
@@ -22,288 +37,580 @@
 - `docs/engineering/slice-workflow.md`
 - `docs/engineering/git-workflow.md`
 - `docs/engineering/qa-system.md`
-- `docs/engineering/workflow-v2/README.md`
-- `docs/api문서-v1.2.27.md`
-- `docs/db설계-v1.3.23.md`
+- `docs/요구사항기준선-v1.7.22.md`
+- `docs/화면정의서-v1.5.28.md`
 - `docs/유저flow맵-v1.3.25.md`
-- YouTube 관련 workpack: `20`, `21`, `22`, `27`, `29`, `30`, `32`
+- `docs/db설계-v1.3.23.md`
+- `docs/api문서-v1.2.27.md`
+- YouTube 관련 workpack `20`, `29`, `32`
 
 실험 저장소:
 
 - `AGENTS.md`
-- `notebooks/recipe_loop_data/README.md`
-- `notebooks/recipe_loop_data/BASELINE.md`
-- `notebooks/recipe_loop_data/REVIEW_train.md`
-- `notebooks/recipe_loop_data/REVIEW_validation.md`
-- `notebooks/recipe_loop_data/REVIEW_holdout.md`
+- `scripts/recipe-loop/snapshot-video.mjs`
+- `scripts/recipe-loop/run-extraction.mjs`
+- `scripts/recipe-loop/extract-video-frames.py`
+- `scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs`
 - `notebooks/recipe_loop_data/*/_grade_summary*.json`
 - `notebooks/recipe_loop_data/*/_semantic_summary*.json`
 - `notebooks/recipe_loop_data/*/_promotion_summary*.json`
-- `.omx/plans/goal-single-recipe-generalization-iteration-031.md` 계열 근거는 요약 JSON으로 대체 확인
-- `.omx/plans/goal-single-recipe-generalization-iteration-068.md`
-- `.omx/plans/goal-single-recipe-generalization-iteration-083.md`
-- `.omx/plans/goal-single-recipe-generalization-iteration-092.md`
+- `notebooks/recipe_loop_data/*/_candidate_lock*.json`
+- `notebooks/recipe_loop_data/*/_pi_freeze*.json`
+- `cv-goal-i031-ocr` 각 case의 `result.json`, `run-progress.json`, `file-access-manifest.json`
 
-## 후보 비교
+## 현재 가장 좋은 iter 확정
 
-Train+Validation을 모두 통과한 후보만 아래 표에 포함했다. `i068`은 Train은 통과했지만 Validation promotion이 실패했다. `i083`은 Train amount coverage `.692`가 사전 gate `>.693`에 미달해 실패했다. `i092`는 OCR 이미지 1.5x 실험이 benchmark에서 실패해 cold Train 전에 revert되었다.
+선정 범위는 Train과 Validation promotion을 모두 통과하고, expected count가 모두 채워졌으며, Validation candidate lock 검증과 누수 검사를 통과한 후보로 제한했다. 최신 번호라는 이유만으로 고르지 않았고, 실패·미완료·사전 gate 탈락 후보는 제외했다.
 
-| 후보 | Train promotion | Validation promotion | Train F1 / amount / step | Validation F1 / amount / step | Semantic Train / Validation | 시간 p50 / p95 | 누수 상태 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `cv-goal-i001` | PASS | PASS | `.952 / .593 / .692` | `.886 / .729 / .517` | `4.056 / 3.750` | Train `67.275 / 98.4`, Validation `77.7 / 192` | Train `not_applicable`, Validation `clean` |
-| `cv-goal-i023` | PASS | PASS | `.963 / .596 / .747` | `.901 / .768 / .540` | `4.111 / 3.625` | Train `53.319 / 79.6`, Validation `58 / 64.2` | Train `not_applicable`, Validation `clean` |
-| `cv-goal-i031-ocr` | PASS | PASS | `.961 / .603 / .678` | `.925 / .747 / .548` | `4.222 / 3.875` | Train `56.28 / 77.1`, Validation `65 / 95.5` | Train `not_applicable`, Validation `clean` |
-| `iter27` | PASS | PASS | `.947 / .600 / .685` | `.903 / .750 / .534` | `4.111 / 3.625` | Train `68.64 / 83.7`, Validation `60.2 / 73.2` | Train `not_applicable`, Validation `clean` |
+### 완료 후보 비교
 
-선택 근거:
+Train deterministic:
 
-1. `cv-goal-i031-ocr`은 Validation 재료 F1 `.925`로 통과 후보 중 가장 높다.
-2. Validation semantic average `3.875`도 통과 후보 중 가장 높다.
-3. amountMatchRate `.747`는 `iter27`의 `.750`보다 낮지만 차이가 `.003`뿐이고, 재료 F1·semantic 우위를 뒤집을 정도가 아니다.
-4. Train p50 `56.28s`, p95 `77.1s`는 `iter27`보다 빠르고 `cv-goal-i023`보다 약간 느리지만 production 후보로 감당 가능한 범위다.
-5. Validation candidate lock verified가 `true`이고 canary leak status가 `clean`이다.
+| 후보 | Promotion | Recipe count | Ingredient F1 | Amount match | Amount coverage | Step coverage | Semantic avg | 시간 p50 / p95 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `cv-goal-i001` | PASS | `1.000` | `.952` | `.593` | `.653` | `.692` | `4.056` | `67.275s / 98.4s` |
+| `cv-goal-i023` | PASS | `1.000` | `.963` | `.596` | `.685` | `.747` | `4.111` | `53.319s / 79.6s` |
+| `cv-goal-i031-ocr` | PASS | `1.000` | `.961` | `.603` | `.676` | `.678` | `4.222` | `56.28s / 77.1s` |
+| `iter27` | PASS | `1.000` | `.947` | `.600` | `.656` | `.685` | `4.111` | `68.64s / 83.7s` |
 
-Holdout 비교:
+Validation deterministic:
 
-| Holdout 실행 | 연결성 | 결과 | 핵심 수치 | 판단 |
-| --- | --- | --- | --- | --- |
-| `cv-goal-i027-holdout-report` | `iter27` candidate lock 기반 | FAIL | F1 `.778`, amount `.659`, amountCoverage `.677`, step `.687`, semantic avg `3.5` | production 승격 근거로 사용 불가 |
-| `cv-v3-r40-stacked-quantity-card-b69-cold` | v3 Holdout challenge 단건/특수 | PASS | F1 `.941`, amount `1`, amountCoverage `1`, step `.444`, semantic avg `4` | Train/Validation lock 연결 부족 |
-| `cv-v3-r47-bounded-ocr-cooking-text-challenge8-cold` | v3 exposed OCR challenge | PASS | F1 `.912`, amount `.776`, amountCoverage `.915`, step `.582`, semantic avg `4` | OCR 방향성 참고 가능, 직접 승격 근거 아님 |
-| `cv-v3-r53-480p-exposed-challenge8-cold` | v3 exposed OCR challenge | PASS | F1 `.898`, amount `.815`, amountCoverage `.872`, step `.474`, semantic avg `4` | OCR 방향성 참고 가능, 직접 승격 근거 아님 |
+| 후보 | Promotion | Recipe count | Ingredient F1 | Amount match | Amount coverage | Step coverage | Semantic avg | 시간 p50 / p95 | Lock / leak |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `cv-goal-i001` | PASS | `1.000` | `.886` | `.729` | `.791` | `.517` | `3.750` | `77.7s / 192s` | verified / clean |
+| `cv-goal-i023` | PASS | `1.000` | `.901` | `.768` | `.801` | `.540` | `3.625` | `58s / 64.2s` | verified / clean |
+| `cv-goal-i031-ocr` | PASS | `1.000` | `.925` | `.747` | `.788` | `.548` | `3.875` | `65s / 95.5s` | verified / clean |
+| `iter27` | PASS | `1.000` | `.903` | `.750` | `.812` | `.534` | `3.625` | `60.2s / 73.2s` | verified / clean |
 
-## Production 통합 목표
+`cv-goal-i031-ocr`을 고른 이유:
 
-`cv-goal-i031-ocr`의 “설명란 + 작성자 댓글 + transcript/caption + 화면 OCR” 조합을 서비스의 YouTube 추출 흐름에 안전하게 넣는다. 실험 harness를 복사하지 않고, 서비스의 기존 경계인 `POST /api/v1/recipes/youtube/extract`, `youtube_extraction_sessions`, `youtube_llm_extraction_cache/events`, `youtube_visual_extraction_cache/events`, `YT_IMPORT` 검수 화면을 확장한다.
+1. Validation Ingredient F1 `.925`로 완료 후보 중 가장 높다.
+2. Validation Semantic average `3.875`로 완료 후보 중 가장 높다.
+3. Validation Step coverage `.548`도 완료 후보 중 가장 높다.
+4. Amount match `.747`은 `iter27`의 `.750`보다 `.003` 낮고, Amount coverage `.788`은 `iter27`보다 `.024` 낮다. 이 약점은 공개하되, 재료·단계·semantic의 우위가 더 크다고 판단한다.
+5. Train/Validation 모두 promotion PASS, failed attempt `0`, 최대 model call `2`, Validation candidate lock verified `true`, canary leak `clean`이다.
 
-개발 완료 후에는 개발자가 로컬에서 서비스를 켜고, `http://localhost:3000/menu/add/youtube` 또는 `http://localhost:3000/recipes/new/youtube`에 임의의 공개 YouTube 레시피 링크를 입력해 새 OCR 통합 경로로 추출 결과를 확인할 수 있어야 한다. 이 로컬 수동 확인은 “계획 문서만 존재하는 상태”가 아니라, backend 구현·UI 연결·feature flag 설정·provider env 설정·DB migration 적용까지 끝난 뒤의 완료 기준이다.
+제외 예:
 
-## 공식 문서 변경과 선행 승인
+- `cv-goal-i068`: Validation promotion FAIL. deterministic execution/amount coverage와 screen OCR gate가 실패했다.
+- `cv-goal-i083`: Train 사전 gate 실패로 완료 후보가 아니다.
+- `cv-goal-i092`: benchmark 실패 후 cold Train 전에 revert되어 검증 후보가 아니다.
+- 이후 v3 challenge PASS 결과: 해당 v3 lock과 dataset에 묶인 별도 후보이며 `i031` Train/Validation lock의 대체 근거로 섞지 않는다.
 
-구현 전 `contract-evolution` 또는 Stage 1 workpack이 필요하다.
+## Holdout과 데이터 누수
 
-- API 문서: `POST /api/v1/recipes/youtube/extract`에 OCR evidence packet, async job status, timeout/fallback metadata를 additive로 정의해야 한다.
-- DB 문서: `youtube_visual_extraction_cache/events`가 현재 visual quantity 중심이므로 화면 OCR 전체 패킷 저장 범위를 명확히 해야 한다. 새 테이블을 만들지 재사용할지는 Stage 1에서 결정한다.
-- 유저플로우: 기존 flow는 공개 텍스트 뒤 visual quantity enrichment만 설명한다. 화면 OCR이 단계/재료 보강에도 쓰이는 흐름을 추가해야 한다.
-- Workpack: 새 product slice이므로 Claude Stage 1이 `docs/workpacks/<slice>/README.md`, `acceptance.md`, `automation-spec.json`, `.workflow-v2` work item을 먼저 작성하고 main에 merge해야 한다.
-- 사용자 승인: 화면 OCR이 provider 비용과 처리 시간을 늘리며, public contract와 DB metadata를 넓히므로 구현 전 승인 필요.
+`cv-goal-i031-ocr` 자체에 연결된 fresh sealed Holdout PASS 근거는 없다. 현재 확인 가능한 기존 Holdout은 `iter27` lock 기반이며 실패했다.
 
-## 서비스 모듈 경계
+| Holdout | 연결 candidate | 결과 | Ingredient F1 | Amount match / coverage | Step coverage | Semantic avg | Leak |
+| --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| `cv-goal-i027-holdout-cold` | `iter27` | FAIL | `.778` | `.659 / .677` | `.687` | `3.4` | `not_covered` |
+| `cv-goal-i027-holdout-report` | `iter27` 결과 재보고 | FAIL | `.778` | `.659 / .677` | `.687` | `3.5` | `not_covered` |
 
-권장 경계:
+따라서 `i031`은 **현재 가장 좋은 통합 후보**이지 **바로 전체 배포 가능한 후보**는 아니다. Production rollout 전 `i031` freeze를 복구한 뒤 fresh sealed Holdout을 한 번만 열어 PASS해야 한다.
 
-- `app/api/v1/recipes/youtube/extract/route.ts`: 지금처럼 `handleYoutubeExtract`만 호출한다.
-- `lib/server/youtube-import.ts`: orchestration만 담당한다. source 수집, fallback 판단, 세션 저장, 응답 조립을 연결한다.
-- `lib/server/youtube-description-parser.ts`: description/comment/caption 텍스트 parser는 유지한다.
-- 신규 서버 모듈 후보:
-  - `lib/server/youtube-ocr-evidence.ts`: 화면 OCR evidence packet 생성, 필터링, 정규화.
-  - `lib/server/youtube-extraction-pipeline.ts`: description/comment/caption/OCR/LLM fallback 단계 상태를 한 곳에서 조립.
-  - `lib/server/youtube-extraction-observability.ts`: event log, timing, 비용, provider status 기록.
-- `components/recipe/youtube-import-screen.tsx`: 기존 검수 화면에 evidence badge, review-required 수량/단계 표시만 추가한다. 추출 로직을 클라이언트로 옮기지 않는다.
+Train/Validation freeze 근거:
+
+- Train `caseCount=9`, `completedCount=9`, `forbiddenReadCount=0`
+- Validation `caseCount=8`, `completedCount=8`, `forbiddenReadCount=0`
+- Validation canary leak `clean`, hit count `0`
+- model read boundary `clean`, enforcement `macos-sandbox-exec`
+
+## `i031` 실행 identity
+
+아래 값이 모두 같아야 “같은 방식”으로 인정한다.
+
+| 항목 | 고정값 |
+| --- | --- |
+| provider | `codex-vision-keyframes` |
+| final model | `gpt-5.4` |
+| selector model | `gpt-5.4-mini` |
+| prompt version | `single-recipe-four-source-v2` |
+| selector prompt | `keyframe-selector-v6-single-compact-json` |
+| final prompt | `keyframe-final-v44-explicit-action-clause` |
+| client version | `codex-vision-keyframes-client-v19-onscreen-amount-recovery` |
+| execution signature | `704359dfb34df5ac1d070078` |
+| code fingerprint | `17f475ae308ca3fa514b0388f93701907e94b439410764f3b1d2e5f8ca65cc53` |
+| candidate lock SHA-256 | `aa550e812181847b4567711f58f0cea57e5ac6320bf471adf745d8e9b6f5ea2b` |
+| dataset manifest SHA-256 | `9a587a879ba2ffbcd0a521587c460d2d42adff7b25951a143fa0c442890fae77` |
+| frame mode | `hybrid` |
+| interval | `4s` |
+| hybrid anchor budget | `36` |
+| selector candidate limit | `12` |
+| keyframe total limit | lock commit의 single-recipe default `8`, 복구 bundle에서 재확인 필요 |
+| keyframes per recipe | lock commit의 default `8`, 복구 bundle에서 재확인 필요 |
+| recipe mode | `singleRecipeOnly=true` |
+| run type | `cold`, `--no-cache` |
+| model call upper bound | `2` (`selector 1 + final 1`) |
+
+`result.json`과 candidate lock에는 당시 model reasoning effort와 timeout 값이 별도 field로 보존되지 않았다. Lock commit의 runner default는 final/selector effort `low`, client timeout `20분`이지만, strict parity 구현은 이 default를 사실로 가정하지 않고 당시 command/session artifact 또는 복구한 code fingerprint로 확인해야 한다.
+
+### 100% 재현을 막는 현재 blocker
+
+Candidate lock의 `commitSha`는 `f7775f68cf7afa12079032b20f39039abaad4ba8`이다. 그러나 그 commit의 tracked client는 `codex-vision-keyframes-client-v4-single-fast12`, final prompt는 `keyframe-final-v32-single-four-source`다. 실제 `i031` 결과에는 각각 `v19-onscreen-amount-recovery`, `v44-explicit-action-clause`가 기록되어 있다.
+
+즉, 실험 결과를 만든 중간 extractor bytes가 해당 commit에 그대로 보존되지 않았다. 최신 experiment client는 이미 `v45`/`v59` 계열이므로 최신 코드를 호출하는 것도 동일 실행이 아니다.
+
+구현 선행 gate:
+
+1. local session/cache/patch artifact에서 `v19` extractor와 `v44` prompt bytes를 복구한다.
+2. 당시 command, model effort, timeout, environment override를 함께 복구한다.
+3. 별도 immutable parity bundle로 저장하고 SHA-256 manifest를 만든다.
+4. evaluator가 계산한 code fingerprint가 `17f475...`와 정확히 일치해야 한다.
+5. Train 9건과 Validation 8건을 cold/no-cache로 다시 실행한다.
+6. 모든 result identity가 위 표와 같고 Train/Validation promotion이 다시 PASS해야 한다.
+7. 하나라도 다르면 “100% parity” 명칭을 쓰지 않고 구현을 중단한다.
+
+모델 서비스의 비결정성 때문에 같은 환경이어도 recipe 문장이 byte-for-byte 같다는 보장은 없다. 여기서 100%는 코드·프롬프트·모델·옵션·source 수집 경계를 동일하게 고정한다는 뜻이며, 결과 품질은 promotion gate로 다시 확인한다.
+
+## 키와 로컬 의존성
+
+완전 동일 모드의 요구사항:
+
+| 항목 | 필요 여부 | 이유 |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | 불필요, strict mode에서 읽지 않음 | `i031` identity에 Gemini가 없다 |
+| `YOUTUBE_API_KEY` | 필수 | 당시 `snapshot-video.mjs`가 metadata와 작성자 댓글을 가져오기 전에 키를 필수 검사한다 |
+| `APIFY_TOKEN` | 조건부지만 parity dataset 재현에는 사실상 필요 | Train 9/9, Validation 5/8 source의 caption provider가 `apify`였다 |
+| Codex CLI 로그인 상태 | 필수 | selector `gpt-5.4-mini`와 final `gpt-5.4`를 `codex exec`로 호출한다 |
+| Supabase local/dev env | 서비스 연결 시 필수 | 로그인, extraction session, 재료 매핑과 등록 검증에 사용한다 |
+| Python 3 + `yt_dlp` + OpenCV/FFmpeg | 필수 | 영상을 내려받고 hybrid frame을 만든다 |
+| macOS | strict local parity 기준 필수 | 당시 model read boundary가 `macos-sandbox-exec`였다 |
+
+`yt-dlp`로 metadata·caption·댓글을 모두 대체하면 API key를 줄일 수 있지만, 그것은 source provider와 fallback 동작이 바뀌므로 **100% strict parity가 아니다**. 나중에 별도 `compatible` 모드로 평가할 수는 있으나 이번 구현 범위에서는 제외한다.
+
+## 목표와 비목표
+
+목표:
+
+- localhost의 기존 `YT_IMPORT` 화면에서 임의의 공개 단일 레시피 URL을 입력한다.
+- strict parity worker가 당시와 같은 source snapshot과 extractor identity로 `result.json`을 만든다.
+- 서비스 adapter가 결과를 기존 draft/session/재료 검수 계약으로 변환한다.
+- Gemini visual/structured extractor로 조용히 우회하지 않는다.
+- 결과가 불완전하면 기존 review-required 규칙으로 사용자 확인을 요구한다.
+
+비목표:
+
+- 최신 experiment harness를 `i031`이라고 부르는 것
+- macOS Vision `screen-ocr-mode=auto`를 추가하는 것
+- YouTube Data API/Apify를 key 없는 수집기로 교체하는 것
+- multi-recipe extraction 지원
+- `i031` 결과를 특정 video ID별 fixture로 하드코딩하는 것
+- fresh sealed Holdout 전 전체 사용자 rollout
 
 ## 추출 흐름
 
 ```mermaid
 flowchart TD
-  A["사용자 YouTube URL 입력"] --> B["validate: oEmbed / videos.list"]
-  B --> C["description parser"]
-  C --> D{"충분한가?"}
-  D -- "예" --> H["draft 생성"]
-  D -- "아니오" --> E["작성자 top-level 댓글"]
-  E --> F["public caption / transcript timedtext"]
-  F --> G{"재료/단계/수량 공백이 남는가?"}
-  G -- "아니오" --> H
-  G -- "예" --> I["화면 OCR evidence packet"]
-  I --> J["Gemini structured fallback: 공개 텍스트 + OCR 요약만"]
-  J --> K["재료 표준명 매핑 / 수량 provenance 판정"]
-  K --> L["youtube_extraction_sessions draft 저장"]
-  L --> M["YT_IMPORT 검수"]
-  M --> N["register: 서버가 session draft 기준 검증"]
+  A["localhost YT_IMPORT에 공개 YouTube URL 입력"] --> B["snapshot-video.mjs"]
+  B --> C["YouTube Data API: metadata + 작성자 댓글"]
+  B --> D["공개 timedtext caption"]
+  D -->|필요 시| E["Apify caption fallback"]
+  C --> F["source.json"]
+  E --> F
+  F --> G["Python yt_dlp + OpenCV/FFmpeg hybrid frame 추출"]
+  G --> H["최대 12개 후보 frame"]
+  H --> I["gpt-5.4-mini selector: 화면 글자/수량 cue 선택"]
+  I --> J["최대 8개 선택 frame"]
+  J --> K["gpt-5.4 final: 4-source recipe JSON"]
+  K --> L["strict identity 검증"]
+  L --> M["서비스 result adapter"]
+  M --> N["재료 표준명/동의어 매핑"]
+  N --> O["youtube_extraction_sessions draft"]
+  O --> P["YT_IMPORT 검수 후 register"]
 ```
 
-핵심 원칙:
+네 가지 source는 다음 우선순위를 유지한다.
 
-- `extraction_methods`는 계속 `description | comment | caption`만 기록한다.
-- OCR과 Gemini는 source가 아니라 `source_providers`와 `extraction_meta_json`에 보조 처리로 기록한다.
-- 화면 OCR로 얻은 수량은 `visual_explicit` 또는 review-required로 내려간다.
-- `recipe_inferred`는 사용자 확인 없이 자동 등록 금지다.
+1. 설명란의 명시 정보
+2. 작성자 top-level 댓글
+3. caption/transcript 발화
+4. selector가 실제 frame에서 읽은 화면 글자와 시각 근거
 
-## API와 비동기 작업 흐름
+수량 근거 우선순위는 `설명란/작성자 댓글 명시값 > 발화 자막 > 화면 자막 > 시각 추정`이다. 추정값은 자동 등록하지 않는다.
 
-1. 1단계 구현은 기존 sync `POST /extract` 안에서 전체 timeout을 지켜 실행한다.
-2. OCR/vision이 1회 요청 timeout을 넘기기 쉬우면 `extraction_job_id` 기반 async job을 contract-evolution으로 먼저 정의한다.
-3. async가 필요하면 `POST /extract`는 `202 accepted`가 아니라 기존 wrapper `{ success, data, error }` 정책을 유지하는 새 응답 shape를 문서화해야 한다.
-4. polling endpoint를 추가한다면 새 endpoint이므로 API 문서와 workpack 승인 전 구현 금지다.
+## 서비스 모듈 경계
 
-로컬 개발 테스트 모드는 다음 조건을 만족해야 한다.
+실험 harness 내부를 서비스 코드에 다시 구현하지 않는다. 복구된 parity bundle은 experiment repo가 소유하고, 서비스는 versioned worker contract만 호출한다.
 
-- `pnpm dev`로 실행한 localhost에서 기존 `YT_IMPORT` 화면을 그대로 사용한다.
-- `.env.local`에는 YouTube provider key, Gemini key, Supabase local/dev 연결값, `youtube_import=true`와 `youtube_ocr_extraction=true` feature flag가 설정되어야 한다. 구현은 운영용 `YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED`/`YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED`도 계속 지원한다.
-- OCR 통합 경로가 켜져 있으면 `youtube_extraction_sessions.extraction_meta_json`과 visual extraction event/cache row에서 `attempted`, `cache_hit`, `status`, `source_provider` 요약을 확인할 수 있어야 한다. API 응답 shape를 새로 늘리는 일은 별도 contract-evolution 전에는 하지 않는다.
-- OCR 통합 경로가 꺼져 있으면 기존 public-text-only 추출 결과로 fallback되어야 한다.
-- 임의 링크 테스트는 공개 영상만 대상으로 하며, 로그인 전용 caption, 비공개 영상, age-restricted 영상은 실패/skip 처리를 확인하는 negative case로만 쓴다.
+권장 경계:
 
-권장 timeout:
+- `app/api/v1/recipes/youtube/extract/route.ts`
+  - 인증, feature flag, request wrapper 유지
+  - parity 알고리즘을 직접 넣지 않음
+- `lib/server/youtube-import.ts`
+  - 기존 session/ingredient/register orchestration 유지
+  - 현재 `youtube_ocr_extraction`이 Gemini provider를 여는 alias인 동작 제거
+- 신규 `lib/server/youtube-i031-parity-runner.ts`
+  - 고정 bundle path, command, timeout, 취소, stdout JSON contract 관리
+  - shell 문자열 조합 대신 `spawn` argument array 사용
+- 신규 `lib/server/youtube-i031-result-adapter.ts`
+  - harness `result.json`을 기존 `YoutubeRecipeExtractData`와 draft shape로 변환
+  - extractor 원본 result와 서비스 표준명 매핑 결과를 분리
+- 신규 `lib/server/youtube-i031-observability.ts`
+  - stage timing, exit reason, identity mismatch, 비용 요약 기록
+- experiment repo의 immutable parity bundle
+  - `snapshot-video`, frame extractor, v19 client, v44 prompt, runner, dependency manifest만 포함
+  - golden/grade/review/holdout 파일은 포함하지 않음
 
-- public text fetch/parser: 5~8초
-- author comment fetch: 3~5초, page cap 1 유지
-- caption/transcript timedtext: 5~8초
-- OCR evidence packet: 20~30초 hard cap
-- Gemini structured fallback: 25~35초 hard cap
-- 전체 `POST /extract`: sync 유지 시 60~75초 hard cap
+서비스와 worker의 최소 JSON contract:
 
-## 재시도와 실패 처리
+```json
+{
+  "request_id": "uuid",
+  "youtube_url": "https://www.youtube.com/watch?v=...",
+  "mode": "cv-goal-i031-ocr-strict",
+  "no_cache": true
+}
+```
 
-- provider 429/quota: 즉시 fallback 또는 검수 화면에서 public-text-only draft 제공, `error_code=QUOTA_DENIED` event 기록.
-- provider 5xx/network: 1회 짧은 jitter retry만 허용, 같은 요청 안 무한 retry 금지.
-- OCR 실패: draft 생성을 막지 않고 `quantity_review_required=true` 또는 step warning으로 보수 처리.
-- Gemini JSON parse 실패: raw response 저장 금지, sanitized error만 event에 기록.
-- 세션 만료: 기존 `410` 정책 유지.
-- consumed 재등록: 기존 `409` 정책 유지.
-- cross-user 접근: 기존 `404` 정책 유지.
+```json
+{
+  "status": "success",
+  "identity": {
+    "execution_config_signature": "704359dfb34df5ac1d070078",
+    "client_version": "codex-vision-keyframes-client-v19-onscreen-amount-recovery",
+    "final_prompt_version": "keyframe-final-v44-explicit-action-clause"
+  },
+  "recipes": [],
+  "timings_ms": {},
+  "warnings": []
+}
+```
+
+Identity가 다르면 adapter는 결과를 저장하지 않고 `PARITY_IDENTITY_MISMATCH`로 실패해야 한다.
+
+## API와 비동기 작업
+
+### Localhost 첫 완료선
+
+기존 `POST /api/v1/recipes/youtube/extract`를 유지하되, 개발 환경에서만 parity worker completion을 기다린다. outer timeout은 실험의 model timeout을 잘라내지 않도록 최소 25분으로 두고, 사용자가 취소하거나 브라우저 연결이 끊기면 child process group에 종료 신호를 보낸다.
+
+이 단계는 localhost 검증용이며 serverless production timeout에는 적합하지 않다.
+
+### Production 완료선
+
+Production은 queue 기반 비동기 job으로 분리한다.
+
+1. `POST /recipes/youtube/extract`가 job을 만든다.
+2. macOS parity worker가 source snapshot과 extraction을 수행한다.
+3. 완료 후 service adapter가 draft/session을 원자적으로 저장한다.
+4. UI는 `queued / collecting_source / extracting_frames / selecting_frames / extracting_recipe / mapping / completed / failed` 상태를 polling 또는 server event로 받는다.
+
+새 status와 polling endpoint는 현재 공식 API에 없으므로 contract-evolution 전 구현하지 않는다. 모든 응답은 기존 `{ success, data, error }` wrapper를 유지한다.
+
+## Timeout, 재시도, 실패 처리
+
+Strict parity에서는 결과를 바꾸는 자동 fallback을 넣지 않는다.
+
+| 단계 | 정책 |
+| --- | --- |
+| YouTube metadata/comments | 당시 collector 정책과 동일하게 실행, 일시적 network 오류만 1회 재시도 |
+| public caption | 공개 timedtext 먼저, 당시 조건에 맞을 때 Apify 1회 fallback |
+| frame extraction | 실험 옵션 그대로, 실패 시 전체 strict run 실패 |
+| selector | 1회 호출, 자동 model 변경/추가 retry 금지 |
+| final | 1회 호출, Gemini fallback/다른 model fallback 금지 |
+| identity validation | 불일치 시 fail closed |
+| 서비스 mapping | DB 일시 오류만 멱등 idempotency key로 재시도 |
+
+사용자에게는 원인을 구분해 보여준다.
+
+- source 수집 실패
+- 영상 접근 제한
+- caption fallback 실패
+- frame extraction 실패
+- Codex 로그인/모델 호출 실패
+- strict identity mismatch
+- 재료 매핑 검수 필요
+
+Strict run이 실패했을 때 기존 text/Gemini 경로를 자동 실행하지 않는다. 사용자가 별도의 “기존 추출 방식으로 다시 시도”를 선택할 때만 모드를 바꾼다.
+
+## 단계별 시간 근거
+
+아래 시간은 `result.json.meta`의 cold/no-cache extraction 시간이다. source snapshot 생성 시간은 별도로 기록되지 않아 end-to-end 총시간에 포함할 수 없다.
+
+| Split | N | Frame extract avg / p50 | Sampler avg | Selector avg / p50 | Final avg / p50 | Total avg | Promotion p50 / p95 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Train | 9 | `9.770s / 8.111s` | `0.001s` | `23.655s / 22.688s` | `25.251s / 22.508s` | `59.306s` | `56.28s / 77.1s` |
+| Validation | 8 | `9.642s / 9.806s` | `<0.001s` | `24.496s / 26.298s` | `35.358s / 34.535s` | `71.465s` | `65s / 95.5s` |
+
+주의:
+
+- “OCR 시간”이 별도 숫자로 기록되지 않았다. 화면 글자 읽기는 selector call 안에 포함된다.
+- localhost end-to-end는 metadata/comments/caption 수집과 queue 대기 시간이 추가되므로 위 p95보다 길다.
+- source 수집 시간 계측을 추가하되 extractor 입력과 실행 순서는 바꾸지 않는다.
 
 ## 재료 DB 표준명 매핑
 
-- `ingredients.standard_name`과 `ingredient_synonyms`를 우선 사용한다.
-- 새 재료 자동 INSERT 금지. 미등록/애매한 재료는 `unresolved` 또는 `needs_review`로 내려서 YT_IMPORT에서 사용자 확인을 받는다.
-- 외부 공공/상용 데이터는 raw import → normalization → review → approved seed 이후에만 production dictionary가 된다.
-- v1 canonical 8종 category label은 유지하고, v2 `category_code`는 optional additive로만 사용한다.
-- 동의어는 confidence만으로 자동 확정하지 않고, 기존 `register_youtube_ingredient(...)` RPC 경로를 따른다.
+Extractor 결과는 먼저 원문 그대로 보존하고, 그 다음 서비스 adapter에서 표준명 매핑을 수행한다.
+
+1. `ingredients.standard_name` exact match
+2. `ingredient_synonyms` normalized match
+3. 하나의 높은 신뢰 후보만 있을 때 `needs_review`
+4. 후보가 없거나 여러 개면 `unresolved`
+
+새 재료 자동 INSERT는 금지한다. 사용자가 검수 화면에서 확인한 뒤 기존 `register_youtube_ingredient(...)` RPC를 사용한다. `draft_ingredient_id`, `quantity_review_required`, `quantity_confirmation_status` 서버 검증은 유지한다.
 
 ## 보안과 비밀값
 
-- YouTube URL, raw source text, transcript, raw OCR frame, provider raw response, API key는 `operational_events`에 저장하지 않는다.
-- cache에는 sanitized structured result만 저장한다.
-- provider key는 서버 env에서만 읽고 클라이언트로 내려주지 않는다.
-- service-role insert/update는 route handler 내부로 제한한다.
-- 사용자별 rate limit은 events table 기준으로 계산한다.
+- `YOUTUBE_API_KEY`, `APIFY_TOKEN`, Codex auth token은 server/worker env로만 주입한다.
+- secret을 command argument, stdout, event payload, DB, browser response에 넣지 않는다.
+- child process env는 allowlist로 만들고 전체 `process.env`를 그대로 전달하지 않는다.
+- worker 임시 폴더는 request별 UUID와 mode `0700`을 사용한다.
+- raw video/frame/source/provider response는 임시 작업 폴더에만 두고 성공/실패 후 정리한다.
+- 보존이 필요한 것은 sanitized recipe result, identity, stage timing, reason code뿐이다.
+- URL 전체 대신 `youtube_video_id` 또는 salted hash를 관측성 key로 사용한다.
+- golden, grade, semantic review, holdout label 경로를 worker sandbox에 mount하지 않는다.
 
 ## 비용과 속도 제한
 
-- 캐시 키는 `youtube_video_id + source_hash + schema_version + model/provider`로 둔다.
-- 같은 사용자 반복 요청은 cache hit를 우선한다.
-- OCR/vision은 text-only 결과가 registration-ready이면 skip한다.
-- source-rich 영상은 OCR을 건너뛰거나 수량 gap이 있는 row만 target한다.
-- p50 목표는 Validation 기준 65초 이하, p95 목표는 95.5초 이하를 초기 기준으로 둔다.
-- model call 상한은 실험 근거처럼 최대 2회를 기본으로 유지한다.
+- 1 strict request는 YouTube Data API, 필요 시 Apify, Codex selector 1회, Codex final 1회를 사용한다.
+- localhost 기본 동시 실행은 `1`, 대기열 상한은 `3`으로 시작한다.
+- 사용자/일일 quota와 전역 concurrency gate를 둔다.
+- strict acceptance test는 `--no-cache`를 유지한다.
+- Production rollout 뒤 sanitized result cache를 추가할 수 있지만, cache hit는 strict cold parity 측정에서 제외한다.
+- model, effort, frame 수를 비용 때문에 자동 축소하지 않는다. 변경하려면 새 iteration으로 다시 평가한다.
+
+정확한 비용은 evidence에 token/cost aggregate가 없어 이 계획에서 추정하지 않는다. 구현 시 selector/final input/output token과 실제 청구 비용을 분리 계측한다.
 
 ## 로그와 관측성
 
-필수 event:
+필수 stage event:
 
-- `text_sources_collected`
-- `author_comment_attempted/skipped/used`
-- `caption_attempted/skipped/used`
-- `ocr_attempted/cache_hit/success/error`
-- `llm_structured_attempted/cache_hit/success/error`
+- `parity_job_queued`
+- `source_snapshot_started/completed/failed`
+- `frame_extraction_started/completed/failed`
+- `selector_started/completed/failed`
+- `final_started/completed/failed`
+- `identity_verified/mismatch`
+- `ingredient_mapping_completed`
 - `draft_created`
-- `register_blocked_by_review_required`
+- `parity_job_cancelled/timed_out`
 
-기록할 수 있는 값:
+기록 값:
 
-- provider, model, status, reason code
-- input/output token 수와 추정 비용
-- 단계별 elapsed ms
-- draft ingredient count, step count, unresolved count
-- sanitized provenance summary
+- parity bundle SHA-256
+- client/prompt/execution signature
+- stage elapsed ms
+- frame/candidate/selected count
+- model call count
+- source availability boolean
+- ingredient/step/unresolved/review-required count
+- sanitized error code
 
 기록 금지:
 
-- YouTube URL 전체
-- raw source text
-- transcript 전문
-- OCR 원본 frame
-- provider raw response
-- API key, cookie, OAuth token
-
-## 단계적 출시와 롤백
-
-1. `youtube_ocr_extraction` feature flag를 추가한다.
-2. 내부/개발 환경에서 fixture와 real smoke만 허용한다.
-3. beta 사용자 5% 또는 admin allowlist로 제한한다.
-4. p95, quota error, unresolved rate, register completion rate를 본다.
-5. 문제가 있으면 flag off로 즉시 public-text-only 경로로 되돌린다.
-6. DB migration은 additive-only로 작성하고, rollback SQL 또는 ignore-safe read path를 준비한다.
+- raw description/comment/transcript
+- raw frame와 provider response
+- API key/token/cookie
+- golden/review/grade data
 
 ## 데이터 누수와 하드코딩 방지
 
-- Validation 개별 golden 접근 금지 원칙을 production 코드에도 반영한다. 테스트 fixture 외 videoId별 특수 분기 금지.
-- 실험 cache/result를 서비스 코드에 복사하지 않는다.
-- source packet에는 public source만 포함하고, 정답지·review note·golden metadata는 포함하지 않는다.
-- `videoId === ...` 조건, 특정 채널명/제목별 hardcoded recipe rule은 금지한다.
-- 후보 승격 전 fresh sealed Holdout을 1회 실행하고, 실패 시 production rollout 금지.
+- worker 입력은 URL과 공개 source뿐이며 golden을 읽지 못하는 sandbox를 유지한다.
+- Train/Validation replay는 extraction freeze가 끝난 뒤에만 grade를 실행한다.
+- production bundle에는 dataset video ID 목록도 넣지 않는다.
+- `videoId === ...`, 제목/채널별 recipe branch, 특정 재료 답안 목록을 금지한다.
+- source snapshot/result cache를 production code fixture로 복사하지 않는다.
+- source-only test fixture와 expected shape fixture를 분리한다.
+- CI source scan으로 known Train/Validation/Holdout video ID와 recipe title literal을 검사한다.
 
-## 테스트와 승인 기준
+## 공식 문서 변경과 선행 승인
 
-Stage 1 문서 gate:
+현재 공식 API §6-2는 YouTube Data API, Gemini structured fallback, visual quantity enrichment를 기준으로 한다. `i031` strict mode와 async status는 공식 계약에 없다.
 
-- 공식 문서 변경 필요 여부와 사용자 승인 기록이 명시되어야 한다.
-- workpack acceptance에 Happy Path, State/Policy, Error/Permission, DataIntegrity, ManualQA, AutomationSplit가 있어야 한다.
+서비스 구현 전에 필요한 순서:
 
-Backend tests:
+1. 사용자의 “실험환경 100% 동일” 결정을 contract-evolution 승인 근거로 기록한다.
+2. Claude Stage 1이 새 product workpack의 `README.md`, `acceptance.md`, `automation-spec.json`, workflow item을 작성해 main에 merge한다.
+3. 별도 contract-evolution docs PR에서 아래를 정한다.
+   - strict extraction mode와 feature flag
+   - async job/status/polling 계약
+   - `PARITY_IDENTITY_MISMATCH`, worker unavailable, timeout error
+   - extraction metadata와 event 저장 범위
+   - localhost-only와 production macOS worker 경계
+4. 공식 API/DB/User Flow 문서와 `CURRENT_SOURCE_OF_TRUTH.md`를 갱신한다.
+5. 갱신된 공식 문서 기준으로 workpack acceptance를 다시 잠근 뒤에만 service 구현을 시작한다.
 
-- source priority: description > author comment > caption/transcript > OCR 보조.
-- text-only ready면 OCR skip.
-- OCR 실패 시 fallback draft 생성.
-- `quantity_review_required=true`면 quick import auto-register 차단.
-- `quantity_confirmation_status` 서버 draft 기준 검증.
-- raw source/provider response 로그 금지.
-- cache hit와 quota denied event 기록.
-- cross-user/expired/consumed session 보호.
+Localhost 내부 spike가 public API/DB shape를 바꾸지 않더라도, product route 동작을 바꾸므로 Stage 1 workpack은 선행한다.
 
-Frontend tests:
+## 구현 순서와 예상 기간
 
-- YT_IMPORT에서 evidence badge와 review-required 상태 표시.
-- unresolved/needs_review 수량·재료가 있으면 저장 차단.
-- provider 실패 시 사용자에게 재시도/수동 수정 경로 제공.
+기간은 1명 기준이며, Stage 0 복구 성공 이후의 범위다.
 
-Regression/eval:
+| 단계 | 작업 | 예상 |
+| --- | --- | ---: |
+| 0 | v19/v44 parity bundle 복구, fingerprint/identity 검증 | `1~2일`, artifact 미복구 시 중단 |
+| 1 | Train 9 + Validation 8 cold replay, promotion 재검증 | `0.5~1일` |
+| 2 | Stage 1 workpack + contract-evolution 문서 | `1일` |
+| 3 | service runner/adapter/identity fail-closed TDD | `1~2일` |
+| 4 | localhost YT_IMPORT 연결, 임의 URL smoke | `0.5~1일` |
+| 5 | async worker, 보안/관측성/비용 gate | `1~2일` |
+| 6 | fresh sealed Holdout, 제한 rollout/rollback 검증 | `0.5~1일` |
 
-- `pnpm verify:backend`
-- `pnpm test -- tests/youtube-import.backend.test.ts tests/youtube-visual-quantity-eval.test.ts tests/youtube-corpus.test.ts`
-- real app route smoke 1회
-- fresh sealed Holdout PASS 후에만 rollout 승인
+복구가 가능하다는 전제에서 총 `4.5~8일`이다. Stage 0에서 exact bytes를 찾지 못하면 기간을 늘려 추측 구현하지 않고 strict parity 목표를 blocked로 보고한다.
 
-Localhost manual smoke:
+## 테스트 계획
 
-1. `pnpm install --frozen-lockfile`
-2. local/dev Supabase migration 적용
-3. `.env.local`에 `YOUTUBE_API_KEY`, Gemini key, Supabase env, `youtube_import=true`, `youtube_ocr_extraction=true` 설정
-4. `pnpm dev`
-5. 브라우저에서 `http://localhost:3000/menu/add/youtube` 접속
-6. 임의의 공개 YouTube 레시피 링크 입력
-7. 결과 검수 화면에서 제목, 재료, 수량, 단계, evidence/provenance 배지, review-required 차단 여부 확인
-8. 서버 로그와 `youtube_visual_extraction_events`, `youtube_visual_extraction_cache`, `youtube_extraction_sessions.extraction_meta_json`에서 `attempted/success/cache_hit/error` 확인
-9. 같은 링크를 한 번 더 입력해 cache hit 경로 확인
-10. `youtube_ocr_extraction=false`로 다시 실행해 기존 fallback 경로가 동작하는지 확인
+### Parity bundle
 
-Localhost smoke 완료 기준:
+- code fingerprint `17f475...` exact
+- execution signature `704359...` exact
+- client/prompt/model/frame options exact
+- Train 9/9, Validation 8/8 completed
+- forbidden read `0`
+- max model call `2`
+- Train/Validation promotion PASS
 
-- 공개 레시피 링크 3개 이상에서 추출 화면까지 도달한다.
-- source-rich 링크 1개는 OCR이 skip되거나 최소 호출로 끝난다.
-- sparse text 링크 1개는 OCR 또는 structured fallback이 시도된다.
-- OCR/provider 실패를 강제로 만들었을 때 public-text-only draft 또는 사용자 수정 가능한 오류 상태로 복구한다.
-- 추정 수량 또는 unresolved 재료가 있으면 quick import 자동 등록이 차단된다.
-- raw YouTube URL, raw transcript, raw OCR frame, provider raw response가 운영 로그에 남지 않는다.
+### Backend
 
-## 구현 순서
+- strict mode에서 Gemini factory가 호출되지 않음
+- `YOUTUBE_API_KEY` 누락 시 source 단계에서 명시적 설정 오류
+- Apify fallback 조건과 provider 기록
+- child process argument injection 방지
+- timeout/cancel 시 process group 종료
+- identity mismatch 결과 저장 금지
+- 실패 시 Gemini/text path 자동 fallback 금지
+- result adapter가 unresolved/review-required를 보존
+- cross-user/expired/consumed session 보호
+- raw source/frame/secret 로그 금지
 
-1. 사용자 승인: OCR production 통합과 공식 계약 변경 승인.
-2. Claude Stage 1: 새 workpack, acceptance, automation-spec, workflow item 작성.
-3. Contract evolution: API/DB/User Flow 문서에 OCR evidence packet과 async 여부 반영.
-4. Codex Stage 2: backend tests를 먼저 작성해 현재 public-text-only 경계 고정.
-5. Backend 구현: source packet builder, OCR evidence adapter, cache/events, draft merge.
-6. Backend 검증: targeted tests, `verify:backend`, real route smoke.
-7. Claude Stage 4: YT_IMPORT badge/review UI 연결.
-8. Codex Stage 5/6: design/FE review와 closeout.
-9. Localhost manual smoke: 개발자가 임의 공개 YouTube 레시피 링크로 새 추출 경로를 확인할 수 있어야 한다.
-10. Fresh sealed Holdout: production rollout 전 1회 통과 필수.
-11. Feature flag rollout: 내부 → allowlist → 제한 비율 → 전체.
+### Localhost 실제 링크
 
-## 남은 위험
+최소 3개 공개 단일 레시피 링크:
 
-- `cv-goal-i031-ocr`은 Holdout 통과 근거가 없어 바로 배포 후보가 아니다.
-- OCR/vision 비용과 p95가 실제 production provider에서 커질 수 있다.
-- 현재 공식 문서는 visual quantity enrichment 중심이라, step/ingredient OCR 보강 범위는 contract-evolution이 필요하다.
-- Gemini semantic judge는 작은 calibration 기반 guardrail이며 사람 검수를 대체하지 않는다.
-- 서비스 worktree에는 기존 사용자 변경이 많아 구현 전 branch/worktree 정리가 필요하다.
+1. 설명란이 풍부하고 public caption이 있는 영상
+2. public caption이 막혀 Apify fallback이 필요한 영상
+3. 설명란이 빈약하고 화면 글자 근거가 중요한 영상
+
+Negative case:
+
+- 비공개/삭제/연령 제한 영상
+- 댓글 비활성
+- caption 없음
+- 잘못된 YouTube key
+- Apify quota/timeout
+- Codex 로그아웃
+- selector/final timeout
+- parity identity 강제 mismatch
+
+### 회귀 명령
+
+구현 단계에서 다음을 기본 gate로 사용한다.
+
+```bash
+pnpm test -- tests/youtube-import.backend.test.ts tests/youtube-visual-quantity-eval.test.ts tests/youtube-corpus.test.ts
+pnpm verify:backend
+```
+
+새 parity runner/adapter 전용 test 파일을 위 targeted set에 추가한다.
+
+## Localhost 실행 계획
+
+완성 후 개발자가 따를 흐름:
+
+1. strict parity bundle 검증 command가 `PASS`인지 확인한다.
+2. `codex login status` 또는 동등한 방법으로 Codex CLI 로그인 상태를 확인한다.
+3. Python 3, `yt_dlp`, OpenCV/FFmpeg 의존성을 검증한다.
+4. `.env.local`에 Supabase 값, `YOUTUBE_API_KEY`, `APIFY_TOKEN`, strict feature flag와 parity bundle 절대경로를 넣는다.
+5. `pnpm dev`로 서비스를 실행한다.
+6. `http://localhost:3000/menu/add/youtube`에 접속한다.
+7. 임의의 공개 단일 레시피 URL을 입력한다.
+8. 진행 상태에서 source/frame/selector/final/mapping 단계를 확인한다.
+9. 검수 화면에서 제목, 재료, 수량, 단계, unresolved/review-required를 확인한다.
+10. event와 result identity가 `i031` 고정값과 일치하는지 확인한다.
+
+예시 env 이름은 Stage 1에서 확정한다.
+
+```dotenv
+YOUTUBE_I031_STRICT_PARITY_ENABLED=true
+YOUTUBE_I031_PARITY_BUNDLE_ROOT=/absolute/path/to/frozen-cv-goal-i031-ocr
+YOUTUBE_API_KEY=server-only
+APIFY_TOKEN=server-only
+```
+
+`GEMINI_API_KEY`는 strict mode 완료 조건에 포함하지 않는다.
+
+## 정확도와 사용자 경험 영향
+
+예상 정확도:
+
+- 근거 기준 Validation Ingredient F1 `.925`, Amount match `.747`, Amount coverage `.788`, Step coverage `.548`, Semantic average `3.875`
+- 새 임의 링크에 같은 수치를 보장할 수는 없다. dataset 밖 일반화는 fresh Holdout과 localhost real-link smoke로 확인한다.
+- 화면 글자가 중요한 영상에서 text-only보다 수량·재료 회수 가능성이 높지만, OCR 오독과 선택 frame 누락은 남는다.
+
+예상 시간:
+
+- extraction 자체 Validation p50 `65s`, p95 `95.5s`
+- source snapshot 시간이 추가되므로 실제 localhost는 보통 이보다 느리다.
+- 기다리는 동안 단계 상태와 취소 기능이 필요하다.
+
+## 출시와 롤백
+
+1. localhost developer only
+2. 내부 allowlist
+3. fresh sealed Holdout PASS
+4. beta `5%`
+5. p95, failure rate, unresolved rate, register completion rate 확인
+6. `25%`
+7. 전체 rollout
+
+롤백:
+
+- strict feature flag off
+- 새 job 접수 중단, 진행 중 job 취소
+- 기존 YouTube text/Gemini 경로는 별도 모드로 유지
+- additive DB field/table은 읽기 무시가 가능해야 함
+- parity bundle SHA를 이전 승인 버전으로 되돌림
+
+Strict mode가 실패했다고 자동으로 기존 모드 결과를 섞지 않는다. 롤백은 사용자에게 모드 전환을 분명히 보여준다.
+
+## 완료 기준
+
+- [ ] v19/v44 exact bytes 복구
+- [ ] code fingerprint `17f475...` exact
+- [ ] execution signature `704359...` exact
+- [ ] Train/Validation cold replay PASS
+- [ ] 공식 문서와 Stage 1 workpack merge
+- [ ] strict mode에서 Gemini 호출 `0`
+- [ ] localhost에서 임의 공개 링크 3개 완료
+- [ ] source/frame/selector/final/mapping 단계 관측 가능
+- [ ] identity mismatch fail closed
+- [ ] secret/raw source/raw frame 로그 `0`
+- [ ] 재료 표준명 매핑과 review-required 검증 통과
+- [ ] targeted tests와 `pnpm verify:backend` PASS
+- [ ] fresh sealed Holdout PASS
+- [ ] rollback smoke PASS
+
+하나라도 빠지면 “실험환경 100% 동일 구현 완료”라고 보고하지 않는다.
+
+## 핵심 근거 파일
+
+실험 성능:
+
+- `notebooks/recipe_loop_data/train/_grade_summary.cv-goal-i031-ocr-train-cold.json`
+- `notebooks/recipe_loop_data/train/_semantic_summary.cv-goal-i031-ocr-train-cold.json`
+- `notebooks/recipe_loop_data/train/_promotion_summary.cv-goal-i031-ocr-train-cold.json`
+- `notebooks/recipe_loop_data/validation/_grade_summary.cv-goal-i031-ocr-validation-cold.json`
+- `notebooks/recipe_loop_data/validation/_semantic_summary.cv-goal-i031-ocr-validation-cold.json`
+- `notebooks/recipe_loop_data/validation/_promotion_summary.cv-goal-i031-ocr-validation-cold.json`
+
+고정 identity와 누수:
+
+- `notebooks/recipe_loop_data/train/_candidate_lock.cv-goal-i031-ocr-train-cold.json`
+- `notebooks/recipe_loop_data/train/_pi_freeze.cv-goal-i031-ocr-train-cold.json`
+- `notebooks/recipe_loop_data/validation/_pi_freeze.cv-goal-i031-ocr-validation-cold.json`
+- `notebooks/recipe_loop_data/train/YUdJBeOdrMY/runs/cv-goal-i031-ocr-train-cold/result.json`
+- `notebooks/recipe_loop_data/train/YUdJBeOdrMY/runs/cv-goal-i031-ocr-train-cold/file-access-manifest.json`
+
+source 수집과 실행:
+
+- `scripts/recipe-loop/snapshot-video.mjs`
+- `scripts/recipe-loop/run-extraction.mjs`
+- `scripts/recipe-loop/extract-video-frames.py`
+- `scripts/recipe-loop/lib/codex-vision-keyframes-client.mjs`
+
+Holdout 제한:
+
+- `notebooks/recipe_loop_data/holdout/_grade_summary.cv-goal-i027-holdout-cold.json`
+- `notebooks/recipe_loop_data/holdout/_semantic_summary.cv-goal-i027-holdout-cold.json`
+- `notebooks/recipe_loop_data/holdout/_promotion_summary.cv-goal-i027-holdout-cold.json`

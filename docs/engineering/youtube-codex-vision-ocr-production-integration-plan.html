@@ -3,235 +3,607 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>YouTube OCR 추출 production 통합 계획</title>
+  <title>cv-goal-i031-ocr 실험환경 100% 일치 통합 계획</title>
   <style>
-    :root{
-      --ink:#1c2230; --muted:#5b6577; --line:#e4e8f0; --panel:#fff;
-      --brand:#2563eb; --brand-soft:#eaf1ff; --brand-line:#c9dbff;
-      --green:#15803d; --green-soft:#e6f4ea; --green-line:#bfe0cd;
-      --amber:#b45309; --amber-soft:#fdf3e3; --amber-line:#f3dcb0;
-      --red:#b91c1c; --red-soft:#fdeaea; --red-line:#f3c4c4;
-      --radius:14px; --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.07);
+    :root {
+      --ink: #1d2935;
+      --muted: #5f6d78;
+      --line: #dce4e5;
+      --panel: #ffffff;
+      --page: #eef3f3;
+      --brand: #0f766e;
+      --brand-dark: #174542;
+      --brand-soft: #e3f3f0;
+      --brand-line: #b7ded8;
+      --blue: #315ca8;
+      --blue-soft: #eaf0fb;
+      --green: #26733b;
+      --green-soft: #e8f4ea;
+      --amber: #a75c06;
+      --amber-soft: #fff3df;
+      --red: #ad3333;
+      --red-soft: #fceaea;
+      --coral: #b6533d;
+      --coral-soft: #fff0eb;
+      --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 10px 28px rgba(16, 42, 40, .07);
+      --radius: 12px;
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Segoe UI",Roboto,sans-serif;background:linear-gradient(180deg,#172554 0%,#1d4ed8 238px,#eef4f8 238px,#eef4f8 100%);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:anywhere}
-    .wrap{max-width:960px;margin:0 auto;padding:0 20px 80px}
-    header.hero{padding:44px 0 28px;color:#e9f4ff}
-    .tag-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-    .pill{display:inline-block;font-size:12.5px;font-weight:700;padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.13);color:#dbeafe;border:1px solid rgba(255,255,255,.2)}
-    header.hero h1{font-size:28px;line-height:1.35;margin:4px 0 10px;color:#fff;letter-spacing:0}
-    header.hero p.sub{margin:0;color:#bfdbfe;font-size:15px}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 28px;margin:18px 0}
-    .card h2{font-size:20px;margin:0 0 14px;display:flex;align-items:center;gap:10px;letter-spacing:0}
-    .card h2 .num{flex:none;width:30px;height:30px;border-radius:9px;background:var(--brand);color:#fff;font-size:15px;display:grid;place-items:center;font-weight:700}
-    .card h3{font-size:16px;margin:22px 0 8px;letter-spacing:0}
-    p{margin:10px 0}.muted{color:var(--muted)}
-    .tldr{background:var(--brand-soft);border:1px solid var(--brand-line);border-left:5px solid var(--brand);border-radius:12px;padding:18px 20px;margin:18px 0;font-size:16px}
-    .tldr strong{color:var(--brand)}
-    .note{border-radius:12px;padding:14px 16px;margin:14px 0;font-size:14.5px}
-    .note .label{font-weight:800;display:block;margin-bottom:4px;font-size:13px}
-    .note.info{background:var(--brand-soft);border:1px solid var(--brand-line)}.note.info .label{color:var(--brand)}
-    .note.warn{background:var(--amber-soft);border:1px solid var(--amber-line)}.note.warn .label{color:var(--amber)}
-    .note.danger{background:var(--red-soft);border:1px solid var(--red-line)}.note.danger .label{color:var(--red)}
-    .note.good{background:var(--green-soft);border:1px solid var(--green-line)}.note.good .label{color:var(--green)}
-    .glossary{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .term{background:#f7faff;border:1px solid var(--line);border-radius:11px;padding:12px 14px}
-    .term dt{font-weight:800;color:var(--brand);font-size:14.5px;margin-bottom:3px}
-    .term dd{margin:0;font-size:13.5px;color:var(--muted)}
-    .term .en{color:#64748b;font-weight:700;font-size:12px}
-    .table-wrap{overflow-x:auto}
-    table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;min-width:680px}
-    th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
-    th{background:#eef4ff;font-weight:800}
-    td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-    tr:last-child td{border-bottom:none}
-    .pass{color:var(--green);font-weight:800}.fail{color:var(--red);font-weight:800}.warn{color:var(--amber);font-weight:800}
-    tr.highlight td{background:#f0fdf4}
-    .steps{list-style:none;padding:0;margin:8px 0 0}
-    .step{position:relative;padding:0 0 18px 46px}
-    .step:not(:last-child)::before{content:"";position:absolute;left:16px;top:30px;bottom:-2px;width:2px;background:var(--line)}
-    .step .dot{position:absolute;left:0;top:2px;width:34px;height:34px;border-radius:50%;background:var(--brand-soft);color:var(--brand);border:2px solid var(--brand);display:grid;place-items:center;font-weight:800;font-size:11.5px}
-    .step h4{margin:4px 0 4px;font-size:15.5px}.step p{margin:4px 0;font-size:14px;color:var(--muted)}
-    .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .listbox{border-radius:12px;padding:16px 18px}
-    .listbox.allow{background:var(--green-soft);border:1px solid var(--green-line)}
-    .listbox.deny{background:var(--red-soft);border:1px solid var(--red-line)}
-    .listbox h4{margin:0 0 8px;font-size:15px}.listbox.allow h4{color:var(--green)}.listbox.deny h4{color:var(--red)}
-    .listbox ul{margin:0;padding-left:18px;font-size:13.5px}.listbox li{margin:5px 0}
-    code,.mono{font-family:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;background:#e8eef8;padding:1px 6px;border-radius:5px;font-size:12.5px;color:#224}
-    pre{background:#10213f;color:#dbeafe;border-radius:10px;padding:14px 16px;overflow-x:auto;font-size:12.5px;line-height:1.6;margin:12px 0;font-family:"SF Mono",Menlo,monospace;white-space:pre}
-    .targets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .target{display:flex;gap:10px;align-items:flex-start;background:#f7faff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px}
-    .target .badge{flex:none;width:22px;height:22px;border-radius:6px;background:var(--brand);color:#fff;font-weight:800;font-size:11px;display:grid;place-items:center}
-    .check{list-style:none;padding:0;margin:0}.check li{padding:7px 0 7px 30px;position:relative;font-size:14px;border-bottom:1px dashed var(--line)}
-    .check li::before{content:"[ ]";position:absolute;left:0;top:7px;color:var(--brand);font-size:12px;font-family:"SF Mono",Menlo,monospace}.check li.done::before{content:"[x]";color:var(--green)}
-    .miniflow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 4px}
-    .miniflow .box{background:#fff;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:700;box-shadow:var(--shadow)}
-    .miniflow .arrow{color:var(--muted);font-weight:800}
-    footer{text-align:center;color:#64748b;font-size:12.5px;margin-top:40px}
-    @media(max-width:720px){.wrap{padding:0 14px 64px}.card{padding:20px 18px}.glossary,.twocol,.targets{grid-template-columns:1fr}header.hero h1{font-size:22px}table{min-width:620px}}
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--page);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+      line-height: 1.72;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      letter-spacing: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { width: min(1020px, calc(100% - 32px)); margin: 0 auto; padding-bottom: 72px; }
+    .hero {
+      margin: 0 calc(50% - 50vw) 26px;
+      padding: 46px max(16px, calc((100vw - 1020px) / 2)) 40px;
+      color: #e9f7f4;
+      background: var(--brand-dark);
+      border-bottom: 5px solid #d57a52;
+    }
+    .tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
+    .pill {
+      display: inline-block;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 999px;
+      padding: 4px 11px;
+      color: #d5eeea;
+      background: rgba(255,255,255,.08);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .hero h1 { max-width: 800px; margin: 0 0 10px; color: #fff; font-size: 30px; line-height: 1.34; letter-spacing: 0; }
+    .hero .sub { max-width: 780px; margin: 0; color: #bcdad5; font-size: 15px; }
+    .card {
+      margin: 18px 0;
+      padding: 26px 28px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .card h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 15px; font-size: 20px; letter-spacing: 0; }
+    .card h3 { margin: 24px 0 8px; font-size: 16px; letter-spacing: 0; }
+    .num {
+      flex: none;
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--brand);
+      font-size: 14px;
+      font-weight: 800;
+    }
+    p { margin: 10px 0; }
+    .tldr {
+      margin: 16px 0;
+      padding: 17px 19px;
+      border: 1px solid var(--brand-line);
+      border-left: 5px solid var(--brand);
+      border-radius: 10px;
+      background: var(--brand-soft);
+      font-size: 16px;
+    }
+    .tldr strong { color: var(--brand); }
+    .note { margin: 14px 0; padding: 14px 16px; border-radius: 10px; font-size: 14px; }
+    .note .label { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    .note.info { border: 1px solid #cbd9f2; background: var(--blue-soft); }
+    .note.info .label { color: var(--blue); }
+    .note.good { border: 1px solid #c8e2ce; background: var(--green-soft); }
+    .note.good .label { color: var(--green); }
+    .note.warn { border: 1px solid #eed3a9; background: var(--amber-soft); }
+    .note.warn .label { color: var(--amber); }
+    .note.danger { border: 1px solid #edc6c6; background: var(--red-soft); }
+    .note.danger .label { color: var(--red); }
+    .twocol, .targets, .glossary { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .listbox { padding: 17px 18px; border-radius: 10px; }
+    .listbox.allow { border: 1px solid #c8e2ce; background: var(--green-soft); }
+    .listbox.deny { border: 1px solid #edc6c6; background: var(--red-soft); }
+    .listbox h3 { margin: 0 0 8px; font-size: 15px; }
+    .listbox.allow h3 { color: var(--green); }
+    .listbox.deny h3 { color: var(--red); }
+    .listbox ul { margin: 0; padding-left: 18px; font-size: 13.5px; }
+    .listbox li { margin: 5px 0; }
+    .term { padding: 12px 14px; border: 1px solid var(--line); border-radius: 9px; background: #f7faf9; }
+    .term dt { margin-bottom: 3px; color: var(--brand); font-size: 14px; font-weight: 800; }
+    .term dd { margin: 0; color: var(--muted); font-size: 13px; }
+    .term .en { color: #718287; font-size: 11px; font-weight: 700; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; min-width: 650px; margin: 13px 0; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #edf5f3; font-weight: 800; }
+    td.numv, th.numv { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:last-child td { border-bottom: 0; }
+    tr.best td { background: #eaf6f3; }
+    .pass { color: var(--green); font-weight: 800; }
+    .fail { color: var(--red); font-weight: 800; }
+    code, .mono {
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #203d3b;
+      background: #e7eeee;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+    pre {
+      margin: 12px 0;
+      padding: 14px 16px;
+      overflow-x: auto;
+      border-radius: 9px;
+      color: #dff1ed;
+      background: #173e3b;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.65;
+      white-space: pre;
+    }
+    pre code { padding: 0; color: inherit; background: transparent; }
+    .target {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px 13px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #f7faf9;
+      font-size: 13.5px;
+    }
+    .badge {
+      flex: none;
+      display: grid;
+      width: 23px;
+      height: 23px;
+      place-items: center;
+      border-radius: 6px;
+      color: #fff;
+      background: var(--brand);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 10px;
+      margin: 18px 0;
+      align-items: stretch;
+    }
+    .flow .box {
+      position: relative;
+      display: flex;
+      min-height: 88px;
+      align-items: center;
+      justify-content: center;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #f8fbfa;
+      text-align: center;
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+    .flow .box:not(:last-child)::after {
+      position: absolute;
+      right: -9px;
+      z-index: 2;
+      color: var(--coral);
+      content: "›";
+      font-size: 24px;
+      font-weight: 900;
+    }
+    .flow .source { border-top: 4px solid var(--blue); }
+    .flow .visual { border-top: 4px solid var(--coral); }
+    .flow .model { border-top: 4px solid var(--amber); }
+    .flow .service { border-top: 4px solid var(--green); }
+    .flow .review { border-top: 4px solid var(--brand); }
+    .steps { margin: 8px 0 0; padding: 0; list-style: none; }
+    .step { position: relative; padding: 0 0 19px 46px; }
+    .step:not(:last-child)::before { position: absolute; top: 30px; bottom: -1px; left: 16px; width: 2px; background: var(--line); content: ""; }
+    .step .dot {
+      position: absolute;
+      top: 2px;
+      left: 0;
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border: 2px solid var(--brand);
+      border-radius: 50%;
+      color: var(--brand);
+      background: var(--brand-soft);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .step h3 { margin: 3px 0 3px; font-size: 15px; }
+    .step p { margin: 3px 0; color: var(--muted); font-size: 13.5px; }
+    .tree { display: grid; gap: 10px; }
+    .branch {
+      display: grid;
+      grid-template-columns: 215px 1fr;
+      gap: 13px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #f8fbfa;
+      font-size: 13.5px;
+    }
+    .branch.go { border-left: 4px solid var(--green); }
+    .branch.wait { border-left: 4px solid var(--amber); }
+    .branch.stop { border-left: 4px solid var(--red); }
+    .check { margin: 0; padding: 0; list-style: none; }
+    .check li { position: relative; padding: 8px 0 8px 31px; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+    .check li::before { position: absolute; top: 8px; left: 0; color: var(--brand); content: "[ ]"; font-family: "SF Mono", Menlo, monospace; font-size: 12px; }
+    .check li.done::before { color: var(--green); content: "[x]"; }
+    .check li:last-child { border-bottom: 0; }
+    .risk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .risk {
+      padding: 14px 15px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #fafcfc;
+    }
+    .risk strong { display: block; margin-bottom: 4px; color: var(--coral); font-size: 14px; }
+    .risk p { margin: 0; color: var(--muted); font-size: 13px; }
+    footer { margin-top: 38px; color: #6f8085; text-align: center; font-size: 12px; }
+    @media (max-width: 860px) {
+      .flow { grid-template-columns: 1fr; }
+      .flow .box { min-height: 58px; }
+      .flow .box:not(:last-child)::after { right: auto; bottom: -21px; left: 50%; transform: rotate(90deg); }
+    }
+    @media (max-width: 720px) {
+      .wrap { width: min(100% - 24px, 1020px); padding-bottom: 56px; }
+      .hero { padding-top: 34px; padding-bottom: 31px; }
+      .hero h1 { font-size: 23px; }
+      .card { padding: 20px 17px; }
+      .twocol, .targets, .glossary, .risk-grid { grid-template-columns: 1fr; }
+      .branch { grid-template-columns: 1fr; gap: 4px; }
+      table { min-width: 590px; }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header class="hero">
       <div class="tag-row">
-        <span class="pill">YouTube 추출</span>
-        <span class="pill">2026-07-25</span>
-        <span class="pill">계획 전용</span>
+        <span class="pill">YouTube 레시피 추출</span>
+        <span class="pill">2026-07-26</span>
+        <span class="pill">방향 승인 완료</span>
+        <span class="pill">Strict parity</span>
       </div>
-      <h1>설명란·댓글·자막·화면 OCR을 안전하게 production에 넣는 계획</h1>
-      <p class="sub">초보 개발자가 구현 순서와 위험을 바로 이해할 수 있게 정리한 요약본</p>
+      <h1><code>cv-goal-i031-ocr</code> 실험환경을 localhost 서비스에 그대로 연결하는 계획</h1>
+      <p class="sub">현재 최선 iter를 고른 근거부터 exact 환경 복구, 임의 YouTube URL 테스트, 출시와 롤백 기준까지 초보 개발자 눈높이로 정리했습니다.</p>
     </header>
 
     <main>
       <section class="card">
         <h2><span class="num">!</span>딱 한 줄 요약</h2>
-        <div class="tldr"><strong>현재 최선 후보는 <code>cv-goal-i031-ocr</code></strong>이다. 구현 완료 후에는 localhost에서 임의 공개 YouTube 레시피 링크를 넣어 새 OCR 통합 경로로 추출을 테스트할 수 있어야 한다.</div>
-        <p>비유: 요리 대회 예선과 준결승을 통과한 레시피를 식당 메뉴로 올리기 전, 마지막 블라인드 테스트와 주방 운영 매뉴얼을 먼저 잠그는 상황이다.</p>
+        <div class="tldr"><strong>Gemini나 최신 OCR 코드를 붙이는 일이 아닙니다.</strong> 당시 <code>i031</code>의 source 수집, 프레임 선택, 두 번의 Codex 모델 호출을 동일한 버전으로 복구해 서비스가 그 worker를 호출하게 만드는 작업입니다.</div>
+        <p><strong>비유:</strong> 우승한 빵의 레시피를 재현하려면 “비슷한 오븐”이 아니라 당시 밀가루, 온도, 굽는 시간까지 같아야 합니다. 지금은 완성된 빵의 점수표는 있지만, 중간에 쓴 정확한 오븐 설정 파일 일부가 보존되지 않아 먼저 복구해야 합니다.</p>
       </section>
 
       <section class="card">
-        <h2><span class="num">1</span>헷갈리는 구분</h2>
+        <h2><span class="num">1</span>가장 먼저 구분할 것</h2>
         <div class="twocol">
-          <div class="listbox allow"><h4>서비스에 넣을 것</h4><ul><li>설명란, 작성자 댓글, public caption/transcript, 화면 OCR의 조합</li><li>기존 <code>POST /api/v1/recipes/youtube/extract</code>와 세션 흐름 확장</li><li>사용자 검수 전제의 수량·재료·단계 보강</li></ul></div>
-          <div class="listbox deny"><h4>넣으면 안 되는 것</h4><ul><li>실험 harness 그대로 복사</li><li>특정 영상 ID별 하드코딩</li><li>golden/review note를 production prompt에 주입</li><li>raw frame, raw transcript, provider response 로그 저장</li></ul></div>
+          <div class="listbox allow">
+            <h3>이번 목표: 100% strict parity</h3>
+            <ul>
+              <li>당시 source provider와 fallback 순서 유지</li>
+              <li>client/prompt/model/frame 옵션 exact match</li>
+              <li>cold, no-cache 실행</li>
+              <li>identity가 다르면 결과 저장 금지</li>
+            </ul>
+          </div>
+          <div class="listbox deny">
+            <h3>이번 범위가 아닌 compatible mode</h3>
+            <ul>
+              <li><code>yt-dlp</code>만으로 모든 source 대체</li>
+              <li>현재 최신 experiment client 호출</li>
+              <li>macOS Vision OCR 추가</li>
+              <li>Gemini로 실패를 자동 보완</li>
+            </ul>
+          </div>
+        </div>
+        <div class="note danger">
+          <span class="label">중요한 정정</span>
+          <code>i031</code>의 OCR은 macOS Vision census가 아닙니다. <code>gpt-5.4-mini</code> selector가 최대 12개 frame을 보고 화면 글자와 수량 cue를 읽은 동작입니다.
         </div>
       </section>
 
       <section class="card">
         <h2><span class="num">2</span>알아둘 용어</h2>
         <dl class="glossary">
-          <div class="term"><dt>Train <span class="en">학습/개선셋</span></dt><dd>반복 개선 중 상세를 볼 수 있는 평가 데이터.</dd></div>
-          <div class="term"><dt>Validation <span class="en">검증셋</span></dt><dd>개별 정답은 보지 않고 집계 점수로만 일반화를 확인하는 데이터.</dd></div>
-          <div class="term"><dt>Holdout <span class="en">최종 블라인드셋</span></dt><dd>마지막 1회 검증용 데이터. 통과 전 배포 근거로 쓰면 안 된다.</dd></div>
-          <div class="term"><dt>Promotion <span class="en">승격 판정</span></dt><dd>deterministic, semantic, timing 같은 gate 전체 통과 여부.</dd></div>
-          <div class="term"><dt>Deterministic <span class="en">결정적 점수</span></dt><dd>재료 F1, 수량 일치, 단계 커버리지처럼 코드로 계산한 점수.</dd></div>
-          <div class="term"><dt>Semantic <span class="en">의미 점수</span></dt><dd>추출 결과가 레시피로 쓸 만한지 judge 모델로 평가한 점수.</dd></div>
-          <div class="term"><dt>OCR <span class="en">화면 글자 인식</span></dt><dd>영상 화면에 적힌 수량·조리 문구를 읽는 처리.</dd></div>
-          <div class="term"><dt>Provenance <span class="en">근거 출처</span></dt><dd>어떤 값이 설명란, 댓글, 자막, 화면 OCR 중 어디서 왔는지 남기는 기록.</dd></div>
-          <div class="term"><dt>Feature flag <span class="en">기능 스위치</span></dt><dd>문제가 생기면 새 OCR 경로만 끄고 기존 경로로 되돌리는 장치.</dd></div>
-          <div class="term"><dt>Contract evolution <span class="en">공식 계약 변경</span></dt><dd>API/DB/Flow 문서를 먼저 바꾸고 승인받은 뒤 구현하는 절차.</dd></div>
+          <div class="term"><dt>Iter <span class="en">Iteration</span></dt><dd>추출 방식이나 prompt를 한 번 바꿔 시험한 버전입니다.</dd></div>
+          <div class="term"><dt>Strict parity <span class="en">Exact environment</span></dt><dd>코드, prompt, 모델, 옵션, source 수집 경계까지 같게 맞추는 것입니다.</dd></div>
+          <div class="term"><dt>Promotion</dt><dd>정확도, semantic 점수, 시간 등 모든 문턱을 통과했다는 판정입니다.</dd></div>
+          <div class="term"><dt>Deterministic score</dt><dd>정답과 기계적으로 비교한 재료 F1, 수량 일치율, 단계 coverage입니다.</dd></div>
+          <div class="term"><dt>Semantic score</dt><dd>표현이 달라도 의미가 맞는지를 Codex judge가 1~5점 범위로 평가한 점수입니다.</dd></div>
+          <div class="term"><dt>Candidate lock</dt><dd>검증할 코드와 설정이 중간에 바뀌지 않았음을 묶는 잠금 정보입니다.</dd></div>
+          <div class="term"><dt>Fingerprint</dt><dd>코드 묶음이 정확히 같은지 확인하는 디지털 지문입니다.</dd></div>
+          <div class="term"><dt>Cold / no-cache</dt><dd>이전 결과를 재사용하지 않고 처음부터 다시 실행하는 조건입니다.</dd></div>
+          <div class="term"><dt>Selector</dt><dd>많은 frame 중 레시피 근거가 좋은 frame을 고르는 첫 번째 모델 호출입니다.</dd></div>
+          <div class="term"><dt>Holdout</dt><dd>개발 중 보지 않은 새 영상으로 마지막 일반화 성능을 확인하는 시험입니다.</dd></div>
+          <div class="term"><dt>Fail closed</dt><dd>조건이 맞지 않으면 비슷한 결과를 억지로 저장하지 않고 안전하게 실패하는 방식입니다.</dd></div>
+          <div class="term"><dt>Worker</dt><dd>오래 걸리는 source 수집과 영상 추출을 웹 서버 대신 실행하는 별도 작업 프로세스입니다.</dd></div>
         </dl>
       </section>
 
       <section class="card">
-        <h2><span class="num">3</span>현재 최선 iter를 고른 이유</h2>
+        <h2><span class="num">3</span>왜 <code>i031</code>이 현재 최선인가</h2>
+        <p>Train과 Validation promotion을 모두 통과한 후보만 비교했습니다. 최신 번호라는 이유로 선택하지 않았습니다.</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>후보</th><th>상태</th><th>Train F1 / amount / step</th><th>Validation F1 / amount / step</th><th>Semantic 평균</th><th>시간 p50 / p95</th></tr></thead>
+            <thead>
+              <tr>
+                <th>후보</th>
+                <th>Validation F1</th>
+                <th>Amount match</th>
+                <th>Amount coverage</th>
+                <th>Step coverage</th>
+                <th>Semantic avg</th>
+                <th>p50 / p95</th>
+              </tr>
+            </thead>
             <tbody>
-              <tr><td><code>cv-goal-i001</code></td><td class="pass">Train+Validation PASS</td><td>.952 / .593 / .692</td><td>.886 / .729 / .517</td><td>4.056 / 3.750</td><td>67.275/98.4s, 77.7/192s</td></tr>
-              <tr><td><code>cv-goal-i023</code></td><td class="pass">Train+Validation PASS</td><td>.963 / .596 / .747</td><td>.901 / .768 / .540</td><td>4.111 / 3.625</td><td>53.319/79.6s, 58/64.2s</td></tr>
-              <tr class="highlight"><td><code>cv-goal-i031-ocr</code></td><td class="pass">선택</td><td>.961 / .603 / .678</td><td>.925 / .747 / .548</td><td>4.222 / 3.875</td><td>56.28/77.1s, 65/95.5s</td></tr>
-              <tr><td><code>iter27</code></td><td class="pass">Train+Validation PASS</td><td>.947 / .600 / .685</td><td>.903 / .750 / .534</td><td>4.111 / 3.625</td><td>68.64/83.7s, 60.2/73.2s</td></tr>
-              <tr><td><code>i068</code></td><td class="fail">Validation FAIL</td><td>.955 / .610 / .699</td><td>.891 / .785 / .580</td><td>4.250 / 3.545</td><td>47.8/59.9s, 46.859/61s</td></tr>
-              <tr><td><code>i083</code></td><td class="fail">Train FAIL</td><td>F1 .950, amount coverage .692</td><td>미실행</td><td>미실행</td><td>timing probe PASS</td></tr>
-              <tr><td><code>i092</code></td><td class="fail">revert</td><td>cold Train 전 중단</td><td>미실행</td><td>미실행</td><td>28.84s, RSS 9.5x 악화</td></tr>
+              <tr><td><code>i001</code></td><td class="numv">.886</td><td class="numv">.729</td><td class="numv">.791</td><td class="numv">.517</td><td class="numv">3.750</td><td class="numv">77.7s / 192s</td></tr>
+              <tr><td><code>i023</code></td><td class="numv">.901</td><td class="numv">.768</td><td class="numv">.801</td><td class="numv">.540</td><td class="numv">3.625</td><td class="numv">58s / 64.2s</td></tr>
+              <tr class="best"><td><strong><code>i031-ocr</code></strong></td><td class="numv"><strong>.925</strong></td><td class="numv">.747</td><td class="numv">.788</td><td class="numv"><strong>.548</strong></td><td class="numv"><strong>3.875</strong></td><td class="numv">65s / 95.5s</td></tr>
+              <tr><td><code>iter27</code></td><td class="numv">.903</td><td class="numv">.750</td><td class="numv">.812</td><td class="numv">.534</td><td class="numv">3.625</td><td class="numv">60.2s / 73.2s</td></tr>
             </tbody>
           </table>
         </div>
-        <div class="note warn"><span class="label">Holdout 주의</span><code>cv-goal-i031-ocr</code>의 직접 Holdout PASS는 없다. 구현 전 fresh sealed Holdout PASS가 필요하다.</div>
-      </section>
-
-      <section class="card">
-        <h2><span class="num">4</span>추출 흐름 그림</h2>
-        <div class="miniflow">
-          <span class="box">URL</span><span class="arrow">→</span>
-          <span class="box">설명란</span><span class="arrow">→</span>
-          <span class="box">작성자 댓글</span><span class="arrow">→</span>
-          <span class="box">caption/transcript</span><span class="arrow">→</span>
-          <span class="box">화면 OCR</span><span class="arrow">→</span>
-          <span class="box">Gemini 구조화</span><span class="arrow">→</span>
-          <span class="box">검수 화면</span><span class="arrow">→</span>
-          <span class="box">등록</span>
-        </div>
-        <p class="muted">중요한 점은 OCR과 Gemini를 원천 source로 보지 않는 것이다. 원천은 <code>description/comment/caption</code>이고, OCR은 보조 근거로 <code>source_providers</code>와 <code>extraction_meta_json</code>에 남긴다.</p>
-      </section>
-
-      <section class="card">
-        <h2><span class="num">5</span>목표와 성공 기준</h2>
         <div class="targets">
-          <div class="target"><span class="badge">1</span><span>Validation 기준 F1 `.925`, semantic 평균 `3.875`, p50 `65s`, p95 `95.5s`를 초기 기준으로 삼는다.</span></div>
-          <div class="target"><span class="badge">2</span><span>Fresh sealed Holdout을 1회 통과하기 전 production rollout을 금지한다.</span></div>
-          <div class="target"><span class="badge">3</span><span>사용자 확인 없는 추정 수량 자동 등록을 금지한다.</span></div>
-          <div class="target"><span class="badge">4</span><span>raw URL, raw transcript, raw frame, provider response, API key를 로그와 cache에 저장하지 않는다.</span></div>
-          <div class="target"><span class="badge">5</span><span><code>pnpm dev</code>로 켠 localhost에서 <code>/menu/add/youtube</code> 또는 <code>/recipes/new/youtube</code>에 임의 공개 링크를 넣어 추출 화면까지 확인한다.</span></div>
-          <div class="target"><span class="badge">6</span><span><code>youtube_ocr_extraction</code> feature flag를 켰을 때 OCR 시도/성공/cache/error가 서버 event에 남고, 껐을 때 기존 경로로 fallback된다.</span></div>
+          <div class="target"><span class="badge">1</span><span>재료 F1 <code>.925</code>로 완료 후보 중 1위</span></div>
+          <div class="target"><span class="badge">2</span><span>Semantic average <code>3.875</code>로 완료 후보 중 1위</span></div>
+          <div class="target"><span class="badge">3</span><span>Step coverage <code>.548</code>로 완료 후보 중 1위</span></div>
+          <div class="target"><span class="badge">4</span><span>Validation lock verified, leak <code>clean</code>, failed attempt <code>0</code></span></div>
+        </div>
+        <div class="note warn">
+          <span class="label">약점도 함께 보기</span>
+          Amount match <code>.747</code>과 coverage <code>.788</code>은 <code>iter27</code>보다 각각 <code>.003</code>, <code>.024</code> 낮습니다. 재료·단계·semantic 우위를 더 크게 본 선택입니다.
         </div>
       </section>
 
       <section class="card">
-        <h2><span class="num">6</span>단계별 구현 순서</h2>
-        <ul class="steps">
-          <li class="step"><span class="dot">1</span><h4>승인과 문서 변경</h4><p>OCR production 통합은 API/DB/User Flow 변경이므로 사용자 승인과 contract-evolution을 먼저 진행한다.</p></li>
-          <li class="step"><span class="dot">2</span><h4>Claude Stage 1 workpack</h4><p><code>docs/workpacks/&lt;slice&gt;/README.md</code>, <code>acceptance.md</code>, <code>automation-spec.json</code>을 먼저 만든다.</p></li>
-          <li class="step"><span class="dot">3</span><h4>Backend 테스트 선작성</h4><p>source priority, OCR skip/fallback, review-required 차단, 로그 금지, cache/event를 테스트로 잠근다.</p></li>
-          <li class="step"><span class="dot">4</span><h4>서버 모듈 추가</h4><p><code>youtube-import.ts</code>는 orchestration으로 유지하고, OCR evidence와 관측성 모듈을 분리한다.</p></li>
-          <li class="step"><span class="dot">5</span><h4>검수 UI 연결</h4><p>YT_IMPORT 화면에 evidence badge와 review-required 상태를 추가한다. 자동 등록 조건은 더 엄격하게 유지한다.</p></li>
-          <li class="step"><span class="dot">6</span><h4>localhost 수동 확인</h4><p><code>pnpm dev</code> 후 임의 공개 YouTube 레시피 링크 3개 이상으로 추출 화면, evidence badge, review-required 차단, cache hit를 확인한다.</p></li>
-          <li class="step"><span class="dot">7</span><h4>검증과 출시</h4><p>backend verify, real smoke, fresh Holdout PASS 후 feature flag로 내부부터 단계 출시한다.</p></li>
-        </ul>
-        <pre><code>pnpm verify:backend
-pnpm test -- tests/youtube-import.backend.test.ts tests/youtube-visual-quantity-eval.test.ts tests/youtube-corpus.test.ts
-pnpm dev
-# http://localhost:3000/menu/add/youtube 에서 공개 YouTube 레시피 링크로 확인</code></pre>
-      </section>
-
-      <section class="card">
-        <h2><span class="num">7</span>localhost 테스트 방법</h2>
-        <ul class="steps">
-          <li class="step"><span class="dot">L1</span><h4>환경 준비</h4><p><code>.env.local</code>에 YouTube key, Gemini key, Supabase dev env, <code>youtube_import=true</code>, <code>youtube_ocr_extraction=true</code>를 설정한다. 운영용 기존 flag인 <code>YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED</code>, <code>YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED</code>도 계속 쓸 수 있다.</p></li>
-          <li class="step"><span class="dot">L2</span><h4>서비스 실행</h4><p><code>pnpm install --frozen-lockfile</code>, local/dev migration 적용, <code>pnpm dev</code> 순서로 실행한다.</p></li>
-          <li class="step"><span class="dot">L3</span><h4>임의 링크 확인</h4><p><code>http://localhost:3000/menu/add/youtube</code>에서 공개 레시피 링크를 넣고 제목, 재료, 수량, 단계, evidence/provenance 배지를 본다.</p></li>
-          <li class="step"><span class="dot">L4</span><h4>기록 확인</h4><p>같은 링크 재입력으로 cache hit를 확인하고, <code>youtube_visual_extraction_events</code>, <code>youtube_visual_extraction_cache</code>, <code>youtube_extraction_sessions.extraction_meta_json</code>에서 attempted/status/cache_hit 기록을 본다.</p></li>
-          <li class="step"><span class="dot">L5</span><h4>fallback 확인</h4><p><code>youtube_ocr_extraction=false</code>로 다시 실행해 기존 public-text-only fallback을 확인한다. API 응답 shape를 새로 늘리는 일은 별도 contract-evolution 전에는 하지 않는다.</p></li>
-        </ul>
-        <div class="note warn"><span class="label">주의</span>이 localhost 테스트는 계획만으로 가능한 일이 아니다. backend 구현, UI 연결, DB migration, env 설정이 끝난 뒤의 완료 기준이다.</div>
-      </section>
-
-      <section class="card">
-        <h2><span class="num">8</span>예상 시간/정확도 영향</h2>
+        <h2><span class="num">4</span>아직 바로 배포할 수 없는 이유</h2>
+        <div class="twocol">
+          <div class="note danger">
+            <span class="label">Blocker A: exact code가 commit에 없음</span>
+            Candidate lock commit에는 client <code>v4</code>, final prompt <code>v32</code>가 있습니다. 실제 결과는 client <code>v19</code>, final prompt <code>v44</code>입니다.
+          </div>
+          <div class="note warn">
+            <span class="label">Blocker B: i031 Holdout 미실행</span>
+            확인된 Holdout FAIL은 <code>iter27</code> lock 결과입니다. <code>i031</code> 자체 fresh sealed Holdout PASS 근거는 없습니다.
+          </div>
+        </div>
+        <h3>복구 후 반드시 같아야 할 identity</h3>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>항목</th><th>기준</th><th>예상 영향</th><th>대응</th></tr></thead>
+            <thead><tr><th>항목</th><th>고정값</th><th>쉽게 말하면</th></tr></thead>
             <tbody>
-              <tr><td>정확도</td><td>Validation F1 `.925`, amount `.747`, step `.548`</td><td>텍스트만 부족한 영상에서 재료/수량 보강 기대</td><td>review-required와 사용자 검수 유지</td></tr>
-              <tr><td>속도</td><td>Validation p50 `65s`, p95 `95.5s`</td><td>OCR/vision 때문에 p95 증가 가능</td><td>text-ready 영상 OCR skip, cache 우선</td></tr>
-              <tr><td>비용</td><td>model call max `2`</td><td>provider 호출 증가</td><td>사용자/일일 rate limit, quota_denied fallback</td></tr>
-              <tr><td>누수</td><td>Validation canary `clean`</td><td>production hardcoding 위험</td><td>videoId 특수분기 금지, fresh Holdout 필수</td></tr>
+              <tr><td>Client</td><td><code>codex-vision-keyframes-client-v19-onscreen-amount-recovery</code></td><td>당시 extractor 버전</td></tr>
+              <tr><td>Final prompt</td><td><code>keyframe-final-v44-explicit-action-clause</code></td><td>최종 모델 지시문 버전</td></tr>
+              <tr><td>Execution signature</td><td><code>704359dfb34df5ac1d070078</code></td><td>모델·frame 옵션 묶음 지문</td></tr>
+              <tr><td>Code fingerprint</td><td><code>17f475ae308ca3fa514b0388f93701907e94b439410764f3b1d2e5f8ca65cc53</code></td><td>코드 전체 지문</td></tr>
+              <tr><td>Candidate lock</td><td><code>aa550e812181847b4567711f58f0cea57e5ac6320bf471adf745d8e9b6f5ea2b</code></td><td>검증 후보 잠금값</td></tr>
             </tbody>
           </table>
         </div>
-      </section>
-
-      <section class="card">
-        <h2><span class="num">9</span>위험과 대응</h2>
-        <div class="twocol">
-          <div class="listbox allow"><h4>허용</h4><ul><li>additive API/DB 변경</li><li>feature flag로 제한 출시</li><li>OCR 실패 시 public-text-only fallback</li><li>미등록 재료는 사용자 검수로 해결</li></ul></div>
-          <div class="listbox deny"><h4>금지</h4><ul><li>Holdout 없이 전체 rollout</li><li>특정 영상별 예외 코드</li><li>raw source text와 frame 로그 저장</li><li>추정 수량의 quick import 자동 등록</li></ul></div>
+        <div class="tree">
+          <div class="branch go"><strong>모두 exact match</strong><span>Train 9건과 Validation 8건 cold replay를 진행합니다.</span></div>
+          <div class="branch wait"><strong>Identity match, promotion FAIL</strong><span>100% 환경은 복구됐지만 현재 모델 동작이 달라진 것이므로 새 후보로 재평가합니다.</span></div>
+          <div class="branch stop"><strong>Fingerprint 불일치</strong><span>추측해서 구현하지 않고 strict parity 작업을 중단합니다.</span></div>
+        </div>
+        <div class="note warn">
+          <span class="label">추가 복구 항목</span>
+          당시 model effort와 timeout은 결과 파일에 별도 field로 남지 않았습니다. Lock commit의 default는 effort <code>low</code>, timeout <code>20분</code>이지만, strict 구현은 이를 가정하지 않고 command/session artifact 또는 exact fingerprint로 확인합니다.
         </div>
       </section>
 
       <section class="card">
-        <h2><span class="num">10</span>완료 기준</h2>
-        <ul class="check">
-          <li class="done">Train+Validation 후보 비교 완료</li>
-          <li class="done"><code>cv-goal-i031-ocr</code>를 현재 최선 후보로 선정</li>
-          <li class="done">Holdout 근거 부족을 rollout blocker로 명시</li>
-          <li>사용자 승인과 contract-evolution 완료</li>
-          <li>Stage 1 workpack/acceptance main merge</li>
-          <li>Backend/Frontend 테스트와 real smoke 통과</li>
-          <li>localhost에서 임의 공개 YouTube 링크 3개 이상으로 추출 화면 확인</li>
-          <li>OCR feature flag on/off와 cache hit/fallback 확인</li>
-          <li>Fresh sealed Holdout PASS</li>
-          <li>feature flag 기반 단계 출시와 rollback 경로 확인</li>
+        <h2><span class="num">5</span>실제 추출 흐름</h2>
+        <div class="flow" aria-label="YouTube URL부터 레시피 검수까지의 추출 흐름">
+          <div class="box source">YouTube URL<br>metadata·댓글·caption 수집</div>
+          <div class="box visual">Hybrid frame<br>4초 간격·anchor 36</div>
+          <div class="box model"><code>gpt-5.4-mini</code><br>최대 12개 frame OCR·선택</div>
+          <div class="box service"><code>gpt-5.4</code><br>4-source recipe JSON</div>
+          <div class="box review">표준명 매핑<br>YT_IMPORT 검수</div>
+        </div>
+        <h3>네 가지 근거</h3>
+        <div class="targets">
+          <div class="target"><span class="badge">1</span><span>설명란의 재료·수량·조리 설명</span></div>
+          <div class="target"><span class="badge">2</span><span>작성자가 직접 단 top-level 댓글</span></div>
+          <div class="target"><span class="badge">3</span><span>caption/transcript의 발화 내용</span></div>
+          <div class="target"><span class="badge">4</span><span>선택 frame의 화면 글자와 실제 조리 장면</span></div>
+        </div>
+        <div class="note info">
+          <span class="label">수량 우선순위</span>
+          설명란·작성자 댓글 명시값 → 발화 자막 → 화면 자막 → 시각 추정 순서입니다. 추정값은 사용자 확인 없이 저장하지 않습니다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">6</span>어떤 key와 프로그램이 필요한가</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>필요 여부</th><th>이유</th></tr></thead>
+            <tbody>
+              <tr><td><code>GEMINI_API_KEY</code></td><td class="pass">불필요</td><td>strict <code>i031</code> identity에 Gemini가 없습니다.</td></tr>
+              <tr><td><code>YOUTUBE_API_KEY</code></td><td class="fail">필수</td><td>당시 <code>snapshot-video.mjs</code>가 metadata와 작성자 댓글 수집 전에 키를 필수 검사합니다.</td></tr>
+              <tr><td><code>APIFY_TOKEN</code></td><td class="fail">사실상 필수</td><td>Train 9/9, Validation 5/8 source의 caption provider가 Apify였습니다.</td></tr>
+              <tr><td>Codex CLI 로그인</td><td class="fail">필수</td><td><code>gpt-5.4-mini</code>와 <code>gpt-5.4</code> 모델을 호출합니다.</td></tr>
+              <tr><td>Python 3, <code>yt_dlp</code>, OpenCV/FFmpeg</td><td class="fail">필수</td><td>영상 다운로드와 hybrid frame 생성에 사용합니다.</td></tr>
+              <tr><td>macOS</td><td class="fail">strict local 기준 필수</td><td>당시 read boundary가 <code>macos-sandbox-exec</code>였습니다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note danger">
+          <span class="label">두 요구사항은 동시에 만족할 수 없음</span>
+          “provider key 없이 임의 URL 수집”과 “당시 source 수집까지 100% 동일”은 같은 목표가 아닙니다. 이번 계획은 사용자의 최신 결정에 따라 100% 동일을 우선합니다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">7</span>서비스에는 어떻게 연결하나</h2>
+        <p>실험 코드를 서비스 파일에 복사해 다시 만들지 않습니다. 복구된 extractor를 고정 bundle로 보관하고, 서비스는 작은 JSON contract로 worker를 호출합니다.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>경계</th><th>담당</th><th>하면 안 되는 일</th></tr></thead>
+            <tbody>
+              <tr><td>API route</td><td>로그인, feature flag, 응답 wrapper</td><td>OCR/프레임 알고리즘 직접 구현</td></tr>
+              <tr><td><code>youtube-import.ts</code></td><td>session·register orchestration</td><td>strict 실패를 Gemini로 조용히 대체</td></tr>
+              <tr><td>Parity runner</td><td>bundle 실행, timeout, cancel, identity 검사</td><td>shell 문자열 조합, 전체 env 전달</td></tr>
+              <tr><td>Result adapter</td><td>recipe JSON을 서비스 draft로 변환</td><td>미등록 재료 자동 INSERT</td></tr>
+              <tr><td>Experiment bundle</td><td>source snapshot, frame, selector, final</td><td>golden/grade/holdout 파일 포함</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note warn">
+          <span class="label">현재 코드의 선행 수정점</span>
+          현재 <code>youtube_ocr_extraction</code>은 Gemini visual provider를 켜는 alias입니다. strict mode 구현 시 이 alias를 제거하거나 명확히 분리해야 합니다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">8</span>단계별 구현 순서</h2>
+        <ul class="steps">
+          <li class="step"><span class="dot">0</span><h3>Exact bundle 복구</h3><p><code>v19</code>/<code>v44</code> bytes를 찾고 fingerprint와 signature를 맞춥니다. 예상 1~2일, 복구 실패 시 중단합니다.</p></li>
+          <li class="step"><span class="dot">1</span><h3>Train·Validation 재실행</h3><p>Train 9건, Validation 8건을 cold/no-cache로 실행해 promotion PASS를 다시 확인합니다. 예상 0.5~1일.</p></li>
+          <li class="step"><span class="dot">2</span><h3>공식 문서와 workpack</h3><p>Strict mode, 비동기 status, 오류, DB metadata를 contract-evolution에 반영합니다. 예상 1일.</p></li>
+          <li class="step"><span class="dot">3</span><h3>Runner·adapter TDD</h3><p>먼저 실패/identity mismatch 테스트를 쓰고 service worker contract를 구현합니다. 예상 1~2일.</p></li>
+          <li class="step"><span class="dot">4</span><h3>localhost 연결</h3><p>기존 YT_IMPORT에서 임의 링크를 넣고 진행 상태와 검수 화면까지 확인합니다. 예상 0.5~1일.</p></li>
+          <li class="step"><span class="dot">5</span><h3>Production worker hardening</h3><p>Queue, timeout, cancel, secret, rate limit, 로그를 완성합니다. 예상 1~2일.</p></li>
+          <li class="step"><span class="dot">6</span><h3>Holdout·단계적 출시</h3><p>fresh sealed Holdout PASS 뒤 localhost → 내부 → 5% → 25% → 전체 순으로 넓힙니다. 예상 0.5~1일.</p></li>
         </ul>
+        <div class="tldr">Stage 0 복구가 된다는 전제에서 총 <strong>4.5~8일</strong>입니다. Exact bytes가 없으면 비슷한 코드를 새로 쓰지 않습니다.</div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">9</span>예상 시간과 정확도 영향</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Split</th><th>Frame avg / p50</th><th>Selector avg / p50</th><th>Final avg / p50</th><th>Total avg</th><th>Promotion p50 / p95</th></tr></thead>
+            <tbody>
+              <tr><td>Train (9)</td><td>9.770s / 8.111s</td><td>23.655s / 22.688s</td><td>25.251s / 22.508s</td><td>59.306s</td><td>56.28s / 77.1s</td></tr>
+              <tr><td>Validation (8)</td><td>9.642s / 9.806s</td><td>24.496s / 26.298s</td><td>35.358s / 34.535s</td><td>71.465s</td><td>65s / 95.5s</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="twocol">
+          <div class="note info">
+            <span class="label">정확도 기대</span>
+            Validation 기준 F1 <code>.925</code>, amount match <code>.747</code>, amount coverage <code>.788</code>, step coverage <code>.548</code>, semantic <code>3.875</code>입니다.
+          </div>
+          <div class="note warn">
+            <span class="label">시간 기대</span>
+            Extraction p50은 <code>65s</code>지만 source snapshot 시간은 별도 기록이 없어 실제 localhost는 더 오래 걸립니다.
+          </div>
+        </div>
+        <p>별도 “OCR 시간”은 없습니다. 화면 글자 읽기는 selector 시간에 들어 있습니다. 새 임의 링크가 같은 정확도를 낸다고 보장할 수 없으므로 real-link smoke와 fresh Holdout이 필요합니다.</p>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">10</span>실패 처리와 안전 규칙</h2>
+        <div class="twocol">
+          <div class="listbox allow">
+            <h3>허용</h3>
+            <ul>
+              <li>Network 일시 오류 1회 재시도</li>
+              <li>공개 caption 실패 시 당시 조건의 Apify 1회 fallback</li>
+              <li>DB 저장만 멱등 key로 재시도</li>
+              <li>사용자가 직접 기존 모드 재시도 선택</li>
+            </ul>
+          </div>
+          <div class="listbox deny">
+            <h3>금지</h3>
+            <ul>
+              <li>Selector/final model 자동 교체</li>
+              <li>Gemini 자동 fallback</li>
+              <li>Identity mismatch 결과 저장</li>
+              <li>특정 video ID별 정답 분기</li>
+            </ul>
+          </div>
+        </div>
+        <div class="risk-grid">
+          <div class="risk"><strong>Source 수집 실패</strong><p>어느 단계에서 실패했는지 보여주고 strict run을 종료합니다.</p></div>
+          <div class="risk"><strong>Codex 로그아웃·timeout</strong><p>프로세스를 종료하고 recipe draft를 저장하지 않습니다.</p></div>
+          <div class="risk"><strong>미등록 재료</strong><p><code>unresolved</code> 또는 <code>needs_review</code>로 내려 사용자 확인을 받습니다.</p></div>
+          <div class="risk"><strong>누수 위험</strong><p>Worker에는 source만 mount하고 golden·grade·review 경로를 주지 않습니다.</p></div>
+          <div class="risk"><strong>비용 급증</strong><p>동시 실행 1, 대기열 3, 사용자/일일 quota로 시작합니다.</p></div>
+          <div class="risk"><strong>긴 처리 시간</strong><p>단계 상태와 취소 기능을 제공하고 production은 queue worker로 분리합니다.</p></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">11</span>localhost에서 임의 링크 테스트</h2>
+        <ol>
+          <li>Parity bundle 검증 command가 <code>PASS</code>인지 확인합니다.</li>
+          <li>Codex CLI 로그인, Python 3, <code>yt_dlp</code>, OpenCV/FFmpeg를 확인합니다.</li>
+          <li><code>.env.local</code>에 Supabase 값, YouTube key, Apify token, bundle 경로를 넣습니다.</li>
+          <li><code>pnpm dev</code>로 서비스를 켭니다.</li>
+          <li><code>http://localhost:3000/menu/add/youtube</code>에 접속합니다.</li>
+          <li>임의의 공개 단일 레시피 URL을 입력합니다.</li>
+          <li>source → frame → selector → final → mapping 진행 상태를 봅니다.</li>
+          <li>검수 화면에서 제목, 재료, 수량, 단계, review-required를 확인합니다.</li>
+          <li>Result identity가 <code>i031</code> 고정값과 같은지 확인합니다.</li>
+        </ol>
+        <pre><code>YOUTUBE_I031_STRICT_PARITY_ENABLED=true
+YOUTUBE_I031_PARITY_BUNDLE_ROOT=/absolute/path/to/frozen-cv-goal-i031-ocr
+YOUTUBE_API_KEY=server-only
+APIFY_TOKEN=server-only</code></pre>
+        <div class="note good">
+          <span class="label">최소 real-link 세트</span>
+          설명란이 풍부한 영상 1개, Apify caption fallback이 필요한 영상 1개, 화면 글자가 중요한 영상 1개를 테스트합니다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">12</span>공식 문서와 승인 순서</h2>
+        <div class="tree">
+          <div class="branch go"><strong>사용자 결정</strong><span>“실험환경 100% 동일”을 contract-evolution의 방향 승인으로 기록합니다.</span></div>
+          <div class="branch wait"><strong>Claude Stage 1</strong><span>새 workpack, acceptance, automation spec, workflow item을 먼저 main에 merge합니다.</span></div>
+          <div class="branch wait"><strong>Contract evolution</strong><span>Strict mode, async status, error, DB metadata를 API/DB/User Flow 문서에 반영합니다.</span></div>
+          <div class="branch go"><strong>그 다음 구현</strong><span>공식 문서와 acceptance가 다시 잠긴 뒤 Codex Stage 2를 시작합니다.</span></div>
+        </div>
+        <p>현재 공식 API는 YouTube Data API + Gemini structured fallback + visual enrichment를 기준으로 하며, strict parity worker와 async job status는 아직 계약에 없습니다.</p>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">13</span>완료 체크리스트</h2>
+        <ul class="check">
+          <li><code>v19</code>/<code>v44</code> exact bytes 복구</li>
+          <li>Code fingerprint <code>17f475...</code> exact</li>
+          <li>Execution signature <code>704359...</code> exact</li>
+          <li>Train 9건, Validation 8건 cold replay PASS</li>
+          <li>공식 문서와 Stage 1 workpack merge</li>
+          <li>Strict mode Gemini 호출 0회</li>
+          <li>localhost 임의 공개 링크 3개 완료</li>
+          <li>Source/frame/selector/final/mapping 단계 관측 가능</li>
+          <li>Identity mismatch fail closed</li>
+          <li>Secret/raw source/raw frame 로그 0건</li>
+          <li>재료 표준명 매핑과 review-required 검증 PASS</li>
+          <li>Targeted tests와 <code>pnpm verify:backend</code> PASS</li>
+          <li>Fresh sealed Holdout PASS</li>
+          <li>Feature flag rollback smoke PASS</li>
+        </ul>
+        <div class="note danger">
+          <span class="label">완료 보고 기준</span>
+          위 항목 중 하나라도 빠지면 “실험환경 100% 동일 구현 완료”라고 보고하지 않습니다.
+        </div>
       </section>
     </main>
 
     <footer>
-      원문: /Users/cwj/01_vibe_coding/homecook/docs/engineering/youtube-codex-vision-ocr-production-integration-plan.md | 초보 개발자 이해용 요약본 | 생성일: 2026-07-25
+      원문: /Users/cwj/01_vibe_coding/homecook/docs/engineering/youtube-codex-vision-ocr-production-integration-plan.md<br>
+      초보 개발자 이해용 단일 HTML · 외부 CSS/JavaScript/네트워크 자산 없음 · 생성일 2026-07-26
     </footer>
   </div>
 </body>
