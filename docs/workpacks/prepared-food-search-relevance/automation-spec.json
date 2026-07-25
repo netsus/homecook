@@ -30,6 +30,7 @@
       "ranked-rpc-public-anon-direct-execute-denied",
       "exact-server-principal-positive-acl-only",
       "security-definer-search-path-safe-and-deterministic",
+      "transaction-compatible-canonical-index-ddl-and-exact-derived-concurrent-prebuild",
       "additive-existing-fresh-replay-safe-migration",
       "v1-query-page-finishes-legacy-ordering",
       "new-first-page-v2-only",
@@ -73,6 +74,7 @@
       "50-to-100-query-sanitized-labeled-fixture",
       "287041-row-relevance-performance-and-explain-evidence",
       "mandatory explain matrix for compound, spaced, short, unified source, legacy source, and owner-private cases",
+      "transaction-compatible canonical index DDL and exact-derived concurrent prebuild drift evidence",
       "local existing/fresh/replay migration and function checksum evidence",
       "local and remote exact-principal role matrix evidence",
       "merged-exact-SHA remote read-only compatibility evidence"
@@ -148,6 +150,7 @@
     "other-owner-hidden-reported-deleted-row-visible-or-inferable",
     "current-nutrition-version-provenance-not-exact",
     "public-and-private-candidate-paths-not-separated",
+    "canonical-index-ddl-and-concurrent-prebuild-definitions-drift",
     "ranked-rpc-public-anon-executable-or-server-principal-overbroad",
     "full-table-rank-scan-or-unbounded-candidate-path",
     "one-fragment-match-outranks-available-full-coverage-match",
