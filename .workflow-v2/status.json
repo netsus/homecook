@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-23T15:21:06Z",
+  "updated_at": "2026-07-26T00:00:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2721,6 +2721,31 @@
         "git diff --check"
       ],
       "notes": "Roadmap is docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/compatibility, five-axis and design-impact reviews reach zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; runtime/E2E/browser/telemetry/remote evidence is future. Implementation waits for #10 and #12 runtime/current-head green. #13 preserves contracts and records prerequisites but does not authorize deletion or R+2 activation.",
+      "evaluation_status": "not_started",
+      "evaluation_round": 0,
+      "last_evaluator_result": null,
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null
+    },
+    {
+      "id": "33-youtube-i031-direct-extraction",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/33-youtube-i031-direct-extraction",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice 33-youtube-i031-direct-extraction",
+        "git diff --check"
+      ],
+      "notes": "User-approved Codex-only Stage 1. Independent native Codex internal 1.5 review passed with blocking findings 0. Implementation waits for this contract/workpack PR to merge. Fresh Train step coverage 0.655 missed the 0.675 threshold; initial enablement is localhost only, and Holdout/production rollout are not approved.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

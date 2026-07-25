@@ -24,7 +24,7 @@ This plan fixes the process so future work cannot claim recipe extraction qualit
 - The user-facing artifact `.omx/artifacts/youtube-12-after-improvement-20260605/extraction-results.json` was produced by `.omx/artifacts/youtube-12-after-improvement-20260605/run-report.test.ts`.
 - `tests/youtube-recipio-parity.test.ts` builds visual recipe mock results from `tests/fixtures/youtube-recipio-parity/parity-v1.json`.
 - `lib/server/youtube-import.ts` restricts `setYoutubeVisualRecipeExtractorForTest` to tests, so the core shortcut was not in normal production provider selection.
-- `docs/api문서-v1.2.27.md` §6-2 forbids fixed recipe fixtures for specific `youtube_video_id` during extraction and forbids storing raw video, raw frames, raw provider responses, API keys, secrets, or Recipio data.
+- `docs/api문서-v1.2.28.md` §6-2 forbids fixed recipe fixtures for specific `youtube_video_id` during extraction and forbids storing raw video, raw frames, raw provider responses, API keys, secrets, or Recipio data.
 
 ## Principles
 
@@ -38,7 +38,7 @@ This plan fixes the process so future work cannot claim recipe extraction qualit
    `fixture_replay_score`, `real_smoke_score`, and `ui_visible_score` must never be averaged into one vague total.
 
 4. Contract limits are part of correctness.
-   Current official docs allow public text parsing, Gemini structured fallback over public text, and visual quantity enrichment. Broader visual/OCR ingredient and step extraction needs docs-first contract evolution.
+   Current official docs define two modes. `legacy` allows public text parsing, Gemini structured fallback, and visual quantity enrichment. Localhost-only `i031_codex_vision` runs the exact source/frame/selector/final path and forbids fallback. Any broader provider, model, prompt, async, or production-runtime change still needs docs-first contract evolution.
 
 5. Recurrence prevention must be structural.
    "Be careful next time" is not enough. Scripts, report schemas, file names, provenance checks, and review gates must make the wrong path fail closed.

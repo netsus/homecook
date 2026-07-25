@@ -1,17 +1,29 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.22.md`
-- `docs/화면정의서-v1.5.28.md`
-- `docs/유저flow맵-v1.3.25.md`
-- `docs/db설계-v1.3.23.md`
-- `docs/api문서-v1.2.27.md`
+- `docs/요구사항기준선-v1.7.23.md`
+- `docs/화면정의서-v1.5.29.md`
+- `docs/유저flow맵-v1.3.26.md`
+- `docs/db설계-v1.3.24.md`
+- `docs/api문서-v1.2.28.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## YouTube i031 Direct Extraction Contract-Evolution `2026-07-26`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.23 | 기존 localhost YouTube 가져오기에서 exact `cv-goal-i031-ocr` 두 단계 Codex Vision 추출을 default-off strict mode로 직접 실행하고 Gemini fallback을 금지한다 |
+| 화면정의서 v1.5.29 | 기존 YT_IMPORT 화면/상태를 재사용하고 i031 loading/error/retry 연결만 고정한다 |
+| 유저플로우 v1.3.26 | 임의 URL→public source→adaptive frames→selector→final→기존 재료 표준명 매핑 흐름과 fail-closed 분기를 정의한다 |
+| DB v1.3.24 | schema 추가 없이 기존 extraction JSON에 safe i031 provenance만 저장하고 raw media/secret 저장을 금지한다 |
+| API v1.2.28 | 기존 extract endpoint에서 env mode를 선택하고 exact preflight, 20분 상한, 기존 오류 wrapper, 명시적 rollback을 잠근다 |
+
+> 사용자는 2026-07-26에 Claude 없이 현재 Codex 작업이 `cv-goal-i031-ocr`을 서비스에서 직접 실행할 수 있게 문서·구현·검증·merge하도록 명시 승인했다. 공개 API/UI/DB schema는 그대로이며 최초 release gate는 localhost 임의 공개 YouTube 레시피 링크 확인이다. i031에는 Gemini key가 필요 없지만 실험 source 경로와 맞추기 위해 server-only `YOUTUBE_API_KEY`, exact Codex CLI/ChatGPT login, media/Python 도구가 필요하고 유료 transcript fallback이 선택될 때만 `APIFY_TOKEN`이 필요하다. 최근 exact 재현은 Validation promotion PASS, Train deterministic step coverage `0.655 < 0.675` FAIL이므로 holdout/production rollout은 승인되지 않았다.
 
 ## Cooking Plan / Meal Log Contract-Evolution `2026-07-23`
 

@@ -1,0 +1,104 @@
+{
+  "id": "33-youtube-i031-direct-extraction",
+  "title": "YouTube i031 direct extraction",
+  "summary": "기존 YT_IMPORT에서 exact cv-goal-i031-ocr source/frame/selector/final 경로를 localhost strict mode로 직접 실행하고 기존 재료 표준명 검수와 등록에 연결한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 localhost의 기존 YouTube 가져오기 화면에 임의 공개 레시피 URL을 넣어 i031 방식으로 직접 추출하고 검수할 수 있게 한다.",
+  "owners": {
+    "claude": "skipped-user-directed",
+    "codex": "stage1,stage2,stage3,stage4,stage5,stage6; independent native critic/code/security reviewers",
+    "workers": []
+  },
+  "dependencies": [
+    "19-youtube-import",
+    "20-youtube-real-import",
+    "21-ingredient-dictionary",
+    "22-youtube-ingredient-registration",
+    "27-youtube-import-quality-uplift",
+    "27b-youtube-source-fallback",
+    "29-youtube-author-comment-fallback"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.7.23.md",
+      "docs/화면정의서-v1.5.29.md",
+      "docs/유저flow맵-v1.3.26.md",
+      "docs/db설계-v1.3.24.md",
+      "docs/api문서-v1.2.28.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/33-youtube-i031-direct-extraction/README.md",
+      "docs/workpacks/33-youtube-i031-direct-extraction/acceptance.md",
+      "docs/workpacks/33-youtube-i031-direct-extraction/automation-spec.json",
+      "docs/engineering/youtube-codex-vision-ocr-production-integration-plan.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "youtube-i031-localhost-arbitrary-url"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 2
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice 33-youtube-i031-direct-extraction",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "exact-i031-identity",
+      "strict-no-fallback",
+      "temp-cleanup",
+      "secrets-not-persisted",
+      "no-hardcoded-video-id",
+      "localhost-arbitrary-url-smoke"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": null,
+  "notes": "User-approved Codex-only slice. Stage 1 contract-evolution must merge before implementation. Independent native Codex internal 1.5 review passed with blocking findings 0. Fresh exact Validation passed promotion; fresh Train deterministic step coverage 0.655 missed 0.675, and Holdout is not approved. Initial release is localhost only.",
+  "out_of_scope": [
+    "preview-or-production-enablement",
+    "holdout-promotion",
+    "new-public-api-or-db-schema",
+    "gemini-fallback",
+    "runtime-eval-answer-or-video-fixture",
+    "experiment-graders-in-service-runtime",
+    "ui-redesign"
+  ],
+  "open_questions": []
+}
