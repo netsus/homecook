@@ -98,7 +98,8 @@ create table public.users (
 );
 create table public.ingredients (
   id uuid primary key default gen_random_uuid(), standard_name text not null unique,
-  category text not null, default_unit text
+  category text not null, default_unit text,
+  created_at timestamptz not null default now()
 );
 create table public.ingredient_synonyms (
   id uuid primary key default gen_random_uuid(),
@@ -260,12 +261,21 @@ grant usage on schema public to anon, authenticated, service_role;
       "-f",
       "supabase/migrations/20260725130000_prepared_food_search_relevance_indexes.sql",
     ]);
+    for (let replay = 0; replay < 2; replay += 1) {
+      runRequired(path.join(postgresBin, "psql"), [
+        ...args,
+        "--single-transaction",
+        "-f",
+        "supabase/migrations/20260725140000_prepared_food_search_ranked_rpc.sql",
+      ]);
+    }
 
     const test = commandResult("pnpm", [
       "exec", "vitest", "run",
       "tests/prepared-food-catalog-postgres.integration.test.ts",
       "tests/community-prepared-food-catalog-postgres.integration.test.ts",
       "tests/prepared-food-search-indexes-postgres.integration.test.ts",
+      "tests/prepared-food-search-relevance-postgres.integration.test.ts",
       "--pool=forks", "--maxWorkers=1", "--testTimeout=30000",
     ], {
       stdio: "inherit",

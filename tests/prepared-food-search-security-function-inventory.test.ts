@@ -7,7 +7,7 @@ const MANIFEST_PATH =
   "docs/security/prepared-food-search-relevance-security-function-authorization-manifest.json";
 
 describe("prepared food search security function inventory", () => {
-  it("classifies both locked-down search projection helpers", () => {
+  it("classifies the locked-down helpers and service-only ranked RPC", () => {
     expect(existsSync(MANIFEST_PATH)).toBe(true);
 
     const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8")) as {
@@ -18,6 +18,7 @@ describe("prepared food search security function inventory", () => {
     expect(manifest.migrations).toEqual([
       "supabase/migrations/20260725120000_prepared_food_search_relevance_foundation.sql",
       "supabase/migrations/20260725130000_prepared_food_search_relevance_indexes.sql",
+      "supabase/migrations/20260725140000_prepared_food_search_ranked_rpc.sql",
     ]);
     expect(manifest.functions).toEqual(
       expect.arrayContaining([
@@ -39,9 +40,19 @@ describe("prepared food search security function inventory", () => {
           security_mode: "invoker",
           safe_search_path: ["pg_catalog", "pg_temp"],
         }),
+        expect.objectContaining({
+          signature:
+            "public.search_food_catalog_ranked(uuid, text, text[], text, integer, jsonb, text, integer)",
+          control_class: "application-controlled",
+          effect: "read-only",
+          exposure: "service-internal",
+          allowed_principals: ["service_role"],
+          security_mode: "definer",
+          safe_search_path: ["pg_catalog", "public", "pg_temp"],
+        }),
       ]),
     );
-    expect(manifest.functions).toHaveLength(2);
+    expect(manifest.functions).toHaveLength(3);
   });
 
   it("validates the additive manifest without a live database", () => {
@@ -61,7 +72,7 @@ describe("prepared food search security function inventory", () => {
 
     expect(result.status, output).toBe(0);
     expect(output).toContain(
-      "prepared-food-search-relevance:2 post-migration additive application functions",
+      "prepared-food-search-relevance:3 post-migration additive application functions",
     );
   }, 15_000);
 });
