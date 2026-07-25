@@ -23,6 +23,7 @@
 
 ## Data Integrity
 
+- [ ] canonical index migration stays transaction-compatible while the merged-exact-SHA release gate derives the same definitions for concurrent prebuild <!-- omo:id=accept-search-index-foundation;stage=2;scope=backend;review=3,6 -->
 - [ ] normalizer/search projection/index/RPC migration이 additive이며 existing/fresh/replay에서 같은 signature/ACL/result를 만든다 <!-- omo:id=accept-search-migration-replay;stage=2;scope=backend;review=3,6 -->
 - [ ] public/private candidate paths are separated and visibility/moderation/current-version predicates run before ranking <!-- omo:id=accept-search-candidate-isolation;stage=2;scope=backend;review=3,6 -->
 - [ ] v2 cursor는 official integer tuple과 query/filter fingerprint만 담고 raw float를 담지 않는다 <!-- omo:id=accept-search-v2-cursor;stage=2;scope=backend;review=3,6 -->
