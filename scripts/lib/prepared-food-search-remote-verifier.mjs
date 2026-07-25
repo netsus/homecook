@@ -140,20 +140,34 @@ with expected_indexes(index_name) as (
     1
   ) as payload
   from actor
-), community_next_page as (
+), pagination_page as (
   select public.search_food_catalog_ranked(
     actor.actor_id,
     '',
-    array['food_product']::text[],
-    'community',
-    2,
-    community_page.payload -> 'next_cursor_tuple',
-    repeat('c', 64),
+    array['ingredient']::text[],
+    null,
+    null,
+    null,
+    repeat('e', 64),
     1
   ) as payload
   from actor
-  cross join community_page
-  where community_page.payload -> 'next_cursor_tuple' is not null
+), pagination_next_page as (
+  select public.search_food_catalog_ranked(
+    actor.actor_id,
+    '',
+    array['ingredient']::text[],
+    null,
+    2,
+    pagination_page.payload -> 'next_cursor_tuple',
+    repeat('e', 64),
+    1
+  ) as payload
+  from actor
+  cross join pagination_page
+  where jsonb_typeof(
+    pagination_page.payload -> 'next_cursor_tuple'
+  ) = 'object'
 ), legacy_page as (
   select public.list_food_products(
     actor.actor_id,
@@ -218,7 +232,10 @@ select jsonb_build_object(
       where requested_scope = 'mine' and owner_user_id = actor_id
     )
     and coalesce(
-      (select payload -> 'next_cursor_tuple' is not null from community_page),
+      (
+        select jsonb_typeof(payload -> 'next_cursor_tuple') = 'object'
+        from pagination_page
+      ),
       false
     )
     and coalesce(
@@ -310,14 +327,14 @@ select jsonb_build_object(
   ),
   'cursor_v2_ok',
     coalesce((select payload -> 'next_cursor_tuple' ->> 'algorithm_version'
-      from community_page), '') = '2'
-    and exists(select 1 from community_next_page)
+      from pagination_page), '') = '2'
+    and exists(select 1 from pagination_next_page)
     and coalesce(
-      (select payload -> 'items' -> 0 ->> 'id' from community_page),
+      (select payload -> 'items' -> 0 ->> 'id' from pagination_page),
       ''
     )
       <> coalesce(
-        (select payload -> 'items' -> 0 ->> 'id' from community_next_page),
+        (select payload -> 'items' -> 0 ->> 'id' from pagination_next_page),
         ''
       ),
   'legacy_compatibility_ok',
@@ -347,6 +364,39 @@ export function buildPreparedFoodSearchRemoteVerificationPlan({ mode }) {
     requiresCleanTrackedTree: true,
     expectedIndexCount: EXPECTED_INDEX_NAMES.length,
     sql: POST_MERGE_READ_ONLY_SQL,
+  };
+}
+
+export function buildPreparedFoodSearchPsqlRequest({
+  actorId,
+  databaseUrl,
+  environment,
+  planSql,
+}) {
+  const psqlEnvironment = { ...environment };
+  delete psqlEnvironment.PGOPTIONS;
+
+  return {
+    args: [
+      "-X",
+      "-qAt",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-v",
+      ["actor_id", actorId].join("="),
+    ],
+    input: [
+      "begin transaction read only;",
+      "set local role service_role;",
+      "set local homecook.prepared_food_search_actor_id = :'actor_id';",
+      planSql,
+      "commit;",
+    ].join("\n"),
+    environment: {
+      ...psqlEnvironment,
+      PGDATABASE: databaseUrl,
+      PGSSLMODE: "require",
+    },
   };
 }
 

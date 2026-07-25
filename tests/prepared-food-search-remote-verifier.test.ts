@@ -22,6 +22,15 @@ describe("prepared food search remote verifier", () => {
     expect(plan.sql).toContain("search_food_catalog_ranked");
     expect(plan.sql).toContain("has_function_privilege");
     expect(plan.sql).toContain("pg_catalog.pg_index");
+    expect(plan.sql).toMatch(
+      /pagination_page as \([\s\S]*?array\['ingredient'\]::text\[\][\s\S]*?pagination_next_page as \(/u,
+    );
+    expect(plan.sql).toMatch(
+      /jsonb_typeof\(\s*pagination_page\.payload -> 'next_cursor_tuple'\s*\)\s*=\s*'object'/u,
+    );
+    expect(plan.sql).not.toMatch(
+      /community_page\.payload -> 'next_cursor_tuple' is not null/u,
+    );
     expect(plan.sql).not.toMatch(
       /\b(?:insert|update|delete|truncate|alter|create|drop|grant|revoke)\b/iu,
     );
@@ -110,9 +119,34 @@ describe("prepared food search remote verifier", () => {
 
     expect(cli).toContain("PREPARED_FOOD_SEARCH_DATABASE_URL");
     expect(cli).toContain("PREPARED_FOOD_SEARCH_ACTOR_ID");
-    expect(cli).toContain('PGSSLMODE: "require"');
-    expect(cli).toContain("-c default_transaction_read_only=on");
+    expect(cli).toContain("buildPreparedFoodSearchPsqlRequest");
+    expect(cli).not.toContain("PGOPTIONS");
     expect(cli).toContain("--untracked-files=no");
     expect(cli).not.toMatch(/process\.stdout\.write\([^\n]*databaseUrl/);
+  });
+
+  it("builds a pooler-safe request without inherited PGOPTIONS", async () => {
+    const verifier = await import(
+      "../scripts/lib/prepared-food-search-remote-verifier.mjs"
+    );
+    const request = verifier.buildPreparedFoodSearchPsqlRequest({
+      actorId: "31000000-0000-4000-8000-000000000001",
+      databaseUrl: "postgresql://example.invalid/postgres?sslmode=require",
+      environment: {
+        PATH: "/usr/bin",
+        PGOPTIONS: "-c default_transaction_read_only=off",
+      },
+      planSql: "select '{}'::jsonb;",
+    });
+
+    expect(request.environment).toMatchObject({
+      PATH: "/usr/bin",
+      PGDATABASE: "postgresql://example.invalid/postgres?sslmode=require",
+      PGSSLMODE: "require",
+    });
+    expect(request.environment).not.toHaveProperty("PGOPTIONS");
+    expect(request.input).toContain("begin transaction read only");
+    expect(request.input).toContain("set local role service_role");
+    expect(request.args).toContain("actor_id=31000000-0000-4000-8000-000000000001");
   });
 });
