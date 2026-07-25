@@ -158,6 +158,7 @@ describe("YouTube i031 exact runtime", () => {
       codexBin: "/repo/codex",
       accessPath: vi.fn(async () => undefined),
       runCommand,
+      platform: "darwin",
     })).rejects.toMatchObject({
       code: "I031_MISSING_YOUTUBE_KEY",
       stage: "preflight",
@@ -172,6 +173,7 @@ describe("YouTube i031 exact runtime", () => {
       },
       codexBin: "/repo/codex",
       accessPath: vi.fn(async () => undefined),
+      platform: "darwin",
       runCommand: vi.fn(async (command) => ({
         stdout: command === "/repo/codex" ? "codex-cli 0.142.5\n" : "",
       })),
@@ -188,6 +190,7 @@ describe("YouTube i031 exact runtime", () => {
       },
       codexBin: "/repo/codex",
       accessPath: vi.fn(async () => undefined),
+      platform: "darwin",
       runCommand: vi.fn(async (_command, args) => ({
         stdout: args[0] === "--version"
           ? "codex-cli 0.144.0-alpha.4\n"
