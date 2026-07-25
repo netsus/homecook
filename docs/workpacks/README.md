@@ -10,6 +10,10 @@
 
 ## Revision Notes
 
+- `v2` cooking/meal-log prepared-food search relevance closeout (2026-07-26 KST, UTC+09:00)
+  - Stage 1 PR #1074, backend/data PRs #1097/#1099/#1100/#1101, merged-exact remote verifier PRs #1103/#1104, frontend Stage 4/5/6 PR #1105, official tuple consistency PR #1108이 모두 병합됐다.
+  - exact frontend head `0bcdc998`는 독립 Codex quality/security/test review P0-P3 0과 모든 최신 current-head check를 통과한 뒤 merge `19f25aae`로 병합됐다. production read-only smoke는 cursor v1/v2, current nutrition, moderation, owner-private, legacy compatibility, ACL과 remote write/provider-request 0을 확인했다.
+
 - `v2` cooking plan / meal log contract-evolution roadmap (2026-07-23 KST, UTC+09:00)
   - 사용자가 승인한 `요리 계획·식사 기록 분리, 커스텀 레시피, 완제품 검색` 마스터 계획을 정확히 15개 successor workpack(`F0` + #1~#14)과 release train A~F로 고정했다.
   - Stage -1 SECURITY DEFINER 권한 hotfix의 production 배포·8개 anon mutation 무변경 검증·closeout merge를 계약 gate의 선행 증거로 고정한다.
@@ -238,7 +242,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `community-prepared-food-catalog` | merged | 공공 영양DB·사용자 등록·비공개 보관을 구분하고 공동 검색, owner-only 수정·삭제, 신고, 탈퇴 후 익명 read-only·기존 pin 보존을 구현했다. PR #1046 merge |
 | `prepared-food-standard-basis-ux` | merged | 고형 100g·액상 100mL 비교, source/label, 추정 금지를 교차 잠그고 MEAL_SCREEN g/mL 수량을 1g/1mL 단위로 안전하게 편집하도록 수리했다. PR #1049 merge `1976ecc3` |
 | `nutrition-products-cross-slice-release-qa` | merged | 영양 데이터, 권한, UI, 계산을 실제 local DB/browser/current-head checks 기준으로 교차 검증했다. Stage 2/3 #1053, historical evidence #1059, TDD repairs #1060/#1063, final evidence/authority/Stage 5/6 #1064 merge `c9315520` 완료 |
-| `prepared-food-search-relevance` | in-progress | 브랜드+제품명 통합 정규화, public/private 분리 index, typed relevance와 정수 tuple cursor로 완제품 검색을 개선하고 287,041건 fixture의 품질·성능을 닫는다 |
+| `prepared-food-search-relevance` | merged | 브랜드+제품명 통합 정규화, public/private 분리 index, typed relevance·정수 tuple cursor·IME 최신 요청 제어를 구현하고 287,041건 품질·성능 및 retained production read-only smoke를 통과했다. 원본 apply/concurrent-index provenance 미보존으로 canonical external-smoke projection은 pending Manual Only다. PR #1105 merge `19f25aae` |
 | `account-session-generation-foundation` | merged | JWT session-bound account generation, lifecycle watermark, DB cutover fence/Auth Hook/quarantine/outbox와 personal-writer inventory를 feature-off foundation으로 잠근다 |
 | `product-ingredient-link-foundation` | docs | 제품과 canonical ingredient의 검수 relation, RLS/admin promotion, pantry effective ingredient projection과 account-delete 결합 gate를 구현한다 |
 | `recipe-visibility-read-hardening` | in-progress | private personal recipe soft delete/public fork/tag visibility, quarantine visibility upper bound, generation-aware image registry·private storage·outbox를 먼저 잠근다 |
@@ -280,7 +284,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | Order | Release train | Slice | Status | Required predecessors |
 | ---: | --- | --- | --- | --- |
 | F0 | B | `account-session-generation-foundation` | merged | contract gate; security hotfix merged and deployed |
-| 1 | A | `prepared-food-search-relevance` | in-progress | contract gate; existing nutrition-products catalog release merged |
+| 1 | A | `prepared-food-search-relevance` | merged | PR #1074/#1097/#1099/#1100/#1101/#1103/#1104/#1105/#1108 merged; retained production read-only subset and current-head gates passed; original apply provenance remains pending Manual Only |
 | 2 | B | `product-ingredient-link-foundation` | docs | F0 + #3 joint account-delete activation gate |
 | 3 | B | `recipe-visibility-read-hardening` | in-progress | F0; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
 | 4 | B | `recipe-snapshot-authority-foundation` | docs | #3; existing recipe nutrition snapshot release merged |

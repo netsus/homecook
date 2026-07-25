@@ -65,7 +65,6 @@ Schema Change:
 - `nutrition-products-cross-slice-release-qa` merged at `c9315520`
 - public catalog evidence: 287,041 visible public products, duplicate key 0, missing current version 0
 - `prepared-food-catalog`, `community-prepared-food-catalog`, `public-prepared-food-catalog-import`, `prepared-food-standard-basis-ux` merged
-- F0 Stage 1 docs PR #1073 merged; runtime F0 activation is not a dependency for this independent read-only train.
 
 ## Backend First Contract
 
@@ -109,7 +108,8 @@ Schema Change:
 - UI risk: `low-risk`
 - Anchor screen dependency: none; HOME and PLANNER_WEEK visual structures are unchanged.
 - Visual artifact: N/A — cursor, debounce, IME, and stale-response control are behavior-only and reuse existing components/tokens.
-- Authority status: `not-required` for Stage 1; Stage 5 independently reviews behavior/accessibility regression. Any later layout or anchor change requires a separate design artifact/authority gate.
+- Authority status: `not-required`
+- Notes: Stage 5 independently reviews behavior/accessibility regression. Any later layout or anchor change requires a separate design artifact/authority gate.
 
 ## Design Status
 
@@ -190,5 +190,5 @@ Schema Change:
 
 ## Manual Only
 
-- [ ] 실제 production/staging migration 또는 data load는 merged exact SHA와 별도 release gate에서만 수행한다.
+- [ ] original production migration/concurrent-index 실행 로그는 보존되지 않았다. PR #1104와 `evidence/2026-07-25-closeout.md`는 merged post-apply state의 read-only smoke와 write 0만 보존한다.
 - [ ] 실제 모바일 기기의 한국어 IME 종류별 조합 감각 확인은 자동화 이후 수동 보조 evidence다.

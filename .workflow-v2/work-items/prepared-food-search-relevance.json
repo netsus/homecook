@@ -16,18 +16,17 @@
   "dependencies": [
     "security-definer-mutation-authorization-hotfix deployed and closed by PR #1071",
     "cooking-meal-log-contract-evolution merged as PR #1072",
-    "account-session-generation-foundation Stage 1 docs merged as PR #1073",
     "nutrition-products-cross-slice-release-qa merged at c9315520",
     "prepared-food-catalog, community-prepared-food-catalog, public-prepared-food-catalog-import, and prepared-food-standard-basis-ux merged"
   ],
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.24.md",
+      "docs/화면정의서-v1.5.29.md",
+      "docs/유저flow맵-v1.3.26.md",
+      "docs/db설계-v1.3.25.md",
+      "docs/api문서-v1.2.29.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -121,11 +120,11 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
@@ -136,8 +135,68 @@
     "Meal log writes, custom recipe product attach, and meal-log UI owned by successors #9 and #12",
     "Initial-consonant search, automatic correction copy, external search engine, runtime provider search, or broad one-character typo matching",
     "Client-side merge of ingredient and product pages",
-    "Unmerged migration application or production/staging data writes"
+    "Applying unmerged migrations or performing production/staging data writes outside the separate release gate"
   ],
   "open_questions": [],
-  "notes": "Approval remains not_started until a fresh, separate Codex internal 1.5 reviewer approves the five Stage 1 core artifacts. This slice is Release Train A and may ship independently after its own current-head gates. F0 runtime activation is not a dependency. Stage 1 verify_commands contain only the executable docs-validator, focused workflow Vitest, lint, typecheck, dependency-audit, and diff-check subset. Search-specific Vitest/PostgreSQL/performance/client/E2E/remote-verifier entries are planned Stage 2/4/closeout artifacts locked by this docs contract, not commands claimed executable in the Stage 1 PR; Stage 2 must add failing tests first and observe RED. The Stage 1 author must not approve, merge, or close its own work."
+  "notes": "Stage 1 docs PR #1074, incremental backend/data PRs #1097/#1099/#1100/#1101, merged-exact remote verifier PRs #1103/#1104, frontend Stage 4/5/6 PR #1105, and official tuple consistency repair PR #1108 are merged. Exact frontend head 0bcdc998f79905cfbe601c67d97a769a4524f455 passed independent Codex quality/security/test review with P0-P3 0, full local frontend verification, and every latest current-head check before merge 19f25aae4806d2de584f4508bce88643c176705a. PR #1108 exact head ec285403ebfc1b88675db2b1bc7eb41975a98968 aligned requirements v1.7.24, DB v1.3.25, and API v1.2.29 after independent internal1.5, security/DB, and five-axis reviews P0-P3 0 and all latest current-head checks. Production Supabase post-apply read-only state covered cursor v1/v2, current nutrition, moderation, owner-private, legacy compatibility, ACL, and write/provider-request zero; the original migration/concurrent-index execution log was not retained, so that Manual Only provenance item remains unchecked. Physical-device installed-keyboard IME feel remains Manual Only.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "pending",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "PR #1074 merged the five Stage 1 contract artifacts after separate Codex internal 1.5 approval",
+        "PRs #1097/#1099/#1100/#1101 merged the TDD normalization, index, ranked typed-union route, ACL, cursor, relevance, and performance implementation",
+        "PRs #1103/#1104 retained production Supabase post-apply transaction-read-only state for cursor v1/v2, current nutrition, moderation, owner-private, legacy /food-products compatibility, exact-principal ACL, and remote write/provider-request zero; original apply/prebuild provenance remains Manual Only",
+        "docs/workpacks/prepared-food-search-relevance/evidence/2026-07-25-stage4-frontend.md retains debounce, Korean IME, stale-generation, responsive viewport, HOME recipe-only, and frontend gate evidence",
+        "docs/workpacks/prepared-food-search-relevance/evidence/2026-07-25-closeout.md retains immutable merge metadata, production read-only verification, independent review, GitGuardian, and final current-head check snapshots",
+        "PR #1105 exact head 0bcdc998f79905cfbe601c67d97a769a4524f455 passed three independent Codex reviews with P0-P3 0 and all latest current-head checks before merge 19f25aae4806d2de584f4508bce88643c176705a",
+        "PR #1108 exact head ec285403ebfc1b88675db2b1bc7eb41975a98968 repaired official tuple/query-empty authority drift and passed independent internal1.5, security/DB, and five-axis reviews P0-P3 0 plus all latest current-head checks before merge 07e041ad0cdef1e8eb83f3e82707d542e66fe64c"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "0bcdc998f79905cfbe601c67d97a769a4524f455",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 8,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 3,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-25T21:12:37Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 8,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 3,
+      "latest_reason_code": "official-contract-consistency-repair",
+      "evidence_sources": [
+        "docs/workpacks/prepared-food-search-relevance/evidence/2026-07-25-stage4-frontend.md",
+        "docs/workpacks/prepared-food-search-relevance/evidence/2026-07-25-closeout.md",
+        "PR #1074 Stage 1 contract and internal 1.5 evidence",
+        "PRs #1097/#1099/#1100/#1101 backend and performance evidence",
+        "PRs #1103/#1104 production read-only smoke evidence",
+        "PR #1105 Actual Verification, Closeout Sync, and latest current-head checks",
+        "PR #1108 official contract consistency, independent reviews, and latest current-head checks"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-25T21:14:12Z",
+      "status_synced_at": "2026-07-25T21:14:12Z",
+      "pr_body_synced_at": "2026-07-25T21:38:22Z"
+    }
+  }
 }
