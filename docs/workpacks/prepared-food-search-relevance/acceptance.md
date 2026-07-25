@@ -1,5 +1,7 @@
 # prepared-food-search-relevance Acceptance
 
+> 2026-07-26 contract consistency re-lock: requirements v1.7.24, DB v1.3.25, and API v1.2.29 align on the integer/fixed v2 cursor tuple and query-empty stable browse. Every acceptance item below retains its prior meaning and completion state; `popularity` is not added as a cursor boundary.
+
 ## Happy Path
 
 - [x] `연세크림빵`의 designated 3 products가 first page에 모두 있고 two-fragment coverage가 one-fragment보다 앞선다 <!-- omo:id=accept-search-designated-three;stage=2;scope=backend;review=3,6 -->

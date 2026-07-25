@@ -1,17 +1,30 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.23.md`
+- `docs/요구사항기준선-v1.7.24.md`
 - `docs/화면정의서-v1.5.29.md`
 - `docs/유저flow맵-v1.3.26.md`
-- `docs/db설계-v1.3.24.md`
-- `docs/api문서-v1.2.28.md`
+- `docs/db설계-v1.3.25.md`
+- `docs/api문서-v1.2.29.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+- 아래 contract-evolution 표의 버전은 해당 변경을 처음 도입한 역사적 파일을 기록한다. 현재 공식본은 항상 위 `Official Files` 목록을 따른다.
+
+## Prepared Food Search Tuple Consistency Contract-Evolution `2026-07-26`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.24 | 통합 검색의 축약 정렬 설명을 기존 API exact integer/fixed tuple과 일치시키고 `popularity`를 cursor authority에서 제외한다 |
+| 화면정의서 v1.5.29 | 변경 없음. 기존 단일 typed-union 목록·단일 cursor UI 계약 유지 |
+| 유저플로우 v1.3.26 | 변경 없음. 기존 search/visibility/error 흐름 유지 |
+| DB v1.3.25 | table/column/index/RLS 추가 없이 DB 정렬 authority를 API tuple과 일치시킨다 |
+| API v1.2.29 | 기존 tuple을 유지하고 query-empty stable browse 의미를 명시한다 |
+
+> 이 복구는 이미 승인·병합된 `prepared-food-search-relevance` 범위의 공식 문서 내부 충돌을 제거한다. endpoint, request/response field, status, error, visibility, relevance/성능 gate와 query-empty stable browse 의미는 바꾸지 않는다. query-present 정렬은 relevance가 source/recency보다 먼저이며 `popularity`를 cursor boundary에 추가하지 않는다.
 
 ## YouTube i031 Direct Extraction Contract-Evolution `2026-07-26`
 
