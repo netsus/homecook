@@ -41,19 +41,23 @@ describe("prepared food unified ranked search RPC", () => {
     expect(sql).toMatch(/p_types\s*<@[\s\S]*array\['ingredient',\s*'food_product'\]/i);
     expect(sql).toMatch(/p_source not in \('public',\s*'community',\s*'mine'\)/i);
     expect(sql).toMatch(/raise exception 'INVALID_SEARCH_FILTER'/i);
+    expect(sql).toMatch(/public_product_index_candidates as materialized/i);
     expect(sql).toMatch(/public_product_candidates as materialized/i);
     expect(sql).toMatch(/private_product_candidates as materialized/i);
     expect(sql).toMatch(
       /private_product_candidates[\s\S]*product\.visibility = 'private'[\s\S]*product\.owner_user_id = p_actor_id/i,
     );
     expect(sql).toMatch(
-      /public_product_candidates[\s\S]*product\.visibility = 'public'[\s\S]*product\.moderation_status = 'visible'[\s\S]*product\.deleted_at is null/i,
+      /public_product_index_candidates[\s\S]*product\.visibility = 'public'[\s\S]*product\.moderation_status = 'visible'[\s\S]*product\.deleted_at is null[\s\S]*limit 400/i,
     );
   });
 
-  it("admits public products through their exact current approved nutrition chain", () => {
+  it("bounds index candidates before exact current approved nutrition admission", () => {
     const sql = readMigration();
 
+    expect(sql).toMatch(
+      /public_product_candidates as materialized[\s\S]*from public_product_index_candidates indexed_candidate[\s\S]*join lateral/i,
+    );
     expect(sql).toMatch(
       /version\.id = product\.current_nutrition_version_id[\s\S]*version\.product_id = product\.id/i,
     );

@@ -43,6 +43,7 @@
     "test:prepared-food-catalog:postgres": "node scripts/run-prepared-food-catalog-postgres-integration.mjs",
     "test:prepared-food-search:postgres": "node scripts/run-prepared-food-catalog-postgres-integration.mjs",
     "test:prepared-food-search-relevance:postgres": "pnpm test:prepared-food-search:postgres",
+    "perf:prepared-food-search-relevance": "node scripts/run-prepared-food-search-relevance-performance.mjs",
     "test:public-prepared-food-import:postgres": "node scripts/run-public-prepared-food-import-postgres-integration.mjs",
     "test:prepared-food-planner-entry:postgres": "node scripts/run-prepared-food-planner-entry-postgres-integration.mjs",
     "test:security-functions:postgres": "node scripts/run-security-function-authorization-postgres-integration.mjs",

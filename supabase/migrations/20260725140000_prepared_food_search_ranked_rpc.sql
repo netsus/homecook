@@ -13,6 +13,8 @@ language plpgsql
 stable
 security definer
 set search_path = pg_catalog, public, pg_temp
+set pg_trgm.word_similarity_threshold = 0.3
+set plan_cache_mode = force_custom_plan
 as $$
 declare
   v_query text := public.normalize_food_search_text(coalesce(p_query, ''), false);
@@ -174,15 +176,19 @@ begin
               ingredient.standard_name::text,
               true
             ) % v_compact_query
-            or public.food_search_short_ngrams(ingredient.standard_name::text)
-              && public.food_search_short_ngrams(v_compact_query)
+            or v_compact_query <% public.normalize_food_search_text(
+              ingredient.standard_name::text,
+              true
+            )
           )
         )
       )
-    order by ingredient.created_at desc, ingredient.id desc
+    order by
+      case when v_query = '' then ingredient.created_at end desc,
+      case when v_query = '' then ingredient.id end desc
     limit 400
   ),
-  public_product_candidates as materialized (
+  public_product_index_candidates as materialized (
     select
       'food_product'::text as item_type,
       product.id as stable_id,
@@ -212,49 +218,6 @@ begin
           and (p_source is null or p_source = 'community'))
       )
       and (
-        product.source_type <> 'public_dataset'
-        or exists (
-          select 1
-          from public.food_product_nutrition_versions version
-          join public.nutrition_profiles profile
-            on profile.id = version.nutrition_profile_id
-          join public.nutrition_source_items source_item
-            on source_item.id = version.source_item_id
-          join public.nutrition_sources source
-            on source.id = source_item.source_id
-          where version.id = product.current_nutrition_version_id
-            and version.product_id = product.id
-            and profile.source_item_id = source_item.id
-            and profile.profile_kind = 'product_label'
-            and profile.normalization_method = 'as_labeled'
-            and profile.review_status = 'approved'
-            and profile.is_active
-            and source_item.external_item_key = product.external_product_key
-            and source_item.source_basis_amount is not null
-            and source_item.source_basis_amount = profile.basis_amount
-            and source_item.source_basis_unit = profile.basis_unit
-            and source_item.review_status = 'approved'
-            and source.review_status = 'approved'
-            and source.freshness_status = 'current'
-            and source.is_active
-            and nullif(btrim(source.source_version), '') is not null
-            and (
-              select count(*)
-              from public.nutrition_values nutrition_value
-              where nutrition_value.profile_id = profile.id
-                and nutrition_value.nutrient_code in (
-                  'energy_kcal',
-                  'carbohydrate_g',
-                  'protein_g',
-                  'fat_g',
-                  'sodium_mg'
-                )
-                and nutrition_value.value_status = 'observed'
-                and nutrition_value.amount is not null
-            ) = 5
-        )
-      )
-      and (
         v_query = ''
         or (
           char_length(v_compact_query) <= 2
@@ -273,14 +236,68 @@ begin
               coalesce(product.brand::text || ' ', '') || product.name::text,
               true
             ) % v_compact_query
-            or public.food_search_short_ngrams(
-              coalesce(product.brand::text || ' ', '') || product.name::text
-            ) && public.food_search_short_ngrams(v_compact_query)
+            or v_compact_query <% public.normalize_food_search_text(
+              coalesce(product.brand::text || ' ', '') || product.name::text,
+              true
+            )
           )
         )
       )
-    order by product.created_at desc, product.id desc
+    order by
+      case when v_query = '' then product.created_at end desc,
+      case when v_query = '' then product.id end desc
     limit 400
+  ),
+  public_product_candidates as materialized (
+    select indexed_candidate.*
+    from public_product_index_candidates indexed_candidate
+    join public.food_products product
+      on product.id = indexed_candidate.stable_id
+    join lateral (
+      select 1
+      where product.source_type <> 'public_dataset'
+      union all
+      select 1
+      from public.food_product_nutrition_versions version
+      join public.nutrition_profiles profile
+        on profile.id = version.nutrition_profile_id
+      join public.nutrition_source_items source_item
+        on source_item.id = version.source_item_id
+      join public.nutrition_sources source
+        on source.id = source_item.source_id
+      where product.source_type = 'public_dataset'
+        and version.id = product.current_nutrition_version_id
+        and version.product_id = product.id
+        and profile.source_item_id = source_item.id
+        and profile.profile_kind = 'product_label'
+        and profile.normalization_method = 'as_labeled'
+        and profile.review_status = 'approved'
+        and profile.is_active
+        and source_item.external_item_key = product.external_product_key
+        and source_item.source_basis_amount is not null
+        and source_item.source_basis_amount = profile.basis_amount
+        and source_item.source_basis_unit = profile.basis_unit
+        and source_item.review_status = 'approved'
+        and source.review_status = 'approved'
+        and source.freshness_status = 'current'
+        and source.is_active
+        and nullif(btrim(source.source_version), '') is not null
+        and (
+          select count(*)
+          from public.nutrition_values nutrition_value
+          where nutrition_value.profile_id = profile.id
+            and nutrition_value.nutrient_code in (
+              'energy_kcal',
+              'carbohydrate_g',
+              'protein_g',
+              'fat_g',
+              'sodium_mg'
+            )
+            and nutrition_value.value_status = 'observed'
+            and nutrition_value.amount is not null
+        ) = 5
+      limit 1
+    ) admitted on true
   ),
   private_product_candidates as materialized (
     select
@@ -325,13 +342,16 @@ begin
               coalesce(product.brand::text || ' ', '') || product.name::text,
               true
             ) % v_compact_query
-            or public.food_search_short_ngrams(
-              coalesce(product.brand::text || ' ', '') || product.name::text
-            ) && public.food_search_short_ngrams(v_compact_query)
+            or v_compact_query <% public.normalize_food_search_text(
+              coalesce(product.brand::text || ' ', '') || product.name::text,
+              true
+            )
           )
         )
       )
-    order by product.created_at desc, product.id desc
+    order by
+      case when v_query = '' then product.created_at end desc,
+      case when v_query = '' then product.id end desc
     limit 400
   ),
   admitted_candidates as materialized (
