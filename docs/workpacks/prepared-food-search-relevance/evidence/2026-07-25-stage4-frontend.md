@@ -64,8 +64,9 @@ Verification window: 2026-07-25 UTC / 2026-07-26 KST (UTC+09:00).
   that this Stage 4 evidence was not persisted. Both findings are repaired in
   the final tree.
 - the final exact-tree quality, security, and test review result is recorded in
-  the PR `Actual Verification` section. The checked closeout item is valid only
-  while that record reports P0-P3 0 for the pushed exact tree.
+  the PR `Actual Verification` section and retained in
+  `evidence/2026-07-25-closeout.md`. The checked closeout item is valid only
+  while those records report P0-P3 0 for the pushed exact tree.
 - the Draft head completed all started checks successfully or with normal
   skips. Ready policy then correctly blocked on unchecked Stage 4 closeout
   items; this repair updates those owned items.

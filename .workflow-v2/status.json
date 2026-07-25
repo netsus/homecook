@@ -2322,11 +2322,11 @@
     {
       "id": "prepared-food-search-relevance",
       "preset": "vertical-slice-strict",
-      "branch": "docs/prepared-food-search-relevance",
-      "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-prepared-food-search-relevance",
+      "pr_path": "https://github.com/netsus/homecook/pull/1105",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
@@ -2344,9 +2344,9 @@
         "node scripts/verify-prepared-food-search-remote.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Approval remains not_started until a fresh, separate Codex internal 1.5 reviewer approves all five Stage 1 core artifacts. This Release Train A slice can ship independently after its own gates; F0 runtime activation is not a dependency. Search-specific Vitest/PostgreSQL/performance/client/E2E/remote-verifier entries are planned Stage 2/4/closeout artifacts locked by this Stage 1 contract and are not claimed executable in the docs PR. Stage 2 writes failing tests first and observes RED. UI scope is low-risk behavior-only with no layout or anchor-screen change.",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
+      "notes": "PRs #1074/#1097/#1099/#1100/#1101/#1103/#1104/#1105/#1108 merged. Exact frontend head 0bcdc998 passed independent Codex quality/security/test review P0-P3 0 and all latest current-head checks before merge 19f25aae. PR #1108 exact head ec285403 aligned requirements v1.7.24, DB v1.3.25, and API v1.2.29 after independent reviews P0-P3 0 and all latest current-head checks before merge 07e041ad. Production Supabase read-only smoke covered cursor v1/v2, current nutrition, moderation, owner-private, legacy compatibility, ACL, and remote write/provider-request zero. closeout_phase=completed; closeout_recovery=manual_patch:8|ci_resync:3|artifact_missing:false; closeout_repair=codex:8|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:3|sources:docs/workpacks/prepared-food-search-relevance/evidence/2026-07-25-stage4-frontend.md,docs/workpacks/prepared-food-search-relevance/evidence/2026-07-25-closeout.md,PR #1074 Stage 1 contract and internal 1.5 evidence,PRs #1097/#1099/#1100/#1101 backend and performance evidence,PRs #1103/#1104 production read-only smoke evidence,PR #1105 Actual Verification, Closeout Sync, and latest current-head checks,PR #1108 official contract consistency, independent reviews, and latest current-head checks; last_recovery_at=2026-07-25T21:12:37Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null

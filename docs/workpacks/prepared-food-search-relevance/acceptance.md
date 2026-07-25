@@ -48,14 +48,14 @@
 
 ### Manual Only
 
-- [ ] real production/staging migration or data load is not performed before merged exact SHA release gate
+- [ ] the original production migration/concurrent-index execution log was not retained; PR #1104 and `evidence/2026-07-25-closeout.md` retain only the merged post-apply read-only state, smoke, and write-zero evidence
 - [ ] physical-device IME feel across installed keyboards remains manual supplementary evidence
 
 ## Automation Split
 
-- [ ] Stage 1 runs only current docs validators, focused workflow tests, lint/typecheck, dependency audit and diff checks; GitGuardian scans the PR head independently <!-- omo:id=accept-search-stage1-gate;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 1 runs only current docs validators, focused workflow tests, lint/typecheck, dependency audit and diff checks; GitGuardian scans the PR head independently <!-- omo:id=accept-search-stage1-gate;stage=2;scope=shared;review=3,6 -->
 - [x] Stage 2 adds tests first, observes RED, then implements route/parser/cursor/SQL/security/performance artifacts <!-- omo:id=accept-search-tdd-red;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 4 adds debounce/IME/latest-generation unit and focused Playwright behavior tests <!-- omo:id=accept-search-stage4-client-tests;stage=4;scope=frontend;review=5,6 -->
-- [x] Stage 3 security/performance/5-axis and Stage 5/6 independent Codex reviews have unresolved P0/P1/P2 0 <!-- omo:id=accept-search-independent-reviews;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 3 security/performance/5-axis and Stage 5/6 independent Codex reviews have unresolved P0/P1/P2/P3 0 <!-- omo:id=accept-search-independent-reviews;stage=4;scope=frontend;review=5,6 -->
 - [x] Draft→Ready and every current-head started check finish success or documented normal skip before squash merge <!-- omo:id=accept-search-current-head-ci;stage=4;scope=frontend;review=5,6 -->
-- [ ] merged exact SHA remote read-only smoke preserves public/private/moderation/current-version/cursor behavior and external writes 0 <!-- omo:id=accept-search-remote-smoke;stage=2;scope=shared;review=3,6 -->
+- [x] merged exact SHA remote read-only smoke preserves public/private/moderation/current-version/cursor behavior and external writes 0 <!-- omo:id=accept-search-remote-smoke;stage=2;scope=shared;review=3,6 -->
