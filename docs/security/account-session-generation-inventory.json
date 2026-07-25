@@ -1760,7 +1760,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "consume_youtube_ingredient_registration_rate_limit",
-      "line": 10441,
+      "line": 10452,
       "source_file": "lib/server/youtube-import.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -1774,7 +1774,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "register_youtube_ingredient",
-      "line": 10471,
+      "line": 10482,
       "source_file": "lib/server/youtube-import.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -1788,7 +1788,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "register_youtube_recipe_from_session",
-      "line": 10605,
+      "line": 10616,
       "source_file": "lib/server/youtube-import.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -1835,6 +1835,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-23T23:31:11.269Z",
-  "checksum": "36e80073096d8e3afc4f075eb76edd19d4495564922908f171c6ad006b47ed4d"
+  "generated_at": "2026-07-25T11:13:30.532Z",
+  "checksum": "4453097bb3407e70b35ee45c4faf530c5f7bcbd035f901de7d446583e49c2aaf"
 }

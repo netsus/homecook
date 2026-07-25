@@ -6879,8 +6879,7 @@ describe("20 youtube real import backend", () => {
     mockAuth();
     vi.stubEnv("YOUTUBE_RECIPE_LLM_ENABLED", "true");
     vi.stubEnv("YOUTUBE_RECIPE_LLM_PROVIDER", "gemini");
-    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED", "true");
-    vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED", "true");
+    vi.stubEnv("youtube_ocr_extraction", "true");
     vi.stubEnv("YOUTUBE_RECIPE_VISUAL_RECIPE_CONTRACT_ALIGNED", "true");
     vi.stubEnv("GEMINI_API_KEY", "test-gemini-key");
 

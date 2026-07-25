@@ -619,8 +619,18 @@ const AUTHOR_COMMENT_RAW_SOURCE_HEADER = "--- author comment ---";
 const CAPTION_TRANSCRIPT_RAW_SOURCE_HEADER = "--- caption transcript ---";
 const MULTI_CANDIDATE_REVIEW_REQUIRED = "MULTI_CANDIDATE_REVIEW_REQUIRED";
 
+function isTruthyEnv(value: string | undefined) {
+  return ["1", "true", "yes", "on"].includes(value?.trim().toLowerCase() ?? "");
+}
+
 function isYoutubeSingleRecipeOnlyEnabled() {
-  return ["1", "true"].includes(process.env.YOUTUBE_RECIPE_SINGLE_ONLY?.trim().toLowerCase() ?? "");
+  return isTruthyEnv(process.env.YOUTUBE_RECIPE_SINGLE_ONLY);
+}
+
+function isYoutubeOcrExtractionEnabled() {
+  return isTruthyEnv(process.env.youtube_ocr_extraction)
+    || isTruthyEnv(process.env.YOUTUBE_OCR_EXTRACTION_ENABLED)
+    || isTruthyEnv(process.env.YOUTUBE_RECIPE_OCR_EXTRACTION_ENABLED);
 }
 const AUTHOR_COMMENT_MAX_RESULTS = 100;
 const AUTHOR_COMMENT_ORDER = "relevance";
@@ -4236,7 +4246,7 @@ function buildVisualQuantityCacheExpiresAt() {
 }
 
 function getVisualQuantityExtractionConfig() {
-  if (process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED !== "true") {
+  if (process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED !== "true" && !isYoutubeOcrExtractionEnabled()) {
     return null;
   }
 
@@ -4267,6 +4277,7 @@ function getVisualRecipeExtractionConfig() {
   const contractAlignedEnv = process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_CONTRACT_ALIGNED?.trim().toLowerCase();
   const contractAligned = contractAlignedEnv !== "false" && contractAlignedEnv !== "0";
   const enabled = explicitVisualRecipeEnabled === "true"
+    || isYoutubeOcrExtractionEnabled()
     || (
       explicitVisualRecipeEnabled === undefined
       && process.env.YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED === "true"
@@ -6679,7 +6690,7 @@ function getVisualRecipeTriggerReason({
   }
 
   if (
-    process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED === "true"
+    (process.env.YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED === "true" || isYoutubeOcrExtractionEnabled())
     && hasSparseVisualRecipeText(recipe, sourceBlocks)
   ) {
     return "sparse_text_recipe";
