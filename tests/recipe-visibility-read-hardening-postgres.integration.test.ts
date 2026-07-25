@@ -13,6 +13,8 @@ const MANAGED_IMAGE_REGISTRY_MIGRATION_PATH =
   "supabase/migrations/20260724110000_recipe_managed_image_registry_foundation.sql";
 const IMAGE_CLEANUP_OUTBOX_MIGRATION_PATH =
   "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql";
+const IMAGE_UPLOAD_RESERVATION_MIGRATION_PATH =
+  "supabase/migrations/20260724130000_recipe_image_upload_reservation.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -41,6 +43,8 @@ const IMAGE_CLEANUP_LEASE_TWO = "00000000-0000-4000-8000-000000000311";
 const IMAGE_CLEANUP_LEASE_THREE = "00000000-0000-4000-8000-000000000312";
 const IMAGE_CLEANUP_REFERENCE = "00000000-0000-4000-8000-000000000313";
 const IMAGE_CLEANUP_CONSUMER = "00000000-0000-4000-8000-000000000314";
+const IMAGE_UPLOAD_KEY = "00000000-0000-4000-8000-000000000315";
+const IMAGE_UPLOAD_ISOLATION_KEY = "00000000-0000-4000-8000-000000000316";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -1103,6 +1107,635 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         )
       );
     `)).toBe("f:f:t:2");
+  });
+
+  it("reserves, replays, takes over, finalizes, and releases one upload exactly once", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1,
+          current_cutover_attempt_id =
+            '00000000-0000-4000-8000-000000000399'
+      where singleton;
+
+      update public.user_account_lifecycles
+      set auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      set local role service_role;
+      do $block$
+      declare
+        v_reserved jsonb;
+        v_replay jsonb;
+        v_takeover jsonb;
+        v_finalized jsonb;
+        v_object_id uuid;
+        v_first_attempt uuid;
+        v_takeover_attempt uuid;
+      begin
+        v_reserved := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_UPLOAD_KEY}',
+          repeat('b', 64),
+          repeat('c', 64),
+          1024,
+          'image/webp',
+          'webp',
+          '2030-07-24T01:00:00Z'
+        );
+        if v_reserved ->> 'outcome' <> 'reserved' then
+          raise exception 'expected reserved outcome: %', v_reserved;
+        end if;
+        v_object_id := (v_reserved ->> 'object_id')::uuid;
+        v_first_attempt := (v_reserved ->> 'attempt_token')::uuid;
+
+        v_replay := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_UPLOAD_KEY}',
+          repeat('b', 64),
+          repeat('c', 64),
+          1024,
+          'image/webp',
+          'webp',
+          '2030-07-24T01:01:00Z'
+        );
+        if v_replay ->> 'outcome' <> 'live_replay'
+          or (v_replay ->> 'object_id')::uuid <> v_object_id
+          or (v_replay ->> 'attempt_token')::uuid <> v_first_attempt
+          or (v_replay ->> 'retry_after_seconds')::integer <= 0 then
+          raise exception 'live replay drift: %', v_replay;
+        end if;
+
+        begin
+          perform public.finalize_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_UPLOAD_KEY}',
+            v_first_attempt,
+            0,
+            '2030-07-24T01:05:01Z'
+          );
+          raise exception 'expired lease finalize unexpectedly succeeded';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'IMAGE_EXPIRED' then
+              raise;
+            end if;
+        end;
+
+        v_takeover := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_UPLOAD_KEY}',
+          repeat('b', 64),
+          repeat('c', 64),
+          1024,
+          'image/webp',
+          'webp',
+          '2030-07-24T01:06:00Z'
+        );
+        v_takeover_attempt := (v_takeover ->> 'attempt_token')::uuid;
+        if v_takeover ->> 'outcome' <> 'takeover'
+          or (v_takeover ->> 'object_id')::uuid <> v_object_id
+          or v_takeover_attempt = v_first_attempt then
+          raise exception 'takeover drift: %', v_takeover;
+        end if;
+
+        begin
+          perform public.finalize_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_UPLOAD_KEY}',
+            v_first_attempt,
+            0,
+            '2030-07-24T01:06:01Z'
+          );
+          raise exception 'stale finalize unexpectedly succeeded';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'IMAGE_EXPIRED' then
+              raise;
+            end if;
+        end;
+
+        v_finalized := public.finalize_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_UPLOAD_KEY}',
+          v_takeover_attempt,
+          0,
+          '2030-07-24T01:06:02Z'
+        );
+        if v_finalized ->> 'state' <> 'uploaded_unlinked'
+          or (v_finalized ->> 'object_id')::uuid <> v_object_id then
+          raise exception 'finalize drift: %', v_finalized;
+        end if;
+
+        if public.release_recipe_image_upload_reservation(
+          '${OWNER_ACTIVE}',
+          1,
+          v_object_id,
+          '2030-07-24T01:06:03Z'
+        ) then
+          raise exception 'uploaded-unlinked reservation released too early';
+        end if;
+
+        reset role;
+        update public.recipe_image_objects
+        set state = 'attached_private',
+            unlinked_cleanup_after = null
+        where id = v_object_id
+          and state = 'uploaded_unlinked';
+        if not found then
+          raise exception 'test attach transition did not win';
+        end if;
+        set local role service_role;
+
+        if not public.release_recipe_image_upload_reservation(
+          '${OWNER_ACTIVE}',
+          1,
+          v_object_id,
+          '2030-07-24T01:06:04Z'
+        ) then
+          raise exception 'attached reservation release did not win';
+        end if;
+        if public.release_recipe_image_upload_reservation(
+          '${OWNER_ACTIVE}',
+          1,
+          v_object_id,
+          '2030-07-24T01:06:05Z'
+        ) then
+          raise exception 'quota release replay won twice';
+        end if;
+      end;
+      $block$;
+
+      reset role;
+
+      do $block$
+      declare
+        v_active integer;
+        v_requests integer;
+      begin
+        select
+          counter.active_reservation_count,
+          jsonb_array_length(counter.request_events)
+        into v_active, v_requests
+        from public.image_upload_quota_counters as counter
+        where counter.owner_uuid = '${OWNER_ACTIVE}'
+          and counter.account_generation = 1;
+
+        if v_active <> 0 or v_requests <> 1 then
+          raise exception 'quota replay/release drift: active %, requests %',
+            v_active,
+            v_requests;
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'upload-cas-pass';
+    `)).toBe("upload-cas-pass");
+  });
+
+  it("fails every pre-PUT quota boundary closed without charging the rejected attempt", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      update public.user_account_lifecycles
+      set auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      insert into public.image_upload_quota_counters (
+        owner_uuid,
+        account_generation
+      ) values (
+        '${OWNER_ACTIVE}',
+        1
+      );
+
+      set local role service_role;
+      do $block$
+      declare
+        v_result jsonb;
+        v_key uuid;
+        v_before_requests jsonb;
+        v_before_bytes jsonb;
+        v_before_active integer;
+      begin
+        reset role;
+        update public.image_upload_quota_counters
+        set request_events = (
+              select jsonb_agg(
+                jsonb_build_object(
+                  'at',
+                  '2030-07-24T01:00:00Z'::timestamptz
+                )
+              )
+              from generate_series(1, 10)
+            ),
+            byte_events = '[]'::jsonb,
+            active_reservation_count = 0
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        set local role service_role;
+
+        foreach v_key in array array[
+          '00000000-0000-4000-8000-000000000401'::uuid,
+          '00000000-0000-4000-8000-000000000402'::uuid,
+          '00000000-0000-4000-8000-000000000403'::uuid,
+          '00000000-0000-4000-8000-000000000404'::uuid,
+          '00000000-0000-4000-8000-000000000405'::uuid,
+          '00000000-0000-4000-8000-000000000406'::uuid
+        ]
+        loop
+          reset role;
+          select request_events, byte_events, active_reservation_count
+            into v_before_requests, v_before_bytes, v_before_active
+          from public.image_upload_quota_counters
+          where owner_uuid = '${OWNER_ACTIVE}'
+            and account_generation = 1;
+          set local role service_role;
+
+          v_result := public.reserve_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            v_key,
+            repeat('b', 64),
+            repeat('c', 64),
+            case v_key
+              when '00000000-0000-4000-8000-000000000402'::uuid
+                then 2097152
+              else 1024
+            end,
+            'image/webp',
+            'webp',
+            '2030-07-24T01:01:00Z'
+          );
+
+          if v_result ->> 'outcome' <> 'limited'
+            or (v_result ->> 'retry_after_seconds')::integer <= 0 then
+            raise exception 'quota boundary did not fail closed for %: %',
+              v_key,
+              v_result;
+          end if;
+
+          reset role;
+          if exists (
+            select 1
+            from public.mutation_idempotency_keys
+            where owner_uuid = '${OWNER_ACTIVE}'
+              and account_generation = 1
+              and result_reference is not null
+          ) then
+            raise exception 'limited attempt created idempotency state';
+          end if;
+          if (
+            select row(request_events, byte_events, active_reservation_count)
+              is distinct from row(
+                v_before_requests,
+                v_before_bytes,
+                v_before_active
+              )
+            from public.image_upload_quota_counters
+            where owner_uuid = '${OWNER_ACTIVE}'
+              and account_generation = 1
+          ) then
+            raise exception 'limited attempt changed quota counters';
+          end if;
+
+          if v_key = '00000000-0000-4000-8000-000000000401'::uuid then
+            update public.image_upload_quota_counters
+            set request_events = '[]'::jsonb,
+                byte_events = jsonb_build_array(
+                  jsonb_build_object(
+                    'at',
+                    '2030-07-24T01:00:00Z'::timestamptz,
+                    'bytes',
+                    103809024
+                  )
+                )
+            where owner_uuid = '${OWNER_ACTIVE}'
+              and account_generation = 1;
+          elsif v_key = '00000000-0000-4000-8000-000000000402'::uuid then
+            update public.image_upload_quota_counters
+            set byte_events = '[]'::jsonb,
+                active_reservation_count = 20
+            where owner_uuid = '${OWNER_ACTIVE}'
+              and account_generation = 1;
+          elsif v_key = '00000000-0000-4000-8000-000000000403'::uuid then
+            update public.image_upload_quota_counters
+            set active_reservation_count = 0
+            where owner_uuid = '${OWNER_ACTIVE}'
+              and account_generation = 1;
+            insert into public.storage_object_deletion_outbox (
+              bucket_id,
+              object_path,
+              owner_uuid,
+              account_generation,
+              cleanup_generation,
+              reason,
+              state,
+              next_attempt_at
+            )
+            select
+              'recipe-images-private',
+              'quota/backlog/' || series::text || '.webp',
+              '${OWNER_ACTIVE}',
+              1,
+              1,
+              'quota-test',
+              'pending',
+              '2030-07-24T01:01:00Z'
+            from generate_series(1, 500) as series;
+          elsif v_key = '00000000-0000-4000-8000-000000000404'::uuid then
+            delete from public.storage_object_deletion_outbox;
+            insert into public.storage_object_deletion_outbox (
+              bucket_id,
+              object_path,
+              owner_uuid,
+              account_generation,
+              cleanup_generation,
+              reason,
+              state,
+              next_attempt_at
+            ) values (
+              'recipe-images-private',
+              'quota/oldest.webp',
+              '${OWNER_ACTIVE}',
+              1,
+              1,
+              'quota-test',
+              'pending',
+              '2030-07-24T00:44:59Z'
+            );
+          elsif v_key = '00000000-0000-4000-8000-000000000405'::uuid then
+            delete from public.storage_object_deletion_outbox;
+            insert into public.storage_object_deletion_outbox (
+              bucket_id,
+              object_path,
+              owner_uuid,
+              account_generation,
+              cleanup_generation,
+              reason,
+              state,
+              next_attempt_at
+            ) values (
+              'recipe-images-private',
+              'quota/dead-letter.webp',
+              '${OWNER_ACTIVE}',
+              1,
+              1,
+              'quota-test',
+              'dead_letter',
+              '2030-07-24T01:01:00Z'
+            );
+          end if;
+          set local role service_role;
+        end loop;
+      end;
+      $block$;
+
+      reset role;
+      rollback;
+      select 'upload-quota-pass';
+    `)).toBe("upload-quota-pass");
+  });
+
+  it("rejects finalize outside READ COMMITTED without changing upload state", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      update public.user_account_lifecycles
+      set auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      set local role service_role;
+      select public.reserve_recipe_image_upload(
+        '${OWNER_ACTIVE}',
+        '2026-01-01T00:00:00Z',
+        repeat('a', 64),
+        1,
+        '${IMAGE_UPLOAD_ISOLATION_KEY}',
+        repeat('d', 64),
+        repeat('e', 64),
+        2048,
+        'image/webp',
+        'webp',
+        '2030-07-24T02:00:00Z'
+      );
+
+      reset role;
+      commit;
+      select 'isolation-fixture-pass';
+    `)).toBe("isolation-fixture-pass");
+
+    const objectId = psql(`
+      select result_reference
+      from public.mutation_idempotency_keys
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and operation_scope = 'recipe_image_upload'
+        and payload_hash = repeat('d', 64);
+    `);
+    const attemptToken = psql(`
+      select attempt_token
+      from public.mutation_idempotency_keys
+      where result_reference = '${objectId}';
+    `);
+
+    try {
+      expect(psql(`
+        begin isolation level serializable;
+        set local role service_role;
+
+        do $block$
+        begin
+          begin
+            perform public.finalize_recipe_image_upload(
+              '${OWNER_ACTIVE}',
+              '2026-01-01T00:00:00Z',
+              repeat('a', 64),
+              1,
+              '${IMAGE_UPLOAD_ISOLATION_KEY}',
+              '${attemptToken}',
+              0,
+              '2030-07-24T02:00:01Z'
+            );
+            raise exception 'serializable finalize unexpectedly succeeded';
+          exception
+            when sqlstate '25001' then
+              null;
+          end;
+        end;
+        $block$;
+
+        reset role;
+
+        do $block$
+        begin
+          if not exists (
+            select 1
+            from public.mutation_idempotency_keys
+            where result_reference = '${objectId}'
+              and state = 'in_progress'
+              and attempt_token = '${attemptToken}'
+          ) or not exists (
+            select 1
+            from public.recipe_image_objects
+            where id = '${objectId}'
+              and state = 'pending_upload'
+              and upload_attempt_token = '${attemptToken}'
+          ) then
+            raise exception 'serializable finalize changed upload state';
+          end if;
+        end;
+        $block$;
+
+        rollback;
+        select 'finalize-isolation-pass';
+      `)).toBe("finalize-isolation-pass");
+    } finally {
+      expect(psql(`
+        begin;
+        delete from public.mutation_idempotency_keys
+        where result_reference = '${objectId}';
+        delete from public.recipe_image_objects
+        where id = '${objectId}';
+        delete from public.image_upload_quota_counters
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        delete from public.user_session_generation_bindings
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and expected_account_generation = 1;
+        update public.user_account_lifecycles
+        set auth_identity_created_at_snapshot = null
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        update public.account_generation_capability_state
+        set state = 'legacy',
+            current_cutover_attempt_id = null,
+            revision = revision + 1
+        where singleton;
+        commit;
+        select 'isolation-cleanup-pass';
+      `)).toBe("isolation-cleanup-pass");
+    }
+  });
+
+  it("replays upload reservation DDL without direct table access", () => {
+    const replay = psqlFileResult(IMAGE_UPLOAD_RESERVATION_MIGRATION_PATH);
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_table_privilege(
+          'service_role',
+          'public.mutation_idempotency_keys',
+          'INSERT'
+        ),
+        has_table_privilege(
+          'service_role',
+          'public.image_upload_quota_counters',
+          'UPDATE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.reserve_recipe_image_upload(uuid,timestamp with time zone,text,integer,uuid,text,text,bigint,text,text,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.reserve_recipe_image_upload(uuid,timestamp with time zone,text,integer,uuid,text,text,bigint,text,text,timestamp with time zone)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:f:t");
   });
 
   it("fails replay closed when the guard owner has an unexpected member", () => {
