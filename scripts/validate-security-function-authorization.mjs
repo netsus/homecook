@@ -9,6 +9,7 @@ import {
   assertHistoricalReplacementIdentity,
   classifyAdditiveDeploymentState,
 } from "./security-function-additive-state.mjs";
+import { parseFunctionSearchPath } from "./lib/security-function-config.mjs";
 
 const REPO_ROOT = process.cwd();
 const MIGRATION_PATH = path.join(
@@ -644,10 +645,8 @@ function assertRecordedEnvironmentPolicy(inventory, environment) {
       throw new Error(`recorded ${environment} exact principal drift for ${entry.signature}`);
     }
     if (observation.security_definer) {
-      const searchPath = (observation.proconfig.match(/search_path=([^}]*)/u)?.[1] ?? "")
-        .replace(/["}]/gu, "")
-        .trim();
-      if (!searchPath.startsWith("pg_catalog") || !searchPath.endsWith("pg_temp")) {
+      const searchPath = parseFunctionSearchPath(observation.proconfig);
+      if (searchPath[0] !== "pg_catalog" || searchPath.at(-1) !== "pg_temp") {
         throw new Error(
           `recorded ${environment} unsafe SECURITY DEFINER search_path for ${entry.signature}`,
         );
@@ -677,10 +676,7 @@ function assertAdditiveEnvironment(additiveContract, currentRows) {
     if ((entry.security_mode === "definer") !== row.prosecdef) {
       throw new Error(`additive security mode drift for ${entry.signature}`);
     }
-    const searchPath = (row.proconfig.match(/search_path=([^}]*)/u)?.[1] ?? "")
-      .replace(/["}]/gu, "")
-      .split(",")
-      .map((value) => value.trim());
+    const searchPath = parseFunctionSearchPath(row.proconfig);
     if (JSON.stringify(searchPath) !== JSON.stringify(entry.safe_search_path)) {
       throw new Error(`additive function search_path drift for ${entry.signature}`);
     }
@@ -741,10 +737,8 @@ function assertEnvironment(
       throw new Error(`exact principal drift for ${entry.signature}`);
     }
     if (row.prosecdef) {
-      const searchPath = (row.proconfig.match(/search_path=([^}]*)/u)?.[1] ?? "")
-        .replace(/["}]/gu, "")
-        .trim();
-      if (!searchPath.startsWith("pg_catalog") || !searchPath.endsWith("pg_temp")) {
+      const searchPath = parseFunctionSearchPath(row.proconfig);
+      if (searchPath[0] !== "pg_catalog" || searchPath.at(-1) !== "pg_temp") {
         throw new Error(`unsafe SECURITY DEFINER search_path for ${entry.signature}`);
       }
     }

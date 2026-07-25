@@ -3,10 +3,20 @@ import { spawnSync } from "node:child_process";
 
 import { describe, expect, it } from "vitest";
 
+import { parseFunctionSearchPath } from "../scripts/lib/security-function-config.mjs";
+
 const MANIFEST_PATH =
   "docs/security/prepared-food-search-relevance-security-function-authorization-manifest.json";
 
 describe("prepared food search security function inventory", () => {
+  it("isolates search_path from trailing function-local settings", () => {
+    expect(parseFunctionSearchPath(
+      "{\"search_path=pg_catalog, public, pg_temp\","
+        + "\"pg_trgm.word_similarity_threshold=0.3\","
+        + "plan_cache_mode=force_custom_plan}",
+    )).toEqual(["pg_catalog", "public", "pg_temp"]);
+  });
+
   it("classifies the locked-down helpers and service-only ranked RPC", () => {
     expect(existsSync(MANIFEST_PATH)).toBe(true);
 
