@@ -957,7 +957,7 @@ if (!postgresBin) {
               or lower(coalesce(brand, '')) like '%크림빵%'
             )
           order by created_at desc, id desc
-          limit 80
+          limit 84
         `,
         indexes: [
           "food_products_shared_catalog_order_idx",

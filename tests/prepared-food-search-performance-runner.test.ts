@@ -85,6 +85,8 @@ describe("prepared food search relevance performance gate", () => {
     expect(runner).toMatch(/source-mine-owner-private/);
     expect(runner).toMatch(/legacy-all-public-dataset/);
     expect(runner).toMatch(/legacy-manual/);
+    expect(runner).toMatch(/limit 84/);
+    expect(runner).not.toMatch(/limit 80/);
     expect(runner).toMatch(/EXPLAIN \(ANALYZE/);
     expect(runner).not.toMatch(/production|staging/);
   });
