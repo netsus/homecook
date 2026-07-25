@@ -161,6 +161,10 @@ existing route
 - localhost arbitrary public URL smoke와 기존 화면 screenshot/console 확인
 - 독립 Codex code/security review와 current-head CI 전체 green
 
+## Delivery Checklist
+
+구현 완료 상태는 metadata가 잠긴 `acceptance.md`에서 관리한다. 이 섹션은 workflow v2 closeout validator가 workpack의 Delivery Checklist 경계를 확인할 수 있도록 유지한다.
+
 ## Handoff
 
 Stage 1 docs PR과 internal 1.5 PASS가 `master`에 merge된 뒤 implementation branch를 새로 만든다. 구현은 TDD로 진행하고, 최종 merge 전 exact-mode localhost smoke evidence와 strict no-fallback assertion을 남긴다.
