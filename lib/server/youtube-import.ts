@@ -58,6 +58,13 @@ import {
   type YoutubeRawRecipeCandidate,
 } from "@/lib/server/youtube-multi-recipe-extractor";
 import {
+  YoutubeI031RuntimeError,
+  getYoutubeI031Extractor,
+  resolveYoutubeRecipeExtractorMode,
+  type YoutubeI031ExtractionResult,
+  type YoutubeI031Extractor,
+} from "@/lib/server/youtube-i031-runtime";
+import {
   fetchGeminiGenerateContentWithFailover,
   getGeminiApiKeyCandidates,
   type GeminiApiKeyCandidate,
@@ -614,6 +621,8 @@ const DEFAULT_EXTRACTION_METHODS = ["description"] as const;
 const COMMENT_EXTRACTION_METHOD = "comment";
 const CAPTION_EXTRACTION_METHOD = "caption";
 const YOUTUBE_PROVIDER_VERSION = "youtube-videos-list-public-text-v2";
+const YOUTUBE_I031_PROVIDER_VERSION = "youtube-i031-direct-v1";
+const I031_VISUAL_EXTRACTION_METHOD = "visual";
 const SESSION_TTL_HOURS = 24;
 const AUTHOR_COMMENT_RAW_SOURCE_HEADER = "--- author comment ---";
 const CAPTION_TRANSCRIPT_RAW_SOURCE_HEADER = "--- caption transcript ---";
@@ -1211,6 +1220,7 @@ let youtubeVideoProviderForTest: YoutubeVideoProvider | null = null;
 let recipeLlmExtractorForTest: YoutubeRecipeLlmExtractor | null = null;
 let visualQuantityExtractorForTest: YoutubeVisualQuantityExtractor | null = null;
 let visualRecipeExtractorForTest: YoutubeVisualRecipeExtractor | null = null;
+let youtubeI031ExtractorForTest: YoutubeI031Extractor | null = null;
 
 export function setYoutubeVideoProviderForTest(provider: YoutubeVideoProvider | null) {
   if (process.env.NODE_ENV !== "test") {
@@ -1336,6 +1346,23 @@ function getYoutubeVisualRecipeExtractor() {
   }
 
   return createDefaultYoutubeVisualRecipeExtractor();
+}
+
+export function setYoutubeI031ExtractorForTest(extractor: YoutubeI031Extractor | null) {
+  if (process.env.NODE_ENV !== "test") {
+    throw new Error("setYoutubeI031ExtractorForTest is only available in tests");
+  }
+
+  const previousExtractor = youtubeI031ExtractorForTest;
+  youtubeI031ExtractorForTest = extractor;
+
+  return () => {
+    youtubeI031ExtractorForTest = previousExtractor;
+  };
+}
+
+function resolveYoutubeI031Extractor() {
+  return youtubeI031ExtractorForTest ?? getYoutubeI031Extractor();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -9019,6 +9046,202 @@ async function insertExtractionSession(
   return result.error;
 }
 
+function buildI031ParsedRecipe(result: YoutubeI031ExtractionResult): ParsedRecipeDescription {
+  return {
+    ingredients: result.recipe.ingredients.map((ingredient) => {
+      const name = normalizeParsedIngredientName(ingredient.name);
+      const amount = normalizeLlmAmount(ingredient.amount);
+      const unit = amount === null ? null : normalizeNullableString(ingredient.unit);
+      const sourceAmountText = normalizeNullableString(ingredient.amount);
+      const ingredientType = amount !== null ? "QUANT" as const : "TO_TASTE" as const;
+      const amountText = ingredientType === "QUANT"
+        ? `${sourceAmountText ?? amount}${unit ?? ""}`
+        : sourceAmountText ?? (ingredient.optional ? "선택" : "");
+      const displayText = `${name} ${amountText}`.trim();
+
+      return {
+        name,
+        amount: ingredientType === "QUANT" ? amount : null,
+        unit: ingredientType === "QUANT" ? unit : null,
+        ingredientType,
+        displayText,
+        rawText: displayText,
+        componentLabel: ingredient.groupLabel,
+        scalable: ingredientType === "QUANT" && unit !== null,
+        confidence: 0.9,
+        quantitySource: "unknown" as const,
+        quantityConfidence: null,
+        quantityRawText: displayText,
+        quantityEvidenceRefs: [],
+        quantityReviewRequired: amount !== null && unit === null,
+      };
+    }),
+    steps: [...result.recipe.steps],
+    stepComponentLabels: result.recipe.steps.map(() => null),
+  };
+}
+
+function buildI031ExtractionMethods(
+  sourceAvailability: YoutubeI031ExtractionResult["meta"]["sourceAvailability"],
+) {
+  return [
+    ...(sourceAvailability.description ? [...DEFAULT_EXTRACTION_METHODS] : []),
+    ...(sourceAvailability.authorComment ? [COMMENT_EXTRACTION_METHOD] : []),
+    ...(sourceAvailability.transcript ? [CAPTION_EXTRACTION_METHOD] : []),
+    I031_VISUAL_EXTRACTION_METHOD,
+  ].filter((method, index, methods) => methods.indexOf(method) === index);
+}
+
+function buildI031SourceProviders(
+  sourceAvailability: YoutubeI031ExtractionResult["meta"]["sourceAvailability"],
+) {
+  return [
+    "youtube_videos_list",
+    ...(sourceAvailability.description ? ["youtube_description"] : []),
+    ...(sourceAvailability.authorComment ? ["youtube_comment_threads"] : []),
+    ...(sourceAvailability.transcript ? ["youtube_timedtext_or_apify"] : []),
+    "codex_vision_keyframes",
+  ];
+}
+
+async function handleYoutubeI031Extract({
+  request,
+  userId,
+  parsedUrl,
+  video,
+  classification,
+  dbClient,
+}: {
+  request: Request;
+  userId: string;
+  parsedUrl: ParsedYoutubeUrl;
+  video: YoutubeProviderVideo;
+  classification: YoutubeClassification;
+  dbClient: DbClient;
+}) {
+  let extraction: YoutubeI031ExtractionResult;
+  try {
+    extraction = await resolveYoutubeI031Extractor().extract({
+      videoId: parsedUrl.videoId,
+      signal: request.signal,
+    });
+  } catch (error) {
+    const errorCode = error instanceof YoutubeI031RuntimeError
+      ? error.code
+      : "I031_RUNTIME_FAILED";
+    await recordYoutubeProviderFailure(request, userId, "extract", {
+      code: errorCode,
+      status: 502,
+    });
+    return fail(
+      "PROVIDER_ERROR",
+      "i031 레시피 추출을 완료하지 못했어요. 설정을 확인하고 다시 시도해 주세요.",
+      502,
+    );
+  }
+
+  const parsedRecipe = buildI031ParsedRecipe(extraction);
+  const ingredientLookup = await findIngredientIds(
+    dbClient,
+    parsedRecipe.ingredients.map((ingredient) => ingredient.name),
+  );
+  if (ingredientLookup.error) {
+    return fail("INTERNAL_ERROR", "재료 정보를 확인하지 못했어요.", 500);
+  }
+
+  const cookingMethodResult = await resolveCookingMethodsForSteps(dbClient, parsedRecipe.steps);
+  if (cookingMethodResult.error || !cookingMethodResult.fallbackMethod) {
+    return fail("INTERNAL_ERROR", "조리방법을 준비하지 못했어요.", 500);
+  }
+
+  const ingredients = buildExtractedIngredients(
+    ingredientLookup.matchesByName,
+    parsedRecipe.ingredients,
+  );
+  const steps = buildExtractedSteps(
+    parsedRecipe.steps,
+    cookingMethodResult.methods,
+    cookingMethodResult.fallbackMethod,
+    {
+      includeIncompleteFallback: false,
+      stepComponentLabels: parsedRecipe.stepComponentLabels,
+    },
+  );
+  const extractionMethods = buildI031ExtractionMethods(extraction.meta.sourceAvailability);
+  const sourceProviders = buildI031SourceProviders(extraction.meta.sourceAvailability);
+  const draftWarnings = classification.status === "uncertain"
+    ? ["영상이 레시피인지 확실하지 않아요. 추출 결과를 꼼꼼히 확인해 주세요."]
+    : [];
+  const blockingIssues = [
+    ...buildBlockingIssues(ingredients),
+    ...steps.flatMap((step, index) =>
+      (step.missing_fields ?? []).map((field) => `steps[${index}].${field}`)),
+  ];
+  const extractionId = crypto.randomUUID();
+  const data: YoutubeRecipeExtractData = {
+    extraction_id: extractionId,
+    title: extraction.recipe.title,
+    base_servings: 2,
+    thumbnail_url: video.thumbnailUrl,
+    tags: generateYoutubeExtractTags({
+      title: extraction.recipe.title,
+      description: video.description,
+      ingredients,
+      steps,
+      providerTags: video.tags,
+      baseServings: 2,
+    }),
+    extraction_methods: extractionMethods,
+    draft_warnings: draftWarnings,
+    blocking_issues: blockingIssues,
+    ingredients,
+    steps,
+    new_cooking_methods: cookingMethodResult.newCookingMethods,
+    multi_recipe_status: "single",
+    primary_candidate_id: null,
+    recipe_candidates: [],
+  };
+  const safeI031Meta = {
+    identity: extraction.identity,
+    ...extraction.meta,
+  };
+  const sessionError = await insertExtractionSession(dbClient, {
+    id: extractionId,
+    user_id: userId,
+    youtube_url: parsedUrl.youtubeUrl,
+    youtube_video_id: parsedUrl.videoId,
+    video_title: video.title,
+    channel_title: video.channel,
+    thumbnail_url: video.thumbnailUrl,
+    provider_version: YOUTUBE_I031_PROVIDER_VERSION,
+    source_providers: sourceProviders,
+    classification_status: classification.status,
+    classification_reasons: classification.reasons,
+    raw_source_text: "",
+    extraction_meta_json: {
+      provider_version: YOUTUBE_I031_PROVIDER_VERSION,
+      source_providers: sourceProviders,
+      classification_status: classification.status,
+      classification_reasons: classification.reasons,
+      draft_warnings: draftWarnings,
+      i031_extractor: safeI031Meta,
+    },
+    draft_json: data as unknown as Record<string, unknown>,
+    extraction_methods: extractionMethods,
+    status: "draft",
+    expires_at: buildSessionExpiresAt(),
+    session_kind: "single",
+    parent_extraction_session_id: null,
+    parent_candidate_id: null,
+  });
+
+  if (sessionError) {
+    return fail("INTERNAL_ERROR", "추출 세션을 저장하지 못했어요.", 500);
+  }
+
+  return ok(data);
+}
+
 export async function handleYoutubeExtract(request: Request) {
   if (!isYoutubeImportEnabled()) {
     return buildFeatureDisabledResponse();
@@ -9052,6 +9275,31 @@ export async function handleYoutubeExtract(request: Request) {
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient;
+  let extractorMode;
+  try {
+    extractorMode = resolveYoutubeRecipeExtractorMode();
+  } catch (error) {
+    const errorCode = error instanceof YoutubeI031RuntimeError
+      ? error.code
+      : "I031_INVALID_MODE";
+    await recordYoutubeProviderFailure(request, user.id, "extract", {
+      code: errorCode,
+      status: 500,
+    });
+    return fail("EXTRACTION_FAILED", "유튜브 추출기 설정이 올바르지 않아요.", 500);
+  }
+
+  if (extractorMode === "i031_codex_vision") {
+    return handleYoutubeI031Extract({
+      request,
+      userId: user.id,
+      parsedUrl,
+      video,
+      classification,
+      dbClient,
+    });
+  }
+
   const descriptionParse = parseRecipeDescriptionForImport(video);
   const parsedRecipe = descriptionParse.recipe;
   const authorCommentFallback = await resolveAuthorCommentFallback(video, parsedRecipe, descriptionParse, parsedUrl);
