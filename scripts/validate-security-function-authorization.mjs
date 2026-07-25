@@ -9,6 +9,7 @@ import {
   assertHistoricalReplacementIdentity,
   classifyAdditiveDeploymentState,
 } from "./security-function-additive-state.mjs";
+import { parseFunctionSearchPath } from "./lib/security-function-config.mjs";
 
 const REPO_ROOT = process.cwd();
 const MIGRATION_PATH = path.join(
@@ -54,12 +55,9 @@ const ADDITIVE_SOURCES = [
         REPO_ROOT,
         "docs/security/prepared-food-search-relevance-security-function-authorization-manifest.json",
       ),
-    migrationPath:
-      process.env.SECURITY_FUNCTION_PREPARED_FOOD_SEARCH_MIGRATION_PATH
-      ?? path.join(
-        REPO_ROOT,
-        "supabase/migrations/20260725120000_prepared_food_search_relevance_foundation.sql",
-      ),
+    migrationPaths: process.env.SECURITY_FUNCTION_PREPARED_FOOD_SEARCH_MIGRATION_PATH
+      ? [process.env.SECURITY_FUNCTION_PREPARED_FOOD_SEARCH_MIGRATION_PATH]
+      : null,
   },
 ];
 const LOCAL_DATABASE_URL =
@@ -647,10 +645,8 @@ function assertRecordedEnvironmentPolicy(inventory, environment) {
       throw new Error(`recorded ${environment} exact principal drift for ${entry.signature}`);
     }
     if (observation.security_definer) {
-      const searchPath = (observation.proconfig.match(/search_path=([^}]*)/u)?.[1] ?? "")
-        .replace(/["}]/gu, "")
-        .trim();
-      if (!searchPath.startsWith("pg_catalog") || !searchPath.endsWith("pg_temp")) {
+      const searchPath = parseFunctionSearchPath(observation.proconfig);
+      if (searchPath[0] !== "pg_catalog" || searchPath.at(-1) !== "pg_temp") {
         throw new Error(
           `recorded ${environment} unsafe SECURITY DEFINER search_path for ${entry.signature}`,
         );
@@ -680,10 +676,7 @@ function assertAdditiveEnvironment(additiveContract, currentRows) {
     if ((entry.security_mode === "definer") !== row.prosecdef) {
       throw new Error(`additive security mode drift for ${entry.signature}`);
     }
-    const searchPath = (row.proconfig.match(/search_path=([^}]*)/u)?.[1] ?? "")
-      .replace(/["}]/gu, "")
-      .split(",")
-      .map((value) => value.trim());
+    const searchPath = parseFunctionSearchPath(row.proconfig);
     if (JSON.stringify(searchPath) !== JSON.stringify(entry.safe_search_path)) {
       throw new Error(`additive function search_path drift for ${entry.signature}`);
     }
@@ -744,10 +737,8 @@ function assertEnvironment(
       throw new Error(`exact principal drift for ${entry.signature}`);
     }
     if (row.prosecdef) {
-      const searchPath = (row.proconfig.match(/search_path=([^}]*)/u)?.[1] ?? "")
-        .replace(/["}]/gu, "")
-        .trim();
-      if (!searchPath.startsWith("pg_catalog") || !searchPath.endsWith("pg_temp")) {
+      const searchPath = parseFunctionSearchPath(row.proconfig);
+      if (searchPath[0] !== "pg_catalog" || searchPath.at(-1) !== "pg_temp") {
         throw new Error(`unsafe SECURITY DEFINER search_path for ${entry.signature}`);
       }
     }
@@ -756,10 +747,26 @@ function assertEnvironment(
 
 const migration = await readFile(MIGRATION_PATH, "utf8");
 const additiveSources = await Promise.all(
-  ADDITIVE_SOURCES.map(async ({ manifestPath, migrationPath }) => ({
-    manifest: JSON.parse(await readFile(manifestPath, "utf8")),
-    migration: await readFile(migrationPath, "utf8"),
-  })),
+  ADDITIVE_SOURCES.map(async ({ manifestPath, migrationPath, migrationPaths }) => {
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    const sourcePaths = migrationPaths
+      ?? (migrationPath ? [migrationPath] : manifest.migrations?.map(
+        (sourcePath) => path.join(REPO_ROOT, sourcePath),
+      ));
+    if (!sourcePaths || sourcePaths.length === 0) {
+      throw new Error(`additive security manifest has no migration source: ${manifest.slice}`);
+    }
+    return {
+      manifest,
+      migration: (
+      await Promise.all(
+        sourcePaths.map((sourcePath) =>
+          readFile(sourcePath, "utf8"),
+        ),
+      )
+    ).join("\n"),
+    };
+  }),
 );
 const applicationContract = parseApplicationContract(migration);
 const additiveContracts = additiveSources.map(({ manifest, migration: sourceMigration }) => ({

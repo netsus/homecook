@@ -1,7 +1,11 @@
 {
   "schema_version": 1,
   "slice": "prepared-food-search-relevance",
-  "migration": "supabase/migrations/20260725120000_prepared_food_search_relevance_foundation.sql",
+  "migrations": [
+    "supabase/migrations/20260725120000_prepared_food_search_relevance_foundation.sql",
+    "supabase/migrations/20260725130000_prepared_food_search_relevance_indexes.sql",
+    "supabase/migrations/20260725140000_prepared_food_search_ranked_rpc.sql"
+  ],
   "deployment_state": "post-migration",
   "baseline_application_contract_count": 74,
   "functions": [
@@ -14,6 +18,33 @@
       "security_mode": "invoker",
       "safe_search_path": [
         "pg_catalog",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.food_search_short_ngrams(text)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": [
+        "pg_catalog",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.search_food_catalog_ranked(uuid, text, text[], text, integer, jsonb, text, integer)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
         "pg_temp"
       ]
     }

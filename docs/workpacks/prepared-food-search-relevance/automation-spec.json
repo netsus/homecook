@@ -133,6 +133,7 @@
     }
   },
   "external_smokes": [
+    "PREPARED_FOOD_SEARCH_DATABASE_URL=<approved target> node scripts/apply-prepared-food-search-indexes-concurrently.mjs --mode post-merge-release --apply from merged exact SHA only",
     "node scripts/verify-prepared-food-search-remote.mjs --mode post-merge-read-only from merged exact SHA only",
     "deployed GET /api/v1/food-catalog/search unauthorized, public, community, and mine scope smoke",
     "remote ranked RPC exact-principal positive and PUBLIC/anon negative ACL matrix",

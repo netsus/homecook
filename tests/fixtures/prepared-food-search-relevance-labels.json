@@ -1,0 +1,69 @@
+{
+  "schema_version": "prepared-food-search-relevance-labels-v1",
+  "description": "검수된 합성 라벨만 포함하며 실제 사용자·provider 원문은 포함하지 않는다.",
+  "cases": [
+    {"id":"ys-compact","q":"연세크림빵","types":["ingredient","food_product"],"source":null,"expected_labels":["연세우유 생크림빵","연세 크림빵","연세베이커리 우유크림빵","연세커뮤니티 크림빵","나만의 연세 크림빵"],"excluded_labels":["연세음료 콜라","다른제조사 크림빵","무관 성능제품"]},
+    {"id":"ys-spaced","q":"연세 크림빵","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵","연세 크림빵","연세베이커리 우유크림빵"],"excluded_labels":["무관 성능제품"]},
+    {"id":"ys-punct","q":"연세-크림빵","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵","연세 크림빵","연세베이커리 우유크림빵"],"excluded_labels":["무관 성능제품"]},
+    {"id":"ys-community","q":"연세크림빵","types":["food_product"],"source":"community","expected_labels":["연세커뮤니티 크림빵"],"excluded_labels":["나만의 연세 크림빵"]},
+    {"id":"ys-mine","q":"연세크림빵","types":["food_product"],"source":"mine","expected_labels":["나만의 연세 크림빵"],"excluded_labels":["연세커뮤니티 크림빵"]},
+    {"id":"ys-brand-product","q":"연세우유","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵"],"excluded_labels":["연세음료 콜라","다른제조사 크림빵"]},
+    {"id":"ys-product-name","q":"생크림빵","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵"],"excluded_labels":["연세음료 콜라","다른제조사 크림빵"]},
+    {"id":"ys-brand-only","q":"연세","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵","연세 크림빵","연세베이커리 우유크림빵","연세음료 콜라"],"excluded_labels":["다른제조사 크림빵"]},
+    {"id":"ys-product-only","q":"크림빵","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵","연세 크림빵","연세베이커리 우유크림빵","다른제조사 크림빵"],"excluded_labels":["연세음료 콜라"]},
+
+    {"id":"seoul-compact","q":"서울우유빵","types":["ingredient","food_product"],"source":null,"expected_labels":["서울우유 담백빵","서울 우유빵","서울베이커리 우유식빵","서울커뮤니티 우유빵","나만의 서울 우유빵"],"excluded_labels":["무관 성능제품"]},
+    {"id":"seoul-spaced","q":"서울 우유빵","types":["food_product"],"source":"public","expected_labels":["서울우유 담백빵","서울 우유빵","서울베이커리 우유식빵"],"excluded_labels":["무관 성능제품"]},
+    {"id":"seoul-punct","q":"서울·우유빵","types":["food_product"],"source":"public","expected_labels":["서울우유 담백빵","서울 우유빵","서울베이커리 우유식빵"],"excluded_labels":["무관 성능제품"]},
+    {"id":"seoul-community","q":"서울우유빵","types":["food_product"],"source":"community","expected_labels":["서울커뮤니티 우유빵"],"excluded_labels":["나만의 서울 우유빵"]},
+    {"id":"seoul-mine","q":"서울우유빵","types":["food_product"],"source":"mine","expected_labels":["나만의 서울 우유빵"],"excluded_labels":["서울커뮤니티 우유빵"]},
+
+    {"id":"jeju-compact","q":"제주말차케이크","types":["ingredient","food_product"],"source":null,"expected_labels":["제주다원 말차케이크","제주 말차케이크","제주디저트 진한말차케이크","제주커뮤니티 말차케이크","나만의 제주 말차케이크"],"excluded_labels":["무관 성능제품"]},
+    {"id":"jeju-spaced","q":"제주 말차 케이크","types":["food_product"],"source":"public","expected_labels":["제주다원 말차케이크","제주 말차케이크","제주디저트 진한말차케이크"],"excluded_labels":["무관 성능제품"]},
+    {"id":"jeju-punct","q":"제주/말차케이크","types":["food_product"],"source":"public","expected_labels":["제주다원 말차케이크","제주 말차케이크","제주디저트 진한말차케이크"],"excluded_labels":["무관 성능제품"]},
+    {"id":"jeju-community","q":"제주말차케이크","types":["food_product"],"source":"community","expected_labels":["제주커뮤니티 말차케이크"],"excluded_labels":["나만의 제주 말차케이크"]},
+    {"id":"jeju-mine","q":"제주말차케이크","types":["food_product"],"source":"mine","expected_labels":["나만의 제주 말차케이크"],"excluded_labels":["제주커뮤니티 말차케이크"]},
+
+    {"id":"busan-compact","q":"부산어묵탕","types":["ingredient","food_product"],"source":null,"expected_labels":["부산수산 모둠어묵탕","부산 어묵탕","부산바다 진한어묵탕","부산커뮤니티 어묵탕","나만의 부산 어묵탕"],"excluded_labels":["무관 성능제품"]},
+    {"id":"busan-spaced","q":"부산 어묵탕","types":["food_product"],"source":"public","expected_labels":["부산수산 모둠어묵탕","부산 어묵탕","부산바다 진한어묵탕"],"excluded_labels":["무관 성능제품"]},
+    {"id":"busan-punct","q":"부산_어묵탕","types":["food_product"],"source":"public","expected_labels":["부산수산 모둠어묵탕","부산 어묵탕","부산바다 진한어묵탕"],"excluded_labels":["무관 성능제품"]},
+    {"id":"busan-community","q":"부산어묵탕","types":["food_product"],"source":"community","expected_labels":["부산커뮤니티 어묵탕"],"excluded_labels":["나만의 부산 어묵탕"]},
+    {"id":"busan-mine","q":"부산어묵탕","types":["food_product"],"source":"mine","expected_labels":["나만의 부산 어묵탕"],"excluded_labels":["부산커뮤니티 어묵탕"]},
+
+    {"id":"jeonju-compact","q":"전주비빔소스","types":["ingredient","food_product"],"source":null,"expected_labels":["전주식품 매콤비빔소스","전주 비빔소스","전주맛집 고추장비빔소스","전주커뮤니티 비빔소스","나만의 전주 비빔소스"],"excluded_labels":["무관 성능제품"]},
+    {"id":"jeonju-spaced","q":"전주 비빔 소스","types":["food_product"],"source":"public","expected_labels":["전주식품 매콤비빔소스","전주 비빔소스","전주맛집 고추장비빔소스"],"excluded_labels":["무관 성능제품"]},
+    {"id":"jeonju-punct","q":"전주.비빔소스","types":["food_product"],"source":"public","expected_labels":["전주식품 매콤비빔소스","전주 비빔소스","전주맛집 고추장비빔소스"],"excluded_labels":["무관 성능제품"]},
+    {"id":"jeonju-community","q":"전주비빔소스","types":["food_product"],"source":"community","expected_labels":["전주커뮤니티 비빔소스"],"excluded_labels":["나만의 전주 비빔소스"]},
+    {"id":"jeonju-mine","q":"전주비빔소스","types":["food_product"],"source":"mine","expected_labels":["나만의 전주 비빔소스"],"excluded_labels":["전주커뮤니티 비빔소스"]},
+
+    {"id":"gangwon-compact","q":"강원감자빵","types":["ingredient","food_product"],"source":null,"expected_labels":["강원농원 담백감자빵","강원 감자빵","강원베이커리 치즈감자빵","강원커뮤니티 감자빵","나만의 강원 감자빵"],"excluded_labels":["무관 성능제품"]},
+    {"id":"gangwon-spaced","q":"강원 감자빵","types":["food_product"],"source":"public","expected_labels":["강원농원 담백감자빵","강원 감자빵","강원베이커리 치즈감자빵"],"excluded_labels":["무관 성능제품"]},
+    {"id":"gangwon-punct","q":"강원(감자빵)","types":["food_product"],"source":"public","expected_labels":["강원농원 담백감자빵","강원 감자빵","강원베이커리 치즈감자빵"],"excluded_labels":["무관 성능제품"]},
+    {"id":"gangwon-community","q":"강원감자빵","types":["food_product"],"source":"community","expected_labels":["강원커뮤니티 감자빵"],"excluded_labels":["나만의 강원 감자빵"]},
+    {"id":"gangwon-mine","q":"강원감자빵","types":["food_product"],"source":"mine","expected_labels":["나만의 강원 감자빵"],"excluded_labels":["강원커뮤니티 감자빵"]},
+
+    {"id":"damyang-compact","q":"담양떡갈비","types":["ingredient","food_product"],"source":null,"expected_labels":["담양식품 숯불떡갈비","담양 떡갈비","담양한상 한우떡갈비","담양커뮤니티 떡갈비","나만의 담양 떡갈비"],"excluded_labels":["무관 성능제품"]},
+    {"id":"damyang-spaced","q":"담양 떡갈비","types":["food_product"],"source":"public","expected_labels":["담양식품 숯불떡갈비","담양 떡갈비","담양한상 한우떡갈비"],"excluded_labels":["무관 성능제품"]},
+    {"id":"damyang-punct","q":"담양+떡갈비","types":["food_product"],"source":"public","expected_labels":["담양식품 숯불떡갈비","담양 떡갈비","담양한상 한우떡갈비"],"excluded_labels":["무관 성능제품"]},
+    {"id":"damyang-community","q":"담양떡갈비","types":["food_product"],"source":"community","expected_labels":["담양커뮤니티 떡갈비"],"excluded_labels":["나만의 담양 떡갈비"]},
+    {"id":"damyang-mine","q":"담양떡갈비","types":["food_product"],"source":"mine","expected_labels":["나만의 담양 떡갈비"],"excluded_labels":["담양커뮤니티 떡갈비"]},
+
+    {"id":"tongyeong-compact","q":"통영굴국밥","types":["ingredient","food_product"],"source":null,"expected_labels":["통영바다 시원굴국밥","통영 굴국밥","통영수산 진한굴국밥","통영커뮤니티 굴국밥","나만의 통영 굴국밥"],"excluded_labels":["무관 성능제품"]},
+    {"id":"tongyeong-spaced","q":"통영 굴 국밥","types":["food_product"],"source":"public","expected_labels":["통영바다 시원굴국밥","통영 굴국밥","통영수산 진한굴국밥"],"excluded_labels":["무관 성능제품"]},
+    {"id":"tongyeong-punct","q":"통영-굴국밥","types":["food_product"],"source":"public","expected_labels":["통영바다 시원굴국밥","통영 굴국밥","통영수산 진한굴국밥"],"excluded_labels":["무관 성능제품"]},
+    {"id":"tongyeong-community","q":"통영굴국밥","types":["food_product"],"source":"community","expected_labels":["통영커뮤니티 굴국밥"],"excluded_labels":["나만의 통영 굴국밥"]},
+    {"id":"tongyeong-short-mine","q":"굴","types":["food_product"],"source":"mine","expected_labels":["나만의 통영 굴국밥"],"excluded_labels":["통영커뮤니티 굴국밥"]},
+
+    {"id":"naju-compact","q":"나주배주스","types":["ingredient","food_product"],"source":null,"expected_labels":["나주농원 맑은배주스","나주 배주스","나주과원 착즙배주스","나주커뮤니티 배주스","나만의 나주 배주스"],"excluded_labels":["무관 성능제품"]},
+    {"id":"naju-spaced","q":"나주 배 주스","types":["food_product"],"source":"public","expected_labels":["나주농원 맑은배주스","나주 배주스","나주과원 착즙배주스"],"excluded_labels":["무관 성능제품"]},
+    {"id":"naju-punct","q":"나주/배주스","types":["food_product"],"source":"public","expected_labels":["나주농원 맑은배주스","나주 배주스","나주과원 착즙배주스"],"excluded_labels":["무관 성능제품"]},
+    {"id":"naju-community","q":"나주배주스","types":["food_product"],"source":"community","expected_labels":["나주커뮤니티 배주스"],"excluded_labels":["나만의 나주 배주스"]},
+    {"id":"naju-short-mine","q":"배","types":["food_product"],"source":"mine","expected_labels":["나만의 나주 배주스"],"excluded_labels":["나주커뮤니티 배주스"]},
+
+    {"id":"andong-compact","q":"안동찜닭소스","types":["ingredient","food_product"],"source":null,"expected_labels":["안동식품 달콤찜닭소스","안동 찜닭소스","안동한상 간장찜닭소스","안동커뮤니티 찜닭소스","나만의 안동 찜닭소스"],"excluded_labels":["무관 성능제품"]},
+    {"id":"andong-spaced","q":"안동 찜닭 소스","types":["food_product"],"source":"public","expected_labels":["안동식품 달콤찜닭소스","안동 찜닭소스","안동한상 간장찜닭소스"],"excluded_labels":["무관 성능제품"]},
+    {"id":"andong-punct","q":"안동_찜닭소스","types":["food_product"],"source":"public","expected_labels":["안동식품 달콤찜닭소스","안동 찜닭소스","안동한상 간장찜닭소스"],"excluded_labels":["무관 성능제품"]},
+    {"id":"andong-community","q":"안동찜닭소스","types":["food_product"],"source":"community","expected_labels":["안동커뮤니티 찜닭소스"],"excluded_labels":["나만의 안동 찜닭소스"]},
+    {"id":"andong-mine","q":"안동찜닭소스","types":["food_product"],"source":"mine","expected_labels":["나만의 안동 찜닭소스"],"excluded_labels":["안동커뮤니티 찜닭소스"]}
+  ]
+}
