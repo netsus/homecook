@@ -15,6 +15,8 @@ const IMAGE_CLEANUP_OUTBOX_MIGRATION_PATH =
   "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql";
 const IMAGE_UPLOAD_RESERVATION_MIGRATION_PATH =
   "supabase/migrations/20260724130000_recipe_image_upload_reservation.sql";
+const IMAGE_PRIVATE_STORAGE_MIGRATION_PATH =
+  "supabase/migrations/20260724140000_recipe_image_private_storage_boundary.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -210,6 +212,166 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
       );
       reset role;
     `);
+  });
+
+  it("keeps managed private image Storage server-only and replay safe", () => {
+    expect(psql(`
+      select jsonb_build_object(
+        'public', bucket.public,
+        'file_size_limit', bucket.file_size_limit,
+        'allowed_mime_types', bucket.allowed_mime_types
+      )
+      from storage.buckets as bucket
+      where bucket.id = 'recipe-images-private';
+    `)).toBe(
+      '{"public": false, "file_size_limit": 5242880, "allowed_mime_types": ["image/jpeg", "image/png", "image/webp"]}',
+    );
+
+    expect(psql(`
+      select count(*)
+      from pg_catalog.pg_policies
+      where schemaname = 'storage'
+        and tablename = 'objects'
+        and (
+          coalesce(qual, '') ilike '%recipe-images-private%'
+          or coalesce(with_check, '') ilike '%recipe-images-private%'
+      );
+    `)).toBe("0");
+
+    psql(`
+      set local role service_role;
+      insert into storage.objects (
+        id,
+        bucket_id,
+        name,
+        owner_id
+      ) values (
+        '00000000-0000-4000-8000-000000000399',
+        'recipe-images-private',
+        '${OWNER_ACTIVE}/1/private.webp',
+        '${OWNER_ACTIVE}'
+      );
+      insert into storage.objects (
+        id,
+        bucket_id,
+        name,
+        owner_id
+      ) values (
+        '00000000-0000-4000-8000-000000000398',
+        'recipe-images',
+        '${OWNER_ACTIVE}/public.webp',
+        '${OWNER_ACTIVE}'
+      );
+      reset role;
+    `);
+
+    for (const role of ["anon", "authenticated"] as const) {
+      const insert = asRoleResult(
+        role,
+        "insert into storage.objects (bucket_id, name) values ('recipe-images-private', 'blocked.webp');",
+        OWNER_ACTIVE,
+      );
+      expect(insert.status).not.toBe(0);
+      expect(insert.stderr).toMatch(/row-level security policy/i);
+
+      const read = asRole(
+        role,
+        "select count(*) from storage.objects where bucket_id = 'recipe-images-private';",
+        OWNER_ACTIVE,
+      );
+      expect(read).toBe("0");
+
+      expect(asRole(
+        role,
+        `
+          with changed as (
+            update storage.objects
+            set name = 'mutated.webp'
+            where bucket_id = 'recipe-images-private'
+            returning 1
+          )
+          select count(*) from changed;
+        `,
+        OWNER_ACTIVE,
+      )).toBe("0");
+
+      expect(asRole(
+        role,
+        `
+          with removed as (
+            delete from storage.objects
+            where bucket_id = 'recipe-images-private'
+            returning 1
+          )
+          select count(*) from removed;
+        `,
+        OWNER_ACTIVE,
+      )).toBe("0");
+    }
+
+    expect(psql(`
+      select count(*)
+      from pg_catalog.pg_policies
+      where schemaname = 'storage'
+        and tablename = 'objects'
+        and policyname in (
+          'recipe_images_public_read',
+          'recipe_images_insert_own',
+          'recipe_images_update_own',
+          'recipe_images_delete_own'
+        );
+    `)).toBe("4");
+    expect(asRole(
+      "anon",
+      "select count(*) from storage.objects where bucket_id = 'recipe-images';",
+    )).toBe("1");
+    expect(asRole(
+      "authenticated",
+      `
+        with changed as (
+          update storage.objects
+          set name = '${OWNER_ACTIVE}/updated.webp'
+          where bucket_id = 'recipe-images'
+          returning 1
+        )
+        select count(*) from changed;
+      `,
+      OWNER_ACTIVE,
+    )).toBe("1");
+    expect(asRole(
+      "authenticated",
+      `
+        with created as (
+          insert into storage.objects (
+            bucket_id,
+            name,
+            owner_id
+          ) values (
+            'recipe-images',
+            '${OWNER_ACTIVE}/new.webp',
+            '${OWNER_ACTIVE}'
+          )
+          returning 1
+        )
+        select count(*) from created;
+      `,
+      OWNER_ACTIVE,
+    )).toBe("1");
+    expect(asRole(
+      "authenticated",
+      `
+        with removed as (
+          delete from storage.objects
+          where bucket_id = 'recipe-images'
+          returning 1
+        )
+        select count(*) from removed;
+      `,
+      OWNER_ACTIVE,
+    )).toBe("1");
+
+    const replay = psqlFileResult(IMAGE_PRIVATE_STORAGE_MIGRATION_PATH);
+    expect(replay.status, replay.stderr).toBe(0);
   });
 
   it("keeps the guard function under an exact no-login least-privilege owner", () => {
