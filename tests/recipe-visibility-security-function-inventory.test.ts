@@ -17,6 +17,8 @@ const IMAGE_CLEANUP_MANIFEST_PATH =
   "docs/security/recipe-image-cleanup-outbox-security-function-authorization-manifest.json";
 const IMAGE_UPLOAD_MANIFEST_PATH =
   "docs/security/recipe-image-upload-reservation-security-function-authorization-manifest.json";
+const IMAGE_UPLOAD_COMPENSATION_MANIFEST_PATH =
+  "docs/security/recipe-image-upload-compensation-security-function-authorization-manifest.json";
 
 describe("recipe visibility security function inventory", () => {
   it("classifies the guard and every recreated baseline function", () => {
@@ -158,6 +160,29 @@ describe("recipe visibility security function inventory", () => {
     ]);
   });
 
+  it("classifies the guarded image upload compensation function", () => {
+    expect(existsSync(IMAGE_UPLOAD_COMPENSATION_MANIFEST_PATH)).toBe(true);
+    if (!existsSync(IMAGE_UPLOAD_COMPENSATION_MANIFEST_PATH)) {
+      return;
+    }
+
+    const manifest = JSON.parse(
+      readFileSync(IMAGE_UPLOAD_COMPENSATION_MANIFEST_PATH, "utf8"),
+    ) as {
+      functions: Array<Record<string, unknown>>;
+    };
+
+    expect(manifest.functions).toEqual([
+      expect.objectContaining({
+        signature:
+          "public.compensate_recipe_image_upload(uuid, bigint, uuid, uuid, uuid, bigint, text, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "extensions", "pg_temp"],
+      }),
+    ]);
+  });
+
   it("uses new functions as deployment markers and rejects incomplete replacements", () => {
     const contract = [
       {
@@ -238,6 +263,9 @@ describe("recipe visibility security function inventory", () => {
     );
     expect(output).toContain(
       "recipe-image-upload-reservation:3 pre-deployment additive application functions",
+    );
+    expect(output).toContain(
+      "recipe-image-upload-compensation:1 pre-deployment additive application functions",
     );
   }, 15_000);
 

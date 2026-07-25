@@ -47,6 +47,7 @@ const IMAGE_CLEANUP_REFERENCE = "00000000-0000-4000-8000-000000000313";
 const IMAGE_CLEANUP_CONSUMER = "00000000-0000-4000-8000-000000000314";
 const IMAGE_UPLOAD_KEY = "00000000-0000-4000-8000-000000000315";
 const IMAGE_UPLOAD_ISOLATION_KEY = "00000000-0000-4000-8000-000000000316";
+const IMAGE_UPLOAD_COMPENSATION_KEY = "00000000-0000-4000-8000-000000000317";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -1493,6 +1494,191 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
       rollback;
       select 'upload-cas-pass';
     `)).toBe("upload-cas-pass");
+  });
+
+  it("compensates the exact failed upload once and opens durable cleanup", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      update public.user_account_lifecycles
+      set auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      set local role service_role;
+      do $block$
+      declare
+        v_reserved jsonb;
+        v_compensated jsonb;
+        v_replay jsonb;
+        v_object_id uuid;
+        v_attempt_token uuid;
+        v_outbox_id uuid;
+      begin
+        v_reserved := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_UPLOAD_COMPENSATION_KEY}',
+          repeat('d', 64),
+          repeat('e', 64),
+          2048,
+          'image/webp',
+          'webp',
+          '2030-07-24T01:10:00Z'
+        );
+        v_object_id := (v_reserved ->> 'object_id')::uuid;
+        v_attempt_token := (v_reserved ->> 'attempt_token')::uuid;
+
+        v_compensated := public.compensate_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          1,
+          '${IMAGE_UPLOAD_COMPENSATION_KEY}',
+          v_object_id,
+          v_attempt_token,
+          0,
+          'storage_upload_failed',
+          '2030-07-24T01:10:01Z'
+        );
+        v_outbox_id := (v_compensated ->> 'outbox_id')::uuid;
+
+        if v_compensated ->> 'outcome' <> 'cleanup_pending'
+          or (v_compensated ->> 'object_id')::uuid <> v_object_id
+          or (v_compensated ->> 'cleanup_generation')::bigint <> 1
+          or v_outbox_id is null then
+          raise exception 'compensation drift: %', v_compensated;
+        end if;
+
+        v_replay := public.compensate_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          1,
+          '${IMAGE_UPLOAD_COMPENSATION_KEY}',
+          v_object_id,
+          v_attempt_token,
+          0,
+          'storage_upload_failed',
+          '2030-07-24T01:10:02Z'
+        );
+        if v_replay is distinct from v_compensated then
+          raise exception 'compensation replay drift: % <> %',
+            v_replay,
+            v_compensated;
+        end if;
+
+        begin
+          perform public.finalize_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_UPLOAD_COMPENSATION_KEY}',
+            v_attempt_token,
+            0,
+            '2030-07-24T01:10:03Z'
+          );
+          raise exception 'compensated upload finalized unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'IMAGE_EXPIRED' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        if not exists (
+          select 1
+          from public.recipe_image_objects as object
+          where object.id = v_object_id
+            and object.state = 'cleanup_pending'
+            and object.cleanup_generation = 1
+            and object.upload_attempt_token is null
+            and object.upload_lease_expires_at is null
+        ) then
+          raise exception 'compensated object state drift';
+        end if;
+        if not exists (
+          select 1
+          from public.mutation_idempotency_keys as idempotency
+          where idempotency.result_reference = v_object_id
+            and idempotency.state = 'failed_terminal'
+            and idempotency.terminal_result = 'cleanup_pending'
+            and idempotency.quota_released_at
+              = '2030-07-24T01:10:01Z'::timestamptz
+            and idempotency.durable_result ->> 'outbox_id'
+              = v_outbox_id::text
+        ) then
+          raise exception 'compensated idempotency state drift';
+        end if;
+        if not exists (
+          select 1
+          from public.storage_object_deletion_outbox as outbox
+          where outbox.id = v_outbox_id
+            and outbox.cleanup_generation = 1
+            and outbox.reason = 'storage_upload_failed'
+            and outbox.state = 'pending'
+        ) then
+          raise exception 'compensation outbox drift';
+        end if;
+        if (
+          select row(
+            counter.active_reservation_count,
+            jsonb_array_length(counter.request_events)
+          ) is distinct from row(0, 1)
+          from public.image_upload_quota_counters as counter
+          where counter.owner_uuid = '${OWNER_ACTIVE}'
+            and counter.account_generation = 1
+        ) then
+          raise exception 'compensation quota drift';
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'upload-compensation-pass';
+    `)).toBe("upload-compensation-pass");
+
+    const serializable = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select public.compensate_recipe_image_upload(
+        '${OWNER_ACTIVE}',
+        1,
+        '${IMAGE_UPLOAD_COMPENSATION_KEY}',
+        '00000000-0000-4000-8000-000000000318',
+        '00000000-0000-4000-8000-000000000319',
+        0,
+        'storage_upload_failed',
+        '2030-07-24T01:11:00Z'
+      );
+    `);
+    expect(serializable.status).not.toBe(0);
+    expect(serializable.stderr).toMatch(
+      /recipe image upload compensation requires READ COMMITTED/i,
+    );
   });
 
   it("fails every pre-PUT quota boundary closed without charging the rejected attempt", () => {
