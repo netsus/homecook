@@ -2,11 +2,15 @@
   "schema_version": "prepared-food-search-relevance-labels-v1",
   "description": "검수된 합성 라벨만 포함하며 실제 사용자·provider 원문은 포함하지 않는다.",
   "cases": [
-    {"id":"ys-compact","q":"연세크림빵","types":["ingredient","food_product"],"source":null,"expected_labels":["연세우유 생크림빵","연세 크림빵","연세베이커리 우유크림빵","연세커뮤니티 크림빵","나만의 연세 크림빵"],"excluded_labels":["무관 성능제품"]},
+    {"id":"ys-compact","q":"연세크림빵","types":["ingredient","food_product"],"source":null,"expected_labels":["연세우유 생크림빵","연세 크림빵","연세베이커리 우유크림빵","연세커뮤니티 크림빵","나만의 연세 크림빵"],"excluded_labels":["연세음료 콜라","다른제조사 크림빵","무관 성능제품"]},
     {"id":"ys-spaced","q":"연세 크림빵","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵","연세 크림빵","연세베이커리 우유크림빵"],"excluded_labels":["무관 성능제품"]},
     {"id":"ys-punct","q":"연세-크림빵","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵","연세 크림빵","연세베이커리 우유크림빵"],"excluded_labels":["무관 성능제품"]},
     {"id":"ys-community","q":"연세크림빵","types":["food_product"],"source":"community","expected_labels":["연세커뮤니티 크림빵"],"excluded_labels":["나만의 연세 크림빵"]},
     {"id":"ys-mine","q":"연세크림빵","types":["food_product"],"source":"mine","expected_labels":["나만의 연세 크림빵"],"excluded_labels":["연세커뮤니티 크림빵"]},
+    {"id":"ys-brand-product","q":"연세우유","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵"],"excluded_labels":["연세음료 콜라","다른제조사 크림빵"]},
+    {"id":"ys-product-name","q":"생크림빵","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵"],"excluded_labels":["연세음료 콜라","다른제조사 크림빵"]},
+    {"id":"ys-brand-only","q":"연세","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵","연세 크림빵","연세베이커리 우유크림빵","연세음료 콜라"],"excluded_labels":["다른제조사 크림빵"]},
+    {"id":"ys-product-only","q":"크림빵","types":["food_product"],"source":"public","expected_labels":["연세우유 생크림빵","연세 크림빵","연세베이커리 우유크림빵","다른제조사 크림빵"],"excluded_labels":["연세음료 콜라"]},
 
     {"id":"seoul-compact","q":"서울우유빵","types":["ingredient","food_product"],"source":null,"expected_labels":["서울우유 담백빵","서울 우유빵","서울베이커리 우유식빵","서울커뮤니티 우유빵","나만의 서울 우유빵"],"excluded_labels":["무관 성능제품"]},
     {"id":"seoul-spaced","q":"서울 우유빵","types":["food_product"],"source":"public","expected_labels":["서울우유 담백빵","서울 우유빵","서울베이커리 우유식빵"],"excluded_labels":["무관 성능제품"]},

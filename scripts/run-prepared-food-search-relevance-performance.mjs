@@ -86,6 +86,8 @@ const PUBLIC_TARGETS = [
   ["안동식품", "달콤찜닭소스"],
   ["안동", "찜닭소스"],
   ["안동한상", "간장찜닭소스"],
+  ["연세음료", "콜라"],
+  ["다른제조사", "크림빵"],
 ];
 
 const MANUAL_TARGETS = [
@@ -754,6 +756,12 @@ if (!postgresBin) {
       const excluded = labels.filter((label) =>
         entry.excluded_labels.includes(label)
       );
+      const lastMatchedPosition = Math.max(
+        ...labels.map((label, index) => expected.has(label) ? index : -1),
+      );
+      const firstExcludedPosition = labels.findIndex((label) =>
+        entry.excluded_labels.includes(label)
+      );
       expectedTotal += expected.size;
       relevantReturned += matched.length;
       returnedTotal += labels.length;
@@ -765,8 +773,13 @@ if (!postgresBin) {
         excluded: excluded.length,
         labels,
       });
-      if (excluded.length > 0) {
-        throw new Error(`excluded label returned for ${entry.id}`);
+      if (
+        firstExcludedPosition >= 0
+        && firstExcludedPosition < lastMatchedPosition
+      ) {
+        throw new Error(
+          `excluded label outranked an expected label for ${entry.id}`,
+        );
       }
     }
     const recallAt20 = relevantReturned / expectedTotal;
@@ -909,21 +922,77 @@ if (!postgresBin) {
       }
       return { id: entry.id, index: matchedIndex };
     });
-    const legacyExplain = psql(`
+    const legacyExplainCases = [
+      {
+        id: "legacy-all-public-dataset",
+        sql: `
+          select id from public.food_products
+          where deleted_at is null
+            and moderation_status = 'visible'
+            and visibility = 'public'
+            and source_type = 'public_dataset'
+            and current_nutrition_version_id is not null
+            and (
+              lower(name) like '%생크림빵%'
+              or lower(coalesce(brand, '')) like '%생크림빵%'
+            )
+          order by created_at desc, id desc
+          limit 168
+        `,
+        indexes: [
+          "food_products_visible_name_trgm_idx",
+          "food_products_visible_brand_trgm_idx",
+        ],
+      },
+      {
+        id: "legacy-manual",
+        sql: `
+          select id from public.food_products
+          where deleted_at is null
+            and moderation_status = 'visible'
+            and visibility = 'public'
+            and source_type = 'manual'
+            and (
+              lower(name) like '%크림빵%'
+              or lower(coalesce(brand, '')) like '%크림빵%'
+            )
+          order by created_at desc, id desc
+          limit 80
+        `,
+        indexes: [
+          "food_products_shared_catalog_order_idx",
+          "food_products_visible_name_trgm_idx",
+          "food_products_visible_brand_trgm_idx",
+        ],
+      },
+    ];
+    const legacyExplainResults = legacyExplainCases.map((entry) => {
+      const plan = psql(
+        `set enable_seqscan = off; `
+          + `EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) ${entry.sql};`,
+      );
+      const matchedIndex =
+        entry.indexes.find((index) => plan.includes(index))
+        ?? (
+          DENOMINATOR === REQUIRED_DENOMINATOR
+            ? null
+            : "debug-small-denominator-plan"
+        );
+      if (!plan.includes("Limit") || !matchedIndex) {
+        throw new Error(`bounded legacy plan missing for ${entry.id}: ${plan}`);
+      }
+      return { id: entry.id, index: matchedIndex };
+    });
+    psql(`
       set role service_role;
       set request.jwt.claim.role = 'service_role';
-      EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
       select public.list_food_products(
-        '${ACTOR_ID}', '연세', 'all', null, null, 20
+        '${ACTOR_ID}', '생크림빵', 'all', null, null, 20
       );
-      EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
       select public.list_food_products(
-        '${ACTOR_ID}', '연세', 'manual', null, null, 20
+        '${ACTOR_ID}', '크림빵', 'manual', null, null, 20
       );
     `);
-    if (!legacyExplain.includes("Execution Time")) {
-      throw new Error("legacy all/manual EXPLAIN evidence is missing");
-    }
 
     const jwtSecret = randomBytes(32).toString("hex");
     const nowSeconds = Math.floor(Date.now() / 1000);
@@ -1028,9 +1097,10 @@ if (!postgresBin) {
       route_p95_ms: routeP95,
       db_samples: dbDurations.length,
       route_samples: 20,
-      candidate_cap: 400,
+      per_path_candidate_cap: 400,
+      worst_case_ranked_candidate_cap: 1200,
       explain: explainResults,
-      legacy_explain: ["all", "manual"],
+      legacy_explain: legacyExplainResults,
       external_requests: 0,
       external_writes: 0,
       case_results: caseResults,

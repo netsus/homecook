@@ -32,6 +32,12 @@ describe("prepared food search relevance performance gate", () => {
     );
     expect(fixture.cases.some((entry) => entry.q === "연세크림빵")).toBe(true);
     expect(fixture.cases.some((entry) => entry.q === "연세 크림빵")).toBe(true);
+    expect(fixture.cases.some((entry) => entry.q === "연세우유")).toBe(true);
+    expect(fixture.cases.some((entry) => entry.q === "생크림빵")).toBe(true);
+    expect(fixture.cases.some((entry) => entry.q === "연세")).toBe(true);
+    expect(fixture.cases.some((entry) => entry.q === "크림빵")).toBe(true);
+    expect(JSON.stringify(fixture)).toMatch(/연세음료 콜라/);
+    expect(JSON.stringify(fixture)).toMatch(/다른제조사 크림빵/);
     expect(fixture.cases.some((entry) => [...entry.q].length <= 2)).toBe(true);
     expect(
       new Set(fixture.cases.map((entry) => entry.source)),
@@ -70,11 +76,15 @@ describe("prepared food search relevance performance gate", () => {
     expect(runner).toMatch(/route p95/);
     expect(runner).toMatch(/cold_db_ms/);
     expect(runner).toMatch(/cold_route_ms/);
+    expect(runner).toMatch(/per_path_candidate_cap/);
+    expect(runner).toMatch(/worst_case_ranked_candidate_cap/);
     expect(runner).toMatch(/hardware/);
     expect(runner).toMatch(/runtime/);
     expect(runner).toMatch(/source-public/);
     expect(runner).toMatch(/source-community/);
     expect(runner).toMatch(/source-mine-owner-private/);
+    expect(runner).toMatch(/legacy-all-public-dataset/);
+    expect(runner).toMatch(/legacy-manual/);
     expect(runner).toMatch(/EXPLAIN \(ANALYZE/);
     expect(runner).not.toMatch(/production|staging/);
   });
