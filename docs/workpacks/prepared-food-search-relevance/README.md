@@ -111,7 +111,7 @@ Schema Change:
 
 ## Design Status
 
-`N/A`. No new screen or visual system change. Existing UI states are regression-tested at Stage 4/5.
+- [x] N/A — 새 화면·시각 시스템·레이아웃 변경이 없는 behavior-only 슬라이스이며 기존 UI 상태를 Stage 4/5에서 회귀 검증했다.
 
 ## Source Links
 
@@ -178,10 +178,10 @@ Schema Change:
 - [x] v1 dual decode and integer v2 tuple/fingerprint pagination without duplicate/omission <!-- omo:id=delivery-search-cursor-v2;stage=2;scope=backend;review=3,6 -->
 - [x] 50~100 labels, designated three, Recall/Precision and 287,041 p95/EXPLAIN gates <!-- omo:id=delivery-search-relevance-performance;stage=2;scope=backend;review=3,6 -->
 - [x] legacy `/food-products` source/current-version/moderation/pagination regression <!-- omo:id=delivery-search-legacy-regression;stage=2;scope=shared;review=3,6 -->
-- [ ] client debounce, IME composition and latest-generation-only response handling <!-- omo:id=delivery-search-client-control;stage=4;scope=frontend;review=5,6 -->
-- [ ] loading/empty/error/read-only/unauthorized and no-layout/no-anchor regression <!-- omo:id=delivery-search-ui-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] client debounce, IME composition and latest-generation-only response handling <!-- omo:id=delivery-search-client-control;stage=4;scope=frontend;review=5,6 -->
+- [x] loading/empty/error/read-only/unauthorized and no-layout/no-anchor regression <!-- omo:id=delivery-search-ui-regression;stage=4;scope=frontend;review=5,6 -->
 - [x] local existing/fresh/replay, exact ACL/function inventory, secret/provider/write-zero evidence <!-- omo:id=delivery-search-security-evidence;stage=2;scope=shared;review=3,6 -->
-- [ ] independent performance, security, five-axis, Stage 5 and Stage 6 approvals plus current-head checks <!-- omo:id=delivery-search-independent-closeout;stage=4;scope=frontend;review=5,6 -->
+- [x] independent performance, security, five-axis, Stage 5 and Stage 6 approvals plus current-head checks <!-- omo:id=delivery-search-independent-closeout;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual Only
 

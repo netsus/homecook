@@ -5,14 +5,14 @@
 - [x] `연세크림빵`의 designated 3 products가 first page에 모두 있고 two-fragment coverage가 one-fragment보다 앞선다 <!-- omo:id=accept-search-designated-three;stage=2;scope=backend;review=3,6 -->
 - [x] ingredient와 food product가 official discriminated union `items[]`와 single `next_cursor`로 전역 정렬된다 <!-- omo:id=accept-search-unified-page;stage=2;scope=backend;review=3,6 -->
 - [x] exact/compact/all-fragment/trigram 순서와 query-present relevance-first tie-break가 deterministic하다 <!-- omo:id=accept-search-ranking;stage=2;scope=backend;review=3,6 -->
-- [ ] client는 200~300ms debounce와 IME composition end 뒤 최신 generation 결과만 표시한다 <!-- omo:id=accept-search-ime-generation;stage=4;scope=frontend;review=5,6 -->
+- [x] client는 200~300ms debounce와 IME composition end 뒤 최신 generation 결과만 표시한다 <!-- omo:id=accept-search-ime-generation;stage=4;scope=frontend;review=5,6 -->
 
 ## State / Policy
 
 - [x] `types=ingredient,food_product`와 `source=public|community|mine`만 허용하고 visibility는 caller/server state에서 파생한다 <!-- omo:id=accept-search-filter-policy;stage=2;scope=backend;review=3,6 -->
 - [x] q가 있으면 relevance가 source/type/recency보다 우선하고 q가 없으면 legacy stable browse 의미를 유지한다 <!-- omo:id=accept-search-query-browse-policy;stage=2;scope=backend;review=3,6 -->
 - [x] 1~2글자는 fuzzy를 사용하지 않고 no-space 4+는 양쪽 2+ split만 평가한다 <!-- omo:id=accept-search-short-split-policy;stage=2;scope=backend;review=3,6 -->
-- [ ] HOME은 recipe-only이고 product planner 신규 추가 UI는 되살아나지 않는다 <!-- omo:id=accept-search-consumer-boundary;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME은 recipe-only이고 product planner 신규 추가 UI는 되살아나지 않는다 <!-- omo:id=accept-search-consumer-boundary;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
 
@@ -41,8 +41,8 @@
 
 ## Manual QA
 
-- [ ] desktop/390/320 existing search control preserves loading/empty/error/read-only/unauthorized without visual hierarchy change <!-- omo:id=accept-search-ui-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] Korean IME composition produces no intermediate request, one composition-end request and no stale result flash <!-- omo:id=accept-search-ime-manual-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] desktop/390/320 existing search control preserves loading/empty/error/read-only/unauthorized without visual hierarchy change <!-- omo:id=accept-search-ui-states;stage=4;scope=frontend;review=5,6 -->
+- [x] Korean IME composition produces no intermediate request, one composition-end request and no stale result flash <!-- omo:id=accept-search-ime-manual-flow;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 
@@ -53,7 +53,7 @@
 
 - [ ] Stage 1 runs only current docs validators, focused workflow tests, lint/typecheck, dependency audit and diff checks; GitGuardian scans the PR head independently <!-- omo:id=accept-search-stage1-gate;stage=2;scope=shared;review=3,6 -->
 - [x] Stage 2 adds tests first, observes RED, then implements route/parser/cursor/SQL/security/performance artifacts <!-- omo:id=accept-search-tdd-red;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 4 adds debounce/IME/latest-generation unit and focused Playwright behavior tests <!-- omo:id=accept-search-stage4-client-tests;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 3 security/performance/5-axis and Stage 5/6 independent Codex reviews have unresolved P0/P1/P2 0 <!-- omo:id=accept-search-independent-reviews;stage=4;scope=frontend;review=5,6 -->
-- [ ] Draft→Ready and every current-head started check finish success or documented normal skip before squash merge <!-- omo:id=accept-search-current-head-ci;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 adds debounce/IME/latest-generation unit and focused Playwright behavior tests <!-- omo:id=accept-search-stage4-client-tests;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 3 security/performance/5-axis and Stage 5/6 independent Codex reviews have unresolved P0/P1/P2 0 <!-- omo:id=accept-search-independent-reviews;stage=4;scope=frontend;review=5,6 -->
+- [x] Draft→Ready and every current-head started check finish success or documented normal skip before squash merge <!-- omo:id=accept-search-current-head-ci;stage=4;scope=frontend;review=5,6 -->
 - [ ] merged exact SHA remote read-only smoke preserves public/private/moderation/current-version/cursor behavior and external writes 0 <!-- omo:id=accept-search-remote-smoke;stage=2;scope=shared;review=3,6 -->
