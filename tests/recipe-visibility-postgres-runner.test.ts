@@ -63,6 +63,15 @@ describe("recipe visibility PostgreSQL gate", () => {
     expect(runner).toContain(
       "supabase/migrations/20260724250000_recipe_image_auth_deletion_readiness_authority.sql",
     );
+    expect(runner).toContain(
+      "supabase/migrations/20260724260000_recipe_image_auth_deletion_claim_authority.sql",
+    );
+    expect(runner).toContain(
+      "create or replace function public.claim_auth_identity_deletion_outbox",
+    );
+    expect(runner).toContain(
+      "create or replace function public.finalize_auth_identity_deletion_outbox",
+    );
     expect(runner).toContain("create policy recipe_images_public_read");
     expect(runner).toContain("create policy recipe_images_insert_own");
     expect(runner).toContain("create policy recipe_images_update_own");

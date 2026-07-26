@@ -25,6 +25,8 @@ const IMAGE_EXPECTED_OWNER_SIGNAL_MIGRATION_PATH =
   "supabase/migrations/20260724240000_recipe_image_expected_owner_signal_authority.sql";
 const IMAGE_AUTH_DELETION_READINESS_MIGRATION_PATH =
   "supabase/migrations/20260724250000_recipe_image_auth_deletion_readiness_authority.sql";
+const IMAGE_AUTH_DELETION_CLAIM_MIGRATION_PATH =
+  "supabase/migrations/20260724260000_recipe_image_auth_deletion_claim_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -4964,6 +4966,221 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         )
       );
     `)).toBe("f:f:t");
+  });
+
+  it("claims only one ready Auth deletion identity epoch", () => {
+    const claimOwner = "00000000-0000-4000-8000-000000000410";
+    const claimOutbox = "00000000-0000-4000-8000-000000000411";
+    const claimLease = "00000000-0000-4000-8000-000000000412";
+    const authSnapshot = "2030-07-25T00:00:00Z";
+    const now = "2030-07-25T01:00:00Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        completed_cleanup_generation,
+        personal_db_deleted_at
+      ) values (
+        '${claimOwner}',
+        1,
+        '${authSnapshot}',
+        'cleanup_pending',
+        0,
+        0,
+        '${authSnapshot}'
+      );
+
+      insert into public.auth_identity_deletion_outbox (
+        id,
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        next_attempt_at
+      ) values (
+        '${claimOutbox}',
+        '${claimOwner}',
+        1,
+        '${authSnapshot}',
+        'pending',
+        '${authSnapshot}'
+      );
+
+      set local role service_role;
+      select concat_ws(
+        ':',
+        claimed ->> 'id',
+        claimed ->> 'owner_uuid',
+        claimed ->> 'account_generation',
+        claimed ->> 'state',
+        claimed ->> 'attempts',
+        claimed ->> 'lease_token'
+      )
+      from (
+        select public.claim_recipe_image_auth_deletion_if_ready(
+          '${claimOutbox}',
+          '${claimOwner}',
+          1,
+          '${claimLease}',
+          '${now}'
+        ) as claimed
+      ) as result;
+      rollback;
+    `)).toBe(
+      `${claimOutbox}:${claimOwner}:1:processing:1:${claimLease}`,
+    );
+  });
+
+  it("rejects a different outbox identity and nonzero owner evidence before claim", () => {
+    const claimOwner = "00000000-0000-4000-8000-000000000420";
+    const claimOutbox = "00000000-0000-4000-8000-000000000421";
+    const otherOutbox = "00000000-0000-4000-8000-000000000422";
+    const claimLease = "00000000-0000-4000-8000-000000000423";
+    const storageObject = "00000000-0000-4000-8000-000000000424";
+    const authSnapshot = "2030-07-25T02:00:00Z";
+    const now = "2030-07-25T03:00:00Z";
+    const fixture = `
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        completed_cleanup_generation,
+        personal_db_deleted_at
+      ) values (
+        '${claimOwner}',
+        1,
+        '${authSnapshot}',
+        'cleanup_pending',
+        0,
+        0,
+        '${authSnapshot}'
+      );
+
+      insert into public.auth_identity_deletion_outbox (
+        id,
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        next_attempt_at
+      ) values
+        (
+          '${claimOutbox}',
+          '${claimOwner}',
+          1,
+          '${authSnapshot}',
+          'pending',
+          '${authSnapshot}'
+        ),
+        (
+          '${otherOutbox}',
+          '${OWNER_ACTIVE}',
+          1,
+          '${authSnapshot}',
+          'pending',
+          '${authSnapshot}'
+        );
+    `;
+
+    const mismatched = psqlResult(`
+      begin;
+      ${fixture}
+      set local role service_role;
+      select public.claim_recipe_image_auth_deletion_if_ready(
+        '${otherOutbox}',
+        '${claimOwner}',
+        1,
+        '${claimLease}',
+        '${now}'
+      );
+    `);
+    expect(mismatched.status).not.toBe(0);
+    expect(mismatched.stderr).toContain(
+      "Auth deletion outbox claim identity compare-and-swap failed",
+    );
+
+    const ownerSignal = psqlResult(`
+      begin;
+      ${fixture}
+      insert into storage.objects (
+        id,
+        bucket_id,
+        name,
+        owner_id
+      ) values (
+        '${storageObject}',
+        'recipe-images-private',
+        '${claimOwner}/1/unregistered.webp',
+        '${claimOwner}'
+      );
+      set local role service_role;
+      select public.claim_recipe_image_auth_deletion_if_ready(
+        '${claimOutbox}',
+        '${claimOwner}',
+        1,
+        '${claimLease}',
+        '${now}'
+      );
+    `);
+    expect(ownerSignal.status).not.toBe(0);
+    expect(ownerSignal.stderr).toContain(
+      "Auth deletion cleanup evidence is not ready",
+    );
+  });
+
+  it("replays guarded Auth deletion claim without opening legacy consumer grants", () => {
+    const replay = psqlFileResult(
+      IMAGE_AUTH_DELETION_CLAIM_MIGRATION_PATH,
+    );
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.claim_recipe_image_auth_deletion_if_ready(uuid,uuid,bigint,uuid,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.claim_recipe_image_auth_deletion_if_ready(uuid,uuid,bigint,uuid,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.claim_recipe_image_auth_deletion_if_ready(uuid,uuid,bigint,uuid,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.claim_auth_identity_deletion_outbox(uuid,uuid,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.finalize_auth_identity_deletion_outbox(uuid,uuid,integer,text,text,timestamp with time zone)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t:f:f");
   });
 
   it("keeps Auth deletion readiness inactive before joint activation", () => {
