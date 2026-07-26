@@ -20,6 +20,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724180000_recipe_image_attach_cas.sql",
   "supabase/migrations/20260724190000_recipe_manual_create_image_attach.sql",
   "supabase/migrations/20260724200000_recipe_image_stale_scanner_cas.sql",
+  "supabase/migrations/20260724210000_recipe_image_terminal_tombstone_scan.sql",
 ];
 
 function commandResult(command, args, options = {}) {
@@ -264,6 +265,10 @@ if (!postgresBin) {
           account_generation bigint not null,
           auth_identity_created_at_snapshot timestamptz,
           status text not null,
+          required_cleanup_generation bigint not null default 0,
+          completed_cleanup_generation bigint not null default 0,
+          revision bigint not null default 1,
+          updated_at timestamptz not null default now(),
           primary key (owner_uuid, account_generation)
         );
         alter table public.user_account_lifecycles enable row level security;
