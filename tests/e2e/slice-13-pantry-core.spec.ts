@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import path from "node:path";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -193,6 +194,28 @@ async function installPantryRoutes(
   });
 }
 
+async function installDeterministicStickerOptimizer(page: Page, assetPath: string) {
+  const localAssetPath = path.join(
+    process.cwd(),
+    "public",
+    assetPath.replace(/^\//, ""),
+  );
+
+  await page.route("**/_next/image?**", async (route) => {
+    const optimizerUrl = new URL(route.request().url());
+
+    if (optimizerUrl.searchParams.get("url") !== assetPath) {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      contentType: "image/webp",
+      path: localAssetPath,
+    });
+  });
+}
+
 async function expectSharpV2Sticker(
   image: Locator,
   {
@@ -285,6 +308,7 @@ test.describe("PANTRY screen", () => {
   }) => {
     await setAuthOverride(page, "authenticated");
     await installPantryRoutes(page, MOCK_PANTRY_ITEMS.slice(0, 1));
+    await installDeterministicStickerOptimizer(page, "/assets/plush-v2/onion.webp");
     await page.goto("/pantry");
 
     await expect(page.getByText(/양파/)).toBeVisible();
