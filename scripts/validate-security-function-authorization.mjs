@@ -115,6 +115,20 @@ const ADDITIVE_SOURCES = [
         "supabase/migrations/20260724160000_recipe_image_cancel_cas.sql",
       ),
   },
+  {
+    manifestPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_ATTACH_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/recipe-image-attach-cas-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_ATTACH_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260724180000_recipe_image_attach_cas.sql",
+      ),
+  },
 ];
 const LOCAL_DATABASE_URL =
   process.env.SECURITY_FUNCTION_DATABASE_URL

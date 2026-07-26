@@ -30,6 +30,7 @@
 - [ ] live same-key replay returns 202+Retry-After and expired exact CAS winner alone takes over same `upsert=false` path <!-- omo:id=accept-image-live-takeover;stage=2;scope=backend;review=3,6 -->
 - [ ] different payload reuse is 409 and never overwrites bytes or changes owner/generation/path <!-- omo:id=accept-image-key-reuse;stage=2;scope=backend;review=3,6 -->
 - [ ] late finalize after scanner/cancel/delete returns no URL and cannot revive registry or reference <!-- omo:id=accept-image-late-finalize;stage=2;scope=backend;review=3,6 -->
+- [x] service-only attach authority locks the active owner/session, private recipe and exact live uploaded-unlinked object before atomically creating the thumbnail reference, transitioning `attached_private` and releasing active quota; recipe-create route wiring remains separately gated <!-- omo:id=accept-image-attach-authority;stage=2;scope=backend;review=3,6 -->
 - [ ] attach versus scanner/cancel has exactly one winner and any active reference blocks cleanup <!-- omo:id=accept-image-attach-race;stage=2;scope=backend;review=3,6 -->
 - [ ] Storage success plus DB finalize failure compensates delete or opens a newer cleanup generation <!-- omo:id=accept-image-storage-db-compensation;stage=2;scope=backend;review=3,6 -->
 - [x] first 404 becomes normal-drain-excluded awaiting recheck for 15 minutes, a late object returns to pending deletion, and only an independent second 404 is verified-not-found <!-- omo:id=accept-image-first404-recheck;stage=2;scope=backend;review=3,6 -->
