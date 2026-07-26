@@ -55,6 +55,12 @@ const IMAGE_CANCEL_FINALIZED_UPLOAD_KEY =
   "00000000-0000-4000-8000-000000000325";
 const IMAGE_CANCEL_FINALIZED_KEY =
   "00000000-0000-4000-8000-000000000326";
+const IMAGE_ATTACH_UPLOAD_KEY =
+  "00000000-0000-4000-8000-000000000327";
+const IMAGE_ATTACH_RECIPE =
+  "00000000-0000-4000-8000-000000000328";
+const IMAGE_ATTACH_CANCEL_KEY =
+  "00000000-0000-4000-8000-000000000329";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -1324,6 +1330,69 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         v_first_attempt uuid;
         v_takeover_attempt uuid;
       begin
+        begin
+          perform public.attach_recipe_image_object(
+            '00000000-0000-4000-8000-000000000299',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_ATTACH_RECIPE}',
+            '${IMAGE_PRIVATE}',
+            0,
+            '2030-07-24T03:00:00Z'
+          );
+          raise exception 'unclassified owner reached attach unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'ACCOUNT_CUTOVER_UNCLASSIFIED' then
+              raise;
+            end if;
+        end;
+
+        begin
+          perform public.attach_recipe_image_object(
+            '${OWNER_QUARANTINED}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_ATTACH_RECIPE}',
+            '${IMAGE_PRIVATE}',
+            0,
+            '2030-07-24T03:00:00Z'
+          );
+          raise exception 'deleting owner reached attach unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'ACCOUNT_DELETING' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        update public.user_account_lifecycles
+        set status = 'quarantined'
+        where owner_uuid = '${OWNER_QUARANTINED}'
+          and account_generation = 1;
+        set local role service_role;
+        begin
+          perform public.attach_recipe_image_object(
+            '${OWNER_QUARANTINED}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_ATTACH_RECIPE}',
+            '${IMAGE_PRIVATE}',
+            0,
+            '2030-07-24T03:00:00Z'
+          );
+          raise exception 'quarantined owner reached attach unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'ACCOUNT_CUTOVER_QUARANTINED' then
+              raise;
+            end if;
+        end;
+
         v_reserved := public.reserve_recipe_image_upload(
           '${OWNER_ACTIVE}',
           '2026-01-01T00:00:00Z',
@@ -1685,6 +1754,313 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(serializable.status).not.toBe(0);
     expect(serializable.stderr).toMatch(
       /recipe image upload compensation requires READ COMMITTED/i,
+    );
+  });
+
+  it("attaches one exact live image atomically and blocks stale competitors", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      update public.user_account_lifecycles
+      set auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      insert into public.recipes (
+        id,
+        title,
+        base_servings,
+        source_type,
+        created_by,
+        visibility
+      ) values (
+        '${IMAGE_ATTACH_RECIPE}',
+        'managed image attach fixture',
+        2,
+        'manual',
+        '${OWNER_ACTIVE}',
+        'private'
+      );
+
+      set local role service_role;
+      do $block$
+      declare
+        v_reserved jsonb;
+        v_finalized jsonb;
+        v_attached jsonb;
+        v_object_id uuid;
+        v_attempt_token uuid;
+        v_before text;
+        v_after text;
+      begin
+        v_reserved := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_ATTACH_UPLOAD_KEY}',
+          repeat('2', 64),
+          repeat('3', 64),
+          4096,
+          'image/webp',
+          'webp',
+          '2030-07-24T03:00:00Z'
+        );
+        v_object_id := (v_reserved ->> 'object_id')::uuid;
+        v_attempt_token := (v_reserved ->> 'attempt_token')::uuid;
+
+        v_finalized := public.finalize_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_ATTACH_UPLOAD_KEY}',
+          v_attempt_token,
+          0,
+          '2030-07-24T03:00:01Z'
+        );
+        if v_finalized ->> 'state' <> 'uploaded_unlinked' then
+          raise exception 'attach fixture finalize drift: %', v_finalized;
+        end if;
+
+        reset role;
+        select md5(
+          row(
+            object.state,
+            object.cleanup_generation,
+            object.unlinked_cleanup_after,
+            (
+              select count(*)
+              from public.recipe_image_object_references as reference
+              where reference.image_object_id = object.id
+            )
+          )::text
+        )
+          into v_before
+        from public.recipe_image_objects as object
+        where object.id = v_object_id;
+        set local role service_role;
+
+        begin
+          perform public.attach_recipe_image_object(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('b', 64),
+            1,
+            '${IMAGE_ATTACH_RECIPE}',
+            v_object_id,
+            0,
+            '2030-07-24T03:00:02Z'
+          );
+          raise exception 'stale session attached image unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'ACCOUNT_SESSION_STALE' then
+              raise;
+            end if;
+        end;
+
+        begin
+          perform public.attach_recipe_image_object(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${RECIPE_ACTIVE_PUBLIC}',
+            v_object_id,
+            0,
+            '2030-07-24T03:00:02Z'
+          );
+          raise exception 'public recipe attached private image unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'IMAGE_VISIBILITY_MISMATCH' then
+              raise;
+            end if;
+        end;
+
+        begin
+          perform public.attach_recipe_image_object(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_ATTACH_RECIPE}',
+            v_object_id,
+            1,
+            '2030-07-24T03:00:02Z'
+          );
+          raise exception 'stale cleanup generation attached image unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'IMAGE_EXPIRED' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        select md5(
+          row(
+            object.state,
+            object.cleanup_generation,
+            object.unlinked_cleanup_after,
+            (
+              select count(*)
+              from public.recipe_image_object_references as reference
+              where reference.image_object_id = object.id
+            )
+          )::text
+        )
+          into v_after
+        from public.recipe_image_objects as object
+        where object.id = v_object_id;
+        if v_after is distinct from v_before then
+          raise exception 'rejected attach mutated image: % <> %',
+            v_after,
+            v_before;
+        end if;
+        set local role service_role;
+
+        v_attached := public.attach_recipe_image_object(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_ATTACH_RECIPE}',
+          v_object_id,
+          0,
+          '2030-07-24T03:00:03Z'
+        );
+
+        if v_attached ->> 'outcome' <> 'succeeded'
+          or (v_attached ->> 'recipe_id')::uuid
+            <> '${IMAGE_ATTACH_RECIPE}'::uuid
+          or (v_attached ->> 'object_id')::uuid <> v_object_id
+          or v_attached ->> 'state' <> 'attached_private'
+          or (v_attached ->> 'reference_id')::uuid is null then
+          raise exception 'attach result drift: %', v_attached;
+        end if;
+
+        reset role;
+        if not exists (
+          select 1
+          from public.recipe_image_objects as object
+          join public.recipe_image_object_references as reference
+            on reference.image_object_id = object.id
+          where object.id = v_object_id
+            and object.state = 'attached_private'
+            and object.unlinked_cleanup_after is null
+            and object.cleanup_generation = 0
+            and reference.reference_type = 'recipe_thumbnail'
+            and reference.consumer_id = '${IMAGE_ATTACH_RECIPE}'
+        ) then
+          raise exception 'attached object/reference state drift';
+        end if;
+        if not exists (
+          select 1
+          from public.mutation_idempotency_keys as idempotency
+          where idempotency.result_reference = v_object_id
+            and idempotency.state = 'succeeded'
+            and idempotency.quota_released_at
+              = '2030-07-24T03:00:03Z'::timestamptz
+        ) then
+          raise exception 'attached upload quota marker drift';
+        end if;
+        if (
+          select counter.active_reservation_count
+          from public.image_upload_quota_counters as counter
+          where counter.owner_uuid = '${OWNER_ACTIVE}'
+            and counter.account_generation = 1
+        ) <> 0 then
+          raise exception 'attached upload active quota drift';
+        end if;
+
+        set local role service_role;
+        begin
+          perform public.cancel_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_ATTACH_CANCEL_KEY}',
+            v_object_id,
+            '2030-07-24T03:00:04Z'
+          );
+          raise exception 'attached image cancelled unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'IMAGE_EXPIRED' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        if not exists (
+          select 1
+          from public.recipe_image_objects as object
+          join public.recipe_image_object_references as reference
+            on reference.image_object_id = object.id
+          where object.id = v_object_id
+            and object.state = 'attached_private'
+            and reference.reference_type = 'recipe_thumbnail'
+            and reference.consumer_id = '${IMAGE_ATTACH_RECIPE}'
+        ) or exists (
+          select 1
+          from public.storage_object_deletion_outbox as outbox
+          join public.recipe_image_objects as object
+            on object.bucket_id = outbox.bucket_id
+           and object.object_path = outbox.object_path
+          where object.id = v_object_id
+        ) then
+          raise exception 'attached image cancel race drift';
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'image-attach-pass';
+    `)).toBe("image-attach-pass");
+
+    const serializable = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select public.attach_recipe_image_object(
+        '${OWNER_ACTIVE}',
+        '2026-01-01T00:00:00Z',
+        repeat('a', 64),
+        1,
+        '${IMAGE_ATTACH_RECIPE}',
+        '${IMAGE_PRIVATE}',
+        0,
+        '2030-07-24T03:10:00Z'
+      );
+    `);
+    expect(serializable.status).not.toBe(0);
+    expect(serializable.stderr).toMatch(
+      /recipe image attach requires READ COMMITTED/i,
     );
   });
 

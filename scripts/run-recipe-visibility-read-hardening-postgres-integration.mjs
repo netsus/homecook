@@ -17,6 +17,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724150000_recipe_image_upload_compensation.sql",
   "supabase/migrations/20260724160000_recipe_image_cancel_cas.sql",
   "supabase/migrations/20260724170000_recipe_image_cancel_lifecycle_errors.sql",
+  "supabase/migrations/20260724180000_recipe_image_attach_cas.sql",
 ];
 
 function commandResult(command, args, options = {}) {
