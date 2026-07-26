@@ -84,8 +84,11 @@ function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1024) < 1024;
 }
 
-async function installPantryRoutes(page: Page) {
-  let pantryItems = [...MOCK_PANTRY_ITEMS];
+async function installPantryRoutes(
+  page: Page,
+  initialPantryItems = MOCK_PANTRY_ITEMS,
+) {
+  let pantryItems = [...initialPantryItems];
 
   await page.route("**/api/v1/pantry/bundles", async (route) => {
     await route.fulfill({
@@ -281,7 +284,7 @@ test.describe("PANTRY screen", () => {
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
-    await installPantryRoutes(page);
+    await installPantryRoutes(page, MOCK_PANTRY_ITEMS.slice(0, 1));
     await page.goto("/pantry");
 
     await expect(page.getByText(/양파/)).toBeVisible();
