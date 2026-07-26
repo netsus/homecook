@@ -62,6 +62,7 @@
 - [ ] private and public/shared references copy to correct buckets, atomically swap references and retain old path through one compatibility release <!-- omo:id=accept-image-visibility-migration;stage=2;scope=backend;review=3,6 -->
 - [ ] old path deletion is a separate irreversible gate with reference 0, read smoke, rollback floor and dead-letter 0 <!-- omo:id=accept-image-old-path-gate;stage=2;scope=backend;review=3,6 -->
 - [ ] expected-owner signal uses only owner_id, strict allowlisted owner path or registry owner/generation and reaches union-zero before Auth deletion <!-- omo:id=accept-image-owner-signal;stage=2;scope=backend;review=3,6 -->
+- [x] service-only expected-owner signal authority counts a distinct Storage-object union from exact `owner_id`, strict allowlisted legacy owner path, or exact registry owner/account-generation/canonical private path join, while arbitrary substrings, other buckets/generations, and registry-only tombstones do not block zero; maintenance/Auth wiring remains separately gated <!-- omo:id=accept-image-owner-signal-authority;stage=2;scope=backend;review=3,6 -->
 - [ ] MacBook tick proves `StartInterval=300`, `RunAtLoad=true`, wrong-secret 401, heartbeat gap 15 minutes, cleanup target 24 hours, alert on 3 consecutive calls failed/oldest due over 15 minutes/any dead-letter, mode 600 env or Keychain secret, JSON log 10MB × 5 rotation and next-tick recovery <!-- omo:id=accept-image-launchd-runtime;stage=2;scope=shared;review=3,6 -->
 
 ### Manual Only
