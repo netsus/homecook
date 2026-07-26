@@ -84,6 +84,16 @@ describe("account session generation inventory", () => {
         source_file: "lib/server/account-generation/external-write.ts",
         guard_mode: "protected-rpc-or-mutated-table-before-trigger",
       }),
+      expect.objectContaining({
+        kind: "rpc",
+        operation: "call",
+        target: "complete_recipe_image_account_lifecycle",
+        source_file: "lib/server/recipe-image-lifecycle-completion.ts",
+        persists_personal_state: false,
+        guard_mode: "not_applicable",
+        expected_generation: "not_applicable",
+        activation_phase: "always",
+      }),
     ]));
     for (const entry of [
       ...inventory.route_inventory,
