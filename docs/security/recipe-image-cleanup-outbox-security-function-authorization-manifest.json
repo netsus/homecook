@@ -1,7 +1,10 @@
 {
   "schema_version": 1,
   "slice": "recipe-image-cleanup-outbox",
-  "migration": "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql",
+  "migrations": [
+    "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql",
+    "supabase/migrations/20260724220000_recipe_image_quarantine_recheck_authority.sql"
+  ],
   "deployment_state": "pre-deployment",
   "baseline_application_contract_count": 74,
   "functions": [
@@ -82,6 +85,36 @@
     },
     {
       "signature": "public.complete_recipe_image_cleanup_deleted(uuid, uuid, bigint, bigint, uuid, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.claim_recipe_image_cleanup_not_found_rechecks(integer, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.recheck_claimed_recipe_image_cleanup_not_found(uuid, uuid, bigint, bigint, timestamp with time zone, boolean, timestamp with time zone)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",

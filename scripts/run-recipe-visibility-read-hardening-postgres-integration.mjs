@@ -21,6 +21,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724190000_recipe_manual_create_image_attach.sql",
   "supabase/migrations/20260724200000_recipe_image_stale_scanner_cas.sql",
   "supabase/migrations/20260724210000_recipe_image_terminal_tombstone_scan.sql",
+  "supabase/migrations/20260724220000_recipe_image_quarantine_recheck_authority.sql",
 ];
 
 function commandResult(command, args, options = {}) {
