@@ -61,6 +61,8 @@ const IMAGE_ATTACH_RECIPE =
   "00000000-0000-4000-8000-000000000328";
 const IMAGE_ATTACH_CANCEL_KEY =
   "00000000-0000-4000-8000-000000000329";
+const IMAGE_CREATE_ATTACH_UPLOAD_KEY =
+  "00000000-0000-4000-8000-000000000330";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -2061,6 +2063,301 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(serializable.status).not.toBe(0);
     expect(serializable.stderr).toMatch(
       /recipe image attach requires READ COMMITTED/i,
+    );
+  });
+
+  it("creates one private manual recipe and managed image reference atomically", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      update public.user_account_lifecycles
+      set auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      set local role service_role;
+      do $block$
+      declare
+        v_reserved jsonb;
+        v_finalized jsonb;
+        v_created jsonb;
+        v_external jsonb;
+        v_object_id uuid;
+        v_attempt_token uuid;
+        v_recipe_id uuid;
+        v_external_recipe_id uuid;
+      begin
+        v_reserved := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_CREATE_ATTACH_UPLOAD_KEY}',
+          repeat('4', 64),
+          repeat('5', 64),
+          8192,
+          'image/webp',
+          'webp',
+          '2030-07-24T04:00:00Z'
+        );
+        v_object_id := (v_reserved ->> 'object_id')::uuid;
+        v_attempt_token := (v_reserved ->> 'attempt_token')::uuid;
+
+        v_finalized := public.finalize_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_CREATE_ATTACH_UPLOAD_KEY}',
+          v_attempt_token,
+          0,
+          '2030-07-24T04:00:01Z'
+        );
+        if v_finalized ->> 'state' <> 'uploaded_unlinked' then
+          raise exception 'create attach fixture finalize drift: %',
+            v_finalized;
+        end if;
+
+        begin
+          perform public.create_manual_recipe_with_managed_image(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('b', 64),
+            1,
+            v_object_id,
+            0,
+            'stale session managed recipe',
+            2,
+            null,
+            array[]::text[],
+            'system_suggested',
+            '[]'::jsonb,
+            '[]'::jsonb,
+            '2030-07-24T04:00:02Z'
+          );
+          raise exception 'stale session created recipe unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'ACCOUNT_SESSION_STALE' then
+              raise;
+            end if;
+        end;
+
+        begin
+          perform public.create_manual_recipe_with_managed_image(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            v_object_id,
+            0,
+            'managed URL conflict recipe',
+            2,
+            'https://example.com/should-not-persist.webp',
+            array[]::text[],
+            'system_suggested',
+            '[]'::jsonb,
+            '[]'::jsonb,
+            '2030-07-24T04:00:02Z'
+          );
+          raise exception 'managed object and URL persisted together';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'MANAGED_IMAGE_REFERENCE_REQUIRED' then
+              raise;
+            end if;
+        end;
+
+        begin
+          perform public.create_manual_recipe_with_managed_image(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            v_object_id,
+            1,
+            'stale cleanup managed recipe',
+            2,
+            null,
+            array[]::text[],
+            'system_suggested',
+            '[]'::jsonb,
+            '[]'::jsonb,
+            '2030-07-24T04:00:02Z'
+          );
+          raise exception 'stale cleanup generation created recipe';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'IMAGE_EXPIRED' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        if exists (
+          select 1
+          from public.recipes as recipe
+          where recipe.title in (
+            'stale session managed recipe',
+            'managed URL conflict recipe',
+            'stale cleanup managed recipe'
+          )
+        ) or exists (
+          select 1
+          from public.recipe_image_object_references as reference
+          where reference.image_object_id = v_object_id
+        ) or not exists (
+          select 1
+          from public.recipe_image_objects as object
+          where object.id = v_object_id
+            and object.state = 'uploaded_unlinked'
+            and object.cleanup_generation = 0
+        ) then
+          raise exception 'rejected managed create failed atomic rollback';
+        end if;
+        set local role service_role;
+
+        v_created := public.create_manual_recipe_with_managed_image(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          v_object_id,
+          0,
+          'managed image private recipe',
+          2,
+          null,
+          array[]::text[],
+          'system_suggested',
+          '[]'::jsonb,
+          '[]'::jsonb,
+          '2030-07-24T04:00:03Z'
+        );
+        v_recipe_id := (v_created ->> 'id')::uuid;
+
+        if v_recipe_id is null
+          or v_created ->> 'visibility' <> 'private'
+          or (v_created ->> 'image_object_id')::uuid <> v_object_id
+          or v_created ->> 'image_state' <> 'attached_private' then
+          raise exception 'managed recipe create result drift: %',
+            v_created;
+        end if;
+
+        reset role;
+        if not exists (
+          select 1
+          from public.recipes as recipe
+          join public.recipe_image_object_references as reference
+            on reference.reference_type = 'recipe_thumbnail'
+           and reference.consumer_id = recipe.id
+          join public.recipe_image_objects as object
+            on object.id = reference.image_object_id
+          where recipe.id = v_recipe_id
+            and recipe.created_by = '${OWNER_ACTIVE}'
+            and recipe.visibility = 'private'
+            and recipe.thumbnail_url is null
+            and object.id = v_object_id
+            and object.state = 'attached_private'
+            and object.unlinked_cleanup_after is null
+        ) then
+          raise exception 'managed recipe/reference transaction drift';
+        end if;
+        if (
+          select counter.active_reservation_count
+          from public.image_upload_quota_counters as counter
+          where counter.owner_uuid = '${OWNER_ACTIVE}'
+            and counter.account_generation = 1
+        ) <> 0 then
+          raise exception 'managed recipe attach quota drift';
+        end if;
+        set local role service_role;
+
+        v_external := public.create_manual_recipe_with_managed_image(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          null,
+          null,
+          'external image private recipe',
+          2,
+          'https://example.com/unmanaged.webp',
+          array[]::text[],
+          'system_suggested',
+          '[]'::jsonb,
+          '[]'::jsonb,
+          '2030-07-24T04:00:04Z'
+        );
+        v_external_recipe_id := (v_external ->> 'id')::uuid;
+
+        reset role;
+        if not exists (
+          select 1
+          from public.recipes as recipe
+          where recipe.id = v_external_recipe_id
+            and recipe.visibility = 'private'
+            and recipe.thumbnail_url
+              = 'https://example.com/unmanaged.webp'
+        ) or exists (
+          select 1
+          from public.recipe_image_object_references as reference
+          where reference.consumer_id = v_external_recipe_id
+        ) then
+          raise exception 'unmanaged external image compatibility drift';
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'manual-create-image-attach-pass';
+    `)).toBe("manual-create-image-attach-pass");
+
+    const serializable = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select public.create_manual_recipe_with_managed_image(
+        '${OWNER_ACTIVE}',
+        '2026-01-01T00:00:00Z',
+        repeat('a', 64),
+        1,
+        null,
+        null,
+        'serializable recipe',
+        2,
+        null,
+        array[]::text[],
+        'system_suggested',
+        '[]'::jsonb,
+        '[]'::jsonb,
+        '2030-07-24T04:10:00Z'
+      );
+    `);
+    expect(serializable.status).not.toBe(0);
+    expect(serializable.stderr).toMatch(
+      /managed manual recipe create requires READ COMMITTED/i,
     );
   });
 
