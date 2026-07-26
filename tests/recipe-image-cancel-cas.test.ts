@@ -7,6 +7,10 @@ const MIGRATION_PATH = path.join(
   process.cwd(),
   "supabase/migrations/20260724160000_recipe_image_cancel_cas.sql",
 );
+const LIFECYCLE_ERROR_MIGRATION_PATH = path.join(
+  process.cwd(),
+  "supabase/migrations/20260724170000_recipe_image_cancel_lifecycle_errors.sql",
+);
 
 describe("recipe image cancel CAS authority", () => {
   it("requires active session-generation authority and a generation-scoped key", () => {
@@ -94,6 +98,27 @@ describe("recipe image cancel CAS authority", () => {
     );
     expect(sql).toMatch(
       /revoke all on function public\.cancel_recipe_image_upload\([\s\S]*from public, anon, authenticated, service_role[\s\S]*grant execute on function public\.cancel_recipe_image_upload\([\s\S]*to service_role/i,
+    );
+  });
+
+  it("preserves exact lifecycle errors before any image mutation", () => {
+    expect(existsSync(LIFECYCLE_ERROR_MIGRATION_PATH)).toBe(true);
+    if (!existsSync(LIFECYCLE_ERROR_MIGRATION_PATH)) {
+      return;
+    }
+
+    const sql = readFileSync(LIFECYCLE_ERROR_MIGRATION_PATH, "utf8");
+    expect(sql).toMatch(
+      /owner_uuid is null[\s\S]*ACCOUNT_CUTOVER_UNCLASSIFIED/i,
+    );
+    expect(sql).toMatch(
+      /status = 'quarantined'[\s\S]*ACCOUNT_CUTOVER_QUARANTINED/i,
+    );
+    expect(sql).toMatch(
+      /status in \('deleting', 'cleanup_pending', 'complete'\)[\s\S]*ACCOUNT_DELETING/i,
+    );
+    expect(sql).toMatch(
+      /status is distinct from 'active'[\s\S]*ACCOUNT_SESSION_STALE/i,
     );
   });
 });

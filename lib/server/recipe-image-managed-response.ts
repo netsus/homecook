@@ -2,6 +2,8 @@ import { fail, ok } from "@/lib/api/response";
 
 import type { ManagedRecipeImageUploadResult } from
   "./recipe-image-managed-upload";
+import type { ManagedRecipeImageCancelResult } from
+  "./recipe-image-managed-cancel";
 
 function validRetryAfter(seconds: number) {
   return Number.isSafeInteger(seconds) && seconds > 0;
@@ -99,4 +101,70 @@ export function createManagedRecipeImageUploadResponse(
   }
 
   return internalFailure();
+}
+
+export function createManagedRecipeImageCancelResponse(
+  result: ManagedRecipeImageCancelResult,
+) {
+  if (result.kind === "succeeded") {
+    return ok({
+      image_object_id: result.objectId,
+      state: result.state,
+    });
+  }
+
+  if (result.kind === "rejected") {
+    switch (result.code) {
+      case "IMAGE_NOT_FOUND":
+        return fail(
+          result.code,
+          "이미지를 찾을 수 없어요.",
+          404,
+        );
+      case "ACCOUNT_CUTOVER_UNCLASSIFIED":
+        return fail(
+          result.code,
+          "계정 상태를 다시 확인해 주세요.",
+          409,
+        );
+      case "ACCOUNT_CUTOVER_QUARANTINED":
+        return fail(
+          result.code,
+          "계정 복구가 필요해요.",
+          409,
+        );
+      case "ACCOUNT_DELETING":
+        return fail(
+          result.code,
+          "계정 삭제가 진행 중이에요.",
+          409,
+        );
+      case "IDEMPOTENCY_KEY_REUSED":
+        return fail(
+          result.code,
+          "같은 요청 키가 다른 요청에 이미 사용됐어요.",
+          409,
+        );
+      case "ACCOUNT_GENERATION_STALE":
+        return fail(
+          result.code,
+          "계정 상태를 다시 확인해 주세요.",
+          409,
+        );
+      case "ACCOUNT_SESSION_STALE":
+        return fail(
+          result.code,
+          "세션을 다시 확인해 주세요.",
+          409,
+        );
+      case "IMAGE_EXPIRED":
+        return fail(
+          result.code,
+          "이미지 업로드가 만료됐어요. 다시 업로드해 주세요.",
+          409,
+        );
+    }
+  }
+
+  return fail("INTERNAL_ERROR", "이미지 업로드를 취소하지 못했어요.", 500);
 }

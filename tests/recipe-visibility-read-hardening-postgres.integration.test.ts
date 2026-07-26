@@ -2031,6 +2031,133 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     );
   });
 
+  it("rejects every non-active cancel lifecycle with its exact public code", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      set local role service_role;
+      do $block$
+      declare
+        v_before_checksum text;
+        v_after_checksum text;
+      begin
+        reset role;
+        select encode(
+          extensions.digest(
+            coalesce(
+              string_agg(
+                object.id::text || ':' || object.state,
+                '|' order by object.id
+              ),
+              ''
+            ),
+            'sha256'
+          ),
+          'hex'
+        )
+        into v_before_checksum
+        from public.recipe_image_objects as object;
+
+        set local role service_role;
+        begin
+          perform public.cancel_recipe_image_upload(
+            '00000000-0000-4000-8000-000000000299',
+            '2025-01-01T00:00:00Z',
+            repeat('f', 64),
+            1,
+            '00000000-0000-4000-8000-000000000330',
+            '${IMAGE_CANCEL_OTHER_OWNER}',
+            '2030-07-24T02:02:00Z'
+          );
+          raise exception 'unclassified lifecycle cancel unexpectedly ran';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'ACCOUNT_CUTOVER_UNCLASSIFIED' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        update public.user_account_lifecycles
+        set status = 'quarantined'
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        set local role service_role;
+        begin
+          perform public.cancel_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '00000000-0000-4000-8000-000000000331',
+            '${IMAGE_CANCEL_OTHER_OWNER}',
+            '2030-07-24T02:02:01Z'
+          );
+          raise exception 'quarantined lifecycle cancel unexpectedly ran';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'ACCOUNT_CUTOVER_QUARANTINED' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        update public.user_account_lifecycles
+        set status = 'deleting'
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        set local role service_role;
+        begin
+          perform public.cancel_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '00000000-0000-4000-8000-000000000332',
+            '${IMAGE_CANCEL_OTHER_OWNER}',
+            '2030-07-24T02:02:02Z'
+          );
+          raise exception 'deleting lifecycle cancel unexpectedly ran';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'ACCOUNT_DELETING' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        select encode(
+          extensions.digest(
+            coalesce(
+              string_agg(
+                object.id::text || ':' || object.state,
+                '|' order by object.id
+              ),
+              ''
+            ),
+            'sha256'
+          ),
+          'hex'
+        )
+        into v_after_checksum
+        from public.recipe_image_objects as object;
+
+        if v_after_checksum is distinct from v_before_checksum then
+          raise exception 'lifecycle rejection mutated image state';
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'image-cancel-lifecycle-pass';
+    `)).toBe("image-cancel-lifecycle-pass");
+  });
+
   it("fails every pre-PUT quota boundary closed without charging the rejected attempt", () => {
     expect(psql(`
       begin;
