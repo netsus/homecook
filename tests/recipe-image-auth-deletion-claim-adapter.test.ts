@@ -84,6 +84,24 @@ describe("managed recipe image Auth deletion claim adapter", () => {
     });
   });
 
+  it("preserves the exact microsecond identity epoch returned by the claim", async () => {
+    const exactEpoch = "2030-07-25T00:00:00.123456Z";
+    const rpc = vi.fn(async () => rpcResult(claimedRow({
+      auth_identity_created_at_snapshot: exactEpoch,
+    })));
+
+    await expect(claimRecipeImageAuthDeletionIfReady({
+      accountGeneration: 3,
+      dbClient: { rpc },
+      leaseToken: LEASE_TOKEN,
+      now: () => new Date(NOW),
+      outboxId: OUTBOX_ID,
+      ownerUuid: OWNER_UUID,
+    })).resolves.toMatchObject({
+      authIdentityCreatedAt: exactEpoch,
+    });
+  });
+
   it.each([
     ["undefined result", undefined],
     ["missing error field", { data: claimedRow() }],
