@@ -2,15 +2,37 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createManagedRecipeImageStorageAdapter = vi.fn();
+const inspectRecipeImageUpload = vi.fn();
+const readVerifiedAccountGenerationSession = vi.fn();
+const runManagedRecipeImageUpload = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
 }));
 
+vi.mock("@/lib/server/account-generation/session-authority", () => ({
+  readVerifiedAccountGenerationSession,
+}));
+
+vi.mock("@/lib/server/recipe-image-managed-storage", () => ({
+  createManagedRecipeImageStorageAdapter,
+}));
+
+vi.mock("@/lib/server/recipe-image-managed-upload", () => ({
+  runManagedRecipeImageUpload,
+}));
+
+vi.mock("@/lib/server/recipe-image-upload", () => ({
+  inspectRecipeImageUpload,
+}));
+
 const userId = "550e8400-e29b-41d4-a716-446655440030";
+const imageObjectId = "550e8400-e29b-41d4-a716-446655440031";
 const attemptId = "550e8400-e29b-41d4-a716-446655440032";
 const attemptToken = "test-attempt-token";
+const idempotencyKey = "550e8400-e29b-41d4-a716-446655440033";
 const deadlineAt = "2026-07-23T07:32:00.000Z";
 const leaseExpiresAt = "2026-07-23T07:32:00.000Z";
 
@@ -79,6 +101,13 @@ function createExternalWriteServiceClient({
     name: string,
     params: Record<string, unknown>,
   ) => {
+    if (name === "get_account_generation_capability") {
+      return {
+        data: { revision: 1, state: "legacy" },
+        error: null,
+      };
+    }
+
     if (name === "start_legacy_external_write_attempt") {
       return startResult;
     }
@@ -109,9 +138,353 @@ async function importImageRoute() {
 describe("POST /api/v1/recipes/images", () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.unstubAllEnvs();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createManagedRecipeImageStorageAdapter.mockReset();
+    inspectRecipeImageUpload.mockReset();
+    readVerifiedAccountGenerationSession.mockReset();
+    runManagedRecipeImageUpload.mockReset();
   });
+
+  it("fails closed when the capability authority cannot be read", async () => {
+    const rpc = vi.fn(async () => ({
+      data: null,
+      error: { message: "capability unavailable" },
+    }));
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ rpc });
+
+    const { POST } = await importImageRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/images", {
+      method: "POST",
+      body: new FormData(),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(rpc).toHaveBeenCalledWith("get_account_generation_capability");
+    expect(inspectRecipeImageUpload).not.toHaveBeenCalled();
+  });
+
+  it("blocks both upload paths during cutover maintenance before reading the file", async () => {
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "get_account_generation_capability") {
+        return {
+          data: { revision: 2, state: "cutover_maintenance" },
+          error: null,
+        };
+      }
+      throw new Error(`Unexpected RPC: ${name}`);
+    });
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ rpc });
+
+    const { POST } = await importImageRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/images", {
+      method: "POST",
+      body: new FormData(),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body).toMatchObject({
+      success: false,
+      error: { code: "ACCOUNT_LIFECYCLE_MAINTENANCE" },
+    });
+    expect(inspectRecipeImageUpload).not.toHaveBeenCalled();
+    expect(runManagedRecipeImageUpload).not.toHaveBeenCalled();
+  });
+
+  it("requires an idempotency key before managed upload work", async () => {
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "get_account_generation_capability") {
+        return {
+          data: { revision: 3, state: "generation_active" },
+          error: null,
+        };
+      }
+      throw new Error(`Unexpected RPC: ${name}`);
+    });
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ rpc });
+
+    const { POST } = await importImageRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/images", {
+      method: "POST",
+      body: new FormData(),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(428);
+    expect(body).toMatchObject({
+      success: false,
+      error: { code: "IDEMPOTENCY_KEY_REQUIRED" },
+    });
+    expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+    expect(inspectRecipeImageUpload).not.toHaveBeenCalled();
+  });
+
+  it("dispatches generation-active uploads through the managed authority", async () => {
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "get_account_generation_capability") {
+        return {
+          data: { revision: 3, state: "generation_active" },
+          error: null,
+        };
+      }
+      throw new Error(`Unexpected RPC: ${name}`);
+    });
+    const routeClient = {
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
+      },
+    };
+    const storageAdapter = {
+      issueReadUrl: vi.fn(),
+      readTakeoverObject: vi.fn(),
+      uploadObject: vi.fn(),
+    };
+    createRouteHandlerClient.mockResolvedValue(routeClient);
+    createServiceRoleClient.mockReturnValue({ rpc, storage: { from: vi.fn() } });
+    readVerifiedAccountGenerationSession.mockResolvedValue({
+      ok: true,
+      sessionAuthority: {
+        authIdentityCreatedAt: "2026-07-23T00:00:00.000Z",
+        hmacKeyVersion: 1,
+        ownerUuid: userId,
+        sessionIssuedAt: "2026-07-26T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+      },
+    });
+    inspectRecipeImageUpload.mockResolvedValue({
+      ok: true,
+      value: {
+        actualMimeType: "image/png",
+        byteSize: 3,
+        extension: "png",
+        rawSha256: "b".repeat(64),
+      },
+    });
+    createManagedRecipeImageStorageAdapter.mockReturnValue(storageAdapter);
+    runManagedRecipeImageUpload.mockResolvedValue({
+      kind: "succeeded",
+      objectId: imageObjectId,
+      readUrl:
+        "https://project.supabase.co/storage/v1/object/sign/recipe-images-private/path?token=signed",
+      readUrlExpiresAt: "2026-07-26T03:30:00.000Z",
+      state: "uploaded_unlinked",
+    });
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+
+    const formData = new FormData();
+    const image = new File([new Uint8Array([1, 2, 3])], "recipe.png", {
+      type: "image/png",
+    });
+    formData.set("image", image);
+
+    const { POST } = await importImageRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/images", {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: formData,
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        image_object_id: imageObjectId,
+        read_url:
+          "https://project.supabase.co/storage/v1/object/sign/recipe-images-private/path?token=signed",
+        read_url_expires_at: "2026-07-26T03:30:00.000Z",
+        state: "uploaded_unlinked",
+      },
+      error: null,
+    });
+    expect(readVerifiedAccountGenerationSession).toHaveBeenCalledWith(routeClient);
+    expect(inspectRecipeImageUpload).toHaveBeenCalledWith(expect.any(File));
+    expect(runManagedRecipeImageUpload).toHaveBeenCalledWith(expect.objectContaining({
+      body: expect.any(File),
+      dbClient: expect.objectContaining({ rpc }),
+      idempotencyKey,
+      inspection: expect.objectContaining({ actualMimeType: "image/png" }),
+      issueReadUrl: storageAdapter.issueReadUrl,
+      readTakeoverObject: storageAdapter.readTakeoverObject,
+      sessionAuthority: expect.objectContaining({ ownerUuid: userId }),
+      uploadObject: storageAdapter.uploadObject,
+    }));
+  });
+
+  it("fails closed when the verified session belongs to a different owner", async () => {
+    const rpc = vi.fn(async () => ({
+      data: { revision: 3, state: "generation_active" },
+      error: null,
+    }));
+    const routeClient = {
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
+      },
+    };
+    createRouteHandlerClient.mockResolvedValue(routeClient);
+    createServiceRoleClient.mockReturnValue({ rpc });
+    readVerifiedAccountGenerationSession.mockResolvedValue({
+      ok: true,
+      sessionAuthority: {
+        authIdentityCreatedAt: "2026-07-23T00:00:00.000Z",
+        hmacKeyVersion: 1,
+        ownerUuid: "550e8400-e29b-41d4-a716-446655440099",
+        sessionIssuedAt: "2026-07-26T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+      },
+    });
+
+    const { POST } = await importImageRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/images", {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: new FormData(),
+    }));
+
+    expect(response.status).toBe(500);
+    expect(inspectRecipeImageUpload).not.toHaveBeenCalled();
+    expect(runManagedRecipeImageUpload).not.toHaveBeenCalled();
+  });
+
+  it("returns the official internal error wrapper when image inspection throws", async () => {
+    const rpc = vi.fn(async () => ({
+      data: { revision: 3, state: "generation_active" },
+      error: null,
+    }));
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ rpc });
+    readVerifiedAccountGenerationSession.mockResolvedValue({
+      ok: true,
+      sessionAuthority: {
+        authIdentityCreatedAt: "2026-07-23T00:00:00.000Z",
+        hmacKeyVersion: 1,
+        ownerUuid: userId,
+        sessionIssuedAt: "2026-07-26T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+      },
+    });
+    inspectRecipeImageUpload.mockRejectedValue(new Error("file read failed"));
+
+    const formData = new FormData();
+    formData.set("image", new File([new Uint8Array([1, 2, 3])], "recipe.png", {
+      type: "image/png",
+    }));
+
+    const { POST } = await importImageRoute();
+    const response = await POST(new Request(
+      "http://localhost:3000/api/v1/recipes/images",
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: formData,
+      },
+    ));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "이미지를 업로드하지 못했어요.",
+        fields: [],
+      },
+    });
+    expect(runManagedRecipeImageUpload).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      expectedCode: "IMAGE_TOO_LARGE",
+      expectedStatus: 413,
+      reason: "too_large",
+    },
+    {
+      expectedCode: "IMAGE_MIME_MISMATCH",
+      expectedStatus: 422,
+      reason: "declared_type_mismatch",
+    },
+    {
+      expectedCode: "IMAGE_MIME_MISMATCH",
+      expectedStatus: 422,
+      reason: "unsupported_actual_type",
+    },
+  ])(
+    "maps managed inspection $reason to $expectedCode",
+    async ({ expectedCode, expectedStatus, reason }) => {
+      const rpc = vi.fn(async () => ({
+        data: { revision: 3, state: "generation_active" },
+        error: null,
+      }));
+      createRouteHandlerClient.mockResolvedValue({
+        auth: {
+          getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
+        },
+      });
+      createServiceRoleClient.mockReturnValue({ rpc });
+      readVerifiedAccountGenerationSession.mockResolvedValue({
+        ok: true,
+        sessionAuthority: {
+          authIdentityCreatedAt: "2026-07-23T00:00:00.000Z",
+          hmacKeyVersion: 1,
+          ownerUuid: userId,
+          sessionIssuedAt: "2026-07-26T00:00:00.000Z",
+          sessionKeyHash: "a".repeat(64),
+        },
+      });
+      inspectRecipeImageUpload.mockResolvedValue({ ok: false, reason });
+
+      const formData = new FormData();
+      formData.set("image", new File([new Uint8Array([1, 2, 3])], "recipe.png", {
+        type: "image/png",
+      }));
+
+      const { POST } = await importImageRoute();
+      const response = await POST(new Request(
+        "http://localhost:3000/api/v1/recipes/images",
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": idempotencyKey },
+          body: formData,
+        },
+      ));
+      const body = await response.json();
+
+      expect(response.status).toBe(expectedStatus);
+      expect(body).toMatchObject({
+        success: false,
+        error: { code: expectedCode },
+      });
+      expect(runManagedRecipeImageUpload).not.toHaveBeenCalled();
+    },
+  );
 
   it("returns 401 before reading multipart data when unauthenticated", async () => {
     createRouteHandlerClient.mockResolvedValue({
@@ -141,6 +514,9 @@ describe("POST /api/v1/recipes/images", () => {
         getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
       },
     });
+    createServiceRoleClient.mockReturnValue(
+      createExternalWriteServiceClient(),
+    );
 
     const formData = new FormData();
     formData.set("image", new File(["not an image"], "recipe.txt", { type: "text/plain" }));
@@ -161,7 +537,7 @@ describe("POST /api/v1/recipes/images", () => {
         fields: [{ field: "image", reason: "unsupported_type" }],
       },
     });
-    expect(createServiceRoleClient).not.toHaveBeenCalled();
+    expect(createServiceRoleClient).toHaveBeenCalledOnce();
   });
 
   it("rejects images over 5MB", async () => {
@@ -170,6 +546,9 @@ describe("POST /api/v1/recipes/images", () => {
         getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
       },
     });
+    createServiceRoleClient.mockReturnValue(
+      createExternalWriteServiceClient(),
+    );
 
     const formData = new FormData();
     formData.set("image", new File(
@@ -194,7 +573,7 @@ describe("POST /api/v1/recipes/images", () => {
         fields: [{ field: "image", reason: "max_size" }],
       },
     });
-    expect(createServiceRoleClient).not.toHaveBeenCalled();
+    expect(createServiceRoleClient).toHaveBeenCalledOnce();
   });
 
   it("fences a service-role upload before storing a valid image", async () => {
@@ -242,19 +621,19 @@ describe("POST /api/v1/recipes/images", () => {
       { contentType: "image/webp", upsert: false },
     );
     const objectPath = upload.mock.calls[0]?.[0];
-    expect(rpc).toHaveBeenNthCalledWith(1, "start_legacy_external_write_attempt", {
+    expect(rpc).toHaveBeenNthCalledWith(2, "start_legacy_external_write_attempt", {
       p_object_path: objectPath,
       p_owner_uuid: userId,
     });
-    expect(rpc).toHaveBeenNthCalledWith(2, "finalize_legacy_external_write_attempt", {
+    expect(rpc).toHaveBeenNthCalledWith(3, "finalize_legacy_external_write_attempt", {
       p_attempt_token: attemptToken,
       p_outcome: "succeeded",
     });
-    expect(rpc.mock.invocationCallOrder[0]).toBeLessThan(upload.mock.invocationCallOrder[0]);
-    expect(upload.mock.invocationCallOrder[0]).toBeLessThan(rpc.mock.invocationCallOrder[1]);
+    expect(rpc.mock.invocationCallOrder[1]).toBeLessThan(upload.mock.invocationCallOrder[0]);
+    expect(upload.mock.invocationCallOrder[0]).toBeLessThan(rpc.mock.invocationCallOrder[2]);
   });
 
-  it("preserves authenticated Storage fallback when no service-role client exists", async () => {
+  it("fails closed when no service-role client exists", async () => {
     const { storage, upload } = createStorageClient();
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -275,8 +654,14 @@ describe("POST /api/v1/recipes/images", () => {
       body: formData,
     }));
 
-    expect(response.status).toBe(201);
-    expect(upload).toHaveBeenCalledOnce();
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(upload).not.toHaveBeenCalled();
   });
 
   it("does not upload or fall back when the service-role start fence fails", async () => {
@@ -353,7 +738,7 @@ describe("POST /api/v1/recipes/images", () => {
       data: null,
       error: { code: "INTERNAL_ERROR" },
     });
-    expect(rpc).toHaveBeenNthCalledWith(2, "finalize_legacy_external_write_attempt", {
+    expect(rpc).toHaveBeenNthCalledWith(3, "finalize_legacy_external_write_attempt", {
       p_attempt_token: attemptToken,
       p_outcome: "failed",
     });
@@ -396,7 +781,7 @@ describe("POST /api/v1/recipes/images", () => {
 
     expect(response.status).toBe(500);
     expect(upload).toHaveBeenCalledOnce();
-    expect(rpc).toHaveBeenNthCalledWith(2, "finalize_legacy_external_write_attempt", {
+    expect(rpc).toHaveBeenNthCalledWith(3, "finalize_legacy_external_write_attempt", {
       p_attempt_token: attemptToken,
       p_outcome: "succeeded",
     });

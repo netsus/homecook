@@ -1802,7 +1802,7 @@
       "kind": "service_external_write",
       "operation": "upload",
       "target": "recipe-images",
-      "line": 90,
+      "line": 253,
       "source_file": "app/api/v1/recipes/images/route.ts",
       "route": "/api/v1/recipes/images",
       "owner_scope": "authenticated-user",
@@ -1835,6 +1835,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-25T22:32:37.619Z",
-  "checksum": "2415110b33ec3de3eaa432e939a2c7c23009ccd5650426cd495375f2dc0e1583"
+  "generated_at": "2026-07-26T04:20:32.081Z",
+  "checksum": "21dfdc6c13944956b80b06ebb406b47ae77f206fc9feae9b6300ae7b74c8180a"
 }
