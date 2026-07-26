@@ -29,6 +29,8 @@ const IMAGE_AUTH_DELETION_CLAIM_MIGRATION_PATH =
   "supabase/migrations/20260724260000_recipe_image_auth_deletion_claim_authority.sql";
 const IMAGE_AUTH_DELETION_FINALIZE_MIGRATION_PATH =
   "supabase/migrations/20260724270000_recipe_image_auth_deletion_finalize_authority.sql";
+const IMAGE_AUTH_DELETION_CANDIDATE_MIGRATION_PATH =
+  "supabase/migrations/20260724280000_recipe_image_auth_deletion_candidate_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -5452,6 +5454,198 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         )
       );
     `)).toBe("f:f:t:f:t");
+  });
+
+  it("pages due Auth deletion candidates without claiming or starving later rows", () => {
+    const ownerOne = "00000000-0000-4000-8000-000000000460";
+    const ownerTwo = "00000000-0000-4000-8000-000000000461";
+    const ownerThree = "00000000-0000-4000-8000-000000000462";
+    const outboxOne = "00000000-0000-4000-8000-000000000470";
+    const outboxTwo = "00000000-0000-4000-8000-000000000471";
+    const outboxThree = "00000000-0000-4000-8000-000000000472";
+    const epoch = "2030-07-25T10:00:00Z";
+    const firstDue = "2030-07-25T10:05:00Z";
+    const secondDue = "2030-07-25T10:10:00Z";
+    const thirdDue = "2030-07-25T10:15:00Z";
+    const now = "2030-07-25T11:00:00Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        personal_db_deleted_at
+      ) values
+        ('${ownerOne}', 1, '${epoch}', 'cleanup_pending', '${epoch}'),
+        ('${ownerTwo}', 1, '${epoch}', 'cleanup_pending', '${epoch}'),
+        ('${ownerThree}', 1, '${epoch}', 'cleanup_pending', '${epoch}');
+
+      insert into public.auth_identity_deletion_outbox (
+        id,
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        attempts,
+        lease_token,
+        lease_expires_at,
+        next_attempt_at
+      ) values
+        (
+          '${outboxOne}',
+          '${ownerOne}',
+          1,
+          '${epoch}',
+          'pending',
+          0,
+          null,
+          null,
+          '${firstDue}'
+        ),
+        (
+          '${outboxTwo}',
+          '${ownerTwo}',
+          1,
+          '${epoch}',
+          'failed',
+          1,
+          null,
+          null,
+          '${secondDue}'
+        ),
+        (
+          '${outboxThree}',
+          '${ownerThree}',
+          1,
+          '${epoch}',
+          'processing',
+          1,
+          '00000000-0000-4000-8000-000000000473',
+          '${thirdDue}',
+          '${thirdDue}'
+        );
+
+      set local role service_role;
+      with first_page as (
+        select *
+        from public.list_recipe_image_auth_deletion_candidates(
+          2,
+          '${now}',
+          null,
+          null
+        )
+      ),
+      second_page as (
+        select *
+        from public.list_recipe_image_auth_deletion_candidates(
+          2,
+          '${now}',
+          '${secondDue}',
+          '${outboxTwo}'
+        )
+      )
+      select concat_ws(
+        ':',
+        (
+          select string_agg(outbox_id::text, ',' order by next_attempt_at, outbox_id)
+          from first_page
+        ),
+        (
+          select string_agg(outbox_id::text, ',' order by next_attempt_at, outbox_id)
+          from second_page
+        )
+      );
+      rollback;
+    `)).toBe(`${outboxOne},${outboxTwo}:${outboxThree}`);
+  });
+
+  it("excludes future, resolved, active and identity-mismatched Auth candidates", () => {
+    const pendingOwner = "00000000-0000-4000-8000-000000000480";
+    const activeOwner = "00000000-0000-4000-8000-000000000481";
+    const resolvedOwner = "00000000-0000-4000-8000-000000000482";
+    const mismatchOwner = "00000000-0000-4000-8000-000000000483";
+    const epoch = "2030-07-25T12:00:00Z";
+    const laterEpoch = "2030-07-25T12:30:00Z";
+    const now = "2030-07-25T13:00:00Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        personal_db_deleted_at,
+        auth_identity_deleted_at
+      ) values
+        ('${pendingOwner}', 1, '${epoch}', 'cleanup_pending', '${epoch}', null),
+        ('${activeOwner}', 1, '${epoch}', 'active', '${epoch}', null),
+        ('${resolvedOwner}', 1, '${epoch}', 'cleanup_pending', '${epoch}', '${now}'),
+        ('${mismatchOwner}', 1, '${laterEpoch}', 'cleanup_pending', '${epoch}', null);
+
+      insert into public.auth_identity_deletion_outbox (
+        id,
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        next_attempt_at
+      ) values
+        ('00000000-0000-4000-8000-000000000490', '${pendingOwner}', 1, '${epoch}', 'pending', '${now}'::timestamptz + interval '1 hour'),
+        ('00000000-0000-4000-8000-000000000491', '${activeOwner}', 1, '${epoch}', 'pending', '${epoch}'),
+        ('00000000-0000-4000-8000-000000000492', '${resolvedOwner}', 1, '${epoch}', 'pending', '${epoch}'),
+        ('00000000-0000-4000-8000-000000000493', '${mismatchOwner}', 1, '${epoch}', 'pending', '${epoch}');
+
+      set local role service_role;
+      select count(*)
+      from public.list_recipe_image_auth_deletion_candidates(
+        50,
+        '${now}',
+        null,
+        null
+      );
+      rollback;
+    `)).toBe("0");
+  });
+
+  it("replays Auth candidate discovery with service-only execute access", () => {
+    const replay = psqlFileResult(
+      IMAGE_AUTH_DELETION_CANDIDATE_MIGRATION_PATH,
+    );
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.list_recipe_image_auth_deletion_candidates(integer,timestamp with time zone,timestamp with time zone,uuid)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.list_recipe_image_auth_deletion_candidates(integer,timestamp with time zone,timestamp with time zone,uuid)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.list_recipe_image_auth_deletion_candidates(integer,timestamp with time zone,timestamp with time zone,uuid)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t");
   });
 
   it("keeps Auth deletion readiness inactive before joint activation", () => {
