@@ -31,6 +31,8 @@ const IMAGE_AUTH_DELETION_FINALIZE_MIGRATION_PATH =
   "supabase/migrations/20260724270000_recipe_image_auth_deletion_finalize_authority.sql";
 const IMAGE_AUTH_DELETION_CANDIDATE_MIGRATION_PATH =
   "supabase/migrations/20260724280000_recipe_image_auth_deletion_candidate_authority.sql";
+const IMAGE_LIFECYCLE_COMPLETION_MIGRATION_PATH =
+  "supabase/migrations/20260724290000_recipe_image_lifecycle_completion_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -5646,6 +5648,492 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         )
       );
     `)).toBe("f:f:t");
+  });
+
+  it("completes one exact lifecycle only after every terminal barrier is closed", () => {
+    const owner = "00000000-0000-4000-8000-000000000500";
+    const absentObject = "00000000-0000-4000-8000-000000000502";
+    const epoch = "2030-07-26T00:00:00.123456Z";
+    const now = "2030-07-26T01:00:00.654321Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        completed_cleanup_generation,
+        personal_db_deleted_at,
+        auth_identity_deleted_at
+      ) values (
+        '${owner}',
+        1,
+        '${epoch}',
+        'cleanup_pending',
+        2,
+        0,
+        '${epoch}',
+        '${now}'::timestamptz - interval '1 minute'
+      );
+
+      insert into public.auth_identity_deletion_outbox (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values (
+        '${owner}',
+        1,
+        '${epoch}',
+        'succeeded',
+        'deleted',
+        '${epoch}'
+      );
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        next_terminal_scan_at
+      ) values (
+        '${absentObject}',
+        '${owner}',
+        1,
+        'recipe-images-private',
+        '${owner}/1/${absentObject}.webp',
+        'private',
+        'verified_not_found',
+        2,
+        '${now}'
+      );
+
+      insert into public.storage_object_deletion_outbox (
+        bucket_id,
+        object_path,
+        owner_uuid,
+        account_generation,
+        cleanup_generation,
+        reason,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values
+        (
+          'recipe-images-private',
+          '${owner}/1/${absentObject}.webp',
+          '${owner}',
+          1,
+          1,
+          'account_delete',
+          'succeeded',
+          'deleted',
+          '${epoch}'
+        ),
+        (
+          'recipe-images-private',
+          '${owner}/1/${absentObject}.webp',
+          '${owner}',
+          1,
+          2,
+          'late_terminal_object',
+          'succeeded',
+          'verified_not_found',
+          '${epoch}'
+        );
+
+      create temp table completion_results (
+        step integer primary key,
+        result jsonb not null
+      ) on commit drop;
+      grant insert, select on completion_results to service_role;
+
+      set local role service_role;
+      insert into completion_results
+      values (
+        1,
+        public.complete_recipe_image_account_lifecycle(
+          '${owner}',
+          1,
+          '${now}'
+        )
+      );
+      insert into completion_results
+      values (
+        2,
+        public.complete_recipe_image_account_lifecycle(
+          '${owner}',
+          1,
+          '${now}'::timestamptz + interval '1 minute'
+        )
+      );
+      reset role;
+
+      select concat_ws(
+        ':',
+        (
+          select result ->> 'changed'
+          from completion_results
+          where step = 1
+        ),
+        (
+          select result ->> 'changed'
+          from completion_results
+          where step = 2
+        ),
+        lifecycle.status,
+        lifecycle.required_cleanup_generation,
+        lifecycle.completed_cleanup_generation,
+        lifecycle.revision,
+        lifecycle.updated_at = '${now}'
+      )
+      from public.user_account_lifecycles as lifecycle
+      where lifecycle.owner_uuid = '${owner}'
+        and lifecycle.account_generation = 1;
+      rollback;
+    `)).toBe("true:false:complete:2:2:2:t");
+  });
+
+  it("rejects cleanup-generation gaps and mismatched terminal object evidence", () => {
+    const gapOwner = "00000000-0000-4000-8000-000000000510";
+    const gapObject = "00000000-0000-4000-8000-000000000511";
+    const mismatchOwner = "00000000-0000-4000-8000-000000000512";
+    const mismatchObject = "00000000-0000-4000-8000-000000000513";
+    const outboxOnlyOwner = "00000000-0000-4000-8000-000000000514";
+    const epoch = "2030-07-26T02:00:00Z";
+    const now = "2030-07-26T03:00:00Z";
+
+    const fixture = (
+      owner: string,
+      object: string,
+      requiredGeneration: number,
+      cleanupGeneration: number,
+      objectState: "deleted" | "verified_not_found",
+      terminalResult: "deleted" | "verified_not_found",
+    ) => `
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        completed_cleanup_generation,
+        personal_db_deleted_at,
+        auth_identity_deleted_at
+      ) values (
+        '${owner}', 1, '${epoch}', 'cleanup_pending',
+        ${requiredGeneration}, 0, '${epoch}', '${now}'
+      );
+      insert into public.auth_identity_deletion_outbox (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values (
+        '${owner}', 1, '${epoch}', 'succeeded', 'deleted', '${epoch}'
+      );
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        next_terminal_scan_at
+      ) values (
+        '${object}', '${owner}', 1, 'recipe-images-private',
+        '${owner}/1/${object}.webp', 'private', '${objectState}',
+        ${cleanupGeneration}, '${now}'
+      );
+      insert into public.storage_object_deletion_outbox (
+        bucket_id,
+        object_path,
+        owner_uuid,
+        account_generation,
+        cleanup_generation,
+        reason,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values (
+        'recipe-images-private', '${owner}/1/${object}.webp',
+        '${owner}', 1, ${cleanupGeneration}, 'account_delete',
+        'succeeded', '${terminalResult}', '${epoch}'
+      );
+    `;
+
+    const gap = psqlResult(`
+      begin;
+      ${fixture(gapOwner, gapObject, 2, 2, "deleted", "deleted")}
+      set local role service_role;
+      select public.complete_recipe_image_account_lifecycle(
+        '${gapOwner}',
+        1,
+        '${now}'
+      );
+    `);
+    expect(gap.status).not.toBe(0);
+    expect(gap.stderr).toContain(
+      "Lifecycle completion terminal evidence is not ready",
+    );
+
+    const mismatch = psqlResult(`
+      begin;
+      ${fixture(
+        mismatchOwner,
+        mismatchObject,
+        1,
+        1,
+        "deleted",
+        "verified_not_found",
+      )}
+      set local role service_role;
+      select public.complete_recipe_image_account_lifecycle(
+        '${mismatchOwner}',
+        1,
+        '${now}'
+      );
+    `);
+    expect(mismatch.status).not.toBe(0);
+    expect(mismatch.stderr).toContain(
+      "Lifecycle completion terminal evidence is not ready",
+    );
+
+    const outboxOnly = psqlResult(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        completed_cleanup_generation,
+        personal_db_deleted_at,
+        auth_identity_deleted_at
+      ) values (
+        '${outboxOnlyOwner}', 1, '${epoch}', 'cleanup_pending',
+        1, 0, '${epoch}', '${now}'
+      );
+      insert into public.auth_identity_deletion_outbox (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values (
+        '${outboxOnlyOwner}',
+        1,
+        '${epoch}',
+        'succeeded',
+        'deleted',
+        '${epoch}'
+      );
+      insert into public.storage_object_deletion_outbox (
+        bucket_id,
+        object_path,
+        owner_uuid,
+        account_generation,
+        cleanup_generation,
+        reason,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values (
+        'recipe-images-private',
+        '${outboxOnlyOwner}/1/00000000-0000-4000-8000-000000000515.webp',
+        '${outboxOnlyOwner}',
+        1,
+        1,
+        'account_delete',
+        'succeeded',
+        'deleted',
+        '${epoch}'
+      );
+      set local role service_role;
+      select public.complete_recipe_image_account_lifecycle(
+        '${outboxOnlyOwner}',
+        1,
+        '${now}'
+      );
+    `);
+    expect(outboxOnly.status).not.toBe(0);
+    expect(outboxOnly.stderr).toContain(
+      "Lifecycle completion terminal evidence is not ready",
+    );
+  });
+
+  it("rejects unresolved Auth deletion and nonzero expected-owner evidence", () => {
+    const authOwner = "00000000-0000-4000-8000-000000000520";
+    const signalOwner = "00000000-0000-4000-8000-000000000521";
+    const signalObject = "00000000-0000-4000-8000-000000000522";
+    const epoch = "2030-07-26T04:00:00Z";
+    const now = "2030-07-26T05:00:00Z";
+
+    const authPending = psqlResult(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        personal_db_deleted_at,
+        auth_identity_deleted_at
+      ) values (
+        '${authOwner}', 1, '${epoch}', 'cleanup_pending', '${epoch}', '${now}'
+      );
+      insert into public.auth_identity_deletion_outbox (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        next_attempt_at
+      ) values (
+        '${authOwner}', 1, '${epoch}', 'dead_letter', '${epoch}'
+      );
+      set local role service_role;
+      select public.complete_recipe_image_account_lifecycle(
+        '${authOwner}',
+        1,
+        '${now}'
+      );
+    `);
+    expect(authPending.status).not.toBe(0);
+    expect(authPending.stderr).toContain(
+      "Lifecycle completion terminal evidence is not ready",
+    );
+
+    const ownerSignal = psqlResult(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        personal_db_deleted_at,
+        auth_identity_deleted_at
+      ) values (
+        '${signalOwner}', 1, '${epoch}', 'cleanup_pending', '${epoch}', '${now}'
+      );
+      insert into public.auth_identity_deletion_outbox (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values (
+        '${signalOwner}', 1, '${epoch}', 'succeeded', 'deleted', '${epoch}'
+      );
+      insert into storage.objects (
+        id,
+        bucket_id,
+        name,
+        owner_id
+      ) values (
+        '${signalObject}',
+        'recipe-images-private',
+        '${signalOwner}/1/unregistered.webp',
+        '${signalOwner}'
+      );
+      set local role service_role;
+      select public.complete_recipe_image_account_lifecycle(
+        '${signalOwner}',
+        1,
+        '${now}'
+      );
+    `);
+    expect(ownerSignal.status).not.toBe(0);
+    expect(ownerSignal.stderr).toContain(
+      "Lifecycle completion terminal evidence is not ready",
+    );
+  });
+
+  it("replays lifecycle completion as service-only and fails closed before activation", () => {
+    const replay = psqlFileResult(
+      IMAGE_LIFECYCLE_COMPLETION_MIGRATION_PATH,
+    );
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.complete_recipe_image_account_lifecycle(uuid,bigint,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.complete_recipe_image_account_lifecycle(uuid,bigint,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.complete_recipe_image_account_lifecycle(uuid,bigint,timestamp with time zone)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t");
+
+    const legacy = psqlResult(`
+      begin;
+      set local role service_role;
+      select public.complete_recipe_image_account_lifecycle(
+        '${OWNER_ACTIVE}',
+        1,
+        now()
+      );
+    `);
+    expect(legacy.status).not.toBe(0);
+    expect(legacy.stderr).toContain("Lifecycle completion is inactive");
+
+    const serializable = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select public.complete_recipe_image_account_lifecycle(
+        '${OWNER_ACTIVE}',
+        1,
+        now()
+      );
+    `);
+    expect(serializable.status).not.toBe(0);
+    expect(serializable.stderr).toContain(
+      "Lifecycle completion requires READ COMMITTED",
+    );
   });
 
   it("keeps Auth deletion readiness inactive before joint activation", () => {
