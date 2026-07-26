@@ -161,6 +161,38 @@ export function createManagedRecipeImageStorageAdapter({
   }
 
   return {
+    async checkObjectPresence({
+      bucketId,
+      objectPath,
+    }: {
+      bucketId: string;
+      objectPath: string;
+    }): Promise<
+      | { kind: "absent" }
+      | { kind: "failed" }
+      | { kind: "present" }
+    > {
+      if (!validPrivateTarget(bucketId, objectPath)) {
+        return { kind: "failed" };
+      }
+
+      const result = await beforeDeadline(
+        () => client.storage.from(bucketId).info(objectPath),
+        takeoverReadTimeoutMs,
+      );
+      if (!result) {
+        return { kind: "failed" };
+      }
+      if (result.error) {
+        return isNotFound(result.error)
+          ? { kind: "absent" }
+          : { kind: "failed" };
+      }
+      return result.data
+        ? { kind: "present" }
+        : { kind: "failed" };
+    },
+
     async uploadObject({
       body,
       bucketId,

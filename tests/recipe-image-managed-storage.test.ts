@@ -14,6 +14,7 @@ const NOW = "2026-07-26T02:00:00.000Z";
 function setup(overrides: {
   createSignedUrl?: ReturnType<typeof vi.fn>;
   download?: ReturnType<typeof vi.fn>;
+  exists?: ReturnType<typeof vi.fn>;
   info?: ReturnType<typeof vi.fn>;
   upload?: ReturnType<typeof vi.fn>;
 } = {}) {
@@ -30,6 +31,10 @@ function setup(overrides: {
         data: new Blob([new Uint8Array([1, 2, 3])]).stream(),
         error: null,
       })),
+    })),
+    exists: overrides.exists ?? vi.fn(async () => ({
+      data: true,
+      error: null,
     })),
     info: overrides.info ?? vi.fn(async () => ({
       data: { size: 3 },
@@ -121,6 +126,59 @@ describe("managed recipe image Storage adapter", () => {
       objectPath: OBJECT_PATH,
     })).resolves.toEqual({ kind: "absent" });
     expect(bucket.download).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      expected: { kind: "present" },
+      response: { data: { size: 4 }, error: null },
+    },
+    {
+      expected: { kind: "absent" },
+      response: {
+        data: null,
+        error: {
+          message: "not found",
+          status: 404,
+          statusCode: "404",
+        },
+      },
+    },
+    {
+      expected: { kind: "failed" },
+      response: {
+        data: null,
+        error: {
+          message: "forbidden",
+          status: 403,
+          statusCode: "403",
+        },
+      },
+    },
+  ])(
+    "checks exact terminal object presence without listing or downloading: $expected.kind",
+    async ({ expected, response }) => {
+      const info = vi.fn(async () => response);
+      const { adapter, bucket } = setup({ info });
+
+      await expect(adapter.checkObjectPresence({
+        bucketId: BUCKET_ID,
+        objectPath: OBJECT_PATH,
+      })).resolves.toEqual(expected);
+      expect(info).toHaveBeenCalledWith(OBJECT_PATH);
+      expect(bucket.exists).not.toHaveBeenCalled();
+      expect(bucket.download).not.toHaveBeenCalled();
+    },
+  );
+
+  it("fails closed before Storage for a non-canonical terminal target", async () => {
+    const { adapter, bucket } = setup();
+
+    await expect(adapter.checkObjectPresence({
+      bucketId: "recipe-images",
+      objectPath: OBJECT_PATH,
+    })).resolves.toEqual({ kind: "failed" });
+    expect(bucket.info).not.toHaveBeenCalled();
   });
 
   it("maps a download 404 race to an absent takeover object", async () => {
