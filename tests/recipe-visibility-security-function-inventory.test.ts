@@ -33,6 +33,8 @@ const IMAGE_AUTH_DELETION_READINESS_MANIFEST_PATH =
   "docs/security/recipe-image-auth-deletion-readiness-security-function-authorization-manifest.json";
 const IMAGE_AUTH_DELETION_CLAIM_MANIFEST_PATH =
   "docs/security/recipe-image-auth-deletion-claim-security-function-authorization-manifest.json";
+const IMAGE_AUTH_DELETION_FINALIZE_MANIFEST_PATH =
+  "docs/security/recipe-image-auth-deletion-finalize-security-function-authorization-manifest.json";
 
 describe("recipe visibility security function inventory", () => {
   it("classifies the guard and every recreated baseline function", () => {
@@ -402,6 +404,33 @@ describe("recipe visibility security function inventory", () => {
       expect.objectContaining({
         signature:
           "public.claim_recipe_image_auth_deletion_if_ready(uuid, uuid, bigint, uuid, timestamp with time zone)",
+        effect: "mutation",
+        exposure: "service-internal",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
+    ]);
+  });
+
+  it("classifies the guarded Auth deletion finalize authority", () => {
+    expect(existsSync(IMAGE_AUTH_DELETION_FINALIZE_MANIFEST_PATH)).toBe(
+      true,
+    );
+    if (!existsSync(IMAGE_AUTH_DELETION_FINALIZE_MANIFEST_PATH)) {
+      return;
+    }
+
+    const manifest = JSON.parse(
+      readFileSync(IMAGE_AUTH_DELETION_FINALIZE_MANIFEST_PATH, "utf8"),
+    ) as {
+      functions: Array<Record<string, unknown>>;
+    };
+
+    expect(manifest.functions).toEqual([
+      expect.objectContaining({
+        signature:
+          "public.finalize_recipe_image_auth_deletion_claim(uuid, uuid, bigint, timestamp with time zone, uuid, integer, text, text, timestamp with time zone)",
         effect: "mutation",
         exposure: "service-internal",
         allowed_principals: ["service_role"],
