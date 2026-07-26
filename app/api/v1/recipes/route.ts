@@ -25,6 +25,13 @@ import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
+import {
+  readAccountGenerationCapability,
+} from "@/app/api/v1/users/me/_account-generation";
+import {
+  readVerifiedAccountGenerationSession,
+  type AccountGenerationBootstrapSessionAuthority,
+} from "@/lib/server/account-generation/session-authority";
 import { parseRecipeImagePublicUrl } from "@/lib/server/recipe-media";
 import {
   recalculateRecipeNutritionSnapshot,
@@ -129,7 +136,10 @@ interface ManualRecipeRow {
 
 interface ManualRecipeCreateRpcData extends Partial<ManualRecipeRow> {
   error_code?: string;
+  image_object_id?: string | null;
+  image_state?: string | null;
   message?: string;
+  visibility?: string;
 }
 
 interface IdLookupQuery {
@@ -195,17 +205,10 @@ interface RecipeStepsInsertTable {
 
 interface ManualRecipeDbClient {
   rpc?: (
-    functionName: "create_manual_recipe",
-    args: {
-      p_user_id: string;
-      p_title: string;
-      p_base_servings: number;
-      p_thumbnail_url: string | null;
-      p_tags: string[];
-      p_tag_source: "system_suggested" | "user_reviewed";
-      p_ingredients: Array<Record<string, unknown>>;
-      p_steps: Array<Record<string, unknown>>;
-    },
+    functionName:
+      | "create_manual_recipe"
+      | "create_manual_recipe_with_managed_image",
+    args: Record<string, unknown>,
   ) => PromiseLike<{
     data: ManualRecipeCreateRpcData | null;
     error: QueryError | null;
@@ -225,6 +228,7 @@ interface ValidationField {
 interface ParsedManualRecipeCreate {
   title: string;
   baseServings: number;
+  imageObjectId: string | null;
   ingredients: ManualRecipeIngredientInput[];
   steps: ManualRecipeStepInput[];
   thumbnailUrl: string | null;
@@ -232,6 +236,25 @@ interface ParsedManualRecipeCreate {
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const INITIAL_IMAGE_CLEANUP_GENERATION = 0;
+
+function isServiceOwnedRecipeImageUrl(value: string) {
+  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!configuredUrl) {
+    return false;
+  }
+
+  try {
+    const expectedOrigin = new URL(configuredUrl).origin;
+    const candidate = new URL(value);
+    const pathname = decodeURIComponent(candidate.pathname);
+    return candidate.origin === expectedOrigin
+      && /^\/storage\/v1\/object\/(?:authenticated|public|sign)\/(?:recipe-images|recipe-images-private)\//u
+        .test(pathname);
+  } catch {
+    return false;
+  }
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -442,6 +465,18 @@ function parseManualRecipeCreateBody(rawBody: unknown) {
     }
   }
 
+  let imageObjectId: string | null = null;
+  if (rawBody.image_object_id !== undefined && rawBody.image_object_id !== null) {
+    if (
+      typeof rawBody.image_object_id === "string"
+      && isUuid(rawBody.image_object_id.trim())
+    ) {
+      imageObjectId = rawBody.image_object_id.trim();
+    } else {
+      fields.push({ field: "image_object_id", reason: "invalid_uuid" });
+    }
+  }
+
   const ingredientRecords = Array.isArray(rawBody.ingredients) ? rawBody.ingredients : [];
   if (!Array.isArray(rawBody.ingredients) || rawBody.ingredients.length === 0) {
     fields.push({ field: "ingredients", reason: "required" });
@@ -504,6 +539,7 @@ function parseManualRecipeCreateBody(rawBody: unknown) {
       ? ({
           title,
           baseServings: baseServings as number,
+          imageObjectId,
           ingredients,
           steps,
           thumbnailUrl,
@@ -570,8 +606,20 @@ function buildStepInsertRows(recipeId: string, steps: ManualRecipeStepInput[]) {
 
 function statusFromManualRecipeRpcError(code: string | undefined) {
   switch (code) {
+    case "MANAGED_IMAGE_REFERENCE_REQUIRED":
+    case "IMAGE_VISIBILITY_MISMATCH":
     case "VALIDATION_ERROR":
       return 422;
+    case "ACCOUNT_LIFECYCLE_MAINTENANCE":
+      return 503;
+    case "ACCOUNT_CUTOVER_QUARANTINED":
+    case "ACCOUNT_CUTOVER_UNCLASSIFIED":
+    case "ACCOUNT_DELETING":
+    case "ACCOUNT_GENERATION_STALE":
+    case "ACCOUNT_SESSION_STALE":
+    case "IMAGE_EXPIRED":
+      return 409;
+    case "IMAGE_NOT_FOUND":
     case "RESOURCE_NOT_FOUND":
       return 404;
     case "FORBIDDEN":
@@ -579,6 +627,84 @@ function statusFromManualRecipeRpcError(code: string | undefined) {
     default:
       return 500;
   }
+}
+
+const MANAGED_RECIPE_CREATE_ERROR_CODES = [
+  "ACCOUNT_LIFECYCLE_MAINTENANCE",
+  "ACCOUNT_CUTOVER_QUARANTINED",
+  "ACCOUNT_CUTOVER_UNCLASSIFIED",
+  "ACCOUNT_DELETING",
+  "ACCOUNT_GENERATION_STALE",
+  "ACCOUNT_SESSION_STALE",
+  "IMAGE_EXPIRED",
+  "IMAGE_NOT_FOUND",
+  "IMAGE_VISIBILITY_MISMATCH",
+  "MANAGED_IMAGE_REFERENCE_REQUIRED",
+] as const;
+
+function readManagedRecipeCreateErrorCode(error: QueryError | null) {
+  if (!error) {
+    return null;
+  }
+
+  const detail = `${error.code ?? ""} ${error.message}`;
+  return MANAGED_RECIPE_CREATE_ERROR_CODES.find((code) =>
+    detail.includes(code),
+  ) ?? null;
+}
+
+function failManagedRecipeCreate(code: string) {
+  const messages: Record<string, string> = {
+    ACCOUNT_LIFECYCLE_MAINTENANCE:
+      "계정 정비 작업 중이에요. 잠시 후 다시 시도해 주세요.",
+    ACCOUNT_CUTOVER_QUARANTINED: "계정 복구가 필요해요.",
+    ACCOUNT_CUTOVER_UNCLASSIFIED: "계정 상태를 다시 확인해 주세요.",
+    ACCOUNT_DELETING: "계정 삭제가 진행 중이에요.",
+    ACCOUNT_GENERATION_STALE: "계정 상태를 다시 확인해 주세요.",
+    ACCOUNT_SESSION_STALE: "세션을 다시 확인해 주세요.",
+    IMAGE_EXPIRED: "이미지 업로드가 만료됐어요. 다시 업로드해 주세요.",
+    IMAGE_NOT_FOUND: "이미지를 찾을 수 없어요.",
+    IMAGE_VISIBILITY_MISMATCH: "이미지 공개 범위를 확인해 주세요.",
+    MANAGED_IMAGE_REFERENCE_REQUIRED:
+      "업로드된 이미지 참조를 다시 확인해 주세요.",
+  };
+  return fail(
+    code,
+    messages[code] ?? "레시피를 등록하지 못했어요.",
+    statusFromManualRecipeRpcError(code),
+  );
+}
+
+function buildManualRecipeRpcPayload(
+  parsed: ParsedManualRecipeCreate,
+  tags: string[],
+  tagSource: "system_suggested" | "user_reviewed",
+) {
+  return {
+    p_title: parsed.title,
+    p_base_servings: parsed.baseServings,
+    p_thumbnail_url: parsed.thumbnailUrl,
+    p_tags: tags,
+    p_tag_source: tagSource,
+    p_ingredients: parsed.ingredients.map((ingredient) => ({
+      ingredient_id: ingredient.ingredient_id,
+      amount: ingredient.amount,
+      unit: ingredient.unit,
+      ingredient_type: ingredient.ingredient_type,
+      display_text: ingredient.display_text,
+      scalable: ingredient.scalable,
+      sort_order: ingredient.sort_order,
+    })),
+    p_steps: parsed.steps.map((step) => ({
+      step_number: step.step_number,
+      instruction: step.instruction,
+      cooking_method_id: step.cooking_method_id,
+      ingredients_used: step.ingredients_used,
+      heat_level: step.heat_level,
+      duration_seconds: step.duration_seconds,
+      duration_text: step.duration_text,
+    })),
+  };
 }
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
@@ -1061,22 +1187,63 @@ export async function POST(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
-  if (parsed.thumbnailUrl) {
-    const imageReference = parseRecipeImagePublicUrl({
-      thumbnailUrl: parsed.thumbnailUrl,
-      userId: user.id,
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-    });
-
-    if (!imageReference) {
-      return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, [
-        { field: "thumbnail_url", reason: "invalid_reference" },
-      ]);
-    }
-  }
-
+  const legacyImageReference = parsed.thumbnailUrl
+    ? parseRecipeImagePublicUrl({
+        thumbnailUrl: parsed.thumbnailUrl,
+        userId: user.id,
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+      })
+    : null;
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
     ManualRecipeDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
+  const capability = await readAccountGenerationCapability(dbClient);
+  if (!capability.ok) {
+    return fail("INTERNAL_ERROR", "계정 상태를 확인하지 못했어요.", 500);
+  }
+  if (capability.state === "cutover_maintenance") {
+    return fail(
+      "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      "계정 정비 작업 중이에요. 잠시 후 다시 시도해 주세요.",
+      503,
+    );
+  }
+
+  let managedSession:
+    | AccountGenerationBootstrapSessionAuthority
+    | null = null;
+  if (capability.state === "generation_active") {
+    if (
+      parsed.thumbnailUrl
+      && (
+        parsed.imageObjectId
+        || isServiceOwnedRecipeImageUrl(parsed.thumbnailUrl)
+      )
+    ) {
+      return failManagedRecipeCreate("MANAGED_IMAGE_REFERENCE_REQUIRED");
+    }
+
+    const verifiedSession =
+      await readVerifiedAccountGenerationSession(routeClient);
+    if (
+      !verifiedSession.ok
+      || verifiedSession.sessionAuthority.ownerUuid !== user.id
+    ) {
+      return failManagedRecipeCreate("ACCOUNT_SESSION_STALE");
+    }
+    managedSession = verifiedSession.sessionAuthority;
+  } else if (parsed.imageObjectId) {
+    return failManagedRecipeCreate("ACCOUNT_GENERATION_STALE");
+  }
+
+  if (
+    capability.state === "legacy"
+    && parsed.thumbnailUrl
+    && !legacyImageReference
+  ) {
+    return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, [
+      { field: "thumbnail_url", reason: "invalid_reference" },
+    ]);
+  }
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -1132,36 +1299,38 @@ export async function POST(request: Request) {
   });
   const tags = parsed.reviewedTags ?? toRecipeTagLabels(suggestedTags);
   const tagSource = parsed.reviewedTags === null ? "system_suggested" : "user_reviewed";
+  const recipePayload = buildManualRecipeRpcPayload(
+    parsed,
+    tags,
+    tagSource,
+  );
 
   if (typeof dbClient.rpc === "function") {
-    const recipeResult = await dbClient.rpc("create_manual_recipe", {
-      p_user_id: user.id,
-      p_title: parsed.title,
-      p_base_servings: parsed.baseServings,
-      p_thumbnail_url: parsed.thumbnailUrl,
-      p_tags: tags,
-      p_tag_source: tagSource,
-      p_ingredients: parsed.ingredients.map((ingredient) => ({
-        ingredient_id: ingredient.ingredient_id,
-        amount: ingredient.amount,
-        unit: ingredient.unit,
-        ingredient_type: ingredient.ingredient_type,
-        display_text: ingredient.display_text,
-        scalable: ingredient.scalable,
-        sort_order: ingredient.sort_order,
-      })),
-      p_steps: parsed.steps.map((step) => ({
-        step_number: step.step_number,
-        instruction: step.instruction,
-        cooking_method_id: step.cooking_method_id,
-        ingredients_used: step.ingredients_used,
-        heat_level: step.heat_level,
-        duration_seconds: step.duration_seconds,
-        duration_text: step.duration_text,
-      })),
-    });
+    const recipeResult = managedSession
+      ? await dbClient.rpc("create_manual_recipe_with_managed_image", {
+          ...recipePayload,
+          p_owner_uuid: user.id,
+          p_auth_identity_created_at_snapshot:
+            managedSession.authIdentityCreatedAt,
+          p_session_key_hash: managedSession.sessionKeyHash,
+          p_hmac_key_version: managedSession.hmacKeyVersion,
+          p_image_object_id: parsed.imageObjectId,
+          p_expected_cleanup_generation: parsed.imageObjectId
+            ? INITIAL_IMAGE_CLEANUP_GENERATION
+            : null,
+        })
+      : await dbClient.rpc("create_manual_recipe", {
+          ...recipePayload,
+          p_user_id: user.id,
+        });
 
     if (recipeResult.error || !recipeResult.data) {
+      const managedErrorCode = managedSession
+        ? readManagedRecipeCreateErrorCode(recipeResult.error)
+        : null;
+      if (managedErrorCode) {
+        return failManagedRecipeCreate(managedErrorCode);
+      }
       return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
     }
 
@@ -1203,6 +1372,10 @@ export async function POST(request: Request) {
     }
 
     return ok(toManualRecipeCreateData(recipeResult.data as ManualRecipeRow), { status: 201 });
+  }
+
+  if (managedSession) {
+    return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
   }
 
   const recipeResult = await dbClient

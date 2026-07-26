@@ -110,16 +110,25 @@ function createDbClient() {
     data: [{ id: cookingMethodId, label: "끓이기" }],
     error: null,
   });
-  const rpc = vi.fn(async () => ({
-    data: {
-      id: recipeId,
-      title: "초보도 쉬운 매콤 김치찌개",
-      source_type: "manual",
-      created_by: userId,
-      base_servings: 2,
-    },
-    error: null,
-  }));
+  const rpc = vi.fn(async (name: string) => {
+    if (name === "get_account_generation_capability") {
+      return {
+        data: { revision: 3, state: "legacy" },
+        error: null,
+      };
+    }
+
+    return {
+      data: {
+        id: recipeId,
+        title: "초보도 쉬운 매콤 김치찌개",
+        source_type: "manual",
+        created_by: userId,
+        base_servings: 2,
+      },
+      error: null,
+    };
+  });
   const from = vi.fn((table: string) => {
     if (table === "ingredients") return ingredientsTable;
     if (table === "cooking_methods") return cookingMethodsTable;
