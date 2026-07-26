@@ -1781,6 +1781,20 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "rpc|lib/server/recipe-image-normal-drain-storage.ts|complete_recipe_image_cleanup_deleted|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "complete_recipe_image_cleanup_deleted",
+      "line": 331,
+      "source_file": "lib/server/recipe-image-normal-drain-storage.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
       "key": "rpc|lib/server/recipe-nutrition-snapshot.ts|write_recipe_nutrition_snapshot|1",
       "kind": "rpc",
       "operation": "call",
@@ -1874,6 +1888,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-26T07:43:48.267Z",
-  "checksum": "6fc88da2ab6c24ed787e0af473ba58db072015a35b364f2c76c5d81c59a58485"
+  "generated_at": "2026-07-26T11:32:35.473Z",
+  "checksum": "e6f5afdc43ef848f6c8003ffd27918ec58a855a229d5796c6bf11dcd6c8edf1e"
 }
