@@ -7,6 +7,8 @@ const hasSupabasePublicEnv = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const recalculateRecipeNutritionSnapshot = vi.fn();
+const readAccountGenerationCapability = vi.fn();
+const readVerifiedAccountGenerationSession = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
   if (error instanceof Error) {
     return `formatted: ${error.message}`;
@@ -32,6 +34,14 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 
 vi.mock("@/lib/server/recipe-nutrition-service", () => ({
   recalculateRecipeNutritionSnapshot,
+}));
+
+vi.mock("@/app/api/v1/users/me/_account-generation", () => ({
+  readAccountGenerationCapability,
+}));
+
+vi.mock("@/lib/server/account-generation/session-authority", () => ({
+  readVerifiedAccountGenerationSession,
 }));
 
 interface QueryResult<T> {
@@ -69,8 +79,109 @@ function createQuery<T>(result: QueryResult<T>) {
   return query;
 }
 
+const manualIngredientId = "550e8400-e29b-41d4-a716-446655440010";
+const manualMethodId = "550e8400-e29b-41d4-a716-446655440020";
+const manualImageObjectId = "550e8400-e29b-41d4-a716-446655440030";
+
+function manualRecipeCreateBody(overrides: Record<string, unknown> = {}) {
+  return {
+    title: "관리형 이미지 레시피",
+    base_servings: 2,
+    ingredients: [
+      {
+        ingredient_id: manualIngredientId,
+        standard_name: "양파",
+        amount: 1,
+        unit: "개",
+        ingredient_type: "QUANT",
+        display_text: "양파 1개",
+        sort_order: 0,
+        scalable: true,
+      },
+    ],
+    steps: [
+      {
+        step_number: 1,
+        instruction: "끓입니다.",
+        cooking_method_id: manualMethodId,
+        ingredients_used: [
+          { ingredient_id: manualIngredientId, amount: 1, unit: "개" },
+        ],
+        heat_level: "중",
+        duration_seconds: 60,
+        duration_text: "1분",
+      },
+    ],
+    ...overrides,
+  };
+}
+
+function setupManagedRecipeCreate(
+  rpcResult: QueryResult<Record<string, unknown> | null> = {
+    data: {
+      id: "recipe-managed-rpc",
+      title: "관리형 이미지 레시피",
+      source_type: "manual",
+      created_by: "user-1",
+      base_servings: 2,
+      visibility: "private",
+      image_object_id: manualImageObjectId,
+      image_state: "attached_private",
+    },
+    error: null,
+  },
+) {
+  const ingredientLookupQuery = createQuery({
+    data: [{ id: manualIngredientId }],
+    error: null,
+  });
+  const cookingMethodLookupQuery = createQuery({
+    data: [{ id: manualMethodId, label: "끓이기" }],
+    error: null,
+  });
+  const rpc = vi.fn(async () => rpcResult);
+  const routeClient = {
+    auth: {
+      getUser: vi.fn(async () => ({
+        data: { user: { id: "user-1" } },
+      })),
+    },
+  };
+  createRouteHandlerClient.mockResolvedValue(routeClient);
+  createServiceRoleClient.mockReturnValue({
+    rpc,
+    from: vi.fn((table: string) => {
+      if (table === "ingredients") {
+        return { select: vi.fn(() => ingredientLookupQuery) };
+      }
+      if (table === "cooking_methods") {
+        return { select: vi.fn(() => cookingMethodLookupQuery) };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    }),
+  });
+  readAccountGenerationCapability.mockResolvedValue({
+    ok: true,
+    revision: 3,
+    state: "generation_active",
+  });
+  readVerifiedAccountGenerationSession.mockResolvedValue({
+    ok: true,
+    sessionAuthority: {
+      authIdentityCreatedAt: "2026-07-23T00:00:00.000Z",
+      hmacKeyVersion: 1,
+      ownerUuid: "user-1",
+      sessionIssuedAt: "2026-07-26T00:00:00.000Z",
+      sessionKeyHash: "a".repeat(64),
+    },
+  });
+
+  return { routeClient, rpc };
+}
+
 describe("recipe API contracts", () => {
   beforeEach(() => {
+    vi.unstubAllEnvs();
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
@@ -78,6 +189,8 @@ describe("recipe API contracts", () => {
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     recalculateRecipeNutritionSnapshot.mockReset();
+    readAccountGenerationCapability.mockReset();
+    readVerifiedAccountGenerationSession.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
     hasSupabasePublicEnv.mockReturnValue(true);
@@ -87,6 +200,11 @@ describe("recipe API contracts", () => {
       snapshot_id: "snapshot-manual",
       created: true,
       is_current: true,
+    });
+    readAccountGenerationCapability.mockResolvedValue({
+      ok: true,
+      revision: 3,
+      state: "legacy",
     });
     delete process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK;
   });
@@ -2106,6 +2224,360 @@ describe("recipe API contracts", () => {
       created_by: "user-1",
       base_servings: 2,
     });
+  });
+
+  it("dispatches generation-active managed image creation through the session-bound transaction writer", async () => {
+    const { routeClient, rpc } = setupManagedRecipeCreate();
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody({
+          image_object_id: manualImageObjectId,
+        })),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(readVerifiedAccountGenerationSession).toHaveBeenCalledWith(routeClient);
+    expect(rpc).toHaveBeenCalledWith(
+      "create_manual_recipe_with_managed_image",
+      expect.objectContaining({
+        p_owner_uuid: "user-1",
+        p_auth_identity_created_at_snapshot: "2026-07-23T00:00:00.000Z",
+        p_session_key_hash: "a".repeat(64),
+        p_hmac_key_version: 1,
+        p_image_object_id: manualImageObjectId,
+        p_expected_cleanup_generation: 0,
+        p_thumbnail_url: null,
+      }),
+    );
+    expect(rpc).not.toHaveBeenCalledWith(
+      "create_manual_recipe",
+      expect.anything(),
+    );
+  });
+
+  it("keeps image-free generation-active creation on the session-bound writer", async () => {
+    const { rpc } = setupManagedRecipeCreate();
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody()),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(rpc).toHaveBeenCalledWith(
+      "create_manual_recipe_with_managed_image",
+      expect.objectContaining({
+        p_image_object_id: null,
+        p_expected_cleanup_generation: null,
+      }),
+    );
+  });
+
+  it("preserves unmanaged external thumbnail compatibility on the generation-active writer", async () => {
+    const { rpc } = setupManagedRecipeCreate();
+    const thumbnailUrl = "https://example.com/unmanaged-recipe.webp";
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody({
+          thumbnail_url: thumbnailUrl,
+        })),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(rpc).toHaveBeenCalledWith(
+      "create_manual_recipe_with_managed_image",
+      expect.objectContaining({
+        p_image_object_id: null,
+        p_expected_cleanup_generation: null,
+        p_thumbnail_url: thumbnailUrl,
+      }),
+    );
+  });
+
+  it("fails closed before bootstrap when a generation-active session cannot be verified", async () => {
+    const rpc = vi.fn();
+    const routeClient = {
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+    };
+    createRouteHandlerClient.mockResolvedValue(routeClient);
+    createServiceRoleClient.mockReturnValue({ rpc });
+    readAccountGenerationCapability.mockResolvedValue({
+      ok: true,
+      revision: 3,
+      state: "generation_active",
+    });
+    readVerifiedAccountGenerationSession.mockResolvedValue({ ok: false });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody({
+          image_object_id: manualImageObjectId,
+        })),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error.code).toBe("ACCOUNT_SESSION_STALE");
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+    expect(ensureUserBootstrapState).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when account generation capability is unavailable", async () => {
+    const rpc = vi.fn();
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ rpc });
+    readAccountGenerationCapability.mockResolvedValue({ ok: false });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody()),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body.error.code).toBe("INTERNAL_ERROR");
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("blocks recipe creation during account lifecycle maintenance", async () => {
+    const rpc = vi.fn();
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ rpc });
+    readAccountGenerationCapability.mockResolvedValue({
+      ok: true,
+      revision: 3,
+      state: "cutover_maintenance",
+    });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody()),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("ACCOUNT_LIFECYCLE_MAINTENANCE");
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects managed object and URL dual identity with the official error", async () => {
+    const rpc = vi.fn();
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ rpc });
+    readAccountGenerationCapability.mockResolvedValue({
+      ok: true,
+      revision: 3,
+      state: "generation_active",
+    });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody({
+          image_object_id: manualImageObjectId,
+          thumbnail_url:
+            "https://project.supabase.co/storage/v1/object/sign/recipe-images-private/path?token=signed",
+        })),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body.error.code).toBe("MANAGED_IMAGE_REFERENCE_REQUIRED");
+    expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects service-owned legacy image URLs without an object ID after activation", async () => {
+    const rpc = vi.fn();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ rpc });
+    readAccountGenerationCapability.mockResolvedValue({
+      ok: true,
+      revision: 3,
+      state: "generation_active",
+    });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody({
+          thumbnail_url:
+            "https://project.supabase.co/storage/v1/object/public/recipe-images/user-1/legacy.webp",
+        })),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body.error.code).toBe("MANAGED_IMAGE_REFERENCE_REQUIRED");
+    expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("maps managed attach authority failures to the official API error", async () => {
+    setupManagedRecipeCreate({
+      data: null,
+      error: { message: "IMAGE_VISIBILITY_MISMATCH" },
+    });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody({
+          image_object_id: manualImageObjectId,
+        })),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body.error.code).toBe("IMAGE_VISIBILITY_MISMATCH");
+    expect(recalculateRecipeNutritionSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("maps a managed writer cutover race to lifecycle maintenance", async () => {
+    setupManagedRecipeCreate({
+      data: null,
+      error: { message: "ACCOUNT_LIFECYCLE_MAINTENANCE" },
+    });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody()),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("ACCOUNT_LIFECYCLE_MAINTENANCE");
+  });
+
+  it("does not fall back to the legacy writer for a managed object ID", async () => {
+    const rpc = vi.fn();
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ rpc });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody({
+          image_object_id: manualImageObjectId,
+        })),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error.code).toBe("ACCOUNT_GENERATION_STALE");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed managed image object IDs before any write", async () => {
+    const rpc = vi.fn();
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ rpc });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody({
+          image_object_id: "not-a-uuid",
+        })),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body.error).toMatchObject({
+      code: "VALIDATION_ERROR",
+      fields: [{ field: "image_object_id", reason: "invalid_uuid" }],
+    });
+    expect(readAccountGenerationCapability).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
 });

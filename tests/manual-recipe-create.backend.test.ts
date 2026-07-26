@@ -7,6 +7,7 @@ const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
+const readAccountGenerationCapability = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
   if (error instanceof Error) {
     return `formatted: ${error.message}`;
@@ -24,6 +25,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/app/api/v1/users/me/_account-generation", () => ({
+  readAccountGenerationCapability,
 }));
 
 interface QueryResult<T> {
@@ -168,10 +173,16 @@ describe("18 manual recipe create backend", () => {
     createServiceRoleClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
+    readAccountGenerationCapability.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+    readAccountGenerationCapability.mockResolvedValue({
+      ok: true,
+      revision: 3,
+      state: "legacy",
+    });
   });
 
   it("GET /api/v1/cooking-methods returns methods in the API envelope", async () => {
@@ -598,7 +609,7 @@ describe("18 manual recipe create backend", () => {
     expect(createServiceRoleClient).not.toHaveBeenCalled();
   });
 
-  it("POST /api/v1/recipes rejects arbitrary external thumbnail URLs before database writes", async () => {
+  it("POST /api/v1/recipes keeps legacy external thumbnail rejection", async () => {
     createRouteHandlerClient.mockResolvedValue({
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
@@ -626,7 +637,8 @@ describe("18 manual recipe create backend", () => {
         fields: [{ field: "thumbnail_url", reason: "invalid_reference" }],
       },
     });
-    expect(createServiceRoleClient).not.toHaveBeenCalled();
+    expect(createServiceRoleClient).toHaveBeenCalledOnce();
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
   });
 
   it("POST /api/v1/recipes creates a manual recipe without recipe_book_items membership", async () => {

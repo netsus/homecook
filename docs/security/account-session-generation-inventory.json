@@ -987,7 +987,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_ingredients",
-      "line": 1226,
+      "line": 1399,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1001,7 +1001,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_steps",
-      "line": 1234,
+      "line": 1407,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1015,7 +1015,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipes",
-      "line": 1209,
+      "line": 1382,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1641,11 +1641,25 @@
       "activation_phase": "always"
     },
     {
-      "key": "rpc|app/api/v1/recipes/route.ts|create_manual_recipe|1",
+      "key": "rpc|app/api/v1/recipes/route.ts|create_manual_recipe_with_managed_image|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "create_manual_recipe_with_managed_image",
+      "line": 1310,
+      "source_file": "app/api/v1/recipes/route.ts",
+      "route": "/api/v1/recipes",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
+      "key": "rpc|app/api/v1/recipes/route.ts|create_manual_recipe|2",
       "kind": "rpc",
       "operation": "call",
       "target": "create_manual_recipe",
-      "line": 1137,
+      "line": 1322,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1860,6 +1874,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-26T05:41:29.298Z",
-  "checksum": "0f5f89b74563d9b9efc592629d069b3030955df0dbcf47249d198cd3afc04df4"
+  "generated_at": "2026-07-26T07:43:48.267Z",
+  "checksum": "6fc88da2ab6c24ed787e0af473ba58db072015a35b364f2c76c5d81c59a58485"
 }

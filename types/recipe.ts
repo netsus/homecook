@@ -222,6 +222,7 @@ export interface ManualRecipeStepInput {
 export interface ManualRecipeCreateBody {
   title: string;
   base_servings: number;
+  image_object_id?: string | null;
   thumbnail_url?: string | null;
   tags?: string[];
   ingredients: ManualRecipeIngredientInput[];
