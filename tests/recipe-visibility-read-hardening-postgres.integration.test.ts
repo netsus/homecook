@@ -27,6 +27,8 @@ const IMAGE_AUTH_DELETION_READINESS_MIGRATION_PATH =
   "supabase/migrations/20260724250000_recipe_image_auth_deletion_readiness_authority.sql";
 const IMAGE_AUTH_DELETION_CLAIM_MIGRATION_PATH =
   "supabase/migrations/20260724260000_recipe_image_auth_deletion_claim_authority.sql";
+const IMAGE_AUTH_DELETION_FINALIZE_MIGRATION_PATH =
+  "supabase/migrations/20260724270000_recipe_image_auth_deletion_finalize_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -5181,6 +5183,275 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         )
       );
     `)).toBe("f:f:t:f:f");
+  });
+
+  it("finalizes one exact terminal Auth deletion lease and resolves the lifecycle atomically", () => {
+    const owner = "00000000-0000-4000-8000-000000000430";
+    const outbox = "00000000-0000-4000-8000-000000000431";
+    const lease = "00000000-0000-4000-8000-000000000432";
+    const authSnapshot = "2030-07-25T04:00:00Z";
+    const now = "2030-07-25T05:00:00Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        completed_cleanup_generation,
+        personal_db_deleted_at
+      ) values (
+        '${owner}',
+        1,
+        '${authSnapshot}',
+        'cleanup_pending',
+        0,
+        0,
+        '${authSnapshot}'
+      );
+
+      insert into public.auth_identity_deletion_outbox (
+        id,
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        attempts,
+        lease_token,
+        lease_expires_at,
+        next_attempt_at
+      ) values (
+        '${outbox}',
+        '${owner}',
+        1,
+        '${authSnapshot}',
+        'processing',
+        1,
+        '${lease}',
+        '${now}'::timestamptz + interval '2 minutes',
+        '${authSnapshot}'
+      );
+
+      set local role service_role;
+      select public.finalize_recipe_image_auth_deletion_claim(
+        '${outbox}',
+        '${owner}',
+        1,
+        '${authSnapshot}',
+        '${lease}',
+        1,
+        'deleted',
+        null,
+        '${now}'
+      );
+      reset role;
+      select concat_ws(
+        ':',
+        outbox.id,
+        outbox.state,
+        outbox.terminal_result,
+        (
+          lifecycle.auth_identity_deleted_at = '${now}'
+          and lifecycle.revision = 2
+        )
+      )
+      from public.auth_identity_deletion_outbox as outbox
+      join public.user_account_lifecycles as lifecycle
+        on lifecycle.owner_uuid = outbox.owner_uuid
+       and lifecycle.account_generation = outbox.account_generation
+      where outbox.id = '${outbox}';
+      rollback;
+    `)).toBe(`${outbox}:succeeded:deleted:t`);
+  });
+
+  it("keeps a retryable Auth deletion failure unresolved", () => {
+    const owner = "00000000-0000-4000-8000-000000000440";
+    const outbox = "00000000-0000-4000-8000-000000000441";
+    const lease = "00000000-0000-4000-8000-000000000442";
+    const authSnapshot = "2030-07-25T06:00:00Z";
+    const now = "2030-07-25T07:00:00Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        completed_cleanup_generation,
+        personal_db_deleted_at
+      ) values (
+        '${owner}',
+        1,
+        '${authSnapshot}',
+        'cleanup_pending',
+        0,
+        0,
+        '${authSnapshot}'
+      );
+
+      insert into public.auth_identity_deletion_outbox (
+        id,
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        attempts,
+        lease_token,
+        lease_expires_at,
+        next_attempt_at
+      ) values (
+        '${outbox}',
+        '${owner}',
+        1,
+        '${authSnapshot}',
+        'processing',
+        1,
+        '${lease}',
+        '${now}'::timestamptz + interval '2 minutes',
+        '${authSnapshot}'
+      );
+
+      set local role service_role;
+      select public.finalize_recipe_image_auth_deletion_claim(
+        '${outbox}',
+        '${owner}',
+        1,
+        '${authSnapshot}',
+        '${lease}',
+        1,
+        null,
+        'ADMIN_DELETE_FAILED',
+        '${now}'
+      );
+      reset role;
+      select concat_ws(
+        ':',
+        outbox.state,
+        lifecycle.auth_identity_deleted_at is null
+      )
+      from public.auth_identity_deletion_outbox as outbox
+      join public.user_account_lifecycles as lifecycle
+        on lifecycle.owner_uuid = outbox.owner_uuid
+       and lifecycle.account_generation = outbox.account_generation
+      where outbox.id = '${outbox}';
+      rollback;
+    `)).toBe("failed:t");
+  });
+
+  it("rejects a stale Auth deletion finalize attempt and preserves the lease", () => {
+    const owner = "00000000-0000-4000-8000-000000000450";
+    const outbox = "00000000-0000-4000-8000-000000000451";
+    const lease = "00000000-0000-4000-8000-000000000452";
+    const authSnapshot = "2030-07-25T08:00:00Z";
+    const now = "2030-07-25T09:00:00Z";
+
+    const stale = psqlResult(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        personal_db_deleted_at
+      ) values (
+        '${owner}',
+        1,
+        '${authSnapshot}',
+        'cleanup_pending',
+        '${authSnapshot}'
+      );
+      insert into public.auth_identity_deletion_outbox (
+        id,
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        attempts,
+        lease_token,
+        lease_expires_at
+      ) values (
+        '${outbox}',
+        '${owner}',
+        1,
+        '${authSnapshot}',
+        'processing',
+        1,
+        '${lease}',
+        '${now}'::timestamptz + interval '2 minutes'
+      );
+      set local role service_role;
+      select public.finalize_recipe_image_auth_deletion_claim(
+        '${outbox}',
+        '${owner}',
+        1,
+        '${authSnapshot}',
+        '${lease}',
+        2,
+        'deleted',
+        null,
+        '${now}'
+      );
+    `);
+    expect(stale.status).not.toBe(0);
+    expect(stale.stderr).toContain(
+      "Auth deletion outbox finalize compare-and-swap failed",
+    );
+  });
+
+  it("replays guarded Auth deletion finalize without opening the legacy grant", () => {
+    const replay = psqlFileResult(
+      IMAGE_AUTH_DELETION_FINALIZE_MIGRATION_PATH,
+    );
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.finalize_recipe_image_auth_deletion_claim(uuid,uuid,bigint,timestamp with time zone,uuid,integer,text,text,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.finalize_recipe_image_auth_deletion_claim(uuid,uuid,bigint,timestamp with time zone,uuid,integer,text,text,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.finalize_recipe_image_auth_deletion_claim(uuid,uuid,bigint,timestamp with time zone,uuid,integer,text,text,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.finalize_auth_identity_deletion_outbox(uuid,uuid,integer,text,text,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.claim_recipe_image_auth_deletion_if_ready(uuid,uuid,bigint,uuid,timestamp with time zone)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t:f:t");
   });
 
   it("keeps Auth deletion readiness inactive before joint activation", () => {
