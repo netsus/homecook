@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "slice": "recipe-image-stale-scanner",
+  "migration": "supabase/migrations/20260724200000_recipe_image_stale_scanner_cas.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.scan_stale_recipe_image_uploads(integer, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    }
+  ]
+}
