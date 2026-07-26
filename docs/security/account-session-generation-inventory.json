@@ -1767,6 +1767,20 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "rpc|lib/server/recipe-image-auth-deletion-finalize.ts|finalize_recipe_image_auth_deletion_claim|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "finalize_recipe_image_auth_deletion_claim",
+      "line": 118,
+      "source_file": "lib/server/recipe-image-auth-deletion-finalize.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
       "key": "rpc|lib/server/recipe-image-managed-cancel.ts|cancel_recipe_image_upload|1",
       "kind": "rpc",
       "operation": "call",
@@ -1888,6 +1902,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-26T11:32:35.473Z",
-  "checksum": "e6f5afdc43ef848f6c8003ffd27918ec58a855a229d5796c6bf11dcd6c8edf1e"
+  "generated_at": "2026-07-26T18:11:25.004Z",
+  "checksum": "98ae9279241a032fe9843c1aca3b1f6d6363f8a4ce4a4bbde18f518d470063ef"
 }
