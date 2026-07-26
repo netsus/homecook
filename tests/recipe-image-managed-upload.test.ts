@@ -326,6 +326,41 @@ describe("managed recipe image upload orchestration", () => {
     expect(input.issueReadUrl).not.toHaveBeenCalled();
   });
 
+  it("treats oversized takeover metadata as a compensated conflict", async () => {
+    const dbClient = rpcClient((name) => {
+      if (name === "reserve_recipe_image_upload") {
+        return {
+          data: { ...reserved, outcome: "takeover" },
+          error: null,
+        };
+      }
+      if (name === "compensate_recipe_image_upload") {
+        return {
+          data: {
+            account_generation: 7,
+            cleanup_generation: 1,
+            object_id: OBJECT_ID,
+            outbox_id: OUTBOX_ID,
+            outcome: "cleanup_pending",
+            state: "cleanup_pending",
+          },
+          error: null,
+        };
+      }
+      throw new Error(`unexpected RPC: ${name}`);
+    });
+    const input = setup(dbClient, {
+      readTakeoverObject: vi.fn(async () => ({
+        kind: "oversized" as const,
+      })),
+    });
+
+    await expect(runManagedRecipeImageUpload(input)).resolves.toEqual({
+      kind: "conflict",
+    });
+    expect(input.uploadObject).not.toHaveBeenCalled();
+  });
+
   it("fails closed on an invalid reservation response", async () => {
     const dbClient = rpcClient(() => ({
       data: {

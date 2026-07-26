@@ -62,6 +62,7 @@ interface ReadUrlResult {
 type TakeoverObjectReadResult =
   | { kind: "absent" }
   | { kind: "found"; body: Blob }
+  | { kind: "oversized" }
   | { kind: "failed" };
 
 export type ManagedRecipeImageUploadResult =
