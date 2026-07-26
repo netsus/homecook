@@ -432,6 +432,17 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "POST /api/v1/recipes/images/[image_object_id]/cancel",
+      "route": "/api/v1/recipes/images/[image_object_id]/cancel",
+      "source_file": "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
+      "method": "POST",
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-database-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
       "key": "POST /api/v1/recipes/tag-suggestions",
       "route": "/api/v1/recipes/tag-suggestions",
       "source_file": "app/api/v1/recipes/tag-suggestions/route.ts",
@@ -1742,6 +1753,20 @@
       "activation_phase": "f0-expand-legacy-guard"
     },
     {
+      "key": "rpc|lib/server/recipe-image-managed-cancel.ts|cancel_recipe_image_upload|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "cancel_recipe_image_upload",
+      "line": 103,
+      "source_file": "lib/server/recipe-image-managed-cancel.ts",
+      "route": null,
+      "owner_scope": "authenticated-user",
+      "persists_personal_state": true,
+      "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
+      "expected_generation": "joint-promote-server-verified-session-binding",
+      "activation_phase": "f0-expand-legacy-guard"
+    },
+    {
       "key": "rpc|lib/server/recipe-nutrition-snapshot.ts|write_recipe_nutrition_snapshot|1",
       "kind": "rpc",
       "operation": "call",
@@ -1835,6 +1860,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-26T04:20:32.081Z",
-  "checksum": "21dfdc6c13944956b80b06ebb406b47ae77f206fc9feae9b6300ae7b74c8180a"
+  "generated_at": "2026-07-26T05:41:29.298Z",
+  "checksum": "0f5f89b74563d9b9efc592629d069b3030955df0dbcf47249d198cd3afc04df4"
 }

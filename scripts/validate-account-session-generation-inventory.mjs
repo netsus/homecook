@@ -52,6 +52,7 @@ const ROUTE_METADATA_BY_KEY = {
   "POST /api/v1/recipes/[id]/like": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/recipes/[id]/save": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/recipes/images": { owner_scope: "authenticated-user", persists_personal_state: true },
+  "POST /api/v1/recipes/images/[image_object_id]/cancel": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/recipes/tag-suggestions": { owner_scope: "authenticated-user", persists_personal_state: false },
   "POST /api/v1/recipes/youtube/candidate-drafts": { owner_scope: "authenticated-user", persists_personal_state: true },
   "POST /api/v1/recipes/youtube/extract": { owner_scope: "authenticated-user", persists_personal_state: true },
@@ -77,6 +78,7 @@ const LIB_FILE_OWNER_SCOPE = {
   "lib/server/account-generation/external-write.ts": "authenticated-user",
   "lib/server/admin-audit.ts": "admin",
   "lib/server/admin-events.ts": "system",
+  "lib/server/recipe-image-managed-cancel.ts": "authenticated-user",
   "lib/server/recipe-nutrition-snapshot.ts": "system",
   "lib/server/user-bootstrap.ts": "authenticated-user",
   "lib/server/user-gamification.ts": "authenticated-user",
@@ -95,7 +97,7 @@ const KNOWN_STORAGE_BUCKETS = {
 };
 
 const MUTATING_RPC_PATTERN =
-  /^(abort|apply|begin|bind|cleanup|complete|consume|create|delete|finalize|increment|initiate|promote|register|report|resolve|revoke|set|stage|start|update|write)_/u;
+  /^(abort|apply|begin|bind|cancel|cleanup|complete|consume|create|delete|finalize|increment|initiate|promote|register|report|resolve|revoke|set|stage|start|update|write)_/u;
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
