@@ -27,6 +27,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724250000_recipe_image_auth_deletion_readiness_authority.sql",
   "supabase/migrations/20260724260000_recipe_image_auth_deletion_claim_authority.sql",
   "supabase/migrations/20260724270000_recipe_image_auth_deletion_finalize_authority.sql",
+  "supabase/migrations/20260724280000_recipe_image_auth_deletion_candidate_authority.sql",
 ];
 
 function commandResult(command, args, options = {}) {

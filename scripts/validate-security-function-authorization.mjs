@@ -224,6 +224,20 @@ const ADDITIVE_SOURCES = [
         "supabase/migrations/20260724270000_recipe_image_auth_deletion_finalize_authority.sql",
       ),
   },
+  {
+    manifestPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_AUTH_DELETION_CANDIDATE_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/recipe-image-auth-deletion-candidate-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_AUTH_DELETION_CANDIDATE_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260724280000_recipe_image_auth_deletion_candidate_authority.sql",
+      ),
+  },
 ];
 const LOCAL_DATABASE_URL =
   process.env.SECURITY_FUNCTION_DATABASE_URL
