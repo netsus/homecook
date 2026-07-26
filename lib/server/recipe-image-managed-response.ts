@@ -55,6 +55,41 @@ export function createManagedRecipeImageUploadResponse(
     );
   }
 
+  if (result.kind === "rejected") {
+    switch (result.code) {
+      case "IDEMPOTENCY_KEY_REUSED":
+        return fail(
+          result.code,
+          "같은 요청 키가 다른 요청에 이미 사용됐어요.",
+          409,
+        );
+      case "ACCOUNT_GENERATION_STALE":
+        return fail(
+          result.code,
+          "계정 상태를 다시 확인해 주세요.",
+          409,
+        );
+      case "ACCOUNT_SESSION_STALE":
+        return fail(
+          result.code,
+          "세션을 다시 확인해 주세요.",
+          409,
+        );
+      case "IMAGE_UPLOAD_CONFLICT":
+        return fail(
+          result.code,
+          "이미지 업로드 상태가 변경됐어요. 다시 시도해 주세요.",
+          409,
+        );
+      case "IMAGE_EXPIRED":
+        return fail(
+          result.code,
+          "이미지 업로드가 만료됐어요. 다시 업로드해 주세요.",
+          409,
+        );
+    }
+  }
+
   if (result.kind === "terminal") {
     return fail(
       "IMAGE_EXPIRED",

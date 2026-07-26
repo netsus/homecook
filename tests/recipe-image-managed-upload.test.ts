@@ -91,6 +91,49 @@ function setup(
 }
 
 describe("managed recipe image upload orchestration", () => {
+  it.each([
+    "IDEMPOTENCY_KEY_REUSED",
+    "ACCOUNT_GENERATION_STALE",
+    "ACCOUNT_SESSION_STALE",
+    "IMAGE_UPLOAD_CONFLICT",
+    "IMAGE_EXPIRED",
+  ] as const)("preserves the official reservation rejection %s", async (code) => {
+    const dbClient = rpcClient((name) => {
+      if (name === "reserve_recipe_image_upload") {
+        return {
+          data: null,
+          error: { message: code },
+        };
+      }
+      throw new Error(`unexpected RPC: ${name}`);
+    });
+    const input = setup(dbClient);
+
+    await expect(runManagedRecipeImageUpload(input)).resolves.toEqual({
+      code,
+      kind: "rejected",
+    });
+    expect(input.uploadObject).not.toHaveBeenCalled();
+    expect(input.issueReadUrl).not.toHaveBeenCalled();
+  });
+
+  it("does not promote an unrecognized reservation error into a public code", async () => {
+    const dbClient = rpcClient((name) => {
+      if (name === "reserve_recipe_image_upload") {
+        return {
+          data: null,
+          error: { message: "IDEMPOTENCY_KEY_REUSED with internal detail" },
+        };
+      }
+      throw new Error(`unexpected RPC: ${name}`);
+    });
+
+    await expect(runManagedRecipeImageUpload(setup(dbClient))).resolves.toEqual({
+      kind: "failed",
+      reason: "reservation_failed",
+    });
+  });
+
   it("reserves before an exact private PUT, finalizes, then issues a read URL", async () => {
     const calls: string[] = [];
     const dbClient = rpcClient((name) => {
