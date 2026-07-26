@@ -194,6 +194,20 @@ describe("managed recipe image Auth deletion finalize adapter", () => {
     })).rejects.toThrow("recipe image Auth deletion finalize failed");
   });
 
+  it("rejects a different identity epoch within the same millisecond", async () => {
+    await expect(finalizeRecipeImageAuthDeletionClaim({
+      ...baseInput,
+      authIdentityCreatedAt: "2030-07-25T00:00:00.000100Z",
+      dbClient: {
+        rpc: async () => rpcResult(terminalRow({
+          auth_identity_created_at_snapshot: "2030-07-25T00:00:00.000900Z",
+        })),
+      },
+      error: null,
+      terminalResult: "deleted",
+    })).rejects.toThrow("recipe image Auth deletion finalize failed");
+  });
+
   it.each([
     ["succeeded retry", retryRow({ state: "succeeded" })],
     ["terminal retry", retryRow({ terminal_result: "deleted" })],

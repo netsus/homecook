@@ -1,3 +1,8 @@
+import {
+  millisecondsToMicroseconds,
+  parsePostgresTimestamp,
+} from "@/lib/server/postgres-timestamp";
+
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POSITIVE_INTEGER_PATTERN = /^[1-9][0-9]*$/;
@@ -50,19 +55,6 @@ function positiveInteger(value: unknown): number | null {
   return parsed <= MAX_SAFE_INTEGER ? Number(parsed) : null;
 }
 
-function timestamp(value: unknown): {
-  iso: string;
-  milliseconds: number;
-} | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const milliseconds = Date.parse(value);
-  return Number.isFinite(milliseconds)
-    ? { iso: new Date(milliseconds).toISOString(), milliseconds }
-    : null;
-}
-
 function exactUuid(value: unknown, expected: string) {
   return typeof value === "string"
     && UUID_PATTERN.test(value)
@@ -83,7 +75,7 @@ export async function finalizeRecipeImageAuthDeletionClaim({
 }: FinalizeInput) {
   const finalizeTime = now();
   const finalizeTimeMs = finalizeTime.getTime();
-  const identityCreatedAt = timestamp(authIdentityCreatedAt);
+  const identityCreatedAt = parsePostgresTimestamp(authIdentityCreatedAt);
   const hasTerminalResult = typeof terminalResult === "string"
     && TERMINAL_RESULTS.has(terminalResult);
   if (
@@ -93,7 +85,8 @@ export async function finalizeRecipeImageAuthDeletionClaim({
     || accountGeneration < 1
     || !identityCreatedAt
     || !Number.isFinite(finalizeTimeMs)
-    || identityCreatedAt.milliseconds > finalizeTimeMs
+    || identityCreatedAt.microseconds
+      > millisecondsToMicroseconds(finalizeTimeMs)
     || !UUID_PATTERN.test(leaseToken)
     || !Number.isSafeInteger(attempts)
     || attempts < 1
@@ -140,25 +133,29 @@ export async function finalizeRecipeImageAuthDeletionClaim({
     : null;
   const returnedAttempts = row ? positiveInteger(row.attempts) : null;
   const returnedIdentityCreatedAt = row
-    ? timestamp(row.auth_identity_created_at_snapshot)
+    ? parsePostgresTimestamp(row.auth_identity_created_at_snapshot)
     : null;
   const deletedAt = row?.auth_identity_deleted_at === null
     ? null
-    : timestamp(row?.auth_identity_deleted_at);
-  const nextAttemptAt = row ? timestamp(row.next_attempt_at) : null;
+    : parsePostgresTimestamp(row?.auth_identity_deleted_at);
+  const nextAttemptAt = row
+    ? parsePostgresTimestamp(row.next_attempt_at)
+    : null;
   const terminalResultMatches = hasTerminalResult
     ? row?.state === "succeeded"
       && row.terminal_result === terminalResult
       && typeof row.auth_identity_deleted_at === "string"
       && deletedAt !== null
-      && deletedAt.milliseconds === finalizeTimeMs
+      && deletedAt.microseconds === millisecondsToMicroseconds(finalizeTimeMs)
     : (row?.state === "failed" || row?.state === "dead_letter")
       && row.terminal_result === null
       && row.auth_identity_deleted_at === null
       && deletedAt === null
       && (
         row.state === "dead_letter"
-        || nextAttemptAt?.milliseconds === finalizeTimeMs + RETRY_DELAY_MS
+        || nextAttemptAt?.microseconds === millisecondsToMicroseconds(
+          finalizeTimeMs + RETRY_DELAY_MS,
+        )
       );
 
   if (
@@ -169,8 +166,8 @@ export async function finalizeRecipeImageAuthDeletionClaim({
     || !exactUuid(row.owner_uuid, ownerUuid)
     || returnedGeneration !== accountGeneration
     || !returnedIdentityCreatedAt
-    || returnedIdentityCreatedAt.milliseconds
-      !== identityCreatedAt.milliseconds
+    || returnedIdentityCreatedAt.microseconds
+      !== identityCreatedAt.microseconds
     || returnedAttempts !== attempts
     || !nextAttemptAt
     || !terminalResultMatches

@@ -1,3 +1,8 @@
+import {
+  millisecondsToMicroseconds,
+  parsePostgresTimestamp,
+} from "@/lib/server/postgres-timestamp";
+
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -20,19 +25,6 @@ interface ExecuteInput extends RecipeImageAuthConditionalDeleteInput {
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
-    : null;
-}
-
-function timestamp(value: unknown): {
-  iso: string;
-  milliseconds: number;
-} | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const milliseconds = Date.parse(value);
-  return Number.isFinite(milliseconds)
-    ? { iso: new Date(milliseconds).toISOString(), milliseconds }
     : null;
 }
 
@@ -65,14 +57,15 @@ export async function executeRecipeImageAuthConditionalDeletion({
   providerBarrier,
 }: ExecuteInput) {
   const executionTimeMs = now().getTime();
-  const expectedIdentityCreatedAt = timestamp(
+  const expectedIdentityCreatedAt = parsePostgresTimestamp(
     expectedAuthIdentityCreatedAt,
   );
   if (
     !UUID_PATTERN.test(ownerUuid)
     || !expectedIdentityCreatedAt
     || !Number.isFinite(executionTimeMs)
-    || expectedIdentityCreatedAt.milliseconds > executionTimeMs
+    || expectedIdentityCreatedAt.microseconds
+      > millisecondsToMicroseconds(executionTimeMs)
   ) {
     throw new Error("invalid recipe image conditional Auth deletion input");
   }
@@ -98,14 +91,14 @@ export async function executeRecipeImageAuthConditionalDeletion({
   }
 
   const evidenceIdentityCreatedAt = evidenceRecord
-    ? timestamp(evidenceRecord.authIdentityCreatedAt)
+    ? parsePostgresTimestamp(evidenceRecord.authIdentityCreatedAt)
     : null;
   if (
     !evidenceRecord
     || !exactUuid(evidenceRecord.ownerUuid, ownerUuid)
     || !evidenceIdentityCreatedAt
-    || evidenceIdentityCreatedAt.milliseconds
-      !== expectedIdentityCreatedAt.milliseconds
+    || evidenceIdentityCreatedAt.microseconds
+      !== expectedIdentityCreatedAt.microseconds
   ) {
     throw new Error("recipe image conditional Auth deletion failed");
   }
@@ -128,7 +121,7 @@ export async function executeRecipeImageAuthConditionalDeletion({
     };
   }
 
-  const actualIdentityCreatedAt = timestamp(
+  const actualIdentityCreatedAt = parsePostgresTimestamp(
     evidenceRecord.actualAuthIdentityCreatedAt,
   );
   if (
@@ -140,9 +133,10 @@ export async function executeRecipeImageAuthConditionalDeletion({
       "status",
     ])
     || !actualIdentityCreatedAt
-    || actualIdentityCreatedAt.milliseconds
-      <= expectedIdentityCreatedAt.milliseconds
-    || actualIdentityCreatedAt.milliseconds > executionTimeMs
+    || actualIdentityCreatedAt.microseconds
+      <= expectedIdentityCreatedAt.microseconds
+    || actualIdentityCreatedAt.microseconds
+      > millisecondsToMicroseconds(executionTimeMs)
   ) {
     throw new Error("recipe image conditional Auth deletion failed");
   }

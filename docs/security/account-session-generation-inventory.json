@@ -1771,7 +1771,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "finalize_recipe_image_auth_deletion_claim",
-      "line": 118,
+      "line": 111,
       "source_file": "lib/server/recipe-image-auth-deletion-finalize.ts",
       "route": null,
       "owner_scope": "system",
@@ -1902,6 +1902,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-26T18:11:25.004Z",
-  "checksum": "98ae9279241a032fe9843c1aca3b1f6d6363f8a4ce4a4bbde18f518d470063ef"
+  "generated_at": "2026-07-26T21:49:45.664Z",
+  "checksum": "08e05fbc3b07d9ac7591ac1e32b533af7a1c78f6e33920b387fe2feebe9eeffb"
 }

@@ -94,6 +94,25 @@ describe("managed recipe image Auth identity lookup adapter", () => {
     });
   });
 
+  it("distinguishes replacement identities within the same millisecond", async () => {
+    const expectedEpoch = "2030-07-25T00:00:00.000100Z";
+    const actualEpoch = "2030-07-25T00:00:00.000900Z";
+    const getUserById = vi.fn(async () => authResult(user({
+      created_at: actualEpoch,
+    })));
+
+    await expect(inspectRecipeImageAuthDeletionIdentity({
+      ...baseInput,
+      authAdminClient: { getUserById },
+      expectedAuthIdentityCreatedAt: expectedEpoch,
+    })).resolves.toEqual({
+      actualAuthIdentityCreatedAt: actualEpoch,
+      authIdentityCreatedAt: expectedEpoch,
+      ownerUuid: OWNER_UUID,
+      status: "identity_replaced",
+    });
+  });
+
   it.each([
     ["undefined result", undefined],
     ["missing error field", { data: { user: user() } }],

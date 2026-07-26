@@ -1,3 +1,8 @@
+import {
+  millisecondsToMicroseconds,
+  parsePostgresTimestamp,
+} from "@/lib/server/postgres-timestamp";
+
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -18,19 +23,6 @@ function record(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function timestamp(value: unknown): {
-  iso: string;
-  milliseconds: number;
-} | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const milliseconds = Date.parse(value);
-  return Number.isFinite(milliseconds)
-    ? { iso: new Date(milliseconds).toISOString(), milliseconds }
-    : null;
-}
-
 function exactUuid(value: unknown, expected: string) {
   return typeof value === "string"
     && UUID_PATTERN.test(value)
@@ -44,14 +36,15 @@ export async function inspectRecipeImageAuthDeletionIdentity({
   ownerUuid,
 }: LookupInput) {
   const lookupTimeMs = now().getTime();
-  const expectedIdentityCreatedAt = timestamp(
+  const expectedIdentityCreatedAt = parsePostgresTimestamp(
     expectedAuthIdentityCreatedAt,
   );
   if (
     !UUID_PATTERN.test(ownerUuid)
     || !expectedIdentityCreatedAt
     || !Number.isFinite(lookupTimeMs)
-    || expectedIdentityCreatedAt.milliseconds > lookupTimeMs
+    || expectedIdentityCreatedAt.microseconds
+      > millisecondsToMicroseconds(lookupTimeMs)
   ) {
     throw new Error("invalid recipe image Auth identity lookup input");
   }
@@ -81,7 +74,7 @@ export async function inspectRecipeImageAuthDeletionIdentity({
 
   const user = data ? record(data.user) : null;
   const actualIdentityCreatedAt = user
-    ? timestamp(user.created_at)
+    ? parsePostgresTimestamp(user.created_at)
     : null;
   if (
     !resultRecord
@@ -90,16 +83,17 @@ export async function inspectRecipeImageAuthDeletionIdentity({
     || !user
     || !exactUuid(user.id, ownerUuid)
     || !actualIdentityCreatedAt
-    || actualIdentityCreatedAt.milliseconds > lookupTimeMs
-    || actualIdentityCreatedAt.milliseconds
-      < expectedIdentityCreatedAt.milliseconds
+    || actualIdentityCreatedAt.microseconds
+      > millisecondsToMicroseconds(lookupTimeMs)
+    || actualIdentityCreatedAt.microseconds
+      < expectedIdentityCreatedAt.microseconds
   ) {
     throw new Error("recipe image Auth identity lookup failed");
   }
 
   if (
-    actualIdentityCreatedAt.milliseconds
-    > expectedIdentityCreatedAt.milliseconds
+    actualIdentityCreatedAt.microseconds
+    > expectedIdentityCreatedAt.microseconds
   ) {
     return {
       actualAuthIdentityCreatedAt: actualIdentityCreatedAt.iso,

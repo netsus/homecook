@@ -1,3 +1,8 @@
+import {
+  millisecondsToMicroseconds,
+  parsePostgresTimestamp,
+} from "@/lib/server/postgres-timestamp";
+
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POSITIVE_INTEGER_PATTERN = /^[1-9][0-9]*$/;
@@ -39,19 +44,6 @@ function positiveInteger(value: unknown): number | null {
 
   const parsed = BigInt(value);
   return parsed <= MAX_SAFE_INTEGER ? Number(parsed) : null;
-}
-
-function timestamp(value: unknown): {
-  iso: string;
-  milliseconds: number;
-} | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const milliseconds = Date.parse(value);
-  return Number.isFinite(milliseconds)
-    ? { iso: new Date(milliseconds).toISOString(), milliseconds }
-    : null;
 }
 
 function exactUuid(value: unknown, expected: string) {
@@ -104,9 +96,11 @@ export async function claimRecipeImageAuthDeletionIfReady({
     : null;
   const attempts = row ? positiveInteger(row.attempts) : null;
   const identityCreatedAt = row
-    ? timestamp(row.auth_identity_created_at_snapshot)
+    ? parsePostgresTimestamp(row.auth_identity_created_at_snapshot)
     : null;
-  const leaseExpiresAt = row ? timestamp(row.lease_expires_at) : null;
+  const leaseExpiresAt = row
+    ? parsePostgresTimestamp(row.lease_expires_at)
+    : null;
 
   if (
     !resultRecord
@@ -116,12 +110,15 @@ export async function claimRecipeImageAuthDeletionIfReady({
     || !exactUuid(row.owner_uuid, ownerUuid)
     || returnedGeneration !== accountGeneration
     || !identityCreatedAt
-    || identityCreatedAt.milliseconds > claimTimeMs
+    || identityCreatedAt.microseconds
+      > millisecondsToMicroseconds(claimTimeMs)
     || row.state !== "processing"
     || attempts === null
     || !exactUuid(row.lease_token, leaseToken)
     || !leaseExpiresAt
-    || leaseExpiresAt.milliseconds !== claimTimeMs + LEASE_DURATION_MS
+    || leaseExpiresAt.microseconds !== millisecondsToMicroseconds(
+      claimTimeMs + LEASE_DURATION_MS,
+    )
   ) {
     throw new Error("recipe image Auth deletion claim failed");
   }

@@ -1,10 +1,12 @@
+import {
+  millisecondsToMicroseconds,
+  parsePostgresTimestamp,
+} from "@/lib/server/postgres-timestamp";
+
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const POSITIVE_INTEGER_PATTERN = /^[1-9][0-9]*$/;
 const MAX_SAFE_INTEGER = BigInt(Number.MAX_SAFE_INTEGER);
-const MICROSECONDS_PER_MILLISECOND = BigInt(1_000);
-const TIMESTAMP_PATTERN
-  = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/;
 const ROW_KEYS = [
   "account_generation",
   "auth_identity_created_at_snapshot",
@@ -54,77 +56,6 @@ function positiveInteger(value: unknown): number | null {
   return parsed <= MAX_SAFE_INTEGER ? Number(parsed) : null;
 }
 
-function timestamp(value: unknown): {
-  iso: string;
-  microseconds: bigint;
-} | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const match = TIMESTAMP_PATTERN.exec(value);
-  if (!match) {
-    return null;
-  }
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const hour = Number(match[4]);
-  const minute = Number(match[5]);
-  const second = Number(match[6]);
-  const leapYear = year % 4 === 0
-    && (year % 100 !== 0 || year % 400 === 0);
-  const daysInMonth = [
-    31,
-    leapYear ? 29 : 28,
-    31,
-    30,
-    31,
-    30,
-    31,
-    31,
-    30,
-    31,
-    30,
-    31,
-  ][month - 1];
-  const zone = match[8];
-  const zoneHours = zone === "Z" ? 0 : Number(zone.slice(1, 3));
-  const zoneMinutes = zone === "Z" ? 0 : Number(zone.slice(4, 6));
-  if (
-    month < 1
-    || month > 12
-    || !daysInMonth
-    || day < 1
-    || day > daysInMonth
-    || hour > 23
-    || minute > 59
-    || second > 59
-    || zoneHours > 23
-    || zoneMinutes > 59
-  ) {
-    return null;
-  }
-  const milliseconds = Date.parse(value);
-  if (!Number.isFinite(milliseconds)) {
-    return null;
-  }
-
-  const fractionalMicros = (match[7] ?? "").padEnd(6, "0");
-  const subMillisecondMicros = Number(fractionalMicros.slice(3));
-  const iso = subMillisecondMicros === 0
-    ? new Date(milliseconds).toISOString()
-    : new Date(milliseconds).toISOString().replace(
-        /\.\d{3}Z$/,
-        `.${fractionalMicros}Z`,
-      );
-
-  return {
-    iso,
-    microseconds: BigInt(milliseconds) * MICROSECONDS_PER_MILLISECOND
-      + BigInt(subMillisecondMicros),
-  };
-}
-
 function isExactCandidateRow(row: Record<string, unknown>) {
   const keys = Object.keys(row).sort();
   return keys.length === ROW_KEYS.length
@@ -150,7 +81,9 @@ export async function listRecipeImageAuthDeletionCandidates({
   const listTimeMs = listTime.getTime();
   const hasCursorTime = afterNextAttemptAt !== undefined;
   const hasCursorId = afterOutboxId !== undefined;
-  const cursorTime = hasCursorTime ? timestamp(afterNextAttemptAt) : null;
+  const cursorTime = hasCursorTime
+    ? parsePostgresTimestamp(afterNextAttemptAt)
+    : null;
   const cursorId = hasCursorId && UUID_PATTERN.test(afterOutboxId!)
     ? afterOutboxId!.toLowerCase()
     : null;
@@ -163,8 +96,7 @@ export async function listRecipeImageAuthDeletionCandidates({
     || hasCursorTime !== hasCursorId
     || (hasCursorTime && (
       !cursorTime
-      || cursorTime.microseconds
-        > BigInt(listTimeMs) * MICROSECONDS_PER_MILLISECOND
+      || cursorTime.microseconds > millisecondsToMicroseconds(listTimeMs)
       || !cursorId
     ))
   ) {
@@ -211,9 +143,11 @@ export async function listRecipeImageAuthDeletionCandidates({
       ? positiveInteger(row.account_generation)
       : null;
     const identityEpoch = row
-      ? timestamp(row.auth_identity_created_at_snapshot)
+      ? parsePostgresTimestamp(row.auth_identity_created_at_snapshot)
       : null;
-    const nextAttemptAt = row ? timestamp(row.next_attempt_at) : null;
+    const nextAttemptAt = row
+      ? parsePostgresTimestamp(row.next_attempt_at)
+      : null;
     const outboxId = typeof row?.outbox_id === "string"
       && UUID_PATTERN.test(row.outbox_id)
       ? row.outbox_id.toLowerCase()
@@ -234,11 +168,9 @@ export async function listRecipeImageAuthDeletionCandidates({
       || !isExactCandidateRow(row)
       || accountGeneration === null
       || !identityEpoch
-      || identityEpoch.microseconds
-        > BigInt(listTimeMs) * MICROSECONDS_PER_MILLISECOND
+      || identityEpoch.microseconds > millisecondsToMicroseconds(listTimeMs)
       || !nextAttemptAt
-      || nextAttemptAt.microseconds
-        > BigInt(listTimeMs) * MICROSECONDS_PER_MILLISECOND
+      || nextAttemptAt.microseconds > millisecondsToMicroseconds(listTimeMs)
       || !outboxId
       || !ownerUuid
       || !current

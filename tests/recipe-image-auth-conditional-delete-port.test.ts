@@ -74,6 +74,28 @@ describe("managed recipe image conditional Auth deletion port", () => {
     });
   });
 
+  it("distinguishes atomic replacement evidence within one millisecond", async () => {
+    const expectedEpoch = "2030-07-26T00:00:00.000100Z";
+    const actualEpoch = "2030-07-26T00:00:00.000900Z";
+    const deleteIfIdentityUnchanged = vi.fn(async () => ({
+      actualAuthIdentityCreatedAt: actualEpoch,
+      authIdentityCreatedAt: expectedEpoch,
+      ownerUuid: OWNER_UUID,
+      status: "identity_replaced",
+    }));
+
+    await expect(executeRecipeImageAuthConditionalDeletion({
+      ...baseInput,
+      expectedAuthIdentityCreatedAt: expectedEpoch,
+      providerBarrier: { deleteIfIdentityUnchanged },
+    })).resolves.toEqual({
+      actualAuthIdentityCreatedAt: actualEpoch,
+      authIdentityCreatedAt: expectedEpoch,
+      ownerUuid: OWNER_UUID,
+      status: "identity_replaced",
+    });
+  });
+
   it("fails closed when no provider-supported barrier exists", async () => {
     await expect(executeRecipeImageAuthConditionalDeletion({
       ...baseInput,
