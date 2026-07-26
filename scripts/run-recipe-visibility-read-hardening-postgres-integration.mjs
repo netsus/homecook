@@ -24,6 +24,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724220000_recipe_image_quarantine_recheck_authority.sql",
   "supabase/migrations/20260724230000_recipe_image_normal_drain_authority.sql",
   "supabase/migrations/20260724240000_recipe_image_expected_owner_signal_authority.sql",
+  "supabase/migrations/20260724250000_recipe_image_auth_deletion_readiness_authority.sql",
 ];
 
 function commandResult(command, args, options = {}) {
@@ -270,6 +271,8 @@ if (!postgresBin) {
           status text not null,
           required_cleanup_generation bigint not null default 0,
           completed_cleanup_generation bigint not null default 0,
+          personal_db_deleted_at timestamptz,
+          auth_identity_deleted_at timestamptz,
           revision bigint not null default 1,
           updated_at timestamptz not null default now(),
           primary key (owner_uuid, account_generation)
@@ -295,6 +298,27 @@ if (!postgresBin) {
         alter table public.user_session_generation_bindings
           enable row level security;
         revoke all on table public.user_session_generation_bindings
+          from public, anon, authenticated, service_role;
+
+        create table public.auth_identity_deletion_outbox (
+          id uuid primary key default gen_random_uuid(),
+          owner_uuid uuid not null,
+          account_generation bigint not null,
+          auth_identity_created_at_snapshot timestamptz not null,
+          state text not null,
+          terminal_result text,
+          attempts integer not null default 0,
+          lease_token uuid,
+          lease_expires_at timestamptz,
+          next_attempt_at timestamptz not null default now(),
+          last_error text,
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now(),
+          unique (owner_uuid, account_generation)
+        );
+        alter table public.auth_identity_deletion_outbox
+          enable row level security;
+        revoke all on table public.auth_identity_deletion_outbox
           from public, anon, authenticated, service_role;
 
         create table public.account_generation_capability_state (

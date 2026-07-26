@@ -23,6 +23,8 @@ const IMAGE_NORMAL_DRAIN_MIGRATION_PATH =
   "supabase/migrations/20260724230000_recipe_image_normal_drain_authority.sql";
 const IMAGE_EXPECTED_OWNER_SIGNAL_MIGRATION_PATH =
   "supabase/migrations/20260724240000_recipe_image_expected_owner_signal_authority.sql";
+const IMAGE_AUTH_DELETION_READINESS_MIGRATION_PATH =
+  "supabase/migrations/20260724250000_recipe_image_auth_deletion_readiness_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -4673,6 +4675,326 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(missingCapability.status).not.toBe(0);
     expect(missingCapability.stderr).toContain(
       "expected owner signal inspection is inactive",
+    );
+  });
+
+  it("proves Auth deletion readiness only for contiguous terminal cleanup and owner-zero", () => {
+    const readinessOwner = "00000000-0000-4000-8000-000000000401";
+    const deletedObject = "00000000-0000-4000-8000-000000000402";
+    const absentObject = "00000000-0000-4000-8000-000000000403";
+    const storageObject = "00000000-0000-4000-8000-000000000404";
+    const authSnapshot = "2030-07-24T00:00:00Z";
+    const now = "2030-07-24T01:00:00Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        completed_cleanup_generation,
+        personal_db_deleted_at
+      ) values (
+        '${readinessOwner}',
+        1,
+        '${authSnapshot}',
+        'cleanup_pending',
+        2,
+        0,
+        '${authSnapshot}'
+      );
+
+      insert into public.auth_identity_deletion_outbox (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        next_attempt_at
+      ) values (
+        '${readinessOwner}',
+        1,
+        '${authSnapshot}',
+        'pending',
+        '${authSnapshot}'
+      );
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        next_terminal_scan_at
+      ) values
+        (
+          '${deletedObject}',
+          '${readinessOwner}',
+          1,
+          'recipe-images-private',
+          '${readinessOwner}/1/${deletedObject}.webp',
+          'private',
+          'deleted',
+          1,
+          '${now}'
+        ),
+        (
+          '${absentObject}',
+          '${readinessOwner}',
+          1,
+          'recipe-images-private',
+          '${readinessOwner}/1/${absentObject}.webp',
+          'private',
+          'verified_not_found',
+          2,
+          '${now}'
+        );
+
+      insert into public.storage_object_deletion_outbox (
+        bucket_id,
+        object_path,
+        owner_uuid,
+        account_generation,
+        cleanup_generation,
+        reason,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values
+        (
+          'recipe-images-private',
+          '${readinessOwner}/1/${deletedObject}.webp',
+          '${readinessOwner}',
+          1,
+          1,
+          'account_delete',
+          'succeeded',
+          'deleted',
+          '${authSnapshot}'
+        ),
+        (
+          'recipe-images-private',
+          '${readinessOwner}/1/${absentObject}.webp',
+          '${readinessOwner}',
+          1,
+          2,
+          'account_delete',
+          'succeeded',
+          'verified_not_found',
+          '${authSnapshot}'
+        );
+
+      create temp table readiness_results (
+        step integer primary key,
+        result text not null
+      ) on commit drop;
+      grant insert, select on readiness_results to service_role;
+
+      set local role service_role;
+      insert into readiness_results
+      select 1, concat_ws(
+        ':',
+        lifecycle_ready,
+        auth_outbox_due_count,
+        required_cleanup_generation,
+        terminal_cleanup_generation_count,
+        storage_nonterminal_count,
+        storage_dead_letter_count,
+        storage_generation_mismatch_count,
+        registry_nonterminal_count,
+        registry_generation_mismatch_count,
+        owner_signal_union_count,
+        owner_signal_union_zero,
+        ready
+      )
+      from public.inspect_recipe_image_auth_deletion_readiness(
+        '${readinessOwner}',
+        1,
+        '${now}'
+      );
+      reset role;
+
+      insert into storage.objects (
+        id,
+        bucket_id,
+        name,
+        owner_id
+      ) values (
+        '${storageObject}',
+        'recipe-images-private',
+        '${readinessOwner}/1/${deletedObject}.webp',
+        null
+      );
+
+      set local role service_role;
+      insert into readiness_results
+      select 2, concat_ws(
+        ':',
+        owner_signal_union_count,
+        owner_signal_union_zero,
+        ready
+      )
+      from public.inspect_recipe_image_auth_deletion_readiness(
+        '${readinessOwner}',
+        1,
+        '${now}'
+      );
+      reset role;
+
+      delete from storage.objects where id = '${storageObject}';
+      update public.storage_object_deletion_outbox
+      set state = 'dead_letter',
+          terminal_result = null
+      where owner_uuid = '${readinessOwner}'
+        and cleanup_generation = 2;
+      update public.recipe_image_objects
+      set state = 'cleanup_pending',
+          next_terminal_scan_at = null
+      where id = '${absentObject}';
+
+      set local role service_role;
+      insert into readiness_results
+      select 3, concat_ws(
+        ':',
+        terminal_cleanup_generation_count,
+        storage_nonterminal_count,
+        storage_dead_letter_count,
+        registry_nonterminal_count,
+        owner_signal_union_count,
+        ready
+      )
+      from public.inspect_recipe_image_auth_deletion_readiness(
+        '${readinessOwner}',
+        1,
+        '${now}'
+      );
+      reset role;
+
+      update public.storage_object_deletion_outbox
+      set state = 'succeeded',
+          terminal_result = 'verified_not_found'
+      where owner_uuid = '${readinessOwner}'
+        and cleanup_generation = 2;
+      update public.recipe_image_objects
+      set state = 'verified_not_found',
+          next_terminal_scan_at = '${now}'
+      where id = '${absentObject}';
+      update public.auth_identity_deletion_outbox
+      set next_attempt_at = '2030-07-24T02:00:00Z'
+      where owner_uuid = '${readinessOwner}'
+        and account_generation = 1;
+
+      set local role service_role;
+      insert into readiness_results
+      select 4, concat_ws(
+        ':',
+        auth_outbox_due_count,
+        ready
+      )
+      from public.inspect_recipe_image_auth_deletion_readiness(
+        '${readinessOwner}',
+        1,
+        '${now}'
+      );
+      reset role;
+
+      update public.auth_identity_deletion_outbox
+      set next_attempt_at = '${authSnapshot}'
+      where owner_uuid = '${readinessOwner}'
+        and account_generation = 1;
+      delete from public.storage_object_deletion_outbox
+      where owner_uuid = '${readinessOwner}'
+        and cleanup_generation = 1;
+
+      set local role service_role;
+      insert into readiness_results
+      select 5, concat_ws(
+        ':',
+        terminal_cleanup_generation_count,
+        required_cleanup_generation,
+        ready
+      )
+      from public.inspect_recipe_image_auth_deletion_readiness(
+        '${readinessOwner}',
+        1,
+        '${now}'
+      );
+      reset role;
+
+      select string_agg(result, ';' order by step)
+      from readiness_results;
+      rollback;
+    `)).toBe(
+      "t:1:2:2:0:0:0:0:0:0:t:t;1:f:f;1:1:1:1:0:f;0:f;1:2:f",
+    );
+  });
+
+  it("replays Auth deletion readiness as a service-only authority", () => {
+    const replay = psqlFileResult(
+      IMAGE_AUTH_DELETION_READINESS_MIGRATION_PATH,
+    );
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.inspect_recipe_image_auth_deletion_readiness(uuid,bigint,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.inspect_recipe_image_auth_deletion_readiness(uuid,bigint,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.inspect_recipe_image_auth_deletion_readiness(uuid,bigint,timestamp with time zone)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t");
+  });
+
+  it("keeps Auth deletion readiness inactive before joint activation", () => {
+    const legacy = psqlResult(`
+      begin;
+      set local role service_role;
+      select *
+      from public.inspect_recipe_image_auth_deletion_readiness(
+        '${OWNER_ACTIVE}',
+        1,
+        now()
+      );
+    `);
+    expect(legacy.status).not.toBe(0);
+    expect(legacy.stderr).toContain(
+      "Auth deletion readiness is inactive",
+    );
+
+    const serializable = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select *
+      from public.inspect_recipe_image_auth_deletion_readiness(
+        '${OWNER_ACTIVE}',
+        1,
+        now()
+      );
+    `);
+    expect(serializable.status).not.toBe(0);
+    expect(serializable.stderr).toContain(
+      "Auth deletion readiness requires READ COMMITTED",
     );
   });
 
