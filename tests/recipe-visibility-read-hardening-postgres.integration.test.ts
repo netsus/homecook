@@ -48,6 +48,13 @@ const IMAGE_CLEANUP_CONSUMER = "00000000-0000-4000-8000-000000000314";
 const IMAGE_UPLOAD_KEY = "00000000-0000-4000-8000-000000000315";
 const IMAGE_UPLOAD_ISOLATION_KEY = "00000000-0000-4000-8000-000000000316";
 const IMAGE_UPLOAD_COMPENSATION_KEY = "00000000-0000-4000-8000-000000000317";
+const IMAGE_CANCEL_UPLOAD_KEY = "00000000-0000-4000-8000-000000000320";
+const IMAGE_CANCEL_KEY = "00000000-0000-4000-8000-000000000321";
+const IMAGE_CANCEL_OTHER_OWNER = "00000000-0000-4000-8000-000000000322";
+const IMAGE_CANCEL_FINALIZED_UPLOAD_KEY =
+  "00000000-0000-4000-8000-000000000325";
+const IMAGE_CANCEL_FINALIZED_KEY =
+  "00000000-0000-4000-8000-000000000326";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -1678,6 +1685,349 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(serializable.status).not.toBe(0);
     expect(serializable.stderr).toMatch(
       /recipe image upload compensation requires READ COMMITTED/i,
+    );
+  });
+
+  it("cancels one exact live image once and prevents late finalize", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      update public.user_account_lifecycles
+      set auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        upload_attempt_token,
+        cleanup_generation,
+        upload_lease_expires_at
+      ) values (
+        '${IMAGE_CANCEL_OTHER_OWNER}',
+        '${OWNER_REACTIVATED}',
+        2,
+        'recipe-images-private',
+        '${OWNER_REACTIVATED}/2/${IMAGE_CANCEL_OTHER_OWNER}.webp',
+        'private',
+        'pending_upload',
+        '00000000-0000-4000-8000-000000000323',
+        0,
+        '2030-07-24T02:10:00Z'
+      );
+
+      set local role service_role;
+      do $block$
+      declare
+        v_reserved jsonb;
+        v_cancelled jsonb;
+        v_replay jsonb;
+        v_uploaded_reserved jsonb;
+        v_uploaded_finalized jsonb;
+        v_uploaded_cancelled jsonb;
+        v_upload_replay jsonb;
+        v_object_id uuid;
+        v_attempt_token uuid;
+        v_outbox_id uuid;
+        v_uploaded_object_id uuid;
+        v_uploaded_attempt_token uuid;
+      begin
+        v_reserved := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_CANCEL_UPLOAD_KEY}',
+          repeat('f', 64),
+          repeat('1', 64),
+          1024,
+          'image/webp',
+          'webp',
+          '2030-07-24T02:00:00Z'
+        );
+        v_object_id := (v_reserved ->> 'object_id')::uuid;
+        v_attempt_token := (v_reserved ->> 'attempt_token')::uuid;
+
+        v_cancelled := public.cancel_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_CANCEL_KEY}',
+          v_object_id,
+          '2030-07-24T02:00:01Z'
+        );
+        v_outbox_id := (v_cancelled ->> 'outbox_id')::uuid;
+
+        if v_cancelled ->> 'outcome' <> 'succeeded'
+          or (v_cancelled ->> 'object_id')::uuid <> v_object_id
+          or (v_cancelled ->> 'cleanup_generation')::bigint <> 1
+          or v_cancelled ->> 'state' <> 'cleanup_pending'
+          or v_outbox_id is null then
+          raise exception 'cancel result drift: %', v_cancelled;
+        end if;
+
+        v_replay := public.cancel_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_CANCEL_KEY}',
+          v_object_id,
+          '2030-07-24T02:00:02Z'
+        );
+        if v_replay is distinct from v_cancelled then
+          raise exception 'cancel replay drift: % <> %',
+            v_replay,
+            v_cancelled;
+        end if;
+
+        begin
+          perform public.finalize_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_CANCEL_UPLOAD_KEY}',
+            v_attempt_token,
+            0,
+            '2030-07-24T02:00:03Z'
+          );
+          raise exception 'cancelled upload finalized unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'IMAGE_EXPIRED' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        update public.storage_object_deletion_outbox
+        set next_attempt_at = '2030-07-24T02:00:01Z'
+        where id = v_outbox_id;
+        set local role service_role;
+
+        v_uploaded_reserved := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_CANCEL_FINALIZED_UPLOAD_KEY}',
+          repeat('2', 64),
+          repeat('3', 64),
+          2048,
+          'image/webp',
+          'webp',
+          '2030-07-24T02:00:10Z'
+        );
+        v_uploaded_object_id :=
+          (v_uploaded_reserved ->> 'object_id')::uuid;
+        v_uploaded_attempt_token :=
+          (v_uploaded_reserved ->> 'attempt_token')::uuid;
+        if v_uploaded_reserved ->> 'outcome' <> 'reserved'
+          or v_uploaded_object_id is null
+          or v_uploaded_attempt_token is null then
+          raise exception 'finalized upload reservation drift: %',
+            v_uploaded_reserved;
+        end if;
+
+        v_uploaded_finalized := public.finalize_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_CANCEL_FINALIZED_UPLOAD_KEY}',
+          v_uploaded_attempt_token,
+          0,
+          '2030-07-24T02:00:11Z'
+        );
+        if v_uploaded_finalized ->> 'outcome' <> 'succeeded'
+          or v_uploaded_finalized ->> 'state' <> 'uploaded_unlinked' then
+          raise exception 'finalized upload setup drift: %',
+            v_uploaded_finalized;
+        end if;
+
+        v_uploaded_cancelled := public.cancel_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_CANCEL_FINALIZED_KEY}',
+          v_uploaded_object_id,
+          '2030-07-24T02:00:12Z'
+        );
+        if v_uploaded_cancelled ->> 'state' <> 'cleanup_pending' then
+          raise exception 'finalized image cancel drift: %',
+            v_uploaded_cancelled;
+        end if;
+
+        v_upload_replay := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_CANCEL_FINALIZED_UPLOAD_KEY}',
+          repeat('2', 64),
+          repeat('3', 64),
+          2048,
+          'image/webp',
+          'webp',
+          '2030-07-24T02:00:13Z'
+        );
+        if v_upload_replay ->> 'outcome' <> 'terminal'
+          or (v_upload_replay ->> 'object_id')::uuid
+            <> v_uploaded_object_id
+          or v_upload_replay ->> 'state' <> 'cleanup_pending'
+          or v_upload_replay ->> 'terminal_result'
+            <> 'cleanup_pending' then
+          raise exception 'cancelled upload replay drift: %',
+            v_upload_replay;
+        end if;
+
+        begin
+          perform public.cancel_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_CANCEL_KEY}',
+            '${IMAGE_CANCEL_OTHER_OWNER}',
+            '2030-07-24T02:00:04Z'
+          );
+          raise exception 'reused cancel key changed target unexpectedly';
+        exception
+          when unique_violation then
+            if sqlerrm <> 'IDEMPOTENCY_KEY_REUSED' then
+              raise;
+            end if;
+        end;
+
+        begin
+          perform public.cancel_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '00000000-0000-4000-8000-000000000324',
+            '${IMAGE_CANCEL_OTHER_OWNER}',
+            '2030-07-24T02:00:05Z'
+          );
+          raise exception 'other-owner image was visible';
+        exception
+          when no_data_found then
+            if sqlerrm <> 'IMAGE_NOT_FOUND' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        if not exists (
+          select 1
+          from public.recipe_image_objects as object
+          where object.id = v_object_id
+            and object.state = 'cleanup_pending'
+            and object.cleanup_generation = 1
+            and object.upload_attempt_token is null
+            and object.upload_lease_expires_at is null
+        ) then
+          raise exception 'cancelled object state drift';
+        end if;
+        if not exists (
+          select 1
+          from public.mutation_idempotency_keys as idempotency
+          where idempotency.owner_uuid = '${OWNER_ACTIVE}'
+            and idempotency.account_generation = 1
+            and idempotency.operation_scope = 'recipe_image_upload'
+            and idempotency.result_reference = v_object_id
+            and idempotency.state = 'cancelled'
+            and idempotency.terminal_result = 'cleanup_pending'
+            and idempotency.quota_released_at
+              = '2030-07-24T02:00:01Z'::timestamptz
+        ) then
+          raise exception 'upload cancellation tombstone drift';
+        end if;
+        if not exists (
+          select 1
+          from public.mutation_idempotency_keys as idempotency
+          where idempotency.owner_uuid = '${OWNER_ACTIVE}'
+            and idempotency.account_generation = 1
+            and idempotency.operation_scope = 'recipe_image_cancel'
+            and idempotency.result_reference = v_object_id
+            and idempotency.state = 'succeeded'
+            and idempotency.durable_result ->> 'outbox_id'
+              = v_outbox_id::text
+        ) then
+          raise exception 'cancel replay authority drift';
+        end if;
+        if not exists (
+          select 1
+          from public.storage_object_deletion_outbox as outbox
+          where outbox.id = v_outbox_id
+            and outbox.cleanup_generation = 1
+            and outbox.reason = 'owner_cancelled'
+            and outbox.state = 'pending'
+        ) then
+          raise exception 'cancel cleanup outbox drift';
+        end if;
+        if exists (
+          select 1
+          from public.recipe_image_objects as object
+          where object.id = '${IMAGE_CANCEL_OTHER_OWNER}'
+            and object.state <> 'pending_upload'
+        ) then
+          raise exception 'other-owner image mutated';
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'image-cancel-pass';
+    `)).toBe("image-cancel-pass");
+
+    const serializable = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select public.cancel_recipe_image_upload(
+        '${OWNER_ACTIVE}',
+        '2026-01-01T00:00:00Z',
+        repeat('a', 64),
+        1,
+        '${IMAGE_CANCEL_KEY}',
+        '${IMAGE_CANCEL_OTHER_OWNER}',
+        '2030-07-24T02:01:00Z'
+      );
+    `);
+    expect(serializable.status).not.toBe(0);
+    expect(serializable.stderr).toMatch(
+      /recipe image cancel requires READ COMMITTED/i,
     );
   });
 
