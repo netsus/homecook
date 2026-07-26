@@ -2831,6 +2831,273 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     `)).toBe("image-cancel-lifecycle-pass");
   });
 
+  it("moves only exact due stale uploads into one newer cleanup generation", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.image_upload_quota_counters (
+        owner_uuid,
+        account_generation,
+        active_reservation_count
+      ) values (
+        '${OWNER_ACTIVE}',
+        1,
+        3
+      )
+      on conflict (owner_uuid, account_generation)
+      do update set
+        active_reservation_count = excluded.active_reservation_count,
+        updated_at = now();
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        raw_sha256,
+        byte_size,
+        actual_mime_type,
+        visibility,
+        state,
+        upload_attempt_token,
+        cleanup_generation,
+        upload_lease_expires_at,
+        unlinked_cleanup_after
+      ) values
+        (
+          '00000000-0000-4000-8000-000000000341',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/00000000-0000-4000-8000-000000000341.webp',
+          repeat('a', 64),
+          100,
+          'image/webp',
+          'private',
+          'pending_upload',
+          '00000000-0000-4000-8000-000000000342',
+          0,
+          '2029-12-31T23:55:00Z',
+          null
+        ),
+        (
+          '00000000-0000-4000-8000-000000000343',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/00000000-0000-4000-8000-000000000343.webp',
+          repeat('b', 64),
+          200,
+          'image/webp',
+          'private',
+          'uploaded_unlinked',
+          null,
+          0,
+          null,
+          '2029-12-31T23:59:00Z'
+        ),
+        (
+          '00000000-0000-4000-8000-000000000344',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/00000000-0000-4000-8000-000000000344.webp',
+          repeat('c', 64),
+          300,
+          'image/webp',
+          'private',
+          'uploaded_unlinked',
+          null,
+          0,
+          null,
+          '2030-01-02T00:00:00Z'
+        );
+
+      insert into public.mutation_idempotency_keys (
+        owner_uuid,
+        account_generation,
+        operation_scope,
+        key_hash,
+        payload_hash,
+        state,
+        durable_result,
+        result_reference,
+        attempt_token,
+        lease_expires_at,
+        reserved_byte_size,
+        quota_reserved_at
+      ) values
+        (
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe_image_upload',
+          repeat('1', 64),
+          repeat('4', 64),
+          'in_progress',
+          null,
+          '00000000-0000-4000-8000-000000000341',
+          '00000000-0000-4000-8000-000000000342',
+          '2029-12-31T23:55:00Z',
+          100,
+          '2029-12-31T23:50:00Z'
+        ),
+        (
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe_image_upload',
+          repeat('2', 64),
+          repeat('5', 64),
+          'succeeded',
+          '{"outcome":"succeeded"}'::jsonb,
+          '00000000-0000-4000-8000-000000000343',
+          null,
+          null,
+          200,
+          '2029-12-30T00:00:00Z'
+        ),
+        (
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe_image_upload',
+          repeat('3', 64),
+          repeat('6', 64),
+          'succeeded',
+          '{"outcome":"succeeded"}'::jsonb,
+          '00000000-0000-4000-8000-000000000344',
+          null,
+          null,
+          300,
+          '2029-12-30T00:00:00Z'
+        );
+
+      set local role service_role;
+
+      do $block$
+      declare
+        v_scanned text;
+        v_replay_count integer;
+        v_cleanup_count integer;
+        v_outbox_count integer;
+        v_cancelled_count integer;
+        v_active_count integer;
+      begin
+        select string_agg(
+          scan.previous_state,
+          ','
+          order by scan.previous_state
+        )
+          into v_scanned
+        from public.scan_stale_recipe_image_uploads(
+          50,
+          '2030-01-01T00:00:00Z'
+        ) as scan;
+
+        if v_scanned is distinct from
+          'pending_upload,uploaded_unlinked' then
+          raise exception 'stale scanner result drift: %', v_scanned;
+        end if;
+
+        reset role;
+
+        select count(*)
+          into v_cleanup_count
+        from public.recipe_image_objects as object
+        where object.id in (
+          '00000000-0000-4000-8000-000000000341',
+          '00000000-0000-4000-8000-000000000343'
+        )
+          and object.state = 'cleanup_pending'
+          and object.cleanup_generation = 1
+          and object.upload_attempt_token is null
+          and object.upload_lease_expires_at is null
+          and object.unlinked_cleanup_after is null;
+
+        if v_cleanup_count <> 2 then
+          raise exception 'stale object transition drift';
+        end if;
+
+        if not exists (
+          select 1
+          from public.recipe_image_objects as object
+          where object.id =
+            '00000000-0000-4000-8000-000000000344'
+            and object.state = 'uploaded_unlinked'
+            and object.cleanup_generation = 0
+        ) then
+          raise exception 'future grace object changed';
+        end if;
+
+        select count(*)
+          into v_outbox_count
+        from public.storage_object_deletion_outbox as outbox
+        where outbox.owner_uuid = '${OWNER_ACTIVE}'
+          and outbox.reason = 'stale_upload'
+          and outbox.cleanup_generation = 1
+          and outbox.state = 'pending';
+
+        if v_outbox_count <> 2 then
+          raise exception 'stale cleanup outbox drift';
+        end if;
+
+        select count(*)
+          into v_cancelled_count
+        from public.mutation_idempotency_keys as idempotency
+        where idempotency.result_reference in (
+          '00000000-0000-4000-8000-000000000341',
+          '00000000-0000-4000-8000-000000000343'
+        )
+          and idempotency.state = 'cancelled'
+          and idempotency.terminal_result = 'cleanup_pending'
+          and idempotency.quota_released_at is not null;
+
+        if v_cancelled_count <> 2 then
+          raise exception 'stale upload tombstone drift';
+        end if;
+
+        select counter.active_reservation_count
+          into v_active_count
+        from public.image_upload_quota_counters as counter
+        where counter.owner_uuid = '${OWNER_ACTIVE}'
+          and counter.account_generation = 1;
+
+        if v_active_count <> 1 then
+          raise exception 'stale reservation release drift: %',
+            v_active_count;
+        end if;
+
+        select count(*)
+          into v_replay_count
+        from public.scan_stale_recipe_image_uploads(
+          50,
+          '2030-01-01T00:00:00Z'
+        );
+
+        if v_replay_count <> 0 then
+          raise exception 'stale scanner replay was not empty';
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'image-stale-scanner-pass';
+    `)).toBe("image-stale-scanner-pass");
+
+    expect(asRoleResult(
+      "authenticated",
+      `
+        select count(*)
+        from public.scan_stale_recipe_image_uploads(1, now());
+      `,
+      OWNER_ACTIVE,
+    ).status).not.toBe(0);
+  });
+
   it("fails every pre-PUT quota boundary closed without charging the rejected attempt", () => {
     expect(psql(`
       begin;
