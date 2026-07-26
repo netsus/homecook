@@ -25,6 +25,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724230000_recipe_image_normal_drain_authority.sql",
   "supabase/migrations/20260724240000_recipe_image_expected_owner_signal_authority.sql",
   "supabase/migrations/20260724250000_recipe_image_auth_deletion_readiness_authority.sql",
+  "supabase/migrations/20260724260000_recipe_image_auth_deletion_claim_authority.sql",
 ];
 
 function commandResult(command, args, options = {}) {
@@ -319,6 +320,175 @@ if (!postgresBin) {
         alter table public.auth_identity_deletion_outbox
           enable row level security;
         revoke all on table public.auth_identity_deletion_outbox
+          from public, anon, authenticated, service_role;
+
+        create or replace function public.claim_auth_identity_deletion_outbox(
+          p_outbox_id uuid,
+          p_lease_token uuid,
+          p_now timestamp with time zone
+        )
+        returns jsonb
+        language plpgsql
+        volatile
+        security definer
+        set search_path = pg_catalog, public, pg_temp
+        as $function$
+        declare
+          v_outbox public.auth_identity_deletion_outbox%rowtype;
+        begin
+          if p_outbox_id is null or p_lease_token is null or p_now is null then
+            raise exception 'auth deletion claim CAS fields are required'
+              using errcode = '22023';
+          end if;
+
+          select outbox.*
+            into v_outbox
+          from public.auth_identity_deletion_outbox as outbox
+          where outbox.id = p_outbox_id
+          for update;
+
+          if v_outbox.id is null
+            or not (
+              (
+                v_outbox.state in ('pending', 'failed')
+                and v_outbox.next_attempt_at <= p_now
+              )
+              or (
+                v_outbox.state = 'processing'
+                and v_outbox.lease_expires_at <= p_now
+              )
+            ) then
+            raise exception
+              'auth deletion outbox claim compare-and-swap failed'
+              using errcode = '40001';
+          end if;
+
+          update public.auth_identity_deletion_outbox
+          set
+            state = 'processing',
+            attempts = attempts + 1,
+            lease_token = p_lease_token,
+            lease_expires_at = p_now + interval '120 seconds',
+            updated_at = p_now
+          where id = p_outbox_id
+          returning * into v_outbox;
+
+          return jsonb_build_object(
+            'id', v_outbox.id,
+            'owner_uuid', v_outbox.owner_uuid,
+            'account_generation', v_outbox.account_generation,
+            'auth_identity_created_at_snapshot',
+              v_outbox.auth_identity_created_at_snapshot,
+            'state', v_outbox.state,
+            'attempts', v_outbox.attempts,
+            'lease_token', v_outbox.lease_token,
+            'lease_expires_at', v_outbox.lease_expires_at
+          );
+        end;
+        $function$;
+
+        create or replace function public.finalize_auth_identity_deletion_outbox(
+          p_outbox_id uuid,
+          p_lease_token uuid,
+          p_expected_attempts integer,
+          p_terminal_result text,
+          p_error text,
+          p_now timestamp with time zone
+        )
+        returns jsonb
+        language plpgsql
+        volatile
+        security definer
+        set search_path = pg_catalog, public, pg_temp
+        as $function$
+        declare
+          v_outbox public.auth_identity_deletion_outbox%rowtype;
+          v_next_state text;
+        begin
+          if p_outbox_id is null
+            or p_lease_token is null
+            or p_expected_attempts is null
+            or p_expected_attempts <= 0
+            or p_now is null
+            or (
+              p_terminal_result is null
+              and nullif(p_error, '') is null
+            )
+            or (
+              p_terminal_result is not null
+              and p_terminal_result not in (
+                'deleted',
+                'already_absent',
+                'identity_replaced'
+              )
+            ) then
+            raise exception 'auth deletion finalize CAS fields are invalid'
+              using errcode = '22023';
+          end if;
+
+          select outbox.*
+            into v_outbox
+          from public.auth_identity_deletion_outbox as outbox
+          where outbox.id = p_outbox_id
+          for update;
+
+          if v_outbox.id is null
+            or v_outbox.state <> 'processing'
+            or v_outbox.lease_token is distinct from p_lease_token
+            or v_outbox.attempts is distinct from p_expected_attempts
+            or v_outbox.lease_expires_at < p_now then
+            raise exception
+              'auth deletion outbox finalize compare-and-swap failed'
+              using errcode = '40001';
+          end if;
+
+          v_next_state := case
+            when p_terminal_result is not null then 'succeeded'
+            when v_outbox.attempts >= 10 then 'dead_letter'
+            else 'failed'
+          end;
+
+          update public.auth_identity_deletion_outbox
+          set
+            state = v_next_state,
+            terminal_result = p_terminal_result,
+            lease_token = null,
+            lease_expires_at = null,
+            next_attempt_at = case
+              when v_next_state = 'failed' then p_now + interval '5 minutes'
+              else next_attempt_at
+            end,
+            last_error = p_error,
+            updated_at = p_now
+          where id = p_outbox_id
+          returning * into v_outbox;
+
+          return jsonb_build_object(
+            'id', v_outbox.id,
+            'state', v_outbox.state,
+            'terminal_result', v_outbox.terminal_result,
+            'attempts', v_outbox.attempts,
+            'next_attempt_at', v_outbox.next_attempt_at
+          );
+        end;
+        $function$;
+
+        revoke execute
+          on function public.claim_auth_identity_deletion_outbox(
+            uuid,
+            uuid,
+            timestamp with time zone
+          )
+          from public, anon, authenticated, service_role;
+        revoke execute
+          on function public.finalize_auth_identity_deletion_outbox(
+            uuid,
+            uuid,
+            integer,
+            text,
+            text,
+            timestamp with time zone
+          )
           from public, anon, authenticated, service_role;
 
         create table public.account_generation_capability_state (
