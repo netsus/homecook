@@ -1781,6 +1781,20 @@
       "activation_phase": "always"
     },
     {
+      "key": "rpc|lib/server/recipe-image-lifecycle-completion.ts|complete_recipe_image_account_lifecycle|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "complete_recipe_image_account_lifecycle",
+      "line": 86,
+      "source_file": "lib/server/recipe-image-lifecycle-completion.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
       "key": "rpc|lib/server/recipe-image-managed-cancel.ts|cancel_recipe_image_upload|1",
       "kind": "rpc",
       "operation": "call",
@@ -1902,6 +1916,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-26T21:49:45.664Z",
-  "checksum": "08e05fbc3b07d9ac7591ac1e32b533af7a1c78f6e33920b387fe2feebe9eeffb"
+  "generated_at": "2026-07-26T23:28:01.776Z",
+  "checksum": "ac65d7c815f816e70e02e3eae86db8fb16b6978551644ba82ae035c4a3b35a10"
 }

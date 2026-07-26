@@ -79,6 +79,7 @@ const LIB_FILE_OWNER_SCOPE = {
   "lib/server/admin-audit.ts": "admin",
   "lib/server/admin-events.ts": "system",
   "lib/server/recipe-image-auth-deletion-finalize.ts": "system",
+  "lib/server/recipe-image-lifecycle-completion.ts": "system",
   "lib/server/recipe-image-managed-cancel.ts": "authenticated-user",
   "lib/server/recipe-image-normal-drain-storage.ts": "system",
   "lib/server/recipe-nutrition-snapshot.ts": "system",
