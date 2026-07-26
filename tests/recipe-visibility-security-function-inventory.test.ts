@@ -142,6 +142,13 @@ describe("recipe visibility security function inventory", () => {
         security_mode: "definer",
         safe_search_path: ["pg_catalog", "public", "pg_temp"],
       }),
+      expect.objectContaining({
+        signature:
+          "public.fail_recipe_image_cleanup(uuid, uuid, bigint, bigint, uuid, text, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
     ]);
   });
 
@@ -394,7 +401,7 @@ describe("recipe visibility security function inventory", () => {
       "recipe-visibility-read-hardening:5 pre-deployment additive application functions",
     );
     expect(output).toContain(
-      "recipe-image-cleanup-outbox:8 pre-deployment additive application functions",
+      "recipe-image-cleanup-outbox:9 pre-deployment additive application functions",
     );
     expect(output).toContain(
       "recipe-image-upload-reservation:3 pre-deployment additive application functions",
