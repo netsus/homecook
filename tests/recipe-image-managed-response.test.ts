@@ -97,6 +97,48 @@ describe("managed recipe image upload response", () => {
     });
   });
 
+  it.each([
+    {
+      code: "IDEMPOTENCY_KEY_REUSED",
+      message: "같은 요청 키가 다른 요청에 이미 사용됐어요.",
+    },
+    {
+      code: "ACCOUNT_GENERATION_STALE",
+      message: "계정 상태를 다시 확인해 주세요.",
+    },
+    {
+      code: "ACCOUNT_SESSION_STALE",
+      message: "세션을 다시 확인해 주세요.",
+    },
+    {
+      code: "IMAGE_UPLOAD_CONFLICT",
+      message: "이미지 업로드 상태가 변경됐어요. 다시 시도해 주세요.",
+    },
+    {
+      code: "IMAGE_EXPIRED",
+      message: "이미지 업로드가 만료됐어요. 다시 업로드해 주세요.",
+    },
+  ] as const)("maps reservation rejection $code without internal detail", async ({
+    code,
+    message,
+  }) => {
+    const { body, response } = await readResponse({
+      code,
+      kind: "rejected",
+    });
+
+    expect(response.status).toBe(409);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code,
+        fields: [],
+        message,
+      },
+    });
+  });
+
   it("maps durable terminal upload replay to the expired response", async () => {
     const { body, response } = await readResponse({
       kind: "terminal",

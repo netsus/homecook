@@ -27,6 +27,13 @@ interface RpcResult {
   error: RpcError | null;
 }
 
+export type ManagedRecipeImageReservationRejectionCode =
+  | "IDEMPOTENCY_KEY_REUSED"
+  | "ACCOUNT_GENERATION_STALE"
+  | "ACCOUNT_SESSION_STALE"
+  | "IMAGE_UPLOAD_CONFLICT"
+  | "IMAGE_EXPIRED";
+
 export interface ManagedRecipeImageRpcClient {
   rpc(
     name: string,
@@ -76,6 +83,10 @@ export type ManagedRecipeImageUploadResult =
   | { kind: "live_replay"; retryAfterSeconds: number }
   | { kind: "limited"; retryAfterSeconds: number }
   | { kind: "conflict" }
+  | {
+    kind: "rejected";
+    code: ManagedRecipeImageReservationRejectionCode;
+  }
   | {
     kind: "terminal";
     objectId: string;
@@ -171,6 +182,21 @@ function nonNegativeInteger(value: unknown): number | null {
   return Number.isSafeInteger(value) && Number(value) >= 0
     ? Number(value)
     : null;
+}
+
+function reservationRejectionCode(
+  error: RpcError,
+): ManagedRecipeImageReservationRejectionCode | null {
+  switch (error.message) {
+    case "IDEMPOTENCY_KEY_REUSED":
+    case "ACCOUNT_GENERATION_STALE":
+    case "ACCOUNT_SESSION_STALE":
+    case "IMAGE_UPLOAD_CONFLICT":
+    case "IMAGE_EXPIRED":
+      return error.message;
+    default:
+      return null;
+  }
 }
 
 function expectedObjectPath(
@@ -494,8 +520,14 @@ export async function runManagedRecipeImageUpload(
       p_session_key_hash: input.sessionAuthority.sessionKeyHash,
     },
   );
-  if (!reservationResult || reservationResult.error) {
+  if (!reservationResult) {
     return { kind: "failed", reason: "reservation_failed" };
+  }
+  if (reservationResult.error) {
+    const code = reservationRejectionCode(reservationResult.error);
+    return code
+      ? { code, kind: "rejected" }
+      : { kind: "failed", reason: "reservation_failed" };
   }
 
   const reservation = parseReservation(
