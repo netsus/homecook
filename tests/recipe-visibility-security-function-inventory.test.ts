@@ -25,6 +25,8 @@ const RECIPE_MANUAL_CREATE_IMAGE_ATTACH_MANIFEST_PATH =
   "docs/security/recipe-manual-create-image-attach-security-function-authorization-manifest.json";
 const IMAGE_STALE_SCANNER_MANIFEST_PATH =
   "docs/security/recipe-image-stale-scanner-security-function-authorization-manifest.json";
+const IMAGE_TERMINAL_TOMBSTONE_MANIFEST_PATH =
+  "docs/security/recipe-image-terminal-tombstone-security-function-authorization-manifest.json";
 
 describe("recipe visibility security function inventory", () => {
   it("classifies the guard and every recreated baseline function", () => {
@@ -265,6 +267,36 @@ describe("recipe visibility security function inventory", () => {
       expect.objectContaining({
         signature:
           "public.scan_stale_recipe_image_uploads(integer, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
+    ]);
+  });
+
+  it("classifies both guarded terminal tombstone scanner functions", () => {
+    expect(existsSync(IMAGE_TERMINAL_TOMBSTONE_MANIFEST_PATH)).toBe(true);
+    if (!existsSync(IMAGE_TERMINAL_TOMBSTONE_MANIFEST_PATH)) {
+      return;
+    }
+
+    const manifest = JSON.parse(
+      readFileSync(IMAGE_TERMINAL_TOMBSTONE_MANIFEST_PATH, "utf8"),
+    ) as {
+      functions: Array<Record<string, unknown>>;
+    };
+
+    expect(manifest.functions).toEqual([
+      expect.objectContaining({
+        signature:
+          "public.claim_recipe_image_terminal_tombstones(integer, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
+      expect.objectContaining({
+        signature:
+          "public.reopen_recipe_image_terminal_tombstone(uuid, uuid, bigint, bigint, timestamp with time zone, timestamp with time zone)",
         allowed_principals: ["service_role"],
         security_mode: "definer",
         safe_search_path: ["pg_catalog", "public", "pg_temp"],

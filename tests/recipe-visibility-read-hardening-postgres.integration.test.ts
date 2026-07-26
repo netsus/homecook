@@ -3098,6 +3098,351 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     ).status).not.toBe(0);
   });
 
+  it("claims 151 terminal tombstones fairly and reopens only an exact late-object cursor", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        next_terminal_scan_at,
+        created_at,
+        updated_at
+      )
+      select
+        (
+          '00000000-0000-4000-8001-'
+          || lpad(series.value::text, 12, '0')
+        )::uuid,
+        '${OWNER_ACTIVE}'::uuid,
+        1,
+        'recipe-images-private',
+        '${OWNER_ACTIVE}/1/00000000-0000-4000-8001-'
+          || lpad(series.value::text, 12, '0')
+          || '.webp',
+        'private',
+        case
+          when series.value % 2 = 0 then 'deleted'
+          else 'verified_not_found'
+        end,
+        1,
+        '2030-01-01T00:00:00Z'::timestamptz
+          + ((series.value - 1) * interval '1 millisecond'),
+        '2029-12-01T00:00:00Z'::timestamptz,
+        case
+          when series.value = 151
+            then '2029-12-01T00:00:00Z'::timestamptz
+          else '2029-12-31T23:00:00Z'::timestamptz
+        end
+      from generate_series(1, 151) as series(value);
+
+      set local role service_role;
+
+      do $block$
+      declare
+        v_batch_count integer;
+      begin
+        select count(*)
+          into v_batch_count
+        from public.claim_recipe_image_terminal_tombstones(
+          50,
+          '2030-01-01T00:00:01Z'
+        );
+        if v_batch_count <> 50 then
+          raise exception 'terminal scan batch one drift: %',
+            v_batch_count;
+        end if;
+
+        select count(*)
+          into v_batch_count
+        from public.claim_recipe_image_terminal_tombstones(
+          50,
+          '2030-01-01T00:00:01Z'
+        );
+        if v_batch_count <> 50 then
+          raise exception 'terminal scan batch two drift: %',
+            v_batch_count;
+        end if;
+
+        select count(*)
+          into v_batch_count
+        from public.claim_recipe_image_terminal_tombstones(
+          50,
+          '2030-01-01T00:00:01Z'
+        );
+        if v_batch_count <> 50 then
+          raise exception 'terminal scan batch three drift: %',
+            v_batch_count;
+        end if;
+
+        select count(*)
+          into v_batch_count
+        from public.claim_recipe_image_terminal_tombstones(
+          50,
+          '2030-01-01T00:00:01Z'
+        );
+        if v_batch_count <> 1 then
+          raise exception 'terminal scan batch four drift: %',
+            v_batch_count;
+        end if;
+      end;
+      $block$;
+
+      reset role;
+
+      do $block$
+      declare
+        v_recent_count integer;
+        v_daily_count integer;
+      begin
+        select count(*)
+          into v_recent_count
+        from public.recipe_image_objects as object
+        where object.id::text like
+          '00000000-0000-4000-8001-%'
+          and object.id <>
+            '00000000-0000-4000-8001-000000000151'
+          and object.next_terminal_scan_at =
+            '2030-01-01T00:05:01Z';
+
+        if v_recent_count <> 150 then
+          raise exception 'five-minute terminal cursor drift: %',
+            v_recent_count;
+        end if;
+
+        select count(*)
+          into v_daily_count
+        from public.recipe_image_objects as object
+        where object.id =
+          '00000000-0000-4000-8001-000000000151'
+          and object.next_terminal_scan_at =
+            '2030-01-02T00:00:01Z';
+
+        if v_daily_count <> 1 then
+          raise exception 'daily terminal cursor drift';
+        end if;
+      end;
+      $block$;
+
+      set local role service_role;
+
+      do $block$
+      declare
+        v_reopened_count integer;
+      begin
+        select count(*)
+          into v_reopened_count
+        from public.reopen_recipe_image_terminal_tombstone(
+          '00000000-0000-4000-8001-000000000001',
+          '${OWNER_ACTIVE}',
+          1,
+          1,
+          '2030-01-01T00:00:00Z',
+          '2030-01-01T00:01:00Z'
+        );
+
+        if v_reopened_count <> 0 then
+          raise exception 'stale terminal cursor reopened cleanup';
+        end if;
+
+        select count(*)
+          into v_reopened_count
+        from public.reopen_recipe_image_terminal_tombstone(
+          '00000000-0000-4000-8001-000000000001',
+          '${OWNER_ACTIVE}',
+          1,
+          1,
+          '2030-01-01T00:05:01Z',
+          '2030-01-01T00:01:00Z'
+        );
+
+        if v_reopened_count <> 1 then
+          raise exception 'exact terminal cursor did not reopen cleanup';
+        end if;
+      end;
+      $block$;
+
+      reset role;
+
+      do $block$
+      begin
+        if not exists (
+          select 1
+          from public.recipe_image_objects as object
+          where object.id =
+            '00000000-0000-4000-8001-000000000001'
+            and object.state = 'cleanup_pending'
+            and object.cleanup_generation = 2
+            and object.next_terminal_scan_at is null
+        ) then
+          raise exception 'terminal object reopen state drift';
+        end if;
+
+        if not exists (
+          select 1
+          from public.user_account_lifecycles as lifecycle
+          where lifecycle.owner_uuid = '${OWNER_ACTIVE}'
+            and lifecycle.account_generation = 1
+            and lifecycle.status = 'active'
+            and lifecycle.required_cleanup_generation = 2
+        ) then
+          raise exception 'terminal lifecycle authority drift';
+        end if;
+
+        if not exists (
+          select 1
+          from public.storage_object_deletion_outbox as outbox
+          where outbox.owner_uuid = '${OWNER_ACTIVE}'
+            and outbox.object_path like
+              '%00000000-0000-4000-8001-000000000001.webp'
+            and outbox.cleanup_generation = 2
+            and outbox.reason = 'late_terminal_object'
+            and outbox.state = 'pending'
+        ) then
+          raise exception 'terminal late-object outbox drift';
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'image-terminal-tombstone-pass';
+    `)).toBe("image-terminal-tombstone-pass");
+
+    expect(asRoleResult(
+      "authenticated",
+      `
+        select count(*)
+        from public.claim_recipe_image_terminal_tombstones(1, now());
+      `,
+      OWNER_ACTIVE,
+    ).status).not.toBe(0);
+    expect(asRoleResult(
+      "authenticated",
+      `
+        select count(*)
+        from public.reopen_recipe_image_terminal_tombstone(
+          '00000000-0000-4000-8001-000000000001',
+          '${OWNER_ACTIVE}',
+          1,
+          1,
+          now(),
+          now()
+        );
+      `,
+      OWNER_ACTIVE,
+    ).status).not.toBe(0);
+  });
+
+  it("moves a completed lifecycle back to cleanup-pending when a terminal object reappears", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      update public.user_account_lifecycles
+      set required_cleanup_generation = 1,
+          completed_cleanup_generation = 1,
+          status = 'complete'
+      where owner_uuid = '${OWNER_REACTIVATED}'
+        and account_generation = 1;
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        next_terminal_scan_at,
+        updated_at
+      ) values (
+        '00000000-0000-4000-8002-000000000001',
+        '${OWNER_REACTIVATED}',
+        1,
+        'recipe-images-private',
+        '${OWNER_REACTIVATED}/1/00000000-0000-4000-8002-000000000001.webp',
+        'private',
+        'deleted',
+        1,
+        '2030-01-01T00:00:00Z',
+        '2029-12-31T23:00:00Z'
+      );
+
+      set local role service_role;
+
+      do $block$
+      declare
+        v_claimed_cursor timestamptz;
+        v_reopened_count integer;
+      begin
+        select scan.claimed_next_terminal_scan_at
+          into v_claimed_cursor
+        from public.claim_recipe_image_terminal_tombstones(
+          1,
+          '2030-01-01T00:00:01Z'
+        ) as scan;
+
+        if v_claimed_cursor is distinct from
+          '2030-01-01T00:05:01Z'::timestamptz then
+          raise exception 'completed lifecycle claim cursor drift';
+        end if;
+
+        select count(*)
+          into v_reopened_count
+        from public.reopen_recipe_image_terminal_tombstone(
+          '00000000-0000-4000-8002-000000000001',
+          '${OWNER_REACTIVATED}',
+          1,
+          1,
+          v_claimed_cursor,
+          '2030-01-01T00:01:00Z'
+        );
+
+        if v_reopened_count <> 1 then
+          raise exception 'completed lifecycle did not reopen';
+        end if;
+      end;
+      $block$;
+
+      reset role;
+
+      do $block$
+      begin
+        if not exists (
+          select 1
+          from public.user_account_lifecycles as lifecycle
+          where lifecycle.owner_uuid = '${OWNER_REACTIVATED}'
+            and lifecycle.account_generation = 1
+            and lifecycle.status = 'cleanup_pending'
+            and lifecycle.required_cleanup_generation = 2
+            and lifecycle.completed_cleanup_generation = 1
+        ) then
+          raise exception 'completed lifecycle reopen authority drift';
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'image-terminal-complete-reopen-pass';
+    `)).toBe("image-terminal-complete-reopen-pass");
+  });
+
   it("fails every pre-PUT quota boundary closed without charging the rejected attempt", () => {
     expect(psql(`
       begin;
