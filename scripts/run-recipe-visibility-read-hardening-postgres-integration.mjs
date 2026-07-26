@@ -18,6 +18,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724160000_recipe_image_cancel_cas.sql",
   "supabase/migrations/20260724170000_recipe_image_cancel_lifecycle_errors.sql",
   "supabase/migrations/20260724180000_recipe_image_attach_cas.sql",
+  "supabase/migrations/20260724190000_recipe_manual_create_image_attach.sql",
 ];
 
 function commandResult(command, args, options = {}) {
@@ -309,7 +310,7 @@ if (!postgresBin) {
           from public, anon, authenticated, service_role;
 
         create table public.recipes (
-          id uuid primary key,
+          id uuid primary key default gen_random_uuid(),
           title varchar(200) not null,
           description text,
           thumbnail_url text,
@@ -382,6 +383,32 @@ if (!postgresBin) {
         );
         alter table public.tags enable row level security;
         alter table public.recipe_tags enable row level security;
+
+        create or replace function public.build_recipe_tag_payload(
+          p_tags text[],
+          p_source text default 'system_suggested'
+        )
+        returns jsonb
+        language sql
+        stable
+        set search_path = pg_catalog
+        as $function$
+          select coalesce(
+            jsonb_agg(
+              jsonb_build_object(
+                'label',
+                tag.label,
+                'source',
+                coalesce(nullif(p_source, ''), 'system_suggested')
+              )
+              order by tag.ordinality
+            ),
+            '[]'::jsonb
+          )
+          from unnest(coalesce(p_tags, '{}'::text[]))
+            with ordinality as tag(label, ordinality)
+          where btrim(coalesce(tag.label, '')) <> ''
+        $function$;
 
         create or replace function public.set_recipe_tags(
           p_recipe_id uuid,

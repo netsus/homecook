@@ -21,6 +21,8 @@ const IMAGE_UPLOAD_COMPENSATION_MANIFEST_PATH =
   "docs/security/recipe-image-upload-compensation-security-function-authorization-manifest.json";
 const IMAGE_ATTACH_MANIFEST_PATH =
   "docs/security/recipe-image-attach-cas-security-function-authorization-manifest.json";
+const RECIPE_MANUAL_CREATE_IMAGE_ATTACH_MANIFEST_PATH =
+  "docs/security/recipe-manual-create-image-attach-security-function-authorization-manifest.json";
 
 describe("recipe visibility security function inventory", () => {
   it("classifies the guard and every recreated baseline function", () => {
@@ -201,6 +203,38 @@ describe("recipe visibility security function inventory", () => {
       expect.objectContaining({
         signature:
           "public.attach_recipe_image_object(uuid, timestamp with time zone, text, integer, uuid, uuid, bigint, timestamp with time zone)",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: [
+          "pg_catalog",
+          "public",
+          "extensions",
+          "pg_temp",
+        ],
+      }),
+    ]);
+  });
+
+  it("classifies the guarded manual recipe image writer", () => {
+    expect(existsSync(RECIPE_MANUAL_CREATE_IMAGE_ATTACH_MANIFEST_PATH))
+      .toBe(true);
+    if (!existsSync(RECIPE_MANUAL_CREATE_IMAGE_ATTACH_MANIFEST_PATH)) {
+      return;
+    }
+
+    const manifest = JSON.parse(
+      readFileSync(
+        RECIPE_MANUAL_CREATE_IMAGE_ATTACH_MANIFEST_PATH,
+        "utf8",
+      ),
+    ) as {
+      functions: Array<Record<string, unknown>>;
+    };
+
+    expect(manifest.functions).toEqual([
+      expect.objectContaining({
+        signature:
+          "public.create_manual_recipe_with_managed_image(uuid, timestamp with time zone, text, integer, uuid, bigint, text, integer, text, text[], text, jsonb, jsonb, timestamp with time zone)",
         allowed_principals: ["service_role"],
         security_mode: "definer",
         safe_search_path: [
