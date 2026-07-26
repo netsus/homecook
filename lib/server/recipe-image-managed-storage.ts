@@ -41,6 +41,10 @@ interface StorageBucket {
     data: { size?: number } | null;
     error: StorageError | null;
   }>;
+  remove(paths: string[]): PromiseLike<{
+    data: unknown[] | null;
+    error: StorageError | null;
+  }>;
   upload(
     path: string,
     body: Blob,
@@ -191,6 +195,31 @@ export function createManagedRecipeImageStorageAdapter({
       return result.data
         ? { kind: "present" }
         : { kind: "failed" };
+    },
+
+    async deleteObject({
+      bucketId,
+      objectPath,
+    }: {
+      bucketId: string;
+      objectPath: string;
+    }): Promise<{ kind: "deleted" | "failed" }> {
+      if (!validPrivateTarget(bucketId, objectPath)) {
+        return { kind: "failed" };
+      }
+
+      const result = await beforeDeadline(
+        () => client.storage.from(bucketId).remove([objectPath]),
+        takeoverReadTimeoutMs,
+      );
+      if (
+        !result
+        || result.error
+        || !Array.isArray(result.data)
+      ) {
+        return { kind: "failed" };
+      }
+      return { kind: "deleted" };
     },
 
     async uploadObject({

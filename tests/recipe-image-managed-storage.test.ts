@@ -16,6 +16,7 @@ function setup(overrides: {
   download?: ReturnType<typeof vi.fn>;
   exists?: ReturnType<typeof vi.fn>;
   info?: ReturnType<typeof vi.fn>;
+  remove?: ReturnType<typeof vi.fn>;
   upload?: ReturnType<typeof vi.fn>;
 } = {}) {
   const bucket = {
@@ -38,6 +39,10 @@ function setup(overrides: {
     })),
     info: overrides.info ?? vi.fn(async () => ({
       data: { size: 3 },
+      error: null,
+    })),
+    remove: overrides.remove ?? vi.fn(async () => ({
+      data: [],
       error: null,
     })),
     upload: overrides.upload ?? vi.fn(async () => ({
@@ -179,6 +184,67 @@ describe("managed recipe image Storage adapter", () => {
       objectPath: OBJECT_PATH,
     })).resolves.toEqual({ kind: "failed" });
     expect(bucket.info).not.toHaveBeenCalled();
+  });
+
+  it("deletes only the exact private object and accepts the documented empty array", async () => {
+    const { adapter, bucket } = setup();
+
+    await expect(adapter.deleteObject({
+      bucketId: BUCKET_ID,
+      objectPath: OBJECT_PATH,
+    })).resolves.toEqual({ kind: "deleted" });
+    expect(bucket.remove).toHaveBeenCalledWith([OBJECT_PATH]);
+  });
+
+  it.each([
+    {
+      data: null,
+      error: { message: "unavailable", status: 503, statusCode: "503" },
+      label: "Storage error",
+    },
+    {
+      data: null,
+      error: null,
+      label: "malformed success",
+    },
+  ])("fails closed on $label during exact deletion", async ({ data, error }) => {
+    const { adapter } = setup({
+      remove: vi.fn(async () => ({ data, error })),
+    });
+
+    await expect(adapter.deleteObject({
+      bucketId: BUCKET_ID,
+      objectPath: OBJECT_PATH,
+    })).resolves.toEqual({ kind: "failed" });
+  });
+
+  it("rejects a non-canonical delete target before calling Storage", async () => {
+    const { adapter, bucket } = setup();
+
+    await expect(adapter.deleteObject({
+      bucketId: "recipe-images",
+      objectPath: OBJECT_PATH,
+    })).resolves.toEqual({ kind: "failed" });
+    expect(bucket.remove).not.toHaveBeenCalled();
+  });
+
+  it("fails a deletion that does not finish before the configured deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const { adapter } = setup({
+        remove: vi.fn(() => new Promise(() => undefined)),
+      });
+      const result = adapter.deleteObject({
+        bucketId: BUCKET_ID,
+        objectPath: OBJECT_PATH,
+      });
+
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      await expect(result).resolves.toEqual({ kind: "failed" });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("maps a download 404 race to an absent takeover object", async () => {

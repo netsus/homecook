@@ -58,8 +58,10 @@ describe.skipIf(!liveStorageAvailable)(
           objectPath,
         })).resolves.toEqual({ kind: "present" });
 
-        const removal = await bucket.remove([objectPath]);
-        expect(removal.error).toBeNull();
+        await expect(adapter.deleteObject({
+          bucketId,
+          objectPath,
+        })).resolves.toEqual({ kind: "deleted" });
 
         await expect(adapter.checkObjectPresence({
           bucketId,
