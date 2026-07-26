@@ -19,6 +19,8 @@ const IMAGE_PRIVATE_STORAGE_MIGRATION_PATH =
   "supabase/migrations/20260724140000_recipe_image_private_storage_boundary.sql";
 const IMAGE_QUARANTINE_RECHECK_MIGRATION_PATH =
   "supabase/migrations/20260724220000_recipe_image_quarantine_recheck_authority.sql";
+const IMAGE_NORMAL_DRAIN_MIGRATION_PATH =
+  "supabase/migrations/20260724230000_recipe_image_normal_drain_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -1490,9 +1492,306 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     `).status).not.toBe(0);
   });
 
+  it("recovers bounded normal-drain leases and fails exact attempts deterministically", () => {
+    expect(psqlResult(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'legacy',
+          revision = revision + 1
+      where singleton;
+      set local role service_role;
+      select *
+      from public.claim_recipe_image_cleanup(
+        1,
+        '50000000-0000-4000-8000-000000000000',
+        '2030-07-24T00:00:00Z'
+      );
+      rollback;
+    `).status).not.toBe(0);
+
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1,
+          current_cutover_attempt_id =
+            '00000000-0000-4000-8000-000000000399'
+      where singleton;
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        not_found_observed_at,
+        late_upload_quarantine_until
+      ) values
+        (
+          '30000000-0000-4000-8000-000000000001',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/30000000-0000-4000-8000-000000000001.webp',
+          'private',
+          'cleanup_pending',
+          201,
+          null,
+          null
+        ),
+        (
+          '30000000-0000-4000-8000-000000000002',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/30000000-0000-4000-8000-000000000002.webp',
+          'private',
+          'cleanup_pending',
+          202,
+          null,
+          null
+        ),
+        (
+          '30000000-0000-4000-8000-000000000003',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/30000000-0000-4000-8000-000000000003.webp',
+          'private',
+          'not_found_observed',
+          203,
+          '2030-07-24T00:00:00Z',
+          '2030-07-24T00:15:00Z'
+        );
+
+      insert into public.storage_object_deletion_outbox (
+        id,
+        bucket_id,
+        object_path,
+        owner_uuid,
+        account_generation,
+        cleanup_generation,
+        reason,
+        state,
+        attempts,
+        next_attempt_at,
+        lease_token,
+        lease_expires_at
+      ) values
+        (
+          '40000000-0000-4000-8000-000000000001',
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/30000000-0000-4000-8000-000000000001.webp',
+          '${OWNER_ACTIVE}',
+          1,
+          201,
+          'expired_lease_fixture',
+          'processing',
+          1,
+          '2030-07-24T00:00:00Z',
+          '50000000-0000-4000-8000-000000000001',
+          '2030-07-24T00:05:00Z'
+        ),
+        (
+          '40000000-0000-4000-8000-000000000002',
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/30000000-0000-4000-8000-000000000002.webp',
+          '${OWNER_ACTIVE}',
+          1,
+          202,
+          'failed_due_fixture',
+          'failed',
+          9,
+          '2030-07-24T00:06:00Z',
+          null,
+          null
+        ),
+        (
+          '40000000-0000-4000-8000-000000000003',
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/30000000-0000-4000-8000-000000000003.webp',
+          '${OWNER_ACTIVE}',
+          1,
+          203,
+          'quarantine_fixture',
+          'awaiting_not_found_recheck',
+          1,
+          '2030-07-24T00:01:00Z',
+          null,
+          null
+        );
+
+      set local role service_role;
+
+      create temp table normal_claim on commit drop as
+      select *
+      from public.claim_recipe_image_cleanup(
+        50,
+        '50000000-0000-4000-8000-000000000002',
+        '2030-07-24T00:10:00Z'
+      );
+
+      do $test$
+      declare
+        v_result text;
+      begin
+        if (select count(*) from normal_claim) <> 2 then
+          raise exception 'normal claim did not recover exactly two due rows';
+        end if;
+
+        if exists (
+          select 1
+          from normal_claim
+          where outbox_id = '40000000-0000-4000-8000-000000000003'
+        ) then
+          raise exception 'quarantine row reached normal claim';
+        end if;
+
+        select public.fail_recipe_image_cleanup(
+          '40000000-0000-4000-8000-000000000001',
+          '${OWNER_ACTIVE}',
+          1,
+          201,
+          '50000000-0000-4000-8000-000000000001',
+          'STALE_WORKER',
+          '2030-07-24T00:10:30Z'
+        ) into v_result;
+        if v_result is not null then
+          raise exception 'expired lease token remained authoritative';
+        end if;
+
+        select public.fail_recipe_image_cleanup(
+          '40000000-0000-4000-8000-000000000001',
+          '${OWNER_ACTIVE}',
+          1,
+          201,
+          '50000000-0000-4000-8000-000000000002',
+          'STORAGE_UNAVAILABLE',
+          '2030-07-24T00:10:30Z'
+        ) into v_result;
+        if v_result is distinct from 'failed' then
+          raise exception 'live lease did not enter failed retry';
+        end if;
+
+        select public.fail_recipe_image_cleanup(
+          '40000000-0000-4000-8000-000000000002',
+          '${OWNER_ACTIVE}',
+          1,
+          202,
+          '50000000-0000-4000-8000-000000000002',
+          'STORAGE_UNAVAILABLE',
+          '2030-07-24T00:10:30Z'
+        ) into v_result;
+        if v_result is distinct from 'dead_letter' then
+          raise exception 'tenth failed attempt did not dead-letter';
+        end if;
+
+      end;
+      $test$;
+
+      reset role;
+
+      do $test$
+      begin
+        if (
+          select concat_ws(
+            ':',
+            state,
+            attempts,
+            next_attempt_at = '2030-07-24T00:15:30Z',
+            lease_token is null,
+            last_error
+          )
+          from public.storage_object_deletion_outbox
+          where id = '40000000-0000-4000-8000-000000000001'
+        ) <> 'failed:2:t:t:STORAGE_UNAVAILABLE' then
+          raise exception 'failed retry state drifted';
+        end if;
+
+        if (
+          select state || ':' || attempts || ':' || last_error
+          from public.storage_object_deletion_outbox
+          where id = '40000000-0000-4000-8000-000000000002'
+        ) <> 'dead_letter:10:STORAGE_UNAVAILABLE' then
+          raise exception 'dead-letter state drifted';
+        end if;
+      end;
+      $test$;
+
+      set local role service_role;
+
+      select concat_ws(
+        ':',
+        (
+          select count(*)
+          from public.claim_recipe_image_cleanup(
+            50,
+            '50000000-0000-4000-8000-000000000003',
+            '2030-07-24T00:15:29Z'
+          )
+        ),
+        (
+          select count(*)
+          from public.claim_recipe_image_cleanup(
+            50,
+            '50000000-0000-4000-8000-000000000004',
+            '2030-07-24T00:15:30Z'
+          )
+          where outbox_id =
+            '40000000-0000-4000-8000-000000000001'
+        ),
+        (
+          select count(*)
+          from public.claim_recipe_image_cleanup(
+            50,
+            '50000000-0000-4000-8000-000000000005',
+            '2031-07-24T00:00:00Z'
+          )
+          where outbox_id =
+            '40000000-0000-4000-8000-000000000002'
+        )
+      );
+
+      rollback;
+    `)).toBe("0:1:0");
+
+    expect(psqlResult(`
+      begin isolation level repeatable read;
+      set local role service_role;
+      select *
+      from public.claim_recipe_image_cleanup(
+        1,
+        '50000000-0000-4000-8000-000000000006',
+        '2030-07-24T00:00:00Z'
+      );
+      rollback;
+    `).status).not.toBe(0);
+
+    expect(psqlResult(`
+      begin;
+      set local role service_role;
+      select public.fail_recipe_image_cleanup(
+        '40000000-0000-4000-8000-000000000001',
+        '${OWNER_ACTIVE}',
+        1,
+        201,
+        '50000000-0000-4000-8000-000000000002',
+        'unsafe free-form detail',
+        '2030-07-24T00:10:30Z'
+      );
+      rollback;
+    `).status).not.toBe(0);
+  });
+
   it("replays cleanup outbox DDL without granting direct mutation", () => {
-    const replay = psqlFileResult(IMAGE_CLEANUP_OUTBOX_MIGRATION_PATH);
-    expect(replay.status, replay.stderr).toBe(0);
+    const baselineReplay = psqlFileResult(IMAGE_CLEANUP_OUTBOX_MIGRATION_PATH);
+    expect(baselineReplay.status, baselineReplay.stderr).toBe(0);
+    const authorityReplay = psqlFileResult(IMAGE_NORMAL_DRAIN_MIGRATION_PATH);
+    expect(authorityReplay.status, authorityReplay.stderr).toBe(0);
 
     expect(psql(`
       select concat_ws(
@@ -1512,13 +1811,28 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
           'public.claim_recipe_image_cleanup(integer,uuid,timestamp with time zone)',
           'EXECUTE'
         ),
+        has_function_privilege(
+          'anon',
+          'public.fail_recipe_image_cleanup(uuid,uuid,bigint,bigint,uuid,text,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.fail_recipe_image_cleanup(uuid,uuid,bigint,bigint,uuid,text,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.fail_recipe_image_cleanup(uuid,uuid,bigint,bigint,uuid,text,timestamp with time zone)',
+          'EXECUTE'
+        ),
         (
           select count(*)::text
           from public.storage_object_deletion_outbox
           where terminal_result in ('deleted', 'verified_not_found')
         )
       );
-    `)).toBe("f:f:t:2");
+    `)).toBe("f:f:t:f:f:t:2");
   });
 
   it("replays quarantine recheck authority without widening direct access", () => {
