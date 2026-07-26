@@ -21,6 +21,8 @@ const IMAGE_QUARANTINE_RECHECK_MIGRATION_PATH =
   "supabase/migrations/20260724220000_recipe_image_quarantine_recheck_authority.sql";
 const IMAGE_NORMAL_DRAIN_MIGRATION_PATH =
   "supabase/migrations/20260724230000_recipe_image_normal_drain_authority.sql";
+const IMAGE_EXPECTED_OWNER_SIGNAL_MIGRATION_PATH =
+  "supabase/migrations/20260724240000_recipe_image_expected_owner_signal_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -4425,6 +4427,253 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         )
       );
     `)).toBe("f:f:f:t");
+  });
+
+  it("counts only exact Storage owner signals and reaches zero with registry tombstones retained", () => {
+    const signalOwner = "00000000-0000-4000-8000-000000000347";
+    const ownerIdObject = "00000000-0000-4000-8000-000000000341";
+    const legacyObject = "00000000-0000-4000-8000-000000000342";
+    const duplicateObject = "00000000-0000-4000-8000-000000000343";
+    const registryObject = "00000000-0000-4000-8000-000000000344";
+    const tombstoneObject = "00000000-0000-4000-8000-000000000345";
+    const otherGenerationObject = "00000000-0000-4000-8000-000000000346";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        next_terminal_scan_at
+      ) values
+        (
+          '${registryObject}',
+          '${signalOwner}',
+          1,
+          'recipe-images-private',
+          '${signalOwner}/1/${registryObject}.webp',
+          'private',
+          'deleted',
+          1,
+          '2030-07-24T00:05:00Z'
+        ),
+        (
+          '${tombstoneObject}',
+          '${signalOwner}',
+          1,
+          'recipe-images-private',
+          '${signalOwner}/1/${tombstoneObject}.webp',
+          'private',
+          'verified_not_found',
+          1,
+          '2030-07-24T00:05:00Z'
+        ),
+        (
+          '${otherGenerationObject}',
+          '${signalOwner}',
+          2,
+          'recipe-images-private',
+          '${signalOwner}/2/${otherGenerationObject}.webp',
+          'private',
+          'deleted',
+          1,
+          '2030-07-24T00:05:00Z'
+        );
+
+      insert into storage.objects (id, bucket_id, name, owner_id) values
+        (
+          '${ownerIdObject}',
+          'unrelated-service-bucket',
+          'not-an-owner-path.webp',
+          '${signalOwner}'
+        ),
+        (
+          '${legacyObject}',
+          'recipe-images',
+          '${signalOwner}/${legacyObject}.webp',
+          null
+        ),
+        (
+          '${duplicateObject}',
+          'recipe-images',
+          '${signalOwner}/${duplicateObject}.png',
+          '${signalOwner}'
+        ),
+        (
+          '${registryObject}',
+          'recipe-images-private',
+          '${signalOwner}/1/${registryObject}.webp',
+          null
+        ),
+        (
+          '${otherGenerationObject}',
+          'recipe-images-private',
+          '${signalOwner}/2/${otherGenerationObject}.webp',
+          null
+        ),
+        (
+          gen_random_uuid(),
+          'recipe-images',
+          'prefix-${signalOwner}/${legacyObject}.webp',
+          null
+        ),
+        (
+          gen_random_uuid(),
+          'unrelated-service-bucket',
+          '${signalOwner}/${legacyObject}.webp',
+          null
+        );
+
+      set local role service_role;
+      select concat_ws(
+        ':',
+        owner_id_signal_count,
+        legacy_owner_path_signal_count,
+        registry_signal_count,
+        union_signal_count,
+        union_zero
+      )
+      from public.inspect_recipe_image_expected_owner_signal(
+        '${signalOwner}',
+        1
+      );
+      reset role;
+      rollback;
+    `)).toBe("2:2:1:4:f");
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        next_terminal_scan_at
+      ) values (
+        '${tombstoneObject}',
+        '${signalOwner}',
+        1,
+        'recipe-images-private',
+        '${signalOwner}/1/${tombstoneObject}.webp',
+        'private',
+        'verified_not_found',
+        1,
+        '2030-07-24T00:05:00Z'
+      );
+
+      set local role service_role;
+      select concat_ws(
+        ':',
+        owner_id_signal_count,
+        legacy_owner_path_signal_count,
+        registry_signal_count,
+        union_signal_count,
+        union_zero
+      )
+      from public.inspect_recipe_image_expected_owner_signal(
+        '${signalOwner}',
+        1
+      );
+      reset role;
+      rollback;
+    `)).toBe("0:0:0:0:t");
+  });
+
+  it("replays expected-owner signal authority without exposing it to normal roles", () => {
+    const replay = psqlFileResult(
+      IMAGE_EXPECTED_OWNER_SIGNAL_MIGRATION_PATH,
+    );
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.inspect_recipe_image_expected_owner_signal(uuid,bigint)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.inspect_recipe_image_expected_owner_signal(uuid,bigint)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.inspect_recipe_image_expected_owner_signal(uuid,bigint)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t");
+  });
+
+  it("keeps expected-owner inspection inactive in legacy and rejects stale isolation", () => {
+    const legacy = psqlResult(`
+      begin;
+      set local role service_role;
+      select *
+      from public.inspect_recipe_image_expected_owner_signal(
+        '${OWNER_ACTIVE}',
+        1
+      );
+    `);
+    expect(legacy.status).not.toBe(0);
+    expect(legacy.stderr).toContain(
+      "expected owner signal inspection is inactive",
+    );
+
+    const serializable = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select *
+      from public.inspect_recipe_image_expected_owner_signal(
+        '${OWNER_ACTIVE}',
+        1
+      );
+    `);
+    expect(serializable.status).not.toBe(0);
+    expect(serializable.stderr).toContain(
+      "expected owner signal inspection requires READ COMMITTED",
+    );
+
+    const missingCapability = psqlResult(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+      delete from public.account_generation_capability_state
+      where singleton;
+      set local role service_role;
+      select *
+      from public.inspect_recipe_image_expected_owner_signal(
+        '${OWNER_ACTIVE}',
+        1
+      );
+    `);
+    expect(missingCapability.status).not.toBe(0);
+    expect(missingCapability.stderr).toContain(
+      "expected owner signal inspection is inactive",
+    );
   });
 
   it("fails replay closed when the guard owner has an unexpected member", () => {

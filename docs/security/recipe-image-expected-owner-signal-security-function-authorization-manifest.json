@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "slice": "recipe-image-expected-owner-signal",
+  "migration": "supabase/migrations/20260724240000_recipe_image_expected_owner_signal_authority.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.inspect_recipe_image_expected_owner_signal(uuid, bigint)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    }
+  ]
+}

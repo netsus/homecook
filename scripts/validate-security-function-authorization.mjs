@@ -168,6 +168,20 @@ const ADDITIVE_SOURCES = [
         "supabase/migrations/20260724210000_recipe_image_terminal_tombstone_scan.sql",
       ),
   },
+  {
+    manifestPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_EXPECTED_OWNER_SIGNAL_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/recipe-image-expected-owner-signal-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_EXPECTED_OWNER_SIGNAL_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260724240000_recipe_image_expected_owner_signal_authority.sql",
+      ),
+  },
 ];
 const LOCAL_DATABASE_URL =
   process.env.SECURITY_FUNCTION_DATABASE_URL

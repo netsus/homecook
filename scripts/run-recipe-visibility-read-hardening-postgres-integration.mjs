@@ -23,6 +23,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724210000_recipe_image_terminal_tombstone_scan.sql",
   "supabase/migrations/20260724220000_recipe_image_quarantine_recheck_authority.sql",
   "supabase/migrations/20260724230000_recipe_image_normal_drain_authority.sql",
+  "supabase/migrations/20260724240000_recipe_image_expected_owner_signal_authority.sql",
 ];
 
 function commandResult(command, args, options = {}) {
@@ -195,7 +196,7 @@ if (!postgresBin) {
           id uuid primary key default gen_random_uuid(),
           bucket_id text not null,
           name text not null,
-          owner_id uuid
+          owner_id text
         );
         alter table storage.objects enable row level security;
         grant usage on schema storage to anon, authenticated, service_role;
