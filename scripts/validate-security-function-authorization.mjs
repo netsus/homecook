@@ -66,12 +66,9 @@ const ADDITIVE_SOURCES = [
         REPO_ROOT,
         "docs/security/recipe-image-cleanup-outbox-security-function-authorization-manifest.json",
       ),
-    migrationPath:
-      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_CLEANUP_MIGRATION_PATH
-      ?? path.join(
-        REPO_ROOT,
-        "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql",
-      ),
+    migrationPaths: process.env.SECURITY_FUNCTION_RECIPE_IMAGE_CLEANUP_MIGRATION_PATH
+      ? [process.env.SECURITY_FUNCTION_RECIPE_IMAGE_CLEANUP_MIGRATION_PATH]
+      : null,
   },
   {
     manifestPath:

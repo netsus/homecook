@@ -17,6 +17,8 @@ const IMAGE_UPLOAD_RESERVATION_MIGRATION_PATH =
   "supabase/migrations/20260724130000_recipe_image_upload_reservation.sql";
 const IMAGE_PRIVATE_STORAGE_MIGRATION_PATH =
   "supabase/migrations/20260724140000_recipe_image_private_storage_boundary.sql";
+const IMAGE_QUARANTINE_RECHECK_MIGRATION_PATH =
+  "supabase/migrations/20260724220000_recipe_image_quarantine_recheck_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -953,6 +955,50 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
 
   it("keeps first-404 cleanup out of normal claims until an ordered recheck", () => {
     expect(psqlResult(`
+      begin;
+      set local role service_role;
+      select *
+      from public.claim_recipe_image_cleanup_not_found_rechecks(
+        50,
+        '2030-07-24T00:00:00Z'
+      );
+      rollback;
+    `).status).not.toBe(0);
+
+    expect(psqlResult(`
+      begin isolation level repeatable read;
+      set local role service_role;
+      select *
+      from public.claim_recipe_image_cleanup_not_found_rechecks(
+        50,
+        '2030-07-24T00:00:00Z'
+      );
+      rollback;
+    `).status).not.toBe(0);
+
+    expect(psqlResult(`
+      begin isolation level repeatable read;
+      set local role service_role;
+      select public.recheck_claimed_recipe_image_cleanup_not_found(
+        '${IMAGE_CLEANUP_FOUND}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        '2030-07-24T00:05:00Z',
+        false,
+        '2030-07-24T00:00:00Z'
+      );
+      rollback;
+    `).status).not.toBe(0);
+
+    expect(psqlResult(`
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+    `).status).toBe(0);
+
+    expect(psqlResult(`
       insert into public.recipe_image_objects (
         id,
         owner_uuid,
@@ -1111,6 +1157,58 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         '${OWNER_ACTIVE}',
         1,
         1,
+        false,
+        '2030-07-24T00:16:00Z'
+      );
+      rollback;
+    `)).toBe("");
+
+    expect(psql(`
+      select outbox.state || ':' || object.state
+      from public.storage_object_deletion_outbox as outbox
+      join public.recipe_image_objects as object
+        on object.bucket_id = outbox.bucket_id
+       and object.object_path = outbox.object_path
+      where outbox.id = '${firstOutboxId}';
+    `)).toBe("awaiting_not_found_recheck:not_found_observed");
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select count(*)
+      from public.claim_recipe_image_cleanup_not_found_rechecks(
+        50,
+        '2030-07-24T00:16:00Z'
+      )
+      where outbox_id = '${firstOutboxId}'
+        and claimed_next_attempt_at = '2030-07-24T00:21:00Z';
+      commit;
+    `)).toBe("1");
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select public.recheck_claimed_recipe_image_cleanup_not_found(
+        '${firstOutboxId}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        '2030-07-24T00:20:00Z',
+        true,
+        '2030-07-24T00:16:00Z'
+      );
+      rollback;
+    `)).toBe("");
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select public.recheck_claimed_recipe_image_cleanup_not_found(
+        '${firstOutboxId}',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        '2030-07-24T00:21:00Z',
         true,
         '2030-07-24T00:16:00Z'
       );
@@ -1206,11 +1304,25 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(psql(`
       begin;
       set local role service_role;
-      select public.recheck_recipe_image_cleanup_not_found(
+      select count(*)
+      from public.claim_recipe_image_cleanup_not_found_rechecks(
+        50,
+        '2030-07-24T00:36:00Z'
+      )
+      where outbox_id = '${secondOutboxId}'
+        and claimed_next_attempt_at = '2030-07-24T00:41:00Z';
+      commit;
+    `)).toBe("1");
+
+    expect(psql(`
+      begin;
+      set local role service_role;
+      select public.recheck_claimed_recipe_image_cleanup_not_found(
         '${secondOutboxId}',
         '${OWNER_ACTIVE}',
         1,
         1,
+        '2030-07-24T00:41:00Z',
         false,
         '2030-07-24T00:36:00Z'
       );
@@ -1256,6 +1368,128 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     `)).toBe("succeeded:deleted");
   });
 
+  it("claims 51 due quarantine rechecks in ordered bounded batches without starvation", () => {
+    expect(psql(`
+      begin;
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        not_found_observed_at,
+        late_upload_quarantine_until
+      )
+      select
+        (
+          '10000000-0000-4000-8000-'
+          || lpad(series.value::text, 12, '0')
+        )::uuid,
+        '${OWNER_ACTIVE}'::uuid,
+        1,
+        'recipe-images-private',
+        '${OWNER_ACTIVE}/1/10000000-0000-4000-8000-'
+          || lpad(series.value::text, 12, '0')
+          || '.webp',
+        'private',
+        'not_found_observed',
+        100 + series.value,
+        '2030-07-24T00:00:00Z'::timestamptz,
+        '2030-07-24T00:15:00Z'::timestamptz
+      from generate_series(1, 51) as series(value);
+
+      insert into public.storage_object_deletion_outbox (
+        id,
+        bucket_id,
+        object_path,
+        owner_uuid,
+        account_generation,
+        cleanup_generation,
+        reason,
+        state,
+        next_attempt_at
+      )
+      select
+        (
+          '20000000-0000-4000-8000-'
+          || lpad(series.value::text, 12, '0')
+        )::uuid,
+        'recipe-images-private',
+        '${OWNER_ACTIVE}/1/10000000-0000-4000-8000-'
+          || lpad(series.value::text, 12, '0')
+          || '.webp',
+        '${OWNER_ACTIVE}'::uuid,
+        1,
+        100 + series.value,
+        'ordered_recheck_fixture',
+        'awaiting_not_found_recheck',
+        '2030-07-24T00:15:00Z'::timestamptz
+          + series.value * interval '1 second'
+      from generate_series(1, 51) as series(value);
+
+      set local role service_role;
+
+      create temp table first_recheck_claim on commit drop as
+      select *
+      from public.claim_recipe_image_cleanup_not_found_rechecks(
+        50,
+        '2030-07-24T01:00:00Z'
+      );
+
+      create temp table second_recheck_claim on commit drop as
+      select *
+      from public.claim_recipe_image_cleanup_not_found_rechecks(
+        50,
+        '2030-07-24T01:00:00Z'
+      );
+
+      select concat_ws(
+        ':',
+        (select count(*) from first_recheck_claim),
+        (
+          select min(outbox_id::text)
+          from first_recheck_claim
+        ),
+        (
+          select max(outbox_id::text)
+          from first_recheck_claim
+        ),
+        (
+          select bool_and(
+            claimed_next_attempt_at = '2030-07-24T01:05:00Z'
+          )
+          from first_recheck_claim
+        ),
+        (select count(*) from second_recheck_claim),
+        (
+          select min(outbox_id::text)
+          from second_recheck_claim
+        )
+      );
+
+      rollback;
+    `)).toBe(
+      "50:20000000-0000-4000-8000-000000000001:"
+      + "20000000-0000-4000-8000-000000000050:t:1:"
+      + "20000000-0000-4000-8000-000000000051",
+    );
+
+    expect(psqlResult(`
+      begin;
+      set local role service_role;
+      select *
+      from public.claim_recipe_image_cleanup_not_found_rechecks(
+        51,
+        '2030-07-24T01:00:00Z'
+      );
+      rollback;
+    `).status).not.toBe(0);
+  });
+
   it("replays cleanup outbox DDL without granting direct mutation", () => {
     const replay = psqlFileResult(IMAGE_CLEANUP_OUTBOX_MIGRATION_PATH);
     expect(replay.status, replay.stderr).toBe(0);
@@ -1285,6 +1519,37 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         )
       );
     `)).toBe("f:f:t:2");
+  });
+
+  it("replays quarantine recheck authority without widening direct access", () => {
+    const replay = psqlFileResult(IMAGE_QUARANTINE_RECHECK_MIGRATION_PATH);
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_table_privilege(
+          'service_role',
+          'public.storage_object_deletion_outbox',
+          'SELECT'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.claim_recipe_image_cleanup_not_found_rechecks(integer,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.claim_recipe_image_cleanup_not_found_rechecks(integer,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.recheck_claimed_recipe_image_cleanup_not_found(uuid,uuid,bigint,bigint,timestamp with time zone,boolean,timestamp with time zone)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t:t");
   });
 
   it("reserves, replays, takes over, finalizes, and releases one upload exactly once", () => {
