@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "slice": "recipe-image-legacy-report-only",
+  "migration": "supabase/migrations/20260725160000_recipe_image_legacy_report_only.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.inventory_recipe_image_legacy_objects(uuid, text)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "extensions",
+        "pg_temp"
+      ]
+    }
+  ]
+}

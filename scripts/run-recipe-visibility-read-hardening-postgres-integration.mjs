@@ -31,6 +31,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724290000_recipe_image_lifecycle_completion_authority.sql",
   "supabase/migrations/20260724300000_recipe_image_lifecycle_completion_candidate_authority.sql",
   "supabase/migrations/20260724310000_recipe_image_compact_retention_authority.sql",
+  "supabase/migrations/20260725160000_recipe_image_legacy_report_only.sql",
 ];
 
 function commandResult(command, args, options = {}) {
@@ -533,6 +534,11 @@ if (!postgresBin) {
           cook_count integer not null default 0,
           created_at timestamptz not null default now(),
           updated_at timestamptz not null default now()
+        );
+        create table public.recipe_books (
+          id uuid primary key default gen_random_uuid(),
+          user_id uuid not null,
+          cover_image_url text
         );
         create table public.recipe_sources (
           id uuid primary key,
