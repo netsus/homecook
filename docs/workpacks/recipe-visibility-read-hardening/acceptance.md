@@ -104,7 +104,7 @@
 
 ## Verification / Delivery
 
-- [ ] Stage 1 runs only current docs validators, focused workflow tests, lint/typecheck, local dependency audit and diff check; GitGuardian/current-head workflows are observed separately <!-- omo:id=accept-visibility-stage1-gate;stage=2;scope=shared;review=3,6 -->
+- [x] Stage 1 runs only current docs validators, focused workflow tests, lint/typecheck, local dependency audit and diff check; GitGuardian/current-head workflows are observed separately <!-- omo:id=accept-visibility-stage1-gate;stage=2;scope=shared;review=3,6 -->
 - [ ] Stage 2 writes focused tests first and records RED before migration, reader, Storage or scheduler implementation <!-- omo:id=accept-visibility-tdd-red;stage=2;scope=backend;review=3,6 -->
 - [x] focused Vitest covers read matrix, tags/cache, ACL/non-disclosure, image CAS/lifecycle and account-delete barrier <!-- omo:id=accept-visibility-vitest;stage=2;scope=backend;review=3,6 -->
 - [x] PostgreSQL existing/fresh/replay covers checks/FKs/RLS/grants/functions/triggers/partial unique and concurrent races <!-- omo:id=accept-visibility-postgres;stage=2;scope=backend;review=3,6 -->
