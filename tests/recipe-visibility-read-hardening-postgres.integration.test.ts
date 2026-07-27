@@ -7179,6 +7179,270 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     `)).toBe("0:0:0:0:t");
   });
 
+  it("blocks Auth deletion until every exact owner signal drains to union-zero", () => {
+    const owner = "00000000-0000-4000-8000-000000000348";
+    const ownerIdObject = "00000000-0000-4000-8000-000000000349";
+    const legacyObject = "00000000-0000-4000-8000-000000000350";
+    const registryObject = "00000000-0000-4000-8000-000000000351";
+    const wrongGenerationObject = "00000000-0000-4000-8000-000000000352";
+    const outbox = "00000000-0000-4000-8000-000000000353";
+    const lease = "00000000-0000-4000-8000-000000000354";
+    const authSnapshot = "2030-07-24T02:00:00Z";
+    const now = "2030-07-24T03:00:00Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        completed_cleanup_generation,
+        personal_db_deleted_at
+      ) values (
+        '${owner}',
+        1,
+        '${authSnapshot}',
+        'cleanup_pending',
+        1,
+        0,
+        '${authSnapshot}'
+      );
+
+      insert into public.auth_identity_deletion_outbox (
+        id,
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        next_attempt_at
+      ) values (
+        '${outbox}',
+        '${owner}',
+        1,
+        '${authSnapshot}',
+        'pending',
+        '${authSnapshot}'
+      );
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        next_terminal_scan_at
+      ) values
+        (
+          '${registryObject}',
+          '${owner}',
+          1,
+          'recipe-images-private',
+          '${owner}/1/${registryObject}.webp',
+          'private',
+          'deleted',
+          1,
+          '${now}'
+        ),
+        (
+          '${wrongGenerationObject}',
+          '${owner}',
+          2,
+          'recipe-images-private',
+          '${owner}/2/${wrongGenerationObject}.webp',
+          'private',
+          'deleted',
+          1,
+          '${now}'
+        );
+
+      insert into public.storage_object_deletion_outbox (
+        bucket_id,
+        object_path,
+        owner_uuid,
+        account_generation,
+        cleanup_generation,
+        reason,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values (
+        'recipe-images-private',
+        '${owner}/1/${registryObject}.webp',
+        '${owner}',
+        1,
+        1,
+        'account_delete',
+        'succeeded',
+        'deleted',
+        '${authSnapshot}'
+      );
+
+      insert into storage.objects (id, bucket_id, name, owner_id) values
+        (
+          '${ownerIdObject}',
+          'unrelated-service-bucket',
+          'owner-id-only.webp',
+          '${owner}'
+        ),
+        (
+          '${legacyObject}',
+          'recipe-images',
+          '${owner}/${legacyObject}.webp',
+          null
+        ),
+        (
+          '${registryObject}',
+          'recipe-images-private',
+          '${owner}/1/${registryObject}.webp',
+          null
+        ),
+        (
+          '${wrongGenerationObject}',
+          'recipe-images-private',
+          '${owner}/2/${wrongGenerationObject}.webp',
+          null
+        ),
+        (
+          gen_random_uuid(),
+          'recipe-images',
+          'prefix-${owner}/${legacyObject}.webp',
+          null
+        ),
+        (
+          gen_random_uuid(),
+          'unrelated-service-bucket',
+          '${owner}/${legacyObject}.webp',
+          null
+        );
+
+      create temp table owner_signal_aggregate_results (
+        step integer primary key,
+        result text not null
+      ) on commit drop;
+      grant insert, select on owner_signal_aggregate_results to service_role;
+
+      set local role service_role;
+      insert into owner_signal_aggregate_results
+      select 1, concat_ws(
+        ':',
+        signal.owner_id_signal_count,
+        signal.legacy_owner_path_signal_count,
+        signal.registry_signal_count,
+        signal.union_signal_count,
+        signal.union_zero,
+        readiness.ready
+      )
+      from public.inspect_recipe_image_expected_owner_signal(
+        '${owner}',
+        1
+      ) as signal
+      cross join public.inspect_recipe_image_auth_deletion_readiness(
+        '${owner}',
+        1,
+        '${now}'
+      ) as readiness;
+
+      do $blocked$
+      declare
+        v_message text;
+      begin
+        perform public.claim_recipe_image_auth_deletion_if_ready(
+          '${outbox}',
+          '${owner}',
+          1,
+          '${lease}',
+          '${now}'
+        );
+        raise exception 'Auth deletion claim ignored owner signals';
+      exception
+        when object_not_in_prerequisite_state then
+          get stacked diagnostics v_message = message_text;
+          if v_message is distinct from
+            'Auth deletion cleanup evidence is not ready' then
+            raise;
+          end if;
+          insert into owner_signal_aggregate_results values (2, 'blocked');
+      end;
+      $blocked$;
+      reset role;
+
+      update owner_signal_aggregate_results
+      set result = result || ':' || (
+        select concat_ws(':', state, attempts)
+        from public.auth_identity_deletion_outbox
+        where id = '${outbox}'
+      )
+      where step = 2;
+
+      delete from storage.objects
+      where id in ('${ownerIdObject}', '${legacyObject}');
+
+      set local role service_role;
+      insert into owner_signal_aggregate_results
+      select 3, concat_ws(
+        ':',
+        owner_signal_union_count,
+        owner_signal_union_zero,
+        ready
+      )
+      from public.inspect_recipe_image_auth_deletion_readiness(
+        '${owner}',
+        1,
+        '${now}'
+      );
+      reset role;
+
+      delete from storage.objects where id = '${registryObject}';
+
+      set local role service_role;
+      insert into owner_signal_aggregate_results
+      select 4, concat_ws(
+        ':',
+        owner_signal_union_count,
+        owner_signal_union_zero,
+        ready
+      )
+      from public.inspect_recipe_image_auth_deletion_readiness(
+        '${owner}',
+        1,
+        '${now}'
+      );
+
+      insert into owner_signal_aggregate_results
+      select 5, concat_ws(
+        ':',
+        claimed ->> 'state',
+        claimed ->> 'attempts',
+        claimed ->> 'lease_token'
+      )
+      from (
+        select public.claim_recipe_image_auth_deletion_if_ready(
+          '${outbox}',
+          '${owner}',
+          1,
+          '${lease}',
+          '${now}'
+        ) as claimed
+      ) as result;
+
+      select string_agg(result, ';' order by step)
+      from owner_signal_aggregate_results;
+      rollback;
+    `)).toBe(
+      `1:1:1:3:f:f;blocked:pending:0;1:f:f;0:t:t;processing:1:${lease}`,
+    );
+  });
+
   it("replays expected-owner signal authority without exposing it to normal roles", () => {
     const replay = psqlFileResult(
       IMAGE_EXPECTED_OWNER_SIGNAL_MIGRATION_PATH,
