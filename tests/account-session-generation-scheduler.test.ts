@@ -21,6 +21,7 @@ const INSTALL_SCRIPT = "scripts/account-maintenance-scheduler-install.mjs";
 const VERIFY_SCRIPT = "scripts/account-maintenance-scheduler-verify.mjs";
 const UNINSTALL_SCRIPT = "scripts/account-maintenance-scheduler-uninstall.mjs";
 const PLIST_PATH = "ops/launchd/com.homecook.account-maintenance.plist.template";
+const PACKAGE_PATH = "package.json";
 
 describe("account session generation scheduler skeleton", () => {
   it("ships a launchd skeleton plist with 300 second cadence and feature-off entrypoint", () => {
@@ -220,6 +221,41 @@ describe("account session generation scheduler skeleton", () => {
         releaseReady: true,
       }),
     ).toBe("fail");
+  });
+
+  it("exposes an explicit package-level release gate that remains blocked before live evidence", () => {
+    const packageJson = JSON.parse(readFileSync(PACKAGE_PATH, "utf8"));
+
+    expect(
+      packageJson.scripts["account-maintenance:scheduler:verify-release"],
+    ).toBe(
+      "node scripts/account-maintenance-scheduler-verify.mjs --dry-run --require-release-ready",
+    );
+
+    const result = spawnSync(
+      "pnpm",
+      [
+        "--silent",
+        "account-maintenance:scheduler:verify-release",
+        "--",
+        "--home-dir",
+        "/Users/tester",
+        "--json",
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      ok: true,
+      releaseReadiness: {
+        ready: false,
+      },
+    });
   });
 
   it("keeps install and uninstall as explicit dry-run-only Manual Only surfaces", () => {
