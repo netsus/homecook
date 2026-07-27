@@ -86,6 +86,10 @@ const IMAGE_CANCEL_OTHER_OWNER = "00000000-0000-4000-8000-000000000322";
 const IMAGE_CANCEL_MISSING = "00000000-0000-4000-8000-00000000039c";
 const IMAGE_CANCEL_MISSING_KEY =
   "00000000-0000-4000-8000-00000000039d";
+const IMAGE_LATE_SCANNER_UPLOAD_KEY =
+  "00000000-0000-4000-8000-00000000039e";
+const IMAGE_LATE_DELETING_UPLOAD_KEY =
+  "00000000-0000-4000-8000-00000000039f";
 const IMAGE_CANCEL_FINALIZED_UPLOAD_KEY =
   "00000000-0000-4000-8000-000000000325";
 const IMAGE_CANCEL_FINALIZED_KEY =
@@ -4125,6 +4129,215 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(serializable.stderr).toMatch(
       /recipe image cancel requires READ COMMITTED/i,
     );
+  });
+
+  it("prevents late finalize after stale scanning and account deletion starts", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      update public.user_account_lifecycles
+      set status = 'active',
+          auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      set local role service_role;
+      do $block$
+      declare
+        v_scanner_reserved jsonb;
+        v_deleting_reserved jsonb;
+        v_scanner_object_id uuid;
+        v_deleting_object_id uuid;
+        v_scanner_attempt_token uuid;
+        v_deleting_attempt_token uuid;
+        v_scanner_claim record;
+        v_deleting_claim record;
+      begin
+        v_scanner_reserved := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_LATE_SCANNER_UPLOAD_KEY}',
+          repeat('4', 64),
+          repeat('5', 64),
+          1024,
+          'image/webp',
+          'webp',
+          '2030-07-24T03:00:00Z'
+        );
+        v_scanner_object_id :=
+          (v_scanner_reserved ->> 'object_id')::uuid;
+        v_scanner_attempt_token :=
+          (v_scanner_reserved ->> 'attempt_token')::uuid;
+
+        v_deleting_reserved := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_LATE_DELETING_UPLOAD_KEY}',
+          repeat('6', 64),
+          repeat('7', 64),
+          1024,
+          'image/webp',
+          'webp',
+          '2030-07-24T03:01:00Z'
+        );
+        v_deleting_object_id :=
+          (v_deleting_reserved ->> 'object_id')::uuid;
+        v_deleting_attempt_token :=
+          (v_deleting_reserved ->> 'attempt_token')::uuid;
+
+        select scan.*
+          into v_scanner_claim
+        from public.scan_stale_recipe_image_uploads(
+          50,
+          '2030-07-24T03:05:01Z'
+        ) as scan
+        where scan.object_id = v_scanner_object_id;
+
+        if v_scanner_claim.object_id is distinct from v_scanner_object_id
+          or v_scanner_claim.previous_state <> 'pending_upload'
+          or v_scanner_claim.cleanup_generation <> 1 then
+          raise exception 'stale scanner claim drift: %',
+            row_to_json(v_scanner_claim);
+        end if;
+
+        begin
+          perform public.finalize_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_LATE_SCANNER_UPLOAD_KEY}',
+            v_scanner_attempt_token,
+            0,
+            '2030-07-24T03:05:02Z'
+          );
+          raise exception 'scanner-lost upload finalized unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'IMAGE_EXPIRED' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        update public.user_account_lifecycles
+        set status = 'deleting'
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        set local role service_role;
+
+        begin
+          perform public.finalize_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_LATE_DELETING_UPLOAD_KEY}',
+            v_deleting_attempt_token,
+            0,
+            '2030-07-24T03:05:03Z'
+          );
+          raise exception 'deleting lifecycle upload finalized unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'ACCOUNT_SESSION_STALE' then
+              raise;
+            end if;
+        end;
+
+        select scan.*
+          into v_deleting_claim
+        from public.scan_stale_recipe_image_uploads(
+          50,
+          '2030-07-24T03:06:01Z'
+        ) as scan
+        where scan.object_id = v_deleting_object_id;
+
+        if v_deleting_claim.object_id is distinct from v_deleting_object_id
+          or v_deleting_claim.previous_state <> 'pending_upload'
+          or v_deleting_claim.cleanup_generation <> 1 then
+          raise exception 'deleting scanner claim drift: %',
+            row_to_json(v_deleting_claim);
+        end if;
+
+        begin
+          perform public.finalize_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_LATE_DELETING_UPLOAD_KEY}',
+            v_deleting_attempt_token,
+            0,
+            '2030-07-24T03:06:02Z'
+          );
+          raise exception 'cleaned deleting upload finalized unexpectedly';
+        exception
+          when sqlstate '55000' then
+            if sqlerrm <> 'ACCOUNT_SESSION_STALE' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        if (
+          select count(*)
+          from public.recipe_image_objects as object
+          where object.id in (
+              v_scanner_object_id,
+              v_deleting_object_id
+            )
+            and object.state = 'cleanup_pending'
+            and object.cleanup_generation = 1
+            and object.upload_attempt_token is null
+            and object.upload_lease_expires_at is null
+        ) <> 2 then
+          raise exception 'late finalize revived managed image state';
+        end if;
+
+        if exists (
+          select 1
+          from public.recipe_image_object_references as reference
+          where reference.image_object_id in (
+            v_scanner_object_id,
+            v_deleting_object_id
+          )
+        ) then
+          raise exception 'late finalize created an image reference';
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'image-late-finalize-pass';
+    `)).toBe("image-late-finalize-pass");
   });
 
   it("rejects every non-active cancel lifecycle with its exact public code", () => {

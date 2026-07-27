@@ -536,6 +536,45 @@ describe("managed recipe image upload orchestration", () => {
     expect(dbClient.rpc).toHaveBeenCalledTimes(3);
   });
 
+  it.each([
+    "IMAGE_EXPIRED",
+    "ACCOUNT_SESSION_STALE",
+  ])("never issues a URL when a lifecycle winner rejects finalize with %s", async (
+    finalizeError,
+  ) => {
+    const dbClient = rpcClient((name, params) => {
+      if (name === "reserve_recipe_image_upload") {
+        return { data: reserved, error: null };
+      }
+      if (name === "finalize_recipe_image_upload") {
+        return { data: null, error: { message: finalizeError } };
+      }
+      if (name === "compensate_recipe_image_upload") {
+        expect(params.p_reason).toBe("storage_finalize_failed");
+        return {
+          data: {
+            account_generation: 7,
+            cleanup_generation: 1,
+            object_id: OBJECT_ID,
+            outbox_id: OUTBOX_ID,
+            outcome: "cleanup_pending",
+            state: "cleanup_pending",
+          },
+          error: null,
+        };
+      }
+      throw new Error(`unexpected RPC: ${name}`);
+    });
+    const input = setup(dbClient);
+
+    await expect(runManagedRecipeImageUpload(input)).resolves.toEqual({
+      kind: "failed",
+      reason: "storage_finalize_failed",
+    });
+    expect(input.issueReadUrl).not.toHaveBeenCalled();
+    expect(dbClient.rpc).toHaveBeenCalledTimes(3);
+  });
+
   it("reports compensation failure instead of hiding an orphan risk", async () => {
     const dbClient = rpcClient((name) => {
       if (name === "reserve_recipe_image_upload") {
