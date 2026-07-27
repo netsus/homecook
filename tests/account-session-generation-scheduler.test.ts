@@ -1,6 +1,19 @@
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+
+import {
+  appendAccountMaintenanceJsonLog,
+  evaluateAccountMaintenanceHealth,
+  recordAccountMaintenanceTickOutcome,
+} from "../scripts/lib/account-maintenance-scheduler.mjs";
 
 const TICK_SCRIPT = "scripts/account-maintenance-tick.mjs";
 const INSTALL_SCRIPT = "scripts/account-maintenance-scheduler-install.mjs";
@@ -28,10 +41,10 @@ describe("account session generation scheduler skeleton", () => {
     expect(verification.launchd.startIntervalSeconds).toBe(300);
     expect(verification.launchd.programArguments).toContain("scripts/account-maintenance-tick.mjs");
     expect(verification.launchd.standardOutPath).toContain(
-      "/Users/tester/Library/Logs/homecook/account-maintenance.log",
+      "/Users/tester/Library/Logs/Homecook/account-maintenance.log",
     );
     expect(verification.launchd.standardErrorPath).toContain(
-      "/Users/tester/Library/Logs/homecook/account-maintenance.err.log",
+      "/Users/tester/Library/Logs/Homecook/account-maintenance.err.log",
     );
     expect(verification.launchd.secretInstall).toBe("manual-only");
   });
@@ -126,6 +139,99 @@ describe("account session generation scheduler skeleton", () => {
       expect(result.target).toBe(
         "/Users/tester/Library/LaunchAgents/com.homecook.account-maintenance.plist",
       );
+    }
+  });
+
+  it("fails local health on the exact consecutive-failure, oldest-due and dead-letter thresholds", () => {
+    expect(
+      evaluateAccountMaintenanceHealth({
+        consecutiveFailures: 2,
+        oldestPendingAgeSeconds: 900,
+        deadLetterCount: 0,
+      }),
+    ).toEqual({
+      ok: true,
+      alerts: [],
+    });
+
+    expect(
+      evaluateAccountMaintenanceHealth({
+        consecutiveFailures: 3,
+        oldestPendingAgeSeconds: 901,
+        deadLetterCount: 1,
+      }),
+    ).toEqual({
+      ok: false,
+      alerts: [
+        "consecutive_failures",
+        "oldest_pending_overdue",
+        "dead_letter_present",
+      ],
+    });
+  });
+
+  it("resets consecutive failures and records recovery on the next successful tick", () => {
+    const failed = recordAccountMaintenanceTickOutcome({
+      previousConsecutiveFailures: 2,
+      succeeded: false,
+      oldestPendingAgeSeconds: 0,
+      deadLetterCount: 0,
+    });
+    const recovered = recordAccountMaintenanceTickOutcome({
+      previousConsecutiveFailures: failed.consecutiveFailures,
+      succeeded: true,
+      oldestPendingAgeSeconds: 0,
+      deadLetterCount: 0,
+    });
+
+    expect(failed).toMatchObject({
+      consecutiveFailures: 3,
+      recovered: false,
+      health: {
+        ok: false,
+        alerts: ["consecutive_failures"],
+      },
+    });
+    expect(recovered).toEqual({
+      consecutiveFailures: 0,
+      recovered: true,
+      health: {
+        ok: true,
+        alerts: [],
+      },
+    });
+  });
+
+  it("writes JSON lines and rotates the local log within the configured retained-file bound", () => {
+    const directory = mkdtempSync(join(tmpdir(), "homecook-maintenance-"));
+    const logPath = join(directory, "account-maintenance.jsonl");
+
+    try {
+      for (let index = 0; index < 8; index += 1) {
+        appendAccountMaintenanceJsonLog({
+          logPath,
+          entry: {
+            event: "tick",
+            index,
+            detail: "x".repeat(40),
+          },
+          maxBytes: 120,
+          maxFiles: 2,
+        });
+      }
+
+      expect(existsSync(logPath)).toBe(true);
+      expect(existsSync(`${logPath}.1`)).toBe(true);
+      expect(existsSync(`${logPath}.2`)).toBe(true);
+      expect(existsSync(`${logPath}.3`)).toBe(false);
+
+      for (const path of [logPath, `${logPath}.1`, `${logPath}.2`]) {
+        for (const line of readFileSync(path, "utf8").trim().split("\n")) {
+          expect(() => JSON.parse(line)).not.toThrow();
+        }
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
     }
   });
 });
