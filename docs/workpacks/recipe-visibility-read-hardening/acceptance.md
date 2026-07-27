@@ -90,10 +90,14 @@
 - [x] dry-run scheduler verification distinguishes F0 skeleton health from release readiness, reports every unresolved actual-install/secret/power/live-wiring/heartbeat/alert/cleanup/recovery gate, and `--require-release-ready` exits non-zero without invoking launchctl, loading a live secret or calling the maintenance route <!-- omo:id=accept-image-maintenance-release-readiness-gate;stage=2;scope=shared;review=3,6 -->
 - [x] package-level `account-maintenance:scheduler:verify-release` invokes the exact dry-run release gate and remains non-zero before live evidence, while `account-maintenance:scheduler:verify` continues to report only the F0 skeleton contract <!-- omo:id=accept-image-maintenance-release-command;stage=2;scope=shared;review=3,6 -->
 - [ ] MacBook tick proves `StartInterval=300`, `RunAtLoad=true`, wrong-secret 401, heartbeat gap 15 minutes, cleanup target 24 hours, alert on 3 consecutive calls failed/oldest due over 15 minutes/any dead-letter, mode 600 env or Keychain secret, JSON log 10MB × 5 rotation and next-tick recovery <!-- omo:id=accept-image-launchd-runtime;stage=2;scope=shared;review=3,6 -->
+  - 2026-07-27 UTC partial evidence on merged exact source `f8ae202f627d190ae349bb97346084e1b2d93d12`: installed/loaded LaunchAgent, `StartInterval=300`, `RunAtLoad=true`, mode `0600`, strong Keychain secret aligned to Vercel production with `secretExposed=false`, one-time wrong-secret `401`, authenticated `200 feature_off/blocked` at `scanner`, and following steady `200 feature_off/blocked` tick. The official `~/Library/Logs/Homecook/account-maintenance.log` entries at `2026-07-27T20:44:21.404Z` and `2026-07-27T20:44:42.351Z` parsed as JSON; stderr was zero bytes.
+  - Still required before checking: power/login/sleep, approved external heartbeat/alert receiver, actual heartbeat-gap and three-failure/oldest-due/dead-letter alert evidence, 24-hour cleanup target, 10MB × 5 rotation, and a failure-to-next-tick recovery proof.
 
 ### Manual Only
 
 - [ ] actual launchd install, production secret, power/login/sleep and external heartbeat receiver evidence remain service-owner Manual Only
+  - Completed partial evidence: actual install and value-hidden Keychain/Vercel production secret rotation from merged exact SHA.
+  - Unresolved Manual Only evidence: power/login/sleep and external heartbeat receiver. No endpoint is guessed or added.
 
 ## Frontend / Regression
 
