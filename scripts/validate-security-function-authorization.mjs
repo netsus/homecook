@@ -252,6 +252,20 @@ const ADDITIVE_SOURCES = [
         "supabase/migrations/20260724290000_recipe_image_lifecycle_completion_authority.sql",
       ),
   },
+  {
+    manifestPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_LIFECYCLE_COMPLETION_CANDIDATE_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/recipe-image-lifecycle-completion-candidate-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_LIFECYCLE_COMPLETION_CANDIDATE_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260724300000_recipe_image_lifecycle_completion_candidate_authority.sql",
+      ),
+  },
 ];
 const LOCAL_DATABASE_URL =
   process.env.SECURITY_FUNCTION_DATABASE_URL

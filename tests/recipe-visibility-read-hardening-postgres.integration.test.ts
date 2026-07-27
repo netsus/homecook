@@ -33,6 +33,8 @@ const IMAGE_AUTH_DELETION_CANDIDATE_MIGRATION_PATH =
   "supabase/migrations/20260724280000_recipe_image_auth_deletion_candidate_authority.sql";
 const IMAGE_LIFECYCLE_COMPLETION_MIGRATION_PATH =
   "supabase/migrations/20260724290000_recipe_image_lifecycle_completion_authority.sql";
+const IMAGE_LIFECYCLE_COMPLETION_CANDIDATE_MIGRATION_PATH =
+  "supabase/migrations/20260724300000_recipe_image_lifecycle_completion_candidate_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -5648,6 +5650,394 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         )
       );
     `)).toBe("f:f:t");
+  });
+
+  it("pages only completion-ready lifecycles without blocked-row starvation", () => {
+    const blockedOwner = "00000000-0000-4000-8000-000000000494";
+    const firstReadyOwner = "00000000-0000-4000-8000-000000000495";
+    const secondReadyOwner = "00000000-0000-4000-8000-000000000496";
+    const epoch = "2030-07-25T02:00:00.123456Z";
+    const blockedAt = "2030-07-25T02:30:00.123456Z";
+    const firstReadyAt = "2030-07-25T02:45:00.123456Z";
+    const secondReadyAt = "2030-07-25T03:00:00.123456Z";
+    const now = "2030-07-25T04:00:00.123456Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        personal_db_deleted_at,
+        auth_identity_deleted_at
+      ) values
+        (
+          '${blockedOwner}', 1, '${epoch}', 'cleanup_pending',
+          '${epoch}', '${blockedAt}'
+        ),
+        (
+          '${firstReadyOwner}', 1, '${epoch}', 'cleanup_pending',
+          '${epoch}', '${firstReadyAt}'
+        ),
+        (
+          '${secondReadyOwner}', 1, '${epoch}', 'cleanup_pending',
+          '${epoch}', '${secondReadyAt}'
+        );
+
+      insert into public.auth_identity_deletion_outbox (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values
+        (
+          '${blockedOwner}', 1, '${epoch}', 'dead_letter',
+          null, '${epoch}'
+        ),
+        (
+          '${firstReadyOwner}', 1, '${epoch}', 'succeeded',
+          'already_absent', '${epoch}'
+        ),
+        (
+          '${secondReadyOwner}', 1, '${epoch}', 'succeeded',
+          'identity_replaced', '${epoch}'
+        );
+
+      set local role service_role;
+      with first_page as (
+        select *
+        from public.list_recipe_image_lifecycle_completion_candidates(
+          1,
+          '${now}',
+          null,
+          null,
+          null
+        )
+      ),
+      second_page as (
+        select *
+        from public.list_recipe_image_lifecycle_completion_candidates(
+          1,
+          '${now}',
+          '${firstReadyAt}',
+          '${firstReadyOwner}',
+          1
+        )
+      )
+      select concat_ws(
+        ':',
+        (select owner_uuid from first_page),
+        (select auth_identity_deleted_at = '${firstReadyAt}' from first_page),
+        (select owner_uuid from second_page),
+        (select auth_identity_deleted_at = '${secondReadyAt}' from second_page)
+      );
+      rollback;
+    `)).toBe(
+      `${firstReadyOwner}:t:${secondReadyOwner}:t`,
+    );
+  });
+
+  it("returns only evidence that the exact completion authority accepts", () => {
+    const owner = "00000000-0000-4000-8000-000000000497";
+    const epoch = "2030-07-25T05:00:00.123456Z";
+    const deletedAt = "2030-07-25T05:30:00.123456Z";
+    const now = "2030-07-25T06:00:00.123456Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        personal_db_deleted_at,
+        auth_identity_deleted_at
+      ) values (
+        '${owner}', 1, '${epoch}', 'cleanup_pending',
+        '${epoch}', '${deletedAt}'
+      );
+      insert into public.auth_identity_deletion_outbox (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values (
+        '${owner}', 1, '${epoch}', 'succeeded',
+        'deleted', '${epoch}'
+      );
+
+      create temp table completion_candidate (
+        owner_uuid uuid not null,
+        account_generation bigint not null
+      ) on commit drop;
+      grant insert, select on completion_candidate to service_role;
+
+      set local role service_role;
+      insert into completion_candidate
+      select candidate.owner_uuid, candidate.account_generation
+      from public.list_recipe_image_lifecycle_completion_candidates(
+        50,
+        '${now}',
+        null,
+        null,
+        null
+      ) as candidate
+      where candidate.owner_uuid = '${owner}';
+      select public.complete_recipe_image_account_lifecycle(
+        '${owner}',
+        1,
+        '${now}'
+      );
+      reset role;
+
+      select concat_ws(
+        ':',
+        (select count(*) from completion_candidate),
+        lifecycle.status,
+        lifecycle.completed_cleanup_generation
+      )
+      from public.user_account_lifecycles as lifecycle
+      where lifecycle.owner_uuid = '${owner}'
+        and lifecycle.account_generation = 1;
+      rollback;
+    `)).toBe("1:complete:0");
+  });
+
+  it("keeps candidate inclusion in differential parity with completion", () => {
+    const readyOwner = "00000000-0000-4000-8000-000000000498";
+    const authBlockedOwner = "00000000-0000-4000-8000-000000000499";
+    const generationGapOwner = "00000000-0000-4000-8000-00000000049a";
+    const ownerSignalOwner = "00000000-0000-4000-8000-00000000049b";
+    const ownerSignalObject = "00000000-0000-4000-8000-00000000049c";
+    const epoch = "2030-07-25T07:00:00.123456Z";
+    const deletedAt = "2030-07-25T07:30:00.123456Z";
+    const now = "2030-07-25T08:00:00.123456Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        personal_db_deleted_at,
+        auth_identity_deleted_at
+      ) values
+        (
+          '${readyOwner}', 1, '${epoch}', 'cleanup_pending',
+          0, '${epoch}', '${deletedAt}'
+        ),
+        (
+          '${authBlockedOwner}', 1, '${epoch}', 'cleanup_pending',
+          0, '${epoch}', '${deletedAt}'
+        ),
+        (
+          '${generationGapOwner}', 1, '${epoch}', 'cleanup_pending',
+          1, '${epoch}', '${deletedAt}'
+        ),
+        (
+          '${ownerSignalOwner}', 1, '${epoch}', 'cleanup_pending',
+          0, '${epoch}', '${deletedAt}'
+        );
+
+      insert into public.auth_identity_deletion_outbox (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values
+        (
+          '${readyOwner}', 1, '${epoch}', 'succeeded',
+          'deleted', '${epoch}'
+        ),
+        (
+          '${authBlockedOwner}', 1, '${epoch}', 'dead_letter',
+          null, '${epoch}'
+        ),
+        (
+          '${generationGapOwner}', 1, '${epoch}', 'succeeded',
+          'deleted', '${epoch}'
+        ),
+        (
+          '${ownerSignalOwner}', 1, '${epoch}', 'succeeded',
+          'deleted', '${epoch}'
+        );
+
+      insert into storage.objects (
+        id,
+        bucket_id,
+        name,
+        owner_id
+      ) values (
+        '${ownerSignalObject}',
+        'recipe-images-private',
+        '${ownerSignalOwner}/1/unregistered.webp',
+        '${ownerSignalOwner}'
+      );
+
+      create temp table completion_candidate_snapshot (
+        owner_uuid uuid primary key
+      ) on commit drop;
+      create temp table completion_differential_results (
+        owner_uuid uuid primary key,
+        succeeded boolean not null
+      ) on commit drop;
+      grant insert, select on completion_candidate_snapshot
+        to service_role;
+
+      set local role service_role;
+      insert into completion_candidate_snapshot
+      select candidate.owner_uuid
+      from public.list_recipe_image_lifecycle_completion_candidates(
+        50,
+        '${now}',
+        null,
+        null,
+        null
+      ) as candidate
+      where candidate.owner_uuid in (
+        '${readyOwner}',
+        '${authBlockedOwner}',
+        '${generationGapOwner}',
+        '${ownerSignalOwner}'
+      );
+      reset role;
+
+      do $matrix$
+      declare
+        v_owner uuid;
+        v_succeeded boolean;
+      begin
+        foreach v_owner in array array[
+          '${readyOwner}'::uuid,
+          '${authBlockedOwner}'::uuid,
+          '${generationGapOwner}'::uuid,
+          '${ownerSignalOwner}'::uuid
+        ] loop
+          begin
+            perform public.complete_recipe_image_account_lifecycle(
+              v_owner,
+              1,
+              '${now}'
+            );
+            v_succeeded := true;
+          exception
+            when others then
+              v_succeeded := false;
+          end;
+
+          insert into completion_differential_results
+          values (v_owner, v_succeeded);
+        end loop;
+      end;
+      $matrix$;
+
+      select concat_ws(
+        ':',
+        (select count(*) from completion_candidate_snapshot),
+        (
+          select bool_and(
+            exists (
+              select 1
+              from completion_candidate_snapshot as candidate
+              where candidate.owner_uuid = result.owner_uuid
+            ) = result.succeeded
+          )
+          from completion_differential_results as result
+        ),
+        (
+          select count(*)
+          from completion_differential_results
+          where succeeded
+        )
+      );
+      rollback;
+    `)).toBe("1:t:1");
+  });
+
+  it("replays completion candidates as service-only and fails closed when inactive", () => {
+    const replay = psqlFileResult(
+      IMAGE_LIFECYCLE_COMPLETION_CANDIDATE_MIGRATION_PATH,
+    );
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.list_recipe_image_lifecycle_completion_candidates(integer,timestamp with time zone,timestamp with time zone,uuid,bigint)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.list_recipe_image_lifecycle_completion_candidates(integer,timestamp with time zone,timestamp with time zone,uuid,bigint)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.list_recipe_image_lifecycle_completion_candidates(integer,timestamp with time zone,timestamp with time zone,uuid,bigint)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t");
+
+    const legacy = psqlResult(`
+      begin;
+      set local role service_role;
+      select *
+      from public.list_recipe_image_lifecycle_completion_candidates(
+        50,
+        now(),
+        null,
+        null,
+        null
+      );
+    `);
+    expect(legacy.status).not.toBe(0);
+    expect(legacy.stderr).toContain(
+      "Lifecycle completion candidate page is inactive",
+    );
+
+    const serializable = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select *
+      from public.list_recipe_image_lifecycle_completion_candidates(
+        50,
+        now(),
+        null,
+        null,
+        null
+      );
+    `);
+    expect(serializable.status).not.toBe(0);
+    expect(serializable.stderr).toContain(
+      "Lifecycle completion candidate page requires READ COMMITTED",
+    );
   });
 
   it("completes one exact lifecycle only after every terminal barrier is closed", () => {
