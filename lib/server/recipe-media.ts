@@ -280,7 +280,12 @@ export function parseRecipeImagePublicUrl({
     return null;
   }
 
-  const segments = parsedUrl.pathname.split("/").map((segment) => decodeURIComponent(segment));
+  let segments: string[];
+  try {
+    segments = parsedUrl.pathname.split("/").map((segment) => decodeURIComponent(segment));
+  } catch {
+    return null;
+  }
   const expectedPrefix = ["", "storage", "v1", "object", "public", RECIPE_IMAGE_BUCKET, userId];
   if (segments.length !== expectedPrefix.length + 1) {
     return null;

@@ -247,10 +247,26 @@ function isServiceOwnedRecipeImageUrl(value: string) {
   try {
     const expectedOrigin = new URL(configuredUrl).origin;
     const candidate = new URL(value);
-    const pathname = decodeURIComponent(candidate.pathname);
-    return candidate.origin === expectedOrigin
-      && /^\/storage\/v1\/object\/(?:authenticated|public|sign)\/(?:recipe-images|recipe-images-private)\//u
-        .test(pathname);
+    if (candidate.origin !== expectedOrigin) {
+      return false;
+    }
+
+    const segments = candidate.pathname.split("/");
+    const storagePrefix = segments.slice(0, 4).map((segment) => decodeURIComponent(segment));
+    if (
+      storagePrefix[0] !== ""
+      || storagePrefix[1] !== "storage"
+      || storagePrefix[2] !== "v1"
+      || storagePrefix[3] !== "object"
+    ) {
+      return false;
+    }
+
+    const accessOrBucket = decodeURIComponent(segments[4] ?? "");
+    const bucket = ["authenticated", "public", "sign"].includes(accessOrBucket)
+      ? decodeURIComponent(segments[5] ?? "")
+      : accessOrBucket;
+    return bucket === "recipe-images" || bucket === "recipe-images-private";
   } catch {
     return false;
   }
