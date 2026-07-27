@@ -80,13 +80,16 @@ function main() {
     homeDir: options.homeDir ?? process.env.HOME,
     dryRun: options.dryRun,
   });
+  const passed =
+    result.ok
+    && (!options.requireReleaseReady || result.releaseReadiness.ready);
 
   if (options.json) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } else {
     process.stdout.write(
       [
-        `Account maintenance scheduler verify: ${result.ok ? "pass" : "fail"}`,
+        `Account maintenance scheduler verify: ${passed ? "pass" : "blocked"}`,
         "",
         `Label: ${result.launchd.label}`,
         `Cadence: ${result.launchd.startIntervalSeconds}s`,
@@ -99,10 +102,7 @@ function main() {
     );
   }
 
-  if (
-    !result.ok
-    || (options.requireReleaseReady && !result.releaseReadiness.ready)
-  ) {
+  if (!passed) {
     process.exit(1);
   }
 }

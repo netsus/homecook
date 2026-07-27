@@ -165,6 +165,29 @@ describe("account session generation scheduler skeleton", () => {
         ]),
       },
     });
+
+    const humanReadableResult = spawnSync(
+      process.execPath,
+      [
+        VERIFY_SCRIPT,
+        "--dry-run",
+        "--require-release-ready",
+        "--home-dir",
+        "/Users/tester",
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(humanReadableResult.status).toBe(1);
+    expect(humanReadableResult.stdout.split("\n")[0]).toBe(
+      "Account maintenance scheduler verify: blocked",
+    );
+    expect(humanReadableResult.stdout).not.toContain(
+      "Account maintenance scheduler verify: pass",
+    );
   });
 
   it("keeps install and uninstall as explicit dry-run-only Manual Only surfaces", () => {
