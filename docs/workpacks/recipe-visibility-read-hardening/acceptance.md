@@ -19,7 +19,7 @@
 - [ ] soft delete is idempotent, blocks new select/book/snapshot/start and leaves history FK/snapshot intact <!-- omo:id=accept-visibility-soft-delete;stage=2;scope=backend;review=3,6 -->
 - [x] historical reader authority cannot be used to fetch general deleted/private detail or make a new plan/session <!-- omo:id=accept-visibility-history-no-bypass;stage=2;scope=backend;review=3,6 -->
 - [x] quarantined user-owned profile/recipe/product/community rows are public-hidden in every direct and cached surface <!-- omo:id=accept-visibility-quarantine-hidden;stage=2;scope=backend;review=3,6 -->
-- [ ] owner-null/system content is unchanged by quarantine, recovery and account cleanup <!-- omo:id=accept-visibility-neutral-preserved;stage=2;scope=backend;review=3,6 -->
+- [x] owner-null/system content is unchanged by quarantine, recovery and account cleanup <!-- omo:id=accept-visibility-neutral-preserved;stage=2;scope=backend;review=3,6 -->
 
 ## Managed Image / Concurrency
 
