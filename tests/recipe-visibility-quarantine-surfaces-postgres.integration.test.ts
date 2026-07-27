@@ -49,10 +49,32 @@ describe.runIf(enabled)(
           ('${actor}', 'reader', 'google', 'reader');
 
         insert into public.user_account_lifecycles (
-          owner_uuid, account_generation, status
+          owner_uuid,
+          account_generation,
+          auth_identity_created_at_snapshot,
+          origin,
+          status,
+          activated_at,
+          quarantine_reason
         ) values
-          ('${activeOwner}', 1, 'active'),
-          ('${quarantinedOwner}', 1, 'quarantined');
+          (
+            '${activeOwner}',
+            1,
+            '2026-07-27T00:00:00Z',
+            'cutover_active',
+            'active',
+            '2026-07-27T00:00:00Z',
+            null
+          ),
+          (
+            '${quarantinedOwner}',
+            1,
+            null,
+            'cutover_personal_owner_quarantined',
+            'quarantined',
+            null,
+            'personal_owner_without_auth'
+          );
 
         insert into public.recipes (
           id, title, source_type, created_by, visibility

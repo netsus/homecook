@@ -84,17 +84,48 @@ if (!postgresBin) {
 create schema extensions;
 create extension pgcrypto with schema extensions;
 create schema auth;
+create schema storage;
 create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin bypassrls;
+create role supabase_auth_admin nologin;
 create function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;
+create table auth.users (
+  id uuid primary key,
+  created_at timestamptz not null,
+  email text,
+  raw_app_meta_data jsonb not null default '{}'::jsonb,
+  raw_user_meta_data jsonb not null default '{}'::jsonb
+);
+create table storage.objects (
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text not null,
+  name text not null
+);
+alter table storage.objects enable row level security;
+create function storage.foldername(p_name text)
+returns text[]
+language sql
+immutable
+as $$
+  select pg_catalog.string_to_array(p_name, '/')
+$$;
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
+create type public.social_provider_type as enum ('kakao', 'naver', 'google');
 create table public.users (
-  id uuid primary key default gen_random_uuid(), nickname text not null,
-  social_provider text not null, social_id text not null
+  id uuid primary key default gen_random_uuid(),
+  nickname text not null,
+  email text,
+  profile_image_url text,
+  social_provider public.social_provider_type not null,
+  social_id text not null,
+  settings_json jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
 );
 create table public.ingredients (
   id uuid primary key default gen_random_uuid(), standard_name text not null unique,
@@ -109,6 +140,7 @@ create table public.ingredient_synonyms (
 create table public.operational_events (
   id uuid primary key default gen_random_uuid(), event_type text not null,
   severity text not null default 'info', source text not null, actor_user_id uuid,
+  target_user_id uuid,
   message_summary text, metadata_json jsonb default '{}'::jsonb,
   created_at timestamptz not null default now(),
   check (severity in ('info', 'warn', 'error', 'critical'))
@@ -181,15 +213,6 @@ create table public.recipe_tags (
   created_at timestamptz not null default now(),
   primary key (recipe_id, tag_id)
 );
-create table public.user_account_lifecycles (
-  owner_uuid uuid not null,
-  account_generation bigint not null check (account_generation > 0),
-  status text not null check (status in (
-    'active', 'quarantined', 'deleting', 'cleanup_pending', 'complete'
-  )),
-  primary key (owner_uuid, account_generation)
-);
-alter table public.user_account_lifecycles enable row level security;
 create table public.meals (
   id uuid primary key default gen_random_uuid(), recipe_id uuid not null references public.recipes(id)
 );
@@ -224,12 +247,6 @@ to anon, authenticated;
 `;
     runRequired(path.join(postgresBin, "psql"), [...args, "-c", bootstrap]);
     runRequired(path.join(postgresBin, "psql"), [...args, "-c", `comment on database ${database} is 'homecook-isolated-product-catalog-v1';`]);
-    runRequired(path.join(postgresBin, "psql"), [
-      ...args,
-      "--single-transaction",
-      "-f",
-      "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
-    ]);
     for (const migration of [
       "supabase/migrations/20260714143000_ingredient_nutrition_conversion_model.sql",
       "supabase/migrations/20260716090000_add_recipe_nutrition_snapshots.sql",
@@ -239,6 +256,17 @@ to anon, authenticated;
       "supabase/migrations/20260718123000_community_prepared_food_catalog_list_perf.sql",
       "supabase/migrations/20260718133000_community_prepared_food_catalog_anonymized_editable_fix.sql",
     ]) runRequired(path.join(postgresBin, "psql"), [...args, "-f", migration]);
+    for (const migration of [
+      "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+      "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
+    ]) {
+      runRequired(path.join(postgresBin, "psql"), [
+        ...args,
+        "--single-transaction",
+        "-f",
+        migration,
+      ]);
+    }
 
     runRequired(path.join(postgresBin, "psql"), [
       ...args,
@@ -346,6 +374,27 @@ to anon, authenticated;
       ]);
     }
 
+    const integrationEnv = {
+      ...process.env,
+      PATH: `${postgresBin}${path.delimiter}${process.env.PATH ?? ""}`,
+      HOMECOOK_PRODUCT_CATALOG_PG_INTEGRATION: "1",
+      HOMECOOK_PRODUCT_CATALOG_PGHOST: "127.0.0.1",
+      HOMECOOK_PRODUCT_CATALOG_PGPORT: String(port),
+      HOMECOOK_PRODUCT_CATALOG_PGDATABASE: database,
+      HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PG_INTEGRATION: "1",
+      HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PGHOST: "127.0.0.1",
+      HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PGPORT: String(port),
+      HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PGDATABASE: database,
+      HOMECOOK_ACCOUNT_VISIBILITY_NEUTRAL_PG_INTEGRATION: "1",
+    };
+    runRequired("pnpm", [
+      "exec", "vitest", "run",
+      "tests/account-visibility-neutral-preservation-postgres.integration.test.ts",
+      "--pool=forks", "--maxWorkers=1", "--testTimeout=30000",
+    ], {
+      stdio: "inherit",
+      env: integrationEnv,
+    });
     const test = commandResult("pnpm", [
       "exec", "vitest", "run",
       "tests/prepared-food-catalog-postgres.integration.test.ts",
@@ -356,18 +405,7 @@ to anon, authenticated;
       "--pool=forks", "--maxWorkers=1", "--testTimeout=30000",
     ], {
       stdio: "inherit",
-      env: {
-        ...process.env,
-        PATH: `${postgresBin}${path.delimiter}${process.env.PATH ?? ""}`,
-        HOMECOOK_PRODUCT_CATALOG_PG_INTEGRATION: "1",
-        HOMECOOK_PRODUCT_CATALOG_PGHOST: "127.0.0.1",
-        HOMECOOK_PRODUCT_CATALOG_PGPORT: String(port),
-        HOMECOOK_PRODUCT_CATALOG_PGDATABASE: database,
-        HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PG_INTEGRATION: "1",
-        HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PGHOST: "127.0.0.1",
-        HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PGPORT: String(port),
-        HOMECOOK_COMMUNITY_PRODUCT_CATALOG_PGDATABASE: database,
-      },
+      env: integrationEnv,
     });
     process.exitCode = test.status ?? 1;
   } finally {
