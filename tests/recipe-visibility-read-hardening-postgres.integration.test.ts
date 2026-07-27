@@ -80,6 +80,8 @@ const IMAGE_UPLOAD_KEY_REUSE_KEY =
   "00000000-0000-4000-8000-0000000003a0";
 const IMAGE_UPLOAD_TAKEOVER_RACE_KEY =
   "00000000-0000-4000-8000-0000000003a1";
+const IMAGE_UPLOAD_PRIVATE_REPLAY_KEY =
+  "00000000-0000-4000-8000-0000000003a2";
 const IMAGE_UPLOAD_ISOLATION_KEY = "00000000-0000-4000-8000-000000000316";
 const IMAGE_UPLOAD_COMPENSATION_KEY = "00000000-0000-4000-8000-000000000317";
 const IMAGE_STORAGE_DB_COMPENSATION_KEY =
@@ -2253,6 +2255,232 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
       rollback;
       select 'upload-cas-pass';
     `)).toBe("upload-cas-pass");
+  });
+
+  it("creates one private upload and reissues its short read URL on replay", async () => {
+    const bodyBytes = new Uint8Array([137, 80, 78, 71, 13, 10]);
+    const rawSha256 = createHash("sha256").update(bodyBytes).digest("hex");
+    const storedObjects = new Map<string, Blob>();
+    const signedPaths: string[] = [];
+    let objectId = "";
+    let objectPath = "";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+      update public.user_account_lifecycles
+      set status = 'active',
+          auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+      commit;
+      select 'private-upload-fixture-pass';
+    `)).toBe("private-upload-fixture-pass");
+
+    const storageClient = {
+      storage: {
+        from: (bucketId: string) => {
+          expect(bucketId).toBe("recipe-images-private");
+          return {
+            createSignedUrl: async (path: string, expiresIn: number) => {
+              expect(expiresIn).toBe(300);
+              signedPaths.push(path);
+              return {
+                data: {
+                  signedUrl:
+                    `https://storage.invalid/storage/v1/object/sign/recipe-images-private/${path}?token=${signedPaths.length}`,
+                },
+                error: null,
+              };
+            },
+            upload: async (
+              path: string,
+              body: Blob,
+              options: { contentType: string; upsert: false },
+            ) => {
+              expect(options).toEqual({
+                contentType: "image/png",
+                upsert: false,
+              });
+              expect(storedObjects.has(path)).toBe(false);
+              storedObjects.set(path, body);
+              return { data: { path }, error: null };
+            },
+          };
+        },
+      },
+    } as unknown as ManagedRecipeImageStorageClient;
+    const storageAdapter = createManagedRecipeImageStorageAdapter({
+      client: storageClient,
+      now: () => new Date("2030-07-24T01:30:00Z"),
+      signedUrlTtlSeconds: 300,
+      takeoverReadTimeoutMs: 2_000,
+    });
+    const dbClient = {
+      rpc: async (name, params) => {
+        if (name === "reserve_recipe_image_upload") {
+          const data = JSON.parse(psql(`
+            begin;
+            set local role service_role;
+            select public.reserve_recipe_image_upload(
+              '${OWNER_ACTIVE}',
+              '2026-01-01T00:00:00Z',
+              repeat('a', 64),
+              1,
+              '${IMAGE_UPLOAD_PRIVATE_REPLAY_KEY}',
+              '${params.p_payload_hash}'::text,
+              '${rawSha256}',
+              ${bodyBytes.byteLength},
+              'image/png',
+              'png',
+              '2030-07-24T01:30:00Z'
+            );
+            commit;
+          `));
+          objectId = data.object_id;
+          objectPath = data.object_path;
+          return { data, error: null };
+        }
+
+        if (name === "finalize_recipe_image_upload") {
+          const data = JSON.parse(psql(`
+            begin;
+            set local role service_role;
+            select public.finalize_recipe_image_upload(
+              '${OWNER_ACTIVE}',
+              '2026-01-01T00:00:00Z',
+              repeat('a', 64),
+              1,
+              '${IMAGE_UPLOAD_PRIVATE_REPLAY_KEY}',
+              '${params.p_attempt_token}'::uuid,
+              0,
+              '2030-07-24T01:30:01Z'
+            );
+            commit;
+          `));
+          return { data, error: null };
+        }
+
+        throw new Error(`unexpected RPC: ${name}`);
+      },
+    } satisfies ManagedRecipeImageRpcClient;
+    const input = {
+      body: new Blob([bodyBytes], { type: "image/png" }),
+      dbClient,
+      expectedReadUrlOrigin: "https://storage.invalid",
+      idempotencyKey: IMAGE_UPLOAD_PRIVATE_REPLAY_KEY,
+      inspection: {
+        actualMimeType: "image/png" as const,
+        byteSize: bodyBytes.byteLength,
+        extension: "png" as const,
+        rawSha256,
+      },
+      issueReadUrl: storageAdapter.issueReadUrl,
+      maxReadUrlTtlMs: 300_000,
+      now: () => new Date("2030-07-24T01:30:00Z"),
+      readTakeoverObject: storageAdapter.readTakeoverObject,
+      sessionAuthority: {
+        authIdentityCreatedAt: "2026-01-01T00:00:00Z",
+        hmacKeyVersion: 1,
+        ownerUuid: OWNER_ACTIVE,
+        sessionKeyHash: "a".repeat(64),
+      },
+      uploadObject: storageAdapter.uploadObject,
+    };
+
+    try {
+      const first = await runManagedRecipeImageUpload(input);
+      const replay = await runManagedRecipeImageUpload(input);
+
+      expect(first).toEqual({
+        kind: "succeeded",
+        objectId,
+        readUrl:
+          `https://storage.invalid/storage/v1/object/sign/recipe-images-private/${objectPath}?token=1`,
+        readUrlExpiresAt: "2030-07-24T01:35:00.000Z",
+        state: "uploaded_unlinked",
+      });
+      expect(replay).toEqual({
+        kind: "succeeded",
+        objectId,
+        readUrl:
+          `https://storage.invalid/storage/v1/object/sign/recipe-images-private/${objectPath}?token=2`,
+        readUrlExpiresAt: "2030-07-24T01:35:00.000Z",
+        state: "uploaded_unlinked",
+      });
+      expect(storedObjects.size).toBe(1);
+      expect(signedPaths).toEqual([objectPath, objectPath]);
+      expect(psql(`
+        select concat_ws(
+          ':',
+          object.owner_uuid,
+          object.account_generation,
+          object.bucket_id,
+          object.object_path,
+          object.visibility,
+          object.state,
+          idempotency.result_reference = object.id
+        )
+        from public.recipe_image_objects as object
+        join public.mutation_idempotency_keys as idempotency
+          on idempotency.result_reference = object.id
+        where object.id = '${objectId}';
+      `)).toBe(
+        `${OWNER_ACTIVE}:1:recipe-images-private:${objectPath}:private:uploaded_unlinked:t`,
+      );
+    } finally {
+      psql(`
+        begin;
+        create temp table private_upload_cleanup_ids on commit drop as
+        select result_reference as object_id
+        from public.mutation_idempotency_keys
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1
+          and operation_scope = 'recipe_image_upload'
+          and key_hash = encode(
+            extensions.digest(
+              pg_catalog.convert_to(
+                '${IMAGE_UPLOAD_PRIVATE_REPLAY_KEY}',
+                'UTF8'
+              ),
+              'sha256'
+            ),
+            'hex'
+          );
+        delete from public.mutation_idempotency_keys
+        where result_reference in (
+          select object_id from private_upload_cleanup_ids
+        );
+        delete from public.recipe_image_objects
+        where id in (
+          select object_id from private_upload_cleanup_ids
+        );
+        delete from public.image_upload_quota_counters
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        commit;
+      `);
+    }
   });
 
   it("lets one expired upload takeover win while the concurrent replay follows it", async () => {
