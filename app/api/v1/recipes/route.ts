@@ -249,7 +249,7 @@ function isServiceOwnedRecipeImageUrl(value: string) {
     const candidate = new URL(value);
     const pathname = decodeURIComponent(candidate.pathname);
     return candidate.origin === expectedOrigin
-      && /^\/storage\/v1\/object\/(?:authenticated|public|sign)\/(?:recipe-images|recipe-images-private)\//u
+      && /^\/storage\/v1\/object\/(?:(?:authenticated|public|sign)\/)?(?:recipe-images|recipe-images-private)\//u
         .test(pathname);
   } catch {
     return false;
