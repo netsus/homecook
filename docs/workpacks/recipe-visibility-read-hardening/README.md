@@ -61,6 +61,8 @@ Schema Change:
 
 - public recipe fork/edit CTA, owner editor decoupling 또는 RECIPE_DETAIL layout 변경(#5)
 - content/nutrition snapshot와 Meal authority 구현(#4), personal recipe write core(#6), future propagation(#7)
+  - #3은 이미 `deleted_at`인 fixture의 read/new-consumer 차단과 history 보존 경계만 검증한다.
+  - owner `DELETE /recipes/{id}` route, owner+revision 멱등 RPC와 실제 `deleted_at` mutation은 #6 소유이며 #2/#3/#4/#5 runtime predecessor 전에는 구현하지 않는다.
 - ACCOUNT_QUARANTINE 화면 재설계(F0 소유)
 - recipe-book object picker UI 또는 진행 중 MYPAGE/RECIPEBOOK_DETAIL 파일 변경
 - 임의 외부 URL을 managed Storage object로 해석하거나 삭제
