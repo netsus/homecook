@@ -1823,6 +1823,20 @@
       "activation_phase": "always"
     },
     {
+      "key": "rpc|lib/server/recipe-image-stale-scanner.ts|scan_stale_recipe_image_uploads|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "scan_stale_recipe_image_uploads",
+      "line": 81,
+      "source_file": "lib/server/recipe-image-stale-scanner.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
       "key": "rpc|lib/server/recipe-nutrition-snapshot.ts|write_recipe_nutrition_snapshot|1",
       "kind": "rpc",
       "operation": "call",
@@ -1916,6 +1930,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-26T23:28:01.776Z",
-  "checksum": "ac65d7c815f816e70e02e3eae86db8fb16b6978551644ba82ae035c4a3b35a10"
+  "generated_at": "2026-07-26T23:56:21.780Z",
+  "checksum": "4f615086a188c23381c814ecaa5b953988f5f44daab2f0596e25f858671ae32d"
 }

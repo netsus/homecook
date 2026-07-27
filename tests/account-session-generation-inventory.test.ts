@@ -94,6 +94,16 @@ describe("account session generation inventory", () => {
         expected_generation: "not_applicable",
         activation_phase: "always",
       }),
+      expect.objectContaining({
+        kind: "rpc",
+        operation: "call",
+        target: "scan_stale_recipe_image_uploads",
+        source_file: "lib/server/recipe-image-stale-scanner.ts",
+        persists_personal_state: false,
+        guard_mode: "not_applicable",
+        expected_generation: "not_applicable",
+        activation_phase: "always",
+      }),
     ]));
     for (const entry of [
       ...inventory.route_inventory,
