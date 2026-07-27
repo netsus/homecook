@@ -102,6 +102,12 @@ const IMAGE_ATTACH_CANCEL_KEY =
   "00000000-0000-4000-8000-000000000329";
 const IMAGE_CREATE_ATTACH_UPLOAD_KEY =
   "00000000-0000-4000-8000-000000000330";
+const IMAGE_ATTACH_OTHER_OWNER =
+  "00000000-0000-4000-8000-000000000333";
+const IMAGE_ATTACH_OTHER_GENERATION =
+  "00000000-0000-4000-8000-000000000334";
+const IMAGE_ATTACH_PUBLIC_SHARED =
+  "00000000-0000-4000-8000-000000000335";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -2713,6 +2719,7 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         v_attached jsonb;
         v_object_id uuid;
         v_attempt_token uuid;
+        v_mismatch_object_id uuid;
         v_before text;
         v_after text;
       begin
@@ -2747,6 +2754,63 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         end if;
 
         reset role;
+        insert into public.recipe_image_objects (
+          id,
+          owner_uuid,
+          account_generation,
+          bucket_id,
+          object_path,
+          raw_sha256,
+          byte_size,
+          actual_mime_type,
+          visibility,
+          state,
+          cleanup_generation,
+          unlinked_cleanup_after
+        ) values
+          (
+            '${IMAGE_ATTACH_OTHER_OWNER}',
+            '${OWNER_QUARANTINED}',
+            1,
+            'recipe-images-private',
+            '${OWNER_QUARANTINED}/1/${IMAGE_ATTACH_OTHER_OWNER}.webp',
+            repeat('4', 64),
+            4096,
+            'image/webp',
+            'private',
+            'uploaded_unlinked',
+            0,
+            '2030-07-25T03:00:00Z'
+          ),
+          (
+            '${IMAGE_ATTACH_OTHER_GENERATION}',
+            '${OWNER_ACTIVE}',
+            2,
+            'recipe-images-private',
+            '${OWNER_ACTIVE}/2/${IMAGE_ATTACH_OTHER_GENERATION}.webp',
+            repeat('5', 64),
+            4096,
+            'image/webp',
+            'private',
+            'uploaded_unlinked',
+            0,
+            '2030-07-25T03:00:00Z'
+          ),
+          (
+            '${IMAGE_ATTACH_PUBLIC_SHARED}',
+            null,
+            null,
+            'recipe-images',
+            'shared/${IMAGE_ATTACH_PUBLIC_SHARED}.webp',
+            repeat('6', 64),
+            4096,
+            'image/webp',
+            'public_shared',
+            'attached_public_shared',
+            0,
+            null
+          );
+
         select md5(
           row(
             object.state,
@@ -2782,6 +2846,47 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
               raise;
             end if;
         end;
+
+        foreach v_mismatch_object_id in array array[
+          '${IMAGE_ATTACH_OTHER_OWNER}'::uuid,
+          '${IMAGE_ATTACH_OTHER_GENERATION}'::uuid,
+          '${IMAGE_ATTACH_PUBLIC_SHARED}'::uuid
+        ] loop
+          begin
+            perform public.attach_recipe_image_object(
+              '${OWNER_ACTIVE}',
+              '2026-01-01T00:00:00Z',
+              repeat('a', 64),
+              1,
+              '${IMAGE_ATTACH_RECIPE}',
+              v_mismatch_object_id,
+              0,
+              '2030-07-24T03:00:02Z'
+            );
+            raise exception
+              'visibility-mismatched object attached unexpectedly: %',
+              v_mismatch_object_id;
+          exception
+            when sqlstate '55000' then
+              if sqlerrm <> 'IMAGE_VISIBILITY_MISMATCH' then
+                raise;
+              end if;
+          end;
+        end loop;
+
+        reset role;
+        if exists (
+          select 1
+          from public.recipe_image_object_references as reference
+          where reference.image_object_id in (
+            '${IMAGE_ATTACH_OTHER_OWNER}'::uuid,
+            '${IMAGE_ATTACH_OTHER_GENERATION}'::uuid,
+            '${IMAGE_ATTACH_PUBLIC_SHARED}'::uuid
+          )
+        ) then
+          raise exception 'visibility-mismatched attach created a reference';
+        end if;
+        set local role service_role;
 
         begin
           perform public.attach_recipe_image_object(
