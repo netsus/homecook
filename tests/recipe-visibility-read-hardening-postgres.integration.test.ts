@@ -15,6 +15,8 @@ import { runRecipeImageNormalDrainStorage } from
   "@/lib/server/recipe-image-normal-drain-storage";
 import { scanStaleRecipeImageUploads } from
   "@/lib/server/recipe-image-stale-scanner";
+import { inspectRecipeImageUpload } from
+  "@/lib/server/recipe-image-upload";
 
 const enabled =
   process.env.HOMECOOK_RECIPE_VISIBILITY_PG_INTEGRATION === "1";
@@ -86,6 +88,8 @@ const IMAGE_UPLOAD_TAKEOVER_RACE_KEY =
   "00000000-0000-4000-8000-0000000003a1";
 const IMAGE_UPLOAD_PRIVATE_REPLAY_KEY =
   "00000000-0000-4000-8000-0000000003a2";
+const IMAGE_UPLOAD_PREPUT_SUCCESS_KEY =
+  "00000000-0000-4000-8000-0000000003b7";
 const IMAGE_UPLOAD_ISOLATION_KEY = "00000000-0000-4000-8000-000000000316";
 const IMAGE_UPLOAD_COMPENSATION_KEY = "00000000-0000-4000-8000-000000000317";
 const IMAGE_STORAGE_DB_COMPENSATION_KEY =
@@ -6388,6 +6392,447 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
       rollback;
       select 'upload-quota-pass';
     `)).toBe("upload-quota-pass");
+  });
+
+  it("joins byte inspection and every quota circuit before PUT without recharging replay", async () => {
+    const jpegBytes = Buffer.from(
+      "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9k=",
+      "base64",
+    );
+    const pngBytes = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      "base64",
+    );
+    const webpBytes = Buffer.from(
+      "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEAAUAmJaQAA3AA/v89WAAAAA==",
+      "base64",
+    ).subarray(0, 42);
+    const uploadKeys = [
+      "00000000-0000-4000-8000-0000000003b1",
+      "00000000-0000-4000-8000-0000000003b2",
+      "00000000-0000-4000-8000-0000000003b3",
+      "00000000-0000-4000-8000-0000000003b4",
+      "00000000-0000-4000-8000-0000000003b5",
+      "00000000-0000-4000-8000-0000000003b6",
+    ];
+    const uploadPaths: string[] = [];
+    const signedPaths: string[] = [];
+    let currentKey = uploadKeys[0]!;
+
+    const allowed = await Promise.all([
+      inspectRecipeImageUpload(
+        new File([jpegBytes], "recipe.jpg", { type: "image/jpeg" }),
+      ),
+      inspectRecipeImageUpload(
+        new File([pngBytes], "recipe.png", { type: "image/png" }),
+      ),
+      inspectRecipeImageUpload(
+        new File([webpBytes], "recipe.webp", { type: "image/webp" }),
+      ),
+    ]);
+    expect(allowed).toMatchObject([
+      { ok: true, value: { actualMimeType: "image/jpeg", extension: "jpg" } },
+      { ok: true, value: { actualMimeType: "image/png", extension: "png" } },
+      { ok: true, value: { actualMimeType: "image/webp", extension: "webp" } },
+    ]);
+    await expect(inspectRecipeImageUpload(
+      new File(["not-an-image"], "recipe.txt", { type: "text/plain" }),
+    )).resolves.toEqual({
+      ok: false,
+      reason: "unsupported_actual_type",
+    });
+    await expect(inspectRecipeImageUpload(
+      new File(
+        [new Uint8Array(5 * 1024 * 1024 + 1)],
+        "oversized.png",
+        { type: "image/png" },
+      ),
+    )).resolves.toEqual({
+      ok: false,
+      reason: "too_large",
+    });
+    expect(uploadPaths).toEqual([]);
+
+    const pngInspection = allowed[1];
+    expect(pngInspection?.ok).toBe(true);
+    if (!pngInspection?.ok) {
+      throw new Error("valid PNG inspection unexpectedly failed");
+    }
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+      update public.user_account_lifecycles
+      set status = 'active',
+          auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+      delete from public.image_upload_quota_counters
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+      insert into public.image_upload_quota_counters (
+        owner_uuid,
+        account_generation
+      ) values (
+        '${OWNER_ACTIVE}',
+        1
+      );
+      commit;
+      select 'preput-aggregate-fixture-pass';
+    `)).toBe("preput-aggregate-fixture-pass");
+
+    const dbClient = {
+      rpc: async (name, params) => {
+        if (name === "reserve_recipe_image_upload") {
+          const result = psqlResult(`
+            begin;
+            set local role service_role;
+            select public.reserve_recipe_image_upload(
+              '${OWNER_ACTIVE}',
+              '2026-01-01T00:00:00Z',
+              repeat('a', 64),
+              1,
+              '${currentKey}',
+              '${String(params.p_payload_hash)}',
+              '${pngInspection.value.rawSha256}',
+              ${pngInspection.value.byteSize},
+              'image/png',
+              'png',
+              '2030-07-24T01:30:00Z'
+            );
+            commit;
+          `);
+          return result.status === 0
+            ? { data: JSON.parse(result.stdout.trim()), error: null }
+            : { data: null, error: { message: result.stderr.trim() } };
+        }
+
+        if (name === "finalize_recipe_image_upload") {
+          const result = psqlResult(`
+            begin;
+            set local role service_role;
+            select public.finalize_recipe_image_upload(
+              '${OWNER_ACTIVE}',
+              '2026-01-01T00:00:00Z',
+              repeat('a', 64),
+              1,
+              '${currentKey}',
+              '${String(params.p_attempt_token)}'::uuid,
+              ${Number(params.p_cleanup_generation)},
+              '2030-07-24T01:30:01Z'
+            );
+            commit;
+          `);
+          return result.status === 0
+            ? { data: JSON.parse(result.stdout.trim()), error: null }
+            : { data: null, error: { message: result.stderr.trim() } };
+        }
+
+        throw new Error(`unexpected RPC: ${name}`);
+      },
+    } satisfies ManagedRecipeImageRpcClient;
+    const input = {
+      body: new Blob([pngBytes], { type: "image/png" }),
+      dbClient,
+      expectedReadUrlOrigin: "https://storage.invalid",
+      idempotencyKey: currentKey,
+      inspection: pngInspection.value,
+      issueReadUrl: async ({
+        objectPath,
+      }: {
+        bucketId: string;
+        objectPath: string;
+      }) => {
+        signedPaths.push(objectPath);
+        return {
+          expiresAt: "2030-07-24T01:35:00.000Z",
+          readUrl:
+            `https://storage.invalid/storage/v1/object/sign/recipe-images-private/${objectPath}?token=${signedPaths.length}`,
+        };
+      },
+      maxReadUrlTtlMs: 300_000,
+      now: () => new Date("2030-07-24T01:30:00Z"),
+      readTakeoverObject: async () => ({ kind: "absent" as const }),
+      sessionAuthority: {
+        authIdentityCreatedAt: "2026-01-01T00:00:00Z",
+        hmacKeyVersion: 1,
+        ownerUuid: OWNER_ACTIVE,
+        sessionKeyHash: "a".repeat(64),
+      },
+      uploadObject: async ({
+        objectPath,
+        upsert,
+      }: {
+        body: Blob;
+        bucketId: string;
+        contentType: "image/png";
+        objectPath: string;
+        upsert: false;
+      }) => {
+        expect(upsert).toBe(false);
+        uploadPaths.push(objectPath);
+      },
+    };
+
+    const setGate = (gate: string) => {
+      psql(`
+        begin;
+        delete from public.storage_object_deletion_outbox
+        where reason = 'preput-aggregate';
+        update public.image_upload_quota_counters
+        set request_events = '[]'::jsonb,
+            byte_events = '[]'::jsonb,
+            active_reservation_count = 0
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        ${
+  gate === "requests"
+    ? `
+        update public.image_upload_quota_counters
+        set request_events = (
+          select jsonb_agg(jsonb_build_object(
+            'at',
+            '2030-07-24T01:29:00Z'::timestamptz
+          ))
+          from generate_series(1, 10)
+        )
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;`
+    : gate === "bytes"
+      ? `
+        update public.image_upload_quota_counters
+        set byte_events = jsonb_build_array(jsonb_build_object(
+          'at',
+          '2030-07-24T01:29:00Z'::timestamptz,
+          'bytes',
+          104857600
+        ))
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;`
+      : gate === "active"
+        ? `
+        update public.image_upload_quota_counters
+        set active_reservation_count = 20
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;`
+        : gate === "backlog"
+          ? `
+        insert into public.storage_object_deletion_outbox (
+          bucket_id,
+          object_path,
+          owner_uuid,
+          account_generation,
+          cleanup_generation,
+          reason,
+          state,
+          next_attempt_at
+        )
+        select
+          'recipe-images-private',
+          'preput/backlog/' || series::text || '.webp',
+          '${OWNER_ACTIVE}',
+          1,
+          1,
+          'preput-aggregate',
+          'pending',
+          '2030-07-24T01:30:00Z'
+        from generate_series(1, 500) as series;`
+          : gate === "oldest"
+            ? `
+        insert into public.storage_object_deletion_outbox (
+          bucket_id,
+          object_path,
+          owner_uuid,
+          account_generation,
+          cleanup_generation,
+          reason,
+          state,
+          next_attempt_at
+        ) values (
+          'recipe-images-private',
+          'preput/oldest.webp',
+          '${OWNER_ACTIVE}',
+          1,
+          1,
+          'preput-aggregate',
+          'pending',
+          '2030-07-24T01:14:59Z'
+        );`
+            : gate === "dead-letter"
+              ? `
+        insert into public.storage_object_deletion_outbox (
+          bucket_id,
+          object_path,
+          owner_uuid,
+          account_generation,
+          cleanup_generation,
+          reason,
+          state,
+          next_attempt_at
+        ) values (
+          'recipe-images-private',
+          'preput/dead-letter.webp',
+          '${OWNER_ACTIVE}',
+          1,
+          1,
+          'preput-aggregate',
+          'dead_letter',
+          '2030-07-24T01:30:00Z'
+        );`
+              : ""
+}
+        commit;
+      `);
+    };
+
+    try {
+      for (const [index, gate] of [
+        "requests",
+        "bytes",
+        "active",
+        "backlog",
+        "oldest",
+        "dead-letter",
+      ].entries()) {
+        currentKey = uploadKeys[index]!;
+        input.idempotencyKey = currentKey;
+        setGate(gate);
+        const before = psql(`
+          select row(
+            request_events,
+            byte_events,
+            active_reservation_count
+          )::text
+          from public.image_upload_quota_counters
+          where owner_uuid = '${OWNER_ACTIVE}'
+            and account_generation = 1;
+        `);
+
+        await expect(runManagedRecipeImageUpload(input)).resolves.toEqual({
+          kind: "limited",
+          retryAfterSeconds: 60,
+        });
+        expect(uploadPaths).toEqual([]);
+        expect(psql(`
+          select concat_ws(
+            ':',
+            count(*) filter (
+              where idempotency.key_hash = encode(
+                extensions.digest(
+                  pg_catalog.convert_to('${currentKey}', 'UTF8'),
+                  'sha256'
+                ),
+                'hex'
+              )
+            ),
+            (
+              select row(
+                counter.request_events,
+                counter.byte_events,
+                counter.active_reservation_count
+              )::text = '${before.replaceAll("'", "''")}'
+              from public.image_upload_quota_counters as counter
+              where counter.owner_uuid = '${OWNER_ACTIVE}'
+                and counter.account_generation = 1
+            )
+          )
+          from public.mutation_idempotency_keys as idempotency;
+        `)).toBe("0:t");
+      }
+
+      setGate("clear");
+      currentKey = IMAGE_UPLOAD_PREPUT_SUCCESS_KEY;
+      input.idempotencyKey = currentKey;
+
+      const first = await runManagedRecipeImageUpload(input);
+      const charged = psql(`
+        select row(
+          request_events,
+          byte_events,
+          active_reservation_count
+        )::text
+        from public.image_upload_quota_counters
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+      `);
+      const replay = await runManagedRecipeImageUpload(input);
+
+      expect(first).toMatchObject({
+        kind: "succeeded",
+        state: "uploaded_unlinked",
+      });
+      expect(replay).toMatchObject({
+        kind: "succeeded",
+        objectId: first.kind === "succeeded" ? first.objectId : "",
+        state: "uploaded_unlinked",
+      });
+      expect(uploadPaths).toHaveLength(1);
+      expect(signedPaths).toEqual([uploadPaths[0], uploadPaths[0]]);
+      expect(psql(`
+        select row(
+          request_events,
+          byte_events,
+          active_reservation_count
+        )::text
+        from public.image_upload_quota_counters
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+      `)).toBe(charged);
+    } finally {
+      psql(`
+        begin;
+        delete from public.storage_object_deletion_outbox
+        where reason = 'preput-aggregate';
+        create temp table preput_cleanup_ids on commit drop as
+        select result_reference as object_id
+        from public.mutation_idempotency_keys
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1
+          and operation_scope = 'recipe_image_upload'
+          and key_hash = encode(
+            extensions.digest(
+              pg_catalog.convert_to(
+                '${IMAGE_UPLOAD_PREPUT_SUCCESS_KEY}',
+                'UTF8'
+              ),
+              'sha256'
+            ),
+            'hex'
+          );
+        delete from public.mutation_idempotency_keys
+        where result_reference in (
+          select object_id from preput_cleanup_ids
+        );
+        delete from public.recipe_image_objects
+        where id in (
+          select object_id from preput_cleanup_ids
+        );
+        delete from public.image_upload_quota_counters
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        commit;
+      `);
+    }
   });
 
   it("rejects finalize outside READ COMMITTED without changing upload state", () => {
