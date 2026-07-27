@@ -83,6 +83,9 @@ const IMAGE_STORAGE_DB_COMPENSATION_KEY =
 const IMAGE_CANCEL_UPLOAD_KEY = "00000000-0000-4000-8000-000000000320";
 const IMAGE_CANCEL_KEY = "00000000-0000-4000-8000-000000000321";
 const IMAGE_CANCEL_OTHER_OWNER = "00000000-0000-4000-8000-000000000322";
+const IMAGE_CANCEL_MISSING = "00000000-0000-4000-8000-00000000039c";
+const IMAGE_CANCEL_MISSING_KEY =
+  "00000000-0000-4000-8000-00000000039d";
 const IMAGE_CANCEL_FINALIZED_UPLOAD_KEY =
   "00000000-0000-4000-8000-000000000325";
 const IMAGE_CANCEL_FINALIZED_KEY =
@@ -4011,9 +4014,27 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
             '2026-01-01T00:00:00Z',
             repeat('a', 64),
             1,
+            '${IMAGE_CANCEL_MISSING_KEY}',
+            '${IMAGE_CANCEL_MISSING}',
+            '2030-07-24T02:00:05Z'
+          );
+          raise exception 'missing image was visible';
+        exception
+          when no_data_found then
+            if sqlerrm <> 'IMAGE_NOT_FOUND' then
+              raise;
+            end if;
+        end;
+
+        begin
+          perform public.cancel_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
             '00000000-0000-4000-8000-000000000324',
             '${IMAGE_CANCEL_OTHER_OWNER}',
-            '2030-07-24T02:00:05Z'
+            '2030-07-24T02:00:06Z'
           );
           raise exception 'other-owner image was visible';
         exception

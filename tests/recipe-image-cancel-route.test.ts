@@ -21,6 +21,9 @@ vi.mock("@/lib/server/recipe-image-managed-cancel", () => ({
 const userId = "550e8400-e29b-41d4-a716-446655440030";
 const imageObjectId = "550e8400-e29b-41d4-a716-446655440031";
 const idempotencyKey = "550e8400-e29b-41d4-a716-446655440032";
+const missingImageObjectId = "550e8400-e29b-41d4-a716-446655440033";
+const otherOwnerImageObjectId = "550e8400-e29b-41d4-a716-446655440034";
+const otherOwnerCancelKey = "550e8400-e29b-41d4-a716-446655440035";
 const sessionAuthority = {
   authIdentityCreatedAt: "2026-07-24T01:00:00.000Z",
   hmacKeyVersion: 1,
@@ -171,6 +174,79 @@ describe("POST /api/v1/recipes/images/{image_object_id}/cancel", () => {
     });
     expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
     expect(runManagedRecipeImageCancel).not.toHaveBeenCalled();
+  });
+
+  it("returns the same opaque response for valid missing and other-owner IDs", async () => {
+    setupCapability("generation_active");
+    readVerifiedAccountGenerationSession.mockResolvedValue({
+      ok: true,
+      sessionAuthority,
+    });
+    runManagedRecipeImageCancel.mockResolvedValue({
+      code: "IMAGE_NOT_FOUND",
+      kind: "rejected",
+    });
+
+    const { POST } = await importRoute();
+    const responses = await Promise.all([
+      POST(
+        new Request(
+          `http://localhost:3000/api/v1/recipes/images/${missingImageObjectId}/cancel`,
+          {
+            headers: { "Idempotency-Key": idempotencyKey },
+            method: "POST",
+          },
+        ),
+        context(missingImageObjectId),
+      ),
+      POST(
+        new Request(
+          `http://localhost:3000/api/v1/recipes/images/${otherOwnerImageObjectId}/cancel`,
+          {
+            headers: { "Idempotency-Key": otherOwnerCancelKey },
+            method: "POST",
+          },
+        ),
+        context(otherOwnerImageObjectId),
+      ),
+    ]);
+    const bodies = await Promise.all(responses.map(response => response.json()));
+
+    expect(responses.map(response => response.status)).toEqual([404, 404]);
+    expect(bodies).toEqual([
+      {
+        success: false,
+        data: null,
+        error: {
+          code: "IMAGE_NOT_FOUND",
+          message: "이미지를 찾을 수 없어요.",
+          fields: [],
+        },
+      },
+      {
+        success: false,
+        data: null,
+        error: {
+          code: "IMAGE_NOT_FOUND",
+          message: "이미지를 찾을 수 없어요.",
+          fields: [],
+        },
+      },
+    ]);
+    expect(JSON.stringify(bodies)).not.toContain(missingImageObjectId);
+    expect(JSON.stringify(bodies)).not.toContain(otherOwnerImageObjectId);
+    expect(runManagedRecipeImageCancel).toHaveBeenNthCalledWith(1, {
+      dbClient: expect.any(Object),
+      idempotencyKey,
+      imageObjectId: missingImageObjectId,
+      sessionAuthority,
+    });
+    expect(runManagedRecipeImageCancel).toHaveBeenNthCalledWith(2, {
+      dbClient: expect.any(Object),
+      idempotencyKey: otherOwnerCancelKey,
+      imageObjectId: otherOwnerImageObjectId,
+      sessionAuthority,
+    });
   });
 
   it("requires the official idempotency key before session or DB mutation", async () => {
