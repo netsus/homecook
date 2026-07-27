@@ -2554,25 +2554,50 @@ describe("recipe API contracts", () => {
     expect(recalculateRecipeNutritionSnapshot).not.toHaveBeenCalled();
   });
 
-  it("maps a managed writer cutover race to lifecycle maintenance", async () => {
-    setupManagedRecipeCreate({
-      data: null,
-      error: { message: "ACCOUNT_LIFECYCLE_MAINTENANCE" },
-    });
+  it.each([
+    ["ACCOUNT_LIFECYCLE_MAINTENANCE", 503],
+    ["ACCOUNT_CUTOVER_QUARANTINED", 409],
+    ["ACCOUNT_CUTOVER_UNCLASSIFIED", 409],
+    ["ACCOUNT_DELETING", 409],
+    ["ACCOUNT_GENERATION_STALE", 409],
+    ["ACCOUNT_SESSION_STALE", 409],
+    ["IMAGE_EXPIRED", 409],
+  ] as const)(
+    "fails closed on managed writer lifecycle rejection %s",
+    async (errorCode, expectedStatus) => {
+      const { rpc } = setupManagedRecipeCreate({
+        data: null,
+        error: { message: errorCode },
+      });
 
-    const { POST } = await import("@/app/api/v1/recipes/route");
-    const response = await POST(
-      new Request("http://localhost:3000/api/v1/recipes", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(manualRecipeCreateBody()),
-      }),
-    );
-    const body = await response.json();
+      const { POST } = await import("@/app/api/v1/recipes/route");
+      const response = await POST(
+        new Request("http://localhost:3000/api/v1/recipes", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(manualRecipeCreateBody({
+            image_object_id: manualImageObjectId,
+          })),
+        }),
+      );
+      const body = await response.json();
 
-    expect(response.status).toBe(503);
-    expect(body.error.code).toBe("ACCOUNT_LIFECYCLE_MAINTENANCE");
-  });
+      expect(response.status).toBe(expectedStatus);
+      expect(body.error.code).toBe(errorCode);
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(rpc).toHaveBeenCalledWith(
+        "create_manual_recipe_with_managed_image",
+        expect.objectContaining({
+          p_image_object_id: manualImageObjectId,
+        }),
+      );
+      expect(rpc).not.toHaveBeenCalledWith(
+        "create_manual_recipe",
+        expect.anything(),
+      );
+      expect(recalculateRecipeNutritionSnapshot).not.toHaveBeenCalled();
+    },
+  );
 
   it("does not fall back to the legacy writer for a managed object ID", async () => {
     const rpc = vi.fn();
