@@ -85,6 +85,14 @@ function ensurePositiveInteger(value, label) {
   return value;
 }
 
+function ensureBoolean(value, label) {
+  if (typeof value !== "boolean") {
+    throw new Error(`${label} must be a boolean.`);
+  }
+
+  return value;
+}
+
 function buildPathEnv(nodeBin) {
   const nodeDir = dirname(nodeBin);
   return [...new Set([nodeDir, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"])].join(
@@ -170,6 +178,31 @@ export function recordAccountMaintenanceTickOutcome({
       deadLetterCount,
     }),
   };
+}
+
+export function getAccountMaintenanceVerificationStatus({
+  contractOk,
+  requireReleaseReady,
+  releaseReady,
+}) {
+  const normalizedContractOk = ensureBoolean(contractOk, "contractOk");
+  const normalizedRequireReleaseReady = ensureBoolean(
+    requireReleaseReady,
+    "requireReleaseReady",
+  );
+  const normalizedReleaseReady = ensureBoolean(
+    releaseReady,
+    "releaseReady",
+  );
+
+  if (!normalizedContractOk) {
+    return "fail";
+  }
+  if (normalizedRequireReleaseReady && !normalizedReleaseReady) {
+    return "blocked";
+  }
+
+  return "pass";
 }
 
 export function appendAccountMaintenanceJsonLog({

@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   appendAccountMaintenanceJsonLog,
   evaluateAccountMaintenanceHealth,
+  getAccountMaintenanceVerificationStatus,
   recordAccountMaintenanceTickOutcome,
 } from "../scripts/lib/account-maintenance-scheduler.mjs";
 
@@ -188,6 +189,37 @@ describe("account session generation scheduler skeleton", () => {
     expect(humanReadableResult.stdout).not.toContain(
       "Account maintenance scheduler verify: pass",
     );
+  });
+
+  it("distinguishes a broken scheduler contract from a blocked release gate", () => {
+    expect(
+      getAccountMaintenanceVerificationStatus({
+        contractOk: true,
+        requireReleaseReady: false,
+        releaseReady: false,
+      }),
+    ).toBe("pass");
+    expect(
+      getAccountMaintenanceVerificationStatus({
+        contractOk: true,
+        requireReleaseReady: true,
+        releaseReady: false,
+      }),
+    ).toBe("blocked");
+    expect(
+      getAccountMaintenanceVerificationStatus({
+        contractOk: false,
+        requireReleaseReady: false,
+        releaseReady: false,
+      }),
+    ).toBe("fail");
+    expect(
+      getAccountMaintenanceVerificationStatus({
+        contractOk: false,
+        requireReleaseReady: true,
+        releaseReady: true,
+      }),
+    ).toBe("fail");
   });
 
   it("keeps install and uninstall as explicit dry-run-only Manual Only surfaces", () => {

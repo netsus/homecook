@@ -2,6 +2,7 @@
 
 import {
   buildAccountMaintenanceSchedulerVerification,
+  getAccountMaintenanceVerificationStatus,
 } from "./lib/account-maintenance-scheduler.mjs";
 
 function printUsage() {
@@ -80,17 +81,20 @@ function main() {
     homeDir: options.homeDir ?? process.env.HOME,
     dryRun: options.dryRun,
   });
-  const passed =
-    result.ok
-    && (!options.requireReleaseReady || result.releaseReadiness.ready);
+  const status = getAccountMaintenanceVerificationStatus({
+    contractOk: result.ok,
+    requireReleaseReady: options.requireReleaseReady,
+    releaseReady: result.releaseReadiness.ready,
+  });
 
   if (options.json) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } else {
     process.stdout.write(
       [
-        `Account maintenance scheduler verify: ${passed ? "pass" : "blocked"}`,
+        `Account maintenance scheduler verify: ${status}`,
         "",
+        `Contract: ${result.ok ? "pass" : "fail"}`,
         `Label: ${result.launchd.label}`,
         `Cadence: ${result.launchd.startIntervalSeconds}s`,
         `Stdout: ${result.launchd.standardOutPath}`,
@@ -102,7 +106,7 @@ function main() {
     );
   }
 
-  if (!passed) {
+  if (status !== "pass") {
     process.exit(1);
   }
 }
