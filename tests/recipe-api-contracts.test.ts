@@ -2282,9 +2282,13 @@ describe("recipe API contracts", () => {
     );
   });
 
-  it("preserves unmanaged external thumbnail compatibility on the generation-active writer", async () => {
+  it.each([
+    "https://example.com/unmanaged-recipe.webp",
+    "https://project.supabase.co/avatars/%E0%A4%A",
+    "https://project.supabase.co/storage/v1/object/public/other-bucket/%E0%A4%A",
+  ])("preserves unmanaged external thumbnail compatibility on the generation-active writer: %s", async (thumbnailUrl) => {
     const { rpc } = setupManagedRecipeCreate();
-    const thumbnailUrl = "https://example.com/unmanaged-recipe.webp";
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
 
     const { POST } = await import("@/app/api/v1/recipes/route");
     const response = await POST(

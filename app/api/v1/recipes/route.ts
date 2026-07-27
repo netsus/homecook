@@ -236,8 +236,6 @@ interface ParsedManualRecipeCreate {
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const MANAGED_RECIPE_IMAGE_STORAGE_PATH =
-  /^\/storage\/v1\/object\/(?:(?:authenticated|public|sign)\/)?(?:recipe-images|recipe-images-private)\//u;
 const INITIAL_IMAGE_CLEANUP_GENERATION = 0;
 
 function isServiceOwnedRecipeImageUrl(value: string) {
@@ -253,11 +251,22 @@ function isServiceOwnedRecipeImageUrl(value: string) {
       return false;
     }
 
-    try {
-      return MANAGED_RECIPE_IMAGE_STORAGE_PATH.test(decodeURIComponent(candidate.pathname));
-    } catch {
-      return true;
+    const segments = candidate.pathname.split("/");
+    const storagePrefix = segments.slice(0, 4).map((segment) => decodeURIComponent(segment));
+    if (
+      storagePrefix[0] !== ""
+      || storagePrefix[1] !== "storage"
+      || storagePrefix[2] !== "v1"
+      || storagePrefix[3] !== "object"
+    ) {
+      return false;
     }
+
+    const accessOrBucket = decodeURIComponent(segments[4] ?? "");
+    const bucket = ["authenticated", "public", "sign"].includes(accessOrBucket)
+      ? decodeURIComponent(segments[5] ?? "")
+      : accessOrBucket;
+    return bucket === "recipe-images" || bucket === "recipe-images-private";
   } catch {
     return false;
   }
