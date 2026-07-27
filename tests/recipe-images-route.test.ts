@@ -333,6 +333,87 @@ describe("POST /api/v1/recipes/images", () => {
     }));
   });
 
+  it("returns one opaque limited response with a positive Retry-After", async () => {
+    const rpc = vi.fn(async (name: string) => {
+      if (name === "get_account_generation_capability") {
+        return {
+          data: { revision: 3, state: "generation_active" },
+          error: null,
+        };
+      }
+      throw new Error(`Unexpected RPC: ${name}`);
+    });
+    const routeClient = {
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
+      },
+    };
+    const storageAdapter = {
+      issueReadUrl: vi.fn(),
+      readTakeoverObject: vi.fn(),
+      uploadObject: vi.fn(),
+    };
+    createRouteHandlerClient.mockResolvedValue(routeClient);
+    createServiceRoleClient.mockReturnValue({ rpc, storage: { from: vi.fn() } });
+    readVerifiedAccountGenerationSession.mockResolvedValue({
+      ok: true,
+      sessionAuthority: {
+        authIdentityCreatedAt: "2026-07-23T00:00:00.000Z",
+        hmacKeyVersion: 1,
+        ownerUuid: userId,
+        sessionIssuedAt: "2026-07-26T00:00:00.000Z",
+        sessionKeyHash: "a".repeat(64),
+      },
+    });
+    inspectRecipeImageUpload.mockResolvedValue({
+      ok: true,
+      value: {
+        actualMimeType: "image/png",
+        byteSize: 3,
+        extension: "png",
+        rawSha256: "b".repeat(64),
+      },
+    });
+    createManagedRecipeImageStorageAdapter.mockReturnValue(storageAdapter);
+    runManagedRecipeImageUpload.mockResolvedValue({
+      kind: "limited",
+      retryAfterSeconds: 61,
+    });
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+
+    const formData = new FormData();
+    formData.set("image", new File([new Uint8Array([1, 2, 3])], "recipe.png", {
+      type: "image/png",
+    }));
+
+    const { POST } = await importImageRoute();
+    const response = await POST(new Request(
+      "http://localhost:3000/api/v1/recipes/images",
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: formData,
+      },
+    ));
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("61");
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "IMAGE_UPLOAD_LIMITED",
+        message: "잠시 후 이미지 업로드를 다시 시도해 주세요.",
+        fields: [],
+      },
+    });
+    expect(JSON.stringify(body)).not.toMatch(
+      /quota|backlog|reservation|pending|dead.?letter/i,
+    );
+    expect(runManagedRecipeImageUpload).toHaveBeenCalledOnce();
+  });
+
   it("fails closed when the verified session belongs to a different owner", async () => {
     const rpc = vi.fn(async () => ({
       data: { revision: 3, state: "generation_active" },
