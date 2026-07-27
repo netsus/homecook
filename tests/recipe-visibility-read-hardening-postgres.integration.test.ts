@@ -627,6 +627,160 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     `)).toBe("t:f:f:f:f:f");
   });
 
+  it("executes the merged-exact remote verifier read-only and fails closed on pre-cutover drift", async () => {
+    const verifier = await import(
+      "../scripts/lib/recipe-visibility-read-hardening-remote-verifier.mjs"
+    );
+    const plan = verifier.buildRecipeVisibilityRemoteVerificationPlan({
+      mode: "post-merge-read-only",
+    });
+    const request = verifier.buildRecipeVisibilityPsqlRequest({
+      databaseEnvironment: { PATH: process.env.PATH ?? "" },
+      planSql: plan.sql,
+    });
+    const result = JSON.parse(psql(request.input)) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      schema_ready: true,
+      capability_state: "legacy",
+      capability_count: 1,
+      rls_matrix_ok: true,
+      guard_function_volatility: "s",
+      guard_function_strict: false,
+      guard_function_language: "plpgsql",
+      guard_function_identity_arguments: "p_owner_uuid uuid",
+      guard_function_result_type: "boolean",
+      guard_lifecycle_select: true,
+      guard_lifecycle_policy_count: 1,
+      private_bucket_exact: true,
+      storage_select_policy_count: 1,
+      remote_writes: 0,
+    });
+    expect(() =>
+      verifier.assertRecipeVisibilityRemoteVerificationResult({
+        ...result,
+        lifecycle_count: 0,
+        role_matrix_ok: true,
+        reader_missing_select_count: 0,
+        anon_direct_mutation_count: 0,
+        authenticated_direct_mutation_count: 0,
+        union_zero_candidate_count: 0,
+        union_zero_ready_count: 0,
+        union_zero_blocked_count: 0,
+      })
+    ).not.toThrow();
+    expect(result.union_zero_candidate_count).toBe(1);
+    expect(() =>
+      verifier.assertRecipeVisibilityRemoteVerificationResult(result)
+    ).toThrow(/remote recipe visibility verification failed/i);
+
+    const columnGrantDrift = JSON.parse(psql(`
+      begin;
+      grant update (title) on public.recipes to authenticated;
+      ${plan.sql}
+      rollback;
+    `)) as Record<string, unknown>;
+    expect(columnGrantDrift.reader_column_mutation_count).toBe(1);
+
+    const internalGrantDrift = JSON.parse(psql(`
+      begin;
+      grant select on public.recipe_image_objects to service_role;
+      ${plan.sql}
+      rollback;
+    `)) as Record<string, unknown>;
+    expect(internalGrantDrift.internal_table_privilege_count).toBe(1);
+    expect(internalGrantDrift.internal_column_privilege_count).toBe(1);
+
+    const serviceTagGrantDrift = JSON.parse(psql(`
+      begin;
+      grant update (visibility) on public.recipe_tags to service_role;
+      ${plan.sql}
+      rollback;
+    `)) as Record<string, unknown>;
+    expect(serviceTagGrantDrift.service_role_tag_column_mutation_count)
+      .toBe(1);
+
+    const policyDrift = JSON.parse(psql(`
+      begin;
+      alter policy recipes_public_and_owner_read
+        on public.recipes
+        using (true);
+      ${plan.sql}
+      rollback;
+    `)) as Record<string, unknown>;
+    expect(
+      (policyDrift.policy_inventory as Array<Record<string, unknown>>)
+        .find((policy) =>
+          policy.name === "recipes_public_and_owner_read"
+        )?.qualification,
+    ).toBe("true");
+
+    const misplacedPolicyDrift = JSON.parse(psql(`
+      begin;
+      create policy tags_public_read
+        on public.recipes
+        for select
+        to anon
+        using (true);
+      ${plan.sql}
+      rollback;
+    `)) as Record<string, unknown>;
+    expect(misplacedPolicyDrift.unexpected_reader_policy_count).toBe(1);
+
+    const guardBodyDrift = JSON.parse(psql(`
+      begin;
+      create or replace function
+        recipe_visibility_guard.is_owner_publicly_visible(
+          p_owner_uuid uuid
+        )
+      returns boolean
+      language plpgsql
+      stable
+      security definer
+      set search_path = pg_catalog, public, pg_temp
+      as $function$
+      begin
+        return true;
+      end
+      $function$;
+      ${plan.sql}
+      rollback;
+    `)) as Record<string, unknown>;
+    expect(guardBodyDrift.guard_function_body).toMatch(/return true/i);
+
+    const guardLifecycleDrift = JSON.parse(psql(`
+      begin;
+      revoke select on public.user_account_lifecycles
+        from homecook_recipe_visibility_guard_owner;
+      alter policy recipe_visibility_guard_lifecycle_select
+        on public.user_account_lifecycles
+        using (false);
+      ${plan.sql}
+      rollback;
+    `)) as Record<string, unknown>;
+    expect(guardLifecycleDrift.guard_lifecycle_select).toBe(false);
+    expect(
+      (guardLifecycleDrift.guard_lifecycle_policy as
+        Record<string, unknown>).qualification,
+    ).toBe("false");
+
+    const privateBucketDrift = JSON.parse(psql(`
+      begin;
+      update storage.buckets
+      set public = true
+      where id = 'recipe-images-private';
+      create policy recipe_images_private_leak
+        on storage.objects
+        for all
+        to anon, authenticated
+        using (bucket_id = 'recipe-images-private');
+      ${plan.sql}
+      rollback;
+    `)) as Record<string, unknown>;
+    expect(privateBucketDrift.private_bucket_exact).toBe(false);
+    expect(privateBucketDrift.storage_select_policy_count).toBe(2);
+  });
+
   it("applies latest-generation visibility to anon and owner detail reads", () => {
     expect(asRole("anon", `
       select string_agg(id::text, ',' order by id)

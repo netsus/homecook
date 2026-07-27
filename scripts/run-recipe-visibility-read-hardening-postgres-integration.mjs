@@ -518,6 +518,25 @@ if (!postgresBin) {
         revoke all on table public.account_generation_capability_state
           from public, anon, authenticated, service_role;
 
+        create table public.user_account_generation_watermarks (
+          owner_uuid uuid primary key,
+          latest_account_generation bigint not null
+        );
+        revoke all on table public.user_account_generation_watermarks
+          from public, anon, authenticated, service_role;
+
+        create table public.account_generation_cutover_attempts (
+          id uuid primary key
+        );
+        revoke all on table public.account_generation_cutover_attempts
+          from public, anon, authenticated, service_role;
+
+        create table public.account_generation_cutover_staging (
+          owner_uuid uuid primary key
+        );
+        revoke all on table public.account_generation_cutover_staging
+          from public, anon, authenticated, service_role;
+
         create table public.recipes (
           id uuid primary key default gen_random_uuid(),
           title varchar(200) not null,
