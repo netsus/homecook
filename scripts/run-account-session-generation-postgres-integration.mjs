@@ -167,6 +167,8 @@ if (!postgresBin) {
         $function$;
         create type public.social_provider_type
           as enum ('kakao', 'naver', 'google');
+        create type public.recipe_source_type
+          as enum ('system', 'youtube', 'manual');
         create table public.users (
           id uuid primary key,
           nickname varchar(30) not null,
@@ -180,6 +182,144 @@ if (!postgresBin) {
           deleted_at timestamptz
         );
         grant select, insert, update, delete on public.users to service_role;
+        create table public.recipes (
+          id uuid primary key default gen_random_uuid(),
+          title varchar(200) not null,
+          description text,
+          thumbnail_url text,
+          base_servings integer not null default 2,
+          tags text[] not null default '{}'::text[],
+          source_type public.recipe_source_type not null,
+          created_by uuid,
+          view_count integer not null default 0,
+          like_count integer not null default 0,
+          save_count integer not null default 0,
+          plan_count integer not null default 0,
+          cook_count integer not null default 0,
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now()
+        );
+        create table public.recipe_sources (
+          id uuid primary key,
+          recipe_id uuid not null unique
+            references public.recipes(id) on delete cascade,
+          youtube_url text,
+          youtube_video_id varchar(20),
+          extraction_meta_json jsonb not null default '{}'::jsonb
+        );
+        create table public.recipe_ingredients (
+          id uuid primary key,
+          recipe_id uuid not null
+            references public.recipes(id) on delete cascade,
+          ingredient_id uuid not null
+        );
+        create table public.recipe_steps (
+          id uuid primary key,
+          recipe_id uuid not null
+            references public.recipes(id) on delete cascade,
+          step_number integer not null,
+          instruction text not null
+        );
+        create table public.recipe_step_cooking_methods (
+          id uuid primary key,
+          step_id uuid not null
+            references public.recipe_steps(id) on delete cascade,
+          method_id uuid not null,
+          position integer not null
+        );
+        create table public.tags (
+          id uuid primary key default gen_random_uuid(),
+          normalized_key text not null unique,
+          label text not null,
+          slug text,
+          kind text not null,
+          is_system boolean not null default false,
+          theme_eligible boolean not null default false,
+          usage_count integer not null default 0,
+          created_by uuid,
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now()
+        );
+        create table public.recipe_tags (
+          recipe_id uuid not null
+            references public.recipes(id) on delete cascade,
+          tag_id uuid not null
+            references public.tags(id) on delete cascade,
+          source text not null default 'system_suggested',
+          confidence numeric(4, 3) not null default 1,
+          visibility text not null default 'public',
+          review_status text not null default 'approved',
+          sort_order integer not null default 0,
+          created_by uuid,
+          created_at timestamptz not null default now(),
+          primary key (recipe_id, tag_id)
+        );
+        alter table public.tags enable row level security;
+        alter table public.recipe_tags enable row level security;
+        create or replace function public.build_recipe_tag_payload(
+          p_tags text[],
+          p_source text default 'system_suggested'
+        )
+        returns jsonb
+        language sql
+        stable
+        set search_path = pg_catalog
+        as $function$
+          select coalesce(
+            jsonb_agg(
+              jsonb_build_object(
+                'label',
+                tag.label,
+                'source',
+                coalesce(nullif(p_source, ''), 'system_suggested')
+              )
+              order by tag.ordinality
+            ),
+            '[]'::jsonb
+          )
+          from unnest(coalesce(p_tags, '{}'::text[]))
+            with ordinality as tag(label, ordinality)
+          where btrim(coalesce(tag.label, '')) <> ''
+        $function$;
+        create or replace function public.set_recipe_tags(
+          p_recipe_id uuid,
+          p_tags jsonb,
+          p_actor_user_id uuid default null,
+          p_source text default 'system_suggested'
+        )
+        returns void
+        language plpgsql
+        security definer
+        set search_path = pg_catalog, public, pg_temp
+        as $function$
+        begin
+          update public.recipes
+             set tags = coalesce((
+               select array_agg(
+                 tag.label order by recipe_tag.sort_order, tag.label
+               )
+               from public.recipe_tags as recipe_tag
+               join public.tags as tag
+                 on tag.id = recipe_tag.tag_id
+               where recipe_tag.recipe_id = p_recipe_id
+             ), '{}'::text[])
+           where id = p_recipe_id;
+        end;
+        $function$;
+        revoke execute on function public.set_recipe_tags(uuid, jsonb, uuid, text)
+          from public, anon, authenticated;
+        grant execute on function public.set_recipe_tags(uuid, jsonb, uuid, text)
+          to service_role;
+        grant usage on schema public to anon, authenticated, service_role;
+        grant select on table
+          public.recipes,
+          public.recipe_sources,
+          public.recipe_ingredients,
+          public.recipe_steps,
+          public.recipe_step_cooking_methods,
+          public.tags,
+          public.recipe_tags
+        to anon, authenticated;
         create table public.account_generation_legacy_delete_fixture (
           owner_uuid uuid primary key,
           fail_cleanup boolean not null default false
@@ -227,6 +367,11 @@ if (!postgresBin) {
       ...connectionArgs,
       "-f",
       "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+    ]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...connectionArgs,
+      "-f",
+      "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
     ]);
 
     const test = commandResult("pnpm", [
