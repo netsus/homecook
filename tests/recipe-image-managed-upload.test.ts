@@ -300,7 +300,13 @@ describe("managed recipe image upload orchestration", () => {
       maxBytes: RECIPE_IMAGE_MAX_BYTES,
       objectPath: OBJECT_PATH,
     });
-    expect(input.uploadObject).toHaveBeenCalledOnce();
+    expect(input.uploadObject).toHaveBeenCalledWith({
+      body: input.body,
+      bucketId: "recipe-images-private",
+      contentType: "image/png",
+      objectPath: OBJECT_PATH,
+      upsert: false,
+    });
   });
 
   it("rehashes matching takeover bytes and finalizes without overwriting", async () => {

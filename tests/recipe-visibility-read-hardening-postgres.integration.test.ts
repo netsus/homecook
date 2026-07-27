@@ -78,6 +78,8 @@ const IMAGE_CLEANUP_CONSUMER = "00000000-0000-4000-8000-000000000314";
 const IMAGE_UPLOAD_KEY = "00000000-0000-4000-8000-000000000315";
 const IMAGE_UPLOAD_KEY_REUSE_KEY =
   "00000000-0000-4000-8000-0000000003a0";
+const IMAGE_UPLOAD_TAKEOVER_RACE_KEY =
+  "00000000-0000-4000-8000-0000000003a1";
 const IMAGE_UPLOAD_ISOLATION_KEY = "00000000-0000-4000-8000-000000000316";
 const IMAGE_UPLOAD_COMPENSATION_KEY = "00000000-0000-4000-8000-000000000317";
 const IMAGE_STORAGE_DB_COMPENSATION_KEY =
@@ -2251,6 +2253,174 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
       rollback;
       select 'upload-cas-pass';
     `)).toBe("upload-cas-pass");
+  });
+
+  it("lets one expired upload takeover win while the concurrent replay follows it", async () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1,
+          current_cutover_attempt_id =
+            '00000000-0000-4000-8000-000000000399'
+      where singleton;
+
+      update public.user_account_lifecycles
+      set auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      set local role service_role;
+      select public.reserve_recipe_image_upload(
+        '${OWNER_ACTIVE}',
+        '2026-01-01T00:00:00Z',
+        repeat('a', 64),
+        1,
+        '${IMAGE_UPLOAD_TAKEOVER_RACE_KEY}',
+        repeat('b', 64),
+        repeat('c', 64),
+        1024,
+        'image/webp',
+        'webp',
+        '2030-07-24T02:00:00Z'
+      );
+      reset role;
+
+      commit;
+      select 'takeover-race-fixture-pass';
+    `)).toBe("takeover-race-fixture-pass");
+
+    const objectId = psql(`
+      select result_reference
+      from public.mutation_idempotency_keys
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1
+        and operation_scope = 'recipe_image_upload'
+        and key_hash = encode(
+          extensions.digest(
+            '${IMAGE_UPLOAD_TAKEOVER_RACE_KEY}'::text,
+            'sha256'
+          ),
+          'hex'
+        );
+    `);
+
+    try {
+      const firstTakeover = psqlAsync(`
+        begin;
+        set local role service_role;
+        select public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_UPLOAD_TAKEOVER_RACE_KEY}',
+          repeat('b', 64),
+          repeat('c', 64),
+          1024,
+          'image/webp',
+          'webp',
+          '2030-07-24T02:06:00Z'
+        );
+        select pg_sleep(0.5);
+        commit;
+      `, "image-takeover-race-winner");
+
+      await waitForPgSleep("image-takeover-race-winner");
+
+      const concurrentReplay = psqlAsync(`
+        begin;
+        set local role service_role;
+        select public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_UPLOAD_TAKEOVER_RACE_KEY}',
+          repeat('b', 64),
+          repeat('c', 64),
+          1024,
+          'image/webp',
+          'webp',
+          '2030-07-24T02:06:00Z'
+        );
+        commit;
+      `, "image-takeover-race-replay");
+
+      const [takeoverResult, replayResult] = await Promise.all([
+        firstTakeover,
+        concurrentReplay,
+      ]);
+      expect(takeoverResult.status, takeoverResult.stderr).toBe(0);
+      expect(replayResult.status, replayResult.stderr).toBe(0);
+
+      const parseResult = (stdout: string) => JSON.parse(
+        stdout.trim().split("\n").find((line) => line.startsWith("{")) ?? "{}",
+      ) as Record<string, unknown>;
+      const takeover = parseResult(takeoverResult.stdout);
+      const replay = parseResult(replayResult.stdout);
+
+      expect(takeover).toMatchObject({
+        outcome: "takeover",
+        object_id: objectId,
+        object_path: `${OWNER_ACTIVE}/1/${objectId}.webp`,
+        state: "pending_upload",
+      });
+      expect(replay).toMatchObject({
+        outcome: "live_replay",
+        object_id: objectId,
+        object_path: takeover.object_path,
+        attempt_token: takeover.attempt_token,
+        state: "pending_upload",
+      });
+      expect(replay.retry_after_seconds).toBe(300);
+
+      expect(psql(`
+        select concat_ws(
+          ':',
+          idempotency.attempts,
+          counter.active_reservation_count,
+          jsonb_array_length(counter.request_events)
+        )
+        from public.mutation_idempotency_keys as idempotency
+        join public.image_upload_quota_counters as counter
+          on counter.owner_uuid = idempotency.owner_uuid
+         and counter.account_generation = idempotency.account_generation
+        where idempotency.result_reference = '${objectId}';
+      `)).toBe("2:1:1");
+    } finally {
+      expect(psql(`
+        begin;
+        delete from public.mutation_idempotency_keys
+        where result_reference = '${objectId}';
+        delete from public.recipe_image_objects
+        where id = '${objectId}';
+        delete from public.image_upload_quota_counters
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        commit;
+        select 'takeover-race-cleanup-pass';
+      `)).toBe("takeover-race-cleanup-pass");
+    }
   });
 
   it("rejects different-payload key reuse without changing upload authority", () => {
