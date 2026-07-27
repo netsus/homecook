@@ -55,7 +55,7 @@
 - [x] service-owned bucket URL without verified object ID is 422 `MANAGED_IMAGE_REFERENCE_REQUIRED`; arbitrary external URL remains unmanaged compatibility input where official contract permits <!-- omo:id=accept-image-managed-reference;stage=2;scope=backend;review=3,6 -->
 - [x] `IMAGE_UPLOAD_LIMITED` has positive Retry-After and does not reveal quota/backlog size <!-- omo:id=accept-image-limited-nondisclosure;stage=2;scope=backend;review=3,6 -->
 - [x] private/public bucket or owner/generation mismatch is 422 `IMAGE_VISIBILITY_MISMATCH` with attach 0 <!-- omo:id=accept-image-visibility-mismatch;stage=2;scope=backend;review=3,6 -->
-- [ ] lifecycle maintenance/quarantine/deleting/stale-session errors are fail-closed and do not fall back to UUID-only writes <!-- omo:id=accept-image-lifecycle-errors;stage=2;scope=backend;review=3,6 -->
+- [x] lifecycle maintenance/quarantine/deleting/stale-session errors are fail-closed and do not fall back to UUID-only writes <!-- omo:id=accept-image-lifecycle-errors;stage=2;scope=backend;review=3,6 -->
 
 ## Legacy / Operations
 
