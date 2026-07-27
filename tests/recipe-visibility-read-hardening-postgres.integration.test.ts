@@ -5818,6 +5818,166 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     `)).toBe("1:complete:0");
   });
 
+  it("keeps candidate inclusion in differential parity with completion", () => {
+    const readyOwner = "00000000-0000-4000-8000-000000000498";
+    const authBlockedOwner = "00000000-0000-4000-8000-000000000499";
+    const generationGapOwner = "00000000-0000-4000-8000-00000000049a";
+    const ownerSignalOwner = "00000000-0000-4000-8000-00000000049b";
+    const ownerSignalObject = "00000000-0000-4000-8000-00000000049c";
+    const epoch = "2030-07-25T07:00:00.123456Z";
+    const deletedAt = "2030-07-25T07:30:00.123456Z";
+    const now = "2030-07-25T08:00:00.123456Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        personal_db_deleted_at,
+        auth_identity_deleted_at
+      ) values
+        (
+          '${readyOwner}', 1, '${epoch}', 'cleanup_pending',
+          0, '${epoch}', '${deletedAt}'
+        ),
+        (
+          '${authBlockedOwner}', 1, '${epoch}', 'cleanup_pending',
+          0, '${epoch}', '${deletedAt}'
+        ),
+        (
+          '${generationGapOwner}', 1, '${epoch}', 'cleanup_pending',
+          1, '${epoch}', '${deletedAt}'
+        ),
+        (
+          '${ownerSignalOwner}', 1, '${epoch}', 'cleanup_pending',
+          0, '${epoch}', '${deletedAt}'
+        );
+
+      insert into public.auth_identity_deletion_outbox (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values
+        (
+          '${readyOwner}', 1, '${epoch}', 'succeeded',
+          'deleted', '${epoch}'
+        ),
+        (
+          '${authBlockedOwner}', 1, '${epoch}', 'dead_letter',
+          null, '${epoch}'
+        ),
+        (
+          '${generationGapOwner}', 1, '${epoch}', 'succeeded',
+          'deleted', '${epoch}'
+        ),
+        (
+          '${ownerSignalOwner}', 1, '${epoch}', 'succeeded',
+          'deleted', '${epoch}'
+        );
+
+      insert into storage.objects (
+        id,
+        bucket_id,
+        name,
+        owner_id
+      ) values (
+        '${ownerSignalObject}',
+        'recipe-images-private',
+        '${ownerSignalOwner}/1/unregistered.webp',
+        '${ownerSignalOwner}'
+      );
+
+      create temp table completion_candidate_snapshot (
+        owner_uuid uuid primary key
+      ) on commit drop;
+      create temp table completion_differential_results (
+        owner_uuid uuid primary key,
+        succeeded boolean not null
+      ) on commit drop;
+      grant insert, select on completion_candidate_snapshot
+        to service_role;
+
+      set local role service_role;
+      insert into completion_candidate_snapshot
+      select candidate.owner_uuid
+      from public.list_recipe_image_lifecycle_completion_candidates(
+        50,
+        '${now}',
+        null,
+        null,
+        null
+      ) as candidate
+      where candidate.owner_uuid in (
+        '${readyOwner}',
+        '${authBlockedOwner}',
+        '${generationGapOwner}',
+        '${ownerSignalOwner}'
+      );
+      reset role;
+
+      do $matrix$
+      declare
+        v_owner uuid;
+        v_succeeded boolean;
+      begin
+        foreach v_owner in array array[
+          '${readyOwner}'::uuid,
+          '${authBlockedOwner}'::uuid,
+          '${generationGapOwner}'::uuid,
+          '${ownerSignalOwner}'::uuid
+        ] loop
+          begin
+            perform public.complete_recipe_image_account_lifecycle(
+              v_owner,
+              1,
+              '${now}'
+            );
+            v_succeeded := true;
+          exception
+            when others then
+              v_succeeded := false;
+          end;
+
+          insert into completion_differential_results
+          values (v_owner, v_succeeded);
+        end loop;
+      end;
+      $matrix$;
+
+      select concat_ws(
+        ':',
+        (select count(*) from completion_candidate_snapshot),
+        (
+          select bool_and(
+            exists (
+              select 1
+              from completion_candidate_snapshot as candidate
+              where candidate.owner_uuid = result.owner_uuid
+            ) = result.succeeded
+          )
+          from completion_differential_results as result
+        ),
+        (
+          select count(*)
+          from completion_differential_results
+          where succeeded
+        )
+      );
+      rollback;
+    `)).toBe("1:t:1");
+  });
+
   it("replays completion candidates as service-only and fails closed when inactive", () => {
     const replay = psqlFileResult(
       IMAGE_LIFECYCLE_COMPLETION_CANDIDATE_MIGRATION_PATH,
