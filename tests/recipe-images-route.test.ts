@@ -298,6 +298,12 @@ describe("POST /api/v1/recipes/images", () => {
       type: "image/png",
     });
     formData.set("image", image);
+    formData.set("visibility", "public");
+    formData.set("bucket_id", "recipe-images");
+    formData.set("object_path", "attacker-controlled/path.png");
+    formData.set("owner_uuid", "550e8400-e29b-41d4-a716-446655440099");
+    formData.set("cleanup_generation", "999");
+    formData.set("moderation_status", "approved");
 
     const { POST } = await importImageRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/recipes/images", {
@@ -331,6 +337,30 @@ describe("POST /api/v1/recipes/images", () => {
       sessionAuthority: expect.objectContaining({ ownerUuid: userId }),
       uploadObject: storageAdapter.uploadObject,
     }));
+    const managedInput = runManagedRecipeImageUpload.mock.calls[0]?.[0];
+    expect(Object.keys(managedInput).sort()).toEqual([
+      "body",
+      "dbClient",
+      "expectedReadUrlOrigin",
+      "idempotencyKey",
+      "inspection",
+      "issueReadUrl",
+      "maxReadUrlTtlMs",
+      "readTakeoverObject",
+      "sessionAuthority",
+      "uploadObject",
+    ]);
+    for (const forbiddenField of [
+      "visibility",
+      "bucket_id",
+      "object_path",
+      "owner_uuid",
+      "cleanup_generation",
+      "moderation_status",
+    ]) {
+      expect(managedInput).not.toHaveProperty(forbiddenField);
+    }
+    expect(managedInput.sessionAuthority.ownerUuid).toBe(userId);
   });
 
   it("returns one opaque limited response with a positive Retry-After", async () => {
