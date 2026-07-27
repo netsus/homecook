@@ -102,6 +102,7 @@
       "tests/recipe-visibility-routes.test.ts",
       "tests/recipe-visibility-security.test.ts",
       "tests/recipe-visibility-focused-gate.test.ts",
+      "tests/recipe-visibility-read-hardening-remote-verifier.test.ts",
       "tests/recipe-visibility-read-hardening-postgres.integration.test.ts",
       "public owner private deleted quarantined recovered and owner-neutral reader matrix",
       "direct PostgREST tag aggregate cache cursor and non-disclosure evidence",
