@@ -7968,6 +7968,197 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     );
   });
 
+  it("requires contiguous terminal registry and outbox evidence before completion", () => {
+    const owner = "00000000-0000-4000-8000-000000000516";
+    const firstObject = "00000000-0000-4000-8000-000000000517";
+    const secondObject = "00000000-0000-4000-8000-000000000518";
+    const epoch = "2030-07-26T03:30:00Z";
+    const now = "2030-07-26T03:45:00Z";
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.user_account_lifecycles (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        status,
+        required_cleanup_generation,
+        completed_cleanup_generation,
+        personal_db_deleted_at,
+        auth_identity_deleted_at
+      ) values (
+        '${owner}', 1, '${epoch}', 'cleanup_pending',
+        2, 0, '${epoch}', '${epoch}'
+      );
+
+      insert into public.auth_identity_deletion_outbox (
+        owner_uuid,
+        account_generation,
+        auth_identity_created_at_snapshot,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values (
+        '${owner}', 1, '${epoch}', 'succeeded', 'deleted', '${epoch}'
+      );
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        next_terminal_scan_at
+      ) values
+        (
+          '${firstObject}', '${owner}', 1, 'recipe-images-private',
+          '${owner}/1/${firstObject}.webp', 'private', 'deleted',
+          1, '${now}'
+        ),
+        (
+          '${secondObject}', '${owner}', 1, 'recipe-images-private',
+          '${owner}/1/${secondObject}.webp', 'private',
+          'verified_not_found', 2, '${now}'
+        );
+
+      insert into public.storage_object_deletion_outbox (
+        bucket_id,
+        object_path,
+        owner_uuid,
+        account_generation,
+        cleanup_generation,
+        reason,
+        state,
+        terminal_result,
+        next_attempt_at
+      ) values
+        (
+          'recipe-images-private', '${owner}/1/${firstObject}.webp',
+          '${owner}', 1, 1, 'account_delete',
+          'succeeded', 'deleted', '${epoch}'
+        ),
+        (
+          'recipe-images-private', '${owner}/1/${secondObject}.webp',
+          '${owner}', 1, 2, 'account_delete',
+          'succeeded', 'verified_not_found', '${epoch}'
+        );
+
+      create temp table contiguous_terminal_results (
+        step integer primary key,
+        rejected boolean not null
+      ) on commit drop;
+      grant insert, select on contiguous_terminal_results to service_role;
+
+      update public.storage_object_deletion_outbox
+      set cleanup_generation = 2
+      where owner_uuid = '${owner}'
+        and object_path = '${owner}/1/${firstObject}.webp';
+      set local role service_role;
+      do $assert$
+      begin
+        perform public.complete_recipe_image_account_lifecycle(
+          '${owner}', 1, '${now}'
+        );
+        insert into contiguous_terminal_results values (1, false);
+      exception when sqlstate '55000' then
+        insert into contiguous_terminal_results values (1, true);
+      end;
+      $assert$;
+      reset role;
+
+      update public.storage_object_deletion_outbox
+      set cleanup_generation = 1
+      where owner_uuid = '${owner}'
+        and object_path = '${owner}/1/${firstObject}.webp';
+      update public.recipe_image_objects
+      set state = 'cleanup_pending',
+          next_terminal_scan_at = null
+      where id = '${secondObject}';
+      set local role service_role;
+      do $assert$
+      begin
+        perform public.complete_recipe_image_account_lifecycle(
+          '${owner}', 1, '${now}'
+        );
+        insert into contiguous_terminal_results values (2, false);
+      exception when sqlstate '55000' then
+        insert into contiguous_terminal_results values (2, true);
+      end;
+      $assert$;
+      reset role;
+
+      update public.recipe_image_objects
+      set state = 'verified_not_found',
+          next_terminal_scan_at = '${now}'
+      where id = '${secondObject}';
+      update public.storage_object_deletion_outbox
+      set state = 'pending',
+          terminal_result = null
+      where owner_uuid = '${owner}'
+        and cleanup_generation = 2;
+      set local role service_role;
+      do $assert$
+      begin
+        perform public.complete_recipe_image_account_lifecycle(
+          '${owner}', 1, '${now}'
+        );
+        insert into contiguous_terminal_results values (3, false);
+      exception when sqlstate '55000' then
+        insert into contiguous_terminal_results values (3, true);
+      end;
+      $assert$;
+      reset role;
+
+      update public.storage_object_deletion_outbox
+      set state = 'dead_letter'
+      where owner_uuid = '${owner}'
+        and cleanup_generation = 2;
+      set local role service_role;
+      do $assert$
+      begin
+        perform public.complete_recipe_image_account_lifecycle(
+          '${owner}', 1, '${now}'
+        );
+        insert into contiguous_terminal_results values (4, false);
+      exception when sqlstate '55000' then
+        insert into contiguous_terminal_results values (4, true);
+      end;
+      $assert$;
+      reset role;
+
+      update public.storage_object_deletion_outbox
+      set state = 'succeeded',
+          terminal_result = 'verified_not_found'
+      where owner_uuid = '${owner}'
+        and cleanup_generation = 2;
+      set local role service_role;
+      select public.complete_recipe_image_account_lifecycle(
+        '${owner}', 1, '${now}'
+      );
+      reset role;
+
+      select concat_ws(
+        ':',
+        (select string_agg(rejected::text, ',' order by step)
+           from contiguous_terminal_results),
+        lifecycle.status,
+        lifecycle.completed_cleanup_generation
+      )
+      from public.user_account_lifecycles as lifecycle
+      where lifecycle.owner_uuid = '${owner}'
+        and lifecycle.account_generation = 1;
+      rollback;
+    `)).toBe("true,true,true,true:complete:2");
+  });
+
   it("rejects unresolved Auth deletion and nonzero expected-owner evidence", () => {
     const authOwner = "00000000-0000-4000-8000-000000000520";
     const signalOwner = "00000000-0000-4000-8000-000000000521";
