@@ -13,17 +13,12 @@ export const ACCOUNT_MAINTENANCE_PHASES = [
 type AccountMaintenancePhase = (typeof ACCOUNT_MAINTENANCE_PHASES)[number];
 type PhaseStatus = "blocked" | "completed" | "failed" | "feature_off";
 
-interface OwnerSignalEvidence {
-  available: boolean;
-  unionZero: boolean;
-}
-
 export interface AccountMaintenanceTickDependencies {
   scanner?: () => Promise<void>;
   terminalTombstoneScan?: () => Promise<void>;
   quarantineRecheck?: () => Promise<void>;
   normalDrain?: () => Promise<void>;
-  expectedOwnerSignalUnionZero?: () => Promise<OwnerSignalEvidence>;
+  expectedOwnerSignalUnionZero?: () => Promise<void>;
   authDelete?: () => Promise<void>;
   complete?: () => Promise<void>;
   jointActivationReady?: boolean;
@@ -130,30 +125,10 @@ export async function runAccountMaintenanceTick(
     }
   }
 
-  let ownerSignalEvidence: OwnerSignalEvidence | null = null;
-  if (dependencies.expectedOwnerSignalUnionZero) {
-    try {
-      ownerSignalEvidence =
-        await dependencies.expectedOwnerSignalUnionZero();
-    } catch {
-      phases.push({
-        phase: "expected_owner_signal_union_zero",
-        status: "failed",
-      });
-      fillBlockedPhases(phases, "expected_owner_signal_union_zero");
-      return {
-        featureState: "feature_off",
-        status: "failed",
-        blockedAt: "expected_owner_signal_union_zero",
-        phases,
-      };
-    }
-  }
-
-  if (!ownerSignalEvidence?.available || !ownerSignalEvidence.unionZero) {
+  if (!dependencies.expectedOwnerSignalUnionZero) {
     phases.push({
       phase: "expected_owner_signal_union_zero",
-      status: ownerSignalEvidence ? "blocked" : "feature_off",
+      status: "feature_off",
     });
     fillBlockedPhases(phases, "expected_owner_signal_union_zero");
     return {
@@ -164,10 +139,21 @@ export async function runAccountMaintenanceTick(
     };
   }
 
-  phases.push({
-    phase: "expected_owner_signal_union_zero",
-    status: "completed",
-  });
+  if (
+    !(await runOptionalPhase(
+      phases,
+      "expected_owner_signal_union_zero",
+      dependencies.expectedOwnerSignalUnionZero,
+    ))
+  ) {
+    fillBlockedPhases(phases, "expected_owner_signal_union_zero");
+    return {
+      featureState: "feature_off",
+      status: "failed",
+      blockedAt: "expected_owner_signal_union_zero",
+      phases,
+    };
+  }
 
   if (!dependencies.jointActivationReady) {
     phases.push({ phase: "auth_delete", status: "feature_off" });

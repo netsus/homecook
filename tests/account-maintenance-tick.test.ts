@@ -20,10 +20,7 @@ interface TickDependencies {
   terminalTombstoneScan?: () => Promise<void>;
   quarantineRecheck?: () => Promise<void>;
   normalDrain?: () => Promise<void>;
-  expectedOwnerSignalUnionZero?: () => Promise<{
-    available: boolean;
-    unionZero: boolean;
-  }>;
+  expectedOwnerSignalUnionZero?: () => Promise<void>;
   authDelete?: () => Promise<void>;
   complete?: () => Promise<void>;
   jointActivationReady?: boolean;
@@ -138,7 +135,6 @@ describe("account maintenance tick internal endpoint", () => {
       },
       expectedOwnerSignalUnionZero: async () => {
         calls.push("expected_owner_signal_union_zero");
-        return { available: true, unionZero: true };
       },
       authDelete: async () => {
         calls.push("auth_delete");
@@ -154,7 +150,7 @@ describe("account maintenance tick internal endpoint", () => {
     expect(result.blockedAt).toBeNull();
   });
 
-  it("does not call Auth delete or complete without Storage owner-signal evidence", async () => {
+  it("does not call Auth delete or complete when the owner-signal phase is unavailable", async () => {
     const tick = await importTickModule();
     const authDelete = vi.fn(async () => undefined);
     const complete = vi.fn(async () => undefined);
@@ -164,10 +160,6 @@ describe("account maintenance tick internal endpoint", () => {
       terminalTombstoneScan: async () => undefined,
       quarantineRecheck: async () => undefined,
       normalDrain: async () => undefined,
-      expectedOwnerSignalUnionZero: async () => ({
-        available: false,
-        unionZero: false,
-      }),
       authDelete,
       complete,
       jointActivationReady: true,
@@ -188,10 +180,7 @@ describe("account maintenance tick internal endpoint", () => {
     const complete = vi.fn(async () => undefined);
 
     const result = await tick.runAccountMaintenanceTick({
-      expectedOwnerSignalUnionZero: async () => ({
-        available: true,
-        unionZero: true,
-      }),
+      expectedOwnerSignalUnionZero: async () => undefined,
       authDelete,
       complete,
       jointActivationReady: true,
@@ -216,10 +205,7 @@ describe("account maintenance tick internal endpoint", () => {
       terminalTombstoneScan: async () => undefined,
       quarantineRecheck: async () => undefined,
       normalDrain: async () => undefined,
-      expectedOwnerSignalUnionZero: async () => ({
-        available: true,
-        unionZero: true,
-      }),
+      expectedOwnerSignalUnionZero: async () => undefined,
       authDelete,
       complete,
     });
@@ -229,6 +215,36 @@ describe("account maintenance tick internal endpoint", () => {
       status: "blocked",
       blockedAt: "auth_delete",
     });
+    expect(authDelete).not.toHaveBeenCalled();
+    expect(complete).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the owner-signal partition phase fails", async () => {
+    const tick = await importTickModule();
+    const authDelete = vi.fn(async () => undefined);
+    const complete = vi.fn(async () => undefined);
+
+    const result = await tick.runAccountMaintenanceTick({
+      scanner: async () => undefined,
+      terminalTombstoneScan: async () => undefined,
+      quarantineRecheck: async () => undefined,
+      normalDrain: async () => undefined,
+      expectedOwnerSignalUnionZero: async () => {
+        throw new Error("sensitive-owner-signal-detail");
+      },
+      authDelete,
+      complete,
+      jointActivationReady: true,
+    });
+
+    expect(result).toMatchObject({
+      featureState: "feature_off",
+      status: "failed",
+      blockedAt: "expected_owner_signal_union_zero",
+    });
+    expect(JSON.stringify(result)).not.toContain(
+      "sensitive-owner-signal-detail",
+    );
     expect(authDelete).not.toHaveBeenCalled();
     expect(complete).not.toHaveBeenCalled();
   });
