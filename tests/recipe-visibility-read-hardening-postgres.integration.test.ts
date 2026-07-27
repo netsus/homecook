@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -124,6 +124,61 @@ function psql(sql: string) {
   const result = psqlResult(sql);
   expect(result.status, result.stderr).toBe(0);
   return result.stdout.trim().split("\n").filter(Boolean).at(-1) ?? "";
+}
+
+function psqlAsync(sql: string, applicationName: string) {
+  const child = spawn("psql", [
+    "-h", host,
+    "-p", port,
+    "-U", "postgres",
+    "-d", database,
+    "-qAt",
+    "-v", "ON_ERROR_STOP=1",
+    "-c", sql,
+  ], {
+    env: {
+      PATH: process.env.PATH ?? "",
+      NODE_ENV: "test",
+      PGAPPNAME: applicationName,
+    },
+  });
+  let stdout = "";
+  let stderr = "";
+
+  child.stdout.on("data", (chunk: Buffer) => {
+    stdout += chunk.toString();
+  });
+  child.stderr.on("data", (chunk: Buffer) => {
+    stderr += chunk.toString();
+  });
+
+  return new Promise<{
+    status: number | null;
+    stderr: string;
+    stdout: string;
+  }>((resolve) => {
+    child.on("close", (status) => {
+      resolve({ status, stderr, stdout });
+    });
+  });
+}
+
+async function waitForPgSleep(applicationName: string) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (psql(`
+      select exists (
+        select 1
+        from pg_catalog.pg_stat_activity
+        where application_name = '${applicationName}'
+          and wait_event = 'PgSleep'
+      );
+    `) === "t") {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+
+  throw new Error(`${applicationName} did not acquire the race lock`);
 }
 
 function asRole(role: "anon" | "authenticated", sql: string, subject = "") {
@@ -2659,6 +2714,517 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(serializable.stderr).toMatch(
       /recipe image attach requires READ COMMITTED/i,
     );
+  });
+
+  it("serializes attach against scanner and cancel with exactly one winner", async () => {
+    const attachWinsRecipe = "00000000-0000-4000-8000-000000000394";
+    const scannerWinsRecipe = "00000000-0000-4000-8000-000000000395";
+    const cancelWinsRecipe = "00000000-0000-4000-8000-000000000396";
+    const attachWinsObject = "00000000-0000-4000-8000-000000000397";
+    const scannerWinsObject = "00000000-0000-4000-8000-000000000398";
+    const cancelWinsObject = "00000000-0000-4000-8000-000000000399";
+    const cancelKey = "00000000-0000-4000-8000-00000000039a";
+
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      update public.user_account_lifecycles
+      set status = 'active',
+          auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      insert into public.recipes (
+        id,
+        title,
+        base_servings,
+        source_type,
+        created_by,
+        visibility
+      ) values
+        (
+          '${attachWinsRecipe}',
+          'attach wins scanner race',
+          2,
+          'manual',
+          '${OWNER_ACTIVE}',
+          'private'
+        ),
+        (
+          '${scannerWinsRecipe}',
+          'scanner wins attach race',
+          2,
+          'manual',
+          '${OWNER_ACTIVE}',
+          'private'
+        ),
+        (
+          '${cancelWinsRecipe}',
+          'cancel wins attach race',
+          2,
+          'manual',
+          '${OWNER_ACTIVE}',
+          'private'
+        );
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        raw_sha256,
+        byte_size,
+        actual_mime_type,
+        visibility,
+        state,
+        cleanup_generation,
+        unlinked_cleanup_after,
+        created_at,
+        updated_at
+      ) values
+        (
+          '${attachWinsObject}',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/${attachWinsObject}.webp',
+          repeat('1', 64),
+          1024,
+          'image/webp',
+          'private',
+          'uploaded_unlinked',
+          0,
+          '2030-01-01T00:05:00Z',
+          '2030-01-01T00:00:00Z',
+          '2030-01-01T00:00:00Z'
+        ),
+        (
+          '${scannerWinsObject}',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/${scannerWinsObject}.webp',
+          repeat('2', 64),
+          2048,
+          'image/webp',
+          'private',
+          'uploaded_unlinked',
+          0,
+          '2030-01-01T00:15:00Z',
+          '2030-01-01T00:00:00Z',
+          '2030-01-01T00:00:00Z'
+        ),
+        (
+          '${cancelWinsObject}',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/${cancelWinsObject}.webp',
+          repeat('3', 64),
+          4096,
+          'image/webp',
+          'private',
+          'uploaded_unlinked',
+          0,
+          '2030-01-01T00:10:00Z',
+          '2030-01-01T00:00:00Z',
+          '2030-01-01T00:00:00Z'
+        );
+
+      insert into public.mutation_idempotency_keys (
+        owner_uuid,
+        account_generation,
+        operation_scope,
+        key_hash,
+        payload_hash,
+        state,
+        terminal_result,
+        durable_result,
+        result_reference,
+        attempts,
+        reserved_byte_size,
+        quota_reserved_at,
+        created_at,
+        updated_at
+      ) values
+        (
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe_image_upload',
+          repeat('4', 64),
+          repeat('7', 64),
+          'succeeded',
+          'uploaded',
+          jsonb_build_object('object_id', '${attachWinsObject}'::uuid),
+          '${attachWinsObject}',
+          1,
+          1024,
+          '2030-01-01T00:00:00Z',
+          '2030-01-01T00:00:00Z',
+          '2030-01-01T00:00:00Z'
+        ),
+        (
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe_image_upload',
+          repeat('5', 64),
+          repeat('8', 64),
+          'succeeded',
+          'uploaded',
+          jsonb_build_object('object_id', '${scannerWinsObject}'::uuid),
+          '${scannerWinsObject}',
+          1,
+          2048,
+          '2030-01-01T00:00:00Z',
+          '2030-01-01T00:00:00Z',
+          '2030-01-01T00:00:00Z'
+        ),
+        (
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe_image_upload',
+          repeat('6', 64),
+          repeat('9', 64),
+          'succeeded',
+          'uploaded',
+          jsonb_build_object('object_id', '${cancelWinsObject}'::uuid),
+          '${cancelWinsObject}',
+          1,
+          4096,
+          '2030-01-01T00:00:00Z',
+          '2030-01-01T00:00:00Z',
+          '2030-01-01T00:00:00Z'
+        );
+
+      insert into public.image_upload_quota_counters (
+        owner_uuid,
+        account_generation,
+        active_reservation_count
+      ) values (
+        '${OWNER_ACTIVE}',
+        1,
+        3
+      )
+      on conflict (owner_uuid, account_generation)
+      do update set active_reservation_count = 3;
+
+      commit;
+      select 'attach-race-fixture-pass';
+    `)).toBe("attach-race-fixture-pass");
+
+    try {
+      const attachFirst = psqlAsync(`
+        begin;
+        set local role service_role;
+        select pg_catalog.pg_advisory_xact_lock(
+          pg_catalog.hashtextextended(
+            'homecook-account-owner:${OWNER_ACTIVE}',
+            0
+          )
+        );
+        select pg_sleep(0.5);
+        select public.attach_recipe_image_object(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${attachWinsRecipe}',
+          '${attachWinsObject}',
+          0,
+          '2030-01-01T00:04:00Z'
+        );
+        commit;
+      `, "attach-race-attach-first");
+
+      await waitForPgSleep("attach-race-attach-first");
+
+      expect(psql(`
+        begin;
+        set local role service_role;
+        select count(*)
+        from public.scan_stale_recipe_image_uploads(
+          50,
+          '2030-01-01T00:06:00Z'
+        );
+        commit;
+      `)).toBe("0");
+
+      const attachFirstResult = await attachFirst;
+      expect(attachFirstResult.status, attachFirstResult.stderr).toBe(0);
+
+      expect(psql(`
+        begin;
+        set local role service_role;
+        select count(*)
+        from public.scan_stale_recipe_image_uploads(
+          50,
+          '2030-01-01T00:06:00Z'
+        );
+        commit;
+      `)).toBe("0");
+
+      expect(psql(`
+        update public.recipe_image_objects
+        set unlinked_cleanup_after = '2030-01-01T00:05:00Z'
+        where id = '${scannerWinsObject}';
+        select 'scanner-race-due-pass';
+      `)).toBe("scanner-race-due-pass");
+
+      const scannerFirst = psqlAsync(`
+        begin;
+        set local role service_role;
+        select pg_catalog.pg_advisory_xact_lock(
+          pg_catalog.hashtextextended(
+            'homecook-account-owner:${OWNER_ACTIVE}',
+            0
+          )
+        );
+        select pg_sleep(0.5);
+        select count(*)
+        from public.scan_stale_recipe_image_uploads(
+          50,
+          '2030-01-01T00:06:00Z'
+        );
+        commit;
+      `, "attach-race-scanner-first");
+
+      await waitForPgSleep("attach-race-scanner-first");
+
+      const attachAfterScanner = psqlAsync(`
+        begin;
+        set local role service_role;
+        do $block$
+        begin
+          begin
+            perform public.attach_recipe_image_object(
+              '${OWNER_ACTIVE}',
+              '2026-01-01T00:00:00Z',
+              repeat('a', 64),
+              1,
+              '${scannerWinsRecipe}',
+              '${scannerWinsObject}',
+              0,
+              '2030-01-01T00:04:00Z'
+            );
+            raise exception 'attach beat the scanner lock unexpectedly';
+          exception
+            when sqlstate '55000' then
+              if sqlerrm <> 'IMAGE_EXPIRED' then
+                raise;
+              end if;
+          end;
+        end;
+        $block$;
+        commit;
+      `, "attach-race-after-scanner");
+
+      const [scannerFirstResult, attachAfterScannerResult] =
+        await Promise.all([scannerFirst, attachAfterScanner]);
+      expect(scannerFirstResult.status, scannerFirstResult.stderr).toBe(0);
+      expect(scannerFirstResult.stdout.trim().split("\n")).toContain("1");
+      expect(
+        attachAfterScannerResult.status,
+        attachAfterScannerResult.stderr,
+      ).toBe(0);
+
+      const cancelFirst = psqlAsync(`
+        begin;
+        set local role service_role;
+        select pg_catalog.pg_advisory_xact_lock(
+          pg_catalog.hashtextextended(
+            'homecook-account-owner:${OWNER_ACTIVE}',
+            0
+          )
+        );
+        select pg_sleep(0.5);
+        select public.cancel_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${cancelKey}',
+          '${cancelWinsObject}',
+          '2030-01-01T00:09:00Z'
+        );
+        commit;
+      `, "attach-race-cancel-first");
+
+      await waitForPgSleep("attach-race-cancel-first");
+
+      const attachAfterCancel = psqlAsync(`
+        begin;
+        set local role service_role;
+        do $block$
+        begin
+          begin
+            perform public.attach_recipe_image_object(
+              '${OWNER_ACTIVE}',
+              '2026-01-01T00:00:00Z',
+              repeat('a', 64),
+              1,
+              '${cancelWinsRecipe}',
+              '${cancelWinsObject}',
+              0,
+              '2030-01-01T00:09:00Z'
+            );
+            raise exception 'attach beat the cancel lock unexpectedly';
+          exception
+            when sqlstate '55000' then
+              if sqlerrm <> 'IMAGE_EXPIRED' then
+                raise;
+              end if;
+          end;
+        end;
+        $block$;
+        commit;
+      `, "attach-race-after-cancel");
+
+      const [cancelFirstResult, attachAfterCancelResult] =
+        await Promise.all([cancelFirst, attachAfterCancel]);
+      expect(cancelFirstResult.status, cancelFirstResult.stderr).toBe(0);
+      expect(
+        attachAfterCancelResult.status,
+        attachAfterCancelResult.stderr,
+      ).toBe(0);
+
+      expect(psql(`
+        select concat_ws(
+          ':',
+          (
+            select object.state
+            from public.recipe_image_objects as object
+            where object.id = '${attachWinsObject}'
+          ),
+          (
+            select count(*)
+            from public.recipe_image_object_references as reference
+            where reference.image_object_id = '${attachWinsObject}'
+          ),
+          (
+            select count(*)
+            from public.storage_object_deletion_outbox as outbox
+            where outbox.object_path =
+              '${OWNER_ACTIVE}/1/${attachWinsObject}.webp'
+          ),
+          (
+            select object.state
+            from public.recipe_image_objects as object
+            where object.id = '${scannerWinsObject}'
+          ),
+          (
+            select count(*)
+            from public.recipe_image_object_references as reference
+            where reference.image_object_id = '${scannerWinsObject}'
+          ),
+          (
+            select count(*)
+            from public.storage_object_deletion_outbox as outbox
+            where outbox.object_path =
+              '${OWNER_ACTIVE}/1/${scannerWinsObject}.webp'
+          ),
+          (
+            select object.state
+            from public.recipe_image_objects as object
+            where object.id = '${cancelWinsObject}'
+          ),
+          (
+            select count(*)
+            from public.recipe_image_object_references as reference
+            where reference.image_object_id = '${cancelWinsObject}'
+          ),
+          (
+            select count(*)
+            from public.storage_object_deletion_outbox as outbox
+            where outbox.object_path =
+              '${OWNER_ACTIVE}/1/${cancelWinsObject}.webp'
+          ),
+          (
+            select counter.active_reservation_count
+            from public.image_upload_quota_counters as counter
+            where counter.owner_uuid = '${OWNER_ACTIVE}'
+              and counter.account_generation = 1
+          )
+        );
+      `)).toBe(
+        "attached_private:1:0:cleanup_pending:0:1:"
+          + "cleanup_pending:0:1:0",
+      );
+    } finally {
+      expect(psql(`
+        begin;
+        delete from public.recipe_image_object_references
+        where image_object_id in (
+          '${attachWinsObject}',
+          '${scannerWinsObject}',
+          '${cancelWinsObject}'
+        );
+        delete from public.storage_object_deletion_outbox
+        where object_path in (
+          '${OWNER_ACTIVE}/1/${attachWinsObject}.webp',
+          '${OWNER_ACTIVE}/1/${scannerWinsObject}.webp',
+          '${OWNER_ACTIVE}/1/${cancelWinsObject}.webp'
+        );
+        delete from public.mutation_idempotency_keys
+        where result_reference in (
+          '${attachWinsObject}',
+          '${scannerWinsObject}',
+          '${cancelWinsObject}'
+        );
+        delete from public.recipe_image_objects
+        where id in (
+          '${attachWinsObject}',
+          '${scannerWinsObject}',
+          '${cancelWinsObject}'
+        );
+        delete from public.recipes
+        where id in (
+          '${attachWinsRecipe}',
+          '${scannerWinsRecipe}',
+          '${cancelWinsRecipe}'
+        );
+        delete from public.image_upload_quota_counters
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        delete from public.user_session_generation_bindings
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and expected_account_generation = 1;
+        update public.user_account_lifecycles
+        set auth_identity_created_at_snapshot = null
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        update public.account_generation_capability_state
+        set state = 'legacy',
+            current_cutover_attempt_id = null,
+            revision = revision + 1
+        where singleton;
+        commit;
+        select 'attach-race-cleanup-pass';
+      `)).toBe("attach-race-cleanup-pass");
+    }
   });
 
   it("creates one private manual recipe and managed image reference atomically", () => {
