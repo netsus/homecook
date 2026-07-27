@@ -783,7 +783,7 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     ].sort().join(","));
   });
 
-  it("keeps managed image registry tables dark-shipped behind RLS and table ACLs", () => {
+  it("keeps managed image authority tables behind direct table ACLs", () => {
     expect(psql(`
       select string_agg(
         table_name || ':' || row_security,
@@ -811,6 +811,8 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
       for (const table of [
         "recipe_image_objects",
         "recipe_image_object_references",
+        "storage_object_deletion_outbox",
+        "image_upload_quota_counters",
       ]) {
         expect(psql(`
           select concat_ws(
