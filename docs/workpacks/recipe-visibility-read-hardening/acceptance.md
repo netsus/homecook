@@ -9,7 +9,7 @@
 - [ ] existing Meal/shopping/session/batch/meal-log/snapshot readers resolve pinned deleted recipe history for the authorized resource owner <!-- omo:id=accept-visibility-historical-anchor;stage=2;scope=backend;review=3,6 -->
 - [x] recovery activate restores eligible stored visibility without creating new owner-neutral rows or changing system content <!-- omo:id=accept-visibility-quarantine-recovery;stage=2;scope=backend;review=3,6 -->
 - [x] personal upload creates a private registry object, returns object ID plus short signed URL and reissues the URL on replay <!-- omo:id=accept-image-private-upload;stage=2;scope=backend;review=3,6 -->
-- [ ] recipe create attaches verified `image_object_id` and reference atomically <!-- omo:id=accept-image-object-attach;stage=2;scope=backend;review=3,6 -->
+- [x] recipe create attaches verified `image_object_id` and reference atomically <!-- omo:id=accept-image-object-attach;stage=2;scope=backend;review=3,6 -->
 - [x] owner cancel, expired scanner and ordered drain reach terminal cleanup exactly once <!-- omo:id=accept-image-cancel-drain;stage=2;scope=backend;review=3,6 -->
 
 ## Visibility / State
