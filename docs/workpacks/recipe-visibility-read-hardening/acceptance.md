@@ -106,8 +106,8 @@
 
 - [ ] Stage 1 runs only current docs validators, focused workflow tests, lint/typecheck, local dependency audit and diff check; GitGuardian/current-head workflows are observed separately <!-- omo:id=accept-visibility-stage1-gate;stage=2;scope=shared;review=3,6 -->
 - [ ] Stage 2 writes focused tests first and records RED before migration, reader, Storage or scheduler implementation <!-- omo:id=accept-visibility-tdd-red;stage=2;scope=backend;review=3,6 -->
-- [ ] focused Vitest covers read matrix, tags/cache, ACL/non-disclosure, image CAS/lifecycle and account-delete barrier <!-- omo:id=accept-visibility-vitest;stage=2;scope=backend;review=3,6 -->
-- [ ] PostgreSQL existing/fresh/replay covers checks/FKs/RLS/grants/functions/triggers/partial unique and concurrent races <!-- omo:id=accept-visibility-postgres;stage=2;scope=backend;review=3,6 -->
+- [x] focused Vitest covers read matrix, tags/cache, ACL/non-disclosure, image CAS/lifecycle and account-delete barrier <!-- omo:id=accept-visibility-vitest;stage=2;scope=backend;review=3,6 -->
+- [x] PostgreSQL existing/fresh/replay covers checks/FKs/RLS/grants/functions/triggers/partial unique and concurrent races <!-- omo:id=accept-visibility-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] live Storage replay covers upload/takeover/cancel/attach/first-404/late-object/compensation with writes limited to approved test fixtures <!-- omo:id=accept-visibility-storage-live;stage=2;scope=shared;review=3,6 -->
 - [ ] merged-exact-SHA remote verifier is read-only before approved cutover and records public/private role matrix plus union-zero readiness <!-- omo:id=accept-visibility-remote;stage=2;scope=shared;review=3,6 -->
 - [ ] independent internal 1.5, security/DB and five-axis reviewers finish with required findings zero <!-- omo:id=accept-visibility-independent-reviews;stage=2;scope=shared;review=3,6 -->
