@@ -256,7 +256,7 @@ function isServiceOwnedRecipeImageUrl(value: string) {
     try {
       return MANAGED_RECIPE_IMAGE_STORAGE_PATH.test(decodeURIComponent(candidate.pathname));
     } catch {
-      return MANAGED_RECIPE_IMAGE_STORAGE_PATH.test(candidate.pathname);
+      return true;
     }
   } catch {
     return false;

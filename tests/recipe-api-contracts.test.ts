@@ -2500,7 +2500,12 @@ describe("recipe API contracts", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("rejects a malformed same-origin Storage object URL before decoding can widen access", async () => {
+  it.each([
+    "https://project.supabase.co/storage/v1/object/recipe-images-private/user-1/%E0%A4%A",
+    "https://project.supabase.co/storage/v1/object/%70ublic/recipe-images/user-1/%E0%A4%A",
+    "https://project.supabase.co/storage/v1/object/%73ign/recipe-images-private/user-1/%E0%A4%A",
+    "https://project.supabase.co/storage/v1/object/%72ecipe-images-private/user-1/%E0%A4%A",
+  ])("rejects a malformed same-origin Storage object URL before decoding can widen access: %s", async (thumbnailUrl) => {
     const { rpc } = setupManagedRecipeCreate();
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
 
@@ -2510,8 +2515,7 @@ describe("recipe API contracts", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(manualRecipeCreateBody({
-          thumbnail_url:
-            "https://project.supabase.co/storage/v1/object/recipe-images-private/user-1/%E0%A4%A",
+          thumbnail_url: thumbnailUrl,
         })),
       }),
     );
