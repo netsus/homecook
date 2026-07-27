@@ -202,7 +202,7 @@ Schema Change:
 - [x] private owner detail 404 and soft-deleted new-selection denial are non-inferable <!-- omo:id=delivery-private-detail-delete;stage=2;scope=backend;review=3,6 -->
 - [ ] anchored historical readers preserve prior Meal/session/batch/log content without general bypass <!-- omo:id=delivery-historical-reader-scope;stage=2;scope=backend;review=3,6 -->
 - [x] recipe tag projection and every aggregate/cache reader recheck parent visibility <!-- omo:id=delivery-parent-bounded-tags;stage=2;scope=backend;review=3,6 -->
-- [ ] quarantine recovery/delete and owner-neutral preservation consume F0 lifecycle exactly <!-- omo:id=delivery-quarantine-upper-bound;stage=2;scope=backend;review=3,6 -->
+- [x] quarantine recovery/delete and owner-neutral preservation consume F0 lifecycle exactly <!-- omo:id=delivery-quarantine-upper-bound;stage=2;scope=backend;review=3,6 -->
 - [ ] private/public-neutral registry, references, RLS/grants and server-only Storage mutation are proven <!-- omo:id=delivery-image-registry-security;stage=2;scope=backend;review=3,6 -->
 - [ ] exact 10/10min, 100MB/24h, active-20 and backlog-500/15min/dead-letter quota gates plus idempotency/lease/takeover/finalize/attach/cancel races are atomic and fail closed <!-- omo:id=delivery-image-upload-cas;stage=2;scope=backend;review=3,6 -->
 - [ ] 15-minute first-404 recheck, late-object recovery, 5-minute→24-hour 50-row fair tombstone scan over 151 rows, 90-day compaction/91-day replay and contiguous cleanup terminal barrier are proven <!-- omo:id=delivery-image-cleanup-lifecycle;stage=2;scope=backend;review=3,6 -->
