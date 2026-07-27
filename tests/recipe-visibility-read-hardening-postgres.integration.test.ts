@@ -5393,6 +5393,140 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     ).status).not.toBe(0);
   });
 
+  it("skips a locked oldest terminal cursor and claims it after release", async () => {
+    const lockedObject = "00000000-0000-4000-8002-000000000001";
+    const nextObject = "00000000-0000-4000-8002-000000000002";
+    const lastObject = "00000000-0000-4000-8002-000000000003";
+
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        visibility,
+        state,
+        cleanup_generation,
+        next_terminal_scan_at,
+        created_at,
+        updated_at
+      ) values
+        (
+          '${lockedObject}',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/${lockedObject}.webp',
+          'private',
+          'deleted',
+          1,
+          '2030-01-01T00:00:00.000Z',
+          '2029-12-31T00:00:00Z',
+          '2029-12-31T23:00:00Z'
+        ),
+        (
+          '${nextObject}',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/${nextObject}.webp',
+          'private',
+          'deleted',
+          1,
+          '2030-01-01T00:00:00.001Z',
+          '2029-12-31T00:00:00Z',
+          '2029-12-31T23:00:00Z'
+        ),
+        (
+          '${lastObject}',
+          '${OWNER_ACTIVE}',
+          1,
+          'recipe-images-private',
+          '${OWNER_ACTIVE}/1/${lastObject}.webp',
+          'private',
+          'deleted',
+          1,
+          '2030-01-01T00:00:00.002Z',
+          '2029-12-31T00:00:00Z',
+          '2029-12-31T23:00:00Z'
+        );
+
+      commit;
+      select 'terminal-skip-locked-fixture-pass';
+    `)).toBe("terminal-skip-locked-fixture-pass");
+
+    try {
+      const heldCursor = psqlAsync(`
+        begin;
+        select id
+        from public.recipe_image_objects
+        where id = '${lockedObject}'
+        for update;
+        select pg_sleep(0.5);
+        commit;
+      `, "terminal-skip-locked-oldest");
+
+      await waitForPgSleep("terminal-skip-locked-oldest");
+
+      expect(psql(`
+        begin;
+        set local role service_role;
+        select object_id
+        from public.claim_recipe_image_terminal_tombstones(
+          1,
+          '2030-01-01T00:00:01Z'
+        );
+        commit;
+      `)).toBe(nextObject);
+
+      const heldResult = await heldCursor;
+      expect(heldResult.status, heldResult.stderr).toBe(0);
+
+      expect(psql(`
+        begin;
+        set local role service_role;
+        select object_id
+        from public.claim_recipe_image_terminal_tombstones(
+          1,
+          '2030-01-01T00:00:01Z'
+        );
+        commit;
+      `)).toBe(lockedObject);
+
+      expect(psql(`
+        begin;
+        set local role service_role;
+        select object_id
+        from public.claim_recipe_image_terminal_tombstones(
+          1,
+          '2030-01-01T00:00:01Z'
+        );
+        commit;
+      `)).toBe(lastObject);
+
+      expect(psql(`
+        select count(*)
+        from public.recipe_image_objects
+        where id in ('${lockedObject}', '${nextObject}', '${lastObject}')
+          and next_terminal_scan_at = '2030-01-01T00:05:01Z';
+      `)).toBe("3");
+    } finally {
+      expect(psql(`
+        delete from public.recipe_image_objects
+        where id in ('${lockedObject}', '${nextObject}', '${lastObject}');
+        select 'terminal-skip-locked-cleanup-pass';
+      `)).toBe("terminal-skip-locked-cleanup-pass");
+    }
+  });
+
   it("moves a completed lifecycle back to cleanup-pending when a terminal object reappears", () => {
     expect(psql(`
       begin;
