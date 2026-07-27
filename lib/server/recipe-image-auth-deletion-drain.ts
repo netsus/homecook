@@ -5,6 +5,9 @@ import {
   type RecipeImageAuthDeletionCandidateRpcClient,
 } from "@/lib/server/recipe-image-auth-deletion-candidates";
 import {
+  listRecipeImageExpectedOwnerEligibleAuthDeletionCandidates,
+} from "@/lib/server/recipe-image-auth-deletion-eligibility";
+import {
   claimRecipeImageAuthDeletionIfReady,
   type RecipeImageAuthDeletionClaimRpcClient,
 } from "@/lib/server/recipe-image-auth-deletion-claim";
@@ -31,17 +34,21 @@ interface DrainInput {
   providerBarrier: RecipeImageAuthDeletionProviderBarrier;
 }
 
-export async function runRecipeImageAuthDeletionDrain({
+type AuthDeletionCandidate = Awaited<
+  ReturnType<typeof listRecipeImageAuthDeletionCandidates>
+>[number];
+
+interface CandidateDrainInput extends DrainInput {
+  candidates: AuthDeletionCandidate[];
+}
+
+async function drainRecipeImageAuthDeletionCandidates({
+  candidates,
   createLeaseToken = randomUUID,
   dbClient,
   now = () => new Date(),
   providerBarrier,
-}: DrainInput) {
-  const candidates = await listRecipeImageAuthDeletionCandidates({
-    dbClient,
-    limit: CANDIDATE_LIMIT,
-    now,
-  });
+}: CandidateDrainInput) {
   let alreadyAbsentCount = 0;
   let claimedCount = 0;
   let deletedCount = 0;
@@ -139,4 +146,58 @@ export async function runRecipeImageAuthDeletionDrain({
     deletedCount,
     identityReplacedCount,
   };
+}
+
+export async function runRecipeImageAuthDeletionDrain(
+  input: DrainInput,
+) {
+  const {
+    dbClient,
+    now = () => new Date(),
+  } = input;
+  const candidates = await listRecipeImageAuthDeletionCandidates({
+    dbClient,
+    limit: CANDIDATE_LIMIT,
+    now,
+  });
+
+  return drainRecipeImageAuthDeletionCandidates({
+    ...input,
+    candidates,
+    now,
+  });
+}
+
+export async function
+runRecipeImageExpectedOwnerEligibleAuthDeletionDrain(
+  input: DrainInput,
+) {
+  const {
+    dbClient,
+    now = () => new Date(),
+  } = input;
+
+  try {
+    const {
+      blockedCount,
+      candidateCount,
+      eligibleCandidates,
+    } = await listRecipeImageExpectedOwnerEligibleAuthDeletionCandidates({
+      dbClient,
+      now,
+    });
+    const result = await drainRecipeImageAuthDeletionCandidates({
+      ...input,
+      candidates: eligibleCandidates,
+      now,
+    });
+
+    return {
+      ...result,
+      blockedCount,
+      candidateCount,
+    };
+  } catch {
+    throw new Error("recipe image Auth deletion drain failed");
+  }
 }
