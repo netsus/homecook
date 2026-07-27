@@ -1,4 +1,12 @@
-import { existsSync, readFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -43,6 +51,26 @@ function ensureNonEmptyString(value, label) {
   return value.trim();
 }
 
+function ensureNonNegativeNumber(value, label) {
+  if (
+    typeof value !== "number"
+    || !Number.isFinite(value)
+    || value < 0
+  ) {
+    throw new Error(`${label} must be a non-negative finite number.`);
+  }
+
+  return value;
+}
+
+function ensurePositiveInteger(value, label) {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`${label} must be a positive safe integer.`);
+  }
+
+  return value;
+}
+
 function buildPathEnv(nodeBin) {
   const nodeDir = dirname(nodeBin);
   return [...new Set([nodeDir, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"])].join(
@@ -52,11 +80,126 @@ function buildPathEnv(nodeBin) {
 
 export function getAccountMaintenanceLogPaths(homeDir = process.env.HOME ?? "") {
   const normalizedHomeDir = ensureNonEmptyString(homeDir, "homeDir");
-  const logDir = `${normalizedHomeDir}/Library/Logs/homecook`;
+  const logDir = `${normalizedHomeDir}/Library/Logs/Homecook`;
 
   return {
     stdout: `${logDir}/account-maintenance.log`,
     stderr: `${logDir}/account-maintenance.err.log`,
+  };
+}
+
+export function evaluateAccountMaintenanceHealth({
+  consecutiveFailures,
+  oldestPendingAgeSeconds,
+  deadLetterCount,
+}) {
+  const normalizedConsecutiveFailures = ensureNonNegativeNumber(
+    consecutiveFailures,
+    "consecutiveFailures",
+  );
+  const normalizedOldestPendingAgeSeconds = ensureNonNegativeNumber(
+    oldestPendingAgeSeconds,
+    "oldestPendingAgeSeconds",
+  );
+  const normalizedDeadLetterCount = ensureNonNegativeNumber(
+    deadLetterCount,
+    "deadLetterCount",
+  );
+  const alerts = [];
+
+  if (normalizedConsecutiveFailures >= ACCOUNT_MAINTENANCE_FAILURE_THRESHOLD) {
+    alerts.push("consecutive_failures");
+  }
+  if (
+    normalizedOldestPendingAgeSeconds
+    > ACCOUNT_MAINTENANCE_OLDEST_PENDING_ALERT_SECONDS
+  ) {
+    alerts.push("oldest_pending_overdue");
+  }
+  if (normalizedDeadLetterCount > 0) {
+    alerts.push("dead_letter_present");
+  }
+
+  return {
+    ok: alerts.length === 0,
+    alerts,
+  };
+}
+
+export function recordAccountMaintenanceTickOutcome({
+  previousConsecutiveFailures,
+  succeeded,
+  oldestPendingAgeSeconds,
+  deadLetterCount,
+}) {
+  const normalizedPreviousFailures = ensureNonNegativeNumber(
+    previousConsecutiveFailures,
+    "previousConsecutiveFailures",
+  );
+  if (!Number.isSafeInteger(normalizedPreviousFailures)) {
+    throw new Error("previousConsecutiveFailures must be a safe integer.");
+  }
+  if (typeof succeeded !== "boolean") {
+    throw new Error("succeeded must be a boolean.");
+  }
+
+  const consecutiveFailures = succeeded
+    ? 0
+    : Math.min(normalizedPreviousFailures + 1, Number.MAX_SAFE_INTEGER);
+
+  return {
+    consecutiveFailures,
+    recovered: succeeded && normalizedPreviousFailures > 0,
+    health: evaluateAccountMaintenanceHealth({
+      consecutiveFailures,
+      oldestPendingAgeSeconds,
+      deadLetterCount,
+    }),
+  };
+}
+
+export function appendAccountMaintenanceJsonLog({
+  logPath,
+  entry,
+  maxBytes = ACCOUNT_MAINTENANCE_LOG_ROTATION_MAX_BYTES,
+  maxFiles = ACCOUNT_MAINTENANCE_LOG_ROTATION_MAX_FILES,
+}) {
+  const normalizedLogPath = resolve(ensureNonEmptyString(logPath, "logPath"));
+  const normalizedMaxBytes = ensurePositiveInteger(maxBytes, "maxBytes");
+  const normalizedMaxFiles = ensurePositiveInteger(maxFiles, "maxFiles");
+  if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+    throw new Error("entry must be a JSON object.");
+  }
+
+  const line = `${JSON.stringify(entry)}\n`;
+  const lineBytes = Buffer.byteLength(line);
+  mkdirSync(dirname(normalizedLogPath), { recursive: true, mode: 0o700 });
+  const currentLogBytes = existsSync(normalizedLogPath)
+    ? statSync(normalizedLogPath).size
+    : 0;
+
+  if (
+    currentLogBytes > 0
+    && currentLogBytes + lineBytes > normalizedMaxBytes
+  ) {
+    rmSync(`${normalizedLogPath}.${normalizedMaxFiles}`, { force: true });
+    for (let index = normalizedMaxFiles - 1; index >= 1; index -= 1) {
+      const source = `${normalizedLogPath}.${index}`;
+      if (existsSync(source)) {
+        renameSync(source, `${normalizedLogPath}.${index + 1}`);
+      }
+    }
+    renameSync(normalizedLogPath, `${normalizedLogPath}.1`);
+  }
+
+  appendFileSync(normalizedLogPath, line, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+
+  return {
+    logPath: normalizedLogPath,
+    bytesWritten: lineBytes,
   };
 }
 
