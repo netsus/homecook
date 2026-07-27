@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "slice": "recipe-image-compact-retention",
+  "migration": "supabase/migrations/20260724310000_recipe_image_compact_retention_authority.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.compact_recipe_image_retention_details(integer, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "pg_temp"
+      ]
+    }
+  ]
+}
