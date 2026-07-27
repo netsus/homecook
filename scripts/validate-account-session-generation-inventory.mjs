@@ -82,6 +82,7 @@ const LIB_FILE_OWNER_SCOPE = {
   "lib/server/recipe-image-lifecycle-completion.ts": "system",
   "lib/server/recipe-image-managed-cancel.ts": "authenticated-user",
   "lib/server/recipe-image-normal-drain-storage.ts": "system",
+  "lib/server/recipe-image-stale-scanner.ts": "system",
   "lib/server/recipe-nutrition-snapshot.ts": "system",
   "lib/server/user-bootstrap.ts": "authenticated-user",
   "lib/server/user-gamification.ts": "authenticated-user",
@@ -100,7 +101,7 @@ const KNOWN_STORAGE_BUCKETS = {
 };
 
 const MUTATING_RPC_PATTERN =
-  /^(abort|apply|begin|bind|cancel|cleanup|complete|consume|create|delete|finalize|increment|initiate|promote|register|report|resolve|revoke|set|stage|start|update|write)_/u;
+  /^(abort|apply|begin|bind|cancel|cleanup|complete|consume|create|delete|finalize|increment|initiate|promote|register|report|resolve|revoke|scan|set|stage|start|update|write)_/u;
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
