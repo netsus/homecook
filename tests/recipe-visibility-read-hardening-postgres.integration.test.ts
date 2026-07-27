@@ -1,6 +1,16 @@
 import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 
 import { beforeAll, describe, expect, it } from "vitest";
+
+import {
+  createManagedRecipeImageStorageAdapter,
+  type ManagedRecipeImageStorageClient,
+} from "@/lib/server/recipe-image-managed-storage";
+import {
+  runManagedRecipeImageUpload,
+  type ManagedRecipeImageRpcClient,
+} from "@/lib/server/recipe-image-managed-upload";
 
 const enabled =
   process.env.HOMECOOK_RECIPE_VISIBILITY_PG_INTEGRATION === "1";
@@ -68,6 +78,8 @@ const IMAGE_CLEANUP_CONSUMER = "00000000-0000-4000-8000-000000000314";
 const IMAGE_UPLOAD_KEY = "00000000-0000-4000-8000-000000000315";
 const IMAGE_UPLOAD_ISOLATION_KEY = "00000000-0000-4000-8000-000000000316";
 const IMAGE_UPLOAD_COMPENSATION_KEY = "00000000-0000-4000-8000-000000000317";
+const IMAGE_STORAGE_DB_COMPENSATION_KEY =
+  "00000000-0000-4000-8000-00000000039b";
 const IMAGE_CANCEL_UPLOAD_KEY = "00000000-0000-4000-8000-000000000320";
 const IMAGE_CANCEL_KEY = "00000000-0000-4000-8000-000000000321";
 const IMAGE_CANCEL_OTHER_OWNER = "00000000-0000-4000-8000-000000000322";
@@ -2407,6 +2419,235 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(serializable.stderr).toMatch(
       /recipe image upload compensation requires READ COMMITTED/i,
     );
+  });
+
+  it("joins a successful private Storage PUT to durable finalize-failure cleanup", async () => {
+    const bodyBytes = new Uint8Array([137, 80, 78, 71]);
+    const rawSha256 = createHash("sha256").update(bodyBytes).digest("hex");
+    const storedObjects = new Map<string, Blob>();
+
+    expect(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+      update public.user_account_lifecycles
+      set status = 'active',
+          auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+      commit;
+      select 'storage-db-compensation-fixture-pass';
+    `)).toBe("storage-db-compensation-fixture-pass");
+
+    const upload = async (
+      path: string,
+      body: Blob,
+      options: { contentType: string; upsert: false },
+    ) => {
+      expect(options).toEqual({
+        contentType: "image/png",
+        upsert: false,
+      });
+      storedObjects.set(path, body);
+      return { data: { path }, error: null };
+    };
+    const storageClient = {
+      storage: {
+        from: (bucketId: string) => {
+          expect(bucketId).toBe("recipe-images-private");
+          return { upload };
+        },
+      },
+    } as unknown as ManagedRecipeImageStorageClient;
+    const storageAdapter = createManagedRecipeImageStorageAdapter({
+      client: storageClient,
+      signedUrlTtlSeconds: 300,
+      takeoverReadTimeoutMs: 2_000,
+    });
+    let objectId: string | null = null;
+    let objectPath: string | null = null;
+
+    const dbClient = {
+      rpc: async (name, params) => {
+        if (name === "reserve_recipe_image_upload") {
+          expect(params.p_idempotency_key)
+            .toBe(IMAGE_STORAGE_DB_COMPENSATION_KEY);
+          const data = JSON.parse(psql(`
+            begin;
+            set local role service_role;
+            select public.reserve_recipe_image_upload(
+              '${OWNER_ACTIVE}',
+              '2026-01-01T00:00:00Z',
+              repeat('a', 64),
+              1,
+              '${IMAGE_STORAGE_DB_COMPENSATION_KEY}',
+              '${params.p_payload_hash}'::text,
+              '${rawSha256}',
+              ${bodyBytes.byteLength},
+              'image/png',
+              'png',
+              '2030-07-24T01:20:00Z'
+            );
+            commit;
+          `));
+          objectId = data.object_id;
+          objectPath = data.object_path;
+          return { data, error: null };
+        }
+
+        if (name === "finalize_recipe_image_upload") {
+          expect(storedObjects.has(String(objectPath))).toBe(true);
+          return {
+            data: null,
+            error: { message: "simulated finalize outage" },
+          };
+        }
+
+        if (name === "compensate_recipe_image_upload") {
+          expect(params).toMatchObject({
+            p_cleanup_generation: 0,
+            p_idempotency_key: IMAGE_STORAGE_DB_COMPENSATION_KEY,
+            p_image_object_id: objectId,
+            p_owner_uuid: OWNER_ACTIVE,
+            p_reason: "storage_finalize_failed",
+          });
+          const data = JSON.parse(psql(`
+            begin;
+            set local role service_role;
+            select public.compensate_recipe_image_upload(
+              '${OWNER_ACTIVE}',
+              1,
+              '${IMAGE_STORAGE_DB_COMPENSATION_KEY}',
+              '${objectId}'::uuid,
+              '${params.p_attempt_token}'::uuid,
+              0,
+              'storage_finalize_failed',
+              '2030-07-24T01:20:01Z'
+            );
+            commit;
+          `));
+          return { data, error: null };
+        }
+
+        throw new Error(`unexpected RPC: ${name}`);
+      },
+    } satisfies ManagedRecipeImageRpcClient;
+
+    try {
+      await expect(runManagedRecipeImageUpload({
+        body: new Blob([bodyBytes], { type: "image/png" }),
+        dbClient,
+        expectedReadUrlOrigin: "https://storage.invalid",
+        idempotencyKey: IMAGE_STORAGE_DB_COMPENSATION_KEY,
+        inspection: {
+          actualMimeType: "image/png",
+          byteSize: bodyBytes.byteLength,
+          extension: "png",
+          rawSha256,
+        },
+        issueReadUrl: async () => {
+          throw new Error("read URL must not be issued after finalize failure");
+        },
+        maxReadUrlTtlMs: 300_000,
+        now: () => new Date("2030-07-24T01:20:00Z"),
+        readTakeoverObject: storageAdapter.readTakeoverObject,
+        sessionAuthority: {
+          authIdentityCreatedAt: "2026-01-01T00:00:00Z",
+          hmacKeyVersion: 1,
+          ownerUuid: OWNER_ACTIVE,
+          sessionKeyHash: "a".repeat(64),
+        },
+        uploadObject: storageAdapter.uploadObject,
+      })).resolves.toEqual({
+        kind: "failed",
+        reason: "storage_finalize_failed",
+      });
+
+      expect(objectId).not.toBeNull();
+      expect(objectPath).not.toBeNull();
+      expect(storedObjects.size).toBe(1);
+      expect(storedObjects.get(String(objectPath))).toMatchObject({
+        size: bodyBytes.byteLength,
+        type: "image/png",
+      });
+      expect(psql(`
+        select concat_ws(
+          ':',
+          object.state,
+          object.cleanup_generation,
+          outbox.state,
+          outbox.reason,
+          counter.active_reservation_count
+        )
+        from public.recipe_image_objects as object
+        join public.storage_object_deletion_outbox as outbox
+          on outbox.object_path = object.object_path
+         and outbox.cleanup_generation = object.cleanup_generation
+        join public.image_upload_quota_counters as counter
+          on counter.owner_uuid = object.owner_uuid
+         and counter.account_generation = object.account_generation
+        where object.id = '${objectId}'::uuid;
+      `)).toBe("cleanup_pending:1:pending:storage_finalize_failed:0");
+    } finally {
+      storedObjects.clear();
+      expect(psql(`
+        begin;
+        delete from public.storage_object_deletion_outbox
+        where object_path = '${objectPath ?? ""}';
+        delete from public.mutation_idempotency_keys
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1
+          and operation_scope = 'recipe_image_upload'
+          and key_hash = encode(
+            extensions.digest(
+              pg_catalog.convert_to(
+                '${IMAGE_STORAGE_DB_COMPENSATION_KEY}',
+                'UTF8'
+              ),
+              'sha256'
+            ),
+            'hex'
+          );
+        delete from public.recipe_image_objects
+        where id = '${objectId ?? "00000000-0000-4000-8000-000000000000"}';
+        delete from public.image_upload_quota_counters
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        delete from public.user_session_generation_bindings
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and expected_account_generation = 1;
+        update public.user_account_lifecycles
+        set auth_identity_created_at_snapshot = null
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        update public.account_generation_capability_state
+        set state = 'legacy',
+            current_cutover_attempt_id = null,
+            revision = revision + 1
+        where singleton;
+        select 'storage-db-compensation-cleanup-pass';
+        commit;
+      `)).toBe("storage-db-compensation-cleanup-pass");
+    }
   });
 
   it("attaches one exact live image atomically and blocks stale competitors", () => {
