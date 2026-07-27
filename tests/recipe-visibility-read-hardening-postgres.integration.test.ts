@@ -35,6 +35,8 @@ const IMAGE_LIFECYCLE_COMPLETION_MIGRATION_PATH =
   "supabase/migrations/20260724290000_recipe_image_lifecycle_completion_authority.sql";
 const IMAGE_LIFECYCLE_COMPLETION_CANDIDATE_MIGRATION_PATH =
   "supabase/migrations/20260724300000_recipe_image_lifecycle_completion_candidate_authority.sql";
+const IMAGE_COMPACT_RETENTION_MIGRATION_PATH =
+  "supabase/migrations/20260724310000_recipe_image_compact_retention_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -6555,6 +6557,383 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(serializable.status).not.toBe(0);
     expect(serializable.stderr).toContain(
       "Auth deletion readiness requires READ COMMITTED",
+    );
+  });
+
+  it("compacts 90-day terminal detail while preserving 91-day same-key replay", () => {
+    const replay = psqlFileResult(IMAGE_COMPACT_RETENTION_MIGRATION_PATH);
+    expect(replay.status, replay.stderr).toBe(0);
+
+    const objectId = "00000000-0000-4000-8000-000000000390";
+    const idempotencyKey = "00000000-0000-4000-8000-000000000391";
+    const outboxId = "00000000-0000-4000-8000-000000000392";
+    const now = "2031-01-01T00:00:00Z";
+
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+
+      update public.user_account_lifecycles
+      set status = 'active',
+          auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        raw_sha256,
+        byte_size,
+        actual_mime_type,
+        visibility,
+        state,
+        cleanup_generation,
+        next_terminal_scan_at,
+        created_at,
+        updated_at
+      ) values (
+        '${objectId}',
+        '${OWNER_ACTIVE}',
+        1,
+        'recipe-images-private',
+        '${OWNER_ACTIVE}/1/${objectId}.webp',
+        repeat('b', 64),
+        2048,
+        'image/webp',
+        'private',
+        'deleted',
+        1,
+        '${now}'::timestamptz + interval '24 hours',
+        '${now}'::timestamptz - interval '100 days',
+        '${now}'::timestamptz - interval '91 days'
+      );
+
+      insert into public.storage_object_deletion_outbox (
+        id,
+        bucket_id,
+        object_path,
+        owner_uuid,
+        account_generation,
+        cleanup_generation,
+        reason,
+        state,
+        terminal_result,
+        attempts,
+        next_attempt_at,
+        last_error,
+        created_at,
+        updated_at
+      ) values (
+        '${outboxId}',
+        'recipe-images-private',
+        '${OWNER_ACTIVE}/1/${objectId}.webp',
+        '${OWNER_ACTIVE}',
+        1,
+        1,
+        'retention-test',
+        'succeeded',
+        'deleted',
+        9,
+        '${now}'::timestamptz - interval '91 days',
+        'verbose historical detail',
+        '${now}'::timestamptz - interval '100 days',
+        '${now}'::timestamptz - interval '91 days'
+      );
+
+      insert into public.mutation_idempotency_keys (
+        owner_uuid,
+        account_generation,
+        operation_scope,
+        key_hash,
+        payload_hash,
+        state,
+        terminal_result,
+        durable_result,
+        result_reference,
+        attempts,
+        reserved_byte_size,
+        quota_reserved_at,
+        quota_released_at,
+        created_at,
+        updated_at
+      ) values (
+        '${OWNER_ACTIVE}',
+        1,
+        'recipe_image_upload',
+        encode(
+          extensions.digest(
+            pg_catalog.convert_to('${idempotencyKey}', 'UTF8'),
+            'sha256'
+          ),
+          'hex'
+        ),
+        repeat('c', 64),
+        'succeeded',
+        'uploaded',
+        jsonb_build_object(
+          'object_id', '${objectId}'::uuid,
+          'state', 'uploaded_unlinked'
+        ),
+        '${objectId}',
+        7,
+        2048,
+        '${now}'::timestamptz - interval '91 days',
+        '${now}'::timestamptz - interval '91 days',
+        '${now}'::timestamptz - interval '100 days',
+        '${now}'::timestamptz - interval '91 days'
+      );
+
+      insert into public.image_upload_quota_counters (
+        owner_uuid,
+        account_generation,
+        request_events,
+        byte_events,
+        active_reservation_count,
+        created_at,
+        updated_at
+      ) values (
+        '${OWNER_ACTIVE}',
+        1,
+        jsonb_build_array(
+          jsonb_build_object(
+            'at', '${now}'::timestamptz - interval '91 days'
+          ),
+          jsonb_build_object(
+            'at', '${now}'::timestamptz - interval '1 hour'
+          )
+        ),
+        jsonb_build_array(
+          jsonb_build_object(
+            'at', '${now}'::timestamptz - interval '91 days',
+            'bytes', 2048
+          ),
+          jsonb_build_object(
+            'at', '${now}'::timestamptz - interval '1 hour',
+            'bytes', 1024
+          )
+        ),
+        0,
+        '${now}'::timestamptz - interval '100 days',
+        '${now}'::timestamptz - interval '1 hour'
+      )
+      on conflict (owner_uuid, account_generation)
+      do update set
+        request_events = excluded.request_events,
+        byte_events = excluded.byte_events,
+        active_reservation_count = excluded.active_reservation_count;
+
+      set local role service_role;
+
+      do $block$
+      declare
+        v_compacted record;
+        v_replay jsonb;
+      begin
+        select *
+          into v_compacted
+        from public.compact_recipe_image_retention_details(
+          50,
+          '${now}'
+        );
+
+        if v_compacted.object_id is distinct from '${objectId}'::uuid
+          or v_compacted.idempotency_rows is distinct from 1
+          or v_compacted.outbox_rows is distinct from 1
+          or v_compacted.quota_events_removed is distinct from 2 then
+          raise exception 'unexpected compact result: %', v_compacted;
+        end if;
+
+        v_replay := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${idempotencyKey}',
+          repeat('c', 64),
+          repeat('b', 64),
+          2048,
+          'image/webp',
+          'webp',
+          '${now}'::timestamptz + interval '1 day'
+        );
+
+        if v_replay ->> 'outcome' <> 'succeeded'
+          or (v_replay ->> 'object_id')::uuid <> '${objectId}'::uuid
+          or v_replay ->> 'state' <> 'deleted' then
+          raise exception '91-day replay lost durable result: %', v_replay;
+        end if;
+
+        begin
+          perform public.reserve_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${idempotencyKey}',
+            repeat('d', 64),
+            repeat('b', 64),
+            2048,
+            'image/webp',
+            'webp',
+            '${now}'::timestamptz + interval '1 day'
+          );
+          raise exception 'different-payload replay unexpectedly succeeded';
+        exception
+          when unique_violation then
+            null;
+        end;
+      end;
+      $block$;
+
+      reset role;
+
+      do $block$
+      declare
+        v_identity record;
+        v_outbox record;
+        v_counter record;
+      begin
+        select
+          owner_uuid,
+          account_generation,
+          operation_scope,
+          key_hash,
+          payload_hash,
+          state,
+          terminal_result,
+          durable_result,
+          result_reference,
+          attempts,
+          attempt_token,
+          lease_expires_at
+        into v_identity
+        from public.mutation_idempotency_keys
+        where result_reference = '${objectId}';
+
+        if v_identity.owner_uuid is distinct from '${OWNER_ACTIVE}'::uuid
+          or v_identity.account_generation is distinct from 1::bigint
+          or v_identity.operation_scope is distinct from 'recipe_image_upload'
+          or v_identity.key_hash is distinct from encode(
+            extensions.digest(
+              pg_catalog.convert_to('${idempotencyKey}', 'UTF8'),
+              'sha256'
+            ),
+            'hex'
+          )
+          or v_identity.payload_hash is distinct from repeat('c', 64)
+          or v_identity.state is distinct from 'succeeded'
+          or v_identity.terminal_result is distinct from 'uploaded'
+          or v_identity.durable_result is null
+          or v_identity.result_reference is distinct from '${objectId}'::uuid
+          or v_identity.attempts is distinct from 1
+          or v_identity.attempt_token is not null
+          or v_identity.lease_expires_at is not null then
+          raise exception 'compact idempotency identity changed: %', v_identity;
+        end if;
+
+        select attempts, lease_token, lease_expires_at, last_error
+          into v_outbox
+        from public.storage_object_deletion_outbox
+        where id = '${outboxId}';
+
+        if v_outbox.attempts is distinct from 0
+          or v_outbox.lease_token is not null
+          or v_outbox.lease_expires_at is not null
+          or v_outbox.last_error is not null then
+          raise exception 'outbox detail was not compacted: %', v_outbox;
+        end if;
+
+        select request_events, byte_events
+          into v_counter
+        from public.image_upload_quota_counters
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+
+        if jsonb_array_length(v_counter.request_events) <> 1
+          or jsonb_array_length(v_counter.byte_events) <> 1 then
+          raise exception 'recent quota detail was not preserved: %', v_counter;
+        end if;
+
+        if not exists (
+          select 1
+          from public.recipe_image_objects
+          where id = '${objectId}'
+            and owner_uuid = '${OWNER_ACTIVE}'
+            and account_generation = 1
+            and state = 'deleted'
+            and cleanup_generation = 1
+            and next_terminal_scan_at =
+              '${now}'::timestamptz + interval '24 hours'
+        ) then
+          raise exception 'permanent registry identity changed';
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'compact-retention-replay-pass';
+    `)).toBe("compact-retention-replay-pass");
+  });
+
+  it("keeps compact retention service-only, READ COMMITTED, and replay-safe", () => {
+    const replay = psqlFileResult(IMAGE_COMPACT_RETENTION_MIGRATION_PATH);
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.compact_recipe_image_retention_details(integer,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.compact_recipe_image_retention_details(integer,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.compact_recipe_image_retention_details(integer,timestamp with time zone)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t");
+
+    const serializable = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select *
+      from public.compact_recipe_image_retention_details(1, now());
+    `);
+    expect(serializable.status).not.toBe(0);
+    expect(serializable.stderr).toContain(
+      "Recipe image retention compaction requires READ COMMITTED",
     );
   });
 
