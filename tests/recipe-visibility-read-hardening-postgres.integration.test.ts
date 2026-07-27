@@ -11,6 +11,10 @@ import {
   runManagedRecipeImageUpload,
   type ManagedRecipeImageRpcClient,
 } from "@/lib/server/recipe-image-managed-upload";
+import { runRecipeImageNormalDrainStorage } from
+  "@/lib/server/recipe-image-normal-drain-storage";
+import { scanStaleRecipeImageUploads } from
+  "@/lib/server/recipe-image-stale-scanner";
 
 const enabled =
   process.env.HOMECOOK_RECIPE_VISIBILITY_PG_INTEGRATION === "1";
@@ -100,6 +104,16 @@ const IMAGE_CANCEL_FINALIZED_UPLOAD_KEY =
   "00000000-0000-4000-8000-000000000325";
 const IMAGE_CANCEL_FINALIZED_KEY =
   "00000000-0000-4000-8000-000000000326";
+const IMAGE_CANCEL_DRAIN_UPLOAD_KEY =
+  "00000000-0000-4000-8000-0000000003a3";
+const IMAGE_CANCEL_DRAIN_KEY =
+  "00000000-0000-4000-8000-0000000003a4";
+const IMAGE_SCANNER_DRAIN_UPLOAD_KEY =
+  "00000000-0000-4000-8000-0000000003a5";
+const IMAGE_CANCEL_DRAIN_LEASE =
+  "00000000-0000-4000-8000-0000000003a6";
+const IMAGE_CANCEL_DRAIN_REPLAY_LEASE =
+  "00000000-0000-4000-8000-0000000003a7";
 const IMAGE_ATTACH_UPLOAD_KEY =
   "00000000-0000-4000-8000-000000000327";
 const IMAGE_ATTACH_RECIPE =
@@ -4770,6 +4784,298 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(serializable.stderr).toMatch(
       /recipe image cancel requires READ COMMITTED/i,
     );
+  });
+
+  it("drains owner-cancelled and expired uploads to one terminal result each", async () => {
+    const cancelReserved = JSON.parse(psql(`
+      begin;
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1
+      where singleton;
+      update public.user_account_lifecycles
+      set status = 'active',
+          auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+      set local role service_role;
+      select public.reserve_recipe_image_upload(
+        '${OWNER_ACTIVE}',
+        '2026-01-01T00:00:00Z',
+        repeat('a', 64),
+        1,
+        '${IMAGE_CANCEL_DRAIN_UPLOAD_KEY}',
+        repeat('4', 64),
+        repeat('5', 64),
+        1024,
+        'image/webp',
+        'webp',
+        '2030-07-24T03:00:00Z'
+      );
+      commit;
+    `));
+    const scannerReserved = JSON.parse(psql(`
+      begin;
+      set local role service_role;
+      select public.reserve_recipe_image_upload(
+        '${OWNER_ACTIVE}',
+        '2026-01-01T00:00:00Z',
+        repeat('a', 64),
+        1,
+        '${IMAGE_SCANNER_DRAIN_UPLOAD_KEY}',
+        repeat('6', 64),
+        repeat('7', 64),
+        2048,
+        'image/webp',
+        'webp',
+        '2030-07-24T03:00:00Z'
+      );
+      commit;
+    `));
+    const cancelObjectId = String(cancelReserved.object_id);
+    const cancelObjectPath = String(cancelReserved.object_path);
+    const scannerObjectId = String(scannerReserved.object_id);
+    const scannerObjectPath = String(scannerReserved.object_path);
+    const storedObjects = new Set([
+      cancelObjectPath,
+      scannerObjectPath,
+    ]);
+    const deletedPaths: string[] = [];
+
+    try {
+      const cancelled = JSON.parse(psql(`
+        begin;
+        set local role service_role;
+        select public.cancel_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_CANCEL_DRAIN_KEY}',
+          '${cancelObjectId}',
+          '2030-07-24T03:00:01Z'
+        );
+        commit;
+      `));
+      expect(cancelled).toMatchObject({
+        cleanup_generation: 1,
+        object_id: cancelObjectId,
+        outcome: "succeeded",
+        state: "cleanup_pending",
+      });
+
+      const scanned = await scanStaleRecipeImageUploads({
+        dbClient: {
+          rpc: async (name, params) => {
+            expect(name).toBe("scan_stale_recipe_image_uploads");
+            const rows = JSON.parse(psql(`
+              begin;
+              set local role service_role;
+              select coalesce(
+                json_agg(row_to_json(scan)),
+                '[]'::json
+              )
+              from public.scan_stale_recipe_image_uploads(
+                ${Number(params.p_limit)},
+                '${String(params.p_now)}'::timestamptz
+              ) as scan;
+              commit;
+            `));
+            return { data: rows, error: null };
+          },
+        },
+        limit: 50,
+        now: () => new Date("2030-07-24T03:06:00Z"),
+      });
+      expect(scanned).toEqual([
+        expect.objectContaining({
+          cleanupGeneration: 1,
+          objectId: scannerObjectId,
+          ownerUuid: OWNER_ACTIVE,
+          previousState: "pending_upload",
+        }),
+      ]);
+
+      expect(psql(`
+        update public.storage_object_deletion_outbox
+        set next_attempt_at = case reason
+          when 'owner_cancelled'
+            then '2030-07-24T03:06:00.000Z'::timestamptz
+          when 'stale_upload'
+            then '2030-07-24T03:06:00.001Z'::timestamptz
+          else next_attempt_at
+        end
+        where object_path in (
+          '${cancelObjectPath}',
+          '${scannerObjectPath}'
+        );
+        select 'cancel-drain-order-pass';
+      `)).toBe("cancel-drain-order-pass");
+
+      const drainDbClient = {
+        rpc: async (name: string, params: Record<string, unknown>) => {
+          if (name === "claim_recipe_image_cleanup") {
+            const rows = JSON.parse(psql(`
+              begin;
+              set local role service_role;
+              select coalesce(
+                json_agg(row_to_json(claimed)),
+                '[]'::json
+              )
+              from public.claim_recipe_image_cleanup(
+                ${Number(params.p_limit)},
+                '${String(params.p_lease_token)}'::uuid,
+                '${String(params.p_now)}'::timestamptz
+              ) as claimed;
+              commit;
+            `));
+            return { data: rows, error: null };
+          }
+
+          if (name === "authorize_recipe_image_cleanup_delete") {
+            const authorized = psql(`
+              begin;
+              set local role service_role;
+              select public.authorize_recipe_image_cleanup_delete(
+                '${String(params.p_outbox_id)}'::uuid,
+                '${String(params.p_owner_uuid)}'::uuid,
+                ${Number(params.p_account_generation)},
+                ${Number(params.p_cleanup_generation)},
+                '${String(params.p_lease_token)}'::uuid,
+                '${String(params.p_authorized_at)}'::timestamptz
+              );
+              commit;
+            `);
+            return { data: authorized === "t", error: null };
+          }
+
+          if (name === "complete_recipe_image_cleanup_deleted") {
+            const completed = psql(`
+              begin;
+              set local role service_role;
+              select public.complete_recipe_image_cleanup_deleted(
+                '${String(params.p_outbox_id)}'::uuid,
+                '${String(params.p_owner_uuid)}'::uuid,
+                ${Number(params.p_account_generation)},
+                ${Number(params.p_cleanup_generation)},
+                '${String(params.p_lease_token)}'::uuid,
+                '${String(params.p_completed_at)}'::timestamptz
+              );
+              commit;
+            `);
+            return { data: completed === "t", error: null };
+          }
+
+          throw new Error(`unexpected RPC: ${name}`);
+        },
+      };
+      const runDrain = (leaseToken: string) =>
+        runRecipeImageNormalDrainStorage({
+          checkObjectPresence: async ({ objectPath }) => ({
+            kind: storedObjects.has(objectPath)
+              ? "present" as const
+              : "absent" as const,
+          }),
+          dbClient: drainDbClient,
+          deleteObject: async ({ objectPath }) => {
+            if (!storedObjects.delete(objectPath)) {
+              return { kind: "failed" as const };
+            }
+            deletedPaths.push(objectPath);
+            return { kind: "deleted" as const };
+          },
+          leaseToken,
+          now: () => new Date("2030-07-24T03:06:01Z"),
+        });
+
+      await expect(runDrain(IMAGE_CANCEL_DRAIN_LEASE)).resolves.toEqual({
+        claimedCount: 2,
+        deletedCount: 2,
+        quarantinedCount: 0,
+        staleCount: 0,
+      });
+      expect(deletedPaths).toEqual([
+        cancelObjectPath,
+        scannerObjectPath,
+      ]);
+      await expect(
+        runDrain(IMAGE_CANCEL_DRAIN_REPLAY_LEASE),
+      ).resolves.toEqual({
+        claimedCount: 0,
+        deletedCount: 0,
+        quarantinedCount: 0,
+        staleCount: 0,
+      });
+      expect(deletedPaths).toHaveLength(2);
+      expect(psql(`
+        select concat_ws(
+          ':',
+          count(*) filter (
+            where object.state = 'deleted'
+          ),
+          count(*) filter (
+            where outbox.state = 'succeeded'
+              and outbox.terminal_result = 'deleted'
+              and outbox.attempts = 1
+          ),
+          count(distinct outbox.reason),
+          coalesce(max(counter.active_reservation_count), 0)
+        )
+        from public.recipe_image_objects as object
+        join public.storage_object_deletion_outbox as outbox
+          on outbox.bucket_id = object.bucket_id
+         and outbox.object_path = object.object_path
+         and outbox.cleanup_generation = object.cleanup_generation
+        left join public.image_upload_quota_counters as counter
+          on counter.owner_uuid = object.owner_uuid
+         and counter.account_generation = object.account_generation
+        where object.id in (
+          '${cancelObjectId}',
+          '${scannerObjectId}'
+        );
+      `)).toBe("2:2:2:0");
+    } finally {
+      expect(psql(`
+        begin;
+        delete from public.storage_object_deletion_outbox
+        where object_path in (
+          '${cancelObjectPath}',
+          '${scannerObjectPath}'
+        );
+        delete from public.mutation_idempotency_keys
+        where result_reference in (
+          '${cancelObjectId}',
+          '${scannerObjectId}'
+        );
+        delete from public.recipe_image_objects
+        where id in (
+          '${cancelObjectId}',
+          '${scannerObjectId}'
+        );
+        delete from public.image_upload_quota_counters
+        where owner_uuid = '${OWNER_ACTIVE}'
+          and account_generation = 1;
+        commit;
+        select 'cancel-drain-cleanup-pass';
+      `)).toBe("cancel-drain-cleanup-pass");
+    }
   });
 
   it("prevents late finalize after stale scanning and account deletion starts", () => {
