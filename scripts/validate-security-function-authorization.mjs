@@ -280,6 +280,20 @@ const ADDITIVE_SOURCES = [
         "supabase/migrations/20260724310000_recipe_image_compact_retention_authority.sql",
       ),
   },
+  {
+    manifestPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_LEGACY_REPORT_ONLY_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/recipe-image-legacy-report-only-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_LEGACY_REPORT_ONLY_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260725160000_recipe_image_legacy_report_only.sql",
+      ),
+  },
 ];
 const LOCAL_DATABASE_URL =
   process.env.SECURITY_FUNCTION_DATABASE_URL

@@ -53,6 +53,8 @@ const IMAGE_LIFECYCLE_COMPLETION_CANDIDATE_MIGRATION_PATH =
   "supabase/migrations/20260724300000_recipe_image_lifecycle_completion_candidate_authority.sql";
 const IMAGE_COMPACT_RETENTION_MIGRATION_PATH =
   "supabase/migrations/20260724310000_recipe_image_compact_retention_authority.sql";
+const IMAGE_LEGACY_REPORT_ONLY_MIGRATION_PATH =
+  "supabase/migrations/20260725160000_recipe_image_legacy_report_only.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -132,6 +134,30 @@ const IMAGE_ATTACH_OTHER_GENERATION =
   "00000000-0000-4000-8000-000000000334";
 const IMAGE_ATTACH_PUBLIC_SHARED =
   "00000000-0000-4000-8000-000000000335";
+const IMAGE_LEGACY_INVENTORY_KEY =
+  "00000000-0000-4000-8000-0000000003c0";
+const IMAGE_LEGACY_PRIVATE_RECIPE =
+  "00000000-0000-4000-8000-0000000003c1";
+const IMAGE_LEGACY_PUBLIC_RECIPE =
+  "00000000-0000-4000-8000-0000000003c2";
+const IMAGE_LEGACY_EXTERNAL_RECIPE =
+  "00000000-0000-4000-8000-0000000003c3";
+const IMAGE_LEGACY_CONFLICT_RECIPE =
+  "00000000-0000-4000-8000-0000000003cb";
+const IMAGE_LEGACY_RECIPE_BOOK =
+  "00000000-0000-4000-8000-0000000003c4";
+const IMAGE_LEGACY_PRIVATE_OBJECT =
+  "00000000-0000-4000-8000-0000000003c5";
+const IMAGE_LEGACY_PUBLIC_OBJECT =
+  "00000000-0000-4000-8000-0000000003c6";
+const IMAGE_LEGACY_COVER_OBJECT =
+  "00000000-0000-4000-8000-0000000003c7";
+const IMAGE_LEGACY_CANDIDATE_OBJECT =
+  "00000000-0000-4000-8000-0000000003c8";
+const IMAGE_LEGACY_SUSPICIOUS_OBJECT =
+  "00000000-0000-4000-8000-0000000003c9";
+const IMAGE_LEGACY_CONFLICT_OBJECT =
+  "00000000-0000-4000-8000-0000000003cc";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -9956,6 +9982,427 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(serializable.status).not.toBe(0);
     expect(serializable.stderr).toContain(
       "Recipe image retention compaction requires READ COMMITTED",
+    );
+  });
+
+  it("backfills only exact known legacy references and reports unknown objects without enqueue or delete", () => {
+    const storageOrigin = "https://project.supabase.co";
+    const privatePath =
+      `${OWNER_ACTIVE}/${IMAGE_LEGACY_PRIVATE_OBJECT}.webp`;
+    const publicPath =
+      `${OWNER_ACTIVE}/${IMAGE_LEGACY_PUBLIC_OBJECT}.jpg`;
+    const coverPath =
+      `${OWNER_ACTIVE}/${IMAGE_LEGACY_COVER_OBJECT}.png`;
+    const candidatePath =
+      `${OWNER_ACTIVE}/${IMAGE_LEGACY_CANDIDATE_OBJECT}.jpeg`;
+    const suspiciousPath =
+      `imports/${IMAGE_LEGACY_SUSPICIOUS_OBJECT}.webp`;
+    const conflictPath =
+      `${OWNER_ACTIVE}/${IMAGE_LEGACY_CONFLICT_OBJECT}.webp`;
+
+    expect(psql(`
+      begin;
+
+      delete from storage.objects;
+
+      insert into public.recipes (
+        id,
+        title,
+        source_type,
+        created_by,
+        visibility,
+        deleted_at,
+        thumbnail_url
+      ) values
+        (
+          '${IMAGE_LEGACY_PRIVATE_RECIPE}',
+          'legacy private',
+          'manual',
+          '${OWNER_ACTIVE}',
+          'private',
+          now(),
+          '${storageOrigin}/storage/v1/object/public/recipe-images/${privatePath}'
+        ),
+        (
+          '${IMAGE_LEGACY_PUBLIC_RECIPE}',
+          'legacy public',
+          'manual',
+          '${OWNER_ACTIVE}',
+          'public',
+          null,
+          '${storageOrigin}/storage/v1/object/public/recipe-images/${publicPath}'
+        ),
+        (
+          '${IMAGE_LEGACY_EXTERNAL_RECIPE}',
+          'external distractor',
+          'manual',
+          '${OWNER_ACTIVE}',
+          'private',
+          null,
+          'https://evil.invalid/storage/v1/object/public/recipe-images/${candidatePath}'
+        ),
+        (
+          '${IMAGE_LEGACY_CONFLICT_RECIPE}',
+          'conflicting owner signal',
+          'manual',
+          '${OWNER_ACTIVE}',
+          'private',
+          null,
+          '${storageOrigin}/storage/v1/object/public/recipe-images/${conflictPath}'
+        );
+
+      insert into public.recipe_books (
+        id,
+        user_id,
+        cover_image_url
+      ) values (
+        '${IMAGE_LEGACY_RECIPE_BOOK}',
+        '${OWNER_ACTIVE}',
+        '${storageOrigin}/storage/v1/object/public/recipe-images/${coverPath}'
+      );
+
+      insert into storage.objects (
+        id,
+        bucket_id,
+        name,
+        owner_id
+      ) values
+        (
+          '${IMAGE_LEGACY_PRIVATE_OBJECT}',
+          'recipe-images',
+          '${privatePath}',
+          null
+        ),
+        (
+          '${IMAGE_LEGACY_PUBLIC_OBJECT}',
+          'recipe-images',
+          '${publicPath}',
+          '${OWNER_ACTIVE}'
+        ),
+        (
+          '${IMAGE_LEGACY_COVER_OBJECT}',
+          'recipe-images',
+          '${coverPath}',
+          null
+        ),
+        (
+          '${IMAGE_LEGACY_CANDIDATE_OBJECT}',
+          'recipe-images',
+          '${candidatePath}',
+          null
+        ),
+        (
+          '${IMAGE_LEGACY_SUSPICIOUS_OBJECT}',
+          'recipe-images',
+          '${suspiciousPath}',
+          '${OWNER_ACTIVE}'
+        ),
+        (
+          '${IMAGE_LEGACY_CONFLICT_OBJECT}',
+          'recipe-images',
+          '${conflictPath}',
+          '${OWNER_QUARANTINED}'
+        );
+
+      create temporary table legacy_inventory_baseline as
+      select
+        (select count(*) from storage.objects) as storage_count,
+        (select count(*) from public.storage_object_deletion_outbox)
+          as outbox_count;
+
+      set local role service_role;
+
+      create temporary table legacy_inventory_result
+      on commit drop
+      as
+      select *
+      from public.inventory_recipe_image_legacy_objects(
+        '${IMAGE_LEGACY_INVENTORY_KEY}',
+        '${storageOrigin}'
+      );
+
+      reset role;
+
+      do $block$
+      declare
+        v_result record;
+        v_baseline record;
+      begin
+        select * into v_result from legacy_inventory_result;
+        select * into v_baseline from legacy_inventory_baseline;
+
+        if v_result.service_object_count is distinct from 6::bigint
+          or v_result.known_reference_count is distinct from 3::bigint
+          or v_result.referenced_private_count is distinct from 2::bigint
+          or v_result.referenced_public_shared_count
+            is distinct from 1::bigint
+          or v_result.deletion_candidate_unverified_count
+            is distinct from 1::bigint
+          or v_result.suspicious_unclassified_count
+            is distinct from 2::bigint
+          or v_result.enqueue_count is distinct from 0::bigint
+          or v_result.delete_count is distinct from 0::bigint then
+          raise exception 'unexpected legacy inventory result: %', v_result;
+        end if;
+
+        if (
+          select count(*)
+          from public.recipe_image_legacy_positive_references
+          where inventory_run_id = v_result.inventory_run_id
+        ) <> 3 then
+          raise exception 'positive reference backfill count mismatch';
+        end if;
+
+        if not exists (
+          select 1
+          from public.recipe_image_legacy_positive_references
+          where inventory_run_id = v_result.inventory_run_id
+            and storage_object_id = '${IMAGE_LEGACY_PRIVATE_OBJECT}'
+            and bucket_id = 'recipe-images'
+            and object_path = '${privatePath}'
+            and owner_uuid = '${OWNER_ACTIVE}'
+            and reference_type = 'recipe_thumbnail'
+            and consumer_id = '${IMAGE_LEGACY_PRIVATE_RECIPE}'
+            and expected_visibility = 'private'
+        ) or not exists (
+          select 1
+          from public.recipe_image_legacy_positive_references
+          where inventory_run_id = v_result.inventory_run_id
+            and storage_object_id = '${IMAGE_LEGACY_PUBLIC_OBJECT}'
+            and reference_type = 'recipe_thumbnail'
+            and consumer_id = '${IMAGE_LEGACY_PUBLIC_RECIPE}'
+            and expected_visibility = 'public_shared'
+        ) or not exists (
+          select 1
+          from public.recipe_image_legacy_positive_references
+          where inventory_run_id = v_result.inventory_run_id
+            and storage_object_id = '${IMAGE_LEGACY_COVER_OBJECT}'
+            and reference_type = 'recipe_book_cover'
+            and consumer_id = '${IMAGE_LEGACY_RECIPE_BOOK}'
+            and expected_visibility = 'private'
+        ) then
+          raise exception 'known recipe and recipe-book references were not exact';
+        end if;
+
+        if exists (
+          select 1
+          from public.recipe_image_legacy_positive_references
+          where storage_object_id in (
+            '${IMAGE_LEGACY_CANDIDATE_OBJECT}'::uuid,
+            '${IMAGE_LEGACY_SUSPICIOUS_OBJECT}'::uuid,
+            '${IMAGE_LEGACY_CONFLICT_OBJECT}'::uuid
+          )
+        ) then
+          raise exception 'unknown object was positive-backfilled';
+        end if;
+
+        if (
+          select count(*)
+          from public.recipe_image_legacy_candidate_reports
+          where inventory_run_id = v_result.inventory_run_id
+            and classification = 'deletion_candidate_unverified'
+            and path_hash = encode(
+              extensions.digest(
+                pg_catalog.convert_to(
+                  'recipe-images/${candidatePath}',
+                  'UTF8'
+                ),
+                'sha256'
+              ),
+              'hex'
+            )
+        ) <> 1 or (
+          select count(*)
+          from public.recipe_image_legacy_candidate_reports
+          where inventory_run_id = v_result.inventory_run_id
+            and classification = 'suspicious_unclassified'
+            and path_hash = encode(
+              extensions.digest(
+                pg_catalog.convert_to(
+                  'recipe-images/${suspiciousPath}',
+                  'UTF8'
+                ),
+                'sha256'
+              ),
+              'hex'
+            )
+        ) <> 1 then
+          raise exception 'candidate hash-only report mismatch';
+        end if;
+
+        if (
+          select count(*)
+          from public.recipe_image_legacy_candidate_reports
+          where inventory_run_id = v_result.inventory_run_id
+            and classification = 'suspicious_unclassified'
+            and path_hash = encode(
+              extensions.digest(
+                pg_catalog.convert_to(
+                  'recipe-images/${conflictPath}',
+                  'UTF8'
+                ),
+                'sha256'
+              ),
+              'hex'
+            )
+        ) <> 1 then
+          raise exception 'conflicting owner signal was not suspicious';
+        end if;
+
+        if exists (
+          select 1
+          from information_schema.columns
+          where table_schema = 'public'
+            and table_name = 'recipe_image_legacy_candidate_reports'
+            and column_name in ('bucket_id', 'object_path', 'owner_uuid')
+        ) then
+          raise exception 'candidate report persisted raw object identity';
+        end if;
+
+        if (select count(*) from storage.objects)
+            is distinct from v_baseline.storage_count
+          or (select count(*) from public.storage_object_deletion_outbox)
+            is distinct from v_baseline.outbox_count then
+          raise exception 'legacy inventory mutated Storage or outbox';
+        end if;
+      end;
+      $block$;
+
+      set local role service_role;
+
+      create temporary table legacy_inventory_replay
+      on commit drop
+      as
+      select *
+      from public.inventory_recipe_image_legacy_objects(
+        '${IMAGE_LEGACY_INVENTORY_KEY}',
+        '${storageOrigin}'
+      );
+
+      reset role;
+
+      do $block$
+      declare
+        v_first record;
+        v_replay record;
+      begin
+        select * into v_first from legacy_inventory_result;
+        select * into v_replay from legacy_inventory_replay;
+
+        if v_replay is distinct from v_first then
+          raise exception 'legacy inventory replay changed result';
+        end if;
+
+        if (
+          select count(*)
+          from public.recipe_image_legacy_inventory_runs
+          where inventory_key = '${IMAGE_LEGACY_INVENTORY_KEY}'
+        ) <> 1 or (
+          select count(*)
+          from public.recipe_image_legacy_positive_references
+          where inventory_run_id = v_first.inventory_run_id
+        ) <> 3 or (
+          select count(*)
+          from public.recipe_image_legacy_candidate_reports
+          where inventory_run_id = v_first.inventory_run_id
+        ) <> 3 then
+          raise exception 'legacy inventory replay duplicated evidence';
+        end if;
+      end;
+      $block$;
+
+      insert into storage.objects (
+        id,
+        bucket_id,
+        name,
+        owner_id
+      ) values (
+        '00000000-0000-4000-8000-0000000003ca',
+        'recipe-images',
+        '${OWNER_ACTIVE}/00000000-0000-4000-8000-0000000003ca.webp',
+        null
+      );
+
+      set local role service_role;
+
+      do $block$
+      begin
+        perform *
+        from public.inventory_recipe_image_legacy_objects(
+          '${IMAGE_LEGACY_INVENTORY_KEY}',
+          '${storageOrigin}'
+        );
+        raise exception 'changed-snapshot replay unexpectedly succeeded';
+      exception
+        when unique_violation then
+          null;
+      end;
+      $block$;
+
+      reset role;
+      rollback;
+      select 'legacy-report-only-pass';
+    `)).toBe("legacy-report-only-pass");
+  });
+
+  it("keeps legacy inventory service-only, READ COMMITTED, and snapshot-bound", () => {
+    const replay = psqlFileResult(IMAGE_LEGACY_REPORT_ONLY_MIGRATION_PATH);
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.inventory_recipe_image_legacy_objects(uuid,text)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.inventory_recipe_image_legacy_objects(uuid,text)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.inventory_recipe_image_legacy_objects(uuid,text)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t");
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_table_privilege(
+          'anon',
+          'public.recipe_image_legacy_inventory_runs',
+          'SELECT,INSERT,UPDATE,DELETE'
+        ),
+        has_table_privilege(
+          'authenticated',
+          'public.recipe_image_legacy_positive_references',
+          'SELECT,INSERT,UPDATE,DELETE'
+        ),
+        has_table_privilege(
+          'service_role',
+          'public.recipe_image_legacy_candidate_reports',
+          'SELECT,INSERT,UPDATE,DELETE'
+        )
+      );
+    `)).toBe("f:f:f");
+
+    const serializable = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select *
+      from public.inventory_recipe_image_legacy_objects(
+        '${IMAGE_LEGACY_INVENTORY_KEY}',
+        'https://project.supabase.co'
+      );
+    `);
+    expect(serializable.status).not.toBe(0);
+    expect(serializable.stderr).toContain(
+      "Recipe image legacy inventory requires READ COMMITTED",
     );
   });
 

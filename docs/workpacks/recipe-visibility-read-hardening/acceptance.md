@@ -59,7 +59,7 @@
 
 ## Legacy / Operations
 
-- [ ] positive referenced objects alone are backfilled; unknown orphan candidates produce report/count/path hash and enqueue/delete exactly 0 <!-- omo:id=accept-image-legacy-report-only;stage=2;scope=backend;review=3,6 -->
+- [x] positive referenced objects alone are backfilled; unknown orphan candidates produce report/count/path hash and enqueue/delete exactly 0 <!-- omo:id=accept-image-legacy-report-only;stage=2;scope=backend;review=3,6 -->
 - [ ] private and public/shared references copy to correct buckets, atomically swap references and retain old path through one compatibility release <!-- omo:id=accept-image-visibility-migration;stage=2;scope=backend;review=3,6 -->
 - [ ] old path deletion is a separate irreversible gate with reference 0, read smoke, rollback floor and dead-letter 0 <!-- omo:id=accept-image-old-path-gate;stage=2;scope=backend;review=3,6 -->
 - [x] expected-owner signal uses only owner_id, strict allowlisted owner path or registry owner/generation and reaches union-zero before Auth deletion <!-- omo:id=accept-image-owner-signal;stage=2;scope=backend;review=3,6 -->
