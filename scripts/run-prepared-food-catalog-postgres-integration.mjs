@@ -113,12 +113,20 @@ create table public.operational_events (
   created_at timestamptz not null default now(),
   check (severity in ('info', 'warn', 'error', 'critical'))
 );
+create type public.recipe_source_type as enum ('system', 'youtube', 'manual');
 create table public.recipes (
   id uuid primary key default gen_random_uuid(), title text not null,
+  description text, thumbnail_url text,
   base_servings integer not null default 2 check (base_servings > 0),
+  tags text[] not null default '{}'::text[],
+  source_type public.recipe_source_type not null default 'system',
   created_by uuid references public.users(id) on delete set null,
+  view_count integer not null default 0,
   save_count integer not null default 0,
   like_count integer not null default 0,
+  plan_count integer not null default 0,
+  cook_count integer not null default 0,
+  created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 create type public.recipe_ingredient_type as enum ('QUANT', 'TO_TASTE');
@@ -136,6 +144,52 @@ create table public.recipe_sources (
   recipe_id uuid not null unique references public.recipes(id) on delete cascade,
   extraction_meta_json jsonb not null default '{}'::jsonb
 );
+create table public.recipe_steps (
+  id uuid primary key default gen_random_uuid(),
+  recipe_id uuid not null references public.recipes(id) on delete cascade,
+  step_number integer not null,
+  instruction text not null
+);
+create table public.recipe_step_cooking_methods (
+  id uuid primary key default gen_random_uuid(),
+  step_id uuid not null references public.recipe_steps(id) on delete cascade,
+  method_id uuid not null,
+  position integer not null
+);
+create table public.tags (
+  id uuid primary key default gen_random_uuid(),
+  normalized_key text not null unique,
+  label text not null,
+  slug text,
+  kind text not null,
+  is_system boolean not null default false,
+  theme_eligible boolean not null default false,
+  usage_count integer not null default 0,
+  created_by uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create table public.recipe_tags (
+  recipe_id uuid not null references public.recipes(id) on delete cascade,
+  tag_id uuid not null references public.tags(id) on delete cascade,
+  source text not null default 'system_suggested',
+  confidence numeric(4, 3) not null default 1,
+  visibility text not null default 'public',
+  review_status text not null default 'approved',
+  sort_order integer not null default 0,
+  created_by uuid,
+  created_at timestamptz not null default now(),
+  primary key (recipe_id, tag_id)
+);
+create table public.user_account_lifecycles (
+  owner_uuid uuid not null,
+  account_generation bigint not null check (account_generation > 0),
+  status text not null check (status in (
+    'active', 'quarantined', 'deleting', 'cleanup_pending', 'complete'
+  )),
+  primary key (owner_uuid, account_generation)
+);
+alter table public.user_account_lifecycles enable row level security;
 create table public.meals (
   id uuid primary key default gen_random_uuid(), recipe_id uuid not null references public.recipes(id)
 );
@@ -158,9 +212,24 @@ create table public.recipe_likes (
   recipe_id uuid not null references public.recipes(id) on delete cascade
 );
 grant usage on schema public to anon, authenticated, service_role;
+grant select on table
+  public.recipes,
+  public.recipe_sources,
+  public.recipe_ingredients,
+  public.recipe_steps,
+  public.recipe_step_cooking_methods,
+  public.tags,
+  public.recipe_tags
+to anon, authenticated;
 `;
     runRequired(path.join(postgresBin, "psql"), [...args, "-c", bootstrap]);
     runRequired(path.join(postgresBin, "psql"), [...args, "-c", `comment on database ${database} is 'homecook-isolated-product-catalog-v1';`]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...args,
+      "--single-transaction",
+      "-f",
+      "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
+    ]);
     for (const migration of [
       "supabase/migrations/20260714143000_ingredient_nutrition_conversion_model.sql",
       "supabase/migrations/20260716090000_add_recipe_nutrition_snapshots.sql",
@@ -269,6 +338,13 @@ grant usage on schema public to anon, authenticated, service_role;
         "supabase/migrations/20260725140000_prepared_food_search_ranked_rpc.sql",
       ]);
     }
+    for (let replay = 0; replay < 2; replay += 1) {
+      runRequired(path.join(postgresBin, "psql"), [
+        ...args,
+        "-f",
+        "supabase/migrations/20260725150000_community_food_visibility_lifecycle_guard.sql",
+      ]);
+    }
 
     const test = commandResult("pnpm", [
       "exec", "vitest", "run",
@@ -276,6 +352,7 @@ grant usage on schema public to anon, authenticated, service_role;
       "tests/community-prepared-food-catalog-postgres.integration.test.ts",
       "tests/prepared-food-search-indexes-postgres.integration.test.ts",
       "tests/prepared-food-search-relevance-postgres.integration.test.ts",
+      "tests/recipe-visibility-quarantine-surfaces-postgres.integration.test.ts",
       "--pool=forks", "--maxWorkers=1", "--testTimeout=30000",
     ], {
       stdio: "inherit",
