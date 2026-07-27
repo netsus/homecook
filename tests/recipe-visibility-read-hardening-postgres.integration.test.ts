@@ -76,6 +76,8 @@ const IMAGE_CLEANUP_LEASE_THREE = "00000000-0000-4000-8000-000000000312";
 const IMAGE_CLEANUP_REFERENCE = "00000000-0000-4000-8000-000000000313";
 const IMAGE_CLEANUP_CONSUMER = "00000000-0000-4000-8000-000000000314";
 const IMAGE_UPLOAD_KEY = "00000000-0000-4000-8000-000000000315";
+const IMAGE_UPLOAD_KEY_REUSE_KEY =
+  "00000000-0000-4000-8000-0000000003a0";
 const IMAGE_UPLOAD_ISOLATION_KEY = "00000000-0000-4000-8000-000000000316";
 const IMAGE_UPLOAD_COMPENSATION_KEY = "00000000-0000-4000-8000-000000000317";
 const IMAGE_STORAGE_DB_COMPENSATION_KEY =
@@ -2247,6 +2249,140 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
       rollback;
       select 'upload-cas-pass';
     `)).toBe("upload-cas-pass");
+  });
+
+  it("rejects different-payload key reuse without changing upload authority", () => {
+    expect(psql(`
+      begin;
+
+      update public.account_generation_capability_state
+      set state = 'generation_active',
+          revision = revision + 1,
+          current_cutover_attempt_id =
+            '00000000-0000-4000-8000-000000000399'
+      where singleton;
+
+      update public.user_account_lifecycles
+      set auth_identity_created_at_snapshot = '2026-01-01T00:00:00Z'
+      where owner_uuid = '${OWNER_ACTIVE}'
+        and account_generation = 1;
+
+      insert into public.user_session_generation_bindings (
+        session_key_hash,
+        hmac_key_version,
+        owner_uuid,
+        expected_account_generation,
+        auth_identity_created_at_snapshot,
+        revoked_at
+      ) values (
+        repeat('a', 64),
+        1,
+        '${OWNER_ACTIVE}',
+        1,
+        '2026-01-01T00:00:00Z',
+        null
+      )
+      on conflict (hmac_key_version, session_key_hash)
+      do update set revoked_at = null;
+
+      set local role service_role;
+      do $block$
+      declare
+        v_reserved jsonb;
+        v_object_id uuid;
+        v_before_idempotency jsonb;
+        v_before_object jsonb;
+        v_before_quota jsonb;
+      begin
+        v_reserved := public.reserve_recipe_image_upload(
+          '${OWNER_ACTIVE}',
+          '2026-01-01T00:00:00Z',
+          repeat('a', 64),
+          1,
+          '${IMAGE_UPLOAD_KEY_REUSE_KEY}',
+          repeat('b', 64),
+          repeat('c', 64),
+          1024,
+          'image/webp',
+          'webp',
+          '2030-07-24T01:00:00Z'
+        );
+        if v_reserved ->> 'outcome' <> 'reserved' then
+          raise exception 'expected reserved outcome: %', v_reserved;
+        end if;
+        v_object_id := (v_reserved ->> 'object_id')::uuid;
+
+        reset role;
+        select to_jsonb(idempotency)
+          into v_before_idempotency
+        from public.mutation_idempotency_keys as idempotency
+        where idempotency.result_reference = v_object_id;
+
+        select to_jsonb(object)
+          into v_before_object
+        from public.recipe_image_objects as object
+        where object.id = v_object_id;
+
+        select to_jsonb(counter)
+          into v_before_quota
+        from public.image_upload_quota_counters as counter
+        where counter.owner_uuid = '${OWNER_ACTIVE}'
+          and counter.account_generation = 1;
+        set local role service_role;
+
+        begin
+          perform public.reserve_recipe_image_upload(
+            '${OWNER_ACTIVE}',
+            '2026-01-01T00:00:00Z',
+            repeat('a', 64),
+            1,
+            '${IMAGE_UPLOAD_KEY_REUSE_KEY}',
+            repeat('d', 64),
+            repeat('e', 64),
+            2048,
+            'image/webp',
+            'webp',
+            '2030-07-24T01:01:00Z'
+          );
+          raise exception 'different payload reuse unexpectedly succeeded';
+        exception
+          when sqlstate '23505' then
+            if sqlerrm <> 'IDEMPOTENCY_KEY_REUSED' then
+              raise;
+            end if;
+        end;
+
+        reset role;
+        if (
+          select to_jsonb(idempotency)
+          from public.mutation_idempotency_keys as idempotency
+          where idempotency.result_reference = v_object_id
+        ) is distinct from v_before_idempotency then
+          raise exception 'idempotency authority changed after key reuse';
+        end if;
+
+        if (
+          select to_jsonb(object)
+          from public.recipe_image_objects as object
+          where object.id = v_object_id
+        ) is distinct from v_before_object then
+          raise exception 'object owner, generation, path, or payload changed';
+        end if;
+
+        if (
+          select to_jsonb(counter)
+          from public.image_upload_quota_counters as counter
+          where counter.owner_uuid = '${OWNER_ACTIVE}'
+            and counter.account_generation = 1
+        ) is distinct from v_before_quota then
+          raise exception 'quota authority changed after key reuse';
+        end if;
+      end;
+      $block$;
+
+      rollback;
+      select 'upload-key-reuse-pass';
+    `)).toBe("upload-key-reuse-pass");
   });
 
   it("compensates the exact failed upload once and opens durable cleanup", () => {
