@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdtempSync,
@@ -115,6 +115,56 @@ describe("account session generation scheduler skeleton", () => {
       "production_secret",
       "live_tick_route",
     ]);
+    expect(verification.releaseReadiness).toEqual({
+      ready: false,
+      verified: [
+        "launchd_contract",
+        "local_observability_primitives",
+      ],
+      blockers: [
+        "actual_launchd_install",
+        "production_secret",
+        "power_login_sleep",
+        "live_tick_log_wiring",
+        "external_heartbeat",
+        "external_alert_delivery",
+        "cleanup_target",
+        "next_tick_recovery",
+      ],
+    });
+  });
+
+  it("fails closed when release readiness is required before Manual Only evidence exists", () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        VERIFY_SCRIPT,
+        "--dry-run",
+        "--require-release-ready",
+        "--home-dir",
+        "/Users/tester",
+        "--json",
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      ok: true,
+      releaseReadiness: {
+        ready: false,
+        blockers: expect.arrayContaining([
+          "actual_launchd_install",
+          "production_secret",
+          "live_tick_log_wiring",
+          "external_heartbeat",
+        ]),
+      },
+    });
   });
 
   it("keeps install and uninstall as explicit dry-run-only Manual Only surfaces", () => {

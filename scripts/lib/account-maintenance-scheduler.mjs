@@ -33,6 +33,20 @@ export const ACCOUNT_MAINTENANCE_MANUAL_ONLY = [
   "production_secret",
   "live_tick_route",
 ];
+export const ACCOUNT_MAINTENANCE_RELEASE_VERIFIED = [
+  "launchd_contract",
+  "local_observability_primitives",
+];
+export const ACCOUNT_MAINTENANCE_RELEASE_BLOCKERS = [
+  "actual_launchd_install",
+  "production_secret",
+  "power_login_sleep",
+  "live_tick_log_wiring",
+  "external_heartbeat",
+  "external_alert_delivery",
+  "cleanup_target",
+  "next_tick_recovery",
+];
 
 const TEMPLATE_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -316,6 +330,11 @@ export function buildAccountMaintenanceSchedulerVerification({
       dryRun: true,
       rootDir: normalizedRootDir,
     }),
+    releaseReadiness: {
+      ready: ACCOUNT_MAINTENANCE_RELEASE_BLOCKERS.length === 0,
+      verified: ACCOUNT_MAINTENANCE_RELEASE_VERIFIED,
+      blockers: ACCOUNT_MAINTENANCE_RELEASE_BLOCKERS,
+    },
     errors,
   };
 }

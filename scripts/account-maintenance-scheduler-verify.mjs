@@ -11,6 +11,7 @@ function printUsage() {
       "",
       "Options:",
       "  --dry-run                      Verify the scheduler contract without launchctl",
+      "  --require-release-ready         Exit non-zero until every release gate is verified",
       "  --home-dir <path>              Override HOME used for rendered log paths",
       "  --json                         Print JSON output",
       "  --help                         Show this help text",
@@ -32,6 +33,7 @@ function parseArgs(argv) {
   const options = {
     dryRun: false,
     json: false,
+    requireReleaseReady: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -48,6 +50,10 @@ function parseArgs(argv) {
     }
     if (token === "--json") {
       options.json = true;
+      continue;
+    }
+    if (token === "--require-release-ready") {
+      options.requireReleaseReady = true;
       continue;
     }
     if (token === "--home-dir") {
@@ -86,12 +92,17 @@ function main() {
         `Cadence: ${result.launchd.startIntervalSeconds}s`,
         `Stdout: ${result.launchd.standardOutPath}`,
         `Stderr: ${result.launchd.standardErrorPath}`,
+        `Release ready: ${result.releaseReadiness.ready ? "yes" : "no"}`,
+        `Release blockers: ${result.releaseReadiness.blockers.join(", ") || "none"}`,
         `Manual-only: ${result.manualOnly.join(", ")}`,
       ].join("\n") + "\n",
     );
   }
 
-  if (!result.ok) {
+  if (
+    !result.ok
+    || (options.requireReleaseReady && !result.releaseReadiness.ready)
+  ) {
     process.exit(1);
   }
 }
