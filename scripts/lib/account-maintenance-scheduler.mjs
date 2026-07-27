@@ -33,6 +33,20 @@ export const ACCOUNT_MAINTENANCE_MANUAL_ONLY = [
   "production_secret",
   "live_tick_route",
 ];
+export const ACCOUNT_MAINTENANCE_RELEASE_VERIFIED = [
+  "launchd_contract",
+  "local_observability_primitives",
+];
+export const ACCOUNT_MAINTENANCE_RELEASE_BLOCKERS = [
+  "actual_launchd_install",
+  "production_secret",
+  "power_login_sleep",
+  "live_tick_log_wiring",
+  "external_heartbeat",
+  "external_alert_delivery",
+  "cleanup_target",
+  "next_tick_recovery",
+];
 
 const TEMPLATE_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -66,6 +80,14 @@ function ensureNonNegativeNumber(value, label) {
 function ensurePositiveInteger(value, label) {
   if (!Number.isSafeInteger(value) || value <= 0) {
     throw new Error(`${label} must be a positive safe integer.`);
+  }
+
+  return value;
+}
+
+function ensureBoolean(value, label) {
+  if (typeof value !== "boolean") {
+    throw new Error(`${label} must be a boolean.`);
   }
 
   return value;
@@ -156,6 +178,31 @@ export function recordAccountMaintenanceTickOutcome({
       deadLetterCount,
     }),
   };
+}
+
+export function getAccountMaintenanceVerificationStatus({
+  contractOk,
+  requireReleaseReady,
+  releaseReady,
+}) {
+  const normalizedContractOk = ensureBoolean(contractOk, "contractOk");
+  const normalizedRequireReleaseReady = ensureBoolean(
+    requireReleaseReady,
+    "requireReleaseReady",
+  );
+  const normalizedReleaseReady = ensureBoolean(
+    releaseReady,
+    "releaseReady",
+  );
+
+  if (!normalizedContractOk) {
+    return "fail";
+  }
+  if (normalizedRequireReleaseReady && !normalizedReleaseReady) {
+    return "blocked";
+  }
+
+  return "pass";
 }
 
 export function appendAccountMaintenanceJsonLog({
@@ -316,6 +363,11 @@ export function buildAccountMaintenanceSchedulerVerification({
       dryRun: true,
       rootDir: normalizedRootDir,
     }),
+    releaseReadiness: {
+      ready: ACCOUNT_MAINTENANCE_RELEASE_BLOCKERS.length === 0,
+      verified: ACCOUNT_MAINTENANCE_RELEASE_VERIFIED,
+      blockers: ACCOUNT_MAINTENANCE_RELEASE_BLOCKERS,
+    },
     errors,
   };
 }

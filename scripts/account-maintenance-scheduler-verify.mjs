@@ -2,6 +2,7 @@
 
 import {
   buildAccountMaintenanceSchedulerVerification,
+  getAccountMaintenanceVerificationStatus,
 } from "./lib/account-maintenance-scheduler.mjs";
 
 function printUsage() {
@@ -11,6 +12,7 @@ function printUsage() {
       "",
       "Options:",
       "  --dry-run                      Verify the scheduler contract without launchctl",
+      "  --require-release-ready         Exit non-zero until every release gate is verified",
       "  --home-dir <path>              Override HOME used for rendered log paths",
       "  --json                         Print JSON output",
       "  --help                         Show this help text",
@@ -32,6 +34,7 @@ function parseArgs(argv) {
   const options = {
     dryRun: false,
     json: false,
+    requireReleaseReady: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -48,6 +51,10 @@ function parseArgs(argv) {
     }
     if (token === "--json") {
       options.json = true;
+      continue;
+    }
+    if (token === "--require-release-ready") {
+      options.requireReleaseReady = true;
       continue;
     }
     if (token === "--home-dir") {
@@ -74,24 +81,32 @@ function main() {
     homeDir: options.homeDir ?? process.env.HOME,
     dryRun: options.dryRun,
   });
+  const status = getAccountMaintenanceVerificationStatus({
+    contractOk: result.ok,
+    requireReleaseReady: options.requireReleaseReady,
+    releaseReady: result.releaseReadiness.ready,
+  });
 
   if (options.json) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } else {
     process.stdout.write(
       [
-        `Account maintenance scheduler verify: ${result.ok ? "pass" : "fail"}`,
+        `Account maintenance scheduler verify: ${status}`,
         "",
+        `Contract: ${result.ok ? "pass" : "fail"}`,
         `Label: ${result.launchd.label}`,
         `Cadence: ${result.launchd.startIntervalSeconds}s`,
         `Stdout: ${result.launchd.standardOutPath}`,
         `Stderr: ${result.launchd.standardErrorPath}`,
+        `Release ready: ${result.releaseReadiness.ready ? "yes" : "no"}`,
+        `Release blockers: ${result.releaseReadiness.blockers.join(", ") || "none"}`,
         `Manual-only: ${result.manualOnly.join(", ")}`,
       ].join("\n") + "\n",
     );
   }
 
-  if (!result.ok) {
+  if (status !== "pass") {
     process.exit(1);
   }
 }
