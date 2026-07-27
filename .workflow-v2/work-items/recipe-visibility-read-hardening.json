@@ -78,7 +78,7 @@
       "BRANCH_NAME=docs/recipe-visibility-read-hardening pnpm validate:workpack -- --slice recipe-visibility-read-hardening",
       "node scripts/validate-automation-spec.mjs --slice recipe-visibility-read-hardening",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/recipe-visibility-read-hardening.test.ts tests/recipe-visibility-routes.test.ts tests/recipe-visibility-security.test.ts tests/recipe-image-registry.test.ts tests/recipe-image-lifecycle.test.ts tests/recipe-visibility-account-delete.test.ts",
+      "pnpm test:recipe-visibility-read-hardening:focused",
       "pnpm test:recipe-visibility-read-hardening:postgres",
       "pnpm verify:backend",
       "pnpm account-maintenance:scheduler:verify",
