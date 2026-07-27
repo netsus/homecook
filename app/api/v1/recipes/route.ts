@@ -236,6 +236,8 @@ interface ParsedManualRecipeCreate {
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MANAGED_RECIPE_IMAGE_STORAGE_PATH =
+  /^\/storage\/v1\/object\/(?:(?:authenticated|public|sign)\/)?(?:recipe-images|recipe-images-private)\//u;
 const INITIAL_IMAGE_CLEANUP_GENERATION = 0;
 
 function isServiceOwnedRecipeImageUrl(value: string) {
@@ -247,10 +249,15 @@ function isServiceOwnedRecipeImageUrl(value: string) {
   try {
     const expectedOrigin = new URL(configuredUrl).origin;
     const candidate = new URL(value);
-    const pathname = decodeURIComponent(candidate.pathname);
-    return candidate.origin === expectedOrigin
-      && /^\/storage\/v1\/object\/(?:(?:authenticated|public|sign)\/)?(?:recipe-images|recipe-images-private)\//u
-        .test(pathname);
+    if (candidate.origin !== expectedOrigin) {
+      return false;
+    }
+
+    try {
+      return MANAGED_RECIPE_IMAGE_STORAGE_PATH.test(decodeURIComponent(candidate.pathname));
+    } catch {
+      return MANAGED_RECIPE_IMAGE_STORAGE_PATH.test(candidate.pathname);
+    }
   } catch {
     return false;
   }

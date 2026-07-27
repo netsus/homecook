@@ -2500,6 +2500,29 @@ describe("recipe API contracts", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("rejects a malformed same-origin Storage object URL before decoding can widen access", async () => {
+    const { rpc } = setupManagedRecipeCreate();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody({
+          thumbnail_url:
+            "https://project.supabase.co/storage/v1/object/recipe-images-private/user-1/%E0%A4%A",
+        })),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body.error.code).toBe("MANAGED_IMAGE_REFERENCE_REQUIRED");
+    expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("maps managed attach authority failures to the official API error", async () => {
     setupManagedRecipeCreate({
       data: null,

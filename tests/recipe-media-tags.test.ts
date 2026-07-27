@@ -118,6 +118,7 @@ describe("recipe media and tag helpers", () => {
       `https://project.supabase.co/storage/v1/object/sign/recipe-images/user-1/${uuid}.webp`,
       `https://project.supabase.co/storage/v1/object/public/recipe-images/user-2/${uuid}.webp`,
       `https://project.supabase.co/storage/v1/object/public/recipe-images/user-1/${uuid}.webp?token=abc`,
+      "https://project.supabase.co/storage/v1/object/public/recipe-images/user-1/%E0%A4%A",
     ];
 
     for (const thumbnailUrl of cases) {
