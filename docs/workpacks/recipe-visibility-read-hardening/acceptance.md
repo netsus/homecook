@@ -46,7 +46,7 @@
 - [x] permanent terminal tombstone detects a later object and reopens cleanup without key/object identity loss <!-- omo:id=accept-image-terminal-late-object;stage=2;scope=backend;review=3,6 -->
 - [x] terminal tombstone scanner claims at most 50 rows per tick in `(next_terminal_scan_at, id)` order with `SKIP LOCKED`, persists cursor progress, scans every 5 minutes for the first 24 hours and every 24 hours thereafter, and drains a 151-row fixture with starvation 0 <!-- omo:id=accept-image-terminal-scan-fairness;stage=2;scope=backend;review=3,6 -->
 - [x] lifecycle/watermark/registry/image-idempotency compact identity is permanent; cleanup terminal + at least 90 days + terminal recheck only compacts verbose detail while preserving key/payload/result/object reference so 91-day same-key replay returns the original durable result <!-- omo:id=accept-image-compact-retention-replay;stage=2;scope=backend;review=3,6 -->
-- [ ] lifecycle complete requires contiguous required generations and zero nonterminal/dead-letter registry/outbox rows <!-- omo:id=accept-image-contiguous-terminal;stage=2;scope=backend;review=3,6 -->
+- [x] lifecycle complete requires contiguous required generations and zero nonterminal/dead-letter registry/outbox rows <!-- omo:id=accept-image-contiguous-terminal;stage=2;scope=backend;review=3,6 -->
 
 ## API / Error / Compatibility
 
