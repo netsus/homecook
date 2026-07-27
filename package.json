@@ -34,6 +34,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "account-maintenance:scheduler:install": "node scripts/account-maintenance-scheduler-install.mjs",
+    "account-maintenance:secret:rotate": "node scripts/account-maintenance-secret-rotate.mjs",
     "account-maintenance:scheduler:uninstall": "node scripts/account-maintenance-scheduler-uninstall.mjs",
     "account-maintenance:scheduler:verify": "node scripts/account-maintenance-scheduler-verify.mjs",
     "account-maintenance:scheduler:verify-release": "node scripts/account-maintenance-scheduler-verify.mjs --dry-run --require-release-ready",

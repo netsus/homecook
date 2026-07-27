@@ -18,6 +18,7 @@ export const ACCOUNT_MAINTENANCE_OLDEST_PENDING_ALERT_SECONDS = 900;
 export const ACCOUNT_MAINTENANCE_LOG_ROTATION_MAX_BYTES = 10 * 1024 * 1024;
 export const ACCOUNT_MAINTENANCE_LOG_ROTATION_MAX_FILES = 5;
 export const ACCOUNT_MAINTENANCE_SECRET_ENV = "HOMECOOK_MAINTENANCE_WORKER_SECRET";
+export const ACCOUNT_MAINTENANCE_TICK_URL_ENV = "HOMECOOK_MAINTENANCE_TICK_URL";
 export const ACCOUNT_MAINTENANCE_TICK_ROUTE = "/internal/account-maintenance/tick";
 export const ACCOUNT_MAINTENANCE_PHASES = [
   "scanner",
@@ -254,6 +255,7 @@ export function renderAccountMaintenanceLaunchdPlist({
   rootDir = process.cwd(),
   homeDir = process.env.HOME ?? "",
   nodeBin = process.execPath,
+  tickUrl = "",
 } = {}) {
   const normalizedRootDir = resolve(ensureNonEmptyString(rootDir, "rootDir"));
   const normalizedHomeDir = ensureNonEmptyString(homeDir, "homeDir");
@@ -265,6 +267,7 @@ export function renderAccountMaintenanceLaunchdPlist({
     .replaceAll("__ROOT_DIR__", normalizedRootDir)
     .replaceAll("__NODE_BIN__", normalizedNodeBin)
     .replaceAll("__PATH__", buildPathEnv(normalizedNodeBin))
+    .replaceAll("__TICK_URL__", tickUrl)
     .replaceAll("__STDOUT_LOG__", logPaths.stdout)
     .replaceAll("__STDERR_LOG__", logPaths.stderr);
 }

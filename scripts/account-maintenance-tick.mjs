@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 
 import {
+  appendAccountMaintenanceJsonLog,
   buildAccountMaintenanceTickResult,
+  getAccountMaintenanceLogPaths,
 } from "./lib/account-maintenance-scheduler.mjs";
+import { runAccountMaintenanceLiveTick } from "./lib/account-maintenance-live.mjs";
 
 function printUsage() {
   process.stdout.write(
@@ -12,6 +15,7 @@ function printUsage() {
       "Options:",
       "  --dry-run                      Print the feature-off maintenance plan",
       "  --mode <dry-run|launchd>       Reserved runner mode (default: dry-run)",
+      "  --verify-wrong-secret          Run the one-time Manual Only 401 proof",
       "  --json                         Print JSON output",
       "  --help                         Show this help text",
       "",
@@ -33,6 +37,7 @@ function parseArgs(argv) {
     dryRun: false,
     json: false,
     mode: "dry-run",
+    verifyWrongSecret: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -51,6 +56,10 @@ function parseArgs(argv) {
       options.json = true;
       continue;
     }
+    if (token === "--verify-wrong-secret") {
+      options.verifyWrongSecret = true;
+      continue;
+    }
     if (token === "--mode") {
       options.mode = requireValue(argv, index, token);
       index += 1;
@@ -63,7 +72,7 @@ function parseArgs(argv) {
   return options;
 }
 
-function main() {
+async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     printUsage();
@@ -72,9 +81,34 @@ function main() {
 
   const dryRun = options.dryRun || options.mode !== "launchd";
   if (!dryRun) {
-    throw new Error(
-      "Live account-maintenance ticks remain manual-only until the #3 joint activation gate. Use --dry-run.",
-    );
+    let result;
+    try {
+      result = await runAccountMaintenanceLiveTick({
+        tickUrl: process.env.HOMECOOK_MAINTENANCE_TICK_URL,
+        verifyWrongSecret: options.verifyWrongSecret,
+      });
+      appendAccountMaintenanceJsonLog({
+        logPath: getAccountMaintenanceLogPaths().stdout,
+        entry: result,
+      });
+    } catch {
+      appendAccountMaintenanceJsonLog({
+        logPath: getAccountMaintenanceLogPaths().stdout,
+        entry: {
+          event: "account_maintenance_tick",
+          timestamp: new Date().toISOString(),
+          ok: false,
+          activationAllowed: false,
+          externalHeartbeatConfigured: false,
+          externalAlertConfigured: false,
+        },
+      });
+      throw new Error("Account maintenance live tick failed closed.");
+    }
+    if (options.json) {
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+    }
+    return;
   }
 
   const result = buildAccountMaintenanceTickResult({
@@ -101,7 +135,7 @@ function main() {
 }
 
 try {
-  main();
+  await main();
 } catch (error) {
   process.stderr.write(`${error.message}\n`);
   process.exit(1);
