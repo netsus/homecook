@@ -42,16 +42,20 @@ describe("account session generation scheduler skeleton", () => {
 
     expect(loaded).toBe(secret);
     expect(execFile).toHaveBeenCalledWith(
-      "/usr/bin/security",
+      "/usr/bin/swift",
       [
-        "find-generic-password",
-        "-s",
-        ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE,
-        "-a",
-        ACCOUNT_MAINTENANCE_KEYCHAIN_ACCOUNT,
-        "-w",
+        "-e",
+        expect.stringContaining("SecItemCopyMatching"),
       ],
-      expect.objectContaining({ encoding: "utf8" }),
+      expect.objectContaining({
+        encoding: "utf8",
+        env: expect.objectContaining({
+          HOMECOOK_KEYCHAIN_SERVICE:
+            ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE,
+          HOMECOOK_KEYCHAIN_ACCOUNT:
+            ACCOUNT_MAINTENANCE_KEYCHAIN_ACCOUNT,
+        }),
+      }),
     );
     expect(JSON.stringify(execFile.mock.calls)).not.toContain(secret);
   });
@@ -302,19 +306,25 @@ describe("account session generation scheduler skeleton", () => {
       file: string;
       args: string[];
       input?: string;
+      env?: Record<string, string>;
     }> = [];
     const run = vi.fn((
       file: string,
       args: string[],
-      options: { input?: string } = {},
+      options: { input?: string; env?: Record<string, string> } = {},
     ) => {
-      calls.push({ file, args, input: options.input });
+      calls.push({
+        file,
+        args,
+        input: options.input,
+        env: options.env,
+      });
       if (file === "git") {
         return { status: 0, stdout: `${exactCommit}\n`, stderr: "" };
       }
       if (
-        file === "/usr/bin/security"
-        && args[0] === "find-generic-password"
+        file === "/usr/bin/swift"
+        && args[1]?.includes("SecItemCopyMatching")
       ) {
         return { status: 44, stdout: "", stderr: "" };
       }
@@ -342,8 +352,27 @@ describe("account session generation scheduler skeleton", () => {
     });
     expect(calls.some(({ args }) => args.includes(secret))).toBe(false);
     expect(
-      calls.filter(({ input }) => input === `${secret}\n`),
+      calls.filter(({ input }) => input === secret),
     ).toHaveLength(3);
+    expect(
+      calls.some(({ file, args }) =>
+        file === "/usr/bin/security" && args[0] === "add-generic-password"
+      ),
+    ).toBe(false);
+    expect(
+      calls.filter(({ file, args }) =>
+        file === "/usr/bin/swift"
+        && args[1]?.includes("SecItemUpdate")
+      ),
+    ).toHaveLength(2);
+    expect(
+      calls
+        .filter(({ file, args }) =>
+          file === "/usr/bin/swift"
+          && args[1]?.includes("SecItemUpdate")
+        )
+        .every(({ args }) => args[1].includes("SecItemAdd")),
+    ).toBe(true);
     expect(JSON.stringify(result)).not.toContain(secret);
   });
 
@@ -356,23 +385,29 @@ describe("account session generation scheduler skeleton", () => {
     const run = vi.fn((
       file: string,
       args: string[],
-      options: { input?: string } = {},
+      options: {
+        input?: string;
+        env?: Record<string, string>;
+      } = {},
     ) => {
       if (file === "git") {
         return { status: 0, stdout: `${exactCommit}\n`, stderr: "" };
       }
-      if (file === "/usr/bin/security" && args[0] === "find-generic-password") {
+      if (
+        file === "/usr/bin/swift"
+        && args[1]?.includes("SecItemCopyMatching")
+      ) {
         return pendingSecret
-          ? { status: 0, stdout: `${pendingSecret}\n`, stderr: "" }
+          ? { status: 0, stdout: pendingSecret, stderr: "" }
           : { status: 44, stdout: "", stderr: "" };
       }
       if (
-        file === "/usr/bin/security"
-        && args[0] === "add-generic-password"
+        file === "/usr/bin/swift"
+        && args[1]?.includes("SecItemUpdate")
       ) {
-        const account = args[args.indexOf("-a") + 1];
+        const account = options.env?.HOMECOOK_KEYCHAIN_ACCOUNT ?? "";
         if (account.endsWith("_PENDING_ROTATION")) {
-          pendingSecret = options.input?.trim() ?? null;
+          pendingSecret = options.input ?? null;
           return { status: 0, stdout: "", stderr: "" };
         }
         if (failActivePromotion) {
@@ -381,10 +416,13 @@ describe("account session generation scheduler skeleton", () => {
         }
       }
       if (
-        file === "/usr/bin/security"
-        && args[0] === "delete-generic-password"
+        file === "/usr/bin/swift"
+        && args[1]?.includes("SecItemDelete")
       ) {
-        pendingSecret = null;
+        const account = options.env?.HOMECOOK_KEYCHAIN_ACCOUNT ?? "";
+        if (account.endsWith("_PENDING_ROTATION")) {
+          pendingSecret = null;
+        }
       }
       return { status: 0, stdout: "", stderr: "" };
     });
@@ -417,7 +455,10 @@ describe("account session generation scheduler skeleton", () => {
       if (file === "git") {
         return { status: 0, stdout: `${exactCommit}\n`, stderr: "" };
       }
-      if (file === "/usr/bin/security" && args[0] === "find-generic-password") {
+      if (
+        file === "/usr/bin/swift"
+        && args[1]?.includes("SecItemCopyMatching")
+      ) {
         return { status: 1, stdout: "", stderr: "" };
       }
       return { status: 0, stdout: "", stderr: "" };
