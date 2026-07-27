@@ -1406,6 +1406,9 @@ describe.runIf(enabled)("account session generation isolated PostgreSQL foundati
     const deleteKey = "72000000-0000-4000-8000-000000000002";
     const activatePayloadHash = "3".repeat(64);
     const deletePayloadHash = "4".repeat(64);
+    const systemRecipe = "73000000-0000-4000-8000-000000000001";
+    const activateRecipe = "73000000-0000-4000-8000-000000000002";
+    const recoveryTag = "74000000-0000-4000-8000-000000000001";
     const authDigest = populationDigest([
       authPopulationLine(activateOwner, identityEpoch),
       authPopulationLine(deleteOwner, identityEpoch),
@@ -1416,6 +1419,27 @@ describe.runIf(enabled)("account session generation isolated PostgreSQL foundati
       begin;
       create table public.recipe_image_objects (id uuid primary key);
       create table public.storage_object_deletion_outbox (id uuid primary key);
+      insert into public.recipes (
+        id, title, source_type, created_by, visibility
+      ) values
+        ('${systemRecipe}', 'system recovery control', 'system', null, 'public'),
+        ('${activateRecipe}', 'quarantine recovery target', 'manual', '${activateOwner}', 'public');
+      insert into public.recipe_sources (id, recipe_id) values
+        (gen_random_uuid(), '${systemRecipe}'),
+        (gen_random_uuid(), '${activateRecipe}');
+      insert into public.tags (
+        id, normalized_key, label, kind, is_system, theme_eligible
+      ) values (
+        '${recoveryTag}', 'recovery', 'Recovery', 'semantic', true, true
+      );
+      insert into public.recipe_tags (
+        recipe_id, tag_id, visibility, review_status
+      ) values
+        ('${systemRecipe}', '${recoveryTag}', 'public', 'approved'),
+        ('${activateRecipe}', '${recoveryTag}', 'public', 'approved');
+      select 'stored-before:' ||
+        md5(string_agg(to_jsonb(recipe)::text, '|' order by recipe.id))
+      from public.recipes as recipe;
       insert into auth.users (
         id, created_at, email, raw_app_meta_data, raw_user_meta_data
       ) values
@@ -1457,6 +1481,30 @@ describe.runIf(enabled)("account session generation isolated PostgreSQL foundati
         0, '${emptyDigest}',
         2, '${personalDigest}'
       );
+      reset role;
+      set local role anon;
+      select 'visibility-before:' || concat_ws(
+        ':',
+        (
+          select count(*) from public.recipes
+          where id = '${activateRecipe}'
+        ),
+        (
+          select count(*) from public.recipes
+          where id = '${systemRecipe}'
+        ),
+        (
+          select count(*) from public.recipe_sources
+          where recipe_id = '${activateRecipe}'
+        ),
+        (
+          select count(*)
+          from public.find_recipe_ids_by_public_tags(null, 'recovery')
+          where recipe_id = '${activateRecipe}'
+        )
+      );
+      reset role;
+      set role service_role;
       select public.resolve_account_cutover_quarantine(
         '${activateOwner}', '${identityEpoch}', '${activateSessionHash}', 1,
         '${activateKey}', '${activatePayloadHash}', 'activate', '복구 사용자'
@@ -1484,6 +1532,31 @@ describe.runIf(enabled)("account session generation isolated PostgreSQL foundati
         '${deleteKey}', '${deletePayloadHash}', 'delete', null
       );
       reset role;
+      set local role anon;
+      select 'visibility-after:' || concat_ws(
+        ':',
+        (
+          select count(*) from public.recipes
+          where id = '${activateRecipe}'
+        ),
+        (
+          select count(*) from public.recipes
+          where id = '${systemRecipe}'
+        ),
+        (
+          select count(*) from public.recipe_sources
+          where recipe_id = '${activateRecipe}'
+        ),
+        (
+          select count(*)
+          from public.find_recipe_ids_by_public_tags(null, 'recovery')
+          where recipe_id = '${activateRecipe}'
+        )
+      );
+      reset role;
+      select 'stored-after:' ||
+        md5(string_agg(to_jsonb(recipe)::text, '|' order by recipe.id))
+      from public.recipes as recipe;
       select concat_ws(
         ':',
         (
@@ -1509,6 +1582,16 @@ describe.runIf(enabled)("account session generation isolated PostgreSQL foundati
       rollback;
     `);
     expect(result.status, result.stderr).toBe(0);
+    const outputLines = result.stdout.trim().split("\n");
+    expect(outputLines).toContain("visibility-before:0:1:0:0");
+    expect(outputLines).toContain("visibility-after:1:1:1:1");
+    expect(
+      outputLines.find((line) => line.startsWith("stored-after:")),
+    ).toBe(
+      outputLines
+        .find((line) => line.startsWith("stored-before:"))
+        ?.replace("stored-before:", "stored-after:"),
+    );
     expect(result.stdout).toContain(
       "active:복구 사용자:1:cleanup_pending:pending",
     );
