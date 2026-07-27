@@ -42,7 +42,7 @@ interface CandidateDrainInput extends DrainInput {
   candidates: AuthDeletionCandidate[];
 }
 
-async function drainRecipeImageAuthDeletionCandidates({
+export async function runRecipeImageAuthDeletionCandidateDrain({
   candidates,
   createLeaseToken = randomUUID,
   dbClient,
@@ -161,7 +161,7 @@ export async function runRecipeImageAuthDeletionDrain(
     now,
   });
 
-  return drainRecipeImageAuthDeletionCandidates({
+  return runRecipeImageAuthDeletionCandidateDrain({
     ...input,
     candidates,
     now,
@@ -186,7 +186,7 @@ runRecipeImageExpectedOwnerEligibleAuthDeletionDrain(
       dbClient,
       now,
     });
-    const result = await drainRecipeImageAuthDeletionCandidates({
+    const result = await runRecipeImageAuthDeletionCandidateDrain({
       ...input,
       candidates: eligibleCandidates,
       now,
