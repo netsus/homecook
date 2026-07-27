@@ -3,11 +3,75 @@ import { spawnSync } from "node:child_process";
 
 import {
   ACCOUNT_MAINTENANCE_KEYCHAIN_ACCOUNT,
+  ACCOUNT_MAINTENANCE_KEYCHAIN_READ_SWIFT,
   ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE,
 } from "./account-maintenance-live.mjs";
 
 const PENDING_KEYCHAIN_ACCOUNT =
   `${ACCOUNT_MAINTENANCE_KEYCHAIN_ACCOUNT}_PENDING_ROTATION`;
+
+const KEYCHAIN_WRITE_SWIFT = `
+import Darwin
+import Foundation
+import Security
+
+guard
+  let service = ProcessInfo.processInfo.environment["HOMECOOK_KEYCHAIN_SERVICE"],
+  let account = ProcessInfo.processInfo.environment["HOMECOOK_KEYCHAIN_ACCOUNT"]
+else {
+  exit(64)
+}
+
+let secret = FileHandle.standardInput.readDataToEndOfFile()
+guard secret.count >= 43 else {
+  exit(65)
+}
+
+let query: [String: Any] = [
+  kSecClass as String: kSecClassGenericPassword,
+  kSecAttrService as String: service,
+  kSecAttrAccount as String: account,
+]
+let attributes: [String: Any] = [
+  kSecValueData as String: secret,
+]
+
+var status = SecItemUpdate(
+  query as CFDictionary,
+  attributes as CFDictionary
+)
+if status == errSecItemNotFound {
+  var item = query
+  item[kSecValueData as String] = secret
+  status = SecItemAdd(item as CFDictionary, nil)
+}
+guard status == errSecSuccess else {
+  exit(1)
+}
+`;
+
+const KEYCHAIN_DELETE_SWIFT = `
+import Darwin
+import Foundation
+import Security
+
+guard
+  let service = ProcessInfo.processInfo.environment["HOMECOOK_KEYCHAIN_SERVICE"],
+  let account = ProcessInfo.processInfo.environment["HOMECOOK_KEYCHAIN_ACCOUNT"]
+else {
+  exit(64)
+}
+
+let query: [String: Any] = [
+  kSecClass as String: kSecClassGenericPassword,
+  kSecAttrService as String: service,
+  kSecAttrAccount as String: account,
+]
+let status = SecItemDelete(query as CFDictionary)
+guard status == errSecSuccess || status == errSecItemNotFound else {
+  exit(1)
+}
+`;
 
 function requireSuccess(result, operation) {
   if (result?.status !== 0) {
@@ -31,6 +95,7 @@ function defaultRun(file, args, options = {}) {
     stdio: ["pipe", "pipe", "pipe"],
     env: {
       ...process.env,
+      ...options.env,
       NO_COLOR: "1",
     },
   });
@@ -39,17 +104,16 @@ function defaultRun(file, args, options = {}) {
 function writeKeychainSecret({ account, secret, run }) {
   requireSuccess(
     run(
-      "/usr/bin/security",
-      [
-        "add-generic-password",
-        "-U",
-        "-s",
-        ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE,
-        "-a",
-        account,
-        "-w",
-      ],
-      { input: `${secret}\n` },
+      "/usr/bin/swift",
+      ["-e", KEYCHAIN_WRITE_SWIFT],
+      {
+        input: secret,
+        env: {
+          HOMECOOK_KEYCHAIN_SERVICE:
+            ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE,
+          HOMECOOK_KEYCHAIN_ACCOUNT: account,
+        },
+      },
     ),
     "Keychain update",
   );
@@ -57,15 +121,15 @@ function writeKeychainSecret({ account, secret, run }) {
 
 function readPendingKeychainSecret(run) {
   const result = run(
-    "/usr/bin/security",
-    [
-      "find-generic-password",
-      "-s",
-      ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE,
-      "-a",
-      PENDING_KEYCHAIN_ACCOUNT,
-      "-w",
-    ],
+    "/usr/bin/swift",
+    ["-e", ACCOUNT_MAINTENANCE_KEYCHAIN_READ_SWIFT],
+    {
+      env: {
+        HOMECOOK_KEYCHAIN_SERVICE:
+          ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE,
+        HOMECOOK_KEYCHAIN_ACCOUNT: PENDING_KEYCHAIN_ACCOUNT,
+      },
+    },
   );
   if (result?.status === 44) {
     return null;
@@ -90,6 +154,7 @@ function readPendingKeychainSecret(run) {
  *   run?: (file: string, args: string[], options?: {
  *     cwd?: string,
  *     input?: string,
+ *     env?: Record<string, string>,
  *   }) => { status: number | null, stdout?: string, stderr?: string },
  * }} options
  */
@@ -144,7 +209,7 @@ export function rotateAccountMaintenanceSecret({
     "Vercel project preflight",
   );
   requireSuccess(
-    run("/usr/bin/security", ["help", "add-generic-password"]),
+    run("/usr/bin/swift", ["--version"]),
     "Keychain capability preflight",
   );
 
@@ -177,7 +242,7 @@ export function rotateAccountMaintenanceSecret({
         vercelCwd,
         "--no-color",
       ],
-      { cwd: vercelCwd, input: `${secret}\n` },
+      { cwd: vercelCwd, input: secret },
     ),
     "Vercel production update",
   );
@@ -188,14 +253,15 @@ export function rotateAccountMaintenanceSecret({
   });
   requireSuccess(
     run(
-      "/usr/bin/security",
-      [
-        "delete-generic-password",
-        "-s",
-        ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE,
-        "-a",
-        PENDING_KEYCHAIN_ACCOUNT,
-      ],
+      "/usr/bin/swift",
+      ["-e", KEYCHAIN_DELETE_SWIFT],
+      {
+        env: {
+          HOMECOOK_KEYCHAIN_SERVICE:
+            ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE,
+          HOMECOOK_KEYCHAIN_ACCOUNT: PENDING_KEYCHAIN_ACCOUNT,
+        },
+      },
     ),
     "Keychain rotation cleanup",
   );

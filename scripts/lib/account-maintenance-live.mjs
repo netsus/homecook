@@ -5,6 +5,39 @@ export const ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE =
   "com.homecook.account-maintenance";
 export const ACCOUNT_MAINTENANCE_KEYCHAIN_ACCOUNT =
   "HOMECOOK_MAINTENANCE_WORKER_SECRET";
+export const ACCOUNT_MAINTENANCE_KEYCHAIN_READ_SWIFT = `
+import Darwin
+import Foundation
+import Security
+
+guard
+  let service = ProcessInfo.processInfo.environment["HOMECOOK_KEYCHAIN_SERVICE"],
+  let account = ProcessInfo.processInfo.environment["HOMECOOK_KEYCHAIN_ACCOUNT"]
+else {
+  exit(64)
+}
+
+let query: [String: Any] = [
+  kSecClass as String: kSecClassGenericPassword,
+  kSecAttrService as String: service,
+  kSecAttrAccount as String: account,
+  kSecReturnData as String: true,
+  kSecMatchLimit as String: kSecMatchLimitOne,
+]
+var result: CFTypeRef?
+let status = SecItemCopyMatching(query as CFDictionary, &result)
+if status == errSecItemNotFound {
+  exit(44)
+}
+guard
+  status == errSecSuccess,
+  let secret = result as? Data,
+  secret.count >= 43
+else {
+  exit(65)
+}
+FileHandle.standardOutput.write(secret)
+`;
 export const ACCOUNT_MAINTENANCE_ALLOWED_TICK_HOSTS = Object.freeze([
   "homecook-flame.vercel.app",
   "homecook-jipbap.vercel.app",
@@ -25,17 +58,17 @@ export function loadAccountMaintenanceSecretFromKeychain({
   let secret;
   try {
     secret = execFile(
-      "/usr/bin/security",
-      [
-        "find-generic-password",
-        "-s",
-        ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE,
-        "-a",
-        ACCOUNT_MAINTENANCE_KEYCHAIN_ACCOUNT,
-        "-w",
-      ],
+      "/usr/bin/swift",
+      ["-e", ACCOUNT_MAINTENANCE_KEYCHAIN_READ_SWIFT],
       {
         encoding: "utf8",
+        env: {
+          ...process.env,
+          HOMECOOK_KEYCHAIN_SERVICE:
+            ACCOUNT_MAINTENANCE_KEYCHAIN_SERVICE,
+          HOMECOOK_KEYCHAIN_ACCOUNT:
+            ACCOUNT_MAINTENANCE_KEYCHAIN_ACCOUNT,
+        },
         stdio: ["ignore", "pipe", "ignore"],
       },
     );
