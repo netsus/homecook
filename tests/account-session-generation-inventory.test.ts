@@ -104,6 +104,28 @@ describe("account session generation inventory", () => {
         expected_generation: "not_applicable",
         activation_phase: "always",
       }),
+      expect.objectContaining({
+        kind: "rpc",
+        operation: "call",
+        target: "prepare_recipe_image_legacy_visibility_migration",
+        source_file:
+          "lib/server/recipe-image-legacy-visibility-copy.ts",
+        persists_personal_state: false,
+        guard_mode: "not_applicable",
+        expected_generation: "not_applicable",
+        activation_phase: "always",
+      }),
+      expect.objectContaining({
+        kind: "rpc",
+        operation: "call",
+        target: "finalize_recipe_image_legacy_visibility_target",
+        source_file:
+          "lib/server/recipe-image-legacy-visibility-copy.ts",
+        persists_personal_state: false,
+        guard_mode: "not_applicable",
+        expected_generation: "not_applicable",
+        activation_phase: "always",
+      }),
     ]));
     for (const entry of [
       ...inventory.route_inventory,

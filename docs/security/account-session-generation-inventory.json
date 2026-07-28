@@ -1781,6 +1781,34 @@
       "activation_phase": "always"
     },
     {
+      "key": "rpc|lib/server/recipe-image-legacy-visibility-copy.ts|finalize_recipe_image_legacy_visibility_target|1",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "finalize_recipe_image_legacy_visibility_target",
+      "line": 329,
+      "source_file": "lib/server/recipe-image-legacy-visibility-copy.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
+      "key": "rpc|lib/server/recipe-image-legacy-visibility-copy.ts|prepare_recipe_image_legacy_visibility_migration|2",
+      "kind": "rpc",
+      "operation": "call",
+      "target": "prepare_recipe_image_legacy_visibility_migration",
+      "line": 368,
+      "source_file": "lib/server/recipe-image-legacy-visibility-copy.ts",
+      "route": null,
+      "owner_scope": "system",
+      "persists_personal_state": false,
+      "guard_mode": "not_applicable",
+      "expected_generation": "not_applicable",
+      "activation_phase": "always"
+    },
+    {
       "key": "rpc|lib/server/recipe-image-lifecycle-completion.ts|complete_recipe_image_account_lifecycle|1",
       "kind": "rpc",
       "operation": "call",
@@ -1930,6 +1958,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-28T09:01:42.992Z",
-  "checksum": "5f04c0e4a158158bdcd4aa5201177510bea784b3fa0c6cf22db2761798461b48"
+  "generated_at": "2026-07-28T10:23:54.033Z",
+  "checksum": "1ba6834911c38053c886ffa3c66ad9b617f50ecb3b33d908c586633a77523533"
 }
