@@ -9,6 +9,8 @@ const ensureUserBootstrapState = vi.fn();
 const recalculateRecipeNutritionSnapshot = vi.fn();
 const readAccountGenerationCapability = vi.fn();
 const readVerifiedAccountGenerationSession = vi.fn();
+const readRecipeImageProjection = vi.fn();
+const resolveRecipeImageReadUrl = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
   if (error instanceof Error) {
     return `formatted: ${error.message}`;
@@ -34,6 +36,11 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 
 vi.mock("@/lib/server/recipe-nutrition-service", () => ({
   recalculateRecipeNutritionSnapshot,
+}));
+
+vi.mock("@/lib/server/recipe-image-read", () => ({
+  readRecipeImageProjection,
+  resolveRecipeImageReadUrl,
 }));
 
 vi.mock("@/app/api/v1/users/me/_account-generation", () => ({
@@ -191,6 +198,8 @@ describe("recipe API contracts", () => {
     recalculateRecipeNutritionSnapshot.mockReset();
     readAccountGenerationCapability.mockReset();
     readVerifiedAccountGenerationSession.mockReset();
+    readRecipeImageProjection.mockReset();
+    resolveRecipeImageReadUrl.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
     hasSupabasePublicEnv.mockReturnValue(true);
@@ -206,6 +215,18 @@ describe("recipe API contracts", () => {
       revision: 3,
       state: "legacy",
     });
+    readRecipeImageProjection.mockResolvedValue({
+      recipe_id: "recipe-1",
+      legacy_thumbnail_url: null,
+      image_object_id: null,
+      bucket_id: null,
+      object_path: null,
+      visibility: null,
+      state: null,
+      reference_type: null,
+    });
+    resolveRecipeImageReadUrl.mockResolvedValue(null);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
     delete process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK;
   });
 
@@ -260,6 +281,7 @@ describe("recipe API contracts", () => {
         ],
       },
     });
+    expect(readRecipeImageProjection).not.toHaveBeenCalled();
   });
 
   it("hydrates authenticated recipe list cards with saved book status", async () => {
@@ -1570,6 +1592,7 @@ describe("recipe API contracts", () => {
         fields: [],
       },
     });
+    expect(readRecipeImageProjection).not.toHaveBeenCalled();
   });
 
   it("awaits the recipe detail view-count persistence when service role is available", async () => {
@@ -1613,6 +1636,9 @@ describe("recipe API contracts", () => {
       select: vi.fn(() => recipeReadQuery),
     };
     const rpc = vi.fn(() => viewCountRpcQuery);
+    const managedReadUrl =
+      "https://project.supabase.co/storage/v1/object/sign/recipe-images-private/managed?token=short";
+    resolveRecipeImageReadUrl.mockResolvedValueOnce(managedReadUrl);
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -1651,6 +1677,13 @@ describe("recipe API contracts", () => {
     });
     expect(viewCountRpcQuery.maybeSingle).toHaveBeenCalled();
     expect(body.data.view_count).toBe(11);
+    expect(readRecipeImageProjection).toHaveBeenCalledWith({
+      client: expect.any(Object),
+      recipeId: "recipe-1",
+    });
+    expect(recipeReadQuery.maybeSingle.mock.invocationCallOrder[0])
+      .toBeLessThan(readRecipeImageProjection.mock.invocationCallOrder[0]);
+    expect(body.data.thumbnail_url).toBe(managedReadUrl);
   });
 
   it("uses actual planner meal count for recipe detail plan_count", async () => {

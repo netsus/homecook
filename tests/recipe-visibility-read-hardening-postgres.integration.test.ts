@@ -55,6 +55,8 @@ const IMAGE_COMPACT_RETENTION_MIGRATION_PATH =
   "supabase/migrations/20260724310000_recipe_image_compact_retention_authority.sql";
 const IMAGE_LEGACY_REPORT_ONLY_MIGRATION_PATH =
   "supabase/migrations/20260725160000_recipe_image_legacy_report_only.sql";
+const IMAGE_READ_PROJECTION_MIGRATION_PATH =
+  "supabase/migrations/20260725170000_recipe_image_read_projection_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -158,6 +160,10 @@ const IMAGE_LEGACY_SUSPICIOUS_OBJECT =
   "00000000-0000-4000-8000-0000000003c9";
 const IMAGE_LEGACY_CONFLICT_OBJECT =
   "00000000-0000-4000-8000-0000000003cc";
+const IMAGE_READ_PROJECTION_OBJECT =
+  "00000000-0000-4000-8000-0000000003cd";
+const IMAGE_READ_PROJECTION_SHARED_OBJECT =
+  "00000000-0000-4000-8000-0000000003ce";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -1027,6 +1033,189 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         `)).toBe("f:f:f:f");
       }
     }
+  });
+
+  it("projects registry identity only through the service role after recipe authorization", () => {
+    const replay = psqlFileResult(IMAGE_READ_PROJECTION_MIGRATION_PATH);
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.read_recipe_image_projections(uuid[])',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.read_recipe_image_projections(uuid[])',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.read_recipe_image_projections(uuid[])',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t");
+
+    for (const role of ["anon", "authenticated"] as const) {
+      const denied = psqlResult(`
+        begin;
+        set local role ${role};
+        select *
+        from public.read_recipe_image_projections(
+          array['${RECIPE_ACTIVE_PUBLIC}'::uuid]
+        );
+      `);
+
+      expect(denied.status).not.toBe(0);
+      expect(denied.stderr).toContain(
+        "permission denied for function read_recipe_image_projections",
+      );
+    }
+
+    const projection = JSON.parse(psql(`
+      begin;
+      update public.recipes
+      set thumbnail_url = 'https://legacy.example/system.webp'
+      where id = '${RECIPE_SYSTEM}';
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        raw_sha256,
+        byte_size,
+        actual_mime_type,
+        visibility,
+        state,
+        cleanup_generation
+      ) values (
+        '${IMAGE_READ_PROJECTION_OBJECT}',
+        '${OWNER_ACTIVE}',
+        1,
+        'recipe-images-private',
+        '${OWNER_ACTIVE}/1/${IMAGE_READ_PROJECTION_OBJECT}.webp',
+        repeat('d', 64),
+        3,
+        'image/webp',
+        'private',
+        'attached_private',
+        0
+      ), (
+        '${IMAGE_READ_PROJECTION_SHARED_OBJECT}',
+        null,
+        null,
+        'recipe-images',
+        'shared/${IMAGE_READ_PROJECTION_SHARED_OBJECT}.jpg',
+        repeat('e', 64),
+        7,
+        'image/jpeg',
+        'public_shared',
+        'attached_public_shared',
+        0
+      );
+
+      insert into public.recipe_image_object_references (
+        image_object_id,
+        reference_type,
+        consumer_id
+      ) values (
+        '${IMAGE_READ_PROJECTION_OBJECT}',
+        'recipe_thumbnail',
+        '${RECIPE_ACTIVE_PRIVATE}'
+      ), (
+        '${IMAGE_READ_PROJECTION_SHARED_OBJECT}',
+        'recipe_thumbnail',
+        '${RECIPE_ACTIVE_PUBLIC}'
+      );
+
+      set local role service_role;
+      select jsonb_agg(
+        jsonb_build_object(
+          'recipe_id', projection.recipe_id,
+          'legacy_thumbnail_url', projection.legacy_thumbnail_url,
+          'image_object_id', projection.image_object_id,
+          'bucket_id', projection.bucket_id,
+          'object_path', projection.object_path,
+          'visibility', projection.visibility,
+          'state', projection.state,
+          'reference_type', projection.reference_type
+        )
+      )
+      from public.read_recipe_image_projections(array[
+        '${RECIPE_ACTIVE_PUBLIC}'::uuid,
+        '${RECIPE_SYSTEM}'::uuid,
+        '${RECIPE_ACTIVE_PRIVATE}'::uuid
+      ]) as projection;
+      rollback;
+    `)) as Array<Record<string, unknown>>;
+
+    expect(projection).toEqual([
+      {
+        recipe_id: RECIPE_ACTIVE_PUBLIC,
+        legacy_thumbnail_url: null,
+        image_object_id: IMAGE_READ_PROJECTION_SHARED_OBJECT,
+        bucket_id: "recipe-images",
+        object_path: `shared/${IMAGE_READ_PROJECTION_SHARED_OBJECT}.jpg`,
+        visibility: "public_shared",
+        state: "attached_public_shared",
+        reference_type: "recipe_thumbnail",
+      },
+      {
+        recipe_id: RECIPE_SYSTEM,
+        legacy_thumbnail_url: "https://legacy.example/system.webp",
+        image_object_id: null,
+        bucket_id: null,
+        object_path: null,
+        visibility: null,
+        state: null,
+        reference_type: null,
+      },
+      {
+        recipe_id: RECIPE_ACTIVE_PRIVATE,
+        legacy_thumbnail_url: null,
+        image_object_id: IMAGE_READ_PROJECTION_OBJECT,
+        bucket_id: "recipe-images-private",
+        object_path:
+          `${OWNER_ACTIVE}/1/${IMAGE_READ_PROJECTION_OBJECT}.webp`,
+        visibility: "private",
+        state: "attached_private",
+        reference_type: "recipe_thumbnail",
+      },
+    ]);
+
+    const invalidInput = psqlResult(`
+      begin;
+      set local role service_role;
+      select *
+      from public.read_recipe_image_projections(array[
+        '${RECIPE_SYSTEM}'::uuid,
+        null::uuid
+      ]);
+      rollback;
+    `);
+    expect(invalidInput.status).not.toBe(0);
+    expect(invalidInput.stderr).toMatch(
+      /recipe image projection input is invalid/i,
+    );
+
+    const duplicateInput = psqlResult(`
+      begin;
+      set local role service_role;
+      select *
+      from public.read_recipe_image_projections(array[
+        '${RECIPE_SYSTEM}'::uuid,
+        '${RECIPE_SYSTEM}'::uuid
+      ]);
+      rollback;
+    `);
+    expect(duplicateInput.status).not.toBe(0);
+    expect(duplicateInput.stderr).toMatch(/duplicate recipe IDs/i);
   });
 
   it("enforces private generation ownership and owner-neutral shared paths", () => {

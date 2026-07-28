@@ -14,6 +14,11 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   formatBootstrapErrorMessage: vi.fn((_: unknown, fallback: string) => fallback),
 }));
 
+vi.mock("@/lib/server/recipe-image-read", () => ({
+  readRecipeImageProjection: vi.fn(async () => null),
+  resolveRecipeImageReadUrl: vi.fn(),
+}));
+
 const validMealBody = {
   recipe_id: "550e8400-e29b-41d4-a716-446655440001",
   plan_date: "2026-07-15",
@@ -215,7 +220,10 @@ describe("recipe nutrition API boundaries", () => {
     createServiceRoleClient.mockReturnValue({
       from: serviceFrom,
       rpc: vi.fn(() => ({
-        maybeSingle: vi.fn(async () => ({ data: { id: "recipe-1", view_count: 2 }, error: null })),
+        maybeSingle: vi.fn(async () => ({
+          data: { id: "recipe-1", view_count: 2 },
+          error: null,
+        })),
       })),
     });
 
