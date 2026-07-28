@@ -59,6 +59,8 @@ const IMAGE_READ_PROJECTION_MIGRATION_PATH =
   "supabase/migrations/20260725170000_recipe_image_read_projection_authority.sql";
 const RECIPE_BOOK_IMAGE_READ_PROJECTION_MIGRATION_PATH =
   "supabase/migrations/20260725180000_recipe_book_image_read_projection_authority.sql";
+const IMAGE_LEGACY_VISIBILITY_MIGRATION_PATH =
+  "supabase/migrations/20260725190000_recipe_image_legacy_visibility_migration_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -162,6 +164,10 @@ const IMAGE_LEGACY_SUSPICIOUS_OBJECT =
   "00000000-0000-4000-8000-0000000003c9";
 const IMAGE_LEGACY_CONFLICT_OBJECT =
   "00000000-0000-4000-8000-0000000003cc";
+const IMAGE_LEGACY_VISIBILITY_MIGRATION_KEY =
+  "00000000-0000-4000-8000-0000000003d4";
+const IMAGE_LEGACY_VISIBILITY_CUTOVER_ATTEMPT =
+  "00000000-0000-4000-8000-0000000003d5";
 const IMAGE_READ_PROJECTION_OBJECT =
   "00000000-0000-4000-8000-0000000003cd";
 const IMAGE_READ_PROJECTION_SHARED_OBJECT =
@@ -10899,6 +10905,527 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     expect(serializable.status).not.toBe(0);
     expect(serializable.stderr).toContain(
       "Recipe image legacy inventory requires READ COMMITTED",
+    );
+  });
+
+  it("plans visibility-split copies and finalizes registry references only after copied Storage evidence", () => {
+    const storageOrigin = "https://project.supabase.co";
+    const privatePath =
+      `${OWNER_ACTIVE}/${IMAGE_LEGACY_PRIVATE_OBJECT}.webp`;
+    const publicPath =
+      `${OWNER_ACTIVE}/${IMAGE_LEGACY_PUBLIC_OBJECT}.jpg`;
+    const coverPath =
+      `${OWNER_ACTIVE}/${IMAGE_LEGACY_COVER_OBJECT}.png`;
+
+    expect(psql(`
+      begin;
+
+      delete from storage.objects;
+
+      insert into public.recipes (
+        id,
+        title,
+        source_type,
+        created_by,
+        visibility,
+        deleted_at,
+        thumbnail_url
+      ) values
+        (
+          '${IMAGE_LEGACY_PRIVATE_RECIPE}',
+          'legacy private migration',
+          'manual',
+          '${OWNER_ACTIVE}',
+          'private',
+          null,
+          '${storageOrigin}/storage/v1/object/public/recipe-images/${privatePath}'
+        ),
+        (
+          '${IMAGE_LEGACY_PUBLIC_RECIPE}',
+          'legacy public migration',
+          'manual',
+          '${OWNER_ACTIVE}',
+          'public',
+          null,
+          '${storageOrigin}/storage/v1/object/public/recipe-images/${publicPath}'
+        );
+
+      insert into public.recipe_books (
+        id,
+        user_id,
+        cover_image_url
+      ) values (
+        '${IMAGE_LEGACY_RECIPE_BOOK}',
+        '${OWNER_ACTIVE}',
+        '${storageOrigin}/storage/v1/object/public/recipe-images/${coverPath}'
+      );
+
+      insert into storage.objects (
+        id,
+        bucket_id,
+        name,
+        owner_id
+      ) values
+        (
+          '${IMAGE_LEGACY_PRIVATE_OBJECT}',
+          'recipe-images',
+          '${privatePath}',
+          '${OWNER_ACTIVE}'
+        ),
+        (
+          '${IMAGE_LEGACY_PUBLIC_OBJECT}',
+          'recipe-images',
+          '${publicPath}',
+          '${OWNER_ACTIVE}'
+        ),
+        (
+          '${IMAGE_LEGACY_COVER_OBJECT}',
+          'recipe-images',
+          '${coverPath}',
+          '${OWNER_ACTIVE}'
+        );
+
+      set local role service_role;
+
+      create temporary table legacy_visibility_inventory
+      on commit drop
+      as
+      select *
+      from public.inventory_recipe_image_legacy_objects(
+        '${IMAGE_LEGACY_INVENTORY_KEY}',
+        '${storageOrigin}'
+      );
+
+      reset role;
+
+      insert into public.account_generation_cutover_attempts (id)
+      values ('${IMAGE_LEGACY_VISIBILITY_CUTOVER_ATTEMPT}');
+
+      insert into public.account_generation_cutover_staging (
+        attempt_id,
+        owner_uuid,
+        proposed_account_generation,
+        proposed_action,
+        validation_state
+      ) values (
+        '${IMAGE_LEGACY_VISIBILITY_CUTOVER_ATTEMPT}',
+        '${OWNER_ACTIVE}',
+        7,
+        'activate',
+        'validated'
+      );
+
+      update public.account_generation_capability_state
+      set
+        state = 'cutover_maintenance',
+        revision = 2,
+        current_cutover_attempt_id =
+          '${IMAGE_LEGACY_VISIBILITY_CUTOVER_ATTEMPT}';
+
+      create temporary table legacy_visibility_reference_input
+      on commit drop
+      as
+      select array_agg(positive.id order by positive.id) as ids
+      from public.recipe_image_legacy_positive_references as positive
+      where positive.inventory_run_id = (
+        select inventory_run_id
+        from legacy_visibility_inventory
+      );
+      grant select on legacy_visibility_reference_input to service_role;
+
+      create temporary table legacy_visibility_baseline
+      on commit drop
+      as
+      select
+        (select count(*) from public.recipe_image_objects)
+          as object_count,
+        (select count(*) from public.recipe_image_object_references)
+          as reference_count,
+        (select count(*) from public.storage_object_deletion_outbox)
+          as outbox_count;
+
+      set local role service_role;
+
+      create temporary table legacy_visibility_plan
+      on commit drop
+      as
+      select *
+      from public.prepare_recipe_image_legacy_visibility_migration(
+        '${IMAGE_LEGACY_VISIBILITY_MIGRATION_KEY}',
+        (
+          select inventory_run_id
+          from legacy_visibility_inventory
+        ),
+        '${IMAGE_LEGACY_VISIBILITY_CUTOVER_ATTEMPT}',
+        2,
+        (select ids from legacy_visibility_reference_input)
+      );
+
+      reset role;
+
+      do $block$
+      declare
+        v_baseline record;
+      begin
+        select * into v_baseline from legacy_visibility_baseline;
+
+        if (select count(*) from legacy_visibility_plan) <> 3
+          or (
+            select count(*)
+            from legacy_visibility_plan
+            where expected_visibility = 'private'
+              and owner_uuid = '${OWNER_ACTIVE}'
+              and account_generation = 7
+              and target_bucket_id = 'recipe-images-private'
+              and target_object_path like (
+                '${OWNER_ACTIVE}/7/' || target_object_id::text || '.%'
+              )
+          ) <> 2
+          or (
+            select count(*)
+            from legacy_visibility_plan
+            where expected_visibility = 'public_shared'
+              and owner_uuid is null
+              and account_generation is null
+              and target_bucket_id = 'recipe-images'
+              and target_object_path like (
+                'shared/' || target_object_id::text || '.%'
+              )
+          ) <> 1 then
+          raise exception 'legacy visibility target split mismatch';
+        end if;
+
+        if (select count(*) from public.recipe_image_objects)
+            is distinct from v_baseline.object_count
+          or (select count(*) from public.recipe_image_object_references)
+            is distinct from v_baseline.reference_count
+          or (select count(*) from public.storage_object_deletion_outbox)
+            is distinct from v_baseline.outbox_count then
+          raise exception 'planning created registry or cleanup side effects';
+        end if;
+
+        if (
+          select thumbnail_url
+          from public.recipes
+          where id = '${IMAGE_LEGACY_PRIVATE_RECIPE}'
+        ) is distinct from
+          '${storageOrigin}/storage/v1/object/public/recipe-images/${privatePath}'
+          or (
+            select thumbnail_url
+            from public.recipes
+            where id = '${IMAGE_LEGACY_PUBLIC_RECIPE}'
+          ) is distinct from
+            '${storageOrigin}/storage/v1/object/public/recipe-images/${publicPath}'
+          or (
+            select cover_image_url
+            from public.recipe_books
+            where id = '${IMAGE_LEGACY_RECIPE_BOOK}'
+          ) is distinct from
+            '${storageOrigin}/storage/v1/object/public/recipe-images/${coverPath}' then
+          raise exception 'planning changed the legacy URL rollback floor';
+        end if;
+      end;
+      $block$;
+
+      set local role service_role;
+
+      do $block$
+      declare
+        v_plan record;
+      begin
+        select *
+        into v_plan
+        from legacy_visibility_plan
+        where expected_visibility = 'private'
+        order by target_object_path
+        limit 1;
+
+        perform public.finalize_recipe_image_legacy_visibility_target(
+          v_plan.migration_run_id,
+          v_plan.target_object_id,
+          2,
+          repeat('a', 64),
+          128,
+          case
+            when v_plan.target_object_path like '%.png' then 'image/png'
+            else 'image/webp'
+          end,
+          '2026-07-28T00:00:00Z'::timestamptz
+        );
+        raise exception 'missing copied target unexpectedly finalized';
+      exception
+        when sqlstate '55000' then
+          if sqlerrm <> 'legacy visibility copied target is unavailable' then
+            raise;
+          end if;
+      end;
+      $block$;
+
+      reset role;
+
+      insert into storage.objects (
+        id,
+        bucket_id,
+        name,
+        owner_id
+      )
+      select
+        target_object_id,
+        target_bucket_id,
+        target_object_path,
+        owner_uuid
+      from legacy_visibility_plan;
+
+      set local role service_role;
+
+      create temporary table legacy_visibility_finalize_results (
+        target_object_id uuid primary key,
+        result jsonb not null
+      ) on commit drop;
+
+      do $block$
+      declare
+        v_plan record;
+        v_mime text;
+      begin
+        for v_plan in
+          select *
+          from legacy_visibility_plan
+          order by target_object_id
+        loop
+          v_mime := case
+            when v_plan.target_object_path like '%.png' then 'image/png'
+            when v_plan.target_object_path like '%.webp' then 'image/webp'
+            else 'image/jpeg'
+          end;
+
+          insert into legacy_visibility_finalize_results (
+            target_object_id,
+            result
+          ) values (
+            v_plan.target_object_id,
+            public.finalize_recipe_image_legacy_visibility_target(
+              v_plan.migration_run_id,
+              v_plan.target_object_id,
+              2,
+              repeat('b', 64),
+              256,
+              v_mime,
+              '2026-07-28T00:00:00Z'::timestamptz
+            )
+          );
+        end loop;
+      end;
+      $block$;
+
+      reset role;
+
+      do $block$
+      declare
+        v_baseline record;
+      begin
+        select * into v_baseline from legacy_visibility_baseline;
+
+        if (
+          select count(*)
+          from legacy_visibility_finalize_results
+          where result @> '{"state":"finalized","replayed":false}'::jsonb
+        ) <> 3
+          or (select count(*) from public.recipe_image_objects)
+            <> v_baseline.object_count + 3
+          or (select count(*) from public.recipe_image_object_references)
+            <> v_baseline.reference_count + 3
+          or (
+            select count(*)
+            from public.recipe_image_legacy_visibility_targets
+            where state = 'finalized'
+          ) <> 3
+          or (
+            select count(*)
+            from public.recipe_image_legacy_visibility_migration_runs
+            where migration_key = '${IMAGE_LEGACY_VISIBILITY_MIGRATION_KEY}'
+              and state = 'finalized'
+              and finalized_target_count = 3
+              and target_count = 3
+          ) <> 1 then
+          raise exception 'legacy visibility finalization mismatch';
+        end if;
+
+        if (
+          select count(*)
+          from public.recipe_image_objects
+          where id in (
+            select target_object_id
+            from legacy_visibility_plan
+          )
+            and (
+              (
+                visibility = 'private'
+                and state = 'attached_private'
+                and owner_uuid = '${OWNER_ACTIVE}'
+                and account_generation = 7
+              )
+              or (
+                visibility = 'public_shared'
+                and state = 'attached_public_shared'
+                and owner_uuid is null
+                and account_generation is null
+              )
+            )
+        ) <> 3 then
+          raise exception 'finalized registry visibility shape mismatch';
+        end if;
+
+        if (select count(*) from public.storage_object_deletion_outbox)
+            is distinct from v_baseline.outbox_count
+          or (
+            select count(*)
+            from storage.objects
+            where id in (
+              '${IMAGE_LEGACY_PRIVATE_OBJECT}'::uuid,
+              '${IMAGE_LEGACY_PUBLIC_OBJECT}'::uuid,
+              '${IMAGE_LEGACY_COVER_OBJECT}'::uuid
+            )
+          ) <> 3 then
+          raise exception 'finalize enqueued or deleted a legacy source';
+        end if;
+      end;
+      $block$;
+
+      set local role service_role;
+
+      do $block$
+      declare
+        v_plan record;
+        v_result jsonb;
+      begin
+        select *
+        into v_plan
+        from legacy_visibility_plan
+        order by target_object_id
+        limit 1;
+
+        v_result :=
+          public.finalize_recipe_image_legacy_visibility_target(
+            v_plan.migration_run_id,
+            v_plan.target_object_id,
+            2,
+            repeat('b', 64),
+            256,
+            case
+              when v_plan.target_object_path like '%.png' then 'image/png'
+              when v_plan.target_object_path like '%.webp' then 'image/webp'
+              else 'image/jpeg'
+            end,
+            '2026-07-28T00:00:01Z'::timestamptz
+          );
+
+        if not (v_result @> '{"state":"finalized","replayed":true}'::jsonb) then
+          raise exception 'finalize replay was not idempotent: %', v_result;
+        end if;
+      end;
+      $block$;
+
+      reset role;
+      rollback;
+      select 'legacy-visibility-migration-pass';
+    `)).toBe("legacy-visibility-migration-pass");
+  });
+
+  it("keeps legacy visibility migration service-only, READ COMMITTED, and replay-safe", () => {
+    const replay = psqlFileResult(IMAGE_LEGACY_VISIBILITY_MIGRATION_PATH);
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.prepare_recipe_image_legacy_visibility_migration(uuid,uuid,uuid,bigint,uuid[])',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.prepare_recipe_image_legacy_visibility_migration(uuid,uuid,uuid,bigint,uuid[])',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.prepare_recipe_image_legacy_visibility_migration(uuid,uuid,uuid,bigint,uuid[])',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'anon',
+          'public.finalize_recipe_image_legacy_visibility_target(uuid,uuid,bigint,text,bigint,text,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.finalize_recipe_image_legacy_visibility_target(uuid,uuid,bigint,text,bigint,text,timestamp with time zone)',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.finalize_recipe_image_legacy_visibility_target(uuid,uuid,bigint,text,bigint,text,timestamp with time zone)',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t:f:f:t");
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_table_privilege(
+          'anon',
+          'public.recipe_image_legacy_visibility_migration_runs',
+          'SELECT,INSERT,UPDATE,DELETE'
+        ),
+        has_table_privilege(
+          'authenticated',
+          'public.recipe_image_legacy_visibility_targets',
+          'SELECT,INSERT,UPDATE,DELETE'
+        ),
+        has_table_privilege(
+          'service_role',
+          'public.recipe_image_legacy_visibility_target_references',
+          'SELECT,INSERT,UPDATE,DELETE'
+        )
+      );
+    `)).toBe("f:f:f");
+
+    const serializablePrepare = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select *
+      from public.prepare_recipe_image_legacy_visibility_migration(
+        '${IMAGE_LEGACY_VISIBILITY_MIGRATION_KEY}',
+        '${IMAGE_LEGACY_INVENTORY_KEY}',
+        '${IMAGE_LEGACY_VISIBILITY_CUTOVER_ATTEMPT}',
+        2,
+        array['${IMAGE_LEGACY_PRIVATE_OBJECT}'::uuid]
+      );
+    `);
+    expect(serializablePrepare.status).not.toBe(0);
+    expect(serializablePrepare.stderr).toContain(
+      "recipe image legacy visibility migration requires READ COMMITTED",
+    );
+
+    const serializableFinalize = psqlResult(`
+      begin isolation level serializable;
+      set local role service_role;
+      select public.finalize_recipe_image_legacy_visibility_target(
+        '${IMAGE_LEGACY_VISIBILITY_MIGRATION_KEY}',
+        '${IMAGE_LEGACY_PRIVATE_OBJECT}',
+        2,
+        repeat('a', 64),
+        1,
+        'image/webp',
+        now()
+      );
+    `);
+    expect(serializableFinalize.status).not.toBe(0);
+    expect(serializableFinalize.stderr).toContain(
+      "recipe image legacy visibility finalize requires READ COMMITTED",
     );
   });
 

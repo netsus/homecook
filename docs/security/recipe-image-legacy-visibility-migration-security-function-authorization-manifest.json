@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "slice": "recipe-image-legacy-visibility-migration",
+  "migration": "supabase/migrations/20260725190000_recipe_image_legacy_visibility_migration_authority.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.prepare_recipe_image_legacy_visibility_migration(uuid, uuid, uuid, bigint, uuid[])",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "extensions",
+        "pg_temp"
+      ]
+    },
+    {
+      "signature": "public.finalize_recipe_image_legacy_visibility_target(uuid, uuid, bigint, text, bigint, text, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": [
+        "service_role"
+      ],
+      "security_mode": "definer",
+      "safe_search_path": [
+        "pg_catalog",
+        "public",
+        "extensions",
+        "pg_temp"
+      ]
+    }
+  ]
+}

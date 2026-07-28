@@ -34,6 +34,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260725160000_recipe_image_legacy_report_only.sql",
   "supabase/migrations/20260725170000_recipe_image_read_projection_authority.sql",
   "supabase/migrations/20260725180000_recipe_book_image_read_projection_authority.sql",
+  "supabase/migrations/20260725190000_recipe_image_legacy_visibility_migration_authority.sql",
 ];
 
 function commandResult(command, args, options = {}) {
@@ -534,7 +535,14 @@ if (!postgresBin) {
           from public, anon, authenticated, service_role;
 
         create table public.account_generation_cutover_staging (
-          owner_uuid uuid primary key
+          attempt_id uuid not null
+            references public.account_generation_cutover_attempts(id)
+            on delete cascade,
+          owner_uuid uuid not null,
+          proposed_account_generation bigint,
+          proposed_action text not null,
+          validation_state text not null,
+          primary key (attempt_id, owner_uuid)
         );
         revoke all on table public.account_generation_cutover_staging
           from public, anon, authenticated, service_role;
