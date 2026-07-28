@@ -1000,6 +1000,25 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
       where normalized_key = 'visible';
     `)).toBe("visible:2");
 
+    const staleUsageResult = psqlResult(`
+      update public.tags
+      set usage_count = 99
+      where id = '${TAG_SYSTEM}';
+    `);
+    expect(staleUsageResult.status, staleUsageResult.stderr).toBe(0);
+    expect(psql(`
+      set role service_role;
+      select normalized_key || ':' || before_count::text || ':' || after_count::text
+      from public.reconcile_recipe_tag_usage_counts(false)
+      where normalized_key = 'visible';
+    `)).toBe("visible:99:2");
+
+    expect(psql(`
+      select usage_count::text
+      from public.tags
+      where normalized_key = 'visible';
+    `)).toBe("2");
+
     expect(asRole("anon", `
       select string_agg(id::text, ',' order by id)
       from public.list_home_theme_recipes(8, 10);

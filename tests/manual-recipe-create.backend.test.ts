@@ -642,9 +642,6 @@ describe("18 manual recipe create backend", () => {
   });
 
   it("POST /api/v1/recipes creates a manual recipe without recipe_book_items membership", async () => {
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
-    const thumbnailUrl =
-      "https://project.supabase.co/storage/v1/object/public/recipe-images/user-1/550e8400-e29b-41d4-a716-446655440401.webp";
     const ingredientsTable = createLookupTable({
       data: [{ id: ingredientId }, { id: toTasteIngredientId }],
       error: null,
@@ -693,7 +690,6 @@ describe("18 manual recipe create backend", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         ...buildValidBody(),
-        thumbnail_url: thumbnailUrl,
       }),
     }));
     const body = await response.json();
@@ -717,7 +713,6 @@ describe("18 manual recipe create backend", () => {
       base_servings: 2,
       source_type: "manual",
       created_by: "user-1",
-      thumbnail_url: thumbnailUrl,
       tags: expect.arrayContaining(["한식", "국물요리", "초보가능"]),
     }));
     expect(recipeIngredientsTable.insert).toHaveBeenCalledWith([
