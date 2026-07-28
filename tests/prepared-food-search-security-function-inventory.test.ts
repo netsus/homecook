@@ -29,6 +29,7 @@ describe("prepared food search security function inventory", () => {
       "supabase/migrations/20260725120000_prepared_food_search_relevance_foundation.sql",
       "supabase/migrations/20260725130000_prepared_food_search_relevance_indexes.sql",
       "supabase/migrations/20260725140000_prepared_food_search_ranked_rpc.sql",
+      "supabase/migrations/20260725145000_prepared_food_search_hosted_compatibility.sql",
     ]);
     expect(manifest.functions).toEqual(
       expect.arrayContaining([

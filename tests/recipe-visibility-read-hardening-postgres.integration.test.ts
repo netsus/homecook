@@ -678,6 +678,7 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
       guard_lifecycle_policy_count: 1,
       private_bucket_exact: true,
       storage_select_policy_count: 1,
+      storage_mutation_policy_count: 3,
       remote_writes: 0,
     });
     expect(() =>
@@ -723,6 +724,15 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     `)) as Record<string, unknown>;
     expect(serviceTagGrantDrift.service_role_tag_column_mutation_count)
       .toBe(1);
+
+    const guardMembershipDrift = JSON.parse(psql(`
+      begin;
+      grant homecook_recipe_visibility_guard_owner to postgres;
+      ${plan.sql}
+      rollback;
+    `)) as Record<string, unknown>;
+    expect(guardMembershipDrift.guard_membership_count).toBe(1);
+    expect(guardMembershipDrift.guard_unsafe_membership_count).toBe(1);
 
     const policyDrift = JSON.parse(psql(`
       begin;
@@ -797,13 +807,17 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
         on storage.objects
         for all
         to anon, authenticated
-        using (bucket_id = 'recipe-images-private');
+        using (true)
+        with check (true);
       ${plan.sql}
       rollback;
     `)) as Record<string, unknown>;
     expect(privateBucketDrift.private_bucket_exact).toBe(false);
     expect(privateBucketDrift.storage_select_policy_count).toBe(2);
+    expect(privateBucketDrift.storage_mutation_policy_count).toBe(4);
+    expect(privateBucketDrift.unallowlisted_storage_mutation_policy_count).toBe(1);
   });
+
 
   it("applies latest-generation visibility to anon and owner detail reads", () => {
     expect(asRole("anon", `

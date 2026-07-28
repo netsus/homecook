@@ -7,9 +7,19 @@ const migrationPath = path.join(
   process.cwd(),
   "supabase/migrations/20260725140000_prepared_food_search_ranked_rpc.sql",
 );
+const hostedCompatibilityMigrationPath = path.join(
+  process.cwd(),
+  "supabase/migrations/20260725145000_prepared_food_search_hosted_compatibility.sql",
+);
 
 function readMigration() {
   return existsSync(migrationPath) ? readFileSync(migrationPath, "utf8") : "";
+}
+
+function readHostedCompatibilityMigration() {
+  return existsSync(hostedCompatibilityMigrationPath)
+    ? readFileSync(hostedCompatibilityMigrationPath, "utf8")
+    : "";
 }
 
 describe("prepared food unified ranked search RPC", () => {
@@ -90,5 +100,23 @@ describe("prepared food unified ranked search RPC", () => {
     expect(sql).toMatch(/p_cursor_version = 2[\s\S]*ranked_page/i);
     expect(sql).toMatch(/jsonb_build_object\([\s\S]*'next_cursor_tuple'/i);
     expect(sql).not.toMatch(/'similarity'\s*,|'raw_score'\s*,/i);
+  });
+
+  it("replays on hosted Postgres without privileged pg_trgm function settings", () => {
+    const sql = readHostedCompatibilityMigration();
+
+    expect(existsSync(hostedCompatibilityMigrationPath)).toBe(true);
+    expect(sql).toContain("pg_get_functiondef");
+    expect(sql).toContain("pg_trgm.word_similarity_threshold");
+    expect(sql).toContain("v_ingredient_word_match");
+    expect(sql).toContain("v_product_word_match");
+    expect(sql).toContain("v_query_bigrams");
+    expect(sql).toContain("public.food_search_short_ngrams(");
+    expect(sql).toContain("&& v_query_bigrams");
+    expect(sql).toContain("public.word_similarity(");
+    expect(sql).toContain("v_explicit_word_match_count <> 3");
+    expect(sql).toContain("HOSTED_SEARCH_INGREDIENT_WORD_MATCH_ANCHOR_MISMATCH");
+    expect(sql).toContain("HOSTED_SEARCH_PRODUCT_WORD_MATCH_ANCHOR_MISMATCH");
+    expect(sql).toContain("HOSTED_SEARCH_THRESHOLD_CONFIG_ANCHOR_MISMATCH");
   });
 });

@@ -1,0 +1,31 @@
+allowBuilds:
+  "esbuild@0.28.1": true
+  "unrs-resolver@1.11.1": true
+
+overrides:
+  basic-ftp: 5.3.1
+  flatted: 3.4.2
+  lodash: 4.18.1
+  lodash-es: 4.18.1
+  "micromatch>picomatch": 2.3.2
+  "minimatch@3.1.5>brace-expansion": 5.0.8
+  "minimatch@10.2.5>brace-expansion": 5.0.8
+  postcss: 8.5.18
+  tmp: 0.2.7
+  "@eslint/eslintrc>js-yaml": 4.3.0
+  "@lhci/cli>uuid": 11.1.1
+  "@lhci/utils>js-yaml": 3.15.0
+  "body-parser>qs": 6.15.2
+  "express>qs": 6.15.2
+  "@supabase/realtime-js>ws": 8.21.0
+  "lighthouse>ws": 7.5.11
+  "puppeteer-core>ws": 8.21.0
+  "socks>ip-address": 10.1.1
+  "tinyglobby>picomatch": 4.0.4
+  "next>sharp": 0.35.3
+  esbuild: 0.28.1
+  undici: 7.28.0
+  vite: 7.3.5
+
+patchedDependencies:
+  minimatch@3.1.5: patches/minimatch@3.1.5.patch

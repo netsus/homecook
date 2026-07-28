@@ -11,6 +11,14 @@ const TAG_PARENT_VISIBILITY_MIGRATION_PATH = path.join(
   process.cwd(),
   "supabase/migrations/20260724090000_recipe_tag_parent_visibility_upper_bound.sql",
 );
+const GUARD_PUBLIC_SCHEMA_USAGE_MIGRATION_PATH = path.join(
+  process.cwd(),
+  "supabase/migrations/20260723180000_recipe_visibility_guard_public_schema_usage.sql",
+);
+const DIRECT_MUTATION_PRIVILEGE_HARDENING_MIGRATION_PATH = path.join(
+  process.cwd(),
+  "supabase/migrations/20260723190000_recipe_visibility_direct_mutation_privilege_hardening.sql",
+);
 const MANAGED_IMAGE_REGISTRY_MIGRATION_PATH = path.join(
   process.cwd(),
   "supabase/migrations/20260724110000_recipe_managed_image_registry_foundation.sql",
@@ -121,6 +129,50 @@ describe("recipe visibility read hardening migration", () => {
       /granted_role\.rolname = 'homecook_recipe_visibility_guard_owner'[\s\S]*admin_option[\s\S]*recipe visibility guard owner has unexpected members/i,
     );
   });
+
+  it("grants the guard owner public schema usage without create access", () => {
+    expect(existsSync(GUARD_PUBLIC_SCHEMA_USAGE_MIGRATION_PATH)).toBe(true);
+
+    if (!existsSync(GUARD_PUBLIC_SCHEMA_USAGE_MIGRATION_PATH)) {
+      return;
+    }
+
+    const sql = readFileSync(GUARD_PUBLIC_SCHEMA_USAGE_MIGRATION_PATH, "utf8");
+    expect(sql).toMatch(
+      /grant usage on schema public\s+to homecook_recipe_visibility_guard_owner/i,
+    );
+    expect(sql).toMatch(
+      /revoke create on schema public\s+from homecook_recipe_visibility_guard_owner/i,
+    );
+    expect(sql).toMatch(
+      /has_schema_privilege\([\s\S]*homecook_recipe_visibility_guard_owner[\s\S]*public[\s\S]*USAGE/i,
+    );
+    expect(sql).toMatch(
+      /has_schema_privilege\([\s\S]*homecook_recipe_visibility_guard_owner[\s\S]*public[\s\S]*CREATE/i,
+    );
+  });
+
+  it("removes direct reader mutations while preserving the public tag projection", () => {
+    expect(existsSync(DIRECT_MUTATION_PRIVILEGE_HARDENING_MIGRATION_PATH))
+      .toBe(true);
+
+    const sql = readFileSync(
+      DIRECT_MUTATION_PRIVILEGE_HARDENING_MIGRATION_PATH,
+      "utf8",
+    );
+
+    expect(sql).toMatch(
+      /revoke insert, update, delete, truncate, references, trigger[\s\S]*public\.recipes[\s\S]*public\.recipe_tags[\s\S]*from anon, authenticated/i,
+    );
+    expect(sql).toMatch(
+      /revoke insert, update, delete, truncate, references, trigger[\s\S]*public\.recipe_tags[\s\S]*from service_role/i,
+    );
+    expect(sql).toMatch(
+      /grant select \([\s\S]*theme_eligible[\s\S]*\) on table public\.tags to anon, authenticated/i,
+    );
+    expect(sql).toContain("has_any_column_privilege");
+  });
+
 
   it("bounds direct child-table reads by the visible parent recipe", () => {
     const sql = readFileSync(MIGRATION_PATH, "utf8");

@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
 const PRODUCTION_ENVS = new Set(["production", "preview-production"]);
 
 const FORBIDDEN_ENABLED_FLAGS = [
@@ -26,10 +29,10 @@ const FORBIDDEN_URL_PATTERNS = [
   { id: "placeholder", label: "placeholder", pattern: /placeholder|placehold\.co|picsum\.photos/iu },
 ];
 
-const DATA_SCAN_TABLES = [
+export const PRODUCTION_DATA_SCAN_TABLES = [
   {
     table: "recipes",
-    columns: "id, title, description, thumbnail_url, source_type",
+    columns: "id, title, description, thumbnail_url, source_type, visibility, deleted_at",
     textFields: ["title", "description"],
     urlFields: ["thumbnail_url"],
     idField: "id",
@@ -56,6 +59,62 @@ const DATA_SCAN_TABLES = [
     idField: "id",
   },
 ];
+
+export function loadProductionEnvFiles({
+  rootDir = process.cwd(),
+  loadEnvFile = (filePath) => process.loadEnvFile(filePath),
+} = {}) {
+  const loadedFiles = [];
+
+  for (const fileName of [".env.production.local", ".env.local", ".env.production", ".env"]) {
+    const filePath = resolve(rootDir, fileName);
+    if (!existsSync(filePath)) continue;
+    loadEnvFile(filePath);
+    loadedFiles.push(filePath);
+  }
+
+  return loadedFiles;
+}
+
+export function parseProductionDataQualityArgs(argv) {
+  const args = {
+    json: false,
+    limit: 500,
+    requireDb: false,
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+
+    if (arg === "--") {
+      continue;
+    }
+
+    if (arg === "--json") {
+      args.json = true;
+      continue;
+    }
+
+    if (arg === "--require-db") {
+      args.requireDb = true;
+      continue;
+    }
+
+    if (arg === "--limit") {
+      const parsed = Number(argv[index + 1]);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error("--limit must be a positive integer.");
+      }
+      args.limit = parsed;
+      index += 1;
+      continue;
+    }
+
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+
+  return args;
+}
 
 function isTruthyFlag(value) {
   return value === "1" || value === "true" || value === "yes" || value === "on";
@@ -84,12 +143,21 @@ export function validateProductionEnv(env = process.env) {
   const errors = [];
   const warnings = [];
   const productionLike = isProductionLikeEnv(env);
+  const productionExposure = env.HOMECOOK_PRODUCTION_EXPOSURE;
+  const localOnlyProduction = productionExposure === "local-only";
 
   if (!productionLike) {
     warnings.push("production-like env가 아니므로 운영 데이터 게이트는 env sanity만 확인합니다.");
   }
 
   if (productionLike) {
+    if (productionExposure && !["local-only", "public"].includes(productionExposure)) {
+      errors.push({
+        code: "PRODUCTION_EXPOSURE_INVALID",
+        message: "HOMECOOK_PRODUCTION_EXPOSURE must be local-only or public.",
+      });
+    }
+
     for (const key of FORBIDDEN_ENABLED_FLAGS) {
       if (isTruthyFlag(env[key])) {
         errors.push({
@@ -116,11 +184,18 @@ export function validateProductionEnv(env = process.env) {
       });
     }
 
-    if (isLocalUrl(env.NEXT_PUBLIC_APP_URL) || isLocalUrl(env.NEXT_PUBLIC_SITE_URL)) {
+    if (
+      !localOnlyProduction
+      && (isLocalUrl(env.NEXT_PUBLIC_APP_URL) || isLocalUrl(env.NEXT_PUBLIC_SITE_URL))
+    ) {
       errors.push({
         code: "PRODUCTION_LOCAL_APP_URL",
         message: "NEXT_PUBLIC_APP_URL/NEXT_PUBLIC_SITE_URL must not point to localhost in production-like environments.",
       });
+    }
+
+    if (localOnlyProduction) {
+      warnings.push("local-only production은 현재 Mac 밖으로 공개하지 않아야 합니다.");
     }
   }
 
@@ -158,7 +233,7 @@ export function findForbiddenValues(row, tableConfig) {
 export function buildDataQualityFindings(rowsByTable) {
   const findings = [];
 
-  for (const tableConfig of DATA_SCAN_TABLES) {
+  for (const tableConfig of PRODUCTION_DATA_SCAN_TABLES) {
     const rows = rowsByTable[tableConfig.table] ?? [];
 
     for (const row of rows) {
@@ -221,7 +296,7 @@ export async function scanProductionData({ env = process.env, limit = 500 } = {}
   const rowsByTable = {};
   const errors = [];
 
-  for (const tableConfig of DATA_SCAN_TABLES) {
+  for (const tableConfig of PRODUCTION_DATA_SCAN_TABLES) {
     const result = await scanTable(supabase, tableConfig, limit);
     rowsByTable[tableConfig.table] = result.rows;
     errors.push(...result.errors);
@@ -270,4 +345,3 @@ export async function validateProductionDataQuality({
     },
   };
 }
-

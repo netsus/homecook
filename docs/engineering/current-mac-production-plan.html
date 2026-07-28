@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>현재 Mac production 운영 안내서</title>
+  <style>
+    :root {
+      --ink: #20242b;
+      --muted: #5f6875;
+      --line: #dce1e7;
+      --surface: #ffffff;
+      --canvas: #f3f5f7;
+      --header: #202a35;
+      --blue: #2864a5;
+      --blue-soft: #eaf2fb;
+      --green: #23754a;
+      --green-soft: #e8f5ed;
+      --amber: #9a5a0b;
+      --amber-soft: #fff4de;
+      --red: #a33a31;
+      --red-soft: #fff0ee;
+      --purple: #6b4e8c;
+      --purple-soft: #f2ecf8;
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+      line-height: 1.68;
+      letter-spacing: 0;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+    }
+
+    a {
+      color: var(--blue);
+      text-underline-offset: 3px;
+    }
+
+    code,
+    pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      letter-spacing: 0;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: #edf0f3;
+      color: #26384a;
+      font-size: 0.9em;
+    }
+
+    pre {
+      margin: 12px 0;
+      padding: 14px 16px;
+      overflow-x: auto;
+      border: 1px solid #334657;
+      border-radius: 6px;
+      background: #1f2d39;
+      color: #eef5f7;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre;
+    }
+
+    .topbar {
+      background: var(--header);
+      color: #ffffff;
+      border-bottom: 4px solid #3d8b67;
+    }
+
+    .topbar-inner,
+    .page {
+      width: min(1040px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar-inner {
+      padding: 38px 0 34px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: #a9c8b9;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 0;
+      color: #ffffff;
+      font-size: 32px;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+
+    .topbar p {
+      max-width: 760px;
+      margin: 12px 0 0;
+      color: #ccd5dd;
+      font-size: 15px;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+      color: #e8eef3;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .badge.live {
+      border-color: #76c898;
+      background: #1f6b44;
+      color: #ffffff;
+    }
+
+    .page {
+      margin-top: 24px;
+      margin-bottom: 64px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 10px 30px rgba(31, 42, 53, 0.08);
+    }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr 1fr;
+      border-bottom: 1px solid var(--line);
+      background: var(--green-soft);
+    }
+
+    .status-item {
+      min-width: 0;
+      padding: 18px 22px;
+      border-right: 1px solid #cfe2d6;
+    }
+
+    .status-item:last-child {
+      border-right: 0;
+    }
+
+    .status-label {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .status-value {
+      display: block;
+      color: #1e4630;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .content {
+      padding: 8px 34px 40px;
+    }
+
+    .quick-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 18px 0 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .quick-nav a {
+      display: inline-flex;
+      min-height: 32px;
+      align-items: center;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #f8f9fa;
+      color: #35414d;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    section {
+      padding: 30px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    section:last-child {
+      border-bottom: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      color: #242e38;
+      font-size: 22px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 24px 0 8px;
+      color: #303b47;
+      font-size: 17px;
+      line-height: 1.4;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 9px 0;
+    }
+
+    .lead {
+      max-width: 820px;
+      color: #374452;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .notice {
+      margin: 14px 0;
+      padding: 14px 16px;
+      border-left: 4px solid var(--blue);
+      border-radius: 4px;
+      background: var(--blue-soft);
+      color: #2d4d70;
+    }
+
+    .notice strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .notice.warn {
+      border-left-color: var(--amber);
+      background: var(--amber-soft);
+      color: #69420f;
+    }
+
+    .notice.good {
+      border-left-color: var(--green);
+      background: var(--green-soft);
+      color: #24543a;
+    }
+
+    .action-link {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      margin-top: 10px;
+      padding: 8px 14px;
+      border: 1px solid #20558e;
+      border-radius: 6px;
+      background: var(--blue);
+      color: #ffffff;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .fact {
+      min-width: 0;
+      padding: 14px 15px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fafbfc;
+    }
+
+    .fact strong {
+      display: block;
+      margin-bottom: 3px;
+      color: #2f3b47;
+      font-size: 14px;
+    }
+
+    .fact span {
+      display: block;
+      color: var(--muted);
+      font-size: 13.5px;
+    }
+
+    .table-wrap {
+      margin: 14px 0;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    table {
+      width: 100%;
+      min-width: 650px;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    th,
+    td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef1f4;
+      color: #36424f;
+      font-weight: 800;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .ok {
+      color: var(--green);
+      font-weight: 800;
+    }
+
+    .cause-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .cause {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+      padding: 15px 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .cause-number {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border-radius: 6px;
+      background: var(--purple-soft);
+      color: var(--purple);
+      font-weight: 900;
+    }
+
+    .cause h3 {
+      margin: 0 0 4px;
+      font-size: 16px;
+    }
+
+    .cause p {
+      margin: 3px 0;
+      color: var(--muted);
+      font-size: 13.5px;
+    }
+
+    .cause .fix {
+      color: #294c3b;
+      font-weight: 700;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+      margin: 20px 0 6px;
+      counter-reset: step;
+    }
+
+    .flow-step {
+      position: relative;
+      min-width: 0;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fafbfc;
+      counter-increment: step;
+    }
+
+    .flow-step::before {
+      content: counter(step);
+      display: grid;
+      width: 26px;
+      height: 26px;
+      margin-bottom: 9px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--header);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .flow-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 37px;
+      right: -19px;
+      width: 18px;
+      border-top: 2px solid #9ca8b4;
+    }
+
+    .flow-step strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .flow-step span {
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+
+    .checklist {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 18px;
+      margin: 14px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .checklist li {
+      position: relative;
+      padding: 8px 8px 8px 32px;
+      border-bottom: 1px dashed var(--line);
+      font-size: 14px;
+    }
+
+    .checklist li::before {
+      content: "OK";
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 24px;
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .checklist li.pending::before {
+      content: "대기";
+      color: var(--amber);
+    }
+
+    .command-block {
+      display: grid;
+      grid-template-columns: 170px minmax(0, 1fr);
+      gap: 16px;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .command-block:last-child {
+      border-bottom: 0;
+    }
+
+    .command-block h3 {
+      margin: 2px 0;
+      font-size: 15px;
+    }
+
+    .command-block p {
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-size: 13.5px;
+    }
+
+    .command-block pre {
+      margin: 0;
+    }
+
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 14px;
+    }
+
+    .list-panel {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .list-panel.safe {
+      border-top: 4px solid var(--green);
+      background: #fbfdfb;
+    }
+
+    .list-panel.limit {
+      border-top: 4px solid var(--amber);
+      background: #fffdf9;
+    }
+
+    .list-panel h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    ul,
+    ol {
+      padding-left: 22px;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    footer {
+      padding: 22px 34px 30px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+
+    @media (max-width: 800px) {
+      .topbar-inner,
+      .page {
+        width: min(100% - 20px, 1040px);
+      }
+
+      .topbar-inner {
+        padding: 28px 4px 26px;
+      }
+
+      h1 {
+        font-size: 25px;
+      }
+
+      .status-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .status-item {
+        border-right: 0;
+        border-bottom: 1px solid #cfe2d6;
+      }
+
+      .status-item:last-child {
+        border-bottom: 0;
+      }
+
+      .content {
+        padding: 6px 18px 28px;
+      }
+
+      .grid,
+      .checklist,
+      .two-column {
+        grid-template-columns: 1fr;
+      }
+
+      .flow {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .flow-step:not(:last-child)::after {
+        display: none;
+      }
+
+      .command-block {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      table {
+        min-width: 560px;
+      }
+
+      footer {
+        padding: 20px 18px 24px;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      .topbar {
+        background: #ffffff;
+        color: #000000;
+        border-bottom: 2px solid #000000;
+      }
+
+      .topbar h1,
+      .topbar p,
+      .eyebrow {
+        color: #000000;
+      }
+
+      .page {
+        width: 100%;
+        margin: 0;
+        border: 0;
+        box-shadow: none;
+      }
+
+      .quick-nav,
+      .action-link {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <p class="eyebrow">HOMECOOK · 2026-07-29 KST</p>
+      <h1>현재 Mac production 운영 안내서</h1>
+      <p>localhost 개발 서버를 실제 운영 build로 바꾸고, 원격 DB 문제를 해결한 뒤, Mac 자동 실행과 복구까지 확인한 결과를 초보 개발자 눈높이로 정리했다.</p>
+      <div class="badge-row" aria-label="현재 상태">
+        <span class="badge live">운영 중</span>
+        <span class="badge">local-only</span>
+        <span class="badge">launchd 자동 실행</span>
+        <span class="badge">전체 검증 통과</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="status-strip" aria-label="운영 요약">
+      <div class="status-item">
+        <span class="status-label">접속 주소</span>
+        <span class="status-value">http://127.0.0.1:3100</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">서비스</span>
+        <span class="status-value">com.homecook.production</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">최종 확인</span>
+        <span class="status-value">HTTP 200 · running</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <nav class="quick-nav" aria-label="문서 바로가기">
+        <a href="#start">바로 확인</a>
+        <a href="#terms">기본 개념</a>
+        <a href="#causes">근본 원인</a>
+        <a href="#verification">검증 결과</a>
+        <a href="#commands">운영 명령</a>
+        <a href="#trouble">장애 대응</a>
+      </nav>
+
+      <section id="start">
+        <h2>서비스는 지금 운영 중이다</h2>
+        <p class="lead">production build가 현재 Mac에서 백그라운드로 실행되고 있다. 홈, 실제 레시피 데이터, 상세 화면, 모바일 화면, 재시작 복구까지 확인했다.</p>
+        <a class="action-link" href="http://127.0.0.1:3100">홈쿡 production 열기</a>
+        <div class="notice warn">
+          <strong>현재 Mac 전용</strong>
+          <code>127.0.0.1</code>은 내 컴퓨터를 뜻한다. 같은 와이파이의 휴대폰이나 인터넷 사용자는 이 주소로 접속할 수 없다.
+        </div>
+        <div class="grid">
+          <div class="fact"><strong>실행 방식</strong><span>Next.js production build를 <code>launchd</code>가 실행한다.</span></div>
+          <div class="fact"><strong>자동 복구</strong><span>프로세스가 종료되면 <code>launchd</code>가 다시 시작한다.</span></div>
+          <div class="fact"><strong>환경 파일</strong><span><code>.env.production.local</code>은 허용 키만 담고 권한은 <code>600</code>이다.</span></div>
+          <div class="fact"><strong>잠자기 방지</strong><span>Amphetamine을 계속 실행해 Mac sleep을 막는다.</span></div>
+        </div>
+      </section>
+
+      <section id="terms">
+        <h2>초보자가 먼저 알아야 할 차이</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>구분</th><th>명령</th><th>뜻</th><th>이번 상태</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>개발 서버</td><td><code>pnpm dev</code></td><td>코드를 고치며 빠르게 확인하는 서버</td><td>운영용 아님</td></tr>
+              <tr><td>production build</td><td><code>./scripts/run-local-mac-production.sh build</code></td><td>Node 경로를 자동으로 찾아 실제 운영에 맞게 최적화한 결과</td><td class="ok">통과</td></tr>
+              <tr><td>production server</td><td><code>pnpm start</code></td><td>build 결과물을 실행하는 서버</td><td class="ok">실행 중</td></tr>
+              <tr><td>Mac 자동 실행</td><td><code>운영 래퍼 install</code></td><td>기존 build 검사, 품질 검사, launchd 등록, HTTP 확인</td><td class="ok">설치됨</td></tr>
+              <tr><td>외부 공개</td><td>도메인 + HTTPS</td><td>인터넷 사용자가 접속하는 운영</td><td>이번 범위 아님</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="notice">
+          <strong>쉬운 비유</strong>
+          <code>pnpm dev</code>는 연습용 주방이고, production build는 손님에게 내기 전에 실제 운영 주방에서 같은 요리를 다시 만드는 과정이다.
+        </div>
+      </section>
+
+      <section id="causes">
+        <h2>문제를 근본적으로 해결한 내용</h2>
+        <div class="cause-list">
+          <article class="cause">
+            <span class="cause-number">1</span>
+            <div>
+              <h3>원격 DB가 코드보다 뒤처짐</h3>
+              <p>원격 Supabase에 <code>recipes.visibility</code>와 후속 schema가 없어 홈 API가 PostgreSQL <code>42703</code>으로 실패했다.</p>
+              <p class="fix">DB를 먼저 백업하고 빠진 공식 migration 33개와 이번 보안 migration을 순서대로 적용했다.</p>
+            </div>
+          </article>
+          <article class="cause">
+            <span class="cause-number">2</span>
+            <div>
+              <h3>visibility guard의 schema 권한 부족</h3>
+              <p>guard 함수 소유자가 테이블은 읽을 수 있지만 <code>public</code> schema 이름을 해석할 수 없었다.</p>
+              <p class="fix"><code>USAGE</code>만 허용하고 <code>CREATE</code>는 계속 금지해 최소 권한을 유지했다.</p>
+            </div>
+          </article>
+          <article class="cause">
+            <span class="cause-number">3</span>
+            <div>
+              <h3>Supabase hosted 검색 함수 제한</h3>
+              <p>함수 내부의 <code>pg_trgm.word_similarity_threshold</code> 변경이 hosted 환경에서 <code>42501</code>로 거부됐다.</p>
+              <p class="fix">short-ngram GIN index로 후보를 줄이고 <code>word_similarity &gt; 0.3</code>을 명시해 같은 검색 의미와 성능을 유지했다.</p>
+            </div>
+          </article>
+          <article class="cause">
+            <span class="cause-number">4</span>
+            <div>
+              <h3>DB 기본 권한과 검증기 오판</h3>
+              <p>레시피 관련 직접 쓰기 권한은 넓게 남았고, 허용 열만 공개한 <code>tags</code>와 PostgreSQL 17 제한형 역할은 검증기가 잘못 판단했다.</p>
+              <p class="fix">table·column 쓰기 권한을 회수하고, 공개 열과 안전한 Supabase 역할 형태를 정확히 검사하도록 수정했다.</p>
+            </div>
+          </article>
+          <article class="cause">
+            <span class="cause-number">5</span>
+            <div>
+              <h3>pnpm 설정 위치와 Node 경로</h3>
+              <p>최신 pnpm 설정 위치가 바뀌었고 현재 셸에는 시스템 <code>node</code>가 없었다.</p>
+              <p class="fix">설정을 <code>pnpm-workspace.yaml</code>로 옮기고, 검토한 build script 버전만 허용하며, 관리 명령이 현재 Mac의 Node를 자동 탐색하게 했다.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>완료한 흐름</h2>
+        <div class="flow" aria-label="운영 완료 흐름">
+          <div class="flow-step"><strong>백업과 진단</strong><span>원격 schema/data dump와 migration 차이를 확인했다.</span></div>
+          <div class="flow-step"><strong>DB와 코드 수정</strong><span>호환성, 권한, 검증기 문제를 각각 고쳤다.</span></div>
+          <div class="flow-step"><strong>전체 검증</strong><span>lint, typecheck, test, build, 실제 PostgreSQL을 통과했다.</span></div>
+          <div class="flow-step"><strong>Mac 운영</strong><span>launchd 설치, 화면 검사, 강제 재시작 복구를 확인했다.</span></div>
+        </div>
+        <ul class="checklist">
+          <li>원격 DB schema/data 백업</li>
+          <li>원격 migration 일치</li>
+          <li>production 환경 파일 권한 600</li>
+          <li>원격 권한 read-only 검증</li>
+          <li>전체 Vitest 통과</li>
+          <li>production build 통과</li>
+          <li>데스크톱·모바일 화면 통과</li>
+          <li>launchd 재시작 복구 통과</li>
+          <li class="pending">실제 Mac 재부팅 smoke는 미실행</li>
+        </ul>
+        <p class="small">실제 재부팅은 현재 사용자 세션을 강제로 끊기 때문에 수행하지 않았다. 같은 launchd 경로의 강제 재시작과 자동 HTTP 준비 검사는 통과했다.</p>
+      </section>
+
+      <section id="verification">
+        <h2>최종 검증 결과</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>검사</th><th>결과</th><th>확인한 내용</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Lint</td><td class="ok">통과</td><td>ESLint 오류 0</td></tr>
+              <tr><td>TypeScript</td><td class="ok">통과</td><td>타입 오류 0</td></tr>
+              <tr><td>전체 Vitest</td><td class="ok">통과</td><td>421 files, 4,309 tests</td></tr>
+              <tr><td>recipe PostgreSQL</td><td class="ok">통과</td><td>75 tests</td></tr>
+              <tr><td>검색 PostgreSQL</td><td class="ok">통과</td><td>32 tests</td></tr>
+              <tr><td>Production build</td><td class="ok">통과</td><td>74 static pages 생성</td></tr>
+              <tr><td>검색 품질</td><td class="ok">통과</td><td>Recall@20 1.0000, DB p95 43.30ms</td></tr>
+              <tr><td>원격 recipe 권한</td><td class="ok">통과</td><td>직접 mutation 0, remote writes 0</td></tr>
+              <tr><td>브라우저</td><td class="ok">통과</td><td>desktop/mobile, 깨진 이미지·가로 넘침·오류 0</td></tr>
+              <tr><td>재시작</td><td class="ok">통과</td><td>새 PID 확인, 홈·레시피 API HTTP 200</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="notice good">
+          <strong>원격 권한 핵심 숫자</strong>
+          읽기 누락 0, recipe table mutation 0, recipe column mutation 0, 비공개 Storage mutation policy 0, 원격 검증 write 0이다.
+        </div>
+      </section>
+
+      <section id="commands">
+        <h2>운영할 때 쓰는 명령</h2>
+        <div class="command-block">
+          <div>
+            <h3>상태 확인</h3>
+            <p>서비스가 켜져 있는지 본다.</p>
+          </div>
+          <pre>./scripts/run-local-mac-production.sh status</pre>
+        </div>
+        <div class="command-block">
+          <div>
+            <h3>재시작</h3>
+            <p>새 build를 반영하거나 일시 오류를 복구한다.</p>
+          </div>
+          <pre>./scripts/run-local-mac-production.sh restart</pre>
+        </div>
+        <div class="command-block">
+          <div>
+            <h3>오류 로그</h3>
+            <p>서버가 켜지지 않을 때 마지막 오류를 본다.</p>
+          </div>
+          <pre>tail -n 100 ~/.homecook/logs/homecook-production.err.log</pre>
+        </div>
+        <div class="command-block">
+          <div>
+            <h3>다시 설치</h3>
+            <p>새 build를 만든 뒤 환경·품질 검사를 거쳐 다시 등록한다.</p>
+          </div>
+          <pre>./scripts/run-local-mac-production.sh build
+./scripts/run-local-mac-production.sh install</pre>
+        </div>
+        <div class="command-block">
+          <div>
+            <h3>운영 해제</h3>
+            <p>자동 실행을 멈추고 launchd 등록을 지운다.</p>
+          </div>
+          <pre>./scripts/run-local-mac-production.sh uninstall</pre>
+        </div>
+      </section>
+
+      <section id="trouble">
+        <h2>장애가 보일 때 확인 순서</h2>
+        <ol>
+          <li><a href="http://127.0.0.1:3100">production 주소</a>를 다시 연다.</li>
+          <li><code>./scripts/run-local-mac-production.sh status</code>에서 <code>running: yes</code>인지 확인한다.</li>
+          <li><code>./scripts/run-local-mac-production.sh restart</code>를 실행한다.</li>
+          <li>계속 실패하면 오류 로그 마지막 100줄을 확인한다.</li>
+          <li>코드를 바꿨다면 운영 래퍼의 <code>build</code> 후 <code>install</code>을 실행한다.</li>
+          <li>환경 변수만 바꿨다면 운영 래퍼의 <code>install</code>을 다시 실행한다.</li>
+        </ol>
+        <div class="two-column">
+          <div class="list-panel safe">
+            <h3>계속 지켜야 할 안전선</h3>
+            <ul>
+              <li>secret과 <code>.env.production.local</code>을 Git에 올리지 않는다.</li>
+              <li><code>SUPABASE_SERVICE_ROLE_KEY</code>를 브라우저 변수로 만들지 않는다.</li>
+              <li><code>127.0.0.1</code> 제한을 임의로 풀지 않는다.</li>
+              <li>Mac 전원과 Amphetamine 상태를 유지한다.</li>
+            </ul>
+          </div>
+          <div class="list-panel limit">
+            <h3>아직 포함하지 않은 것</h3>
+            <ul>
+              <li>같은 와이파이의 다른 기기 접속</li>
+              <li>public internet 공개</li>
+              <li>도메인과 HTTPS</li>
+              <li>OAuth production callback 변경</li>
+              <li>실제 Mac 재부팅 smoke test</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>백업과 공식 참고 자료</h2>
+        <p>원격 migration 전 백업은 아래 경로에 있다. 검증이 충분히 끝날 때까지 삭제하지 않는다.</p>
+        <pre>/tmp/homecook-pre-migration-20260729.sql
+/tmp/homecook-pre-migration-data-20260729.sql</pre>
+        <ul>
+          <li><a href="https://supabase.com/docs/guides/deployment/database-migrations">Supabase database migrations</a></li>
+          <li><a href="https://supabase.com/docs/guides/database/custom-postgres-config">Supabase custom Postgres configuration</a></li>
+          <li><a href="https://www.postgresql.org/docs/current/pgtrgm.html">PostgreSQL pg_trgm</a></li>
+          <li><a href="https://pnpm.io/settings">pnpm project settings</a></li>
+        </ul>
+      </section>
+    </div>
+
+    <footer>
+      상세 기술 기록은 <code>docs/engineering/current-mac-production-plan.md</code>를 기준으로 한다. 이 HTML은 초보자가 운영 상태와 명령을 빠르게 이해하기 위한 안내서다.
+    </footer>
+  </main>
+</body>
+</html>

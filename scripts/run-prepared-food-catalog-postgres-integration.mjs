@@ -259,6 +259,7 @@ to anon, authenticated;
     for (const migration of [
       "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
       "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
+      "supabase/migrations/20260723180000_recipe_visibility_guard_public_schema_usage.sql",
     ]) {
       runRequired(path.join(postgresBin, "psql"), [
         ...args,
@@ -364,6 +365,14 @@ to anon, authenticated;
         "--single-transaction",
         "-f",
         "supabase/migrations/20260725140000_prepared_food_search_ranked_rpc.sql",
+      ]);
+    }
+    for (let replay = 0; replay < 2; replay += 1) {
+      runRequired(path.join(postgresBin, "psql"), [
+        ...args,
+        "--single-transaction",
+        "-f",
+        "supabase/migrations/20260725145000_prepared_food_search_hosted_compatibility.sql",
       ]);
     }
     for (let replay = 0; replay < 2; replay += 1) {

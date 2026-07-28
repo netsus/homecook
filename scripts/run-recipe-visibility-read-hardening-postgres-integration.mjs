@@ -9,6 +9,8 @@ import path from "node:path";
 const POSTGRES_TOOLS = ["initdb", "pg_ctl", "createdb", "psql"];
 const MIGRATION_PATHS = [
   "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
+  "supabase/migrations/20260723180000_recipe_visibility_guard_public_schema_usage.sql",
+  "supabase/migrations/20260723190000_recipe_visibility_direct_mutation_privilege_hardening.sql",
   "supabase/migrations/20260724090000_recipe_tag_parent_visibility_upper_bound.sql",
   "supabase/migrations/20260724110000_recipe_managed_image_registry_foundation.sql",
   "supabase/migrations/20260724120000_recipe_image_cleanup_outbox.sql",
@@ -168,6 +170,18 @@ if (!postgresBin) {
       "-O", "migration_runner",
       database,
     ]);
+    runRequired(path.join(postgresBin, "psql"), [
+      "-h", "127.0.0.1",
+      "-p", String(port),
+      "-U", "postgres",
+      "-d", database,
+      "-v", "ON_ERROR_STOP=1",
+      "-c", `
+        revoke all on schema public from public;
+        grant usage, create on schema public
+          to migration_runner with grant option;
+      `,
+    ]);
 
     const runnerArgs = [
       "-h", "127.0.0.1",
@@ -225,6 +239,21 @@ if (!postgresBin) {
         grant execute on function storage.foldername(text)
           to anon, authenticated, service_role;
 
+        create schema account_generation_storage_guard authorization migration_runner;
+        create function account_generation_storage_guard.allows_legacy_recipe_image_write()
+        returns boolean
+        language sql
+        stable
+        security definer
+        set search_path = pg_catalog
+        as $function$
+          select true
+        $function$;
+        grant usage on schema account_generation_storage_guard to authenticated;
+        grant execute
+          on function account_generation_storage_guard.allows_legacy_recipe_image_write()
+          to authenticated;
+
         insert into storage.buckets (
           id,
           name,
@@ -250,6 +279,7 @@ if (!postgresBin) {
           with check (
             bucket_id = 'recipe-images'
             and (storage.foldername(name))[1] = auth.uid()::text
+            and account_generation_storage_guard.allows_legacy_recipe_image_write()
           );
         create policy recipe_images_update_own
           on storage.objects
@@ -258,10 +288,12 @@ if (!postgresBin) {
           using (
             bucket_id = 'recipe-images'
             and (storage.foldername(name))[1] = auth.uid()::text
+            and account_generation_storage_guard.allows_legacy_recipe_image_write()
           )
           with check (
             bucket_id = 'recipe-images'
             and (storage.foldername(name))[1] = auth.uid()::text
+            and account_generation_storage_guard.allows_legacy_recipe_image_write()
           );
         create policy recipe_images_delete_own
           on storage.objects
@@ -270,6 +302,7 @@ if (!postgresBin) {
           using (
             bucket_id = 'recipe-images'
             and (storage.foldername(name))[1] = auth.uid()::text
+            and account_generation_storage_guard.allows_legacy_recipe_image_write()
           );
 
         create type public.recipe_source_type
@@ -683,7 +716,7 @@ if (!postgresBin) {
           to service_role;
 
         grant usage on schema public to anon, authenticated, service_role;
-        grant select on table
+        grant all on table
           public.recipes,
           public.recipe_sources,
           public.recipe_ingredients,
@@ -692,6 +725,7 @@ if (!postgresBin) {
           public.tags,
           public.recipe_tags
         to anon, authenticated;
+        grant all on table public.recipe_tags to service_role;
       `,
     ]);
 
