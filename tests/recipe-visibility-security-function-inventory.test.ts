@@ -43,6 +43,8 @@ const IMAGE_LIFECYCLE_COMPLETION_CANDIDATE_MANIFEST_PATH =
   "docs/security/recipe-image-lifecycle-completion-candidate-security-function-authorization-manifest.json";
 const IMAGE_LEGACY_REPORT_ONLY_MANIFEST_PATH =
   "docs/security/recipe-image-legacy-report-only-security-function-authorization-manifest.json";
+const IMAGE_READ_PROJECTION_MANIFEST_PATH =
+  "docs/security/recipe-image-read-projection-security-function-authorization-manifest.json";
 
 describe("recipe visibility security function inventory", () => {
   it("classifies the guard and every recreated baseline function", () => {
@@ -511,6 +513,30 @@ describe("recipe visibility security function inventory", () => {
     ]);
   });
 
+  it("classifies the registry-aware image read projection authority", () => {
+    expect(existsSync(IMAGE_READ_PROJECTION_MANIFEST_PATH)).toBe(true);
+    if (!existsSync(IMAGE_READ_PROJECTION_MANIFEST_PATH)) {
+      return;
+    }
+
+    const manifest = JSON.parse(
+      readFileSync(IMAGE_READ_PROJECTION_MANIFEST_PATH, "utf8"),
+    ) as {
+      functions: Array<Record<string, unknown>>;
+    };
+
+    expect(manifest.functions).toEqual([
+      expect.objectContaining({
+        signature: "public.read_recipe_image_projections(uuid[])",
+        effect: "read-only",
+        exposure: "service-internal",
+        allowed_principals: ["service_role"],
+        security_mode: "definer",
+        safe_search_path: ["pg_catalog", "public", "pg_temp"],
+      }),
+    ]);
+  });
+
   it("classifies the guarded Auth deletion finalize authority", () => {
     expect(existsSync(IMAGE_AUTH_DELETION_FINALIZE_MANIFEST_PATH)).toBe(
       true,
@@ -654,6 +680,9 @@ describe("recipe visibility security function inventory", () => {
     );
     expect(output).toContain(
       "recipe-image-legacy-report-only:1 pre-deployment additive application functions",
+    );
+    expect(output).toContain(
+      "recipe-image-read-projection:1 pre-deployment additive application functions",
     );
   }, 15_000);
 

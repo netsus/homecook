@@ -21,6 +21,10 @@ import {
   type RecipeNutritionSnapshotRow,
 } from "@/lib/server/recipe-nutrition-snapshot";
 import {
+  readRecipeImageProjection,
+  resolveRecipeImageReadUrl,
+} from "@/lib/server/recipe-image-read";
+import {
   isMissingStepCookingMethodsRelation,
   RECIPE_STEP_SELECT_LEGACY,
   RECIPE_STEP_SELECT_WITH_METHODS,
@@ -39,6 +43,8 @@ interface RecipeViewCountIncrementRow {
   id: string;
   view_count: number;
 }
+
+const RECIPE_IMAGE_READ_URL_TTL_SECONDS = 300;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -60,6 +66,23 @@ function normalizePositiveNumber(value: unknown) {
   }
 
   return numberValue;
+}
+
+function readExpectedStorageOrigin() {
+  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!configuredUrl) {
+    throw new Error("managed recipe image read configuration is invalid");
+  }
+
+  try {
+    const url = new URL(configuredUrl);
+    if (url.protocol !== "https:") {
+      throw new Error();
+    }
+    return url.origin;
+  } catch {
+    throw new Error("managed recipe image read configuration is invalid");
+  }
 }
 
 async function readCurrentRecipeNutritionSnapshot(
@@ -259,12 +282,29 @@ export async function GET(request: Request, context: RouteContext) {
 
     const serviceClient = createServiceRoleClient();
     const dbClient = routeClient;
+    const legacyThumbnailUrl = recipeResult.data.thumbnail_url;
+    const imageReadPromise = serviceClient
+      ? readRecipeImageProjection({
+          client: serviceClient,
+          recipeId: id,
+        }).then((projection) =>
+          projection
+            ? resolveRecipeImageReadUrl({
+                client: serviceClient,
+                expectedStorageOrigin: readExpectedStorageOrigin(),
+                projection,
+                signedUrlTtlSeconds: RECIPE_IMAGE_READ_URL_TTL_SECONDS,
+              })
+            : legacyThumbnailUrl
+        )
+      : Promise.resolve(legacyThumbnailUrl);
 
     const [
       sourceResult,
       ingredientsResult,
       nutritionSnapshotResult,
       authResult,
+      resolvedThumbnailUrl,
     ] = await Promise.all([
       dbClient
         .from("recipe_sources")
@@ -280,6 +320,7 @@ export async function GET(request: Request, context: RouteContext) {
         .order("sort_order", { ascending: true }),
       readCurrentRecipeNutritionSnapshot(serviceClient ?? routeClient, id),
       routeClient.auth.getUser(),
+      imageReadPromise,
     ]);
 
     let stepsResult = await dbClient
@@ -375,7 +416,7 @@ export async function GET(request: Request, context: RouteContext) {
       }
     }
 
-    const thumbnailUrl = normalizeFoodSafetyImageUrl(recipeResult.data.thumbnail_url);
+    const thumbnailUrl = normalizeFoodSafetyImageUrl(resolvedThumbnailUrl);
     const detail: RecipeDetail = {
       id: recipeResult.data.id,
       title: recipeResult.data.title,
