@@ -5,15 +5,18 @@ const PRIVATE_OBJECT_PATH_PATTERN
 const PUBLIC_OBJECT_PATH_PATTERN
   = /^shared\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.(jpg|jpeg|png|webp)$/i;
 
-export interface RecipeImageReadProjection {
-  recipe_id: string;
-  legacy_thumbnail_url: string | null;
+export interface ManagedRecipeImageReadProjection {
   image_object_id: string | null;
   bucket_id: string | null;
   object_path: string | null;
   visibility: string | null;
   state: string | null;
   reference_type: string | null;
+}
+
+export interface RecipeImageReadProjection extends ManagedRecipeImageReadProjection {
+  recipe_id: string;
+  legacy_thumbnail_url: string | null;
 }
 
 interface RecipeImageReadStorageBucket {
@@ -68,7 +71,7 @@ function nullableString(value: unknown): value is string | null {
   return value === null || typeof value === "string";
 }
 
-function isProjectionAuthorityMissing(error: unknown) {
+export function isRecipeImageProjectionAuthorityMissing(error: unknown) {
   return isRecord(error)
     && (error.code === "PGRST202" || error.code === "42883");
 }
@@ -155,7 +158,7 @@ export async function readRecipeImageProjection({
   const result = await client.rpc("read_recipe_image_projections", {
     p_recipe_ids: [recipeId],
   });
-  if (isProjectionAuthorityMissing(result.error)) {
+  if (isRecipeImageProjectionAuthorityMissing(result.error)) {
     return null;
   }
   if (
@@ -185,6 +188,33 @@ export async function resolveRecipeImageReadUrl({
   signedUrlTtlSeconds: number;
 }) {
   const projection = parseProjection(rawProjection);
+
+  if (projection.image_object_id === null) {
+    return legacyUrl(projection);
+  }
+
+  return resolveManagedRecipeImageReadUrl({
+    client,
+    expectedReferenceType: "recipe_thumbnail",
+    expectedStorageOrigin,
+    projection,
+    signedUrlTtlSeconds,
+  });
+}
+
+export async function resolveManagedRecipeImageReadUrl({
+  client,
+  expectedReferenceType,
+  expectedStorageOrigin,
+  projection,
+  signedUrlTtlSeconds,
+}: {
+  client: RecipeImageReadStorageClient;
+  expectedReferenceType: "recipe_thumbnail" | "recipe_book_cover";
+  expectedStorageOrigin: string;
+  projection: ManagedRecipeImageReadProjection;
+  signedUrlTtlSeconds: number;
+}) {
   const expectedOrigin = expectedHttpsOrigin(expectedStorageOrigin);
   if (
     !Number.isSafeInteger(signedUrlTtlSeconds)
@@ -192,13 +222,15 @@ export async function resolveRecipeImageReadUrl({
   ) {
     throw new Error("managed recipe image read configuration is invalid");
   }
-
-  if (projection.image_object_id === null) {
-    return legacyUrl(projection);
-  }
   if (
-    !UUID_PATTERN.test(projection.image_object_id)
-    || projection.reference_type !== "recipe_thumbnail"
+    typeof projection.image_object_id !== "string"
+    || !UUID_PATTERN.test(projection.image_object_id)
+    || !nullableString(projection.bucket_id)
+    || !nullableString(projection.object_path)
+    || !nullableString(projection.visibility)
+    || !nullableString(projection.state)
+    || !nullableString(projection.reference_type)
+    || projection.reference_type !== expectedReferenceType
   ) {
     throw new Error("managed recipe image read evidence is invalid");
   }

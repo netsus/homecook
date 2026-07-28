@@ -57,6 +57,8 @@ const IMAGE_LEGACY_REPORT_ONLY_MIGRATION_PATH =
   "supabase/migrations/20260725160000_recipe_image_legacy_report_only.sql";
 const IMAGE_READ_PROJECTION_MIGRATION_PATH =
   "supabase/migrations/20260725170000_recipe_image_read_projection_authority.sql";
+const RECIPE_BOOK_IMAGE_READ_PROJECTION_MIGRATION_PATH =
+  "supabase/migrations/20260725180000_recipe_book_image_read_projection_authority.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -164,6 +166,14 @@ const IMAGE_READ_PROJECTION_OBJECT =
   "00000000-0000-4000-8000-0000000003cd";
 const IMAGE_READ_PROJECTION_SHARED_OBJECT =
   "00000000-0000-4000-8000-0000000003ce";
+const RECIPE_BOOK_IMAGE_READ_PROJECTION_OBJECT =
+  "00000000-0000-4000-8000-0000000003d0";
+const RECIPE_BOOK_IMAGE_READ_PROJECTION_REFERENCE =
+  "00000000-0000-4000-8000-0000000003d1";
+const RECIPE_BOOK_IMAGE_READ_PROJECTION_MANAGED_BOOK =
+  "00000000-0000-4000-8000-0000000003d2";
+const RECIPE_BOOK_IMAGE_READ_PROJECTION_LEGACY_BOOK =
+  "00000000-0000-4000-8000-0000000003d3";
 
 function psqlResult(sql: string) {
   return spawnSync("psql", [
@@ -1216,6 +1226,149 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
     `);
     expect(duplicateInput.status).not.toBe(0);
     expect(duplicateInput.stderr).toMatch(/duplicate recipe IDs/i);
+  });
+
+  it("projects only authorized recipe-book cover identity in caller order", () => {
+    const replay = psqlFileResult(
+      RECIPE_BOOK_IMAGE_READ_PROJECTION_MIGRATION_PATH,
+    );
+    expect(replay.status, replay.stderr).toBe(0);
+
+    expect(psql(`
+      select concat_ws(
+        ':',
+        has_function_privilege(
+          'anon',
+          'public.read_recipe_book_image_projections(uuid[])',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'authenticated',
+          'public.read_recipe_book_image_projections(uuid[])',
+          'EXECUTE'
+        ),
+        has_function_privilege(
+          'service_role',
+          'public.read_recipe_book_image_projections(uuid[])',
+          'EXECUTE'
+        )
+      );
+    `)).toBe("f:f:t");
+
+    for (const role of ["anon", "authenticated"] as const) {
+      const denied = psqlResult(`
+        set role ${role};
+        select *
+        from public.read_recipe_book_image_projections(
+          array['${RECIPE_BOOK_IMAGE_READ_PROJECTION_MANAGED_BOOK}'::uuid]
+        );
+      `);
+      expect(denied.status).not.toBe(0);
+      expect(denied.stderr).toMatch(/permission denied/i);
+    }
+
+    psql(`
+      delete from public.recipe_image_object_references
+      where id = '${RECIPE_BOOK_IMAGE_READ_PROJECTION_REFERENCE}';
+      delete from public.recipe_image_objects
+      where id = '${RECIPE_BOOK_IMAGE_READ_PROJECTION_OBJECT}';
+      delete from public.recipe_books
+      where id in (
+        '${RECIPE_BOOK_IMAGE_READ_PROJECTION_MANAGED_BOOK}',
+        '${RECIPE_BOOK_IMAGE_READ_PROJECTION_LEGACY_BOOK}'
+      );
+
+      insert into public.recipe_books (
+        id,
+        user_id,
+        cover_image_url
+      )
+      values
+        (
+          '${RECIPE_BOOK_IMAGE_READ_PROJECTION_MANAGED_BOOK}',
+          '${OWNER_ACTIVE}',
+          'https://legacy.example/managed.webp'
+        ),
+        (
+          '${RECIPE_BOOK_IMAGE_READ_PROJECTION_LEGACY_BOOK}',
+          '${OWNER_ACTIVE}',
+          'https://legacy.example/legacy.webp'
+        );
+
+      insert into public.recipe_image_objects (
+        id,
+        owner_uuid,
+        account_generation,
+        bucket_id,
+        object_path,
+        raw_sha256,
+        byte_size,
+        actual_mime_type,
+        visibility,
+        state
+      )
+      values (
+        '${RECIPE_BOOK_IMAGE_READ_PROJECTION_OBJECT}',
+        '${OWNER_ACTIVE}',
+        1,
+        'recipe-images-private',
+        '${OWNER_ACTIVE}/1/${RECIPE_BOOK_IMAGE_READ_PROJECTION_OBJECT}.webp',
+        repeat('c', 64),
+        512,
+        'image/webp',
+        'private',
+        'attached_private'
+      );
+
+      insert into public.recipe_image_object_references (
+        id,
+        image_object_id,
+        reference_type,
+        consumer_id
+      )
+      values (
+        '${RECIPE_BOOK_IMAGE_READ_PROJECTION_REFERENCE}',
+        '${RECIPE_BOOK_IMAGE_READ_PROJECTION_OBJECT}',
+        'recipe_book_cover',
+        '${RECIPE_BOOK_IMAGE_READ_PROJECTION_MANAGED_BOOK}'
+      );
+    `);
+
+    expect(psql(`
+      set role service_role;
+      select string_agg(
+        concat_ws(
+          ':',
+          projection.book_id,
+          projection.legacy_cover_image_url,
+          coalesce(projection.image_object_id::text, 'none'),
+          coalesce(projection.reference_type, 'none')
+        ),
+        '|' order by projection.ordinality
+      )
+      from public.read_recipe_book_image_projections(
+        array[
+          '${RECIPE_BOOK_IMAGE_READ_PROJECTION_LEGACY_BOOK}'::uuid,
+          '${RECIPE_BOOK_IMAGE_READ_PROJECTION_MANAGED_BOOK}'::uuid
+        ]
+      ) with ordinality as projection;
+    `)).toBe([
+      `${RECIPE_BOOK_IMAGE_READ_PROJECTION_LEGACY_BOOK}:https://legacy.example/legacy.webp:none:none`,
+      `${RECIPE_BOOK_IMAGE_READ_PROJECTION_MANAGED_BOOK}:https://legacy.example/managed.webp:${RECIPE_BOOK_IMAGE_READ_PROJECTION_OBJECT}:recipe_book_cover`,
+    ].join("|"));
+
+    const duplicate = psqlResult(`
+      set role service_role;
+      select *
+      from public.read_recipe_book_image_projections(
+        array[
+          '${RECIPE_BOOK_IMAGE_READ_PROJECTION_MANAGED_BOOK}'::uuid,
+          '${RECIPE_BOOK_IMAGE_READ_PROJECTION_MANAGED_BOOK}'::uuid
+        ]
+      );
+    `);
+    expect(duplicate.status).not.toBe(0);
+    expect(duplicate.stderr).toMatch(/duplicate book IDs/i);
   });
 
   it("enforces private generation ownership and owner-neutral shared paths", () => {

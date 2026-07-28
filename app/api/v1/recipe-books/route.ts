@@ -13,6 +13,12 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import {
+  readRecipeBookImageProjections,
+  resolveRecipeBookImageReadUrl,
+  type RecipeBookImageReadRpcClient,
+} from "@/lib/server/recipe-book-image-read";
+import type { RecipeImageReadStorageClient } from "@/lib/server/recipe-image-read";
+import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
@@ -29,6 +35,8 @@ import type {
 interface QueryError {
   message: string;
 }
+
+const RECIPE_BOOK_IMAGE_READ_URL_TTL_SECONDS = 300;
 
 interface QueryOrderOption {
   ascending: boolean;
@@ -193,6 +201,66 @@ function getCurrentMaxSortOrder(rows: RecipeBookSortOrderRow[] | null) {
   return rows.reduce((maxValue, row) => Math.max(maxValue, row.sort_order), -1);
 }
 
+function readExpectedStorageOrigin() {
+  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!configuredUrl) {
+    throw new Error("managed recipe image read configuration is invalid");
+  }
+
+  try {
+    const url = new URL(configuredUrl);
+    if (url.protocol !== "https:") {
+      throw new Error();
+    }
+    return url.origin;
+  } catch {
+    throw new Error("managed recipe image read configuration is invalid");
+  }
+}
+
+async function resolveRecipeBookCoverUrls({
+  books,
+  client,
+}: {
+  books: RecipeBookRow[];
+  client: RecipeBookImageReadRpcClient & RecipeImageReadStorageClient;
+}) {
+  const chunks: RecipeBookRow[][] = [];
+  for (let index = 0; index < books.length; index += 100) {
+    chunks.push(books.slice(index, index + 100));
+  }
+
+  const projectionChunks = await Promise.all(
+    chunks.map((chunk) =>
+      readRecipeBookImageProjections({
+        client,
+        bookIds: chunk.map((book) => book.id),
+      })
+    ),
+  );
+  if (projectionChunks.some((chunk) => chunk === null)) {
+    return books;
+  }
+
+  const projections = projectionChunks.flatMap((chunk) => chunk ?? []);
+  const expectedStorageOrigin = readExpectedStorageOrigin();
+  const resolvedCoverUrls = await Promise.all(
+    projections.map((projection) =>
+      resolveRecipeBookImageReadUrl({
+        client,
+        expectedStorageOrigin,
+        projection,
+        signedUrlTtlSeconds: RECIPE_BOOK_IMAGE_READ_URL_TTL_SECONDS,
+      })
+    ),
+  );
+
+  return books.map((book, index) => ({
+    ...book,
+    cover_image_url: resolvedCoverUrls[index] ?? null,
+  }));
+}
+
 function toRecipeBookListData({
   books,
   countByBookId,
@@ -338,7 +406,8 @@ export async function GET(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const serviceClient = createServiceRoleClient();
+  const dbClient = (serviceClient ?? routeClient) as unknown as
     RecipeBookDbClient & UserBootstrapDbClient;
 
   try {
@@ -371,18 +440,35 @@ export async function GET(request: Request) {
   const countedBookIds = booksResult.data
     .filter((book: RecipeBookRow) => book.book_type === "saved" || book.book_type === "custom")
     .map((book: RecipeBookRow) => book.id);
-  const [itemCountsResult, likesResult, userRecipesResult] = await Promise.all([
-    readRecipeBookItemCounts(dbClient, countedBookIds),
-    dbClient
-      .from("recipe_likes")
-      .select("recipe_id", { count: "exact", head: true })
-      .eq("user_id", user.id),
-    dbClient
-      .from("recipes")
-      .select("id", { count: "exact", head: true })
-      .eq("created_by", user.id)
-      .in("source_type", ["youtube", "manual"]),
-  ]);
+  const readResults = await Promise.all([
+      readRecipeBookItemCounts(dbClient, countedBookIds),
+      dbClient
+        .from("recipe_likes")
+        .select("recipe_id", { count: "exact", head: true })
+        .eq("user_id", user.id),
+      dbClient
+        .from("recipes")
+        .select("id", { count: "exact", head: true })
+        .eq("created_by", user.id)
+        .in("source_type", ["youtube", "manual"]),
+      serviceClient
+        ? resolveRecipeBookCoverUrls({
+            books: booksResult.data,
+            client: serviceClient as unknown as
+              RecipeBookImageReadRpcClient & RecipeImageReadStorageClient,
+          })
+        : Promise.resolve(booksResult.data),
+    ] as const).catch(() => null);
+  if (!readResults) {
+    return fail("INTERNAL_ERROR", "레시피북 목록을 불러오지 못했어요.", 500);
+  }
+
+  const [
+    itemCountsResult,
+    likesResult,
+    userRecipesResult,
+    booksWithResolvedCovers,
+  ] = readResults;
 
   if (
     itemCountsResult.error ||
@@ -394,7 +480,7 @@ export async function GET(request: Request) {
   }
 
   return ok(toRecipeBookListData({
-    books: booksResult.data,
+    books: booksWithResolvedCovers,
     countByBookId: itemCountsResult.data,
     likedCount: likesResult.count ?? 0,
     myAddedCount: userRecipesResult.count ?? 0,
