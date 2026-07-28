@@ -96,10 +96,19 @@ function parseProjection(value: unknown): RecipeImageReadProjection {
   return value as unknown as RecipeImageReadProjection;
 }
 
-function expectedHttpsOrigin(value: string) {
+export function normalizeExpectedRecipeImageStorageOrigin(value: string) {
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:" || url.origin !== value) {
+    const isLoopbackHttp = url.protocol === "http:"
+      && (
+        url.hostname === "127.0.0.1"
+        || url.hostname === "localhost"
+        || url.hostname === "[::1]"
+      );
+    if (
+      (url.protocol !== "https:" && !isLoopbackHttp)
+      || url.origin !== value
+    ) {
       throw new Error();
     }
     return url.origin;
@@ -115,7 +124,11 @@ function assertExpectedReadUrl(value: unknown, expectedOrigin: string) {
 
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:" || url.origin !== expectedOrigin) {
+    const expectedUrl = new URL(expectedOrigin);
+    if (
+      url.protocol !== expectedUrl.protocol
+      || url.origin !== expectedOrigin
+    ) {
       throw new Error();
     }
     return url.toString();
@@ -215,7 +228,8 @@ export async function resolveManagedRecipeImageReadUrl({
   projection: ManagedRecipeImageReadProjection;
   signedUrlTtlSeconds: number;
 }) {
-  const expectedOrigin = expectedHttpsOrigin(expectedStorageOrigin);
+  const expectedOrigin =
+    normalizeExpectedRecipeImageStorageOrigin(expectedStorageOrigin);
   if (
     !Number.isSafeInteger(signedUrlTtlSeconds)
     || signedUrlTtlSeconds <= 0

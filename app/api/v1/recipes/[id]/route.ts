@@ -21,6 +21,7 @@ import {
   type RecipeNutritionSnapshotRow,
 } from "@/lib/server/recipe-nutrition-snapshot";
 import {
+  normalizeExpectedRecipeImageStorageOrigin,
   readRecipeImageProjection,
   resolveRecipeImageReadUrl,
 } from "@/lib/server/recipe-image-read";
@@ -73,16 +74,7 @@ function readExpectedStorageOrigin() {
   if (!configuredUrl) {
     throw new Error("managed recipe image read configuration is invalid");
   }
-
-  try {
-    const url = new URL(configuredUrl);
-    if (url.protocol !== "https:") {
-      throw new Error();
-    }
-    return url.origin;
-  } catch {
-    throw new Error("managed recipe image read configuration is invalid");
-  }
+  return normalizeExpectedRecipeImageStorageOrigin(configuredUrl);
 }
 
 async function readCurrentRecipeNutritionSnapshot(
