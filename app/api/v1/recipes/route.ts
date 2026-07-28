@@ -1223,18 +1223,18 @@ export async function POST(request: Request) {
       503,
     );
   }
+  if (
+    parsed.thumbnailUrl
+    && isServiceOwnedRecipeImageUrl(parsed.thumbnailUrl)
+  ) {
+    return failManagedRecipeCreate("MANAGED_IMAGE_REFERENCE_REQUIRED");
+  }
 
   let managedSession:
     | AccountGenerationBootstrapSessionAuthority
     | null = null;
   if (capability.state === "generation_active") {
-    if (
-      parsed.thumbnailUrl
-      && (
-        parsed.imageObjectId
-        || isServiceOwnedRecipeImageUrl(parsed.thumbnailUrl)
-      )
-    ) {
+    if (parsed.thumbnailUrl && parsed.imageObjectId) {
       return failManagedRecipeCreate("MANAGED_IMAGE_REFERENCE_REQUIRED");
     }
 

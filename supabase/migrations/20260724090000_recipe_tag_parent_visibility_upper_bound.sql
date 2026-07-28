@@ -1,5 +1,64 @@
 begin;
 
+do $guard_runner_context$
+begin
+  perform set_config('homecook.recipe_visibility_migration_runner', current_user, true);
+end;
+$guard_runner_context$;
+
+do $guard_runner_membership_grant$
+begin
+  if current_setting('server_version_num')::integer >= 160000 then
+    execute format(
+      'grant homecook_recipe_visibility_guard_owner to %I with inherit false, set true granted by %I',
+      current_user,
+      current_user
+    );
+  else
+    execute format(
+      'grant homecook_recipe_visibility_guard_owner to %I',
+      current_user
+    );
+  end if;
+end;
+$guard_runner_membership_grant$;
+
+set local role homecook_recipe_visibility_guard_owner;
+
+do $guard_function_execute_grant$
+declare
+  v_runner name := current_setting('homecook.recipe_visibility_migration_runner')::name;
+begin
+  execute format(
+    'grant usage on schema recipe_visibility_guard to %I',
+    v_runner
+  );
+  execute format(
+    'grant execute on function recipe_visibility_guard.is_owner_publicly_visible(uuid) to %I',
+    v_runner
+  );
+end;
+$guard_function_execute_grant$;
+
+reset role;
+
+do $guard_runner_membership_revoke$
+begin
+  if current_setting('server_version_num')::integer >= 160000 then
+    execute format(
+      'revoke homecook_recipe_visibility_guard_owner from %I granted by %I',
+      current_user,
+      current_user
+    );
+  else
+    execute format(
+      'revoke homecook_recipe_visibility_guard_owner from %I',
+      current_user
+    );
+  end if;
+end;
+$guard_runner_membership_revoke$;
+
 create or replace function public.set_recipe_tags(
   p_recipe_id uuid,
   p_tags jsonb,
@@ -165,6 +224,7 @@ begin
         and recipe_tag.review_status = 'approved'
         and recipe.visibility = 'public'
         and recipe.deleted_at is null
+        and recipe_visibility_guard.is_owner_publicly_visible(recipe.created_by)
     ),
     updated_at = now()
   where tag.id = any(v_touched_tag_ids);
@@ -178,6 +238,88 @@ revoke insert, update, delete
 revoke execute on function public.set_recipe_tags(uuid, jsonb, uuid, text)
   from public, anon, authenticated, service_role;
 grant execute on function public.set_recipe_tags(uuid, jsonb, uuid, text)
+  to service_role;
+
+create or replace function public.reconcile_recipe_tag_usage_counts(
+  p_dry_run boolean default true
+)
+returns table(
+  tag_id uuid,
+  normalized_key text,
+  label text,
+  before_count integer,
+  after_count integer,
+  would_update boolean
+)
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+begin
+  create temporary table if not exists pg_temp.recipe_tag_usage_reconcile_report (
+    tag_id uuid,
+    normalized_key text,
+    label text,
+    before_count integer,
+    after_count integer,
+    would_update boolean
+  ) on commit drop;
+
+  truncate table pg_temp.recipe_tag_usage_reconcile_report;
+
+  insert into pg_temp.recipe_tag_usage_reconcile_report (
+    tag_id,
+    normalized_key,
+    label,
+    before_count,
+    after_count,
+    would_update
+  )
+  select
+    tag.id,
+    tag.normalized_key,
+    tag.label,
+    tag.usage_count,
+    count(recipe.id)::integer,
+    tag.usage_count is distinct from count(recipe.id)::integer
+  from public.tags as tag
+  left join public.recipe_tags as recipe_tag
+    on recipe_tag.tag_id = tag.id
+   and recipe_tag.visibility = 'public'
+   and recipe_tag.review_status = 'approved'
+  left join public.recipes as recipe
+    on recipe.id = recipe_tag.recipe_id
+   and recipe.visibility = 'public'
+   and recipe.deleted_at is null
+   and recipe_visibility_guard.is_owner_publicly_visible(recipe.created_by)
+  group by tag.id, tag.normalized_key, tag.label, tag.usage_count;
+
+  if p_dry_run is false then
+    update public.tags as tag
+       set usage_count = report.after_count,
+           updated_at = now()
+      from pg_temp.recipe_tag_usage_reconcile_report as report
+     where report.tag_id = tag.id
+       and report.would_update = true;
+  end if;
+
+  return query
+  select
+    report.tag_id,
+    report.normalized_key,
+    report.label,
+    report.before_count,
+    report.after_count,
+    report.would_update
+  from pg_temp.recipe_tag_usage_reconcile_report as report
+  where report.would_update = true
+  order by report.normalized_key asc;
+end;
+$function$;
+
+revoke execute on function public.reconcile_recipe_tag_usage_counts(boolean)
+  from public, anon, authenticated;
+grant execute on function public.reconcile_recipe_tag_usage_counts(boolean)
   to service_role;
 
 update public.recipe_tags as recipe_tag
@@ -242,6 +384,7 @@ set usage_count = (
     and recipe_tag.review_status = 'approved'
     and recipe.visibility = 'public'
     and recipe.deleted_at is null
+    and recipe_visibility_guard.is_owner_publicly_visible(recipe.created_by)
 )
 where tag.usage_count is distinct from (
   select count(*)::integer
@@ -253,6 +396,7 @@ where tag.usage_count is distinct from (
     and recipe_tag.review_status = 'approved'
     and recipe.visibility = 'public'
     and recipe.deleted_at is null
+    and recipe_visibility_guard.is_owner_publicly_visible(recipe.created_by)
 );
 
 commit;

@@ -2518,6 +2518,34 @@ describe("recipe API contracts", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("rejects service-owned legacy image URLs without an object ID before activation", async () => {
+    const { rpc } = setupManagedRecipeCreate();
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    readAccountGenerationCapability.mockResolvedValue({
+      ok: true,
+      revision: 1,
+      state: "legacy",
+    });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody({
+          thumbnail_url:
+            "https://project.supabase.co/storage/v1/object/public/recipe-images/user-1/550e8400-e29b-41d4-a716-446655440031.webp",
+        })),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body.error.code).toBe("MANAGED_IMAGE_REFERENCE_REQUIRED");
+    expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("rejects a plain private Storage object URL without an object ID after activation", async () => {
     const { rpc } = setupManagedRecipeCreate();
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");

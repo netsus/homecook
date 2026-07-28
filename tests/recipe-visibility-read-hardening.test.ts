@@ -222,6 +222,17 @@ describe("recipe visibility read hardening migration", () => {
     expect(writerMatch?.[0]).toMatch(
       /join public\.recipes as recipe[\s\S]*recipe\.visibility = 'public'[\s\S]*recipe\.deleted_at is null/i,
     );
+    expect(
+      sql.match(
+        /recipe_visibility_guard\.is_owner_publicly_visible\(recipe\.created_by\)/g,
+      )?.length ?? 0,
+    ).toBeGreaterThanOrEqual(3);
+    expect(sql).toMatch(
+      /create or replace function public\.reconcile_recipe_tag_usage_counts\([\s\S]*count\(recipe\.id\)::integer[\s\S]*recipe_visibility_guard\.is_owner_publicly_visible\(recipe\.created_by\)/i,
+    );
+    expect(sql).toMatch(
+      /grant execute on function public\.reconcile_recipe_tag_usage_counts\(boolean\)[\s\S]*to service_role/i,
+    );
     expect(sql).toMatch(
       /revoke insert, update, delete[\s\S]*on table public\.recipe_tags[\s\S]*from public, anon, authenticated, service_role/i,
     );
