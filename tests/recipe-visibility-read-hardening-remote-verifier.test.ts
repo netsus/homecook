@@ -24,9 +24,18 @@ describe("recipe visibility read-hardening remote verifier", () => {
     expect(plan.sql).toContain("storage.buckets");
     expect(plan.sql).toContain("storage.objects");
     expect(plan.sql).toContain("has_any_column_privilege");
+    expect(plan.sql).toMatch(
+      /has_column_privilege\([\s\S]*'public\.tags'[\s\S]*column_name[\s\S]*'SELECT'/u,
+    );
     expect(plan.sql).toContain("has_function_privilege");
     expect(plan.sql).toContain("homecook_recipe_visibility_guard_owner");
+    expect(plan.sql).toContain("supabase_admin");
+    expect(plan.sql).toContain("inherit_option");
+    expect(plan.sql).toContain("set_option");
     expect(plan.sql).toContain("recipe_visibility_guard_lifecycle_select");
+    expect(plan.sql).toMatch(
+      /has_schema_privilege\(\s*'homecook_recipe_visibility_guard_owner',\s*'public',\s*'USAGE'/u,
+    );
     expect(plan.sql).toContain("recipe_sources_parent_read");
     expect(plan.sql).toContain("tags_public_read");
     expect(plan.sql).toContain("union_zero_ready_count");
@@ -148,6 +157,8 @@ describe("recipe visibility read-hardening remote verifier", () => {
       internal_column_privilege_count: 0,
       service_role_tag_table_mutation_count: 0,
       service_role_tag_column_mutation_count: 0,
+      guard_membership_count: 0,
+      guard_unsafe_membership_count: 0,
       anon_direct_mutation_count: 0,
       authenticated_direct_mutation_count: 0,
       public_recipe_select: true,
@@ -196,6 +207,8 @@ describe("recipe visibility read-hardening remote verifier", () => {
         public_role: true,
         qualification: "(bucket_id = 'recipe-images'::text)",
       },
+      storage_mutation_policy_count: 3,
+      unallowlisted_storage_mutation_policy_count: 0,
       union_zero_candidate_count: 0,
       union_zero_ready_count: 0,
       union_zero_blocked_count: 0,
@@ -215,11 +228,14 @@ describe("recipe visibility read-hardening remote verifier", () => {
           "00000000-0000-4000-8000-000000000001",
       },
       { ...validResult, lifecycle_count: 1 },
-      { ...validResult, anon_direct_mutation_count: 1 },
+      { ...validResult, storage_mutation_policy_count: 2 },
+      { ...validResult, unallowlisted_storage_mutation_policy_count: 1 },
       { ...validResult, reader_column_mutation_count: 1 },
       { ...validResult, internal_table_privilege_count: 1 },
       { ...validResult, internal_column_privilege_count: 1 },
       { ...validResult, service_role_tag_table_mutation_count: 1 },
+      { ...validResult, guard_membership_count: 2 },
+      { ...validResult, guard_unsafe_membership_count: 1 },
       { ...validResult, role_matrix_ok: false },
       { ...validResult, rls_matrix_ok: false },
       {

@@ -694,6 +694,11 @@ if (!postgresBin) {
       "-f",
       "supabase/migrations/20260725140000_prepared_food_search_ranked_rpc.sql",
     ]);
+    runRequired(path.join(postgresBin, "psql"), [
+      ...psqlArgs,
+      "-f",
+      "supabase/migrations/20260725145000_prepared_food_search_hosted_compatibility.sql",
+    ]);
     psql("analyze public.food_products; analyze public.ingredients;");
 
     const denominator = JSON.parse(readLastLine(psql(`

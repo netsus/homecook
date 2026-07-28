@@ -104,6 +104,15 @@ with required_relations(relation_name) as (
     ('public.recipe_step_cooking_methods'),
     ('public.recipe_tags'),
     ('public.tags')
+), tag_reader_columns(column_name) as (
+  values
+    ('id'),
+    ('normalized_key'),
+    ('label'),
+    ('slug'),
+    ('kind'),
+    ('is_system'),
+    ('theme_eligible')
 ), expected_policies(relation_name, policy_name) as (
   values
     ('public.recipes', 'recipes_public_and_owner_read'),
@@ -146,13 +155,29 @@ with required_relations(relation_name) as (
     ('REFER' || 'ENCES')
 ), reader_missing_selects as (
   select count(*)::integer as value
-  from protected_roles
-  cross join reader_relations
-  where not pg_catalog.has_table_privilege(
-    grantee,
-    relation_name,
-    'SELECT'
-  )
+  from (
+    select grantee, relation_name
+    from protected_roles
+    cross join reader_relations
+    where relation_name <> 'public.tags'
+      and not pg_catalog.has_table_privilege(
+        grantee,
+        relation_name,
+        'SELECT'
+      )
+
+    union all
+
+    select grantee, 'public.tags.' || column_name
+    from protected_roles
+    cross join tag_reader_columns
+    where not pg_catalog.has_column_privilege(
+      grantee,
+      'public.tags',
+      column_name,
+      'SELECT'
+    )
+  ) as missing_selects
 ), reader_table_mutations as (
   select count(*)::integer as value
   from protected_roles
@@ -322,9 +347,30 @@ with required_relations(relation_name) as (
   from pg_catalog.pg_roles as role
   where role.rolname = 'homecook_recipe_visibility_guard_owner'
 ), guard_memberships as (
-  select count(*)::integer as value
+  select
+    count(*)::integer as total_count,
+    count(*) filter (
+      where not (
+        current_setting('server_version_num')::integer >= 160000
+        and member_role.rolname = 'postgres'
+        and grantor_role.rolname = 'supabase_admin'
+        and membership.admin_option
+        and not coalesce(
+          (to_jsonb(membership) ->> 'inherit_option')::boolean,
+          true
+        )
+        and not coalesce(
+          (to_jsonb(membership) ->> 'set_option')::boolean,
+          true
+        )
+      )
+    )::integer as unsafe_count
   from pg_catalog.pg_auth_members as membership
   join guard_owner on guard_owner.oid = membership.roleid
+  join pg_catalog.pg_roles as member_role
+    on member_role.oid = membership.member
+  join pg_catalog.pg_roles as grantor_role
+    on grantor_role.oid = membership.grantor
 ), guard_lifecycle_boundary as (
   select
     pg_catalog.has_table_privilege(
@@ -429,6 +475,69 @@ with required_relations(relation_name) as (
   from pg_catalog.pg_policy as policy
   where policy.polrelid = 'storage.objects'::pg_catalog.regclass
     and policy.polcmd in ('r', '*')
+), storage_mutation_policy_inventory as (
+  select
+    policy.polname as name,
+    policy.polpermissive as permissive,
+    policy.polcmd as command,
+    policy.polroles = array[
+      (select role.oid from pg_catalog.pg_roles as role where role.rolname = 'authenticated')
+    ] as authenticated_only,
+    pg_catalog.pg_get_expr(policy.polqual, policy.polrelid) as qualification,
+    pg_catalog.pg_get_expr(policy.polwithcheck, policy.polrelid) as with_check
+  from pg_catalog.pg_policy as policy
+  where policy.polrelid = 'storage.objects'::pg_catalog.regclass
+    and policy.polcmd in ('a', 'w', 'd', '*')
+), storage_mutation_policy_count as (
+  select count(*)::integer as value
+  from storage_mutation_policy_inventory
+), unallowlisted_storage_mutation_policy_count as (
+  select count(*)::integer as value
+  from storage_mutation_policy_inventory as policy
+  where not (
+    policy.permissive
+    and coalesce(policy.authenticated_only, false)
+    and (
+      (
+        policy.name = 'recipe_images_insert_own'
+        and policy.command = 'a'
+        and policy.qualification is null
+        and policy.with_check ilike '%bucket_id%recipe-images%'
+        and policy.with_check not ilike '%recipe-images-private%'
+        and policy.with_check ilike '%storage.foldername%'
+        and policy.with_check ilike '%auth.uid%'
+        and policy.with_check ilike '%allows_legacy_recipe_image_write%'
+        and policy.with_check !~* '\mor\M'
+      )
+      or (
+        policy.name = 'recipe_images_update_own'
+        and policy.command = 'w'
+        and policy.qualification ilike '%bucket_id%recipe-images%'
+        and policy.qualification not ilike '%recipe-images-private%'
+        and policy.qualification ilike '%storage.foldername%'
+        and policy.qualification ilike '%auth.uid%'
+        and policy.qualification ilike '%allows_legacy_recipe_image_write%'
+        and policy.qualification !~* '\mor\M'
+        and policy.with_check ilike '%bucket_id%recipe-images%'
+        and policy.with_check not ilike '%recipe-images-private%'
+        and policy.with_check ilike '%storage.foldername%'
+        and policy.with_check ilike '%auth.uid%'
+        and policy.with_check ilike '%allows_legacy_recipe_image_write%'
+        and policy.with_check !~* '\mor\M'
+      )
+      or (
+        policy.name = 'recipe_images_delete_own'
+        and policy.command = 'd'
+        and policy.qualification ilike '%bucket_id%recipe-images%'
+        and policy.qualification not ilike '%recipe-images-private%'
+        and policy.qualification ilike '%storage.foldername%'
+        and policy.qualification ilike '%auth.uid%'
+        and policy.qualification ilike '%allows_legacy_recipe_image_write%'
+        and policy.qualification !~* '\mor\M'
+        and policy.with_check is null
+      )
+    )
+  )
 )
 select jsonb_build_object(
   'schema_ready',
@@ -481,7 +590,15 @@ select jsonb_build_object(
       ),
       false
     )
-    and (select value = 0 from guard_memberships)
+    and (
+      select unsafe_count = 0 and total_count <= 1
+      from guard_memberships
+    )
+    and pg_catalog.has_schema_privilege(
+      'homecook_recipe_visibility_guard_owner',
+      'public',
+      'USAGE'
+    )
     and not pg_catalog.has_schema_privilege(
       'homecook_recipe_visibility_guard_owner',
       'recipe_visibility_guard',
@@ -535,6 +652,12 @@ select jsonb_build_object(
   ),
   'service_role_tag_column_mutation_count', (
     select value from service_role_tag_column_mutations
+  ),
+  'guard_membership_count', (
+    select total_count from guard_memberships
+  ),
+  'guard_unsafe_membership_count', (
+    select unsafe_count from guard_memberships
   ),
   'anon_direct_mutation_count',
     coalesce(
@@ -646,6 +769,12 @@ select jsonb_build_object(
   'storage_select_policy', (
     select to_jsonb(storage_select_policy)
     from storage_select_policy
+  ),
+  'storage_mutation_policy_count', (
+    select value from storage_mutation_policy_count
+  ),
+  'unallowlisted_storage_mutation_policy_count', (
+    select value from unallowlisted_storage_mutation_policy_count
   ),
   'union_zero_candidate_count', (select value from cleanup_candidates),
   'union_zero_ready_count', 0,
@@ -851,8 +980,10 @@ export function assertRecipeVisibilityRemoteVerificationResult(result) {
     && result.internal_column_privilege_count === 0
     && result.service_role_tag_table_mutation_count === 0
     && result.service_role_tag_column_mutation_count === 0
-    && result.anon_direct_mutation_count === 0
-    && result.authenticated_direct_mutation_count === 0
+    && Number.isInteger(result.guard_membership_count)
+    && result.guard_membership_count >= 0
+    && result.guard_membership_count <= 1
+    && result.guard_unsafe_membership_count === 0
     && result.public_recipe_select === true
     && result.authenticated_recipe_select === true
     && result.rls_matrix_ok === true
@@ -874,6 +1005,8 @@ export function assertRecipeVisibilityRemoteVerificationResult(result) {
     && result.private_bucket_exact === true
     && result.storage_select_policy_count === 1
     && hasExactStorageSelectPolicy(result.storage_select_policy)
+    && result.storage_mutation_policy_count === 3
+    && result.unallowlisted_storage_mutation_policy_count === 0
     && result.union_zero_candidate_count === 0
     && result.union_zero_ready_count === 0
     && result.union_zero_blocked_count === 0

@@ -259,6 +259,32 @@ select jsonb_build_object(
     ] from rpc_inventory),
     false
   ),
+  'rpc_hosted_threshold_compatible', coalesce(
+    (
+      select
+        not exists (
+          select 1
+          from unnest(configuration) setting
+          where setting like 'pg_trgm.word_similarity_threshold=%'
+        )
+        and position('v_query_bigrams' in definition) > 0
+        and position(' <%' in definition) = 0
+        and (
+          length(definition)
+            - length(replace(definition, 'public.word_similarity(', ''))
+        ) / length('public.word_similarity(') = 3
+        and (
+          length(definition)
+            - length(replace(
+              definition,
+              'public.food_search_short_ngrams(',
+              ''
+            ))
+        ) / length('public.food_search_short_ngrams(') = 6
+      from rpc_inventory
+    ),
+    false
+  ),
   'public_execute', coalesce(
     has_function_privilege('public', '${RPC_SIGNATURE}', 'EXECUTE'),
     false
@@ -436,6 +462,7 @@ export function assertPreparedFoodSearchRemoteVerificationResult(result) {
     && result.rpc_exists === true
     && result.rpc_security_definer === true
     && result.rpc_search_path_safe === true
+    && result.rpc_hosted_threshold_compatible === true
     && result.public_execute === false
     && result.anon_execute === false
     && result.authenticated_execute === false

@@ -22,6 +22,8 @@ describe("prepared food search remote verifier", () => {
     expect(plan.sql).toContain("search_food_catalog_ranked");
     expect(plan.sql).toContain("has_function_privilege");
     expect(plan.sql).toContain("pg_catalog.pg_index");
+    expect(plan.sql).toContain("rpc_hosted_threshold_compatible");
+    expect(plan.sql).toContain("v_query_bigrams");
     expect(plan.sql).toMatch(
       /pagination_page as \([\s\S]*?array\['ingredient'\]::text\[\][\s\S]*?pagination_next_page as \(/u,
     );
@@ -73,6 +75,7 @@ describe("prepared food search remote verifier", () => {
       rpc_exists: true,
       rpc_security_definer: true,
       rpc_search_path_safe: true,
+      rpc_hosted_threshold_compatible: true,
       public_execute: false,
       anon_execute: false,
       authenticated_execute: false,
@@ -94,6 +97,7 @@ describe("prepared food search remote verifier", () => {
     for (const invalidResult of [
       { ...validResult, index_count: 8 },
       { ...validResult, public_execute: true },
+      { ...validResult, rpc_hosted_threshold_compatible: false },
       { ...validResult, private_scope_ok: false },
       { ...validResult, current_nutrition_ok: false },
       { ...validResult, remote_writes: 1 },

@@ -37,6 +37,12 @@ describe("recipe visibility PostgreSQL gate", () => {
       "supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql",
     );
     expect(runner).toContain(
+      "supabase/migrations/20260723180000_recipe_visibility_guard_public_schema_usage.sql",
+    );
+    expect(runner).toContain(
+      "supabase/migrations/20260723190000_recipe_visibility_direct_mutation_privilege_hardening.sql",
+    );
+    expect(runner).toContain(
       "supabase/migrations/20260724090000_recipe_tag_parent_visibility_upper_bound.sql",
     );
     expect(runner).toContain(
@@ -91,6 +97,10 @@ describe("recipe visibility PostgreSQL gate", () => {
     expect(runner).toContain("create policy recipe_images_insert_own");
     expect(runner).toContain("create policy recipe_images_update_own");
     expect(runner).toContain("create policy recipe_images_delete_own");
+    expect(runner).toContain(
+      "grant usage, create on schema public",
+    );
+    expect(runner).toContain("to migration_runner with grant option");
     expect(runner).toContain("for (const migrationPath of MIGRATION_PATHS)");
     expect(runner).toContain(
       "tests/recipe-visibility-read-hardening-postgres.integration.test.ts",
