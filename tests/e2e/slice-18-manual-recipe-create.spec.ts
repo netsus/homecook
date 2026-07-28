@@ -1010,3 +1010,104 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 });
+
+test.describe("recipe-visibility-read-hardening managed image consumer", () => {
+  test("uses signed preview and owner cancel without browser Storage deletion", async ({
+    page,
+  }, testInfo) => {
+    await setAuthOverride(page, "authenticated");
+    await installCookingMethodsRoute(page, [
+      {
+        id: "method-1",
+        code: "prep",
+        label: "섞기/준비",
+        color_key: "gray",
+        is_system: true,
+      },
+    ]);
+    await installIngredientsRoute(page, []);
+
+    const storageRequests: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/storage/v1/object")) {
+        storageRequests.push(request.url());
+      }
+    });
+
+    const imageObjectId = "44444444-4444-4444-8444-444444444444";
+    let cancelRequestCount = 0;
+    let uploadRequestCount = 0;
+    const imageBytes = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      "base64",
+    );
+    await page.route("**/signed-recipe-preview*.png*", async (route) => {
+      await route.fulfill({
+        body: imageBytes,
+        contentType: "image/png",
+      });
+    });
+    await page.route("**/api/v1/recipes/images/**/cancel", async (route) => {
+      expect(route.request().headers()["idempotency-key"]).toBeTruthy();
+      cancelRequestCount += 1;
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            image_object_id: imageObjectId,
+            state: "cleanup_pending",
+          },
+          error: null,
+        },
+      });
+    });
+    await page.route("**/api/v1/recipes/images", async (route) => {
+      expect(route.request().headers()["idempotency-key"]).toBeTruthy();
+      uploadRequestCount += 1;
+      await route.fulfill({
+        status: 201,
+        json: {
+          success: true,
+          data: {
+            image_object_id: imageObjectId,
+            state: "uploaded_unlinked",
+            read_url: uploadRequestCount === 1
+              ? `${E2E_APP_ORIGIN}/signed-recipe-preview.png?token=old`
+              : `${E2E_APP_ORIGIN}/signed-recipe-preview-refreshed.png?token=new`,
+            read_url_expires_at: "2026-07-29T05:00:00.000Z",
+          },
+          error: null,
+        },
+      });
+    });
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    const imageSection = testInfo.project.name === "desktop-chrome"
+      ? page.getByTestId("manual-image-upload-section-desktop")
+      : page.getByTestId("manual-image-upload-section");
+    await expect(imageSection).toBeVisible();
+    await imageSection.getByTestId("manual-image-file-input").setInputFiles({
+      name: "recipe.png",
+      mimeType: "image/png",
+      buffer: imageBytes,
+    });
+
+    const preview = imageSection.getByRole("img", {
+      name: "레시피 이미지 미리보기",
+    });
+    await expect(preview).toHaveAttribute(
+      "src",
+      `${E2E_APP_ORIGIN}/signed-recipe-preview.png?token=old`,
+    );
+    await preview.dispatchEvent("error");
+    await expect(preview).toHaveAttribute(
+      "src",
+      `${E2E_APP_ORIGIN}/signed-recipe-preview-refreshed.png?token=new`,
+    );
+    expect(uploadRequestCount).toBe(2);
+    await imageSection.getByRole("button", { name: "제거", exact: true }).click();
+
+    await expect.poll(() => cancelRequestCount).toBe(1);
+    expect(storageRequests).toEqual([]);
+  });
+});
