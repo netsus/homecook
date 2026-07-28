@@ -82,14 +82,16 @@
       "existing-fresh-replay-safe-migration",
       "common-success-data-error-envelope-preserved",
       "official-errors-only-no-new-public-contract",
-      "no-unmerged-remote-migration-production-db-or-storage-write"
+      "no-unmerged-production-db-or-storage-write"
     ],
     "verify_commands": [
       "pnpm test:recipe-visibility-read-hardening:focused",
       "pnpm test:recipe-visibility-read-hardening:postgres",
       "pnpm verify:backend",
       "pnpm account-maintenance:scheduler:verify",
-      "node scripts/verify-recipe-visibility-read-hardening-remote.mjs --mode post-merge-read-only",
+      "pnpm account-maintenance:local-scheduler:verify",
+      "node scripts/verify-recipe-visibility-read-hardening-local.mjs --mode local-read-only",
+      "HOMECOOK_STORAGE_LIVE_LOCAL_ONLY=1 node scripts/run-recipe-image-legacy-visibility-local.mjs",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "BRANCH_NAME=docs/recipe-visibility-read-hardening pnpm validate:workpack -- --slice recipe-visibility-read-hardening",
@@ -102,7 +104,7 @@
       "tests/recipe-visibility-routes.test.ts",
       "tests/recipe-visibility-security.test.ts",
       "tests/recipe-visibility-focused-gate.test.ts",
-      "tests/recipe-visibility-read-hardening-remote-verifier.test.ts",
+      "tests/recipe-visibility-read-hardening-local-verifier.test.ts",
       "tests/recipe-visibility-read-hardening-postgres.integration.test.ts",
       "public owner private deleted quarantined recovered and owner-neutral reader matrix",
       "direct PostgREST tag aggregate cache cursor and non-disclosure evidence",
@@ -112,8 +114,9 @@
       "terminal tombstone 151-row fairness evidence with durable next_terminal_scan_at-id cursor SKIP LOCKED limit 50 5min-first-24h then 24h and starvation zero",
       "cleanup-terminal-plus-90-day-compaction and 91-day same-key durable replay evidence",
       "legacy positive migration and orphan enqueue-delete-zero evidence",
-      "launchd 300-second RunAtLoad tick 15-minute heartbeat and oldest-due alert 3-failure dead-letter alert 24-hour cleanup mode-600 secret 10MB-times-5 logs recovery and Manual Only evidence",
-      "merged-exact-SHA remote read-only compatibility evidence"
+      "local legacy private-public copy-swap runner evidence with local-only guard and old-path deletion zero",
+      "local launchd 300-second RunAtLoad dry-run tick plistMatches loaded-state and Homecook log evidence",
+      "local Supabase read-only compatibility evidence"
     ]
   },
   "frontend": {
@@ -166,13 +169,15 @@
     }
   },
   "external_smokes": [
-    "node scripts/verify-recipe-visibility-read-hardening-remote.mjs --mode post-merge-read-only from merged exact SHA only",
+    "node scripts/verify-recipe-visibility-read-hardening-local.mjs --mode local-read-only against local Supabase only",
     "deployed public list detail themes tags sitemap and cache non-disclosure smoke for private deleted and quarantined owners",
-    "remote RLS grant function trigger bucket policy and exact principal inventory",
+    "local RLS grant function trigger bucket policy and exact principal inventory",
     "approved test-fixture Storage replay for upload takeover cancel attach first-404 late-object and compensation",
+    "HOMECOOK_STORAGE_LIVE_LOCAL_ONLY=1 node scripts/run-recipe-image-legacy-visibility-local.mjs against local Supabase only",
     "legacy orphan inventory report proves enqueue and delete zero",
+    "pnpm account-maintenance:local-scheduler:verify proves the installed local LaunchAgent matches the dry-run plist",
     "Manual Only launchd install secret power login sleep and external heartbeat evidence before activation",
-    "remote production cutover database and storage writes remain zero until approved joint gate"
+    "production cutover database and storage writes remain zero until approved joint gate"
   ],
   "blocked_conditions": [
     "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
@@ -209,12 +214,12 @@
     "vercel-cron-used-as-p0-scheduler",
     "new-public-endpoint-field-status-error-bucket-or-actor-invented",
     "unmerged-migration-or-production-storage-write",
-    "remote-verifier-sha-not-merged-exact-source",
+    "local-verifier-target-not-local-supabase",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {
     "backend": 6,
     "frontend": 4
   },
-  "notes": "This is a security and DB high-risk read/storage foundation with behavior-only Stage 4 integration for the existing MANUAL_RECIPE_CREATE image picker and no new visual scope. Visibility, tag, image registry, lifecycle, PostgreSQL, Storage replay, scheduler, client, Playwright and remote verification commands are future Stage 2/4/closeout artifacts. Stage 1 runs only the current docs validator subset and does not claim those future artifacts exist. Runtime implementation waits for F0 and the merged recipe media/tag predecessors, and joint generation/account-delete activation remains off until both F0 and this slice are release-ready."
+  "notes": "This is a security and DB high-risk read/storage foundation with behavior-only Stage 4 integration for the existing MANUAL_RECIPE_CREATE image picker and no new visual scope. Visibility, tag, image registry, lifecycle, PostgreSQL, Storage replay, scheduler, client, Playwright and local verification commands are future Stage 2/4/closeout artifacts. Stage 1 runs only the current docs validator subset and does not claim those future artifacts exist. Runtime implementation waits for F0 and the merged recipe media/tag predecessors, and joint generation/account-delete activation remains off until both F0 and this slice are release-ready."
 }
