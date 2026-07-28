@@ -1,376 +1,315 @@
-# 현재 맥 production 운영 계획
+# 현재 Mac production 운영 계획
 
-상태: implementation complete / live activation blocked
-생성일: 2026-07-29
-변경 유형: low-risk docs/config
-대상 서비스: `homecook` Next.js 앱
-목표 환경: 현재 Mac에서 production build로 상시 실행
-
-> 운영 차단 사유: 연결된 Supabase DB에 공식 계약이 요구하는 `recipes.visibility`가 없다.
-> 필요한 공식 migration: `supabase/migrations/20260723170000_recipe_visibility_read_hardening.sql`부터 원격 미적용 migration 확인 및 순차 적용.
-> 안전 조치: launchd 설치·재시작 검증 후 `com.homecook.production` 등록을 해제했으며, Amphetamine만 계속 실행 중이다.
+상태: **운영 중 (local-only production)**
+최종 갱신: 2026-07-29 KST
+서비스: `homecook` Next.js 앱
+접속 주소: `http://127.0.0.1:3100`
+자동 실행: macOS `launchd`의 `com.homecook.production`
 
 ## 딱 한 줄 요약
 
-production 운영 코드와 launchd 흐름은 구현·검증했지만, 원격 DB migration이 코드보다 뒤처져 있어 실제 서비스는 안전하게 중지한 상태다.
+현재 Mac에서 production build가 `launchd`로 상시 실행 중이며, 원격 Supabase migration, 보안 권한, 전체 테스트, 데스크톱·모바일 화면, 재시작 복구까지 확인했다.
 
-비유하면, `pnpm dev`는 요리 연습용 주방이고 `pnpm build && pnpm start`는 손님에게 내기 전에 같은 레시피를 실제 판매 주방에서 다시 만드는 과정이다.
+> 이 서비스는 **현재 Mac 안에서만** 열린다. `127.0.0.1`은 내 컴퓨터를 뜻하므로 같은 와이파이의 다른 기기나 인터넷 사용자는 접속할 수 없다.
 
-## 현재 repo 근거
+## 지금 바로 확인하는 방법
 
-| 항목 | 확인한 값 | 의미 |
-| --- | --- | --- |
-| 패키지 매니저 | `pnpm@10.32.1` | 명령어는 `pnpm` 기준으로 실행한다. |
-| 프레임워크 | `next@15.5.21`, `react@19.1.0` | production 실행은 Next.js build/start 흐름을 따른다. |
-| 개발 서버 | `pnpm dev` -> `next dev --turbopack` | 개발 확인용이다. production 운영 명령이 아니다. |
-| production build | `pnpm build` -> `next build` | 배포 전 반드시 통과해야 한다. |
-| production start | `pnpm start` -> `node scripts/start-production.mjs` | 내부에서 `next start`를 실행하기 전에 route manifest 정리를 수행한다. |
-| 환경 변수 예시 | `.env.example` | 필요한 키 이름의 기준이다. 실제 secret 값은 repo에 쓰지 않는다. |
-| production 품질 게이트 | `pnpm validate:production-data-quality` | QA fixture, local auth, localhost DB 같은 위험 설정을 잡는다. |
-| 보안 헤더 | `next.config.ts` | production에서는 CSP와 보안 헤더가 전체 route에 적용된다. |
-
-## 목표
-
-1. `pnpm build`가 production 환경 기준으로 통과한다.
-2. 현재 Mac에서 `127.0.0.1:3100`으로 서비스가 열린다.
-3. `launchd`로 Mac 로그인 후 자동 실행되고, 죽으면 다시 켜진다.
-4. 로그 위치, health check, 중지/재시작/롤백 방법이 문서화된다.
-5. 초보 개발자가 `개발 서버`, `production build`, `외부 공개`의 차이를 이해한다.
-
-## 범위
-
-### 이번 계획에 포함
-
-- 현재 Mac에서 production build 실행
-- `.env.production.local` 준비 기준
-- local-only, LAN-only, public internet 공개의 차이 정리
-- `launchd`를 이용한 상시 실행과 운영 명령
-- 검증 명령, 운영 체크리스트, 롤백 절차
-
-### 이번 계획에서 제외
-
-- DB migration 적용
-- Supabase 프로젝트 생성/변경
-- OAuth 앱 설정 변경
-- 도메인 구매, HTTPS 인증서 발급, reverse proxy 구성
-- 법률 문서 최종 검토
-- cloud 배포, Vercel 배포, Docker 배포
-
-## 이번 구현 결과
-
-| 구현 | 파일 또는 명령 | 역할 |
-| --- | --- | --- |
-| production 환경 준비 | `corepack pnpm mac-production:prepare` | `.env.local`을 그대로 복사하지 않고 허용된 키만 골라 `.env.production.local`을 `600` 권한으로 만든다. |
-| launchd 설치 | `corepack pnpm mac-production:install` | DB 품질 게이트 통과 후에만 plist를 등록하고, HTTP 준비 실패 시 자동 롤백한다. |
-| 상태/재시작/삭제 | `mac-production:status`, `mac-production:restart`, `mac-production:uninstall` | 초보자도 직접 plist를 수정하지 않고 운영할 수 있다. |
-| local-only 품질 게이트 | `HOMECOOK_PRODUCTION_EXPOSURE=local-only` | localhost 앱 주소는 이 명시적 모드에서만 허용하며 localhost Supabase와 QA/local auth는 계속 차단한다. |
-| 선택 포트 | `3100` | 기존 개발 서버가 `3000`을 사용 중이라 충돌을 피했다. |
-
-실제 검증 중 HOME의 `GET /api/v1/recipes?sort=view_count`가 PostgreSQL `42703`으로 실패했다. 기존 품질 게이트가 이 스키마 불일치를 놓치던 문제도 수정해, 이제 같은 상태에서는 `PRODUCTION_DATA_SCAN_FAILED`로 설치 전 차단된다.
-
-현재 Mac에서는 NVM의 Node와 Corepack을 사용한다. `corepack pnpm`은 `package.json`에 고정된 `pnpm@10.32.1`을 실행하므로 Codex 런타임의 다른 pnpm 버전과 섞이지 않는다.
-
-구현·검증은 사용자 작업을 보호하기 위해 `/Users/cwj/01_vibe_coding/homecook-mac-production` 전용 worktree에서 수행했다. 아래 `--source-env /Users/cwj/01_vibe_coding/homecook/.env.local`은 기존 개발 환경 값을 읽기 위한 의도된 원본 경로이며, 값은 출력하거나 Git에 추가하지 않는다.
-
-## 중요한 구분
-
-| 구분 | 명령 또는 예시 | 용도 | 주의 |
-| --- | --- | --- | --- |
-| 개발 서버 | `pnpm dev` | 코드를 고치면서 바로 확인 | production 성능/보안 조건과 다르다. |
-| production build | `pnpm build` | 실제 운영 전에 앱을 컴파일 | 여기서 실패하면 운영 시작 금지. |
-| production server | `pnpm start` | build 결과물을 실제 실행 | 먼저 `pnpm build`가 필요하다. |
-| local-only 운영 | `-H 127.0.0.1` | 현재 Mac에서만 접속 | 외부 사용자는 못 들어온다. |
-| LAN 운영 | `-H 0.0.0.0` + Mac 내부 IP | 같은 와이파이/사내망에서 접속 | 방화벽과 IP 노출 범위를 확인해야 한다. |
-| public internet 운영 | 도메인 + HTTPS + reverse proxy/tunnel | 외부 사용자가 접속 | 현재 계획에서는 후속 단계로만 둔다. |
-
-## production 환경 변수 기준
-
-production에서는 `.env.local`을 그대로 복사하지 않는다. 개발용 flag와 secret이 섞여 있을 수 있으므로 `.env.example`과 현재 운영 목적을 기준으로 `.env.production.local`을 따로 만든다.
-
-### 최소 필수 후보
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_APP_URL=
-NEXT_PUBLIC_SITE_URL=
-NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS=
-```
-
-### 기능별 선택 후보
-
-YouTube import를 production에서도 열 때만 아래 값을 준비한다.
-
-```bash
-HOMECOOK_ENABLE_YOUTUBE_IMPORT=1
-NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT=1
-YOUTUBE_API_KEY=
-YOUTUBE_RECIPE_LLM_ENABLED=
-YOUTUBE_RECIPE_LLM_PROVIDER=
-GEMINI_API_KEY=
-GEMINI_API_KEY_FREE=
-GEMINI_API_KEY_PAID=
-GEMINI_API_KEYS=
-YOUTUBE_RECIPE_VISUAL_RECIPE_ENABLED=
-YOUTUBE_RECIPE_VISUAL_QUANTITY_ENABLED=
-```
-
-현재 Mac 전용 비공개 운영에는 아래 값을 사용한다.
-
-```bash
-HOMECOOK_PRODUCTION_EXPOSURE=local-only
-NEXT_PUBLIC_APP_URL=http://127.0.0.1:3100
-NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3100
-```
-
-외부 공공 데이터 수집을 production에서 직접 실행할 때만 아래 값을 준비한다.
-
-```bash
-DATA_GO_KR_API_KEY=
-KOREANFOOD_RDA_API_KEY=
-```
-
-### production에서 켜면 안 되는 값
-
-아래 값은 테스트/개발 편의 기능이다. production-like 환경에서는 켜지면 안 된다.
-
-```bash
-HOMECOOK_ENABLE_QA_FIXTURES=1
-NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES=1
-HOMECOOK_ENABLE_LOCAL_DEV_AUTH=1
-NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_DEV_AUTH=1
-NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_GOOGLE_OAUTH=1
-HOMECOOK_YOUTUBE_FIXTURE_PROVIDER=fixture
-```
-
-### 주소 값 선택 규칙
-
-| 운영 모드 | `NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_SITE_URL` 예시 | 판단 |
-| --- | --- | --- |
-| 현재 Mac에서만 확인 | `http://127.0.0.1:3100` | 이번에 구현한 local-only 운영 주소다. Mac 밖에서는 접속할 수 없다. |
-| 같은 네트워크에서 확인 | `http://192.168.0.25:3000` | LAN 내부 테스트 후보. Mac IP가 바뀌면 다시 수정해야 한다. |
-| 실제 사용자 공개 | `https://your-domain.example` | 권장 production 후보. HTTPS, OAuth callback, legal/trust 점검이 필요하다. |
-
-`app/layout.tsx`는 `NEXT_PUBLIC_SITE_URL`이 없으면 `https://homecook-flame.vercel.app`를 fallback으로 사용한다. 현재 Mac을 기준 주소로 쓰려면 `NEXT_PUBLIC_SITE_URL`을 명시한다.
-
-## 실행 계획
-
-### 0단계: 공개 범위 결정
-
-이번 구현은 `local-only`로 고정한다. `3000`은 기존 개발 서버가 사용 중이므로 `3100`을 쓴다.
-
-```bash
-corepack pnpm start -- -H 127.0.0.1 -p 3100
-```
-
-운영 스크립트는 안전을 위해 `127.0.0.1` 이외의 host를 거부한다. LAN이나 외부 사용자에게 공개하려면 도메인/HTTPS/reverse proxy 또는 tunnel 계획을 별도 문서로 잠근다.
-
-### 1단계: production 환경 파일 만들기
-
-아래 명령은 source env에서 production 허용 키만 골라 파일을 만들고 권한도 자동으로 좁힌다. 기존 파일을 교체할 때만 `--force`를 붙인다.
-
-```bash
-corepack pnpm mac-production:prepare -- \
-  --source-env /Users/cwj/01_vibe_coding/homecook/.env.local \
-  --port 3100
-```
-
-주의: `SUPABASE_SERVICE_ROLE_KEY`는 서버 전용 master key에 가깝다. `NEXT_PUBLIC_` 접두사를 붙이면 브라우저로 노출될 수 있으므로 절대 붙이지 않는다.
-
-### 2단계: 설치와 기본 검증
-
-```bash
-corepack pnpm install --frozen-lockfile
-corepack pnpm lint
-corepack pnpm typecheck
-corepack pnpm test:product
-```
-
-실패하면 production 실행 전에 고친다.
-
-### 3단계: production 품질 게이트
-
-production처럼 검사하려면 아래처럼 실행한다.
-
-```bash
-NODE_ENV=production HOMECOOK_VALIDATE_PRODUCTION_DATA=1 corepack pnpm validate:production-data-quality -- --require-db
-```
-
-기대 결과:
+브라우저에서 아래 주소를 연다.
 
 ```text
-Production data quality gate passed.
+http://127.0.0.1:3100
 ```
 
-실패 예시:
+서비스 상태를 확인하려면 다음 명령을 실행한다.
 
-| 실패 코드 | 뜻 | 조치 |
+```bash
+pnpm mac-production:status
+```
+
+정상 예시:
+
+```text
+loaded: yes
+running: yes
+state: running
+pid: 29719
+```
+
+`pid`는 실행 중인 프로그램 번호라서 재시작할 때마다 바뀌는 것이 정상이다.
+
+## 현재 운영 상태
+
+| 항목 | 현재 값 | 초보자용 설명 |
 | --- | --- | --- |
-| `PRODUCTION_QA_FLAG_ENABLED` | QA fixture 또는 local auth flag가 켜짐 | `.env.production.local`에서 제거한다. |
-| `PRODUCTION_LOCAL_SUPABASE_URL` | production에서 Supabase URL이 localhost | 운영 Supabase URL로 바꾼다. |
-| `PRODUCTION_LOCAL_APP_URL` | production 후보 주소가 localhost | LAN IP 또는 도메인으로 바꾼다. |
-| `FORBIDDEN_PRODUCTION_DATA_PATTERN` | DB에 fixture/mock/demo/test 데이터 흔적 | 데이터를 정리하거나 운영 DB를 분리한다. |
+| 실행 모드 | production build | 개발용 서버가 아니라 최적화된 운영 build다. |
+| 접속 범위 | `127.0.0.1` | 현재 Mac에서만 접속할 수 있다. |
+| 포트 | `3100` | 기존 개발 서버의 `3000`과 충돌하지 않는다. |
+| 프로세스 관리자 | `launchd` | Mac 로그인 시 켜고, 비정상 종료 시 다시 시작한다. |
+| 서비스 이름 | `com.homecook.production` | `launchd`가 서비스를 구분하는 이름이다. |
+| 환경 파일 | `.env.production.local` | 허용된 production 키만 들어가며 권한은 `600`이다. |
+| 표준 오류 로그 | `~/.homecook/logs/homecook-production.err.log` | 서버 오류를 확인하는 파일이다. |
+| 잠자기 방지 | Amphetamine 실행 중 | Mac이 잠들어 서버가 멈추는 일을 방지한다. |
 
-### 4단계: build
+## production이란 무엇인가
 
-```bash
-corepack pnpm build
+| 구분 | 명령 | 용도 |
+| --- | --- | --- |
+| 개발 서버 | `pnpm dev` | 코드를 고치면서 빠르게 확인한다. |
+| production build | `pnpm build` | 실제 운영용 코드로 컴파일하고 최적화한다. |
+| production server | `pnpm start` | build 결과물을 실행한다. |
+| 현재 운영 방식 | `pnpm build` 후 `pnpm mac-production:install` | 새 build를 만든 뒤 품질 검사, `launchd` 등록, HTTP 확인을 수행한다. |
+
+`pnpm dev`가 연습용 주방이라면, production build는 손님에게 내기 전에 같은 레시피를 실제 운영 주방에서 다시 만드는 과정이다.
+
+## 구성도
+
+```mermaid
+flowchart LR
+  A["현재 Mac의 브라우저"] --> B["127.0.0.1:3100"]
+  B --> C["launchd: com.homecook.production"]
+  C --> D["Node.js + Next.js production server"]
+  D --> E["원격 Supabase DB / Auth / Storage"]
 ```
 
-`next build`가 실패하면 `pnpm start`를 실행하지 않는다.
+## 해결한 근본 원인
 
-### 5단계: 수동으로 production server 실행
+### 1. 원격 DB가 코드보다 뒤처져 있었다
 
-local-only:
+증상:
 
-```bash
-corepack pnpm start -- -H 127.0.0.1 -p 3100
-lsof -nP -iTCP:3100 -sTCP:LISTEN
+- 홈의 레시피 API가 PostgreSQL `42703` 오류로 실패했다.
+- 원격 DB에 `recipes.visibility`를 포함한 공식 schema가 없었다.
+- 로컬 build는 성공해도 실제 데이터 요청은 실패했다.
+
+해결:
+
+- 적용 전 schema와 데이터를 각각 SQL dump로 백업했다.
+- 원격에서 빠진 공식 migration 33개를 순서대로 적용했다.
+- 이번 작업에서 발견한 보안·호환성 migration도 추가 적용했다.
+- 마지막 migration 목록에서 로컬과 원격이 일치함을 확인했다.
+
+백업:
+
+```text
+/tmp/homecook-pre-migration-20260729.sql
+/tmp/homecook-pre-migration-data-20260729.sql
 ```
 
-### 6단계: 접속 확인
+### 2. recipe visibility guard가 `public` schema를 읽지 못했다
+
+증상:
+
+- guard 함수 소유자는 필요한 테이블 `SELECT` 권한이 있었지만 `public` schema `USAGE` 권한이 없었다.
+- 함수가 schema 안의 테이블 이름을 해석하지 못했다.
+
+해결:
+
+- `USAGE`만 허용하고 `CREATE`는 계속 금지하는 migration을 추가했다.
+- guard 소유자는 로그인, superuser, RLS 우회, DB 생성 권한이 모두 없다.
+- 익명·로그인 역할은 함수 실행만 가능하고 `service_role`은 직접 실행할 수 없다.
+
+### 3. Supabase hosted PostgreSQL에서 검색 함수 생성이 거부됐다
+
+증상:
+
+- 검색 함수가 `pg_trgm.word_similarity_threshold`를 함수 안에서 바꾸려 했다.
+- Supabase hosted 환경은 이 설정 변경을 허용하지 않아 migration이 `42501`로 실패했다.
+
+해결:
+
+- 제한된 설정 변경과 `<%` 연산자 의존을 제거했다.
+- 기존 short-ngram GIN index로 후보를 먼저 줄인 뒤 `word_similarity(...) > 0.3`을 명시적으로 계산한다.
+- 검색 의미는 유지하면서 index를 사용하도록 만들었다.
+
+검증 결과:
+
+```text
+Recall@20: 1.0000
+Precision@20: 0.9211
+DB p95: 43.30ms
+Route p95: 16.79ms
+```
+
+### 4. Supabase 기본 권한과 보안 검증기의 가정이 달랐다
+
+증상:
+
+- 익명·로그인 역할에 레시피 관련 직접 쓰기 권한이 넓게 남아 있었다.
+- `tags`는 의도적으로 일부 열만 읽게 했는데 검증기는 전체 테이블 `SELECT`가 없다고 오판했다.
+- PostgreSQL 17의 제한형 guard 관리 멤버십을 일반 멤버십 누수로 오판했다.
+
+해결:
+
+- 레시피·단계·재료·태그 관련 익명/로그인 직접 쓰기 권한을 table과 column 수준에서 모두 회수했다.
+- `service_role`의 `recipe_tags` 직접 쓰기도 회수하고 공식 함수만 사용하게 했다.
+- `tags`는 공개 허용 열 7개를 각각 검사하도록 검증기를 수정했다.
+- Supabase의 guard 관리 멤버십은 `INHERIT=false`, `SET=false`, 안전한 grantor인 경우 1개만 허용한다.
+- 기존 공개 이미지 업로드 호환성은 한 릴리스 동안 유지하되, 비공개 bucket 쓰기 policy는 0개임을 검증한다.
+
+원격 read-only 검증 결과:
+
+```text
+schema_ready: true
+role_matrix_ok: true
+reader_missing_select_count: 0
+reader_table_mutation_count: 0
+reader_column_mutation_count: 0
+service_role_tag_table_mutation_count: 0
+service_role_tag_column_mutation_count: 0
+guard_unsafe_membership_count: 0
+storage_mutation_policy_count: 3
+unallowlisted_storage_mutation_policy_count: 0
+remote_writes: 0
+```
+
+### 5. 최신 pnpm 설정 위치와 Mac의 Node 경로가 달랐다
+
+증상:
+
+- 최신 pnpm은 project 설정을 `pnpm-workspace.yaml`에서 읽는다.
+- 현재 작업 셸에는 시스템 `node`가 없어 설치 스크립트와 관리 명령이 실패했다.
+- 검토되지 않은 build script는 pnpm이 fail-closed 방식으로 차단했다.
+
+해결:
+
+- 보안 override와 patch 설정을 `pnpm-workspace.yaml`로 옮겼다.
+- build script는 `esbuild@0.28.1`, `unrs-resolver@1.11.1` 두 정확한 버전만 허용했다.
+- production 관리 래퍼가 시스템 Node를 먼저 찾고, 없으면 현재 Mac의 Codex Node를 찾는다.
+- `mac-production:status`, `restart`, `install`, `uninstall`이 Node 경로를 직접 입력하지 않아도 동작한다.
+
+## 완료한 실행 계획
+
+1. [x] 공식 문서와 저장소 운영 규칙 확인
+2. [x] 별도 worktree와 작업 branch로 사용자 변경 보호
+3. [x] 원격 DB schema/data 백업
+4. [x] 원격 pending migration 적용
+5. [x] hosted PostgreSQL 검색 호환성 수정
+6. [x] recipe visibility 권한과 guard 경계 수정
+7. [x] production 전용 환경 파일 생성 및 `600` 권한 적용
+8. [x] dependency install, lint, typecheck, 전체 test, production build
+9. [x] production 데이터 품질 게이트 통과
+10. [x] `launchd` 설치 및 HTTP readiness 확인
+11. [x] 데스크톱·모바일 홈과 레시피 상세 확인
+12. [x] `launchd` 재시작 후 새 PID와 HTTP/API `200` 확인
+13. [ ] 실제 Mac 재부팅 확인
+
+실제 재부팅은 현재 사용자 세션을 강제로 끊기 때문에 수행하지 않았다. 대신 같은 `launchd` 경로의 강제 재시작과 자동 HTTP 준비 검사를 통과했다.
+
+## 최종 검증 결과
+
+| 검증 | 결과 |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | 통과 |
+| `pnpm lint` | 통과 |
+| `pnpm typecheck` | 통과 |
+| 전체 Vitest | 421 files passed, 4,308 tests passed |
+| recipe visibility 실제 PostgreSQL | 75 tests passed |
+| prepared food 실제 PostgreSQL | 32 tests passed |
+| `pnpm build` | 74 static pages 생성, build 통과 |
+| production 데이터 품질 | 통과 |
+| 원격 검색 검증 | 통과, remote writes 0 |
+| 원격 recipe 권한 검증 | 통과, remote writes 0 |
+| 홈 화면 | desktop/mobile 통과 |
+| 레시피 상세 | desktop/mobile 통과 |
+| 깨진 이미지 | 0 |
+| 가로 화면 넘침 | 0 |
+| 브라우저 warning/error | 0 |
+| 재시작 후 홈/API | HTTP `200` |
+
+## 운영 명령
+
+### 상태 확인
+
+서비스가 켜져 있는지 확인한다.
+
+```bash
+pnpm mac-production:status
+```
+
+### 재시작
+
+새 build를 반영하거나 일시 오류를 복구한다.
+
+```bash
+pnpm mac-production:restart
+```
+
+### 오류 로그 확인
+
+서버가 켜지지 않거나 화면에서 `500`이 보일 때 확인한다.
+
+```bash
+tail -n 100 ~/.homecook/logs/homecook-production.err.log
+```
+
+### 다시 설치
+
+코드로 새 build를 만든 뒤, 품질 검사를 거쳐 `launchd`에 등록한다.
+
+```bash
+pnpm build
+pnpm mac-production:install
+```
+
+### 운영 중지와 등록 해제
+
+현재 Mac에서 더 이상 자동 실행하지 않을 때 사용한다.
+
+```bash
+pnpm mac-production:uninstall
+```
+
+## 장애 확인 순서
+
+1. 브라우저에서 `http://127.0.0.1:3100`을 다시 연다.
+2. `pnpm mac-production:status`에서 `running: yes`인지 본다.
+3. `pnpm mac-production:restart`를 실행한다.
+4. 오류가 계속되면 `~/.homecook/logs/homecook-production.err.log`의 마지막 100줄을 본다.
+5. 코드를 바꿨다면 `pnpm build` 후 `pnpm mac-production:install`을 실행한다.
+6. 환경 변수만 바꿨다면 `pnpm mac-production:install`을 다시 실행한다.
+
+HTTP만 빠르게 확인하려면 다음 명령을 쓴다.
 
 ```bash
 curl -I http://127.0.0.1:3100
-curl -I http://127.0.0.1:3100 | grep -Ei 'content-security-policy|x-frame-options|x-content-type-options|referrer-policy|permissions-policy'
+curl -I http://127.0.0.1:3100/manifest.webmanifest
+curl -I 'http://127.0.0.1:3100/api/v1/recipes?limit=1'
 ```
 
-브라우저에서 최소로 확인할 화면:
+## 안전선
 
-1. HOME 첫 화면
-2. 레시피 상세
-3. 로그인 버튼
-4. 플래너
-5. 장보기
-6. 마이페이지
-7. `/privacy`
-8. `/terms`
+- `.env.production.local`과 secret 값은 Git에 올리지 않는다.
+- `SUPABASE_SERVICE_ROLE_KEY`에 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
+- `127.0.0.1` host 제한을 임의로 `0.0.0.0`으로 바꾸지 않는다.
+- public internet 공개 전에는 HTTPS, 도메인, OAuth callback, 방화벽, 법률 문서 검토가 필요하다.
+- Mac이 꺼지거나 잠들면 서비스도 멈춘다. 전원 연결과 Amphetamine 상태를 유지한다.
+- 원격 migration 전 백업 파일은 검증이 끝날 때까지 삭제하지 않는다.
 
-### 7단계: launchd로 상시 실행
+## 이번 범위 밖
 
-수동 실행이 안정적이면 저장소 스크립트로 등록한다. plist는 직접 작성하지 않는다. 현재 Node 절대 경로, 로그 경로, 자동 재시작 정책이 자동으로 들어간다.
+다음 항목은 현재 local-only production과 별도 계획이 필요하다.
 
-```bash
-corepack pnpm mac-production:install -- \
-  --node-bin /Users/cwj/.nvm/versions/node/v22.19.0/bin/node \
-  --port 3100
-```
+- 같은 와이파이의 다른 기기에서 접속하는 LAN 공개
+- 인터넷 사용자가 접속하는 public 배포
+- 도메인과 HTTPS 인증서
+- reverse proxy 또는 tunnel
+- OAuth production callback 변경
+- 24시간 장애 감시와 외부 알림
+- 실제 Mac 재부팅 smoke test
 
-상태 확인:
+## 다음 단계
 
-```bash
-corepack pnpm mac-production:status
-tail -f ~/.homecook/logs/homecook-production.err.log
-```
+현재 목표는 완료됐다. 외부 사용자에게 공개하려면 다음 순서로 별도 작업한다.
 
-재시작:
+1. 공개 범위와 예상 사용자를 결정한다.
+2. 도메인과 HTTPS 방식을 정한다.
+3. OAuth callback과 보안 헤더를 공개 주소 기준으로 갱신한다.
+4. 외부 heartbeat와 장애 알림을 붙인다.
+5. LAN 또는 public exposure 전용 보안 검토를 통과한다.
 
-```bash
-corepack pnpm mac-production:restart
-```
+## 참고한 공식 문서
 
-등록 해제:
-
-```bash
-corepack pnpm mac-production:uninstall
-```
-
-### 8단계: Mac 운영 조건 확인
-
-현재 Mac을 production 서버처럼 쓰려면 아래 조건이 필요하다.
-
-| 조건 | 이유 | 확인 방법 |
-| --- | --- | --- |
-| Mac이 잠자기 상태로 들어가지 않음 | 잠들면 서버도 멈춘다. | 시스템 설정의 전원/잠자기 설정 확인 |
-| 안정적인 네트워크 | IP가 바뀌면 접속 주소가 바뀐다. | 공유기 DHCP reservation 또는 고정 IP |
-| 충분한 디스크 공간 | `.next`, 로그, cache가 쌓인다. | `df -h` |
-| 방화벽 정책 | LAN/public 노출 범위 제어 | macOS Firewall, router 설정 |
-| secret 파일 보호 | service role key 노출 방지 | `.env.production.local`이 Git ignored이고 `chmod 600`인지 확인 |
-
-## 검증 명령 모음
-
-작은 검증:
-
-```bash
-corepack pnpm lint
-corepack pnpm typecheck
-corepack pnpm test:product
-corepack pnpm build
-```
-
-운영 전 권장 검증:
-
-```bash
-corepack pnpm verify:frontend:pr
-NODE_ENV=production HOMECOOK_VALIDATE_PRODUCTION_DATA=1 corepack pnpm validate:production-data-quality -- --require-db
-```
-
-서버 실행 후 smoke:
-
-```bash
-curl -I http://127.0.0.1:3100
-curl -sS http://127.0.0.1:3100 >/tmp/homecook-home.html
-```
-
-보안 헤더:
-
-```bash
-curl -I http://127.0.0.1:3100 | grep -Ei 'content-security-policy|strict-transport-security|x-frame-options|x-content-type-options|referrer-policy|permissions-policy'
-```
-
-## 롤백 계획
-
-1. `corepack pnpm mac-production:uninstall`로 현재 launchd job을 멈춘다.
-2. 마지막으로 성공했던 Git commit 또는 branch로 돌아간다.
-3. `pnpm install --frozen-lockfile`을 다시 실행한다.
-4. `pnpm build`를 다시 실행한다.
-5. `launchctl kickstart -k`로 재시작한다.
-
-중지 명령:
-
-```bash
-corepack pnpm mac-production:uninstall
-```
-
-재시작 명령:
-
-```bash
-corepack pnpm mac-production:restart
-```
-
-## 위험과 완화책
-
-| 위험 | 왜 문제인가 | 완화책 |
-| --- | --- | --- |
-| Mac sleep | 서버가 멈춘다. | 운영 중 잠자기 방지, 전원 연결, 필요 시 dedicated machine 사용 |
-| `localhost` URL 사용 | 다른 사용자가 접속할 수 없고 OAuth callback이 꼬일 수 있다. | LAN IP 또는 HTTPS 도메인으로 명시 |
-| QA fixture flag 노출 | 가짜 데이터/테스트 UI가 운영에 보일 수 있다. | `validate:production-data-quality` 실행 |
-| service role key 노출 | DB 권한 우회 위험 | repo에 저장 금지, `.env.production.local` 권한 제한 |
-| HTTP public 공개 | 로그인/session/개인정보 보호에 취약 | public internet은 HTTPS 전까지 열지 않음 |
-| 로그 방치 | 장애 원인 추적이 어렵고 디스크가 찰 수 있다. | 로그 위치 고정, 주기적 정리 |
-
-## 완료 기준
-
-- [x] `.env.production.local`이 production 전용 값으로 준비됨
-- [x] production 금지 flag가 없음
-- [x] `corepack pnpm install --frozen-lockfile` 통과
-- [x] `corepack pnpm lint` 통과
-- [x] `corepack pnpm typecheck` 통과
-- [x] `corepack pnpm test:product` 통과
-- [x] `corepack pnpm build` 통과
-- [ ] `corepack pnpm validate:production-data-quality -- --require-db` 통과: `recipes.visibility` 원격 migration 필요
-- [x] `corepack pnpm start -- -H 127.0.0.1 -p 3100` 수동 실행 성공
-- [x] `curl -I http://127.0.0.1:3100` 응답 확인
-- [x] 보안 헤더 확인
-- [ ] 핵심 화면 브라우저 smoke 통과: 렌더링은 정상이나 HOME recipe API가 DB schema mismatch로 실패
-- [x] launchd 설치·상태·재시작·등록 해제 실제 검증
-- [ ] 재부팅/로그인 후 자동 실행 확인: migration 적용 후 재설치하여 확인
-- [x] 중지/재시작/롤백 명령 확인
-
-## 다음 의사결정
-
-1. Supabase CLI를 연결하고 원격 migration 목록을 확인한 뒤, 공식 순서대로 pending migration을 적용한다.
-2. production 품질 게이트와 브라우저 smoke가 모두 통과하면 `mac-production:install`을 다시 실행한다.
-3. 현재 구현은 `local-only`로 유지한다. LAN/public으로 넓힐 때는 이 스크립트의 host 제한을 임의로 풀지 않는다.
-4. public internet이면 도메인, HTTPS, OAuth callback, 개인정보처리방침/이용약관, 보안 헤더, logging 정책을 별도 launch plan으로 잠근다.
+- [Supabase database migrations](https://supabase.com/docs/guides/deployment/database-migrations)
+- [Supabase custom Postgres configuration](https://supabase.com/docs/guides/database/custom-postgres-config)
+- [PostgreSQL pg_trgm](https://www.postgresql.org/docs/current/pgtrgm.html)
+- [pnpm project settings](https://pnpm.io/settings)
