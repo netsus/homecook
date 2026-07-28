@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 
 const MIGRATION_PATH =
   "supabase/migrations/20260725190000_recipe_image_legacy_visibility_migration_authority.sql";
+const PREPARE_REPLAY_REPAIR_PATH =
+  "supabase/migrations/20260728130000_recipe_image_legacy_visibility_prepare_replay.sql";
 
 async function readMigration() {
   return readFile(MIGRATION_PATH, "utf8").catch(() => "");
@@ -121,6 +123,23 @@ describe("recipe image legacy visibility migration authority", () => {
     );
     expect(migration).toMatch(
       /revoke all on function[\s\S]*finalize_recipe_image_legacy_visibility_target[\s\S]*from public, anon, authenticated, service_role[\s\S]*grant execute on function[\s\S]*finalize_recipe_image_legacy_visibility_target[\s\S]*to service_role/i,
+    );
+  });
+
+  it("allows only the finalized durable references created by the same migration run on prepare replay", async () => {
+    const repair = await readFile(PREPARE_REPLAY_REPAIR_PATH, "utf8");
+
+    expect(repair).toMatch(
+      /existing_run\.migration_key = p_migration_key[\s\S]*existing_run\.inventory_run_id = p_inventory_run_id[\s\S]*existing_run\.cutover_attempt_id = p_cutover_attempt_id[\s\S]*existing_run\.capability_revision[\s\S]*= p_expected_capability_revision/i,
+    );
+    expect(repair).toMatch(
+      /existing_target\.state = 'finalized'[\s\S]*existing_target\.target_object_id[\s\S]*= reference\.image_object_id/i,
+    );
+    expect(repair).toMatch(
+      /existing_target_reference\.positive_reference_id[\s\S]*= v_positive\.id[\s\S]*existing_target_reference\.reference_type[\s\S]*= v_positive\.reference_type[\s\S]*existing_target_reference\.consumer_id[\s\S]*= v_positive\.consumer_id/i,
+    );
+    expect(repair).toMatch(
+      /not exists \([\s\S]*existing_run[\s\S]*\)[\s\S]*legacy visibility migration source drifted/i,
     );
   });
 });

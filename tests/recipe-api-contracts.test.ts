@@ -11,6 +11,9 @@ const readAccountGenerationCapability = vi.fn();
 const readVerifiedAccountGenerationSession = vi.fn();
 const readRecipeImageProjection = vi.fn();
 const resolveRecipeImageReadUrl = vi.fn();
+const normalizeExpectedRecipeImageStorageOrigin = vi.fn(
+  (value: string) => new URL(value).origin,
+);
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
   if (error instanceof Error) {
     return `formatted: ${error.message}`;
@@ -39,6 +42,7 @@ vi.mock("@/lib/server/recipe-nutrition-service", () => ({
 }));
 
 vi.mock("@/lib/server/recipe-image-read", () => ({
+  normalizeExpectedRecipeImageStorageOrigin,
   readRecipeImageProjection,
   resolveRecipeImageReadUrl,
 }));

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  normalizeExpectedRecipeImageStorageOrigin,
   readRecipeImageProjection,
   resolveRecipeImageReadUrl,
   type RecipeImageReadRpcClient,
@@ -58,6 +59,21 @@ function storageClient(overrides: {
 }
 
 describe("recipe image registry-aware read adapter", () => {
+  it("allows HTTP only for loopback local Supabase origins", () => {
+    expect(normalizeExpectedRecipeImageStorageOrigin(
+      "http://127.0.0.1:54321",
+    )).toBe("http://127.0.0.1:54321");
+    expect(normalizeExpectedRecipeImageStorageOrigin(
+      "http://localhost:54321",
+    )).toBe("http://localhost:54321");
+    expect(normalizeExpectedRecipeImageStorageOrigin(
+      "http://[::1]:54321",
+    )).toBe("http://[::1]:54321");
+    expect(() => normalizeExpectedRecipeImageStorageOrigin(
+      "http://supabase.internal:54321",
+    )).toThrow("managed recipe image read configuration is invalid");
+  });
+
   it("uses the compatibility path only while the projection authority is not deployed", async () => {
     const client = {
       rpc: vi.fn(async () => ({
@@ -141,6 +157,33 @@ describe("recipe image registry-aware read adapter", () => {
 
     expect(client.storage.from).toHaveBeenCalledWith("recipe-images");
     expect(bucket.getPublicUrl).toHaveBeenCalledWith(objectPath);
+  });
+
+  it("accepts an exact loopback public URL for local Supabase", async () => {
+    const objectPath = `shared/${OBJECT_ID}.webp`;
+    const localOrigin = "http://127.0.0.1:54321";
+    const { client } = storageClient({
+      getPublicUrl: vi.fn(() => ({
+        data: {
+          publicUrl:
+            `${localOrigin}/storage/v1/object/public/recipe-images/${objectPath}`,
+        },
+      })),
+    });
+
+    await expect(resolveRecipeImageReadUrl({
+      client,
+      expectedStorageOrigin: localOrigin,
+      projection: projection({
+        image_object_id: OBJECT_ID,
+        bucket_id: "recipe-images",
+        object_path: objectPath,
+        visibility: "public_shared",
+        state: "attached_public_shared",
+        reference_type: "recipe_thumbnail",
+      }),
+      signedUrlTtlSeconds: 300,
+    })).resolves.toContain("/storage/v1/object/public/");
   });
 
   it("fails closed instead of using legacy URL for malformed managed evidence", async () => {

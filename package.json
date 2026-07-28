@@ -41,6 +41,7 @@
     "test:account-session-generation:postgres": "node scripts/run-account-session-generation-postgres-integration.mjs",
     "test:recipe-visibility-read-hardening:focused": "vitest run tests/recipe-visibility-*.test.ts tests/recipe-image-*.test.ts --exclude '**/*.integration.test.ts' --exclude '**/*.live.test.ts'",
     "test:recipe-visibility-read-hardening:postgres": "node scripts/run-recipe-visibility-read-hardening-postgres-integration.mjs",
+    "test:recipe-visibility-read-hardening:storage-live": "vitest run tests/recipe-image-terminal-tombstone-storage.live.test.ts tests/recipe-image-legacy-visibility-storage.live.test.ts",
     "test:nutrition-model:postgres": "node scripts/run-ingredient-nutrition-postgres-integration.mjs",
     "test:recipe-nutrition:postgres": "node scripts/run-recipe-nutrition-postgres-integration.mjs",
     "test:prepared-food-catalog:postgres": "node scripts/run-prepared-food-catalog-postgres-integration.mjs",

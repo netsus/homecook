@@ -61,6 +61,8 @@ const RECIPE_BOOK_IMAGE_READ_PROJECTION_MIGRATION_PATH =
   "supabase/migrations/20260725180000_recipe_book_image_read_projection_authority.sql";
 const IMAGE_LEGACY_VISIBILITY_MIGRATION_PATH =
   "supabase/migrations/20260725190000_recipe_image_legacy_visibility_migration_authority.sql";
+const IMAGE_LEGACY_VISIBILITY_PREPARE_REPLAY_MIGRATION_PATH =
+  "supabase/migrations/20260728130000_recipe_image_legacy_visibility_prepare_replay.sql";
 
 const OWNER_ACTIVE = "00000000-0000-4000-8000-000000000201";
 const OWNER_QUARANTINED = "00000000-0000-4000-8000-000000000202";
@@ -11294,6 +11296,49 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
 
       set local role service_role;
 
+      create temporary table legacy_visibility_finalized_prepare_replay
+      on commit drop
+      as
+      select *
+      from public.prepare_recipe_image_legacy_visibility_migration(
+        '${IMAGE_LEGACY_VISIBILITY_MIGRATION_KEY}',
+        (
+          select inventory_run_id
+          from legacy_visibility_inventory
+        ),
+        '${IMAGE_LEGACY_VISIBILITY_CUTOVER_ATTEMPT}',
+        2,
+        (select ids from legacy_visibility_reference_input)
+      );
+
+      reset role;
+
+      do $block$
+      begin
+        if (
+          select count(*)
+          from legacy_visibility_finalized_prepare_replay
+          where state = 'finalized'
+        ) <> 3
+          or exists (
+            (
+              select target_object_id
+              from legacy_visibility_plan
+            )
+            except
+            (
+              select target_object_id
+              from legacy_visibility_finalized_prepare_replay
+            )
+          ) then
+          raise exception
+            'legacy visibility finalized prepare replay was not idempotent';
+        end if;
+      end;
+      $block$;
+
+      set local role service_role;
+
       do $block$
       declare
         v_plan record;
@@ -11335,6 +11380,10 @@ describe.runIf(enabled)("recipe visibility isolated PostgreSQL boundary", () => 
   it("keeps legacy visibility migration service-only, READ COMMITTED, and replay-safe", () => {
     const replay = psqlFileResult(IMAGE_LEGACY_VISIBILITY_MIGRATION_PATH);
     expect(replay.status, replay.stderr).toBe(0);
+    const repairReplay = psqlFileResult(
+      IMAGE_LEGACY_VISIBILITY_PREPARE_REPLAY_MIGRATION_PATH,
+    );
+    expect(repairReplay.status, repairReplay.stderr).toBe(0);
 
     expect(psql(`
       select concat_ws(
