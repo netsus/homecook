@@ -6,6 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "node scripts/start-production.mjs",
+    "mac-production:build": "sh scripts/run-local-mac-production.sh build",
     "mac-production:prepare": "sh scripts/run-local-mac-production.sh prepare-env",
     "mac-production:install": "sh scripts/run-local-mac-production.sh install",
     "mac-production:status": "sh scripts/run-local-mac-production.sh status",

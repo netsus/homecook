@@ -39,4 +39,22 @@ if [ -z "$NODE_BIN" ]; then
   exit 1
 fi
 
+if [ "${1:-}" = "build" ]; then
+  NEXT_BIN="$SCRIPT_DIR/../node_modules/next/dist/bin/next"
+  ESLINT_BIN=${HOMECOOK_ESLINT_BIN:-"$SCRIPT_DIR/../node_modules/.bin/eslint"}
+  if [ ! -f "$NEXT_BIN" ]; then
+    printf 'Next.js build entrypoint was not found: %s\n' "$NEXT_BIN" >&2
+    exit 1
+  fi
+  if [ ! -x "$ESLINT_BIN" ]; then
+    printf 'ESLint entrypoint was not found: %s\n' "$ESLINT_BIN" >&2
+    exit 1
+  fi
+  shift
+  PATH="$(dirname "$NODE_BIN"):${PATH:-/usr/bin:/bin}" "$ESLINT_BIN" . \
+    --ignore-pattern '.agents/**' \
+    --ignore-pattern '.omx/**'
+  exec "$NODE_BIN" "$NEXT_BIN" build --no-lint "$@"
+fi
+
 exec "$NODE_BIN" "$SCRIPT_DIR/local-mac-production.mjs" "$@"

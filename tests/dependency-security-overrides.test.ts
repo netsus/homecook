@@ -28,7 +28,10 @@ function readPnpmConfig(name: string) {
     encoding: "utf8",
   });
   expect(result.status, result.stderr).toBe(0);
-  return JSON.parse(result.stdout) as Record<string, string | boolean>;
+  const output = result.stdout.trim();
+  return output
+    ? JSON.parse(output) as Record<string, string | boolean> | string[]
+    : null;
 }
 
 function createDependencyRequire(packageName: string) {
@@ -53,7 +56,9 @@ describe("dependency security overrides", () => {
   it("keeps the audited versions and minimatch compatibility patch declared", () => {
     const overrides = readPnpmConfig("overrides");
     const patchedDependencies = readPnpmConfig("patchedDependencies");
-    const allowBuilds = readPnpmConfig("allowBuilds");
+    const allowBuilds =
+      readPnpmConfig("allowBuilds")
+      ?? readPnpmConfig("onlyBuiltDependencies");
 
     expect(overrides).toMatchObject({
       "minimatch@3.1.5>brace-expansion": "5.0.8",
@@ -63,10 +68,17 @@ describe("dependency security overrides", () => {
     expect(patchedDependencies).toEqual({
       "minimatch@3.1.5": join(rootDir, "patches/minimatch@3.1.5.patch"),
     });
-    expect(allowBuilds).toEqual({
-      "esbuild@0.28.1": true,
-      "unrs-resolver@1.11.1": true,
-    });
+    if (Array.isArray(allowBuilds)) {
+      expect(allowBuilds).toEqual([
+        "esbuild@0.28.1",
+        "unrs-resolver@1.11.1",
+      ]);
+    } else {
+      expect(allowBuilds).toEqual({
+        "esbuild@0.28.1": true,
+        "unrs-resolver@1.11.1": true,
+      });
+    }
   });
 
   it("expands braces through both installed minimatch major versions", () => {

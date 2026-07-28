@@ -23,7 +23,7 @@ http://127.0.0.1:3100
 서비스 상태를 확인하려면 다음 명령을 실행한다.
 
 ```bash
-pnpm mac-production:status
+./scripts/run-local-mac-production.sh status
 ```
 
 정상 예시:
@@ -55,9 +55,9 @@ pid: 29719
 | 구분 | 명령 | 용도 |
 | --- | --- | --- |
 | 개발 서버 | `pnpm dev` | 코드를 고치면서 빠르게 확인한다. |
-| production build | `pnpm build` | 실제 운영용 코드로 컴파일하고 최적화한다. |
+| production build | `./scripts/run-local-mac-production.sh build` | 현재 Mac에서 Node 경로를 자동으로 찾아 운영용 코드로 컴파일하고 최적화한다. |
 | production server | `pnpm start` | build 결과물을 실행한다. |
-| 현재 운영 방식 | `pnpm build` 후 `pnpm mac-production:install` | 새 build를 만든 뒤 품질 검사, `launchd` 등록, HTTP 확인을 수행한다. |
+| 현재 운영 방식 | 운영 래퍼의 `build` 후 `install` | 새 build를 만든 뒤 품질 검사, `launchd` 등록, HTTP 확인을 수행한다. |
 
 `pnpm dev`가 연습용 주방이라면, production build는 손님에게 내기 전에 같은 레시피를 실제 운영 주방에서 다시 만드는 과정이다.
 
@@ -175,7 +175,7 @@ remote_writes: 0
 - 보안 override와 patch 설정을 `pnpm-workspace.yaml`로 옮겼다.
 - build script는 `esbuild@0.28.1`, `unrs-resolver@1.11.1` 두 정확한 버전만 허용했다.
 - production 관리 래퍼가 시스템 Node를 먼저 찾고, 없으면 현재 Mac의 Codex Node를 찾는다.
-- `mac-production:status`, `restart`, `install`, `uninstall`이 Node 경로를 직접 입력하지 않아도 동작한다.
+- 운영 래퍼의 `build`, `status`, `restart`, `install`, `uninstall`이 Node나 pnpm 경로를 직접 입력하지 않아도 동작한다.
 
 ## 완료한 실행 계획
 
@@ -202,7 +202,7 @@ remote_writes: 0
 | `pnpm install --frozen-lockfile` | 통과 |
 | `pnpm lint` | 통과 |
 | `pnpm typecheck` | 통과 |
-| 전체 Vitest | 421 files passed, 4,308 tests passed |
+| 전체 Vitest | 421 files passed, 4,309 tests passed |
 | recipe visibility 실제 PostgreSQL | 75 tests passed |
 | prepared food 실제 PostgreSQL | 32 tests passed |
 | `pnpm build` | 74 static pages 생성, build 통과 |
@@ -223,7 +223,7 @@ remote_writes: 0
 서비스가 켜져 있는지 확인한다.
 
 ```bash
-pnpm mac-production:status
+./scripts/run-local-mac-production.sh status
 ```
 
 ### 재시작
@@ -231,7 +231,7 @@ pnpm mac-production:status
 새 build를 반영하거나 일시 오류를 복구한다.
 
 ```bash
-pnpm mac-production:restart
+./scripts/run-local-mac-production.sh restart
 ```
 
 ### 오류 로그 확인
@@ -247,8 +247,8 @@ tail -n 100 ~/.homecook/logs/homecook-production.err.log
 코드로 새 build를 만든 뒤, 품질 검사를 거쳐 `launchd`에 등록한다.
 
 ```bash
-pnpm build
-pnpm mac-production:install
+./scripts/run-local-mac-production.sh build
+./scripts/run-local-mac-production.sh install
 ```
 
 ### 운영 중지와 등록 해제
@@ -256,17 +256,17 @@ pnpm mac-production:install
 현재 Mac에서 더 이상 자동 실행하지 않을 때 사용한다.
 
 ```bash
-pnpm mac-production:uninstall
+./scripts/run-local-mac-production.sh uninstall
 ```
 
 ## 장애 확인 순서
 
 1. 브라우저에서 `http://127.0.0.1:3100`을 다시 연다.
-2. `pnpm mac-production:status`에서 `running: yes`인지 본다.
-3. `pnpm mac-production:restart`를 실행한다.
+2. `./scripts/run-local-mac-production.sh status`에서 `running: yes`인지 본다.
+3. `./scripts/run-local-mac-production.sh restart`를 실행한다.
 4. 오류가 계속되면 `~/.homecook/logs/homecook-production.err.log`의 마지막 100줄을 본다.
-5. 코드를 바꿨다면 `pnpm build` 후 `pnpm mac-production:install`을 실행한다.
-6. 환경 변수만 바꿨다면 `pnpm mac-production:install`을 다시 실행한다.
+5. 코드를 바꿨다면 운영 래퍼의 `build` 후 `install`을 실행한다.
+6. 환경 변수만 바꿨다면 운영 래퍼의 `install`을 다시 실행한다.
 
 HTTP만 빠르게 확인하려면 다음 명령을 쓴다.
 

@@ -46,6 +46,26 @@ describe("local Mac production environment", () => {
     expect(result.stdout).toContain("127.0.0.1");
   });
 
+  it("builds through the resolved Node binary without relying on PATH", () => {
+    const result = spawnSync(
+      "/bin/sh",
+      ["scripts/run-local-mac-production.sh", "build"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          HOMECOOK_ESLINT_BIN: "/usr/bin/true",
+          HOMECOOK_NODE_BIN: "/bin/echo",
+          PATH: "/usr/bin:/bin",
+        },
+      },
+    );
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("node_modules/next/dist/bin/next build --no-lint");
+  });
+
   it("accepts the pnpm argument separator before command options", () => {
     const result = parseLocalMacProductionArgs([
       "prepare-env",
