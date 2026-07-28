@@ -7,11 +7,18 @@ import {
   createManagedRecipeImageStorageAdapter,
   type ManagedRecipeImageStorageClient,
 } from "@/lib/server/recipe-image-managed-storage";
+import { isLocalStorageLiveEnvAvailable } from
+  "./recipe-image-storage-live-guard";
 
 const storageUrl = process.env.HOMECOOK_STORAGE_LIVE_URL;
 const serviceRoleKey =
   process.env.HOMECOOK_STORAGE_LIVE_SERVICE_ROLE_KEY;
-const liveStorageAvailable = Boolean(storageUrl && serviceRoleKey);
+const databaseUrl = process.env.HOMECOOK_STORAGE_LIVE_DB_URL;
+const liveStorageAvailable = isLocalStorageLiveEnvAvailable({
+  databaseUrl,
+  serviceRoleKey,
+  storageUrl,
+});
 
 describe.skipIf(!liveStorageAvailable)(
   "recipe image terminal tombstone local Storage",
@@ -28,13 +35,11 @@ describe.skipIf(!liveStorageAvailable)(
         },
       });
       const existingBucket = await client.storage.getBucket(bucketId);
-      let createdBucket = false;
       if (existingBucket.error) {
         const creation = await client.storage.createBucket(bucketId, {
           public: false,
         });
         expect(creation.error).toBeNull();
-        createdBucket = true;
       }
       const bucket = client.storage.from(bucketId);
       const adapter = createManagedRecipeImageStorageAdapter({
@@ -68,10 +73,8 @@ describe.skipIf(!liveStorageAvailable)(
           objectPath,
         })).resolves.toEqual({ kind: "absent" });
       } finally {
-        await bucket.remove([objectPath]);
-        if (createdBucket) {
-          await client.storage.deleteBucket(bucketId);
-        }
+        const removal = await bucket.remove([objectPath]);
+        expect(removal.error).toBeNull();
       }
     });
   },
