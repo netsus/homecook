@@ -632,6 +632,140 @@ describe("14 cook session start backend", () => {
     });
   });
 
+  it("GET /cooking/sessions/{id}/cook-mode reads anchored deleted recipe content through service role for the owner", async () => {
+    const sessionQuery = createMaybeSingleQuery([
+      {
+        data: { id: sessionId, user_id: "user-1", status: "in_progress" },
+        error: null,
+      },
+    ]);
+    const sessionMealsQuery = createArraySelectQuery([
+      {
+        data: [{ meal_id: mealId1, recipe_id: recipeId, cooking_servings: 4 }],
+        error: null,
+      },
+    ]);
+    const recipeQuery = createMaybeSingleQuery([
+      {
+        data: { id: recipeId, title: "숨김 처리된 레시피", base_servings: 2 },
+        error: null,
+      },
+    ]);
+    const ingredientsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            ingredient_id: "ing-kimchi",
+            amount: 200,
+            unit: "g",
+            display_text: "[찌개 재료] 김치 200g",
+            component_label: "찌개 재료",
+            ingredient_type: "QUANT",
+            scalable: true,
+            sort_order: 1,
+            ingredients: { standard_name: "김치" },
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const stepsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            step_number: 1,
+            instruction: "[찌개 재료] 김치를 썬다",
+            component_label: "찌개 재료",
+            ingredients_used: ["김치"],
+            heat_level: null,
+            duration_seconds: null,
+            duration_text: null,
+            cooking_methods: { code: "prep", label: "손질", color_key: "gray" },
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "cooking_sessions") return { select: vi.fn(() => sessionQuery) };
+      if (table === "cooking_session_meals") return { select: vi.fn(() => sessionMealsQuery) };
+      if (table === "recipes") return { select: vi.fn(() => recipeQuery) };
+      if (table === "recipe_ingredients") return { select: vi.fn(() => ingredientsQuery) };
+      if (table === "recipe_steps") return { select: vi.fn(() => stepsQuery) };
+      throw new Error(`unexpected service table: ${table}`);
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        throw new Error(`unexpected route table: ${table}`);
+      }),
+    });
+    createServiceRoleClient.mockReturnValue({ from: serviceFrom });
+
+    const { GET } = await importCookModeRoute();
+    const response = await GET(
+      new NextRequest(`http://localhost:3000/api/v1/cooking/sessions/${sessionId}/cook-mode`),
+      createSessionContext(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.recipe.title).toBe("숨김 처리된 레시피");
+    expect(body.data.recipe.ingredients).toHaveLength(1);
+    expect(body.data.recipe.steps).toHaveLength(1);
+    expect(serviceFrom).toHaveBeenCalledWith("recipes");
+    expect(serviceFrom).toHaveBeenCalledWith("recipe_ingredients");
+    expect(serviceFrom).toHaveBeenCalledWith("recipe_steps");
+    expect(recipeQuery.eq).toHaveBeenCalledWith("id", recipeId);
+    expect(ingredientsQuery.eq).toHaveBeenCalledWith("recipe_id", recipeId);
+    expect(stepsQuery.eq).toHaveBeenCalledWith("recipe_id", recipeId);
+  });
+
+  it("GET /cooking/sessions/{id}/cook-mode stops before deleted recipe-content reads when session owner mismatches", async () => {
+    const sessionQuery = createMaybeSingleQuery([
+      {
+        data: { id: sessionId, user_id: "other-user", status: "in_progress" },
+        error: null,
+      },
+    ]);
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "cooking_sessions") return { select: vi.fn(() => sessionQuery) };
+      throw new Error(`unexpected service table: ${table}`);
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        throw new Error(`unexpected route table: ${table}`);
+      }),
+    });
+    createServiceRoleClient.mockReturnValue({ from: serviceFrom });
+
+    const { GET } = await importCookModeRoute();
+    const response = await GET(
+      new NextRequest(`http://localhost:3000/api/v1/cooking/sessions/${sessionId}/cook-mode`),
+      createSessionContext(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "FORBIDDEN" },
+    });
+    expect(serviceFrom).toHaveBeenCalledWith("cooking_sessions");
+    expect(serviceFrom).not.toHaveBeenCalledWith("cooking_session_meals");
+    expect(serviceFrom).not.toHaveBeenCalledWith("recipes");
+    expect(serviceFrom).not.toHaveBeenCalledWith("recipe_ingredients");
+    expect(serviceFrom).not.toHaveBeenCalledWith("recipe_steps");
+  });
+
   it("GET /cooking/sessions/{id}/cook-mode rejects completed sessions before loading snapshots", async () => {
     const sessionQuery = createMaybeSingleQuery([
       {

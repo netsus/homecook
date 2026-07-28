@@ -444,18 +444,21 @@ describe("10a shopping detail backend", () => {
         error: null,
       },
     ]);
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "shopping_lists") return { select: vi.fn(() => listQuery) };
+      throw new Error(`unexpected service table: ${table}`);
+    });
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
       from: vi.fn((table: string) => {
-        if (table === "shopping_lists") {
-          return { select: vi.fn(() => listQuery) };
-        }
-
-        throw new Error(`unexpected table: ${table}`);
+        throw new Error(`unexpected route table: ${table}`);
       }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      from: serviceFrom,
     });
 
     const { GET } = await importListDetailRoute();
@@ -472,6 +475,93 @@ describe("10a shopping detail backend", () => {
       data: null,
       error: { code: "FORBIDDEN" },
     });
+    expect(serviceFrom).toHaveBeenCalledWith("shopping_lists");
+    expect(serviceFrom).not.toHaveBeenCalledWith("shopping_list_recipes");
+    expect(serviceFrom).not.toHaveBeenCalledWith("recipes");
+  });
+
+  it("reads anchored deleted recipe metadata through service role for the list owner", async () => {
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440001",
+          user_id: "user-1",
+          title: "삭제 레시피 장보기",
+          date_range_start: "2026-04-25",
+          date_range_end: "2026-04-27",
+          is_completed: false,
+          completed_at: null,
+          created_at: "2026-04-25T09:00:00.000Z",
+          updated_at: "2026-04-25T09:10:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const listRecipesQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            recipe_id: "recipe-deleted",
+            shopping_servings: 2,
+            planned_servings_total: 2,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipesQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: "recipe-deleted",
+            title: "숨김 처리된 레시피",
+            thumbnail_url: "https://example.com/deleted.jpg",
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const itemsQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "shopping_lists") return { select: vi.fn(() => listQuery) };
+      if (table === "shopping_list_recipes") return { select: vi.fn(() => listRecipesQuery) };
+      if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+      if (table === "shopping_list_items") return { select: vi.fn(() => itemsQuery) };
+      throw new Error(`unexpected service table: ${table}`);
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        throw new Error(`unexpected route table: ${table}`);
+      }),
+    });
+    createServiceRoleClient.mockReturnValue({
+      from: serviceFrom,
+    });
+
+    const { GET } = await importListDetailRoute();
+    const response = await GET(new Request("http://localhost:3000/api/v1/shopping/lists/550e8400-e29b-41d4-a716-446655440001"), {
+      params: Promise.resolve({
+        list_id: "550e8400-e29b-41d4-a716-446655440001",
+      }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.recipes).toEqual([
+      {
+        recipe_id: "recipe-deleted",
+        recipe_name: "숨김 처리된 레시피",
+        recipe_thumbnail: "https://example.com/deleted.jpg",
+        shopping_servings: 2,
+        planned_servings_total: 2,
+      },
+    ]);
+    expect(serviceFrom).toHaveBeenCalledWith("recipes");
+    expect(recipesQuery.in).toHaveBeenCalledWith("id", ["recipe-deleted"]);
   });
 
   it("returns 422 when item patch body is empty", async () => {
