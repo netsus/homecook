@@ -296,6 +296,20 @@ const ADDITIVE_SOURCES = [
   },
   {
     manifestPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_LEGACY_VISIBILITY_MIGRATION_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/recipe-image-legacy-visibility-migration-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_RECIPE_IMAGE_LEGACY_VISIBILITY_MIGRATION_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260725190000_recipe_image_legacy_visibility_migration_authority.sql",
+      ),
+  },
+  {
+    manifestPath:
       process.env.SECURITY_FUNCTION_RECIPE_IMAGE_READ_PROJECTION_MANIFEST_PATH
       ?? path.join(
         REPO_ROOT,

@@ -79,6 +79,9 @@ describe("recipe visibility PostgreSQL gate", () => {
       "supabase/migrations/20260725180000_recipe_book_image_read_projection_authority.sql",
     );
     expect(runner).toContain(
+      "supabase/migrations/20260725190000_recipe_image_legacy_visibility_migration_authority.sql",
+    );
+    expect(runner).toContain(
       "create or replace function public.claim_auth_identity_deletion_outbox",
     );
     expect(runner).toContain(
