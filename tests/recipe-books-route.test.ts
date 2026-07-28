@@ -308,6 +308,109 @@ describe("/api/v1/recipe-books", () => {
     expect(recipesTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
   });
 
+  it("GET resolves a managed private cover only after the owned book list is authorized", async () => {
+    const bookId = "11111111-1111-4111-8111-111111111111";
+    const ownerId = "22222222-2222-4222-8222-222222222222";
+    const objectId = "33333333-3333-4333-8333-333333333333";
+    const signedUrl =
+      "https://project.supabase.co/storage/v1/object/sign/recipe-images-private/cover?token=short";
+    let ownedBookListCompleted = false;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
+
+    const recipeBooksTable = createRecipeBooksTable({
+      selectResults: [],
+    });
+    recipeBooksTable.__selectQuery.then = (
+      onFulfilled?: (value: QueryResult<unknown[]>) => unknown,
+      onRejected?: (reason: unknown) => unknown,
+    ) => {
+      ownedBookListCompleted = true;
+      return Promise.resolve({
+        data: [{
+          id: bookId,
+          name: "비공개 표지",
+          book_type: "custom",
+          cover_color_key: "sage",
+          cover_image_url: "https://legacy.example/cover.webp",
+          sort_order: 0,
+        }],
+        error: null,
+      }).then(onFulfilled, onRejected);
+    };
+
+    const recipeBookItemsTable = createRecipeBookItemsTable({
+      selectResults: [{ data: null, error: null, count: 0 }],
+    });
+    const recipeLikesTable = createRecipeBooksTable({
+      selectResults: [{ data: null, error: null, count: 0 }],
+    });
+    const recipesTable = createRecipeBooksTable({
+      selectResults: [{ data: null, error: null, count: 0 }],
+    });
+    const from = vi.fn((table: string) => {
+      if (table === "recipe_books") return recipeBooksTable;
+      if (table === "recipe_book_items") return recipeBookItemsTable;
+      if (table === "recipe_likes") return recipeLikesTable;
+      if (table === "recipes") return recipesTable;
+      throw new Error(`unexpected table: ${table}`);
+    });
+    const rpc = vi.fn(async () => {
+      expect(ownedBookListCompleted).toBe(true);
+      return {
+        data: [{
+          book_id: bookId,
+          legacy_cover_image_url: "https://legacy.example/cover.webp",
+          image_object_id: objectId,
+          bucket_id: "recipe-images-private",
+          object_path: `${ownerId}/1/${objectId}.webp`,
+          visibility: "private",
+          state: "attached_private",
+          reference_type: "recipe_book_cover",
+        }],
+        error: null,
+      };
+    });
+    const createSignedUrl = vi.fn(async () => ({
+      data: { signedUrl },
+      error: null,
+    }));
+    const serviceClient = {
+      from,
+      rpc,
+      storage: {
+        from: vi.fn(() => ({
+          createSignedUrl,
+          getPublicUrl: vi.fn(),
+        })),
+      },
+    };
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: ownerId } },
+        })),
+      },
+      from,
+    });
+    createServiceRoleClient.mockReturnValue(serviceClient);
+
+    const { GET } = await importRoute();
+    const response = await GET(new Request("http://localhost:3000/api/v1/recipe-books"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.books[0].cover_image_url).toBe(signedUrl);
+    expect(recipeBooksTable.__selectQuery.eq).toHaveBeenCalledWith("user_id", ownerId);
+    expect(rpc).toHaveBeenCalledWith("read_recipe_book_image_projections", {
+      p_book_ids: [bookId],
+    });
+    expect(createSignedUrl).toHaveBeenCalledWith(
+      `${ownerId}/1/${objectId}.webp`,
+      300,
+    );
+  });
+
   it("GET returns schema guidance when bootstrap fails before listing books", async () => {
     ensurePublicUserRow.mockRejectedValue(
       new Error("Could not find the table 'public.recipe_books' in the schema cache"),
