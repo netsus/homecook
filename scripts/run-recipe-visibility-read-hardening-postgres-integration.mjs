@@ -33,6 +33,7 @@ const MIGRATION_PATHS = [
   "supabase/migrations/20260724310000_recipe_image_compact_retention_authority.sql",
   "supabase/migrations/20260725160000_recipe_image_legacy_report_only.sql",
   "supabase/migrations/20260725170000_recipe_image_read_projection_authority.sql",
+  "supabase/migrations/20260725180000_recipe_book_image_read_projection_authority.sql",
 ];
 
 function commandResult(command, args, options = {}) {
