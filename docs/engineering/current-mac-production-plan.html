@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>현재 맥 production 운영 계획 초보자 안내서</title>
+  <style>
+    :root{
+      --ink:#20242e; --muted:#626b7a; --line:#e1e7eb; --panel:#fff;
+      --brand:#0f766e; --brand-soft:#e5f4f1; --brand-line:#b8ded8;
+      --blue:#2f5e9e; --blue-soft:#eaf2ff; --blue-line:#c7d8f4;
+      --green:#217346; --green-soft:#e7f4ed; --green-line:#bfdfcd;
+      --amber:#a95f12; --amber-soft:#fff4df; --amber-line:#efd5a5;
+      --red:#b42318; --red-soft:#fff0ee; --red-line:#f2c2bd;
+      --slate:#314256; --slate-soft:#eef2f5;
+      --radius:14px; --shadow:0 1px 2px rgba(16,24,40,.06),0 12px 30px rgba(16,24,40,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Segoe UI",Roboto,sans-serif;
+      background:linear-gradient(180deg,#102c34 0%,#154a4f 250px,#f1f5f4 250px,#f1f5f4 100%);
+      color:var(--ink);
+      line-height:1.72;
+      -webkit-font-smoothing:antialiased;
+      word-break:keep-all;
+      overflow-wrap:anywhere;
+    }
+    .wrap{max-width:980px;margin:0 auto;padding:0 20px 80px}
+    header.hero{padding:46px 0 28px;color:#e9f6f4}
+    .tag-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .pill{display:inline-block;font-size:12.5px;font-weight:700;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.13);color:#d6efea;border:1px solid rgba(255,255,255,.2)}
+    header.hero h1{font-size:29px;line-height:1.35;margin:4px 0 10px;color:#fff;letter-spacing:0}
+    header.hero p.sub{margin:0;color:#b7d8d5;font-size:15px;max-width:720px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 28px;margin:18px 0}
+    .card h2{font-size:20px;margin:0 0 14px;display:flex;align-items:center;gap:10px;letter-spacing:0}
+    .card h2 .num{flex:none;width:30px;height:30px;border-radius:9px;background:var(--brand);color:#fff;font-size:15px;display:grid;place-items:center;font-weight:800}
+    .card h3{font-size:16px;margin:22px 0 8px;letter-spacing:0}
+    p{margin:10px 0}
+    a{color:var(--blue)}
+    .tldr{background:var(--brand-soft);border:1px solid var(--brand-line);border-left:5px solid var(--brand);border-radius:12px;padding:18px 20px;margin:18px 0;font-size:16px}
+    .tldr strong{color:var(--brand)}
+    .note{border-radius:12px;padding:14px 16px;margin:14px 0;font-size:14.5px}
+    .note .label{font-weight:800;display:block;margin-bottom:4px;font-size:13px;letter-spacing:0;text-transform:uppercase}
+    .note.info{background:var(--blue-soft);border:1px solid var(--blue-line)}.note.info .label{color:var(--blue)}
+    .note.warn{background:var(--amber-soft);border:1px solid var(--amber-line)}.note.warn .label{color:var(--amber)}
+    .note.danger{background:var(--red-soft);border:1px solid var(--red-line)}.note.danger .label{color:var(--red)}
+    .note.good{background:var(--green-soft);border:1px solid var(--green-line)}.note.good .label{color:var(--green)}
+    .glossary{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .term{background:#f7faf9;border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+    .term dt{font-weight:800;color:var(--brand);font-size:14.5px;margin-bottom:3px}
+    .term dd{margin:0;font-size:13.5px;color:var(--muted)}
+    .term .en{color:#6c8086;font-weight:700;font-size:12px}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;min-width:560px}
+    th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{background:#edf5f4;font-weight:800}
+    td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+    tr:last-child td{border-bottom:none}
+    tr.highlight td{background:#fff8ed}
+    .pass{color:var(--green);font-weight:800}.fail{color:var(--red);font-weight:800}
+    code,.mono{font-family:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;background:#e9efee;padding:1px 6px;border-radius:5px;font-size:12.5px;color:#243043}
+    pre{background:#102f34;color:#def2ec;border-radius:10px;padding:14px 16px;overflow-x:auto;font-size:12.5px;line-height:1.6;margin:12px 0;font-family:"SF Mono",Menlo,monospace;white-space:pre}
+    .steps{list-style:none;padding:0;margin:8px 0 0}
+    .step{position:relative;padding:0 0 18px 46px}
+    .step:not(:last-child)::before{content:"";position:absolute;left:16px;top:31px;bottom:-2px;width:2px;background:var(--line)}
+    .step .dot{position:absolute;left:0;top:2px;width:34px;height:34px;border-radius:50%;background:var(--brand-soft);color:var(--brand);border:2px solid var(--brand);display:grid;place-items:center;font-weight:800;font-size:11.5px}
+    .step h4{margin:4px 0 4px;font-size:15.5px}
+    .step p{margin:4px 0;font-size:14px;color:var(--muted)}
+    .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .listbox{border-radius:12px;padding:16px 18px}
+    .listbox.allow{background:var(--green-soft);border:1px solid var(--green-line)}
+    .listbox.deny{background:var(--red-soft);border:1px solid var(--red-line)}
+    .listbox.neutral{background:var(--slate-soft);border:1px solid var(--line)}
+    .listbox h4{margin:0 0 8px;font-size:15px}.listbox.allow h4{color:var(--green)}.listbox.deny h4{color:var(--red)}
+    .listbox ul{margin:0;padding-left:18px;font-size:13.5px}.listbox li{margin:5px 0}
+    .targets{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .target{display:flex;gap:10px;align-items:flex-start;background:#f7faf9;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px}
+    .target .badge{flex:none;width:24px;height:24px;border-radius:7px;background:var(--brand);color:#fff;font-weight:800;font-size:11px;display:grid;place-items:center}
+    .tree{display:grid;gap:10px;margin:8px 0}
+    .branch{display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:start;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:#f8fbfa}
+    .branch.go{border-left:4px solid var(--green)}.branch.two{border-left:4px solid var(--brand)}.branch.warn{border-left:4px solid var(--amber)}.branch.stop{border-left:4px solid var(--red)}
+    .check{list-style:none;padding:0;margin:0}
+    .check li{padding:7px 0 7px 30px;position:relative;font-size:14px;border-bottom:1px dashed var(--line)}
+    .check li::before{content:"[ ]";position:absolute;left:0;top:7px;color:var(--brand);font-size:12px;font-family:"SF Mono",Menlo,monospace}
+    .check li.done::before{content:"[x]";color:var(--green)}
+    .check li:last-child{border-bottom:none}
+    .miniflow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 4px}
+    .miniflow .box{background:#fff;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:800;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+    .miniflow .arrow{color:var(--muted);font-weight:800}
+    footer{text-align:center;color:#6c8086;font-size:12.5px;margin-top:40px}
+    @media(max-width:720px){
+      .wrap{padding:0 14px 64px}
+      .card{padding:20px 18px}
+      .glossary,.twocol,.targets{grid-template-columns:1fr}
+      .branch{grid-template-columns:1fr;gap:4px}
+      header.hero h1{font-size:23px}
+      table{min-width:520px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="tag-row">
+        <span class="pill">homecook</span>
+        <span class="pill">2026-07-29</span>
+        <span class="pill">activation blocked</span>
+        <span class="pill">Mac production</span>
+      </div>
+      <h1>현재 Mac에서 집밥 서비스를 production처럼 운영하기</h1>
+      <p class="sub">localhost 개발 서버를 그대로 공개하지 않고, production build, 환경 변수, 검증, launchd 상시 실행까지 순서대로 이해하는 초보자용 안내서다.</p>
+      <div class="note danger">
+        <span class="label">현재 상태</span>
+        운영 코드와 launchd 검증은 끝났지만 연결된 Supabase DB에 <code>recipes.visibility</code>가 없어 실제 서비스는 안전하게 중지했다. 공식 migration 적용 후 품질 게이트를 다시 통과해야 한다.
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2><span class="num">!</span>딱 한 줄 요약</h2>
+        <div class="tldr"><strong>production 운영 도구와 build는 준비됐지만</strong>, 원격 DB migration이 코드보다 뒤처져 있어 <strong>live activation은 차단</strong>된 상태다.</div>
+        <p>비유: <code>pnpm dev</code>는 요리 연습용 주방이고, <code>pnpm build &amp;&amp; pnpm start</code>는 같은 레시피를 손님에게 내기 전에 실제 판매 주방에서 다시 만드는 과정이다.</p>
+        <div class="note warn">
+          <span class="label">중요</span>
+          현재 Mac에서 production build를 돌리는 것과 외부 사용자에게 안전하게 공개하는 것은 다르다. 외부 공개는 도메인, HTTPS, OAuth callback, 법률/신뢰 페이지, 네트워크 보안 계획이 추가로 필요하다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">1</span>헷갈리는 구분</h2>
+        <div class="twocol">
+          <div class="listbox allow">
+            <h4>먼저 해도 되는 것</h4>
+            <ul>
+              <li><code>pnpm build</code>로 production build를 만든다.</li>
+              <li><code>corepack pnpm start -- -H 127.0.0.1 -p 3100</code>으로 현재 Mac 안에서만 확인한다.</li>
+              <li>검증이 끝난 뒤 <code>launchd</code>로 자동 실행을 붙인다.</li>
+            </ul>
+          </div>
+          <div class="listbox deny">
+            <h4>바로 하면 위험한 것</h4>
+            <ul>
+              <li><code>pnpm dev</code>를 production이라고 생각하고 공개한다.</li>
+              <li><code>.env.local</code>을 그대로 복사해 QA flag까지 운영에 올린다.</li>
+              <li>HTTPS 없이 public internet에 로그인 서비스를 연다.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>구분</th><th>명령 또는 예시</th><th>용도</th><th>주의</th></tr></thead>
+            <tbody>
+              <tr><td>개발 서버</td><td><code>pnpm dev</code></td><td>코드를 고치면서 바로 확인</td><td>production 성능/보안 조건과 다르다.</td></tr>
+              <tr><td>production build</td><td><code>pnpm build</code></td><td>실제 운영 전에 앱을 컴파일</td><td>실패하면 운영 시작 금지.</td></tr>
+              <tr><td>production server</td><td><code>pnpm start</code></td><td>build 결과물을 실제 실행</td><td>먼저 <code>pnpm build</code>가 필요하다.</td></tr>
+              <tr><td>local-only 운영</td><td><code>-H 127.0.0.1</code></td><td>현재 Mac에서만 접속</td><td>외부 사용자는 못 들어온다.</td></tr>
+              <tr><td>LAN 운영</td><td><code>-H 0.0.0.0</code> + Mac 내부 IP</td><td>같은 와이파이/사내망에서 접속</td><td>방화벽과 IP 노출 범위를 확인한다.</td></tr>
+              <tr class="highlight"><td>public internet 운영</td><td>도메인 + HTTPS + reverse proxy/tunnel</td><td>외부 사용자 접속</td><td>현재 계획에서는 후속 단계다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">2</span>알아둘 용어</h2>
+        <dl class="glossary">
+          <div class="term"><dt>localhost <span class="en">local address</span></dt><dd>내 컴퓨터 안에서만 통하는 주소다. 보통 <code>127.0.0.1</code>과 같다.</dd></div>
+          <div class="term"><dt>production build <span class="en">release build</span></dt><dd>개발용이 아니라 실제 운영에 가까운 방식으로 앱을 컴파일한 결과다.</dd></div>
+          <div class="term"><dt>pnpm <span class="en">package manager</span></dt><dd>이 repo의 패키지 설치와 실행 명령을 담당하는 도구다. 현재 기준은 <code>pnpm@10.32.1</code>이다.</dd></div>
+          <div class="term"><dt>Next.js <span class="en">framework</span></dt><dd>이 서비스의 웹 앱 프레임워크다. 현재 repo는 <code>next@15.5.21</code>를 쓴다.</dd></div>
+          <div class="term"><dt>.env.production.local <span class="en">env file</span></dt><dd>production 실행에 필요한 비밀값과 주소값을 담는 로컬 파일이다. Git에 올리면 안 된다.</dd></div>
+          <div class="term"><dt>Supabase <span class="en">backend service</span></dt><dd>로그인, DB, API 접근에 쓰는 외부 백엔드 서비스다.</dd></div>
+          <div class="term"><dt>service role key <span class="en">server secret</span></dt><dd>서버에서만 써야 하는 강한 권한의 키다. 브라우저에 노출되면 위험하다.</dd></div>
+          <div class="term"><dt>launchd <span class="en">macOS service manager</span></dt><dd>Mac에서 앱을 백그라운드로 켜고, 죽으면 다시 시작하게 해주는 기본 기능이다.</dd></div>
+          <div class="term"><dt>host binding <span class="en">-H option</span></dt><dd>서버가 어떤 주소에서 접속을 받을지 정하는 설정이다. <code>127.0.0.1</code>은 내 Mac 전용, <code>0.0.0.0</code>은 네트워크 접속 허용이다.</dd></div>
+          <div class="term"><dt>LAN <span class="en">local network</span></dt><dd>같은 와이파이나 사내망처럼 가까운 네트워크 범위다.</dd></div>
+          <div class="term"><dt>CSP <span class="en">Content Security Policy</span></dt><dd>브라우저가 불필요한 외부 스크립트나 연결을 막도록 하는 보안 헤더다.</dd></div>
+          <div class="term"><dt>smoke test <span class="en">quick check</span></dt><dd>모든 걸 깊게 보지는 않지만, 서비스가 큰 문제 없이 뜨는지 빠르게 확인하는 테스트다.</dd></div>
+        </dl>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">3</span>현재 repo 근거</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>항목</th><th>확인한 값</th><th>초보자용 의미</th></tr></thead>
+            <tbody>
+              <tr><td>패키지 매니저</td><td><code>pnpm@10.32.1</code></td><td>명령어는 <code>pnpm</code>으로 실행한다.</td></tr>
+              <tr><td>프레임워크</td><td><code>next@15.5.21</code>, <code>react@19.1.0</code></td><td>Next.js 방식의 build/start 흐름을 따른다.</td></tr>
+              <tr><td>개발 서버</td><td><code>pnpm dev</code> -> <code>next dev --turbopack</code></td><td>개발 확인용이다.</td></tr>
+              <tr><td>production build</td><td><code>pnpm build</code> -> <code>next build</code></td><td>운영 전에 반드시 통과해야 한다.</td></tr>
+              <tr><td>production start</td><td><code>pnpm start</code> -> <code>node scripts/start-production.mjs</code></td><td><code>next start</code> 전에 route manifest 정리를 수행한다.</td></tr>
+              <tr><td>환경 변수 예시</td><td><code>.env.example</code></td><td>필요한 키 이름의 기준이다. 실제 secret 값은 쓰지 않는다.</td></tr>
+              <tr><td>품질 게이트</td><td><code>pnpm validate:production-data-quality</code></td><td>QA fixture, local auth, localhost DB 같은 위험 설정을 잡는다.</td></tr>
+              <tr><td>보안 헤더</td><td><code>next.config.ts</code></td><td>production에서는 CSP와 보안 헤더가 전체 route에 적용된다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">4</span>목표와 성공 기준</h2>
+        <div class="targets">
+          <div class="target"><span class="badge">1</span><span><code>pnpm build</code>가 production 환경 기준으로 통과한다.</span></div>
+          <div class="target"><span class="badge">2</span><span>현재 Mac에서 <code>http://127.0.0.1:3100</code>으로 서비스가 열린다.</span></div>
+          <div class="target"><span class="badge">3</span><span><code>launchd</code>로 Mac 로그인 후 자동 실행되고, 죽으면 다시 켜진다.</span></div>
+          <div class="target"><span class="badge">4</span><span>로그 위치, health check, 중지, 재시작, 롤백 방법이 문서화된다.</span></div>
+          <div class="target"><span class="badge">5</span><span>초보 개발자가 개발 서버, production build, 외부 공개의 차이를 이해한다.</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">5</span>범위와 안전선</h2>
+        <div class="twocol">
+          <div class="listbox allow">
+            <h4>이번 계획에 포함</h4>
+            <ul>
+              <li>현재 Mac에서 production build 실행</li>
+              <li><code>.env.production.local</code> 준비 기준</li>
+              <li><code>local-only</code>, <code>LAN-only</code>, <code>public internet</code> 차이 정리</li>
+              <li><code>launchd</code> 설치·상태·재시작·삭제 명령</li>
+              <li>검증 명령, 운영 체크리스트, 롤백 절차</li>
+            </ul>
+          </div>
+          <div class="listbox deny">
+            <h4>이번 계획에서 제외</h4>
+            <ul>
+              <li>DB migration 적용</li>
+              <li>Supabase 프로젝트 생성/변경</li>
+              <li>OAuth 앱 설정 변경</li>
+              <li>도메인 구매, HTTPS 인증서 발급, reverse proxy 구성</li>
+              <li>cloud, Vercel, Docker 배포</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">6</span>환경 변수 준비</h2>
+        <p>production에서는 <code>.env.local</code>을 그대로 복사하지 않는다. 개발용 flag와 secret이 섞여 있을 수 있으므로 <code>.env.example</code>과 운영 목적을 기준으로 <code>.env.production.local</code>을 따로 만든다.</p>
+        <div class="note danger">
+          <span class="label">secret 주의</span>
+          <code>SUPABASE_SERVICE_ROLE_KEY</code>는 서버 전용 master key에 가깝다. <code>NEXT_PUBLIC_</code> 접두사를 붙이면 브라우저로 노출될 수 있으므로 절대 붙이지 않는다.
+        </div>
+        <h3>최소 필수 후보</h3>
+        <pre><code>NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_APP_URL=
+NEXT_PUBLIC_SITE_URL=
+NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS=</code></pre>
+        <h3>이번 Mac의 local-only 값</h3>
+        <pre><code>HOMECOOK_PRODUCTION_EXPOSURE=local-only
+NEXT_PUBLIC_APP_URL=http://127.0.0.1:3100
+NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3100</code></pre>
+        <h3>production에서 켜면 안 되는 값</h3>
+        <pre><code>HOMECOOK_ENABLE_QA_FIXTURES=1
+NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES=1
+HOMECOOK_ENABLE_LOCAL_DEV_AUTH=1
+NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_DEV_AUTH=1
+NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_GOOGLE_OAUTH=1
+HOMECOOK_YOUTUBE_FIXTURE_PROVIDER=fixture</code></pre>
+        <h3>주소 값 선택 규칙</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>운영 모드</th><th><code>NEXT_PUBLIC_APP_URL</code> / <code>NEXT_PUBLIC_SITE_URL</code> 예시</th><th>판단</th></tr></thead>
+            <tbody>
+              <tr><td>현재 Mac에서만 확인</td><td><code>http://127.0.0.1:3100</code></td><td>이번에 구현한 local-only 주소다. Mac 밖에서는 접속할 수 없다.</td></tr>
+              <tr><td>같은 네트워크에서 확인</td><td><code>http://192.168.0.25:3000</code></td><td>LAN 내부 테스트 후보. Mac IP가 바뀌면 다시 수정해야 한다.</td></tr>
+              <tr class="highlight"><td>실제 사용자 공개</td><td><code>https://your-domain.example</code></td><td>권장 production 후보. HTTPS, OAuth callback, legal/trust 점검이 필요하다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><code>app/layout.tsx</code>는 <code>NEXT_PUBLIC_SITE_URL</code>이 없으면 <code>https://homecook-flame.vercel.app</code>를 fallback으로 사용한다. 현재 Mac을 기준 주소로 쓰려면 <code>NEXT_PUBLIC_SITE_URL</code>을 명시한다.</p>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">7</span>실행 타임라인</h2>
+        <ul class="steps">
+          <li class="step">
+            <span class="dot">0</span>
+            <h4>공개 범위 결정</h4>
+            <p>이번 구현은 local-only로 고정한다. 기존 개발 서버가 3000을 사용하므로 3100을 쓴다.</p>
+            <pre><code>corepack pnpm start -- -H 127.0.0.1 -p 3100</code></pre>
+          </li>
+          <li class="step">
+            <span class="dot">1</span>
+            <h4>production 환경 파일 만들기</h4>
+            <p>준비 명령이 허용된 production 키만 골라 파일을 만들고 권한을 600으로 제한한다.</p>
+            <pre><code>corepack pnpm mac-production:prepare -- \
+  --source-env /Users/cwj/01_vibe_coding/homecook/.env.local \
+  --port 3100</code></pre>
+          </li>
+          <li class="step">
+            <span class="dot">2</span>
+            <h4>설치와 기본 검증</h4>
+            <p>기본 검증이 실패하면 production 실행 전에 고친다.</p>
+            <pre><code>corepack pnpm install --frozen-lockfile
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm test:product</code></pre>
+          </li>
+          <li class="step">
+            <span class="dot">3</span>
+            <h4>production 품질 게이트</h4>
+            <p>QA flag, local auth, localhost DB, fixture/mock/demo/test 데이터 흔적을 확인한다.</p>
+            <pre><code>NODE_ENV=production HOMECOOK_VALIDATE_PRODUCTION_DATA=1 corepack pnpm validate:production-data-quality -- --require-db</code></pre>
+          </li>
+          <li class="step">
+            <span class="dot">4</span>
+            <h4>build</h4>
+            <p><code>next build</code>가 실패하면 <code>pnpm start</code>를 실행하지 않는다.</p>
+            <pre><code>corepack pnpm build</code></pre>
+          </li>
+          <li class="step">
+            <span class="dot">5</span>
+            <h4>수동 production server 실행</h4>
+            <p>local-only로 실행한다. 운영 스크립트는 안전을 위해 다른 host를 거부한다.</p>
+            <pre><code>corepack pnpm start -- -H 127.0.0.1 -p 3100
+lsof -nP -iTCP:3100 -sTCP:LISTEN</code></pre>
+          </li>
+          <li class="step">
+            <span class="dot">6</span>
+            <h4>접속과 보안 헤더 확인</h4>
+            <p>서버가 뜨는지, 보안 헤더가 내려오는지 확인한다.</p>
+            <pre><code>curl -I http://127.0.0.1:3100
+curl -I http://127.0.0.1:3100 | grep -Ei 'content-security-policy|x-frame-options|x-content-type-options|referrer-policy|permissions-policy'</code></pre>
+          </li>
+          <li class="step">
+            <span class="dot">7</span>
+            <h4>launchd 상시 실행</h4>
+            <p>수동 실행이 안정적이면 macOS의 백그라운드 실행 관리자인 <code>launchd</code>로 등록한다.</p>
+            <pre><code>corepack pnpm mac-production:install -- \
+  --node-bin /Users/cwj/.nvm/versions/node/v22.19.0/bin/node \
+  --port 3100
+corepack pnpm mac-production:status</code></pre>
+          </li>
+          <li class="step">
+            <span class="dot">8</span>
+            <h4>Mac 운영 조건 확인</h4>
+            <p>Mac sleep, 네트워크, 디스크, 방화벽, secret 파일 권한을 확인한다.</p>
+            <pre><code>df -h
+tail -f ~/.homecook/logs/homecook-production.err.log</code></pre>
+          </li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">8</span>launchd 운영 명령</h2>
+        <p>plist를 직접 만들거나 수정하지 않는다. 저장소 스크립트가 DB 품질 게이트를 먼저 실행하고, 현재 Node 절대 경로, local-only host, 자동 재시작, 로그 위치를 일관되게 생성한다. HTTP 준비에 실패하면 설치를 자동 롤백한다.</p>
+        <pre><code>corepack pnpm mac-production:install -- \
+  --node-bin /Users/cwj/.nvm/versions/node/v22.19.0/bin/node \
+  --port 3100
+
+corepack pnpm mac-production:status
+corepack pnpm mac-production:restart
+corepack pnpm mac-production:uninstall</code></pre>
+        <div class="note warn">
+          <span class="label">초보자 포인트</span>
+          plist 안에 secret 값을 직접 넣지 않는 편이 좋다. secret은 Git ignored 상태의 <code>.env.production.local</code>에 두고, plist에는 실행 방법과 <code>NODE_ENV=production</code>처럼 민감하지 않은 값만 둔다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">9</span>판단 규칙</h2>
+        <div class="tree">
+          <div class="branch go"><strong>local-only로 진행</strong><span>나 혼자 현재 Mac에서 production build 동작만 확인하려는 경우. host는 <code>127.0.0.1</code>을 쓴다.</span></div>
+          <div class="branch two"><strong>LAN-only로 확장</strong><span>같은 와이파이 또는 사내망 사용자만 접속하면 되는 경우. host는 <code>0.0.0.0</code>이고 접속 주소는 Mac 내부 IP다.</span></div>
+          <div class="branch warn"><strong>public internet은 별도 계획</strong><span>외부 사용자를 받으려면 도메인, HTTPS, OAuth callback, legal/trust, 방화벽, 로그 정책을 먼저 잠근다.</span></div>
+          <div class="branch stop"><strong>즉시 중단</strong><span><code>pnpm build</code>, production 품질 게이트, 보안 헤더 확인 중 하나라도 실패하면 운영 시작을 멈춘다.</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">10</span>검증과 롤백</h2>
+        <h3>작은 검증</h3>
+        <pre><code>corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm test:product
+corepack pnpm build</code></pre>
+        <h3>운영 전 권장 검증</h3>
+        <pre><code>corepack pnpm verify:frontend:pr
+NODE_ENV=production HOMECOOK_VALIDATE_PRODUCTION_DATA=1 corepack pnpm validate:production-data-quality -- --require-db</code></pre>
+        <h3>서버 실행 후 smoke</h3>
+        <pre><code>curl -I http://127.0.0.1:3100
+curl -sS http://127.0.0.1:3100 &gt;/tmp/homecook-home.html</code></pre>
+        <h3>보안 헤더</h3>
+        <pre><code>curl -I http://127.0.0.1:3100 | grep -Ei 'content-security-policy|strict-transport-security|x-frame-options|x-content-type-options|referrer-policy|permissions-policy'</code></pre>
+        <h3>롤백 순서</h3>
+        <ol>
+          <li>현재 실행 중인 launchd job을 멈춘다.</li>
+          <li>마지막으로 성공했던 Git commit 또는 branch로 돌아간다.</li>
+          <li><code>pnpm install --frozen-lockfile</code>을 다시 실행한다.</li>
+          <li><code>pnpm build</code>를 다시 실행한다.</li>
+          <li><code>launchctl kickstart -k</code>로 재시작한다.</li>
+        </ol>
+        <pre><code>corepack pnpm mac-production:uninstall
+corepack pnpm mac-production:install -- --node-bin /Users/cwj/.nvm/versions/node/v22.19.0/bin/node --port 3100</code></pre>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">11</span>위험과 완화책</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>위험</th><th>왜 문제인가</th><th>완화책</th></tr></thead>
+            <tbody>
+              <tr><td>Mac sleep</td><td>서버가 멈춘다.</td><td>운영 중 잠자기 방지, 전원 연결, 필요 시 dedicated machine 사용</td></tr>
+              <tr><td><code>localhost</code> URL 사용</td><td>다른 사용자는 접속할 수 없고 OAuth callback이 제한된다.</td><td>이번 local-only 목적에는 의도된 제한이다. 외부 공개 시 HTTPS 계획으로 전환</td></tr>
+              <tr><td>QA fixture flag 노출</td><td>가짜 데이터/테스트 UI가 운영에 보일 수 있다.</td><td><code>validate:production-data-quality</code> 실행</td></tr>
+              <tr><td>service role key 노출</td><td>DB 권한 우회 위험</td><td>repo에 저장 금지, <code>.env.production.local</code> 권한 제한</td></tr>
+              <tr class="highlight"><td>HTTP public 공개</td><td>로그인/session/개인정보 보호에 취약</td><td>public internet은 HTTPS 전까지 열지 않음</td></tr>
+              <tr><td>로그 방치</td><td>장애 원인 추적이 어렵고 디스크가 찰 수 있다.</td><td>로그 위치 고정, 주기적 정리</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">12</span>완료 체크리스트</h2>
+        <ul class="check">
+          <li class="done"><code>.env.production.local</code> production 전용 생성 및 권한 600</li>
+          <li class="done">production 금지 flag 없음</li>
+          <li class="done"><code>corepack pnpm install --frozen-lockfile</code> 통과</li>
+          <li class="done"><code>corepack pnpm lint</code> 통과</li>
+          <li class="done"><code>corepack pnpm typecheck</code> 통과</li>
+          <li class="done"><code>corepack pnpm test:product</code> 통과</li>
+          <li class="done"><code>corepack pnpm build</code> 통과</li>
+          <li>production 품질 게이트: 원격 <code>recipes.visibility</code> migration 필요</li>
+          <li class="done"><code>127.0.0.1:3100</code> 수동 실행과 HTTP 200 확인</li>
+          <li class="done">CSP 등 보안 헤더 확인</li>
+          <li>브라우저 smoke: 렌더링 정상, HOME recipe API는 DB schema mismatch로 실패</li>
+          <li class="done">launchd 설치·상태·재시작·등록 해제 실제 검증</li>
+          <li>재부팅/로그인 자동 실행: migration 적용 후 재설치하여 확인</li>
+          <li class="done">중지·재시작·롤백 명령 확인</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">13</span>다음 의사결정</h2>
+        <div class="miniflow">
+          <span class="box">local-only</span><span class="arrow">-></span>
+          <span class="box">LAN-only</span><span class="arrow">-></span>
+          <span class="box">도메인/HTTPS</span><span class="arrow">-></span>
+          <span class="box">public production</span>
+        </div>
+        <ol>
+          <li>Supabase CLI를 연결하고 원격 pending migration을 공식 순서대로 적용한다.</li>
+          <li>품질 게이트와 브라우저 smoke가 통과하면 <code>mac-production:install</code>을 다시 실행한다.</li>
+          <li>현재 구현은 <code>local-only</code>로 유지한다. LAN/public으로 넓힐 때 host 제한을 임의로 풀지 않는다.</li>
+          <li><code>public internet</code>이면 도메인, HTTPS, OAuth callback, 법률 문서와 네트워크 보안 계획을 별도로 잠근다.</li>
+        </ol>
+      </section>
+    </main>
+
+    <footer>
+      원문: docs/engineering/current-mac-production-plan.md | 초보 개발자 이해용 HTML | 생성일: 2026-07-29
+    </footer>
+  </div>
+</body>
+</html>

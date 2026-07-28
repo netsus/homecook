@@ -2,10 +2,27 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildDataQualityFindings,
+  parseProductionDataQualityArgs,
+  PRODUCTION_DATA_SCAN_TABLES,
   validateProductionEnv,
 } from "../scripts/lib/production-data-quality.mjs";
 
 describe("production data quality gate", () => {
+  it("accepts the pnpm argument separator before validator options", () => {
+    expect(parseProductionDataQualityArgs(["--", "--require-db"])).toMatchObject({
+      requireDb: true,
+    });
+  });
+
+  it("probes recipe visibility columns required by the production read contract", () => {
+    const recipesScan = PRODUCTION_DATA_SCAN_TABLES.find(
+      (table) => table.table === "recipes",
+    );
+
+    expect(recipesScan?.columns).toContain("visibility");
+    expect(recipesScan?.columns).toContain("deleted_at");
+  });
+
   it("blocks QA fixture and local auth flags in production-like environments", () => {
     const result = validateProductionEnv({
       NODE_ENV: "production",
@@ -33,6 +50,35 @@ describe("production data quality gate", () => {
 
     expect(result.errors).toEqual([]);
     expect(result.productionLike).toBe(false);
+  });
+
+  it("allows a localhost app URL only for explicit local-only production", () => {
+    const result = validateProductionEnv({
+      NODE_ENV: "production",
+      HOMECOOK_PRODUCTION_EXPOSURE: "local-only",
+      NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+      NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3100",
+      NEXT_PUBLIC_SITE_URL: "http://127.0.0.1:3100",
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toContain(
+      "local-only production은 현재 Mac 밖으로 공개하지 않아야 합니다.",
+    );
+  });
+
+  it("still blocks localhost URLs when local-only production is not explicit", () => {
+    const result = validateProductionEnv({
+      NODE_ENV: "production",
+      NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+      NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3100",
+    });
+
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: "PRODUCTION_LOCAL_APP_URL",
+      }),
+    ]);
   });
 
   it("finds test pollution patterns in scanned production rows", () => {
@@ -77,4 +123,3 @@ describe("production data quality gate", () => {
     );
   });
 });
-

@@ -1,42 +1,12 @@
 #!/usr/bin/env node
 
-import { validateProductionDataQuality } from "./lib/production-data-quality.mjs";
+import {
+  loadProductionEnvFiles,
+  parseProductionDataQualityArgs,
+  validateProductionDataQuality,
+} from "./lib/production-data-quality.mjs";
 
-function parseArgs(argv) {
-  const args = {
-    json: false,
-    limit: 500,
-    requireDb: false,
-  };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-
-    if (arg === "--json") {
-      args.json = true;
-      continue;
-    }
-
-    if (arg === "--require-db") {
-      args.requireDb = true;
-      continue;
-    }
-
-    if (arg === "--limit") {
-      const parsed = Number(argv[index + 1]);
-      if (!Number.isInteger(parsed) || parsed < 1) {
-        throw new Error("--limit must be a positive integer.");
-      }
-      args.limit = parsed;
-      index += 1;
-      continue;
-    }
-
-    throw new Error(`Unknown argument: ${arg}`);
-  }
-
-  return args;
-}
+loadProductionEnvFiles();
 
 function printHuman(result) {
   if (result.ok) {
@@ -57,7 +27,7 @@ function printHuman(result) {
 }
 
 try {
-  const args = parseArgs(process.argv.slice(2));
+  const args = parseProductionDataQualityArgs(process.argv.slice(2));
   const result = await validateProductionDataQuality({
     limit: args.limit,
     requireDb: args.requireDb,
@@ -74,4 +44,3 @@ try {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);
 }
-
