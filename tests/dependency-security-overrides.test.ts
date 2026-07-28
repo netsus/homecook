@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
@@ -22,14 +22,13 @@ type Postcss = (
   };
 };
 
-function readJson(relativePath: string) {
-  return JSON.parse(readFileSync(join(rootDir, relativePath), "utf8")) as {
-    pnpm?: {
-      overrides?: Record<string, string>;
-      patchedDependencies?: Record<string, string>;
-    };
-    version?: string;
-  };
+function readPnpmConfig(name: string) {
+  const result = spawnSync("pnpm", ["config", "get", name, "--json"], {
+    cwd: rootDir,
+    encoding: "utf8",
+  });
+  expect(result.status, result.stderr).toBe(0);
+  return JSON.parse(result.stdout) as Record<string, string | boolean>;
 }
 
 function createDependencyRequire(packageName: string) {
@@ -52,15 +51,21 @@ function resolveTypescriptEstreeRequire() {
 
 describe("dependency security overrides", () => {
   it("keeps the audited versions and minimatch compatibility patch declared", () => {
-    const packageJson = readJson("package.json");
+    const overrides = readPnpmConfig("overrides");
+    const patchedDependencies = readPnpmConfig("patchedDependencies");
+    const allowBuilds = readPnpmConfig("allowBuilds");
 
-    expect(packageJson.pnpm?.overrides).toMatchObject({
+    expect(overrides).toMatchObject({
       "minimatch@3.1.5>brace-expansion": "5.0.8",
       "minimatch@10.2.5>brace-expansion": "5.0.8",
       postcss: "8.5.18",
     });
-    expect(packageJson.pnpm?.patchedDependencies).toEqual({
-      "minimatch@3.1.5": "patches/minimatch@3.1.5.patch",
+    expect(patchedDependencies).toEqual({
+      "minimatch@3.1.5": join(rootDir, "patches/minimatch@3.1.5.patch"),
+    });
+    expect(allowBuilds).toEqual({
+      "esbuild@0.28.1": true,
+      "unrs-resolver@1.11.1": true,
     });
   });
 

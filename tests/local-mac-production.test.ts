@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -25,6 +26,26 @@ afterEach(() => {
 });
 
 describe("local Mac production environment", () => {
+  it("starts the production CLI through an explicit Node binary", () => {
+    const result = spawnSync(
+      "/bin/sh",
+      ["scripts/run-local-mac-production.sh", "help"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          HOMECOOK_NODE_BIN: process.execPath,
+          PATH: "/usr/bin:/bin",
+        },
+      },
+    );
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("Usage:");
+    expect(result.stdout).toContain("127.0.0.1");
+  });
+
   it("accepts the pnpm argument separator before command options", () => {
     const result = parseLocalMacProductionArgs([
       "prepare-env",
