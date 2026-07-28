@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   appendAccountMaintenanceJsonLog,
+  buildAccountMaintenanceLocalSchedulerVerification,
   evaluateAccountMaintenanceHealth,
   getAccountMaintenanceVerificationStatus,
   recordAccountMaintenanceTickOutcome,
@@ -22,10 +23,13 @@ import {
   runAccountMaintenanceLiveTick,
 } from "../scripts/lib/account-maintenance-live.mjs";
 import { installAccountMaintenanceLaunchd } from "../scripts/lib/account-maintenance-scheduler-manual.mjs";
+import { installAccountMaintenanceLocalLaunchd } from "../scripts/lib/account-maintenance-scheduler-local.mjs";
 import { rotateAccountMaintenanceSecret } from "../scripts/lib/account-maintenance-secret-rotation.mjs";
 
 const TICK_SCRIPT = "scripts/account-maintenance-tick.mjs";
 const INSTALL_SCRIPT = "scripts/account-maintenance-scheduler-install.mjs";
+const LOCAL_INSTALL_SCRIPT = "scripts/account-maintenance-local-scheduler-install.mjs";
+const LOCAL_VERIFY_SCRIPT = "scripts/account-maintenance-local-scheduler-verify.mjs";
 const VERIFY_SCRIPT = "scripts/account-maintenance-scheduler-verify.mjs";
 const UNINSTALL_SCRIPT = "scripts/account-maintenance-scheduler-uninstall.mjs";
 const PLIST_PATH = "ops/launchd/com.homecook.account-maintenance.plist.template";
@@ -753,6 +757,131 @@ describe("account session generation scheduler skeleton", () => {
         );
       }
     }
+  });
+
+  it("installs a separate local launchd dry-run cleaner without production URL or Keychain", () => {
+    const calls: Array<{ file: string; args: string[] }> = [];
+    const writes: Array<{ path: string; content: string; mode: number }> = [];
+    const execFile = vi.fn((file: string, args: string[]) => {
+      calls.push({ file, args });
+      return "";
+    });
+
+    const result = installAccountMaintenanceLocalLaunchd({
+      rootDir: "/Users/tester/homecook",
+      homeDir: "/Users/tester",
+      userId: 501,
+      execFile: execFile as never,
+      fileSystem: {
+        mkdir: vi.fn(),
+        exists: vi.fn(() => false),
+        readFile: vi.fn(),
+        writeFile: vi.fn((path, content, options) => {
+          writes.push({ path, content, mode: options.mode });
+        }),
+        chmod: vi.fn(),
+        rename: vi.fn(),
+        rm: vi.fn(),
+      },
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      action: "install",
+      label: "com.homecook.account-maintenance.local",
+      target:
+        "/Users/tester/Library/LaunchAgents/com.homecook.account-maintenance.local.plist",
+      liveMode: "local-dry-run",
+    });
+    expect(calls).toContainEqual({
+      file: "/bin/launchctl",
+      args: [
+        "bootstrap",
+        "gui/501",
+        "/Users/tester/Library/LaunchAgents/com.homecook.account-maintenance.local.plist",
+      ],
+    });
+    expect(calls.some(({ file }) => file === "/usr/bin/security")).toBe(false);
+    expect(writes).toHaveLength(1);
+    expect(writes[0].mode).toBe(0o600);
+    expect(writes[0].content).toContain(
+      "<string>com.homecook.account-maintenance.local</string>",
+    );
+    expect(writes[0].content).toContain("<integer>300</integer>");
+    expect(writes[0].content).toContain("<string>--dry-run</string>");
+    expect(writes[0].content).toContain("<string>--json</string>");
+    expect(writes[0].content).toContain("account-maintenance-local.log");
+    expect(writes[0].content).not.toContain("HOMECOOK_MAINTENANCE_TICK_URL");
+    expect(writes[0].content).not.toContain("homecook-flame.vercel.app");
+  });
+
+  it("verifies the local launchd dry-run cleaner contract and package scripts", () => {
+    expect(existsSync(LOCAL_INSTALL_SCRIPT)).toBe(true);
+    expect(existsSync(LOCAL_VERIFY_SCRIPT)).toBe(true);
+
+    const verification = buildAccountMaintenanceLocalSchedulerVerification({
+      rootDir: "/Users/tester/homecook",
+      homeDir: "/Users/tester",
+    });
+
+    expect(verification).toMatchObject({
+      ok: true,
+      checkedLaunchctl: false,
+      launchd: {
+        label: "com.homecook.account-maintenance.local",
+        runAtLoad: true,
+        startIntervalSeconds: 300,
+        programArguments: [
+          process.execPath,
+          "scripts/account-maintenance-tick.mjs",
+          "--dry-run",
+          "--json",
+        ],
+        standardOutPath:
+          "/Users/tester/Library/Logs/Homecook/account-maintenance-local.log",
+        standardErrorPath:
+          "/Users/tester/Library/Logs/Homecook/account-maintenance-local.err.log",
+      },
+    });
+
+    const packageJson = JSON.parse(readFileSync(PACKAGE_PATH, "utf8"));
+    expect(
+      packageJson.scripts["account-maintenance:local-scheduler:install"],
+    ).toBe("node scripts/account-maintenance-local-scheduler-install.mjs");
+    expect(
+      packageJson.scripts["account-maintenance:local-scheduler:verify"],
+    ).toBe("node scripts/account-maintenance-local-scheduler-verify.mjs");
+
+    const verifySource = readFileSync(LOCAL_VERIFY_SCRIPT, "utf8");
+    expect(verifySource).toContain("plistMatches");
+    expect(verifySource).toContain(
+      "installedState.plist === verification.launchd.plist",
+    );
+    expect(verifySource).toContain(
+      "result.installed && result.loaded && result.plistMatches",
+    );
+
+    const rendered = execFileSync(
+      process.execPath,
+      [
+        LOCAL_VERIFY_SCRIPT,
+        "--dry-run",
+        "--home-dir",
+        "/Users/tester",
+        "--json",
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+    expect(JSON.parse(rendered)).toMatchObject({
+      ok: true,
+      checkedLaunchctl: false,
+      launchd: {
+        label: "com.homecook.account-maintenance.local",
+      },
+    });
   });
 
   it("fails local health on the exact consecutive-failure, oldest-due and dead-letter thresholds", () => {

@@ -11,6 +11,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const ACCOUNT_MAINTENANCE_LABEL = "com.homecook.account-maintenance";
+export const ACCOUNT_MAINTENANCE_LOCAL_LABEL =
+  "com.homecook.account-maintenance.local";
 export const ACCOUNT_MAINTENANCE_INTERVAL_SECONDS = 300;
 export const ACCOUNT_MAINTENANCE_HEARTBEAT_SECONDS = 900;
 export const ACCOUNT_MAINTENANCE_FAILURE_THRESHOLD = 3;
@@ -108,6 +110,18 @@ export function getAccountMaintenanceLogPaths(homeDir = process.env.HOME ?? "") 
   return {
     stdout: `${logDir}/account-maintenance.log`,
     stderr: `${logDir}/account-maintenance.err.log`,
+  };
+}
+
+export function getAccountMaintenanceLocalLogPaths(
+  homeDir = process.env.HOME ?? "",
+) {
+  const normalizedHomeDir = ensureNonEmptyString(homeDir, "homeDir");
+  const logDir = `${normalizedHomeDir}/Library/Logs/Homecook`;
+
+  return {
+    stdout: `${logDir}/account-maintenance-local.log`,
+    stderr: `${logDir}/account-maintenance-local.err.log`,
   };
 }
 
@@ -272,6 +286,51 @@ export function renderAccountMaintenanceLaunchdPlist({
     .replaceAll("__STDERR_LOG__", logPaths.stderr);
 }
 
+export function renderAccountMaintenanceLocalLaunchdPlist({
+  rootDir = process.cwd(),
+  homeDir = process.env.HOME ?? "",
+  nodeBin = process.execPath,
+} = {}) {
+  const normalizedRootDir = resolve(ensureNonEmptyString(rootDir, "rootDir"));
+  const normalizedHomeDir = ensureNonEmptyString(homeDir, "homeDir");
+  const normalizedNodeBin = ensureNonEmptyString(nodeBin, "nodeBin");
+  const logPaths = getAccountMaintenanceLocalLogPaths(normalizedHomeDir);
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+    '<plist version="1.0">',
+    '<dict>',
+    "  <key>Label</key>",
+    `  <string>${ACCOUNT_MAINTENANCE_LOCAL_LABEL}</string>`,
+    "  <key>ProgramArguments</key>",
+    "  <array>",
+    `    <string>${normalizedNodeBin}</string>`,
+    "    <string>scripts/account-maintenance-tick.mjs</string>",
+    "    <string>--dry-run</string>",
+    "    <string>--json</string>",
+    "  </array>",
+    "  <key>EnvironmentVariables</key>",
+    "  <dict>",
+    "    <key>PATH</key>",
+    `    <string>${buildPathEnv(normalizedNodeBin)}</string>`,
+    "  </dict>",
+    "  <key>WorkingDirectory</key>",
+    `  <string>${normalizedRootDir}</string>`,
+    "  <key>RunAtLoad</key>",
+    "  <true/>",
+    "  <key>StartInterval</key>",
+    `  <integer>${ACCOUNT_MAINTENANCE_INTERVAL_SECONDS}</integer>`,
+    "  <key>StandardOutPath</key>",
+    `  <string>${logPaths.stdout}</string>`,
+    "  <key>StandardErrorPath</key>",
+    `  <string>${logPaths.stderr}</string>`,
+    "</dict>",
+    "</plist>",
+    "",
+  ].join("\n");
+}
+
 export function buildAccountMaintenanceTickResult({
   dryRun = false,
   rootDir = process.cwd(),
@@ -371,6 +430,67 @@ export function buildAccountMaintenanceSchedulerVerification({
       verified: ACCOUNT_MAINTENANCE_RELEASE_VERIFIED,
       blockers: ACCOUNT_MAINTENANCE_RELEASE_BLOCKERS,
     },
+    errors,
+  };
+}
+
+export function buildAccountMaintenanceLocalSchedulerVerification({
+  rootDir = process.cwd(),
+  homeDir = process.env.HOME ?? "",
+  dryRun = false,
+} = {}) {
+  const normalizedRootDir = resolve(ensureNonEmptyString(rootDir, "rootDir"));
+  const normalizedHomeDir = ensureNonEmptyString(homeDir, "homeDir");
+  const logPaths = getAccountMaintenanceLocalLogPaths(normalizedHomeDir);
+  const plist = renderAccountMaintenanceLocalLaunchdPlist({
+    rootDir: normalizedRootDir,
+    homeDir: normalizedHomeDir,
+  });
+  const errors = [];
+
+  if (!plist.includes(`<string>${ACCOUNT_MAINTENANCE_LOCAL_LABEL}</string>`)) {
+    errors.push("missing_local_label");
+  }
+  if (!plist.includes("<true/>")) {
+    errors.push("missing_run_at_load");
+  }
+  if (!plist.includes(`<integer>${ACCOUNT_MAINTENANCE_INTERVAL_SECONDS}</integer>`)) {
+    errors.push("missing_start_interval");
+  }
+  if (
+    !plist.includes("<string>--dry-run</string>")
+    || !plist.includes("<string>--json</string>")
+  ) {
+    errors.push("missing_local_dry_run_arguments");
+  }
+  if (plist.includes(ACCOUNT_MAINTENANCE_TICK_URL_ENV)) {
+    errors.push("unexpected_live_tick_url_environment");
+  }
+
+  return {
+    ok: errors.length === 0,
+    dryRun,
+    checkedLaunchctl: false,
+    launchd: {
+      label: ACCOUNT_MAINTENANCE_LOCAL_LABEL,
+      runAtLoad: true,
+      startIntervalSeconds: ACCOUNT_MAINTENANCE_INTERVAL_SECONDS,
+      workingDirectory: normalizedRootDir,
+      programArguments: [
+        process.execPath,
+        "scripts/account-maintenance-tick.mjs",
+        "--dry-run",
+        "--json",
+      ],
+      standardOutPath: logPaths.stdout,
+      standardErrorPath: logPaths.stderr,
+      plist,
+    },
+    tickDryRun: buildAccountMaintenanceTickResult({
+      dryRun: true,
+      rootDir: normalizedRootDir,
+    }),
+    liveMode: "local-dry-run",
     errors,
   };
 }
