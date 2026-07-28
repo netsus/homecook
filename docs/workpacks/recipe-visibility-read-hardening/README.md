@@ -203,6 +203,7 @@ Schema Change:
 - [x] public list/detail/theme/tag/search/sitemap/cache/SEO enforce public+not-deleted+non-quarantined owner <!-- omo:id=delivery-public-read-matrix;stage=2;scope=backend;review=3,6 -->
 - [x] private owner detail 404 and soft-deleted new-selection denial are non-inferable <!-- omo:id=delivery-private-detail-delete;stage=2;scope=backend;review=3,6 -->
 - [ ] anchored historical readers preserve prior Meal/session/batch/log content without general bypass <!-- omo:id=delivery-historical-reader-scope;stage=2;scope=backend;review=3,6 -->
+  - 2026-07-28 partial evidence covers owned existing Meal, shopping-list and cooking-session FK readers plus rejection before service-role recipe lookup for another owner. Immutable content snapshots (#4), snapshot-v2 session reads (#7), batch (#8) and meal-log (#9) remain outside the current implementation, so this aggregate stays open.
 - [x] recipe tag projection and every aggregate/cache reader recheck parent visibility <!-- omo:id=delivery-parent-bounded-tags;stage=2;scope=backend;review=3,6 -->
 - [x] quarantine recovery/delete and owner-neutral preservation consume F0 lifecycle exactly <!-- omo:id=delivery-quarantine-upper-bound;stage=2;scope=backend;review=3,6 -->
 - [ ] private/public-neutral registry, references, RLS/grants and server-only Storage mutation are proven <!-- omo:id=delivery-image-registry-security;stage=2;scope=backend;review=3,6 -->
