@@ -444,14 +444,14 @@ with extension_membership as (
 ), selected as (
   select *
   from function_rows
-  where schema_name in ('public', 'account_generation_auth_hook')
+  where schema_name in ('public', 'account_generation_auth_hook', 'private')
     and extension_name is null
   union all
   select *
   from function_rows
   where prosecdef
     and not (
-      schema_name in ('public', 'account_generation_auth_hook')
+      schema_name in ('public', 'account_generation_auth_hook', 'private')
       and extension_name is null
     )
 )
