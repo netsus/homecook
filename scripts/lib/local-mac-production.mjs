@@ -18,6 +18,18 @@ import { ensureDockerRunning } from "./local-docker.mjs";
 export const LOCAL_MAC_PRODUCTION_LABEL = "com.homecook.production";
 export const DEFAULT_LOCAL_MAC_PRODUCTION_HOST = "127.0.0.1";
 export const DEFAULT_LOCAL_MAC_PRODUCTION_PORT = 3100;
+export const LOCAL_SUPABASE_CLI_PACKAGE = "supabase@2.110.0";
+
+const LOCAL_SUPABASE_ENV_KEYS = [
+  "COREPACK_HOME",
+  "DOCKER_CONTEXT",
+  "DOCKER_HOST",
+  "HOME",
+  "PATH",
+  "PNPM_HOME",
+  "TMPDIR",
+  "XDG_CONFIG_HOME",
+];
 
 const REQUIRED_PRODUCTION_ENV_KEYS = [
   "NEXT_PUBLIC_SUPABASE_URL",
@@ -80,6 +92,49 @@ function ensurePort(port) {
   }
 
   return parsed;
+}
+
+function ensureLocalNextStartArgs(args) {
+  if (Array.isArray(args) && args.length === 0) {
+    return [
+      "-H",
+      DEFAULT_LOCAL_MAC_PRODUCTION_HOST,
+      "-p",
+      String(DEFAULT_LOCAL_MAC_PRODUCTION_PORT),
+    ];
+  }
+
+  if (
+    !Array.isArray(args)
+    || args.length !== 4
+    || args[0] !== "-H"
+    || args[2] !== "-p"
+  ) {
+    throw new Error("Local Mac production requires explicit -H and -p arguments.");
+  }
+
+  return [
+    "-H",
+    ensureLocalOnlyHost(args[1]),
+    "-p",
+    String(ensurePort(args[3])),
+  ];
+}
+
+function createLocalSupabaseCommandEnv(env) {
+  /** @type {Record<string, string | undefined>} */
+  const commandEnv = {};
+
+  for (const key of LOCAL_SUPABASE_ENV_KEYS) {
+    if (typeof env[key] === "string" && env[key].length > 0) {
+      commandEnv[key] = env[key];
+    }
+  }
+
+  ensureNonEmptyString(commandEnv.HOME, "HOME");
+  ensureNonEmptyString(commandEnv.PATH, "PATH");
+
+  return commandEnv;
 }
 
 export function parseLocalMacProductionArgs(argv, {
@@ -267,7 +322,7 @@ export function getLocalMacProductionPaths(homeDir = process.env.HOME ?? "") {
  *   args?: string[],
  *   rootDir?: string,
  *   nodeBin?: string,
- *   env?: NodeJS.ProcessEnv,
+ *   env?: Record<string, string | undefined>,
  *   ensureDocker?: () => Promise<void>,
  *   runCommand?: (
  *     command: string,
@@ -296,18 +351,20 @@ export async function startLocalMacProductionRuntime({
 } = {}) {
   const normalizedRootDir = resolve(ensureNonEmptyString(rootDir, "rootDir"));
   const normalizedNodeBin = resolve(ensureNonEmptyString(nodeBin, "nodeBin"));
+  const normalizedArgs = ensureLocalNextStartArgs(args);
+  const supabaseEnv = createLocalSupabaseCommandEnv(env);
 
   await ensureDocker();
 
   const commandOptions = {
     cwd: normalizedRootDir,
-    env,
+    env: supabaseEnv,
     encoding: "utf8",
     stdio: "ignore",
   };
   const startResult = runCommand(
     "pnpm",
-    ["dlx", "supabase", "start"],
+    ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "start"],
     commandOptions,
   );
   if (startResult.status !== 0) {
@@ -316,7 +373,7 @@ export async function startLocalMacProductionRuntime({
 
   const statusResult = runCommand(
     "pnpm",
-    ["dlx", "supabase", "status"],
+    ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "status"],
     commandOptions,
   );
   if (statusResult.status !== 0) {
@@ -327,7 +384,7 @@ export async function startLocalMacProductionRuntime({
     normalizedNodeBin,
     [
       resolve(normalizedRootDir, "scripts", "start-production.mjs"),
-      ...args,
+      ...normalizedArgs,
     ],
     {
       cwd: normalizedRootDir,

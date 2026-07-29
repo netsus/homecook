@@ -132,16 +132,29 @@ describe("local Mac production launch agent", () => {
   it("starts Docker and local Supabase before the Next.js production process", async () => {
     const calls: string[] = [];
     const child = { on: () => child };
+    const runtimeEnv = {
+      HOME: "/Users/tester",
+      PATH: "/Users/tester/.local/bin:/usr/bin:/bin",
+      XDG_CONFIG_HOME: "/Users/tester/.config",
+      SUPABASE_SERVICE_ROLE_KEY: "must-not-reach-cli",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "must-not-reach-cli",
+    };
 
     const result = await startLocalMacProductionRuntime({
       args: ["-H", "127.0.0.1", "-p", "3100"],
       rootDir: "/Users/tester/homecook",
       nodeBin: "/Users/tester/.nvm/node",
+      env: runtimeEnv,
       ensureDocker: async () => {
         calls.push("docker-ready");
       },
-      runCommand: (command: string, args: readonly string[]) => {
+      runCommand: (command: string, args: readonly string[], options) => {
         calls.push(`${command} ${args.join(" ")}`);
+        expect(options.env).toEqual({
+          HOME: runtimeEnv.HOME,
+          PATH: runtimeEnv.PATH,
+          XDG_CONFIG_HOME: runtimeEnv.XDG_CONFIG_HOME,
+        });
         return { status: 0, stdout: "", stderr: "" };
       },
       spawnProcess: (command: string, args: readonly string[]) => {
@@ -153,10 +166,38 @@ describe("local Mac production launch agent", () => {
     expect(result).toBe(child);
     expect(calls).toEqual([
       "docker-ready",
-      "pnpm dlx supabase start",
-      "pnpm dlx supabase status",
+      "pnpm dlx supabase@2.110.0 start",
+      "pnpm dlx supabase@2.110.0 status",
       "/Users/tester/.nvm/node /Users/tester/homecook/scripts/start-production.mjs -H 127.0.0.1 -p 3100",
     ]);
+  });
+
+  it("rejects a public bind address before starting Docker or Supabase", async () => {
+    let dockerStarted = false;
+    let commandStarted = false;
+    let nextStarted = false;
+
+    await expect(
+      startLocalMacProductionRuntime({
+        args: ["-H", "0.0.0.0", "-p", "3100"],
+        rootDir: "/Users/tester/homecook",
+        ensureDocker: async () => {
+          dockerStarted = true;
+        },
+        runCommand: () => {
+          commandStarted = true;
+          return { status: 0 };
+        },
+        spawnProcess: () => {
+          nextStarted = true;
+          return { on: () => undefined };
+        },
+      }),
+    ).rejects.toThrow("Local Mac production must bind to 127.0.0.1");
+
+    expect(dockerStarted).toBe(false);
+    expect(commandStarted).toBe(false);
+    expect(nextStarted).toBe(false);
   });
 
   it("does not start Next.js when local Supabase start fails", async () => {
