@@ -59,7 +59,8 @@ flowchart LR
 
 - production validator는 `HOMECOOK_PRODUCTION_EXPOSURE=local-only`이고 앱·사이트 origin도 loopback일 때만 local Supabase URL을 허용한다. `public`, 혼합 origin, exposure 누락은 계속 거부한다.
 - `com.homecook.production` LaunchAgent는 `scripts/start-local-mac-production.mjs`를 실행한다.
-- 부팅 wrapper는 `Docker 준비 → pnpm dlx supabase start → pnpm dlx supabase status → Next.js start` 순서를 강제한다.
+- 부팅 wrapper는 `Docker 준비 → pnpm dlx supabase@2.110.0 start → pnpm dlx supabase@2.110.0 status → Next.js start` 순서를 강제한다.
+- 부팅 wrapper는 Supabase CLI에 `HOME`, `PATH`, Docker 설정처럼 필요한 환경만 전달한다. 앱의 anon key나 service-role key는 전달하지 않는다.
 - Docker 또는 Supabase 준비가 실패하면 Next.js를 시작하지 않고 비정상 종료한다. launchd의 `KeepAlive.SuccessfulExit=false`와 `ThrottleInterval=10`이 10초 간격 재시도를 맡는다.
 - 아직 남은 증거는 **실제 서버 MacBook에서의 설치 및 재부팅 smoke**다.
 
@@ -105,11 +106,12 @@ pid: 29719
   - `react-dom@19.1.0`
   - `@supabase/supabase-js` manifest 범위 `^2.57.4`, 현재 lock 해석 `2.99.1`
   - `@supabase/ssr@0.7.0`
+  - 부팅용 Supabase CLI package `supabase@2.110.0`
   - local Supabase PostgreSQL major version `17` (`supabase/config.toml`)
 - 실제 재현 authority는 위 설명보다 `pnpm-lock.yaml`이 우선한다. 버전 범위를 보고 수동 설치하지 말고 반드시 `pnpm install --frozen-lockfile`을 사용한다.
 - 주의:
   - Node.js 실행 파일 경로는 repo가 고정하지 않는다. 새 MacBook에서도 source Mac과 같은 `node -v` 결과를 먼저 기록한 뒤 맞추는 것이 가장 안전하다.
-  - Supabase CLI도 `package.json`에 버전이 잠겨 있지 않다. source Mac에서 `pnpm dlx supabase --version` 결과를 함께 기록해 두는 편이 좋다.
+  - Supabase CLI는 `package.json` 의존성으로 추가하지 않고 부팅 wrapper와 이 문서의 exact package version으로 고정한다. 버전을 바꿀 때는 코드·테스트·문서를 같이 갱신한다.
 
 ### 2. 코드와 의존성 설치
 
@@ -131,8 +133,8 @@ pnpm install --frozen-lockfile
 테스트 데이터를 다시 만들 수 있을 때 쓴다.
 
 ```bash
-pnpm dlx supabase start
-pnpm dlx supabase db reset --local --yes
+pnpm dlx supabase@2.110.0 start
+pnpm dlx supabase@2.110.0 db reset --local --yes
 ```
 
 - 위 reset은 `supabase/migrations/` 전체와 `supabase/seed.sql`을 다시 적용한다.
