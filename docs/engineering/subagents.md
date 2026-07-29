@@ -2,6 +2,9 @@
 
 이 문서는 이 저장소에서 메인 Codex가 어떤 역할 기반 서브에이전트 관점으로 작업을 분해하는지 정의한다.
 
+서브에이전트는 `docs/engineering/codex-task-handoff.md`의 별도 Codex Stage 작업과 다르다.
+Stage 작성·구현과 최종 검토의 task ID 분리는 같은 작업 안의 서브에이전트로 대체하지 않는다.
+
 ## Core Flow
 
 메인 Codex는 아래 순서를 기본값으로 사용한다.
@@ -21,6 +24,7 @@
 - 필수 수정 사항
 - 권장 사항
 - 차단 여부 (`blocker` / `non-blocker`)
+- Stage 독립 승인으로 사용할 수 없음
 
 우선순위는 항상 아래 순서를 따른다.
 

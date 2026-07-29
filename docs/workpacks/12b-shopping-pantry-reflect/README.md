@@ -209,8 +209,8 @@ POST /shopping/lists/{list_id}/complete
 **Backend First + E2E Gated**
 
 1. **Stage 2** (Codex): 백엔드 API 구현 + Vitest 단위 테스트 (4단계 검증, 3-way 로직)
-2. **Stage 3** (Claude): 백엔드 PR 리뷰
-3. **Stage 4** (Claude): 프론트엔드 팝업 UI + 통합 + E2E 전체 통과
+2. **Stage 3** (Codex `backend-reviewer` 새 작업): 백엔드 PR 리뷰
+3. **Stage 4** (Codex `frontend-implementer` 새 작업): 프론트엔드 팝업 UI + 통합 + E2E 전체 통과
 4. **Stage 5** (Codex): 디자인 리뷰 (low-risk UI change, lightweight 또는 스킵)
 5. **Stage 6** (Codex): 프론트엔드 PR 리뷰 + 최종 closeout
 
@@ -397,7 +397,7 @@ POST /shopping/lists/{list_id}/complete
 
 ## Delivery Checklist
 
-### Stage 1 (Docs) — Claude 담당
+### Stage 1 (Docs) — Codex `stage1-docs-author` 새 작업 담당
 - Done: `docs/workpacks/12b-shopping-pantry-reflect/README.md` 생성
 - Done: `docs/workpacks/12b-shopping-pantry-reflect/acceptance.md` 생성
 - Done: `docs/workpacks/12b-shopping-pantry-reflect/automation-spec.json` 생성
@@ -412,7 +412,7 @@ POST /shopping/lists/{list_id}/complete
 - [x] Vitest 단위 테스트 (필터링, 멱등성, 무효 항목 무시) <!-- omo:id=stage2_unit_tests;stage=2;scope=backend;review=3 -->
 - [ ] Playwright E2E API 테스트 (직접 호출, 팝업 없이) <!-- omo:id=stage2_e2e_api;stage=2;scope=backend;review=3;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_vitest_backend_contract_coverage -->
 
-### Stage 3 (Backend Review) — Claude 담당
+### Stage 3 (Backend Review) — Codex `backend-reviewer` 새 작업 담당
 - [x] 백엔드 PR 리뷰 (계약 준수, 멱등성, 무효 항목 처리) <!-- omo:id=stage3_be_review;stage=2;scope=backend;review=3 -->
 
 ## Stage 2 Backend Evidence
@@ -437,7 +437,7 @@ POST /shopping/lists/{list_id}/complete
   - `pnpm verify:backend` passed (lint, typecheck, product tests 310, build, security E2E 9)
 - Real DB/schema readiness: `pnpm verify:backend` includes `tests/supabase-server.test.ts`, confirming the documented shopping and pantry tables exist in migrations. Real browser/local Supabase pantry reflection smoke remains Stage 4/6 evidence because the user-facing popup is not implemented until Stage 4.
 
-### Stage 4 (Frontend) — Claude 담당
+### Stage 4 (Frontend) — Codex `frontend-implementer` 새 작업 담당
 - [x] 팝업 UI 구현 (기존 bottom sheet 패턴 재사용) <!-- omo:id=stage4_popup_ui;stage=4;scope=frontend;review=5 -->
 - [x] 완료 버튼 클릭 → 팝업 표시 로직 <!-- omo:id=stage4_popup_trigger;stage=4;scope=frontend;review=5 -->
 - [x] 3가지 선택지 핸들러 (모두/선택/안 함) <!-- omo:id=stage4_handlers;stage=4;scope=frontend;review=5 -->

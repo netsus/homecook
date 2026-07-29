@@ -43,7 +43,7 @@
 - [x] production-like build가 성공한다 (`pnpm build`) <!-- omo:id=accept-prodlike-build;stage=4;scope=frontend;review=6 -->
 
 ## Manual QA
-- verifier: Claude (Stage 4) + Codex (Stage 5/6)
+- verifier: Codex `frontend-implementer` Stage 4 작업 + task ID가 다른 Codex Stage 5/6 검토 작업
 - environment: local production-like (`pnpm build && node scripts/start-production.mjs`)
 - scenarios:
   - 주요 route entry 체감 속도 확인 (mobile viewport 390x844)

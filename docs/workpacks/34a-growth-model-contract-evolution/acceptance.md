@@ -47,7 +47,7 @@
 
 ## Manual QA
 
-- verifier: Codex + Claude (`claude-opus-4-8`)
+- verifier: 구현/작성 작업과 task ID가 다른 Codex 검토 작업
 - environment: local repo + GitHub PR #728
 - scenarios:
   - 공식 문서 5종을 서로 대조해 XP source, activity ledger, archive, MYPAGE UI 방향이 충돌하지 않는지 확인한다.

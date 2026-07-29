@@ -2,7 +2,7 @@
 
 > RECIPE_DETAIL anchor screen visual retrofit to Baemin-style design language.
 > Dependencies: `h6-baemin-style-direction` (merged), `baemin-style-tokens-additive` (merged), `baemin-style-token-values` (merged), `baemin-style-shared-components` (merged), `baemin-style-home-retrofit` (merged), `h5-modal-system-redesign` (merged).
-> Stage 2/3 are N/A (no backend). Implementation is Stage 4 (Claude). Review is Stage 5/6 (Codex).
+> Stage 2/3 are N/A (no backend). Implementation is a Codex `frontend-implementer` Stage 4 task. Review is performed by separate Codex Stage 5/6 tasks.
 
 ## Goal
 
@@ -19,10 +19,10 @@ RECIPE_DETAIL 화면의 기존 정보 구조(overview, 재료, 조리 단계, ut
 
 | Stage | Name | Owner | Status |
 | --- | --- | --- | --- |
-| 1 | Workpack README + acceptance | **Claude** | this workpack |
+| 1 | Workpack README + acceptance | **Codex `stage1-docs-author` 새 작업** | this workpack |
 | 2 | Backend implementation | N/A | no backend in this slice |
 | 3 | Backend PR review | N/A | no backend in this slice |
-| 4 | Frontend / RECIPE_DETAIL retrofit implementation | **Claude** | visual retrofit |
+| 4 | Frontend / RECIPE_DETAIL retrofit implementation | **Codex `frontend-implementer` 새 작업** | visual retrofit |
 | 5 | Design review | **Codex** | authority evidence, a11y, visual regression |
 | 6 | Frontend PR review / closeout | **Codex** | final review and merge |
 

@@ -1,6 +1,6 @@
 # h6-baemin-style-direction
 
-> Codex-authored direction gate draft. Public Stage 1 ownership remains Claude per `docs/engineering/slice-workflow.md`; treat this as the approved product-direction input plus machine-checkable gate package. No runtime app code may be changed by this workpack.
+> Codex-authored direction gate draft. Public Stage 1 ownership is a separate Codex `stage1-docs-author` task per `docs/engineering/slice-workflow.md`; treat this as the approved product-direction input plus machine-checkable gate package. No runtime app code may be changed by this workpack.
 
 ## Goal
 
@@ -142,7 +142,7 @@ This gate has no backend implementation. Future implementation slices must prese
 
 - [x] Direction adopted by user
 - [x] Reference package present
-- [ ] Claude Stage 1 final owner review completed
+- [ ] task ID가 다른 Codex `docs-gate-reviewer` final owner review completed
 - [ ] Direction docs approved for merge
 - [ ] Runtime visual implementation started
 - [ ] Runtime visual implementation confirmed

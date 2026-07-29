@@ -2,7 +2,7 @@
 
 > Baemin-style shared UI component foundation. This is NOT an anchor-screen retrofit slice.
 > Dependencies: `h6-baemin-style-direction` (merged), `baemin-style-tokens-additive` (merged), `baemin-style-token-values` (merged).
-> Stage 2/3 are N/A (no backend). Implementation is Stage 4 (Claude). Review is Stage 5/6 (Codex).
+> Stage 2/3 are N/A (no backend). Implementation is a Codex `frontend-implementer` Stage 4 task. Review is performed by separate Codex Stage 5/6 tasks.
 
 ## Goal
 
@@ -19,10 +19,10 @@ Establish reusable shared UI primitives styled with the approved Baemin-style to
 
 | Stage | Name | Owner | Status |
 | --- | --- | --- | --- |
-| 1 | Workpack README + acceptance | **Claude** | this workpack |
+| 1 | Workpack README + acceptance | **Codex `stage1-docs-author` 새 작업** | this workpack |
 | 2 | Backend implementation | N/A | no backend in this slice |
 | 3 | Backend PR review | N/A | no backend in this slice |
-| 4 | Frontend / shared implementation | **Claude** | shared component creation/restyling |
+| 4 | Frontend / shared implementation | **Codex `frontend-implementer` 새 작업** | shared component creation/restyling |
 | 5 | Design review | **Codex** | component state coverage, token usage, a11y basics |
 | 6 | Frontend PR review / closeout | **Codex** | final review and merge |
 
@@ -186,7 +186,7 @@ None. This slice is visual-only within approved direction and token boundaries.
 ## Primary User Path
 
 1. Claude creates new `components/ui/` primitives and restyles existing `components/shared/` files using approved tokens (Stage 4).
-2. Claude runs `pnpm verify:frontend` and captures component state previews.
+2. Codex `frontend-implementer` 작업이 `pnpm verify:frontend`를 실행하고 component state preview를 캡처한다.
 3. If existing screens are visually affected, Claude captures before/after screenshots at mobile default and 320px.
 4. Codex reviews component state coverage, token usage, a11y basics, and any visual regression (Stage 5/6).
 5. Follow-up retrofit slices import shared components to apply Baemin styling to anchor screens.

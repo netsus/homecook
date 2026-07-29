@@ -47,7 +47,7 @@
 
 ## Manual QA
 
-- verifier: Claude / Codex
+- verifier: 구현 작업과 task ID가 다른 Codex 검토 작업
 - environment: `pnpm dev:demo` 또는 `pnpm dev:local-supabase`
 - scenarios:
   - YouTube URL 추출 → 3건 이상 unresolved → bulk sheet 열기 → 일괄 등록 → resolved 확인 → 레시피 저장

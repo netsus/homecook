@@ -2,7 +2,7 @@
 
 > Slice E of Wave1 Service Porting Plan
 > Stage: 5 authority-reviewed
-> Owner: Claude (Stage 1 attempted), Codex (Stage 1 fallback because Claude provider limit reset was 13:20 Asia/Seoul)
+> Historical owner: Claude (Stage 1 attempted), Codex (Stage 1 fallback because Claude provider limit reset was 13:20 Asia/Seoul). 신규 Stage는 역할별 별도 Codex 작업이 맡는다.
 
 ## Goal
 

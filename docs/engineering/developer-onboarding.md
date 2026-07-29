@@ -70,9 +70,10 @@ Homecook은 **공식 문서가 제품 계약을 잠그고**, **workpack이 구�
 4. 관련 workpack `README.md` / `acceptance.md`
 5. [agent-workflow-overview.md](./agent-workflow-overview.md)
 6. [slice-workflow.md](./slice-workflow.md)
-7. [workflow-v2/README.md](./workflow-v2/README.md)
-8. [qa-system.md](./qa-system.md)
-9. [git-workflow.md](./git-workflow.md)
+7. [codex-task-handoff.md](./codex-task-handoff.md)
+8. [workflow-v2/README.md](./workflow-v2/README.md)
+9. [qa-system.md](./qa-system.md)
+10. [git-workflow.md](./git-workflow.md)
 
 ### 왜 이 순서인가
 
@@ -81,6 +82,7 @@ Homecook은 **공식 문서가 제품 계약을 잠그고**, **workpack이 구�
 - `docs/workpacks/README.md`: 무엇을 어떤 순서로 구현하는지
 - workpack 문서: 지금 내가 만지는 기능의 scope
 - `agent-workflow-overview.md` / `slice-workflow.md`: 실제 작업 절차
+- `codex-task-handoff.md`: Stage별 새 Codex 작업 생성과 독립 검토 규칙
 - `workflow-v2/README.md`: OMO 기본 운영 구조
 - `qa-system.md`: 테스트와 QA 증거를 어떻게 남기는지
 - `git-workflow.md`: 브랜치/커밋/PR 규칙
@@ -134,16 +136,17 @@ Homecook은 **공식 문서가 제품 계약을 잠그고**, **workpack이 구�
 
 현재 product slice의 stage mechanics는 여전히 [slice-workflow.md](./slice-workflow.md)가 담당한다.
 
-| Stage | 담당 | 의미 |
+| Stage | Codex 작업 역할 | 의미 |
 |---|---|---|
-| 1 | Claude | workpack docs 작성 |
-| 2 | Codex | 백엔드 구현 |
-| 3 | Claude | 백엔드 리뷰 |
-| 4 | Claude | 프론트 구현 |
-| 5 | Codex | 디자인 리뷰 |
-| 6 | Codex | 프론트 PR 리뷰 / closeout |
+| 1 | `stage1-docs-author` 새 작업 | workpack docs 작성 |
+| 2 | `backend-implementer` 새 작업 | 백엔드 구현 |
+| 3 | `backend-reviewer` 새 작업 | 백엔드 리뷰 |
+| 4 | `frontend-implementer` 새 작업 | 프론트 구현 |
+| 5 | `design-reviewer` 새 작업 | 디자인 리뷰 |
+| 6 | `frontend-closeout-reviewer` 새 작업 | 프론트 PR 리뷰 / closeout |
 
-즉, **OMO v2가 기본 운영 경로**가 되었어도, slice 단계 책임표 자체는 그대로 유지된다.
+Claude는 사용하지 않는다.
+Stage마다 별도 Codex 작업을 사용하고, 작성·구현 작업과 독립 검토 작업의 task ID를 분리한다.
 
 ### 3. 변경 유형별 게이트
 
@@ -164,7 +167,8 @@ Homecook은 **공식 문서가 제품 계약을 잠그고**, **workpack이 구�
 
 ### 4. OMO v2는 무엇을 담당하나
 
-[workflow-v2/README.md](./workflow-v2/README.md)는 이제 **기본 운영 entry docs**다.
+[workflow-v2/README.md](./workflow-v2/README.md)는 OMO 상태·검증·closeout 운영 entry docs다.
+Claude provider를 포함한 actor 자동 dispatch는 사용 중지됐으며, Stage 실행은 Codex 새 작업 handoff가 담당한다.
 
 OMO가 맡는 것:
 

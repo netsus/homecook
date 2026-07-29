@@ -386,7 +386,7 @@ Must prove:
 
 ### Review Gate
 
-Claude or human review must check:
+An independent Codex review task or human review must check:
 - no fixture/mock/parity provider in live report
 - no Recipio data in extraction input
 - no video-id/title-specific extraction rule

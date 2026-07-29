@@ -2,7 +2,7 @@
 
 > PLANNER_WEEK anchor screen visual retrofit to Baemin-style design language.
 > Dependencies: `h6-baemin-style-direction` (merged), `baemin-style-tokens-additive` (merged), `baemin-style-token-values` (merged), `baemin-style-shared-components` (merged), `baemin-style-home-retrofit` (merged), `baemin-style-recipe-detail-retrofit` (merged), `H2-planner-week-v2-redesign` (merged).
-> Stage 2/3 are N/A (no backend). Implementation is Stage 4 (Claude). Review is Stage 5/6 (Codex).
+> Stage 2/3 are N/A (no backend). Implementation is a Codex `frontend-implementer` Stage 4 task. Review is performed by separate Codex Stage 5/6 tasks.
 > Superseded note: 2026-04-27 Baemin prototype parity contract removes the planner-level "가로 스크롤 없음" lock. This merged workpack remains historical evidence and must not block `docs/화면정의서-v1.5.1.md`.
 
 ## Goal
@@ -20,10 +20,10 @@ PLANNER_WEEK 화면의 기존 정보 구조(hero, secondary CTA toolbar, week co
 
 | Stage | Name | Owner | Status |
 | --- | --- | --- | --- |
-| 1 | Workpack README + acceptance | **Claude** | this workpack |
+| 1 | Workpack README + acceptance | **Codex `stage1-docs-author` 새 작업** | this workpack |
 | 2 | Backend implementation | N/A | no backend in this slice |
 | 3 | Backend PR review | N/A | no backend in this slice |
-| 4 | Frontend / PLANNER_WEEK retrofit implementation | **Claude** | visual retrofit |
+| 4 | Frontend / PLANNER_WEEK retrofit implementation | **Codex `frontend-implementer` 새 작업** | visual retrofit |
 | 5 | Design review | **Codex** | authority evidence, a11y, visual regression |
 | 6 | Frontend PR review / closeout | **Codex** | final review and merge |
 

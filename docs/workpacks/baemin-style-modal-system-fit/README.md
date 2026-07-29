@@ -3,7 +3,7 @@
 > Modal/sheet 오버레이 패밀리의 배민 스타일 시각 정합 슬라이스.
 > 앵커 화면 리트로핏(HOME, RECIPE_DETAIL, PLANNER_WEEK) 완료 이후, 모달/시트 표면이 동일한 토큰·프리미티브 시스템을 사용하도록 맞춘다.
 > H5 Quiet Kitchen modal 결정(D1-D6)은 보존하며, 기능/API/DB/상태 전이 변경 없음.
-> Stage 2/3 are N/A (no backend). Implementation is Stage 4 (Claude). Review is Stage 5/6 (Codex).
+> Stage 2/3 are N/A (no backend). Implementation is a Codex `frontend-implementer` Stage 4 task. Review is performed by separate Codex Stage 5/6 tasks.
 
 ## Goal
 
@@ -28,10 +28,10 @@ H5 Quiet Kitchen 결정(D1~D6)은 잠겨 있다. 이 슬라이스는 H5 결정�
 
 | Stage | Name | Owner | Status |
 | --- | --- | --- | --- |
-| 1 | Workpack README + acceptance | **Claude** | this workpack |
+| 1 | Workpack README + acceptance | **Codex `stage1-docs-author` 새 작업** | this workpack |
 | 2 | Backend implementation | N/A | no backend in this slice |
 | 3 | Backend PR review | N/A | no backend in this slice |
-| 4 | Frontend / modal system fit implementation | **Claude** | visual fit |
+| 4 | Frontend / modal system fit implementation | **Codex `frontend-implementer` 새 작업** | visual fit |
 | 5 | Design review | **Codex** | authority evidence, a11y, visual regression |
 | 6 | Frontend PR review / closeout | **Codex** | final review and merge |
 
