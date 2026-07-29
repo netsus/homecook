@@ -260,6 +260,31 @@ export function getLocalMacProductionPaths(homeDir = process.env.HOME ?? "") {
   };
 }
 
+/**
+ * @typedef {{ status: number | null }} LocalStartupCommandResult
+ * @typedef {{ on: (...args: unknown[]) => unknown }} LocalRuntimeChild
+ * @typedef {{
+ *   args?: string[],
+ *   rootDir?: string,
+ *   nodeBin?: string,
+ *   env?: NodeJS.ProcessEnv,
+ *   ensureDocker?: () => Promise<void>,
+ *   runCommand?: (
+ *     command: string,
+ *     args: readonly string[],
+ *     options: import("node:child_process").SpawnSyncOptionsWithStringEncoding,
+ *   ) => LocalStartupCommandResult,
+ *   spawnProcess?: (
+ *     command: string,
+ *     args: readonly string[],
+ *     options: import("node:child_process").SpawnOptions,
+ *   ) => LocalRuntimeChild,
+ * }} LocalMacProductionRuntimeOptions
+ */
+
+/**
+ * @param {LocalMacProductionRuntimeOptions} [options]
+ */
 export async function startLocalMacProductionRuntime({
   args = [],
   rootDir = process.cwd(),
