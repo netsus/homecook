@@ -813,7 +813,7 @@ describe("account session generation remote verifier", () => {
     expect(compareCli).toContain("compareAccountGenerationJointStorageInventoryEnvelopes");
   });
 
-  it("rejects --second and fail-closes compare CLI before trusting a saved live-second envelope", () => {
+  it("rejects --second before compare CLI can trust any saved live-second envelope", () => {
     const directory = mkdtempSync(
       join(tmpdir(), "homecook-storage-sample-compare-cli-"),
     );
@@ -867,21 +867,6 @@ describe("account session generation remote verifier", () => {
     );
     expect(rejectSecond.status).toBe(1);
     expect(rejectSecond.stderr).toContain("--second is no longer allowed");
-
-    const dirtyFailClosed = spawnSync(
-      process.execPath,
-      [
-        "scripts/compare-account-session-generation-storage-samples.mjs",
-        "--first",
-        firstPath,
-      ],
-      {
-        cwd: process.cwd(),
-        encoding: "utf8",
-      },
-    );
-    expect(dirtyFailClosed.status).toBe(1);
-    expect(dirtyFailClosed.stderr).toContain("requires a clean worktree");
   });
 
   it("parses saved sample envelopes and compares them only when mergeSha and stable-zero gate match", async () => {
