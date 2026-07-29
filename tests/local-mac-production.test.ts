@@ -11,6 +11,7 @@ import {
   installLocalMacProductionLaunchAgent,
   parseLocalMacProductionArgs,
   renderLocalMacProductionPlist,
+  startLocalMacProductionRuntime,
   waitForLocalMacProductionReady,
 } from "../scripts/lib/local-mac-production.mjs";
 
@@ -128,6 +129,105 @@ describe("local Mac production environment", () => {
 });
 
 describe("local Mac production launch agent", () => {
+  it("starts Docker and local Supabase before the Next.js production process", async () => {
+    const calls: string[] = [];
+    const child = { on: () => child };
+
+    const result = await startLocalMacProductionRuntime({
+      args: ["-H", "127.0.0.1", "-p", "3100"],
+      rootDir: "/Users/tester/homecook",
+      nodeBin: "/Users/tester/.nvm/node",
+      ensureDocker: async () => {
+        calls.push("docker-ready");
+      },
+      runCommand: (command: string, args: readonly string[]) => {
+        calls.push(`${command} ${args.join(" ")}`);
+        return { status: 0, stdout: "", stderr: "" };
+      },
+      spawnProcess: (command: string, args: readonly string[]) => {
+        calls.push(`${command} ${args.join(" ")}`);
+        return child;
+      },
+    });
+
+    expect(result).toBe(child);
+    expect(calls).toEqual([
+      "docker-ready",
+      "pnpm dlx supabase start",
+      "pnpm dlx supabase status",
+      "/Users/tester/.nvm/node /Users/tester/homecook/scripts/start-production.mjs -H 127.0.0.1 -p 3100",
+    ]);
+  });
+
+  it("does not start Next.js when local Supabase start fails", async () => {
+    let nextStarted = false;
+
+    await expect(
+      startLocalMacProductionRuntime({
+        rootDir: "/Users/tester/homecook",
+        ensureDocker: async () => undefined,
+        runCommand: () => ({ status: 1, stdout: "", stderr: "failed" }),
+        spawnProcess: () => {
+          nextStarted = true;
+          return { on: () => undefined };
+        },
+      }),
+    ).rejects.toThrow("Local Supabase start failed");
+
+    expect(nextStarted).toBe(false);
+  });
+
+  it("does not start local Supabase or Next.js when Docker is unavailable", async () => {
+    let commandStarted = false;
+    let nextStarted = false;
+
+    await expect(
+      startLocalMacProductionRuntime({
+        rootDir: "/Users/tester/homecook",
+        ensureDocker: async () => {
+          throw new Error("Docker unavailable");
+        },
+        runCommand: () => {
+          commandStarted = true;
+          return { status: 0, stdout: "", stderr: "" };
+        },
+        spawnProcess: () => {
+          nextStarted = true;
+          return { on: () => undefined };
+        },
+      }),
+    ).rejects.toThrow("Docker unavailable");
+
+    expect(commandStarted).toBe(false);
+    expect(nextStarted).toBe(false);
+  });
+
+  it("does not start Next.js when local Supabase health check fails", async () => {
+    let commandCount = 0;
+    let nextStarted = false;
+
+    await expect(
+      startLocalMacProductionRuntime({
+        rootDir: "/Users/tester/homecook",
+        ensureDocker: async () => undefined,
+        runCommand: () => {
+          commandCount += 1;
+          return {
+            status: commandCount === 1 ? 0 : 1,
+            stdout: "",
+            stderr: "unhealthy",
+          };
+        },
+        spawnProcess: () => {
+          nextStarted = true;
+          return { on: () => undefined };
+        },
+      }),
+    ).rejects.toThrow("Local Supabase health check failed");
+
+    expect(nextStarted).toBe(false);
+  });
+
   it("blocks activation before launchd install when the production gate fails", async () => {
     let installCalled = false;
 
@@ -232,11 +332,14 @@ describe("local Mac production launch agent", () => {
 
     expect(plist).toContain("<string>com.homecook.production</string>");
     expect(plist).toContain("<string>/Users/tester/.nvm/node</string>");
-    expect(plist).toContain("<string>/Users/tester/Home &amp; Cook/scripts/start-production.mjs</string>");
+    expect(plist).toContain("<string>/Users/tester/Home &amp; Cook/scripts/start-local-mac-production.mjs</string>");
     expect(plist).toContain("<string>127.0.0.1</string>");
     expect(plist).toContain("<string>3100</string>");
+    expect(plist).toContain("<key>RunAtLoad</key>");
     expect(plist).toContain("<key>SuccessfulExit</key>");
     expect(plist).toContain("<false/>");
+    expect(plist).toContain("<key>ThrottleInterval</key>");
+    expect(plist).toContain("<integer>10</integer>");
     expect(plist).toContain("/Users/tester/.homecook/logs/homecook-production.err.log");
   });
 

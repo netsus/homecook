@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn as spawnChild, spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
@@ -13,6 +13,7 @@ import {
   loadProductionEnvFiles,
   validateProductionDataQuality,
 } from "./production-data-quality.mjs";
+import { ensureDockerRunning } from "./local-docker.mjs";
 
 export const LOCAL_MAC_PRODUCTION_LABEL = "com.homecook.production";
 export const DEFAULT_LOCAL_MAC_PRODUCTION_HOST = "127.0.0.1";
@@ -259,6 +260,58 @@ export function getLocalMacProductionPaths(homeDir = process.env.HOME ?? "") {
   };
 }
 
+export async function startLocalMacProductionRuntime({
+  args = [],
+  rootDir = process.cwd(),
+  nodeBin = process.execPath,
+  env = process.env,
+  ensureDocker = ensureDockerRunning,
+  runCommand = spawnSync,
+  spawnProcess = spawnChild,
+} = {}) {
+  const normalizedRootDir = resolve(ensureNonEmptyString(rootDir, "rootDir"));
+  const normalizedNodeBin = resolve(ensureNonEmptyString(nodeBin, "nodeBin"));
+
+  await ensureDocker();
+
+  const commandOptions = {
+    cwd: normalizedRootDir,
+    env,
+    encoding: "utf8",
+    stdio: "ignore",
+  };
+  const startResult = runCommand(
+    "pnpm",
+    ["dlx", "supabase", "start"],
+    commandOptions,
+  );
+  if (startResult.status !== 0) {
+    throw new Error("Local Supabase start failed.");
+  }
+
+  const statusResult = runCommand(
+    "pnpm",
+    ["dlx", "supabase", "status"],
+    commandOptions,
+  );
+  if (statusResult.status !== 0) {
+    throw new Error("Local Supabase health check failed.");
+  }
+
+  return spawnProcess(
+    normalizedNodeBin,
+    [
+      resolve(normalizedRootDir, "scripts", "start-production.mjs"),
+      ...args,
+    ],
+    {
+      cwd: normalizedRootDir,
+      env,
+      stdio: "inherit",
+    },
+  );
+}
+
 export function renderLocalMacProductionPlist({
   rootDir = process.cwd(),
   homeDir = process.env.HOME ?? "",
@@ -293,7 +346,7 @@ export function renderLocalMacProductionPlist({
   <key>ProgramArguments</key>
   <array>
     <string>${escapeXml(normalizedNodeBin)}</string>
-    <string>${escapeXml(resolve(normalizedRootDir, "scripts", "start-production.mjs"))}</string>
+    <string>${escapeXml(resolve(normalizedRootDir, "scripts", "start-local-mac-production.mjs"))}</string>
     <string>-H</string>
     <string>${normalizedHost}</string>
     <string>-p</string>
@@ -335,6 +388,7 @@ export function verifyLocalMacProductionPrerequisites({
   const requiredPaths = [
     resolve(rootDir, ".env.production.local"),
     resolve(rootDir, ".next", "BUILD_ID"),
+    resolve(rootDir, "scripts", "start-local-mac-production.mjs"),
     resolve(rootDir, "scripts", "start-production.mjs"),
     resolve(nodeBin),
   ];
