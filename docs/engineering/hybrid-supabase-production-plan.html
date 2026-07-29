@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>원격 Auth + 로컬 DB/Storage production 전환 계획</title>
+  <style>
+    :root{
+      --ink:#182126;
+      --muted:#5d6870;
+      --line:#dce3e6;
+      --page:#edf2f2;
+      --panel:#ffffff;
+      --hero:#16363a;
+      --hero-muted:#b9d3d1;
+      --teal:#087f75;
+      --teal-soft:#e5f5f2;
+      --green:#19713d;
+      --green-soft:#e8f4eb;
+      --amber:#9c5800;
+      --amber-soft:#fff3de;
+      --red:#a72b2b;
+      --red-soft:#fbeaea;
+      --blue:#245ca6;
+      --blue-soft:#eaf1fb;
+      --violet:#6650a4;
+      --violet-soft:#f0edfa;
+      --shadow:0 1px 2px rgba(18,38,45,.05),0 8px 22px rgba(18,38,45,.06);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      color:var(--ink);
+      background:var(--page);
+      font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;
+      line-height:1.72;
+      letter-spacing:0;
+      word-break:keep-all;
+      overflow-wrap:anywhere;
+      -webkit-font-smoothing:antialiased;
+    }
+    a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}
+    .hero{
+      background:var(--hero);
+      color:#fff;
+      border-bottom:5px solid #d6a63e;
+    }
+    .hero-inner,.wrap{width:min(980px,calc(100% - 32px));margin:0 auto}
+    .hero-inner{padding:42px 0 36px}
+    .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      min-height:28px;
+      padding:3px 10px;
+      border:1px solid rgba(255,255,255,.24);
+      border-radius:999px;
+      color:#e7f3f2;
+      background:rgba(255,255,255,.08);
+      font-size:12px;
+      font-weight:700;
+    }
+    h1{margin:0;font-size:clamp(25px,4vw,38px);line-height:1.28;letter-spacing:0}
+    .hero p{max-width:760px;margin:12px 0 0;color:var(--hero-muted);font-size:15px}
+    .wrap{padding:24px 0 72px}
+    .section{
+      margin:16px 0;
+      padding:26px 28px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:var(--panel);
+      box-shadow:var(--shadow);
+    }
+    .section h2{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin:0 0 15px;
+      font-size:20px;
+      line-height:1.4;
+      letter-spacing:0;
+    }
+    .section h3{margin:22px 0 9px;font-size:16px;letter-spacing:0}
+    .num{
+      flex:none;
+      display:grid;
+      place-items:center;
+      width:30px;
+      height:30px;
+      border-radius:7px;
+      color:#fff;
+      background:var(--teal);
+      font-size:13px;
+      font-weight:800;
+    }
+    p{margin:9px 0}
+    .tldr{
+      margin:12px 0;
+      padding:17px 19px;
+      border:1px solid #9dd9d0;
+      border-left:5px solid var(--teal);
+      border-radius:7px;
+      background:var(--teal-soft);
+      font-size:16px;
+    }
+    .analogy{
+      margin-top:12px;
+      padding:14px 16px;
+      border:1px solid #d4c9ee;
+      border-radius:7px;
+      background:var(--violet-soft);
+      color:#3d335b;
+    }
+    .two-col,.three-col,.glossary,.targets{
+      display:grid;
+      gap:12px;
+    }
+    .two-col{grid-template-columns:1fr 1fr}
+    .three-col{grid-template-columns:repeat(3,1fr)}
+    .glossary{grid-template-columns:1fr 1fr}
+    .targets{grid-template-columns:1fr 1fr}
+    .box{
+      padding:15px 16px;
+      border:1px solid var(--line);
+      border-radius:7px;
+      background:#f8fafb;
+    }
+    .box h3,.box h4{margin:0 0 8px;font-size:15px}
+    .box ul{margin:0;padding-left:20px}
+    .box li{margin:5px 0}
+    .box.auth{border-top:4px solid var(--blue);background:var(--blue-soft)}
+    .box.data{border-top:4px solid var(--green);background:var(--green-soft)}
+    .box.stop{border-top:4px solid var(--red);background:var(--red-soft)}
+    .term{
+      margin:0;
+      padding:12px 14px;
+      border-left:4px solid var(--teal);
+      background:#f4f8f8;
+    }
+    .term dt{font-weight:800;color:#075f58}
+    .term dd{margin:3px 0 0;color:var(--muted);font-size:13.5px}
+    .en{color:#587177;font-size:12px;font-weight:700}
+    .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:7px}
+    table{width:100%;min-width:650px;border-collapse:collapse;font-size:13.5px}
+    th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+    th{background:#eef4f4;font-weight:800}
+    tr:last-child td{border-bottom:none}
+    .ok{color:var(--green);font-weight:800}
+    .warn-text{color:var(--amber);font-weight:800}
+    .fail{color:var(--red);font-weight:800}
+    code,.mono{
+      font-family:"SF Mono",Menlo,Consolas,monospace;
+      font-size:12.5px;
+      color:#1c3439;
+      background:#e8eeee;
+      padding:2px 5px;
+      border-radius:4px;
+    }
+    pre{
+      margin:12px 0;
+      padding:15px 16px;
+      overflow-x:auto;
+      border-radius:7px;
+      color:#e6f5f3;
+      background:#17373a;
+      font-family:"SF Mono",Menlo,Consolas,monospace;
+      font-size:12.5px;
+      line-height:1.65;
+      white-space:pre;
+    }
+    pre code{padding:0;color:inherit;background:transparent}
+    .flow{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      margin:18px 0;
+      padding:16px;
+      border:1px solid var(--line);
+      background:#f7f9fa;
+    }
+    .flow-box{
+      min-width:132px;
+      padding:9px 11px;
+      border:1px solid #b9c8cc;
+      border-radius:6px;
+      background:#fff;
+      text-align:center;
+      font-size:13px;
+      font-weight:800;
+    }
+    .flow-box.remote{border-color:#9db7df;background:var(--blue-soft);color:#234a80}
+    .flow-box.local{border-color:#9fcbaa;background:var(--green-soft);color:#185d35}
+    .arrow{color:#6f7a80;font-weight:900}
+    .note{
+      margin:14px 0;
+      padding:13px 15px;
+      border-radius:7px;
+      font-size:14px;
+    }
+    .note strong{display:block;margin-bottom:3px}
+    .note.info{border:1px solid #b8cef0;background:var(--blue-soft)}
+    .note.warn{border:1px solid #edcf9d;background:var(--amber-soft)}
+    .note.danger{border:1px solid #e6b5b5;background:var(--red-soft)}
+    .note.good{border:1px solid #afd4b9;background:var(--green-soft)}
+    .timeline{list-style:none;margin:0;padding:0}
+    .step{position:relative;padding:0 0 20px 50px}
+    .step:not(:last-child)::before{
+      content:"";
+      position:absolute;
+      left:18px;
+      top:37px;
+      bottom:0;
+      width:2px;
+      background:#cbd6d8;
+    }
+    .dot{
+      position:absolute;
+      left:0;
+      top:1px;
+      display:grid;
+      place-items:center;
+      width:38px;
+      height:38px;
+      border:2px solid var(--teal);
+      border-radius:50%;
+      color:var(--teal);
+      background:#fff;
+      font-size:11px;
+      font-weight:900;
+    }
+    .step h3{margin:0 0 4px;font-size:16px}
+    .step p{margin:3px 0;color:var(--muted);font-size:14px}
+    .gate{color:var(--red);font-weight:800}
+    .target{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      padding:11px 12px;
+      border:1px solid var(--line);
+      border-radius:7px;
+      background:#f7faf9;
+      font-size:13.5px;
+    }
+    .badge{
+      flex:none;
+      display:grid;
+      place-items:center;
+      width:24px;
+      height:24px;
+      border-radius:6px;
+      color:#fff;
+      background:var(--teal);
+      font-size:11px;
+      font-weight:900;
+    }
+    .check{list-style:none;margin:0;padding:0}
+    .check li{
+      position:relative;
+      padding:8px 0 8px 31px;
+      border-bottom:1px dashed var(--line);
+      font-size:14px;
+    }
+    .check li:last-child{border-bottom:none}
+    .check li::before{
+      content:"[ ]";
+      position:absolute;
+      left:0;
+      top:8px;
+      color:var(--teal);
+      font-family:"SF Mono",Menlo,monospace;
+      font-size:12px;
+    }
+    .check li.done::before{content:"[x]";color:var(--good)}
+    .check li.pending::before{content:"[ ]";color:var(--warn)}
+    .decision{
+      display:grid;
+      grid-template-columns:190px 1fr;
+      gap:14px;
+      margin:9px 0;
+      padding:12px 14px;
+      border:1px solid var(--line);
+      border-left:4px solid var(--teal);
+      border-radius:7px;
+      background:#f8fafb;
+      font-size:14px;
+    }
+    .decision.stop{border-left-color:var(--red)}
+    .decision.warn{border-left-color:var(--amber)}
+    footer{padding:10px 0 30px;text-align:center;color:#657078;font-size:12.5px}
+    @media(max-width:760px){
+      .hero-inner,.wrap{width:min(100% - 24px,980px)}
+      .hero-inner{padding:32px 0 28px}
+      .section{padding:20px 17px}
+      .two-col,.three-col,.glossary,.targets{grid-template-columns:1fr}
+      .decision{grid-template-columns:1fr;gap:4px}
+      .flow{justify-content:flex-start}
+      .flow-box{width:100%}
+      .arrow{width:100%;text-align:center;transform:rotate(90deg)}
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="pills">
+        <span class="pill">Homecook production</span>
+        <span class="pill">2026-07-30 KST</span>
+        <span class="pill">Stage 1 doc gate PASS · 문서 PR merge 대기 · local write 미개방</span>
+      </div>
+      <h1>원격 Auth + 로컬 DB/Storage 전환 계획</h1>
+      <p>Google·네이버·카카오 로그인은 원격 Supabase에 남기고, 실제 Homecook 데이터와 이미지는 현재 Mac에서 운영하기 위한 초보 개발자용 안내서입니다.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="section">
+      <h2><span class="num">!</span>딱 한 줄 요약</h2>
+      <div class="tldr">
+        <strong>로그인 증명서는 원격에서 받고, 그 증명서로 Mac의 로컬 데이터 보관함을 여는 구조</strong>로 바꿉니다.
+      </div>
+      <div class="analogy">
+        <strong>일상 비유:</strong> 원격 Supabase Auth는 신분증 발급 기관입니다. Mac의 로컬 Supabase는 그 신분증의 공개 서명을 확인하고 사용자별 보관함을 열어 줍니다. Mac은 Google·네이버·카카오 비밀번호를 보관하지 않습니다.
+      </div>
+      <div class="note warn">
+        <strong>현재 단계</strong>
+        독립 GPT 리뷰에서 발견한 7개 문서 문제를 모두 수리했고 정확한 커밋 재검토에서 필수 finding 0건으로 PASS했습니다. 24시간 shadow와 off-Mac 복원 증거 전에는 local write를 열지 않습니다.
+      </div>
+      <div class="note info">
+        <strong>독립 검토 증거</strong>
+        작성 task <code>019faf10-2d5b-7240-91e5-12d616cd3e89</code>와 검토 task를 분리했습니다. Stage 1 reviewer task <code>019faf4f-1c1d-7af1-84e2-97e3c694265a</code>가 <code>e83524ec</code>를 필수 finding 0건으로 승인했습니다. 이는 문서 게이트 통과이며 production gate 완료를 뜻하지 않습니다.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">1</span>무엇이 원격이고 무엇이 로컬인가</h2>
+      <div class="two-col">
+        <div class="box auth">
+          <h3>원격 Supabase Auth</h3>
+          <ul>
+            <li>Google·네이버·카카오 OAuth</li>
+            <li><code>auth.users</code>, <code>auth.identities</code></li>
+            <li>로그인 세션과 refresh token</li>
+            <li>JWT 발급과 공개 JWKS 제공</li>
+          </ul>
+        </div>
+        <div class="box data">
+          <h3>현재 Mac의 로컬 Supabase</h3>
+          <ul>
+            <li>레시피, 장보기, 팬트리, 플래너</li>
+            <li>사용자 설정과 앱 프로필</li>
+            <li><code>recipe-images</code> 이미지</li>
+            <li>PostgreSQL, RLS, RPC, Storage</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note info">
+        <strong>중요한 사실</strong>
+        “로그인만 원격”이어도 이메일, 소셜 계정 식별자, 세션 정보는 원격 Auth에 남습니다. 레시피와 개인 앱 데이터가 로컬로 이동하는 것입니다.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>먼저 알아둘 용어</h2>
+      <dl class="glossary">
+        <div class="term"><dt>Auth <span class="en">Authentication</span></dt><dd>사용자가 누구인지 로그인으로 확인하는 기능입니다.</dd></div>
+        <div class="term"><dt>JWT <span class="en">JSON Web Token</span></dt><dd>로그인한 사용자 UUID와 만료시간이 서명되어 들어 있는 신분증입니다.</dd></div>
+        <div class="term"><dt>JWKS <span class="en">JSON Web Key Set</span></dt><dd>JWT 서명이 진짜인지 확인하는 공개키 목록입니다. private key는 포함하지 않습니다.</dd></div>
+        <div class="term"><dt>RLS <span class="en">Row Level Security</span></dt><dd>사용자가 자기 데이터 행만 읽고 바꾸게 하는 PostgreSQL 규칙입니다.</dd></div>
+        <div class="term"><dt><code>auth.uid()</code></dt><dd>검증된 JWT의 사용자 UUID를 PostgreSQL에서 읽는 함수입니다.</dd></div>
+        <div class="term"><dt>PostgREST</dt><dd>PostgreSQL 테이블과 RPC를 HTTP API로 제공하는 Supabase 구성요소입니다.</dd></div>
+        <div class="term"><dt>Identity mirror</dt><dd>원격 Auth 사용자의 최소 신원 정보를 로컬 DB에 안전하게 맞춰 둔 사본입니다.</dd></div>
+        <div class="term"><dt>Shadow read</dt><dd>사용자에게는 기존 결과를 주면서 로컬 결과도 읽어 조용히 비교하는 검증입니다.</dd></div>
+        <div class="term"><dt>Cutover</dt><dd>실제 데이터 권위 주소를 원격에서 로컬로 바꾸는 마지막 전환입니다.</dd></div>
+        <div class="term"><dt>Rollback floor</dt><dd>이 시점이 지나면 단순 설정 복귀로는 안전하게 되돌릴 수 없는 경계입니다.</dd></div>
+        <div class="term"><dt>RPO</dt><dd>장애가 나면 최대 얼마 동안의 데이터를 잃을 수 있는지 나타냅니다.</dd></div>
+        <div class="term"><dt>RTO</dt><dd>장애 뒤 서비스를 몇 시간 안에 복구할지 나타냅니다.</dd></div>
+      </dl>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>현재 준비 상태</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>항목</th><th>현재 값</th><th>판정</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Mac</td><td>M1 Pro 10 cores, RAM 32 GB</td><td class="ok">소규모 운영 가능</td></tr>
+            <tr><td>Docker 할당</td><td>5 CPU, 약 8.2 GB RAM</td><td class="warn-text">권장선 하단</td></tr>
+            <tr><td>디스크 여유</td><td>약 120 GiB</td><td class="ok">현재 약 4 MiB data 기준 gate 통과</td></tr>
+            <tr><td>원격 PostgreSQL</td><td><code>17.6.1.121</code></td><td class="warn-text">로컬 restore 호환성 검증 필요</td></tr>
+            <tr><td>원격 JWT 공개키</td><td>1 key, <code>EC / ES256</code></td><td class="ok">공개키 검증 가능</td></tr>
+            <tr><td>account-generation</td><td><code>legacy</code>, revision <code>1</code></td><td class="ok">계획 진입 가능</td></tr>
+            <tr><td>현재 상태</td><td>원격 DB/Auth/Storage 사용 중</td><td class="warn-text">아직 데이터 이전 전</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note good">
+        <strong>용량 blocker 해소</strong>
+        gitignored 실험 cache를 정리해 현재 gate를 통과했습니다. <code>max(80 GiB, DB+Storage 실사용량의 3배)</code>는 final cutover 직전에 다시 계산합니다.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>데이터가 움직이는 길</h2>
+      <div class="flow" aria-label="하이브리드 Supabase 요청 흐름">
+        <div class="flow-box">휴대폰</div>
+        <span class="arrow">→</span>
+        <div class="flow-box remote">원격 Auth 로그인</div>
+        <span class="arrow">→</span>
+        <div class="flow-box">Next.js 서버</div>
+        <span class="arrow">→</span>
+        <div class="flow-box local">로컬 Data API + RLS</div>
+        <span class="arrow">→</span>
+        <div class="flow-box local">DB / Storage</div>
+      </div>
+      <h3>로그인한 뒤 데이터 요청이 처리되는 순서</h3>
+      <ol>
+        <li>원격 Auth가 사용자 JWT를 발급합니다.</li>
+        <li>Next.js가 remote <code>/auth/v1/user</code>로 token/user를 확인하고 issuer, audience, 만료시간, <code>sub</code>, <code>session_id</code>, <code>user.created_at</code>을 검증합니다.</li>
+        <li>Next.js는 로컬 <code>apikey</code>와 원격 사용자 JWT를 서로 다른 header에 넣습니다.</li>
+        <li>session-authority gateway가 verified session tuple을 current active identity epoch와 session-liveness HMAC binding에 결합합니다.</li>
+        <li>PostgREST DB pre-request와 Storage loopback gateway가 exact issuer, audience, role, <code>sub</code>, <code>session_id</code>, time claim, active binding TTL, method/path attestation을 검사합니다.</li>
+        <li>로컬 PostgREST와 Storage가 공개 JWKS로 JWT 서명을 확인합니다.</li>
+        <li>PostgreSQL이 <code>auth.uid()</code>로 기존 RLS를 적용합니다.</li>
+      </ol>
+      <pre><code>apikey: &lt;local publishable key&gt;
+Authorization: Bearer &lt;remote user JWT&gt;</code></pre>
+      <div class="note good">
+        <strong>왜 이 방법을 선택했나</strong>
+        사용자용 local JWT를 새로 만들지 않으므로 토큰이 두 종류로 늘어나지 않고, 현재 사용자 UUID와 RLS 의미를 가장 적게 바꿉니다.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>반드시 지킬 보안 규칙</h2>
+      <div class="two-col">
+        <div class="box data">
+          <h3>허용</h3>
+          <ul>
+            <li>remote public JWKS와 exact claim guard</li>
+            <li>request마다 사용자 JWT 전달</li>
+            <li>local Data API를 <code>127.0.0.1</code>에 제한</li>
+            <li>User A/B negative RLS test</li>
+            <li>Storage upstream을 Docker internal network로 제한</li>
+            <li>별도 장치와 off-site encrypted backup</li>
+          </ul>
+        </div>
+        <div class="box stop">
+          <h3>금지</h3>
+          <ul>
+            <li>remote private signing key 복사</li>
+            <li>사용자 요청을 <code>service_role</code>로 처리</li>
+            <li>PostgreSQL <code>5432</code>와 Studio 공개</li>
+            <li>remote/local dual-write</li>
+            <li>검증 전 remote DB/Storage 삭제</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note danger">
+        <strong>RLS 우회 금지</strong>
+        모든 요청을 local <code>service_role</code>로 처리하면 구현은 쉬워 보이지만, Route Handler 한 곳의 실수로 다른 사용자 데이터까지 노출될 수 있습니다.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">6</span>실행 순서</h2>
+      <ul class="timeline">
+        <li class="step">
+          <span class="dot">-1</span>
+          <h3>공식 계약과 workpack부터 작성</h3>
+          <p>공식 5종 문서에 Auth/Data authority, identity mirror, 탈퇴와 account-generation 의미를 먼저 반영합니다.</p>
+          <p class="gate">승인과 독립 security review 없이는 다음 단계로 가지 않습니다.</p>
+        </li>
+        <li class="step">
+          <span class="dot">0</span>
+          <h3>용량·데이터·권한 inventory</h3>
+          <p>DB roles/schema/data dump, table digest, Storage object hash, <code>auth.users</code> 참조를 전부 기록합니다.</p>
+        </li>
+        <li class="step">
+          <span class="dot">1</span>
+          <h3>공식 Docker self-hosted Supabase 설치</h3>
+          <p><code>supabase start</code>가 아니라 pinned Docker Compose를 사용하고, DB/Storage/Studio를 loopback에 제한합니다.</p>
+        </li>
+        <li class="step">
+          <span class="dot">2</span>
+          <h3>JWKS trust bridge</h3>
+          <p>combined JWKS, PostgREST pre-request, Storage claim gateway를 묶고 local Auth token과 잘못된 token을 모두 거부하는지 확인합니다.</p>
+        </li>
+        <li class="step">
+          <span class="dot">3</span>
+          <h3>Auth client와 Data client 분리</h3>
+          <p><code>remote | local-shadow | local</code> feature flag를 만들고 기본값은 계속 <code>remote</code>로 둡니다.</p>
+        </li>
+        <li class="step">
+          <span class="dot">4</span>
+          <h3>Identity mirror와 lifecycle authority</h3>
+          <p>local <code>auth.users=0</code>을 유지하면서 직접 FK/function/digest/lock을 private epoch mirror와 remote control-plane ack로 바꾸고 callback/reconcile/delete를 멱등화합니다.</p>
+        </li>
+        <li class="step">
+          <span class="dot">5</span>
+          <h3>DB와 Storage 이전 연습</h3>
+          <p>pre-data → compatibility → data → validation 순서로 두 번 restore하고 known 5/1/99 fixture와 row/object mismatch가 모두 닫히는지 확인합니다.</p>
+        </li>
+        <li class="step">
+          <span class="dot">6</span>
+          <h3>24시간 shadow read</h3>
+          <p>사용자에게는 원격 결과를 주면서 로컬 결과를 함께 읽어 권한과 응답 차이가 0인지 비교합니다.</p>
+        </li>
+        <li class="step">
+          <span class="dot">7</span>
+          <h3>최종 cutover</h3>
+          <p>write를 잠그고 final delta를 옮긴 뒤 15분 read-only smoke와 세 provider 실제 로그인을 통과해야 local write를 엽니다.</p>
+        </li>
+        <li class="step">
+          <span class="dot">8</span>
+          <h3>14일 안정화</h3>
+          <p>remote data를 read-only 복구본으로 유지하고 backup restore, Mac reboot, Docker restart, JWKS rotation을 연습합니다.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">7</span>언제 진행하고 언제 멈추나</h2>
+      <div class="decision">
+        <strong>진행 가능</strong>
+        <span>원격 JWKS가 비대칭키이고 capability가 <code>legacy</code>이며, exact claim guard·backup·semantic restore rehearsal을 모두 통과했습니다.</span>
+      </div>
+      <div class="decision warn">
+        <strong>먼저 보완</strong>
+        <span>final 시점 용량 gate가 실패하거나 off-Mac encrypted restore evidence가 없으면 local write를 열지 않습니다.</span>
+      </div>
+      <div class="decision stop">
+        <strong>즉시 중단</strong>
+        <span>User A가 User B 데이터를 읽거나, identity mirror digest가 다르거나, Storage hash mismatch가 하나라도 있습니다.</span>
+      </div>
+      <div class="decision stop">
+        <strong>Cutover 금지</strong>
+        <span>기존 account-generation safeguard보다 안전성이 낮아지거나 remote/local fencing token과 <code>auth.users</code> 대체 semantic gate가 닫히지 않았습니다.</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">8</span>성공 기준</h2>
+      <div class="targets">
+        <div class="target"><span class="badge">1</span><span>Google·네이버·카카오 로그인이 모두 LAN Homecook으로 돌아옵니다.</span></div>
+        <div class="target"><span class="badge">2</span><span>remote user ID와 local <code>auth.uid()</code>가 정확히 같습니다.</span></div>
+        <div class="target"><span class="badge">3</span><span>User A/B cross-owner read/write가 모두 0입니다.</span></div>
+        <div class="target"><span class="badge">4</span><span>DB row count와 핵심 digest mismatch가 0입니다.</span></div>
+        <div class="target"><span class="badge">5</span><span>Storage object count/byte/hash mismatch가 0입니다.</span></div>
+        <div class="target"><span class="badge">6</span><span>24시간 shadow response와 권한 mismatch가 0입니다.</span></div>
+        <div class="target"><span class="badge">7</span><span>Mac 재부팅 후 DB → Storage → Next.js 순서로 자동 복구합니다.</span></div>
+        <div class="target"><span class="badge">8</span><span>로그와 브라우저 bundle에 secret, raw JWT, 사용자 식별자가 없습니다.</span></div>
+      </div>
+      <h3>최종 명령 범위</h3>
+      <pre><code>pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm verify:security-functions
+pnpm mac-production:install</code></pre>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">9</span>되돌리기 규칙</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>시점</th><th>가능한 복구</th><th>하면 안 되는 것</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Stage 0~6</td><td><code>remote</code>를 계속 사용</td><td>원격 데이터 삭제</td></tr>
+            <tr><td>Local read-only</td><td>즉시 remote로 복귀</td><td>mismatch 상태에서 write 개방</td></tr>
+            <tr><td>첫 local write 전</td><td>remote data authority 복귀</td><td>digest 없이 전환</td></tr>
+            <tr><td>첫 local write 후</td><td>write freeze 후 local delta 역이전 또는 forward-fix</td><td>환경변수만 remote로 변경</td></tr>
+            <tr><td>Remote data 폐기 후</td><td>off-Mac backup restore</td><td>backup 없는 초기화</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note danger">
+        <strong>Rollback floor = 첫 local user write</strong>
+        이 시점부터 로컬에만 존재하는 데이터가 생기므로 URL만 원격으로 되돌리면 사용자 데이터가 사라진 것처럼 보입니다.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">10</span>예상 문제와 대응</h2>
+      <div class="three-col">
+        <div class="box">
+          <h3>JWT key 변경</h3>
+          <p>증상: 모든 요청이 <code>401</code>.</p>
+          <p>대응: 5분 JWKS poll, 이전 key 유지, canary 뒤 reload.</p>
+        </div>
+        <div class="box">
+          <h3>Identity mirror 불일치</h3>
+          <p>증상: callback bootstrap 실패.</p>
+          <p>대응: 개인 write를 닫고 remote Auth 기준으로 reconcile.</p>
+        </div>
+        <div class="box">
+          <h3>Mac 전원·디스크 장애</h3>
+          <p>증상: DB와 이미지 동시 중단.</p>
+          <p>대응: SSD, UPS, off-Mac backup에서 restore.</p>
+        </div>
+      </div>
+      <div class="note warn">
+        <strong>인터넷 장애의 의미</strong>
+        원격 Auth에 연결하지 못하면 user-scoped local DB/Storage 요청은 fail closed입니다. 만료 전 access token 서명만으로 logout/revocation을 증명하지 않으며 allow-until-exp로 mutation을 열지 않습니다.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">11</span>운영과 backup 기본값</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>항목</th><th>계획 기본값</th><th>초보자 설명</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>DB backup</td><td>매일 1회</td><td>roles/schema/data를 따로 저장합니다.</td></tr>
+            <tr><td>Storage backup</td><td>매일 증분, 주 1회 full manifest</td><td>이미지와 파일 목록·hash를 함께 보관합니다.</td></tr>
+            <tr><td>보관 기간</td><td>daily 14개, weekly 8개</td><td>최근 복구점과 오래된 복구점을 모두 남깁니다.</td></tr>
+            <tr><td>위치</td><td>외부 장치 + off-site encrypted copy</td><td>Mac이 고장 나도 backup이 함께 사라지지 않습니다.</td></tr>
+            <tr><td>Restore 연습</td><td>주 1회</td><td>backup 파일이 실제로 열리는지 별도 DB에서 확인합니다.</td></tr>
+            <tr><td>RPO</td><td>최대 24시간</td><td>최악의 경우 하루치 데이터 손실을 허용합니다.</td></tr>
+            <tr><td>RTO</td><td>4시간</td><td>4시간 안에 서비스 복구를 목표로 합니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">12</span>구현 시작 전 체크리스트</h2>
+      <ul class="check">
+        <li class="done">Hybrid contract-evolution을 사용자가 명시 승인했습니다.</li>
+        <li class="pending">공식 5종 문서와 <code>CURRENT_SOURCE_OF_TRUTH.md</code>는 독립 재검토 PASS를 받았고 PR merge만 남았습니다.</li>
+        <li class="done">신규 workpack과 acceptance가 docs-gate PASS를 받았습니다.</li>
+        <li class="done">Capability가 <code>legacy</code>이고 canonical generation row가 0임을 현재 evidence로 확인했습니다.</li>
+        <li class="done">현재 디스크 여유는 최소 gate를 통과했습니다.</li>
+        <li class="pending">off-Mac encrypted backup restore drill은 아직 final cutover blocker입니다.</li>
+        <li class="pending">PostgreSQL 17 semantic restore rehearsal은 아직 필요합니다.</li>
+        <li class="pending">Identity mirror, session-liveness binding과 <code>auth.users</code> 대체 설계는 최종 security review가 필요합니다.</li>
+        <li class="pending">User A/B RLS negative test는 Stage 2 evidence가 필요합니다.</li>
+        <li class="pending">Storage object mismatch 0은 migration rehearsal evidence가 필요합니다.</li>
+        <li class="pending">Google·네이버·카카오 E2E는 Stage 4 evidence가 필요합니다.</li>
+        <li class="pending">24시간 shadow mismatch 0은 cutover 전 evidence가 필요합니다.</li>
+        <li class="pending">final evidence와 fencing revision은 cutover window 직전에만 고정할 수 있습니다.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">13</span>결론과 참고자료</h2>
+      <div class="two-col">
+        <div class="box data">
+          <h3>현재 가능한 것</h3>
+          <ul>
+            <li>원격 ES256 JWT와 exact claim guard 계약</li>
+            <li><code>legacy</code> 상태에서 계획 시작</li>
+            <li>현재 Mac CPU/RAM으로 소규모 운영</li>
+          </ul>
+        </div>
+        <div class="box stop">
+          <h3>아직 막힌 것</h3>
+          <ul>
+            <li>off-Mac encrypted restore evidence</li>
+            <li><code>auth.users</code> replacement 구현·semantic 검증</li>
+            <li>24시간 shadow와 post-write rollback rehearsal</li>
+          </ul>
+        </div>
+      </div>
+      <h3>Supabase 공식 문서</h3>
+      <ul>
+        <li><a href="https://supabase.com/docs/guides/self-hosting">Self-Hosting</a></li>
+        <li><a href="https://supabase.com/docs/guides/self-hosting/docker">Self-Hosting with Docker</a></li>
+        <li><a href="https://supabase.com/docs/guides/auth/jwts">JWT</a></li>
+        <li><a href="https://supabase.com/docs/guides/auth/signing-keys">JWT Signing Keys</a></li>
+        <li><a href="https://supabase.com/docs/guides/self-hosting/self-hosted-auth-keys">Self-hosted Auth Keys and JWKS</a></li>
+        <li><a href="https://supabase.com/docs/guides/self-hosting/restore-from-platform">Restore Platform Project to Self-Hosted</a></li>
+      </ul>
+      <div class="note info">
+        <strong>현재 최종 판정</strong>
+        기술적으로 가능한 방향이며 Stage 1 doc gate는 PASS했습니다. 문서 PR merge 뒤에만 구현을 시작하며, local write 개방 전에는 실제 logout/revoke negative canary, 구현 검증, 24시간 shadow, off-Mac encrypted restore와 post-write rollback rehearsal이 모두 필요합니다.
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    원문: docs/engineering/hybrid-supabase-production-plan.md<br>
+    초보 개발자 이해용 단일 HTML · 외부 CSS/JavaScript/폰트 없음 · 생성일 2026-07-30 KST
+  </footer>
+</body>
+</html>

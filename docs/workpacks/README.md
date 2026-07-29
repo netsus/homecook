@@ -10,6 +10,11 @@
 
 ## Revision Notes
 
+- `v2` hybrid remote Auth / local Data production contract (2026-07-30 KST, UTC+09:00)
+  - 2026-07-29 local-first 초기 배포의 `원격 프로젝트 삭제`, `실제 사용자 없음`, `local auth.users 단일 barrier` 전제를 대체한다.
+  - Google/Naver/Kakao와 session identity는 remote Supabase Auth에 남기고 application DB/Storage는 서버 Mac의 local Supabase로 이전한다.
+  - local `auth.users=0`, private identity epoch mirror, session-liveness HMAC binding, exact JWT claim guard, 기존 409/503 error mapping, remote Hook control-plane, service-role user path 0, semantic restore와 off-Mac rollback evidence를 final cutover gate로 둔다.
+
 - `v2` cooking/meal-log prepared-food search relevance closeout (2026-07-26 KST, UTC+09:00)
   - Stage 1 PR #1074, backend/data PRs #1097/#1099/#1100/#1101, merged-exact remote verifier PRs #1103/#1104, frontend Stage 4/5/6 PR #1105, official tuple consistency PR #1108이 모두 병합됐다.
   - exact frontend head `0bcdc998`는 독립 Codex quality/security/test review P0-P3 0과 모든 최신 current-head check를 통과한 뒤 merge `19f25aae`로 병합됐다. production read-only smoke는 cursor v1/v2, current nutrition, moderation, owner-private, legacy compatibility, ACL과 remote write/provider-request 0을 확인했다.
@@ -223,6 +228,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `36d-recipe-tags-rules-backfill` | merged | P0 의미 태그 rule fixture와 기존 레시피 backfill dry-run/report, usage count reconcile, P1 후보 승인 정책 구현 |
 | `36e-recipe-tags-frontend` | ready-for-review | MANUAL_RECIPE_CREATE/YT_IMPORT 태그 추천·검수 UI와 HOME 태그 검색/filter/theme chip UX 구현 |
 | `launch-readiness-blockers` | docs | 광고/배포 차단 release-hotfix 예외: legal/trust/SEO 404와 fake contact, HOME hydration/guest console noise, security headers, FoodSafety mixed-content, PostCSS audit blocker를 Codex-only 세션 분리로 닫음 |
+| `hybrid-auth-local-data-production` | docs | Google/Naver/Kakao Auth는 remote Supabase에 유지하고 application DB/Storage는 서버 Mac local Supabase로 이전하며 기존 RLS, identity epoch, semantic restore, backup/rollback gate를 보존 |
 | `auth-provider-memory-linking` | merged | 세 provider 이메일 필수, built-in Kakao/Naver 표준 claim gate, 최근 provider 기억/전환 확인, same-user identity linking과 different-user conflict 보호, 수동 provider 연결. PR #967 merge |
 | `service-about-guide` | merged | 공개 `/about` 서비스 가이드, `PRIMARY_WEB_NAV_ITEMS` 웹 공통 5메뉴, HOME `집밥 둘러보기` guide+theme rail, MYPAGE 임시 도움말 제거. docs PR #978 + FE PR #979 merge. 커뮤니티/제안 게시판은 후속 슬라이스 |
 | `service-brand-rebrand` | merged | 정식명 `무엇을 먹든`, 짧은명 `무먹`, 신규·빈 nickname `무먹러`, system notification read-time copy 호환을 API/DB shape와 기술 식별자 변화 없이 잠금 |
