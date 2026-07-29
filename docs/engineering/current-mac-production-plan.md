@@ -60,8 +60,11 @@ flowchart LR
 - production validator는 `HOMECOOK_PRODUCTION_EXPOSURE=local-only`이고 앱·사이트 origin도 loopback일 때만 local Supabase URL을 허용한다. `public`, 혼합 origin, exposure 누락은 계속 거부한다.
 - `com.homecook.production` LaunchAgent는 `scripts/start-local-mac-production.mjs`를 실행한다.
 - 부팅 wrapper는 `Docker 준비 → pnpm dlx supabase@2.110.0 start → pnpm dlx supabase@2.110.0 status → Next.js start` 순서를 강제한다.
+- `install`은 LaunchAgent를 등록하기 전에 고정된 Supabase CLI를 한 번 실행해 pnpm cache를 준비한다. 준비에 실패하면 설치도 중단한다.
+- 실제 부팅은 `npm_config_offline=true`로 그 cache만 사용한다. 따라서 재부팅 복구 중 npm registry에 접속하지 않는다.
 - 부팅 wrapper는 Supabase CLI에 `HOME`, `PATH`, Docker 설정처럼 필요한 환경만 전달한다. 앱의 anon key나 service-role key는 전달하지 않는다.
 - Docker 또는 Supabase 준비가 실패하면 Next.js를 시작하지 않고 비정상 종료한다. launchd의 `KeepAlive.SuccessfulExit=false`와 `ThrottleInterval=10`이 10초 간격 재시도를 맡는다.
+- launchd가 wrapper를 종료할 때 `SIGTERM`, `SIGINT`, `SIGHUP` 신호를 자식 Next.js 프로세스까지 전달해 고아 프로세스가 남지 않게 한다.
 - 아직 남은 증거는 **실제 서버 MacBook에서의 설치 및 재부팅 smoke**다.
 
 > 따라서 아래의 `build`·`install` 절차는 코드로 자동화됐지만, 실제 서버 MacBook 재부팅 smoke가 통과하기 전에는 “다른 MacBook 배포 완료”라고 기록하지 않는다.
@@ -202,10 +205,12 @@ pnpm dlx supabase@2.110.0 db reset --local --yes
 - plist: `~/Library/LaunchAgents/com.homecook.production.plist`
 - stdout log: `~/.homecook/logs/homecook-production.out.log`
 - stderr log: `~/.homecook/logs/homecook-production.err.log`
+- 고정 CLI cache: `supabase@2.110.0`을 한 번 확인하고 이후 부팅에서는 offline으로 재사용한다.
 - 부팅 wrapper: Docker를 준비하고 local Supabase의 start/status를 확인한 뒤 Next.js를 시작한다.
 - 준비 실패 시: Next.js를 띄우지 않고 종료하며 launchd가 10초 뒤 다시 시도한다.
 
 Node가 표준 위치에 없으면 `HOMECOOK_NODE_BIN`으로 새 Mac의 실행 파일 경로를 먼저 지정한다.
+`install` 때만 고정 CLI cache를 처음 준비할 네트워크가 필요하다. 이후 재부팅은 npm registry 없이 복구한다. pnpm cache를 지웠다면 네트워크가 있는 상태에서 `install`을 다시 실행한다.
 
 ### 8. smoke 확인하기
 

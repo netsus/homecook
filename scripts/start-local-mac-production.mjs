@@ -1,22 +1,14 @@
 import { startLocalMacProductionRuntime } from "./lib/local-mac-production.mjs";
+import { relayChildLifecycle } from "./lib/process-signal-relay.mjs";
 
 try {
   const child = await startLocalMacProductionRuntime({
     args: process.argv.slice(2),
   });
 
-  child.on("error", () => {
-    process.stderr.write("Unable to start the local Mac production process.\n");
-    process.exit(1);
-  });
-
-  child.on("exit", (code, signal) => {
-    if (signal) {
-      process.kill(process.pid, signal);
-      return;
-    }
-
-    process.exit(code ?? 1);
+  relayChildLifecycle(child, {
+    errorMessage: "Unable to start the local Mac production process.",
+    nullExitCode: 1,
   });
 } catch (error) {
   process.stderr.write(

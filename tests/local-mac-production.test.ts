@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -9,11 +10,14 @@ import {
   activateLocalMacProduction,
   createProductionEnvContents,
   installLocalMacProductionLaunchAgent,
+  LOCAL_SUPABASE_CLI_PACKAGE,
   parseLocalMacProductionArgs,
   renderLocalMacProductionPlist,
   startLocalMacProductionRuntime,
+  verifyLocalMacProductionBootCli,
   waitForLocalMacProductionReady,
 } from "../scripts/lib/local-mac-production.mjs";
+import { relayChildLifecycle } from "../scripts/lib/process-signal-relay.mjs";
 
 const tempDirs: string[] = [];
 
@@ -154,6 +158,7 @@ describe("local Mac production launch agent", () => {
           HOME: runtimeEnv.HOME,
           PATH: runtimeEnv.PATH,
           XDG_CONFIG_HOME: runtimeEnv.XDG_CONFIG_HOME,
+          npm_config_offline: "true",
         });
         return { status: 0, stdout: "", stderr: "" };
       },
@@ -390,6 +395,7 @@ describe("local Mac production launch agent", () => {
     tempDirs.push(rootDir, homeDir);
 
     const spawnCalls: string[] = [];
+    const bootCliChecks: string[] = [];
     const spawn = ((command: string, args: readonly string[]) => {
       spawnCalls.push(`${command} ${args.join(" ")}`);
       return {
@@ -408,12 +414,88 @@ describe("local Mac production launch agent", () => {
       platform: "darwin",
       getuid: () => 501,
       spawn,
+      verifyBootCli: ({ command, args, env }) => {
+        bootCliChecks.push(`${command} ${args.join(" ")}`);
+        expect(args).toEqual(["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"]);
+        expect(env).toEqual({
+          HOME: homeDir,
+          PATH: [
+            dirname(process.execPath),
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin",
+            "/usr/sbin",
+            "/sbin",
+          ].join(":"),
+        });
+      },
       verifyPrerequisites: () => undefined,
     });
 
     expect(result.changed).toBe(true);
     expect(readFileSync(result.plistPath, "utf8")).toContain("127.0.0.1");
+    expect(bootCliChecks).toEqual([
+      `pnpm dlx ${LOCAL_SUPABASE_CLI_PACKAGE} --version`,
+    ]);
     expect(spawnCalls).toContain(`launchctl bootstrap gui/501 ${result.plistPath}`);
     expect(spawnCalls).toContain("launchctl kickstart -k gui/501/com.homecook.production");
+  });
+
+  it("fails installation preflight when the pinned boot CLI cannot be cached", () => {
+    expect(() => verifyLocalMacProductionBootCli({
+      command: "pnpm",
+      args: ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"],
+      cwd: "/Users/tester/homecook",
+      env: {
+        HOME: "/Users/tester",
+        PATH: "/usr/bin:/bin",
+      },
+      runCommand: () => ({ status: 1 }),
+    })).toThrow(
+      `Unable to cache ${LOCAL_SUPABASE_CLI_PACKAGE} for offline production boot`,
+    );
+  });
+});
+
+describe("process signal relay", () => {
+  it("forwards parent SIGTERM to the child process", () => {
+    class FakeChild extends EventEmitter {
+      killCalls: string[] = [];
+
+      kill(signal: string) {
+        this.killCalls.push(signal);
+      }
+    }
+
+    class FakeProcess extends EventEmitter {
+      pid = 4242;
+      killed: Array<{ pid: number; signal: string }> = [];
+      exitCodes: number[] = [];
+      stderr = { write: () => undefined };
+
+      kill(pid: number, signal: string) {
+        this.killed.push({ pid, signal });
+      }
+
+      exit(code: number) {
+        this.exitCodes.push(code);
+      }
+    }
+
+    const child = new FakeChild();
+    const processRef = new FakeProcess();
+
+    relayChildLifecycle(child, {
+      processRef,
+      errorMessage: "failed",
+      nullExitCode: 1,
+    });
+
+    processRef.emit("SIGTERM");
+
+    expect(child.killCalls).toEqual(["SIGTERM"]);
+    expect(processRef.killed).toEqual([]);
+    expect(processRef.exitCodes).toEqual([]);
   });
 });

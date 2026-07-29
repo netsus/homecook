@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 
 import { normalizeNextRoutesManifest } from "./lib/next-routes-manifest.mjs";
+import { relayChildLifecycle } from "./lib/process-signal-relay.mjs";
 import { normalizeProductionStartArgs } from "./lib/start-production-args.mjs";
 
 const require = createRequire(import.meta.url);
@@ -19,11 +20,7 @@ const child = spawn(
   },
 );
 
-child.on("exit", (code, signal) => {
-  if (signal) {
-    process.kill(process.pid, signal);
-    return;
-  }
-
-  process.exit(code ?? 0);
+relayChildLifecycle(child, {
+  errorMessage: "Unable to start the Next.js production process.",
+  nullExitCode: 0,
 });

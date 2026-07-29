@@ -133,6 +133,7 @@ function createLocalSupabaseCommandEnv(env) {
 
   ensureNonEmptyString(commandEnv.HOME, "HOME");
   ensureNonEmptyString(commandEnv.PATH, "PATH");
+  commandEnv.npm_config_offline = "true";
 
   return commandEnv;
 }
@@ -315,6 +316,52 @@ export function getLocalMacProductionPaths(homeDir = process.env.HOME ?? "") {
   };
 }
 
+function getLocalMacProductionPath(nodeBin) {
+  return [
+    dirname(resolve(ensureNonEmptyString(nodeBin, "nodeBin"))),
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+  ].join(":");
+}
+
+/**
+ * @param {{
+ *   command: string,
+ *   args: readonly string[],
+ *   cwd: string,
+ *   env: Record<string, string | undefined>,
+ *   runCommand?: (
+ *     command: string,
+ *     args: readonly string[],
+ *     options: import("node:child_process").SpawnSyncOptionsWithStringEncoding,
+ *   ) => { status: number | null },
+ * }} options
+ */
+export function verifyLocalMacProductionBootCli({
+  command,
+  args,
+  cwd,
+  env,
+  runCommand = spawnSync,
+}) {
+  const result = runCommand(command, args, {
+    cwd: resolve(cwd),
+    env,
+    encoding: "utf8",
+    stdio: "ignore",
+  });
+
+  if (result.status !== 0) {
+    throw new Error(
+      `Unable to cache ${LOCAL_SUPABASE_CLI_PACKAGE} for offline production boot.`,
+    );
+  }
+}
+
 /**
  * @typedef {{ status: number | null }} LocalStartupCommandResult
  * @typedef {{ on: (...args: unknown[]) => unknown }} LocalRuntimeChild
@@ -407,15 +454,7 @@ export function renderLocalMacProductionPlist({
   const normalizedHost = ensureLocalOnlyHost(host);
   const normalizedPort = ensurePort(port);
   const paths = getLocalMacProductionPaths(normalizedHomeDir);
-  const fixedPath = [
-    dirname(normalizedNodeBin),
-    "/opt/homebrew/bin",
-    "/usr/local/bin",
-    "/usr/bin",
-    "/bin",
-    "/usr/sbin",
-    "/sbin",
-  ].join(":");
+  const fixedPath = getLocalMacProductionPath(normalizedNodeBin);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -500,6 +539,7 @@ export function installLocalMacProductionLaunchAgent({
   platform = process.platform,
   getuid = process.getuid?.bind(process),
   spawn = spawnSync,
+  verifyBootCli = verifyLocalMacProductionBootCli,
   verifyPrerequisites = verifyLocalMacProductionPrerequisites,
 } = {}) {
   if (platform !== "darwin") {
@@ -516,6 +556,15 @@ export function installLocalMacProductionLaunchAgent({
   verifyPrerequisites({
     rootDir: normalizedRootDir,
     nodeBin: normalizedNodeBin,
+  });
+  verifyBootCli({
+    command: "pnpm",
+    args: ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"],
+    cwd: normalizedRootDir,
+    env: {
+      HOME: resolve(ensureNonEmptyString(homeDir, "homeDir")),
+      PATH: getLocalMacProductionPath(normalizedNodeBin),
+    },
   });
 
   const paths = getLocalMacProductionPaths(homeDir);
