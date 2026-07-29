@@ -39,7 +39,6 @@
     ],
     "verify_commands": [
       "pnpm verify:backend",
-      "node scripts/verify-legacy-product-compat-remote.mjs --mode post-merge-read-only",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "BRANCH_NAME=docs/legacy-product-compat pnpm validate:workpack -- --slice legacy-product-compat",
@@ -123,9 +122,9 @@
     "flag-off-existing-v2-drain-blocked",
     "r2-activation-or-destructive-tombstone-performed-by-slice13",
     "compatibility-telemetry-leaks-secret-or-private-payload",
-    "remote-verifier-not-merged-exact-sha",
+    "local-first-verifier-not-merged-exact-sha",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {"backend": 4, "frontend": 4},
-  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Runtime/E2E/browser/telemetry/remote evidence is future. #13 preserves legacy contracts and records tombstone prerequisites; it does not authorize deletion or R+2 activation. No new design artifact is required because #10/#7/#11 own the affected visual surfaces, but their authority evidence remains a regression gate."
+  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Runtime/E2E/browser/telemetry/local-first production-rehearsal evidence is future. #13 preserves legacy contracts and records tombstone prerequisites; it does not authorize deletion or R+2 activation. No new design artifact is required because #10/#7/#11 own the affected visual surfaces, but their authority evidence remains a regression gate."
 }

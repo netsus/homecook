@@ -1,6 +1,6 @@
 # recipe-visibility-read-hardening
 
-> Stage 1 contract lock. Approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines). Official baseline: requirements v1.7.22, screens v1.5.28, flow v1.3.25, DB v1.3.23, API v1.2.27.
+> Stage 1 contract lock. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). Official baseline: requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29.
 
 ## Goal
 
@@ -12,6 +12,7 @@ private, soft-deleted, 또는 quarantined owner의 recipe/tag/profile/image 존�
 - Stage 2 backend/data/storage: `feature/be-recipe-visibility-read-hardening`
 - Stage 4 existing-consumer behavior regression: `feature/fe-recipe-visibility-read-hardening`
 - Release train: B. 구현 선행조건은 F0 runtime, merged `31-recipe-media-tags`, merged `36e-recipe-tags-frontend`다. 이 Stage 1 docs PR은 승인된 Stage 0 순서대로 먼저 작성한다.
+- 초기 배포 gate: production=`server MacBook local Next.js + local Supabase`, staging=`isolated local rehearsal stack`, remote verifier/provider barrier/remote migration=`N/A` until separate contract-evolution
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer와 five-axis reviewer는 서로 다른 Codex 세션을 사용하며 Claude는 사용하지 않는다.
 
 ## In Scope
@@ -55,7 +56,7 @@ private, soft-deleted, 또는 quarantined owner의 recipe/tag/profile/image 존�
 
 Schema Change:
 - [ ] 없음
-- [x] 있음 — official DB v1.3.23의 recipe visibility/tag projection, image registry/reference/quota/storage outbox와 F0 lifecycle integration을 additive하게 구현한다. 기존 migration은 수정하지 않는다.
+- [x] 있음 — official DB v1.3.26의 recipe visibility/tag projection, image registry/reference/quota/storage outbox와 F0 lifecycle integration을 additive하게 구현한다. 기존 migration은 수정하지 않는다.
 
 ## Out of Scope
 
@@ -77,7 +78,7 @@ Schema Change:
 | Gate | Current state | Meaning |
 | --- | --- | --- |
 | Stage -1 security hotfix + closeout | merged/deployed | mutation authorization predecessor complete |
-| official contract PR #1072 | merged | v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 authority available |
+| historical contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
 | F0 Stage 1 docs PR #1073 | merged | account generation contract documented; runtime remains future implementation predecessor |
 | `product-ingredient-link-foundation` Stage 1 docs PR #1076 | merged | successor #2 Stage 1 complete; joint activation still waits for F0+#3 runtime |
 | `31-recipe-media-tags` | merged | existing manual recipe image/tag ownership must be preserved |
@@ -119,7 +120,7 @@ Schema Change:
 ### ACL, API and operations
 
 - all registry/reference/outbox/quota tables enable RLS and revoke normal direct mutation. Exact internal functions use safe search path, minimal grants, expected generation and lease/token CAS.
-- public JSON responses keep `{ success, data, error }` and `{ code, message, fields[] }`. Only official v1.2.27 errors are used, including `IMAGE_NOT_FOUND`, `IMAGE_EXPIRED`, `IMAGE_VISIBILITY_MISMATCH`, `MANAGED_IMAGE_REFERENCE_REQUIRED`, `IMAGE_UPLOAD_LIMITED`, `IDEMPOTENCY_KEY_REUSED` and lifecycle errors.
+- public JSON responses keep `{ success, data, error }` and `{ code, message, fields[] }`. Only official v1.2.29 errors are used, including `IMAGE_NOT_FOUND`, `IMAGE_EXPIRED`, `IMAGE_VISIBILITY_MISMATCH`, `MANAGED_IMAGE_REFERENCE_REQUIRED`, `IMAGE_UPLOAD_LIMITED`, `IDEMPOTENCY_KEY_REUSED` and lifecycle errors.
 - implementation routes use `/api/v1` prefix while official contract paths omit it where documented. Assertions name both forms and do not invent duplicate endpoints.
 - maintenance tick order is scanner → permanent tombstone late-object scan → due quarantine recheck → normal drain → expected-owner union-zero → Auth deletion drain → lifecycle complete.
 - the MacBook LaunchAgent uses `StartInterval=300` and `RunAtLoad=true`. Its release gate requires an external heartbeat gap no greater than 15 minutes, Storage cleanup target within 24 hours, alert on 3 consecutive calls failed, oldest due over 15 minutes or any dead-letter, a mode 600 env or Keychain secret, and structured JSON log rotation at 10MB with 5 retained files.
@@ -147,11 +148,11 @@ Schema Change:
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.22.md` B/H/I
-- `docs/화면정의서-v1.5.28.md` 0-D/0-G
-- `docs/유저flow맵-v1.3.25.md` ⓮/⓱
-- `docs/db설계-v1.3.23.md` B/C/E/F/G and managed-image/outbox sections
-- `docs/api문서-v1.2.27.md` A/C/E/I/J/K/L and image cancel contract
+- `docs/요구사항기준선-v1.7.25.md` B/H/I
+- `docs/화면정의서-v1.5.29.md` 0-D/0-G
+- `docs/유저flow맵-v1.3.27.md` ⓮/⓱
+- `docs/db설계-v1.3.26.md` B/C/E/F/G and managed-image/outbox sections
+- `docs/api문서-v1.2.29.md` A/C/E/I/J/K/L and image cancel contract
 - approved master plan sections 6-1, dependency matrix #3 and successor #3
 
 ## QA / Test Data Plan

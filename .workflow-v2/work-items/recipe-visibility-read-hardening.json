@@ -25,11 +25,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.25.md",
+      "docs/화면정의서-v1.5.29.md",
+      "docs/유저flow맵-v1.3.27.md",
+      "docs/db설계-v1.3.26.md",
+      "docs/api문서-v1.2.29.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -48,20 +48,19 @@
       "docs/engineering/security-performance-design.md",
       "docs/engineering/workflow-v2/README.md",
       "docs/engineering/workflow-v2/approval-and-loops.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
     ]
   },
   "workflow": {
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "node scripts/verify-recipe-visibility-read-hardening-remote.mjs --mode post-merge-read-only from merged exact SHA only",
-      "deployed public list detail themes tags sitemap and cache non-disclosure smoke",
-      "remote RLS grant function trigger bucket policy and exact principal inventory",
+      "server MacBook local production and isolated local rehearsal exact-SHA public list/detail/themes/tags/sitemap/cache non-disclosure smoke",
+      "server-production/local-rehearsal RLS grant function trigger bucket policy and exact principal inventory",
       "approved fixture Storage replay for upload takeover cancel attach first-404 late-object and compensation",
       "legacy orphan inventory report proves enqueue and delete zero",
       "Manual Only launchd install secret host power login sleep and external heartbeat evidence",
-      "production generation cutover database and storage writes remain zero until approved joint activation"
+      "remote verifier/provider barrier/remote migration remain N/A until approved contract-evolution; production generation cutover database and storage writes remain zero until approved joint activation"
     ],
     "execution_mode": "manual",
     "evaluator_profile": "vertical-slice-strict",
@@ -90,7 +89,7 @@
       "pnpm verify:frontend",
       "pnpm validate:exploratory-qa-evidence -- --slice recipe-visibility-read-hardening",
       "pnpm validate:closeout-sync -- --slice recipe-visibility-read-hardening",
-      "node scripts/verify-recipe-visibility-read-hardening-remote.mjs --mode post-merge-read-only",
+      "node scripts/verify-recipe-visibility-read-hardening-local.mjs --mode local-read-only --json",
       "git diff --check"
     ],
     "verify_commands": [
@@ -112,7 +111,7 @@
       "separate Codex Stage 3 implementation review and final closeout review"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
+      "approved-plan-sha256-and-1056-line-lock",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "official-recipe-visibility-tag-image-and-account-lifecycle-contract-only",
       "public-private-deleted-quarantined-owner-read-matrix",
@@ -127,7 +126,7 @@
       "launchd-ordered-tick-heartbeat-alert-recovery-manual-only-gate",
       "existing-manual-recipe-create-behavior-only-consumer-regression",
       "f0-plus-slice3-joint-activation-gate",
-      "merged-exact-sha-remote-read-only-evidence",
+      "merged-exact-sha-local-first-production-rehearsal-evidence",
       "independent-codex-required-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip"
     ]
@@ -151,8 +150,8 @@
     "Arbitrary external URL conversion to managed object",
     "Vercel Cron as P0 scheduler or claimed 24 by 7 availability",
     "User-facing history trash restore or a new public restore endpoint",
-    "Unmerged remote migration production database or Storage writes"
+    "Migration or Storage write outside local-first production authority"
   ],
   "open_questions": [],
-  "notes": "Stage 2 backend implementation is in progress on feature/be-recipe-visibility-read-hardening after F0 and the merged recipe media/tag predecessors. Approval remains not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve the frozen implementation tree with zero required findings. Public recipe/tag readers and the isolated PostgreSQL fresh/replay gate are the current small backend PR executable subset. verification.required_checks intentionally remains the full-slice closeout contract and is not a claim that deferred image registry/lifecycle, Storage replay, scheduler, existing-consumer, Playwright, exploratory QA or merged-exact-SHA remote verifier artifacts exist in this PR; those remain later owning-stage gates. Stage 4 changes only existing MANUAL_RECIPE_CREATE behavior/states and adds no visual hierarchy. Joint generation/account-delete activation remains off until F0 and this slice pass the complete release gate."
+  "notes": "Stage 2 backend implementation is in progress on feature/be-recipe-visibility-read-hardening after F0 and the merged recipe media/tag predecessors. Approval remains not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve the frozen implementation tree with zero required findings. Public recipe/tag readers and the isolated PostgreSQL fresh/replay gate are the current small backend PR executable subset. verification.required_checks intentionally remains the full-slice closeout contract and is not a claim that deferred image registry/lifecycle, Storage replay, scheduler, existing-consumer, Playwright, exploratory QA or server-production/local-rehearsal verifier artifacts exist in this PR; those remain later owning-stage gates. Initial deployment uses server MacBook local production plus isolated local rehearsal; remote verifier/provider barrier/remote migration are N/A until contract-evolution. Stage 4 changes only existing MANUAL_RECIPE_CREATE behavior/states and adds no visual hierarchy. Joint generation/account-delete activation remains off until F0 and this slice pass the complete release gate."
 }

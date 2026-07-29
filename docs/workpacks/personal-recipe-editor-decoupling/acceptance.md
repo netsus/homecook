@@ -32,7 +32,7 @@
 - [ ] title/servings, ingredient/product, step order/content, tags and image object/state changes all mark the draft dirty <!-- omo:id=accept-editor-dirty-coverage;stage=4;scope=frontend;review=5,6 -->
 - [ ] clean cancel returns immediately; dirty browser back, in-app back and close share one `계속 편집 | 변경사항 버리기` guard <!-- omo:id=accept-editor-discard-guard;stage=4;scope=frontend;review=5,6 -->
 - [ ] discard does not claim success while an unattached managed upload still needs recoverable owner cancel/cleanup <!-- omo:id=accept-editor-discard-cleanup;stage=4;scope=frontend;review=5,6 -->
-- [ ] remote/preload refresh never overwrites a dirty local draft <!-- omo:id=accept-editor-no-dirty-overwrite;stage=4;scope=frontend;review=5,6 -->
+- [ ] server/preload refresh never overwrites a dirty local draft <!-- omo:id=accept-editor-no-dirty-overwrite;stage=4;scope=frontend;review=5,6 -->
 
 ## Image / Tag Reuse
 

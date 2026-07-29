@@ -42,7 +42,7 @@
       "docs/engineering/security-performance-design.md",
       "docs/engineering/workflow-v2/README.md",
       "docs/engineering/workflow-v2/approval-and-loops.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
     ]
   },
   "workflow": {
@@ -101,7 +101,7 @@
       "separate Codex Stage 5 behavior/accessibility review and Stage 6 closeout"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
+      "approved-plan-sha256-and-1056-line-lock",
       "stage1-five-core-artifacts",
       "official-food-catalog-search-typed-union-contract",
       "normalizer-public-private-index-and-ranked-rpc-replay",

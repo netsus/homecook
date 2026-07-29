@@ -28,7 +28,6 @@
     ],
     "verify_commands": [
       "pnpm verify:backend",
-      "node scripts/verify-cooked-batch-weight-ui-remote.mjs --mode post-merge-read-only",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "BRANCH_NAME=docs/cooked-batch-weight-ui pnpm validate:workpack -- --slice cooked-batch-weight-ui",
@@ -163,9 +162,9 @@
     "cook-mode-or-leftovers-canonical-design-or-independent-critique-missing-stale",
     "evidence-manifest-head-sha-captured-at-or-authority-report-order-invalid",
     "required-design-critic-authority-or-390-320-desktop-evidence-missing",
-    "remote-verifier-not-merged-exact-sha",
+    "local-first-verifier-not-merged-exact-sha",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {"backend": 3, "frontend": 6},
-  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/browser/remote evidence is future. #11 owns COOK_MODE and LEFTOVERS weight/lifecycle presentation only, reuses #8 mutations, and leaves meal-log consumption UI to #12."
+  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/browser/local-first production-rehearsal evidence is future. #11 owns COOK_MODE and LEFTOVERS weight/lifecycle presentation only, reuses #8 mutations, and leaves meal-log consumption UI to #12."
 }

@@ -1,10 +1,10 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.24.md`
+- `docs/요구사항기준선-v1.7.25.md`
 - `docs/화면정의서-v1.5.29.md`
-- `docs/유저flow맵-v1.3.26.md`
-- `docs/db설계-v1.3.25.md`
+- `docs/유저flow맵-v1.3.27.md`
+- `docs/db설계-v1.3.26.md`
 - `docs/api문서-v1.2.29.md`
 
 ## Notes
@@ -13,6 +13,20 @@
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
 - 아래 contract-evolution 표의 버전은 해당 변경을 처음 도입한 역사적 파일을 기록한다. 현재 공식본은 항상 위 `Official Files` 목록을 따른다.
+
+## Local-First MacBook Initial Deployment Contract-Evolution `2026-07-29`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.25 | 실제 사용자 없이 테스트 데이터만 사용하는 local-first 초기 배포 계약, production=서버 MacBook local Supabase+Next.js, staging=격리 local rehearsal, local `auth.users SHARE ROW EXCLUSIVE` final barrier, remote/provider barrier N/A를 잠근다 |
+| 화면정의서 v1.5.29 | 변경 없음. 기존 화면 URL, 상태, 권한, read-only 계약 유지 |
+| 유저플로우 v1.3.27 | 격리 local rehearsal → build/env 재발급 → local barrier → launchd localhost smoke → rollback/replay 흐름을 추가하고 remote migration/provider 단계는 제거한다 |
+| DB v1.3.26 | schema 추가 없이 local DB authority, clean replay 또는 verified backup restore, old-path irreversible delete 별도 gate를 잠근다 |
+| API v1.2.29 | 변경 없음. 기존 공개 endpoint, field, status, error wrapper 유지 |
+
+> 사용자는 2026-07-29에 local-first 초기 배포 계약을 명시적으로 승인했다. 초기 production은 서버 MacBook의 local Supabase와 same-host Next.js production server이며, remote Supabase 프로젝트는 삭제되어 remote migration, remote verifier, provider-managed maintenance barrier는 이번 범위에서 `N/A`다. quiet window는 최초 cutover 1회성 운영 창으로, 같은 초기 배포 안에서 길이를 늘리는 것만으로 별도 재승인을 다시 요구하지 않는다.
+> old-path irreversible delete는 이번 계약에 포함되지 않으며 별도 gate가 필요하다. 향후 managed provider 또는 hosted Supabase로 이동하려면 새 contract-evolution으로 공식 문서와 이 파일을 먼저 갱신해야 한다.
+> 이 결정의 운영 마스터 플랜 근거는 2026-07-29 local-first plan 1,056 lines, SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc`다. 화면정의서와 API 공식 파일은 이번 계약에서 변경되지 않는다.
 
 ## Prepared Food Search Tuple Consistency Contract-Evolution `2026-07-26`
 

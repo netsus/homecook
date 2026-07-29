@@ -1,6 +1,6 @@
 # personal-recipe-customization-write-core
 
-> Stage 1 contract lock. Approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines). Official baseline: requirements v1.7.22, screens v1.5.28, flow v1.3.25, DB v1.3.23, API v1.2.27.
+> Stage 1 contract lock. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). Official baseline: requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29.
 
 ## Goal
 
@@ -50,13 +50,13 @@ Schema Change:
 - MYPAGE/RECIPEBOOK_DETAIL 편집 UI, user-facing history/trash/restore/publish UI
 - public recipe mutation, other-owner private existence disclosure, client-selected owner/visibility/generation/source authority
 - unofficial endpoint, request/response field, status, error code 또는 production feature activation
-- production DB migration, remote write 또는 unmerged migration 적용을 이 Stage 1 docs PR에서 수행하기
+- production DB migration, external-provider write 또는 unmerged migration 적용을 이 Stage 1 docs PR에서 수행하기
 
 ## Dependencies
 
 | Gate | Current state | Meaning |
 | --- | --- | --- |
-| official contract PR #1072 | merged | v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 authority available |
+| historical contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
 | F0 `account-session-generation-foundation` | Stage 1 docs merged | runtime session-generation/capability/fence가 #6 implementation predecessor |
 | #2 `product-ingredient-link-foundation` | Stage 1 docs merged | exact product→ingredient relation runtime이 product ingredient validation predecessor |
 | #3 `recipe-visibility-read-hardening` | Stage 1 docs merged | private visibility/RLS/image registry/tag upper-bound runtime이 predecessor |
@@ -153,7 +153,7 @@ No stable capability-off public error code is invented. Before approved activati
 ### Stage 1 gate
 
 - this docs PR runs SOT/workflow/workpack/automation/bookkeeping validators, focused workflow-doc Vitest, lint, typecheck, dependency audit and diff check.
-- PostgreSQL migrations, route/RPC tests, real DB, browser/E2E, remote verification and activation evidence below are future Stage 2/integration/closeout artifacts and are not claimed executable now.
+- PostgreSQL migrations, route/RPC tests, real DB, browser/E2E, local-first production/rehearsal verification and activation evidence below are future Stage 2/integration/closeout artifacts and are not claimed executable now.
 
 ### Future fixtures
 
@@ -169,7 +169,7 @@ No stable capability-off public error code is invented. Before approved activati
 - Vitest route/service tests for create/fork/save-as-new/update/delete, wrapper/errors, legacy compatibility and image/tag integration.
 - PostgreSQL fresh/replay tests for RLS, grants, direct DML denial, lock order, generation binding, idempotency, concurrency and cleanup.
 - real local Supabase smoke with two owners and exact DB before/after digest for every denied path.
-- merged-exact-SHA remote read-only inventory of functions, ACL/RLS/policies/constraints and capability state; no unmerged remote migration.
+- merged-exact-SHA server-production/local-rehearsal read-only inventory of functions, ACL/RLS/policies/constraints and capability state; no unapproved server-production migration.
 - E2E only after #5 UI plus #7/#8 integration: public source unchanged/new private ID, same-ID edit, explicit new ID, delete/history, and capability rollback.
 
 ## Key Rules

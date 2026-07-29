@@ -1,6 +1,6 @@
 # product-ingredient-link-foundation
 
-> Stage 1 contract lock. Approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines). Official baseline: requirements v1.7.22, screens v1.5.28, flow v1.3.25, DB v1.3.23, API v1.2.27.
+> Stage 1 contract lock. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). Official baseline: requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29.
 
 ## Goal
 
@@ -12,6 +12,7 @@
 - Stage 2 backend/data: `feature/be-product-ingredient-link-foundation`
 - Stage 4 existing-consumer regression: `feature/fe-product-ingredient-link-foundation`
 - Release train: B. 구현 및 activation은 F0와 successor #3의 joint account-delete gate 이후에만 진행한다.
+- 초기 배포 gate: production=`server MacBook local Next.js + local Supabase`, staging=`isolated local rehearsal stack`, remote verifier/provider barrier/remote migration=`N/A` until separate contract-evolution
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer와 five-axis reviewer는 사용자 승인대로 서로 다른 Codex 세션을 사용하며 Claude는 사용하지 않는다.
 
 ## In Scope
@@ -43,7 +44,7 @@
 
 Schema Change:
 - [ ] 없음
-- [x] 있음 — 기존 migration을 수정하지 않고 official DB v1.3.23 K의 link table, pantry product/version identity와 effective reader를 additive migration으로 추가한다.
+- [x] 있음 — 기존 migration을 수정하지 않고 official DB v1.3.26 K의 link table, pantry product/version identity와 effective reader를 additive migration으로 추가한다.
 
 ## Out of Scope
 
@@ -54,14 +55,14 @@ Schema Change:
 - HOME 검색에 product를 추가하거나 HOME/PANTRY/MEAL_LOG/COOK_MODE layout을 변경
 - successor #1의 search relevance, #6의 personal recipe write, #8의 exact pantry-row cooking completion, #9/#12의 meal-log implementation/UI
 - F0 또는 #3보다 먼저 production account-generation/account-delete activation
-- unmerged migration의 remote 적용 또는 production/staging data write
+- server MacBook local production authority 밖의 migration apply 또는 production/staging data write
 
 ## Dependencies
 
 | Gate | Current state | Meaning |
 | --- | --- | --- |
 | Stage -1 security hotfix + closeout | merged/deployed | application-controlled mutation authorization predecessor complete |
-| official cooking/meal-log contract PR #1072 | merged | v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 authority available |
+| historical cooking/meal-log contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
 | `account-session-generation-foundation` Stage 1 docs PR #1073 | merged | F0 contract is documented; F0 runtime is not yet activated |
 | `prepared-food-search-relevance` Stage 1 docs PR #1074 | merged | exact successor #1 docs predecessor complete |
 | `recipe-visibility-read-hardening` (#3) | Stage 1 docs pending | does not block this Stage 1 docs PR; blocks #2 implementation activation with F0 |
@@ -122,11 +123,11 @@ Schema Change:
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.22.md` G/J
-- `docs/화면정의서-v1.5.28.md` 0-C/0-E
-- `docs/유저flow맵-v1.3.25.md` ⓰
-- `docs/db설계-v1.3.23.md` K and account cleanup order
-- `docs/api문서-v1.2.27.md` C/F and existing `GET /recipes/pantry-match`
+- `docs/요구사항기준선-v1.7.25.md` G/J
+- `docs/화면정의서-v1.5.29.md` 0-C/0-E
+- `docs/유저flow맵-v1.3.27.md` ⓰
+- `docs/db설계-v1.3.26.md` K and account cleanup order
+- `docs/api문서-v1.2.29.md` C/F and existing `GET /recipes/pantry-match`
 - approved master plan sections 6-2 and successor #2
 
 ## QA / Test Data Plan
@@ -134,7 +135,7 @@ Schema Change:
 ### Stage 1 gate and planned artifacts
 
 - this docs PR runs only currently executable SOT/workflow/workpack/automation/bookkeeping/doc-gate validators, focused workflow Vitest, lint, typecheck, dependency audit as additional local security evidence, and diff check. The current PR head's independent GitGuardian result and repository Security Review workflow are observed separately; no unspecified local secret command is claimed.
-- Stage 2 first adds tests and observes RED before writing migration or production reader code. Planned artifacts include focused link/route/security/reader/account-delete Vitest, existing/fresh/replay PostgreSQL integration, backend verification and a merged-exact-SHA remote read-only verifier.
+- Stage 2 first adds tests and observes RED before writing migration or production reader code. Planned artifacts include focused link/route/security/reader/account-delete Vitest, existing/fresh/replay PostgreSQL integration, backend verification and a merged-exact-SHA server-production/local-rehearsal read-only verifier.
 - those Stage 2/closeout commands are required future gates but are not claimed to exist or pass in Stage 1. Missing planned files or commands block implementation closeout.
 
 ### Local fixture and real DB matrix
@@ -146,12 +147,12 @@ Schema Change:
 - candidate cases: high-use deterministic candidates, brand-variable product with no approval, and `화이트크림` referenced/unreferenced inventory.
 - run on existing schema, fresh migration replay and idempotent replay. Validate table/FK/index/check/partial-unique/RLS/grants/function signatures and row digests.
 
-### Security, performance and remote evidence
+### Security, performance and local-first release evidence
 
 - PUBLIC/anon/authenticated/admin/service-principal matrix proves normal users cannot mutate/promote or infer another owner's private product/link.
 - each effective reader uses a bounded indexed set operation without per-row product-link N+1 or unbounded catalog scan.
 - evidence contains no secret, raw provider payload, private product owner identity or user PII.
-- remote work is read-only before merge. Any migration or data promotion runs only from a merged exact SHA under a later approved release gate.
+- initial deployment authority는 server MacBook local production과 isolated local rehearsal뿐이다. Any migration or data promotion runs only from a merged exact SHA under that local-first gate; remote provider migration is `N/A` until a later contract-evolution.
 
 ## Key Rules
 
@@ -181,6 +182,6 @@ Schema Change:
 - [ ] brand-product synonym prohibition, ambiguity fail-closed and broad-anchor preservation are tested <!-- omo:id=delivery-no-guess-policy;stage=2;scope=backend;review=3,6 -->
 - [ ] private cascade/public-shared preservation and ingredient restrict are proven <!-- omo:id=delivery-delete-integrity;stage=2;scope=backend;review=3,6 -->
 - [ ] RLS/grants/admin promotion and A/B owner isolation are proven <!-- omo:id=delivery-link-security;stage=2;scope=backend;review=3,6 -->
-- [ ] local real DB, query-plan and merged-exact-SHA remote read-only evidence are recorded <!-- omo:id=delivery-link-verification;stage=2;scope=shared;review=3,6 -->
+- [ ] local real DB, query-plan and merged-exact-SHA server-production/local-rehearsal read-only evidence are recorded <!-- omo:id=delivery-link-verification;stage=2;scope=shared;review=3,6 -->
 - [ ] existing HOME cleanout and PANTRY display/add consumers use the projection contract without raw ingredient-only fallback <!-- omo:id=delivery-link-existing-consumers;stage=4;scope=frontend;review=5,6 -->
 - [ ] existing loading/empty/error/read-only/unauthorized and exact product/version presentation remain unchanged <!-- omo:id=delivery-link-ui-regression;stage=4;scope=frontend;review=5,6 -->

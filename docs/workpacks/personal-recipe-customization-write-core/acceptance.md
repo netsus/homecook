@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> This Stage 1 document locks future backend and release evidence. Unchecked items are not claims that migrations, routes, RLS/RPC, remote DB state, #7 propagation or `personal_recipe_v2` activation already exist.
+> This Stage 1 document locks future backend and release evidence. Unchecked items are not claims that migrations, routes, RLS/RPC, server-production/local-rehearsal DB state, #7 propagation or `personal_recipe_v2` activation already exist.
 
 ## Create / Fork / Identity
 
@@ -62,13 +62,13 @@
 - [ ] fixtures cover two owners, public/private/deleted/shared/legacy rows, G1/G2 lifecycle and image/tag/product provenance <!-- omo:id=accept-personal-fixtures;stage=2;scope=shared;review=3,6 -->
 - [ ] fresh/replay PostgreSQL tests prove policies, grants, triggers, functions, idempotency and lock/concurrency behavior <!-- omo:id=accept-personal-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] real local Supabase role matrix and before/after digests prove all denied paths are unchanged <!-- omo:id=accept-personal-real-db;stage=2;scope=backend;review=3,6 -->
-- [ ] merged-exact-SHA remote verifier is read-only and production capability remains off until the approved release gate <!-- omo:id=accept-personal-remote;stage=2;scope=shared;review=3,6 -->
+- [ ] merged-exact-SHA server-production/local-rehearsal verifier is read-only and production capability remains off until the approved release gate <!-- omo:id=accept-personal-remote;stage=2;scope=shared;review=3,6 -->
 - [ ] independent internal1.5, security/DB, five-axis, Stage 3 and closeout reviews have zero unresolved required findings <!-- omo:id=accept-personal-independent-review;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
 - verifier: separate Codex implementation/review sessions; service owner for the future R+2 activation decision
-- environment: local Supabase for write tests; merged-exact-SHA remote read-only inventory; production mutation/flag changes excluded until the release gate
+- environment: local Supabase for write tests; merged-exact-SHA server-production/local-rehearsal read-only inventory; production mutation/flag changes excluded until the release gate
 - scenarios: two-owner non-disclosure, session-generation race, public-source immutable fork, same-ID save/new-ID save, soft delete/history, image/tag atomicity, capability-off legacy compatibility
 
 ## Automation Split

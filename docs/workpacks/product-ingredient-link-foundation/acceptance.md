@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> Evidence is checked only after the owning implementation/review stage produces it. This Stage 1 document locks the tests and rollout boundary; it does not claim future migration, PostgreSQL, route or remote-verifier artifacts already exist.
+> Evidence is checked only after the owning implementation/review stage produces it. This Stage 1 document locks the tests and rollout boundary; it does not claim future migration, PostgreSQL, route or local-first production/rehearsal verifier artifacts already exist.
 
 ## Happy Path
 
@@ -54,7 +54,7 @@
 ## Manual QA
 
 - verifier: separate Codex implementation/review sessions at Stage 2/3
-- environment: fresh and existing local Supabase plus merged-exact-SHA remote read-only smoke
+- environment: fresh and existing local Supabase plus server MacBook local production / isolated local rehearsal exact-SHA smoke
 - scenarios:
   1. compare generic-only, product-only and mixed pantry recommendations for the same ingredient
   2. confirm product name/brand/version remains visible to exact-row readers while recommendation dedupes by ingredient
@@ -80,6 +80,6 @@
 - [ ] focused Vitest covers link predicate, route/helper readers, ACL/PII and account-delete behavior <!-- omo:id=accept-link-vitest-targets;stage=2;scope=backend;review=3,6 -->
 - [ ] PostgreSQL integration covers existing/fresh/replay, FK/check/partial unique, RLS/grants and concurrent promotion <!-- omo:id=accept-link-postgres-targets;stage=2;scope=backend;review=3,6 -->
 - [ ] query plans prove one bounded set-based projection without per-row N+1 or unbounded product scan <!-- omo:id=accept-link-query-plan;stage=2;scope=backend;review=3,6 -->
-- [ ] merged-exact-SHA remote verifier is read-only and records schema/role/reader compatibility with writes zero <!-- omo:id=accept-link-remote-read-only;stage=2;scope=shared;review=3,6 -->
+- [ ] merged-exact-SHA server-production/local-rehearsal verifier records schema/role/reader compatibility with writes zero and keeps remote provider migration N/A <!-- omo:id=accept-link-remote-read-only;stage=2;scope=shared;review=3,6 -->
 - [ ] independent internal 1.5, security/DB and five-axis reviewers finish with unresolved required findings zero <!-- omo:id=accept-link-independent-reviews;stage=2;scope=shared;review=3,6 -->
 - [ ] Draft→Ready and current exact head started checks all finish success or documented normal skip before squash merge <!-- omo:id=accept-link-current-head-ci;stage=2;scope=shared;review=3,6 -->

@@ -50,14 +50,13 @@
       "capability-off-current-previous-new-personal-mutation-zero",
       "rollback-blocks-new-writes-without-disabling-existing-v2-drain",
       "no-unofficial-endpoint-field-status-error-code-or-visual-scope",
-      "no-unmerged-remote-migration-or-production-write"
+      "no-unmerged-server-production-migration-or-production-write"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/personal-recipe-customization-write-core.test.ts tests/personal-recipe-customization-write-security.test.ts tests/personal-recipe-customization-write-idempotency.test.ts tests/personal-recipe-customization-write-account-delete.test.ts",
       "pnpm test:personal-recipe-customization-write-core:postgres",
       "pnpm verify:backend",
       "pnpm test:e2e:regression:ci --grep personal-recipe-customization-write-core",
-      "node scripts/verify-personal-recipe-customization-write-core-remote.mjs --mode post-merge-read-only",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "BRANCH_NAME=docs/personal-recipe-customization-write-core pnpm validate:workpack -- --slice personal-recipe-customization-write-core",
@@ -81,7 +80,7 @@
       "managed image atomic attach and parent-bounded tag visibility evidence",
       "capability-off current-immediate-previous zero-new-personal-write evidence",
       "slice7 final PATCH and slice8 activation boundary evidence",
-      "merged-exact-SHA remote read-only function-policy-capability evidence"
+      "merged-exact-SHA server-production/local-rehearsal read-only function-policy-capability evidence"
     ]
   },
   "frontend": {
@@ -108,7 +107,7 @@
     }
   },
   "external_smokes": [
-    "merged-exact-SHA remote verifier is read-only and reports function signatures ACL RLS policy guards and capability state",
+    "merged-exact-SHA server-production/local-rehearsal verifier is read-only and reports function signatures ACL RLS policy guards and capability state",
     "two-owner role matrix denies public source mutation other-owner private write and direct DML without row-count or digest change",
     "delayed G1 write delete and G2 recreation never records G1 content in G2",
     "public source digest stays unchanged while fork creates one private origin-linked identity",
@@ -147,12 +146,12 @@
     "capability-rollback-disables-existing-v2-drain",
     "frontend-screen-wireframe-design-or-anchor-scope-added",
     "unmerged-migration-or-production-write",
-    "remote-verifier-sha-not-merged-exact-source",
+    "local-first-verifier-sha-not-merged-exact-source",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {
     "backend": 6,
     "frontend": 1
   },
-  "notes": "This is a DB/security high-risk backend-only Stage 1 lock. Stage 1 runs only current docs validators, focused workflow tests, lint, typecheck, audit and diff. Route/RPC, PostgreSQL, real DB, E2E, remote and compatibility evidence are future Stage 2/integration/closeout artifacts. #6 dark-ships recipe-local write core but cannot expose an alternate PATCH contract; #7 owns impact integration and #8 owns the R/R+1 gate before R+2 joint activation. Design is N/A because #5 exclusively owns RECIPE_DETAIL/editor UI and authority evidence."
+  "notes": "This is a DB/security high-risk backend-only Stage 1 lock. Stage 1 runs only current docs validators, focused workflow tests, lint, typecheck, audit and diff. Route/RPC, PostgreSQL, real DB, E2E, server-production/local-rehearsal and compatibility evidence are future Stage 2/integration/closeout artifacts. #6 dark-ships recipe-local write core but cannot expose an alternate PATCH contract; #7 owns impact integration and #8 owns the R/R+1 gate before R+2 joint activation. Design is N/A because #5 exclusively owns RECIPE_DETAIL/editor UI and authority evidence."
 }

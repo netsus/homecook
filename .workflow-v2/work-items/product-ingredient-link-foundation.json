@@ -23,11 +23,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.25.md",
+      "docs/화면정의서-v1.5.29.md",
+      "docs/유저flow맵-v1.3.27.md",
+      "docs/db설계-v1.3.26.md",
+      "docs/api문서-v1.2.29.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -43,18 +43,17 @@
       "docs/engineering/security-performance-design.md",
       "docs/engineering/workflow-v2/README.md",
       "docs/engineering/workflow-v2/approval-and-loops.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
     ]
   },
   "workflow": {
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "node scripts/verify-product-ingredient-link-remote.mjs --mode post-merge-read-only from merged exact SHA only",
-      "deployed /api/v1/recipes/pantry-match implementation route smoke for official GET /recipes/pantry-match, covering unauthorized and authenticated generic/product/mixed pantry reads",
-      "remote link-table FK partial-unique RLS grant and exact-principal read-only inventory",
-      "remote private-product cascade policy and owner-null public/shared preservation read-only evidence",
-      "remote writes data promotion and account-delete activation remain zero until approved release gates"
+      "server MacBook local production and isolated local rehearsal exact-SHA smoke for GET /recipes/pantry-match, covering unauthorized and authenticated generic/product/mixed pantry reads",
+      "server-production/local-rehearsal link-table FK partial-unique RLS grant and exact-principal inventory",
+      "server-production/local-rehearsal private-product cascade policy and owner-null public/shared preservation evidence",
+      "remote verifier/provider barrier/remote migration stay N/A until approved contract-evolution"
     ],
     "execution_mode": "manual",
     "evaluator_profile": "vertical-slice-strict",
@@ -78,7 +77,7 @@
       "pnpm verify:frontend:pr",
       "pnpm test:e2e:regression:ci --grep product-ingredient-link-foundation",
       "pnpm verify:frontend",
-      "node scripts/verify-product-ingredient-link-remote.mjs --mode post-merge-read-only",
+      "node scripts/verify-product-ingredient-link-local-first.mjs --mode post-merge-read-only",
       "git diff --check"
     ],
     "verify_commands": [
@@ -100,7 +99,7 @@
       "separate Codex Stage 3 and closeout review after implementation"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
+      "approved-plan-sha256-and-1056-line-lock",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "official-food-product-ingredient-link-contract-only",
       "product-cascade-and-ingredient-restrict",
@@ -115,7 +114,7 @@
       "private-cascade-public-shared-preservation",
       "f0-plus-slice3-joint-account-delete-activation-gate",
       "local-existing-fresh-replay-and-role-matrix-evidence",
-      "merged-exact-sha-remote-read-only-evidence",
+      "merged-exact-sha-local-first-production-rehearsal-evidence",
       "independent-codex-required-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip"
     ]
@@ -138,8 +137,8 @@
     "Prepared-food search relevance owned by successor #1",
     "Personal recipe writes cooked-batch completion meal-log core or meal-log UI owned by later successors",
     "Production account-generation or account-delete activation before F0 plus slice #3 joint gate",
-    "Unmerged remote migration production staging write or data promotion"
+    "Migration or data promotion outside local-first production authority"
   ],
   "open_questions": [],
-  "notes": "Roadmap status moves planned to docs in this Stage 1 PR, while workflow lifecycle intentionally stays planned until Stage 2. Approval remains not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve with zero unresolved required findings. Stage 1 verify_commands are only current executable docs validators, focused workflow tests, lint, typecheck, dependency audit and diff check. Link/reader/account-delete/consumer tests, PostgreSQL replay, backend/frontend verification, focused Playwright and remote verifier are future Stage 2/4/closeout artifacts that must be created TDD-first. Stage 4 is behavior-only for existing HOME/PANTRY consumers and adds no visual scope. The Stage 1 author must not approve or merge its own work."
+  "notes": "Roadmap status moves planned to docs in this Stage 1 PR, while workflow lifecycle intentionally stays planned until Stage 2. Approval remains not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve with zero unresolved required findings. Stage 1 verify_commands are only current executable docs validators, focused workflow tests, lint, typecheck, dependency audit and diff check. Link/reader/account-delete/consumer tests, PostgreSQL replay, backend/frontend verification, focused Playwright and local-first production/rehearsal verification are future Stage 2/4/closeout artifacts that must be created TDD-first. Initial deployment uses server MacBook local production plus isolated local rehearsal; remote verifier/provider barrier/remote migration remain N/A until contract-evolution. Stage 4 is behavior-only for existing HOME/PANTRY consumers and adds no visual scope. The Stage 1 author must not approve or merge its own work."
 }

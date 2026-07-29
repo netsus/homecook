@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> This Stage 1 document locks future meal-log backend and release evidence. Unchecked items do not claim that schema, RPCs, routes, real DB, E2E, #12 UI, remote verification, or production activation already exist.
+> This Stage 1 document locks future meal-log backend and release evidence. Unchecked items do not claim that schema, RPCs, routes, real DB, E2E, #12 UI, local-first production/rehearsal verification, or production activation already exist.
 
 ## Schema / Ownership
 
@@ -80,7 +80,7 @@
 - [ ] 401/404 preserve nondisclosure and all 409/422/428/503 failures are whole-operation zero-write <!-- omo:id=accept-meal-log-errors;stage=2;scope=backend;review=3,6 -->
 - [ ] no unofficial endpoint, source type, field, aggregate state, error or screen is introduced <!-- omo:id=accept-meal-log-no-contract-invention;stage=2;scope=shared;review=3,6 -->
 - [ ] implementation waits for #1+#2+#4+#8 runtime and required checks green <!-- omo:id=accept-meal-log-predecessors;stage=2;scope=shared;review=3,6 -->
-- [ ] no unmerged migration, remote mutation or production capability/flag change occurs <!-- omo:id=accept-meal-log-no-production-write;stage=2;scope=backend;review=3,6 -->
+- [ ] no unmerged migration, external-provider mutation or production capability/flag change occurs <!-- omo:id=accept-meal-log-no-production-write;stage=2;scope=backend;review=3,6 -->
 
 ## Verification / Evidence
 
@@ -89,16 +89,16 @@
 - [ ] PostgreSQL fresh/replay covers RLS, exact-one checks, deferred pointer, RPCs and cleanup <!-- omo:id=accept-meal-log-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] A/B real DB digests prove nondisclosure, idempotency and zero-write failures <!-- omo:id=accept-meal-log-real-db;stage=2;scope=backend;review=3,6 -->
 - [ ] integration tests cover three sources, timezone/DST, evidence, aggregate and concurrent replay <!-- omo:id=accept-meal-log-integration;stage=4;scope=backend;review=3,6 -->
-- [ ] remote verifier is merged-exact-SHA read-only and flags stay off until release gate <!-- omo:id=accept-meal-log-remote;stage=2;scope=shared;review=3,6 -->
+- [ ] local-first verifier is merged-exact-SHA server-production/local-rehearsal read-only and flags stay off until release gate <!-- omo:id=accept-meal-log-remote;stage=2;scope=shared;review=3,6 -->
 - [ ] independent internal1.5/security-DB/five-axis/Stage3/6 reviews have zero findings <!-- omo:id=accept-meal-log-independent-review;stage=2;scope=shared;review=3,6 -->
 - [ ] current-head PR and post-merge QA/Policy/Security/Vercel are green/intended skip <!-- omo:id=accept-meal-log-ci;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
 - verifier: separate Codex implementation, security/DB, five-axis and release-review sessions
-- environment: local Supabase/PostgreSQL, owner A/B, merged-exact-SHA remote read-only; production flags excluded
+- environment: local Supabase/PostgreSQL, owner A/B, merged-exact-SHA server-production/local-rehearsal read-only; production flags excluded
 - scenarios: three-source create/replay, batch edit/delete/interleaving, timezone/DST, slot deletion, exact evidence, aggregate states, account cleanup
 
 ## Manual Only
 
-- [ ] production capability activation occurs only in the approved release train after predecessor and remote evidence
+- [ ] production capability activation occurs only in the approved release train after predecessor and server-production/local-rehearsal evidence

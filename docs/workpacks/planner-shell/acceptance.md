@@ -50,7 +50,7 @@
 ## Manual QA
 
 - verifier: separate Codex reviewers and product-design-authority
-- environment: 390px/320px/desktop, keyboard/screen reader, history/back, merged-exact-SHA remote read-only
+- environment: 390px/320px/desktop, keyboard/screen reader, history/back, merged-exact-SHA server-production/local-rehearsal read-only
 - scenarios: both segments, auth return, #12 unavailable, plan states, legacy read/detail/delete, completed shopping
 
 ## Manual Only

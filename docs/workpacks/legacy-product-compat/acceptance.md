@@ -53,7 +53,7 @@
 ## Manual QA
 
 - verifier: separate Codex reviewers
-- environment: current/immediate-previous clients, seeded v2 fixture, 390px/320px/desktop, merged-exact-SHA remote read-only
+- environment: current/immediate-previous clients, seeded v2 fixture, 390px/320px/desktop, merged-exact-SHA server-production/local-rehearsal read-only
 - scenarios: legacy read/detail/delete, no writers, optional/no-key/428, v1/v2 dispatch, flag-off drain, rollback, unavailable telemetry
 
 ## Manual Only

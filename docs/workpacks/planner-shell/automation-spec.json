@@ -18,7 +18,6 @@
     ],
     "verify_commands": [
       "pnpm verify:backend",
-      "node scripts/verify-planner-shell-remote.mjs --mode post-merge-read-only",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "BRANCH_NAME=docs/planner-shell pnpm validate:workpack -- --slice planner-shell",
@@ -30,7 +29,7 @@
       "tests/planner-shell-compatibility.test.ts",
       "legacy-read-delete-and-nondisclosure-evidence",
       "planner-nutrition-endpoint-retained-no-new-ui-call-evidence",
-      "merged-exact-sha-remote-read-only-inventory"
+      "merged-exact-sha-server-production-local-rehearsal-read-only-inventory"
     ]
   },
   "frontend": {
@@ -121,9 +120,9 @@
     "completed-shopping-mutation-exposed",
     "home-search-expanded-beyond-recipes",
     "canonical-design-critic-or-authority-evidence-missing",
-    "remote-verifier-not-merged-exact-sha",
+    "local-first-verifier-not-merged-exact-sha",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {"backend": 3, "frontend": 6},
-  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/browser/remote evidence is future. #10 owns Planner shell and plan-only PLANNER_WEEK composition; #12 owns MEAL_LOG content, #13 owns legacy tombstones."
+  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/browser/local-first production-rehearsal evidence is future. #10 owns Planner shell and plan-only PLANNER_WEEK composition; #12 owns MEAL_LOG content, #13 owns legacy tombstones."
 }

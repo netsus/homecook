@@ -1,6 +1,6 @@
 # personal-recipe-editor-decoupling
 
-> Stage 1 contract lock. Approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines). Official baseline: requirements v1.7.22, screens v1.5.28, flow v1.3.25, DB v1.3.23, API v1.2.27.
+> Stage 1 contract lock. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). Official baseline: requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29.
 
 ## Goal
 
@@ -58,7 +58,7 @@ Schema Change:
 
 | Gate | Current state | Meaning |
 | --- | --- | --- |
-| official contract PR #1072 | merged | v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 authority available |
+| historical contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
 | `recipe-visibility-read-hardening` Stage 1 PR #1077 | merged | #3 docs locked; runtime implementation remains #5 implementation predecessor |
 | `31-recipe-media-tags` | merged required | existing image upload/object-ID/cancel surface must be reused |
 | `36e-recipe-tags-frontend` | merged required | existing tag form/primitives must be reused |

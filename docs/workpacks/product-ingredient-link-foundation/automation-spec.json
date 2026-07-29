@@ -46,13 +46,12 @@
       "bounded-set-based-effective-reader-without-n-plus-one-or-unbounded-catalog-scan",
       "common-success-data-error-envelope-preserved",
       "no-new-public-endpoint-field-status-or-error",
-      "no-unmerged-remote-migration-or-production-staging-write"
+      "no-unmerged-server-production-migration-or-production-rehearsal-write"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/product-ingredient-link-foundation.test.ts tests/product-ingredient-link-routes.test.ts tests/product-ingredient-link-security.test.ts tests/product-ingredient-link-readers.test.ts tests/product-ingredient-link-account-delete.test.ts",
       "pnpm test:product-ingredient-link-foundation:postgres",
       "pnpm verify:backend",
-      "node scripts/verify-product-ingredient-link-remote.mjs --mode post-merge-read-only",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "BRANCH_NAME=docs/product-ingredient-link-foundation pnpm validate:workpack -- --slice product-ingredient-link-foundation",
@@ -72,7 +71,7 @@
       "A/B owner plus owner-null public/shared role matrix evidence",
       "five required effective-reader raw-ingredient-only regression evidence",
       "private cascade public preservation and ingredient restrict evidence",
-      "merged-exact-SHA remote read-only compatibility evidence"
+      "merged-exact-SHA server-production/local-rehearsal read-only compatibility evidence"
     ]
   },
   "frontend": {
@@ -120,11 +119,10 @@
     }
   },
   "external_smokes": [
-    "node scripts/verify-product-ingredient-link-remote.mjs --mode post-merge-read-only from merged exact SHA only",
-    "deployed /api/v1/recipes/pantry-match implementation route smoke for official GET /recipes/pantry-match, covering unauthorized and authenticated generic/product/mixed pantry reads",
-    "remote link-table FK partial-unique RLS grant and exact-principal read-only inventory",
-    "remote private-product cascade policy and owner-null public/shared preservation read-only evidence",
-    "remote writes data promotion and account-delete activation remain zero until approved release gates"
+    "server MacBook local production and isolated local rehearsal exact-SHA smoke for GET /recipes/pantry-match, covering unauthorized and authenticated generic/product/mixed pantry reads",
+    "server-production/local-rehearsal link-table FK partial-unique RLS grant and exact-principal inventory",
+    "server-production/local-rehearsal private-product cascade policy and owner-null public/shared preservation evidence",
+    "remote verifier/provider barrier/remote migration stay N/A until approved contract-evolution"
   ],
   "blocked_conditions": [
     "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
@@ -150,8 +148,8 @@
     "account-delete-activation-before-f0-plus-slice3-joint-gate",
     "unbounded-catalog-scan-or-per-row-link-n-plus-one",
     "new-public-endpoint-field-status-or-error-invented",
-    "unmerged-migration-applied-to-remote",
-    "remote-verifier-sha-does-not-match-merged-source",
+    "migration-applied-outside-local-first-production-authority",
+    "local-first-verifier-sha-does-not-match-merged-source",
     "production-staging-write-or-data-promotion-before-approved-release-gate",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
@@ -159,5 +157,5 @@
     "backend": 4,
     "frontend": 4
   },
-  "notes": "This is a backend/data foundation with behavior-only Stage 4 regression for existing HOME/PANTRY consumers and no new visual scope. Link/reader/account-delete/consumer tests, PostgreSQL replay, backend/frontend verification, focused Playwright, and remote verification commands are planned Stage 2/4/closeout artifacts. Stage 1 runs only the currently executable docs validator subset and must not claim future commands exist. Implementation activation remains blocked until the F0 + recipe-visibility-read-hardening joint account-delete gate is satisfied."
+  "notes": "This is a backend/data foundation with behavior-only Stage 4 regression for existing HOME/PANTRY consumers and no new visual scope. Link/reader/account-delete/consumer tests, PostgreSQL replay, backend/frontend verification, focused Playwright, and local-first production/rehearsal verification commands are planned Stage 2/4/closeout artifacts. Stage 1 runs only the currently executable docs validator subset and must not claim future commands exist. Initial deployment uses server MacBook local production plus isolated local rehearsal; remote verifier/provider barrier/remote migration stay N/A until contract-evolution. Implementation activation remains blocked until the F0 + recipe-visibility-read-hardening joint account-delete gate is satisfied."
 }

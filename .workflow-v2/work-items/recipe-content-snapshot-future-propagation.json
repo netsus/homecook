@@ -24,11 +24,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.25.md",
+      "docs/화면정의서-v1.5.29.md",
+      "docs/유저flow맵-v1.3.27.md",
+      "docs/db설계-v1.3.26.md",
+      "docs/api문서-v1.2.29.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -49,14 +49,14 @@
       "docs/design/mobile-ux-rules.md",
       "docs/design/anchor-screens.md",
       "docs/engineering/workflow-v2/README.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
     ]
   },
   "workflow": {
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "merged-exact-SHA remote read-only preview session function ACL RLS policy constraint and capability inventory",
+      "merged-exact-SHA server-production/local-rehearsal read-only preview session function ACL RLS policy constraint and capability inventory",
       "two-owner preview and PATCH non-disclosure matrix with exact before-after domain digests",
       "stale draft revision target and active-claim whole-transaction zero-write smoke",
       "keep versus replace-all plus deterministic incomplete and completed-read-only shopping smoke",
@@ -94,7 +94,7 @@
       "pnpm verify:frontend",
       "pnpm validate:exploratory-qa-evidence -- --slice recipe-content-snapshot-future-propagation",
       "pnpm validate:closeout-sync -- --slice recipe-content-snapshot-future-propagation",
-      "node scripts/verify-recipe-content-snapshot-future-propagation-remote.mjs --mode post-merge-read-only",
+      "node scripts/verify-recipe-content-snapshot-future-propagation-local-first.mjs --mode post-merge-read-only",
       "git diff --check"
     ],
     "verify_commands": [
@@ -118,7 +118,7 @@
       "separate Codex Stage 3 Stage 5 Stage 6 and final closeout reviews"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
+      "approved-plan-sha256-and-1056-line-lock",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "roadmap-docs-workflow-lifecycle-planned-separation",
       "preview-patch-single-canonicalizer-and-server-opaque-token-binding",
@@ -135,7 +135,7 @@
       "r-r1-before-r2-joint-activation-and-zero-new-write",
       "stage1-impact-start-dispatch-wireframes",
       "independent-design-critic-and-product-design-authority-required",
-      "merged-exact-sha-remote-read-only-evidence",
+      "merged-exact-sha-server-production-local-rehearsal-read-only-evidence",
       "stage1-current-vs-future-command-honesty",
       "independent-codex-required-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip"
@@ -160,7 +160,7 @@
     "Past cook-done completed session completed shopping or meal-log repin",
     "Direct nutrition pointer mutable recipe fallback or alternative snapshot authority",
     "New public endpoint request response field status error code screen or client authority",
-    "Unmerged remote migration production database write or capability activation"
+    "Unapproved server-production migration or database write or capability activation"
   ],
   "open_questions": [],
   "notes": "Roadmap moves to docs while workflow lifecycle remains planned and approval not_started until separate Codex internal1.5, security/DB, five-axis and design reviews approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Runtime implementation waits for #4/#6 and cook-mode-whole-board. #7 owns dormant preview/PATCH propagation plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation. Design Status is temporary pending implementation evidence and authority approval."
