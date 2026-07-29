@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 const MIGRATION_PATH =
-  "supabase/migrations/20260725170000_recipe_image_read_projection_authority.sql";
+  "supabase/migrations/20260730120000_recipe_image_read_owner_generation_authority.sql";
 
 async function readMigration() {
   return readFile(MIGRATION_PATH, "utf8").catch(() => "");
@@ -14,10 +14,10 @@ describe("recipe image read projection authority", () => {
     const migration = await readMigration();
 
     expect(migration).toMatch(
-      /create or replace function public\.read_recipe_image_projections\(\s*p_recipe_ids uuid\[\]\s*\)/i,
+      /create function public\.read_recipe_image_projections\(\s*p_recipe_ids uuid\[\]\s*\)/i,
     );
     expect(migration).toMatch(
-      /returns table\s*\([\s\S]*recipe_id uuid[\s\S]*legacy_thumbnail_url text[\s\S]*image_object_id uuid[\s\S]*bucket_id text[\s\S]*object_path text[\s\S]*visibility text[\s\S]*state text/i,
+      /returns table\s*\([\s\S]*recipe_id uuid[\s\S]*legacy_thumbnail_url text[\s\S]*image_object_id uuid[\s\S]*bucket_id text[\s\S]*object_path text[\s\S]*owner_uuid uuid[\s\S]*account_generation bigint[\s\S]*visibility text[\s\S]*state text/i,
     );
     expect(migration).not.toMatch(/\b(signed_url|read_url|expires_at)\b/i);
   });
@@ -33,6 +33,9 @@ describe("recipe image read projection authority", () => {
     );
     expect(migration).toMatch(
       /left join public\.recipe_image_objects/i,
+    );
+    expect(migration).toMatch(
+      /image_object\.owner_uuid[\s\S]*image_object\.account_generation/i,
     );
     expect(migration).toMatch(/order by[\s\S]*ordinality/i);
     expect(migration).not.toMatch(

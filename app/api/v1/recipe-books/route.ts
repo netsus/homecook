@@ -17,7 +17,10 @@ import {
   resolveRecipeBookImageReadUrl,
   type RecipeBookImageReadRpcClient,
 } from "@/lib/server/recipe-book-image-read";
-import type { RecipeImageReadStorageClient } from "@/lib/server/recipe-image-read";
+import {
+  normalizeExpectedRecipeImageStorageOrigin,
+  type RecipeImageReadStorageClient,
+} from "@/lib/server/recipe-image-read";
 import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
@@ -206,24 +209,17 @@ function readExpectedStorageOrigin() {
   if (!configuredUrl) {
     throw new Error("managed recipe image read configuration is invalid");
   }
-
-  try {
-    const url = new URL(configuredUrl);
-    if (url.protocol !== "https:") {
-      throw new Error();
-    }
-    return url.origin;
-  } catch {
-    throw new Error("managed recipe image read configuration is invalid");
-  }
+  return normalizeExpectedRecipeImageStorageOrigin(configuredUrl);
 }
 
 async function resolveRecipeBookCoverUrls({
   books,
   client,
+  expectedOwnerUuid,
 }: {
   books: RecipeBookRow[];
   client: RecipeBookImageReadRpcClient & RecipeImageReadStorageClient;
+  expectedOwnerUuid: string;
 }) {
   const chunks: RecipeBookRow[][] = [];
   for (let index = 0; index < books.length; index += 100) {
@@ -248,6 +244,7 @@ async function resolveRecipeBookCoverUrls({
     projections.map((projection) =>
       resolveRecipeBookImageReadUrl({
         client,
+        expectedOwnerUuid,
         expectedStorageOrigin,
         projection,
         signedUrlTtlSeconds: RECIPE_BOOK_IMAGE_READ_URL_TTL_SECONDS,
@@ -456,6 +453,7 @@ export async function GET(request: Request) {
             books: booksResult.data,
             client: serviceClient as unknown as
               RecipeBookImageReadRpcClient & RecipeImageReadStorageClient,
+            expectedOwnerUuid: user.id,
           })
         : Promise.resolve(booksResult.data),
     ] as const).catch(() => null);

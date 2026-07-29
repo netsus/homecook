@@ -263,7 +263,7 @@ export async function GET(request: Request, context: RouteContext) {
     const recipeResult = await routeClient
       .from("recipes")
       .select(
-        "id, title, description, thumbnail_url, base_servings, tags, source_type, view_count, like_count, save_count, plan_count, cook_count",
+        "id, title, description, thumbnail_url, base_servings, tags, source_type, created_by, view_count, like_count, save_count, plan_count, cook_count",
       )
       .eq("id", id)
       .maybeSingle();
@@ -283,6 +283,7 @@ export async function GET(request: Request, context: RouteContext) {
           projection
             ? resolveRecipeImageReadUrl({
                 client: serviceClient,
+                expectedOwnerUuid: recipeResult.data?.created_by ?? null,
                 expectedStorageOrigin: readExpectedStorageOrigin(),
                 projection,
                 signedUrlTtlSeconds: RECIPE_IMAGE_READ_URL_TTL_SECONDS,
