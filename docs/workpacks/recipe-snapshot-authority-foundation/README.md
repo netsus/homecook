@@ -208,5 +208,5 @@ Schema Change:
 - [ ] planner session-meal match/revision, Meal claim PK and generation-scoped v2 idempotency dark schema are concurrency-safe before #7 activation <!-- omo:id=delivery-snapshot-session-concurrency;stage=2;scope=backend;review=3,6 -->
 - [ ] leftover/batch uses immutable content-only nutrition authority with no direct nutrition FK <!-- omo:id=delivery-snapshot-batch-authority;stage=2;scope=backend;review=3,6 -->
 - [ ] scalable cooking/base plus fixed-once, partial/unavailable and missing-not-zero fixtures pass <!-- omo:id=delivery-snapshot-nutrition-formula;stage=2;scope=backend;review=3,6 -->
-- [ ] existing consumers preserve pinned history and legacy fallback without new visual scope <!-- omo:id=delivery-snapshot-consumer-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] existing consumers preserve pinned history and legacy fallback without new visual scope <!-- omo:id=delivery-snapshot-consumer-regression;stage=4;scope=frontend;review=5,6 -->
 - [ ] local existing/fresh/replay and merged-exact-SHA remote read-only evidence are green <!-- omo:id=delivery-snapshot-verification;stage=2;scope=shared;review=3,6 -->
