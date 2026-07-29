@@ -308,14 +308,14 @@ describe("/api/v1/recipe-books", () => {
     expect(recipesTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
   });
 
-  it("GET resolves a managed private cover only after the owned book list is authorized", async () => {
+  it("GET resolves a managed private cover from local Supabase only after the owned book list is authorized", async () => {
     const bookId = "11111111-1111-4111-8111-111111111111";
     const ownerId = "22222222-2222-4222-8222-222222222222";
     const objectId = "33333333-3333-4333-8333-333333333333";
     const signedUrl =
-      "https://project.supabase.co/storage/v1/object/sign/recipe-images-private/cover?token=short";
+      "http://127.0.0.1:54321/storage/v1/object/sign/recipe-images-private/cover?token=short";
     let ownedBookListCompleted = false;
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321";
 
     const recipeBooksTable = createRecipeBooksTable({
       selectResults: [],
@@ -363,6 +363,8 @@ describe("/api/v1/recipe-books", () => {
           image_object_id: objectId,
           bucket_id: "recipe-images-private",
           object_path: `${ownerId}/1/${objectId}.webp`,
+          owner_uuid: ownerId,
+          account_generation: 1,
           visibility: "private",
           state: "attached_private",
           reference_type: "recipe_book_cover",

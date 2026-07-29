@@ -13,6 +13,8 @@ export interface RecipeBookImageReadProjection {
   image_object_id: string | null;
   bucket_id: string | null;
   object_path: string | null;
+  owner_uuid: string | null;
+  account_generation: number | null;
   visibility: string | null;
   state: string | null;
   reference_type: string | null;
@@ -29,11 +31,13 @@ export interface RecipeBookImageReadRpcClient {
 }
 
 const PROJECTION_KEYS = [
+  "account_generation",
   "book_id",
   "bucket_id",
   "image_object_id",
   "legacy_cover_image_url",
   "object_path",
+  "owner_uuid",
   "reference_type",
   "state",
   "visibility",
@@ -47,6 +51,11 @@ function nullableString(value: unknown): value is string | null {
   return value === null || typeof value === "string";
 }
 
+function nullablePositiveSafeInteger(value: unknown): value is number | null {
+  return value === null
+    || (Number.isSafeInteger(value) && typeof value === "number" && value > 0);
+}
+
 function parseProjection(value: unknown): RecipeBookImageReadProjection {
   if (
     !isRecord(value)
@@ -57,6 +66,8 @@ function parseProjection(value: unknown): RecipeBookImageReadProjection {
     || !nullableString(value.image_object_id)
     || !nullableString(value.bucket_id)
     || !nullableString(value.object_path)
+    || !nullableString(value.owner_uuid)
+    || !nullablePositiveSafeInteger(value.account_generation)
     || !nullableString(value.visibility)
     || !nullableString(value.state)
     || !nullableString(value.reference_type)
@@ -108,11 +119,13 @@ export async function readRecipeBookImageProjections({
 
 export async function resolveRecipeBookImageReadUrl({
   client,
+  expectedOwnerUuid,
   expectedStorageOrigin,
   projection: rawProjection,
   signedUrlTtlSeconds,
 }: {
   client: RecipeImageReadStorageClient;
+  expectedOwnerUuid: string;
   expectedStorageOrigin: string;
   projection: RecipeBookImageReadProjection;
   signedUrlTtlSeconds: number;
@@ -122,6 +135,8 @@ export async function resolveRecipeBookImageReadUrl({
     if (
       projection.bucket_id !== null
       || projection.object_path !== null
+      || projection.owner_uuid !== null
+      || projection.account_generation !== null
       || projection.visibility !== null
       || projection.state !== null
       || projection.reference_type !== null
@@ -135,6 +150,7 @@ export async function resolveRecipeBookImageReadUrl({
 
   return resolveManagedRecipeImageReadUrl({
     client,
+    expectedOwnerUuid,
     expectedReferenceType: "recipe_book_cover",
     expectedStorageOrigin,
     projection,

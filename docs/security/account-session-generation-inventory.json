@@ -889,7 +889,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_books",
-      "line": 579,
+      "line": 577,
       "source_file": "app/api/v1/recipe-books/route.ts",
       "route": "/api/v1/recipe-books",
       "owner_scope": "authenticated-user",
@@ -1631,7 +1631,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "increment_recipe_view_count",
-      "line": 392,
+      "line": 393,
       "source_file": "app/api/v1/recipes/[id]/route.ts",
       "route": "/api/v1/recipes/[id]",
       "owner_scope": "public",
@@ -1958,6 +1958,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-29T09:58:45.394Z",
-  "checksum": "52d1e8391bf90a04cc40bfd2f8f0cf7c8138ad6e38af2f88d7d9aa6894a4d4cc"
+  "generated_at": "2026-07-29T16:52:20.546Z",
+  "checksum": "664c280dceca17a32ad5a6554dc406c8574045afa31b370c2d5642fe5b072baf"
 }
