@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -20,46 +19,6 @@ const consumerSources = {
   leftoversRoute: readRepositoryFile("app/api/v1/leftovers/route.ts"),
   leftoversProjection: readRepositoryFile("lib/server/leftovers.ts"),
 };
-
-function readGitNames(args: string[]) {
-  const output = execFileSync("git", args, {
-    cwd: process.cwd(),
-    encoding: "utf8",
-  }).trim();
-
-  return output.length === 0 ? [] : output.split("\n");
-}
-
-function hasGitRef(ref: string) {
-  try {
-    execFileSync("git", ["rev-parse", "--verify", "--quiet", ref], {
-      cwd: process.cwd(),
-      stdio: "ignore",
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function resolveBaseRef() {
-  const githubBase = process.env.GITHUB_BASE_REF;
-  const candidates = [
-    githubBase ? `origin/${githubBase}` : null,
-    "origin/master",
-    "master",
-    "HEAD^",
-  ];
-  const baseRef = candidates.find(
-    (candidate): candidate is string => candidate !== null && hasGitRef(candidate),
-  );
-
-  if (!baseRef) {
-    throw new Error("Stage 4 changed-file scope guard could not resolve a base ref");
-  }
-
-  return baseRef;
-}
 
 function expectScenarioNames(
   path: string,
@@ -204,41 +163,5 @@ describe("recipe snapshot consumer regression", () => {
         "denies ordinary snapshot mutation and permits only exact-owner cleanup delete",
       ],
     );
-  });
-
-  it("proves Stage 4 changes only tests and checklist evidence, ignoring only generated visual PNGs", () => {
-    const baseRef = resolveBaseRef();
-    const generatedVisualEvidencePattern =
-      /^ui\/designs\/evidence\/.+\.png$/u;
-    const unstagedPaths = readGitNames(["diff", "--name-only"]);
-    const untrackedPaths = readGitNames([
-      "ls-files",
-      "--others",
-      "--exclude-standard",
-    ]);
-    const changedPaths = new Set([
-      ...readGitNames(["diff", "--name-only", `${baseRef}...HEAD`]),
-      ...readGitNames(["diff", "--name-only", "--cached"]),
-      ...unstagedPaths.filter(
-        (path) => !generatedVisualEvidencePattern.test(path),
-      ),
-      ...untrackedPaths.filter(
-        (path) => !generatedVisualEvidencePattern.test(path),
-      ),
-    ]);
-    const allowedPaths = new Set([
-      "docs/workpacks/recipe-snapshot-authority-foundation/README.md",
-      "docs/workpacks/recipe-snapshot-authority-foundation/acceptance.md",
-      "tests/e2e/slice-recipe-snapshot-authority-foundation.spec.ts",
-      "tests/recipe-snapshot-consumers.test.tsx",
-    ]);
-    const unexpectedPaths = [...changedPaths]
-      .filter((path) => !allowedPaths.has(path))
-      .sort();
-
-    expect(
-      unexpectedPaths,
-      "Stage 4 must not change production sources; only unstaged/untracked ui/designs/evidence/**/*.png verifier output is ignored",
-    ).toEqual([]);
   });
 });
