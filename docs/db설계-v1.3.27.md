@@ -35,10 +35,11 @@
 ### JWT와 network guard
 
 - PostgREST는 pinned official image, local+remote combined verify JWKS, `PGRST_JWT_AUD=authenticated`, DB pre-request exact claim guard를 함께 사용한다.
-- loopback session-authority gateway는 remote `/auth/v1/user` 검증 결과의 `(iss, sub, session_id, user.created_at)`와 current active mirror `(issuer, owner_uuid, identity_created_at, remote_revision)`를 request마다 결합한다. client body의 UUID/epoch/session은 authority가 아니다.
-- gateway는 짧은 만료의 HMAC attestation에 owner, session, epoch, revision, method/path를 묶어 PostgREST에 전달한다. DB pre-request는 attestation과 active mirror를 같은 transaction에서 검증한 뒤 remote exact `iss`, `aud=authenticated`, `role=authenticated`, UUID `sub`, UUID `session_id`, `exp/iat/nbf`, allowlisted `alg/kid`를 강제한다.
-- missing/stale/deleted/identity-replaced binding, mirror revision mismatch, `iat < identity_created_at`, attestation method/path mismatch는 모든 personal PostgREST mutation/RPC에서 fail closed한다.
-- Storage는 `JWT_JWKS`와 같은 session-authority gateway를 사용한다. gateway는 owner fence와 active epoch를 mutation 직전에 다시 확인하고 Storage upstream은 Docker internal network에만 둔다. owner fence를 먼저 닫지 않은 mirror/deletion transition은 금지한다.
+- loopback session-authority gateway는 remote `/auth/v1/user` 검증 결과의 `(iss, sub, session_id, user.created_at)`와 current active mirror `(issuer, owner_uuid, identity_created_at, remote_revision)`를 request마다 결합한다. 이 비교만으로 logout/revocation을 탐지했다고 보지 않으며 client body의 UUID/epoch/session은 authority가 아니다.
+- gateway는 짧은 만료의 HMAC attestation에 owner, HMAC(session), epoch, revision, method/path, remote liveness verification timestamp를 묶어 PostgREST에 전달한다. DB pre-request는 attestation, active mirror, local `user_session_generation_bindings`의 active session-liveness HMAC binding을 같은 transaction에서 검증한 뒤 remote exact `iss`, `aud=authenticated`, `role=authenticated`, UUID `sub`, UUID `session_id`, `exp/iat/nbf`, allowlisted `alg/kid`를 강제한다.
+- session-liveness binding은 callback/refresh 직후 remote `/auth/v1/user` 성공 결과로만 생성/갱신한다. raw JWT/raw `session_id`는 저장하지 않고 versioned HMAC, key version, issuer, owner, identity epoch, remote verified timestamp, binding TTL, revoked/deleted terminal만 저장한다. Homecook logout, account deletion/quarantine, identity replacement, maintenance abort는 owner fence 아래 binding을 revoke/delete한다.
+- missing/stale/deleted/identity-replaced binding, expired binding TTL, remote liveness negative/outage, mirror revision mismatch, `iat < identity_created_at`, attestation method/path mismatch는 모든 personal PostgREST mutation/RPC에서 fail closed한다. remote outage 중 allow-until-exp는 금지한다.
+- Storage는 `JWT_JWKS`와 같은 session-authority gateway를 사용한다. gateway는 owner fence, active epoch, session-liveness HMAC binding, remote liveness를 mutation 직전에 다시 확인하고 Storage upstream은 Docker internal network에만 둔다. owner fence를 먼저 닫지 않은 mirror/deletion transition은 금지한다.
 - remote private signing key는 local file/env/container에 복사하지 않는다. JWKS는 size/timeout/alg/kty/unique kid/public verify-only 조건을 검사해 atomic replace하고 reload 뒤 RLS canary를 수행한다.
 
 ### two-system maintenance barrier
@@ -179,8 +180,9 @@ contract 뒤 rollback floor는 content-aware release다. direct-only binary 배�
 
 ### `user_session_generation_bindings`
 
-- raw JWT session ID 대신 server secret의 versioned HMAC `session_key_hash`, key version, owner, generation, auth identity epoch, bound/revoked time을 저장한다.
+- raw JWT session ID 대신 server secret의 versioned HMAC `session_key_hash`, key version, remote issuer, owner, generation, auth identity epoch, remote liveness verified time, binding expiry, bound/revoked/deleted-terminal time을 저장한다.
 - anon/authenticated direct read/write는 모두 금지한다. server-verified bind/revoke RPC만 허용한다.
+- callback/refresh 직후 remote `/auth/v1/user` liveness 확인 성공만 bind/TTL 갱신을 허용한다. Homecook logout, account deletion/quarantine, identity replacement, maintenance abort는 owner fence 아래 revoke/delete하고 remote Auth outage에서는 신규 bind/TTL 연장을 금지한다.
 - secret rotation 동안 JWT max lifetime+30일 old verifier를 유지한다. generation complete+auth terminal 뒤 같은 보존 기간이 지나면 binding detail은 삭제할 수 있으나 lifecycle initiation tombstone은 삭제하지 않는다.
 
 ### capability/fence/guard

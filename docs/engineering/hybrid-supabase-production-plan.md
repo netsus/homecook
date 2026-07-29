@@ -1,6 +1,6 @@
 # 원격 Auth + 로컬 DB/Storage production 전환 계획
 
-상태: **Stage -1 계약·독립 검토 완료, 문서 PR 준비 / local write 미개방**
+상태: **Stage 1 doc gate 수리·재검토 중 / local write 미개방**
 작성일: **2026-07-30 KST**
 대상 서비스: `homecook`
 목표 구조: **원격 Supabase Auth + 현재 Mac의 self-hosted Supabase DB/Storage + 기존 RLS 유지**
@@ -16,8 +16,9 @@ Google·네이버·카카오 로그인과 세션 발급은 기존 원격 Supabas
 
 - 계약 작성 Codex task: `019faf10-2d5b-7240-91e5-12d616cd3e89`
 - 독립 architecture/security 검토 Codex task: `019faf26-2c9d-7d00-b632-12da47d3fad4`
-- 독립 검토 결론: Stage -1 통합 계약 `PASS`, 필수 설계 blocker `0`
-- 검토 후 조치: 최신 GPT-only `origin/master`를 반영하고 source-of-truth/workpack/automation/workflow/harness 검증을 다시 통과했다.
+- 1차 architecture/security 검토 결론: Stage -1 통합 계약 `PASS`
+- Stage 1 docs-gate 검토 Codex task: `019faf4f-1c1d-7af1-84e2-97e3c694265a`
+- docs-gate 결론: `REQUEST_CHANGES` 7건. session-liveness binding, 기존 public error mapping, workflow-v2 projection, HTML pending/done 분리, mirror schema 일치, browser direct Storage Stage 2/4 분리, Schema Change 표시를 수리하고 재검토한다.
 
 ## 1. 이 문서가 결정하는 것
 
@@ -121,8 +122,8 @@ flowchart LR
 3. local data client를 request마다 만들고 다음 두 값을 분리해 보낸다.
    - `apikey`: 로컬 Supabase publishable key
    - `Authorization: Bearer <remote user JWT>`
-4. session-authority gateway가 verified `(iss, sub, session_id, user.created_at)`를 current active mirror epoch와 결합한다.
-5. Storage loopback gateway와 PostgREST DB pre-request가 exact issuer/audience/role/sub/session/time/alg/kid를 확인한다.
+4. session-authority gateway가 verified `(iss, sub, session_id, user.created_at)`를 current active mirror epoch와 local session-liveness HMAC binding에 결합한다.
+5. Storage loopback gateway와 PostgREST DB pre-request가 exact issuer/audience/role/sub/session/time/alg/kid, active binding TTL, method/path attestation을 확인한다.
 6. 로컬 PostgREST/Storage가 remote JWKS 공개키로 JWT 서명을 확인한다.
 7. PostgreSQL이 JWT의 `sub`를 `auth.uid()`로 읽어 기존 RLS를 적용한다.
 
@@ -130,7 +131,7 @@ flowchart LR
 
 - refresh token은 원격 Supabase Auth에만 보낸다.
 - local data client는 session을 저장하거나 refresh하지 않는다.
-- 원격 Auth가 중단되면 아직 만료되지 않은 access token은 로컬에서 검증할 수 있지만, 만료 뒤 로그인과 refresh는 실패한다.
+- 원격 Auth가 중단되면 user-scoped local DB/Storage request는 fail closed한다. 아직 만료되지 않은 access token의 로컬 서명 검증만으로 logout/revocation/liveness를 증명하지 않으며 remote outage 중 binding TTL 연장, 신규 binding 생성, mutation allow-until-exp는 금지한다.
 
 ## 5. JWT/JWKS 신뢰 설계
 
@@ -187,10 +188,11 @@ flowchart LR
 | `issuer` | 다른 Supabase project token 혼입 차단 |
 | `active_epoch` | issuer+owner current epoch 1개 보장 |
 | `remote_revision` / `remote_identity_digest` | remote control-plane과 CAS 비교 |
-| `verified_at` / `deleted_terminal_at` | 검증·삭제 terminal 상태 |
+| `verified_at` / `deleted_terminal_at` / `deleted_terminal_reason` | 검증·삭제 terminal 상태와 이유 |
 | `evidence_revision` | callback/Admin read evidence 추적 |
+| `created_at` / `updated_at` | mirror row 생성·갱신 시각 |
 
-원본 access token, refresh token, raw/hash email, raw/hash provider subject, profile metadata, raw provider payload, OAuth secret은 저장하지 않는다. profile bootstrap은 검증된 remote 결과의 exact allowlist를 일회성 internal RPC로만 전달한다.
+원본 access token, refresh token, raw/hash email, raw/hash provider subject, profile metadata, raw provider payload, OAuth secret은 저장하지 않는다. email/provider subject는 hash도 PII로 간주해 장기 mirror에 저장하지 않는다. profile bootstrap은 검증된 remote 결과의 exact allowlist를 일회성 internal RPC로만 전달한다.
 
 ### write authority
 
@@ -209,6 +211,9 @@ flowchart LR
 5. `generation_active`는 새 barrier, mirror digest, deletion outbox, Storage owner signal이 모두 검증되기 전까지 활성화하지 않는다.
 6. 기존 official contract보다 안전성이 낮아지는 경우 hybrid cutover를 중단한다.
 7. 모든 authenticated DB/Storage request는 remote verified session tuple과 active epoch를 결합한다. missing/stale/deleted/replaced binding과 old `iat` token은 fail closed한다.
+   - remote verified session tuple과 active epoch만으로는 logout/revocation authority가 아니다.
+   - callback/refresh 성공 시 session-liveness HMAC binding을 만들고 logout/deletion/quarantine/identity replacement/maintenance abort에서 revoke/delete한다.
+   - 모든 request에서 remote liveness와 binding TTL을 재검증하며 remote outage는 user-scoped Data/Storage fail-closed다.
 8. provider linking은 local owner authority가 아니며 remote freeze를 주장하지 않는다. barrier 전후 population/revision digest CAS가 달라지면 cutover attempt를 abort/restart한다.
 9. deletion은 local owner fence/cleanup → remote Admin exact epoch delete → terminal readback → mirror terminal → lifecycle complete의 멱등 saga로 처리한다.
 
@@ -602,15 +607,15 @@ UPS와 자동 전원 복구가 없으면 정전 뒤 수동 복구가 필요하�
 ## 14. 구현 시작 전 체크리스트
 
 - [x] 사용자가 hybrid contract-evolution을 명시 승인했다.
-- [x] 공식 5종 문서와 `CURRENT_SOURCE_OF_TRUTH.md`가 먼저 갱신됐다.
-- [x] 신규 workpack과 acceptance가 작성·독립 검토됐다.
+- [ ] 공식 5종 문서와 `CURRENT_SOURCE_OF_TRUTH.md`가 수리된 상태로 독립 재검토·merge됐다.
+- [ ] 신규 workpack과 acceptance가 docs-gate `PASS`를 받았다.
 - [x] production capability가 `legacy`, canonical generation row가 `0`이다.
 - [x] remote JWKS가 asymmetric key를 제공한다.
 - [x] 디스크 여유가 최소 gate를 만족한다.
 - [ ] off-Mac encrypted backup 위치가 준비됐다.
 - [ ] PostgreSQL 17 restore rehearsal이 통과했다.
 - [ ] Auth/Data client 분리 테스트가 RED부터 준비됐다.
-- [x] identity mirror와 `auth.users` dependency 대체안이 security review를 통과했다.
+- [ ] identity mirror, session-liveness binding과 `auth.users` dependency 대체안이 최종 security review를 통과했다.
 - [ ] User A/B RLS negative test가 통과했다.
 - [ ] Storage object manifest mismatch가 `0`이다.
 - [ ] Google·네이버·카카오 E2E가 모두 통과했다.
@@ -640,6 +645,6 @@ UPS와 자동 전원 복구가 없으면 정전 뒤 수동 복구가 필요하�
 - 현재 account-generation 진입 조건: **충족 (`legacy`, revision `1`)**
 - 현재 Mac CPU/RAM: **충족**
 - 현재 disk gate: **충족 (약 120 GiB free, final 직전 재검증)**
-- Stage -1 설계 blocker: **해소, 독립 architecture/security 검토 PASS**
+- Stage 1 설계 blocker: **docs-gate REQUEST_CHANGES 수리·재검토 중**
 - 남은 final cutover blocker: **실제 구현 검증, 24시간 shadow, off-Mac encrypted restore와 post-write rollback rehearsal**
-- 구현 상태: **Stage -1 문서 PR 준비, local write 미개방**
+- 구현 상태: **Stage 1 문서 재검토 전, local write 미개방**

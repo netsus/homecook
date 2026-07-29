@@ -21,10 +21,10 @@ flowchart LR
 ```
 
 - callback은 원격 Auth에서 session/user를 검증한 뒤 PII 없는 current identity epoch를 local mirror에 멱등 반영한다.
-- user-scoped Data/Storage request는 local publishable key와 원격 user JWT를 사용한다. session-authority gateway가 remote `/auth/v1/user` 결과의 `(iss, sub, session_id, user.created_at)`와 current active mirror epoch를 비교하고, missing/stale/deleted/replaced binding은 fail closed한다.
+- user-scoped Data/Storage request는 local publishable key와 원격 user JWT를 사용한다. session-authority gateway가 remote `/auth/v1/user` 결과의 `(iss, sub, session_id, user.created_at)`와 current active mirror epoch를 비교한 뒤 local `user_session_generation_bindings`의 session-liveness HMAC binding을 재검증한다. `/auth/v1/user`와 epoch 비교만으로 logout/revocation을 탐지했다고 간주하지 않는다. callback/refresh 성공은 binding 생성/갱신, Homecook logout/deletion/quarantine/identity replacement/maintenance abort는 binding revoke/delete, 모든 request는 remote liveness와 HMAC binding/TTL 재검증을 수행한다. remote Auth outage에서는 allow-until-exp 없이 user-scoped DB/Storage request를 fail closed한다.
 - maintenance는 remote control-plane closed ack → linking UI 차단 → barrier 전 remote identity population/revision digest → callback drain/reconcile → local fence/mirror digest → barrier 후 remote digest CAS → Storage/DB final digest → local authority promote 순서다. direct/automatic link race로 digest가 달라지면 write를 열지 않고 attempt를 다시 시작한다.
 - account deletion은 local owner fence/cleanup → remote Admin exact epoch delete → terminal readback → mirror terminal → lifecycle complete 순서다. already-absent/duplicate/identity-replaced를 멱등하게 분기한다.
-- local write 전 실패는 remote authority로 복귀할 수 있다. 첫 local write 후에는 write freeze, delta export/restore 또는 forward-fix만 허용한다.
+- stale session/epoch/generation은 새 public status/code를 만들지 않는다. session-liveness binding missing/revoked/expired, remote liveness negative/outage, deleted/replaced epoch, old `iat`, HMAC mismatch는 기존 `409 ACCOUNT_SESSION_STALE`, active generation mismatch는 기존 `409 ACCOUNT_GENERATION_STALE`, maintenance는 기존 `503 ACCOUNT_LIFECYCLE_MAINTENANCE`로 반환한다. local write 전 실패는 remote authority로 복귀할 수 있다. 첫 local write 후에는 write freeze, delta export/restore 또는 forward-fix만 허용한다.
 
 > **2026-07-29 contract-evolution — local-first MacBook 초기 배포 흐름**
 >

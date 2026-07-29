@@ -34,12 +34,15 @@
 - [ ] remote private signing key가 local env/file/container/log/artifact에 없다 <!-- omo:id=accept-hybrid-no-private-key-local;stage=2;scope=shared;review=3,6 -->
 - [ ] JWKS sync는 size/timeout/alg/kty/kid/public-key allowlist와 atomic replace를 검증한다 <!-- omo:id=accept-hybrid-jwks-sync-guard;stage=2;scope=backend;review=3,6 -->
 - [ ] JWKS stale/rotation rehearsal이 alert와 canary RLS verification을 남긴다 <!-- omo:id=accept-hybrid-jwks-rotation;stage=2;scope=backend;review=3,6 -->
+- [ ] session-liveness HMAC binding은 callback/refresh remote liveness success에서만 생성/갱신되고 logout/deletion/quarantine/identity replacement/maintenance abort에서 revoke/delete된다 <!-- omo:id=accept-hybrid-session-liveness-create-revoke;stage=2;scope=backend;review=3,6 -->
+- [ ] 모든 user-scoped DB/Storage request가 remote liveness recheck, active mirror epoch, session-liveness HMAC binding, binding TTL, method/path attestation을 재검증한다 <!-- omo:id=accept-hybrid-session-liveness-request-recheck;stage=2;scope=backend;review=3,6 -->
+- [ ] remote Auth outage에서는 binding TTL 연장, 신규 binding 생성, user-scoped mutation allow-until-exp가 모두 금지되고 기존 public mapping으로 fail closed된다 <!-- omo:id=accept-hybrid-remote-outage-fail-closed;stage=2;scope=backend;review=3,6 -->
 
 ## Identity Mirror / Account Lifecycle
 
 - [ ] private remote identity mirror가 remote verified session/Admin read-only result만 authority로 사용한다 <!-- omo:id=accept-hybrid-mirror-authority;stage=2;scope=backend;review=3,6 -->
-- [ ] `private.remote_auth_identity_epochs`는 active epoch 단일성, `issuer`, `owner_uuid`, `identity_created_at`, `remote_revision`, `remote_identity_digest`, `verified_at`/`deleted_terminal_at`, `evidence_revision`만 저장한다 <!-- omo:id=accept-hybrid-mirror-minimal-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] mirror는 raw/profile PII, raw token, refresh token, OAuth code, provider payload, raw email, raw provider subject, unbounded JSON을 저장하지 않는다 <!-- omo:id=accept-hybrid-mirror-secret-free;stage=2;scope=backend;review=3,6 -->
+- [ ] `private.remote_auth_identity_epochs`는 active epoch 단일성, `issuer`, `owner_uuid`, `identity_created_at`, `remote_revision`, `remote_identity_digest`, `verified_at`, `deleted_terminal_at`, `deleted_terminal_reason`, `evidence_revision`, `created_at`, `updated_at`만 저장한다 <!-- omo:id=accept-hybrid-mirror-minimal-fields;stage=2;scope=backend;review=3,6 -->
+- [ ] mirror는 raw/profile PII, raw token, refresh token, OAuth code, provider payload, raw/hash email, raw/hash provider subject, unbounded JSON을 저장하지 않는다 <!-- omo:id=accept-hybrid-mirror-secret-free;stage=2;scope=backend;review=3,6 -->
 - [ ] profile bootstrap은 검증된 remote session/Admin 결과의 exact allowlist 입력을 일회성 internal RPC로 전달하고 mirror에는 저장하지 않는다 <!-- omo:id=accept-hybrid-profile-bootstrap-rpc;stage=2;scope=backend;review=3,6 -->
 - [ ] application-owned `auth.users` direct read/FK/digest dependency inventory가 100% 분류된다 <!-- omo:id=accept-hybrid-auth-users-inventory;stage=2;scope=backend;review=3,6 -->
 - [ ] 세 FK, 함수, digest, lock 항목별 `auth.users` replacement matrix가 구현 전 review 승인된다 <!-- omo:id=accept-hybrid-auth-users-replacement-matrix;stage=2;scope=backend;review=3,6 -->
@@ -47,7 +50,8 @@
 - [ ] account-generation identity epoch 검증이 mirror authority로 대체되고 세대 보호가 약화되지 않는다 <!-- omo:id=accept-hybrid-generation-mirror-epoch;stage=2;scope=backend;review=3,6 -->
 - [ ] remote deleted/recreated same UUID 또는 stale session이 이전 generation personal data를 쓰지 못한다 <!-- omo:id=accept-hybrid-deleted-recreated-stale;stage=2;scope=backend;review=3,6 -->
 - [ ] 모든 authenticated DB/Storage request는 remote `/auth/v1/user` 검증 결과의 `(iss, sub, session_id, user.created_at)`와 current active mirror epoch를 결합하는 session-authority gateway를 통과한다 <!-- omo:id=accept-hybrid-current-session-epoch-binding;stage=2;scope=backend;review=3,6 -->
-- [ ] missing/stale/deleted/identity-replaced/revoked epoch binding과 old `iat < identity_created_at` token은 personal DB/Storage write에서 fail closed된다 <!-- omo:id=accept-hybrid-stale-binding-fail-closed;stage=2;scope=backend;review=3,6 -->
+- [ ] missing/stale/deleted/identity-replaced/revoked session-liveness 또는 epoch binding, expired binding TTL, remote liveness negative/outage, HMAC mismatch, old `iat < identity_created_at` token은 personal DB/Storage write에서 `409 ACCOUNT_SESSION_STALE`로 fail closed된다 <!-- omo:id=accept-hybrid-stale-binding-fail-closed;stage=2;scope=backend;review=3,6 -->
+- [ ] active generation mismatch는 `409 ACCOUNT_GENERATION_STALE`, maintenance는 `503 ACCOUNT_LIFECYCLE_MAINTENANCE`로 매핑되고 stale session/epoch 원인에 신규 public status/error code를 만들지 않는다 <!-- omo:id=accept-hybrid-existing-error-mapping-only;stage=2;scope=backend;review=3,6 -->
 - [ ] provider identity set은 local owner/epoch authority가 아니다. maintenance는 linking UI를 막고 barrier 전후 remote identity population/revision digest CAS를 비교하며 direct/automatic linking race가 digest를 바꾸면 attempt를 abort/restart한다 <!-- omo:id=accept-hybrid-provider-linking-revision-cas;stage=2;scope=backend;review=3,6 -->
 - [ ] provider link가 owner/epoch를 바꾸지 않으면 remote-only metadata로 reconcile하고, owner/epoch 또는 population digest가 바뀌면 local write 개방 전에 fail closed한다 <!-- omo:id=accept-hybrid-provider-linking-boundary;stage=2;scope=backend;review=3,6 -->
 - [ ] deletion은 local owner fence/cleanup -> remote Admin exact id+created_at 확인/delete -> terminal readback -> mirror terminal -> lifecycle complete 순서이며 retry, duplicate, identity-replaced 분기가 멱등하다 <!-- omo:id=accept-hybrid-deletion-exact-epoch-saga;stage=2;scope=backend;review=3,6 -->
@@ -59,7 +63,8 @@
 - [ ] service role key 누락이 user client fallback으로 이어지지 않는다 <!-- omo:id=accept-hybrid-no-user-fallback;stage=2;scope=backend;review=3,6 -->
 - [ ] 모든 user route의 service role priority/fallback count가 0이다 <!-- omo:id=accept-hybrid-user-route-service-role-zero;stage=2;scope=backend;review=3,6 -->
 - [ ] user/public/admin/internal route와 helper inventory, exact internal service-role allowlist, AST/static CI gate가 통과한다 <!-- omo:id=accept-hybrid-route-helper-static-gate;stage=2;scope=backend;review=3,6 -->
-- [ ] browser bundle direct local Storage URL/key/SDK write/delete path count가 0이다 <!-- omo:id=accept-hybrid-browser-direct-storage-zero;stage=2;scope=frontend;review=3,6 -->
+- [ ] Stage 2 route/helper/browser inventory와 AST/static CI gate가 browser direct local Storage URL/key/SDK write/delete path를 탐지하고 차단한다 <!-- omo:id=accept-hybrid-browser-direct-storage-static-gate;stage=2;scope=backend;review=3,6 -->
+- [ ] Stage 4 frontend implementation evidence에서 기존 browser direct Storage mutation 경로가 제거되고 기존 서버 image API 경유만 남는다 <!-- omo:id=accept-hybrid-browser-direct-storage-stage4-removal;stage=4;scope=frontend;review=5,6 -->
 - [ ] User A token으로 User B DB row read/write가 0이다 <!-- omo:id=accept-hybrid-cross-owner-db-denied;stage=2;scope=backend;review=3,6 -->
 - [ ] User A token으로 User B Storage object read/write/delete가 0이다 <!-- omo:id=accept-hybrid-cross-owner-storage-denied;stage=2;scope=backend;review=3,6 -->
 - [ ] local DB down 또는 Storage down이 기존 safe error 상태로 fail closed되고 partial write를 만들지 않는다 <!-- omo:id=accept-hybrid-local-down-fail-closed;stage=2;scope=shared;review=3,6 -->
@@ -117,6 +122,7 @@
 - [ ] Naver login -> private CRUD -> logout -> relogin smoke가 통과한다 <!-- omo:id=accept-hybrid-playwright-naver;stage=4;scope=shared;review=6 -->
 - [ ] Kakao login -> private CRUD -> logout -> relogin smoke가 통과한다 <!-- omo:id=accept-hybrid-playwright-kakao;stage=4;scope=shared;review=6 -->
 - [ ] recipe image upload/read/cancel/delete smoke가 local Storage에서 통과한다 <!-- omo:id=accept-hybrid-playwright-image;stage=4;scope=shared;review=6 -->
+- [ ] browser에서 Storage SDK direct write/delete가 호출되지 않고 existing server image API만 사용된다 <!-- omo:id=accept-hybrid-playwright-no-direct-storage;stage=4;scope=frontend;review=5,6 -->
 - [ ] 390px/320px/desktop에서 기존 login/error/account states가 깨지지 않는다 <!-- omo:id=accept-hybrid-playwright-viewports;stage=4;scope=frontend;review=6 -->
 
 ### Independent Review
@@ -124,6 +130,7 @@
 - [ ] 별도 Codex architecture reviewer가 hybrid trust boundary를 승인한다 <!-- omo:id=accept-hybrid-architecture-review;stage=2;scope=shared;review=3,6 -->
 - [ ] 별도 Codex security reviewer가 JWT/JWKS/service-role/mirror/backup 범위를 승인한다 <!-- omo:id=accept-hybrid-security-review;stage=2;scope=shared;review=3,6 -->
 - [ ] Stage author와 구현 세션은 자기 산출물을 최종 승인하지 않는다 <!-- omo:id=accept-hybrid-separated-codex-roles;stage=2;scope=shared;review=3,6 -->
+- [ ] Design Status N/A이므로 신규 visual authority는 요구하지 않지만 Stage 4 browser direct Storage 제거는 Stage 5 lightweight boundary review와 Stage 6 closeout을 통과한다 <!-- omo:id=accept-hybrid-design-status-na-stage5-boundary-review;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual QA
 

@@ -11,7 +11,9 @@
 - private mirror가 raw/profile PII를 저장하거나 `private.remote_auth_identity_epochs` 최소 필드(active epoch 단일성, issuer/owner/created_at, remote revision/digest, verified/deleted terminal, evidence revision)를 넘으면 cutover 금지.
 - profile bootstrap이 검증된 remote session/Admin 결과의 exact allowlist 입력을 일회성 internal RPC로 전달하지 않거나 mirror에 profile PII를 저장하면 cutover 금지.
 - remote `/auth/v1/user` 검증 결과의 `(iss, sub, session_id, user.created_at)`와 current active mirror epoch binding이 모든 personal DB/Storage request에 강제되지 않으면 cutover 금지.
+- `/auth/v1/user`와 epoch binding만으로 logout/revocation 탐지를 완료했다고 주장하면 cutover 금지. session-liveness HMAC binding 생성/폐기/재검증/TTL, logout/deletion/quarantine/identity replacement/maintenance abort revoke/delete, remote outage fail-closed가 모든 user-scoped DB/Storage request에 강제되어야 한다.
 - missing/stale/deleted/identity-replaced binding, `iat < identity_created_at`, deleted/recreated same UUID의 old token/session이 DB 또는 Storage write를 통과하면 즉시 cutover 금지.
+- stale session/epoch/generation에 신규 public status/error code를 만들면 즉시 blocker다. public mapping은 기존 `409 ACCOUNT_SESSION_STALE`, `409 ACCOUNT_GENERATION_STALE`, `503 ACCOUNT_LIFECYCLE_MAINTENANCE`만 사용한다.
 - 모든 user route에서 service role priority/fallback count가 0이 아니거나 user/public/admin/internal inventory, exact internal allowlist, AST/static CI gate, browser direct Storage 0 증거가 없으면 cutover 금지.
 - restore 순서가 pre-data schema -> hybrid compatibility/FK 교체 -> application data -> post-data validate가 아니면 cutover 금지. local `auth.users=0`은 의도된 invariant이며 `pg_constraint`/`pg_depend`/`pg_proc`/policy 잔존 0과 known fixture `public.users=5/admin missing=1/audit missing=99` 교정 전 fail·교정 후 pass를 증명해야 한다.
 - off-Mac encrypted backup evidence schema, DB+Storage cut line, key 분리 복구, pre-write rollback rehearsal, post-write rollback rehearsal 전 final cutover 금지.

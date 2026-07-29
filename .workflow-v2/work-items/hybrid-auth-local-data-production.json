@@ -1,0 +1,117 @@
+{
+  "id": "hybrid-auth-local-data-production",
+  "title": "Hybrid remote Auth and local Data production contract",
+  "summary": "Keep Google, Naver, and Kakao Auth on remote Supabase while moving application DB and Storage authority to Mac self-hosted Supabase without weakening RLS, owner boundaries, account-generation safeguards, or public API shape.",
+  "project_profile": "homecook",
+  "change_type": "docs-only",
+  "surface": "fullstack",
+  "risk": "critical",
+  "preset": "vertical-slice-strict",
+  "goal": "Lock the official five documents, workpack, acceptance, automation, workflow projection, and beginner plan before implementation or local user writes begin.",
+  "owners": {
+    "claude": "retired-do-not-dispatch-legacy-schema-field",
+    "codex": "separate Stage 1 author, docs-gate reviewer, implementation, security, operations, and closeout tasks; no task approves its own work",
+    "workers": []
+  },
+  "dependencies": [
+    "account-session-generation-foundation merged",
+    "recipe-visibility-read-hardening merged",
+    "off-Mac encrypted restore and post-write rollback rehearsal required before final cutover"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/workpacks/README.md",
+      "docs/요구사항기준선-v1.7.26.md",
+      "docs/화면정의서-v1.5.30.md",
+      "docs/유저flow맵-v1.3.28.md",
+      "docs/db설계-v1.3.27.md",
+      "docs/api문서-v1.2.30.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/engineering/codex-task-handoff.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/hybrid-supabase-production-plan.md",
+      "docs/workpacks/hybrid-auth-local-data-production/README.md",
+      "docs/workpacks/hybrid-auth-local-data-production/acceptance.md",
+      "docs/workpacks/hybrid-auth-local-data-production/automation-spec.json"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [
+      "real Google OAuth login with remote Supabase Auth",
+      "real Naver OAuth login with remote Supabase Auth",
+      "real Kakao OAuth login with remote Supabase Auth",
+      "remote Auth JWKS rotation and stale rehearsal",
+      "session-liveness HMAC binding logout revocation and remote-outage rehearsal",
+      "provider linking digest CAS race abort rehearsal",
+      "deletion exact-epoch terminal readback rehearsal",
+      "deleted-recreated same UUID old DB and Storage session rejection",
+      "off-Mac encrypted backup restore drill",
+      "pre-write and post-write rollback rehearsals",
+      "capacity final preflight recheck"
+    ],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 2
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:source-of-truth-sync",
+      "BRANCH_NAME=docs/hybrid-supabase-contract pnpm validate:workpack -- --slice hybrid-auth-local-data-production",
+      "node scripts/validate-automation-spec.mjs --slice hybrid-auth-local-data-production",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/legacy-auth-contracts.test.ts tests/workflow-v2-docs.test.ts tests/omo-doc-gate.test.ts",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:source-of-truth-sync",
+      "BRANCH_NAME=docs/hybrid-supabase-contract pnpm validate:workpack -- --slice hybrid-auth-local-data-production",
+      "node scripts/validate-automation-spec.mjs --slice hybrid-auth-local-data-production",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/legacy-auth-contracts.test.ts tests/workflow-v2-docs.test.ts tests/omo-doc-gate.test.ts",
+      "git diff --check"
+    ],
+    "evaluator_commands": [
+      "separate Codex docs-gate review of the exact commit SHA",
+      "separate Codex architecture and security review before implementation",
+      "separate Codex Stage 3 and Stage 6 reviews after implementation"
+    ],
+    "artifact_assertions": [
+      "official-five-session-liveness-and-existing-error-mapping",
+      "workflow-work-item-and-status-projection",
+      "beginner-html-done-pending-separation",
+      "identity-mirror-exact-schema-alignment",
+      "browser-direct-storage-stage2-static-and-stage4-removal-split",
+      "independent-codex-required-findings-zero"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "needs_revision",
+    "verification_status": "pending",
+    "evaluation_status": "fixable",
+    "evaluation_round": 1,
+    "last_evaluator_result": "REQUEST_CHANGES by Codex task 019faf4f-1c1d-7af1-84e2-97e3c694265a at a3d16bd4",
+    "auto_merge_eligible": false,
+    "blocked_reason_code": "stage1-doc-gate-repair"
+  },
+  "out_of_scope": [
+    "runtime implementation in this docs PR",
+    "local or remote DB write",
+    "migration apply",
+    "remote provider callback change",
+    "public API shape change",
+    "account-generation activation"
+  ],
+  "open_questions": []
+}

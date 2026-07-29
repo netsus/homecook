@@ -6,7 +6,7 @@
 
 ## Branches
 
-- 문서: `docs/hybrid-auth-local-data-production`
+- 문서: `docs/hybrid-supabase-contract`
 - 백엔드/인프라: `feature/be-hybrid-auth-local-data-production`
 - 프론트엔드: `feature/fe-hybrid-auth-local-data-production`
 
@@ -29,6 +29,7 @@
   - provider linking은 remote freeze를 주장하지 않고 barrier 전후 user/identity population+revision digest CAS와 callback reconcile로 충돌 시 cutover abort
 - DB 영향:
   - PII 없는 private `remote_auth_identity_epochs` mirror 추가
+  - 기존 `user_session_generation_bindings`를 remote liveness와 identity epoch에 묶는 additive session-liveness authority로 확장
   - `auth.users` direct dependency inventory 및 mirror authority replacement matrix 작성
   - local self-hosted PostgREST는 combined local+remote verify JWKS, `PGRST_JWT_AUD=authenticated`, DB pre-request exact claim guard를 사용
   - local Storage는 `JWT_JWKS`와 loopback claim-verifying gateway를 사용하고 upstream port는 Docker internal network only
@@ -36,7 +37,7 @@
   - local `auth.users=0`은 의도된 invariant이며 `pg_constraint`/`pg_depend`/`pg_proc`/policy의 `auth.users` 잔존은 0이어야 함
   - DB dump/restore, Storage copy, count/digest manifest, off-Mac backup evidence, rollback rehearsal evidence
 - Schema Change:
-  - [ ] 있음 -> `supabase/migrations/<timestamp>_hybrid_auth_local_data_identity_mirror.sql` 생성 필요
+  - [x] 있음 -> `supabase/migrations/<timestamp>_hybrid_auth_local_data_identity_and_session_authority.sql` 생성 필요
 
 ## Out of Scope
 
@@ -80,13 +81,22 @@
   - user response 생성이나 owner-scoped mutation fallback에 사용하지 않는다.
   - local anon/service token은 내부 경로에서만 별도 허용하고 user-scoped gateway는 거부한다.
 
+### Session liveness / logout / revocation
+
+- remote `/auth/v1/user`와 identity epoch 비교는 필요조건이지만 logout/revocation 탐지 authority가 아니다.
+- callback/refresh 직후 remote liveness 확인이 성공해야 local `user_session_generation_bindings`에 server-secret HMAC session-liveness binding을 생성/갱신한다.
+- binding에는 raw JWT/raw `session_id`를 저장하지 않는다. 저장 허용값은 versioned HMAC, key version, issuer, owner, identity epoch, remote verified timestamp, binding TTL, revoked/deleted terminal뿐이다.
+- Homecook logout, account deletion/quarantine, identity replacement, maintenance abort는 owner fence 아래 binding을 revoke/delete한다.
+- 모든 user-scoped DB/Storage request는 remote liveness recheck, active mirror epoch, session-liveness HMAC binding, binding TTL, method/path attestation을 재검증한다.
+- remote Auth outage에서는 binding TTL 연장, 신규 binding 생성, user-scoped mutation allow-until-exp를 금지하고 fail closed한다.
+
 ### JWT / JWKS
 
 - remote Auth issuer는 exact URL로 고정한다.
 - local PostgREST는 combined local+remote verify JWKS를 사용하되 `PGRST_JWT_AUD=authenticated`와 DB pre-request exact claim guard를 함께 둔다.
 - local Storage는 `JWT_JWKS`를 사용하되 외부에서 우회 불가능한 loopback claim-verifying gateway를 단일 user entrypoint로 둔다. Storage upstream port는 Docker internal network에만 둔다.
-- authenticated Data/Storage request마다 gateway가 remote `/auth/v1/user`의 `(iss, sub, session_id, user.created_at)`를 current active mirror epoch와 결합한다.
-- PostgREST mutation은 gateway HMAC attestation을 DB pre-request가 active mirror와 같은 transaction에서 재검증한다. Storage mutation은 owner fence와 epoch를 바로 전에 다시 확인한다.
+- authenticated Data/Storage request마다 gateway가 remote `/auth/v1/user`의 `(iss, sub, session_id, user.created_at)`를 current active mirror epoch와 session-liveness HMAC binding에 결합한다.
+- PostgREST mutation은 gateway HMAC attestation과 active binding TTL을 DB pre-request가 active mirror와 같은 transaction에서 재검증한다. Storage mutation은 owner fence, epoch, active binding을 바로 전에 다시 확인한다.
 - 검증 항목: allowlisted `alg`/`kid`, remote exact `iss`, `aud=authenticated`, `role=authenticated`, UUID `sub`, UUID `session_id`, `iat`/`nbf`/`exp` time claims.
 - remote private signing key는 Mac/local container/env에 복사하지 않는다.
 - JWKS sync는 atomic replace, reload/recreate, canary RLS read, stale alert를 포함한다.
@@ -94,8 +104,8 @@
 ### Identity mirror
 
 - private mirror는 remote verified session 또는 Auth Admin read-only reconciler 결과만 받는다.
-- mirror 저장 허용: active epoch 단일성, `issuer`, `owner_uuid`, `identity_created_at`, `remote_revision`, `remote_identity_digest`, `verified_at`/`deleted_terminal_at`, `evidence_revision`.
-- 저장 금지: raw/profile PII, raw email, raw provider subject, raw token, refresh token, OAuth code, provider payload, cookie, unbounded JSON.
+- mirror 저장 허용: active epoch 단일성, `issuer`, `owner_uuid`, `identity_created_at`, `remote_revision`, `remote_identity_digest`, `verified_at`, `deleted_terminal_at`, `deleted_terminal_reason`, `evidence_revision`, `created_at`, `updated_at`.
+- 저장 금지: raw/profile PII, raw/hash email, raw/hash provider subject, raw token, refresh token, OAuth code, provider payload, cookie, unbounded JSON.
 - profile bootstrap은 검증된 remote session/Admin 결과의 exact allowlist 입력만 일회성 internal RPC로 local profile 생성에 전달하고 mirror에는 저장하지 않는다.
 - `auth.users` direct read/FK/digest/created_at authority는 mirror read로 대체하며 FK/함수/digest/lock별 replacement matrix를 작성한다.
 - historical audit actor는 set-null 또는 write-time snapshot policy로 처리한다.
@@ -108,6 +118,7 @@
 - 신규 public endpoint/field/status/error 없음.
 - local DB/Storage 장애는 기존 endpoint별 unauthorized/internal/error wrapper 범위 안에서 처리한다.
 - client body의 owner/generation/provider/email/capability 값은 authority가 아니다.
+- missing/revoked/expired session-liveness binding, remote liveness negative/outage, HMAC mismatch, stale/deleted/replaced epoch, old `iat`는 기존 `409 ACCOUNT_SESSION_STALE`; generation mismatch는 기존 `409 ACCOUNT_GENERATION_STALE`; maintenance는 기존 `503 ACCOUNT_LIFECYCLE_MAINTENANCE`로만 매핑한다.
 
 ### Cutover and rollback
 
@@ -130,6 +141,7 @@
 - local Data/Storage 내부 정보, JWKS key id, service key, token, project id는 화면에 표시하지 않는다.
 - provider login return-to-action은 기존 동작을 유지한다.
 - Design Status: N/A.
+- 신규 visual artifact와 product-design authority는 필요하지 않다. Stage 5는 browser direct Storage 제거와 기존 상태 유지 여부만 lightweight frontend boundary review로 확인하고 visual design 승인을 요구하지 않는다.
 
 ## Design Authority
 
@@ -145,6 +157,8 @@
 - [ ] 리뷰 대기 (pending-review)
 - [ ] 확정 (confirmed)
 - [x] N/A — 신규 FE 화면 없음
+
+> Stage 5 contract: 신규 화면/visual change가 없어 design authority는 N/A지만, Stage 4의 browser direct Storage 제거는 `review=5,6` lightweight boundary review를 통과해야 한다.
 
 ## Source Links
 
@@ -179,7 +193,8 @@
   - DB pre-request guard rejects non-remote exact `iss`, non-`authenticated` audience/role, non-UUID `sub`/`session_id`, invalid time claims, non-allowlisted alg/kid
   - User A cannot read/write User B rows
   - local Storage owner policy applies only through loopback claim-verifying gateway
-  - browser bundle direct Storage URL/key/SDK write/delete path count is 0
+  - Stage 2 inventory/static gate identifies browser direct Storage URL/key/SDK write/delete paths
+  - Stage 4 browser bundle/path evidence proves existing direct Storage mutation is removed and only the existing server image API remains
   - route/helper inventory proves user route service-role priority/fallback count is 0 and internal allowlist is exact
   - remote application DB/Storage write count remains 0 after local cutover
 - migration/rehearsal:
@@ -201,6 +216,7 @@
 - Remote Auth only; local DB/Storage only.
 - local Data/Storage is loopback-only.
 - remote Auth JWT ES256/JWKS verification plus exact claim guard is mandatory for local RLS.
+- remote Auth outage는 user-scoped local DB/Storage request를 fail closed하며 JWT 만료 전 allow-until-exp를 허용하지 않는다.
 - Storage user access must go through loopback claim-verifying gateway; browser direct local Storage access is 0.
 - private signing key and refresh token never enter local Data/Storage.
 - private remote identity mirror replaces application-owned `auth.users` direct dependency without raw/profile PII.
@@ -240,11 +256,13 @@
 - [ ] user-scoped local Data client에 service role/secret key가 들어가지 않음을 테스트로 고정한다 <!-- omo:id=delivery-hybrid-no-service-role-user-client;stage=2;scope=backend;review=3,6 -->
 - [ ] local PostgREST가 combined local+remote verify JWKS, `PGRST_JWT_AUD=authenticated`, DB pre-request exact claim guard로 remote `iss`/`aud`/`role`/UUID `sub`/UUID `session_id`/time claims/allowlisted alg/kid를 검증하고 `auth.uid()`를 remote `sub`로 적용한다 <!-- omo:id=delivery-hybrid-postgrest-jwks;stage=2;scope=backend;review=3,6 -->
 - [ ] local Storage가 `JWT_JWKS`와 loopback claim-verifying gateway 단일 진입점으로 remote JWT owner RLS를 적용하고 upstream port가 Docker internal network only임을 증명한다 <!-- omo:id=delivery-hybrid-storage-jwks;stage=2;scope=backend;review=3,6 -->
-- [ ] private remote identity mirror가 raw/profile PII 없이 active epoch, issuer/owner/created_at, remote revision/digest, verified/deleted terminal, evidence revision만 저장하고 `auth.users` dependency replacement matrix가 완료된다 <!-- omo:id=delivery-hybrid-identity-mirror;stage=2;scope=backend;review=3,6 -->
+- [ ] session-liveness HMAC binding 생성/폐기/재검증/TTL과 remote outage fail-closed가 local DB/Storage user path에서 검증된다 <!-- omo:id=delivery-hybrid-session-liveness-binding;stage=2;scope=backend;review=3,6 -->
+- [ ] private remote identity mirror가 raw/profile PII 없이 active epoch, issuer/owner/identity created_at, remote revision/digest, verified/deleted terminal/reason, evidence revision, row created_at/updated_at만 저장하고 `auth.users` dependency replacement matrix가 완료된다 <!-- omo:id=delivery-hybrid-identity-mirror;stage=2;scope=backend;review=3,6 -->
 - [ ] deletion/rejoin/Before User Created Hook barrier와 provider linking before/after remote digest CAS가 attempt UUID, monotonic revision, fencing token, remote/local ack, lease/quiet window/abort-resume state로 fail-closed 검증된다 <!-- omo:id=delivery-hybrid-two-system-barrier;stage=2;scope=backend;review=3,6 -->
 - [ ] account-generation capability가 `legacy`이고 safeguard가 약화되지 않음을 remote/local smoke로 증명한다 <!-- omo:id=delivery-hybrid-generation-legacy;stage=2;scope=shared;review=3,6 -->
 - [ ] local DB/Storage/Studio/Postgres가 loopback-only임을 네트워크 스캔으로 검증한다 <!-- omo:id=delivery-hybrid-loopback-only;stage=2;scope=backend;review=3,6 -->
-- [ ] user/public/admin/internal route/helper inventory와 exact internal service-role allowlist, AST/static CI gate, browser direct Storage count 0이 통과한다 <!-- omo:id=delivery-hybrid-route-authority-inventory;stage=2;scope=backend;review=3,6 -->
+- [ ] user/public/admin/internal route/helper inventory와 exact internal service-role allowlist, AST/static CI gate, browser direct Storage inventory gate가 통과한다 <!-- omo:id=delivery-hybrid-route-authority-inventory;stage=2;scope=backend;review=3,6 -->
+- [ ] 기존 frontend browser direct Storage mutation 경로가 제거되고 기존 서버 image API만 통과한다는 Stage 4 evidence가 있다 <!-- omo:id=delivery-hybrid-browser-direct-storage-removed;stage=4;scope=frontend;review=5,6 -->
 - [ ] remote DB dump restore와 Storage copy rehearsal이 pre-data schema -> hybrid compatibility/FK 교체 -> application data -> post-data validate 순서로 수행되고 `auth.users=0`, dependency residual 0, known fixture `public.users=5/admin missing=1/audit missing=99` 교정 전 fail·교정 후 pass를 증명한다 <!-- omo:id=delivery-hybrid-migration-rehearsal;stage=2;scope=backend;review=3,6 -->
 - [ ] `local-shadow` 24시간 safe GET semantic digest mismatch 0을 기록한다 <!-- omo:id=delivery-hybrid-shadow-read;stage=2;scope=shared;review=3,6 -->
 - [ ] final cutover 전 off-Mac encrypted backup evidence schema, restore drill, DB+Storage cut line, key 분리 복구, pre/post-write rollback rehearsal이 있다 <!-- omo:id=delivery-hybrid-backup-restore;stage=2;scope=shared;review=3,6 -->

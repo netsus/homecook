@@ -273,6 +273,8 @@
       font-family:"SF Mono",Menlo,monospace;
       font-size:12px;
     }
+    .check li.done::before{content:"[x]";color:var(--good)}
+    .check li.pending::before{content:"[ ]";color:var(--warn)}
     .decision{
       display:grid;
       grid-template-columns:190px 1fr;
@@ -306,7 +308,7 @@
       <div class="pills">
         <span class="pill">Homecook production</span>
         <span class="pill">2026-07-30 KST</span>
-        <span class="pill">Stage -1 계약·독립 검토 완료 · local write 미개방</span>
+        <span class="pill">Stage 1 doc gate 수리·재검토 중 · local write 미개방</span>
       </div>
       <h1>원격 Auth + 로컬 DB/Storage 전환 계획</h1>
       <p>Google·네이버·카카오 로그인은 원격 Supabase에 남기고, 실제 Homecook 데이터와 이미지는 현재 Mac에서 운영하기 위한 초보 개발자용 안내서입니다.</p>
@@ -328,7 +330,7 @@
       </div>
       <div class="note info">
         <strong>독립 검토 증거</strong>
-        작성 task <code>019faf10-2d5b-7240-91e5-12d616cd3e89</code>와 검토 task <code>019faf26-2c9d-7d00-b632-12da47d3fad4</code>를 분리했고, Stage -1 필수 설계 blocker 0으로 판정했습니다.
+        작성 task <code>019faf10-2d5b-7240-91e5-12d616cd3e89</code>와 검토 task를 분리했습니다. 현재 Stage 1 reviewer task <code>019faf4f-1c1d-7af1-84e2-97e3c694265a</code>의 REQUEST_CHANGES 7건을 수리 중이며, production gate 완료를 뜻하지 않습니다.
       </div>
     </section>
 
@@ -420,8 +422,8 @@
         <li>원격 Auth가 사용자 JWT를 발급합니다.</li>
         <li>Next.js가 remote <code>/auth/v1/user</code>로 token/user를 확인하고 issuer, audience, 만료시간, <code>sub</code>, <code>session_id</code>, <code>user.created_at</code>을 검증합니다.</li>
         <li>Next.js는 로컬 <code>apikey</code>와 원격 사용자 JWT를 서로 다른 header에 넣습니다.</li>
-        <li>session-authority gateway가 verified session tuple을 current active identity epoch와 결합합니다.</li>
-        <li>PostgREST DB pre-request와 Storage loopback gateway가 exact issuer, audience, role, <code>sub</code>, <code>session_id</code>, time claim을 검사합니다.</li>
+        <li>session-authority gateway가 verified session tuple을 current active identity epoch와 session-liveness HMAC binding에 결합합니다.</li>
+        <li>PostgREST DB pre-request와 Storage loopback gateway가 exact issuer, audience, role, <code>sub</code>, <code>session_id</code>, time claim, active binding TTL, method/path attestation을 검사합니다.</li>
         <li>로컬 PostgREST와 Storage가 공개 JWKS로 JWT 서명을 확인합니다.</li>
         <li>PostgreSQL이 <code>auth.uid()</code>로 기존 RLS를 적용합니다.</li>
       </ol>
@@ -605,7 +607,7 @@ pnpm mac-production:install</code></pre>
       </div>
       <div class="note warn">
         <strong>인터넷 장애의 의미</strong>
-        만료 전 access token은 로컬에서 확인할 수 있지만, 원격 Auth에 연결하지 못하면 새 로그인과 refresh가 실패합니다.
+        원격 Auth에 연결하지 못하면 user-scoped local DB/Storage 요청은 fail closed입니다. 만료 전 access token 서명만으로 logout/revocation을 증명하지 않으며 allow-until-exp로 mutation을 열지 않습니다.
       </div>
     </section>
 
@@ -632,18 +634,19 @@ pnpm mac-production:install</code></pre>
     <section class="section">
       <h2><span class="num">12</span>구현 시작 전 체크리스트</h2>
       <ul class="check">
-        <li>Hybrid contract-evolution을 사용자가 명시 승인했습니다.</li>
-        <li>공식 5종 문서와 <code>CURRENT_SOURCE_OF_TRUTH.md</code>가 먼저 갱신됐습니다.</li>
-        <li>신규 workpack과 acceptance가 작성되고 독립 검토됐습니다.</li>
-        <li>Capability가 <code>legacy</code>이고 canonical generation row가 0입니다.</li>
-        <li>디스크 여유와 off-Mac encrypted backup을 준비했습니다.</li>
-        <li>PostgreSQL 17 restore rehearsal을 통과했습니다.</li>
-        <li>Identity mirror와 <code>auth.users</code> 대체 설계가 security review를 통과했습니다.</li>
-        <li>User A/B RLS negative test를 통과했습니다.</li>
-        <li>Storage object mismatch가 0입니다.</li>
-        <li>Google·네이버·카카오 E2E를 통과했습니다.</li>
-        <li>24시간 shadow mismatch가 0입니다.</li>
-        <li>현재 사용자 지시가 승인한 cutover window 안에서 final evidence와 fencing revision을 고정했습니다.</li>
+        <li class="done">Hybrid contract-evolution을 사용자가 명시 승인했습니다.</li>
+        <li class="pending">공식 5종 문서와 <code>CURRENT_SOURCE_OF_TRUTH.md</code>는 수리 뒤 독립 재검토와 merge가 필요합니다.</li>
+        <li class="pending">신규 workpack과 acceptance는 docs-gate PASS가 필요합니다.</li>
+        <li class="done">Capability가 <code>legacy</code>이고 canonical generation row가 0임을 현재 evidence로 확인했습니다.</li>
+        <li class="done">현재 디스크 여유는 최소 gate를 통과했습니다.</li>
+        <li class="pending">off-Mac encrypted backup restore drill은 아직 final cutover blocker입니다.</li>
+        <li class="pending">PostgreSQL 17 semantic restore rehearsal은 아직 필요합니다.</li>
+        <li class="pending">Identity mirror, session-liveness binding과 <code>auth.users</code> 대체 설계는 최종 security review가 필요합니다.</li>
+        <li class="pending">User A/B RLS negative test는 Stage 2 evidence가 필요합니다.</li>
+        <li class="pending">Storage object mismatch 0은 migration rehearsal evidence가 필요합니다.</li>
+        <li class="pending">Google·네이버·카카오 E2E는 Stage 4 evidence가 필요합니다.</li>
+        <li class="pending">24시간 shadow mismatch 0은 cutover 전 evidence가 필요합니다.</li>
+        <li class="pending">final evidence와 fencing revision은 cutover window 직전에만 고정할 수 있습니다.</li>
       </ul>
     </section>
 
@@ -678,7 +681,7 @@ pnpm mac-production:install</code></pre>
       </ul>
       <div class="note info">
         <strong>현재 최종 판정</strong>
-        기술적으로 가능하고 Stage -1 계약·독립 검토는 완료되었습니다. 문서 PR merge 뒤 구현을 시작하며, local write 개방 전에는 구현 검증, 24시간 shadow, off-Mac encrypted restore와 post-write rollback rehearsal이 모두 필요합니다.
+        기술적으로 가능한 방향이지만 현재는 Stage 1 doc gate 수리·재검토 중입니다. 문서 PR merge와 독립 재검토 통과 뒤에만 구현을 시작하며, local write 개방 전에는 구현 검증, 24시간 shadow, off-Mac encrypted restore와 post-write rollback rehearsal이 모두 필요합니다.
       </div>
     </section>
   </main>

@@ -13,10 +13,22 @@
 - Auth client는 원격 URL/key로 OAuth, callback, refresh, logout, provider linking, Auth Admin을 처리한다.
 - user Data/Storage client는 local publishable key와 원격 verified user JWT만 사용한다. service role을 우선하거나 누락 시 user client로 fallback하는 양방향 우회를 모두 금지한다.
 - admin/internal maintenance client는 exact allowlist 파일/RPC에서만 local secret을 사용하고 secret 누락 시 fail closed한다.
-- local session-authority gateway는 remote `/auth/v1/user`로 token/user를 확인하고 JWT `(iss, sub, session_id, iat)`를 current active mirror `(issuer, owner_uuid, identity_created_at, remote_revision)`와 결합한다. PostgREST pre-request는 같은 owner/epoch와 HMAC attestation을 transaction 안에서 재검증한다.
-- Storage mutation은 gateway가 owner fence와 current epoch를 확인한 직후 Docker-internal upstream으로 전달한다. missing/stale/deleted/replaced binding과 `iat < identity_created_at`은 기존 endpoint별 401/403/500 wrapper 범위에서 fail closed한다.
+- local session-authority gateway는 remote `/auth/v1/user`로 token/user를 확인하고 JWT `(iss, sub, session_id, iat)`를 current active mirror `(issuer, owner_uuid, identity_created_at, remote_revision)`와 local `user_session_generation_bindings`의 session-liveness HMAC binding에 결합한다. PostgREST pre-request는 같은 owner/epoch, HMAC attestation, active binding TTL을 transaction 안에서 재검증한다. `/auth/v1/user`와 epoch 비교만으로 logout/revocation 탐지를 완료했다고 보지 않는다.
+- Storage mutation은 gateway가 owner fence, current epoch, active session-liveness binding을 확인한 직후 Docker-internal upstream으로 전달한다. missing/revoked/expired local binding, remote liveness negative/outage, stale/deleted/replaced epoch, HMAC mismatch, `iat < identity_created_at`은 신규 public status/code 없이 기존 `409 ACCOUNT_SESSION_STALE`로 fail closed한다. bound expected generation mismatch는 기존 `409 ACCOUNT_GENERATION_STALE`, maintenance는 기존 `503 ACCOUNT_LIFECYCLE_MAINTENANCE`로만 매핑한다.
 - browser direct local Data/Storage call은 금지한다. 이미지 mutation은 기존 `/recipes/images` 계열 서버 API만 통과한다.
 - remote Auth 장애, local DB/Storage 장애, stale mirror/JWKS는 partial write 없이 fail closed한다.
+
+### Hybrid internal reason → existing public error mapping
+
+| internal reason | existing public status/code | mutation |
+| --- | --- | --- |
+| missing/revoked/expired session-liveness binding, remote liveness negative/outage, HMAC attestation mismatch, stale/deleted/replaced identity epoch, `iat < identity_created_at` | `409 ACCOUNT_SESSION_STALE` | 0 |
+| active account generation mismatch | `409 ACCOUNT_GENERATION_STALE` | 0 |
+| cutover maintenance active outside exact internal allowlist | `503 ACCOUNT_LIFECYCLE_MAINTENANCE` | 0 |
+| unauthenticated request with no valid Homecook session | existing endpoint unauthorized wrapper | 0 |
+| local DB/Storage infrastructure failure unrelated to session/epoch authority | existing endpoint internal/error wrapper | partial write 0 |
+
+위 표는 새 public endpoint, field, HTTP status, public error code를 추가하지 않는다.
 
 > **2026-07-26 contract-evolution — 완제품 통합 검색 정렬 authority 일치**
 >
@@ -4664,7 +4676,7 @@ POST /api/v1/admin/page-view
 
 ---
 
-## 엔드포인트 전체 목록 (102개) `v1.2.29`
+## 엔드포인트 전체 목록 (102개) `v1.2.30`
 
 | #        | Method     | Path                                   | 화면                     | 인증   | v1.2 변경                        |
 | -------- | ---------- | -------------------------------------- | ------------------------ | ------ | -------------------------------- |
@@ -4771,6 +4783,7 @@ POST /api/v1/admin/page-view
 | 16-19    | DELETE     | /meal-log/entries/{id}                 | MEAL_LOG                 | 🔒     | v1.2.27 soft delete+reversal     |
 | 16-20    | GET        | /food-catalog/search                   | MEAL_LOG / recipe editor | 🔒     | v1.2.27 typed union search       |
 
+> **v1.2.30 총계**: 102개 (신규 public endpoint 없음. active 101개 + 삭제된 `2-4` tombstone 1개. internal maintenance endpoint와 DB internal RPC는 제외)
 > **v1.2.29 총계**: 102개 (신규 public endpoint 없음. active 101개 + 삭제된 `2-4` tombstone 1개. internal maintenance endpoint와 DB internal RPC는 제외)
 > **v1.2.28 총계**: 102개 (신규 public endpoint 없음. active 101개 + 삭제된 `2-4` tombstone 1개. internal maintenance endpoint와 DB internal RPC는 제외)
 > **v1.2.27 총계**: 102개 (신규 public active endpoint 20개. active 101개 + 삭제된 `2-4` tombstone 1개. internal maintenance endpoint와 DB internal RPC는 제외)

@@ -2787,6 +2787,30 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "hybrid-auth-local-data-production",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/hybrid-supabase-contract",
+      "pr_path": "https://github.com/netsus/homecook/pull/1226",
+      "lifecycle": "planned",
+      "approval_state": "needs_revision",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm validate:source-of-truth-sync",
+        "BRANCH_NAME=docs/hybrid-supabase-contract pnpm validate:workpack -- --slice hybrid-auth-local-data-production",
+        "node scripts/validate-automation-spec.mjs --slice hybrid-auth-local-data-production",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/legacy-auth-contracts.test.ts tests/workflow-v2-docs.test.ts tests/omo-doc-gate.test.ts",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs-only contract gate for hybrid remote Auth and local Data production. The required owners.claude work-item field is a retired compatibility field and must never dispatch Claude. Independent Codex reviewer task 019faf4f-1c1d-7af1-84e2-97e3c694265a requested seven repairs; implementation, DB writes, provider callback changes, public API changes, and account-generation activation remain blocked until exact-head re-review passes.",
+      "evaluation_status": "fixable",
+      "evaluation_round": 1,
+      "last_evaluator_result": "REQUEST_CHANGES at a3d16bd4",
+      "auto_merge_eligible": false,
+      "blocked_reason_code": "stage1-doc-gate-repair"
     }
   ]
 }

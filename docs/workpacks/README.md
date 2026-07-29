@@ -13,7 +13,7 @@
 - `v2` hybrid remote Auth / local Data production contract (2026-07-30 KST, UTC+09:00)
   - 2026-07-29 local-first 초기 배포의 `원격 프로젝트 삭제`, `실제 사용자 없음`, `local auth.users 단일 barrier` 전제를 대체한다.
   - Google/Naver/Kakao와 session identity는 remote Supabase Auth에 남기고 application DB/Storage는 서버 Mac의 local Supabase로 이전한다.
-  - local `auth.users=0`, private identity epoch mirror, exact JWT claim guard, remote Hook control-plane, service-role user path 0, semantic restore와 off-Mac rollback evidence를 final cutover gate로 둔다.
+  - local `auth.users=0`, private identity epoch mirror, session-liveness HMAC binding, exact JWT claim guard, 기존 409/503 error mapping, remote Hook control-plane, service-role user path 0, semantic restore와 off-Mac rollback evidence를 final cutover gate로 둔다.
 
 - `v2` cooking/meal-log prepared-food search relevance closeout (2026-07-26 KST, UTC+09:00)
   - Stage 1 PR #1074, backend/data PRs #1097/#1099/#1100/#1101, merged-exact remote verifier PRs #1103/#1104, frontend Stage 4/5/6 PR #1105, official tuple consistency PR #1108이 모두 병합됐다.
