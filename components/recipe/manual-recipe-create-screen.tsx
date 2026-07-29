@@ -18,12 +18,7 @@ import { ModalHeader } from "@/components/shared/modal-header";
 import { useAppReturn } from "@/components/shared/use-app-return";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
-import {
-  cancelRecipeImageUpload,
-  createManualRecipe,
-  uploadRecipeImage,
-  type RecipeImageUploadData,
-} from "@/lib/api/manual-recipe";
+import { createManualRecipe, uploadRecipeImage } from "@/lib/api/manual-recipe";
 import { createMealSafe } from "@/lib/api/meal";
 import { suggestRecipeTags } from "@/lib/api/recipe";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -648,9 +643,7 @@ export function ManualRecipeCreateScreen({
   const [imageStatus, setImageStatus] = useState<ImageUploadStatus>("idle");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [uploadedThumbnailUrl, setUploadedThumbnailUrl] = useState<string | null>(null);
-  const [uploadedImageObjectId, setUploadedImageObjectId] = useState<string | null>(null);
-  const [legacyUploadedStoragePath, setLegacyUploadedStoragePath] =
-    useState<string | null>(null);
+  const [uploadedStoragePath, setUploadedStoragePath] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [reviewedTags, setReviewedTags] = useState<string[]>([]);
@@ -663,10 +656,7 @@ export function ManualRecipeCreateScreen({
   const uploadRequestIdRef = useRef(0);
   const tagSuggestionRequestIdRef = useRef(0);
   const areTagsDirtyRef = useRef(false);
-  const uploadedImageObjectIdRef = useRef<string | null>(null);
-  const legacyUploadedStoragePathRef = useRef<string | null>(null);
-  const uploadIdempotencyKeyRef = useRef<string | null>(null);
-  const isRefreshingSignedUrlRef = useRef(false);
+  const uploadedStoragePathRef = useRef<string | null>(null);
   const shouldCleanupUploadedImageRef = useRef(false);
   const isMountedRef = useRef(true);
 
@@ -766,11 +756,7 @@ export function ManualRecipeCreateScreen({
     });
   }, []);
 
-  const cleanupUploadedImage = useCallback((imageObjectId: string) => {
-    void cancelRecipeImageUpload(imageObjectId).catch(() => undefined);
-  }, []);
-
-  const cleanupLegacyUploadedImage = useCallback((storagePath: string) => {
+  const cleanupUploadedImage = useCallback((storagePath: string) => {
     const objectPath = storagePath.replace(/^recipe-images\//, "");
     try {
       void getSupabaseBrowserClient()
@@ -782,43 +768,24 @@ export function ManualRecipeCreateScreen({
     }
   }, []);
 
-  const cleanupCompletedUpload = useCallback((
-    data: RecipeImageUploadData,
-  ) => {
-    if ("image_object_id" in data) {
-      cleanupUploadedImage(data.image_object_id);
-      return;
-    }
-    cleanupLegacyUploadedImage(data.storage_path);
-  }, [cleanupLegacyUploadedImage, cleanupUploadedImage]);
-
   useEffect(() => {
-    uploadedImageObjectIdRef.current = uploadedImageObjectId;
-  }, [uploadedImageObjectId]);
-
-  useEffect(() => {
-    legacyUploadedStoragePathRef.current = legacyUploadedStoragePath;
-  }, [legacyUploadedStoragePath]);
+    uploadedStoragePathRef.current = uploadedStoragePath;
+  }, [uploadedStoragePath]);
 
   useEffect(() => {
     isMountedRef.current = true;
 
     return () => {
       isMountedRef.current = false;
-      const imageObjectId = uploadedImageObjectIdRef.current;
-      if (shouldCleanupUploadedImageRef.current && imageObjectId) {
-        cleanupUploadedImage(imageObjectId);
-        return;
-      }
-      const legacyStoragePath = legacyUploadedStoragePathRef.current;
-      if (shouldCleanupUploadedImageRef.current && legacyStoragePath) {
-        cleanupLegacyUploadedImage(legacyStoragePath);
+      const storagePath = uploadedStoragePathRef.current;
+      if (shouldCleanupUploadedImageRef.current && storagePath) {
+        cleanupUploadedImage(storagePath);
       }
     };
-  }, [cleanupLegacyUploadedImage, cleanupUploadedImage]);
+  }, [cleanupUploadedImage]);
 
   const revokePreviewUrl = useCallback((previewUrl: string | null) => {
-    if (!previewUrl?.startsWith("blob:")) return;
+    if (!previewUrl) return;
     try {
       URL.revokeObjectURL(previewUrl);
     } catch {
@@ -826,24 +793,15 @@ export function ManualRecipeCreateScreen({
     }
   }, []);
 
-  const doUpload = useCallback(async (
-    file: File,
-    idempotencyKey = crypto.randomUUID(),
-    exactReplay = false,
-  ) => {
+  const doUpload = useCallback(async (file: File) => {
     const requestId = uploadRequestIdRef.current + 1;
     uploadRequestIdRef.current = requestId;
-    uploadIdempotencyKeyRef.current = idempotencyKey;
     const nextPreviewUrl = URL.createObjectURL(file);
 
-    if (uploadedImageObjectId) {
-      cleanupUploadedImage(uploadedImageObjectId);
+    if (uploadedStoragePath) {
+      cleanupUploadedImage(uploadedStoragePath);
       shouldCleanupUploadedImageRef.current = false;
-      uploadedImageObjectIdRef.current = null;
-    } else if (legacyUploadedStoragePath) {
-      cleanupLegacyUploadedImage(legacyUploadedStoragePath);
-      shouldCleanupUploadedImageRef.current = false;
-      legacyUploadedStoragePathRef.current = null;
+      uploadedStoragePathRef.current = null;
     }
     revokePreviewUrl(imagePreviewUrl);
 
@@ -851,13 +809,10 @@ export function ManualRecipeCreateScreen({
     setImageError(null);
     setPendingFile(file);
     setUploadedThumbnailUrl(null);
-    setUploadedImageObjectId(null);
-    setLegacyUploadedStoragePath(null);
+    setUploadedStoragePath(null);
     setImagePreviewUrl(nextPreviewUrl);
 
-    const uploadFile = exactReplay
-      ? file
-      : await compressRecipeImageFile(file);
+    const uploadFile = await compressRecipeImageFile(file);
 
     if (!isMountedRef.current) {
       revokePreviewUrl(nextPreviewUrl);
@@ -869,13 +824,12 @@ export function ManualRecipeCreateScreen({
       return;
     }
 
-    setPendingFile(uploadFile);
-    const result = await uploadRecipeImage(uploadFile, { idempotencyKey });
+    const result = await uploadRecipeImage(uploadFile);
 
     if (!isMountedRef.current) {
       revokePreviewUrl(nextPreviewUrl);
       if (result.success && result.data) {
-        cleanupCompletedUpload(result.data);
+        cleanupUploadedImage(result.data.storage_path);
       }
       return;
     }
@@ -883,136 +837,30 @@ export function ManualRecipeCreateScreen({
     if (uploadRequestIdRef.current !== requestId) {
       revokePreviewUrl(nextPreviewUrl);
       if (result.success && result.data) {
-        cleanupCompletedUpload(result.data);
+        cleanupUploadedImage(result.data.storage_path);
       }
-      return;
-    }
-
-    if (
-      result.success
-      && result.http_status === 202
-      && result.data === null
-    ) {
-      setImageStatus("failed");
-      setImageError(
-        result.retry_after_seconds
-          ? `이미지를 처리 중이에요. ${result.retry_after_seconds}초 후 다시 시도해 주세요.`
-          : "이미지를 처리 중이에요. 잠시 후 다시 시도해 주세요.",
-      );
       return;
     }
 
     if (!result.success || !result.data) {
       shouldCleanupUploadedImageRef.current = false;
-      uploadedImageObjectIdRef.current = null;
+      uploadedStoragePathRef.current = null;
       setImageStatus("failed");
       setImageError(result.error?.message ?? "이미지를 업로드하지 못했어요.");
       return;
     }
 
-    if ("image_object_id" in result.data) {
-      uploadedImageObjectIdRef.current = result.data.image_object_id;
-      shouldCleanupUploadedImageRef.current = true;
-      setUploadedImageObjectId(result.data.image_object_id);
-      setLegacyUploadedStoragePath(null);
-      setUploadedThumbnailUrl(null);
-      revokePreviewUrl(nextPreviewUrl);
-      setImagePreviewUrl(result.data.read_url);
-      setPendingFile(uploadFile);
-    } else {
-      uploadedImageObjectIdRef.current = null;
-      legacyUploadedStoragePathRef.current = result.data.storage_path;
-      shouldCleanupUploadedImageRef.current = true;
-      setUploadedImageObjectId(null);
-      setLegacyUploadedStoragePath(result.data.storage_path);
-      setUploadedThumbnailUrl(result.data.thumbnail_url);
-      setPendingFile(null);
-      uploadIdempotencyKeyRef.current = null;
-    }
+    uploadedStoragePathRef.current = result.data.storage_path;
+    shouldCleanupUploadedImageRef.current = true;
+    setUploadedThumbnailUrl(result.data.thumbnail_url);
+    setUploadedStoragePath(result.data.storage_path);
     setImageStatus("uploaded");
+    setPendingFile(null);
   }, [
     cleanupUploadedImage,
-    cleanupLegacyUploadedImage,
-    cleanupCompletedUpload,
     imagePreviewUrl,
-    legacyUploadedStoragePath,
     revokePreviewUrl,
-    uploadedImageObjectId,
-  ]);
-
-  const refreshSignedImageUrl = useCallback(async () => {
-    const imageObjectId =
-      uploadedImageObjectId ?? uploadedImageObjectIdRef.current;
-    const idempotencyKey = uploadIdempotencyKeyRef.current;
-    if (
-      !imageObjectId
-      || !pendingFile
-      || !idempotencyKey
-      || isRefreshingSignedUrlRef.current
-    ) {
-      return;
-    }
-
-    isRefreshingSignedUrlRef.current = true;
-    const requestId = uploadRequestIdRef.current + 1;
-    uploadRequestIdRef.current = requestId;
-    setImageStatus("uploading");
-    setImageError(null);
-
-    try {
-      const result = await uploadRecipeImage(pendingFile, { idempotencyKey });
-      if (
-        !isMountedRef.current
-        || uploadRequestIdRef.current !== requestId
-      ) {
-        return;
-      }
-
-      if (
-        result.success
-        && result.http_status === 202
-        && result.data === null
-      ) {
-        setImageStatus("failed");
-        setImageError(
-          result.retry_after_seconds
-            ? `이미지를 처리 중이에요. ${result.retry_after_seconds}초 후 다시 시도해 주세요.`
-            : "이미지를 처리 중이에요. 잠시 후 다시 시도해 주세요.",
-        );
-        return;
-      }
-
-      if (
-        !result.success
-        || !result.data
-        || !("image_object_id" in result.data)
-        || result.data.image_object_id !== imageObjectId
-      ) {
-        if (
-          result.success
-          && result.data
-          && "image_object_id" in result.data
-          && result.data.image_object_id !== imageObjectId
-        ) {
-          cleanupUploadedImage(result.data.image_object_id);
-        }
-        setImageStatus("failed");
-        setImageError(
-          result.error?.message
-            ?? "이미지 미리보기를 새로 불러오지 못했어요.",
-        );
-        return;
-      }
-
-      setImagePreviewUrl(result.data.read_url);
-      setImageStatus("uploaded");
-    } finally {
-      isRefreshingSignedUrlRef.current = false;
-    }
-  }, [
-    cleanupUploadedImage,
-    pendingFile,
-    uploadedImageObjectId,
+    uploadedStoragePath,
   ]);
 
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1024,55 +872,25 @@ export function ManualRecipeCreateScreen({
 
   const handleImageRetry = useCallback(() => {
     if (pendingFile) {
-      if (uploadedImageObjectId ?? uploadedImageObjectIdRef.current) {
-        void refreshSignedImageUrl();
-        return;
-      }
-      void doUpload(
-        pendingFile,
-        uploadIdempotencyKeyRef.current ?? crypto.randomUUID(),
-        true,
-      );
+      void doUpload(pendingFile);
     }
-  }, [
-    doUpload,
-    pendingFile,
-    refreshSignedImageUrl,
-    uploadedImageObjectId,
-  ]);
+  }, [doUpload, pendingFile]);
 
   const handleImageRemove = useCallback(() => {
-    const imageObjectId =
-      uploadedImageObjectId ?? uploadedImageObjectIdRef.current;
-    if (imageObjectId) {
-      cleanupUploadedImage(imageObjectId);
-    } else {
-      const legacyStoragePath =
-        legacyUploadedStoragePath ?? legacyUploadedStoragePathRef.current;
-      if (legacyStoragePath) {
-        cleanupLegacyUploadedImage(legacyStoragePath);
-      }
+    const storagePath = uploadedStoragePath ?? uploadedStoragePathRef.current;
+    if (storagePath) {
+      cleanupUploadedImage(storagePath);
     }
     revokePreviewUrl(imagePreviewUrl);
     shouldCleanupUploadedImageRef.current = false;
-    uploadedImageObjectIdRef.current = null;
-    legacyUploadedStoragePathRef.current = null;
-    uploadIdempotencyKeyRef.current = null;
+    uploadedStoragePathRef.current = null;
     setImageStatus("idle");
     setImagePreviewUrl(null);
     setUploadedThumbnailUrl(null);
-    setUploadedImageObjectId(null);
-    setLegacyUploadedStoragePath(null);
+    setUploadedStoragePath(null);
     setImageError(null);
     setPendingFile(null);
-  }, [
-    cleanupUploadedImage,
-    cleanupLegacyUploadedImage,
-    imagePreviewUrl,
-    legacyUploadedStoragePath,
-    revokePreviewUrl,
-    uploadedImageObjectId,
-  ]);
+  }, [cleanupUploadedImage, imagePreviewUrl, revokePreviewUrl, uploadedStoragePath]);
 
   const handleImageReplace = useCallback(() => {
     imageInputRef.current?.click();
@@ -1194,11 +1012,7 @@ export function ManualRecipeCreateScreen({
     const response = await createManualRecipe({
       title: title.trim(),
       base_servings: baseServings,
-      ...(uploadedImageObjectId
-        ? { image_object_id: uploadedImageObjectId }
-        : uploadedThumbnailUrl
-          ? { thumbnail_url: uploadedThumbnailUrl }
-          : {}),
+      thumbnail_url: uploadedThumbnailUrl ?? undefined,
       ...(reviewedTagPayload !== undefined ? { tags: reviewedTagPayload } : {}),
       ingredients: ingredients.map((ing, idx) => ({
         ingredient_id: ing.ingredient_id,
@@ -1241,7 +1055,6 @@ export function ManualRecipeCreateScreen({
     title,
     baseServings,
     uploadedThumbnailUrl,
-    uploadedImageObjectId,
     areTagsDirty,
     reviewedTags,
     ingredients,
@@ -1358,11 +1171,6 @@ export function ManualRecipeCreateScreen({
               <Image
                 src={imagePreviewUrl}
                 alt="레시피 이미지 미리보기"
-                onError={
-                  uploadedImageObjectId
-                    ? () => void refreshSignedImageUrl()
-                    : undefined
-                }
                 fill
                 className="object-cover"
                 sizes="(min-width: 768px) 42rem, 100vw"
@@ -1656,11 +1464,6 @@ export function ManualRecipeCreateScreen({
                   <Image
                     src={imagePreviewUrl}
                     alt="레시피 이미지 미리보기"
-                    onError={
-                      uploadedImageObjectId
-                        ? () => void refreshSignedImageUrl()
-                        : undefined
-                    }
                     fill
                     className="object-cover"
                     sizes="(min-width: 768px) 42rem, 100vw"
