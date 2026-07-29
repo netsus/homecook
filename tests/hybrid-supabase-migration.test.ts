@@ -67,6 +67,12 @@ describe("hybrid remote identity/session authority migration", () => {
     expect(sql).toMatch(
       /alter role authenticator set pgrst\.db_pre_request\s*=\s*'private\.verify_hybrid_request_authority'/i,
     );
+    expect(sql).toMatch(
+      /revoke all on schema private from public[\s\S]+grant usage on schema private to anon, authenticated, service_role/i,
+    );
+    expect(sql).toMatch(
+      /grant execute on function private\.verify_hybrid_request_authority\(\)\s+to anon, authenticated, service_role/i,
+    );
   });
 
   it("replaces the three historical auth.users FKs without reviving audit ownership", () => {
@@ -102,6 +108,15 @@ describe("hybrid remote identity/session authority migration", () => {
     );
     expect(sql).toMatch(
       /create or replace function public\.bootstrap_account_generation_identity\(/i,
+    );
+    expect(sql).toMatch(
+      /create or replace function public\.bootstrap_account_generation_identity\([\s\S]+?set search_path = pg_catalog, public, auth, pg_temp[\s\S]+?as \$function\$/i,
+    );
+    expect(sql).toMatch(
+      /create or replace function public\.resolve_account_cutover_quarantine\([\s\S]+?set search_path = pg_catalog, public, auth, extensions, pg_temp[\s\S]+?as \$function\$/i,
+    );
+    expect(sql).toMatch(
+      /revoke all on function public\.bootstrap_account_generation_identity\([\s\S]+?from public, anon, authenticated[\s\S]+?grant execute on function public\.bootstrap_account_generation_identity\([\s\S]+?to service_role/i,
     );
     expect(sql).not.toMatch(/lock table auth\.users/i);
     expect(sql).not.toMatch(/from auth\.users/i);

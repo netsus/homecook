@@ -2,6 +2,32 @@
 
 begin;
 
+do $acl$
+declare
+  v_role text;
+begin
+  foreach v_role in array array['anon', 'authenticated', 'service_role']
+  loop
+    if not has_schema_privilege(v_role, 'private', 'USAGE')
+      or not has_function_privilege(
+        v_role,
+        'private.verify_hybrid_request_authority()',
+        'EXECUTE'
+      ) then
+      raise exception 'hybrid pre-request ACL missing for %', v_role;
+    end if;
+  end loop;
+
+  if has_function_privilege(
+    'authenticated',
+    'private.decode_base64url_jsonb(text)',
+    'EXECUTE'
+  ) then
+    raise exception 'private decoder leaked to authenticated';
+  end if;
+end;
+$acl$;
+
 do $test$
 declare
   v_issuer constant text := 'https://remote.example.supabase.co/auth/v1';

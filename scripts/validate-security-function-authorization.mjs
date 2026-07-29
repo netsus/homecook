@@ -28,11 +28,18 @@ const ADDITIVE_SOURCES = [
         REPO_ROOT,
         "docs/security/account-session-generation-security-function-authorization-manifest.json",
       ),
-    migrationPath: process.env.SECURITY_FUNCTION_ADDITIVE_MIGRATION_PATH
-      ?? path.join(
-        REPO_ROOT,
-        "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
-      ),
+    migrationPaths: process.env.SECURITY_FUNCTION_ADDITIVE_MIGRATION_PATH
+      ? [process.env.SECURITY_FUNCTION_ADDITIVE_MIGRATION_PATH]
+      : [
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+          ),
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
+          ),
+        ],
   },
   {
     manifestPath:

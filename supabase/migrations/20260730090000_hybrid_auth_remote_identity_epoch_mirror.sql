@@ -4,6 +4,9 @@ begin;
 
 create schema if not exists private;
 
+revoke all on schema private from public;
+grant usage on schema private to anon, authenticated, service_role;
+
 create table if not exists private.remote_auth_identity_epochs (
   issuer text not null,
   owner_uuid uuid not null,
@@ -343,26 +346,26 @@ $function$;
 revoke all on function public.record_hybrid_remote_session_authority(
   text,
   uuid,
-  timestamptz,
+  timestamp with time zone,
   bigint,
   text,
-  timestamptz,
+  timestamp with time zone,
   bigint,
   text,
   integer,
-  timestamptz
+  timestamp with time zone
 ) from public, anon, authenticated;
 grant execute on function public.record_hybrid_remote_session_authority(
   text,
   uuid,
-  timestamptz,
+  timestamp with time zone,
   bigint,
   text,
-  timestamptz,
+  timestamp with time zone,
   bigint,
   text,
   integer,
-  timestamptz
+  timestamp with time zone
 ) to service_role;
 
 revoke all on function public.revoke_hybrid_remote_session_authority(
@@ -571,6 +574,8 @@ revoke all on function private.decode_base64url_jsonb(text)
   from public, anon, authenticated, service_role;
 revoke all on function private.verify_hybrid_request_authority()
   from public, anon, authenticated, service_role;
+grant execute on function private.verify_hybrid_request_authority()
+  to anon, authenticated, service_role;
 
 alter role authenticator set pgrst.db_pre_request = 'private.verify_hybrid_request_authority';
 
@@ -669,7 +674,7 @@ returns jsonb
 language plpgsql
 volatile
 security definer
-set search_path = pg_catalog, public, extensions, pg_temp
+set search_path = pg_catalog, public, auth, extensions, pg_temp
 as $function$
 begin
   raise exception 'ACCOUNT_LIFECYCLE_MAINTENANCE'
@@ -688,12 +693,94 @@ returns jsonb
 language plpgsql
 volatile
 security definer
-set search_path = pg_catalog, public, pg_temp
+set search_path = pg_catalog, public, auth, pg_temp
 as $function$
 begin
   raise exception 'ACCOUNT_LIFECYCLE_MAINTENANCE'
     using errcode = '55000';
 end;
 $function$;
+
+revoke all on function public.set_account_generation_cutover_snapshot(
+  uuid,
+  bigint,
+  bigint,
+  text,
+  bigint,
+  text,
+  bigint,
+  text,
+  text,
+  jsonb
+) from public, anon, authenticated;
+grant execute on function public.set_account_generation_cutover_snapshot(
+  uuid,
+  bigint,
+  bigint,
+  text,
+  bigint,
+  text,
+  bigint,
+  text,
+  text,
+  jsonb
+) to service_role;
+
+revoke all on function public.promote_account_generation_cutover(
+  uuid,
+  bigint,
+  bigint,
+  text,
+  bigint,
+  text,
+  bigint,
+  text
+) from public, anon, authenticated;
+grant execute on function public.promote_account_generation_cutover(
+  uuid,
+  bigint,
+  bigint,
+  text,
+  bigint,
+  text,
+  bigint,
+  text
+) to service_role;
+
+revoke all on function public.resolve_account_cutover_quarantine(
+  uuid,
+  timestamp with time zone,
+  text,
+  integer,
+  uuid,
+  text,
+  text,
+  text
+) from public, anon, authenticated;
+grant execute on function public.resolve_account_cutover_quarantine(
+  uuid,
+  timestamp with time zone,
+  text,
+  integer,
+  uuid,
+  text,
+  text,
+  text
+) to service_role;
+
+revoke all on function public.bootstrap_account_generation_identity(
+  uuid,
+  timestamp with time zone,
+  text,
+  integer,
+  timestamp with time zone
+) from public, anon, authenticated;
+grant execute on function public.bootstrap_account_generation_identity(
+  uuid,
+  timestamp with time zone,
+  text,
+  integer,
+  timestamp with time zone
+) to service_role;
 
 commit;

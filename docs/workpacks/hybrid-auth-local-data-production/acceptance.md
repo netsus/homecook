@@ -153,11 +153,11 @@
 - remote JWT/JWKS: `tests/hybrid-supabase-jwt.test.ts`, `tests/hybrid-jwks-sync.test.ts`
 - liveness/binding/attestation/outage: `tests/hybrid-session-authority-gateway.test.ts`
 - local-shadow runtime: `tests/hybrid-shadow-read.test.ts`, `tests/supabase-server.test.ts`, `node scripts/verify-hybrid-supabase.mjs --mode shadow-read-runtime`
-- mirror/migration/static gate: `tests/hybrid-supabase-identity-mirror.test.ts`, `tests/hybrid-supabase-migration.test.ts`, `tests/hybrid-supabase-static-gate.test.ts`
+- mirror/migration/static gate: `tests/hybrid-supabase-identity-mirror.test.ts`, `tests/hybrid-supabase-migration.test.ts`, `tests/hybrid-supabase-static-gate.test.ts`, `tests/account-session-generation-security-function-inventory.test.ts`, `node scripts/validate-security-function-authorization.mjs --contract-only`
 - isolated runtime 계약: `tests/hybrid-isolated-runtime.test.ts`, `tests/hybrid-supabase-storage.integration.test.ts`, `infra/hybrid-supabase/docker-compose.integration.yml`
 - exact runtime smoke: PG 17.6.1.136/PostgREST 14.12/Storage 1.60.4/gateway 모두 기동, `published_ports={}`, internal PostgREST/Storage 200, unauthenticated gateway 409 (`tests/fixtures/hybrid-stage2-runtime-evidence.json`)
 - 격리 복원 DB transaction: `HYBRID_SUPABASE_TEST_CONTAINER=homecook-hybrid-encrypted-restore-20260730 node scripts/verify-hybrid-supabase.mjs --mode migration-rehearsal`
-- 격리 DB 결과: `auth.users=0`, `public.users=5`, `storage.objects=1`, invalid constraint/FK/procedure residual=0, transaction rollback
+- 격리 DB 결과: `auth.users=0`, `public.users=5`, `storage.objects=1`, invalid constraint/FK/procedure residual=0, session canary transaction rollback. Stage 2 초안이 이미 적용된 격리 DB에는 exact function `search_path`/ACL 보정만 적용했으며 production/cutover/data write는 0이다.
 - inventory: `hybrid-browser-storage-direct-inventory.json`, `hybrid-service-role-inventory.json`, `auth-users-replacement-matrix.md`
 - migration: `supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql`
 - restore/backup evidence: `tests/fixtures/hybrid-stage01-restore-evidence.json`, `tests/fixtures/hybrid-stage2-migration-evidence.json`
