@@ -32,8 +32,9 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import {
+  bootstrapAuthCallbackSessionAuthority,
+  createAuthCallbackInternalDataClient,
   createAuthRouteHandlerClient,
-  createRemoteCompatibilityServiceRoleClient,
 } from "@/lib/supabase/server";
 
 type AuthFailureCode =
@@ -261,13 +262,30 @@ export async function GET(request: Request) {
       );
     }
 
-    const serviceRoleClient = createRemoteCompatibilityServiceRoleClient();
+    const serviceRoleClient = createAuthCallbackInternalDataClient();
     if (!serviceRoleClient) {
       await recordAuthFailure(request, "SERVICE_ROLE_UNAVAILABLE");
       return clearPartialSession(
         supabase,
         clearAuthFlowCookies(NextResponse.redirect(
           buildFailureRedirectUrl(requestUrl, nextPath, "oauth_failed"),
+        )),
+        request,
+        cookieStore,
+      );
+    }
+
+    const hybridBootstrap = await bootstrapAuthCallbackSessionAuthority({
+      accessToken: exchangedAccessToken,
+      client: serviceRoleClient,
+      user,
+    });
+    if (!hybridBootstrap.ok) {
+      await recordAuthFailure(request, "ACCOUNT_SESSION_STALE");
+      return clearPartialSession(
+        supabase,
+        clearAuthFlowCookies(NextResponse.redirect(
+          buildFailureRedirectUrl(requestUrl, nextPath, "ACCOUNT_SESSION_STALE"),
         )),
         request,
         cookieStore,

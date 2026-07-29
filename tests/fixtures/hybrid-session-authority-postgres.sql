@@ -157,6 +157,25 @@ begin
     1
   );
 
+  begin
+    perform public.record_hybrid_remote_session_authority(
+      v_issuer,
+      v_owner,
+      v_identity_created_at,
+      v_now,
+      repeat('b', 64),
+      v_verified_at,
+      v_now,
+      v_session_key_hash,
+      1,
+      v_verified_at + interval '120 seconds'
+    );
+    raise exception 'revoked binding was reactivated';
+  exception
+    when sqlstate '55000' then
+      null;
+  end;
+
   perform set_config(
     'request.jwt.claims',
     jsonb_build_object(
@@ -177,6 +196,27 @@ begin
   begin
     perform private.verify_hybrid_request_authority();
     raise exception 'revoked binding was accepted';
+  exception
+    when sqlstate '55000' then
+      null;
+  end;
+
+  perform set_config(
+    'request.jwt.claims',
+    jsonb_build_object('role', 'service_role')::text,
+    true
+  );
+  perform set_config('request.jwt.claim.role', 'service_role', true);
+
+  begin
+    perform public.assert_hybrid_remote_session_authority(
+      v_issuer,
+      v_owner,
+      v_identity_created_at,
+      v_session_key_hash,
+      1
+    );
+    raise exception 'revoked binding assert accepted';
   exception
     when sqlstate '55000' then
       null;

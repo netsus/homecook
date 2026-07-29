@@ -38,9 +38,7 @@ import {
 } from "@/lib/server/recipe-tags";
 import { cleanYoutubeTitle } from "@/lib/youtube-title";
 import {
-  recordOperationalEvent,
   recordOperationalEventFromServiceRole,
-  type OperationalEventsDbClient,
 } from "@/lib/server/admin-events";
 import {
   recalculateRecipeNutritionSnapshot,
@@ -69,7 +67,10 @@ import {
   getGeminiApiKeyCandidates,
   type GeminiApiKeyCandidate,
 } from "@/lib/server/gemini-key-failover";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createRouteHandlerClient,
+  createYoutubeIngredientRegistrationInternalRpcClient,
+} from "@/lib/supabase/server";
 import { YOUTUBE_PREVIEW_ONLY_CLASSIFICATION_REASON } from "@/lib/youtube-import-constants";
 import type {
   IngredientCategory,
@@ -9274,7 +9275,7 @@ export async function handleYoutubeExtract(request: Request) {
     return fail("NOT_RECIPE_VIDEO", "이 영상은 요리 레시피가 아닌 것 같아요.", 422);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient;
+  const dbClient = routeClient as unknown as DbClient;
   let extractorMode;
   try {
     extractorMode = resolveYoutubeRecipeExtractorMode();
@@ -10511,7 +10512,7 @@ export async function handleYoutubeCandidateDraft(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as DbClient;
+  const dbClient = routeClient as unknown as DbClient;
   const parentResult = await findExtractionSession(dbClient, parsed.extractionId);
   if (parentResult.error) {
     return fail("INTERNAL_ERROR", "추출 세션을 확인하지 못했어요.", 500);
@@ -10651,7 +10652,7 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
     return buildFeatureDisabledResponse();
   }
 
-  const { user } = await requireUser();
+  const { routeClient, user } = await requireUser();
 
   if (!user) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
@@ -10669,8 +10670,26 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
-  const serviceRoleClient = createServiceRoleClient();
-  if (!serviceRoleClient) {
+  const sessionResult = await findExtractionSession(
+    routeClient as unknown as DbClient,
+    parsed.extractionId,
+  );
+  if (sessionResult.error) {
+    return fail("INTERNAL_ERROR", "추출 세션을 확인하지 못했어요.", 500);
+  }
+
+  const sessionFailure = validateSessionForIngredientRegistration(
+    sessionResult.data,
+    parsed,
+    user.id,
+  );
+  if (sessionFailure) {
+    return sessionFailure;
+  }
+
+  const internalRpcClient =
+    createYoutubeIngredientRegistrationInternalRpcClient();
+  if (!internalRpcClient) {
     await recordOperationalEventFromServiceRole({
       event_type: "youtube_ingredient_registration_failure",
       severity: "critical",
@@ -10685,17 +10704,8 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
     return fail("INTERNAL_ERROR", "재료를 등록하지 못했어요.", 500);
   }
 
-  const dbClient = serviceRoleClient as unknown as DbClient
-    & YoutubeIngredientRegistrationRpcClient;
-  const sessionResult = await findExtractionSession(dbClient, parsed.extractionId);
-  if (sessionResult.error) {
-    return fail("INTERNAL_ERROR", "추출 세션을 확인하지 못했어요.", 500);
-  }
-
-  const sessionFailure = validateSessionForIngredientRegistration(sessionResult.data, parsed, user.id);
-  if (sessionFailure) {
-    return sessionFailure;
-  }
+  const dbClient =
+    internalRpcClient as unknown as YoutubeIngredientRegistrationRpcClient;
 
   const rateLimitResult = await dbClient.rpc(
     "consume_youtube_ingredient_registration_rate_limit",
@@ -10710,9 +10720,7 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
     return fail("INTERNAL_ERROR", "재료 등록 한도를 확인하지 못했어요.", 500);
   }
   if (!rateLimitResult.data.allowed) {
-    await recordOperationalEvent(
-      serviceRoleClient as unknown as OperationalEventsDbClient,
-      {
+    await recordOperationalEventFromServiceRole({
         event_type: "youtube_ingredient_registration_rate_limited",
         severity: "warn",
         source: "youtube",
@@ -10722,8 +10730,7 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
         error_code: "RATE_LIMITED",
         message_summary: "YouTube ingredient registration rate limited",
         metadata_json: { extraction_id: parsed.extractionId },
-      },
-    );
+      });
     return fail("RATE_LIMITED", "잠시 후 재료 등록을 다시 시도해 주세요.", 429);
   }
 
@@ -10757,9 +10764,7 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
     warnings: registrationResult.data.warnings ?? [],
   };
 
-  await recordOperationalEvent(
-    serviceRoleClient as unknown as OperationalEventsDbClient,
-    {
+  await recordOperationalEventFromServiceRole({
       event_type: "youtube_ingredient_registration_success",
       severity: "info",
       source: "youtube",
@@ -10772,8 +10777,7 @@ export async function handleYoutubeIngredientRegistration(request: Request) {
         draft_ingredient_id: parsed.draftIngredientId,
         ingredient_id: registrationResult.data.ingredient_id,
       },
-    },
-  );
+    });
 
   return ok(data);
 }
@@ -10794,7 +10798,7 @@ export async function handleYoutubeRegister(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     DbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
 
   try {

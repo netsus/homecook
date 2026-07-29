@@ -76,7 +76,7 @@
       "exposure": "service-internal",
       "allowed_principals": ["authenticated"],
       "security_mode": "definer",
-      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     },
     {
       "signature": "public.get_account_generation_capability()",
@@ -309,6 +309,15 @@
       "signature": "public.record_hybrid_remote_session_authority(text, uuid, timestamp with time zone, bigint, text, timestamp with time zone, bigint, text, integer, timestamp with time zone)",
       "control_class": "application-controlled",
       "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.assert_hybrid_remote_session_authority(text, uuid, timestamp with time zone, text, integer)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
       "exposure": "service-internal",
       "allowed_principals": ["service_role"],
       "security_mode": "definer",

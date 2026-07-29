@@ -16,6 +16,7 @@ const formatBootstrapErrorMessage = vi.fn((_error: unknown, fallbackMessage: str
 const recordOperationalEvent = vi.fn(async () => true);
 
 vi.mock("@/lib/supabase/server", () => ({
+  createAccountLifecycleInternalRpcClient: createServiceRoleClient,
   createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,

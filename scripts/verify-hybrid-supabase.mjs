@@ -41,6 +41,9 @@ const commands = {
   "semantic-restore-fixture": [
     ["pnpm", ["vitest", "run", "tests/hybrid-isolated-runtime.test.ts"]],
   ],
+  "isolated-runtime-measured": [
+    ["pnpm", ["test:hybrid-supabase:runtime"]],
+  ],
 };
 const manualOnlyModes = new Set([
   "two-system-maintenance-barrier",
@@ -92,6 +95,8 @@ process.stdout.write(`${JSON.stringify({
   status: "PASS",
   evidence_scope: mode === "migration-rehearsal"
     ? "isolated-container-transaction"
+    : mode === "isolated-runtime-measured"
+      ? "isolated-container-measured-runtime"
     : "deterministic-static-unit",
   production_writes: 0,
   cutover_writes: 0,

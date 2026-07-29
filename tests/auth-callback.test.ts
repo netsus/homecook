@@ -6,6 +6,7 @@ const getUser = vi.fn();
 const signOut = vi.fn();
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const bootstrapAuthCallbackSessionAuthority = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const cookies = vi.fn();
@@ -43,8 +44,9 @@ function createServiceRoleUserLookup(
 }
 
 vi.mock("@/lib/supabase/server", () => ({
+  bootstrapAuthCallbackSessionAuthority,
+  createAuthCallbackInternalDataClient: createServiceRoleClient,
   createAuthRouteHandlerClient: createRouteHandlerClient,
-  createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
 }));
 
 vi.mock("next/headers", () => ({
@@ -76,6 +78,7 @@ describe("auth callback", () => {
     signOut.mockReset();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    bootstrapAuthCallbackSessionAuthority.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     cookies.mockReset();
@@ -93,6 +96,7 @@ describe("auth callback", () => {
 
     createRouteHandlerClient.mockResolvedValue(routeClient);
     createServiceRoleClient.mockReturnValue(createServiceRoleUserLookup().client);
+    bootstrapAuthCallbackSessionAuthority.mockResolvedValue({ ok: true });
     cookies.mockResolvedValue({
       get: cookieGet,
       getAll: cookieGetAll,
@@ -436,6 +440,47 @@ describe("auth callback", () => {
     expect(new URL(response.headers.get("location") ?? "").searchParams.get("authError"))
       .toBe("oauth_failed");
     expect(ensurePublicUserRow).not.toHaveBeenCalled();
+  });
+
+  it("bootstraps local session authority before legacy callback data writes", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: "remote-access-token",
+        },
+      },
+      error: null,
+    });
+    getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-1",
+          created_at: "2026-07-28T00:00:00.000Z",
+          email: "cook@example.com",
+          app_metadata: { provider: "google" },
+          user_metadata: { nickname: "집밥러" },
+          identities: [{
+            provider: "google",
+            identity_data: { email_verified: true },
+          }],
+        },
+      },
+      error: null,
+    });
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner",
+    ));
+
+    expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
+    expect(bootstrapAuthCallbackSessionAuthority).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accessToken: "remote-access-token",
+        user: expect.objectContaining({ id: "user-1" }),
+      }),
+    );
+    expect(ensurePublicUserRow).toHaveBeenCalledTimes(1);
   });
 
   it("clears the partial session when the account capability cannot be read", async () => {

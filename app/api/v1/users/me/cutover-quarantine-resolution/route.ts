@@ -1,7 +1,7 @@
 import { fail } from "@/lib/api/response";
 import { recordOperationalEvent, type OperationalEventsDbClient } from "@/lib/server/admin-events";
 import {
-  createRemoteCompatibilityServiceRoleClient,
+  createAccountLifecycleInternalRpcClient,
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const serviceRoleClient = createRemoteCompatibilityServiceRoleClient();
+  const serviceRoleClient = createAccountLifecycleInternalRpcClient();
   if (!serviceRoleClient) {
     if (user) {
       await recordOperationalEvent(null, {

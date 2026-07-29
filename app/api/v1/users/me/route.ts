@@ -9,7 +9,7 @@ import {
 } from "@/lib/server/user-bootstrap";
 import { recordOperationalEvent, type OperationalEventsDbClient } from "@/lib/server/admin-events";
 import {
-  createRemoteCompatibilityServiceRoleClient,
+  createAccountLifecycleInternalRpcClient,
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
 import type { UserDeleteData, UserProfileData } from "@/types/user";
@@ -289,7 +289,7 @@ export async function DELETE(request: Request) {
     }
 
     const replayServiceRoleClient =
-      createRemoteCompatibilityServiceRoleClient();
+      createAccountLifecycleInternalRpcClient();
     if (!replayServiceRoleClient) {
       return fail("INTERNAL_ERROR", "회원 탈퇴를 처리하지 못했어요.", 500);
     }
@@ -318,7 +318,7 @@ export async function DELETE(request: Request) {
     });
   }
 
-  const serviceRoleClient = createRemoteCompatibilityServiceRoleClient();
+  const serviceRoleClient = createAccountLifecycleInternalRpcClient();
   if (!serviceRoleClient) {
     await recordOperationalEvent(null, {
       event_type: "account_delete_failure",

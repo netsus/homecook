@@ -68,6 +68,12 @@ interface QueryResult<T> {
   count?: number | null;
 }
 
+function hybridAuthorityMarker(
+  code: "ACCOUNT_LIFECYCLE_MAINTENANCE" | "ACCOUNT_SESSION_STALE",
+) {
+  return `HOMECOOK_HYBRID_AUTHORITY::${code}::${code === "ACCOUNT_SESSION_STALE" ? "409" : "503"}`;
+}
+
 function createAwaitableQuery<T>(result: QueryResult<T>) {
   return {
     then(onFulfilled?: (value: QueryResult<T>) => unknown, onRejected?: (reason: unknown) => unknown) {
@@ -2415,6 +2421,56 @@ describe("recipe API contracts", () => {
     expect(body.error.code).toBe("INTERNAL_ERROR");
     expect(ensurePublicUserRow).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("maps wrapped hybrid authority outages on recipe list reads to the contracted 503", async () => {
+    const recipesQuery = createQuery({
+      data: null,
+      error: {
+        message: "TypeError: fetch failed",
+        details: hybridAuthorityMarker("ACCOUNT_LIFECYCLE_MAINTENANCE"),
+      } as { message: string },
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: null } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/recipes?sort=latest"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("ACCOUNT_LIFECYCLE_MAINTENANCE");
+  });
+
+  it("maps wrapped hybrid authority revokes during recipe creation to the contracted 409", async () => {
+    createRouteHandlerClient.mockRejectedValue(
+      Object.assign(new Error("TypeError: fetch failed"), {
+        details: hybridAuthorityMarker("ACCOUNT_SESSION_STALE"),
+      }),
+    );
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody()),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error.code).toBe("ACCOUNT_SESSION_STALE");
   });
 
   it("blocks recipe creation during account lifecycle maintenance", async () => {

@@ -19,8 +19,21 @@ interface RemoteAuthSessionClient {
       };
       error: unknown;
     }>;
+    signOut(options?: { scope?: "global" | "local" | "others" }): PromiseLike<{
+      error: unknown;
+    }>;
   };
 }
+
+export interface HybridLogoutFailure {
+  code: "ACCOUNT_SESSION_STALE" | "INTERNAL_ERROR";
+  message: string;
+  status: 409 | 500;
+}
+
+export type HybridLogoutResult =
+  | { ok: true }
+  | { ok: false; error: HybridLogoutFailure };
 
 export async function revokeCurrentHybridSessionAuthority(
   authClient: RemoteAuthSessionClient,
@@ -73,7 +86,7 @@ export async function revokeCurrentHybridSessionAuthority(
     if (!authorityClient) {
       return { ok: false as const };
     }
-    const { error } = await authorityClient.rpc(
+    const { data, error } = await authorityClient.rpc(
       "revoke_hybrid_remote_session_authority",
       {
         p_session_key_hash: binding.session_key_hash,
@@ -81,9 +94,53 @@ export async function revokeCurrentHybridSessionAuthority(
       },
     );
     return error
+      || typeof data !== "object"
+      || data === null
+      || (data as { revoked?: unknown }).revoked !== true
       ? { ok: false as const }
       : { ok: true as const, skipped: false as const };
   } catch {
     return { ok: false as const };
   }
+}
+
+export async function executeHybridLogout(
+  authClient: RemoteAuthSessionClient,
+): Promise<HybridLogoutResult> {
+  const revokeResult = await revokeCurrentHybridSessionAuthority(authClient);
+  if (!revokeResult.ok) {
+    return {
+      ok: false,
+      error: {
+        code: "ACCOUNT_SESSION_STALE",
+        message: "세션을 다시 확인해 주세요.",
+        status: 409,
+      },
+    };
+  }
+
+  try {
+    const signOutResult = await authClient.auth.signOut({ scope: "local" });
+    if (signOutResult.error) {
+      return {
+        ok: false,
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "로그아웃하지 못했어요.",
+          status: 500,
+        },
+      };
+    }
+  } catch {
+    return {
+      ok: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "로그아웃하지 못했어요.",
+        status: 500,
+      },
+    };
+  }
+
+  return { ok: true };
 }

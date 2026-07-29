@@ -33,7 +33,7 @@ import {
   type ExternalWriteRpcClient,
 } from "@/lib/server/account-generation/external-write";
 import {
-  createRemoteCompatibilityServiceRoleClient,
+  createRecipeImageInternalClient,
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
 
@@ -189,7 +189,7 @@ export async function POST(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const serviceRoleClient = createRemoteCompatibilityServiceRoleClient();
+  const serviceRoleClient = createRecipeImageInternalClient();
   if (!serviceRoleClient) {
     return fail("INTERNAL_ERROR", "이미지를 업로드하지 못했어요.", 500);
   }

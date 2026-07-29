@@ -63,6 +63,7 @@ export function LoginScreen({
     email_required: "로그인하려면 이메일 제공 동의가 필요해요. 동의 항목을 확인한 뒤 다시 시도해 주세요.",
     account_conflict: "현재 계정으로 로그인할 수 없어요. 다른 로그인 방법을 시도해 주세요.",
     provider_resolution_failed: "로그인 정보를 안전하게 확인하지 못했어요. 다시 시도해 주세요.",
+    ACCOUNT_SESSION_STALE: "세션을 다시 확인해 주세요. 다시 로그인해 주세요.",
   };
   const safeNextPath = sanitizeInternalPath(nextPath, "/");
   const viewMode = useViewMode();

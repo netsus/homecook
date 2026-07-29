@@ -19,7 +19,8 @@ describe("hybrid Storage internal boundary contract", () => {
     expect(compose).toMatch(/STORAGE_UPSTREAM_URL:\s*http:\/\/storage:5000/);
     expect(gateway).toMatch(/claims\.role !== "authenticated"/);
     expect(gateway).toMatch(/readRemoteUser/);
-    expect(gateway).toMatch(/persistAuthority/);
+    expect(gateway).toMatch(/assertAuthority/);
+    expect(gateway).not.toMatch(/async function persistAuthority/);
     expect(gateway).toMatch(/ACCOUNT_SESSION_STALE/);
   });
 });

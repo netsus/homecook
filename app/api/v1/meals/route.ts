@@ -15,6 +15,10 @@ import {
   toMealProductPlannerEntry,
 } from "@/lib/server/prepared-food-planner-entry";
 import {
+  createHybridAuthorityRouteError,
+  withHybridAuthorityRouteError,
+} from "@/lib/server/hybrid-auth/route-error";
+import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
@@ -354,7 +358,7 @@ async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHan
   return authResult.data.user;
 }
 
-export async function GET(request: NextRequest) {
+async function getMeals(request: NextRequest) {
   const parsed = parseMealListQuery(request);
   if (parsed.fields.length > 0) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
@@ -398,6 +402,10 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   if (columnResult.error || !columnResult.data) {
+    const authorityError = createHybridAuthorityRouteError(columnResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
   }
 
@@ -417,6 +425,10 @@ export async function GET(request: NextRequest) {
     .order("id", { ascending: true });
 
   if (mealsResult.error || !mealsResult.data) {
+    const authorityError = createHybridAuthorityRouteError(mealsResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
   }
 
@@ -443,6 +455,10 @@ export async function GET(request: NextRequest) {
     p_column_id: parsed.columnId,
   });
   if (productEntriesResult.error || !Array.isArray(productEntriesResult.data)) {
+    const authorityError = createHybridAuthorityRouteError(productEntriesResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
   }
   const productEntries = dedupeProductPlannerEntries(
@@ -459,6 +475,10 @@ export async function GET(request: NextRequest) {
       .in("id", recipeIds);
 
     if (recipesResult.error || !recipesResult.data) {
+      const authorityError = createHybridAuthorityRouteError(recipesResult.error);
+      if (authorityError) {
+        return authorityError;
+      }
       return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
     }
 
@@ -473,7 +493,16 @@ export async function GET(request: NextRequest) {
   } satisfies MealListData);
 }
 
-export async function POST(request: Request) {
+const guardedGetMeals = withHybridAuthorityRouteError(
+  "식사 목록을 불러오지 못했어요.",
+  getMeals,
+);
+
+export async function GET(request: NextRequest) {
+  return guardedGetMeals(request);
+}
+
+async function postMeals(request: Request) {
   let routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>> | null = null;
   let user: Awaited<ReturnType<typeof requireUser>> | null = null;
 
@@ -573,6 +602,10 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (recipeResult.error || !recipeResult.data) {
+    const authorityError = createHybridAuthorityRouteError(recipeResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
   }
 
@@ -583,6 +616,10 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (columnResult.error || !columnResult.data) {
+    const authorityError = createHybridAuthorityRouteError(columnResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
   }
 
@@ -598,6 +635,10 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (leftoverResult.error || !leftoverResult.data) {
+      const authorityError = createHybridAuthorityRouteError(leftoverResult.error);
+      if (authorityError) {
+        return authorityError;
+      }
       return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
     }
 
@@ -630,6 +671,10 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (insertResult.error || !insertResult.data) {
+    const authorityError = createHybridAuthorityRouteError(insertResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("INTERNAL_ERROR", "식사를 추가하지 못했어요.", 500);
   }
 
@@ -666,4 +711,13 @@ export async function POST(request: Request) {
   }
 
   return ok(toMealCreateData(insertResult.data), { status: 201 });
+}
+
+const guardedPostMeals = withHybridAuthorityRouteError(
+  "식사를 추가하지 못했어요.",
+  postMeals,
+);
+
+export async function POST(request: Request) {
+  return guardedPostMeals(request);
 }

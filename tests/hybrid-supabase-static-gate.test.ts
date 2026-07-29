@@ -10,19 +10,51 @@ describe("hybrid authority AST/static gate", () => {
 
     expect(inventory.userServiceRoleViolations).toEqual([]);
     expect(inventory.userDirectServiceRoleEntries).toEqual([]);
+    expect(inventory.internalOperationViolations).toEqual([]);
     expect(inventory.remoteCompatibilityEntries.map((entry) => entry.file))
       .toEqual([
         "app/api/v1/cooking-methods/route.ts",
         "app/api/v1/ingredients/route.ts",
         "app/api/v1/recipes/[id]/route.ts",
-        "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
-        "app/api/v1/recipes/images/route.ts",
         "app/api/v1/recipes/themes/route.ts",
-        "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
-        "app/api/v1/users/me/route.ts",
-        "app/api/v1/users/me/route.ts",
-        "app/auth/callback/route.ts",
       ]);
+    expect(inventory.internalOperationEntries.map((entry) => ({
+      factory: entry.factory,
+      file: entry.file,
+    }))).toEqual([
+      {
+        factory: "createRecipeImageInternalClient",
+        file: "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
+      },
+      {
+        factory: "createRecipeImageInternalClient",
+        file: "app/api/v1/recipes/images/route.ts",
+      },
+      {
+        factory: "createAccountLifecycleInternalRpcClient",
+        file: "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
+      },
+      {
+        factory: "createAccountLifecycleInternalRpcClient",
+        file: "app/api/v1/users/me/route.ts",
+      },
+      {
+        factory: "createAccountLifecycleInternalRpcClient",
+        file: "app/api/v1/users/me/route.ts",
+      },
+      {
+        factory: "createAuthCallbackInternalDataClient",
+        file: "app/auth/callback/route.ts",
+      },
+      {
+        factory: "createYoutubeIngredientRegistrationInternalRpcClient",
+        file: "lib/server/youtube-import.ts",
+      },
+      {
+        factory: "createAuthRefreshInternalDataClient",
+        file: "lib/supabase/server.ts",
+      },
+    ]);
 
     const serverFactory = readFileSync("lib/supabase/server.ts", "utf8");
     expect(serverFactory).toMatch(

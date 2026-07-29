@@ -101,6 +101,7 @@ describe("login screen", () => {
     ["email_required", "이메일 제공 동의"],
     ["account_conflict", "현재 계정으로 로그인할 수 없어요"],
     ["provider_resolution_failed", "로그인 정보를 안전하게 확인하지 못했어요"],
+    ["ACCOUNT_SESSION_STALE", "세션을 다시 확인해 주세요"],
   ])("shows a PII-safe recovery for %s", (code, copy) => {
     render(<LoginScreen authError={code} />);
     expect(screen.getByRole("alert").textContent).toContain(copy);

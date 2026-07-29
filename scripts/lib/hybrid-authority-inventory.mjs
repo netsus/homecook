@@ -25,8 +25,36 @@ const INTERNAL_ALLOWLIST_FILES = new Set([
   "lib/server/account-generation/quarantine-gate.ts",
   "lib/server/admin-auth.ts",
   "lib/server/admin-events.ts",
-  "lib/server/youtube-import.ts",
   "lib/supabase/server.ts",
+]);
+
+const INTERNAL_OPERATION_ALLOWLIST = new Map([
+  [
+    "createAuthCallbackInternalDataClient",
+    new Set(["app/auth/callback/route.ts"]),
+  ],
+  [
+    "createAuthRefreshInternalDataClient",
+    new Set(["lib/supabase/server.ts"]),
+  ],
+  [
+    "createRecipeImageInternalClient",
+    new Set([
+      "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
+      "app/api/v1/recipes/images/route.ts",
+    ]),
+  ],
+  [
+    "createAccountLifecycleInternalRpcClient",
+    new Set([
+      "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
+      "app/api/v1/users/me/route.ts",
+    ]),
+  ],
+  [
+    "createYoutubeIngredientRegistrationInternalRpcClient",
+    new Set(["lib/server/youtube-import.ts"]),
+  ],
 ]);
 
 const BROWSER_DIRECT_STORAGE_ALLOWLIST = new Map([
@@ -184,10 +212,12 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
   const remoteCompatibilityEntries = [];
   const fallbackEntries = [];
   const browserDirectStoragePaths = [];
+  const internalOperationEntries = [];
   const serviceRoleEntryKeys = new Set();
   const fallbackEntryKeys = new Set();
   const storageEntryKeys = new Set();
   const remoteCompatibilityEntryKeys = new Set();
+  const internalOperationEntryKeys = new Set();
 
   for (const absoluteFile of listSourceFiles(repoRoot)) {
     const relativeFile = toRelativeFile(repoRoot, absoluteFile);
@@ -237,6 +267,25 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
         if (!remoteCompatibilityEntryKeys.has(key)) {
           remoteCompatibilityEntryKeys.add(key);
           remoteCompatibilityEntries.push(entry);
+        }
+      }
+
+      if (ts.isCallExpression(node)) {
+        for (const [factory, allowedFiles] of INTERNAL_OPERATION_ALLOWLIST) {
+          if (!isNamedCall(node, factory)) {
+            continue;
+          }
+          const entry = {
+            ...createBaseEntry(relativeFile, sourceFile, node, classification),
+            allowed: allowedFiles.has(relativeFile),
+            factory,
+            kind: "internal-operation-call",
+          };
+          const key = `${entry.file}:${entry.line}:${entry.column}:${entry.factory}`;
+          if (!internalOperationEntryKeys.has(key)) {
+            internalOperationEntryKeys.add(key);
+            internalOperationEntries.push(entry);
+          }
         }
       }
 
@@ -294,12 +343,23 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
   const sortedRemoteCompatibilityEntries =
     remoteCompatibilityEntries.sort(compareEntries);
   const sortedBrowserDirectStoragePaths = browserDirectStoragePaths.sort(compareEntries);
+  const sortedInternalOperationEntries = internalOperationEntries.sort(compareEntries);
 
   return {
     adminAllowlistFiles: [...ADMIN_ALLOWLIST_FILES].sort(),
     adminServiceRoleEntries: sortedServiceRoleEntries.filter((entry) => entry.classification === "admin"),
     browserDirectStoragePaths: sortedBrowserDirectStoragePaths,
     internalAllowlistFiles: [...INTERNAL_ALLOWLIST_FILES].sort(),
+    internalOperationAllowlist: Object.fromEntries(
+      [...INTERNAL_OPERATION_ALLOWLIST].map(([factory, files]) => [
+        factory,
+        [...files].sort(),
+      ]),
+    ),
+    internalOperationEntries: sortedInternalOperationEntries,
+    internalOperationViolations: sortedInternalOperationEntries.filter(
+      (entry) => !entry.allowed,
+    ),
     internalServiceRoleEntries: sortedServiceRoleEntries.filter((entry) => entry.classification === "internal"),
     publicAllowlistFiles: [...PUBLIC_ALLOWLIST_FILES].sort(),
     publicServiceRoleEntries: sortedServiceRoleEntries.filter((entry) => entry.classification === "public"),

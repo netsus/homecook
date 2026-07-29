@@ -2,6 +2,100 @@
   "generated_from": "scripts/lib/hybrid-authority-inventory.mjs",
   "user_service_role_violation_count": 0,
   "user_direct_service_role_count": 0,
+  "internal_operation_violation_count": 0,
+  "internal_operation_allowlist": {
+    "createAuthCallbackInternalDataClient": [
+      "app/auth/callback/route.ts"
+    ],
+    "createAuthRefreshInternalDataClient": [
+      "lib/supabase/server.ts"
+    ],
+    "createRecipeImageInternalClient": [
+      "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
+      "app/api/v1/recipes/images/route.ts"
+    ],
+    "createAccountLifecycleInternalRpcClient": [
+      "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
+      "app/api/v1/users/me/route.ts"
+    ],
+    "createYoutubeIngredientRegistrationInternalRpcClient": [
+      "lib/server/youtube-import.ts"
+    ]
+  },
+  "internal_operation_entries": [
+    {
+      "classification": "user",
+      "file": "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
+      "column": 29,
+      "line": 42,
+      "allowed": true,
+      "factory": "createRecipeImageInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/recipes/images/route.ts",
+      "column": 29,
+      "line": 192,
+      "allowed": true,
+      "factory": "createRecipeImageInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
+      "column": 29,
+      "line": 36,
+      "allowed": true,
+      "factory": "createAccountLifecycleInternalRpcClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/users/me/route.ts",
+      "column": 7,
+      "line": 292,
+      "allowed": true,
+      "factory": "createAccountLifecycleInternalRpcClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/users/me/route.ts",
+      "column": 29,
+      "line": 321,
+      "allowed": true,
+      "factory": "createAccountLifecycleInternalRpcClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "app/auth/callback/route.ts",
+      "column": 31,
+      "line": 265,
+      "allowed": true,
+      "factory": "createAuthCallbackInternalDataClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "lib/server/youtube-import.ts",
+      "column": 5,
+      "line": 10691,
+      "allowed": true,
+      "factory": "createYoutubeIngredientRegistrationInternalRpcClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "lib/supabase/server.ts",
+      "column": 26,
+      "line": 53,
+      "allowed": true,
+      "factory": "createAuthRefreshInternalDataClient",
+      "kind": "internal-operation-call"
+    }
+  ],
   "remote_compatibility_entries": [
     {
       "classification": "public",
@@ -26,51 +120,9 @@
     },
     {
       "classification": "user",
-      "file": "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
-      "column": 29,
-      "line": 42,
-      "kind": "remote-only-compatibility-call"
-    },
-    {
-      "classification": "user",
-      "file": "app/api/v1/recipes/images/route.ts",
-      "column": 29,
-      "line": 192,
-      "kind": "remote-only-compatibility-call"
-    },
-    {
-      "classification": "user",
       "file": "app/api/v1/recipes/themes/route.ts",
       "column": 7,
       "line": 398,
-      "kind": "remote-only-compatibility-call"
-    },
-    {
-      "classification": "user",
-      "file": "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
-      "column": 29,
-      "line": 36,
-      "kind": "remote-only-compatibility-call"
-    },
-    {
-      "classification": "user",
-      "file": "app/api/v1/users/me/route.ts",
-      "column": 7,
-      "line": 292,
-      "kind": "remote-only-compatibility-call"
-    },
-    {
-      "classification": "user",
-      "file": "app/api/v1/users/me/route.ts",
-      "column": 29,
-      "line": 321,
-      "kind": "remote-only-compatibility-call"
-    },
-    {
-      "classification": "internal",
-      "file": "app/auth/callback/route.ts",
-      "column": 31,
-      "line": 264,
       "kind": "remote-only-compatibility-call"
     }
   ],
@@ -88,7 +140,6 @@
     "lib/server/account-generation/quarantine-gate.ts",
     "lib/server/admin-auth.ts",
     "lib/server/admin-events.ts",
-    "lib/server/youtube-import.ts",
     "lib/supabase/server.ts"
   ],
   "service_role_entries": [
@@ -126,60 +177,7 @@
       "column": 7,
       "line": 71,
       "kind": "service-role-call"
-    },
-    {
-      "classification": "internal",
-      "file": "lib/server/youtube-import.ts",
-      "column": 21,
-      "line": 9277,
-      "kind": "service-role-call"
-    },
-    {
-      "classification": "internal",
-      "file": "lib/server/youtube-import.ts",
-      "column": 21,
-      "line": 10514,
-      "kind": "service-role-call"
-    },
-    {
-      "classification": "internal",
-      "file": "lib/server/youtube-import.ts",
-      "column": 29,
-      "line": 10672,
-      "kind": "service-role-call"
-    },
-    {
-      "classification": "internal",
-      "file": "lib/server/youtube-import.ts",
-      "column": 21,
-      "line": 10797,
-      "kind": "service-role-call"
     }
   ],
-  "service_role_fallback_entries": [
-    {
-      "classification": "internal",
-      "file": "lib/server/youtube-import.ts",
-      "column": 21,
-      "line": 9277,
-      "kind": "service-role-fallback",
-      "pattern": "direct-nullish-fallback"
-    },
-    {
-      "classification": "internal",
-      "file": "lib/server/youtube-import.ts",
-      "column": 21,
-      "line": 10514,
-      "kind": "service-role-fallback",
-      "pattern": "direct-nullish-fallback"
-    },
-    {
-      "classification": "internal",
-      "file": "lib/server/youtube-import.ts",
-      "column": 21,
-      "line": 10797,
-      "kind": "service-role-fallback",
-      "pattern": "direct-nullish-fallback"
-    }
-  ]
+  "service_role_fallback_entries": []
 }

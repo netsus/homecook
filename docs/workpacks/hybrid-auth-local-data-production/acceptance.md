@@ -9,9 +9,9 @@
 - [ ] Google 로그인 후 기존 화면/API shape 그대로 local DB CRUD가 동작한다 <!-- omo:id=accept-hybrid-google-crud;stage=4;scope=shared;review=6 -->
 - [ ] Naver 로그인 후 기존 화면/API shape 그대로 local DB CRUD가 동작한다 <!-- omo:id=accept-hybrid-naver-crud;stage=4;scope=shared;review=6 -->
 - [ ] Kakao 로그인 후 기존 화면/API shape 그대로 local DB CRUD가 동작한다 <!-- omo:id=accept-hybrid-kakao-crud;stage=4;scope=shared;review=6 -->
-- [ ] remote Auth JWT `sub`와 local PostgREST `auth.uid()`가 exact 일치한다 <!-- omo:id=accept-hybrid-auth-uid-sub;stage=2;scope=backend;review=3,6 -->
+- [x] remote Auth JWT `sub`와 local PostgREST `auth.uid()`가 exact 일치한다 <!-- omo:id=accept-hybrid-auth-uid-sub;stage=2;scope=backend;review=3,6 -->
 - [ ] local Storage read/write/cancel/delete가 remote JWT owner policy를 따른다 <!-- omo:id=accept-hybrid-storage-owner;stage=2;scope=backend;review=3,6 -->
-- [ ] response wrapper `{ success, data, error }`와 error object shape가 기존 API 문서와 일치한다 <!-- omo:id=accept-hybrid-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] response wrapper `{ success, data, error }`와 error object shape가 기존 API 문서와 일치한다 <!-- omo:id=accept-hybrid-api-envelope;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
 
@@ -34,8 +34,8 @@
 - [x] remote private signing key가 local env/file/container/log/artifact에 없다 <!-- omo:id=accept-hybrid-no-private-key-local;stage=2;scope=shared;review=3,6 -->
 - [x] JWKS sync는 size/timeout/alg/kty/kid/public-key allowlist와 atomic replace를 검증한다 <!-- omo:id=accept-hybrid-jwks-sync-guard;stage=2;scope=backend;review=3,6 -->
 - [ ] JWKS stale/rotation rehearsal이 alert와 canary RLS verification을 남긴다 <!-- omo:id=accept-hybrid-jwks-rotation;stage=2;scope=backend;review=3,6 -->
-- [ ] session-liveness HMAC binding은 callback/refresh remote liveness success에서만 생성/갱신되고 logout/deletion/quarantine/identity replacement/maintenance abort에서 revoke/delete된다 <!-- omo:id=accept-hybrid-session-liveness-create-revoke;stage=2;scope=backend;review=3,6 -->
-- [ ] 모든 user-scoped DB/Storage request가 remote liveness recheck, active mirror epoch, session-liveness HMAC binding, binding TTL, method/path attestation을 재검증한다 <!-- omo:id=accept-hybrid-session-liveness-request-recheck;stage=2;scope=backend;review=3,6 -->
+- [ ] session-liveness HMAC binding은 callback/refresh remote liveness success에서만 생성/갱신되고 logout/deletion/quarantine/identity replacement/maintenance abort에서 revoke/delete된다. callback/refresh 및 logout/deletion/quarantine 경로는 자동화됐고 identity replacement/maintenance abort live 연동은 미실행이다 <!-- omo:id=accept-hybrid-session-liveness-create-revoke;stage=2;scope=backend;review=3,6 -->
+- [x] 모든 user-scoped DB/Storage request가 remote liveness recheck, active mirror epoch, session-liveness HMAC binding, binding TTL, method/path attestation을 재검증한다 <!-- omo:id=accept-hybrid-session-liveness-request-recheck;stage=2;scope=backend;review=3,6 -->
 - [ ] 실제 hosted Auth에서 유효 JWT의 `/auth/v1/user` 성공 -> 해당 `session_id` logout/revoke -> 만료 전 같은 JWT의 `session_not_found` 계열 실패를 확인하고 gateway가 이를 `409 ACCOUNT_SESSION_STALE`로 매핑하며 local DB/Storage mutation이 0건임을 증명한다 <!-- omo:id=accept-hybrid-revoked-session-negative-canary;stage=2;scope=backend;review=3,6 -->
 - [x] remote Auth outage에서는 binding TTL 연장, 신규 binding 생성, user-scoped mutation allow-until-exp가 모두 금지되고 기존 public mapping으로 fail closed된다 <!-- omo:id=accept-hybrid-remote-outage-fail-closed;stage=2;scope=backend;review=3,6 -->
 
@@ -66,7 +66,7 @@
 - [x] user/public/admin/internal route와 helper inventory, exact internal service-role allowlist, AST/static CI gate가 통과한다 <!-- omo:id=accept-hybrid-route-helper-static-gate;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 2 route/helper/browser inventory와 AST/static CI gate가 browser direct local Storage URL/key/SDK write/delete path를 탐지하고 차단한다 <!-- omo:id=accept-hybrid-browser-direct-storage-static-gate;stage=2;scope=backend;review=3,6 -->
 - [ ] Stage 4 frontend implementation evidence에서 기존 browser direct Storage mutation 경로가 제거되고 기존 서버 image API 경유만 남는다 <!-- omo:id=accept-hybrid-browser-direct-storage-stage4-removal;stage=4;scope=frontend;review=5,6 -->
-- [ ] User A token으로 User B DB row read/write가 0이다 <!-- omo:id=accept-hybrid-cross-owner-db-denied;stage=2;scope=backend;review=3,6 -->
+- [x] User A token으로 User B DB row read/write가 0이다 <!-- omo:id=accept-hybrid-cross-owner-db-denied;stage=2;scope=backend;review=3,6 -->
 - [ ] User A token으로 User B Storage object read/write/delete가 0이다 <!-- omo:id=accept-hybrid-cross-owner-storage-denied;stage=2;scope=backend;review=3,6 -->
 - [ ] local DB down 또는 Storage down이 기존 safe error 상태로 fail closed되고 partial write를 만들지 않는다 <!-- omo:id=accept-hybrid-local-down-fail-closed;stage=2;scope=shared;review=3,6 -->
 - [x] 신규 public endpoint/field/status/error code가 추가되지 않는다 <!-- omo:id=accept-hybrid-no-public-shape-change;stage=2;scope=shared;review=3,6 -->
@@ -155,7 +155,9 @@
 - local-shadow runtime: `tests/hybrid-shadow-read.test.ts`, `tests/supabase-server.test.ts`, `node scripts/verify-hybrid-supabase.mjs --mode shadow-read-runtime`
 - mirror/migration/static gate: `tests/hybrid-supabase-identity-mirror.test.ts`, `tests/hybrid-supabase-migration.test.ts`, `tests/hybrid-supabase-static-gate.test.ts`, `tests/account-session-generation-security-function-inventory.test.ts`, `node scripts/validate-security-function-authorization.mjs --contract-only`
 - isolated runtime 계약: `tests/hybrid-isolated-runtime.test.ts`, `tests/hybrid-supabase-storage.integration.test.ts`, `infra/hybrid-supabase/docker-compose.integration.yml`
-- exact runtime smoke: PG 17.6.1.136/PostgREST 14.12/Storage 1.60.4/gateway 모두 기동, `published_ports={}`, internal PostgREST/Storage 200, unauthenticated gateway 409 (`tests/fixtures/hybrid-stage2-runtime-evidence.json`)
+- historical runtime snapshot(측정 증거 아님): `tests/fixtures/hybrid-stage2-runtime-evidence.json`
+- measured isolated runtime: `pnpm test:hybrid-supabase:runtime` — PG 17.6.1.136/PostgREST 14.12/Storage 1.60.4/gateway를 host port 없이 기동하고 DB setting 주입, remote-shaped ES256 `sub=auth.uid()`, anon public GET, User A/B DB RLS, Storage owner mutation, exact callback control-plane/user-token 거부, revoke 후 동일 JWT DB/Storage mutation 0, 409/503 outage mapping을 실제 HTTP/DB 상태로 검증
+- measured runtime은 locally signed fixture만 사용한다. 실제 hosted revoked-session canary, Google/Naver/Kakao OAuth, production network/cutover/write는 미실행 manual gate다
 - 격리 복원 DB transaction: `HYBRID_SUPABASE_TEST_CONTAINER=homecook-hybrid-encrypted-restore-20260730 node scripts/verify-hybrid-supabase.mjs --mode migration-rehearsal`
 - 격리 DB 결과: `auth.users=0`, `public.users=5`, `storage.objects=1`, invalid constraint/FK/procedure residual=0, session canary transaction rollback. Stage 2 초안이 이미 적용된 격리 DB에는 exact function `search_path`/ACL 보정만 적용했으며 production/cutover/data write는 0이다.
 - inventory: `hybrid-browser-storage-direct-inventory.json`, `hybrid-service-role-inventory.json`, `auth-users-replacement-matrix.md`

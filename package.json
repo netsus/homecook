@@ -50,6 +50,7 @@
     "test:account-session-generation:postgres": "node scripts/run-account-session-generation-postgres-integration.mjs",
     "test:hybrid-supabase:postgres": "vitest run tests/hybrid-supabase-postgres.integration.test.ts",
     "test:hybrid-supabase:storage": "vitest run tests/hybrid-supabase-storage.integration.test.ts tests/hybrid-session-authority-gateway.test.ts",
+    "test:hybrid-supabase:runtime": "HYBRID_RUNTIME_COMPOSE=1 vitest run tests/hybrid-isolated-runtime.test.ts",
     "verify:account-generation:auth-hook-config": "node scripts/verify-account-generation-auth-hook-config.mjs",
     "verify:account-generation:joint-preflight": "node scripts/verify-account-session-generation-remote.mjs --mode joint-activation-preflight --json",
     "verify:account-generation:storage-inventory-sample": "node scripts/verify-account-session-generation-remote.mjs --mode joint-storage-inventory-sample --json",

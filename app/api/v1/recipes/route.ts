@@ -37,6 +37,10 @@ import {
   recalculateRecipeNutritionSnapshot,
   type RecipeNutritionServiceClient,
 } from "@/lib/server/recipe-nutrition-service";
+import {
+  createHybridAuthorityRouteError,
+  withHybridAuthorityRouteError,
+} from "@/lib/server/hybrid-auth/route-error";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import {
   buildSuggestedRecipeTags,
@@ -1023,6 +1027,10 @@ export async function GET(request: NextRequest) {
         .in("ingredient_id", listQuery.ingredient_ids);
 
       if (ingredientError) {
+        const authorityError = createHybridAuthorityRouteError(ingredientError);
+        if (authorityError) {
+          return authorityError;
+        }
         return fail("INTERNAL_ERROR", "레시피 목록을 불러오지 못했어요.", 500);
       }
 
@@ -1044,6 +1052,10 @@ export async function GET(request: NextRequest) {
       });
 
       if (tagLookup.error) {
+        const authorityError = createHybridAuthorityRouteError(tagLookup.error);
+        if (authorityError) {
+          return authorityError;
+        }
         return fail("INTERNAL_ERROR", "레시피 목록을 불러오지 못했어요.", 500);
       }
 
@@ -1073,6 +1085,10 @@ export async function GET(request: NextRequest) {
         });
 
     if (recipeRowsResult.error) {
+      const authorityError = createHybridAuthorityRouteError(recipeRowsResult.error);
+      if (authorityError) {
+        return authorityError;
+      }
       return fail("INTERNAL_ERROR", "레시피 목록을 불러오지 못했어요.", 500);
     }
 
@@ -1114,7 +1130,11 @@ export async function GET(request: NextRequest) {
     };
 
     return ok(response);
-  } catch {
+  } catch (error) {
+    const authorityError = createHybridAuthorityRouteError(error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("INTERNAL_ERROR", "레시피 목록을 불러오지 못했어요.", 500);
   }
 }
@@ -1179,7 +1199,7 @@ function buildMissingCookingMethodFields(
     .filter((field): field is ValidationField => field !== null);
 }
 
-export async function POST(request: Request) {
+async function postRecipe(request: Request) {
   const routeClient = await createRouteHandlerClient();
   const user = await requireUser(routeClient);
 
@@ -1274,6 +1294,10 @@ export async function POST(request: Request) {
   const ingredientIds = [...new Set(parsed.ingredients.map((ingredient) => ingredient.ingredient_id))];
   const ingredientLookup = await findMissingIds(dbClient, "ingredients", ingredientIds);
   if (ingredientLookup.error) {
+    const authorityError = createHybridAuthorityRouteError(ingredientLookup.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("INTERNAL_ERROR", "레시피 재료를 확인하지 못했어요.", 500);
   }
 
@@ -1289,6 +1313,10 @@ export async function POST(request: Request) {
   const cookingMethodIds = [...new Set(parsed.steps.map((step) => step.cooking_method_id))];
   const cookingMethodLookup = await findMissingIds(dbClient, "cooking_methods", cookingMethodIds, "id, label");
   if (cookingMethodLookup.error) {
+    const authorityError = createHybridAuthorityRouteError(cookingMethodLookup.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("INTERNAL_ERROR", "조리방법을 확인하지 못했어요.", 500);
   }
 
@@ -1345,6 +1373,10 @@ export async function POST(request: Request) {
         : null;
       if (managedErrorCode) {
         return failManagedRecipeCreate(managedErrorCode);
+      }
+      const authorityError = createHybridAuthorityRouteError(recipeResult.error);
+      if (authorityError) {
+        return authorityError;
       }
       return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
     }
@@ -1407,6 +1439,10 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (recipeResult.error || !recipeResult.data) {
+    const authorityError = createHybridAuthorityRouteError(recipeResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("INTERNAL_ERROR", "레시피를 등록하지 못했어요.", 500);
   }
 
@@ -1415,6 +1451,10 @@ export async function POST(request: Request) {
     .insert(buildIngredientInsertRows(recipeResult.data.id, parsed.ingredients));
 
   if (ingredientInsertResult.error) {
+    const authorityError = createHybridAuthorityRouteError(ingredientInsertResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("INTERNAL_ERROR", "레시피 재료를 등록하지 못했어요.", 500);
   }
 
@@ -1423,6 +1463,10 @@ export async function POST(request: Request) {
     .insert(buildStepInsertRows(recipeResult.data.id, parsed.steps));
 
   if (stepInsertResult.error) {
+    const authorityError = createHybridAuthorityRouteError(stepInsertResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("INTERNAL_ERROR", "레시피 만들기를 등록하지 못했어요.", 500);
   }
 
@@ -1446,4 +1490,13 @@ export async function POST(request: Request) {
   }
 
   return ok(toManualRecipeCreateData(recipeResult.data), { status: 201 });
+}
+
+const guardedPostRecipe = withHybridAuthorityRouteError(
+  "레시피를 등록하지 못했어요.",
+  postRecipe,
+);
+
+export async function POST(request: Request) {
+  return guardedPostRecipe(request);
 }

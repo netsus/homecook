@@ -25,6 +25,10 @@ const serviceContent = `${JSON.stringify({
     inventory.userServiceRoleViolations.length,
   user_direct_service_role_count:
     inventory.userDirectServiceRoleEntries.length,
+  internal_operation_violation_count:
+    inventory.internalOperationViolations.length,
+  internal_operation_allowlist: inventory.internalOperationAllowlist,
+  internal_operation_entries: inventory.internalOperationEntries,
   remote_compatibility_entries: inventory.remoteCompatibilityEntries,
   public_allowlist_files: inventory.publicAllowlistFiles,
   admin_allowlist_files: inventory.adminAllowlistFiles,

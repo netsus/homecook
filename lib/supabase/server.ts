@@ -3,7 +3,16 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
-import { createHybridAuthorityFetch } from "@/lib/server/hybrid-auth/gateway";
+import {
+  HybridLifecycleMaintenanceError,
+  HybridSessionAuthorityError,
+  createHybridAuthorityMarker,
+  createHybridAuthorityFetch,
+} from "@/lib/server/hybrid-auth/gateway";
+import {
+  createRemoteRefreshAuthorityFetch,
+  recordHybridSessionAuthorityBootstrap,
+} from "@/lib/server/hybrid-auth/bootstrap";
 import { createHybridShadowReadFetch } from "@/lib/server/hybrid-auth/shadow-read";
 import {
   getAuthServiceRoleKey,
@@ -34,6 +43,27 @@ async function createAuthServerClient({
   const shadowFetch = dataEnv.authority === "local-shadow"
     ? createLocalShadowReadFetch()
     : undefined;
+  const refreshFetch = dataEnv.authority === "local"
+    ? createRemoteRefreshAuthorityFetch({
+        auth: {
+          publishableKey: anonKey,
+          url,
+        },
+        bootstrap: async ({ accessToken, user }) => {
+          const client = createAuthRefreshInternalDataClient();
+          if (!client) {
+            return { ok: false };
+          }
+
+          return bootstrapAuthCallbackSessionAuthority({
+            accessToken,
+            client,
+            user,
+          });
+        },
+      })
+    : undefined;
+  const authFetch = shadowFetch ?? refreshFetch;
 
   return createServerClient(url, anonKey, {
     cookies: {
@@ -56,23 +86,20 @@ async function createAuthServerClient({
         });
       },
     },
-    ...(shadowFetch ? { global: { fetch: shadowFetch } } : {}),
+    ...(authFetch ? { global: { fetch: authFetch } } : {}),
   });
 }
 
 type LocalAuthorityClient = { rpc: unknown };
 
-function createPersistSessionAuthority(
+function createAssertSessionAuthority(
   authorityClient: LocalAuthorityClient,
 ) {
   return async ({
     binding,
-    remoteIdentityDigest,
-    remoteRevision,
-    evidenceRevision,
   }: Parameters<
     NonNullable<
-      Parameters<typeof createHybridAuthorityFetch>[0]["persistSessionAuthority"]
+      Parameters<typeof createHybridAuthorityFetch>[0]["assertSessionAuthority"]
     >
   >[0]) => {
     const rpc = authorityClient.rpc as (
@@ -81,22 +108,32 @@ function createPersistSessionAuthority(
     ) => PromiseLike<{ error: unknown }>;
     const { error } = await rpc.call(
       authorityClient,
-      "record_hybrid_remote_session_authority",
+      "assert_hybrid_remote_session_authority",
       {
         p_issuer: binding.issuer,
         p_owner_uuid: binding.owner_uuid,
         p_identity_created_at: binding.identity_created_at,
-        p_remote_revision: remoteRevision,
-        p_remote_identity_digest: remoteIdentityDigest,
-        p_verified_at: binding.remote_verified_at,
-        p_evidence_revision: evidenceRevision,
         p_session_key_hash: binding.session_key_hash,
         p_hmac_key_version: binding.hmac_key_version,
-        p_binding_expires_at: binding.binding_expires_at,
       },
     );
     if (error) {
-      throw error;
+      const message = String(
+        (error as { message?: unknown; details?: unknown; hint?: unknown })
+          ?.message
+          ?? (error as { details?: unknown })?.details
+          ?? (error as { hint?: unknown })?.hint
+          ?? "",
+      );
+      if (
+        message.includes(
+          createHybridAuthorityMarker(new HybridLifecycleMaintenanceError()),
+        )
+        || message.includes("ACCOUNT_LIFECYCLE_MAINTENANCE")
+      ) {
+        throw new HybridLifecycleMaintenanceError();
+      }
+      throw new HybridSessionAuthorityError();
     }
   };
 }
@@ -122,7 +159,7 @@ function createGuardedLocalFetch({
     sessionBindingSecret: requireHmacSecret(
       "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
     ),
-    persistSessionAuthority: createPersistSessionAuthority(authorityClient),
+    assertSessionAuthority: createAssertSessionAuthority(authorityClient),
   });
 }
 
@@ -273,6 +310,76 @@ export function createDataServiceRoleClient() {
  */
 export function createServiceRoleClient() {
   return createDataServiceRoleClient();
+}
+
+export function createAuthCallbackInternalDataClient() {
+  return createDataServiceRoleClient();
+}
+
+export function createAuthRefreshInternalDataClient() {
+  return createDataServiceRoleClient();
+}
+
+export function createRecipeImageInternalClient() {
+  const client = createDataServiceRoleClient();
+  return client
+    ? {
+        rpc: client.rpc.bind(client),
+        storage: client.storage,
+      }
+    : null;
+}
+
+export function createAccountLifecycleInternalRpcClient() {
+  const client = createDataServiceRoleClient();
+  return client
+    ? {
+        rpc: client.rpc.bind(client),
+      }
+    : null;
+}
+
+export function createYoutubeIngredientRegistrationInternalRpcClient() {
+  const client = createDataServiceRoleClient();
+  return client
+    ? {
+        rpc: client.rpc.bind(client),
+      }
+    : null;
+}
+
+export async function bootstrapAuthCallbackSessionAuthority({
+  accessToken,
+  client,
+  user,
+}: {
+  accessToken: string | undefined;
+  client: NonNullable<ReturnType<typeof createAuthCallbackInternalDataClient>>;
+  user: {
+    id: string;
+    created_at?: string;
+  };
+}) {
+  if (getDataSupabaseEnv().authority !== "local") {
+    return { ok: true };
+  }
+  if (!accessToken || !user.created_at) {
+    return { ok: false };
+  }
+
+  const authEnv = getAuthSupabaseEnv();
+  return recordHybridSessionAuthorityBootstrap({
+    accessToken,
+    dbClient: client,
+    expectedIssuer: authEnv.issuer,
+    sessionBindingSecret: requireHmacSecret(
+      "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
+    ),
+    user: {
+      id: user.id,
+      created_at: user.created_at,
+    },
+  });
 }
 
 /**

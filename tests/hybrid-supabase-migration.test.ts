@@ -43,7 +43,19 @@ describe("hybrid remote identity/session authority migration", () => {
       /create or replace function public\.revoke_hybrid_remote_session_authority\(/i,
     );
     expect(sql).toMatch(
+      /create or replace function public\.assert_hybrid_remote_session_authority\(/i,
+    );
+    expect(sql).toMatch(
       /grant execute on function public\.record_hybrid_remote_session_authority[\s\S]+to service_role/i,
+    );
+    expect(sql).toMatch(
+      /grant execute on function public\.assert_hybrid_remote_session_authority[\s\S]+to service_role/i,
+    );
+    expect(sql).toMatch(
+      /v_existing_binding\.binding_state in \('revoked', 'deleted_terminal'\)[\s\S]+raise exception 'ACCOUNT_SESSION_STALE'/i,
+    );
+    expect(sql).toMatch(
+      /on conflict \(hmac_key_version, session_key_hash\)[\s\S]+binding_state = 'active'[\s\S]+revoked_at is null/i,
     );
   });
 

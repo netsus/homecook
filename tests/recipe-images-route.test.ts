@@ -8,6 +8,7 @@ const readVerifiedAccountGenerationSession = vi.fn();
 const runManagedRecipeImageUpload = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeImageInternalClient: createServiceRoleClient,
   createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,

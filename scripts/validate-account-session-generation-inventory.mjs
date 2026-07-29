@@ -294,6 +294,7 @@ function collectStorageEntries(source, sourceFile) {
   const bucketTarget = KNOWN_STORAGE_BUCKETS[rawBucketTarget] ?? rawBucketTarget.toLowerCase();
   const kind = source.includes("createServiceRoleClient()")
     || source.includes("createRemoteCompatibilityServiceRoleClient()")
+    || source.includes("createRecipeImageInternalClient()")
     ? "service_external_write"
     : "storage";
 
