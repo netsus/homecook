@@ -632,6 +632,272 @@ describe("14 cook session start backend", () => {
     });
   });
 
+  it("GET /cooking/sessions/{id}/cook-mode uses snapshot-v2 pinned title, servings base, ingredients, and steps", async () => {
+    const contentSnapshot = {
+      id: "550e8400-e29b-41d4-a716-446655440099",
+      recipe_id: recipeId,
+      title: "요리 시작 당시 김치찌개",
+      base_servings: 2,
+      ingredients_json: [
+        {
+          ingredient_id: "ing-kimchi",
+          amount: 200,
+          unit: "g",
+          display_text: "김치 200g",
+          ingredient_type: "QUANT",
+          scalable: true,
+          sort_order: 1,
+          component_label: "찌개 재료",
+        },
+      ],
+      steps_json: [
+        {
+          step_number: 1,
+          instruction: "당시 조리법으로 끓인다",
+          component_label: "찌개 단계",
+          ingredients_used: ["김치"],
+          heat_level: "중불",
+          duration_seconds: 600,
+          duration_text: "10분",
+          cooking_methods: [
+            {
+              code: "boil",
+              label: "끓이기",
+              color_key: "red",
+              category_code: "wet_heat",
+            },
+          ],
+        },
+      ],
+    };
+    const sessionQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: sessionId,
+          user_id: "user-1",
+          status: "in_progress",
+          contract_version: "snapshot_v2",
+          session_kind: "planner",
+          recipe_id: recipeId,
+          recipe_content_snapshot_id: contentSnapshot.id,
+          cooking_servings: 4,
+          recipe_content_snapshots: contentSnapshot,
+        },
+        error: null,
+      },
+    ]);
+    const sessionMealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            meal_id: mealId1,
+            recipe_id: recipeId,
+            recipe_content_snapshot_id: contentSnapshot.id,
+            cooking_servings: 4,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipeQuery = createMaybeSingleQuery([
+      {
+        data: { id: recipeId, title: "편집된 현재 김치찌개", base_servings: 100 },
+        error: null,
+      },
+    ]);
+    const contentSnapshotQuery = createMaybeSingleQuery([
+      {
+        data: contentSnapshot,
+        error: null,
+      },
+    ]);
+    const ingredientsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            ingredient_id: "ing-kimchi",
+            amount: 1000,
+            unit: "g",
+            display_text: "편집된 김치 1000g",
+            component_label: null,
+            ingredient_type: "QUANT",
+            scalable: true,
+            sort_order: 1,
+            ingredients: { standard_name: "김치" },
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const stepsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            step_number: 1,
+            instruction: "편집된 현재 조리법",
+            component_label: null,
+            ingredients_used: ["김치"],
+            heat_level: null,
+            duration_seconds: null,
+            duration_text: null,
+            cooking_methods: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const ingredientNamesQuery = createArraySelectQuery([
+      {
+        data: [{ id: "ing-kimchi", standard_name: "김치" }],
+        error: null,
+      },
+    ]);
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "cooking_sessions") return { select: vi.fn(() => sessionQuery) };
+      if (table === "cooking_session_meals") {
+        return { select: vi.fn(() => sessionMealsQuery) };
+      }
+      if (table === "recipe_content_snapshots") {
+        return { select: vi.fn(() => contentSnapshotQuery) };
+      }
+      if (table === "recipes") return { select: vi.fn(() => recipeQuery) };
+      if (table === "recipe_ingredients") {
+        return { select: vi.fn(() => ingredientsQuery) };
+      }
+      if (table === "recipe_steps") return { select: vi.fn(() => stepsQuery) };
+      if (table === "ingredients") {
+        return { select: vi.fn(() => ingredientNamesQuery) };
+      }
+      throw new Error(`unexpected service table: ${table}`);
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ from: serviceFrom });
+
+    const { GET } = await importCookModeRoute();
+    const response = await GET(
+      new NextRequest(`http://localhost:3000/api/v1/cooking/sessions/${sessionId}/cook-mode`),
+      createSessionContext(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.recipe).toMatchObject({
+      id: recipeId,
+      title: "요리 시작 당시 김치찌개",
+      cooking_servings: 4,
+      ingredients: [
+        expect.objectContaining({
+          ingredient_id: "ing-kimchi",
+          amount: 400,
+          unit: "g",
+          component_label: "찌개 재료",
+        }),
+      ],
+      steps: [
+        expect.objectContaining({
+          step_number: 1,
+          instruction: "당시 조리법으로 끓인다",
+          component_label: "찌개 단계",
+          heat_level: "중불",
+          duration_seconds: 600,
+          duration_text: "10분",
+          cooking_methods: [
+            {
+              code: "boil",
+              label: "끓이기",
+              color_key: "red",
+              category_code: "wet_heat",
+            },
+          ],
+        }),
+      ],
+    });
+  });
+
+  it("GET /cooking/sessions/{id}/cook-mode fails closed when a snapshot-v2 content relation is broken", async () => {
+    const contentSnapshotId = "550e8400-e29b-41d4-a716-446655440099";
+    const sessionQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: sessionId,
+          user_id: "user-1",
+          status: "in_progress",
+          contract_version: "snapshot_v2",
+          session_kind: "planner",
+          recipe_id: recipeId,
+          recipe_content_snapshot_id: contentSnapshotId,
+          cooking_servings: 4,
+          recipe_content_snapshots: null,
+        },
+        error: null,
+      },
+    ]);
+    const sessionMealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            meal_id: mealId1,
+            recipe_id: recipeId,
+            recipe_content_snapshot_id: contentSnapshotId,
+            cooking_servings: 4,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipeQuery = createMaybeSingleQuery([
+      {
+        data: { id: recipeId, title: "노출되면 안 되는 현재 제목", base_servings: 2 },
+        error: null,
+      },
+    ]);
+    const serviceFrom = vi.fn((table: string) => {
+      if (table === "cooking_sessions") return { select: vi.fn(() => sessionQuery) };
+      if (table === "cooking_session_meals") {
+        return { select: vi.fn(() => sessionMealsQuery) };
+      }
+      if (table === "recipe_content_snapshots") {
+        return {
+          select: vi.fn(() =>
+            createMaybeSingleQuery([{ data: null, error: null }]),
+          ),
+        };
+      }
+      if (table === "recipes") return { select: vi.fn(() => recipeQuery) };
+      if (table === "recipe_ingredients" || table === "recipe_steps") {
+        return { select: vi.fn(() => createArraySelectQuery([{ data: [], error: null }])) };
+      }
+      throw new Error(`unexpected service table: ${table}`);
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ from: serviceFrom });
+
+    const { GET } = await importCookModeRoute();
+    const response = await GET(
+      new NextRequest(`http://localhost:3000/api/v1/cooking/sessions/${sessionId}/cook-mode`),
+      createSessionContext(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(JSON.stringify(body)).not.toContain("노출되면 안 되는 현재 제목");
+  });
+
   it("GET /cooking/sessions/{id}/cook-mode reads anchored deleted recipe content through service role for the owner", async () => {
     const sessionQuery = createMaybeSingleQuery([
       {

@@ -22,6 +22,15 @@ interface MealRow {
   id: string;
   column_id: string;
   recipe_id: string;
+  recipe_content_snapshot_id: string | null;
+  recipe_content_snapshots:
+    | {
+      title: string | null;
+    }
+    | Array<{
+      title: string | null;
+    }>
+    | null;
   plan_date: string;
   planned_servings: number;
   status: string;
@@ -81,6 +90,18 @@ interface ShoppingPreviewDbClient {
   from(table: "meal_plan_columns"): MealPlanColumnsTable;
 }
 
+function getPinnedMealTitle(meal: MealRow) {
+  const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
+    ? meal.recipe_content_snapshots[0] ?? null
+    : meal.recipe_content_snapshots;
+
+  return contentSnapshot?.title?.trim() || null;
+}
+
+function hasContentPin(meal: MealRow) {
+  return typeof meal.recipe_content_snapshot_id === "string" && meal.recipe_content_snapshot_id.length > 0;
+}
+
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
   const authResult = await routeClient.auth.getUser();
   return authResult.data.user;
@@ -110,7 +131,9 @@ export async function GET() {
 
   const mealsResult = await dbClient
     .from("meals")
-    .select("id, recipe_id, column_id, plan_date, planned_servings, status, shopping_list_id, created_at")
+    .select(
+      "id, recipe_id, recipe_content_snapshot_id, recipe_content_snapshots(title), column_id, plan_date, planned_servings, status, shopping_list_id, created_at",
+    )
     .eq("user_id", user.id)
     .eq("status", "registered")
     .is("shopping_list_id", null)
@@ -122,6 +145,10 @@ export async function GET() {
   }
 
   const eligibleMeals = mealsResult.data.filter(isMealEligibleForShopping);
+  if (eligibleMeals.some((meal) => hasContentPin(meal) && getPinnedMealTitle(meal) === null)) {
+    return fail("INTERNAL_ERROR", "장보기 미리보기를 불러오지 못했어요.", 500);
+  }
+
   const recipeIds = [...new Set(eligibleMeals.map((meal) => meal.recipe_id))];
   const columnIds = [...new Set(eligibleMeals.map((meal) => meal.column_id))];
   const recipeMap = new Map<string, RecipeRow>();
@@ -193,7 +220,7 @@ export async function GET() {
       column_name: columnNameMap.get(meal.column_id) ?? null,
       plan_date: meal.plan_date,
       recipe_id: meal.recipe_id,
-      recipe_name: recipeMap.get(meal.recipe_id)?.title ?? "",
+      recipe_name: getPinnedMealTitle(meal) ?? recipeMap.get(meal.recipe_id)?.title ?? "",
       recipe_thumbnail: normalizeFoodSafetyImageUrl(
         recipeMap.get(meal.recipe_id)?.thumbnail_url,
       ),
@@ -211,7 +238,14 @@ export async function GET() {
       })
       .map((recipe) => ({
         recipe_id: recipe.recipe_id,
-        recipe_name: recipeMap.get(recipe.recipe_id)?.title ?? "",
+        recipe_name:
+          eligibleMeals.find((meal) => meal.recipe_id === recipe.recipe_id && getPinnedMealTitle(meal))
+            ? getPinnedMealTitle(
+              eligibleMeals.find((meal) =>
+                meal.recipe_id === recipe.recipe_id && getPinnedMealTitle(meal)
+              )!,
+            ) ?? ""
+            : recipeMap.get(recipe.recipe_id)?.title ?? "",
         recipe_thumbnail: normalizeFoodSafetyImageUrl(
           recipeMap.get(recipe.recipe_id)?.thumbnail_url,
         ),

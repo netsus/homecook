@@ -213,6 +213,74 @@ describe("planner nutrition bounded read model", () => {
     expect(result.summary.nutrition.values.energy_kcal.amount).toBeNull();
   });
 
+  it("uses the content snapshot nutrition pin even when the legacy direct pin differs", async () => {
+    const contentNutritionId = "550e8400-e29b-41d4-a716-446655440099";
+    const meals = thenableQuery({
+      data: [{
+        id: "meal-content-pinned",
+        plan_date: "2026-07-17",
+        column_id: COLUMN_A,
+        planned_servings: 2,
+        recipe_content_snapshot_id: "content-1",
+        recipe_nutrition_snapshot_id: SNAPSHOT_ID,
+        recipe_content_snapshots: {
+          recipe_nutrition_snapshot_id: contentNutritionId,
+        },
+      }],
+      error: null,
+    });
+    const snapshots = thenableQuery({
+      data: [{ ...recipeSnapshot(), id: contentNutritionId }],
+      error: null,
+    });
+    const from = vi.fn((table: string) => ({
+      select: vi.fn(() => table === "meals" ? meals : snapshots),
+    }));
+    const db = {
+      from,
+      rpc: vi.fn(async () => ({ data: [], error: null })),
+    } as unknown as PlannerNutritionDbClient;
+
+    const result = await readPlannerNutritionSummary(db, USER_ID, {
+      startDate: "2026-07-17",
+      endDate: "2026-07-17",
+    });
+
+    expect(snapshots.in).toHaveBeenCalledWith("id", [contentNutritionId]);
+    expect(result.summary.nutrition.values.energy_kcal.amount).toBe(100);
+  });
+
+  it("does not fall back to a legacy direct pin when pinned content has no nutrition", async () => {
+    const meals = thenableQuery({
+      data: [{
+        id: "meal-content-unavailable",
+        plan_date: "2026-07-17",
+        column_id: COLUMN_A,
+        planned_servings: 2,
+        recipe_content_snapshot_id: "content-without-nutrition",
+        recipe_nutrition_snapshot_id: SNAPSHOT_ID,
+        recipe_content_snapshots: {
+          recipe_nutrition_snapshot_id: null,
+        },
+      }],
+      error: null,
+    });
+    const from = vi.fn(() => ({ select: vi.fn(() => meals) }));
+    const db = {
+      from,
+      rpc: vi.fn(async () => ({ data: [], error: null })),
+    } as unknown as PlannerNutritionDbClient;
+
+    const result = await readPlannerNutritionSummary(db, USER_ID, {
+      startDate: "2026-07-17",
+      endDate: "2026-07-17",
+    });
+
+    expect(from).toHaveBeenCalledTimes(1);
+    expect(result.summary.nutrition.calculation_status).toBe("unavailable");
+    expect(result.summary.nutrition.values.energy_kcal.amount).toBeNull();
+  });
+
   it("does not issue a snapshot query when every recipe pin is null", async () => {
     const meals = thenableQuery({
       data: [{
