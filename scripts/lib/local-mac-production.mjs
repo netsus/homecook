@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn as spawnChild, spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
@@ -13,10 +13,23 @@ import {
   loadProductionEnvFiles,
   validateProductionDataQuality,
 } from "./production-data-quality.mjs";
+import { ensureDockerRunning } from "./local-docker.mjs";
 
 export const LOCAL_MAC_PRODUCTION_LABEL = "com.homecook.production";
 export const DEFAULT_LOCAL_MAC_PRODUCTION_HOST = "127.0.0.1";
 export const DEFAULT_LOCAL_MAC_PRODUCTION_PORT = 3100;
+export const LOCAL_SUPABASE_CLI_PACKAGE = "supabase@2.110.0";
+
+const LOCAL_SUPABASE_ENV_KEYS = [
+  "COREPACK_HOME",
+  "DOCKER_CONTEXT",
+  "DOCKER_HOST",
+  "HOME",
+  "PATH",
+  "PNPM_HOME",
+  "TMPDIR",
+  "XDG_CONFIG_HOME",
+];
 
 const REQUIRED_PRODUCTION_ENV_KEYS = [
   "NEXT_PUBLIC_SUPABASE_URL",
@@ -79,6 +92,50 @@ function ensurePort(port) {
   }
 
   return parsed;
+}
+
+function ensureLocalNextStartArgs(args) {
+  if (Array.isArray(args) && args.length === 0) {
+    return [
+      "-H",
+      DEFAULT_LOCAL_MAC_PRODUCTION_HOST,
+      "-p",
+      String(DEFAULT_LOCAL_MAC_PRODUCTION_PORT),
+    ];
+  }
+
+  if (
+    !Array.isArray(args)
+    || args.length !== 4
+    || args[0] !== "-H"
+    || args[2] !== "-p"
+  ) {
+    throw new Error("Local Mac production requires explicit -H and -p arguments.");
+  }
+
+  return [
+    "-H",
+    ensureLocalOnlyHost(args[1]),
+    "-p",
+    String(ensurePort(args[3])),
+  ];
+}
+
+function createLocalSupabaseCommandEnv(env) {
+  /** @type {Record<string, string | undefined>} */
+  const commandEnv = {};
+
+  for (const key of LOCAL_SUPABASE_ENV_KEYS) {
+    if (typeof env[key] === "string" && env[key].length > 0) {
+      commandEnv[key] = env[key];
+    }
+  }
+
+  ensureNonEmptyString(commandEnv.HOME, "HOME");
+  ensureNonEmptyString(commandEnv.PATH, "PATH");
+  commandEnv.npm_config_offline = "true";
+
+  return commandEnv;
 }
 
 export function parseLocalMacProductionArgs(argv, {
@@ -259,6 +316,131 @@ export function getLocalMacProductionPaths(homeDir = process.env.HOME ?? "") {
   };
 }
 
+function getLocalMacProductionPath(nodeBin) {
+  return [
+    dirname(resolve(ensureNonEmptyString(nodeBin, "nodeBin"))),
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+  ].join(":");
+}
+
+/**
+ * @param {{
+ *   command: string,
+ *   args: readonly string[],
+ *   cwd: string,
+ *   env: Record<string, string | undefined>,
+ *   runCommand?: (
+ *     command: string,
+ *     args: readonly string[],
+ *     options: import("node:child_process").SpawnSyncOptionsWithStringEncoding,
+ *   ) => { status: number | null },
+ * }} options
+ */
+export function verifyLocalMacProductionBootCli({
+  command,
+  args,
+  cwd,
+  env,
+  runCommand = spawnSync,
+}) {
+  const result = runCommand(command, args, {
+    cwd: resolve(cwd),
+    env,
+    encoding: "utf8",
+    stdio: "ignore",
+  });
+
+  if (result.status !== 0) {
+    throw new Error(
+      `Unable to cache ${LOCAL_SUPABASE_CLI_PACKAGE} for offline production boot.`,
+    );
+  }
+}
+
+/**
+ * @typedef {{ status: number | null }} LocalStartupCommandResult
+ * @typedef {{ on: (...args: unknown[]) => unknown }} LocalRuntimeChild
+ * @typedef {{
+ *   args?: string[],
+ *   rootDir?: string,
+ *   nodeBin?: string,
+ *   env?: Record<string, string | undefined>,
+ *   ensureDocker?: () => Promise<void>,
+ *   runCommand?: (
+ *     command: string,
+ *     args: readonly string[],
+ *     options: import("node:child_process").SpawnSyncOptionsWithStringEncoding,
+ *   ) => LocalStartupCommandResult,
+ *   spawnProcess?: (
+ *     command: string,
+ *     args: readonly string[],
+ *     options: import("node:child_process").SpawnOptions,
+ *   ) => LocalRuntimeChild,
+ * }} LocalMacProductionRuntimeOptions
+ */
+
+/**
+ * @param {LocalMacProductionRuntimeOptions} [options]
+ */
+export async function startLocalMacProductionRuntime({
+  args = [],
+  rootDir = process.cwd(),
+  nodeBin = process.execPath,
+  env = process.env,
+  ensureDocker = ensureDockerRunning,
+  runCommand = spawnSync,
+  spawnProcess = spawnChild,
+} = {}) {
+  const normalizedRootDir = resolve(ensureNonEmptyString(rootDir, "rootDir"));
+  const normalizedNodeBin = resolve(ensureNonEmptyString(nodeBin, "nodeBin"));
+  const normalizedArgs = ensureLocalNextStartArgs(args);
+  const supabaseEnv = createLocalSupabaseCommandEnv(env);
+
+  await ensureDocker();
+
+  const commandOptions = {
+    cwd: normalizedRootDir,
+    env: supabaseEnv,
+    encoding: "utf8",
+    stdio: "ignore",
+  };
+  const startResult = runCommand(
+    "pnpm",
+    ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "start"],
+    commandOptions,
+  );
+  if (startResult.status !== 0) {
+    throw new Error("Local Supabase start failed.");
+  }
+
+  const statusResult = runCommand(
+    "pnpm",
+    ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "status"],
+    commandOptions,
+  );
+  if (statusResult.status !== 0) {
+    throw new Error("Local Supabase health check failed.");
+  }
+
+  return spawnProcess(
+    normalizedNodeBin,
+    [
+      resolve(normalizedRootDir, "scripts", "start-production.mjs"),
+      ...normalizedArgs,
+    ],
+    {
+      cwd: normalizedRootDir,
+      env,
+      stdio: "inherit",
+    },
+  );
+}
+
 export function renderLocalMacProductionPlist({
   rootDir = process.cwd(),
   homeDir = process.env.HOME ?? "",
@@ -272,15 +454,7 @@ export function renderLocalMacProductionPlist({
   const normalizedHost = ensureLocalOnlyHost(host);
   const normalizedPort = ensurePort(port);
   const paths = getLocalMacProductionPaths(normalizedHomeDir);
-  const fixedPath = [
-    dirname(normalizedNodeBin),
-    "/opt/homebrew/bin",
-    "/usr/local/bin",
-    "/usr/bin",
-    "/bin",
-    "/usr/sbin",
-    "/sbin",
-  ].join(":");
+  const fixedPath = getLocalMacProductionPath(normalizedNodeBin);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -293,7 +467,7 @@ export function renderLocalMacProductionPlist({
   <key>ProgramArguments</key>
   <array>
     <string>${escapeXml(normalizedNodeBin)}</string>
-    <string>${escapeXml(resolve(normalizedRootDir, "scripts", "start-production.mjs"))}</string>
+    <string>${escapeXml(resolve(normalizedRootDir, "scripts", "start-local-mac-production.mjs"))}</string>
     <string>-H</string>
     <string>${normalizedHost}</string>
     <string>-p</string>
@@ -335,6 +509,7 @@ export function verifyLocalMacProductionPrerequisites({
   const requiredPaths = [
     resolve(rootDir, ".env.production.local"),
     resolve(rootDir, ".next", "BUILD_ID"),
+    resolve(rootDir, "scripts", "start-local-mac-production.mjs"),
     resolve(rootDir, "scripts", "start-production.mjs"),
     resolve(nodeBin),
   ];
@@ -364,6 +539,7 @@ export function installLocalMacProductionLaunchAgent({
   platform = process.platform,
   getuid = process.getuid?.bind(process),
   spawn = spawnSync,
+  verifyBootCli = verifyLocalMacProductionBootCli,
   verifyPrerequisites = verifyLocalMacProductionPrerequisites,
 } = {}) {
   if (platform !== "darwin") {
@@ -380,6 +556,15 @@ export function installLocalMacProductionLaunchAgent({
   verifyPrerequisites({
     rootDir: normalizedRootDir,
     nodeBin: normalizedNodeBin,
+  });
+  verifyBootCli({
+    command: "pnpm",
+    args: ["dlx", LOCAL_SUPABASE_CLI_PACKAGE, "--version"],
+    cwd: normalizedRootDir,
+    env: {
+      HOME: resolve(ensureNonEmptyString(homeDir, "homeDir")),
+      PATH: getLocalMacProductionPath(normalizedNodeBin),
+    },
   });
 
   const paths = getLocalMacProductionPaths(homeDir);
