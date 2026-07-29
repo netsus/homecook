@@ -49,8 +49,8 @@
 
 - [ ] Meal/planner/planner-nutrition compatibility, shopping and existing cooking/history readers use content when present <!-- omo:id=accept-snapshot-reader-map;stage=2;scope=backend;review=3,6 -->
 - [ ] compatibility `GET /planner/nutrition` remains one release and is removed only by a separate tombstone contract <!-- omo:id=accept-snapshot-planner-nutrition-floor;stage=2;scope=backend;review=3,6 -->
-- [ ] content-pinned title/ingredients/steps/nutrition stay unchanged after recipe edit, nutrition current switch or soft delete <!-- omo:id=accept-snapshot-history-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] this slice adds no new screen/layout/CTA/servings control; PLANNER_WEEK/COOK_MODE/RECIPE_DETAIL design stays with owning successors <!-- omo:id=accept-snapshot-ui-ownership;stage=4;scope=frontend;review=5,6 -->
+- [x] content-pinned title/ingredients/steps/nutrition stay unchanged after recipe edit, nutrition current switch or soft delete <!-- omo:id=accept-snapshot-history-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] this slice adds no new screen/layout/CTA/servings control; PLANNER_WEEK/COOK_MODE/RECIPE_DETAIL design stays with owning successors <!-- omo:id=accept-snapshot-ui-ownership;stage=4;scope=frontend;review=5,6 -->
 
 ## Verification / Delivery
 
