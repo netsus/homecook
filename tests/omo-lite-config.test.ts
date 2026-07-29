@@ -36,7 +36,7 @@ describe("OMO-lite repo config", () => {
     expect(plugin).toContain("oh-my-opencode@latest");
     expect(config.default_agent).toBe("hephaestus");
     expect(agents.hephaestus?.model).toBe("openai/gpt-5.4");
-    expect(agents.athena?.model).toBe("anthropic/claude-sonnet-4-0");
+    expect(agents.athena?.model).toBe("openai/gpt-5.4");
     expect(agents.sisyphus?.model).toBe("openai/gpt-5.3-codex");
     expect(agents.oracle?.model).toBe("openai/gpt-5.4");
     expect(agents.explore?.mode).toBe("subagent");
@@ -46,23 +46,19 @@ describe("OMO-lite repo config", () => {
         "AGENTS.md",
         "docs/engineering/agent-workflow-overview.md",
         "docs/engineering/slice-workflow.md",
-        "docs/engineering/workflow-v2/omo-session-orchestrator.md",
-        "docs/engineering/workflow-v2/omo-claude-cli-provider.md",
-        "docs/engineering/workflow-v2/omo-autonomous-supervisor.md",
-        "docs/engineering/workflow-v2/omo-lite-architecture.md",
-        "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
-        "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
+        "docs/engineering/codex-task-handoff.md",
+        "docs/engineering/workflow-v2/README.md",
         ".opencode/README.md",
       ]),
     );
     expect(omoProvider.claude).toMatchObject({
-      provider: "claude-cli",
-      bin: "claude",
-      model: "sonnet",
-      effort: "high",
+      provider: "retired",
+      bin: "disabled",
+      model: "none",
+      effort: "none",
     });
     expect(String((omoProvider.claude as Record<string, unknown>).permission_mode)).toBe(
-      "bypassPermissions",
+      "disabled",
     );
     expect(omoProvider.codex).toMatchObject({
       provider: "opencode",
@@ -88,7 +84,7 @@ describe("OMO-lite repo config", () => {
     expect(disabledCommands).toEqual(expect.arrayContaining(["ulw-loop"]));
     expect(disabledCommands).not.toEqual(expect.arrayContaining(["ralph-loop"]));
     expect(agents.hephaestus?.model).toBe("openai/gpt-5.4");
-    expect(agents.athena?.model).toBe("anthropic/claude-sonnet-4-0");
+    expect(agents.athena?.model).toBe("openai/gpt-5.4");
     expect(agents.sisyphus?.model).toBe("openai/gpt-5.3-codex");
     expect(agents.oracle?.model).toBe("openai/gpt-5.4");
     expect(scripts["omo:start"]).toBe("node scripts/omo-start.mjs");

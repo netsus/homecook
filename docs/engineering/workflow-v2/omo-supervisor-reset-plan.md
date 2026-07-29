@@ -1,5 +1,7 @@
 # OMO Supervisor Reset Plan
 
+> Claude actor/provider 관련 항목은 과거 reset baseline이다. 신규 운영은 Codex task orchestration과 actor-free OMO rail을 기준으로 한다.
+
 ## Status
 
 - 상태: `draft`
@@ -93,7 +95,7 @@ slice07 failure log는 단일 슬라이스의 특수 사고 기록이 아니다.
 
 - Codex는 현재 blocker를 분류하고, repairable failure를 bounded repair lane으로 보낸다.
 - OMO는 semantic 판단을 새로 만들지 않고 state transition, validator 재실행, current-head gate, closeout/report projection을 맡는다.
-- Claude는 Stage 1/3/4, final authority gate, 독립 review가 필요한 specialized lane으로 남는다.
+- 모든 Stage와 final authority는 역할별 별도 Codex 작업으로 분리한다.
 - `human_escalation`은 실제 사람 결정이 필요한 `manual_decision_required` reason으로 좁힌다.
 
 ## What The Reset Will Stop Doing
@@ -115,7 +117,7 @@ reset 이후 supervisor kernel은 아래만 확실하게 책임진다.
 4. current-head PR / CI tracking
 5. deterministic gate execution
 6. canonical closeout snapshot projection
-7. Codex/Claude repair evidence ingestion and report projection
+7. Codex task repair evidence ingestion and report projection
 
 아래는 kernel 밖으로 밀어낸다.
 
@@ -129,7 +131,7 @@ reset 이후 supervisor kernel은 아래만 확실하게 책임진다.
 reset 기간에는 기존 `human_escalation` reason을 아래 코드 중 하나로 먼저 정규화한다.
 
 - `codex_repairable`: Codex가 repo-local reversible edit와 validator recheck로 복구할 수 있는 OMO/report/closeout/PR body drift
-- `claude_repairable`: Claude-owned stage artifact, authority evidence, reviewer judgment 누락처럼 해당 lane actor가 고쳐야 하는 drift
+- `claude_repairable`: 과거 artifact 호환 코드. 신규 실행은 해당 Codex Stage role의 repair로 정규화
 - `product_defect`: 제품 구현/계약 결함. OMO incident로 섞지 않고 담당 stage로 route back
 - `omo_defect`: supervisor/runtime/report/validator 결함. registry와 tooling/docs-governance PR로 분리
 - `ci_wait`: current head check pending/rerun/stale snapshot

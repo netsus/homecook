@@ -1,13 +1,16 @@
 # Local Worktree OMO Autonomous Supervisor
 
+> **Actor dispatch suspended `2026-07-30`.**
+> 이 spec의 Claude provider, budget, resume, Stage execute 절차는 신규 작업에 사용하지 않는다.
+> Codex 새 작업이 Stage를 수행하고 OMO는 actor를 호출하지 않는 validator·상태·closeout projection에만 사용한다.
+
 ## Status
 
-- 이 문서는 `generic session-orchestrator` 위에 얹는 `local autonomous supervisor` 규격을 고정한다.
+- 이 문서는 과거 `generic session-orchestrator` 위에 얹었던 `local autonomous supervisor` 규격을 보존한다.
 - 이 문서는 product stage actor 기본 읽기가 아니라 OMO implementation maintainer spec이다.
-- 현재 executable baseline은 `omo:supervise`, `omo:tick`, dedicated worktree manager, `gh` automation, `omo:status`, `omo:status:brief`, `omo:tail`까지 포함한다.
-- hardening baseline은 `omo:smoke:control-plane`, `omo:smoke:providers`, `omo:scheduler:install/uninstall/verify`까지 포함한다.
-- `omo:start`, `omo:continue`, `omo:resume-pending`은 low-level primitive로 남고, product slice full-autonomy는 supervisor state machine이 담당한다.
-- fullauto v1은 low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함하는 의미로 고정한다.
+- 과거 executable baseline에는 `omo:supervise`, `omo:tick`, dedicated worktree manager, `gh` automation, `omo:status`, `omo:status:brief`, `omo:tail`이 포함됐다.
+- actor/provider를 호출하는 hardening, scheduler, start/continue/resume primitive는 모두 신규 Stage에서 중지한다.
+- Stage 1~6 무인 merge를 수행하던 fullauto v1 의미는 더 이상 현재 운영 계약이 아니다.
 
 ## Purpose
 

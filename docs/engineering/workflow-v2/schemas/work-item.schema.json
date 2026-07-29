@@ -64,6 +64,7 @@
     },
     "owners": {
       "type": "object",
+      "description": "The claude property is a required legacy compatibility field and must be set to a retired/do-not-dispatch value for new GPT-only work. Active ownership belongs in codex.",
       "additionalProperties": false,
       "required": ["claude", "codex", "workers"],
       "properties": {
@@ -187,6 +188,7 @@
     },
     "status": {
       "type": "object",
+      "description": "claude_approved is retained only for historical records. New GPT-only work uses codex_approved for an independent Codex review and dual_approved only when two distinct task IDs are evidenced.",
       "additionalProperties": false,
       "required": ["lifecycle", "approval_state", "verification_status"],
       "properties": {

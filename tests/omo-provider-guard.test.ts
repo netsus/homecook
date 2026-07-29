@@ -46,15 +46,18 @@ describe("OMO Claude provider guard", () => {
     }
   }, 15_000);
 
-  it("documents claude-cli as the only supported Claude provider in repo-local docs", () => {
+  it("marks the legacy Claude adapter retired in current repo-local docs", () => {
     const providerDoc = readFileSync(
       join(repoRoot, "docs/engineering/workflow-v2/omo-claude-cli-provider.md"),
       "utf8",
     );
     const repoReadme = readFileSync(join(repoRoot, ".opencode/README.md"), "utf8");
 
-    expect(providerDoc).toContain("`--claude-provider claude-cli`");
-    expect(providerDoc).toContain("Homecook OMO는 Claude-owned stage provider로 `opencode`를 지원하지 않는다.");
-    expect(repoReadme).toContain("`claude-cli`만 지원한다.");
+    expect(providerDoc).toContain("**Retired `2026-07-30`: 신규 실행 금지.**");
+    expect(providerDoc).toContain(
+      "아래 명령, provider 설정, resume 절차를 신규 Stage에 실행하지 말고",
+    );
+    expect(repoReadme).toContain("`provider=retired`, `bin=disabled`로 잠근다.");
+    expect(repoReadme).toContain("Claude login 또는 Claude credential은 필요하지 않다.");
   });
 });

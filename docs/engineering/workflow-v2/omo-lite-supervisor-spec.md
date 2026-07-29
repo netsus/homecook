@@ -1,13 +1,15 @@
 # Homecook OMO-Lite Supervisor Spec
 
+> **Actor dispatch suspended `2026-07-30`.**
+> Claude-owned stage, provider retry, budget 분기는 신규 실행에 사용하지 않는다.
+> 현재 허용 범위는 actor를 호출하지 않는 deterministic validation, 상태 조회, closeout/report projection이다.
+
 ## Status
 
-- 이 문서는 `Codex supervisor 기반 Homecook OMO-lite`의 실행 규격이다.
-- 현재 executable baseline은 `설치 + repo-local config + dispatcher/status helper + direct Codex stage runner + budget-aware reviewer fallback`까지다.
-- 이 문서는 다음 phase의 `generic session-orchestrator + Homecook adapter` target spec도 함께 잠근다.
-- 이 문서는 다음 phase의 `local worktree autonomous supervisor` target spec도 함께 잠근다.
-- `scripts/omo-lite-dispatch-stage.mjs`, `scripts/omo-lite-sync-status.mjs`, `scripts/omo-lite-run-stage.mjs`가 이 문서의 최소 executable path다.
-- `scripts/omo-lite-claude-budget.mjs`는 reviewer availability override를 관리하는 companion CLI다.
+- 이 문서는 과거 `Codex supervisor 기반 Homecook OMO-lite` 실행 규격을 보존한다.
+- dispatcher, direct stage runner, provider budget fallback과 autonomous supervisor target은 retired 상태다.
+- 관련 `scripts/omo-lite-*` actor helper는 신규 Stage 실행 경로가 아니다.
+- 현재 실행 기준은 `docs/engineering/codex-task-handoff.md`와 actor-free deterministic rail이다.
 - 다음 phase에서는 reviewer stage direct execution, session reuse, repo-local runtime retry를 추가한다.
 
 ## Purpose

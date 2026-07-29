@@ -9,8 +9,8 @@
   "preset": "infra-governance",
   "goal": "Create the workflow v2 foundation as a pilot path for reusable multi-agent execution.",
   "owners": {
-    "claude": "supervision-and-review",
-    "codex": "implementation-and-integration",
+    "claude": "retired-legacy-field-do-not-dispatch",
+    "codex": "coordinator-plus-independent-stage-tasks",
     "workers": ["test-reviewer", "pr-governance-reviewer"]
   },
   "dependencies": ["agent-plan-loop", "agent-review-loop"],

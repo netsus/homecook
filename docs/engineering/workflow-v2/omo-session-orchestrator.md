@@ -1,10 +1,14 @@
 # Generic OMO Session-Orchestrator
 
+> **Legacy provider-session spec.**
+> Claude session reuse/resume 경로는 retired 상태다. 신규 product Stage는 세션 재사용이 아니라 역할별 Codex 새 작업과 명시적 handoff를 사용한다.
+> 이 문서는 과거 runtime state와 artifact를 해석할 때만 참조한다.
+
 ## Status
 
-- 이 문서는 다음 OMO-lite phase에서 구현할 `generic session-orchestrated runner` 규격을 고정한다.
-- 현재 저장소의 실행 가능 helper는 여전히 `dispatch-stage / sync-status / run-stage / claude-budget` 조합이다.
-- 이 문서의 목적은 구현 전에 `세션 재사용`, `pause/resume`, `runtime state`의 단일 규격을 먼저 잠그는 것이다.
+- 이 문서는 과거 OMO-lite의 `generic session-orchestrated runner` 규격을 보존한다.
+- `dispatch-stage / sync-status / run-stage / claude-budget` 조합은 legacy helper이며 신규 actor 실행에 사용하지 않는다.
+- `세션 재사용`, `pause/resume`, `runtime state` 설명은 과거 상태 해석에만 사용한다.
 
 ## Purpose
 

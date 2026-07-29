@@ -10,22 +10,24 @@
   - reusable workflow v2 설계와 기본 운영 기준
   - Homecook OMO default path의 entry docs
 - 현재 executable baseline:
-  - `pnpm omo:supervise`, `pnpm omo:tick`, `pnpm omo:tick:watch`, `pnpm omo:reconcile`, `pnpm omo:status`, `pnpm omo:tail`
+  - actor를 호출하지 않는 `pnpm omo:reconcile`, `pnpm omo:status`, `pnpm omo:tail`, `pnpm omo:report`
   - `pnpm validate:workflow-v2`, `pnpm validate:omo-bookkeeping`
 - 새로 잠그는 범위:
-  - `generic OMO session-orchestrated runner` 설계
-  - per-work-item session reuse
-  - repo-local runtime state + scheduled resume policy
+  - `docs/engineering/codex-task-handoff.md` 기반 별도 Codex 작업 handoff
+  - task ID / commit SHA / evidence 기반 독립 Stage 검토
+  - 기존 OMO 상태·validator·closeout projection의 model-neutral migration 경계
 - 현재 운영 규칙:
   - workflow-v2 entry docs가 OMO 기본 운영 경로를 설명한다.
   - product slice 구현의 stage-by-stage mechanics는 계속 `slice-workflow.md`와 `agent-workflow-overview.md`가 담당한다.
 - 현재 전환 방향:
   - Codex는 conductor, OMO는 rail이다.
   - Homecook OMO는 Codex가 orchestration owner이고 OMO가 deterministic rail인 `Codex-orchestrated OMO rail`로 전환한다.
-  - Claude는 Stage 1/3/4, authority-required final gate, 독립 review가 필요한 specialized lane으로 남긴다.
+  - Claude는 사용하지 않는다. 모든 Stage actor는 역할별 별도 Codex 작업이다.
+  - Claude provider를 호출하는 `omo:supervise`, `omo:run-stage`, `omo:tick`, live-provider smoke, scheduler execute 경로는 신규 작업에서 사용 중지한다.
 - 현재 readiness 경계:
-  - `OMO autonomous promotion`은 repo evidence 기준 `ready`다. `.workflow-v2/promotion-evidence.json`의 promotion gate가 ready이고 active incident blocker가 없을 때만 이 상태를 유지한다.
-  - `Codex-orchestrated OMO rail`은 product slice 진행에 사용할 수 있다. Codex가 blocker 분류와 repair routing을 맡고, OMO는 상태, validator, current-head gate, closeout/report projection을 담당한다.
+  - 과거 `.workflow-v2/promotion-evidence.json`의 `ready`는 Claude provider baseline에 대한 역사적 판정이며 GPT-only actor dispatch readiness가 아니다.
+  - `Codex-orchestrated OMO rail`은 상태 조회, validator, current-head gate, closeout/report projection에만 사용할 수 있다.
+  - product Stage 실행은 `codex-task-handoff.md`를 사용한다.
   - slice `12b-shopping-pantry-reflect` 시작 전에는 [omo-codex-orchestrated-rail.md](./omo-codex-orchestrated-rail.md)의 `Slice 12b Preflight Lock`을 먼저 확인한다.
 
 ## Why
@@ -37,7 +39,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 - workflow core와 project profile 분리
 - preset 기반 경로 선택
-- Claude-Codex dual-approval loop의 공식화
+- 서로 다른 Codex task ID를 사용하는 independent approval loop의 공식화
 - machine-readable 상태 파일
 - external dependency smoke check의 명시화
 
@@ -75,7 +77,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 1. [omo-lite-architecture.md](./omo-lite-architecture.md)
 2. [omo-session-orchestrator.md](./omo-session-orchestrator.md)
-3. [omo-claude-cli-provider.md](./omo-claude-cli-provider.md)
+3. [omo-claude-cli-provider.md](./omo-claude-cli-provider.md) — retired legacy spec
 4. [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md)
 5. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
 6. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
@@ -99,7 +101,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [../bookkeeping-authority-matrix.md](../bookkeeping-authority-matrix.md): transition-period writable closeout surface compatibility note
 - [omo-lite-architecture.md](./omo-lite-architecture.md): maintainer spec. Codex supervisor 기반 Homecook OMO-lite 설계안
 - [omo-session-orchestrator.md](./omo-session-orchestrator.md): maintainer spec. generic session reuse / runtime state / scheduled resume 규격
-- [omo-claude-cli-provider.md](./omo-claude-cli-provider.md): maintainer spec. raw `claude` CLI provider, session extraction, deterministic resume 규격
+- [omo-claude-cli-provider.md](./omo-claude-cli-provider.md): retired legacy spec. 과거 raw Claude CLI provider 기록이며 신규 실행 금지
 - [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md): maintainer spec. local worktree / PR / CI / merge / scheduler supervisor 규격
 - [omo-supervisor-reset-plan.md](./omo-supervisor-reset-plan.md): slice07 이후 OMO를 patch accumulation이 아니라 supervisor reset 관점에서 다시 축소/재잠그기 위한 계획 문서
 - [omo-codex-orchestrated-rail.md](./omo-codex-orchestrated-rail.md): Codex를 orchestration owner로 두고 OMO를 deterministic rail로 줄이는 전환 결정, reason code, baseline evidence
@@ -121,13 +123,13 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [migration.md](./migration.md): v1 -> v2 점진 전환 경로
 - [opencode.json](../../../opencode.json): repo-local OpenCode instructions + direct agent/default bindings
 - [.opencode/README.md](../../../.opencode/README.md): repo-local OMO 운영 메모
-- [.opencode/omo-provider.json](../../../.opencode/omo-provider.json): Claude/Codex provider defaults for OMO
+- [.opencode/omo-provider.json](../../../.opencode/omo-provider.json): legacy provider compatibility snapshot. 신규 Stage dispatch source로 사용 금지
 - [.opencode/oh-my-opencode.json](../../../.opencode/oh-my-opencode.json): Homecook agent/hook compatibility snapshot
 
 ## Adoption Rules
 
 - workflow-v2는 현재 Homecook의 OMO 기본 운영 경로다.
-- 현재 기본 운영 모델은 `Codex-orchestrated OMO rail`이다. Codex가 blocker 분류와 repair routing을 맡고, OMO는 state transition / validator / current-head gate / closeout-report projection을 맡는다.
+- 현재 기본 운영 모델은 `Codex task orchestration + OMO deterministic rail`이다. Codex 새 작업들이 Stage를 수행하고, OMO는 actor를 호출하지 않는 state validation / current-head gate / closeout-report projection만 맡는다.
 - `Codex-orchestrated OMO rail`이 usable하다는 말은 promotion gate가 ready라는 뜻이 아니다. promotion readiness는 `.workflow-v2/promotion-evidence.json`과 `promotion-readiness.md`가 정한 별도 gate로 판단한다.
 - 12b 이후 product slice는 시작 전에 해당 slice의 report/evidence 체크리스트와 escalation 기준을 명시하고, `human_escalation`은 manual decision 또는 repair budget exhaustion으로만 남긴다.
 - 이 README는 operator entry다. product stage actor는 workflow-v2 spec 전체를 기본 읽기 세트로 삼지 않고, `slice-workflow.md`와 `agent-workflow-overview.md`를 우선한다.
@@ -143,16 +145,14 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - machine-readable 파일이 들어와도 README 표를 즉시 제거하지 않는다.
 - product slice merge gate는 `slice-workflow.md`와 `agent-workflow-overview.md`가 정한 current-head 기준을 계속 따른다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
-- Phase 5부터는 `pnpm omo:run-stage`로 Codex/Claude stage를 repo-local OpenCode/OMO 실행과 artifact bundle에 직접 연결한다.
-- Phase 7부터는 `pnpm omo:claude-budget`과 repo-local override를 통해 Claude reviewer availability를 자동 해석하고, 필요 시 blocked retry를 기록한다.
-- 현재 executable baseline은 `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:reconcile`, `omo:tail`, `validate:omo-bookkeeping`까지 포함한다.
-- fullauto v1의 의미는 low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함한다.
-- product slice 기본 경로에서 `pnpm omo:supervise -- --work-item <slice>`는 Stage 1 bootstrap부터 시작한다.
+- 과거 Phase 5 `omo:run-stage`와 Phase 7 Claude budget 경로는 retired compatibility surface다.
+- 현재 허용 baseline은 actor를 호출하지 않는 `omo:reconcile`, `omo:status`, `omo:tail`, `omo:report`, validation 명령이다.
+- fullauto v1과 `pnpm omo:supervise -- --work-item <slice>` actor dispatch는 GPT-only migration 완료 전 중지한다.
 - Stage 1 docs PR은 즉시 merge하지 않고, 같은 run 안에서 `internal 1.5 docs gate`를 mandatory로 거친다.
 - session-orchestrated runner 규격은 구현보다 먼저 문서로 잠근다.
 - 구현 baseline과 상위 문서가 다시 어긋나면 `pnpm validate:workflow-v2`가 fail한다.
 
-## Immediate Scope
+## Legacy Baseline (감사 기록, 신규 실행 금지)
 
 - v2 charter/core/profile/preset/loop 문서화
 - OMO-lite architecture / supervisor / dispatch spec 고정
@@ -160,9 +160,9 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - repo-local OpenCode / OMO config bootstrap
 - minimal `omo:dispatch-stage` / `omo:sync-status` helper 도입
 - direct `omo:run-stage` execution binding + `.artifacts/omo-lite-dispatch/` artifact bundle
-- Stage 1 Claude author + internal 1.5 Codex review / Claude repair docs gate를 기본 product slice 경로에 내장
-- Stage 4 Claude implementation + Codex `authority_precheck` + Stage 5 Codex public review + Claude `final_authority_gate` 흐름
-- automatic Claude budget resolution + repo-local override
+- 과거 Stage 1 author / internal 1.5 repair provider 경로
+- 과거 Stage 4 implementation / final authority provider 경로
+- 과거 provider budget resolution + repo-local override
 - JSON schema와 예시 파일 추가
 - promotion checklist와 lane evidence ledger 추가
 - `validate:workflow-v2` 최소 validator 추가
@@ -174,46 +174,36 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
   - Stage 6 approve 뒤 `closeout_reconcile_check -> repair -> recheck`를 거쳐 merged bookkeeping과 safe slice-local closeout drift를 정렬한 뒤에만 merge gate로 진입
 - executable supervisor baseline: `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:status`, `omo:tail`
 - live smoke entrypoints: `omo:smoke:control-plane`, `omo:smoke:providers`
-- `omo:smoke:control-plane -- --live-providers`는 backend Stage 2/3만 실제 Claude/Codex를 사용하고, 나머지 단계는 deterministic smoke로 유지한 채 최소 확인용 프롬프트로 review loop(`request_changes -> Codex 반영 -> 추가 review -> 추가 반영`)를 검증한다.
+- `omo:smoke:control-plane -- --live-providers` 같은 live-provider smoke는 신규 작업에서 실행하지 않는다.
 - macOS repo-managed scheduler entrypoints: `omo:scheduler:install`, `omo:scheduler:uninstall`, `omo:scheduler:verify`
-- macOS에서는 `omo:supervise`, `omo:start`, `omo:continue`가 execute mode에서 work item launchd scheduler를 자동 bootstrap/refresh한다.
+- macOS scheduler execute 경로는 legacy provider를 호출할 수 있으므로 신규 작업에서 실행하지 않는다.
 - 현재 entry-point 문서에서 workflow-v2 default 경로를 발견 가능하게 연결
 
-## Executable Baseline
+## 현재 사용 가능한 OMO 범위
 
-- 현재 구현된 supervisor/control-plane 명령:
-  - `pnpm omo:supervise`
-  - `pnpm omo:tick`
-  - `pnpm omo:tick:watch`
+- actor를 호출하지 않는 상태·projection 명령:
   - `pnpm omo:reconcile`
   - `pnpm omo:promotion:update`
   - `pnpm omo:replay:update`
   - `pnpm omo:status`
   - `pnpm omo:status:brief`
   - `pnpm omo:tail`
-- 현재 구현된 validation/smoke/scheduler 명령:
+- validation 명령:
   - `pnpm validate:workflow-v2`
   - `pnpm validate:omo-bookkeeping`
   - `pnpm validate:authority-evidence-presence`
   - `pnpm validate:real-smoke-presence`
-  - `pnpm omo:smoke:control-plane`
-  - `pnpm omo:smoke:providers`
-  - `pnpm omo:scheduler:install`
-  - `pnpm omo:scheduler:uninstall`
-  - `pnpm omo:scheduler:verify`
 - 현재 baseline의 해석:
-  - `fullauto v1`은 low/medium autonomous slice의 무인 merge까지 자동화한다.
-  - merge authority는 GitHub formal approval이 아니라 stage owner review artifact + authority gate pass(해당 시) + 전체 PR checks + external smoke다.
-  - authority-required UI는 Claude Stage 4 구현 뒤 Codex `authority_precheck`, Codex Stage 5 public review, Claude `final_authority_gate`를 거친다.
+  - Stage 실행과 merge 판단은 `codex-task-handoff.md`와 `slice-workflow.md`를 따른다.
+  - authority-required UI는 서로 다른 Codex Stage 4, design-reviewer, product-design-authority 작업을 거친다.
   - Stage 6 approve 뒤 supervisor는 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence`, `validate:authority-evidence-presence`, `validate:real-smoke-presence` bundle을 `internal 6.5`로 실행하고, fixable slice-local drift만 같은 frontend PR branch에서 auto-repair한다.
   - Stage 6/current-head merge 완료 뒤에는 `pnpm omo:report -- --work-item <slice>`로 `docs/workpacks/<slice>/omo-report.md`를 생성한다. dispatch 산출물이 없어 순수 진행시간이 0.0분으로 떨어지는 Codex-orchestrated slice는 `.omx/artifacts`, PR timestamps, git history, GitHub checks, source PR body를 근거로 backfilled estimate를 남긴다.
-  - manual handoff는 `high-risk` / `anchor-extension` / `exceptional recovery`에 한정된 예외 경로다.
-  - provider wait와 budget issue는 기본적으로 `pause + scheduled resume`를 사용한다.
+  - 새 Codex 작업 handoff는 모든 product Stage의 기본 경로다.
+  - task가 완료되지 않으면 조정 작업은 상태를 추적하고, 사용자 입력 또는 외부 조건이 필요할 때만 handoff한다.
   - `high-risk` / `anchor-extension` slice는 stage execution은 지원하지만 automatic merge는 금지하고 manual merge handoff bundle로 종료한다.
   - live smoke는 일반 PR CI 전체 강제가 아니라 `external_smokes[]`가 선언된 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.
   - live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.
-  - scheduler standard는 team-shared default를 `macOS launchd`로 고정하고, non-macOS 환경은 `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending` fallback으로 다룬다.
-  - scheduler install/config 변경 뒤와 최소 `slice-batch-review`마다 1회 `pnpm omo:scheduler:verify -- --work-item <id>`와 `pnpm omo:tick:watch -- --work-item <id>`를 함께 확인한다.
+  - legacy scheduler/tick은 신규 Stage actor 실행에 사용하지 않는다.
 
 ## Next Locked Scope
 
@@ -223,27 +213,19 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 ## Workflow Usage
 
-1. product slice에서 `pnpm omo:supervise -- --work-item <slice>`를 사용하면 Stage 1 Claude author가 work item / status item까지 bootstrap한다.
-2. 이미 tracked item이 있는 작업은 `.workflow-v2/work-items/<id>.json`과 `.workflow-v2/status.json`을 기존처럼 source of truth로 사용한다.
-3. 승격 상태를 관리 중이면 `.workflow-v2/promotion-evidence.json`도 같이 갱신한다.
-4. 작업 브랜치와 preset, required checks를 status에 기록한다.
+1. product Stage는 `docs/engineering/codex-task-handoff.md`에 따라 역할별 Codex 새 작업으로 실행한다.
+2. 조정 작업은 task ID, 입력 commit SHA, PR URL, stage-result/evidence를 handoff ledger와 PR `Actual Verification`에 기록한다.
+3. 이미 tracked item이 있는 작업은 `.workflow-v2/work-items/<id>.json`과 `.workflow-v2/status.json`을 상태·closeout projection source로 사용한다.
+4. 승격 상태를 관리 중이면 `.workflow-v2/promotion-evidence.json`도 같이 갱신한다. 과거 provider `ready`는 GPT-only actor dispatch readiness로 재사용하지 않는다.
+5. 작업 브랜치와 preset, required checks를 status에 기록한다.
    merge gate는 required subset이 아니라 current head 기준 시작된 PR checks 전체 green 여부로 판단한다.
-5. PR 본문의 `## Workpack / Slice`에 `workflow v2 work item` 경로를 적는다.
-6. `pnpm validate:workflow-v2`를 통과시킨다.
-7. medium/high risk 작업이면 plan loop summary artifact를 남긴다.
-8. generic review loop summary artifact는 docs-governance, workflow/tooling 변경, 또는 exceptional recovery일 때만 남긴다. product slice의 Stage 1 docs gate는 supervisor runtime/artifact를 canonical source로 사용한다.
-9. OMO-lite supervised execution이 필요하면 `pnpm omo:run-stage -- --slice <id> --stage <n>`으로 dispatch artifact를 만들고, public code stage 실행이 필요할 때 `--mode execute`를 사용한다.
-   slice6 기준 public Stage 4는 Claude execute path를 사용할 수 있고, Stage 5 `final_authority_gate`는 review gate이므로 execute 대상이 아니라 review artifact 경로로 다룬다.
-10. Claude reviewer availability를 로컬에서 강제로 조정해야 하면 `pnpm omo:claude-budget -- --set unavailable --reason "<reason>"` 또는 `--clear`를 사용한다.
-11. reviewer fallback도 tracked state에 같이 남기려면 `pnpm omo:run-stage -- --slice <id> --stage <n> --sync-status`를 사용한다.
-12. sandbox GitHub repo에서 supervisor control plane을 점검할 때는 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`를 사용한다.
-13. 실제 Claude 첫 리뷰가 반드시 `request_changes`를 내고 Codex가 그 피드백 토큰을 반영하는지까지 최소 프롬프트로 보려면 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name> --live-providers`를 사용한다. 이 모드는 backend Stage 2/3만 실제 provider를 사용한다.
-14. 실제 Claude/Codex provider 경로, session reuse, stage-result 생성을 분리 검증할 때는 `pnpm omo:smoke:providers`를 사용한다. 이 smoke는 기본 120초 timeout을 적용하며, 필요 시 `--timeout-ms <ms>`로 조정한다.
-15. slice06 또는 parallel checkpoint 결과를 promotion lane ledger에 남길 때는 `pnpm omo:promotion:update`를 사용한다. 상세 section/id 조합은 `promotion-readiness.md`를 따른다.
-16. representative replay lane 결과를 replay ledger에 남길 때는 `pnpm omo:replay:update`를 사용한다. lane/id/criteria 조합은 `omo-replay-acceptance.md`를 따른다.
-17. macOS scheduler는 `pnpm omo:scheduler:install -- --work-item <id>`로 설치하고 `pnpm omo:scheduler:verify -- --work-item <id>`로 확인한다. 인자 없는 `pnpm omo:scheduler:verify`는 repo-local runtime 중 provider/control-plane smoke runtime을 제외한 scheduler-managed work item 전체를 점검한다.
-   기본 execute kickoff는 scheduler를 자동 보장하고, 수동 install은 repair/custom cadence override용이다.
-18. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs drift와 official source-of-truth reference drift도 함께 검사한다.
+6. PR 본문의 `## Workpack / Slice`에 `workflow v2 work item` 경로를 적는다.
+7. `pnpm validate:workflow-v2`를 통과시킨다.
+8. medium/high risk 작업이면 독립 Codex plan/review artifact를 남긴다.
+9. `pnpm omo:reconcile`, `pnpm omo:status`, `pnpm omo:report`처럼 actor를 호출하지 않는 명령만 사용한다.
+10. `omo:supervise`, `omo:run-stage`, `omo:tick`, `omo:resume-pending`, live-provider smoke, scheduler execute 명령은 GPT-only runtime migration이 완료될 때까지 실행하지 않는다.
+11. representative replay lane 결과를 replay ledger에 남길 때는 `pnpm omo:replay:update`를 사용한다. promotion ledger와 함께 과거 실행 기록과 현재 GPT-only evidence를 구분해 기록한다.
+12. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs drift와 official source-of-truth reference drift도 함께 검사한다.
 
 ## Not Yet Included
 

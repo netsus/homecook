@@ -1,10 +1,14 @@
 # OMO Claude CLI Provider Adapter
 
+> **Retired `2026-07-30`: 신규 실행 금지.**
+> Homecook은 Claude를 더 이상 사용하지 않는다. 이 문서는 과거 provider 동작과 artifact 해석을 위한 감사 기록이다.
+> 아래 명령, provider 설정, resume 절차를 신규 Stage에 실행하지 말고 `docs/engineering/codex-task-handoff.md`를 사용한다.
+
 ## Status
 
-- 이 문서는 OMO의 Claude-owned stage를 `raw claude CLI`로 실행하는 v1 provider adapter 계약을 고정한다.
-- 현재 저장소의 Codex-owned stage는 계속 `OpenCode` 경로를 사용한다.
-- 구현 전 목표는 `session_id 추출 -> runtime 저장 -> deterministic resume` 규칙을 먼저 잠그는 것이다.
+- 이 문서는 과거 OMO의 Claude-owned stage를 `raw claude CLI`로 실행했던 v1 provider adapter 계약을 보존한다.
+- 현재 Stage actor는 이 provider나 OpenCode의 Claude 경로를 사용하지 않는다.
+- `session_id 추출 -> runtime 저장 -> deterministic resume` 규칙은 과거 artifact 해석에만 사용한다.
 
 ## Purpose
 

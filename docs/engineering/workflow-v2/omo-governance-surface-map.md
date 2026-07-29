@@ -1,5 +1,7 @@
 # OMO Governance Surface Map
 
+> `2026-07-30` 이후 모든 신규 Stage actor는 역할별 Codex 새 작업이다. Claude 표면은 역사적/호환 문서로만 분류한다.
+
 ## Status
 
 - 상태: `draft`
@@ -45,7 +47,7 @@
 
 정의:
 
-- 실제 slice 작업을 수행하는 Claude/Codex
+- 실제 slice 작업을 수행하는 역할별 Codex 새 작업
 - 목표는 제품 stage를 수행하는 것이지 OMO internals를 유지보수하는 것이 아니다
 
 필수 읽기 target:
@@ -83,7 +85,7 @@
 원칙:
 
 - Codex orchestrator는 stage actor ownership과 orchestration ownership을 섞지 않는다.
-- `codex_repairable`, `claude_repairable`, `ci_wait`, `blocked_on_external`, `manual_decision_required`를 먼저 분류한 뒤 route를 고른다.
+- `codex_repairable`, legacy `claude_repairable`, `ci_wait`, `blocked_on_external`, `manual_decision_required`를 먼저 분류한 뒤 route를 고른다.
 - `human_escalation`은 실제 사람 결정이 필요할 때만 사용한다.
 - OMO maintainer spec은 runtime/report/tooling 변경이 필요할 때만 읽는다.
 
@@ -164,7 +166,7 @@
 | Doc | Current Role | Target Role | Action |
 |-----|--------------|-------------|--------|
 | `AGENTS.md` | 공통 원칙 + read-first + 레이어 설명 | 공통 원칙 / 가드레일만 유지 | `slim` |
-| `CLAUDE.md` | Claude entry | Claude 전용 entry 유지 | `keep` |
+| `CLAUDE.md` | legacy entry | Claude 실행 금지 tombstone 유지 | `retire` |
 | `agent-workflow-overview.md` | change type / gate / 일부 문서 레이어 | change type / required checks / loop gate만 유지 | `slim` |
 | `slice-workflow.md` | stage SOP + closeout contract + 공통 규칙 일부 재서술 | stage SOP 중심 유지 | `slim` |
 | `workflow-v2/README.md` | operator entry + spec index | operator entry 유지 | `keep` |
