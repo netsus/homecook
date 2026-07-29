@@ -25,11 +25,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.25.md",
+      "docs/화면정의서-v1.5.29.md",
+      "docs/유저flow맵-v1.3.27.md",
+      "docs/db설계-v1.3.26.md",
+      "docs/api문서-v1.2.29.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -50,7 +50,7 @@
       "docs/design/mobile-ux-rules.md",
       "docs/design/anchor-screens.md",
       "docs/engineering/workflow-v2/README.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
     ]
   },
   "workflow": {
@@ -112,7 +112,7 @@
       "separate Codex Stage 5 and Stage 6 implementation reviews and final closeout review"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
+      "approved-plan-sha256-and-1056-line-lock",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "roadmap-docs-workflow-lifecycle-planned-separation",
       "planner-add-personal-create-personal-edit-public-fork-context-matrix",
@@ -151,7 +151,7 @@
     "Public recipe mutation or client owner visibility public image path authority",
     "Planner shell Cook Mode Meal Log or YouTube redesign",
     "Browser direct Storage mutation or signed URL durable identity",
-    "Production code migration remote database or data write in this Stage 1 docs PR"
+    "Production code migration server-production/rehearsal database or data write in this Stage 1 docs PR"
   ],
   "open_questions": [],
   "notes": "Roadmap moves to docs while workflow lifecycle stays planned and approval remains not_started until fresh separate Codex internal 1.5, security/ownership and five-axis reviewers approve with zero required findings. This Stage 1 lock embeds the mandatory RECIPE_DETAIL/editor state wireframe and requires later design critic plus 390px/320px screenshot/Figma product-design authority. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/exploratory/design evidence is future Stage 4 work. #5 does not own #6 writes or #8 activation; external personal editor behavior remains dark until the approved capability and snapshot-v2 gate."

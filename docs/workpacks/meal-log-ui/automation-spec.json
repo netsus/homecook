@@ -29,7 +29,6 @@
     ],
     "verify_commands": [
       "pnpm verify:backend",
-      "node scripts/verify-meal-log-ui-remote.mjs --mode post-merge-read-only",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "BRANCH_NAME=docs/meal-log-ui pnpm validate:workpack -- --slice meal-log-ui",
@@ -163,9 +162,9 @@
     "mutable-current-product-profile-silently-repinned",
     "batch-edit-delete-targets-another-event",
     "canonical-design-critic-authority-or-fresh-evidence-missing",
-    "remote-verifier-not-merged-exact-sha",
+    "local-first-verifier-not-merged-exact-sha",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {"backend": 3, "frontend": 6},
-  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/browser/remote evidence is future. #12 consumes #9 backend inside #10 shell, reuses #1 search and #8 batch authority, and does not change HOME or Planner plan rows."
+  "notes": "Stage 1 runs docs validators, focused tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/browser/local-first production-rehearsal evidence is future. #12 consumes #9 backend inside #10 shell, reuses #1 search and #8 batch authority, and does not change HOME or Planner plan rows."
 }

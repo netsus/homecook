@@ -1,6 +1,6 @@
 # prepared-food-search-relevance
 
-> Historical Stage 1 contract lock. Approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines). Original official baseline: requirements v1.7.22, screens v1.5.28, flow v1.3.25, DB v1.3.23, API v1.2.27.
+> Historical Stage 1 contract lock. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). Original official baseline: requirements v1.7.22, screens v1.5.28, flow v1.3.25, DB v1.3.23, API v1.2.27.
 
 > 2026-07-26 contract consistency re-lock: requirements v1.7.24, DB v1.3.25, and API v1.2.29 use the v2 cursor tuple `(algorithm_version, match_bucket, coverage_bucket, quantized_score, source_partition, type_partition, created_at, stable_id)` and preserve query-empty stable browse. Screens v1.5.29 and flow v1.3.26 are unchanged. This removes an official-doc wording conflict without adding or relaxing any workpack scope, acceptance criterion, endpoint, field, status, error, visibility rule, schema, or performance gate.
 

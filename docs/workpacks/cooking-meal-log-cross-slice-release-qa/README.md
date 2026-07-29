@@ -2,24 +2,24 @@
 
 ## Goal
 
-F0와 #1~#13에서 닫은 계정 세대, 제품 검색·재료 연결, private recipe/snapshot, 미래 계획, cooked batch, meal log, Planner/COOK_MODE/legacy 계약을 하나의 verification-only 최종 release gate로 재검증한다. exact repaired head에서 local/remote DB·API·browser·security·performance·design·rollback evidence와 모든 started check가 green이어야 하며, 발견한 defect는 이 slice에서 inline 수정하지 않고 별도 TDD repair PR로 봉합한 뒤 전체 증거를 다시 만든다.
+F0와 #1~#13에서 닫은 계정 세대, 제품 검색·재료 연결, private recipe/snapshot, 미래 계획, cooked batch, meal log, Planner/COOK_MODE/legacy 계약을 하나의 verification-only 최종 release gate로 재검증한다. exact repaired head에서 서버 MacBook local production·isolated local rehearsal DB/API/browser/security/performance/design/rollback evidence와 모든 started check가 green이어야 하며, 발견한 defect는 이 slice에서 inline 수정하지 않고 별도 TDD repair PR로 봉합한 뒤 전체 증거를 다시 만든다.
 
 ## Official Sources
 
-- `docs/요구사항기준선-v1.7.22.md`
-- `docs/화면정의서-v1.5.28.md`
-- `docs/유저flow맵-v1.3.25.md`
-- `docs/db설계-v1.3.23.md`
-- `docs/api문서-v1.2.27.md`
-- approved plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
+- `docs/요구사항기준선-v1.7.25.md`
+- `docs/화면정의서-v1.5.29.md`
+- `docs/유저flow맵-v1.3.27.md`
+- `docs/db설계-v1.3.26.md`
+- `docs/api문서-v1.2.29.md`
+- approved plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc`, 1,056 lines
 
 ## Verification-Only Boundary
 
 - this slice adds no endpoint, field, status, error, migration, runtime feature, UI composition or dependency.
 - F0 and #1~#13 Stage 1 docs are merged. Runtime verification starts only after all predecessor implementation/closeout PRs are merged and their current-head checks are green.
 - each train's evidence may be reused only when it records the exact release/head/window and still applies to the final repaired head. Stale, absent, fixture-only or different-head evidence is not a final pass.
-- any runtime defect opens a small separate TDD repair PR. After merge, affected local/remote DB, browser, security, performance, design and rollback evidence is rerun on the new exact head.
-- production-safe read-only verification never permits writes. Production/staging/provider writes remain zero unless a separately authorized Manual Only operation explicitly permits a scoped mutation.
+- any runtime defect opens a small separate TDD repair PR. After merge, affected server-production/local-rehearsal DB, browser, security, performance, design and rollback evidence is rerun on the new exact head.
+- production-safe verification never permits writes outside the server MacBook local production stack or isolated local rehearsal. Remote provider/DB/Storage writes remain zero unless a future contract-evolution explicitly permits them.
 
 ## Final Evidence Contract
 
@@ -72,7 +72,7 @@ F0와 #1~#13에서 닫은 계정 세대, 제품 검색·재료 연결, private r
 | predecessor runtime incomplete | final verification does not start; Stage 1 docs remain planned lifecycle |
 | stale or different-head evidence | reject the evidence and rerun on the exact repaired head |
 | runtime defect found | stop closeout, open separate failing-test-first repair PR, merge, then rerun affected and final gates |
-| remote or provider verifier unavailable | fail closed; do not substitute a local fixture or claim remote pass |
+| server-production or isolated-rehearsal verifier unavailable | fail closed; do not substitute a fixture or claim pass |
 | telemetry unavailable/zero | retain compatibility surfaces; no destructive inference |
 | browser state unavailable | record blocker; do not replace real Chrome with fixture screenshots |
 | current-head check pending/fail/cancel/absent | do not merge or close the release |
@@ -96,13 +96,13 @@ F0와 #1~#13에서 닫은 계정 세대, 제품 검색·재료 연결, private r
 
 - inline runtime repair, new API/DB/UI contract, new dependency or official contract evolution.
 - R+2 activation, v1/product/planner/image-path tombstone, retention cleanup or legacy orphan deletion.
-- production/staging/provider mutation, launchd install/secret setup or destructive data operation without its separate authority.
+- external provider mutation, server MacBook launchd install/secret setup or destructive data operation without its separate authority.
 - medical guidance, new nutrition inference, external search SaaS or runtime provider fetch.
 
 ## Stage 1 Current Gate
 
 - run SOT/workflow/workpack/automation/bookkeeping validators, focused workflow-doc tests, lint, typecheck, dependency audit and exact-six diff/parity only.
-- DB migrations, Postgres/RLS/Auth/Storage, targeted product tests, full backend/frontend, E2E/browser, exploratory/eval, performance, remote read-only, authority and Manual Only operations are future runtime release evidence.
+- DB migrations, Postgres/RLS/Auth/Storage, targeted product tests, full backend/frontend, E2E/browser, exploratory/eval, performance, local production/rehearsal authority and Manual Only operations are future runtime release evidence.
 - `verification.required_checks` is the canonical full-lifecycle minimum; `verification.verify_commands` is only the Stage 1 executable subset.
 
 ## Delivery Checklist

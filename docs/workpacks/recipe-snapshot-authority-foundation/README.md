@@ -1,6 +1,6 @@
 # recipe-snapshot-authority-foundation
 
-> Stage 1 contract lock. Approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines). Official baseline: requirements v1.7.22, screens v1.5.28, flow v1.3.25, DB v1.3.23, API v1.2.27.
+> Stage 1 contract lock. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). Official baseline: requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29.
 
 ## Goal
 
@@ -42,7 +42,7 @@ mutable recipe current가 바뀌어도 기존 Meal·요리 세션·batch·식사
   - planner `cooking_session_meals.meal_revision_snapshot`과 session recipe/content 일치, planner 1개 이상/standalone 0개 association shape
   - 신규 `cooking_session_meal_claims.meal_id` PK와 session/owner/claimed_at으로 Meal당 active attempt 최대 1개를 dark schema로 보장
   - F0 `mutation_idempotency_keys`를 generation-scoped v2 start/cancel/complete scope와 durable result reference에 사용하고 same key+payload exact-once/different payload conflict를 잠금
-  - remote preflight는 orphan/mixed recipe/servings를 보고하되 fabricated v2 backfill을 만들지 않음
+  - isolated-local preflight는 orphan/mixed recipe/servings를 보고하되 fabricated v2 backfill을 만들지 않음
   - `leftover_dishes` v2는 content snapshot 하나만 영양 pointer로 사용하며 batch direct nutrition snapshot FK를 만들지 않음
 - read and compatibility regression
   - Meal/planner/planner-nutrition compatibility, shopping, existing cooking/history와 leftover/batch projection은 content가 있으면 content만 authority로 사용
@@ -51,7 +51,7 @@ mutable recipe current가 바뀌어도 기존 Meal·요리 세션·batch·식사
 
 Schema Change:
 - [ ] 없음
-- [x] 있음 — 기존 migration을 수정하지 않고 official DB v1.3.23의 content snapshot, Meal transition, snapshot-v2 conditional columns와 leftover content pointer를 additive migration으로 추가한다.
+- [x] 있음 — 기존 migration을 수정하지 않고 official DB v1.3.26의 content snapshot, Meal transition, snapshot-v2 conditional columns와 leftover content pointer를 additive migration으로 추가한다.
 
 ## Out of Scope
 
@@ -63,14 +63,14 @@ Schema Change:
 - 기존 v1 `/sessions` shape 제거, new-v2 creation activation 또는 strict v1 tombstone
 - recipe nutrition vector를 content/batch/Meal에 복사하거나 missing을 0으로 채우기
 - existing nutrition snapshot FK/unique/current index/ON CONFLICT를 partial/detached 계약으로 변경
-- unmerged migration의 remote 적용 또는 production/staging data write
+- unmerged migration의 server-production 적용 또는 production/rehearsal data write
 
 ## Dependencies
 
 | Gate | Current state | Meaning |
 | --- | --- | --- |
 | Stage -1 security hotfix + closeout | merged/deployed | mutation authorization predecessor complete |
-| official contract PR #1072 | merged | v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 authority available |
+| historical contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
 | existing recipe nutrition snapshot release | merged | immutable nutrition authority, writer conflict and Meal direct pin baseline available |
 | `recipe-visibility-read-hardening` Stage 1 docs PR #1077 | merged | #3 contract documented; #3 runtime remains Stage 2 predecessor |
 | `product-ingredient-link-foundation` Stage 1 docs PR #1076 | merged | Train B product relation docs available for integrated QA |
@@ -120,7 +120,7 @@ Schema Change:
 - shopping preview/detail, existing cooking/history and later batch/meal-log readers must consume the same Meal/content authority. A regression test fails if any content-pinned row reads raw Meal direct N or mutable current recipe data.
 - `GET /planner/nutrition` remains for one compatibility release even though the new planner UI will stop calling it; removal requires a separate tombstone contract.
 - Train B closeout jointly rechecks #3 Storage cleanup/outbox and #2 pantry effective-ingredient projection, but #4 does not reimplement or weaken either contract.
-- remote verification before merge is read-only. Contract/null cutover and production writes run only from a merged exact SHA after the compatibility evidence gate.
+- local-first production/rehearsal verification before merge is read-only. Contract/null cutover and production writes run only from a merged exact SHA after the compatibility evidence gate.
 
 ## Frontend Delivery Mode
 
@@ -146,11 +146,11 @@ Schema Change:
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.22.md` B/D/J
-- `docs/화면정의서-v1.5.28.md` 0-B and nutrition formula compatibility notes
-- `docs/유저flow맵-v1.3.25.md` snapshot/Meal migration and release/legacy gate
-- `docs/db설계-v1.3.23.md` B/C/D and snapshot/cooking/batch/account-cleanup sections
-- `docs/api문서-v1.2.27.md` F/L and existing Meal/planner nutrition contracts
+- `docs/요구사항기준선-v1.7.25.md` B/D/J
+- `docs/화면정의서-v1.5.29.md` 0-B and nutrition formula compatibility notes
+- `docs/유저flow맵-v1.3.27.md` snapshot/Meal migration and release/legacy gate
+- `docs/db설계-v1.3.26.md` B/C/D and snapshot/cooking/batch/account-cleanup sections
+- `docs/api문서-v1.2.29.md` F/L and existing Meal/planner nutrition contracts
 - approved master plan sections 6-1, dependency matrix #4, successor #4, migration plan 9 and test strategy 10
 
 ## QA / Test Data Plan
@@ -159,7 +159,7 @@ Schema Change:
 
 - this docs PR runs only current SOT/workflow/workpack/automation/bookkeeping/doc-gate validators, focused workflow Vitest, lint, typecheck, dependency audit and diff check. GitGuardian and current-head repository workflows are observed separately.
 - Stage 2 first adds focused schema/reader/lifecycle/account-delete tests and records RED before migration, trigger, backfill or production reader code.
-- planned Stage 2/4/closeout commands, PostgreSQL existing/fresh/replay, compatibility-release telemetry and remote verifier are required future gates, not commands claimed to exist or pass in Stage 1.
+- planned Stage 2/4/closeout commands, PostgreSQL existing/fresh/replay, compatibility-release telemetry and local-first verifier are required future gates, not commands claimed to exist or pass in Stage 1.
 
 ### Fixture and matrix
 
@@ -176,7 +176,7 @@ Schema Change:
 
 - old-shape/direct-only write telemetry is zero for one full compatibility release and backfill/pair mismatch is zero before contract/null.
 - current and immediate-previous releases read content-aware rows and direct-only legacy fallback; rollback smoke before null and rollback-floor rejection after null are both recorded.
-- local existing/fresh/idempotent replay, remote schema/constraint/trigger/grant inventory and merged-exact-SHA read-only evidence are required.
+- local existing/fresh/idempotent replay, server-production/local-rehearsal schema/constraint/trigger/grant inventory and merged-exact-SHA read-only evidence are required.
 - Train B integration confirms #3 Storage cleanup outbox remains terminal-safe and #2 pantry effective ingredient readers remain green without adding them to #4 schema.
 
 ## Key Rules
@@ -212,4 +212,4 @@ Schema Change:
 - [ ] leftover/batch uses immutable content-only nutrition authority with no direct nutrition FK <!-- omo:id=delivery-snapshot-batch-authority;stage=2;scope=backend;review=3,6 -->
 - [ ] scalable cooking/base plus fixed-once, partial/unavailable and missing-not-zero fixtures pass <!-- omo:id=delivery-snapshot-nutrition-formula;stage=2;scope=backend;review=3,6 -->
 - [x] existing consumers preserve pinned history and legacy fallback without new visual scope <!-- omo:id=delivery-snapshot-consumer-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] local existing/fresh/replay and merged-exact-SHA remote read-only evidence are green <!-- omo:id=delivery-snapshot-verification;stage=2;scope=shared;review=3,6 -->
+- [ ] local existing/fresh/replay and merged-exact-SHA server-production/local-rehearsal read-only evidence are green <!-- omo:id=delivery-snapshot-verification;stage=2;scope=shared;review=3,6 -->

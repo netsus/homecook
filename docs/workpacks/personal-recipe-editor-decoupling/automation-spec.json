@@ -27,7 +27,7 @@
       "tag-visibility-never-wider-than-parent-recipe",
       "success-data-error-envelope-and-official-errors-only",
       "no-unofficial-route-query-field-status-error-or-endpoint",
-      "no-unmerged-remote-migration-or-production-write"
+      "no-unmerged-server-production-migration-or-production-write"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/personal-recipe-editor-permissions.test.ts tests/personal-recipe-editor-contract.test.ts",

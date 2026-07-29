@@ -1,20 +1,20 @@
 # Acceptance Checklist
 
-> Stage 1 locks a future verification-only final release gate. Unchecked items do not claim predecessor runtime, remote/local DB, browser, telemetry, authority, activation or Manual Only evidence already exists.
+> Stage 1 locks a future verification-only final release gate. Unchecked items do not claim predecessor runtime, server-production/local-rehearsal DB, browser, telemetry, authority, activation or Manual Only evidence already exists.
 
 ## Contract / Repair Boundary
 
-- [ ] official v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 and the approved 1,018-line plan remain the only public contract <!-- omo:id=accept-cooking-cross-release-contract;stage=2;scope=shared;review=3,6 -->
+- [ ] official v1.7.25/v1.5.29/v1.3.27/v1.3.26/v1.2.29 and the approved 1,056-line plan remain the only public contract <!-- omo:id=accept-cooking-cross-release-contract;stage=2;scope=shared;review=3,6 -->
 - [ ] the slice introduces no endpoint, field, status, error, migration, dependency, UI composition or inline runtime fix <!-- omo:id=accept-cooking-cross-release-no-invention;stage=2;scope=shared;review=3,5,6 -->
 - [ ] runtime verification waits for F0 and #1~#13 implementation/closeout current-head green <!-- omo:id=accept-cooking-cross-release-predecessors;stage=2;scope=shared;review=3,6 -->
 - [ ] each discovered defect is reproduced by a failing test in a separate repair PR and the final evidence is rerun on the repaired exact head <!-- omo:id=accept-cooking-cross-release-repair-boundary;stage=2;scope=shared;review=3,5,6 -->
-- [ ] production/staging/provider writes remain zero outside separately authorized Manual Only operations <!-- omo:id=accept-cooking-cross-release-external-write-zero;stage=2;scope=shared;review=3,6 -->
+- [ ] server MacBook local production 외부의 DB/Auth/Storage/provider writes remain zero outside separately authorized Manual Only operations <!-- omo:id=accept-cooking-cross-release-external-write-zero;stage=2;scope=shared;review=3,6 -->
 
 ## Security / Account Generation
 
 - [ ] every application-owned trusted-schema function and every SECURITY DEFINER exact signature has one control-class/effect/exposure/exact-principal inventory row <!-- omo:id=accept-cooking-cross-release-function-inventory;stage=2;scope=backend;review=3,6 -->
 - [ ] application mutations keep PUBLIC/anon false and safe search paths; provider-managed baselines are immutable and Data API/actual RPC negatives pass <!-- omo:id=accept-cooking-cross-release-function-security;stage=2;scope=backend;review=3,6 -->
-- [ ] Auth Hook wrapper/guard exact principal and SELECT-only owner privileges pass local/remote legacy-maintenance-active and race fixtures <!-- omo:id=accept-cooking-cross-release-auth-hook;stage=2;scope=backend;review=3,6 -->
+- [ ] Auth Hook wrapper/guard exact principal and SELECT-only owner privileges pass server-production/local-rehearsal legacy-maintenance-active and race fixtures <!-- omo:id=accept-cooking-cross-release-auth-hook;stage=2;scope=backend;review=3,6 -->
 - [ ] every personal writer and account delete rejects stale/revoked/missing G1 sessions and cannot write into G2 <!-- omo:id=accept-cooking-cross-release-session-generation;stage=2;scope=backend;review=3,6 -->
 - [ ] cutover staging/count-digest CAS/quarantine/promote/rollback and actual FK cleanup order pass without orphan private rows <!-- omo:id=accept-cooking-cross-release-cutover;stage=2;scope=backend;review=3,6 -->
 - [ ] image quota/lease/takeover/cancel/first-404/recheck/permanent-tombstone/dead-letter/late-object recovery pass and legacy orphan enqueue/delete remains zero <!-- omo:id=accept-cooking-cross-release-image-lifecycle;stage=2;scope=backend;review=3,6 -->
@@ -39,10 +39,10 @@
 - [ ] record-time IANA timezone/local date stays immutable and deleted meal columns retain slot history without admitting new selections <!-- omo:id=accept-cooking-cross-release-time-column;stage=2;scope=shared;review=3,5,6 -->
 - [ ] consumed first depletion grants eaten/auto-hide/XP once, discarded/mixed does not, and reversal/redepletion never duplicates XP <!-- omo:id=accept-cooking-cross-release-leftover-xp;stage=2;scope=backend;review=3,6 -->
 
-## Real DB / Remote / Performance
+## Real DB / Local-first Production / Performance
 
 - [ ] fresh local Supabase full migrations and replay pass with real Postgres/RLS/PostgREST/Auth/Storage, A/B isolation and exact digests <!-- omo:id=accept-cooking-cross-release-real-db;stage=2;scope=backend;review=3,6 -->
-- [ ] merged-exact-SHA remote read-only verification matches local inventory and performs no production mutation <!-- omo:id=accept-cooking-cross-release-remote;stage=2;scope=backend;review=3,6 -->
+- [ ] merged-exact-SHA server-production/local-rehearsal verification matches local inventory and performs no external-provider mutation <!-- omo:id=accept-cooking-cross-release-remote;stage=2;scope=backend;review=3,6 -->
 - [ ] search 287,041 rows, product relation, propagation, batch ledger and meal aggregate close one end-to-end evidence chain <!-- omo:id=accept-cooking-cross-release-e2e-data;stage=2;scope=shared;review=3,6 -->
 - [ ] SQL/route measurements, EXPLAIN and query counts show no item-level N+1 or unexplained baseline regression <!-- omo:id=accept-cooking-cross-release-performance;stage=2;scope=backend;review=3,6 -->
 
@@ -68,12 +68,12 @@
 ## Manual QA
 
 - verifier: separated Codex DB/security/operations, performance/code, browser/design authority, Stage 5 and Stage 6 reviewers
-- environment: exact repaired head, fresh local Supabase, merged-exact-SHA remote read-only, real Chrome, mobile-default 390px, mobile-narrow 320px and desktop
+- environment: exact repaired head, fresh local Supabase, server MacBook local production + isolated local rehearsal exact-SHA verification, real Chrome, mobile-default 390px, mobile-narrow 320px and desktop
 - scenarios: security inventory/Auth Hook; cutover/quarantine/image lifecycle; recipe/snapshot/product/planner; v1/v2 cooking; batch/meal log; legacy/rollback; current-head CI
 
 ## Manual Only
 
 - [ ] physical device and actual screen-reader verification
 - [ ] true production-scale query/load measurement
-- [ ] product MacBook launchd install, production secret provisioning/rotation and external heartbeat ownership
-- [ ] any irreversible tombstone, legacy orphan deletion or production/staging/provider mutation
+- [ ] server MacBook launchd install, production secret provisioning/rotation and external heartbeat ownership
+- [ ] any irreversible tombstone, legacy orphan deletion or external-provider mutation

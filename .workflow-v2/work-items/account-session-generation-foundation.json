@@ -20,11 +20,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.25.md",
+      "docs/화면정의서-v1.5.29.md",
+      "docs/유저flow맵-v1.3.27.md",
+      "docs/db설계-v1.3.26.md",
+      "docs/api문서-v1.2.29.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -43,17 +43,16 @@
       "docs/engineering/workflow-v2/README.md",
       "docs/engineering/workflow-v2/approval-and-loops.md",
       "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
     ]
   },
   "workflow": {
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "node scripts/verify-account-session-generation-remote.mjs --mode inventory (read-only before merge)",
-      "node scripts/verify-account-session-generation-remote.mjs --mode post-merge-dark-ship (merged exact SHA only)",
-      "remote exact-principal Hook ACL and legacy allow smoke with supabase_auth_admin",
-      "remote personal-writer and auth.users inbound-FK inventory completeness",
+      "server MacBook local production and isolated local rehearsal exact-principal Hook ACL and legacy allow smoke with supabase_auth_admin",
+      "server MacBook local production personal-writer and auth.users inbound-FK inventory completeness",
+      "initial deployment keeps remote verifier/provider barrier/remote migration N/A until contract-evolution",
       "deployed DELETE /api/v1/users/me legacy compatibility smoke without destructive production account deletion",
       "deployed POST /api/v1/users/me/cutover-quarantine-resolution unauthorized and legacy non-exposure smoke",
       "pnpm account-maintenance:scheduler:verify -- --dry-run"
@@ -85,8 +84,6 @@
       "pnpm validate:authority-evidence-presence -- --slice account-session-generation-foundation",
       "pnpm validate:exploratory-qa-evidence -- --slice account-session-generation-foundation",
       "pnpm validate:closeout-sync -- --slice account-session-generation-foundation",
-      "node scripts/verify-account-session-generation-remote.mjs --mode inventory",
-      "node scripts/verify-account-session-generation-remote.mjs --mode post-merge-dark-ship",
       "pnpm account-maintenance:scheduler:verify -- --dry-run",
       "git diff --check"
     ],
@@ -105,19 +102,19 @@
       "separate Codex ACCOUNT_QUARANTINE design authority review"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
+      "approved-plan-sha256-and-1056-line-lock",
       "stage1-five-core-plus-two-design-gate-artifacts",
       "stage1-account-quarantine-design-critique-round4-pass-zero-findings",
       "f0-production-legacy-and-canonical-zero",
       "personal-writer-direct-dml-storage-service-callsite-inventory",
-      "local-remote-auth-users-inbound-fk-delete-action-inventory",
+      "server-production-and-local-rehearsal-auth-users-inbound-fk-delete-action-inventory",
       "shared-exclusive-fence-and-guard-signature-matrix",
       "auth-hook-supabase-auth-admin-and-nologin-owner-role-matrix",
       "staging-classification-count-digest-cas-and-abort-evidence",
       "legacy-delete-receipt-and-auth-outbox-identity-cas-evidence",
       "account-maintenance-launchd-skeleton-and-ordered-tick",
       "local-existing-fresh-replay-and-concurrency-evidence",
-      "merged-exact-sha-remote-dark-ship-evidence",
+      "merged-exact-sha-server-production-dark-ship-evidence",
       "ACCOUNT_QUARANTINE-390-320-desktop-and-state-evidence",
       "independent-codex-review-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip"
@@ -202,5 +199,5 @@
     "Meal log, cooked batch, personal recipe, or snapshot-v2 feature activation"
   ],
   "open_questions": [],
-  "notes": "Backend PR #1089 merged as 64f180e49976e73078cc90308c8938f8e74a8b70 and retained production legacy with canonical lifecycle/watermark zero. Stage 4 ACCOUNT_QUARANTINE implementation, 320/390/desktop and state evidence, exploratory QA eval 98, independent Codex product-design-authority PASS 0/0/0, final focused/product/browser/security gates, and production build are collected on feature/fe-account-session-generation-foundation. Independent internal1.5/security-auth/five-axis reviews approved the frozen implementation tree with zero findings. Draft PR #1090 head a95b6302f6bba768f86f775e6c61c30d5a265abf completed its initial started checks with success or normal skip; the Ready-only policy run then exposed this closeout projection gap, so that SHA is superseded and is not merge evidence. Canonical docs/status are pre-merge closeout projections; replacement-head checks, actual merge, and post-merge checks remain required. All Manual Only items remain open. Production generation activation and #3-owned work remain forbidden. closeout_phase=completed closeout_recovery=manual_patch:4|ci_resync:1 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/ACCOUNT_QUARANTINE-authority.md,ui/designs/evidence/account-session-generation-foundation,.artifacts/qa/account-session-generation-foundation/latest/eval-result.json,tests/e2e/slice-account-session-generation-foundation.spec.ts | latest_reason_code=frontend-ready-closeout-projection-sync | last_recovery_at=2026-07-23T15:44:39Z"
+  "notes": "Backend PR #1089 merged as 64f180e49976e73078cc90308c8938f8e74a8b70 and retained production legacy with canonical lifecycle/watermark zero. 2026-07-29 local-first authority re-lock fixes initial deployment to server MacBook local production plus isolated local rehearsal; remote verifier/provider barrier/remote migration are N/A until a future contract-evolution. Stage 4 ACCOUNT_QUARANTINE implementation, 320/390/desktop and state evidence, exploratory QA eval 98, independent Codex product-design-authority PASS 0/0/0, final focused/product/browser/security gates, and production build are collected on feature/fe-account-session-generation-foundation. Independent internal1.5/security-auth/five-axis reviews approved the frozen implementation tree with zero findings. Draft PR #1090 head a95b6302f6bba768f86f775e6c61c30d5a265abf completed its initial started checks with success or normal skip; the Ready-only policy run then exposed this closeout projection gap, so that SHA is superseded and is not merge evidence. Canonical docs/status are pre-merge closeout projections; replacement-head checks, actual merge, and post-merge checks remain required. All Manual Only items remain open. Production generation activation and #3-owned work remain forbidden. closeout_phase=completed closeout_recovery=manual_patch:4|ci_resync:1 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/ACCOUNT_QUARANTINE-authority.md,ui/designs/evidence/account-session-generation-foundation,.artifacts/qa/account-session-generation-foundation/latest/eval-result.json,tests/e2e/slice-account-session-generation-foundation.spec.ts | latest_reason_code=frontend-ready-closeout-projection-sync | last_recovery_at=2026-07-23T15:44:39Z"
 }

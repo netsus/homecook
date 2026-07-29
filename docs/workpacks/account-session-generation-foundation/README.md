@@ -7,8 +7,9 @@
 ## Approved Plan Lock
 
 - 승인 계획: `/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md`
-- SHA-256: `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`
-- line count: `1,018`
+- SHA-256: `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc`
+- line count: `1,056`
+- 초기 배포 authority: production=`server MacBook local Next.js + local Supabase`, staging=`isolated local rehearsal stack`, remote verifier/provider barrier/remote migration=`N/A` until separate contract-evolution
 - successor order: F0를 먼저 닫은 뒤 독립 Train A, 이어 Train B→C→D→E→F
 - Stage 1 author: 사용자 승인에 따라 Claude가 아닌 별도 Codex 문서 세션
 - internal 1.5: 이 author 세션과 분리된 독립 Codex reviewer/repair-final 세션이 5개 core artifact(README, acceptance, automation spec, work-item, status)와 2개 design gate artifact(wireframe, critique) 전체를 함께 검토한다. author와 design author/critic은 자기 산출물을 승인하지 않는다.
@@ -78,7 +79,7 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
   - authenticated Storage policy의 generation capability predicate 선설치
 - schema/inventory artifact:
   - 모든 existing/new personal mutation Route·RPC·direct PostgREST DML·Storage policy·service external write call site
-  - local/remote `auth.users(id)` inbound FK와 delete action
+  - local-rehearsal/server-production `auth.users(id)` inbound FK와 delete action
   - guard exact signature, owner, `SECURITY DEFINER|INVOKER`, safe search path, exposure, exact principal allowlist
 - Schema Change: **있음**. 기존 migration은 수정하지 않고 additive migration만 추가한다.
 
@@ -99,7 +100,7 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
 | --- | --- | --- |
 | `security-definer-mutation-authorization-hotfix` | merged/deployed | PR #1067~#1071, production 8개 anon mutation `42501`+checksum 무변경, provider Data API 비노출, Route smoke, closeout merge `9810406546120e047348d517b801aa2b2e16867e` |
 | `cooking-meal-log-contract-evolution` | merged | PR #1072, merge `e239d94151bab4e504513cc197dad554bc4f6a01` |
-| #3 joint activation | **implementation predecessor가 아니라 activation predecessor** | F0를 `legacy` dark-ship으로 먼저 merge한 뒤 #3과 같은 activation release에서만 promote |
+| #3 joint activation | **implementation predecessor가 아니라 activation predecessor** | F0를 `legacy` dark-ship으로 먼저 merge한 뒤 서버 MacBook local production stack의 #3 activation release에서만 promote한다. initial DB barrier는 local `LOCK TABLE auth.users IN SHARE ROW EXCLUSIVE MODE` write barrier이며 remote provider barrier는 future contract-evolution 없이는 사용하지 않는다 |
 
 ## Backend First Contract
 
@@ -126,7 +127,7 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
 - `supabase_auth_admin`: wrapper/guard schema `USAGE`, exact wrapper/guard function `EXECUTE`만 허용한다.
 - `PUBLIC`, `anon`, `authenticated`, `service_role`: wrapper/guard `EXECUTE=false`.
 - dedicated owner: schema `USAGE`, capability table `SELECT`만 true. table `INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER`, 모든 capability column `UPDATE`, 비관리 membership/`SET ROLE`은 false다.
-- Hook은 legacy/active identity create를 허용하고 maintenance의 email/OAuth create를 fail closed한다. hook health와 remote configuration 증거가 없으면 maintenance에 진입하지 않는다.
+- Hook은 legacy/active identity create를 허용하고 maintenance의 email/OAuth create를 fail closed한다. Hook health와 local configuration 증거가 없으면 maintenance에 진입하지 않는다.
 
 ### Cutover staging, quarantine, and atomic promote
 
@@ -134,7 +135,7 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
 - exact delete receipt/recovery/cleanup evidence만 active/cleanup 근거다. 증거 없는 auth-only/public-only/personal-only owner는 삭제 추정 없이 G1 quarantine으로 보존한다.
 - owner conflict, duplicate identity epoch, evidence mismatch 등 안전한 단일 action이 없는 `classification_unresolved`만 promote blocker다.
 - proposed generation은 staging에만 존재하며 final transaction 전 canonical lifecycle/watermark row count는 0이다.
-- final promote는 exclusive global fence와 migration-owner `auth.users SHARE ROW EXCLUSIVE` lock 또는 검증된 provider barrier 아래 ordered auth/public/personal count+digest/revision을 staging과 CAS한다.
+- final promote는 exclusive global fence와 서버 MacBook local Postgres의 migration-owner `auth.users SHARE ROW EXCLUSIVE` write barrier 아래 ordered auth/public/personal count+digest/revision을 staging과 CAS한다. 이 lock은 전체 read freeze가 아니므로 Auth Admin/import/dashboard create/delete 동결, external attempt 0, 15분 간격 Storage inventory 2회 일치를 별도로 유지한다. remote provider barrier는 초기 배포 authority가 아니며 future contract-evolution 없이는 사용하지 않는다.
 - same transaction에서만 active/cleanup/quarantine lifecycle, append-only watermark, 필요한 auth outbox, capability=`generation_active`를 commit한다.
 - digest mismatch, lock timeout, 권한 부족, unresolved classification, owner-signal nonzero는 canonical mutation 0으로 abort한다.
 - promote 전 abort는 adapter/policy를 legacy로 복구하고 staging/external attempt를 purge한 뒤 canonical 0을 확인한다. promote 뒤 legacy rollback은 금지한다.
@@ -199,33 +200,33 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 - `docs/workpacks/README.md`
-- `docs/요구사항기준선-v1.7.22.md` A/H/I
-- `docs/화면정의서-v1.5.28.md` 0-G `ACCOUNT_QUARANTINE`
-- `docs/유저flow맵-v1.3.25.md` ⓱ account generation cutover·탈퇴·재가입
-- `docs/db설계-v1.3.23.md` E/F/G/M/N/O/P
-- `docs/api문서-v1.2.27.md` A/B/C/D/K/L
+- `docs/요구사항기준선-v1.7.25.md` A/H/I
+- `docs/화면정의서-v1.5.29.md` 0-G `ACCOUNT_QUARANTINE`
+- `docs/유저flow맵-v1.3.27.md` ⓱ account generation cutover·탈퇴·재가입
+- `docs/db설계-v1.3.26.md` E/F/G/M/N/O/P
+- `docs/api문서-v1.2.29.md` A/B/C/D/K/L
 - `docs/engineering/slice-workflow.md`
 - `docs/engineering/qa-system.md`
 - `docs/engineering/product-design-authority.md`
 - `docs/design/mobile-ux-rules.md`
-- 승인 계획 SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`
+- 승인 계획 SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc`
 
 ## QA / Test Data Plan
 
 ### Stage 1 gate와 구현 검증 명령의 수명주기
 
 - 이 docs PR에서 실행 가능한 Stage 1 gate는 `validate:source-of-truth-sync`, `validate:workflow-v2`, `validate:workpack`, `validate-automation-spec`, `validate:omo-bookkeeping`, focused workflow-v2 Vitest, `lint`, `typecheck`, `git diff --check`다.
-- `automation-spec.json`의 F0 전용 Vitest/PostgreSQL/remote verifier/scheduler 명령과 `.workflow-v2`의 전체 `required_checks`는 Stage 2/4가 생성하고 Stage 6까지 닫아야 하는 **planned implementation artifacts**다. Stage 1은 그 파일이나 package script가 이미 존재하거나 실행됐다고 주장하지 않는다.
-- Stage 2는 production code 전에 먼저 해당 실패 테스트를 추가해 RED를 확인하고, `tests/account-session-generation-*`, `tests/account-quarantine-*`, `scripts/verify-account-session-generation-remote.mjs`, isolated PostgreSQL runner, `account-maintenance:scheduler:*` script를 `package.json`에 연결한다. 이 planned artifact 중 하나라도 누락되면 구현/closeout gate는 fail closed한다.
+- `verify-account-session-generation-remote.mjs` 두 모드의 실행 기록은 이미 병합된 F0의 **과거 closeout evidence**다. 원격 Supabase가 삭제된 현재 환경에서 다시 실행하는 초기 배포 명령이 아니므로 active `verify_commands`/`required_checks`에서는 제거하고 이력 설명으로만 보존한다.
+- local-first production/rehearsal verifier는 별도 Stage 2 TDD 후속 PR에서 RED→GREEN으로 생성하고 `package.json`에 연결한다. 그 전에는 F0의 과거 `verification_status=passed`를 새 local-first 실행 증거로 해석하지 않으며, joint activation을 완료로 닫지 않는다.
 - 따라서 Stage 1 reviewer는 아래 미래 명령을 실행하는 대신 현재 docs gate와 명령·test target의 공식 계약 정합성을 검토하고, Stage 2/4 reviewer는 실제 파일 존재와 명령 실행 결과를 검증한다.
 
 ### Deterministic fixtures
 
 - active A/B users, same UUID old G1/new G2 identity epoch/session pair, revoked/missing/expired binding, concurrent double-bootstrap
 - `auth∩public`, exact delete receipt auth-only, signed recovery auth-only, evidence 없는 auth-only/public-only/personal-only, classification conflict
-- `admin_members`, `admin_audit_logs`, `operational_events` identifier fixture와 local/remote `auth.users` inbound FK inventory
+- `admin_members`, `admin_audit_logs`, `operational_events` identifier fixture와 local-rehearsal/server-production `auth.users` inbound FK inventory
 - long-running pre-maintenance writer, pre-started Hook, late service PUT/external lease, staging 뒤 Auth create/final digest 뒤 Auth delete race
-- digest mismatch, lock timeout, guard-owner privilege missing, provider barrier unavailable, abort 후 legacy mutation과 second attempt
+- digest mismatch, lock timeout/loss, guard-owner privilege missing, 새 auth/external write, restart/restore, secret rotation, Auth 동결 해제 중 하나가 발생하면 abort 후 quiet 관측과 Storage inventory를 처음부터 다시 수집하고 legacy mutation/second attempt를 검증
 - auth-present quarantine activate/delete same-key replay/different-key·payload/session rejection, auth-absent Manual Only response
 
 ### Migration / DB / security gates
@@ -234,11 +235,11 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
 - local existing upgrade, fresh database, exact migration replay를 각각 실행한다.
 - state=`legacy`에서 existing writer/bootstrap/delete semantics 유지, receipt atomicity, canonical lifecycle/watermark count 0을 checksum으로 증명한다.
 - every inventoried RPC/direct DML/Storage predicate가 shared fence/capability guard에 1:1 대응하는지 fail-closed lint한다.
-- local/remote role matrix는 `PUBLIC`, `anon`, `authenticated`, `service_role`, `supabase_auth_admin`, dedicated NOLOGIN owner를 exact signature로 검사한다.
+- server-production/local-rehearsal role matrix는 `PUBLIC`, `anon`, `authenticated`, `service_role`, `supabase_auth_admin`, dedicated NOLOGIN owner를 exact signature로 검사한다.
 - Hook wrapper/guard ACL, owner SELECT-only/DML false/column UPDATE false/membership closure 0/actual `SET ROLE` failure를 검사한다.
 - local에서 legacy allow→maintenance deny→active allow, long transaction/old snapshot, Hook/transition/promote race와 canonical atomic promote/abort를 검증한다.
-- remote DB는 merged exact migration SHA에서만 적용한다. production에서는 F0 capability=`legacy`, canonical lifecycle/watermark=0, Hook legacy allow/ACL, writer·route compatibility를 검증하고 unmerged migration이나 production maintenance/active 전환을 하지 않는다.
-- remote inventory에 미분류 writer/FK/trigger/grant/policy/hook가 있으면 release blocker다.
+- 서버 MacBook local production stack에는 merged exact migration SHA만 적용한다. production에서는 F0 capability=`legacy`, canonical lifecycle/watermark=0, Hook legacy allow/ACL, writer·route compatibility를 검증하고 임의 maintenance/active 전환을 하지 않는다.
+- server-production/local-rehearsal inventory에 미분류 writer/FK/trigger/grant/policy/hook가 있으면 release blocker다.
 
 ### Route / UI / browser gates
 
@@ -264,13 +265,13 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
 - shared/exclusive global fence와 owner lifecycle lock을 우회하는 Route precheck+REST write 조합을 금지한다.
 - Before User Created Hook의 `supabase_auth_admin`을 service role과 같은 exposure로 취급하지 않는다.
 - NOLOGIN guard owner는 capability read/lock 최소권한만 갖는다.
-- remote production migration은 merged exact SHA에서만 적용하고 state를 `legacy`로 유지한다.
+- 서버 MacBook local production migration은 merged exact SHA에서만 적용하고 state를 `legacy`로 유지한다.
 - legacy receipt, lifecycle delete/quarantine durable result, append-only watermark는 cascade로 삭제하지 않는다.
 - production secret, raw JWT/session ID, Auth payload, API key, user identifier를 artifact/log/PR/Discord에 남기지 않는다.
 
 ## Contract Evolution Candidates
 
-없음. 구현은 공식 v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 계약을 확장하지 않는다. provider에서 `auth.users SHARE ROW EXCLUSIVE` lock을 안전하게 제공하지 않는다면 대체 barrier를 임의 구현하지 않고 provider-supported evidence 또는 별도 contract-evolution이 생길 때까지 activation을 중단한다.
+없음. 구현은 공식 v1.7.25/v1.5.29/v1.3.27/v1.3.26/v1.2.29 계약을 확장하지 않는다. 초기 배포는 서버 MacBook local Postgres의 `auth.users SHARE ROW EXCLUSIVE` write barrier를 authority로 사용한다. future remote provider로 이동할 때는 대체 barrier를 임의 구현하지 않고 별도 contract-evolution이 생길 때까지 activation을 중단한다.
 
 ## Primary User Path
 
@@ -286,14 +287,14 @@ quarantine resolution: quarantined --delete--> deleting -> cleanup_pending
 
 - [x] additive F0 schema와 capability singleton을 migration으로 구현하고 existing/fresh/replay를 통과한다 <!-- omo:id=delivery-f0-additive-schema;stage=2;scope=backend;review=3,6 -->
 - [x] production dark-ship에서 `state=legacy`, canonical lifecycle/watermark 0, existing behavior 보존을 증명한다 <!-- omo:id=delivery-f0-legacy-dark-ship;stage=2;scope=backend;review=3,6 -->
-- [x] personal writer/direct DML/Storage/service external write와 local/remote auth inbound FK inventory를 100% 분류한다 <!-- omo:id=delivery-f0-writer-fk-inventory;stage=2;scope=backend;review=3,6 -->
+- [x] personal writer/direct DML/Storage/service external write와 server-production/local-rehearsal auth inbound FK inventory를 100% 분류한다 <!-- omo:id=delivery-f0-writer-fk-inventory;stage=2;scope=backend;review=3,6 -->
 - [x] shared/exclusive fence, volatile locking guard trigger, Storage predicate, external write lease를 구현한다 <!-- omo:id=delivery-f0-fence-guards;stage=2;scope=backend;review=3,6 -->
 - [x] session HMAC binding과 generation-aware bind/revoke/dual-dispatch를 구현한다 <!-- omo:id=delivery-f0-session-binding;stage=2;scope=backend;review=3,6 -->
 - [x] Hook invoker wrapper, NOLOGIN definer guard, exact `supabase_auth_admin` ACL과 negative role matrix를 구현한다 <!-- omo:id=delivery-f0-auth-hook-acl;stage=2;scope=backend;review=3,6 -->
 - [x] staging/classification/digest CAS/quarantine/abort/atomic promote를 local testable state로 구현한다 <!-- omo:id=delivery-f0-cutover-core;stage=2;scope=backend;review=3,6 -->
 - [x] legacy delete receipt, generation delete skeleton, auth outbox consumer, audit/FK cleanup을 구현한다 <!-- omo:id=delivery-f0-delete-outbox;stage=2;scope=backend;review=3,6 -->
 - [x] `com.homecook.account-maintenance` 300초 launchd skeleton과 secret-free 검증 도구를 구현한다 <!-- omo:id=delivery-f0-launchd-skeleton;stage=2;scope=backend;review=3,6 -->
-- [x] local existing/fresh/replay, lock race, exact principal role matrix와 read-only remote inventory를 통과한다 <!-- omo:id=delivery-f0-security-verification;stage=2;scope=shared;review=3,6 -->
+- [x] local existing/fresh/replay, lock race, exact principal role matrix와 server-production/local-rehearsal read-only inventory를 통과한다 <!-- omo:id=delivery-f0-security-verification;stage=2;scope=shared;review=3,6 -->
 - [x] `ACCOUNT_QUARANTINE` API client/type와 auth callback/MYPAGE lifecycle gate를 연결한다 <!-- omo:id=delivery-f0-quarantine-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] loading/empty/error/restricted/unauthorized/pending replay UI와 return-to-action을 구현한다 <!-- omo:id=delivery-f0-quarantine-states;stage=4;scope=frontend;review=5,6 -->
 - [x] 390/320/desktop screenshot, exploratory QA/eval, separate Codex authority report를 남긴다 <!-- omo:id=delivery-f0-authority-evidence;stage=4;scope=frontend;review=5,6 -->

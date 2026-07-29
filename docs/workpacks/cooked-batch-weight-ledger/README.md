@@ -66,13 +66,13 @@ Schema Change:
 - new direct nutrition pointer, client-computed nutrition/projection/status, authenticated direct protected-column UPDATE
 - existing legacy row fabricated snapshot/weight backfill
 - official contract에 없는 endpoint, field, status, reason, error, screen or client authority
-- Stage 1 docs PR에서 production code, migration, remote DB mutation or capability activation
+- Stage 1 docs PR에서 production code, migration, server-production/rehearsal DB mutation or capability activation
 
 ## Dependencies
 
 | Gate | Current state | Meaning |
 | --- | --- | --- |
-| official contract PR #1072 | merged | v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 authority available |
+| historical contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
 | `recipe-content-snapshot-future-propagation` Stage 1 PR #1081 | merged docs | #7 runtime must provide v2 start/cancel/read, immutable session pin and claim behavior before #8 implementation |
 | `recipe-snapshot-authority-foundation` Stage 1 PR #1078 | merged docs | #4 runtime must provide content-only batch/session schema authority |
 | `product-ingredient-link-foundation` Stage 1 PR #1076 | merged docs | #2 runtime approved effective-ingredient relation is required for generic pin pantry validation |
@@ -223,7 +223,7 @@ creation flag rollback:
 ### Stage 1 gate
 
 - this docs PR runs current SOT/workflow/workpack/automation/bookkeeping validators, focused workflow-doc Vitest, lint, typecheck, dependency audit and diff check only.
-- migration/RPC/PostgreSQL/component/E2E/visual/real DB/remote/seeded-drain/activation commands below are future Stage 2/4/release artifacts, not claimed executable now.
+- migration/RPC/PostgreSQL/component/E2E/visual/real DB/server-production/local-rehearsal/seeded-drain/activation commands below are future Stage 2/4/release artifacts, not claimed executable now.
 
 ### Future fixtures
 
@@ -241,7 +241,7 @@ creation flag rollback:
 - real local Supabase two-owner tests with before/after pantry/batch/session/claim/Meal/cook-count/XP digests for every denied/replayed path.
 - v1 legacy optional-key/body/response regression and R/R+1 seeded-v2 read/cancel/complete drain with new-write zero telemetry.
 - 390px/320px COOK_MODE visual/a11y evidence, design critic and scoped authority report.
-- merged-exact-SHA remote read-only function/ACL/RLS/policy/constraint/capability inventory; no unmerged remote migration.
+- merged-exact-SHA server-production/local-rehearsal read-only function/ACL/RLS/policy/constraint/capability inventory; no unapproved server-production migration.
 
 ## Key Rules
 
@@ -273,4 +273,4 @@ creation flag rollback:
 - [ ] R/R+1 seeded v2 drain and current/previous v1 compatibility pass with new-write zero <!-- omo:id=delivery-batch-drain;stage=2;scope=shared;review=3,6 -->
 - [ ] R+2 joint activation and rollback preserve existing v2 drain <!-- omo:id=delivery-batch-activation;stage=2;scope=shared;review=3,6 -->
 - [ ] #9 meal-log and #11 final UI boundaries are not preclaimed <!-- omo:id=delivery-batch-successor-boundary;stage=2;scope=shared;review=3,6 -->
-- [ ] local PostgreSQL E2E real DB remote security and current-head evidence are green <!-- omo:id=delivery-batch-verification;stage=2;scope=shared;review=3,6 -->
+- [ ] local PostgreSQL E2E real DB server-production/local-rehearsal security and current-head evidence are green <!-- omo:id=delivery-batch-verification;stage=2;scope=shared;review=3,6 -->

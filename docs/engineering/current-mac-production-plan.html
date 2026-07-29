@@ -150,6 +150,19 @@
       box-shadow: 0 10px 30px rgba(31, 42, 53, 0.08);
     }
 
+    .superseded-banner {
+      padding: 14px 24px;
+      border-bottom: 2px solid #a33a31;
+      background: #fff0ee;
+      color: #6f211b;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .superseded-banner a {
+      color: #6f211b;
+    }
+
     .status-strip {
       display: grid;
       grid-template-columns: 1.3fr 1fr 1fr;
@@ -643,6 +656,11 @@
   </style>
 </head>
 <body>
+  <div class="superseded-banner" role="status">
+    이 HTML은 2026-07-29 이전 원격 중심 절차의 과거 참고 자료입니다.
+    현재 local-first 서버 MacBook 운영 기준은
+    <a href="./current-mac-production-plan.md">current-mac-production-plan.md</a>만 사용하세요.
+  </div>
   <header class="topbar">
     <div class="topbar-inner">
       <p class="eyebrow">HOMECOOK · 2026-07-29 KST</p>

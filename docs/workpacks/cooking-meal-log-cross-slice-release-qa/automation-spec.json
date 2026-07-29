@@ -7,7 +7,7 @@
   "merge_policy": "manual",
   "backend": {
     "required_endpoints": [
-      "all official API v1.2.27 routes touched by F0 and successor #1 through #13",
+      "all official API v1.2.29 routes touched by F0 and successor #1 through #13",
       "GET /food-products",
       "GET /food-catalog/search",
       "GET /recipes/pantry-match",
@@ -78,7 +78,6 @@
       "pnpm verify:backend",
       "pnpm local:reset:demo",
       "pnpm verify:security-functions:release",
-      "node scripts/verify-cooking-meal-log-cross-slice-release-qa-remote.mjs --mode post-merge-read-only",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "BRANCH_NAME=docs/cooking-meal-log-cross-slice-release-qa pnpm validate:workpack -- --slice cooking-meal-log-cross-slice-release-qa",
@@ -95,7 +94,7 @@
       "tests/meal-log-aggregate-and-event-link-release.test.ts",
       "tests/legacy-rollback-and-tombstone-barrier-release.test.ts",
       "fresh-local-supabase-migration-replay-and-rls-auth-storage",
-      "merged-exact-sha-remote-read-only-inventory",
+      "merged-exact-sha-local-first-production-rehearsal-inventory",
       "search-287041-explain-route-latency-and-no-n-plus-1"
     ]
   },
@@ -193,14 +192,14 @@
     }
   },
   "external_smokes": [
-    "all application-provider function and Auth Hook inventories on exact local and remote head",
+    "all application-provider function and Auth Hook inventories on exact local production and isolated local rehearsal head",
     "fresh local migrations replay RLS PostgREST Auth Storage A-B isolation and digests",
     "account generation cutover quarantine cleanup image lifecycle and owner-signal-zero",
     "search 287041 product relation recipe propagation batch ledger and meal aggregate end-to-end",
     "v1-v2 current-immediate-previous seeded drain rollback and legacy retention matrix",
     "real Chrome eight required screens at 390 320 desktop with accessibility states",
     "independent security DB operations performance code authority Stage5 and Stage6 reviews",
-    "production staging provider mutation remains intentionally zero"
+    "external provider mutation remains intentionally zero while server MacBook local production is the only production authority"
   ],
   "blocked_conditions": [
     "stage1-independent-reviews-not-zero",
@@ -221,12 +220,12 @@
     "fixture-only-browser-or-stale-authority-evidence",
     "item-level-n-plus-1-or-unexplained-performance-regression",
     "production-staging-provider-write-or-unapproved-manual-only-operation",
-    "remote-verifier-not-merged-exact-sha",
+    "local-first-verifier-not-merged-exact-sha",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {
     "backend": 4,
     "frontend": 4
   },
-  "notes": "Stage 1 runs docs validators, focused workflow tests, lint, typecheck, audit and exact-six diff only. Runtime DB/API/browser/performance/telemetry/remote/authority evidence is future and starts only after all predecessor runtime/current-head gates are green. The slice is verification-only: defects require a separate TDD repair PR and full exact-head evidence rerun. MEAL_LOG canonical design, critique and authority paths are future #12-owned reservations, not current Stage 0 existence claims; #14 Stage 2 fails closed until #12 actually creates and merges all three and its implementation/current-head gate is green. #14 then reuses predecessor artifacts without a new generator/critic artifact, but fresh 390/320/desktop authority evidence and a final authority report remain mandatory. No production/staging/provider write, R+2 activation, destructive tombstone or legacy orphan deletion is authorized."
+  "notes": "Stage 1 runs docs validators, focused workflow tests, lint, typecheck, audit and exact-six diff only. Runtime DB/API/browser/performance/telemetry/local-production-rehearsal/authority evidence is future and starts only after all predecessor runtime/current-head gates are green. The slice is verification-only: defects require a separate TDD repair PR and full exact-head evidence rerun. Initial deployment uses server MacBook local production plus isolated local rehearsal; remote verifier/provider barrier/remote migration are N/A until contract-evolution. MEAL_LOG canonical design, critique and authority paths are future #12-owned reservations, not current Stage 0 existence claims; #14 Stage 2 fails closed until #12 actually creates and merges all three and its implementation/current-head gate is green. #14 then reuses predecessor artifacts without a new generator/critic artifact, but fresh 390/320/desktop authority evidence and a final authority report remain mandatory. No external-provider write, R+2 activation, destructive tombstone or legacy orphan deletion is authorized."
 }

@@ -1,16 +1,66 @@
-# 현재 Mac production 운영 계획
+# 서버 MacBook local-first production 운영 계획
 
-상태: **운영 중 (local-only production)**
+상태: **local-first 초기 배포 계약 기준**
 최종 갱신: 2026-07-29 KST
 서비스: `homecook` Next.js 앱
-접속 주소: `http://127.0.0.1:3100`
-자동 실행: macOS `launchd`의 `com.homecook.production`
+기본 접속 주소: `http://127.0.0.1:3100`
+자동 실행 라벨: macOS `launchd`의 `com.homecook.production`
 
 ## 딱 한 줄 요약
 
-현재 Mac에서 production build가 `launchd`로 상시 실행 중이며, 원격 Supabase migration, 보안 권한, 전체 테스트, 데스크톱·모바일 화면, 재시작 복구까지 확인했다.
+현재 production의 뜻은 **서버 MacBook 한 대에서 local Supabase와 Next.js production server를 같이 띄우는 것**이다. 실제 고객은 없고, 검증용 테스트 데이터만 사용한다.
 
-> 이 서비스는 **현재 Mac 안에서만** 열린다. `127.0.0.1`은 내 컴퓨터를 뜻하므로 같은 와이파이의 다른 기기나 인터넷 사용자는 접속할 수 없다.
+> `127.0.0.1`은 이 MacBook 자신만 뜻한다. 같은 와이파이의 다른 기기나 인터넷 사용자는 이 주소로 접속할 수 없다.
+
+## 현재 사실
+
+| 항목 | 현재 기준 | 쉬운 설명 |
+| --- | --- | --- |
+| 사용자 범위 | 실제 사용자 없음 | 테스트 데이터와 운영자 검증만 허용한다. |
+| production DB | local Supabase | DB/Auth/Storage authority가 이 MacBook 안에 있다. |
+| app server | Next.js production build | 개발 서버가 아니라 배포용 build를 띄운다. |
+| 노출 범위 | `127.0.0.1:3100` | 같은 MacBook에서만 열린다. |
+| 자동 실행 | `launchd` | 로그인 후 자동 시작, 비정상 종료 시 재기동을 맡는다. |
+| 환경 파일 | `.env.production.local` | production용 키만 복사하고 권한은 `600`이어야 한다. |
+| 로그 | `~/.homecook/logs/homecook-production.out.log`, `~/.homecook/logs/homecook-production.err.log` | 앱 stdout/stderr를 본다. |
+| staging | 격리 local rehearsal | 원격 staging이 아니라 별도 로컬 리허설이다. |
+| 최종 barrier | local `auth.users SHARE ROW EXCLUSIVE` lock | cutover 마지막 잠금 기준이다. |
+
+## 실제 구성도
+
+```mermaid
+flowchart LR
+  A["현재 MacBook의 브라우저"] --> B["127.0.0.1:3100"]
+  B --> C["launchd: com.homecook.production"]
+  C --> D["Node.js + Next.js production server"]
+  D --> E["local Supabase API/Auth/Storage"]
+  E --> F["local PostgreSQL 17"]
+```
+
+원격 Supabase 프로젝트는 이번 계약에서 삭제된 것으로 본다. 따라서 원격 migration, 원격 verifier, provider-managed maintenance barrier는 이 문서 범위에서 `N/A`다.
+
+2026-07-29 이전의 원격 Supabase 운영·migration 완료 서사는 이 문서에서 **superseded**다. 과거 이력은 참고용일 수 있지만, 현재 production 정의와 재현 절차의 authority로 사용하지 않는다.
+
+## production과 rehearsal 구분
+
+| 구분 | 의미 | 대표 명령/행동 |
+| --- | --- | --- |
+| 개발 | 코드 수정용 빠른 서버 | `pnpm dev` |
+| rehearsal | 배포 직전 격리 로컬 검증 | clean reset 또는 backup restore 뒤 smoke |
+| production build | 배포용 결과물 생성 | `./scripts/run-local-mac-production.sh build` |
+| production install | LaunchAgent 등록 + readiness 확인 | `./scripts/run-local-mac-production.sh install` |
+
+## 현재 구현 gap
+
+현재 문서 계약과 코드가 완전히 맞지는 않는다.
+
+- `scripts/lib/production-data-quality.mjs`는 production-like 환경에서 `NEXT_PUBLIC_SUPABASE_URL`이 localhost면 무조건 `PRODUCTION_LOCAL_SUPABASE_URL` 오류로 거부한다.
+- 후속 필수 작업: **별도 TDD PR**에서 `HOMECOOK_PRODUCTION_EXPOSURE=local-only`일 때만 local Supabase URL을 허용하고, `public` exposure에서는 지금처럼 계속 거부해야 한다.
+- 현재 `com.homecook.production` LaunchAgent는 Next.js만 시작한다. Docker Desktop과 local Supabase가 재부팅 뒤 먼저 준비됐는지는 보장하지 않는다.
+- 후속 필수 작업: 서버 MacBook의 재부팅 복구를 닫기 전에 `Docker 준비 → pnpm dlx supabase start/health → Next.js start` 순서와 실패 시 재시도를 자동화하고 실제 재부팅 smoke를 통과해야 한다.
+- 이번 docs 변경에서는 코드를 수정하지 않는다.
+
+> 따라서 아래의 `build`·`install`·재부팅 절차는 **문서 계약이 요구하는 목표 절차**다. local Supabase production validator TDD 수정과 부팅 순서 자동화가 merge되고 실제 재부팅 smoke가 통과하기 전에는 “다른 MacBook 배포 완료” 증거로 사용할 수 없다.
 
 ## 지금 바로 확인하는 방법
 
@@ -20,7 +70,7 @@
 http://127.0.0.1:3100
 ```
 
-서비스 상태를 확인하려면 다음 명령을 실행한다.
+서비스 상태를 확인한다.
 
 ```bash
 ./scripts/run-local-mac-production.sh status
@@ -35,192 +85,151 @@ state: running
 pid: 29719
 ```
 
-`pid`는 실행 중인 프로그램 번호라서 재시작할 때마다 바뀌는 것이 정상이다.
+`pid`는 프로세스 번호라서 재시작 때마다 바뀌는 것이 정상이다.
 
-## 현재 운영 상태
+## 다른 MacBook에서 다시 만드는 절차
 
-| 항목 | 현재 값 | 초보자용 설명 |
-| --- | --- | --- |
-| 실행 모드 | production build | 개발용 서버가 아니라 최적화된 운영 build다. |
-| 접속 범위 | `127.0.0.1` | 현재 Mac에서만 접속할 수 있다. |
-| 포트 | `3100` | 기존 개발 서버의 `3000`과 충돌하지 않는다. |
-| 프로세스 관리자 | `launchd` | Mac 로그인 시 켜고, 비정상 종료 시 다시 시작한다. |
-| 서비스 이름 | `com.homecook.production` | `launchd`가 서비스를 구분하는 이름이다. |
-| 환경 파일 | `.env.production.local` | 허용된 production 키만 들어가며 권한은 `600`이다. |
-| 표준 오류 로그 | `~/.homecook/logs/homecook-production.err.log` | 서버 오류를 확인하는 파일이다. |
-| 잠자기 방지 | Amphetamine 실행 중 | Mac이 잠들어 서버가 멈추는 일을 방지한다. |
+아래 절차는 **초보자 기준**으로 적었다. 핵심은 "같은 소스 버전 + 같은 로컬 DB 상태 + 새 환경 변수 + 새 LaunchAgent"다.
 
-## production이란 무엇인가
+### 1. 정확한 소스 버전 맞추기
 
-| 구분 | 명령 | 용도 |
-| --- | --- | --- |
-| 개발 서버 | `pnpm dev` | 코드를 고치면서 빠르게 확인한다. |
-| production build | `./scripts/run-local-mac-production.sh build` | 현재 Mac에서 Node 경로를 자동으로 찾아 운영용 코드로 컴파일하고 최적화한다. |
-| production server | `pnpm start` | build 결과물을 실행한다. |
-| 현재 운영 방식 | 운영 래퍼의 `build` 후 `install` | 새 build를 만든 뒤 품질 검사, `launchd` 등록, HTTP 확인을 수행한다. |
+- 이 문서 작성 시 검증 기준 Git SHA: `fb15e77697f54f44e318852e227bd4ff97fa3a55`
+- 실제 설치 기준: 배포 직전에 승인한 release head SHA. 위 SHA를 영구 고정값으로 사용하지 않는다.
+- repo 고정 버전:
+  - `pnpm@10.32.1`
+  - `next@15.5.21`
+  - `react@19.1.0`
+  - `react-dom@19.1.0`
+  - `@supabase/supabase-js` manifest 범위 `^2.57.4`, 현재 lock 해석 `2.99.1`
+  - `@supabase/ssr@0.7.0`
+  - local Supabase PostgreSQL major version `17` (`supabase/config.toml`)
+- 실제 재현 authority는 위 설명보다 `pnpm-lock.yaml`이 우선한다. 버전 범위를 보고 수동 설치하지 말고 반드시 `pnpm install --frozen-lockfile`을 사용한다.
+- 주의:
+  - Node.js 실행 파일 경로는 repo가 고정하지 않는다. 새 MacBook에서도 source Mac과 같은 `node -v` 결과를 먼저 기록한 뒤 맞추는 것이 가장 안전하다.
+  - Supabase CLI도 `package.json`에 버전이 잠겨 있지 않다. source Mac에서 `pnpm dlx supabase --version` 결과를 함께 기록해 두는 편이 좋다.
 
-`pnpm dev`가 연습용 주방이라면, production build는 손님에게 내기 전에 같은 레시피를 실제 운영 주방에서 다시 만드는 과정이다.
+### 2. 코드와 의존성 설치
 
-## 구성도
+왜 필요한가: 앱 build와 local Supabase helper가 같은 버전을 써야 하기 때문이다.
 
-```mermaid
-flowchart LR
-  A["현재 Mac의 브라우저"] --> B["127.0.0.1:3100"]
-  B --> C["launchd: com.homecook.production"]
-  C --> D["Node.js + Next.js production server"]
-  D --> E["원격 Supabase DB / Auth / Storage"]
+```bash
+git checkout <승인한-release-head-SHA>
+pnpm install --frozen-lockfile
 ```
 
-## 해결한 근본 원인
+### 3. local Supabase 상태 준비
 
-### 1. 원격 DB가 코드보다 뒤처져 있었다
+왜 필요한가: production authority가 remote가 아니라 local DB/Auth/Storage이기 때문이다.
 
-증상:
+두 가지 길 중 하나를 고른다.
 
-- 홈의 레시피 API가 PostgreSQL `42703` 오류로 실패했다.
-- 원격 DB에 `recipes.visibility`를 포함한 공식 schema가 없었다.
-- 로컬 build는 성공해도 실제 데이터 요청은 실패했다.
+#### A. 깨끗한 기준선으로 새로 만들기
 
-해결:
+테스트 데이터를 다시 만들 수 있을 때 쓴다.
 
-- 적용 전 schema와 데이터를 각각 SQL dump로 백업했다.
-- 원격에서 빠진 공식 migration 33개를 순서대로 적용했다.
-- 이번 작업에서 발견한 보안·호환성 migration도 추가 적용했다.
-- 마지막 migration 목록에서 로컬과 원격이 일치함을 확인했다.
-
-백업:
-
-```text
-/tmp/homecook-pre-migration-20260729.sql
-/tmp/homecook-pre-migration-data-20260729.sql
+```bash
+pnpm dlx supabase start
+pnpm dlx supabase db reset --local --yes
 ```
 
-### 2. recipe visibility guard가 `public` schema를 읽지 못했다
+- 위 reset은 `supabase/migrations/` 전체와 `supabase/seed.sql`을 다시 적용한다.
+- 추가 demo 데이터가 필요하면 별도 local seed 스크립트를 쓴다.
+  - `pnpm local:seed:demo`
+  - 필요 시 `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
 
-증상:
+#### B. source Mac의 상태를 그대로 복원하기
 
-- guard 함수 소유자는 필요한 테이블 `SELECT` 권한이 있었지만 `public` schema `USAGE` 권한이 없었다.
-- 함수가 schema 안의 테이블 이름을 해석하지 못했다.
+같은 테스트 데이터, 같은 계정, 같은 이미지가 꼭 필요할 때 쓴다.
 
-해결:
+- source Mac에서 챙길 것:
+  - local Postgres backup(SQL dump 또는 verified restore artifact)
+  - Storage bucket 파일 백업
+  - 새 Mac에서 다시 발급할 env 값 목록
+- 새 Mac에서는 clean local Supabase를 띄운 뒤 backup을 복원한다.
+- 복원 후에 migration head가 현재 repo와 같은지 다시 확인한다. local backup이 오래됐으면 replay보다 오히려 위험하다.
 
-- `USAGE`만 허용하고 `CREATE`는 계속 금지하는 migration을 추가했다.
-- guard 소유자는 로그인, superuser, RLS 우회, DB 생성 권한이 모두 없다.
-- 익명·로그인 역할은 함수 실행만 가능하고 `service_role`은 직접 실행할 수 없다.
+### 4. Storage와 이미지 상태 맞추기
 
-### 3. Supabase hosted PostgreSQL에서 검색 함수 생성이 거부됐다
+왜 필요한가: SQL만 복원해도 bucket object가 없으면 화면에서 이미지가 깨질 수 있다.
 
-증상:
+- clean replay 경로라면 seed가 준비한 기본 데이터만 사용한다.
+- exact 복원 경로라면 source Mac의 local Storage object도 함께 옮긴다.
+- old-path reference를 지우는 작업은 여기서 하지 않는다. irreversible delete는 별도 gate다.
 
-- 검색 함수가 `pg_trgm.word_similarity_threshold`를 함수 안에서 바꾸려 했다.
-- Supabase hosted 환경은 이 설정 변경을 허용하지 않아 migration이 `42501`로 실패했다.
+### 5. 환경 변수 새로 발급하기
 
-해결:
+왜 필요한가: local Supabase 키와 앱 origin이 새 MacBook 기준으로 바뀌기 때문이다.
 
-- 제한된 설정 변경과 `<%` 연산자 의존을 제거했다.
-- 기존 short-ngram GIN index로 후보를 먼저 줄인 뒤 `word_similarity(...) > 0.3`을 명시적으로 계산한다.
-- 검색 의미는 유지하면서 index를 사용하도록 만들었다.
+- source `.env.local` 또는 승인된 비밀 저장소를 준비한다.
+- production 파일은 스크립트로 다시 만든다.
 
-검증 결과:
-
-```text
-Recall@20: 1.0000
-Precision@20: 0.9211
-DB p95: 43.30ms
-Route p95: 16.79ms
+```bash
+./scripts/run-local-mac-production.sh prepare-env --force
 ```
 
-### 4. Supabase 기본 권한과 보안 검증기의 가정이 달랐다
+- 이 스크립트는 `.env.production.local`을 만들면서:
+  - 필요한 production 키만 복사한다.
+  - `HOMECOOK_PRODUCTION_EXPOSURE=local-only`를 강제로 넣는다.
+  - `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`을 `http://127.0.0.1:3100`으로 맞춘다.
+- 파일 권한은 `600`이어야 한다.
+- OAuth client secret, service role key, YouTube 관련 키는 새 Mac 기준으로 다시 확인해야 한다. "복사만 하면 된다"고 가정하면 안 된다.
 
-증상:
+### 6. build 만들기
 
-- 익명·로그인 역할에 레시피 관련 직접 쓰기 권한이 넓게 남아 있었다.
-- `tags`는 의도적으로 일부 열만 읽게 했는데 검증기는 전체 테이블 `SELECT`가 없다고 오판했다.
-- PostgreSQL 17의 제한형 guard 관리 멤버십을 일반 멤버십 누수로 오판했다.
+왜 필요한가: LaunchAgent는 `.next/BUILD_ID`가 있는 production build를 전제로 동작한다.
 
-해결:
-
-- 레시피·단계·재료·태그 관련 익명/로그인 직접 쓰기 권한을 table과 column 수준에서 모두 회수했다.
-- `service_role`의 `recipe_tags` 직접 쓰기도 회수하고 공식 함수만 사용하게 했다.
-- `tags`는 공개 허용 열 7개를 각각 검사하도록 검증기를 수정했다.
-- Supabase의 guard 관리 멤버십은 `INHERIT=false`, `SET=false`, 안전한 grantor인 경우 1개만 허용한다.
-- 기존 공개 이미지 업로드 호환성은 한 릴리스 동안 유지하되, 비공개 bucket 쓰기 policy는 0개임을 검증한다.
-
-원격 read-only 검증 결과:
-
-```text
-schema_ready: true
-role_matrix_ok: true
-reader_missing_select_count: 0
-reader_table_mutation_count: 0
-reader_column_mutation_count: 0
-service_role_tag_table_mutation_count: 0
-service_role_tag_column_mutation_count: 0
-guard_unsafe_membership_count: 0
-storage_mutation_policy_count: 3
-unallowlisted_storage_mutation_policy_count: 0
-remote_writes: 0
+```bash
+./scripts/run-local-mac-production.sh build
 ```
 
-### 5. 최신 pnpm 설정 위치와 Mac의 Node 경로가 달랐다
+이 단계는 내부적으로 ESLint를 한 번 돌린 뒤 `next build --no-lint`를 수행한다.
 
-증상:
+### 7. LaunchAgent 다시 생성하기
 
-- 최신 pnpm은 project 설정을 `pnpm-workspace.yaml`에서 읽는다.
-- 현재 작업 셸에는 시스템 `node`가 없어 설치 스크립트와 관리 명령이 실패했다.
-- 검토되지 않은 build script는 pnpm이 fail-closed 방식으로 차단했다.
+왜 필요한가: LaunchAgent plist 경로와 Node 경로는 Mac마다 다를 수 있기 때문이다.
 
-해결:
+먼저 Docker Desktop과 local Supabase가 실행 중인지 확인한다. 현재 Next.js LaunchAgent는 local Supabase를 대신 시작하지 않는다.
 
-- 보안 override와 patch 설정을 `pnpm-workspace.yaml`로 옮겼다.
-- build script는 `esbuild@0.28.1`, `unrs-resolver@1.11.1` 두 정확한 버전만 허용했다.
-- production 관리 래퍼가 시스템 Node를 먼저 찾고, 없으면 현재 Mac의 Codex Node를 찾는다.
-- 운영 래퍼의 `build`, `status`, `restart`, `install`, `uninstall`이 Node나 pnpm 경로를 직접 입력하지 않아도 동작한다.
+```bash
+pnpm dlx supabase start
+pnpm dlx supabase status
+```
 
-## 완료한 실행 계획
+```bash
+./scripts/run-local-mac-production.sh install
+```
 
-1. [x] 공식 문서와 저장소 운영 규칙 확인
-2. [x] 별도 worktree와 작업 branch로 사용자 변경 보호
-3. [x] 원격 DB schema/data 백업
-4. [x] 원격 pending migration 적용
-5. [x] hosted PostgreSQL 검색 호환성 수정
-6. [x] recipe visibility 권한과 guard 경계 수정
-7. [x] production 전용 환경 파일 생성 및 `600` 권한 적용
-8. [x] dependency install, lint, typecheck, 전체 test, production build
-9. [x] production 데이터 품질 게이트 통과
-10. [x] `launchd` 설치 및 HTTP readiness 확인
-11. [x] 데스크톱·모바일 홈과 레시피 상세 확인
-12. [x] `launchd` 재시작 후 새 PID와 HTTP/API `200` 확인
-13. [ ] 실제 Mac 재부팅 확인
+이 명령은 아래를 다시 만든다.
 
-실제 재부팅은 현재 사용자 세션을 강제로 끊기 때문에 수행하지 않았다. 대신 같은 `launchd` 경로의 강제 재시작과 자동 HTTP 준비 검사를 통과했다.
+- plist: `~/Library/LaunchAgents/com.homecook.production.plist`
+- stdout log: `~/.homecook/logs/homecook-production.out.log`
+- stderr log: `~/.homecook/logs/homecook-production.err.log`
 
-## 최종 검증 결과
+Node가 표준 위치에 없으면 `HOMECOOK_NODE_BIN`으로 새 Mac의 실행 파일 경로를 먼저 지정한다.
 
-| 검증 | 결과 |
-| --- | --- |
-| `pnpm install --frozen-lockfile` | 통과 |
-| `pnpm lint` | 통과 |
-| `pnpm typecheck` | 통과 |
-| 전체 Vitest | 421 files passed, 4,309 tests passed |
-| recipe visibility 실제 PostgreSQL | 75 tests passed |
-| prepared food 실제 PostgreSQL | 32 tests passed |
-| `pnpm build` | 74 static pages 생성, build 통과 |
-| production 데이터 품질 | 통과 |
-| 원격 검색 검증 | 통과, remote writes 0 |
-| 원격 recipe 권한 검증 | 통과, remote writes 0 |
-| 홈 화면 | desktop/mobile 통과 |
-| 레시피 상세 | desktop/mobile 통과 |
-| 깨진 이미지 | 0 |
-| 가로 화면 넘침 | 0 |
-| 브라우저 warning/error | 0 |
-| 재시작 후 홈/API | HTTP `200` |
+### 8. smoke 확인하기
+
+왜 필요한가: build가 성공해도 local DB/Auth/Storage 연결이 틀리면 실제 화면은 깨질 수 있기 때문이다.
+
+```bash
+./scripts/run-local-mac-production.sh status
+curl -I http://127.0.0.1:3100
+curl -I http://127.0.0.1:3100/manifest.webmanifest
+curl -I 'http://127.0.0.1:3100/api/v1/recipes?limit=1'
+```
+
+### 9. cutover가 필요한 경우 마지막 `auth.users` write barrier 지키기
+
+왜 필요한가: 이번 계약에서 원격 provider freeze 대신 local DB lock이 최종 barrier이기 때문이다.
+
+- rehearsal과 production 데이터를 바꾸는 마지막 순간에는 local PostgreSQL의 `auth.users`에 `SHARE ROW EXCLUSIVE` write barrier를 잡는다. 이 lock은 전체 read freeze가 아니다.
+- Auth Admin/import/dashboard create/delete 동결, external write attempt 0, 15분 간격 Storage inventory 2회 일치는 lock과 별도로 필요하다.
+- quiet window는 최초 cutover 1회성 운영 창이다. 같은 작업 안에서 시간이 조금 늘어나도 별도 재승인을 다시 요구하지 않는다. 다만 lock 상실, digest 불일치, 새 auth/external write, DB·서비스 restart/restore, secret 교체, Auth 동결 해제가 발생하면 즉시 중단하고 quiet 관측과 Storage inventory를 처음부터 다시 수집한다.
+- 실패하면 local rollback 또는 clean restore로 되돌린다. 별도 원격 검증기를 기다리는 단계는 없다.
 
 ## 운영 명령
 
 ### 상태 확인
-
-서비스가 켜져 있는지 확인한다.
 
 ```bash
 ./scripts/run-local-mac-production.sh status
@@ -228,35 +237,27 @@ remote_writes: 0
 
 ### 재시작
 
-새 build를 반영하거나 일시 오류를 복구한다.
-
 ```bash
 ./scripts/run-local-mac-production.sh restart
 ```
 
-### 오류 로그 확인
-
-서버가 켜지지 않거나 화면에서 `500`이 보일 때 확인한다.
-
-```bash
-tail -n 100 ~/.homecook/logs/homecook-production.err.log
-```
-
 ### 다시 설치
-
-코드로 새 build를 만든 뒤, 품질 검사를 거쳐 `launchd`에 등록한다.
 
 ```bash
 ./scripts/run-local-mac-production.sh build
 ./scripts/run-local-mac-production.sh install
 ```
 
-### 운영 중지와 등록 해제
-
-현재 Mac에서 더 이상 자동 실행하지 않을 때 사용한다.
+### 등록 해제
 
 ```bash
 ./scripts/run-local-mac-production.sh uninstall
+```
+
+### 오류 로그 보기
+
+```bash
+tail -n 100 ~/.homecook/logs/homecook-production.err.log
 ```
 
 ## 장애 확인 순서
@@ -264,52 +265,37 @@ tail -n 100 ~/.homecook/logs/homecook-production.err.log
 1. 브라우저에서 `http://127.0.0.1:3100`을 다시 연다.
 2. `./scripts/run-local-mac-production.sh status`에서 `running: yes`인지 본다.
 3. `./scripts/run-local-mac-production.sh restart`를 실행한다.
-4. 오류가 계속되면 `~/.homecook/logs/homecook-production.err.log`의 마지막 100줄을 본다.
-5. 코드를 바꿨다면 운영 래퍼의 `build` 후 `install`을 실행한다.
-6. 환경 변수만 바꿨다면 운영 래퍼의 `install`을 다시 실행한다.
-
-HTTP만 빠르게 확인하려면 다음 명령을 쓴다.
-
-```bash
-curl -I http://127.0.0.1:3100
-curl -I http://127.0.0.1:3100/manifest.webmanifest
-curl -I 'http://127.0.0.1:3100/api/v1/recipes?limit=1'
-```
+4. 계속 실패하면 stderr 로그 마지막 100줄을 확인한다.
+5. 코드를 바꿨다면 `build` 후 `install`을 다시 한다.
+6. local Supabase가 내려갔다면 `pnpm dlx supabase start`부터 다시 확인한다.
 
 ## 안전선
 
 - `.env.production.local`과 secret 값은 Git에 올리지 않는다.
-- `SUPABASE_SERVICE_ROLE_KEY`에 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
+- `SUPABASE_SERVICE_ROLE_KEY`를 `NEXT_PUBLIC_` 변수로 만들지 않는다.
 - `127.0.0.1` host 제한을 임의로 `0.0.0.0`으로 바꾸지 않는다.
-- public internet 공개 전에는 HTTPS, 도메인, OAuth callback, 방화벽, 법률 문서 검토가 필요하다.
-- Mac이 꺼지거나 잠들면 서비스도 멈춘다. 전원 연결과 Amphetamine 상태를 유지한다.
-- 원격 migration 전 백업 파일은 검증이 끝날 때까지 삭제하지 않는다.
+- local-only production은 같은 와이파이 다른 기기에서도 보이지 않는다. 이 한계를 무시하고 QA 범위를 넓히면 안 된다.
+- public 인터넷 공개, 도메인, HTTPS, OAuth production callback, reverse proxy, tunnel, 방화벽은 전부 별도 계약이다.
+- Mac이 꺼지거나 잠들면 서비스도 멈춘다. 전원, 로그인 상태, sleep 정책을 운영자가 직접 관리해야 한다.
+- old-path irreversible delete는 이번 범위 밖이다.
 
 ## 이번 범위 밖
 
-다음 항목은 현재 local-only production과 별도 계획이 필요하다.
-
 - 같은 와이파이의 다른 기기에서 접속하는 LAN 공개
-- 인터넷 사용자가 접속하는 public 배포
-- 도메인과 HTTPS 인증서
-- reverse proxy 또는 tunnel
-- OAuth production callback 변경
-- 24시간 장애 감시와 외부 알림
-- 실제 Mac 재부팅 smoke test
+- 인터넷 공개 배포
+- hosted Supabase 또는 managed provider 복귀
+- HTTPS/도메인/OAuth production callback 전환
+- 외부 heartbeat와 24시간 장애 알림
+- old-path Storage 영구 삭제
+- 실제 고객 데이터 운영
 
-## 다음 단계
+## 참고한 파일
 
-현재 목표는 완료됐다. 외부 사용자에게 공개하려면 다음 순서로 별도 작업한다.
-
-1. 공개 범위와 예상 사용자를 결정한다.
-2. 도메인과 HTTPS 방식을 정한다.
-3. OAuth callback과 보안 헤더를 공개 주소 기준으로 갱신한다.
-4. 외부 heartbeat와 장애 알림을 붙인다.
-5. LAN 또는 public exposure 전용 보안 검토를 통과한다.
-
-## 참고한 공식 문서
-
-- [Supabase database migrations](https://supabase.com/docs/guides/deployment/database-migrations)
-- [Supabase custom Postgres configuration](https://supabase.com/docs/guides/database/custom-postgres-config)
-- [PostgreSQL pg_trgm](https://www.postgresql.org/docs/current/pgtrgm.html)
-- [pnpm project settings](https://pnpm.io/settings)
+- `package.json`
+- `supabase/config.toml`
+- `supabase/seed.sql`
+- `scripts/run-local-mac-production.sh`
+- `scripts/local-mac-production.mjs`
+- `scripts/lib/local-mac-production.mjs`
+- `scripts/lib/local-supabase-env.mjs`
+- `scripts/lib/production-data-quality.mjs`
