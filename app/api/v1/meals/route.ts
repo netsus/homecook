@@ -28,7 +28,7 @@ import {
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { MealCreateBody, MealCreateData, MealListData, MealListItemData } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
@@ -377,7 +377,7 @@ export async function GET(request: NextRequest) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     MealsDbClient & UserBootstrapDbClient;
 
   try {
@@ -552,7 +552,7 @@ export async function POST(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     MealsDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
 
   try {

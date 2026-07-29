@@ -1,6 +1,6 @@
 import { fail, ok } from "@/lib/api/response";
 import { parseProductPatchBody } from "@/lib/server/prepared-food-catalog";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { FoodProductData } from "@/types/food-product";
 
 interface RouteContext {
@@ -111,7 +111,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = (createServiceRoleClient() ?? routeClient) as unknown as CatalogMutationDbClient;
+  const db = routeClient as unknown as CatalogMutationDbClient;
   const stateResult = await readProductState(db, productId);
   if (stateResult.error) return fail("INTERNAL_ERROR", "완제품을 수정하지 못했어요.", 500);
   const state = stateResult.data;
@@ -147,7 +147,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return fail("RESOURCE_NOT_FOUND", "완제품을 찾을 수 없어요.", 404);
   }
 
-  const db = (createServiceRoleClient() ?? routeClient) as unknown as CatalogMutationDbClient;
+  const db = routeClient as unknown as CatalogMutationDbClient;
   const stateResult = await readProductState(db, productId);
   if (stateResult.error) return fail("INTERNAL_ERROR", "완제품을 삭제하지 못했어요.", 500);
   const authorization = authorizeOwnerManualMutation(stateResult.data, user.id);

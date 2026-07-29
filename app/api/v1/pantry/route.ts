@@ -27,7 +27,7 @@ import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { PantryMutationBody } from "@/types/pantry";
 
 interface QueryError {
@@ -151,7 +151,7 @@ async function getAuthenticatedDb(
     };
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     PantryDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
 
   try {

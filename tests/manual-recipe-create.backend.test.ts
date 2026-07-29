@@ -17,6 +17,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,
 }));
@@ -637,7 +638,7 @@ describe("18 manual recipe create backend", () => {
         fields: [{ field: "thumbnail_url", reason: "invalid_reference" }],
       },
     });
-    expect(createServiceRoleClient).toHaveBeenCalledOnce();
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
     expect(ensurePublicUserRow).not.toHaveBeenCalled();
   });
 

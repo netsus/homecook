@@ -18,7 +18,7 @@ import {
 } from "@/lib/server/recipe-card-user-status";
 import {
   createRouteHandlerClient,
-  createServiceRoleClient,
+  createRemoteCompatibilityServiceRoleClient,
 } from "@/lib/supabase/server";
 import type { RecipeCardItem, RecipeThemesData } from "@/types/recipe";
 
@@ -394,7 +394,8 @@ export async function GET() {
 
   try {
     const routeClient = await createRouteHandlerClient();
-    const serviceClient = createServiceRoleClient() ?? routeClient;
+    const serviceClient =
+      createRemoteCompatibilityServiceRoleClient() ?? routeClient;
     const supabase = routeClient;
     const themeDbClient = supabase as unknown as ThemeDbClient;
     const privateThemeDbClient = serviceClient as unknown as ThemeDbClient;

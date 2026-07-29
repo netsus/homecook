@@ -31,7 +31,10 @@ import {
   RECIPE_STEP_SELECT_WITH_METHODS,
 } from "@/lib/server/recipe-step-method-select";
 import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createRemoteCompatibilityServiceRoleClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 import type { RecipeDetail, RecipePhoto, RecipePhotoRole, RecipeUserStatus } from "@/types/recipe";
 
 interface RouteContext {
@@ -78,7 +81,9 @@ function readExpectedStorageOrigin() {
 }
 
 async function readCurrentRecipeNutritionSnapshot(
-  dbClient: NonNullable<ReturnType<typeof createServiceRoleClient>> |
+  dbClient: NonNullable<
+    ReturnType<typeof createRemoteCompatibilityServiceRoleClient>
+  > |
     Awaited<ReturnType<typeof createRouteHandlerClient>>,
   recipeId: string,
 ) {
@@ -193,7 +198,9 @@ function buildRecipePhotos(
 }
 
 async function incrementRecipeViewCountWithFallback(
-  serviceClient: NonNullable<ReturnType<typeof createServiceRoleClient>>,
+  serviceClient: NonNullable<
+    ReturnType<typeof createRemoteCompatibilityServiceRoleClient>
+  >,
   recipeId: string,
   initialViewCount: number,
 ) {
@@ -272,7 +279,7 @@ export async function GET(request: Request, context: RouteContext) {
       return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
     }
 
-    const serviceClient = createServiceRoleClient();
+    const serviceClient = createRemoteCompatibilityServiceRoleClient();
     const dbClient = routeClient;
     const legacyThumbnailUrl = recipeResult.data.thumbnail_url;
     const imageReadPromise = serviceClient

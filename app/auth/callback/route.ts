@@ -31,7 +31,10 @@ import {
   normalizeUserEmail,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createAuthRouteHandlerClient,
+  createRemoteCompatibilityServiceRoleClient,
+} from "@/lib/supabase/server";
 
 type AuthFailureCode =
   | "email_required"
@@ -170,7 +173,8 @@ export async function GET(request: Request) {
       ?? parsePostAuthNextCookie(cookieStore.get(POST_AUTH_NEXT_COOKIE)?.value),
   );
   const code = requestUrl.searchParams.get("code");
-  let supabase: Awaited<ReturnType<typeof createRouteHandlerClient>> | null = null;
+  let supabase: Awaited<ReturnType<typeof createAuthRouteHandlerClient>> | null =
+    null;
 
   if (!code) {
     if (requestUrl.searchParams.get("error")) {
@@ -186,7 +190,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    supabase = await createRouteHandlerClient();
+    supabase = await createAuthRouteHandlerClient();
     const exchangeResult = await supabase.auth.exchangeCodeForSession(code);
     if (exchangeResult.error) {
       await recordAuthFailure(request, "OAUTH_EXCHANGE_FAILED");
@@ -257,7 +261,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const serviceRoleClient = createServiceRoleClient();
+    const serviceRoleClient = createRemoteCompatibilityServiceRoleClient();
     if (!serviceRoleClient) {
       await recordAuthFailure(request, "SERVICE_ROLE_UNAVAILABLE");
       return clearPartialSession(

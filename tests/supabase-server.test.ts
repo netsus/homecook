@@ -8,6 +8,9 @@ const createServerClient = vi.fn();
 const createClient = vi.fn();
 const getSupabaseEnv = vi.fn();
 const getServiceRoleKey = vi.fn();
+const getLocalShadowDataEnv = vi.fn();
+const getLocalDataServiceRoleKey = vi.fn();
+const createHybridShadowReadFetch = vi.fn();
 const cookieGetAll = vi.fn();
 const cookieSet = vi.fn();
 
@@ -33,9 +36,17 @@ vi.mock("@supabase/supabase-js", () => ({
   createClient,
 }));
 
+vi.mock("@/lib/server/hybrid-auth/shadow-read", () => ({
+  createHybridShadowReadFetch,
+}));
+
 vi.mock("@/lib/supabase/env", () => ({
-  getSupabaseEnv,
-  getServiceRoleKey,
+  getAuthSupabaseEnv: getSupabaseEnv,
+  getDataSupabaseEnv: getSupabaseEnv,
+  getAuthServiceRoleKey: getServiceRoleKey,
+  getDataServiceRoleKey: getServiceRoleKey,
+  getLocalDataServiceRoleKey,
+  getLocalShadowDataEnv,
 }));
 
 describe("supabase server helpers", () => {
@@ -46,6 +57,9 @@ describe("supabase server helpers", () => {
     createClient.mockReset();
     getSupabaseEnv.mockReset();
     getServiceRoleKey.mockReset();
+    getLocalDataServiceRoleKey.mockReset();
+    getLocalShadowDataEnv.mockReset();
+    createHybridShadowReadFetch.mockReset();
     cookieGetAll.mockReset();
     cookieSet.mockReset();
 
@@ -57,8 +71,13 @@ describe("supabase server helpers", () => {
     getSupabaseEnv.mockReturnValue({
       url: "http://127.0.0.1:54321",
       anonKey: "anon-key",
+      authority: "remote",
+      issuer: "http://127.0.0.1:54321/auth/v1",
+      jwksUrl: "http://127.0.0.1:54321/auth/v1/.well-known/jwks.json",
     });
     getServiceRoleKey.mockReturnValue(null);
+    getLocalDataServiceRoleKey.mockReturnValue(null);
+    createHybridShadowReadFetch.mockReturnValue(vi.fn());
   });
 
   it("does not throw when server-page auth reads trigger cookie writes", async () => {
@@ -95,6 +114,42 @@ describe("supabase server helpers", () => {
     await expect(getServerAuthUser()).resolves.toEqual({
       id: "user-1",
     });
+  });
+
+  it("wires safe semantic comparison into the real server fetch path in local-shadow", async () => {
+    const shadowFetch = vi.fn();
+    createHybridShadowReadFetch.mockReturnValue(shadowFetch);
+    getSupabaseEnv.mockReturnValue({
+      url: "https://remote.example",
+      anonKey: "remote-publishable",
+      authority: "local-shadow",
+      issuer: "https://remote.example/auth/v1",
+      jwksUrl: "https://remote.example/auth/v1/.well-known/jwks.json",
+    });
+    getLocalShadowDataEnv.mockReturnValue({
+      url: "http://127.0.0.1:8000",
+      anonKey: "local-publishable",
+    });
+    getLocalDataServiceRoleKey.mockReturnValue("local-service-secret");
+    createClient.mockReturnValue({ rpc: vi.fn() });
+    createServerClient.mockReturnValue({ auth: {} });
+
+    const { createAuthRouteHandlerClient } =
+      await import("@/lib/supabase/server");
+    await createAuthRouteHandlerClient();
+
+    expect(createHybridShadowReadFetch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        localDataUrl: "http://127.0.0.1:8000",
+      }),
+    );
+    expect(createServerClient).toHaveBeenCalledWith(
+      "https://remote.example",
+      "remote-publishable",
+      expect.objectContaining({
+        global: { fetch: shadowFetch },
+      }),
+    );
   });
 });
 

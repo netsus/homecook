@@ -18,7 +18,7 @@ import {
 } from "@/lib/server/recipe-image-managed-response";
 import {
   createRouteHandlerClient,
-  createServiceRoleClient,
+  createRemoteCompatibilityServiceRoleClient,
 } from "@/lib/supabase/server";
 
 interface RouteContext {
@@ -39,7 +39,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const serviceRoleClient = createServiceRoleClient();
+  const serviceRoleClient = createRemoteCompatibilityServiceRoleClient();
   if (!serviceRoleClient) {
     return fail("INTERNAL_ERROR", "이미지 업로드를 취소하지 못했어요.", 500);
   }

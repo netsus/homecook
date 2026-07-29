@@ -2,7 +2,7 @@ import { fail, ok } from "@/lib/api/response";
 import { isYoutubeImportEnabled } from "@/lib/feature-flags";
 import { normalizeFoodSafetyImageUrl } from "@/lib/recipe-image";
 import { normalizeRecipioYoutubeUrl } from "@/lib/recipio-youtube-import";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { RecipioYoutubeDuplicateCheckData } from "@/types/recipe";
 
 interface QueryError {
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = createServiceRoleClient() ?? routeClient;
+  const dbClient = routeClient;
   const result = await dbClient
     .from("recipe_sources")
     .select("recipe_id, youtube_url, youtube_video_id, recipes(id, title, thumbnail_url)")

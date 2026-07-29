@@ -86,6 +86,10 @@ function setupAuthedClient(dbClient: { from: ReturnType<typeof vi.fn> }, user = 
       getUser: vi.fn(async () => ({ data: { user } })),
     },
     from: dbClient.from,
+    rpc: vi.fn(async () => ({
+      data: null,
+      error: { code: "PGRST202" },
+    })),
   };
 
   createRouteHandlerClient.mockResolvedValue(routeClient);
@@ -155,7 +159,7 @@ describe("17a mypage backend", () => {
     const response = await GET(new Request("http://localhost:3000/api/v1/users/me"));
     const body = await response.json();
 
-    expect(response.status).toBe(200);
+    expect(response.status, JSON.stringify(body)).toBe(200);
     expect(body).toEqual({
       success: true,
       data: {
@@ -177,10 +181,10 @@ describe("17a mypage backend", () => {
     const recipeBooksTable = createTable([
       {
         data: [
-          { id: "book-my", name: "내가 추가한 레시피", book_type: "my_added", sort_order: 0 },
-          { id: "book-saved", name: "저장한 레시피", book_type: "saved", sort_order: 1 },
-          { id: "book-liked", name: "좋아요한 레시피", book_type: "liked", sort_order: 2 },
-          { id: "book-custom", name: "주말 파티", book_type: "custom", sort_order: 3 },
+          { id: "91000000-0000-4000-8000-000000000001", name: "내가 추가한 레시피", book_type: "my_added", sort_order: 0 },
+          { id: "91000000-0000-4000-8000-000000000002", name: "저장한 레시피", book_type: "saved", sort_order: 1 },
+          { id: "91000000-0000-4000-8000-000000000003", name: "좋아요한 레시피", book_type: "liked", sort_order: 2 },
+          { id: "91000000-0000-4000-8000-000000000004", name: "주말 파티", book_type: "custom", sort_order: 3 },
         ],
         error: null,
       },
@@ -207,14 +211,14 @@ describe("17a mypage backend", () => {
 
     expect(response.status).toBe(200);
     expect(body.data.books).toEqual([
-      { id: "book-my", name: "내가 추가한 레시피", book_type: "my_added", recipe_count: 1, cover_color_key: null, cover_image_url: null, sort_order: 0 },
-      { id: "book-saved", name: "저장한 레시피", book_type: "saved", recipe_count: 2, cover_color_key: null, cover_image_url: null, sort_order: 1 },
-      { id: "book-liked", name: "좋아요한 레시피", book_type: "liked", recipe_count: 2, cover_color_key: null, cover_image_url: null, sort_order: 2 },
-      { id: "book-custom", name: "주말 파티", book_type: "custom", recipe_count: 1, cover_color_key: null, cover_image_url: null, sort_order: 3 },
+      { id: "91000000-0000-4000-8000-000000000001", name: "내가 추가한 레시피", book_type: "my_added", recipe_count: 1, cover_color_key: null, cover_image_url: null, sort_order: 0 },
+      { id: "91000000-0000-4000-8000-000000000002", name: "저장한 레시피", book_type: "saved", recipe_count: 2, cover_color_key: null, cover_image_url: null, sort_order: 1 },
+      { id: "91000000-0000-4000-8000-000000000003", name: "좋아요한 레시피", book_type: "liked", recipe_count: 2, cover_color_key: null, cover_image_url: null, sort_order: 2 },
+      { id: "91000000-0000-4000-8000-000000000004", name: "주말 파티", book_type: "custom", recipe_count: 1, cover_color_key: null, cover_image_url: null, sort_order: 3 },
     ]);
     expect(recipeBookItemsTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
-    expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("book_id", "book-saved");
-    expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("book_id", "book-custom");
+    expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("book_id", "91000000-0000-4000-8000-000000000002");
+    expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("book_id", "91000000-0000-4000-8000-000000000004");
     expect(recipeLikesTable.select).toHaveBeenCalledWith("recipe_id", { count: "exact", head: true });
     expect(recipesTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
   });
@@ -222,12 +226,12 @@ describe("17a mypage backend", () => {
   it("PATCH /recipe-books/{book_id} renames only custom books", async () => {
     const recipeBooksTable = createTable([
       {
-        data: { id: "book-custom", user_id: "user-1", book_type: "custom" },
+        data: { id: "91000000-0000-4000-8000-000000000004", user_id: "user-1", book_type: "custom" },
         error: null,
       },
       {
         data: {
-          id: "book-custom",
+          id: "91000000-0000-4000-8000-000000000004",
           name: "저녁 모임",
           book_type: "custom",
           sort_order: 3,
@@ -238,7 +242,7 @@ describe("17a mypage backend", () => {
     ]);
     const recipeBookItemsTable = createTable([
       {
-        data: [{ book_id: "book-custom" }, { book_id: "book-custom" }],
+        data: [{ book_id: "91000000-0000-4000-8000-000000000004" }, { book_id: "91000000-0000-4000-8000-000000000004" }],
         error: null,
       },
     ]);
@@ -252,7 +256,7 @@ describe("17a mypage backend", () => {
 
     const { PATCH } = await importRecipeBookDetailRoute();
     const response = await PATCH(
-      new Request("http://localhost:3000/api/v1/recipe-books/book-custom", {
+      new Request("http://localhost:3000/api/v1/recipe-books/91000000-0000-4000-8000-000000000004", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name: "저녁 모임" }),
@@ -263,7 +267,7 @@ describe("17a mypage backend", () => {
 
     expect(response.status).toBe(200);
     expect(body.data).toMatchObject({
-      id: "book-custom",
+      id: "91000000-0000-4000-8000-000000000004",
       name: "저녁 모임",
       book_type: "custom",
       recipe_count: 2,
@@ -342,7 +346,7 @@ describe("17a mypage backend", () => {
   it("DELETE /recipe-books/{book_id} rejects system books and deletes custom books", async () => {
     const systemBooksTable = createTable([
       {
-        data: { id: "book-saved", user_id: "user-1", book_type: "saved" },
+        data: { id: "91000000-0000-4000-8000-000000000002", user_id: "user-1", book_type: "saved" },
         error: null,
       },
     ]);
@@ -355,7 +359,7 @@ describe("17a mypage backend", () => {
 
     const { DELETE } = await importRecipeBookDetailRoute();
     const systemResponse = await DELETE(
-      new Request("http://localhost:3000/api/v1/recipe-books/book-saved", { method: "DELETE" }),
+      new Request("http://localhost:3000/api/v1/recipe-books/91000000-0000-4000-8000-000000000002", { method: "DELETE" }),
       createBookContext("550e8400-e29b-41d4-a716-446655440002"),
     );
 
@@ -363,7 +367,7 @@ describe("17a mypage backend", () => {
 
     const customBooksTable = createTable([
       {
-        data: { id: "book-custom", user_id: "user-1", book_type: "custom" },
+        data: { id: "91000000-0000-4000-8000-000000000004", user_id: "user-1", book_type: "custom" },
         error: null,
       },
       { data: [], error: null },
@@ -378,7 +382,7 @@ describe("17a mypage backend", () => {
     });
 
     const customResponse = await DELETE(
-      new Request("http://localhost:3000/api/v1/recipe-books/book-custom", { method: "DELETE" }),
+      new Request("http://localhost:3000/api/v1/recipe-books/91000000-0000-4000-8000-000000000004", { method: "DELETE" }),
       createBookContext("550e8400-e29b-41d4-a716-446655440001"),
     );
     const body = await customResponse.json();

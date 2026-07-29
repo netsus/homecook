@@ -32,7 +32,10 @@ import {
   runLegacyExternalWrite,
   type ExternalWriteRpcClient,
 } from "@/lib/server/account-generation/external-write";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createRemoteCompatibilityServiceRoleClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 
 const MANAGED_READ_URL_TTL_SECONDS = 300;
 const MANAGED_TAKEOVER_READ_TIMEOUT_MS = 10_000;
@@ -186,7 +189,7 @@ export async function POST(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const serviceRoleClient = createServiceRoleClient();
+  const serviceRoleClient = createRemoteCompatibilityServiceRoleClient();
   if (!serviceRoleClient) {
     return fail("INTERNAL_ERROR", "이미지를 업로드하지 못했어요.", 500);
   }

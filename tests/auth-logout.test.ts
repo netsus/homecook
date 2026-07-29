@@ -4,6 +4,8 @@ const signOut = vi.fn();
 const createRouteHandlerClient = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
+  createAuthRouteHandlerClient: createRouteHandlerClient,
+  createDataServiceRoleClient: vi.fn(),
   createRouteHandlerClient,
 }));
 

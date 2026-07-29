@@ -4,7 +4,7 @@ import {
   parseProductListQuery,
 } from "@/lib/server/prepared-food-catalog";
 import { ensurePublicUserRow, type UserBootstrapDbClient } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { FoodProductData, FoodProductListData } from "@/types/food-product";
 
 interface RpcError {
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     return fail(parsed.code, "검색 조건을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = (createServiceRoleClient() ?? routeClient) as unknown as CatalogDbClient;
+  const db = routeClient as unknown as CatalogDbClient;
   const result = await db.rpc("list_food_products", {
     p_user_id: user.id,
     p_query: parsed.value.q || null,
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = (createServiceRoleClient() ?? routeClient) as unknown as CatalogDbClient & UserBootstrapDbClient;
+  const db = routeClient as unknown as CatalogDbClient & UserBootstrapDbClient;
   try {
     await ensurePublicUserRow(db, user);
   } catch {

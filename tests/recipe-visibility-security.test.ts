@@ -34,7 +34,7 @@ describe("recipe visibility security inventory", () => {
     );
   });
 
-  it("keeps public discovery reads request-scoped and private overlays service-scoped", () => {
+  it("keeps recipe list discovery and authenticated status reads request-scoped", () => {
     const list = read("app/api/v1/recipes/route.ts");
     const listGet = list.slice(
       list.indexOf("export async function GET"),
@@ -48,7 +48,7 @@ describe("recipe visibility security inventory", () => {
       "const recipeSearchDbClient = routeClient as unknown as RecipeSearchDbClient",
     );
     expect(listGet).toContain(
-      "dbClient: serviceClient as unknown as RecipeCardUserStatusDbClient",
+      "dbClient: routeClient as unknown as RecipeCardUserStatusDbClient",
     );
     expect(detail).not.toContain(
       "const dbClient = serviceClient ?? routeClient",

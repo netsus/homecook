@@ -1,6 +1,6 @@
 import { fail, ok } from "@/lib/api/response";
 import { parseProductPlannerEntryPatchBody } from "@/lib/server/prepared-food-planner-entry";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 interface RouteContext {
@@ -78,7 +78,7 @@ async function requireEntry(context: RouteContext) {
     };
   }
 
-  const db = (createServiceRoleClient() ?? routeClient) as unknown as ProductPlannerEntryMutationDbClient;
+  const db = routeClient as unknown as ProductPlannerEntryMutationDbClient;
   const stateResult = await db
     .from("product_planner_entries")
     .select("id, user_id")
@@ -138,7 +138,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = (createServiceRoleClient() ?? routeClient) as unknown as ProductPlannerEntryMutationDbClient;
+  const db = routeClient as unknown as ProductPlannerEntryMutationDbClient;
   const stateResult = await db
     .from("product_planner_entries")
     .select("id, user_id")

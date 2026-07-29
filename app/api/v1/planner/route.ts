@@ -11,7 +11,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { MealStatus, PlannerData, PlannerMealData } from "@/types/planner";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
@@ -212,7 +212,7 @@ export async function GET(request: NextRequest) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     PlannerDbClient & UserBootstrapDbClient;
 
   try {

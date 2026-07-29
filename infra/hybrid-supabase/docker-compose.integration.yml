@@ -1,0 +1,93 @@
+name: homecook-hybrid-integration
+
+services:
+  postgres:
+    image: public.ecr.aws/supabase/postgres:17.6.1.136
+    environment:
+      POSTGRES_DB: homecook_hybrid_test
+      POSTGRES_PASSWORD: ${HYBRID_TEST_POSTGRES_PASSWORD:-hybrid-test-only}
+      POSTGRES_USER: supabase_admin
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U supabase_admin -d homecook_hybrid_test
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks:
+      - hybrid-internal
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ./hybrid-role-passwords.sh:/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh:ro
+
+  postgrest:
+    image: postgrest/postgrest:v14.12
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_DB_PRE_REQUEST: private.verify_hybrid_request_authority
+      PGRST_DB_SCHEMAS: public,storage
+      PGRST_DB_URI: postgres://authenticator:${HYBRID_TEST_POSTGRES_PASSWORD:-hybrid-test-only}@postgres:5432/homecook_hybrid_test
+      PGRST_JWT_AUD: authenticated
+      PGRST_JWT_SECRET: '${HYBRID_TEST_COMBINED_JWKS:-{"keys":[]}}'
+    networks:
+      - hybrid-internal
+
+  storage:
+    image: supabase/storage-api:v1.60.4
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ANON_KEY: ${HYBRID_TEST_ANON_KEY:-integration-anon-key}
+      DATABASE_URL: postgres://supabase_storage_admin:${HYBRID_TEST_POSTGRES_PASSWORD:-hybrid-test-only}@postgres:5432/homecook_hybrid_test
+      FILE_SIZE_LIMIT: "1048576"
+      GLOBAL_S3_BUCKET: homecook-hybrid-test
+      JWT_JWKS: '${HYBRID_TEST_COMBINED_JWKS:-{"keys":[]}}'
+      # Storage 1.60.4 requires this legacy compatibility value at startup.
+      # User traffic still enters only through the exact remote-JWT gateway.
+      PGRST_JWT_SECRET: ${HYBRID_TEST_STORAGE_LEGACY_SECRET:-integration-storage-legacy-secret-32b}
+      POSTGREST_URL: http://postgrest:3000
+      SERVICE_KEY: ${HYBRID_TEST_SERVICE_KEY:-integration-service-key}
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: homecook-hybrid-test
+    networks:
+      - hybrid-internal
+    tmpfs:
+      - /var/lib/storage
+
+  gateway:
+    image: node:22.20.0-alpine
+    command:
+      - node
+      - /workspace/infra/hybrid-supabase/loopback-gateway.mjs
+    depends_on:
+      - postgrest
+      - storage
+    environment:
+      AUTH_SUPABASE_EXPECTED_ISSUER: ${HYBRID_TEST_AUTH_ISSUER:-https://auth.invalid.example/auth/v1}
+      AUTH_SUPABASE_JWKS_URL: ${HYBRID_TEST_AUTH_JWKS_URL:-https://auth.invalid.example/auth/v1/.well-known/jwks.json}
+      AUTH_SUPABASE_URL: ${HYBRID_TEST_AUTH_URL:-https://auth.invalid.example}
+      AUTH_SUPABASE_PUBLISHABLE_KEY: ${HYBRID_TEST_AUTH_PUBLISHABLE_KEY:-integration-publishable-key}
+      DATA_SUPABASE_SECRET_KEY: ${HYBRID_TEST_SERVICE_KEY:-integration-service-key}
+      HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1: ${HYBRID_TEST_ATTESTATION_HMAC_KEY:-integration-attestation-hmac-key-32-bytes}
+      HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1: ${HYBRID_TEST_BINDING_HMAC_KEY:-integration-binding-hmac-key-32-bytes}
+      POSTGREST_UPSTREAM_URL: http://postgrest:3000
+      STORAGE_UPSTREAM_URL: http://storage:5000
+    networks:
+      - hybrid-internal
+      - hybrid-egress
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - ../../:/workspace:ro
+
+networks:
+  hybrid-internal:
+    internal: true
+  hybrid-egress: {}

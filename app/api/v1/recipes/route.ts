@@ -47,7 +47,7 @@ import {
   readRecipeCardUserStatuses,
   type RecipeCardUserStatusDbClient,
 } from "@/lib/server/recipe-card-user-status";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type {
   ManualRecipeCreateBody,
   ManualRecipeCreateData,
@@ -1012,7 +1012,6 @@ export async function GET(request: NextRequest) {
     }
 
     const routeClient = await createRouteHandlerClient();
-    const serviceClient = createServiceRoleClient() ?? routeClient;
     const supabase = routeClient;
     const recipeSearchDbClient = routeClient as unknown as RecipeSearchDbClient;
     let filteredRecipeIds: string[] | null = null;
@@ -1098,7 +1097,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userStatusByRecipeId = await readRecipeCardUserStatuses({
-      dbClient: serviceClient as unknown as RecipeCardUserStatusDbClient,
+      dbClient: routeClient as unknown as RecipeCardUserStatusDbClient,
       recipeIds: pageRows.map((recipe) => recipe.id),
       userId,
     });
@@ -1210,7 +1209,7 @@ export async function POST(request: Request) {
         supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
       })
     : null;
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     ManualRecipeDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
   const capability = await readAccountGenerationCapability(dbClient);
   if (!capability.ok) {

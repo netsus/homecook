@@ -8,7 +8,10 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { recordOperationalEvent, type OperationalEventsDbClient } from "@/lib/server/admin-events";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createRemoteCompatibilityServiceRoleClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 import type { UserDeleteData, UserProfileData } from "@/types/user";
 
 import {
@@ -150,7 +153,7 @@ async function createAuthedUsersMeDbClient(fallbackMessage: string) {
     };
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     UsersMeDbClient & UserBootstrapDbClient;
 
   try {
@@ -285,7 +288,8 @@ export async function DELETE(request: Request) {
       return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
     }
 
-    const replayServiceRoleClient = createServiceRoleClient();
+    const replayServiceRoleClient =
+      createRemoteCompatibilityServiceRoleClient();
     if (!replayServiceRoleClient) {
       return fail("INTERNAL_ERROR", "회원 탈퇴를 처리하지 못했어요.", 500);
     }
@@ -314,7 +318,7 @@ export async function DELETE(request: Request) {
     });
   }
 
-  const serviceRoleClient = createServiceRoleClient();
+  const serviceRoleClient = createRemoteCompatibilityServiceRoleClient();
   if (!serviceRoleClient) {
     await recordOperationalEvent(null, {
       event_type: "account_delete_failure",

@@ -23,7 +23,14 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
+  createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
+  createRouteHandlerClient: async () => {
+    const routeClient = await createRouteHandlerClient();
+    const compatibilityClient = createServiceRoleClient();
+    return compatibilityClient
+      ? { ...compatibilityClient, ...routeClient }
+      : routeClient;
+  },
   createServiceRoleClient,
 }));
 
@@ -327,11 +334,8 @@ describe("recipe API contracts", () => {
     });
     const routeFrom = vi.fn((table: string) => {
       if (table === "recipes") return listQuery;
-      throw new Error(`unexpected route table: ${table}`);
-    });
-    const serviceFrom = vi.fn((table: string) => {
       if (table === "recipe_book_items") return savedItemsQuery;
-      throw new Error(`unexpected service table: ${table}`);
+      throw new Error(`unexpected route table: ${table}`);
     });
 
     createRouteHandlerClient.mockResolvedValue({
@@ -342,9 +346,7 @@ describe("recipe API contracts", () => {
       },
       from: routeFrom,
     });
-    createServiceRoleClient.mockReturnValue({
-      from: serviceFrom,
-    });
+    createServiceRoleClient.mockReturnValue(null);
 
     const { GET } = await import("@/app/api/v1/recipes/route");
     const response = await GET(new NextRequest("http://localhost:3000/api/v1/recipes"));
@@ -370,8 +372,7 @@ describe("recipe API contracts", () => {
     expect(savedItemsQuery.in).toHaveBeenCalledWith("recipe_id", ["recipe-1", "recipe-2"]);
     expect(savedItemsQuery.eq).toHaveBeenCalledWith("recipe_books.user_id", "user-1");
     expect(savedItemsQuery.in).toHaveBeenCalledWith("recipe_books.book_type", ["saved", "custom"]);
-    expect(routeFrom).not.toHaveBeenCalledWith("recipe_book_items");
-    expect(serviceFrom).toHaveBeenCalledWith("recipe_book_items");
+    expect(routeFrom).toHaveBeenCalledWith("recipe_book_items");
   });
 
   it("maps latest sort to created_at descending with deterministic id tie-break", async () => {
@@ -2278,7 +2279,9 @@ describe("recipe API contracts", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(readVerifiedAccountGenerationSession).toHaveBeenCalledWith(routeClient);
+    expect(readVerifiedAccountGenerationSession).toHaveBeenCalledWith(
+      expect.objectContaining({ auth: routeClient.auth }),
+    );
     expect(rpc).toHaveBeenCalledWith(
       "create_manual_recipe_with_managed_image",
       expect.objectContaining({

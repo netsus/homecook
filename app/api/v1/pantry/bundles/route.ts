@@ -11,7 +11,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 
 interface QueryError {
   message: string;
@@ -80,7 +80,7 @@ async function getAuthenticatedDb(): Promise<PantryBundlesAuthSuccess | PantryBu
     };
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     PantryBundlesDbClient & UserBootstrapDbClient;
 
   try {

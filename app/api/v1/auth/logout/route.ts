@@ -1,7 +1,8 @@
 import { fail, ok } from "@/lib/api/response";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { isQaFixtureModeEnabled } from "@/lib/mock/recipes";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import { revokeCurrentHybridSessionAuthority } from "@/lib/server/hybrid-auth/logout";
+import { createAuthRouteHandlerClient } from "@/lib/supabase/server";
 import type { UserLogoutData } from "@/types/user";
 
 export async function POST(request: Request) {
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
     return ok<UserLogoutData>({ logged_out: true });
   }
 
-  const supabase = await createRouteHandlerClient();
+  const supabase = await createAuthRouteHandlerClient();
   const authResult = await supabase.auth.getUser();
   const user = authResult.data.user;
 
@@ -21,7 +22,15 @@ export async function POST(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const signOutResult = await supabase.auth.signOut();
+  const revokeResult = await revokeCurrentHybridSessionAuthority(supabase);
+  if (!revokeResult.ok) {
+    return fail(
+      "ACCOUNT_SESSION_STALE",
+      "세션을 다시 확인해 주세요.",
+      409,
+    );
+  }
+  const signOutResult = await supabase.auth.signOut({ scope: "local" });
 
   if (signOutResult.error) {
     return fail("INTERNAL_ERROR", "로그아웃하지 못했어요.", 500);

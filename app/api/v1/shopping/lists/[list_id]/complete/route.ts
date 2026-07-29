@@ -11,7 +11,7 @@ import {
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { ShoppingListCompleteData } from "@/types/shopping";
 
 interface RouteContext {
@@ -280,7 +280,7 @@ export async function POST(request: Request, context: RouteContext) {
     ]);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     ShoppingCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
 
   try {

@@ -17,7 +17,7 @@ import {
   type LeftoverRecipeRow,
   type LeftoverSourceMealRow,
 } from "@/lib/server/leftovers";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { LeftoverListData } from "@/types/leftover";
 
 interface QueryError {
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     LeftoversDbClient & UserBootstrapDbClient;
 
   try {

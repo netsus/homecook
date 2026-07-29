@@ -1,0 +1,22 @@
+{
+  "observed_at": "2026-07-30T06:21:35+09:00",
+  "scope": "isolated-compose-smoke",
+  "images": {
+    "postgres": "public.ecr.aws/supabase/postgres:17.6.1.136",
+    "postgrest": "postgrest/postgrest:v14.12",
+    "storage": "supabase/storage-api:v1.60.4",
+    "gateway": "node:22.20.0-alpine"
+  },
+  "published_ports": {},
+  "role_connections": {
+    "authenticator": "PASS",
+    "supabase_storage_admin": "PASS"
+  },
+  "internal_http": {
+    "postgrest": 200,
+    "storage": 200,
+    "gateway_unauthenticated": 409
+  },
+  "production_writes": 0,
+  "cutover_writes": 0
+}

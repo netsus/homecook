@@ -48,7 +48,7 @@ describe("recipe visibility public reader boundaries", () => {
       "const supabase = createServiceRoleClient() ?? routeClient",
     );
     expect(themes).toContain(
-      "const serviceClient = createServiceRoleClient() ?? routeClient",
+      "createRemoteCompatibilityServiceRoleClient() ?? routeClient",
     );
     expect(themes).toContain(
       "const privateThemeDbClient = serviceClient as unknown as ThemeDbClient",

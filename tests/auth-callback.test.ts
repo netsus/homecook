@@ -43,8 +43,8 @@ function createServiceRoleUserLookup(
 }
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
-  createServiceRoleClient,
+  createAuthRouteHandlerClient: createRouteHandlerClient,
+  createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
 }));
 
 vi.mock("next/headers", () => ({
@@ -529,12 +529,18 @@ describe("auth callback", () => {
     const issuedAt = Math.floor(Date.now() / 1_000) - 10;
     const expiresAt = issuedAt + 3_600;
     const accessToken = [
-      Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url"),
+      Buffer.from(JSON.stringify({
+        alg: "RS256",
+        kid: "remote-test-key",
+        typ: "JWT",
+      })).toString("base64url"),
       Buffer.from(JSON.stringify({
         aud: "authenticated",
         exp: expiresAt,
         iat: issuedAt,
         iss: "https://example.supabase.co/auth/v1",
+        nbf: issuedAt,
+        role: "authenticated",
         session_id: sessionId,
         sub: ownerUuid,
       })).toString("base64url"),
@@ -617,12 +623,18 @@ describe("auth callback", () => {
     const issuedAt = Math.floor(Date.now() / 1_000) - 10;
     const expiresAt = issuedAt + 3_600;
     const accessToken = [
-      Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url"),
+      Buffer.from(JSON.stringify({
+        alg: "RS256",
+        kid: "remote-test-key",
+        typ: "JWT",
+      })).toString("base64url"),
       Buffer.from(JSON.stringify({
         aud: "authenticated",
         exp: expiresAt,
         iat: issuedAt,
         iss: "https://example.supabase.co/auth/v1",
+        nbf: issuedAt,
+        role: "authenticated",
         session_id: sessionId,
         sub: ownerUuid,
       })).toString("base64url"),

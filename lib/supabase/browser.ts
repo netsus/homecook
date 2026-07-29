@@ -2,7 +2,7 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 
-import { getSupabaseEnv } from "@/lib/supabase/env";
+import { getAuthSupabaseEnv } from "@/lib/supabase/auth-env";
 
 let browserClient: ReturnType<typeof createBrowserClient> | null = null;
 
@@ -11,8 +11,8 @@ export function getSupabaseBrowserClient() {
     return browserClient;
   }
 
-  const { url, anonKey } = getSupabaseEnv();
-  browserClient = createBrowserClient(url, anonKey);
+  const { url, publishableKey } = getAuthSupabaseEnv();
+  browserClient = createBrowserClient(url, publishableKey);
 
   return browserClient;
 }

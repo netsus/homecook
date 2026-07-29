@@ -10,7 +10,17 @@ const getQaFixturePlannerNutrition = vi.fn();
 const isQaFixtureModeEnabled = vi.fn();
 const readE2EAuthOverrideHeader = vi.fn();
 
-vi.mock("@/lib/supabase/server", () => ({ createRouteHandlerClient, createServiceRoleClient }));
+vi.mock("@/lib/supabase/server", () => ({
+  createRouteHandlerClient: async (...args: unknown[]) => {
+    const routeClient = await createRouteHandlerClient(...args);
+    const createDataClient = createServiceRoleClient.getMockImplementation();
+    const dataClient = createDataClient?.();
+    return dataClient
+      ? { ...routeClient, ...dataClient, auth: routeClient.auth }
+      : routeClient;
+  },
+  createServiceRoleClient,
+}));
 vi.mock("@/lib/server/planner-nutrition-summary", () => ({ readPlannerNutritionSummary }));
 vi.mock("@/lib/mock/recipes", () => ({
   getQaFixturePlannerNutrition,
@@ -169,10 +179,14 @@ describe("GET /api/v1/planner/nutrition", () => {
     expect(body.data.summary.nutrition).not.toHaveProperty("availability_reason");
     expect(body.data.summary.nutrition).not.toHaveProperty("base_servings");
     expect(body.data.summary.nutrition).not.toHaveProperty("snapshot_id");
-    expect(readPlannerNutritionSummary).toHaveBeenCalledWith(serviceClient, USER_ID, {
+    expect(readPlannerNutritionSummary).toHaveBeenCalledWith(
+      expect.objectContaining(serviceClient),
+      USER_ID,
+      {
       startDate: "2026-07-17",
       endDate: "2026-07-17",
-    });
+      },
+    );
     expect(ensurePublicUserRow).not.toHaveBeenCalled();
     expect(ensureUserBootstrapState).not.toHaveBeenCalled();
   });
