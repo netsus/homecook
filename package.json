@@ -48,6 +48,7 @@
     "account-maintenance:local-scheduler:uninstall": "node scripts/account-maintenance-local-scheduler-uninstall.mjs",
     "account-maintenance:local-scheduler:verify": "node scripts/account-maintenance-local-scheduler-verify.mjs",
     "test:account-session-generation:postgres": "node scripts/run-account-session-generation-postgres-integration.mjs",
+    "verify:account-generation:auth-hook-config": "node scripts/verify-account-generation-auth-hook-config.mjs",
     "verify:account-generation:joint-preflight": "node scripts/verify-account-session-generation-remote.mjs --mode joint-activation-preflight --json",
     "test:recipe-visibility-read-hardening:focused": "vitest run tests/recipe-visibility-*.test.ts tests/recipe-image-*.test.ts --exclude '**/*.integration.test.ts' --exclude '**/*.live.test.ts'",
     "test:recipe-visibility-read-hardening:postgres": "node scripts/run-recipe-visibility-read-hardening-postgres-integration.mjs",
