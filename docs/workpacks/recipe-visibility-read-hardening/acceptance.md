@@ -117,7 +117,9 @@
 ## Frontend / Regression
 
 - [ ] MANUAL_RECIPE_CREATE stores object ID, refreshes signed URL and calls owner cancel instead of browser Storage `.remove()` <!-- omo:id=accept-image-client-object-state;stage=4;scope=frontend;review=5,6 -->
+  - 2026-07-29 KST partial evidence: managed upload/202 replay/signed-URL refresh/object-ID attach/owner cancel are implemented and independently security-reviewed with P0/P1/P2 findings zero. The exact compressed payload is reused with the same idempotency key. The checkbox stays open because `legacy` capability still requires its existing cleanup until the separately approved joint activation retires that response shape.
 - [ ] in-progress/retry/quota/expired/reference errors render without public/private selector or new layout <!-- omo:id=accept-image-client-errors;stage=4;scope=frontend;review=5,6 -->
+  - 2026-07-29 KST partial evidence: `202 + Retry-After`, official API errors and signed preview replay use the existing error/retry composition without a visibility selector. Focused Vitest passed 34 tests and the dedicated desktop/mobile Playwright path passed 2 tests.
 - [ ] existing loading/empty/error/read-only/unauthorized, accessibility and return-to-action behavior remains unchanged <!-- omo:id=accept-visibility-ui-regression;stage=4;scope=frontend;review=5,6 -->
 - [ ] F0 ACCOUNT_QUARANTINE and #5 RECIPE_DETAIL CTA files are not modified by this slice <!-- omo:id=accept-visibility-ui-ownership;stage=4;scope=frontend;review=5,6 -->
 

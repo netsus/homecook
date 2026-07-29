@@ -1,14 +1,26 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ManualRecipeCreateScreen } from "@/components/recipe/manual-recipe-create-screen";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
 import { fetchIngredients } from "@/lib/api/ingredients";
-import { createManualRecipe, uploadRecipeImage, type RecipeImageUploadData } from "@/lib/api/manual-recipe";
+import {
+  cancelRecipeImageUpload,
+  createManualRecipe,
+  uploadRecipeImage,
+  type RecipeImageUploadData,
+} from "@/lib/api/manual-recipe";
 import { suggestRecipeTags } from "@/lib/api/recipe";
 import { compressRecipeImageFile } from "@/lib/recipe-image-compression";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
@@ -33,6 +45,7 @@ vi.mock("@/lib/api/ingredients", () => ({
 }));
 
 vi.mock("@/lib/api/manual-recipe", () => ({
+  cancelRecipeImageUpload: vi.fn(),
   createManualRecipe: vi.fn(),
   uploadRecipeImage: vi.fn(),
 }));
@@ -93,6 +106,15 @@ describe("ManualRecipeCreateScreen", () => {
     vi.mocked(fetchIngredients).mockReset();
     vi.mocked(createManualRecipe).mockReset();
     vi.mocked(uploadRecipeImage).mockReset();
+    vi.mocked(cancelRecipeImageUpload).mockReset();
+    vi.mocked(cancelRecipeImageUpload).mockResolvedValue({
+      success: true,
+      data: {
+        image_object_id: "11111111-1111-4111-8111-111111111111",
+        state: "cleanup_pending",
+      },
+      error: null,
+    });
     vi.mocked(suggestRecipeTags).mockReset();
     vi.mocked(compressRecipeImageFile).mockReset();
     vi.mocked(compressRecipeImageFile).mockImplementation(async (file: File) => file);
@@ -440,7 +462,9 @@ describe("ManualRecipeCreateScreen", () => {
 
     await user.upload(fileInput, file);
 
-    expect(uploadRecipeImage).toHaveBeenCalledWith(file);
+    expect(uploadRecipeImage).toHaveBeenCalledWith(file, {
+      idempotencyKey: expect.any(String),
+    });
     expect(screen.getByTestId("manual-image-preview")).toBeTruthy();
     expect(screen.getByTestId("manual-image-uploading-indicator")).toBeTruthy();
 
@@ -485,7 +509,9 @@ describe("ManualRecipeCreateScreen", () => {
     await waitFor(() => {
       expect(compressRecipeImageFile).toHaveBeenCalledWith(originalFile);
     });
-    expect(uploadRecipeImage).toHaveBeenCalledWith(compressedFile);
+    expect(uploadRecipeImage).toHaveBeenCalledWith(compressedFile, {
+      idempotencyKey: expect.any(String),
+    });
   });
 
   it("keeps the latest image when an older upload resolves last", async () => {
@@ -527,8 +553,10 @@ describe("ManualRecipeCreateScreen", () => {
     resolveSecond({
       success: true,
       data: {
-        thumbnail_url: "https://cdn.test/second.jpg",
-        storage_path: "recipe-images/user/second.jpg",
+        image_object_id: "22222222-2222-4222-8222-222222222222",
+        state: "uploaded_unlinked",
+        read_url: "https://cdn.test/second.jpg",
+        read_url_expires_at: "2026-07-29T04:20:00.000Z",
       },
       error: null,
     });
@@ -540,14 +568,18 @@ describe("ManualRecipeCreateScreen", () => {
     resolveFirst({
       success: true,
       data: {
-        thumbnail_url: "https://cdn.test/first.jpg",
-        storage_path: "recipe-images/user/first.jpg",
+        image_object_id: "11111111-1111-4111-8111-111111111111",
+        state: "uploaded_unlinked",
+        read_url: "https://cdn.test/first.jpg",
+        read_url_expires_at: "2026-07-29T04:20:00.000Z",
       },
       error: null,
     });
 
     await waitFor(() => {
-      expect(mockStorageRemove).toHaveBeenCalledWith(["user/first.jpg"]);
+      expect(cancelRecipeImageUpload).toHaveBeenCalledWith(
+        "11111111-1111-4111-8111-111111111111",
+      );
     });
 
     await user.type(screen.getByPlaceholderText("예: 김치찌개"), "최신 이미지 요리");
@@ -564,17 +596,19 @@ describe("ManualRecipeCreateScreen", () => {
     await waitFor(() => {
       expect(createManualRecipe).toHaveBeenCalled();
     });
-    expect(vi.mocked(createManualRecipe).mock.calls[0][0].thumbnail_url).toBe(
-      "https://cdn.test/second.jpg",
+    expect(vi.mocked(createManualRecipe).mock.calls[0][0].image_object_id).toBe(
+      "22222222-2222-4222-8222-222222222222",
     );
   });
 
-  it("removes an uploaded image from storage when the unsaved form unmounts", async () => {
+  it("cancels a managed image through the owner API when the unsaved form unmounts", async () => {
     vi.mocked(uploadRecipeImage).mockResolvedValue({
       success: true,
       data: {
-        thumbnail_url: "https://cdn.test/discard.jpg",
-        storage_path: "recipe-images/user/discard.jpg",
+        image_object_id: "11111111-1111-4111-8111-111111111111",
+        state: "uploaded_unlinked",
+        read_url: "https://cdn.test/discard.jpg",
+        read_url_expires_at: "2026-07-29T04:20:00.000Z",
       },
       error: null,
     });
@@ -591,7 +625,33 @@ describe("ManualRecipeCreateScreen", () => {
 
     view.unmount();
 
-    expect(mockStorageRemove).toHaveBeenCalledWith(["user/discard.jpg"]);
+    expect(cancelRecipeImageUpload).toHaveBeenCalledWith(
+      "11111111-1111-4111-8111-111111111111",
+    );
+  });
+
+  it("keeps legacy cleanup until managed generation activation retires the fallback", async () => {
+    vi.mocked(uploadRecipeImage).mockResolvedValue({
+      success: true,
+      data: {
+        thumbnail_url: "https://cdn.test/legacy-discard.jpg",
+        storage_path: "recipe-images/user/legacy-discard.jpg",
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["legacy"], "legacy.jpg", { type: "image/jpeg" }),
+    );
+    await user.click(await screen.findByTestId("manual-image-remove-button"));
+
+    expect(mockStorageRemove).toHaveBeenCalledWith([
+      "user/legacy-discard.jpg",
+    ]);
+    expect(cancelRecipeImageUpload).not.toHaveBeenCalled();
   });
 
   it("removes an upload that finishes after the unsaved form unmounts", async () => {
@@ -617,21 +677,30 @@ describe("ManualRecipeCreateScreen", () => {
     resolveUpload({
       success: true,
       data: {
-        thumbnail_url: "https://cdn.test/slow.jpg",
-        storage_path: "recipe-images/user/slow.jpg",
+        image_object_id: "33333333-3333-4333-8333-333333333333",
+        state: "uploaded_unlinked",
+        read_url: "https://cdn.test/slow.jpg",
+        read_url_expires_at: "2026-07-29T04:20:00.000Z",
       },
       error: null,
     });
 
     await waitFor(() => {
-      expect(mockStorageRemove).toHaveBeenCalledWith(["user/slow.jpg"]);
+      expect(cancelRecipeImageUpload).toHaveBeenCalledWith(
+        "33333333-3333-4333-8333-333333333333",
+      );
     });
   });
 
-  it("successful save includes thumbnail_url from uploaded image", async () => {
+  it("successful save attaches the managed image object ID instead of its signed URL", async () => {
     vi.mocked(uploadRecipeImage).mockResolvedValue({
       success: true,
-      data: { thumbnail_url: "https://cdn.test/thumb.jpg", storage_path: "recipe-images/user/abc.jpg" },
+      data: {
+        image_object_id: "22222222-2222-4222-8222-222222222222",
+        state: "uploaded_unlinked",
+        read_url: "https://cdn.test/thumb.jpg?token=signed",
+        read_url_expires_at: "2026-07-29T04:20:00.000Z",
+      },
       error: null,
     });
     vi.mocked(createManualRecipe).mockResolvedValue({
@@ -686,7 +755,79 @@ describe("ManualRecipeCreateScreen", () => {
       expect(createManualRecipe).toHaveBeenCalled();
     });
     const callBody = vi.mocked(createManualRecipe).mock.calls[0][0];
-    expect(callBody.thumbnail_url).toBe("https://cdn.test/thumb.jpg");
+    expect(callBody.image_object_id).toBe(
+      "22222222-2222-4222-8222-222222222222",
+    );
+    expect(callBody.thumbnail_url).toBeUndefined();
+  });
+
+  it("replays the managed upload with the same key when its signed preview expires", async () => {
+    const originalFile = new File(
+      ["original"],
+      "refresh.jpg",
+      { type: "image/jpeg" },
+    );
+    const compressedFile = new File(
+      ["compressed"],
+      "refresh-compressed.jpg",
+      { type: "image/jpeg" },
+    );
+    vi.mocked(compressRecipeImageFile).mockResolvedValue(compressedFile);
+    vi.mocked(uploadRecipeImage)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          image_object_id: "22222222-2222-4222-8222-222222222222",
+          state: "uploaded_unlinked",
+          read_url: "https://cdn.test/expired.jpg?token=old",
+          read_url_expires_at: "2026-07-29T04:20:00.000Z",
+        },
+        error: null,
+        http_status: 201,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          image_object_id: "22222222-2222-4222-8222-222222222222",
+          state: "uploaded_unlinked",
+          read_url: "https://cdn.test/refreshed.jpg?token=new",
+          read_url_expires_at: "2026-07-29T04:25:00.000Z",
+        },
+        error: null,
+        http_status: 201,
+      });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      originalFile,
+    );
+
+    const preview = await screen.findByAltText("레시피 이미지 미리보기");
+    const firstKey = vi.mocked(uploadRecipeImage).mock.calls[0]?.[1]?.idempotencyKey;
+    fireEvent.error(preview);
+
+    await waitFor(() => {
+      expect(uploadRecipeImage).toHaveBeenCalledTimes(2);
+    });
+    expect(vi.mocked(uploadRecipeImage).mock.calls[1]?.[1]?.idempotencyKey).toBe(
+      firstKey,
+    );
+    expect(vi.mocked(uploadRecipeImage).mock.calls[0]?.[0]).toBe(
+      compressedFile,
+    );
+    expect(vi.mocked(uploadRecipeImage).mock.calls[1]?.[0]).toBe(
+      compressedFile,
+    );
+    await waitFor(() => {
+      expect(
+        screen
+          .getByAltText("레시피 이미지 미리보기")
+          .getAttribute("src"),
+      ).toBe("https://cdn.test/refreshed.jpg?token=new");
+    });
   });
 
   it("upload failure shows error with retry and clears the error after success", async () => {
@@ -722,6 +863,70 @@ describe("ManualRecipeCreateScreen", () => {
       expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
     });
     expect(screen.queryByTestId("manual-image-error")).toBeNull();
+  });
+
+  it("shows Retry-After guidance and reuses the upload key for a live replay", async () => {
+    const compressedFile = new File(
+      ["compressed"],
+      "replay-compressed.jpg",
+      { type: "image/jpeg" },
+    );
+    const recompressedFile = new File(
+      ["recompressed"],
+      "replay-recompressed.jpg",
+      { type: "image/jpeg" },
+    );
+    vi.mocked(compressRecipeImageFile)
+      .mockResolvedValueOnce(compressedFile)
+      .mockResolvedValueOnce(recompressedFile);
+    vi.mocked(uploadRecipeImage)
+      .mockResolvedValueOnce({
+        success: true,
+        data: null,
+        error: null,
+        http_status: 202,
+        retry_after_seconds: 23,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          image_object_id: "44444444-4444-4444-8444-444444444444",
+          state: "uploaded_unlinked",
+          read_url: "https://cdn.test/replay.jpg?token=signed",
+          read_url_expires_at: "2026-07-29T04:20:00.000Z",
+        },
+        error: null,
+        http_status: 201,
+      });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["image"], "replay.jpg", { type: "image/jpeg" }),
+    );
+
+    expect(await screen.findByText(
+      "이미지를 처리 중이에요. 23초 후 다시 시도해 주세요.",
+    )).toBeTruthy();
+
+    const firstKey = vi.mocked(uploadRecipeImage).mock.calls[0]?.[1]?.idempotencyKey;
+    await user.click(screen.getByTestId("manual-image-retry-button"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+    expect(vi.mocked(uploadRecipeImage).mock.calls[1]?.[1]?.idempotencyKey).toBe(
+      firstKey,
+    );
+    expect(compressRecipeImageFile).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(uploadRecipeImage).mock.calls[0]?.[0]).toBe(
+      compressedFile,
+    );
+    expect(vi.mocked(uploadRecipeImage).mock.calls[1]?.[0]).toBe(
+      compressedFile,
+    );
   });
 
   it("save without image works and does not include thumbnail_url", async () => {
