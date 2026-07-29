@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 const INVENTORY_SQL = String.raw`
 with auth_inbound_fks as (
   select
@@ -93,6 +95,496 @@ select jsonb_build_object(
 );
 `;
 
+const JOINT_STORAGE_INVENTORY_SAMPLE_SQL = String.raw`
+with capability as (
+  select
+    capability.state,
+    capability.revision,
+    capability.current_cutover_attempt_id
+  from public.account_generation_capability_state as capability
+  where capability.singleton
+    and capability.state = 'cutover_maintenance'
+), expected_owner_universe as (
+  select
+    staging.owner_uuid,
+    staging.proposed_account_generation,
+    staging.validation_state
+  from capability
+  join public.account_generation_cutover_staging as staging
+    on staging.attempt_id = capability.current_cutover_attempt_id
+  where staging.owner_uuid is not null
+), registry_expected_owners as (
+  select
+    expected_owner.owner_uuid,
+    expected_owner.proposed_account_generation
+  from expected_owner_universe as expected_owner
+  where expected_owner.proposed_account_generation is not null
+    and expected_owner.proposed_account_generation > 0
+), current_expected_owner_lifecycles as (
+  select
+    expected_owner.owner_uuid,
+    expected_owner.proposed_account_generation,
+    lifecycle.required_cleanup_generation
+  from registry_expected_owners as expected_owner
+  left join public.user_account_lifecycles as lifecycle
+    on lifecycle.owner_uuid = expected_owner.owner_uuid
+   and lifecycle.account_generation = expected_owner.proposed_account_generation
+), strict_legacy_path_candidates as (
+  select
+    object.id as storage_object_id,
+    object.bucket_id,
+    object.name as object_path,
+    object.owner_id,
+    split_part(object.name, '/', 1)::uuid as path_owner_uuid
+  from storage.objects as object
+  where object.bucket_id = 'recipe-images'
+    and object.name ~
+      '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|jpeg|png|webp)$'
+), owner_id_signals as (
+  select distinct object.id as storage_object_id
+  from storage.objects as object
+  join expected_owner_universe as expected_owner
+    on object.owner_id = expected_owner.owner_uuid::text
+), strict_legacy_path_signals as (
+  select distinct object.storage_object_id
+  from strict_legacy_path_candidates as object
+  join expected_owner_universe as expected_owner
+    on object.path_owner_uuid = expected_owner.owner_uuid
+), null_owner_strict_legacy_path_signals as (
+  select distinct object.storage_object_id
+  from strict_legacy_path_candidates as object
+  join expected_owner_universe as expected_owner
+    on object.path_owner_uuid = expected_owner.owner_uuid
+  where object.owner_id is null
+), registry_signals as (
+  select distinct object.id as storage_object_id
+  from registry_expected_owners as expected_owner
+  join public.recipe_image_objects as registry
+    on registry.owner_uuid = expected_owner.owner_uuid
+   and registry.account_generation = expected_owner.proposed_account_generation
+   and registry.visibility = 'private'
+   and registry.bucket_id = 'recipe-images-private'
+  join storage.objects as object
+    on object.bucket_id = registry.bucket_id
+   and object.name = registry.object_path
+  where registry.object_path ~ (
+    '^'
+    || expected_owner.owner_uuid::text
+    || '/'
+    || expected_owner.proposed_account_generation::text
+    || '/'
+    || registry.id::text
+    || '\.(jpg|jpeg|png|webp)$'
+  )
+), current_attempt_targets as (
+  select
+    target.id as migration_target_id,
+    target.target_object_id,
+    target.source_storage_object_id,
+    target.source_bucket_id,
+    target.source_object_path,
+    target.target_bucket_id,
+    target.target_object_path,
+    target.expected_visibility,
+    target.owner_uuid,
+    target.account_generation,
+    target.state
+  from capability
+  join public.recipe_image_legacy_visibility_migration_runs as migration_run
+    on migration_run.cutover_attempt_id = capability.current_cutover_attempt_id
+  join public.recipe_image_legacy_visibility_targets as target
+    on target.migration_run_id = migration_run.id
+  where target.source_bucket_id = 'recipe-images'
+), current_attempt_target_references as (
+  select
+    target_reference.migration_target_id,
+    positive_reference.owner_uuid as persisted_owner_uuid,
+    positive_reference.storage_object_id as persisted_storage_object_id,
+    positive_reference.bucket_id as persisted_bucket_id,
+    positive_reference.object_path as persisted_object_path
+  from public.recipe_image_legacy_visibility_target_references
+    as target_reference
+  join public.recipe_image_legacy_positive_references as positive_reference
+    on positive_reference.id = target_reference.positive_reference_id
+), current_existing_legacy_sources as (
+  select distinct target.source_storage_object_id as storage_object_id
+  from current_attempt_targets as target
+  left join current_attempt_target_references as target_reference
+    on target_reference.migration_target_id = target.migration_target_id
+  join expected_owner_universe as expected_owner
+    on expected_owner.owner_uuid = coalesce(
+      target.owner_uuid,
+      target_reference.persisted_owner_uuid
+    )
+  join storage.objects as source_object
+    on source_object.id = target.source_storage_object_id
+   and source_object.bucket_id = target.source_bucket_id
+   and source_object.name = target.source_object_path
+  where target.source_object_path ~
+      '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|jpeg|png|webp)$'
+    and (
+      target.owner_uuid is not null
+      or (
+        target_reference.persisted_storage_object_id = target.source_storage_object_id
+        and target_reference.persisted_bucket_id = target.source_bucket_id
+        and target_reference.persisted_object_path = target.source_object_path
+      )
+    )
+    and split_part(target.source_object_path, '/', 1)::uuid = expected_owner.owner_uuid
+    and (
+      source_object.owner_id is null
+      or source_object.owner_id = expected_owner.owner_uuid::text
+    )
+), owned_unverified as (
+  select owner_signal.storage_object_id
+  from owner_id_signals as owner_signal
+  left join current_existing_legacy_sources as known_source
+    using (storage_object_id)
+  left join registry_signals as registry_signal
+    using (storage_object_id)
+  where known_source.storage_object_id is null
+    and registry_signal.storage_object_id is null
+), owner_path_unverified as (
+  select owner_path_signal.storage_object_id
+  from null_owner_strict_legacy_path_signals as owner_path_signal
+  left join current_existing_legacy_sources as known_source
+    using (storage_object_id)
+  where known_source.storage_object_id is null
+), owner_signal_union as (
+  select storage_object_id from owner_id_signals
+  union
+  select storage_object_id from strict_legacy_path_signals
+  union
+  select storage_object_id from registry_signals
+), public_shared_rehome_targets as (
+  select
+    target.target_object_id,
+    target.state
+  from current_attempt_targets as target
+  where target.expected_visibility = 'public_shared'
+), private_cleanup_target_candidates as (
+  select
+    target.target_object_id,
+    target.owner_uuid,
+    target.account_generation,
+    target.target_bucket_id,
+    target.target_object_path
+  from current_attempt_targets as target
+  where target.expected_visibility = 'private'
+), current_expected_owner_private_registry as (
+  select distinct
+    registry.id as target_object_id,
+    registry.owner_uuid,
+    registry.account_generation,
+    registry.bucket_id as target_bucket_id,
+    registry.object_path as target_object_path
+  from registry_expected_owners as expected_owner
+  join public.recipe_image_objects as registry
+    on registry.owner_uuid = expected_owner.owner_uuid
+   and registry.account_generation = expected_owner.proposed_account_generation
+   and registry.visibility = 'private'
+), private_cleanup_candidates as (
+  select distinct
+    candidate.target_object_id,
+    candidate.owner_uuid,
+    candidate.account_generation,
+    candidate.target_bucket_id,
+    candidate.target_object_path
+  from (
+    select
+      target.target_object_id,
+      target.owner_uuid,
+      target.account_generation,
+      target.target_bucket_id,
+      target.target_object_path
+    from private_cleanup_target_candidates as target
+
+    union
+
+    select
+      registry.target_object_id,
+      registry.owner_uuid,
+      registry.account_generation,
+      registry.target_bucket_id,
+      registry.target_object_path
+    from current_expected_owner_private_registry as registry
+  ) as candidate
+), current_expected_owner_outboxes as (
+  select distinct
+    outbox.owner_uuid,
+    outbox.account_generation,
+    outbox.bucket_id,
+    outbox.object_path,
+    outbox.cleanup_generation,
+    outbox.state,
+    outbox.terminal_result
+  from registry_expected_owners as expected_owner
+  join public.storage_object_deletion_outbox as outbox
+    on outbox.owner_uuid = expected_owner.owner_uuid
+   and outbox.account_generation = expected_owner.proposed_account_generation
+), private_cleanup_candidate_states as (
+  select
+    candidate.target_object_id,
+    candidate.owner_uuid,
+    candidate.account_generation,
+    candidate.target_bucket_id,
+    candidate.target_object_path,
+    registry.cleanup_generation,
+    registry.state as registry_state,
+    outbox.state as outbox_state,
+    outbox.terminal_result as outbox_terminal_result
+  from private_cleanup_candidates as candidate
+  left join public.recipe_image_objects as registry
+    on registry.id = candidate.target_object_id
+   and registry.bucket_id = candidate.target_bucket_id
+   and registry.object_path = candidate.target_object_path
+   and registry.visibility = 'private'
+   and registry.owner_uuid = candidate.owner_uuid
+   and registry.account_generation = candidate.account_generation
+  left join current_expected_owner_outboxes as outbox
+    on outbox.owner_uuid = candidate.owner_uuid
+   and outbox.account_generation = candidate.account_generation
+   and outbox.bucket_id = candidate.target_bucket_id
+   and outbox.object_path = candidate.target_object_path
+   and registry.cleanup_generation is not null
+   and outbox.cleanup_generation = registry.cleanup_generation
+), digests as (
+  select
+    encode(
+      extensions.digest(
+        pg_catalog.convert_to(
+          coalesce((
+            select string_agg(
+              owner_signal.storage_object_id::text,
+              E'\n' order by owner_signal.storage_object_id
+            )
+            from owner_signal_union as owner_signal
+          ), ''),
+          'UTF8'
+        ),
+        'sha256'
+      ),
+      'hex'
+    ) as owner_signal_digest,
+    encode(
+      extensions.digest(
+        pg_catalog.convert_to(
+          coalesce((
+            select string_agg(
+              owned.storage_object_id::text,
+              E'\n' order by owned.storage_object_id
+            )
+            from owned_unverified as owned
+          ), ''),
+          'UTF8'
+        ),
+        'sha256'
+      ),
+      'hex'
+    ) as owned_unverified_digest,
+    encode(
+      extensions.digest(
+        pg_catalog.convert_to(
+          coalesce((
+            select string_agg(
+              owner_path.storage_object_id::text,
+              E'\n' order by owner_path.storage_object_id
+            )
+            from owner_path_unverified as owner_path
+          ), ''),
+          'UTF8'
+        ),
+        'sha256'
+      ),
+      'hex'
+    ) as owner_path_unverified_digest,
+    encode(
+      extensions.digest(
+        pg_catalog.convert_to(
+          coalesce((
+            select string_agg(
+              rehome.target_object_id::text || ':' || rehome.state,
+              E'\n' order by rehome.target_object_id, rehome.state
+            )
+            from public_shared_rehome_targets as rehome
+          ), ''),
+          'UTF8'
+        ),
+        'sha256'
+      ),
+      'hex'
+    ) as known_public_shared_rehome_digest,
+    encode(
+      extensions.digest(
+        pg_catalog.convert_to(
+          coalesce((
+            select string_agg(
+              cleanup.target_object_id::text || ':' || coalesce(cleanup.registry_state, 'missing')
+              || ':' || coalesce(cleanup.outbox_state, 'missing')
+              || ':' || coalesce(cleanup.outbox_terminal_result, 'missing'),
+              E'\n' order by cleanup.target_object_id, cleanup.registry_state, cleanup.outbox_state, cleanup.outbox_terminal_result
+            )
+            from private_cleanup_candidate_states as cleanup
+          ), ''),
+          'UTF8'
+        ),
+        'sha256'
+      ),
+      'hex'
+    ) as known_private_cleanup_digest,
+    encode(
+      extensions.digest(
+        pg_catalog.convert_to(
+          coalesce((
+            select capability.current_cutover_attempt_id::text
+            from capability
+          ), ''),
+          'UTF8'
+        ),
+        'sha256'
+      ),
+      'hex'
+    ) as capability_cutover_attempt_digest
+)
+select jsonb_build_object(
+  'sampled_at', to_char(
+    statement_timestamp() at time zone 'UTC',
+    'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
+  ),
+  'capability_state', (select capability.state from capability),
+  'capability_revision', (select capability.revision from capability),
+  'capability_cutover_attempt_digest', (
+    select digests.capability_cutover_attempt_digest from digests
+  ),
+  'external_write_nonterminal_count', (
+    select count(*)
+    from public.legacy_external_write_attempts as attempt
+    where attempt.state <> 'terminal'
+  ),
+  'owner_id_signal_count', (
+    select count(*) from owner_id_signals
+  ),
+  'strict_legacy_path_signal_count', (
+    select count(*) from strict_legacy_path_signals
+  ),
+  'registry_signal_count', (
+    select count(*) from registry_signals
+  ),
+  'owner_signal_3_way_union_count', (
+    select count(*) from owner_signal_union
+  ),
+  'owned_unverified_count', (
+    select count(*) from owned_unverified
+  ),
+  'owner_path_unverified_count', (
+    select count(*) from owner_path_unverified
+  ),
+  'known_public_shared_rehome_terminal_count', (
+    select count(*)
+    from public_shared_rehome_targets as rehome
+    where rehome.state = 'finalized'
+  ),
+  'known_public_shared_rehome_pending_count', (
+    select count(*)
+    from public_shared_rehome_targets as rehome
+    where rehome.state <> 'finalized'
+  ),
+  'known_private_cleanup_terminal_count', (
+    select count(*)
+    from private_cleanup_candidate_states as cleanup
+    where cleanup.registry_state in ('deleted', 'verified_not_found')
+      and cleanup.outbox_state = 'succeeded'
+      and cleanup.outbox_terminal_result in ('deleted', 'verified_not_found')
+      and cleanup.outbox_terminal_result = cleanup.registry_state
+  ),
+  'known_private_cleanup_pending_count', (
+    select count(*)
+    from private_cleanup_candidate_states as cleanup
+    where not (
+      cleanup.registry_state in ('deleted', 'verified_not_found')
+      and cleanup.outbox_state = 'succeeded'
+      and cleanup.outbox_terminal_result in ('deleted', 'verified_not_found')
+      and cleanup.outbox_terminal_result = cleanup.registry_state
+    )
+  ),
+  'known_private_cleanup_outbox_nonterminal_count', (
+    select count(*)
+    from current_expected_owner_outboxes as outbox
+    where outbox.state not in ('succeeded', 'dead_letter')
+  ),
+  'known_private_cleanup_outbox_dead_letter_count', (
+    select count(*)
+    from current_expected_owner_outboxes as outbox
+    where outbox.state = 'dead_letter'
+  ),
+  'known_private_cleanup_outbox_generation_mismatch_count', (
+    select count(*)
+    from current_expected_owner_lifecycles as lifecycle
+    where lifecycle.required_cleanup_generation is null
+      or exists (
+        select 1
+        from current_expected_owner_outboxes as outbox
+        where outbox.owner_uuid = lifecycle.owner_uuid
+          and outbox.account_generation = lifecycle.proposed_account_generation
+          and outbox.cleanup_generation not between 1 and lifecycle.required_cleanup_generation
+      )
+      or (
+        select count(distinct outbox.cleanup_generation) filter (
+          where outbox.state = 'succeeded'
+            and outbox.terminal_result in ('deleted', 'verified_not_found')
+            and exists (
+              select 1
+              from public.recipe_image_objects as registry
+              where registry.bucket_id = outbox.bucket_id
+                and registry.object_path = outbox.object_path
+                and registry.owner_uuid = outbox.owner_uuid
+                and registry.account_generation = outbox.account_generation
+                and registry.visibility = 'private'
+                and registry.cleanup_generation >= outbox.cleanup_generation
+                and registry.cleanup_generation <= lifecycle.required_cleanup_generation
+            )
+        )
+        from current_expected_owner_outboxes as outbox
+        where outbox.owner_uuid = lifecycle.owner_uuid
+          and outbox.account_generation = lifecycle.proposed_account_generation
+      ) <> lifecycle.required_cleanup_generation
+  ),
+  'known_private_cleanup_outbox_registry_mismatch_count', (
+    select count(*)
+    from current_expected_owner_outboxes as outbox
+    left join current_expected_owner_lifecycles as lifecycle
+      on lifecycle.owner_uuid = outbox.owner_uuid
+     and lifecycle.proposed_account_generation = outbox.account_generation
+    where lifecycle.required_cleanup_generation is null
+      or not exists (
+      select 1
+      from public.recipe_image_objects as registry
+      where registry.bucket_id = outbox.bucket_id
+        and registry.object_path = outbox.object_path
+        and registry.owner_uuid = outbox.owner_uuid
+        and registry.account_generation = outbox.account_generation
+        and registry.visibility = 'private'
+        and registry.cleanup_generation >= outbox.cleanup_generation
+        and registry.cleanup_generation <= lifecycle.required_cleanup_generation
+    )
+  ),
+  'owner_signal_digest', (select digests.owner_signal_digest from digests),
+  'owned_unverified_digest', (
+    select digests.owned_unverified_digest from digests
+  ),
+  'owner_path_unverified_digest', (
+    select digests.owner_path_unverified_digest from digests
+  ),
+  'known_public_shared_rehome_digest', (
+    select digests.known_public_shared_rehome_digest from digests
+  ),
+  'known_private_cleanup_digest', (
+    select digests.known_private_cleanup_digest from digests
+  ),
+  'remote_writes', 0
+);
+`;
+
 const MUTATING_SQL_PATTERN =
   /\b(?:insert|update|delete|truncate|alter|create|drop|grant|revoke|call|do|merge|copy|vacuum|reindex|refresh|execute|perform)\b/iu;
 
@@ -181,6 +673,79 @@ const ALLOWED_PERSONAL_OWNER_CLASSIFICATIONS = new Set([
   "unknown_owner_like",
 ]);
 
+const ACCOUNT_GENERATION_SAMPLE_ALLOWED_KEYS = Object.freeze([
+  "sampled_at",
+  "capability_state",
+  "capability_revision",
+  "capability_cutover_attempt_digest",
+  "external_write_nonterminal_count",
+  "owner_id_signal_count",
+  "strict_legacy_path_signal_count",
+  "registry_signal_count",
+  "owner_signal_3_way_union_count",
+  "owned_unverified_count",
+  "owner_path_unverified_count",
+  "known_public_shared_rehome_terminal_count",
+  "known_public_shared_rehome_pending_count",
+  "known_private_cleanup_terminal_count",
+  "known_private_cleanup_pending_count",
+  "known_private_cleanup_outbox_nonterminal_count",
+  "known_private_cleanup_outbox_dead_letter_count",
+  "known_private_cleanup_outbox_generation_mismatch_count",
+  "known_private_cleanup_outbox_registry_mismatch_count",
+  "owner_signal_digest",
+  "owned_unverified_digest",
+  "owner_path_unverified_digest",
+  "known_public_shared_rehome_digest",
+  "known_private_cleanup_digest",
+  "remote_writes",
+]);
+
+const ACCOUNT_GENERATION_SAMPLE_COUNT_FIELDS = Object.freeze([
+  "external_write_nonterminal_count",
+  "owner_id_signal_count",
+  "strict_legacy_path_signal_count",
+  "registry_signal_count",
+  "owner_signal_3_way_union_count",
+  "owned_unverified_count",
+  "owner_path_unverified_count",
+  "known_public_shared_rehome_terminal_count",
+  "known_public_shared_rehome_pending_count",
+  "known_private_cleanup_terminal_count",
+  "known_private_cleanup_pending_count",
+  "known_private_cleanup_outbox_nonterminal_count",
+  "known_private_cleanup_outbox_dead_letter_count",
+  "known_private_cleanup_outbox_generation_mismatch_count",
+  "known_private_cleanup_outbox_registry_mismatch_count",
+  "remote_writes",
+]);
+
+const ACCOUNT_GENERATION_SAMPLE_DIGEST_FIELDS = Object.freeze([
+  "capability_cutover_attempt_digest",
+  "owner_signal_digest",
+  "owned_unverified_digest",
+  "owner_path_unverified_digest",
+  "known_public_shared_rehome_digest",
+  "known_private_cleanup_digest",
+]);
+
+const PSQL_META_COMMAND_PATTERN = /\\/u;
+const STRICT_UTC_TIMESTAMP_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{6})Z$/u;
+const GIT_SHA_PATTERN = /^[0-9a-f]{40}$/u;
+const STORAGE_SAMPLE_MANUAL_BLOCKERS = Object.freeze([
+  "storage_inventory_second_sample",
+  "auth_quiet_window",
+  "provider_auth_barrier",
+  "maintenance_runtime_release",
+]);
+const CUTOVER_SHARED_LOCK_PRELUDE = String.raw`select pg_catalog.pg_advisory_xact_lock_shared(
+  pg_catalog.hashtextextended(
+    'homecook-account-generation-cutover',
+    0
+  )
+);`;
+
 const PERSONAL_OWNER_SOURCE_INVENTORY_SQL = PERSONAL_OWNER_SOURCE_DEFINITIONS.map(
   ({ sourceName, relation, columnExpression }) =>
     `select '${sourceName}'::text as source_name, count(distinct ${columnExpression}::text)::bigint as owner_count from ${relation} where ${columnExpression} is not null`,
@@ -228,6 +793,9 @@ export function assertAccountGenerationReadOnlyVerificationSql({
 
   if (!trimmedSql.toLowerCase().startsWith("with")) {
     throw new Error(`${fieldName} must be a single WITH ... SELECT statement`);
+  }
+  if (PSQL_META_COMMAND_PATTERN.test(trimmedSql)) {
+    throw new Error(`${fieldName} must not contain psql meta-commands`);
   }
   if (semicolonCount !== 1 || !trimmedSql.endsWith(";")) {
     throw new Error(`${fieldName} must not contain multiple SQL statements`);
@@ -581,6 +1149,49 @@ function assertSha256Hex(value, fieldName) {
   }
 }
 
+function assertIsoTimestamp(value, fieldName) {
+  const match =
+    typeof value === "string"
+      ? value.match(STRICT_UTC_TIMESTAMP_PATTERN)
+      : null;
+  if (!match) {
+    throw new Error(`joint storage inventory sample returned an invalid timestamp: ${fieldName}`);
+  }
+
+  const [
+    ,
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    second,
+    microseconds,
+  ] = match;
+  const date = new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+      Number(microseconds.slice(0, 3)),
+    ),
+  );
+  if (
+    Number.isNaN(date.getTime())
+    || date.getUTCFullYear() !== Number(year)
+    || date.getUTCMonth() !== Number(month) - 1
+    || date.getUTCDate() !== Number(day)
+    || date.getUTCHours() !== Number(hour)
+    || date.getUTCMinutes() !== Number(minute)
+    || date.getUTCSeconds() !== Number(second)
+  ) {
+    throw new Error(`joint storage inventory sample returned an invalid timestamp: ${fieldName}`);
+  }
+}
+
 function assertStrictAuthInboundFks(value) {
   if (!Array.isArray(value)) {
     throw new Error("joint activation preflight returned invalid auth_inbound_fks inventory");
@@ -855,6 +1466,378 @@ export function assessAccountGenerationJointActivationPreflightResult(result) {
   };
 }
 
+export function assertAccountGenerationJointStorageInventorySampleResult(result) {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    throw new Error("joint storage inventory sample did not return a JSON object");
+  }
+
+  const resultKeys = Object.keys(result).sort();
+  const allowedKeys = [...ACCOUNT_GENERATION_SAMPLE_ALLOWED_KEYS].sort();
+  if (
+    resultKeys.length !== allowedKeys.length
+    || resultKeys.some((key, index) => key !== allowedKeys[index])
+  ) {
+    throw new Error("joint storage inventory sample must contain only safe summary keys");
+  }
+
+  assertIsoTimestamp(result.sampled_at, "sampled_at");
+  if (result.capability_state !== "cutover_maintenance") {
+    throw new Error("joint storage inventory sample requires capability_state=cutover_maintenance");
+  }
+  assertNonNegativeInteger(result.capability_revision, "capability_revision");
+  if (result.capability_revision <= 0) {
+    throw new Error("joint storage inventory sample requires a positive capability revision");
+  }
+  assertSha256Hex(
+    result.capability_cutover_attempt_digest,
+    "capability_cutover_attempt_digest",
+  );
+
+  for (const fieldName of ACCOUNT_GENERATION_SAMPLE_COUNT_FIELDS) {
+    assertNonNegativeInteger(result[fieldName], fieldName);
+  }
+  for (const fieldName of ACCOUNT_GENERATION_SAMPLE_DIGEST_FIELDS) {
+    assertSha256Hex(result[fieldName], fieldName);
+  }
+
+  if (
+    result.owner_signal_3_way_union_count < result.owner_id_signal_count
+    || result.owner_signal_3_way_union_count
+      < result.strict_legacy_path_signal_count
+    || result.owner_signal_3_way_union_count < result.registry_signal_count
+  ) {
+    throw new Error(
+      "joint storage inventory sample returned inconsistent owner signal counts",
+    );
+  }
+
+  if (result.remote_writes !== 0) {
+    throw new Error("joint storage inventory sample requires remote_writes=0");
+  }
+
+  return result;
+}
+
+export function assessAccountGenerationJointStorageInventorySampleResult(result) {
+  const sample = assertAccountGenerationJointStorageInventorySampleResult(result);
+  const blockers = [];
+
+  if (sample.external_write_nonterminal_count !== 0) {
+    blockers.push("external_write_nonterminal_not_zero");
+  }
+  if (sample.owner_signal_3_way_union_count !== 0) {
+    blockers.push("owner_signal_union_not_zero");
+  }
+  if (sample.owned_unverified_count !== 0) {
+    blockers.push("owned_unverified_not_zero");
+  }
+  if (sample.owner_path_unverified_count !== 0) {
+    blockers.push("owner_path_unverified_not_zero");
+  }
+  if (sample.known_public_shared_rehome_pending_count !== 0) {
+    blockers.push("known_public_shared_rehome_pending_not_zero");
+  }
+  if (sample.known_private_cleanup_pending_count !== 0) {
+    blockers.push("known_private_cleanup_pending_not_zero");
+  }
+  if (sample.known_private_cleanup_outbox_nonterminal_count !== 0) {
+    blockers.push("known_private_cleanup_outbox_nonterminal_not_zero");
+  }
+  if (sample.known_private_cleanup_outbox_dead_letter_count !== 0) {
+    blockers.push("known_private_cleanup_outbox_dead_letter_not_zero");
+  }
+  if (sample.known_private_cleanup_outbox_generation_mismatch_count !== 0) {
+    blockers.push("known_private_cleanup_outbox_generation_mismatch_not_zero");
+  }
+  if (sample.known_private_cleanup_outbox_registry_mismatch_count !== 0) {
+    blockers.push("known_private_cleanup_outbox_registry_mismatch_not_zero");
+  }
+
+  return {
+    ready: false,
+    blockers: uniqueBlockers([
+      ...blockers,
+      ...STORAGE_SAMPLE_MANUAL_BLOCKERS,
+    ]),
+    safeSummary: {
+      remote_writes: sample.remote_writes,
+      external_write_nonterminal_count:
+        sample.external_write_nonterminal_count,
+      owner_id_signal_count: sample.owner_id_signal_count,
+      strict_legacy_path_signal_count:
+        sample.strict_legacy_path_signal_count,
+      registry_signal_count: sample.registry_signal_count,
+      owner_signal_3_way_union_count:
+        sample.owner_signal_3_way_union_count,
+      owned_unverified_count: sample.owned_unverified_count,
+      owner_path_unverified_count: sample.owner_path_unverified_count,
+      known_public_shared_rehome_terminal_count:
+        sample.known_public_shared_rehome_terminal_count,
+      known_public_shared_rehome_pending_count:
+        sample.known_public_shared_rehome_pending_count,
+      known_private_cleanup_terminal_count:
+        sample.known_private_cleanup_terminal_count,
+      known_private_cleanup_pending_count:
+        sample.known_private_cleanup_pending_count,
+      known_private_cleanup_outbox_nonterminal_count:
+        sample.known_private_cleanup_outbox_nonterminal_count,
+      known_private_cleanup_outbox_dead_letter_count:
+        sample.known_private_cleanup_outbox_dead_letter_count,
+      known_private_cleanup_outbox_generation_mismatch_count:
+        sample.known_private_cleanup_outbox_generation_mismatch_count,
+      known_private_cleanup_outbox_registry_mismatch_count:
+        sample.known_private_cleanup_outbox_registry_mismatch_count,
+    },
+  };
+}
+
+export function compareAccountGenerationJointStorageInventorySamples({
+  firstSample,
+  secondSample,
+  minimumIntervalSeconds,
+} = {}) {
+  if (
+    minimumIntervalSeconds !== undefined
+    && minimumIntervalSeconds !== 900
+  ) {
+    throw new Error("joint storage inventory sample minimum interval is fixed at 900 seconds");
+  }
+
+  const first = assertAccountGenerationJointStorageInventorySampleResult(firstSample);
+  const second = assertAccountGenerationJointStorageInventorySampleResult(secondSample);
+
+  const firstTimestamp = parseStrictUtcTimestampMicroseconds(
+    first.sampled_at,
+    "firstSample.sampled_at",
+  );
+  const secondTimestamp = parseStrictUtcTimestampMicroseconds(
+    second.sampled_at,
+    "secondSample.sampled_at",
+  );
+  if (secondTimestamp <= firstTimestamp) {
+    throw new Error("joint storage inventory second sample must be later than the first sample");
+  }
+  const intervalMicroseconds = secondTimestamp - firstTimestamp;
+  const intervalSeconds = Number(intervalMicroseconds) / 1_000_000;
+
+  if (intervalMicroseconds < 900_000_000n) {
+    throw new Error(
+      "joint storage inventory samples must be at least 900 seconds apart",
+    );
+  }
+  if (first.capability_revision !== second.capability_revision) {
+    throw new Error("joint storage inventory samples must keep the same capability revision");
+  }
+  if (
+    first.capability_cutover_attempt_digest
+    !== second.capability_cutover_attempt_digest
+  ) {
+    throw new Error("joint storage inventory samples must keep the same cutover attempt digest");
+  }
+
+  for (const fieldName of ACCOUNT_GENERATION_SAMPLE_DIGEST_FIELDS) {
+    if (first[fieldName] !== second[fieldName]) {
+      throw new Error(`joint storage inventory samples must keep a stable digest: ${fieldName}`);
+    }
+  }
+
+  for (const fieldName of [
+    "external_write_nonterminal_count",
+    "owner_id_signal_count",
+    "strict_legacy_path_signal_count",
+    "registry_signal_count",
+    "owner_signal_3_way_union_count",
+    "owned_unverified_count",
+    "owner_path_unverified_count",
+    "known_public_shared_rehome_terminal_count",
+    "known_public_shared_rehome_pending_count",
+    "known_private_cleanup_terminal_count",
+    "known_private_cleanup_pending_count",
+    "known_private_cleanup_outbox_nonterminal_count",
+    "known_private_cleanup_outbox_dead_letter_count",
+    "known_private_cleanup_outbox_generation_mismatch_count",
+    "known_private_cleanup_outbox_registry_mismatch_count",
+  ]) {
+    if (first[fieldName] !== second[fieldName]) {
+      throw new Error(`joint storage inventory samples must keep stable counts: ${fieldName}`);
+    }
+  }
+
+  if (
+    first.external_write_nonterminal_count !== 0
+    || first.owner_signal_3_way_union_count !== 0
+    || first.owned_unverified_count !== 0
+    || first.owner_path_unverified_count !== 0
+    || first.known_public_shared_rehome_pending_count !== 0
+    || first.known_private_cleanup_pending_count !== 0
+    || first.known_private_cleanup_outbox_nonterminal_count !== 0
+    || first.known_private_cleanup_outbox_dead_letter_count !== 0
+    || first.known_private_cleanup_outbox_generation_mismatch_count !== 0
+    || first.known_private_cleanup_outbox_registry_mismatch_count !== 0
+  ) {
+    throw new Error(
+      "joint storage inventory samples must reject stable nonzero gate blockers",
+    );
+  }
+
+  return {
+    ok: true,
+    intervalSeconds,
+    capability_revision: first.capability_revision,
+    capability_cutover_attempt_digest:
+      first.capability_cutover_attempt_digest,
+    stable_digests: {
+      owner_signal_digest: first.owner_signal_digest,
+      owned_unverified_digest: first.owned_unverified_digest,
+      owner_path_unverified_digest: first.owner_path_unverified_digest,
+      known_public_shared_rehome_digest:
+        first.known_public_shared_rehome_digest,
+      known_private_cleanup_digest: first.known_private_cleanup_digest,
+    },
+    stable_counts: {
+      external_write_nonterminal_count:
+        first.external_write_nonterminal_count,
+      owner_id_signal_count: first.owner_id_signal_count,
+      strict_legacy_path_signal_count:
+        first.strict_legacy_path_signal_count,
+      registry_signal_count: first.registry_signal_count,
+      owner_signal_3_way_union_count:
+        first.owner_signal_3_way_union_count,
+      owned_unverified_count: first.owned_unverified_count,
+      owner_path_unverified_count: first.owner_path_unverified_count,
+      known_public_shared_rehome_terminal_count:
+        first.known_public_shared_rehome_terminal_count,
+      known_public_shared_rehome_pending_count:
+        first.known_public_shared_rehome_pending_count,
+      known_private_cleanup_terminal_count:
+        first.known_private_cleanup_terminal_count,
+      known_private_cleanup_pending_count:
+        first.known_private_cleanup_pending_count,
+      known_private_cleanup_outbox_nonterminal_count:
+        first.known_private_cleanup_outbox_nonterminal_count,
+      known_private_cleanup_outbox_dead_letter_count:
+        first.known_private_cleanup_outbox_dead_letter_count,
+      known_private_cleanup_outbox_generation_mismatch_count:
+        first.known_private_cleanup_outbox_generation_mismatch_count,
+      known_private_cleanup_outbox_registry_mismatch_count:
+        first.known_private_cleanup_outbox_registry_mismatch_count,
+    },
+  };
+}
+
+export function assertAccountGenerationJointStorageInventoryEnvelope(envelope) {
+  if (!envelope || typeof envelope !== "object" || Array.isArray(envelope)) {
+    throw new Error("storage inventory sample envelope must be a JSON object");
+  }
+
+  const allowedKeys = ["assessment", "mergeSha", "mode", "ok", "result"];
+  const envelopeKeys = Object.keys(envelope).sort();
+  const sortedAllowedKeys = [...allowedKeys].sort();
+  if (
+    envelopeKeys.length !== sortedAllowedKeys.length
+    || envelopeKeys.some((key, index) => key !== sortedAllowedKeys[index])
+  ) {
+    throw new Error("storage inventory sample envelope must contain only safe keys");
+  }
+  if (envelope.mode !== "joint-storage-inventory-sample") {
+    throw new Error("storage inventory sample envelope must keep the sample mode");
+  }
+  if (typeof envelope.ok !== "boolean") {
+    throw new Error("storage inventory sample envelope must include boolean ok");
+  }
+  if (typeof envelope.mergeSha !== "string" || !GIT_SHA_PATTERN.test(envelope.mergeSha)) {
+    throw new Error("storage inventory sample envelope must include a valid mergeSha");
+  }
+
+  const result = assertAccountGenerationJointStorageInventorySampleResult(
+    envelope.result,
+  );
+  const assessment = envelope.assessment;
+  if (!assessment || typeof assessment !== "object" || Array.isArray(assessment)) {
+    throw new Error("storage inventory sample envelope must include assessment");
+  }
+  if (assessment.ready !== false) {
+    throw new Error("storage inventory sample envelope assessment must stay not-ready");
+  }
+  if (!Array.isArray(assessment.blockers)) {
+    throw new Error("storage inventory sample envelope assessment blockers must be an array");
+  }
+  if (!assessment.safeSummary || typeof assessment.safeSummary !== "object" || Array.isArray(assessment.safeSummary)) {
+    throw new Error("storage inventory sample envelope assessment must include safeSummary");
+  }
+
+  return {
+    ok: envelope.ok,
+    mode: envelope.mode,
+    mergeSha: envelope.mergeSha,
+    result,
+    assessment,
+  };
+}
+
+export function readAccountGenerationJointStorageInventoryEnvelope({
+  filePath,
+}) {
+  const parsed = JSON.parse(readFileSync(filePath, "utf8"));
+  return assertAccountGenerationJointStorageInventoryEnvelope(parsed);
+}
+
+export function compareAccountGenerationJointStorageInventoryEnvelopes({
+  firstEnvelope,
+  secondEnvelope,
+}) {
+  const first = assertAccountGenerationJointStorageInventoryEnvelope(firstEnvelope);
+  const second = assertAccountGenerationJointStorageInventoryEnvelope(secondEnvelope);
+
+  if (first.mergeSha !== second.mergeSha) {
+    throw new Error("storage inventory sample envelopes must keep the same mergeSha");
+  }
+
+  return {
+    ok: true,
+    mode: "joint-storage-inventory-sample-compare",
+    mergeSha: first.mergeSha,
+    comparison: compareAccountGenerationJointStorageInventorySamples({
+      firstSample: first.result,
+      secondSample: second.result,
+    }),
+  };
+}
+
+function parseStrictUtcTimestampMicroseconds(value, fieldName) {
+  const match =
+    typeof value === "string"
+      ? value.match(STRICT_UTC_TIMESTAMP_PATTERN)
+      : null;
+  if (!match) {
+    throw new Error(`joint storage inventory sample returned an invalid timestamp: ${fieldName}`);
+  }
+  const [, year, month, day, hour, minute, second, microseconds] = match;
+  const milliseconds = Number(microseconds.slice(0, 3));
+  const epochMilliseconds = Date.UTC(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    Number(second),
+    milliseconds,
+  );
+  const date = new Date(epochMilliseconds);
+  if (
+    Number.isNaN(epochMilliseconds)
+    || date.getUTCFullYear() !== Number(year)
+    || date.getUTCMonth() !== Number(month) - 1
+    || date.getUTCDate() !== Number(day)
+    || date.getUTCHours() !== Number(hour)
+    || date.getUTCMinutes() !== Number(minute)
+    || date.getUTCSeconds() !== Number(second)
+  ) {
+    throw new Error(`joint storage inventory sample returned an invalid timestamp: ${fieldName}`);
+  }
+  return BigInt(epochMilliseconds) * 1000n + BigInt(microseconds.slice(3));
+}
+
 export function buildAccountGenerationRemoteVerificationPlan({ mode }) {
   if (mode === "inventory") {
     assertAccountGenerationReadOnlyVerificationSql({
@@ -865,6 +1848,7 @@ export function buildAccountGenerationRemoteVerificationPlan({ mode }) {
       mode,
       readOnly: true,
       requiresMergedOriginMaster: false,
+      requiresCutoverSharedLock: false,
       sql: INVENTORY_SQL,
     };
   }
@@ -878,6 +1862,7 @@ export function buildAccountGenerationRemoteVerificationPlan({ mode }) {
       mode,
       readOnly: true,
       requiresMergedOriginMaster: true,
+      requiresCutoverSharedLock: false,
       sql: POST_MERGE_DARK_SHIP_SQL,
     };
   }
@@ -891,7 +1876,22 @@ export function buildAccountGenerationRemoteVerificationPlan({ mode }) {
       mode,
       readOnly: true,
       requiresMergedOriginMaster: true,
+      requiresCutoverSharedLock: false,
       sql: JOINT_ACTIVATION_PREFLIGHT_SQL,
+    };
+  }
+
+  if (mode === "joint-storage-inventory-sample") {
+    assertAccountGenerationReadOnlyVerificationSql({
+      sql: JOINT_STORAGE_INVENTORY_SAMPLE_SQL,
+      fieldName: "joint storage inventory sample SQL",
+    });
+    return {
+      mode,
+      readOnly: true,
+      requiresMergedOriginMaster: true,
+      requiresCutoverSharedLock: true,
+      sql: JOINT_STORAGE_INVENTORY_SAMPLE_SQL,
     };
   }
 
@@ -904,6 +1904,7 @@ export function buildAccountGenerationRemotePsqlRequest({
   baseEnvironment = {},
   databaseEnvironment,
   planSql,
+  requiresCutoverSharedLock = false,
 }) {
   const environment = {};
   for (const [name, value] of Object.entries(baseEnvironment)) {
@@ -919,7 +1920,8 @@ export function buildAccountGenerationRemotePsqlRequest({
   return {
     args: ["-X", "-qAt", "-v", "ON_ERROR_STOP=1"],
     input: [
-      "begin transaction read only;",
+      "begin transaction isolation level read committed read only;",
+      ...(requiresCutoverSharedLock ? [CUTOVER_SHARED_LOCK_PRELUDE] : []),
       planSql,
       "commit;",
     ].join("\n"),
@@ -962,6 +1964,11 @@ export function assertAccountGenerationRemoteVerificationResult({
 
   if (mode === "joint-activation-preflight") {
     assessAccountGenerationJointActivationPreflightResult(result);
+    return;
+  }
+
+  if (mode === "joint-storage-inventory-sample") {
+    assertAccountGenerationJointStorageInventorySampleResult(result);
     return;
   }
 
