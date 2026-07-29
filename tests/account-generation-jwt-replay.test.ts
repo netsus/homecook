@@ -101,7 +101,15 @@ describe("account delete JWKS replay verifier", () => {
     vi.resetModules();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", `${projectUrl}/ignored/path?x=1`);
+    vi.stubEnv("NEXT_PUBLIC_AUTH_SUPABASE_URL", projectUrl);
+    vi.stubEnv(
+      "AUTH_SUPABASE_EXPECTED_ISSUER",
+      `${projectUrl}/auth/v1`,
+    );
+    vi.stubEnv(
+      "AUTH_SUPABASE_JWKS_URL",
+      `${projectUrl}/auth/v1/.well-known/jwks.json`,
+    );
   });
 
   afterEach(() => {

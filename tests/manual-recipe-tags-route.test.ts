@@ -7,9 +7,24 @@ const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((_: unknown, fallbackMessage: string) => fallbackMessage);
 const recordUserGrowthActivityEvent = vi.fn();
 
+function attachRouteDataClient<T extends object>(routeClient: T) {
+  let dataClient: { from?: unknown; rpc?: unknown } | null | undefined;
+  return new Proxy(routeClient, {
+    get(target, property, receiver) {
+      if (property === "from" || property === "rpc") {
+        if (dataClient === undefined) {
+          dataClient = createServiceRoleClient() as typeof dataClient;
+        }
+        return property === "from" ? dataClient?.from : dataClient?.rpc;
+      }
+      return Reflect.get(target, property, receiver);
+    },
+  });
+}
+
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
-  createServiceRoleClient,
+  createRouteHandlerClient: async (...args: unknown[]) =>
+    attachRouteDataClient(await createRouteHandlerClient(...args)),
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
