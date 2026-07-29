@@ -32,9 +32,12 @@
 flowchart LR
   A["현재 MacBook의 브라우저"] --> B["127.0.0.1:3100"]
   B --> C["launchd: com.homecook.production"]
-  C --> D["Node.js + Next.js production server"]
-  D --> E["local Supabase API/Auth/Storage"]
-  E --> F["local PostgreSQL 17"]
+  C --> D["부팅 wrapper"]
+  D --> E["Docker Desktop 준비"]
+  E --> F["local Supabase start + status"]
+  F --> G["Node.js + Next.js production server"]
+  G --> H["local Supabase API/Auth/Storage"]
+  H --> I["local PostgreSQL 17"]
 ```
 
 원격 Supabase 프로젝트는 이번 계약에서 삭제된 것으로 본다. 따라서 원격 migration, 원격 verifier, provider-managed maintenance barrier는 이 문서 범위에서 `N/A`다.
@@ -50,17 +53,17 @@ flowchart LR
 | production build | 배포용 결과물 생성 | `./scripts/run-local-mac-production.sh build` |
 | production install | LaunchAgent 등록 + readiness 확인 | `./scripts/run-local-mac-production.sh install` |
 
-## 현재 구현 gap
+## 남은 배포 증거
 
-현재 문서 계약과 코드가 완전히 맞지는 않는다.
+코드는 local-first 계약에 맞게 정렬됐다.
 
-- `scripts/lib/production-data-quality.mjs`는 production-like 환경에서 `NEXT_PUBLIC_SUPABASE_URL`이 localhost면 무조건 `PRODUCTION_LOCAL_SUPABASE_URL` 오류로 거부한다.
-- 후속 필수 작업: **별도 TDD PR**에서 `HOMECOOK_PRODUCTION_EXPOSURE=local-only`일 때만 local Supabase URL을 허용하고, `public` exposure에서는 지금처럼 계속 거부해야 한다.
-- 현재 `com.homecook.production` LaunchAgent는 Next.js만 시작한다. Docker Desktop과 local Supabase가 재부팅 뒤 먼저 준비됐는지는 보장하지 않는다.
-- 후속 필수 작업: 서버 MacBook의 재부팅 복구를 닫기 전에 `Docker 준비 → pnpm dlx supabase start/health → Next.js start` 순서와 실패 시 재시도를 자동화하고 실제 재부팅 smoke를 통과해야 한다.
-- 이번 docs 변경에서는 코드를 수정하지 않는다.
+- production validator는 `HOMECOOK_PRODUCTION_EXPOSURE=local-only`이고 앱·사이트 origin도 loopback일 때만 local Supabase URL을 허용한다. `public`, 혼합 origin, exposure 누락은 계속 거부한다.
+- `com.homecook.production` LaunchAgent는 `scripts/start-local-mac-production.mjs`를 실행한다.
+- 부팅 wrapper는 `Docker 준비 → pnpm dlx supabase start → pnpm dlx supabase status → Next.js start` 순서를 강제한다.
+- Docker 또는 Supabase 준비가 실패하면 Next.js를 시작하지 않고 비정상 종료한다. launchd의 `KeepAlive.SuccessfulExit=false`와 `ThrottleInterval=10`이 10초 간격 재시도를 맡는다.
+- 아직 남은 증거는 **실제 서버 MacBook에서의 설치 및 재부팅 smoke**다.
 
-> 따라서 아래의 `build`·`install`·재부팅 절차는 **문서 계약이 요구하는 목표 절차**다. local Supabase production validator TDD 수정과 부팅 순서 자동화가 merge되고 실제 재부팅 smoke가 통과하기 전에는 “다른 MacBook 배포 완료” 증거로 사용할 수 없다.
+> 따라서 아래의 `build`·`install` 절차는 코드로 자동화됐지만, 실제 서버 MacBook 재부팅 smoke가 통과하기 전에는 “다른 MacBook 배포 완료”라고 기록하지 않는다.
 
 ## 지금 바로 확인하는 방법
 
@@ -188,13 +191,6 @@ pnpm dlx supabase db reset --local --yes
 
 왜 필요한가: LaunchAgent plist 경로와 Node 경로는 Mac마다 다를 수 있기 때문이다.
 
-먼저 Docker Desktop과 local Supabase가 실행 중인지 확인한다. 현재 Next.js LaunchAgent는 local Supabase를 대신 시작하지 않는다.
-
-```bash
-pnpm dlx supabase start
-pnpm dlx supabase status
-```
-
 ```bash
 ./scripts/run-local-mac-production.sh install
 ```
@@ -204,6 +200,8 @@ pnpm dlx supabase status
 - plist: `~/Library/LaunchAgents/com.homecook.production.plist`
 - stdout log: `~/.homecook/logs/homecook-production.out.log`
 - stderr log: `~/.homecook/logs/homecook-production.err.log`
+- 부팅 wrapper: Docker를 준비하고 local Supabase의 start/status를 확인한 뒤 Next.js를 시작한다.
+- 준비 실패 시: Next.js를 띄우지 않고 종료하며 launchd가 10초 뒤 다시 시도한다.
 
 Node가 표준 위치에 없으면 `HOMECOOK_NODE_BIN`으로 새 Mac의 실행 파일 경로를 먼저 지정한다.
 
@@ -267,7 +265,7 @@ tail -n 100 ~/.homecook/logs/homecook-production.err.log
 3. `./scripts/run-local-mac-production.sh restart`를 실행한다.
 4. 계속 실패하면 stderr 로그 마지막 100줄을 확인한다.
 5. 코드를 바꿨다면 `build` 후 `install`을 다시 한다.
-6. local Supabase가 내려갔다면 `pnpm dlx supabase start`부터 다시 확인한다.
+6. local Supabase가 내려갔다면 stderr 로그에서 Docker 또는 Supabase 준비 실패를 확인한다. LaunchAgent가 10초 간격으로 자동 재시도한다.
 
 ## 안전선
 
@@ -296,6 +294,7 @@ tail -n 100 ~/.homecook/logs/homecook-production.err.log
 - `supabase/seed.sql`
 - `scripts/run-local-mac-production.sh`
 - `scripts/local-mac-production.mjs`
+- `scripts/start-local-mac-production.mjs`
 - `scripts/lib/local-mac-production.mjs`
 - `scripts/lib/local-supabase-env.mjs`
 - `scripts/lib/production-data-quality.mjs`
