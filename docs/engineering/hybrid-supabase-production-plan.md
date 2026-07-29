@@ -1,6 +1,6 @@
 # 원격 Auth + 로컬 DB/Storage production 전환 계획
 
-상태: **Stage 1 doc gate 수리·재검토 중 / local write 미개방**
+상태: **Stage 1 doc gate PASS / 문서 PR merge 대기 / local write 미개방**
 작성일: **2026-07-30 KST**
 대상 서비스: `homecook`
 목표 구조: **원격 Supabase Auth + 현재 Mac의 self-hosted Supabase DB/Storage + 기존 RLS 유지**
@@ -18,7 +18,8 @@ Google·네이버·카카오 로그인과 세션 발급은 기존 원격 Supabas
 - 독립 architecture/security 검토 Codex task: `019faf26-2c9d-7d00-b632-12da47d3fad4`
 - 1차 architecture/security 검토 결론: Stage -1 통합 계약 `PASS`
 - Stage 1 docs-gate 검토 Codex task: `019faf4f-1c1d-7af1-84e2-97e3c694265a`
-- docs-gate 결론: `REQUEST_CHANGES` 7건. session-liveness binding, 기존 public error mapping, workflow-v2 projection, HTML pending/done 분리, mirror schema 일치, browser direct Storage Stage 2/4 분리, Schema Change 표시를 수리하고 재검토한다.
+- docs-gate 결론: 1차 `REQUEST_CHANGES` 7건을 모두 수리했고, 정확한 커밋 `e83524ecce73a99e211c73cfad9f43d323106e1f` 재검토에서 필수 finding 0건으로 `PASS`했다.
+- session-liveness 추가 반증 검토: 최신 Supabase Auth의 `/auth/v1/user`가 JWT `session_id`의 원격 session 존재를 확인하는 코드·회귀 테스트까지 검증했다. Stage 2에서는 실제 hosted Auth logout/revoke 뒤 만료 전 JWT 거부와 local mutation 0건을 negative canary로 다시 증명한다.
 
 ## 1. 이 문서가 결정하는 것
 
@@ -607,8 +608,8 @@ UPS와 자동 전원 복구가 없으면 정전 뒤 수동 복구가 필요하�
 ## 14. 구현 시작 전 체크리스트
 
 - [x] 사용자가 hybrid contract-evolution을 명시 승인했다.
-- [ ] 공식 5종 문서와 `CURRENT_SOURCE_OF_TRUTH.md`가 수리된 상태로 독립 재검토·merge됐다.
-- [ ] 신규 workpack과 acceptance가 docs-gate `PASS`를 받았다.
+- [ ] 공식 5종 문서와 `CURRENT_SOURCE_OF_TRUTH.md`는 독립 재검토 `PASS`를 받았고 PR merge만 남았다.
+- [x] 신규 workpack과 acceptance가 docs-gate `PASS`를 받았다.
 - [x] production capability가 `legacy`, canonical generation row가 `0`이다.
 - [x] remote JWKS가 asymmetric key를 제공한다.
 - [x] 디스크 여유가 최소 gate를 만족한다.
@@ -645,6 +646,6 @@ UPS와 자동 전원 복구가 없으면 정전 뒤 수동 복구가 필요하�
 - 현재 account-generation 진입 조건: **충족 (`legacy`, revision `1`)**
 - 현재 Mac CPU/RAM: **충족**
 - 현재 disk gate: **충족 (약 120 GiB free, final 직전 재검증)**
-- Stage 1 설계 blocker: **docs-gate REQUEST_CHANGES 수리·재검토 중**
+- Stage 1 설계 blocker: **없음 - docs-gate PASS, 문서 PR merge만 대기**
 - 남은 final cutover blocker: **실제 구현 검증, 24시간 shadow, off-Mac encrypted restore와 post-write rollback rehearsal**
-- 구현 상태: **Stage 1 문서 재검토 전, local write 미개방**
+- 구현 상태: **Stage 1 문서 PR merge 전, local write 미개방**

@@ -36,6 +36,7 @@
 - [ ] JWKS stale/rotation rehearsal이 alert와 canary RLS verification을 남긴다 <!-- omo:id=accept-hybrid-jwks-rotation;stage=2;scope=backend;review=3,6 -->
 - [ ] session-liveness HMAC binding은 callback/refresh remote liveness success에서만 생성/갱신되고 logout/deletion/quarantine/identity replacement/maintenance abort에서 revoke/delete된다 <!-- omo:id=accept-hybrid-session-liveness-create-revoke;stage=2;scope=backend;review=3,6 -->
 - [ ] 모든 user-scoped DB/Storage request가 remote liveness recheck, active mirror epoch, session-liveness HMAC binding, binding TTL, method/path attestation을 재검증한다 <!-- omo:id=accept-hybrid-session-liveness-request-recheck;stage=2;scope=backend;review=3,6 -->
+- [ ] 실제 hosted Auth에서 유효 JWT의 `/auth/v1/user` 성공 -> 해당 `session_id` logout/revoke -> 만료 전 같은 JWT의 `session_not_found` 계열 실패를 확인하고 gateway가 이를 `409 ACCOUNT_SESSION_STALE`로 매핑하며 local DB/Storage mutation이 0건임을 증명한다 <!-- omo:id=accept-hybrid-revoked-session-negative-canary;stage=2;scope=backend;review=3,6 -->
 - [ ] remote Auth outage에서는 binding TTL 연장, 신규 binding 생성, user-scoped mutation allow-until-exp가 모두 금지되고 기존 public mapping으로 fail closed된다 <!-- omo:id=accept-hybrid-remote-outage-fail-closed;stage=2;scope=backend;review=3,6 -->
 
 ## Identity Mirror / Account Lifecycle

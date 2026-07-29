@@ -47,7 +47,7 @@
       "real Naver OAuth login with remote Supabase Auth",
       "real Kakao OAuth login with remote Supabase Auth",
       "remote Auth JWKS rotation and stale rehearsal",
-      "session-liveness HMAC binding logout revocation and remote-outage rehearsal",
+      "session-liveness HMAC binding logout revocation and remote-outage rehearsal, including revoked pre-expiry JWT /auth/v1/user rejection with zero local mutation",
       "provider linking digest CAS race abort rehearsal",
       "deletion exact-epoch terminal readback rehearsal",
       "deleted-recreated same UUID old DB and Storage session rejection",
@@ -97,13 +97,13 @@
   },
   "status": {
     "lifecycle": "planned",
-    "approval_state": "needs_revision",
-    "verification_status": "pending",
-    "evaluation_status": "fixable",
-    "evaluation_round": 1,
-    "last_evaluator_result": "REQUEST_CHANGES by Codex task 019faf4f-1c1d-7af1-84e2-97e3c694265a at a3d16bd4",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 2,
+    "last_evaluator_result": "PASS by Codex task 019faf4f-1c1d-7af1-84e2-97e3c694265a at e83524ecce73a99e211c73cfad9f43d323106e1f",
     "auto_merge_eligible": false,
-    "blocked_reason_code": "stage1-doc-gate-repair"
+    "blocked_reason_code": null
   },
   "out_of_scope": [
     "runtime implementation in this docs PR",

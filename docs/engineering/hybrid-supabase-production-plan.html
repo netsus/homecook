@@ -308,7 +308,7 @@
       <div class="pills">
         <span class="pill">Homecook production</span>
         <span class="pill">2026-07-30 KST</span>
-        <span class="pill">Stage 1 doc gate 수리·재검토 중 · local write 미개방</span>
+        <span class="pill">Stage 1 doc gate PASS · 문서 PR merge 대기 · local write 미개방</span>
       </div>
       <h1>원격 Auth + 로컬 DB/Storage 전환 계획</h1>
       <p>Google·네이버·카카오 로그인은 원격 Supabase에 남기고, 실제 Homecook 데이터와 이미지는 현재 Mac에서 운영하기 위한 초보 개발자용 안내서입니다.</p>
@@ -326,11 +326,11 @@
       </div>
       <div class="note warn">
         <strong>현재 단계</strong>
-        독립 GPT 리뷰에서 발견한 exact JWT claim, remote Hook, <code>auth.users</code>, service-role 우회 문제를 공식 계약에 반영하고 최신 GPT-only 운영 규칙까지 다시 합쳤습니다. 24시간 shadow와 off-Mac 복원 증거 전에는 local write를 열지 않습니다.
+        독립 GPT 리뷰에서 발견한 7개 문서 문제를 모두 수리했고 정확한 커밋 재검토에서 필수 finding 0건으로 PASS했습니다. 24시간 shadow와 off-Mac 복원 증거 전에는 local write를 열지 않습니다.
       </div>
       <div class="note info">
         <strong>독립 검토 증거</strong>
-        작성 task <code>019faf10-2d5b-7240-91e5-12d616cd3e89</code>와 검토 task를 분리했습니다. 현재 Stage 1 reviewer task <code>019faf4f-1c1d-7af1-84e2-97e3c694265a</code>의 REQUEST_CHANGES 7건을 수리 중이며, production gate 완료를 뜻하지 않습니다.
+        작성 task <code>019faf10-2d5b-7240-91e5-12d616cd3e89</code>와 검토 task를 분리했습니다. Stage 1 reviewer task <code>019faf4f-1c1d-7af1-84e2-97e3c694265a</code>가 <code>e83524ec</code>를 필수 finding 0건으로 승인했습니다. 이는 문서 게이트 통과이며 production gate 완료를 뜻하지 않습니다.
       </div>
     </section>
 
@@ -635,8 +635,8 @@ pnpm mac-production:install</code></pre>
       <h2><span class="num">12</span>구현 시작 전 체크리스트</h2>
       <ul class="check">
         <li class="done">Hybrid contract-evolution을 사용자가 명시 승인했습니다.</li>
-        <li class="pending">공식 5종 문서와 <code>CURRENT_SOURCE_OF_TRUTH.md</code>는 수리 뒤 독립 재검토와 merge가 필요합니다.</li>
-        <li class="pending">신규 workpack과 acceptance는 docs-gate PASS가 필요합니다.</li>
+        <li class="pending">공식 5종 문서와 <code>CURRENT_SOURCE_OF_TRUTH.md</code>는 독립 재검토 PASS를 받았고 PR merge만 남았습니다.</li>
+        <li class="done">신규 workpack과 acceptance가 docs-gate PASS를 받았습니다.</li>
         <li class="done">Capability가 <code>legacy</code>이고 canonical generation row가 0임을 현재 evidence로 확인했습니다.</li>
         <li class="done">현재 디스크 여유는 최소 gate를 통과했습니다.</li>
         <li class="pending">off-Mac encrypted backup restore drill은 아직 final cutover blocker입니다.</li>
@@ -681,7 +681,7 @@ pnpm mac-production:install</code></pre>
       </ul>
       <div class="note info">
         <strong>현재 최종 판정</strong>
-        기술적으로 가능한 방향이지만 현재는 Stage 1 doc gate 수리·재검토 중입니다. 문서 PR merge와 독립 재검토 통과 뒤에만 구현을 시작하며, local write 개방 전에는 구현 검증, 24시간 shadow, off-Mac encrypted restore와 post-write rollback rehearsal이 모두 필요합니다.
+        기술적으로 가능한 방향이며 Stage 1 doc gate는 PASS했습니다. 문서 PR merge 뒤에만 구현을 시작하며, local write 개방 전에는 실제 logout/revoke negative canary, 구현 검증, 24시간 shadow, off-Mac encrypted restore와 post-write rollback rehearsal이 모두 필요합니다.
       </div>
     </section>
   </main>
