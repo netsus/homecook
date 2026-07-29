@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { isIP } from "node:net";
 import { resolve } from "node:path";
 
 const PRODUCTION_ENVS = new Set(["production", "preview-production"]);
@@ -133,7 +134,29 @@ export function isLocalUrl(value) {
 
   try {
     const url = new URL(value);
-    return ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+    const hostname = url.hostname
+      .toLowerCase()
+      .replace(/^\[/u, "")
+      .replace(/\]$/u, "")
+      .replace(/\.+$/u, "");
+
+    if (hostname === "localhost" || hostname === "::1") {
+      return true;
+    }
+
+    if (isIP(hostname) === 4) {
+      return hostname.startsWith("127.");
+    }
+
+    const mappedIpv4 = hostname.match(
+      /^::ffff:([0-9a-f]{1,4}):[0-9a-f]{1,4}$/u,
+    );
+    if (!mappedIpv4) {
+      return false;
+    }
+
+    const leadingIpv4Bits = Number.parseInt(mappedIpv4[1], 16);
+    return leadingIpv4Bits >= 0x7f00 && leadingIpv4Bits <= 0x7fff;
   } catch {
     return false;
   }
@@ -145,6 +168,10 @@ export function validateProductionEnv(env = process.env) {
   const productionLike = isProductionLikeEnv(env);
   const productionExposure = env.HOMECOOK_PRODUCTION_EXPOSURE;
   const localOnlyProduction = productionExposure === "local-only";
+  const localOnlyOrigins =
+    localOnlyProduction
+    && isLocalUrl(env.NEXT_PUBLIC_APP_URL)
+    && isLocalUrl(env.NEXT_PUBLIC_SITE_URL);
 
   if (!productionLike) {
     warnings.push("production-like env가 아니므로 운영 데이터 게이트는 env sanity만 확인합니다.");
@@ -177,7 +204,7 @@ export function validateProductionEnv(env = process.env) {
       });
     }
 
-    if (isLocalUrl(env.NEXT_PUBLIC_SUPABASE_URL)) {
+    if (!localOnlyOrigins && isLocalUrl(env.NEXT_PUBLIC_SUPABASE_URL)) {
       errors.push({
         code: "PRODUCTION_LOCAL_SUPABASE_URL",
         message: "NEXT_PUBLIC_SUPABASE_URL points to localhost in a production-like environment.",
