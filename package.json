@@ -54,6 +54,7 @@
     "verify:account-generation:storage-inventory-compare": "node scripts/compare-account-session-generation-storage-samples.mjs --json",
     "test:recipe-visibility-read-hardening:focused": "vitest run tests/recipe-visibility-*.test.ts tests/recipe-image-*.test.ts --exclude '**/*.integration.test.ts' --exclude '**/*.live.test.ts'",
     "test:recipe-visibility-read-hardening:postgres": "node scripts/run-recipe-visibility-read-hardening-postgres-integration.mjs",
+    "test:recipe-snapshot-authority:postgres": "node scripts/run-recipe-snapshot-authority-postgres-integration.mjs",
     "test:recipe-visibility-read-hardening:storage-live": "vitest run tests/recipe-image-terminal-tombstone-storage.live.test.ts tests/recipe-image-legacy-visibility-storage.live.test.ts",
     "recipe-image:legacy-visibility:local": "node scripts/run-recipe-image-legacy-visibility-local.mjs",
     "test:nutrition-model:postgres": "node scripts/run-ingredient-nutrition-postgres-integration.mjs",

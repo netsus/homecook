@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "slice": "recipe-snapshot-authority-foundation",
+  "migration": "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
+  "deployment_state": "pre-deployment",
+  "baseline_application_contract_count": 74,
+  "functions": [
+    {
+      "signature": "public.validate_recipe_nutrition_snapshot_ownership()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.validate_recipe_content_snapshot_ownership()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.prevent_recipe_content_snapshot_mutation()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.prevent_recipe_nutrition_snapshot_mutation()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.protect_recipe_nutrition_snapshot()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"],
+      "replaces_baseline": true
+    },
+    {
+      "signature": "public.build_recipe_content_snapshot_input(uuid)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.bump_meal_revision()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.recipe_content_snapshot_mirror()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.pin_current_recipe_nutrition_snapshot_on_meal_insert()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"],
+      "replaces_baseline": true
+    },
+    {
+      "signature": "public.protect_meal_recipe_content_pin()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.backfill_meal_recipe_content_snapshots()",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.protect_cooking_session_snapshot_v2_mutation()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.validate_cooking_session_snapshot_v2_association()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.validate_cooking_session_meal_claim()",
+      "control_class": "application-controlled",
+      "effect": "trigger/internal",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.recipe_snapshot_account_cleanup_guard(uuid)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+    },
+    {
+      "signature": "public.delete_user_private_data(uuid)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "pg_temp"],
+      "replaces_baseline": true
+    }
+  ]
+}

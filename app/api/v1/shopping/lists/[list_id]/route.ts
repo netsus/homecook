@@ -48,6 +48,19 @@ interface RecipeRow {
   thumbnail_url: string | null;
 }
 
+interface MealRecipeContentRow {
+  recipe_id: string;
+  recipe_content_snapshot_id: string | null;
+  recipe_content_snapshots:
+    | {
+      title: string | null;
+    }
+    | Array<{
+      title: string | null;
+    }>
+    | null;
+}
+
 interface IngredientRow {
   id: string;
   category: string | null;
@@ -120,12 +133,34 @@ interface ShoppingListItemsTable {
   select(columns: string): ShoppingListItemsSelectQuery;
 }
 
+interface MealsSelectQuery {
+  eq(column: string, value: string): MealsSelectQuery;
+  then: ArrayResult<MealRecipeContentRow>["then"];
+}
+
+interface MealsTable {
+  select(columns: string): MealsSelectQuery;
+}
+
 interface ShoppingListDetailDbClient {
   from(table: "shopping_lists"): ShoppingListsTable;
   from(table: "shopping_list_recipes"): ShoppingListRecipesTable;
+  from(table: "meals"): MealsTable;
   from(table: "recipes"): RecipesTable;
   from(table: "ingredients"): IngredientsTable;
   from(table: "shopping_list_items"): ShoppingListItemsTable;
+}
+
+function getMealPinnedTitle(meal: MealRecipeContentRow) {
+  const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
+    ? meal.recipe_content_snapshots[0] ?? null
+    : meal.recipe_content_snapshots;
+
+  return contentSnapshot?.title?.trim() || null;
+}
+
+function hasContentPin(meal: MealRecipeContentRow) {
+  return typeof meal.recipe_content_snapshot_id === "string" && meal.recipe_content_snapshot_id.length > 0;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -232,6 +267,32 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const recipeIds = [...new Set(recipesResult.data.map((recipe) => recipe.recipe_id))];
   const recipeNameMap = new Map<string, RecipeRow>();
+  const pinnedRecipeTitleMap = new Map<string, string>();
+
+  let mealContentResult: Awaited<ArrayResult<MealRecipeContentRow>>;
+  try {
+    mealContentResult = await dbClient
+      .from("meals")
+      .select("recipe_id, recipe_content_snapshot_id, recipe_content_snapshots(title)")
+      .eq("shopping_list_id", listId);
+  } catch {
+    return fail("INTERNAL_ERROR", "장보기 상세를 불러오지 못했어요.", 500);
+  }
+
+  if (mealContentResult.error || !mealContentResult.data) {
+    return fail("INTERNAL_ERROR", "장보기 상세를 불러오지 못했어요.", 500);
+  }
+
+  if (mealContentResult.data.some((meal) => hasContentPin(meal) && getMealPinnedTitle(meal) === null)) {
+    return fail("INTERNAL_ERROR", "장보기 상세를 불러오지 못했어요.", 500);
+  }
+
+  mealContentResult.data.forEach((meal) => {
+    const pinnedTitle = getMealPinnedTitle(meal);
+    if (pinnedTitle) {
+      pinnedRecipeTitleMap.set(meal.recipe_id, pinnedTitle);
+    }
+  });
 
   if (recipeIds.length > 0) {
     const recipeRowsResult = await dbClient
@@ -287,7 +348,10 @@ export async function GET(_request: Request, context: RouteContext) {
     recipes: recipesResult.data
       .map((recipe) => ({
         recipe_id: recipe.recipe_id,
-        recipe_name: recipeNameMap.get(recipe.recipe_id)?.title ?? "",
+        recipe_name:
+          pinnedRecipeTitleMap.get(recipe.recipe_id) ??
+          recipeNameMap.get(recipe.recipe_id)?.title ??
+          "",
         recipe_thumbnail: normalizeFoodSafetyImageUrl(
           recipeNameMap.get(recipe.recipe_id)?.thumbnail_url,
         ),

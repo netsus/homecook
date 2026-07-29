@@ -67,6 +67,15 @@ interface MealListRow {
   status: string;
   is_leftover: boolean;
   created_at: string;
+  recipe_content_snapshot_id: string | null;
+  recipe_content_snapshots:
+    | {
+      title: string | null;
+    }
+    | Array<{
+      title: string | null;
+    }>
+    | null;
 }
 
 interface MealInsertRow {
@@ -325,11 +334,14 @@ function toMealCreateData(row: MealInsertRow): MealCreateData {
 
 function toMealListItem(row: MealListRow, recipeMap: Map<string, RecipeSummaryRow>): MealListItemData {
   const recipe = recipeMap.get(row.recipe_id);
+  const contentSnapshot = Array.isArray(row.recipe_content_snapshots)
+    ? row.recipe_content_snapshots[0] ?? null
+    : row.recipe_content_snapshots;
 
   return {
     id: row.id,
     recipe_id: row.recipe_id,
-    recipe_title: recipe?.title ?? "",
+    recipe_title: contentSnapshot?.title?.trim() || recipe?.title || "",
     recipe_thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
     planned_servings: row.planned_servings,
     status: normalizeMealStatus(row.status),
@@ -395,7 +407,9 @@ export async function GET(request: NextRequest) {
 
   const mealsResult = await dbClient
     .from("meals")
-    .select("id, recipe_id, planned_servings, status, is_leftover, created_at")
+    .select(
+      "id, recipe_id, planned_servings, status, is_leftover, created_at, recipe_content_snapshot_id, recipe_content_snapshots(title)",
+    )
     .eq("user_id", user.id)
     .eq("plan_date", parsed.planDate)
     .eq("column_id", parsed.columnId)
@@ -403,6 +417,22 @@ export async function GET(request: NextRequest) {
     .order("id", { ascending: true });
 
   if (mealsResult.error || !mealsResult.data) {
+    return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
+  }
+
+  const hasBrokenContentPinnedMeal = mealsResult.data.some((meal) => {
+    if (!meal.recipe_content_snapshot_id) {
+      return false;
+    }
+
+    const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
+      ? meal.recipe_content_snapshots[0] ?? null
+      : meal.recipe_content_snapshots;
+
+    return contentSnapshot === null || contentSnapshot.title === null;
+  });
+
+  if (hasBrokenContentPinnedMeal) {
     return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
   }
 

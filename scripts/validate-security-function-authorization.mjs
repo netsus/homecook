@@ -50,6 +50,20 @@ const ADDITIVE_SOURCES = [
   },
   {
     manifestPath:
+      process.env.SECURITY_FUNCTION_RECIPE_SNAPSHOT_AUTHORITY_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/recipe-snapshot-authority-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_RECIPE_SNAPSHOT_AUTHORITY_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
+      ),
+  },
+  {
+    manifestPath:
       process.env.SECURITY_FUNCTION_PREPARED_FOOD_SEARCH_MANIFEST_PATH
       ?? path.join(
         REPO_ROOT,

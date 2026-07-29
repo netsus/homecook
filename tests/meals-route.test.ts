@@ -306,6 +306,125 @@ describe("GET /api/v1/meals", () => {
     expect(mealsQuery.order).toHaveBeenNthCalledWith(2, "id", { ascending: true });
   });
 
+  it("uses an immutable content title instead of the mutable current recipe title", async () => {
+    const columnQuery = createMaybeSingleQuery([
+      {
+        data: { id: "column-1", user_id: "user-1", name: "점심" },
+        error: null,
+      },
+    ]);
+    const mealsQuery = createThenableQuery([
+      {
+        data: [{
+          id: "meal-content",
+          recipe_id: "recipe-1",
+          planned_servings: 2,
+          status: "registered",
+          is_leftover: false,
+          created_at: "2026-03-01T08:00:00Z",
+          recipe_content_snapshot_id: "content-1",
+          recipe_content_snapshots: { title: "계획 당시 김치찌개" },
+        }],
+        error: null,
+      },
+    ]);
+    const recipesQuery = createThenableQuery([
+      {
+        data: [{
+          id: "recipe-1",
+          title: "나중에 바뀐 제목",
+          thumbnail_url: null,
+        }],
+        error: null,
+      },
+    ]);
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
+      from: vi.fn((table: string) => {
+        if (table === "meal_plan_columns") return { select: vi.fn(() => columnQuery) };
+        if (table === "meals") return { select: vi.fn(() => mealsQuery) };
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importRoute();
+    const response = await GET(
+      new NextRequest(
+        "http://localhost:3000/api/v1/meals?plan_date=2026-03-01&column_id=550e8400-e29b-41d4-a716-446655440021",
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items[0].recipe_title).toBe("계획 당시 김치찌개");
+  });
+
+  it("fails closed when a content-pinned Meal cannot load its immutable content row", async () => {
+    const columnQuery = createMaybeSingleQuery([
+      {
+        data: { id: "column-1", user_id: "user-1", name: "점심" },
+        error: null,
+      },
+    ]);
+    const mealsQuery = createThenableQuery([
+      {
+        data: [{
+          id: "meal-broken-content",
+          recipe_id: "recipe-1",
+          planned_servings: 2,
+          status: "registered",
+          is_leftover: false,
+          created_at: "2026-03-01T08:00:00Z",
+          recipe_content_snapshot_id: "missing-content",
+          recipe_content_snapshots: null,
+        }],
+        error: null,
+      },
+    ]);
+    const recipesQuery = createThenableQuery([
+      {
+        data: [{
+          id: "recipe-1",
+          title: "현재 제목으로 대체하면 안 됨",
+          thumbnail_url: null,
+        }],
+        error: null,
+      },
+    ]);
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
+      from: vi.fn((table: string) => {
+        if (table === "meal_plan_columns") return { select: vi.fn(() => columnQuery) };
+        if (table === "meals") return { select: vi.fn(() => mealsQuery) };
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importRoute();
+    const response = await GET(
+      new NextRequest(
+        "http://localhost:3000/api/v1/meals?plan_date=2026-03-01&column_id=550e8400-e29b-41d4-a716-446655440022",
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(JSON.stringify(body)).not.toContain("현재 제목으로 대체하면 안 됨");
+  });
+
   it("keeps deleted recipe metadata behind an owned Meal anchor", async () => {
     const routeFrom = vi.fn();
     const columnQuery = createMaybeSingleQuery([
