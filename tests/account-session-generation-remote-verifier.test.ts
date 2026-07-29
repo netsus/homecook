@@ -1,5 +1,72 @@
 import { describe, expect, it } from "vitest";
 
+const PERSONAL_OWNER_DIGEST =
+  "1111111111111111111111111111111111111111111111111111111111111111";
+
+const PERSONAL_OWNER_SOURCE_NAMES = [
+  "public.auth_identity_deletion_outbox",
+  "public.image_upload_quota_counters",
+  "public.mutation_idempotency_keys",
+  "public.recipe_image_legacy_positive_references",
+  "public.recipe_image_legacy_visibility_targets",
+  "public.recipe_image_objects",
+  "public.storage_object_deletion_outbox",
+  "public.user_account_generation_watermarks",
+  "public.user_account_lifecycles",
+  "public.user_session_generation_bindings",
+  "public.users",
+];
+
+const PERSONAL_OWNER_UUID_COLUMNS_FIXTURE = [
+  {
+    schema_name: "public",
+    table_name: "auth_identity_deletion_outbox",
+    column_name: "owner_uuid",
+    classification: "included_personal_owner",
+  },
+  {
+    schema_name: "public",
+    table_name: "user_session_generation_bindings",
+    column_name: "owner_uuid",
+    classification: "included_personal_owner",
+  },
+  {
+    schema_name: "public",
+    table_name: "legacy_account_delete_receipts",
+    column_name: "owner_uuid",
+    classification: "excluded_evidence",
+  },
+  {
+    schema_name: "public",
+    table_name: "operational_events",
+    column_name: "actor_user_id",
+    classification: "excluded_audit_actor",
+  },
+  {
+    schema_name: "public",
+    table_name: "operational_events",
+    column_name: "target_user_id",
+    classification: "excluded_audit_target",
+  },
+];
+
+function buildPersonalOwnerInventoryFields(overrides = {}) {
+  return {
+    public_user_inbound_fks: [],
+    personal_owner_count: 2,
+    personal_owner_digest: PERSONAL_OWNER_DIGEST,
+    personal_owner_without_identity_count: 0,
+    personal_owner_sources: PERSONAL_OWNER_SOURCE_NAMES.map((source_name) => ({
+      source_name,
+      owner_count: source_name === "public.users" ? 2 : 0,
+    })),
+    personal_owner_uuid_columns: PERSONAL_OWNER_UUID_COLUMNS_FIXTURE,
+    personal_owner_inventory_unknown_count: 0,
+    personal_owner_inventory_missing_count: 0,
+    ...overrides,
+  };
+}
+
 describe("account session generation remote verifier", () => {
   it("defines read-only inventory, preflight, and protected post-merge plans", async () => {
     const verifier = await import(
@@ -45,6 +112,14 @@ describe("account session generation remote verifier", () => {
       "public_users.user_id || ':' || public_users.created_at_snapshot",
     );
     expect(preflight.sql).toContain("registry.state");
+    expect(preflight.sql).toContain("public_user_inbound_fks");
+    expect(preflight.sql).toContain("owner_uuid_candidates");
+    expect(preflight.sql).toContain("personal_owner_sources");
+    expect(preflight.sql).toContain("personal_owner_uuid_columns");
+    expect(preflight.sql).toContain("personal_owner_without_identity_count");
+    expect(preflight.sql).toContain("personal_owner_inventory_unknown_count");
+    expect(preflight.sql).toContain("personal_owner_inventory_missing_count");
+    expect(preflight.sql).toContain("public.user_session_generation_bindings");
     expect(preflight.sql).not.toContain("registry.status");
     expect(preflight.sql).toContain("'cutover_nonterminal_attempt_count'");
     expect(preflight.sql).not.toContain("'cutover_attempt_count'");
@@ -53,6 +128,9 @@ describe("account session generation remote verifier", () => {
     );
     expect(preflight.sql).toMatch(
       /registry\.state in \([\s\S]*'pending_upload'[\s\S]*'uploaded_unlinked'[\s\S]*'cleanup_pending'[\s\S]*'not_found_observed'[\s\S]*\)/iu,
+    );
+    expect(preflight.sql).toMatch(
+      /where auth_users\.user_id is null[\s\S]*and public_users\.user_id is null/iu,
     );
     expect(postMerge.sql.toLowerCase()).toContain(
       "from public.account_generation_capability_state",
@@ -210,6 +288,7 @@ describe("account session generation remote verifier", () => {
       public_only_count: 0,
       legacy_receipt_count: 0,
       current_auth_identity_exact_match_count: 0,
+      ...buildPersonalOwnerInventoryFields(),
       auth_inbound_fks: [],
       remote_writes: 0,
     });
@@ -289,6 +368,122 @@ describe("account session generation remote verifier", () => {
     }
   });
 
+  it("removes the legacy personal-owner blocker when schema inventory is exact and keeps identity-less owners diagnostic only", async () => {
+    const verifier = await import(
+      "../scripts/lib/account-session-generation-remote-verifier.mjs"
+    );
+    const assessment = verifier.assessAccountGenerationJointActivationPreflightResult({
+      capability: {
+        state: "legacy",
+        revision: 1,
+        current_cutover_attempt_id: null,
+      },
+      capability_count: 1,
+      watermark_count: 0,
+      lifecycle_count: 0,
+      cutover_nonterminal_attempt_count: 0,
+      cutover_staging_count: 0,
+      legacy_external_write_nonterminal_count: 0,
+      auth_deletion_outbox_nonterminal_count: 0,
+      auth_deletion_outbox_dead_letter_count: 0,
+      recipe_image_registry_nonterminal_count: 0,
+      storage_deletion_outbox_nonterminal_count: 0,
+      storage_deletion_outbox_dead_letter_count: 0,
+      auth_user_count: 3,
+      auth_user_digest:
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      public_user_count: 3,
+      public_user_digest:
+        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+      auth_public_intersection_count: 2,
+      auth_only_count: 1,
+      public_only_count: 1,
+      legacy_receipt_count: 1,
+      current_auth_identity_exact_match_count: 1,
+      ...buildPersonalOwnerInventoryFields({
+        personal_owner_count: 4,
+        personal_owner_without_identity_count: 2,
+        personal_owner_sources: PERSONAL_OWNER_SOURCE_NAMES.map((source_name) => ({
+          source_name,
+          owner_count:
+            source_name === "public.users"
+              ? 3
+              : source_name === "public.user_account_lifecycles"
+                ? 1
+                : 0,
+        })),
+      }),
+      auth_inbound_fks: [],
+      remote_writes: 0,
+    });
+
+    expect(assessment).toEqual({
+      ready: false,
+      databaseReady: true,
+      remoteWrites: 0,
+      blockers: [
+        "identity_population_requires_staging",
+        "auth_hook_remote_configuration",
+        "auth_admin_write_freeze",
+        "auth_quiet_window",
+        "storage_inventory_second_sample",
+        "provider_auth_barrier",
+        "maintenance_runtime_release",
+      ],
+    });
+  });
+
+  it("adds a drift blocker when personal owner schema inventory has unknown or missing classified columns", async () => {
+    const verifier = await import(
+      "../scripts/lib/account-session-generation-remote-verifier.mjs"
+    );
+    const assessment = verifier.assessAccountGenerationJointActivationPreflightResult({
+      capability: {
+        state: "legacy",
+        revision: 1,
+        current_cutover_attempt_id: null,
+      },
+      capability_count: 1,
+      watermark_count: 0,
+      lifecycle_count: 0,
+      cutover_nonterminal_attempt_count: 0,
+      cutover_staging_count: 0,
+      legacy_external_write_nonterminal_count: 0,
+      auth_deletion_outbox_nonterminal_count: 0,
+      auth_deletion_outbox_dead_letter_count: 0,
+      recipe_image_registry_nonterminal_count: 0,
+      storage_deletion_outbox_nonterminal_count: 0,
+      storage_deletion_outbox_dead_letter_count: 0,
+      auth_user_count: 2,
+      auth_user_digest:
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      public_user_count: 2,
+      public_user_digest:
+        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+      auth_public_intersection_count: 2,
+      auth_only_count: 0,
+      public_only_count: 0,
+      legacy_receipt_count: 0,
+      current_auth_identity_exact_match_count: 0,
+      ...buildPersonalOwnerInventoryFields({
+        personal_owner_uuid_columns: [
+          {
+            schema_name: "public",
+            table_name: "mystery_table",
+            column_name: "user_id",
+            classification: "unknown_owner_like",
+          },
+        ],
+        personal_owner_inventory_unknown_count: 1,
+      }),
+      auth_inbound_fks: [],
+      remote_writes: 0,
+    });
+
+    expect(assessment.blockers).toContain("personal_owner_universe_inventory_drift");
+    expect(assessment.blockers).not.toContain("personal_owner_universe_inventory");
+  });
+
   it("keeps preflight not-ready while allowing diagnosable identity mismatch, receipt drift, and aborted historical attempts", async () => {
     const verifier = await import(
       "../scripts/lib/account-session-generation-remote-verifier.mjs"
@@ -321,6 +516,14 @@ describe("account session generation remote verifier", () => {
       public_only_count: 1,
       legacy_receipt_count: 1,
       current_auth_identity_exact_match_count: 1,
+      ...buildPersonalOwnerInventoryFields({
+        personal_owner_count: 4,
+        personal_owner_without_identity_count: 2,
+        personal_owner_sources: PERSONAL_OWNER_SOURCE_NAMES.map((source_name) => ({
+          source_name,
+          owner_count: source_name === "public.users" ? 3 : 0,
+        })),
+      }),
       auth_inbound_fks: [],
       remote_writes: 0,
     });
@@ -331,7 +534,6 @@ describe("account session generation remote verifier", () => {
       remoteWrites: 0,
       blockers: [
         "identity_population_requires_staging",
-        "personal_owner_universe_inventory",
         "auth_hook_remote_configuration",
         "auth_admin_write_freeze",
         "auth_quiet_window",
@@ -374,6 +576,14 @@ describe("account session generation remote verifier", () => {
       public_only_count: 1,
       legacy_receipt_count: 0,
       current_auth_identity_exact_match_count: 0,
+      ...buildPersonalOwnerInventoryFields({
+        personal_owner_count: 4,
+        personal_owner_without_identity_count: 2,
+        personal_owner_sources: PERSONAL_OWNER_SOURCE_NAMES.map((source_name) => ({
+          source_name,
+          owner_count: source_name === "public.users" ? 3 : 0,
+        })),
+      }),
       auth_inbound_fks: [],
       remote_writes: 1,
     });
@@ -430,6 +640,10 @@ describe("account session generation remote verifier", () => {
         public_only_count: 1,
         legacy_receipt_count: 1,
         current_auth_identity_exact_match_count: 1,
+        ...buildPersonalOwnerInventoryFields({
+          personal_owner_count: 4,
+          personal_owner_without_identity_count: 1,
+        }),
         auth_inbound_fks: [],
         remote_writes: 0,
       }),
@@ -472,6 +686,10 @@ describe("account session generation remote verifier", () => {
         public_only_count: 1,
         legacy_receipt_count: 1,
         current_auth_identity_exact_match_count: 2,
+        ...buildPersonalOwnerInventoryFields({
+          personal_owner_count: 4,
+          personal_owner_without_identity_count: 2,
+        }),
         auth_inbound_fks: [],
         remote_writes: 0,
       }),
@@ -514,10 +732,192 @@ describe("account session generation remote verifier", () => {
         public_only_count: 1,
         legacy_receipt_count: 1,
         current_auth_identity_exact_match_count: 1,
+        ...buildPersonalOwnerInventoryFields({
+          personal_owner_count: 4,
+          personal_owner_without_identity_count: 2,
+          auth_inbound_fks: "invalid",
+        }),
         auth_inbound_fks: "invalid",
         remote_writes: 0,
       }),
     ).toThrow("joint activation preflight returned invalid auth_inbound_fks inventory");
+  });
+
+  it("throws when public user inbound fks or personal owner inventories are malformed", async () => {
+    const verifier = await import(
+      "../scripts/lib/account-session-generation-remote-verifier.mjs"
+    );
+
+    expect(() =>
+      verifier.assessAccountGenerationJointActivationPreflightResult({
+        capability: {
+          state: "legacy",
+          revision: 1,
+          current_cutover_attempt_id: null,
+        },
+        capability_count: 1,
+        watermark_count: 0,
+        lifecycle_count: 0,
+        cutover_nonterminal_attempt_count: 0,
+        cutover_staging_count: 0,
+        legacy_external_write_nonterminal_count: 0,
+        auth_deletion_outbox_nonterminal_count: 0,
+        auth_deletion_outbox_dead_letter_count: 0,
+        recipe_image_registry_nonterminal_count: 0,
+        storage_deletion_outbox_nonterminal_count: 0,
+        storage_deletion_outbox_dead_letter_count: 0,
+        auth_user_count: 2,
+        auth_user_digest:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        public_user_count: 2,
+        public_user_digest:
+          "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+        auth_public_intersection_count: 2,
+        auth_only_count: 0,
+        public_only_count: 0,
+        legacy_receipt_count: 0,
+        current_auth_identity_exact_match_count: 0,
+        ...buildPersonalOwnerInventoryFields({
+          public_user_inbound_fks: "invalid",
+        }),
+        auth_inbound_fks: [],
+        remote_writes: 0,
+      }),
+    ).toThrow("joint activation preflight returned invalid public_user_inbound_fks inventory");
+
+    expect(() =>
+      verifier.assessAccountGenerationJointActivationPreflightResult({
+        capability: {
+          state: "legacy",
+          revision: 1,
+          current_cutover_attempt_id: null,
+        },
+        capability_count: 1,
+        watermark_count: 0,
+        lifecycle_count: 0,
+        cutover_nonterminal_attempt_count: 0,
+        cutover_staging_count: 0,
+        legacy_external_write_nonterminal_count: 0,
+        auth_deletion_outbox_nonterminal_count: 0,
+        auth_deletion_outbox_dead_letter_count: 0,
+        recipe_image_registry_nonterminal_count: 0,
+        storage_deletion_outbox_nonterminal_count: 0,
+        storage_deletion_outbox_dead_letter_count: 0,
+        auth_user_count: 2,
+        auth_user_digest:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        public_user_count: 2,
+        public_user_digest:
+          "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+        auth_public_intersection_count: 2,
+        auth_only_count: 0,
+        public_only_count: 0,
+        legacy_receipt_count: 0,
+        current_auth_identity_exact_match_count: 0,
+        ...buildPersonalOwnerInventoryFields({
+          personal_owner_sources: [{ source_name: "public.users", owner_count: 2 }],
+        }),
+        auth_inbound_fks: [],
+        remote_writes: 0,
+      }),
+    ).toThrow("joint activation preflight returned invalid personal_owner_sources inventory");
+  });
+
+  it("throws when personal owner aggregates are internally inconsistent", async () => {
+    const verifier = await import(
+      "../scripts/lib/account-session-generation-remote-verifier.mjs"
+    );
+
+    expect(() =>
+      verifier.assessAccountGenerationJointActivationPreflightResult({
+        capability: {
+          state: "legacy",
+          revision: 1,
+          current_cutover_attempt_id: null,
+        },
+        capability_count: 1,
+        watermark_count: 0,
+        lifecycle_count: 0,
+        cutover_nonterminal_attempt_count: 0,
+        cutover_staging_count: 0,
+        legacy_external_write_nonterminal_count: 0,
+        auth_deletion_outbox_nonterminal_count: 0,
+        auth_deletion_outbox_dead_letter_count: 0,
+        recipe_image_registry_nonterminal_count: 0,
+        storage_deletion_outbox_nonterminal_count: 0,
+        storage_deletion_outbox_dead_letter_count: 0,
+        auth_user_count: 2,
+        auth_user_digest:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        public_user_count: 3,
+        public_user_digest:
+          "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+        auth_public_intersection_count: 2,
+        auth_only_count: 0,
+        public_only_count: 1,
+        legacy_receipt_count: 0,
+        current_auth_identity_exact_match_count: 0,
+        ...buildPersonalOwnerInventoryFields({
+          personal_owner_count: 2,
+          personal_owner_sources: PERSONAL_OWNER_SOURCE_NAMES.map((source_name) => ({
+            source_name,
+            owner_count: source_name === "public.users" ? 3 : 0,
+          })),
+        }),
+        auth_inbound_fks: [],
+        remote_writes: 0,
+      }),
+    ).toThrow(
+      "joint activation preflight returned an impossible personal owner aggregate",
+    );
+
+    expect(() =>
+      verifier.assessAccountGenerationJointActivationPreflightResult({
+        capability: {
+          state: "legacy",
+          revision: 1,
+          current_cutover_attempt_id: null,
+        },
+        capability_count: 1,
+        watermark_count: 0,
+        lifecycle_count: 0,
+        cutover_nonterminal_attempt_count: 0,
+        cutover_staging_count: 0,
+        legacy_external_write_nonterminal_count: 0,
+        auth_deletion_outbox_nonterminal_count: 0,
+        auth_deletion_outbox_dead_letter_count: 0,
+        recipe_image_registry_nonterminal_count: 0,
+        storage_deletion_outbox_nonterminal_count: 0,
+        storage_deletion_outbox_dead_letter_count: 0,
+        auth_user_count: 2,
+        auth_user_digest:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        public_user_count: 2,
+        public_user_digest:
+          "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+        auth_public_intersection_count: 2,
+        auth_only_count: 0,
+        public_only_count: 0,
+        legacy_receipt_count: 0,
+        current_auth_identity_exact_match_count: 0,
+        ...buildPersonalOwnerInventoryFields({
+          personal_owner_count: 2,
+          personal_owner_sources: PERSONAL_OWNER_SOURCE_NAMES.map((source_name) => ({
+            source_name,
+            owner_count:
+              source_name === "public.users"
+                ? 1
+                : source_name === "public.recipe_image_objects"
+                  ? 3
+                  : 0,
+          })),
+        }),
+        auth_inbound_fks: [],
+        remote_writes: 0,
+      }),
+    ).toThrow(
+      "joint activation preflight returned an impossible personal owner source aggregate",
+    );
   });
 
   it("rejects malformed preflight count and digest fields", async () => {
@@ -554,6 +954,7 @@ describe("account session generation remote verifier", () => {
         public_only_count: 0,
         legacy_receipt_count: 1,
         current_auth_identity_exact_match_count: 1,
+        ...buildPersonalOwnerInventoryFields(),
         remote_writes: 0,
       }),
     ).toThrow("joint activation preflight returned an invalid count: capability_count");
@@ -586,6 +987,7 @@ describe("account session generation remote verifier", () => {
         public_only_count: 0,
         legacy_receipt_count: 1,
         current_auth_identity_exact_match_count: 1,
+        ...buildPersonalOwnerInventoryFields(),
         remote_writes: 0,
         auth_inbound_fks: [],
       }),

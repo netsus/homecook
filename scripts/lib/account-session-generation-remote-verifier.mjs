@@ -96,6 +96,106 @@ select jsonb_build_object(
 const MUTATING_SQL_PATTERN =
   /\b(?:insert|update|delete|truncate|alter|create|drop|grant|revoke|call|do|merge|copy|vacuum|reindex|refresh|execute|perform)\b/iu;
 
+const PERSONAL_OWNER_SOURCE_DEFINITIONS = Object.freeze([
+  {
+    sourceName: "public.users",
+    relation: "public.users",
+    columnExpression: "id",
+  },
+  {
+    sourceName: "public.auth_identity_deletion_outbox",
+    relation: "public.auth_identity_deletion_outbox",
+    columnExpression: "owner_uuid",
+  },
+  {
+    sourceName: "public.image_upload_quota_counters",
+    relation: "public.image_upload_quota_counters",
+    columnExpression: "owner_uuid",
+  },
+  {
+    sourceName: "public.mutation_idempotency_keys",
+    relation: "public.mutation_idempotency_keys",
+    columnExpression: "owner_uuid",
+  },
+  {
+    sourceName: "public.recipe_image_legacy_positive_references",
+    relation: "public.recipe_image_legacy_positive_references",
+    columnExpression: "owner_uuid",
+  },
+  {
+    sourceName: "public.recipe_image_legacy_visibility_targets",
+    relation: "public.recipe_image_legacy_visibility_targets",
+    columnExpression: "owner_uuid",
+  },
+  {
+    sourceName: "public.recipe_image_objects",
+    relation: "public.recipe_image_objects",
+    columnExpression: "owner_uuid",
+  },
+  {
+    sourceName: "public.storage_object_deletion_outbox",
+    relation: "public.storage_object_deletion_outbox",
+    columnExpression: "owner_uuid",
+  },
+  {
+    sourceName: "public.user_account_generation_watermarks",
+    relation: "public.user_account_generation_watermarks",
+    columnExpression: "owner_uuid",
+  },
+  {
+    sourceName: "public.user_account_lifecycles",
+    relation: "public.user_account_lifecycles",
+    columnExpression: "owner_uuid",
+  },
+  {
+    sourceName: "public.user_session_generation_bindings",
+    relation: "public.user_session_generation_bindings",
+    columnExpression: "owner_uuid",
+  },
+]);
+
+const PERSONAL_OWNER_UUID_COLUMN_WHITELIST = Object.freeze([
+  ["public", "auth_identity_deletion_outbox", "owner_uuid", "included_personal_owner"],
+  ["public", "image_upload_quota_counters", "owner_uuid", "included_personal_owner"],
+  ["public", "mutation_idempotency_keys", "owner_uuid", "included_personal_owner"],
+  ["public", "recipe_image_legacy_positive_references", "owner_uuid", "included_personal_owner"],
+  ["public", "recipe_image_legacy_visibility_targets", "owner_uuid", "included_personal_owner"],
+  ["public", "recipe_image_objects", "owner_uuid", "included_personal_owner"],
+  ["public", "storage_object_deletion_outbox", "owner_uuid", "included_personal_owner"],
+  ["public", "user_account_generation_watermarks", "owner_uuid", "included_personal_owner"],
+  ["public", "user_account_lifecycles", "owner_uuid", "included_personal_owner"],
+  ["public", "user_session_generation_bindings", "owner_uuid", "included_personal_owner"],
+  ["public", "legacy_account_delete_receipts", "owner_uuid", "excluded_evidence"],
+  ["public", "legacy_external_write_attempts", "owner_uuid", "excluded_evidence"],
+  ["public", "account_generation_cutover_staging", "owner_uuid", "excluded_staging"],
+  ["public", "operational_events", "actor_user_id", "excluded_audit_actor"],
+  ["public", "operational_events", "target_user_id", "excluded_audit_target"],
+]);
+
+const EXPECTED_PERSONAL_OWNER_SOURCE_NAMES = Object.freeze(
+  PERSONAL_OWNER_SOURCE_DEFINITIONS.map(({ sourceName }) => sourceName).sort(),
+);
+
+const ALLOWED_PERSONAL_OWNER_CLASSIFICATIONS = new Set([
+  ...PERSONAL_OWNER_UUID_COLUMN_WHITELIST.map(([, , , classification]) => classification),
+  "unknown_owner_like",
+]);
+
+const PERSONAL_OWNER_SOURCE_INVENTORY_SQL = PERSONAL_OWNER_SOURCE_DEFINITIONS.map(
+  ({ sourceName, relation, columnExpression }) =>
+    `select '${sourceName}'::text as source_name, count(distinct ${columnExpression}::text)::bigint as owner_count from ${relation} where ${columnExpression} is not null`,
+).join("\n  union all\n  ");
+
+const PERSONAL_OWNER_UNION_SQL = PERSONAL_OWNER_SOURCE_DEFINITIONS.map(
+  ({ relation, columnExpression }) =>
+    `select ${columnExpression}::text as user_id from ${relation} where ${columnExpression} is not null`,
+).join("\n  union\n  ");
+
+const PERSONAL_OWNER_UUID_COLUMN_WHITELIST_SQL = PERSONAL_OWNER_UUID_COLUMN_WHITELIST.map(
+  ([schemaName, tableName, columnName, classification]) =>
+    `('${schemaName}', '${tableName}', '${columnName}', '${classification}')`,
+).join(",\n    ");
+
 function maskSqlLiterals(value) {
   if (typeof value !== "string") return "";
 
@@ -155,6 +255,23 @@ with auth_inbound_fks as (
     on namespace.oid = relation.relnamespace
   where constraint_row.contype = 'f'
     and constraint_row.confrelid = 'auth.users'::pg_catalog.regclass
+), public_user_inbound_fks as (
+  select
+    namespace.nspname as schema_name,
+    relation.relname as table_name,
+    constraint_row.conname as constraint_name,
+    attribute_row.attname as column_name,
+    constraint_row.confdeltype as delete_action
+  from pg_catalog.pg_constraint as constraint_row
+  join pg_catalog.pg_class as relation
+    on relation.oid = constraint_row.conrelid
+  join pg_catalog.pg_namespace as namespace
+    on namespace.oid = relation.relnamespace
+  join pg_catalog.pg_attribute as attribute_row
+    on attribute_row.attrelid = relation.oid
+   and attribute_row.attnum = any(constraint_row.conkey)
+  where constraint_row.contype = 'f'
+    and constraint_row.confrelid = 'public.users'::pg_catalog.regclass
 ), capability as (
   select state, revision, current_cutover_attempt_id
   from public.account_generation_capability_state
@@ -194,6 +311,74 @@ with auth_inbound_fks as (
       receipt.auth_identity_created_at_snapshot at time zone 'UTC',
       'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
     )
+), personal_owner_sources as (
+  ${PERSONAL_OWNER_SOURCE_INVENTORY_SQL}
+), personal_owner_union as (
+  ${PERSONAL_OWNER_UNION_SQL}
+), owner_uuid_whitelist as (
+  select *
+  from (
+    values
+    ${PERSONAL_OWNER_UUID_COLUMN_WHITELIST_SQL}
+  ) as whitelist(schema_name, table_name, column_name, classification)
+), owner_uuid_candidates as (
+  select
+    namespace.nspname as schema_name,
+    relation.relname as table_name,
+    attribute_row.attname as column_name
+  from pg_catalog.pg_attribute as attribute_row
+  join pg_catalog.pg_class as relation
+    on relation.oid = attribute_row.attrelid
+  join pg_catalog.pg_namespace as namespace
+    on namespace.oid = relation.relnamespace
+  join pg_catalog.pg_type as type_row
+    on type_row.oid = attribute_row.atttypid
+  left join pg_catalog.pg_constraint as constraint_row
+    on constraint_row.conrelid = relation.oid
+   and constraint_row.contype = 'f'
+   and pg_catalog.array_length(constraint_row.conkey, 1) = 1
+   and constraint_row.conkey[1] = attribute_row.attnum
+  where namespace.nspname = 'public'
+    and relation.relkind in ('r', 'p')
+    and attribute_row.attnum > 0
+    and not attribute_row.attisdropped
+    and type_row.typname = 'uuid'
+    and attribute_row.attname in (
+      'owner_uuid',
+      'owner_user_id',
+      'user_id',
+      'created_by',
+      'reporter_user_id',
+      'actor_user_id',
+      'target_user_id'
+    )
+    and constraint_row.oid is null
+), personal_owner_uuid_columns as (
+  select
+    candidate.schema_name,
+    candidate.table_name,
+    candidate.column_name,
+    coalesce(whitelist.classification, 'unknown_owner_like') as classification
+  from owner_uuid_candidates as candidate
+  left join owner_uuid_whitelist as whitelist
+    using (schema_name, table_name, column_name)
+), personal_owner_uuid_missing as (
+  select
+    whitelist.schema_name,
+    whitelist.table_name,
+    whitelist.column_name,
+    whitelist.classification
+  from owner_uuid_whitelist as whitelist
+  left join owner_uuid_candidates as candidate
+    using (schema_name, table_name, column_name)
+  where candidate.schema_name is null
+), personal_owner_without_identity as (
+  select personal_owner.user_id
+  from personal_owner_union as personal_owner
+  left join auth_users using (user_id)
+  left join public_users using (user_id)
+  where auth_users.user_id is null
+    and public_users.user_id is null
 )
 select jsonb_build_object(
   'capability', (select to_jsonb(capability) from capability),
@@ -309,6 +494,55 @@ select jsonb_build_object(
   'current_auth_identity_exact_match_count', (
     select count(*) from legacy_receipts_exact
   ),
+  'public_user_inbound_fks', coalesce(
+    (select jsonb_agg(to_jsonb(public_user_inbound_fks) order by schema_name, table_name, constraint_name, column_name)
+      from public_user_inbound_fks),
+    '[]'::jsonb
+  ),
+  'personal_owner_count', (
+    select count(*) from personal_owner_union
+  ),
+  'personal_owner_digest', (
+    select encode(
+      extensions.digest(
+        pg_catalog.convert_to(
+          coalesce(
+            string_agg(
+              personal_owner.user_id,
+              E'\n'
+              order by personal_owner.user_id
+            ),
+            ''
+          ),
+          'UTF8'
+        ),
+        'sha256'
+      ),
+      'hex'
+    )
+    from personal_owner_union as personal_owner
+  ),
+  'personal_owner_without_identity_count', (
+    select count(*) from personal_owner_without_identity
+  ),
+  'personal_owner_sources', coalesce(
+    (select jsonb_agg(to_jsonb(personal_owner_sources) order by source_name)
+      from personal_owner_sources),
+    '[]'::jsonb
+  ),
+  'personal_owner_uuid_columns', coalesce(
+    (select jsonb_agg(to_jsonb(personal_owner_uuid_columns) order by schema_name, table_name, column_name)
+      from personal_owner_uuid_columns),
+    '[]'::jsonb
+  ),
+  'personal_owner_inventory_unknown_count', (
+    select count(*)
+    from personal_owner_uuid_columns
+    where classification = 'unknown_owner_like'
+  ),
+  'personal_owner_inventory_missing_count', (
+    select count(*) from personal_owner_uuid_missing
+  ),
   'auth_inbound_fks', coalesce(
     (select jsonb_agg(to_jsonb(auth_inbound_fks) order by schema_name, table_name, constraint_name)
       from auth_inbound_fks),
@@ -319,7 +553,6 @@ select jsonb_build_object(
 `;
 
 const PREFLIGHT_MANUAL_BLOCKERS = Object.freeze([
-  "personal_owner_universe_inventory",
   "auth_hook_remote_configuration",
   "auth_admin_write_freeze",
   "auth_quiet_window",
@@ -363,6 +596,77 @@ function assertStrictAuthInboundFks(value) {
       || typeof item.delete_action !== "string"
     ) {
       throw new Error("joint activation preflight returned invalid auth_inbound_fks inventory");
+    }
+  }
+}
+
+function assertStrictPublicUserInboundFks(value) {
+  if (!Array.isArray(value)) {
+    throw new Error("joint activation preflight returned invalid public_user_inbound_fks inventory");
+  }
+  for (const item of value) {
+    if (
+      !item
+      || typeof item !== "object"
+      || Array.isArray(item)
+      || typeof item.schema_name !== "string"
+      || typeof item.table_name !== "string"
+      || typeof item.constraint_name !== "string"
+      || typeof item.column_name !== "string"
+      || typeof item.delete_action !== "string"
+    ) {
+      throw new Error("joint activation preflight returned invalid public_user_inbound_fks inventory");
+    }
+  }
+}
+
+function assertStrictPersonalOwnerSources(value) {
+  if (!Array.isArray(value)) {
+    throw new Error("joint activation preflight returned invalid personal_owner_sources inventory");
+  }
+
+  const sourceNames = [];
+  for (const item of value) {
+    if (
+      !item
+      || typeof item !== "object"
+      || Array.isArray(item)
+      || typeof item.source_name !== "string"
+    ) {
+      throw new Error("joint activation preflight returned invalid personal_owner_sources inventory");
+    }
+    assertNonNegativeInteger(item.owner_count, `${item.source_name} owner_count`);
+    sourceNames.push(item.source_name);
+  }
+
+  const sortedNames = [...sourceNames].sort();
+  if (
+    sortedNames.length !== EXPECTED_PERSONAL_OWNER_SOURCE_NAMES.length
+    || sortedNames.some(
+      (sourceName, index) => sourceName !== EXPECTED_PERSONAL_OWNER_SOURCE_NAMES[index],
+    )
+  ) {
+    throw new Error("joint activation preflight returned invalid personal_owner_sources inventory");
+  }
+}
+
+function assertStrictPersonalOwnerUuidColumns(value) {
+  if (!Array.isArray(value)) {
+    throw new Error("joint activation preflight returned invalid personal_owner_uuid_columns inventory");
+  }
+
+  for (const item of value) {
+    if (
+      !item
+      || typeof item !== "object"
+      || Array.isArray(item)
+      || typeof item.schema_name !== "string"
+      || typeof item.table_name !== "string"
+      || typeof item.column_name !== "string"
+      || typeof item.classification !== "string"
+      || !ALLOWED_PERSONAL_OWNER_CLASSIFICATIONS.has(item.classification)
+    ) {
+      throw new Error("joint activation preflight returned invalid personal_owner_uuid_columns inventory");
     }
   }
 }
@@ -419,6 +723,10 @@ export function assessAccountGenerationJointActivationPreflightResult(result) {
     "public_only_count",
     "legacy_receipt_count",
     "current_auth_identity_exact_match_count",
+    "personal_owner_count",
+    "personal_owner_without_identity_count",
+    "personal_owner_inventory_unknown_count",
+    "personal_owner_inventory_missing_count",
     "remote_writes",
   ];
 
@@ -428,7 +736,11 @@ export function assessAccountGenerationJointActivationPreflightResult(result) {
 
   assertSha256Hex(result.auth_user_digest, "auth_user_digest");
   assertSha256Hex(result.public_user_digest, "public_user_digest");
+  assertSha256Hex(result.personal_owner_digest, "personal_owner_digest");
   assertStrictAuthInboundFks(result.auth_inbound_fks);
+  assertStrictPublicUserInboundFks(result.public_user_inbound_fks);
+  assertStrictPersonalOwnerSources(result.personal_owner_sources);
+  assertStrictPersonalOwnerUuidColumns(result.personal_owner_uuid_columns);
 
   if (
     result.auth_public_intersection_count + result.auth_only_count
@@ -446,6 +758,36 @@ export function assessAccountGenerationJointActivationPreflightResult(result) {
   ) {
     throw new Error(
       "joint activation preflight returned an impossible current auth identity exact-match aggregate",
+    );
+  }
+  if (result.personal_owner_without_identity_count > result.personal_owner_count) {
+    throw new Error(
+      "joint activation preflight returned an impossible personal owner identity aggregate",
+    );
+  }
+  if (result.personal_owner_count < result.public_user_count) {
+    throw new Error(
+      "joint activation preflight returned an impossible personal owner aggregate",
+    );
+  }
+  const publicUsersPersonalOwnerSource = result.personal_owner_sources.find(
+    (item) => item.source_name === "public.users",
+  );
+  if (
+    !publicUsersPersonalOwnerSource
+    || publicUsersPersonalOwnerSource.owner_count !== result.public_user_count
+  ) {
+    throw new Error(
+      "joint activation preflight returned an impossible personal owner source aggregate",
+    );
+  }
+  if (
+    result.personal_owner_sources.some(
+      (item) => item.owner_count > result.personal_owner_count,
+    )
+  ) {
+    throw new Error(
+      "joint activation preflight returned an impossible personal owner source aggregate",
     );
   }
 
@@ -494,6 +836,11 @@ export function assessAccountGenerationJointActivationPreflightResult(result) {
     result.auth_only_count > 0 || result.public_only_count > 0
       ? ["identity_population_requires_staging"]
       : [];
+  const personalOwnerInventoryBlockers =
+    result.personal_owner_inventory_unknown_count > 0
+    || result.personal_owner_inventory_missing_count > 0
+      ? ["personal_owner_universe_inventory_drift"]
+      : [];
 
   return {
     ready: false,
@@ -502,6 +849,7 @@ export function assessAccountGenerationJointActivationPreflightResult(result) {
     blockers: uniqueBlockers([
       ...readinessBlockers,
       ...stagingBlockers,
+      ...personalOwnerInventoryBlockers,
       ...PREFLIGHT_MANUAL_BLOCKERS,
     ]),
   };
