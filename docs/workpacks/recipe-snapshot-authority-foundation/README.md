@@ -138,7 +138,10 @@ Schema Change:
 
 ## Design Status
 
-`N/A`. No new screen or visual-system change. Stage 4 is limited to behavior regression for immutable pinned history and legacy fallback.
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [ ] 확정 (confirmed)
+- [x] N/A — No new screen or visual-system change. Stage 4 is limited to behavior regression for immutable pinned history and legacy fallback.
 
 ## Source Links
 
