@@ -311,10 +311,80 @@ describe("account maintenance tick internal endpoint", () => {
     expect("GET" in route).toBe(false);
   });
 
-  it("returns a secret-free feature-off result for the authorized F0 worker", async () => {
+  it("fails closed when the service-role client is unavailable", async () => {
     const workerSecret =
       "maintenance-secret-with-high-entropy-1234567890";
     process.env.HOMECOOK_MAINTENANCE_WORKER_SECRET = workerSecret;
+
+    vi.resetModules();
+    vi.doMock("@/lib/supabase/server", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/supabase/server")>(
+        "@/lib/supabase/server",
+      );
+      return {
+        ...actual,
+        createServiceRoleClient: () => null,
+      };
+    });
+
+    const route = await importTickRoute();
+
+    const response = await route.POST(
+      new Request("http://localhost:3000/internal/account-maintenance/tick", {
+        method: "POST",
+        headers: { authorization: `Bearer ${workerSecret}` },
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(JSON.stringify(body)).not.toContain(workerSecret);
+  });
+
+  it("wires the managed recipe image Storage phases before stopping at expected-owner", async () => {
+    const workerSecret =
+      "maintenance-secret-with-high-entropy-1234567890";
+    process.env.HOMECOOK_MAINTENANCE_WORKER_SECRET = workerSecret;
+
+    const serviceRoleClient = {
+      rpc: vi.fn(),
+      storage: { from: vi.fn() },
+    };
+    const checkObjectPresence = vi.fn();
+    const deleteObject = vi.fn();
+    const createManagedRecipeImageStorageAdapter = vi.fn(() => ({
+      checkObjectPresence,
+      deleteObject,
+    }));
+    const createRecipeImageStorageMaintenancePhases = vi.fn(() => ({
+      scanner: async () => undefined,
+      terminalTombstoneScan: async () => undefined,
+      quarantineRecheck: async () => undefined,
+      normalDrain: async () => undefined,
+    }));
+
+    vi.resetModules();
+    vi.doMock("@/lib/supabase/server", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/supabase/server")>(
+        "@/lib/supabase/server",
+      );
+      return {
+        ...actual,
+        createServiceRoleClient: () => serviceRoleClient,
+      };
+    });
+    vi.doMock("@/lib/server/recipe-image-managed-storage", () => ({
+      createManagedRecipeImageStorageAdapter,
+    }));
+    vi.doMock("@/lib/account-maintenance/recipe-image-storage-phases", () => ({
+      createRecipeImageStorageMaintenancePhases,
+    }));
+
     const route = await importTickRoute();
 
     const response = await route.POST(
@@ -331,11 +401,22 @@ describe("account maintenance tick internal endpoint", () => {
       data: {
         feature_state: "feature_off",
         status: "blocked",
+        blocked_at: "expected_owner_signal_union_zero",
       },
       error: null,
     });
-    expect(body.data.phases).toHaveLength(7);
-    expect(JSON.stringify(body)).not.toContain(workerSecret);
+    expect(createManagedRecipeImageStorageAdapter).toHaveBeenCalledWith({
+      client: serviceRoleClient,
+      signedUrlTtlSeconds: 300,
+      takeoverReadTimeoutMs: 10_000,
+    });
+    expect(createRecipeImageStorageMaintenancePhases).toHaveBeenCalledWith({
+      dbClient: serviceRoleClient,
+      storage: {
+        checkObjectPresence,
+        deleteObject,
+      },
+    });
   });
 
   it("fails closed when the server worker secret is not configured", async () => {
@@ -345,6 +426,42 @@ describe("account maintenance tick internal endpoint", () => {
       new Request("http://localhost:3000/internal/account-maintenance/tick", {
         method: "POST",
         headers: { authorization: "Bearer any-candidate" },
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+  });
+
+  it("fails closed when creating the service-role client throws", async () => {
+    const workerSecret =
+      "maintenance-secret-with-high-entropy-1234567890";
+    process.env.HOMECOOK_MAINTENANCE_WORKER_SECRET = workerSecret;
+
+    vi.resetModules();
+    vi.doMock("@/lib/supabase/server", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/supabase/server")>(
+        "@/lib/supabase/server",
+      );
+      return {
+        ...actual,
+        createServiceRoleClient: () => {
+          throw new Error("NEXT_PUBLIC_SUPABASE_URL 환경 변수가 필요해요.");
+        },
+      };
+    });
+
+    const route = await importTickRoute();
+
+    const response = await route.POST(
+      new Request("http://localhost:3000/internal/account-maintenance/tick", {
+        method: "POST",
+        headers: { authorization: `Bearer ${workerSecret}` },
       }),
     );
     const body = await response.json();
