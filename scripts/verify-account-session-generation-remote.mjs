@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 
 import {
   assessAccountGenerationJointActivationPreflightResult,
+  assessAccountGenerationJointStorageInventorySampleResult,
   assertAccountGenerationMergedExactSource,
   assertAccountGenerationRemoteVerificationResult,
   buildAccountGenerationRemotePsqlRequest,
@@ -84,6 +85,7 @@ try {
     baseEnvironment: process.env,
     databaseEnvironment,
     planSql: plan.sql,
+    requiresCutoverSharedLock: plan.requiresCutoverSharedLock,
   });
   const rawResult = run(
     "psql",
@@ -103,6 +105,14 @@ try {
     output.ok = false;
     process.stdout.write(`${JSON.stringify(output, null, json ? 2 : 0)}\n`);
     process.exit(1);
+  }
+  if (mode === "joint-storage-inventory-sample") {
+    output.assessment = assessAccountGenerationJointStorageInventorySampleResult(
+      result,
+    );
+    output.ok = output.assessment.ready;
+    process.stdout.write(`${JSON.stringify(output, null, json ? 2 : 0)}\n`);
+    process.exit(output.ok ? 0 : 1);
   }
   process.stdout.write(`${JSON.stringify(output, null, json ? 2 : 0)}\n`);
 } catch (error) {

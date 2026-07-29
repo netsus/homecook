@@ -50,6 +50,8 @@
     "test:account-session-generation:postgres": "node scripts/run-account-session-generation-postgres-integration.mjs",
     "verify:account-generation:auth-hook-config": "node scripts/verify-account-generation-auth-hook-config.mjs",
     "verify:account-generation:joint-preflight": "node scripts/verify-account-session-generation-remote.mjs --mode joint-activation-preflight --json",
+    "verify:account-generation:storage-inventory-sample": "node scripts/verify-account-session-generation-remote.mjs --mode joint-storage-inventory-sample --json",
+    "verify:account-generation:storage-inventory-compare": "node scripts/compare-account-session-generation-storage-samples.mjs --json",
     "test:recipe-visibility-read-hardening:focused": "vitest run tests/recipe-visibility-*.test.ts tests/recipe-image-*.test.ts --exclude '**/*.integration.test.ts' --exclude '**/*.live.test.ts'",
     "test:recipe-visibility-read-hardening:postgres": "node scripts/run-recipe-visibility-read-hardening-postgres-integration.mjs",
     "test:recipe-visibility-read-hardening:storage-live": "vitest run tests/recipe-image-terminal-tombstone-storage.live.test.ts tests/recipe-image-legacy-visibility-storage.live.test.ts",
