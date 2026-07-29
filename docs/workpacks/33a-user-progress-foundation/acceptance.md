@@ -55,7 +55,7 @@ Evidence:
 
 ## Manual QA
 
-- verifier: Codex Stage 2 implementer + Claude Stage 3 reviewer
+- verifier: Codex Stage 2 implementer + task ID가 다른 Codex `backend-reviewer` 작업
 - environment: local Supabase 또는 agreed smoke DB
 - scenarios:
   - 신규 로그인 사용자로 progress 조회 시 level 1 / 0 XP 확인

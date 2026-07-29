@@ -59,6 +59,7 @@
           },
           "approval_state": {
             "type": "string",
+            "description": "claude_approved is a historical compatibility value. Do not create it for new GPT-only executions.",
             "enum": [
               "not_started",
               "needs_revision",

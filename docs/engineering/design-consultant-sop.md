@@ -1,7 +1,7 @@
 # Design Consultant SOP
 
-> 대상: Claude (디자인 시스템 기반 확정 전)
-> 관련 에이전트: `.claude/agents/design-consultant.md`
+> 대상: Codex `design-consultant` 새 작업 (디자인 시스템 기반 확정 전)
+> 실행 규칙: `docs/engineering/codex-task-handoff.md`
 
 ---
 
@@ -22,7 +22,7 @@ Stage 4 (FE 구현) 시작 전에 토큰 확정 완료.
 
 ## 실행 방법
 
-트리거 예시를 Claude에게 입력:
+별도 Codex 디자인 컨설턴트 작업을 열고 아래 트리거를 입력:
 
 ```
 디자인 컨설턴트 실행해줘

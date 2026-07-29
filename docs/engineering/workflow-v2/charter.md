@@ -14,7 +14,7 @@
 
 1. 현재 v1의 강점을 유지한다.
 2. 다른 프로젝트에도 복제 가능한 reusable workflow core를 만든다.
-3. Claude와 Codex의 상호 피드백을 구조화된 loop로 공식화한다.
+3. 역할이 분리된 Codex 새 작업 사이의 피드백을 구조화된 loop로 공식화한다.
 4. 상태와 승인 정보를 machine-readable하게 남긴다.
 5. 작업 위험도에 따라 strict path와 fast path를 함께 제공한다.
 

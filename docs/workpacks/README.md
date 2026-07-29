@@ -101,7 +101,7 @@
 |--------|------|
 | `bootstrap` | 초기 설정 슬라이스 (`01` 전용, 별도 SOP 없이 직접 투입). **의존성 gate에서는 `merged`와 동등하게 간주한다.** |
 | `planned` | 착수 전 |
-| `docs` | 1단계(Claude) README + acceptance.md 작업 중 또는 완료, 구현 착수 전 |
+| `docs` | Stage 1 Codex 문서 작업의 README + acceptance.md 작업 중 또는 완료, 구현 착수 전 |
 | `in-progress` | 2~4단계 구현 진행 중 |
 | `merged` | 모든 브랜치 main merge 완료 |
 
@@ -117,20 +117,12 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 
 ## Operating Rules
 
-- **1단계(Claude)**: `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 작성하고 main에 merge한다. 단계별 절차는 `docs/engineering/slice-workflow.md` 참조.
+- **Stage 1(Codex 새 작업)**: `stage1-docs-author` 역할의 별도 Codex 작업이 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 작성하고 main에 merge한다. 단계별 절차는 `docs/engineering/slice-workflow.md`와 `docs/engineering/codex-task-handoff.md`를 참조한다.
 - **2단계 시작 조건**: 1단계 문서 PR이 main에 **merge된 후**에만 백엔드 구현(2단계)을 시작한다.
 - Slice Order에서 선행 슬라이스 Status가 전부 `merged`인지 확인한 뒤 착수한다.
+- **전역 GPT-only 규칙**: Claude는 사용하지 않는다. Stage 1/2/4 작성·구현 작업과 internal 1.5/Stage 3/5/final authority/Stage 6 검토 작업을 역할별 별도 Codex task ID로 분리하고, 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 같은 작업 안의 서브에이전트는 이 독립 작업 분리를 대신하지 않는다.
 - **Launch blocker 예외**: `launch-readiness-blockers`는 광고/배포를 직접 막는 release-hotfix workpack이다. 선행 slice 일부가 미완료여도 fake contact/legal 404, hydration/console error, missing security headers, mixed-content, audit failure를 먼저 닫기 위해 진행한다. 이 예외는 해당 workpack에만 적용되며 product contract, required checks, authority evidence, current-head CI green gate를 완화하지 않는다.
-- **Codex-only 예외**: `launch-readiness-blockers`는 사용자 지시에 따라 Claude를 사용하지 않는다. 기존 Claude 담당 Stage 1/3/4/final authority 역할은 같은 세션이 아니라 별도 Codex 세션으로 분리하고, 구현 세션은 자기 작업을 approve하지 않는다.
-- **Codex docs-owner 예외**: `auth-provider-memory-linking`은 사용자가 Claude 사용을 중단하고 별도 Codex 세션이 Stage 1 docs-owner 역할을 대신하도록 명시적으로 승인했다. 이후 구현과 리뷰도 역할별 별도 Codex 세션으로 분리하며, 구현 세션은 자기 변경을 최종 승인하지 않는다.
-- **Codex-only 서비스 가이드 예외**: `service-about-guide`는 사용자가 Claude 사용 중단과 기존 Claude 담당 단계의 새 Codex 세션 대체를 명시적으로 승인했다. 공식 계약 PR 병합 후 Stage 1 docs owner, Stage 4 구현 owner, internal docs repair/final authority owner를 서로 다른 Codex 세션으로 분리하고, Stage 1/4 작성 세션은 자기 변경을 최종 승인하지 않는다.
-- **Codex-only 서비스 브랜드 예외**: `service-brand-rebrand`는 사용자가 Claude 미사용과 기존 Claude 담당의 Stage 1 docs owner, Stage 3 backend review, Stage 4 frontend implementation, internal docs repair/final owner, authority-required final authority를 각각 역할 분리된 새 Codex 세션으로 대체하도록 명시 승인했다. Stage 1/4 작성·구현 세션은 자기 변경을 최종 승인하지 않는다. 이 예외는 `service-brand-rebrand`에만 적용하며 전역 workflow actor 규칙을 바꾸지 않는다.
-- **Codex-only HOME lockup 예외**: `service-brand-home-lockup`은 사용자가 Claude 미사용을 유지하고 Stage 1 docs owner, Stage 4 frontend implementation, internal docs repair/final owner, authority-required final authority를 역할 분리된 새 Codex 세션으로 대체하도록 승인했다. Stage 1/4 작성·구현 세션은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용한다.
-- **Codex-only 이미지 브랜드 자산 예외**: `service-brand-image-assets`는 사용자가 기존 브랜드 Codex-only 연속 작업에서 공식 계약 갱신과 실제 서비스 적용을 함께 요청한 후속 슬라이스다. Stage 1 docs owner, Stage 4 frontend implementation, internal docs repair/final owner, authority reviewer를 역할 분리된 Codex 작업으로 나누고 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용하며 전역 workflow actor 규칙을 바꾸지 않는다.
-- **Codex-only 아이콘 외곽 처리 예외**: `service-brand-icon-edge-treatment`는 사용자가 실제 favicon 흰 모서리를 확인하고 수정을 요청한 `service-brand-image-assets`의 연속 후속 슬라이스다. Stage 1 docs owner, Stage 4 frontend implementation, 독립 Stage 5/6 reviewer를 역할 분리하고 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용하며 전역 workflow actor 규칙을 바꾸지 않는다.
-- **Codex-only nutrition/products/planner 예외**: `public-nutrition-source-acquisition`, `ingredient-nutrition-conversion-model`, `recipe-nutrition-calculation`, `prepared-food-catalog`, `prepared-food-planner-entry`, `planner-nutrition-summary`, `ingredient-nutrition-full-coverage`, `all-recipe-nutrition-recalculation`, `public-prepared-food-catalog-import`, `community-prepared-food-catalog`, `prepared-food-standard-basis-ux`, `nutrition-products-cross-slice-release-qa`는 사용자가 기존 Claude 담당 단계를 역할이 분리된 **별도 Codex 앱 작업**으로 대체하도록 승인했다. Stage 1 docs owner, internal 1.5 review/repair-final owner, Stage 2/3, Stage 4, authority precheck/Stage 5/final authority/Stage 6은 필요한 역할별 새 작업으로 분리하고, 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 같은 작업 안의 서브에이전트는 이 역할 분리의 대체물이 아니다. 각 successor slice도 별도 Stage 1 workpack docs PR이 main에 merge되기 전에는 구현을 시작할 수 없다. 이 예외는 위 nutrition/products/planner slice들에만 적용하며 전역 stage owner 규칙은 바꾸지 않는다.
-- **Codex-only cooking/meal-log 예외**: `account-session-generation-foundation`, `prepared-food-search-relevance`, `product-ingredient-link-foundation`, `recipe-visibility-read-hardening`, `recipe-snapshot-authority-foundation`, `personal-recipe-editor-decoupling`, `personal-recipe-customization-write-core`, `recipe-content-snapshot-future-propagation`, `cooked-batch-weight-ledger`, `meal-log-core`, `planner-shell`, `cooked-batch-weight-ui`, `meal-log-ui`, `legacy-product-compat`, `cooking-meal-log-cross-slice-release-qa`는 사용자가 Claude를 사용하지 않고 기존 Claude 담당 단계마다 역할이 분리된 **별도 Codex 작업**을 사용하도록 승인했다. Stage 1 docs author, internal 1.5 reviewer/repair-final owner, 구현 owner, security/code/design authority reviewer를 분리하고 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 각 slice의 별도 Stage 1 docs PR과 mandatory internal 1.5 pass가 main에 merge되기 전에는 해당 구현을 시작하지 않는다.
-- **Codex-only i031 직접 추출 예외**: `33-youtube-i031-direct-extraction`은 사용자가 Claude 미사용과 현재 Codex 작업의 문서→구현→검증→merge 연속 수행을 명시 승인했다. Stage 1/구현 owner와 internal 1.5/code/security final reviewer는 서로 다른 native Codex agent 역할로 분리하며, 작성 owner는 독립 reviewer의 finding을 직접 숨기거나 자기 변경을 무검토 승인하지 않는다. Stage 1 contract/workpack PR과 internal 1.5 pass가 main에 merge된 뒤에만 구현을 시작한다. 이 strict mode는 merged YouTube import/dictionary source만 사용하며 `31-recipe-media-tags`, `32-youtube-visual-quantity-enrichment`의 미완료 closeout을 선행조건으로 두지 않는다. 해당 provider를 호출하거나 계약을 완화하지 않기 때문이다. 이 예외는 localhost i031 직접 추출 slice에만 적용하며 전역 actor 규칙을 바꾸지 않는다.
+- 과거 slice별 `Codex-only` 승인 기록은 당시 예외가 적용된 이유를 설명하는 merged evidence로 보존한다. 2026-07-30 이후에는 위 전역 GPT-only 규칙이 모든 신규·재개 Stage에 적용되므로 slice별 예외를 새로 추가하지 않는다.
 - `workflow-v2` / `OMO` 대상 product slice는 Stage 1 전에 **slice ID / goal / 분기 경로를 고정**한다.
 - `planned` 상태 slice에 `착수 시점에 분할 여부 결정` 메모를 남기지 않는다. 분할이 필요하면 roadmap PR에서 `08a/08b`처럼 먼저 쪼갠다.
 - 예외: `docs/engineering/` 아래의 repo-engineering automation, workflow tooling, agent 운영 규칙 변경은 제품 workpack roadmap 바깥이다.

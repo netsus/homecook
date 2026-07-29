@@ -130,7 +130,7 @@
 > 현재 임시 UI에서 `#d56a3a`, `#6e7c4a` 같은 하드코딩 색상을 교체해야 한다.
 >
 > Design Status 전이: `temporary` → `pending-review` (Stage 4 리트로핏 완료, Codex 변경)
->                   → `confirmed` (Stage 5 리뷰 통과, Claude 변경)
+>                   → `confirmed` (독립 Codex Stage 5 리뷰 작업 통과 후 closeout coordinator가 변경)
 
 ## Source Links
 

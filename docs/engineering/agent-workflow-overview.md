@@ -2,10 +2,14 @@
 
 ## 역할 요약
 
-| 에이전트 | 역할 |
+Claude는 더 이상 사용하지 않는다.
+모든 역할은 GPT 기반 Codex가 수행하되, 작성·구현과 최종 검토는 `docs/engineering/codex-task-handoff.md`에 따라 task ID가 다른 새 작업으로 분리한다.
+
+| Codex 작업 역할 | 책임 |
 |----------|------|
-| **Claude** | Workpack 문서 작성 (1단계), internal 1.5 docs gate repair/final owner, 백엔드 리뷰 (3단계), 프론트엔드 구현 (4단계), authority-required slice의 final authority gate, CI 디버깅 |
-| **Codex** | internal 1.5 docs gate review, TDD 기반 백엔드 구현 (2단계), authority precheck, 디자인 리뷰 (5단계), 프론트엔드 PR 리뷰/closeout (6단계), API 계약 고정, 커밋/PR 생성 |
+| **조정 작업** | Stage 순서, 새 작업 생성, handoff, evidence 수집, 상태 전이 |
+| **작성·구현 작업** | Stage 1 workpack 문서, Stage 2 백엔드, Stage 4 프론트엔드 |
+| **독립 검토 작업** | internal 1.5, Stage 3, Stage 5, final authority, Stage 6 |
 
 ---
 
@@ -22,14 +26,14 @@
 |---------------|-----------|-------------------|--------------------|----------------------|-------------|
 | `product-backend` | Route Handler, 상태 전이, 권한, schema | `pnpm install --frozen-lockfile && pnpm verify:backend`, 브랜치/커밋 규칙, 실제 동작 확인 | security reviewer 추가 점검 | Design / Accessibility (UI 변경 없음 근거 필요) | Draft → required checks green → Ready for Review → 전체 PR checks green 후 merge |
 | `product-frontend` | 화면 구현, 상태 UI, 로그인 게이트, UX 흐름 | PR 빠른 게이트: `pnpm install --frozen-lockfile && pnpm verify:frontend:pr`, Ready/merge 전 전체 게이트: `pnpm verify:frontend`, 실제 동작 확인 | Stage 5 디자인 리뷰, `product-design-authority`(new-screen / high-risk / anchor extension), performance reviewer, high-risk UI의 exploratory QA | Security / Performance / Design 항목 중 무영향 영역은 근거와 함께 `N/A` 가능 | Draft → 빠른 required checks green → Ready for Review → 전체 PR checks green 후 merge |
-| `docs-governance` | `AGENTS.md`, `CLAUDE.md`, `docs/engineering/*.md`, PR 템플릿 | 문서 정합성 검토, 관련 unit test 또는 validation script, 필요한 경우만 targeted test | `agent-plan-loop`, `agent-review-loop`, human governance review | Test/E2E, Security, Performance, Design은 `N/A` + 근거 허용 | 필요 시 Draft 생략 가능, 단 merge 전 리뷰 기록 필요 |
+| `docs-governance` | `AGENTS.md`, `docs/engineering/*.md`, PR 템플릿 | 문서 정합성 검토, 관련 unit test 또는 validation script, 필요한 경우만 targeted test | 독립 Codex plan/review 작업, human governance review | Test/E2E, Security, Performance, Design은 `N/A` + 근거 허용 | 필요 시 Draft 생략 가능, 단 merge 전 리뷰 기록 필요 |
 | `contract-evolution` | 사용자 승인 기반 공식 요구사항/화면/API/DB/Flow 계약 변경, `CURRENT_SOURCE_OF_TRUTH` 갱신, 관련 workpack 재잠금 | 명시적 사용자 승인 기록, 공식 문서·버전 경로 동기화, `CURRENT_SOURCE_OF_TRUTH` sync, 영향 범위 정리, 관련 workpack/acceptance sync, 필요한 최소 validation | `agent-plan-loop`, `agent-review-loop`, human governance review | docs-only PR이면 Test/E2E, Security, Performance, Design은 `N/A` + 근거 허용 | 별도 docs PR merge → 이후 product slice 재개 |
 | `low-risk docs/config` | 오탈자 수정, 주석/설명 보강, 위험도 낮은 config 정리 | 변경 파일 확인, 필요한 최소 validation | 추가 리뷰 선택 | 영향 없는 항목은 `N/A` + 근거 허용 | 작은 PR 허용, 단 PR 본문 근거 기록 |
 
 ### Change Type Rules
 
 - `product-backend`와 `product-frontend`는 product slice 절차를 따른다.
-- `product-backend` Stage 2를 작은 PR 여러 개로 분할할 수 있다. 각 Ready PR은 base 대비 checked 또는 유효한 reviewer waiver로 새로 닫은 Stage 2 checklist 항목을 최소 1개 포함하고, 남은 항목은 후속 PR을 위해 미체크로 유지한다. 전체 non-manual checklist 완료는 최종 merged closeout에서만 강제한다.
+- `product-backend` Stage 2를 작은 PR 여러 개로 분할할 수 있다. 각 Ready PR은 base 대비 checked로 새로 닫은 Stage 2 checklist 항목을 최소 1개 포함하고, 남은 항목은 후속 PR을 위해 미체크로 유지한다. 신규 GPT-only 실행은 reviewer waiver를 만들지 않으며, 전체 non-manual checklist 완료는 최종 merged closeout에서만 강제한다.
 - `product-frontend`에서 신규 화면, high-risk UI change, anchor extension은 `docs/engineering/product-design-authority.md` 기준 authority review를 optional이 아니라 사실상 required review로 취급한다.
 - Baemin prototype 적용 product-frontend는 `ui/designs/BAEMIN_STYLE_DIRECTION.md`의 classification vocabulary를 따른다. slice 13-19 화면은 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`의 screen/surface-level matrix를 먼저 확인한다.
 - `frontend.design_authority.generator_artifact`와 `critic_artifact`는 generic nullable fields다. string path는 required/reused artifact, `null`은 intentionally not applicable을 뜻한다.
@@ -70,27 +74,23 @@
 
 ## Loop Usage Rules
 
-- 계획 합의가 중요한 작업은 `docs/engineering/agent-plan-loop.md`의 `Codex-Claude plan loop`를 권장한다.
+- 계획 합의가 중요한 작업은 `docs/engineering/agent-plan-loop.md`의 독립 Codex 작업 plan loop를 권장한다.
   - 새 슬라이스 시작 전 계획 합의, 여러 governing doc이 얽힌 engineering 변경, open question이 남은 docs-governance에 특히 유효하다.
   - low-risk docs/config 정리나 단순 기록 보강은 생략 가능하다.
 - 공식 문서에 없는 더 나은 계약이 보여도 plan에 기정사실로 넣지 않는다.
   - `user approval required` unresolved question으로 남기고 `contract-evolution` 경로로 에스컬레이션한다.
-- `docs/engineering/agent-review-loop.md`의 generic `Codex-Claude review loop`는 product slice 기본 public stage 엔진이 아니다.
+- `docs/engineering/agent-review-loop.md`의 generic 독립 Codex 작업 review loop는 product slice 기본 public stage 엔진이 아니다.
   - Stage 1은 예외가 아니라 supervisor 기본 경로 안의 `internal 1.5 docs gate`를 mandatory로 사용한다.
   - generic review loop는 docs-governance, infra-governance, workflow/tooling 변경, exceptional recovery에서 권장한다.
   - low-risk docs/config, reviewer가 즉시 판단 가능한 작은 변경은 생략 가능하다.
 - product slice의 stage 시작 조건, handoff, closeout 의무는 이 문서가 아니라 `docs/engineering/slice-workflow.md`가 단일 소스다.
 
-## Claude public stage 흐름
+## Codex 새 작업 public stage 흐름
 
-- `workpacks/<slice>/README.md`를 확인한 뒤 `Stage 1 문서 작성`, `internal 1.5 docs gate repair / final owner 수행`, `Stage 3 백엔드 리뷰 / Stage 4 프론트 구현 수행`을 맡는다.
-- authority-required slice면 `authority-required slice면 Stage 5 final_authority_gate 수행`까지 포함한다.
-- 상세 읽을 것, 산출물, handoff는 `docs/engineering/slice-workflow.md`를 따른다.
-
-## Codex review / closeout 흐름
-
-- `workpacks/<slice>/README.md + acceptance.md`를 확인한 뒤 `internal 1.5 docs gate review 수행`, `Stage 2 백엔드 구현 수행`, 필요 시 authority precheck를 맡는다.
-- public path에서는 `Stage 5 public 디자인 리뷰와 Stage 6 FE PR 리뷰 / closeout 수행`을 담당한다.
+- 조정 작업은 `workpacks/<slice>/README.md + acceptance.md`와 이전 Stage evidence를 확인한다.
+- Stage마다 `docs/engineering/codex-task-handoff.md`의 역할표에 맞는 새 Codex 작업을 열고, branch/commit/PR/evidence를 handoff한다.
+- Stage 1/2/4 작성·구현 작업은 자기 변경을 승인하지 않는다.
+- internal 1.5, Stage 3/5/6, final authority는 검토 대상 작업과 다른 task ID를 사용한다.
 - 상세 읽을 것, 산출물, closeout 의무는 `docs/engineering/slice-workflow.md`를 따른다.
 
 ---

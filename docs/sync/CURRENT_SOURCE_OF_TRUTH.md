@@ -12,6 +12,14 @@
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Workflow Actor Governance Note `2026-07-30`
+
+- Claude는 신규·재개 작업에 사용하지 않는다.
+- 기존 Claude 담당 Stage는 `docs/engineering/codex-task-handoff.md`에 따라 역할이 분리된 별도 Codex 작업이 수행한다.
+- 작성·구현 작업은 자기 변경을 최종 승인하지 않으며, 독립 검토 작업은 다른 task ID와 검토 commit SHA를 evidence로 남긴다.
+- 아래 addendum과 과거 공식 버전의 Claude 표기는 당시 승인·작성·실행 이력을 보존하는 역사적 기록이다. 현재 actor 지시나 Claude 호출 권한으로 해석하지 않는다.
+- 이 변경은 workflow governance 전환이며 요구사항, 화면, 유저 flow, API, DB 제품 계약은 바꾸지 않는다.
 - 아래 contract-evolution 표의 버전은 해당 변경을 처음 도입한 역사적 파일을 기록한다. 현재 공식본은 항상 위 `Official Files` 목록을 따른다.
 
 ## Local-First MacBook Initial Deployment Contract-Evolution `2026-07-29`

@@ -2,7 +2,7 @@
 
 > User-approved brand token value slice. This is not a broad visual retrofit.
 > Dependencies: `h6-baemin-style-direction` (merged), `baemin-style-tokens-additive` (merged).
-> Stage 2/3 are N/A (no backend). Implementation is Stage 4 (Claude). Review is Stage 5/6 (Codex).
+> Stage 2/3 are N/A (no backend). Implementation is a Codex `frontend-implementer` Stage 4 task. Review is performed by separate Codex Stage 5/6 tasks.
 
 ## Goal
 
@@ -19,10 +19,10 @@ Change the three brand token values (`--brand`, `--brand-deep`, `--brand-soft`) 
 
 | Stage | Name | Owner | Status |
 | --- | --- | --- | --- |
-| 1 | Workpack README + acceptance | **Claude** | this workpack |
+| 1 | Workpack README + acceptance | **Codex `stage1-docs-author` 새 작업** | this workpack |
 | 2 | Backend implementation | N/A | no backend in this slice |
 | 3 | Backend PR review | N/A | no backend in this slice |
-| 4 | Frontend implementation | **Claude** | CSS value changes + design-tokens.md update |
+| 4 | Frontend implementation | **Codex `frontend-implementer` 새 작업** | CSS value changes + design-tokens.md update |
 | 5 | Design review | **Codex** | visual diff check on brand-colored states |
 | 6 | Frontend PR review / closeout | **Codex** | final review and merge |
 

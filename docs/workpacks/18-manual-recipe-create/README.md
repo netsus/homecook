@@ -216,13 +216,13 @@
   - `ui/designs/evidence/18-manual-recipe-create/MANUAL_RECIPE_CREATE-mobile-narrow.png`
   - `ui/designs/evidence/18-manual-recipe-create/MANUAL_RECIPE_CREATE-mobile-scrolled.png`
 - Authority status: `reviewed`
-- Authority planning: `authority_precheck=conditional-pass`, Claude final authority gate `pass`
+- Authority planning: `authority_precheck=conditional-pass`; historical Claude final authority gate `pass`
 - Authority report: `ui/designs/authority/MANUAL_RECIPE_CREATE-authority.md`
 - Notes:
   - h8 matrix에 따라 `MANUAL_RECIPE_CREATE`는 `prototype-derived design`으로 분류
   - Baemin vocabulary/material/tokens 사용, near-100% parity 타겟 아님
   - prototype-only 요소(bottom tab 동작, Jua 폰트, unsupported 기능) 불포함
-  - 새 화면이므로 Stage 4 screenshot evidence + Claude final authority gate 필요
+  - 새 화면이므로 Stage 4 screenshot evidence + 별도 Codex `product-design-authority` 작업 필요
   - new screen requires authority evidence per workflow
 
 ## Design Status

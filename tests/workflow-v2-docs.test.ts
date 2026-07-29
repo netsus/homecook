@@ -106,11 +106,11 @@ describe("workflow v2 docs", () => {
     expect(results.every((result) => result.errors.length === 0)).toBe(true);
   });
 
-  it("keeps repo-local Claude agent descriptions aligned with current stage ownership", () => {
+  it("keeps repo-local independent Codex agent descriptions aligned", () => {
     const opencodeConfig = readJson("opencode.json");
     const ohMyOpencodeConfig = readJson(".opencode/oh-my-opencode.json");
     const expectedDescription =
-      "Homecook Claude primary actor for Stage 1/3/4 and authority-required final authority gate session-orchestrated work.";
+      "Homecook independent Codex stage reviewer for task-separated review and final authority work.";
 
     expect((opencodeConfig.agent as Record<string, Record<string, unknown>>).athena.description).toBe(
       expectedDescription,
@@ -141,29 +141,22 @@ describe("workflow v2 docs", () => {
 
     expect(agents).toContain("## Language Policy");
     expect(agents).toContain("사용자-facing 응답은 특별한 요청이 없는 한 항상 한국어로 작성한다.");
-    expect(sliceWorkflow).toContain("**Codex**가 1·3·4단계를 요청받으면:");
-    expect(sliceWorkflow).toContain("Codex는 Stage 4 internal subphase인 authority_precheck만 담당합니다.");
-    expect(overview).toContain("## Claude public stage 흐름");
-    expect(overview).toContain("## Codex review / closeout 흐름");
-    expect(workflowReadme).toContain("public code stage 실행이 필요할 때 `--mode execute`를 사용한다.");
+    expect(sliceWorkflow).toContain("**Codex `frontend-implementer` 새 작업**");
+    expect(sliceWorkflow).toContain("같은 작업의 서브에이전트는 독립 Stage 작업을 대신하지 않는다.");
+    expect(overview).toContain("## Codex 새 작업 public stage 흐름");
+    expect(overview).toContain("Claude는 더 이상 사용하지 않는다.");
+    expect(workflowReadme).toContain("## 현재 사용 가능한 OMO 범위");
     expect(workflowReadme).toContain("`pnpm omo:replay:update`");
-    expect(workflowReadme).not.toContain("Codex stage에 한해 `--mode execute`를 사용한다.");
     expect(workflowReadme).toContain(
-      "manual handoff는 `high-risk` / `anchor-extension` / `exceptional recovery`에 한정된 예외 경로다.",
+      "새 Codex 작업 handoff는 모든 product Stage의 기본 경로다.",
     );
-    expect(workflowReadme).toContain("provider wait와 budget issue는 기본적으로 `pause + scheduled resume`를 사용한다.");
     expect(workflowReadme).toContain(
       "live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
     );
-    expect(workflowReadme).toContain(
-      "scheduler standard는 team-shared default를 `macOS launchd`로 고정하고, non-macOS 환경은 `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending` fallback으로 다룬다.",
-    );
-    expect(workflowReadme).toContain(
-      "macOS에서는 `omo:supervise`, `omo:start`, `omo:continue`가 execute mode에서 work item launchd scheduler를 자동 bootstrap/refresh한다.",
-    );
+    expect(workflowReadme).toContain("legacy scheduler/tick은 신규 Stage actor 실행에 사용하지 않는다.");
     expect(promotionReadiness).toContain("#### `manual-handoff-policy`");
     expect(promotionReadiness).toContain(
-      "manual handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.",
+      "Codex 새 작업 handoff는 모든 product Stage의 기본 경로다.",
     );
     expect(promotionReadiness).toContain("#### `live-smoke-standard`");
     expect(promotionReadiness).toContain("#### `scheduler-standard`");
@@ -184,21 +177,11 @@ describe("workflow v2 docs", () => {
     expect(auditorResetRequirements).not.toContain(
       "현재 finding registry는 `H-CI-001`, `H-GOV-001`, `H-OMO-001` 세 개만 가진다.",
     );
-    expect(opencodeReadme).toContain("## Manual Handoff Standard");
-    expect(opencodeReadme).toContain("## Live Smoke Standard");
-    expect(opencodeReadme).toContain("## Scheduler Standard");
-    expect(opencodeReadme).toContain(
-      "execute mode kickoff 명령은 macOS에서 work item별 launchd scheduler를 자동 보장하고, `omo:scheduler:install`은 repair/custom cadence 용도로 남긴다.",
-    );
-    expect(opencodeReadme).toContain(
-      "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.",
-    );
-    expect(opencodeReadme).toContain(
-      "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
-    );
-    expect(claudeEntry).toContain("슬라이스 개발 1·3·4단계와 authority-required slice의 final authority gate 담당.");
-    expect(claudeEntry).toContain("2·5·6단계(Codex 담당)");
-    expect(claudeEntry).toContain("사용자-facing 응답은 특별한 요청이 없는 한 한국어로 작성한다.");
+    expect(opencodeReadme).toContain("## Allowed OMO Commands");
+    expect(opencodeReadme).toContain("## Suspended Commands");
+    expect(opencodeReadme).toContain("`provider=retired`, `bin=disabled`");
+    expect(claudeEntry).toContain("# Claude 진입점 폐기 안내");
+    expect(claudeEntry).toContain("Homecook은 Claude를 더 이상 사용하지 않는다.");
     expect(roadmap).toContain("| `in-progress` → `merged` | Stage 6 frontend closeout이 merge까지 반영된 시점 |");
     expect(template).toContain("Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과");
     expect(designConsultant).toContain("authority-required slice는 final authority gate까지 통과 후");

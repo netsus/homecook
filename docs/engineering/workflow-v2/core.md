@@ -7,7 +7,7 @@ v2는 `workflow core + project profile + preset + loops + verification`의 조�
 - `workflow core`: 어떤 프로젝트에도 공통으로 쓰는 개념과 상태
 - `project profile`: 프로젝트별 source of truth, 도메인 규칙, 기본 검증
 - `preset`: 작업 유형별 기본 경로
-- `loops`: Claude-Codex 수렴 규칙
+- `loops`: 서로 다른 Codex task ID 사이의 수렴 규칙
 - `verification`: 테스트, CI, smoke check
 
 ## Core Objects
@@ -82,9 +82,10 @@ v2는 `workflow core + project profile + preset + loops + verification`의 조�
 
 ## Ownership Model
 
-- `Claude`: 감독자, 비판적 리뷰어, 최종 승인 참여자
-- `Codex`: 주 구현자, 상태 갱신자, verification 실행자
-- `Workers`: 제한된 역할 수행자. bounded scope만 맡는다.
+- `Codex coordinator task`: Stage 순서, 새 작업 handoff, 상태, evidence 관리
+- `Codex author/implementer task`: 문서 또는 코드 작성
+- `Codex independent reviewer task`: 작성 작업과 다른 task ID로 비판적 리뷰와 승인
+- `Workers`: 제한된 보조 역할 수행자. bounded scope만 맡고 독립 Stage 승인을 대신하지 않는다.
 
 ### Single Writer Rule
 

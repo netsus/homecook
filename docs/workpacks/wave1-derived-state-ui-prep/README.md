@@ -2,7 +2,7 @@
 
 > Phase4 재진행 전 상태 UI 선행 정리 slice.
 > 이 작업은 fixed prototype reference가 직접 없는 `loading / skeleton / empty / error / unauthorized / not-found / submitting` 상태를 `prototype-derived design`으로 분류하고, 공통 규칙과 대표 적용 범위를 먼저 잠근다.
-> Public owner 기준으로는 Stage 1/4가 Claude 담당이지만, 이번 PR은 사용자 요청에 따른 Codex fallback으로 진행한다.
+> Stage 1/4 public owner는 각각 별도 Codex `stage1-docs-author`/`frontend-implementer` 작업이다. 이 PR의 과거 fallback 기록은 실행 이력으로만 보존한다.
 
 ## Goal
 
@@ -18,10 +18,10 @@ Wave1 Phase4 재포팅을 병렬로 시작하기 전에, fixed prototype에 직�
 
 | Stage | Name | Owner | Status |
 | --- | --- | --- | --- |
-| 1 | Workpack README + acceptance | Claude normally / Codex fallback in this PR | complete |
+| 1 | Workpack README + acceptance | Codex `stage1-docs-author` 새 작업 | complete |
 | 2 | Backend implementation | N/A | no backend |
 | 3 | Backend PR review | N/A | no backend |
-| 4 | Frontend shared state prep | Claude normally / Codex fallback in this PR | complete |
+| 4 | Frontend shared state prep | Codex `frontend-implementer` 새 작업 | complete |
 | 5 | Design review | Codex | passed |
 | 6 | Frontend PR review / closeout | Codex | passed |
 

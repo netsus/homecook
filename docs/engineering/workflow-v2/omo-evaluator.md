@@ -1,5 +1,7 @@
 # OMO Evaluator
 
+> 과거 Claude/Codex actor vocabulary는 artifact 호환용이다. 신규 평가는 작성 작업과 다른 task ID의 Codex 검토 작업이 수행한다.
+
 ## Status
 
 - 이 문서는 `omo:supervise`가 사용하는 machine-checkable evaluator contract를 고정한다.
@@ -128,7 +130,7 @@ code stage의 `stage-result.json`은 아래 추가 필드를 포함해야 한다
 
 1. doc gate는 “문서가 구현을 잠갔는가”를 판단한다.
 2. evaluator는 doc gate `pass` 이후의 Stage 2/4 implementation만 평가한다.
-3. docs gate는 `doc_gate_review(Codex) -> doc_gate_repair(Claude) -> doc_gate_recheck` 순서를 쓰고, merge 후 recheck `pass`가 있기 전까지 Stage 2 implementation을 열지 않는다.
+3. docs gate는 `independent Codex doc_gate_review -> Stage 1 author repair -> reviewer recheck` 순서를 쓰고, merge 후 recheck `pass`가 있기 전까지 Stage 2 implementation을 열지 않는다.
 
 ## Outcomes
 

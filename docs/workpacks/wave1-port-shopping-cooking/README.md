@@ -2,7 +2,7 @@
 
 > Slice D of Wave1 Service Porting Plan
 > Stage: 5/6 closeout
-> Owner: Claude (Stage 1), Codex (Stage 4 fallback, 5, 6)
+> Historical owner: Claude (Stage 1), Codex (Stage 4 fallback, 5, 6). 신규 Stage는 역할별 별도 Codex 작업이 맡는다.
 
 ## Goal
 
