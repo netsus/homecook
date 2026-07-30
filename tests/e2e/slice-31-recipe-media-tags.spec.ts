@@ -717,4 +717,168 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
     await expect(page.getByRole("link", { name: "다시 로그인" })).toBeVisible();
     expect(await page.evaluate(() => window.innerWidth)).toBe(viewport.width);
   });
+
+  test("hybrid-auth-local-data-production keeps a pending create attached across browser back", async ({
+    page,
+  }, testInfo) => {
+    const viewport = hybridViewport(testInfo.project.name);
+    await page.setViewportSize(viewport);
+    const imageMutations = observeImageMutations(page);
+    const cancelledObjectIds: string[] = [];
+    let createAttempts = 0;
+    let releaseCreate!: () => void;
+    const createMayFinish = new Promise<void>((resolve) => {
+      releaseCreate = resolve;
+    });
+
+    await setAuthOverride(page);
+    await installManualRoutes(page, { imageUploadMode: "managed" });
+    await page.route("**/api/v1/recipes/images/*/cancel", async (route) => {
+      cancelledObjectIds.push(
+        new URL(route.request().url()).pathname.split("/").at(-2) ?? "",
+      );
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            image_object_id: cancelledObjectIds.at(-1),
+            state: "cleanup_pending",
+          },
+          error: null,
+        },
+      });
+    });
+    await page.route("**/api/v1/recipes", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      createAttempts += 1;
+      await createMayFinish;
+      await route.fulfill({
+        status: 201,
+        json: {
+          success: true,
+          data: {
+            id: "recipe-31-back-guarded",
+            title: "뒤로가기 보호 김치찌개",
+            source_type: "manual",
+            created_by: "user-1",
+            base_servings: 2,
+          },
+          error: null,
+        },
+      });
+    });
+
+    await page.goto("/about");
+    await page.goto("/menu/add/manual");
+    await stabilize(page);
+    await page
+      .getByTestId("manual-image-file-input")
+      .setInputFiles(hybridImageFile("pending-back.png"));
+    await fillRequiredManualRecipeFields(page, "뒤로가기 보호 김치찌개");
+    await page.getByRole("button", { name: "저장" }).click();
+    await expect.poll(() => createAttempts).toBe(1);
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/menu\/add\/manual$/);
+    await expect(page.getByLabel("요리 이름")).toHaveValue(
+      "뒤로가기 보호 김치찌개",
+    );
+    expect(cancelledObjectIds).toEqual([]);
+    expect(createAttempts).toBe(1);
+
+    releaseCreate();
+    await expect(page.getByText("레시피 등록 완료")).toBeVisible();
+    expect(cancelledObjectIds).toEqual([]);
+    expect(createAttempts).toBe(1);
+    expect(imageMutations.directStorage).toEqual([]);
+    expect(imageMutations.serverImageApi).toEqual([
+      "POST /api/v1/recipes/images",
+    ]);
+  });
+
+  test("hybrid-auth-local-data-production keeps a pending create attached when reload is dismissed", async ({
+    page,
+  }, testInfo) => {
+    const viewport = hybridViewport(testInfo.project.name);
+    await page.setViewportSize(viewport);
+    const imageMutations = observeImageMutations(page);
+    const cancelledObjectIds: string[] = [];
+    let createAttempts = 0;
+    let reloadDialogSeen = false;
+    let releaseCreate!: () => void;
+    const createMayFinish = new Promise<void>((resolve) => {
+      releaseCreate = resolve;
+    });
+
+    await setAuthOverride(page);
+    await installManualRoutes(page, { imageUploadMode: "managed" });
+    await page.route("**/api/v1/recipes/images/*/cancel", async (route) => {
+      cancelledObjectIds.push(
+        new URL(route.request().url()).pathname.split("/").at(-2) ?? "",
+      );
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            image_object_id: cancelledObjectIds.at(-1),
+            state: "cleanup_pending",
+          },
+          error: null,
+        },
+      });
+    });
+    await page.route("**/api/v1/recipes", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      createAttempts += 1;
+      await createMayFinish;
+      await route.fulfill({
+        status: 201,
+        json: {
+          success: true,
+          data: {
+            id: "recipe-31-reload-guarded",
+            title: "새로고침 보호 김치찌개",
+            source_type: "manual",
+            created_by: "user-1",
+            base_servings: 2,
+          },
+          error: null,
+        },
+      });
+    });
+    page.on("dialog", async (dialog) => {
+      reloadDialogSeen = dialog.type() === "beforeunload";
+      await dialog.dismiss();
+    });
+
+    await page.goto("/menu/add/manual");
+    await stabilize(page);
+    await page
+      .getByTestId("manual-image-file-input")
+      .setInputFiles(hybridImageFile("pending-reload.png"));
+    await fillRequiredManualRecipeFields(page, "새로고침 보호 김치찌개");
+    await page.getByRole("button", { name: "저장" }).click();
+    await expect.poll(() => createAttempts).toBe(1);
+
+    await page.reload({ timeout: 2_000 }).catch(() => null);
+    await expect.poll(() => reloadDialogSeen).toBe(true);
+    await expect(page).toHaveURL(/\/menu\/add\/manual$/);
+    expect(cancelledObjectIds).toEqual([]);
+    expect(createAttempts).toBe(1);
+
+    releaseCreate();
+    await expect(page.getByText("레시피 등록 완료")).toBeVisible();
+    expect(cancelledObjectIds).toEqual([]);
+    expect(createAttempts).toBe(1);
+    expect(imageMutations.directStorage).toEqual([]);
+    expect(imageMutations.serverImageApi).toEqual([
+      "POST /api/v1/recipes/images",
+    ]);
+  });
 });

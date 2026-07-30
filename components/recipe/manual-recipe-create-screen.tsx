@@ -674,6 +674,7 @@ export function ManualRecipeCreateScreen({
   const [steps, setSteps] = useState<TempStep[]>([]);
   const [modalMode, setModalMode] = useState<ModalMode>("none");
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreateOutcomeUnknown, setIsCreateOutcomeUnknown] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [createdRecipeId, setCreatedRecipeId] = useState<string | null>(null);
@@ -706,6 +707,15 @@ export function ManualRecipeCreateScreen({
   const processedUploadFileRef = useRef<File | null>(null);
   const isManagedReadUrlRefreshRetryRef = useRef(false);
   const uploadedImageRef = useRef<UploadedRecipeImage | null>(null);
+  const createOwnedImageRef = useRef<{
+    image: UploadedRecipeImage;
+    saveOperationId: number;
+    state: "in-flight" | "unknown";
+  } | null>(null);
+  const createRequestInFlightRef = useRef(false);
+  const createOutcomeUnknownRef = useRef(false);
+  const historyGuardArmedRef = useRef(false);
+  const historyGuardBypassRef = useRef(false);
   const isMountedRef = useRef(true);
 
   // API data states
@@ -737,9 +747,14 @@ export function ManualRecipeCreateScreen({
     steps,
   });
   const canSave = saveRequirements.length === 0;
+  const isImageLifecycleLocked = isSaving || isCreateOutcomeUnknown;
 
   const handleBack = useCallback(() => {
-    if (isSavingRef.current) {
+    if (
+      isSavingRef.current
+      || createOwnedImageRef.current
+      || createOutcomeUnknownRef.current
+    ) {
       return;
     }
 
@@ -837,14 +852,82 @@ export function ManualRecipeCreateScreen({
       });
   }, []);
 
+  const armCreateNavigationGuard = useCallback(() => {
+    createRequestInFlightRef.current = true;
+    if (historyGuardArmedRef.current) {
+      return;
+    }
+
+    historyGuardArmedRef.current = true;
+    window.history.pushState(
+      {
+        ...window.history.state,
+        __homecookManualCreateGuard: true,
+      },
+      "",
+      window.location.href,
+    );
+  }, []);
+
+  const releaseCreateNavigationGuard = useCallback(() => {
+    createRequestInFlightRef.current = false;
+    if (!historyGuardArmedRef.current) {
+      return;
+    }
+
+    historyGuardArmedRef.current = false;
+    if (isMountedRef.current) {
+      historyGuardBypassRef.current = true;
+      window.history.back();
+    }
+  }, []);
+
   useEffect(() => {
     isMountedRef.current = true;
 
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!createRequestInFlightRef.current) {
+        return;
+      }
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    const handlePopState = () => {
+      if (historyGuardBypassRef.current) {
+        historyGuardBypassRef.current = false;
+        return;
+      }
+      if (!createRequestInFlightRef.current) {
+        return;
+      }
+      window.history.pushState(
+        {
+          ...window.history.state,
+          __homecookManualCreateGuard: true,
+        },
+        "",
+        window.location.href,
+      );
+      historyGuardArmedRef.current = true;
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("popstate", handlePopState);
+
     return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopState);
       isMountedRef.current = false;
       imageOperationVersionRef.current += 1;
       saveOperationIdRef.current += 1;
-      cancelManagedUpload(uploadedImageRef.current);
+      const currentImage = uploadedImageRef.current;
+      const createOwnedImage = createOwnedImageRef.current?.image;
+      if (
+        !currentImage
+        || currentImage.image_object_id !== createOwnedImage?.image_object_id
+      ) {
+        cancelManagedUpload(currentImage);
+      }
     };
   }, [cancelManagedUpload]);
 
@@ -1060,7 +1143,12 @@ export function ManualRecipeCreateScreen({
 
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || isSavingRef.current) {
+    if (
+      !file
+      || isSavingRef.current
+      || createOwnedImageRef.current
+      || createOutcomeUnknownRef.current
+    ) {
       return;
     }
     e.target.value = "";
@@ -1071,7 +1159,11 @@ export function ManualRecipeCreateScreen({
   }, [doUpload, startImageOperation]);
 
   const handleImageRetry = useCallback(() => {
-    if (isSavingRef.current) return;
+    if (
+      isSavingRef.current
+      || createOwnedImageRef.current
+      || createOutcomeUnknownRef.current
+    ) return;
     if (isManagedReadUrlRefreshRetryRef.current) {
       const expectedImage = uploadedImageRef.current;
       const operationVersion = imageOperationVersionRef.current;
@@ -1103,7 +1195,11 @@ export function ManualRecipeCreateScreen({
   ]);
 
   const handleImageRemove = useCallback(() => {
-    if (isSavingRef.current) return;
+    if (
+      isSavingRef.current
+      || createOwnedImageRef.current
+      || createOutcomeUnknownRef.current
+    ) return;
     startImageOperation();
     uploadRequestIdRef.current += 1;
     const currentImage = uploadedImageRef.current;
@@ -1123,7 +1219,11 @@ export function ManualRecipeCreateScreen({
   }, [cancelManagedUpload, imagePreviewUrl, revokePreviewUrl, startImageOperation]);
 
   const handleImageReplace = useCallback(() => {
-    if (isSavingRef.current) return;
+    if (
+      isSavingRef.current
+      || createOwnedImageRef.current
+      || createOutcomeUnknownRef.current
+    ) return;
     imageInputRef.current?.click();
   }, []);
 
@@ -1220,7 +1320,12 @@ export function ManualRecipeCreateScreen({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (isUploading || isSavingRef.current) {
+    if (
+      isUploading
+      || isSavingRef.current
+      || createOwnedImageRef.current
+      || createOutcomeUnknownRef.current
+    ) {
       return;
     }
 
@@ -1280,6 +1385,14 @@ export function ManualRecipeCreateScreen({
     const imagePayload = activeImage
       ? { image_object_id: activeImage.image_object_id }
       : {};
+    if (activeImage) {
+      createOwnedImageRef.current = {
+        image: activeImage,
+        saveOperationId,
+        state: "in-flight",
+      };
+    }
+    armCreateNavigationGuard();
     const response = await createManualRecipe({
       title: title.trim(),
       base_servings: baseServings,
@@ -1306,14 +1419,60 @@ export function ManualRecipeCreateScreen({
       })),
     });
 
-    if (
+    const createOwnership = createOwnedImageRef.current;
+    const ownsSaveImage = Boolean(
+      activeImage
+      && createOwnership
+      && createOwnership.saveOperationId === saveOperationId
+      && createOwnership.image.image_object_id === activeImage.image_object_id,
+    );
+    const createSucceeded = Boolean(response?.success && response.data);
+    const createOutcomeUnknown = Boolean(
+      !response
+      || (
+        !response.success
+        && (
+          response.error?.code === "NETWORK_ERROR"
+          || response.error?.code === "INVALID_RESPONSE"
+        )
+      ),
+    );
+    const createFailedDefinitively = Boolean(
+      response
+      && !response.success
+      && !createOutcomeUnknown,
+    );
+
+    if (ownsSaveImage) {
+      if (createSucceeded) {
+        createOwnedImageRef.current = null;
+      } else if (createOutcomeUnknown && createOwnership) {
+        createOwnership.state = "unknown";
+      } else if (createFailedDefinitively) {
+        createOwnedImageRef.current = null;
+      }
+    }
+
+    createOutcomeUnknownRef.current = createOutcomeUnknown;
+    if (isMountedRef.current) {
+      setIsCreateOutcomeUnknown(createOutcomeUnknown);
+    }
+    releaseCreateNavigationGuard();
+
+    const saveCompletionIsStale = (
       !isMountedRef.current
       || saveOperationId !== saveOperationIdRef.current
       || imageOperationVersionRef.current !== saveImageToken
       || uploadedImageRef.current?.image_object_id
         !== activeImage?.image_object_id
-    ) {
-      cancelManagedUpload(uploadedImageRef.current);
+    );
+    if (saveCompletionIsStale) {
+      if (createSucceeded && response?.data) {
+        router.replace(`/recipe/${response.data.id}`);
+      } else if (createFailedDefinitively && activeImage) {
+        uploadedImageRef.current = null;
+        cancelManagedUpload(activeImage);
+      }
       isSavingRef.current = false;
       return;
     }
@@ -1355,6 +1514,7 @@ export function ManualRecipeCreateScreen({
     isSavingRef.current = false;
     setIsSaving(false);
   }, [
+    armCreateNavigationGuard,
     isUploading,
     canSave,
     title,
@@ -1365,6 +1525,8 @@ export function ManualRecipeCreateScreen({
     steps,
     cancelManagedUpload,
     refreshManagedReadUrlIfExpired,
+    releaseCreateNavigationGuard,
+    router,
   ]);
 
   const handleMealAdd = useCallback(() => {
@@ -1457,14 +1619,14 @@ export function ManualRecipeCreateScreen({
           accept="image/jpeg,image/png,image/webp"
           className="hidden"
           data-testid="manual-image-file-input"
-          disabled={isSaving}
+          disabled={isImageLifecycleLocked}
           onChange={handleImageSelect}
         />
         {imageStatus === "idle" ? (
           <WebButton
             className="web-manual-add-button"
             data-testid="manual-image-choose-button"
-            disabled={isSaving}
+            disabled={isImageLifecycleLocked}
             onClick={() => imageInputRef.current?.click()}
             variant="secondary"
           >
@@ -1498,7 +1660,7 @@ export function ManualRecipeCreateScreen({
               <div style={{ display: "flex", gap: "8px" }}>
                 <WebButton
                   data-testid="manual-image-replace-button"
-                  disabled={isSaving}
+                  disabled={isImageLifecycleLocked}
                   onClick={handleImageReplace}
                   variant="secondary"
                 >
@@ -1506,7 +1668,7 @@ export function ManualRecipeCreateScreen({
                 </WebButton>
                 <WebButton
                   data-testid="manual-image-remove-button"
-                  disabled={isSaving}
+                  disabled={isImageLifecycleLocked}
                   onClick={handleImageRemove}
                   variant="secondary"
                 >
@@ -1524,14 +1686,14 @@ export function ManualRecipeCreateScreen({
             <div style={{ display: "flex", gap: "8px" }}>
               <WebButton
                 data-testid="manual-image-retry-button"
-                disabled={isSaving}
+                disabled={isImageLifecycleLocked}
                 onClick={handleImageRetry}
               >
                 다시 시도
               </WebButton>
               <WebButton
                 data-testid="manual-image-remove-button"
-                disabled={isSaving}
+                disabled={isImageLifecycleLocked}
                 onClick={handleImageRemove}
                 variant="secondary"
               >
@@ -1613,7 +1775,7 @@ export function ManualRecipeCreateScreen({
     <div className="web-manual-footer">
       <WebButton
         className="web-manual-save-button"
-        disabled={isSaving || isUploading}
+        disabled={isImageLifecycleLocked || isUploading}
         fullWidth
         onClick={handleSave}
         size="lg"
@@ -1676,7 +1838,7 @@ export function ManualRecipeCreateScreen({
           <nav aria-label="직접 등록 경로" className="web-breadcrumb">
             <button
               className="web-breadcrumb-link"
-              disabled={isSaving}
+              disabled={isImageLifecycleLocked}
               onClick={handleBack}
               type="button"
             >
@@ -1694,7 +1856,7 @@ export function ManualRecipeCreateScreen({
               <p>요리 이름, 재료, 만들기를 입력해 저장해요.</p>
             </div>
             <div className="web-manual-actions">
-              <WebButton disabled={isSaving} onClick={handleBack} variant="secondary">
+              <WebButton disabled={isImageLifecycleLocked} onClick={handleBack} variant="secondary">
                 취소
               </WebButton>
             </div>
@@ -1717,7 +1879,7 @@ export function ManualRecipeCreateScreen({
         onBack={handleBack}
         onSave={handleSave}
         isSaving={isSaving}
-        isUploading={isUploading}
+        isUploading={isUploading || isCreateOutcomeUnknown}
       />
       <div className="min-h-0 flex-1 scroll-pb-[96px] overflow-y-auto pb-[88px] md:px-4 md:pb-6 md:scroll-pb-6">
         <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
@@ -1780,14 +1942,14 @@ export function ManualRecipeCreateScreen({
               accept="image/jpeg,image/png,image/webp"
               className="hidden"
               data-testid="manual-image-file-input"
-              disabled={isSaving}
+              disabled={isImageLifecycleLocked}
               onChange={handleImageSelect}
             />
             {imageStatus === "idle" ? (
               <button
                 className="flex h-[100px] w-full items-center justify-center rounded-[var(--radius-card)] border border-dashed border-[var(--line-strong)] bg-[var(--surface-fill)] text-[13px] text-[var(--text-3)]"
                 data-testid="manual-image-choose-button"
-                disabled={isSaving}
+                disabled={isImageLifecycleLocked}
                 onClick={() => imageInputRef.current?.click()}
                 type="button"
               >
@@ -1821,7 +1983,7 @@ export function ManualRecipeCreateScreen({
                     <button
                       className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
                       data-testid="manual-image-replace-button"
-                      disabled={isSaving}
+                      disabled={isImageLifecycleLocked}
                       onClick={handleImageReplace}
                       type="button"
                     >
@@ -1830,7 +1992,7 @@ export function ManualRecipeCreateScreen({
                     <button
                       className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
                       data-testid="manual-image-remove-button"
-                      disabled={isSaving}
+                      disabled={isImageLifecycleLocked}
                       onClick={handleImageRemove}
                       type="button"
                     >
@@ -1853,7 +2015,7 @@ export function ManualRecipeCreateScreen({
                   <button
                     className="flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] py-2 text-[13px] font-semibold text-[var(--text-inverse)]"
                     data-testid="manual-image-retry-button"
-                    disabled={isSaving}
+                    disabled={isImageLifecycleLocked}
                     onClick={handleImageRetry}
                     type="button"
                   >
@@ -1862,7 +2024,7 @@ export function ManualRecipeCreateScreen({
                   <button
                     className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
                     data-testid="manual-image-remove-button"
-                    disabled={isSaving}
+                    disabled={isImageLifecycleLocked}
                     onClick={handleImageRemove}
                     type="button"
                   >
