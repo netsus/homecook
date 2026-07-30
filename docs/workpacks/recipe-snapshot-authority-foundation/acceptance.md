@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> PR #1218 Stage 2 and PR #1219 Stage 4 evidence are historical implementation evidence. PR #1220 reopened the lifecycle because deployment verification remained missing. PR #1232 merged the hybrid verifier, and PR #1233 merged the Stage 2 regression delta as `4a7718ee6bac66fb39b5163742783ac2092e5b5c`. The clean master dry-run passed at exact SHA `da054a96afb7c6108a7007bfafbf3d328ef47656`. Full local/remote evidence remains pending, so the unchecked compatibility-release, real sanitized remote Auth/local Storage, full actual-DB cleanup rehearsal and production gates remain unclaimed.
+> PR #1218 Stage 2 and PR #1219 Stage 4 evidence are historical implementation evidence. PR #1220 reopened the lifecycle because deployment verification remained missing. PR #1232 merged the hybrid verifier, PR #1233 merged the Stage 2 regression delta as `4a7718ee6bac66fb39b5163742783ac2092e5b5c`, and PR #1251 merged historical merged-SHA verifier hardening as `94ae1a2077d63974c73a506add7b6647bf69d6d0` from exact head `75d09a37f6341772c77e27a12a59730b7ef7914e` after 14 success and 10 intended skips. Both clean master dry-runs passed at exact SHA `94ae1a2077d63974c73a506add7b6647bf69d6d0`. Full local/remote evidence remains pending, so the unchecked compatibility-release, real sanitized remote Auth/local Storage, full actual-DB cleanup rehearsal and production gates remain unclaimed.
 
 ## Snapshot Authority
 

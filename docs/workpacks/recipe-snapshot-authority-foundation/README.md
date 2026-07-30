@@ -11,6 +11,7 @@ mutable recipe current가 바뀌어도 기존 Meal·요리 세션·batch·식사
 - Stage 1 docs: `docs/recipe-snapshot-authority-foundation`
 - Stage 2 hybrid verifier delta: `fix/recipe-snapshot-hybrid-verifier` (PR #1232 merged)
 - Stage 2 hybrid regression evidence: `fix/recipe-snapshot-stage2-regression-evidence` (PR #1233 merged)
+- Stage 2 verifier reproducibility hardening: `fix/recipe-snapshot-verifier-historical-sha` (PR #1251 merged)
 - Stage 4 existing-consumer compatibility: `feature/fe-recipe-snapshot-authority-foundation`
 - Release train: B. #3 runtime과 기존 recipe nutrition snapshot release는 모두 병합됐다. 이 relock은 이미 병합된 #4 Stage 2/4 구현을 hybrid delta/reverification 기준으로 다시 검증하기 위한 문서 선행 작업이다.
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer와 five-axis reviewer는 서로 다른 Codex 세션을 사용하며 Claude는 사용하지 않는다.
@@ -176,6 +177,15 @@ Schema Change:
   compatibility-release observation window, a full actual-DB inbound-FK
   cleanup rehearsal, and successor/Train B dependencies remain required and
   are not claimed complete.
+- PR #1251 hardened clean historical merged-SHA verification against replace
+  refs, legacy grafts, malformed SHAs and repository/history redirect
+  environment variables. Exact head
+  `75d09a37f6341772c77e27a12a59730b7ef7914e` completed 24 current-head
+  checks with 14 success and 10 intended skips after independent
+  code/security/verifier P0/P1/P2 `0/0/0`, then squash-merged as
+  `94ae1a2077d63974c73a506add7b6647bf69d6d0`. Both clean master dry-runs
+  passed at that exact SHA in read-only mode with production/staging/remote
+  application writes 0. This does not close the full evidence gate.
 - Detailed evidence:
   `evidence/2026-07-30-stage2-hybrid-regression.md`.
 
