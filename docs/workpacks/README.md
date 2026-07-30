@@ -250,7 +250,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `prepared-food-search-relevance` | merged | 브랜드+제품명 통합 정규화, public/private 분리 index, typed relevance·정수 tuple cursor·IME 최신 요청 제어를 구현하고 287,041건 품질·성능 및 retained production read-only smoke를 통과했다. 원본 apply/concurrent-index provenance 미보존으로 canonical external-smoke projection은 pending Manual Only다. PR #1105 merge `19f25aae` |
 | `account-session-generation-foundation` | merged | JWT session-bound account generation, lifecycle watermark, DB cutover fence/Auth Hook/quarantine/outbox와 personal-writer inventory를 feature-off foundation으로 잠근다 |
 | `product-ingredient-link-foundation` | docs | 제품과 canonical ingredient의 검수 relation, RLS/admin promotion, pantry effective ingredient projection과 account-delete 결합 gate를 구현한다 |
-| `recipe-visibility-read-hardening` | in-progress | private personal recipe soft delete/public fork/tag visibility, quarantine visibility upper bound, generation-aware image registry·private storage·outbox를 먼저 잠근다 |
+| `recipe-visibility-read-hardening` | merged | private personal recipe soft delete/public fork/tag visibility, quarantine visibility upper bound, generation-aware image registry·private storage·outbox를 먼저 잠근다 |
 | `recipe-snapshot-authority-foundation` | docs | nutrition snapshot을 exact pin하는 content snapshot 단일 authority와 Meal expand→mirror→contract/null·rollback floor를 additive하게 구축한다 |
 | `personal-recipe-editor-decoupling` | docs | 공개 원본 불변 fork 및 owner-only 개인 레시피 편집 진입을 RECIPE_DETAIL 중심으로 분리하고 기존 MYPAGE/RECIPEBOOK 상세과의 소유권 충돌을 피한다 |
 | `personal-recipe-customization-write-core` | docs | 개인 레시피 create/PATCH/soft DELETE, owner→recipe lock, session generation과 idempotent single-RPC write를 구현한다 |
@@ -291,7 +291,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | F0 | B | `account-session-generation-foundation` | merged | contract gate; security hotfix merged and deployed |
 | 1 | A | `prepared-food-search-relevance` | merged | PR #1074/#1097/#1099/#1100/#1101/#1103/#1104/#1105/#1108 merged; retained production read-only subset and current-head gates passed; original apply provenance remains pending Manual Only |
 | 2 | B | `product-ingredient-link-foundation` | docs | F0 + #3 server-MacBook local-first joint account-delete activation gate |
-| 3 | B | `recipe-visibility-read-hardening` | in-progress | F0 local runtime; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
+| 3 | B | `recipe-visibility-read-hardening` | merged | F0 local runtime; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
 | 4 | B | `recipe-snapshot-authority-foundation` | docs | #3; existing recipe nutrition snapshot release merged |
 | 5 | C | `personal-recipe-editor-decoupling` | docs | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
 | 6 | C | `personal-recipe-customization-write-core` | docs | #2 + #3 + #4 + #5 |
