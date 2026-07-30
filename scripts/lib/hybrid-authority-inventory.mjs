@@ -481,15 +481,22 @@ function buildClientBindingSeeds(repoRoot, files) {
         flattened.push(descriptor ?? UNKNOWN);
       }
     }
-    const unique = new Map(
-      flattened.map((descriptor) => [
-        descriptorKey(descriptor),
-        descriptor,
-      ]),
-    );
-    return unique.size === 1
-      ? [...unique.values()][0]
-      : { kind: "union", values: [...unique.values()] };
+    const objectDescriptors = new Set();
+    const scalarDescriptors = new Map();
+    for (const descriptor of flattened) {
+      if (descriptor && typeof descriptor === "object") {
+        objectDescriptors.add(descriptor);
+      } else {
+        scalarDescriptors.set(descriptorKey(descriptor), descriptor);
+      }
+    }
+    const unique = [
+      ...objectDescriptors,
+      ...scalarDescriptors.values(),
+    ];
+    return unique.length === 1
+      ? unique[0]
+      : { kind: "union", values: unique };
   };
 
   const descriptorProperty = (descriptor, propertyName) => {
@@ -887,26 +894,82 @@ function buildClientBindingSeeds(repoRoot, files) {
       };
     }
     if (ts.isArrayLiteralExpression(expression)) {
-      const properties = {};
+      let possibleElements = [[]];
       let arrayUnknown = false;
-      for (let index = 0; index < expression.elements.length; index += 1) {
-        const element = expression.elements[index];
+      for (const element of expression.elements) {
         if (ts.isSpreadElement(element)) {
-          arrayUnknown = true;
-        } else {
-          properties[String(index)] = resolveExpression(
-            element,
+          const spread = resolveExpression(
+            element.expression,
             locals,
             summaries,
             record,
           );
+          const spreadValues = (
+            spread
+            && typeof spread === "object"
+            && spread.kind === "union"
+          ) ? spread.values : [spread];
+          // Preserve the nested descriptor identities of proven arrays.
+          // Unknown/non-array iterables keep the result tainted instead.
+          const spreadArrays = spreadValues.filter((value) => (
+            value
+            && typeof value === "object"
+            && value.kind === "object"
+            && value.array === true
+          ));
+          arrayUnknown ||= (
+            spreadArrays.length !== spreadValues.length
+            || spreadArrays.some((value) => value.unknown === true)
+          );
+          if (spreadArrays.length === 0) {
+            continue;
+          }
+          possibleElements = possibleElements.flatMap((prefix) => (
+            spreadArrays.map((spreadArray) => {
+              const numericEntries = Object.entries(spreadArray.properties)
+                .filter(([key]) => /^\d+$/.test(key))
+                .sort(([left], [right]) => Number(left) - Number(right));
+              if (
+                numericEntries.some(
+                  ([key], index) => Number(key) !== index,
+                )
+              ) {
+                arrayUnknown = true;
+                return prefix;
+              }
+              return [
+                ...prefix,
+                ...numericEntries.map(([, descriptor]) => descriptor),
+              ];
+            })
+          ));
+          continue;
         }
+        possibleElements = possibleElements.map((elements) => [
+          ...elements,
+          ts.isOmittedExpression(element)
+            ? UNKNOWN
+            : resolveExpression(
+                element,
+                locals,
+                summaries,
+                record,
+              ),
+        ]);
       }
-      return {
-        kind: "object",
-        properties,
-        ...(arrayUnknown ? { unknown: true } : {}),
-      };
+      return mergeDescriptors(
+        ...possibleElements.map((elements) => ({
+          array: true,
+          kind: "object",
+          properties: Object.fromEntries(
+            elements.map((descriptor, index) => [
+              String(index),
+              descriptor,
+            ]),
+          ),
+          ...(arrayUnknown ? { unknown: true } : {}),
+        })),
+      );
     }
     if (ts.isConditionalExpression(expression)) {
       return mergeDescriptors(
@@ -918,6 +981,31 @@ function buildClientBindingSeeds(repoRoot, files) {
         ),
         resolveExpression(
           expression.whenFalse,
+          locals,
+          summaries,
+          record,
+        ),
+      );
+    }
+    if (
+      ts.isBinaryExpression(expression)
+      && (
+        expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+        || expression.operatorToken.kind === ts.SyntaxKind.BarBarToken
+        || expression.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+      )
+    ) {
+      // The expression result can retain either operand's object identity.
+      // Identity-aware union members are later rewritten together on writes.
+      return mergeDescriptors(
+        resolveExpression(
+          expression.left,
+          locals,
+          summaries,
+          record,
+        ),
+        resolveExpression(
+          expression.right,
           locals,
           summaries,
           record,

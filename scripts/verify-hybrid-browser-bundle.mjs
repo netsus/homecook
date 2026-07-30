@@ -27,6 +27,7 @@ const BINDING_UNINITIALIZED = "uninitialized";
 const BINDING_UNKNOWN = "unknown";
 const VALUE_SET_LIMIT = 32;
 const EXCEPTION_OUTCOME_LIMIT = 64;
+const ARRAY_VALUE_OBJECTS = new WeakSet();
 const SDK_MUTATION_METHODS = new Set([
   "copy",
   "createSignedUploadUrl",
@@ -139,12 +140,16 @@ function valueFromDescriptor(descriptor) {
     && descriptor.kind === "object"
     && descriptor.properties
   ) {
-    return valueSet([new Map(
+    const composite = new Map(
       Object.entries(descriptor.properties).map(([name, value]) => [
         name,
         valueFromDescriptor(value),
       ]),
-    )], { unknown: descriptor.unknown === true });
+    );
+    if (descriptor.array === true) {
+      ARRAY_VALUE_OBJECTS.add(composite);
+    }
+    return valueSet([composite], { unknown: descriptor.unknown === true });
   }
   return unknownValue();
 }
@@ -590,21 +595,83 @@ function resolveStaticValue(node, bindings) {
     );
   }
 
+  if (
+    ts.isBinaryExpression(expression)
+    && (
+      expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+      || expression.operatorToken.kind === ts.SyntaxKind.BarBarToken
+      || expression.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+    )
+  ) {
+    // Logical expressions may return either operand. Keeping the original
+    // composite references lets later property writes update every binding
+    // that can still name the same object.
+    return mergeValues(
+      resolveStaticValue(expression.left, bindings),
+      resolveStaticValue(expression.right, bindings),
+    );
+  }
+
   if (ts.isArrayLiteralExpression(expression)) {
-    const elements = new Map();
+    let possibleElements = [new Map()];
     let arrayUnknown = false;
-    for (let index = 0; index < expression.elements.length; index += 1) {
-      const element = expression.elements[index];
+    for (const element of expression.elements) {
       if (ts.isSpreadElement(element)) {
-        arrayUnknown = true;
+        const spread = resolveStaticValue(element.expression, bindings);
+        // Only an array value proven by this lattice is flattened. Its element
+        // values are reused by reference; an unproven iterable stays tainted.
+        const spreadArrays = [...spread.known].filter(
+          (known) => known instanceof Map && ARRAY_VALUE_OBJECTS.has(known),
+        );
+        arrayUnknown ||= spread.unknown || spreadArrays.length === 0;
+        if (spreadArrays.length === 0) {
+          continue;
+        }
+        const expanded = [];
+        for (const prefix of possibleElements) {
+          for (const spreadArray of spreadArrays) {
+            if (expanded.length >= VALUE_SET_LIMIT) {
+              arrayUnknown = true;
+              break;
+            }
+            const next = new Map(prefix);
+            const numericEntries = [...spreadArray.entries()]
+              .filter(([key]) => /^\d+$/.test(key))
+              .sort(([left], [right]) => Number(left) - Number(right));
+            if (
+              numericEntries.some(
+                ([key], index) => Number(key) !== index,
+              )
+            ) {
+              arrayUnknown = true;
+              continue;
+            }
+            for (const [, value] of numericEntries) {
+              next.set(String(next.size), value);
+            }
+            ARRAY_VALUE_OBJECTS.add(next);
+            expanded.push(next);
+          }
+        }
+        if (expanded.length > 0) {
+          possibleElements = expanded;
+        }
         continue;
       }
-      elements.set(
-        String(index),
-        resolveStaticValue(element, bindings),
-      );
+      const resolved = ts.isOmittedExpression(element)
+        ? unknownValue()
+        : resolveStaticValue(element, bindings);
+      possibleElements = possibleElements.map((elements) => {
+        const next = new Map(elements);
+        next.set(String(next.size), resolved);
+        ARRAY_VALUE_OBJECTS.add(next);
+        return next;
+      });
     }
-    return valueSet([elements], { unknown: arrayUnknown });
+    for (const elements of possibleElements) {
+      ARRAY_VALUE_OBJECTS.add(elements);
+    }
+    return valueSet(possibleElements, { unknown: arrayUnknown });
   }
 
   if (
@@ -965,6 +1032,9 @@ function rewriteKnownObjectReferences(
     return objectMemo.get(canonical);
   }
   const rewritten = new Map();
+  if (ARRAY_VALUE_OBJECTS.has(canonical)) {
+    ARRAY_VALUE_OBJECTS.add(rewritten);
+  }
   objectMemo.set(canonical, rewritten);
   for (const [propertyName, propertyValue] of canonical) {
     rewritten.set(
@@ -1027,6 +1097,9 @@ function updateAssignedObjectPath(
       continue;
     }
     const nextObject = new Map(knownOwner);
+    if (ARRAY_VALUE_OBJECTS.has(knownOwner)) {
+      ARRAY_VALUE_OBJECTS.add(nextObject);
+    }
     for (const propertyName of propertyNames.known) {
       if (typeof propertyName !== "string") {
         unknown = true;
