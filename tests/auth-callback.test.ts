@@ -582,6 +582,78 @@ describe("auth callback", () => {
     },
   );
 
+  it.each([
+    [
+      {
+        ok: false,
+        reason: "maintenance",
+        errorCode: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      },
+      "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      "/login",
+    ],
+    [
+      {
+        ok: false,
+        reason: "stale",
+        errorCode: "ACCOUNT_SESSION_STALE",
+      },
+      "ACCOUNT_SESSION_STALE",
+      "/login",
+    ],
+    [
+      {
+        ok: false,
+        reason: "unexpected",
+        errorCode: null,
+      },
+      "oauth_failed",
+      "/planner",
+    ],
+  ] as const)(
+    "classifies a post-capability legacy RPC race as %s",
+    async (bootstrapResult, expectedCode, expectedPath) => {
+      exchangeCodeForSession.mockResolvedValue({
+        data: { session: { access_token: "remote-access-token" } },
+        error: null,
+      });
+      const rpc = vi.fn(async (name: string) => {
+        if (name === "get_account_generation_capability") {
+          return {
+            data: { state: "legacy", revision: 1 },
+            error: null,
+          };
+        }
+        throw new Error(`unexpected RPC: ${name}`);
+      });
+      const localOperationsClient = { rpc };
+      createServiceRoleClient.mockReturnValue(localOperationsClient);
+      bootstrapLegacyAuthCallbackIdentity.mockResolvedValueOnce(bootstrapResult);
+      cookieGetAll.mockReturnValue([
+        {
+          name: "sb-homecook-auth-token",
+          value: "remote-session-cookie",
+        },
+      ]);
+
+      const { GET } = await import("@/app/auth/callback/route");
+      const response = await GET(new Request(
+        "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner",
+      ));
+
+      const redirectUrl = new URL(response.headers.get("location") ?? "");
+      expect(redirectUrl.pathname).toBe(expectedPath);
+      expect(redirectUrl.searchParams.get("authError")).toBe(expectedCode);
+      expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledWith(
+        localOperationsClient,
+        expect.objectContaining({ id: "user-1" }),
+      );
+      expect(signOut).toHaveBeenCalledTimes(1);
+      expect(response.headers.get("set-cookie") ?? "")
+        .toMatch(/sb-homecook-auth-token=;.*Max-Age=0/i);
+    },
+  );
+
   it("preserves bootstrap maintenance instead of reporting a stale session", async () => {
     exchangeCodeForSession.mockResolvedValue({
       data: { session: { access_token: "remote-access-token" } },

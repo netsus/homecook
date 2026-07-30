@@ -46,6 +46,13 @@ describe("isolated hybrid integration runtime", () => {
     expect(compose).toMatch(
       /DATABASE_URL:\s*postgres:\/\/supabase_storage_admin:/,
     );
+    expect(compose).toMatch(
+      /pg_roles[\s\S]*service_role[\s\S]*authenticated[\s\S]*anon/,
+    );
+    expect(compose).toMatch(
+      /pg_namespace[\s\S]*auth[\s\S]*storage[\s\S]*extensions/,
+    );
+    expect(compose).toMatch(/pg_extension[\s\S]*pgcrypto/);
     expect(compose).toMatch(/JWT_JWKS:.*COMBINED_JWKS/);
     expect(compose).toMatch(
       /PGRST_JWT_SECRET:.*HYBRID_TEST_STORAGE_LEGACY_SECRET/,
@@ -317,6 +324,92 @@ function gatewayExec(
 }
 
 composeRun("isolated hybrid integration runtime measured", () => {
+  it("waits for Supabase initialization before three clean-volume bootstraps", () => {
+    const composeFile = "infra/hybrid-supabase/docker-compose.integration.yml";
+    const runtimeEnv = {
+      ...process.env,
+      DOCKER_DEFAULT_PLATFORM: process.arch === "arm64"
+        ? "linux/arm64"
+        : "linux/amd64",
+    };
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const project = `homecook-hybrid-ready-${process.pid}-${attempt}`;
+      const composeArgs = ["compose", "-p", project, "-f", composeFile];
+      try {
+        runComposeWithRegistryRetry([
+          ...composeArgs,
+          "up",
+          "-d",
+          "--wait",
+          "postgres",
+        ], {
+          env: runtimeEnv,
+        });
+
+        const initComplete = run("docker", [
+          ...composeArgs,
+          "exec",
+          "-T",
+          "postgres",
+          "psql",
+          "-At",
+          "-U",
+          "supabase_admin",
+          "-d",
+          "homecook_hybrid_test",
+          "-c",
+          "select ((select count(*) from pg_catalog.pg_roles where rolname in ('service_role', 'authenticated', 'anon', 'authenticator', 'supabase_storage_admin')) = 5 and (select count(*) from pg_catalog.pg_namespace where nspname in ('auth', 'storage', 'extensions')) = 3 and exists (select 1 from pg_catalog.pg_extension where extname = 'pgcrypto'))::integer;",
+        ]).trim();
+        expect(initComplete).toBe("1");
+
+        run("docker", [
+          ...composeArgs,
+          "exec",
+          "-T",
+          "postgres",
+          "psql",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-U",
+          "supabase_admin",
+          "-d",
+          "homecook_hybrid_test",
+        ], {
+          input: readFileSync(
+            "infra/hybrid-supabase/runtime-bootstrap.sql",
+            "utf8",
+          ),
+        });
+
+        const bootstrapReady = run("docker", [
+          ...composeArgs,
+          "exec",
+          "-T",
+          "postgres",
+          "psql",
+          "-At",
+          "-U",
+          "supabase_admin",
+          "-d",
+          "homecook_hybrid_test",
+          "-c",
+          "select (to_regprocedure('private.verify_hybrid_request_authority()') is not null and has_schema_privilege('service_role', 'public', 'USAGE'))::integer;",
+        ]).trim();
+        expect(bootstrapReady).toBe("1");
+      } finally {
+        run("docker", [
+          ...composeArgs,
+          "down",
+          "-v",
+          "--remove-orphans",
+        ], {
+          env: runtimeEnv,
+        });
+      }
+    }
+  }, 240_000);
+
   it("measures callback bootstrap, request app-settings injection, revoke fail-closed, anon GET, and upstream 503s", () => {
     const composeFile = "infra/hybrid-supabase/docker-compose.integration.yml";
     const project = `homecook-hybrid-${process.pid}`;
@@ -679,6 +772,111 @@ composeRun("isolated hybrid integration runtime measured", () => {
         "select (select count(*) from auth.users) || ':' || (select count(*) from public.users where id::text like '71000000-0000-4000-8000-%') || ':' || (select count(*) from public.recipe_books where user_id::text like '71000000-0000-4000-8000-%') || ':' || (select count(*) from public.meal_plan_columns where user_id::text like '71000000-0000-4000-8000-%') || ':' || (select count(*) from public.users where settings_json ->> 'user_bootstrap_version' = '3' and id::text like '71000000-0000-4000-8000-%');",
       ]).trim();
       expect(callbackState).toBe("0:3:9:9:3");
+
+      run("docker", [
+        ...composeArgs,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "supabase_admin",
+        "-d",
+        "homecook_hybrid_test",
+        "-c",
+        "update public.account_generation_capability_state set state = 'cutover_maintenance' where singleton;",
+      ]);
+      const callbackAuthorityErrors = gatewayExec(
+        composeArgs,
+        `
+          const request = async (socialId) => {
+            const response = await fetch(
+              "http://127.0.0.1:8080/rest/v1/rpc/bootstrap_legacy_auth_callback_identity",
+              {
+                method: "POST",
+                headers: {
+                  authorization: \`Bearer \${process.env.DATA_SECRET}\`,
+                  "content-type": "application/json",
+                  "x-homecook-internal-scope": "auth-callback",
+                },
+                body: JSON.stringify({
+                  p_owner_uuid: "71000000-0000-4000-8000-000000000004",
+                  p_email: "race.local@example.com",
+                  p_social_provider: "google",
+                  p_social_id: socialId,
+                  p_nickname: "race-cook",
+                  p_profile_image_url: null,
+                }),
+              },
+            );
+            return { status: response.status, body: await response.text() };
+          };
+          const maintenance = await request("google-race-sub");
+          console.log(JSON.stringify({ maintenance }));
+        `,
+        { DATA_SECRET: serviceFixture.access_token },
+      );
+      const parsedCallbackAuthorityErrors = JSON.parse(
+        callbackAuthorityErrors,
+      ) as {
+        maintenance: { status: number; body: string };
+      };
+      expect(parsedCallbackAuthorityErrors.maintenance.status).not.toBe(200);
+      expect(parsedCallbackAuthorityErrors.maintenance.body)
+        .toContain("ACCOUNT_LIFECYCLE_MAINTENANCE");
+
+      run("docker", [
+        ...composeArgs,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "supabase_admin",
+        "-d",
+        "homecook_hybrid_test",
+        "-c",
+        "update public.account_generation_capability_state set state = 'legacy' where singleton;",
+      ]);
+      const callbackStale = gatewayExec(
+        composeArgs,
+        `
+          const response = await fetch(
+            "http://127.0.0.1:8080/rest/v1/rpc/bootstrap_legacy_auth_callback_identity",
+            {
+              method: "POST",
+              headers: {
+                authorization: \`Bearer \${process.env.DATA_SECRET}\`,
+                "content-type": "application/json",
+                "x-homecook-internal-scope": "auth-callback",
+              },
+              body: JSON.stringify({
+                p_owner_uuid: "71000000-0000-4000-8000-000000000004",
+                p_email: "stale.local@example.com",
+                p_social_provider: "google",
+                p_social_id: "",
+                p_nickname: "stale-cook",
+                p_profile_image_url: null,
+              }),
+            },
+          );
+          console.log(JSON.stringify({
+            status: response.status,
+            body: await response.text(),
+          }));
+        `,
+        { DATA_SECRET: serviceFixture.access_token },
+      );
+      const parsedCallbackStale = JSON.parse(callbackStale) as {
+        status: number;
+        body: string;
+      };
+      expect(parsedCallbackStale.status).not.toBe(200);
+      expect(parsedCallbackStale.body).toContain("ACCOUNT_SESSION_STALE");
 
       run("docker", [
         ...composeArgs,

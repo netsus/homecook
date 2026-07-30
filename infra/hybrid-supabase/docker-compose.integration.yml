@@ -12,10 +12,17 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -U supabase_admin -d homecook_hybrid_test
-      interval: 2s
-      timeout: 2s
-      retries: 30
+        - >-
+          pg_isready -U supabase_admin -d homecook_hybrid_test >/dev/null
+          && test "$$(psql -U supabase_admin -d homecook_hybrid_test -Atqc
+          "select (
+            (select count(*) from pg_catalog.pg_roles where rolname in ('service_role', 'authenticated', 'anon', 'authenticator', 'supabase_storage_admin')) = 5
+            and (select count(*) from pg_catalog.pg_namespace where nspname in ('auth', 'storage', 'extensions')) = 3
+            and exists (select 1 from pg_catalog.pg_extension where extname = 'pgcrypto')
+          )::integer")" = "1"
+      interval: 1s
+      timeout: 3s
+      retries: 90
     networks:
       - hybrid-internal
     tmpfs:

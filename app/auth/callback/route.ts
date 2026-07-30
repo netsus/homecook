@@ -348,16 +348,37 @@ export async function GET(request: Request) {
       serviceRoleClient,
       { ...user, email },
     );
-    if (!legacyBootstrap.ok && legacyBootstrap.reason === "account_conflict") {
-      await recordAuthFailure(request, "ACCOUNT_CONFLICT");
-      return clearPartialSession(
-        supabase,
-        clearAuthFlowCookies(NextResponse.redirect(
-          buildFailureRedirectUrl(requestUrl, nextPath, "account_conflict"),
-        )),
-        request,
-        cookieStore,
-      );
+    if (!legacyBootstrap.ok) {
+      if (legacyBootstrap.reason === "account_conflict") {
+        await recordAuthFailure(request, "ACCOUNT_CONFLICT");
+        return clearPartialSession(
+          supabase,
+          clearAuthFlowCookies(NextResponse.redirect(
+            buildFailureRedirectUrl(requestUrl, nextPath, "account_conflict"),
+          )),
+          request,
+          cookieStore,
+        );
+      }
+      if (
+        legacyBootstrap.reason === "maintenance"
+        || legacyBootstrap.reason === "stale"
+      ) {
+        await recordAuthFailure(request, legacyBootstrap.errorCode);
+        return clearPartialSession(
+          supabase,
+          clearAuthFlowCookies(NextResponse.redirect(
+            buildFailureRedirectUrl(
+              requestUrl,
+              nextPath,
+              legacyBootstrap.errorCode,
+            ),
+          )),
+          request,
+          cookieStore,
+        );
+      }
+      throw new Error("legacy callback bootstrap failed");
     }
 
     const redirectUrl = shouldCollectNickname(legacyBootstrap)

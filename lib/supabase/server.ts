@@ -410,10 +410,63 @@ type LegacyAuthCallbackUser = Parameters<
   typeof buildLegacyAuthCallbackProfile
 >[0];
 
+type LegacyAuthCallbackBootstrapResult =
+  | {
+      ok: true;
+      nickname: string;
+    }
+  | {
+      ok: false;
+      reason: "account_conflict";
+    }
+  | {
+      ok: false;
+      reason: "maintenance";
+      errorCode: "ACCOUNT_LIFECYCLE_MAINTENANCE";
+    }
+  | {
+      ok: false;
+      reason: "stale";
+      errorCode: "ACCOUNT_SESSION_STALE";
+    }
+  | {
+      ok: false;
+      reason: "unexpected";
+      errorCode: null;
+    };
+
+function classifyLegacyAuthCallbackError(
+  error: unknown,
+): Extract<LegacyAuthCallbackBootstrapResult, { ok: false }> {
+  if (!error || typeof error !== "object") {
+    return { ok: false, reason: "unexpected", errorCode: null };
+  }
+  const candidate = error as Record<string, unknown>;
+  const detail = ["code", "message", "details", "hint"]
+    .map((key) => candidate[key])
+    .filter((value): value is string => typeof value === "string")
+    .join(" ");
+  if (detail.includes("ACCOUNT_LIFECYCLE_MAINTENANCE")) {
+    return {
+      ok: false,
+      reason: "maintenance",
+      errorCode: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+    };
+  }
+  if (detail.includes("ACCOUNT_SESSION_STALE")) {
+    return {
+      ok: false,
+      reason: "stale",
+      errorCode: "ACCOUNT_SESSION_STALE",
+    };
+  }
+  return { ok: false, reason: "unexpected", errorCode: null };
+}
+
 export async function bootstrapLegacyAuthCallbackIdentity(
   client: NonNullable<ReturnType<typeof createAuthCallbackInternalDataClient>>,
   user: LegacyAuthCallbackUser,
-) {
+): Promise<LegacyAuthCallbackBootstrapResult> {
   if (getDataSupabaseEnv().authority !== "local") {
     const dbClient = client as unknown as UserBootstrapDbClient;
     const lookupClient = client as unknown as {
@@ -451,21 +504,27 @@ export async function bootstrapLegacyAuthCallbackIdentity(
   }
 
   const profile = buildLegacyAuthCallbackProfile(user);
-  const result = await client.rpc(
-    "bootstrap_legacy_auth_callback_identity",
-    {
-      p_email: profile.email,
-      p_nickname: profile.nickname,
-      p_owner_uuid: profile.ownerUuid,
-      p_profile_image_url: profile.profileImageUrl,
-      p_social_id: profile.socialId,
-      p_social_provider: profile.socialProvider,
-    },
-  );
-  if (result.error || !result.data || typeof result.data !== "object") {
-    throw new Error(
-      result.error?.message ?? "legacy callback bootstrap failed",
+  let result;
+  try {
+    result = await client.rpc(
+      "bootstrap_legacy_auth_callback_identity",
+      {
+        p_email: profile.email,
+        p_nickname: profile.nickname,
+        p_owner_uuid: profile.ownerUuid,
+        p_profile_image_url: profile.profileImageUrl,
+        p_social_id: profile.socialId,
+        p_social_provider: profile.socialProvider,
+      },
     );
+  } catch (error) {
+    return classifyLegacyAuthCallbackError(error);
+  }
+  if (result.error) {
+    return classifyLegacyAuthCallbackError(result.error);
+  }
+  if (!result.data || typeof result.data !== "object") {
+    return { ok: false, reason: "unexpected", errorCode: null };
   }
   const data = result.data as {
     nickname?: unknown;
@@ -475,7 +534,7 @@ export async function bootstrapLegacyAuthCallbackIdentity(
     return { ok: false as const, reason: "account_conflict" as const };
   }
   if (data.status !== "ok" || typeof data.nickname !== "string") {
-    throw new Error("legacy callback bootstrap returned an invalid result");
+    return { ok: false, reason: "unexpected", errorCode: null };
   }
   return {
     ok: true as const,

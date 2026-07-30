@@ -274,6 +274,82 @@ describe("supabase server helpers", () => {
       },
     );
   });
+
+  it.each([
+    [
+      {
+        code: "55000",
+        message: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      },
+      {
+        ok: false,
+        reason: "maintenance",
+        errorCode: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      },
+    ],
+    [
+      {
+        code: "55000",
+        details: "ACCOUNT_SESSION_STALE",
+        message: "legacy callback rejected",
+      },
+      {
+        ok: false,
+        reason: "stale",
+        errorCode: "ACCOUNT_SESSION_STALE",
+      },
+    ],
+    [
+      {
+        code: "XX000",
+        message: "unexpected database failure",
+      },
+      {
+        ok: false,
+        reason: "unexpected",
+        errorCode: null,
+      },
+    ],
+  ])(
+    "preserves local legacy callback RPC authority classification for %#",
+    async (rpcError, expected) => {
+      getSupabaseEnv.mockReturnValue({
+        url: "http://127.0.0.1:8000",
+        anonKey: "local-publishable",
+        authority: "local",
+        issuer: "https://remote.example/auth/v1",
+        jwksUrl: "https://remote.example/auth/v1/.well-known/jwks.json",
+      });
+      getServiceRoleKey.mockReturnValue("local-service-secret");
+      const client = {
+        from: vi.fn(),
+        rpc: vi.fn().mockResolvedValue({
+          data: null,
+          error: rpcError,
+        }),
+        storage: {},
+      };
+      createClient.mockReturnValue(client);
+
+      const server = await import("@/lib/supabase/server");
+      const callbackClient = server.createAuthCallbackOperationsClient();
+      if (!callbackClient) {
+        throw new Error("callback client missing");
+      }
+
+      await expect(server.bootstrapLegacyAuthCallbackIdentity(
+        callbackClient,
+        {
+          id: "71000000-0000-4000-8000-000000000001",
+          email: "cook@example.com",
+          app_metadata: { provider: "google" },
+          user_metadata: { sub: "google-remote-sub" },
+        },
+      )).resolves.toEqual(expected);
+      expect(callbackClient).toEqual({ rpc: expect.any(Function) });
+      expect(client.from).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("supabase schema migrations", () => {
