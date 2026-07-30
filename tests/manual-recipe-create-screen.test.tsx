@@ -1311,7 +1311,10 @@ describe("ManualRecipeCreateScreen", () => {
     expect(cancelRecipeImage).not.toHaveBeenCalled();
   });
 
-  it("fails closed after an unknown create outcome without retrying or cancelling the image", async () => {
+  it.each([
+    "NETWORK_ERROR",
+    "INVALID_RESPONSE",
+  ])("fails closed after an unknown %s create outcome without retrying or cancelling the image", async (errorCode) => {
     vi.mocked(uploadRecipeImage).mockResolvedValueOnce(
       managedUploadSuccess({
         image_object_id: "550e8400-e29b-41d4-a716-446655440080",
@@ -1321,7 +1324,7 @@ describe("ManualRecipeCreateScreen", () => {
       success: false,
       data: null,
       error: {
-        code: "NETWORK_ERROR",
+        code: errorCode,
         message: "등록 결과를 확인하지 못했어요.",
         fields: [],
       },
@@ -1355,6 +1358,121 @@ describe("ManualRecipeCreateScreen", () => {
     await user.click(screen.getByRole("button", { name: "저장" }));
     expect(createManualRecipe).toHaveBeenCalledOnce();
     expect(cancelRecipeImage).not.toHaveBeenCalled();
+  });
+
+  it("does not cancel a create-owned image after a mounted success or later unmount", async () => {
+    vi.mocked(uploadRecipeImage).mockResolvedValueOnce(
+      managedUploadSuccess({
+        image_object_id: "550e8400-e29b-41d4-a716-446655440081",
+      }),
+    );
+    vi.mocked(createManualRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        id: "recipe-mounted-success",
+        title: "정상 저장 요리",
+        source_type: "manual",
+        created_by: "user-1",
+        base_servings: 2,
+      },
+      error: null,
+    });
+
+    const user = userEvent.setup();
+    const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["image"], "mounted-success.png", { type: "image/png" }),
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+    await completeRequiredRecipeForm(user);
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => {
+      expect(screen.getByText("레시피 등록 완료")).toBeTruthy();
+    });
+
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
+    view.unmount();
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "IMAGE_NOT_FOUND",
+    "IMAGE_EXPIRED",
+    "IMAGE_VISIBILITY_MISMATCH",
+    "MANAGED_IMAGE_REFERENCE_REQUIRED",
+  ])("cancels and clears a mounted create-owned image exactly once on %s", async (errorCode) => {
+    const failedImageObjectId = "550e8400-e29b-41d4-a716-446655440082";
+    vi.mocked(uploadRecipeImage)
+      .mockResolvedValueOnce(
+        managedUploadSuccess({
+          image_object_id: failedImageObjectId,
+          read_url: "https://signed.example.com/definitive-failure.png",
+        }),
+      )
+      .mockResolvedValueOnce(
+        managedUploadSuccess({
+          image_object_id: "550e8400-e29b-41d4-a716-446655440083",
+          read_url: "https://signed.example.com/definitive-retry.png",
+        }),
+      );
+    vi.mocked(createManualRecipe).mockResolvedValue({
+      success: false,
+      data: null,
+      error: {
+        code: errorCode,
+        message: "이미지를 다시 업로드해 주세요.",
+        fields: [],
+      },
+    });
+
+    const user = userEvent.setup();
+    const view = render(
+      <React.StrictMode>
+        <ManualRecipeCreateScreen {...DEFAULT_PROPS} />
+      </React.StrictMode>,
+    );
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["image"], "mounted-definitive.png", { type: "image/png" }),
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+    await completeRequiredRecipeForm(user);
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(cancelRecipeImage).toHaveBeenCalledWith(failedImageObjectId);
+    });
+    expect(
+      vi.mocked(cancelRecipeImage).mock.calls.filter(
+        ([imageObjectId]) => imageObjectId === failedImageObjectId,
+      ),
+    ).toHaveLength(1);
+    expect(screen.queryByTestId("manual-image-preview")).toBeNull();
+    expect(screen.queryByTestId("manual-image-replace-button")).toBeNull();
+    expect(screen.getByTestId("manual-image-retry-button")).toBeTruthy();
+
+    await user.click(screen.getByTestId("manual-image-retry-button"));
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+    expect(vi.mocked(uploadRecipeImage).mock.calls[0]?.[1]).toEqual({
+      idempotencyKey: "550e8400-e29b-41d4-a716-446655440101",
+    });
+    expect(vi.mocked(uploadRecipeImage).mock.calls[1]?.[1]).toEqual({
+      idempotencyKey: "550e8400-e29b-41d4-a716-446655440102",
+    });
+
+    view.unmount();
+    expect(
+      vi.mocked(cancelRecipeImage).mock.calls.filter(
+        ([imageObjectId]) => imageObjectId === failedImageObjectId,
+      ),
+    ).toHaveLength(1);
   });
 
   it("keeps StrictMode cleanup idempotent for an upload-owned image", async () => {

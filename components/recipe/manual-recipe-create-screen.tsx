@@ -1489,6 +1489,16 @@ export function ManualRecipeCreateScreen({
         setTagSubmitError(response.error.message);
       }
       if (isCreateImageError(response.error?.code ?? null)) {
+        startImageOperation();
+        uploadRequestIdRef.current += 1;
+        uploadedImageRef.current = null;
+        isManagedReadUrlRefreshRetryRef.current = false;
+        pendingUploadIdempotencyKeyRef.current = null;
+        processedUploadFileRef.current = null;
+        cancelManagedUpload(activeImage);
+        revokePreviewUrl(imagePreviewUrl);
+        setImagePreviewUrl(null);
+        setUploadedImage(null);
         setImageStatus("failed");
         setImageErrorCode(response.error?.code ?? null);
         setImageError(response.error?.message ?? "이미지를 다시 확인해 주세요.");
@@ -1524,9 +1534,12 @@ export function ManualRecipeCreateScreen({
     ingredients,
     steps,
     cancelManagedUpload,
+    imagePreviewUrl,
     refreshManagedReadUrlIfExpired,
     releaseCreateNavigationGuard,
+    revokePreviewUrl,
     router,
+    startImageOperation,
   ]);
 
   const handleMealAdd = useCallback(() => {
