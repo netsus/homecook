@@ -66,7 +66,7 @@ describe("personal recipe editor hybrid contract lock", () => {
       /\|\s*4\s*\|\s*B\s*\|\s*`recipe-snapshot-authority-foundation`\s*\|\s*in-progress\s*\|/,
     );
     expect(roadmap).toMatch(
-      /\|\s*5\s*\|\s*C\s*\|\s*`personal-recipe-editor-decoupling`\s*\|\s*docs\s*\|\s*#3;/,
+      /\|\s*5\s*\|\s*C\s*\|\s*`personal-recipe-editor-decoupling`\s*\|\s*in-progress\s*\|\s*#3;/,
     );
   });
 
@@ -146,7 +146,7 @@ describe("personal recipe editor hybrid contract lock", () => {
     expect(statusNotes).toContain("future work");
   });
 
-  it("keeps roadmap and workflow approval projections intentionally open", () => {
+  it("projects the test-only Stage 2 as in progress without claiming approval", () => {
     const workItem = readJson(workItemPath);
     const workItemStatus = workItem.status as Record<string, unknown>;
     const statusFile = readJson(".workflow-v2/status.json");
@@ -157,24 +157,24 @@ describe("personal recipe editor hybrid contract lock", () => {
     const roadmap = read("docs/workpacks/README.md");
 
     expect(workItemStatus).toMatchObject({
-      lifecycle: "planned",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
       evaluation_status: "not_started",
     });
     expect(statusItem).toMatchObject({
-      branch: "docs/personal-recipe-editor-stage1-relock",
-      pr_path: "https://github.com/netsus/homecook/pull/1237",
-      lifecycle: "planned",
+      branch: "feature/be-personal-recipe-editor-decoupling",
+      pr_path: "https://github.com/netsus/homecook/pull/1238",
+      lifecycle: "in_progress",
       approval_state: "not_started",
       verification_status: "pending",
       evaluation_status: "not_started",
     });
     expect(Date.parse(statusFile.updated_at as string)).toBeGreaterThanOrEqual(
-      Date.parse("2026-07-30T12:47:39.000Z"),
+      Date.parse("2026-07-30T13:14:11.000Z"),
     );
     expect(roadmap).toMatch(
-      /\|\s*`personal-recipe-editor-decoupling`\s*\|\s*docs\s*\|/,
+      /\|\s*`personal-recipe-editor-decoupling`\s*\|\s*in-progress\s*\|/,
     );
     expect(workItemNotes).toContain(
       "required_checks is the full-lifecycle gate and verify_commands is the current executable subset",

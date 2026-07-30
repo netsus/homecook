@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-30T12:47:39.000Z",
+  "updated_at": "2026-07-30T13:14:11.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2423,9 +2423,9 @@
     {
       "id": "personal-recipe-editor-decoupling",
       "preset": "vertical-slice-strict",
-      "branch": "docs/personal-recipe-editor-stage1-relock",
-      "pr_path": "https://github.com/netsus/homecook/pull/1237",
-      "lifecycle": "planned",
+      "branch": "feature/be-personal-recipe-editor-decoupling",
+      "pr_path": "https://github.com/netsus/homecook/pull/1238",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -2448,7 +2448,7 @@
         "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Hybrid Stage 1 relock on the current v1.7.26/v1.5.30/v1.3.28/v1.3.27/v1.2.30 tuple. The approved master plan remains editor/product design history, while its local-only Auth/deployment assumptions are superseded by local application Data/Storage plus the remote Auth control-plane. #3 Stage 2 through Stage 6 merged as PR #1228 and the media/tag foundations are merged. #4 historical Stage 2 PR #1218 and Stage 4 PR #1219 are preserved, while its hybrid delta/reverification remains in progress and is not a #5 predecessor. Roadmap stays docs, lifecycle stays planned, approval/evaluation stay not_started and verification stays pending until fresh independent review. The focused contract-sync test is the only new executable Stage 1 test; required_checks is the full-lifecycle gate and verify_commands is the current executable subset; the hybrid verifier and all component/E2E/visual/a11y/exploratory/authority artifacts remain future work. #5 makes no product API, DB, route, field, status or error change; local auth.users=0, session-liveness HMAC binding, service-role user path 0, remote application DB/Storage write 0 and external personal write dark remain required.",
+      "notes": "Hybrid Stage 1 relock on the current v1.7.26/v1.5.30/v1.3.28/v1.3.27/v1.2.30 tuple. The approved master plan remains editor/product design history, while its local-only Auth/deployment assumptions are superseded by local application Data/Storage plus the remote Auth control-plane. #3 Stage 2 through Stage 6 merged as PR #1228 and the media/tag foundations are merged. #4 historical Stage 2 PR #1218 and Stage 4 PR #1219 are preserved, while its hybrid delta/reverification remains in progress and is not a #5 predecessor. Roadmap and lifecycle are in progress for the test-only Stage 2; approval/evaluation stay not_started and verification stays pending until independent Stage 3 review. required_checks is the full-lifecycle gate and verify_commands is the current executable subset. This backend branch proved a projection RED before the required docs-to-in-progress transition and locks existing fail-closed detail reads plus official manual-create payload boundaries with `tests/personal-recipe-editor-permissions.test.ts` and `tests/personal-recipe-editor-contract.test.ts`. The hybrid verifier and all component/E2E/visual/a11y/exploratory/authority artifacts remain future work. #5 makes no product API, DB, route, field, status or error change; local auth.users=0, session-liveness HMAC binding, service-role user path 0, remote application DB/Storage write 0 and external personal write dark remain required.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

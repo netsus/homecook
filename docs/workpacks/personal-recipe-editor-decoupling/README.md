@@ -9,6 +9,7 @@ planner에 결합된 `MANUAL_RECIPE_CREATE`를 재사용 가능한 editor shell�
 ## Branches
 
 - Stage 1 hybrid relock: `docs/personal-recipe-editor-stage1-relock`
+- Stage 2 backend evidence lock: `feature/be-personal-recipe-editor-decoupling`
 - Stage 4 frontend shell: `feature/fe-personal-recipe-editor-decoupling`
 - Release train: C. successor dependency는 merged #3뿐이며, 재사용 대상인 `31-recipe-media-tags`와 `36e-recipe-tags-frontend`도 이미 merged다. #4 완료는 #5 구현 선행조건이 아니다.
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, frontend implementation owner, security/ownership reviewer, five-axis reviewer, design critic와 product-design-authority reviewer는 서로 다른 Codex 세션을 사용한다. Claude는 사용하지 않는다.
@@ -68,7 +69,7 @@ Schema Change:
 | `recipe-snapshot-authority-foundation` | in-progress, not a predecessor | PR #1218 historical Stage 2 and PR #1219 historical Stage 4 are preserved; the hybrid delta/reverification remains in progress. #4 is not a #5 implementation predecessor |
 | `recipebook-diary-port` | not a predecessor | MYPAGE/RECIPEBOOK_DETAIL remain untouched |
 
-> Roadmap status is `docs` while workflow lifecycle remains `planned`. This Stage 1 docs merge does not activate editor CTA or personal writes.
+> Roadmap and workflow lifecycle are `in-progress` for the test-only Stage 2. This backend branch adds route/contract regression locks only; it does not activate editor CTA, personal writes or any new runtime endpoint.
 
 ## Hybrid Auth / Local Data Boundary
 
@@ -225,8 +226,8 @@ dirty close/back → [계속 편집] [변경사항 버리기]
 
 ## Delivery Checklist
 
-- [ ] existing recipe detail read returns the same `404 RESOURCE_NOT_FOUND` before child or service-role reads when the parent recipe is not visible <!-- omo:id=delivery-editor-backend-nondisclosure;stage=2;scope=backend;review=3 -->
-- [ ] existing manual recipe create ignores client owner, visibility and origin fields and forwards only the official payload <!-- omo:id=delivery-editor-backend-create-boundary;stage=2;scope=backend;review=3 -->
+- [x] existing recipe detail read returns the same `404 RESOURCE_NOT_FOUND` before child or service-role reads when the parent recipe is not visible <!-- omo:id=delivery-editor-backend-nondisclosure;stage=2;scope=backend;review=3 -->
+- [x] existing manual recipe create ignores client owner, visibility and origin fields and forwards only the official payload <!-- omo:id=delivery-editor-backend-create-boundary;stage=2;scope=backend;review=3 -->
 - [ ] shared pure form primitives are separated from context shell/router/persistence <!-- omo:id=delivery-editor-primitives;stage=4;scope=frontend;review=5,6 -->
 - [ ] all four contexts preserve distinct initial data, submit, success and cancel destinations <!-- omo:id=delivery-editor-contexts;stage=4;scope=frontend;review=5,6 -->
 - [ ] public/anon/owner/other-owner/deleted/quarantined CTA matrix is fail-closed <!-- omo:id=delivery-editor-cta-matrix;stage=4;scope=frontend;review=5,6 -->
