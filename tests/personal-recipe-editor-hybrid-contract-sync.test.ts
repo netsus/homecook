@@ -150,7 +150,7 @@ describe("personal recipe editor hybrid contract lock", () => {
     expect(statusNotes).toContain("future work");
   });
 
-  it("projects the approved Stage 4 branch and Draft PR without claiming verification", () => {
+  it("projects the merged Stage 4 and 5 implementation while full lifecycle stays pending", () => {
     const workItem = readJson(workItemPath);
     const workItemStatus = workItem.status as Record<string, unknown>;
     const statusFile = readJson(".workflow-v2/status.json");
@@ -180,14 +180,14 @@ describe("personal recipe editor hybrid contract lock", () => {
     expect(roadmap).toMatch(
       /\|\s*`personal-recipe-editor-decoupling`\s*\|\s*in-progress\s*\|/,
     );
+    expect(workItemNotes).toContain("PR #1243 merged");
     expect(workItemNotes).toContain(
-      "required_checks is the full-lifecycle gate and verify_commands is the current executable subset",
+      "e177a882e0fbc35847895a7a0f1dd775ff4425d1",
     );
-    expect(workItemNotes).toContain("Stage 4 Draft PR #1243");
-    expect(statusNotes).toContain(
-      "required_checks is the full-lifecycle gate and verify_commands is the current executable subset",
-    );
-    expect(statusNotes).toContain("Stage 4 Draft PR #1243");
+    expect(workItemNotes).toContain("merged-SHA hybrid verifier remains pending");
+    expect(statusNotes).toContain("PR #1243 merged");
+    expect(statusNotes).toContain("20 success and one normal full-regression skip");
+    expect(statusNotes).toContain("external personal write dark");
   });
 
   it("keeps the relocked Stage 4 workpack ready-for-review valid", () => {
