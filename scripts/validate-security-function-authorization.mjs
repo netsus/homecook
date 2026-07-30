@@ -81,6 +81,20 @@ const ADDITIVE_SOURCES = [
   },
   {
     manifestPath:
+      process.env.SECURITY_FUNCTION_PRODUCT_INGREDIENT_LINK_MANIFEST_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "docs/security/product-ingredient-link-foundation-security-function-authorization-manifest.json",
+      ),
+    migrationPath:
+      process.env.SECURITY_FUNCTION_PRODUCT_INGREDIENT_LINK_MIGRATION_PATH
+      ?? path.join(
+        REPO_ROOT,
+        "supabase/migrations/20260730210000_product_ingredient_link_foundation.sql",
+      ),
+  },
+  {
+    manifestPath:
       process.env.SECURITY_FUNCTION_PREPARED_FOOD_SEARCH_MANIFEST_PATH
       ?? path.join(
         REPO_ROOT,
