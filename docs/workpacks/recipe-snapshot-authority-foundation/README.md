@@ -122,6 +122,7 @@ Schema Change:
 - `GET /planner/nutrition` remains for one compatibility release even though the new planner UI will stop calling it; removal requires a separate tombstone contract.
 - Train B closeout jointly rechecks #3 Storage cleanup/outbox and #2 pantry effective-ingredient projection, but #4 does not reimplement or weaken either contract.
 - hybrid verification is read-only: it inspects the local application DB/Storage authority and only the minimal remote Auth control-plane identity-epoch evidence. It requires `local auth.users=0`, active epoch/session binding consistency and no remote application DB/Storage write. Contract/null cutover and production writes run only from a merged exact SHA after the compatibility evidence gate.
+- the verifier may re-check a clean historical merged SHA after `origin/master` advances only when `git --no-replace-objects merge-base --is-ancestor` proves that exact HEAD is an `origin/master` ancestor. Local replace refs and legacy grafts cannot supply ancestry evidence; a dirty tree, unmerged branch or unrelated commit still fails closed.
 
 ## Frontend Delivery Mode
 
