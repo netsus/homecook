@@ -99,6 +99,7 @@ describe("hybrid built browser bundle canary", () => {
     "async function run(){const module=await import('../lib/sdk'),key='remove',{[key]:mutate}=module;mutate(['unsafe.png'])}",
     "import('../lib/sdk').then(module=>{const key='remove',mutate=module[key];mutate(['unsafe.png'])})",
     "function safe(){}const bucket=client.storage.from('bucket'),namespace={tools:{remove:safe}};namespace.tools.remove=bucket.remove;namespace.tools.remove(['unsafe.png'])",
+    "function safe(){}const bucket=client.storage.from('bucket'),namespace={tools:{remove:safe}},tools=namespace.tools;tools.remove=bucket.remove;namespace.tools.remove(['unsafe-alias.png'])",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready&&(method='GET');fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready||(method='GET');fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready??(method='GET');fetch(storageUrl,{method})",
@@ -282,6 +283,10 @@ describe("hybrid built browser bundle canary", () => {
         path.join(bundleRoot, "sdk-nested-assignment.min.js"),
         "function s(){}const b=c.storage.from('x'),n={tools:{remove:s}};n.tools.remove=b.remove;n.tools.remove(['x'])",
       );
+      fs.writeFileSync(
+        path.join(bundleRoot, "sdk-object-identity-alias.min.js"),
+        "function s(){}const b=c.storage.from('x'),n={tools:{remove:s}},t=n.tools;t.remove=b.remove;n.tools.remove(['x'])",
+      );
 
       expect(inspectBrowserBundle(bundleRoot)).toEqual(
         expect.arrayContaining(
@@ -363,10 +368,14 @@ describe("hybrid built browser bundle canary", () => {
               file: "sdk-nested-assignment.min.js",
               kind: "supabase-storage-sdk",
             }),
+            expect.objectContaining({
+              file: "sdk-object-identity-alias.min.js",
+              kind: "supabase-storage-sdk",
+            }),
           ]),
         ),
       );
-      expect(inspectBrowserBundle(bundleRoot)).toHaveLength(40);
+      expect(inspectBrowserBundle(bundleRoot)).toHaveLength(41);
     } finally {
       fs.rmSync(bundleRoot, { recursive: true, force: true });
     }
@@ -419,6 +428,7 @@ describe("hybrid built browser bundle canary", () => {
     "function safe(){}const module={remove:safe},key='remove',mutate=module[key];mutate(['safe.png'])",
     "function safe(){}const module={remove:safe},key='remove',{[key]:mutate}=module;mutate(['safe.png'])",
     "function safe(){}const namespace={tools:{remove:safe}};namespace.tools.remove=safe;namespace.tools.remove(['safe.png'])",
+    "function safe(){}const namespace={tools:{remove:safe}},tools=namespace.tools;tools.remove=safe;namespace.tools.remove(['safe-alias.png'])",
   ])("does not flag a non-mutation canary: %s", (source) => {
     expect(findBrowserBundleStorageMutations(source)).toEqual([]);
   });

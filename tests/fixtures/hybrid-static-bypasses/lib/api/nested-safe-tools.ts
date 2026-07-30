@@ -13,3 +13,11 @@ export const nestedSafeNamespace = {
 };
 
 nestedSafeNamespace.tools.remove = replacementSafeRemove;
+
+export const nestedAliasedSafeNamespace = {
+  tools: {
+    remove: safeRemove,
+  },
+};
+const aliasedTools = nestedAliasedSafeNamespace.tools;
+aliasedTools.remove = replacementSafeRemove;

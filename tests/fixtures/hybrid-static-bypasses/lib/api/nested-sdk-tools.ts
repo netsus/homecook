@@ -19,3 +19,11 @@ export const nestedSdkNamespace = {
 };
 
 nestedSdkNamespace.tools.remove = bucket.remove;
+
+export const nestedAliasedSdkNamespace = {
+  tools: {
+    remove: safeRemove,
+  },
+};
+const aliasedTools = nestedAliasedSdkNamespace.tools;
+aliasedTools.remove = bucket.remove;

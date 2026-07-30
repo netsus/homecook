@@ -172,6 +172,8 @@ describe("hybrid authority AST/static gate", () => {
       "components/live-binding-client.tsx",
       "components/nested-sdk-client.tsx",
       "components/nested-sdk-client.tsx",
+      "components/nested-sdk-client.tsx",
+      "components/nested-sdk-client.tsx",
       "features/unsafe.mjs",
       "lib/api/dynamic-sdk-alias.mjs",
       "lib/api/raw-delete.ts",
@@ -284,7 +286,7 @@ describe("hybrid authority AST/static gate", () => {
       inventory.browserDirectStoragePaths.filter(
         (entry) => entry.file === "components/nested-sdk-client.tsx",
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(4);
     expect(inventory.browserDirectStoragePaths).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({

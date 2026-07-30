@@ -996,11 +996,76 @@ function buildClientBindingSeeds(repoRoot, files) {
         };
   };
 
+  const rewriteDescriptorReferences = (
+    descriptor,
+    replacements,
+    objectMemo,
+  ) => {
+    if (
+      descriptor
+      && typeof descriptor === "object"
+      && descriptor.kind === "union"
+    ) {
+      return {
+        ...descriptor,
+        values: descriptor.values.map((value) => rewriteDescriptorReferences(
+          value,
+          replacements,
+          objectMemo,
+        )),
+      };
+    }
+    if (
+      !descriptor
+      || typeof descriptor !== "object"
+      || descriptor.kind !== "object"
+    ) {
+      return descriptor;
+    }
+    const canonical = replacements.get(descriptor) ?? descriptor;
+    if (objectMemo.has(canonical)) {
+      return objectMemo.get(canonical);
+    }
+    const rewritten = {
+      ...canonical,
+      properties: {},
+    };
+    objectMemo.set(canonical, rewritten);
+    for (const [propertyName, propertyDescriptor] of Object.entries(
+      canonical.properties,
+    )) {
+      rewritten.properties[propertyName] = rewriteDescriptorReferences(
+        propertyDescriptor,
+        replacements,
+        objectMemo,
+      );
+    }
+    return rewritten;
+  };
+
+  const rewriteLocalDescriptorReferences = (locals, replacements) => {
+    if (replacements.size === 0) {
+      return;
+    }
+    const objectMemo = new Map();
+    for (const [name, descriptor] of locals) {
+      locals.set(
+        name,
+        rewriteDescriptorReferences(
+          descriptor,
+          replacements,
+          objectMemo,
+        ),
+      );
+    }
+  };
+
   const updateAssignedDescriptorPath = (
     owner,
     path,
     index,
     descriptor,
+    replacements,
   ) => {
     if (index >= path.length) {
       return descriptor;
@@ -1016,6 +1081,7 @@ function buildClientBindingSeeds(repoRoot, files) {
           path,
           index,
           descriptor,
+          replacements,
         )),
       );
     }
@@ -1028,7 +1094,7 @@ function buildClientBindingSeeds(repoRoot, files) {
       && typeof owner === "object"
       && owner.kind === "object"
     ) {
-      return {
+      const updated = {
         ...owner,
         properties: {
           ...owner.properties,
@@ -1037,9 +1103,12 @@ function buildClientBindingSeeds(repoRoot, files) {
             path,
             index + 1,
             descriptor,
+            replacements,
           ),
         },
       };
+      replacements.set(owner, updated);
+      return updated;
     }
     return buildAssignedDescriptorPath(path, index, descriptor);
   };
@@ -1122,6 +1191,7 @@ function buildClientBindingSeeds(repoRoot, files) {
       if (!assignment) {
         return false;
       }
+      const replacements = new Map();
       locals.set(
         assignment.rootName,
         updateAssignedDescriptorPath(
@@ -1129,8 +1199,10 @@ function buildClientBindingSeeds(repoRoot, files) {
           assignment.path,
           0,
           descriptor,
+          replacements,
         ),
       );
+      rewriteLocalDescriptorReferences(locals, replacements);
       return true;
     }
     return false;

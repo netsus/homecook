@@ -1,6 +1,9 @@
 "use client";
 
-import { nestedSdkNamespace } from "../lib/api/nested-sdk-tools";
+import {
+  nestedAliasedSdkNamespace,
+  nestedSdkNamespace,
+} from "../lib/api/nested-sdk-tools";
 
 declare const client: {
   storage: {
@@ -23,7 +26,17 @@ const localNamespace = {
 
 localNamespace.tools.remove = bucket.remove;
 
+const aliasedNamespace = {
+  tools: {
+    remove: safeRemove,
+  },
+};
+const aliasedTools = aliasedNamespace.tools;
+aliasedTools.remove = bucket.remove;
+
 export function removeThroughNestedNamespaces() {
   localNamespace.tools.remove(["unsafe-local.png"]);
   nestedSdkNamespace.tools.remove(["unsafe-imported.png"]);
+  aliasedNamespace.tools.remove(["unsafe-local-alias.png"]);
+  nestedAliasedSdkNamespace.tools.remove(["unsafe-imported-alias.png"]);
 }

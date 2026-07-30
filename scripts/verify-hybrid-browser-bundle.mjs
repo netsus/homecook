@@ -955,7 +955,65 @@ function buildAssignedObjectPath(path, index, nextValue) {
   });
 }
 
-function updateAssignedObjectPath(owner, path, index, nextValue) {
+function rewriteKnownObjectReferences(
+  knownObject,
+  replacements,
+  objectMemo,
+) {
+  const canonical = replacements.get(knownObject) ?? knownObject;
+  if (objectMemo.has(canonical)) {
+    return objectMemo.get(canonical);
+  }
+  const rewritten = new Map();
+  objectMemo.set(canonical, rewritten);
+  for (const [propertyName, propertyValue] of canonical) {
+    rewritten.set(
+      propertyName,
+      rewriteValueObjectReferences(
+        propertyValue,
+        replacements,
+        objectMemo,
+      ),
+    );
+  }
+  return rewritten;
+}
+
+function rewriteValueObjectReferences(value, replacements, objectMemo) {
+  return valueSet(
+    [...value.known].map((known) => (
+      known instanceof Map
+        ? rewriteKnownObjectReferences(known, replacements, objectMemo)
+        : known
+    )),
+    {
+      fragments: value.fragments,
+      initialization: value.initialization,
+      unknown: value.unknown,
+    },
+  );
+}
+
+function rewriteBindingObjectReferences(bindings, replacements) {
+  if (replacements.size === 0) {
+    return;
+  }
+  const objectMemo = new Map();
+  for (const [name, value] of bindings) {
+    bindings.set(
+      name,
+      rewriteValueObjectReferences(value, replacements, objectMemo),
+    );
+  }
+}
+
+function updateAssignedObjectPath(
+  owner,
+  path,
+  index,
+  nextValue,
+  replacements,
+) {
   if (index >= path.length) {
     return nextValue;
   }
@@ -982,9 +1040,11 @@ function updateAssignedObjectPath(owner, path, index, nextValue) {
           path,
           index + 1,
           nextValue,
+          replacements,
         ),
       );
     }
+    replacements.set(knownOwner, nextObject);
     nextObjects.push(nextObject);
   }
 
@@ -1002,10 +1062,18 @@ function assignMemberPath(target, nextValue, bindings) {
     return false;
   }
   const owner = bindings.get(assignment.rootName) ?? unknownValue();
+  const replacements = new Map();
   bindings.set(
     assignment.rootName,
-    updateAssignedObjectPath(owner, assignment.path, 0, nextValue),
+    updateAssignedObjectPath(
+      owner,
+      assignment.path,
+      0,
+      nextValue,
+      replacements,
+    ),
   );
+  rewriteBindingObjectReferences(bindings, replacements);
   return true;
 }
 
