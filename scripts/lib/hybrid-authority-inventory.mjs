@@ -8,6 +8,9 @@ import ts from "typescript";
 import {
   HYBRID_PUBLIC_ROUTE_CONTRACTS,
 } from "../../lib/server/hybrid-auth/public-read-policy-runtime.mjs";
+import {
+  findBrowserBundleStorageMutations,
+} from "../verify-hybrid-browser-bundle.mjs";
 
 const SKIP_DIRS = new Set([".git", ".next", "coverage", "dist", "node_modules"]);
 const CLIENT_GRAPH_SKIP_DIRS = new Set([
@@ -30,13 +33,6 @@ const STORAGE_MUTATION_METHODS = new Set([
   "upsert",
   "write",
 ]);
-const STORAGE_REST_MUTATION_METHODS = new Set([
-  "DELETE",
-  "PATCH",
-  "POST",
-  "PUT",
-]);
-const STORAGE_REST_PATH = "/storage/v1/object/";
 const FILE_EXTENSIONS = [
   ".ts",
   ".tsx",
@@ -586,45 +582,6 @@ function extractStorageMutationCalls(fileState) {
     return ts.isIdentifier(callee) && storageBucketMethodAliases.has(callee.text);
   };
 
-  const isStorageFetch = (callExpression) => {
-    if (!isName(callExpression.expression, "fetch")) {
-      return false;
-    }
-    const firstArg = callExpression.arguments[0];
-    if (!firstArg) {
-      return false;
-    }
-
-    const arg = unwrapExpression(firstArg);
-    if (
-      !arg.getText(sourceFile).includes(STORAGE_REST_PATH)
-      && !source.includes(STORAGE_REST_PATH)
-    ) {
-      return false;
-    }
-
-    const options = callExpression.arguments[1];
-    if (!options || !ts.isObjectLiteralExpression(unwrapExpression(options))) {
-      return false;
-    }
-
-    const methodProperty = unwrapExpression(options).properties.find(
-      (property) => (
-        ts.isPropertyAssignment(property)
-        && getPropertyName(property.name) === "method"
-      ),
-    );
-    if (!methodProperty || !ts.isPropertyAssignment(methodProperty)) {
-      return false;
-    }
-
-    const methodValue = unwrapExpression(methodProperty.initializer);
-    return (
-      ts.isStringLiteralLike(methodValue)
-      && STORAGE_REST_MUTATION_METHODS.has(methodValue.text.toUpperCase())
-    );
-  };
-
   const visit = (node) => {
     if (
       ts.isVariableDeclaration(node)
@@ -704,24 +661,40 @@ function extractStorageMutationCalls(fileState) {
           });
         }
       }
-
-      if (isStorageFetch(node)) {
-        const key = `${relativeFile}:${node.getStart()}:storage-fetch`;
-        if (!storageFromLines.has(key)) {
-          storageFromLines.add(key);
-          entries.push({
-            ...createBaseEntry(relativeFile, sourceFile, node, classification),
-            reason: "client direct Storage REST fetch",
-            method: "fetch",
-          });
-        }
-      }
     }
 
     ts.forEachChild(node, visit);
   };
 
   visit(sourceFile);
+
+  // FETCH_VALUE can only enter the intra-module lattice from a fetch token.
+  // URL, method, options, alias, escape, and control-flow decisions remain in
+  // the shared structured scanner, including split Storage path literals.
+  if (isClientReachable && source.includes("fetch")) {
+    for (const match of findBrowserBundleStorageMutations(source, {
+      fileName: relativeFile,
+      scriptKind: scriptKindFor(relativeFile),
+    })) {
+      if (match.kind !== "supabase-storage-rest") {
+        continue;
+      }
+      const key = `${relativeFile}:${match.index}:storage-fetch`;
+      if (storageFromLines.has(key)) {
+        continue;
+      }
+      storageFromLines.add(key);
+      const location = sourceFile.getLineAndCharacterOfPosition(match.index);
+      entries.push({
+        classification,
+        column: location.character + 1,
+        file: relativeFile,
+        line: location.line + 1,
+        method: "fetch",
+        reason: "client direct Storage REST fetch",
+      });
+    }
+  }
 
   const hasAnyStorageFrom = entries.length > 0;
   if (hasAnyStorageFrom) {

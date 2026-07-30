@@ -153,6 +153,7 @@ describe("hybrid authority AST/static gate", () => {
       "lib/api/raw-delete.ts",
       "lib/api/sdk-alias.mjs",
       "lib/api/sdk-bracket.js",
+      "stores/aliased-rest.ts",
       "stores/unsafe.ts",
     ]);
     expect(inventory.clientReachableFiles).not.toContain(
@@ -161,6 +162,18 @@ describe("hybrid authority AST/static gate", () => {
     expect(inventory.clientReachableFiles).not.toContain(
       "stores/server-only.ts",
     );
+    expect(inventory.clientReachableFiles).toEqual(
+      expect.arrayContaining([
+        "components/dynamic-client.tsx",
+        "lib/api/complex/index.ts",
+        "stores/aliased-rest.ts",
+      ]),
+    );
+    expect(
+      inventory.browserDirectStoragePaths.filter(
+        (entry) => entry.file === "stores/aliased-rest.ts",
+      ),
+    ).toHaveLength(1);
   });
 
   it("keeps every remaining service-role call inside an exact allowlist", () => {

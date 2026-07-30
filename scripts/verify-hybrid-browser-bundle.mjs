@@ -137,23 +137,33 @@ function appendExceptionalOutcome(outcomes, bindings) {
   taintBindings(overflow);
 }
 
-function isDefinitelyNonThrowingEvaluation(node) {
+function isDefinitelyNonThrowingEvaluation(node, bindings) {
+  if (ts.isAwaitExpression(node)) {
+    return false;
+  }
+
   const expression = unwrapExpression(node);
 
   if (
-    ts.isIdentifier(expression)
-    || ts.isStringLiteralLike(expression)
+    ts.isStringLiteralLike(expression)
     || ts.isNumericLiteral(expression)
     || ts.isBigIntLiteral(expression)
     || ts.isRegularExpressionLiteral(expression)
     || expression.kind === ts.SyntaxKind.TrueKeyword
     || expression.kind === ts.SyntaxKind.FalseKeyword
     || expression.kind === ts.SyntaxKind.NullKeyword
-    || expression.kind === ts.SyntaxKind.ThisKeyword
     || ts.isFunctionExpression(expression)
     || ts.isArrowFunction(expression)
     || ts.isMetaProperty(expression)
   ) {
+    return true;
+  }
+
+  if (ts.isIdentifier(expression)) {
+    return bindings.has(expression.text);
+  }
+
+  if (ts.isTypeOfExpression(expression)) {
     return true;
   }
 
@@ -203,10 +213,51 @@ function isDefinitelyNonThrowingEvaluation(node) {
   return false;
 }
 
-function mayThrowDuringEvaluation(node) {
+function isRuntimeIdentifierReference(node) {
+  const parent = node.parent;
+  if (!parent) {
+    return true;
+  }
+
+  if (
+    (ts.isPropertyAccessExpression(parent) && parent.name === node)
+    || (ts.isPropertyAssignment(parent) && parent.name === node)
+    || (ts.isMethodDeclaration(parent) && parent.name === node)
+    || (ts.isPropertyDeclaration(parent) && parent.name === node)
+    || (ts.isGetAccessorDeclaration(parent) && parent.name === node)
+    || (ts.isSetAccessorDeclaration(parent) && parent.name === node)
+    || (ts.isVariableDeclaration(parent) && parent.name === node)
+    || (ts.isParameter(parent) && parent.name === node)
+    || (ts.isBindingElement(parent) && (
+      parent.name === node
+      || parent.propertyName === node
+    ))
+    || (ts.isFunctionDeclaration(parent) && parent.name === node)
+    || (ts.isFunctionExpression(parent) && parent.name === node)
+    || (ts.isClassDeclaration(parent) && parent.name === node)
+    || (ts.isClassExpression(parent) && parent.name === node)
+    || (ts.isLabeledStatement(parent) && parent.label === node)
+    || (ts.isBreakOrContinueStatement(parent) && parent.label === node)
+    || ts.isImportClause(parent)
+    || ts.isImportSpecifier(parent)
+    || ts.isNamespaceImport(parent)
+    || ts.isExportSpecifier(parent)
+    || ts.isTypeNode(parent)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function mayThrowDuringEvaluation(node, bindings) {
   return (
     ts.isExpressionNode(node)
-    && !isDefinitelyNonThrowingEvaluation(node)
+    && (
+      !ts.isIdentifier(node)
+      || isRuntimeIdentifierReference(node)
+    )
+    && !isDefinitelyNonThrowingEvaluation(node, bindings)
   );
 }
 
@@ -330,6 +381,32 @@ function resolveStaticValue(node, bindings) {
     );
   }
 
+  if (
+    ts.isNewExpression(expression)
+    && ts.isIdentifier(expression.expression)
+    && expression.expression.text === "URL"
+    && expression.arguments?.[0]
+  ) {
+    return resolveStaticValue(expression.arguments[0], bindings);
+  }
+
+  if (ts.isCallExpression(expression)) {
+    const propagated = [];
+    const callee = unwrapExpression(expression.expression);
+    if (
+      ts.isPropertyAccessExpression(callee)
+      || ts.isElementAccessExpression(callee)
+    ) {
+      propagated.push(resolveStaticValue(callee.expression, bindings));
+    }
+    for (const argument of expression.arguments) {
+      propagated.push(resolveStaticValue(argument, bindings));
+    }
+    const escaped = mergeValues(...propagated);
+    escaped.unknown = true;
+    return escaped;
+  }
+
   if (ts.isObjectLiteralExpression(expression)) {
     const properties = new Map();
     let objectUnknown = false;
@@ -375,13 +452,19 @@ function resolveStaticValue(node, bindings) {
   return unknownValue();
 }
 
-function findStorageRestFetches(source) {
+function findStorageRestFetches(
+  source,
+  {
+    fileName = "browser-bundle.js",
+    scriptKind = ts.ScriptKind.JS,
+  } = {},
+) {
   const sourceFile = ts.createSourceFile(
-    "browser-bundle.js",
+    fileName,
     source,
     ts.ScriptTarget.Latest,
     true,
-    ts.ScriptKind.JS,
+    scriptKind,
   );
   const matches = [];
   const exceptionCollectors = [];
@@ -473,8 +556,51 @@ function findStorageRestFetches(source) {
     label: null,
   });
 
+  const initializeHoistedBindings = (statements, bindings) => {
+    for (const statement of statements) {
+      if (ts.isFunctionDeclaration(statement) && statement.name) {
+        bindings.set(statement.name.text, unknownValue());
+        continue;
+      }
+      if (ts.isImportDeclaration(statement) && statement.importClause) {
+        const { importClause } = statement;
+        if (importClause.name) {
+          bindings.set(importClause.name.text, unknownValue());
+        }
+        if (
+          importClause.namedBindings
+          && ts.isNamespaceImport(importClause.namedBindings)
+        ) {
+          bindings.set(importClause.namedBindings.name.text, unknownValue());
+        } else if (
+          importClause.namedBindings
+          && ts.isNamedImports(importClause.namedBindings)
+        ) {
+          for (const element of importClause.namedBindings.elements) {
+            if (!element.isTypeOnly) {
+              bindings.set(element.name.text, unknownValue());
+            }
+          }
+        }
+        continue;
+      }
+      if (
+        ts.isVariableStatement(statement)
+        && !(statement.declarationList.flags & ts.NodeFlags.BlockScoped)
+      ) {
+        for (const declaration of statement.declarationList.declarations) {
+          if (ts.isIdentifier(declaration.name)) {
+            bindings.set(declaration.name.text, unknownValue());
+          }
+        }
+      }
+    }
+  };
+
   const executeStatementList = (statements, initialBindings) => {
-    let completions = [normalCompletion(cloneBindings(initialBindings))];
+    const entryBindings = cloneBindings(initialBindings);
+    initializeHoistedBindings(statements, entryBindings);
+    let completions = [normalCompletion(entryBindings)];
     for (const statement of statements) {
       const nextCompletions = [];
       for (const completion of completions) {
@@ -662,18 +788,17 @@ function findStorageRestFetches(source) {
 
   const executeLoopBody = (statement, inheritedBindings) => (
     executeStatement(statement, cloneBindings(inheritedBindings))
-      .map((completion) => {
-        if (
-          (completion.kind === "break" || completion.kind === "continue")
-          && completion.label === null
-        ) {
-          return normalCompletion(completion.bindings);
-        }
-        return completion;
-      })
   );
 
-  const executeStatement = (node, inheritedBindings) => {
+  const executeStatement = (node, inheritedBindings, ownedLabels = []) => {
+    const loopOwns = (completion, kind) => (
+      completion.kind === kind
+      && (
+        completion.label === null
+        || ownedLabels.includes(completion.label)
+      )
+    );
+
     if (ts.isBlock(node)) {
       return executeBlock(node, inheritedBindings);
     }
@@ -708,10 +833,21 @@ function findStorageRestFetches(source) {
     if (ts.isWhileStatement(node)) {
       const bindings = cloneBindings(inheritedBindings);
       visit(node.expression, bindings);
-      return compactCompletions([
-        normalCompletion(cloneBindings(bindings)),
-        ...executeLoopBody(node.statement, bindings),
-      ]);
+      const outcomes = [normalCompletion(cloneBindings(bindings))];
+      for (const completion of executeLoopBody(node.statement, bindings)) {
+        if (loopOwns(completion, "break")) {
+          outcomes.push(normalCompletion(completion.bindings));
+          continue;
+        }
+        if (completion.kind === "normal" || loopOwns(completion, "continue")) {
+          const iterationBindings = cloneBindings(completion.bindings);
+          visit(node.expression, iterationBindings);
+          outcomes.push(normalCompletion(iterationBindings));
+          continue;
+        }
+        outcomes.push(completion);
+      }
+      return compactCompletions(outcomes);
     }
 
     if (ts.isDoStatement(node)) {
@@ -721,13 +857,17 @@ function findStorageRestFetches(source) {
       );
       const outcomes = [];
       for (const completion of bodyCompletions) {
-        if (completion.kind !== "normal") {
-          outcomes.push(completion);
+        if (loopOwns(completion, "break")) {
+          outcomes.push(normalCompletion(completion.bindings));
           continue;
         }
-        const bindings = cloneBindings(completion.bindings);
-        visit(node.expression, bindings);
-        outcomes.push(normalCompletion(bindings));
+        if (completion.kind === "normal" || loopOwns(completion, "continue")) {
+          const bindings = cloneBindings(completion.bindings);
+          visit(node.expression, bindings);
+          outcomes.push(normalCompletion(bindings));
+          continue;
+        }
+        outcomes.push(completion);
       }
       return compactCompletions(outcomes);
     }
@@ -742,11 +882,19 @@ function findStorageRestFetches(source) {
       }
       const outcomes = [normalCompletion(cloneBindings(bindings))];
       for (const completion of executeLoopBody(node.statement, bindings)) {
-        if (
-          completion.kind === "normal"
-          && node.incrementor
-        ) {
-          visit(node.incrementor, completion.bindings);
+        if (loopOwns(completion, "break")) {
+          outcomes.push(normalCompletion(completion.bindings));
+          continue;
+        }
+        if (completion.kind === "normal" || loopOwns(completion, "continue")) {
+          if (node.incrementor) {
+            visit(node.incrementor, completion.bindings);
+          }
+          if (node.condition) {
+            visit(node.condition, completion.bindings);
+          }
+          outcomes.push(normalCompletion(completion.bindings));
+          continue;
         }
         outcomes.push(completion);
       }
@@ -758,10 +906,19 @@ function findStorageRestFetches(source) {
       visit(node.initializer, bindings);
       visit(node.expression, bindings);
       captureExceptionalOutcome(bindings);
-      return compactCompletions([
-        normalCompletion(cloneBindings(bindings)),
-        ...executeLoopBody(node.statement, bindings),
-      ]);
+      const outcomes = [normalCompletion(cloneBindings(bindings))];
+      for (const completion of executeLoopBody(node.statement, bindings)) {
+        if (
+          loopOwns(completion, "break")
+          || completion.kind === "normal"
+          || loopOwns(completion, "continue")
+        ) {
+          outcomes.push(normalCompletion(completion.bindings));
+        } else {
+          outcomes.push(completion);
+        }
+      }
+      return compactCompletions(outcomes);
     }
 
     if (ts.isThrowStatement(node)) {
@@ -797,6 +954,20 @@ function findStorageRestFetches(source) {
     }
 
     if (ts.isLabeledStatement(node)) {
+      if (
+        ts.isDoStatement(node.statement)
+        || ts.isWhileStatement(node.statement)
+        || ts.isForStatement(node.statement)
+        || ts.isForInStatement(node.statement)
+        || ts.isForOfStatement(node.statement)
+        || ts.isLabeledStatement(node.statement)
+      ) {
+        return executeStatement(
+          node.statement,
+          inheritedBindings,
+          [...ownedLabels, node.label.text],
+        );
+      }
       return executeStatement(node.statement, inheritedBindings).map(
         (completion) => (
           completion.kind === "break"
@@ -805,6 +976,17 @@ function findStorageRestFetches(source) {
             : completion
         ),
       );
+    }
+
+    if (ts.isClassDeclaration(node)) {
+      const bindings = cloneBindings(inheritedBindings);
+      captureExceptionalOutcome(bindings);
+      visit(node, bindings);
+      if (node.name) {
+        bindings.set(node.name.text, unknownValue());
+      }
+      captureExceptionalOutcome(bindings);
+      return [normalCompletion(bindings)];
     }
 
     if (ts.isWithStatement(node)) {
@@ -829,7 +1011,10 @@ function findStorageRestFetches(source) {
   };
 
   visit = (node, inheritedBindings) => {
-    const potentiallyThrowing = mayThrowDuringEvaluation(node);
+    const potentiallyThrowing = mayThrowDuringEvaluation(
+      node,
+      inheritedBindings,
+    );
     if (potentiallyThrowing) {
       captureExceptionalOutcome(inheritedBindings);
     }
@@ -894,6 +1079,10 @@ function findStorageRestFetches(source) {
       visit(node.whenTrue, trueBindings);
       visit(node.whenFalse, falseBindings);
       mergeBindings(inheritedBindings, trueBindings, falseBindings);
+      return;
+    }
+
+    if (ts.isTypeOfExpression(node)) {
       return;
     }
 
@@ -1017,15 +1206,18 @@ function findStorageRestFetches(source) {
   return matches;
 }
 
-export function findBrowserBundleStorageMutations(source) {
-  const executableSource = source.replace(/\/\*\*[\s\S]*?\*\//gu, " ");
+export function findBrowserBundleStorageMutations(source, parserOptions) {
+  const executableSource = source.replace(
+    /\/\*\*[\s\S]*?\*\//gu,
+    (comment) => " ".repeat(comment.length),
+  );
   return [
     ...findPatternMatches(
       executableSource,
       "supabase-storage-sdk",
       SDK_MUTATION_PATTERN,
     ),
-    ...findStorageRestFetches(executableSource),
+    ...findStorageRestFetches(executableSource, parserOptions),
   ].sort((left, right) => left.index - right.index);
 }
 
