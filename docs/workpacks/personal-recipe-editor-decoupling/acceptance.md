@@ -1,11 +1,11 @@
 # Acceptance Checklist
 
-> This hybrid Stage 1 relock uses the current official tuple (`요구사항기준선-v1.7.26.md`, `화면정의서-v1.5.30.md`, `유저flow맵-v1.3.28.md`, `db설계-v1.3.27.md`, `api문서-v1.2.30.md`). The approved master plan remains design history, but its local-only Auth/deployment assumptions are superseded. Unchecked items are not claims that #6 write APIs, Stage 4 UI, hybrid verifier, screenshots or production activation already exist.
+> This hybrid Stage 1 relock uses the current official tuple (`요구사항기준선-v1.7.26.md`, `화면정의서-v1.5.30.md`, `유저flow맵-v1.3.28.md`, `db설계-v1.3.27.md`, `api문서-v1.2.30.md`). The approved master plan remains design history, but its local-only Auth/deployment assumptions are superseded. Stage 2 backend is currently test-only: it locks the existing detail-read and manual-create contract boundaries without adding runtime endpoints. Unchecked items are not claims that #6 write APIs, Stage 4 UI, hybrid verifier, screenshots or production activation already exist.
 
 ## Existing Backend Boundary Lock
 
-- [ ] an invisible parent recipe returns the same `404 RESOURCE_NOT_FOUND` before ingredient, step, tag or service-role image reads <!-- omo:id=accept-editor-backend-nondisclosure;stage=2;scope=backend;review=3 -->
-- [ ] manual recipe create cannot accept client authority for `visibility`, `created_by` or `origin_recipe_id` and sends only official fields to the existing RPC <!-- omo:id=accept-editor-backend-create-boundary;stage=2;scope=backend;review=3 -->
+- [x] an invisible parent recipe returns the same `404 RESOURCE_NOT_FOUND` before ingredient, step, tag or service-role image reads <!-- omo:id=accept-editor-backend-nondisclosure;stage=2;scope=backend;review=3 -->
+- [x] manual recipe create cannot accept client authority for `visibility`, `created_by` or `origin_recipe_id` and sends only official fields to the existing RPC <!-- omo:id=accept-editor-backend-create-boundary;stage=2;scope=backend;review=3 -->
 
 ## Composition / Context
 
