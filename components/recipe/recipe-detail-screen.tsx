@@ -10,6 +10,7 @@ import { LoginGateModal } from "@/components/auth/login-gate-modal";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
+import { RecipeDetailPersonalActions } from "@/components/recipe/recipe-detail-personal-actions";
 import { RecipeNutritionCard } from "@/components/recipe/recipe-nutrition-card";
 import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
@@ -1724,21 +1725,31 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderAppView ? (
-      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(82px+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_var(--shadow-color-soft)] lg:hidden">
-        <button
-          className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand)] px-3 text-[15px] font-bold text-[var(--text-inverse)]"
-          onClick={() => handleProtectedAction("planner")}
-          type="button"
-        >
-          플래너에 추가
-        </button>
-        <button
-          className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-transparent px-3 text-[15px] font-bold text-[var(--brand)]"
-          onClick={() => router.push(cookModeHref)}
-          type="button"
-        >
-          요리하기
-        </button>
+      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-[var(--line-strong)] bg-[var(--surface)] px-4 pb-[calc(82px+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_var(--shadow-color-soft)] lg:hidden">
+        <div className="flex gap-2">
+          <button
+            className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-[var(--brand)] px-3 text-[15px] font-bold text-[var(--text-inverse)]"
+            onClick={() => handleProtectedAction("planner")}
+            type="button"
+          >
+            플래너에 추가
+          </button>
+          <button
+            className="min-h-[var(--control-height-md)] flex-1 rounded-[var(--radius-card)] border border-[var(--brand)] bg-transparent px-3 text-[15px] font-bold text-[var(--brand)]"
+            onClick={() => router.push(cookModeHref)}
+            type="button"
+          >
+            요리하기
+          </button>
+        </div>
+        <RecipeDetailPersonalActions
+          accessState="unknown"
+          capabilityEnabled={false}
+          isAuthenticated={isAuthenticated}
+          onDelete={() => undefined}
+          onEdit={() => undefined}
+          onFork={() => undefined}
+        />
       </div>
       ) : null}
       {shouldRenderAppView ? (
@@ -2140,6 +2151,14 @@ function RecipeDetailWebView({
                     <CookIcon />
                     요리하기
                   </WebButton>
+                  <RecipeDetailPersonalActions
+                    accessState="unknown"
+                    capabilityEnabled={false}
+                    isAuthenticated={isAuthenticated}
+                    onDelete={() => undefined}
+                    onEdit={() => undefined}
+                    onFork={() => undefined}
+                  />
                 </div>
                 <p className="web-recipe-rail-note">
                   <InfoIcon />
@@ -2156,6 +2175,14 @@ function RecipeDetailWebView({
           플래너에 추가
         </WebButton>
         <WebButton onClick={onCook} variant="secondary">요리하기</WebButton>
+        <RecipeDetailPersonalActions
+          accessState="unknown"
+          capabilityEnabled={false}
+          isAuthenticated={isAuthenticated}
+          onDelete={() => undefined}
+          onEdit={() => undefined}
+          onFork={() => undefined}
+        />
       </WebCTA>
     </WebShell>
   );

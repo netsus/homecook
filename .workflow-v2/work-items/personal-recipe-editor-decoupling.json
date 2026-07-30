@@ -143,7 +143,7 @@
   },
   "status": {
     "lifecycle": "in_progress",
-    "approval_state": "not_started",
+    "approval_state": "codex_approved",
     "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
@@ -165,5 +165,5 @@
     "Production code migration server-production/rehearsal database or data write in this Stage 1 docs PR"
   ],
   "open_questions": [],
-  "notes": "Roadmap and workflow lifecycle are in progress for the test-only Stage 2 while approval remains not_started and verification remains pending until independent Stage 3 review. The approved master plan remains editor/product design history, while its local-only Auth/deployment assumptions are superseded by the current v1.7.26/v1.5.30/v1.3.28/v1.3.27/v1.2.30 hybrid contract. #3 Stage 2 through Stage 6 merged as PR #1228 and the media/tag foundations are merged. #4 historical Stage 2 PR #1218 and Stage 4 PR #1219 are preserved, but its hybrid delta/reverification remains in progress and is not a #5 predecessor. required_checks is the full-lifecycle gate and verify_commands is the current executable subset. This backend branch proved a projection RED before the required docs-to-in-progress transition, then GREEN with `tests/personal-recipe-editor-permissions.test.ts` and `tests/personal-recipe-editor-contract.test.ts` to lock fail-closed detail reads and official manual-create payload boundaries. The hybrid verifier, component/E2E/visual/a11y/exploratory/design evidence are future Stage 4/release work. #5 makes no product API, DB, route, field, status or error change, does not own #6 writes or #8 activation, keeps local auth.users=0 and service-role user path 0, and keeps remote application DB/Storage writes and external personal write dark."
+  "notes": "Stage 4 Draft PR #1243 is open from feature/fe-personal-recipe-editor-decoupling after the Stage 2/3 evidence PR #1238 merged. The shared production shell/primitives, capability-off detail action composition, browser dirty guard, managed-image owner cleanup and 390px/320px local-fixture evidence are present; independent Codex code/security reviews passed P0/P1/P2 0/0/0 and authority passed blocker/major/minor 0/0/0. required_checks is the full-lifecycle gate and verify_commands is the current executable subset. Verification remains pending until every started exact current-head PR check finishes green. The merged-SHA hybrid verifier, #6 writes and #8 activation remain future work at manual boundaries. No production/staging or remote application DB/Storage write is claimed; keep external personal write dark."
 }

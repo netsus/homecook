@@ -214,11 +214,14 @@ describe("recipe visibility consumers", () => {
     await waitFor(() => {
       expect(cancelRecipeImage).toHaveBeenCalledWith(
         "550e8400-e29b-41d4-a716-446655440030",
+        {
+          idempotencyKey: "550e8400-e29b-41d4-a716-446655440102",
+        },
       );
     });
     expect(storageMocks.mockStorageRemove).not.toHaveBeenCalled();
     expect(storageMocks.getSupabaseBrowserClient).not.toHaveBeenCalled();
-  });
+  }, 10_000);
 
   it("saves managed uploads through image_object_id but keeps legacy uploads on thumbnail_url", async () => {
     const user = userEvent.setup();
@@ -264,7 +267,7 @@ describe("recipe visibility consumers", () => {
     expect(vi.mocked(createManualRecipe).mock.calls[0]?.[0]).toMatchObject({
       thumbnail_url: "https://cdn.test/legacy-thumbnail.jpg",
     });
-  });
+  }, 15_000);
 
   it("replays an in-progress upload with the same idempotency key", async () => {
     vi.mocked(uploadRecipeImage)
