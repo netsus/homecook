@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertPinnedImageInspection,
+  assertBackupMatchesCurrent,
   assertPreRestoreBackupBinding,
   assertDockerEnginePlatform,
   assertProductionComposeModel,
@@ -25,12 +26,16 @@ import {
   evaluateCapacityPreflight,
   evaluateMemoryCapacityPreflight,
   evaluateRuntimeStatus,
+  planPostRestoreMigrationAdvance,
   planOrderedRecovery,
   runRestorePublicationGate,
   runtimeImageRefsForPlatform,
   synchronizeRemoteJwks,
   validateHybridProductionConfig,
+  validateInstalledSemanticState,
   validateSemanticRestoreEvidence,
+  validateStoragePayloadInventory,
+  validateStorageXattrManifest,
 } from "../scripts/lib/hybrid-production-runtime.mjs";
 
 const GIB = 1024 ** 3;
@@ -481,6 +486,177 @@ describe("hybrid production restore safety", () => {
           + "lrwxr-xr-x  0 user group 0 Jan 1 00:00 ./object-link -> /tmp\n",
       }),
     ).toThrow(/regular files and directories/u);
+
+    expect(() =>
+      assertSafeTarArchive({
+        names: "--checkpoint-action=exec=malicious\n",
+        verbose:
+          "-rw-------  0 user group 1 Jan 1 00:00 "
+          + "--checkpoint-action=exec=malicious\n",
+      }),
+    ).toThrow(/unsafe archive path/u);
+  });
+
+  it("allows only the two required PII-free Storage xattrs for every persisted file", () => {
+    const path =
+      "tenant/project/recipe-images/owner/object.jpg/version";
+    const manifest = {
+      files: [
+        {
+          attributes: {
+            "user.supabase.cache-control":
+              Buffer.from("max-age=3600").toString("base64"),
+            "user.supabase.content-type":
+              Buffer.from("image/jpeg").toString("base64"),
+          },
+          path,
+        },
+      ],
+      format: "homecook-storage-xattrs-v1",
+    };
+
+    expect(validateStorageXattrManifest({
+      manifest,
+      storageFiles: [{ path }],
+    })).toEqual(manifest);
+    expect(() => validateStorageXattrManifest({
+      manifest: {
+        ...manifest,
+        files: [
+          {
+            ...manifest.files[0],
+            attributes: {
+              ...manifest.files[0].attributes,
+              "user.profile-email":
+                Buffer.from("must-not-be-stored").toString("base64"),
+            },
+          },
+        ],
+      },
+      storageFiles: [{ path }],
+    })).toThrow(/xattr allowlist/u);
+    expect(() => validateStorageXattrManifest({
+      manifest: { files: [], format: manifest.format },
+      storageFiles: [{ path }],
+    })).toThrow(/file manifest/u);
+  });
+
+  it("requires the inner Storage payload set, size, and SHA to exactly match the outer manifest", () => {
+    const metadataPath =
+      ".homecook-complete-v2-storage-xattrs.json";
+    const payloadPath =
+      "tenant/project/recipe-images/owner/object.jpg/version";
+    const storageFiles = [{
+      bytes: 3,
+      path: payloadPath,
+      sha256: "a".repeat(64),
+    }];
+    const metadata = {
+      bytes: 2,
+      path: metadataPath,
+      sha256: "b".repeat(64),
+      type: "file",
+    };
+    const payload = {
+      ...storageFiles[0],
+      type: "file",
+    };
+
+    expect(validateStoragePayloadInventory({
+      entries: [metadata, payload],
+      metadataPath,
+      storageFiles,
+    })).toEqual([payload]);
+
+    const adversarial = [
+      {
+        entries: [metadata],
+        label: "missing payload",
+      },
+      {
+        entries: [
+          metadata,
+          payload,
+          {
+            bytes: 1,
+            path: "extra.bin",
+            sha256: "c".repeat(64),
+            type: "file",
+          },
+        ],
+        label: "extra payload",
+      },
+      {
+        entries: [metadata, payload, payload],
+        label: "duplicate payload",
+      },
+      {
+        entries: [
+          metadata,
+          payload,
+          {
+            bytes: 1,
+            path: "../escape",
+            sha256: "c".repeat(64),
+            type: "file",
+          },
+        ],
+        label: "path traversal",
+      },
+      {
+        entries: [
+          metadata,
+          payload,
+          {
+            bytes: 0,
+            path: "object-link",
+            sha256: "c".repeat(64),
+            type: "link",
+          },
+        ],
+        label: "link",
+      },
+      {
+        entries: [
+          metadata,
+          { ...payload, sha256: "d".repeat(64) },
+        ],
+        label: "hash mismatch",
+      },
+      {
+        entries: [metadata, { ...payload, bytes: 4 }],
+        label: "size mismatch",
+      },
+      {
+        entries: [payload],
+        label: "xattr manifest missing",
+      },
+    ];
+
+    for (const fixture of adversarial) {
+      expect(
+        () => validateStoragePayloadInventory({
+          entries: fixture.entries,
+          metadataPath,
+          storageFiles,
+        }),
+        fixture.label,
+      ).toThrow(/Storage payload|archive path|regular files|metadata/u);
+    }
+  });
+
+  it("hashes every inner Storage regular file during verify-backup before restore", () => {
+    const cli = readFileSync(
+      "scripts/hybrid-production-runtime.mjs",
+      "utf8",
+    );
+
+    expect(cli).toMatch(
+      /function inspectStorageXattrArchive[\s\S]*stdoutPath:[\s\S]*sha256File[\s\S]*validateStoragePayloadInventory/u,
+    );
+    expect(cli).toMatch(
+      /function extractBackup[\s\S]*inspectStorageXattrArchive[\s\S]*return manifest/u,
+    );
   });
 
   it("omits only legacy auth.users FK entries during compatibility restore", () => {
@@ -588,6 +764,50 @@ describe("hybrid production restore safety", () => {
     ).toThrow(/current|manifest|pre-restore/u);
   });
 
+  it("verifies a complete-v2 archive against the exact current runtime without restoring it", () => {
+    const metadata = {
+      manifest: {
+        catalog: { digest: "c".repeat(64) },
+        database: { digest: "d".repeat(64) },
+        storage: { digest: "s".repeat(64) },
+      },
+      runtime: {
+        compose_project: "target-project",
+        postgres_volume: "target-postgres",
+        storage_volume: "target-storage",
+      },
+    };
+    const current = {
+      catalog: { digest: "c".repeat(64) },
+      database: { digest: "d".repeat(64) },
+      storage: { digest: "s".repeat(64) },
+    };
+
+    expect(assertBackupMatchesCurrent({
+      current,
+      metadata,
+      runtime: {
+        project: "target-project",
+        postgresVolume: "target-postgres",
+        storageVolume: "target-storage",
+      },
+    })).toBe(true);
+    expect(() =>
+      assertBackupMatchesCurrent({
+        current: {
+          ...current,
+          database: { digest: "changed" },
+        },
+        metadata,
+        runtime: {
+          project: "target-project",
+          postgresVolume: "target-postgres",
+          storageVolume: "target-storage",
+        },
+      }),
+    ).toThrow(/current runtime/u);
+  });
+
   it.each(Object.keys(catalogSections))(
     "rejects intentional %s catalog drift",
     (section) => {
@@ -616,6 +836,49 @@ describe("hybrid production restore safety", () => {
       }),
     ).toThrow(/catalog mismatch/u);
     expect(calls).toEqual(["verify", "force-private"]);
+  });
+
+  it("validates a restored archive against its signed migration count instead of newer repo files", () => {
+    const restored = {
+      auth_users: 0,
+      auth_users_residual: 0,
+      invalid_constraints: 0,
+      migration_count: 120,
+      runtime_ready: true,
+    };
+
+    expect(validateInstalledSemanticState(restored, 120)).toBe(true);
+    expect(() => validateInstalledSemanticState(restored, 121))
+      .toThrow(/migration count/u);
+  });
+
+  it("separates exact archive restore from current repo forward migrations", () => {
+    expect(planPostRestoreMigrationAdvance({
+      archiveMigrationCount: 120,
+      currentMigrationCount: 121,
+    })).toEqual({
+      archiveMigrationCount: 120,
+      currentMigrationCount: 121,
+      forwardMigrationCount: 1,
+    });
+    expect(() => planPostRestoreMigrationAdvance({
+      archiveMigrationCount: 122,
+      currentMigrationCount: 121,
+    })).toThrow(/newer than the current repo/u);
+
+    const cli = readFileSync(
+      "scripts/hybrid-production-runtime.mjs",
+      "utf8",
+    );
+    expect(cli).toMatch(
+      /archiveState = assertInstalled[\s\S]*archiveManifest = currentManifest[\s\S]*compareCatalogManifests[\s\S]*applyPendingMigrationsAtomically\(runtime\)[\s\S]*forwardState = assertInstalled/u,
+    );
+    expect(cli).toMatch(
+      /forwardAppliedVersions\.length[\s\S]*migrationAdvance\.forwardMigrationCount[\s\S]*Forward migration plan did not match applied versions/u,
+    );
+    expect(cli).toMatch(
+      /migration_count_applied:\s*forwardAppliedVersions\.length/u,
+    );
   });
 
   it("requires the exact semantic restore order", () => {
@@ -838,5 +1101,25 @@ describe("hybrid production verification routing", () => {
     );
     expect(cli).toContain('"/backup/$1"');
     expect(cli).not.toContain("/backup/${basename(archivePath)}");
+    expect(cli).toContain("homecook-storage-xattrs-v1");
+    expect(cli).toContain("user.supabase.content-type");
+    expect(cli).toContain("user.supabase.cache-control");
+  });
+
+  it("applies repo-only forward migrations atomically behind a verified current backup", () => {
+    const cli = readFileSync(
+      "scripts/hybrid-production-runtime.mjs",
+      "utf8",
+    );
+    const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+
+    expect(packageJson.scripts["hybrid-production:migrate-forward"])
+      .toBe("node scripts/hybrid-production-runtime.mjs migrate-forward");
+    expect(cli).toMatch(
+      /case "migrate-forward"[\s\S]*verifyBackupArchive[\s\S]*applyPendingMigrationsAtomically[\s\S]*assertInstalled/u,
+    );
+    expect(cli).toMatch(
+      /applyPendingMigrationsAtomically[\s\S]*lock table auth\.users in share row exclusive mode[\s\S]*insert into supabase_migrations\.schema_migrations[\s\S]*commit;/u,
+    );
   });
 });
