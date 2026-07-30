@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -187,5 +188,20 @@ describe("personal recipe editor hybrid contract lock", () => {
       "required_checks is the full-lifecycle gate and verify_commands is the current executable subset",
     );
     expect(statusNotes).toContain("Stage 4 Draft PR #1243");
+  });
+
+  it("keeps the relocked Stage 4 workpack ready-for-review valid", () => {
+    expect(() =>
+      execFileSync("node", ["scripts/validate-closeout-sync.mjs"], {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          BRANCH_NAME: "feature/fe-personal-recipe-editor-decoupling",
+          BASE_REF: "master",
+          PR_IS_DRAFT: "false",
+        },
+        stdio: "pipe",
+      }),
+    ).not.toThrow();
   });
 });
