@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> Evidence is checked only after the owning implementation/review stage produces it. This Stage 1 document locks future tests and rollout boundaries; it does not claim migration, compatibility-release, browser or local-first production/rehearsal verifier artifacts already exist.
+> PR #1218 Stage 2 and PR #1219 Stage 4 evidence are historical implementation evidence. PR #1220 reopened the lifecycle because deployment verification remained missing. This relock records only the current hybrid contract delta and does not claim the hybrid verifier, compatibility-release or production evidence already exists.
 
 ## Snapshot Authority
 
@@ -22,7 +22,7 @@
 - [ ] public/shared content and nutrition are owner-null shared rows without per-user duplication <!-- omo:id=accept-snapshot-public-neutral;stage=2;scope=backend;review=3,6 -->
 - [ ] anon/authenticated/service-role direct snapshot update/delete and generic cleanup fail; only allowlisted nutrition writer current switch remains <!-- omo:id=accept-snapshot-direct-mutation;stage=2;scope=backend;review=3,6 -->
 - [ ] personal soft delete preserves recipe/snapshot/history FKs, blocks new snapshot/current transition and internal restore reuses immutable identity <!-- omo:id=accept-snapshot-soft-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] session-generation-bound account cleanup alone follows `Meal event pointer → event → meal log/non-image idempotency → claim → session-meal → session → Meal → batch → private content → private nutrition → private recipe → private-product references/link/version/profile/product` while preserving public/shared rows <!-- omo:id=accept-snapshot-account-delete;stage=2;scope=backend;review=3,6 -->
+- [ ] the session-authority gateway validates the active epoch and session-liveness HMAC binding; account deletion then follows `local owner fence/cleanup → remote exact-epoch delete → terminal readback → mirror terminal`, with local cleanup preserving the exact `Meal event pointer → event → meal log/non-image idempotency → claim → session-meal → session → Meal → batch → private content → private nutrition → private recipe → private-product references/link/version/profile/product` order and owner-null public/shared rows <!-- omo:id=accept-snapshot-account-delete;stage=2;scope=backend;review=3,6 -->
 
 ## Meal Expand / Mirror / Contract
 
@@ -37,7 +37,7 @@
 
 ## Session / Batch Foundation
 
-- [ ] existing cooking sessions remain `legacy_v1`; server-production/local-rehearsal orphan/mixed rows are reported without fabricated snapshot-v2 backfill <!-- omo:id=accept-snapshot-session-legacy;stage=2;scope=backend;review=3,6 -->
+- [ ] existing cooking sessions remain `legacy_v1`; local application DB orphan/mixed rows are reported without fabricated snapshot-v2 backfill <!-- omo:id=accept-snapshot-session-legacy;stage=2;scope=backend;review=3,6 -->
 - [ ] snapshot-v2 alone requires planner/standalone kind, recipe/content pin, cooking servings and standalone expected revision under conditional checks <!-- omo:id=accept-snapshot-session-shape;stage=2;scope=backend;review=3,6 -->
 - [ ] planner has at least one session-meal with start-time Meal revision and matching recipe/content; standalone has zero session-meal rows <!-- omo:id=accept-snapshot-session-meals;stage=2;scope=backend;review=3,6 -->
 - [ ] `cooking_session_meal_claims.meal_id` PK permits at most one active attempt per Meal and preserves session/owner/claimed-at provenance <!-- omo:id=accept-snapshot-meal-claim;stage=2;scope=backend;review=3,6 -->
@@ -54,11 +54,11 @@
 
 ## Verification / Delivery
 
-- [ ] Stage 1 runs only current docs validators, focused workflow tests, lint/typecheck, local dependency audit and diff check; current-head workflows are observed separately <!-- omo:id=accept-snapshot-stage1-gate;stage=2;scope=shared;review=3,6 -->
+- [ ] the hybrid relock records a failing contract-sync RED before docs repair, then runs current docs validators, focused workflow tests, lint/typecheck, local dependency audit and diff check; current-head workflows are observed separately <!-- omo:id=accept-snapshot-stage1-gate;stage=2;scope=shared;review=3,6 -->
 - [x] Stage 2 writes focused tests first and records RED before migration, trigger, reader, backfill or cleanup implementation <!-- omo:id=accept-snapshot-tdd-red;stage=2;scope=backend;review=3,6 -->
 - [ ] PostgreSQL existing/fresh/replay covers FK/unique/check/trigger/grant, writer conflict, backfill/mirror/XOR and account cleanup order <!-- omo:id=accept-snapshot-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] current/immediate-previous rollback smoke and old-shape zero telemetry are recorded for the exact compatibility release <!-- omo:id=accept-snapshot-release-evidence;stage=2;scope=shared;review=3,6 -->
-- [ ] merged-exact-SHA server-production/local-rehearsal verifier is read-only before approved contract/null cutover <!-- omo:id=accept-snapshot-remote;stage=2;scope=shared;review=3,6 -->
+- [ ] merged-exact-SHA hybrid verifier reads the local application DB/Storage authority plus remote Auth control-plane exact-epoch evidence only, proves `local auth.users=0`, and performs no production/staging or remote application write before approved contract/null cutover <!-- omo:id=accept-snapshot-remote;stage=2;scope=shared;review=3,6 -->
 - [ ] Train B integration keeps #3 Storage cleanup/outbox and #2 effective pantry ingredient regressions green <!-- omo:id=accept-snapshot-train-b;stage=2;scope=shared;review=3,6 -->
 - [ ] independent internal 1.5, security/DB and five-axis reviewers finish with required findings zero <!-- omo:id=accept-snapshot-independent-reviews;stage=2;scope=shared;review=3,6 -->
 - [ ] Draft→Ready and every started current-head check finishes success or documented normal skip before squash merge <!-- omo:id=accept-snapshot-current-head;stage=2;scope=shared;review=3,6 -->
