@@ -139,7 +139,42 @@ describe("hybrid authority AST/static gate", () => {
     expect(inventory.browserDirectStoragePaths).toEqual([]);
   });
 
-  it("finds every adversarial client-reachable Storage mutation bypass", () => {
+  it("allows Supabase browser runtime imports only in the Auth adapter", () => {
+    const inventory = defaultInventory;
+
+    expect(inventory.browserSupabaseRuntimeImportViolations).toEqual([]);
+  });
+
+  it("finds runtime import, re-export, and dynamic import bypasses in the client graph", () => {
+    const fixtureRoot = path.resolve(
+      "tests/fixtures/hybrid-static-bypasses",
+    );
+    const inventory = inventoryHybridAuthorityPaths(fixtureRoot);
+
+    expect(inventory.browserSupabaseRuntimeImportViolations).toEqual([
+      expect.objectContaining({
+        file: "components/forbidden-supabase-client.tsx",
+        package: "@supabase/ssr",
+      }),
+      expect.objectContaining({
+        file: "components/forbidden-supabase-client.tsx",
+        package: "@supabase/storage-js",
+      }),
+      expect.objectContaining({
+        file: "stores/forbidden-supabase-barrel.ts",
+        package: "@supabase/supabase-js",
+      }),
+    ]);
+    expect(inventory.browserSupabaseRuntimeImportViolations).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: "components/supabase-type-only-client.tsx",
+        }),
+      ]),
+    );
+  });
+
+  it("keeps direct executable Storage syntax as an auxiliary canary", () => {
     const fixtureRoot = path.resolve(
       "tests/fixtures/hybrid-static-bypasses",
     );
@@ -148,51 +183,8 @@ describe("hybrid authority AST/static gate", () => {
     expect(
       inventory.browserDirectStoragePaths.map((entry) => entry.file),
     ).toEqual([
-      "components/dynamic-binding-client.tsx",
-      "components/dynamic-binding-client.tsx",
-      "components/dynamic-binding-client.tsx",
-      "components/dynamic-binding-client.tsx",
-      "components/dynamic-binding-client.tsx",
-      "components/dynamic-binding-client.tsx",
-      "components/dynamic-binding-client.tsx",
-      "components/dynamic-binding-client.tsx",
-      "components/dynamic-binding-client.tsx",
-      "components/dynamic-unknown-sdk-client.tsx",
-      "components/dynamic-unknown-sdk-client.tsx",
-      "components/dynamic-unknown-sdk-client.tsx",
-      "components/dynamic-unknown-sdk-client.tsx",
-      "components/dynamic-unknown-sdk-client.tsx",
-      "components/dynamic-unknown-sdk-client.tsx",
-      "components/live-binding-client.tsx",
-      "components/live-binding-client.tsx",
-      "components/live-binding-client.tsx",
-      "components/live-binding-client.tsx",
-      "components/live-binding-client.tsx",
-      "components/live-binding-client.tsx",
-      "components/live-binding-client.tsx",
-      "components/nested-sdk-client.tsx",
-      "components/nested-sdk-client.tsx",
-      "components/nested-sdk-client.tsx",
-      "components/nested-sdk-client.tsx",
-      "components/nested-sdk-client.tsx",
-      "components/nested-sdk-client.tsx",
-      "components/nested-sdk-client.tsx",
-      "components/nested-sdk-client.tsx",
-      "components/nested-sdk-client.tsx",
-      "components/nested-sdk-client.tsx",
-      "components/nested-sdk-client.tsx",
-      "components/nested-sdk-client.tsx",
       "features/unsafe.mjs",
-      "lib/api/dynamic-sdk-alias.mjs",
-      "lib/api/raw-delete.ts",
-      "lib/api/sdk-alias.mjs",
       "lib/api/sdk-bracket.js",
-      "stores/aliased-rest.ts",
-      "stores/imported-fetch.ts",
-      "stores/sdk-patterns.ts",
-      "stores/sdk-patterns.ts",
-      "stores/sdk-patterns.ts",
-      "stores/unsafe.ts",
     ]);
     expect(inventory.clientReachableFiles).not.toContain(
       "lib/server/type-only-storage.ts",
@@ -202,104 +194,10 @@ describe("hybrid authority AST/static gate", () => {
     );
     expect(inventory.clientReachableFiles).toEqual(
       expect.arrayContaining([
+        "components/forbidden-supabase-client.tsx",
         "components/dynamic-client.tsx",
-        "components/dynamic-binding-client.tsx",
-        "components/dynamic-unknown-sdk-client.tsx",
-        "components/live-binding-client.tsx",
-        "components/live-binding-safe-client.tsx",
-        "components/nested-safe-client.tsx",
-        "components/nested-sdk-client.tsx",
-        "components/safe-dynamic-client.tsx",
-        "lib/api/complex/index.ts",
-        "lib/api/cycle-a.ts",
-        "lib/api/cycle-b.ts",
-        "lib/api/fetch-barrel.ts",
-        "lib/api/fetch-transport.ts",
-        "lib/api/computed-tools.ts",
-        "lib/api/live-barrel.ts",
-        "lib/api/live-conditional.ts",
-        "lib/api/live-dynamic-barrel.ts",
-        "lib/api/live-destructure.ts",
-        "lib/api/live-mutation.ts",
-        "lib/api/live-safe.ts",
-        "lib/api/live-unknown.ts",
-        "lib/api/live-update.ts",
-        "lib/api/non-fetch-helper.ts",
-        "lib/api/nested-safe-tools.ts",
-        "lib/api/nested-sdk-tools.ts",
-        "lib/api/safe-dynamic-helper.ts",
-        "lib/api/sdk-barrel.ts",
-        "lib/api/sdk-dynamic-barrel.ts",
-        "lib/api/sdk-transport.ts",
-        "stores/aliased-rest.ts",
-        "stores/imported-fetch.ts",
-        "stores/live-binding-store.ts",
-        "stores/safe-imported-helper.ts",
-        "stores/sdk-patterns.ts",
-        "stores/sdk-store.ts",
-      ]),
-    );
-    expect(
-      inventory.browserDirectStoragePaths.filter(
-        (entry) => entry.file === "stores/aliased-rest.ts",
-      ),
-    ).toHaveLength(1);
-    expect(
-      inventory.browserDirectStoragePaths.filter(
-        (entry) => entry.file === "stores/imported-fetch.ts",
-      ),
-    ).toHaveLength(1);
-    expect(inventory.browserDirectStoragePaths).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          file: "stores/safe-imported-helper.ts",
-        }),
-      ]),
-    );
-    expect(
-      inventory.browserDirectStoragePaths.filter(
-        (entry) => entry.file === "components/dynamic-binding-client.tsx",
-      ),
-    ).toHaveLength(9);
-    expect(
-      inventory.browserDirectStoragePaths.filter(
-        (entry) => entry.file === "components/dynamic-unknown-sdk-client.tsx",
-      ),
-    ).toHaveLength(6);
-    expect(
-      inventory.browserDirectStoragePaths.filter(
-        (entry) => entry.file === "components/live-binding-client.tsx",
-      ),
-    ).toHaveLength(7);
-    expect(
-      inventory.browserDirectStoragePaths.filter(
-        (entry) => entry.file === "stores/sdk-patterns.ts",
-      ),
-    ).toHaveLength(3);
-    expect(inventory.browserDirectStoragePaths).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          file: "components/safe-dynamic-client.tsx",
-        }),
-      ]),
-    );
-    expect(inventory.browserDirectStoragePaths).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          file: "components/live-binding-safe-client.tsx",
-        }),
-      ]),
-    );
-    expect(
-      inventory.browserDirectStoragePaths.filter(
-        (entry) => entry.file === "components/nested-sdk-client.tsx",
-      ),
-    ).toHaveLength(12);
-    expect(inventory.browserDirectStoragePaths).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          file: "components/nested-safe-client.tsx",
-        }),
+        "components/supabase-type-only-client.tsx",
+        "stores/forbidden-supabase-barrel.ts",
       ]),
     );
   });

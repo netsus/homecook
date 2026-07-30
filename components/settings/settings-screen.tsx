@@ -60,7 +60,7 @@ import {
   updatePlannerColumn,
 } from "@/lib/api/planner";
 import type { PlannerColumnData } from "@/types/planner";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
@@ -168,7 +168,7 @@ export function SettingsScreen({
         return;
       }
 
-      const supabase = getSupabaseBrowserClient();
+      const supabase = getAuthSupabaseBrowserClient();
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
@@ -187,7 +187,7 @@ export function SettingsScreen({
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
+    const supabase = getAuthSupabaseBrowserClient();
 
     void supabase.auth
       .getSession()

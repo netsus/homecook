@@ -40,6 +40,8 @@ const storageContent = `${JSON.stringify({
   stage: 2,
   removal_stage: 4,
   generated_from: "scripts/lib/hybrid-authority-inventory.mjs",
+  browser_supabase_runtime_import_violations:
+    inventory.browserSupabaseRuntimeImportViolations,
   browser_direct_storage_paths: inventory.browserDirectStoragePaths,
 }, null, 2)}\n`;
 

@@ -12,7 +12,7 @@ import {
   savePendingAction,
   type PendingRecipeAction,
 } from "@/lib/auth/pending-action";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 
 interface LocalDevLoginPanelProps {
@@ -58,7 +58,7 @@ export function LocalDevLoginPanel({
         }
 
         const credentials = getLocalDevAuthCredentials(accountId);
-        const supabase = getSupabaseBrowserClient();
+        const supabase = getAuthSupabaseBrowserClient();
         let signInResult = await supabase.auth.signInWithPassword({
           email: credentials.email,
           password: credentials.password,

@@ -21,7 +21,7 @@ import {
   isVisibleGrowthToastNotification,
 } from "@/lib/gamification-notifications";
 import { createTutorialGuideNotification } from "@/lib/gamification-tutorial-guide";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import achievementIconManifest from "@/public/assets/growth/achievement-icons-v3-4/manifest.json";
 import type {
@@ -460,7 +460,7 @@ export function GrowthToastStack({
     }
 
     let isCurrent = true;
-    const supabase = getSupabaseBrowserClient();
+    const supabase = getAuthSupabaseBrowserClient();
 
     void supabase.auth
       .getSession()

@@ -57,7 +57,7 @@ import {
   stripMatchingSectionPrefix,
 } from "@/lib/recipe-section-labels";
 import { buildReturnHref } from "@/lib/navigation/return-context";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useAuthGateStore } from "@/stores/ui-store";
 import type {
@@ -302,7 +302,7 @@ export function RecipeDetailScreen({
         return;
       }
 
-      const supabase = getSupabaseBrowserClient();
+      const supabase = getAuthSupabaseBrowserClient();
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
@@ -321,7 +321,7 @@ export function RecipeDetailScreen({
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
+    const supabase = getAuthSupabaseBrowserClient();
 
     void supabase.auth
       .getSession()

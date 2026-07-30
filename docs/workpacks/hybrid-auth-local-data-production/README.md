@@ -20,7 +20,7 @@
   - 기존 `/api/v1/*` route의 runtime authority를 remote Auth + local Data/Storage로 분리
   - browser 비노출 internal maintenance/reconciler는 public endpoint count에 포함하지 않음
   - 모든 user/public/admin/internal route와 helper를 inventory하고, user route의 service role 우선순위/fallback은 0으로 고정
-  - browser direct local Storage 접근은 0이며, Storage user traffic은 loopback claim-verifying gateway만 통과
+  - browser direct local Storage mutation은 0이며 loopback gateway도 `anon`/`authenticated` Storage mutation을 upstream 전에 거부한다. recipe image write는 server-only exact secret + `recipe-image` internal scope만 통과
 - 상태 전이:
   - `HOMECOOK_DATA_AUTHORITY=remote -> local-shadow -> local`
   - account-generation capability는 `legacy` 유지
@@ -87,7 +87,7 @@
 - callback/refresh 직후 remote liveness 확인이 성공해야 local `user_session_generation_bindings`에 server-secret HMAC session-liveness binding을 생성/갱신한다.
 - binding에는 raw JWT/raw `session_id`를 저장하지 않는다. 저장 허용값은 versioned HMAC, key version, issuer, owner, identity epoch, remote verified timestamp, binding TTL, revoked/deleted terminal뿐이다.
 - Homecook logout, account deletion/quarantine, identity replacement, maintenance abort는 owner fence 아래 binding을 revoke/delete한다.
-- 모든 user-scoped DB/Storage request는 remote liveness recheck, active mirror epoch, session-liveness HMAC binding, binding TTL, method/path attestation을 재검증한다.
+- 허용된 user-scoped DB mutation과 Storage read request는 remote liveness recheck, active mirror epoch, session-liveness HMAC binding, binding TTL, method/path attestation을 재검증한다. browser/user Storage mutation은 별도 deny 경계에서 upstream 전에 차단한다.
 - remote Auth outage에서는 binding TTL 연장, 신규 binding 생성, user-scoped mutation allow-until-exp를 금지하고 fail closed한다.
 
 ### JWT / JWKS
@@ -95,8 +95,9 @@
 - remote Auth issuer는 exact URL로 고정한다.
 - local PostgREST는 combined local+remote verify JWKS를 사용하되 `PGRST_JWT_AUD=authenticated`와 DB pre-request exact claim guard를 함께 둔다.
 - local Storage는 `JWT_JWKS`를 사용하되 외부에서 우회 불가능한 loopback claim-verifying gateway를 단일 user entrypoint로 둔다. Storage upstream port는 Docker internal network에만 둔다.
-- authenticated Data/Storage request마다 gateway가 remote `/auth/v1/user`의 `(iss, sub, session_id, user.created_at)`를 current active mirror epoch와 session-liveness HMAC binding에 결합한다.
-- PostgREST mutation은 gateway HMAC attestation과 active binding TTL을 DB pre-request가 active mirror와 같은 transaction에서 재검증한다. Storage mutation은 owner fence, epoch, active binding을 바로 전에 다시 확인한다.
+- authenticated Data/Storage read request마다 gateway가 remote `/auth/v1/user`의 `(iss, sub, session_id, user.created_at)`를 current active mirror epoch와 session-liveness HMAC binding에 결합한다.
+- PostgREST mutation은 gateway HMAC attestation과 active binding TTL을 DB pre-request가 active mirror와 같은 transaction에서 재검증한다.
+- browser/user Storage mutation은 gateway와 Storage RLS에서 deny한다. recipe image upload/sign/remove는 기존 server image lifecycle이 exact data secret + `recipe-image` scope로 수행하고 reservation/attach/cancel/cleanup authority를 유지한다.
 - 검증 항목: allowlisted `alg`/`kid`, remote exact `iss`, `aud=authenticated`, `role=authenticated`, UUID `sub`, UUID `session_id`, `iat`/`nbf`/`exp` time claims.
 - remote private signing key는 Mac/local container/env에 복사하지 않는다.
 - JWKS sync는 atomic replace, reload/recreate, canary RLS read, stale alert를 포함한다.
@@ -192,9 +193,9 @@
   - deleted/recreated same UUID의 이전 token/session은 DB와 Storage write 모두 거부
   - DB pre-request guard rejects non-remote exact `iss`, non-`authenticated` audience/role, non-UUID `sub`/`session_id`, invalid time claims, non-allowlisted alg/kid
   - User A cannot read/write User B rows
-  - local Storage owner policy applies only through loopback claim-verifying gateway
-  - Stage 2 inventory/static gate identifies browser direct Storage URL/key/SDK write/delete paths
-  - Stage 4 browser bundle/path evidence proves existing direct Storage mutation is removed and only the existing server image API remains
+  - local Storage의 `anon`/`authenticated` mutation policy count는 0이고 gateway도 같은 mutation을 upstream 전에 거부한다
+  - Stage 2 source authority gate는 client-reachable runtime에서 `@supabase/ssr`, `@supabase/supabase-js`, `@supabase/storage-js`를 단일 Auth adapter 외에 금지한다
+  - Stage 4 Auth-only facade와 exact-origin `/auth/v1/**` transport deny가 browser에 raw Storage capability를 주지 않으며, source/bundle direct syntax inventory는 보조 canary로만 유지한다
   - route/helper inventory proves user route service-role priority/fallback count is 0 and internal allowlist is exact
   - remote application DB/Storage write count remains 0 after local cutover
 - migration/rehearsal:
@@ -217,7 +218,7 @@
 - local Data/Storage is loopback-only.
 - remote Auth JWT ES256/JWKS verification plus exact claim guard is mandatory for local RLS.
 - remote Auth outage는 user-scoped local DB/Storage request를 fail closed하며 JWT 만료 전 allow-until-exp를 허용하지 않는다.
-- Storage user access must go through loopback claim-verifying gateway; browser direct local Storage access is 0.
+- Storage user read는 loopback claim-verifying gateway만 통과하고 user mutation은 gateway/RLS에서 deny한다. server recipe image mutation만 exact internal secret/scope로 허용한다.
 - private signing key and refresh token never enter local Data/Storage.
 - private remote identity mirror replaces application-owned `auth.users` direct dependency without raw/profile PII.
 - local `auth.users=0` after restore is intended, not a failure.

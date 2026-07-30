@@ -1201,6 +1201,16 @@ composeRun("isolated hybrid integration runtime measured", () => {
               body: "owner-b",
             },
           );
+          const anonymousUpload = await fetch(
+            "http://127.0.0.1:8080/storage/v1/object/runtime-private/anonymous.txt",
+            {
+              method: "POST",
+              headers: {
+                "content-type": "text/plain",
+              },
+              body: "anonymous",
+            },
+          );
           console.log(JSON.stringify({
             owner: {
               status: ownerUpload.status,
@@ -1209,6 +1219,10 @@ composeRun("isolated hybrid integration runtime measured", () => {
             crossOwner: {
               status: crossOwnerOverwrite.status,
               body: await crossOwnerOverwrite.text(),
+            },
+            anonymous: {
+              status: anonymousUpload.status,
+              body: await anonymousUpload.text(),
             },
           }));
         `,
@@ -1224,8 +1238,89 @@ composeRun("isolated hybrid integration runtime measured", () => {
       expect(
         parsedStorageMutation.owner.status,
         parsedStorageMutation.owner.body,
-      ).toBe(200);
+      ).toBe(409);
       expect(parsedStorageMutation.crossOwner.status).toBeGreaterThanOrEqual(400);
+      expect(parsedStorageMutation.anonymous.status).toBe(409);
+
+      const internalStorageLifecycle = gatewayExec(
+        composeArgs,
+        `
+          const objectPath = \`\${process.env.OWNER_A}/internal-boundary.png\`;
+          const headers = {
+            authorization: \`Bearer \${process.env.DATA_SECRET}\`,
+            "x-homecook-internal-scope": "recipe-image",
+          };
+          const uploadResponse = await fetch(
+            \`http://127.0.0.1:8080/storage/v1/object/recipe-images-private/\${objectPath}\`,
+            {
+              method: "POST",
+              headers: {
+                ...headers,
+                "content-type": "image/png",
+              },
+              body: Buffer.from(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2n5QAAAAASUVORK5CYII=",
+                "base64",
+              ),
+            },
+          );
+          const signResponse = await fetch(
+            \`http://127.0.0.1:8080/storage/v1/object/sign/recipe-images-private/\${objectPath}\`,
+            {
+              method: "POST",
+              headers: {
+                ...headers,
+                "content-type": "application/json",
+              },
+              body: JSON.stringify({ expiresIn: 60 }),
+            },
+          );
+          const removeResponse = await fetch(
+            "http://127.0.0.1:8080/storage/v1/object/recipe-images-private",
+            {
+              method: "DELETE",
+              headers: {
+                ...headers,
+                "content-type": "application/json",
+              },
+              body: JSON.stringify({ prefixes: [objectPath] }),
+            },
+          );
+          console.log(JSON.stringify({
+            upload: {
+              status: uploadResponse.status,
+              body: await uploadResponse.text(),
+            },
+            sign: {
+              status: signResponse.status,
+              body: await signResponse.text(),
+            },
+            remove: {
+              status: removeResponse.status,
+              body: await removeResponse.text(),
+            },
+          }));
+        `,
+        {
+          DATA_SECRET: serviceFixture.access_token,
+          OWNER_A: authFixture.claims.sub,
+        },
+      );
+      const parsedInternalStorageLifecycle = JSON.parse(
+        internalStorageLifecycle,
+      ) as Record<string, { status: number; body: string }>;
+      expect(
+        parsedInternalStorageLifecycle.upload.status,
+        parsedInternalStorageLifecycle.upload.body,
+      ).toBe(200);
+      expect(
+        parsedInternalStorageLifecycle.sign.status,
+        parsedInternalStorageLifecycle.sign.body,
+      ).toBe(200);
+      expect(
+        parsedInternalStorageLifecycle.remove.status,
+        parsedInternalStorageLifecycle.remove.body,
+      ).toBe(200);
 
       const anonResult = gatewayExec(
         composeArgs,
@@ -1512,7 +1607,23 @@ composeRun("isolated hybrid integration runtime measured", () => {
         "-c",
         "select (select count(*) from public.hybrid_runtime_mutations) || ':' || (select count(*) from storage.objects where bucket_id = 'runtime-private');",
       ]).trim();
-      expect(mutationCounts).toBe("1:1");
+      expect(mutationCounts).toBe("1:0");
+
+      const storageMutationPolicyCount = run("docker", [
+        ...composeArgs,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-At",
+        "-U",
+        "supabase_admin",
+        "-d",
+        "homecook_hybrid_test",
+        "-c",
+        "select count(*) from pg_catalog.pg_policies where schemaname = 'storage' and tablename = 'objects' and cmd in ('INSERT', 'UPDATE', 'DELETE', 'ALL') and (coalesce(qual, '') ilike '%runtime-private%' or coalesce(with_check, '') ilike '%runtime-private%');",
+      ]).trim();
+      expect(storageMutationPolicyCount).toBe("0");
 
       run("docker", [...composeArgs, "stop", "auth-stub"]);
       const authOutage = gatewayExec(

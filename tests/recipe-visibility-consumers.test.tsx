@@ -41,7 +41,7 @@ vi.mock("@/lib/api/recipe", () => ({
 const storageMocks = vi.hoisted(() => {
   const mockStorageRemove = vi.fn();
   return {
-    getSupabaseBrowserClient: vi.fn(() => ({
+    getAuthSupabaseBrowserClient: vi.fn(() => ({
       storage: {
         from: () => ({
           remove: mockStorageRemove,
@@ -53,7 +53,7 @@ const storageMocks = vi.hoisted(() => {
 });
 
 vi.mock("@/lib/supabase/browser", () => ({
-  getSupabaseBrowserClient: storageMocks.getSupabaseBrowserClient,
+  getAuthSupabaseBrowserClient: storageMocks.getAuthSupabaseBrowserClient,
 }));
 
 vi.mock("@/lib/api/meal", () => ({
@@ -131,7 +131,7 @@ describe("recipe visibility consumers", () => {
   beforeEach(() => {
     installMatchMedia();
     storageMocks.mockStorageRemove.mockReset();
-    storageMocks.getSupabaseBrowserClient.mockClear();
+    storageMocks.getAuthSupabaseBrowserClient.mockClear();
     vi.mocked(cancelRecipeImage).mockReset();
     vi.mocked(cancelRecipeImage).mockResolvedValue({
       success: true,
@@ -218,7 +218,7 @@ describe("recipe visibility consumers", () => {
       );
     });
     expect(storageMocks.mockStorageRemove).not.toHaveBeenCalled();
-    expect(storageMocks.getSupabaseBrowserClient).not.toHaveBeenCalled();
+    expect(storageMocks.getAuthSupabaseBrowserClient).not.toHaveBeenCalled();
   });
 
   it("saves managed uploads through image_object_id and rejects legacy upload results", async () => {
@@ -261,7 +261,7 @@ describe("recipe visibility consumers", () => {
     expect(screen.queryByTestId("manual-image-replace-button")).toBeNull();
     expect(createManualRecipe).not.toHaveBeenCalled();
     expect(storageMocks.mockStorageRemove).not.toHaveBeenCalled();
-    expect(storageMocks.getSupabaseBrowserClient).not.toHaveBeenCalled();
+    expect(storageMocks.getAuthSupabaseBrowserClient).not.toHaveBeenCalled();
   });
 
   it("replays an in-progress upload with the same idempotency key", async () => {

@@ -56,7 +56,9 @@ Google·네이버·카카오 로그인과 세션 발급은 기존 원격 Supabas
 
 실행 시점에 위 값을 다시 확인한다. 특히 JWKS 알고리즘, account-generation capability, DB 버전, 디스크 여유가 달라지면 계획을 중단하고 재검토한다.
 
-### 코드 결합 상태
+### 착수 기준 코드 결합 상태
+
+아래 목록은 계획 승인 시점의 결합 상태 snapshot이다. 현재 구현의 PASS authority와 완료 증거는 `docs/workpacks/hybrid-auth-local-data-production/acceptance.md`를 따른다.
 
 - 현재 공개 URL, anon key, service role key가 하나의 `getSupabaseEnv()`로 묶여 있다: `lib/supabase/env.ts:1`.
 - 서버 client 하나가 `auth.getUser()`, `.from()`, `.rpc()`, Storage를 모두 같은 Supabase URL에 보낸다: `lib/supabase/server.ts:8`.
@@ -246,7 +248,7 @@ AUTH_SUPABASE_JWKS_URL=https://vfubnhtawezmheylfhsv.supabase.co/auth/v1/.well-kn
 | --- | --- |
 | `lib/supabase/auth-env.ts` | remote Auth URL/key/issuer 검증 |
 | `lib/supabase/data-env.ts` | local Data URL/key 검증, loopback production guard |
-| `lib/supabase/auth-browser.ts` | OAuth, session, auth state |
+| `lib/supabase/browser.ts` | OAuth, session, auth state만 노출하는 browser Auth-only facade |
 | `lib/supabase/auth-server.ts` | callback, logout, linking, verified user/session |
 | `lib/supabase/data-server.ts` | remote access token을 넣은 local user-scoped client |
 | `lib/supabase/data-admin.ts` | local maintenance 전용 secret client |

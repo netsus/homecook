@@ -420,6 +420,140 @@ describe("hybrid loopback gateway runtime", () => {
     expect(response.snapshot().statusCode).toBe(200);
   });
 
+  it.each([
+    {
+      headers: {},
+      label: "missing bearer",
+      method: "POST",
+      path: "/storage/v1/object/recipe-images-private/owner/missing.jpg",
+    },
+    {
+      headers: { authorization: "Bearer local-anon-jwt" },
+      label: "anon bearer",
+      method: "PUT",
+      path: "/storage/v1/object/recipe-images-private/owner/anon.jpg",
+    },
+    {
+      headers: {},
+      label: "remote user bearer",
+      method: "PATCH",
+      path: "/storage/v1/object/recipe-images-private/owner/user.jpg",
+      validRemoteUser: true,
+    },
+    {
+      headers: {
+        authorization: "Bearer 0123456789abcdef0123456789abcdef",
+      },
+      label: "missing scope",
+      method: "DELETE",
+      path: "/storage/v1/object/recipe-images-private",
+    },
+    {
+      headers: {
+        authorization: "Bearer 0123456789abcdef0123456789abcdef",
+        "x-homecook-internal-scope": "admin-data",
+      },
+      label: "wrong scope",
+      method: "POST",
+      path: "/storage/v1/object/sign/recipe-images-private/owner/x.jpg",
+    },
+    {
+      headers: {
+        authorization: "Bearer wrong-secret",
+        "x-homecook-internal-scope": "recipe-image",
+      },
+      label: "wrong secret",
+      method: "POST",
+      path: "/storage/v1/object/recipe-images-private/owner/wrong.jpg",
+    },
+  ])("rejects $label Storage mutation before any upstream call", async ({
+    headers,
+    method,
+    path,
+    validRemoteUser,
+  }) => {
+    const fixture = validRemoteUser ? createSigningFixture() : null;
+    const resolvedHeaders: Record<string, string> = fixture
+      ? { authorization: `Bearer ${createToken(fixture)}` }
+      : headers as Record<string, string>;
+    const objectManifest = new Map([["existing.jpg", "unchanged"]]);
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      if (fixture && String(input).includes("/.well-known/jwks.json")) {
+        return new Response(JSON.stringify({ keys: [fixture.publicJwk] }), {
+          status: 200,
+        });
+      }
+      objectManifest.set("unexpected.jpg", "mutated");
+      return new Response(null, { status: 200 });
+    });
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const request = Readable.from(["mutation-body"]) as Readable & {
+      headers: Record<string, string>;
+      method: string;
+      url: string;
+    };
+    request.headers = resolvedHeaders;
+    request.method = method;
+    request.url = `http://gateway.internal${path}`;
+    const response = createResponseRecorder();
+
+    await handler(request, response);
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(objectManifest).toEqual(new Map([["existing.jpg", "unchanged"]]));
+    expect(response.snapshot().statusCode).toBe(409);
+  });
+
+  it.each([
+    {
+      method: "POST",
+      path: "/storage/v1/object/recipe-images-private/owner/upload.jpg",
+    },
+    {
+      method: "DELETE",
+      path: "/storage/v1/object/recipe-images-private",
+    },
+    {
+      method: "POST",
+      path: "/storage/v1/object/sign/recipe-images-private/owner/upload.jpg",
+    },
+  ])("keeps exact internal recipe-image $method $path allowed", async ({
+    method,
+    path,
+  }) => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const requestBody = path.includes("/object/recipe-images-private/")
+      && !path.includes("/object/sign/")
+      ? Buffer.from([0x89, 0x50, 0x4e, 0x47])
+      : Buffer.from("{}");
+    const request = Readable.from([requestBody]) as Readable & {
+      headers: Record<string, string>;
+      method: string;
+      url: string;
+    };
+    request.headers = {
+      authorization: `Bearer ${dataSecret}`,
+      "content-type": "application/json",
+      "x-homecook-internal-scope": "recipe-image",
+    };
+    request.method = method;
+    request.url = `http://gateway.internal${path}`;
+    const response = createResponseRecorder();
+
+    await handler(request, response);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(response.snapshot().statusCode).toBe(200);
+  });
+
   it("rejects general user-data PostgREST access from the callback service scope", async () => {
     const dataSecret = "0123456789abcdef0123456789abcdef";
     const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));

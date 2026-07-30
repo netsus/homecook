@@ -23,7 +23,7 @@ import {
   savePendingAction,
 } from "@/lib/auth/pending-action";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { readLastAuthProvider } from "@/lib/auth/provider-memory";
 
 export interface SocialLoginButtonsProps {
@@ -112,7 +112,7 @@ export function SocialLoginButtons({
 
         onStarted?.();
 
-        const supabase = getSupabaseBrowserClient();
+        const supabase = getAuthSupabaseBrowserClient();
         const callback = new URL("/auth/callback", window.location.origin);
         callback.searchParams.set("attemptedProvider", provider);
         const authProvider = getSupabaseAuthProvider(provider);

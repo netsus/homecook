@@ -115,6 +115,12 @@ const INTERNAL_SCOPE_RULES = Object.freeze({
   },
 });
 const MAX_INTERNAL_BODY_BYTES = 1_048_576;
+const STORAGE_MUTATION_METHODS = new Set([
+  "DELETE",
+  "PATCH",
+  "POST",
+  "PUT",
+]);
 
 class AuthorityError extends Error {}
 class UpstreamError extends Error {}
@@ -622,6 +628,13 @@ function isInternalControlPlaneRequest(request, requestUrl, accessToken, config)
   );
 }
 
+function isStorageMutationRequest(request, requestUrl) {
+  return requestUrl.pathname.startsWith("/storage/v1/")
+    && STORAGE_MUTATION_METHODS.has(
+      (request.method ?? "GET").toUpperCase(),
+    );
+}
+
 function anonymousScope(request) {
   const value = request.headers["x-homecook-public-read-scope"];
   return typeof value === "string" ? value : "";
@@ -846,6 +859,20 @@ export function createGatewayRequestHandler({
         }));
         return;
       }
+      if (isStorageMutationRequest(request, requestUrl)) {
+        const accessToken = readBearerToken(request);
+        if (
+          !accessToken
+          || !isInternalControlPlaneRequest(
+            request,
+            requestUrl,
+            accessToken,
+            resolvedConfig,
+          )
+        ) {
+          failAuthority();
+        }
+      }
       if (
         resolvedConfig.requireReady
         && !await probeGatewayHealth(resolvedConfig, fetchImpl)
@@ -873,7 +900,7 @@ export function createGatewayRequestHandler({
         );
       const bufferedBody = needsBufferedBody ? await readBody(request) : undefined;
       let parsedBody;
-      if (bufferedBody?.length) {
+      if (bufferedBody?.length && !readBearerToken(request)) {
         try {
           parsedBody = JSON.parse(bufferedBody.toString("utf8"));
         } catch {

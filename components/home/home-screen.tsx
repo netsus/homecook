@@ -47,7 +47,7 @@ import {
   isSafeDisplayText,
 } from "@/lib/display-safety";
 import { resolveRecipeImage } from "@/lib/recipe-image";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { rememberAboutReturn } from "@/lib/navigation/about-return";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
@@ -383,7 +383,7 @@ export function HomeScreen() {
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
+    const supabase = getAuthSupabaseBrowserClient();
 
     void supabase.auth
       .getSession()
