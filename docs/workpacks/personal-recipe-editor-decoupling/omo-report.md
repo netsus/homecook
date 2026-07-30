@@ -120,10 +120,9 @@ PR #1239/#1240은 actor ownership과 Ready gate 책임을 명확히 한 governan
 
 ## Remaining Workflow-State Drift
 
-- Canonical roadmap and workpack correctly remain `in-progress`: PR #1243 is merged and its implementation checks are green, while the required merged-SHA hybrid verifier is still missing.
-- `.workflow-v2/status.json` and `.workflow-v2/work-items/personal-recipe-editor-decoupling.json` keep the correct `in_progress/pending` values but their notes still describe PR #1243 as an open Draft and name current-head checks as the pending reason.
-- This docs/OMO branch intentionally does not edit those machine-readable files. `docs/engineering/workflow-v2/omo-autonomous-supervisor.md` requires post-merge machine-note drift to use a separate workflow-state repair or supervisor finalize path.
-- Next repair must update notes only, preserve `in_progress/pending/not_started`, cite merge `6565c2a84f3b7eba9f0579db7b91fed12fc08f23`, and name the missing merged-SHA hybrid verifier as the remaining blocker.
+- Canonical roadmap and workpack correctly remain `in-progress`: PR #1243 is merged, and PR #1246 merged the hybrid verifier with a successful merged exact-SHA dry-run. The complete local Data/Storage plus sanitized remote Auth evidence path remains pending.
+- `.workflow-v2/status.json` and `.workflow-v2/work-items/personal-recipe-editor-decoupling.json` keep the correct `in_progress/pending/not_started` values.
+- The PR #1246 post-merge workflow-state repair updates their notes separately, cites merge `354c569c8e40889bcfa7d9832cb9cec93f53db46`, and names the missing complete local/remote evidence as the remaining blocker.
 
 ## Efficiency Notes
 
@@ -132,6 +131,6 @@ PR #1239/#1240은 actor ownership과 Ready gate 책임을 명확히 한 governan
 - 가장 오래 걸린 stage는 Stage 4 frontend다. 네 editor context, dirty navigation, managed-image cleanup, 390px/320px evidence와 Linux visual repair를 함께 닫았기 때문이다.
 - human_escalation과 manual_decision_required는 0회다.
 - Vercel Git 연결은 별도 운영 결정에 따라 끊었고, exact-head 검사에 Vercel job이 남지 않았다.
-- post-merge hybrid verifier, 물리 기기 키보드/IME와 capability-on public fork/edit/delete/login-return은 future 또는 Manual Only다.
-- PR #1243은 Stage 4/5 capability-off 구현과 해당 implementation merge gate를 닫았지만, work item의 full-lifecycle `verification_status`는 merged-SHA hybrid verifier가 실제로 만들어져 통과할 때까지 `pending`이다.
+- post-merge hybrid verifier의 complete local/remote evidence, 물리 기기 키보드/IME와 capability-on public fork/edit/delete/login-return은 future 또는 Manual Only다.
+- PR #1243은 Stage 4/5 capability-off 구현을 닫았고 PR #1246은 verifier 구현과 merged exact-SHA dry-run을 닫았지만, work item의 full-lifecycle `verification_status`는 complete local Data/Storage plus sanitized remote Auth evidence가 통과할 때까지 `pending`이다.
 - production/staging 및 remote application DB/Storage write는 수행하지 않았다.

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-30T19:06:07.000Z",
+  "updated_at": "2026-07-30T20:03:23.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2448,7 +2448,7 @@
         "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Stage 2/3 evidence merged through PR #1238. PR #1243 merged the capability-off Stage 4/5 implementation as 6565c2a84f3b7eba9f0579db7b91fed12fc08f23 from exact head e177a882e0fbc35847895a7a0f1dd775ff4425d1 after independent code/security/authority review and 20 success and one normal full-regression skip. required_checks remains the full-lifecycle gate: the missing merged-SHA hybrid verifier remains pending, so lifecycle/verification/evaluation stay in_progress/pending/not_started. #6 writes and #8 activation remain future work or Manual Only. No production/staging or remote application DB/Storage write was performed; external personal write dark remains enforced.",
+      "notes": "Stage 2/3 evidence merged through PR #1238. PR #1243 merged the capability-off Stage 4/5 implementation as 6565c2a84f3b7eba9f0579db7b91fed12fc08f23 from exact head e177a882e0fbc35847895a7a0f1dd775ff4425d1 after independent code/security/authority review and 20 success and one normal full-regression skip. PR #1246 merged the test-first hybrid verifier as 354c569c8e40889bcfa7d9832cb9cec93f53db46 after exact-head code/security P0/P1/P2 0/0/0 and 21 green or intended-skip checks; its merged exact-SHA dry-run passed. required_checks remains the full-lifecycle gate because full local/remote evidence remains pending: the current local instance lacks private.remote_auth_identity_epochs and no truthful sanitized remote Auth evidence exists, so lifecycle/verification/evaluation stay in_progress/pending/not_started. #6 writes and #8 activation remain future work or Manual Only. No production/staging or remote application DB/Storage write was performed; external personal write dark remains enforced.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

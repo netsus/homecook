@@ -203,17 +203,17 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 - The implementation head `e177a882e0fbc35847895a7a0f1dd775ff4425d1` completed 20 GitHub checks successfully with one documented normal `full-regression` skip and no pending, failed, cancelled or Vercel check.
 - Independent code, security and exact-head verification finished with P0/P1/P2 `0/0/0`; the independent design authority finished with blocker/major/minor `0/0/0`.
 - Retained Codex native review paths: `/root/stage4_final4_code_review`, `/root/stage4_final4_security_review`, `/root/stage4_post_vercel_fresh_review`, `/root/stage4_exact_head_final_verifier`; reviewed input SHA `e177a882e0fbc35847895a7a0f1dd775ff4425d1`, result artifact is this closeout evidence plus PR #1243 Actual Verification.
-- The post-merge hybrid verifier implementation is separate from the Stage 4 evidence. Its merged-exact execution and capability-on fork/edit/delete/login-return smokes remain pending or Manual Only and do not authorize remote application DB/Storage writes.
-- Full Stage 6 lifecycle closeout remains pending until the verifier passes from the merged exact SHA with truthful local and Manual Only evidence.
+- The post-merge hybrid verifier implementation is separate from the Stage 4 evidence. PR #1246 merged it as `354c569c8e40889bcfa7d9832cb9cec93f53db46`; its merged exact-SHA dry-run passed. Capability-on fork/edit/delete/login-return smokes remain future or Manual Only and do not authorize remote application DB/Storage writes.
+- Full Stage 6 lifecycle closeout remains pending until the verifier passes its complete local Data/Storage plus sanitized remote Auth evidence path.
 
 ### Stage 6 verifier implementation evidence
 
 - RED: `pnpm exec vitest run tests/personal-recipe-editor-hybrid-verifier.test.ts` failed because the verifier module did not exist.
-- GREEN: the focused verifier, snapshot-hybrid, recipe-visibility local and hybrid static-gate set passed `25/25`.
+- GREEN: the focused verifier, contract-sync, snapshot-hybrid, recipe-visibility local and hybrid static-gate set passed `33/33`.
 - The verifier accepts only a loopback local PostgreSQL URL, runs one read-only transaction, requires `local auth.users=0`, reuses the predecessor Data/Storage authority checks, rejects source authority drift and accepts only fresh sanitized remote Auth aggregate evidence bound to the exact merge SHA.
 - The predecessor Data/Storage subset on the running local Supabase returned `local_auth_user_count=0`, capability `legacy`, local writes `0`, and anon/authenticated direct Storage writes `0/0`. The complete Stage 6 query then failed closed because `private.remote_auth_identity_epochs` is not applied to this local instance; therefore no full local or merged-SHA release result is claimed. No secret or raw row was printed or recorded.
 - The exact source inventory proves user service-role fallback/direct paths `0`, browser direct Storage paths `0`, inactive personal-create entry, app/MYPAGE/RECIPEBOOK personal-entry markers `0`, shipping capability-on markers `0`, and no recipe `PATCH`/`DELETE` handler. It preserves the one legacy manual-create `POST /recipes` handler while requiring personal editor markers and `origin_recipe_id` inputs on that handler to remain `0`. The stale generated browser Storage inventory was refreshed to the current empty set.
-- Branch execution intentionally fails the merged-exact gate. No merged-SHA release result, other-Mac deployment evidence, production/staging write or remote application DB/Storage mutation is claimed here.
+- The merged exact-SHA dry-run passed on `354c569c8e40889bcfa7d9832cb9cec93f53db46`, proving the clean merged source and static dark-ship boundary. The complete verifier still fails closed because the current local instance lacks `private.remote_auth_identity_epochs` and no truthful sanitized remote Auth evidence is available. No full release result, other-Mac deployment evidence, production/staging write or remote application DB/Storage mutation is claimed here.
 
 ## QA / Test Data Plan
 
