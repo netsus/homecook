@@ -66,6 +66,15 @@ services:
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
       TENANT_ID: homecook-hybrid-test
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          wget --quiet --tries=1 --timeout=3 --output-document=/dev/null
+          http://127.0.0.1:5000/status
+      interval: 1s
+      timeout: 4s
+      retries: 60
     networks:
       - hybrid-internal
     volumes:
@@ -99,7 +108,7 @@ services:
       postgrest:
         condition: service_started
       storage:
-        condition: service_started
+        condition: service_healthy
     environment:
       ALLOW_INSECURE_LOCAL_AUTH_STUB: ${HYBRID_TEST_ALLOW_INSECURE_AUTH_STUB:-1}
       AUTH_SUPABASE_EXPECTED_ISSUER: ${HYBRID_TEST_AUTH_ISSUER:-http://auth-stub:4100/auth/v1}

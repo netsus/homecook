@@ -65,6 +65,15 @@ describe("isolated hybrid integration runtime", () => {
     );
     expect(compose).toMatch(/\n  gateway:\n/);
     expect(compose).toMatch(/STORAGE_UPSTREAM_URL:\s*http:\/\/storage:5000/);
+    expect(compose).toMatch(
+      /storage:[\s\S]*healthcheck:[\s\S]*http:\/\/127\.0\.0\.1:5000\/status/,
+    );
+    expect(compose).toMatch(
+      /storage:[\s\S]*healthcheck:[\s\S]*retries:\s*60/,
+    );
+    expect(compose).toMatch(
+      /gateway:[\s\S]*storage:[\s\S]*condition:\s*service_healthy/,
+    );
   });
 
   it("injects isolated login-role passwords and DB authority settings without literal secrets", () => {
