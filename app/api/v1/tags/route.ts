@@ -98,7 +98,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const routeClient = await createRouteHandlerClient();
+    const routeClient = await createRouteHandlerClient({
+      anonymousPublicReadScope: "tags",
+    });
     const dbClient = routeClient as unknown as TagsDbClient;
     const { data, error } = await dbClient.rpc("list_public_recipe_tags", {
       p_q: q,

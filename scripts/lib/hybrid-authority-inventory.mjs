@@ -5,13 +5,17 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
+import {
+  HYBRID_PUBLIC_ROUTE_CONTRACTS,
+} from "../../lib/server/hybrid-auth/public-read-policy-runtime.mjs";
+
 const SKIP_DIRS = new Set([".git", ".next", "coverage", "dist", "node_modules"]);
 const SOURCE_FILE_PATTERN = /\.(ts|tsx)$/u;
 const SCAN_ROOTS = ["app", "components", "lib"];
 
 const PUBLIC_ALLOWLIST_FILES = new Set([
-  "app/api/v1/cooking-methods/route.ts",
   "app/api/v1/feedback/404/route.ts",
+  ...HYBRID_PUBLIC_ROUTE_CONTRACTS.map((contract) => contract.file),
 ]);
 
 const ADMIN_ALLOWLIST_FILES = new Set([
@@ -38,6 +42,10 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
     new Set(["lib/supabase/server.ts"]),
   ],
   [
+    "createSessionLogoutInternalDataClient",
+    new Set(["lib/server/hybrid-auth/logout.ts"]),
+  ],
+  [
     "createRecipeImageInternalClient",
     new Set([
       "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
@@ -49,6 +57,7 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
     new Set([
       "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
       "app/api/v1/users/me/route.ts",
+      "lib/server/account-generation/quarantine-gate.ts",
     ]),
   ],
   [
@@ -218,6 +227,8 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
   const storageEntryKeys = new Set();
   const remoteCompatibilityEntryKeys = new Set();
   const internalOperationEntryKeys = new Set();
+  const declaredPublicRouteScopes = new Map();
+  const dataRouteResponseBoundaries = [];
 
   for (const absoluteFile of listSourceFiles(repoRoot)) {
     const relativeFile = toRelativeFile(repoRoot, absoluteFile);
@@ -232,8 +243,44 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
     const classification = classifyFile(relativeFile);
     const clientModule = isClientModule(sourceFile);
     const serviceRoleVariables = new Set();
+    let usesDataRouteClient = false;
 
     const visit = (node) => {
+      if (
+        ts.isCallExpression(node)
+        && (
+          isNamedCall(node, "createRouteHandlerClient")
+          || isNamedCall(node, "createDataRouteHandlerClient")
+        )
+      ) {
+        usesDataRouteClient = true;
+      }
+
+      if (
+        ts.isCallExpression(node)
+        && isNamedCall(node, "createRouteHandlerClient")
+        && node.arguments.length === 1
+      ) {
+        const options = unwrapExpression(node.arguments[0]);
+        if (ts.isObjectLiteralExpression(options)) {
+          const property = options.properties.find(
+            (candidate) =>
+              ts.isPropertyAssignment(candidate)
+              && (
+                ts.isIdentifier(candidate.name)
+                || ts.isStringLiteral(candidate.name)
+              )
+              && candidate.name.text === "anonymousPublicReadScope",
+          );
+          if (property && ts.isPropertyAssignment(property)) {
+            const value = unwrapExpression(property.initializer);
+            if (ts.isStringLiteral(value)) {
+              declaredPublicRouteScopes.set(relativeFile, value.text);
+            }
+          }
+        }
+      }
+
       if (
         ts.isVariableDeclaration(node)
         && ts.isIdentifier(node.name)
@@ -336,6 +383,15 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
     };
 
     visit(sourceFile);
+    if (relativeFile.startsWith("app/api/") && relativeFile.endsWith("/route.ts")
+      && usesDataRouteClient) {
+      dataRouteResponseBoundaries.push({
+        file: relativeFile,
+        importsCommonResponseBoundary:
+          source.includes("@/lib/api/response"),
+        bypassesCommonResponseBoundary: source.includes("NextResponse.json"),
+      });
+    }
   }
 
   const sortedServiceRoleEntries = serviceRoleEntries.sort(compareEntries);
@@ -344,11 +400,32 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
     remoteCompatibilityEntries.sort(compareEntries);
   const sortedBrowserDirectStoragePaths = browserDirectStoragePaths.sort(compareEntries);
   const sortedInternalOperationEntries = internalOperationEntries.sort(compareEntries);
+  const publicRouteContracts = HYBRID_PUBLIC_ROUTE_CONTRACTS
+    .map((contract) => ({ ...contract }))
+    .sort((left, right) => left.file.localeCompare(right.file));
+  const publicRouteContractViolations = publicRouteContracts
+    .filter(
+      (contract) =>
+        declaredPublicRouteScopes.get(contract.file) !== contract.scope,
+    )
+    .map((contract) => ({
+      actualScope: declaredPublicRouteScopes.get(contract.file) ?? null,
+      expectedScope: contract.scope,
+      file: contract.file,
+    }));
 
   return {
     adminAllowlistFiles: [...ADMIN_ALLOWLIST_FILES].sort(),
     adminServiceRoleEntries: sortedServiceRoleEntries.filter((entry) => entry.classification === "admin"),
     browserDirectStoragePaths: sortedBrowserDirectStoragePaths,
+    dataRouteResponseBoundaries:
+      dataRouteResponseBoundaries.sort((left, right) =>
+        left.file.localeCompare(right.file)),
+    dataRouteResponseBoundaryViolations: dataRouteResponseBoundaries.filter(
+      (entry) =>
+        !entry.importsCommonResponseBoundary
+        || entry.bypassesCommonResponseBoundary,
+    ),
     internalAllowlistFiles: [...INTERNAL_ALLOWLIST_FILES].sort(),
     internalOperationAllowlist: Object.fromEntries(
       [...INTERNAL_OPERATION_ALLOWLIST].map(([factory, files]) => [
@@ -362,6 +439,8 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
     ),
     internalServiceRoleEntries: sortedServiceRoleEntries.filter((entry) => entry.classification === "internal"),
     publicAllowlistFiles: [...PUBLIC_ALLOWLIST_FILES].sort(),
+    publicRouteContracts,
+    publicRouteContractViolations,
     publicServiceRoleEntries: sortedServiceRoleEntries.filter((entry) => entry.classification === "public"),
     remoteCompatibilityEntries: sortedRemoteCompatibilityEntries,
     serviceRoleFallbackEntries: sortedFallbackEntries,

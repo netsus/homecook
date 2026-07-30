@@ -118,6 +118,19 @@ create index if not exists user_session_generation_bindings_active_epoch_idx
   )
   where binding_state = 'active' and revoked_at is null;
 
+drop function if exists public.record_hybrid_remote_session_authority(
+  text,
+  uuid,
+  timestamp with time zone,
+  bigint,
+  text,
+  timestamp with time zone,
+  bigint,
+  text,
+  integer,
+  timestamp with time zone
+);
+
 create or replace function public.record_hybrid_remote_session_authority(
   p_issuer text,
   p_owner_uuid uuid,
@@ -128,6 +141,7 @@ create or replace function public.record_hybrid_remote_session_authority(
   p_evidence_revision bigint,
   p_session_key_hash text,
   p_hmac_key_version integer,
+  p_access_token_expires_at timestamptz,
   p_binding_expires_at timestamptz
 )
 returns jsonb
@@ -165,8 +179,9 @@ begin
     or p_hmac_key_version <= 0
     or p_identity_created_at > p_verified_at
     or p_verified_at > clock_timestamp() + interval '5 seconds'
+    or p_access_token_expires_at <= p_verified_at
     or p_binding_expires_at <= p_verified_at
-    or p_binding_expires_at > p_verified_at + interval '5 minutes' then
+    or p_binding_expires_at > p_access_token_expires_at then
     raise exception 'ACCOUNT_SESSION_STALE'
       using errcode = '55000';
   end if;
@@ -439,6 +454,7 @@ revoke all on function public.record_hybrid_remote_session_authority(
   bigint,
   text,
   integer,
+  timestamp with time zone,
   timestamp with time zone
 ) from public, anon, authenticated;
 grant execute on function public.record_hybrid_remote_session_authority(
@@ -451,6 +467,7 @@ grant execute on function public.record_hybrid_remote_session_authority(
   bigint,
   text,
   integer,
+  timestamp with time zone,
   timestamp with time zone
 ) to service_role;
 
@@ -528,6 +545,8 @@ declare
   v_attestation_payload text;
   v_attestation_signature text;
   v_attestation jsonb;
+  v_attestation_kind text;
+  v_attestation_scope text;
   v_attestation_version integer;
   v_attestation_iat bigint;
   v_attestation_exp bigint;
@@ -540,7 +559,182 @@ declare
   v_epoch private.remote_auth_identity_epochs%rowtype;
   v_binding public.user_session_generation_bindings%rowtype;
 begin
-  if v_claims ->> 'role' in ('anon', 'service_role') then
+  v_attestation_payload := coalesce(
+    v_headers ->> 'x-homecook-session-attestation',
+    ''
+  );
+  v_attestation_signature := lower(coalesce(
+    v_headers ->> 'x-homecook-session-attestation-signature',
+    ''
+  ));
+
+  if v_attestation_payload = ''
+    or v_attestation_signature !~ '^[0-9a-f]{64}$'
+    or coalesce(v_secret, '') = '' then
+    raise exception 'ACCOUNT_SESSION_STALE'
+      using errcode = '55000';
+  end if;
+
+  v_expected_signature := encode(
+    extensions.hmac(
+      pg_catalog.convert_to(v_attestation_payload, 'UTF8'),
+      pg_catalog.convert_to(v_secret, 'UTF8'),
+      'sha256'
+    ),
+    'hex'
+  );
+
+  if v_expected_signature <> v_attestation_signature then
+    raise exception 'ACCOUNT_SESSION_STALE'
+      using errcode = '55000';
+  end if;
+
+  v_attestation := private.decode_base64url_jsonb(v_attestation_payload);
+  v_attestation_kind := v_attestation ->> 'kind';
+  v_attestation_scope := v_attestation ->> 'scope';
+  v_attestation_version := (v_attestation ->> 'version')::integer;
+  v_attestation_iat := (v_attestation ->> 'issued_at')::bigint;
+  v_attestation_exp := (v_attestation ->> 'expires_at')::bigint;
+
+  if v_attestation ->> 'method' is distinct from v_method
+    or v_attestation ->> 'path' is distinct from v_path
+    or v_attestation_version is distinct from 1
+    or v_attestation_iat is null
+    or v_attestation_exp is null
+    or v_attestation_iat > extract(epoch from clock_timestamp())::bigint + 5
+    or v_attestation_exp < extract(epoch from clock_timestamp())::bigint
+    or v_attestation_exp - v_attestation_iat > 60
+    or v_attestation_exp <= v_attestation_iat then
+    raise exception 'ACCOUNT_SESSION_STALE'
+      using errcode = '55000';
+  end if;
+
+  if v_claims ->> 'role' = 'anon' then
+    if v_attestation_kind is distinct from 'anonymous'
+      or not (
+        (
+          v_attestation_scope = 'ingredients'
+          and v_method in ('GET', 'HEAD')
+          and v_path in ('/ingredients', '/ingredient_synonyms')
+        )
+        or (
+          v_attestation_scope = 'cooking-methods'
+          and v_method in ('GET', 'HEAD')
+          and v_path in ('/cooking_methods', '/cooking_method_synonyms')
+        )
+        or (
+          v_attestation_scope = 'tags'
+          and v_method = 'POST'
+          and v_path = '/rpc/list_public_recipe_tags'
+        )
+        or (
+          v_attestation_scope = 'recipe-themes'
+          and (
+            (
+              v_method in ('GET', 'HEAD')
+              and v_path in ('/recipes', '/recipe_steps')
+            )
+            or (
+              v_method = 'POST'
+              and v_path = '/rpc/list_home_theme_recipes'
+            )
+          )
+        )
+        or (
+          v_attestation_scope = 'recipes'
+          and v_method in ('GET', 'HEAD')
+          and v_path in ('/recipes', '/recipe_ingredients')
+        )
+        or (
+          v_attestation_scope = 'recipes'
+          and v_method = 'POST'
+          and v_path = '/rpc/find_recipe_ids_by_public_tags'
+        )
+        or (
+          v_attestation_scope = 'recipe-detail'
+          and v_method in ('GET', 'HEAD')
+          and v_path in (
+            '/recipes',
+            '/recipe_ingredients',
+            '/recipe_nutrition_snapshots',
+            '/recipe_sources',
+            '/recipe_steps'
+          )
+        )
+        or (
+          v_attestation_scope = 'recipe-cook-mode'
+          and v_method in ('GET', 'HEAD')
+          and v_path in ('/recipes', '/recipe_ingredients', '/recipe_steps')
+        )
+      ) then
+      raise exception 'ACCOUNT_SESSION_STALE'
+        using errcode = '55000';
+    end if;
+    return;
+  end if;
+
+  if v_claims ->> 'role' = 'service_role' then
+    if v_attestation_kind is distinct from 'internal'
+      or not (
+        (
+          v_attestation_scope = 'request-authority'
+          and v_method = 'POST'
+          and v_path = '/rpc/assert_hybrid_remote_session_authority'
+        )
+        or (
+          v_attestation_scope in ('auth-callback', 'auth-refresh')
+          and v_method = 'POST'
+          and v_path = '/rpc/record_hybrid_remote_session_authority'
+        )
+        or (
+          v_attestation_scope = 'session-logout'
+          and v_method = 'POST'
+          and v_path = '/rpc/revoke_hybrid_remote_session_authority'
+        )
+        or (
+          v_attestation_scope = 'auth-callback'
+          and v_method = 'POST'
+          and v_path in (
+            '/rpc/get_account_generation_capability',
+            '/rpc/bootstrap_account_generation_identity'
+          )
+        )
+        or (
+          v_attestation_scope = 'account-lifecycle'
+          and v_method = 'POST'
+          and v_path in (
+            '/rpc/get_account_generation_capability',
+            '/rpc/bootstrap_account_generation_identity',
+            '/rpc/initiate_account_generation_delete',
+            '/rpc/replay_account_generation_delete',
+            '/rpc/resolve_account_cutover_quarantine',
+            '/rpc/delete_user_private_data_with_generation_receipt',
+            '/rpc/start_legacy_external_write_attempt',
+            '/rpc/finalize_legacy_external_write_attempt',
+            '/operational_events'
+          )
+        )
+        or (
+          v_attestation_scope = 'recipe-image'
+          and v_method = 'POST'
+          and v_path in (
+            '/rpc/cancel_recipe_image_upload',
+            '/rpc/compensate_recipe_image_upload',
+            '/rpc/finalize_recipe_image_upload',
+            '/rpc/read_recipe_image_projections',
+            '/rpc/reserve_recipe_image_upload',
+            '/operational_events'
+          )
+        )
+        or (
+          v_attestation_scope = 'youtube-ingredient-registration'
+          and v_method = 'POST'
+          and v_path = '/rpc/register_youtube_ingredient'
+        )
+      ) then
+      raise exception 'ACCOUNT_SESSION_STALE'
+        using errcode = '55000';
+    end if;
     return;
   end if;
 
@@ -574,40 +768,6 @@ begin
       using errcode = '55000';
   end if;
 
-  v_attestation_payload := coalesce(
-    v_headers ->> 'x-homecook-session-attestation',
-    ''
-  );
-  v_attestation_signature := lower(coalesce(
-    v_headers ->> 'x-homecook-session-attestation-signature',
-    ''
-  ));
-
-  if v_attestation_payload = ''
-    or v_attestation_signature !~ '^[0-9a-f]{64}$'
-    or coalesce(v_secret, '') = '' then
-    raise exception 'ACCOUNT_SESSION_STALE'
-      using errcode = '55000';
-  end if;
-
-  v_expected_signature := encode(
-    extensions.hmac(
-      pg_catalog.convert_to(v_attestation_payload, 'UTF8'),
-      pg_catalog.convert_to(v_secret, 'UTF8'),
-      'sha256'
-    ),
-    'hex'
-  );
-
-  if v_expected_signature <> v_attestation_signature then
-    raise exception 'ACCOUNT_SESSION_STALE'
-      using errcode = '55000';
-  end if;
-
-  v_attestation := private.decode_base64url_jsonb(v_attestation_payload);
-  v_attestation_version := (v_attestation ->> 'version')::integer;
-  v_attestation_iat := (v_attestation ->> 'issued_at')::bigint;
-  v_attestation_exp := (v_attestation ->> 'expires_at')::bigint;
   v_attestation_session_key_hash := v_attestation ->> 'session_key_hash';
 
   if v_attestation ->> 'method' is distinct from v_method

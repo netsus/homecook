@@ -10,13 +10,17 @@
     "createAuthRefreshInternalDataClient": [
       "lib/supabase/server.ts"
     ],
+    "createSessionLogoutInternalDataClient": [
+      "lib/server/hybrid-auth/logout.ts"
+    ],
     "createRecipeImageInternalClient": [
       "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
       "app/api/v1/recipes/images/route.ts"
     ],
     "createAccountLifecycleInternalRpcClient": [
       "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
-      "app/api/v1/users/me/route.ts"
+      "app/api/v1/users/me/route.ts",
+      "lib/server/account-generation/quarantine-gate.ts"
     ],
     "createYoutubeIngredientRegistrationInternalRpcClient": [
       "lib/server/youtube-import.ts"
@@ -78,6 +82,24 @@
       "kind": "internal-operation-call"
     },
     {
+      "classification": "internal",
+      "file": "lib/server/account-generation/quarantine-gate.ts",
+      "column": 29,
+      "line": 72,
+      "allowed": true,
+      "factory": "createAccountLifecycleInternalRpcClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "lib/server/hybrid-auth/logout.ts",
+      "column": 29,
+      "line": 85,
+      "allowed": true,
+      "factory": "createSessionLogoutInternalDataClient",
+      "kind": "internal-operation-call"
+    },
+    {
       "classification": "user",
       "file": "lib/server/youtube-import.ts",
       "column": 5,
@@ -90,7 +112,7 @@
       "classification": "internal",
       "file": "lib/supabase/server.ts",
       "column": 26,
-      "line": 53,
+      "line": 58,
       "allowed": true,
       "factory": "createAuthRefreshInternalDataClient",
       "kind": "internal-operation-call"
@@ -99,36 +121,21 @@
   "remote_compatibility_entries": [
     {
       "classification": "public",
-      "file": "app/api/v1/cooking-methods/route.ts",
-      "column": 7,
-      "line": 144,
-      "kind": "remote-only-compatibility-call"
-    },
-    {
-      "classification": "user",
-      "file": "app/api/v1/ingredients/route.ts",
-      "column": 7,
-      "line": 167,
-      "kind": "remote-only-compatibility-call"
-    },
-    {
-      "classification": "user",
       "file": "app/api/v1/recipes/[id]/route.ts",
       "column": 27,
-      "line": 282,
-      "kind": "remote-only-compatibility-call"
-    },
-    {
-      "classification": "user",
-      "file": "app/api/v1/recipes/themes/route.ts",
-      "column": 7,
-      "line": 398,
+      "line": 284,
       "kind": "remote-only-compatibility-call"
     }
   ],
   "public_allowlist_files": [
     "app/api/v1/cooking-methods/route.ts",
-    "app/api/v1/feedback/404/route.ts"
+    "app/api/v1/feedback/404/route.ts",
+    "app/api/v1/ingredients/route.ts",
+    "app/api/v1/recipes/[id]/cook-mode/route.ts",
+    "app/api/v1/recipes/[id]/route.ts",
+    "app/api/v1/recipes/route.ts",
+    "app/api/v1/recipes/themes/route.ts",
+    "app/api/v1/tags/route.ts"
   ],
   "admin_allowlist_files": [
     "app/admin/layout.tsx"
@@ -155,13 +162,6 @@
       "file": "app/api/v1/feedback/404/route.ts",
       "column": 29,
       "line": 101,
-      "kind": "service-role-call"
-    },
-    {
-      "classification": "internal",
-      "file": "lib/server/account-generation/quarantine-gate.ts",
-      "column": 29,
-      "line": 72,
       "kind": "service-role-call"
     },
     {

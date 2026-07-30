@@ -281,11 +281,14 @@ export async function GET(request: Request) {
       user,
     });
     if (!hybridBootstrap.ok) {
-      await recordAuthFailure(request, "ACCOUNT_SESSION_STALE");
+      const errorCode = hybridBootstrap.reason === "maintenance"
+        ? "ACCOUNT_LIFECYCLE_MAINTENANCE"
+        : "ACCOUNT_SESSION_STALE";
+      await recordAuthFailure(request, errorCode);
       return clearPartialSession(
         supabase,
         clearAuthFlowCookies(NextResponse.redirect(
-          buildFailureRedirectUrl(requestUrl, nextPath, "ACCOUNT_SESSION_STALE"),
+          buildFailureRedirectUrl(requestUrl, nextPath, errorCode),
         )),
         request,
         cookieStore,

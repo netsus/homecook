@@ -64,6 +64,12 @@ describe("hybrid callback/refresh authority bootstrap", () => {
         p_remote_revision: 1_800_000_100,
         p_evidence_revision: 1_800_000_100,
         p_hmac_key_version: 1,
+        p_access_token_expires_at: new Date(
+          1_800_000_700 * 1_000,
+        ).toISOString(),
+        p_binding_expires_at: new Date(
+          1_800_000_700 * 1_000,
+        ).toISOString(),
         p_session_key_hash: createHmac("sha256", SECRET)
           .update([
             "v1",
@@ -75,6 +81,79 @@ describe("hybrid callback/refresh authority bootstrap", () => {
           .digest("hex"),
       }),
     );
+  });
+
+  it("keeps a valid token bound after 120 seconds but never beyond JWT exp", async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: { binding_state: "active" },
+      error: null,
+    });
+
+    const result = await recordHybridSessionAuthorityBootstrap({
+      accessToken: accessToken({ exp: 1_800_000_700 }),
+      dbClient: { rpc },
+      expectedIssuer: ISSUER,
+      nowSeconds: () => 1_800_000_221,
+      sessionBindingSecret: SECRET,
+      user: {
+        id: OWNER_UUID,
+        created_at: "2026-07-28T00:00:00.000Z",
+      },
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(rpc).toHaveBeenCalledWith(
+      "record_hybrid_remote_session_authority",
+      expect.objectContaining({
+        p_access_token_expires_at: new Date(
+          1_800_000_700 * 1_000,
+        ).toISOString(),
+        p_binding_expires_at: new Date(
+          1_800_000_700 * 1_000,
+        ).toISOString(),
+      }),
+    );
+  });
+
+  it("preserves maintenance separately from stale RPC bootstrap failures", async () => {
+    const maintenanceRpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: {
+        code: "55000",
+        message: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      },
+    });
+    const staleRpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: {
+        code: "55000",
+        details: "ACCOUNT_SESSION_STALE",
+      },
+    });
+
+    await expect(recordHybridSessionAuthorityBootstrap({
+      accessToken: accessToken(),
+      dbClient: { rpc: maintenanceRpc },
+      expectedIssuer: ISSUER,
+      nowSeconds: () => 1_800_000_100,
+      sessionBindingSecret: SECRET,
+      user: {
+        id: OWNER_UUID,
+        created_at: "2026-07-28T00:00:00.000Z",
+      },
+    })).resolves.toEqual({ ok: false, reason: "maintenance" });
+
+    await expect(recordHybridSessionAuthorityBootstrap({
+      accessToken: accessToken(),
+      dbClient: { rpc: staleRpc },
+      expectedIssuer: ISSUER,
+      nowSeconds: () => 1_800_000_100,
+      sessionBindingSecret: SECRET,
+      user: {
+        id: OWNER_UUID,
+        created_at: "2026-07-28T00:00:00.000Z",
+      },
+    })).resolves.toEqual({ ok: false, reason: "stale" });
   });
 
   it("fails closed without calling local authority for a mismatched or stale callback token", async () => {
@@ -92,7 +171,7 @@ describe("hybrid callback/refresh authority bootstrap", () => {
       },
     });
 
-    expect(result).toEqual({ ok: false });
+    expect(result).toEqual({ ok: false, reason: "stale" });
     expect(rpc).not.toHaveBeenCalled();
   });
 
@@ -196,5 +275,67 @@ describe("hybrid callback/refresh authority bootstrap", () => {
       code: "ACCOUNT_LIFECYCLE_MAINTENANCE",
     });
     expect(bootstrap).not.toHaveBeenCalled();
+  });
+
+  it("maps a maintenance bootstrap result to 503 instead of stale 409", async () => {
+    const bootstrap = vi.fn().mockResolvedValue({
+      ok: false,
+      reason: "maintenance",
+    });
+    const remoteFetch = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        access_token: accessToken(),
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        id: OWNER_UUID,
+        created_at: "2026-07-28T00:00:00.000Z",
+      }), { status: 200 }));
+    const refreshFetch = createRemoteRefreshAuthorityFetch({
+      auth: {
+        publishableKey: "remote-publishable",
+        url: "https://remote.example.supabase.co",
+      },
+      bootstrap,
+      remoteFetch,
+    });
+
+    const response = await refreshFetch(
+      "https://remote.example.supabase.co/auth/v1/token?grant_type=refresh_token",
+      { method: "POST" },
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+    });
+  });
+
+  it("bounds ordinary remote Auth fetches while composing the caller signal", async () => {
+    const callerController = new AbortController();
+    const remoteFetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("aborted", "AbortError"));
+        }, { once: true });
+      }));
+    const refreshFetch = createRemoteRefreshAuthorityFetch({
+      auth: {
+        publishableKey: "remote-publishable",
+        url: "https://remote.example.supabase.co",
+      },
+      bootstrap: vi.fn(),
+      remoteFetch,
+      timeoutMs: 20,
+    } as never);
+
+    const response = await refreshFetch(
+      "https://remote.example.supabase.co/auth/v1/user",
+      { method: "GET", signal: callerController.signal },
+    );
+
+    expect(response.status).toBe(503);
+    const forwardedSignal = remoteFetch.mock.calls[0]?.[1]?.signal;
+    expect(forwardedSignal).toBeInstanceOf(AbortSignal);
+    expect(forwardedSignal).not.toBe(callerController.signal);
   });
 });

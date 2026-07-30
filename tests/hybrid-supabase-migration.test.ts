@@ -57,6 +57,10 @@ describe("hybrid remote identity/session authority migration", () => {
     expect(sql).toMatch(
       /on conflict \(hmac_key_version, session_key_hash\)[\s\S]+binding_state = 'active'[\s\S]+revoked_at is null/i,
     );
+    expect(sql).toMatch(/p_access_token_expires_at timestamptz/i);
+    expect(sql).toMatch(
+      /p_binding_expires_at\s*>\s*p_access_token_expires_at/i,
+    );
   });
 
   it("verifies attestation, active epoch and binding in the PostgREST transaction", () => {
@@ -84,6 +88,15 @@ describe("hybrid remote identity/session authority migration", () => {
     );
     expect(sql).toMatch(
       /grant execute on function private\.verify_hybrid_request_authority\(\)\s+to anon, authenticated, service_role/i,
+    );
+    expect(sql).not.toMatch(
+      /if v_claims ->> 'role' in \('anon', 'service_role'\) then\s+return/i,
+    );
+    expect(sql).toMatch(
+      /x-homecook-session-attestation[\s\S]+v_claims ->> 'role' = 'anon'[\s\S]+v_attestation_kind is distinct from 'anonymous'/i,
+    );
+    expect(sql).toMatch(
+      /x-homecook-session-attestation[\s\S]+v_claims ->> 'role' = 'service_role'[\s\S]+v_attestation_kind is distinct from 'internal'/i,
     );
   });
 

@@ -21,6 +21,10 @@ describe("isolated hybrid integration runtime", () => {
     expect(compose).toMatch(
       /public\.ecr\.aws\/supabase\/postgres:17\.6\.1\.136/,
     );
+    expect(compose).toMatch(
+      /public\.ecr\.aws\/docker\/library\/node:22\.20\.0-alpine/,
+    );
+    expect(compose).not.toMatch(/image:\s*node:/);
     expect(compose).toMatch(/POSTGRES_USER:\s*supabase_admin/);
     expect(compose).toMatch(
       /hybrid-role-passwords\.sh:\/docker-entrypoint-initdb\.d\/zz-homecook-role-passwords\.sh:ro/,
@@ -71,14 +75,16 @@ describe("isolated hybrid integration runtime", () => {
     expect(bootstrap).not.toContain("integration-attestation-hmac-key-32-bytes");
   });
 
-  it("allows the local secret only on the exact binding control-plane RPCs", () => {
+  it("allows the local secret only with an exact internal scope and attestation", () => {
     const gateway = readFileSync(
       "infra/hybrid-supabase/loopback-gateway.mjs",
       "utf8",
     );
 
-    expect(gateway).toMatch(/INTERNAL_CONTROL_PLANE_RPC_PATHS/);
+    expect(gateway).toMatch(/INTERNAL_SCOPE_RULES/);
     expect(gateway).toMatch(/timingSafeEqual/);
+    expect(gateway).toMatch(/x-homecook-internal-scope/);
+    expect(gateway).toMatch(/kind:\s*"internal"/);
     expect(gateway).toMatch(
       /record_hybrid_remote_session_authority/,
     );
@@ -258,6 +264,40 @@ function run(
   }) as string;
 }
 
+function runComposeWithRegistryRetry(
+  args: string[],
+  options: Parameters<typeof execFileSync>[2],
+) {
+  const retryDelaysMs = [5_000, 15_000, 30_000];
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return run("docker", args, options);
+    } catch (error) {
+      const candidate = error as {
+        message?: unknown;
+        stderr?: unknown;
+      };
+      const detail = [
+        candidate.message,
+        candidate.stderr,
+      ].map(String).join("\n");
+      if (
+        attempt >= retryDelaysMs.length
+        || !/(?:too\s*many\s*requests|toomanyrequests|rate exceeded)/iu
+          .test(detail)
+      ) {
+        throw error;
+      }
+      Atomics.wait(
+        new Int32Array(new SharedArrayBuffer(4)),
+        0,
+        0,
+        retryDelaysMs[attempt],
+      );
+    }
+  }
+}
+
 function gatewayExec(
   composeArgs: string[],
   script: string,
@@ -309,6 +349,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
     )) as {
       access_token: string;
       claims: {
+        exp: number;
         iss: string;
         sub: string;
         session_id: string;
@@ -376,6 +417,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
         iss: authFixture.claims.iss,
         sub: authFixture.claims.sub,
         session_id: authFixture.claims.session_id,
+        exp: authFixture.claims.exp,
       } as never,
       identityCreatedAt: authFixture.created_at,
       now: nowSeconds,
@@ -386,6 +428,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
         iss: authFixtureB.claims.iss,
         sub: authFixtureB.claims.sub,
         session_id: authFixtureB.claims.session_id,
+        exp: authFixtureB.claims.exp,
       } as never,
       identityCreatedAt: authFixtureB.created_at,
       now: nowSeconds,
@@ -403,12 +446,11 @@ composeRun("isolated hybrid integration runtime measured", () => {
       HYBRID_TEST_AUTH_JWKS_URL: "http://auth-stub:4100/auth/v1/.well-known/jwks.json",
       HYBRID_TEST_AUTH_URL: "http://auth-stub:4100",
       HYBRID_TEST_COMBINED_JWKS: JSON.stringify(authFixture.jwks),
-      HYBRID_TEST_ANON_ALLOWED_PATHS: "/rest/v1/recipes",
       HYBRID_TEST_SERVICE_KEY: serviceFixture.access_token,
     };
 
     try {
-      run("docker", [
+      runComposeWithRegistryRetry([
         ...composeArgs,
         "up",
         "-d",
@@ -435,7 +477,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
         input: readFileSync("infra/hybrid-supabase/runtime-bootstrap.sql", "utf8"),
       });
 
-      run("docker", [...composeArgs, "up", "-d", "--wait"], {
+      runComposeWithRegistryRetry([...composeArgs, "up", "-d", "--wait"], {
         env: {
           ...runtimeEnv,
         },
@@ -499,6 +541,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
             headers: {
               authorization: \`Bearer \${process.env.DATA_SECRET}\`,
               "content-type": "application/json",
+              "x-homecook-internal-scope": "auth-callback",
             },
             body: process.env.BOOTSTRAP_BODY,
           });
@@ -523,6 +566,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
             headers: {
               authorization: \`Bearer \${process.env.DATA_SECRET}\`,
               "content-type": "application/json",
+              "x-homecook-internal-scope": "auth-callback",
             },
             body: process.env.BOOTSTRAP_BODY,
           });
@@ -742,12 +786,131 @@ composeRun("isolated hybrid integration runtime measured", () => {
       const anonResult = gatewayExec(
         composeArgs,
         `
-          const response = await fetch("http://127.0.0.1:8080/rest/v1/recipes?select=id,title");
+          const response = await fetch("http://127.0.0.1:8080/rest/v1/recipes?select=id%2Ctitle%2Cthumbnail_url%2Ctags%2Cbase_servings%2Cview_count%2Clike_count%2Csave_count%2Cplan_count%2Ccook_count%2Ccreated_at%2Csource_type&visibility=eq.public&deleted_at=is.null&limit=21&order=view_count.desc&order=id.asc", {
+            headers: { "x-homecook-public-read-scope": "recipes" },
+          });
           console.log(JSON.stringify({ status: response.status, body: await response.text() }));
         `,
         {},
       );
       expect(JSON.parse(anonResult).status).toBe(200);
+
+      const officialPublicReads = gatewayExec(
+        composeArgs,
+        `
+          const requests = [
+            ["ingredients", "/rest/v1/ingredients?select=id%2Cstandard_name%2Ccategory&order=standard_name.asc", "GET"],
+            ["ingredientSynonyms", "/rest/v1/ingredient_synonyms?select=ingredient_id%2Cingredients%21inner%28id%2Cstandard_name%2Ccategory%29&order=ingredient_id.asc", "GET"],
+            ["cookingMethods", "/rest/v1/cooking_methods?select=id%2Ccode%2Clabel%2Ccolor_key%2Cis_system&order=display_order.asc%2Ccreated_at.asc", "GET"],
+            ["cookingMethodSynonyms", "/rest/v1/cooking_method_synonyms?select=method_code%2Csynonym&is_active=eq.true&order=synonym.asc", "GET"],
+          ];
+          const results = {};
+          for (const [name, path, method] of requests) {
+            const scope = name.startsWith("cooking")
+              ? "cooking-methods"
+              : "ingredients";
+            const response = await fetch(\`http://127.0.0.1:8080\${path}\`, {
+              method,
+              headers: { "x-homecook-public-read-scope": scope },
+            });
+            results[name] = { status: response.status, body: await response.text() };
+          }
+          for (const [name, scope, path, body] of [
+            ["tags", "tags", "/rest/v1/rpc/list_public_recipe_tags", {
+              p_q: null,
+              p_kind: null,
+              p_theme_eligible: null,
+              p_limit: 20,
+            }],
+            ["themes", "recipe-themes", "/rest/v1/rpc/list_home_theme_recipes", {
+              p_tag_limit: 4,
+              p_recipes_per_tag: 4,
+            }],
+          ]) {
+            const response = await fetch(\`http://127.0.0.1:8080\${path}\`, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                "x-homecook-public-read-scope": scope,
+              },
+              body: JSON.stringify(body),
+            });
+            results[name] = { status: response.status, body: await response.text() };
+          }
+          console.log(JSON.stringify(results));
+        `,
+        {},
+      );
+      const parsedOfficialReads = JSON.parse(officialPublicReads) as Record<
+        string,
+        { status: number; body: string }
+      >;
+      for (const result of Object.values(parsedOfficialReads)) {
+        expect(result.status, result.body).toBe(200);
+      }
+
+      const defenseInDepth = gatewayExec(
+        composeArgs,
+        `
+          const directAnon = await fetch("http://postgrest:3000/recipes?select=id,title");
+          const directService = await fetch(
+            "http://postgrest:3000/recipes?select=id,title",
+            { headers: { authorization: \`Bearer \${process.env.DATA_SECRET}\` } },
+          );
+          const scopedButGeneralService = await fetch(
+            "http://127.0.0.1:8080/rest/v1/recipes?select=id,title",
+            {
+              headers: {
+                authorization: \`Bearer \${process.env.DATA_SECRET}\`,
+                "x-homecook-internal-scope": "auth-callback",
+              },
+            },
+          );
+          const callbackUserData = await fetch(
+            "http://127.0.0.1:8080/rest/v1/users",
+            {
+              headers: {
+                authorization: \`Bearer \${process.env.DATA_SECRET}\`,
+                "x-homecook-internal-scope": "auth-callback",
+              },
+            },
+          );
+          const privateAnon = await fetch(
+            "http://127.0.0.1:8080/rest/v1/hybrid_runtime_probe?select=owner_uuid",
+            { headers: { "x-homecook-public-read-scope": "recipes" } },
+          );
+          const anonMutation = await fetch(
+            "http://127.0.0.1:8080/rest/v1/recipes",
+            {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                "x-homecook-public-read-scope": "recipes",
+              },
+              body: JSON.stringify({
+                id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+                title: "blocked",
+              }),
+            },
+          );
+          console.log(JSON.stringify({
+            directAnon: directAnon.status,
+            directService: directService.status,
+            scopedButGeneralService: scopedButGeneralService.status,
+            callbackUserData: callbackUserData.status,
+            privateAnon: privateAnon.status,
+            anonMutation: anonMutation.status,
+          }));
+        `,
+        { DATA_SECRET: serviceFixture.access_token },
+      );
+      const parsedDefense = JSON.parse(defenseInDepth) as Record<string, number>;
+      expect(parsedDefense.directAnon).not.toBe(200);
+      expect(parsedDefense.directService).not.toBe(200);
+      expect(parsedDefense.scopedButGeneralService).not.toBe(200);
+      expect(parsedDefense.callbackUserData).not.toBe(200);
+      expect(parsedDefense.privateAnon).not.toBe(200);
+      expect(parsedDefense.anonMutation).not.toBe(200);
 
       const revokeResult = gatewayExec(
         composeArgs,
@@ -757,6 +920,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
             headers: {
               authorization: \`Bearer \${process.env.DATA_SECRET}\`,
               "content-type": "application/json",
+              "x-homecook-internal-scope": "session-logout",
             },
             body: process.env.REVOKE_BODY,
           });
@@ -780,6 +944,7 @@ composeRun("isolated hybrid integration runtime measured", () => {
             headers: {
               authorization: \`Bearer \${process.env.DATA_SECRET}\`,
               "content-type": "application/json",
+              "x-homecook-internal-scope": "auth-refresh",
             },
             body: process.env.BOOTSTRAP_BODY,
           });
@@ -911,7 +1076,9 @@ composeRun("isolated hybrid integration runtime measured", () => {
       const postgrestOutage = gatewayExec(
         composeArgs,
         `
-          const response = await fetch("http://127.0.0.1:8080/rest/v1/recipes?select=id,title");
+          const response = await fetch("http://127.0.0.1:8080/rest/v1/recipes?select=id%2Ctitle%2Cthumbnail_url%2Ctags%2Cbase_servings%2Cview_count%2Clike_count%2Csave_count%2Cplan_count%2Ccook_count%2Ccreated_at%2Csource_type&visibility=eq.public&deleted_at=is.null&limit=21&order=view_count.desc&order=id.asc", {
+            headers: { "x-homecook-public-read-scope": "recipes" },
+          });
           console.log(JSON.stringify({ status: response.status, body: await response.text() }));
         `,
         {},

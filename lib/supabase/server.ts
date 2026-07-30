@@ -15,6 +15,11 @@ import {
 } from "@/lib/server/hybrid-auth/bootstrap";
 import { createHybridShadowReadFetch } from "@/lib/server/hybrid-auth/shadow-read";
 import {
+  beginHybridAuthorityResponseBoundary,
+} from "@/lib/server/hybrid-auth/route-error-context";
+import type { HybridPublicReadScope } from
+  "@/lib/server/hybrid-auth/public-read-policy";
+import {
   getAuthServiceRoleKey,
   getAuthSupabaseEnv,
   getDataServiceRoleKey,
@@ -52,7 +57,7 @@ async function createAuthServerClient({
         bootstrap: async ({ accessToken, user }) => {
           const client = createAuthRefreshInternalDataClient();
           if (!client) {
-            return { ok: false };
+            return { ok: false as const, reason: "maintenance" as const };
           }
 
           return bootstrapAuthCallbackSessionAuthority({
@@ -141,9 +146,11 @@ function createAssertSessionAuthority(
 function createGuardedLocalFetch({
   authorityClient,
   getAccessToken,
+  anonymousPublicReadScope,
 }: {
   authorityClient: LocalAuthorityClient;
   getAccessToken: () => Promise<string | null>;
+  anonymousPublicReadScope?: HybridPublicReadScope;
 }) {
   const authEnv = getAuthSupabaseEnv();
   return createHybridAuthorityFetch({
@@ -160,23 +167,27 @@ function createGuardedLocalFetch({
       "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1",
     ),
     assertSessionAuthority: createAssertSessionAuthority(authorityClient),
+    anonymousPublicReadScope,
   });
 }
 
 function createLocalShadowReadFetch() {
   const localEnv = getLocalShadowDataEnv();
-  const serviceRoleKey = getLocalDataServiceRoleKey();
-  if (!serviceRoleKey) {
+  const localServiceRoleKey = getLocalDataServiceRoleKey();
+  if (!localServiceRoleKey) {
     throw new Error(
       "local-shadow Data authority에는 DATA_SUPABASE_SECRET_KEY가 필요해요.",
     );
   }
-  const authorityClient = createClient(localEnv.url, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+  const authorityClient = createRequestAuthorityInternalClient({
+    key: localServiceRoleKey,
+    url: localEnv.url,
   });
+  if (!authorityClient) {
+    throw new Error(
+      "local-shadow Data authority에는 scoped authority client가 필요해요.",
+    );
+  }
 
   return createHybridShadowReadFetch({
     localDataUrl: localEnv.url,
@@ -205,12 +216,13 @@ function bindClientMember(
 
 function attachLocalDataAuthority<TAuthClient extends object>(
   authClient: TAuthClient,
+  anonymousPublicReadScope?: HybridPublicReadScope,
 ): TAuthClient {
   const dataEnv = getDataSupabaseEnv();
   if (dataEnv.authority !== "local") {
     return authClient;
   }
-  const authorityClient = createDataServiceRoleClient();
+  const authorityClient = createRequestAuthorityInternalClient();
   if (!authorityClient) {
     throw new Error(
       "local Data authority에는 DATA_SUPABASE_SECRET_KEY가 필요해요.",
@@ -229,6 +241,7 @@ function attachLocalDataAuthority<TAuthClient extends object>(
       const result = await auth.getSession();
       return result.error ? null : result.data.session?.access_token ?? null;
     },
+    anonymousPublicReadScope,
   });
   const dataClient = createClient(dataEnv.url, dataEnv.anonKey, {
     auth: {
@@ -271,9 +284,15 @@ export async function createAuthServerComponentClient() {
  * Storage members are delegated to a request-scoped local client whose fetch
  * is guarded by remote `/auth/v1/user` liveness and HMAC attestation.
  */
-export async function createRouteHandlerClient() {
+export async function createRouteHandlerClient(options?: {
+  anonymousPublicReadScope?: HybridPublicReadScope;
+}) {
+  beginHybridAuthorityResponseBoundary();
   const authClient = await createAuthRouteHandlerClient();
-  return attachLocalDataAuthority(authClient);
+  return attachLocalDataAuthority(
+    authClient,
+    options?.anonymousPublicReadScope,
+  );
 }
 
 export async function createDataRouteHandlerClient() {
@@ -304,6 +323,56 @@ export function createDataServiceRoleClient() {
   });
 }
 
+type LocalInternalScope =
+  | "account-lifecycle"
+  | "auth-callback"
+  | "auth-refresh"
+  | "recipe-image"
+  | "request-authority"
+  | "session-logout"
+  | "youtube-ingredient-registration";
+
+function createScopedDataServiceRoleClient(
+  scope: LocalInternalScope,
+  override?: { key: string; url: string },
+) {
+  const { url } = override ?? getDataSupabaseEnv();
+  const serviceRoleKey = override?.key ?? getDataServiceRoleKey();
+  if (!serviceRoleKey) {
+    return null;
+  }
+
+  return createClient(url, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    global: {
+      headers: {
+        "x-homecook-internal-scope": scope,
+      },
+    },
+  });
+}
+
+function exactInternalFrom(
+  client: NonNullable<ReturnType<typeof createScopedDataServiceRoleClient>>,
+  allowedTables: ReadonlySet<string>,
+) {
+  return (table: string) => {
+    if (!allowedTables.has(table)) {
+      throw new Error(`Internal Data scope denied table: ${table}`);
+    }
+    return client.from(table);
+  };
+}
+
+function createRequestAuthorityInternalClient(
+  override?: { key: string; url: string },
+) {
+  return createScopedDataServiceRoleClient("request-authority", override);
+}
+
 /**
  * Legacy internal helper. It is deliberately Data-scoped and never falls back
  * from a missing local secret to a user client.
@@ -313,17 +382,31 @@ export function createServiceRoleClient() {
 }
 
 export function createAuthCallbackInternalDataClient() {
-  return createDataServiceRoleClient();
+  const client = createScopedDataServiceRoleClient("auth-callback");
+  if (!client) {
+    return null;
+  }
+  if (getDataSupabaseEnv().authority !== "local") {
+    return client;
+  }
+  return {
+    rpc: client.rpc.bind(client),
+  };
 }
 
 export function createAuthRefreshInternalDataClient() {
-  return createDataServiceRoleClient();
+  return createScopedDataServiceRoleClient("auth-refresh");
+}
+
+export function createSessionLogoutInternalDataClient() {
+  return createScopedDataServiceRoleClient("session-logout");
 }
 
 export function createRecipeImageInternalClient() {
-  const client = createDataServiceRoleClient();
+  const client = createScopedDataServiceRoleClient("recipe-image");
   return client
     ? {
+        from: exactInternalFrom(client, new Set(["operational_events"])),
         rpc: client.rpc.bind(client),
         storage: client.storage,
       }
@@ -331,16 +414,19 @@ export function createRecipeImageInternalClient() {
 }
 
 export function createAccountLifecycleInternalRpcClient() {
-  const client = createDataServiceRoleClient();
+  const client = createScopedDataServiceRoleClient("account-lifecycle");
   return client
     ? {
+        from: exactInternalFrom(client, new Set(["operational_events"])),
         rpc: client.rpc.bind(client),
       }
     : null;
 }
 
 export function createYoutubeIngredientRegistrationInternalRpcClient() {
-  const client = createDataServiceRoleClient();
+  const client = createScopedDataServiceRoleClient(
+    "youtube-ingredient-registration",
+  );
   return client
     ? {
         rpc: client.rpc.bind(client),
@@ -361,10 +447,10 @@ export async function bootstrapAuthCallbackSessionAuthority({
   };
 }) {
   if (getDataSupabaseEnv().authority !== "local") {
-    return { ok: true };
+    return { ok: true as const };
   }
   if (!accessToken || !user.created_at) {
-    return { ok: false };
+    return { ok: false as const, reason: "stale" as const };
   }
 
   const authEnv = getAuthSupabaseEnv();

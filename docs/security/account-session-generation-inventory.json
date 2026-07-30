@@ -987,7 +987,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_ingredients",
-      "line": 1450,
+      "line": 1452,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1001,7 +1001,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_steps",
-      "line": 1462,
+      "line": 1464,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1015,7 +1015,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipes",
-      "line": 1429,
+      "line": 1431,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1631,7 +1631,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "increment_recipe_view_count",
-      "line": 400,
+      "line": 404,
       "source_file": "app/api/v1/recipes/[id]/route.ts",
       "route": "/api/v1/recipes/[id]",
       "owner_scope": "public",
@@ -1645,7 +1645,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "create_manual_recipe_with_managed_image",
-      "line": 1353,
+      "line": 1355,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1659,7 +1659,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "create_manual_recipe",
-      "line": 1365,
+      "line": 1367,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1972,6 +1972,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-29T23:41:07.749Z",
-  "checksum": "4f37df35d470278b981f3e8e109762f79a956d043c2becc8d077c89fb2ca2096"
+  "generated_at": "2026-07-30T01:06:48.647Z",
+  "checksum": "2b418d441dd73a8d693f0ed225ec8f2b67a5264db2a225772ec8c9ccf7dce76d"
 }

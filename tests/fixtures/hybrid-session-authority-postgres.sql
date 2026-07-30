@@ -70,8 +70,19 @@ begin
     v_now,
     v_session_key_hash,
     1,
-    v_verified_at + interval '120 seconds'
+    v_verified_at + interval '600 seconds',
+    v_verified_at + interval '600 seconds'
   );
+
+  if not exists (
+    select 1
+    from public.user_session_generation_bindings as binding
+    where binding.session_key_hash = v_session_key_hash
+      and binding.binding_expires_at > v_verified_at + interval '120 seconds'
+      and binding.binding_expires_at <= v_verified_at + interval '600 seconds'
+  ) then
+    raise exception 'binding TTL did not follow the access-token expiry';
+  end if;
 
   v_payload := translate(
     rtrim(
@@ -168,7 +179,8 @@ begin
       v_now,
       v_session_key_hash,
       1,
-      v_verified_at + interval '120 seconds'
+      v_verified_at + interval '600 seconds',
+      v_verified_at + interval '600 seconds'
     );
     raise exception 'revoked binding was reactivated';
   exception

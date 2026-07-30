@@ -1015,7 +1015,9 @@ export async function GET(request: NextRequest) {
       return ok(getMockRecipeList(listQuery.q, listQuery.ingredient_ids));
     }
 
-    const routeClient = await createRouteHandlerClient();
+    const routeClient = await createRouteHandlerClient({
+      anonymousPublicReadScope: "recipes",
+    });
     const supabase = routeClient;
     const recipeSearchDbClient = routeClient as unknown as RecipeSearchDbClient;
     let filteredRecipeIds: string[] | null = null;

@@ -84,6 +84,19 @@ create index if not exists user_session_generation_bindings_active_epoch_idx
   )
   where binding_state = 'active' and revoked_at is null;
 
+drop function if exists public.record_hybrid_remote_session_authority(
+  text,
+  uuid,
+  timestamp with time zone,
+  bigint,
+  text,
+  timestamp with time zone,
+  bigint,
+  text,
+  integer,
+  timestamp with time zone
+);
+
 create or replace function public.record_hybrid_remote_session_authority(
   p_issuer text,
   p_owner_uuid uuid,
@@ -94,6 +107,7 @@ create or replace function public.record_hybrid_remote_session_authority(
   p_evidence_revision bigint,
   p_session_key_hash text,
   p_hmac_key_version integer,
+  p_access_token_expires_at timestamptz,
   p_binding_expires_at timestamptz
 )
 returns jsonb
@@ -131,8 +145,9 @@ begin
     or p_hmac_key_version <= 0
     or p_identity_created_at > p_verified_at
     or p_verified_at > clock_timestamp() + interval '5 seconds'
+    or p_access_token_expires_at <= p_verified_at
     or p_binding_expires_at <= p_verified_at
-    or p_binding_expires_at > p_verified_at + interval '5 minutes' then
+    or p_binding_expires_at > p_access_token_expires_at then
     raise exception 'ACCOUNT_SESSION_STALE'
       using errcode = '55000';
   end if;
@@ -445,6 +460,8 @@ declare
   v_attestation_payload text;
   v_attestation_signature text;
   v_attestation jsonb;
+  v_attestation_kind text;
+  v_attestation_scope text;
   v_attestation_version integer;
   v_attestation_iat bigint;
   v_attestation_exp bigint;
@@ -457,7 +474,182 @@ declare
   v_epoch private.remote_auth_identity_epochs%rowtype;
   v_binding public.user_session_generation_bindings%rowtype;
 begin
-  if v_claims ->> 'role' in ('anon', 'service_role') then
+  v_attestation_payload := coalesce(
+    v_headers ->> 'x-homecook-session-attestation',
+    ''
+  );
+  v_attestation_signature := lower(coalesce(
+    v_headers ->> 'x-homecook-session-attestation-signature',
+    ''
+  ));
+
+  if v_attestation_payload = ''
+    or v_attestation_signature !~ '^[0-9a-f]{64}$'
+    or coalesce(v_secret, '') = '' then
+    raise exception 'ACCOUNT_SESSION_STALE'
+      using errcode = '55000';
+  end if;
+
+  v_expected_signature := encode(
+    extensions.hmac(
+      pg_catalog.convert_to(v_attestation_payload, 'UTF8'),
+      pg_catalog.convert_to(v_secret, 'UTF8'),
+      'sha256'
+    ),
+    'hex'
+  );
+
+  if v_expected_signature <> v_attestation_signature then
+    raise exception 'ACCOUNT_SESSION_STALE'
+      using errcode = '55000';
+  end if;
+
+  v_attestation := private.decode_base64url_jsonb(v_attestation_payload);
+  v_attestation_kind := v_attestation ->> 'kind';
+  v_attestation_scope := v_attestation ->> 'scope';
+  v_attestation_version := (v_attestation ->> 'version')::integer;
+  v_attestation_iat := (v_attestation ->> 'issued_at')::bigint;
+  v_attestation_exp := (v_attestation ->> 'expires_at')::bigint;
+
+  if v_attestation ->> 'method' is distinct from v_method
+    or v_attestation ->> 'path' is distinct from v_path
+    or v_attestation_version is distinct from 1
+    or v_attestation_iat is null
+    or v_attestation_exp is null
+    or v_attestation_iat > extract(epoch from clock_timestamp())::bigint + 5
+    or v_attestation_exp < extract(epoch from clock_timestamp())::bigint
+    or v_attestation_exp - v_attestation_iat > 60
+    or v_attestation_exp <= v_attestation_iat then
+    raise exception 'ACCOUNT_SESSION_STALE'
+      using errcode = '55000';
+  end if;
+
+  if v_claims ->> 'role' = 'anon' then
+    if v_attestation_kind is distinct from 'anonymous'
+      or not (
+        (
+          v_attestation_scope = 'ingredients'
+          and v_method in ('GET', 'HEAD')
+          and v_path in ('/ingredients', '/ingredient_synonyms')
+        )
+        or (
+          v_attestation_scope = 'cooking-methods'
+          and v_method in ('GET', 'HEAD')
+          and v_path in ('/cooking_methods', '/cooking_method_synonyms')
+        )
+        or (
+          v_attestation_scope = 'tags'
+          and v_method = 'POST'
+          and v_path = '/rpc/list_public_recipe_tags'
+        )
+        or (
+          v_attestation_scope = 'recipe-themes'
+          and (
+            (
+              v_method in ('GET', 'HEAD')
+              and v_path in ('/recipes', '/recipe_steps')
+            )
+            or (
+              v_method = 'POST'
+              and v_path = '/rpc/list_home_theme_recipes'
+            )
+          )
+        )
+        or (
+          v_attestation_scope = 'recipes'
+          and v_method in ('GET', 'HEAD')
+          and v_path in ('/recipes', '/recipe_ingredients')
+        )
+        or (
+          v_attestation_scope = 'recipes'
+          and v_method = 'POST'
+          and v_path = '/rpc/find_recipe_ids_by_public_tags'
+        )
+        or (
+          v_attestation_scope = 'recipe-detail'
+          and v_method in ('GET', 'HEAD')
+          and v_path in (
+            '/recipes',
+            '/recipe_ingredients',
+            '/recipe_nutrition_snapshots',
+            '/recipe_sources',
+            '/recipe_steps'
+          )
+        )
+        or (
+          v_attestation_scope = 'recipe-cook-mode'
+          and v_method in ('GET', 'HEAD')
+          and v_path in ('/recipes', '/recipe_ingredients', '/recipe_steps')
+        )
+      ) then
+      raise exception 'ACCOUNT_SESSION_STALE'
+        using errcode = '55000';
+    end if;
+    return;
+  end if;
+
+  if v_claims ->> 'role' = 'service_role' then
+    if v_attestation_kind is distinct from 'internal'
+      or not (
+        (
+          v_attestation_scope = 'request-authority'
+          and v_method = 'POST'
+          and v_path = '/rpc/assert_hybrid_remote_session_authority'
+        )
+        or (
+          v_attestation_scope in ('auth-callback', 'auth-refresh')
+          and v_method = 'POST'
+          and v_path = '/rpc/record_hybrid_remote_session_authority'
+        )
+        or (
+          v_attestation_scope = 'session-logout'
+          and v_method = 'POST'
+          and v_path = '/rpc/revoke_hybrid_remote_session_authority'
+        )
+        or (
+          v_attestation_scope = 'auth-callback'
+          and v_method = 'POST'
+          and v_path in (
+            '/rpc/get_account_generation_capability',
+            '/rpc/bootstrap_account_generation_identity'
+          )
+        )
+        or (
+          v_attestation_scope = 'account-lifecycle'
+          and v_method = 'POST'
+          and v_path in (
+            '/rpc/get_account_generation_capability',
+            '/rpc/bootstrap_account_generation_identity',
+            '/rpc/initiate_account_generation_delete',
+            '/rpc/replay_account_generation_delete',
+            '/rpc/resolve_account_cutover_quarantine',
+            '/rpc/delete_user_private_data_with_generation_receipt',
+            '/rpc/start_legacy_external_write_attempt',
+            '/rpc/finalize_legacy_external_write_attempt',
+            '/operational_events'
+          )
+        )
+        or (
+          v_attestation_scope = 'recipe-image'
+          and v_method = 'POST'
+          and v_path in (
+            '/rpc/cancel_recipe_image_upload',
+            '/rpc/compensate_recipe_image_upload',
+            '/rpc/finalize_recipe_image_upload',
+            '/rpc/read_recipe_image_projections',
+            '/rpc/reserve_recipe_image_upload',
+            '/operational_events'
+          )
+        )
+        or (
+          v_attestation_scope = 'youtube-ingredient-registration'
+          and v_method = 'POST'
+          and v_path = '/rpc/register_youtube_ingredient'
+        )
+      ) then
+      raise exception 'ACCOUNT_SESSION_STALE'
+        using errcode = '55000';
+    end if;
     return;
   end if;
 
@@ -491,40 +683,6 @@ begin
       using errcode = '55000';
   end if;
 
-  v_attestation_payload := coalesce(
-    v_headers ->> 'x-homecook-session-attestation',
-    ''
-  );
-  v_attestation_signature := lower(coalesce(
-    v_headers ->> 'x-homecook-session-attestation-signature',
-    ''
-  ));
-
-  if v_attestation_payload = ''
-    or v_attestation_signature !~ '^[0-9a-f]{64}$'
-    or coalesce(v_secret, '') = '' then
-    raise exception 'ACCOUNT_SESSION_STALE'
-      using errcode = '55000';
-  end if;
-
-  v_expected_signature := encode(
-    extensions.hmac(
-      pg_catalog.convert_to(v_attestation_payload, 'UTF8'),
-      pg_catalog.convert_to(v_secret, 'UTF8'),
-      'sha256'
-    ),
-    'hex'
-  );
-
-  if v_expected_signature <> v_attestation_signature then
-    raise exception 'ACCOUNT_SESSION_STALE'
-      using errcode = '55000';
-  end if;
-
-  v_attestation := private.decode_base64url_jsonb(v_attestation_payload);
-  v_attestation_version := (v_attestation ->> 'version')::integer;
-  v_attestation_iat := (v_attestation ->> 'issued_at')::bigint;
-  v_attestation_exp := (v_attestation ->> 'expires_at')::bigint;
   v_attestation_session_key_hash := v_attestation ->> 'session_key_hash';
 
   if v_attestation ->> 'method' is distinct from v_method
@@ -622,6 +780,7 @@ revoke all on function public.record_hybrid_remote_session_authority(
   bigint,
   text,
   integer,
+  timestamp with time zone,
   timestamp with time zone
 ) from public, anon, authenticated;
 grant execute on function public.record_hybrid_remote_session_authority(
@@ -634,6 +793,7 @@ grant execute on function public.record_hybrid_remote_session_authority(
   bigint,
   text,
   integer,
+  timestamp with time zone,
   timestamp with time zone
 ) to service_role;
 revoke all on function public.revoke_hybrid_remote_session_authority(
@@ -711,13 +871,31 @@ grant select, insert on public.hybrid_runtime_mutations to authenticated;
 create table if not exists public.recipes (
   id uuid primary key,
   title text not null,
+  thumbnail_url text,
+  tags text[] not null default '{}',
+  base_servings integer not null default 1,
+  view_count integer not null default 0,
+  like_count integer not null default 0,
+  save_count integer not null default 0,
+  plan_count integer not null default 0,
+  cook_count integer not null default 0,
+  created_at timestamptz not null default clock_timestamp(),
+  source_type text not null default 'system',
+  visibility text not null default 'public',
+  deleted_at timestamptz,
   is_public boolean not null default true
 );
 
-insert into public.recipes (id, title, is_public)
-values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'public-recipe', true)
+insert into public.recipes (id, title, visibility, is_public)
+values (
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'public-recipe',
+  'public',
+  true
+)
 on conflict (id) do update
 set title = excluded.title,
+    visibility = excluded.visibility,
     is_public = excluded.is_public;
 
 grant select on public.recipes to anon, authenticated;
@@ -729,7 +907,123 @@ create policy recipes_public_read
   on public.recipes
   for select
   to anon, authenticated
-  using (is_public);
+  using (is_public and visibility = 'public' and deleted_at is null);
+
+create table if not exists public.ingredients (
+  id uuid primary key,
+  standard_name text not null,
+  category text not null
+);
+
+create table if not exists public.ingredient_synonyms (
+  ingredient_id uuid not null references public.ingredients(id),
+  synonym text not null
+);
+
+insert into public.ingredients (id, standard_name, category)
+values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '감자', '채소')
+on conflict (id) do update
+set standard_name = excluded.standard_name,
+    category = excluded.category;
+
+insert into public.ingredient_synonyms (ingredient_id, synonym)
+select 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'potato'
+where not exists (
+  select 1 from public.ingredient_synonyms where synonym = 'potato'
+);
+
+grant select on public.ingredients, public.ingredient_synonyms
+  to anon, authenticated;
+alter table public.ingredients enable row level security;
+alter table public.ingredient_synonyms enable row level security;
+create policy ingredients_public_read on public.ingredients
+  for select to anon, authenticated using (true);
+create policy ingredient_synonyms_public_read on public.ingredient_synonyms
+  for select to anon, authenticated using (true);
+
+create table if not exists public.cooking_methods (
+  id uuid primary key,
+  code text not null,
+  label text not null,
+  color_key text not null,
+  is_system boolean not null,
+  display_order integer not null,
+  created_at timestamptz not null default clock_timestamp()
+);
+
+create table if not exists public.cooking_method_synonyms (
+  method_code text not null,
+  synonym text not null,
+  is_active boolean not null default true
+);
+
+insert into public.cooking_methods (
+  id, code, label, color_key, is_system, display_order
+)
+values (
+  'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+  'boil',
+  '삶기',
+  'blue',
+  true,
+  1
+)
+on conflict (id) do update set label = excluded.label;
+
+insert into public.cooking_method_synonyms (method_code, synonym)
+select 'boil', '데치기'
+where not exists (
+  select 1 from public.cooking_method_synonyms where synonym = '데치기'
+);
+
+grant select on public.cooking_methods, public.cooking_method_synonyms
+  to anon, authenticated;
+alter table public.cooking_methods enable row level security;
+alter table public.cooking_method_synonyms enable row level security;
+create policy cooking_methods_public_read on public.cooking_methods
+  for select to anon, authenticated using (true);
+create policy cooking_method_synonyms_public_read
+  on public.cooking_method_synonyms
+  for select to anon, authenticated using (is_active);
+
+create or replace function public.list_public_recipe_tags(
+  p_q text,
+  p_kind text,
+  p_theme_eligible boolean,
+  p_limit integer
+)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = pg_catalog, public, pg_temp
+as $function$
+  select jsonb_build_array(
+    jsonb_build_object('id', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'name', '간단')
+  );
+$function$;
+
+create or replace function public.list_home_theme_recipes(
+  p_tag_limit integer,
+  p_recipes_per_tag integer
+)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = pg_catalog, public, pg_temp
+as $function$
+  select jsonb_build_array(
+    jsonb_build_object('tag_id', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd')
+  );
+$function$;
+
+grant execute on function public.list_public_recipe_tags(
+  text, text, boolean, integer
+) to anon, authenticated;
+grant execute on function public.list_home_theme_recipes(
+  integer, integer
+) to anon, authenticated;
 
 create or replace function public.hybrid_runtime_request_probe()
 returns jsonb

@@ -151,6 +151,63 @@ describe("supabase server helpers", () => {
       }),
     );
   });
+
+  it("binds each local internal responsibility to an exact gateway scope", async () => {
+    getSupabaseEnv.mockReturnValue({
+      url: "http://127.0.0.1:8000",
+      anonKey: "local-publishable",
+      authority: "local",
+      issuer: "https://remote.example/auth/v1",
+      jwksUrl: "https://remote.example/auth/v1/.well-known/jwks.json",
+    });
+    getServiceRoleKey.mockReturnValue("local-service-secret");
+    const client = {
+      from: vi.fn(),
+      rpc: vi.fn(),
+      storage: {},
+    };
+    createClient.mockReturnValue(client);
+
+    const server = await import("@/lib/supabase/server");
+    const callbackClient = server.createAuthCallbackInternalDataClient();
+    server.createAuthRefreshInternalDataClient();
+    server.createSessionLogoutInternalDataClient();
+    const imageClient = server.createRecipeImageInternalClient();
+    const lifecycleClient = server.createAccountLifecycleInternalRpcClient();
+    server.createYoutubeIngredientRegistrationInternalRpcClient();
+
+    expect(createClient.mock.calls.map((call) =>
+      call[2]?.global?.headers?.["x-homecook-internal-scope"])).toEqual([
+      "auth-callback",
+      "auth-refresh",
+      "session-logout",
+      "recipe-image",
+      "account-lifecycle",
+      "youtube-ingredient-registration",
+    ]);
+    expect(() => imageClient?.from("users")).toThrow(
+      "Internal Data scope denied table: users",
+    );
+    expect(() => lifecycleClient?.from("recipes")).toThrow(
+      "Internal Data scope denied table: recipes",
+    );
+    expect(callbackClient).not.toHaveProperty("from");
+  });
+
+  it("keeps the legacy callback data facade only while Data authority is remote", async () => {
+    getServiceRoleKey.mockReturnValue("remote-service-secret");
+    const client = {
+      from: vi.fn(),
+      rpc: vi.fn(),
+      storage: {},
+    };
+    createClient.mockReturnValue(client);
+
+    const server = await import("@/lib/supabase/server");
+    const callbackClient = server.createAuthCallbackInternalDataClient();
+
+    expect(callbackClient).toHaveProperty("from", client.from);
+  });
 });
 
 describe("supabase schema migrations", () => {

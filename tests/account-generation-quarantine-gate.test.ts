@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   bootstrapIdentity: vi.fn(),
   createServerComponentClient: vi.fn(),
-  createServiceRoleClient: vi.fn(),
+  createAccountLifecycleInternalRpcClient: vi.fn(),
   hasSupabasePublicEnv: vi.fn(),
   readCapability: vi.fn(),
   readReplaySession: vi.fn(),
@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerComponentClient: mocks.createServerComponentClient,
-  createServiceRoleClient: mocks.createServiceRoleClient,
+  createAccountLifecycleInternalRpcClient:
+    mocks.createAccountLifecycleInternalRpcClient,
 }));
 
 vi.mock("@/lib/supabase/env", () => ({
@@ -44,7 +45,9 @@ describe("account quarantine server gate", () => {
       error: null,
     });
     mocks.createServerComponentClient.mockResolvedValue(routeClient);
-    mocks.createServiceRoleClient.mockReturnValue(serviceRoleClient);
+    mocks.createAccountLifecycleInternalRpcClient.mockReturnValue(
+      serviceRoleClient,
+    );
     mocks.hasSupabasePublicEnv.mockReturnValue(true);
     mocks.readCapability.mockResolvedValue({
       ok: true,
@@ -79,7 +82,8 @@ describe("account quarantine server gate", () => {
       state: "not-applicable",
       hasSession: false,
     });
-    expect(mocks.createServiceRoleClient).not.toHaveBeenCalled();
+    expect(mocks.createAccountLifecycleInternalRpcClient)
+      .not.toHaveBeenCalled();
     expect(mocks.readCapability).not.toHaveBeenCalled();
   });
 
@@ -95,7 +99,8 @@ describe("account quarantine server gate", () => {
       state: "error",
       hasSession: false,
     });
-    expect(mocks.createServiceRoleClient).not.toHaveBeenCalled();
+    expect(mocks.createAccountLifecycleInternalRpcClient)
+      .not.toHaveBeenCalled();
     expect(mocks.readCapability).not.toHaveBeenCalled();
   });
 

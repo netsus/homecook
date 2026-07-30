@@ -3,6 +3,7 @@ import {
   sign,
   type KeyObject,
 } from "node:crypto";
+import { Readable } from "node:stream";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -91,7 +92,6 @@ function createConfig(overrides: Record<string, string> = {}) {
     AUTH_SUPABASE_JWKS_URL: `${ISSUER}/.well-known/jwks.json`,
     AUTH_SUPABASE_PUBLISHABLE_KEY: "publishable",
     DATA_SUPABASE_SECRET_KEY: "0123456789abcdef0123456789abcdef",
-    HYBRID_ANON_ALLOWED_PATHS: "/rest/v1/recipes",
     HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1:
       "0123456789abcdef0123456789abcdef",
     HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1:
@@ -127,9 +127,9 @@ describe("hybrid loopback gateway runtime", () => {
 
     await handler(
       {
-        headers: {},
+        headers: { "x-homecook-public-read-scope": "recipes" },
         method: "GET",
-        url: "http://gateway.internal/rest/v1/recipes?select=id",
+        url: "http://gateway.internal/rest/v1/recipes?select=id%2Ctitle%2Cthumbnail_url%2Ctags%2Cbase_servings%2Cview_count%2Clike_count%2Csave_count%2Cplan_count%2Ccook_count%2Ccreated_at%2Csource_type&visibility=eq.public&deleted_at=is.null&limit=21&order=view_count.desc&order=id.asc",
       },
       response,
     );
@@ -179,5 +179,97 @@ describe("hybrid loopback gateway runtime", () => {
     };
     expect(response.snapshot().statusCode).toBe(503);
     expect(body.error.code).toBe("ACCOUNT_LIFECYCLE_MAINTENANCE");
+  });
+
+  it("allows only scoped recipe-image Storage removal through the internal facade", async () => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const fetchImpl = vi.fn(async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      expect(String(input)).toBe(
+        "http://storage:5000/object/recipe-images-private",
+      );
+      const headers = new Headers(init?.headers);
+      expect(headers.get("x-homecook-session-attestation")).toBeTruthy();
+      expect(headers.get("x-homecook-session-attestation-signature"))
+        .toMatch(/^[a-f0-9]{64}$/);
+      return new Response(null, { status: 200 });
+    });
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const request = Readable.from([
+      JSON.stringify({ prefixes: ["owner/image.jpg"] }),
+    ]) as Readable & {
+      headers: Record<string, string>;
+      method: string;
+      url: string;
+    };
+    request.headers = {
+      authorization: `Bearer ${dataSecret}`,
+      "content-type": "application/json",
+      "x-homecook-internal-scope": "recipe-image",
+    };
+    request.method = "DELETE";
+    request.url =
+      "http://gateway.internal/storage/v1/object/recipe-images-private";
+    const response = createResponseRecorder();
+
+    await handler(request, response);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(response.snapshot().statusCode).toBe(200);
+  });
+
+  it("rejects general user-data PostgREST access from the callback service scope", async () => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const response = createResponseRecorder();
+
+    await handler(
+      {
+        headers: {
+          authorization: `Bearer ${dataSecret}`,
+          "x-homecook-internal-scope": "auth-callback",
+        },
+        method: "GET",
+        url: "http://gateway.internal/rest/v1/users",
+      },
+      response,
+    );
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(response.snapshot().statusCode).toBe(409);
+  });
+
+  it("rejects a cross-method recipe-image scope request", async () => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const response = createResponseRecorder();
+
+    await handler(
+      {
+        headers: {
+          authorization: `Bearer ${dataSecret}`,
+          "x-homecook-internal-scope": "recipe-image",
+        },
+        method: "GET",
+        url: "http://gateway.internal/rest/v1/operational_events",
+      },
+      response,
+    );
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(response.snapshot().statusCode).toBe(409);
   });
 });

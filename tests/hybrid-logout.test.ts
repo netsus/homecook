@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const createDataServiceRoleClient = vi.fn();
+const createSessionLogoutInternalDataClient = vi.fn();
 const getAuthSupabaseEnv = vi.fn();
 const getDataAuthority = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
-  createDataServiceRoleClient,
+  createSessionLogoutInternalDataClient,
 }));
 
 vi.mock("@/lib/supabase/auth-env", () => ({
@@ -65,7 +65,7 @@ function authClient() {
 
 describe("hybrid logout authority", () => {
   beforeEach(() => {
-    createDataServiceRoleClient.mockReset();
+    createSessionLogoutInternalDataClient.mockReset();
     getAuthSupabaseEnv.mockReset();
     getDataAuthority.mockReset();
     getDataAuthority.mockReturnValue("local");
@@ -79,7 +79,7 @@ describe("hybrid logout authority", () => {
       data: { revoked: false },
       error: null,
     });
-    createDataServiceRoleClient.mockReturnValue({ rpc });
+    createSessionLogoutInternalDataClient.mockReturnValue({ rpc });
     const client = authClient();
     const { executeHybridLogout } =
       await import("@/lib/server/hybrid-auth/logout");
@@ -99,7 +99,7 @@ describe("hybrid logout authority", () => {
   it("fails closed before the RPC when the binding HMAC secret is unavailable", async () => {
     process.env.HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1 = "short";
     const rpc = vi.fn();
-    createDataServiceRoleClient.mockReturnValue({ rpc });
+    createSessionLogoutInternalDataClient.mockReturnValue({ rpc });
     const client = authClient();
     const { executeHybridLogout } =
       await import("@/lib/server/hybrid-auth/logout");
@@ -122,7 +122,7 @@ describe("hybrid logout authority", () => {
       data: { revoked: true },
       error: null,
     });
-    createDataServiceRoleClient.mockReturnValue({ rpc });
+    createSessionLogoutInternalDataClient.mockReturnValue({ rpc });
     const client = authClient();
     const { executeHybridLogout } =
       await import("@/lib/server/hybrid-auth/logout");

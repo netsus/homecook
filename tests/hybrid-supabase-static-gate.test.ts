@@ -13,10 +13,7 @@ describe("hybrid authority AST/static gate", () => {
     expect(inventory.internalOperationViolations).toEqual([]);
     expect(inventory.remoteCompatibilityEntries.map((entry) => entry.file))
       .toEqual([
-        "app/api/v1/cooking-methods/route.ts",
-        "app/api/v1/ingredients/route.ts",
         "app/api/v1/recipes/[id]/route.ts",
-        "app/api/v1/recipes/themes/route.ts",
       ]);
     expect(inventory.internalOperationEntries.map((entry) => ({
       factory: entry.factory,
@@ -47,6 +44,14 @@ describe("hybrid authority AST/static gate", () => {
         file: "app/auth/callback/route.ts",
       },
       {
+        factory: "createAccountLifecycleInternalRpcClient",
+        file: "lib/server/account-generation/quarantine-gate.ts",
+      },
+      {
+        factory: "createSessionLogoutInternalDataClient",
+        file: "lib/server/hybrid-auth/logout.ts",
+      },
+      {
         factory: "createYoutubeIngredientRegistrationInternalRpcClient",
         file: "lib/server/youtube-import.ts",
       },
@@ -60,6 +65,49 @@ describe("hybrid authority AST/static gate", () => {
     expect(serverFactory).toMatch(
       /createRemoteCompatibilityServiceRoleClient[\s\S]+authority === "local"[\s\S]+\? null/i,
     );
+  });
+
+  it("routes every local Data handler through the common API response boundary", () => {
+    const inventory = inventoryHybridAuthorityPaths();
+
+    expect(inventory.dataRouteResponseBoundaries).toHaveLength(52);
+    expect(inventory.dataRouteResponseBoundaryViolations).toEqual([]);
+  });
+
+  it("links every official anonymous API route to an exact public-read scope", () => {
+    const inventory = inventoryHybridAuthorityPaths();
+
+    expect(inventory.publicRouteContractViolations).toEqual([]);
+    expect(inventory.publicRouteContracts).toEqual([
+      expect.objectContaining({
+        file: "app/api/v1/cooking-methods/route.ts",
+        scope: "cooking-methods",
+      }),
+      expect.objectContaining({
+        file: "app/api/v1/ingredients/route.ts",
+        scope: "ingredients",
+      }),
+      expect.objectContaining({
+        file: "app/api/v1/recipes/[id]/cook-mode/route.ts",
+        scope: "recipe-cook-mode",
+      }),
+      expect.objectContaining({
+        file: "app/api/v1/recipes/[id]/route.ts",
+        scope: "recipe-detail",
+      }),
+      expect.objectContaining({
+        file: "app/api/v1/recipes/route.ts",
+        scope: "recipes",
+      }),
+      expect.objectContaining({
+        file: "app/api/v1/recipes/themes/route.ts",
+        scope: "recipe-themes",
+      }),
+      expect.objectContaining({
+        file: "app/api/v1/tags/route.ts",
+        scope: "tags",
+      }),
+    ]);
   });
 
   it("keeps the one legacy browser Storage mutation as Stage 4 evidence", () => {

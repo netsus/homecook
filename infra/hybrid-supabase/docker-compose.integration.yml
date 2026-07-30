@@ -65,7 +65,7 @@ services:
       - hybrid-storage-data:/var/lib/storage
 
   auth-stub:
-    image: node:22.20.0-alpine
+    image: public.ecr.aws/docker/library/node:22.20.0-alpine
     command:
       - node
       - /workspace/infra/hybrid-supabase/auth-stub.mjs
@@ -82,7 +82,7 @@ services:
       - ../../:/workspace:ro
 
   gateway:
-    image: node:22.20.0-alpine
+    image: public.ecr.aws/docker/library/node:22.20.0-alpine
     command:
       - node
       - /workspace/infra/hybrid-supabase/loopback-gateway.mjs
@@ -100,7 +100,6 @@ services:
       AUTH_SUPABASE_URL: ${HYBRID_TEST_AUTH_URL:-http://auth-stub:4100}
       AUTH_SUPABASE_PUBLISHABLE_KEY: ${HYBRID_TEST_AUTH_PUBLISHABLE_KEY:-integration-publishable-key}
       DATA_SUPABASE_SECRET_KEY: ${HYBRID_TEST_SERVICE_KEY:-integration-service-key}
-      HYBRID_ANON_ALLOWED_PATHS: ${HYBRID_TEST_ANON_ALLOWED_PATHS:-/rest/v1/recipes}
       HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1: ${HYBRID_TEST_ATTESTATION_HMAC_KEY:-integration-attestation-hmac-key-32-bytes}
       HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1: ${HYBRID_TEST_BINDING_HMAC_KEY:-integration-binding-hmac-key-32-bytes}
       POSTGREST_UPSTREAM_URL: http://postgrest:3000

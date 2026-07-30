@@ -266,7 +266,9 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   try {
-    const routeClient = await createRouteHandlerClient();
+    const routeClient = await createRouteHandlerClient({
+      anonymousPublicReadScope: "recipe-detail",
+    });
     const recipeResult = await routeClient
       .from("recipes")
       .select(
@@ -379,20 +381,22 @@ export async function GET(request: Request, context: RouteContext) {
     let viewCount = recipeResult.data.view_count + (serviceClient ? 1 : 0);
     let planCount = recipeResult.data.plan_count;
 
-    try {
-      const planCountResult = await dbClient
-        .from("meals")
-        .select("id", { count: "exact", head: true })
-        .eq("recipe_id", id) as {
-          count?: number | null;
-          error?: unknown;
-        };
+    if (user) {
+      try {
+        const planCountResult = await dbClient
+          .from("meals")
+          .select("id", { count: "exact", head: true })
+          .eq("recipe_id", id) as {
+            count?: number | null;
+            error?: unknown;
+          };
 
-      if (!planCountResult.error && typeof planCountResult.count === "number") {
-        planCount = planCountResult.count;
+        if (!planCountResult.error && typeof planCountResult.count === "number") {
+          planCount = planCountResult.count;
+        }
+      } catch {
+        planCount = recipeResult.data.plan_count;
       }
-    } catch {
-      planCount = recipeResult.data.plan_count;
     }
 
     if (serviceClient) {

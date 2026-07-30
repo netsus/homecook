@@ -125,6 +125,7 @@ describe("loopback session-authority gateway", () => {
       binding: expect.objectContaining({
         owner_uuid: OWNER_UUID,
         binding_state: "active",
+        binding_expires_at: new Date(1_800_000_600 * 1_000).toISOString(),
       }),
     });
     const [, localInit] = localUpstreamFetch.mock.calls[0];
@@ -148,7 +149,7 @@ describe("loopback session-authority gateway", () => {
     })).toMatchObject({ ok: true });
   });
 
-  it("allows only the exact anonymous public recipe read allowlist without remote liveness or attestation", async () => {
+  it("allows only a scoped exact anonymous public read without remote liveness", async () => {
     const remoteLivenessFetch = vi.fn();
     const localUpstreamFetch = vi.fn().mockResolvedValue(
       new Response("{}", { status: 200 }),
@@ -168,10 +169,11 @@ describe("loopback session-authority gateway", () => {
       attestationSecret: SECRET,
       sessionBindingSecret: SECRET,
       nowSeconds: () => 1_800_000_100,
+      anonymousPublicReadScope: "recipes",
     });
 
     const response = await authorityFetch(
-      "http://127.0.0.1:8000/rest/v1/recipes?select=id,title",
+      "http://127.0.0.1:8000/rest/v1/recipes?select=id%2Ctitle%2Cthumbnail_url%2Ctags%2Cbase_servings%2Cview_count%2Clike_count%2Csave_count%2Cplan_count%2Ccook_count%2Ccreated_at%2Csource_type&visibility=eq.public&deleted_at=is.null&limit=21&order=view_count.desc&order=id.asc",
       { method: "GET" },
     );
 
@@ -182,6 +184,7 @@ describe("loopback session-authority gateway", () => {
     const [, localInit] = localUpstreamFetch.mock.calls[0];
     const localHeaders = new Headers(localInit.headers);
     expect(localHeaders.get("authorization")).toBeNull();
+    expect(localHeaders.get("x-homecook-public-read-scope")).toBe("recipes");
     expect(localHeaders.get("x-homecook-session-attestation")).toBeNull();
     expect(localHeaders.get("x-homecook-session-attestation-signature")).toBeNull();
   });
@@ -202,6 +205,7 @@ describe("loopback session-authority gateway", () => {
       attestationSecret: SECRET,
       sessionBindingSecret: SECRET,
       nowSeconds: () => 1_800_000_100,
+      anonymousPublicReadScope: "recipes",
     });
 
     const privateGetResponse = await authorityFetch(
@@ -216,6 +220,53 @@ describe("loopback session-authority gateway", () => {
     await expectAuthorityError(privateGetResponse, "ACCOUNT_SESSION_STALE");
     await expectAuthorityError(mutationResponse, "ACCOUNT_SESSION_STALE");
     expect(localUpstreamFetch).not.toHaveBeenCalled();
+  });
+
+  it("maps a stalled Next-to-local gateway fetch to 503 with caller cancellation composed", async () => {
+    const callerController = new AbortController();
+    const localUpstreamFetch = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          }, { once: true });
+        }),
+    );
+    const authorityFetch = createHybridAuthorityFetch({
+      getAccessToken: async () => accessToken(),
+      remoteLivenessFetch: vi.fn().mockResolvedValue(new Response(
+        JSON.stringify({
+          id: OWNER_UUID,
+          created_at: "2026-07-28T00:00:00.000Z",
+        }),
+        { status: 200 },
+      )),
+      localUpstreamFetch,
+      loadRemoteJwks: async () => ({ keys: [REMOTE_JWK] }),
+      assertSessionAuthority: vi.fn(),
+      auth: {
+        issuer: ISSUER,
+        url: "https://remote.example.supabase.co",
+        publishableKey: "remote-publishable",
+      },
+      attestationSecret: SECRET,
+      sessionBindingSecret: SECRET,
+      nowSeconds: () => 1_800_000_100,
+      timeoutMs: 20,
+    } as never);
+
+    const response = await authorityFetch(
+      "http://127.0.0.1:8000/rest/v1/meals",
+      { method: "GET", signal: callerController.signal },
+    );
+
+    await expectAuthorityError(
+      response,
+      "ACCOUNT_LIFECYCLE_MAINTENANCE",
+    );
+    const forwardedSignal = localUpstreamFetch.mock.calls[0]?.[1]?.signal;
+    expect(forwardedSignal).toBeInstanceOf(AbortSignal);
+    expect(forwardedSignal).not.toBe(callerController.signal);
   });
 
   it.each([

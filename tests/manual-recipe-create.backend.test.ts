@@ -213,6 +213,9 @@ describe("18 manual recipe create backend", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(createRouteHandlerClient).toHaveBeenCalledWith({
+      anonymousPublicReadScope: "cooking-methods",
+    });
     expect(body).toEqual({
       success: true,
       data: {

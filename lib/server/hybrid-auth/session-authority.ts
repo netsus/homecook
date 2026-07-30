@@ -134,8 +134,12 @@ export function createSessionLivenessBinding({
   if (!Number.isSafeInteger(keyVersion) || keyVersion <= 0) {
     throw new Error("keyVersion은 양의 정수여야 해요.");
   }
-  if (!Number.isSafeInteger(ttlSeconds) || ttlSeconds <= 0 || ttlSeconds > 300) {
-    throw new Error("binding TTL은 1~300초여야 해요.");
+  if (
+    !Number.isSafeInteger(ttlSeconds)
+    || ttlSeconds <= 0
+    || ttlSeconds > 86_400
+  ) {
+    throw new Error("binding TTL은 1~86400초여야 해요.");
   }
 
   const normalizedIdentityCreatedAt = requireIsoTimestamp(

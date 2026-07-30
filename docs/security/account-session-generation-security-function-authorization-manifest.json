@@ -306,7 +306,7 @@
       ]
     },
     {
-      "signature": "public.record_hybrid_remote_session_authority(text, uuid, timestamp with time zone, bigint, text, timestamp with time zone, bigint, text, integer, timestamp with time zone)",
+      "signature": "public.record_hybrid_remote_session_authority(text, uuid, timestamp with time zone, bigint, text, timestamp with time zone, bigint, text, integer, timestamp with time zone, timestamp with time zone)",
       "control_class": "application-controlled",
       "effect": "mutation",
       "exposure": "service-internal",

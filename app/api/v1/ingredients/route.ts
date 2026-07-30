@@ -14,7 +14,6 @@ import {
   isDiscoveryFilterManualMockEnabled,
 } from "@/lib/mock/recipes";
 import {
-  createRemoteCompatibilityServiceRoleClient,
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
 import type { IngredientItem, IngredientListData, IngredientListQuery } from "@/types/recipe";
@@ -163,9 +162,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const supabase =
-      createRemoteCompatibilityServiceRoleClient()
-      ?? await createRouteHandlerClient();
+    const supabase = await createRouteHandlerClient({
+      anonymousPublicReadScope: "ingredients",
+    });
 
     const shouldApplyLegacyCategory = query.category &&
       !query.category_code &&

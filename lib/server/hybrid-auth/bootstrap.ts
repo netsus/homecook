@@ -32,6 +32,29 @@ interface RemoteRefreshAuthEnv {
   url: string;
 }
 
+export type HybridSessionAuthorityBootstrapResult =
+  | { ok: true }
+  | { ok: false; reason: "maintenance" | "stale" };
+
+function boundedSignal(signal: AbortSignal | null | undefined, timeoutMs: number) {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
+function bootstrapFailureReason(error: unknown): "maintenance" | "stale" {
+  if (!error || typeof error !== "object") {
+    return "stale";
+  }
+  const candidate = error as Record<string, unknown>;
+  const detail = ["code", "message", "details", "hint"]
+    .map((key) => candidate[key])
+    .filter((value): value is string => typeof value === "string")
+    .join(" ");
+  return detail.includes("ACCOUNT_LIFECYCLE_MAINTENANCE")
+    ? "maintenance"
+    : "stale";
+}
+
 function isExactRemoteRefreshRequest(request: Request, authUrl: string) {
   const expected = new URL("/auth/v1/token", `${authUrl.replace(/\/+$/u, "")}/`);
   const actual = new URL(request.url);
@@ -56,25 +79,34 @@ export function createRemoteRefreshAuthorityFetch({
   auth,
   bootstrap,
   remoteFetch = globalThis.fetch,
+  timeoutMs = 3_000,
 }: {
   auth: RemoteRefreshAuthEnv;
   bootstrap: (input: {
     accessToken: string;
     user: VerifiedRemoteUser;
-  }) => Promise<{ ok: boolean }>;
+  }) => Promise<HybridSessionAuthorityBootstrapResult>;
   remoteFetch?: typeof globalThis.fetch;
+  timeoutMs?: number;
 }): typeof globalThis.fetch {
   return async (input, init) => {
     const request = new Request(input, init);
     if (!isExactRemoteRefreshRequest(request, auth.url)) {
-      return remoteFetch(input, init);
+      try {
+        return await remoteFetch(input, {
+          ...init,
+          signal: boundedSignal(request.signal, timeoutMs),
+        });
+      } catch {
+        return maintenanceResponse();
+      }
     }
 
     let refreshResponse: Response;
     try {
       refreshResponse = await remoteFetch(input, {
         ...init,
-        signal: AbortSignal.timeout(3_000),
+        signal: boundedSignal(request.signal, timeoutMs),
       });
     } catch {
       return maintenanceResponse();
@@ -112,7 +144,7 @@ export function createRemoteRefreshAuthorityFetch({
             Authorization: `Bearer ${accessToken}`,
           },
           method: "GET",
-          signal: AbortSignal.timeout(3_000),
+          signal: boundedSignal(request.signal, timeoutMs),
         },
       );
     } catch {
@@ -143,9 +175,12 @@ export function createRemoteRefreshAuthorityFetch({
     }
 
     try {
-      return (await bootstrap({ accessToken, user })).ok
+      const result = await bootstrap({ accessToken, user });
+      return result.ok
         ? refreshResponse
-        : staleResponse();
+        : result.reason === "maintenance"
+          ? maintenanceResponse()
+          : staleResponse();
     } catch {
       return staleResponse();
     }
@@ -166,10 +201,10 @@ export async function recordHybridSessionAuthorityBootstrap({
   nowSeconds?: () => number;
   sessionBindingSecret: string;
   user: VerifiedRemoteUser;
-}): Promise<{ ok: boolean }> {
+}): Promise<HybridSessionAuthorityBootstrapResult> {
   const decoded = decodeRemoteJwt(accessToken);
   if (!decoded.ok) {
-    return { ok: false };
+    return { ok: false, reason: "stale" };
   }
 
   const now = nowSeconds();
@@ -183,7 +218,7 @@ export async function recordHybridSessionAuthorityBootstrap({
     || validated.claims.ownerUuid !== user.id
     || !Number.isFinite(Date.parse(user.created_at))
   ) {
-    return { ok: false };
+    return { ok: false, reason: "stale" };
   }
 
   const identityCreatedAt = new Date(user.created_at).toISOString();
@@ -196,8 +231,10 @@ export async function recordHybridSessionAuthorityBootstrap({
     sessionId: validated.claims.sessionId,
     identityCreatedAt,
     remoteVerifiedAt: verifiedAt,
-    ttlSeconds: 120,
+    ttlSeconds: validated.claims.expiresAt - now,
   });
+  const accessTokenExpiresAt =
+    new Date(validated.claims.expiresAt * 1_000).toISOString();
 
   try {
     const result = await dbClient.rpc(
@@ -216,11 +253,14 @@ export async function recordHybridSessionAuthorityBootstrap({
         p_evidence_revision: now,
         p_session_key_hash: binding.session_key_hash,
         p_hmac_key_version: binding.hmac_key_version,
+        p_access_token_expires_at: accessTokenExpiresAt,
         p_binding_expires_at: binding.binding_expires_at,
       },
     );
-    return { ok: !result.error };
-  } catch {
-    return { ok: false };
+    return result.error
+      ? { ok: false, reason: bootstrapFailureReason(result.error) }
+      : { ok: true };
+  } catch (error) {
+    return { ok: false, reason: bootstrapFailureReason(error) };
   }
 }

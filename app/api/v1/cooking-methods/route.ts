@@ -7,7 +7,6 @@ import {
 } from "@/lib/cooking-method-taxonomy";
 import { getQaFixtureCookingMethods, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
 import {
-  createRemoteCompatibilityServiceRoleClient,
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
 import type { CookingMethodItem, CookingMethodListData } from "@/types/recipe";
@@ -140,10 +139,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const dbClient = (
-      createRemoteCompatibilityServiceRoleClient()
-      ?? await createRouteHandlerClient()
-    ) as unknown as CookingMethodsDbClient;
+    const dbClient = await createRouteHandlerClient({
+      anonymousPublicReadScope: "cooking-methods",
+    }) as unknown as CookingMethodsDbClient;
     let result = await dbClient
       .from("cooking_methods")
       .select("id, code, label, color_key, category_code, is_system")

@@ -11,14 +11,84 @@ import { createServer } from "node:http";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 
+import {
+  isAnonymousHybridPublicReadRequest,
+} from "../../lib/server/hybrid-auth/public-read-policy-runtime.mjs";
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ALGORITHMS = new Set(["ES256", "RS256"]);
 const MAX_JWKS_BYTES = 1_048_576;
-const INTERNAL_CONTROL_PLANE_RPC_PATHS = new Set([
-  "/rest/v1/rpc/record_hybrid_remote_session_authority",
-  "/rest/v1/rpc/revoke_hybrid_remote_session_authority",
-]);
+const INTERNAL_SCOPE_RULES = Object.freeze({
+  "auth-callback": {
+    methods: new Set(["POST"]),
+    paths: new Set([
+      "/rest/v1/rpc/record_hybrid_remote_session_authority",
+      "/rest/v1/rpc/get_account_generation_capability",
+      "/rest/v1/rpc/bootstrap_account_generation_identity",
+    ]),
+  },
+  "auth-refresh": {
+    methods: new Set(["POST"]),
+    paths: new Set([
+      "/rest/v1/rpc/record_hybrid_remote_session_authority",
+    ]),
+  },
+  "session-logout": {
+    methods: new Set(["POST"]),
+    paths: new Set([
+      "/rest/v1/rpc/revoke_hybrid_remote_session_authority",
+    ]),
+  },
+  "account-lifecycle": {
+    methods: new Set(["POST"]),
+    paths: new Set([
+      "/rest/v1/rpc/get_account_generation_capability",
+      "/rest/v1/rpc/bootstrap_account_generation_identity",
+      "/rest/v1/rpc/initiate_account_generation_delete",
+      "/rest/v1/rpc/replay_account_generation_delete",
+      "/rest/v1/rpc/resolve_account_cutover_quarantine",
+      "/rest/v1/rpc/delete_user_private_data_with_generation_receipt",
+      "/rest/v1/rpc/start_legacy_external_write_attempt",
+      "/rest/v1/rpc/finalize_legacy_external_write_attempt",
+      "/rest/v1/operational_events",
+    ]),
+  },
+  "recipe-image": {
+    methods: new Set(["GET", "POST", "PUT", "DELETE"]),
+    paths: new Set([
+      "/rest/v1/rpc/cancel_recipe_image_upload",
+      "/rest/v1/rpc/compensate_recipe_image_upload",
+      "/rest/v1/rpc/finalize_recipe_image_upload",
+      "/rest/v1/rpc/read_recipe_image_projections",
+      "/rest/v1/rpc/reserve_recipe_image_upload",
+      "/rest/v1/operational_events",
+      "/storage/v1/object/recipe-images",
+      "/storage/v1/object/recipe-images-private",
+    ]),
+    storagePrefixes: [
+      "/storage/v1/object/recipe-images/",
+      "/storage/v1/object/recipe-images-private/",
+      "/storage/v1/object/info/recipe-images/",
+      "/storage/v1/object/info/recipe-images-private/",
+      "/storage/v1/object/sign/recipe-images/",
+      "/storage/v1/object/sign/recipe-images-private/",
+    ],
+  },
+  "request-authority": {
+    methods: new Set(["POST"]),
+    paths: new Set([
+      "/rest/v1/rpc/assert_hybrid_remote_session_authority",
+    ]),
+  },
+  "youtube-ingredient-registration": {
+    methods: new Set(["POST"]),
+    paths: new Set([
+      "/rest/v1/rpc/register_youtube_ingredient",
+    ]),
+  },
+});
+const MAX_INTERNAL_BODY_BYTES = 1_048_576;
 
 class AuthorityError extends Error {}
 class UpstreamError extends Error {}
@@ -35,15 +105,6 @@ function timeoutSignal(timeoutMs) {
   return AbortSignal.timeout(timeoutMs);
 }
 
-function parseAnonAllowedPaths(envValue) {
-  return new Set(
-    String(envValue ?? "")
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean),
-  );
-}
-
 /**
  * @param {Record<string, string | undefined>} env
  */
@@ -51,7 +112,6 @@ export function createGatewayConfig(env = process.env) {
   return {
     allowInsecureLocalAuthStub:
       String(env.ALLOW_INSECURE_LOCAL_AUTH_STUB ?? "") === "1",
-    anonAllowedPaths: parseAnonAllowedPaths(env.HYBRID_ANON_ALLOWED_PATHS),
     authUrl: requiredEnv(env, "AUTH_SUPABASE_URL").replace(/\/+$/, ""),
     issuer: requiredEnv(env, "AUTH_SUPABASE_EXPECTED_ISSUER"),
     jwksUrl: requiredEnv(env, "AUTH_SUPABASE_JWKS_URL"),
@@ -273,7 +333,7 @@ function hmacHex(secret, value) {
 
 export function createAuthority({ claims, identityCreatedAt, now, config }) {
   const remoteVerifiedAt = new Date(now * 1_000).toISOString();
-  const bindingExpiresAt = new Date((now + 120) * 1_000).toISOString();
+  const bindingExpiresAt = new Date(claims.exp * 1_000).toISOString();
   const sessionKeyHash = hmacHex(
     config.bindingSecret,
     [
@@ -322,6 +382,7 @@ export function buildBootstrapAuthorityRecord({
     p_evidence_revision: now,
     p_session_key_hash: authority.sessionKeyHash,
     p_hmac_key_version: 1,
+    p_access_token_expires_at: new Date(claims.exp * 1_000).toISOString(),
     p_binding_expires_at: authority.bindingExpiresAt,
   };
 }
@@ -352,6 +413,14 @@ async function assertAuthority({
   config,
   fetchImpl,
 }) {
+  const proof = systemAttestation({
+    kind: "internal",
+    scope: "request-authority",
+    method: "POST",
+    path: "/rpc/assert_hybrid_remote_session_authority",
+    now: Math.floor(Date.now() / 1_000),
+    config,
+  });
   let response;
   try {
     response = await fetchImpl(
@@ -362,6 +431,8 @@ async function assertAuthority({
           apikey: config.dataSecretKey,
           authorization: `Bearer ${config.dataSecretKey}`,
           "content-type": "application/json",
+          "x-homecook-session-attestation": proof.payload,
+          "x-homecook-session-attestation-signature": proof.signature,
         },
         body: JSON.stringify(
           buildAssertAuthorityRecord({
@@ -439,41 +510,168 @@ function hasExactDataSecret(value, config) {
     && timingSafeEqual(actual, expected);
 }
 
-function isInternalControlPlaneRequest(request, requestUrl, accessToken, config) {
-  return request.method === "POST"
-    && requestUrl.search === ""
-    && INTERNAL_CONTROL_PLANE_RPC_PATHS.has(requestUrl.pathname)
-    && hasExactDataSecret(accessToken, config);
+function internalScope(request) {
+  const value = request.headers["x-homecook-internal-scope"];
+  return typeof value === "string" ? value : "";
 }
 
-function isAnonymousAllowedRequest(request, requestUrl, config) {
+function isExactInternalScopeRequest(scope, rule, method, pathname) {
+  if (scope !== "recipe-image") {
+    return rule.methods.has(method) && rule.paths.has(pathname);
+  }
+  if (pathname.startsWith("/rest/v1/")) {
+    return method === "POST" && rule.paths.has(pathname);
+  }
+  if (
+    pathname === "/storage/v1/object/recipe-images"
+    || pathname === "/storage/v1/object/recipe-images-private"
+  ) {
+    return method === "DELETE";
+  }
+  if (
+    pathname.startsWith("/storage/v1/object/recipe-images/")
+    || pathname.startsWith("/storage/v1/object/recipe-images-private/")
+  ) {
+    return method === "POST" || method === "PUT";
+  }
+  if (
+    pathname.startsWith("/storage/v1/object/info/recipe-images/")
+    || pathname.startsWith("/storage/v1/object/info/recipe-images-private/")
+  ) {
+    return method === "GET";
+  }
+  if (
+    pathname.startsWith("/storage/v1/object/sign/recipe-images/")
+    || pathname.startsWith("/storage/v1/object/sign/recipe-images-private/")
+  ) {
+    return method === "POST";
+  }
+  return false;
+}
+
+function isInternalControlPlaneRequest(request, requestUrl, accessToken, config) {
+  const scope = internalScope(request);
+  const rule = INTERNAL_SCOPE_RULES[scope];
+  const method = (request.method ?? "GET").toUpperCase();
+  return Boolean(
+    rule
+    && requestUrl.search === ""
+    && isExactInternalScopeRequest(
+      scope,
+      rule,
+      method,
+      requestUrl.pathname,
+    )
+    && hasExactDataSecret(accessToken, config),
+  );
+}
+
+function anonymousScope(request) {
+  const value = request.headers["x-homecook-public-read-scope"];
+  return typeof value === "string" ? value : "";
+}
+
+function isAnonymousAllowedRequest(request, requestUrl, body) {
   const method = (request.method ?? "GET").toUpperCase();
   return (
-    (method === "GET" || method === "HEAD")
-    && !readBearerToken(request)
-    && config.anonAllowedPaths.has(requestUrl.pathname)
+    !readBearerToken(request)
+    && requestUrl.pathname.startsWith("/rest/v1/")
+    && isAnonymousHybridPublicReadRequest({
+      scope: anonymousScope(request),
+      method,
+      path: requestUrl.pathname.slice("/rest/v1".length),
+      search: requestUrl.search,
+      body,
+    })
   );
+}
+
+async function readBody(request) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const value = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += value.length;
+    if (size > MAX_INTERNAL_BODY_BYTES) {
+      failAuthority();
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
+
+function systemAttestation({ kind, scope, method, path, now, config }) {
+  const payload = Buffer.from(JSON.stringify({
+    version: 1,
+    kind,
+    scope,
+    method,
+    path,
+    issued_at: now,
+    expires_at: now + 30,
+  })).toString("base64url");
+  return {
+    payload,
+    signature: hmacHex(config.attestationSecret, payload),
+  };
+}
+
+function forwardedHeaders(request, proof, accessToken) {
+  const headers = new Headers();
+  for (const [name, value] of Object.entries(request.headers)) {
+    if (
+      typeof value === "string"
+      && ![
+        "connection",
+        "content-length",
+        "host",
+        "x-homecook-session-attestation",
+        "x-homecook-session-attestation-signature",
+      ].includes(name)
+    ) {
+      headers.set(name, value);
+    }
+  }
+  if (accessToken) {
+    headers.set("authorization", `Bearer ${accessToken}`);
+  } else {
+    headers.delete("authorization");
+  }
+  headers.set("x-homecook-session-attestation", proof.payload);
+  headers.set(
+    "x-homecook-session-attestation-signature",
+    proof.signature,
+  );
+  return headers;
 }
 
 async function proxyInternalControlPlaneRequest(
   request,
-  response,
   requestUrl,
   config,
   fetchImpl,
+  accessToken,
+  body,
 ) {
-  const upstreamPath = requestUrl.pathname.slice("/rest/v1".length);
+  const upstream = upstreamFor(requestUrl.pathname, config);
+  if (!upstream) {
+    failAuthority();
+  }
+  const method = (request.method ?? "GET").toUpperCase();
+  const proof = systemAttestation({
+    kind: "internal",
+    scope: internalScope(request),
+    method,
+    path: upstream.authorityPath,
+    now: Math.floor(Date.now() / 1_000),
+    config,
+  });
   let upstreamResponse;
   try {
-    upstreamResponse = await fetchImpl(`${config.postgrestUrl}${upstreamPath}`, {
-      method: "POST",
-      headers: {
-        apikey: config.dataSecretKey,
-        authorization: `Bearer ${config.dataSecretKey}`,
-        "content-type":
-          request.headers["content-type"] ?? "application/json",
-      },
-      body: Readable.toWeb(request),
+    upstreamResponse = await fetchImpl(upstream.url, {
+      method,
+      headers: forwardedHeaders(request, proof, accessToken),
+      body: ["GET", "HEAD"].includes(method) ? undefined : body,
       duplex: "half",
       signal: timeoutSignal(config.upstreamTimeoutMs),
     });
@@ -538,12 +736,38 @@ export function createGatewayRequestHandler({
         return;
       }
 
-      if (isAnonymousAllowedRequest(request, requestUrl, resolvedConfig)) {
+      const method = (request.method ?? "GET").toUpperCase();
+      const needsBufferedBody = !["GET", "HEAD"].includes(method)
+        && (
+          !readBearerToken(request)
+          || hasExactDataSecret(readBearerToken(request) ?? "", resolvedConfig)
+        );
+      const bufferedBody = needsBufferedBody ? await readBody(request) : undefined;
+      let parsedBody;
+      if (bufferedBody?.length) {
+        try {
+          parsedBody = JSON.parse(bufferedBody.toString("utf8"));
+        } catch {
+          failAuthority();
+        }
+      }
+
+      if (isAnonymousAllowedRequest(request, requestUrl, parsedBody)) {
+        const proof = systemAttestation({
+          kind: "anonymous",
+          scope: anonymousScope(request),
+          method,
+          path: upstream.authorityPath,
+          now: Math.floor(Date.now() / 1_000),
+          config: resolvedConfig,
+        });
         let anonymousResponse;
         try {
           anonymousResponse = await fetchImpl(`${upstream.url}${requestUrl.search}`, {
-            method: request.method,
-            headers: request.headers,
+            method,
+            headers: forwardedHeaders(request, proof, null),
+            body: ["GET", "HEAD"].includes(method) ? undefined : bufferedBody,
+            duplex: "half",
             signal: timeoutSignal(resolvedConfig.upstreamTimeoutMs),
           });
         } catch {
@@ -557,10 +781,11 @@ export function createGatewayRequestHandler({
       if (isInternalControlPlaneRequest(request, requestUrl, accessToken, resolvedConfig)) {
         const upstreamResponse = await proxyInternalControlPlaneRequest(
           request,
-          response,
           requestUrl,
           resolvedConfig,
           fetchImpl,
+          accessToken,
+          bufferedBody,
         );
         forwardResponse(response, upstreamResponse);
         return;
@@ -599,27 +824,7 @@ export function createGatewayRequestHandler({
         config: resolvedConfig,
       });
 
-      const headers = new Headers();
-      for (const [name, value] of Object.entries(request.headers)) {
-        if (
-          typeof value === "string"
-          && ![
-            "connection",
-            "content-length",
-            "host",
-            "x-homecook-session-attestation",
-            "x-homecook-session-attestation-signature",
-          ].includes(name)
-        ) {
-          headers.set(name, value);
-        }
-      }
-      headers.set("authorization", `Bearer ${accessToken}`);
-      headers.set("x-homecook-session-attestation", proof.payload);
-      headers.set(
-        "x-homecook-session-attestation-signature",
-        proof.signature,
-      );
+      const headers = forwardedHeaders(request, proof, accessToken);
 
       let upstreamResponse;
       try {

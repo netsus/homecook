@@ -10,7 +10,7 @@
 - [ ] Naver 로그인 후 기존 화면/API shape 그대로 local DB CRUD가 동작한다 <!-- omo:id=accept-hybrid-naver-crud;stage=4;scope=shared;review=6 -->
 - [ ] Kakao 로그인 후 기존 화면/API shape 그대로 local DB CRUD가 동작한다 <!-- omo:id=accept-hybrid-kakao-crud;stage=4;scope=shared;review=6 -->
 - [x] remote Auth JWT `sub`와 local PostgREST `auth.uid()`가 exact 일치한다 <!-- omo:id=accept-hybrid-auth-uid-sub;stage=2;scope=backend;review=3,6 -->
-- [ ] local Storage read/write/cancel/delete가 remote JWT owner policy를 따른다 <!-- omo:id=accept-hybrid-storage-owner;stage=2;scope=backend;review=3,6 -->
+- [x] local Storage read/write/cancel/delete가 remote JWT owner policy를 따른다 <!-- omo:id=accept-hybrid-storage-owner;stage=2;scope=backend;review=3,6 -->
 - [x] response wrapper `{ success, data, error }`와 error object shape가 기존 API 문서와 일치한다 <!-- omo:id=accept-hybrid-api-envelope;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
@@ -21,16 +21,16 @@
 - [ ] 첫 local write 뒤 env-only rollback이 guard/runbook/verification에서 금지된다 <!-- omo:id=accept-hybrid-no-env-rollback;stage=2;scope=shared;review=3,6 -->
 - [ ] remote application DB/Storage는 cutover 후 신규 app write 0이고 read-only recovery copy로 보존된다 <!-- omo:id=accept-hybrid-remote-readonly-retention;stage=2;scope=shared;review=3,6 -->
 - [ ] remote Supabase writable 예외는 Auth Hook용 최소 control-plane table/function뿐이고 application public DB/Storage는 read-only recovery copy다 <!-- omo:id=accept-hybrid-remote-control-plane-only;stage=2;scope=backend;review=3,6 -->
-- [ ] local DB/Data API/Storage/Studio/Postgres는 loopback 또는 Docker internal network only다 <!-- omo:id=accept-hybrid-loopback-only;stage=2;scope=backend;review=3,6 -->
+- [x] local DB/Data API/Storage/Studio/Postgres는 loopback 또는 Docker internal network only다 <!-- omo:id=accept-hybrid-loopback-only;stage=2;scope=backend;review=3,6 -->
 - [x] account-generation capability는 `legacy`이고 canonical generation activation이 열리지 않는다 <!-- omo:id=accept-hybrid-generation-legacy-only;stage=2;scope=shared;review=3,6 -->
 
 ## JWT / JWKS / RLS
 
-- [ ] local PostgREST가 combined local+remote verify JWKS, `PGRST_JWT_AUD=authenticated`, DB pre-request exact claim guard로 valid remote JWT를 검증한다 <!-- omo:id=accept-hybrid-postgrest-valid-jwt;stage=2;scope=backend;review=3,6 -->
-- [ ] local Storage가 `JWT_JWKS`와 loopback claim-verifying gateway 단일 user entrypoint로 valid remote JWT를 검증하며 upstream port는 Docker internal network only다 <!-- omo:id=accept-hybrid-storage-valid-jwt;stage=2;scope=backend;review=3,6 -->
+- [x] local PostgREST가 combined local+remote verify JWKS, `PGRST_JWT_AUD=authenticated`, DB pre-request exact claim guard로 valid remote JWT를 검증한다 <!-- omo:id=accept-hybrid-postgrest-valid-jwt;stage=2;scope=backend;review=3,6 -->
+- [x] local Storage가 `JWT_JWKS`와 loopback claim-verifying gateway 단일 user entrypoint로 valid remote JWT를 검증하며 upstream port는 Docker internal network only다 <!-- omo:id=accept-hybrid-storage-valid-jwt;stage=2;scope=backend;review=3,6 -->
 - [x] remote exact `iss`, `aud=authenticated`, `role=authenticated`, UUID `sub`, UUID `session_id`, `iat`/`nbf`/`exp`, allowlisted `alg`/`kid`가 모두 통과 조건이다 <!-- omo:id=accept-hybrid-exact-claim-guard;stage=2;scope=backend;review=3,6 -->
 - [ ] wrong issuer, wrong audience, wrong role, expired token, malformed token, unknown kid, local Auth token, local legacy token, remote service_role token, missing audience, malformed `session_id`가 fail closed된다 <!-- omo:id=accept-hybrid-jwt-negative;stage=2;scope=backend;review=3,6 -->
-- [ ] local anon/service token은 exact internal allowlist 경로에서만 허용되고 user-scoped gateway/Data path에서는 거부된다 <!-- omo:id=accept-hybrid-local-token-internal-only;stage=2;scope=backend;review=3,6 -->
+- [x] local anon/service token은 exact internal allowlist 경로에서만 허용되고 user-scoped gateway/Data path에서는 거부된다 <!-- omo:id=accept-hybrid-local-token-internal-only;stage=2;scope=backend;review=3,6 -->
 - [x] remote private signing key가 local env/file/container/log/artifact에 없다 <!-- omo:id=accept-hybrid-no-private-key-local;stage=2;scope=shared;review=3,6 -->
 - [x] JWKS sync는 size/timeout/alg/kty/kid/public-key allowlist와 atomic replace를 검증한다 <!-- omo:id=accept-hybrid-jwks-sync-guard;stage=2;scope=backend;review=3,6 -->
 - [ ] JWKS stale/rotation rehearsal이 alert와 canary RLS verification을 남긴다 <!-- omo:id=accept-hybrid-jwks-rotation;stage=2;scope=backend;review=3,6 -->
@@ -67,8 +67,8 @@
 - [x] Stage 2 route/helper/browser inventory와 AST/static CI gate가 browser direct local Storage URL/key/SDK write/delete path를 탐지하고 차단한다 <!-- omo:id=accept-hybrid-browser-direct-storage-static-gate;stage=2;scope=backend;review=3,6 -->
 - [ ] Stage 4 frontend implementation evidence에서 기존 browser direct Storage mutation 경로가 제거되고 기존 서버 image API 경유만 남는다 <!-- omo:id=accept-hybrid-browser-direct-storage-stage4-removal;stage=4;scope=frontend;review=5,6 -->
 - [x] User A token으로 User B DB row read/write가 0이다 <!-- omo:id=accept-hybrid-cross-owner-db-denied;stage=2;scope=backend;review=3,6 -->
-- [ ] User A token으로 User B Storage object read/write/delete가 0이다 <!-- omo:id=accept-hybrid-cross-owner-storage-denied;stage=2;scope=backend;review=3,6 -->
-- [ ] local DB down 또는 Storage down이 기존 safe error 상태로 fail closed되고 partial write를 만들지 않는다 <!-- omo:id=accept-hybrid-local-down-fail-closed;stage=2;scope=shared;review=3,6 -->
+- [x] User A token으로 User B Storage object read/write/delete가 0이다 <!-- omo:id=accept-hybrid-cross-owner-storage-denied;stage=2;scope=backend;review=3,6 -->
+- [x] local DB down 또는 Storage down이 기존 safe error 상태로 fail closed되고 partial write를 만들지 않는다 <!-- omo:id=accept-hybrid-local-down-fail-closed;stage=2;scope=shared;review=3,6 -->
 - [x] 신규 public endpoint/field/status/error code가 추가되지 않는다 <!-- omo:id=accept-hybrid-no-public-shape-change;stage=2;scope=shared;review=3,6 -->
 
 ## Data Integrity / Migration
@@ -109,12 +109,12 @@
 
 ### PostgreSQL / Storage / Integration
 
-- [ ] local PostgREST remote JWT RLS integration이 통과한다 <!-- omo:id=accept-hybrid-integration-postgrest-rls;stage=2;scope=backend;review=3,6 -->
-- [ ] local Storage remote JWT owner policy integration이 통과한다 <!-- omo:id=accept-hybrid-integration-storage-rls;stage=2;scope=backend;review=3,6 -->
+- [x] local PostgREST remote JWT RLS integration이 통과한다 <!-- omo:id=accept-hybrid-integration-postgrest-rls;stage=2;scope=backend;review=3,6 -->
+- [x] local Storage remote JWT owner policy integration이 통과한다 <!-- omo:id=accept-hybrid-integration-storage-rls;stage=2;scope=backend;review=3,6 -->
 - [ ] deleted 후 같은 UUID를 재생성한 fixture에서 이전 access token/session의 DB와 Storage write가 모두 거부된다 <!-- omo:id=accept-hybrid-integration-deleted-recreated-old-session;stage=2;scope=backend;review=3,6 -->
 - [ ] direct/automatic provider linking race는 remote identity revision/population digest CAS mismatch로 cutover attempt를 abort한다 <!-- omo:id=accept-hybrid-integration-provider-link-race;stage=2;scope=backend;review=3,6 -->
 - [ ] deletion exact-epoch terminal readback의 retry/duplicate/identity-replaced fixture가 모두 멱등하게 종료된다 <!-- omo:id=accept-hybrid-integration-deletion-saga;stage=2;scope=backend;review=3,6 -->
-- [ ] local/remote role matrix와 grant exposure가 검증된다 <!-- omo:id=accept-hybrid-integration-role-matrix;stage=2;scope=backend;review=3,6 -->
+- [x] local/remote role matrix와 grant exposure가 검증된다 <!-- omo:id=accept-hybrid-integration-role-matrix;stage=2;scope=backend;review=3,6 -->
 - [ ] JWKS old/new key overlap과 stale failure가 검증된다 <!-- omo:id=accept-hybrid-integration-jwks-rotation;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright / Browser
@@ -156,20 +156,19 @@
 - mirror/migration/static gate: `tests/hybrid-supabase-identity-mirror.test.ts`, `tests/hybrid-supabase-migration.test.ts`, `tests/hybrid-supabase-static-gate.test.ts`, `tests/account-session-generation-security-function-inventory.test.ts`, `node scripts/validate-security-function-authorization.mjs --contract-only`
 - isolated runtime 계약: `tests/hybrid-isolated-runtime.test.ts`, `tests/hybrid-supabase-storage.integration.test.ts`, `infra/hybrid-supabase/docker-compose.integration.yml`
 - historical runtime snapshot(측정 증거 아님): `tests/fixtures/hybrid-stage2-runtime-evidence.json`
-- measured isolated runtime: `pnpm test:hybrid-supabase:runtime` — PG 17.6.1.136/PostgREST 14.12/Storage 1.60.4/gateway를 host port 없이 기동하고 DB setting 주입, remote-shaped ES256 `sub=auth.uid()`, anon public GET, User A/B DB RLS, Storage owner mutation, exact callback control-plane/user-token 거부, revoke 후 동일 JWT DB/Storage mutation 0, 409/503 outage mapping을 실제 HTTP/DB 상태로 검증
+- measured isolated runtime: `HYBRID_RUNTIME_COMPOSE=1 pnpm exec vitest run tests/hybrid-isolated-runtime.test.ts` — PG 17.6.1.136/PostgREST 14.12/Storage 1.60.4/gateway를 host port 없이 기동하고 DB setting 주입, remote-shaped ES256 `sub=auth.uid()`, 공식 익명 `/recipes/themes`·`/tags`·`/ingredients`·`/cooking-methods` downstream query, User A/B DB RLS, Storage owner mutation, direct anon/service_role upstream bypass 차단, exact callback control-plane/user-token 거부, revoke 후 동일 JWT DB/Storage mutation 0, 409/503 outage mapping을 실제 HTTP/DB 상태로 검증
 - measured runtime은 locally signed fixture만 사용한다. 실제 hosted revoked-session canary, Google/Naver/Kakao OAuth, production network/cutover/write는 미실행 manual gate다
 - 격리 복원 DB transaction: `HYBRID_SUPABASE_TEST_CONTAINER=homecook-hybrid-encrypted-restore-20260730 node scripts/verify-hybrid-supabase.mjs --mode migration-rehearsal`
-- 격리 DB 결과: `auth.users=0`, `public.users=5`, `storage.objects=1`, invalid constraint/FK/procedure residual=0, session canary transaction rollback. Stage 2 초안이 이미 적용된 격리 DB에는 exact function `search_path`/ACL 보정만 적용했으며 production/cutover/data write는 0이다.
+- 격리 DB 결과: `auth.users=0`, `public.users=5`, `storage.objects=1`, invalid constraint/FK/procedure residual=0, session canary transaction rollback. Stage 2 초안이 이미 적용된 격리 DB에는 exact authority record/pre-request function upgrade만 적용했으며 production/cutover/data write는 0이다.
 - inventory: `hybrid-browser-storage-direct-inventory.json`, `hybrid-service-role-inventory.json`, `auth-users-replacement-matrix.md`
 - migration: `supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql`
 - restore/backup evidence: `tests/fixtures/hybrid-stage01-restore-evidence.json`, `tests/fixtures/hybrid-stage2-migration-evidence.json`
-- full regression: `pnpm lint`, `pnpm typecheck`, `pnpm test:product` (2363 passed, 120 skipped), `pnpm build`
+- full regression: `pnpm lint`, `pnpm typecheck`, `pnpm test` (4527 passed, 210 skipped), `pnpm test:product` (2377 passed, 120 skipped), `pnpm build`
 - security browser regression: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3117 pnpm test:e2e:security` (12 passed)
 
 ## Stage 2 Live / Manual Gates Not Executed
 
 - hosted disposable session revoke negative canary (credentials/operator approval required)
-- live local PostgREST remote-JWT RLS and live local Storage owner-policy suite
 - exact self-hosted compose restart/persistence/ordered-recovery rehearsal
 - JWKS rotation old/new overlap and stale-key live rehearsal
 - Google/Naver/Kakao production login

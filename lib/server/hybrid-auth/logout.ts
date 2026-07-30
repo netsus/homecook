@@ -5,7 +5,7 @@ import {
 import { createSessionLivenessBinding } from "@/lib/server/hybrid-auth/session-authority";
 import { getAuthSupabaseEnv } from "@/lib/supabase/auth-env";
 import { getDataAuthority } from "@/lib/supabase/data-env";
-import { createDataServiceRoleClient } from "@/lib/supabase/server";
+import { createSessionLogoutInternalDataClient } from "@/lib/supabase/server";
 
 interface RemoteAuthSessionClient {
   auth: {
@@ -82,7 +82,7 @@ export async function revokeCurrentHybridSessionAuthority(
       remoteVerifiedAt: new Date().toISOString(),
       ttlSeconds: 1,
     });
-    const authorityClient = createDataServiceRoleClient();
+    const authorityClient = createSessionLogoutInternalDataClient();
     if (!authorityClient) {
       return { ok: false as const };
     }

@@ -3,10 +3,15 @@ import {
   verifyRemoteJwtSignature,
 } from "./jwt-guard";
 import { isAnonymousHybridPublicReadRequest } from "./public-read-policy";
+import type { HybridPublicReadScope } from "./public-read-policy";
 import {
   createHybridRequestAttestation,
   createSessionLivenessBinding,
 } from "./session-authority";
+import {
+  recordHybridAuthorityFailure,
+  recordHybridAuthorityFailureResponse,
+} from "./route-error-context";
 
 interface RemoteAuthGatewayEnv {
   issuer: string;
@@ -51,6 +56,7 @@ export function createHybridAuthorityMarker(
 export function createHybridAuthorityErrorResponse(
   error: HybridSessionAuthorityError | HybridLifecycleMaintenanceError,
 ) {
+  recordHybridAuthorityFailure(error.publicCode);
   const marker = createHybridAuthorityMarker(error);
   return new Response(JSON.stringify({
     code: error.publicCode,
@@ -104,14 +110,34 @@ function downstreamAuthorityPath(pathname: string) {
   return pathname;
 }
 
+function boundedSignal(signal: AbortSignal | null | undefined, timeoutMs: number) {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
+async function readJsonBody(request: Request) {
+  if (request.method === "GET" || request.method === "HEAD") {
+    return undefined;
+  }
+  try {
+    return await request.clone().json() as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
 async function readRemoteLiveUser({
   accessToken,
   auth,
   fetch,
+  signal,
+  timeoutMs,
 }: {
   accessToken: string;
   auth: RemoteAuthGatewayEnv;
   fetch: typeof globalThis.fetch;
+  signal?: AbortSignal;
+  timeoutMs: number;
 }) {
   let response: Response;
   try {
@@ -122,7 +148,7 @@ async function readRemoteLiveUser({
         Authorization: `Bearer ${accessToken}`,
       },
       method: "GET",
-      signal: AbortSignal.timeout(3_000),
+      signal: boundedSignal(signal, timeoutMs),
     });
   } catch {
     failMaintenance();
@@ -159,9 +185,13 @@ async function readRemoteLiveUser({
 async function readRemoteJwks({
   auth,
   fetch,
+  signal,
+  timeoutMs,
 }: {
   auth: RemoteAuthGatewayEnv;
   fetch: typeof globalThis.fetch;
+  signal?: AbortSignal;
+  timeoutMs: number;
 }) {
   let response: Response;
   try {
@@ -171,7 +201,7 @@ async function readRemoteJwks({
         cache: "no-store",
         headers: { accept: "application/json" },
         method: "GET",
-        signal: AbortSignal.timeout(3_000),
+        signal: boundedSignal(signal, timeoutMs),
       },
     );
   } catch {
@@ -206,6 +236,8 @@ export function createHybridAuthorityFetch({
   attestationSecret,
   sessionBindingSecret,
   nowSeconds = () => Math.floor(Date.now() / 1_000),
+  anonymousPublicReadScope,
+  timeoutMs = 3_000,
 }: {
   getAccessToken: () => Promise<string | null>;
   remoteLivenessFetch?: typeof globalThis.fetch;
@@ -218,6 +250,8 @@ export function createHybridAuthorityFetch({
   attestationSecret: string;
   sessionBindingSecret: string;
   nowSeconds?: () => number;
+  anonymousPublicReadScope?: HybridPublicReadScope;
+  timeoutMs?: number;
 }): typeof globalThis.fetch {
   return async (input, init) => {
     const request = new Request(input, init);
@@ -225,21 +259,33 @@ export function createHybridAuthorityFetch({
     const accessToken = (await getAccessToken())?.trim();
 
     if (!accessToken) {
+      const requestUrl = new URL(request.url);
+      const publicReadBody = await readJsonBody(request);
       if (isAnonymousHybridPublicReadRequest({
+        scope: anonymousPublicReadScope as HybridPublicReadScope,
         method: request.method,
         path: authorityPath,
+        search: requestUrl.search,
+        body: publicReadBody,
       })) {
         const headers = new Headers(request.headers);
         headers.delete("authorization");
         headers.delete("x-homecook-session-attestation");
         headers.delete("x-homecook-session-attestation-signature");
+        headers.set(
+          "x-homecook-public-read-scope",
+          anonymousPublicReadScope as string,
+        );
 
         try {
-          return await localUpstreamFetch(input, {
+          return await recordHybridAuthorityFailureResponse(
+            await localUpstreamFetch(input, {
             ...init,
             headers,
             method: request.method,
-          });
+            signal: boundedSignal(request.signal, timeoutMs),
+            }),
+          );
         } catch {
           return createHybridAuthorityErrorResponse(
             new HybridLifecycleMaintenanceError(),
@@ -260,6 +306,8 @@ export function createHybridAuthorityFetch({
           : await readRemoteJwks({
               auth,
               fetch: remoteLivenessFetch,
+              signal: request.signal,
+              timeoutMs,
             });
       } catch (error) {
         throw toPublicAuthorityError(error);
@@ -282,6 +330,8 @@ export function createHybridAuthorityFetch({
         accessToken,
         auth,
         fetch: remoteLivenessFetch,
+        signal: request.signal,
+        timeoutMs,
       });
       if (remoteUser.id !== validated.claims.ownerUuid) {
         failClosed();
@@ -295,7 +345,7 @@ export function createHybridAuthorityFetch({
         sessionId: validated.claims.sessionId,
         identityCreatedAt: remoteUser.createdAt,
         remoteVerifiedAt: new Date(now * 1_000).toISOString(),
-        ttlSeconds: 120,
+        ttlSeconds: validated.claims.expiresAt - now,
       });
 
       await assertSessionAuthority({
@@ -326,11 +376,14 @@ export function createHybridAuthorityFetch({
       );
 
       try {
-        return await localUpstreamFetch(input, {
+        return await recordHybridAuthorityFailureResponse(
+          await localUpstreamFetch(input, {
           ...init,
           headers,
           method: request.method,
-        });
+          signal: boundedSignal(request.signal, timeoutMs),
+          }),
+        );
       } catch {
         failMaintenance();
       }
