@@ -95,9 +95,23 @@ describe("product ingredient link hybrid contract lock", () => {
     expect(bundle).toContain(target);
   });
 
-  it("keeps the hybrid verifier test in every executable verification projection", () => {
+  it("projects the merged verifier evidence without closing the full lifecycle", () => {
     const target = "tests/product-ingredient-link-hybrid-verifier.test.ts";
+    const workItem = JSON.parse(read(workItemPath)) as Record<string, unknown>;
+    const workItemStatus = workItem.status as Record<string, unknown>;
+    const statusFile = JSON.parse(
+      read(".workflow-v2/status.json"),
+    ) as Record<string, unknown>;
+    const statusItems = statusFile.items as Array<Record<string, unknown>>;
+    const statusItem = statusItems.find((item) => item.id === sliceId);
     const bundle = [
+      read(automationPath),
+      read(workItemPath),
+      read(".workflow-v2/status.json"),
+    ].join("\n");
+    const evidenceBundle = [
+      read(readmePath),
+      read(acceptancePath),
       read(automationPath),
       read(workItemPath),
       read(".workflow-v2/status.json"),
@@ -105,10 +119,24 @@ describe("product ingredient link hybrid contract lock", () => {
 
     expect(bundle).toContain(target);
     expect(read(readmePath)).toContain("Hybrid verifier implementation evidence");
-    expect(read(readmePath)).toContain("No merged exact-SHA result");
-    expect(read(readmePath)).not.toContain("merged exact-SHA dry-run passed");
-    expect(read(acceptancePath)).toContain(
-      "verifier implementation alone does not satisfy",
+    expect(evidenceBundle).toContain("PR #1248");
+    expect(evidenceBundle).toContain(
+      "4881c4c53181a5504e16f2fa3971e9f6f4b99f05",
     );
+    expect(evidenceBundle).toContain("merged exact-SHA dry-run passed");
+    expect(evidenceBundle).toContain(
+      "full local/remote evidence remains pending",
+    );
+    expect(read(readmePath)).not.toContain("No merged exact-SHA result");
+    expect(workItemStatus).toMatchObject({
+      lifecycle: "in_progress",
+      verification_status: "pending",
+      evaluation_status: "not_started",
+    });
+    expect(statusItem).toMatchObject({
+      lifecycle: "in_progress",
+      verification_status: "pending",
+      evaluation_status: "not_started",
+    });
   });
 });
