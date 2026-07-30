@@ -126,7 +126,7 @@ describe("hybrid authority AST/static gate", () => {
     ]);
   });
 
-  it("removes the final legacy browser Storage mutation after Stage 4", () => {
+  it("has zero browser direct Storage mutations after Stage 4", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
     expect(inventory.browserDirectStoragePaths).toEqual([]);

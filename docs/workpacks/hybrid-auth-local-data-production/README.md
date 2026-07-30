@@ -262,7 +262,7 @@
 - [ ] account-generation capability가 `legacy`이고 safeguard가 약화되지 않음을 remote/local smoke로 증명한다 <!-- omo:id=delivery-hybrid-generation-legacy;stage=2;scope=shared;review=3,6 -->
 - [ ] local DB/Storage/Studio/Postgres가 loopback-only임을 네트워크 스캔으로 검증한다 <!-- omo:id=delivery-hybrid-loopback-only;stage=2;scope=backend;review=3,6 -->
 - [ ] user/public/admin/internal route/helper inventory와 exact internal service-role allowlist, AST/static CI gate, browser direct Storage inventory gate가 통과한다 <!-- omo:id=delivery-hybrid-route-authority-inventory;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 frontend browser direct Storage mutation 경로가 제거되고 기존 서버 image API만 통과한다는 Stage 4 evidence가 있다 <!-- omo:id=delivery-hybrid-browser-direct-storage-removed;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 frontend browser direct Storage mutation 경로가 제거되고 기존 서버 image API만 통과한다는 Stage 4 evidence가 있다 <!-- omo:id=delivery-hybrid-browser-direct-storage-removed;stage=4;scope=frontend;review=5,6 -->
 - [ ] remote DB dump restore와 Storage copy rehearsal이 pre-data schema -> hybrid compatibility/FK 교체 -> application data -> post-data validate 순서로 수행되고 `auth.users=0`, dependency residual 0, known fixture `public.users=5/admin missing=1/audit missing=99` 교정 전 fail·교정 후 pass를 증명한다 <!-- omo:id=delivery-hybrid-migration-rehearsal;stage=2;scope=backend;review=3,6 -->
 - [ ] `local-shadow` 24시간 safe GET semantic digest mismatch 0을 기록한다 <!-- omo:id=delivery-hybrid-shadow-read;stage=2;scope=shared;review=3,6 -->
 - [ ] final cutover 전 off-Mac encrypted backup evidence schema, restore drill, DB+Storage cut line, key 분리 복구, pre/post-write rollback rehearsal이 있다 <!-- omo:id=delivery-hybrid-backup-restore;stage=2;scope=shared;review=3,6 -->

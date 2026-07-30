@@ -81,15 +81,7 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
   ],
 ]);
 
-const BROWSER_DIRECT_STORAGE_ALLOWLIST = new Map([
-  [
-    "components/recipe/manual-recipe-create-screen.tsx",
-    {
-      reason: "legacy browser Storage mutation path retained as Stage 4 removal evidence",
-      stage: 4,
-    },
-  ],
-]);
+const BROWSER_DIRECT_STORAGE_ALLOWLIST = new Map();
 
 function normalizePath(filePath) {
   return filePath.split(path.sep).join("/");

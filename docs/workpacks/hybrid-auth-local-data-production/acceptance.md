@@ -65,7 +65,7 @@
 - [x] 모든 user route의 service role priority/fallback count가 0이다 <!-- omo:id=accept-hybrid-user-route-service-role-zero;stage=2;scope=backend;review=3,6 -->
 - [x] user/public/admin/internal route와 helper inventory, exact internal service-role allowlist, AST/static CI gate가 통과한다 <!-- omo:id=accept-hybrid-route-helper-static-gate;stage=2;scope=backend;review=3,6 -->
 - [x] Stage 2 route/helper/browser inventory와 AST/static CI gate가 browser direct local Storage URL/key/SDK write/delete path를 탐지하고 차단한다 <!-- omo:id=accept-hybrid-browser-direct-storage-static-gate;stage=2;scope=backend;review=3,6 -->
-- [ ] Stage 4 frontend implementation evidence에서 기존 browser direct Storage mutation 경로가 제거되고 기존 서버 image API 경유만 남는다 <!-- omo:id=accept-hybrid-browser-direct-storage-stage4-removal;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 frontend implementation evidence에서 기존 browser direct Storage mutation 경로가 제거되고 기존 서버 image API 경유만 남는다 <!-- omo:id=accept-hybrid-browser-direct-storage-stage4-removal;stage=4;scope=frontend;review=5,6 -->
 - [x] User A token으로 User B DB row read/write가 0이다 <!-- omo:id=accept-hybrid-cross-owner-db-denied;stage=2;scope=backend;review=3,6 -->
 - [x] User A token으로 User B Storage object read/write/delete가 0이다 <!-- omo:id=accept-hybrid-cross-owner-storage-denied;stage=2;scope=backend;review=3,6 -->
 - [x] local DB down 또는 Storage down이 기존 safe error 상태로 fail closed되고 partial write를 만들지 않는다 <!-- omo:id=accept-hybrid-local-down-fail-closed;stage=2;scope=shared;review=3,6 -->
@@ -123,8 +123,8 @@
 - [ ] Naver login -> private CRUD -> logout -> relogin smoke가 통과한다 <!-- omo:id=accept-hybrid-playwright-naver;stage=4;scope=shared;review=6 -->
 - [ ] Kakao login -> private CRUD -> logout -> relogin smoke가 통과한다 <!-- omo:id=accept-hybrid-playwright-kakao;stage=4;scope=shared;review=6 -->
 - [ ] recipe image upload/read/cancel/delete smoke가 local Storage에서 통과한다 <!-- omo:id=accept-hybrid-playwright-image;stage=4;scope=shared;review=6 -->
-- [ ] browser에서 Storage SDK direct write/delete가 호출되지 않고 existing server image API만 사용된다 <!-- omo:id=accept-hybrid-playwright-no-direct-storage;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px/desktop에서 기존 login/error/account states가 깨지지 않는다 <!-- omo:id=accept-hybrid-playwright-viewports;stage=4;scope=frontend;review=6 -->
+- [x] browser에서 Storage SDK direct write/delete가 호출되지 않고 existing server image API만 사용된다 <!-- omo:id=accept-hybrid-playwright-no-direct-storage;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px/320px/desktop에서 기존 login/error/account states가 깨지지 않는다 <!-- omo:id=accept-hybrid-playwright-viewports;stage=4;scope=frontend;review=6 -->
 
 ### Independent Review
 
@@ -164,6 +164,9 @@
 - 격리 복원 DB transaction: `HYBRID_SUPABASE_TEST_CONTAINER=homecook-hybrid-encrypted-restore-20260730 node scripts/verify-hybrid-supabase.mjs --mode migration-rehearsal`
 - 격리 DB 결과: `auth.users=0`, `public.users=5`, `storage.objects=1`, invalid constraint/FK/procedure residual=0, session canary transaction rollback. Stage 2 초안이 이미 적용된 격리 DB에는 exact authority record/pre-request function과 internal operation facade migration을 적용했으며 두 RPC 모두 `service_role EXECUTE=true`, `authenticated EXECUTE=false`, production/cutover/data write는 0이다.
 - inventory: `hybrid-browser-storage-direct-inventory.json`, `hybrid-service-role-inventory.json`, `auth-users-replacement-matrix.md`
+- Stage 4 frontend image lifecycle: `pnpm exec vitest run tests/manual-recipe-create-screen.test.tsx tests/recipe-image-upload-client.test.tsx tests/hybrid-supabase-static-gate.test.ts` — `43 passed`; upload/cancel/unmount/stale completion/create failure/retry와 browser direct Storage inventory `[]`를 검증
+- Stage 4 browser fixture: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3118 pnpm exec playwright test tests/e2e/slice-31-recipe-media-tags.spec.ts --grep hybrid-auth-local-data-production --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small` — `9 passed`; exact 320px/390px/1280px에서 server image API만 호출되고 `/storage/v1/object` mutation `0`, login return-to-action과 account error/unauthorized 상태를 검증
+- Stage 4 production bundle: `pnpm build` 통과 후 `.next/static`에서 `storage.from("recipe-images")` mutation canary match `0`; server-only env 노출 경계는 기존 `tests/hybrid-supabase-env.test.ts`와 전체 product suite 통과로 검증
 - migration: `supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql`, `supabase/migrations/20260730140000_hybrid_internal_operations_facades.sql`
 - restore/backup evidence: `tests/fixtures/hybrid-stage01-restore-evidence.json`, `tests/fixtures/hybrid-stage2-migration-evidence.json`
 - full regression: `pnpm lint`, `pnpm typecheck`, `pnpm test` (4544 passed, 211 skipped), `pnpm test:product` (2387 passed, 120 skipped), `pnpm build`
