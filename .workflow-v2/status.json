@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-29T13:18:03.932Z",
+  "updated_at": "2026-07-30T12:47:39.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2423,17 +2423,18 @@
     {
       "id": "personal-recipe-editor-decoupling",
       "preset": "vertical-slice-strict",
-      "branch": "docs/personal-recipe-editor-decoupling",
-      "pr_path": "pending",
+      "branch": "docs/personal-recipe-editor-stage1-relock",
+      "pr_path": "https://github.com/netsus/homecook/pull/1237",
       "lifecycle": "planned",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
         "pnpm validate:workflow-v2",
-        "BRANCH_NAME=docs/personal-recipe-editor-decoupling pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
+        "BRANCH_NAME=docs/personal-recipe-editor-stage1-relock pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
         "node scripts/validate-automation-spec.mjs --slice personal-recipe-editor-decoupling",
         "pnpm validate:omo-bookkeeping",
+        "pnpm exec vitest run tests/personal-recipe-editor-hybrid-contract-sync.test.ts",
         "pnpm exec vitest run tests/personal-recipe-editor-shell.test.tsx tests/personal-recipe-editor-navigation.test.tsx tests/personal-recipe-editor-dirty-state.test.tsx tests/personal-recipe-editor-media-tags.test.tsx tests/recipe-detail-personal-actions.test.tsx",
         "pnpm verify:frontend:pr",
         "pnpm test:e2e:regression:ci --grep personal-recipe-editor-decoupling",
@@ -2444,9 +2445,10 @@
         "pnpm verify:frontend",
         "pnpm validate:exploratory-qa-evidence -- --slice personal-recipe-editor-decoupling",
         "pnpm validate:closeout-sync -- --slice personal-recipe-editor-decoupling",
+        "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Roadmap status is docs while workflow lifecycle intentionally remains planned. Approval stays not_started until fresh separate Codex internal 1.5, security/ownership and five-axis reviewers approve with zero required findings. Stage 1 embeds the required RECIPE_DETAIL/editor wireframe; component/E2E/visual/a11y/exploratory and 390px/320px design-authority evidence are future Stage 4 artifacts, not commands claimed executable in this docs PR. Implementation waits for #3 runtime and merged media/tag predecessors. #5 owns editor composition/navigation only; #6 owns writes and external personal editor activation stays dark until the approved snapshot-v2 gate.",
+      "notes": "Hybrid Stage 1 relock on the current v1.7.26/v1.5.30/v1.3.28/v1.3.27/v1.2.30 tuple. The approved master plan remains editor/product design history, while its local-only Auth/deployment assumptions are superseded by local application Data/Storage plus the remote Auth control-plane. #3 Stage 2 through Stage 6 merged as PR #1228 and the media/tag foundations are merged. #4 historical Stage 2 PR #1218 and Stage 4 PR #1219 are preserved, while its hybrid delta/reverification remains in progress and is not a #5 predecessor. Roadmap stays docs, lifecycle stays planned, approval/evaluation stay not_started and verification stays pending until fresh independent review. The focused contract-sync test is the only new executable Stage 1 test; required_checks is the full-lifecycle gate and verify_commands is the current executable subset; the hybrid verifier and all component/E2E/visual/a11y/exploratory/authority artifacts remain future work. #5 makes no product API, DB, route, field, status or error change; local auth.users=0, session-liveness HMAC binding, service-role user path 0, remote application DB/Storage write 0 and external personal write dark remain required.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
