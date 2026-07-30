@@ -35,6 +35,11 @@ describe("hybrid built browser bundle canary", () => {
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';switch(kind){case 'delete':method='DELETE';if(flag)break;method='GET';break;default:method='GET'}fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE'}catch(error){method='GET'}fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE'}catch{method='GET'}finally{ready&&(method='GET')}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';mayThrow();method='GET'}catch{}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';candidate.value;method='GET'}catch{}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';mayThrow();method='GET'}catch{}finally{audit()}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';mayThrow();method='GET'}finally{fetch(storageUrl,{method})}",
+    "let m='GET';try{m='DELETE';x();m='GET'}catch{}fetch('/storage/v1/object/x',{method:m})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready&&(method='GET');fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready||(method='GET');fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready??(method='GET');fetch(storageUrl,{method})",
@@ -61,6 +66,10 @@ describe("hybrid built browser bundle canary", () => {
         "let m='GET';try{m='DELETE'}catch(e){m='GET'}const u='/storage/v1/object/recipe-images/unsafe.png';window.fetch(u,{method:m});",
       );
       fs.writeFileSync(
+        path.join(bundleRoot, "try-intermediate.min.js"),
+        "let m='GET';try{m='DELETE';x();m='GET'}catch{}finally{a()}fetch('/storage/v1/object/x',{method:m});",
+      );
+      fs.writeFileSync(
         path.join(bundleRoot, "short.min.js"),
         "let m='DELETE';r&&(m='GET');const u='/storage/v1/object/recipe-images/unsafe.png';globalThis.fetch(u,{method:m});",
       );
@@ -84,6 +93,7 @@ describe("hybrid built browser bundle canary", () => {
             "do-positive.min.js",
             "short.min.js",
             "switch.min.js",
+            "try-intermediate.min.js",
             "try.min.js",
           ].map((file) => expect.objectContaining({
             file,
@@ -91,7 +101,7 @@ describe("hybrid built browser bundle canary", () => {
           })),
         ),
       );
-      expect(inspectBrowserBundle(bundleRoot)).toHaveLength(5);
+      expect(inspectBrowserBundle(bundleRoot)).toHaveLength(6);
     } finally {
       fs.rmSync(bundleRoot, { recursive: true, force: true });
     }
@@ -111,6 +121,9 @@ describe("hybrid built browser bundle canary", () => {
     "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';switch(kind){case 'head':method='HEAD';break;default:method='GET'}fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';try{method='GET'}catch{method='HEAD'}finally{method='GET'}fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='DELETE';try{method='DELETE'}catch{method='POST'}finally{method='GET'}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';try{method='DELETE';mayThrow();method='GET'}catch{}finally{method='GET'}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';try{method='DELETE';mayThrow();method='GET'}finally{method='GET'}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';try{method='DELETE';mayThrow();method='GET'}finally{audit()}fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';ready&&(method='HEAD');fetch(storageUrl,{method})",
     "/** example: client.storage.from('avatars').upload('avatar.png', file) */",
   ])("does not flag a non-mutation canary: %s", (source) => {

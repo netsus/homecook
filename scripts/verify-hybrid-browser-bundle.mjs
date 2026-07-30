@@ -17,6 +17,7 @@ const STORAGE_REST_PATH = "/storage/v1/object/";
 const FETCH_VALUE = Symbol("fetch");
 const CONTROL_FLOW_TAINT = Symbol("control-flow-taint");
 const VALUE_SET_LIMIT = 32;
+const EXCEPTION_OUTCOME_LIMIT = 64;
 
 // The scanner lattice keeps a bounded set of possible known values plus an
 // unknown/tainted bit. Every executable control-flow outcome gets its own
@@ -123,6 +124,30 @@ function taintBindings(bindings) {
     bindings.set(key, mergeValues(value, unknownValue()));
   }
   bindings.set(CONTROL_FLOW_TAINT, unknownValue());
+}
+
+function appendExceptionalOutcome(outcomes, bindings) {
+  if (outcomes.length < EXCEPTION_OUTCOME_LIMIT) {
+    outcomes.push(cloneBindings(bindings));
+    return;
+  }
+
+  const overflow = outcomes[EXCEPTION_OUTCOME_LIMIT - 1];
+  mergeBindings(overflow, overflow, bindings);
+  taintBindings(overflow);
+}
+
+function mayThrowDuringEvaluation(node) {
+  return (
+    ts.isCallExpression(node)
+    || ts.isNewExpression(node)
+    || ts.isPropertyAccessExpression(node)
+    || ts.isElementAccessExpression(node)
+    || ts.isTaggedTemplateExpression(node)
+    || ts.isAwaitExpression(node)
+    || ts.isYieldExpression(node)
+    || ts.isDeleteExpression(node)
+  );
 }
 
 function findPatternMatches(source, kind, pattern) {
@@ -299,6 +324,13 @@ function findStorageRestFetches(source) {
     ts.ScriptKind.JS,
   );
   const matches = [];
+  const exceptionCollectors = [];
+
+  const captureExceptionalOutcome = (bindings) => {
+    for (const outcomes of exceptionCollectors) {
+      appendExceptionalOutcome(outcomes, bindings);
+    }
+  };
 
   const blockScopedNames = (block) => {
     const names = new Set();
@@ -351,6 +383,11 @@ function findStorageRestFetches(source) {
   };
 
   const visit = (node, inheritedBindings) => {
+    const potentiallyThrowing = mayThrowDuringEvaluation(node);
+    if (potentiallyThrowing) {
+      captureExceptionalOutcome(inheritedBindings);
+    }
+
     if (ts.isSourceFile(node)) {
       for (const statement of node.statements) {
         visit(statement, inheritedBindings);
@@ -386,8 +423,13 @@ function findStorageRestFetches(source) {
           bindings.set(parameter.name.text, unknownValue());
         }
       }
-      if (node.body) {
-        visit(node.body, bindings);
+      const suspendedCollectors = exceptionCollectors.splice(0);
+      try {
+        if (node.body) {
+          visit(node.body, bindings);
+        }
+      } finally {
+        exceptionCollectors.push(...suspendedCollectors);
       }
       return;
     }
@@ -486,17 +528,26 @@ function findStorageRestFetches(source) {
 
     if (ts.isTryStatement(node)) {
       const tryBindings = cloneBindings(inheritedBindings);
-      visit(node.tryBlock, tryBindings);
+      const tryExceptionalOutcomes = [];
+      exceptionCollectors.push(tryExceptionalOutcomes);
+      try {
+        visit(node.tryBlock, tryBindings);
+      } finally {
+        exceptionCollectors.pop();
+      }
       const outcomes = [tryBindings];
+      let uncaughtExceptionalOutcomes = tryExceptionalOutcomes;
 
       if (node.catchClause) {
         // A throw can happen before or after a state change in the try block.
-        // The catch path therefore starts from the join of both possibilities.
+        // The catch path therefore starts from the join of entry, normal exit,
+        // and every potentially-throwing intermediate evaluation state.
         const catchBindings = cloneBindings(inheritedBindings);
         mergeBindings(
           catchBindings,
           inheritedBindings,
           tryBindings,
+          ...tryExceptionalOutcomes,
         );
         if (
           node.catchClause.variableDeclaration
@@ -507,8 +558,15 @@ function findStorageRestFetches(source) {
             unknownValue(),
           );
         }
-        visit(node.catchClause.block, catchBindings);
+        const catchExceptionalOutcomes = [];
+        exceptionCollectors.push(catchExceptionalOutcomes);
+        try {
+          visit(node.catchClause.block, catchBindings);
+        } finally {
+          exceptionCollectors.pop();
+        }
         outcomes.push(catchBindings);
+        uncaughtExceptionalOutcomes = catchExceptionalOutcomes;
       }
 
       const completedOutcomes = node.finallyBlock
@@ -518,6 +576,12 @@ function findStorageRestFetches(source) {
             return finallyBindings;
           })
         : outcomes;
+      if (node.finallyBlock) {
+        for (const exceptionalOutcome of uncaughtExceptionalOutcomes) {
+          const finallyBindings = cloneBindings(exceptionalOutcome);
+          visit(node.finallyBlock, finallyBindings);
+        }
+      }
       mergeBindings(inheritedBindings, ...completedOutcomes);
       return;
     }
@@ -630,6 +694,7 @@ function findStorageRestFetches(source) {
           )
           && ts.isIdentifier(target.expression)
         ) {
+          captureExceptionalOutcome(inheritedBindings);
           const objectValue = inheritedBindings.get(target.expression.text);
           const propertyName = ts.isPropertyAccessExpression(target)
             ? target.name.text
@@ -702,6 +767,9 @@ function findStorageRestFetches(source) {
     }
 
     ts.forEachChild(node, (child) => visit(child, inheritedBindings));
+    if (potentiallyThrowing) {
+      captureExceptionalOutcome(inheritedBindings);
+    }
   };
 
   visit(sourceFile, new Map());
