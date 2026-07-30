@@ -105,14 +105,15 @@ function managedUploadSuccess(
   } as unknown as UploadResult;
 }
 
-function legacyUploadSuccess() {
+function legacyUploadRejected() {
   return {
-    success: true,
-    data: {
-      thumbnail_url: "https://cdn.test/legacy-thumbnail.jpg",
-      storage_path: "recipe-images/user/legacy-thumbnail.jpg",
+    success: false,
+    data: null,
+    error: {
+      code: "INVALID_RESPONSE",
+      message: "서버 응답을 해석하지 못했어요.",
+      fields: [],
     },
-    error: null,
   } as unknown as UploadResult;
 }
 
@@ -220,7 +221,7 @@ describe("recipe visibility consumers", () => {
     expect(storageMocks.getSupabaseBrowserClient).not.toHaveBeenCalled();
   });
 
-  it("saves managed uploads through image_object_id but keeps legacy uploads on thumbnail_url", async () => {
+  it("saves managed uploads through image_object_id and rejects legacy upload results", async () => {
     const user = userEvent.setup();
 
     vi.mocked(uploadRecipeImage).mockResolvedValueOnce(
@@ -246,24 +247,21 @@ describe("recipe visibility consumers", () => {
 
     cleanup();
     vi.mocked(createManualRecipe).mockClear();
-    vi.mocked(uploadRecipeImage).mockResolvedValueOnce(legacyUploadSuccess());
+    vi.mocked(uploadRecipeImage).mockResolvedValueOnce(legacyUploadRejected());
     render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
     await user.upload(
       screen.getByTestId("manual-image-file-input"),
       new File(["legacy"], "legacy.png", { type: "image/png" }),
     );
     await waitFor(() => {
-      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+      expect(screen.getByTestId("manual-image-error").textContent).toContain(
+        "서버 응답을 해석하지 못했어요.",
+      );
     });
-    await fillRequiredManualRecipeFields(user);
-    await user.click(screen.getByRole("button", { name: "저장" }));
-    await waitFor(() => {
-      expect(createManualRecipe).toHaveBeenCalled();
-    });
-    expect(vi.mocked(createManualRecipe).mock.calls[0]?.[0]?.image_object_id).toBeUndefined();
-    expect(vi.mocked(createManualRecipe).mock.calls[0]?.[0]).toMatchObject({
-      thumbnail_url: "https://cdn.test/legacy-thumbnail.jpg",
-    });
+    expect(screen.queryByTestId("manual-image-replace-button")).toBeNull();
+    expect(createManualRecipe).not.toHaveBeenCalled();
+    expect(storageMocks.mockStorageRemove).not.toHaveBeenCalled();
+    expect(storageMocks.getSupabaseBrowserClient).not.toHaveBeenCalled();
   });
 
   it("replays an in-progress upload with the same idempotency key", async () => {
