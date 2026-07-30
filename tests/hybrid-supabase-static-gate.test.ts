@@ -142,10 +142,14 @@ describe("hybrid authority AST/static gate", () => {
     expect(
       inventory.browserDirectStoragePaths.map((entry) => entry.file),
     ).toEqual([
+      "lib/api/dynamic-sdk-alias.mjs",
       "lib/api/raw-delete.ts",
       "lib/api/sdk-alias.mjs",
       "lib/api/sdk-bracket.js",
     ]);
+    expect(inventory.clientReachableFiles).not.toContain(
+      "lib/server/type-only-storage.ts",
+    );
   });
 
   it("keeps every remaining service-role call inside an exact allowlist", () => {

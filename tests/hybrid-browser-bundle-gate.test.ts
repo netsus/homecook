@@ -10,6 +10,8 @@ describe("hybrid built browser bundle canary", () => {
     "client['storage']['from']('recipe-images')['upload']('unsafe.png', file)",
     "fetch('/storage/v1/object/recipe-images/unsafe.png',{method:'DELETE'})",
     "const base='/storage/v1/object/';fetch(base+'unsafe.png',{method:'DELETE'})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png',method='DELETE';fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png',opts={method:'DELETE'};fetch(storageUrl,opts)",
   ])("rejects direct Storage mutation syntax: %s", (source) => {
     expect(findBrowserBundleStorageMutations(source)).not.toEqual([]);
   });
@@ -18,6 +20,7 @@ describe("hybrid built browser bundle canary", () => {
     "fetch('/api/v1/recipes/images',{method:'POST'})",
     "fetch('/storage/v1/object/recipe-images/safe.png',{method:'GET'})",
     "const documentation = '/storage/v1/object/';",
+    "const documentation='/storage/v1/object/';fetch('/api/v1/recipes/images',{method:'POST'})",
     "/** example: client.storage.from('avatars').upload('avatar.png', file) */",
   ])("does not flag a non-mutation canary: %s", (source) => {
     expect(findBrowserBundleStorageMutations(source)).toEqual([]);

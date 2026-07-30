@@ -352,28 +352,82 @@ function collectClientImportGraph(repoRoot, files) {
       clientRoots.add(relativeFile);
     }
 
-    sourceFile.forEachChild((node) => {
-      if (
-        (
-          ts.isImportDeclaration(node)
-          || ts.isExportDeclaration(node)
-        )
-        && node.moduleSpecifier
-        && ts.isStringLiteral(node.moduleSpecifier)
-      ) {
-        const resolved = resolveImportSource(
-          repoRoot,
-          importerDir,
-          node.moduleSpecifier.text,
-        );
-        if (resolved) {
-          const target = toRelativeFile(repoRoot, resolved);
-          if (fileByRelative.has(target)) {
-            imports.add(target);
-          }
+    const addRuntimeEdge = (rawSpecifier) => {
+      const resolved = resolveImportSource(
+        repoRoot,
+        importerDir,
+        rawSpecifier,
+      );
+      if (resolved) {
+        const target = toRelativeFile(repoRoot, resolved);
+        if (fileByRelative.has(target)) {
+          imports.add(target);
         }
       }
-    });
+    };
+
+    const importHasRuntimeEdge = (node) => {
+      const clause = node.importClause;
+      if (!clause) {
+        return true;
+      }
+      if (clause.isTypeOnly || clause.name) {
+        return !clause.isTypeOnly;
+      }
+      if (ts.isNamespaceImport(clause.namedBindings)) {
+        return true;
+      }
+      if (ts.isNamedImports(clause.namedBindings)) {
+        return clause.namedBindings.elements.length === 0
+          || clause.namedBindings.elements.some((element) => !element.isTypeOnly);
+      }
+      return false;
+    };
+
+    const exportHasRuntimeEdge = (node) => {
+      if (node.isTypeOnly) {
+        return false;
+      }
+      if (!node.exportClause || ts.isNamespaceExport(node.exportClause)) {
+        return true;
+      }
+      if (ts.isNamedExports(node.exportClause)) {
+        return node.exportClause.elements.length === 0
+          || node.exportClause.elements.some((element) => !element.isTypeOnly);
+      }
+      return false;
+    };
+
+    const visitImportEdges = (node) => {
+      if (
+        ts.isImportDeclaration(node)
+        && node.moduleSpecifier
+        && ts.isStringLiteral(node.moduleSpecifier)
+        && importHasRuntimeEdge(node)
+      ) {
+        addRuntimeEdge(node.moduleSpecifier.text);
+      } else if (
+        ts.isExportDeclaration(node)
+        && node.moduleSpecifier
+        && ts.isStringLiteral(node.moduleSpecifier)
+        && exportHasRuntimeEdge(node)
+      ) {
+        addRuntimeEdge(node.moduleSpecifier.text);
+      } else if (
+        ts.isCallExpression(node)
+        && ts.isImportCall(node)
+        && node.arguments.length === 1
+      ) {
+        const specifier = unwrapExpression(node.arguments[0]);
+        if (ts.isStringLiteralLike(specifier)) {
+          addRuntimeEdge(specifier.text);
+        }
+      }
+
+      ts.forEachChild(node, visitImportEdges);
+    };
+
+    visitImportEdges(sourceFile);
 
     importEdges.set(relativeFile, imports);
   }
