@@ -3,6 +3,8 @@
 > This hybrid Stage 1 relock uses the current official tuple (`요구사항기준선-v1.7.26.md`, `화면정의서-v1.5.30.md`, `유저flow맵-v1.3.28.md`, `db설계-v1.3.27.md`, `api문서-v1.2.30.md`). The approved master plan remains design history, but its local-only Auth/deployment assumptions are superseded. Stage 2 backend is test-only: it locks the existing detail-read and manual-create contract boundaries without adding runtime endpoints.
 >
 > Stage 4 evidence is local-fixture only: the shared shell/primitives, capability-off CTA composition, browser dirty guard, managed-image cleanup, 390px/320px Playwright and 20 PNG authority set are implemented on `feature/fe-personal-recipe-editor-decoupling`. Plain successor/merge-gate bullets are intentionally outside the machine Stage 4 checklist; they remain owned by #6, #8 or post-merge verification and are not claimed here.
+>
+> Stage 4/5 implementation and its merge gate closed through PR #1243: exact implementation head `e177a882e0fbc35847895a7a0f1dd775ff4425d1` completed 20 checks successfully with one documented normal skip, then squash-merged as `6565c2a84f3b7eba9f0579db7b91fed12fc08f23`. Full Stage 6 lifecycle verification remains pending; future/Manual Only gates below remain explicitly unclaimed.
 
 ## Existing Backend Boundary Lock
 

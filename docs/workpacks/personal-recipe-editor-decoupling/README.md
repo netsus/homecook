@@ -69,14 +69,14 @@ Schema Change:
 | `recipe-snapshot-authority-foundation` | in-progress, not a predecessor | PR #1218 historical Stage 2 and PR #1219 historical Stage 4 are preserved; the hybrid delta/reverification remains in progress. #4 is not a #5 implementation predecessor |
 | `recipebook-diary-port` | not a predecessor | MYPAGE/RECIPEBOOK_DETAIL remain untouched |
 
-> Roadmap and workflow lifecycle are `in-progress` for the test-only Stage 2. This backend branch adds route/contract regression locks only; it does not activate editor CTA, personal writes or any new runtime endpoint.
+> Roadmap and workflow lifecycle remain `in-progress` after the Stage 2/3 boundary lock and Stage 4/5 capability-off implementation merge. The required merged-SHA hybrid verifier is still pending, and no editor CTA, personal write or new runtime endpoint is activated.
 
 ## Hybrid Auth / Local Data Boundary
 
 - Google/Naver/Kakao session identity and the minimal Hook/lifecycle fence remain in the remote Auth control-plane. Application DB and Storage authority are local application Data/Storage on the server Mac.
 - `local auth.users=0` is intentional. User-scoped editor preload and future mutation paths must pass the server session-authority gateway, exact remote JWT claim checks, current private identity epoch and active session-liveness HMAC binding.
 - The browser must not call local PostgREST/Storage directly. The user path has service-role user path 0; managed image operations continue through the existing server image APIs.
-- The future Stage 4/release verifier is planned as `node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only`. It must read local application Data/Storage plus the minimal remote Auth control-plane evidence, keep remote application DB/Storage writes remain zero, and prove the capability-off external personal write remains dark.
+- The post-merge release verifier is planned as `node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only`. It must read local application Data/Storage plus the minimal remote Auth control-plane evidence, keep remote application DB/Storage writes remain zero, and prove the capability-off external personal write remains dark.
 - The verifier file and its RED/GREEN evidence do not exist in this Stage 1 relock and are not claimed complete. This relock makes no product API, DB, route, field, status or error change.
 
 ## Context Contract
@@ -170,6 +170,7 @@ dirty close/back → [계속 편집] [변경사항 버리기]
 
 ## Design Authority
 
+- Authority status: `reviewed`
 - UI risk: `high-risk` anchor-screen CTA and multi-context editor navigation
 - Anchor screen: `RECIPE_DETAIL`; high-risk affected/required editor surface: `MANUAL_RECIPE_CREATE`
 - Stage 1 artifact: this README's state matrix and markdown wireframe
@@ -195,6 +196,15 @@ The independent product-design-authority recheck records `pass`, blocker/major/m
 - `tests/e2e/slice-personal-recipe-editor-decoupling.spec.ts` covers 12 local-fixture cases across 390px and 320px, including browser back, validation, upload error, cleanup retry, interaction geometry, focus/scroll and MYPAGE/RECIPEBOOK no-edit regression.
 - `ui/designs/authority/personal-recipe-editor-decoupling-authority.md` is the canonical authority report. Physical-device virtual keyboard/IME and post-activation personal writes remain Manual Only/future evidence.
 - No production/staging write or remote application DB/Storage mutation was performed.
+
+### Stage 4/5 implementation closeout
+
+- PR #1243 merged as exact squash SHA `6565c2a84f3b7eba9f0579db7b91fed12fc08f23`.
+- The implementation head `e177a882e0fbc35847895a7a0f1dd775ff4425d1` completed 20 GitHub checks successfully with one documented normal `full-regression` skip and no pending, failed, cancelled or Vercel check.
+- Independent code, security and exact-head verification finished with P0/P1/P2 `0/0/0`; the independent design authority finished with blocker/major/minor `0/0/0`.
+- Retained Codex native review paths: `/root/stage4_final4_code_review`, `/root/stage4_final4_security_review`, `/root/stage4_post_vercel_fresh_review`, `/root/stage4_exact_head_final_verifier`; reviewed input SHA `e177a882e0fbc35847895a7a0f1dd775ff4425d1`, result artifact is this closeout evidence plus PR #1243 Actual Verification.
+- The post-merge hybrid verifier and capability-on fork/edit/delete/login-return smokes remain future or Manual Only. They are not claimed as Stage 4 dark-ship evidence and do not authorize remote application DB/Storage writes.
+- Full Stage 6 lifecycle closeout remains pending until the required merged-SHA hybrid verifier exists, is developed test-first and passes with truthful local/Manual Only evidence.
 
 ## QA / Test Data Plan
 
