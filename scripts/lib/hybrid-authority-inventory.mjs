@@ -257,34 +257,68 @@ function isClientModule(sourceFile) {
   return false;
 }
 
-function collectCommonJsRequireAliases(sourceFile) {
-  const aliases = new Set(["require"]);
+function collectCommonJsRequireCalls(sourceFile) {
+  const compilerOptions = {
+    allowJs: true,
+    noLib: true,
+    noResolve: true,
+  };
+  const fileName = sourceFile.fileName;
+  const compilerHost = ts.createCompilerHost(compilerOptions, true);
+  compilerHost.fileExists = (candidate) => candidate === fileName;
+  compilerHost.getSourceFile = (candidate) => (
+    candidate === fileName ? sourceFile : undefined
+  );
+  compilerHost.readFile = (candidate) => (
+    candidate === fileName ? sourceFile.text : undefined
+  );
+  compilerHost.writeFile = () => {};
+  const checker = ts.createProgram({
+    host: compilerHost,
+    options: compilerOptions,
+    rootNames: [fileName],
+  }).getTypeChecker();
+  const freeRequire = Symbol("free-commonjs-require");
+  const resolveIdentifier = (identifier) => {
+    const symbol = checker.getSymbolAtLocation(identifier);
+    if (
+      identifier.text === "require"
+      && (!symbol || !symbol.declarations?.length)
+    ) {
+      return freeRequire;
+    }
+    return symbol ?? null;
+  };
+
   const aliasEdges = [];
-  const visit = (node) => {
+  const collectAliasEdges = (node) => {
     let target = null;
-    let value = null;
+    let source = null;
     if (
       ts.isVariableDeclaration(node)
       && ts.isIdentifier(node.name)
       && node.initializer
     ) {
-      target = node.name.text;
-      value = unwrapExpression(node.initializer);
+      target = checker.getSymbolAtLocation(node.name) ?? null;
+      const value = unwrapExpression(node.initializer);
+      source = ts.isIdentifier(value) ? resolveIdentifier(value) : null;
     } else if (
       ts.isBinaryExpression(node)
       && node.operatorToken.kind === ts.SyntaxKind.EqualsToken
       && ts.isIdentifier(unwrapExpression(node.left))
     ) {
-      target = unwrapExpression(node.left).text;
-      value = unwrapExpression(node.right);
+      target = resolveIdentifier(unwrapExpression(node.left));
+      const value = unwrapExpression(node.right);
+      source = ts.isIdentifier(value) ? resolveIdentifier(value) : null;
     }
-    if (target && value && ts.isIdentifier(value)) {
-      aliasEdges.push({ source: value.text, target });
+    if (target && source && target !== freeRequire) {
+      aliasEdges.push({ source, target });
     }
-    ts.forEachChild(node, visit);
+    ts.forEachChild(node, collectAliasEdges);
   };
-  visit(sourceFile);
+  collectAliasEdges(sourceFile);
 
+  const aliases = new Set([freeRequire]);
   let changed = true;
   while (changed) {
     changed = false;
@@ -299,14 +333,24 @@ function collectCommonJsRequireAliases(sourceFile) {
     }
   }
 
-  return aliases;
+  const calls = new WeakSet();
+  const collectCalls = (node) => {
+    if (
+      ts.isCallExpression(node)
+      && ts.isIdentifier(unwrapExpression(node.expression))
+      && aliases.has(resolveIdentifier(unwrapExpression(node.expression)))
+      && node.arguments.length === 1
+    ) {
+      calls.add(node);
+    }
+    ts.forEachChild(node, collectCalls);
+  };
+  collectCalls(sourceFile);
+  return calls;
 }
 
-function isCommonJsRequireCall(node, requireAliases = new Set(["require"])) {
-  return ts.isCallExpression(node)
-    && ts.isIdentifier(unwrapExpression(node.expression))
-    && requireAliases.has(unwrapExpression(node.expression).text)
-    && node.arguments.length === 1;
+function isCommonJsRequireCall(node, requireCalls) {
+  return ts.isCallExpression(node) && requireCalls.has(node);
 }
 
 function staticModuleSpecifier(node) {
@@ -417,7 +461,7 @@ function collectClientImportGraph(repoRoot, files) {
     inspectedFiles.add(relativeFile);
     const importerDir = path.dirname(absoluteFile);
     const { sourceFile } = readSourceFile(repoRoot, absoluteFile);
-    const requireAliases = collectCommonJsRequireAliases(sourceFile);
+    const requireCalls = collectCommonJsRequireCalls(sourceFile);
     const imports = new Set();
 
     if (detectClientRoot && isClientModule(sourceFile)) {
@@ -508,7 +552,7 @@ function collectClientImportGraph(repoRoot, files) {
         if (ts.isStringLiteralLike(specifier)) {
           addRuntimeEdge(specifier.text);
         }
-      } else if (isCommonJsRequireCall(node, requireAliases)) {
+      } else if (isCommonJsRequireCall(node, requireCalls)) {
         const specifier = staticModuleSpecifier(node.arguments[0]);
         if (specifier !== null) {
           addRuntimeEdge(specifier);
@@ -575,7 +619,7 @@ function browserSupabaseRuntimeImportViolations(
       continue;
     }
     const { sourceFile } = readSourceFile(repoRoot, absoluteFile);
-    const requireAliases = collectCommonJsRequireAliases(sourceFile);
+    const requireCalls = collectCommonJsRequireCalls(sourceFile);
     const record = (node, packageName, kind) => {
       violations.push({
         file: relativeFile,
@@ -641,7 +685,7 @@ function browserSupabaseRuntimeImportViolations(
         } else if (isForbiddenPackage(specifier)) {
           record(node, specifier, "runtime-dynamic-import");
         }
-      } else if (isCommonJsRequireCall(node, requireAliases)) {
+      } else if (isCommonJsRequireCall(node, requireCalls)) {
         const specifier = staticModuleSpecifier(node.arguments[0]);
         if (specifier === null) {
           record(node, "<dynamic>", "unknown-runtime-require");
