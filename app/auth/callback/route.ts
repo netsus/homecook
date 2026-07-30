@@ -17,6 +17,7 @@ import {
   parsePostAuthNextCookie,
   POST_AUTH_NEXT_COOKIE,
 } from "@/lib/auth/post-auth-next";
+import { resolvePublicRequestUrl } from "@/lib/auth/public-request-url";
 import {
   bootstrapAuthCallbackAccountGenerationIdentity,
   readAuthCallbackAccountGenerationCapability,
@@ -163,7 +164,7 @@ async function recordAuthFailure(request: Request, errorCode: string) {
 }
 
 export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
+  const requestUrl = resolvePublicRequestUrl(new URL(request.url));
   const cookieStore = await cookies();
   const nextPath = resolveNextPath(
     requestUrl.searchParams.get("next")

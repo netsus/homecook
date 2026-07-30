@@ -1,5 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,9 +14,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   activateLocalMacProduction,
   createProductionEnvContents,
+  getLocalMacProductionPublicOrigin,
   installLocalMacProductionLaunchAgent,
   parseLocalMacProductionArgs,
   renderLocalMacProductionPlist,
+  verifyLocalMacProductionPrerequisites,
   waitForLocalMacProductionReady,
 } from "../scripts/lib/local-mac-production.mjs";
 
@@ -43,7 +51,8 @@ describe("local Mac production environment", () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("Usage:");
-    expect(result.stdout).toContain("127.0.0.1");
+    expect(result.stdout).toContain("0.0.0.0");
+    expect(result.stdout).toContain("LAN");
   });
 
   it("builds through the resolved Node binary without relying on PATH", () => {
@@ -77,6 +86,7 @@ describe("local Mac production environment", () => {
     ]);
 
     expect(result.command).toBe("prepare-env");
+    expect(result.host).toBe("0.0.0.0");
     expect(result.sourcePath).toBe("/repo/.env.local");
     expect(result.port).toBe(3100);
   });
@@ -88,6 +98,7 @@ describe("local Mac production environment", () => {
         "NEXT_PUBLIC_SUPABASE_ANON_KEY=anon-secret",
         "SUPABASE_SERVICE_ROLE_KEY=service-secret",
         "GEMINI_API_KEY=gemini-secret",
+        "YOUTUBE_RECIPE_EXTRACTOR_MODE=i031_codex_vision",
         "GH_TOKEN=must-not-copy",
         "HOMECOOK_MAINTENANCE_WORKER_SECRET=must-not-copy",
         "HOMECOOK_STORAGE_LIVE_SERVICE_ROLE_KEY=must-not-copy",
@@ -102,14 +113,19 @@ describe("local Mac production environment", () => {
         "GEMINI_API_KEY=",
         "NEXT_PUBLIC_APP_URL=",
       ].join("\n"),
-      origin: "http://127.0.0.1:3100",
+      origin: "http://192-168-0-36.sslip.io:3100",
     });
 
     expect(result.contents).toContain("NEXT_PUBLIC_SUPABASE_URL=https://project.supabase.co");
     expect(result.contents).toContain("SUPABASE_SERVICE_ROLE_KEY=service-secret");
-    expect(result.contents).toContain("NEXT_PUBLIC_APP_URL=http://127.0.0.1:3100");
-    expect(result.contents).toContain("NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3100");
-    expect(result.contents).toContain("HOMECOOK_PRODUCTION_EXPOSURE=local-only");
+    expect(result.contents).toContain(
+      "NEXT_PUBLIC_APP_URL=http://192-168-0-36.sslip.io:3100",
+    );
+    expect(result.contents).toContain(
+      "NEXT_PUBLIC_SITE_URL=http://192-168-0-36.sslip.io:3100",
+    );
+    expect(result.contents).toContain("HOMECOOK_PRODUCTION_EXPOSURE=lan");
+    expect(result.contents).toContain("YOUTUBE_RECIPE_EXTRACTOR_MODE=i031_codex_vision");
     expect(result.contents).not.toContain("GH_TOKEN");
     expect(result.contents).not.toContain("HOMECOOK_MAINTENANCE_WORKER_SECRET");
     expect(result.contents).not.toContain("HOMECOOK_STORAGE_LIVE_SERVICE_ROLE_KEY");
@@ -124,6 +140,66 @@ describe("local Mac production environment", () => {
         "NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_DEV_AUTH",
       ]),
     );
+  });
+
+  it("uses a DNS hostname for the private LAN address", () => {
+    expect(getLocalMacProductionPublicOrigin({
+      lanAddress: "192.168.0.36",
+      port: 3100,
+    })).toBe("http://192-168-0-36.sslip.io:3100");
+
+    expect(() => getLocalMacProductionPublicOrigin({
+      lanAddress: "203.0.113.10",
+      port: 3100,
+    })).toThrow("private LAN");
+  });
+
+  it("fails before launchd install when strict YouTube extraction lacks its runtime", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "homecook-production-i031-"));
+    tempDirs.push(rootDir);
+
+    mkdirSync(join(rootDir, ".next"), { recursive: true });
+    mkdirSync(join(rootDir, "scripts"), { recursive: true });
+    writeFileSync(join(rootDir, ".next", "BUILD_ID"), "test-build\n");
+    writeFileSync(
+      join(rootDir, ".env.production.local"),
+      "YOUTUBE_RECIPE_EXTRACTOR_MODE=\"i031_codex_vision\" # local-only strict mode\n",
+    );
+    writeFileSync(join(rootDir, "scripts", "start-production.mjs"), "");
+
+    expect(() => verifyLocalMacProductionPrerequisites({
+      rootDir,
+      nodeBin: process.execPath,
+    })).toThrow("YouTube i031 runtime");
+  });
+
+  it("accepts the stable i031 Codex entrypoint created by setup", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "homecook-production-i031-ready-"));
+    tempDirs.push(rootDir);
+
+    mkdirSync(join(rootDir, ".next"), { recursive: true });
+    mkdirSync(join(rootDir, "scripts"), { recursive: true });
+    mkdirSync(join(rootDir, ".youtube-i031-tools", "bin"), { recursive: true });
+    mkdirSync(
+      join(rootDir, "lib", "server", "youtube-i031-runtime", "bundle"),
+      { recursive: true },
+    );
+    writeFileSync(join(rootDir, ".next", "BUILD_ID"), "test-build\n");
+    writeFileSync(
+      join(rootDir, ".env.production.local"),
+      "YOUTUBE_RECIPE_EXTRACTOR_MODE=i031_codex_vision\n",
+    );
+    writeFileSync(join(rootDir, "scripts", "start-production.mjs"), "");
+    writeFileSync(join(rootDir, ".youtube-i031-tools", "bin", "codex"), "");
+    writeFileSync(
+      join(rootDir, "lib", "server", "youtube-i031-runtime", "bundle", "manifest.json"),
+      "{}\n",
+    );
+
+    expect(() => verifyLocalMacProductionPrerequisites({
+      rootDir,
+      nodeBin: process.execPath,
+    })).not.toThrow();
   });
 });
 
@@ -179,7 +255,7 @@ describe("local Mac production launch agent", () => {
           plistPath: "/Users/tester/Library/LaunchAgents/com.homecook.production.plist",
           stdoutPath: "/Users/tester/.homecook/logs/homecook-production.out.log",
           stderrPath: "/Users/tester/.homecook/logs/homecook-production.err.log",
-          host: "127.0.0.1",
+          host: "0.0.0.0",
           port: 3100,
         }),
         waitForReady: async () => {
@@ -196,6 +272,43 @@ describe("local Mac production launch agent", () => {
     ).rejects.toThrow("HTTP readiness timeout");
 
     expect(uninstallCalled).toBe(true);
+  });
+
+  it("checks readiness through loopback after binding the server to the LAN", async () => {
+    let readinessOrigin = "";
+
+    const result = await activateLocalMacProduction({
+      loadEnvFiles: () => [],
+      validateDataQuality: async () => ({
+        ok: true,
+        errors: [],
+        warnings: [],
+        db: {
+          skipped: false,
+          skipReason: null,
+          findingCount: 0,
+        },
+      }),
+      installLaunchAgent: () => ({
+        changed: true,
+        label: "com.homecook.production",
+        plistPath: "/Users/tester/Library/LaunchAgents/com.homecook.production.plist",
+        stdoutPath: "/Users/tester/.homecook/logs/homecook-production.out.log",
+        stderrPath: "/Users/tester/.homecook/logs/homecook-production.err.log",
+        host: "0.0.0.0",
+        port: 3100,
+      }),
+      waitForReady: async (options = {}) => {
+        readinessOrigin = options.origin ?? "";
+        return {
+          attempts: 1,
+          status: 200,
+        };
+      },
+    });
+
+    expect(result.host).toBe("0.0.0.0");
+    expect(readinessOrigin).toBe("http://127.0.0.1:3100");
   });
 
   it("waits until the restarted HTTP server is ready", async () => {
@@ -221,19 +334,19 @@ describe("local Mac production launch agent", () => {
     });
   });
 
-  it("renders a local-only service with absolute paths and restart protection", () => {
+  it("renders a LAN-bound service with absolute paths and restart protection", () => {
     const plist = renderLocalMacProductionPlist({
       rootDir: "/Users/tester/Home & Cook",
       homeDir: "/Users/tester",
       nodeBin: "/Users/tester/.nvm/node",
-      host: "127.0.0.1",
+      host: "0.0.0.0",
       port: 3100,
     });
 
     expect(plist).toContain("<string>com.homecook.production</string>");
     expect(plist).toContain("<string>/Users/tester/.nvm/node</string>");
     expect(plist).toContain("<string>/Users/tester/Home &amp; Cook/scripts/start-production.mjs</string>");
-    expect(plist).toContain("<string>127.0.0.1</string>");
+    expect(plist).toContain("<string>0.0.0.0</string>");
     expect(plist).toContain("<string>3100</string>");
     expect(plist).toContain("<key>SuccessfulExit</key>");
     expect(plist).toContain("<false/>");
@@ -259,7 +372,7 @@ describe("local Mac production launch agent", () => {
       rootDir,
       homeDir,
       nodeBin: process.execPath,
-      host: "127.0.0.1",
+      host: "0.0.0.0",
       port: 3100,
       platform: "darwin",
       getuid: () => 501,
@@ -268,7 +381,7 @@ describe("local Mac production launch agent", () => {
     });
 
     expect(result.changed).toBe(true);
-    expect(readFileSync(result.plistPath, "utf8")).toContain("127.0.0.1");
+    expect(readFileSync(result.plistPath, "utf8")).toContain("0.0.0.0");
     expect(spawnCalls).toContain(`launchctl bootstrap gui/501 ${result.plistPath}`);
     expect(spawnCalls).toContain("launchctl kickstart -k gui/501/com.homecook.production");
   });

@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/provider-cookies";
 import { hasProviderIdentity } from "@/lib/auth/provider-resolution";
 import { normalizeAuthProviderId } from "@/lib/auth/providers";
+import { resolvePublicRequestUrl } from "@/lib/auth/public-request-url";
 import { expireSupabaseAuthCookies } from "@/lib/auth/session-cookies";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
@@ -88,7 +89,7 @@ async function restoreOrTerminateSession({
 }
 
 export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
+  const requestUrl = resolvePublicRequestUrl(new URL(request.url));
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next") ?? "/mypage");
 
   try {

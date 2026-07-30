@@ -2,6 +2,8 @@
 
 import {
   activateLocalMacProduction,
+  getLocalMacProductionPublicOrigin,
+  LOCAL_MAC_PRODUCTION_READINESS_HOST,
   parseLocalMacProductionArgs,
   prepareProductionEnvFile,
   readLocalMacProductionStatus,
@@ -18,7 +20,7 @@ function printHelp() {
   node scripts/local-mac-production.mjs restart
   node scripts/local-mac-production.mjs uninstall
 
-The service is intentionally bound to 127.0.0.1 and is not exposed to the LAN or internet.
+The service is bound to 0.0.0.0 for trusted LAN access. Do not expose port 3100 to the internet.
 `);
 }
 
@@ -42,7 +44,7 @@ try {
   }
 
   if (options.command === "prepare-env") {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = getLocalMacProductionPublicOrigin({ port: options.port });
     const result = prepareProductionEnvFile({
       rootDir: options.rootDir,
       sourcePath: options.sourcePath,
@@ -52,6 +54,7 @@ try {
     process.stdout.write(`Prepared ${result.targetPath} with mode 600.\n`);
     process.stdout.write(`Copied ${result.copiedKeyCount} production keys.\n`);
     process.stdout.write(`Omitted ${result.omittedKeys.length} development or unrelated keys.\n`);
+    process.stdout.write(`Phone URL: ${result.publicOrigin}\n`);
     process.exit(0);
   }
 
@@ -63,7 +66,13 @@ try {
       port: options.port,
     });
     process.stdout.write(`Installed ${result.label}.\n`);
-    process.stdout.write(`URL: http://${result.host}:${result.port}\n`);
+    process.stdout.write(`Bind: ${result.host}:${result.port}\n`);
+    process.stdout.write(
+      `Local URL: http://${LOCAL_MAC_PRODUCTION_READINESS_HOST}:${result.port}\n`,
+    );
+    process.stdout.write(
+      `Phone URL: ${getLocalMacProductionPublicOrigin({ port: result.port })}\n`,
+    );
     process.stdout.write(`plist: ${result.plistPath}\n`);
     process.stdout.write(`stderr: ${result.stderrPath}\n`);
     process.stdout.write(
@@ -80,7 +89,7 @@ try {
   if (options.command === "restart") {
     restartLocalMacProductionLaunchAgent();
     const ready = await waitForLocalMacProductionReady({
-      origin: `http://${options.host}:${options.port}`,
+      origin: `http://${LOCAL_MAC_PRODUCTION_READINESS_HOST}:${options.port}`,
     });
     process.stdout.write(`ready: HTTP ${ready.status} after ${ready.attempts} check(s)\n`);
     printStatus(readLocalMacProductionStatus());

@@ -183,6 +183,24 @@ describe("auth callback", () => {
     );
   });
 
+  it("uses the configured public origin instead of the server bind address", async () => {
+    vi.stubEnv(
+      "NEXT_PUBLIC_APP_URL",
+      "http://192-168-0-36.sslip.io:3100",
+    );
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(
+      new Request(
+        "http://0.0.0.0:3100/auth/callback?error=access_denied&next=/planner",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "http://192-168-0-36.sslip.io:3100/planner?authError=oauth_failed",
+    );
+  });
+
   it("adds authError when Supabase client throws", async () => {
     exchangeCodeForSession.mockRejectedValue(new Error("network error"));
 

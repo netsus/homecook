@@ -4,10 +4,15 @@ import { access, cp, link, mkdir, mkdtemp, readFile, readdir, rm, stat } from "n
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 
+import {
+  resolveYoutubeI031CodexBin,
+  YOUTUBE_I031_CODEX_CLI_VERSION,
+} from "@/lib/server/youtube-i031-runtime-config.mjs";
+
 export type YoutubeRecipeExtractorMode = "legacy" | "i031_codex_vision";
 type RuntimeEnv = Readonly<Record<string, string | undefined>>;
 
-export const I031_CODEX_CLI_VERSION = "0.144.0-alpha.4";
+export const I031_CODEX_CLI_VERSION = YOUTUBE_I031_CODEX_CLI_VERSION;
 export const I031_TOTAL_TIMEOUT_MS = 20 * 60 * 1000;
 
 export const I031_EXACT_IDENTITY = Object.freeze({
@@ -156,12 +161,7 @@ const RUNTIME_BUNDLE_ROOT = path.join(
   process.cwd(),
   "lib/server/youtube-i031-runtime/bundle",
 );
-const DEFAULT_CODEX_BIN = path.join(
-  process.cwd(),
-  ".youtube-i031-tools/node_modules/.pnpm",
-  `@openai+codex@${I031_CODEX_CLI_VERSION}-darwin-arm64`,
-  "node_modules/@openai/codex/vendor/aarch64-apple-darwin/bin/codex",
-);
+const DEFAULT_CODEX_BIN = resolveYoutubeI031CodexBin(process.cwd());
 const MAX_WORKER_OUTPUT_BYTES = 1024 * 1024;
 const SAFE_SCREEN_OCR_STATUS_RE = /^[a-z0-9_-]{1,40}$/u;
 

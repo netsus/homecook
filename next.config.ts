@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const isQaFixtureServer = process.env.HOMECOOK_ENABLE_QA_FIXTURES === "1";
 const isProduction = process.env.NODE_ENV === "production";
+const productionExposure = process.env.HOMECOOK_PRODUCTION_EXPOSURE;
+const isHttpOnlyProduction =
+  productionExposure === "local-only" || productionExposure === "lan";
 
 function unique(values: Array<string | null | undefined>) {
   return Array.from(
@@ -97,7 +100,7 @@ function buildContentSecurityPolicy() {
     joinDirective("frame-src", ["'none'"]),
     joinDirective("worker-src", ["'self'", "blob:"]),
     joinDirective("manifest-src", ["'self'"]),
-    isProduction ? "upgrade-insecure-requests" : null,
+    isProduction && !isHttpOnlyProduction ? "upgrade-insecure-requests" : null,
   ];
 
   return directives.filter(Boolean).join("; ");

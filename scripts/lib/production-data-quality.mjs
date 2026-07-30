@@ -145,16 +145,21 @@ export function validateProductionEnv(env = process.env) {
   const productionLike = isProductionLikeEnv(env);
   const productionExposure = env.HOMECOOK_PRODUCTION_EXPOSURE;
   const localOnlyProduction = productionExposure === "local-only";
+  const lanProduction = productionExposure === "lan";
+  const allowsLoopbackAppUrl = localOnlyProduction || lanProduction;
 
   if (!productionLike) {
     warnings.push("production-like env가 아니므로 운영 데이터 게이트는 env sanity만 확인합니다.");
   }
 
   if (productionLike) {
-    if (productionExposure && !["local-only", "public"].includes(productionExposure)) {
+    if (
+      productionExposure
+      && !["local-only", "lan", "public"].includes(productionExposure)
+    ) {
       errors.push({
         code: "PRODUCTION_EXPOSURE_INVALID",
-        message: "HOMECOOK_PRODUCTION_EXPOSURE must be local-only or public.",
+        message: "HOMECOOK_PRODUCTION_EXPOSURE must be local-only, lan, or public.",
       });
     }
 
@@ -185,7 +190,7 @@ export function validateProductionEnv(env = process.env) {
     }
 
     if (
-      !localOnlyProduction
+      !allowsLoopbackAppUrl
       && (isLocalUrl(env.NEXT_PUBLIC_APP_URL) || isLocalUrl(env.NEXT_PUBLIC_SITE_URL))
     ) {
       errors.push({
@@ -196,6 +201,9 @@ export function validateProductionEnv(env = process.env) {
 
     if (localOnlyProduction) {
       warnings.push("local-only production은 현재 Mac 밖으로 공개하지 않아야 합니다.");
+    }
+    if (lanProduction) {
+      warnings.push("LAN production은 신뢰하는 같은 네트워크에서만 접속해야 합니다.");
     }
   }
 

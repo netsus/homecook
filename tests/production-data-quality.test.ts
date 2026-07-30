@@ -67,6 +67,21 @@ describe("production data quality gate", () => {
     );
   });
 
+  it("allows a loopback canonical URL for an explicit LAN-bound Mac production", () => {
+    const result = validateProductionEnv({
+      NODE_ENV: "production",
+      HOMECOOK_PRODUCTION_EXPOSURE: "lan",
+      NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+      NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3100",
+      NEXT_PUBLIC_SITE_URL: "http://127.0.0.1:3100",
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toContain(
+      "LAN production은 신뢰하는 같은 네트워크에서만 접속해야 합니다.",
+    );
+  });
+
   it("still blocks localhost URLs when local-only production is not explicit", () => {
     const result = validateProductionEnv({
       NODE_ENV: "production",

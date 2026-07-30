@@ -7,15 +7,19 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { isIP } from "node:net";
+import { networkInterfaces } from "node:os";
 import { dirname, resolve } from "node:path";
 
 import {
   loadProductionEnvFiles,
   validateProductionDataQuality,
 } from "./production-data-quality.mjs";
+import { resolveYoutubeI031CodexBin } from "../../lib/server/youtube-i031-runtime-config.mjs";
 
 export const LOCAL_MAC_PRODUCTION_LABEL = "com.homecook.production";
-export const DEFAULT_LOCAL_MAC_PRODUCTION_HOST = "127.0.0.1";
+export const DEFAULT_LOCAL_MAC_PRODUCTION_HOST = "0.0.0.0";
+export const LOCAL_MAC_PRODUCTION_READINESS_HOST = "127.0.0.1";
 export const DEFAULT_LOCAL_MAC_PRODUCTION_PORT = 3100;
 
 const REQUIRED_PRODUCTION_ENV_KEYS = [
@@ -39,6 +43,7 @@ const EXTRA_PRODUCTION_ENV_KEYS = new Set([
   "GEMINI_API_KEYS",
   "HOMECOOK_ENABLE_YOUTUBE_IMPORT",
   "NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT",
+  "YOUTUBE_RECIPE_EXTRACTOR_MODE",
   "YOUTUBE_RECIPE_LLM_DAILY_LIMIT",
   "YOUTUBE_RECIPE_LLM_TIMEOUT_MS",
   "YOUTUBE_RECIPE_LLM_USER_DAILY_LIMIT",
@@ -63,10 +68,10 @@ function ensureNonEmptyString(value, label) {
   return value.trim();
 }
 
-function ensureLocalOnlyHost(host) {
+function ensureLanBindHost(host) {
   const normalized = ensureNonEmptyString(host, "host");
   if (normalized !== DEFAULT_LOCAL_MAC_PRODUCTION_HOST) {
-    throw new Error("Local Mac production must bind to 127.0.0.1.");
+    throw new Error("Local Mac production must bind to 0.0.0.0.");
   }
 
   return normalized;
@@ -79,6 +84,46 @@ function ensurePort(port) {
   }
 
   return parsed;
+}
+
+function isPrivateLanIpv4(address) {
+  if (isIP(address) !== 4) return false;
+
+  const octets = address.split(".").map(Number);
+  return octets[0] === 10
+    || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
+    || (octets[0] === 192 && octets[1] === 168);
+}
+
+function getPrimaryPrivateLanAddress() {
+  for (const entries of Object.values(networkInterfaces())) {
+    for (const entry of entries ?? []) {
+      if (!entry.internal && isPrivateLanIpv4(entry.address)) {
+        return entry.address;
+      }
+    }
+  }
+
+  throw new Error("Unable to find a private LAN IPv4 address for this Mac.");
+}
+
+function ensurePrivateLanAddress(address) {
+  const normalized = ensureNonEmptyString(address, "lanAddress");
+  if (!isPrivateLanIpv4(normalized)) {
+    throw new Error(
+      "The phone-facing Local Mac production URL requires a private LAN IPv4 address.",
+    );
+  }
+
+  return normalized;
+}
+
+export function getLocalMacProductionPublicOrigin({
+  lanAddress = getPrimaryPrivateLanAddress(),
+  port = DEFAULT_LOCAL_MAC_PRODUCTION_PORT,
+} = {}) {
+  const dnsHost = `${ensurePrivateLanAddress(lanAddress).replaceAll(".", "-")}.sslip.io`;
+  return `http://${dnsHost}:${ensurePort(port)}`;
 }
 
 export function parseLocalMacProductionArgs(argv, {
@@ -140,17 +185,61 @@ function parseEnvEntries(text) {
   return entries;
 }
 
+function normalizeEnvEntry(value) {
+  const normalized = String(value ?? "").trim();
+  const quote = normalized[0];
+  if (quote === "\"" || quote === "'") {
+    const closingQuoteIndex = normalized.indexOf(quote, 1);
+    return closingQuoteIndex === -1
+      ? normalized
+      : normalized.slice(1, closingQuoteIndex);
+  }
+  return normalized.split("#", 1)[0].trim();
+}
+
 function isAllowedProductionKey(key, exampleKeys) {
   return exampleKeys.has(key) || EXTRA_PRODUCTION_ENV_KEYS.has(key);
 }
 
-function resolveLocalOrigin(origin) {
+function resolveProductionPublicOrigin(origin) {
   const parsed = new URL(ensureNonEmptyString(origin, "origin"));
-  if (parsed.protocol !== "http:" || parsed.hostname !== DEFAULT_LOCAL_MAC_PRODUCTION_HOST) {
-    throw new Error("Local Mac production origin must use http://127.0.0.1.");
+  const hostMatch = parsed.hostname
+    .toLowerCase()
+    .match(/^(\d{1,3})-(\d{1,3})-(\d{1,3})-(\d{1,3})\.sslip\.io$/u);
+  if (
+    parsed.protocol !== "http:"
+    || !hostMatch
+    || !isPrivateLanIpv4(hostMatch.slice(1).join("."))
+  ) {
+    throw new Error(
+      "The phone-facing Local Mac production origin must use its private LAN sslip.io hostname.",
+    );
+  }
+  if (
+    parsed.username
+    || parsed.password
+    || parsed.pathname !== "/"
+    || parsed.search
+    || parsed.hash
+  ) {
+    throw new Error("Local Mac production origin must not include a path, query, or hash.");
+  }
+
+  return parsed.origin.toLowerCase();
+}
+
+function resolveReadinessOrigin(origin) {
+  const parsed = new URL(ensureNonEmptyString(origin, "origin"));
+  if (
+    parsed.protocol !== "http:"
+    || parsed.hostname !== LOCAL_MAC_PRODUCTION_READINESS_HOST
+  ) {
+    throw new Error("Local Mac production readiness origin must use http://127.0.0.1.");
   }
   if (parsed.pathname !== "/" || parsed.search || parsed.hash) {
-    throw new Error("Local Mac production origin must not include a path, query, or hash.");
+    throw new Error(
+      "Local Mac production readiness origin must not include a path, query, or hash.",
+    );
   }
 
   return parsed.origin;
@@ -159,7 +248,7 @@ function resolveLocalOrigin(origin) {
 export function createProductionEnvContents({ sourceText, exampleText, origin }) {
   const sourceEntries = parseEnvEntries(sourceText);
   const exampleKeys = new Set(parseEnvEntries(exampleText).keys());
-  const localOrigin = resolveLocalOrigin(origin);
+  const publicOrigin = resolveProductionPublicOrigin(origin);
   const selectedEntries = new Map();
   const omittedKeys = [];
 
@@ -180,13 +269,13 @@ export function createProductionEnvContents({ sourceText, exampleText, origin })
     throw new Error(`Missing required production env keys: ${missingRequiredKeys.join(", ")}`);
   }
 
-  selectedEntries.set("HOMECOOK_PRODUCTION_EXPOSURE", "local-only");
-  selectedEntries.set("NEXT_PUBLIC_APP_URL", localOrigin);
-  selectedEntries.set("NEXT_PUBLIC_SITE_URL", localOrigin);
+  selectedEntries.set("HOMECOOK_PRODUCTION_EXPOSURE", "lan");
+  selectedEntries.set("NEXT_PUBLIC_APP_URL", publicOrigin);
+  selectedEntries.set("NEXT_PUBLIC_SITE_URL", publicOrigin);
 
   const lines = [
-    "# Generated for local-only production on this Mac.",
-    "# Do not commit this file or expose the service outside 127.0.0.1.",
+    "# Generated for LAN production on this Mac.",
+    "# Do not commit this file or expose port 3100 directly to the public internet.",
     ...[...selectedEntries]
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, rawValue]) => `${key}=${rawValue}`),
@@ -197,6 +286,7 @@ export function createProductionEnvContents({ sourceText, exampleText, origin })
     contents: lines.join("\n"),
     copiedKeyCount: selectedEntries.size,
     omittedKeys: omittedKeys.sort(),
+    publicOrigin,
   };
 }
 
@@ -204,7 +294,7 @@ export function prepareProductionEnvFile({
   rootDir = process.cwd(),
   sourcePath = resolve(rootDir, ".env.local"),
   examplePath = resolve(rootDir, ".env.example"),
-  origin = `http://${DEFAULT_LOCAL_MAC_PRODUCTION_HOST}:${DEFAULT_LOCAL_MAC_PRODUCTION_PORT}`,
+  origin = getLocalMacProductionPublicOrigin(),
   force = false,
 } = {}) {
   const targetPath = resolve(rootDir, ".env.production.local");
@@ -269,7 +359,7 @@ export function renderLocalMacProductionPlist({
   const normalizedRootDir = resolve(ensureNonEmptyString(rootDir, "rootDir"));
   const normalizedHomeDir = resolve(ensureNonEmptyString(homeDir, "homeDir"));
   const normalizedNodeBin = resolve(ensureNonEmptyString(nodeBin, "nodeBin"));
-  const normalizedHost = ensureLocalOnlyHost(host);
+  const normalizedHost = ensureLanBindHost(host);
   const normalizedPort = ensurePort(port);
   const paths = getLocalMacProductionPaths(normalizedHomeDir);
   const fixedPath = [
@@ -332,8 +422,9 @@ export function verifyLocalMacProductionPrerequisites({
   rootDir = process.cwd(),
   nodeBin = process.execPath,
 } = {}) {
+  const envPath = resolve(rootDir, ".env.production.local");
   const requiredPaths = [
-    resolve(rootDir, ".env.production.local"),
+    envPath,
     resolve(rootDir, ".next", "BUILD_ID"),
     resolve(rootDir, "scripts", "start-production.mjs"),
     resolve(nodeBin),
@@ -342,6 +433,27 @@ export function verifyLocalMacProductionPrerequisites({
 
   if (missingPaths.length > 0) {
     throw new Error(`Local Mac production prerequisites are missing: ${missingPaths.join(", ")}`);
+  }
+
+  const productionEnv = parseEnvEntries(readFileSync(envPath, "utf8"));
+  if (
+    normalizeEnvEntry(productionEnv.get("YOUTUBE_RECIPE_EXTRACTOR_MODE"))
+    !== "i031_codex_vision"
+  ) {
+    return;
+  }
+
+  const i031RequiredPaths = [
+    resolveYoutubeI031CodexBin(rootDir),
+    resolve(rootDir, "lib", "server", "youtube-i031-runtime", "bundle", "manifest.json"),
+  ];
+  const missingI031Paths = i031RequiredPaths.filter((filePath) => !existsSync(filePath));
+
+  if (missingI031Paths.length > 0) {
+    throw new Error(
+      `YouTube i031 runtime prerequisites are missing: ${missingI031Paths.join(", ")}. `
+      + "Run pnpm youtube:i031:setup before installing local Mac production.",
+    );
   }
 }
 
@@ -408,7 +520,7 @@ export function installLocalMacProductionLaunchAgent({
     plistPath: paths.plistPath,
     stdoutPath: paths.stdoutPath,
     stderrPath: paths.stderrPath,
-    host: ensureLocalOnlyHost(host),
+    host: ensureLanBindHost(host),
     port: ensurePort(port),
   };
 }
@@ -440,7 +552,7 @@ export function readLocalMacProductionStatus({
 }
 
 export async function waitForLocalMacProductionReady({
-  origin = `http://${DEFAULT_LOCAL_MAC_PRODUCTION_HOST}:${DEFAULT_LOCAL_MAC_PRODUCTION_PORT}`,
+  origin = `http://${LOCAL_MAC_PRODUCTION_READINESS_HOST}:${DEFAULT_LOCAL_MAC_PRODUCTION_PORT}`,
   attempts = 40,
   intervalMs = 250,
   fetchImpl = fetch,
@@ -448,7 +560,7 @@ export async function waitForLocalMacProductionReady({
     setTimeout(resolvePromise, milliseconds);
   }),
 } = {}) {
-  const localOrigin = resolveLocalOrigin(origin);
+  const localOrigin = resolveReadinessOrigin(origin);
   if (!Number.isInteger(attempts) || attempts < 1) {
     throw new Error("attempts must be a positive integer.");
   }
@@ -523,7 +635,7 @@ export async function activateLocalMacProduction({
       port,
     });
     const ready = await waitForReady({
-      origin: `http://${installed.host}:${installed.port}`,
+      origin: `http://${LOCAL_MAC_PRODUCTION_READINESS_HOST}:${installed.port}`,
     });
     return {
       ...installed,

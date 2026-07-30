@@ -1,26 +1,29 @@
 # 현재 Mac production 운영 계획
 
-상태: **운영 중 (local-only production)**
+상태: **운영 중 (신뢰하는 LAN production)**
 최종 갱신: 2026-07-29 KST
 서비스: `homecook` Next.js 앱
-접속 주소: `http://127.0.0.1:3100`
+현재 휴대폰 접속 주소: `http://192-168-0-36.sslip.io:3100`
+서버 바인딩: `0.0.0.0:3100`
 자동 실행: macOS `launchd`의 `com.homecook.production`
 
 ## 딱 한 줄 요약
 
-현재 Mac에서 production build가 `launchd`로 상시 실행 중이며, 원격 Supabase migration, 보안 권한, 전체 테스트, 데스크톱·모바일 화면, 재시작 복구까지 확인했다.
+현재 Mac에서 production build가 `launchd`로 상시 실행 중이며, 같은 와이파이의 휴대폰에서 소셜 로그인까지 사용할 수 있다.
 
-> 이 서비스는 **현재 Mac 안에서만** 열린다. `127.0.0.1`은 내 컴퓨터를 뜻하므로 같은 와이파이의 다른 기기나 인터넷 사용자는 접속할 수 없다.
+> `0.0.0.0`은 서버가 Mac의 모든 네트워크 연결에서 요청을 받는다는 설정값이다. 브라우저에는 `0.0.0.0`이나 `192.168.0.36`을 직접 입력하지 말고, 소셜 로그인이 가능한 LAN DNS 주소를 사용한다.
 
 ## 지금 바로 확인하는 방법
 
-브라우저에서 아래 주소를 연다.
+Mac과 휴대폰을 같은 와이파이에 연결한 뒤, 휴대폰 브라우저에서 아래 주소를 연다.
 
 ```text
-http://127.0.0.1:3100
+http://192-168-0-36.sslip.io:3100
 ```
 
-서비스 상태를 확인하려면 다음 명령을 실행한다.
+`sslip.io`는 주소 안의 `192-168-0-36`을 실제 LAN IP `192.168.0.36`으로 연결해 주는 DNS 서비스다. 데이터와 로그인 세션은 이 Mac의 서버가 처리한다.
+
+Mac 자체 브라우저에서는 `http://127.0.0.1:3100`도 상태 확인용으로 사용할 수 있다. 소셜 로그인을 시험할 때는 휴대폰과 같은 `sslip.io` 주소를 사용한다. 서비스 상태를 확인하려면 다음 명령을 실행한다.
 
 ```bash
 ./scripts/run-local-mac-production.sh status
@@ -42,13 +45,15 @@ pid: 29719
 | 항목 | 현재 값 | 초보자용 설명 |
 | --- | --- | --- |
 | 실행 모드 | production build | 개발용 서버가 아니라 최적화된 운영 build다. |
-| 접속 범위 | `127.0.0.1` | 현재 Mac에서만 접속할 수 있다. |
+| 서버 바인딩 | `0.0.0.0` | Mac의 모든 네트워크 연결에서 요청을 받는다. |
+| 접속 범위 | 신뢰하는 같은 LAN | 현재 같은 와이파이의 휴대폰에서 접속할 수 있다. |
+| 브라우저 주소 | `192-168-0-36.sslip.io:3100` | Supabase가 허용하는 호스트명이며 실제 연결은 현재 Mac의 LAN IP로 온다. |
 | 포트 | `3100` | 기존 개발 서버의 `3000`과 충돌하지 않는다. |
 | 프로세스 관리자 | `launchd` | Mac 로그인 시 켜고, 비정상 종료 시 다시 시작한다. |
 | 서비스 이름 | `com.homecook.production` | `launchd`가 서비스를 구분하는 이름이다. |
 | 환경 파일 | `.env.production.local` | 허용된 production 키만 들어가며 권한은 `600`이다. |
 | 표준 오류 로그 | `~/.homecook/logs/homecook-production.err.log` | 서버 오류를 확인하는 파일이다. |
-| 잠자기 방지 | Amphetamine 실행 중 | Mac이 잠들어 서버가 멈추는 일을 방지한다. |
+| 잠자기 방지 | Amphetamine 꺼짐 | Mac이 잠들면 휴대폰 접속도 중단된다. |
 
 ## production이란 무엇인가
 
@@ -65,10 +70,14 @@ pid: 29719
 
 ```mermaid
 flowchart LR
-  A["현재 Mac의 브라우저"] --> B["127.0.0.1:3100"]
-  B --> C["launchd: com.homecook.production"]
-  C --> D["Node.js + Next.js production server"]
-  D --> E["원격 Supabase DB / Auth / Storage"]
+  A["같은 와이파이의 휴대폰"] --> B["192-168-0-36.sslip.io:3100"]
+  M["현재 Mac의 브라우저"] --> L["127.0.0.1:3100"]
+  B --> I["DNS 해석: 192.168.0.36"]
+  I --> C["0.0.0.0:3100"]
+  L --> C
+  C --> D["launchd: com.homecook.production"]
+  D --> E["Node.js + Next.js production server"]
+  E --> F["원격 Supabase DB / Auth / Storage"]
 ```
 
 ## 해결한 근본 원인
@@ -177,6 +186,43 @@ remote_writes: 0
 - production 관리 래퍼가 시스템 Node를 먼저 찾고, 없으면 현재 Mac의 Codex Node를 찾는다.
 - 운영 래퍼의 `build`, `status`, `restart`, `install`, `uninstall`이 Node나 pnpm 경로를 직접 입력하지 않아도 동작한다.
 
+### 6. LAN에서는 CSS와 JavaScript가 HTTPS로 잘못 바뀌었다
+
+증상:
+
+- LAN 홈 문서 자체는 HTTP `200`이었지만 화면은 기본 HTML처럼 깨져 보였다.
+- production CSP의 `upgrade-insecure-requests`가 CSS, JavaScript, 이미지 주소를 `https://192.168.0.36:3100`으로 바꿨다.
+- 현재 LAN 서버에는 HTTPS 인증서가 없어서 모든 핵심 자산이 `ERR_SSL_PROTOCOL_ERROR`로 실패했다.
+
+해결:
+
+- `HOMECOOK_PRODUCTION_EXPOSURE=lan`과 `local-only`에서는 HTTPS 강제 업그레이드를 제외했다.
+- 실제 public production에서는 기존 `upgrade-insecure-requests` 보호를 유지한다.
+- 세 모드의 경계를 Vitest로 고정하고 production을 새로 빌드·재설치했다.
+- Playwright에서 LAN 모바일 홈이 정상 loopback 기준과 픽셀 단위로 완전히 같음을 확인했다.
+
+### 7. 소셜 로그인 후 Vercel 또는 `0.0.0.0`으로 이동했다
+
+증상:
+
+- LAN IP에서 Google, 네이버, 카카오 로그인을 시작하면 완료 후 Vercel로 이동했다.
+- Supabase 허용 목록에 `192.168.0.36` 콜백을 넣어도 현상이 계속됐다.
+- Supabase를 통과한 뒤 앱이 서버 바인드 주소인 `0.0.0.0`으로 이동하는 경우도 있었다.
+
+근본 원인:
+
+- Supabase Auth는 보안상 IP 주소 리디렉션을 루프백 주소에만 허용한다. `192.168.x.x` 같은 사설 IP는 허용 목록에 있어도 거부하고 Site URL인 Vercel로 되돌린다.
+- Next.js route handler의 `request.url`에는 외부 주소 대신 서버 바인드 주소 `0.0.0.0`이 들어올 수 있었다.
+
+해결:
+
+- 휴대폰 접속 주소를 IP 직접 주소가 아닌 `http://192-168-0-36.sslip.io:3100`으로 변경했다.
+- Supabase Redirect URLs에는 Google·네이버·카카오의 로그인/계정연결 콜백 6개를 정확한 URL로 등록했다.
+- 네이버 개발자 센터의 서비스 URL을 같은 LAN DNS 주소로 변경했다.
+- Google과 네이버의 공급자 callback, 그리고 카카오가 실제 사용하는 callback은 모두 Supabase의 `https://vfubnhtawezmheylfhsv.supabase.co/auth/v1/callback`과 일치한다.
+- 앱의 로그인 callback, 계정연결 callback, 로그아웃은 신뢰하는 `NEXT_PUBLIC_APP_URL`을 사용하도록 수정했다.
+- Chrome에서 `조해피` 계정으로 Google·네이버·카카오 로그인을 각각 끝까지 수행했고, 모두 `http://192-168-0-36.sslip.io:3100/menu/add/youtube`로 돌아오는 것을 확인했다.
+
 ## 완료한 실행 계획
 
 1. [x] 공식 문서와 저장소 운영 규칙 확인
@@ -191,7 +237,11 @@ remote_writes: 0
 10. [x] `launchd` 설치 및 HTTP readiness 확인
 11. [x] 데스크톱·모바일 홈과 레시피 상세 확인
 12. [x] `launchd` 재시작 후 새 PID와 HTTP/API `200` 확인
-13. [ ] 실제 Mac 재부팅 확인
+13. [x] 서버를 `0.0.0.0`으로 바인딩하고 LAN 주소 응답 확인
+14. [x] LAN CSP 자산 로딩 수정과 Playwright 반응형 검증
+15. [x] Supabase와 공급자 callback 설정 수정
+16. [x] Google·네이버·카카오 실제 로그인 왕복 검증
+17. [ ] 실제 Mac 재부팅 확인
 
 실제 재부팅은 현재 사용자 세션을 강제로 끊기 때문에 수행하지 않았다. 대신 같은 `launchd` 경로의 강제 재시작과 자동 HTTP 준비 검사를 통과했다.
 
@@ -202,7 +252,7 @@ remote_writes: 0
 | `pnpm install --frozen-lockfile` | 통과 |
 | `pnpm lint` | 통과 |
 | `pnpm typecheck` | 통과 |
-| 전체 Vitest | 421 files passed, 4,309 tests passed |
+| 전체 Vitest | 422 files passed, 4,318 tests passed |
 | recipe visibility 실제 PostgreSQL | 75 tests passed |
 | prepared food 실제 PostgreSQL | 32 tests passed |
 | `pnpm build` | 74 static pages 생성, build 통과 |
@@ -215,6 +265,16 @@ remote_writes: 0
 | 가로 화면 넘침 | 0 |
 | 브라우저 warning/error | 0 |
 | 재시작 후 홈/API | HTTP `200` |
+| LAN 바인딩 | `TCP *:3100` |
+| LAN IP 직접 상태 확인 | `http://192.168.0.36:3100`에서 HTTP `200` (소셜 로그인 주소로는 사용하지 않음) |
+| 휴대폰용 LAN DNS | `http://192-168-0-36.sslip.io:3100`에서 HTTP `200` |
+| Google 로그인 | `조해피` 계정 로그인 후 LAN 유튜브 가져오기 화면 복귀 |
+| 네이버 로그인 | 로그인 후 LAN 유튜브 가져오기 화면 복귀 |
+| 카카오 로그인 | 로그인 후 LAN 유튜브 가져오기 화면 복귀 |
+| CSP 회귀 테스트 | LAN·local-only는 HTTPS 강제 없음, public은 유지 |
+| Playwright 주요 경로 | guest 9개 경로, HTTP `200`, 실제 실패 요청·console/page error `0` |
+| Playwright 화면 폭 | 모바일 `320/390px`, 데스크톱 `1440px`, 가로 넘침·깨진 이미지 `0` |
+| 모바일 픽셀 비교 | LAN과 정상 loopback 기준 차이 `0/45,383,520 bytes` |
 
 ## 운영 명령
 
@@ -272,6 +332,7 @@ HTTP만 빠르게 확인하려면 다음 명령을 쓴다.
 
 ```bash
 curl -I http://127.0.0.1:3100
+curl -I http://192-168-0-36.sslip.io:3100
 curl -I http://127.0.0.1:3100/manifest.webmanifest
 curl -I 'http://127.0.0.1:3100/api/v1/recipes?limit=1'
 ```
@@ -280,20 +341,20 @@ curl -I 'http://127.0.0.1:3100/api/v1/recipes?limit=1'
 
 - `.env.production.local`과 secret 값은 Git에 올리지 않는다.
 - `SUPABASE_SERVICE_ROLE_KEY`에 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
-- `127.0.0.1` host 제한을 임의로 `0.0.0.0`으로 바꾸지 않는다.
+- 공유기에서 포트 `3100`을 포트 포워딩하지 않는다.
+- 신뢰할 수 없는 공용 와이파이에서는 production 서비스를 실행하지 않는다.
+- 공유기가 Mac에 다른 IP를 할당하면 `sslip.io` 주소, Supabase Redirect URLs, 네이버 서비스 URL을 새 IP 기준으로 다시 만든다.
 - public internet 공개 전에는 HTTPS, 도메인, OAuth callback, 방화벽, 법률 문서 검토가 필요하다.
-- Mac이 꺼지거나 잠들면 서비스도 멈춘다. 전원 연결과 Amphetamine 상태를 유지한다.
+- Mac이 꺼지거나 잠들면 서비스도 멈춘다. 현재 Amphetamine은 꺼져 있다.
 - 원격 migration 전 백업 파일은 검증이 끝날 때까지 삭제하지 않는다.
 
 ## 이번 범위 밖
 
-다음 항목은 현재 local-only production과 별도 계획이 필요하다.
+다음 항목은 현재 LAN production과 별도 계획이 필요하다.
 
-- 같은 와이파이의 다른 기기에서 접속하는 LAN 공개
 - 인터넷 사용자가 접속하는 public 배포
 - 도메인과 HTTPS 인증서
 - reverse proxy 또는 tunnel
-- OAuth production callback 변경
 - 24시간 장애 감시와 외부 알림
 - 실제 Mac 재부팅 smoke test
 
@@ -311,5 +372,9 @@ curl -I 'http://127.0.0.1:3100/api/v1/recipes?limit=1'
 
 - [Supabase database migrations](https://supabase.com/docs/guides/deployment/database-migrations)
 - [Supabase custom Postgres configuration](https://supabase.com/docs/guides/database/custom-postgres-config)
+- [Supabase Auth redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls)
+- [Supabase Google login](https://supabase.com/docs/guides/auth/social-login/auth-google)
+- [Supabase Kakao login](https://supabase.com/docs/guides/auth/social-login/auth-kakao)
+- [Supabase custom OAuth providers](https://supabase.com/docs/guides/auth/custom-oauth-providers)
 - [PostgreSQL pg_trgm](https://www.postgresql.org/docs/current/pgtrgm.html)
 - [pnpm project settings](https://pnpm.io/settings)
