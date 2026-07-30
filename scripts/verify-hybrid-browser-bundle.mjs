@@ -15,7 +15,106 @@ const STORAGE_REST_MUTATION_METHODS = new Set([
 ]);
 const STORAGE_REST_PATH = "/storage/v1/object/";
 const FETCH_VALUE = Symbol("fetch");
-const UNKNOWN_VALUE = Symbol("unknown");
+const VALUE_SET_LIMIT = 32;
+
+// The scanner lattice keeps a bounded set of possible known values plus an
+// unknown/tainted bit. Branches union their value sets, so any mutating or
+// unresolved call-site path fails closed without treating all safe branches
+// as mutations.
+function valueSet(known = [], { fragments = [], unknown = false } = {}) {
+  return {
+    fragments: new Set(fragments),
+    known: new Set(known),
+    unknown,
+  };
+}
+
+function unknownValue() {
+  return valueSet([], { unknown: true });
+}
+
+function knownValue(value) {
+  return valueSet(
+    [value],
+    typeof value === "string" ? { fragments: [value] } : undefined,
+  );
+}
+
+function mergeValues(...values) {
+  const merged = valueSet();
+  for (const value of values) {
+    if (!value) {
+      merged.unknown = true;
+      continue;
+    }
+    merged.unknown ||= value.unknown;
+    for (const known of value.known) {
+      if (merged.known.size >= VALUE_SET_LIMIT) {
+        merged.unknown = true;
+        break;
+      }
+      merged.known.add(known);
+    }
+    for (const fragment of value.fragments) {
+      if (merged.fragments.size >= VALUE_SET_LIMIT) {
+        merged.unknown = true;
+        break;
+      }
+      merged.fragments.add(fragment);
+    }
+  }
+  return merged;
+}
+
+function combineStringValues(left, right) {
+  const combined = valueSet([], {
+    unknown: left.unknown || right.unknown,
+  });
+  const leftStrings = [...left.known].filter(
+    (value) => typeof value === "string",
+  );
+  const rightStrings = [...right.known].filter(
+    (value) => typeof value === "string",
+  );
+
+  for (const leftString of leftStrings) {
+    for (const rightString of rightStrings) {
+      if (combined.known.size >= VALUE_SET_LIMIT) {
+        combined.unknown = true;
+        break;
+      }
+      const joined = `${leftString}${rightString}`;
+      combined.known.add(joined);
+      combined.fragments.add(joined);
+    }
+  }
+
+  for (const fragment of left.fragments) {
+    combined.fragments.add(fragment);
+  }
+  for (const fragment of right.fragments) {
+    combined.fragments.add(fragment);
+  }
+
+  if (leftStrings.length === 0 || rightStrings.length === 0) {
+    combined.unknown = true;
+  }
+  return combined;
+}
+
+function cloneBindings(bindings) {
+  return new Map(bindings);
+}
+
+function mergeBindings(target, ...branches) {
+  const keys = new Set(branches.flatMap((branch) => [...branch.keys()]));
+  for (const key of keys) {
+    target.set(
+      key,
+      mergeValues(...branches.map((branch) => branch.get(key))),
+    );
+  }
+}
 
 function findPatternMatches(source, kind, pattern) {
   return [...source.matchAll(pattern)].map((match) => ({
@@ -51,8 +150,14 @@ function getPropertyName(node) {
   return null;
 }
 
-function stringValue(value) {
-  return typeof value === "string" ? value : null;
+function valueMayContain(value, text) {
+  return [...value.known, ...value.fragments].some(
+    (entry) => typeof entry === "string" && entry.includes(text),
+  );
+}
+
+function valueHas(value, expected) {
+  return value.known.has(expected);
 }
 
 function resolveStaticValue(node, bindings) {
@@ -62,14 +167,16 @@ function resolveStaticValue(node, bindings) {
     ts.isStringLiteralLike(expression)
     || ts.isNoSubstitutionTemplateLiteral(expression)
   ) {
-    return expression.text;
+    return knownValue(expression.text);
   }
 
   if (ts.isIdentifier(expression)) {
     if (bindings.has(expression.text)) {
       return bindings.get(expression.text);
     }
-    return expression.text === "fetch" ? FETCH_VALUE : UNKNOWN_VALUE;
+    return expression.text === "fetch"
+      ? knownValue(FETCH_VALUE)
+      : unknownValue();
   }
 
   if (
@@ -81,7 +188,7 @@ function resolveStaticValue(node, bindings) {
     )
     && expression.name.text === "fetch"
   ) {
-    return FETCH_VALUE;
+    return knownValue(FETCH_VALUE);
   }
 
   if (
@@ -94,26 +201,55 @@ function resolveStaticValue(node, bindings) {
     && expression.argumentExpression
     && getPropertyName(expression.argumentExpression) === "fetch"
   ) {
-    return FETCH_VALUE;
+    return knownValue(FETCH_VALUE);
   }
 
   if (
     ts.isBinaryExpression(expression)
     && expression.operatorToken.kind === ts.SyntaxKind.PlusToken
   ) {
-    const left = stringValue(resolveStaticValue(expression.left, bindings));
-    const right = stringValue(resolveStaticValue(expression.right, bindings));
-    return left !== null && right !== null ? `${left}${right}` : null;
+    return combineStringValues(
+      resolveStaticValue(expression.left, bindings),
+      resolveStaticValue(expression.right, bindings),
+    );
+  }
+
+  if (ts.isTemplateExpression(expression)) {
+    let resolved = knownValue(expression.head.text);
+    for (const span of expression.templateSpans) {
+      resolved = combineStringValues(
+        resolved,
+        resolveStaticValue(span.expression, bindings),
+      );
+      resolved = combineStringValues(
+        resolved,
+        knownValue(span.literal.text),
+      );
+    }
+    return resolved;
+  }
+
+  if (ts.isConditionalExpression(expression)) {
+    return mergeValues(
+      resolveStaticValue(expression.whenTrue, bindings),
+      resolveStaticValue(expression.whenFalse, bindings),
+    );
   }
 
   if (ts.isObjectLiteralExpression(expression)) {
     const properties = new Map();
+    let objectUnknown = false;
     for (const property of expression.properties) {
       if (ts.isSpreadAssignment(property)) {
         const spread = resolveStaticValue(property.expression, bindings);
-        if (spread instanceof Map) {
-          for (const [key, value] of spread) {
-            properties.set(key, value);
+        objectUnknown ||= spread.unknown;
+        for (const spreadValue of spread.known) {
+          if (spreadValue instanceof Map) {
+            for (const [key, value] of spreadValue) {
+              properties.set(key, value);
+            }
+          } else {
+            objectUnknown = true;
           }
         }
         continue;
@@ -135,14 +271,14 @@ function resolveStaticValue(node, bindings) {
           property.name.text,
           bindings.has(property.name.text)
             ? bindings.get(property.name.text)
-            : null,
+            : unknownValue(),
         );
       }
     }
-    return properties;
+    return valueSet([properties], { unknown: objectUnknown });
   }
 
-  return UNKNOWN_VALUE;
+  return unknownValue();
 }
 
 function findStorageRestFetches(source) {
@@ -155,11 +291,75 @@ function findStorageRestFetches(source) {
   );
   const matches = [];
 
+  const blockScopedNames = (block) => {
+    const names = new Set();
+    for (const statement of block.statements) {
+      if (
+        !ts.isVariableStatement(statement)
+        || !(statement.declarationList.flags & ts.NodeFlags.BlockScoped)
+      ) {
+        continue;
+      }
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name)) {
+          names.add(declaration.name.text);
+        }
+      }
+    }
+    return names;
+  };
+
+  const optionsCouldMutate = (options, hasOptions) => {
+    if (!hasOptions) {
+      return false;
+    }
+    if (options.unknown) {
+      return true;
+    }
+
+    for (const optionValue of options.known) {
+      if (!(optionValue instanceof Map)) {
+        return true;
+      }
+      if (!optionValue.has("method")) {
+        continue;
+      }
+
+      const methodValue = optionValue.get("method");
+      if (!methodValue || methodValue.unknown) {
+        return true;
+      }
+      for (const method of methodValue.known) {
+        if (
+          typeof method !== "string"
+          || STORAGE_REST_MUTATION_METHODS.has(method.toUpperCase())
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   const visit = (node, inheritedBindings) => {
-    if (ts.isSourceFile(node) || ts.isBlock(node)) {
-      const bindings = new Map(inheritedBindings);
+    if (ts.isSourceFile(node)) {
+      for (const statement of node.statements) {
+        visit(statement, inheritedBindings);
+      }
+      return;
+    }
+
+    if (ts.isBlock(node)) {
+      const outerNames = new Set(inheritedBindings.keys());
+      const shadowedNames = blockScopedNames(node);
+      const bindings = cloneBindings(inheritedBindings);
       for (const statement of node.statements) {
         visit(statement, bindings);
+      }
+      for (const name of outerNames) {
+        if (!shadowedNames.has(name) && bindings.has(name)) {
+          inheritedBindings.set(name, bindings.get(name));
+        }
       }
       return;
     }
@@ -168,7 +368,7 @@ function findStorageRestFetches(source) {
       const bindings = new Map(inheritedBindings);
       for (const parameter of node.parameters) {
         if (ts.isIdentifier(parameter.name)) {
-          bindings.set(parameter.name.text, UNKNOWN_VALUE);
+          bindings.set(parameter.name.text, unknownValue());
         }
       }
       if (node.body) {
@@ -187,10 +387,83 @@ function findStorageRestFetches(source) {
             declaration.name.text,
             declaration.initializer
               ? resolveStaticValue(declaration.initializer, inheritedBindings)
-              : UNKNOWN_VALUE,
+              : unknownValue(),
           );
         }
       }
+      return;
+    }
+
+    if (ts.isIfStatement(node)) {
+      visit(node.expression, inheritedBindings);
+      const thenBindings = cloneBindings(inheritedBindings);
+      const elseBindings = cloneBindings(inheritedBindings);
+      visit(node.thenStatement, thenBindings);
+      if (node.elseStatement) {
+        visit(node.elseStatement, elseBindings);
+      }
+      mergeBindings(inheritedBindings, thenBindings, elseBindings);
+      return;
+    }
+
+    if (ts.isConditionalExpression(node)) {
+      visit(node.condition, inheritedBindings);
+      const trueBindings = cloneBindings(inheritedBindings);
+      const falseBindings = cloneBindings(inheritedBindings);
+      visit(node.whenTrue, trueBindings);
+      visit(node.whenFalse, falseBindings);
+      mergeBindings(inheritedBindings, trueBindings, falseBindings);
+      return;
+    }
+
+    if (
+      ts.isWhileStatement(node)
+      || ts.isDoStatement(node)
+    ) {
+      visit(node.expression, inheritedBindings);
+      const noIterationBindings = cloneBindings(inheritedBindings);
+      const iterationBindings = cloneBindings(inheritedBindings);
+      visit(node.statement, iterationBindings);
+      mergeBindings(
+        inheritedBindings,
+        noIterationBindings,
+        iterationBindings,
+      );
+      return;
+    }
+
+    if (ts.isForStatement(node)) {
+      if (node.initializer) {
+        visit(node.initializer, inheritedBindings);
+      }
+      if (node.condition) {
+        visit(node.condition, inheritedBindings);
+      }
+      const noIterationBindings = cloneBindings(inheritedBindings);
+      const iterationBindings = cloneBindings(inheritedBindings);
+      visit(node.statement, iterationBindings);
+      if (node.incrementor) {
+        visit(node.incrementor, iterationBindings);
+      }
+      mergeBindings(
+        inheritedBindings,
+        noIterationBindings,
+        iterationBindings,
+      );
+      return;
+    }
+
+    if (ts.isForInStatement(node) || ts.isForOfStatement(node)) {
+      visit(node.initializer, inheritedBindings);
+      visit(node.expression, inheritedBindings);
+      const noIterationBindings = cloneBindings(inheritedBindings);
+      const iterationBindings = cloneBindings(inheritedBindings);
+      visit(node.statement, iterationBindings);
+      mergeBindings(
+        inheritedBindings,
+        noIterationBindings,
+        iterationBindings,
+      );
       return;
     }
 
@@ -204,7 +477,7 @@ function findStorageRestFetches(source) {
         visit(node.right, inheritedBindings);
         const nextValue = operator === ts.SyntaxKind.EqualsToken
           ? resolveStaticValue(node.right, inheritedBindings)
-          : UNKNOWN_VALUE;
+          : unknownValue();
         const target = unwrapExpression(node.left);
         if (ts.isIdentifier(target)) {
           inheritedBindings.set(target.text, nextValue);
@@ -221,8 +494,22 @@ function findStorageRestFetches(source) {
             : target.argumentExpression
               ? getPropertyName(target.argumentExpression)
               : null;
-          if (objectValue instanceof Map && propertyName !== null) {
-            objectValue.set(propertyName, nextValue);
+          if (objectValue && propertyName !== null) {
+            const nextObjects = [];
+            let objectUnknown = objectValue.unknown;
+            for (const knownObject of objectValue.known) {
+              if (!(knownObject instanceof Map)) {
+                objectUnknown = true;
+                continue;
+              }
+              const nextObject = new Map(knownObject);
+              nextObject.set(propertyName, nextValue);
+              nextObjects.push(nextObject);
+            }
+            inheritedBindings.set(
+              target.expression.text,
+              valueSet(nextObjects, { unknown: objectUnknown }),
+            );
           }
         }
         return;
@@ -231,32 +518,22 @@ function findStorageRestFetches(source) {
 
     if (
       ts.isCallExpression(node)
-      && resolveStaticValue(node.expression, inheritedBindings) === FETCH_VALUE
+      && valueHas(
+        resolveStaticValue(node.expression, inheritedBindings),
+        FETCH_VALUE,
+      )
     ) {
       const url = node.arguments[0]
-        ? stringValue(resolveStaticValue(node.arguments[0], inheritedBindings))
-        : null;
+        ? resolveStaticValue(node.arguments[0], inheritedBindings)
+        : unknownValue();
       const hasOptions = node.arguments.length > 1;
       const options = hasOptions
         ? resolveStaticValue(node.arguments[1], inheritedBindings)
-        : null;
-      const hasMethod = options instanceof Map && options.has("method");
-      const methodValue = hasMethod ? options.get("method") : null;
-      const method = stringValue(methodValue);
-      const couldMutate = hasOptions && (
-        !(options instanceof Map)
-        || (
-          hasMethod
-          && (
-            method === null
-            || STORAGE_REST_MUTATION_METHODS.has(method.toUpperCase())
-          )
-        )
-      );
+        : valueSet();
 
       if (
-        url?.includes(STORAGE_REST_PATH)
-        && couldMutate
+        valueMayContain(url, STORAGE_REST_PATH)
+        && optionsCouldMutate(options, hasOptions)
       ) {
         matches.push({
           index: node.getStart(sourceFile),

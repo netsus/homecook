@@ -22,6 +22,12 @@ describe("hybrid built browser bundle canary", () => {
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png',send=fetch;send(storageUrl,{method:'DELETE'})",
     "let e='GET';e='DELETE';const u='/storage/v1/object/recipe-images/unsafe.png';globalThis.fetch(u,{method:e})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png',method=readMethod();fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';if(flag){method='DELETE'}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';if(flag)method='GET';fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';if(flag){method='DELETE'}else{method='GET'}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';while(flag)method='GET';fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png',method=flag?'DELETE':'GET';fetch(storageUrl,{method})",
+    "const base='/storage/v1/object/',objectPath='recipe-images/unsafe.png',storageUrl=`${base}${objectPath}`;fetch(storageUrl,{method:'DELETE'})",
   ])("rejects direct Storage mutation syntax: %s", (source) => {
     expect(findBrowserBundleStorageMutations(source)).not.toEqual([]);
   });
@@ -33,7 +39,11 @@ describe("hybrid built browser bundle canary", () => {
     try {
       fs.writeFileSync(
         path.join(bundleRoot, "app.min.js"),
-        "let e='GET';e='DELETE';const u='/storage/v1/object/recipe-images/unsafe.png',s=fetch;s(u,{method:e});",
+        "let m='DELETE';if(f)m='GET';const b='/storage/v1/object/',p='recipe-images/unsafe.png',u=`${b}${p}`,s=fetch;s(u,{method:m});",
+      );
+      fs.writeFileSync(
+        path.join(bundleRoot, "safe.min.js"),
+        "let m='DELETE';m='GET';const b='/storage/v1/object/',p='recipe-images/safe.png',u=`${b}${p}`;globalThis.fetch(u,{method:m});",
       );
 
       expect(inspectBrowserBundle(bundleRoot)).toEqual([
@@ -53,6 +63,10 @@ describe("hybrid built browser bundle canary", () => {
     "const documentation = '/storage/v1/object/';",
     "const documentation='/storage/v1/object/';fetch('/api/v1/recipes/images',{method:'POST'})",
     "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='DELETE';method='GET';fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';if(flag){method='GET'}else{method='HEAD'}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/safe.png',method=flag?'GET':'HEAD';fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';while(flag)method='HEAD';fetch(storageUrl,{method})",
+    "const base='/api/v1/',path='recipes/images',url=`${base}${path}`;fetch(url,{method:'POST'})",
     "/** example: client.storage.from('avatars').upload('avatar.png', file) */",
   ])("does not flag a non-mutation canary: %s", (source) => {
     expect(findBrowserBundleStorageMutations(source)).toEqual([]);

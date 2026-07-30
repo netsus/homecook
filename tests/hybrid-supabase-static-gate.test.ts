@@ -148,13 +148,18 @@ describe("hybrid authority AST/static gate", () => {
     expect(
       inventory.browserDirectStoragePaths.map((entry) => entry.file),
     ).toEqual([
+      "features/unsafe.mjs",
       "lib/api/dynamic-sdk-alias.mjs",
       "lib/api/raw-delete.ts",
       "lib/api/sdk-alias.mjs",
       "lib/api/sdk-bracket.js",
+      "stores/unsafe.ts",
     ]);
     expect(inventory.clientReachableFiles).not.toContain(
       "lib/server/type-only-storage.ts",
+    );
+    expect(inventory.clientReachableFiles).not.toContain(
+      "stores/server-only.ts",
     );
   });
 

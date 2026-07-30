@@ -10,6 +10,14 @@ import {
 } from "../../lib/server/hybrid-auth/public-read-policy-runtime.mjs";
 
 const SKIP_DIRS = new Set([".git", ".next", "coverage", "dist", "node_modules"]);
+const CLIENT_GRAPH_SKIP_DIRS = new Set([
+  ...SKIP_DIRS,
+  ".agents",
+  ".omx",
+  "docs",
+  "scripts",
+  "tests",
+]);
 const SOURCE_FILE_PATTERN = /\.(ts|tsx|js|mjs|jsx)$/u;
 const DEFAULT_SCAN_ROOTS = ["app", "components", "lib"];
 const STORAGE_MUTATION_METHODS = new Set([
@@ -332,6 +340,21 @@ function readSourceFile(repoRoot, absoluteFile) {
   return { source, sourceFile };
 }
 
+function isRepoLocalRuntimeSource(repoRoot, absoluteFile) {
+  const relativeFile = path.relative(repoRoot, absoluteFile);
+  if (
+    relativeFile.startsWith(`..${path.sep}`)
+    || path.isAbsolute(relativeFile)
+    || !SOURCE_FILE_PATTERN.test(absoluteFile)
+  ) {
+    return false;
+  }
+
+  return !relativeFile
+    .split(path.sep)
+    .some((segment) => CLIENT_GRAPH_SKIP_DIRS.has(segment));
+}
+
 function collectClientImportGraph(repoRoot, files) {
   const fileByRelative = new Map(
     files.map((absoluteFile) => [
@@ -341,14 +364,19 @@ function collectClientImportGraph(repoRoot, files) {
   );
   const importEdges = new Map();
   const clientRoots = new Set();
+  const inspectedFiles = new Set();
 
-  for (const absoluteFile of files) {
+  const inspectFile = (absoluteFile, { detectClientRoot = false } = {}) => {
     const relativeFile = toRelativeFile(repoRoot, absoluteFile);
+    if (inspectedFiles.has(relativeFile)) {
+      return;
+    }
+    inspectedFiles.add(relativeFile);
     const importerDir = path.dirname(absoluteFile);
     const { sourceFile } = readSourceFile(repoRoot, absoluteFile);
     const imports = new Set();
 
-    if (isClientModule(sourceFile)) {
+    if (detectClientRoot && isClientModule(sourceFile)) {
       clientRoots.add(relativeFile);
     }
 
@@ -358,11 +386,10 @@ function collectClientImportGraph(repoRoot, files) {
         importerDir,
         rawSpecifier,
       );
-      if (resolved) {
+      if (resolved && isRepoLocalRuntimeSource(repoRoot, resolved)) {
         const target = toRelativeFile(repoRoot, resolved);
-        if (fileByRelative.has(target)) {
-          imports.add(target);
-        }
+        fileByRelative.set(target, resolved);
+        imports.add(target);
       }
     };
 
@@ -430,6 +457,10 @@ function collectClientImportGraph(repoRoot, files) {
     visitImportEdges(sourceFile);
 
     importEdges.set(relativeFile, imports);
+  };
+
+  for (const absoluteFile of files) {
+    inspectFile(absoluteFile, { detectClientRoot: true });
   }
 
   const reachable = new Set(clientRoots);
@@ -437,6 +468,10 @@ function collectClientImportGraph(repoRoot, files) {
 
   while (stack.length > 0) {
     const current = stack.pop();
+    const absoluteFile = fileByRelative.get(current);
+    if (absoluteFile) {
+      inspectFile(absoluteFile);
+    }
     const neighbors = importEdges.get(current);
     if (!neighbors) {
       continue;
@@ -451,7 +486,12 @@ function collectClientImportGraph(repoRoot, files) {
     }
   }
 
-  return { reachable };
+  return {
+    files: [...reachable]
+      .map((relativeFile) => fileByRelative.get(relativeFile))
+      .filter(Boolean),
+    reachable,
+  };
 }
 
 function extractStorageMutationCalls(fileState) {
@@ -709,8 +749,17 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd(), { scanRoots = D
   const declaredPublicRouteScopes = new Map();
   const dataRouteResponseBoundaries = [];
 
-  const files = listSourceFiles(repoRoot, scanRoots);
-  const { reachable: clientReachableFiles } = collectClientImportGraph(repoRoot, files);
+  const entryFiles = listSourceFiles(repoRoot, scanRoots);
+  const {
+    files: clientReachableAbsoluteFiles,
+    reachable: clientReachableFiles,
+  } = collectClientImportGraph(repoRoot, entryFiles);
+  const files = [
+    ...new Set([
+      ...entryFiles,
+      ...clientReachableAbsoluteFiles,
+    ]),
+  ].sort();
 
   for (const absoluteFile of files) {
     const relativeFile = toRelativeFile(repoRoot, absoluteFile);
