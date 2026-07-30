@@ -4,7 +4,7 @@
 
 ## Happy Path
 
-- [ ] the first small Stage 2 PR proves only the additive link authority, promotion ACL and fail-closed eligible-link selector, while leaving `pantry_items`, public payloads and existing readers unchanged <!-- omo:id=accept-link-safe-subset;stage=2;scope=backend;review=3,6 -->
+- [x] the first small Stage 2 PR proves only the additive link authority, promotion ACL and fail-closed eligible-link selector, while leaving `pantry_items`, public payloads and existing readers unchanged <!-- omo:id=accept-link-safe-subset;stage=2;scope=backend;review=3,6 -->
 - [ ] after approved Contract Evolution, a generic pantry row contributes its canonical ingredient without any product link <!-- omo:id=accept-link-generic-pantry;stage=2;scope=backend;review=3,6 -->
 - [ ] after approved Contract Evolution, a product pantry row retains exact product and nutrition-version identity while an active approved primary `represents` link contributes its effective ingredient <!-- omo:id=accept-link-product-pantry;stage=2;scope=backend;review=3,6 -->
 - [ ] after approved Contract Evolution, generic and multiple product rows resolving to the same ingredient produce one DISTINCT effective ingredient without collapsing exact pantry row IDs <!-- omo:id=accept-link-distinct-union;stage=2;scope=backend;review=3,6 -->

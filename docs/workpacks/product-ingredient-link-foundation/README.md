@@ -186,7 +186,7 @@ Schema Change:
 
 - [ ] additive link table, FKs, review/active checks and partial unique are existing/fresh/replay safe <!-- omo:id=delivery-link-schema;stage=2;scope=backend;review=3,6 -->
 - [ ] deterministic candidate and human-only atomic promotion boundary is enforced <!-- omo:id=delivery-link-promotion;stage=2;scope=backend;review=3,6 -->
-- [ ] first small Stage 2 PR leaves `pantry_items`, public payloads and existing readers unchanged while proving the additive link authority, promotion ACL and fail-closed eligible-link selector only <!-- omo:id=delivery-link-safe-subset;stage=2;scope=backend;review=3,6 -->
+- [x] first small Stage 2 PR leaves `pantry_items`, public payloads and existing readers unchanged while proving the additive link authority, promotion ACL and fail-closed eligible-link selector only <!-- omo:id=delivery-link-safe-subset;stage=2;scope=backend;review=3,6 -->
 - [ ] after approved Contract Evolution, pantry exact product/nutrition-version identity is additive and generic identity is not overwritten <!-- omo:id=delivery-pantry-product-identity;stage=2;scope=backend;review=3,6 -->
 - [ ] after approved Contract Evolution, the shared DISTINCT effective-ingredient projection admits only active approved primary represents <!-- omo:id=delivery-effective-projection;stage=2;scope=backend;review=3,6 -->
 - [ ] after approved Contract Evolution, pantry-match and HOME cleanout readers use the shared projection <!-- omo:id=delivery-current-readers;stage=2;scope=backend;review=3,6 -->
