@@ -4,7 +4,7 @@
 작성일: **2026-07-30 KST**
 대상 서비스: `homecook`
 목표 구조: **원격 Supabase Auth + 현재 Mac의 self-hosted Supabase DB/Storage + 기존 RLS 유지**
-현재 production: `http://192-168-0-36.sslip.io:3100`
+현재 production: `http://cwjsui-macbookpro.local:3100`
 
 ## 딱 한 줄 요약
 

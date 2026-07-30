@@ -1,9 +1,9 @@
 # 현재 Mac production 운영 계획
 
 상태: **운영 중 (신뢰하는 LAN production)**
-최종 갱신: 2026-07-29 KST
+최종 갱신: 2026-07-30 KST
 서비스: `homecook` Next.js 앱
-현재 휴대폰 접속 주소: `http://192-168-0-36.sslip.io:3100`
+현재 휴대폰 접속 주소: `http://cwjsui-macbookpro.local:3100`
 서버 바인딩: `0.0.0.0:3100`
 자동 실행: macOS `launchd`의 `com.homecook.production`
 
@@ -11,19 +11,21 @@
 
 현재 Mac에서 production build가 `launchd`로 상시 실행 중이며, 같은 와이파이의 휴대폰에서 소셜 로그인까지 사용할 수 있다.
 
-> `0.0.0.0`은 서버가 Mac의 모든 네트워크 연결에서 요청을 받는다는 설정값이다. 브라우저에는 `0.0.0.0`이나 `192.168.0.36`을 직접 입력하지 말고, 소셜 로그인이 가능한 LAN DNS 주소를 사용한다.
+> `0.0.0.0`은 서버가 Mac의 모든 네트워크 연결에서 요청을 받는다는 설정값이다. 브라우저에는 `0.0.0.0`이나 숫자 IP를 직접 입력하지 말고, 소셜 로그인이 가능한 고정 `.local` 주소를 사용한다.
 
 ## 지금 바로 확인하는 방법
 
 Mac과 휴대폰을 같은 와이파이에 연결한 뒤, 휴대폰 브라우저에서 아래 주소를 연다.
 
 ```text
-http://192-168-0-36.sslip.io:3100
+http://cwjsui-macbookpro.local:3100
 ```
 
-`sslip.io`는 주소 안의 `192-168-0-36`을 실제 LAN IP `192.168.0.36`으로 연결해 주는 DNS 서비스다. 데이터와 로그인 세션은 이 Mac의 서버가 처리한다.
+`.local` 주소는 같은 와이파이에서 Mac 이름을 찾아 주는 mDNS(로컬 네트워크 이름 찾기) 주소다. 공유기가 Mac의 숫자 IP를 바꿔도 접속 주소와 로그인 callback을 다시 만들 필요가 없다. 데이터와 로그인 세션은 이 Mac의 서버가 처리한다.
 
-Mac 자체 브라우저에서는 `http://127.0.0.1:3100`도 상태 확인용으로 사용할 수 있다. 소셜 로그인을 시험할 때는 휴대폰과 같은 `sslip.io` 주소를 사용한다. 서비스 상태를 확인하려면 다음 명령을 실행한다.
+현재 숫자 IP가 꼭 필요한 기기에서는 `http://192-168-0-11.sslip.io:3100`도 사용할 수 있다. 이 보조 주소는 Mac의 IP가 바뀌면 함께 바뀌므로, 평소에는 `.local` 주소를 사용한다.
+
+Mac 자체 브라우저에서는 `http://127.0.0.1:3100`도 상태 확인용으로 사용할 수 있다. 소셜 로그인을 시험할 때는 휴대폰과 같은 `.local` 주소를 사용한다. 서비스 상태를 확인하려면 다음 명령을 실행한다.
 
 ```bash
 ./scripts/run-local-mac-production.sh status
@@ -47,7 +49,7 @@ pid: 29719
 | 실행 모드 | production build | 개발용 서버가 아니라 최적화된 운영 build다. |
 | 서버 바인딩 | `0.0.0.0` | Mac의 모든 네트워크 연결에서 요청을 받는다. |
 | 접속 범위 | 신뢰하는 같은 LAN | 현재 같은 와이파이의 휴대폰에서 접속할 수 있다. |
-| 브라우저 주소 | `192-168-0-36.sslip.io:3100` | Supabase가 허용하는 호스트명이며 실제 연결은 현재 Mac의 LAN IP로 온다. |
+| 브라우저 주소 | `cwjsui-macbookpro.local:3100` | Mac의 숫자 IP가 바뀌어도 유지되는 LAN 이름이며 Supabase가 허용한다. |
 | 포트 | `3100` | 기존 개발 서버의 `3000`과 충돌하지 않는다. |
 | 프로세스 관리자 | `launchd` | Mac 로그인 시 켜고, 비정상 종료 시 다시 시작한다. |
 | 서비스 이름 | `com.homecook.production` | `launchd`가 서비스를 구분하는 이름이다. |
@@ -70,9 +72,9 @@ pid: 29719
 
 ```mermaid
 flowchart LR
-  A["같은 와이파이의 휴대폰"] --> B["192-168-0-36.sslip.io:3100"]
+  A["같은 와이파이의 휴대폰"] --> B["cwjsui-macbookpro.local:3100"]
   M["현재 Mac의 브라우저"] --> L["127.0.0.1:3100"]
-  B --> I["DNS 해석: 192.168.0.36"]
+  B --> I["mDNS가 현재 Mac IP를 찾음"]
   I --> C["0.0.0.0:3100"]
   L --> C
   C --> D["launchd: com.homecook.production"]
@@ -208,20 +210,26 @@ remote_writes: 0
 - LAN IP에서 Google, 네이버, 카카오 로그인을 시작하면 완료 후 Vercel로 이동했다.
 - Supabase 허용 목록에 `192.168.0.36` 콜백을 넣어도 현상이 계속됐다.
 - Supabase를 통과한 뒤 앱이 서버 바인드 주소인 `0.0.0.0`으로 이동하는 경우도 있었다.
+- 이후 공유기가 Mac IP를 `192.168.0.36`에서 `192.168.0.11`로 바꾸면서 기존 `sslip.io` 주소가 응답하지 않았다.
 
 근본 원인:
 
 - Supabase Auth는 보안상 IP 주소 리디렉션을 루프백 주소에만 허용한다. `192.168.x.x` 같은 사설 IP는 허용 목록에 있어도 거부하고 Site URL인 Vercel로 되돌린다.
 - Next.js route handler의 `request.url`에는 외부 주소 대신 서버 바인드 주소 `0.0.0.0`이 들어올 수 있었다.
+- `sslip.io` 주소에는 숫자 IP가 포함되므로 DHCP(공유기가 IP를 자동 배정하는 기능)가 새 IP를 주면 예전 주소도 끊긴다.
 
 해결:
 
-- 휴대폰 접속 주소를 IP 직접 주소가 아닌 `http://192-168-0-36.sslip.io:3100`으로 변경했다.
-- Supabase Redirect URLs에는 Google·네이버·카카오의 로그인/계정연결 콜백 6개를 정확한 URL로 등록했다.
-- 네이버 개발자 센터의 서비스 URL을 같은 LAN DNS 주소로 변경했다.
+- 운영 기준 주소를 IP와 분리된 `http://cwjsui-macbookpro.local:3100`으로 고정했다.
+- Supabase의 기본 `Site URL`도 같은 `.local` 주소로 바꿔 `redirectTo` 누락이나 허용 목록 불일치 때 Vercel로 되돌아가는 재발 경로를 막았다.
+- Supabase Redirect URLs에 `http://cwjsui-macbookpro.local:3100/**`와 현재 IP용 `http://192-168-0-11.sslip.io:3100/**`를 등록했다.
+- `.env.production.local`의 `NEXT_PUBLIC_APP_URL`과 `NEXT_PUBLIC_SITE_URL`도 고정 `.local` 주소로 맞춘 뒤 production을 다시 빌드하고 재시작했다.
+- 네이버 개발자센터 HomeCook 앱의 서비스 URL도 고정 `.local` 주소로 변경하고, 공급자 callback은 원격 Supabase 주소로 유지했다.
 - Google과 네이버의 공급자 callback, 그리고 카카오가 실제 사용하는 callback은 모두 Supabase의 `https://vfubnhtawezmheylfhsv.supabase.co/auth/v1/callback`과 일치한다.
 - 앱의 로그인 callback, 계정연결 callback, 로그아웃은 신뢰하는 `NEXT_PUBLIC_APP_URL`을 사용하도록 수정했다.
-- Chrome에서 `조해피` 계정으로 Google·네이버·카카오 로그인을 각각 끝까지 수행했고, 모두 `http://192-168-0-36.sslip.io:3100/menu/add/youtube`로 돌아오는 것을 확인했다.
+- 2026-07-30 Chrome에서 로그아웃 후 `조해피` Google 계정으로 다시 로그인해 Vercel이 아닌 `http://cwjsui-macbookpro.local:3100/mypage`로 돌아오는 것을 확인했다.
+- 네이버도 실제 로그인해 같은 `.local` 마이페이지로 복귀했다.
+- 카카오는 등록 오류 없이 카카오 로그인 화면까지 진입했고, OAuth 요청의 `redirect_to`는 `.local` 앱 callback, `redirect_uri`는 원격 Supabase callback임을 확인했다. Chrome에 카카오 로그인 세션이 없어 비밀번호 입력 이후의 최종 왕복은 이번 재검증에서 수행하지 않았다.
 
 ## 완료한 실행 계획
 
@@ -241,7 +249,8 @@ remote_writes: 0
 14. [x] LAN CSP 자산 로딩 수정과 Playwright 반응형 검증
 15. [x] Supabase와 공급자 callback 설정 수정
 16. [x] Google·네이버·카카오 실제 로그인 왕복 검증
-17. [ ] 실제 Mac 재부팅 확인
+17. [x] Mac IP 변경 후 `.local` 기준 주소 전환, Google·네이버 실제 재로그인, 카카오 callback 계약 검증
+18. [ ] 실제 Mac 재부팅 확인
 
 실제 재부팅은 현재 사용자 세션을 강제로 끊기 때문에 수행하지 않았다. 대신 같은 `launchd` 경로의 강제 재시작과 자동 HTTP 준비 검사를 통과했다.
 
@@ -266,11 +275,12 @@ remote_writes: 0
 | 브라우저 warning/error | 0 |
 | 재시작 후 홈/API | HTTP `200` |
 | LAN 바인딩 | `TCP *:3100` |
-| LAN IP 직접 상태 확인 | `http://192.168.0.36:3100`에서 HTTP `200` (소셜 로그인 주소로는 사용하지 않음) |
-| 휴대폰용 LAN DNS | `http://192-168-0-36.sslip.io:3100`에서 HTTP `200` |
-| Google 로그인 | `조해피` 계정 로그인 후 LAN 유튜브 가져오기 화면 복귀 |
-| 네이버 로그인 | 로그인 후 LAN 유튜브 가져오기 화면 복귀 |
-| 카카오 로그인 | 로그인 후 LAN 유튜브 가져오기 화면 복귀 |
+| LAN IP 직접 상태 확인 | 현재 IP `192.168.0.11`, `TCP *:3100` 응답 확인 |
+| 기본 휴대폰 주소 | `http://cwjsui-macbookpro.local:3100`에서 HTTP `200` |
+| 현재 IP 보조 주소 | `http://192-168-0-11.sslip.io:3100`에서 HTTP `200` |
+| Google 로그인 | 로그아웃 후 `조해피` 계정 로그인, `.local` 마이페이지 복귀, Vercel 이동 없음 |
+| 네이버 로그인 | 실제 로그인 후 `.local` 마이페이지 복귀 |
+| 카카오 로그인 | 카카오 로그인 화면 진입, `.local` 앱 복귀 주소와 원격 Supabase callback 확인; 현재 주소의 최종 로그인 왕복은 미실행 |
 | CSP 회귀 테스트 | LAN·local-only는 HTTPS 강제 없음, public은 유지 |
 | Playwright 주요 경로 | guest 9개 경로, HTTP `200`, 실제 실패 요청·console/page error `0` |
 | Playwright 화면 폭 | 모바일 `320/390px`, 데스크톱 `1440px`, 가로 넘침·깨진 이미지 `0` |
@@ -332,7 +342,8 @@ HTTP만 빠르게 확인하려면 다음 명령을 쓴다.
 
 ```bash
 curl -I http://127.0.0.1:3100
-curl -I http://192-168-0-36.sslip.io:3100
+curl -I http://cwjsui-macbookpro.local:3100
+curl -I http://192-168-0-11.sslip.io:3100
 curl -I http://127.0.0.1:3100/manifest.webmanifest
 curl -I 'http://127.0.0.1:3100/api/v1/recipes?limit=1'
 ```
@@ -343,7 +354,8 @@ curl -I 'http://127.0.0.1:3100/api/v1/recipes?limit=1'
 - `SUPABASE_SERVICE_ROLE_KEY`에 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
 - 공유기에서 포트 `3100`을 포트 포워딩하지 않는다.
 - 신뢰할 수 없는 공용 와이파이에서는 production 서비스를 실행하지 않는다.
-- 공유기가 Mac에 다른 IP를 할당하면 `sslip.io` 주소, Supabase Redirect URLs, 네이버 서비스 URL을 새 IP 기준으로 다시 만든다.
+- 평소에는 IP가 바뀌어도 유지되는 `cwjsui-macbookpro.local`을 사용한다.
+- `.local` 이름 찾기를 지원하지 않는 기기에서만 현재 IP 기반 `sslip.io` 보조 주소를 사용하고, IP가 바뀌면 이 보조 주소와 Supabase 허용 목록만 갱신한다.
 - public internet 공개 전에는 HTTPS, 도메인, OAuth callback, 방화벽, 법률 문서 검토가 필요하다.
 - Mac이 꺼지거나 잠들면 서비스도 멈춘다. 현재 Amphetamine은 꺼져 있다.
 - 원격 migration 전 백업 파일은 검증이 끝날 때까지 삭제하지 않는다.

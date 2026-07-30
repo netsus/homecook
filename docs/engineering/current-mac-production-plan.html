@@ -645,7 +645,7 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <p class="eyebrow">HOMECOOK · 2026-07-29 KST</p>
+      <p class="eyebrow">HOMECOOK · 2026-07-30 KST</p>
       <h1>현재 Mac production 운영 안내서</h1>
       <p>localhost 개발 서버를 실제 운영 build로 바꾸고, Mac 자동 실행과 같은 와이파이의 휴대폰 소셜 로그인까지 확인한 결과를 초보 개발자 눈높이로 정리했다.</p>
       <div class="badge-row" aria-label="현재 상태">
@@ -661,7 +661,7 @@
     <div class="status-strip" aria-label="운영 요약">
       <div class="status-item">
         <span class="status-label">접속 주소</span>
-        <span class="status-value">http://192-168-0-36.sslip.io:3100</span>
+        <span class="status-value">http://cwjsui-macbookpro.local:3100</span>
       </div>
       <div class="status-item">
         <span class="status-label">서비스</span>
@@ -686,10 +686,10 @@
       <section id="start">
         <h2>딱 한 줄 요약: 서비스는 지금 운영 중이다</h2>
         <p class="lead">production build가 현재 Mac에서 백그라운드로 실행되고 있다. 홈, 실제 레시피 데이터, 모바일 화면, 재시작 복구와 세 가지 소셜 로그인을 확인했다.</p>
-        <a class="action-link" href="http://192-168-0-36.sslip.io:3100">휴대폰용 production 열기</a>
+        <a class="action-link" href="http://cwjsui-macbookpro.local:3100">휴대폰용 production 열기</a>
         <div class="notice warn">
           <strong>같은 와이파이에서만 사용</strong>
-          서버는 <code>0.0.0.0:3100</code>에서 요청을 받는다. 휴대폰에는 IP를 직접 입력하지 말고 소셜 로그인이 가능한 <code>192-168-0-36.sslip.io:3100</code>을 입력한다.
+          서버는 <code>0.0.0.0:3100</code>에서 요청을 받는다. 휴대폰에는 숫자 IP를 직접 입력하지 말고, IP가 바뀌어도 유지되는 <code>cwjsui-macbookpro.local:3100</code>을 입력한다.
         </div>
         <div class="grid">
           <div class="fact"><strong>실행 방식</strong><span>Next.js production build를 <code>launchd</code>가 실행한다.</span></div>
@@ -712,7 +712,8 @@
               <tr><td>production server</td><td><code>pnpm start</code></td><td>build 결과물을 실행하는 서버</td><td class="ok">실행 중</td></tr>
               <tr><td>Mac 자동 실행</td><td><code>운영 래퍼 install</code></td><td>기존 build 검사, 품질 검사, launchd 등록, HTTP 확인</td><td class="ok">설치됨</td></tr>
               <tr><td>LAN 접속</td><td><code>0.0.0.0:3100</code></td><td>신뢰하는 같은 와이파이의 기기에서 접속</td><td class="ok">설정됨</td></tr>
-              <tr><td>휴대폰 주소</td><td><code>192-168-0-36.sslip.io:3100</code></td><td>실제로는 이 Mac의 <code>192.168.0.36</code>으로 연결되는 DNS 이름</td><td class="ok">로그인 통과</td></tr>
+              <tr><td>휴대폰 주소</td><td><code>cwjsui-macbookpro.local:3100</code></td><td>mDNS가 같은 와이파이에서 현재 Mac IP를 찾아 주는 고정 이름</td><td class="ok">로그인 통과</td></tr>
+              <tr><td>현재 IP 보조 주소</td><td><code>192-168-0-11.sslip.io:3100</code></td><td><code>.local</code>을 지원하지 않는 기기용이며 Mac IP가 바뀌면 함께 바뀜</td><td class="ok">HTTP 200</td></tr>
               <tr><td>외부 공개</td><td>도메인 + HTTPS</td><td>인터넷 사용자가 접속하는 운영</td><td>이번 범위 아님</td></tr>
             </tbody>
           </table>
@@ -778,8 +779,8 @@
             <span class="cause-number">7</span>
             <div>
               <h3>소셜 로그인 후 Vercel 또는 0.0.0.0으로 이동</h3>
-              <p>Supabase Auth는 <code>192.168.x.x</code> 같은 IP 주소를 허용 목록에 넣어도 로그인 리디렉션 대상으로 받지 않는다. Next.js callback도 외부 주소 대신 서버 바인드 주소를 사용할 수 있었다.</p>
-              <p class="fix">접속 주소를 <code>192-168-0-36.sslip.io:3100</code>으로 바꾸고 Supabase·네이버 설정과 앱 callback을 같은 주소로 맞췄다. Google·네이버·카카오를 실제 로그인해 모두 LAN 유튜브 가져오기 화면으로 돌아오는 것을 확인했다.</p>
+              <p>Supabase 허용 목록에 현재 접속 주소가 없으면 기본 Site URL인 Vercel로 이동한다. 예전 <code>sslip.io</code> 주소는 Mac IP가 <code>192.168.0.36</code>에서 <code>192.168.0.11</code>로 바뀐 뒤 더 이상 현재 Mac을 가리키지 않았다.</p>
+              <p class="fix">운영 기준 주소와 Supabase 기본 <code>Site URL</code>을 <code>cwjsui-macbookpro.local:3100</code>으로 고정하고, Supabase 허용 목록과 네이버 서비스 URL도 같은 주소로 맞췄다. 앱 환경변수도 같은 주소로 다시 빌드했다. Chrome에서 Google·네이버 로그인을 실제 완료해 Vercel이 아닌 <code>/mypage</code>로 돌아왔고, 카카오는 등록 오류 없이 정확한 앱·Supabase callback을 담은 로그인 화면까지 확인했다.</p>
             </div>
           </article>
         </div>
@@ -802,8 +803,9 @@
           <li>production build 통과</li>
           <li>데스크톱·모바일 화면 통과</li>
           <li>LAN CSS·JavaScript·이미지 로딩 통과</li>
-          <li>Supabase 로그인·계정연결 Redirect URL 6개 등록</li>
-          <li>Google·네이버·카카오 실제 로그인 왕복 통과</li>
+          <li>Supabase에 고정 <code>.local</code> 및 현재 IP 보조 Redirect URL 등록</li>
+          <li>IP 변경 후 Google·네이버 실제 로그아웃·재로그인 왕복 통과</li>
+          <li>카카오 OAuth의 앱 복귀 주소와 원격 Supabase callback 확인</li>
           <li>launchd 재시작 복구 통과</li>
           <li class="pending">실제 Mac 재부팅 smoke는 미실행</li>
         </ul>
@@ -829,7 +831,10 @@
               <tr><td>브라우저</td><td class="ok">통과</td><td>desktop/mobile, 깨진 이미지·가로 넘침·오류 0</td></tr>
               <tr><td>재시작</td><td class="ok">통과</td><td>새 PID 확인, 홈·레시피 API HTTP 200</td></tr>
               <tr><td>LAN 접속</td><td class="ok">통과</td><td><code>TCP *:3100</code>, LAN 홈·레시피 API HTTP 200</td></tr>
-              <tr><td>소셜 로그인</td><td class="ok">통과</td><td>Google·네이버·카카오 → <code>192-168-0-36.sslip.io:3100/menu/add/youtube</code></td></tr>
+              <tr><td>Google 로그인</td><td class="ok">통과</td><td><code>조해피</code> 계정 → <code>cwjsui-macbookpro.local:3100/mypage</code>, Vercel 이동 없음</td></tr>
+              <tr><td>네이버 로그인</td><td class="ok">통과</td><td>개발자센터 서비스 URL 수정 후 <code>.local</code> 마이페이지 복귀</td></tr>
+              <tr><td>카카오 로그인</td><td>부분 확인</td><td>등록 오류 없이 로그인 화면 진입, <code>redirect_to</code>와 Supabase callback 정확함; 비밀번호 이후 왕복 미실행</td></tr>
+              <tr><td>LAN 주소</td><td class="ok">통과</td><td>고정 <code>.local</code>과 현재 IP용 <code>sslip.io</code> 모두 HTTP 200</td></tr>
               <tr><td>LAN Playwright</td><td class="ok">통과</td><td>guest 9개 경로, 320·390·1440px, 실제 실패 요청·오류·오버플로 0</td></tr>
               <tr><td>픽셀 비교</td><td class="ok">통과</td><td>LAN 모바일 홈과 정상 loopback 기준 차이 0</td></tr>
             </tbody>
@@ -884,7 +889,7 @@
       <section id="trouble">
         <h2>장애가 보일 때 확인 순서</h2>
         <ol>
-          <li>휴대폰에서 <a href="http://192-168-0-36.sslip.io:3100">LAN production 주소</a>를 다시 연다.</li>
+          <li>휴대폰에서 <a href="http://cwjsui-macbookpro.local:3100">고정 LAN production 주소</a>를 다시 연다.</li>
           <li><code>./scripts/run-local-mac-production.sh status</code>에서 <code>running: yes</code>인지 확인한다.</li>
           <li><code>./scripts/run-local-mac-production.sh restart</code>를 실행한다.</li>
           <li>계속 실패하면 오류 로그 마지막 100줄을 확인한다.</li>
@@ -899,7 +904,8 @@
               <li><code>SUPABASE_SERVICE_ROLE_KEY</code>를 브라우저 변수로 만들지 않는다.</li>
               <li>공유기에서 포트 <code>3100</code>을 포트 포워딩하지 않는다.</li>
               <li>신뢰할 수 없는 공용 와이파이에서는 서비스를 실행하지 않는다.</li>
-              <li>Mac의 LAN IP가 바뀌면 <code>sslip.io</code> 주소와 OAuth 설정도 함께 갱신한다.</li>
+              <li>평소에는 IP 변경 영향을 받지 않는 <code>cwjsui-macbookpro.local</code> 주소를 사용한다.</li>
+              <li><code>.local</code>을 지원하지 않는 기기에서만 현재 IP용 <code>sslip.io</code> 보조 주소를 사용한다.</li>
               <li>Amphetamine은 현재 꺼져 있으므로 Mac 잠자기 상태를 확인한다.</li>
             </ul>
           </div>
