@@ -4,7 +4,7 @@
 >
 > Stage 4 evidence is local-fixture only: the shared shell/primitives, capability-off CTA composition, browser dirty guard, managed-image cleanup, 390px/320px Playwright and 20 PNG authority set are implemented on `feature/fe-personal-recipe-editor-decoupling`. Plain successor/merge-gate bullets are intentionally outside the machine Stage 4 checklist; they remain owned by #6, #8 or post-merge verification and are not claimed here.
 >
-> Stage 4/5 implementation and its merge gate closed through PR #1243: exact implementation head `e177a882e0fbc35847895a7a0f1dd775ff4425d1` completed 20 checks successfully with one documented normal skip, then squash-merged as `6565c2a84f3b7eba9f0579db7b91fed12fc08f23`. The Stage 6 hybrid verifier is implemented test-first, but full lifecycle verification remains pending until its merged-exact execution has truthful local and Manual Only evidence; future gates below remain explicitly unclaimed.
+> Stage 4/5 implementation and its merge gate closed through PR #1243: exact implementation head `e177a882e0fbc35847895a7a0f1dd775ff4425d1` completed 20 checks successfully with one documented normal skip, then squash-merged as `6565c2a84f3b7eba9f0579db7b91fed12fc08f23`. PR #1246 merged the test-first Stage 6 hybrid verifier as `354c569c8e40889bcfa7d9832cb9cec93f53db46`, and its merged exact-SHA dry-run passed. Full lifecycle verification remains pending until the complete local Data/Storage plus sanitized remote Auth evidence path passes; future gates below remain explicitly unclaimed.
 
 ## Existing Backend Boundary Lock
 

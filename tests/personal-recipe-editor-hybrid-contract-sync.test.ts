@@ -190,8 +190,22 @@ describe("personal recipe editor hybrid contract lock", () => {
     expect(workItemNotes).toContain(
       "e177a882e0fbc35847895a7a0f1dd775ff4425d1",
     );
-    expect(workItemNotes).toContain("merged-SHA hybrid verifier remains pending");
+    expect(workItemNotes).toContain("PR #1246 merged");
+    expect(workItemNotes).toContain(
+      "354c569c8e40889bcfa7d9832cb9cec93f53db46",
+    );
+    expect(workItemNotes).toContain("21 green or intended-skip checks");
+    expect(workItemNotes).toContain("merged exact-SHA dry-run passed");
+    expect(workItemNotes).toContain(
+      "full local/remote evidence remains pending",
+    );
     expect(statusNotes).toContain("PR #1243 merged");
+    expect(statusNotes).toContain("PR #1246 merged");
+    expect(statusNotes).toContain("21 green or intended-skip checks");
+    expect(statusNotes).toContain("merged exact-SHA dry-run passed");
+    expect(statusNotes).toContain(
+      "full local/remote evidence remains pending",
+    );
     expect(statusNotes).toContain("20 success and one normal full-regression skip");
     expect(statusNotes).toContain("external personal write dark");
   });
