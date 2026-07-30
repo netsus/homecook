@@ -293,7 +293,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 1 | A | `prepared-food-search-relevance` | merged | PR #1074/#1097/#1099/#1100/#1101/#1103/#1104/#1105/#1108 merged; retained production read-only subset and current-head gates passed; original apply provenance remains pending Manual Only |
 | 2 | B | `product-ingredient-link-foundation` | docs | F0 + #3 server-MacBook local-first joint account-delete activation gate |
 | 3 | B | `recipe-visibility-read-hardening` | merged | F0 local runtime; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
-| 4 | B | `recipe-snapshot-authority-foundation` | in-progress | #3 merged; PR #1218 Stage 2 + PR #1219 Stage 4 merged, PR #1231 hybrid relock 뒤 delta/reverification 진행 중 |
+| 4 | B | `recipe-snapshot-authority-foundation` | in-progress | #3 merged; PR #1218 Stage 2 + PR #1219 Stage 4, PR #1231 hybrid relock, PR #1232 verifier merged; exact-epoch regression과 Manual Only evidence 진행 중 |
 | 5 | C | `personal-recipe-editor-decoupling` | docs | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
 | 6 | C | `personal-recipe-customization-write-core` | docs | #2 + #3 + #4 + #5 |
 | 7 | C | `recipe-content-snapshot-future-propagation` | docs | #4 + #6; `cook-mode-whole-board` merged |

@@ -61,13 +61,15 @@ describe("recipe snapshot hybrid contract lock", () => {
     expect(readme).toContain("PR #1218");
     expect(readme).toContain("PR #1219");
     expect(readme).toContain("PR #1220");
+    expect(readme).toContain("PR #1232 merged");
     expect(readme).toContain("hybrid delta/reverification");
     expect((workItem.status as Record<string, unknown>)).toMatchObject({
       lifecycle: "in_progress",
       verification_status: "pending",
     });
     expect(statusItem).toMatchObject({
-      branch: "fix/recipe-snapshot-hybrid-verifier",
+      branch: "fix/recipe-snapshot-stage2-regression-evidence",
+      pr_path: "pending",
       lifecycle: "in_progress",
       verification_status: "pending",
     });
@@ -89,5 +91,23 @@ describe("recipe snapshot hybrid contract lock", () => {
     expect(acceptance).toContain("remote exact-epoch delete");
     expect(acceptance).toContain("terminal readback");
     expect(acceptance).toContain("mirror terminal");
+  });
+
+  it("locks the hybrid exact-epoch cleanup regression into required automation", () => {
+    const automation = read(automationPath);
+
+    expect(automation).toContain(
+      "tests/recipe-snapshot-hybrid-account-cleanup-postgres.integration.test.ts",
+    );
+  });
+
+  it("bounds PostgreSQL subprocesses and fails closed when teardown cannot stop the server", () => {
+    const runner = read(
+      "scripts/run-recipe-snapshot-hybrid-account-cleanup-postgres-integration.mjs",
+    );
+
+    expect(runner).toContain("COMMAND_TIMEOUT_MS");
+    expect(runner).toContain("timeout: COMMAND_TIMEOUT_MS");
+    expect(runner).toContain("POSTGRES_STOP_FAILED");
   });
 });
