@@ -956,11 +956,28 @@ export function buildRecipeSnapshotAuthorityRemoteVerificationPlan({ mode }) {
 export function assertRecipeSnapshotAuthorityMergedExactSource({
   head,
   originMaster,
+  isAncestorOfOriginMaster,
+  legacyGrafts,
   trackedStatus,
 }) {
-  if (head !== originMaster) {
+  if (
+    !/^[0-9a-f]{40}$/u.test(head)
+    || !/^[0-9a-f]{40}$/u.test(originMaster)
+  ) {
     throw new Error(
-      "post-merge read-only verification requires HEAD to equal origin/master",
+      "post-merge read-only verification requires exact 40-character commit SHAs",
+    );
+  }
+  if (
+    isAncestorOfOriginMaster !== true
+  ) {
+    throw new Error(
+      "post-merge read-only verification requires HEAD to be merged into origin/master",
+    );
+  }
+  if (legacyGrafts !== "") {
+    throw new Error(
+      "post-merge read-only verification rejects legacy Git grafts",
     );
   }
   if (trackedStatus !== "") {
@@ -969,6 +986,35 @@ export function assertRecipeSnapshotAuthorityMergedExactSource({
     );
   }
   return head;
+}
+
+const RECIPE_SNAPSHOT_AUTHORITY_UNSAFE_GIT_ENVIRONMENT_KEYS = new Set([
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_CEILING_DIRECTORIES",
+  "GIT_COMMON_DIR",
+  "GIT_CONFIG_COUNT",
+  "GIT_CONFIG_GLOBAL",
+  "GIT_CONFIG_PARAMETERS",
+  "GIT_CONFIG_SYSTEM",
+  "GIT_DIR",
+  "GIT_EXEC_PATH",
+  "GIT_INDEX_FILE",
+  "GIT_NAMESPACE",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_REPLACE_REF_BASE",
+  "GIT_SHALLOW_FILE",
+  "GIT_WORK_TREE",
+]);
+
+export function buildRecipeSnapshotAuthorityGitEnvironment({
+  baseEnvironment,
+}) {
+  return Object.fromEntries(
+    Object.entries(baseEnvironment).filter(([key]) =>
+      !RECIPE_SNAPSHOT_AUTHORITY_UNSAFE_GIT_ENVIRONMENT_KEYS.has(key)
+      && !/^GIT_CONFIG_(?:KEY|VALUE)_\d+$/u.test(key)
+    ),
+  );
 }
 
 export function parseRecipeSnapshotAuthorityLinkedDatabaseEnvironment({

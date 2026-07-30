@@ -48,6 +48,8 @@ describe("recipe snapshot hybrid contract lock", () => {
     expect(bundle).toContain("local application DB");
     expect(bundle).toContain("local auth.users=0");
     expect(bundle).toContain("exact epoch");
+    expect(read(readmePath)).toContain("historical merged SHA");
+    expect(read(automationPath)).toContain("origin/master ancestor");
   });
 
   it("records the merged regression evidence while keeping full verification pending", () => {
