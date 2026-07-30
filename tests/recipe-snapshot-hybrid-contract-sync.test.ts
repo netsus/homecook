@@ -88,6 +88,10 @@ describe("recipe snapshot hybrid contract lock", () => {
     expect(evidenceBundle).toContain(
       "94ae1a2077d63974c73a506add7b6647bf69d6d0",
     );
+    expect(evidenceBundle).toContain(
+      "29115dee2830f657a594ab68a8a6a3efe107dec9",
+    );
+    expect(evidenceBundle).toContain("historical dry-run passed");
     expect(evidenceBundle).toContain("14 success and 10 intended skips");
     expect(evidenceBundle).toContain("clean master dry-run passed");
     expect(evidenceBundle).toContain(
@@ -100,8 +104,8 @@ describe("recipe snapshot hybrid contract lock", () => {
       evaluation_status: "not_started",
     });
     expect(statusItem).toMatchObject({
-      branch: "docs/recipe-snapshot-verifier-merge-evidence",
-      pr_path: "https://github.com/netsus/homecook/pull/1252",
+      branch: "docs/recipe-snapshot-historical-dry-run-evidence",
+      pr_path: "https://github.com/netsus/homecook/pull/1253",
       lifecycle: "in_progress",
       verification_status: "pending",
       evaluation_status: "not_started",

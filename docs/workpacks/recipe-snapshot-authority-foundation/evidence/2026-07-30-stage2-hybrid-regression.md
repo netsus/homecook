@@ -158,5 +158,11 @@ Production writes: 0. Staging writes: 0. Remote application writes: 0.
 - Both remote and hybrid clean `master == origin/master` dry-runs passed at
   exact SHA `94ae1a2077d63974c73a506add7b6647bf69d6d0` in read-only mode with
   production/staging/remote application writes all 0.
+- PR #1252 advanced `origin/master` to
+  `29115dee2830f657a594ab68a8a6a3efe107dec9`.
+- From clean detached historical ancestor
+  `94ae1a2077d63974c73a506add7b6647bf69d6d0`, both remote and hybrid
+  historical dry-run passed in read-only mode with production/staging/remote
+  application writes all 0.
 - This reconciliation does not replace the still-pending full local/remote
   evidence listed above and does not close the workpack lifecycle.

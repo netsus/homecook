@@ -186,6 +186,12 @@ Schema Change:
   `94ae1a2077d63974c73a506add7b6647bf69d6d0`. Both clean master dry-runs
   passed at that exact SHA in read-only mode with production/staging/remote
   application writes 0. This does not close the full evidence gate.
+- After PR #1252 advanced `origin/master` to
+  `29115dee2830f657a594ab68a8a6a3efe107dec9`, both remote and hybrid
+  historical dry-run passed from clean detached ancestor
+  `94ae1a2077d63974c73a506add7b6647bf69d6d0` in read-only mode with
+  production/staging/remote application writes 0. Full local/remote evidence
+  remains pending.
 - Detailed evidence:
   `evidence/2026-07-30-stage2-hybrid-regression.md`.
 
