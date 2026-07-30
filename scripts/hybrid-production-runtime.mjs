@@ -6,6 +6,7 @@ import {
   chmodSync,
   closeSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
@@ -19,6 +20,7 @@ import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  assertBackupMatchesCurrent,
   assertPinnedImageInspection,
   assertPreRestoreBackupBinding,
   assertDockerEnginePlatform,
@@ -32,10 +34,14 @@ import {
   evaluateCapacityPreflight,
   evaluateMemoryCapacityPreflight,
   evaluateRuntimeStatus,
+  planPostRestoreMigrationAdvance,
   runRestorePublicationGate,
   synchronizeRemoteJwks,
   validateHybridProductionConfig,
+  validateInstalledSemanticState,
   validateSemanticRestoreEvidence,
+  validateStoragePayloadInventory,
+  validateStorageXattrManifest,
 } from "./lib/hybrid-production-runtime.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -59,6 +65,13 @@ const SECRET_NAMES = Object.freeze([
 ]);
 const BACKUP_KEY_ENV = "HOMECOOK_HYBRID_BACKUP_KEY";
 const BACKUP_FORMAT = "homecook-hybrid-complete-v2";
+const STORAGE_XATTR_ENTRY =
+  ".homecook-complete-v2-storage-xattrs.json";
+const STORAGE_XATTR_FORMAT = "homecook-storage-xattrs-v1";
+const STORAGE_XATTR_NAMES = Object.freeze([
+  "user.supabase.cache-control",
+  "user.supabase.content-type",
+]);
 const PBKDF2_ITERATIONS = 200_000;
 const MIGRATIONS_DIR = join(ROOT, "supabase/migrations");
 const POSTGRES_CONTAINERS = new Map();
@@ -571,6 +584,58 @@ function applyMigrations(runtime) {
   }
 }
 
+function applyPendingMigrationsAtomically(runtime) {
+  ensureMigrationLedger(runtime);
+  const appliedVersions = [];
+  for (const path of migrationFiles()) {
+    const filename = basename(path, ".sql");
+    const version = filename.split("_", 1)[0];
+    if (
+      !/^[0-9]{14}$/u.test(version)
+      || !/^[A-Za-z0-9_]+$/u.test(filename)
+    ) {
+      fail(`Migration filename is unsafe: ${filename}.`);
+    }
+    const applied = psql(
+      runtime,
+      `select count(*) from supabase_migrations.schema_migrations where version = '${version}';`,
+      { tuples: true },
+    ).trim();
+    if (applied === "1") {
+      continue;
+    }
+    const sql = readFileSync(path, "utf8");
+    const begin = /^\s*begin\s*;/iu.exec(sql);
+    const commit = /commit\s*;\s*$/iu.exec(sql);
+    if (!begin || !commit || commit.index <= begin[0].length) {
+      fail(`Forward migration must own one outer transaction: ${filename}.`);
+    }
+    const body = sql.slice(begin[0].length, commit.index).trim();
+    psql(
+      runtime,
+      `
+        begin;
+        set local lock_timeout = '15s';
+        set local statement_timeout = '10min';
+        lock table auth.users in share row exclusive mode;
+        lock table private.remote_auth_identity_epochs in share mode;
+        ${body}
+        insert into supabase_migrations.schema_migrations
+          (version, statements, name)
+        values (
+          '${version}',
+          array[]::text[],
+          '${filename}'
+        );
+        commit;
+      `,
+      { failure: `Atomic forward migration failed for ${filename}.` },
+    );
+    appliedVersions.push(version);
+  }
+  return Object.freeze(appliedVersions);
+}
+
 const RESIDUAL_SQL = `
   select json_build_object(
     'auth_users', (select count(*) from auth.users),
@@ -612,17 +677,12 @@ function semanticState(runtime) {
   return JSON.parse(psql(runtime, RESIDUAL_SQL, { tuples: true }).trim());
 }
 
-function assertInstalled(runtime) {
+function assertInstalled(
+  runtime,
+  expectedMigrationCount = migrationFiles().length,
+) {
   const state = semanticState(runtime);
-  if (
-    state.auth_users !== 0
-    || state.auth_users_residual !== 0
-    || state.invalid_constraints !== 0
-    || state.runtime_ready !== true
-    || state.migration_count !== migrationFiles().length
-  ) {
-    fail("Installed schema failed the semantic readiness gate.");
-  }
+  validateInstalledSemanticState(state, expectedMigrationCount);
   return state;
 }
 
@@ -1676,7 +1736,151 @@ function dumpDatabase(runtime, destination) {
   );
 }
 
+function writeStorageXattrManifest(runtime, destinationDir) {
+  const script = `
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const xattr = require("fs-xattr");
+    const [root, output] = process.argv.slice(1);
+    const allowed = ${JSON.stringify(STORAGE_XATTR_NAMES)};
+    const files = [];
+    const walk = (directory) => {
+      for (const entry of fs.readdirSync(directory, {
+        withFileTypes: true,
+      })) {
+        const absolute = path.join(directory, entry.name);
+        const stat = fs.lstatSync(absolute);
+        if (stat.isSymbolicLink()) {
+          throw new Error("Storage volume may not contain links.");
+        }
+        if (stat.isDirectory()) {
+          walk(absolute);
+          continue;
+        }
+        if (!stat.isFile()) {
+          throw new Error("Storage volume may contain only regular files.");
+        }
+        const names = xattr.listSync(absolute).sort();
+        if (
+          names.length !== allowed.length
+          || names.some((name, index) => name !== allowed[index])
+        ) {
+          throw new Error("Storage file xattr allowlist mismatch.");
+        }
+        files.push({
+          attributes: Object.fromEntries(names.map((name) => [
+            name,
+            xattr.getSync(absolute, name).toString("base64"),
+          ])),
+          path: path.relative(root, absolute)
+            .split(path.sep).join("/"),
+        });
+      }
+    };
+    walk(root);
+    files.sort((left, right) => left.path.localeCompare(right.path));
+    fs.writeFileSync(output, JSON.stringify({
+      files,
+      format: ${JSON.stringify(STORAGE_XATTR_FORMAT)},
+    }), { flag: "wx", mode: 0o600 });
+  `;
+  run(
+    "docker",
+    [
+      "run",
+      "--rm",
+      "--platform",
+      runtime.config.HYBRID_DOCKER_PLATFORM,
+      "--entrypoint",
+      "node",
+      "--workdir",
+      "/app",
+      "-v",
+      `${runtime.config.HYBRID_STORAGE_VOLUME_NAME}:/volume:ro`,
+      "-v",
+      `${destinationDir}:/backup`,
+      runtime.config.HYBRID_STORAGE_IMAGE,
+      "-e",
+      script,
+      "/volume",
+      `/backup/${STORAGE_XATTR_ENTRY}`,
+    ],
+    { failure: "Storage xattr manifest creation failed." },
+  );
+}
+
+function inspectStorageXattrArchive(archivePath, storageFiles) {
+  const names = run("tar", ["-tzf", archivePath], {
+    failure: "Storage archive entry inspection failed.",
+  });
+  const verbose = run("tar", ["-tvzf", archivePath], {
+    failure: "Storage archive type inspection failed.",
+  });
+  const entries = assertSafeTarArchive({ names, verbose });
+  const verboseEntries = verbose.split(/\r?\n/u).filter(Boolean);
+  const normalizedEntries = entries.map((entry) =>
+    entry.replace(/^\.\//u, ""));
+  if (new Set(normalizedEntries).size !== normalizedEntries.length) {
+    fail("Storage payload archive contains a duplicate path.");
+  }
+  const manifestEntries = entries.filter((entry) =>
+    entry.replace(/^\.\//u, "") === STORAGE_XATTR_ENTRY);
+  if (manifestEntries.length !== 1) {
+    fail("Storage xattr manifest is missing or duplicated.");
+  }
+  const inspectionDir = mkdtempSync(join(
+    tmpdir(),
+    "homecook-storage-archive-inventory-",
+  ));
+  chmodSync(inspectionDir, 0o700);
+  try {
+    const extractedFiles = new Map();
+    const inventory = entries.map((entry, index) => {
+      if (verboseEntries[index][0] === "d") {
+        return { path: entry, type: "directory" };
+      }
+      const outputPath = join(inspectionDir, `${index}.payload`);
+      run(
+        "tar",
+        ["-xOzf", archivePath, entry],
+        {
+          failure: "Storage payload extraction failed.",
+          stdoutPath: outputPath,
+        },
+      );
+      extractedFiles.set(entry, outputPath);
+      return {
+        bytes: statSync(outputPath).size,
+        path: entry,
+        sha256: sha256File(outputPath),
+        type: "file",
+      };
+    });
+    validateStoragePayloadInventory({
+      entries: inventory,
+      metadataPath: STORAGE_XATTR_ENTRY,
+      storageFiles,
+    });
+    let manifest;
+    try {
+      manifest = JSON.parse(readFileSync(
+        extractedFiles.get(manifestEntries[0]),
+        "utf8",
+      ));
+    } catch {
+      fail("Storage xattr manifest is not valid JSON.");
+    }
+    validateStorageXattrManifest({ manifest, storageFiles });
+    return manifest;
+  } finally {
+    rmSync(inspectionDir, { force: true, recursive: true });
+  }
+}
+
 function dumpStorage(runtime, destinationDir) {
+  const stagingDir = join(destinationDir, "storage-staging");
+  mkdirSync(stagingDir, { mode: 0o700 });
+  writeStorageXattrManifest(runtime, stagingDir);
   run(
     "docker",
     [
@@ -1687,11 +1891,27 @@ function dumpStorage(runtime, destinationDir) {
       "-v",
       `${runtime.config.HYBRID_STORAGE_VOLUME_NAME}:/volume:ro`,
       "-v",
+      `${stagingDir}:/staging`,
+      runtime.config.HYBRID_NODE_IMAGE,
+      "sh",
+      "-c",
+      "cd /volume && tar -cf - . | tar -xf - -C /staging",
+    ],
+    { failure: "Storage volume staging failed." },
+  );
+  run(
+    "docker",
+    [
+      "run",
+      "--rm",
+      "--platform",
+      runtime.config.HYBRID_DOCKER_PLATFORM,
+      "-v",
       `${destinationDir}:/backup`,
       runtime.config.HYBRID_NODE_IMAGE,
       "sh",
       "-c",
-      "cd /volume && tar -czf /backup/storage.tar.gz .",
+      "cd /backup/storage-staging && tar -czf /backup/storage.tar.gz .",
     ],
     { failure: "Storage volume backup failed." },
   );
@@ -1722,6 +1942,10 @@ function createBackup(
     const dbDump = join(temp, "database.dump");
     dumpDatabase(runtime, dbDump);
     dumpStorage(runtime, temp);
+    inspectStorageXattrArchive(
+      join(temp, "storage.tar.gz"),
+      manifest.storage.files.files,
+    );
     const createdAt = new Date().toISOString();
     const metadata = {
       format: BACKUP_FORMAT,
@@ -1855,6 +2079,10 @@ function extractBackup(runtime, args, archive, temp) {
   ) {
     fail("Backup manifest or component checksum is invalid.");
   }
+  inspectStorageXattrArchive(
+    join(temp, "storage.tar.gz"),
+    manifest.manifest?.storage?.files?.files,
+  );
   return manifest;
 }
 
@@ -1867,6 +2095,51 @@ function verifyPreRestoreBackup(runtime, args, archive, expected) {
     const metadata = extractBackup(runtime, args, archive, temp);
     assertPreRestoreBackupBinding({ expected, metadata });
     return metadata;
+  } finally {
+    rmSync(temp, { force: true, recursive: true });
+  }
+}
+
+function verifyBackupArchive(runtime, args) {
+  const archiveOption = optionValue(args, "--archive");
+  if (!archiveOption || !isAbsolute(archiveOption)) {
+    fail("verify-backup requires --archive <absolute path>.");
+  }
+  const archive = resolve(archiveOption);
+  const temp = mkdtempSync(
+    join(tmpdir(), "homecook-hybrid-verify-backup-"),
+  );
+  chmodSync(temp, 0o700);
+  try {
+    const metadata = extractBackup(runtime, args, archive, temp);
+    let currentMatch = null;
+    if (hasFlag(args, "--against-current")) {
+      const current = currentManifest(runtime);
+      assertBackupMatchesCurrent({
+        current,
+        metadata,
+        runtime: {
+          postgresVolume:
+            runtime.config.HYBRID_POSTGRES_VOLUME_NAME,
+          project: runtime.config.HYBRID_COMPOSE_PROJECT_NAME,
+          storageVolume:
+            runtime.config.HYBRID_STORAGE_VOLUME_NAME,
+        },
+      });
+      currentMatch = true;
+    }
+    return {
+      archive_sha256: sha256File(archive),
+      auth_users: metadata.manifest?.semantic?.auth_users,
+      auth_users_residual:
+        metadata.manifest?.semantic?.auth_users_residual,
+      catalog_digest: metadata.manifest?.catalog?.digest,
+      created_at: metadata.created_at,
+      current_match: currentMatch,
+      database_digest: metadata.manifest?.database?.digest,
+      format: metadata.format,
+      storage_digest: metadata.manifest?.storage?.digest,
+    };
   } finally {
     rmSync(temp, { force: true, recursive: true });
   }
@@ -2109,14 +2382,6 @@ function restoreDatabase(runtime, dumpPath) {
 }
 
 function restoreStorage(runtime, archivePath) {
-  assertSafeTarArchive({
-    names: run("tar", ["-tzf", archivePath], {
-      failure: "Storage archive entry inspection failed.",
-    }),
-    verbose: run("tar", ["-tvzf", archivePath], {
-      failure: "Storage archive type inspection failed.",
-    }),
-  });
   run(
     "docker",
     [
@@ -2136,6 +2401,104 @@ function restoreStorage(runtime, archivePath) {
       basename(archivePath),
     ],
     { failure: "Storage restore failed." },
+  );
+  const script = `
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const xattr = require("fs-xattr");
+    const [root, manifestPath] = process.argv.slice(1);
+    const allowed = ${JSON.stringify(STORAGE_XATTR_NAMES)};
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    if (manifest.format !== ${JSON.stringify(STORAGE_XATTR_FORMAT)}) {
+      throw new Error("Storage xattr format mismatch.");
+    }
+    const expected = new Map(
+      manifest.files.map((file) => [file.path, file]),
+    );
+    const actual = [];
+    const walk = (directory) => {
+      for (const entry of fs.readdirSync(directory, {
+        withFileTypes: true,
+      })) {
+        const absolute = path.join(directory, entry.name);
+        if (absolute === manifestPath) continue;
+        const stat = fs.lstatSync(absolute);
+        if (stat.isSymbolicLink()) {
+          throw new Error("Restored Storage may not contain links.");
+        }
+        if (stat.isDirectory()) {
+          walk(absolute);
+          continue;
+        }
+        if (!stat.isFile()) {
+          throw new Error("Restored Storage contains a non-file.");
+        }
+        actual.push({
+          absolute,
+          relative: path.relative(root, absolute)
+            .split(path.sep).join("/"),
+        });
+      }
+    };
+    walk(root);
+    actual.sort((left, right) =>
+      left.relative.localeCompare(right.relative));
+    if (
+      actual.length !== expected.size
+      || actual.some((file) => !expected.has(file.relative))
+    ) {
+      throw new Error("Restored Storage file manifest mismatch.");
+    }
+    for (const file of actual) {
+      const evidence = expected.get(file.relative);
+      const names = Object.keys(evidence.attributes).sort();
+      if (
+        names.length !== allowed.length
+        || names.some((name, index) => name !== allowed[index])
+      ) {
+        throw new Error("Restored Storage xattr allowlist mismatch.");
+      }
+      for (const name of names) {
+        xattr.setSync(
+          file.absolute,
+          name,
+          Buffer.from(evidence.attributes[name], "base64"),
+        );
+      }
+      const restoredNames = xattr.listSync(file.absolute).sort();
+      if (
+        restoredNames.length !== allowed.length
+        || restoredNames.some((name, index) => name !== allowed[index])
+        || restoredNames.some((name) =>
+          !xattr.getSync(file.absolute, name).equals(
+            Buffer.from(evidence.attributes[name], "base64"),
+          ))
+      ) {
+        throw new Error("Restored Storage xattr verification failed.");
+      }
+    }
+    fs.unlinkSync(manifestPath);
+  `;
+  run(
+    "docker",
+    [
+      "run",
+      "--rm",
+      "--platform",
+      runtime.config.HYBRID_DOCKER_PLATFORM,
+      "--entrypoint",
+      "node",
+      "--workdir",
+      "/app",
+      "-v",
+      `${runtime.config.HYBRID_STORAGE_VOLUME_NAME}:/volume`,
+      runtime.config.HYBRID_STORAGE_IMAGE,
+      "-e",
+      script,
+      "/volume",
+      `/volume/${STORAGE_XATTR_ENTRY}`,
+    ],
+    { failure: "Storage xattr restoration failed." },
   );
 }
 
@@ -2207,14 +2570,25 @@ function restore(runtime, args) {
     compose(runtime, ["up", "-d", "--wait", "postgres"]);
     restoreDatabase(runtime, join(temp, "database.dump"));
     restoreStorage(runtime, join(temp, "storage.tar.gz"));
-    const state = assertInstalled(runtime);
-    const targetManifest = currentManifest(runtime);
+    const migrationAdvance = planPostRestoreMigrationAdvance({
+      archiveMigrationCount:
+        sourceManifest.manifest?.semantic?.migration_count,
+      currentMigrationCount: migrationFiles().length,
+    });
+    const archiveState = assertInstalled(
+      runtime,
+      migrationAdvance.archiveMigrationCount,
+    );
+    const archiveManifest = currentManifest(runtime);
     const phases = [
       "pre-data-schema",
       "hybrid-compatibility-fk-replacement",
       "application-data",
       "post-data-validation",
     ];
+    let forwardState;
+    let forwardManifest;
+    let forwardAppliedVersions = [];
     runRestorePublicationGate({
       forcePrivate: () => bestEffortGatewayPrivate(runtime),
       publish: () => {
@@ -2224,33 +2598,59 @@ function restore(runtime, args) {
       verify: () => {
         compareCatalogManifests(
           sourceManifest.manifest.catalog,
-          targetManifest.catalog,
+          archiveManifest.catalog,
         );
         validateSemanticRestoreEvidence({
           phases,
-          authUsers: state.auth_users,
-          authUsersResidual: state.auth_users_residual,
+          authUsers: archiveState.auth_users,
+          authUsersResidual: archiveState.auth_users_residual,
           catalogManifest: {
             source: sourceManifest.manifest.catalog.digest,
-            target: targetManifest.catalog.digest,
+            target: archiveManifest.catalog.digest,
           },
           publicManifest: {
             source: sourceManifest.manifest.database.digest,
-            target: targetManifest.database.digest,
+            target: archiveManifest.database.digest,
           },
           storageManifest: {
             source: sourceManifest.manifest.storage.digest,
-            target: targetManifest.storage.digest,
+            target: archiveManifest.storage.digest,
           },
         });
+        forwardAppliedVersions =
+          applyPendingMigrationsAtomically(runtime);
+        if (
+          forwardAppliedVersions.length
+          !== migrationAdvance.forwardMigrationCount
+        ) {
+          fail(
+            "Forward migration plan did not match applied versions.",
+          );
+        }
+        forwardState = assertInstalled(
+          runtime,
+          migrationAdvance.currentMigrationCount,
+        );
+        forwardManifest = currentManifest(runtime);
       },
     });
     return {
-      catalog_digest: targetManifest.catalog.digest,
-      database_digest: targetManifest.database.digest,
+      archive_exact: {
+        catalog_digest: archiveManifest.catalog.digest,
+        database_digest: archiveManifest.database.digest,
+        migration_count: archiveState.migration_count,
+        storage_digest: archiveManifest.storage.digest,
+      },
+      forward_migrated: {
+        catalog_digest: forwardManifest.catalog.digest,
+        database_digest: forwardManifest.database.digest,
+        migration_count: forwardState.migration_count,
+        migration_count_applied: forwardAppliedVersions.length,
+        migration_versions_applied: forwardAppliedVersions,
+        storage_digest: forwardManifest.storage.digest,
+      },
       phases,
       pre_restore_backup: preRestoreBackup,
-      storage_digest: targetManifest.storage.digest,
     };
   } finally {
     if (!published) {
@@ -2351,7 +2751,7 @@ function help() {
     [
       "Usage: node scripts/hybrid-production-runtime.mjs <command> [options]",
       "",
-      "Commands: validate install start status stop recover backup restore manifest capacity network",
+      "Commands: validate install start status stop recover backup verify-backup restore migrate-forward manifest capacity network",
       `Default config: ${DEFAULT_CONFIG}`,
       "",
       "Process-env secrets are test/rehearsal-only and require --allow-process-env-secrets.",
@@ -2462,6 +2862,9 @@ async function main() {
         });
       }
       break;
+    case "verify-backup":
+      print({ ...verifyBackupArchive(runtime, args), status: "PASS" });
+      break;
     case "restore":
       if (hasFlag(args, "--dry-run")) {
         assertRestoreAllowed({
@@ -2490,6 +2893,61 @@ async function main() {
         print({ ...restore(runtime, args), status: "PASS" });
       }
       break;
+    case "migrate-forward": {
+      const prebackupOption = optionValue(args, "--prebackup");
+      if (!prebackupOption || !isAbsolute(prebackupOption)) {
+        fail(
+          "migrate-forward requires --prebackup <absolute current complete-v2 archive>.",
+        );
+      }
+      forceGatewayPrivate(runtime);
+      try {
+        const backupEvidence = verifyBackupArchive(runtime, [
+          "--archive",
+          resolve(prebackupOption),
+          "--against-current",
+          ...(hasFlag(args, "--allow-process-env-secrets")
+            ? ["--allow-process-env-secrets"]
+            : []),
+        ]);
+        const beforeState = semanticState(runtime);
+        validateInstalledSemanticState(
+          beforeState,
+          beforeState.migration_count,
+        );
+        planPostRestoreMigrationAdvance({
+          archiveMigrationCount: beforeState.migration_count,
+          currentMigrationCount: migrationFiles().length,
+        });
+        const beforeManifest = currentManifest(runtime);
+        const appliedVersions =
+          applyPendingMigrationsAtomically(runtime);
+        const afterState = assertInstalled(runtime);
+        const afterManifest = currentManifest(runtime);
+        print({
+          applied_migration_versions: appliedVersions,
+          before: {
+            catalog_digest: beforeManifest.catalog.digest,
+            database_digest: beforeManifest.database.digest,
+            migration_count: beforeState.migration_count,
+            storage_digest: beforeManifest.storage.digest,
+          },
+          after: {
+            catalog_digest: afterManifest.catalog.digest,
+            database_digest: afterManifest.database.digest,
+            migration_count: afterState.migration_count,
+            storage_digest: afterManifest.storage.digest,
+          },
+          gateway_private: true,
+          prebackup_sha256: backupEvidence.archive_sha256,
+          status: "PASS",
+        });
+      } catch (error) {
+        bestEffortGatewayPrivate(runtime);
+        throw error;
+      }
+      break;
+    }
     case "manifest":
       print({ ...currentManifest(runtime), status: "PASS" });
       break;
