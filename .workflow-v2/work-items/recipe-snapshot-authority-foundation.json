@@ -80,7 +80,8 @@
       "pnpm validate:workpack -- --slice recipe-snapshot-authority-foundation",
       "node scripts/validate-automation-spec.mjs --slice recipe-snapshot-authority-foundation",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/recipe-snapshot-authority-hybrid-verifier.test.ts",
+      "pnpm exec vitest run tests/recipe-snapshot-authority-hybrid-verifier.test.ts tests/recipe-snapshot-authority-remote-verifier.test.ts",
+      "pnpm test:recipe-snapshot-authority:hybrid-cleanup-postgres",
       "pnpm exec vitest run tests/recipe-snapshot-authority.test.ts tests/recipe-snapshot-readers.test.ts tests/recipe-snapshot-security.test.ts tests/recipe-snapshot-account-delete.test.ts",
       "pnpm test:recipe-snapshot-authority:postgres",
       "pnpm verify:backend",
@@ -98,7 +99,8 @@
       "pnpm validate:workpack -- --slice recipe-snapshot-authority-foundation",
       "node scripts/validate-automation-spec.mjs --slice recipe-snapshot-authority-foundation",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/recipe-snapshot-authority-hybrid-verifier.test.ts",
+      "pnpm exec vitest run tests/recipe-snapshot-authority-hybrid-verifier.test.ts tests/recipe-snapshot-authority-remote-verifier.test.ts",
+      "pnpm test:recipe-snapshot-authority:hybrid-cleanup-postgres",
       "pnpm exec vitest run tests/recipe-snapshot-hybrid-contract-sync.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
@@ -159,5 +161,5 @@
     "Unapproved production or staging migration database Storage or remote application write"
   ],
   "open_questions": [],
-  "notes": "PR #1231 merged the hybrid remote Auth/local Data relock after PR #1218 Stage 2 and PR #1219 Stage 4. Draft PR #1232 carries the TDD hybrid verifier delta on fix/recipe-snapshot-hybrid-verifier; this is not a fresh Stage 2 or duplicate migration. The verifier accepts only a loopback local application DB, proves local auth.users=0, binds sanitized remote Auth aggregate evidence to the exact merged SHA, and performs no production/staging or remote application write. Merged-exact-SHA execution, hybrid exact-epoch cleanup regression and compatibility-release evidence remain pending; contract/null still waits for current+previous content-aware, one-release old-shape zero and pair-mismatch zero evidence."
+  "notes": "PR #1231 merged the hybrid remote Auth/local Data relock after PR #1218 Stage 2 and PR #1219 Stage 4. PR #1232 merged the TDD hybrid verifier as 6c9d2c32969d715de95813e93c61f005075c89a0; its exact-master dry-run passed and a separate read-only local query proved auth.users=0. fix/recipe-snapshot-stage2-regression-evidence adds fail-closed true mismatch/backfill checks, report-only historical direct inventory, an expired hybrid binding guard, operational identifier scrub, and one isolated exact-epoch cleanup regression for the currently implemented snapshot/product FK subset without production/staging or remote application writes. The actual merged verifier with real sanitized remote Auth evidence, local Storage evidence, compatibility-release observation window, full actual public.users inbound-FK cleanup rehearsal, Train B #2 integration and successor event/meal-log/non-image-idempotency cleanup links remain pending; contract/null still waits for current+previous content-aware, one-release old-shape zero and pair-mismatch zero evidence."
 }

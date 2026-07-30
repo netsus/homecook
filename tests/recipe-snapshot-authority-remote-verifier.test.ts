@@ -51,6 +51,19 @@ describe("recipe snapshot authority remote verifier", () => {
     expect(plan.sql).toContain("content_direct_mismatch_count");
     expect(plan.sql).toContain("backfill_gap_count");
     expect(plan.sql).toContain("compatibility_direct_only_write_count");
+    const backfillPredicate = plan.sql.match(
+      /count\(\*\) filter \(\s+where meal\.status in \('registered', 'shopping_done'\)[\s\S]*?\)::integer as backfill_gap_count/u,
+    )?.[0];
+    expect(backfillPredicate).toBeTruthy();
+    expect(backfillPredicate).not.toContain(
+      "meal.recipe_nutrition_snapshot_id",
+    );
+    expect(plan.sql).toMatch(
+      /meal\.recipe_nutrition_snapshot_id is not null\s+and meal\.recipe_nutrition_snapshot_id is distinct from content_snapshot\.recipe_nutrition_snapshot_id/u,
+    );
+    expect(plan.sql).not.toMatch(
+      /meal\.recipe_nutrition_snapshot_id is null\s+or meal\.recipe_nutrition_snapshot_id is distinct from content_snapshot\.recipe_nutrition_snapshot_id/u,
+    );
     expect(plan.sql).toContain("'remote_writes', 0");
     const manifest = JSON.parse(
       readFileSync(
@@ -284,6 +297,12 @@ describe("recipe snapshot authority remote verifier", () => {
       verifier.assertRecipeSnapshotAuthorityRemoteVerificationResult(
         validResult,
       ),
+    ).not.toThrow();
+    expect(() =>
+      verifier.assertRecipeSnapshotAuthorityRemoteVerificationResult({
+        ...validResult,
+        compatibility_direct_only_write_count: 1,
+      }),
     ).not.toThrow();
 
     for (const invalidResult of [
