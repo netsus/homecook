@@ -21,10 +21,12 @@ import {
   type RecipeNutritionSnapshotRow,
 } from "@/lib/server/recipe-nutrition-snapshot";
 import {
-  normalizeExpectedRecipeImageStorageOrigin,
   readRecipeImageProjection,
   resolveRecipeImageReadUrl,
 } from "@/lib/server/recipe-image-read";
+import {
+  readExpectedRecipeImageStorageOrigin,
+} from "@/lib/server/recipe-image-storage-origin";
 import {
   isMissingStepCookingMethodsRelation,
   RECIPE_STEP_SELECT_LEGACY,
@@ -73,11 +75,7 @@ function normalizePositiveNumber(value: unknown) {
 }
 
 function readExpectedStorageOrigin() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (!configuredUrl) {
-    throw new Error("managed recipe image read configuration is invalid");
-  }
-  return normalizeExpectedRecipeImageStorageOrigin(configuredUrl);
+  return readExpectedRecipeImageStorageOrigin();
 }
 
 async function readCurrentRecipeNutritionSnapshot(

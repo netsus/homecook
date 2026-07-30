@@ -68,7 +68,7 @@
       "classification": "user",
       "file": "app/api/v1/recipes/images/route.ts",
       "column": 29,
-      "line": 163,
+      "line": 154,
       "allowed": true,
       "factory": "createRecipeImageInternalClient",
       "kind": "internal-operation-call"
@@ -169,7 +169,7 @@
       "classification": "public",
       "file": "app/api/v1/recipes/[id]/route.ts",
       "column": 27,
-      "line": 284,
+      "line": 282,
       "kind": "remote-only-compatibility-call"
     }
   ],

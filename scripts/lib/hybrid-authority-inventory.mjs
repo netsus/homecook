@@ -257,10 +257,55 @@ function isClientModule(sourceFile) {
   return false;
 }
 
-function isCommonJsRequireCall(node) {
+function collectCommonJsRequireAliases(sourceFile) {
+  const aliases = new Set(["require"]);
+  const aliasEdges = [];
+  const visit = (node) => {
+    let target = null;
+    let value = null;
+    if (
+      ts.isVariableDeclaration(node)
+      && ts.isIdentifier(node.name)
+      && node.initializer
+    ) {
+      target = node.name.text;
+      value = unwrapExpression(node.initializer);
+    } else if (
+      ts.isBinaryExpression(node)
+      && node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+      && ts.isIdentifier(unwrapExpression(node.left))
+    ) {
+      target = unwrapExpression(node.left).text;
+      value = unwrapExpression(node.right);
+    }
+    if (target && value && ts.isIdentifier(value)) {
+      aliasEdges.push({ source: value.text, target });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const { source, target } of aliasEdges) {
+      if (
+        aliases.has(source)
+        && !aliases.has(target)
+      ) {
+        aliases.add(target);
+        changed = true;
+      }
+    }
+  }
+
+  return aliases;
+}
+
+function isCommonJsRequireCall(node, requireAliases = new Set(["require"])) {
   return ts.isCallExpression(node)
     && ts.isIdentifier(unwrapExpression(node.expression))
-    && unwrapExpression(node.expression).text === "require"
+    && requireAliases.has(unwrapExpression(node.expression).text)
     && node.arguments.length === 1;
 }
 
@@ -372,6 +417,7 @@ function collectClientImportGraph(repoRoot, files) {
     inspectedFiles.add(relativeFile);
     const importerDir = path.dirname(absoluteFile);
     const { sourceFile } = readSourceFile(repoRoot, absoluteFile);
+    const requireAliases = collectCommonJsRequireAliases(sourceFile);
     const imports = new Set();
 
     if (detectClientRoot && isClientModule(sourceFile)) {
@@ -462,7 +508,7 @@ function collectClientImportGraph(repoRoot, files) {
         if (ts.isStringLiteralLike(specifier)) {
           addRuntimeEdge(specifier.text);
         }
-      } else if (isCommonJsRequireCall(node)) {
+      } else if (isCommonJsRequireCall(node, requireAliases)) {
         const specifier = staticModuleSpecifier(node.arguments[0]);
         if (specifier !== null) {
           addRuntimeEdge(specifier);
@@ -529,6 +575,7 @@ function browserSupabaseRuntimeImportViolations(
       continue;
     }
     const { sourceFile } = readSourceFile(repoRoot, absoluteFile);
+    const requireAliases = collectCommonJsRequireAliases(sourceFile);
     const record = (node, packageName, kind) => {
       violations.push({
         file: relativeFile,
@@ -594,7 +641,7 @@ function browserSupabaseRuntimeImportViolations(
         } else if (isForbiddenPackage(specifier)) {
           record(node, specifier, "runtime-dynamic-import");
         }
-      } else if (isCommonJsRequireCall(node)) {
+      } else if (isCommonJsRequireCall(node, requireAliases)) {
         const specifier = staticModuleSpecifier(node.arguments[0]);
         if (specifier === null) {
           record(node, "<dynamic>", "unknown-runtime-require");

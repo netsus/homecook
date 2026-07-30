@@ -172,6 +172,11 @@ describe("hybrid authority AST/static gate", () => {
           kind: "unknown-runtime-dynamic-import",
         }),
         expect.objectContaining({
+          file: "components/forbidden-commonjs-alias-client.tsx",
+          kind: "runtime-require",
+          package: "@supabase/supabase-js",
+        }),
+        expect.objectContaining({
           file: "components/forbidden-commonjs-client.tsx",
           kind: "runtime-require",
           package: "@supabase/supabase-js",
@@ -228,11 +233,14 @@ describe("hybrid authority AST/static gate", () => {
         }),
       ]),
     );
-    expect(inventory.browserSupabaseRuntimeImportViolations).toHaveLength(18);
+    expect(inventory.browserSupabaseRuntimeImportViolations).toHaveLength(19);
     expect(inventory.browserSupabaseRuntimeImportViolations).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           file: "components/supabase-type-only-client.tsx",
+        }),
+        expect.objectContaining({
+          file: "components/safe-commonjs-helper-client.tsx",
         }),
         expect.objectContaining({
           file: "components/safe-local-runtime-client.tsx",

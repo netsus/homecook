@@ -1,6 +1,7 @@
 import {
   getAuthSupabaseEnv,
   getAuthSupabaseSecretKey,
+  getRemoteAuthIssuer,
 } from "./auth-env";
 
 export type DataAuthority = "remote" | "local-shadow" | "local";
@@ -82,6 +83,18 @@ export function getDataSupabaseEnv(): {
   );
 
   return { authority, url, publishableKey };
+}
+
+export function getDataSupabaseUrl() {
+  const authority = getDataAuthority();
+  if (authority === "remote" || authority === "local-shadow") {
+    return getRemoteAuthIssuer().slice(0, -"/auth/v1".length);
+  }
+
+  return normalizeDataUrl(
+    requireNonEmpty(process.env.DATA_SUPABASE_URL, "DATA_SUPABASE_URL"),
+    process.env.NODE_ENV === "production",
+  );
 }
 
 export function getLocalShadowDataSupabaseEnv() {

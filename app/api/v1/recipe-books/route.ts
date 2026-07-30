@@ -18,9 +18,11 @@ import {
   type RecipeBookImageReadRpcClient,
 } from "@/lib/server/recipe-book-image-read";
 import {
-  normalizeExpectedRecipeImageStorageOrigin,
   type RecipeImageReadStorageClient,
 } from "@/lib/server/recipe-image-read";
+import {
+  readExpectedRecipeImageStorageOrigin,
+} from "@/lib/server/recipe-image-storage-origin";
 import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
@@ -205,11 +207,7 @@ function getCurrentMaxSortOrder(rows: RecipeBookSortOrderRow[] | null) {
 }
 
 function readExpectedStorageOrigin() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (!configuredUrl) {
-    throw new Error("managed recipe image read configuration is invalid");
-  }
-  return normalizeExpectedRecipeImageStorageOrigin(configuredUrl);
+  return readExpectedRecipeImageStorageOrigin();
 }
 
 async function resolveRecipeBookCoverUrls({

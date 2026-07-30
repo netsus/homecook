@@ -244,11 +244,25 @@ describe("POST /api/v1/recipes/images", () => {
       kind: "succeeded",
       objectId: imageObjectId,
       readUrl:
-        "https://project.supabase.co/storage/v1/object/sign/recipe-images-private/path?token=signed",
+        "http://127.0.0.1:8000/storage/v1/object/sign/recipe-images-private/path?token=signed",
       readUrlExpiresAt: "2026-07-26T03:30:00.000Z",
       state: "uploaded_unlinked",
     });
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("HOMECOOK_DATA_AUTHORITY", "local");
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_SUPABASE_URL",
+      "https://auth.example.supabase.co",
+    );
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY",
+      "remote-auth-publishable",
+    );
+    vi.stubEnv(
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "https://legacy-auth.example.supabase.co",
+    );
+    vi.stubEnv("DATA_SUPABASE_URL", "http://127.0.0.1:8000");
+    vi.stubEnv("DATA_SUPABASE_PUBLISHABLE_KEY", "local-data-publishable");
 
     const formData = new FormData();
     const image = new File([new Uint8Array([1, 2, 3])], "recipe.png", {
@@ -276,7 +290,7 @@ describe("POST /api/v1/recipes/images", () => {
       data: {
         image_object_id: imageObjectId,
         read_url:
-          "https://project.supabase.co/storage/v1/object/sign/recipe-images-private/path?token=signed",
+          "http://127.0.0.1:8000/storage/v1/object/sign/recipe-images-private/path?token=signed",
         read_url_expires_at: "2026-07-26T03:30:00.000Z",
         state: "uploaded_unlinked",
       },
@@ -318,6 +332,7 @@ describe("POST /api/v1/recipes/images", () => {
       expect(managedInput).not.toHaveProperty(forbiddenField);
     }
     expect(managedInput.sessionAuthority.ownerUuid).toBe(userId);
+    expect(managedInput.expectedReadUrlOrigin).toBe("http://127.0.0.1:8000");
   });
 
   it("returns one opaque limited response with a positive Retry-After", async () => {

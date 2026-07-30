@@ -184,6 +184,7 @@ describe("18 manual recipe create backend", () => {
       revision: 3,
       state: "legacy",
     });
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
   });
 
   it("GET /api/v1/cooking-methods returns methods in the API envelope", async () => {

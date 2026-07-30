@@ -23,6 +23,9 @@ import {
   inspectRecipeImageUpload,
 } from "@/lib/server/recipe-image-upload";
 import {
+  readExpectedRecipeImageStorageOrigin,
+} from "@/lib/server/recipe-image-storage-origin";
+import {
   createRecipeImageInternalClient,
   createRouteHandlerClient,
 } from "@/lib/supabase/server";
@@ -35,20 +38,6 @@ type ManagedServiceRoleClient = ManagedRecipeImageRpcClient
 
 function isFile(value: FormDataEntryValue | null): value is File {
   return value instanceof File;
-}
-
-function readExpectedStorageOrigin() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (!configuredUrl) {
-    return null;
-  }
-
-  try {
-    const url = new URL(configuredUrl);
-    return url.protocol === "https:" ? url.origin : null;
-  } catch {
-    return null;
-  }
 }
 
 async function runManagedUpload({
@@ -117,8 +106,10 @@ async function runManagedUpload({
     );
   }
 
-  const expectedReadUrlOrigin = readExpectedStorageOrigin();
-  if (!expectedReadUrlOrigin) {
+  let expectedReadUrlOrigin: string;
+  try {
+    expectedReadUrlOrigin = readExpectedRecipeImageStorageOrigin();
+  } catch {
     return fail("INTERNAL_ERROR", "이미지를 업로드하지 못했어요.", 500);
   }
 

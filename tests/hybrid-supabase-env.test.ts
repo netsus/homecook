@@ -25,7 +25,11 @@ describe("hybrid Supabase environment boundary", () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "remote-publishable";
 
     const { getAuthSupabaseEnv } = await import("@/lib/supabase/auth-env");
-    const { getDataAuthority, getDataSupabaseEnv } = await import(
+    const {
+      getDataAuthority,
+      getDataSupabaseEnv,
+      getDataSupabaseUrl,
+    } = await import(
       "@/lib/supabase/data-env"
     );
 
@@ -40,6 +44,7 @@ describe("hybrid Supabase environment boundary", () => {
       publishableKey: "remote-publishable",
       authority: "remote",
     });
+    expect(getDataSupabaseUrl()).toBe("https://remote.example.supabase.co");
   });
 
   it("requires explicit remote Auth and loopback local Data values in local mode", async () => {
@@ -56,7 +61,9 @@ describe("hybrid Supabase environment boundary", () => {
     process.env.DATA_SUPABASE_PUBLISHABLE_KEY = "local-publishable";
 
     const { getAuthSupabaseEnv } = await import("@/lib/supabase/auth-env");
-    const { getDataSupabaseEnv } = await import("@/lib/supabase/data-env");
+    const { getDataSupabaseEnv, getDataSupabaseUrl } = await import(
+      "@/lib/supabase/data-env"
+    );
 
     expect(getAuthSupabaseEnv()).toMatchObject({
       url: "https://remote.example.supabase.co",
@@ -69,6 +76,7 @@ describe("hybrid Supabase environment boundary", () => {
       url: "http://127.0.0.1:8000",
       publishableKey: "local-publishable",
     });
+    expect(getDataSupabaseUrl()).toBe("http://127.0.0.1:8000");
   });
 
   it("keeps local-shadow responses and writes remote while exposing a read-only local target", async () => {
@@ -82,6 +90,7 @@ describe("hybrid Supabase environment boundary", () => {
 
     const {
       getDataSupabaseEnv,
+      getDataSupabaseUrl,
       getLocalShadowDataSupabaseEnv,
     } = await import("@/lib/supabase/data-env");
 
@@ -94,6 +103,7 @@ describe("hybrid Supabase environment boundary", () => {
       url: "http://127.0.0.1:8000",
       publishableKey: "local-publishable",
     });
+    expect(getDataSupabaseUrl()).toBe("https://remote.example.supabase.co");
   });
 
   it("fails closed when local production Data is not loopback", async () => {
