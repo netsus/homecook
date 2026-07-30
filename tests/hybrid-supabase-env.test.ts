@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ORIGINAL_ENV = { ...process.env };
@@ -45,6 +47,19 @@ describe("hybrid Supabase environment boundary", () => {
       authority: "remote",
     });
     expect(getDataSupabaseUrl()).toBe("https://remote.example.supabase.co");
+  });
+
+  it("reads public Auth values with Next.js client-bundle compatible static access", () => {
+    const source = readFileSync("lib/supabase/auth-env.ts", "utf8");
+
+    for (const name of [
+      "NEXT_PUBLIC_AUTH_SUPABASE_URL",
+      "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    ]) {
+      expect(source).toContain(`process.env.${name}`);
+    }
   });
 
   it("requires explicit remote Auth and loopback local Data values in local mode", async () => {

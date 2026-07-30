@@ -39,7 +39,7 @@ export interface AuthSupabaseEnv {
 }
 
 export function getRemoteAuthIssuer() {
-  const explicitUrl = process.env[REMOTE_AUTH_URL_ENV]?.trim();
+  const explicitUrl = process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL?.trim();
   const authority = process.env.HOMECOOK_DATA_AUTHORITY?.trim() || "remote";
   if (authority !== "remote" && !explicitUrl) {
     throw new Error(
@@ -48,7 +48,7 @@ export function getRemoteAuthIssuer() {
   }
 
   const url = normalizeRemoteAuthUrl(requireNonEmpty(
-    explicitUrl || process.env[LEGACY_URL_ENV],
+    explicitUrl || process.env.NEXT_PUBLIC_SUPABASE_URL,
     explicitUrl ? REMOTE_AUTH_URL_ENV : LEGACY_URL_ENV,
   ));
   const derivedIssuer = `${url}/auth/v1`;
@@ -64,8 +64,9 @@ export function getRemoteAuthIssuer() {
 }
 
 export function getAuthSupabaseEnv(): AuthSupabaseEnv {
-  const explicitUrl = process.env[REMOTE_AUTH_URL_ENV]?.trim();
-  const explicitKey = process.env[REMOTE_AUTH_KEY_ENV]?.trim();
+  const explicitUrl = process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL?.trim();
+  const explicitKey
+    = process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY?.trim();
   const authority = process.env.HOMECOOK_DATA_AUTHORITY?.trim() || "remote";
   if (authority !== "remote" && (!explicitUrl || !explicitKey)) {
     throw new Error(
@@ -76,7 +77,7 @@ export function getAuthSupabaseEnv(): AuthSupabaseEnv {
   const issuer = getRemoteAuthIssuer();
   const url = issuer.slice(0, -"/auth/v1".length);
   const publishableKey = requireNonEmpty(
-    explicitKey || process.env[LEGACY_KEY_ENV],
+    explicitKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     explicitKey ? REMOTE_AUTH_KEY_ENV : LEGACY_KEY_ENV,
   );
   const derivedJwksUrl = `${issuer}/.well-known/jwks.json`;
