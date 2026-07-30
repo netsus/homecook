@@ -120,6 +120,7 @@ export function IngredientFilterModal({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const requestIdRef = useRef(0);
+  const wasOpenRef = useRef(false);
   const isDesktopViewport = useDesktopViewport();
 
   useEffect(() => {
@@ -137,12 +138,21 @@ export function IngredientFilterModal({
   }, [onClose]);
 
   useEffect(() => {
-    if (!isOpen) {
+    const wasOpen = wasOpenRef.current;
+    wasOpenRef.current = isOpen;
+
+    if (!isOpen || wasOpen) {
       return;
     }
 
     setDraftIngredientIds(appliedIngredientIds);
     closeButtonRef.current?.focus();
+  }, [appliedIngredientIds, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -190,7 +200,7 @@ export function IngredientFilterModal({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [appliedIngredientIds, handleClose, isOpen]);
+  }, [handleClose, isOpen]);
 
   useEffect(() => {
     if (isOpen) {

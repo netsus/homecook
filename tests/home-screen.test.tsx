@@ -1176,6 +1176,41 @@ describe("home screen", () => {
     );
   });
 
+  it("keeps draft ingredients across parent rerenders and resets them after close and reopen", async () => {
+    const user = userEvent.setup();
+    useDiscoveryFilterStore.setState({ appliedIngredientIds: [ONION_ID] });
+    const { rerender } = render(<HomeScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "재료 1개" }));
+    const onionCheckbox = await screen.findByRole("checkbox", { name: "양파" });
+    const beefCheckbox = screen.getByRole("checkbox", { name: "소고기" });
+
+    expect((onionCheckbox as HTMLInputElement).checked).toBe(true);
+    await user.click(beefCheckbox);
+    expect((onionCheckbox as HTMLInputElement).checked).toBe(true);
+    expect((beefCheckbox as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole("button", { name: "2개 적용" })).toBeTruthy();
+
+    rerender(<HomeScreen />);
+
+    expect((onionCheckbox as HTMLInputElement).checked).toBe(true);
+    expect((beefCheckbox as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole("button", { name: "2개 적용" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "닫기" }));
+    await user.click(screen.getByRole("button", { name: "재료 1개" }));
+
+    expect(
+      (await screen.findByRole("checkbox", { name: "양파" }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+    expect(
+      (screen.getByRole("checkbox", { name: "소고기" }) as HTMLInputElement)
+        .checked,
+    ).toBe(false);
+    expect(screen.getByRole("button", { name: "1개 적용" })).toBeTruthy();
+  });
+
   it("uses the narrower desktop ingredient modal with compact centered ingredient pills", async () => {
     const user = userEvent.setup();
     installMatchMedia(true);

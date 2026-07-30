@@ -87,7 +87,7 @@
 
 ## Data Setup / Preconditions
 
-- [ ] current capacity evidence는 target free space 약 120GiB/current DB+Storage 약 4MiB로 `max(80GiB, DB+Storage used*3)` gate를 통과한다 <!-- omo:id=accept-hybrid-capacity-gate;stage=2;scope=shared;review=3,6 -->
+- [ ] current capacity evidence는 disk gate(target free space 약 120GiB/current DB+Storage 약 4MiB)는 통과하지만 encrypted swap free `650,840,637` bytes가 conservative service peak `907,214,848` bytes보다 작아 전체 gate가 BLOCKED다. swap headroom 확보 후 전체 preflight를 통과한다 <!-- omo:id=accept-hybrid-capacity-gate;stage=2;scope=shared;review=3,6 -->
 - [ ] final cutover 직전 capacity evidence를 재검증한다 <!-- omo:id=accept-hybrid-capacity-final-recheck;stage=2;scope=shared;review=3,6 -->
 - [ ] off-Mac encrypted backup 1개 이상과 local separate backup 1개 이상이 있다 <!-- omo:id=accept-hybrid-offmac-backup;stage=2;scope=shared;review=3,6 -->
 - [ ] off-Mac backup evidence schema가 DB dump, Storage manifest, encryption key id, restore host, restore command, digest, operator, timestamp를 기록한다 <!-- omo:id=accept-hybrid-offmac-evidence-schema;stage=2;scope=shared;review=3,6 -->

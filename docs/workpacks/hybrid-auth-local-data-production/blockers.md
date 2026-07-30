@@ -1,6 +1,6 @@
 # Unresolved Blocker
 
-- current capacity blocker는 stale로 제거한다. 최신 evidence 기준 target free space는 약 120GiB이고 current DB+Storage data는 약 4MiB라서 `max(80GiB, DB+Storage used*3)` gate를 통과한다. 단 final cutover 직전 capacity preflight 재검증 실패 시 즉시 blocker다.
+- storage disk capacity blocker는 stale로 제거한다. 최신 evidence 기준 target free space는 약 120GiB이고 current DB+Storage data는 약 4MiB라서 `max(80GiB, DB+Storage used*3)` disk gate를 통과한다. 그러나 2026-07-30 격리 production runtime의 encrypted swap free `650,840,637` bytes가 conservative service peak `907,214,848` bytes보다 작으므로 전체 capacity gate는 현재 **BLOCKED**다. swap headroom을 확보하고 final cutover 직전 전체 capacity preflight를 다시 통과하기 전에는 24시간 shadow/cutover를 시작하지 않는다.
 - local PostgREST가 combined local+remote verify JWKS, `PGRST_JWT_AUD=authenticated`, DB pre-request exact claim guard로 remote exact `iss`, `aud=authenticated`, `role=authenticated`, UUID `sub`, UUID `session_id`, `iat`/`nbf`/`exp`, allowlisted `alg`/`kid`를 검증한다는 canary 전 application write 금지.
 - local Storage가 `JWT_JWKS`와 loopback claim-verifying gateway 단일 user entrypoint를 사용하고 upstream port가 Docker internal network only라는 증거 전 application Storage write 금지. local anon/service token은 internal allowlist에서만 허용하며 user-scoped gateway에서는 거부되어야 한다.
 - remote Auth와 local DB가 한 transaction이 아니므로 deletion/rejoin/Before User Created Hook을 보호할 structured barrier와 provider linking before/after digest CAS 구현·검증 전 local write cutover 금지. barrier는 attempt UUID, monotonic revision, fencing token, remote/local ack, lease, quiet window, abort/resume state를 포함해야 한다.

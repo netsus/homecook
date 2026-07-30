@@ -1,0 +1,195 @@
+name: homecook-hybrid-production
+
+services:
+  postgres:
+    image: ${HYBRID_POSTGRES_IMAGE:?HYBRID_POSTGRES_IMAGE is required}
+    platform: ${HYBRID_DOCKER_PLATFORM:?HYBRID_DOCKER_PLATFORM is required}
+    environment:
+      POSTGRES_DB: ${HYBRID_POSTGRES_DB:?HYBRID_POSTGRES_DB is required}
+      POSTGRES_PASSWORD: ${HYBRID_POSTGRES_PASSWORD:?HYBRID_POSTGRES_PASSWORD is required}
+      POSTGRES_USER: supabase_admin
+      HYBRID_AUTH_EXPECTED_ISSUER: ${AUTH_SUPABASE_EXPECTED_ISSUER:?AUTH_SUPABASE_EXPECTED_ISSUER is required}
+      HYBRID_SESSION_ATTESTATION_HMAC_KEY_V1: ${HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1:?HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1 is required}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready -h 127.0.0.1 -U supabase_admin -d "$${POSTGRES_DB}"
+          >/dev/null
+          && test "$$(psql -h 127.0.0.1 -U supabase_admin
+          -d "$${POSTGRES_DB}" -Atqc
+          "select (
+            (select count(*) from pg_catalog.pg_roles
+              where rolname in (
+                'service_role',
+                'authenticated',
+                'anon',
+                'authenticator',
+                'supabase_storage_admin'
+              )) = 5
+            and exists (
+              select 1 from pg_catalog.pg_namespace where nspname = 'auth'
+            )
+            and exists (
+              select 1 from pg_catalog.pg_namespace where nspname = 'storage'
+            )
+          )::integer")" = "1"
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
+    networks:
+      - data-internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./hybrid-role-passwords.sh:/docker-entrypoint-initdb.d/zz-homecook-role-passwords.sh:ro
+
+  postgrest:
+    image: ${HYBRID_POSTGREST_IMAGE:?HYBRID_POSTGREST_IMAGE is required}
+    platform: ${HYBRID_DOCKER_PLATFORM:?HYBRID_DOCKER_PLATFORM is required}
+    command: ["postgrest", "+RTS", "-N2", "-RTS"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_DB_PRE_REQUEST: private.verify_hybrid_request_authority
+      PGRST_DB_SCHEMAS: public,storage
+      PGRST_DB_URI: postgres://authenticator:${HYBRID_POSTGRES_PASSWORD:?HYBRID_POSTGRES_PASSWORD is required}@postgres:5432/${HYBRID_POSTGRES_DB:?HYBRID_POSTGRES_DB is required}
+      PGRST_APP_SETTINGS_AUTH_EXPECTED_ISSUER: ${AUTH_SUPABASE_EXPECTED_ISSUER:?AUTH_SUPABASE_EXPECTED_ISSUER is required}
+      PGRST_APP_SETTINGS_HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1: ${HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1:?HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1 is required}
+      PGRST_ADMIN_SERVER_PORT: "3001"
+      PGRST_JWT_AUD: authenticated
+      PGRST_JWT_SECRET: ${HYBRID_COMBINED_JWKS:?HYBRID_COMBINED_JWKS is required}
+    networks:
+      - data-internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  postgrest-probe:
+    image: ${HYBRID_NODE_IMAGE:?HYBRID_NODE_IMAGE is required}
+    platform: ${HYBRID_DOCKER_PLATFORM:?HYBRID_DOCKER_PLATFORM is required}
+    command:
+      - node
+      - -e
+      - setInterval(() => {}, 2147483647)
+    depends_on:
+      postgrest:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://postgrest:3001/ready').then((response) => process.exit(response.status === 200 ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 5s
+      timeout: 4s
+      retries: 60
+    networks:
+      - data-internal
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  storage:
+    image: ${HYBRID_STORAGE_IMAGE:?HYBRID_STORAGE_IMAGE is required}
+    platform: ${HYBRID_DOCKER_PLATFORM:?HYBRID_DOCKER_PLATFORM is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgrest-probe:
+        condition: service_healthy
+    environment:
+      ANON_KEY: ${DATA_SUPABASE_PUBLISHABLE_KEY:?DATA_SUPABASE_PUBLISHABLE_KEY is required}
+      DATABASE_URL: postgres://supabase_storage_admin:${HYBRID_POSTGRES_PASSWORD:?HYBRID_POSTGRES_PASSWORD is required}@postgres:5432/${HYBRID_POSTGRES_DB:?HYBRID_POSTGRES_DB is required}
+      FILE_SIZE_LIMIT: ${HYBRID_STORAGE_FILE_SIZE_LIMIT:?HYBRID_STORAGE_FILE_SIZE_LIMIT is required}
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      GLOBAL_S3_BUCKET: ${HYBRID_STORAGE_GLOBAL_BUCKET:?HYBRID_STORAGE_GLOBAL_BUCKET is required}
+      JWT_JWKS: ${HYBRID_COMBINED_JWKS:?HYBRID_COMBINED_JWKS is required}
+      PGRST_JWT_SECRET: ${HYBRID_STORAGE_LEGACY_JWT_SECRET:?HYBRID_STORAGE_LEGACY_JWT_SECRET is required}
+      POSTGREST_URL: http://postgrest:3000
+      SERVICE_KEY: ${DATA_SUPABASE_SECRET_KEY:?DATA_SUPABASE_SECRET_KEY is required}
+      STORAGE_BACKEND: file
+      TENANT_ID: ${HYBRID_STORAGE_TENANT_ID:?HYBRID_STORAGE_TENANT_ID is required}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          wget --quiet --tries=1 --timeout=3 --output-document=/dev/null
+          http://127.0.0.1:5000/status
+      interval: 5s
+      timeout: 4s
+      retries: 60
+    networks:
+      - data-internal
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - storage-data:/var/lib/storage
+
+  gateway:
+    image: homecook-hybrid-gateway:production
+    platform: ${HYBRID_DOCKER_PLATFORM:?HYBRID_DOCKER_PLATFORM is required}
+    build:
+      args:
+        NODE_IMAGE: ${HYBRID_NODE_IMAGE:?HYBRID_NODE_IMAGE is required}
+      context: ../..
+      dockerfile: infra/hybrid-supabase/Dockerfile.gateway
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgrest-probe:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    environment:
+      AUTH_SUPABASE_EXPECTED_ISSUER: ${AUTH_SUPABASE_EXPECTED_ISSUER:?AUTH_SUPABASE_EXPECTED_ISSUER is required}
+      AUTH_SUPABASE_JWKS_URL: ${AUTH_SUPABASE_JWKS_URL:?AUTH_SUPABASE_JWKS_URL is required}
+      AUTH_SUPABASE_PUBLISHABLE_KEY: ${AUTH_SUPABASE_PUBLISHABLE_KEY:?AUTH_SUPABASE_PUBLISHABLE_KEY is required}
+      AUTH_SUPABASE_URL: ${AUTH_SUPABASE_URL:?AUTH_SUPABASE_URL is required}
+      ALLOW_INSECURE_LOCAL_AUTH_STUB: ${ALLOW_INSECURE_LOCAL_AUTH_STUB:?ALLOW_INSECURE_LOCAL_AUTH_STUB is required}
+      DATA_SUPABASE_PUBLISHABLE_KEY: ${DATA_SUPABASE_PUBLISHABLE_KEY:?DATA_SUPABASE_PUBLISHABLE_KEY is required}
+      DATA_SUPABASE_SECRET_KEY: ${DATA_SUPABASE_SECRET_KEY:?DATA_SUPABASE_SECRET_KEY is required}
+      GATEWAY_PORT: "8080"
+      HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1: ${HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1:?HOMECOOK_SESSION_ATTESTATION_HMAC_KEY_V1 is required}
+      HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1: ${HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1:?HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1 is required}
+      HYBRID_GATEWAY_TIMEOUT_MS: ${HYBRID_GATEWAY_TIMEOUT_MS:?HYBRID_GATEWAY_TIMEOUT_MS is required}
+      HYBRID_GATEWAY_REQUIRE_READY: "1"
+      POSTGREST_HEALTH_URL: http://postgrest:3001/ready
+      POSTGREST_UPSTREAM_URL: http://postgrest:3000
+      STORAGE_UPSTREAM_URL: http://storage:5000
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8080/healthz').then((response) => process.exit(response.status === 200 ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 5s
+      timeout: 4s
+      retries: 60
+    networks:
+      - data-internal
+      - auth-egress
+    ports:
+      - 127.0.0.1:${HOMECOOK_HYBRID_GATEWAY_PORT:?HOMECOOK_HYBRID_GATEWAY_PORT is required}:8080
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  auth-egress: {}
+  data-internal:
+    internal: true
+
+volumes:
+  postgres-data:
+    name: ${HYBRID_POSTGRES_VOLUME_NAME:?HYBRID_POSTGRES_VOLUME_NAME is required}
+  storage-data:
+    name: ${HYBRID_STORAGE_VOLUME_NAME:?HYBRID_STORAGE_VOLUME_NAME is required}
