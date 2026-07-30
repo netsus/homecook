@@ -132,15 +132,87 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "pending",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "GitHub PR #1208 Stage 2 local-only closeout merged as 68aafc705c01d1ff45e5e2530003ce8a634bfadd from reviewed head 163ce9e132b5916ffd9540fa0d56eebcb2d8508d",
+        "GitHub PR #1224 Stage 3 independent code/security review approved exact head bd4a03ac0cb83979321ddf274bfe0b4498cc2142 with P0/P1/P2 0/0/0 and merged as 35997a778b452185f9f3614b4d115ea5429a362a",
+        "Stage 4 TDD RED started with 3 failed files and 8 failed tests; focused final Vitest passed 3 files and 42 tests",
+        "Locked Stage 4 automation tests recipe-image-upload-client and recipe-visibility-consumers passed 8/8",
+        "Stage 4 managed browser regression passed desktop/mobile 2/2; full frontend gate passed 2,369 product tests, Lighthouse 6/6, Playwright 909 passed / 132 skipped, accessibility 18 passed / 15 skipped, visual 23 passed / 22 skipped and security 12/12",
+        "Independent Stage 4 code and security reviews approved with P0/P1/P2/P3 0/0/0/0",
+        "Independent Stage 5 lightweight design review approved with P0/P1/P2/P3 0/0/0/0; no visual change and design authority not required",
+        "Independent Codex Stage 6 exact-head review approved PR #1228 head 06269ce4d165a96fb750bb3aded951d2bb8091c3 with P0/P1/P2/P3 0/0/0/0",
+        "GitHub PR #1228 exact head 06269ce4d165a96fb750bb3aded951d2bb8091c3 completed 15 checks successfully with one intended full-regression skip and pending/fail/cancel 0",
+        "docs/workpacks/recipe-visibility-read-hardening/evidence/2026-07-30-stage4-6-closeout.md records distinct native Codex code, security and exact-head Stage 6 reviewer tasks",
+        "Local source-of-truth, workflow-v2, workpack, automation-spec, OMO bookkeeping, closeout and diff validators passed",
+        "Production power/login/sleep, external heartbeat receiver, activation and irreversible old-path deletion remain Manual Only; production/staging writes remain zero"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "06269ce4d165a96fb750bb3aded951d2bb8091c3",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 4,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 3,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-07-30T05:41:30Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 6,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage6-review-evidence-persisted",
+      "evidence_sources": [
+        "GitHub PR #1208 Stage 2 local-only closeout",
+        "GitHub PR #1224 Stage 3 exact-head review and merge",
+        "GitHub PR #1228 Stage 4 TDD and current-head checks",
+        "tests/manual-recipe-create-screen.test.tsx",
+        "tests/recipe-image-upload-client.test.tsx",
+        "tests/recipe-visibility-consumers.test.tsx",
+        "tests/hybrid-supabase-static-gate.test.ts",
+        "tests/e2e/slice-31-recipe-media-tags.spec.ts",
+        "docs/workpacks/recipe-visibility-read-hardening/evidence/2026-07-30-stage4-6-closeout.md",
+        "independent Codex Stage 4 code and security reviews",
+        "independent Codex Stage 5 lightweight design review",
+        "independent Codex Stage 6 exact-head review"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-07-30T05:41:30Z",
+      "status_synced_at": "2026-07-30T05:41:30Z",
+      "pr_body_synced_at": "pending-closeout-head"
+    }
+  },
+  "branch": "fix/recipe-visibility-stage4-client",
+  "pr_path": "https://github.com/netsus/homecook/pull/1228",
   "out_of_scope": [
     "RECIPE_DETAIL fork editor delete CTA or layout owned by successor #5",
     "Content snapshot Meal authority personal write and propagation owned by successors #4 #6 and #7",
@@ -153,5 +225,5 @@
     "Migration or Storage write outside local-first production authority"
   ],
   "open_questions": [],
-  "notes": "Stage 2 backend implementation is in progress on feature/be-recipe-visibility-read-hardening after F0 and the merged recipe media/tag predecessors. Approval remains not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve the frozen implementation tree with zero required findings. Public recipe/tag readers and the isolated PostgreSQL fresh/replay gate are the current small backend PR executable subset. verification.required_checks intentionally remains the full-slice closeout contract and is not a claim that deferred image registry/lifecycle, Storage replay, scheduler, existing-consumer, Playwright, exploratory QA or server-production/local-rehearsal verifier artifacts exist in this PR; those remain later owning-stage gates. Initial deployment uses server MacBook local production plus isolated local rehearsal; remote verifier/provider barrier/remote migration are N/A until contract-evolution. Stage 4 changes only existing MANUAL_RECIPE_CREATE behavior/states and adds no visual hierarchy. Joint generation/account-delete activation remains off until F0 and this slice pass the complete release gate."
+  "notes": "Stage 2 local-only backend/storage closeout merged through PR #1208 and Stage 3 ownership hardening merged through PR #1224 after separate Codex code/security approval. Stage 4 existing MANUAL_RECIPE_CREATE integration used TDD and now consumes strict managed-or-legacy upload results, same-intent retries and image_object_id while removing browser Storage mutation in favor of owner cancel for managed objects. Stage 5 found no visual drift and required no design authority artifact. Independent Stage 6 approved exact PR #1228 head 06269ce4d165a96fb750bb3aded951d2bb8091c3 with P0/P1/P2/P3 0/0/0/0; its 15 started checks passed and full-regression had one intended skip. Distinct Codex code, security and exact-head reviewer task evidence is persisted in docs/workpacks/recipe-visibility-read-hardening/evidence/2026-07-30-stage4-6-closeout.md. Successor-owned snapshot, batch, meal-log and delete mutation work remains out of scope. Production power/login/sleep, external heartbeat receiver, activation and irreversible old-path deletion remain Manual Only, and production/staging writes remain zero. closeout_phase=completed closeout_recovery=manual_patch:4|ci_resync:3 closeout_repair=codex:6|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:PR #1208,PR #1224,PR #1228,Stage 4 focused and full frontend verification,independent Codex Stage 4 code/security reviews,Stage 5 lightweight design review,Stage 6 exact-head review,docs/workpacks/recipe-visibility-read-hardening/evidence/2026-07-30-stage4-6-closeout.md | latest_reason_code=stage6-review-evidence-persisted | last_recovery_at=2026-07-30T05:41:30Z"
 }

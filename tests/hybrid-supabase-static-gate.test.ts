@@ -126,15 +126,10 @@ describe("hybrid authority AST/static gate", () => {
     ]);
   });
 
-  it("keeps the one legacy browser Storage mutation as Stage 4 evidence", () => {
+  it("removes the final legacy browser Storage mutation after Stage 4", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
-    expect(inventory.browserDirectStoragePaths).toEqual([
-      expect.objectContaining({
-        file: "components/recipe/manual-recipe-create-screen.tsx",
-        stage: 4,
-      }),
-    ]);
+    expect(inventory.browserDirectStoragePaths).toEqual([]);
   });
 
   it("keeps every remaining service-role call inside an exact allowlist", () => {
