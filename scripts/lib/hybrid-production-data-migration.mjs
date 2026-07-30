@@ -18,6 +18,75 @@ function safeQualifiedName(value) {
   return value;
 }
 
+export function buildStorageApiRequestScript() {
+  return `
+    const fs = await import("node:fs");
+    const crypto = await import("node:crypto");
+    const [
+      baseUrl,
+      method,
+      bucket,
+      objectPath,
+      contentType,
+      cacheControl,
+      file,
+    ] = process.argv.slice(1);
+    const serviceJwt = process.env.SERVICE_JWT;
+    if (!serviceJwt) {
+      throw new Error("Storage service authorization is unavailable.");
+    }
+    const encodedPath = objectPath.split("/")
+      .map(encodeURIComponent).join("/");
+    const prefix = method === "GET"
+      ? "/object/authenticated/"
+      : "/object/";
+    const headers = {
+      authorization: "Bearer " + serviceJwt,
+    };
+    if (method === "POST") {
+      headers["cache-control"] = cacheControl;
+      headers["content-type"] = contentType;
+      headers["x-upsert"] = "false";
+    }
+    const response = await fetch(
+      baseUrl.replace(/\\/+$/, "") + prefix
+        + encodeURIComponent(bucket) + "/" + encodedPath,
+      {
+        method,
+        headers,
+        body: method === "POST" && file
+          ? fs.readFileSync(file)
+          : undefined,
+      },
+    );
+    const body = Buffer.from(await response.arrayBuffer());
+    process.stdout.write(JSON.stringify({
+      status: response.status,
+      bytes: body.length,
+      sha256: method === "GET"
+        ? crypto.createHash("sha256").update(body).digest("hex")
+        : null,
+      contentType: response.headers.get("content-type"),
+      cacheControl: response.headers.get("cache-control"),
+    }));
+  `;
+}
+
+export function planStorageCommitBoundary({
+  publicCommitted,
+  storageVerifiedBeforeCommit,
+}) {
+  if (publicCommitted && !storageVerifiedBeforeCommit) {
+    throw new Error(
+      "Storage must verify before public commit.",
+    );
+  }
+  return Object.freeze({
+    commitAllowed: storageVerifiedBeforeCommit,
+    compensateStorage: !publicCommitted,
+  });
+}
+
 export function buildLegacyDataMigrationPlan({
   sourceTables,
   targetTables,
@@ -116,9 +185,13 @@ export function assertLegacyEvidenceArchive({ entries, types }) {
     throw new Error("Legacy archive listings are incomplete.");
   }
   const normalized = entries.map((entry) => entry.replace(/^\.\//u, ""));
+  if (new Set(normalized).size !== normalized.length) {
+    throw new Error("Legacy archive contains a duplicate path.");
+  }
   for (const [index, entry] of normalized.entries()) {
     if (
       entry.startsWith("/")
+      || entry.startsWith("-")
       || entry.includes("\\")
       || entry.split("/").includes("..")
     ) {
@@ -166,6 +239,104 @@ export function assertLegacyEvidenceArchive({ entries, types }) {
     root,
     storageEntries: storageEntries.sort(compareText),
   });
+}
+
+export function validateLegacyStoragePayloadInventory({
+  archiveFiles,
+  manifestObjects,
+  root,
+}) {
+  if (
+    !Array.isArray(archiveFiles)
+    || !Array.isArray(manifestObjects)
+    || typeof root !== "string"
+    || !root
+    || root.startsWith("/")
+    || root.startsWith("-")
+    || root.includes("\\")
+    || root.split("/").includes("..")
+    || root.includes("/")
+  ) {
+    throw new Error("Legacy Storage inventory is malformed.");
+  }
+  const expected = manifestObjects.map((object) => {
+    if (
+      typeof object?.bucket !== "string"
+      || !object.bucket
+      || object.bucket.includes("/")
+      || object.bucket.includes("\\")
+      || object.bucket === ".."
+      || typeof object?.path !== "string"
+      || !object.path
+      || object.path.startsWith("/")
+      || object.path.includes("\\")
+      || object.path.split("/").includes("..")
+      || !/^[0-9a-f]{64}$/u.test(object?.sha256)
+      || !Number.isSafeInteger(object?.size_bytes)
+      || object.size_bytes < 0
+    ) {
+      throw new Error("Legacy Storage manifest entry is invalid.");
+    }
+    const manifestPrefix = `storage-objects/${object.bucket}/`;
+    if (
+      object.path.startsWith("storage-objects/")
+      && !object.path.startsWith(manifestPrefix)
+    ) {
+      throw new Error("Legacy Storage manifest bucket and path disagree.");
+    }
+    const logicalPath = object.path.startsWith(manifestPrefix)
+      ? object.path.slice(manifestPrefix.length)
+      : object.path;
+    if (!logicalPath || logicalPath.endsWith("/")) {
+      throw new Error("Legacy Storage object path is invalid.");
+    }
+    return {
+      ...object,
+      archiveEntry: `${root}/${manifestPrefix}${logicalPath}`,
+      path: logicalPath,
+    };
+  });
+  const expectedPaths = expected.map((object) => object.archiveEntry);
+  if (new Set(expectedPaths).size !== expectedPaths.length) {
+    throw new Error("Legacy Storage manifest contains a duplicate object.");
+  }
+  const storagePrefix = `${root}/storage-objects/`;
+  const actual = archiveFiles.map((file) => {
+    const path = typeof file?.path === "string"
+      ? file.path.replace(/^\.\//u, "")
+      : "";
+    if (
+      !path.startsWith(storagePrefix)
+      || path === storagePrefix
+      || path.startsWith("/")
+      || path.includes("\\")
+      || path.split("/").includes("..")
+      || !Number.isSafeInteger(file?.bytes)
+      || file.bytes < 0
+      || !/^[0-9a-f]{64}$/u.test(file?.sha256)
+    ) {
+      throw new Error("Legacy Storage archive payload is invalid.");
+    }
+    return { bytes: file.bytes, path, sha256: file.sha256 };
+  });
+  if (new Set(actual.map((file) => file.path)).size !== actual.length) {
+    throw new Error("Legacy Storage archive contains a duplicate payload.");
+  }
+  const actualByPath = new Map(actual.map((file) => [file.path, file]));
+  if (
+    actual.length !== expected.length
+    || expected.some((object) => {
+      const file = actualByPath.get(object.archiveEntry);
+      return !file
+        || file.bytes !== object.size_bytes
+        || file.sha256 !== object.sha256;
+    })
+  ) {
+    throw new Error(
+      "Legacy Storage manifest and archive payloads must exactly match.",
+    );
+  }
+  return expected;
 }
 
 function requireEqual(evidence, before, after, label) {

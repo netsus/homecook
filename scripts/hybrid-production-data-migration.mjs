@@ -18,9 +18,12 @@ import { fileURLToPath } from "node:url";
 
 import {
   assertLegacyEvidenceArchive,
+  buildStorageApiRequestScript,
   buildLegacyDataMigrationPlan,
   buildLegacyDataMigrationTransaction,
   evaluateLegacyDataMigrationEvidence,
+  planStorageCommitBoundary,
+  validateLegacyStoragePayloadInventory,
 } from "./lib/hybrid-production-data-migration.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -854,31 +857,9 @@ function inspectLegacyArchive(config, archive, expectedSha256) {
     ) {
       fail("Legacy backup manifest is invalid.");
     }
-    const payloads = manifest.contents.storage_objects.map(
-      (object, index) => {
-        if (
-          typeof object?.bucket !== "string"
-          || typeof object?.path !== "string"
-          || !SHA256.test(object?.sha256)
-          || !Number.isSafeInteger(object?.size_bytes)
-          || object.size_bytes < 0
-        ) {
-          fail("Legacy Storage manifest entry is invalid.");
-        }
-        const manifestPrefix =
-          `storage-objects/${object.bucket}/`;
-        const logicalPath = object.path.startsWith(manifestPrefix)
-          ? object.path.slice(manifestPrefix.length)
-          : object.path;
-        if (!logicalPath || logicalPath.startsWith("/")) {
-          fail("Legacy Storage object path is invalid.");
-        }
-        const entry = object.path.startsWith("storage-objects/")
-          ? `${archivePlan.root}/${object.path}`
-          : `${archivePlan.root}/${manifestPrefix}${object.path}`;
-        if (!archivePlan.storageEntries.includes(entry)) {
-          fail("Legacy Storage payload is missing from the archive.");
-        }
+    const extractedByEntry = new Map();
+    const actualPayloads = archivePlan.storageEntries.map(
+      (entry, index) => {
         const output = join(temp, `storage-object-${index}.bin`);
         run(
           "tar",
@@ -889,15 +870,22 @@ function inspectLegacyArchive(config, archive, expectedSha256) {
           },
         );
         chmodSync(output, 0o600);
-        if (
-          statSync(output).size !== object.size_bytes
-          || sha256File(output) !== object.sha256
-        ) {
-          fail("Legacy Storage payload checksum verification failed.");
-        }
-        return { ...object, file: output, path: logicalPath };
+        extractedByEntry.set(entry, output);
+        return {
+          bytes: statSync(output).size,
+          path: entry,
+          sha256: sha256File(output),
+        };
       },
     );
+    const payloads = validateLegacyStoragePayloadInventory({
+      archiveFiles: actualPayloads,
+      manifestObjects: manifest.contents.storage_objects,
+      root: archivePlan.root,
+    }).map((object) => ({
+      ...object,
+      file: extractedByEntry.get(object.archiveEntry),
+    }));
     return {
       archiveSha256,
       cleanup: () => rmSync(temp, { force: true, recursive: true }),
@@ -1002,40 +990,6 @@ function storageRequest({
     );
   }
   try {
-    const script = `
-      const fs = await import("node:fs");
-      const crypto = await import("node:crypto");
-      const [method, bucket, objectPath, contentType, cacheControl, file] =
-        process.argv.slice(1);
-      const encodedPath = objectPath.split("/")
-        .map(encodeURIComponent).join("/");
-      const isRead = method === "GET";
-      const prefix = isRead ? "/object/public/" : "/object/";
-      const response = await fetch(
-        "http://127.0.0.1:5000" + prefix
-          + encodeURIComponent(bucket) + "/" + encodedPath,
-        {
-          method,
-          headers: isRead ? {} : {
-            authorization: "Bearer " + process.env.SERVICE_JWT,
-            "cache-control": cacheControl,
-            "content-type": contentType,
-            "x-upsert": "false",
-          },
-          body: file ? fs.readFileSync(file) : undefined,
-        },
-      );
-      const body = Buffer.from(await response.arrayBuffer());
-      process.stdout.write(JSON.stringify({
-        status: response.status,
-        bytes: body.length,
-        sha256: isRead
-          ? crypto.createHash("sha256").update(body).digest("hex")
-          : null,
-        contentType: response.headers.get("content-type"),
-        cacheControl: response.headers.get("cache-control"),
-      }));
-    `;
     const output = run(
       "docker",
       [
@@ -1046,7 +1000,8 @@ function storageRequest({
         "node",
         "--input-type=module",
         "-e",
-        script,
+        buildStorageApiRequestScript(),
+        "http://127.0.0.1:5000",
         method,
         object.bucket,
         object.name,
@@ -1080,6 +1035,19 @@ function uploadStorageObjects(config, target, pairs) {
   }
   const container = storageContainer(config);
   const uploaded = [];
+  const compensate = () => {
+    for (const object of [...uploaded].reverse()) {
+      const result = storageRequest({
+        config,
+        container,
+        method: "DELETE",
+        object,
+      });
+      if (![200, 204, 404].includes(result.status)) {
+        fail("Storage compensation failed.");
+      }
+    }
+  };
   try {
     for (const { payload, source } of pairs) {
       const upload = storageRequest({
@@ -1094,73 +1062,54 @@ function uploadStorageObjects(config, target, pairs) {
       }
       uploaded.push(source);
     }
+    const targets = storageObjects(target);
+    if (targets.length !== pairs.length) {
+      fail("Target storage.objects count differs after upload.");
+    }
+    const evidence = pairs.map(({ payload, source }) => {
+      const targetObject = targets.find((object) =>
+        object.bucket === source.bucket
+        && object.name === source.name);
+      if (
+        !targetObject
+        || targetObject.bytes !== source.bytes
+        || targetObject.mime !== source.mime
+        || targetObject.cacheControl !== source.cacheControl
+      ) {
+        fail("Target Storage DB metadata differs from source.");
+      }
+      const http = storageRequest({
+        config,
+        container,
+        method: "GET",
+        object: source,
+      });
+      if (
+        http.status !== 200
+        || http.bytes !== payload.size_bytes
+        || http.sha256 !== payload.sha256
+        || http.contentType !== source.mime
+        || http.cacheControl !== source.cacheControl
+      ) {
+        fail("Target Storage HTTP payload or metadata differs.");
+      }
+      return {
+        bytes: http.bytes,
+        cacheControl: http.cacheControl,
+        contentType: http.contentType,
+        sha256: http.sha256,
+      };
+    });
     return {
-      compensate: () => {
-        for (const object of uploaded.reverse()) {
-          const result = storageRequest({
-            config,
-            container,
-            method: "DELETE",
-            object,
-          });
-          if (![200, 204, 404].includes(result.status)) {
-            fail("Storage compensation failed.");
-          }
-        }
-      },
-      verify: () => {
-        const targets = storageObjects(target);
-        if (targets.length !== pairs.length) {
-          fail("Target storage.objects count differs after upload.");
-        }
-        return pairs.map(({ payload, source }) => {
-          const targetObject = targets.find((object) =>
-            object.bucket === source.bucket
-            && object.name === source.name);
-          if (
-            !targetObject
-            || targetObject.bytes !== source.bytes
-            || targetObject.mime !== source.mime
-            || targetObject.cacheControl !== source.cacheControl
-          ) {
-            fail("Target Storage DB metadata differs from source.");
-          }
-          const http = storageRequest({
-            config,
-            container,
-            method: "GET",
-            object: source,
-          });
-          if (
-            http.status !== 200
-            || http.bytes !== payload.size_bytes
-            || http.sha256 !== payload.sha256
-            || http.contentType !== source.mime
-            || http.cacheControl !== source.cacheControl
-          ) {
-            fail("Target Storage HTTP payload or metadata differs.");
-          }
-          return {
-            bytes: http.bytes,
-            cacheControl: http.cacheControl,
-            contentType: http.contentType,
-            sha256: http.sha256,
-          };
-        });
-      },
+      compensate,
+      evidence,
+      storageVerifiedBeforeCommit: true,
     };
   } catch (error) {
-    for (const object of uploaded.reverse()) {
-      try {
-        storageRequest({
-          config,
-          container,
-          method: "DELETE",
-          object,
-        });
-      } catch {
-        // The production gateway remains private if compensation is incomplete.
-      }
+    try {
+      compensate();
+    } catch {
+      // The production gateway remains private if compensation is incomplete.
     }
     throw error;
   }
@@ -1338,6 +1287,16 @@ async function main() {
       target,
       storagePairs,
     );
+    const storageEvidence = storageMutation.evidence;
+    const preCommitBoundary = planStorageCommitBoundary({
+      publicCommitted: false,
+      storageVerifiedBeforeCommit:
+        storageMutation.storageVerifiedBeforeCommit,
+    });
+    if (!preCommitBoundary.commitAllowed) {
+      storageMutation.compensate();
+      fail("Storage verification did not authorize public commit.");
+    }
     let publicCommitted = false;
     try {
       const applyEvidence = executePublicMigration({
@@ -1355,7 +1314,6 @@ async function main() {
       const targetDataDigest = aggregateDataDigest(
         applyEvidence.tableDigests,
       );
-      const storageEvidence = storageMutation.verify();
       const afterCatalog = catalogSnapshot(target);
       const evaluated = evaluateLegacyDataMigrationEvidence({
         authUsersAfter: applyEvidence.summary.authUsers,
@@ -1402,7 +1360,12 @@ async function main() {
         storage: storageEvidence,
       });
     } catch (error) {
-      if (!publicCommitted) {
+      const boundary = planStorageCommitBoundary({
+        publicCommitted,
+        storageVerifiedBeforeCommit:
+          storageMutation.storageVerifiedBeforeCommit,
+      });
+      if (boundary.compensateStorage) {
         storageMutation.compensate();
       }
       throw error;

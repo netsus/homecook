@@ -720,15 +720,26 @@ run("hybrid production Mac Docker runtime", () => {
       );
       expect(restored).toMatchObject({
         status: "PASS",
-        catalog_digest: sourceManifest.catalog.digest,
+        archive_exact: {
+          catalog_digest: sourceManifest.catalog.digest,
+          database_digest: sourceManifest.database.digest,
+          migration_count: sourceManifest.semantic.migration_count,
+          storage_digest: sourceManifest.storage.digest,
+        },
+        forward_migrated: {
+          catalog_digest: sourceManifest.catalog.digest,
+          database_digest: sourceManifest.database.digest,
+          migration_count: sourceManifest.semantic.migration_count,
+          migration_count_applied: 0,
+          migration_versions_applied: [],
+          storage_digest: sourceManifest.storage.digest,
+        },
         phases: [
           "pre-data-schema",
           "hybrid-compatibility-fk-replacement",
           "application-data",
           "post-data-validation",
         ],
-        database_digest: sourceManifest.database.digest,
-        storage_digest: sourceManifest.storage.digest,
       });
       expect(restored.pre_restore_backup).toBe(targetPreRestore);
 

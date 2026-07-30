@@ -40,6 +40,7 @@ import {
   validateHybridProductionConfig,
   validateInstalledSemanticState,
   validateSemanticRestoreEvidence,
+  validateStoragePayloadInventory,
   validateStorageXattrManifest,
 } from "./lib/hybrid-production-runtime.mjs";
 
@@ -1816,23 +1817,64 @@ function inspectStorageXattrArchive(archivePath, storageFiles) {
     failure: "Storage archive type inspection failed.",
   });
   const entries = assertSafeTarArchive({ names, verbose });
+  const verboseEntries = verbose.split(/\r?\n/u).filter(Boolean);
+  const normalizedEntries = entries.map((entry) =>
+    entry.replace(/^\.\//u, ""));
+  if (new Set(normalizedEntries).size !== normalizedEntries.length) {
+    fail("Storage payload archive contains a duplicate path.");
+  }
   const manifestEntries = entries.filter((entry) =>
     entry.replace(/^\.\//u, "") === STORAGE_XATTR_ENTRY);
   if (manifestEntries.length !== 1) {
     fail("Storage xattr manifest is missing or duplicated.");
   }
-  let manifest;
+  const inspectionDir = mkdtempSync(join(
+    tmpdir(),
+    "homecook-storage-archive-inventory-",
+  ));
+  chmodSync(inspectionDir, 0o700);
   try {
-    manifest = JSON.parse(run(
-      "tar",
-      ["-xOzf", archivePath, manifestEntries[0]],
-      { failure: "Storage xattr manifest extraction failed." },
-    ));
-  } catch {
-    fail("Storage xattr manifest is not valid JSON.");
+    const extractedFiles = new Map();
+    const inventory = entries.map((entry, index) => {
+      if (verboseEntries[index][0] === "d") {
+        return { path: entry, type: "directory" };
+      }
+      const outputPath = join(inspectionDir, `${index}.payload`);
+      run(
+        "tar",
+        ["-xOzf", archivePath, entry],
+        {
+          failure: "Storage payload extraction failed.",
+          stdoutPath: outputPath,
+        },
+      );
+      extractedFiles.set(entry, outputPath);
+      return {
+        bytes: statSync(outputPath).size,
+        path: entry,
+        sha256: sha256File(outputPath),
+        type: "file",
+      };
+    });
+    validateStoragePayloadInventory({
+      entries: inventory,
+      metadataPath: STORAGE_XATTR_ENTRY,
+      storageFiles,
+    });
+    let manifest;
+    try {
+      manifest = JSON.parse(readFileSync(
+        extractedFiles.get(manifestEntries[0]),
+        "utf8",
+      ));
+    } catch {
+      fail("Storage xattr manifest is not valid JSON.");
+    }
+    validateStorageXattrManifest({ manifest, storageFiles });
+    return manifest;
+  } finally {
+    rmSync(inspectionDir, { force: true, recursive: true });
   }
-  validateStorageXattrManifest({ manifest, storageFiles });
-  return manifest;
 }
 
 function dumpStorage(runtime, destinationDir) {

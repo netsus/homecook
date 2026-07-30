@@ -34,6 +34,7 @@ import {
   validateHybridProductionConfig,
   validateInstalledSemanticState,
   validateSemanticRestoreEvidence,
+  validateStoragePayloadInventory,
   validateStorageXattrManifest,
 } from "../scripts/lib/hybrid-production-runtime.mjs";
 
@@ -485,6 +486,15 @@ describe("hybrid production restore safety", () => {
           + "lrwxr-xr-x  0 user group 0 Jan 1 00:00 ./object-link -> /tmp\n",
       }),
     ).toThrow(/regular files and directories/u);
+
+    expect(() =>
+      assertSafeTarArchive({
+        names: "--checkpoint-action=exec=malicious\n",
+        verbose:
+          "-rw-------  0 user group 1 Jan 1 00:00 "
+          + "--checkpoint-action=exec=malicious\n",
+      }),
+    ).toThrow(/unsafe archive path/u);
   });
 
   it("allows only the two required PII-free Storage xattrs for every persisted file", () => {
@@ -529,6 +539,124 @@ describe("hybrid production restore safety", () => {
       manifest: { files: [], format: manifest.format },
       storageFiles: [{ path }],
     })).toThrow(/file manifest/u);
+  });
+
+  it("requires the inner Storage payload set, size, and SHA to exactly match the outer manifest", () => {
+    const metadataPath =
+      ".homecook-complete-v2-storage-xattrs.json";
+    const payloadPath =
+      "tenant/project/recipe-images/owner/object.jpg/version";
+    const storageFiles = [{
+      bytes: 3,
+      path: payloadPath,
+      sha256: "a".repeat(64),
+    }];
+    const metadata = {
+      bytes: 2,
+      path: metadataPath,
+      sha256: "b".repeat(64),
+      type: "file",
+    };
+    const payload = {
+      ...storageFiles[0],
+      type: "file",
+    };
+
+    expect(validateStoragePayloadInventory({
+      entries: [metadata, payload],
+      metadataPath,
+      storageFiles,
+    })).toEqual([payload]);
+
+    const adversarial = [
+      {
+        entries: [metadata],
+        label: "missing payload",
+      },
+      {
+        entries: [
+          metadata,
+          payload,
+          {
+            bytes: 1,
+            path: "extra.bin",
+            sha256: "c".repeat(64),
+            type: "file",
+          },
+        ],
+        label: "extra payload",
+      },
+      {
+        entries: [metadata, payload, payload],
+        label: "duplicate payload",
+      },
+      {
+        entries: [
+          metadata,
+          payload,
+          {
+            bytes: 1,
+            path: "../escape",
+            sha256: "c".repeat(64),
+            type: "file",
+          },
+        ],
+        label: "path traversal",
+      },
+      {
+        entries: [
+          metadata,
+          payload,
+          {
+            bytes: 0,
+            path: "object-link",
+            sha256: "c".repeat(64),
+            type: "link",
+          },
+        ],
+        label: "link",
+      },
+      {
+        entries: [
+          metadata,
+          { ...payload, sha256: "d".repeat(64) },
+        ],
+        label: "hash mismatch",
+      },
+      {
+        entries: [metadata, { ...payload, bytes: 4 }],
+        label: "size mismatch",
+      },
+      {
+        entries: [payload],
+        label: "xattr manifest missing",
+      },
+    ];
+
+    for (const fixture of adversarial) {
+      expect(
+        () => validateStoragePayloadInventory({
+          entries: fixture.entries,
+          metadataPath,
+          storageFiles,
+        }),
+        fixture.label,
+      ).toThrow(/Storage payload|archive path|regular files|metadata/u);
+    }
+  });
+
+  it("hashes every inner Storage regular file during verify-backup before restore", () => {
+    const cli = readFileSync(
+      "scripts/hybrid-production-runtime.mjs",
+      "utf8",
+    );
+
+    expect(cli).toMatch(
+      /function inspectStorageXattrArchive[\s\S]*stdoutPath:[\s\S]*sha256File[\s\S]*validateStoragePayloadInventory/u,
+    );
+    expect(cli).toMatch(
+      /function extractBackup[\s\S]*inspectStorageXattrArchive[\s\S]*return manifest/u,
+    );
   });
 
   it("omits only legacy auth.users FK entries during compatibility restore", () => {

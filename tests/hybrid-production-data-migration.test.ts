@@ -1,5 +1,13 @@
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { createServer } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -10,6 +18,45 @@ type MigrationModule = typeof import(
 async function loadMigrationModule(): Promise<MigrationModule | null> {
   return import("../scripts/lib/hybrid-production-data-migration.mjs")
     .catch(() => null);
+}
+
+function executeStorageFixtureClient({
+  args,
+  env,
+  script,
+}: {
+  args: string[];
+  env: NodeJS.ProcessEnv;
+  script: string;
+}) {
+  return new Promise<{ stderr: string; stdout: string }>(
+    (resolve, reject) => {
+      const child = spawn(
+        process.execPath,
+        ["--input-type=module", "-e", script, ...args],
+        {
+          env,
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+      let stdout = "";
+      let stderr = "";
+      child.stdout.on("data", (chunk) => {
+        stdout += String(chunk);
+      });
+      child.stderr.on("data", (chunk) => {
+        stderr += String(chunk);
+      });
+      child.once("error", reject);
+      child.once("close", (status) => {
+        if (status !== 0) {
+          reject(new Error(`fixture client failed: ${stderr}`));
+          return;
+        }
+        resolve({ stderr, stdout });
+      });
+    },
+  );
 }
 
 describe("hybrid production legacy data migration plan", () => {
@@ -238,6 +285,87 @@ describe("hybrid production legacy data migration plan", () => {
         types: ["-"],
       }),
     ).toThrow(/unsafe legacy archive path/u);
+    expect(() =>
+      migration.assertLegacyEvidenceArchive({
+        entries: ["--checkpoint-action=exec=malicious/backup-manifest.json"],
+        types: ["-"],
+      }),
+    ).toThrow(/unsafe legacy archive path/u);
+    expect(() =>
+      migration.assertLegacyEvidenceArchive({
+        entries: [...entries, entries.at(-1)!],
+        types: [
+          ...entries.map((entry) => entry.endsWith("/") ? "d" : "-"),
+          "-",
+        ],
+      }),
+    ).toThrow(/duplicate/u);
+  });
+
+  it("requires the legacy manifest and regular payload inventory to match exactly", async () => {
+    const migration = await loadMigrationModule();
+    expect(migration).not.toBeNull();
+    if (!migration) {
+      return;
+    }
+    const root = "hybrid-rehearsal-20260730";
+    const sha256 = "a".repeat(64);
+    const manifestObjects = [{
+      bucket: "recipe-images",
+      path: "storage-objects/recipe-images/owner/object.jpg",
+      sha256,
+      size_bytes: 3,
+    }];
+    const archiveFile = {
+      bytes: 3,
+      path: `${root}/storage-objects/recipe-images/owner/object.jpg`,
+      sha256,
+    };
+
+    expect(migration.validateLegacyStoragePayloadInventory({
+      archiveFiles: [archiveFile],
+      manifestObjects,
+      root,
+    })).toEqual([{
+      ...manifestObjects[0],
+      archiveEntry: archiveFile.path,
+      path: "owner/object.jpg",
+    }]);
+
+    expect(() => migration.validateLegacyStoragePayloadInventory({
+      archiveFiles: [],
+      manifestObjects,
+      root,
+    })).toThrow(/exactly match/u);
+    expect(() => migration.validateLegacyStoragePayloadInventory({
+      archiveFiles: [
+        archiveFile,
+        {
+          ...archiveFile,
+          path: `${root}/storage-objects/recipe-images/extra.jpg`,
+        },
+      ],
+      manifestObjects,
+      root,
+    })).toThrow(/exactly match/u);
+    expect(() => migration.validateLegacyStoragePayloadInventory({
+      archiveFiles: [archiveFile, archiveFile],
+      manifestObjects,
+      root,
+    })).toThrow(/duplicate/u);
+    expect(() => migration.validateLegacyStoragePayloadInventory({
+      archiveFiles: [{ ...archiveFile, sha256: "b".repeat(64) }],
+      manifestObjects,
+      root,
+    })).toThrow(/exactly match/u);
+
+    const cli = readFileSync(
+      "scripts/hybrid-production-data-migration.mjs",
+      "utf8",
+    );
+    expect(cli).toMatch(
+      /archivePlan\.storageEntries\.map[\s\S]*stdoutPath:[\s\S]*sha256File[\s\S]*validateLegacyStoragePayloadInventory/u,
+    );
   });
 
   it("keeps the gateway private unless import and publication evidence are independently safe", async () => {
@@ -300,5 +428,195 @@ describe("hybrid production legacy data migration plan", () => {
     expect(cli).toMatch(
       /onCommitted: \(\) => \{\s*publicCommitted = true;\s*\}/u,
     );
+  });
+
+  it("verifies public and private uploads through the authenticated Storage API before commit", async () => {
+    const migration = await loadMigrationModule();
+    expect(migration).not.toBeNull();
+    if (!migration) {
+      return;
+    }
+    const api = migration as unknown as {
+      buildStorageApiRequestScript: () => string;
+      planStorageCommitBoundary: (input: {
+        publicCommitted: boolean;
+        storageVerifiedBeforeCommit: boolean;
+      }) => {
+        commitAllowed: boolean;
+        compensateStorage: boolean;
+      };
+    };
+    expect(api.buildStorageApiRequestScript).toBeTypeOf("function");
+    expect(api.planStorageCommitBoundary).toBeTypeOf("function");
+
+    const serviceJwt = "fixture-service-role-token";
+    const objects = new Map<string, {
+      body: Buffer;
+      cacheControl: string;
+      contentType: string;
+    }>();
+    const calls: Array<{
+      authorization: string;
+      method: string;
+      path: string;
+    }> = [];
+    const server = createServer(async (request, response) => {
+      const body = Buffer.concat(
+        await Array.fromAsync(request),
+      );
+      const path = request.url ?? "";
+      calls.push({
+        authorization: request.headers.authorization ?? "",
+        method: request.method ?? "",
+        path,
+      });
+      if (request.headers.authorization !== `Bearer ${serviceJwt}`) {
+        response.writeHead(401).end();
+        return;
+      }
+      const upload = /^\/object\/([^/]+)\/(.+)$/u.exec(path);
+      const authenticated =
+        /^\/object\/authenticated\/([^/]+)\/(.+)$/u.exec(path);
+      if (request.method === "POST" && upload) {
+        objects.set(`${upload[1]}/${upload[2]}`, {
+          body,
+          cacheControl: request.headers["cache-control"] ?? "",
+          contentType: request.headers["content-type"] ?? "",
+        });
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end("{}");
+        return;
+      }
+      if (request.method === "GET" && authenticated) {
+        const object = objects.get(
+          `${authenticated[1]}/${authenticated[2]}`,
+        );
+        if (!object) {
+          response.writeHead(404).end();
+          return;
+        }
+        response.writeHead(200, {
+          "cache-control": object.cacheControl,
+          "content-type": object.contentType,
+        });
+        response.end(object.body);
+        return;
+      }
+      response.writeHead(404).end();
+    });
+    await new Promise<void>((resolve) => {
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    expect(address).not.toBeNull();
+    expect(typeof address).not.toBe("string");
+    if (!address || typeof address === "string") {
+      server.close();
+      return;
+    }
+    const directory = mkdtempSync(
+      join(tmpdir(), "homecook-storage-api-fixture-"),
+    );
+    try {
+      const results = [];
+      for (const [index, bucket] of [
+        "recipe-images",
+        "recipe-images-private",
+      ].entries()) {
+        const payload = Buffer.from(`fixture-${bucket}`, "utf8");
+        const file = join(directory, `payload-${index}.bin`);
+        writeFileSync(file, payload, { mode: 0o600 });
+        const common = [
+          `http://127.0.0.1:${address.port}`,
+          bucket,
+          `owner/object-${index}.jpg`,
+          "image/jpeg",
+          "max-age=3600",
+        ];
+        results.push(JSON.parse((await executeStorageFixtureClient({
+          args: [
+            common[0],
+            "POST",
+            ...common.slice(1),
+            file,
+          ],
+          env: { ...process.env, SERVICE_JWT: serviceJwt },
+          script: api.buildStorageApiRequestScript(),
+        })).stdout));
+        results.push(JSON.parse((await executeStorageFixtureClient({
+          args: [
+            common[0],
+            "GET",
+            ...common.slice(1),
+            "",
+          ],
+          env: { ...process.env, SERVICE_JWT: serviceJwt },
+          script: api.buildStorageApiRequestScript(),
+        })).stdout));
+      }
+
+      expect(results).toEqual([
+        expect.objectContaining({ status: 200 }),
+        expect.objectContaining({
+          bytes: Buffer.byteLength("fixture-recipe-images"),
+          cacheControl: "max-age=3600",
+          contentType: "image/jpeg",
+          status: 200,
+        }),
+        expect.objectContaining({ status: 200 }),
+        expect.objectContaining({
+          bytes: Buffer.byteLength("fixture-recipe-images-private"),
+          cacheControl: "max-age=3600",
+          contentType: "image/jpeg",
+          status: 200,
+        }),
+      ]);
+      expect(calls.filter((call) => call.method === "GET")).toEqual([
+        expect.objectContaining({
+          authorization: `Bearer ${serviceJwt}`,
+          path:
+            "/object/authenticated/recipe-images/owner/object-0.jpg",
+        }),
+        expect.objectContaining({
+          authorization: `Bearer ${serviceJwt}`,
+          path:
+            "/object/authenticated/recipe-images-private/owner/object-1.jpg",
+        }),
+      ]);
+      expect(JSON.stringify(results)).not.toContain(serviceJwt);
+      expect(api.planStorageCommitBoundary({
+        publicCommitted: false,
+        storageVerifiedBeforeCommit: true,
+      })).toEqual({
+        commitAllowed: true,
+        compensateStorage: true,
+      });
+      expect(api.planStorageCommitBoundary({
+        publicCommitted: true,
+        storageVerifiedBeforeCommit: true,
+      })).toEqual({
+        commitAllowed: true,
+        compensateStorage: false,
+      });
+      expect(() => api.planStorageCommitBoundary({
+        publicCommitted: true,
+        storageVerifiedBeforeCommit: false,
+      })).toThrow(/must verify before public commit/u);
+    } finally {
+      server.close();
+      rmSync(directory, { force: true, recursive: true });
+    }
+  });
+
+  it("contains no fallible Storage verification after the public commit boundary", () => {
+    const cli = readFileSync(
+      "scripts/hybrid-production-data-migration.mjs",
+      "utf8",
+    );
+
+    expect(cli).toMatch(
+      /const storageEvidence = storageMutation\.evidence;[\s\S]*executePublicMigration/u,
+    );
+    expect(cli).not.toContain("storageMutation.verify()");
   });
 });

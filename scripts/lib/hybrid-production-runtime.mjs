@@ -826,6 +826,7 @@ export function assertSafeTarArchive({
     const normalized = entry.replace(/^\.\//u, "");
     if (
       normalized.startsWith("/")
+      || normalized.startsWith("-")
       || normalized.split("/").includes("..")
       || normalized.includes("\\")
     ) {
@@ -910,6 +911,102 @@ export function validateInstalledSemanticState(
     throw new Error("Installed schema failed the semantic readiness gate.");
   }
   return true;
+}
+
+function normalizedArchivePath(value) {
+  return typeof value === "string"
+    ? value.replace(/^\.\//u, "")
+    : "";
+}
+
+export function validateStoragePayloadInventory({
+  entries,
+  metadataPath,
+  storageFiles,
+}) {
+  const normalizedMetadataPath = normalizedArchivePath(metadataPath);
+  if (
+    !Array.isArray(entries)
+    || !Array.isArray(storageFiles)
+    || !normalizedMetadataPath
+  ) {
+    throw new Error("Storage payload inventory is malformed.");
+  }
+  const normalizedEntries = entries.map((entry) => {
+    const path = normalizedArchivePath(entry?.path);
+    if (
+      (entry?.type !== "file" && entry?.type !== "directory")
+      || path.startsWith("/")
+      || path.startsWith("-")
+      || path.includes("\\")
+      || path.split("/").includes("..")
+      || (entry.type === "file" && !path)
+    ) {
+      throw new Error(
+        "Storage archive paths and types must be regular files or directories.",
+      );
+    }
+    if (
+      entry.type === "file"
+      && (
+        !Number.isSafeInteger(entry.bytes)
+        || entry.bytes < 0
+        || !/^[0-9a-f]{64}$/u.test(entry.sha256)
+      )
+    ) {
+      throw new Error("Storage payload size or SHA-256 is invalid.");
+    }
+    return { ...entry, path };
+  });
+  const normalizedPaths = normalizedEntries.map((entry) => entry.path);
+  if (new Set(normalizedPaths).size !== normalizedPaths.length) {
+    throw new Error("Storage payload archive contains a duplicate path.");
+  }
+  const metadataEntries = normalizedEntries.filter((entry) =>
+    entry.type === "file" && entry.path === normalizedMetadataPath);
+  if (metadataEntries.length !== 1) {
+    throw new Error("Storage payload metadata entry is missing or duplicated.");
+  }
+  const expected = storageFiles.map((file) => {
+    const path = normalizedArchivePath(file?.path);
+    if (
+      !path
+      || path.startsWith("/")
+      || path.startsWith("-")
+      || path.includes("\\")
+      || path.split("/").includes("..")
+      || !Number.isSafeInteger(file?.bytes)
+      || file.bytes < 0
+      || !/^[0-9a-f]{64}$/u.test(file?.sha256)
+      || path === normalizedMetadataPath
+    ) {
+      throw new Error("Outer Storage file manifest is malformed.");
+    }
+    return {
+      bytes: file.bytes,
+      path,
+      sha256: file.sha256,
+    };
+  }).sort((left, right) => left.path.localeCompare(right.path));
+  if (new Set(expected.map((file) => file.path)).size !== expected.length) {
+    throw new Error("Outer Storage file manifest contains a duplicate path.");
+  }
+  const actual = normalizedEntries
+    .filter((entry) =>
+      entry.type === "file" && entry.path !== normalizedMetadataPath)
+    .sort((left, right) => left.path.localeCompare(right.path));
+  if (
+    actual.length !== expected.length
+    || actual.some((file, index) =>
+      file.path !== expected[index].path
+      || file.bytes !== expected[index].bytes
+      || file.sha256 !== expected[index].sha256)
+  ) {
+    throw new Error(
+      "Storage payload entries do not exactly match path, size, and SHA-256.",
+    );
+  }
+  return actual;
 }
 
 export function validateStorageXattrManifest({
