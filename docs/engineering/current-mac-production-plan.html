@@ -645,9 +645,9 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <p class="eyebrow">HOMECOOK · 2026-07-30 KST</p>
+      <p class="eyebrow">HOMECOOK · 2026-07-31 KST</p>
       <h1>현재 Mac production 운영 안내서</h1>
-      <p>localhost 개발 서버를 실제 운영 build로 바꾸고, Mac 자동 실행과 같은 와이파이의 휴대폰 소셜 로그인까지 확인한 결과를 초보 개발자 눈높이로 정리했다.</p>
+      <p>localhost 개발 서버를 실제 운영 build로 바꾸고, Mac 자동 실행, 휴대폰 소셜 로그인, YouTube 실제 추출까지 확인한 결과를 초보 개발자 눈높이로 정리했다.</p>
       <div class="badge-row" aria-label="현재 상태">
         <span class="badge live">운영 중</span>
         <span class="badge">신뢰하는 LAN</span>
@@ -685,7 +685,7 @@
 
       <section id="start">
         <h2>딱 한 줄 요약: 서비스는 지금 운영 중이다</h2>
-        <p class="lead">production build가 현재 Mac에서 백그라운드로 실행되고 있다. 홈, 실제 레시피 데이터, 모바일 화면, 재시작 복구와 세 가지 소셜 로그인을 확인했다.</p>
+        <p class="lead">production build가 현재 Mac에서 백그라운드로 실행되고 있다. 홈, 모바일 화면, 재시작 복구, 소셜 로그인과 실제 YouTube 레시피 추출을 확인했다.</p>
         <a class="action-link" href="http://cwjsui-macbookpro.local:3100">휴대폰용 production 열기</a>
         <div class="notice warn">
           <strong>같은 와이파이에서만 사용</strong>
@@ -696,6 +696,8 @@
           <div class="fact"><strong>자동 복구</strong><span>프로세스가 종료되면 <code>launchd</code>가 다시 시작한다.</span></div>
           <div class="fact"><strong>환경 파일</strong><span><code>.env.production.local</code>은 허용 키만 담고 권한은 <code>600</code>이다.</span></div>
           <div class="fact"><strong>잠자기 방지</strong><span>Amphetamine은 현재 꺼져 있다. Mac이 잠들면 휴대폰 접속도 중단된다.</span></div>
+          <div class="fact"><strong>운영 코드</strong><span>commit <code>61361b5a</code>, build <code>m1iMdqs3EFa6gICnLiS9P</code>다.</span></div>
+          <div class="fact"><strong>데이터 위치</strong><span>앱은 Mac에서 실행되지만 현재 Auth·DB·Storage 권한은 원격 Supabase다.</span></div>
         </div>
       </section>
 
@@ -714,6 +716,9 @@
               <tr><td>LAN 접속</td><td><code>0.0.0.0:3100</code></td><td>신뢰하는 같은 와이파이의 기기에서 접속</td><td class="ok">설정됨</td></tr>
               <tr><td>휴대폰 주소</td><td><code>cwjsui-macbookpro.local:3100</code></td><td>mDNS가 같은 와이파이에서 현재 Mac IP를 찾아 주는 고정 이름</td><td class="ok">로그인 통과</td></tr>
               <tr><td>현재 IP 보조 주소</td><td><code>192-168-0-11.sslip.io:3100</code></td><td><code>.local</code>을 지원하지 않는 기기용이며 Mac IP가 바뀌면 함께 바뀜</td><td class="ok">HTTP 200</td></tr>
+              <tr><td>예전 IP 보조 주소</td><td><code>192-168-0-36.sslip.io:3100</code></td><td>공유기가 예전에 배정했던 IP라 현재 Mac을 가리키지 않음</td><td>사용 중지</td></tr>
+              <tr><td>현재 Data authority</td><td><code>remote</code></td><td>실제 Auth·DB·Storage 데이터는 원격 Supabase 사용</td><td class="ok">안전하게 유지</td></tr>
+              <tr><td>로컬 DB/Storage</td><td>PostgreSQL·Storage healthy</td><td>gateway는 OFF/blocked라 아직 앱의 실제 데이터 권한으로 전환되지 않음</td><td>전환 전</td></tr>
               <tr><td>외부 공개</td><td>도메인 + HTTPS</td><td>인터넷 사용자가 접속하는 운영</td><td>이번 범위 아님</td></tr>
             </tbody>
           </table>
@@ -783,6 +788,14 @@
               <p class="fix">운영 기준 주소와 Supabase 기본 <code>Site URL</code>을 <code>cwjsui-macbookpro.local:3100</code>으로 고정하고, Supabase 허용 목록과 네이버 서비스 URL도 같은 주소로 맞췄다. 앱 환경변수도 같은 주소로 다시 빌드했다. Chrome에서 Google·네이버 로그인을 실제 완료해 Vercel이 아닌 <code>/mypage</code>로 돌아왔고, 카카오는 등록 오류 없이 정확한 앱·Supabase callback을 담은 로그인 화면까지 확인했다.</p>
             </div>
           </article>
+          <article class="cause">
+            <span class="cause-number">8</span>
+            <div>
+              <h3>YouTube 분석 후 초안 저장 실패와 재시도 무한 대기</h3>
+              <p>영상 분석은 끝났지만 사용자 RLS client로는 새 추출 세션을 저장할 수 없었다. 첫 실패 뒤 재시도는 같은 <code>extracting</code> 단계에 머물러 두 번째 API 요청도 실행되지 않았다.</p>
+              <p class="fix">사용자 인증과 소유권 확인 뒤 정확한 YouTube 테이블만 허용하는 scoped internal client를 사용했다. 세션은 <code>select/insert</code>만 허용하고 수정·삭제는 차단했다. 재시도 횟수를 별도 상태로 관리해 API를 다시 호출하게 했으며, 실제 영상에서 재료 15개와 조리 8단계 초안 저장을 확인했다.</p>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -806,6 +819,9 @@
           <li>Supabase에 고정 <code>.local</code> 및 현재 IP 보조 Redirect URL 등록</li>
           <li>IP 변경 후 Google·네이버 실제 로그아웃·재로그인 왕복 통과</li>
           <li>카카오 OAuth의 앱 복귀 주소와 원격 Supabase callback 확인</li>
+          <li>YouTube 실제 영상 추출, 검토 화면, DB 초안 저장 통과</li>
+          <li>YouTube 재시도 두 번째 API 호출 회귀 테스트 통과</li>
+          <li><code>61361b5a</code> build 원자 배포와 외부 롤백 보관</li>
           <li>launchd 재시작 복구 통과</li>
           <li class="pending">실제 Mac 재부팅 smoke는 미실행</li>
         </ul>
@@ -822,7 +838,7 @@
             <tbody>
               <tr><td>Lint</td><td class="ok">통과</td><td>ESLint 오류 0</td></tr>
               <tr><td>TypeScript</td><td class="ok">통과</td><td>타입 오류 0</td></tr>
-              <tr><td>전체 Vitest</td><td class="ok">통과</td><td>422 files, 4,318 tests</td></tr>
+              <tr><td>전체 Vitest</td><td class="ok">통과</td><td>467 files, 4,769 tests</td></tr>
               <tr><td>recipe PostgreSQL</td><td class="ok">통과</td><td>75 tests</td></tr>
               <tr><td>검색 PostgreSQL</td><td class="ok">통과</td><td>32 tests</td></tr>
               <tr><td>Production build</td><td class="ok">통과</td><td>74 static pages 생성</td></tr>
@@ -837,6 +853,11 @@
               <tr><td>LAN 주소</td><td class="ok">통과</td><td>고정 <code>.local</code>과 현재 IP용 <code>sslip.io</code> 모두 HTTP 200</td></tr>
               <tr><td>LAN Playwright</td><td class="ok">통과</td><td>guest 9개 경로, 320·390·1440px, 실제 실패 요청·오류·오버플로 0</td></tr>
               <tr><td>픽셀 비교</td><td class="ok">통과</td><td>LAN 모바일 홈과 정상 loopback 기준 차이 0</td></tr>
+              <tr><td>YouTube 실제 추출</td><td class="ok">통과</td><td><code>FNhCQKrey6Y</code> → 대패 삼겹살 감자탕, 재료 15개, 조리 8단계, DB draft 저장</td></tr>
+              <tr><td>YouTube 최소 권한</td><td class="ok">통과</td><td>소유권 선검증, exact table scope, session update/upsert/delete/PATCH 차단</td></tr>
+              <tr><td>YouTube 재시도</td><td class="ok">통과</td><td>수정 전 API 1회 정지 재현, 수정 후 2회 호출과 검토 화면 도달</td></tr>
+              <tr><td>운영 build</td><td class="ok">통과</td><td><code>61361b5a</code> / <code>m1iMdqs3EFa6gICnLiS9P</code> / <code>TCP *:3100</code></td></tr>
+              <tr><td>로컬 Data 전환</td><td>전환 전</td><td>PostgreSQL·Storage healthy, gateway OFF/blocked, 현재 authority는 <code>remote</code></td></tr>
             </tbody>
           </table>
         </div>
@@ -906,6 +927,7 @@
               <li>신뢰할 수 없는 공용 와이파이에서는 서비스를 실행하지 않는다.</li>
               <li>평소에는 IP 변경 영향을 받지 않는 <code>cwjsui-macbookpro.local</code> 주소를 사용한다.</li>
               <li><code>.local</code>을 지원하지 않는 기기에서만 현재 IP용 <code>sslip.io</code> 보조 주소를 사용한다.</li>
+              <li><code>HOMECOOK_DATA_AUTHORITY=remote</code>를 유지하고 gateway 준비 전에는 임의로 <code>local</code>로 바꾸지 않는다.</li>
               <li>Amphetamine은 현재 꺼져 있으므로 Mac 잠자기 상태를 확인한다.</li>
             </ul>
           </div>
@@ -915,6 +937,7 @@
               <li>public internet 공개</li>
               <li>도메인과 HTTPS</li>
               <li>실제 Mac 재부팅 smoke test</li>
+              <li>원격 Auth + 로컬 DB/Storage의 최종 Data authority 전환</li>
             </ul>
           </div>
         </div>
