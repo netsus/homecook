@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import {
@@ -156,6 +156,72 @@ function validateActualVerificationReady(body) {
   ];
 }
 
+function readJsonFile(filePath) {
+  if (!existsSync(filePath)) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(readFileSync(filePath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function validateFrontendSmokeRelock({
+  rootDir,
+  slice,
+  mode,
+}) {
+  if (
+    normalizeMode(mode) !== "frontend" ||
+    typeof slice !== "string" ||
+    slice.trim().length === 0
+  ) {
+    return [];
+  }
+
+  const normalizedSlice = slice.trim();
+  const automationSpecPath = resolve(
+    rootDir,
+    "docs",
+    "workpacks",
+    normalizedSlice,
+    "automation-spec.json",
+  );
+  const workItemPath = resolve(
+    rootDir,
+    ".workflow-v2",
+    "work-items",
+    `${normalizedSlice}.json`,
+  );
+  const automationSpec = readJsonFile(automationSpecPath);
+  const workItem = readJsonFile(workItemPath);
+  const currentSmokes = Array.isArray(automationSpec?.external_smokes)
+    ? automationSpec.external_smokes
+    : [];
+  const futureSmokes = Array.isArray(workItem?.workflow?.external_smokes)
+    ? workItem.workflow.external_smokes
+    : [];
+
+  if (futureSmokes.length === 0 || currentSmokes.length > 0) {
+    return [];
+  }
+
+  return [
+    {
+      name: "frontend-smoke-relock",
+      errors: [
+        {
+          path: `docs/workpacks/${normalizedSlice}/automation-spec.json:external_smokes`,
+          message:
+            "Frontend Ready requires automation-spec external_smokes to be relocked from the preserved work-item full-lifecycle smoke list.",
+        },
+      ],
+    },
+  ];
+}
+
 export function validatePrReady({
   rootDir = process.cwd(),
   slice,
@@ -202,6 +268,11 @@ export function validatePrReady({
     ...validateAuthorityEvidencePresence({
       rootDir,
       env: validationEnv,
+    }),
+    ...validateFrontendSmokeRelock({
+      rootDir,
+      slice,
+      mode,
     }),
     ...validateRealSmokePresence({
       rootDir,

@@ -75,6 +75,7 @@ describe("personal recipe editor hybrid contract lock", () => {
     const backend = automation.backend as Record<string, unknown>;
     const invariants = backend.invariants as string[];
     const backendVerifyCommands = backend.verify_commands as string[];
+    const externalSmokes = automation.external_smokes as string[];
     const blockedConditions = automation.blocked_conditions as string[];
     const acceptance = read(acceptancePath);
 
@@ -102,11 +103,17 @@ describe("personal recipe editor hybrid contract lock", () => {
     expect(backendVerifyCommands).not.toContain(
       "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only",
     );
+    expect(externalSmokes).toEqual([]);
+    expect(blockedConditions).toContain(
+      "stage4-ready-before-external-smokes-relocked-from-work-item-full-lifecycle-gate",
+    );
   });
 
   it("keeps the relock and future editor externally dark", () => {
     const readme = read(readmePath);
     const workItem = readJson(workItemPath);
+    const workflow = workItem.workflow as Record<string, unknown>;
+    const futureExternalSmokes = workflow.external_smokes as string[];
     const verification = workItem.verification as Record<string, unknown>;
     const requiredChecks = verification.required_checks as string[];
     const verifyCommands = verification.verify_commands as string[];
@@ -125,6 +132,9 @@ describe("personal recipe editor hybrid contract lock", () => {
     expect(readme).toContain("capability-off hides the personal CTA and route");
     expect(requiredChecks).toContain(
       "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only",
+    );
+    expect(futureExternalSmokes).toContain(
+      "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only from a merged exact SHA only",
     );
     expect(verifyCommands).not.toContain(
       "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only",
