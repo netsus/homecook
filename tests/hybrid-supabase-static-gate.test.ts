@@ -154,6 +154,7 @@ describe("hybrid authority AST/static gate", () => {
       "lib/api/sdk-alias.mjs",
       "lib/api/sdk-bracket.js",
       "stores/aliased-rest.ts",
+      "stores/imported-fetch.ts",
       "stores/unsafe.ts",
     ]);
     expect(inventory.clientReachableFiles).not.toContain(
@@ -166,7 +167,12 @@ describe("hybrid authority AST/static gate", () => {
       expect.arrayContaining([
         "components/dynamic-client.tsx",
         "lib/api/complex/index.ts",
+        "lib/api/fetch-barrel.ts",
+        "lib/api/fetch-transport.ts",
+        "lib/api/non-fetch-helper.ts",
         "stores/aliased-rest.ts",
+        "stores/imported-fetch.ts",
+        "stores/safe-imported-helper.ts",
       ]),
     );
     expect(
@@ -174,6 +180,18 @@ describe("hybrid authority AST/static gate", () => {
         (entry) => entry.file === "stores/aliased-rest.ts",
       ),
     ).toHaveLength(1);
+    expect(
+      inventory.browserDirectStoragePaths.filter(
+        (entry) => entry.file === "stores/imported-fetch.ts",
+      ),
+    ).toHaveLength(1);
+    expect(inventory.browserDirectStoragePaths).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: "stores/safe-imported-helper.ts",
+        }),
+      ]),
+    );
   });
 
   it("keeps every remaining service-role call inside an exact allowlist", () => {

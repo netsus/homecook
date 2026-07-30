@@ -5,8 +5,6 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
-const SDK_MUTATION_PATTERN =
-  /(?:\.storage|\[\s*["']storage["']\s*\])[\s\S]{0,80}(?:\.from|\[\s*["']from["']\s*\])\s*\([^)]{0,160}\)[\s\S]{0,80}(?:\.(?:copy|delete|move|remove|update|upload|upsert|write)|\[\s*["'](?:copy|delete|move|remove|update|upload|upsert|write)["']\s*\])\s*\(/giu;
 const STORAGE_REST_MUTATION_METHODS = new Set([
   "DELETE",
   "PATCH",
@@ -15,18 +13,45 @@ const STORAGE_REST_MUTATION_METHODS = new Set([
 ]);
 const STORAGE_REST_PATH = "/storage/v1/object/";
 const FETCH_VALUE = Symbol("fetch");
+const FUNCTION_VALUE = Symbol("function");
+const GLOBAL_OBJECT_VALUE = Symbol("global-object");
+const STORAGE_NAMESPACE_VALUE = Symbol("storage-namespace");
+const STORAGE_FROM_VALUE = Symbol("storage-from");
+const STORAGE_BUCKET_VALUE = Symbol("storage-bucket");
+const STORAGE_MUTATOR_VALUE = Symbol("storage-mutator");
 const CONTROL_FLOW_TAINT = Symbol("control-flow-taint");
+const BINDING_INITIALIZED = "initialized";
+const BINDING_UNINITIALIZED = "uninitialized";
+const BINDING_UNKNOWN = "unknown";
 const VALUE_SET_LIMIT = 32;
 const EXCEPTION_OUTCOME_LIMIT = 64;
+const SDK_MUTATION_METHODS = new Set([
+  "copy",
+  "delete",
+  "move",
+  "remove",
+  "update",
+  "upload",
+  "upsert",
+  "write",
+]);
 
 // The scanner lattice keeps a bounded set of possible known values plus an
 // unknown/tainted bit. Every executable control-flow outcome gets its own
 // binding state, then joins by union at the statement exit. Unknown state or
 // any mutating call-site value fails closed while confirmed-safe sets remain
 // safe.
-function valueSet(known = [], { fragments = [], unknown = false } = {}) {
+function valueSet(
+  known = [],
+  {
+    fragments = [],
+    initialization = BINDING_INITIALIZED,
+    unknown = false,
+  } = {},
+) {
   return {
     fragments: new Set(fragments),
+    initialization,
     known: new Set(known),
     unknown,
   };
@@ -34,6 +59,17 @@ function valueSet(known = [], { fragments = [], unknown = false } = {}) {
 
 function unknownValue() {
   return valueSet([], { unknown: true });
+}
+
+function uninitializedValue() {
+  return valueSet([], { initialization: BINDING_UNINITIALIZED });
+}
+
+function unknownBindingValue() {
+  return valueSet([], {
+    initialization: BINDING_UNKNOWN,
+    unknown: true,
+  });
 }
 
 function knownValue(value) {
@@ -45,11 +81,14 @@ function knownValue(value) {
 
 function mergeValues(...values) {
   const merged = valueSet();
+  const initializationStates = new Set();
   for (const value of values) {
     if (!value) {
       merged.unknown = true;
+      initializationStates.add(BINDING_UNKNOWN);
       continue;
     }
+    initializationStates.add(value.initialization ?? BINDING_INITIALIZED);
     merged.unknown ||= value.unknown;
     for (const known of value.known) {
       if (merged.known.size >= VALUE_SET_LIMIT) {
@@ -66,6 +105,9 @@ function mergeValues(...values) {
       merged.fragments.add(fragment);
     }
   }
+  merged.initialization = initializationStates.size === 1
+    ? [...initializationStates][0]
+    : BINDING_UNKNOWN;
   return merged;
 }
 
@@ -121,7 +163,7 @@ function mergeBindings(target, ...branches) {
 
 function taintBindings(bindings) {
   for (const [key, value] of bindings) {
-    bindings.set(key, mergeValues(value, unknownValue()));
+    bindings.set(key, mergeValues(value, unknownBindingValue()));
   }
   bindings.set(CONTROL_FLOW_TAINT, unknownValue());
 }
@@ -155,16 +197,26 @@ function isDefinitelyNonThrowingEvaluation(node, bindings) {
     || ts.isFunctionExpression(expression)
     || ts.isArrowFunction(expression)
     || ts.isMetaProperty(expression)
+    || expression.kind === ts.SyntaxKind.ThisKeyword
   ) {
     return true;
   }
 
   if (ts.isIdentifier(expression)) {
-    return bindings.has(expression.text);
+    return bindings.get(expression.text)?.initialization
+      === BINDING_INITIALIZED;
   }
 
   if (ts.isTypeOfExpression(expression)) {
-    return true;
+    const operand = unwrapExpression(expression.expression);
+    if (!ts.isIdentifier(operand)) {
+      return false;
+    }
+    if (!bindings.has(operand.text)) {
+      return true;
+    }
+    return bindings.get(operand.text)?.initialization
+      === BINDING_INITIALIZED;
   }
 
   if (ts.isArrayLiteralExpression(expression)) {
@@ -261,14 +313,6 @@ function mayThrowDuringEvaluation(node, bindings) {
   );
 }
 
-function findPatternMatches(source, kind, pattern) {
-  return [...source.matchAll(pattern)].map((match) => ({
-    index: match.index ?? 0,
-    kind,
-    snippet: match[0].slice(0, 240),
-  }));
-}
-
 function unwrapExpression(node) {
   let current = node;
   while (
@@ -305,6 +349,90 @@ function valueHas(value, expected) {
   return value.known.has(expected);
 }
 
+function resolvePropertyNames(node, bindings) {
+  if (ts.isComputedPropertyName(node)) {
+    return resolvePropertyNames(node.expression, bindings);
+  }
+  const direct = getPropertyName(node);
+  if (direct !== null) {
+    return valueSet([direct]);
+  }
+  const resolved = resolveStaticValue(node, bindings);
+  return valueSet(
+    [...resolved.known].filter((value) => typeof value === "string"),
+    { unknown: resolved.unknown },
+  );
+}
+
+function resolveMemberValue(expression, bindings) {
+  const owner = resolveStaticValue(expression.expression, bindings);
+  const propertyNames = ts.isPropertyAccessExpression(expression)
+    ? knownValue(expression.name.text)
+    : expression.argumentExpression
+      ? resolvePropertyNames(expression.argumentExpression, bindings)
+      : unknownValue();
+  const values = [];
+  let unknown = owner.unknown || propertyNames.unknown;
+
+  for (const propertyName of propertyNames.known) {
+    if (typeof propertyName !== "string") {
+      unknown = true;
+      continue;
+    }
+
+    if (
+      ts.isIdentifier(expression.expression)
+      && (
+        expression.expression.text === "window"
+        || expression.expression.text === "globalThis"
+      )
+      && propertyName === "fetch"
+    ) {
+      values.push(knownValue(FETCH_VALUE));
+    }
+
+    if (propertyName === "storage") {
+      values.push(knownValue(STORAGE_NAMESPACE_VALUE));
+    }
+
+    for (const knownOwner of owner.known) {
+      if (knownOwner instanceof Map) {
+        if (knownOwner.has(propertyName)) {
+          values.push(knownOwner.get(propertyName));
+        } else {
+          unknown = true;
+        }
+        continue;
+      }
+      if (
+        knownOwner === GLOBAL_OBJECT_VALUE
+        && propertyName === "fetch"
+      ) {
+        values.push(knownValue(FETCH_VALUE));
+        continue;
+      }
+      if (
+        knownOwner === STORAGE_NAMESPACE_VALUE
+        && propertyName === "from"
+      ) {
+        values.push(knownValue(STORAGE_FROM_VALUE));
+        continue;
+      }
+      if (
+        knownOwner === STORAGE_BUCKET_VALUE
+        && SDK_MUTATION_METHODS.has(propertyName)
+      ) {
+        values.push(knownValue(STORAGE_MUTATOR_VALUE));
+      }
+    }
+  }
+
+  if (values.length === 0) {
+    return valueSet([], { unknown: true });
+  }
+  return mergeValues(...values, valueSet([], { unknown }));
+}
+
 function resolveStaticValue(node, bindings) {
   const expression = unwrapExpression(node);
 
@@ -319,6 +447,12 @@ function resolveStaticValue(node, bindings) {
     if (bindings.has(expression.text)) {
       return bindings.get(expression.text);
     }
+    if (
+      expression.text === "window"
+      || expression.text === "globalThis"
+    ) {
+      return knownValue(GLOBAL_OBJECT_VALUE);
+    }
     return expression.text === "fetch"
       ? knownValue(FETCH_VALUE)
       : unknownValue();
@@ -326,27 +460,9 @@ function resolveStaticValue(node, bindings) {
 
   if (
     ts.isPropertyAccessExpression(expression)
-    && ts.isIdentifier(expression.expression)
-    && (
-      expression.expression.text === "window"
-      || expression.expression.text === "globalThis"
-    )
-    && expression.name.text === "fetch"
+    || ts.isElementAccessExpression(expression)
   ) {
-    return knownValue(FETCH_VALUE);
-  }
-
-  if (
-    ts.isElementAccessExpression(expression)
-    && ts.isIdentifier(expression.expression)
-    && (
-      expression.expression.text === "window"
-      || expression.expression.text === "globalThis"
-    )
-    && expression.argumentExpression
-    && getPropertyName(expression.argumentExpression) === "fetch"
-  ) {
-    return knownValue(FETCH_VALUE);
+    return resolveMemberValue(expression, bindings);
   }
 
   if (
@@ -382,6 +498,13 @@ function resolveStaticValue(node, bindings) {
   }
 
   if (
+    ts.isBinaryExpression(expression)
+    && expression.operatorToken.kind === ts.SyntaxKind.CommaToken
+  ) {
+    return resolveStaticValue(expression.right, bindings);
+  }
+
+  if (
     ts.isNewExpression(expression)
     && ts.isIdentifier(expression.expression)
     && expression.expression.text === "URL"
@@ -391,6 +514,10 @@ function resolveStaticValue(node, bindings) {
   }
 
   if (ts.isCallExpression(expression)) {
+    const calleeValue = resolveStaticValue(expression.expression, bindings);
+    if (valueHas(calleeValue, STORAGE_FROM_VALUE)) {
+      return knownValue(STORAGE_BUCKET_VALUE);
+    }
     const propagated = [];
     const callee = unwrapExpression(expression.expression);
     if (
@@ -402,6 +529,7 @@ function resolveStaticValue(node, bindings) {
     for (const argument of expression.arguments) {
       propagated.push(resolveStaticValue(argument, bindings));
     }
+    propagated.push(calleeValue);
     const escaped = mergeValues(...propagated);
     escaped.unknown = true;
     return escaped;
@@ -427,8 +555,9 @@ function resolveStaticValue(node, bindings) {
       }
 
       if (ts.isPropertyAssignment(property)) {
-        const name = getPropertyName(property.name);
-        if (name !== null) {
+        const names = resolvePropertyNames(property.name, bindings);
+        objectUnknown ||= names.unknown;
+        for (const name of names.known) {
           properties.set(
             name,
             resolveStaticValue(property.initializer, bindings),
@@ -444,18 +573,128 @@ function resolveStaticValue(node, bindings) {
             ? bindings.get(property.name.text)
             : unknownValue(),
         );
+        continue;
+      }
+
+      if (
+        ts.isMethodDeclaration(property)
+        || ts.isGetAccessorDeclaration(property)
+        || ts.isSetAccessorDeclaration(property)
+      ) {
+        const names = resolvePropertyNames(property.name, bindings);
+        objectUnknown ||= names.unknown;
+        for (const name of names.known) {
+          properties.set(name, knownValue(FUNCTION_VALUE));
+        }
       }
     }
     return valueSet([properties], { unknown: objectUnknown });
   }
 
+  if (
+    ts.isFunctionExpression(expression)
+    || ts.isArrowFunction(expression)
+  ) {
+    return knownValue(FUNCTION_VALUE);
+  }
+
   return unknownValue();
+}
+
+function valueForProperty(value, propertyName) {
+  const values = [];
+  let unknown = value.unknown;
+  if (propertyName === "storage") {
+    values.push(knownValue(STORAGE_NAMESPACE_VALUE));
+  }
+  for (const known of value.known) {
+    if (known instanceof Map) {
+      if (known.has(propertyName)) {
+        values.push(known.get(propertyName));
+      } else {
+        unknown = true;
+      }
+      continue;
+    }
+    if (
+      known === GLOBAL_OBJECT_VALUE
+      && propertyName === "fetch"
+    ) {
+      values.push(knownValue(FETCH_VALUE));
+      continue;
+    }
+    if (
+      known === STORAGE_NAMESPACE_VALUE
+      && propertyName === "from"
+    ) {
+      values.push(knownValue(STORAGE_FROM_VALUE));
+      continue;
+    }
+    if (
+      known === STORAGE_BUCKET_VALUE
+      && SDK_MUTATION_METHODS.has(propertyName)
+    ) {
+      values.push(knownValue(STORAGE_MUTATOR_VALUE));
+      continue;
+    }
+    unknown = true;
+  }
+  return values.length > 0
+    ? mergeValues(...values, valueSet([], { unknown }))
+    : valueSet([], { unknown: true });
+}
+
+function assignBindingPattern(name, value, bindings) {
+  if (ts.isIdentifier(name)) {
+    bindings.set(name.text, value);
+    return;
+  }
+
+  if (ts.isObjectBindingPattern(name)) {
+    for (const element of name.elements) {
+      if (element.dotDotDotToken) {
+        assignBindingPattern(element.name, unknownValue(), bindings);
+        continue;
+      }
+      const propertyName = element.propertyName
+        ? getPropertyName(element.propertyName)
+        : ts.isIdentifier(element.name)
+          ? element.name.text
+          : null;
+      assignBindingPattern(
+        element.name,
+        propertyName === null
+          ? unknownValue()
+          : valueForProperty(value, propertyName),
+        bindings,
+      );
+    }
+    return;
+  }
+
+  if (ts.isArrayBindingPattern(name)) {
+    for (let index = 0; index < name.elements.length; index += 1) {
+      const element = name.elements[index];
+      if (ts.isOmittedExpression(element)) {
+        continue;
+      }
+      assignBindingPattern(
+        element.name,
+        element.dotDotDotToken
+          ? unknownValue()
+          : valueForProperty(value, String(index)),
+        bindings,
+      );
+    }
+  }
 }
 
 function findStorageRestFetches(
   source,
   {
+    failClosedUnknownStorageCallee = false,
     fileName = "browser-bundle.js",
+    initialBindings = {},
     scriptKind = ts.ScriptKind.JS,
   } = {},
 ) {
@@ -476,9 +715,26 @@ function findStorageRestFetches(
     }
   };
 
-  const blockScopedNames = (block) => {
+  const collectBindingNames = (name, names) => {
+    if (ts.isIdentifier(name)) {
+      names.add(name.text);
+      return;
+    }
+    for (const element of name.elements) {
+      if (ts.isOmittedExpression(element)) {
+        continue;
+      }
+      collectBindingNames(element.name, names);
+    }
+  };
+
+  const blockScopedNames = (statements) => {
     const names = new Set();
-    for (const statement of block.statements) {
+    for (const statement of statements) {
+      if (ts.isClassDeclaration(statement) && statement.name) {
+        names.add(statement.name.text);
+        continue;
+      }
       if (
         !ts.isVariableStatement(statement)
         || !(statement.declarationList.flags & ts.NodeFlags.BlockScoped)
@@ -486,9 +742,7 @@ function findStorageRestFetches(
         continue;
       }
       for (const declaration of statement.declarationList.declarations) {
-        if (ts.isIdentifier(declaration.name)) {
-          names.add(declaration.name.text);
-        }
+        collectBindingNames(declaration.name, names);
       }
     }
     return names;
@@ -557,28 +811,41 @@ function findStorageRestFetches(
   });
 
   const initializeHoistedBindings = (statements, bindings) => {
+    for (const name of blockScopedNames(statements)) {
+      bindings.set(name, uninitializedValue());
+    }
+
     for (const statement of statements) {
       if (ts.isFunctionDeclaration(statement) && statement.name) {
-        bindings.set(statement.name.text, unknownValue());
+        bindings.set(statement.name.text, knownValue(FUNCTION_VALUE));
         continue;
       }
       if (ts.isImportDeclaration(statement) && statement.importClause) {
         const { importClause } = statement;
         if (importClause.name) {
-          bindings.set(importClause.name.text, unknownValue());
+          if (!bindings.has(importClause.name.text)) {
+            bindings.set(importClause.name.text, unknownValue());
+          }
         }
         if (
           importClause.namedBindings
           && ts.isNamespaceImport(importClause.namedBindings)
         ) {
-          bindings.set(importClause.namedBindings.name.text, unknownValue());
+          if (!bindings.has(importClause.namedBindings.name.text)) {
+            bindings.set(
+              importClause.namedBindings.name.text,
+              unknownValue(),
+            );
+          }
         } else if (
           importClause.namedBindings
           && ts.isNamedImports(importClause.namedBindings)
         ) {
           for (const element of importClause.namedBindings.elements) {
             if (!element.isTypeOnly) {
-              bindings.set(element.name.text, unknownValue());
+              if (!bindings.has(element.name.text)) {
+                bindings.set(element.name.text, unknownValue());
+              }
             }
           }
         }
@@ -619,7 +886,7 @@ function findStorageRestFetches(
 
   const executeBlock = (block, inheritedBindings) => {
     const outerNames = new Set(inheritedBindings.keys());
-    const shadowedNames = blockScopedNames(block);
+    const shadowedNames = blockScopedNames(block.statements);
     const completions = executeStatementList(
       block.statements,
       cloneBindings(inheritedBindings),
@@ -649,7 +916,15 @@ function findStorageRestFetches(
   };
 
   const executeSwitch = (node, inheritedBindings) => {
+    const outerNames = new Set(inheritedBindings.keys());
+    const switchStatements = node.caseBlock.clauses.flatMap(
+      (clause) => [...clause.statements],
+    );
+    const shadowedNames = blockScopedNames(switchStatements);
     const selectorBindings = cloneBindings(inheritedBindings);
+    for (const name of shadowedNames) {
+      selectorBindings.set(name, uninitializedValue());
+    }
     visit(node.expression, selectorBindings);
     const clauses = node.caseBlock.clauses;
 
@@ -690,7 +965,24 @@ function findStorageRestFetches(
     if (outcomes.length === 0) {
       outcomes.push(normalCompletion(cloneBindings(selectorBindings)));
     }
-    return compactCompletions(outcomes);
+    return compactCompletions(outcomes).map((completion) => {
+      const bindings = cloneBindings(inheritedBindings);
+      for (const name of outerNames) {
+        if (
+          !shadowedNames.has(name)
+          && completion.bindings.has(name)
+        ) {
+          bindings.set(name, completion.bindings.get(name));
+        }
+      }
+      if (completion.bindings.has(CONTROL_FLOW_TAINT)) {
+        bindings.set(
+          CONTROL_FLOW_TAINT,
+          completion.bindings.get(CONTROL_FLOW_TAINT),
+        );
+      }
+      return { ...completion, bindings };
+    });
   };
 
   const executeTry = (node, inheritedBindings) => {
@@ -983,7 +1275,7 @@ function findStorageRestFetches(
       captureExceptionalOutcome(bindings);
       visit(node, bindings);
       if (node.name) {
-        bindings.set(node.name.text, unknownValue());
+        bindings.set(node.name.text, knownValue(FUNCTION_VALUE));
       }
       captureExceptionalOutcome(bindings);
       return [normalCompletion(bindings)];
@@ -1037,8 +1329,10 @@ function findStorageRestFetches(
     if (ts.isFunctionLike(node)) {
       const bindings = new Map(inheritedBindings);
       for (const parameter of node.parameters) {
-        if (ts.isIdentifier(parameter.name)) {
-          bindings.set(parameter.name.text, unknownValue());
+        const parameterNames = new Set();
+        collectBindingNames(parameter.name, parameterNames);
+        for (const name of parameterNames) {
+          bindings.set(name, unknownValue());
         }
       }
       const suspendedCollectors = exceptionCollectors.splice(0);
@@ -1060,14 +1354,14 @@ function findStorageRestFetches(
         if (!ts.isIdentifier(declaration.name)) {
           captureExceptionalOutcome(inheritedBindings);
         }
-        if (ts.isIdentifier(declaration.name)) {
-          inheritedBindings.set(
-            declaration.name.text,
-            declaration.initializer
-              ? resolveStaticValue(declaration.initializer, inheritedBindings)
-              : unknownValue(),
-          );
-        }
+        const declaredValue = declaration.initializer
+          ? resolveStaticValue(declaration.initializer, inheritedBindings)
+          : unknownValue();
+        assignBindingPattern(
+          declaration.name,
+          declaredValue,
+          inheritedBindings,
+        );
       }
       return;
     }
@@ -1126,22 +1420,34 @@ function findStorageRestFetches(
         ) {
           captureExceptionalOutcome(inheritedBindings);
           const objectValue = inheritedBindings.get(target.expression.text);
-          const propertyName = ts.isPropertyAccessExpression(target)
-            ? target.name.text
+          const propertyNames = ts.isPropertyAccessExpression(target)
+            ? knownValue(target.name.text)
             : target.argumentExpression
-              ? getPropertyName(target.argumentExpression)
-              : null;
-          if (objectValue && propertyName !== null) {
+              ? resolvePropertyNames(
+                  target.argumentExpression,
+                  inheritedBindings,
+                )
+              : unknownValue();
+          if (objectValue && propertyNames.known.size > 0) {
             const nextObjects = [];
-            let objectUnknown = objectValue.unknown;
+            let objectUnknown = objectValue.unknown || propertyNames.unknown;
             for (const knownObject of objectValue.known) {
               if (!(knownObject instanceof Map)) {
                 objectUnknown = true;
                 continue;
               }
               const nextObject = new Map(knownObject);
-              nextObject.set(propertyName, nextValue);
+              for (const propertyName of propertyNames.known) {
+                nextObject.set(propertyName, nextValue);
+              }
               nextObjects.push(nextObject);
+            }
+            if (nextObjects.length === 0 && objectUnknown) {
+              const possibleObject = new Map();
+              for (const propertyName of propertyNames.known) {
+                possibleObject.set(propertyName, nextValue);
+              }
+              nextObjects.push(possibleObject);
             }
             inheritedBindings.set(
               target.expression.text,
@@ -1166,13 +1472,16 @@ function findStorageRestFetches(
       return;
     }
 
-    if (
-      ts.isCallExpression(node)
-      && valueHas(
-        resolveStaticValue(node.expression, inheritedBindings),
-        FETCH_VALUE,
-      )
-    ) {
+    if (ts.isCallExpression(node)) {
+      const callee = resolveStaticValue(node.expression, inheritedBindings);
+      if (valueHas(callee, STORAGE_MUTATOR_VALUE)) {
+        matches.push({
+          index: node.getStart(sourceFile),
+          kind: "supabase-storage-sdk",
+          snippet: node.getText(sourceFile).slice(0, 240),
+        });
+      }
+
       const url = node.arguments[0]
         ? resolveStaticValue(node.arguments[0], inheritedBindings)
         : unknownValue();
@@ -1181,7 +1490,14 @@ function findStorageRestFetches(
         ? resolveStaticValue(node.arguments[1], inheritedBindings)
         : valueSet();
 
+      const knownFetch = valueHas(callee, FETCH_VALUE);
+      const unknownStorageCallee = (
+        failClosedUnknownStorageCallee
+        && callee.unknown
+      );
       if (
+        (knownFetch || unknownStorageCallee)
+        &&
         valueMayContain(url, STORAGE_REST_PATH)
         && (
           inheritedBindings.has(CONTROL_FLOW_TAINT)
@@ -1202,22 +1518,27 @@ function findStorageRestFetches(
     }
   };
 
-  visit(sourceFile, new Map());
+  const seededBindings = new Map();
+  for (const [name, kind] of Object.entries(initialBindings)) {
+    seededBindings.set(
+      name,
+      kind === "fetch"
+        ? knownValue(FETCH_VALUE)
+        : kind === "function"
+          ? knownValue(FUNCTION_VALUE)
+          : unknownValue(),
+    );
+  }
+  visit(sourceFile, seededBindings);
   return matches;
 }
 
 export function findBrowserBundleStorageMutations(source, parserOptions) {
-  const executableSource = source.replace(
-    /\/\*\*[\s\S]*?\*\//gu,
-    (comment) => " ".repeat(comment.length),
-  );
+  const matches = findStorageRestFetches(source, parserOptions);
   return [
-    ...findPatternMatches(
-      executableSource,
-      "supabase-storage-sdk",
-      SDK_MUTATION_PATTERN,
-    ),
-    ...findStorageRestFetches(executableSource, parserOptions),
+    ...new Map(
+      matches.map((match) => [`${match.kind}:${match.index}`, match]),
+    ).values(),
   ].sort((left, right) => left.index - right.index);
 }
 
