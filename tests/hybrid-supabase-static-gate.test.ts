@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -130,6 +131,21 @@ describe("hybrid authority AST/static gate", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
     expect(inventory.browserDirectStoragePaths).toEqual([]);
+  });
+
+  it("finds every adversarial client-reachable Storage mutation bypass", () => {
+    const fixtureRoot = path.resolve(
+      "tests/fixtures/hybrid-static-bypasses",
+    );
+    const inventory = inventoryHybridAuthorityPaths(fixtureRoot);
+
+    expect(
+      inventory.browserDirectStoragePaths.map((entry) => entry.file),
+    ).toEqual([
+      "lib/api/raw-delete.ts",
+      "lib/api/sdk-alias.mjs",
+      "lib/api/sdk-bracket.js",
+    ]);
   });
 
   it("keeps every remaining service-role call inside an exact allowlist", () => {

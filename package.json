@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "verify:hybrid-browser-bundle": "node scripts/verify-hybrid-browser-bundle.mjs .next/static",
     "start": "node scripts/start-production.mjs",
     "mac-production:build": "sh scripts/run-local-mac-production.sh build",
     "mac-production:prepare": "sh scripts/run-local-mac-production.sh prepare-env",

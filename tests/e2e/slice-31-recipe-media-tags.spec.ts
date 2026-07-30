@@ -290,7 +290,7 @@ async function installManualRoutes(
             ? {
                 image_object_id: "550e8400-e29b-41d4-a716-446655440331",
                 state: "uploaded_unlinked",
-                read_url: createFoodThumbDataUri("김밥", "#FFE2CF"),
+                read_url: "https://signed.example.com/managed-image.png",
                 read_url_expires_at: "2099-07-30T03:05:00.000Z",
               }
             : {
@@ -579,7 +579,7 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
           data: {
             image_object_id: `550e8400-e29b-41d4-a716-44665544033${uploadAttempt}`,
             state: "uploaded_unlinked",
-            read_url: createFoodThumbDataUri("재시도", "#FFE2CF"),
+            read_url: `https://signed.example.com/retry-${uploadAttempt}.png`,
             read_url_expires_at: "2099-07-30T03:05:00.000Z",
           },
           error: null,

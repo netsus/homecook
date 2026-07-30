@@ -95,20 +95,24 @@ function normalizeIngredient(ingredient: TempIngredient): TempIngredient {
 function isManagedRecipeImage(
   value: {
     image_object_id?: string;
-    thumbnail_url?: string;
+    read_url?: string;
+    read_url_expires_at?: string;
   } | null | undefined,
 ): value is {
   image_object_id: string;
   read_url: string;
+  read_url_expires_at: string;
 } {
-  return Boolean(value && typeof value.image_object_id === "string");
+  return Boolean(
+    value
+      && typeof value.image_object_id === "string"
+    && typeof value.read_url === "string"
+    && typeof value.read_url_expires_at === "string"
+  );
 }
 
 function isRetrySameKeyImageError(code: string | null) {
-  return (
-    code === "IMAGE_UPLOAD_IN_PROGRESS"
-    || code === "NETWORK_ERROR"
-  );
+  return code === "IMAGE_UPLOAD_IN_PROGRESS" || code === "NETWORK_ERROR";
 }
 
 function isCreateImageError(code: string | null) {
@@ -678,6 +682,7 @@ export function ManualRecipeCreateScreen({
   type UploadedRecipeImage = RecipeImageUploadData;
   type ImageUploadStatus = "idle" | "uploading" | "uploaded" | "failed";
   const [imageStatus, setImageStatus] = useState<ImageUploadStatus>("idle");
+  const isUploading = imageStatus === "uploading";
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [uploadedImage, setUploadedImage] = useState<UploadedRecipeImage | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -691,6 +696,10 @@ export function ManualRecipeCreateScreen({
   const [tagSubmitError, setTagSubmitError] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const uploadRequestIdRef = useRef(0);
+  const imageOperationVersionRef = useRef(0);
+  const saveOperationIdRef = useRef(0);
+  const isSavingRef = useRef(false);
+  const cancelledImageObjectIdsRef = useRef(new Set<string>());
   const tagSuggestionRequestIdRef = useRef(0);
   const areTagsDirtyRef = useRef(false);
   const pendingUploadIdempotencyKeyRef = useRef<string | null>(null);
@@ -730,6 +739,10 @@ export function ManualRecipeCreateScreen({
   const canSave = saveRequirements.length === 0;
 
   const handleBack = useCallback(() => {
+    if (isSavingRef.current) {
+      return;
+    }
+
     if (presentation === "embedded" && onRequestClose) {
       onRequestClose();
       return;
@@ -799,12 +812,29 @@ export function ManualRecipeCreateScreen({
     uploadedImageRef.current = uploadedImage;
   }, [uploadedImage]);
 
+  const startImageOperation = useCallback(() => {
+    imageOperationVersionRef.current += 1;
+    return imageOperationVersionRef.current;
+  }, []);
+
   const cancelManagedUpload = useCallback((image: UploadedRecipeImage | null) => {
     if (!isManagedRecipeImage(image)) {
       return;
     }
+    if (cancelledImageObjectIdsRef.current.has(image.image_object_id)) {
+      return;
+    }
 
-    void Promise.resolve(cancelRecipeImage(image.image_object_id)).catch(() => undefined);
+    cancelledImageObjectIdsRef.current.add(image.image_object_id);
+    void Promise.resolve(cancelRecipeImage(image.image_object_id))
+      .then((result) => {
+        if (!result.success) {
+          cancelledImageObjectIdsRef.current.delete(image.image_object_id);
+        }
+      })
+      .catch(() => {
+        cancelledImageObjectIdsRef.current.delete(image.image_object_id);
+      });
   }, []);
 
   useEffect(() => {
@@ -812,6 +842,8 @@ export function ManualRecipeCreateScreen({
 
     return () => {
       isMountedRef.current = false;
+      imageOperationVersionRef.current += 1;
+      saveOperationIdRef.current += 1;
       cancelManagedUpload(uploadedImageRef.current);
     };
   }, [cancelManagedUpload]);
@@ -825,15 +857,21 @@ export function ManualRecipeCreateScreen({
     }
   }, []);
 
-  const refreshManagedReadUrlIfExpired = useCallback(async () => {
+  const refreshManagedReadUrlIfExpired = useCallback(async (
+    expectedImage: UploadedRecipeImage | null,
+    operationVersion: number,
+  ) => {
     const currentImage = uploadedImageRef.current;
     const idempotencyKey = pendingUploadIdempotencyKeyRef.current;
     const replayFile = processedUploadFileRef.current;
 
     if (
       !isManagedRecipeImage(currentImage)
+      || !isManagedRecipeImage(expectedImage)
       || !idempotencyKey
       || !replayFile
+      || currentImage.image_object_id !== expectedImage.image_object_id
+      || imageOperationVersionRef.current !== operationVersion
     ) {
       return currentImage;
     }
@@ -847,11 +885,28 @@ export function ManualRecipeCreateScreen({
     setImageStatus("uploading");
     const result = await uploadRecipeImage(replayFile, { idempotencyKey });
     if (!result) {
-      setImageStatus("failed");
-      setImageErrorCode("INVALID_RESPONSE");
-      setImageError("이미지를 다시 확인해 주세요.");
+      if (
+        isMountedRef.current
+        && imageOperationVersionRef.current === operationVersion
+      ) {
+        setImageStatus("failed");
+        setImageErrorCode("INVALID_RESPONSE");
+        setImageError("이미지를 다시 확인해 주세요.");
+      }
       return null;
     }
+
+    if (
+      !isMountedRef.current
+      || imageOperationVersionRef.current !== operationVersion
+      || uploadedImageRef.current?.image_object_id !== expectedImage.image_object_id
+    ) {
+      if (result.success && result.data && isManagedRecipeImage(result.data)) {
+        cancelManagedUpload(result.data);
+      }
+      return null;
+    }
+
     if (result.success && result.data === null && "in_progress" in result) {
       isManagedReadUrlRefreshRetryRef.current = true;
       setImageStatus("failed");
@@ -874,6 +929,23 @@ export function ManualRecipeCreateScreen({
       return null;
     }
 
+    if (result.data.image_object_id !== expectedImage.image_object_id) {
+      cancelManagedUpload(result.data);
+      setImageStatus("failed");
+      setImageErrorCode("INVALID_RESPONSE");
+      setImageError("이미지를 다시 확인해 주세요.");
+      return null;
+    }
+
+    if (
+      !isMountedRef.current
+      || imageOperationVersionRef.current !== operationVersion
+      || uploadedImageRef.current?.image_object_id !== expectedImage.image_object_id
+    ) {
+      cancelManagedUpload(result.data);
+      return null;
+    }
+
     isManagedReadUrlRefreshRetryRef.current = false;
     uploadedImageRef.current = result.data;
     setUploadedImage(result.data);
@@ -882,15 +954,17 @@ export function ManualRecipeCreateScreen({
     setImageError(null);
     setImageErrorCode(null);
     return result.data;
-  }, []);
+  }, [cancelManagedUpload]);
 
   const doUpload = useCallback(async (
     file: File,
     idempotencyKey: string,
     options?: {
       processedFile?: File;
+      operationVersion?: number;
     },
   ) => {
+    const operationVersion = options?.operationVersion ?? startImageOperation();
     const requestId = uploadRequestIdRef.current + 1;
     uploadRequestIdRef.current = requestId;
     const nextPreviewUrl = URL.createObjectURL(file);
@@ -913,12 +987,11 @@ export function ManualRecipeCreateScreen({
     processedUploadFileRef.current = uploadFile;
     setPendingFile(uploadFile);
 
-    if (!isMountedRef.current) {
-      revokePreviewUrl(nextPreviewUrl);
-      return;
-    }
-
-    if (uploadRequestIdRef.current !== requestId) {
+    if (
+      !isMountedRef.current
+      || uploadRequestIdRef.current !== requestId
+      || imageOperationVersionRef.current !== operationVersion
+    ) {
       revokePreviewUrl(nextPreviewUrl);
       return;
     }
@@ -947,6 +1020,14 @@ export function ManualRecipeCreateScreen({
       return;
     }
 
+    if (imageOperationVersionRef.current !== operationVersion) {
+      revokePreviewUrl(nextPreviewUrl);
+      if (result.success && result.data && isManagedRecipeImage(result.data)) {
+        cancelManagedUpload(result.data);
+      }
+      return;
+    }
+
     if (result.success && result.data === null && "in_progress" in result) {
       setImageStatus("failed");
       setImageErrorCode("IMAGE_UPLOAD_IN_PROGRESS");
@@ -966,31 +1047,35 @@ export function ManualRecipeCreateScreen({
     setImageError(null);
     setImageErrorCode(null);
     revokePreviewUrl(nextPreviewUrl);
-    if (isManagedRecipeImage(result.data)) {
-      setImagePreviewUrl(result.data.read_url);
-    } else {
-      setImagePreviewUrl(result.data.thumbnail_url);
-    }
+    setImagePreviewUrl(result.data.read_url);
     setImageStatus("uploaded");
     pendingUploadIdempotencyKeyRef.current = idempotencyKey;
   }, [
     cancelManagedUpload,
     imagePreviewUrl,
     revokePreviewUrl,
+    startImageOperation,
   ]);
+
 
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || isSavingRef.current) {
+      return;
+    }
     e.target.value = "";
     const idempotencyKey = crypto.randomUUID();
     pendingUploadIdempotencyKeyRef.current = idempotencyKey;
-    void doUpload(file, idempotencyKey);
-  }, [doUpload]);
+    const operationVersion = startImageOperation();
+    void doUpload(file, idempotencyKey, { operationVersion });
+  }, [doUpload, startImageOperation]);
 
   const handleImageRetry = useCallback(() => {
+    if (isSavingRef.current) return;
     if (isManagedReadUrlRefreshRetryRef.current) {
-      void refreshManagedReadUrlIfExpired();
+      const expectedImage = uploadedImageRef.current;
+      const operationVersion = imageOperationVersionRef.current;
+      void refreshManagedReadUrlIfExpired(expectedImage, operationVersion);
       return;
     }
 
@@ -1003,8 +1088,10 @@ export function ManualRecipeCreateScreen({
         ? pendingUploadIdempotencyKeyRef.current
         : crypto.randomUUID();
       pendingUploadIdempotencyKeyRef.current = idempotencyKey;
+      const operationVersion = startImageOperation();
       void doUpload(replayFile, idempotencyKey, {
         processedFile: replayFile,
+        operationVersion,
       });
     }
   }, [
@@ -1012,9 +1099,12 @@ export function ManualRecipeCreateScreen({
     imageErrorCode,
     pendingFile,
     refreshManagedReadUrlIfExpired,
+    startImageOperation,
   ]);
 
   const handleImageRemove = useCallback(() => {
+    if (isSavingRef.current) return;
+    startImageOperation();
     uploadRequestIdRef.current += 1;
     const currentImage = uploadedImageRef.current;
     isManagedReadUrlRefreshRetryRef.current = false;
@@ -1030,9 +1120,10 @@ export function ManualRecipeCreateScreen({
     setImageErrorCode(null);
     setPendingFile(null);
     setSaveError(null);
-  }, [cancelManagedUpload, imagePreviewUrl, revokePreviewUrl]);
+  }, [cancelManagedUpload, imagePreviewUrl, revokePreviewUrl, startImageOperation]);
 
   const handleImageReplace = useCallback(() => {
+    if (isSavingRef.current) return;
     imageInputRef.current?.click();
   }, []);
 
@@ -1041,8 +1132,6 @@ export function ManualRecipeCreateScreen({
       revokePreviewUrl(imagePreviewUrl);
     };
   }, [imagePreviewUrl, revokePreviewUrl]);
-
-  const isUploading = imageStatus === "uploading";
 
   useEffect(() => {
     areTagsDirtyRef.current = areTagsDirty;
@@ -1131,7 +1220,7 @@ export function ManualRecipeCreateScreen({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (isUploading) {
+    if (isUploading || isSavingRef.current) {
       return;
     }
 
@@ -1142,13 +1231,44 @@ export function ManualRecipeCreateScreen({
     }
 
     setShowValidationErrors(false);
+    isSavingRef.current = true;
+    const saveOperationId = ++saveOperationIdRef.current;
+    const saveImageToken = imageOperationVersionRef.current;
+    const saveImageRef = uploadedImageRef.current;
     setIsSaving(true);
     setSaveError(null);
     setImageError(null);
     setImageErrorCode(null);
 
-    const activeImage = await refreshManagedReadUrlIfExpired();
-    if (uploadedImageRef.current && !activeImage) {
+    const activeImage = await refreshManagedReadUrlIfExpired(saveImageRef, saveImageToken);
+    if (!isMountedRef.current || saveOperationId !== saveOperationIdRef.current) {
+      isSavingRef.current = false;
+      return;
+    }
+    if (
+      saveImageRef
+      && (
+        !activeImage
+        || activeImage.image_object_id !== saveImageRef.image_object_id
+      )
+    ) {
+      if (
+        activeImage
+        && activeImage.image_object_id !== saveImageRef.image_object_id
+      ) {
+        cancelManagedUpload(activeImage);
+      }
+      isSavingRef.current = false;
+      setIsSaving(false);
+      return;
+    }
+    if (
+      imageOperationVersionRef.current !== saveImageToken
+      || uploadedImageRef.current?.image_object_id
+        !== activeImage?.image_object_id
+    ) {
+      cancelManagedUpload(uploadedImageRef.current);
+      isSavingRef.current = false;
       setIsSaving(false);
       return;
     }
@@ -1158,11 +1278,7 @@ export function ManualRecipeCreateScreen({
       tags: reviewedTags,
     });
     const imagePayload = activeImage
-      ? (
-          isManagedRecipeImage(activeImage)
-            ? { image_object_id: activeImage.image_object_id }
-            : { thumbnail_url: activeImage.thumbnail_url }
-        )
+      ? { image_object_id: activeImage.image_object_id }
       : {};
     const response = await createManualRecipe({
       title: title.trim(),
@@ -1190,8 +1306,21 @@ export function ManualRecipeCreateScreen({
       })),
     });
 
+    if (
+      !isMountedRef.current
+      || saveOperationId !== saveOperationIdRef.current
+      || imageOperationVersionRef.current !== saveImageToken
+      || uploadedImageRef.current?.image_object_id
+        !== activeImage?.image_object_id
+    ) {
+      cancelManagedUpload(uploadedImageRef.current);
+      isSavingRef.current = false;
+      return;
+    }
+
     if (!response) {
       setSaveError("레시피를 등록하지 못했어요.");
+      isSavingRef.current = false;
       setIsSaving(false);
       return;
     }
@@ -1205,10 +1334,12 @@ export function ManualRecipeCreateScreen({
         setImageErrorCode(response.error?.code ?? null);
         setImageError(response.error?.message ?? "이미지를 다시 확인해 주세요.");
         setSaveError(null);
+        isSavingRef.current = false;
         setIsSaving(false);
         return;
       }
       setSaveError(response.error?.message ?? "레시피를 등록하지 못했어요.");
+      isSavingRef.current = false;
       setIsSaving(false);
       return;
     }
@@ -1221,6 +1352,7 @@ export function ManualRecipeCreateScreen({
     processedUploadFileRef.current = null;
     setUploadedImage(null);
     setModalMode("success");
+    isSavingRef.current = false;
     setIsSaving(false);
   }, [
     isUploading,
@@ -1231,6 +1363,7 @@ export function ManualRecipeCreateScreen({
     reviewedTags,
     ingredients,
     steps,
+    cancelManagedUpload,
     refreshManagedReadUrlIfExpired,
   ]);
 
@@ -1324,11 +1457,14 @@ export function ManualRecipeCreateScreen({
           accept="image/jpeg,image/png,image/webp"
           className="hidden"
           data-testid="manual-image-file-input"
+          disabled={isSaving}
           onChange={handleImageSelect}
         />
         {imageStatus === "idle" ? (
           <WebButton
             className="web-manual-add-button"
+            data-testid="manual-image-choose-button"
+            disabled={isSaving}
             onClick={() => imageInputRef.current?.click()}
             variant="secondary"
           >
@@ -1360,8 +1496,22 @@ export function ManualRecipeCreateScreen({
             </div>
             {imageStatus === "uploaded" ? (
               <div style={{ display: "flex", gap: "8px" }}>
-                <WebButton onClick={handleImageReplace} variant="secondary">교체</WebButton>
-                <WebButton onClick={handleImageRemove} variant="secondary">제거</WebButton>
+                <WebButton
+                  data-testid="manual-image-replace-button"
+                  disabled={isSaving}
+                  onClick={handleImageReplace}
+                  variant="secondary"
+                >
+                  교체
+                </WebButton>
+                <WebButton
+                  data-testid="manual-image-remove-button"
+                  disabled={isSaving}
+                  onClick={handleImageRemove}
+                  variant="secondary"
+                >
+                  제거
+                </WebButton>
               </div>
             ) : null}
           </div>
@@ -1372,8 +1522,21 @@ export function ManualRecipeCreateScreen({
               {imageError}
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
-              <WebButton onClick={handleImageRetry}>다시 시도</WebButton>
-              <WebButton onClick={handleImageRemove} variant="secondary">제거</WebButton>
+              <WebButton
+                data-testid="manual-image-retry-button"
+                disabled={isSaving}
+                onClick={handleImageRetry}
+              >
+                다시 시도
+              </WebButton>
+              <WebButton
+                data-testid="manual-image-remove-button"
+                disabled={isSaving}
+                onClick={handleImageRemove}
+                variant="secondary"
+              >
+                제거
+              </WebButton>
             </div>
           </div>
         ) : null}
@@ -1513,6 +1676,7 @@ export function ManualRecipeCreateScreen({
           <nav aria-label="직접 등록 경로" className="web-breadcrumb">
             <button
               className="web-breadcrumb-link"
+              disabled={isSaving}
               onClick={handleBack}
               type="button"
             >
@@ -1530,7 +1694,7 @@ export function ManualRecipeCreateScreen({
               <p>요리 이름, 재료, 만들기를 입력해 저장해요.</p>
             </div>
             <div className="web-manual-actions">
-              <WebButton onClick={handleBack} variant="secondary">
+              <WebButton disabled={isSaving} onClick={handleBack} variant="secondary">
                 취소
               </WebButton>
             </div>
@@ -1616,12 +1780,14 @@ export function ManualRecipeCreateScreen({
               accept="image/jpeg,image/png,image/webp"
               className="hidden"
               data-testid="manual-image-file-input"
+              disabled={isSaving}
               onChange={handleImageSelect}
             />
             {imageStatus === "idle" ? (
               <button
                 className="flex h-[100px] w-full items-center justify-center rounded-[var(--radius-card)] border border-dashed border-[var(--line-strong)] bg-[var(--surface-fill)] text-[13px] text-[var(--text-3)]"
                 data-testid="manual-image-choose-button"
+                disabled={isSaving}
                 onClick={() => imageInputRef.current?.click()}
                 type="button"
               >
@@ -1655,6 +1821,7 @@ export function ManualRecipeCreateScreen({
                     <button
                       className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
                       data-testid="manual-image-replace-button"
+                      disabled={isSaving}
                       onClick={handleImageReplace}
                       type="button"
                     >
@@ -1663,6 +1830,7 @@ export function ManualRecipeCreateScreen({
                     <button
                       className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
                       data-testid="manual-image-remove-button"
+                      disabled={isSaving}
                       onClick={handleImageRemove}
                       type="button"
                     >
@@ -1685,6 +1853,7 @@ export function ManualRecipeCreateScreen({
                   <button
                     className="flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] py-2 text-[13px] font-semibold text-[var(--text-inverse)]"
                     data-testid="manual-image-retry-button"
+                    disabled={isSaving}
                     onClick={handleImageRetry}
                     type="button"
                   >
@@ -1693,6 +1862,7 @@ export function ManualRecipeCreateScreen({
                   <button
                     className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
                     data-testid="manual-image-remove-button"
+                    disabled={isSaving}
                     onClick={handleImageRemove}
                     type="button"
                   >

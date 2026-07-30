@@ -10,8 +10,37 @@ import {
 } from "../../lib/server/hybrid-auth/public-read-policy-runtime.mjs";
 
 const SKIP_DIRS = new Set([".git", ".next", "coverage", "dist", "node_modules"]);
-const SOURCE_FILE_PATTERN = /\.(ts|tsx)$/u;
-const SCAN_ROOTS = ["app", "components", "lib"];
+const SOURCE_FILE_PATTERN = /\.(ts|tsx|js|mjs|jsx)$/u;
+const DEFAULT_SCAN_ROOTS = ["app", "components", "lib"];
+const STORAGE_MUTATION_METHODS = new Set([
+  "copy",
+  "delete",
+  "move",
+  "remove",
+  "update",
+  "upload",
+  "upsert",
+  "write",
+]);
+const STORAGE_REST_MUTATION_METHODS = new Set([
+  "DELETE",
+  "PATCH",
+  "POST",
+  "PUT",
+]);
+const STORAGE_REST_PATH = "/storage/v1/object/";
+const FILE_EXTENSIONS = [
+  ".ts",
+  ".tsx",
+  ".js",
+  ".mjs",
+  ".jsx",
+  "/index.ts",
+  "/index.tsx",
+  "/index.js",
+  "/index.mjs",
+  "/index.jsx",
+];
 
 const PUBLIC_ALLOWLIST_FILES = new Set([
   "app/api/v1/feedback/404/route.ts",
@@ -81,8 +110,6 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
   ],
 ]);
 
-const BROWSER_DIRECT_STORAGE_ALLOWLIST = new Map();
-
 function normalizePath(filePath) {
   return filePath.split(path.sep).join("/");
 }
@@ -101,7 +128,7 @@ function compareEntries(left, right) {
   return left.column - right.column;
 }
 
-function listSourceFiles(repoRoot) {
+function listSourceFiles(repoRoot, scanRoots = DEFAULT_SCAN_ROOTS) {
   const files = [];
 
   const walk = (absoluteDir) => {
@@ -122,7 +149,7 @@ function listSourceFiles(repoRoot) {
     }
   };
 
-  for (const root of SCAN_ROOTS) {
+  for (const root of scanRoots) {
     const absoluteRoot = path.join(repoRoot, root);
     if (fs.existsSync(absoluteRoot)) {
       walk(absoluteRoot);
@@ -133,7 +160,9 @@ function listSourceFiles(repoRoot) {
 }
 
 function scriptKindFor(filePath) {
-  return filePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  return filePath.endsWith(".tsx") || filePath.endsWith(".jsx")
+    ? ts.ScriptKind.TSX
+    : ts.ScriptKind.TS;
 }
 
 function unwrapExpression(node) {
@@ -150,6 +179,30 @@ function unwrapExpression(node) {
   }
 
   return current;
+}
+
+function isIdentifier(node, value) {
+  return ts.isIdentifier(node) && (!value || node.text === value);
+}
+
+function isName(node, value) {
+  if (isIdentifier(node, value)) {
+    return true;
+  }
+
+  return ts.isStringLiteral(node) && node.text === value;
+}
+
+function getPropertyName(node) {
+  if (ts.isIdentifier(node) || ts.isStringLiteral(node) || ts.isNumericLiteral(node)) {
+    return String(node.text);
+  }
+
+  if (ts.isNoSubstitutionTemplateLiteral(node)) {
+    return node.text;
+  }
+
+  return null;
 }
 
 function isNamedCall(node, name) {
@@ -195,24 +248,26 @@ function createBaseEntry(relativeFile, sourceFile, node, classification) {
   };
 }
 
-function isStorageFromCall(node) {
-  const expression = unwrapExpression(node);
-  if (!ts.isCallExpression(expression) || !ts.isPropertyAccessExpression(expression.expression)) {
-    return false;
+function isWritePath(node) {
+  return ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node);
+}
+
+function getCalledMemberName(node) {
+  if (!isWritePath(node)) {
+    return null;
   }
 
-  const fromAccess = expression.expression;
-  if (fromAccess.name.text !== "from" || !ts.isPropertyAccessExpression(fromAccess.expression)) {
-    return false;
-  }
+  const method = ts.isPropertyAccessExpression(node)
+    ? node.name.text
+    : getPropertyName(node.argumentExpression);
 
-  return fromAccess.expression.name.text === "storage";
+  return method;
 }
 
 function isClientModule(sourceFile) {
   for (const statement of sourceFile.statements) {
     if (!ts.isExpressionStatement(statement) || !ts.isStringLiteral(statement.expression)) {
-      return false;
+      continue;
     }
 
     if (statement.expression.text === "use client") {
@@ -223,7 +278,370 @@ function isClientModule(sourceFile) {
   return false;
 }
 
-function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
+function resolveImportSource(repoRoot, importerDir, rawSpecifier) {
+  if (!rawSpecifier) {
+    return null;
+  }
+
+  if (rawSpecifier.startsWith("@/")) {
+    const aliased = path.join(repoRoot, rawSpecifier.slice(2));
+    return tryResolveModulePath(aliased);
+  }
+
+  if (rawSpecifier.startsWith("./") || rawSpecifier.startsWith("../") || rawSpecifier === ".") {
+    const absolute = path.resolve(importerDir, rawSpecifier);
+    return tryResolveModulePath(absolute);
+  }
+
+  return null;
+}
+
+function tryResolveModulePath(basePath) {
+  if (fs.existsSync(basePath) && fs.statSync(basePath).isFile()) {
+    return basePath;
+  }
+
+  for (const extension of FILE_EXTENSIONS) {
+    const withExt = `${basePath}${extension}`;
+    if (fs.existsSync(withExt) && fs.statSync(withExt).isFile()) {
+      return withExt;
+    }
+  }
+
+  const indexPath = path.join(basePath, "index");
+  for (const extension of [".ts", ".tsx", ".js", ".mjs", ".jsx"]) {
+    const indexed = `${indexPath}${extension}`;
+    if (fs.existsSync(indexed) && fs.statSync(indexed).isFile()) {
+      return indexed;
+    }
+  }
+
+  return null;
+}
+
+function readSourceFile(repoRoot, absoluteFile) {
+  const source = fs.readFileSync(absoluteFile, "utf8");
+  const sourceFile = ts.createSourceFile(
+    toRelativeFile(repoRoot, absoluteFile),
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKindFor(absoluteFile),
+  );
+
+  return { source, sourceFile };
+}
+
+function collectClientImportGraph(repoRoot, files) {
+  const fileByRelative = new Map(
+    files.map((absoluteFile) => [
+      toRelativeFile(repoRoot, absoluteFile),
+      absoluteFile,
+    ]),
+  );
+  const importEdges = new Map();
+  const clientRoots = new Set();
+
+  for (const absoluteFile of files) {
+    const relativeFile = toRelativeFile(repoRoot, absoluteFile);
+    const importerDir = path.dirname(absoluteFile);
+    const { sourceFile } = readSourceFile(repoRoot, absoluteFile);
+    const imports = new Set();
+
+    if (isClientModule(sourceFile)) {
+      clientRoots.add(relativeFile);
+    }
+
+    sourceFile.forEachChild((node) => {
+      if (
+        (
+          ts.isImportDeclaration(node)
+          || ts.isExportDeclaration(node)
+        )
+        && node.moduleSpecifier
+        && ts.isStringLiteral(node.moduleSpecifier)
+      ) {
+        const resolved = resolveImportSource(
+          repoRoot,
+          importerDir,
+          node.moduleSpecifier.text,
+        );
+        if (resolved) {
+          const target = toRelativeFile(repoRoot, resolved);
+          if (fileByRelative.has(target)) {
+            imports.add(target);
+          }
+        }
+      }
+    });
+
+    importEdges.set(relativeFile, imports);
+  }
+
+  const reachable = new Set(clientRoots);
+  const stack = [...clientRoots];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    const neighbors = importEdges.get(current);
+    if (!neighbors) {
+      continue;
+    }
+
+    for (const next of neighbors) {
+      if (reachable.has(next)) {
+        continue;
+      }
+      reachable.add(next);
+      stack.push(next);
+    }
+  }
+
+  return { reachable };
+}
+
+function extractStorageMutationCalls(fileState) {
+  const {
+    relativeFile,
+    source,
+    sourceFile,
+    classification,
+    isClientReachable,
+    storageBucketAliases,
+    storageBucketMethodAliases,
+  } = fileState;
+
+  const entries = [];
+  const storageFromLines = new Set();
+  const storageAliases = new Set();
+  let uploadCandidate = null;
+
+  const isStorageFromCall = (expression) => {
+    const unwrapped = unwrapExpression(expression);
+    if (!ts.isCallExpression(unwrapped)) {
+      return false;
+    }
+
+    let callee = unwrapped.expression;
+    if (ts.isPropertyAccessExpression(callee)) {
+      const owner = unwrapExpression(callee.expression);
+      const method = callee.name.text;
+      return method === "from"
+        && (
+          (
+            ts.isPropertyAccessExpression(owner)
+            && isName(owner.name, "storage")
+          )
+          || (ts.isIdentifier(owner) && storageAliases.has(owner.text))
+        );
+    }
+
+    if (ts.isElementAccessExpression(callee)) {
+      const owner = unwrapExpression(callee.expression);
+      const method = getPropertyName(callee.argumentExpression);
+      return method === "from"
+        && (
+          (
+            ts.isElementAccessExpression(owner)
+            && isName(owner.argumentExpression, "storage")
+          )
+          || (ts.isIdentifier(owner) && storageAliases.has(owner.text))
+        );
+    }
+
+    return false;
+  };
+
+  const isStorageMutator = (callExpression) => {
+    const callee = callExpression.expression;
+    if (!isWritePath(callee)) {
+      return false;
+    }
+
+    const methodName = getCalledMemberName(callee);
+    if (!methodName || !STORAGE_MUTATION_METHODS.has(methodName)) {
+      return false;
+    }
+
+    if (ts.isPropertyAccessExpression(callee)) {
+      const target = unwrapExpression(callee.expression);
+      if (isStorageFromCall(target)) {
+        return true;
+      }
+      if (ts.isIdentifier(target) && storageBucketAliases.has(target.text)) {
+        return true;
+      }
+      return false;
+    }
+
+    if (ts.isElementAccessExpression(callee)) {
+      const target = unwrapExpression(callee.expression);
+      if (ts.isIdentifier(target) && storageBucketAliases.has(target.text)) {
+        return true;
+      }
+      if (isStorageFromCall(target)) {
+        return true;
+      }
+      return false;
+    }
+
+    return false;
+  };
+
+  const isStorageMethodAlias = (callee) => {
+    return ts.isIdentifier(callee) && storageBucketMethodAliases.has(callee.text);
+  };
+
+  const isStorageFetch = (callExpression) => {
+    if (!isName(callExpression.expression, "fetch")) {
+      return false;
+    }
+    const firstArg = callExpression.arguments[0];
+    if (!firstArg) {
+      return false;
+    }
+
+    const arg = unwrapExpression(firstArg);
+    if (
+      !arg.getText(sourceFile).includes(STORAGE_REST_PATH)
+      && !source.includes(STORAGE_REST_PATH)
+    ) {
+      return false;
+    }
+
+    const options = callExpression.arguments[1];
+    if (!options || !ts.isObjectLiteralExpression(unwrapExpression(options))) {
+      return false;
+    }
+
+    const methodProperty = unwrapExpression(options).properties.find(
+      (property) => (
+        ts.isPropertyAssignment(property)
+        && getPropertyName(property.name) === "method"
+      ),
+    );
+    if (!methodProperty || !ts.isPropertyAssignment(methodProperty)) {
+      return false;
+    }
+
+    const methodValue = unwrapExpression(methodProperty.initializer);
+    return (
+      ts.isStringLiteralLike(methodValue)
+      && STORAGE_REST_MUTATION_METHODS.has(methodValue.text.toUpperCase())
+    );
+  };
+
+  const visit = (node) => {
+    if (
+      ts.isVariableDeclaration(node)
+      && ts.isIdentifier(node.name)
+      && node.initializer
+      && (
+        (
+          ts.isPropertyAccessExpression(unwrapExpression(node.initializer))
+          && getCalledMemberName(unwrapExpression(node.initializer)) === "storage"
+        )
+        || (
+          ts.isElementAccessExpression(unwrapExpression(node.initializer))
+          && getCalledMemberName(unwrapExpression(node.initializer)) === "storage"
+        )
+      )
+    ) {
+      storageAliases.add(node.name.text);
+    }
+
+    if (
+      ts.isVariableDeclaration(node)
+      && ts.isIdentifier(node.name)
+      && node.initializer
+      && isStorageFromCall(node.initializer)
+    ) {
+      storageBucketAliases.add(node.name.text);
+    }
+
+    if (ts.isVariableDeclaration(node)
+      && ts.isIdentifier(node.name)
+      && node.initializer
+      && ts.isPropertyAccessExpression(node.initializer)
+      && isStorageFromCall(node.initializer.expression)
+      && ts.isCallExpression(node.initializer.expression)
+    ) {
+      const callee = node.initializer.expression;
+      const uploadName = getCalledMemberName(node.initializer);
+      if (uploadName && storageBucketAliases.has((ts.isIdentifier(callee.expression.expression) && callee.expression.expression.text) ? callee.expression.expression.text : "")) {
+        storageBucketAliases.add(node.name.text);
+      }
+    }
+
+    if (
+      ts.isVariableDeclaration(node)
+      && ts.isIdentifier(node.name)
+      && node.initializer
+      && ts.isElementAccessExpression(node.initializer)
+      && ts.isIdentifier(node.initializer.expression)
+      && storageBucketAliases.has(node.initializer.expression.text)
+      && node.initializer.argumentExpression
+      && STORAGE_MUTATION_METHODS.has(getPropertyName(node.initializer.argumentExpression))
+    ) {
+      storageBucketMethodAliases.add(node.name.text);
+    }
+
+    if (
+      ts.isVariableDeclaration(node)
+      && ts.isIdentifier(node.name)
+      && node.initializer
+      && ts.isPropertyAccessExpression(node.initializer)
+      && ts.isIdentifier(node.initializer.expression)
+      && storageBucketAliases.has(node.initializer.expression.text)
+      && STORAGE_MUTATION_METHODS.has(node.initializer.name.text)
+    ) {
+      storageBucketMethodAliases.add(node.name.text);
+    }
+
+    if (isClientReachable && ts.isCallExpression(node)) {
+      if (isStorageMutator(node) || isStorageMethodAlias(node.expression)) {
+        const reason = `client direct storage mutation (${getCalledMemberName(unwrapExpression(node.expression)) ?? "unknown"})`;
+        const key = `${relativeFile}:${node.getStart()}:${getCalledMemberName(unwrapExpression(node.expression))}`;
+        if (!storageFromLines.has(key)) {
+          storageFromLines.add(key);
+          entries.push({
+            ...createBaseEntry(relativeFile, sourceFile, node, classification),
+            reason,
+          });
+        }
+      }
+
+      if (isStorageFetch(node)) {
+        const key = `${relativeFile}:${node.getStart()}:storage-fetch`;
+        if (!storageFromLines.has(key)) {
+          storageFromLines.add(key);
+          entries.push({
+            ...createBaseEntry(relativeFile, sourceFile, node, classification),
+            reason: "client direct Storage REST fetch",
+            method: "fetch",
+          });
+        }
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sourceFile);
+
+  const hasAnyStorageFrom = entries.length > 0;
+  if (hasAnyStorageFrom) {
+    uploadCandidate = source;
+  }
+
+  return {
+    entries,
+    hasStorageFrom: hasAnyStorageFrom,
+    uploadCandidate,
+  };
+}
+
+function inventoryHybridAuthorityPaths(repoRoot = process.cwd(), { scanRoots = DEFAULT_SCAN_ROOTS } = {}) {
   const serviceRoleEntries = [];
   const remoteCompatibilityEntries = [];
   const fallbackEntries = [];
@@ -237,20 +655,19 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
   const declaredPublicRouteScopes = new Map();
   const dataRouteResponseBoundaries = [];
 
-  for (const absoluteFile of listSourceFiles(repoRoot)) {
+  const files = listSourceFiles(repoRoot, scanRoots);
+  const { reachable: clientReachableFiles } = collectClientImportGraph(repoRoot, files);
+
+  for (const absoluteFile of files) {
     const relativeFile = toRelativeFile(repoRoot, absoluteFile);
-    const source = fs.readFileSync(absoluteFile, "utf8");
-    const sourceFile = ts.createSourceFile(
-      relativeFile,
-      source,
-      ts.ScriptTarget.Latest,
-      true,
-      scriptKindFor(absoluteFile),
-    );
+    const { source, sourceFile } = readSourceFile(repoRoot, absoluteFile);
     const classification = classifyFile(relativeFile);
     const clientModule = isClientModule(sourceFile);
     const serviceRoleVariables = new Set();
     let usesDataRouteClient = false;
+
+    const storageBucketAliases = new Set();
+    const storageBucketMethodAliases = new Set();
 
     const visit = (node) => {
       if (
@@ -372,24 +789,33 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
         }
       }
 
-      if (clientModule && ts.isCallExpression(node) && isStorageFromCall(node)) {
-        const allowlisted = BROWSER_DIRECT_STORAGE_ALLOWLIST.get(relativeFile);
-        const entry = {
-          ...createBaseEntry(relativeFile, sourceFile, node, classification),
-          reason: allowlisted?.reason ?? "unclassified direct browser Storage usage",
-          stage: allowlisted?.stage ?? null,
-        };
+      ts.forEachChild(node, visit);
+    };
+
+    visit(sourceFile);
+
+    const shouldInspect = clientModule || clientReachableFiles.has(relativeFile);
+    if (shouldInspect) {
+      const storageState = {
+        relativeFile,
+        source,
+        sourceFile,
+        classification,
+        isClientReachable: clientReachableFiles.has(relativeFile),
+        storageBucketAliases,
+        storageBucketMethodAliases,
+      };
+      const { entries } = extractStorageMutationCalls(storageState);
+
+      for (const entry of entries) {
         const key = `${entry.file}:${entry.line}:${entry.column}`;
         if (!storageEntryKeys.has(key)) {
           storageEntryKeys.add(key);
           browserDirectStoragePaths.push(entry);
         }
       }
+    }
 
-      ts.forEachChild(node, visit);
-    };
-
-    visit(sourceFile);
     if (relativeFile.startsWith("app/api/") && relativeFile.endsWith("/route.ts")
       && usesDataRouteClient) {
       dataRouteResponseBoundaries.push({
@@ -399,6 +825,7 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
         bypassesCommonResponseBoundary: source.includes("NextResponse.json"),
       });
     }
+
   }
 
   const sortedServiceRoleEntries = serviceRoleEntries.sort(compareEntries);
@@ -455,6 +882,7 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
     serviceRoleEntries: sortedServiceRoleEntries,
     userDirectServiceRoleEntries: sortedServiceRoleEntries.filter((entry) => entry.classification === "user"),
     userServiceRoleViolations: sortedFallbackEntries.filter((entry) => entry.classification === "user"),
+    clientReachableFiles: [...clientReachableFiles],
   };
 }
 

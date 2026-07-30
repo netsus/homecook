@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -99,6 +99,19 @@ function managedUploadSuccess(
     },
     error: null,
   } as unknown as UploadResult;
+}
+
+async function completeRequiredRecipeForm(
+  user: ReturnType<typeof userEvent.setup>,
+  title = "경합 방지 요리",
+) {
+  await user.type(screen.getByPlaceholderText("예: 김치찌개"), title);
+  await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+  await user.click(await screen.findByRole("checkbox", { name: "양파" }));
+  await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+  await user.click(await screen.findByRole("button", { name: "준비" }));
+  await user.type(screen.getByLabelText("만들기 1 설명"), "재료를 준비해요");
+  await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
 }
 
 describe("ManualRecipeCreateScreen", () => {
@@ -995,13 +1008,7 @@ describe("ManualRecipeCreateScreen", () => {
       expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
     });
 
-    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "만료 URL 재시도 요리");
-    await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
-    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
-    await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
-    await user.click(screen.getByRole("button", { name: "준비" }));
-    await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
-    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+    await completeRequiredRecipeForm(user);
     await user.click(screen.getByRole("button", { name: "저장" }));
 
     await waitFor(() => {
@@ -1032,6 +1039,129 @@ describe("ManualRecipeCreateScreen", () => {
     expect(
       screen.getByRole("img", { name: "레시피 이미지 미리보기" }).getAttribute("src"),
     ).toBe("https://signed.example.com/expired-retry-refreshed.png");
+  });
+
+  it("does not start recipe creation when an expired-URL replay finishes after unmount", async () => {
+    let resolveReplay!: (value: UploadResult) => void;
+    vi.mocked(uploadRecipeImage)
+      .mockResolvedValueOnce(
+        managedUploadSuccess({
+          image_object_id: "550e8400-e29b-41d4-a716-446655440073",
+          read_url: "https://signed.example.com/expired-before-unmount.png",
+          read_url_expires_at: "2000-01-01T00:00:00.000Z",
+        }),
+      )
+      .mockReturnValueOnce(new Promise((resolve) => {
+        resolveReplay = resolve;
+      }));
+
+    const user = userEvent.setup();
+    const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["image"], "expired.png", { type: "image/png" }),
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+    await completeRequiredRecipeForm(user);
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => {
+      expect(uploadRecipeImage).toHaveBeenCalledTimes(2);
+    });
+
+    view.unmount();
+    await act(async () => {
+      resolveReplay(managedUploadSuccess({
+        image_object_id: "550e8400-e29b-41d4-a716-446655440073",
+        read_url: "https://signed.example.com/refreshed-after-unmount.png",
+      }));
+      await Promise.resolve();
+    });
+
+    expect(createManualRecipe).not.toHaveBeenCalled();
+    expect(cancelRecipeImage).toHaveBeenCalledWith(
+      "550e8400-e29b-41d4-a716-446655440073",
+    );
+  });
+
+  it("serializes desktop navigation and image mutations while recipe creation is pending", async () => {
+    installMatchMedia(true);
+    let resolveCreate!: (
+      value: Awaited<ReturnType<typeof createManualRecipe>>,
+    ) => void;
+    vi.mocked(uploadRecipeImage)
+      .mockResolvedValueOnce(
+        managedUploadSuccess({
+          image_object_id: "550e8400-e29b-41d4-a716-446655440074",
+          read_url: "https://signed.example.com/save-a.png",
+        }),
+      )
+      .mockResolvedValueOnce(
+        managedUploadSuccess({
+          image_object_id: "550e8400-e29b-41d4-a716-446655440075",
+          read_url: "https://signed.example.com/save-b.png",
+        }),
+      );
+    vi.mocked(createManualRecipe).mockReturnValue(new Promise((resolve) => {
+      resolveCreate = resolve;
+    }));
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    await user.upload(
+      fileInput,
+      new File(["image-a"], "a.png", { type: "image/png" }),
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("manual-image-replace-button")).toBeTruthy();
+    });
+    await completeRequiredRecipeForm(user);
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalledOnce();
+    });
+
+    const breadcrumbBack = screen.getByRole("button", { name: "플래너" });
+    const cancelButton = screen.getByRole("button", { name: "취소" });
+    const replaceButton = screen.getByTestId("manual-image-replace-button");
+    const removeButton = screen.getByTestId("manual-image-remove-button");
+    expect(fileInput.disabled).toBe(true);
+    expect((breadcrumbBack as HTMLButtonElement).disabled).toBe(true);
+    expect((cancelButton as HTMLButtonElement).disabled).toBe(true);
+    expect((replaceButton as HTMLButtonElement).disabled).toBe(true);
+    expect((removeButton as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.change(fileInput, {
+      target: {
+        files: [new File(["image-b"], "b.png", { type: "image/png" })],
+      },
+    });
+    fireEvent.click(removeButton);
+    fireEvent.click(replaceButton);
+    fireEvent.click(breadcrumbBack);
+    fireEvent.click(cancelButton);
+
+    expect(uploadRecipeImage).toHaveBeenCalledTimes(1);
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
+    expect(mockRouterReplace).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveCreate({
+        success: true,
+        data: {
+          id: "recipe-serialized",
+          title: "경합 방지 요리",
+          source_type: "manual",
+          created_by: "user-1",
+          base_servings: 2,
+        },
+        error: null,
+      });
+      await Promise.resolve();
+    });
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
   });
 
   it("upload failure shows error with retry and clears the error after success", async () => {
