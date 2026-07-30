@@ -15,12 +15,14 @@ const STORAGE_REST_MUTATION_METHODS = new Set([
 ]);
 const STORAGE_REST_PATH = "/storage/v1/object/";
 const FETCH_VALUE = Symbol("fetch");
+const CONTROL_FLOW_TAINT = Symbol("control-flow-taint");
 const VALUE_SET_LIMIT = 32;
 
 // The scanner lattice keeps a bounded set of possible known values plus an
-// unknown/tainted bit. Branches union their value sets, so any mutating or
-// unresolved call-site path fails closed without treating all safe branches
-// as mutations.
+// unknown/tainted bit. Every executable control-flow outcome gets its own
+// binding state, then joins by union at the statement exit. Unknown state or
+// any mutating call-site value fails closed while confirmed-safe sets remain
+// safe.
 function valueSet(known = [], { fragments = [], unknown = false } = {}) {
   return {
     fragments: new Set(fragments),
@@ -114,6 +116,13 @@ function mergeBindings(target, ...branches) {
       mergeValues(...branches.map((branch) => branch.get(key))),
     );
   }
+}
+
+function taintBindings(bindings) {
+  for (const [key, value] of bindings) {
+    bindings.set(key, mergeValues(value, unknownValue()));
+  }
+  bindings.set(CONTROL_FLOW_TAINT, unknownValue());
 }
 
 function findPatternMatches(source, kind, pattern) {
@@ -361,6 +370,12 @@ function findStorageRestFetches(source) {
           inheritedBindings.set(name, bindings.get(name));
         }
       }
+      if (bindings.has(CONTROL_FLOW_TAINT)) {
+        inheritedBindings.set(
+          CONTROL_FLOW_TAINT,
+          bindings.get(CONTROL_FLOW_TAINT),
+        );
+      }
       return;
     }
 
@@ -416,10 +431,98 @@ function findStorageRestFetches(source) {
       return;
     }
 
-    if (
-      ts.isWhileStatement(node)
-      || ts.isDoStatement(node)
-    ) {
+    if (ts.isSwitchStatement(node)) {
+      visit(node.expression, inheritedBindings);
+      const clauses = node.caseBlock.clauses;
+      const selectorBindings = cloneBindings(inheritedBindings);
+
+      // Case expressions may have side effects. Preserve both the prior and
+      // evaluated states so their lexical order cannot erase a possible value.
+      for (const clause of clauses) {
+        if (!ts.isCaseClause(clause)) {
+          continue;
+        }
+        const evaluatedBindings = cloneBindings(selectorBindings);
+        visit(clause.expression, evaluatedBindings);
+        mergeBindings(
+          selectorBindings,
+          selectorBindings,
+          evaluatedBindings,
+        );
+      }
+
+      const outcomes = [];
+      for (let entryIndex = 0; entryIndex < clauses.length; entryIndex += 1) {
+        const branchBindings = cloneBindings(selectorBindings);
+        let didBreak = false;
+        for (
+          let clauseIndex = entryIndex;
+          clauseIndex < clauses.length && !didBreak;
+          clauseIndex += 1
+        ) {
+          for (const statement of clauses[clauseIndex].statements) {
+            if (ts.isBreakStatement(statement)) {
+              if (statement.label) {
+                taintBindings(branchBindings);
+              }
+              didBreak = true;
+              break;
+            }
+            visit(statement, branchBindings);
+          }
+        }
+        outcomes.push(branchBindings);
+      }
+
+      if (!clauses.some((clause) => ts.isDefaultClause(clause))) {
+        outcomes.push(cloneBindings(selectorBindings));
+      }
+      mergeBindings(
+        inheritedBindings,
+        ...(outcomes.length > 0 ? outcomes : [selectorBindings]),
+      );
+      return;
+    }
+
+    if (ts.isTryStatement(node)) {
+      const tryBindings = cloneBindings(inheritedBindings);
+      visit(node.tryBlock, tryBindings);
+      const outcomes = [tryBindings];
+
+      if (node.catchClause) {
+        // A throw can happen before or after a state change in the try block.
+        // The catch path therefore starts from the join of both possibilities.
+        const catchBindings = cloneBindings(inheritedBindings);
+        mergeBindings(
+          catchBindings,
+          inheritedBindings,
+          tryBindings,
+        );
+        if (
+          node.catchClause.variableDeclaration
+          && ts.isIdentifier(node.catchClause.variableDeclaration.name)
+        ) {
+          catchBindings.set(
+            node.catchClause.variableDeclaration.name.text,
+            unknownValue(),
+          );
+        }
+        visit(node.catchClause.block, catchBindings);
+        outcomes.push(catchBindings);
+      }
+
+      const completedOutcomes = node.finallyBlock
+        ? outcomes.map((outcome) => {
+            const finallyBindings = cloneBindings(outcome);
+            visit(node.finallyBlock, finallyBindings);
+            return finallyBindings;
+          })
+        : outcomes;
+      mergeBindings(inheritedBindings, ...completedOutcomes);
+      return;
+    }
+
+    if (ts.isWhileStatement(node)) {
       visit(node.expression, inheritedBindings);
       const noIterationBindings = cloneBindings(inheritedBindings);
       const iterationBindings = cloneBindings(inheritedBindings);
@@ -428,6 +531,28 @@ function findStorageRestFetches(source) {
         inheritedBindings,
         noIterationBindings,
         iterationBindings,
+      );
+      return;
+    }
+
+    if (ts.isDoStatement(node)) {
+      const firstIterationBindings = cloneBindings(inheritedBindings);
+      visit(node.statement, firstIterationBindings);
+      visit(node.expression, firstIterationBindings);
+
+      const condition = unwrapExpression(node.expression);
+      if (condition.kind === ts.SyntaxKind.FalseKeyword) {
+        mergeBindings(inheritedBindings, firstIterationBindings);
+        return;
+      }
+
+      const laterIterationBindings = cloneBindings(firstIterationBindings);
+      visit(node.statement, laterIterationBindings);
+      visit(node.expression, laterIterationBindings);
+      mergeBindings(
+        inheritedBindings,
+        firstIterationBindings,
+        laterIterationBindings,
       );
       return;
     }
@@ -469,6 +594,23 @@ function findStorageRestFetches(source) {
 
     if (ts.isBinaryExpression(node)) {
       const operator = node.operatorToken.kind;
+      if (
+        operator === ts.SyntaxKind.AmpersandAmpersandToken
+        || operator === ts.SyntaxKind.BarBarToken
+        || operator === ts.SyntaxKind.QuestionQuestionToken
+      ) {
+        visit(node.left, inheritedBindings);
+        const skippedBindings = cloneBindings(inheritedBindings);
+        const evaluatedBindings = cloneBindings(inheritedBindings);
+        visit(node.right, evaluatedBindings);
+        mergeBindings(
+          inheritedBindings,
+          skippedBindings,
+          evaluatedBindings,
+        );
+        return;
+      }
+
       const isAssignment = (
         operator >= ts.SyntaxKind.FirstAssignment
         && operator <= ts.SyntaxKind.LastAssignment
@@ -517,6 +659,19 @@ function findStorageRestFetches(source) {
     }
 
     if (
+      ts.isBreakStatement(node)
+      || ts.isContinueStatement(node)
+      || ts.isReturnStatement(node)
+      || ts.isThrowStatement(node)
+      || ts.isLabeledStatement(node)
+      || ts.isWithStatement(node)
+    ) {
+      ts.forEachChild(node, (child) => visit(child, inheritedBindings));
+      taintBindings(inheritedBindings);
+      return;
+    }
+
+    if (
       ts.isCallExpression(node)
       && valueHas(
         resolveStaticValue(node.expression, inheritedBindings),
@@ -533,7 +688,10 @@ function findStorageRestFetches(source) {
 
       if (
         valueMayContain(url, STORAGE_REST_PATH)
-        && optionsCouldMutate(options, hasOptions)
+        && (
+          inheritedBindings.has(CONTROL_FLOW_TAINT)
+          || optionsCouldMutate(options, hasOptions)
+        )
       ) {
         matches.push({
           index: node.getStart(sourceFile),
