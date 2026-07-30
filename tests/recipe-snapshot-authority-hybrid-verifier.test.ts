@@ -118,6 +118,32 @@ describe("recipe snapshot authority hybrid verifier", () => {
     ).toThrow(/snapshot authority verification failed/i);
   });
 
+  it("fails closed when authority mismatch or backfill telemetry is nonzero", () => {
+    for (const field of [
+      "content_direct_mismatch_count",
+      "backfill_gap_count",
+      "compatibility_pair_mismatch_count",
+    ] as const) {
+      expect(() =>
+        assertRecipeSnapshotAuthorityHybridLocalResult({
+          ...snapshotResult,
+          local_auth_user_count: 0,
+          [field]: 1,
+        }),
+      ).toThrow(/snapshot authority verification failed/i);
+    }
+  });
+
+  it("reports historical direct-only inventory without treating it as release-window write evidence", () => {
+    expect(() =>
+      assertRecipeSnapshotAuthorityHybridLocalResult({
+        ...snapshotResult,
+        local_auth_user_count: 0,
+        compatibility_direct_only_write_count: 1,
+      }),
+    ).not.toThrow();
+  });
+
   it("accepts fresh aggregate Auth evidence with exact epoch coverage and multiple session bindings", () => {
     expect(() =>
       assertRecipeSnapshotAuthorityRemoteAuthEvidence(remoteAuthEvidence, {

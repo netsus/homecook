@@ -838,15 +838,13 @@ ${renderSqlRows(EXACT_OWNED_TRIGGER_TABLE_ROWS)}
   select
     count(*) filter (
       where meal.recipe_content_snapshot_id is not null
-        and (
-          meal.recipe_nutrition_snapshot_id is null
-          or meal.recipe_nutrition_snapshot_id is distinct from content_snapshot.recipe_nutrition_snapshot_id
-        )
+        and meal.recipe_nutrition_snapshot_id is not null
+        and meal.recipe_nutrition_snapshot_id
+          is distinct from content_snapshot.recipe_nutrition_snapshot_id
     )::integer as content_direct_mismatch_count,
     count(*) filter (
       where meal.status in ('registered', 'shopping_done')
         and meal.recipe_content_snapshot_id is null
-        and meal.recipe_nutrition_snapshot_id is not null
     )::integer as backfill_gap_count
   from public.meals as meal
   left join public.recipe_content_snapshots as content_snapshot
@@ -860,6 +858,7 @@ ${renderSqlRows(EXACT_OWNED_TRIGGER_TABLE_ROWS)}
     )::integer as compatibility_direct_only_write_count,
     count(*) filter (
       where meal.recipe_content_snapshot_id is not null
+        and meal.recipe_nutrition_snapshot_id is not null
         and meal.recipe_nutrition_snapshot_id is distinct from content_snapshot.recipe_nutrition_snapshot_id
     )::integer as compatibility_pair_mismatch_count
   from public.meals as meal
@@ -1059,6 +1058,9 @@ export function assertRecipeSnapshotAuthorityRemoteVerificationResult(result) {
     && result.function_missing_count === 0
     && result.unexpected_function_count === 0
     && result.function_drift_count === 0
+    && result.content_direct_mismatch_count === 0
+    && result.backfill_gap_count === 0
+    && result.compatibility_pair_mismatch_count === 0
     && result.remote_writes === 0;
 
   if (!(validShape && validStatuses && validCounts && validReadiness)) {
