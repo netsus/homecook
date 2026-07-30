@@ -699,6 +699,22 @@ export function assertPreRestoreBackupBinding({ expected, metadata }) {
   return true;
 }
 
+export function assertBackupMatchesCurrent({ current, metadata, runtime }) {
+  if (
+    metadata?.runtime?.compose_project !== runtime?.project
+    || metadata?.runtime?.postgres_volume !== runtime?.postgresVolume
+    || metadata?.runtime?.storage_volume !== runtime?.storageVolume
+    || metadata?.manifest?.database?.digest !== current?.database?.digest
+    || metadata?.manifest?.storage?.digest !== current?.storage?.digest
+    || metadata?.manifest?.catalog?.digest !== current?.catalog?.digest
+  ) {
+    throw new Error(
+      "Backup archive does not match the exact current runtime.",
+    );
+  }
+  return true;
+}
+
 export function canonicalCatalogManifest(sections) {
   const canonicalSections = {};
   for (const section of CATALOG_SECTIONS) {
@@ -870,6 +886,120 @@ export function buildAclRestoreList(restoreList) {
         ? line
         : `;${line}`)
     .join("\n");
+}
+
+export function validateInstalledSemanticState(
+  state,
+  expectedMigrationCount,
+) {
+  if (
+    !Number.isSafeInteger(expectedMigrationCount)
+    || expectedMigrationCount <= 0
+  ) {
+    throw new Error("Expected migration count must be a positive integer.");
+  }
+  if (state?.migration_count !== expectedMigrationCount) {
+    throw new Error("Installed schema migration count does not match the restore authority.");
+  }
+  if (
+    state.auth_users !== 0
+    || state.auth_users_residual !== 0
+    || state.invalid_constraints !== 0
+    || state.runtime_ready !== true
+  ) {
+    throw new Error("Installed schema failed the semantic readiness gate.");
+  }
+  return true;
+}
+
+export function validateStorageXattrManifest({
+  manifest,
+  storageFiles,
+}) {
+  const allowedAttributes = [
+    "user.supabase.cache-control",
+    "user.supabase.content-type",
+  ];
+  if (
+    !manifest
+    || manifest.format !== "homecook-storage-xattrs-v1"
+    || !Array.isArray(manifest.files)
+    || Object.keys(manifest).sort().join(",") !== "files,format"
+    || !Array.isArray(storageFiles)
+  ) {
+    throw new Error("Storage xattr manifest is malformed.");
+  }
+  const expectedPaths = storageFiles.map((file) => file?.path).sort();
+  const actualPaths = manifest.files.map((file) => file?.path).sort();
+  if (
+    expectedPaths.some((path) => typeof path !== "string")
+    || actualPaths.some((path) => typeof path !== "string")
+    || expectedPaths.length !== actualPaths.length
+    || expectedPaths.some((path, index) => path !== actualPaths[index])
+    || new Set(actualPaths).size !== actualPaths.length
+  ) {
+    throw new Error("Storage xattr file manifest does not match persisted files.");
+  }
+  for (const file of manifest.files) {
+    const path = file.path;
+    if (
+      path.startsWith("/")
+      || path.includes("\\")
+      || path.split("/").includes("..")
+      || Object.keys(file).sort().join(",") !== "attributes,path"
+      || !file.attributes
+      || typeof file.attributes !== "object"
+      || Object.keys(file.attributes).sort().join(",")
+        !== allowedAttributes.join(",")
+    ) {
+      throw new Error("Storage xattr allowlist validation failed.");
+    }
+    for (const attribute of allowedAttributes) {
+      const encoded = file.attributes[attribute];
+      if (
+        typeof encoded !== "string"
+        || encoded.length === 0
+        || encoded.length > 1_368
+        || !/^[A-Za-z0-9+/]+={0,2}$/u.test(encoded)
+      ) {
+        throw new Error("Storage xattr value is invalid.");
+      }
+      const decoded = Buffer.from(encoded, "base64");
+      if (
+        decoded.length === 0
+        || decoded.length > 1_024
+        || decoded.toString("base64") !== encoded
+      ) {
+        throw new Error("Storage xattr value is invalid.");
+      }
+    }
+  }
+  return manifest;
+}
+
+export function planPostRestoreMigrationAdvance({
+  archiveMigrationCount,
+  currentMigrationCount,
+}) {
+  if (
+    !Number.isSafeInteger(archiveMigrationCount)
+    || archiveMigrationCount <= 0
+    || !Number.isSafeInteger(currentMigrationCount)
+    || currentMigrationCount <= 0
+  ) {
+    throw new Error("Restore migration counts must be positive integers.");
+  }
+  if (archiveMigrationCount > currentMigrationCount) {
+    throw new Error(
+      "The restored archive is newer than the current repo migration set.",
+    );
+  }
+  return Object.freeze({
+    archiveMigrationCount,
+    currentMigrationCount,
+    forwardMigrationCount:
+      currentMigrationCount - archiveMigrationCount,
+  });
 }
 
 export function validateSemanticRestoreEvidence({
