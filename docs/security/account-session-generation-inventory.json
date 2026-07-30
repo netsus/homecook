@@ -889,7 +889,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_books",
-      "line": 575,
+      "line": 581,
       "source_file": "app/api/v1/recipe-books/route.ts",
       "route": "/api/v1/recipe-books",
       "owner_scope": "authenticated-user",
@@ -1958,6 +1958,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-30T15:55:40.005Z",
-  "checksum": "6d489ccd40c4b656834c485d2bdcb6536c63bbeaa5464d18d0843845115a2446"
+  "generated_at": "2026-07-30T18:11:47.791Z",
+  "checksum": "dca2b89608edd2f6a80c7e74f0815ca402f3a1c2c14aedbf49dacce3b58ebba0"
 }

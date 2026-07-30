@@ -37,6 +37,10 @@ describe("hybrid authority AST/static gate", () => {
       },
       {
         factory: "createRecipeImageInternalClient",
+        file: "app/api/v1/recipe-books/route.ts",
+      },
+      {
+        factory: "createRecipeImageInternalClient",
         file: "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
       },
       {

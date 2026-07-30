@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createRecipeImageInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -13,6 +14,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRecipeImageInternalClient,
   createRouteHandlerClient,
   createServiceRoleClient,
 }));
@@ -94,6 +96,7 @@ function setupAuthedClient(dbClient: { from: ReturnType<typeof vi.fn> }, user = 
 
   createRouteHandlerClient.mockResolvedValue(routeClient);
   createServiceRoleClient.mockReturnValue(null);
+  createRecipeImageInternalClient.mockReturnValue(null);
 
   return routeClient;
 }
@@ -125,12 +128,14 @@ describe("17a mypage backend", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createRecipeImageInternalClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     createServiceRoleClient.mockReturnValue(null);
+    createRecipeImageInternalClient.mockReturnValue(null);
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
-const createServiceRoleClient = vi.fn();
+const createRecipeImageInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -15,23 +15,8 @@ const awardUserProgressEvent = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient: async (...args: unknown[]) => {
-    const routeClient = await createRouteHandlerClient(...args);
-    const createDataClient = createServiceRoleClient.getMockImplementation();
-    const dataClient = createDataClient?.();
-    return {
-      ...routeClient,
-      ...dataClient,
-      auth: routeClient.auth,
-      rpc: dataClient?.rpc
-        ?? routeClient.rpc
-        ?? vi.fn(async () => ({
-          data: null,
-          error: { code: "PGRST202" },
-        })),
-    };
-  },
-  createServiceRoleClient,
+  createRecipeImageInternalClient,
+  createRouteHandlerClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -147,13 +132,13 @@ describe("/api/v1/recipe-books", () => {
   beforeEach(() => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
-    createServiceRoleClient.mockReset();
+    createRecipeImageInternalClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     awardUserProgressEvent.mockReset();
     recordUserGrowthActivityEvent.mockReset();
-    createServiceRoleClient.mockReturnValue(null);
+    createRecipeImageInternalClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     awardUserProgressEvent.mockResolvedValue({
@@ -410,6 +395,10 @@ describe("/api/v1/recipe-books", () => {
       },
     };
 
+    const routeRpc = vi.fn(async () => ({
+      data: null,
+      error: { code: "42501", message: "permission denied" },
+    }));
     createRouteHandlerClient.mockResolvedValue({
       auth: {
         getUser: vi.fn(async () => ({
@@ -417,8 +406,9 @@ describe("/api/v1/recipe-books", () => {
         })),
       },
       from,
+      rpc: routeRpc,
     });
-    createServiceRoleClient.mockReturnValue(serviceClient);
+    createRecipeImageInternalClient.mockReturnValue(serviceClient);
 
     const { GET } = await importRoute();
     const response = await GET(new Request("http://localhost:3000/api/v1/recipe-books"));
@@ -426,6 +416,8 @@ describe("/api/v1/recipe-books", () => {
 
     expect(response.status).toBe(200);
     expect(body.data.books[0].cover_image_url).toBe(signedUrl);
+    expect(createRecipeImageInternalClient).toHaveBeenCalledTimes(1);
+    expect(routeRpc).not.toHaveBeenCalled();
     expect(recipeBooksTable.__selectQuery.eq).toHaveBeenCalledWith("user_id", ownerId);
     expect(rpc).toHaveBeenCalledWith("read_recipe_book_image_projections", {
       p_book_ids: [bookId],

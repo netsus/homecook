@@ -100,6 +100,7 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
   [
     "createRecipeImageInternalClient",
     new Set([
+      "app/api/v1/recipe-books/route.ts",
       "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
       "app/api/v1/recipes/images/route.ts",
     ]),
