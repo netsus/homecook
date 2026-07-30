@@ -17,7 +17,7 @@ import {
   type LeftoverRecipeRow,
   type LeftoverSourceMealRow,
 } from "@/lib/server/leftovers";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { LeftoverListData } from "@/types/leftover";
 
 interface QueryError {
@@ -67,6 +67,15 @@ interface RecipesTable {
   select(columns: string): RecipeSelectQuery;
 }
 
+interface RecipeContentSnapshotsSelectQuery {
+  in(column: string, values: string[]): RecipeContentSnapshotsSelectQuery;
+  then: ArrayQueryResult<{ id: string; recipe_id: string; title: string }>["then"];
+}
+
+interface RecipeContentSnapshotsTable {
+  select(columns: string): RecipeContentSnapshotsSelectQuery;
+}
+
 interface MealsTable {
   select(columns: string): SourceMealSelectQuery;
 }
@@ -78,6 +87,7 @@ interface CookingSessionMealsTable {
 interface LeftoversDbClient {
   from(table: "leftover_dishes"): LeftoverDishesTable;
   from(table: "recipes"): RecipesTable;
+  from(table: "recipe_content_snapshots"): RecipeContentSnapshotsTable;
   from(table: "meals"): MealsTable;
   from(table: "cooking_session_meals"): CookingSessionMealsTable;
 }
@@ -113,7 +123,7 @@ export async function GET(request: NextRequest) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     LeftoversDbClient & UserBootstrapDbClient;
 
   try {
@@ -130,7 +140,7 @@ export async function GET(request: NextRequest) {
   let leftoversQuery = dbClient
     .from("leftover_dishes")
     .select(
-      "id, user_id, recipe_id, status, cooked_at, eaten_at, auto_hide_at, stale_reviewed_at, cooking_servings",
+      "id, user_id, recipe_id, recipe_content_snapshot_id, recipe_content_snapshots(id, recipe_id, title), status, cooked_at, eaten_at, auto_hide_at, stale_reviewed_at, cooking_servings",
     )
     .eq("user_id", user.id)
     .eq("status", status);
@@ -156,6 +166,14 @@ export async function GET(request: NextRequest) {
   const leftoverIds = leftoversResult.data.map((item) => item.id);
   const recipeMap = new Map<string, LeftoverRecipeRow>();
   const sourceMealMap = new Map<string, LeftoverSourceMealRow>();
+  const contentSnapshotIds = [
+    ...new Set(
+      leftoversResult.data
+        .map((item) => item.recipe_content_snapshot_id)
+        .filter((value): value is string => typeof value === "string" && value.length > 0),
+    ),
+  ];
+  const contentSnapshotMap = new Map<string, { id: string; recipe_id: string; title: string }>();
 
   if (recipeIds.length > 0) {
     const recipesResult = await dbClient
@@ -170,6 +188,29 @@ export async function GET(request: NextRequest) {
     recipesResult.data.forEach((recipe) => {
       recipeMap.set(recipe.id, recipe);
     });
+  }
+
+  if (contentSnapshotIds.length > 0) {
+    const contentSnapshotsResult = await dbClient
+      .from("recipe_content_snapshots")
+      .select("id, recipe_id, title")
+      .in("id", contentSnapshotIds);
+
+    if (contentSnapshotsResult.error || !contentSnapshotsResult.data) {
+      return fail("INTERNAL_ERROR", "남은 요리 목록을 불러오지 못했어요.", 500);
+    }
+
+    contentSnapshotsResult.data.forEach((snapshot) => {
+      contentSnapshotMap.set(snapshot.id, snapshot);
+    });
+
+    if (leftoversResult.data.some((item) =>
+      item.recipe_content_snapshot_id !== null &&
+      item.recipe_content_snapshot_id !== undefined &&
+      !contentSnapshotMap.has(item.recipe_content_snapshot_id)
+    )) {
+      return fail("INTERNAL_ERROR", "남은 요리 목록을 불러오지 못했어요.", 500);
+    }
   }
 
   if (leftoverIds.length > 0) {
@@ -220,6 +261,8 @@ export async function GET(request: NextRequest) {
   }
 
   return ok({
-    items: leftoversResult.data.map((row) => toLeftoverListItem(row, recipeMap, sourceMealMap)),
+    items: leftoversResult.data.map((row) =>
+      toLeftoverListItem(row, recipeMap, sourceMealMap, contentSnapshotMap)
+    ),
   } satisfies LeftoverListData);
 }

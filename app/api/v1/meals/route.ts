@@ -15,6 +15,10 @@ import {
   toMealProductPlannerEntry,
 } from "@/lib/server/prepared-food-planner-entry";
 import {
+  createHybridAuthorityRouteError,
+  withHybridAuthorityRouteError,
+} from "@/lib/server/hybrid-auth/route-error";
+import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
@@ -28,7 +32,7 @@ import {
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { MealCreateBody, MealCreateData, MealListData, MealListItemData } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
@@ -67,6 +71,15 @@ interface MealListRow {
   status: string;
   is_leftover: boolean;
   created_at: string;
+  recipe_content_snapshot_id: string | null;
+  recipe_content_snapshots:
+    | {
+      title: string | null;
+    }
+    | Array<{
+      title: string | null;
+    }>
+    | null;
 }
 
 interface MealInsertRow {
@@ -325,11 +338,14 @@ function toMealCreateData(row: MealInsertRow): MealCreateData {
 
 function toMealListItem(row: MealListRow, recipeMap: Map<string, RecipeSummaryRow>): MealListItemData {
   const recipe = recipeMap.get(row.recipe_id);
+  const contentSnapshot = Array.isArray(row.recipe_content_snapshots)
+    ? row.recipe_content_snapshots[0] ?? null
+    : row.recipe_content_snapshots;
 
   return {
     id: row.id,
     recipe_id: row.recipe_id,
-    recipe_title: recipe?.title ?? "",
+    recipe_title: contentSnapshot?.title?.trim() || recipe?.title || "",
     recipe_thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
     planned_servings: row.planned_servings,
     status: normalizeMealStatus(row.status),
@@ -342,7 +358,7 @@ async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHan
   return authResult.data.user;
 }
 
-export async function GET(request: NextRequest) {
+async function getMeals(request: NextRequest) {
   const parsed = parseMealListQuery(request);
   if (parsed.fields.length > 0) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, parsed.fields);
@@ -365,7 +381,7 @@ export async function GET(request: NextRequest) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     MealsDbClient & UserBootstrapDbClient;
 
   try {
@@ -386,6 +402,10 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   if (columnResult.error || !columnResult.data) {
+    const authorityError = createHybridAuthorityRouteError(columnResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
   }
 
@@ -395,7 +415,9 @@ export async function GET(request: NextRequest) {
 
   const mealsResult = await dbClient
     .from("meals")
-    .select("id, recipe_id, planned_servings, status, is_leftover, created_at")
+    .select(
+      "id, recipe_id, planned_servings, status, is_leftover, created_at, recipe_content_snapshot_id, recipe_content_snapshots(title)",
+    )
     .eq("user_id", user.id)
     .eq("plan_date", parsed.planDate)
     .eq("column_id", parsed.columnId)
@@ -403,6 +425,26 @@ export async function GET(request: NextRequest) {
     .order("id", { ascending: true });
 
   if (mealsResult.error || !mealsResult.data) {
+    const authorityError = createHybridAuthorityRouteError(mealsResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
+    return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
+  }
+
+  const hasBrokenContentPinnedMeal = mealsResult.data.some((meal) => {
+    if (!meal.recipe_content_snapshot_id) {
+      return false;
+    }
+
+    const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
+      ? meal.recipe_content_snapshots[0] ?? null
+      : meal.recipe_content_snapshots;
+
+    return contentSnapshot === null || contentSnapshot.title === null;
+  });
+
+  if (hasBrokenContentPinnedMeal) {
     return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
   }
 
@@ -413,6 +455,10 @@ export async function GET(request: NextRequest) {
     p_column_id: parsed.columnId,
   });
   if (productEntriesResult.error || !Array.isArray(productEntriesResult.data)) {
+    const authorityError = createHybridAuthorityRouteError(productEntriesResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
   }
   const productEntries = dedupeProductPlannerEntries(
@@ -429,6 +475,10 @@ export async function GET(request: NextRequest) {
       .in("id", recipeIds);
 
     if (recipesResult.error || !recipesResult.data) {
+      const authorityError = createHybridAuthorityRouteError(recipesResult.error);
+      if (authorityError) {
+        return authorityError;
+      }
       return fail("INTERNAL_ERROR", "식사 목록을 불러오지 못했어요.", 500);
     }
 
@@ -443,7 +493,16 @@ export async function GET(request: NextRequest) {
   } satisfies MealListData);
 }
 
-export async function POST(request: Request) {
+const guardedGetMeals = withHybridAuthorityRouteError(
+  "식사 목록을 불러오지 못했어요.",
+  getMeals,
+);
+
+export async function GET(request: NextRequest) {
+  return guardedGetMeals(request);
+}
+
+async function postMeals(request: Request) {
   let routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>> | null = null;
   let user: Awaited<ReturnType<typeof requireUser>> | null = null;
 
@@ -522,7 +581,7 @@ export async function POST(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     MealsDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
 
   try {
@@ -543,6 +602,10 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (recipeResult.error || !recipeResult.data) {
+    const authorityError = createHybridAuthorityRouteError(recipeResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
   }
 
@@ -553,6 +616,10 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (columnResult.error || !columnResult.data) {
+    const authorityError = createHybridAuthorityRouteError(columnResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
   }
 
@@ -568,6 +635,10 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (leftoverResult.error || !leftoverResult.data) {
+      const authorityError = createHybridAuthorityRouteError(leftoverResult.error);
+      if (authorityError) {
+        return authorityError;
+      }
       return fail("RESOURCE_NOT_FOUND", "남은 요리를 찾을 수 없어요.", 404);
     }
 
@@ -600,6 +671,10 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (insertResult.error || !insertResult.data) {
+    const authorityError = createHybridAuthorityRouteError(insertResult.error);
+    if (authorityError) {
+      return authorityError;
+    }
     return fail("INTERNAL_ERROR", "식사를 추가하지 못했어요.", 500);
   }
 
@@ -636,4 +711,13 @@ export async function POST(request: Request) {
   }
 
   return ok(toMealCreateData(insertResult.data), { status: 201 });
+}
+
+const guardedPostMeals = withHybridAuthorityRouteError(
+  "식사를 추가하지 못했어요.",
+  postMeals,
+);
+
+export async function POST(request: Request) {
+  return guardedPostMeals(request);
 }

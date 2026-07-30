@@ -1,18 +1,58 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.7.24.md`
-- `docs/화면정의서-v1.5.29.md`
-- `docs/유저flow맵-v1.3.26.md`
-- `docs/db설계-v1.3.25.md`
-- `docs/api문서-v1.2.29.md`
+- `docs/요구사항기준선-v1.7.26.md`
+- `docs/화면정의서-v1.5.30.md`
+- `docs/유저flow맵-v1.3.28.md`
+- `docs/db설계-v1.3.27.md`
+- `docs/api문서-v1.2.30.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## Workflow Actor Governance Note `2026-07-30`
+
+- Claude는 신규·재개 작업에 사용하지 않는다.
+- 기존 Claude 담당 Stage는 `docs/engineering/codex-task-handoff.md`에 따라 역할이 분리된 별도 Codex 작업이 수행한다.
+- 작성·구현 작업은 자기 변경을 최종 승인하지 않으며, 독립 검토 작업은 다른 task ID와 검토 commit SHA를 evidence로 남긴다.
+- 아래 addendum과 과거 공식 버전의 Claude 표기는 당시 승인·작성·실행 이력을 보존하는 역사적 기록이다. 현재 actor 지시나 Claude 호출 권한으로 해석하지 않는다.
+- 이 변경은 workflow governance 전환이며 요구사항, 화면, 유저 flow, API, DB 제품 계약은 바꾸지 않는다.
 - 아래 contract-evolution 표의 버전은 해당 변경을 처음 도입한 역사적 파일을 기록한다. 현재 공식본은 항상 위 `Official Files` 목록을 따른다.
+
+## Hybrid Remote Auth / Local Data Production Contract-Evolution `2026-07-30`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.26 | Google/Naver/Kakao Auth는 원격에 유지하고 application DB/Storage는 Mac self-hosted authority로 이전하며 exact JWT claim guard, two-system barrier, no service-role user path, backup/rollback floor를 잠근다 |
+| 화면정의서 v1.5.30 | 신규 화면 없이 browser는 remote Auth만 사용하고 local Data/Storage mutation은 기존 server API로 제한한다 |
+| 유저플로우 v1.3.28 | remote callback → identity epoch mirror → claim gateway → local RLS와 remote/local maintenance barrier 흐름을 추가한다 |
+| DB v1.3.27 | private identity epoch mirror 1개로 target 71 tables, local `auth.users=0`, dependency replacement matrix와 semantic restore gate를 정의한다 |
+| API v1.2.30 | public 102 endpoints와 wrapper를 유지하면서 remote Auth/local user Data/local internal client 경계를 분리한다 |
+
+> 사용자는 2026-07-30에 2026-07-29 local-first 초기 배포의 `원격 Supabase 삭제`, `실제 사용자 없음`, `local auth.users 단일 barrier` 전제를 대체하고, 원격 Supabase는 Auth와 최소 Auth Hook control-plane에만 사용하도록 승인했다. remote application `public` DB와 application Storage는 cutover 뒤 read-only recovery copy이며 신규 application write authority는 Mac의 local Supabase다.
+>
+> local PostgREST/Storage는 원격 ES256 JWKS 서명 확인만으로 충분하다고 간주하지 않는다. session-authority gateway가 remote `/auth/v1/user` 결과의 `(iss, sub, session_id, user.created_at)`를 current active epoch와 `user_session_generation_bindings`의 session-liveness HMAC binding에 결합하고, PostgREST DB pre-request와 Storage gateway가 exact claim, binding TTL, remote liveness를 재검증한다. logout/deletion/quarantine/identity replacement/maintenance abort는 binding을 revoke/delete하며 remote Auth outage는 allow-until-exp 없이 user-scoped request를 fail closed한다. upstream은 Docker internal network에만 두며 user-scoped route의 service role 우선/fallback과 browser direct Storage는 정적 gate로 0을 요구한다.
+>
+> 원격 Auth와 로컬 DB는 한 transaction이 아니므로 remote Hook control-plane과 local fence를 attempt/revision/fencing token/ack/lease/quiet-window 상태로 묶는다. hosted Auth의 provider linking freeze를 주장하지 않고 barrier 전후 population/revision digest CAS가 달라지면 attempt를 abort/restart한다. deletion은 exact-epoch terminal saga다. stale session/epoch/generation은 신규 public status/code가 아니라 기존 `409 ACCOUNT_SESSION_STALE`, `409 ACCOUNT_GENERATION_STALE`, `503 ACCOUNT_LIFECYCLE_MAINTENANCE`에만 매핑한다. local `auth.users=0`은 의도된 invariant이며 private identity epoch mirror와 nullable historical audit 정책으로 기존 FK/function 의미를 대체한다.
+>
+> isolated PG17 복원은 SQL COPY 성공 뒤에도 `public.users=5`, `admin_members` missing auth FK 1, `admin_audit_logs` missing actor 99를 재현했다. 따라서 row copy 성공이 아니라 dependency 잔존 0과 owner↔active epoch semantic query가 cutover authority다. off-Mac encrypted restore와 첫 local write 뒤 rollback rehearsal 전에는 final cutover하지 않는다.
+
+## Local-First MacBook Initial Deployment Contract-Evolution `2026-07-29`
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.7.25 | 실제 사용자 없이 테스트 데이터만 사용하는 local-first 초기 배포 계약, production=서버 MacBook local Supabase+Next.js, staging=격리 local rehearsal, local `auth.users SHARE ROW EXCLUSIVE` final barrier, remote/provider barrier N/A를 잠근다 |
+| 화면정의서 v1.5.29 | 변경 없음. 기존 화면 URL, 상태, 권한, read-only 계약 유지 |
+| 유저플로우 v1.3.27 | 격리 local rehearsal → build/env 재발급 → local barrier → launchd localhost smoke → rollback/replay 흐름을 추가하고 remote migration/provider 단계는 제거한다 |
+| DB v1.3.26 | schema 추가 없이 local DB authority, clean replay 또는 verified backup restore, old-path irreversible delete 별도 gate를 잠근다 |
+| API v1.2.29 | 변경 없음. 기존 공개 endpoint, field, status, error wrapper 유지 |
+
+> 사용자는 2026-07-29에 local-first 초기 배포 계약을 명시적으로 승인했다. 초기 production은 서버 MacBook의 local Supabase와 same-host Next.js production server이며, remote Supabase 프로젝트는 삭제되어 remote migration, remote verifier, provider-managed maintenance barrier는 이번 범위에서 `N/A`다. quiet window는 최초 cutover 1회성 운영 창으로, 같은 초기 배포 안에서 길이를 늘리는 것만으로 별도 재승인을 다시 요구하지 않는다.
+> old-path irreversible delete는 이번 계약에 포함되지 않으며 별도 gate가 필요하다. 향후 managed provider 또는 hosted Supabase로 이동하려면 새 contract-evolution으로 공식 문서와 이 파일을 먼저 갱신해야 한다.
+> 이 결정의 운영 마스터 플랜 근거는 2026-07-29 local-first plan 1,056 lines, SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc`다. 화면정의서와 API 공식 파일은 이번 계약에서 변경되지 않는다.
 
 ## Prepared Food Search Tuple Consistency Contract-Evolution `2026-07-26`
 

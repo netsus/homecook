@@ -37,7 +37,7 @@
 
 ## Manual QA
 
-- verifier: Codex Stage 5/6 + Claude final authority when available
+- verifier: 서로 task ID가 다른 Codex Stage 5/6 및 `product-design-authority` 작업
 - environment: local Playwright fixture server, mobile default 390px, mobile narrow 320px
 - scenarios:
   - 직접등록 화면에서 재료 2개를 추가하고 한 줄 정렬/삭제 버튼 터치 영역 확인

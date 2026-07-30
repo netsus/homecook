@@ -17,18 +17,20 @@
     "security-definer-mutation-authorization-hotfix merged and deployed",
     "cooking-meal-log contract-evolution merged as PR #1072",
     "existing recipe nutrition snapshot release merged",
-    "recipe-visibility-read-hardening Stage 1 docs merged as PR #1077; its runtime implementation remains a Stage 2 predecessor",
+    "recipe-visibility-read-hardening Stage 2 through Stage 6 merged through PR #1228",
     "product-ingredient-link-foundation Stage 1 docs merged as PR #1076 for Train B integrated QA",
-    "this Stage 1 docs sequence does not activate schema migration or Meal contract cutover"
+    "recipe snapshot Stage 2 implementation merged as PR #1218 and Stage 4 consumer regression merged as PR #1219",
+    "PR #1220 intentionally reopened roadmap docs and lifecycle planned because deployment verification remained missing",
+    "this hybrid contract relock does not activate schema migration Meal contract cutover or production writes"
   ],
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.26.md",
+      "docs/화면정의서-v1.5.30.md",
+      "docs/유저flow맵-v1.3.28.md",
+      "docs/db설계-v1.3.27.md",
+      "docs/api문서-v1.2.30.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -46,19 +48,20 @@
       "docs/engineering/security-performance-design.md",
       "docs/engineering/workflow-v2/README.md",
       "docs/engineering/workflow-v2/approval-and-loops.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#historical-snapshot-product-design-sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc-local-only-auth-deployment-assumptions-superseded-by-current-source-of-truth"
     ]
   },
   "workflow": {
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "node scripts/verify-recipe-snapshot-authority-remote.mjs --mode post-merge-read-only from merged exact SHA only",
-      "remote table column FK unique check trigger grant and function inventory",
+      "node scripts/verify-recipe-snapshot-authority-hybrid.mjs --mode post-merge-read-only from merged exact SHA only",
+      "local application DB table column FK unique check trigger grant function inventory and local auth.users=0",
+      "remote Auth control-plane active exact epoch session binding terminal state read-only evidence with remote application writes zero",
       "current and immediate-previous content-aware reader compatibility smoke",
       "one-full-release old-shape direct-only write zero and pair mismatch zero evidence",
       "pre-contract rollback and post-contract content-aware rollback-floor rejection",
-      "private account cleanup FK-order fixture preserves owner-null public shared snapshots",
+      "hybrid exact-epoch account cleanup runs local owner fence and FK order before remote delete terminal readback and mirror terminal while preserving owner-null public shared snapshots",
       "Train B Storage outbox and pantry effective-ingredient integration smoke",
       "production contract-null writes remain zero until approved compatibility gate"
     ],
@@ -74,9 +77,11 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/recipe-snapshot-authority-foundation pnpm validate:workpack -- --slice recipe-snapshot-authority-foundation",
+      "pnpm validate:workpack -- --slice recipe-snapshot-authority-foundation",
       "node scripts/validate-automation-spec.mjs --slice recipe-snapshot-authority-foundation",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/recipe-snapshot-authority-hybrid-verifier.test.ts tests/recipe-snapshot-authority-remote-verifier.test.ts",
+      "pnpm test:recipe-snapshot-authority:hybrid-cleanup-postgres",
       "pnpm exec vitest run tests/recipe-snapshot-authority.test.ts tests/recipe-snapshot-readers.test.ts tests/recipe-snapshot-security.test.ts tests/recipe-snapshot-account-delete.test.ts",
       "pnpm test:recipe-snapshot-authority:postgres",
       "pnpm verify:backend",
@@ -85,16 +90,18 @@
       "pnpm test:e2e:regression:ci --grep recipe-snapshot-authority-foundation",
       "pnpm verify:frontend",
       "pnpm validate:closeout-sync -- --slice recipe-snapshot-authority-foundation",
-      "node scripts/verify-recipe-snapshot-authority-remote.mjs --mode post-merge-read-only",
+      "node scripts/verify-recipe-snapshot-authority-hybrid.mjs --mode post-merge-read-only",
       "git diff --check"
     ],
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/recipe-snapshot-authority-foundation pnpm validate:workpack -- --slice recipe-snapshot-authority-foundation",
+      "pnpm validate:workpack -- --slice recipe-snapshot-authority-foundation",
       "node scripts/validate-automation-spec.mjs --slice recipe-snapshot-authority-foundation",
       "pnpm validate:omo-bookkeeping",
-      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
+      "pnpm exec vitest run tests/recipe-snapshot-authority-hybrid-verifier.test.ts tests/recipe-snapshot-authority-remote-verifier.test.ts",
+      "pnpm test:recipe-snapshot-authority:hybrid-cleanup-postgres",
+      "pnpm exec vitest run tests/recipe-snapshot-hybrid-contract-sync.test.ts tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
       "pnpm audit --audit-level high",
@@ -107,13 +114,15 @@
       "separate Codex Stage 3 implementation review and final closeout review"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
-      "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
+      "historical-plan-snapshot-product-design-plus-current-hybrid-source-of-truth-lock",
+      "hybrid-relock-core-artifacts-plus-roadmap-and-status-projections",
       "content-exact-nutrition-id-only-single-authority",
       "nutrition-not-null-restrict-ordinary-unique-current-index-and-writer-conflict-preserved",
       "private-owner-recipe-pair-and-owner-null-public-shared-shape",
-      "ordinary-direct-mutation-denied-and-account-cleanup-only-private-delete",
+      "ordinary-direct-mutation-denied-and-hybrid-exact-epoch-account-cleanup-only-private-delete",
       "exact-account-cleanup-event-idempotency-claim-session-meal-batch-snapshot-product-order",
+      "active-epoch-session-liveness-hmac-binding-local-cleanup-before-remote-delete-terminal-readback-and-mirror-terminal",
+      "local-auth-users-zero-and-remote-application-writes-zero",
       "soft-delete-history-preservation-and-new-snapshot-denial",
       "reader-first-n-preserving-idempotent-expand-backfill",
       "db-derived-null-or-equal-compatibility-mirror-and-content-null-legacy-fallback",
@@ -124,13 +133,13 @@
       "scalable-cooking-over-base-plus-fixed-once-and-missing-not-zero",
       "existing-consumer-behavior-only-no-new-visual-scope",
       "train-b-storage-outbox-and-pantry-effective-ingredient-integration",
-      "merged-exact-sha-remote-read-only-evidence",
+      "merged-exact-sha-local-application-db-and-remote-auth-control-plane-read-only-hybrid-evidence",
       "independent-codex-required-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip"
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -149,8 +158,8 @@
     "Duplicate nutrition vector in content Meal or batch",
     "Relaxed nutrition FK unique current index writer conflict or immutable trigger",
     "New public endpoint field status error or visual hierarchy",
-    "Unmerged remote migration production database or data write"
+    "Unapproved production or staging migration database Storage or remote application write"
   ],
   "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle stays planned and approval remains not_started until fresh separate Codex internal 1.5, security/DB and five-axis reviewers approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff check only. Snapshot migration/readers/account cleanup, PostgreSQL, compatibility telemetry, consumer/E2E and remote-verifier commands are future Stage 2/4/closeout artifacts. Implementation waits for #3 runtime and the merged nutrition baseline; contract/null waits for current+previous content-aware, one-release old-shape zero and pair-mismatch zero evidence."
+  "notes": "PR #1231 merged the hybrid remote Auth/local Data relock after PR #1218 Stage 2 and PR #1219 Stage 4. PR #1232 merged the TDD hybrid verifier as 6c9d2c32969d715de95813e93c61f005075c89a0; its exact-master dry-run passed and a separate read-only local query proved auth.users=0. fix/recipe-snapshot-stage2-regression-evidence adds fail-closed true mismatch/backfill checks, report-only historical direct inventory, an expired hybrid binding guard, operational identifier scrub, and one isolated exact-epoch cleanup regression for the currently implemented snapshot/product FK subset without production/staging or remote application writes. The actual merged verifier with real sanitized remote Auth evidence, local Storage evidence, compatibility-release observation window, full actual public.users inbound-FK cleanup rehearsal, Train B #2 integration and successor event/meal-log/non-image-idempotency cleanup links remain pending; contract/null still waits for current+previous content-aware, one-release old-shape zero and pair-mismatch zero evidence."
 }

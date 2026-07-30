@@ -1,7 +1,7 @@
 import { fail, ok } from "@/lib/api/response";
 import { parseFoodProductReportBody } from "@/lib/server/prepared-food-catalog";
 import { ensurePublicUserRow, type UserBootstrapDbClient } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 
 interface RouteContext {
   params: Promise<{ product_id: string }>;
@@ -66,7 +66,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = (createServiceRoleClient() ?? routeClient) as unknown as ReportDbClient & UserBootstrapDbClient;
+  const db = routeClient as unknown as ReportDbClient & UserBootstrapDbClient;
   try {
     await ensurePublicUserRow(db, user);
   } catch {

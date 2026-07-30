@@ -6,6 +6,9 @@ import {
   RECIPE_IMAGE_MAX_BYTES,
   type RecipeImageMimeType,
 } from "./recipe-media";
+import {
+  normalizeExpectedRecipeImageStorageOrigin,
+} from "./recipe-image-read";
 
 const PRIVATE_RECIPE_IMAGE_BUCKET = "recipe-images-private";
 const UUID_PATTERN
@@ -334,9 +337,8 @@ function canonicalPayloadHash(inspection: ManagedRecipeImageInspection) {
 
 function validInput(input: ManagedRecipeImageUploadInput) {
   const { inspection, sessionAuthority } = input;
-  let readUrlOrigin: URL;
   try {
-    readUrlOrigin = new URL(input.expectedReadUrlOrigin);
+    normalizeExpectedRecipeImageStorageOrigin(input.expectedReadUrlOrigin);
   } catch {
     return false;
   }
@@ -355,8 +357,6 @@ function validInput(input: ManagedRecipeImageUploadInput) {
       === inspection.extension
     && input.body.size === inspection.byteSize
     && input.body.type === inspection.actualMimeType
-    && readUrlOrigin.protocol === "https:"
-    && readUrlOrigin.origin === input.expectedReadUrlOrigin
     && Number.isSafeInteger(input.maxReadUrlTtlMs)
     && input.maxReadUrlTtlMs > 0;
 }
@@ -445,11 +445,12 @@ async function issueValidatedReadUrl(
       objectPath: value.objectPath,
     });
     const url = new URL(result.readUrl);
+    const expectedUrl = new URL(input.expectedReadUrlOrigin);
     const expiresAt = Date.parse(result.expiresAt);
     const nowMs = now().getTime();
     const expectedPath
       = `/storage/v1/object/sign/${value.bucketId}/${value.objectPath}`;
-    return url.protocol === "https:"
+    return url.protocol === expectedUrl.protocol
       && url.origin === input.expectedReadUrlOrigin
       && decodeURIComponent(url.pathname) === expectedPath
       && Boolean(url.searchParams.get("token"))

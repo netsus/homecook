@@ -9,6 +9,8 @@ export interface ManagedRecipeImageReadProjection {
   image_object_id: string | null;
   bucket_id: string | null;
   object_path: string | null;
+  owner_uuid: string | null;
+  account_generation: number | null;
   visibility: string | null;
   state: string | null;
   reference_type: string | null;
@@ -49,10 +51,12 @@ export interface RecipeImageReadRpcClient {
 }
 
 const PROJECTION_KEYS = [
+  "account_generation",
   "bucket_id",
   "image_object_id",
   "legacy_thumbnail_url",
   "object_path",
+  "owner_uuid",
   "recipe_id",
   "reference_type",
   "state",
@@ -71,6 +75,11 @@ function nullableString(value: unknown): value is string | null {
   return value === null || typeof value === "string";
 }
 
+function nullablePositiveSafeInteger(value: unknown): value is number | null {
+  return value === null
+    || (Number.isSafeInteger(value) && typeof value === "number" && value > 0);
+}
+
 export function isRecipeImageProjectionAuthorityMissing(error: unknown) {
   return isRecord(error)
     && (error.code === "PGRST202" || error.code === "42883");
@@ -86,6 +95,8 @@ function parseProjection(value: unknown): RecipeImageReadProjection {
     || !nullableString(value.image_object_id)
     || !nullableString(value.bucket_id)
     || !nullableString(value.object_path)
+    || !nullableString(value.owner_uuid)
+    || !nullablePositiveSafeInteger(value.account_generation)
     || !nullableString(value.visibility)
     || !nullableString(value.state)
     || !nullableString(value.reference_type)
@@ -142,6 +153,8 @@ function legacyUrl(projection: RecipeImageReadProjection) {
     projection.image_object_id,
     projection.bucket_id,
     projection.object_path,
+    projection.owner_uuid,
+    projection.account_generation,
     projection.visibility,
     projection.state,
     projection.reference_type,
@@ -191,11 +204,13 @@ export async function readRecipeImageProjection({
 
 export async function resolveRecipeImageReadUrl({
   client,
+  expectedOwnerUuid,
   expectedStorageOrigin,
   projection: rawProjection,
   signedUrlTtlSeconds,
 }: {
   client: RecipeImageReadStorageClient;
+  expectedOwnerUuid?: string | null;
   expectedStorageOrigin: string;
   projection: RecipeImageReadProjection;
   signedUrlTtlSeconds: number;
@@ -208,6 +223,7 @@ export async function resolveRecipeImageReadUrl({
 
   return resolveManagedRecipeImageReadUrl({
     client,
+    expectedOwnerUuid,
     expectedReferenceType: "recipe_thumbnail",
     expectedStorageOrigin,
     projection,
@@ -217,12 +233,14 @@ export async function resolveRecipeImageReadUrl({
 
 export async function resolveManagedRecipeImageReadUrl({
   client,
+  expectedOwnerUuid,
   expectedReferenceType,
   expectedStorageOrigin,
   projection,
   signedUrlTtlSeconds,
 }: {
   client: RecipeImageReadStorageClient;
+  expectedOwnerUuid?: string | null;
   expectedReferenceType: "recipe_thumbnail" | "recipe_book_cover";
   expectedStorageOrigin: string;
   projection: ManagedRecipeImageReadProjection;
@@ -241,6 +259,8 @@ export async function resolveManagedRecipeImageReadUrl({
     || !UUID_PATTERN.test(projection.image_object_id)
     || !nullableString(projection.bucket_id)
     || !nullableString(projection.object_path)
+    || !nullableString(projection.owner_uuid)
+    || !nullablePositiveSafeInteger(projection.account_generation)
     || !nullableString(projection.visibility)
     || !nullableString(projection.state)
     || !nullableString(projection.reference_type)
@@ -254,9 +274,19 @@ export async function resolveManagedRecipeImageReadUrl({
     && projection.state === "attached_private"
     && projection.bucket_id === "recipe-images-private"
     && typeof projection.object_path === "string"
+    && typeof projection.owner_uuid === "string"
+    && UUID_PATTERN.test(projection.owner_uuid)
+    && typeof projection.account_generation === "number"
+    && typeof expectedOwnerUuid === "string"
+    && UUID_PATTERN.test(expectedOwnerUuid)
+    && projection.owner_uuid.toLowerCase() === expectedOwnerUuid.toLowerCase()
   ) {
     const pathMatch = PRIVATE_OBJECT_PATH_PATTERN.exec(projection.object_path);
-    if (pathMatch?.[3].toLowerCase() !== projection.image_object_id.toLowerCase()) {
+    if (
+      pathMatch?.[1].toLowerCase() !== projection.owner_uuid.toLowerCase()
+      || Number(pathMatch?.[2]) !== projection.account_generation
+      || pathMatch?.[3].toLowerCase() !== projection.image_object_id.toLowerCase()
+    ) {
       throw new Error("managed recipe image read evidence is invalid");
     }
 
@@ -278,6 +308,8 @@ export async function resolveManagedRecipeImageReadUrl({
     && projection.state === "attached_public_shared"
     && projection.bucket_id === "recipe-images"
     && typeof projection.object_path === "string"
+    && projection.owner_uuid === null
+    && projection.account_generation === null
   ) {
     const pathMatch = PUBLIC_OBJECT_PATH_PATTERN.exec(projection.object_path);
     if (pathMatch?.[1].toLowerCase() !== projection.image_object_id.toLowerCase()) {

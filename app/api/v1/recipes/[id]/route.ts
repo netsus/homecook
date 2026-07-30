@@ -21,17 +21,22 @@ import {
   type RecipeNutritionSnapshotRow,
 } from "@/lib/server/recipe-nutrition-snapshot";
 import {
-  normalizeExpectedRecipeImageStorageOrigin,
   readRecipeImageProjection,
   resolveRecipeImageReadUrl,
 } from "@/lib/server/recipe-image-read";
+import {
+  readExpectedRecipeImageStorageOrigin,
+} from "@/lib/server/recipe-image-storage-origin";
 import {
   isMissingStepCookingMethodsRelation,
   RECIPE_STEP_SELECT_LEGACY,
   RECIPE_STEP_SELECT_WITH_METHODS,
 } from "@/lib/server/recipe-step-method-select";
 import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createRemoteCompatibilityServiceRoleClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 import type { RecipeDetail, RecipePhoto, RecipePhotoRole, RecipeUserStatus } from "@/types/recipe";
 
 interface RouteContext {
@@ -70,15 +75,13 @@ function normalizePositiveNumber(value: unknown) {
 }
 
 function readExpectedStorageOrigin() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (!configuredUrl) {
-    throw new Error("managed recipe image read configuration is invalid");
-  }
-  return normalizeExpectedRecipeImageStorageOrigin(configuredUrl);
+  return readExpectedRecipeImageStorageOrigin();
 }
 
 async function readCurrentRecipeNutritionSnapshot(
-  dbClient: NonNullable<ReturnType<typeof createServiceRoleClient>> |
+  dbClient: NonNullable<
+    ReturnType<typeof createRemoteCompatibilityServiceRoleClient>
+  > |
     Awaited<ReturnType<typeof createRouteHandlerClient>>,
   recipeId: string,
 ) {
@@ -193,7 +196,9 @@ function buildRecipePhotos(
 }
 
 async function incrementRecipeViewCountWithFallback(
-  serviceClient: NonNullable<ReturnType<typeof createServiceRoleClient>>,
+  serviceClient: NonNullable<
+    ReturnType<typeof createRemoteCompatibilityServiceRoleClient>
+  >,
   recipeId: string,
   initialViewCount: number,
 ) {
@@ -259,11 +264,13 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   try {
-    const routeClient = await createRouteHandlerClient();
+    const routeClient = await createRouteHandlerClient({
+      anonymousPublicReadScope: "recipe-detail",
+    });
     const recipeResult = await routeClient
       .from("recipes")
       .select(
-        "id, title, description, thumbnail_url, base_servings, tags, source_type, view_count, like_count, save_count, plan_count, cook_count",
+        "id, title, description, thumbnail_url, base_servings, tags, source_type, created_by, view_count, like_count, save_count, plan_count, cook_count",
       )
       .eq("id", id)
       .maybeSingle();
@@ -272,7 +279,7 @@ export async function GET(request: Request, context: RouteContext) {
       return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
     }
 
-    const serviceClient = createServiceRoleClient();
+    const serviceClient = createRemoteCompatibilityServiceRoleClient();
     const dbClient = routeClient;
     const legacyThumbnailUrl = recipeResult.data.thumbnail_url;
     const imageReadPromise = serviceClient
@@ -283,6 +290,7 @@ export async function GET(request: Request, context: RouteContext) {
           projection
             ? resolveRecipeImageReadUrl({
                 client: serviceClient,
+                expectedOwnerUuid: recipeResult.data?.created_by ?? null,
                 expectedStorageOrigin: readExpectedStorageOrigin(),
                 projection,
                 signedUrlTtlSeconds: RECIPE_IMAGE_READ_URL_TTL_SECONDS,
@@ -371,20 +379,22 @@ export async function GET(request: Request, context: RouteContext) {
     let viewCount = recipeResult.data.view_count + (serviceClient ? 1 : 0);
     let planCount = recipeResult.data.plan_count;
 
-    try {
-      const planCountResult = await dbClient
-        .from("meals")
-        .select("id", { count: "exact", head: true })
-        .eq("recipe_id", id) as {
-          count?: number | null;
-          error?: unknown;
-        };
+    if (user) {
+      try {
+        const planCountResult = await dbClient
+          .from("meals")
+          .select("id", { count: "exact", head: true })
+          .eq("recipe_id", id) as {
+            count?: number | null;
+            error?: unknown;
+          };
 
-      if (!planCountResult.error && typeof planCountResult.count === "number") {
-        planCount = planCountResult.count;
+        if (!planCountResult.error && typeof planCountResult.count === "number") {
+          planCount = planCountResult.count;
+        }
+      } catch {
+        planCount = recipeResult.data.plan_count;
       }
-    } catch {
-      planCount = recipeResult.data.plan_count;
     }
 
     if (serviceClient) {

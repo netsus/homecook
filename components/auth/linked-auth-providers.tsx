@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createAuthProviderAttemptCookie } from "@/lib/auth/provider-cookies";
 import { AUTH_PROVIDER_META, getEnabledAuthProviders, getSupabaseAuthProvider, normalizeAuthProviderId, type AuthProviderId } from "@/lib/auth/providers";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { isQaFixtureClientModeEnabled } from "@/lib/mock/qa-fixture-client";
 
@@ -30,7 +30,7 @@ export function LinkedAuthProviders() {
       return;
     }
     if (!hasSupabasePublicEnv()) { setState("unauthorized"); return; }
-    void getSupabaseBrowserClient().auth.getUserIdentities().then(({ data, error: identityError }: {
+    void getAuthSupabaseBrowserClient().auth.getUserIdentities().then(({ data, error: identityError }: {
       data: { identities: Array<{ provider: string }> } | null;
       error: unknown;
     }) => {
@@ -54,7 +54,7 @@ export function LinkedAuthProviders() {
     document.cookie = createAuthProviderAttemptCookie(provider);
     const callback = new URL("/auth/link/callback", window.location.origin);
     callback.searchParams.set("attemptedProvider", provider);
-    const { error: linkError } = await getSupabaseBrowserClient().auth.linkIdentity({
+    const { error: linkError } = await getAuthSupabaseBrowserClient().auth.linkIdentity({
       provider: getSupabaseAuthProvider(provider),
       options: { redirectTo: callback.toString() },
     });

@@ -1,6 +1,6 @@
 # product-ingredient-link-foundation
 
-> Stage 1 contract lock. Approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines). Official baseline: requirements v1.7.22, screens v1.5.28, flow v1.3.25, DB v1.3.23, API v1.2.27.
+> Hybrid contract relock. The historical master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines) remains product-link design history, while its local-only Auth/deployment assumptions are superseded by `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`. Official baseline: requirements v1.7.26, screens v1.5.30, flow v1.3.28, DB v1.3.27, API v1.2.30.
 
 ## Goal
 
@@ -11,7 +11,8 @@
 - Stage 1 docs: `docs/product-ingredient-link-foundation`
 - Stage 2 backend/data: `feature/be-product-ingredient-link-foundation`
 - Stage 4 existing-consumer regression: `feature/fe-product-ingredient-link-foundation`
-- Release train: B. 구현 및 activation은 F0와 successor #3의 joint account-delete gate 이후에만 진행한다.
+- Release train: B. `account-session-generation-foundation`과 `recipe-visibility-read-hardening`은 모두 병합됐다. Stage 2는 hybrid exact-epoch/session-authority 경계 안에서만 구현하며 production activation은 별도 Manual Only gate로 남긴다.
+- 초기 배포 gate: application Data/Storage authority는 server MacBook local Next.js + local Supabase, Auth control-plane은 remote Auth다. verifier는 둘을 분리해 읽기 전용으로 확인하고 production/staging/remote application write는 0이어야 한다.
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer와 five-axis reviewer는 사용자 승인대로 서로 다른 Codex 세션을 사용하며 Claude는 사용하지 않는다.
 
 ## In Scope
@@ -43,7 +44,7 @@
 
 Schema Change:
 - [ ] 없음
-- [x] 있음 — 기존 migration을 수정하지 않고 official DB v1.3.23 K의 link table, pantry product/version identity와 effective reader를 additive migration으로 추가한다.
+- [x] 있음 — 기존 migration을 수정하지 않고 official DB v1.3.27 K의 link table, pantry product/version identity와 effective reader를 additive migration으로 추가한다.
 
 ## Out of Scope
 
@@ -54,19 +55,26 @@ Schema Change:
 - HOME 검색에 product를 추가하거나 HOME/PANTRY/MEAL_LOG/COOK_MODE layout을 변경
 - successor #1의 search relevance, #6의 personal recipe write, #8의 exact pantry-row cooking completion, #9/#12의 meal-log implementation/UI
 - F0 또는 #3보다 먼저 production account-generation/account-delete activation
-- unmerged migration의 remote 적용 또는 production/staging data write
+- server MacBook local production authority 밖의 migration apply 또는 production/staging data write
 
 ## Dependencies
 
 | Gate | Current state | Meaning |
 | --- | --- | --- |
 | Stage -1 security hotfix + closeout | merged/deployed | application-controlled mutation authorization predecessor complete |
-| official cooking/meal-log contract PR #1072 | merged | v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 authority available |
-| `account-session-generation-foundation` Stage 1 docs PR #1073 | merged | F0 contract is documented; F0 runtime is not yet activated |
-| `prepared-food-search-relevance` Stage 1 docs PR #1074 | merged | exact successor #1 docs predecessor complete |
-| `recipe-visibility-read-hardening` (#3) | Stage 1 docs pending | does not block this Stage 1 docs PR; blocks #2 implementation activation with F0 |
+| historical cooking/meal-log contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
+| `account-session-generation-foundation` | merged | F0 backend/frontend foundation and independent closeout are available; production generation activation remains Manual Only |
+| `prepared-food-search-relevance` | merged | successor #1 implementation and closeout predecessor complete |
+| `recipe-visibility-read-hardening` (#3) | merged | hybrid session/image/account-delete runtime and existing MANUAL_RECIPE_CREATE integration complete |
 
-> The approved Stage 0 sequence intentionally merges all 15 Stage 1 docs/internal 1.5 gates before implementation. Therefore roadmap `docs` is valid now while workflow lifecycle remains `planned`; Stage 2 must not start until its runtime predecessors and joint activation gate are satisfied.
+> PR #1076 already recorded independent internal 1.5, security/DB and five-axis Stage 1 approvals at exact head `f3d9be4e37bf791c430635036aa14bf355a7b85b`. This relock updates the official tuple, hybrid verification boundary and implementation split without claiming Stage 2 evidence. Roadmap `docs` and workflow `planned` remain correct until the first implementation PR begins.
+
+### Contract Evolution boundary before full Stage 2 closeout
+
+- current official `GET /pantry` / `POST /pantry` contract exposes only `ingredient_id` / `ingredient_ids`; it does not define a public product/version request or response shape.
+- current shopping completion rows carry ingredient identity only, so product/version shopping reflection has no official source provenance.
+- official DB v1.3.27 requires additive pantry product/version identity but does not yet lock the pantry FK delete action needed to coexist with the current version-before-product account cleanup order.
+- therefore the first small Stage 2 PR may safely implement and prove only the additive link authority, promotion ACL and fail-closed eligible-link selector without changing `pantry_items` or public payloads. Pantry product identity, the shared effective projection, `pantry-match`/HOME reader conversion, direct add/display, shopping reflection and any public product/version field remain unchecked until an explicitly approved Contract Evolution docs PR fixes the API/DB shape.
 
 ## Backend First Contract
 
@@ -78,13 +86,15 @@ Schema Change:
 - candidate generation and approval are separate. Deterministic candidates contain source/provenance but cannot become matching authority without an explicit human-reviewed promotion.
 - link rows do not copy owner UUID, email, session, label secrets, raw provider payload, API key, or other user PII.
 
-### Pantry identity and projection
+### Post-Contract-Evolution pantry identity and projection follow-on
+
+> The following pantry identity and shared-reader expectations remain future work. They are not authorized in the first small Stage 2 PR until an approved Contract Evolution fixes the public API shape, shopping provenance and pantry FK delete semantics.
 
 - generic pantry rows retain their canonical ingredient identity.
 - product pantry rows retain exact product identity and the nutrition version selected at add time; a later product current-version change must not rewrite historical pantry provenance.
 - the effective ingredient set is a stable `DISTINCT` union of generic pantry ingredient IDs and product-link ingredient IDs admitted by the exact production predicate.
 - duplicate generic+product evidence for the same ingredient appears once in recommendation matching, while the distinct pantry row IDs and product/version identity remain available to row-level consumers.
-- official `GET /recipes/pantry-match`, HOME cleanout, custom recipe validation, pantry display/add and meal-log picker consume the shared projection/helper. Regression tests must fail if any reader returns to a raw ingredient-only query.
+- after an approved Contract Evolution, official `GET /recipes/pantry-match`, HOME cleanout, custom recipe validation, pantry display/add and meal-log picker consume the shared projection/helper. Regression tests must fail if any reader returns to a raw ingredient-only query.
 
 ### Product variance and legacy safety
 
@@ -122,19 +132,19 @@ Schema Change:
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.22.md` G/J
-- `docs/화면정의서-v1.5.28.md` 0-C/0-E
-- `docs/유저flow맵-v1.3.25.md` ⓰
-- `docs/db설계-v1.3.23.md` K and account cleanup order
-- `docs/api문서-v1.2.27.md` C/F and existing `GET /recipes/pantry-match`
-- approved master plan sections 6-2 and successor #2
+- `docs/요구사항기준선-v1.7.26.md` G/J and hybrid Auth/local Data addendum
+- `docs/화면정의서-v1.5.30.md` 0-C/0-E and browser Auth/Data boundary
+- `docs/유저flow맵-v1.3.28.md` ⓰ and hybrid deletion saga
+- `docs/db설계-v1.3.27.md` K/O/P and pantry/account-cleanup order
+- `docs/api문서-v1.2.30.md` existing `GET /recipes/pantry-match`, pantry ingredient-only payload and hybrid gateway boundary
+- historical master plan sections 6-2 and successor #2, with local-only Auth/deployment assumptions superseded by the current official tuple
 
 ## QA / Test Data Plan
 
 ### Stage 1 gate and planned artifacts
 
 - this docs PR runs only currently executable SOT/workflow/workpack/automation/bookkeeping/doc-gate validators, focused workflow Vitest, lint, typecheck, dependency audit as additional local security evidence, and diff check. The current PR head's independent GitGuardian result and repository Security Review workflow are observed separately; no unspecified local secret command is claimed.
-- Stage 2 first adds tests and observes RED before writing migration or production reader code. Planned artifacts include focused link/route/security/reader/account-delete Vitest, existing/fresh/replay PostgreSQL integration, backend verification and a merged-exact-SHA remote read-only verifier.
+- Stage 2 first adds tests and observes RED before writing migration or production reader code. Planned artifacts include focused link/route/security/reader/account-delete Vitest, existing/fresh/replay PostgreSQL integration, backend verification and a merged-exact-SHA hybrid verifier that reads local application DB/Storage plus minimal remote Auth evidence only.
 - those Stage 2/closeout commands are required future gates but are not claimed to exist or pass in Stage 1. Missing planned files or commands block implementation closeout.
 
 ### Local fixture and real DB matrix
@@ -146,12 +156,14 @@ Schema Change:
 - candidate cases: high-use deterministic candidates, brand-variable product with no approval, and `화이트크림` referenced/unreferenced inventory.
 - run on existing schema, fresh migration replay and idempotent replay. Validate table/FK/index/check/partial-unique/RLS/grants/function signatures and row digests.
 
-### Security, performance and remote evidence
+### Security, performance and hybrid release evidence
 
 - PUBLIC/anon/authenticated/admin/service-principal matrix proves normal users cannot mutate/promote or infer another owner's private product/link.
 - each effective reader uses a bounded indexed set operation without per-row product-link N+1 or unbounded catalog scan.
 - evidence contains no secret, raw provider payload, private product owner identity or user PII.
-- remote work is read-only before merge. Any migration or data promotion runs only from a merged exact SHA under a later approved release gate.
+- merged-exact-SHA `verify-product-ingredient-link-hybrid.mjs`는 local application DB/Storage schema·reader·role을 읽기 전용으로 확인하고 remote Auth의 exact epoch/session binding evidence만 최소 조회한다.
+- local application DB에는 `local auth.users=0`을 요구한다. remote application DB/Storage, production, staging에는 write하지 않는다.
+- migration apply, link promotion, account-generation activation은 이 docs relock이나 unmerged branch에서 실행하지 않는다.
 
 ## Key Rules
 
@@ -163,7 +175,7 @@ Schema Change:
 - F0 + #3 joint account-delete activation is a hard predecessor, not an optional rollout note.
 - no public contract, field, endpoint, status or error is invented in implementation.
 
-## Primary User Path
+## Post-Contract-Evolution Primary User Path
 
 1. An authenticated user has a generic ingredient row, a product row, or both in pantry while exact product/version identity is retained.
 2. A recommendation or validation reader asks the shared effective-ingredient projection for the user's eligible pantry set.
@@ -174,13 +186,14 @@ Schema Change:
 
 - [ ] additive link table, FKs, review/active checks and partial unique are existing/fresh/replay safe <!-- omo:id=delivery-link-schema;stage=2;scope=backend;review=3,6 -->
 - [ ] deterministic candidate and human-only atomic promotion boundary is enforced <!-- omo:id=delivery-link-promotion;stage=2;scope=backend;review=3,6 -->
-- [ ] pantry exact product/nutrition-version identity is additive and generic identity is not overwritten <!-- omo:id=delivery-pantry-product-identity;stage=2;scope=backend;review=3,6 -->
-- [ ] shared DISTINCT effective-ingredient projection admits only active approved primary represents <!-- omo:id=delivery-effective-projection;stage=2;scope=backend;review=3,6 -->
-- [ ] pantry-match and HOME cleanout readers use the shared projection <!-- omo:id=delivery-current-readers;stage=2;scope=backend;review=3,6 -->
-- [ ] custom recipe validation, pantry display/add and meal-log picker reader contracts are regression locked <!-- omo:id=delivery-future-readers;stage=2;scope=backend;review=3,6 -->
+- [x] first small Stage 2 PR leaves `pantry_items`, public payloads and existing readers unchanged while proving the additive link authority, promotion ACL and fail-closed eligible-link selector only <!-- omo:id=delivery-link-safe-subset;stage=2;scope=backend;review=3,6 -->
+- [ ] after approved Contract Evolution, pantry exact product/nutrition-version identity is additive and generic identity is not overwritten <!-- omo:id=delivery-pantry-product-identity;stage=2;scope=backend;review=3,6 -->
+- [ ] after approved Contract Evolution, the shared DISTINCT effective-ingredient projection admits only active approved primary represents <!-- omo:id=delivery-effective-projection;stage=2;scope=backend;review=3,6 -->
+- [ ] after approved Contract Evolution, pantry-match and HOME cleanout readers use the shared projection <!-- omo:id=delivery-current-readers;stage=2;scope=backend;review=3,6 -->
+- [ ] after approved Contract Evolution, custom recipe validation, pantry display/add and meal-log picker reader contracts are regression locked <!-- omo:id=delivery-future-readers;stage=2;scope=backend;review=3,6 -->
 - [ ] brand-product synonym prohibition, ambiguity fail-closed and broad-anchor preservation are tested <!-- omo:id=delivery-no-guess-policy;stage=2;scope=backend;review=3,6 -->
 - [ ] private cascade/public-shared preservation and ingredient restrict are proven <!-- omo:id=delivery-delete-integrity;stage=2;scope=backend;review=3,6 -->
 - [ ] RLS/grants/admin promotion and A/B owner isolation are proven <!-- omo:id=delivery-link-security;stage=2;scope=backend;review=3,6 -->
-- [ ] local real DB, query-plan and merged-exact-SHA remote read-only evidence are recorded <!-- omo:id=delivery-link-verification;stage=2;scope=shared;review=3,6 -->
-- [ ] existing HOME cleanout and PANTRY display/add consumers use the projection contract without raw ingredient-only fallback <!-- omo:id=delivery-link-existing-consumers;stage=4;scope=frontend;review=5,6 -->
-- [ ] existing loading/empty/error/read-only/unauthorized and exact product/version presentation remain unchanged <!-- omo:id=delivery-link-ui-regression;stage=4;scope=frontend;review=5,6 -->
+- [ ] current safe subset records local real DB/replay and merged-exact-SHA hybrid read-only evidence; projection query-plan evidence remains deferred until Contract Evolution <!-- omo:id=delivery-link-verification;stage=2;scope=shared;review=3,6 -->
+- [ ] after approved Contract Evolution, existing HOME cleanout and PANTRY display/add consumers use the projection contract without raw ingredient-only fallback <!-- omo:id=delivery-link-existing-consumers;stage=4;scope=frontend;review=5,6 -->
+- [ ] after approved Contract Evolution, existing loading/empty/error/read-only/unauthorized and exact product/version presentation remain unchanged <!-- omo:id=delivery-link-ui-regression;stage=4;scope=frontend;review=5,6 -->

@@ -6,7 +6,7 @@ import {
   toggleQaFixtureRecipeLike,
 } from "@/lib/mock/recipes";
 import { clampLikeCount, isRecipeLikeUniqueConflict } from "@/lib/recipe-like";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { RecipeLikeData } from "@/types/recipe";
 
 interface RouteContext {
@@ -140,7 +140,7 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as RecipeLikeDbClient;
+  const dbClient = routeClient as unknown as RecipeLikeDbClient;
   const recipeResult = await readRecipeCount(dbClient, id);
 
   if (recipeResult.error || !recipeResult.data) {

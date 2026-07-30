@@ -65,12 +65,6 @@ describe("account session generation inventory", () => {
         source_file: "app/api/v1/users/me/route.ts",
       }),
       expect.objectContaining({
-        kind: "service_external_write",
-        operation: "upload",
-        target: "recipe-images",
-        source_file: "app/api/v1/recipes/images/route.ts",
-      }),
-      expect.objectContaining({
         kind: "rpc",
         operation: "call",
         target: "start_legacy_external_write_attempt",
@@ -125,6 +119,14 @@ describe("account session generation inventory", () => {
         guard_mode: "not_applicable",
         expected_generation: "not_applicable",
         activation_phase: "always",
+      }),
+    ]));
+    expect(inventory.write_inventory).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: "service_external_write",
+        operation: "upload",
+        target: "recipe-images",
+        source_file: "app/api/v1/recipes/images/route.ts",
       }),
     ]));
     for (const entry of [

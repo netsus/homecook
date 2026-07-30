@@ -6,6 +6,7 @@
 해당 Stage의 **담당 · 사전 조건 · 읽을 것 · 산출물 · 포함 필수 사항 · 자가 점검 · 완료 기준 · 완료 요약**을 그대로 따른다.
 
 change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`를 따르며, 이 문서는 stage actor SOP에 집중한다.
+새 Codex 작업 생성, task ID 분리, handoff prompt와 evidence 규칙은 `docs/engineering/codex-task-handoff.md`를 따른다.
 
 ---
 
@@ -13,22 +14,22 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 
 | Stage | 이름 | 담당 |
 |-------|------|------|
-| 1 | Workpack README + acceptance.md 작성 | **Claude** |
-| 2 | 백엔드 구현 | **Codex** |
-| 3 | 백엔드 PR 리뷰 | **Claude** |
-| 4 | 프론트엔드 구현 | **Claude** |
-| 5 | 디자인 리뷰 | **Codex** |
-| 6 | 프론트엔드 PR 리뷰 | **Codex** |
+| 1 | Workpack README + acceptance.md 작성 | **Codex `stage1-docs-author` 새 작업** |
+| 2 | 백엔드 구현 | **Codex `backend-implementer` 새 작업** |
+| 3 | 백엔드 PR 리뷰 | **Codex `backend-reviewer` 새 작업** |
+| 4 | 프론트엔드 구현 | **Codex `frontend-implementer` 새 작업** |
+| 5 | 디자인 리뷰 | **Codex `design-reviewer` 새 작업** |
+| 6 | 프론트엔드 PR 리뷰 | **Codex `frontend-closeout-reviewer` 새 작업** |
 
-**거부 규칙 (요청받은 즉시 확인, 담당이 아니면 중단)**
+Claude는 어떤 Stage에도 사용하지 않는다.
 
-- **Codex**가 1·3·4단계를 요청받으면:
-  > "이 단계(N단계)의 public stage owner는 Claude입니다. Claude에게 요청해주세요. Codex는 Stage 4 internal subphase인 authority_precheck만 담당합니다."
-  → 이후 진행하지 않는다.
+**작업 분리 규칙 (요청받은 즉시 확인)**
 
-- **Claude**가 2·5·6단계를 요청받으면:
-  > "이 단계(N단계)는 Codex 담당입니다. Codex에게 요청해주세요. Claude는 이 단계의 primary actor가 아닙니다."
-  → 이후 진행하지 않는다.
+- 현재 Codex 작업이 조정 작업이면 해당 Stage를 직접 수행하지 않고 `codex-task-handoff.md`에 따라 전용 새 작업을 연다.
+- Stage 1/2/4 작성·구현 작업은 자기 변경을 최종 승인하지 않는다.
+- internal 1.5, Stage 3/5/6, final authority는 검토 대상 작성·구현 작업과 다른 task ID를 사용한다.
+- 같은 작업의 서브에이전트는 독립 Stage 작업을 대신하지 않는다.
+- 이전 Stage와 같은 task ID이거나 입력 commit SHA가 불명확하면 Stage를 시작하지 않고 handoff를 다시 잠근다.
 
 ---
 
@@ -51,8 +52,8 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - product slice는 `Ready for Review` 전에 PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 비워두지 않는다.
 - exact closeout ownership / projection / repair semantics는 `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`를 따른다. `docs/engineering/bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface를 기록하는 compatibility note다.
 - Stage 2/4 구현 actor는 자신이 닫은 범위의 checklist / acceptance / PR evidence를 최신화하고, Stage 3/5/6 review actor는 mismatch를 closeout drift로 본다.
-- Stage 2를 여러 작은 backend PR로 나누면 각 PR은 base 대비 이번 PR에서 실제로 닫은 Stage 2 checklist만 `unchecked -> checked` 또는 유효한 reviewer waiver 추가로 바꾼다. 후속 PR 항목은 unchecked로 유지하며, 기존 계약 metadata/text 변경·완료 항목 재개방·기존 waiver 제거/변경은 별도 선행 docs PR 없이는 허용하지 않는다.
-- authority-required slice는 Claude `final_authority_gate`를 통과하기 전 최종 closeout이나 merge-ready 상태로 넘기지 않는다.
+- Stage 2를 여러 작은 backend PR로 나누면 각 PR은 base 대비 이번 PR에서 실제로 닫은 Stage 2 checklist만 `unchecked -> checked`로 바꾼다. 신규 GPT-only 실행은 reviewer waiver를 만들지 않는다. 후속 PR 항목은 unchecked로 유지하며, 기존 계약 metadata/text 변경·완료 항목 재개방·과거 waiver 제거/변경은 별도 선행 docs PR 없이는 허용하지 않는다.
+- authority-required slice는 Stage 4/5와 다른 Codex `product-design-authority` 새 작업의 `final_authority_gate`를 통과하기 전 최종 closeout이나 merge-ready 상태로 넘기지 않는다.
 - Stage 2/4 actor는 Draft PR을 Ready로 전환하기 전에 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode backend|frontend`로 PR body required sections, exploratory QA/eval evidence, authority evidence refs, real smoke evidence, pending Actual Verification placeholder를 한 번에 확인한다.
 - exact validator semantics와 미체크 허용 범위는 `pnpm validate:pr-ready`, `pnpm validate:closeout-sync`, `pnpm validate:exploratory-qa-evidence`, `pnpm validate:authority-evidence-presence`, `pnpm validate:real-smoke-presence`, canonical closeout doc를 따른다.
 
@@ -67,7 +68,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 
 ## Stage 1: Workpack README + acceptance.md 작성
 
-**담당: Claude**
+**담당: Codex `stage1-docs-author` 새 작업**
 
 ### 사전 조건
 
@@ -79,10 +80,10 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 1. `docs/workpacks/_template/README.md` — 모든 섹션 확인
 2. `docs/workpacks/_template/acceptance.md` — 모든 섹션 확인
 3. `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` — 공식 문서 버전 확인
-4. `docs/요구사항기준선-v1.7.24.md` — 해당 슬라이스 요구사항 범위
-5. `docs/화면정의서-v1.5.29.md` — 해당 화면 정의
-6. `docs/api문서-v1.2.29.md` — 해당 API 섹션
-7. `docs/db설계-v1.3.25.md` — 영향받는 테이블
+4. `docs/요구사항기준선-v1.7.26.md` — 해당 슬라이스 요구사항 범위
+5. `docs/화면정의서-v1.5.30.md` — 해당 화면 정의
+6. `docs/api문서-v1.2.30.md` — 해당 API 섹션
+7. `docs/db설계-v1.3.27.md` — 영향받는 테이블
 8. `docs/engineering/qa-system.md` — QA 3-Layer와 real DB / fixture 운영 기준
 9. `docs/workpacks/README.md` — Slice Order의 Status 열로 선행 슬라이스 `merged` 여부 확인
 10. `docs/design/design-tokens.md` — 확정 디자인 토큰 (와이어프레임 작성 전 확인)
@@ -131,7 +132,8 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - `stage`: 해당 항목을 실제로 닫는 code stage (`2 | 4`)
 - `scope`: `backend | frontend | shared`
 - `review`: 이 항목을 구조적으로 다시 확인해야 하는 review stage (`3`, `5`, `6`)
-- Claude가 Codex rebuttal을 수용한 항목은 checkbox를 바꾸지 않고 `waived=true;waived_by=claude;waived_stage=<3|5|6>;waived_reason=<slug>` metadata를 추가해 닫는다
+- 신규 실행에서는 과거 `waived_by=claude` metadata를 만들지 않는다. rebuttal이 수용되면 독립 검토 작업이 finding을 재검토하고 evidence와 verdict를 남긴 뒤 closeout coordinator가 체크리스트를 갱신한다
+- 과거 `waived_by=claude` metadata는 merged 실행 이력 호환용으로 보존하며 신규 actor 지시로 해석하지 않는다
 - Stage 5는 `scope=frontend`이면서 `review`에 `5`가 포함된 acceptance / README 항목만 리뷰한다
 - Stage 6는 `Manual Only`를 제외한 non-manual checklist 전체를 최종 closeout 기준으로 리뷰한다
 
@@ -194,9 +196,9 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 그 다음 Stage 1 완료 게이트로 supervisor 기본 경로의 `internal 1.5 docs gate`를 통과해야 한다.
 
 - `doc_gate_check`: supervisor deterministic validation
-- `doc_gate_review`: Codex structured review
-- `doc_gate_repair`: Claude final owner fix / rebuttal
-- 최대 3회(`Codex review -> Claude repair`) 안에 approve + unresolved required finding 0이어야 한다
+- `doc_gate_review`: Stage 1과 다른 Codex `docs-gate-reviewer` 새 작업의 structured review
+- `doc_gate_repair`: Stage 1 작성 작업의 fix / rebuttal
+- 최대 3회(`independent Codex review -> Stage 1 author repair`) 안에 approve + unresolved required finding 0이어야 한다
 - approve 후 docs PR merge와 pending_recheck가 끝나야 Stage 1 완료로 본다
 - 3회 초과 unresolved required finding은 `human_escalation`이다
 
@@ -205,7 +207,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - 먼저 별도 `contract-evolution` docs PR에서 공식 문서와 `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`를 갱신한다.
 - 그 후 Stage 1 workpack/acceptance를 새 공식 문서 기준으로 다시 잠그고 main에 merge한다.
 
-### 완료 요약 (단계 종료 시 Claude가 출력)
+### 완료 요약 (Stage 1 Codex 작업이 출력)
 
 ```
 ## 1단계 완료: <slice-name>
@@ -236,7 +238,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 
 ## Stage 2: 백엔드 구현
 
-**담당: Codex**
+**담당: Codex `backend-implementer` 새 작업**
 
 ### 사전 조건
 
@@ -255,8 +257,8 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 3. `docs/workpacks/<slice>/README.md` — Backend First Contract, Key Rules, In Scope
 4. `docs/workpacks/<slice>/acceptance.md` — 상태 전이·에러·권한 시나리오 확인
 5. `docs/workpacks/<slice>/automation-spec.json` — autonomous/evaluator/closeout contract 확인
-6. `docs/api문서-v1.2.29.md` — 해당 섹션 전체
-7. `docs/db설계-v1.3.25.md` — 해당 테이블
+6. `docs/api문서-v1.2.30.md` — 해당 섹션 전체
+7. `docs/db설계-v1.3.27.md` — 해당 테이블
 8. `docs/engineering/tdd-vitest.md` — 테스트 전략
 9. `docs/engineering/qa-system.md` — Layer 1 deterministic gate + real DB smoke 운영 기준
 10. `docs/engineering/supabase-migrations.md` — Schema 변경 있는 경우만
@@ -284,9 +286,9 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - `Schema Change: 없음`이어도 이 슬라이스가 읽는 기존 테이블이 real DB/local Supabase에 존재하는지 확인
 - 시스템 row/bootstrap 의존 슬라이스면 fixture만이 아니라 real DB smoke 또는 seed 검증 경로를 최소 1회 실행
 - README `Delivery Checklist`와 acceptance의 백엔드 범위를 PR 준비 전에 갱신
-- 작은 Stage 2 PR은 자신이 새로 만족한 항목만 체크하고 후속 구현 항목은 미체크로 유지한다. Ready gate는 base 대비 Stage 2 항목이 최소 1개 새로 닫혔는지(checked 또는 유효한 reviewer waiver), 기존 계약/완료/waiver 상태가 약화되지 않았는지 검증한다.
+- 작은 Stage 2 PR은 자신이 새로 만족한 항목만 체크하고 후속 구현 항목은 미체크로 유지한다. Ready gate는 base 대비 Stage 2 항목이 최소 1개 `unchecked -> checked`로 새로 닫혔는지, 기존 계약/완료/과거 waiver 상태가 약화되지 않았는지 검증한다.
 - stage-result에는 이번 run에서 닫은 checklist id(`checklist_updates[]`)와 evidence ref를 남긴다
-- Claude review의 `required_fix_ids`가 잘못 짚은 항목이라고 판단되면 Codex는 `contested_fix_ids[]`와 `rebuttals[]`로 반박 근거를 제출할 수 있다
+- Stage 3 독립 검토의 `required_fix_ids`가 잘못 짚은 항목이라고 판단되면 Stage 2 구현 작업은 `contested_fix_ids[]`와 `rebuttals[]`로 반박 근거를 제출할 수 있다
 - PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 Stage 2 범위 기준으로 최신화
 
 ### 자가 점검 체크리스트
@@ -330,7 +332,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 
 ## Stage 3: 백엔드 PR 리뷰
 
-**담당: Claude**
+**담당: Codex `backend-reviewer` 새 작업**
 
 ### 사전 조건 (3가지 모두 충족 시에만 시작)
 
@@ -366,7 +368,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 
 수정 요청 없이 승인 → merge
 
-### 완료 요약 (리뷰 종료 시 Claude가 출력)
+### 완료 요약 (Stage 3 Codex 검토 작업이 출력)
 
 ```
 ## 3단계 완료: <slice-name> 백엔드 PR 리뷰
@@ -384,7 +386,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - <항목>
 
 ### 다음 단계
-→ 4단계(Claude): feature/fe-<slice> 프론트엔드 구현
+→ 4단계(Codex 새 작업): feature/fe-<slice> 프론트엔드 구현
 → 사전 조건: 이 PR merged
 
 ※ **BE-only 슬라이스** (workpack README에 FE 화면 없음 명시):
@@ -412,7 +414,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 
 ## Stage 4: 프론트엔드 구현
 
-**담당: Claude**
+**담당: Codex `frontend-implementer` 새 작업**
 
 ### 사전 조건
 
@@ -429,7 +431,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 3. `docs/workpacks/<slice>/README.md` — Frontend Delivery Mode, Design Status, Key Rules
 4. `docs/workpacks/<slice>/acceptance.md` — 자동화 대상·Manual Only 분리 확인
 5. `docs/workpacks/<slice>/automation-spec.json` — stage ownership / required states / artifact contract 확인
-6. `docs/화면정의서-v1.5.29.md` — 해당 화면 정의
+6. `docs/화면정의서-v1.5.30.md` — 해당 화면 정의
 7. `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (Tailwind 클래스 작성 전 확인)
 8. `docs/design/mobile-ux-rules.md`
 9. `docs/design/anchor-screens.md`
@@ -525,7 +527,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 
 ## Stage 5: 디자인 리뷰
 
-**담당: Codex**
+**담당: Codex `design-reviewer` 새 작업**
 
 ### 트리거 조건
 
@@ -533,7 +535,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - **기본 추가**: 신규 화면, high-risk UI change, anchor extension은 authority report가 있어야 Stage 5 public review를 시작할 수 있다
 - authority-required slice는 authority report의 `> evidence:` block에 mobile default + narrow screenshot/Figma evidence를 남기고, `automation-spec.json`의 `stage4_evidence_requirements`와 맞춰야 한다
 - Baemin prototype parity candidate는 `BAEMIN_STYLE_DIRECTION.md` definition과 h8/h7 scope boundary를 확인한 뒤, absence of out-of-scope prototype-only elements를 deficit으로 채점하지 않는다
-- **authority-required**: public Stage 5 approve 뒤에는 Claude `final_authority_gate`를 추가로 통과해야 `confirmed`를 줄 수 있다
+- **authority-required**: public Stage 5 approve 뒤에는 Stage 4/5와 다른 Codex `product-design-authority` 새 작업의 `final_authority_gate`를 추가로 통과해야 `confirmed`를 줄 수 있다
 - **예외 1**: `temporary` 상태에서 명시적 요청이 있으면 기능 검토(5개 UI 상태·화면정의서 일치)만 수행, 스타일 리뷰 제외
 - **예외 2**: 기존 confirmed 화면의 low-risk UI change는 Stage 5를 생략하고 Stage 6에서 lightweight design check로 흡수할 수 있다
 - Figma URL은 트리거가 아닌 **추가 컨텍스트** — 제공되면 리뷰 시 참조
@@ -552,7 +554,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 
 1. `docs/workpacks/<slice>/README.md` — Design Status 확인
 2. `docs/workpacks/<slice>/acceptance.md` — FE 관련 checklist와 `review=5` 대상 확인
-3. `docs/화면정의서-v1.5.29.md` — 해당 화면 정의
+3. `docs/화면정의서-v1.5.30.md` — 해당 화면 정의
 4. `docs/design/design-tokens.md` — 확정 토큰 기준 (색상·간격·컴포넌트 규칙)
 5. `docs/design/mobile-ux-rules.md`
 6. `docs/design/anchor-screens.md`
@@ -566,11 +568,11 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 
 - 디자인 피드백 (구체적 수정 위치·파일명·라인 포함)
 - Tailwind 클래스 교체 제안 (컴포넌트 구조 변경은 Codex와 협의)
-- workpack README Design Status 업데이트 준비 (`confirmed` 가능 여부는 authority-required slice에서 Claude final authority gate가 결정)
+- workpack README Design Status 업데이트 준비 (`confirmed` 가능 여부는 authority-required slice에서 독립 Codex final authority gate가 결정)
 - authority blocker가 남으면 `confirmed` 보류와 재검토 조건 명시
 - stage-result에 `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`를 남긴다
 - authority-required slice면 `authority_verdict`, `reviewed_screen_ids`, `authority_report_paths`, `blocker_count`, `major_count`, `minor_count`도 남긴다
-- Claude final authority gate가 rebuttal을 받아들이면 `waived_fix_ids[]`로 남기고, supervisor가 README/acceptance metadata에 waiver comment를 반영한다
+- final authority 검토 작업이 rebuttal을 받아들이면 evidence와 `accepted_rebuttal_ids[]`를 남기고, closeout coordinator가 README/acceptance 상태를 반영한다
 
 ### 완료 요약 (리뷰 종료 시 Codex가 출력)
 
@@ -593,7 +595,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - <수정 제안 항목 (파일명·위치 포함)>
 
 ### 다음 단계
-→ authority-required slice: Claude `final_authority_gate`
+→ authority-required slice: 별도 Codex `product-design-authority` 작업의 `final_authority_gate`
 → 그 외: 6단계(Codex): 프론트엔드 PR 리뷰
 → 사전 조건: required CI green + Draft 해제
 ```
@@ -602,7 +604,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 
 ## Stage 6: 프론트엔드 PR 리뷰
 
-**담당: Codex**
+**담당: Codex `frontend-closeout-reviewer` 새 작업**
 
 ### 사전 조건 (3가지 모두 충족 시에만 시작)
 
@@ -653,13 +655,13 @@ merge 완료 후 Codex는 `master`를 최신화한 뒤 OMO efficiency report를 
 1. `git checkout master && git pull --ff-only origin master`
 2. `pnpm omo:report -- --work-item <slice>`
 3. 생성 파일: `docs/workpacks/<slice>/omo-report.md`
-4. report의 `순수 진행 누적시간`이 `0.0분`으로 떨어지고 실제 작업이 OMO dispatch runner가 아니라 Codex/Claude orchestration으로 진행된 경우, **slice 14 `docs/workpacks/14-cook-session-start/omo-report.md` 방식**의 backfilled estimate로 보정한다:
-   - `.omx/artifacts` Claude prompt/response mtime
+4. report의 `순수 진행 누적시간`이 `0.0분`으로 떨어지고 실제 작업이 OMO dispatch runner가 아니라 여러 Codex 작업의 handoff로 진행된 경우, **slice 14 `docs/workpacks/14-cook-session-start/omo-report.md` 방식**의 backfilled estimate로 보정한다:
+   - Codex task handoff artifact와 stage-result mtime
    - Stage PR timestamp / merge timestamp
    - git commit history
    - GitHub current-head check 결과
    - source PR body closeout projection
-   - CI 대기와 단순 watch 시간은 제외, Codex/Claude가 직접 수행한 구현/리뷰/수리/검증 시간은 포함
+   - CI 대기와 단순 watch 시간은 제외, Codex Stage 작업이 직접 수행한 구현/리뷰/수리/검증 시간은 포함
 5. backfilled report는 최소한 다음 section을 포함한다:
    - `report_mode | backfilled`
    - `Measurement Basis`

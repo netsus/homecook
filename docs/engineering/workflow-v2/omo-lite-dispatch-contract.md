@@ -1,5 +1,9 @@
 # Homecook OMO-Lite Dispatch Contract
 
+> **Legacy dispatch contract — 신규 실행 금지.**
+> Claude actor/provider dispatch는 retired 상태다. 신규 Stage는 역할별 Codex 새 작업 handoff를 사용한다.
+> 아래 actor/session/reason code는 과거 artifact와 schema 호환을 위한 기록이며 새 Claude 호출 권한이 아니다.
+
 ## Purpose
 
 이 문서는 Codex supervisor가 stage별로 어떤 입력을 읽고, 어떤 actor에게 어떤 요청을 만들며, 어떤 산출물을 요구하는지 정의한다.

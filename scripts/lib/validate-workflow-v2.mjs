@@ -381,73 +381,64 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
 
   const sliceWorkflowErrors = [
     ...containsAll(sliceWorkflow, [
-      "| 4 | 프론트엔드 구현 | **Claude** |",
-      "| 5 | 디자인 리뷰 | **Codex** |",
-      "| 6 | 프론트엔드 PR 리뷰 | **Codex** |",
-      "**Codex**가 1·3·4단계를 요청받으면:",
-      "Codex는 Stage 4 internal subphase인 authority_precheck만 담당합니다.",
+      "| 1 | Workpack README + acceptance.md 작성 | **Codex `stage1-docs-author` 새 작업** |",
+      "| 2 | 백엔드 구현 | **Codex `backend-implementer` 새 작업** |",
+      "| 3 | 백엔드 PR 리뷰 | **Codex `backend-reviewer` 새 작업** |",
+      "| 4 | 프론트엔드 구현 | **Codex `frontend-implementer` 새 작업** |",
+      "| 5 | 디자인 리뷰 | **Codex `design-reviewer` 새 작업** |",
+      "| 6 | 프론트엔드 PR 리뷰 | **Codex `frontend-closeout-reviewer` 새 작업** |",
+      "Claude는 어떤 Stage에도 사용하지 않는다.",
+      "같은 작업의 서브에이전트는 독립 Stage 작업을 대신하지 않는다.",
     ]),
     ...containsNone(sliceWorkflow, [
-      "**Codex**가 1·3단계를 요청받으면:",
+      "| 4 | 프론트엔드 구현 | **Claude** |",
+      "Claude `final_authority_gate`",
     ]),
   ];
 
   const agentWorkflowOverviewErrors = [
     ...containsAll(agentWorkflowOverview, [
-      "## Claude public stage 흐름",
-      "Stage 1 문서 작성",
-      "internal 1.5 docs gate repair / final owner 수행",
-      "Stage 3 백엔드 리뷰 / Stage 4 프론트 구현 수행",
-      "authority-required slice면 Stage 5 final_authority_gate 수행",
-      "## Codex review / closeout 흐름",
-      "internal 1.5 docs gate review 수행",
-      "Stage 2 백엔드 구현 수행",
-      "Stage 5 public 디자인 리뷰와 Stage 6 FE PR 리뷰 / closeout 수행",
+      "Claude는 더 이상 사용하지 않는다.",
+      "## Codex 새 작업 public stage 흐름",
+      "Stage 1/2/4 작성·구현 작업은 자기 변경을 승인하지 않는다.",
+      "internal 1.5, Stage 3/5/6, final authority는 검토 대상 작업과 다른 task ID를 사용한다.",
     ]),
     ...containsNone(agentWorkflowOverview, [
-      "## Claude 리뷰 흐름",
-      "→ PR 코드 리뷰 (AGENTS.md 기준)",
-      "→ 디자인 피드백 (Tailwind/레이아웃/공용 컴포넌트)",
+      "## Claude public stage 흐름",
+      "Codex-Claude plan loop",
+      "Codex-Claude review loop",
     ]),
   ];
 
   const workflowReadmeErrors = [
     ...containsAll(workflowReadme, [
-      "## Executable Baseline",
-      "`pnpm omo:supervise`",
-      "`pnpm omo:tick`",
-      "`pnpm omo:tick:watch`",
+      "## 현재 사용 가능한 OMO 범위",
       "`pnpm omo:reconcile`",
       "`pnpm omo:promotion:update`",
       "`pnpm omo:replay:update`",
       "`pnpm omo:status`",
       "`pnpm omo:tail`",
       "`pnpm validate:omo-bookkeeping`",
-      "low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함",
-      "authority-required UI는 Claude Stage 4 구현 뒤 Codex `authority_precheck`, Codex Stage 5 public review, Claude `final_authority_gate`를 거친다.",
-      "stage owner review artifact + authority gate pass(해당 시) + 전체 PR checks + external smoke",
+      "Claude는 사용하지 않는다. 모든 Stage actor는 역할별 별도 Codex 작업이다.",
+      "authority-required UI는 서로 다른 Codex Stage 4, design-reviewer, product-design-authority 작업을 거친다.",
       "manual merge handoff",
-      "manual handoff는 `high-risk` / `anchor-extension` / `exceptional recovery`에 한정된 예외 경로다.",
-      "provider wait와 budget issue는 기본적으로 `pause + scheduled resume`를 사용한다.",
+      "새 Codex 작업 handoff는 모든 product Stage의 기본 경로다.",
       "live smoke는 일반 PR CI 전체 강제가 아니라 `external_smokes[]`가 선언된 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.",
       "live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
-      "scheduler standard는 team-shared default를 `macOS launchd`로 고정하고, non-macOS 환경은 `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending` fallback으로 다룬다.",
-      "scheduler install/config 변경 뒤와 최소 `slice-batch-review`마다 1회 `pnpm omo:scheduler:verify -- --work-item <id>`와 `pnpm omo:tick:watch -- --work-item <id>`를 함께 확인한다.",
-      "macOS에서는 `omo:supervise`, `omo:start`, `omo:continue`가 execute mode에서 work item launchd scheduler를 자동 bootstrap/refresh한다.",
-      "public code stage 실행이 필요할 때 `--mode execute`를 사용한다.",
-      "slice6 기준 public Stage 4는 Claude execute path를 사용할 수 있고, Stage 5 `final_authority_gate`는 review gate이므로 execute 대상이 아니라 review artifact 경로로 다룬다.",
+      "legacy scheduler/tick은 신규 Stage actor 실행에 사용하지 않는다.",
       "promotion-readiness.md",
       "omo-replay-acceptance.md",
       ".workflow-v2/promotion-evidence.json",
       ".workflow-v2/replay-acceptance.json",
-      "Stage 1 bootstrap부터 시작한다.",
       "internal 1.5 docs gate",
       "canonical closeout projection / repair semantics의 기준은 `omo-canonical-closeout-state.md`를 따른다. `bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface compatibility note로 유지한다.",
       "현재 executable baseline은 `.workflow-v2/status.json` summary projection consistency, `validate:closeout-sync`의 doc-surface drift check, PR body `Closeout Sync` / `Merge Gate` generated section, `omo:reconcile` current-vocabulary repair consumer를 포함한다.",
       "`Actual Verification` evidence는 source PR/manual surface를 계속 우선하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.",
     ]),
     ...containsNone(workflowReadme, [
-      "Codex stage에 한해 `--mode execute`를 사용한다.",
+      "Stage 1 Claude author",
+      "Claude execute path를 사용할 수 있고",
+      "provider wait와 budget issue는 기본적으로 `pause + scheduled resume`를 사용한다.",
     ]),
   ];
 
@@ -462,6 +453,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
 
   const supervisorDocErrors = [
     ...containsAll(supervisorDoc, [
+      "**Actor dispatch suspended `2026-07-30`.**",
       "`pnpm omo:scheduler:install -- --work-item <id>`",
       "`pnpm omo:scheduler:verify -- --work-item <id>`",
       "`pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`",
@@ -487,6 +479,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
 
   const sessionOrchestratorErrors = [
     ...containsAll(sessionOrchestrator, [
+      "**Legacy provider-session spec.**",
       "Stage `1 / 3 / 4` -> `claude_primary`",
       "Stage `2 / 5 / 6` -> `codex_primary`",
       "Stage 5 `final_authority_gate` -> `claude_primary`",
@@ -497,6 +490,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
 
   const liteArchitectureErrors = [
     ...containsAll(liteArchitecture, [
+      "**Legacy architecture note.**",
       "Claude primary session은 Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`에서 재사용한다.",
       "Codex primary session은 Stage `2 / 5 / 6`와 Stage 4 `authority_precheck`에서 재사용한다.",
       "Stage 4 프론트 구현",
@@ -506,6 +500,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
 
   const dispatchContractErrors = [
     ...containsAll(dispatchContract, [
+      "**Legacy dispatch contract — 신규 실행 금지.**",
       "### Stage 4 → Claude",
       "### Stage 5 → Codex",
       "### Stage 5 → Claude (`subphase=final_authority_gate`)",
@@ -525,6 +520,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
 
   const claudeProviderErrors = [
     ...containsAll(claudeProviderDoc, [
+      "**Retired `2026-07-30`: 신규 실행 금지.**",
       "Claude Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`의 기본 실행 표면은 `raw claude CLI`다.",
       "Codex Stage `2 / 5 / 6`와 Stage 4 `authority_precheck`는 기존 `OpenCode` provider를 유지한다.",
     ]),
@@ -532,28 +528,18 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
 
   const opencodeReadmeErrors = [
     ...containsAll(opencodeReadme, [
-      "`pnpm omo:supervise -- --work-item <id>`",
-      "`pnpm omo:tick -- --all`",
-      "`pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`",
-      "`pnpm omo:smoke:providers`",
-      "`pnpm omo:scheduler:install -- --work-item <id>`",
-      "`pnpm omo:scheduler:verify -- --work-item <id>`",
-      "`pnpm omo:promotion:update`",
-      "Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`의 기본 provider는 raw `claude` CLI다.",
-      "Stage `1 / 3 / 4`는 `claude_primary`, Stage `2 / 5 / 6`은 `codex_primary` 세션을 재사용한다.",
-      "## Manual Handoff Standard",
-      "provider wait, Claude budget unavailable, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 `pause + scheduled resume`를 사용한다.",
-      "## Live Smoke Standard",
-      "canonical evidence는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
-      "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.",
-      "## Scheduler Standard",
-      "team-shared default scheduler는 현재 `macOS launchd`다.",
-      "execute mode kickoff 명령은 macOS에서 work item별 launchd scheduler를 자동 보장하고, `omo:scheduler:install`은 repair/custom cadence 용도로 남긴다.",
-      "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
-      "최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.",
-      "macOS에서는 `launchd` 예시를 우선 제공한다",
-      "promotion-readiness.md",
-      ".workflow-v2/promotion-evidence.json",
+      "Claude는 사용하지 않는다.",
+      "모든 primary agent model은 OpenAI GPT 계열을 사용한다.",
+      "Stage 실행은 `docs/engineering/codex-task-handoff.md`에 따라 역할별 Codex 새 작업이 맡는다.",
+      "`provider=retired`, `bin=disabled`",
+      "## Allowed OMO Commands",
+      "## Suspended Commands",
+      "actor를 호출하지 않는 아래 범위만 사용한다.",
+      "실수로 actor command를 실행하면 `.opencode/omo-provider.json`의 retired provider 값 때문에 fail-fast해야 한다.",
+    ]),
+    ...containsNone(opencodeReadme, [
+      "기본 provider는 raw `claude` CLI다.",
+      "Claude-owned stage의 canonical resume 경로",
     ]),
   ];
 
@@ -572,7 +558,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "slice06",
       "pnpm omo:promotion:update",
       "#### `manual-handoff-policy`",
-      "manual handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.",
+      "Codex 새 작업 handoff는 모든 product Stage의 기본 경로다.",
       "#### `live-smoke-standard`",
       "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox rehearsal 중 더 이른 쪽을 따른다.",
       "#### `scheduler-standard`",
@@ -632,11 +618,13 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
 
   const claudeEntryErrors = [
     ...containsAll(claudeEntry, [
-      "슬라이스 개발 1·3·4단계와 authority-required slice의 final authority gate 담당.",
-      "2·5·6단계(Codex 담당)",
+      "# Claude 진입점 폐기 안내",
+      "Homecook은 Claude를 더 이상 사용하지 않는다.",
+      "모든 신규 Stage는 `AGENTS.md`, `docs/engineering/slice-workflow.md`, `docs/engineering/codex-task-handoff.md`에 따라 역할이 분리된 별도 Codex 작업이 수행한다.",
     ]),
     ...containsNone(claudeEntry, [
-      "슬라이스 개발 1·3·5·6단계 담당. 2·4단계(Codex 담당)",
+      "Claude 역할",
+      "final authority gate 담당",
     ]),
   ];
 

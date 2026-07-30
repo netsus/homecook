@@ -25,7 +25,7 @@ import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type {
   RecipeBookDeleteData,
   RecipeBookReaderRecipeData,
@@ -449,7 +449,7 @@ export async function GET(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     RecipeBookRecipeRemoveDbClient & UserBootstrapDbClient;
   const recipeReaderClient = routeClient as unknown as RecipeBookRecipeRemoveDbClient;
 
@@ -727,7 +727,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     RecipeBookRecipeRemoveAuthedDbClient;
   const recipeReaderClient = routeClient as unknown as RecipeBookRecipeRemoveDbClient;
 

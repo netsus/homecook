@@ -79,14 +79,14 @@
 - [ ] PostgreSQL fresh/replay covers RLS/ACL/guards/events/locks/replay/cleanup <!-- omo:id=accept-batch-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] real DB two-owner before/after digests prove denial/replay atomicity <!-- omo:id=accept-batch-real-db;stage=2;scope=backend;review=3,6 -->
 - [ ] E2E covers exact pantry complete, weight matrix, v1 compatibility and seeded drain <!-- omo:id=accept-batch-e2e;stage=4;scope=shared;review=5,6 -->
-- [ ] remote verifier is merged-exact-SHA read-only and flags stay off until release gate <!-- omo:id=accept-batch-remote;stage=2;scope=shared;review=3,6 -->
+- [ ] local-first verifier is merged-exact-SHA server-production/local-rehearsal read-only and flags stay off until release gate <!-- omo:id=accept-batch-remote;stage=2;scope=shared;review=3,6 -->
 - [ ] independent internal1.5/security-DB/five-axis/design/Stage3/5/6 reviews have zero unresolved findings <!-- omo:id=accept-batch-independent-review;stage=2;scope=shared;review=3,5,6 -->
 - [ ] current-head PR and post-merge QA/Policy/Security/Vercel are green/intended skip <!-- omo:id=accept-batch-ci;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
 - verifier: separate Codex implementation/review/design sessions; service owner for future R+2 activation
-- environment: local Supabase, 390px/320px browser evidence, merged-exact-SHA remote read-only; production flags excluded until gate
+- environment: local Supabase, 390px/320px browser evidence, merged-exact-SHA server-production/local-rehearsal read-only; production flags excluded until gate
 - scenarios: exact row complete/replay, known/missing/unrecoverable, discard/adjust/close/cancel, legacy reader, R/R+1 drain and rollback
 
 ## Manual Only

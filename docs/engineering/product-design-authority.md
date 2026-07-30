@@ -1,7 +1,7 @@
 # Product Design Authority SOP
 
-> 대상: Claude final authority / Codex authority_precheck
-> 관련 에이전트: `.claude/agents/product-design-authority.md`
+> 대상: 독립 Codex `product-design-authority` final authority / Codex `design-reviewer` authority precheck
+> 실행 규칙: `docs/engineering/codex-task-handoff.md`
 
 ---
 
@@ -209,7 +209,7 @@ authority report에는 아래를 반드시 포함한다.
 
 ### Stage 4
 
-- Claude가 public Stage 4 구현을 마치면, Codex가 `authority_precheck`로 evidence와 blocker 구조화를 먼저 수행한다.
+- Codex `frontend-implementer` 새 작업이 public Stage 4 구현을 마치면, Stage 4와 다른 Codex `design-reviewer` 작업이 `authority_precheck`로 evidence와 blocker 구조화를 먼저 수행한다.
 - 신규 화면, high-risk UI change, anchor screen 확장은
   `Ready for Review` 전에 Codex `authority_precheck`를 거친다.
 - UI가 실제로 바뀌었으면 구현 후 관련 비공식 설계 문서도 현재 화면 기준으로 갱신한다.
@@ -225,7 +225,7 @@ authority report에는 아래를 반드시 포함한다.
 ### Stage 5
 
 - Codex가 public Stage 5 디자인 리뷰를 수행한다.
-- authority-required slice면 Claude가 sparse `final_authority_gate`에서 authority report를 읽고 blocker 0개를 확인한 뒤에만 `confirmed`를 허용한다.
+- authority-required slice면 Stage 4/5와 다른 Codex `product-design-authority` 새 작업이 sparse `final_authority_gate`에서 authority report를 읽고 blocker 0개를 확인한 뒤에만 `confirmed`를 허용한다.
 - authority report가 없거나 evidence가 약하면 `confirmed`를 보류한다.
 - Wave1 mobile 100% re-porting에서는 fixed reference와 after screenshot을 나란히 보는 것에 더해 screenshot diff, computed-style audit, geometry audit의 unresolved finding을 확인한다. unclassified visual difference가 남아 있으면 `hold`가 기본값이다.
 

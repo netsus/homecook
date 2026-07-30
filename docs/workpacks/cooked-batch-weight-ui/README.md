@@ -6,12 +6,12 @@
 
 ## Official Sources
 
-- `docs/요구사항기준선-v1.7.22.md`
-- `docs/화면정의서-v1.5.28.md`
-- `docs/유저flow맵-v1.3.25.md`
-- `docs/db설계-v1.3.23.md`
-- `docs/api문서-v1.2.27.md`
-- approved plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
+- `docs/요구사항기준선-v1.7.25.md`
+- `docs/화면정의서-v1.5.29.md`
+- `docs/유저flow맵-v1.3.27.md`
+- `docs/db설계-v1.3.26.md`
+- `docs/api문서-v1.2.29.md`
+- approved plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc`, 1,056 lines
 
 ## Scope
 
@@ -157,7 +157,7 @@ unweighed close:
 ## Stage 1 Current Gate
 
 - run SOT/workflow/workpack/automation/bookkeeping validators, focused workflow-doc tests, lint, typecheck, dependency audit and diff/parity only.
-- component/E2E/visual/a11y/browser/remote/design-authority commands are future Stage 4/6 evidence and are not claimed executable now.
+- component/E2E/visual/a11y/browser/local-first production-rehearsal/design-authority commands are future Stage 4/6 evidence and are not claimed executable now.
 
 ## Delivery Checklist
 

@@ -137,7 +137,7 @@ Phase4 prep의 목표는 구현이 아니라 준비 산출물을 잠그는 것�
   - HOME + RECIPE_DETAIL은 anchor screen이므로 authority review 필수.
   - historical authority report `ui/designs/authority/WAVE1_DISCOVERY_DETAIL-authority.md`는 과거 closeout evidence다. Slice B re-audit에서 fixed reference/current/after 비교 결과로 갱신한다.
   - screenshot 존재만으로 pass하지 않는다. reference와 service generated screenshot을 실제로 비교하고, remaining-difference ledger가 0 unclassified visual differences인지 확인한다.
-  - Claude final authority gate 통과 필수 (blocker 0개 확인 후 `confirmed`).
+  - 별도 Codex `product-design-authority` 작업 통과 필수 (blocker 0개 확인 후 `confirmed`).
 
 ## Design Status
 

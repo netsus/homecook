@@ -48,7 +48,7 @@ import {
   ingredientMatchesCategoryGroup,
 } from "@/lib/ingredient-categories";
 import { resolveRecipeImage } from "@/lib/recipe-image";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { PantryItem } from "@/types/pantry";
 import type { PlannerColumnData } from "@/types/planner";
@@ -453,7 +453,7 @@ export function PantryScreen({
         return;
       }
 
-      const supabase = getSupabaseBrowserClient();
+      const supabase = getAuthSupabaseBrowserClient();
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
@@ -472,7 +472,7 @@ export function PantryScreen({
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
+    const supabase = getAuthSupabaseBrowserClient();
 
     void supabase.auth
       .getSession()

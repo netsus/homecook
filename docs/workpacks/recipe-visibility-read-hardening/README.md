@@ -1,6 +1,6 @@
 # recipe-visibility-read-hardening
 
-> Stage 1 contract lock. Approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d` (1,018 lines). Official baseline: requirements v1.7.22, screens v1.5.28, flow v1.3.25, DB v1.3.23, API v1.2.27.
+> Stage 1 contract lock. Approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc` (1,056 lines). Official baseline: requirements v1.7.25, screens v1.5.29, flow v1.3.27, DB v1.3.26, API v1.2.29.
 
 ## Goal
 
@@ -12,6 +12,7 @@ private, soft-deleted, 또는 quarantined owner의 recipe/tag/profile/image 존�
 - Stage 2 backend/data/storage: `feature/be-recipe-visibility-read-hardening`
 - Stage 4 existing-consumer behavior regression: `feature/fe-recipe-visibility-read-hardening`
 - Release train: B. 구현 선행조건은 F0 runtime, merged `31-recipe-media-tags`, merged `36e-recipe-tags-frontend`다. 이 Stage 1 docs PR은 승인된 Stage 0 순서대로 먼저 작성한다.
+- 초기 배포 gate: production=`server MacBook local Next.js + local Supabase`, staging=`isolated local rehearsal stack`, remote verifier/provider barrier/remote migration=`N/A` until separate contract-evolution
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer와 five-axis reviewer는 서로 다른 Codex 세션을 사용하며 Claude는 사용하지 않는다.
 
 ## In Scope
@@ -55,7 +56,7 @@ private, soft-deleted, 또는 quarantined owner의 recipe/tag/profile/image 존�
 
 Schema Change:
 - [ ] 없음
-- [x] 있음 — official DB v1.3.23의 recipe visibility/tag projection, image registry/reference/quota/storage outbox와 F0 lifecycle integration을 additive하게 구현한다. 기존 migration은 수정하지 않는다.
+- [x] 있음 — official DB v1.3.26의 recipe visibility/tag projection, image registry/reference/quota/storage outbox와 F0 lifecycle integration을 additive하게 구현한다. 기존 migration은 수정하지 않는다.
 
 ## Out of Scope
 
@@ -77,7 +78,7 @@ Schema Change:
 | Gate | Current state | Meaning |
 | --- | --- | --- |
 | Stage -1 security hotfix + closeout | merged/deployed | mutation authorization predecessor complete |
-| official contract PR #1072 | merged | v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 authority available |
+| historical contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
 | F0 Stage 1 docs PR #1073 | merged | account generation contract documented; runtime remains future implementation predecessor |
 | `product-ingredient-link-foundation` Stage 1 docs PR #1076 | merged | successor #2 Stage 1 complete; joint activation still waits for F0+#3 runtime |
 | `31-recipe-media-tags` | merged | existing manual recipe image/tag ownership must be preserved |
@@ -119,7 +120,7 @@ Schema Change:
 ### ACL, API and operations
 
 - all registry/reference/outbox/quota tables enable RLS and revoke normal direct mutation. Exact internal functions use safe search path, minimal grants, expected generation and lease/token CAS.
-- public JSON responses keep `{ success, data, error }` and `{ code, message, fields[] }`. Only official v1.2.27 errors are used, including `IMAGE_NOT_FOUND`, `IMAGE_EXPIRED`, `IMAGE_VISIBILITY_MISMATCH`, `MANAGED_IMAGE_REFERENCE_REQUIRED`, `IMAGE_UPLOAD_LIMITED`, `IDEMPOTENCY_KEY_REUSED` and lifecycle errors.
+- public JSON responses keep `{ success, data, error }` and `{ code, message, fields[] }`. Only official v1.2.29 errors are used, including `IMAGE_NOT_FOUND`, `IMAGE_EXPIRED`, `IMAGE_VISIBILITY_MISMATCH`, `MANAGED_IMAGE_REFERENCE_REQUIRED`, `IMAGE_UPLOAD_LIMITED`, `IDEMPOTENCY_KEY_REUSED` and lifecycle errors.
 - implementation routes use `/api/v1` prefix while official contract paths omit it where documented. Assertions name both forms and do not invent duplicate endpoints.
 - maintenance tick order is scanner → permanent tombstone late-object scan → due quarantine recheck → normal drain → expected-owner union-zero → Auth deletion drain → lifecycle complete.
 - the MacBook LaunchAgent uses `StartInterval=300` and `RunAtLoad=true`. Its release gate requires an external heartbeat gap no greater than 15 minutes, Storage cleanup target within 24 hours, alert on 3 consecutive calls failed, oldest due over 15 minutes or any dead-letter, a mode 600 env or Keychain secret, and structured JSON log rotation at 10MB with 5 retained files.
@@ -142,16 +143,21 @@ Schema Change:
 
 ## Design Status
 
-`N/A`. No new screen or visual-system change. Stage 4 verifies existing picker states and browser `.remove()` removal behavior only.
+- [ ] 임시 UI (temporary)
+- [ ] 디자인 리뷰 대기 (pending-review)
+- [ ] 확정 (confirmed)
+- [x] N/A — 기존 MANUAL_RECIPE_CREATE 동작 통합만 수행하며 새 화면 또는 시각 변경 없음
+
+No new screen or visual-system change. Stage 4 verifies existing picker states and browser `.remove()` removal behavior only.
 
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.7.22.md` B/H/I
-- `docs/화면정의서-v1.5.28.md` 0-D/0-G
-- `docs/유저flow맵-v1.3.25.md` ⓮/⓱
-- `docs/db설계-v1.3.23.md` B/C/E/F/G and managed-image/outbox sections
-- `docs/api문서-v1.2.27.md` A/C/E/I/J/K/L and image cancel contract
+- `docs/요구사항기준선-v1.7.25.md` B/H/I
+- `docs/화면정의서-v1.5.29.md` 0-D/0-G
+- `docs/유저flow맵-v1.3.27.md` ⓮/⓱
+- `docs/db설계-v1.3.26.md` B/C/E/F/G and managed-image/outbox sections
+- `docs/api문서-v1.2.29.md` A/C/E/I/J/K/L and image cancel contract
 - approved master plan sections 6-1, dependency matrix #3 and successor #3
 
 ## QA / Test Data Plan
@@ -202,9 +208,10 @@ Schema Change:
 - [x] recipe visibility/origin/deleted/revision schema and existing-row compatibility are additive and replay safe <!-- omo:id=delivery-visibility-schema;stage=2;scope=backend;review=3,6 -->
 - [x] public list/detail/theme/tag/search/sitemap/cache/SEO enforce public+not-deleted+non-quarantined owner <!-- omo:id=delivery-public-read-matrix;stage=2;scope=backend;review=3,6 -->
 - [x] private owner detail 404 and soft-deleted new-selection denial are non-inferable <!-- omo:id=delivery-private-detail-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] anchored historical readers preserve prior Meal/session/batch/log content without general bypass <!-- omo:id=delivery-historical-reader-scope;stage=2;scope=backend;review=3,6 -->
-  - 2026-07-28 partial evidence covers owned existing Meal, shopping-list and cooking-session FK readers plus rejection before service-role recipe lookup for another owner. Immutable content snapshots (#4), snapshot-v2 session reads (#7), batch (#8) and meal-log (#9) remain outside the current implementation, so this aggregate stays open.
-  - 2026-07-29 KST user-directed scope split: successor reader/snapshot workpacks own the remaining immutable content readers, so this unchecked aggregate is excluded from the local-only Stage 2 closeout.
+- [x] existing Meal/shopping/session historical readers preserve prior anchored content without general bypass; successor batch/log/snapshot readers remain in their owning workpacks <!-- omo:id=delivery-historical-reader-scope;stage=2;scope=backend;review=3,6 -->
+  - 2026-07-28 partial evidence covers owned existing Meal, shopping-list and cooking-session FK readers plus rejection before service-role recipe lookup for another owner. Immutable content snapshots (#4), snapshot-v2 session reads (#7), batch (#8) and meal-log (#9) remain outside the current implementation.
+  - 2026-07-29 KST user-directed scope split: successor reader/snapshot workpacks own the remaining immutable content readers, so they are excluded from this workpack's local-only Stage 2 closeout.
+  - 2026-07-30 KST Stage 6 scope projection: this item closes only the existing-reader portion implemented by this workpack. Successor-owned immutable snapshot, batch and meal-log readers remain explicitly out of scope and are not claimed complete here.
 - [x] recipe tag projection and every aggregate/cache reader recheck parent visibility <!-- omo:id=delivery-parent-bounded-tags;stage=2;scope=backend;review=3,6 -->
 - [x] quarantine recovery/delete and owner-neutral preservation consume F0 lifecycle exactly <!-- omo:id=delivery-quarantine-upper-bound;stage=2;scope=backend;review=3,6 -->
 - [x] private/public-neutral registry, references, RLS/grants and server-only Storage mutation are proven <!-- omo:id=delivery-image-registry-security;stage=2;scope=backend;review=3,6 -->
@@ -224,8 +231,10 @@ Schema Change:
   - 2026-07-29 KST closeout rerun on exact source `539a9f593ef5d26563f496c33a577210583688f5`: `pnpm account-maintenance:scheduler:verify` passed the F0 skeleton contract with cadence `300s`; `pnpm account-maintenance:scheduler:verify-release` remained non-zero with `actual_launchd_install`, `production_secret`, `power_login_sleep`, `live_tick_log_wiring`, `external_heartbeat`, `external_alert_delivery`, `cleanup_target` and `next_tick_recovery`. No `launchctl`, live secret load or maintenance tick mutation was attempted.
   - 2026-07-29 KST local automatic cleaner evidence: `pnpm account-maintenance:local-scheduler:install -- --json` installed and loaded separate LaunchAgent `com.homecook.account-maintenance.local` at `/Users/shj/Library/LaunchAgents/com.homecook.account-maintenance.local.plist`; `pnpm account-maintenance:local-scheduler:verify -- --json` confirmed `RunAtLoad=true`, `StartInterval=300`, `checkedLaunchctl=true`, `installed=true`, `loaded=true`, and dry-run-only `scripts/account-maintenance-tick.mjs --dry-run --json`. Local stderr was zero bytes, and `plutil -lint /Users/shj/Library/LaunchAgents/com.homecook.account-maintenance.local.plist` passed.
   - Production power/login/sleep, approved external heartbeat/alert receiver, actual external 15-minute gap/alert fault evidence, 24-hour cleanup target and 10MB x 5 rotation stay Manual Only outside the local-only Stage 2 closeout.
-- [ ] MANUAL_RECIPE_CREATE consumes object ID/cancel/signed-read states with no browser direct Storage mutation <!-- omo:id=delivery-image-existing-consumer;stage=4;scope=frontend;review=5,6 -->
-- [ ] existing screen composition, accessibility, loading/error/read-only and return-to-action behavior remain unchanged <!-- omo:id=delivery-visibility-ui-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] MANUAL_RECIPE_CREATE consumes object ID/cancel/signed-read states with no browser direct Storage mutation <!-- omo:id=delivery-image-existing-consumer;stage=4;scope=frontend;review=5,6 -->
+  - 2026-07-30 KST Stage 4 evidence: TDD began with 3 failed files / 8 failed tests and later review-specific RED for limited-key replay, remove-during-retry stale completion and expired-read refresh retry cancellation. Final focused Vitest passed 3 files / 42 tests; the locked automation pair passed 2 files / 8 tests; managed browser regression passed desktop/mobile 2/2. The client now consumes the managed object ID/read state, preserves the pre-activation legacy union, refreshes expired signed URLs with the same intent without cancelling that object, rotates the key after a durable limited response, and owner-cancels managed abandoned or stale objects without browser Storage `.remove()`.
+- [x] existing screen composition, accessibility, loading/error/read-only and return-to-action behavior remain unchanged <!-- omo:id=delivery-visibility-ui-regression;stage=4;scope=frontend;review=5,6 -->
+  - 2026-07-30 KST Stage 4 evidence: `pnpm verify:frontend:pr` and full `pnpm verify:frontend` passed. The full gate included 2,369 product tests, production build, Lighthouse 6/6, Playwright regression 909 passed / 132 skipped, accessibility 18 passed / 15 skipped, visual 23 passed / 22 skipped and security 12/12. Fresh independent code and security reviews both approved with P0/P1/P2/P3 findings 0.
 - [x] local existing/fresh/replay, live Storage fixtures and local read-only verifier evidence are green <!-- omo:id=delivery-visibility-verification;stage=2;scope=shared;review=3,6 -->
   - 2026-07-28 partial local evidence: focused Vitest passed 601 tests, PostgreSQL existing/fresh/replay passed 75 tests, local migration replay reported up to date, and the two real local Storage tests passed.
   - 2026-07-28 KST orchestrator rerun on clean merged-exact head `0410b0cb6b4c4e3204ab462783f2cf7431b055d1`: `pnpm test:recipe-visibility-read-hardening:focused` passed 56 files / 601 tests, `pnpm test:recipe-visibility-read-hardening:postgres` passed 75 tests, local Supabase-backed `pnpm test:recipe-visibility-read-hardening:storage-live` passed 2 files / 2 tests, and `pnpm verify:backend` completed lint, typecheck, product tests 2298 passed / 102 skipped, production build and security Playwright 12/12. Historical remote verifier dry-run passed at that time, while the full remote read-only verifier failed closed before the later local-only decision.

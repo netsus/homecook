@@ -1,10 +1,34 @@
 import { createHmac } from "node:crypto";
 
+import { getRemoteAuthIssuer } from "@/lib/supabase/auth-env";
+
 import { verifyAccountDeleteReplayJwt } from "./jwt-replay";
+
+const ALLOWLISTED_SESSION_JWT_ALGS = ["ES256", "RS256"] as const;
+const ROLE_AUTHENTICATED = "authenticated";
 
 const SESSION_HMAC_SECRET_ENV = "HOMECOOK_SESSION_GENERATION_HMAC_KEY_V1";
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+type AllowlistedJwtAlg = (typeof ALLOWLISTED_SESSION_JWT_ALGS)[number];
+
+const NUMBER_KEYS = ["iat", "nbf", "exp"] as const;
+
+interface JwtClaims {
+  iss?: unknown;
+  aud?: unknown;
+  role?: unknown;
+  sub?: unknown;
+  session_id?: unknown;
+  iat?: unknown;
+  nbf?: unknown;
+  exp?: unknown;
+}
+
+interface JwtHeader {
+  alg?: string;
+  kid?: string;
+}
 
 interface VerifiedAuthUser {
   created_at: string;
@@ -66,17 +90,68 @@ function decodeJwtPayload(accessToken: string) {
   }
 }
 
-function readProjectIssuer() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (!configuredUrl) {
+function decodeJwtHeader(accessToken: string) {
+  const parts = accessToken.split(".");
+  if (parts.length !== 3 || !parts[0]) {
     return null;
   }
 
   try {
-    return `${new URL(configuredUrl).origin}/auth/v1`;
+    const value = JSON.parse(
+      Buffer.from(parts[0], "base64url").toString("utf8"),
+    ) as unknown;
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? value as JwtHeader
+      : null;
   } catch {
     return null;
   }
+}
+
+function readProjectIssuer() {
+  try {
+    return getRemoteAuthIssuer();
+  } catch {
+    return null;
+  }
+}
+
+export function hasRemoteAuthSessionClaimMatch(
+  accessToken: string,
+  userId: string,
+): boolean {
+  const claims = decodeJwtPayload(accessToken);
+  const claimsRecord = claims as JwtClaims | null;
+  const header = decodeJwtHeader(accessToken);
+  const headerAlg = header?.alg;
+  const sessionId = claimsRecord?.session_id;
+  const nowSeconds = Math.floor(Date.now() / 1_000);
+  if (
+    !Number.isInteger(nowSeconds)
+    || !claimsRecord
+    || !headerAlg
+    || !ALLOWLISTED_SESSION_JWT_ALGS.includes(headerAlg as AllowlistedJwtAlg)
+    || typeof header?.kid !== "string"
+    || header.kid.trim().length === 0
+    || claimsRecord.iss !== readProjectIssuer()
+    || claimsRecord.aud !== ROLE_AUTHENTICATED
+    || claimsRecord.role !== ROLE_AUTHENTICATED
+    || claimsRecord.sub !== userId
+    || typeof sessionId !== "string"
+    || !UUID_PATTERN.test(sessionId)
+    || !NUMBER_KEYS.every(
+      (key) => Number.isSafeInteger(claimsRecord?.[key] as number | undefined),
+    )
+    || Number(claimsRecord.iat) <= 0
+    || Number(claimsRecord.nbf) - 30 > nowSeconds
+    || Number(claimsRecord.exp) <= nowSeconds
+    || Number(claimsRecord.iat) > nowSeconds + 60
+    || Number(claimsRecord.iat) >= Number(claimsRecord.exp)
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 export function deriveVerifiedAccountGenerationSessionAuthority(input: {
@@ -88,37 +163,24 @@ export function deriveVerifiedAccountGenerationSessionAuthority(input: {
     return null;
   }
 
-  const claims = decodeJwtPayload(input.accessToken);
-  const expectedIssuer = readProjectIssuer();
-  const sessionId = claims?.session_id;
-  const issuedAt = claims?.iat;
-  const expiresAt = claims?.exp;
-  const nowSeconds = Math.floor(Date.now() / 1_000);
   if (
-    !expectedIssuer
-    || claims?.iss !== expectedIssuer
-    || claims?.aud !== "authenticated"
-    || claims?.sub !== input.user.id
-    || typeof sessionId !== "string"
-    || !UUID_PATTERN.test(sessionId)
-    || !Number.isSafeInteger(issuedAt)
-    || Number(issuedAt) <= 0
-    || Number(issuedAt) > nowSeconds + 60
-    || !Number.isSafeInteger(expiresAt)
-    || Number(expiresAt) <= nowSeconds
-    || Number(issuedAt) >= Number(expiresAt)
+    !hasRemoteAuthSessionClaimMatch(input.accessToken, input.user.id)
     || !UUID_PATTERN.test(input.user.id)
     || !Number.isFinite(Date.parse(input.user.created_at))
   ) {
     return null;
   }
 
+  const claims = decodeJwtPayload(input.accessToken) as JwtClaims | null;
+  const issuedAt = claims?.iat;
+  const sessionId = claims?.session_id;
+
   return {
     ownerUuid: input.user.id,
     authIdentityCreatedAt: input.user.created_at,
     sessionIssuedAt: new Date(Number(issuedAt) * 1_000).toISOString(),
     sessionKeyHash: createHmac("sha256", secret)
-      .update(sessionId, "utf8")
+      .update(sessionId as string, "utf8")
       .digest("hex"),
     hmacKeyVersion: 1,
   };

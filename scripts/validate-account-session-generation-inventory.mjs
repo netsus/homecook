@@ -78,6 +78,7 @@ const LIB_FILE_OWNER_SCOPE = {
   "lib/server/account-generation/external-write.ts": "authenticated-user",
   "lib/server/admin-audit.ts": "admin",
   "lib/server/admin-events.ts": "system",
+  "lib/server/hybrid-auth/logout.ts": "auth-session",
   "lib/server/recipe-image-auth-deletion-finalize.ts": "system",
   "lib/server/recipe-image-legacy-visibility-copy.ts": "system",
   "lib/server/recipe-image-lifecycle-completion.ts": "system",
@@ -292,6 +293,8 @@ function collectStorageEntries(source, sourceFile) {
   const rawBucketTarget = bucketMatch[1].replace(/^["'`]|["'`]$/gu, "");
   const bucketTarget = KNOWN_STORAGE_BUCKETS[rawBucketTarget] ?? rawBucketTarget.toLowerCase();
   const kind = source.includes("createServiceRoleClient()")
+    || source.includes("createRemoteCompatibilityServiceRoleClient()")
+    || source.includes("createRecipeImageInternalClient()")
     ? "service_external_write"
     : "storage";
 

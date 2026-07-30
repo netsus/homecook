@@ -27,26 +27,35 @@
       "tag-visibility-never-wider-than-parent-recipe",
       "success-data-error-envelope-and-official-errors-only",
       "no-unofficial-route-query-field-status-error-or-endpoint",
-      "no-unmerged-remote-migration-or-production-write"
+      "hybrid-remote-auth-control-plane-and-local-application-data-storage-boundary",
+      "local-auth-users-zero-and-private-identity-epoch-mirror",
+      "session-liveness-hmac-binding-and-exact-remote-claim-gateway",
+      "browser-direct-local-data-storage-and-service-role-user-path-zero",
+      "remote-application-db-storage-writes-zero",
+      "external-personal-write-remains-dark",
+      "no-unmerged-server-production-migration-or-production-write"
     ],
     "verify_commands": [
+      "pnpm exec vitest run tests/personal-recipe-editor-hybrid-contract-sync.test.ts",
       "pnpm exec vitest run tests/personal-recipe-editor-permissions.test.ts tests/personal-recipe-editor-contract.test.ts",
       "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/personal-recipe-editor-decoupling pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
+      "BRANCH_NAME=docs/personal-recipe-editor-stage1-relock pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
       "node scripts/validate-automation-spec.mjs --slice personal-recipe-editor-decoupling",
       "pnpm validate:omo-bookkeeping",
       "git diff --check"
     ],
     "required_test_targets": [
+      "tests/personal-recipe-editor-hybrid-contract-sync.test.ts",
       "tests/personal-recipe-editor-permissions.test.ts",
       "tests/personal-recipe-editor-contract.test.ts",
       "public authenticated anonymous owner other-owner deleted quarantined entry matrix",
       "public source mutation zero and new private fork identity",
       "personal edit same-id and explicit save-as-new new-id contract",
       "planner-only meal side-effect isolation",
-      "managed image object-id owner cancel and tag upper-bound regression"
+      "managed image object-id owner cancel and tag upper-bound regression",
+      "hybrid local application Data/Storage plus remote Auth control-plane read-only verifier with local auth.users=0 service-role user path 0 and remote application write 0"
     ]
   },
   "frontend": {
@@ -157,23 +166,17 @@
       ]
     }
   },
-  "external_smokes": [
-    "current and immediate-previous deployment keep personal editor capability dark until approved activation",
-    "public anonymous login round-trip restores same recipe and fork draft action",
-    "public source remains byte-for-byte/revision unchanged after fork fixture while new private detail opens",
-    "owner-private edit and delete CTA never appear to another owner or deleted/quarantined public reader",
-    "MYPAGE and RECIPEBOOK_DETAIL keep existing item-to-RECIPE_DETAIL navigation",
-    "390px and 320px screenshot/Figma authority evidence from exact implementation head",
-    "production write activation remains zero until #6 and snapshot-v2 gate"
-  ],
+  "external_smokes": [],
   "blocked_conditions": [
     "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
     "stage1-author-attempts-to-self-approve",
     "claude-invoked-for-any-stage",
     "official-doc-or-approved-plan-conflict",
+    "current-official-document-tuple-or-hybrid-auth-local-data-contract-drift",
     "plan-sha-or-line-count-drift",
     "recipe-visibility-or-media-tag-predecessor-not-merged-before-implementation",
     "recipe-detail-state-matrix-or-stage1-wireframe-missing",
+    "stage4-ready-before-external-smokes-relocked-from-work-item-full-lifecycle-gate",
     "loading-empty-read-only-401-or-404-visual-state-missing",
     "primary-secondary-destructive-hierarchy-or-320-wrap-order-missing",
     "design-critic-or-product-design-authority-plan-missing",
@@ -193,11 +196,14 @@
     "personal-write-or-cta-activated-before-approved-capability-snapshot-v2-gate",
     "320px-overflow-keyboard-occlusion-clipped-sticky-cta-or-sub-44px-target",
     "unmerged-migration-or-production-write",
+    "hybrid-verifier-treated-as-existing-or-complete-without-tdd-and-merged-exact-sha-evidence",
+    "local-auth-users-nonzero-browser-direct-local-data-storage-or-service-role-user-fallback",
+    "remote-application-db-storage-write-or-external-personal-write-before-approved-activation",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {
     "backend": 2,
     "frontend": 6
   },
-  "notes": "This high-risk UI Stage 1 slice separates the existing manual recipe form from context shell/navigation and locks RECIPE_DETAIL CTA states. It does not implement #6 recipe writes, #7 future propagation or #8 activation. Stage 1 runs only current docs validators/focused workflow tests/lint/typecheck/audit/diff; component, Playwright, exploratory QA, visual/a11y and authority commands are future Stage 4 artifacts. Roadmap is docs while lifecycle remains planned, and external personal writes stay dark until the approved capability and snapshot-v2 gate."
+  "notes": "This hybrid Stage 1 relock preserves the approved master plan as editor/product design history and supersedes only its local-only Auth/deployment assumptions with the current remote Auth control-plane plus local application Data/Storage contract. #3 merged as PR #1228 and the media/tag predecessors are merged. #4 PR #1218 Stage 2 and PR #1219 Stage 4 remain historical implementation, while its hybrid delta/reverification stays in progress and is not a #5 predecessor. This slice makes no product API, DB, route, field, status or error change and does not implement #6 writes, #7 propagation or #8 activation. Stage 1 runs the focused contract-sync RED/GREEN plus docs validators/workflow tests/lint/typecheck/audit/diff; Stage 2 locks the existing backend read/create boundaries and advances the roadmap to in-progress with workflow lifecycle in_progress. Global external_smokes stays empty during the test-only Stage 2 because the preserved full-lifecycle work-item gate contains merged-SHA-only, Stage 4 UI and visual evidence that cannot truthfully run before backend Ready; the executable frontend Ready gate requires Stage 4 to relock those entries from the work-item. Approval stays not_started; the hybrid verifier, component, Playwright, exploratory QA, visual/a11y and authority commands remain future Stage 4/release artifacts. Remote application DB/Storage writes remain zero and external personal write remains dark."
 }

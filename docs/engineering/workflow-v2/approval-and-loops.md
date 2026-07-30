@@ -2,131 +2,81 @@
 
 ## Goal
 
-Claude와 Codex가 서로 보완사항을 주고받되, 무한 핑퐁이 아니라 `구조화된 수렴 루프`로 종료되게 만든다.
+작성·구현 작업과 독립 검토 작업을 서로 다른 Codex task ID로 분리하고, 무한 핑퐁 없이 구조화된 수렴 루프로 종료한다.
+Claude는 사용하지 않는다.
 
 ## Fixed Roles
 
-- `Claude`: primary reviewer, 감독자, 승인자
-- `Codex`: primary author/fixer, verification 실행자, 승인자
-- `Workers`: bounded subtask 수행자
+- `coordinator task`: handoff, round, 상태, evidence 관리
+- `author/fixer task`: authoritative artifact 작성·수정
+- `independent reviewer task`: author와 다른 task ID로 review/approve
+- `Workers`: bounded 보조 작업. 독립 reviewer를 대신하지 않는다
 
-Claude와 Codex를 대등한 자유 토론자로 두지 않는다.
-편집 권한은 항상 한쪽에만 있고, 기본값은 `Codex가 작성/수정`, `Claude가 리뷰/승인`이다.
+편집 권한은 한 시점에 한 작성 작업만 가진다.
+reviewer는 finding을 반환하고 author의 artifact를 직접 덮어쓰지 않는다.
 
-## Dual-Approval Contract
+## Independent Approval Contract
 
 최종 승인 조건:
 
-`Claude approve && Codex approve && required_changes=[] && verification_status=passed && omitted_targets=[]`
+`author_task_id != reviewer_task_id && reviewer_approve && required_changes=[] && verification_status=passed && omitted_targets=[]`
 
 위 조건 중 하나라도 빠지면 최종 상태는 `approved`가 될 수 없다.
-
-Claude budget 문제로 Claude-owned stage가 pause 되면 상태는 blocked retry로 기록하고 approval_state는 이전 값을 유지한다.
-기본 정책은 `pause + scheduled retry`이며, provisional Codex summary는 manual recovery에서만 사용한다.
-이 상태는 provisional이며 `dual_approved`와 동일하지 않다.
+task가 끝났거나 commentary가 긍정적이라는 사실은 approval evidence가 아니다.
 
 ## Plan Loop
 
-기존 [agent-plan-loop.md](../agent-plan-loop.md)를 v2의 기본 planning engine으로 사용한다.
+`docs/engineering/agent-plan-loop.md`를 따른다.
 
-기본 순서:
+1. Codex author 새 작업이 초안을 작성한다.
+2. 다른 Codex reviewer 새 작업이 구조화 리뷰한다.
+3. author가 required finding을 수정한다.
+4. reviewer가 최신 artifact를 재검토한다.
+5. 최대 3회 안에 approve 또는 stalled/block으로 종료한다.
 
-1. Codex 초안 작성
-2. Claude 구조화 리뷰
-3. Codex 수정
-4. 둘 다 approve 시 종료
-
-필수 조건:
-
-- medium/high risk 작업
-- infra-governance
-- 여러 source of truth가 엮인 작업
-
-생략 가능:
-
-- docs-only
-- 명백한 single-file low-risk bugfix
+medium/high risk, infra-governance, 여러 source of truth가 얽힌 작업에 권장한다.
 
 ## Review Loop
 
-기존 [agent-review-loop.md](../agent-review-loop.md)는 v2에서 `non-slice governance / tooling / exceptional recovery`용 review engine으로 사용한다.
-product slice의 기본 Stage 경로에는 generic review-loop CLI를 넣지 않는다.
-대신 Stage 1은 supervisor 기본 경로 안에 `internal 1.5 docs gate`를 mandatory로 포함한다.
+`docs/engineering/agent-review-loop.md`를 따른다.
+product slice 기본 경로에는 generic review loop를 넣지 않고 Stage 3/5/6을 사용한다.
 
-기본 순서:
+Stage 1 docs gate는 아래 순서를 고정한다.
 
-1. Claude diff 리뷰
-2. Codex 수정
-3. verification 실행
-4. Claude 재리뷰
-5. Codex final sanity review
-6. dual-approval이면 종료
-
-Stage 1 docs gate는 위 generic review loop와 별도로 아래 고정 역할을 사용한다.
-
-1. Claude Stage 1 author
-2. supervisor `doc_gate_check`
-3. Codex `doc_gate_review`
-4. Claude `doc_gate_repair`
-5. approve 또는 `human_escalation`
-
-필수 조건:
-
-- infra-governance
-- cross-cutting workflow/tooling diff
-- 정식 Stage 리뷰를 대체하지 않는 exceptional recovery
-
-생략 가능:
-
-- 일반 product slice Stage 2/4 구현
-- docs-only
-- 작은 UI polish
+1. Codex `stage1-docs-author` 새 작업
+2. deterministic `doc_gate_check`
+3. 다른 task ID의 Codex `docs-gate-reviewer`
+4. author repair/rebuttal
+5. reviewer recheck
+6. approve 또는 `human_escalation`
 
 ## Convergence Rules
 
 - `max_rounds`: 기본 3
-- 같은 필수 수정 이슈가 반복되면 `stalled`
-- blocker가 나오면 `blocked`
-- `stalled` 또는 `blocked`는 사람이 방향을 재결정한다.
+- 같은 required finding set 반복: `stalled`
+- 공식 계약 변경, 권한 부족, destructive decision: `blocked`
+- verification 실패: `needs_revision`
 
 ## Worker Orchestration Rules
 
-v2는 multi-agent를 허용하지만 아래 제약을 둔다.
-
 - worker는 disjoint scope만 맡는다.
-- 같은 파일을 여러 worker가 동시에 수정하지 않는다.
-- worker 산출물의 통합 책임은 Codex에 있다.
-- Claude는 worker 결과를 승인 없이 merge-ready로 간주하지 않는다.
-
-권장 worker 역할:
-
-- security
-- testing
-- design-system
-- ci/governance
-- research/explorer
+- 같은 authoritative 파일을 여러 worker가 동시에 수정하지 않는다.
+- worker 결과 통합은 author task가 맡는다.
+- 같은 task 안 worker review는 independent Stage approval이 아니다.
 
 ## External Smoke Gate
 
-테스트가 모두 green이어도 외부 서비스가 포함된 작업이면 smoke check를 별도로 본다.
-
-예:
-
-- auth: Supabase reachable, env set, OAuth redirect URL
-- payment: sandbox key, callback URL, webhook reachability
-- deployment: target env, secret availability, release toggle
+외부 서비스가 포함된 작업은 테스트 green 외에 실제 smoke evidence를 남긴다.
+credential, external production authority, destructive operation은 자동으로 가정하지 않는다.
 
 ## Artifact Requirements
 
-medium/high risk 작업은 최소한 아래를 남긴다.
-
-- work item metadata
-- loop final summary
+- author/reviewer task ID
+- reviewed commit SHA
+- required/recommended findings
 - verification result
-- unresolved questions or out-of-scope note
+- unresolved questions / out-of-scope
+- final verdict
 
-## Authority Rule
-
-- Codex는 단독으로 구현 완료를 선언할 수 없다.
-- Claude는 단독으로 구현을 완료시킬 수 없다.
-- dual-approval과 verification이 함께 있어야 완료다.
+과거 machine-readable vocabulary의 `claude_approved`, `claude_repairable`은 역사적 호환값이다.
+새 실행의 actor 의미나 provider 호출 근거로 사용하지 않는다.

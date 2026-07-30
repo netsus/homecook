@@ -64,7 +64,6 @@
       "pnpm test:meal-log-core:postgres",
       "pnpm verify:backend",
       "pnpm test:e2e:regression:ci --grep meal-log-core",
-      "node scripts/verify-meal-log-core-remote.mjs --mode post-merge-read-only",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "BRANCH_NAME=docs/meal-log-core pnpm validate:workpack -- --slice meal-log-core",
@@ -85,7 +84,7 @@
       "timezone-null-instant-dst-and-no-regroup-evidence",
       "exact-product-ingredient-evidence-and-conversion-failure-evidence",
       "complete-partial-unavailable-slot-day-aggregate-evidence",
-      "merged-exact-sha-remote-read-only-function-policy-capability-evidence"
+      "merged-exact-sha-server-production-local-rehearsal-read-only-function-policy-capability-evidence"
     ]
   },
   "frontend": {
@@ -108,7 +107,7 @@
     }
   },
   "external_smokes": [
-    "merged-exact-SHA remote read-only meal-log schema function ACL RLS constraint and capability inventory",
+    "merged-exact-SHA server-production/local-rehearsal read-only meal-log schema function ACL RLS constraint and capability inventory",
     "two-owner three-source nondisclosure and before-after multi-table digests",
     "same-key replay and different-payload zero-effect",
     "interleaved batch entries own-event reversal and full-replay checksum",
@@ -138,12 +137,12 @@
     "reversal-retracts-or-repeats-xp",
     "slice10-shell-or-slice12-ui-design-preclaimed",
     "unofficial-contract-unmerged-migration-production-write-or-capability-change",
-    "remote-verifier-not-merged-exact-sha",
+    "local-first-verifier-not-merged-exact-sha",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {
     "backend": 6,
     "frontend": 0
   },
-  "notes": "High-risk DB/security/concurrency Stage 1 backend lock. Stage 1 runs only current docs validators, focused tests, lint, typecheck, audit and diff. Runtime/PostgreSQL/real DB/E2E/remote evidence is future. Implementation waits for #1, #2, #4 and #8 runtime. #9 owns meal-log schema/RLS/RPC/API and exact evidence; #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and production activation remains Manual Only."
+  "notes": "High-risk DB/security/concurrency Stage 1 backend lock. Stage 1 runs only current docs validators, focused tests, lint, typecheck, audit and diff. Runtime/PostgreSQL/real DB/E2E/server-production/local-rehearsal evidence is future. Implementation waits for #1, #2, #4 and #8 runtime. #9 owns meal-log schema/RLS/RPC/API and exact evidence; #10 owns Planner shell, #12 owns MEAL_LOG UI/design, and production activation remains Manual Only."
 }

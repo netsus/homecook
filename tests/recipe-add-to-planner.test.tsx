@@ -60,7 +60,7 @@ vi.mock("@/lib/api/meal", () => ({
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
-  getSupabaseBrowserClient: () => ({
+  getAuthSupabaseBrowserClient: () => ({
     auth: { getSession, onAuthStateChange },
   }),
 }));

@@ -1,23 +1,37 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const signOut = vi.fn();
 const createRouteHandlerClient = vi.fn();
+const executeHybridLogout = vi.fn();
+const cookies = vi.fn();
+const cookieGetAll = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
+  createAuthRouteHandlerClient: createRouteHandlerClient,
+  createDataServiceRoleClient: vi.fn(),
   createRouteHandlerClient,
+}));
+
+vi.mock("@/lib/server/hybrid-auth/logout", () => ({
+  executeHybridLogout,
+}));
+
+vi.mock("next/headers", () => ({
+  cookies,
 }));
 
 describe("auth logout route", () => {
   beforeEach(() => {
-    signOut.mockReset();
     createRouteHandlerClient.mockReset();
+    executeHybridLogout.mockReset();
+    cookies.mockReset();
+    cookieGetAll.mockReset();
 
-    createRouteHandlerClient.mockResolvedValue({
-      auth: {
-        signOut,
-      },
+    createRouteHandlerClient.mockResolvedValue({ auth: {} });
+    executeHybridLogout.mockResolvedValue({ ok: true });
+    cookies.mockResolvedValue({
+      getAll: cookieGetAll,
     });
-    signOut.mockResolvedValue({ error: null });
+    cookieGetAll.mockReturnValue([]);
   });
 
   it("clears the server session and redirects to the requested local path", async () => {
@@ -26,7 +40,59 @@ describe("auth logout route", () => {
       new Request("http://localhost:3000/auth/logout?next=/planner"),
     );
 
-    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(executeHybridLogout).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
+  });
+
+  it("fails closed to login when hybrid revoke rejects the session", async () => {
+    executeHybridLogout.mockResolvedValueOnce({
+      ok: false,
+      error: {
+        code: "ACCOUNT_SESSION_STALE",
+        message: "세션을 다시 확인해 주세요.",
+        status: 409,
+      },
+    });
+
+    const { GET } = await import("@/app/auth/logout/route");
+    const response = await GET(
+      new Request("http://localhost:3000/auth/logout?next=/planner", {
+        headers: {
+          cookie: "sb-local-auth-token=token",
+        },
+      }),
+    );
+
+    const redirectUrl = new URL(response.headers.get("location") ?? "");
+    expect(redirectUrl.pathname).toBe("/login");
+    expect(redirectUrl.searchParams.get("authError")).toBe("ACCOUNT_SESSION_STALE");
+    expect(redirectUrl.searchParams.get("next")).toBe("/planner");
+    expect(response.cookies.get("sb-local-auth-token")?.maxAge).toBe(0);
+  });
+
+  it("fails closed to login when signOut reports an error", async () => {
+    executeHybridLogout.mockResolvedValueOnce({
+      ok: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "로그아웃하지 못했어요.",
+        status: 500,
+      },
+    });
+
+    const { GET } = await import("@/app/auth/logout/route");
+    const response = await GET(
+      new Request("http://localhost:3000/auth/logout?next=/planner", {
+        headers: {
+          cookie: "sb-local-auth-token=token",
+        },
+      }),
+    );
+
+    const redirectUrl = new URL(response.headers.get("location") ?? "");
+    expect(redirectUrl.pathname).toBe("/login");
+    expect(redirectUrl.searchParams.get("authError")).toBe("ACCOUNT_SESSION_STALE");
+    expect(redirectUrl.searchParams.get("next")).toBe("/planner");
+    expect(response.cookies.get("sb-local-auth-token")?.maxAge).toBe(0);
   });
 });

@@ -4,6 +4,8 @@ import {
   type JsonWebKeyInput,
 } from "node:crypto";
 
+import { getRemoteAuthIssuer } from "@/lib/supabase/auth-env";
+
 const ALLOWED_ALGORITHMS = new Set(["ES256", "RS256"] as const);
 const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;
 const MAX_JWKS_BYTES = 1_048_576;
@@ -74,13 +76,8 @@ function readHeader(value: Record<string, unknown>): JwtHeader | null {
 }
 
 function readProjectOrigin() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (!configuredUrl) {
-    return null;
-  }
-
   try {
-    const url = new URL(configuredUrl);
+    const url = new URL(getRemoteAuthIssuer());
     const isLoopbackHttp = url.protocol === "http:"
       && (url.hostname === "127.0.0.1"
         || url.hostname === "localhost"

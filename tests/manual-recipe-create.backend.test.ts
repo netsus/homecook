@@ -17,6 +17,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 
 vi.mock("@/lib/supabase/server", () => ({
+  createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,
 }));
@@ -183,6 +184,7 @@ describe("18 manual recipe create backend", () => {
       revision: 3,
       state: "legacy",
     });
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
   });
 
   it("GET /api/v1/cooking-methods returns methods in the API envelope", async () => {
@@ -212,6 +214,9 @@ describe("18 manual recipe create backend", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(createRouteHandlerClient).toHaveBeenCalledWith({
+      anonymousPublicReadScope: "cooking-methods",
+    });
     expect(body).toEqual({
       success: true,
       data: {
@@ -637,7 +642,7 @@ describe("18 manual recipe create backend", () => {
         fields: [{ field: "thumbnail_url", reason: "invalid_reference" }],
       },
     });
-    expect(createServiceRoleClient).toHaveBeenCalledOnce();
+    expect(createServiceRoleClient).not.toHaveBeenCalled();
     expect(ensurePublicUserRow).not.toHaveBeenCalled();
   });
 

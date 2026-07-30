@@ -1,7 +1,10 @@
 import type { User } from "@supabase/supabase-js";
 
 import { fail } from "@/lib/api/response";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createAdminDataInternalClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 
 import { recordOperationalEvent, type OperationalEventsDbClient } from "./admin-events";
 
@@ -61,7 +64,8 @@ export async function requireAdminUser(request: Request): Promise<AdminAuthResul
     };
   }
 
-  const serviceRoleClient = createServiceRoleClient() as AdminServiceRoleClient | null;
+  const serviceRoleClient =
+    createAdminDataInternalClient() as AdminServiceRoleClient | null;
 
   if (!serviceRoleClient) {
     await recordOperationalEvent(null, {

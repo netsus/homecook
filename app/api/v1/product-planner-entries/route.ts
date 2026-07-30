@@ -5,7 +5,7 @@ import {
   ensureUserBootstrapState,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { ProductPlannerEntryData } from "@/types/product-planner-entry";
 
 interface RpcError {
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
     return fail(parsed.code, "요청 값을 확인해 주세요.", 422, parsed.fields);
   }
 
-  const db = (createServiceRoleClient() ?? routeClient) as unknown as
+  const db = routeClient as unknown as
     ProductPlannerEntryCreateDbClient & UserBootstrapDbClient;
   try {
     await ensurePublicUserRow(db, user);

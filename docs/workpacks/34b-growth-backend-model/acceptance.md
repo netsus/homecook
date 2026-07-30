@@ -4,7 +4,7 @@
 > acceptance는 living closeout 문서다. 체크는 테스트, real DB smoke, 실제 검증처럼 evidence가 생긴 뒤에만 한다.
 > 34b는 BE-only slice이므로 frontend UI 상태 항목은 N/A이며, Stage 3 merge 시점에 `Manual Only`를 제외한 In Scope acceptance 항목이 모두 체크되어 있어야 한다.
 > `automation-spec.json`을 함께 쓰는 슬라이스이므로 `Manual Only`를 제외한 각 체크박스 끝에 `omo` metadata를 유지한다.
-> Claude가 rebuttal을 수용해 닫은 항목은 checkbox를 유지한 채 `waived=true;waived_by=claude;waived_stage=<3|6>;waived_reason=<slug>` metadata를 추가한다.
+> 신규 GPT-only 실행에서는 reviewer waiver를 만들지 않는다. rebuttal이 수용되면 독립 Codex 검토 작업의 task ID, evidence, verdict를 남기고 closeout coordinator가 항목을 갱신한다. 과거 `waived_by=claude` metadata는 merged 이력 호환용으로만 보존한다.
 
 ## Happy Path
 

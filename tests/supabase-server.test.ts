@@ -8,6 +8,9 @@ const createServerClient = vi.fn();
 const createClient = vi.fn();
 const getSupabaseEnv = vi.fn();
 const getServiceRoleKey = vi.fn();
+const getLocalShadowDataEnv = vi.fn();
+const getLocalDataServiceRoleKey = vi.fn();
+const createHybridShadowReadFetch = vi.fn();
 const cookieGetAll = vi.fn();
 const cookieSet = vi.fn();
 
@@ -33,9 +36,17 @@ vi.mock("@supabase/supabase-js", () => ({
   createClient,
 }));
 
+vi.mock("@/lib/server/hybrid-auth/shadow-read", () => ({
+  createHybridShadowReadFetch,
+}));
+
 vi.mock("@/lib/supabase/env", () => ({
-  getSupabaseEnv,
-  getServiceRoleKey,
+  getAuthSupabaseEnv: getSupabaseEnv,
+  getDataSupabaseEnv: getSupabaseEnv,
+  getAuthServiceRoleKey: getServiceRoleKey,
+  getDataServiceRoleKey: getServiceRoleKey,
+  getLocalDataServiceRoleKey,
+  getLocalShadowDataEnv,
 }));
 
 describe("supabase server helpers", () => {
@@ -46,6 +57,9 @@ describe("supabase server helpers", () => {
     createClient.mockReset();
     getSupabaseEnv.mockReset();
     getServiceRoleKey.mockReset();
+    getLocalDataServiceRoleKey.mockReset();
+    getLocalShadowDataEnv.mockReset();
+    createHybridShadowReadFetch.mockReset();
     cookieGetAll.mockReset();
     cookieSet.mockReset();
 
@@ -57,8 +71,13 @@ describe("supabase server helpers", () => {
     getSupabaseEnv.mockReturnValue({
       url: "http://127.0.0.1:54321",
       anonKey: "anon-key",
+      authority: "remote",
+      issuer: "http://127.0.0.1:54321/auth/v1",
+      jwksUrl: "http://127.0.0.1:54321/auth/v1/.well-known/jwks.json",
     });
     getServiceRoleKey.mockReturnValue(null);
+    getLocalDataServiceRoleKey.mockReturnValue(null);
+    createHybridShadowReadFetch.mockReturnValue(vi.fn());
   });
 
   it("does not throw when server-page auth reads trigger cookie writes", async () => {
@@ -96,6 +115,241 @@ describe("supabase server helpers", () => {
       id: "user-1",
     });
   });
+
+  it("wires safe semantic comparison into the real server fetch path in local-shadow", async () => {
+    const shadowFetch = vi.fn();
+    createHybridShadowReadFetch.mockReturnValue(shadowFetch);
+    getSupabaseEnv.mockReturnValue({
+      url: "https://remote.example",
+      anonKey: "remote-publishable",
+      authority: "local-shadow",
+      issuer: "https://remote.example/auth/v1",
+      jwksUrl: "https://remote.example/auth/v1/.well-known/jwks.json",
+    });
+    getLocalShadowDataEnv.mockReturnValue({
+      url: "http://127.0.0.1:8000",
+      anonKey: "local-publishable",
+    });
+    getLocalDataServiceRoleKey.mockReturnValue("local-service-secret");
+    createClient.mockReturnValue({ rpc: vi.fn() });
+    createServerClient.mockReturnValue({ auth: {} });
+
+    const { createAuthRouteHandlerClient } =
+      await import("@/lib/supabase/server");
+    await createAuthRouteHandlerClient();
+
+    expect(createHybridShadowReadFetch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        localDataUrl: "http://127.0.0.1:8000",
+      }),
+    );
+    expect(createServerClient).toHaveBeenCalledWith(
+      "https://remote.example",
+      "remote-publishable",
+      expect.objectContaining({
+        global: { fetch: shadowFetch },
+      }),
+    );
+  });
+
+  it("binds each local internal responsibility to an exact gateway scope", async () => {
+    getSupabaseEnv.mockReturnValue({
+      url: "http://127.0.0.1:8000",
+      anonKey: "local-publishable",
+      authority: "local",
+      issuer: "https://remote.example/auth/v1",
+      jwksUrl: "https://remote.example/auth/v1/.well-known/jwks.json",
+    });
+    getServiceRoleKey.mockReturnValue("local-service-secret");
+    const client = {
+      from: vi.fn(),
+      rpc: vi.fn(),
+      storage: {},
+    };
+    createClient.mockReturnValue(client);
+
+    const server = await import("@/lib/supabase/server");
+    const callbackClient = server.createAuthCallbackOperationsClient();
+    server.createAuthRefreshInternalDataClient();
+    server.createSessionLogoutInternalDataClient();
+    const imageClient = server.createRecipeImageInternalClient();
+    const lifecycleClient = server.createAccountLifecycleInternalRpcClient();
+    server.createYoutubeIngredientRegistrationInternalRpcClient();
+    const adminClient = server.createAdminDataInternalClient();
+    const feedbackClient = server.createNotFoundFeedbackInternalClient();
+    const eventClient = server.createOperationalEventInternalClient();
+
+    expect(createClient.mock.calls.map((call) =>
+      call[2]?.global?.headers?.["x-homecook-internal-scope"])).toEqual([
+      "auth-callback",
+      "auth-refresh",
+      "session-logout",
+      "recipe-image",
+      "account-lifecycle",
+      "youtube-ingredient-registration",
+      "admin-data",
+      "not-found-feedback",
+      "operational-event",
+    ]);
+    expect(() => imageClient?.from("users")).toThrow(
+      "Internal Data scope denied table: users",
+    );
+    expect(() => lifecycleClient?.from("recipes")).toThrow(
+      "Internal Data scope denied table: recipes",
+    );
+    expect(callbackClient).not.toHaveProperty("from");
+    expect(callbackClient).toEqual({ rpc: expect.any(Function) });
+    expect(() => adminClient?.from("recipes")).toThrow(
+      "Internal Data scope denied table: recipes",
+    );
+    expect(feedbackClient).toEqual({ rpc: expect.any(Function) });
+    expect(eventClient).toEqual({ rpc: expect.any(Function) });
+  });
+
+  it("keeps the legacy callback data facade only while Data authority is remote", async () => {
+    getServiceRoleKey.mockReturnValue("remote-service-secret");
+    const client = {
+      from: vi.fn(),
+      rpc: vi.fn(),
+      storage: {},
+    };
+    createClient.mockReturnValue(client);
+
+    const server = await import("@/lib/supabase/server");
+    const callbackClient = server.createAuthCallbackInternalDataClient();
+
+    expect(callbackClient).toHaveProperty("from", client.from);
+  });
+
+  it("executes local legacy callback bootstrap through RPC without exposing from", async () => {
+    getSupabaseEnv.mockReturnValue({
+      url: "http://127.0.0.1:8000",
+      anonKey: "local-publishable",
+      authority: "local",
+      issuer: "https://remote.example/auth/v1",
+      jwksUrl: "https://remote.example/auth/v1/.well-known/jwks.json",
+    });
+    getServiceRoleKey.mockReturnValue("local-service-secret");
+    const rpc = vi.fn().mockResolvedValue({
+      data: { status: "ok", nickname: "집밥러" },
+      error: null,
+    });
+    const client = {
+      from: vi.fn(),
+      rpc,
+      storage: {},
+    };
+    createClient.mockReturnValue(client);
+
+    const server = await import("@/lib/supabase/server");
+    const callbackClient = server.createAuthCallbackOperationsClient();
+    if (!callbackClient) {
+      throw new Error("callback client missing");
+    }
+    const result = await server.bootstrapLegacyAuthCallbackIdentity(
+      callbackClient,
+      {
+        id: "71000000-0000-4000-8000-000000000001",
+        email: " Cook@Example.COM ",
+        app_metadata: { provider: "google" },
+        user_metadata: {
+          nickname: "집밥러",
+          sub: "google-remote-sub",
+        },
+      },
+    );
+
+    expect(result).toEqual({ ok: true, nickname: "집밥러" });
+    expect(callbackClient).toEqual({ rpc: expect.any(Function) });
+    expect(client.from).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith(
+      "bootstrap_legacy_auth_callback_identity",
+      {
+        p_email: "cook@example.com",
+        p_nickname: "집밥러",
+        p_owner_uuid: "71000000-0000-4000-8000-000000000001",
+        p_profile_image_url: null,
+        p_social_id: "google-remote-sub",
+        p_social_provider: "google",
+      },
+    );
+  });
+
+  it.each([
+    [
+      {
+        code: "55000",
+        message: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      },
+      {
+        ok: false,
+        reason: "maintenance",
+        errorCode: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      },
+    ],
+    [
+      {
+        code: "55000",
+        details: "ACCOUNT_SESSION_STALE",
+        message: "legacy callback rejected",
+      },
+      {
+        ok: false,
+        reason: "stale",
+        errorCode: "ACCOUNT_SESSION_STALE",
+      },
+    ],
+    [
+      {
+        code: "XX000",
+        message: "unexpected database failure",
+      },
+      {
+        ok: false,
+        reason: "unexpected",
+        errorCode: null,
+      },
+    ],
+  ])(
+    "preserves local legacy callback RPC authority classification for %#",
+    async (rpcError, expected) => {
+      getSupabaseEnv.mockReturnValue({
+        url: "http://127.0.0.1:8000",
+        anonKey: "local-publishable",
+        authority: "local",
+        issuer: "https://remote.example/auth/v1",
+        jwksUrl: "https://remote.example/auth/v1/.well-known/jwks.json",
+      });
+      getServiceRoleKey.mockReturnValue("local-service-secret");
+      const client = {
+        from: vi.fn(),
+        rpc: vi.fn().mockResolvedValue({
+          data: null,
+          error: rpcError,
+        }),
+        storage: {},
+      };
+      createClient.mockReturnValue(client);
+
+      const server = await import("@/lib/supabase/server");
+      const callbackClient = server.createAuthCallbackOperationsClient();
+      if (!callbackClient) {
+        throw new Error("callback client missing");
+      }
+
+      await expect(server.bootstrapLegacyAuthCallbackIdentity(
+        callbackClient,
+        {
+          id: "71000000-0000-4000-8000-000000000001",
+          email: "cook@example.com",
+          app_metadata: { provider: "google" },
+          user_metadata: { sub: "google-remote-sub" },
+        },
+      )).resolves.toEqual(expected);
+      expect(callbackClient).toEqual({ rpc: expect.any(Function) });
+      expect(client.from).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("supabase schema migrations", () => {

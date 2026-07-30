@@ -11,6 +11,8 @@ const recalculateRecipeNutritionSnapshot = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createYoutubeIngredientRegistrationInternalRpcClient:
+    createServiceRoleClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -225,6 +227,10 @@ describe("36b YouTube recipe register tag write path", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
       },
+      from: vi.fn((...args: unknown[]) =>
+        createServiceRoleClient()?.from(...args)),
+      rpc: vi.fn((...args: unknown[]) =>
+        createServiceRoleClient()?.rpc(...args)),
     });
   });
 
@@ -240,7 +246,13 @@ describe("36b YouTube recipe register tag write path", () => {
     }));
 
     expect(response.status).toBe(201);
-    expect(recalculateRecipeNutritionSnapshot).toHaveBeenCalledWith(dbClient, recipeId);
+    expect(recalculateRecipeNutritionSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: expect.any(Function),
+        rpc: expect.any(Function),
+      }),
+      recipeId,
+    );
     expect(dbClient.rpc).toHaveBeenCalledWith("register_youtube_recipe_from_session", expect.objectContaining({
       p_tags: null,
       p_tag_source: "system_suggested",
@@ -260,7 +272,13 @@ describe("36b YouTube recipe register tag write path", () => {
     }));
 
     expect(response.status).toBe(201);
-    expect(recalculateRecipeNutritionSnapshot).toHaveBeenCalledWith(dbClient, recipeId);
+    expect(recalculateRecipeNutritionSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: expect.any(Function),
+        rpc: expect.any(Function),
+      }),
+      recipeId,
+    );
   });
 
   it("accepts reviewed tags and sends normalized labels to the register RPC", async () => {

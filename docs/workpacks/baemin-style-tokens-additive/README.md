@@ -1,6 +1,6 @@
 # baemin-style-tokens-additive
 
-> Stage 1 workpack. Claude owns Stages 1, 3, 4; Codex owns Stages 2, 5, 6.
+> Stage 1 workpack. 모든 Stage는 역할별 새 Codex 작업이 맡으며, 작성·구현 작업과 검토 작업의 task ID를 분리한다.
 > Dependency: `h6-baemin-style-direction` must be merged before implementation begins.
 
 ## Goal
@@ -69,7 +69,7 @@ No backend changes. Existing contracts must be preserved:
 
 ## Token Candidates
 
-Candidates for additive CSS variables. Final values are authored by Codex in Stage 2 and reviewed by Claude in Stage 3. No value is authoritative until merged.
+Candidates for additive CSS variables. Final values are authored by the Stage 2 Codex task and reviewed by a task-ID-separated Codex Stage 3 task. No value is authoritative until merged.
 
 | Token | Role | Prototype source |
 | --- | --- | --- |
@@ -114,7 +114,7 @@ Prototype source reference: `ui/designs/prototypes/baemin-redesign/HANDOFF.md` (
 ## Primary User Path
 
 1. Codex adds new CSS variables to `app/globals.css` and records them in `docs/design/design-tokens.md` (Stage 2).
-2. Claude reviews that no existing C2 values changed and no component references new tokens (Stage 3).
+2. A separate Codex Stage 3 review task verifies that no existing C2 values changed and no component references new tokens.
 3. CI runs `pnpm verify:frontend`; no visual diff expected.
 4. User reviews the token candidate values before merge (Stage 4).
 

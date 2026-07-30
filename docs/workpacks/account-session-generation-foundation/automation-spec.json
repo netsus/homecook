@@ -32,7 +32,7 @@
       "hook-owner-schema-usage-and-capability-select-only",
       "hook-owner-no-dml-column-update-membership-or-set-role",
       "personal-writer-storage-policy-service-callsite-inventory-complete",
-      "local-remote-auth-users-inbound-fk-delete-action-inventory-complete",
+      "server-production-and-local-rehearsal-auth-users-inbound-fk-delete-action-inventory-complete",
       "attempt-scoped-staging-does-not-create-canonical-authority",
       "auth-public-personal-owner-exact-one-classification",
       "unknown-symmetric-difference-preserved-as-quarantine",
@@ -52,8 +52,8 @@
       "api-envelope-and-error-object-preserved",
       "no-service-key-user-client-fallback",
       "client-owner-generation-capability-injection-denied",
-      "merged-exact-sha-only-remote-migration",
-      "remote-f0-remains-legacy-and-canonical-zero",
+      "merged-exact-sha-only-server-production-migration",
+      "server-production-f0-remains-legacy-and-canonical-zero",
       "no-secrets-raw-jwt-session-or-user-identifiers-in-evidence",
       "codex-author-review-security-authority-sessions-separated"
     ],
@@ -61,8 +61,6 @@
       "pnpm exec vitest run tests/account-session-generation-foundation.test.ts tests/account-session-generation-routes.test.ts tests/account-session-generation-inventory.test.ts tests/account-session-generation-security.test.ts tests/account-session-generation-scheduler.test.ts",
       "pnpm test:account-session-generation:postgres",
       "pnpm verify:backend",
-      "node scripts/verify-account-session-generation-remote.mjs --mode inventory",
-      "node scripts/verify-account-session-generation-remote.mjs --mode post-merge-dark-ship",
       "pnpm account-maintenance:scheduler:verify -- --dry-run",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
@@ -79,9 +77,9 @@
       "tests/account-session-generation-scheduler.test.ts",
       "tests/account-session-generation-postgres.integration.test.ts",
       "local existing/fresh/replay migration evidence",
-      "local and remote exact-principal role matrix evidence",
-      "read-only remote writer/FK/policy/hook inventory evidence",
-      "merged-exact-SHA remote dark-ship evidence"
+      "server-production and local-rehearsal exact-principal role matrix evidence",
+      "server-production/local-rehearsal writer/FK/policy/hook inventory evidence",
+      "merged-exact-SHA server-production dark-ship evidence"
     ]
   },
   "frontend": {
@@ -157,10 +155,9 @@
     }
   },
   "external_smokes": [
-    "node scripts/verify-account-session-generation-remote.mjs --mode inventory (read-only before merge)",
-    "node scripts/verify-account-session-generation-remote.mjs --mode post-merge-dark-ship (merged exact SHA only)",
-    "remote exact-principal Hook ACL and legacy allow smoke with supabase_auth_admin",
-    "remote personal-writer and auth.users inbound-FK inventory completeness",
+    "server MacBook local production and isolated local rehearsal exact-principal Hook ACL and legacy allow smoke with supabase_auth_admin",
+    "server MacBook local production personal-writer and auth.users inbound-FK inventory completeness",
+    "initial deployment keeps remote verifier/provider barrier/remote migration N/A until contract-evolution",
     "deployed DELETE /api/v1/users/me legacy compatibility smoke without destructive production account deletion",
     "deployed POST /api/v1/users/me/cutover-quarantine-resolution unauthorized and legacy non-exposure smoke",
     "pnpm account-maintenance:scheduler:verify -- --dry-run"
@@ -182,11 +179,11 @@
     "canonical-lifecycle-or-watermark-row-created-before-joint-promote",
     "generation-and-legacy-authority-enabled-together",
     "production-maintenance-or-generation-active-transition-before-slice-3-joint-gate",
-    "unmerged-migration-applied-to-remote",
-    "remote-migration-sha-does-not-match-merged-source",
+    "unmerged-migration-applied-outside-server-production-authority",
+    "server-production-migration-sha-does-not-match-merged-source",
     "auth-admin-import-dashboard-freeze-or-hook-health-missing-at-joint-gate",
     "external-write-attempt-nonterminal-at-maintenance",
-    "auth-write-lock-or-provider-supported-barrier-unavailable",
+    "server-production-auth-write-lock-unavailable",
     "auth-public-personal-digest-mismatch",
     "classification-unresolved-nonzero",
     "owned-unverified-or-owner-path-unverified-nonzero-at-joint-activation",

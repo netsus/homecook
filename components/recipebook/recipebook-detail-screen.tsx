@@ -49,7 +49,7 @@ import { getSurfaceChromeRule } from "@/lib/navigation/app-nav";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import { getRecipeBookCoverViewModel } from "@/lib/recipebook-cover";
 import { resolveRecipeImage } from "@/lib/recipe-image";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type {
   RecipeBookReaderRecipeData,
@@ -861,7 +861,7 @@ export function RecipeBookDetailScreen({
         return;
       }
 
-      const supabase = getSupabaseBrowserClient();
+      const supabase = getAuthSupabaseBrowserClient();
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
@@ -880,7 +880,7 @@ export function RecipeBookDetailScreen({
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
+    const supabase = getAuthSupabaseBrowserClient();
 
     void supabase.auth
       .getSession()

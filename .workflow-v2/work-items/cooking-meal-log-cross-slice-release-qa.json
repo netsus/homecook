@@ -7,7 +7,7 @@
   "surface": "fullstack",
   "risk": "high",
   "preset": "vertical-slice-strict",
-  "goal": "local/remote DB·API·browser·security·performance·design·rollback/legacy 증거와 current-head checks를 모두 blocker 0으로 닫되 defect는 별도 TDD repair PR과 full rerun으로만 처리한다.",
+  "goal": "server MacBook local production·isolated local rehearsal DB/API/browser/security/performance/design/rollback/legacy 증거와 current-head checks를 모두 blocker 0으로 닫되 defect는 별도 TDD repair PR과 full rerun으로만 처리한다.",
   "owners": {
     "claude": "forbidden by explicit user instruction; do not invoke Claude for any stage",
     "codex": "separate sessions for Stage 1 author, internal 1.5 reviewer/repair-final, security-DB-operations reviewer, five-axis reviewer, design-authority-plan reviewer, Stage 2/3 verification, Stage 4 browser evidence, Stage 5 authority, Stage 6 and closeout; no self-approval",
@@ -35,11 +35,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.25.md",
+      "docs/화면정의서-v1.5.29.md",
+      "docs/유저flow맵-v1.3.27.md",
+      "docs/db설계-v1.3.26.md",
+      "docs/api문서-v1.2.29.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -75,21 +75,21 @@
       "ui/designs/PLANNER_WEEK.md",
       "ui/designs/COOK_MODE.md",
       "ui/designs/MEAL_LOG.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
     ]
   },
   "workflow": {
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "application provider function and Auth Hook inventories local and remote",
+      "application provider function and Auth Hook inventories on local production and isolated local rehearsal",
       "fresh local migrations replay RLS PostgREST Auth Storage and A-B isolation",
       "account generation cutover quarantine cleanup image lifecycle and owner-signal-zero",
       "search 287041 product link personal recipe propagation batch ledger and meal aggregate end-to-end",
       "v1-v2 current-immediate-previous seeded drain rollback and legacy retention",
       "real Chrome eight required screens at 390 320 desktop with fresh authority",
       "independent security DB operations performance code Stage5 authority and Stage6 reviews",
-      "production staging provider mutations intentionally zero"
+      "external provider mutations intentionally zero while local-first production is authoritative"
     ],
     "execution_mode": "manual",
     "evaluator_profile": "vertical-slice-strict",
@@ -121,7 +121,7 @@
       "pnpm validate:exploratory-qa-evidence -- --slice cooking-meal-log-cross-slice-release-qa",
       "pnpm validate:authority-evidence-presence -- --slice cooking-meal-log-cross-slice-release-qa",
       "pnpm validate:closeout-sync -- --slice cooking-meal-log-cross-slice-release-qa",
-      "node scripts/verify-cooking-meal-log-cross-slice-release-qa-remote.mjs --mode post-merge-read-only",
+      "node scripts/verify-cooking-meal-log-cross-slice-release-qa-local-first.mjs --mode post-merge-read-only",
       "git diff --check"
     ],
     "verify_commands": [
@@ -145,7 +145,7 @@
       "separate Codex Stage 5 authority and Stage 6 closeout reviews"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
+      "approved-plan-sha256-and-1056-line-lock",
       "stage1-exact-six-roadmap-readme-acceptance-automation-work-item-status",
       "roadmap-docs-workflow-lifecycle-planned-separation",
       "verification-only-no-inline-runtime-repair",
@@ -157,11 +157,11 @@
       "v1-v2-seeded-drain-rollback-and-legacy-tombstone-barriers",
       "content-only-batch-ledger-and-meal-entry-event-link",
       "exact-nutrition-timezone-aggregate-and-xp-semantics",
-      "fresh-local-db-and-merged-exact-sha-remote-read-only",
+      "fresh-local-db-and-merged-exact-sha-local-first-production-rehearsal",
       "measured-performance-and-no-item-level-n-plus-1",
       "eight-screen-real-chrome-390-320-desktop-evidence",
       "fresh-exact-head-authority-stage5-stage6-findings-zero",
-      "production-staging-provider-write-zero",
+      "external-provider-write-zero",
       "stage1-current-vs-full-lifecycle-command-honesty",
       "current-head-all-started-checks-terminal-green-or-intended-skip",
       "post-merge-master-qa-policy-security-vercel-green"
@@ -183,10 +183,10 @@
     "R+2 activation or strict v1 removal",
     "Legacy product planner nutrition cursor image path or row tombstone",
     "Legacy orphan enqueue delete or retention cleanup",
-    "Production staging provider writes without separate production-safe authority",
+    "External provider writes without separate contract-evolution authority",
     "Product MacBook launchd install or production secret provisioning before Manual Only approval",
     "Physical-device actual-screen-reader and true-production-scale claims during Stage 1"
   ],
   "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security-DB-operations, five-axis and design-authority-plan reviews reach zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; required_checks is the full-lifecycle gate and verify_commands is the current executable subset. Runtime verification waits for every F0 and #1 through #13 implementation/closeout current-head gate. The docs_refs entry for ui/designs/MEAL_LOG.md is a future #12-owned predecessor path reservation, not current evidence; its matching critique and authority artifacts must also be created and merged by #12 before #14 Stage 2 can start. Defects require a separate TDD repair PR and full rerun on the repaired exact head. No production/staging/provider write, destructive tombstone, legacy orphan deletion, R+2 activation or Manual Only installation is authorized."
+  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security-DB-operations, five-axis and design-authority-plan reviews reach zero findings. Stage 1 runs docs validators/tests/lint/typecheck/audit/diff; required_checks is the full-lifecycle gate and verify_commands is the current executable subset. Runtime verification waits for every F0 and #1 through #13 implementation/closeout current-head gate. Initial deployment uses server MacBook local production plus isolated local rehearsal; remote verifier/provider barrier/remote migration are N/A until contract-evolution. The docs_refs entry for ui/designs/MEAL_LOG.md is a future #12-owned predecessor path reservation, not current evidence; its matching critique and authority artifacts must also be created and merged by #12 before #14 Stage 2 can start. Defects require a separate TDD repair PR and full rerun on the repaired exact head. No external-provider write, destructive tombstone, legacy orphan deletion, R+2 activation or Manual Only installation is authorized."
 }

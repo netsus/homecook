@@ -15,7 +15,22 @@ const awardUserProgressEvent = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
+  createRouteHandlerClient: async (...args: unknown[]) => {
+    const routeClient = await createRouteHandlerClient(...args);
+    const createDataClient = createServiceRoleClient.getMockImplementation();
+    const dataClient = createDataClient?.();
+    return {
+      ...routeClient,
+      ...dataClient,
+      auth: routeClient.auth,
+      rpc: dataClient?.rpc
+        ?? routeClient.rpc
+        ?? vi.fn(async () => ({
+          data: null,
+          error: { code: "PGRST202" },
+        })),
+    };
+  },
   createServiceRoleClient,
 }));
 
@@ -179,7 +194,7 @@ describe("/api/v1/recipe-books", () => {
         {
           data: [
             {
-              id: "book-my",
+              id: "91000000-0000-4000-8000-000000000001",
               name: "내가 추가한 레시피",
               book_type: "my_added",
               cover_color_key: "lavender",
@@ -187,7 +202,7 @@ describe("/api/v1/recipe-books", () => {
               sort_order: 0,
             },
             {
-              id: "book-saved",
+              id: "91000000-0000-4000-8000-000000000002",
               name: "저장한 레시피",
               book_type: "saved",
               cover_color_key: "sky",
@@ -195,7 +210,7 @@ describe("/api/v1/recipe-books", () => {
               sort_order: 1,
             },
             {
-              id: "book-liked",
+              id: "91000000-0000-4000-8000-000000000003",
               name: "좋아요한 레시피",
               book_type: "liked",
               cover_color_key: "coral",
@@ -203,7 +218,7 @@ describe("/api/v1/recipe-books", () => {
               sort_order: 2,
             },
             {
-              id: "book-custom",
+              id: "91000000-0000-4000-8000-000000000004",
               name: "주말 파티",
               book_type: "custom",
               cover_color_key: "sand",
@@ -254,13 +269,13 @@ describe("/api/v1/recipe-books", () => {
     const response = await GET(new Request("http://localhost:3000/api/v1/recipe-books"));
     const body = await response.json();
 
-    expect(response.status).toBe(200);
+    expect(response.status, JSON.stringify(body)).toBe(200);
     expect(body).toEqual({
       success: true,
       data: {
         books: [
           {
-            id: "book-my",
+            id: "91000000-0000-4000-8000-000000000001",
             name: "내가 추가한 레시피",
             book_type: "my_added",
             recipe_count: 1,
@@ -269,7 +284,7 @@ describe("/api/v1/recipe-books", () => {
             sort_order: 0,
           },
           {
-            id: "book-saved",
+            id: "91000000-0000-4000-8000-000000000002",
             name: "저장한 레시피",
             book_type: "saved",
             recipe_count: 2,
@@ -278,7 +293,7 @@ describe("/api/v1/recipe-books", () => {
             sort_order: 1,
           },
           {
-            id: "book-liked",
+            id: "91000000-0000-4000-8000-000000000003",
             name: "좋아요한 레시피",
             book_type: "liked",
             recipe_count: 2,
@@ -287,7 +302,7 @@ describe("/api/v1/recipe-books", () => {
             sort_order: 2,
           },
           {
-            id: "book-custom",
+            id: "91000000-0000-4000-8000-000000000004",
             name: "주말 파티",
             book_type: "custom",
             recipe_count: 1,
@@ -302,20 +317,28 @@ describe("/api/v1/recipe-books", () => {
     expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
     expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
     expect(recipeBookItemsTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
-    expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "book-saved");
-    expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "book-custom");
+    expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "91000000-0000-4000-8000-000000000002");
+    expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "91000000-0000-4000-8000-000000000004");
     expect(recipeLikesTable.select).toHaveBeenCalledWith("recipe_id", { count: "exact", head: true });
     expect(recipesTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
   });
 
-  it("GET resolves a managed private cover only after the owned book list is authorized", async () => {
+  it("GET resolves a managed private cover from local Supabase only after the owned book list is authorized", async () => {
     const bookId = "11111111-1111-4111-8111-111111111111";
     const ownerId = "22222222-2222-4222-8222-222222222222";
     const objectId = "33333333-3333-4333-8333-333333333333";
     const signedUrl =
-      "https://project.supabase.co/storage/v1/object/sign/recipe-images-private/cover?token=short";
+      "http://127.0.0.1:54321/storage/v1/object/sign/recipe-images-private/cover?token=short";
     let ownedBookListCompleted = false;
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
+    process.env.HOMECOOK_DATA_AUTHORITY = "local";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL
+      = "https://auth.example.supabase.co";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY
+      = "remote-auth-publishable";
+    process.env.NEXT_PUBLIC_SUPABASE_URL
+      = "https://legacy-auth.example.supabase.co";
+    process.env.DATA_SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.DATA_SUPABASE_PUBLISHABLE_KEY = "local-data-publishable";
 
     const recipeBooksTable = createRecipeBooksTable({
       selectResults: [],
@@ -363,6 +386,8 @@ describe("/api/v1/recipe-books", () => {
           image_object_id: objectId,
           bucket_id: "recipe-images-private",
           object_path: `${ownerId}/1/${objectId}.webp`,
+          owner_uuid: ownerId,
+          account_generation: 1,
           visibility: "private",
           state: "attached_private",
           reference_type: "recipe_book_cover",

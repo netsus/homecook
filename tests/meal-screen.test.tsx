@@ -65,7 +65,7 @@ vi.mock("@/lib/supabase/env", () => ({
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
-  getSupabaseBrowserClient: () => ({
+  getAuthSupabaseBrowserClient: () => ({
     auth: {
       getSession: vi.fn(async () => ({ data: { session: null } })),
       onAuthStateChange: vi.fn(() => ({

@@ -1,0 +1,51 @@
+{
+  "captured_at": "2026-07-30",
+  "target": {
+    "container": "homecook-hybrid-encrypted-restore-20260730",
+    "image": "public.ecr.aws/supabase/postgres:17.6.1.121",
+    "published_ports": {},
+    "production": false,
+    "dev_stack": false
+  },
+  "before": {
+    "auth_users": 0,
+    "public_users": 5,
+    "public_tables": 82,
+    "storage_objects": 1,
+    "invalid_constraints": 0,
+    "admin_members_missing_auth": 1,
+    "admin_audit_missing_auth": 99
+  },
+  "after": {
+    "auth_users": 0,
+    "public_users": 5,
+    "public_tables": 82,
+    "storage_objects": 1,
+    "invalid_constraints": 0,
+    "auth_users_fk_residual": 0,
+    "auth_users_proc_residual": 0,
+    "auth_users_external_depend_residual": 0,
+    "admin_members_missing_public": 0,
+    "admin_audit_missing_public": 0,
+    "account_generation_capability": "legacy",
+    "postgrest_pre_request": "private.verify_hybrid_request_authority",
+    "pre_request_schema_usage": {
+      "anon": true,
+      "authenticated": true,
+      "service_role": true
+    },
+    "pre_request_execute": {
+      "anon": true,
+      "authenticated": true,
+      "service_role": true
+    },
+    "private_decoder_authenticated_execute": false
+  },
+  "transaction_canary": "HYBRID_SESSION_AUTHORITY_TRANSACTION_PASS",
+  "writes": {
+    "production": false,
+    "cutover": false,
+    "canary_transaction_rolled_back": true,
+    "isolated_authorization_repair_applied": true
+  }
+}

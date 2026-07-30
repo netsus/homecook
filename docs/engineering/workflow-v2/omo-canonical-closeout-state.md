@@ -1,5 +1,7 @@
 # OMO Canonical Closeout State
 
+> `claude_*` field와 reason code는 과거 closeout record 호환용이다. 신규 Stage actor나 provider 호출 근거로 사용하지 않는다.
+
 ## Status
 
 - 상태: `draft`
@@ -286,7 +288,7 @@ Codex-orchestrated OMO rail에서는 closeout/report가 "사람에게 넘겼는�
 최소 projection은 아래를 구분한다.
 
 - `codex_repairable`: Codex가 repo-local reversible edit 또는 evidence sync로 복구한 drift
-- `claude_repairable`: Claude-owned stage artifact/authority evidence repair
+- `claude_repairable`: 과거 Claude-owned artifact/authority evidence repair를 보존하는 legacy code. 신규 실행에 생성하지 않음
 - `manual_decision_required`: 사람 결정이 필요해 escalation이 허용된 경우
 - `ci_wait`: current-head check wait/resume처럼 repair가 아니라 대기였던 경우
 

@@ -214,6 +214,19 @@ function normalizeSettings(value: unknown) {
   return { ...(value as Record<string, unknown>) };
 }
 
+export function buildLegacyAuthCallbackProfile(
+  user: Pick<User, "id" | "email" | "app_metadata" | "user_metadata">,
+) {
+  return {
+    email: normalizeUserEmail(user.email),
+    nickname: normalizeNickname(normalizeMetadata(user.user_metadata).nickname),
+    ownerUuid: user.id,
+    profileImageUrl: normalizeProfileImage(user),
+    socialId: normalizeSocialId(user),
+    socialProvider: normalizeProvider(user),
+  };
+}
+
 function getBootstrapVersion(settings: Record<string, unknown>) {
   const rawValue = settings[USER_BOOTSTRAP_VERSION_KEY];
 

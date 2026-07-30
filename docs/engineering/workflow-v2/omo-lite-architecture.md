@@ -1,12 +1,15 @@
 # Homecook OMO-Lite Architecture
 
+> **Legacy architecture note.**
+> Claude actor를 포함한 실행 설계는 retired 상태다. 신규 Stage 실행 기준은 `docs/engineering/codex-task-handoff.md`이며,
+> 이 문서의 Claude 명칭과 session field는 과거 runtime/artifact 호환 설명으로만 읽는다.
+
 ## Status
 
-- 이 문서는 `Codex supervisor 기반 Homecook OMO-lite` 설계안이다.
-- 아직 저장소의 기본 운영 규칙을 직접 대체하지 않는다.
+- 이 문서는 과거 `Codex supervisor 기반 Homecook OMO-lite` 설계안이다.
+- 저장소의 현재 운영 규칙을 대체하지 않는다.
 - 현재 authoritative path는 계속 `AGENTS.md`, `docs/engineering/slice-workflow.md`, `docs/engineering/agent-workflow-overview.md`다.
-- 이 설계안은 full OpenCode migration이 아니라, 현재 저장소 위에 얹는 `workflow supervisor` 아키텍처를 정의한다.
-- 다음 phase에서는 `generic session-orchestrator core + Homecook adapter` 구조를 추가하며, 이 문서는 그 target architecture를 먼저 잠근다.
+- 이 설계안의 workflow supervisor와 `generic session-orchestrator core + Homecook adapter` target은 retired 상태다.
 
 ## Core Definition
 

@@ -58,14 +58,13 @@
       "current-immediate-previous-flag-off-new-personal-and-v2-creation-zero",
       "v1-body-response-parser-and-consumed-ingredient-semantics-unchanged",
       "no-unofficial-endpoint-field-status-error-code-or-action",
-      "no-unmerged-remote-migration-production-write-or-capability-change"
+      "no-unmerged-server-production-migration-production-write-or-capability-change"
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/recipe-content-snapshot-future-propagation.test.ts tests/recipe-future-impact-security.test.ts tests/snapshot-v2-session-attempts.test.ts tests/recipe-shopping-reconciliation.test.ts",
       "pnpm test:recipe-content-snapshot-future-propagation:postgres",
       "pnpm verify:backend",
       "pnpm test:e2e:regression:ci --grep recipe-content-snapshot-future-propagation",
-      "node scripts/verify-recipe-content-snapshot-future-propagation-remote.mjs --mode post-merge-read-only",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
       "BRANCH_NAME=docs/recipe-content-snapshot-future-propagation pnpm validate:workpack -- --slice recipe-content-snapshot-future-propagation",
@@ -88,7 +87,7 @@
       "planner-pin-standalone-pin-and-same-meal-claim-concurrency-evidence",
       "v1-v2-explicit-dispatch-cancel-replay-and-rollback-drain-evidence",
       "capability-off-current-immediate-previous-zero-new-write-evidence",
-      "merged-exact-sha-remote-read-only-function-policy-capability-evidence"
+      "merged-exact-sha-server-production-local-rehearsal-read-only-function-policy-capability-evidence"
     ]
   },
   "frontend": {
@@ -166,7 +165,7 @@
     }
   },
   "external_smokes": [
-    "merged-exact-SHA remote verifier is read-only and reports preview/session functions ACL RLS policies constraints and capability state",
+    "merged-exact-SHA server-production/local-rehearsal verifier is read-only and reports preview/session functions ACL RLS policies constraints and capability state",
     "two-owner preview and patch denial matrix leaves exact before-after recipe Meal shopping claim digests unchanged",
     "G1 delayed preview-or-patch and G2 recreation never commits an old-generation target",
     "keep preserves all pins while replace-all changes only eligible unclaimed future pins",
@@ -207,12 +206,12 @@
     "required-design-critic-authority-or-390-320-evidence-missing-before-confirmed",
     "unofficial-endpoint-field-status-error-code-or-screen-invented",
     "unmerged-migration-production-write-or-capability-change",
-    "remote-verifier-sha-not-merged-exact-source",
+    "local-first-verifier-sha-not-merged-exact-source",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
   "max_fix_rounds": {
     "backend": 6,
     "frontend": 4
   },
-  "notes": "This is a DB/security/concurrency and high-risk UI integration Stage 1 lock. Stage 1 runs only current docs validators, focused workflow tests, lint, typecheck, audit and diff. Backend migrations/RPCs, PostgreSQL, real DB, components, E2E, visual/a11y, remote and release evidence are future artifacts. Implementation is blocked until #4/#6 runtime and cook-mode-whole-board merge. #7 dark-ships impact integration plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation."
+  "notes": "This is a DB/security/concurrency and high-risk UI integration Stage 1 lock. Stage 1 runs only current docs validators, focused workflow tests, lint, typecheck, audit and diff. Backend migrations/RPCs, PostgreSQL, real DB, components, E2E, visual/a11y, server-production/local-rehearsal and release evidence are future artifacts. Implementation is blocked until #4/#6 runtime and cook-mode-whole-board merge. #7 dark-ships impact integration plus v2 start/cancel/read and explicit dispatch; #8 owns exact-pantry completion and the R/R+1 gate before R+2 joint activation."
 }

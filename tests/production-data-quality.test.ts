@@ -67,19 +67,97 @@ describe("production data quality gate", () => {
     );
   });
 
-  it("allows a loopback canonical URL for an explicit LAN-bound Mac production", () => {
+  it("allows a trusted LAN production origin with remote Auth", () => {
     const result = validateProductionEnv({
       NODE_ENV: "production",
       HOMECOOK_PRODUCTION_EXPOSURE: "lan",
-      NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
-      NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3100",
-      NEXT_PUBLIC_SITE_URL: "http://127.0.0.1:3100",
+      NEXT_PUBLIC_SUPABASE_URL: "https://auth-project.supabase.co",
+      NEXT_PUBLIC_APP_URL: "http://cwjsui-macbookpro.local:3100",
+      NEXT_PUBLIC_SITE_URL: "http://cwjsui-macbookpro.local:3100",
     });
 
     expect(result.errors).toEqual([]);
     expect(result.warnings).toContain(
       "LAN production은 신뢰하는 같은 네트워크에서만 접속해야 합니다.",
     );
+  });
+
+  it("allows a loopback Supabase URL only for explicit local-only production", () => {
+    const result = validateProductionEnv({
+      NODE_ENV: "production",
+      HOMECOOK_PRODUCTION_EXPOSURE: "local-only",
+      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+      NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3100",
+      NEXT_PUBLIC_SITE_URL: "http://127.0.0.1:3100",
+    });
+
+    expect(result.errors).toEqual([]);
+  });
+
+  it("still blocks a loopback Supabase URL for public production", () => {
+    const result = validateProductionEnv({
+      NODE_ENV: "production",
+      HOMECOOK_PRODUCTION_EXPOSURE: "public",
+      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+      NEXT_PUBLIC_APP_URL: "https://homecook.example",
+    });
+
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: "PRODUCTION_LOCAL_SUPABASE_URL",
+      }),
+    ]);
+  });
+
+  it("requires loopback app origins before allowing a local-only Supabase URL", () => {
+    const result = validateProductionEnv({
+      NODE_ENV: "production",
+      HOMECOOK_PRODUCTION_EXPOSURE: "local-only",
+      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+      NEXT_PUBLIC_APP_URL: "https://homecook.example",
+      NEXT_PUBLIC_SITE_URL: "https://homecook.example",
+    });
+
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: "PRODUCTION_LOCAL_SUPABASE_URL",
+      }),
+    ]);
+  });
+
+  it.each([
+    "http://localhost.:54321",
+    "http://[::1]:54321",
+    "http://[::ffff:127.0.0.1]:54321",
+  ])("blocks canonical loopback variant %s for public production", (supabaseUrl) => {
+    const result = validateProductionEnv({
+      NODE_ENV: "test",
+      VERCEL_ENV: "production",
+      HOMECOOK_PRODUCTION_EXPOSURE: "public",
+      NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
+      NEXT_PUBLIC_APP_URL: "https://homecook.example",
+    });
+
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: "PRODUCTION_LOCAL_SUPABASE_URL",
+      }),
+    ]);
+  });
+
+  it("blocks loopback Supabase when the production data gate is explicitly enabled", () => {
+    const result = validateProductionEnv({
+      NODE_ENV: "test",
+      HOMECOOK_VALIDATE_PRODUCTION_DATA: "1",
+      NEXT_PUBLIC_SUPABASE_URL: "http://[::1]:54321",
+      NEXT_PUBLIC_APP_URL: "https://homecook.example",
+    });
+
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: "PRODUCTION_LOCAL_SUPABASE_URL",
+      }),
+    ]);
   });
 
   it("still blocks localhost URLs when local-only production is not explicit", () => {

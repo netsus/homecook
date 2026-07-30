@@ -131,7 +131,7 @@ import {
   RECIPE_BOOK_COVER_TONES,
 } from "@/lib/recipebook-cover";
 import { resolveRecipeImage } from "@/lib/recipe-image";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type {
   RecipeBookCoverColorKey,
@@ -1309,7 +1309,7 @@ export function MypageScreen({
         return;
       }
 
-      const supabase = getSupabaseBrowserClient();
+      const supabase = getAuthSupabaseBrowserClient();
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
@@ -1328,7 +1328,7 @@ export function MypageScreen({
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
+    const supabase = getAuthSupabaseBrowserClient();
 
     void supabase.auth
       .getSession()

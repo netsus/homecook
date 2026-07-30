@@ -13,7 +13,7 @@ const cookieGet = vi.fn();
 const cookieGetAll = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
+  createAuthRouteHandlerClient: createRouteHandlerClient,
 }));
 
 vi.mock("next/headers", () => ({ cookies }));

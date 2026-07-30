@@ -7,6 +7,7 @@ import { buildUnavailableRecipeNutrition } from "@/lib/nutrition/recipe-nutritio
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
+const QUARANTINE_STATE_COOKIE = "homecook.qa-account-quarantine-state";
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 const EVIDENCE_DIR = path.resolve(
   process.cwd(),
@@ -15,6 +16,55 @@ const EVIDENCE_DIR = path.resolve(
 
 const MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
 const NARROW_VIEWPORT = { width: 320, height: 568 } as const;
+
+function hybridViewport(projectName: string) {
+  const width = projectName === "mobile-ios-small"
+    ? 320
+    : projectName === "mobile-chrome"
+      ? 390
+      : 1280;
+  return { width, height: width < 500 ? 844 : 900 };
+}
+
+function observeImageMutations(page: Page) {
+  const directStorage: string[] = [];
+  const serverImageApi: string[] = [];
+  page.on("request", (request) => {
+    if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method())) {
+      return;
+    }
+    const pathname = new URL(request.url()).pathname;
+    if (pathname.includes("/storage/v1/object")) {
+      directStorage.push(`${request.method()} ${pathname}`);
+    }
+    if (pathname.startsWith("/api/v1/recipes/images")) {
+      serverImageApi.push(`${request.method()} ${pathname}`);
+    }
+  });
+  return { directStorage, serverImageApi };
+}
+
+function hybridImageFile(name: string) {
+  return {
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR42mP8z8BQDwAFgwJ/l4e5WQAAAABJRU5ErkJggg==",
+      "base64",
+    ),
+    mimeType: "image/png",
+    name,
+  };
+}
+
+async function fillRequiredManualRecipeFields(page: Page, title: string) {
+  await page.getByLabel("요리 이름").fill(title);
+  await page.getByRole("button", { name: "+ 재료 추가하기" }).click();
+  const ingredientDialog = page.getByRole("dialog", { name: "재료로 검색" });
+  await ingredientDialog.locator("label").filter({ hasText: "김치" }).click();
+  await ingredientDialog.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+  await page.getByRole("button", { name: "손질" }).click();
+  await page.getByLabel("만들기 1 설명").fill("김치를 손질한다");
+  await page.getByRole("button", { name: "+ 만들기 추가" }).click();
+}
 
 function createFoodThumbDataUri(label: string, background: string) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540"><rect width="960" height="540" fill="${background}"/><circle cx="480" cy="270" r="150" fill="rgba(255,255,255,0.72)"/><text x="480" y="306" text-anchor="middle" font-family="Apple Color Emoji, Segoe UI Emoji, sans-serif" font-size="108">${label}</text></svg>`;
@@ -34,20 +84,23 @@ async function preparePage(
   return { context, page };
 }
 
-async function setAuthOverride(page: Page) {
+async function setAuthOverride(
+  page: Page,
+  state: "authenticated" | "guest" = "authenticated",
+) {
   await page.context().addCookies([
     {
       name: E2E_AUTH_OVERRIDE_COOKIE,
       sameSite: "Lax",
       url: BASE_URL,
-      value: "authenticated",
+      value: state,
     },
   ]);
   await page.addInitScript(
     ({ key, state }) => {
       window.localStorage.setItem(key, state);
     },
-    { key: E2E_AUTH_OVERRIDE_KEY, state: "authenticated" },
+    { key: E2E_AUTH_OVERRIDE_KEY, state },
   );
 }
 
@@ -200,7 +253,11 @@ async function installYoutubeRoutes(page: Page) {
 
 async function installManualRoutes(
   page: Page,
-  onCreateBody?: (body: Record<string, unknown>) => void,
+  options?: {
+    imageUploadMode?: "legacy" | "managed";
+    onCreateBody?: (body: Record<string, unknown>) => void;
+    onUploadHeaders?: (headers: Record<string, string>) => void;
+  },
 ) {
   await installCookingMethodRoutes(page);
 
@@ -222,14 +279,24 @@ async function installManualRoutes(
       return;
     }
 
+    options?.onUploadHeaders?.(route.request().headers());
+
     await route.fulfill({
       status: 201,
       json: {
         success: true,
-        data: {
-          thumbnail_url: createFoodThumbDataUri("김밥", "#FFE2CF"),
-          storage_path: "recipe-images/user-1/slice31.webp",
-        },
+        data:
+          options?.imageUploadMode === "managed"
+            ? {
+                image_object_id: "550e8400-e29b-41d4-a716-446655440331",
+                state: "uploaded_unlinked",
+                read_url: "https://signed.example.com/managed-image.png",
+                read_url_expires_at: "2099-07-30T03:05:00.000Z",
+              }
+            : {
+                thumbnail_url: createFoodThumbDataUri("김밥", "#FFE2CF"),
+                storage_path: "recipe-images/user-1/slice31.webp",
+              },
         error: null,
       },
     });
@@ -241,7 +308,7 @@ async function installManualRoutes(
       return;
     }
 
-    onCreateBody?.(route.request().postDataJSON() as Record<string, unknown>);
+    options?.onCreateBody?.(route.request().postDataJSON() as Record<string, unknown>);
     await route.fulfill({
       status: 201,
       json: {
@@ -359,8 +426,10 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       current: null,
     };
     try {
-      await installManualRoutes(manual.page, (body) => {
-        manualCreateBody.current = body;
+      await installManualRoutes(manual.page, {
+        onCreateBody: (body) => {
+          manualCreateBody.current = body;
+        },
       });
       await manual.page.goto("/menu/add/manual");
       await stabilize(manual.page);
@@ -423,5 +492,393 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
     } finally {
       void narrow.context.close().catch(() => {});
     }
+  });
+
+  test("hybrid-auth-local-data-production keeps managed image mutations server-side at exact target widths", async ({
+    page,
+  }, testInfo) => {
+    const viewport = hybridViewport(testInfo.project.name);
+    await page.setViewportSize(viewport);
+    const imageMutations = observeImageMutations(page);
+    const manualCreateBody: { current: Record<string, unknown> | null } = {
+      current: null,
+    };
+    const uploadHeaders: { current: Record<string, string> | null } = {
+      current: null,
+    };
+
+    await setAuthOverride(page);
+    await installManualRoutes(page, {
+      imageUploadMode: "managed",
+      onCreateBody: (body) => {
+        manualCreateBody.current = body;
+      },
+      onUploadHeaders: (headers) => {
+        uploadHeaders.current = headers;
+      },
+    });
+    await page.goto("/menu/add/manual");
+    await stabilize(page);
+    expect(await page.evaluate(() => window.innerWidth)).toBe(viewport.width);
+    await page
+      .getByTestId("manual-image-file-input")
+      .setInputFiles(hybridImageFile("slice31-managed.png"));
+    await expect(page.getByTestId("manual-image-preview")).toBeVisible();
+
+    await fillRequiredManualRecipeFields(page, "관리형 이미지 김치찌개");
+    await page.getByRole("button", { name: "저장" }).click();
+
+    await expect(page.getByText("레시피 등록 완료")).toBeVisible();
+    expect(uploadHeaders.current?.["idempotency-key"]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(manualCreateBody.current?.image_object_id).toBe(
+      "550e8400-e29b-41d4-a716-446655440331",
+    );
+    expect(manualCreateBody.current?.thumbnail_url).toBeUndefined();
+    expect(imageMutations.directStorage).toEqual([]);
+    expect(imageMutations.serverImageApi).toEqual(["POST /api/v1/recipes/images"]);
+  });
+
+  test("hybrid-auth-local-data-production preserves upload failure, cancel, create failure, and retry", async ({
+    page,
+  }, testInfo) => {
+    const viewport = hybridViewport(testInfo.project.name);
+    await page.setViewportSize(viewport);
+    const imageMutations = observeImageMutations(page);
+
+    await setAuthOverride(page);
+    await installManualRoutes(page, { imageUploadMode: "managed" });
+
+    let uploadAttempt = 0;
+    await page.route("**/api/v1/recipes/images", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      uploadAttempt += 1;
+      if (uploadAttempt === 1) {
+        await route.fulfill({
+          status: 503,
+          json: {
+            success: false,
+            data: null,
+            error: {
+              code: "NETWORK_ERROR",
+              message: "네트워크 오류가 발생했어요.",
+              fields: [],
+            },
+          },
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 201,
+        json: {
+          success: true,
+          data: {
+            image_object_id: `550e8400-e29b-41d4-a716-44665544033${uploadAttempt}`,
+            state: "uploaded_unlinked",
+            read_url: `https://signed.example.com/retry-${uploadAttempt}.png`,
+            read_url_expires_at: "2099-07-30T03:05:00.000Z",
+          },
+          error: null,
+        },
+      });
+    });
+
+    const cancelledObjectIds: string[] = [];
+    await page.route("**/api/v1/recipes/images/*/cancel", async (route) => {
+      const imageObjectId = new URL(route.request().url()).pathname.split("/").at(-2) ?? "";
+      cancelledObjectIds.push(imageObjectId);
+      await route.fulfill({
+        json: {
+          success: true,
+          data: { image_object_id: imageObjectId, state: "cleanup_pending" },
+          error: null,
+        },
+      });
+    });
+
+    let createAttempt = 0;
+    await page.route("**/api/v1/recipes", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      createAttempt += 1;
+      if (createAttempt === 1) {
+        await route.fulfill({
+          status: 409,
+          json: {
+            success: false,
+            data: null,
+            error: {
+              code: "IMAGE_NOT_FOUND",
+              message: "이미지를 다시 확인해 주세요.",
+              fields: [],
+            },
+          },
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 201,
+        json: {
+          success: true,
+          data: {
+            id: "recipe-31-retried",
+            title: "재시도 김치찌개",
+            source_type: "manual",
+            created_by: "user-1",
+            base_servings: 2,
+          },
+          error: null,
+        },
+      });
+    });
+
+    await page.goto("/menu/add/manual");
+    await stabilize(page);
+    expect(await page.evaluate(() => window.innerWidth)).toBe(viewport.width);
+
+    const imageFile = hybridImageFile("hybrid-stage4.png");
+    await page.getByTestId("manual-image-file-input").setInputFiles(imageFile);
+    await expect(page.getByTestId("manual-image-error")).toContainText("네트워크 오류");
+    await page.getByTestId("manual-image-retry-button").click();
+    await expect(page.getByTestId("manual-image-replace-button")).toBeVisible();
+    await page.getByTestId("manual-image-remove-button").click();
+    await expect(page.getByTestId("manual-image-choose-button")).toBeVisible();
+    expect(cancelledObjectIds).toEqual(["550e8400-e29b-41d4-a716-446655440332"]);
+
+    await page.getByTestId("manual-image-file-input").setInputFiles(imageFile);
+    await expect(page.getByTestId("manual-image-replace-button")).toBeVisible();
+    await fillRequiredManualRecipeFields(page, "재시도 김치찌개");
+    await page.getByRole("button", { name: "저장" }).click();
+    await expect(page.getByTestId("manual-image-error")).toContainText(
+      "이미지를 다시 확인해 주세요.",
+    );
+    await page.getByTestId("manual-image-retry-button").click();
+    await expect(page.getByTestId("manual-image-replace-button")).toBeVisible();
+    await page.getByRole("button", { name: "저장" }).click();
+    await expect(page.getByText("레시피 등록 완료")).toBeVisible();
+
+    expect(uploadAttempt).toBe(4);
+    expect(createAttempt).toBe(2);
+    expect(cancelledObjectIds).toEqual([
+      "550e8400-e29b-41d4-a716-446655440332",
+      "550e8400-e29b-41d4-a716-446655440333",
+    ]);
+    expect(imageMutations.directStorage).toEqual([]);
+    expect(imageMutations.serverImageApi).toHaveLength(6);
+    expect(imageMutations.serverImageApi.every((entry) =>
+      entry.startsWith("POST /api/v1/recipes/images")
+    )).toBe(true);
+  });
+
+  test("hybrid-auth-local-data-production preserves return-to-action and account error states", async ({
+    page,
+  }, testInfo) => {
+    const viewport = hybridViewport(testInfo.project.name);
+    await page.setViewportSize(viewport);
+
+    await setAuthOverride(page, "guest");
+    await page.goto("/menu/add/manual?date=2026-07-30&columnId=dinner");
+    await expect(page).toHaveURL(/\/login\?next=/);
+    const nextValue = new URL(page.url()).searchParams.get("next");
+    expect(nextValue).toBe(
+      "/menu/add/manual?date=2026-07-30&columnId=dinner",
+    );
+
+    await page.goto(
+      "/login?authError=oauth_failed&next=%2Fmenu%2Fadd%2Fmanual",
+    );
+    await expect(page.getByText(/로그인|다시 시도/).first()).toBeVisible();
+
+    await setAuthOverride(page, "authenticated");
+    await page.context().addCookies([{
+      name: QUARANTINE_STATE_COOKIE,
+      sameSite: "Lax",
+      url: BASE_URL,
+      value: "error",
+    }]);
+    await page.goto("/account-quarantine?next=%2Fmypage");
+    await expect(page.locator('[data-screen-id="ACCOUNT_QUARANTINE"]')).toBeVisible();
+    await expect(page.getByRole("button", { name: "다시 시도" })).toBeVisible();
+
+    await page.context().addCookies([{
+      name: QUARANTINE_STATE_COOKIE,
+      sameSite: "Lax",
+      url: BASE_URL,
+      value: "unauthorized",
+    }]);
+    await page.reload();
+    await expect(page.getByText("세션이 바뀌었어요. 다시 로그인해 주세요.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "다시 로그인" })).toBeVisible();
+    expect(await page.evaluate(() => window.innerWidth)).toBe(viewport.width);
+  });
+
+  test("hybrid-auth-local-data-production keeps a pending create attached across browser back", async ({
+    page,
+  }, testInfo) => {
+    const viewport = hybridViewport(testInfo.project.name);
+    await page.setViewportSize(viewport);
+    const imageMutations = observeImageMutations(page);
+    const cancelledObjectIds: string[] = [];
+    let createAttempts = 0;
+    let releaseCreate!: () => void;
+    const createMayFinish = new Promise<void>((resolve) => {
+      releaseCreate = resolve;
+    });
+
+    await setAuthOverride(page);
+    await installManualRoutes(page, { imageUploadMode: "managed" });
+    await page.route("**/api/v1/recipes/images/*/cancel", async (route) => {
+      cancelledObjectIds.push(
+        new URL(route.request().url()).pathname.split("/").at(-2) ?? "",
+      );
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            image_object_id: cancelledObjectIds.at(-1),
+            state: "cleanup_pending",
+          },
+          error: null,
+        },
+      });
+    });
+    await page.route("**/api/v1/recipes", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      createAttempts += 1;
+      await createMayFinish;
+      await route.fulfill({
+        status: 201,
+        json: {
+          success: true,
+          data: {
+            id: "recipe-31-back-guarded",
+            title: "뒤로가기 보호 김치찌개",
+            source_type: "manual",
+            created_by: "user-1",
+            base_servings: 2,
+          },
+          error: null,
+        },
+      });
+    });
+
+    await page.goto("/about");
+    await page.goto("/menu/add/manual");
+    await stabilize(page);
+    await page
+      .getByTestId("manual-image-file-input")
+      .setInputFiles(hybridImageFile("pending-back.png"));
+    await fillRequiredManualRecipeFields(page, "뒤로가기 보호 김치찌개");
+    await page.getByRole("button", { name: "저장" }).click();
+    await expect.poll(() => createAttempts).toBe(1);
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/menu\/add\/manual$/);
+    await expect(page.getByLabel("요리 이름")).toHaveValue(
+      "뒤로가기 보호 김치찌개",
+    );
+    expect(cancelledObjectIds).toEqual([]);
+    expect(createAttempts).toBe(1);
+
+    releaseCreate();
+    await expect(page.getByText("레시피 등록 완료")).toBeVisible();
+    expect(cancelledObjectIds).toEqual([]);
+    expect(createAttempts).toBe(1);
+    expect(imageMutations.directStorage).toEqual([]);
+    expect(imageMutations.serverImageApi).toEqual([
+      "POST /api/v1/recipes/images",
+    ]);
+  });
+
+  test("hybrid-auth-local-data-production keeps a pending create attached when reload is dismissed", async ({
+    page,
+  }, testInfo) => {
+    const viewport = hybridViewport(testInfo.project.name);
+    await page.setViewportSize(viewport);
+    const imageMutations = observeImageMutations(page);
+    const cancelledObjectIds: string[] = [];
+    let createAttempts = 0;
+    let reloadDialogSeen = false;
+    let releaseCreate!: () => void;
+    const createMayFinish = new Promise<void>((resolve) => {
+      releaseCreate = resolve;
+    });
+
+    await setAuthOverride(page);
+    await installManualRoutes(page, { imageUploadMode: "managed" });
+    await page.route("**/api/v1/recipes/images/*/cancel", async (route) => {
+      cancelledObjectIds.push(
+        new URL(route.request().url()).pathname.split("/").at(-2) ?? "",
+      );
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            image_object_id: cancelledObjectIds.at(-1),
+            state: "cleanup_pending",
+          },
+          error: null,
+        },
+      });
+    });
+    await page.route("**/api/v1/recipes", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      createAttempts += 1;
+      await createMayFinish;
+      await route.fulfill({
+        status: 201,
+        json: {
+          success: true,
+          data: {
+            id: "recipe-31-reload-guarded",
+            title: "새로고침 보호 김치찌개",
+            source_type: "manual",
+            created_by: "user-1",
+            base_servings: 2,
+          },
+          error: null,
+        },
+      });
+    });
+    page.on("dialog", async (dialog) => {
+      reloadDialogSeen = dialog.type() === "beforeunload";
+      await dialog.dismiss();
+    });
+
+    await page.goto("/menu/add/manual");
+    await stabilize(page);
+    await page
+      .getByTestId("manual-image-file-input")
+      .setInputFiles(hybridImageFile("pending-reload.png"));
+    await fillRequiredManualRecipeFields(page, "새로고침 보호 김치찌개");
+    await page.getByRole("button", { name: "저장" }).click();
+    await expect.poll(() => createAttempts).toBe(1);
+
+    await page.reload({ timeout: 2_000 }).catch(() => null);
+    await expect.poll(() => reloadDialogSeen).toBe(true);
+    await expect(page).toHaveURL(/\/menu\/add\/manual$/);
+    expect(cancelledObjectIds).toEqual([]);
+    expect(createAttempts).toBe(1);
+
+    releaseCreate();
+    await expect(page.getByText("레시피 등록 완료")).toBeVisible();
+    expect(cancelledObjectIds).toEqual([]);
+    expect(createAttempts).toBe(1);
+    expect(imageMutations.directStorage).toEqual([]);
+    expect(imageMutations.serverImageApi).toEqual([
+      "POST /api/v1/recipes/images",
+    ]);
   });
 });

@@ -6,12 +6,12 @@
 
 ## Official Sources
 
-- `docs/요구사항기준선-v1.7.22.md`
-- `docs/화면정의서-v1.5.28.md`
-- `docs/유저flow맵-v1.3.25.md`
-- `docs/db설계-v1.3.23.md`
-- `docs/api문서-v1.2.27.md`
-- approved master plan SHA-256 `d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d`, 1,018 lines
+- `docs/요구사항기준선-v1.7.25.md`
+- `docs/화면정의서-v1.5.29.md`
+- `docs/유저flow맵-v1.3.27.md`
+- `docs/db설계-v1.3.26.md`
+- `docs/api문서-v1.2.29.md`
+- approved master plan SHA-256 `45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc`, 1,056 lines
 
 ## Scope
 
@@ -79,7 +79,7 @@
 | GET | `/food-catalog/search` | predecessor-provided unified ingredient/product search reader |
 | GET | `/cooked-batches` | predecessor-provided owner batch read model |
 
-All responses keep `{ success, data, error }`; errors keep `{ code, message, fields[] }`. This workpack adds no endpoint, field, enum, status, or public error outside the official v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 contract.
+All responses keep `{ success, data, error }`; errors keep `{ code, message, fields[] }`. This workpack adds no endpoint, field, enum, status, or public error outside the official v1.7.25/v1.5.29/v1.3.27/v1.3.26/v1.2.29 contract.
 
 ## Error / Zero-write Matrix
 
@@ -109,7 +109,7 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 
 - implementation predecessors: #1 `prepared-food-search-relevance`, #2 `product-ingredient-link-foundation`, #4 `recipe-snapshot-authority-foundation`, and #8 `cooked-batch-weight-ledger` merged with required checks green.
 - F0 account-generation capability remains a global personal-writer gate even though it is not repeated in the #9 DAG row.
-- #9 implementation remains dormant until predecessor runtime/migrations and #8 batch RPC/read models are available. No unmerged migration, production flag, or remote write is allowed from Stage 1.
+- #9 implementation remains dormant until predecessor runtime/migrations and #8 batch RPC/read models are available. No unmerged migration, production flag, or external-provider write is allowed from Stage 1.
 - #10 owns Planner shell navigation; #12 owns day-first `MEAL_LOG` UI/add-edit-delete sheets/design authority; #14 owns cross-slice release QA.
 
 ## Out of Scope
@@ -136,7 +136,7 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 ### Stage 1 current gate
 
 - run only SOT/workflow/workpack/automation/bookkeeping validators, focused workflow-doc tests, lint, typecheck, dependency audit and diff/parity checks.
-- migration/RPC/PostgreSQL/route/component/E2E/visual/real DB/remote checks below are future Stage 2/4/release evidence and are not claimed executable now.
+- migration/RPC/PostgreSQL/route/component/E2E/visual/real DB/server-production/local-rehearsal checks below are future Stage 2/4/release evidence and are not claimed executable now.
 
 ### Future fixtures
 
@@ -152,7 +152,7 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 - deferred entry↔event pointer constraint, exact-one source/evidence checks, immutable append-only events and soft-delete exclusion.
 - row-lock/common lock ordering, expected revision, operation registry, full replay/checksum and concurrent remaining-weight bounds.
 - IANA validation/date immutability, exact evidence pinning, partial/unavailable aggregation and zero-write errors.
-- remote verification must target the merged exact SHA and remain read-only until an explicitly approved release gate.
+- local-first production/rehearsal verification must target the merged exact SHA and remain read-only until an explicitly approved release gate.
 
 ## Delivery Checklist
 
@@ -164,4 +164,4 @@ All responses keep `{ success, data, error }`; errors keep `{ code, message, fie
 - [ ] Stage 2 TDD RED evidence recorded before implementation
 - [ ] Stage 2 schema/RLS/RPC/routes implemented behind dormant capability
 - [ ] Stage 4 backend integration, concurrency, aggregate and compatibility evidence green
-- [ ] Stage 6 merged-exact-SHA remote read-only and release-train evidence green
+- [ ] Stage 6 merged-exact-SHA server-production/local-rehearsal read-only and release-train evidence green

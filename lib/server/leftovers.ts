@@ -13,6 +13,14 @@ export interface LeftoverDishRow {
   id: string;
   user_id: string;
   recipe_id: string;
+  recipe_content_snapshot_id?: string | null;
+  recipe_content_snapshots?:
+    | {
+      id: string;
+      recipe_id: string;
+      title: string;
+    }
+    | null;
   status: LeftoverDishStatus;
   cooked_at: string;
   eaten_at: string | null;
@@ -81,14 +89,18 @@ export function toLeftoverListItem(
   row: LeftoverDishRow,
   recipeMap: Map<string, LeftoverRecipeRow>,
   sourceMealMap = new Map<string, LeftoverSourceMealRow>(),
+  contentSnapshotMap = new Map<string, { id: string; recipe_id: string; title: string }>(),
 ): LeftoverListItemData {
   const recipe = recipeMap.get(row.recipe_id);
   const sourceMeal = sourceMealMap.get(row.id);
+  const contentSnapshot = row.recipe_content_snapshot_id
+    ? contentSnapshotMap.get(row.recipe_content_snapshot_id) ?? null
+    : null;
 
   return {
     id: row.id,
     recipe_id: row.recipe_id,
-    recipe_title: recipe?.title ?? "",
+    recipe_title: contentSnapshot?.title ?? recipe?.title ?? "",
     recipe_thumbnail_url: normalizeFoodSafetyImageUrl(recipe?.thumbnail_url),
     status: row.status,
     cooked_at: row.cooked_at,

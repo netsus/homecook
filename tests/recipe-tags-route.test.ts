@@ -57,6 +57,9 @@ describe("36c public tags route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(createRouteHandlerClient).toHaveBeenCalledWith({
+      anonymousPublicReadScope: "tags",
+    });
     expect(body).toEqual({
       success: true,
       data: {

@@ -23,6 +23,8 @@ function projection(
     image_object_id: null,
     bucket_id: null,
     object_path: null,
+    owner_uuid: null,
+    account_generation: null,
     visibility: null,
     state: null,
     reference_type: null,
@@ -121,20 +123,66 @@ describe("recipe image registry-aware read adapter", () => {
 
     await expect(resolveRecipeImageReadUrl({
       client,
+      expectedOwnerUuid: OWNER_ID,
       expectedStorageOrigin: STORAGE_ORIGIN,
       projection: projection({
         image_object_id: OBJECT_ID,
         bucket_id: "recipe-images-private",
         object_path: objectPath,
+        owner_uuid: OWNER_ID,
+        account_generation: 7,
         visibility: "private",
         state: "attached_private",
         reference_type: "recipe_thumbnail",
-      }),
+      } as Partial<RecipeImageReadProjection>),
       signedUrlTtlSeconds: 300,
     })).resolves.toContain("/storage/v1/object/sign/");
 
     expect(client.storage.from).toHaveBeenCalledWith("recipe-images-private");
     expect(bucket.createSignedUrl).toHaveBeenCalledWith(objectPath, 300);
+  });
+
+  it("fails closed when a private object owner does not match the authorized recipe owner", async () => {
+    const otherOwnerId = "44444444-4444-4444-8444-444444444444";
+    const { client } = storageClient();
+
+    await expect(resolveRecipeImageReadUrl({
+      client,
+      expectedOwnerUuid: OWNER_ID,
+      expectedStorageOrigin: STORAGE_ORIGIN,
+      projection: projection({
+        image_object_id: OBJECT_ID,
+        bucket_id: "recipe-images-private",
+        object_path: `${otherOwnerId}/7/${OBJECT_ID}.webp`,
+        owner_uuid: otherOwnerId,
+        account_generation: 7,
+        visibility: "private",
+        state: "attached_private",
+        reference_type: "recipe_thumbnail",
+      } as Partial<RecipeImageReadProjection>),
+      signedUrlTtlSeconds: 300,
+    })).rejects.toThrow("managed recipe image read evidence is invalid");
+  });
+
+  it("fails closed when a private object path generation differs from registry authority", async () => {
+    const { client } = storageClient();
+
+    await expect(resolveRecipeImageReadUrl({
+      client,
+      expectedOwnerUuid: OWNER_ID,
+      expectedStorageOrigin: STORAGE_ORIGIN,
+      projection: projection({
+        image_object_id: OBJECT_ID,
+        bucket_id: "recipe-images-private",
+        object_path: `${OWNER_ID}/8/${OBJECT_ID}.webp`,
+        owner_uuid: OWNER_ID,
+        account_generation: 7,
+        visibility: "private",
+        state: "attached_private",
+        reference_type: "recipe_thumbnail",
+      } as Partial<RecipeImageReadProjection>),
+      signedUrlTtlSeconds: 300,
+    })).rejects.toThrow("managed recipe image read evidence is invalid");
   });
 
   it("derives a public URL for an attached owner-neutral shared object", async () => {
@@ -143,15 +191,18 @@ describe("recipe image registry-aware read adapter", () => {
 
     await expect(resolveRecipeImageReadUrl({
       client,
+      expectedOwnerUuid: OWNER_ID,
       expectedStorageOrigin: STORAGE_ORIGIN,
       projection: projection({
         image_object_id: OBJECT_ID,
         bucket_id: "recipe-images",
         object_path: objectPath,
+        owner_uuid: null,
+        account_generation: null,
         visibility: "public_shared",
         state: "attached_public_shared",
         reference_type: "recipe_thumbnail",
-      }),
+      } as Partial<RecipeImageReadProjection>),
       signedUrlTtlSeconds: 300,
     })).resolves.toContain("/storage/v1/object/public/");
 
@@ -214,11 +265,14 @@ describe("recipe image registry-aware read adapter", () => {
 
     await expect(resolveRecipeImageReadUrl({
       client,
+      expectedOwnerUuid: OWNER_ID,
       expectedStorageOrigin: STORAGE_ORIGIN,
       projection: projection({
         image_object_id: OBJECT_ID,
         bucket_id: "recipe-images-private",
         object_path: `${OWNER_ID}/7/${OBJECT_ID}.webp`,
+        owner_uuid: OWNER_ID,
+        account_generation: 7,
         visibility: "private",
         state: "attached_private",
         reference_type: "recipe_thumbnail",

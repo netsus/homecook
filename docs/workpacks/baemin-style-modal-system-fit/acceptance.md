@@ -1,7 +1,7 @@
 # Acceptance Checklist: baemin-style-modal-system-fit
 
 > Modal/sheet 오버레이 패밀리의 배민 스타일 시각 정합.
-> Stage 2/3 are N/A (no backend). Implementation is Stage 4 (Claude). Review is Stage 5/6 (Codex).
+> Stage 2/3 are N/A (no backend). Implementation is a Codex `frontend-implementer` Stage 4 task. Review is performed by separate Codex Stage 5/6 tasks.
 > `Manual Only`를 제외한 각 체크박스에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
 
 ## Happy Path

@@ -21,6 +21,7 @@ import type {
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const createYoutubeIngredientRegistrationInternalRpcClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -34,6 +35,7 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+  createYoutubeIngredientRegistrationInternalRpcClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -1058,7 +1060,10 @@ function mockAuth(user: { id: string } | null = { id: userId }) {
     auth: {
       getUser: vi.fn(async () => ({ data: { user } })),
     },
-    from: vi.fn(),
+    from: vi.fn((...args: unknown[]) =>
+      createServiceRoleClient()?.from(...args)),
+    rpc: vi.fn((...args: unknown[]) =>
+      createServiceRoleClient()?.rpc(...args)),
   };
 
   createRouteHandlerClient.mockResolvedValue(routeClient);
@@ -1307,10 +1312,14 @@ describe("20 youtube real import backend", () => {
     restoreYoutubeImportEnv();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    createYoutubeIngredientRegistrationInternalRpcClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
+    createYoutubeIngredientRegistrationInternalRpcClient.mockImplementation(
+      () => createServiceRoleClient(),
+    );
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
   });
@@ -8584,10 +8593,17 @@ describe("20 youtube real import backend", () => {
   });
 
   it("POST /api/v1/recipes/youtube/ingredient-registration fails closed without service-role authority", async () => {
+    const { dbClient } = createIngredientRegistrationDbClient({
+      rpcResult: {
+        data: null,
+        error: { message: "must not call internal RPC" },
+      },
+    });
+    createServiceRoleClient.mockReturnValue(dbClient);
     const routeClient = mockAuth();
     const routeRpc = vi.fn();
     (routeClient as typeof routeClient & { rpc: typeof routeRpc }).rpc = routeRpc;
-    createServiceRoleClient.mockReturnValue(null);
+    createYoutubeIngredientRegistrationInternalRpcClient.mockReturnValue(null);
 
     const { POST } = await importIngredientRegistrationRoute();
     const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/ingredient-registration", {

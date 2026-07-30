@@ -2,7 +2,7 @@
 
 > Slice F of Wave1 Service Porting Plan
 > Stage: Stage 5 fixed-reference closeout refresh
-> Owner: Codex with Claude final authority gate
+> Historical owner: Codex with Claude final authority gate. 신규 검토는 별도 Codex `product-design-authority` 작업이 맡는다.
 
 ## Goal
 

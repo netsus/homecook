@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> This Stage 1 document locks future backend, frontend integration and release evidence. Unchecked items do not claim that #4/#6 runtime, `cook-mode-whole-board`, migrations, RPCs, v2 routes, visual artifacts, remote state or R+2 activation already exist.
+> This Stage 1 document locks future backend, frontend integration and release evidence. Unchecked items do not claim that #4/#6 runtime, `cook-mode-whole-board`, migrations, RPCs, v2 routes, visual artifacts, server-production/local-rehearsal state or R+2 activation already exist.
 
 ## Impact Preview
 
@@ -93,14 +93,14 @@
 - [ ] fresh/replay PostgreSQL tests cover preview RLS/ACL, locks, idempotency, claim concurrency and full rollback <!-- omo:id=accept-future-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] real local Supabase two-owner matrix and before/after digests prove denied/stale/claim paths are unchanged <!-- omo:id=accept-future-real-db;stage=2;scope=backend;review=3,6 -->
 - [ ] E2E covers keep/replace-all, shopping read-only, stale preview, same-Meal concurrent start, cancel/restart and historical snapshot invariance <!-- omo:id=accept-future-e2e;stage=4;scope=shared;review=5,6 -->
-- [ ] merged-exact-SHA remote verifier is read-only and production flags remain off until approved release gate <!-- omo:id=accept-future-remote;stage=2;scope=shared;review=3,6 -->
+- [ ] merged-exact-SHA server-production/local-rehearsal verifier is read-only and production flags remain off until approved release gate <!-- omo:id=accept-future-remote;stage=2;scope=shared;review=3,6 -->
 - [ ] independent internal1.5, security/DB, five-axis, design, Stage 3/5/6 and closeout reviews have zero unresolved required findings <!-- omo:id=accept-future-independent-review;stage=2;scope=shared;review=3,5,6 -->
 - [ ] current-head PR checks and post-merge QA/Policy/Security/Vercel are terminal green or intended skip <!-- omo:id=accept-future-ci;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
 - verifier: separate Codex implementation/review/design sessions; service owner for the future R+2 activation decision
-- environment: local Supabase for write/concurrency tests; merged-exact-SHA remote read-only inventory; 390px/320px browser evidence; production mutation/flag changes excluded until release gate
+- environment: local Supabase for write/concurrency tests; merged-exact-SHA server-production/local-rehearsal read-only inventory; 390px/320px browser evidence; production mutation/flag changes excluded until release gate
 - scenarios: fresh/stale preview, keep, replace-all, active claim, completed shopping, same-Meal start race, cancel/restart, v1/v2 dispatch, creation-off seeded drain and historical pin stability
 
 ## Automation Split

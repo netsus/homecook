@@ -16,20 +16,19 @@
   "dependencies": [
     "security-definer-mutation-authorization hotfix merged and deployed",
     "cooking-meal-log contract-evolution merged as PR #1072",
-    "recipe-visibility-read-hardening Stage 1 docs merged as PR #1077; runtime implementation remains a #5 implementation predecessor",
-    "recipe-snapshot-authority-foundation Stage 1 docs merged as PR #1078",
-    "31-recipe-media-tags and 36e-recipe-tags-frontend merged before #5 implementation",
+    "recipe-visibility-read-hardening Stage 2 through Stage 6 merged as PR #1228",
+    "31-recipe-media-tags and 36e-recipe-tags-frontend are merged reusable foundations",
     "recipebook-diary-port is explicitly not a predecessor and its screens remain untouched",
     "#6 owns recipe persistence/RLS/RPC and #8 snapshot-v2 gate precedes external public-fork/personal-edit activation"
   ],
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.26.md",
+      "docs/화면정의서-v1.5.30.md",
+      "docs/유저flow맵-v1.3.28.md",
+      "docs/db설계-v1.3.27.md",
+      "docs/api문서-v1.2.30.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -50,13 +49,16 @@
       "docs/design/mobile-ux-rules.md",
       "docs/design/anchor-screens.md",
       "docs/engineering/workflow-v2/README.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
     ]
   },
   "workflow": {
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
+      "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only from a merged exact SHA only",
+      "local application Data/Storage authority plus minimal remote Auth control-plane evidence with local auth.users=0, active epoch and session-liveness HMAC binding",
+      "service-role user path 0, remote application DB/Storage writes remain zero and external personal write remains dark",
       "capability-off current and immediate-previous deployment exposes no external personal write",
       "public anonymous login return restores same recipe and fork draft action",
       "public source remains unchanged and fork result opens new owner-private detail",
@@ -76,9 +78,10 @@
     "required_checks": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/personal-recipe-editor-decoupling pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
+      "BRANCH_NAME=docs/personal-recipe-editor-stage1-relock pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
       "node scripts/validate-automation-spec.mjs --slice personal-recipe-editor-decoupling",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/personal-recipe-editor-hybrid-contract-sync.test.ts",
       "pnpm exec vitest run tests/personal-recipe-editor-shell.test.tsx tests/personal-recipe-editor-navigation.test.tsx tests/personal-recipe-editor-dirty-state.test.tsx tests/personal-recipe-editor-media-tags.test.tsx tests/recipe-detail-personal-actions.test.tsx",
       "pnpm verify:frontend:pr",
       "pnpm test:e2e:regression:ci --grep personal-recipe-editor-decoupling",
@@ -89,14 +92,16 @@
       "pnpm verify:frontend",
       "pnpm validate:exploratory-qa-evidence -- --slice personal-recipe-editor-decoupling",
       "pnpm validate:closeout-sync -- --slice personal-recipe-editor-decoupling",
+      "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only",
       "git diff --check"
     ],
     "verify_commands": [
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/personal-recipe-editor-decoupling pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
+      "BRANCH_NAME=docs/personal-recipe-editor-stage1-relock pnpm validate:workpack -- --slice personal-recipe-editor-decoupling",
       "node scripts/validate-automation-spec.mjs --slice personal-recipe-editor-decoupling",
       "pnpm validate:omo-bookkeeping",
+      "pnpm exec vitest run tests/personal-recipe-editor-hybrid-contract-sync.test.ts",
       "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-automation-spec.test.ts tests/omo-bookkeeping.test.ts tests/omo-doc-gate.test.ts tests/source-of-truth-sync.test.ts",
       "pnpm lint",
       "pnpm typecheck",
@@ -112,7 +117,11 @@
       "separate Codex Stage 5 and Stage 6 implementation reviews and final closeout review"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
+      "approved-plan-sha256-and-1056-line-lock",
+      "current-official-tuple-v1-7-26-v1-5-30-v1-3-28-v1-3-27-v1-2-30",
+      "hybrid-remote-auth-control-plane-and-local-application-data-storage-boundary",
+      "local-auth-users-zero-session-liveness-hmac-and-service-role-user-path-zero",
+      "slice3-pr1228-merged-media-tag-merged-and-slice4-not-a-slice5-predecessor",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "roadmap-docs-workflow-lifecycle-planned-separation",
       "planner-add-personal-create-personal-edit-public-fork-context-matrix",
@@ -133,7 +142,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -151,8 +160,10 @@
     "Public recipe mutation or client owner visibility public image path authority",
     "Planner shell Cook Mode Meal Log or YouTube redesign",
     "Browser direct Storage mutation or signed URL durable identity",
-    "Production code migration remote database or data write in this Stage 1 docs PR"
+    "Hybrid Auth gateway identity mirror session binding verifier or local Data Storage infrastructure implementation",
+    "Remote application DB Storage write or external personal write activation",
+    "Production code migration server-production/rehearsal database or data write in this Stage 1 docs PR"
   ],
   "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle stays planned and approval remains not_started until fresh separate Codex internal 1.5, security/ownership and five-axis reviewers approve with zero required findings. This Stage 1 lock embeds the mandatory RECIPE_DETAIL/editor state wireframe and requires later design critic plus 390px/320px screenshot/Figma product-design authority. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Component/E2E/visual/a11y/exploratory/design evidence is future Stage 4 work. #5 does not own #6 writes or #8 activation; external personal editor behavior remains dark until the approved capability and snapshot-v2 gate."
+  "notes": "Roadmap and workflow lifecycle are in progress for the test-only Stage 2 while approval remains not_started and verification remains pending until independent Stage 3 review. The approved master plan remains editor/product design history, while its local-only Auth/deployment assumptions are superseded by the current v1.7.26/v1.5.30/v1.3.28/v1.3.27/v1.2.30 hybrid contract. #3 Stage 2 through Stage 6 merged as PR #1228 and the media/tag foundations are merged. #4 historical Stage 2 PR #1218 and Stage 4 PR #1219 are preserved, but its hybrid delta/reverification remains in progress and is not a #5 predecessor. required_checks is the full-lifecycle gate and verify_commands is the current executable subset. This backend branch proved a projection RED before the required docs-to-in-progress transition, then GREEN with `tests/personal-recipe-editor-permissions.test.ts` and `tests/personal-recipe-editor-contract.test.ts` to lock fail-closed detail reads and official manual-create payload boundaries. The hybrid verifier, component/E2E/visual/a11y/exploratory/design evidence are future Stage 4/release work. #5 makes no product API, DB, route, field, status or error change, does not own #6 writes or #8 activation, keeps local auth.users=0 and service-role user path 0, and keeps remote application DB/Storage writes and external personal write dark."
 }

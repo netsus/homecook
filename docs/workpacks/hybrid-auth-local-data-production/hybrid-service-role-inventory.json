@@ -1,0 +1,200 @@
+{
+  "generated_from": "scripts/lib/hybrid-authority-inventory.mjs",
+  "user_service_role_violation_count": 0,
+  "user_direct_service_role_count": 0,
+  "internal_operation_violation_count": 0,
+  "internal_operation_allowlist": {
+    "createAuthCallbackOperationsClient": [
+      "app/auth/callback/route.ts"
+    ],
+    "createAdminDataInternalClient": [
+      "app/admin/layout.tsx",
+      "lib/server/admin-auth.ts"
+    ],
+    "createNotFoundFeedbackInternalClient": [
+      "app/api/v1/feedback/404/route.ts"
+    ],
+    "createOperationalEventInternalClient": [
+      "lib/server/admin-events.ts"
+    ],
+    "createAuthRefreshInternalDataClient": [
+      "lib/supabase/server.ts"
+    ],
+    "createSessionLogoutInternalDataClient": [
+      "lib/server/hybrid-auth/logout.ts"
+    ],
+    "createRecipeImageInternalClient": [
+      "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
+      "app/api/v1/recipes/images/route.ts"
+    ],
+    "createAccountLifecycleInternalRpcClient": [
+      "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
+      "app/api/v1/users/me/route.ts",
+      "lib/server/account-generation/quarantine-gate.ts"
+    ],
+    "createYoutubeIngredientRegistrationInternalRpcClient": [
+      "lib/server/youtube-import.ts"
+    ]
+  },
+  "internal_operation_entries": [
+    {
+      "classification": "admin",
+      "file": "app/admin/layout.tsx",
+      "column": 5,
+      "line": 44,
+      "allowed": true,
+      "factory": "createAdminDataInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "public",
+      "file": "app/api/v1/feedback/404/route.ts",
+      "column": 29,
+      "line": 106,
+      "allowed": true,
+      "factory": "createNotFoundFeedbackInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
+      "column": 29,
+      "line": 42,
+      "allowed": true,
+      "factory": "createRecipeImageInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/recipes/images/route.ts",
+      "column": 29,
+      "line": 154,
+      "allowed": true,
+      "factory": "createRecipeImageInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
+      "column": 29,
+      "line": 36,
+      "allowed": true,
+      "factory": "createAccountLifecycleInternalRpcClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/users/me/route.ts",
+      "column": 7,
+      "line": 292,
+      "allowed": true,
+      "factory": "createAccountLifecycleInternalRpcClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "app/api/v1/users/me/route.ts",
+      "column": 29,
+      "line": 321,
+      "allowed": true,
+      "factory": "createAccountLifecycleInternalRpcClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "app/auth/callback/route.ts",
+      "column": 31,
+      "line": 230,
+      "allowed": true,
+      "factory": "createAuthCallbackOperationsClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "lib/server/account-generation/quarantine-gate.ts",
+      "column": 29,
+      "line": 72,
+      "allowed": true,
+      "factory": "createAccountLifecycleInternalRpcClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "lib/server/admin-auth.ts",
+      "column": 5,
+      "line": 68,
+      "allowed": true,
+      "factory": "createAdminDataInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "lib/server/admin-events.ts",
+      "column": 7,
+      "line": 111,
+      "allowed": true,
+      "factory": "createOperationalEventInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "lib/server/hybrid-auth/logout.ts",
+      "column": 29,
+      "line": 85,
+      "allowed": true,
+      "factory": "createSessionLogoutInternalDataClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "user",
+      "file": "lib/server/youtube-import.ts",
+      "column": 5,
+      "line": 10691,
+      "allowed": true,
+      "factory": "createYoutubeIngredientRegistrationInternalRpcClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "lib/supabase/server.ts",
+      "column": 26,
+      "line": 64,
+      "allowed": true,
+      "factory": "createAuthRefreshInternalDataClient",
+      "kind": "internal-operation-call"
+    }
+  ],
+  "remote_compatibility_entries": [
+    {
+      "classification": "public",
+      "file": "app/api/v1/recipes/[id]/route.ts",
+      "column": 27,
+      "line": 282,
+      "kind": "remote-only-compatibility-call"
+    }
+  ],
+  "public_allowlist_files": [
+    "app/api/v1/cooking-methods/route.ts",
+    "app/api/v1/feedback/404/route.ts",
+    "app/api/v1/ingredients/route.ts",
+    "app/api/v1/recipes/[id]/cook-mode/route.ts",
+    "app/api/v1/recipes/[id]/route.ts",
+    "app/api/v1/recipes/route.ts",
+    "app/api/v1/recipes/themes/route.ts",
+    "app/api/v1/tags/route.ts"
+  ],
+  "admin_allowlist_files": [
+    "app/admin/layout.tsx"
+  ],
+  "internal_allowlist_files": [
+    "app/auth/callback/route.ts",
+    "app/auth/link/callback/route.ts",
+    "app/auth/logout/route.ts",
+    "lib/server/account-generation/quarantine-gate.ts",
+    "lib/server/admin-auth.ts",
+    "lib/server/admin-events.ts",
+    "lib/supabase/server.ts"
+  ],
+  "service_role_entries": [],
+  "service_role_fallback_entries": []
+}

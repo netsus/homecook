@@ -1,12 +1,12 @@
 # Acceptance Checklist: account-session-generation-foundation
 
-> 이 문서는 F0 additive dark-ship의 living closeout이다. 체크는 실패 테스트의 RED, 구현, local/remote evidence, 독립 Codex review가 생긴 뒤에만 한다. Stage 1 author는 자기 문서를 승인하지 않으며 별도 Codex internal 1.5 reviewer가 5개 core artifact(README/acceptance/automation/work-item/status)와 2개 design gate artifact(wireframe/critique) 전체를 먼저 승인해야 한다.
+> 이 문서는 F0 additive dark-ship의 living closeout이다. 체크는 실패 테스트의 RED, 구현, server-production/local-rehearsal evidence, 독립 Codex review가 생긴 뒤에만 한다. Stage 1 author는 자기 문서를 승인하지 않으며 별도 Codex internal 1.5 reviewer가 5개 core artifact(README/acceptance/automation/work-item/status)와 2개 design gate artifact(wireframe/critique) 전체를 먼저 승인해야 한다.
 >
 > `Manual Only`를 제외한 모든 체크박스는 `omo` metadata를 유지한다. F0 완료는 production `generation_active` 전환이 아니라 `legacy` 안전 배포다. #3 joint activation 항목은 local deterministic harness로 검증하되 실제 production transition은 이 slice의 완료 신호로 요구하지 않는다.
 
 ## Happy Path
 
-정상 경로는 `legacy` additive 배포와 기존 동작 보존, local cutover harness의 stage→digest→atomic promote, auth-present quarantine의 exact-session 복구/삭제, 그리고 merged exact SHA remote dark-ship 검증이다. 아래 세부 절이 각 경로의 상태·데이터·권한·UI 증거를 1:1로 잠근다.
+정상 경로는 `legacy` additive 배포와 기존 동작 보존, local cutover harness의 stage→digest→atomic promote, auth-present quarantine의 exact-session 복구/삭제, 그리고 서버 MacBook local production dark-ship 및 isolated local rehearsal 검증이다. 아래 세부 절이 각 경로의 상태·데이터·권한·UI 증거를 1:1로 잠근다.
 
 ## State / Policy
 
@@ -38,7 +38,7 @@
 - [x] recipe·recipe book·save/like/follow·settings·meal column·progress/XP·pantry·Meal/planner·shopping·cooking·meal-log·batch·report의 existing/new mutation Route를 전수 inventory한다 <!-- omo:id=accept-f0-route-writer-inventory;stage=2;scope=backend;review=3,6 -->
 - [x] application mutation RPC exact signature와 direct PostgREST INSERT/UPDATE/DELETE call site를 전수 inventory한다 <!-- omo:id=accept-f0-rpc-dml-inventory;stage=2;scope=backend;review=3,6 -->
 - [x] authenticated Storage policy와 service-role external Storage write call site를 분리해 inventory한다 <!-- omo:id=accept-f0-storage-writer-inventory;stage=2;scope=backend;review=3,6 -->
-- [x] local/remote `pg_constraint`에서 `auth.users(id)` inbound FK와 delete action을 모두 추출·분류한다 <!-- omo:id=accept-f0-auth-fk-inventory;stage=2;scope=backend;review=3,6 -->
+- [x] server-production/local-rehearsal `pg_constraint`에서 `auth.users(id)` inbound FK와 delete action을 모두 추출·분류한다 <!-- omo:id=accept-f0-auth-fk-inventory;stage=2;scope=backend;review=3,6 -->
 - [x] inventory의 모든 writer가 owning Route/RPC/table/policy, guard mode, expected generation, activation phase와 1:1 대응한다 <!-- omo:id=accept-f0-inventory-coverage;stage=2;scope=backend;review=3,6 -->
 - [x] 누락 writer/guard trigger/Storage predicate/service wrapper/미분류 RESTRICT FK가 있으면 validator와 release gate가 실패한다 <!-- omo:id=accept-f0-inventory-fail-closed;stage=2;scope=backend;review=3,6 -->
 - [x] auth hook exact signature는 effect `auth-hook`, exposure `auth-hook-internal`, exact principal set으로 일반 service-only와 구분된다 <!-- omo:id=accept-f0-hook-inventory-class;stage=2;scope=backend;review=3,6 -->
@@ -64,7 +64,7 @@
 - [x] 비관리 역할의 transitive membership이 0이고 `PUBLIC|anon|authenticated|service_role|supabase_auth_admin`의 actual SET ROLE이 실패한다 <!-- omo:id=accept-f0-hook-owner-set-role-negative;stage=2;scope=backend;review=3,6 -->
 - [x] 실제 `supabase_auth_admin` payload 호출이 local에서 legacy allow, maintenance deny, active allow를 보인다 <!-- omo:id=accept-f0-hook-three-state-smoke;stage=2;scope=backend;review=3,6 -->
 - [x] pre-started Hook과 exclusive transition/final promote race가 same advisory key에서 직렬화된다 <!-- omo:id=accept-f0-hook-transition-race;stage=2;scope=backend;review=3,6 -->
-- [x] Hook health/remote configuration/admin freeze/auth consumer-off evidence가 없으면 maintenance preflight가 실패한다 <!-- omo:id=accept-f0-hook-health-gate;stage=2;scope=backend;review=3,6 -->
+- [x] Hook health/configuration/admin freeze/auth consumer-off evidence가 없으면 maintenance preflight가 실패한다 <!-- omo:id=accept-f0-hook-health-gate;stage=2;scope=backend;review=3,6 -->
 
 ## Cutover Staging / Quarantine / Promote / Abort
 
@@ -73,7 +73,7 @@
 - [x] 한 owner가 exact-one action을 가지며 evidence conflict/duplicate epoch/owner ambiguity만 `classification_unresolved`다 <!-- omo:id=accept-f0-classification-exact-one;stage=2;scope=backend;review=3,6 -->
 - [x] quarantine row는 전체 activation을 막지 않지만 unresolved row는 한 건이라도 promote를 막는다 <!-- omo:id=accept-f0-quarantine-vs-unresolved;stage=2;scope=backend;review=3,6 -->
 - [x] staging population과 proposed generation을 만들어도 canonical lifecycle/watermark는 0이다 <!-- omo:id=accept-f0-staging-canonical-zero;stage=2;scope=backend;review=3,6 -->
-- [x] final promote는 exclusive fence와 `auth.users SHARE ROW EXCLUSIVE` lock 또는 검증된 provider barrier 아래 수행된다 <!-- omo:id=accept-f0-auth-barrier;stage=2;scope=backend;review=3,6 -->
+- [x] final promote는 exclusive fence와 local `auth.users SHARE ROW EXCLUSIVE` write barrier 아래 수행되며 provider barrier는 future contract-evolution 전까지 사용하지 않는다 <!-- omo:id=accept-f0-auth-barrier;stage=2;scope=backend;review=3,6 -->
 - [x] ordered auth/public/personal count+digest/revision을 staging과 CAS하고 mismatch/lock timeout/권한 부족은 canonical mutation 0으로 abort한다 <!-- omo:id=accept-f0-authoritative-digest-cas;stage=2;scope=backend;review=3,6 -->
 - [x] active/cleanup/quarantine lifecycle, watermark, outbox와 capability active가 한 transaction에서만 commit된다 <!-- omo:id=accept-f0-atomic-promote;stage=2;scope=backend;review=3,6 -->
 - [x] promote 전 failure는 adapter/policy를 legacy로 복구하고 staging/external attempt를 purge하며 canonical 0을 확인한다 <!-- omo:id=accept-f0-abort-restores-legacy;stage=2;scope=backend;review=3,6 -->
@@ -152,8 +152,8 @@
 - [x] long writer/Hook/external PUT/Auth insert-delete/digest mismatch/lock timeout을 결정적으로 주입하는 fixture가 준비된다 <!-- omo:id=accept-f0-fixture-races;stage=2;scope=shared;review=3,6 -->
 - [x] admin membership/audit/operational event와 inbound auth FK fixture가 준비된다 <!-- omo:id=accept-f0-fixture-admin-fk;stage=2;scope=shared;review=3,6 -->
 - [x] local existing upgrade, clean fresh migration, exact replay DB가 서로 분리되고 사용자 기존 DB/container/volume을 삭제하지 않는다 <!-- omo:id=accept-f0-local-db-isolation;stage=2;scope=shared;review=3,6 -->
-- [x] remote preflight는 read-only inventory이며 migration apply는 merged exact SHA 이후에만 수행한다 <!-- omo:id=accept-f0-remote-merged-sha-only;stage=2;scope=shared;review=3,6 -->
-- [x] remote apply 뒤 capability legacy/canonical 0/Hook ACL/legacy Route compatibility를 검증하고 maintenance/active로 바꾸지 않는다 <!-- omo:id=accept-f0-remote-dark-ship-smoke;stage=2;scope=shared;review=3,6 -->
+- [x] server MacBook local production preflight와 isolated local rehearsal inventory는 read-only authority를 분리해 확인하며 production migration apply는 merged exact SHA 이후에만 수행한다 <!-- omo:id=accept-f0-remote-merged-sha-only;stage=2;scope=shared;review=3,6 -->
+- [x] server MacBook local production apply 뒤 capability legacy/canonical 0/Hook ACL/legacy Route compatibility를 검증하고 maintenance/active로 바꾸지 않는다 <!-- omo:id=accept-f0-remote-dark-ship-smoke;stage=2;scope=shared;review=3,6 -->
 - [x] secrets/raw JWT/session/auth payload/API keys/user identifiers가 logs, fixture report, PR evidence에 없다 <!-- omo:id=accept-f0-evidence-secret-free;stage=2;scope=shared;review=3,6 -->
 
 ## Automation Split
@@ -190,8 +190,8 @@
 
 ### Manual Only
 
-- [ ] #3 준비 뒤 production `cutover_maintenance` 진입, Auth Admin/import/dashboard create/delete freeze, quiet window, Storage inventory 2회와 final `generation_active` promote
-- [ ] remote provider가 `auth.users SHARE ROW EXCLUSIVE` lock을 허용하지 않을 때 provider-supported maintenance barrier의 운영자 증거
+- [ ] #3 준비 뒤 서버 MacBook local production `cutover_maintenance` 진입, Auth Admin/import/dashboard create/delete freeze, external attempt 0, 기간 연장만으로 재승인하지 않는 최초 1회 quiet window, 15분 간격 local Storage inventory 2회와 final `generation_active` promote. lock 상실/digest 불일치/새 auth·external write/restart·restore/secret 교체/Auth 동결 해제 시 abort하고 증거를 처음부터 재수집한다
+- [ ] future remote provider 이동 시 별도 contract-evolution으로만 provider-supported maintenance barrier authority를 추가한다
 - [ ] auth-absent quarantine identity 복구 또는 backup/Storage/personal-owner inventory를 포함한 cleanup 승인
-- [ ] MacBook `com.homecook.account-maintenance` 실제 설치와 production `HOMECOOK_MAINTENANCE_WORKER_SECRET` 주입/교체
+- [ ] 서버 MacBook `com.homecook.account-maintenance` 실제 설치와 production `HOMECOOK_MAINTENANCE_WORKER_SECRET` 신규 주입/교체
 - [ ] 실제 email/OAuth provider 가입 smoke와 production 외부 dead-man heartbeat 수신 확인

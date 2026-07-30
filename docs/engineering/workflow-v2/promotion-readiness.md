@@ -1,5 +1,7 @@
 # OMO Promotion Readiness
 
+> 과거 provider promotion `ready`는 GPT-only actor dispatch readiness가 아니다. Claude provider 경로는 retired 상태이며 신규 Stage는 Codex 새 작업 handoff를 사용한다.
+
 ## 목적
 
 이 문서는 `OMO v2`의 기본 운영 경로 승격 이후에도
@@ -38,8 +40,8 @@
 
 `pass` 기준:
 
-- manual handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.
-- provider wait, Claude budget unavailable, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 `pause + scheduled resume`를 사용한다.
+- Codex 새 작업 handoff는 모든 product Stage의 기본 경로다. 별도의 사람 handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.
+- Codex task 진행 중, 외부 provider wait, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 task wait 또는 scheduled recheck를 사용한다.
 - handoff가 발생하면 latest `stage-result.json`, authority/final gate artifact 경로(해당 시), 남은 blocker, 다음 권장 명령을 handoff bundle 또는 notes에 남긴다.
 
 #### `live-smoke-standard`

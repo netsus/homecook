@@ -31,7 +31,7 @@ vi.mock("@/lib/supabase/env", () => ({
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
-  getSupabaseBrowserClient: () => ({
+  getAuthSupabaseBrowserClient: () => ({
     auth: {
       signInWithPassword,
       signUp,

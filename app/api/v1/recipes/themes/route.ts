@@ -18,7 +18,6 @@ import {
 } from "@/lib/server/recipe-card-user-status";
 import {
   createRouteHandlerClient,
-  createServiceRoleClient,
 } from "@/lib/supabase/server";
 import type { RecipeCardItem, RecipeThemesData } from "@/types/recipe";
 
@@ -393,8 +392,19 @@ export async function GET() {
   }
 
   try {
-    const routeClient = await createRouteHandlerClient();
-    const serviceClient = createServiceRoleClient() ?? routeClient;
+    const routeClient = await createRouteHandlerClient({
+      anonymousPublicReadScope: "recipe-themes",
+    });
+    let userId: string | null = null;
+    try {
+      const authResult = typeof routeClient.auth?.getUser === "function"
+        ? await routeClient.auth.getUser()
+        : { data: { user: null } };
+      userId = authResult.data.user?.id ?? null;
+    } catch {
+      userId = null;
+    }
+    const serviceClient = routeClient;
     const supabase = routeClient;
     const themeDbClient = supabase as unknown as ThemeDbClient;
     const privateThemeDbClient = serviceClient as unknown as ThemeDbClient;
@@ -423,12 +433,14 @@ export async function GET() {
         .order("view_count", { ascending: false })
         .order("id", { ascending: true })
         .limit(RECIPES_PER_THEME),
-      privateThemeDbClient
-        .from("meals")
-        .select("recipe_id")
-        .gte("created_at", getRecentPlannerSinceIso())
-        .order("created_at", { ascending: false })
-        .limit(RECENT_PLANNER_ROW_LIMIT),
+      userId
+        ? privateThemeDbClient
+          .from("meals")
+          .select("recipe_id")
+          .gte("created_at", getRecentPlannerSinceIso())
+          .order("created_at", { ascending: false })
+          .limit(RECENT_PLANNER_ROW_LIMIT)
+        : Promise.resolve({ data: [], error: null }),
       themeDbClient.rpc("list_home_theme_recipes", {
         p_tag_limit: 8,
         p_recipes_per_tag: 10,
@@ -470,17 +482,6 @@ export async function GET() {
     const noFlameRecipeIds = methodRowsResult.error
       ? []
       : selectNoFlameApplianceRecipeIds(normalizeMethodRows(methodRowsResult.data ?? []));
-    let userId: string | null = null;
-
-    try {
-      const authResult = typeof routeClient.auth?.getUser === "function"
-        ? await routeClient.auth.getUser()
-        : { data: { user: null } };
-      userId = authResult.data.user?.id ?? null;
-    } catch {
-      userId = null;
-    }
-
     const pantryRecipeIds = await readPantryMatchedRecipeIds(themeDbClient, userId);
     const supplementalRows = await readRecipeCardsByIds(themeDbClient, [
       ...pantryRecipeIds,

@@ -46,7 +46,16 @@ interface RecipeMealRow {
   plan_date: string;
   column_id: string;
   planned_servings: number;
+  recipe_content_snapshot_id: string | null;
   recipe_nutrition_snapshot_id: string | null;
+  recipe_content_snapshots:
+    | {
+      recipe_nutrition_snapshot_id: string | null;
+    }
+    | Array<{
+      recipe_nutrition_snapshot_id: string | null;
+    }>
+    | null;
 }
 
 type ArrayQueryResult<T> = PromiseLike<{
@@ -308,10 +317,18 @@ function projectRecipeMeal(
   snapshots: Map<string, RecipeNutritionSnapshotRow>,
 ): PlannerNutritionEntryProjection {
   const storageKey = `recipe:${meal.id}`;
-  if (!meal.recipe_nutrition_snapshot_id) {
+  const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
+    ? meal.recipe_content_snapshots[0] ?? null
+    : meal.recipe_content_snapshots;
+  const snapshotId = meal.recipe_content_snapshot_id
+    ? contentSnapshot?.recipe_nutrition_snapshot_id ?? null
+    : meal.recipe_nutrition_snapshot_id;
+
+  // content pin wins whenever present; legacy direct nutrition is fallback-only.
+  if (!snapshotId) {
     return unavailableEntry(storageKey, meal.plan_date, meal.column_id);
   }
-  const row = snapshots.get(meal.recipe_nutrition_snapshot_id);
+  const row = snapshots.get(snapshotId);
   if (!row) return unavailableEntry(storageKey, meal.plan_date, meal.column_id);
 
   try {
@@ -400,7 +417,9 @@ export async function readPlannerNutritionSummary(
 ): Promise<PlannerNutritionData> {
   const mealsResult = await dbClient
     .from("meals")
-    .select("id, plan_date, column_id, planned_servings, recipe_nutrition_snapshot_id")
+    .select(
+      "id, plan_date, column_id, planned_servings, recipe_content_snapshot_id, recipe_nutrition_snapshot_id, recipe_content_snapshots(recipe_nutrition_snapshot_id)",
+    )
     .eq("user_id", userId)
     .gte("plan_date", range.startDate)
     .lte("plan_date", range.endDate)
@@ -411,7 +430,14 @@ export async function readPlannerNutritionSummary(
 
   const dedupedMeals = [...new Map(mealsResult.data.map((meal) => [meal.id, meal])).values()];
   const snapshotIds = [...new Set(dedupedMeals
-    .map((meal) => meal.recipe_nutrition_snapshot_id)
+    .map((meal) => {
+      const contentSnapshot = Array.isArray(meal.recipe_content_snapshots)
+        ? meal.recipe_content_snapshots[0] ?? null
+        : meal.recipe_content_snapshots;
+      return meal.recipe_content_snapshot_id
+        ? contentSnapshot?.recipe_nutrition_snapshot_id ?? null
+        : meal.recipe_nutrition_snapshot_id;
+    })
     .filter((id): id is string => typeof id === "string" && id.length > 0))]
     .sort(compareUnicodeOrdinal);
   const snapshotMap = new Map<string, RecipeNutritionSnapshotRow>();

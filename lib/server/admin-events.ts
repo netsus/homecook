@@ -1,4 +1,6 @@
-import { createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createOperationalEventInternalClient,
+} from "@/lib/supabase/server";
 
 import {
   normalizeRequestPath,
@@ -19,6 +21,16 @@ interface OperationalEventsTable {
 
 export interface OperationalEventsDbClient {
   from(table: "operational_events"): OperationalEventsTable;
+}
+
+export interface OperationalEventsRpcClient {
+  rpc(
+    functionName: "record_internal_operational_event",
+    args: Record<string, unknown>,
+  ): PromiseLike<{
+    data: boolean | null;
+    error: QueryError | null;
+  }>;
 }
 
 export interface OperationalEventInput {
@@ -65,13 +77,50 @@ export async function recordOperationalEvent(
   }
 }
 
-export async function recordOperationalEventFromServiceRole(input: OperationalEventInput) {
+export async function recordOperationalEventThroughRpc(
+  dbClient: OperationalEventsRpcClient | null | undefined,
+  input: OperationalEventInput,
+) {
+  if (!dbClient) {
+    return false;
+  }
+
+  const requestPath = input.request_path ?? normalizeRequestPath(input.request);
   try {
-    return await recordOperationalEvent(
-      createServiceRoleClient() as unknown as OperationalEventsDbClient | null,
-      input,
-    );
+    const result = await dbClient.rpc("record_internal_operational_event", {
+      p_actor_user_id: input.actor_user_id ?? null,
+      p_error_code: input.error_code ?? null,
+      p_event_type: input.event_type,
+      p_http_status: input.http_status ?? null,
+      p_message_summary: input.message_summary ?? null,
+      p_metadata_json: sanitizeOperationalMetadata(input.metadata_json),
+      p_request_path: requestPath,
+      p_severity: input.severity ?? "info",
+      p_source: input.source,
+      p_target_user_id: input.target_user_id ?? null,
+    });
+    return !result.error && result.data === true;
   } catch {
     return false;
   }
+}
+
+export async function recordOperationalEventFromServiceRole(input: OperationalEventInput) {
+  try {
+    const stored = await recordOperationalEventThroughRpc(
+      createOperationalEventInternalClient(),
+      input,
+    );
+    if (stored) {
+      return true;
+    }
+  } catch {
+    // Emit the same PII-free diagnostic used for RPC failures below.
+  }
+
+  console.error("HOMECOOK_OPERATIONAL_EVENT_WRITE_FAILED", {
+    event_type: input.event_type,
+    source: input.source,
+  });
+  return false;
 }

@@ -16,7 +16,14 @@ const awardUserProgressEvent = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
+  createRouteHandlerClient: async (...args: unknown[]) => {
+    const routeClient = await createRouteHandlerClient(...args);
+    const createDataClient = createServiceRoleClient.getMockImplementation();
+    const dataClient = createDataClient?.();
+    return dataClient
+      ? { ...routeClient, ...dataClient, auth: routeClient.auth }
+      : routeClient;
+  },
   createServiceRoleClient,
 }));
 
@@ -48,6 +55,14 @@ interface LeftoverRow {
   id: string;
   user_id: string;
   recipe_id: string;
+  recipe_content_snapshot_id?: string | null;
+  recipe_content_snapshots?:
+    | {
+        id: string;
+        recipe_id: string;
+        title: string;
+      }
+    | null;
   status: "leftover" | "eaten";
   cooked_at: string;
   eaten_at: string | null;
@@ -76,6 +91,12 @@ interface RecipeRow {
   id: string;
   title: string;
   thumbnail_url: string | null;
+}
+
+interface RecipeContentSnapshotRow {
+  id: string;
+  recipe_id: string;
+  title: string;
 }
 
 const leftoverId = "550e8400-e29b-41d4-a716-446655440201";
@@ -141,22 +162,28 @@ function createUpdateQuery<T>(results: Array<QueryResult<T | null>>) {
 function createLeftoverListDb({
   leftovers,
   recipes,
+  contentSnapshots = [],
   sourceMeals = [],
   originMeals = [],
 }: {
   leftovers: LeftoverRow[];
   recipes: RecipeRow[];
+  contentSnapshots?: RecipeContentSnapshotRow[];
   sourceMeals?: SourceMealRow[];
   originMeals?: OriginMealRow[];
 }) {
   const leftoversQuery = createThenableQuery([{ data: leftovers, error: null }]);
   const recipesQuery = createThenableQuery([{ data: recipes, error: null }]);
+  const contentSnapshotsQuery = createThenableQuery([
+    { data: contentSnapshots, error: null },
+  ]);
   const sourceMealsQuery = createThenableQuery([{ data: sourceMeals, error: null }]);
   const originMealsQuery = createThenableQuery([{ data: originMeals, error: null }]);
 
   return {
     leftoversQuery,
     recipesQuery,
+    contentSnapshotsQuery,
     sourceMealsQuery,
     originMealsQuery,
     db: {
@@ -167,6 +194,10 @@ function createLeftoverListDb({
 
         if (table === "recipes") {
           return { select: vi.fn(() => recipesQuery) };
+        }
+
+        if (table === "recipe_content_snapshots") {
+          return { select: vi.fn(() => contentSnapshotsQuery) };
         }
 
         if (table === "meals") {
@@ -394,6 +425,90 @@ describe("GET /api/v1/leftovers", () => {
       },
       error: null,
     });
+  });
+
+  it("uses the leftover content snapshot title instead of the mutable current recipe title", async () => {
+    const contentSnapshotId = "550e8400-e29b-41d4-a716-446655440099";
+    const contentSnapshot = {
+      id: contentSnapshotId,
+      recipe_id: recipeId,
+      title: "조리 당시 김치찌개",
+    };
+    const { db } = createLeftoverListDb({
+      leftovers: [
+        {
+          id: leftoverId,
+          user_id: "user-1",
+          recipe_id: recipeId,
+          recipe_content_snapshot_id: contentSnapshotId,
+          recipe_content_snapshots: contentSnapshot,
+          status: "leftover",
+          cooked_at: "2026-04-28T10:00:00.000Z",
+          eaten_at: null,
+          auto_hide_at: null,
+          stale_reviewed_at: null,
+          cooking_servings: 4,
+        },
+      ],
+      recipes: [
+        {
+          id: recipeId,
+          title: "편집된 현재 김치찌개",
+          thumbnail_url: "https://example.com/kimchi.png",
+        },
+      ],
+      contentSnapshots: [contentSnapshot],
+    });
+    setupAuthenticatedDb(db);
+
+    const { GET } = await importListRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/leftovers"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items[0].recipe_title).toBe("조리 당시 김치찌개");
+  });
+
+  it("fails closed when a leftover content snapshot relation is broken", async () => {
+    const contentSnapshotId = "550e8400-e29b-41d4-a716-446655440099";
+    const { db } = createLeftoverListDb({
+      leftovers: [
+        {
+          id: leftoverId,
+          user_id: "user-1",
+          recipe_id: recipeId,
+          recipe_content_snapshot_id: contentSnapshotId,
+          recipe_content_snapshots: null,
+          status: "leftover",
+          cooked_at: "2026-04-28T10:00:00.000Z",
+          eaten_at: null,
+          auto_hide_at: null,
+          stale_reviewed_at: null,
+          cooking_servings: 4,
+        },
+      ],
+      recipes: [
+        {
+          id: recipeId,
+          title: "노출되면 안 되는 현재 제목",
+          thumbnail_url: null,
+        },
+      ],
+      contentSnapshots: [],
+    });
+    setupAuthenticatedDb(db);
+
+    const { GET } = await importListRoute();
+    const response = await GET(new NextRequest("http://localhost:3000/api/v1/leftovers"));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(JSON.stringify(body)).not.toContain("노출되면 안 되는 현재 제목");
   });
 
   it("falls back to the original cooked planner meal when no re-added meal exists", async () => {
@@ -703,22 +818,28 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
       },
       error: null,
     });
-    expect(awardUserProgressEvent).toHaveBeenCalledWith(db, {
-      userId: "user-1",
-      eventType: "leftover_eaten",
-      sourceTable: "leftover_dishes",
-      sourceId: leftoverId,
-      occurredAt: nowIso,
-    });
-    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(db, {
-      userId: "user-1",
-      activityType: "leftover_eaten",
-      category: "leftovers",
-      sourceKey: `leftover_eaten:${leftoverId}`,
-      sourceTable: "leftover_dishes",
-      sourceId: leftoverId,
-      occurredAt: nowIso,
-    });
+    expect(awardUserProgressEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ from: db.from }),
+      {
+        userId: "user-1",
+        eventType: "leftover_eaten",
+        sourceTable: "leftover_dishes",
+        sourceId: leftoverId,
+        occurredAt: nowIso,
+      },
+    );
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ from: db.from }),
+      {
+        userId: "user-1",
+        activityType: "leftover_eaten",
+        category: "leftovers",
+        sourceKey: `leftover_eaten:${leftoverId}`,
+        sourceTable: "leftover_dishes",
+        sourceId: leftoverId,
+        occurredAt: nowIso,
+      },
+    );
   });
 
   it("returns the same result without updating when the dish is already eaten", async () => {

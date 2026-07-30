@@ -1,10 +1,10 @@
 {
   "claude": {
-    "provider": "claude-cli",
-    "bin": "claude",
-    "model": "sonnet",
-    "effort": "high",
-    "permission_mode": "bypassPermissions"
+    "provider": "retired",
+    "bin": "disabled",
+    "model": "none",
+    "effort": "none",
+    "permission_mode": "disabled"
   },
   "codex": {
     "provider": "opencode",

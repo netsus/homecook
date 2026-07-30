@@ -29,7 +29,7 @@
 - 표준 로컬 진입점은 `pnpm branch:start -- --branch <name>` 또는 `pnpm branch:start -- --slice <slice> --role <docs|be|fe>`다.
 - `pnpm branch:start`는 깨끗한 worktree에서만 동작하며, 새 브랜치는 기본적으로 `origin/master`에서 만든다.
 - `pnpm branch:start`는 일반 세션의 active work branch intent를 `.opencode/branch-session.json`에 기록한다.
-- 일반 세션의 `.claude/settings.json` project hook는 새 user prompt가 들어오면 branch reassert를 요구한다.
+- `.claude/settings.json` 경로에 남은 project hook는 legacy 호환 경로다. 모든 Codex 새 작업은 hook 유무와 관계없이 새 user prompt 뒤 `pnpm branch:start`로 branch intent를 직접 재확인한다.
 - 따라서 같은 세션이어도 새 prompt 뒤에 수정하려면 먼저 `pnpm branch:start ...`를 다시 실행해 이번 턴의 branch intent를 재확인한다.
 - 그 다음 `Write/Edit/MultiEdit` 직전에 recorded intent를 검사한다.
   - current checkout과 recorded intent가 다르지만 worktree가 clean이면 recorded branch로 자동 `checkout`
@@ -89,7 +89,7 @@ pnpm branch:clear
 - 예시:
   - `fix(planner): keep login CTA above mobile tabs`
   - `docs(workflow): slim CI triggers for docs-only PRs`
-- 정규 리뷰용 PR 제목에는 `[codex]`, `[claude]` 같은 작성자 접두사는 기본값으로 쓰지 않는다.
+- 정규 리뷰용 PR 제목에는 `[codex]` 같은 작성자 접두사를 기본값으로 쓰지 않는다. 역할과 task ID는 PR evidence에 남긴다.
 - 이 규칙은 우선 문서 규칙으로 운영하며, 별도 공지 전까지 CI 필수 체크로 강제하지 않는다.
 
 ## Worktree Strategy

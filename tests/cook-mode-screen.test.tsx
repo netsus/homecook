@@ -84,7 +84,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
-  getSupabaseBrowserClient: vi.fn(),
+  getAuthSupabaseBrowserClient: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/env", () => ({

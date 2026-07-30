@@ -25,11 +25,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.25.md",
+      "docs/화면정의서-v1.5.29.md",
+      "docs/유저flow맵-v1.3.27.md",
+      "docs/db설계-v1.3.26.md",
+      "docs/api문서-v1.2.29.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -50,14 +50,14 @@
       "docs/design/mobile-ux-rules.md",
       "docs/design/anchor-screens.md",
       "docs/engineering/workflow-v2/README.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
     ]
   },
   "workflow": {
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "merged-exact-SHA remote read-only batch event function ACL RLS policy constraint capability inventory",
+      "merged-exact-SHA server-production/local-rehearsal read-only batch event function ACL RLS policy constraint capability inventory",
       "two-owner exact pantry complete denial and multi-table digest smoke",
       "idempotent complete and batch event replay/checksum concurrency smoke",
       "known missing unrecoverable and weighted-unweighed state matrix smoke",
@@ -94,7 +94,7 @@
       "pnpm verify:frontend",
       "pnpm validate:exploratory-qa-evidence -- --slice cooked-batch-weight-ledger",
       "pnpm validate:closeout-sync -- --slice cooked-batch-weight-ledger",
-      "node scripts/verify-cooked-batch-weight-ledger-remote.mjs --mode post-merge-read-only",
+      "node scripts/verify-cooked-batch-weight-ledger-local-first.mjs --mode post-merge-read-only",
       "git diff --check"
     ],
     "verify_commands": [
@@ -118,7 +118,7 @@
       "separate Codex Stage 3 Stage 5 Stage 6 and closeout reviews"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
+      "approved-plan-sha256-and-1056-line-lock",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "roadmap-docs-workflow-lifecycle-planned-separation",
       "snapshot-v2-exact-pantry-weight-completion-atomicity",
@@ -133,7 +133,7 @@
       "v1-shape-optional-key-telemetry-and-tombstone-boundary",
       "slice9-meal-log-and-slice11-final-ui-boundary",
       "stage1-cook-mode-wireframe-and-390-320-authority-plan",
-      "merged-exact-sha-remote-read-only-evidence",
+      "merged-exact-sha-server-production-local-rehearsal-read-only-evidence",
       "stage1-current-vs-future-command-honesty",
       "independent-required-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip"
@@ -159,7 +159,7 @@
     "Discard mixed as eaten meal-log creation for unweighed closure or repeat XP",
     "Existing legacy row fabricated content or weight backfill",
     "New endpoint field status reason error screen or client authority",
-    "Unmerged remote migration production write or capability activation"
+    "Unapproved server-production migration or write or capability activation"
   ],
   "open_questions": [],
   "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/DB, five-axis and design reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; implementation evidence is future. Runtime waits for #7 and cook-mode-whole-board. #8 owns complete/ledger/functional COOK_MODE/R-R1 gate, #9 meal-log links, #11 final visual completion, and R+2 activation remains Manual Only."

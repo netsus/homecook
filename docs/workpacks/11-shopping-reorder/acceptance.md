@@ -5,7 +5,7 @@
 > Stage 6 merge 시점에는 `Manual Only`를 제외한 In Scope acceptance 항목이 모두 체크되어 있어야 한다.
 > `Manual Only`에 남는 항목은 외부 서비스, live OAuth, 운영 승인처럼 자동화할 수 없는 것만 허용하며, PR의 `Actual Verification` / `Closeout Sync` 섹션에 현재 상태를 남긴다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 `Manual Only`를 제외한 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
-> Claude가 rebuttal을 수용해 닫은 항목은 checkbox를 유지한 채 `waived=true;waived_by=claude;waived_stage=<3|5|6>;waived_reason=<slug>` metadata를 추가한다.
+> 신규 GPT-only 실행에서는 reviewer waiver를 만들지 않는다. rebuttal이 수용되면 독립 Codex 검토 작업의 task ID, evidence, verdict를 남기고 closeout coordinator가 항목을 갱신한다. 과거 `waived_by=claude` metadata는 merged 이력 호환용으로만 보존한다.
 
 ## Happy Path
 - [x] 대표 사용자 흐름이 정상 동작한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
@@ -73,7 +73,7 @@
   - `meal_plan_columns` × 4, `recipe_books` × 3 (회원가입 시 자동 생성, slice 01 bootstrap)
 
 ## Manual QA
-- verifier: Claude (Stage 4 implementation)
+- verifier: Codex `frontend-implementer` 작업
 - environment: Automated (Vitest + Playwright e2e)
 - scenarios:
   1. 장보기 상세(미완료) 진입 → 위/아래 이동 버튼 표시 확인 ✅

@@ -29,11 +29,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.25.md",
+      "docs/화면정의서-v1.5.29.md",
+      "docs/유저flow맵-v1.3.27.md",
+      "docs/db설계-v1.3.26.md",
+      "docs/api문서-v1.2.29.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -52,14 +52,14 @@
       "docs/engineering/tdd-vitest.md",
       "docs/engineering/qa-system.md",
       "docs/engineering/workflow-v2/README.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
     ]
   },
   "workflow": {
     "plan_loop": "required",
     "review_loop": "required",
     "external_smokes": [
-      "merged-exact-SHA remote read-only function ACL RLS policy and capability inventory",
+      "merged-exact-SHA server-production/local-rehearsal read-only function ACL RLS policy and capability inventory",
       "two-owner direct-DML and non-disclosure role matrix with before-after digest",
       "G1 delayed write delete G2 recreation race produces no cross-generation row",
       "public source immutable fork and same-id versus new-id identity smoke",
@@ -88,7 +88,7 @@
       "pnpm verify:backend",
       "pnpm test:e2e:regression:ci --grep personal-recipe-customization-write-core",
       "pnpm validate:closeout-sync -- --slice personal-recipe-customization-write-core",
-      "node scripts/verify-personal-recipe-customization-write-core-remote.mjs --mode post-merge-read-only",
+      "node scripts/verify-personal-recipe-customization-write-core-local-first.mjs --mode post-merge-read-only",
       "git diff --check"
     ],
     "verify_commands": [
@@ -110,7 +110,7 @@
       "separate Codex Stage 3 implementation review and final closeout review"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
+      "approved-plan-sha256-and-1056-line-lock",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "roadmap-docs-workflow-lifecycle-planned-separation",
       "public-source-immutable-fork-new-private-origin-id",
@@ -125,7 +125,7 @@
       "slice7-final-patch-and-slice8-activation-boundary",
       "capability-off-zero-new-personal-mutation-and-legacy-compatibility",
       "backend-only-design-not-required",
-      "merged-exact-sha-remote-read-only-evidence",
+      "merged-exact-sha-server-production-local-rehearsal-read-only-evidence",
       "stage1-current-vs-future-command-honesty",
       "independent-codex-required-findings-zero",
       "current-head-all-started-checks-terminal-green-or-intended-skip"
@@ -150,8 +150,8 @@
     "User-facing history trash restore publish or MYPAGE RECIPEBOOK_DETAIL edit UI",
     "Public recipe mutation other-owner existence disclosure or client-selected authority",
     "New public endpoint request response field status or error code",
-    "Unmerged remote migration production database write or capability activation"
+    "Unapproved server-production migration or database write or capability activation"
   ],
   "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle remains planned and approval not_started until separate Codex internal1.5, security/DB and five-axis reviews approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Backend migration/RPC/RLS/PostgreSQL/real DB/E2E/remote and release evidence are future artifacts. Design is N/A because #5 owns all UI. #6 may dark-ship recipe-local write core but must not expose an alternate PATCH; #7 integrates future impact and #8 gates R+2 activation."
+  "notes": "Roadmap moves to docs while workflow lifecycle remains planned and approval not_started until separate Codex internal1.5, security/DB and five-axis reviews approve with zero required findings. Stage 1 verify_commands are current docs validators, focused workflow tests, lint, typecheck, audit and diff only. Backend migration/RPC/RLS/PostgreSQL/real DB/E2E/server-production/local-rehearsal and release evidence are future artifacts. Design is N/A because #5 owns all UI. #6 may dark-ship recipe-local write core but must not expose an alternate PATCH; #7 integrates future impact and #8 gates R+2 activation."
 }

@@ -10,7 +10,7 @@
 - Major issues: 0
 - Accepted minor issues: 2
 
-## Claude Final Authority Gate
+## Historical Claude Final Authority Gate
 
 - Prompt: `.omx/artifacts/claude-delegate-admin-foundation-final-authority-gate-prompt-20260527T140615+0900.md`
 - Response: `.omx/artifacts/claude-delegate-admin-foundation-final-authority-gate-response-20260527T140615+0900.md`

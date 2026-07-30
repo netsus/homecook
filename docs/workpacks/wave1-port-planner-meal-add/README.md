@@ -147,7 +147,7 @@ Phase4 prep의 목표는 구현이 아니라 준비 산출물을 잠그는 것�
   - `design-generator` / `design-critic`: 변경이 프로토타입 기준의 정리(이모지/배지 제거, CTA 재배치, 2열 그리드)이므로 screenshot evidence 기반 authority로 충분. Stage 4에서 재판단.
   - authority report: `ui/designs/authority/WAVE1_PLANNER_MEAL_ADD-authority.md`
   - refreshed evidence artifacts: `ui/designs/evidence/wave1-port-planner-meal-add/phase4-prep.md`, `ui/designs/evidence/wave1-port-planner-meal-add/phase5-visual-audit.md`, `ui/designs/evidence/wave1-port-planner-meal-add/visual-verdict.json`
-  - Claude final authority gate PASS required before Phase5 merge
+  - 별도 Codex `product-design-authority` 작업 PASS required before Phase5 merge
 
 ## Design Status
 

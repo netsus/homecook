@@ -16,6 +16,17 @@ describe("account session generation security function inventory", () => {
     expect(existsSync(ADDITIVE_MANIFEST_PATH)).toBe(true);
   });
 
+  it("observes private invoker helpers instead of treating them as absent", () => {
+    const validator = readFileSync(
+      "scripts/validate-security-function-authorization.mjs",
+      "utf8",
+    );
+
+    expect(validator).toContain(
+      "schema_name in ('public', 'account_generation_auth_hook', 'private')",
+    );
+  });
+
   it("validates the additive manifest without requiring a live database", () => {
     const manifest = JSON.parse(readFileSync(ADDITIVE_MANIFEST_PATH, "utf8")) as {
       deployment_state: string;

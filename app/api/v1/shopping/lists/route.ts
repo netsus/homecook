@@ -18,7 +18,7 @@ import {
   recordUserGrowthActivityEvent,
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type {
   ShoppingListAllPantryCompletionSummary,
   ShoppingListAllPantrySummary,
@@ -50,6 +50,33 @@ interface MealsRow {
   id: string;
   user_id: string;
   recipe_id: string;
+  recipe_content_snapshot_id: string | null;
+  recipe_content_snapshots:
+    | {
+      base_servings: number | null;
+      ingredients_json: Array<{
+        ingredient_id: string;
+        amount: number | null;
+        unit: string | null;
+        ingredient_type: "QUANT" | "TO_TASTE";
+        display_text: string | null;
+        scalable?: boolean;
+        sort_order?: number;
+      }> | null;
+    }
+    | Array<{
+      base_servings: number | null;
+      ingredients_json: Array<{
+        ingredient_id: string;
+        amount: number | null;
+        unit: string | null;
+        ingredient_type: "QUANT" | "TO_TASTE";
+        display_text: string | null;
+        scalable?: boolean;
+        sort_order?: number;
+      }> | null;
+    }>
+    | null;
   plan_date: string;
   column_id: string;
   planned_servings: number;
@@ -292,6 +319,16 @@ function sortMealsForShopping(left: MealsRow, right: MealsRow) {
   return left.id.localeCompare(right.id);
 }
 
+function getMealContentSnapshot(meal: MealsRow) {
+  return Array.isArray(meal.recipe_content_snapshots)
+    ? meal.recipe_content_snapshots[0] ?? null
+    : meal.recipe_content_snapshots;
+}
+
+function hasContentPin(meal: MealsRow) {
+  return typeof meal.recipe_content_snapshot_id === "string" && meal.recipe_content_snapshot_id.length > 0;
+}
+
 function buildShoppingMealSelection({
   mealConfigMap,
   recipeConfigMap,
@@ -448,7 +485,7 @@ export async function POST(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     ShoppingCreateDbClient & UserBootstrapDbClient & UserGrowthActivityDbClient;
 
   try {
@@ -492,7 +529,7 @@ export async function POST(request: Request) {
   const mealsResult = await dbClient
     .from("meals")
     .select(
-      "id, user_id, recipe_id, plan_date, column_id, planned_servings, status, is_leftover, leftover_dish_id, shopping_list_id",
+      "id, user_id, recipe_id, recipe_content_snapshot_id, recipe_content_snapshots(base_servings, ingredients_json), plan_date, column_id, planned_servings, status, is_leftover, leftover_dish_id, shopping_list_id",
     )
     .in("id", mealIds);
 
@@ -527,6 +564,10 @@ export async function POST(request: Request) {
     return fail("VALIDATION_ERROR", "선택된 식사가 없어요.", 422, [
       { field: "meal_configs", reason: "no_eligible_meal" },
     ]);
+  }
+
+  if (validMeals.some((meal) => hasContentPin(meal) && getMealContentSnapshot(meal) === null)) {
+    return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
   }
 
   const { shoppingMeals, splitMeals } = buildShoppingMealSelection({
@@ -591,30 +632,88 @@ export async function POST(request: Request) {
     });
   }
 
-  const recipeIds = [...recipeAggregation.keys()];
-  const recipeRowsResult = await dbClient
-    .from("recipes")
-    .select("id, base_servings")
-    .in("id", recipeIds);
+  const legacyMeals = shoppingMeals.filter((meal) => !hasContentPin(meal));
+  const contentPinnedMeals = shoppingMeals.filter((meal) => hasContentPin(meal));
+  const legacyRecipeIds = [...new Set(legacyMeals.map((meal) => meal.recipe_id))];
+  const recipeBaseServingsMap = new Map<string, number>();
+  const ingredientAggregationRows: Array<
+    RecipeIngredientRow & {
+      shopping_key: string;
+      shopping_servings: number;
+      planned_servings: number;
+    }
+  > = [];
 
-  if (recipeRowsResult.error || !recipeRowsResult.data) {
-    return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+  if (legacyRecipeIds.length > 0) {
+    const recipeRowsResult = await dbClient
+      .from("recipes")
+      .select("id, base_servings")
+      .in("id", legacyRecipeIds);
+
+    if (recipeRowsResult.error || !recipeRowsResult.data) {
+      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+    }
+
+    recipeRowsResult.data.forEach((recipe) => {
+      recipeBaseServingsMap.set(recipe.id, recipe.base_servings);
+    });
+
+    const recipeIngredientRowsResult = await dbClient
+      .from("recipe_ingredients")
+      .select("recipe_id, ingredient_id, amount, unit, ingredient_type, display_text")
+      .in("recipe_id", legacyRecipeIds);
+
+    if (recipeIngredientRowsResult.error || !recipeIngredientRowsResult.data) {
+      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+    }
+
+    recipeIngredientRowsResult.data.forEach((row) => {
+      const recipeTotals = recipeAggregation.get(row.recipe_id);
+      const plannedServings = recipeBaseServingsMap.get(row.recipe_id);
+      if (!recipeTotals || !plannedServings) {
+        return;
+      }
+      ingredientAggregationRows.push({
+        ...row,
+        shopping_key: row.recipe_id,
+        shopping_servings: recipeTotals.shopping_servings,
+        planned_servings: plannedServings,
+      });
+    });
   }
 
-  const recipeBaseServingsMap = new Map(
-    recipeRowsResult.data.map((recipe) => [recipe.id, recipe.base_servings]),
-  );
+  contentPinnedMeals.forEach((meal) => {
+    const contentSnapshot = getMealContentSnapshot(meal);
+    if (!contentSnapshot || typeof contentSnapshot.base_servings !== "number") {
+      return;
+    }
 
-  const recipeIngredientRowsResult = await dbClient
-    .from("recipe_ingredients")
-    .select("recipe_id, ingredient_id, amount, unit, ingredient_type, display_text")
-    .in("recipe_id", recipeIds);
+    const recipeTotals = recipeAggregation.get(meal.recipe_id);
+    const shoppingServings = usesRecipeConfigs
+      ? recipeTotals && recipeTotals.planned_servings_total > 0
+        ? (
+            recipeTotals.shopping_servings
+            * meal.planned_servings
+          ) / recipeTotals.planned_servings_total
+        : meal.planned_servings
+      : mealConfigMap.get(meal.id)?.shopping_servings ?? meal.planned_servings;
 
-  if (recipeIngredientRowsResult.error || !recipeIngredientRowsResult.data) {
-    return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
-  }
+    for (const ingredient of contentSnapshot.ingredients_json ?? []) {
+      ingredientAggregationRows.push({
+        recipe_id: meal.recipe_id,
+        ingredient_id: ingredient.ingredient_id,
+        amount: ingredient.amount,
+        unit: ingredient.unit,
+        ingredient_type: ingredient.ingredient_type,
+        display_text: ingredient.display_text,
+        shopping_key: meal.id,
+        shopping_servings: shoppingServings,
+        planned_servings: contentSnapshot.base_servings,
+      });
+    }
+  });
 
-  const ingredientIds = [...new Set(recipeIngredientRowsResult.data.map((row) => row.ingredient_id))];
+  const ingredientIds = [...new Set(ingredientAggregationRows.map((row) => row.ingredient_id))];
   const ingredientNameMap = new Map<string, string>();
 
   if (ingredientIds.length > 0) {
@@ -650,28 +749,16 @@ export async function POST(request: Request) {
   }
 
   const aggregatedIngredients = aggregateShoppingIngredients(
-    recipeIngredientRowsResult.data
-      .map((ingredientRow) => {
-        const recipeTotals = recipeAggregation.get(ingredientRow.recipe_id);
-
-        if (!recipeTotals) {
-          return null;
-        }
-
-        return {
-          ingredient_id: ingredientRow.ingredient_id,
-          standard_name: ingredientNameMap.get(ingredientRow.ingredient_id) ?? "",
-          ingredient_type: ingredientRow.ingredient_type,
-          amount: ingredientRow.amount,
-          unit: ingredientRow.unit,
-          display_text: ingredientRow.display_text,
-          planned_servings:
-            recipeBaseServingsMap.get(ingredientRow.recipe_id) ??
-            recipeTotals.planned_servings_total,
-          shopping_servings: recipeTotals.shopping_servings,
-        };
-      })
-      .filter((value): value is NonNullable<typeof value> => value !== null),
+    ingredientAggregationRows.map((ingredientRow) => ({
+      ingredient_id: ingredientRow.ingredient_id,
+      standard_name: ingredientNameMap.get(ingredientRow.ingredient_id) ?? "",
+      ingredient_type: ingredientRow.ingredient_type,
+      amount: ingredientRow.amount,
+      unit: ingredientRow.unit,
+      display_text: ingredientRow.display_text,
+      planned_servings: ingredientRow.planned_servings,
+      shopping_servings: ingredientRow.shopping_servings,
+    })),
   );
 
   const allNeededIngredientsAreInPantry =
@@ -1066,7 +1153,7 @@ export async function GET(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     ShoppingCreateDbClient & UserBootstrapDbClient;
 
   try {

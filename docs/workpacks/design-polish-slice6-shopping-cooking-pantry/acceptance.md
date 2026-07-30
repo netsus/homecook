@@ -45,7 +45,7 @@
 
 ## Manual QA
 
-- verifier: Codex Stage 5/6 + Claude final authority when available
+- verifier: 서로 task ID가 다른 Codex Stage 5/6 및 `product-design-authority` 작업
 - environment: local Playwright fixture server, mobile default 390px, mobile narrow 320px
 - scenarios:
   - 같은 recipe 식사 2개가 서로 다른 인분으로 등록된 상태에서 한 카드의 `[요리하기]`만 실행

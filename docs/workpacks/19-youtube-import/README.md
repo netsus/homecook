@@ -328,14 +328,14 @@
   - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-review-narrow-320x568.png`
   - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-complete-narrow-320x568.png`
 - Authority status: `reviewed`
-- Authority planning: Stage 4에서 screenshot evidence 캡처 → Codex `authority_precheck` → Claude `final_authority_gate`
+- Authority planning: Stage 4에서 screenshot evidence 캡처 → 별도 Codex `authority_precheck` 작업 → 또 다른 Codex `product-design-authority` 작업
 - Authority report: `ui/designs/authority/YT_IMPORT-authority.md` (Stage 4/5에서 생성)
 - Notes:
   - h8 matrix에 따라 `YT_IMPORT`는 `prototype-derived design`으로 분류
   - Baemin vocabulary/material/tokens 사용, near-100% parity 타겟 아님
   - prototype-only 요소(bottom tab 동작, Jua 폰트, unsupported 기능) 불포함
-  - 새 화면이므로 Stage 4 screenshot evidence + Claude final authority gate 필요
-  - Codex authority_precheck + Claude final authority gate passed, blocker 0 / major 0
+  - 새 화면이므로 Stage 4 screenshot evidence + 별도 Codex `product-design-authority` 작업 필요
+  - historical Codex authority_precheck + Claude final authority gate passed, blocker 0 / major 0
 
 ## Design Status
 

@@ -58,13 +58,13 @@ Schema Change:
 - #4 content/nutrition authority를 대체하는 direct nutrition pointer나 mutable recipe fallback
 - #5의 editor primitive/CTA 재설계, #10의 planner navigation shell, #11의 weight UI
 - 공식 문서에 없는 endpoint, request/response field, status, error code, screen 또는 client authority
-- Stage 1 docs PR에서 production code, migration, remote DB mutation 또는 capability change
+- Stage 1 docs PR에서 production code, migration, server-production/rehearsal DB mutation 또는 capability change
 
 ## Dependencies
 
 | Gate | Current state | Meaning |
 | --- | --- | --- |
-| official contract PR #1072 | merged | v1.7.22/v1.5.28/v1.3.25/v1.3.23/v1.2.27 authority available |
+| historical contract base PR #1072 | merged | superseded baseline; active authority is the current tuple in `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` |
 | `recipe-snapshot-authority-foundation` Stage 1 PR #1078 | merged docs | #4 runtime must provide content authority, v2 dark session/claim/idempotency schema and rollback-safe Meal transition before #7 implementation |
 | `personal-recipe-customization-write-core` Stage 1 PR #1080 | merged docs | #6 runtime must provide the recipe-local owner/session-generation-bound write core before #7 integrates final PATCH |
 | `cook-mode-whole-board` | currently `implementation` | must merge with required checks green before #7 implementation; Stage 1 docs may merge now |
@@ -225,7 +225,7 @@ snapshot_v2 read:
 ### Stage 1 gate
 
 - this docs PR runs current SOT/workflow/workpack/automation/bookkeeping validators, focused workflow-doc Vitest, lint, typecheck, dependency audit and diff check only.
-- PostgreSQL, Route/RPC, component, E2E, visual/a11y, real DB, remote inventory, seeded-drain and activation commands below are future implementation/integration artifacts and are not claimed executable now.
+- PostgreSQL, Route/RPC, component, E2E, visual/a11y, real DB, server-production/local-rehearsal inventory, seeded-drain and activation commands below are future implementation/integration artifacts and are not claimed executable now.
 
 ### Future fixtures
 
@@ -243,7 +243,7 @@ snapshot_v2 read:
 - real local Supabase two-owner tests with before/after digests for every denied/stale path and deterministic shopping reconciliation.
 - E2E for custom save/fork, keep/replace-all, stale preview, active claim, same-Meal concurrent start, cancel/restart, completed shopping read-only and historical snapshot invariance.
 - 390px/320px component/visual/a11y evidence plus design critic and product-design-authority report.
-- merged-exact-SHA remote read-only function/ACL/RLS/policy/constraint/capability inventory; no unmerged remote migration.
+- merged-exact-SHA server-production/local-rehearsal read-only function/ACL/RLS/policy/constraint/capability inventory; no unapproved server-production migration.
 
 ## Key Rules
 
@@ -276,4 +276,4 @@ snapshot_v2 read:
 - [ ] past/cook-done/completed shopping/session/log history remains snapshot-stable <!-- omo:id=delivery-future-history;stage=2;scope=shared;review=3,6 -->
 - [ ] v2 creation/personal writes stay dark and existing seeded v2 drain survives rollback <!-- omo:id=delivery-future-dark-release;stage=2;scope=shared;review=3,6 -->
 - [ ] exact-pantry complete and activation remain #8 boundaries <!-- omo:id=delivery-future-successor-boundary;stage=2;scope=shared;review=3,6 -->
-- [ ] local, PostgreSQL, E2E, real DB, remote, security and current-head evidence are green <!-- omo:id=delivery-future-verification;stage=2;scope=shared;review=3,6 -->
+- [ ] local, PostgreSQL, E2E, real DB, server-production/local-rehearsal, security and current-head evidence are green <!-- omo:id=delivery-future-verification;stage=2;scope=shared;review=3,6 -->

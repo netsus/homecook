@@ -16,6 +16,7 @@
 12. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
 13. 필요 시 `docs/engineering/security-performance-design.md`
 14. workflow v2 / OMO 운영 기준 확인 시 `docs/engineering/workflow-v2/README.md`부터 읽고, 필요한 문서만 링크를 따라간다
+15. Stage 간 새 Codex 작업 생성·인수인계 시 → `docs/engineering/codex-task-handoff.md`
 
 ## Source of Truth
 
@@ -35,13 +36,16 @@
 - 예외: `docs/engineering/` 아래의 repo-engineering automation, workflow tooling, agent 운영 규칙은 제품 기능 슬라이스가 아니다.
 - 이런 engineering 작업은 `docs/workpacks/<slice>/README.md`를 새로 만드는 대신 관련 `docs/engineering/*.md`를 설계와 운영 기준 문서로 사용한다.
 - 현재 저장소에 이미 들어온 탐색/상세/로그인 게이트는 `01-discovery-detail-auth` 부트스트랩 슬라이스로 간주한다.
-- 새로운 기능 작업 전 **Claude가** `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 먼저 만들고 main에 머지한다 (1단계).
-- **Codex는** 구현 전 해당 슬라이스의 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 반드시 확인한다. 없으면 Claude에 먼저 요청한다.
-- engineering 예외 작업에서는 Codex와 Claude 모두 대상 `docs/engineering/*.md`를 우선 확인하고, 필요 시 `AGENTS.md`, `CLAUDE.md`, `docs/engineering/subagents.md` 같은 governing doc을 함께 갱신한다.
+- Claude는 더 이상 사용하지 않는다. Claude CLI, Claude 앱, Claude API를 신규 작업이나 리뷰에 호출하지 않는다.
+- 새로운 기능 작업 전 **별도 Codex Stage 1 문서 작업**이 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 먼저 만들고 main에 머지한다.
+- 구현 전 해당 슬라이스의 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 반드시 확인한다. 없으면 현재 작업에서 대신 작성하지 말고 `docs/engineering/codex-task-handoff.md`에 따라 Stage 1 전용 새 Codex 작업으로 넘긴다.
+- Stage 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. internal 1.5, Stage 3, Stage 5, final authority, Stage 6은 작성·구현 작업과 다른 Codex task ID를 사용한다.
+- 같은 작업 안의 서브에이전트는 독립 Stage 작업을 대신하지 않는다. 역할 기반 보조 작업에만 사용한다.
+- engineering 예외 작업에서는 대상 `docs/engineering/*.md`를 우선 확인하고, 필요 시 `AGENTS.md`, `docs/engineering/codex-task-handoff.md`, `docs/engineering/subagents.md` 같은 governing doc을 함께 갱신한다.
 - 문서 간 충돌이 보이면 구현보다 충돌 정리를 우선한다.
 - 메인 Codex는 작업 전 `문서 확인 -> 테스트 전략 -> 구현 -> 리뷰` 순서를 기본 흐름으로 따른다.
 - 품질 판단이 필요한 작업은 `docs/engineering/subagents.md`의 역할 기반 체크리스트를 사용한다.
-- 슬라이스 개발 단계를 요청받으면 `docs/engineering/slice-workflow.md`를 읽고 해당 단계의 담당 AI를 확인한다. 자신이 담당하지 않는 단계는 수행하지 않고 올바른 AI를 안내한다.
+- 슬라이스 개발 단계를 요청받으면 `docs/engineering/slice-workflow.md`와 `docs/engineering/codex-task-handoff.md`를 읽고 해당 단계의 Codex 역할을 확인한다. 현재 작업이 해당 역할의 독립성 조건을 만족하지 않으면 직접 수행하지 않고 새 Codex 작업으로 handoff한다.
 
 ## Rule Layers
 

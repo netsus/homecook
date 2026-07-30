@@ -148,9 +148,9 @@ Service Slice A~F re-porting must pin the fixed prototype implementation SHA abo
 - `pnpm validate:workflow-v2`
 - Current-head GitHub checks before merge
 
-## Claude Delegate
+## Independent Codex Review
 
-Codex may attach to the user-provided Claude session `2937f409-95c1-4627-a6e2-3febf3e3955f` when a repair slice needs cross-model review.
+Repair slice review는 구현 task ID와 다른 새 Codex 검토 작업에서 수행한다. 과거 Claude session ID는 신규 실행에 재사용하지 않는다.
 
 Required recording:
 

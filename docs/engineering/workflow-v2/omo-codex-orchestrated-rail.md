@@ -13,11 +13,11 @@ Homecook OMO의 다음 기본 운영 모델은 `Codex-orchestrated OMO rail`이�
 
 - Codex는 slice 진행의 orchestration owner다.
 - OMO는 상태 저장, stage 전이, deterministic validator, current-head gate, closeout/report projection을 맡는 rail이다.
-- Claude는 Stage 1/3/4, authority-required final gate, 독립 review가 필요한 lane의 specialized actor로 남는다.
+- Stage 1~6과 authority gate는 `docs/engineering/codex-task-handoff.md`에 따라 역할별 별도 Codex 작업이 맡는다.
 - 기존 `pnpm omo:*` entrypoint 이름은 유지한다.
-- stage actor ownership과 orchestration ownership은 분리해서 설명한다. 즉 Stage 1/3/4가 Claude-owned일 수 있어도, 전체 진행 판단과 repair routing은 Codex가 맡는다.
+- stage actor ownership과 orchestration ownership은 분리해서 설명한다. 조정 작업은 전체 진행 판단과 repair routing을 맡고, Stage 작업은 자기 범위만 수행한다.
 
-이 결정은 새 거대 supervisor를 추가한다는 뜻이 아니다. semantic 판단과 복구 판단은 Codex/Claude stage artifact에 남기고, OMO는 그 결과를 검증 가능한 상태와 report로 투영한다.
+이 결정은 새 거대 supervisor를 추가한다는 뜻이 아니다. semantic 판단과 복구 판단은 Codex Stage artifact에 남기고, OMO는 그 결과를 검증 가능한 상태와 report로 투영한다.
 
 ## Baseline Evidence
 
@@ -33,7 +33,7 @@ Homecook OMO의 다음 기본 운영 모델은 `Codex-orchestrated OMO rail`이�
 해석:
 
 - 핵심 개선 신호는 "작업 시간이 항상 짧아졌다"가 아니라, 자동 repair가 evidence로 남고 사람 escalation이 실제 사람 결정으로 좁아졌다는 점이다.
-- 10b/11/12a는 OMO dispatch JSON이 없어도 Codex/Claude repair loop evidence가 `.omx/artifacts`에 남았기 때문에 report가 이를 읽을 수 있어야 한다.
+- 10b/11/12a의 과거 Codex/Claude repair loop evidence는 역사적 baseline으로 읽을 수 있어야 한다. 신규 실행은 Codex task handoff artifact를 사용한다.
 - 10a의 stale escalation은 이후 전환에서 `codex_repairable`, `ci_wait`, `manual_decision_required`로 재분류해야 할 대표 baseline이다.
 
 ## Responsibility Boundary
@@ -56,12 +56,13 @@ Homecook OMO의 다음 기본 운영 모델은 `Codex-orchestrated OMO rail`이�
 - closeout canonical snapshot과 projection 관리
 - artifact/event/report 생성
 
-### Claude
+### Codex Stage 작업
 
 - Stage 1 docs authoring
-- Stage 3 backend review
-- Stage 4 implementation 또는 authority-required lane
-- Codex repair에 대해 독립 review가 필요한 경우의 reviewer
+- Stage 2/4 implementation
+- Stage 3/5/6 독립 review
+- authority-required final gate
+- author/implementer와 다른 task ID를 가진 reviewer
 
 ## Reason Code Taxonomy
 
@@ -70,7 +71,7 @@ Homecook OMO의 다음 기본 운영 모델은 `Codex-orchestrated OMO rail`이�
 | Reason code | 의미 | 기본 처리 |
 | --- | --- | --- |
 | `codex_repairable` | repo-local reversible edit와 validator 재실행으로 복구 가능한 OMO/report/closeout/PR body drift | Codex bounded repair 1회 이상 시도 후 recheck |
-| `claude_repairable` | Claude-owned stage artifact, authority evidence, reviewer 판단 누락처럼 해당 lane actor가 고쳐야 하는 drift | Claude owner lane으로 bounded repair dispatch 후 recheck |
+| `claude_repairable` | **legacy compatibility code.** 과거 Claude-owned artifact 분류 | 신규 실행에 생성하지 않고 해당 Codex Stage 역할의 bounded repair로 정규화 |
 | `product_defect` | slice 제품 구현/계약 버그 | 담당 stage로 route back. OMO incident와 섞지 않음 |
 | `omo_defect` | supervisor/runtime/report/validator 자체 결함 | incident registry에 남기고 tooling/docs-governance PR로 분리 |
 | `ci_wait` | current head check pending/rerun/stale snapshot 등 기다릴 수 있는 CI 상태 | scheduled resume 또는 current-head refresh |
@@ -85,9 +86,9 @@ Homecook OMO의 다음 기본 운영 모델은 `Codex-orchestrated OMO rail`이�
 2. bounded repair budget을 소진했고 같은 finding이 validator recheck에서 남은 경우
 3. required credential, external production authority, destructive operation 권한이 필요한 경우
 4. 공식 product contract 변경이 필요하지만 사용자 승인 또는 contract-evolution PR이 없는 경우
-5. source가 모호해 Codex/Claude가 안전하게 판단하면 안 되는 경우
+5. source가 모호해 Codex Stage 작업이 안전하게 판단하면 안 되는 경우
 
-`codex_repairable`, `claude_repairable`, `ci_wait`, `blocked_on_external`은 바로 `human_escalation`으로 올리지 않는다. 먼저 repair attempt, scheduled retry, current-head refresh, 또는 owner-lane recheck 중 하나를 남겨야 한다.
+`codex_repairable`, legacy `claude_repairable`, `ci_wait`, `blocked_on_external`은 바로 `human_escalation`으로 올리지 않는다. 먼저 repair attempt, task recheck, current-head refresh, 또는 owner-lane recheck 중 하나를 남겨야 한다.
 
 ## Slice 12b Preflight Lock
 
@@ -109,7 +110,7 @@ slice `12b-shopping-pantry-reflect` 개발 전에는 promotion blocker 전체를
 12b Stage 1 시작 전 운영자는 아래 항목을 closeout/report evidence로 남길 수 있는지 확인한다.
 
 - `codex_repair_attempts`: Codex가 고친 OMO/report/PR body/closeout drift의 횟수와 evidence ref
-- `claude_repair_attempts`: Claude-owned stage artifact 또는 authority evidence repair의 횟수와 evidence ref
+- `claude_repair_attempts`: 과거 artifact 호환 필드. 신규 실행은 Codex Stage repair evidence를 `codex_repair_attempts`와 task handoff artifact에 기록
 - `human_escalation_count`: 실제 사람 결정으로 넘긴 횟수
 - `manual_decision_required_count`: destructive, credential, external production, public contract change, scope-changing, ambiguous authority decision으로 분류된 횟수
 - `ci_wait_count`: current-head pending/rerun/stale snapshot으로 기다린 횟수
@@ -117,7 +118,7 @@ slice `12b-shopping-pantry-reflect` 개발 전에는 promotion blocker 전체를
 - `final_check_refs`: PR current-head checks, local validators, slice-specific tests, external smoke가 필요한 경우 그 evidence ref
 - `merge_evidence_ref`: PR URL, merge commit, closeout projection 또는 OMO report path
 
-초기 기록은 manual/backfill이어도 된다. 중요한 것은 12b가 끝났을 때 `human_escalation=0` 같은 숫자만 남는 것이 아니라, Codex/Claude repair가 어떤 evidence로 남았는지 추적 가능한 상태가 되는 것이다.
+초기 기록은 manual/backfill이어도 된다. 중요한 것은 `human_escalation=0` 같은 숫자만 남는 것이 아니라, Codex Stage repair가 어떤 task ID와 evidence로 남았는지 추적 가능한 상태가 되는 것이다.
 
 ### 12b Escalation Filter
 
@@ -127,16 +128,16 @@ slice `12b-shopping-pantry-reflect` 개발 전에는 promotion blocker 전체를
 - destructive operation 또는 external production authority가 필요하다.
 - 공식 product contract 변경이 필요하지만 사용자 승인 또는 contract-evolution PR이 없다.
 - scope-changing 제품 방향 결정이 필요하다.
-- source가 모호해 Codex/Claude가 안전하게 판단하면 안 된다.
+- source가 모호해 Codex Stage 작업이 안전하게 판단하면 안 된다.
 - 같은 finding이 bounded repair와 validator recheck 뒤에도 남아 repair budget을 소진했다.
 
-아래는 먼저 Codex/Claude repair, scheduled retry, current-head refresh, 또는 owner-lane recheck를 시도한다.
+아래는 먼저 Codex Stage repair, task recheck, current-head refresh, 또는 owner-lane recheck를 시도한다.
 
 - report/closeout/PR body section drift
 - stale CI snapshot 또는 pending/rerun 상태
 - deterministic validator expectation과 generated projection의 불일치
 - OMO runtime/report drift처럼 repo-local reversible edit로 복구 가능한 문제
-- Claude-owned artifact 누락 또는 reviewer evidence 누락
+- Stage artifact 누락 또는 독립 reviewer evidence 누락
 
 ## Event Shape
 
@@ -169,7 +170,7 @@ Report generator는 source를 아래처럼 구분한다.
 
 - `dispatch`: `.artifacts/omo-lite-dispatch/**`
 - `supervisor`: `.artifacts/omo-supervisor/**`
-- `.omx/artifacts`: Claude/Codex delegation, repair, review artifact
+- `.omx/artifacts`: 과거 Claude/Codex 및 현재 Codex task delegation, repair, review artifact
 - `manual/backfill`: 사람이 작성한 report 또는 PR timestamp 기반 재구성
 
 Report는 새 truth surface가 아니다. canonical closeout과 runtime/event artifact를 사람이 읽기 좋게 투영한 결과다.

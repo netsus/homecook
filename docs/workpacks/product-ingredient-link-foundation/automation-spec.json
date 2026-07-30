@@ -46,21 +46,26 @@
       "bounded-set-based-effective-reader-without-n-plus-one-or-unbounded-catalog-scan",
       "common-success-data-error-envelope-preserved",
       "no-new-public-endpoint-field-status-or-error",
-      "no-unmerged-remote-migration-or-production-staging-write"
+      "public-pantry-product-version-writes-remain-unchecked-until-contract-evolution",
+      "shopping-reflection-remains-unchecked-until-product-version-provenance-is-official",
+      "hybrid-session-authority-active-exact-epoch-and-live-hmac-binding",
+      "local-application-db-requires-local-auth-users-zero",
+      "no-unmerged-server-production-migration-or-production-rehearsal-write"
     ],
     "verify_commands": [
+      "pnpm exec vitest run tests/product-ingredient-link-hybrid-contract-sync.test.ts",
       "pnpm exec vitest run tests/product-ingredient-link-foundation.test.ts tests/product-ingredient-link-routes.test.ts tests/product-ingredient-link-security.test.ts tests/product-ingredient-link-readers.test.ts tests/product-ingredient-link-account-delete.test.ts",
       "pnpm test:product-ingredient-link-foundation:postgres",
       "pnpm verify:backend",
-      "node scripts/verify-product-ingredient-link-remote.mjs --mode post-merge-read-only",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
-      "BRANCH_NAME=docs/product-ingredient-link-foundation pnpm validate:workpack -- --slice product-ingredient-link-foundation",
+      "BRANCH_NAME=docs/product-ingredient-link-stage2-relock pnpm validate:workpack -- --slice product-ingredient-link-foundation",
       "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
       "pnpm validate:omo-bookkeeping",
       "git diff --check"
     ],
     "required_test_targets": [
+      "tests/product-ingredient-link-hybrid-contract-sync.test.ts",
       "tests/product-ingredient-link-foundation.test.ts",
       "tests/product-ingredient-link-routes.test.ts",
       "tests/product-ingredient-link-security.test.ts",
@@ -72,7 +77,7 @@
       "A/B owner plus owner-null public/shared role matrix evidence",
       "five required effective-reader raw-ingredient-only regression evidence",
       "private cascade public preservation and ingredient restrict evidence",
-      "merged-exact-SHA remote read-only compatibility evidence"
+      "merged-exact-SHA local application DB/Storage plus remote Auth exact-epoch read-only compatibility evidence"
     ]
   },
   "frontend": {
@@ -120,11 +125,10 @@
     }
   },
   "external_smokes": [
-    "node scripts/verify-product-ingredient-link-remote.mjs --mode post-merge-read-only from merged exact SHA only",
-    "deployed /api/v1/recipes/pantry-match implementation route smoke for official GET /recipes/pantry-match, covering unauthorized and authenticated generic/product/mixed pantry reads",
-    "remote link-table FK partial-unique RLS grant and exact-principal read-only inventory",
-    "remote private-product cascade policy and owner-null public/shared preservation read-only evidence",
-    "remote writes data promotion and account-delete activation remain zero until approved release gates"
+    "server MacBook local application DB/Storage and isolated local rehearsal exact-SHA smoke for GET /recipes/pantry-match, covering unauthorized and authenticated generic/product/mixed pantry reads",
+    "local application DB/rehearsal link-table FK partial-unique RLS grant and exact-principal inventory",
+    "local application DB/rehearsal private-product cascade policy and owner-null public/shared preservation evidence",
+    "minimal remote Auth control-plane exact-epoch/session-binding read-only evidence with local auth.users=0 and remote application writes zero"
   ],
   "blocked_conditions": [
     "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
@@ -150,8 +154,13 @@
     "account-delete-activation-before-f0-plus-slice3-joint-gate",
     "unbounded-catalog-scan-or-per-row-link-n-plus-one",
     "new-public-endpoint-field-status-or-error-invented",
-    "unmerged-migration-applied-to-remote",
-    "remote-verifier-sha-does-not-match-merged-source",
+    "public-pantry-product-version-field-or-write-added-before-contract-evolution",
+    "shopping-product-version-reflection-implemented-without-official-source-provenance",
+    "pantry-product-version-fk-delete-action-guessed-before-contract-evolution",
+    "migration-applied-outside-hybrid-local-data-authority",
+    "hybrid-verifier-sha-does-not-match-merged-source",
+    "local-auth-users-is-not-zero",
+    "remote-auth-exact-epoch-or-live-hmac-binding-evidence-missing",
     "production-staging-write-or-data-promotion-before-approved-release-gate",
     "current-head-check-pending-absent-stale-failed-or-cancelled"
   ],
@@ -159,5 +168,5 @@
     "backend": 4,
     "frontend": 4
   },
-  "notes": "This is a backend/data foundation with behavior-only Stage 4 regression for existing HOME/PANTRY consumers and no new visual scope. Link/reader/account-delete/consumer tests, PostgreSQL replay, backend/frontend verification, focused Playwright, and remote verification commands are planned Stage 2/4/closeout artifacts. Stage 1 runs only the currently executable docs validator subset and must not claim future commands exist. Implementation activation remains blocked until the F0 + recipe-visibility-read-hardening joint account-delete gate is satisfied."
+  "notes": "This is a backend/data foundation with behavior-only Stage 4 regression for existing HOME/PANTRY consumers and no new visual scope. The current official POST /pantry contract accepts ingredient_ids only, shopping rows do not carry product/version provenance, and pantry product/version FK delete behavior is not locked. Those pantry identity/projection/public/direct-add/shopping paths remain unchecked until an approved Contract Evolution. A first small Stage 2 PR may implement only the additive link authority, promotion ACL and fail-closed eligible-link selector without changing pantry_items or public payloads. Link/reader/account-delete/consumer tests, PostgreSQL replay, backend/frontend verification, focused Playwright, and verify-product-ingredient-link-hybrid.mjs are future Stage 2/4/closeout artifacts. Hybrid verification reads local application DB/Storage plus minimal remote Auth exact-epoch/session evidence, requires local auth.users=0, and performs no production/staging/remote application writes. F0 and recipe-visibility-read-hardening are merged predecessors; production activation remains Manual Only."
 }

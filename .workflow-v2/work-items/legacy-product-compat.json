@@ -24,11 +24,11 @@
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-      "docs/요구사항기준선-v1.7.22.md",
-      "docs/화면정의서-v1.5.28.md",
-      "docs/유저flow맵-v1.3.25.md",
-      "docs/db설계-v1.3.23.md",
-      "docs/api문서-v1.2.27.md"
+      "docs/요구사항기준선-v1.7.25.md",
+      "docs/화면정의서-v1.5.29.md",
+      "docs/유저flow맵-v1.3.27.md",
+      "docs/db설계-v1.3.26.md",
+      "docs/api문서-v1.2.29.md"
     ],
     "governing_docs": [
       "AGENTS.md",
@@ -51,7 +51,7 @@
       "ui/designs/COOK_MODE.md",
       "ui/designs/authority/PLANNER_WEEK-authority.md",
       "ui/designs/authority/COOK_MODE-authority.md",
-      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-d4d0fb39e80eeffc8b1e73ad92f0d91a35a9b6adc57a556ea8c9ec6ecffa951d"
+      "/Users/shj/2025/2026/homecook1/.omx/plans/cooking-meal-log-and-product-search-master-plan-20260722.md#sha256-45f02013fbc1c3af1936d596605230d0cbac7839a783224aa9535844e4bda7dc"
     ]
   },
   "workflow": {
@@ -92,7 +92,7 @@
       "pnpm verify:frontend",
       "pnpm validate:exploratory-qa-evidence -- --slice legacy-product-compat",
       "pnpm validate:closeout-sync -- --slice legacy-product-compat",
-      "node scripts/verify-legacy-product-compat-remote.mjs --mode post-merge-read-only",
+      "node scripts/verify-legacy-product-compat-local-first.mjs --mode post-merge-read-only",
       "git diff --check"
     ],
     "verify_commands": [
@@ -115,7 +115,7 @@
       "separate Codex Stage 3 Stage 6 and closeout reviews"
     ],
     "artifact_assertions": [
-      "approved-plan-sha256-and-1018-line-lock",
+      "approved-plan-sha256-and-1056-line-lock",
       "stage1-five-core-artifacts-plus-roadmap-and-status-projections",
       "roadmap-docs-workflow-lifecycle-planned-separation",
       "legacy-product-row-read-delete-and-pinned-version-retained",
@@ -159,5 +159,5 @@
     "New endpoint field status error enum migration or direct DML"
   ],
   "open_questions": [],
-  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/compatibility, five-axis and design-impact reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; runtime/E2E/browser/telemetry/remote evidence is future. Implementation waits for #10 and #12 runtime/current-head green. #13 preserves contracts and records prerequisites but does not authorize deletion or R+2 activation."
+  "notes": "Roadmap moves to docs while workflow lifecycle remains planned. Approval stays not_started until separate Codex internal1.5, security/compatibility, five-axis and design-impact reviews reach zero findings. Stage 1 current commands are docs validators/tests/lint/typecheck/audit/diff; runtime/E2E/browser/telemetry/server-production/local-rehearsal evidence is future. Implementation waits for #10 and #12 runtime/current-head green. #13 preserves contracts and records prerequisites but does not authorize deletion or R+2 activation."
 }

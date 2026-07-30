@@ -10,6 +10,12 @@
 
 ## Revision Notes
 
+- `v2` hybrid remote Auth / local Data production contract (2026-07-30 KST, UTC+09:00)
+  - 2026-07-29 local-first 초기 배포의 `원격 프로젝트 삭제`, `실제 사용자 없음`, `local auth.users 단일 barrier` 전제를 대체한다.
+  - Google/Naver/Kakao와 session identity는 remote Supabase Auth에 남기고 application DB/Storage는 서버 Mac의 local Supabase로 이전한다.
+  - local `auth.users=0`, private identity epoch mirror, session-liveness HMAC binding, exact JWT claim guard, 기존 409/503 error mapping, remote Hook control-plane, service-role user path 0, semantic restore와 off-Mac rollback evidence를 final cutover gate로 둔다.
+  - 이 계약으로 다시 잠근 successor verifier는 `verify-*-hybrid.mjs` 이름을 사용해 local application Data와 remote Auth control-plane을 분리 검증한다. 기존 `verify-*-local-first.mjs` 예약은 해당 workpack이 hybrid relock되기 전까지의 역사적 계획이며 완료 증거가 아니다.
+
 - `v2` cooking/meal-log prepared-food search relevance closeout (2026-07-26 KST, UTC+09:00)
   - Stage 1 PR #1074, backend/data PRs #1097/#1099/#1100/#1101, merged-exact remote verifier PRs #1103/#1104, frontend Stage 4/5/6 PR #1105, official tuple consistency PR #1108이 모두 병합됐다.
   - exact frontend head `0bcdc998`는 독립 Codex quality/security/test review P0-P3 0과 모든 최신 current-head check를 통과한 뒤 merge `19f25aae`로 병합됐다. production read-only smoke는 cursor v1/v2, current nutrition, moderation, owner-private, legacy compatibility, ACL과 remote write/provider-request 0을 확인했다.
@@ -18,6 +24,13 @@
   - 사용자가 승인한 `요리 계획·식사 기록 분리, 커스텀 레시피, 완제품 검색` 마스터 계획을 정확히 15개 successor workpack(`F0` + #1~#14)과 release train A~F로 고정했다.
   - Stage -1 SECURITY DEFINER 권한 hotfix의 production 배포·8개 anon mutation 무변경 검증·closeout merge를 계약 gate의 선행 증거로 고정한다.
   - 각 successor는 별도 Stage 1 docs PR과 mandatory internal 1.5 gate가 merge되기 전 구현할 수 없으며, `MEAL_LOG`, `PLANNER_WEEK`, `COOK_MODE`, `RECIPE_DETAIL` 변경은 해당 Stage 1에서 요구되는 wireframe/design critique/authority evidence 계획을 먼저 잠근다.
+
+- `v2` cooking/meal-log local-first MacBook relock (2026-07-29 KST, UTC+09:00; 2026-07-30 hybrid 계약으로 대체된 역사적 기록)
+  - 초기 production은 서버 MacBook의 local Next.js + local Supabase stack이고, staging은 서버 MacBook 또는 격리된 검증 MacBook의 local rehearsal stack으로 재정의됐다.
+  - 초기 배포에서는 remote verifier, remote provider barrier, remote migration apply가 `N/A`이며, F0+#3 joint activation은 local Postgres `auth.users SHARE ROW EXCLUSIVE` write barrier와 서버 MacBook 재설치 LaunchAgent/secret/heartbeat를 authority로 사용한다. 이 lock은 전체 read freeze가 아니므로 Auth Admin/import/dashboard 동결, external attempt 0, 15분 간격 Storage inventory 2회 일치를 별도로 요구한다.
+  - 다른 MacBook에서는 저장소 안의 `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`를 portable entry로 사용하고, 그 문서에 잠긴 master plan SHA-256을 원본 외부 계획 파일과 대조한다. 사용자별 절대 경로는 계획의 위치 힌트일 뿐 배포 계약이 아니다.
+  - 실제 사용자가 없으므로 최초 quiet window는 일회성 cutover 창으로 고정하고 기간 연장만으로 재승인을 요구하지 않는다. 다만 lock 상실, digest 불일치, 새 auth/external write, restart/restore, secret 교체, Auth 동결 해제는 현재 증거를 무효화하며 quiet 관측과 Storage inventory를 처음부터 다시 수집한다. legacy old-path/unknown-data delete는 자동 승인하지 않고 별도 Manual Only irreversible gate로 남긴다. 향후 remote provider는 별도 contract-evolution이 선행된다.
+  - 당시 successor 문서의 `verify-*-local-first.mjs`는 해당 Stage 2가 TDD로 만들 planned artifact였다. 2026-07-30 hybrid relock 대상은 위 `verify-*-hybrid.mjs` 규칙으로 교체하며, 어느 이름이든 파일 부재는 검증 완료를 뜻하지 않고 구현·RED/GREEN 증거 없이 N/A로 닫을 수 없다.
 
 - `v2` nutrition products/planner release QA Stage 2/3 (2026-07-19 KST, UTC+09:00)
   - repair PR #1052 merge `a3301e16` 이후 exact repaired head에서 ingredient `845`, recipe `34`, public products `287,041`, auth A/B anonymization/pin retention, SQL/route 성능을 처음부터 재검증했다.
@@ -94,7 +107,7 @@
 |--------|------|
 | `bootstrap` | 초기 설정 슬라이스 (`01` 전용, 별도 SOP 없이 직접 투입). **의존성 gate에서는 `merged`와 동등하게 간주한다.** |
 | `planned` | 착수 전 |
-| `docs` | 1단계(Claude) README + acceptance.md 작업 중 또는 완료, 구현 착수 전 |
+| `docs` | Stage 1 Codex 문서 작업의 README + acceptance.md 작업 중 또는 완료, 구현 착수 전 |
 | `in-progress` | 2~4단계 구현 진행 중 |
 | `merged` | 모든 브랜치 main merge 완료 |
 
@@ -110,20 +123,12 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 
 ## Operating Rules
 
-- **1단계(Claude)**: `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 작성하고 main에 merge한다. 단계별 절차는 `docs/engineering/slice-workflow.md` 참조.
+- **Stage 1(Codex 새 작업)**: `stage1-docs-author` 역할의 별도 Codex 작업이 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 작성하고 main에 merge한다. 단계별 절차는 `docs/engineering/slice-workflow.md`와 `docs/engineering/codex-task-handoff.md`를 참조한다.
 - **2단계 시작 조건**: 1단계 문서 PR이 main에 **merge된 후**에만 백엔드 구현(2단계)을 시작한다.
 - Slice Order에서 선행 슬라이스 Status가 전부 `merged`인지 확인한 뒤 착수한다.
+- **전역 GPT-only 규칙**: Claude는 사용하지 않는다. Stage 1/2/4 작성·구현 작업과 internal 1.5/Stage 3/5/final authority/Stage 6 검토 작업을 역할별 별도 Codex task ID로 분리하고, 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 같은 작업 안의 서브에이전트는 이 독립 작업 분리를 대신하지 않는다.
 - **Launch blocker 예외**: `launch-readiness-blockers`는 광고/배포를 직접 막는 release-hotfix workpack이다. 선행 slice 일부가 미완료여도 fake contact/legal 404, hydration/console error, missing security headers, mixed-content, audit failure를 먼저 닫기 위해 진행한다. 이 예외는 해당 workpack에만 적용되며 product contract, required checks, authority evidence, current-head CI green gate를 완화하지 않는다.
-- **Codex-only 예외**: `launch-readiness-blockers`는 사용자 지시에 따라 Claude를 사용하지 않는다. 기존 Claude 담당 Stage 1/3/4/final authority 역할은 같은 세션이 아니라 별도 Codex 세션으로 분리하고, 구현 세션은 자기 작업을 approve하지 않는다.
-- **Codex docs-owner 예외**: `auth-provider-memory-linking`은 사용자가 Claude 사용을 중단하고 별도 Codex 세션이 Stage 1 docs-owner 역할을 대신하도록 명시적으로 승인했다. 이후 구현과 리뷰도 역할별 별도 Codex 세션으로 분리하며, 구현 세션은 자기 변경을 최종 승인하지 않는다.
-- **Codex-only 서비스 가이드 예외**: `service-about-guide`는 사용자가 Claude 사용 중단과 기존 Claude 담당 단계의 새 Codex 세션 대체를 명시적으로 승인했다. 공식 계약 PR 병합 후 Stage 1 docs owner, Stage 4 구현 owner, internal docs repair/final authority owner를 서로 다른 Codex 세션으로 분리하고, Stage 1/4 작성 세션은 자기 변경을 최종 승인하지 않는다.
-- **Codex-only 서비스 브랜드 예외**: `service-brand-rebrand`는 사용자가 Claude 미사용과 기존 Claude 담당의 Stage 1 docs owner, Stage 3 backend review, Stage 4 frontend implementation, internal docs repair/final owner, authority-required final authority를 각각 역할 분리된 새 Codex 세션으로 대체하도록 명시 승인했다. Stage 1/4 작성·구현 세션은 자기 변경을 최종 승인하지 않는다. 이 예외는 `service-brand-rebrand`에만 적용하며 전역 workflow actor 규칙을 바꾸지 않는다.
-- **Codex-only HOME lockup 예외**: `service-brand-home-lockup`은 사용자가 Claude 미사용을 유지하고 Stage 1 docs owner, Stage 4 frontend implementation, internal docs repair/final owner, authority-required final authority를 역할 분리된 새 Codex 세션으로 대체하도록 승인했다. Stage 1/4 작성·구현 세션은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용한다.
-- **Codex-only 이미지 브랜드 자산 예외**: `service-brand-image-assets`는 사용자가 기존 브랜드 Codex-only 연속 작업에서 공식 계약 갱신과 실제 서비스 적용을 함께 요청한 후속 슬라이스다. Stage 1 docs owner, Stage 4 frontend implementation, internal docs repair/final owner, authority reviewer를 역할 분리된 Codex 작업으로 나누고 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용하며 전역 workflow actor 규칙을 바꾸지 않는다.
-- **Codex-only 아이콘 외곽 처리 예외**: `service-brand-icon-edge-treatment`는 사용자가 실제 favicon 흰 모서리를 확인하고 수정을 요청한 `service-brand-image-assets`의 연속 후속 슬라이스다. Stage 1 docs owner, Stage 4 frontend implementation, 독립 Stage 5/6 reviewer를 역할 분리하고 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 이 예외는 해당 workpack에만 적용하며 전역 workflow actor 규칙을 바꾸지 않는다.
-- **Codex-only nutrition/products/planner 예외**: `public-nutrition-source-acquisition`, `ingredient-nutrition-conversion-model`, `recipe-nutrition-calculation`, `prepared-food-catalog`, `prepared-food-planner-entry`, `planner-nutrition-summary`, `ingredient-nutrition-full-coverage`, `all-recipe-nutrition-recalculation`, `public-prepared-food-catalog-import`, `community-prepared-food-catalog`, `prepared-food-standard-basis-ux`, `nutrition-products-cross-slice-release-qa`는 사용자가 기존 Claude 담당 단계를 역할이 분리된 **별도 Codex 앱 작업**으로 대체하도록 승인했다. Stage 1 docs owner, internal 1.5 review/repair-final owner, Stage 2/3, Stage 4, authority precheck/Stage 5/final authority/Stage 6은 필요한 역할별 새 작업으로 분리하고, 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 같은 작업 안의 서브에이전트는 이 역할 분리의 대체물이 아니다. 각 successor slice도 별도 Stage 1 workpack docs PR이 main에 merge되기 전에는 구현을 시작할 수 없다. 이 예외는 위 nutrition/products/planner slice들에만 적용하며 전역 stage owner 규칙은 바꾸지 않는다.
-- **Codex-only cooking/meal-log 예외**: `account-session-generation-foundation`, `prepared-food-search-relevance`, `product-ingredient-link-foundation`, `recipe-visibility-read-hardening`, `recipe-snapshot-authority-foundation`, `personal-recipe-editor-decoupling`, `personal-recipe-customization-write-core`, `recipe-content-snapshot-future-propagation`, `cooked-batch-weight-ledger`, `meal-log-core`, `planner-shell`, `cooked-batch-weight-ui`, `meal-log-ui`, `legacy-product-compat`, `cooking-meal-log-cross-slice-release-qa`는 사용자가 Claude를 사용하지 않고 기존 Claude 담당 단계마다 역할이 분리된 **별도 Codex 작업**을 사용하도록 승인했다. Stage 1 docs author, internal 1.5 reviewer/repair-final owner, 구현 owner, security/code/design authority reviewer를 분리하고 작성·구현 작업은 자기 변경을 최종 승인하지 않는다. 각 slice의 별도 Stage 1 docs PR과 mandatory internal 1.5 pass가 main에 merge되기 전에는 해당 구현을 시작하지 않는다.
-- **Codex-only i031 직접 추출 예외**: `33-youtube-i031-direct-extraction`은 사용자가 Claude 미사용과 현재 Codex 작업의 문서→구현→검증→merge 연속 수행을 명시 승인했다. Stage 1/구현 owner와 internal 1.5/code/security final reviewer는 서로 다른 native Codex agent 역할로 분리하며, 작성 owner는 독립 reviewer의 finding을 직접 숨기거나 자기 변경을 무검토 승인하지 않는다. Stage 1 contract/workpack PR과 internal 1.5 pass가 main에 merge된 뒤에만 구현을 시작한다. 이 strict mode는 merged YouTube import/dictionary source만 사용하며 `31-recipe-media-tags`, `32-youtube-visual-quantity-enrichment`의 미완료 closeout을 선행조건으로 두지 않는다. 해당 provider를 호출하거나 계약을 완화하지 않기 때문이다. 이 예외는 localhost i031 직접 추출 slice에만 적용하며 전역 actor 규칙을 바꾸지 않는다.
+- 과거 slice별 `Codex-only` 승인 기록은 당시 예외가 적용된 이유를 설명하는 merged evidence로 보존한다. 2026-07-30 이후에는 위 전역 GPT-only 규칙이 모든 신규·재개 Stage에 적용되므로 slice별 예외를 새로 추가하지 않는다.
 - `workflow-v2` / `OMO` 대상 product slice는 Stage 1 전에 **slice ID / goal / 분기 경로를 고정**한다.
 - `planned` 상태 slice에 `착수 시점에 분할 여부 결정` 메모를 남기지 않는다. 분할이 필요하면 roadmap PR에서 `08a/08b`처럼 먼저 쪼갠다.
 - 예외: `docs/engineering/` 아래의 repo-engineering automation, workflow tooling, agent 운영 규칙 변경은 제품 workpack roadmap 바깥이다.
@@ -224,6 +229,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `36d-recipe-tags-rules-backfill` | merged | P0 의미 태그 rule fixture와 기존 레시피 backfill dry-run/report, usage count reconcile, P1 후보 승인 정책 구현 |
 | `36e-recipe-tags-frontend` | ready-for-review | MANUAL_RECIPE_CREATE/YT_IMPORT 태그 추천·검수 UI와 HOME 태그 검색/filter/theme chip UX 구현 |
 | `launch-readiness-blockers` | docs | 광고/배포 차단 release-hotfix 예외: legal/trust/SEO 404와 fake contact, HOME hydration/guest console noise, security headers, FoodSafety mixed-content, PostCSS audit blocker를 Codex-only 세션 분리로 닫음 |
+| `hybrid-auth-local-data-production` | in-progress | Google/Naver/Kakao Auth는 remote Supabase에 유지하고 application DB/Storage는 서버 Mac local Supabase로 이전하며 기존 RLS, identity epoch, semantic restore, backup/rollback gate를 보존 |
 | `auth-provider-memory-linking` | merged | 세 provider 이메일 필수, built-in Kakao/Naver 표준 claim gate, 최근 provider 기억/전환 확인, same-user identity linking과 different-user conflict 보호, 수동 provider 연결. PR #967 merge |
 | `service-about-guide` | merged | 공개 `/about` 서비스 가이드, `PRIMARY_WEB_NAV_ITEMS` 웹 공통 5메뉴, HOME `집밥 둘러보기` guide+theme rail, MYPAGE 임시 도움말 제거. docs PR #978 + FE PR #979 merge. 커뮤니티/제안 게시판은 후속 슬라이스 |
 | `service-brand-rebrand` | merged | 정식명 `무엇을 먹든`, 짧은명 `무먹`, 신규·빈 nickname `무먹러`, system notification read-time copy 호환을 API/DB shape와 기술 식별자 변화 없이 잠금 |
@@ -244,10 +250,10 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `nutrition-products-cross-slice-release-qa` | merged | 영양 데이터, 권한, UI, 계산을 실제 local DB/browser/current-head checks 기준으로 교차 검증했다. Stage 2/3 #1053, historical evidence #1059, TDD repairs #1060/#1063, final evidence/authority/Stage 5/6 #1064 merge `c9315520` 완료 |
 | `prepared-food-search-relevance` | merged | 브랜드+제품명 통합 정규화, public/private 분리 index, typed relevance·정수 tuple cursor·IME 최신 요청 제어를 구현하고 287,041건 품질·성능 및 retained production read-only smoke를 통과했다. 원본 apply/concurrent-index provenance 미보존으로 canonical external-smoke projection은 pending Manual Only다. PR #1105 merge `19f25aae` |
 | `account-session-generation-foundation` | merged | JWT session-bound account generation, lifecycle watermark, DB cutover fence/Auth Hook/quarantine/outbox와 personal-writer inventory를 feature-off foundation으로 잠근다 |
-| `product-ingredient-link-foundation` | docs | 제품과 canonical ingredient의 검수 relation, RLS/admin promotion, pantry effective ingredient projection과 account-delete 결합 gate를 구현한다 |
-| `recipe-visibility-read-hardening` | in-progress | private personal recipe soft delete/public fork/tag visibility, quarantine visibility upper bound, generation-aware image registry·private storage·outbox를 먼저 잠근다 |
-| `recipe-snapshot-authority-foundation` | docs | nutrition snapshot을 exact pin하는 content snapshot 단일 authority와 Meal expand→mirror→contract/null·rollback floor를 additive하게 구축한다 |
-| `personal-recipe-editor-decoupling` | docs | 공개 원본 불변 fork 및 owner-only 개인 레시피 편집 진입을 RECIPE_DETAIL 중심으로 분리하고 기존 MYPAGE/RECIPEBOOK 상세과의 소유권 충돌을 피한다 |
+| `product-ingredient-link-foundation` | in-progress | 첫 Stage 2 PR에서 additive link authority, service-role promotion ACL, fail-closed selector만 구현한다. pantry product/version identity와 shared reader는 Contract Evolution 대기 |
+| `recipe-visibility-read-hardening` | merged | PR #1228로 Stage 2~6 runtime/client/review/current-head closeout 완료. private personal recipe soft delete/public fork/tag visibility, quarantine visibility upper bound, generation-aware image registry·private storage·outbox를 먼저 잠근다 |
+| `recipe-snapshot-authority-foundation` | in-progress | PR #1218/#1219의 구현을 보존하고, PR #1231 hybrid relock 뒤 merged-exact-SHA local Data/remote Auth 검증기를 TDD로 보강한다 |
+| `personal-recipe-editor-decoupling` | in-progress | 공개 원본 불변 fork 및 owner-only 개인 레시피 편집 진입을 RECIPE_DETAIL 중심으로 분리하고 기존 MYPAGE/RECIPEBOOK 상세과의 소유권 충돌을 피한다. Stage 2는 기존 backend 계약을 테스트로 잠그며 새 runtime API를 추가하지 않는다 |
 | `personal-recipe-customization-write-core` | docs | 개인 레시피 create/PATCH/soft DELETE, owner→recipe lock, session generation과 idempotent single-RPC write를 구현한다 |
 | `recipe-content-snapshot-future-propagation` | docs | future-plan impact preview/token, replace_all/keep, active cooking claim, shopping open reconcile와 completed read-only를 같은 transaction 경계에 잠근다 |
 | `cooked-batch-weight-ledger` | docs | cooked batch content-only nutrition, 전체/잔량 중량, append-only quantity/lifecycle event, weighted/unweighed/unrecoverable와 RPC-only mutation을 구현한다 |
@@ -256,7 +262,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `cooked-batch-weight-ui` | docs | COOK_MODE 완료 중량 입력과 weigh-later, 이후 exact weight/unrecoverable/discard/adjust UI를 ledger 계약에 연결한다 |
 | `meal-log-ui` | docs | 신규 MEAL_LOG의 날짜 중심 하루 합계·끼니 소계·음식 추가 sheet·수정/삭제·결측 상태를 구현한다 |
 | `legacy-product-compat` | docs | legacy product planner 조회/삭제, v1 session optional→required stable key, v2 dormant drain과 current/immediate-previous reader 호환·tombstone 전제조건을 검증한다 |
-| `cooking-meal-log-cross-slice-release-qa` | docs | F0와 #1~#13의 current-head local/remote DB·API·browser·security·performance·design·rollback/legacy 통합 gate를 닫는다 |
+| `cooking-meal-log-cross-slice-release-qa` | docs | F0와 #1~#13의 current-head 서버 MacBook local production·isolated local rehearsal DB/API/browser/security/performance/design/rollback/legacy 통합 gate를 닫는다 |
 
 ## Nutrition / Products / Planner Dependency Chain
 
@@ -285,10 +291,10 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | ---: | --- | --- | --- | --- |
 | F0 | B | `account-session-generation-foundation` | merged | contract gate; security hotfix merged and deployed |
 | 1 | A | `prepared-food-search-relevance` | merged | PR #1074/#1097/#1099/#1100/#1101/#1103/#1104/#1105/#1108 merged; retained production read-only subset and current-head gates passed; original apply provenance remains pending Manual Only |
-| 2 | B | `product-ingredient-link-foundation` | docs | F0 + #3 joint account-delete activation gate |
-| 3 | B | `recipe-visibility-read-hardening` | in-progress | F0; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
-| 4 | B | `recipe-snapshot-authority-foundation` | docs | #3; existing recipe nutrition snapshot release merged |
-| 5 | C | `personal-recipe-editor-decoupling` | docs | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
+| 2 | B | `product-ingredient-link-foundation` | in-progress | F0 + #3 merged; link-only Stage 2 subset 구현 중, public pantry product writes와 shared readers는 Contract Evolution pending |
+| 3 | B | `recipe-visibility-read-hardening` | merged | PR #1228 Stage 2~6 merged; F0 runtime, `31-recipe-media-tags`, `36e-recipe-tags-frontend` merged |
+| 4 | B | `recipe-snapshot-authority-foundation` | in-progress | #3 merged; PR #1218 Stage 2 + PR #1219 Stage 4, PR #1231 hybrid relock, PR #1232 verifier merged; exact-epoch regression과 Manual Only evidence 진행 중 |
+| 5 | C | `personal-recipe-editor-decoupling` | in-progress | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged; Stage 2 test-only backend evidence 진행 중 |
 | 6 | C | `personal-recipe-customization-write-core` | docs | #2 + #3 + #4 + #5 |
 | 7 | C | `recipe-content-snapshot-future-propagation` | docs | #4 + #6; `cook-mode-whole-board` merged |
 | 8 | D | `cooked-batch-weight-ledger` | docs | #7; `cook-mode-whole-board` merged |
@@ -297,7 +303,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 11 | E | `cooked-batch-weight-ui` | docs | #8; `cook-mode-whole-board` merged |
 | 12 | E | `meal-log-ui` | docs | #9 + #10 |
 | 13 | E | `legacy-product-compat` | docs | #10 + #12 |
-| 14 | F | `cooking-meal-log-cross-slice-release-qa` | docs | F0 and #1~#13 all merged/current-head green |
+| 14 | F | `cooking-meal-log-cross-slice-release-qa` | docs | F0 and #1~#13 all merged/current-head green on server-MacBook local production and isolated local rehearsal |
 
 > 이 표가 cooking/meal-log successor의 exact ID·dependency authority다. 실행 순서는 foundation F0 → 독립 Train A → Train B→C→D→E→F이며 `#1`은 stable successor 번호다. `recipebook-diary-port`는 선행조건이 아니며, #3/#5는 `31-recipe-media-tags`와 `36e-recipe-tags-frontend`를 되돌리거나 진행 중 MYPAGE/RECIPEBOOK_DETAIL 파일을 소유하지 않는다. 각 행은 독립 Stage 1 `README.md` + `acceptance.md` + `automation-spec.json` + workflow-v2 work item/status PR과 mandatory internal 1.5 pass가 main에 merge된 뒤에만 구현 상태로 전환한다.
 

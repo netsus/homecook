@@ -53,6 +53,8 @@ const {
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient: mocks.createRouteHandlerClient,
   createServiceRoleClient: mocks.createServiceRoleClient,
+  createYoutubeIngredientRegistrationInternalRpcClient:
+    mocks.createServiceRoleClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -262,7 +264,10 @@ function mockAuth() {
     auth: {
       getUser: vi.fn(async () => ({ data: { user: { id: userId } } })),
     },
-    from: vi.fn(),
+    from: vi.fn((...args: unknown[]) =>
+      createServiceRoleClient()?.from(...args)),
+    rpc: vi.fn((...args: unknown[]) =>
+      createServiceRoleClient()?.rpc(...args)),
   });
 }
 

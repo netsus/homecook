@@ -134,9 +134,9 @@
 - product slice는 Stage 1~6 흐름을 따른다.
 - Stage 1은 Claude가 workpack README/acceptance/automation-spec, `.workflow-v2/work-items/<slice>.json`, `.workflow-v2/status.json` matching item을 작성하고 `docs/workpacks/README.md`에 해당 slice row와 Status를 맞춘다.
 - Stage 2는 Codex가 BE 변경이 필요한 경우만 수행한다. UI-only 또는 기존 API로 가능한 slice는 `N/A` 근거를 남긴다.
-- Stage 3은 BE 변경이 있었을 때 Claude review를 받는다.
+- Stage 3은 BE 변경이 있었을 때 Stage 2와 task ID가 다른 Codex `backend-reviewer` 작업의 review를 받는다.
 - Stage 4는 Claude가 FE 포팅을 수행한다. UI가 실제로 바뀌면 관련 `ui/designs/<SCREEN_ID>.md` 또는 authority/design closeout 메모도 현재 화면 기준으로 맞춘다.
-- Stage 5는 Codex가 public design review와 authority precheck를 수행한다. authority-required slice는 Claude `final_authority_gate`에서 blocker 0개 확인 후에만 `confirmed`로 닫는다.
+- Stage 5 public design review와 authority precheck는 Stage 4와 다른 Codex 작업이 수행한다. authority-required slice는 또 다른 Codex `product-design-authority` 작업에서 blocker 0개 확인 후에만 `confirmed`로 닫는다.
 - Stage 6은 Codex가 code review, local verification, PR checks, merge까지 닫는다.
 - 사용자가 `$claude-delegate`와 기존 Claude session을 명시하면 해당 session에 `--resume`으로 붙는다. 현재 Wave1 Phase 2 요청 session은 `a5fcbba9-be8d-4765-b939-b628995c071e`이며, `session_attach_mode=resume`, `model=opus`, `effort=high`, `permission_mode=bypassPermissions`로 기록한다.
 

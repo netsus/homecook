@@ -6,6 +6,7 @@ const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
+  createAdminDataInternalClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,
 }));
@@ -406,7 +407,7 @@ describe("admin foundation backend", () => {
     expect(migration).toContain("alter table public.admin_members enable row level security");
     expect(migration).toContain("grant all privileges on public.admin_members to service_role");
     expect(migration).toContain("insert into public.admin_members (user_id, role)");
-    expect(authHelper).toContain("createServiceRoleClient()");
+    expect(authHelper).toContain("createAdminDataInternalClient()");
     expect(authHelper).toContain("admin_members");
     expect(authHelper).not.toMatch(/ADMIN_(EMAIL|USER|ALLOW|ALLOWLIST|UUID|ID)/u);
   });

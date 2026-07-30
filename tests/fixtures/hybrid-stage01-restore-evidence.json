@@ -1,0 +1,55 @@
+{
+  "backup": {
+    "filename": "homecook-hybrid-rehearsal-20260730-complete-v2.tar.gz.enc",
+    "sha256": "dd0d7c7e65ac48e7fda071cb2c08e6abd677689742ad97c56ec450e973530390",
+    "encrypted_size_bytes": 2816032,
+    "file_mode": "600",
+    "cipher": "AES-256-CBC",
+    "key_source": "macOS Keychain",
+    "pbkdf2_iterations": 200000,
+    "archive_check": "PASS",
+    "manifest": "backup-manifest.json",
+    "streaming_decrypt_verified": true,
+    "storage_object": {
+      "size_bytes": 2127830,
+      "sha256_redacted": "e6d153...f57b",
+      "media_type": "image/jpeg"
+    },
+    "off_mac_upload": "pending-user-confirmation"
+  },
+  "superseded_backup": {
+    "sha256_redacted": "d19f...d6f0",
+    "approximate_size": "699KB",
+    "decryptable": true,
+    "cutover_evidence": false,
+    "reason": "storage-object-payload-missing"
+  },
+  "restore": {
+    "container": "homecook-hybrid-encrypted-restore-20260730",
+    "image": "public.ecr.aws/supabase/postgres:17.6.1.121",
+    "healthy": true,
+    "published_ports": {},
+    "preflight": [
+      "wait-container-health",
+      "install-pg_trgm",
+      "disable-supabase-default-event-triggers"
+    ],
+    "phases": [
+      "roles",
+      "schema-application",
+      "data-application"
+    ],
+    "postflight": [
+      "reenable-supabase-default-event-triggers"
+    ],
+    "metrics": {
+      "auth_users": 0,
+      "public_users": 5,
+      "public_tables": 82,
+      "storage_objects": 1,
+      "invalid_constraints": 0,
+      "admin_members_missing_auth": 1,
+      "admin_audit_missing_auth": 99
+    }
+  }
+}

@@ -39,7 +39,7 @@
 
 ## Manual QA
 
-- verifier: Claude / Codex
+- verifier: 구현 작업과 task ID가 다른 Codex 검토 작업
 - environment: `pnpm local:reset:demo` 후 migration 적용
 - scenarios:
   - Seed migration 적용 후 `local:reset:demo` → YouTube URL 추출 → 이전보다 더 많은 재료가 `resolved`로 나타나는지 확인

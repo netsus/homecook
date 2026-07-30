@@ -27,12 +27,14 @@ import {
 } from "@/lib/server/account-generation/session-authority";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
 import {
-  ensurePublicUserRow,
-  ensureUserBootstrapState,
   normalizeUserEmail,
-  type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  bootstrapLegacyAuthCallbackIdentity,
+  bootstrapAuthCallbackSessionAuthority,
+  createAuthCallbackOperationsClient,
+  createAuthRouteHandlerClient,
+} from "@/lib/supabase/server";
 
 type AuthFailureCode =
   | "email_required"
@@ -46,24 +48,6 @@ type AuthFailureCode =
   | "ACCOUNT_GENERATION_STALE"
   | "ACCOUNT_LIFECYCLE_MAINTENANCE"
   | "ACCOUNT_SESSION_STALE";
-
-interface ActiveUserRow {
-  id: string;
-  social_provider: "google" | "naver" | "kakao";
-}
-
-interface ActiveUserQuery {
-  eq(column: string, value: string): ActiveUserQuery;
-  is(column: string, value: null): ActiveUserQuery;
-  maybeSingle(): PromiseLike<{
-    data: ActiveUserRow | null;
-    error: { message: string } | null;
-  }>;
-}
-
-interface ActiveUserDbClient {
-  from(table: "users"): { select(columns: string): ActiveUserQuery };
-}
 
 function getFailurePath(nextPath: string) {
   return nextPath === "/" ? "/login" : nextPath;
@@ -136,21 +120,6 @@ async function clearPartialSession(
   return expireSupabaseAuthCookies(response, request, cookieStore);
 }
 
-async function findActiveUserByEmail(dbClient: ActiveUserDbClient, email: string) {
-  const result = await dbClient
-    .from("users")
-    .select("id, social_provider")
-    .eq("email", email)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  if (result.error) {
-    throw new Error(result.error.message);
-  }
-
-  return result.data;
-}
-
 async function recordAuthFailure(request: Request, errorCode: string) {
   await recordOperationalEventFromServiceRole({
     event_type: "auth_failure",
@@ -171,7 +140,8 @@ export async function GET(request: Request) {
       ?? parsePostAuthNextCookie(cookieStore.get(POST_AUTH_NEXT_COOKIE)?.value),
   );
   const code = requestUrl.searchParams.get("code");
-  let supabase: Awaited<ReturnType<typeof createRouteHandlerClient>> | null = null;
+  let supabase: Awaited<ReturnType<typeof createAuthRouteHandlerClient>> | null =
+    null;
 
   if (!code) {
     if (requestUrl.searchParams.get("error")) {
@@ -187,7 +157,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    supabase = await createRouteHandlerClient();
+    supabase = await createAuthRouteHandlerClient();
     const exchangeResult = await supabase.auth.exchangeCodeForSession(code);
     if (exchangeResult.error) {
       await recordAuthFailure(request, "OAUTH_EXCHANGE_FAILED");
@@ -258,13 +228,33 @@ export async function GET(request: Request) {
       );
     }
 
-    const serviceRoleClient = createServiceRoleClient();
+    const serviceRoleClient = createAuthCallbackOperationsClient();
     if (!serviceRoleClient) {
       await recordAuthFailure(request, "SERVICE_ROLE_UNAVAILABLE");
       return clearPartialSession(
         supabase,
         clearAuthFlowCookies(NextResponse.redirect(
           buildFailureRedirectUrl(requestUrl, nextPath, "oauth_failed"),
+        )),
+        request,
+        cookieStore,
+      );
+    }
+
+    const hybridBootstrap = await bootstrapAuthCallbackSessionAuthority({
+      accessToken: exchangedAccessToken,
+      client: serviceRoleClient,
+      user,
+    });
+    if (!hybridBootstrap.ok) {
+      const errorCode = hybridBootstrap.reason === "maintenance"
+        ? "ACCOUNT_LIFECYCLE_MAINTENANCE"
+        : "ACCOUNT_SESSION_STALE";
+      await recordAuthFailure(request, errorCode);
+      return clearPartialSession(
+        supabase,
+        clearAuthFlowCookies(NextResponse.redirect(
+          buildFailureRedirectUrl(requestUrl, nextPath, errorCode),
         )),
         request,
         cookieStore,
@@ -355,28 +345,44 @@ export async function GET(request: Request) {
       return response;
     }
 
-    const existingUser = await findActiveUserByEmail(
-      serviceRoleClient as unknown as ActiveUserDbClient,
-      email,
+    const legacyBootstrap = await bootstrapLegacyAuthCallbackIdentity(
+      serviceRoleClient,
+      { ...user, email },
     );
-    if (existingUser && existingUser.id !== user.id) {
-      await recordAuthFailure(request, "ACCOUNT_CONFLICT");
-      return clearPartialSession(
-        supabase,
-        clearAuthFlowCookies(NextResponse.redirect(
-          buildFailureRedirectUrl(requestUrl, nextPath, "account_conflict"),
-        )),
-        request,
-        cookieStore,
-      );
+    if (!legacyBootstrap.ok) {
+      if (legacyBootstrap.reason === "account_conflict") {
+        await recordAuthFailure(request, "ACCOUNT_CONFLICT");
+        return clearPartialSession(
+          supabase,
+          clearAuthFlowCookies(NextResponse.redirect(
+            buildFailureRedirectUrl(requestUrl, nextPath, "account_conflict"),
+          )),
+          request,
+          cookieStore,
+        );
+      }
+      if (
+        legacyBootstrap.reason === "maintenance"
+        || legacyBootstrap.reason === "stale"
+      ) {
+        await recordAuthFailure(request, legacyBootstrap.errorCode);
+        return clearPartialSession(
+          supabase,
+          clearAuthFlowCookies(NextResponse.redirect(
+            buildFailureRedirectUrl(
+              requestUrl,
+              nextPath,
+              legacyBootstrap.errorCode,
+            ),
+          )),
+          request,
+          cookieStore,
+        );
+      }
+      throw new Error("legacy callback bootstrap failed");
     }
 
-    const normalizedUser = { ...user, email };
-    const dbClient = serviceRoleClient as unknown as UserBootstrapDbClient;
-    const userRow = await ensurePublicUserRow(dbClient, normalizedUser);
-    await ensureUserBootstrapState(dbClient, user.id);
-
-    const redirectUrl = shouldCollectNickname(userRow)
+    const redirectUrl = shouldCollectNickname(legacyBootstrap)
       ? buildNicknameOnboardingRedirectUrl(requestUrl, nextPath)
       : new URL(nextPath, requestUrl.origin);
     const response = clearAuthFlowCookies(NextResponse.redirect(redirectUrl));

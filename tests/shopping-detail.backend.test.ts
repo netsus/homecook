@@ -15,7 +15,14 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
+  createRouteHandlerClient: async (...args: unknown[]) => {
+    const routeClient = await createRouteHandlerClient(...args);
+    const createDataClient = createServiceRoleClient.getMockImplementation();
+    const dataClient = createDataClient?.();
+    return dataClient
+      ? { ...routeClient, ...dataClient, auth: routeClient.auth }
+      : routeClient;
+  },
   createServiceRoleClient,
 }));
 
@@ -163,6 +170,7 @@ describe("10a shopping detail backend", () => {
         error: null,
       },
     ]);
+    const mealsQuery = createArraySelectQuery([{ data: [], error: null }]);
     const recipesQuery = createArraySelectQuery([
       {
         data: [
@@ -219,6 +227,9 @@ describe("10a shopping detail backend", () => {
         }
         if (table === "shopping_list_recipes") {
           return { select: vi.fn(() => listRecipesQuery) };
+        }
+        if (table === "meals") {
+          return { select: vi.fn(() => mealsQuery) };
         }
         if (table === "recipes") {
           return { select: vi.fn(() => recipesQuery) };
@@ -301,6 +312,301 @@ describe("10a shopping detail backend", () => {
     expect(itemsQuery.order).toHaveBeenCalledWith("id", { ascending: true });
   });
 
+  it("uses the content-pinned Meal title for shopping list detail", async () => {
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440001",
+          user_id: "user-1",
+          title: "4/25 장보기",
+          date_range_start: "2026-04-25",
+          date_range_end: "2026-04-25",
+          is_completed: false,
+          completed_at: null,
+          created_at: "2026-04-25T09:00:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const listRecipesQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            recipe_id: "recipe-1",
+            shopping_servings: 2,
+            planned_servings_total: 2,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            recipe_id: "recipe-1",
+            recipe_content_snapshot_id: "snapshot-1",
+            recipe_content_snapshots: {
+              title: "장보기 생성 당시 김치찌개",
+            },
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipesQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: "recipe-1",
+            title: "편집된 현재 김치찌개",
+            thumbnail_url: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") {
+          return { select: vi.fn(() => listQuery) };
+        }
+        if (table === "shopping_list_recipes") {
+          return { select: vi.fn(() => listRecipesQuery) };
+        }
+        if (table === "meals") {
+          return { select: vi.fn(() => mealsQuery) };
+        }
+        if (table === "recipes") {
+          return { select: vi.fn(() => recipesQuery) };
+        }
+        if (table === "shopping_list_items") {
+          return {
+            select: vi.fn(() => createArraySelectQuery([{ data: [], error: null }])),
+          };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importListDetailRoute();
+    const response = await GET(
+      new Request(
+        "http://localhost:3000/api/v1/shopping/lists/550e8400-e29b-41d4-a716-446655440001",
+      ),
+      {
+        params: Promise.resolve({
+          list_id: "550e8400-e29b-41d4-a716-446655440001",
+        }),
+      },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.recipes[0].recipe_name).toBe("장보기 생성 당시 김치찌개");
+  });
+
+  it("fails closed when shopping list detail finds a broken Meal content pin relation", async () => {
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440001",
+          user_id: "user-1",
+          title: "4/25 장보기",
+          date_range_start: "2026-04-25",
+          date_range_end: "2026-04-25",
+          is_completed: false,
+          completed_at: null,
+          created_at: "2026-04-25T09:00:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const listRecipesQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            recipe_id: "recipe-1",
+            shopping_servings: 2,
+            planned_servings_total: 2,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            recipe_id: "recipe-1",
+            recipe_content_snapshot_id: "snapshot-1",
+            recipe_content_snapshots: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipesQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: "recipe-1",
+            title: "노출되면 안 되는 현재 제목",
+            thumbnail_url: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") {
+          return { select: vi.fn(() => listQuery) };
+        }
+        if (table === "shopping_list_recipes") {
+          return { select: vi.fn(() => listRecipesQuery) };
+        }
+        if (table === "meals") {
+          return { select: vi.fn(() => mealsQuery) };
+        }
+        if (table === "recipes") {
+          return { select: vi.fn(() => recipesQuery) };
+        }
+        if (table === "shopping_list_items") {
+          return {
+            select: vi.fn(() => createArraySelectQuery([{ data: [], error: null }])),
+          };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importListDetailRoute();
+    const response = await GET(
+      new Request(
+        "http://localhost:3000/api/v1/shopping/lists/550e8400-e29b-41d4-a716-446655440001",
+      ),
+      {
+        params: Promise.resolve({
+          list_id: "550e8400-e29b-41d4-a716-446655440001",
+        }),
+      },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(JSON.stringify(body)).not.toContain("노출되면 안 되는 현재 제목");
+  });
+
+  it("fails closed when the shopping list Meal content authority query throws", async () => {
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440001",
+          user_id: "user-1",
+          title: "4/25 장보기",
+          date_range_start: "2026-04-25",
+          date_range_end: "2026-04-25",
+          is_completed: false,
+          completed_at: null,
+          created_at: "2026-04-25T09:00:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const listRecipesQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            recipe_id: "recipe-1",
+            shopping_servings: 2,
+            planned_servings_total: 2,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipesQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: "recipe-1",
+            title: "노출되면 안 되는 현재 제목",
+            thumbnail_url: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") {
+          return { select: vi.fn(() => listQuery) };
+        }
+        if (table === "shopping_list_recipes") {
+          return { select: vi.fn(() => listRecipesQuery) };
+        }
+        if (table === "meals") {
+          return {
+            select: vi.fn(() => {
+              throw new Error("Meal content authority unavailable");
+            }),
+          };
+        }
+        if (table === "recipes") {
+          return { select: vi.fn(() => recipesQuery) };
+        }
+        if (table === "shopping_list_items") {
+          return {
+            select: vi.fn(() => createArraySelectQuery([{ data: [], error: null }])),
+          };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importListDetailRoute();
+    const response = await GET(
+      new Request(
+        "http://localhost:3000/api/v1/shopping/lists/550e8400-e29b-41d4-a716-446655440001",
+      ),
+      {
+        params: Promise.resolve({
+          list_id: "550e8400-e29b-41d4-a716-446655440001",
+        }),
+      },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(JSON.stringify(body)).not.toContain("노출되면 안 되는 현재 제목");
+  });
+
   it("returns detail when shopping_lists does not expose updated_at", async () => {
     const listQuery = createMaybeSingleQuery([
       {
@@ -318,6 +624,7 @@ describe("10a shopping detail backend", () => {
       },
     ]);
     const listRecipesQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const mealsQuery = createArraySelectQuery([{ data: [], error: null }]);
     const itemsQuery = createArraySelectQuery([{ data: [], error: null }]);
 
     createRouteHandlerClient.mockResolvedValue({
@@ -330,6 +637,9 @@ describe("10a shopping detail backend", () => {
         }
         if (table === "shopping_list_recipes") {
           return { select: vi.fn(() => listRecipesQuery) };
+        }
+        if (table === "meals") {
+          return { select: vi.fn(() => mealsQuery) };
         }
         if (table === "shopping_list_items") {
           return { select: vi.fn(() => itemsQuery) };
@@ -369,6 +679,7 @@ describe("10a shopping detail backend", () => {
       },
     ]);
     const listRecipesQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const mealsQuery = createArraySelectQuery([{ data: [], error: null }]);
     const itemsQuery = createArraySelectQuery([
       {
         data: [
@@ -403,6 +714,9 @@ describe("10a shopping detail backend", () => {
         }
         if (table === "shopping_list_recipes") {
           return { select: vi.fn(() => listRecipesQuery) };
+        }
+        if (table === "meals") {
+          return { select: vi.fn(() => mealsQuery) };
         }
         if (table === "shopping_list_items") {
           return { select: vi.fn(() => itemsQuery) };
@@ -521,10 +835,12 @@ describe("10a shopping detail backend", () => {
         error: null,
       },
     ]);
+    const mealsQuery = createArraySelectQuery([{ data: [], error: null }]);
     const itemsQuery = createArraySelectQuery([{ data: [], error: null }]);
     const serviceFrom = vi.fn((table: string) => {
       if (table === "shopping_lists") return { select: vi.fn(() => listQuery) };
       if (table === "shopping_list_recipes") return { select: vi.fn(() => listRecipesQuery) };
+      if (table === "meals") return { select: vi.fn(() => mealsQuery) };
       if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
       if (table === "shopping_list_items") return { select: vi.fn(() => itemsQuery) };
       throw new Error(`unexpected service table: ${table}`);

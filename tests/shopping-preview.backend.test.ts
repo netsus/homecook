@@ -23,7 +23,14 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
+  createRouteHandlerClient: async (...args: unknown[]) => {
+    const routeClient = await createRouteHandlerClient(...args);
+    const createDataClient = createServiceRoleClient.getMockImplementation();
+    const dataClient = createDataClient?.();
+    return dataClient
+      ? { ...routeClient, ...dataClient, auth: routeClient.auth }
+      : routeClient;
+  },
   createServiceRoleClient,
 }));
 
@@ -378,6 +385,140 @@ describe("shopping stage2 backend", () => {
     expect(mealsQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
     expect(mealsQuery.eq).toHaveBeenCalledWith("status", "registered");
     expect(mealsQuery.is).toHaveBeenCalledWith("shopping_list_id", null);
+  });
+
+  it("uses a content-pinned Meal title instead of the mutable current recipe title", async () => {
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: "550e8400-e29b-41d4-a716-446655440001",
+            recipe_id: "recipe-1",
+            recipe_content_snapshot_id: "snapshot-1",
+            recipe_content_snapshots: {
+              title: "계획 당시 김치찌개",
+            },
+            column_id: "column-breakfast",
+            plan_date: "2026-04-25",
+            planned_servings: 2,
+            status: "registered",
+            shopping_list_id: null,
+            created_at: "2026-04-25T00:00:00.000Z",
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipesQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: "recipe-1",
+            title: "편집된 현재 김치찌개",
+            thumbnail_url: "https://example.com/kimchi.jpg",
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const columnsQuery = createArraySelectQuery([
+      {
+        data: [{ id: "column-breakfast", name: "아침" }],
+        error: null,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "meals") {
+          return { select: vi.fn(() => mealsQuery) };
+        }
+        if (table === "recipes") {
+          return { select: vi.fn(() => recipesQuery) };
+        }
+        if (table === "meal_plan_columns") {
+          return { select: vi.fn(() => columnsQuery) };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importPreviewRoute();
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.eligible_meals[0].recipe_name).toBe("계획 당시 김치찌개");
+    expect(body.data.recipes[0].recipe_name).toBe("계획 당시 김치찌개");
+  });
+
+  it("fails closed when a shopping preview Meal has a broken content pin relation", async () => {
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: "550e8400-e29b-41d4-a716-446655440001",
+            recipe_id: "recipe-1",
+            recipe_content_snapshot_id: "snapshot-1",
+            recipe_content_snapshots: null,
+            column_id: "column-breakfast",
+            plan_date: "2026-04-25",
+            planned_servings: 2,
+            status: "registered",
+            shopping_list_id: null,
+            created_at: "2026-04-25T00:00:00.000Z",
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipesQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: "recipe-1",
+            title: "노출되면 안 되는 현재 제목",
+            thumbnail_url: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "meals") {
+          return { select: vi.fn(() => mealsQuery) };
+        }
+        if (table === "recipes") {
+          return { select: vi.fn(() => recipesQuery) };
+        }
+        if (table === "meal_plan_columns") {
+          return { select: vi.fn(() => createArraySelectQuery([{ data: [], error: null }])) };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importPreviewRoute();
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(JSON.stringify(body)).not.toContain("노출되면 안 되는 현재 제목");
   });
 
   it("returns 422 when shopping list create body has empty meal_configs", async () => {
@@ -992,6 +1133,178 @@ describe("shopping stage2 backend", () => {
       is_completed: false,
       created_at: "2026-04-25T09:00:00.000Z",
     });
+  });
+
+  it("uses pinned content once per Meal without duplicating a recipe-level serving total", async () => {
+    const firstMealId = "550e8400-e29b-41d4-a716-446655440001";
+    const secondMealId = "550e8400-e29b-41d4-a716-446655440002";
+    const recipeId = "550e8400-e29b-41d4-a716-446655440101";
+    const rpc = vi.fn(async () => ({
+      data: {
+        id: "shopping-list-rpc",
+        title: "4/25 장보기",
+        is_completed: false,
+        created_at: "2026-04-25T09:00:00.000Z",
+      },
+      error: null,
+    }));
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: firstMealId,
+            user_id: "user-1",
+            recipe_id: recipeId,
+            recipe_content_snapshot_id: "snapshot-1",
+            recipe_content_snapshots: {
+              base_servings: 2,
+              ingredients_json: [
+                {
+                  ingredient_id: "ing-onion",
+                  amount: 200,
+                  unit: "g",
+                  ingredient_type: "QUANT",
+                  display_text: "양파 200g",
+                  scalable: true,
+                  sort_order: 1,
+                },
+              ],
+            },
+            plan_date: "2026-04-25",
+            column_id: "column-dinner",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+            leftover_dish_id: null,
+            shopping_list_id: null,
+          },
+          {
+            id: secondMealId,
+            user_id: "user-1",
+            recipe_id: recipeId,
+            recipe_content_snapshot_id: "snapshot-1",
+            recipe_content_snapshots: {
+              base_servings: 2,
+              ingredients_json: [
+                {
+                  ingredient_id: "ing-onion",
+                  amount: 200,
+                  unit: "g",
+                  ingredient_type: "QUANT",
+                  display_text: "양파 200g",
+                  scalable: true,
+                  sort_order: 1,
+                },
+              ],
+            },
+            plan_date: "2026-04-26",
+            column_id: "column-dinner",
+            planned_servings: 4,
+            status: "registered",
+            is_leftover: false,
+            leftover_dish_id: null,
+            shopping_list_id: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipeRowsQuery = createArraySelectQuery([
+      {
+        data: [{ id: recipeId, base_servings: 100 }],
+        error: null,
+      },
+    ]);
+    const recipeIngredientsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            recipe_id: recipeId,
+            ingredient_id: "ing-onion",
+            amount: 1000,
+            unit: "g",
+            ingredient_type: "QUANT",
+            display_text: "편집된 양파 1000g",
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const ingredientsQuery = createArraySelectQuery([
+      {
+        data: [{ id: "ing-onion", standard_name: "양파" }],
+        error: null,
+      },
+    ]);
+    const pantryQuery = createArraySelectQuery([{ data: [], error: null }]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({
+      rpc,
+      from: vi.fn((table: string) => {
+        if (table === "meals") {
+          return { select: vi.fn(() => mealsQuery) };
+        }
+        if (table === "recipes") {
+          return { select: vi.fn(() => recipeRowsQuery) };
+        }
+        if (table === "recipe_ingredients") {
+          return { select: vi.fn(() => recipeIngredientsQuery) };
+        }
+        if (table === "ingredients") {
+          return { select: vi.fn(() => ingredientsQuery) };
+        }
+        if (table === "pantry_items") {
+          return { select: vi.fn(() => pantryQuery) };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importListsRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/shopping/lists", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          recipes: [
+            {
+              recipe_id: recipeId,
+              meal_ids: [firstMealId, secondMealId],
+              shopping_servings: 6,
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(rpc).toHaveBeenCalledWith(
+      "create_shopping_list_from_payload",
+      expect.objectContaining({
+        p_item_rows: [
+          {
+            ingredient_id: "ing-onion",
+            display_text: "양파 600g",
+            amounts_json: [{ amount: 600, unit: "g" }],
+            is_pantry_excluded: false,
+            sort_order: 0,
+          },
+        ],
+        p_recipe_rows: [
+          {
+            recipe_id: recipeId,
+            shopping_servings: 6,
+            planned_servings_total: 6,
+          },
+        ],
+      }),
+    );
   });
 
   it("marks selected meals shopping_done without creating a list when every needed ingredient is already in pantry", async () => {
