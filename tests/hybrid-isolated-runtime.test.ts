@@ -50,6 +50,12 @@ describe("isolated hybrid integration runtime", () => {
       /pg_roles[\s\S]*service_role[\s\S]*authenticated[\s\S]*anon/,
     );
     expect(compose).toMatch(
+      /pg_isready -h 127\.0\.0\.1 -U supabase_admin/,
+    );
+    expect(compose).toMatch(
+      /psql -h 127\.0\.0\.1 -U supabase_admin/,
+    );
+    expect(compose).toMatch(
       /pg_namespace[\s\S]*auth[\s\S]*storage[\s\S]*extensions/,
     );
     expect(compose).toMatch(/pg_extension[\s\S]*pgcrypto/);
