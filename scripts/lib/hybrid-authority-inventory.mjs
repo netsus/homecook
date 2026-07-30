@@ -547,13 +547,7 @@ function buildClientBindingSeeds(repoRoot, files) {
           continue;
         }
         const propertyName = element.propertyName
-          ? (
-              ts.isIdentifier(element.propertyName)
-              || ts.isStringLiteralLike(element.propertyName)
-              || ts.isNumericLiteral(element.propertyName)
-            )
-            ? String(element.propertyName.text)
-            : null
+          ? staticPropertyName(element.propertyName, locals)
           : ts.isIdentifier(element.name)
             ? element.name.text
             : null;
@@ -961,6 +955,95 @@ function buildClientBindingSeeds(repoRoot, files) {
     }
   };
 
+  const descriptorAssignmentPath = (target, locals) => {
+    const path = [];
+    let current = unwrapExpression(target);
+    while (
+      ts.isPropertyAccessExpression(current)
+      || ts.isElementAccessExpression(current)
+    ) {
+      path.unshift(
+        ts.isPropertyAccessExpression(current)
+          ? current.name.text
+          : current.argumentExpression
+            ? staticPropertyName(current.argumentExpression, locals, true)
+            : null,
+      );
+      current = unwrapExpression(current.expression);
+    }
+    return ts.isIdentifier(current) && path.length > 0
+      ? { path, rootName: current.text }
+      : null;
+  };
+
+  const buildAssignedDescriptorPath = (path, index, descriptor) => {
+    if (index >= path.length) {
+      return descriptor;
+    }
+    const propertyName = path[index];
+    return propertyName === null
+      ? { kind: "object", properties: {}, unknown: true }
+      : {
+          kind: "object",
+          properties: {
+            [propertyName]: buildAssignedDescriptorPath(
+              path,
+              index + 1,
+              descriptor,
+            ),
+          },
+          unknown: true,
+        };
+  };
+
+  const updateAssignedDescriptorPath = (
+    owner,
+    path,
+    index,
+    descriptor,
+  ) => {
+    if (index >= path.length) {
+      return descriptor;
+    }
+    if (
+      owner
+      && typeof owner === "object"
+      && owner.kind === "union"
+    ) {
+      return mergeDescriptors(
+        ...owner.values.map((value) => updateAssignedDescriptorPath(
+          value,
+          path,
+          index,
+          descriptor,
+        )),
+      );
+    }
+    const propertyName = path[index];
+    if (propertyName === null) {
+      return mergeDescriptors(owner ?? UNKNOWN, UNKNOWN);
+    }
+    if (
+      owner
+      && typeof owner === "object"
+      && owner.kind === "object"
+    ) {
+      return {
+        ...owner,
+        properties: {
+          ...owner.properties,
+          [propertyName]: updateAssignedDescriptorPath(
+            owner.properties[propertyName] ?? UNKNOWN,
+            path,
+            index + 1,
+            descriptor,
+          ),
+        },
+      };
+    }
+    return buildAssignedDescriptorPath(path, index, descriptor);
+  };
+
   const assignDescriptorTarget = (
     target,
     descriptor,
@@ -1032,35 +1115,22 @@ function buildClientBindingSeeds(repoRoot, files) {
       return true;
     }
     if (
-      (
-        ts.isPropertyAccessExpression(expression)
-        || ts.isElementAccessExpression(expression)
-      )
-      && ts.isIdentifier(expression.expression)
+      ts.isPropertyAccessExpression(expression)
+      || ts.isElementAccessExpression(expression)
     ) {
-      const ownerName = expression.expression.text;
-      const owner = locals.get(ownerName);
-      const propertyName = ts.isPropertyAccessExpression(expression)
-        ? expression.name.text
-        : expression.argumentExpression
-          ? staticPropertyName(expression.argumentExpression, locals, true)
-          : null;
-      if (
-        propertyName !== null
-        && owner
-        && typeof owner === "object"
-        && owner.kind === "object"
-      ) {
-        locals.set(ownerName, {
-          ...owner,
-          properties: {
-            ...owner.properties,
-            [propertyName]: descriptor,
-          },
-        });
-      } else {
-        locals.set(ownerName, mergeDescriptors(owner ?? UNKNOWN, UNKNOWN));
+      const assignment = descriptorAssignmentPath(expression, locals);
+      if (!assignment) {
+        return false;
       }
+      locals.set(
+        assignment.rootName,
+        updateAssignedDescriptorPath(
+          locals.get(assignment.rootName) ?? UNKNOWN,
+          assignment.path,
+          0,
+          descriptor,
+        ),
+      );
       return true;
     }
     return false;

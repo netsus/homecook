@@ -16,6 +16,19 @@ export async function removeThroughDynamicSdkBarrel() {
 
   const sdkNamespace = await import("../lib/api/sdk-dynamic-barrel");
   sdkNamespace.removeStoredNamespaceImage(["unsafe.png"]);
+
+  const key = "removeStoredImage";
+  const computedRemove = sdkNamespace[key];
+  computedRemove(["unsafe-computed.png"]);
+
+  const { [key]: destructuredRemove } = sdkNamespace;
+  destructuredRemove(["unsafe-destructured.png"]);
+
+  await import("../lib/api/sdk-dynamic-barrel").then((loaded) => {
+    const thenKey = "removeStoredImage";
+    const thenRemove = loaded[thenKey];
+    thenRemove(["unsafe-then.png"]);
+  });
 }
 
 export async function inspectThroughUnknownDynamicModule(specifier: string) {

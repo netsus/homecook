@@ -14,3 +14,18 @@ export function removeThroughSafeDynamicHelper() {
     (loaded) => loaded.remove(["safe.png"]),
   );
 }
+
+export async function removeThroughComputedSafeDynamicHelper() {
+  const loaded = await import("../lib/api/safe-dynamic-helper");
+  const key = "remove";
+  const computedRemove = loaded[key];
+  const { [key]: destructuredRemove } = loaded;
+  computedRemove(["safe-computed.png"]);
+  destructuredRemove(["safe-destructured.png"]);
+
+  await import("../lib/api/safe-dynamic-helper").then((safeModule) => {
+    const thenKey = "remove";
+    const thenRemove = safeModule[thenKey];
+    thenRemove(["safe-then.png"]);
+  });
+}

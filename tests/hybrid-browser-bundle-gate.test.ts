@@ -95,6 +95,10 @@ describe("hybrid built browser bundle canary", () => {
     "async function run(specifier){const {upload}=await import(specifier);upload('unsafe.png',file)}",
     "async function run(specifier){const module=await import(specifier),update=module.update;update('unsafe.png',file)}",
     "import('./storage-module.js').then(module=>module.createSignedUploadUrl('unsafe.png'))",
+    "async function run(){const module=await import('../lib/sdk'),key='remove',mutate=module[key];mutate(['unsafe.png'])}",
+    "async function run(){const module=await import('../lib/sdk'),key='remove',{[key]:mutate}=module;mutate(['unsafe.png'])}",
+    "import('../lib/sdk').then(module=>{const key='remove',mutate=module[key];mutate(['unsafe.png'])})",
+    "function safe(){}const bucket=client.storage.from('bucket'),namespace={tools:{remove:safe}};namespace.tools.remove=bucket.remove;namespace.tools.remove(['unsafe.png'])",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready&&(method='GET');fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready||(method='GET');fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready??(method='GET');fetch(storageUrl,{method})",
@@ -262,6 +266,22 @@ describe("hybrid built browser bundle canary", () => {
         path.join(bundleRoot, "dynamic-literal.min.js"),
         "import('./x.js').then(m=>m.createSignedUploadUrl('x'))",
       );
+      fs.writeFileSync(
+        path.join(bundleRoot, "dynamic-computed.min.js"),
+        "async function f(){const m=await import('./x'),k='remove',r=m[k];r(['x'])}",
+      );
+      fs.writeFileSync(
+        path.join(bundleRoot, "dynamic-computed-destructure.min.js"),
+        "async function f(){const m=await import('./x'),k='remove',{[k]:r}=m;r(['x'])}",
+      );
+      fs.writeFileSync(
+        path.join(bundleRoot, "dynamic-computed-then.min.js"),
+        "import('./x').then(m=>{const k='remove',r=m[k];r(['x'])})",
+      );
+      fs.writeFileSync(
+        path.join(bundleRoot, "sdk-nested-assignment.min.js"),
+        "function s(){}const b=c.storage.from('x'),n={tools:{remove:s}};n.tools.remove=b.remove;n.tools.remove(['x'])",
+      );
 
       expect(inspectBrowserBundle(bundleRoot)).toEqual(
         expect.arrayContaining(
@@ -316,6 +336,18 @@ describe("hybrid built browser bundle canary", () => {
               kind: "supabase-storage-sdk",
             }),
             expect.objectContaining({
+              file: "dynamic-computed-destructure.min.js",
+              kind: "supabase-storage-sdk",
+            }),
+            expect.objectContaining({
+              file: "dynamic-computed-then.min.js",
+              kind: "supabase-storage-sdk",
+            }),
+            expect.objectContaining({
+              file: "dynamic-computed.min.js",
+              kind: "supabase-storage-sdk",
+            }),
+            expect.objectContaining({
               file: "dynamic-literal.min.js",
               kind: "supabase-storage-sdk",
             }),
@@ -327,10 +359,14 @@ describe("hybrid built browser bundle canary", () => {
               file: "dynamic-then.min.js",
               kind: "supabase-storage-sdk",
             }),
+            expect.objectContaining({
+              file: "sdk-nested-assignment.min.js",
+              kind: "supabase-storage-sdk",
+            }),
           ]),
         ),
       );
-      expect(inspectBrowserBundle(bundleRoot)).toHaveLength(36);
+      expect(inspectBrowserBundle(bundleRoot)).toHaveLength(40);
     } finally {
       fs.rmSync(bundleRoot, { recursive: true, force: true });
     }
@@ -380,6 +416,9 @@ describe("hybrid built browser bundle canary", () => {
     "const bucket=client.storage.from('recipe-images'),methods=[function inspect(){}];methods[0](['safe.png'])",
     "const bundled={remove:function safeRemove(){}};bundled.remove(['safe.png'])",
     "const unrelated=getCollection();unrelated.remove('safe.png')",
+    "function safe(){}const module={remove:safe},key='remove',mutate=module[key];mutate(['safe.png'])",
+    "function safe(){}const module={remove:safe},key='remove',{[key]:mutate}=module;mutate(['safe.png'])",
+    "function safe(){}const namespace={tools:{remove:safe}};namespace.tools.remove=safe;namespace.tools.remove(['safe.png'])",
   ])("does not flag a non-mutation canary: %s", (source) => {
     expect(findBrowserBundleStorageMutations(source)).toEqual([]);
   });

@@ -154,6 +154,9 @@ describe("hybrid authority AST/static gate", () => {
       "components/dynamic-binding-client.tsx",
       "components/dynamic-binding-client.tsx",
       "components/dynamic-binding-client.tsx",
+      "components/dynamic-binding-client.tsx",
+      "components/dynamic-binding-client.tsx",
+      "components/dynamic-binding-client.tsx",
       "components/dynamic-unknown-sdk-client.tsx",
       "components/dynamic-unknown-sdk-client.tsx",
       "components/dynamic-unknown-sdk-client.tsx",
@@ -167,6 +170,8 @@ describe("hybrid authority AST/static gate", () => {
       "components/live-binding-client.tsx",
       "components/live-binding-client.tsx",
       "components/live-binding-client.tsx",
+      "components/nested-sdk-client.tsx",
+      "components/nested-sdk-client.tsx",
       "features/unsafe.mjs",
       "lib/api/dynamic-sdk-alias.mjs",
       "lib/api/raw-delete.ts",
@@ -192,6 +197,8 @@ describe("hybrid authority AST/static gate", () => {
         "components/dynamic-unknown-sdk-client.tsx",
         "components/live-binding-client.tsx",
         "components/live-binding-safe-client.tsx",
+        "components/nested-safe-client.tsx",
+        "components/nested-sdk-client.tsx",
         "components/safe-dynamic-client.tsx",
         "lib/api/complex/index.ts",
         "lib/api/cycle-a.ts",
@@ -208,6 +215,8 @@ describe("hybrid authority AST/static gate", () => {
         "lib/api/live-unknown.ts",
         "lib/api/live-update.ts",
         "lib/api/non-fetch-helper.ts",
+        "lib/api/nested-safe-tools.ts",
+        "lib/api/nested-sdk-tools.ts",
         "lib/api/safe-dynamic-helper.ts",
         "lib/api/sdk-barrel.ts",
         "lib/api/sdk-dynamic-barrel.ts",
@@ -241,7 +250,7 @@ describe("hybrid authority AST/static gate", () => {
       inventory.browserDirectStoragePaths.filter(
         (entry) => entry.file === "components/dynamic-binding-client.tsx",
       ),
-    ).toHaveLength(6);
+    ).toHaveLength(9);
     expect(
       inventory.browserDirectStoragePaths.filter(
         (entry) => entry.file === "components/dynamic-unknown-sdk-client.tsx",
@@ -268,6 +277,18 @@ describe("hybrid authority AST/static gate", () => {
       expect.arrayContaining([
         expect.objectContaining({
           file: "components/live-binding-safe-client.tsx",
+        }),
+      ]),
+    );
+    expect(
+      inventory.browserDirectStoragePaths.filter(
+        (entry) => entry.file === "components/nested-sdk-client.tsx",
+      ),
+    ).toHaveLength(2);
+    expect(inventory.browserDirectStoragePaths).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: "components/nested-safe-client.tsx",
         }),
       ]),
     );

@@ -423,6 +423,13 @@ function resolvePropertyNames(node, bindings) {
   if (ts.isComputedPropertyName(node)) {
     return resolvePropertyNames(node.expression, bindings);
   }
+  if (ts.isIdentifier(node)) {
+    const resolved = resolveStaticValue(node, bindings);
+    return valueSet(
+      [...resolved.known].filter((value) => typeof value === "string"),
+      { unknown: resolved.unknown },
+    );
+  }
   const direct = getPropertyName(node);
   if (direct !== null) {
     return valueSet([direct]);
@@ -432,6 +439,16 @@ function resolvePropertyNames(node, bindings) {
     [...resolved.known].filter((value) => typeof value === "string"),
     { unknown: resolved.unknown },
   );
+}
+
+function resolveDeclaredPropertyNames(node, bindings) {
+  if (ts.isComputedPropertyName(node)) {
+    return resolvePropertyNames(node.expression, bindings);
+  }
+  const direct = getPropertyName(node);
+  return direct === null
+    ? unknownValue()
+    : knownValue(direct);
 }
 
 function resolveMemberValue(expression, bindings) {
@@ -683,7 +700,10 @@ function resolveStaticValue(node, bindings) {
       }
 
       if (ts.isPropertyAssignment(property)) {
-        const names = resolvePropertyNames(property.name, bindings);
+        const names = resolveDeclaredPropertyNames(
+          property.name,
+          bindings,
+        );
         objectUnknown ||= names.unknown;
         for (const name of names.known) {
           properties.set(
@@ -709,7 +729,10 @@ function resolveStaticValue(node, bindings) {
         || ts.isGetAccessorDeclaration(property)
         || ts.isSetAccessorDeclaration(property)
       ) {
-        const names = resolvePropertyNames(property.name, bindings);
+        const names = resolveDeclaredPropertyNames(
+          property.name,
+          bindings,
+        );
         objectUnknown ||= names.unknown;
         for (const name of names.known) {
           properties.set(name, knownValue(FUNCTION_VALUE));
@@ -779,6 +802,18 @@ function valueForProperty(value, propertyName) {
     : valueSet([], { unknown: true });
 }
 
+function valueForPropertyNames(value, propertyNames) {
+  const values = [...propertyNames.known]
+    .filter((propertyName) => typeof propertyName === "string")
+    .map((propertyName) => valueForProperty(value, propertyName));
+  return values.length > 0
+    ? mergeValues(
+        ...values,
+        valueSet([], { unknown: propertyNames.unknown }),
+      )
+    : unknownValue();
+}
+
 function assignBindingPattern(name, value, bindings) {
   if (ts.isIdentifier(name)) {
     bindings.set(name.text, value);
@@ -791,16 +826,14 @@ function assignBindingPattern(name, value, bindings) {
         assignBindingPattern(element.name, unknownValue(), bindings);
         continue;
       }
-      const propertyName = element.propertyName
-        ? getPropertyName(element.propertyName)
+      const propertyNames = element.propertyName
+        ? resolveDeclaredPropertyNames(element.propertyName, bindings)
         : ts.isIdentifier(element.name)
-          ? element.name.text
-          : null;
+          ? knownValue(element.name.text)
+          : unknownValue();
       assignBindingPattern(
         element.name,
-        propertyName === null
-          ? unknownValue()
-          : valueForProperty(value, propertyName),
+        valueForPropertyNames(value, propertyNames),
         bindings,
       );
     }
@@ -841,12 +874,13 @@ function assignAssignmentPattern(target, value, bindings) {
         continue;
       }
       if (ts.isPropertyAssignment(property)) {
-        const propertyName = getPropertyName(property.name);
+        const propertyNames = resolveDeclaredPropertyNames(
+          property.name,
+          bindings,
+        );
         assignAssignmentPattern(
           property.initializer,
-          propertyName === null
-            ? unknownValue()
-            : valueForProperty(value, propertyName),
+          valueForPropertyNames(value, propertyNames),
           bindings,
         );
         continue;
@@ -880,6 +914,99 @@ function assignAssignmentPattern(target, value, bindings) {
   }
 
   return false;
+}
+
+function assignmentMemberPath(target, bindings) {
+  const path = [];
+  let current = unwrapExpression(target);
+  while (
+    ts.isPropertyAccessExpression(current)
+    || ts.isElementAccessExpression(current)
+  ) {
+    path.unshift(
+      ts.isPropertyAccessExpression(current)
+        ? knownValue(current.name.text)
+        : current.argumentExpression
+          ? resolvePropertyNames(current.argumentExpression, bindings)
+          : unknownValue(),
+    );
+    current = unwrapExpression(current.expression);
+  }
+  return ts.isIdentifier(current) && path.length > 0
+    ? { path, rootName: current.text }
+    : null;
+}
+
+function buildAssignedObjectPath(path, index, nextValue) {
+  if (index >= path.length) {
+    return nextValue;
+  }
+  const properties = new Map();
+  for (const propertyName of path[index].known) {
+    if (typeof propertyName === "string") {
+      properties.set(
+        propertyName,
+        buildAssignedObjectPath(path, index + 1, nextValue),
+      );
+    }
+  }
+  return valueSet([properties], {
+    unknown: path[index].unknown || properties.size === 0,
+  });
+}
+
+function updateAssignedObjectPath(owner, path, index, nextValue) {
+  if (index >= path.length) {
+    return nextValue;
+  }
+
+  const propertyNames = path[index];
+  const nextObjects = [];
+  let unknown = owner.unknown || propertyNames.unknown;
+  for (const knownOwner of owner.known) {
+    if (!(knownOwner instanceof Map)) {
+      unknown = true;
+      continue;
+    }
+    const nextObject = new Map(knownOwner);
+    for (const propertyName of propertyNames.known) {
+      if (typeof propertyName !== "string") {
+        unknown = true;
+        continue;
+      }
+      const previous = knownOwner.get(propertyName) ?? unknownValue();
+      nextObject.set(
+        propertyName,
+        updateAssignedObjectPath(
+          previous,
+          path,
+          index + 1,
+          nextValue,
+        ),
+      );
+    }
+    nextObjects.push(nextObject);
+  }
+
+  if (nextObjects.length === 0) {
+    const possible = buildAssignedObjectPath(path, index, nextValue);
+    nextObjects.push(...possible.known);
+    unknown = true;
+  }
+  return valueSet(nextObjects, { unknown });
+}
+
+function assignMemberPath(target, nextValue, bindings) {
+  const assignment = assignmentMemberPath(target, bindings);
+  if (!assignment) {
+    return false;
+  }
+  const owner = bindings.get(assignment.rootName) ?? unknownValue();
+  bindings.set(
+    assignment.rootName,
+    updateAssignedObjectPath(owner, assignment.path, 0, nextValue),
+  );
+  return true;
 }
 
 function findStorageRestFetches(
@@ -1623,47 +1750,12 @@ function findStorageRestFetches(
           return;
         }
         if (
-          (
-            ts.isPropertyAccessExpression(target)
-            || ts.isElementAccessExpression(target)
-          )
-          && ts.isIdentifier(target.expression)
+          ts.isPropertyAccessExpression(target)
+          || ts.isElementAccessExpression(target)
         ) {
           captureExceptionalOutcome(inheritedBindings);
-          const objectValue = inheritedBindings.get(target.expression.text);
-          const propertyNames = ts.isPropertyAccessExpression(target)
-            ? knownValue(target.name.text)
-            : target.argumentExpression
-              ? resolvePropertyNames(
-                  target.argumentExpression,
-                  inheritedBindings,
-                )
-              : unknownValue();
-          if (objectValue && propertyNames.known.size > 0) {
-            const nextObjects = [];
-            let objectUnknown = objectValue.unknown || propertyNames.unknown;
-            for (const knownObject of objectValue.known) {
-              if (!(knownObject instanceof Map)) {
-                objectUnknown = true;
-                continue;
-              }
-              const nextObject = new Map(knownObject);
-              for (const propertyName of propertyNames.known) {
-                nextObject.set(propertyName, nextValue);
-              }
-              nextObjects.push(nextObject);
-            }
-            if (nextObjects.length === 0 && objectUnknown) {
-              const possibleObject = new Map();
-              for (const propertyName of propertyNames.known) {
-                possibleObject.set(propertyName, nextValue);
-              }
-              nextObjects.push(possibleObject);
-            }
-            inheritedBindings.set(
-              target.expression.text,
-              valueSet(nextObjects, { unknown: objectUnknown }),
-            );
+          if (!assignMemberPath(target, nextValue, inheritedBindings)) {
+            taintBindings(inheritedBindings);
           }
         }
         return;
