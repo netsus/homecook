@@ -234,5 +234,5 @@ dirty close/back → [계속 편집] [변경사항 버리기]
 - [ ] image object/cancel and tag primitives reuse predecessor contracts without direct Storage mutation <!-- omo:id=delivery-editor-media-tags;stage=4;scope=frontend;review=5,6 -->
 - [ ] MYPAGE/RECIPEBOOK_DETAIL remain unchanged and navigate items to RECIPE_DETAIL <!-- omo:id=delivery-editor-surface-boundary;stage=4;scope=frontend;review=5,6 -->
 - [ ] 390px/320px screenshots and independent design critic/authority reviews pass <!-- omo:id=delivery-editor-design-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] capability stays dark until owning write and snapshot-v2 activation gates <!-- omo:id=delivery-editor-dark-ship;stage=4;scope=shared;review=5,6 -->
-- [ ] local tests, E2E, visual/a11y and current-head checks are green <!-- omo:id=delivery-editor-verification;stage=4;scope=shared;review=5,6 -->
+- [ ] capability stays dark until owning write and snapshot-v2 activation gates <!-- omo:id=delivery-editor-dark-ship;stage=4;scope=shared;review=6 -->
+- [ ] local tests, E2E, visual/a11y and current-head checks are green <!-- omo:id=delivery-editor-verification;stage=4;scope=shared;review=6 -->
