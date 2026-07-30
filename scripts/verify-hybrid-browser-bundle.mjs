@@ -19,6 +19,7 @@ const STORAGE_NAMESPACE_VALUE = Symbol("storage-namespace");
 const STORAGE_FROM_VALUE = Symbol("storage-from");
 const STORAGE_BUCKET_VALUE = Symbol("storage-bucket");
 const STORAGE_MUTATOR_VALUE = Symbol("storage-mutator");
+const DYNAMIC_IMPORT_REGISTRY = Symbol("dynamic-import-registry");
 const CONTROL_FLOW_TAINT = Symbol("control-flow-taint");
 const BINDING_INITIALIZED = "initialized";
 const BINDING_UNINITIALIZED = "uninitialized";
@@ -77,6 +78,60 @@ function knownValue(value) {
     [value],
     typeof value === "string" ? { fragments: [value] } : undefined,
   );
+}
+
+function valueFromDescriptor(descriptor) {
+  if (
+    descriptor
+    && typeof descriptor === "object"
+    && descriptor.kind === "union"
+    && Array.isArray(descriptor.values)
+  ) {
+    return mergeValues(
+      ...descriptor.values.map((value) => valueFromDescriptor(value)),
+    );
+  }
+  if (descriptor === "fetch") {
+    return knownValue(FETCH_VALUE);
+  }
+  if (descriptor === "function") {
+    return knownValue(FUNCTION_VALUE);
+  }
+  if (descriptor === "global-object") {
+    return knownValue(GLOBAL_OBJECT_VALUE);
+  }
+  if (descriptor === "storage-namespace") {
+    return knownValue(STORAGE_NAMESPACE_VALUE);
+  }
+  if (descriptor === "storage-from") {
+    return knownValue(STORAGE_FROM_VALUE);
+  }
+  if (descriptor === "storage-bucket") {
+    return knownValue(STORAGE_BUCKET_VALUE);
+  }
+  if (descriptor === "storage-mutator") {
+    return knownValue(STORAGE_MUTATOR_VALUE);
+  }
+  if (descriptor === "unknown-storage-mutator") {
+    return mergeValues(
+      knownValue(STORAGE_MUTATOR_VALUE),
+      unknownValue(),
+    );
+  }
+  if (
+    descriptor
+    && typeof descriptor === "object"
+    && descriptor.kind === "object"
+    && descriptor.properties
+  ) {
+    return valueSet([new Map(
+      Object.entries(descriptor.properties).map(([name, value]) => [
+        name,
+        valueFromDescriptor(value),
+      ]),
+    )], { unknown: descriptor.unknown === true });
+  }
+  return unknownValue();
 }
 
 function mergeValues(...values) {
@@ -497,6 +552,23 @@ function resolveStaticValue(node, bindings) {
     );
   }
 
+  if (ts.isArrayLiteralExpression(expression)) {
+    const elements = new Map();
+    let arrayUnknown = false;
+    for (let index = 0; index < expression.elements.length; index += 1) {
+      const element = expression.elements[index];
+      if (ts.isSpreadElement(element)) {
+        arrayUnknown = true;
+        continue;
+      }
+      elements.set(
+        String(index),
+        resolveStaticValue(element, bindings),
+      );
+    }
+    return valueSet([elements], { unknown: arrayUnknown });
+  }
+
   if (
     ts.isBinaryExpression(expression)
     && expression.operatorToken.kind === ts.SyntaxKind.CommaToken
@@ -514,6 +586,33 @@ function resolveStaticValue(node, bindings) {
   }
 
   if (ts.isCallExpression(expression)) {
+    if (ts.isImportCall(expression) && expression.arguments[0]) {
+      const specifier = resolveStaticValue(
+        expression.arguments[0],
+        bindings,
+      );
+      const registry = bindings.get(DYNAMIC_IMPORT_REGISTRY);
+      const importedValues = [];
+      let importedUnknown = specifier.unknown || !registry;
+      if (registry) {
+        for (const knownSpecifier of specifier.known) {
+          if (typeof knownSpecifier !== "string") {
+            importedUnknown = true;
+            continue;
+          }
+          const imported = valueForProperty(registry, knownSpecifier);
+          importedValues.push(imported);
+          importedUnknown ||= imported.unknown;
+        }
+      }
+      return importedValues.length > 0
+        ? mergeValues(
+            ...importedValues,
+            valueSet([], { unknown: importedUnknown }),
+          )
+        : unknownValue();
+    }
+
     const calleeValue = resolveStaticValue(expression.expression, bindings);
     if (valueHas(calleeValue, STORAGE_FROM_VALUE)) {
       return knownValue(STORAGE_BUCKET_VALUE);
@@ -689,11 +788,70 @@ function assignBindingPattern(name, value, bindings) {
   }
 }
 
+function assignAssignmentPattern(target, value, bindings) {
+  const expression = unwrapExpression(target);
+  if (ts.isIdentifier(expression)) {
+    bindings.set(expression.text, value);
+    return true;
+  }
+
+  if (ts.isObjectLiteralExpression(expression)) {
+    for (const property of expression.properties) {
+      if (ts.isShorthandPropertyAssignment(property)) {
+        bindings.set(
+          property.name.text,
+          valueForProperty(value, property.name.text),
+        );
+        continue;
+      }
+      if (ts.isPropertyAssignment(property)) {
+        const propertyName = getPropertyName(property.name);
+        assignAssignmentPattern(
+          property.initializer,
+          propertyName === null
+            ? unknownValue()
+            : valueForProperty(value, propertyName),
+          bindings,
+        );
+        continue;
+      }
+      if (ts.isSpreadAssignment(property)) {
+        assignAssignmentPattern(
+          property.expression,
+          unknownValue(),
+          bindings,
+        );
+      }
+    }
+    return true;
+  }
+
+  if (ts.isArrayLiteralExpression(expression)) {
+    for (let index = 0; index < expression.elements.length; index += 1) {
+      const element = expression.elements[index];
+      if (ts.isOmittedExpression(element)) {
+        continue;
+      }
+      assignAssignmentPattern(
+        ts.isSpreadElement(element) ? element.expression : element,
+        ts.isSpreadElement(element)
+          ? unknownValue()
+          : valueForProperty(value, String(index)),
+        bindings,
+      );
+    }
+    return true;
+  }
+
+  return false;
+}
+
 function findStorageRestFetches(
   source,
   {
     failClosedUnknownStorageCallee = false,
     fileName = "browser-bundle.js",
+    dynamicImports = {},
     initialBindings = {},
     scriptKind = ts.ScriptKind.JS,
   } = {},
@@ -1409,9 +1567,10 @@ function findStorageRestFetches(
           ? resolveStaticValue(node.right, inheritedBindings)
           : unknownValue();
         const target = unwrapExpression(node.left);
-        if (ts.isIdentifier(target)) {
-          inheritedBindings.set(target.text, nextValue);
-        } else if (
+        if (assignAssignmentPattern(target, nextValue, inheritedBindings)) {
+          return;
+        }
+        if (
           (
             ts.isPropertyAccessExpression(target)
             || ts.isElementAccessExpression(target)
@@ -1519,15 +1678,20 @@ function findStorageRestFetches(
   };
 
   const seededBindings = new Map();
-  for (const [name, kind] of Object.entries(initialBindings)) {
-    seededBindings.set(
-      name,
-      kind === "fetch"
-        ? knownValue(FETCH_VALUE)
-        : kind === "function"
-          ? knownValue(FUNCTION_VALUE)
-          : unknownValue(),
-    );
+  for (const [name, descriptor] of Object.entries(initialBindings)) {
+    seededBindings.set(name, valueFromDescriptor(descriptor));
+  }
+  seededBindings.set(
+    DYNAMIC_IMPORT_REGISTRY,
+    knownValue(new Map(
+      Object.entries(dynamicImports).map(([specifier, descriptor]) => [
+        specifier,
+        valueFromDescriptor(descriptor),
+      ]),
+    )),
+  );
+  if (Object.keys(dynamicImports).length === 0) {
+    seededBindings.get(DYNAMIC_IMPORT_REGISTRY).unknown = true;
   }
   visit(sourceFile, seededBindings);
   return matches;
@@ -1563,12 +1727,13 @@ function listBundleFiles(root) {
 
 export function inspectBrowserBundle(root) {
   return listBundleFiles(root).flatMap((file) => (
-    findBrowserBundleStorageMutations(fs.readFileSync(file, "utf8")).map(
-      (entry) => ({
-        ...entry,
-        file: path.relative(root, file).split(path.sep).join("/"),
-      }),
-    )
+    findBrowserBundleStorageMutations(
+      fs.readFileSync(file, "utf8"),
+      { failClosedUnknownStorageCallee: true },
+    ).map((entry) => ({
+      ...entry,
+      file: path.relative(root, file).split(path.sep).join("/"),
+    }))
   ));
 }
 

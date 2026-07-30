@@ -6,5 +6,6 @@ export async function loadUnsafeImageMutation() {
     import("../lib/api/complex"),
     import("../stores/imported-fetch"),
     import("../stores/safe-imported-helper"),
+    import("../stores/sdk-patterns"),
   ]);
 }

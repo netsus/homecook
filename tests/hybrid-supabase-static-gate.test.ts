@@ -148,6 +148,12 @@ describe("hybrid authority AST/static gate", () => {
     expect(
       inventory.browserDirectStoragePaths.map((entry) => entry.file),
     ).toEqual([
+      "components/dynamic-binding-client.tsx",
+      "components/dynamic-binding-client.tsx",
+      "components/dynamic-binding-client.tsx",
+      "components/dynamic-binding-client.tsx",
+      "components/dynamic-binding-client.tsx",
+      "components/dynamic-binding-client.tsx",
       "features/unsafe.mjs",
       "lib/api/dynamic-sdk-alias.mjs",
       "lib/api/raw-delete.ts",
@@ -155,6 +161,9 @@ describe("hybrid authority AST/static gate", () => {
       "lib/api/sdk-bracket.js",
       "stores/aliased-rest.ts",
       "stores/imported-fetch.ts",
+      "stores/sdk-patterns.ts",
+      "stores/sdk-patterns.ts",
+      "stores/sdk-patterns.ts",
       "stores/unsafe.ts",
     ]);
     expect(inventory.clientReachableFiles).not.toContain(
@@ -166,13 +175,23 @@ describe("hybrid authority AST/static gate", () => {
     expect(inventory.clientReachableFiles).toEqual(
       expect.arrayContaining([
         "components/dynamic-client.tsx",
+        "components/dynamic-binding-client.tsx",
+        "components/safe-dynamic-client.tsx",
         "lib/api/complex/index.ts",
+        "lib/api/cycle-a.ts",
+        "lib/api/cycle-b.ts",
         "lib/api/fetch-barrel.ts",
         "lib/api/fetch-transport.ts",
         "lib/api/non-fetch-helper.ts",
+        "lib/api/safe-dynamic-helper.ts",
+        "lib/api/sdk-barrel.ts",
+        "lib/api/sdk-dynamic-barrel.ts",
+        "lib/api/sdk-transport.ts",
         "stores/aliased-rest.ts",
         "stores/imported-fetch.ts",
         "stores/safe-imported-helper.ts",
+        "stores/sdk-patterns.ts",
+        "stores/sdk-store.ts",
       ]),
     );
     expect(
@@ -189,6 +208,23 @@ describe("hybrid authority AST/static gate", () => {
       expect.arrayContaining([
         expect.objectContaining({
           file: "stores/safe-imported-helper.ts",
+        }),
+      ]),
+    );
+    expect(
+      inventory.browserDirectStoragePaths.filter(
+        (entry) => entry.file === "components/dynamic-binding-client.tsx",
+      ),
+    ).toHaveLength(6);
+    expect(
+      inventory.browserDirectStoragePaths.filter(
+        (entry) => entry.file === "stores/sdk-patterns.ts",
+      ),
+    ).toHaveLength(3);
+    expect(inventory.browserDirectStoragePaths).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: "components/safe-dynamic-client.tsx",
         }),
       ]),
     );
