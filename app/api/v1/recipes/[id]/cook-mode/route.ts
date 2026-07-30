@@ -133,7 +133,9 @@ export async function GET(request: Request, context: RouteContext) {
   const cookingServings = parsedServings.data;
 
   try {
-    const routeClient = await createRouteHandlerClient();
+    const routeClient = await createRouteHandlerClient({
+      anonymousPublicReadScope: "recipe-cook-mode",
+    });
     const dbClient = routeClient as unknown as StandaloneCookModeDbClient;
 
     const recipeResult = await dbClient

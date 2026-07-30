@@ -19,7 +19,7 @@ import {
   COOK_MODE_STEP_SELECT_WITH_METHODS,
   isMissingStepCookingMethodsRelation,
 } from "@/lib/server/recipe-step-method-select";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { CookingSessionCookModeData, CookingSessionStatus } from "@/types/cooking";
 
 interface RouteContext {
@@ -220,7 +220,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     CookModeDbClient & UserBootstrapDbClient;
 
   try {

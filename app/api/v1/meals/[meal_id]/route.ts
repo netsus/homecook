@@ -11,7 +11,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { MealMutationData, MealUpdateBody } from "@/types/meal";
 import type { MealStatus } from "@/types/planner";
 
@@ -185,7 +185,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as MealsDbClient & UserBootstrapDbClient;
+  const dbClient = routeClient as unknown as MealsDbClient & UserBootstrapDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);
@@ -259,7 +259,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as MealsDbClient & UserBootstrapDbClient;
+  const dbClient = routeClient as unknown as MealsDbClient & UserBootstrapDbClient;
 
   try {
     await ensurePublicUserRow(dbClient, user);

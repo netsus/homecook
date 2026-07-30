@@ -1,6 +1,9 @@
 import { fail } from "@/lib/api/response";
 import { recordOperationalEvent, type OperationalEventsDbClient } from "@/lib/server/admin-events";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createAccountLifecycleInternalRpcClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 
 import {
   executeAccountQuarantineResolution,
@@ -30,7 +33,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const serviceRoleClient = createServiceRoleClient();
+  const serviceRoleClient = createAccountLifecycleInternalRpcClient();
   if (!serviceRoleClient) {
     if (user) {
       await recordOperationalEvent(null, {

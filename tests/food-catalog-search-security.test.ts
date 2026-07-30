@@ -16,7 +16,8 @@ describe("food catalog search security boundary", () => {
     expect(route.indexOf("auth.getUser()")).toBeLessThan(
       route.indexOf("const parsed = parseFoodCatalogSearchQuery"),
     );
-    expect(route).toMatch(/createServiceRoleClient\(\) \?\? routeClient/i);
+    expect(route).not.toMatch(/createServiceRoleClient/i);
+    expect(route).toMatch(/const db = routeClient as unknown as/i);
     expect(route).toMatch(/p_actor_id:\s*user\.id/i);
   });
 

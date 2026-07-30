@@ -15,7 +15,22 @@ const awardUserProgressEvent = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
+  createRouteHandlerClient: async (...args: unknown[]) => {
+    const routeClient = await createRouteHandlerClient(...args);
+    const createDataClient = createServiceRoleClient.getMockImplementation();
+    const dataClient = createDataClient?.();
+    return {
+      ...routeClient,
+      ...dataClient,
+      auth: routeClient.auth,
+      rpc: dataClient?.rpc
+        ?? routeClient.rpc
+        ?? vi.fn(async () => ({
+          data: null,
+          error: { code: "PGRST202" },
+        })),
+    };
+  },
   createServiceRoleClient,
 }));
 
@@ -179,7 +194,7 @@ describe("/api/v1/recipe-books", () => {
         {
           data: [
             {
-              id: "book-my",
+              id: "91000000-0000-4000-8000-000000000001",
               name: "내가 추가한 레시피",
               book_type: "my_added",
               cover_color_key: "lavender",
@@ -187,7 +202,7 @@ describe("/api/v1/recipe-books", () => {
               sort_order: 0,
             },
             {
-              id: "book-saved",
+              id: "91000000-0000-4000-8000-000000000002",
               name: "저장한 레시피",
               book_type: "saved",
               cover_color_key: "sky",
@@ -195,7 +210,7 @@ describe("/api/v1/recipe-books", () => {
               sort_order: 1,
             },
             {
-              id: "book-liked",
+              id: "91000000-0000-4000-8000-000000000003",
               name: "좋아요한 레시피",
               book_type: "liked",
               cover_color_key: "coral",
@@ -203,7 +218,7 @@ describe("/api/v1/recipe-books", () => {
               sort_order: 2,
             },
             {
-              id: "book-custom",
+              id: "91000000-0000-4000-8000-000000000004",
               name: "주말 파티",
               book_type: "custom",
               cover_color_key: "sand",
@@ -254,13 +269,13 @@ describe("/api/v1/recipe-books", () => {
     const response = await GET(new Request("http://localhost:3000/api/v1/recipe-books"));
     const body = await response.json();
 
-    expect(response.status).toBe(200);
+    expect(response.status, JSON.stringify(body)).toBe(200);
     expect(body).toEqual({
       success: true,
       data: {
         books: [
           {
-            id: "book-my",
+            id: "91000000-0000-4000-8000-000000000001",
             name: "내가 추가한 레시피",
             book_type: "my_added",
             recipe_count: 1,
@@ -269,7 +284,7 @@ describe("/api/v1/recipe-books", () => {
             sort_order: 0,
           },
           {
-            id: "book-saved",
+            id: "91000000-0000-4000-8000-000000000002",
             name: "저장한 레시피",
             book_type: "saved",
             recipe_count: 2,
@@ -278,7 +293,7 @@ describe("/api/v1/recipe-books", () => {
             sort_order: 1,
           },
           {
-            id: "book-liked",
+            id: "91000000-0000-4000-8000-000000000003",
             name: "좋아요한 레시피",
             book_type: "liked",
             recipe_count: 2,
@@ -287,7 +302,7 @@ describe("/api/v1/recipe-books", () => {
             sort_order: 2,
           },
           {
-            id: "book-custom",
+            id: "91000000-0000-4000-8000-000000000004",
             name: "주말 파티",
             book_type: "custom",
             recipe_count: 1,
@@ -302,8 +317,8 @@ describe("/api/v1/recipe-books", () => {
     expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
     expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
     expect(recipeBookItemsTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
-    expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "book-saved");
-    expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "book-custom");
+    expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "91000000-0000-4000-8000-000000000002");
+    expect(recipeBookItemsTable.__selectQuery.eq).toHaveBeenCalledWith("book_id", "91000000-0000-4000-8000-000000000004");
     expect(recipeLikesTable.select).toHaveBeenCalledWith("recipe_id", { count: "exact", head: true });
     expect(recipesTable.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
   });

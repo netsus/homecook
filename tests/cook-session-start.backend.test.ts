@@ -775,6 +775,7 @@ describe("14 cook session start backend", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      from: serviceFrom,
     });
     createServiceRoleClient.mockReturnValue({ from: serviceFrom });
 
@@ -879,6 +880,7 @@ describe("14 cook session start backend", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
+      from: serviceFrom,
     });
     createServiceRoleClient.mockReturnValue({ from: serviceFrom });
 
@@ -965,9 +967,7 @@ describe("14 cook session start backend", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
-      from: vi.fn((table: string) => {
-        throw new Error(`unexpected route table: ${table}`);
-      }),
+      from: serviceFrom,
     });
     createServiceRoleClient.mockReturnValue({ from: serviceFrom });
 
@@ -1006,9 +1006,7 @@ describe("14 cook session start backend", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
-      from: vi.fn((table: string) => {
-        throw new Error(`unexpected route table: ${table}`);
-      }),
+      from: serviceFrom,
     });
     createServiceRoleClient.mockReturnValue({ from: serviceFrom });
 

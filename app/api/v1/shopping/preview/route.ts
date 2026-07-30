@@ -7,7 +7,7 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { isMealEligibleForShopping } from "@/lib/server/shopping";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { ShoppingPreviewData } from "@/types/shopping";
 
 interface QueryError {
@@ -115,7 +115,7 @@ export async function GET() {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     ShoppingPreviewDbClient & UserBootstrapDbClient;
 
   try {

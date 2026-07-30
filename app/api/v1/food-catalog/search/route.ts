@@ -7,7 +7,6 @@ import {
 import { encodeProductCursor } from "@/lib/server/prepared-food-catalog";
 import {
   createRouteHandlerClient,
-  createServiceRoleClient,
 } from "@/lib/supabase/server";
 
 interface RpcError {
@@ -44,7 +43,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const db = (createServiceRoleClient() ?? routeClient) as unknown as
+  const db = routeClient as unknown as
     FoodCatalogSearchDb;
   const cursor = parsed.value.cursor;
   const result = await db.rpc("search_food_catalog_ranked", {

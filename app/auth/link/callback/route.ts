@@ -10,7 +10,7 @@ import { hasProviderIdentity } from "@/lib/auth/provider-resolution";
 import { normalizeAuthProviderId } from "@/lib/auth/providers";
 import { expireSupabaseAuthCookies } from "@/lib/auth/session-cookies";
 import { recordOperationalEventFromServiceRole } from "@/lib/server/admin-events";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import { createAuthRouteHandlerClient } from "@/lib/supabase/server";
 
 type LinkErrorCode = "link_cancelled" | "link_failed" | "link_conflict";
 type LinkResultCode = "linked" | "already_linked";
@@ -92,7 +92,7 @@ export async function GET(request: Request) {
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next") ?? "/mypage");
 
   try {
-    const supabase = await createRouteHandlerClient();
+    const supabase = await createAuthRouteHandlerClient();
     const beforeResult = await supabase.auth.getUser();
     const beforeUser = beforeResult.data.user;
     if (beforeResult.error || !beforeUser) {

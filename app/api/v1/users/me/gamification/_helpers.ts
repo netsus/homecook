@@ -7,7 +7,7 @@ import {
 } from "@/lib/server/user-bootstrap";
 import type { UserGamificationDbClient } from "@/lib/server/user-gamification";
 import type { UserProgressDbClient } from "@/lib/server/user-progress";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 
 export async function createAuthedGamificationClient(fallbackMessage: string) {
   let routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>;
@@ -42,7 +42,7 @@ export async function createAuthedGamificationClient(fallbackMessage: string) {
 
   let dbClient: UserGamificationDbClient & UserProgressDbClient & UserBootstrapDbClient;
   try {
-    dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    dbClient = routeClient as unknown as
       UserGamificationDbClient & UserProgressDbClient & UserBootstrapDbClient;
   } catch {
     return {

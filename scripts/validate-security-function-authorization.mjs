@@ -28,11 +28,28 @@ const ADDITIVE_SOURCES = [
         REPO_ROOT,
         "docs/security/account-session-generation-security-function-authorization-manifest.json",
       ),
-    migrationPath: process.env.SECURITY_FUNCTION_ADDITIVE_MIGRATION_PATH
-      ?? path.join(
-        REPO_ROOT,
-        "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
-      ),
+    migrationPaths: process.env.SECURITY_FUNCTION_ADDITIVE_MIGRATION_PATH
+      ? [process.env.SECURITY_FUNCTION_ADDITIVE_MIGRATION_PATH]
+      : [
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+          ),
+          path.join(
+            REPO_ROOT,
+            "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql",
+          ),
+        ],
+  },
+  {
+    manifestPath: path.join(
+      REPO_ROOT,
+      "docs/security/hybrid-internal-operations-security-function-authorization-manifest.json",
+    ),
+    migrationPath: path.join(
+      REPO_ROOT,
+      "supabase/migrations/20260730140000_hybrid_internal_operations_facades.sql",
+    ),
   },
   {
     manifestPath:
@@ -437,14 +454,14 @@ with extension_membership as (
 ), selected as (
   select *
   from function_rows
-  where schema_name in ('public', 'account_generation_auth_hook')
+  where schema_name in ('public', 'account_generation_auth_hook', 'private')
     and extension_name is null
   union all
   select *
   from function_rows
   where prosecdef
     and not (
-      schema_name in ('public', 'account_generation_auth_hook')
+      schema_name in ('public', 'account_generation_auth_hook', 'private')
       and extension_name is null
     )
 )

@@ -3,9 +3,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
 
+function attachRouteDataClient<T extends object>(routeClient: T) {
+  let dataClient: { from?: unknown; rpc?: unknown } | null | undefined;
+  return new Proxy(routeClient, {
+    get(target, property, receiver) {
+      if (property === "from" || property === "rpc") {
+        if (dataClient === undefined) {
+          dataClient = createServiceRoleClient() as typeof dataClient;
+        }
+        return property === "from" ? dataClient?.from : dataClient?.rpc;
+      }
+      return Reflect.get(target, property, receiver);
+    },
+  });
+}
+
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
-  createServiceRoleClient,
+  createRouteHandlerClient: async (...args: unknown[]) =>
+    attachRouteDataClient(await createRouteHandlerClient(...args)),
 }));
 
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";

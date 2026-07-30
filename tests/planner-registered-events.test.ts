@@ -125,13 +125,16 @@ describe("planner registered progress source", () => {
     }));
 
     expect(response.status).toBe(201);
-    expect(awardUserProgressEvent).toHaveBeenCalledWith(dbClient, {
+    expect(awardUserProgressEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ from: dbClient.from }),
+      {
       userId: "user-1",
       eventType: "planner_registered",
       sourceTable: "meals",
       sourceId: "550e8400-e29b-41d4-a716-446655440901",
       occurredAt: expect.any(String),
-    });
+      },
+    );
   });
 
   it("records a distinct planner add path when source_path is known", async () => {
@@ -193,7 +196,9 @@ describe("planner registered progress source", () => {
     }));
 
     expect(response.status).toBe(201);
-    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(dbClient, {
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ from: dbClient.from }),
+      {
       userId: "user-1",
       activityType: "meal_add_path_used",
       category: "planner",
@@ -202,7 +207,8 @@ describe("planner registered progress source", () => {
       sourceId: "550e8400-e29b-41d4-a716-446655440902",
       sourceMeta: { source_path: "recipebook" },
       occurredAt: expect.any(String),
-    });
+      },
+    );
   });
 
   it("keeps meal creation successful when planner add path activity recording fails", async () => {

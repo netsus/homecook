@@ -16,7 +16,14 @@ const awardUserProgressEvent = vi.fn();
 const recordUserGrowthActivityEvent = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
+  createRouteHandlerClient: async (...args: unknown[]) => {
+    const routeClient = await createRouteHandlerClient(...args);
+    const createDataClient = createServiceRoleClient.getMockImplementation();
+    const dataClient = createDataClient?.();
+    return dataClient
+      ? { ...routeClient, ...dataClient, auth: routeClient.auth }
+      : routeClient;
+  },
   createServiceRoleClient,
 }));
 
@@ -811,22 +818,28 @@ describe("POST /api/v1/leftovers/{id}/eat", () => {
       },
       error: null,
     });
-    expect(awardUserProgressEvent).toHaveBeenCalledWith(db, {
-      userId: "user-1",
-      eventType: "leftover_eaten",
-      sourceTable: "leftover_dishes",
-      sourceId: leftoverId,
-      occurredAt: nowIso,
-    });
-    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(db, {
-      userId: "user-1",
-      activityType: "leftover_eaten",
-      category: "leftovers",
-      sourceKey: `leftover_eaten:${leftoverId}`,
-      sourceTable: "leftover_dishes",
-      sourceId: leftoverId,
-      occurredAt: nowIso,
-    });
+    expect(awardUserProgressEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ from: db.from }),
+      {
+        userId: "user-1",
+        eventType: "leftover_eaten",
+        sourceTable: "leftover_dishes",
+        sourceId: leftoverId,
+        occurredAt: nowIso,
+      },
+    );
+    expect(recordUserGrowthActivityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ from: db.from }),
+      {
+        userId: "user-1",
+        activityType: "leftover_eaten",
+        category: "leftovers",
+        sourceKey: `leftover_eaten:${leftoverId}`,
+        sourceTable: "leftover_dishes",
+        sourceId: leftoverId,
+        occurredAt: nowIso,
+      },
+    );
   });
 
   it("returns the same result without updating when the dish is already eaten", async () => {

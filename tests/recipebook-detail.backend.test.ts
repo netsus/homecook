@@ -264,7 +264,9 @@ describe("17b recipebook detail backend", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
-      from: routeFrom,
+      from: vi.fn((table: string) =>
+        table === "recipe_books" ? serviceRecipeBooksTable : routeFrom(table)
+      ),
     });
     createServiceRoleClient.mockReturnValue({ from: serviceFrom });
 
@@ -354,7 +356,9 @@ describe("17b recipebook detail backend", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
-      from: routeFrom,
+      from: vi.fn((table: string) =>
+        table === "recipe_books" ? serviceRecipeBooksTable : routeFrom(table)
+      ),
     });
     createServiceRoleClient.mockReturnValue({ from: serviceFrom });
 
@@ -583,7 +587,11 @@ describe("17b recipebook detail backend", () => {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
-      from: routeFrom,
+      from: vi.fn((table: string) => {
+        if (table === "recipe_books") return serviceRecipeBooksTable;
+        if (table === "recipe_book_items") return serviceRecipeBookItemsTable;
+        return routeFrom(table);
+      }),
     });
     createServiceRoleClient.mockReturnValue({ from: serviceFrom });
 

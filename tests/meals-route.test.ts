@@ -14,7 +14,14 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
+  createRouteHandlerClient: async (...args: unknown[]) => {
+    const routeClient = await createRouteHandlerClient(...args);
+    const createDataClient = createServiceRoleClient.getMockImplementation();
+    const dataClient = createDataClient?.();
+    return dataClient
+      ? { ...routeClient, ...dataClient, auth: routeClient.auth }
+      : routeClient;
+  },
   createServiceRoleClient,
 }));
 
@@ -27,6 +34,12 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
 interface QueryError {
   code?: string;
   message: string;
+}
+
+function hybridAuthorityMarker(
+  code: "ACCOUNT_LIFECYCLE_MAINTENANCE" | "ACCOUNT_SESSION_STALE",
+) {
+  return `HOMECOOK_HYBRID_AUTHORITY::${code}::${code === "ACCOUNT_SESSION_STALE" ? "409" : "503"}`;
 }
 
 interface QueryResult<T> {
@@ -210,6 +223,81 @@ describe("GET /api/v1/meals", () => {
         code: "RESOURCE_NOT_FOUND",
       },
     });
+  });
+
+  it("maps wrapped hybrid authority revokes before planner column lookup to 409", async () => {
+    const columnQuery = createMaybeSingleQuery([
+      {
+        data: null,
+        error: {
+          message: "TypeError: fetch failed",
+          details: hybridAuthorityMarker("ACCOUNT_SESSION_STALE"),
+        } as QueryError,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
+      from: vi.fn((table: string) => {
+        if (table === "meal_plan_columns") return { select: vi.fn(() => columnQuery) };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importRoute();
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/meals?plan_date=2026-03-01&column_id=550e8400-e29b-41d4-a716-446655440112"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error.code).toBe("ACCOUNT_SESSION_STALE");
+  });
+
+  it("maps wrapped hybrid authority outages during meal list reads to 503", async () => {
+    const columnQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: "column-1",
+          user_id: "user-1",
+          name: "점심",
+        },
+        error: null,
+      },
+    ]);
+    const mealsQuery = createThenableQuery([
+      {
+        data: null,
+        error: {
+          message: "TypeError: fetch failed",
+          details: hybridAuthorityMarker("ACCOUNT_LIFECYCLE_MAINTENANCE"),
+        } as QueryError,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
+      from: vi.fn((table: string) => {
+        if (table === "meal_plan_columns") return { select: vi.fn(() => columnQuery) };
+        if (table === "meals") return { select: vi.fn(() => mealsQuery) };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importRoute();
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/meals?plan_date=2026-03-01&column_id=550e8400-e29b-41d4-a716-446655440113"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("ACCOUNT_LIFECYCLE_MAINTENANCE");
   });
 
   it("returns the meals for the requested slot with recipe metadata", async () => {

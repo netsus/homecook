@@ -16,6 +16,8 @@ const formatBootstrapErrorMessage = vi.fn((_error: unknown, fallbackMessage: str
 const recordOperationalEvent = vi.fn(async () => true);
 
 vi.mock("@/lib/supabase/server", () => ({
+  createAccountLifecycleInternalRpcClient: createServiceRoleClient,
+  createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,
 }));
@@ -52,9 +54,11 @@ function createTestAccessToken(payload: Record<string, unknown>) {
     return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
   };
 
-  return `${encode({ alg: "RS256", typ: "JWT" })}.${encode({
+  return `${encode({ alg: "RS256", kid: "test-key", typ: "JWT" })}.${encode({
     aud: "authenticated",
     iss: "https://project.supabase.co/auth/v1",
+    role: "authenticated",
+    nbf: payload.iat,
     ...payload,
   })}.test-signature`;
 }

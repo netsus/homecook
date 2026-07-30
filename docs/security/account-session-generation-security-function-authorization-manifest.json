@@ -1,7 +1,10 @@
 {
   "schema_version": 1,
   "slice": "account-session-generation-foundation",
-  "migration": "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+  "migrations": [
+    "supabase/migrations/20260723140000_account_session_generation_foundation.sql",
+    "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql"
+  ],
   "deployment_state": "post-migration",
   "baseline_application_contract_count": 74,
   "functions": [
@@ -73,7 +76,7 @@
       "exposure": "service-internal",
       "allowed_principals": ["authenticated"],
       "security_mode": "definer",
-      "safe_search_path": ["pg_catalog", "public", "pg_temp"]
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     },
     {
       "signature": "public.get_account_generation_capability()",
@@ -301,6 +304,51 @@
         "account_generation_auth_hook",
         "pg_temp"
       ]
+    },
+    {
+      "signature": "public.record_hybrid_remote_session_authority(text, uuid, timestamp with time zone, bigint, text, timestamp with time zone, bigint, text, integer, timestamp with time zone, timestamp with time zone)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.assert_hybrid_remote_session_authority(text, uuid, timestamp with time zone, text, integer)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "auth", "pg_temp"]
+    },
+    {
+      "signature": "public.revoke_hybrid_remote_session_authority(text, integer)",
+      "control_class": "application-controlled",
+      "effect": "mutation",
+      "exposure": "service-internal",
+      "allowed_principals": ["service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "auth", "pg_temp"]
+    },
+    {
+      "signature": "private.decode_base64url_jsonb(text)",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": [],
+      "security_mode": "invoker",
+      "safe_search_path": ["pg_catalog", "pg_temp"]
+    },
+    {
+      "signature": "private.verify_hybrid_request_authority()",
+      "control_class": "application-controlled",
+      "effect": "read-only",
+      "exposure": "service-internal",
+      "allowed_principals": ["anon", "authenticated", "service_role"],
+      "security_mode": "definer",
+      "safe_search_path": ["pg_catalog", "public", "private", "pg_temp"]
     }
   ]
 }

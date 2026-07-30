@@ -5,7 +5,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { PlannerColumnData } from "@/types/planner";
 
 interface QueryError {
@@ -282,7 +282,7 @@ export async function createAuthedPlannerColumnsClient(fallbackMessage: string) 
     };
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     PlannerColumnsDbClient & UserBootstrapDbClient;
 
   try {

@@ -4,6 +4,7 @@ const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
+  createNotFoundFeedbackInternalClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,
 }));
@@ -25,18 +26,18 @@ function setupClients({
   insertResult?: QueryResult;
   user?: { id: string } | null;
 } = {}) {
-  const insert = vi.fn(async (values: Record<string, unknown>) => {
+  const rpc = vi.fn(async (
+    name: string,
+    values: Record<string, unknown>,
+  ) => {
     void values;
-    return insertResult;
+    return {
+      data: insertResult.error ? null : true,
+      error: insertResult.error,
+    };
   });
   const serviceClient = {
-    from: vi.fn((table: string) => {
-      if (table !== "operational_events") {
-        throw new Error(`unexpected table: ${table}`);
-      }
-
-      return { insert };
-    }),
+    rpc,
   };
   const routeClient = {
     auth: {
@@ -47,7 +48,7 @@ function setupClients({
   createRouteHandlerClient.mockResolvedValue(routeClient);
   createServiceRoleClient.mockReturnValue(serviceClient);
 
-  return { insert, routeClient, serviceClient };
+  return { insert: rpc, routeClient, serviceClient };
 }
 
 async function importRoute() {
@@ -102,23 +103,24 @@ describe("POST /api/v1/feedback/404", () => {
     expect(response.status).toBe(200);
     expect(body.data).toEqual({ received: true });
     expect(insert).toHaveBeenCalledWith(
+      "record_internal_operational_event",
       expect.objectContaining({
-        actor_user_id: "user-1",
-        error_code: "ROUTE_NOT_FOUND",
-        event_type: "not_found_feedback",
-        http_status: 404,
-        request_path: "/missing",
-        severity: "warn",
-        source: "web",
+        p_actor_user_id: "user-1",
+        p_error_code: "ROUTE_NOT_FOUND",
+        p_event_type: "not_found_feedback",
+        p_http_status: 404,
+        p_request_path: "/missing",
+        p_severity: "warn",
+        p_source: "web",
       }),
     );
 
-    const row = insert.mock.calls[0]?.[0] as Record<string, unknown>;
+    const row = insert.mock.calls[0]?.[1] as Record<string, unknown>;
     expect(JSON.stringify(row)).not.toContain("me@example.com");
     expect(JSON.stringify(row)).not.toContain("https://example.com");
     expect(JSON.stringify(row)).not.toContain("010-1234-5678");
-    expect(row.message_summary).toBe("플래너 링크가 깨졌어요. [이메일 제거] [링크 제거] [연락처 제거]");
-    expect(row.metadata_json).toMatchObject({
+    expect(row.p_message_summary).toBe("플래너 링크가 깨졌어요. [이메일 제거] [링크 제거] [연락처 제거]");
+    expect(row.p_metadata_json).toMatchObject({
       anonymous_id: null,
       current_path: "/missing",
       feedback_text: "플래너 링크가 깨졌어요. [이메일 제거] [링크 제거] [연락처 제거]",
@@ -126,7 +128,7 @@ describe("POST /api/v1/feedback/404", () => {
       occurred_at: "2026-06-20T09:00:00.000Z",
       referrer_path: "/planner",
     });
-    expect(JSON.stringify(row.metadata_json)).toMatch(/sha256:/u);
+    expect(JSON.stringify(row.p_metadata_json)).toMatch(/sha256:/u);
   });
 
   it("returns a failure when the operational event cannot be stored", async () => {

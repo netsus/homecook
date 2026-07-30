@@ -1,0 +1,15 @@
+{
+  "stage": 2,
+  "removal_stage": 4,
+  "generated_from": "scripts/lib/hybrid-authority-inventory.mjs",
+  "browser_direct_storage_paths": [
+    {
+      "classification": "user",
+      "file": "components/recipe/manual-recipe-create-screen.tsx",
+      "column": 12,
+      "line": 762,
+      "reason": "legacy browser Storage mutation path retained as Stage 4 removal evidence",
+      "stage": 4
+    }
+  ]
+}

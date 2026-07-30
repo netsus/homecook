@@ -26,7 +26,7 @@ import {
   type UserGrowthActivityDbClient,
 } from "@/lib/server/user-growth-activity";
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type {
   RecipeBookCoverColorKey,
   RecipeBookCreateBody,
@@ -239,6 +239,9 @@ async function resolveRecipeBookCoverUrls({
   }
 
   const projections = projectionChunks.flatMap((chunk) => chunk ?? []);
+  if (projections.length === 0) {
+    return books;
+  }
   const expectedStorageOrigin = readExpectedStorageOrigin();
   const resolvedCoverUrls = await Promise.all(
     projections.map((projection) =>
@@ -354,7 +357,7 @@ async function createAuthedRecipeBookDbClient(fallbackMessage: string) {
     };
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     RecipeBookDbClient & UserBootstrapDbClient & UserProgressDbClient & UserGrowthActivityDbClient;
 
   try {
@@ -403,8 +406,7 @@ export async function GET(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const serviceClient = createServiceRoleClient();
-  const dbClient = (serviceClient ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     RecipeBookDbClient & UserBootstrapDbClient;
 
   try {
@@ -448,14 +450,12 @@ export async function GET(request: Request) {
         .select("id", { count: "exact", head: true })
         .eq("created_by", user.id)
         .in("source_type", ["youtube", "manual"]),
-      serviceClient
-        ? resolveRecipeBookCoverUrls({
-            books: booksResult.data,
-            client: serviceClient as unknown as
-              RecipeBookImageReadRpcClient & RecipeImageReadStorageClient,
-            expectedOwnerUuid: user.id,
-          })
-        : Promise.resolve(booksResult.data),
+      resolveRecipeBookCoverUrls({
+        books: booksResult.data,
+        client: routeClient as unknown as
+          RecipeBookImageReadRpcClient & RecipeImageReadStorageClient,
+        expectedOwnerUuid: user.id,
+      }),
     ] as const).catch(() => null);
   if (!readResults) {
     return fail("INTERNAL_ERROR", "레시피북 목록을 불러오지 못했어요.", 500);

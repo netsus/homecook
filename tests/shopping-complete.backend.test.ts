@@ -18,7 +18,14 @@ const recordUserGrowthActivityEvent = vi.fn();
 const buildShoppingBundlePreparedSourceKey = vi.fn(() => "shopping_bundle_prepared:test-key");
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
+  createRouteHandlerClient: async (...args: unknown[]) => {
+    const routeClient = await createRouteHandlerClient(...args);
+    const createDataClient = createServiceRoleClient.getMockImplementation();
+    const dataClient = createDataClient?.();
+    return dataClient
+      ? { ...routeClient, ...dataClient, auth: routeClient.auth }
+      : routeClient;
+  },
   createServiceRoleClient,
 }));
 

@@ -332,7 +332,12 @@ describe("/api/v1/recipe-books/[book_id]/recipes/[recipe_id]", () => {
           },
         })),
       },
-      from: routeFrom,
+      from: vi.fn((table: string) => {
+        if (table === "recipe_books" || table === "recipe_book_items") {
+          return serviceFrom(table);
+        }
+        return routeFrom(table);
+      }),
     });
     createServiceRoleClient.mockReturnValue({ from: serviceFrom });
 

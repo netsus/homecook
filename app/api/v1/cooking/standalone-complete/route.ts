@@ -9,7 +9,6 @@ import {
 import { awardUserProgressEvent, type UserProgressDbClient } from "@/lib/server/user-progress";
 import {
   createRouteHandlerClient,
-  createServiceRoleClient,
 } from "@/lib/supabase/server";
 import type {
   CookingStandaloneCompleteBody,
@@ -95,7 +94,7 @@ export async function POST(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+  const dbClient = routeClient as unknown as
     StandaloneCompleteDbClient & UserBootstrapDbClient & UserProgressDbClient;
 
   try {

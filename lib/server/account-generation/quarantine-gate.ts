@@ -12,8 +12,8 @@ import {
 import { readQaFixtureAccountQuarantineGate } from
   "@/lib/server/account-generation/quarantine-fixture";
 import {
+  createAccountLifecycleInternalRpcClient,
   createServerComponentClient,
-  createServiceRoleClient,
 } from "@/lib/supabase/server";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 
@@ -69,7 +69,7 @@ Promise<AccountQuarantineGateResult> {
     };
   }
 
-  const serviceRoleClient = createServiceRoleClient();
+  const serviceRoleClient = createAccountLifecycleInternalRpcClient();
   if (!serviceRoleClient) {
     return { state: "error", hasSession: false };
   }

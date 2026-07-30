@@ -6,6 +6,7 @@ const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
+const executeHybridLogout = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
   if (error instanceof Error) {
     return `formatted: ${error.message}`;
@@ -15,6 +16,10 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 
 vi.mock("@/lib/supabase/server", () => ({
+  createAccountLifecycleInternalRpcClient: createServiceRoleClient,
+  createAuthRouteHandlerClient: createRouteHandlerClient,
+  createDataServiceRoleClient: vi.fn(),
+  createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServiceRoleClient,
 }));
@@ -23,6 +28,10 @@ vi.mock("@/lib/server/user-bootstrap", () => ({
   ensurePublicUserRow,
   ensureUserBootstrapState,
   formatBootstrapErrorMessage,
+}));
+
+vi.mock("@/lib/server/hybrid-auth/logout", () => ({
+  executeHybridLogout,
 }));
 
 interface QueryError {
@@ -114,10 +123,14 @@ describe("17c settings/account backend", () => {
     createServiceRoleClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
+    executeHybridLogout.mockReset();
     formatBootstrapErrorMessage.mockClear();
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     createServiceRoleClient.mockReturnValue(null);
+    executeHybridLogout.mockResolvedValue({
+      ok: true,
+    });
     delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
@@ -494,12 +507,66 @@ describe("17c settings/account backend", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(routeClient.auth.signOut).toHaveBeenCalledTimes(1);
+    expect(executeHybridLogout).toHaveBeenCalledOnce();
+    expect(executeHybridLogout).toHaveBeenCalledWith(routeClient);
     expect(body).toEqual({
       success: true,
       data: { logged_out: true },
       error: null,
     });
+  });
+
+  it("POST /auth/logout fails closed before signOut when local authority revoke fails", async () => {
+    const routeClient = setupAuthedClient({ from: vi.fn() });
+    executeHybridLogout.mockResolvedValueOnce({
+      ok: false,
+      error: {
+        code: "ACCOUNT_SESSION_STALE",
+        message: "세션을 다시 확인해 주세요.",
+        status: 409,
+      },
+    });
+
+    const { POST } = await importLogoutRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/auth/logout", { method: "POST" }),
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: { code: "ACCOUNT_SESSION_STALE" },
+    });
+    expect(response.status).toBe(409);
+    expect(executeHybridLogout).toHaveBeenCalledWith(routeClient);
+  });
+
+  it("POST /auth/logout returns an explicit internal error when signOut fails", async () => {
+    const routeClient = setupAuthedClient({ from: vi.fn() });
+    executeHybridLogout.mockResolvedValueOnce({
+      ok: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "로그아웃하지 못했어요.",
+        status: 500,
+      },
+    });
+
+    const { POST } = await importLogoutRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/auth/logout", { method: "POST" }),
+    );
+
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "로그아웃하지 못했어요.",
+        fields: [],
+      },
+    });
+    expect(response.status).toBe(500);
+    expect(executeHybridLogout).toHaveBeenCalledWith(routeClient);
   });
 
   it("POST /auth/logout rejects unauthenticated requests", async () => {

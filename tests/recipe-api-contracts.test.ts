@@ -23,7 +23,14 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 });
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
+  createRemoteCompatibilityServiceRoleClient: createServiceRoleClient,
+  createRouteHandlerClient: async (...args: unknown[]) => {
+    const routeClient = await createRouteHandlerClient(...args);
+    const compatibilityClient = createServiceRoleClient();
+    return compatibilityClient
+      ? { ...compatibilityClient, ...routeClient }
+      : routeClient;
+  },
   createServiceRoleClient,
 }));
 
@@ -59,6 +66,12 @@ interface QueryResult<T> {
   data: T;
   error: { message: string } | null;
   count?: number | null;
+}
+
+function hybridAuthorityMarker(
+  code: "ACCOUNT_LIFECYCLE_MAINTENANCE" | "ACCOUNT_SESSION_STALE",
+) {
+  return `HOMECOOK_HYBRID_AUTHORITY::${code}::${code === "ACCOUNT_SESSION_STALE" ? "409" : "503"}`;
 }
 
 function createAwaitableQuery<T>(result: QueryResult<T>) {
@@ -272,6 +285,9 @@ describe("recipe API contracts", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(createRouteHandlerClient).toHaveBeenCalledWith({
+      anonymousPublicReadScope: "recipes",
+    });
     expect(body).toMatchObject({
       success: true,
       error: null,
@@ -327,11 +343,8 @@ describe("recipe API contracts", () => {
     });
     const routeFrom = vi.fn((table: string) => {
       if (table === "recipes") return listQuery;
-      throw new Error(`unexpected route table: ${table}`);
-    });
-    const serviceFrom = vi.fn((table: string) => {
       if (table === "recipe_book_items") return savedItemsQuery;
-      throw new Error(`unexpected service table: ${table}`);
+      throw new Error(`unexpected route table: ${table}`);
     });
 
     createRouteHandlerClient.mockResolvedValue({
@@ -342,15 +355,16 @@ describe("recipe API contracts", () => {
       },
       from: routeFrom,
     });
-    createServiceRoleClient.mockReturnValue({
-      from: serviceFrom,
-    });
+    createServiceRoleClient.mockReturnValue(null);
 
     const { GET } = await import("@/app/api/v1/recipes/route");
     const response = await GET(new NextRequest("http://localhost:3000/api/v1/recipes"));
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(createRouteHandlerClient).toHaveBeenCalledWith({
+      anonymousPublicReadScope: "recipes",
+    });
     expect(body.data.items).toMatchObject([
       {
         id: "recipe-1",
@@ -370,8 +384,7 @@ describe("recipe API contracts", () => {
     expect(savedItemsQuery.in).toHaveBeenCalledWith("recipe_id", ["recipe-1", "recipe-2"]);
     expect(savedItemsQuery.eq).toHaveBeenCalledWith("recipe_books.user_id", "user-1");
     expect(savedItemsQuery.in).toHaveBeenCalledWith("recipe_books.book_type", ["saved", "custom"]);
-    expect(routeFrom).not.toHaveBeenCalledWith("recipe_book_items");
-    expect(serviceFrom).toHaveBeenCalledWith("recipe_book_items");
+    expect(routeFrom).toHaveBeenCalledWith("recipe_book_items");
   });
 
   it("maps latest sort to created_at descending with deterministic id tie-break", async () => {
@@ -446,6 +459,9 @@ describe("recipe API contracts", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(createRouteHandlerClient).toHaveBeenCalledWith({
+      anonymousPublicReadScope: "ingredients",
+    });
     expect(body).toMatchObject({
       success: true,
       error: null,
@@ -1265,10 +1281,13 @@ describe("recipe API contracts", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(createRouteHandlerClient).toHaveBeenCalledWith({
+      anonymousPublicReadScope: "recipe-themes",
+    });
     expect(body.success).toBe(true);
     expect(body.error).toBeNull();
     const themeIds = body.data.themes.map((theme: { id: string }) => theme.id);
-    expect(themeIds).toContain("recent-planner");
+    expect(themeIds).not.toContain("recent-planner");
     expect(themeIds).toContain("youtube");
     expect(themeIds).toContain("no-flame-appliance");
     expect(themeIds).toContain("hearty-main");
@@ -1278,26 +1297,9 @@ describe("recipe API contracts", () => {
     expect(themeIds).not.toContain("no-cook-sweet");
     expect(themeIds).not.toContain("saved-favorites");
     expect(routeFrom).not.toHaveBeenCalledWith("meals");
-    expect(serviceFrom).toHaveBeenCalledWith("meals");
-    expect(recentPlannerRowsQuery.order).toHaveBeenCalledWith(
-      "created_at",
-      { ascending: false },
-    );
-    expect(recentPlannerRowsQuery.limit).toHaveBeenCalledWith(500);
-    const recentPlannerTheme = body.data.themes.find((theme: { id: string }) => theme.id === "recent-planner");
-    expect(recentPlannerTheme.title).toBe("요즘 플래너에 많이 담은 메뉴");
-    expect(recentPlannerTheme.recipes[0]).toMatchObject({ id: "recipe-1" });
-    expect(firstVisibleRecentPlannerRecipesQuery.in).toHaveBeenCalledWith(
-      "id",
-      Array.from(
-        { length: 100 },
-        (_, index) => `hidden-recipe-${index}`,
-      ).sort((left, right) => left.localeCompare(right)),
-    );
-    expect(secondVisibleRecentPlannerRecipesQuery.in).toHaveBeenCalledWith(
-      "id",
-      ["recipe-1"],
-    );
+    expect(serviceFrom).not.toHaveBeenCalled();
+    expect(recentPlannerRowsQuery.order).not.toHaveBeenCalled();
+    expect(recentPlannerRowsQuery.limit).not.toHaveBeenCalled();
     expect(body.data.themes.find((theme: { id: string }) => theme.id === "youtube")).toMatchObject({
       title: "유튜브에서 가져온 레시피",
       recipes: [
@@ -1396,11 +1398,8 @@ describe("recipe API contracts", () => {
     expect(
       body.data.themes.find((theme: { id: string }) => theme.id === "recent-planner"),
     ).toBeUndefined();
-    expect(firstVisibleRecentPlannerRecipesQuery.in).toHaveBeenCalledTimes(1);
-    expect(failedVisibleRecentPlannerRecipesQuery.in).toHaveBeenCalledWith(
-      "id",
-      ["recipe-1"],
-    );
+    expect(firstVisibleRecentPlannerRecipesQuery.in).not.toHaveBeenCalled();
+    expect(failedVisibleRecentPlannerRecipesQuery.in).not.toHaveBeenCalled();
   });
 
   it("adds the pantry cleanout theme from the authenticated user's pantry matches", async () => {
@@ -1643,6 +1642,13 @@ describe("recipe API contracts", () => {
     const managedReadUrl =
       "https://project.supabase.co/storage/v1/object/sign/recipe-images-private/managed?token=short";
     resolveRecipeImageReadUrl.mockResolvedValueOnce(managedReadUrl);
+    const routeFrom = vi.fn((table: string) => {
+      if (table === "recipes") return recipesTable;
+      if (table === "recipe_sources") return sourceQuery;
+      if (table === "recipe_ingredients") return ingredientsQuery;
+      if (table === "recipe_steps") return stepsQuery;
+      throw new Error(`unexpected table: ${table}`);
+    });
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -1650,13 +1656,7 @@ describe("recipe API contracts", () => {
           data: { user: null },
         })),
       },
-      from: vi.fn((table: string) => {
-        if (table === "recipes") return recipesTable;
-        if (table === "recipe_sources") return sourceQuery;
-        if (table === "recipe_ingredients") return ingredientsQuery;
-        if (table === "recipe_steps") return stepsQuery;
-        throw new Error(`unexpected table: ${table}`);
-      }),
+      from: routeFrom,
     });
     createServiceRoleClient.mockReturnValue({
       rpc,
@@ -1688,6 +1688,7 @@ describe("recipe API contracts", () => {
     expect(recipeReadQuery.maybeSingle.mock.invocationCallOrder[0])
       .toBeLessThan(readRecipeImageProjection.mock.invocationCallOrder[0]);
     expect(body.data.thumbnail_url).toBe(managedReadUrl);
+    expect(routeFrom).not.toHaveBeenCalledWith("meals");
   });
 
   it("uses actual planner meal count for recipe detail plan_count", async () => {
@@ -1738,12 +1739,16 @@ describe("recipe API contracts", () => {
     const mealsTable = {
       select: vi.fn(() => mealsCountQuery),
     };
+    const userStatusQuery = createQuery({
+      data: [],
+      error: null,
+    });
     const rpc = vi.fn(() => viewCountRpcQuery);
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
         getUser: vi.fn(async () => ({
-          data: { user: null },
+          data: { user: { id: "user-1" } },
         })),
       },
       from: vi.fn((table: string) => {
@@ -1752,6 +1757,8 @@ describe("recipe API contracts", () => {
         if (table === "recipe_ingredients") return ingredientsQuery;
         if (table === "recipe_steps") return stepsQuery;
         if (table === "meals") return mealsTable;
+        if (table === "recipe_likes") return userStatusQuery;
+        if (table === "recipe_book_items") return userStatusQuery;
         throw new Error(`unexpected table: ${table}`);
       }),
     });
@@ -1763,6 +1770,8 @@ describe("recipe API contracts", () => {
         if (table === "recipe_ingredients") return ingredientsQuery;
         if (table === "recipe_steps") return stepsQuery;
         if (table === "meals") return mealsTable;
+        if (table === "recipe_likes") return userStatusQuery;
+        if (table === "recipe_book_items") return userStatusQuery;
         throw new Error(`unexpected table: ${table}`);
       }),
     });
@@ -2278,7 +2287,9 @@ describe("recipe API contracts", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(readVerifiedAccountGenerationSession).toHaveBeenCalledWith(routeClient);
+    expect(readVerifiedAccountGenerationSession).toHaveBeenCalledWith(
+      expect.objectContaining({ auth: routeClient.auth }),
+    );
     expect(rpc).toHaveBeenCalledWith(
       "create_manual_recipe_with_managed_image",
       expect.objectContaining({
@@ -2412,6 +2423,56 @@ describe("recipe API contracts", () => {
     expect(body.error.code).toBe("INTERNAL_ERROR");
     expect(ensurePublicUserRow).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("maps wrapped hybrid authority outages on recipe list reads to the contracted 503", async () => {
+    const recipesQuery = createQuery({
+      data: null,
+      error: {
+        message: "TypeError: fetch failed",
+        details: hybridAuthorityMarker("ACCOUNT_LIFECYCLE_MAINTENANCE"),
+      } as { message: string },
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: null } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/recipes?sort=latest"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("ACCOUNT_LIFECYCLE_MAINTENANCE");
+  });
+
+  it("maps wrapped hybrid authority revokes during recipe creation to the contracted 409", async () => {
+    createRouteHandlerClient.mockRejectedValue(
+      Object.assign(new Error("TypeError: fetch failed"), {
+        details: hybridAuthorityMarker("ACCOUNT_SESSION_STALE"),
+      }),
+    );
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody()),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error.code).toBe("ACCOUNT_SESSION_STALE");
   });
 
   it("blocks recipe creation during account lifecycle maintenance", async () => {

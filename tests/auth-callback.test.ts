@@ -6,6 +6,9 @@ const getUser = vi.fn();
 const signOut = vi.fn();
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const bootstrapAuthCallbackSessionAuthority = vi.fn();
+const bootstrapLegacyAuthCallbackIdentity = vi.fn();
+const operationalEventRpc = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const cookies = vi.fn();
@@ -43,8 +46,14 @@ function createServiceRoleUserLookup(
 }
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient,
-  createServiceRoleClient,
+  bootstrapAuthCallbackSessionAuthority,
+  bootstrapLegacyAuthCallbackIdentity,
+  createAuthCallbackOperationsClient: createServiceRoleClient,
+  createAuthCallbackInternalDataClient: createServiceRoleClient,
+  createAuthRouteHandlerClient: createRouteHandlerClient,
+  createOperationalEventInternalClient: () => ({
+    rpc: operationalEventRpc,
+  }),
 }));
 
 vi.mock("next/headers", () => ({
@@ -76,6 +85,9 @@ describe("auth callback", () => {
     signOut.mockReset();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    bootstrapAuthCallbackSessionAuthority.mockReset();
+    bootstrapLegacyAuthCallbackIdentity.mockReset();
+    operationalEventRpc.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     cookies.mockReset();
@@ -93,6 +105,12 @@ describe("auth callback", () => {
 
     createRouteHandlerClient.mockResolvedValue(routeClient);
     createServiceRoleClient.mockReturnValue(createServiceRoleUserLookup().client);
+    bootstrapAuthCallbackSessionAuthority.mockResolvedValue({ ok: true });
+    bootstrapLegacyAuthCallbackIdentity.mockResolvedValue({
+      ok: true,
+      nickname: "집밥러",
+    });
+    operationalEventRpc.mockResolvedValue({ data: true, error: null });
     cookies.mockResolvedValue({
       get: cookieGet,
       getAll: cookieGetAll,
@@ -264,6 +282,10 @@ describe("auth callback", () => {
       social_provider: "google",
     });
     createServiceRoleClient.mockReturnValue(lookup.client);
+    bootstrapLegacyAuthCallbackIdentity.mockResolvedValueOnce({
+      ok: false,
+      reason: "account_conflict",
+    });
 
     const { GET } = await import("@/app/auth/callback/route");
     const response = await GET(
@@ -316,7 +338,10 @@ describe("auth callback", () => {
     ));
 
     expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
-    expect(lookup.usersQuery.eq).toHaveBeenCalledWith("email", "cook@example.com");
+    expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledWith(
+      lookup.client,
+      expect.objectContaining({ email: "cook@example.com", id: "user-1" }),
+    );
     expect(response.headers.get("set-cookie")).toContain("homecook-last-auth-provider=naver");
     expect(signOut).not.toHaveBeenCalled();
   });
@@ -438,6 +463,236 @@ describe("auth callback", () => {
     expect(ensurePublicUserRow).not.toHaveBeenCalled();
   });
 
+  it("bootstraps local session authority before legacy callback data writes", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: "remote-access-token",
+        },
+      },
+      error: null,
+    });
+    getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-1",
+          created_at: "2026-07-28T00:00:00.000Z",
+          email: "cook@example.com",
+          app_metadata: { provider: "google" },
+          user_metadata: { nickname: "집밥러" },
+          identities: [{
+            provider: "google",
+            identity_data: { email_verified: true },
+          }],
+        },
+      },
+      error: null,
+    });
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner",
+    ));
+
+    expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
+    expect(bootstrapAuthCallbackSessionAuthority).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accessToken: "remote-access-token",
+        user: expect.objectContaining({ id: "user-1" }),
+      }),
+    );
+    expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["google", "google"],
+    ["naver", "custom:naver"],
+    ["kakao", "kakao"],
+  ])(
+    "bootstraps a local %s callback through the RPC-only factory",
+    async (attemptedProvider, identityProvider) => {
+      exchangeCodeForSession.mockResolvedValue({
+        data: {
+          session: {
+            access_token: "remote-access-token",
+          },
+        },
+        error: null,
+      });
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: "user-1",
+            created_at: "2026-07-28T00:00:00.000Z",
+            email: "cook@example.com",
+            email_confirmed_at: "2026-07-28T00:00:00.000Z",
+            app_metadata: { provider: identityProvider },
+            user_metadata: {
+              nickname: "집밥러",
+              sub: `${attemptedProvider}-social-id`,
+            },
+            identities: [{
+              provider: identityProvider,
+              identity_data: { email_verified: true },
+            }],
+          },
+        },
+        error: null,
+      });
+      const rpc = vi.fn(async (name: string) => {
+        if (name === "get_account_generation_capability") {
+          return {
+            data: { state: "legacy", revision: 1 },
+            error: null,
+          };
+        }
+        throw new Error(`unexpected RPC: ${name}`);
+      });
+      const localOperationsClient = { rpc };
+      createServiceRoleClient.mockReturnValue(localOperationsClient);
+      cookieGetAll.mockReturnValue([
+        {
+          name: "sb-homecook-auth-token",
+          value: "remote-session-cookie",
+        },
+      ]);
+
+      const { GET } = await import("@/app/auth/callback/route");
+      const response = await GET(new Request(
+        `http://localhost:3000/auth/callback?code=abc&attemptedProvider=${attemptedProvider}&next=/planner`,
+      ));
+
+      expect(response.headers.get("location")).toBe(
+        "http://localhost:3000/planner",
+      );
+      expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledWith(
+        localOperationsClient,
+        expect.objectContaining({
+          id: "user-1",
+          email: "cook@example.com",
+        }),
+      );
+      expect(ensurePublicUserRow).not.toHaveBeenCalled();
+      expect(ensureUserBootstrapState).not.toHaveBeenCalled();
+      expect(signOut).not.toHaveBeenCalled();
+      expect(response.headers.get("set-cookie") ?? "")
+        .toContain(`homecook-last-auth-provider=${attemptedProvider}`);
+      expect(response.headers.get("set-cookie") ?? "")
+        .not.toMatch(/sb-homecook-auth-token=;.*Max-Age=0/i);
+    },
+  );
+
+  it.each([
+    [
+      {
+        ok: false,
+        reason: "maintenance",
+        errorCode: "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      },
+      "ACCOUNT_LIFECYCLE_MAINTENANCE",
+      "/login",
+    ],
+    [
+      {
+        ok: false,
+        reason: "stale",
+        errorCode: "ACCOUNT_SESSION_STALE",
+      },
+      "ACCOUNT_SESSION_STALE",
+      "/login",
+    ],
+    [
+      {
+        ok: false,
+        reason: "unexpected",
+        errorCode: null,
+      },
+      "oauth_failed",
+      "/planner",
+    ],
+  ] as const)(
+    "classifies a post-capability legacy RPC race as %s",
+    async (bootstrapResult, expectedCode, expectedPath) => {
+      exchangeCodeForSession.mockResolvedValue({
+        data: { session: { access_token: "remote-access-token" } },
+        error: null,
+      });
+      const rpc = vi.fn(async (name: string) => {
+        if (name === "get_account_generation_capability") {
+          return {
+            data: { state: "legacy", revision: 1 },
+            error: null,
+          };
+        }
+        throw new Error(`unexpected RPC: ${name}`);
+      });
+      const localOperationsClient = { rpc };
+      createServiceRoleClient.mockReturnValue(localOperationsClient);
+      bootstrapLegacyAuthCallbackIdentity.mockResolvedValueOnce(bootstrapResult);
+      cookieGetAll.mockReturnValue([
+        {
+          name: "sb-homecook-auth-token",
+          value: "remote-session-cookie",
+        },
+      ]);
+
+      const { GET } = await import("@/app/auth/callback/route");
+      const response = await GET(new Request(
+        "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner",
+      ));
+
+      const redirectUrl = new URL(response.headers.get("location") ?? "");
+      expect(redirectUrl.pathname).toBe(expectedPath);
+      expect(redirectUrl.searchParams.get("authError")).toBe(expectedCode);
+      expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledWith(
+        localOperationsClient,
+        expect.objectContaining({ id: "user-1" }),
+      );
+      expect(signOut).toHaveBeenCalledTimes(1);
+      expect(response.headers.get("set-cookie") ?? "")
+        .toMatch(/sb-homecook-auth-token=;.*Max-Age=0/i);
+    },
+  );
+
+  it("preserves bootstrap maintenance instead of reporting a stale session", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: "remote-access-token" } },
+      error: null,
+    });
+    getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-1",
+          created_at: "2026-07-28T00:00:00.000Z",
+          email: "cook@example.com",
+          app_metadata: { provider: "google" },
+          user_metadata: { nickname: "집밥러" },
+          identities: [{
+            provider: "google",
+            identity_data: { email_verified: true },
+          }],
+        },
+      },
+      error: null,
+    });
+    bootstrapAuthCallbackSessionAuthority.mockResolvedValue({
+      ok: false,
+      reason: "maintenance",
+    });
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new Request(
+      "http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner",
+    ));
+
+    const redirectUrl = new URL(response.headers.get("location") ?? "");
+    expect(redirectUrl.pathname).toBe("/login");
+    expect(redirectUrl.searchParams.get("authError"))
+      .toBe("ACCOUNT_LIFECYCLE_MAINTENANCE");
+    expect(redirectUrl.searchParams.get("next")).toBe("/planner");
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+  });
+
   it("clears the partial session when the account capability cannot be read", async () => {
     exchangeCodeForSession.mockResolvedValue({ error: null });
     const lookup = createServiceRoleUserLookup(null, {
@@ -529,12 +784,18 @@ describe("auth callback", () => {
     const issuedAt = Math.floor(Date.now() / 1_000) - 10;
     const expiresAt = issuedAt + 3_600;
     const accessToken = [
-      Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url"),
+      Buffer.from(JSON.stringify({
+        alg: "RS256",
+        kid: "remote-test-key",
+        typ: "JWT",
+      })).toString("base64url"),
       Buffer.from(JSON.stringify({
         aud: "authenticated",
         exp: expiresAt,
         iat: issuedAt,
         iss: "https://example.supabase.co/auth/v1",
+        nbf: issuedAt,
+        role: "authenticated",
         session_id: sessionId,
         sub: ownerUuid,
       })).toString("base64url"),
@@ -617,12 +878,18 @@ describe("auth callback", () => {
     const issuedAt = Math.floor(Date.now() / 1_000) - 10;
     const expiresAt = issuedAt + 3_600;
     const accessToken = [
-      Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url"),
+      Buffer.from(JSON.stringify({
+        alg: "RS256",
+        kid: "remote-test-key",
+        typ: "JWT",
+      })).toString("base64url"),
       Buffer.from(JSON.stringify({
         aud: "authenticated",
         exp: expiresAt,
         iat: issuedAt,
         iss: "https://example.supabase.co/auth/v1",
+        nbf: issuedAt,
+        role: "authenticated",
         session_id: sessionId,
         sub: ownerUuid,
       })).toString("base64url"),
@@ -804,16 +1071,14 @@ describe("auth callback", () => {
       new Request("http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner"),
     );
 
-    expect(ensurePublicUserRow).toHaveBeenCalledWith(
-      expect.objectContaining({ from: expect.any(Function) }),
+    expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         id: "user-1",
       }),
     );
-    expect(ensureUserBootstrapState).toHaveBeenCalledWith(
-      expect.objectContaining({ from: expect.any(Function) }),
-      "user-1",
-    );
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+    expect(ensureUserBootstrapState).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
   });
 
@@ -821,7 +1086,8 @@ describe("auth callback", () => {
     exchangeCodeForSession.mockResolvedValue({
       error: null,
     });
-    ensurePublicUserRow.mockResolvedValueOnce({
+    bootstrapLegacyAuthCallbackIdentity.mockResolvedValueOnce({
+      ok: true,
       nickname: "",
     });
 
@@ -830,10 +1096,7 @@ describe("auth callback", () => {
       new Request("http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner"),
     );
 
-    expect(ensureUserBootstrapState).toHaveBeenCalledWith(
-      expect.objectContaining({ from: expect.any(Function) }),
-      "user-1",
-    );
+    expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toBe(
       "http://localhost:3000/onboarding/nickname?next=%2Fplanner",
     );
