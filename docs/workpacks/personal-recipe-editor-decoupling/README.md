@@ -225,6 +225,8 @@ dirty close/back → [계속 편집] [변경사항 버리기]
 
 ## Delivery Checklist
 
+- [ ] existing recipe detail read returns the same `404 RESOURCE_NOT_FOUND` before child or service-role reads when the parent recipe is not visible <!-- omo:id=delivery-editor-backend-nondisclosure;stage=2;scope=backend;review=3 -->
+- [ ] existing manual recipe create ignores client owner, visibility and origin fields and forwards only the official payload <!-- omo:id=delivery-editor-backend-create-boundary;stage=2;scope=backend;review=3 -->
 - [ ] shared pure form primitives are separated from context shell/router/persistence <!-- omo:id=delivery-editor-primitives;stage=4;scope=frontend;review=5,6 -->
 - [ ] all four contexts preserve distinct initial data, submit, success and cancel destinations <!-- omo:id=delivery-editor-contexts;stage=4;scope=frontend;review=5,6 -->
 - [ ] public/anon/owner/other-owner/deleted/quarantined CTA matrix is fail-closed <!-- omo:id=delivery-editor-cta-matrix;stage=4;scope=frontend;review=5,6 -->
