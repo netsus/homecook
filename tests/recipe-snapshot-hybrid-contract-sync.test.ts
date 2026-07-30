@@ -50,7 +50,7 @@ describe("recipe snapshot hybrid contract lock", () => {
     expect(bundle).toContain("exact epoch");
   });
 
-  it("preserves the implemented history while keeping the reopened lifecycle honest", () => {
+  it("preserves implementation history while keeping hybrid reverification in progress", () => {
     const readme = read(readmePath);
     const workItem = readJson(workItemPath);
     const statusFile = readJson(".workflow-v2/status.json");
@@ -62,10 +62,20 @@ describe("recipe snapshot hybrid contract lock", () => {
     expect(readme).toContain("PR #1219");
     expect(readme).toContain("PR #1220");
     expect(readme).toContain("hybrid delta/reverification");
-    expect((workItem.status as Record<string, unknown>).lifecycle).toBe("planned");
-    expect(statusItem?.lifecycle).toBe("planned");
+    expect((workItem.status as Record<string, unknown>)).toMatchObject({
+      lifecycle: "in_progress",
+      verification_status: "pending",
+    });
+    expect(statusItem).toMatchObject({
+      branch: "fix/recipe-snapshot-hybrid-verifier",
+      lifecycle: "in_progress",
+      verification_status: "pending",
+    });
     expect(roadmap).toMatch(
-      /\|\s*4\s*\|\s*B\s*\|\s*`recipe-snapshot-authority-foundation`\s*\|\s*docs\s*\|/,
+      /\|\s*4\s*\|\s*B\s*\|\s*`recipe-snapshot-authority-foundation`\s*\|\s*in-progress\s*\|/,
+    );
+    expect(read(acceptancePath)).toContain(
+      "- [ ] merged-exact-SHA hybrid verifier reads the local application DB/Storage authority",
     );
   });
 

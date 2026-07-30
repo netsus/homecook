@@ -252,7 +252,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `account-session-generation-foundation` | merged | JWT session-bound account generation, lifecycle watermark, DB cutover fence/Auth Hook/quarantine/outbox와 personal-writer inventory를 feature-off foundation으로 잠근다 |
 | `product-ingredient-link-foundation` | docs | 제품과 canonical ingredient의 검수 relation, RLS/admin promotion, pantry effective ingredient projection과 account-delete 결합 gate를 구현한다 |
 | `recipe-visibility-read-hardening` | merged | private personal recipe soft delete/public fork/tag visibility, quarantine visibility upper bound, generation-aware image registry·private storage·outbox를 먼저 잠근다 |
-| `recipe-snapshot-authority-foundation` | docs | PR #1218/#1219의 snapshot authority와 consumer 회귀를 보존하고, PR #1220이 다시 연 검증 gate를 hybrid remote Auth/local Data 기준으로 재잠근다 |
+| `recipe-snapshot-authority-foundation` | in-progress | PR #1218/#1219의 구현을 보존하고, PR #1231 hybrid relock 뒤 merged-exact-SHA local Data/remote Auth 검증기를 TDD로 보강한다 |
 | `personal-recipe-editor-decoupling` | docs | 공개 원본 불변 fork 및 owner-only 개인 레시피 편집 진입을 RECIPE_DETAIL 중심으로 분리하고 기존 MYPAGE/RECIPEBOOK 상세과의 소유권 충돌을 피한다 |
 | `personal-recipe-customization-write-core` | docs | 개인 레시피 create/PATCH/soft DELETE, owner→recipe lock, session generation과 idempotent single-RPC write를 구현한다 |
 | `recipe-content-snapshot-future-propagation` | docs | future-plan impact preview/token, replace_all/keep, active cooking claim, shopping open reconcile와 completed read-only를 같은 transaction 경계에 잠근다 |
@@ -293,7 +293,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 1 | A | `prepared-food-search-relevance` | merged | PR #1074/#1097/#1099/#1100/#1101/#1103/#1104/#1105/#1108 merged; retained production read-only subset and current-head gates passed; original apply provenance remains pending Manual Only |
 | 2 | B | `product-ingredient-link-foundation` | docs | F0 + #3 server-MacBook local-first joint account-delete activation gate |
 | 3 | B | `recipe-visibility-read-hardening` | merged | F0 local runtime; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
-| 4 | B | `recipe-snapshot-authority-foundation` | docs | #3 merged; PR #1218 Stage 2 + PR #1219 Stage 4 merged, PR #1220 reopened hybrid delta/reverification pending |
+| 4 | B | `recipe-snapshot-authority-foundation` | in-progress | #3 merged; PR #1218 Stage 2 + PR #1219 Stage 4 merged, PR #1231 hybrid relock 뒤 delta/reverification 진행 중 |
 | 5 | C | `personal-recipe-editor-decoupling` | docs | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged |
 | 6 | C | `personal-recipe-customization-write-core` | docs | #2 + #3 + #4 + #5 |
 | 7 | C | `recipe-content-snapshot-future-propagation` | docs | #4 + #6; `cook-mode-whole-board` merged |
