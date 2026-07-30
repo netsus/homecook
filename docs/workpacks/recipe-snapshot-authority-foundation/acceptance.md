@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> PR #1218 Stage 2 and PR #1219 Stage 4 evidence are historical implementation evidence. PR #1220 reopened the lifecycle because deployment verification remained missing. This relock records only the current hybrid contract delta and does not claim the hybrid verifier, compatibility-release or production evidence already exists.
+> PR #1218 Stage 2 and PR #1219 Stage 4 evidence are historical implementation evidence. PR #1220 reopened the lifecycle because deployment verification remained missing. PR #1232 merged the hybrid verifier, and PR #1233 merged the Stage 2 regression delta as `4a7718ee6bac66fb39b5163742783ac2092e5b5c`. The clean master dry-run passed at exact SHA `da054a96afb7c6108a7007bfafbf3d328ef47656`. Full local/remote evidence remains pending, so the unchecked compatibility-release, real sanitized remote Auth/local Storage, full actual-DB cleanup rehearsal and production gates remain unclaimed.
 
 ## Snapshot Authority
 

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-30T20:42:36.000Z",
+  "updated_at": "2026-07-30T20:56:42.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2391,7 +2391,7 @@
       "id": "recipe-snapshot-authority-foundation",
       "preset": "vertical-slice-strict",
       "branch": "fix/recipe-snapshot-stage2-regression-evidence",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/1233",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
@@ -2414,7 +2414,7 @@
         "node scripts/verify-recipe-snapshot-authority-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "PR #1231 merged the hybrid remote Auth/local Data relock after PR #1218 Stage 2 and PR #1219 Stage 4. PR #1232 merged the TDD hybrid verifier as 6c9d2c32969d715de95813e93c61f005075c89a0 after exact-head checks; its exact-master dry-run passed and a separate read-only local query proved auth.users=0. fix/recipe-snapshot-stage2-regression-evidence adds fail-closed true mismatch/backfill checks, report-only historical direct inventory, an expired hybrid binding guard, operational identifier scrub, and one isolated exact-epoch cleanup regression for the currently implemented snapshot/product FK subset. The actual merged verifier with real sanitized remote Auth evidence, local Storage evidence, compatibility-release observation window, full actual public.users inbound-FK cleanup rehearsal, Train B #2 integration and successor event/meal-log/non-image-idempotency cleanup links remain pending; production/staging and remote application writes remain forbidden.",
+      "notes": "PR #1231 merged the hybrid remote Auth/local Data relock after PR #1218 Stage 2 and PR #1219 Stage 4. PR #1232 merged the TDD hybrid verifier as 6c9d2c32969d715de95813e93c61f005075c89a0; its exact-master dry-run passed and a separate read-only local query proved auth.users=0. PR #1233 merged the Stage 2 regression delta as 4a7718ee6bac66fb39b5163742783ac2092e5b5c from exact head d9468881b7ae77f5b9b333e6f2a82452eb9dd60e after independent code/security P0/P1/P2 0/0/0 and 16 current-head checks with 15 success and one intended skip. The clean master dry-run passed at exact SHA da054a96afb7c6108a7007bfafbf3d328ef47656 in read-only mode with production/staging/remote application writes 0. Full local/remote evidence remains pending: real sanitized remote Auth evidence, local Storage evidence, compatibility-release observation, full actual public.users inbound-FK cleanup rehearsal, Train B #2 integration and successor event/meal-log/non-image-idempotency cleanup links are still required. Lifecycle/verification/evaluation therefore remain in_progress/pending/not_started, and production/staging/remote application writes remain forbidden.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
