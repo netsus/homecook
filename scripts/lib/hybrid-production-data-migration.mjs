@@ -72,18 +72,118 @@ export function buildStorageApiRequestScript() {
   `;
 }
 
+export function validateStorageMigrationEvidence({ actual, expected }) {
+  if (!Array.isArray(actual) || !Array.isArray(expected)) {
+    throw new Error("Storage migration evidence is incomplete.");
+  }
+  const fields = [
+    "bucket",
+    "bytes",
+    "cacheControl",
+    "contentType",
+    "name",
+    "sha256",
+  ];
+  const normalize = (objects, label) => {
+    const keys = new Set();
+    return objects.map((object) => {
+      if (
+        !object
+        || typeof object !== "object"
+        || typeof object.bucket !== "string"
+        || object.bucket.length === 0
+        || !Number.isSafeInteger(object.bytes)
+        || object.bytes < 0
+        || typeof object.cacheControl !== "string"
+        || typeof object.contentType !== "string"
+        || object.contentType.length === 0
+        || typeof object.name !== "string"
+        || object.name.length === 0
+        || !/^[0-9a-f]{64}$/u.test(object.sha256)
+      ) {
+        throw new Error(`Storage migration evidence ${label} is invalid.`);
+      }
+      const key = `${object.bucket}\u0000${object.name}`;
+      if (keys.has(key)) {
+        throw new Error(
+          `Storage migration evidence ${label} contains a duplicate object.`,
+        );
+      }
+      keys.add(key);
+      return Object.freeze(Object.fromEntries(
+        fields.map((field) => [field, object[field]]),
+      ));
+    }).sort((left, right) => {
+      const leftKey = `${left.bucket}\u0000${left.name}`;
+      const rightKey = `${right.bucket}\u0000${right.name}`;
+      return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+    });
+  };
+  const normalizedActual = normalize(actual, "actual");
+  const normalizedExpected = normalize(expected, "expected");
+  if (
+    normalizedActual.length !== normalizedExpected.length
+    || normalizedActual.some((object, index) =>
+      fields.some((field) =>
+        object[field] !== normalizedExpected[index][field]))
+  ) {
+    throw new Error(
+      "Storage migration evidence does not exactly match the source.",
+    );
+  }
+  return Object.freeze({
+    count: normalizedActual.length,
+    objects: Object.freeze(normalizedActual),
+  });
+}
+
+export function resolvePublicMigrationOutcome({
+  executionStatus,
+  markerStatus,
+  transactionActive,
+}) {
+  if (markerStatus === "present") {
+    return Object.freeze({
+      databaseOutcome: "committed",
+      reason: "durable-marker-present",
+    });
+  }
+  if (
+    markerStatus === "absent"
+    && transactionActive === false
+    && ["failed", "precommit_failed"].includes(executionStatus)
+  ) {
+    return Object.freeze({
+      databaseOutcome: "rolled_back",
+      reason: "marker-absent-and-transaction-inactive",
+    });
+  }
+  return Object.freeze({
+    databaseOutcome: "unknown",
+    reason: markerStatus === "unknown"
+      ? "commit-marker-unavailable"
+      : "commit-outcome-unconfirmed",
+  });
+}
+
 export function planStorageCommitBoundary({
-  publicCommitted,
+  databaseOutcome,
   storageVerifiedBeforeCommit,
 }) {
-  if (publicCommitted && !storageVerifiedBeforeCommit) {
+  if (
+    !["committed", "rolled_back", "unknown"].includes(databaseOutcome)
+  ) {
+    throw new Error("Database migration outcome is invalid.");
+  }
+  if (databaseOutcome === "committed" && !storageVerifiedBeforeCommit) {
     throw new Error(
       "Storage must verify before public commit.",
     );
   }
   return Object.freeze({
     commitAllowed: storageVerifiedBeforeCommit,
-    compensateStorage: !publicCommitted,
+    compensateStorage: databaseOutcome === "rolled_back",
+    reconciliationRequired: databaseOutcome === "unknown",
   });
 }
 
@@ -144,10 +244,22 @@ export function buildLegacyDataMigrationPlan({
   });
 }
 
+/**
+ * @param {{
+ *   commitMarkerSql?: string;
+ *   dataSql: string;
+ *   dryRun: boolean;
+ *   evidenceSql: string;
+ *   transactionPreambleSql?: string;
+ *   truncateTables: string[];
+ * }} input
+ */
 export function buildLegacyDataMigrationTransaction({
+  commitMarkerSql = undefined,
   dataSql,
   dryRun,
   evidenceSql,
+  transactionPreambleSql = undefined,
   truncateTables,
 }) {
   if (
@@ -155,6 +267,12 @@ export function buildLegacyDataMigrationTransaction({
     || typeof evidenceSql !== "string"
     || !Array.isArray(truncateTables)
     || truncateTables.length === 0
+    || (!dryRun && (
+      typeof commitMarkerSql !== "string"
+      || commitMarkerSql.trim().length === 0
+      || typeof transactionPreambleSql !== "string"
+      || transactionPreambleSql.trim().length === 0
+    ))
   ) {
     throw new Error("Migration transaction inputs are incomplete.");
   }
@@ -163,13 +281,15 @@ export function buildLegacyDataMigrationTransaction({
     "begin;",
     "set local lock_timeout = '15s';",
     "set local statement_timeout = '10min';",
+    ...(dryRun ? [] : [transactionPreambleSql.trim()]),
     "lock table auth.users in share row exclusive mode;",
     `truncate table ${relations} restart identity;`,
     "set local session_replication_role = replica;",
     dataSql.trim(),
     "set local session_replication_role = origin;",
-    "set constraints all deferred;",
+    "set constraints all immediate;",
     evidenceSql.trim(),
+    ...(dryRun ? [] : [commitMarkerSql.trim()]),
     dryRun ? "rollback;" : "commit;",
     "",
   ].join("\n");
@@ -337,91 +457,4 @@ export function validateLegacyStoragePayloadInventory({
     );
   }
   return expected;
-}
-
-function requireEqual(evidence, before, after, label) {
-  if (
-    typeof evidence[before] !== "string"
-    || evidence[before].length === 0
-    || evidence[before] !== evidence[after]
-  ) {
-    throw new Error(`${label} changed during migration.`);
-  }
-}
-
-export function evaluateLegacyDataMigrationEvidence(evidence) {
-  if (evidence.gatewayRunning) {
-    throw new Error("Production gateway must remain private.");
-  }
-  if (!evidence.next3100Running) {
-    throw new Error("Existing Next service on port 3100 is not running.");
-  }
-  if (!evidence.prebackupMatchesCurrent) {
-    throw new Error("Current complete-v2 prebackup is not verified.");
-  }
-  if (
-    evidence.authUsersBefore !== 0
-    || evidence.authUsersAfter !== 0
-    || evidence.authUsersResidualAfter !== 0
-  ) {
-    throw new Error("Local auth.users separation was not preserved.");
-  }
-  if (evidence.foreignKeyViolations !== 0) {
-    throw new Error("Foreign key validation failed after migration.");
-  }
-  requireEqual(
-    evidence,
-    "constraintDigestBefore",
-    "constraintDigestAfter",
-    "Constraint catalog",
-  );
-  requireEqual(
-    evidence,
-    "migrationDigestBefore",
-    "migrationDigestAfter",
-    "Migration ledger",
-  );
-  requireEqual(
-    evidence,
-    "rlsDigestBefore",
-    "rlsDigestAfter",
-    "RLS catalog",
-  );
-  if (
-    typeof evidence.sourceDataDigest !== "string"
-    || evidence.sourceDataDigest.length === 0
-    || evidence.sourceDataDigest !== evidence.targetDataDigest
-  ) {
-    throw new Error("Source and target public data digests differ.");
-  }
-  if (
-    !/^[0-9a-f]{64}$/u.test(evidence.storageSourceSha256)
-    || evidence.storageSourceSha256 !== evidence.storagePayloadSha256
-  ) {
-    throw new Error("Storage payload SHA-256 differs from the source.");
-  }
-  if (
-    evidence.storageHttpContentType !== "image/jpeg"
-    || evidence.storageHttpCacheControl !== "max-age=3600"
-  ) {
-    throw new Error("Storage HTTP metadata does not match the source.");
-  }
-
-  const publicationBlockers = [];
-  if (
-    !Number.isSafeInteger(evidence.identityEpochAntiJoinCount)
-    || evidence.identityEpochAntiJoinCount < 0
-  ) {
-    throw new Error("Identity epoch anti-join evidence is invalid.");
-  }
-  if (evidence.identityEpochAntiJoinCount > 0) {
-    publicationBlockers.push(
-      `identity-epoch-anti-join:${evidence.identityEpochAntiJoinCount}`,
-    );
-  }
-  return Object.freeze({
-    importSafe: true,
-    publicationBlockers,
-    publicationSafe: publicationBlockers.length === 0,
-  });
 }

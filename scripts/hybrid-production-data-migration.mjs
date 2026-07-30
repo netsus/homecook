@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
   closeSync,
@@ -21,8 +21,9 @@ import {
   buildStorageApiRequestScript,
   buildLegacyDataMigrationPlan,
   buildLegacyDataMigrationTransaction,
-  evaluateLegacyDataMigrationEvidence,
   planStorageCommitBoundary,
+  resolvePublicMigrationOutcome,
+  validateStorageMigrationEvidence,
   validateLegacyStoragePayloadInventory,
 } from "./lib/hybrid-production-data-migration.mjs";
 
@@ -184,11 +185,25 @@ function sqlLiteral(value) {
 }
 
 function psql({ container, database, user }, sql, options = {}) {
+  const applicationName = options.applicationName;
+  if (
+    applicationName !== undefined
+    && (
+      typeof applicationName !== "string"
+      || applicationName.length > 63
+      || !SAFE_NAME.test(applicationName)
+    )
+  ) {
+    fail("PostgreSQL application name is unsafe.");
+  }
   return run(
     "docker",
     [
       "exec",
       "-i",
+      ...(applicationName
+        ? ["-e", `PGAPPNAME=${applicationName}`]
+        : []),
       container,
       "psql",
       "-X",
@@ -559,6 +574,182 @@ function transactionEvidenceSql(sourceCatalog, targetOnly, issuer) {
   ].join("\n");
 }
 
+function tableDigestValidationSql(table, expected) {
+  if (
+    !expected
+    || !Number.isSafeInteger(expected.count)
+    || expected.count < 0
+    || !SHA256.test(expected.sha256)
+  ) {
+    fail(`Source digest for ${table.name} is invalid.`);
+  }
+  if (!Array.isArray(table.primaryKey) || table.primaryKey.length === 0) {
+    fail(`Source table ${table.name} has no primary key.`);
+  }
+  const columns = table.columns.map((column) => sqlName(column.name));
+  const order = table.primaryKey.map((column) =>
+    `row_data.${sqlName(column)}`).join(", ");
+  return `
+    do $homecook_table_validation$
+    declare
+      actual_count bigint;
+      actual_sha256 text;
+    begin
+      select
+        count(*),
+        encode(extensions.digest(
+          coalesce(
+            string_agg(
+              row_to_json(row_data)::text,
+              E'\\\\n'
+              order by ${order}
+            ),
+            ''
+          ),
+          'sha256'
+        ), 'hex')
+        into actual_count, actual_sha256
+      from (
+        select ${columns.join(", ")}
+        from ${qualifiedName(table.name)}
+      ) as row_data;
+      if actual_count <> ${expected.count}
+        or actual_sha256 <> ${sqlLiteral(expected.sha256)}
+      then
+        raise exception 'Public table digest validation failed for %',
+          ${sqlLiteral(table.name)};
+      end if;
+    end;
+    $homecook_table_validation$;
+  `;
+}
+
+function identityEpochAntiJoinSql(issuer) {
+  return `
+    (
+      select count(*)
+      from public.users as app_user
+      where not exists (
+        select 1
+        from private.remote_auth_identity_epochs as epoch
+        where epoch.issuer = ${sqlLiteral(issuer)}
+          and epoch.owner_uuid = app_user.id
+          and epoch.active_epoch
+          and epoch.deleted_terminal_at is null
+      )
+    )
+  `;
+}
+
+function transactionValidationSql({
+  sourceCatalog,
+  sourceDigests,
+  targetOnly,
+}) {
+  const targetOnlyChecks = Object.keys(targetOnly).map((name) => `
+    if (select count(*) from ${qualifiedName(name)}) <> 0 then
+      raise exception 'Target-only table is not empty: %',
+        ${sqlLiteral(name)};
+    end if;
+  `);
+  return [
+    foreignKeyValidationSql(),
+    ...sourceCatalog.map((table) =>
+      tableDigestValidationSql(table, sourceDigests[table.name])),
+    `
+      do $homecook_semantic_validation$
+      begin
+        if (select count(*) from auth.users) <> 0 then
+          raise exception 'Local auth.users separation was not preserved';
+        end if;
+        if ${authUsersResidualSql()} <> 0 then
+          raise exception 'Local auth.users residual references remain';
+        end if;
+        if (
+          select count(*)
+          from pg_catalog.pg_constraint
+          where not convalidated
+        ) <> 0 then
+          raise exception 'Unvalidated constraints remain';
+        end if;
+        if (
+          select state
+          from public.account_generation_capability_state
+          where singleton
+        ) is distinct from 'legacy' then
+          raise exception 'Account generation capability is not legacy';
+        end if;
+        ${targetOnlyChecks.join("\n")}
+      end;
+      $homecook_semantic_validation$;
+    `,
+  ].join("\n");
+}
+
+function publicMigrationAttempt({
+  id,
+  sourceDataDigest,
+  sourceTableCount,
+}) {
+  if (
+    typeof id !== "string"
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u
+      .test(id)
+    || !SHA256.test(sourceDataDigest)
+    || !Number.isSafeInteger(sourceTableCount)
+    || sourceTableCount < 0
+  ) {
+    fail("Public migration attempt is invalid.");
+  }
+  return Object.freeze({
+    applicationName: `homecook-migration-${id}`,
+    id,
+    sourceDataDigest,
+    sourceTableCount,
+  });
+}
+
+function transactionCommitMarkerSql({
+  attempt,
+  issuer,
+  sourceCatalog,
+  sourceDataDigest,
+}) {
+  if (!SHA256.test(sourceDataDigest)) {
+    fail("Source public data digest is invalid.");
+  }
+  return `
+    insert into public.operational_events (
+      id,
+      event_type,
+      severity,
+      source,
+      message_summary,
+      metadata_json
+    ) values (
+      ${sqlLiteral(attempt.id)}::uuid,
+      'hybrid_data_migration_commit',
+      'info',
+      'homecook-hybrid-production-data-migration',
+      'Durable commit marker for a public data migration attempt.',
+      jsonb_build_object(
+        'attempt_id', ${sqlLiteral(attempt.id)},
+        'source_data_digest', ${sqlLiteral(sourceDataDigest)},
+        'source_table_count', ${sourceCatalog.length},
+        'identity_epoch_anti_join_count',
+          ${identityEpochAntiJoinSql(issuer)},
+        'auth_users', (select count(*) from auth.users),
+        'auth_users_residual', ${authUsersResidualSql()},
+        'invalid_constraints', (
+          select count(*)
+          from pg_catalog.pg_constraint
+          where not convalidated
+        )
+      )
+    );
+  `;
+}
+
 function parseTransactionEvidence(output, expectedTableCount) {
   const tableDigests = parseTableDigests(output);
   const summaryLine = output.split(/\r?\n/u)
@@ -585,34 +776,187 @@ function parseTransactionEvidence(output, expectedTableCount) {
 }
 
 function executePublicMigration({
+  attempt = null,
   dataSql,
   dryRun,
-  onCommitted = () => {},
   plan,
   sourceCatalog,
+  sourceDataDigest = null,
+  sourceDigests = null,
   target,
   targetOnly,
   issuer,
 }) {
-  const sql = buildLegacyDataMigrationTransaction({
-    dataSql,
-    dryRun,
-    evidenceSql: transactionEvidenceSql(
-      sourceCatalog,
-      targetOnly,
-      issuer,
-    ),
-    truncateTables: plan.truncateTables,
-  });
-  const output = psql(target, sql, {
-    failure: dryRun
-      ? "Public data migration dry-run failed."
-      : "Public data migration apply failed.",
-  });
-  if (!dryRun) {
-    onCommitted();
+  let sql;
+  try {
+    sql = buildLegacyDataMigrationTransaction({
+      commitMarkerSql: dryRun
+        ? undefined
+        : transactionCommitMarkerSql({
+            attempt,
+            issuer,
+            sourceCatalog,
+            sourceDataDigest,
+          }),
+      dataSql,
+      dryRun,
+      evidenceSql: dryRun
+        ? transactionEvidenceSql(sourceCatalog, targetOnly, issuer)
+        : transactionValidationSql({
+            sourceCatalog,
+            sourceDigests,
+            targetOnly,
+          }),
+      transactionPreambleSql: dryRun
+        ? undefined
+        : `set local application_name = ${
+            sqlLiteral(attempt.applicationName)
+          };`,
+      truncateTables: plan.truncateTables,
+    });
+  } catch (error) {
+    if (dryRun) {
+      throw error;
+    }
+    return Object.freeze({
+      error,
+      executionStatus: "precommit_failed",
+    });
   }
-  return parseTransactionEvidence(output, sourceCatalog.length);
+  try {
+    const output = psql(target, sql, {
+      applicationName: dryRun
+        ? undefined
+        : attempt.applicationName,
+      failure: dryRun
+        ? "Public data migration dry-run failed."
+        : "Public data migration apply failed.",
+    });
+    return dryRun
+      ? parseTransactionEvidence(output, sourceCatalog.length)
+      : Object.freeze({
+          error: null,
+          executionStatus: "acknowledged",
+        });
+  } catch (error) {
+    if (dryRun) {
+      throw error;
+    }
+    return Object.freeze({
+      error,
+      executionStatus: "failed",
+    });
+  }
+}
+
+function probePublicMigrationAttemptOnce(target, attempt) {
+  try {
+    const result = queryJson(
+      target,
+      `
+        select json_build_object(
+          'marker', (
+            select event.metadata_json
+            from public.operational_events as event
+            where event.id = ${sqlLiteral(attempt.id)}::uuid
+              and event.event_type = 'hybrid_data_migration_commit'
+              and event.source =
+                'homecook-hybrid-production-data-migration'
+          ),
+          'transactionActive', exists (
+            select 1
+            from pg_catalog.pg_stat_activity
+            where application_name =
+              ${sqlLiteral(attempt.applicationName)}
+              and pid <> pg_backend_pid()
+          )
+        )::text;
+      `,
+    );
+    if (
+      !result
+      || typeof result !== "object"
+      || typeof result.transactionActive !== "boolean"
+    ) {
+      return Object.freeze({
+        evidence: null,
+        markerStatus: "unknown",
+        transactionActive: null,
+      });
+    }
+    if (result.marker === null) {
+      return Object.freeze({
+        evidence: null,
+        markerStatus: "absent",
+        transactionActive: result.transactionActive,
+      });
+    }
+    const marker = result.marker;
+    if (
+      !marker
+      || typeof marker !== "object"
+      || marker.attempt_id !== attempt.id
+      || marker.source_data_digest !== attempt.sourceDataDigest
+      || marker.source_table_count !== attempt.sourceTableCount
+      || !Number.isSafeInteger(marker.identity_epoch_anti_join_count)
+      || marker.identity_epoch_anti_join_count < 0
+      || marker.auth_users !== 0
+      || marker.auth_users_residual !== 0
+      || marker.invalid_constraints !== 0
+    ) {
+      return Object.freeze({
+        evidence: null,
+        markerStatus: "unknown",
+        transactionActive: result.transactionActive,
+      });
+    }
+    return Object.freeze({
+      evidence: Object.freeze({
+        identityEpochAntiJoinCount:
+          marker.identity_epoch_anti_join_count,
+        sourceDataDigest: marker.source_data_digest,
+        sourceTableCount: marker.source_table_count,
+      }),
+      markerStatus: "present",
+      transactionActive: result.transactionActive,
+    });
+  } catch {
+    return Object.freeze({
+      evidence: null,
+      markerStatus: "unknown",
+      transactionActive: null,
+    });
+  }
+}
+
+function probePublicMigrationAttempt(target, attempt) {
+  const first = probePublicMigrationAttemptOnce(target, attempt);
+  if (
+    first.markerStatus !== "absent"
+    || first.transactionActive !== false
+  ) {
+    return first;
+  }
+  const second = probePublicMigrationAttemptOnce(target, attempt);
+  return second;
+}
+
+function cleanupPublicMigrationAttempt(target, attempt) {
+  try {
+    psql(
+      target,
+      `
+        delete from public.operational_events
+        where id = ${sqlLiteral(attempt.id)}::uuid
+          and event_type = 'hybrid_data_migration_commit'
+          and source = 'homecook-hybrid-production-data-migration';
+      `,
+      { failure: "Public migration marker cleanup failed." },
+    );
+  } catch {
+    // A follow-up probe resolves an acknowledgement loss without guessing.
+  }
+  return probePublicMigrationAttempt(target, attempt);
 }
 
 function catalogSnapshot(target) {
@@ -1094,9 +1438,11 @@ function uploadStorageObjects(config, target, pairs) {
         fail("Target Storage HTTP payload or metadata differs.");
       }
       return {
+        bucket: source.bucket,
         bytes: http.bytes,
         cacheControl: http.cacheControl,
         contentType: http.contentType,
+        name: source.name,
         sha256: http.sha256,
       };
     });
@@ -1282,94 +1628,138 @@ async function main() {
       return;
     }
 
+    const attempt = publicMigrationAttempt({
+      id: randomUUID(),
+      sourceDataDigest,
+      sourceTableCount: runtimePlan.sourceCatalog.length,
+    });
     const storageMutation = uploadStorageObjects(
       config,
       target,
       storagePairs,
     );
-    const storageEvidence = storageMutation.evidence;
-    const preCommitBoundary = planStorageCommitBoundary({
-      publicCommitted: false,
-      storageVerifiedBeforeCommit:
-        storageMutation.storageVerifiedBeforeCommit,
-    });
-    if (!preCommitBoundary.commitAllowed) {
+    let storageEvidence;
+    try {
+      storageEvidence = validateStorageMigrationEvidence({
+        actual: storageMutation.evidence,
+        expected: storagePairs.map(({ payload, source: sourceObject }) => ({
+          bucket: sourceObject.bucket,
+          bytes: payload.size_bytes,
+          cacheControl: sourceObject.cacheControl,
+          contentType: sourceObject.mime,
+          name: sourceObject.name,
+          sha256: payload.sha256,
+        })),
+      });
+    } catch (error) {
+      storageMutation.compensate();
+      throw error;
+    }
+    if (
+      !storageMutation.storageVerifiedBeforeCommit
+      || storageEvidence.count !== storagePairs.length
+    ) {
       storageMutation.compensate();
       fail("Storage verification did not authorize public commit.");
     }
-    let publicCommitted = false;
-    try {
-      const applyEvidence = executePublicMigration({
-        dataSql: dump,
-        dryRun: false,
-        issuer: config.AUTH_SUPABASE_EXPECTED_ISSUER,
-        onCommitted: () => {
-          publicCommitted = true;
-        },
-        plan: runtimePlan.plan,
-        sourceCatalog: runtimePlan.sourceCatalog,
-        target,
-        targetOnly: runtimePlan.targetOnly,
-      });
-      const targetDataDigest = aggregateDataDigest(
-        applyEvidence.tableDigests,
-      );
-      const afterCatalog = catalogSnapshot(target);
-      const evaluated = evaluateLegacyDataMigrationEvidence({
-        authUsersAfter: applyEvidence.summary.authUsers,
-        authUsersBefore,
-        authUsersResidualAfter:
-          applyEvidence.summary.authUsersResidual,
-        constraintDigestAfter: afterCatalog.constraintDigest,
-        constraintDigestBefore: beforeCatalog.constraintDigest,
-        foreignKeyViolations: 0,
-        gatewayRunning:
-          gatewayRunning(config.HYBRID_COMPOSE_PROJECT_NAME),
-        identityEpochAntiJoinCount:
-          applyEvidence.summary.identityEpochAntiJoinCount,
-        migrationDigestAfter: afterCatalog.migrationDigest,
-        migrationDigestBefore: beforeCatalog.migrationDigest,
-        next3100Running: next3100Running(),
-        prebackupMatchesCurrent: true,
-        rlsDigestAfter: afterCatalog.rlsDigest,
-        rlsDigestBefore: beforeCatalog.rlsDigest,
-        sourceDataDigest,
-        storageHttpCacheControl:
-          storageEvidence[0]?.cacheControl,
-        storageHttpContentType:
-          storageEvidence[0]?.contentType,
-        storagePayloadSha256: storageEvidence[0]?.sha256,
-        storageSourceSha256:
-          storagePairs[0]?.payload.sha256,
-        targetDataDigest,
-      });
-      print({
-        auth_users: 0,
-        auth_users_residual: 0,
-        foreign_key_violations: 0,
-        identity_epoch_anti_join:
-          applyEvidence.summary.identityEpochAntiJoinCount,
-        import_safe: evaluated.importSafe,
-        legacy_archive_sha256: legacy.archiveSha256,
-        prebackup_sha256: prebackup.archive_sha256,
-        public_data_digest: targetDataDigest,
-        publication_blockers: evaluated.publicationBlockers,
-        publication_safe: evaluated.publicationSafe,
-        rls_digest: afterCatalog.rlsDigest,
-        status: "APPLY_PASS_GATEWAY_PRIVATE",
-        storage: storageEvidence,
-      });
-    } catch (error) {
-      const boundary = planStorageCommitBoundary({
-        publicCommitted,
-        storageVerifiedBeforeCommit:
-          storageMutation.storageVerifiedBeforeCommit,
-      });
-      if (boundary.compensateStorage) {
-        storageMutation.compensate();
-      }
-      throw error;
+    const execution = executePublicMigration({
+      attempt,
+      dataSql: dump,
+      dryRun: false,
+      issuer: config.AUTH_SUPABASE_EXPECTED_ISSUER,
+      plan: runtimePlan.plan,
+      sourceCatalog: runtimePlan.sourceCatalog,
+      sourceDataDigest,
+      sourceDigests,
+      target,
+      targetOnly: runtimePlan.targetOnly,
+    });
+    const probe = probePublicMigrationAttempt(target, attempt);
+    const outcome = resolvePublicMigrationOutcome({
+      executionStatus: execution.executionStatus,
+      markerStatus: probe.markerStatus,
+      transactionActive: probe.transactionActive,
+    });
+    const boundary = planStorageCommitBoundary({
+      databaseOutcome: outcome.databaseOutcome,
+      storageVerifiedBeforeCommit: true,
+    });
+    if (boundary.compensateStorage) {
+      storageMutation.compensate();
+      throw execution.error
+        ?? new Error("Public data migration rolled back.");
     }
+    if (boundary.reconciliationRequired) {
+      print({
+        attempt_id: attempt.id,
+        database_outcome: outcome.databaseOutcome,
+        gateway_private: true,
+        reason: outcome.reason,
+        status: "RECONCILIATION_REQUIRED_GATEWAY_PRIVATE",
+        storage_preserved: true,
+      });
+      process.exitCode = 2;
+      return;
+    }
+
+    const cleanupProbe = cleanupPublicMigrationAttempt(target, attempt);
+    if (
+      cleanupProbe.markerStatus !== "absent"
+      || cleanupProbe.transactionActive !== false
+    ) {
+      print({
+        attempt_id: attempt.id,
+        database_outcome: "committed",
+        gateway_private: true,
+        reason: "commit-marker-cleanup-unconfirmed",
+        status: "RECONCILIATION_REQUIRED_GATEWAY_PRIVATE",
+        storage_preserved: true,
+      });
+      process.exitCode = 2;
+      return;
+    }
+    if (
+      !probe.evidence
+      || !Number.isSafeInteger(
+        probe.evidence.identityEpochAntiJoinCount,
+      )
+    ) {
+      print({
+        attempt_id: attempt.id,
+        database_outcome: "committed",
+        gateway_private: true,
+        reason: "commit-marker-evidence-unavailable",
+        status: "RECONCILIATION_REQUIRED_GATEWAY_PRIVATE",
+        storage_preserved: true,
+      });
+      process.exitCode = 2;
+      return;
+    }
+    const identityEpochAntiJoinCount =
+      probe.evidence.identityEpochAntiJoinCount;
+    const publicationBlockers = [
+      "remote-auth-provider-revision-cas-not-evaluated",
+    ];
+    if (identityEpochAntiJoinCount > 0) {
+      publicationBlockers.push(
+        `identity-epoch-anti-join:${identityEpochAntiJoinCount}`,
+      );
+    }
+    print({
+      auth_users: 0,
+      auth_users_residual: 0,
+      foreign_key_violations: 0,
+      identity_epoch_anti_join: identityEpochAntiJoinCount,
+      import_safe: true,
+      legacy_archive_sha256: legacy.archiveSha256,
+      prebackup_sha256: prebackup.archive_sha256,
+      public_data_digest: sourceDataDigest,
+      publication_blockers: publicationBlockers,
+      publication_safe: false,
+      rls_digest: beforeCatalog.rlsDigest,
+      status: "APPLY_PASS_GATEWAY_PRIVATE",
+      storage: storageEvidence.objects,
+    });
   } finally {
     legacy.cleanup();
   }

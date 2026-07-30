@@ -226,9 +226,13 @@ describe("hybrid production legacy data migration plan", () => {
       ],
     });
     const apply = migration.buildLegacyDataMigrationTransaction({
+      commitMarkerSql:
+        "insert into public.operational_events (id) values ('attempt');",
       dataSql: "-- source data",
       dryRun: false,
       evidenceSql: "select 'HOMECOOK_EVIDENCE|{}';",
+      transactionPreambleSql:
+        "set local application_name = 'homecook-migration-attempt';",
       truncateTables: ["public.recipes"],
     });
 
@@ -242,6 +246,9 @@ describe("hybrid production legacy data migration plan", () => {
       /session_replication_role = replica[\s\S]*-- source data[\s\S]*session_replication_role = origin/u,
     );
     expect(dryRun.trimEnd()).toMatch(/rollback;$/u);
+    expect(apply).toMatch(
+      /begin;[\s\S]*set local application_name[\s\S]*-- source data[\s\S]*HOMECOOK_EVIDENCE[\s\S]*insert into public\.operational_events[\s\S]*commit;/u,
+    );
     expect(apply.trimEnd()).toMatch(/commit;$/u);
   });
 
@@ -368,66 +375,146 @@ describe("hybrid production legacy data migration plan", () => {
     );
   });
 
-  it("keeps the gateway private unless import and publication evidence are independently safe", async () => {
+  it("accepts zero, PNG, WebP, and order-independent Storage evidence before commit", async () => {
     const migration = await loadMigrationModule();
     expect(migration).not.toBeNull();
     if (!migration) {
       return;
     }
-    const evidence = {
-      authUsersAfter: 0,
-      authUsersBefore: 0,
-      authUsersResidualAfter: 0,
-      constraintDigestAfter: "constraints",
-      constraintDigestBefore: "constraints",
-      foreignKeyViolations: 0,
-      gatewayRunning: false,
-      migrationDigestAfter: "migrations",
-      migrationDigestBefore: "migrations",
-      next3100Running: true,
-      prebackupMatchesCurrent: true,
-      rlsDigestAfter: "rls",
-      rlsDigestBefore: "rls",
-      sourceDataDigest: "source",
-      storageHttpCacheControl: "max-age=3600",
-      storageHttpContentType: "image/jpeg",
-      storagePayloadSha256: "a".repeat(64),
-      storageSourceSha256: "a".repeat(64),
-      targetDataDigest: "source",
-      identityEpochAntiJoinCount: 5,
+    const png = {
+      bucket: "recipe-images",
+      bytes: 3,
+      cacheControl: "max-age=60",
+      contentType: "image/png",
+      name: "owner/a.png",
+      sha256: "a".repeat(64),
+    };
+    const webp = {
+      bucket: "recipe-images-private",
+      bytes: 4,
+      cacheControl: "max-age=3600",
+      contentType: "image/webp",
+      name: "owner/z.webp",
+      sha256: "b".repeat(64),
     };
 
-    expect(migration.evaluateLegacyDataMigrationEvidence(evidence)).toEqual({
-      importSafe: true,
-      publicationBlockers: ["identity-epoch-anti-join:5"],
-      publicationSafe: false,
+    expect(migration.validateStorageMigrationEvidence({
+      actual: [],
+      expected: [],
+    })).toEqual({ count: 0, objects: [] });
+    expect(migration.validateStorageMigrationEvidence({
+      actual: [png],
+      expected: [png],
+    })).toEqual({ count: 1, objects: [png] });
+    expect(migration.validateStorageMigrationEvidence({
+      actual: [webp],
+      expected: [webp],
+    })).toEqual({ count: 1, objects: [webp] });
+    expect(migration.validateStorageMigrationEvidence({
+      actual: [webp, png],
+      expected: [png, webp],
+    })).toEqual({
+      count: 2,
+      objects: [png, webp],
     });
     expect(() =>
-      migration.evaluateLegacyDataMigrationEvidence({
-        ...evidence,
-        gatewayRunning: true,
+      migration.validateStorageMigrationEvidence({
+        actual: [{ ...png, contentType: "image/webp" }],
+        expected: [png],
       }),
-    ).toThrow(/gateway must remain private/u);
+    ).toThrow(/Storage migration evidence/u);
     expect(() =>
-      migration.evaluateLegacyDataMigrationEvidence({
-        ...evidence,
-        storageHttpContentType: "application/octet-stream",
+      migration.validateStorageMigrationEvidence({
+        actual: [png, png],
+        expected: [png],
       }),
-    ).toThrow(/Storage HTTP metadata/u);
+    ).toThrow(/duplicate|Storage migration evidence/u);
   });
 
-  it("never compensates Storage after PostgreSQL has already committed", () => {
-    const cli = readFileSync(
-      "scripts/hybrid-production-data-migration.mjs",
-      "utf8",
-    );
+  it("preserves Storage when commit succeeded but acknowledgement was lost", async () => {
+    const migration = await loadMigrationModule();
+    expect(migration).not.toBeNull();
+    if (!migration) {
+      return;
+    }
 
-    expect(cli).toMatch(
-      /const output = psql\([\s\S]*if \(!dryRun\) \{\s*onCommitted\(\);\s*\}[\s\S]*return parseTransactionEvidence/u,
-    );
-    expect(cli).toMatch(
-      /onCommitted: \(\) => \{\s*publicCommitted = true;\s*\}/u,
-    );
+    expect(migration.resolvePublicMigrationOutcome({
+      executionStatus: "failed",
+      markerStatus: "present",
+      transactionActive: false,
+    })).toEqual({
+      databaseOutcome: "committed",
+      reason: "durable-marker-present",
+    });
+    expect(migration.planStorageCommitBoundary({
+      databaseOutcome: "committed",
+      storageVerifiedBeforeCommit: true,
+    })).toEqual({
+      commitAllowed: true,
+      compensateStorage: false,
+      reconciliationRequired: false,
+    });
+  });
+
+  it.each([
+    ["confirmed rollback", "failed"],
+    ["pre-commit failure", "precommit_failed"],
+  ])("compensates Storage only after %s", async (_label, executionStatus) => {
+    const migration = await loadMigrationModule();
+    expect(migration).not.toBeNull();
+    if (!migration) {
+      return;
+    }
+
+    expect(migration.resolvePublicMigrationOutcome({
+      executionStatus,
+      markerStatus: "absent",
+      transactionActive: false,
+    })).toEqual({
+      databaseOutcome: "rolled_back",
+      reason: "marker-absent-and-transaction-inactive",
+    });
+    expect(migration.planStorageCommitBoundary({
+      databaseOutcome: "rolled_back",
+      storageVerifiedBeforeCommit: true,
+    })).toEqual({
+      commitAllowed: true,
+      compensateStorage: true,
+      reconciliationRequired: false,
+    });
+  });
+
+  it("preserves Storage and requests reconciliation when commit outcome is unknown", async () => {
+    const migration = await loadMigrationModule();
+    expect(migration).not.toBeNull();
+    if (!migration) {
+      return;
+    }
+
+    expect(migration.resolvePublicMigrationOutcome({
+      executionStatus: "failed",
+      markerStatus: "unknown",
+      transactionActive: null,
+    })).toEqual({
+      databaseOutcome: "unknown",
+      reason: "commit-marker-unavailable",
+    });
+    expect(migration.resolvePublicMigrationOutcome({
+      executionStatus: "failed",
+      markerStatus: "absent",
+      transactionActive: true,
+    })).toEqual({
+      databaseOutcome: "unknown",
+      reason: "commit-outcome-unconfirmed",
+    });
+    expect(migration.planStorageCommitBoundary({
+      databaseOutcome: "unknown",
+      storageVerifiedBeforeCommit: true,
+    })).toEqual({
+      commitAllowed: true,
+      compensateStorage: false,
+      reconciliationRequired: true,
+    });
   });
 
   it("verifies public and private uploads through the authenticated Storage API before commit", async () => {
@@ -439,11 +526,12 @@ describe("hybrid production legacy data migration plan", () => {
     const api = migration as unknown as {
       buildStorageApiRequestScript: () => string;
       planStorageCommitBoundary: (input: {
-        publicCommitted: boolean;
+        databaseOutcome: "committed" | "rolled_back" | "unknown";
         storageVerifiedBeforeCommit: boolean;
       }) => {
         commitAllowed: boolean;
         compensateStorage: boolean;
+        reconciliationRequired: boolean;
       };
     };
     expect(api.buildStorageApiRequestScript).toBeTypeOf("function");
@@ -519,19 +607,32 @@ describe("hybrid production legacy data migration plan", () => {
     );
     try {
       const results = [];
-      for (const [index, bucket] of [
-        "recipe-images",
-        "recipe-images-private",
+      for (const [index, fixture] of [
+        {
+          bucket: "recipe-images",
+          cacheControl: "max-age=60",
+          extension: "png",
+          mime: "image/png",
+        },
+        {
+          bucket: "recipe-images-private",
+          cacheControl: "max-age=3600",
+          extension: "webp",
+          mime: "image/webp",
+        },
       ].entries()) {
-        const payload = Buffer.from(`fixture-${bucket}`, "utf8");
+        const payload = Buffer.from(
+          `fixture-${fixture.bucket}`,
+          "utf8",
+        );
         const file = join(directory, `payload-${index}.bin`);
         writeFileSync(file, payload, { mode: 0o600 });
         const common = [
           `http://127.0.0.1:${address.port}`,
-          bucket,
-          `owner/object-${index}.jpg`,
-          "image/jpeg",
-          "max-age=3600",
+          fixture.bucket,
+          `owner/object-${index}.${fixture.extension}`,
+          fixture.mime,
+          fixture.cacheControl,
         ];
         results.push(JSON.parse((await executeStorageFixtureClient({
           args: [
@@ -559,15 +660,15 @@ describe("hybrid production legacy data migration plan", () => {
         expect.objectContaining({ status: 200 }),
         expect.objectContaining({
           bytes: Buffer.byteLength("fixture-recipe-images"),
-          cacheControl: "max-age=3600",
-          contentType: "image/jpeg",
+          cacheControl: "max-age=60",
+          contentType: "image/png",
           status: 200,
         }),
         expect.objectContaining({ status: 200 }),
         expect.objectContaining({
           bytes: Buffer.byteLength("fixture-recipe-images-private"),
           cacheControl: "max-age=3600",
-          contentType: "image/jpeg",
+          contentType: "image/webp",
           status: 200,
         }),
       ]);
@@ -575,31 +676,33 @@ describe("hybrid production legacy data migration plan", () => {
         expect.objectContaining({
           authorization: `Bearer ${serviceJwt}`,
           path:
-            "/object/authenticated/recipe-images/owner/object-0.jpg",
+            "/object/authenticated/recipe-images/owner/object-0.png",
         }),
         expect.objectContaining({
           authorization: `Bearer ${serviceJwt}`,
           path:
-            "/object/authenticated/recipe-images-private/owner/object-1.jpg",
+            "/object/authenticated/recipe-images-private/owner/object-1.webp",
         }),
       ]);
       expect(JSON.stringify(results)).not.toContain(serviceJwt);
       expect(api.planStorageCommitBoundary({
-        publicCommitted: false,
+        databaseOutcome: "rolled_back",
         storageVerifiedBeforeCommit: true,
       })).toEqual({
         commitAllowed: true,
         compensateStorage: true,
+        reconciliationRequired: false,
       });
       expect(api.planStorageCommitBoundary({
-        publicCommitted: true,
+        databaseOutcome: "committed",
         storageVerifiedBeforeCommit: true,
       })).toEqual({
         commitAllowed: true,
         compensateStorage: false,
+        reconciliationRequired: false,
       });
       expect(() => api.planStorageCommitBoundary({
-        publicCommitted: true,
+        databaseOutcome: "committed",
         storageVerifiedBeforeCommit: false,
       })).toThrow(/must verify before public commit/u);
     } finally {
@@ -615,8 +718,42 @@ describe("hybrid production legacy data migration plan", () => {
     );
 
     expect(cli).toMatch(
-      /const storageEvidence = storageMutation\.evidence;[\s\S]*executePublicMigration/u,
+      /validateStorageMigrationEvidence[\s\S]*executePublicMigration/u,
     );
+    const storageValidation = cli.indexOf(
+      "storageEvidence = validateStorageMigrationEvidence",
+    );
+    const publicExecution = cli.indexOf(
+      "const execution = executePublicMigration",
+    );
+    expect(storageValidation).toBeGreaterThan(-1);
+    expect(publicExecution).toBeGreaterThan(storageValidation);
+    expect(cli.slice(publicExecution)).not.toContain(
+      "validateStorageMigrationEvidence",
+    );
+    expect(cli.slice(publicExecution)).not.toContain(
+      "catalogSnapshot(target)",
+    );
+    expect(cli).toContain("probePublicMigrationAttempt");
+    expect(cli).toMatch(
+      /psql\(target, sql,[\s\S]*applicationName:[\s\S]*attempt\.applicationName/u,
+    );
+    expect(cli).toMatch(
+      /const first = probePublicMigrationAttemptOnce[\s\S]*const second = probePublicMigrationAttemptOnce/u,
+    );
+    expect(cli).not.toContain("storageEvidence[0]");
+    expect(cli).not.toContain("storagePairs[0]");
+    expect(cli).not.toContain("publicCommitted");
     expect(cli).not.toContain("storageMutation.verify()");
+    expect(cli).toContain(
+      "remote-auth-provider-revision-cas-not-evaluated",
+    );
+    expect(cli).toContain("publication_safe: false");
+    expect(
+      readFileSync(
+        "scripts/lib/hybrid-production-data-migration.mjs",
+        "utf8",
+      ),
+    ).not.toContain("image/jpeg");
   });
 });
