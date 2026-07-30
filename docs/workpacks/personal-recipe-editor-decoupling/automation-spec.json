@@ -37,7 +37,9 @@
     ],
     "verify_commands": [
       "pnpm exec vitest run tests/personal-recipe-editor-hybrid-contract-sync.test.ts",
+      "pnpm exec vitest run tests/personal-recipe-editor-hybrid-verifier.test.ts",
       "pnpm exec vitest run tests/personal-recipe-editor-permissions.test.ts tests/personal-recipe-editor-contract.test.ts",
+      "node scripts/generate-hybrid-authority-inventories.mjs --check",
       "pnpm verify:backend",
       "pnpm validate:source-of-truth-sync",
       "pnpm validate:workflow-v2",
