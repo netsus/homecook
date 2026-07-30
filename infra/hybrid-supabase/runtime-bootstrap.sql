@@ -774,6 +774,44 @@ begin
           )
         )
         or (
+          v_attestation_scope = 'gamification-projection'
+          and (
+            (
+              v_method = 'GET'
+              and v_path in (
+                '/recipes',
+                '/shopping_lists',
+                '/user_achievement_awards',
+                '/user_badge_awards',
+                '/user_growth_activity_events',
+                '/user_progress_events',
+                '/user_progress_notifications',
+                '/user_progress_summary',
+                '/user_quest_progress'
+              )
+            )
+            or (
+              v_method = 'POST'
+              and v_path in (
+                '/user_achievement_awards',
+                '/user_badge_awards',
+                '/user_progress_notifications',
+                '/user_progress_summary',
+                '/user_quest_progress'
+              )
+            )
+            or (
+              v_method = 'PATCH'
+              and v_path in (
+                '/user_achievement_awards',
+                '/user_badge_awards',
+                '/user_progress_notifications',
+                '/user_quest_progress'
+              )
+            )
+          )
+        )
+        or (
           v_attestation_scope = 'recipe-image'
           and v_method = 'POST'
           and v_path in (

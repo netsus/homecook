@@ -71,6 +71,20 @@ const INTERNAL_SCOPE_RULES = Object.freeze({
       "/rest/v1/users",
     ]),
   },
+  "gamification-projection": {
+    methods: new Set(["GET", "PATCH", "POST"]),
+    paths: new Set([
+      "/rest/v1/recipes",
+      "/rest/v1/shopping_lists",
+      "/rest/v1/user_achievement_awards",
+      "/rest/v1/user_badge_awards",
+      "/rest/v1/user_growth_activity_events",
+      "/rest/v1/user_progress_events",
+      "/rest/v1/user_progress_notifications",
+      "/rest/v1/user_progress_summary",
+      "/rest/v1/user_quest_progress",
+    ]),
+  },
   "not-found-feedback": {
     methods: new Set(["POST"]),
     paths: new Set([
@@ -581,6 +595,21 @@ function isExactInternalScopeRequest(scope, rule, method, pathname) {
         || pathname === "/rest/v1/operational_events"
       );
   }
+  if (scope === "gamification-projection") {
+    if (
+      pathname === "/rest/v1/recipes"
+      || pathname === "/rest/v1/shopping_lists"
+      || pathname === "/rest/v1/user_growth_activity_events"
+      || pathname === "/rest/v1/user_progress_events"
+    ) {
+      return method === "GET";
+    }
+    if (pathname === "/rest/v1/user_progress_summary") {
+      return method === "GET" || method === "POST";
+    }
+    return rule.paths.has(pathname)
+      && (method === "GET" || method === "PATCH" || method === "POST");
+  }
   if (scope !== "recipe-image") {
     return rule.methods.has(method) && rule.paths.has(pathname);
   }
@@ -629,7 +658,11 @@ function isInternalControlPlaneRequest(request, requestUrl, accessToken, config)
   const method = (request.method ?? "GET").toUpperCase();
   return Boolean(
     rule
-    && (requestUrl.search === "" || scope === "admin-data")
+    && (
+      requestUrl.search === ""
+      || scope === "admin-data"
+      || scope === "gamification-projection"
+    )
     && isExactInternalScopeRequest(
       scope,
       rule,

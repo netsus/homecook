@@ -334,6 +334,7 @@ type LocalInternalScope =
   | "admin-data"
   | "auth-callback"
   | "auth-refresh"
+  | "gamification-projection"
   | "not-found-feedback"
   | "operational-event"
   | "recipe-image"
@@ -557,6 +558,25 @@ export function createRecipeImageInternalClient() {
         from: exactInternalFrom(client, new Set(["operational_events"])),
         rpc: client.rpc.bind(client),
         storage: client.storage,
+      }
+    : null;
+}
+
+export function createGamificationProjectionInternalClient() {
+  const client = createScopedDataServiceRoleClient("gamification-projection");
+  return client
+    ? {
+        from: exactInternalFrom(client, new Set([
+          "recipes",
+          "shopping_lists",
+          "user_achievement_awards",
+          "user_badge_awards",
+          "user_growth_activity_events",
+          "user_progress_events",
+          "user_progress_notifications",
+          "user_progress_summary",
+          "user_quest_progress",
+        ])),
       }
     : null;
 }

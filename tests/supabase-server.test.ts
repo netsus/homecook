@@ -173,6 +173,8 @@ describe("supabase server helpers", () => {
     server.createAuthRefreshInternalDataClient();
     server.createSessionLogoutInternalDataClient();
     const imageClient = server.createRecipeImageInternalClient();
+    const gamificationClient =
+      server.createGamificationProjectionInternalClient();
     const lifecycleClient = server.createAccountLifecycleInternalRpcClient();
     server.createYoutubeIngredientRegistrationInternalRpcClient();
     const adminClient = server.createAdminDataInternalClient();
@@ -185,6 +187,7 @@ describe("supabase server helpers", () => {
       "auth-refresh",
       "session-logout",
       "recipe-image",
+      "gamification-projection",
       "account-lifecycle",
       "youtube-ingredient-registration",
       "admin-data",
@@ -192,6 +195,11 @@ describe("supabase server helpers", () => {
       "operational-event",
     ]);
     expect(() => imageClient?.from("users")).toThrow(
+      "Internal Data scope denied table: users",
+    );
+    expect(() => gamificationClient?.from("user_progress_summary"))
+      .not.toThrow();
+    expect(() => gamificationClient?.from("users")).toThrow(
       "Internal Data scope denied table: users",
     );
     expect(() => lifecycleClient?.from("recipes")).toThrow(

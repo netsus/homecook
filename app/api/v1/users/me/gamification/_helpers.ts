@@ -7,7 +7,10 @@ import {
 } from "@/lib/server/user-bootstrap";
 import type { UserGamificationDbClient } from "@/lib/server/user-gamification";
 import type { UserProgressDbClient } from "@/lib/server/user-progress";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import {
+  createGamificationProjectionInternalClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 
 export async function createAuthedGamificationClient(fallbackMessage: string) {
   let routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>;
@@ -40,21 +43,10 @@ export async function createAuthedGamificationClient(fallbackMessage: string) {
     };
   }
 
-  let dbClient: UserGamificationDbClient & UserProgressDbClient & UserBootstrapDbClient;
+  const bootstrapClient = routeClient as unknown as UserBootstrapDbClient;
   try {
-    dbClient = routeClient as unknown as
-      UserGamificationDbClient & UserProgressDbClient & UserBootstrapDbClient;
-  } catch {
-    return {
-      response: fail("INTERNAL_ERROR", fallbackMessage, 500),
-      dbClient: null,
-      user: null,
-    };
-  }
-
-  try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
+    await ensurePublicUserRow(bootstrapClient, user);
+    await ensureUserBootstrapState(bootstrapClient, user.id);
   } catch (bootstrapError) {
     return {
       response: fail(
@@ -62,6 +54,22 @@ export async function createAuthedGamificationClient(fallbackMessage: string) {
         formatBootstrapErrorMessage(bootstrapError, fallbackMessage),
         500,
       ),
+      dbClient: null,
+      user: null,
+    };
+  }
+
+  let dbClient: UserGamificationDbClient & UserProgressDbClient;
+  try {
+    const internalClient = createGamificationProjectionInternalClient();
+    if (!internalClient) {
+      throw new Error("gamification projection client is unavailable");
+    }
+    dbClient = internalClient as unknown as
+      UserGamificationDbClient & UserProgressDbClient;
+  } catch {
+    return {
+      response: fail("INTERNAL_ERROR", fallbackMessage, 500),
       dbClient: null,
       user: null,
     };

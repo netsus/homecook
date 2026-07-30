@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
-const createServiceRoleClient = vi.fn();
+const createGamificationProjectionInternalClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -16,8 +16,8 @@ const markUserGamificationNotificationsSeen = vi.fn();
 const dismissUserGamificationTutorialQuest = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
+  createGamificationProjectionInternalClient,
   createRouteHandlerClient,
-  createServiceRoleClient,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -55,14 +55,14 @@ describe("user gamification routes", () => {
   beforeEach(() => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
-    createServiceRoleClient.mockReset();
+    createGamificationProjectionInternalClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     readUserGamification.mockReset();
     markUserGamificationNotificationsSeen.mockReset();
     dismissUserGamificationTutorialQuest.mockReset();
-    createServiceRoleClient.mockReturnValue(null);
+    createGamificationProjectionInternalClient.mockReturnValue({ from: vi.fn() });
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
   });
@@ -131,13 +131,38 @@ describe("user gamification routes", () => {
     expect(readUserGamification).not.toHaveBeenCalled();
   });
 
-  it("returns the documented gamification envelope for an authenticated user", async () => {
+  it("fails closed when the scoped gamification client is unavailable", async () => {
     const routeClient = {
       auth: {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
     };
     createRouteHandlerClient.mockResolvedValue(routeClient);
+    createGamificationProjectionInternalClient.mockReturnValue(null);
+
+    const { GET } = await importReadRoute();
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "INTERNAL_ERROR" },
+    });
+    expect(ensurePublicUserRow).toHaveBeenCalledWith(routeClient, { id: "user-1" });
+    expect(readUserGamification).not.toHaveBeenCalled();
+  });
+
+  it("returns the documented gamification envelope for an authenticated user", async () => {
+    const routeClient = {
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+    };
+    const internalClient = { from: vi.fn() };
+    createRouteHandlerClient.mockResolvedValue(routeClient);
+    createGamificationProjectionInternalClient.mockReturnValue(internalClient);
     readUserGamification.mockResolvedValue({
       data: {
         level: {
@@ -179,7 +204,9 @@ describe("user gamification routes", () => {
       },
       error: null,
     });
-    expect(readUserGamification).toHaveBeenCalledWith(routeClient, "user-1");
+    expect(ensurePublicUserRow).toHaveBeenCalledWith(routeClient, { id: "user-1" });
+    expect(ensureUserBootstrapState).toHaveBeenCalledWith(routeClient, "user-1");
+    expect(readUserGamification).toHaveBeenCalledWith(internalClient, "user-1");
   });
 
   it("rejects malformed notification seen bodies", async () => {
@@ -211,7 +238,9 @@ describe("user gamification routes", () => {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
     };
+    const internalClient = { from: vi.fn() };
     createRouteHandlerClient.mockResolvedValue(routeClient);
+    createGamificationProjectionInternalClient.mockReturnValue(internalClient);
     markUserGamificationNotificationsSeen.mockResolvedValue({
       data: {
         seen_notification_ids: ["550e8400-e29b-41d4-a716-446655440001"],
@@ -236,7 +265,7 @@ describe("user gamification routes", () => {
       },
       error: null,
     });
-    expect(markUserGamificationNotificationsSeen).toHaveBeenCalledWith(routeClient, "user-1", [
+    expect(markUserGamificationNotificationsSeen).toHaveBeenCalledWith(internalClient, "user-1", [
       "550e8400-e29b-41d4-a716-446655440001",
       "550e8400-e29b-41d4-a716-446655440002",
     ]);
@@ -273,7 +302,9 @@ describe("user gamification routes", () => {
         getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
       },
     };
+    const internalClient = { from: vi.fn() };
     createRouteHandlerClient.mockResolvedValue(routeClient);
+    createGamificationProjectionInternalClient.mockReturnValue(internalClient);
     dismissUserGamificationTutorialQuest.mockResolvedValue({
       data: {
         quest_key: "first_shopping_done",
@@ -298,7 +329,7 @@ describe("user gamification routes", () => {
       error: null,
     });
     expect(dismissUserGamificationTutorialQuest).toHaveBeenCalledWith(
-      routeClient,
+      internalClient,
       "user-1",
       "first_shopping_done",
     );

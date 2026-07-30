@@ -86,6 +86,10 @@ const INTERNAL_OPERATION_ALLOWLIST = new Map([
     new Set(["app/api/v1/feedback/404/route.ts"]),
   ],
   [
+    "createGamificationProjectionInternalClient",
+    new Set(["app/api/v1/users/me/gamification/_helpers.ts"]),
+  ],
+  [
     "createOperationalEventInternalClient",
     new Set(["lib/server/admin-events.ts"]),
   ],

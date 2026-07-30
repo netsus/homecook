@@ -52,6 +52,10 @@ describe("hybrid authority AST/static gate", () => {
         file: "app/api/v1/users/me/cutover-quarantine-resolution/route.ts",
       },
       {
+        factory: "createGamificationProjectionInternalClient",
+        file: "app/api/v1/users/me/gamification/_helpers.ts",
+      },
+      {
         factory: "createAccountLifecycleInternalRpcClient",
         file: "app/api/v1/users/me/route.ts",
       },
