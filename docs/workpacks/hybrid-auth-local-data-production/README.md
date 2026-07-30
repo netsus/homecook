@@ -194,7 +194,7 @@
   - DB pre-request guard rejects non-remote exact `iss`, non-`authenticated` audience/role, non-UUID `sub`/`session_id`, invalid time claims, non-allowlisted alg/kid
   - User A cannot read/write User B rows
   - local Storage의 `anon`/`authenticated` mutation policy count는 0이고 gateway도 같은 mutation을 upstream 전에 거부한다
-  - Stage 2 source authority gate는 client-reachable runtime에서 `@supabase/ssr`, `@supabase/supabase-js`, `@supabase/storage-js`를 단일 Auth adapter 외에 금지한다
+  - Stage 2 source authority gate는 client-reachable ESM/CommonJS runtime graph(`.ts/.tsx/.mts/.cts/.js/.jsx/.mjs/.cjs`, index 및 TypeScript runtime extension 대입 포함)에서 `@supabase/ssr`, `@supabase/supabase-js`, `@supabase/storage-js`를 단일 Auth adapter 외에 금지하고 해석 불가능한 runtime loader를 fail closed한다
   - Stage 4 Auth-only facade와 exact-origin `/auth/v1/**` transport deny가 browser에 raw Storage capability를 주지 않으며, source/bundle direct syntax inventory는 보조 canary로만 유지한다
   - route/helper inventory proves user route service-role priority/fallback count is 0 and internal allowlist is exact
   - remote application DB/Storage write count remains 0 after local cutover
@@ -218,7 +218,7 @@
 - local Data/Storage is loopback-only.
 - remote Auth JWT ES256/JWKS verification plus exact claim guard is mandatory for local RLS.
 - remote Auth outage는 user-scoped local DB/Storage request를 fail closed하며 JWT 만료 전 allow-until-exp를 허용하지 않는다.
-- Storage user read는 loopback claim-verifying gateway만 통과하고 user mutation은 gateway/RLS에서 deny한다. server recipe image mutation만 exact internal secret/scope로 허용한다.
+  - Storage user read는 loopback claim-verifying gateway만 통과하고 user mutation은 gateway/RLS에서 deny한다. server recipe image mutation과 private takeover object GET만 exact internal secret/scope 및 exact bucket/path로 허용한다.
 - private signing key and refresh token never enter local Data/Storage.
 - private remote identity mirror replaces application-owned `auth.users` direct dependency without raw/profile PII.
 - local `auth.users=0` after restore is intended, not a failure.

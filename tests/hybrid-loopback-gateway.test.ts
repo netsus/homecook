@@ -1,9 +1,10 @@
 import {
+  createHash,
   generateKeyPairSync,
   sign,
   type KeyObject,
 } from "node:crypto";
-import { Readable } from "node:stream";
+import { Readable, Writable } from "node:stream";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -12,6 +13,7 @@ import {
   createGatewayRequestHandler,
   validateConfig,
 } from "@/infra/hybrid-supabase/loopback-gateway.mjs";
+import { RECIPE_IMAGE_MAX_BYTES } from "@/lib/server/recipe-media";
 
 const OWNER_UUID = "11111111-1111-4111-8111-111111111111";
 const SESSION_UUID = "22222222-2222-4222-8222-222222222222";
@@ -71,18 +73,39 @@ function createToken(fixture: SigningFixture) {
 
 function createResponseRecorder() {
   let statusCode = 200;
-  let body = "";
-  return {
-    writeHead(code: number) {
-      statusCode = code;
+  const chunks: Buffer[] = [];
+  let markCompleted: () => void = () => {};
+  const completed = new Promise<void>((resolve) => {
+    markCompleted = resolve;
+  });
+  const response = new Writable({
+    write(chunk, _encoding, callback) {
+      chunks.push(Buffer.from(chunk));
+      callback();
     },
-    end(chunk?: string) {
-      body += chunk ?? "";
-    },
-    snapshot() {
-      return { statusCode, body };
-    },
+  }) as Writable & {
+    completed: Promise<void>;
+    snapshot(): {
+      body: string;
+      bodyBytes: Buffer;
+      statusCode: number;
+    };
+    writeHead(code: number): void;
   };
+  response.once("finish", markCompleted);
+  response.completed = completed;
+  response.writeHead = (code: number) => {
+    statusCode = code;
+  };
+  response.snapshot = () => {
+    const bodyBytes = Buffer.concat(chunks);
+    return {
+      statusCode,
+      body: bodyBytes.toString("utf8"),
+      bodyBytes,
+    };
+  };
+  return response;
 }
 
 function createConfig(overrides: Record<string, string> = {}) {
@@ -274,6 +297,7 @@ describe("hybrid loopback gateway runtime", () => {
       response,
     );
 
+    await response.completed;
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const [, anonymousOptions] = fetchImpl.mock.calls[0] as unknown as [
       string,
@@ -420,6 +444,139 @@ describe("hybrid loopback gateway runtime", () => {
     expect(response.snapshot().statusCode).toBe(200);
   });
 
+  it("downloads only an exact private recipe image through the internal facade without changing bytes", async () => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const objectBody = Buffer.from([
+      0x00, 0xff, 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a,
+    ]);
+    const fetchImpl = vi.fn(async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      expect(String(input)).toBe(
+        "http://storage:5000/object/recipe-images-private/owner/takeover.png",
+      );
+      expect(init?.method).toBe("GET");
+      return new Response(objectBody, {
+        headers: { "content-type": "image/png" },
+        status: 200,
+      });
+    });
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const response = createResponseRecorder();
+
+    await handler(
+      {
+        headers: {
+          authorization: `Bearer ${dataSecret}`,
+          "x-homecook-internal-scope": "recipe-image",
+        },
+        method: "GET",
+        url: "http://gateway.internal/storage/v1/object/recipe-images-private/owner/takeover.png",
+      },
+      response,
+    );
+
+    await response.completed;
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(response.snapshot().statusCode).toBe(200);
+    expect(response.snapshot().bodyBytes).toEqual(objectBody);
+  });
+
+  it.each([
+    {
+      headers: {},
+      label: "missing bearer",
+    },
+    {
+      headers: { authorization: "Bearer local-anon-jwt" },
+      label: "anon bearer",
+    },
+    {
+      headers: {},
+      label: "remote user bearer",
+      validRemoteUser: true,
+    },
+    {
+      headers: {
+        authorization: "Bearer 0123456789abcdef0123456789abcdef",
+      },
+      label: "missing scope",
+    },
+    {
+      headers: {
+        authorization: "Bearer 0123456789abcdef0123456789abcdef",
+        "x-homecook-internal-scope": "admin-data",
+      },
+      label: "wrong scope",
+    },
+    {
+      headers: {
+        authorization: "Bearer wrong-secret",
+        "x-homecook-internal-scope": "recipe-image",
+      },
+      label: "wrong secret",
+    },
+  ])("rejects $label private object GET before any upstream call", async ({
+    headers,
+    validRemoteUser,
+  }) => {
+    const fixture = validRemoteUser ? createSigningFixture() : null;
+    const resolvedHeaders: Record<string, string> = fixture
+      ? { authorization: `Bearer ${createToken(fixture)}` }
+      : headers as Record<string, string>;
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const response = createResponseRecorder();
+
+    await handler(
+      {
+        headers: resolvedHeaders,
+        method: "GET",
+        url: "http://gateway.internal/storage/v1/object/recipe-images-private/owner/takeover.png",
+      },
+      response,
+    );
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(response.snapshot().statusCode).toBe(409);
+  });
+
+  it.each([
+    "/storage/v1/object/recipe-images/owner/public.png",
+    "/storage/v1/object/other-bucket/owner/image.png",
+    "/storage/v1/object/recipe-images-private/",
+  ])("does not widen internal object GET authority to %s", async (path) => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const response = createResponseRecorder();
+
+    await handler(
+      {
+        headers: {
+          authorization: `Bearer ${dataSecret}`,
+          "x-homecook-internal-scope": "recipe-image",
+        },
+        method: "GET",
+        url: `http://gateway.internal${path}`,
+      },
+      response,
+    );
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(response.snapshot().statusCode).toBe(409);
+  });
+
   it.each([
     {
       headers: {},
@@ -552,6 +709,122 @@ describe("hybrid loopback gateway runtime", () => {
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(response.snapshot().statusCode).toBe(200);
+  });
+
+  it.each([
+    {
+      label: "larger than the legacy 1 MiB gateway limit",
+      size: 1_048_576 + 1,
+    },
+    {
+      label: "at the official 5 MiB image limit",
+      size: RECIPE_IMAGE_MAX_BYTES,
+    },
+  ])("forwards a $label binary upload without changing bytes", async ({
+    size,
+  }) => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const requestBody = Buffer.alloc(size, 0xa5);
+    const requestDigest = createHash("sha256")
+      .update(requestBody)
+      .digest("hex");
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      expect(Buffer.isBuffer(init?.body)).toBe(true);
+      const upstreamBody = init?.body as Buffer;
+      expect(upstreamBody.byteLength).toBe(requestBody.byteLength);
+      expect(
+        createHash("sha256").update(upstreamBody).digest("hex"),
+      ).toBe(requestDigest);
+      return new Response(null, { status: 200 });
+    });
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const request = Readable.from([requestBody]) as Readable & {
+      headers: Record<string, string>;
+      method: string;
+      url: string;
+    };
+    request.headers = {
+      authorization: `Bearer ${dataSecret}`,
+      "content-type": "image/png",
+      "x-homecook-internal-scope": "recipe-image",
+    };
+    request.method = "POST";
+    request.url =
+      "http://gateway.internal/storage/v1/object/recipe-images-private/owner/large.png";
+    const response = createResponseRecorder();
+
+    await handler(request, response);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(response.snapshot().statusCode).toBe(200);
+  });
+
+  it("rejects an image body above 5 MiB before Storage upstream", async () => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const request = Readable.from([
+      Buffer.alloc(RECIPE_IMAGE_MAX_BYTES, 0xa5),
+      Buffer.from([0xff]),
+    ]) as Readable & {
+      headers: Record<string, string>;
+      method: string;
+      url: string;
+    };
+    request.headers = {
+      authorization: `Bearer ${dataSecret}`,
+      "content-type": "image/png",
+      "x-homecook-internal-scope": "recipe-image",
+    };
+    request.method = "POST";
+    request.url =
+      "http://gateway.internal/storage/v1/object/recipe-images-private/owner/too-large.png";
+    const response = createResponseRecorder();
+
+    await handler(request, response);
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(response.snapshot().statusCode).toBe(409);
+  });
+
+  it("keeps non-upload internal control-plane bodies capped at 1 MiB", async () => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const request = Readable.from([
+      Buffer.alloc(1_048_576, 0x20),
+      Buffer.from([0x20]),
+    ]) as Readable & {
+      headers: Record<string, string>;
+      method: string;
+      url: string;
+    };
+    request.headers = {
+      authorization: `Bearer ${dataSecret}`,
+      "content-type": "application/json",
+      "x-homecook-internal-scope": "recipe-image",
+    };
+    request.method = "POST";
+    request.url =
+      "http://gateway.internal/storage/v1/object/sign/recipe-images-private/owner/image.png";
+    const response = createResponseRecorder();
+
+    await handler(request, response);
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(response.snapshot().statusCode).toBe(409);
   });
 
   it("rejects general user-data PostgREST access from the callback service scope", async () => {

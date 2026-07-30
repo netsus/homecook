@@ -145,13 +145,35 @@ describe("hybrid authority AST/static gate", () => {
     expect(inventory.browserSupabaseRuntimeImportViolations).toEqual([]);
   });
 
-  it("finds runtime import, re-export, and dynamic import bypasses in the client graph", () => {
+  it("finds ESM, CommonJS, re-export, and dynamic loader bypasses in the client graph", () => {
     const fixtureRoot = path.resolve(
       "tests/fixtures/hybrid-static-bypasses",
     );
     const inventory = inventoryHybridAuthorityPaths(fixtureRoot);
 
-    expect(inventory.browserSupabaseRuntimeImportViolations).toEqual([
+    expect(inventory.browserSupabaseRuntimeImportViolations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: "components/dynamic-binding-client.tsx",
+          kind: "unknown-runtime-dynamic-import",
+        }),
+        expect.objectContaining({
+          file: "components/dynamic-unknown-sdk-client.tsx",
+          kind: "unknown-runtime-dynamic-import",
+        }),
+        expect.objectContaining({
+          file: "components/forbidden-commonjs-client.tsx",
+          kind: "runtime-require",
+          package: "@supabase/supabase-js",
+        }),
+        expect.objectContaining({
+          file: "components/unknown-runtime-loader-client.tsx",
+          kind: "unknown-runtime-dynamic-import",
+        }),
+        expect.objectContaining({
+          file: "components/unknown-runtime-loader-client.tsx",
+          kind: "unknown-runtime-require",
+        }),
       expect.objectContaining({
         file: "components/forbidden-supabase-client.tsx",
         package: "@supabase/ssr",
@@ -164,11 +186,48 @@ describe("hybrid authority AST/static gate", () => {
         file: "stores/forbidden-supabase-barrel.ts",
         package: "@supabase/supabase-js",
       }),
-    ]);
+        expect.objectContaining({
+          file: "stores/forbidden-commonjs-barrel.js",
+          kind: "runtime-require",
+          package: "@supabase/storage-js",
+        }),
+        expect.objectContaining({
+          file: "stores/forbidden-cjs.cjs",
+          kind: "runtime-require",
+          package: "@supabase/supabase-js",
+        }),
+        expect.objectContaining({
+          file: "stores/forbidden-cts.cts",
+          package: "@supabase/supabase-js",
+        }),
+        expect.objectContaining({
+          file: "stores/forbidden-jsx.jsx",
+          package: "@supabase/ssr",
+        }),
+        expect.objectContaining({
+          file: "stores/forbidden-mts.mts",
+          package: "@supabase/supabase-js",
+        }),
+        expect.objectContaining({
+          file: "stores/forbidden-runtime-index/index.cts",
+          package: "@supabase/supabase-js",
+        }),
+      ]),
+    );
+    expect(inventory.browserSupabaseRuntimeImportViolations).toHaveLength(15);
     expect(inventory.browserSupabaseRuntimeImportViolations).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           file: "components/supabase-type-only-client.tsx",
+        }),
+        expect.objectContaining({
+          file: "components/safe-local-runtime-client.tsx",
+        }),
+        expect.objectContaining({
+          file: "lib/api/safe-runtime-mts.mts",
+        }),
+        expect.objectContaining({
+          file: "lib/api/safe-runtime-type.mts",
         }),
       ]),
     );
@@ -194,11 +253,25 @@ describe("hybrid authority AST/static gate", () => {
     );
     expect(inventory.clientReachableFiles).toEqual(
       expect.arrayContaining([
+        "components/commonjs-barrel-client.tsx",
         "components/forbidden-supabase-client.tsx",
         "components/dynamic-client.tsx",
+        "components/runtime-extension-client.tsx",
+        "components/safe-local-runtime-client.tsx",
         "components/supabase-type-only-client.tsx",
+        "components/unknown-runtime-loader-client.tsx",
+        "lib/api/safe-runtime-mts.mts",
+        "stores/forbidden-commonjs-barrel.js",
+        "stores/forbidden-cjs.cjs",
+        "stores/forbidden-cts.cts",
+        "stores/forbidden-jsx.jsx",
+        "stores/forbidden-mts.mts",
+        "stores/forbidden-runtime-index/index.cts",
         "stores/forbidden-supabase-barrel.ts",
       ]),
+    );
+    expect(inventory.clientReachableFiles).not.toContain(
+      "lib/api/safe-runtime-type.mts",
     );
   });
 

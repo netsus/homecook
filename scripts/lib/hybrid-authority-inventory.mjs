@@ -21,20 +21,28 @@ const CLIENT_GRAPH_SKIP_DIRS = new Set([
   "scripts",
   "tests",
 ]);
-const SOURCE_FILE_PATTERN = /\.(ts|tsx|js|mjs|jsx)$/u;
-const DEFAULT_SCAN_ROOTS = ["app", "components", "lib"];
-const FILE_EXTENSIONS = [
+const SOURCE_EXTENSIONS = [
   ".ts",
   ".tsx",
+  ".mts",
+  ".cts",
   ".js",
-  ".mjs",
   ".jsx",
-  "/index.ts",
-  "/index.tsx",
-  "/index.js",
-  "/index.mjs",
-  "/index.jsx",
+  ".mjs",
+  ".cjs",
 ];
+const SOURCE_FILE_PATTERN = /\.(?:[cm]?[jt]s|[jt]sx)$/u;
+const DEFAULT_SCAN_ROOTS = ["app", "components", "lib"];
+const EXPLICIT_RUNTIME_EXTENSION_SUBSTITUTIONS = new Map([
+  [".js", [".ts", ".tsx", ".js", ".jsx"]],
+  [".jsx", [".tsx", ".jsx"]],
+  [".mjs", [".mts", ".mjs"]],
+  [".cjs", [".cts", ".cjs"]],
+  [".ts", [".ts"]],
+  [".tsx", [".tsx"]],
+  [".mts", [".mts"]],
+  [".cts", [".cts"]],
+]);
 const BROWSER_SUPABASE_RUNTIME_PACKAGES = new Set([
   "@supabase/ssr",
   "@supabase/storage-js",
@@ -160,9 +168,20 @@ function listSourceFiles(repoRoot, scanRoots = DEFAULT_SCAN_ROOTS) {
 }
 
 function scriptKindFor(filePath) {
-  return filePath.endsWith(".tsx") || filePath.endsWith(".jsx")
-    ? ts.ScriptKind.TSX
-    : ts.ScriptKind.TS;
+  if (filePath.endsWith(".tsx")) {
+    return ts.ScriptKind.TSX;
+  }
+  if (filePath.endsWith(".jsx")) {
+    return ts.ScriptKind.JSX;
+  }
+  if (
+    filePath.endsWith(".js")
+    || filePath.endsWith(".mjs")
+    || filePath.endsWith(".cjs")
+  ) {
+    return ts.ScriptKind.JS;
+  }
+  return ts.ScriptKind.TS;
 }
 
 function unwrapExpression(node) {
@@ -238,6 +257,18 @@ function isClientModule(sourceFile) {
   return false;
 }
 
+function isCommonJsRequireCall(node) {
+  return ts.isCallExpression(node)
+    && ts.isIdentifier(unwrapExpression(node.expression))
+    && unwrapExpression(node.expression).text === "require"
+    && node.arguments.length === 1;
+}
+
+function staticModuleSpecifier(node) {
+  const specifier = unwrapExpression(node);
+  return ts.isStringLiteralLike(specifier) ? specifier.text : null;
+}
+
 function resolveImportSource(repoRoot, importerDir, rawSpecifier) {
   if (!rawSpecifier) {
     return null;
@@ -261,15 +292,24 @@ function tryResolveModulePath(basePath) {
     return basePath;
   }
 
-  for (const extension of FILE_EXTENSIONS) {
-    const withExt = `${basePath}${extension}`;
+  const explicitExtension = path.extname(basePath);
+  const substitutions = EXPLICIT_RUNTIME_EXTENSION_SUBSTITUTIONS.get(
+    explicitExtension,
+  );
+  const stem = substitutions
+    ? basePath.slice(0, -explicitExtension.length)
+    : basePath;
+  const extensionCandidates = substitutions ?? SOURCE_EXTENSIONS;
+
+  for (const extension of extensionCandidates) {
+    const withExt = `${stem}${extension}`;
     if (fs.existsSync(withExt) && fs.statSync(withExt).isFile()) {
       return withExt;
     }
   }
 
   const indexPath = path.join(basePath, "index");
-  for (const extension of [".ts", ".tsx", ".js", ".mjs", ".jsx"]) {
+  for (const extension of SOURCE_EXTENSIONS) {
     const indexed = `${indexPath}${extension}`;
     if (fs.existsSync(indexed) && fs.statSync(indexed).isFile()) {
       return indexed;
@@ -393,6 +433,18 @@ function collectClientImportGraph(repoRoot, files) {
       ) {
         addRuntimeEdge(node.moduleSpecifier.text);
       } else if (
+        ts.isImportEqualsDeclaration(node)
+        && !node.isTypeOnly
+        && ts.isExternalModuleReference(node.moduleReference)
+        && node.moduleReference.expression
+      ) {
+        const specifier = staticModuleSpecifier(
+          node.moduleReference.expression,
+        );
+        if (specifier !== null) {
+          addRuntimeEdge(specifier);
+        }
+      } else if (
         ts.isCallExpression(node)
         && ts.isImportCall(node)
         && node.arguments.length === 1
@@ -400,6 +452,11 @@ function collectClientImportGraph(repoRoot, files) {
         const specifier = unwrapExpression(node.arguments[0]);
         if (ts.isStringLiteralLike(specifier)) {
           addRuntimeEdge(specifier.text);
+        }
+      } else if (isCommonJsRequireCall(node)) {
+        const specifier = staticModuleSpecifier(node.arguments[0]);
+        if (specifier !== null) {
+          addRuntimeEdge(specifier);
         }
       }
 
@@ -503,16 +560,37 @@ function browserSupabaseRuntimeImportViolations(
       ) {
         record(node, node.moduleSpecifier.text, "runtime-re-export");
       } else if (
+        ts.isImportEqualsDeclaration(node)
+        && !node.isTypeOnly
+        && ts.isExternalModuleReference(node.moduleReference)
+        && node.moduleReference.expression
+      ) {
+        const specifier = staticModuleSpecifier(
+          node.moduleReference.expression,
+        );
+        if (
+          specifier !== null
+          && isForbiddenPackage(specifier)
+        ) {
+          record(node, specifier, "runtime-import-equals");
+        }
+      } else if (
         ts.isCallExpression(node)
         && ts.isImportCall(node)
         && node.arguments.length === 1
       ) {
-        const specifier = unwrapExpression(node.arguments[0]);
-        if (
-          ts.isStringLiteralLike(specifier)
-          && isForbiddenPackage(specifier.text)
-        ) {
-          record(node, specifier.text, "runtime-dynamic-import");
+        const specifier = staticModuleSpecifier(node.arguments[0]);
+        if (specifier === null) {
+          record(node, "<dynamic>", "unknown-runtime-dynamic-import");
+        } else if (isForbiddenPackage(specifier)) {
+          record(node, specifier, "runtime-dynamic-import");
+        }
+      } else if (isCommonJsRequireCall(node)) {
+        const specifier = staticModuleSpecifier(node.arguments[0]);
+        if (specifier === null) {
+          record(node, "<dynamic>", "unknown-runtime-require");
+        } else if (isForbiddenPackage(specifier)) {
+          record(node, specifier, "runtime-require");
         }
       }
       ts.forEachChild(node, visit);

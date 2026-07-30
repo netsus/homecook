@@ -1,5 +1,7 @@
 export const RECIPE_IMAGE_BUCKET = "recipe-images";
-export const RECIPE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+export {
+  RECIPE_IMAGE_MAX_BYTES,
+} from "@/lib/server/recipe-media-runtime.mjs";
 
 const ALLOWED_IMAGE_TYPES = {
   "image/jpeg": "jpg",

@@ -329,6 +329,8 @@ function gatewayExec(
     ...composeArgs,
     "exec",
     "-T",
+    "--workdir",
+    "/workspace",
     ...Object.entries(extraEnv).flatMap(([name, value]) => ["-e", `${name}=${value}`]),
     "gateway",
     "node",
@@ -658,6 +660,106 @@ composeRun("isolated hybrid integration runtime measured", () => {
           "utf8",
         ),
       });
+      run("docker", [
+        ...composeArgs,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "supabase_admin",
+        "-d",
+        "homecook_hybrid_test",
+      ], {
+        input: `
+          create policy hybrid_test_recipe_images_authenticated_insert
+            on storage.objects
+            for insert
+            to authenticated
+            with check (bucket_id = 'recipe-images');
+          create policy hybrid_test_recipe_images_private_anon_all
+            on storage.objects
+            for all
+            to anon
+            using (bucket_id = 'recipe-images-private')
+            with check (bucket_id = 'recipe-images-private');
+        `,
+      });
+      run("docker", [
+        ...composeArgs,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "supabase_admin",
+        "-d",
+        "homecook_hybrid_test",
+      ], {
+        input: readFileSync(
+          "supabase/migrations/20260730223000_hybrid_storage_browser_mutation_deny.sql",
+          "utf8",
+        ),
+      });
+      const recipeImageMutationPolicyCounts = run("docker", [
+        ...composeArgs,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-At",
+        "-U",
+        "supabase_admin",
+        "-d",
+        "homecook_hybrid_test",
+        "-c",
+        `
+          select concat_ws(
+            ':',
+            count(*) filter (
+              where roles @> array['anon']::name[]
+                and (
+                  coalesce(qual, '') ilike '%recipe-images%'
+                  or coalesce(with_check, '') ilike '%recipe-images%'
+                )
+                and coalesce(qual, '') not ilike '%recipe-images-private%'
+                and coalesce(with_check, '') not ilike '%recipe-images-private%'
+            ),
+            count(*) filter (
+              where roles @> array['authenticated']::name[]
+                and (
+                  coalesce(qual, '') ilike '%recipe-images%'
+                  or coalesce(with_check, '') ilike '%recipe-images%'
+                )
+                and coalesce(qual, '') not ilike '%recipe-images-private%'
+                and coalesce(with_check, '') not ilike '%recipe-images-private%'
+            ),
+            count(*) filter (
+              where roles @> array['anon']::name[]
+                and (
+                  coalesce(qual, '') ilike '%recipe-images-private%'
+                  or coalesce(with_check, '') ilike '%recipe-images-private%'
+                )
+            ),
+            count(*) filter (
+              where roles @> array['authenticated']::name[]
+                and (
+                  coalesce(qual, '') ilike '%recipe-images-private%'
+                  or coalesce(with_check, '') ilike '%recipe-images-private%'
+                )
+            )
+          )
+          from pg_catalog.pg_policies
+          where schemaname = 'storage'
+            and tablename = 'objects'
+            and cmd in ('INSERT', 'UPDATE', 'DELETE', 'ALL');
+        `,
+      ]).trim();
+      expect(recipeImageMutationPolicyCounts).toBe("0:0:0:0");
 
       const bootstrapResult = gatewayExec(
         composeArgs,
@@ -1245,7 +1347,23 @@ composeRun("isolated hybrid integration runtime measured", () => {
       const internalStorageLifecycle = gatewayExec(
         composeArgs,
         `
+          const { realpathSync } = await import("node:fs");
+          const { createRequire } = await import("node:module");
+          const { pathToFileURL } = await import("node:url");
+          const requireFromSupabase = createRequire(
+            realpathSync("node_modules/@supabase/supabase-js/package.json"),
+          );
+          const storageEntry = requireFromSupabase.resolve(
+            "@supabase/storage-js",
+          );
+          const { StorageClient } = await import(
+            pathToFileURL(storageEntry).href
+          );
           const objectPath = \`\${process.env.OWNER_A}/internal-boundary.png\`;
+          const objectBytes = Buffer.from(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2n5QAAAAASUVORK5CYII=",
+            "base64",
+          );
           const headers = {
             authorization: \`Bearer \${process.env.DATA_SECRET}\`,
             "x-homecook-internal-scope": "recipe-image",
@@ -1258,12 +1376,23 @@ composeRun("isolated hybrid integration runtime measured", () => {
                 ...headers,
                 "content-type": "image/png",
               },
-              body: Buffer.from(
-                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2n5QAAAAASUVORK5CYII=",
-                "base64",
-              ),
+              body: objectBytes,
             },
           );
+          const storageClient = new StorageClient(
+            "http://127.0.0.1:8080/storage/v1",
+            {
+              apikey: process.env.DATA_SECRET,
+              authorization: \`Bearer \${process.env.DATA_SECRET}\`,
+              "x-homecook-internal-scope": "recipe-image",
+            },
+          );
+          const download = await storageClient
+            .from("recipe-images-private")
+            .download(objectPath);
+          const downloadedBytes = download.data
+            ? Buffer.from(await download.data.arrayBuffer())
+            : null;
           const signResponse = await fetch(
             \`http://127.0.0.1:8080/storage/v1/object/sign/recipe-images-private/\${objectPath}\`,
             {
@@ -1291,6 +1420,12 @@ composeRun("isolated hybrid integration runtime measured", () => {
               status: uploadResponse.status,
               body: await uploadResponse.text(),
             },
+            download: {
+              error: download.error?.message ?? null,
+              matches:
+                downloadedBytes !== null
+                && downloadedBytes.equals(objectBytes),
+            },
             sign: {
               status: signResponse.status,
               body: await signResponse.text(),
@@ -1308,11 +1443,20 @@ composeRun("isolated hybrid integration runtime measured", () => {
       );
       const parsedInternalStorageLifecycle = JSON.parse(
         internalStorageLifecycle,
-      ) as Record<string, { status: number; body: string }>;
+      ) as {
+        download: { error: string | null; matches: boolean };
+        remove: { status: number; body: string };
+        sign: { status: number; body: string };
+        upload: { status: number; body: string };
+      };
       expect(
         parsedInternalStorageLifecycle.upload.status,
         parsedInternalStorageLifecycle.upload.body,
       ).toBe(200);
+      expect(parsedInternalStorageLifecycle.download).toEqual({
+        error: null,
+        matches: true,
+      });
       expect(
         parsedInternalStorageLifecycle.sign.status,
         parsedInternalStorageLifecycle.sign.body,
