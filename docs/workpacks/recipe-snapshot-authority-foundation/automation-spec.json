@@ -83,6 +83,7 @@
       "no-unmerged-server-production-migration-or-production-write"
     ],
     "verify_commands": [
+      "pnpm exec vitest run tests/recipe-snapshot-authority-hybrid-verifier.test.ts",
       "pnpm exec vitest run tests/recipe-snapshot-authority.test.ts tests/recipe-snapshot-readers.test.ts tests/recipe-snapshot-security.test.ts tests/recipe-snapshot-account-delete.test.ts",
       "pnpm test:recipe-snapshot-authority:postgres",
       "pnpm verify:backend",
@@ -101,6 +102,7 @@
       "tests/recipe-snapshot-account-delete.test.ts",
       "tests/recipe-snapshot-authority-postgres.integration.test.ts",
       "tests/recipe-snapshot-hybrid-contract-sync.test.ts",
+      "tests/recipe-snapshot-authority-hybrid-verifier.test.ts",
       "content exact nutrition ID only and no duplicate nutrition payload evidence",
       "nutrition NOT NULL RESTRICT ordinary unique current partial unique and predicate-free conflict evidence",
       "private owner-recipe pair public owner-null shared and mismatch-zero evidence",

@@ -54,7 +54,7 @@
 
 ## Verification / Delivery
 
-- [ ] the hybrid relock records a failing contract-sync RED before docs repair, then runs current docs validators, focused workflow tests, lint/typecheck, local dependency audit and diff check; current-head workflows are observed separately <!-- omo:id=accept-snapshot-stage1-gate;stage=2;scope=shared;review=3,6 -->
+- [x] the hybrid relock records a failing contract-sync RED before docs repair, then runs current docs validators, focused workflow tests, lint/typecheck, local dependency audit and diff check; current-head workflows are observed separately <!-- omo:id=accept-snapshot-stage1-gate;stage=2;scope=shared;review=3,6 -->
 - [x] Stage 2 writes focused tests first and records RED before migration, trigger, reader, backfill or cleanup implementation <!-- omo:id=accept-snapshot-tdd-red;stage=2;scope=backend;review=3,6 -->
 - [ ] PostgreSQL existing/fresh/replay covers FK/unique/check/trigger/grant, writer conflict, backfill/mirror/XOR and account cleanup order <!-- omo:id=accept-snapshot-postgres;stage=2;scope=backend;review=3,6 -->
 - [ ] current/immediate-previous rollback smoke and old-shape zero telemetry are recorded for the exact compatibility release <!-- omo:id=accept-snapshot-release-evidence;stage=2;scope=shared;review=3,6 -->

@@ -9,7 +9,7 @@ mutable recipe current가 바뀌어도 기존 Meal·요리 세션·batch·식사
 ## Branches
 
 - Stage 1 docs: `docs/recipe-snapshot-authority-foundation`
-- Stage 2 backend/data: `feature/be-recipe-snapshot-authority-foundation`
+- Stage 2 hybrid delta/reverification: `fix/recipe-snapshot-hybrid-verifier`
 - Stage 4 existing-consumer compatibility: `feature/fe-recipe-snapshot-authority-foundation`
 - Release train: B. #3 runtime과 기존 recipe nutrition snapshot release는 모두 병합됐다. 이 relock은 이미 병합된 #4 Stage 2/4 구현을 hybrid delta/reverification 기준으로 다시 검증하기 위한 문서 선행 작업이다.
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer와 five-axis reviewer는 서로 다른 Codex 세션을 사용하며 Claude는 사용하지 않는다.
@@ -157,9 +157,9 @@ Schema Change:
 
 ### Relock gate and remaining artifacts
 
-- this docs PR records RED in `tests/recipe-snapshot-hybrid-contract-sync.test.ts`, then runs current SOT/workflow/workpack/automation/bookkeeping validators, focused workflow Vitest, lint, typecheck, dependency audit and diff check. GitGuardian and current-head repository workflows are observed separately.
+- PR #1231 recorded RED in `tests/recipe-snapshot-hybrid-contract-sync.test.ts`, then passed the current SOT/workflow/workpack/automation/bookkeeping validators, focused workflow Vitest, lint, typecheck, dependency audit, diff check and current-head repository workflows.
 - PR #1218 already supplied the original Stage 2 RED/GREEN implementation and PR #1219 supplied the Stage 4 consumer regression. Their evidence remains historical and must not be represented as new work.
-- the missing hybrid verifier, hybrid exact-epoch cleanup regression and compatibility-release evidence are required future hybrid delta/reverification gates. They are not claimed to exist or pass in this relock.
+- the hybrid verifier is now implemented test-first on `fix/recipe-snapshot-hybrid-verifier`; merged-exact-SHA execution, hybrid exact-epoch cleanup regression and compatibility-release evidence remain required gates and are not claimed complete here.
 
 ### Fixture and matrix
 
