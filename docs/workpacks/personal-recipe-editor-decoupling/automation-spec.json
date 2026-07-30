@@ -166,19 +166,7 @@
       ]
     }
   },
-  "external_smokes": [
-    "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only from a merged exact SHA only",
-    "local application Data/Storage remains authoritative while remote access is limited to the Auth control-plane",
-    "local auth.users=0, active identity epoch, session-liveness HMAC binding and service-role user path 0",
-    "remote application DB/Storage writes remain zero and external personal write remains dark",
-    "current and immediate-previous deployment keep personal editor capability dark until approved activation",
-    "public anonymous login round-trip restores same recipe and fork draft action",
-    "public source remains byte-for-byte/revision unchanged after fork fixture while new private detail opens",
-    "owner-private edit and delete CTA never appear to another owner or deleted/quarantined public reader",
-    "MYPAGE and RECIPEBOOK_DETAIL keep existing item-to-RECIPE_DETAIL navigation",
-    "390px and 320px screenshot/Figma authority evidence from exact implementation head",
-    "production write activation remains zero until #6 and snapshot-v2 gate"
-  ],
+  "external_smokes": [],
   "blocked_conditions": [
     "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
     "stage1-author-attempts-to-self-approve",
@@ -188,6 +176,7 @@
     "plan-sha-or-line-count-drift",
     "recipe-visibility-or-media-tag-predecessor-not-merged-before-implementation",
     "recipe-detail-state-matrix-or-stage1-wireframe-missing",
+    "stage4-ready-before-external-smokes-relocked-from-work-item-full-lifecycle-gate",
     "loading-empty-read-only-401-or-404-visual-state-missing",
     "primary-secondary-destructive-hierarchy-or-320-wrap-order-missing",
     "design-critic-or-product-design-authority-plan-missing",
@@ -216,5 +205,5 @@
     "backend": 2,
     "frontend": 6
   },
-  "notes": "This hybrid Stage 1 relock preserves the approved master plan as editor/product design history and supersedes only its local-only Auth/deployment assumptions with the current remote Auth control-plane plus local application Data/Storage contract. #3 merged as PR #1228 and the media/tag predecessors are merged. #4 PR #1218 Stage 2 and PR #1219 Stage 4 remain historical implementation, while its hybrid delta/reverification stays in progress and is not a #5 predecessor. This slice makes no product API, DB, route, field, status or error change and does not implement #6 writes, #7 propagation or #8 activation. Stage 1 runs the focused contract-sync RED/GREEN plus docs validators/workflow tests/lint/typecheck/audit/diff; the hybrid verifier, component, Playwright, exploratory QA, visual/a11y and authority commands are future Stage 4/release artifacts. Roadmap stays docs, workflow lifecycle stays planned, approval stays not_started, remote application DB/Storage writes remain zero and external personal write remains dark."
+  "notes": "This hybrid Stage 1 relock preserves the approved master plan as editor/product design history and supersedes only its local-only Auth/deployment assumptions with the current remote Auth control-plane plus local application Data/Storage contract. #3 merged as PR #1228 and the media/tag predecessors are merged. #4 PR #1218 Stage 2 and PR #1219 Stage 4 remain historical implementation, while its hybrid delta/reverification stays in progress and is not a #5 predecessor. This slice makes no product API, DB, route, field, status or error change and does not implement #6 writes, #7 propagation or #8 activation. Stage 1 runs the focused contract-sync RED/GREEN plus docs validators/workflow tests/lint/typecheck/audit/diff. Global external_smokes stays empty during the test-only Stage 2 because the preserved full-lifecycle work-item gate contains merged-SHA-only, Stage 4 UI and visual evidence that cannot truthfully run before backend Ready; Stage 4 must relock those entries from the work-item before frontend Ready. The hybrid verifier, component, Playwright, exploratory QA, visual/a11y and authority commands are future Stage 4/release artifacts. Roadmap stays docs, workflow lifecycle stays planned, approval stays not_started, remote application DB/Storage writes remain zero and external personal write remains dark."
 }

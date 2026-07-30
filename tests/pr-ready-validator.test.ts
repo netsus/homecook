@@ -13,7 +13,11 @@ function writeFixtureFile(rootDir: string, relativePath: string, contents: strin
   writeFileSync(filePath, contents);
 }
 
-function writeAutomationSpec(rootDir: string, slice: string) {
+function writeAutomationSpec(
+  rootDir: string,
+  slice: string,
+  externalSmokes = ["pnpm dev:local-supabase"],
+) {
   writeFixtureFile(
     rootDir,
     `docs/workpacks/${slice}/automation-spec.json`,
@@ -45,11 +49,28 @@ function writeAutomationSpec(rootDir: string, slice: string) {
             authority_report_paths: [],
           },
         },
-        external_smokes: ["pnpm dev:local-supabase"],
+        external_smokes: externalSmokes,
         blocked_conditions: [],
         max_fix_rounds: {
           backend: 2,
           frontend: 2,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+function writeWorkItem(rootDir: string, slice: string, externalSmokes: string[]) {
+  writeFixtureFile(
+    rootDir,
+    `.workflow-v2/work-items/${slice}.json`,
+    `${JSON.stringify(
+      {
+        id: slice,
+        workflow: {
+          external_smokes: externalSmokes,
         },
       },
       null,
@@ -111,10 +132,17 @@ function buildPrBody({
   ].join("\n");
 }
 
-function createFixture(actualResult: string) {
+function createFixture(
+  actualResult: string,
+  {
+    automationExternalSmokes = ["pnpm dev:local-supabase"],
+    workItemExternalSmokes = [] as string[],
+  } = {},
+) {
   const rootDir = mkdtempSync(join(tmpdir(), "pr-ready-validator-"));
   const slice = "99-pr-ready-fixture";
-  writeAutomationSpec(rootDir, slice);
+  writeAutomationSpec(rootDir, slice, automationExternalSmokes);
+  writeWorkItem(rootDir, slice, workItemExternalSmokes);
   const bodyPath = join(rootDir, "pr-body.md");
   writeFileSync(bodyPath, buildPrBody({ actualResult }));
 
@@ -129,14 +157,16 @@ function runValidator({
   rootDir,
   slice,
   bodyPath,
+  mode = "frontend",
 }: {
   rootDir: string;
   slice: string;
   bodyPath: string;
+  mode?: "backend" | "frontend";
 }) {
   return spawnSync(
     "node",
-    [SCRIPT_PATH, "--slice", slice, "--pr-body", bodyPath, "--mode", "frontend"],
+    [SCRIPT_PATH, "--slice", slice, "--pr-body", bodyPath, "--mode", mode],
     {
       cwd: rootDir,
       encoding: "utf8",
@@ -158,6 +188,35 @@ describe("PR-ready validator", () => {
     const fixture = createFixture("pass — local Supabase bootstrap + seed smoke passed for `pnpm dev:local-supabase`");
 
     const result = runValidator(fixture);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("PR ready validation passed");
+  });
+
+  it("fails frontend Ready when full-lifecycle smokes remain only in the work item", () => {
+    const fixture = createFixture("pass — test-only backend verification", {
+      automationExternalSmokes: [],
+      workItemExternalSmokes: ["pnpm dev:local-supabase"],
+    });
+
+    const result = runValidator(fixture);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "Frontend Ready requires automation-spec external_smokes to be relocked",
+    );
+  });
+
+  it("allows backend Ready while future full-lifecycle smokes remain preserved", () => {
+    const fixture = createFixture("pass — test-only backend verification", {
+      automationExternalSmokes: [],
+      workItemExternalSmokes: ["pnpm dev:local-supabase"],
+    });
+
+    const result = runValidator({
+      ...fixture,
+      mode: "backend",
+    });
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("PR ready validation passed");
