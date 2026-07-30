@@ -40,6 +40,20 @@ describe("hybrid built browser bundle canary", () => {
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';mayThrow();method='GET'}catch{}finally{audit()}fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';mayThrow();method='GET'}finally{fetch(storageUrl,{method})}",
     "let m='GET';try{m='DELETE';x();m='GET'}catch{}fetch('/storage/v1/object/x',{method:m})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';1n+1;method='GET'}catch{}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';`${candidate}`;method='GET'}catch{}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';({...candidate});method='GET'}catch{}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';[...candidate];method='GET'}catch{}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';for(const value of candidate){}method='GET'}catch{}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';const {value}=candidate;method='GET'}catch{}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='GET';try{method='DELETE';const [value]=candidate;method='GET'}catch{}fetch(storageUrl,{method})",
+    "let m='GET';try{m='DELETE';1n+1;m='GET'}catch{}fetch('/storage/v1/object/x',{method:m})",
+    "let m='GET';try{m='DELETE';`${x}`;m='GET'}catch{}fetch('/storage/v1/object/x',{method:m})",
+    "let m='GET';try{m='DELETE';({...x});m='GET'}catch{}fetch('/storage/v1/object/x',{method:m})",
+    "let m='GET';try{m='DELETE';[...x];m='GET'}catch{}fetch('/storage/v1/object/x',{method:m})",
+    "let m='GET';try{m='DELETE';for(const v of x){}m='GET'}catch{}fetch('/storage/v1/object/x',{method:m})",
+    "let m='GET';try{m='DELETE';const {v}=x;m='GET'}catch{}fetch('/storage/v1/object/x',{method:m})",
+    "let m='GET';try{m='DELETE';const [v]=x;m='GET'}catch{}fetch('/storage/v1/object/x',{method:m})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready&&(method='GET');fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready||(method='GET');fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/unsafe.png';let method='DELETE';ready??(method='GET');fetch(storageUrl,{method})",
@@ -69,6 +83,20 @@ describe("hybrid built browser bundle canary", () => {
         path.join(bundleRoot, "try-intermediate.min.js"),
         "let m='GET';try{m='DELETE';x();m='GET'}catch{}finally{a()}fetch('/storage/v1/object/x',{method:m});",
       );
+      for (const [file, throwingEvaluation] of [
+        ["try-binary.min.js", "1n+1"],
+        ["try-template.min.js", "`${x}`"],
+        ["try-object-spread.min.js", "({...x})"],
+        ["try-array-spread.min.js", "[...x]"],
+        ["try-for-of.min.js", "for(const v of x){}"],
+        ["try-object-destructure.min.js", "const {v}=x"],
+        ["try-array-destructure.min.js", "const [v]=x"],
+      ]) {
+        fs.writeFileSync(
+          path.join(bundleRoot, file),
+          `let m='GET';try{m='DELETE';${throwingEvaluation};m='GET'}catch{}fetch('/storage/v1/object/x',{method:m});`,
+        );
+      }
       fs.writeFileSync(
         path.join(bundleRoot, "short.min.js"),
         "let m='DELETE';r&&(m='GET');const u='/storage/v1/object/recipe-images/unsafe.png';globalThis.fetch(u,{method:m});",
@@ -93,7 +121,14 @@ describe("hybrid built browser bundle canary", () => {
             "do-positive.min.js",
             "short.min.js",
             "switch.min.js",
+            "try-array-destructure.min.js",
+            "try-array-spread.min.js",
+            "try-binary.min.js",
+            "try-for-of.min.js",
             "try-intermediate.min.js",
+            "try-object-destructure.min.js",
+            "try-object-spread.min.js",
+            "try-template.min.js",
             "try.min.js",
           ].map((file) => expect.objectContaining({
             file,
@@ -101,7 +136,7 @@ describe("hybrid built browser bundle canary", () => {
           })),
         ),
       );
-      expect(inspectBrowserBundle(bundleRoot)).toHaveLength(6);
+      expect(inspectBrowserBundle(bundleRoot)).toHaveLength(13);
     } finally {
       fs.rmSync(bundleRoot, { recursive: true, force: true });
     }
@@ -124,6 +159,11 @@ describe("hybrid built browser bundle canary", () => {
     "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';try{method='DELETE';mayThrow();method='GET'}catch{}finally{method='GET'}fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';try{method='DELETE';mayThrow();method='GET'}finally{method='GET'}fetch(storageUrl,{method})",
     "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';try{method='DELETE';mayThrow();method='GET'}finally{audit()}fetch(storageUrl,{method})",
+    "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='DELETE';try{throw 0}finally{method='GET'}fetch(storageUrl,{method})",
+    "let m='DELETE';try{throw 0}finally{m='GET'}fetch('/storage/v1/object/x',{method:m})",
+    "const storageUrl='/storage/v1/object/recipe-images/safe.png';function save(){let method='DELETE';try{return}finally{method='GET'}fetch(storageUrl,{method})}",
+    "const storageUrl='/storage/v1/object/recipe-images/safe.png';while(flag){let method='DELETE';try{break}finally{method='GET'}fetch(storageUrl,{method})}",
+    "const storageUrl='/storage/v1/object/recipe-images/safe.png';while(flag){let method='DELETE';try{continue}finally{method='GET'}fetch(storageUrl,{method})}",
     "const storageUrl='/storage/v1/object/recipe-images/safe.png';let method='GET';ready&&(method='HEAD');fetch(storageUrl,{method})",
     "/** example: client.storage.from('avatars').upload('avatar.png', file) */",
   ])("does not flag a non-mutation canary: %s", (source) => {

@@ -137,16 +137,76 @@ function appendExceptionalOutcome(outcomes, bindings) {
   taintBindings(overflow);
 }
 
+function isDefinitelyNonThrowingEvaluation(node) {
+  const expression = unwrapExpression(node);
+
+  if (
+    ts.isIdentifier(expression)
+    || ts.isStringLiteralLike(expression)
+    || ts.isNumericLiteral(expression)
+    || ts.isBigIntLiteral(expression)
+    || ts.isRegularExpressionLiteral(expression)
+    || expression.kind === ts.SyntaxKind.TrueKeyword
+    || expression.kind === ts.SyntaxKind.FalseKeyword
+    || expression.kind === ts.SyntaxKind.NullKeyword
+    || expression.kind === ts.SyntaxKind.ThisKeyword
+    || ts.isFunctionExpression(expression)
+    || ts.isArrowFunction(expression)
+    || ts.isMetaProperty(expression)
+  ) {
+    return true;
+  }
+
+  if (ts.isArrayLiteralExpression(expression)) {
+    return !expression.elements.some((element) => ts.isSpreadElement(element));
+  }
+
+  if (ts.isObjectLiteralExpression(expression)) {
+    return !expression.properties.some((property) => (
+      ts.isSpreadAssignment(property)
+      || (
+        "name" in property
+        && property.name
+        && ts.isComputedPropertyName(property.name)
+      )
+    ));
+  }
+
+  if (ts.isConditionalExpression(expression)) {
+    return true;
+  }
+
+  if (ts.isPrefixUnaryExpression(expression)) {
+    return (
+      expression.operator === ts.SyntaxKind.ExclamationToken
+      || expression.operator === ts.SyntaxKind.VoidKeyword
+      || expression.operator === ts.SyntaxKind.TypeOfKeyword
+    );
+  }
+
+  if (ts.isBinaryExpression(expression)) {
+    const operator = expression.operatorToken.kind;
+    if (
+      operator === ts.SyntaxKind.AmpersandAmpersandToken
+      || operator === ts.SyntaxKind.BarBarToken
+      || operator === ts.SyntaxKind.QuestionQuestionToken
+      || operator === ts.SyntaxKind.CommaToken
+    ) {
+      return true;
+    }
+    return (
+      operator === ts.SyntaxKind.EqualsToken
+      && ts.isIdentifier(unwrapExpression(expression.left))
+    );
+  }
+
+  return false;
+}
+
 function mayThrowDuringEvaluation(node) {
   return (
-    ts.isCallExpression(node)
-    || ts.isNewExpression(node)
-    || ts.isPropertyAccessExpression(node)
-    || ts.isElementAccessExpression(node)
-    || ts.isTaggedTemplateExpression(node)
-    || ts.isAwaitExpression(node)
-    || ts.isYieldExpression(node)
-    || ts.isDeleteExpression(node)
+    ts.isExpressionNode(node)
+    && !isDefinitelyNonThrowingEvaluation(node)
   );
 }
 
@@ -325,6 +385,7 @@ function findStorageRestFetches(source) {
   );
   const matches = [];
   const exceptionCollectors = [];
+  let visit;
 
   const captureExceptionalOutcome = (bindings) => {
     for (const outcomes of exceptionCollectors) {
@@ -382,37 +443,409 @@ function findStorageRestFetches(source) {
     return false;
   };
 
-  const visit = (node, inheritedBindings) => {
+  // Statements return explicit completion records. Only `normal` records may
+  // advance to the next statement; abrupt completions retain their bindings
+  // until the construct that owns them consumes or propagates them.
+  const compactCompletions = (completions) => {
+    const compacted = new Map();
+    for (const completion of completions) {
+      const key = `${completion.kind}:${completion.label ?? ""}`;
+      if (!compacted.has(key)) {
+        compacted.set(key, {
+          ...completion,
+          bindings: cloneBindings(completion.bindings),
+        });
+        continue;
+      }
+      const existing = compacted.get(key);
+      mergeBindings(
+        existing.bindings,
+        existing.bindings,
+        completion.bindings,
+      );
+    }
+    return [...compacted.values()];
+  };
+
+  const normalCompletion = (bindings) => ({
+    bindings,
+    kind: "normal",
+    label: null,
+  });
+
+  const executeStatementList = (statements, initialBindings) => {
+    let completions = [normalCompletion(cloneBindings(initialBindings))];
+    for (const statement of statements) {
+      const nextCompletions = [];
+      for (const completion of completions) {
+        if (completion.kind !== "normal") {
+          nextCompletions.push(completion);
+          continue;
+        }
+        nextCompletions.push(
+          ...executeStatement(statement, completion.bindings),
+        );
+      }
+      completions = compactCompletions(nextCompletions);
+    }
+    return completions;
+  };
+
+  const executeBlock = (block, inheritedBindings) => {
+    const outerNames = new Set(inheritedBindings.keys());
+    const shadowedNames = blockScopedNames(block);
+    const completions = executeStatementList(
+      block.statements,
+      cloneBindings(inheritedBindings),
+    );
+
+    return completions.map((completion) => {
+      const bindings = cloneBindings(inheritedBindings);
+      for (const name of outerNames) {
+        if (
+          !shadowedNames.has(name)
+          && completion.bindings.has(name)
+        ) {
+          bindings.set(name, completion.bindings.get(name));
+        }
+      }
+      if (completion.bindings.has(CONTROL_FLOW_TAINT)) {
+        bindings.set(
+          CONTROL_FLOW_TAINT,
+          completion.bindings.get(CONTROL_FLOW_TAINT),
+        );
+      }
+      return {
+        ...completion,
+        bindings,
+      };
+    });
+  };
+
+  const executeSwitch = (node, inheritedBindings) => {
+    const selectorBindings = cloneBindings(inheritedBindings);
+    visit(node.expression, selectorBindings);
+    const clauses = node.caseBlock.clauses;
+
+    for (const clause of clauses) {
+      if (!ts.isCaseClause(clause)) {
+        continue;
+      }
+      const evaluatedBindings = cloneBindings(selectorBindings);
+      visit(clause.expression, evaluatedBindings);
+      mergeBindings(
+        selectorBindings,
+        selectorBindings,
+        evaluatedBindings,
+      );
+    }
+
+    const outcomes = [];
+    for (let entryIndex = 0; entryIndex < clauses.length; entryIndex += 1) {
+      const statements = clauses
+        .slice(entryIndex)
+        .flatMap((clause) => [...clause.statements]);
+      const completions = executeStatementList(
+        statements,
+        selectorBindings,
+      );
+      for (const completion of completions) {
+        if (completion.kind === "break" && completion.label === null) {
+          outcomes.push(normalCompletion(completion.bindings));
+        } else {
+          outcomes.push(completion);
+        }
+      }
+    }
+
+    if (!clauses.some((clause) => ts.isDefaultClause(clause))) {
+      outcomes.push(normalCompletion(cloneBindings(selectorBindings)));
+    }
+    if (outcomes.length === 0) {
+      outcomes.push(normalCompletion(cloneBindings(selectorBindings)));
+    }
+    return compactCompletions(outcomes);
+  };
+
+  const executeTry = (node, inheritedBindings) => {
+    const tryExceptionalOutcomes = [];
+    exceptionCollectors.push(tryExceptionalOutcomes);
+    let tryCompletions;
+    try {
+      tryCompletions = executeBlock(node.tryBlock, inheritedBindings);
+    } finally {
+      exceptionCollectors.pop();
+    }
+
+    tryCompletions.push(
+      ...tryExceptionalOutcomes.map((bindings) => ({
+        bindings,
+        kind: "throw",
+        label: null,
+      })),
+    );
+    tryCompletions = compactCompletions(tryCompletions);
+
+    let completions = tryCompletions;
+    if (node.catchClause) {
+      const thrown = tryCompletions.filter(
+        (completion) => completion.kind === "throw",
+      );
+      const unthrown = tryCompletions.filter(
+        (completion) => completion.kind !== "throw",
+      );
+      if (thrown.length > 0) {
+        const catchBindings = cloneBindings(thrown[0].bindings);
+        mergeBindings(
+          catchBindings,
+          ...thrown.map((completion) => completion.bindings),
+        );
+        if (
+          node.catchClause.variableDeclaration
+          && ts.isIdentifier(node.catchClause.variableDeclaration.name)
+        ) {
+          catchBindings.set(
+            node.catchClause.variableDeclaration.name.text,
+            unknownValue(),
+          );
+        }
+        const catchExceptionalOutcomes = [];
+        exceptionCollectors.push(catchExceptionalOutcomes);
+        let catchCompletions;
+        try {
+          catchCompletions = executeBlock(
+            node.catchClause.block,
+            catchBindings,
+          );
+        } finally {
+          exceptionCollectors.pop();
+        }
+        catchCompletions.push(
+          ...catchExceptionalOutcomes.map((bindings) => ({
+            bindings,
+            kind: "throw",
+            label: null,
+          })),
+        );
+        completions = compactCompletions([
+          ...unthrown,
+          ...catchCompletions,
+        ]);
+      } else {
+        completions = unthrown;
+      }
+    }
+
+    if (!node.finallyBlock) {
+      return completions;
+    }
+
+    const finalized = [];
+    for (const completion of completions) {
+      const finallyCompletions = executeBlock(
+        node.finallyBlock,
+        completion.bindings,
+      );
+      for (const finallyCompletion of finallyCompletions) {
+        if (finallyCompletion.kind === "normal") {
+          finalized.push({
+            ...completion,
+            bindings: finallyCompletion.bindings,
+          });
+        } else {
+          finalized.push(finallyCompletion);
+        }
+      }
+    }
+    return compactCompletions(finalized);
+  };
+
+  const executeLoopBody = (statement, inheritedBindings) => (
+    executeStatement(statement, cloneBindings(inheritedBindings))
+      .map((completion) => {
+        if (
+          (completion.kind === "break" || completion.kind === "continue")
+          && completion.label === null
+        ) {
+          return normalCompletion(completion.bindings);
+        }
+        return completion;
+      })
+  );
+
+  const executeStatement = (node, inheritedBindings) => {
+    if (ts.isBlock(node)) {
+      return executeBlock(node, inheritedBindings);
+    }
+
+    if (ts.isIfStatement(node)) {
+      const bindings = cloneBindings(inheritedBindings);
+      visit(node.expression, bindings);
+      const thenCompletions = executeStatement(
+        node.thenStatement,
+        cloneBindings(bindings),
+      );
+      const elseCompletions = node.elseStatement
+        ? executeStatement(
+            node.elseStatement,
+            cloneBindings(bindings),
+          )
+        : [normalCompletion(cloneBindings(bindings))];
+      return compactCompletions([
+        ...thenCompletions,
+        ...elseCompletions,
+      ]);
+    }
+
+    if (ts.isSwitchStatement(node)) {
+      return executeSwitch(node, inheritedBindings);
+    }
+
+    if (ts.isTryStatement(node)) {
+      return executeTry(node, inheritedBindings);
+    }
+
+    if (ts.isWhileStatement(node)) {
+      const bindings = cloneBindings(inheritedBindings);
+      visit(node.expression, bindings);
+      return compactCompletions([
+        normalCompletion(cloneBindings(bindings)),
+        ...executeLoopBody(node.statement, bindings),
+      ]);
+    }
+
+    if (ts.isDoStatement(node)) {
+      const bodyCompletions = executeLoopBody(
+        node.statement,
+        inheritedBindings,
+      );
+      const outcomes = [];
+      for (const completion of bodyCompletions) {
+        if (completion.kind !== "normal") {
+          outcomes.push(completion);
+          continue;
+        }
+        const bindings = cloneBindings(completion.bindings);
+        visit(node.expression, bindings);
+        outcomes.push(normalCompletion(bindings));
+      }
+      return compactCompletions(outcomes);
+    }
+
+    if (ts.isForStatement(node)) {
+      const bindings = cloneBindings(inheritedBindings);
+      if (node.initializer) {
+        visit(node.initializer, bindings);
+      }
+      if (node.condition) {
+        visit(node.condition, bindings);
+      }
+      const outcomes = [normalCompletion(cloneBindings(bindings))];
+      for (const completion of executeLoopBody(node.statement, bindings)) {
+        if (
+          completion.kind === "normal"
+          && node.incrementor
+        ) {
+          visit(node.incrementor, completion.bindings);
+        }
+        outcomes.push(completion);
+      }
+      return compactCompletions(outcomes);
+    }
+
+    if (ts.isForInStatement(node) || ts.isForOfStatement(node)) {
+      const bindings = cloneBindings(inheritedBindings);
+      visit(node.initializer, bindings);
+      visit(node.expression, bindings);
+      captureExceptionalOutcome(bindings);
+      return compactCompletions([
+        normalCompletion(cloneBindings(bindings)),
+        ...executeLoopBody(node.statement, bindings),
+      ]);
+    }
+
+    if (ts.isThrowStatement(node)) {
+      const bindings = cloneBindings(inheritedBindings);
+      if (node.expression) {
+        visit(node.expression, bindings);
+      }
+      return [{
+        bindings,
+        kind: "throw",
+        label: null,
+      }];
+    }
+
+    if (ts.isReturnStatement(node)) {
+      const bindings = cloneBindings(inheritedBindings);
+      if (node.expression) {
+        visit(node.expression, bindings);
+      }
+      return [{
+        bindings,
+        kind: "return",
+        label: null,
+      }];
+    }
+
+    if (ts.isBreakStatement(node) || ts.isContinueStatement(node)) {
+      return [{
+        bindings: cloneBindings(inheritedBindings),
+        kind: ts.isBreakStatement(node) ? "break" : "continue",
+        label: node.label?.text ?? null,
+      }];
+    }
+
+    if (ts.isLabeledStatement(node)) {
+      return executeStatement(node.statement, inheritedBindings).map(
+        (completion) => (
+          completion.kind === "break"
+          && completion.label === node.label.text
+            ? normalCompletion(completion.bindings)
+            : completion
+        ),
+      );
+    }
+
+    if (ts.isWithStatement(node)) {
+      const bindings = cloneBindings(inheritedBindings);
+      visit(node.expression, bindings);
+      taintBindings(bindings);
+      return executeStatement(node.statement, bindings);
+    }
+
+    const bindings = cloneBindings(inheritedBindings);
+    visit(node, bindings);
+    return [normalCompletion(bindings)];
+  };
+
+  const mergeNormalCompletions = (inheritedBindings, completions) => {
+    const normalBindings = completions
+      .filter((completion) => completion.kind === "normal")
+      .map((completion) => completion.bindings);
+    if (normalBindings.length > 0) {
+      mergeBindings(inheritedBindings, ...normalBindings);
+    }
+  };
+
+  visit = (node, inheritedBindings) => {
     const potentiallyThrowing = mayThrowDuringEvaluation(node);
     if (potentiallyThrowing) {
       captureExceptionalOutcome(inheritedBindings);
     }
 
     if (ts.isSourceFile(node)) {
-      for (const statement of node.statements) {
-        visit(statement, inheritedBindings);
-      }
+      const completions = executeStatementList(
+        node.statements,
+        inheritedBindings,
+      );
+      mergeNormalCompletions(inheritedBindings, completions);
       return;
     }
 
     if (ts.isBlock(node)) {
-      const outerNames = new Set(inheritedBindings.keys());
-      const shadowedNames = blockScopedNames(node);
-      const bindings = cloneBindings(inheritedBindings);
-      for (const statement of node.statements) {
-        visit(statement, bindings);
-      }
-      for (const name of outerNames) {
-        if (!shadowedNames.has(name) && bindings.has(name)) {
-          inheritedBindings.set(name, bindings.get(name));
-        }
-      }
-      if (bindings.has(CONTROL_FLOW_TAINT)) {
-        inheritedBindings.set(
-          CONTROL_FLOW_TAINT,
-          bindings.get(CONTROL_FLOW_TAINT),
-        );
-      }
+      const completions = executeBlock(node, inheritedBindings);
+      mergeNormalCompletions(inheritedBindings, completions);
       return;
     }
 
@@ -439,6 +872,9 @@ function findStorageRestFetches(source) {
         if (declaration.initializer) {
           visit(declaration.initializer, inheritedBindings);
         }
+        if (!ts.isIdentifier(declaration.name)) {
+          captureExceptionalOutcome(inheritedBindings);
+        }
         if (ts.isIdentifier(declaration.name)) {
           inheritedBindings.set(
             declaration.name.text,
@@ -451,18 +887,6 @@ function findStorageRestFetches(source) {
       return;
     }
 
-    if (ts.isIfStatement(node)) {
-      visit(node.expression, inheritedBindings);
-      const thenBindings = cloneBindings(inheritedBindings);
-      const elseBindings = cloneBindings(inheritedBindings);
-      visit(node.thenStatement, thenBindings);
-      if (node.elseStatement) {
-        visit(node.elseStatement, elseBindings);
-      }
-      mergeBindings(inheritedBindings, thenBindings, elseBindings);
-      return;
-    }
-
     if (ts.isConditionalExpression(node)) {
       visit(node.condition, inheritedBindings);
       const trueBindings = cloneBindings(inheritedBindings);
@@ -470,189 +894,6 @@ function findStorageRestFetches(source) {
       visit(node.whenTrue, trueBindings);
       visit(node.whenFalse, falseBindings);
       mergeBindings(inheritedBindings, trueBindings, falseBindings);
-      return;
-    }
-
-    if (ts.isSwitchStatement(node)) {
-      visit(node.expression, inheritedBindings);
-      const clauses = node.caseBlock.clauses;
-      const selectorBindings = cloneBindings(inheritedBindings);
-
-      // Case expressions may have side effects. Preserve both the prior and
-      // evaluated states so their lexical order cannot erase a possible value.
-      for (const clause of clauses) {
-        if (!ts.isCaseClause(clause)) {
-          continue;
-        }
-        const evaluatedBindings = cloneBindings(selectorBindings);
-        visit(clause.expression, evaluatedBindings);
-        mergeBindings(
-          selectorBindings,
-          selectorBindings,
-          evaluatedBindings,
-        );
-      }
-
-      const outcomes = [];
-      for (let entryIndex = 0; entryIndex < clauses.length; entryIndex += 1) {
-        const branchBindings = cloneBindings(selectorBindings);
-        let didBreak = false;
-        for (
-          let clauseIndex = entryIndex;
-          clauseIndex < clauses.length && !didBreak;
-          clauseIndex += 1
-        ) {
-          for (const statement of clauses[clauseIndex].statements) {
-            if (ts.isBreakStatement(statement)) {
-              if (statement.label) {
-                taintBindings(branchBindings);
-              }
-              didBreak = true;
-              break;
-            }
-            visit(statement, branchBindings);
-          }
-        }
-        outcomes.push(branchBindings);
-      }
-
-      if (!clauses.some((clause) => ts.isDefaultClause(clause))) {
-        outcomes.push(cloneBindings(selectorBindings));
-      }
-      mergeBindings(
-        inheritedBindings,
-        ...(outcomes.length > 0 ? outcomes : [selectorBindings]),
-      );
-      return;
-    }
-
-    if (ts.isTryStatement(node)) {
-      const tryBindings = cloneBindings(inheritedBindings);
-      const tryExceptionalOutcomes = [];
-      exceptionCollectors.push(tryExceptionalOutcomes);
-      try {
-        visit(node.tryBlock, tryBindings);
-      } finally {
-        exceptionCollectors.pop();
-      }
-      const outcomes = [tryBindings];
-      let uncaughtExceptionalOutcomes = tryExceptionalOutcomes;
-
-      if (node.catchClause) {
-        // A throw can happen before or after a state change in the try block.
-        // The catch path therefore starts from the join of entry, normal exit,
-        // and every potentially-throwing intermediate evaluation state.
-        const catchBindings = cloneBindings(inheritedBindings);
-        mergeBindings(
-          catchBindings,
-          inheritedBindings,
-          tryBindings,
-          ...tryExceptionalOutcomes,
-        );
-        if (
-          node.catchClause.variableDeclaration
-          && ts.isIdentifier(node.catchClause.variableDeclaration.name)
-        ) {
-          catchBindings.set(
-            node.catchClause.variableDeclaration.name.text,
-            unknownValue(),
-          );
-        }
-        const catchExceptionalOutcomes = [];
-        exceptionCollectors.push(catchExceptionalOutcomes);
-        try {
-          visit(node.catchClause.block, catchBindings);
-        } finally {
-          exceptionCollectors.pop();
-        }
-        outcomes.push(catchBindings);
-        uncaughtExceptionalOutcomes = catchExceptionalOutcomes;
-      }
-
-      const completedOutcomes = node.finallyBlock
-        ? outcomes.map((outcome) => {
-            const finallyBindings = cloneBindings(outcome);
-            visit(node.finallyBlock, finallyBindings);
-            return finallyBindings;
-          })
-        : outcomes;
-      if (node.finallyBlock) {
-        for (const exceptionalOutcome of uncaughtExceptionalOutcomes) {
-          const finallyBindings = cloneBindings(exceptionalOutcome);
-          visit(node.finallyBlock, finallyBindings);
-        }
-      }
-      mergeBindings(inheritedBindings, ...completedOutcomes);
-      return;
-    }
-
-    if (ts.isWhileStatement(node)) {
-      visit(node.expression, inheritedBindings);
-      const noIterationBindings = cloneBindings(inheritedBindings);
-      const iterationBindings = cloneBindings(inheritedBindings);
-      visit(node.statement, iterationBindings);
-      mergeBindings(
-        inheritedBindings,
-        noIterationBindings,
-        iterationBindings,
-      );
-      return;
-    }
-
-    if (ts.isDoStatement(node)) {
-      const firstIterationBindings = cloneBindings(inheritedBindings);
-      visit(node.statement, firstIterationBindings);
-      visit(node.expression, firstIterationBindings);
-
-      const condition = unwrapExpression(node.expression);
-      if (condition.kind === ts.SyntaxKind.FalseKeyword) {
-        mergeBindings(inheritedBindings, firstIterationBindings);
-        return;
-      }
-
-      const laterIterationBindings = cloneBindings(firstIterationBindings);
-      visit(node.statement, laterIterationBindings);
-      visit(node.expression, laterIterationBindings);
-      mergeBindings(
-        inheritedBindings,
-        firstIterationBindings,
-        laterIterationBindings,
-      );
-      return;
-    }
-
-    if (ts.isForStatement(node)) {
-      if (node.initializer) {
-        visit(node.initializer, inheritedBindings);
-      }
-      if (node.condition) {
-        visit(node.condition, inheritedBindings);
-      }
-      const noIterationBindings = cloneBindings(inheritedBindings);
-      const iterationBindings = cloneBindings(inheritedBindings);
-      visit(node.statement, iterationBindings);
-      if (node.incrementor) {
-        visit(node.incrementor, iterationBindings);
-      }
-      mergeBindings(
-        inheritedBindings,
-        noIterationBindings,
-        iterationBindings,
-      );
-      return;
-    }
-
-    if (ts.isForInStatement(node) || ts.isForOfStatement(node)) {
-      visit(node.initializer, inheritedBindings);
-      visit(node.expression, inheritedBindings);
-      const noIterationBindings = cloneBindings(inheritedBindings);
-      const iterationBindings = cloneBindings(inheritedBindings);
-      visit(node.statement, iterationBindings);
-      mergeBindings(
-        inheritedBindings,
-        noIterationBindings,
-        iterationBindings,
-      );
       return;
     }
 
