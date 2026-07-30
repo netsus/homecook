@@ -116,10 +116,14 @@
 
 ## Frontend / Regression
 
-- [ ] MANUAL_RECIPE_CREATE stores object ID, refreshes signed URL and calls owner cancel instead of browser Storage `.remove()` <!-- omo:id=accept-image-client-object-state;stage=4;scope=frontend;review=5,6 -->
-- [ ] in-progress/retry/quota/expired/reference errors render without public/private selector or new layout <!-- omo:id=accept-image-client-errors;stage=4;scope=frontend;review=5,6 -->
-- [ ] existing loading/empty/error/read-only/unauthorized, accessibility and return-to-action behavior remains unchanged <!-- omo:id=accept-visibility-ui-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] F0 ACCOUNT_QUARANTINE and #5 RECIPE_DETAIL CTA files are not modified by this slice <!-- omo:id=accept-visibility-ui-ownership;stage=4;scope=frontend;review=5,6 -->
+- [x] MANUAL_RECIPE_CREATE stores object ID, refreshes signed URL and calls owner cancel instead of browser Storage `.remove()` <!-- omo:id=accept-image-client-object-state;stage=4;scope=frontend;review=5,6 -->
+  - 2026-07-30 KST Stage 4 evidence: locked RED first failed 8 tests across the manual screen, upload client and consumer suites before implementation. The final strict managed-or-legacy client sends an upload UUID `Idempotency-Key`, replays `202` and expired signed-read intents with the same key and processed bytes, uses a fresh key after `IMAGE_UPLOAD_LIMITED`, sends `image_object_id` on managed create, keeps legacy `thumbnail_url` compatibility before activation, and routes managed remove/replace/unmount/stale completion through the owner cancel endpoint. Browser Supabase Storage mutation is absent and no legacy cancel API was invented.
+- [x] in-progress/retry/quota/expired/reference errors render without public/private selector or new layout <!-- omo:id=accept-image-client-errors;stage=4;scope=frontend;review=5,6 -->
+  - 2026-07-30 KST Stage 4 evidence: focused Vitest passed 3 files / 41 tests and covers `IMAGE_UPLOAD_IN_PROGRESS`, `IMAGE_UPLOAD_LIMITED`, `IMAGE_NOT_FOUND`, `IMAGE_EXPIRED`, `IMAGE_VISIBILITY_MISMATCH`, `MANAGED_IMAGE_REFERENCE_REQUIRED`, retry, mixed-response rejection and signed-read refresh. The existing picker composition remains unchanged and no visibility selector was added.
+- [x] existing loading/empty/error/read-only/unauthorized, accessibility and return-to-action behavior remains unchanged <!-- omo:id=accept-visibility-ui-regression;stage=4;scope=frontend;review=5,6 -->
+  - 2026-07-30 KST Stage 4 evidence: `pnpm verify:frontend:pr` passed lint, typecheck, 2,369 product tests, production build, smoke 59 passed / 10 skipped, accessibility core 8 passed / 1 skipped and visual core 12 passed. Full `pnpm verify:frontend` also passed Lighthouse 6/6, full Playwright regression 909 passed / 132 skipped, accessibility 18 passed / 15 skipped, visual 23 passed / 22 skipped and security 12/12.
+- [x] F0 ACCOUNT_QUARANTINE and #5 RECIPE_DETAIL CTA files are not modified by this slice <!-- omo:id=accept-visibility-ui-ownership;stage=4;scope=frontend;review=5,6 -->
+  - 2026-07-30 KST Stage 4 evidence: the final diff is limited to the manual recipe API/screen, its locked tests, the existing slice-31 managed-upload E2E, and this workpack evidence. F0 and RECIPE_DETAIL CTA files are unchanged.
 
 ## Verification / Delivery
 

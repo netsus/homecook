@@ -200,7 +200,11 @@ async function installYoutubeRoutes(page: Page) {
 
 async function installManualRoutes(
   page: Page,
-  onCreateBody?: (body: Record<string, unknown>) => void,
+  options?: {
+    imageUploadMode?: "legacy" | "managed";
+    onCreateBody?: (body: Record<string, unknown>) => void;
+    onUploadHeaders?: (headers: Record<string, string>) => void;
+  },
 ) {
   await installCookingMethodRoutes(page);
 
@@ -222,14 +226,24 @@ async function installManualRoutes(
       return;
     }
 
+    options?.onUploadHeaders?.(route.request().headers());
+
     await route.fulfill({
       status: 201,
       json: {
         success: true,
-        data: {
-          thumbnail_url: createFoodThumbDataUri("김밥", "#FFE2CF"),
-          storage_path: "recipe-images/user-1/slice31.webp",
-        },
+        data:
+          options?.imageUploadMode === "managed"
+            ? {
+                image_object_id: "550e8400-e29b-41d4-a716-446655440331",
+                state: "uploaded_unlinked",
+                read_url: createFoodThumbDataUri("김밥", "#FFE2CF"),
+                read_url_expires_at: "2099-07-30T03:05:00.000Z",
+              }
+            : {
+                thumbnail_url: createFoodThumbDataUri("김밥", "#FFE2CF"),
+                storage_path: "recipe-images/user-1/slice31.webp",
+              },
         error: null,
       },
     });
@@ -241,7 +255,7 @@ async function installManualRoutes(
       return;
     }
 
-    onCreateBody?.(route.request().postDataJSON() as Record<string, unknown>);
+    options?.onCreateBody?.(route.request().postDataJSON() as Record<string, unknown>);
     await route.fulfill({
       status: 201,
       json: {
@@ -359,8 +373,10 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
       current: null,
     };
     try {
-      await installManualRoutes(manual.page, (body) => {
-        manualCreateBody.current = body;
+      await installManualRoutes(manual.page, {
+        onCreateBody: (body) => {
+          manualCreateBody.current = body;
+        },
       });
       await manual.page.goto("/menu/add/manual");
       await stabilize(manual.page);
@@ -423,5 +439,59 @@ test.describe("Slice 31: Recipe media and tags evidence", () => {
     } finally {
       void narrow.context.close().catch(() => {});
     }
+  });
+
+  test("recipe-visibility-read-hardening managed manual upload keeps object identity through create", async ({
+    page,
+  }) => {
+    const manualCreateBody: { current: Record<string, unknown> | null } = {
+      current: null,
+    };
+    const uploadHeaders: { current: Record<string, string> | null } = {
+      current: null,
+    };
+
+    await setAuthOverride(page);
+    await installManualRoutes(page, {
+      imageUploadMode: "managed",
+      onCreateBody: (body) => {
+        manualCreateBody.current = body;
+      },
+      onUploadHeaders: (headers) => {
+        uploadHeaders.current = headers;
+      },
+    });
+    await page.goto("/menu/add/manual");
+    await stabilize(page);
+    await page
+      .getByTestId("manual-image-file-input")
+      .setInputFiles({
+        buffer: Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR42mP8z8BQDwAFgwJ/l4e5WQAAAABJRU5ErkJggg==",
+          "base64",
+        ),
+        mimeType: "image/png",
+        name: "slice31-managed.png",
+      });
+    await expect(page.getByTestId("manual-image-preview")).toBeVisible();
+
+    await page.getByLabel("요리 이름").fill("관리형 이미지 김치찌개");
+    await page.getByRole("button", { name: "+ 재료 추가하기" }).click();
+    const ingredientDialog = page.getByRole("dialog", { name: "재료로 검색" });
+    await ingredientDialog.locator("label").filter({ hasText: "김치" }).click();
+    await ingredientDialog.getByRole("button", { name: "선택한 재료 1개 추가" }).click();
+    await page.getByRole("button", { name: "손질" }).click();
+    await page.getByLabel("만들기 1 설명").fill("김치를 손질한다");
+    await page.getByRole("button", { name: "+ 만들기 추가" }).click();
+    await page.getByRole("button", { name: "저장" }).click();
+
+    await expect(page.getByText("레시피 등록 완료")).toBeVisible();
+    expect(uploadHeaders.current?.["idempotency-key"]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+    expect(manualCreateBody.current?.image_object_id).toBe(
+      "550e8400-e29b-41d4-a716-446655440331",
+    );
+    expect(manualCreateBody.current?.thumbnail_url).toBeUndefined();
   });
 });
