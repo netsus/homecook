@@ -280,7 +280,10 @@ function collectCommonJsRequireCalls(sourceFile) {
   }).getTypeChecker();
   const freeRequire = Symbol("free-commonjs-require");
   const isRuntimeDeclaration = (declaration) => {
-    if (declaration.getSourceFile().isDeclarationFile) {
+    if (
+      declaration.getSourceFile().isDeclarationFile
+      || ts.isFunctionDeclaration(declaration) && !declaration.body
+    ) {
       return false;
     }
     for (let current = declaration; current; current = current.parent) {

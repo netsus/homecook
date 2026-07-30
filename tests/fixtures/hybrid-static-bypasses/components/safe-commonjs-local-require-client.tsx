@@ -15,3 +15,12 @@ export function loadThroughLocalFunction() {
   const loader = require;
   return loader("@supabase/storage-js");
 }
+
+export function loadThroughImplementedOverload() {
+  function require(specifier: string): string;
+  function require(specifier: string) {
+    return specifier;
+  }
+  const loader = require;
+  return loader("@supabase/supabase-js");
+}
