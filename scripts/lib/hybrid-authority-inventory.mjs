@@ -269,29 +269,26 @@ function staticModuleSpecifier(node) {
   return ts.isStringLiteralLike(specifier) ? specifier.text : null;
 }
 
-function resolveImportSource(repoRoot, importerDir, rawSpecifier) {
+function resolveImportSources(repoRoot, importerDir, rawSpecifier) {
   if (!rawSpecifier) {
-    return null;
+    return [];
   }
 
   if (rawSpecifier.startsWith("@/")) {
     const aliased = path.join(repoRoot, rawSpecifier.slice(2));
-    return tryResolveModulePath(aliased);
+    return tryResolveModulePaths(aliased);
   }
 
   if (rawSpecifier.startsWith("./") || rawSpecifier.startsWith("../") || rawSpecifier === ".") {
     const absolute = path.resolve(importerDir, rawSpecifier);
-    return tryResolveModulePath(absolute);
+    return tryResolveModulePaths(absolute);
   }
 
-  return null;
+  return [];
 }
 
-function tryResolveModulePath(basePath) {
-  if (fs.existsSync(basePath) && fs.statSync(basePath).isFile()) {
-    return basePath;
-  }
-
+function tryResolveModulePaths(basePath) {
+  const candidates = [];
   const explicitExtension = path.extname(basePath);
   const substitutions = EXPLICIT_RUNTIME_EXTENSION_SUBSTITUTIONS.get(
     explicitExtension,
@@ -304,19 +301,28 @@ function tryResolveModulePath(basePath) {
   for (const extension of extensionCandidates) {
     const withExt = `${stem}${extension}`;
     if (fs.existsSync(withExt) && fs.statSync(withExt).isFile()) {
-      return withExt;
+      candidates.push(withExt);
     }
   }
 
-  const indexPath = path.join(basePath, "index");
-  for (const extension of SOURCE_EXTENSIONS) {
-    const indexed = `${indexPath}${extension}`;
-    if (fs.existsSync(indexed) && fs.statSync(indexed).isFile()) {
-      return indexed;
+  if (!explicitExtension) {
+    if (fs.existsSync(basePath) && fs.statSync(basePath).isFile()) {
+      candidates.push(basePath);
+    }
+
+    const indexPath = path.join(basePath, "index");
+    for (const extension of SOURCE_EXTENSIONS) {
+      const indexed = `${indexPath}${extension}`;
+      if (fs.existsSync(indexed) && fs.statSync(indexed).isFile()) {
+        candidates.push(indexed);
+      }
     }
   }
 
-  return null;
+  // TypeScript and Next can substitute a source extension for an explicit
+  // runtime extension. Inspect every viable repo-local candidate so an
+  // ambiguous basename cannot hide a forbidden runtime capability.
+  return [...new Set(candidates)];
 }
 
 function readSourceFile(repoRoot, absoluteFile) {
@@ -373,12 +379,15 @@ function collectClientImportGraph(repoRoot, files) {
     }
 
     const addRuntimeEdge = (rawSpecifier) => {
-      const resolved = resolveImportSource(
+      const resolvedSources = resolveImportSources(
         repoRoot,
         importerDir,
         rawSpecifier,
       );
-      if (resolved && isRepoLocalRuntimeSource(repoRoot, resolved)) {
+      for (const resolved of resolvedSources) {
+        if (!isRepoLocalRuntimeSource(repoRoot, resolved)) {
+          continue;
+        }
         const target = toRelativeFile(repoRoot, resolved);
         fileByRelative.set(target, resolved);
         imports.add(target);
@@ -447,7 +456,7 @@ function collectClientImportGraph(repoRoot, files) {
       } else if (
         ts.isCallExpression(node)
         && ts.isImportCall(node)
-        && node.arguments.length === 1
+        && node.arguments.length >= 1
       ) {
         const specifier = unwrapExpression(node.arguments[0]);
         if (ts.isStringLiteralLike(specifier)) {
@@ -577,7 +586,7 @@ function browserSupabaseRuntimeImportViolations(
       } else if (
         ts.isCallExpression(node)
         && ts.isImportCall(node)
-        && node.arguments.length === 1
+        && node.arguments.length >= 1
       ) {
         const specifier = staticModuleSpecifier(node.arguments[0]);
         if (specifier === null) {
