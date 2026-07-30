@@ -279,12 +279,30 @@ function collectCommonJsRequireCalls(sourceFile) {
     rootNames: [fileName],
   }).getTypeChecker();
   const freeRequire = Symbol("free-commonjs-require");
+  const isRuntimeDeclaration = (declaration) => {
+    if (declaration.getSourceFile().isDeclarationFile) {
+      return false;
+    }
+    for (let current = declaration; current; current = current.parent) {
+      if (
+        current.flags & ts.NodeFlags.Ambient
+        || (
+          ts.canHaveModifiers(current)
+          && ts.getCombinedModifierFlags(current) & ts.ModifierFlags.Ambient
+        )
+        || ts.isTypeOnlyImportOrExportDeclaration(current)
+        || (
+          ts.isModuleDeclaration(current)
+          && ts.isGlobalScopeAugmentation(current)
+        )
+      ) {
+        return false;
+      }
+    }
+    return true;
+  };
   const hasRuntimeDeclaration = (symbol) => symbol?.declarations?.some(
-    (declaration) => (
-      !declaration.getSourceFile().isDeclarationFile
-      && !(ts.getCombinedModifierFlags(declaration) & ts.ModifierFlags.Ambient)
-      && !ts.isTypeOnlyImportOrExportDeclaration(declaration)
-    ),
+    isRuntimeDeclaration,
   );
   const resolveIdentifier = (identifier) => {
     const symbol = checker.getSymbolAtLocation(identifier);
