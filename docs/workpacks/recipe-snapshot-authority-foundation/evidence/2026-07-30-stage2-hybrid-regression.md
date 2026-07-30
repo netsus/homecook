@@ -138,3 +138,16 @@ Stage 2 completion.
   proving those rows reach dependency zero under their real checks and FKs.
 
 Production writes: 0. Staging writes: 0. Remote application writes: 0.
+
+## Post-merge reconciliation
+
+- PR #1233 exact head `d9468881b7ae77f5b9b333e6f2a82452eb9dd60e`
+  completed 16 check runs: 15 success and one intended full-regression skip,
+  with pending/fail/cancel 0.
+- PR #1233 squash-merged as
+  `4a7718ee6bac66fb39b5163742783ac2092e5b5c`.
+- The clean `master == origin/master` dry-run passed at exact SHA
+  `da054a96afb7c6108a7007bfafbf3d328ef47656` in read-only mode with
+  production/staging/remote application writes all 0.
+- This reconciliation does not replace the still-pending full local/remote
+  evidence listed above and does not close the workpack lifecycle.
