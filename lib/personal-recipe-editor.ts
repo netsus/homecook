@@ -1,5 +1,3 @@
-import type { ManagedRecipeImageUploadData } from "@/lib/api/manual-recipe";
-
 export type RecipeEditorContext =
   | "planner-add"
   | "personal-create"
@@ -27,6 +25,13 @@ export interface RecipeEditorImageDraft {
   imageObjectId: string | null;
   readUrl?: string | null;
   readUrlExpiresAt?: string | null;
+  state: RecipeEditorImageState;
+}
+
+export interface RecipeEditorImageSource {
+  image_object_id: string;
+  read_url: string;
+  read_url_expires_at: string;
   state: RecipeEditorImageState;
 }
 
@@ -117,7 +122,7 @@ export function getRecipeEditorContextPolicy(
 }
 
 export function createRecipeEditorImageDraft(
-  image?: ManagedRecipeImageUploadData | null,
+  image?: RecipeEditorImageSource | null,
 ): RecipeEditorImageDraft {
   if (!image) {
     return {

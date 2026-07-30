@@ -445,6 +445,7 @@ export function RecipeEditorImageSection({
         {imageStatus === "idle" ? (
           <Button
             className="web-manual-add-button"
+            data-testid="manual-image-choose-button"
             onClick={() => fileInputRef.current?.click()}
             variant="secondary"
           >
@@ -476,8 +477,22 @@ export function RecipeEditorImageSection({
             </div>
             {imageStatus === "uploaded" ? (
               <div style={{ display: "flex", gap: "8px" }}>
-                <Button disabled={actionsDisabled} onClick={onReplace} variant="secondary">교체</Button>
-                <Button disabled={actionsDisabled} onClick={onRemove} variant="secondary">제거</Button>
+                <Button
+                  data-testid="manual-image-replace-button"
+                  disabled={actionsDisabled}
+                  onClick={onReplace}
+                  variant="secondary"
+                >
+                  교체
+                </Button>
+                <Button
+                  data-testid="manual-image-remove-button"
+                  disabled={actionsDisabled}
+                  onClick={onRemove}
+                  variant="secondary"
+                >
+                  제거
+                </Button>
               </div>
             ) : null}
           </div>
@@ -494,8 +509,21 @@ export function RecipeEditorImageSection({
               {imageError}
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
-              <Button disabled={actionsDisabled} onClick={onRetry}>다시 시도</Button>
-              <Button disabled={actionsDisabled} onClick={onRemove} variant="secondary">제거</Button>
+              <Button
+                data-testid="manual-image-retry-button"
+                disabled={actionsDisabled}
+                onClick={onRetry}
+              >
+                다시 시도
+              </Button>
+              <Button
+                data-testid="manual-image-remove-button"
+                disabled={actionsDisabled}
+                onClick={onRemove}
+                variant="secondary"
+              >
+                제거
+              </Button>
             </div>
           </div>
         ) : null}

@@ -330,7 +330,15 @@ describe("/api/v1/recipe-books", () => {
     const signedUrl =
       "http://127.0.0.1:54321/storage/v1/object/sign/recipe-images-private/cover?token=short";
     let ownedBookListCompleted = false;
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.HOMECOOK_DATA_AUTHORITY = "local";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_URL
+      = "https://auth.example.supabase.co";
+    process.env.NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY
+      = "remote-auth-publishable";
+    process.env.NEXT_PUBLIC_SUPABASE_URL
+      = "https://legacy-auth.example.supabase.co";
+    process.env.DATA_SUPABASE_URL = "http://127.0.0.1:54321";
+    process.env.DATA_SUPABASE_PUBLISHABLE_KEY = "local-data-publishable";
 
     const recipeBooksTable = createRecipeBooksTable({
       selectResults: [],

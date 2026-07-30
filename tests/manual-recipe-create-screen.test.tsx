@@ -1493,6 +1493,195 @@ describe("ManualRecipeCreateScreen", () => {
     );
   });
 
+  it("does not cancel a create-owned image when the form unmounts before a successful create response", async () => {
+    let resolveCreate!: (
+      value: Awaited<ReturnType<typeof createManualRecipe>>,
+    ) => void;
+    vi.mocked(uploadRecipeImage).mockResolvedValueOnce(
+      managedUploadSuccess({
+        image_object_id: "550e8400-e29b-41d4-a716-446655440076",
+      }),
+    );
+    vi.mocked(createManualRecipe).mockReturnValue(new Promise((resolve) => {
+      resolveCreate = resolve;
+    }));
+
+    const user = userEvent.setup();
+    const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["image"], "create-owned.png", { type: "image/png" }),
+    );
+    await screen.findByTestId("manual-image-replace-button");
+    await fillMinimumManualRecipe(user, "생성 소유 성공");
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalledOnce();
+    });
+
+    view.unmount();
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveCreate({
+        success: true,
+        data: {
+          id: "recipe-create-owned",
+          title: "생성 소유 성공",
+          source_type: "manual",
+          created_by: "user-1",
+          base_servings: 2,
+        },
+        error: null,
+      });
+      await Promise.resolve();
+    });
+
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
+  });
+
+  it("cancels a create-owned image after unmount when create definitively rejects the image", async () => {
+    let resolveCreate!: (
+      value: Awaited<ReturnType<typeof createManualRecipe>>,
+    ) => void;
+    const imageObjectId = "550e8400-e29b-41d4-a716-446655440077";
+    vi.mocked(uploadRecipeImage).mockResolvedValueOnce(
+      managedUploadSuccess({ image_object_id: imageObjectId }),
+    );
+    vi.mocked(createManualRecipe).mockReturnValue(new Promise((resolve) => {
+      resolveCreate = resolve;
+    }));
+
+    const user = userEvent.setup();
+    const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["image"], "create-failed.png", { type: "image/png" }),
+    );
+    await screen.findByTestId("manual-image-replace-button");
+    await fillMinimumManualRecipe(user, "생성 소유 실패");
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalledOnce();
+    });
+
+    view.unmount();
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveCreate({
+        success: false,
+        data: null,
+        error: {
+          code: "IMAGE_NOT_FOUND",
+          message: "이미지를 연결하지 못했어요.",
+          fields: [],
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(cancelRecipeImage).toHaveBeenCalledTimes(1);
+    expect(cancelRecipeImage).toHaveBeenCalledWith(
+      imageObjectId,
+      expect.objectContaining({ idempotencyKey: expect.any(String) }),
+    );
+  });
+
+  it("does not cancel a create-owned image after unmount when the create outcome is unknown", async () => {
+    let resolveCreate!: (
+      value: Awaited<ReturnType<typeof createManualRecipe>>,
+    ) => void;
+    vi.mocked(uploadRecipeImage).mockResolvedValueOnce(
+      managedUploadSuccess({
+        image_object_id: "550e8400-e29b-41d4-a716-446655440079",
+      }),
+    );
+    vi.mocked(createManualRecipe).mockReturnValue(new Promise((resolve) => {
+      resolveCreate = resolve;
+    }));
+
+    const user = userEvent.setup();
+    const view = render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["image"], "create-unknown.png", { type: "image/png" }),
+    );
+    await screen.findByTestId("manual-image-replace-button");
+    await fillMinimumManualRecipe(user, "생성 결과 미확인");
+    await user.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalledOnce();
+    });
+
+    view.unmount();
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveCreate({
+        success: false,
+        data: null,
+        error: {
+          code: "NETWORK_ERROR",
+          message: "등록 결과를 확인하지 못했어요.",
+          fields: [],
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(createManualRecipe).toHaveBeenCalledOnce();
+    expect(cancelRecipeImage).not.toHaveBeenCalled();
+  });
+
+  it.each(["NETWORK_ERROR", "INVALID_RESPONSE"])(
+    "fails closed after a mounted unknown %s create outcome",
+    async (errorCode) => {
+      vi.mocked(uploadRecipeImage).mockResolvedValueOnce(
+        managedUploadSuccess({
+          image_object_id: "550e8400-e29b-41d4-a716-446655440080",
+        }),
+      );
+      vi.mocked(createManualRecipe).mockResolvedValue({
+        success: false,
+        data: null,
+        error: {
+          code: errorCode,
+          message: "등록 결과를 확인하지 못했어요.",
+          fields: [],
+        },
+      });
+
+      const user = userEvent.setup();
+      render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+      await user.upload(
+        screen.getByTestId("manual-image-file-input"),
+        new File(["image"], "create-unknown-mounted.png", { type: "image/png" }),
+      );
+      await screen.findByTestId("manual-image-replace-button");
+      await fillMinimumManualRecipe(user, "생성 결과 잠금");
+      await user.click(screen.getByRole("button", { name: "저장" }));
+
+      await screen.findByText("등록 결과를 확인하지 못했어요.");
+      expect(screen.getByRole("button", { name: "저장" })).toHaveProperty(
+        "disabled",
+        true,
+      );
+      expect(screen.getByTestId("manual-image-replace-button")).toHaveProperty(
+        "disabled",
+        true,
+      );
+      expect(screen.getByTestId("manual-image-remove-button")).toHaveProperty(
+        "disabled",
+        true,
+      );
+
+      await user.click(screen.getByRole("button", { name: "저장" }));
+      expect(createManualRecipe).toHaveBeenCalledOnce();
+      expect(cancelRecipeImage).not.toHaveBeenCalled();
+    },
+  );
+
   it("save without image works and does not include image identity fields", async () => {
     vi.mocked(createManualRecipe).mockResolvedValue({
       success: true,

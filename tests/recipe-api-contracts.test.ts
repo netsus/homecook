@@ -1640,7 +1640,18 @@ describe("recipe API contracts", () => {
     };
     const rpc = vi.fn(() => viewCountRpcQuery);
     const managedReadUrl =
-      "https://project.supabase.co/storage/v1/object/sign/recipe-images-private/managed?token=short";
+      "http://127.0.0.1:8000/storage/v1/object/sign/recipe-images-private/managed?token=short";
+    vi.stubEnv("HOMECOOK_DATA_AUTHORITY", "local");
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_SUPABASE_URL",
+      "https://auth.example.supabase.co",
+    );
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY",
+      "remote-auth-publishable",
+    );
+    vi.stubEnv("DATA_SUPABASE_URL", "http://127.0.0.1:8000");
+    vi.stubEnv("DATA_SUPABASE_PUBLISHABLE_KEY", "local-data-publishable");
     resolveRecipeImageReadUrl.mockResolvedValueOnce(managedReadUrl);
     const routeFrom = vi.fn((table: string) => {
       if (table === "recipes") return recipesTable;
@@ -1688,6 +1699,13 @@ describe("recipe API contracts", () => {
     expect(recipeReadQuery.maybeSingle.mock.invocationCallOrder[0])
       .toBeLessThan(readRecipeImageProjection.mock.invocationCallOrder[0]);
     expect(body.data.thumbnail_url).toBe(managedReadUrl);
+    expect(normalizeExpectedRecipeImageStorageOrigin)
+      .toHaveBeenCalledWith("http://127.0.0.1:8000");
+    expect(resolveRecipeImageReadUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedStorageOrigin: "http://127.0.0.1:8000",
+      }),
+    );
     expect(routeFrom).not.toHaveBeenCalledWith("meals");
   });
 
@@ -2568,6 +2586,56 @@ describe("recipe API contracts", () => {
         body: JSON.stringify(manualRecipeCreateBody({
           thumbnail_url:
             "https://project.supabase.co/storage/v1/object/public/recipe-images/user-1/legacy.webp",
+        })),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body.error.code).toBe("MANAGED_IMAGE_REFERENCE_REQUIRED");
+    expect(readVerifiedAccountGenerationSession).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("uses the local Data/Storage origin instead of the remote Auth origin for manual image ownership", async () => {
+    const rpc = vi.fn();
+    vi.stubEnv("HOMECOOK_DATA_AUTHORITY", "local");
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_SUPABASE_URL",
+      "https://auth.example.supabase.co",
+    );
+    vi.stubEnv(
+      "NEXT_PUBLIC_AUTH_SUPABASE_PUBLISHABLE_KEY",
+      "remote-auth-publishable",
+    );
+    vi.stubEnv(
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "https://legacy-auth.example.supabase.co",
+    );
+    vi.stubEnv("DATA_SUPABASE_URL", "http://127.0.0.1:8000");
+    vi.stubEnv("DATA_SUPABASE_PUBLISHABLE_KEY", "local-data-publishable");
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+    });
+    createServiceRoleClient.mockReturnValue({ rpc });
+    readAccountGenerationCapability.mockResolvedValue({
+      ok: true,
+      revision: 3,
+      state: "generation_active",
+    });
+
+    const { POST } = await import("@/app/api/v1/recipes/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(manualRecipeCreateBody({
+          thumbnail_url:
+            "http://127.0.0.1:8000/storage/v1/object/public/recipe-images/user-1/legacy.webp",
         })),
       }),
     );

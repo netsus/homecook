@@ -889,7 +889,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_books",
-      "line": 577,
+      "line": 575,
       "source_file": "app/api/v1/recipe-books/route.ts",
       "route": "/api/v1/recipe-books",
       "owner_scope": "authenticated-user",
@@ -931,7 +931,7 @@
       "kind": "direct_dml",
       "operation": "update",
       "target": "recipes",
-      "line": 212,
+      "line": 210,
       "source_file": "app/api/v1/recipes/[id]/route.ts",
       "route": "/api/v1/recipes/[id]",
       "owner_scope": "public",
@@ -987,7 +987,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_ingredients",
-      "line": 1452,
+      "line": 1464,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1001,7 +1001,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_steps",
-      "line": 1464,
+      "line": 1476,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1015,7 +1015,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipes",
-      "line": 1431,
+      "line": 1443,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1631,7 +1631,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "increment_recipe_view_count",
-      "line": 404,
+      "line": 402,
       "source_file": "app/api/v1/recipes/[id]/route.ts",
       "route": "/api/v1/recipes/[id]",
       "owner_scope": "public",
@@ -1645,7 +1645,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "create_manual_recipe_with_managed_image",
-      "line": 1355,
+      "line": 1367,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1659,7 +1659,7 @@
       "kind": "rpc",
       "operation": "call",
       "target": "create_manual_recipe",
-      "line": 1367,
+      "line": 1379,
       "source_file": "app/api/v1/recipes/route.ts",
       "route": "/api/v1/recipes",
       "owner_scope": "authenticated-user",
@@ -1933,20 +1933,6 @@
       "guard_mode": "protected-rpc-or-mutated-table-before-trigger",
       "expected_generation": "joint-promote-server-verified-session-binding",
       "activation_phase": "f0-expand-legacy-guard"
-    },
-    {
-      "key": "service_external_write|app/api/v1/recipes/images/route.ts|recipe-images|upload|1",
-      "kind": "service_external_write",
-      "operation": "upload",
-      "target": "recipe-images",
-      "line": 256,
-      "source_file": "app/api/v1/recipes/images/route.ts",
-      "route": "/api/v1/recipes/images",
-      "owner_scope": "authenticated-user",
-      "persists_personal_state": true,
-      "guard_mode": "shared-fence-external-attempt-lease",
-      "expected_generation": "joint-promote-server-verified-session-binding",
-      "activation_phase": "f0-expand-legacy-guard"
     }
   ],
   "auth_users_inbound_fks": [
@@ -1972,6 +1958,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-30T02:10:42.840Z",
-  "checksum": "0f73d37728f9076a31b2a8f6ac18485c2f29876dfe11a962193c5ae3ad632d4d"
+  "generated_at": "2026-07-30T15:55:40.005Z",
+  "checksum": "6d489ccd40c4b656834c485d2bdcb6536c63bbeaa5464d18d0843845115a2446"
 }

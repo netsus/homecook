@@ -29,7 +29,7 @@ import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { notifyGamificationSourceAction } from "@/lib/gamification-events";
 import { buildReturnHref } from "@/lib/navigation/return-context";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useStandaloneCookModeStore } from "@/stores/standalone-cook-mode-store";
 
@@ -76,7 +76,7 @@ export function StandaloneCookModeScreen({
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
+    const supabase = getAuthSupabaseBrowserClient();
 
     void supabase.auth
       .getSession()

@@ -73,7 +73,7 @@ vi.mock("@/lib/api/user-gamification", () => ({
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
-  getSupabaseBrowserClient: () => ({
+  getAuthSupabaseBrowserClient: () => ({
     auth: {
       getSession,
       onAuthStateChange,

@@ -225,6 +225,35 @@ describe("managed recipe image upload orchestration", () => {
     );
   });
 
+  it("accepts a signed read URL from the exact loopback HTTP Data/Storage origin", async () => {
+    const localStorageOrigin = "http://127.0.0.1:8000";
+    const localReadUrl
+      = `${localStorageOrigin}/storage/v1/object/sign/recipe-images-private/${OBJECT_PATH}?token=local`;
+    const dbClient = rpcClient((name) => {
+      if (name === "reserve_recipe_image_upload") {
+        return { data: reserved, error: null };
+      }
+      if (name === "finalize_recipe_image_upload") {
+        return { data: finalized, error: null };
+      }
+      throw new Error(`unexpected RPC: ${name}`);
+    });
+
+    await expect(runManagedRecipeImageUpload(setup(dbClient, {
+      expectedReadUrlOrigin: localStorageOrigin,
+      issueReadUrl: vi.fn(async () => ({
+        expiresAt: "2026-07-26T01:05:00.000Z",
+        readUrl: localReadUrl,
+      })),
+    }))).resolves.toEqual({
+      kind: "succeeded",
+      objectId: OBJECT_ID,
+      readUrl: localReadUrl,
+      readUrlExpiresAt: "2026-07-26T01:05:00.000Z",
+      state: "uploaded_unlinked",
+    });
+  });
+
   it("reissues a fresh URL for a durable success replay without PUT or finalize", async () => {
     const dbClient = rpcClient(() => ({
       data: {

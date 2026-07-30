@@ -23,4 +23,28 @@ describe("hybrid Storage internal boundary contract", () => {
     expect(gateway).not.toMatch(/async function persistAuthority/);
     expect(gateway).toMatch(/ACCOUNT_SESSION_STALE/);
   });
+
+  it("removes anon/authenticated mutation policies from final recipe image buckets", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260730223000_hybrid_storage_browser_mutation_deny.sql",
+      "utf8",
+    );
+
+    expect(migration).toMatch(
+      /drop policy if exists recipe_images_insert_own/i,
+    );
+    expect(migration).toMatch(
+      /drop policy if exists recipe_images_update_own/i,
+    );
+    expect(migration).toMatch(
+      /drop policy if exists recipe_images_delete_own/i,
+    );
+    expect(migration).toMatch(
+      /cmd in \('INSERT', 'UPDATE', 'DELETE', 'ALL'\)/i,
+    );
+    expect(migration).toMatch(
+      /recipe-images-private/i,
+    );
+    expect(migration).not.toMatch(/create policy[\s\S]*for (insert|update|delete)/i);
+  });
 });

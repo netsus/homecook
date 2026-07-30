@@ -19,7 +19,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/supabase/env", () => ({ hasSupabasePublicEnv: () => publicEnvAvailable }));
 vi.mock("@/lib/supabase/browser", () => ({
-  getSupabaseBrowserClient: () => ({ auth: { getUserIdentities, linkIdentity } }),
+  getAuthSupabaseBrowserClient: () => ({ auth: { getUserIdentities, linkIdentity } }),
 }));
 
 describe("LinkedAuthProviders", () => {

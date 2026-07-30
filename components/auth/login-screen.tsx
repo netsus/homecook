@@ -10,7 +10,7 @@ import { ContentState } from "@/components/shared/content-state";
 import { useViewMode } from "@/components/shared/use-view-mode";
 import type { AuthProviderId } from "@/lib/auth/providers";
 import { sanitizeInternalPath } from "@/lib/navigation/return-context";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 
 interface LoginScreenProps {
@@ -75,7 +75,7 @@ export function LoginScreen({
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
+    const supabase = getAuthSupabaseBrowserClient();
     let mounted = true;
 
     void supabase.auth

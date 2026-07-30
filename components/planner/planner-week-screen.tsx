@@ -39,7 +39,7 @@ import {
   isPlannerApiError,
   shiftPlannerRange,
 } from "@/lib/api/planner";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import {
@@ -884,7 +884,7 @@ export function PlannerWeekScreen({
         return;
       }
 
-      const supabase = getSupabaseBrowserClient();
+      const supabase = getAuthSupabaseBrowserClient();
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
@@ -903,7 +903,7 @@ export function PlannerWeekScreen({
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
+    const supabase = getAuthSupabaseBrowserClient();
     let mounted = true;
 
     void supabase.auth

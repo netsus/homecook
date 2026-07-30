@@ -14,6 +14,9 @@ import { fileURLToPath } from "node:url";
 import {
   isAnonymousHybridPublicReadRequest,
 } from "../../lib/server/hybrid-auth/public-read-policy-runtime.mjs";
+import {
+  RECIPE_IMAGE_MAX_BYTES,
+} from "../../lib/server/recipe-media-runtime.mjs";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -115,6 +118,12 @@ const INTERNAL_SCOPE_RULES = Object.freeze({
   },
 });
 const MAX_INTERNAL_BODY_BYTES = 1_048_576;
+const STORAGE_MUTATION_METHODS = new Set([
+  "DELETE",
+  "PATCH",
+  "POST",
+  "PUT",
+]);
 
 class AuthorityError extends Error {}
 class UpstreamError extends Error {}
@@ -588,7 +597,16 @@ function isExactInternalScopeRequest(scope, rule, method, pathname) {
     pathname.startsWith("/storage/v1/object/recipe-images/")
     || pathname.startsWith("/storage/v1/object/recipe-images-private/")
   ) {
-    return method === "POST" || method === "PUT";
+    return method === "POST"
+      || method === "PUT"
+      || (
+        method === "GET"
+        && pathname.startsWith(
+          "/storage/v1/object/recipe-images-private/",
+        )
+        && pathname.length
+          > "/storage/v1/object/recipe-images-private/".length
+      );
   }
   if (
     pathname.startsWith("/storage/v1/object/info/recipe-images/")
@@ -622,6 +640,38 @@ function isInternalControlPlaneRequest(request, requestUrl, accessToken, config)
   );
 }
 
+function isStorageMutationRequest(request, requestUrl) {
+  return requestUrl.pathname.startsWith("/storage/v1/")
+    && STORAGE_MUTATION_METHODS.has(
+      (request.method ?? "GET").toUpperCase(),
+    );
+}
+
+function isPrivateRecipeImageObjectRead(request, requestUrl) {
+  const prefix = "/storage/v1/object/recipe-images-private/";
+  return (request.method ?? "GET").toUpperCase() === "GET"
+    && requestUrl.pathname.startsWith(prefix)
+    && requestUrl.pathname.length > prefix.length;
+}
+
+function bodyLimitForRequest(request, requestUrl) {
+  const method = (request.method ?? "GET").toUpperCase();
+  const isRecipeImageUpload = (
+    method === "POST"
+    || method === "PUT"
+  ) && (
+    requestUrl.pathname.startsWith(
+      "/storage/v1/object/recipe-images/",
+    )
+    || requestUrl.pathname.startsWith(
+      "/storage/v1/object/recipe-images-private/",
+    )
+  );
+  return isRecipeImageUpload
+    ? RECIPE_IMAGE_MAX_BYTES
+    : MAX_INTERNAL_BODY_BYTES;
+}
+
 function anonymousScope(request) {
   const value = request.headers["x-homecook-public-read-scope"];
   return typeof value === "string" ? value : "";
@@ -642,13 +692,13 @@ function isAnonymousAllowedRequest(request, requestUrl, body) {
   );
 }
 
-async function readBody(request) {
+async function readBody(request, maxBytes = MAX_INTERNAL_BODY_BYTES) {
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {
     const value = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     size += value.length;
-    if (size > MAX_INTERNAL_BODY_BYTES) {
+    if (size > maxBytes) {
       failAuthority();
     }
     chunks.push(value);
@@ -847,6 +897,23 @@ export function createGatewayRequestHandler({
         return;
       }
       if (
+        isStorageMutationRequest(request, requestUrl)
+        || isPrivateRecipeImageObjectRead(request, requestUrl)
+      ) {
+        const accessToken = readBearerToken(request);
+        if (
+          !accessToken
+          || !isInternalControlPlaneRequest(
+            request,
+            requestUrl,
+            accessToken,
+            resolvedConfig,
+          )
+        ) {
+          failAuthority();
+        }
+      }
+      if (
         resolvedConfig.requireReady
         && !await probeGatewayHealth(resolvedConfig, fetchImpl)
       ) {
@@ -871,9 +938,11 @@ export function createGatewayRequestHandler({
           !readBearerToken(request)
           || hasExactDataSecret(readBearerToken(request) ?? "", resolvedConfig)
         );
-      const bufferedBody = needsBufferedBody ? await readBody(request) : undefined;
+      const bufferedBody = needsBufferedBody
+        ? await readBody(request, bodyLimitForRequest(request, requestUrl))
+        : undefined;
       let parsedBody;
-      if (bufferedBody?.length) {
+      if (bufferedBody?.length && !readBearerToken(request)) {
         try {
           parsedBody = JSON.parse(bufferedBody.toString("utf8"));
         } catch {

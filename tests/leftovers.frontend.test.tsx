@@ -52,7 +52,7 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
-  getSupabaseBrowserClient: () => ({
+  getAuthSupabaseBrowserClient: () => ({
     auth: {
       getSession: vi.fn().mockResolvedValue({
         data: { session: null },

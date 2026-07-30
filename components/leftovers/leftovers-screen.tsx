@@ -34,7 +34,7 @@ import { fetchPlanner } from "@/lib/api/planner";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { formatKoreaCompactDate, formatKoreaDate } from "@/lib/korean-date";
 import { buildReturnHref } from "@/lib/navigation/return-context";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getAuthSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { LeftoverListItemData } from "@/types/leftover";
 import type { PlannerColumnData } from "@/types/planner";
@@ -303,7 +303,7 @@ export function LeftoversScreen({
         return;
       }
 
-      const supabase = getSupabaseBrowserClient();
+      const supabase = getAuthSupabaseBrowserClient();
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(
@@ -322,7 +322,7 @@ export function LeftoversScreen({
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
+    const supabase = getAuthSupabaseBrowserClient();
     let mounted = true;
 
     void supabase.auth

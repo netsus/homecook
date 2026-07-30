@@ -34,6 +34,9 @@ import {
 } from "@/lib/server/account-generation/session-authority";
 import { parseRecipeImagePublicUrl } from "@/lib/server/recipe-media";
 import {
+  readExpectedRecipeImageStorageOrigin,
+} from "@/lib/server/recipe-image-storage-origin";
+import {
   recalculateRecipeNutritionSnapshot,
   type RecipeNutritionServiceClient,
 } from "@/lib/server/recipe-nutrition-service";
@@ -242,14 +245,11 @@ interface ParsedManualRecipeCreate {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const INITIAL_IMAGE_CLEANUP_GENERATION = 0;
 
-function isServiceOwnedRecipeImageUrl(value: string) {
-  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  if (!configuredUrl) {
-    return false;
-  }
-
+function isServiceOwnedRecipeImageUrl(
+  value: string,
+  expectedOrigin: string,
+) {
   try {
-    const expectedOrigin = new URL(configuredUrl).origin;
     const candidate = new URL(value);
     if (candidate.origin !== expectedOrigin) {
       return false;
@@ -1224,11 +1224,19 @@ async function postRecipe(request: Request) {
     return fail("VALIDATION_ERROR", "요청 값을 확인해 주세요.", 422, fields);
   }
 
-  const legacyImageReference = parsed.thumbnailUrl
+  let expectedStorageOrigin: string | null = null;
+  if (parsed.thumbnailUrl) {
+    try {
+      expectedStorageOrigin = readExpectedRecipeImageStorageOrigin();
+    } catch {
+      return fail("INTERNAL_ERROR", "이미지 설정을 확인하지 못했어요.", 500);
+    }
+  }
+  const legacyImageReference = parsed.thumbnailUrl && expectedStorageOrigin
     ? parseRecipeImagePublicUrl({
         thumbnailUrl: parsed.thumbnailUrl,
         userId: user.id,
-        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+        supabaseUrl: expectedStorageOrigin,
       })
     : null;
   const dbClient = routeClient as unknown as
@@ -1246,7 +1254,11 @@ async function postRecipe(request: Request) {
   }
   if (
     parsed.thumbnailUrl
-    && isServiceOwnedRecipeImageUrl(parsed.thumbnailUrl)
+    && expectedStorageOrigin
+    && isServiceOwnedRecipeImageUrl(
+      parsed.thumbnailUrl,
+      expectedStorageOrigin,
+    )
   ) {
     return failManagedRecipeCreate("MANAGED_IMAGE_REFERENCE_REQUIRED");
   }
