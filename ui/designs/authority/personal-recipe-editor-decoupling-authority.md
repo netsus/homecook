@@ -9,8 +9,26 @@
 > canonical report: `ui/designs/authority/personal-recipe-editor-decoupling-authority.md`
 >
 > evidence:
-> - `ui/designs/evidence/personal-recipe-editor-decoupling/*-mobile-default.png` 10개 — 390×844 CSS viewport
-> - `ui/designs/evidence/personal-recipe-editor-decoupling/*-mobile-narrow.png` 10개 — 320×568 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_CLEANUP_ERROR-mobile-default.png` — 390×844 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_CLEANUP_ERROR-mobile-narrow.png` — 320×568 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_CONTEXTS-mobile-default.png` — 390×844 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_CONTEXTS-mobile-narrow.png` — 320×568 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_CONTROLS-mobile-default.png` — 390×844 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_CONTROLS-mobile-narrow.png` — 320×568 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_KEYBOARD_FOCUS-mobile-default.png` — 390×844 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_KEYBOARD_FOCUS-mobile-narrow.png` — 320×568 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_STATES-mobile-default.png` — 390×844 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_STATES-mobile-narrow.png` — 320×568 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_UPLOAD_ERROR-mobile-default.png` — 390×844 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_UPLOAD_ERROR-mobile-narrow.png` — 320×568 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_VALIDATION-mobile-default.png` — 390×844 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/EDITOR_VALIDATION-mobile-narrow.png` — 320×568 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/MYPAGE-no-edit-mobile-default.png` — 390×844 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/MYPAGE-no-edit-mobile-narrow.png` — 320×568 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/MYPAGE_RECIPEBOOK-no-edit-regression-mobile-default.png` — 390×844 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/MYPAGE_RECIPEBOOK-no-edit-regression-mobile-narrow.png` — 320×568 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/RECIPE_DETAIL-mobile-default.png` — 390×844 CSS viewport
+> - `ui/designs/evidence/personal-recipe-editor-decoupling/RECIPE_DETAIL-mobile-narrow.png` — 320×568 CSS viewport
 > - `tests/e2e/qa-visual.spec.ts-snapshots/qa-manual-recipe-create-desktop-chrome-darwin.png` — 1280px desktop editor
 > - `tests/e2e/qa-visual.spec.ts-snapshots/qa-youtube-import-review-desktop-chrome-darwin.png` — 1280px shared tag/editor-control regression snapshot
 

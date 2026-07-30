@@ -204,4 +204,18 @@ describe("personal recipe editor hybrid contract lock", () => {
       }),
     ).not.toThrow();
   });
+
+  it("keeps the Stage 4 authority evidence ready-for-review valid", () => {
+    expect(() =>
+      execFileSync("node", ["scripts/validate-authority-evidence-presence.mjs"], {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          BRANCH_NAME: "feature/fe-personal-recipe-editor-decoupling",
+          PR_IS_DRAFT: "false",
+        },
+        stdio: "pipe",
+      }),
+    ).not.toThrow();
+  });
 });
