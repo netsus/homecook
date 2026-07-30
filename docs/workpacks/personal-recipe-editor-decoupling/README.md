@@ -69,15 +69,15 @@ Schema Change:
 | `recipe-snapshot-authority-foundation` | in-progress, not a predecessor | PR #1218 historical Stage 2 and PR #1219 historical Stage 4 are preserved; the hybrid delta/reverification remains in progress. #4 is not a #5 implementation predecessor |
 | `recipebook-diary-port` | not a predecessor | MYPAGE/RECIPEBOOK_DETAIL remain untouched |
 
-> Roadmap and workflow lifecycle are `in-progress` for the test-only Stage 2. This backend branch adds route/contract regression locks only; it does not activate editor CTA, personal writes or any new runtime endpoint.
+> Roadmap and workflow lifecycle remain `in-progress` after the Stage 2/3 boundary lock and Stage 4/5 capability-off implementation merge. The required merged-SHA hybrid verifier is still pending, and no editor CTA, personal write or new runtime endpoint is activated.
 
 ## Hybrid Auth / Local Data Boundary
 
 - Google/Naver/Kakao session identity and the minimal Hook/lifecycle fence remain in the remote Auth control-plane. Application DB and Storage authority are local application Data/Storage on the server Mac.
 - `local auth.users=0` is intentional. User-scoped editor preload and future mutation paths must pass the server session-authority gateway, exact remote JWT claim checks, current private identity epoch and active session-liveness HMAC binding.
 - The browser must not call local PostgREST/Storage directly. The user path has service-role user path 0; managed image operations continue through the existing server image APIs.
-- The future Stage 4/release verifier is planned as `node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only`. It must read local application Data/Storage plus the minimal remote Auth control-plane evidence, keep remote application DB/Storage writes remain zero, and prove the capability-off external personal write remains dark.
-- The verifier file and its RED/GREEN evidence do not exist in this Stage 1 relock and are not claimed complete. This relock makes no product API, DB, route, field, status or error change.
+- The post-merge release verifier is `node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only`. It reads local application Data/Storage plus minimal sanitized remote Auth control-plane evidence, keeps remote application DB/Storage writes at zero, and proves the capability-off external personal write is dark at the observation point.
+- The verifier is developed test-first in `tests/personal-recipe-editor-hybrid-verifier.test.ts`. A successful release result is claimed only when the command runs from a clean merged exact SHA with truthful local and Manual Only evidence. This verifier makes no product API, DB, route, field, status or error change.
 
 ## Context Contract
 
@@ -170,6 +170,7 @@ dirty close/back → [계속 편집] [변경사항 버리기]
 
 ## Design Authority
 
+- Authority status: `reviewed`
 - UI risk: `high-risk` anchor-screen CTA and multi-context editor navigation
 - Anchor screen: `RECIPE_DETAIL`; high-risk affected/required editor surface: `MANUAL_RECIPE_CREATE`
 - Stage 1 artifact: this README's state matrix and markdown wireframe
@@ -181,7 +182,38 @@ dirty close/back → [계속 편집] [변경사항 버리기]
 
 ## Design Status
 
-`temporary`. Stage 1 locks the official interaction contract only. Stage 4 implementation, independent design critique and screenshot/Figma authority approval are still pending.
+- [ ] 임시 (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed) — Stage 4 dark-ship surface authority pass
+- [ ] N/A
+
+The independent product-design-authority recheck records `pass`, blocker/major/minor `0/0/0`, after reviewing 20 local-fixture PNGs at 390px/320px plus rendered 44px geometry. Capability-on fork/edit/delete visuals remain intentionally deferred to #8 activation and are not claimed as reachable shipping evidence.
+
+### Stage 4 local evidence
+
+- TDD RED was recorded before the locked shell/navigation/dirty/media/action implementation and before the automation `external_smokes` relock.
+- Focused Vitest covers the shared shell, context policy, browser dirty guard, managed owner cancel, tag/media reuse and capability-off action matrix.
+- `tests/e2e/slice-personal-recipe-editor-decoupling.spec.ts` covers 12 local-fixture cases across 390px and 320px, including browser back, validation, upload error, cleanup retry, interaction geometry, focus/scroll and MYPAGE/RECIPEBOOK no-edit regression.
+- `ui/designs/authority/personal-recipe-editor-decoupling-authority.md` is the canonical authority report. Physical-device virtual keyboard/IME and post-activation personal writes remain Manual Only/future evidence.
+- No production/staging write or remote application DB/Storage mutation was performed.
+
+### Stage 4/5 implementation closeout
+
+- PR #1243 merged as exact squash SHA `6565c2a84f3b7eba9f0579db7b91fed12fc08f23`.
+- The implementation head `e177a882e0fbc35847895a7a0f1dd775ff4425d1` completed 20 GitHub checks successfully with one documented normal `full-regression` skip and no pending, failed, cancelled or Vercel check.
+- Independent code, security and exact-head verification finished with P0/P1/P2 `0/0/0`; the independent design authority finished with blocker/major/minor `0/0/0`.
+- Retained Codex native review paths: `/root/stage4_final4_code_review`, `/root/stage4_final4_security_review`, `/root/stage4_post_vercel_fresh_review`, `/root/stage4_exact_head_final_verifier`; reviewed input SHA `e177a882e0fbc35847895a7a0f1dd775ff4425d1`, result artifact is this closeout evidence plus PR #1243 Actual Verification.
+- The post-merge hybrid verifier implementation is separate from the Stage 4 evidence. PR #1246 merged it as `354c569c8e40889bcfa7d9832cb9cec93f53db46`; its merged exact-SHA dry-run passed. Capability-on fork/edit/delete/login-return smokes remain future or Manual Only and do not authorize remote application DB/Storage writes.
+- Full Stage 6 lifecycle closeout remains pending until the verifier passes its complete local Data/Storage plus sanitized remote Auth evidence path.
+
+### Stage 6 verifier implementation evidence
+
+- RED: `pnpm exec vitest run tests/personal-recipe-editor-hybrid-verifier.test.ts` failed because the verifier module did not exist.
+- GREEN: the focused verifier, contract-sync, snapshot-hybrid, recipe-visibility local and hybrid static-gate set passed `33/33`.
+- The verifier accepts only a loopback local PostgreSQL URL, runs one read-only transaction, requires `local auth.users=0`, reuses the predecessor Data/Storage authority checks, rejects source authority drift and accepts only fresh sanitized remote Auth aggregate evidence bound to the exact merge SHA.
+- The predecessor Data/Storage subset on the running local Supabase returned `local_auth_user_count=0`, capability `legacy`, local writes `0`, and anon/authenticated direct Storage writes `0/0`. The complete Stage 6 query then failed closed because `private.remote_auth_identity_epochs` is not applied to this local instance; therefore no full local or merged-SHA release result is claimed. No secret or raw row was printed or recorded.
+- The exact source inventory proves user service-role fallback/direct paths `0`, browser direct Storage paths `0`, inactive personal-create entry, app/MYPAGE/RECIPEBOOK personal-entry markers `0`, shipping capability-on markers `0`, and no recipe `PATCH`/`DELETE` handler. It preserves the one legacy manual-create `POST /recipes` handler while requiring personal editor markers and `origin_recipe_id` inputs on that handler to remain `0`. The stale generated browser Storage inventory was refreshed to the current empty set.
+- The merged exact-SHA dry-run passed on `354c569c8e40889bcfa7d9832cb9cec93f53db46`, proving the clean merged source and static dark-ship boundary. The complete verifier still fails closed because the current local instance lacks `private.remote_auth_identity_epochs` and no truthful sanitized remote Auth evidence is available. No full release result, other-Mac deployment evidence, production/staging write or remote application DB/Storage mutation is claimed here.
 
 ## QA / Test Data Plan
 
@@ -190,7 +222,7 @@ dirty close/back → [계속 편집] [변경사항 버리기]
 - this docs PR first records RED and then GREEN in `tests/personal-recipe-editor-hybrid-contract-sync.test.ts`, and runs the current executable subset only: SOT/workflow/workpack/automation/bookkeeping validators, focused workflow Vitest, lint, typecheck, dependency audit and diff check.
 - `required_checks` remains the full-lifecycle closeout gate; `verify_commands` is the current Stage 1 executable subset.
 - Stage 4 first writes component/navigation regression tests and records RED before shell extraction, CTA or dirty guard production code.
-- future component/Playwright/visual/authority and `verify-personal-recipe-editor-hybrid.mjs` commands below are required implementation artifacts, not commands claimed executable in this docs PR.
+- capability-on component/Playwright/visual/authority smokes below remain future or Manual Only. The hybrid verifier unit/static checks are executable now, while its release command remains a merged-exact-SHA gate.
 
 ### Future fixtures
 
@@ -228,14 +260,19 @@ dirty close/back → [계속 편집] [변경사항 버리기]
 
 - [x] existing recipe detail read returns the same `404 RESOURCE_NOT_FOUND` before child or service-role reads when the parent recipe is not visible <!-- omo:id=delivery-editor-backend-nondisclosure;stage=2;scope=backend;review=3 -->
 - [x] existing manual recipe create ignores client owner, visibility and origin fields and forwards only the official payload <!-- omo:id=delivery-editor-backend-create-boundary;stage=2;scope=backend;review=3 -->
-- [ ] shared pure form primitives are separated from context shell/router/persistence <!-- omo:id=delivery-editor-primitives;stage=4;scope=frontend;review=5,6 -->
-- [ ] all four contexts preserve distinct initial data, submit, success and cancel destinations <!-- omo:id=delivery-editor-contexts;stage=4;scope=frontend;review=5,6 -->
-- [ ] public/anon/owner/other-owner/deleted/quarantined CTA matrix is fail-closed <!-- omo:id=delivery-editor-cta-matrix;stage=4;scope=frontend;review=5,6 -->
-- [ ] public-fork login round-trip restores the same recipe and draft action <!-- omo:id=delivery-editor-login-return;stage=4;scope=frontend;review=5,6 -->
-- [ ] primary save/same ID, secondary new ID and public fork/new private ID are not conflated <!-- omo:id=delivery-editor-identity;stage=4;scope=frontend;review=5,6 -->
-- [ ] dirty discard, duplicate submit, validation/error and navigation guards preserve draft integrity <!-- omo:id=delivery-editor-dirty;stage=4;scope=frontend;review=5,6 -->
-- [ ] image object/cancel and tag primitives reuse predecessor contracts without direct Storage mutation <!-- omo:id=delivery-editor-media-tags;stage=4;scope=frontend;review=5,6 -->
-- [ ] MYPAGE/RECIPEBOOK_DETAIL remain unchanged and navigate items to RECIPE_DETAIL <!-- omo:id=delivery-editor-surface-boundary;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px screenshots and independent design critic/authority reviews pass <!-- omo:id=delivery-editor-design-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] capability stays dark until owning write and snapshot-v2 activation gates <!-- omo:id=delivery-editor-dark-ship;stage=4;scope=shared;review=6 -->
-- [ ] local tests, E2E, visual/a11y and current-head checks are green <!-- omo:id=delivery-editor-verification;stage=4;scope=shared;review=6 -->
+- [x] shared pure form primitives are separated from context shell/router/persistence <!-- omo:id=delivery-editor-primitives;stage=4;scope=frontend;review=5,6 -->
+- [x] all four context policies keep planner side effects, identity intent and cancel destinations distinct while inactive entry points stay dark <!-- omo:id=delivery-editor-contexts;stage=4;scope=frontend;review=5,6 -->
+- [x] public/anon/owner/other-owner/deleted/quarantined CTA matrix is fail-closed <!-- omo:id=delivery-editor-cta-matrix;stage=4;scope=frontend;review=5,6 -->
+- [x] primary save/same ID, secondary new ID and public fork/new private ID remain distinct in the dark-ship context policy <!-- omo:id=delivery-editor-identity;stage=4;scope=frontend;review=5,6 -->
+- [x] dirty discard, duplicate submit, validation/error and navigation guards preserve draft integrity <!-- omo:id=delivery-editor-dirty;stage=4;scope=frontend;review=5,6 -->
+- [x] image object/cancel and tag primitives reuse predecessor contracts without direct Storage mutation <!-- omo:id=delivery-editor-media-tags;stage=4;scope=frontend;review=5,6 -->
+- [x] MYPAGE/RECIPEBOOK_DETAIL remain unchanged and navigate items to RECIPE_DETAIL <!-- omo:id=delivery-editor-surface-boundary;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px/320px screenshots and independent design critic/authority reviews pass <!-- omo:id=delivery-editor-design-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] capability stays dark until owning write and snapshot-v2 activation gates <!-- omo:id=delivery-editor-dark-ship;stage=4;scope=shared;review=6 -->
+- [x] local tests, E2E and visual/a11y gates are green for the Stage 4 implementation <!-- omo:id=delivery-editor-verification;stage=4;scope=shared;review=6 -->
+
+Successor and merge gates, not Stage 4 implementation checklist items:
+
+- public-fork login round-trip restores the same recipe and draft action <!-- omo:id=delivery-editor-login-return -->
+- capability-on preload/write destinations are verified by #6/#8 before activation
+- every started exact current-head PR check is green before merge

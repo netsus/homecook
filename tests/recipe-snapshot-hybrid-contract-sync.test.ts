@@ -48,30 +48,67 @@ describe("recipe snapshot hybrid contract lock", () => {
     expect(bundle).toContain("local application DB");
     expect(bundle).toContain("local auth.users=0");
     expect(bundle).toContain("exact epoch");
+    expect(read(readmePath)).toContain("historical merged SHA");
+    expect(read(automationPath)).toContain("origin/master ancestor");
   });
 
-  it("preserves implementation history while keeping hybrid reverification in progress", () => {
+  it("records the merged regression evidence while keeping full verification pending", () => {
     const readme = read(readmePath);
     const workItem = readJson(workItemPath);
     const statusFile = readJson(".workflow-v2/status.json");
     const statusItems = statusFile.items as Array<Record<string, unknown>>;
     const statusItem = statusItems.find((item) => item.id === sliceId);
     const roadmap = read("docs/workpacks/README.md");
+    const evidenceBundle = [
+      readme,
+      read(acceptancePath),
+      read(automationPath),
+      read(workItemPath),
+      read(".workflow-v2/status.json"),
+    ].join("\n");
 
     expect(readme).toContain("PR #1218");
     expect(readme).toContain("PR #1219");
     expect(readme).toContain("PR #1220");
     expect(readme).toContain("PR #1232 merged");
+    expect(evidenceBundle).toContain("PR #1233");
+    expect(evidenceBundle).toContain(
+      "4a7718ee6bac66fb39b5163742783ac2092e5b5c",
+    );
+    expect(evidenceBundle).toContain(
+      "d9468881b7ae77f5b9b333e6f2a82452eb9dd60e",
+    );
+    expect(evidenceBundle).toContain(
+      "da054a96afb7c6108a7007bfafbf3d328ef47656",
+    );
+    expect(evidenceBundle).toContain("PR #1251");
+    expect(evidenceBundle).toContain(
+      "75d09a37f6341772c77e27a12a59730b7ef7914e",
+    );
+    expect(evidenceBundle).toContain(
+      "94ae1a2077d63974c73a506add7b6647bf69d6d0",
+    );
+    expect(evidenceBundle).toContain(
+      "29115dee2830f657a594ab68a8a6a3efe107dec9",
+    );
+    expect(evidenceBundle).toContain("historical dry-run passed");
+    expect(evidenceBundle).toContain("14 success and 10 intended skips");
+    expect(evidenceBundle).toContain("clean master dry-run passed");
+    expect(evidenceBundle).toContain(
+      "full local/remote evidence remains pending",
+    );
     expect(readme).toContain("hybrid delta/reverification");
     expect((workItem.status as Record<string, unknown>)).toMatchObject({
       lifecycle: "in_progress",
       verification_status: "pending",
+      evaluation_status: "not_started",
     });
     expect(statusItem).toMatchObject({
-      branch: "fix/recipe-snapshot-stage2-regression-evidence",
-      pr_path: "pending",
+      branch: "docs/recipe-snapshot-historical-dry-run-evidence",
+      pr_path: "https://github.com/netsus/homecook/pull/1253",
       lifecycle: "in_progress",
       verification_status: "pending",
+      evaluation_status: "not_started",
     });
     expect(roadmap).toMatch(
       /\|\s*4\s*\|\s*B\s*\|\s*`recipe-snapshot-authority-foundation`\s*\|\s*in-progress\s*\|/,

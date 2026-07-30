@@ -253,7 +253,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `product-ingredient-link-foundation` | in-progress | 첫 Stage 2 PR에서 additive link authority, service-role promotion ACL, fail-closed selector만 구현한다. pantry product/version identity와 shared reader는 Contract Evolution 대기 |
 | `recipe-visibility-read-hardening` | merged | PR #1228로 Stage 2~6 runtime/client/review/current-head closeout 완료. private personal recipe soft delete/public fork/tag visibility, quarantine visibility upper bound, generation-aware image registry·private storage·outbox를 먼저 잠근다 |
 | `recipe-snapshot-authority-foundation` | in-progress | PR #1218/#1219의 구현을 보존하고, PR #1231 hybrid relock 뒤 merged-exact-SHA local Data/remote Auth 검증기를 TDD로 보강한다 |
-| `personal-recipe-editor-decoupling` | in-progress | 공개 원본 불변 fork 및 owner-only 개인 레시피 편집 진입을 RECIPE_DETAIL 중심으로 분리하고 기존 MYPAGE/RECIPEBOOK 상세과의 소유권 충돌을 피한다. Stage 2는 기존 backend 계약을 테스트로 잠그며 새 runtime API를 추가하지 않는다 |
+| `personal-recipe-editor-decoupling` | in-progress | PR #1238에서 기존 backend 경계를 잠그고 PR #1243에서 capability-off 공유 shell, local-fixture UI·권한·취소·디자인 증거와 implementation current-head 검사를 닫았다. 새 write runtime API와 외부 personal write는 활성화하지 않았으며 merged-SHA hybrid verifier는 pending이다 |
 | `personal-recipe-customization-write-core` | docs | 개인 레시피 create/PATCH/soft DELETE, owner→recipe lock, session generation과 idempotent single-RPC write를 구현한다 |
 | `recipe-content-snapshot-future-propagation` | docs | future-plan impact preview/token, replace_all/keep, active cooking claim, shopping open reconcile와 completed read-only를 같은 transaction 경계에 잠근다 |
 | `cooked-batch-weight-ledger` | docs | cooked batch content-only nutrition, 전체/잔량 중량, append-only quantity/lifecycle event, weighted/unweighed/unrecoverable와 RPC-only mutation을 구현한다 |
@@ -294,7 +294,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | 2 | B | `product-ingredient-link-foundation` | in-progress | F0 + #3 merged; link-only Stage 2 subset 구현 중, public pantry product writes와 shared readers는 Contract Evolution pending |
 | 3 | B | `recipe-visibility-read-hardening` | merged | PR #1228 Stage 2~6 merged; F0 runtime, `31-recipe-media-tags`, `36e-recipe-tags-frontend` merged |
 | 4 | B | `recipe-snapshot-authority-foundation` | in-progress | #3 merged; PR #1218 Stage 2 + PR #1219 Stage 4, PR #1231 hybrid relock, PR #1232 verifier merged; exact-epoch regression과 Manual Only evidence 진행 중 |
-| 5 | C | `personal-recipe-editor-decoupling` | in-progress | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged; Stage 2 test-only backend evidence 진행 중 |
+| 5 | C | `personal-recipe-editor-decoupling` | in-progress | #3; `31-recipe-media-tags` merged; `36e-recipe-tags-frontend` merged; Stage 2/3 PR #1238와 Stage 4/5 capability-off shell·local-fixture·authority PR #1243 merge `6565c2a8`; full-lifecycle merged-SHA hybrid verifier pending |
 | 6 | C | `personal-recipe-customization-write-core` | docs | #2 + #3 + #4 + #5 |
 | 7 | C | `recipe-content-snapshot-future-propagation` | docs | #4 + #6; `cook-mode-whole-board` merged |
 | 8 | D | `cooked-batch-weight-ledger` | docs | #7; `cook-mode-whole-board` merged |

@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { isAbsolute, resolve } from "node:path";
 
 import {
   assertRecipeSnapshotAuthorityMergedExactSource,
+  buildRecipeSnapshotAuthorityGitEnvironment,
   assertRecipeSnapshotAuthorityRemoteVerificationResult,
   buildRecipeSnapshotAuthorityRemotePsqlRequest,
   buildRecipeSnapshotAuthorityRemoteVerificationPlan,
@@ -27,23 +30,66 @@ function run(command, args, options = {}) {
   return result.stdout.trim();
 }
 
+function runStatus(command, args, options = {}) {
+  const result = spawnSync(command, args, {
+    encoding: "utf8",
+    ...options,
+  });
+  if (result.status !== 0 && result.status !== 1) {
+    throw new Error(`${command} failed without exposing captured output`);
+  }
+  return result.status;
+}
+
 function assertMergedExactSource(repositoryRoot) {
+  const gitEnvironment = buildRecipeSnapshotAuthorityGitEnvironment({
+    baseEnvironment: process.env,
+  });
   run("git", ["fetch", "--quiet", "origin", "master"], {
     cwd: repositoryRoot,
+    env: gitEnvironment,
   });
-  const head = run("git", ["rev-parse", "HEAD"], { cwd: repositoryRoot });
+  const head = run("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    env: gitEnvironment,
+  });
   const originMaster = run("git", ["rev-parse", "origin/master"], {
     cwd: repositoryRoot,
+    env: gitEnvironment,
   });
   const trackedStatus = run(
     "git",
     ["status", "--short", "--untracked-files=no"],
-    { cwd: repositoryRoot },
+    { cwd: repositoryRoot, env: gitEnvironment },
   );
+  const graftsPath = run(
+    "git",
+    ["rev-parse", "--git-path", "info/grafts"],
+    { cwd: repositoryRoot, env: gitEnvironment },
+  );
+  const resolvedGraftsPath = isAbsolute(graftsPath)
+    ? graftsPath
+    : resolve(repositoryRoot, graftsPath);
+  const legacyGrafts = existsSync(resolvedGraftsPath)
+    ? readFileSync(resolvedGraftsPath, "utf8").trim()
+    : "";
 
   return assertRecipeSnapshotAuthorityMergedExactSource({
     head,
     originMaster,
+    isAncestorOfOriginMaster:
+      runStatus(
+        "git",
+        [
+          "--no-replace-objects",
+          "merge-base",
+          "--is-ancestor",
+          head,
+          originMaster,
+        ],
+        { cwd: repositoryRoot, env: gitEnvironment },
+      ) === 0,
+    legacyGrafts,
     trackedStatus,
   });
 }

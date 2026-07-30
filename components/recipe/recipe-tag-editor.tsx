@@ -87,13 +87,13 @@ export function RecipeTagEditor({
       <div className="flex flex-wrap gap-1.5">
         {tags.map((tag) => (
           <span
-            className="inline-flex max-w-full items-center gap-1 rounded-[var(--radius-full)] bg-[var(--brand-soft)] px-2.5 py-1 text-[12px] font-semibold text-[var(--brand)]"
+            className="inline-flex min-h-11 max-w-full items-center gap-1 rounded-[var(--radius-full)] bg-[var(--brand-soft)] pl-3 text-[12px] font-semibold text-[var(--brand)]"
             key={normalizeRecipeTagKey(tag)}
           >
             <span className="truncate">{tag}</span>
             <button
               aria-label={`${tag} 삭제`}
-              className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[13px] leading-none hover:bg-[var(--surface)]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[16px] leading-none hover:bg-[var(--surface)]"
               onClick={() => removeTag(tag)}
               type="button"
             >
@@ -117,7 +117,7 @@ export function RecipeTagEditor({
           ) : null}
           {addableSuggestedTags.map((tag) => (
             <button
-              className="rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--surface-fill)] px-2.5 py-1 text-[12px] font-semibold text-[var(--text-2)] hover:border-[var(--brand)] hover:text-[var(--brand)]"
+              className="min-h-11 rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 text-[12px] font-semibold text-[var(--text-2)] hover:border-[var(--brand)] hover:text-[var(--brand)]"
               key={normalizeRecipeTagKey(tag)}
               onClick={() => addTag(tag)}
               type="button"
@@ -127,7 +127,7 @@ export function RecipeTagEditor({
           ))}
           {suggestionErrorMessage ? (
             <button
-              className="text-[12px] font-semibold text-[var(--brand)] underline-offset-2 hover:underline"
+              className="min-h-11 px-2 text-[12px] font-semibold text-[var(--brand)] underline-offset-2 hover:underline"
               onClick={onRefreshSuggestions}
               type="button"
             >
@@ -148,7 +148,7 @@ export function RecipeTagEditor({
           <span className="visually-hidden">태그 추가</span>
           <input
             aria-label="태그 추가"
-            className="h-9 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[13px] font-medium text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)] focus:border-[var(--brand)]"
+            className="h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-3 text-[13px] font-medium text-[var(--foreground)] outline-none placeholder:text-[var(--text-3)] focus:border-[var(--brand)]"
             onChange={(event) => setInputValue(event.target.value)}
             placeholder="예: 한식"
             value={inputValue}
@@ -156,7 +156,7 @@ export function RecipeTagEditor({
         </label>
         <button
           aria-label="태그 추가하기"
-          className="h-9 shrink-0 rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[12px] font-bold text-[var(--text-inverse)] disabled:opacity-40"
+          className="h-11 shrink-0 rounded-[var(--radius-control)] bg-[var(--brand)] px-3 text-[12px] font-bold text-[var(--text-inverse)] disabled:opacity-40"
           disabled={!inputValue.trim()}
           type="submit"
         >

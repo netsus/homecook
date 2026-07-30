@@ -1,8 +1,137 @@
-import { readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 
 import { describe, expect, it } from "vitest";
 
 describe("recipe snapshot authority remote verifier", () => {
+  it("rejects replace refs and legacy grafts that forge merged ancestry", () => {
+    const fixtureRoot = mkdtempSync(
+      join(tmpdir(), "recipe-snapshot-ancestry-"),
+    );
+    const repositoryRoot = join(fixtureRoot, "repository");
+    const originRoot = join(fixtureRoot, "origin.git");
+    const remoteCli = resolve(
+      "scripts/verify-recipe-snapshot-authority-remote.mjs",
+    );
+    const hybridCli = resolve(
+      "scripts/verify-recipe-snapshot-authority-hybrid.mjs",
+    );
+    const git = (args: string[]) => {
+      const result = spawnSync("git", args, {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+      });
+      expect(result.status, result.stderr).toBe(0);
+      return result.stdout.trim();
+    };
+    const verifyRejected = (cli: string) => {
+      const result = spawnSync(
+        process.execPath,
+        [cli, "--mode", "post-merge-read-only", "--dry-run"],
+        {
+          cwd: repositoryRoot,
+          encoding: "utf8",
+        },
+      );
+      expect(result.status, result.stdout).toBe(1);
+      expect(result.stderr).toMatch(/merged into origin\/master|grafts/i);
+    };
+
+    try {
+      mkdirSync(repositoryRoot);
+      expect(
+        spawnSync(
+          "git",
+          ["init", "--bare", "--initial-branch=master", originRoot],
+          { encoding: "utf8" },
+        ).status,
+      ).toBe(0);
+      git(["init", "--initial-branch=master"]);
+      git(["config", "user.name", "Snapshot Test"]);
+      git(["config", "user.email", "snapshot@example.test"]);
+      writeFileSync(join(repositoryRoot, "base.txt"), "base\n");
+      git(["add", "base.txt"]);
+      git(["commit", "-m", "base"]);
+      git(["remote", "add", "origin", originRoot]);
+      git(["push", "-u", "origin", "master"]);
+      git(["switch", "-c", "feature"]);
+      writeFileSync(join(repositoryRoot, "feature.txt"), "feature\n");
+      git(["add", "feature.txt"]);
+      git(["commit", "-m", "feature"]);
+      const featureSha = git(["rev-parse", "HEAD"]);
+      git(["switch", "master"]);
+      writeFileSync(join(repositoryRoot, "master.txt"), "master\n");
+      git(["add", "master.txt"]);
+      git(["commit", "-m", "master"]);
+      const masterSha = git(["rev-parse", "HEAD"]);
+      git(["push", "origin", "master"]);
+      git(["switch", "feature"]);
+      const manifestDirectory = join(repositoryRoot, "docs", "security");
+      mkdirSync(manifestDirectory, { recursive: true });
+      writeFileSync(
+        join(
+          manifestDirectory,
+          "recipe-snapshot-authority-security-function-authorization-manifest.json",
+        ),
+        readFileSync(
+          resolve(
+            "docs/security/recipe-snapshot-authority-security-function-authorization-manifest.json",
+          ),
+          "utf8",
+        ),
+      );
+      const migrationDirectory = join(repositoryRoot, "supabase", "migrations");
+      mkdirSync(migrationDirectory, { recursive: true });
+      writeFileSync(
+        join(
+          migrationDirectory,
+          "20260729170500_recipe_snapshot_authority_foundation.sql",
+        ),
+        readFileSync(
+          resolve(
+            "supabase/migrations/20260729170500_recipe_snapshot_authority_foundation.sql",
+          ),
+          "utf8",
+        ),
+      );
+
+      git(["replace", "--graft", masterSha, featureSha]);
+      expect(
+        spawnSync(
+          "git",
+          ["merge-base", "--is-ancestor", featureSha, "origin/master"],
+          { cwd: repositoryRoot },
+        ).status,
+      ).toBe(0);
+      verifyRejected(remoteCli);
+      verifyRejected(hybridCli);
+
+      git(["replace", "-d", masterSha]);
+      const gitDirectory = git(["rev-parse", "--git-dir"]);
+      const graftsPath = join(repositoryRoot, gitDirectory, "info", "grafts");
+      writeFileSync(graftsPath, `${masterSha} ${featureSha}\n`);
+      expect(
+        spawnSync(
+          "git",
+          ["merge-base", "--is-ancestor", featureSha, "origin/master"],
+          { cwd: repositoryRoot },
+        ).status,
+      ).toBe(0);
+      verifyRejected(remoteCli);
+      verifyRejected(hybridCli);
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  }, 60_000);
+
   it("defines a merged-exact-SHA read-only verification plan", async () => {
     const verifier = await import(
       "../scripts/lib/recipe-snapshot-authority-remote-verifier.mjs"
@@ -125,7 +254,7 @@ describe("recipe snapshot authority remote verifier", () => {
     );
   });
 
-  it("rejects unknown modes and non-merged or dirty source trees", async () => {
+  it("accepts clean historical merged SHAs and rejects non-merged or dirty source trees", async () => {
     const verifier = await import(
       "../scripts/lib/recipe-snapshot-authority-remote-verifier.mjs"
     );
@@ -141,16 +270,47 @@ describe("recipe snapshot authority remote verifier", () => {
       verifier.assertRecipeSnapshotAuthorityMergedExactSource({
         head: "a".repeat(40),
         originMaster: "b".repeat(40),
+        isAncestorOfOriginMaster: false,
+        legacyGrafts: "",
         trackedStatus: "",
       }),
-    ).toThrow(/HEAD to equal origin\/master/i);
+    ).toThrow(/HEAD to be merged into origin\/master/i);
+    expect(
+      verifier.assertRecipeSnapshotAuthorityMergedExactSource({
+        head: "a".repeat(40),
+        originMaster: "b".repeat(40),
+        isAncestorOfOriginMaster: true,
+        legacyGrafts: "",
+        trackedStatus: "",
+      }),
+    ).toBe("a".repeat(40));
     expect(() =>
       verifier.assertRecipeSnapshotAuthorityMergedExactSource({
         head: "a".repeat(40),
         originMaster: "a".repeat(40),
+        isAncestorOfOriginMaster: true,
+        legacyGrafts: "",
         trackedStatus: " M migration.sql",
       }),
     ).toThrow(/clean tracked tree/i);
+    expect(() =>
+      verifier.assertRecipeSnapshotAuthorityMergedExactSource({
+        head: "",
+        originMaster: "",
+        isAncestorOfOriginMaster: true,
+        legacyGrafts: "",
+        trackedStatus: "",
+      }),
+    ).toThrow(/40-character commit SHA/i);
+    expect(() =>
+      verifier.assertRecipeSnapshotAuthorityMergedExactSource({
+        head: "a".repeat(40),
+        originMaster: "a".repeat(40),
+        isAncestorOfOriginMaster: true,
+        legacyGrafts: `${"b".repeat(40)} ${"a".repeat(40)}`,
+        trackedStatus: "",
+      }),
+    ).toThrow(/legacy Git grafts/i);
   });
 
   it("fails closed on multi-statement SQL, mutating keywords, and psql meta-commands", async () => {
@@ -240,6 +400,37 @@ describe("recipe snapshot authority remote verifier", () => {
     expect(request.input).toBe(
       "begin transaction isolation level read committed read only;\nwith safe as (select 1) select * from safe\ncommit;",
     );
+  });
+
+  it("removes Git environment overrides that can redirect ancestry evidence", async () => {
+    const verifier = await import(
+      "../scripts/lib/recipe-snapshot-authority-remote-verifier.mjs"
+    );
+
+    expect(
+      verifier.buildRecipeSnapshotAuthorityGitEnvironment({
+        baseEnvironment: {
+          PATH: "/usr/bin:/bin",
+          HOME: "/tmp/homecook",
+          GIT_DIR: "/tmp/forged.git",
+          GIT_WORK_TREE: "/tmp/forged-worktree",
+          GIT_OBJECT_DIRECTORY: "/tmp/forged-objects",
+          GIT_ALTERNATE_OBJECT_DIRECTORIES: "/tmp/alternate-objects",
+          GIT_REPLACE_REF_BASE: "refs/forged",
+          GIT_SHALLOW_FILE: "/tmp/forged-shallow",
+          GIT_CONFIG_COUNT: "1",
+          GIT_CONFIG_GLOBAL: "/tmp/forged-global-config",
+          GIT_CONFIG_KEY_0: "core.repositoryformatversion",
+          GIT_CONFIG_SYSTEM: "/tmp/forged-system-config",
+          GIT_CONFIG_VALUE_0: "0",
+          GIT_ASKPASS: "/usr/bin/ssh-askpass",
+        },
+      }),
+    ).toEqual({
+      PATH: "/usr/bin:/bin",
+      HOME: "/tmp/homecook",
+      GIT_ASKPASS: "/usr/bin/ssh-askpass",
+    });
   });
 
   it("accepts only exact status and zero-drift inventory fields with remote_writes=0", async () => {
@@ -337,6 +528,10 @@ describe("recipe snapshot authority remote verifier", () => {
       "scripts/verify-recipe-snapshot-authority-remote.mjs",
       "utf8",
     );
+    const hybridCli = readFileSync(
+      "scripts/verify-recipe-snapshot-authority-hybrid.mjs",
+      "utf8",
+    );
 
     expect(cli).toContain("buildRecipeSnapshotAuthorityRemotePsqlRequest");
     expect(cli).toContain(
@@ -345,6 +540,10 @@ describe("recipe snapshot authority remote verifier", () => {
     expect(cli).toContain("resolveSecurityFunctionLinkedRoot");
     expect(cli).toContain("--untracked-files=no");
     expect(cli).toContain("--dry-run");
+    expect(cli).toContain('"--no-replace-objects"');
+    expect(cli).toContain('"merge-base"');
+    expect(hybridCli).toContain('"--no-replace-objects"');
+    expect(hybridCli).toContain('"merge-base"');
     expect(cli).not.toContain("PGOPTIONS");
     expect(cli).not.toMatch(/process\.stdout\.write\([^\n]*PGPASSWORD/u);
   });

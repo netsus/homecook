@@ -10,7 +10,8 @@ mutable recipe current가 바뀌어도 기존 Meal·요리 세션·batch·식사
 
 - Stage 1 docs: `docs/recipe-snapshot-authority-foundation`
 - Stage 2 hybrid verifier delta: `fix/recipe-snapshot-hybrid-verifier` (PR #1232 merged)
-- Stage 2 hybrid regression evidence: `fix/recipe-snapshot-stage2-regression-evidence`
+- Stage 2 hybrid regression evidence: `fix/recipe-snapshot-stage2-regression-evidence` (PR #1233 merged)
+- Stage 2 verifier reproducibility hardening: `fix/recipe-snapshot-verifier-historical-sha` (PR #1251 merged)
 - Stage 4 existing-consumer compatibility: `feature/fe-recipe-snapshot-authority-foundation`
 - Release train: B. #3 runtime과 기존 recipe nutrition snapshot release는 모두 병합됐다. 이 relock은 이미 병합된 #4 Stage 2/4 구현을 hybrid delta/reverification 기준으로 다시 검증하기 위한 문서 선행 작업이다.
 - Stage 1 author, internal 1.5 reviewer/repair-final owner, implementation owner, security/DB reviewer와 five-axis reviewer는 서로 다른 Codex 세션을 사용하며 Claude는 사용하지 않는다.
@@ -122,6 +123,7 @@ Schema Change:
 - `GET /planner/nutrition` remains for one compatibility release even though the new planner UI will stop calling it; removal requires a separate tombstone contract.
 - Train B closeout jointly rechecks #3 Storage cleanup/outbox and #2 pantry effective-ingredient projection, but #4 does not reimplement or weaken either contract.
 - hybrid verification is read-only: it inspects the local application DB/Storage authority and only the minimal remote Auth control-plane identity-epoch evidence. It requires `local auth.users=0`, active epoch/session binding consistency and no remote application DB/Storage write. Contract/null cutover and production writes run only from a merged exact SHA after the compatibility evidence gate.
+- the verifier may re-check a clean historical merged SHA after `origin/master` advances only when `git --no-replace-objects merge-base --is-ancestor` proves that exact HEAD is an `origin/master` ancestor. Local replace refs and legacy grafts cannot supply ancestry evidence; a dirty tree, unmerged branch or unrelated commit still fails closed.
 
 ## Frontend Delivery Mode
 
@@ -162,14 +164,34 @@ Schema Change:
 - PR #1218 already supplied the original Stage 2 RED/GREEN implementation and PR #1219 supplied the Stage 4 consumer regression. Their evidence remains historical and must not be represented as new work.
 - PR #1232 merged the test-first hybrid verifier. Its merged-exact-SHA dry-run
   passed, and the local application DB separately proved `auth.users=0`.
-  `fix/recipe-snapshot-stage2-regression-evidence` adds fail-closed true
-  mismatch/backfill checks, report-only historical direct inventory, an expired
-  hybrid binding guard, operational identifier scrub, and one isolated
-  exact-epoch cleanup regression for the currently implemented snapshot/product
-  FK subset. Actual remote Auth evidence, local Storage evidence, the
-  compatibility-release observation window, a full actual-DB inbound-FK cleanup
-  rehearsal, and successor/Train B dependencies remain required and are not
-  claimed complete.
+  PR #1233 then merged the fail-closed mismatch/backfill checks, report-only
+  historical direct inventory, expired hybrid binding guard, operational
+  identifier scrub, and isolated exact-epoch cleanup regression as
+  `4a7718ee6bac66fb39b5163742783ac2092e5b5c` from exact head
+  `d9468881b7ae77f5b9b333e6f2a82452eb9dd60e`. Its 16 current-head checks
+  completed with 15 success and one intended skip after independent
+  code/security P0/P1/P2 `0/0/0`. The clean master dry-run passed at exact SHA
+  `da054a96afb7c6108a7007bfafbf3d328ef47656` in read-only mode with
+  production/staging/remote application writes 0. Full local/remote evidence
+  remains pending: actual remote Auth evidence, local Storage evidence, the
+  compatibility-release observation window, a full actual-DB inbound-FK
+  cleanup rehearsal, and successor/Train B dependencies remain required and
+  are not claimed complete.
+- PR #1251 hardened clean historical merged-SHA verification against replace
+  refs, legacy grafts, malformed SHAs and repository/history redirect
+  environment variables. Exact head
+  `75d09a37f6341772c77e27a12a59730b7ef7914e` completed 24 current-head
+  checks with 14 success and 10 intended skips after independent
+  code/security/verifier P0/P1/P2 `0/0/0`, then squash-merged as
+  `94ae1a2077d63974c73a506add7b6647bf69d6d0`. Both clean master dry-runs
+  passed at that exact SHA in read-only mode with production/staging/remote
+  application writes 0. This does not close the full evidence gate.
+- After PR #1252 advanced `origin/master` to
+  `29115dee2830f657a594ab68a8a6a3efe107dec9`, both remote and hybrid
+  historical dry-run passed from clean detached ancestor
+  `94ae1a2077d63974c73a506add7b6647bf69d6d0` in read-only mode with
+  production/staging/remote application writes 0. Full local/remote evidence
+  remains pending.
 - Detailed evidence:
   `evidence/2026-07-30-stage2-hybrid-regression.md`.
 

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -76,6 +77,9 @@ describe("personal recipe editor hybrid contract lock", () => {
     const invariants = backend.invariants as string[];
     const backendVerifyCommands = backend.verify_commands as string[];
     const externalSmokes = automation.external_smokes as string[];
+    const workItem = readJson(workItemPath);
+    const workflow = workItem.workflow as Record<string, unknown>;
+    const futureExternalSmokes = workflow.external_smokes as string[];
     const blockedConditions = automation.blocked_conditions as string[];
     const acceptance = read(acceptancePath);
 
@@ -103,7 +107,13 @@ describe("personal recipe editor hybrid contract lock", () => {
     expect(backendVerifyCommands).not.toContain(
       "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only",
     );
-    expect(externalSmokes).toEqual([]);
+    expect(backendVerifyCommands).toEqual(
+      expect.arrayContaining([
+        "pnpm exec vitest run tests/personal-recipe-editor-hybrid-verifier.test.ts",
+        "node scripts/generate-hybrid-authority-inventories.mjs --check",
+      ]),
+    );
+    expect(externalSmokes).toEqual(futureExternalSmokes);
     expect(blockedConditions).toContain(
       "stage4-ready-before-external-smokes-relocked-from-work-item-full-lifecycle-gate",
     );
@@ -146,7 +156,7 @@ describe("personal recipe editor hybrid contract lock", () => {
     expect(statusNotes).toContain("future work");
   });
 
-  it("projects the test-only Stage 2 as in progress without claiming approval", () => {
+  it("projects the merged Stage 4 and 5 implementation while full lifecycle stays pending", () => {
     const workItem = readJson(workItemPath);
     const workItemStatus = workItem.status as Record<string, unknown>;
     const statusFile = readJson(".workflow-v2/status.json");
@@ -158,15 +168,15 @@ describe("personal recipe editor hybrid contract lock", () => {
 
     expect(workItemStatus).toMatchObject({
       lifecycle: "in_progress",
-      approval_state: "not_started",
+      approval_state: "codex_approved",
       verification_status: "pending",
       evaluation_status: "not_started",
     });
     expect(statusItem).toMatchObject({
-      branch: "feature/be-personal-recipe-editor-decoupling",
-      pr_path: "https://github.com/netsus/homecook/pull/1238",
+      branch: "feature/fe-personal-recipe-editor-decoupling",
+      pr_path: "https://github.com/netsus/homecook/pull/1243",
       lifecycle: "in_progress",
-      approval_state: "not_started",
+      approval_state: "codex_approved",
       verification_status: "pending",
       evaluation_status: "not_started",
     });
@@ -176,11 +186,56 @@ describe("personal recipe editor hybrid contract lock", () => {
     expect(roadmap).toMatch(
       /\|\s*`personal-recipe-editor-decoupling`\s*\|\s*in-progress\s*\|/,
     );
+    expect(workItemNotes).toContain("PR #1243 merged");
     expect(workItemNotes).toContain(
-      "required_checks is the full-lifecycle gate and verify_commands is the current executable subset",
+      "e177a882e0fbc35847895a7a0f1dd775ff4425d1",
     );
+    expect(workItemNotes).toContain("PR #1246 merged");
+    expect(workItemNotes).toContain(
+      "354c569c8e40889bcfa7d9832cb9cec93f53db46",
+    );
+    expect(workItemNotes).toContain("21 green or intended-skip checks");
+    expect(workItemNotes).toContain("merged exact-SHA dry-run passed");
+    expect(workItemNotes).toContain(
+      "full local/remote evidence remains pending",
+    );
+    expect(statusNotes).toContain("PR #1243 merged");
+    expect(statusNotes).toContain("PR #1246 merged");
+    expect(statusNotes).toContain("21 green or intended-skip checks");
+    expect(statusNotes).toContain("merged exact-SHA dry-run passed");
     expect(statusNotes).toContain(
-      "required_checks is the full-lifecycle gate and verify_commands is the current executable subset",
+      "full local/remote evidence remains pending",
     );
+    expect(statusNotes).toContain("20 success and one normal full-regression skip");
+    expect(statusNotes).toContain("external personal write dark");
+  });
+
+  it("keeps the relocked Stage 4 workpack ready-for-review valid", () => {
+    expect(() =>
+      execFileSync("node", ["scripts/validate-closeout-sync.mjs"], {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          BRANCH_NAME: "feature/fe-personal-recipe-editor-decoupling",
+          BASE_REF: "master",
+          PR_IS_DRAFT: "false",
+        },
+        stdio: "pipe",
+      }),
+    ).not.toThrow();
+  });
+
+  it("keeps the Stage 4 authority evidence ready-for-review valid", () => {
+    expect(() =>
+      execFileSync("node", ["scripts/validate-authority-evidence-presence.mjs"], {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          BRANCH_NAME: "feature/fe-personal-recipe-editor-decoupling",
+          PR_IS_DRAFT: "false",
+        },
+        stdio: "pipe",
+      }),
+    ).not.toThrow();
   });
 });

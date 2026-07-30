@@ -144,8 +144,17 @@ Schema Change:
 ### Stage 1 gate and planned artifacts
 
 - this docs PR runs only currently executable SOT/workflow/workpack/automation/bookkeeping/doc-gate validators, focused workflow Vitest, lint, typecheck, dependency audit as additional local security evidence, and diff check. The current PR head's independent GitGuardian result and repository Security Review workflow are observed separately; no unspecified local secret command is claimed.
-- Stage 2 first adds tests and observes RED before writing migration or production reader code. Planned artifacts include focused link/route/security/reader/account-delete Vitest, existing/fresh/replay PostgreSQL integration, backend verification and a merged-exact-SHA hybrid verifier that reads local application DB/Storage plus minimal remote Auth evidence only.
-- those Stage 2/closeout commands are required future gates but are not claimed to exist or pass in Stage 1. Missing planned files or commands block implementation closeout.
+- PR #1236 merged the test-first link-only safe subset with focused link/security tests, isolated fresh/replay PostgreSQL integration and backend verification. Deferred reader, account-delete, consumer and Contract Evolution-dependent coverage remains unchecked.
+- PR #1248 merged the test-first hybrid verifier as `4881c4c53181a5504e16f2fa3971e9f6f4b99f05` from exact head `e58bea0c544693c1f99104d07bf58bd8c0d01285`. Independent code/security review recorded P0/P1/P2 `0/0/0`, and all 24 current-head check runs completed as 14 success plus 10 intended skips. The complete local application DB/Storage plus sanitized remote Auth evidence remains a separate full-lifecycle gate.
+
+### Hybrid verifier implementation evidence
+
+- RED: `pnpm exec vitest run tests/product-ingredient-link-hybrid-verifier.test.ts` failed `2/7` because the draft required `HEAD == origin/master` and the CLI did not prove that an exact historical HEAD remained merged after `origin/master` advanced.
+- GREEN: the same focused verifier suite passed `7/7` after the source gate changed to `git merge-base --is-ancestor HEAD origin/master` plus a clean tracked-tree check.
+- The verifier accepts only loopback PostgreSQL, strips inherited PostgreSQL settings, opens a read-only transaction, requires `local auth.users=0`, and validates the link table, FK/check/partial-unique, ACL and exact function authority without applying migrations or promoting data.
+- The remote Auth input is a strict sanitized aggregate bound to the exact verified SHA. Raw session/provider material, linked remote DB access and production/staging/remote application writes are rejected or absent.
+- Local verification passed: focused product-link tests `26` passed with six normal integration skips, isolated PostgreSQL fresh `6/6` and replay `6/6`, and `pnpm verify:backend` with product tests `2,420` passed plus 128 normal skips, production build and security E2E `12/12`.
+- The merged exact-SHA dry-run passed on `4881c4c53181a5504e16f2fa3971e9f6f4b99f05`, proving the clean merged-source gate, read-only mode, no Storage dependency and zero production/staging/remote application writes. Full local/remote evidence remains pending because truthful sanitized remote Auth evidence and the complete local application DB verification were not supplied. Contract Evolution-dependent reader completion and production activation remain unclaimed.
 
 ### Local fixture and real DB matrix
 

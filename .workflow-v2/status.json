@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-30T13:14:11.000Z",
+  "updated_at": "2026-07-30T22:18:40.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2301,6 +2301,7 @@
         "node scripts/validate-automation-spec.mjs --slice product-ingredient-link-foundation",
         "pnpm validate:omo-bookkeeping",
         "pnpm exec vitest run tests/product-ingredient-link-hybrid-contract-sync.test.ts",
+        "pnpm exec vitest run tests/product-ingredient-link-hybrid-verifier.test.ts",
         "pnpm exec vitest run tests/product-ingredient-link-foundation.test.ts tests/product-ingredient-link-routes.test.ts tests/product-ingredient-link-security.test.ts tests/product-ingredient-link-readers.test.ts tests/product-ingredient-link-account-delete.test.ts",
         "pnpm test:product-ingredient-link-foundation:postgres",
         "pnpm verify:backend",
@@ -2311,7 +2312,7 @@
         "node scripts/verify-product-ingredient-link-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "PR #1076 records the Stage 1 contract and independent internal 1.5/security-DB/five-axis approvals at exact head f3d9be4e37bf791c430635036aa14bf355a7b85b. PR #1235 relocked the official tuple to v1.7.26/v1.5.30/v1.3.28/v1.3.27/v1.2.30 and the hybrid local application Data plus remote Auth verification boundary. feature/be-product-ingredient-link-foundation now implements only the first Stage 2 safe subset: additive link authority, service-role promotion ACL and fail-closed eligible-link selector, with isolated fresh/replay PostgreSQL evidence. F0 and recipe-visibility-read-hardening are merged predecessors, but production activation remains Manual Only. The current public pantry contract accepts ingredient_ids only, shopping rows lack product/version provenance, and pantry product/version FK delete behavior is not locked; pantry identity/projection, public payloads and related readers remain unchecked pending approved Contract Evolution.",
+      "notes": "PR #1076 records the Stage 1 contract and independent internal 1.5/security-DB/five-axis approvals at exact head f3d9be4e37bf791c430635036aa14bf355a7b85b. PR #1235 relocked the current official tuple and hybrid boundary, and PR #1236 merged the first Stage 2 safe subset: additive link authority, service-role promotion ACL and fail-closed eligible-link selector with isolated fresh/replay PostgreSQL evidence. PR #1248 merged the test-first hybrid verifier as 4881c4c53181a5504e16f2fa3971e9f6f4b99f05 from exact head e58bea0c544693c1f99104d07bf58bd8c0d01285 after independent code/security P0/P1/P2 0/0/0 and 24 current-head checks with 14 success and 10 intended skips; its merged exact-SHA dry-run passed. Full local/remote evidence remains pending because truthful sanitized remote Auth evidence and the complete local application DB verification were not supplied, so lifecycle/verification/evaluation stay in_progress/pending/not_started. The current public pantry contract accepts ingredient_ids only, shopping rows lack product/version provenance, and pantry product/version FK delete behavior is not locked; pantry identity/projection, public payloads and related readers remain unchecked pending approved Contract Evolution. Production activation remains Manual Only, and production/staging/remote application writes remain zero.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
@@ -2389,8 +2390,8 @@
     {
       "id": "recipe-snapshot-authority-foundation",
       "preset": "vertical-slice-strict",
-      "branch": "fix/recipe-snapshot-stage2-regression-evidence",
-      "pr_path": "pending",
+      "branch": "docs/recipe-snapshot-historical-dry-run-evidence",
+      "pr_path": "https://github.com/netsus/homecook/pull/1253",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
@@ -2413,7 +2414,7 @@
         "node scripts/verify-recipe-snapshot-authority-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "PR #1231 merged the hybrid remote Auth/local Data relock after PR #1218 Stage 2 and PR #1219 Stage 4. PR #1232 merged the TDD hybrid verifier as 6c9d2c32969d715de95813e93c61f005075c89a0 after exact-head checks; its exact-master dry-run passed and a separate read-only local query proved auth.users=0. fix/recipe-snapshot-stage2-regression-evidence adds fail-closed true mismatch/backfill checks, report-only historical direct inventory, an expired hybrid binding guard, operational identifier scrub, and one isolated exact-epoch cleanup regression for the currently implemented snapshot/product FK subset. The actual merged verifier with real sanitized remote Auth evidence, local Storage evidence, compatibility-release observation window, full actual public.users inbound-FK cleanup rehearsal, Train B #2 integration and successor event/meal-log/non-image-idempotency cleanup links remain pending; production/staging and remote application writes remain forbidden.",
+      "notes": "PR #1231 merged the hybrid remote Auth/local Data relock after PR #1218 Stage 2 and PR #1219 Stage 4. PR #1232 merged the TDD hybrid verifier as 6c9d2c32969d715de95813e93c61f005075c89a0; its exact-master dry-run passed and a separate read-only local query proved auth.users=0. PR #1233 merged the Stage 2 regression delta as 4a7718ee6bac66fb39b5163742783ac2092e5b5c from exact head d9468881b7ae77f5b9b333e6f2a82452eb9dd60e after independent code/security P0/P1/P2 0/0/0 and 16 current-head checks with 15 success and one intended skip. PR #1251 then hardened historical merged-SHA verification at exact head 75d09a37f6341772c77e27a12a59730b7ef7914e after independent code/security/verifier P0/P1/P2 0/0/0 and 24 current-head checks with 14 success and 10 intended skips, and squash-merged as 94ae1a2077d63974c73a506add7b6647bf69d6d0. The clean master remote and hybrid dry-runs passed at exact SHA 94ae1a2077d63974c73a506add7b6647bf69d6d0 in read-only mode with production/staging/remote application writes 0. After PR #1252 advanced origin/master to 29115dee2830f657a594ab68a8a6a3efe107dec9, both remote and hybrid historical dry-run passed from clean detached ancestor 94ae1a2077d63974c73a506add7b6647bf69d6d0 in read-only mode with production/staging/remote application writes 0. Full local/remote evidence remains pending: real sanitized remote Auth evidence, local Storage evidence, compatibility-release observation, full actual public.users inbound-FK cleanup rehearsal, Train B #2 integration and successor event/meal-log/non-image-idempotency cleanup links are still required. Lifecycle/verification/evaluation therefore remain in_progress/pending/not_started, and production/staging/remote application writes remain forbidden.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
@@ -2423,10 +2424,10 @@
     {
       "id": "personal-recipe-editor-decoupling",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-personal-recipe-editor-decoupling",
-      "pr_path": "https://github.com/netsus/homecook/pull/1238",
+      "branch": "feature/fe-personal-recipe-editor-decoupling",
+      "pr_path": "https://github.com/netsus/homecook/pull/1243",
       "lifecycle": "in_progress",
-      "approval_state": "not_started",
+      "approval_state": "codex_approved",
       "verification_status": "pending",
       "required_checks": [
         "pnpm validate:source-of-truth-sync",
@@ -2448,7 +2449,7 @@
         "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "Hybrid Stage 1 relock on the current v1.7.26/v1.5.30/v1.3.28/v1.3.27/v1.2.30 tuple. The approved master plan remains editor/product design history, while its local-only Auth/deployment assumptions are superseded by local application Data/Storage plus the remote Auth control-plane. #3 Stage 2 through Stage 6 merged as PR #1228 and the media/tag foundations are merged. #4 historical Stage 2 PR #1218 and Stage 4 PR #1219 are preserved, while its hybrid delta/reverification remains in progress and is not a #5 predecessor. Roadmap and lifecycle are in progress for the test-only Stage 2; approval/evaluation stay not_started and verification stays pending until independent Stage 3 review. required_checks is the full-lifecycle gate and verify_commands is the current executable subset. This backend branch proved a projection RED before the required docs-to-in-progress transition and locks existing fail-closed detail reads plus official manual-create payload boundaries with `tests/personal-recipe-editor-permissions.test.ts` and `tests/personal-recipe-editor-contract.test.ts`. The hybrid verifier and all component/E2E/visual/a11y/exploratory/authority artifacts remain future work. #5 makes no product API, DB, route, field, status or error change; local auth.users=0, session-liveness HMAC binding, service-role user path 0, remote application DB/Storage write 0 and external personal write dark remain required.",
+      "notes": "Stage 2/3 evidence merged through PR #1238. PR #1243 merged the capability-off Stage 4/5 implementation as 6565c2a84f3b7eba9f0579db7b91fed12fc08f23 from exact head e177a882e0fbc35847895a7a0f1dd775ff4425d1 after independent code/security/authority review and 20 success and one normal full-regression skip. PR #1246 merged the test-first hybrid verifier as 354c569c8e40889bcfa7d9832cb9cec93f53db46 after exact-head code/security P0/P1/P2 0/0/0 and 21 green or intended-skip checks; its merged exact-SHA dry-run passed. required_checks remains the full-lifecycle gate because full local/remote evidence remains pending: the current local instance lacks private.remote_auth_identity_epochs and no truthful sanitized remote Auth evidence exists, so lifecycle/verification/evaluation stay in_progress/pending/not_started. #6 writes and #8 activation remain future work or Manual Only. No production/staging or remote application DB/Storage write was performed; external personal write dark remains enforced.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,

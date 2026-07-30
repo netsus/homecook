@@ -138,3 +138,31 @@ Stage 2 completion.
   proving those rows reach dependency zero under their real checks and FKs.
 
 Production writes: 0. Staging writes: 0. Remote application writes: 0.
+
+## Post-merge reconciliation
+
+- PR #1233 exact head `d9468881b7ae77f5b9b333e6f2a82452eb9dd60e`
+  completed 16 check runs: 15 success and one intended full-regression skip,
+  with pending/fail/cancel 0.
+- PR #1233 squash-merged as
+  `4a7718ee6bac66fb39b5163742783ac2092e5b5c`.
+- The clean `master == origin/master` dry-run passed at exact SHA
+  `da054a96afb7c6108a7007bfafbf3d328ef47656` in read-only mode with
+  production/staging/remote application writes all 0.
+- PR #1251 exact head `75d09a37f6341772c77e27a12a59730b7ef7914e`
+  completed 24 check runs: 14 success and 10 intended skips, with
+  pending/fail/cancel 0 after independent code/security/verifier
+  P0/P1/P2 `0/0/0`.
+- PR #1251 squash-merged the historical merged-SHA source-gate hardening as
+  `94ae1a2077d63974c73a506add7b6647bf69d6d0`.
+- Both remote and hybrid clean `master == origin/master` dry-runs passed at
+  exact SHA `94ae1a2077d63974c73a506add7b6647bf69d6d0` in read-only mode with
+  production/staging/remote application writes all 0.
+- PR #1252 advanced `origin/master` to
+  `29115dee2830f657a594ab68a8a6a3efe107dec9`.
+- From clean detached historical ancestor
+  `94ae1a2077d63974c73a506add7b6647bf69d6d0`, both remote and hybrid
+  historical dry-run passed in read-only mode with production/staging/remote
+  application writes all 0.
+- This reconciliation does not replace the still-pending full local/remote
+  evidence listed above and does not close the workpack lifecycle.

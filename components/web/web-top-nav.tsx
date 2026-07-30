@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import * as React from "react";
 
@@ -14,6 +16,10 @@ export interface WebTopNavProps {
   brandLabel?: string;
   brandSupportingLabel?: string;
   className?: string;
+  onNavigate?: (
+    href: string,
+    event: React.MouseEvent<HTMLAnchorElement>,
+  ) => void;
   rightSlot?: React.ReactNode;
 }
 
@@ -23,6 +29,7 @@ export function WebTopNav({
   brandLabel = "무먹",
   brandSupportingLabel,
   className,
+  onNavigate,
   rightSlot,
 }: WebTopNavProps) {
   return (
@@ -36,6 +43,7 @@ export function WebTopNav({
           }
           className="web-topnav-brand"
           href={brandHref}
+          onClick={(event) => onNavigate?.(brandHref, event)}
         >
           <MumeokBrandSymbol size={32} />
           {brandSupportingLabel ? (
@@ -62,6 +70,7 @@ export function WebTopNav({
                 )}
                 href={item.href}
                 key={item.id}
+                onClick={(event) => onNavigate?.(item.href, event)}
               >
                 {item.label}
               </Link>
