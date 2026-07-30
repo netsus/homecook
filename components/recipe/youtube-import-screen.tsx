@@ -2360,6 +2360,7 @@ export function YoutubeImportScreen({
   const [extractionStartTime, setExtractionStartTime] = useState(0);
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [extractionAttempt, setExtractionAttempt] = useState(0);
   const [draftWarnings, setDraftWarnings] = useState<string[]>([]);
   const [blockingIssues, setBlockingIssues] = useState<string[]>([]);
 
@@ -2625,7 +2626,13 @@ export function YoutubeImportScreen({
     })();
 
     return () => { cancelled = true; };
-  }, [applyExtractDataToReview, currentStep, youtubeUrl, pushStep]);
+  }, [
+    applyExtractDataToReview,
+    currentStep,
+    extractionAttempt,
+    youtubeUrl,
+    pushStep,
+  ]);
 
   // Helper to initiate extraction from non-recipe warning proceed button
   const triggerExtraction = useCallback(() => {
@@ -2633,6 +2640,7 @@ export function YoutubeImportScreen({
     setExtractionError(null);
     setExtractionStartTime(Date.now());
     setExtractionElapsedMs(0);
+    setExtractionAttempt((attempt) => attempt + 1);
     pushStep("extracting");
   }, [pushStep]);
 

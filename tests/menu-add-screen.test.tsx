@@ -553,6 +553,41 @@ describe("MenuAddScreen", () => {
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
+  it("reissues the YouTube extraction request when retrying after a provider error", async () => {
+    installMatchMedia(true);
+    vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
+      success: false,
+      data: null,
+      error: {
+        code: "PROVIDER_ERROR",
+        message: "분석기를 준비하지 못했어요.",
+        fields: [],
+      },
+    });
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-youtube"));
+    await user.type(
+      screen.getByLabelText("유튜브 URL"),
+      "https://www.youtube.com/watch?v=recipe12345",
+    );
+    await user.click(screen.getByRole("button", { name: "가져오기" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "레시피 추출에 실패했어요" }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    await waitFor(() => {
+      expect(youtubeApi.extractYoutubeRecipe).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      await screen.findByRole("heading", { name: "추출 결과를 확인해 주세요" }),
+    ).toBeTruthy();
+  });
+
   it("promotes a selected multi-recipe YouTube candidate into the review form", async () => {
     installMatchMedia(true);
     vi.mocked(youtubeApi.extractYoutubeRecipe).mockResolvedValueOnce({
