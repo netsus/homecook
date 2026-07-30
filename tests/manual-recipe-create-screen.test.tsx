@@ -18,12 +18,13 @@ import { compressRecipeImageFile } from "@/lib/recipe-image-compression";
 import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 
 const mockRouterReplace = vi.fn();
+const mockRouterPush = vi.fn();
 const navigationMocks = vi.hoisted(() => ({
   searchParams: vi.fn(() => new URLSearchParams()),
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: mockRouterReplace }),
+  useRouter: () => ({ push: mockRouterPush, replace: mockRouterReplace }),
   useSearchParams: () => navigationMocks.searchParams(),
 }));
 
@@ -101,10 +102,25 @@ function managedUploadSuccess(
   } as unknown as UploadResult;
 }
 
+async function fillMinimumManualRecipe(
+  user: ReturnType<typeof userEvent.setup>,
+  title: string,
+) {
+  await user.type(screen.getByPlaceholderText("예: 김치찌개"), title);
+  await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+  await user.click(await screen.findByRole("checkbox", { name: "양파" }));
+  await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+  await screen.findByRole("button", { name: "준비" });
+  await user.click(screen.getByRole("button", { name: "준비" }));
+  await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
+  await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+}
+
 describe("ManualRecipeCreateScreen", () => {
   beforeEach(() => {
     installMatchMedia(false);
     mockRouterReplace.mockReset();
+    mockRouterPush.mockReset();
     navigationMocks.searchParams.mockReset();
     navigationMocks.searchParams.mockReturnValue(new URLSearchParams());
     vi.mocked(fetchCookingMethods).mockReset();
@@ -281,6 +297,141 @@ describe("ManualRecipeCreateScreen", () => {
     expect(backButton.querySelector("svg")?.getAttribute("class") ?? "").toContain(
       "h-[var(--app-back-button-icon-size)]",
     );
+  });
+
+  it("uses the shared dirty guard before closing the planner-add editor", async () => {
+    const user = userEvent.setup();
+    const onRequestClose = vi.fn();
+    render(
+      <ManualRecipeCreateScreen
+        {...DEFAULT_PROPS}
+        onRequestClose={onRequestClose}
+        presentation="embedded"
+      />,
+    );
+
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "수정 중인 요리");
+    await user.click(screen.getByRole("button", { name: "뒤로 가기" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "변경사항을 버릴까요?" }),
+    ).toBeTruthy();
+    expect(onRequestClose).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "계속 편집" }));
+    expect(onRequestClose).not.toHaveBeenCalled();
+  });
+
+  it("uses the dirty guard before a mobile bottom-tab navigation", async () => {
+    const historyBack = vi
+      .spyOn(window.history, "back")
+      .mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "탭 이동 보호");
+    await user.click(screen.getByRole("link", { name: "홈" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "변경사항을 버릴까요?" }),
+    ).toBeTruthy();
+    expect(mockRouterPush).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "변경사항 버리기" }));
+    await waitFor(() => {
+      expect(historyBack).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    expect(mockRouterPush).toHaveBeenCalledWith("/");
+  });
+
+  it("uses the dirty guard before a desktop top-navigation link", async () => {
+    installMatchMedia(true);
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "웹 메뉴 보호");
+    await user.click(screen.getByRole("link", { name: "홈" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "변경사항을 버릴까요?" }),
+    ).toBeTruthy();
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it("uses the same dirty guard for browser back and unload", async () => {
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "브라우저 보호 요리");
+
+    const unloadEvent = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unloadEvent);
+    expect(unloadEvent.defaultPrevented).toBe(true);
+
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("dialog", { name: "변경사항을 버릴까요?" }),
+      ).toBeTruthy();
+    });
+  });
+
+  it("keeps browser back blocked while a managed upload is still pending", async () => {
+    let resolveUpload!: (value: UploadResult) => void;
+    vi.mocked(uploadRecipeImage).mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpload = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["img"], "pending.png", { type: "image/png" }),
+    );
+    await waitFor(() => {
+      expect(uploadRecipeImage).toHaveBeenCalledOnce();
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(
+      screen.queryByRole("dialog", { name: "변경사항을 버릴까요?" }),
+    ).toBeNull();
+
+    resolveUpload(managedUploadSuccess());
+  });
+
+  it("removes the browser history guard when a reverted draft becomes clean", async () => {
+    const user = userEvent.setup();
+    const historyBack = vi
+      .spyOn(window.history, "back")
+      .mockImplementation(() => undefined);
+    const historyPush = vi.spyOn(window.history, "pushState");
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const title = screen.getByPlaceholderText("예: 김치찌개");
+    await user.type(title, "원복할 제목");
+
+    await waitFor(() => {
+      expect(historyPush).toHaveBeenCalledTimes(1);
+    });
+
+    await user.clear(title);
+
+    await waitFor(() => {
+      expect(historyBack).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("does not show a non-interactive default step placeholder", async () => {
@@ -587,6 +738,7 @@ describe("ManualRecipeCreateScreen", () => {
     await waitFor(() => {
       expect(cancelRecipeImage).toHaveBeenCalledWith(
         "550e8400-e29b-41d4-a716-446655440051",
+        { idempotencyKey: expect.any(String) },
       );
     });
 
@@ -632,6 +784,7 @@ describe("ManualRecipeCreateScreen", () => {
 
     expect(cancelRecipeImage).toHaveBeenCalledWith(
       "550e8400-e29b-41d4-a716-446655440060",
+      { idempotencyKey: expect.any(String) },
     );
   });
 
@@ -665,6 +818,7 @@ describe("ManualRecipeCreateScreen", () => {
     await waitFor(() => {
       expect(cancelRecipeImage).toHaveBeenCalledWith(
         "550e8400-e29b-41d4-a716-446655440061",
+        { idempotencyKey: expect.any(String) },
       );
     });
   });
@@ -697,6 +851,7 @@ describe("ManualRecipeCreateScreen", () => {
 
     expect(cancelRecipeImage).toHaveBeenCalledWith(
       "550e8400-e29b-41d4-a716-446655440062",
+      { idempotencyKey: expect.any(String) },
     );
   });
 
@@ -725,6 +880,118 @@ describe("ManualRecipeCreateScreen", () => {
         ([imageObjectId]) => imageObjectId === "550e8400-e29b-41d4-a716-446655440063",
       ),
     ).toHaveLength(1);
+  });
+
+  it("does not start parallel owner cleanup for rapid duplicate remove clicks", async () => {
+    let resolveCleanup!: (
+      value: Awaited<ReturnType<typeof cancelRecipeImage>>,
+    ) => void;
+    vi.mocked(uploadRecipeImage).mockResolvedValue(
+      managedUploadSuccess({
+        image_object_id: "550e8400-e29b-41d4-a716-446655440164",
+        read_url: "https://signed.example.com/remove-latched.png",
+      }),
+    );
+    vi.mocked(cancelRecipeImage).mockReturnValue(
+      new Promise((resolve) => {
+        resolveCleanup = resolve;
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["img"], "remove-latched.png", { type: "image/png" }),
+    );
+    const removeButton = await screen.findByTestId("manual-image-remove-button");
+
+    await act(async () => {
+      removeButton.click();
+      removeButton.click();
+      await Promise.resolve();
+    });
+
+    expect(cancelRecipeImage).toHaveBeenCalledTimes(1);
+    expect(removeButton).toHaveProperty("disabled", true);
+
+    resolveCleanup({
+      success: true,
+      data: {
+        image_object_id: "550e8400-e29b-41d4-a716-446655440164",
+        state: "cleanup_pending",
+      },
+      error: null,
+    });
+  });
+
+  it("keeps a managed image visible and replays owner cleanup with the same key after cancel failure", async () => {
+    vi.mocked(uploadRecipeImage).mockResolvedValue(
+      managedUploadSuccess({
+        image_object_id: "550e8400-e29b-41d4-a716-446655440163",
+        read_url: "https://signed.example.com/recoverable-cleanup.png",
+      }),
+    );
+    vi.mocked(cancelRecipeImage)
+      .mockResolvedValueOnce({
+        success: false,
+        data: null,
+        error: {
+          code: "NETWORK_ERROR",
+          message: "temporary",
+          fields: [],
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          image_object_id: "550e8400-e29b-41d4-a716-446655440163",
+          state: "cleanup_pending",
+        },
+        error: null,
+      });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    const fileInput = screen.getByTestId("manual-image-file-input") as HTMLInputElement;
+    await user.upload(
+      fileInput,
+      new File(["img"], "recoverable-cleanup.png", { type: "image/png" }),
+    );
+    await screen.findByTestId("manual-image-remove-button");
+
+    await user.click(screen.getByTestId("manual-image-remove-button"));
+
+    expect(screen.getByTestId("manual-image-preview")).toBeTruthy();
+    const cleanupAlert = screen.getByRole("alert");
+    expect(cleanupAlert.textContent).toContain(
+      "이미지 정리를 완료하지 못했어요",
+    );
+    expect(
+      screen.getByTestId("manual-editor-feedback-region").contains(cleanupAlert),
+    ).toBe(true);
+    expect(
+      screen.getByTestId("manual-editor-scroll-region").contains(cleanupAlert),
+    ).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "정리 다시 시도" }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("manual-image-preview")).toBeNull();
+    });
+
+    const cleanupCalls = vi.mocked(cancelRecipeImage).mock.calls.filter(
+      ([imageObjectId]) =>
+        imageObjectId === "550e8400-e29b-41d4-a716-446655440163",
+    );
+    expect(cleanupCalls).toHaveLength(2);
+    const firstKey = cleanupCalls[0]?.[1]?.idempotencyKey;
+    const secondKey = cleanupCalls[1]?.[1]?.idempotencyKey;
+    expect(firstKey).toBeTruthy();
+    expect(secondKey).toBeTruthy();
+    expect(secondKey).toBe(firstKey);
   });
 
   it("does not double cancel the previous managed image when replace starts and the form unmounts immediately", async () => {
@@ -814,6 +1081,7 @@ describe("ManualRecipeCreateScreen", () => {
     await waitFor(() => {
       expect(cancelRecipeImage).toHaveBeenCalledWith(
         "550e8400-e29b-41d4-a716-446655440066",
+        { idempotencyKey: expect.any(String) },
       );
     });
     expect(screen.getByTestId("manual-image-choose-button")).toBeTruthy();
@@ -1150,6 +1418,79 @@ describe("ManualRecipeCreateScreen", () => {
     expect(screen.getByText("이미지를 찾을 수 없어요.")).toBeTruthy();
     expect(screen.getByTestId("manual-image-retry-button")).toBeTruthy();
     expect(screen.queryByText("레시피를 등록하지 못했어요.")).toBeNull();
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByTestId("manual-image-error"));
+    });
+  });
+
+  it("surfaces retryable save failures in the shared feedback region and focuses the summary", async () => {
+    vi.mocked(createManualRecipe).mockResolvedValue({
+      success: false,
+      data: null,
+      error: {
+        code: "NETWORK_ERROR",
+        message: "저장에 실패했어요. 다시 시도해 주세요.",
+        fields: [],
+      },
+    });
+
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.type(screen.getByPlaceholderText("예: 김치찌개"), "저장 실패 요리");
+    await user.click(screen.getByRole("button", { name: "+ 재료 추가하기" }));
+    await user.click(await screen.findByRole("checkbox", { name: "양파" }));
+    await user.click(screen.getByRole("button", { name: "선택한 재료 1개 추가" }));
+    await screen.findByRole("button", { name: "준비" });
+    await user.click(screen.getByRole("button", { name: "준비" }));
+    await user.type(screen.getByLabelText("만들기 1 설명"), "양파를 볶아요");
+    await user.click(screen.getByRole("button", { name: "+ 만들기 추가" }));
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    const saveAlert = await screen.findByRole("alert");
+    expect(saveAlert.textContent).toContain("저장에 실패했어요. 다시 시도해 주세요.");
+    expect(
+      screen.getByTestId("manual-editor-feedback-region").contains(saveAlert),
+    ).toBe(true);
+    expect(
+      screen.getByTestId("manual-editor-scroll-region").contains(saveAlert),
+    ).toBe(false);
+    await waitFor(() => {
+      expect(document.activeElement).toBe(saveAlert);
+    });
+  });
+
+  it("disables managed image replace and remove while recipe save is pending", async () => {
+    vi.mocked(uploadRecipeImage).mockResolvedValue(
+      managedUploadSuccess({
+        image_object_id: "550e8400-e29b-41d4-a716-446655440074",
+      }),
+    );
+    vi.mocked(createManualRecipe).mockReturnValue(
+      new Promise(() => undefined),
+    );
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await user.upload(
+      screen.getByTestId("manual-image-file-input"),
+      new File(["img"], "save-pending.png", { type: "image/png" }),
+    );
+    await screen.findByTestId("manual-image-replace-button");
+    await fillMinimumManualRecipe(user, "저장 중 이미지 보호");
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(createManualRecipe).toHaveBeenCalledOnce();
+    });
+    expect(screen.getByTestId("manual-image-replace-button")).toHaveProperty(
+      "disabled",
+      true,
+    );
+    expect(screen.getByTestId("manual-image-remove-button")).toHaveProperty(
+      "disabled",
+      true,
+    );
   });
 
   it("save without image works and does not include image identity fields", async () => {
@@ -1201,6 +1542,42 @@ describe("ManualRecipeCreateScreen", () => {
     expect(callBody.image_object_id).toBeUndefined();
     expect(callBody.thumbnail_url).toBeUndefined();
     expect(uploadRecipeImage).not.toHaveBeenCalled();
+  });
+
+  it("removes the dirty history guard before showing save success and navigating", async () => {
+    vi.mocked(createManualRecipe).mockResolvedValue({
+      success: true,
+      data: {
+        id: "recipe-history-clean",
+        title: "저장된 요리",
+        source_type: "manual",
+        created_by: "user-1",
+        base_servings: 2,
+      },
+      error: null,
+    });
+    const historyBack = vi
+      .spyOn(window.history, "back")
+      .mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    render(<ManualRecipeCreateScreen {...DEFAULT_PROPS} />);
+
+    await fillMinimumManualRecipe(user, "저장된 요리");
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(historyBack).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByText("레시피 등록 완료")).toBeNull();
+
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    expect(await screen.findByText("레시피 등록 완료")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "레시피 상세로 이동" }));
+    expect(mockRouterReplace).toHaveBeenCalledWith("/recipe/recipe-history-clean");
+    expect(historyBack).toHaveBeenCalledTimes(1);
   });
 
   it("shows suggested tags but omits tags from the save body until the user edits them", async () => {

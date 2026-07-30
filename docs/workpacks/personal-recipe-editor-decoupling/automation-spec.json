@@ -166,7 +166,17 @@
       ]
     }
   },
-  "external_smokes": [],
+  "external_smokes": [
+    "node scripts/verify-personal-recipe-editor-hybrid.mjs --mode post-merge-read-only from a merged exact SHA only",
+    "local application Data/Storage authority plus minimal remote Auth control-plane evidence with local auth.users=0, active epoch and session-liveness HMAC binding",
+    "service-role user path 0, remote application DB/Storage writes remain zero and external personal write remains dark",
+    "capability-off current and immediate-previous deployment exposes no external personal write",
+    "public anonymous login return restores same recipe and fork draft action",
+    "public source remains unchanged and fork result opens new owner-private detail",
+    "other-owner private/deleted/quarantined CTA and editor preload remain non-inferable",
+    "MYPAGE and RECIPEBOOK_DETAIL keep existing item-to-detail behavior",
+    "390px and 320px exact-head visual/a11y/design-authority evidence"
+  ],
   "blocked_conditions": [
     "stage1-artifacts-not-approved-by-separate-codex-internal-1.5-reviewer",
     "stage1-author-attempts-to-self-approve",
@@ -205,5 +215,5 @@
     "backend": 2,
     "frontend": 6
   },
-  "notes": "This hybrid Stage 1 relock preserves the approved master plan as editor/product design history and supersedes only its local-only Auth/deployment assumptions with the current remote Auth control-plane plus local application Data/Storage contract. #3 merged as PR #1228 and the media/tag predecessors are merged. #4 PR #1218 Stage 2 and PR #1219 Stage 4 remain historical implementation, while its hybrid delta/reverification stays in progress and is not a #5 predecessor. This slice makes no product API, DB, route, field, status or error change and does not implement #6 writes, #7 propagation or #8 activation. Stage 1 runs the focused contract-sync RED/GREEN plus docs validators/workflow tests/lint/typecheck/audit/diff; Stage 2 locks the existing backend read/create boundaries and advances the roadmap to in-progress with workflow lifecycle in_progress. Global external_smokes stays empty during the test-only Stage 2 because the preserved full-lifecycle work-item gate contains merged-SHA-only, Stage 4 UI and visual evidence that cannot truthfully run before backend Ready; the executable frontend Ready gate requires Stage 4 to relock those entries from the work-item. Approval stays not_started; the hybrid verifier, component, Playwright, exploratory QA, visual/a11y and authority commands remain future Stage 4/release artifacts. Remote application DB/Storage writes remain zero and external personal write remains dark."
+  "notes": "This hybrid relock preserves the approved master plan as editor/product design history and supersedes only its local-only Auth/deployment assumptions with the current remote Auth control-plane plus local application Data/Storage contract. #3 merged as PR #1228, the media/tag predecessors are merged, and Stage 2/3 evidence merged as PR #1238. #4 PR #1218 Stage 2 and PR #1219 Stage 4 remain historical implementation, while its hybrid delta/reverification stays in progress and is not a #5 predecessor. This slice makes no product API, DB, route, field, status or error change and does not implement #6 writes, #7 propagation or #8 activation. Stage 4 relocked external_smokes from the full-lifecycle work-item gate and now has capability-off component, local-fixture Playwright, exploratory QA, visual/a11y and authority evidence. Approval and verification remain pending until fresh independent reviews pass and every started exact current-head PR check is green. The merged-SHA hybrid verifier and capability-on fork/edit/delete/login-return smokes remain future or Manual Only. Remote application DB/Storage writes remain zero and external personal write remains dark."
 }

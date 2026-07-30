@@ -181,7 +181,15 @@ dirty close/back → [계속 편집] [변경사항 버리기]
 
 ## Design Status
 
-`temporary`. Stage 1 locks the official interaction contract only. Stage 4 implementation, independent design critique and screenshot/Figma authority approval are still pending.
+`confirmed` for the Stage 4 dark-ship surface. The independent product-design-authority recheck records `pass`, blocker/major/minor `0/0/0`, after reviewing 20 local-fixture PNGs at 390px/320px plus rendered 44px geometry. Capability-on fork/edit/delete visuals remain intentionally deferred to #8 activation and are not claimed as reachable shipping evidence.
+
+### Stage 4 local evidence
+
+- TDD RED was recorded before the locked shell/navigation/dirty/media/action implementation and before the automation `external_smokes` relock.
+- Focused Vitest covers the shared shell, context policy, browser dirty guard, managed owner cancel, tag/media reuse and capability-off action matrix.
+- `tests/e2e/slice-personal-recipe-editor-decoupling.spec.ts` covers 12 local-fixture cases across 390px and 320px, including browser back, validation, upload error, cleanup retry, interaction geometry, focus/scroll and MYPAGE/RECIPEBOOK no-edit regression.
+- `ui/designs/authority/personal-recipe-editor-decoupling-authority.md` is the canonical authority report. Physical-device virtual keyboard/IME and post-activation personal writes remain Manual Only/future evidence.
+- No production/staging write or remote application DB/Storage mutation was performed.
 
 ## QA / Test Data Plan
 
@@ -228,14 +236,14 @@ dirty close/back → [계속 편집] [변경사항 버리기]
 
 - [x] existing recipe detail read returns the same `404 RESOURCE_NOT_FOUND` before child or service-role reads when the parent recipe is not visible <!-- omo:id=delivery-editor-backend-nondisclosure;stage=2;scope=backend;review=3 -->
 - [x] existing manual recipe create ignores client owner, visibility and origin fields and forwards only the official payload <!-- omo:id=delivery-editor-backend-create-boundary;stage=2;scope=backend;review=3 -->
-- [ ] shared pure form primitives are separated from context shell/router/persistence <!-- omo:id=delivery-editor-primitives;stage=4;scope=frontend;review=5,6 -->
+- [x] shared pure form primitives are separated from context shell/router/persistence <!-- omo:id=delivery-editor-primitives;stage=4;scope=frontend;review=5,6 -->
 - [ ] all four contexts preserve distinct initial data, submit, success and cancel destinations <!-- omo:id=delivery-editor-contexts;stage=4;scope=frontend;review=5,6 -->
-- [ ] public/anon/owner/other-owner/deleted/quarantined CTA matrix is fail-closed <!-- omo:id=delivery-editor-cta-matrix;stage=4;scope=frontend;review=5,6 -->
+- [x] public/anon/owner/other-owner/deleted/quarantined CTA matrix is fail-closed <!-- omo:id=delivery-editor-cta-matrix;stage=4;scope=frontend;review=5,6 -->
 - [ ] public-fork login round-trip restores the same recipe and draft action <!-- omo:id=delivery-editor-login-return;stage=4;scope=frontend;review=5,6 -->
 - [ ] primary save/same ID, secondary new ID and public fork/new private ID are not conflated <!-- omo:id=delivery-editor-identity;stage=4;scope=frontend;review=5,6 -->
-- [ ] dirty discard, duplicate submit, validation/error and navigation guards preserve draft integrity <!-- omo:id=delivery-editor-dirty;stage=4;scope=frontend;review=5,6 -->
-- [ ] image object/cancel and tag primitives reuse predecessor contracts without direct Storage mutation <!-- omo:id=delivery-editor-media-tags;stage=4;scope=frontend;review=5,6 -->
-- [ ] MYPAGE/RECIPEBOOK_DETAIL remain unchanged and navigate items to RECIPE_DETAIL <!-- omo:id=delivery-editor-surface-boundary;stage=4;scope=frontend;review=5,6 -->
-- [ ] 390px/320px screenshots and independent design critic/authority reviews pass <!-- omo:id=delivery-editor-design-authority;stage=4;scope=frontend;review=5,6 -->
-- [ ] capability stays dark until owning write and snapshot-v2 activation gates <!-- omo:id=delivery-editor-dark-ship;stage=4;scope=shared;review=6 -->
+- [x] dirty discard, duplicate submit, validation/error and navigation guards preserve draft integrity <!-- omo:id=delivery-editor-dirty;stage=4;scope=frontend;review=5,6 -->
+- [x] image object/cancel and tag primitives reuse predecessor contracts without direct Storage mutation <!-- omo:id=delivery-editor-media-tags;stage=4;scope=frontend;review=5,6 -->
+- [x] MYPAGE/RECIPEBOOK_DETAIL remain unchanged and navigate items to RECIPE_DETAIL <!-- omo:id=delivery-editor-surface-boundary;stage=4;scope=frontend;review=5,6 -->
+- [x] 390px/320px screenshots and independent design critic/authority reviews pass <!-- omo:id=delivery-editor-design-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] capability stays dark until owning write and snapshot-v2 activation gates <!-- omo:id=delivery-editor-dark-ship;stage=4;scope=shared;review=6 -->
 - [ ] local tests, E2E, visual/a11y and current-head checks are green <!-- omo:id=delivery-editor-verification;stage=4;scope=shared;review=6 -->

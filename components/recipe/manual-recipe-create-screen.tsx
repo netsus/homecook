@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -10,7 +9,18 @@ import {
   formatMealAddTargetLabel,
 } from "@/components/planner/meal-add-target-badge";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
-import { RecipeTagEditor } from "@/components/recipe/recipe-tag-editor";
+import {
+  PersonalRecipeEditorShell,
+  PersonalRecipeEditorShellFeedback,
+  RecipeEditorBaseServingsControl,
+  RecipeEditorDiscardDialog,
+  RecipeEditorIngredientList,
+  RecipeEditorImageSection,
+  RecipeEditorStepComposer,
+  RecipeEditorStepList,
+  RecipeEditorTagSection,
+  usePersonalRecipeEditorShell,
+} from "@/components/recipe/personal-recipe-editor-shell";
 import { Button } from "@/components/ui/button";
 import { AppBackButton } from "@/components/shared/app-back-button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
@@ -26,11 +36,14 @@ import {
 } from "@/lib/api/manual-recipe";
 import { createMealSafe } from "@/lib/api/meal";
 import { suggestRecipeTags } from "@/lib/api/recipe";
-import { getCookingMethodColor } from "@/lib/cooking-method-colors";
-import { groupCookingMethodsByCategory } from "@/lib/cooking-method-taxonomy";
+import {
+  cleanupRecipeEditorImage,
+  createEmptyRecipeEditorDraft,
+  createRecipeEditorImageDraft,
+  type RecipeEditorDraft,
+} from "@/lib/personal-recipe-editor";
 import { buildReviewedRecipeTagsPayload } from "@/lib/recipe-tag-input";
 import { compressRecipeImageFile } from "@/lib/recipe-image-compression";
-import { COOKING_UNIT_OPTIONS } from "@/lib/recipe-units";
 import {
   WebButton,
   WebCard,
@@ -57,6 +70,8 @@ type ModalMode =
   | "ingredient-add"
   | "success"
   | "servings-input";
+
+const RECIPE_EDITOR_HISTORY_GUARD_KEY = "__homecookRecipeEditorGuard";
 
 function formatTargetLabel(planDate: string, slotName: string) {
   return formatMealAddTargetLabel(planDate, slotName);
@@ -184,358 +199,6 @@ function AppBar({ onBack, onSave, isSaving, isUploading = false }: AppBarProps) 
           {isSaving ? "저장 중..." : "저장"}
         </button>
       </div>
-    </div>
-  );
-}
-
-interface BaseServingsStepperProps {
-  value: number;
-  onChange: (value: number) => void;
-}
-
-function BaseServingsStepper({ value, onChange }: BaseServingsStepperProps) {
-  const updateValue = (nextValue: number) => {
-    onChange(Math.max(1, nextValue));
-  };
-
-  return (
-    <div
-      aria-label="기준 인분 조절"
-      className="inline-flex w-fit items-center justify-center rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface-fill)] px-2 py-1.5"
-      role="group"
-    >
-      <div className="flex items-center gap-1.5">
-        <button
-          aria-label="기준 인분 줄이기"
-          className="flex h-9 w-9 items-center justify-center disabled:opacity-40"
-          disabled={value <= 1}
-          onClick={() => updateValue(value - 1)}
-          type="button"
-        >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface)] text-sm font-medium leading-none text-[var(--foreground)]">
-            −
-          </span>
-        </button>
-        <span
-          aria-live="polite"
-          className="min-w-11 text-center text-sm font-bold text-[var(--foreground)]"
-        >
-          {value}인분
-        </span>
-        <button
-          aria-label="기준 인분 늘리기"
-          className="flex h-9 w-9 items-center justify-center"
-          onClick={() => updateValue(value + 1)}
-          type="button"
-        >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand)] text-sm font-bold leading-none text-[var(--text-inverse)]">
-            +
-          </span>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Ingredient List ─────────────────────────────────────────────────────────
-
-interface IngredientListProps {
-  ingredients: TempIngredient[];
-  showValidationError: boolean;
-  onChange: (
-    tempId: string,
-    patch: Pick<ManualRecipeIngredientInput, "amount" | "unit">,
-  ) => void;
-  onRemove: (tempId: string) => void;
-}
-
-function IngredientList({
-  ingredients,
-  showValidationError,
-  onChange,
-  onRemove,
-}: IngredientListProps) {
-  if (ingredients.length === 0) {
-    return (
-      <p
-        className={[
-          "mb-2 text-[12px] font-medium leading-[1.4]",
-          showValidationError ? "text-[var(--danger)]" : "text-[var(--text-3)]",
-        ].join(" ")}
-      >
-        재료를 1개 이상 추가해 주세요.
-      </p>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      {ingredients.map((ing) => (
-        <div
-          key={ing.tempId}
-          className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5"
-        >
-          <div className="grid grid-cols-[minmax(3.5rem,1fr)_4.25rem_auto_2.5rem] items-center gap-1.5">
-            <div className="min-w-0">
-              <div className="truncate text-[14px] font-semibold text-[var(--foreground)]">
-                {ing.standard_name}
-              </div>
-            </div>
-            <input
-              aria-label={`${ing.standard_name} 수량`}
-              className="h-9 min-w-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-2 text-right text-[14px] font-semibold text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
-              inputMode="decimal"
-              min={0}
-              onChange={(event) => {
-                const value = event.target.value;
-                onChange(ing.tempId, {
-                  amount: value === "" ? 0 : Number(value),
-                  unit: ing.unit ?? "g",
-                });
-              }}
-              type="number"
-              value={ing.amount ?? 0}
-            />
-            <div
-              aria-label={`${ing.standard_name} 단위`}
-              className="flex shrink-0 gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-0.5"
-              role="group"
-            >
-              {COOKING_UNIT_OPTIONS.map((option) => (
-                <button
-                  aria-label={`${ing.standard_name} ${option}`}
-                  aria-pressed={(ing.unit ?? "g") === option}
-                  className={[
-                    "h-9 min-w-9 rounded-[var(--radius-sm)] px-1.5 text-[14px] font-semibold transition",
-                    (ing.unit ?? "g") === option
-                      ? "bg-[var(--brand)] text-[var(--text-inverse)]"
-                      : "text-[var(--text-2)] hover:bg-[var(--surface)]",
-                  ].join(" ")}
-                  key={option}
-                  onClick={() =>
-                    onChange(ing.tempId, {
-                      amount: ing.amount ?? 0,
-                      unit: option,
-                    })
-                  }
-                  type="button"
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-            <button
-              aria-label={`${ing.standard_name} 삭제`}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[18px] leading-none text-[var(--text-3)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]"
-              onClick={() => onRemove(ing.tempId)}
-              type="button"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Step List ───────────────────────────────────────────────────────────────
-
-interface StepListProps {
-  steps: TempStep[];
-  showValidationError: boolean;
-  onRemove: (tempId: string) => void;
-}
-
-function StepList({ steps, showValidationError, onRemove }: StepListProps) {
-  if (steps.length === 0) {
-    return (
-      <p
-        className={[
-          "mb-2 text-[12px] font-medium leading-[1.4]",
-          showValidationError ? "text-[var(--danger)]" : "text-[var(--text-3)]",
-        ].join(" ")}
-      >
-        만들기를 추가해 주세요.
-      </p>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {steps.map((step) => (
-        <div
-          key={step.tempId}
-          className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] p-4"
-          style={{
-            borderLeft: `4px solid ${getCookingMethodColor(step.cooking_method)}`,
-          }}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-sm font-semibold text-[var(--foreground)]">
-                  {step.step_number}.
-                </span>
-                {step.cooking_method && (
-                  <span
-                    className="rounded-full px-2.5 py-0.5 text-xs font-semibold text-[var(--text-inverse)]"
-                    style={{
-                      backgroundColor: getCookingMethodColor(step.cooking_method),
-                    }}
-                  >
-                    {step.cooking_method.label}
-                  </span>
-                )}
-              </div>
-              <p className="text-base text-[var(--foreground)] whitespace-pre-wrap break-words">
-                {step.instruction}
-              </p>
-            </div>
-            <button
-              aria-label={`스텝 ${step.step_number} 삭제`}
-              className="flex h-[var(--control-height-md)] w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--foreground)]"
-              onClick={() => onRemove(step.tempId)}
-              type="button"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Inline Step Composer ────────────────────────────────────────────────────
-
-interface StepInlineComposerProps {
-  onAdd: (step: Omit<TempStep, "tempId" | "step_number">) => void;
-  cookingMethods: CookingMethodItem[];
-  nextStepNumber: number;
-}
-
-function StepInlineComposer({
-  onAdd,
-  cookingMethods,
-  nextStepNumber,
-}: StepInlineComposerProps) {
-  const [selectedMethodId, setSelectedMethodId] = useState("");
-  const [instruction, setInstruction] = useState("");
-  const [methodError, setMethodError] = useState<string | null>(null);
-
-  const selectedMethod =
-    cookingMethods.find((method) => method.id === selectedMethodId) ?? null;
-  const cookingMethodGroups = useMemo(
-    () => groupCookingMethodsByCategory(cookingMethods),
-    [cookingMethods],
-  );
-
-  const handleAdd = () => {
-    if (!instruction.trim()) return;
-    if (!selectedMethod) {
-      setMethodError("조리법을 선택해 주세요.");
-      return;
-    }
-
-    onAdd({
-      instruction: instruction.trim(),
-      cooking_method: selectedMethod,
-      ingredients_used: [],
-      heat_level: null,
-      duration_seconds: null,
-      duration_text: null,
-    });
-    setInstruction("");
-    setSelectedMethodId("");
-    setMethodError(null);
-  };
-
-  return (
-    <div
-      className="mb-4 mt-3 scroll-mb-[120px] rounded-[var(--radius-md)] border border-dashed border-[var(--line)] bg-[var(--surface)] p-3 md:mb-0"
-      data-testid="manual-step-composer"
-    >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-[13px] font-semibold text-[var(--foreground)]">
-          {nextStepNumber}단계 입력
-        </span>
-        <span className="text-[12px] font-medium text-[var(--text-3)]">
-          조리방법을 먼저 골라 주세요
-        </span>
-      </div>
-      <div
-        aria-label="조리방법 선택"
-        className="-mx-1 overflow-x-auto px-1 pb-1 scrollbar-hide"
-        role="group"
-      >
-        <div className="flex w-max gap-3">
-          {cookingMethodGroups.map((group) => (
-            <div className="shrink-0" key={group.label}>
-              <p className="mb-1 px-1 text-[11px] font-bold text-[var(--text-3)]">
-                {group.label}
-              </p>
-              <div className="flex gap-2">
-                {group.items.map((method) => {
-                  const color = getCookingMethodColor(method);
-                  const isSelected = selectedMethod?.id === method.id;
-
-                  return (
-                    <button
-                      key={method.id}
-                      aria-pressed={isSelected}
-                      className="h-9 shrink-0 rounded-full border px-3 text-[13px] font-semibold transition"
-                      onClick={() => {
-                        setSelectedMethodId(method.id);
-                        setMethodError(null);
-                      }}
-                      style={{
-                        backgroundColor: isSelected
-                          ? color
-                          : `color-mix(in srgb, ${color} 14%, transparent)`,
-                        borderColor: color,
-                        color: isSelected ? "var(--text-inverse)" : "var(--foreground)",
-                      }}
-                      type="button"
-                    >
-                      {method.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <label className="mt-2 block">
-        <span className="sr-only">만들기 설명</span>
-        <textarea
-          aria-label={`만들기 ${nextStepNumber} 설명`}
-          className="min-h-[92px] w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 py-2.5 text-[14px] leading-[1.55] text-[var(--foreground)] outline-none focus:border-[var(--brand)]"
-          onChange={(event) => setInstruction(event.target.value)}
-          placeholder="만들기 설명을 입력하세요"
-          rows={3}
-          value={instruction}
-        />
-      </label>
-      {methodError ? (
-        <p className="mt-2 text-[12px] font-semibold text-[var(--danger)]">
-          {methodError}
-        </p>
-      ) : null}
-      <button
-        className={[
-          "mt-2 flex h-10 w-full items-center justify-center rounded-[var(--radius-control)] text-[13px] font-semibold",
-          selectedMethod && instruction.trim()
-            ? "bg-[var(--brand)] text-[var(--text-inverse)]"
-            : "bg-[var(--line-strong)] text-[var(--text-4)]",
-        ].join(" ")}
-        disabled={!instruction.trim()}
-        onClick={handleAdd}
-        type="button"
-      >
-        + 만들기 추가
-      </button>
     </div>
   );
 }
@@ -670,7 +333,6 @@ export function ManualRecipeCreateScreen({
   const [steps, setSteps] = useState<TempStep[]>([]);
   const [modalMode, setModalMode] = useState<ModalMode>("none");
   const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [createdRecipeId, setCreatedRecipeId] = useState<string | null>(null);
   const [createdRecipeTitle, setCreatedRecipeTitle] = useState<string>("");
@@ -698,6 +360,21 @@ export function ManualRecipeCreateScreen({
   const isManagedReadUrlRefreshRetryRef = useRef(false);
   const uploadedImageRef = useRef<UploadedRecipeImage | null>(null);
   const isMountedRef = useRef(true);
+  const cleanupRetryActionRef = useRef<
+    | { kind: "remove" }
+    | { kind: "replace"; file: File }
+    | null
+  >(null);
+  const cleanupInFlightImageObjectIdRef = useRef<string | null>(null);
+  const cleanupCancelIntentRef = useRef<{
+    imageObjectId: string;
+    idempotencyKey: string;
+  } | null>(null);
+  const historyGuardActiveRef = useRef(false);
+  const allowHistoryExitRef = useRef(false);
+  const pendingHistoryExitRef = useRef<(() => void) | null>(null);
+  const pendingNavigationRef = useRef<(() => void) | null>(null);
+  const [imageCleanupState, setImageCleanupState] = useState<"idle" | "running" | "failed">("idle");
 
   // API data states
   const [cookingMethods, setCookingMethods] = useState<CookingMethodItem[]>(
@@ -708,6 +385,39 @@ export function ManualRecipeCreateScreen({
   // Meal add flow
   const [isCreatingMeal, setIsCreatingMeal] = useState(false);
   const [mealAddError, setMealAddError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isDesktopViewport) {
+      return;
+    }
+
+    const documentElement = document.documentElement;
+    const previousDocumentHeight = documentElement.style.height;
+    const previousDocumentOverflow = documentElement.style.overflow;
+    const previousBodyHeight = document.body.style.height;
+    const previousBodyInset = document.body.style.inset;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyWidth = document.body.style.width;
+
+    documentElement.style.height = "100%";
+    documentElement.style.overflow = "hidden";
+    document.body.style.height = "100%";
+    document.body.style.inset = "0";
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+
+    return () => {
+      documentElement.style.height = previousDocumentHeight;
+      documentElement.style.overflow = previousDocumentOverflow;
+      document.body.style.height = previousBodyHeight;
+      document.body.style.inset = previousBodyInset;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.width = previousBodyWidth;
+    };
+  }, [isDesktopViewport]);
 
   useEffect(() => {
     async function loadCookingMethods() {
@@ -728,8 +438,73 @@ export function ManualRecipeCreateScreen({
     steps,
   });
   const canSave = saveRequirements.length === 0;
+  const initialEditorDraftRef = useRef<RecipeEditorDraft>(
+    createEmptyRecipeEditorDraft(),
+  );
+  const editorDraft = useMemo<RecipeEditorDraft>(() => ({
+    title,
+    baseServings,
+    ingredients: ingredients.map((ingredient, index) => ({
+      amount: ingredient.amount,
+      draftId: ingredient.tempId,
+      ingredientType: ingredient.ingredient_type,
+      sortOrder: index + 1,
+      source: {
+        ingredientId: ingredient.ingredient_id || null,
+        kind: "ingredient" as const,
+      },
+      standardName: ingredient.standard_name,
+      unit: ingredient.unit,
+    })),
+    steps: steps.map((step, index) => ({
+      cookingMethodId: step.cooking_method?.id ?? null,
+      draftId: step.tempId,
+      instruction: step.instruction,
+      sortOrder: index + 1,
+    })),
+    tags: reviewedTags,
+    image: isManagedRecipeImage(uploadedImage)
+      ? createRecipeEditorImageDraft(uploadedImage)
+      : {
+          attachment: "unattached",
+          imageObjectId: null,
+          readUrl: imagePreviewUrl,
+          readUrlExpiresAt: null,
+          state: imageStatus,
+        },
+  }), [
+    baseServings,
+    imagePreviewUrl,
+    imageStatus,
+    ingredients,
+    reviewedTags,
+    steps,
+    title,
+    uploadedImage,
+  ]);
+  const isUploading =
+    imageStatus === "uploading" || imageCleanupState === "running";
+  const editorShell = usePersonalRecipeEditorShell({
+    accessState: "ready",
+    cleanupState: imageStatus === "uploading" ? "running" : imageCleanupState,
+    context: "planner-add",
+    draft: editorDraft,
+    initialDraft: initialEditorDraftRef.current,
+    onCancel: () => completeExit(),
+    onDiscard: () => handleDiscardDraft(),
+    onRetryCleanup: () => handleImageRetry(),
+    onSubmit: async () => handleSave(),
+  });
+  const {
+    dirty: hasDraftChanges,
+    openDiscardDialog,
+    requestCancel,
+    stay,
+  } = editorShell;
+  const openDiscardDialogRef = useRef(openDiscardDialog);
+  openDiscardDialogRef.current = openDiscardDialog;
 
-  const handleBack = useCallback(() => {
+  const performExit = useCallback(() => {
     if (presentation === "embedded" && onRequestClose) {
       onRequestClose();
       return;
@@ -737,6 +512,145 @@ export function ManualRecipeCreateScreen({
 
     appReturn.goBack();
   }, [appReturn, onRequestClose, presentation]);
+
+  const completeExit = useCallback(() => {
+    if (historyGuardActiveRef.current) {
+      pendingHistoryExitRef.current = performExit;
+      allowHistoryExitRef.current = true;
+      window.history.back();
+      return;
+    }
+
+    performExit();
+  }, [performExit]);
+
+  const releaseHistoryGuard = useCallback((onReleased: () => void) => {
+    if (historyGuardActiveRef.current) {
+      pendingHistoryExitRef.current = onReleased;
+      allowHistoryExitRef.current = true;
+      window.history.back();
+      return;
+    }
+
+    onReleased();
+  }, []);
+
+  const handleBack = useCallback(() => {
+    if (imageStatus === "uploading") {
+      return;
+    }
+
+    pendingNavigationRef.current = null;
+    requestCancel();
+  }, [imageStatus, requestCancel]);
+
+  const requestAppNavigation = useCallback((
+    href: string,
+    event: React.MouseEvent<HTMLAnchorElement>,
+  ) => {
+    if (
+      editorShell.isSubmitting
+      || editorShell.cleanupState !== "idle"
+    ) {
+      event.preventDefault();
+      return;
+    }
+
+    if (!hasDraftChanges) {
+      return;
+    }
+
+    event.preventDefault();
+    pendingNavigationRef.current = () => router.push(href);
+    openDiscardDialog();
+  }, [
+    editorShell.cleanupState,
+    editorShell.isSubmitting,
+    hasDraftChanges,
+    openDiscardDialog,
+    router,
+  ]);
+
+  const handleStayEditing = useCallback(() => {
+    pendingNavigationRef.current = null;
+    stay();
+  }, [stay]);
+
+  useEffect(() => {
+    if (!hasDraftChanges || historyGuardActiveRef.current) {
+      return;
+    }
+
+    window.history.pushState(
+      {
+        ...(
+          window.history.state && typeof window.history.state === "object"
+            ? window.history.state
+            : {}
+        ),
+        [RECIPE_EDITOR_HISTORY_GUARD_KEY]: true,
+      },
+      "",
+      window.location.href,
+    );
+    historyGuardActiveRef.current = true;
+
+    const handleHistoryBack = () => {
+      if (!historyGuardActiveRef.current) {
+        return;
+      }
+
+      if (allowHistoryExitRef.current) {
+        historyGuardActiveRef.current = false;
+        allowHistoryExitRef.current = false;
+        const pendingExit = pendingHistoryExitRef.current;
+        pendingHistoryExitRef.current = null;
+        queueMicrotask(() => pendingExit?.());
+        return;
+      }
+
+      window.history.pushState(
+        {
+          ...(
+            window.history.state && typeof window.history.state === "object"
+              ? window.history.state
+              : {}
+          ),
+          [RECIPE_EDITOR_HISTORY_GUARD_KEY]: true,
+        },
+        "",
+        window.location.href,
+      );
+      openDiscardDialogRef.current();
+    };
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("popstate", handleHistoryBack);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("popstate", handleHistoryBack);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      pendingHistoryExitRef.current = null;
+      allowHistoryExitRef.current = false;
+
+      if (historyGuardActiveRef.current) {
+        historyGuardActiveRef.current = false;
+        const currentHistoryState = window.history.state;
+        if (
+          currentHistoryState &&
+          typeof currentHistoryState === "object" &&
+          RECIPE_EDITOR_HISTORY_GUARD_KEY in currentHistoryState
+        ) {
+          window.history.back();
+        }
+      }
+    };
+  }, [hasDraftChanges]);
 
   const handleAddIngredient = useCallback(
     (newIngredients: ManualRecipeIngredientInput[]) => {
@@ -799,12 +713,31 @@ export function ManualRecipeCreateScreen({
     uploadedImageRef.current = uploadedImage;
   }, [uploadedImage]);
 
-  const cancelManagedUpload = useCallback((image: UploadedRecipeImage | null) => {
-    if (!isManagedRecipeImage(image)) {
+  const cancelManagedUploadBestEffort = useCallback((image: UploadedRecipeImage | null) => {
+    if (
+      !isManagedRecipeImage(image)
+      || image.state === "attached_private"
+      || image.state === "attached_public_shared"
+    ) {
       return;
     }
 
-    void Promise.resolve(cancelRecipeImage(image.image_object_id)).catch(() => undefined);
+    if (cleanupInFlightImageObjectIdRef.current === image.image_object_id) {
+      return;
+    }
+
+    const existingIntent = cleanupCancelIntentRef.current;
+    const idempotencyKey =
+      existingIntent?.imageObjectId === image.image_object_id
+        ? existingIntent.idempotencyKey
+        : crypto.randomUUID();
+    cleanupCancelIntentRef.current = {
+      imageObjectId: image.image_object_id,
+      idempotencyKey,
+    };
+    void Promise.resolve(
+      cancelRecipeImage(image.image_object_id, { idempotencyKey }),
+    ).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -812,9 +745,9 @@ export function ManualRecipeCreateScreen({
 
     return () => {
       isMountedRef.current = false;
-      cancelManagedUpload(uploadedImageRef.current);
+      cancelManagedUploadBestEffort(uploadedImageRef.current);
     };
-  }, [cancelManagedUpload]);
+  }, [cancelManagedUploadBestEffort]);
 
   const revokePreviewUrl = useCallback((previewUrl: string | null) => {
     if (!previewUrl) return;
@@ -824,6 +757,84 @@ export function ManualRecipeCreateScreen({
       return;
     }
   }, []);
+
+  const clearImageSelection = useCallback(() => {
+    uploadRequestIdRef.current += 1;
+    isManagedReadUrlRefreshRetryRef.current = false;
+    cleanupRetryActionRef.current = null;
+    cleanupInFlightImageObjectIdRef.current = null;
+    cleanupCancelIntentRef.current = null;
+    uploadedImageRef.current = null;
+    revokePreviewUrl(imagePreviewUrl);
+    pendingUploadIdempotencyKeyRef.current = null;
+    processedUploadFileRef.current = null;
+    setImageCleanupState("idle");
+    setImageStatus("idle");
+    setImagePreviewUrl(null);
+    setUploadedImage(null);
+    setImageError(null);
+    setImageErrorCode(null);
+    setPendingFile(null);
+  }, [imagePreviewUrl, revokePreviewUrl]);
+
+  const failImageCleanup = useCallback((retryAction: { kind: "remove" } | { kind: "replace"; file: File }) => {
+    cleanupRetryActionRef.current = retryAction;
+    cleanupInFlightImageObjectIdRef.current = null;
+    setImageCleanupState("failed");
+    setImageStatus("failed");
+    setImageErrorCode(null);
+    setImageError("이미지 정리를 완료하지 못했어요. 다시 시도해 주세요.");
+  }, []);
+
+  const cleanupManagedImageForAction = useCallback(async (
+    image: UploadedRecipeImage | null,
+    retryAction: { kind: "remove" } | { kind: "replace"; file: File },
+  ) => {
+    if (!isManagedRecipeImage(image)) {
+      cleanupRetryActionRef.current = null;
+      setImageCleanupState("idle");
+      return true;
+    }
+
+    if (cleanupInFlightImageObjectIdRef.current === image.image_object_id) {
+      return false;
+    }
+
+    cleanupRetryActionRef.current = retryAction;
+    cleanupInFlightImageObjectIdRef.current = image.image_object_id;
+    setImageCleanupState("running");
+    const existingIntent = cleanupCancelIntentRef.current;
+    const idempotencyKey =
+      existingIntent?.imageObjectId === image.image_object_id
+        ? existingIntent.idempotencyKey
+        : crypto.randomUUID();
+    cleanupCancelIntentRef.current = {
+      imageObjectId: image.image_object_id,
+      idempotencyKey,
+    };
+
+    const cleanupResult = await cleanupRecipeEditorImage(
+      createRecipeEditorImageDraft(image),
+      {
+        cancelOwnerUpload: async (imageObjectId, idempotencyKey) =>
+          cancelRecipeImage(imageObjectId, { idempotencyKey }),
+        idempotencyKey,
+      },
+    );
+
+    if (cleanupResult !== "complete") {
+      failImageCleanup(retryAction);
+      return false;
+    }
+
+    cleanupRetryActionRef.current = null;
+    cleanupInFlightImageObjectIdRef.current = null;
+    cleanupCancelIntentRef.current = null;
+    setImageCleanupState("idle");
+    setImageError(null);
+    setImageErrorCode(null);
+    return true;
+  }, [failImageCleanup]);
 
   const refreshManagedReadUrlIfExpired = useCallback(async () => {
     const currentImage = uploadedImageRef.current;
@@ -889,6 +900,7 @@ export function ManualRecipeCreateScreen({
     idempotencyKey: string,
     options?: {
       processedFile?: File;
+      skipPreviousImageCleanup?: boolean;
     },
   ) => {
     const requestId = uploadRequestIdRef.current + 1;
@@ -897,14 +909,16 @@ export function ManualRecipeCreateScreen({
     const previousUploadedImage = uploadedImageRef.current;
 
     isManagedReadUrlRefreshRetryRef.current = false;
+    setImageCleanupState("idle");
     uploadedImageRef.current = null;
-    cancelManagedUpload(previousUploadedImage);
+    if (!options?.skipPreviousImageCleanup) {
+      cancelManagedUploadBestEffort(previousUploadedImage);
+    }
     revokePreviewUrl(imagePreviewUrl);
 
     setImageStatus("uploading");
     setImageError(null);
     setImageErrorCode(null);
-    setSaveError(null);
     setPendingFile(options?.processedFile ?? file);
     setUploadedImage(null);
     setImagePreviewUrl(nextPreviewUrl);
@@ -934,7 +948,7 @@ export function ManualRecipeCreateScreen({
     if (!isMountedRef.current) {
       revokePreviewUrl(nextPreviewUrl);
       if (result.success && result.data && isManagedRecipeImage(result.data)) {
-        cancelManagedUpload(result.data);
+        cancelManagedUploadBestEffort(result.data);
       }
       return;
     }
@@ -942,7 +956,7 @@ export function ManualRecipeCreateScreen({
     if (uploadRequestIdRef.current !== requestId) {
       revokePreviewUrl(nextPreviewUrl);
       if (result.success && result.data && isManagedRecipeImage(result.data)) {
-        cancelManagedUpload(result.data);
+        cancelManagedUploadBestEffort(result.data);
       }
       return;
     }
@@ -974,7 +988,7 @@ export function ManualRecipeCreateScreen({
     setImageStatus("uploaded");
     pendingUploadIdempotencyKeyRef.current = idempotencyKey;
   }, [
-    cancelManagedUpload,
+    cancelManagedUploadBestEffort,
     imagePreviewUrl,
     revokePreviewUrl,
   ]);
@@ -983,12 +997,59 @@ export function ManualRecipeCreateScreen({
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    const currentImage = uploadedImageRef.current;
+
+    if (isManagedRecipeImage(currentImage)) {
+      void (async () => {
+        const cleaned = await cleanupManagedImageForAction(currentImage, {
+          kind: "replace",
+          file,
+        });
+        if (!cleaned) {
+          return;
+        }
+
+        const idempotencyKey = crypto.randomUUID();
+        pendingUploadIdempotencyKeyRef.current = idempotencyKey;
+        void doUpload(file, idempotencyKey, {
+          skipPreviousImageCleanup: true,
+        });
+      })();
+      return;
+    }
+
     const idempotencyKey = crypto.randomUUID();
     pendingUploadIdempotencyKeyRef.current = idempotencyKey;
     void doUpload(file, idempotencyKey);
-  }, [doUpload]);
+  }, [cleanupManagedImageForAction, doUpload]);
 
   const handleImageRetry = useCallback(() => {
+    if (imageCleanupState === "failed") {
+      const currentImage = uploadedImageRef.current;
+      const retryAction = cleanupRetryActionRef.current;
+
+      if (isManagedRecipeImage(currentImage) && retryAction) {
+        void (async () => {
+          const cleaned = await cleanupManagedImageForAction(currentImage, retryAction);
+          if (!cleaned) {
+            return;
+          }
+
+          if (retryAction.kind === "remove") {
+            clearImageSelection();
+            return;
+          }
+
+          const idempotencyKey = crypto.randomUUID();
+          pendingUploadIdempotencyKeyRef.current = idempotencyKey;
+          void doUpload(retryAction.file, idempotencyKey, {
+            skipPreviousImageCleanup: true,
+          });
+        })();
+        return;
+      }
+    }
+
     if (isManagedReadUrlRefreshRetryRef.current) {
       void refreshManagedReadUrlIfExpired();
       return;
@@ -1008,41 +1069,72 @@ export function ManualRecipeCreateScreen({
       });
     }
   }, [
+    clearImageSelection,
+    cleanupManagedImageForAction,
     doUpload,
     imageErrorCode,
+    imageCleanupState,
     pendingFile,
     refreshManagedReadUrlIfExpired,
   ]);
 
   const handleImageRemove = useCallback(() => {
-    uploadRequestIdRef.current += 1;
     const currentImage = uploadedImageRef.current;
-    isManagedReadUrlRefreshRetryRef.current = false;
-    uploadedImageRef.current = null;
-    cancelManagedUpload(currentImage);
-    revokePreviewUrl(imagePreviewUrl);
-    pendingUploadIdempotencyKeyRef.current = null;
-    processedUploadFileRef.current = null;
-    setImageStatus("idle");
-    setImagePreviewUrl(null);
-    setUploadedImage(null);
-    setImageError(null);
-    setImageErrorCode(null);
-    setPendingFile(null);
-    setSaveError(null);
-  }, [cancelManagedUpload, imagePreviewUrl, revokePreviewUrl]);
+    if (isManagedRecipeImage(currentImage)) {
+      void (async () => {
+        const cleaned = await cleanupManagedImageForAction(currentImage, {
+          kind: "remove",
+        });
+        if (cleaned) {
+          clearImageSelection();
+        }
+      })();
+      return;
+    }
+
+    clearImageSelection();
+  }, [clearImageSelection, cleanupManagedImageForAction]);
 
   const handleImageReplace = useCallback(() => {
     imageInputRef.current?.click();
   }, []);
+
+  const handleDiscardDraft = useCallback(async () => {
+    if (cleanupInFlightImageObjectIdRef.current) {
+      return false;
+    }
+
+    const currentImage = uploadedImageRef.current;
+    if (isManagedRecipeImage(currentImage)) {
+      const cleaned = await cleanupManagedImageForAction(currentImage, {
+        kind: "remove",
+      });
+      if (!cleaned) {
+        return false;
+      }
+      clearImageSelection();
+    }
+
+    const pendingNavigation = pendingNavigationRef.current;
+    pendingNavigationRef.current = null;
+    if (pendingNavigation) {
+      releaseHistoryGuard(pendingNavigation);
+    } else {
+      completeExit();
+    }
+    return true;
+  }, [
+    cleanupManagedImageForAction,
+    clearImageSelection,
+    completeExit,
+    releaseHistoryGuard,
+  ]);
 
   useEffect(() => {
     return () => {
       revokePreviewUrl(imagePreviewUrl);
     };
   }, [imagePreviewUrl, revokePreviewUrl]);
-
-  const isUploading = imageStatus === "uploading";
 
   useEffect(() => {
     areTagsDirtyRef.current = areTagsDirty;
@@ -1137,91 +1229,91 @@ export function ManualRecipeCreateScreen({
 
     if (!canSave) {
       setShowValidationErrors(true);
-      setSaveError(null);
       return;
     }
 
     setShowValidationErrors(false);
     setIsSaving(true);
-    setSaveError(null);
     setImageError(null);
     setImageErrorCode(null);
-
-    const activeImage = await refreshManagedReadUrlIfExpired();
-    if (uploadedImageRef.current && !activeImage) {
-      setIsSaving(false);
-      return;
-    }
-
-    const reviewedTagPayload = buildReviewedRecipeTagsPayload({
-      isDirty: areTagsDirty,
-      tags: reviewedTags,
-    });
-    const imagePayload = activeImage
-      ? (
-          isManagedRecipeImage(activeImage)
-            ? { image_object_id: activeImage.image_object_id }
-            : { thumbnail_url: activeImage.thumbnail_url }
-        )
-      : {};
-    const response = await createManualRecipe({
-      title: title.trim(),
-      base_servings: baseServings,
-      ...imagePayload,
-      ...(reviewedTagPayload !== undefined ? { tags: reviewedTagPayload } : {}),
-      ingredients: ingredients.map((ing, idx) => ({
-        ingredient_id: ing.ingredient_id,
-        standard_name: ing.standard_name,
-        amount: ing.amount,
-        unit: ing.unit,
-        ingredient_type: ing.ingredient_type,
-        display_text: ing.display_text,
-        scalable: ing.scalable,
-        sort_order: idx + 1,
-      })),
-      steps: steps.map((step) => ({
-        step_number: step.step_number,
-        instruction: step.instruction,
-        cooking_method_id: step.cooking_method?.id ?? "",
-        ingredients_used: step.ingredients_used,
-        heat_level: step.heat_level,
-        duration_seconds: step.duration_seconds,
-        duration_text: step.duration_text,
-      })),
-    });
-
-    if (!response) {
-      setSaveError("레시피를 등록하지 못했어요.");
-      setIsSaving(false);
-      return;
-    }
-
-    if (!response.success || !response.data) {
-      if (response.error?.fields?.some((field) => field.field === "tags")) {
-        setTagSubmitError(response.error.message);
-      }
-      if (isCreateImageError(response.error?.code ?? null)) {
-        setImageStatus("failed");
-        setImageErrorCode(response.error?.code ?? null);
-        setImageError(response.error?.message ?? "이미지를 다시 확인해 주세요.");
-        setSaveError(null);
-        setIsSaving(false);
+    try {
+      const activeImage = await refreshManagedReadUrlIfExpired();
+      if (uploadedImageRef.current && !activeImage) {
         return;
       }
-      setSaveError(response.error?.message ?? "레시피를 등록하지 못했어요.");
-      setIsSaving(false);
-      return;
-    }
 
-    setCreatedRecipeId(response.data.id);
-    setCreatedRecipeTitle(response.data.title);
-    isManagedReadUrlRefreshRetryRef.current = false;
-    uploadedImageRef.current = null;
-    pendingUploadIdempotencyKeyRef.current = null;
-    processedUploadFileRef.current = null;
-    setUploadedImage(null);
-    setModalMode("success");
-    setIsSaving(false);
+      const reviewedTagPayload = buildReviewedRecipeTagsPayload({
+        isDirty: areTagsDirty,
+        tags: reviewedTags,
+      });
+      const imagePayload = activeImage
+        ? (
+            isManagedRecipeImage(activeImage)
+              ? { image_object_id: activeImage.image_object_id }
+              : { thumbnail_url: activeImage.thumbnail_url }
+          )
+        : {};
+      const response = await createManualRecipe({
+        title: title.trim(),
+        base_servings: baseServings,
+        ...imagePayload,
+        ...(reviewedTagPayload !== undefined ? { tags: reviewedTagPayload } : {}),
+        ingredients: ingredients.map((ing, idx) => ({
+          ingredient_id: ing.ingredient_id,
+          standard_name: ing.standard_name,
+          amount: ing.amount,
+          unit: ing.unit,
+          ingredient_type: ing.ingredient_type,
+          display_text: ing.display_text,
+          scalable: ing.scalable,
+          sort_order: idx + 1,
+        })),
+        steps: steps.map((step) => ({
+          step_number: step.step_number,
+          instruction: step.instruction,
+          cooking_method_id: step.cooking_method?.id ?? "",
+          ingredients_used: step.ingredients_used,
+          heat_level: step.heat_level,
+          duration_seconds: step.duration_seconds,
+          duration_text: step.duration_text,
+        })),
+      });
+
+      if (!response) {
+        throw new Error("저장하지 못했어요. 내용을 유지했으니 다시 시도해 주세요.");
+      }
+
+      if (!response.success || !response.data) {
+        if (response.error?.fields?.some((field) => field.field === "tags")) {
+          setTagSubmitError(response.error.message);
+        }
+        if (isCreateImageError(response.error?.code ?? null)) {
+          setImageStatus("failed");
+          setImageErrorCode(response.error?.code ?? null);
+          setImageError(response.error?.message ?? "이미지를 다시 확인해 주세요.");
+          return;
+        }
+        throw new Error(
+          response.error?.message
+            ?? "저장하지 못했어요. 내용을 유지했으니 다시 시도해 주세요.",
+        );
+      }
+
+      const createdRecipe = response.data;
+      isManagedReadUrlRefreshRetryRef.current = false;
+      uploadedImageRef.current = null;
+      pendingUploadIdempotencyKeyRef.current = null;
+      processedUploadFileRef.current = null;
+      setUploadedImage(null);
+      releaseHistoryGuard(() => {
+        initialEditorDraftRef.current = editorDraft;
+        setCreatedRecipeId(createdRecipe.id);
+        setCreatedRecipeTitle(createdRecipe.title);
+        setModalMode("success");
+      });
+    } finally {
+      setIsSaving(false);
+    }
   }, [
     isUploading,
     canSave,
@@ -1232,6 +1324,8 @@ export function ManualRecipeCreateScreen({
     ingredients,
     steps,
     refreshManagedReadUrlIfExpired,
+    editorDraft,
+    releaseHistoryGuard,
   ]);
 
   const handleMealAdd = useCallback(() => {
@@ -1305,7 +1399,7 @@ export function ManualRecipeCreateScreen({
           </label>
           <div className="web-manual-field web-manual-field-servings">
             <span>기준 수량</span>
-            <BaseServingsStepper
+            <RecipeEditorBaseServingsControl
               value={baseServings}
               onChange={setBaseServings}
             />
@@ -1313,95 +1407,38 @@ export function ManualRecipeCreateScreen({
         </div>
       </section>
 
-      <section className="web-manual-section" data-testid="manual-image-upload-section-desktop">
-        <div className="web-manual-section-head">
-          <h2>이미지</h2>
-          <span>선택사항</span>
-        </div>
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          data-testid="manual-image-file-input"
-          onChange={handleImageSelect}
-        />
-        {imageStatus === "idle" ? (
-          <WebButton
-            className="web-manual-add-button"
-            onClick={() => imageInputRef.current?.click()}
-            variant="secondary"
-          >
-            사진 선택
-          </WebButton>
-        ) : null}
-        {imageStatus !== "idle" && imagePreviewUrl ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <div
-              style={{ position: "relative", aspectRatio: "16/9", overflow: "hidden", borderRadius: "var(--radius-card)", background: "var(--surface-fill)" }}
-              data-testid="manual-image-preview"
-            >
-              <Image
-                src={imagePreviewUrl}
-                alt="레시피 이미지 미리보기"
-                fill
-                className="object-cover"
-                sizes="(min-width: 768px) 42rem, 100vw"
-                unoptimized
-              />
-              {imageStatus === "uploading" ? (
-                <div
-                  style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--overlay-30)" }}
-                  data-testid="manual-image-uploading-indicator"
-                >
-                  <span style={{ color: "var(--text-inverse)", fontSize: "13px", fontWeight: 600 }}>업로드 중...</span>
-                </div>
-              ) : null}
-            </div>
-            {imageStatus === "uploaded" ? (
-              <div style={{ display: "flex", gap: "8px" }}>
-                <WebButton onClick={handleImageReplace} variant="secondary">교체</WebButton>
-                <WebButton onClick={handleImageRemove} variant="secondary">제거</WebButton>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-        {imageStatus === "failed" ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <div className="web-menu-add-error" role="alert" data-testid="manual-image-error">
-              {imageError}
-            </div>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <WebButton onClick={handleImageRetry}>다시 시도</WebButton>
-              <WebButton onClick={handleImageRemove} variant="secondary">제거</WebButton>
-            </div>
-          </div>
-        ) : null}
-      </section>
+      <RecipeEditorImageSection
+        actionsDisabled={
+          imageCleanupState === "running" || editorShell.isSubmitting
+        }
+        fileInputRef={imageInputRef}
+        imageError={imageError}
+        imagePreviewUrl={imagePreviewUrl}
+        imageStatus={imageCleanupState === "failed" ? "uploaded" : imageStatus}
+        onRemove={handleImageRemove}
+        onReplace={handleImageReplace}
+        onRetry={handleImageRetry}
+        onSelectFile={handleImageSelect}
+        variant="desktop"
+      />
 
-      <section className="web-manual-section">
-        <div className="web-manual-section-head">
-          <h2>태그</h2>
-          <span>선택사항</span>
-        </div>
-        <RecipeTagEditor
-          errorMessage={tagSubmitError}
-          hideHeader
-          isLoading={tagSuggestionState === "loading"}
-          onChange={handleReviewedTagsChange}
-          onRefreshSuggestions={() => void loadTagSuggestions()}
-          suggestedTags={suggestedTags}
-          suggestionErrorMessage={tagSuggestionError}
-          tags={reviewedTags}
-        />
-      </section>
+      <RecipeEditorTagSection
+        isLoading={tagSuggestionState === "loading"}
+        onChange={handleReviewedTagsChange}
+        onRefreshSuggestions={() => void loadTagSuggestions()}
+        suggestedTags={suggestedTags}
+        suggestionErrorMessage={tagSuggestionError}
+        tags={reviewedTags}
+        tagSubmitError={tagSubmitError}
+        variant="desktop"
+      />
 
       <section className="web-manual-section">
         <div className="web-manual-section-head">
           <h2>재료</h2>
           <span>{ingredients.length}개 선택됨</span>
         </div>
-        <IngredientList
+        <RecipeEditorIngredientList
           ingredients={ingredients}
           showValidationError={showValidationErrors}
           onChange={handleUpdateIngredient}
@@ -1425,12 +1462,12 @@ export function ManualRecipeCreateScreen({
           <p className="web-picker-subtle">조리방법 불러오는 중...</p>
         ) : (
           <>
-            <StepList
+            <RecipeEditorStepList
               steps={steps}
               showValidationError={showValidationErrors}
               onRemove={handleRemoveStep}
             />
-            <StepInlineComposer
+            <RecipeEditorStepComposer
               cookingMethods={cookingMethods}
               nextStepNumber={steps.length + 1}
               onAdd={handleAddStep}
@@ -1439,11 +1476,6 @@ export function ManualRecipeCreateScreen({
         )}
       </section>
 
-      {saveError ? (
-        <div className="web-menu-add-error" role="alert">
-          {saveError}
-        </div>
-      ) : null}
     </>
   );
   const desktopManualFooter = (
@@ -1452,7 +1484,7 @@ export function ManualRecipeCreateScreen({
         className="web-manual-save-button"
         disabled={isSaving || isUploading}
         fullWidth
-        onClick={handleSave}
+        onClick={() => void editorShell.submit("save-private")}
         size="lg"
       >
         {isSaving ? "저장 중..." : "저장"}
@@ -1461,6 +1493,12 @@ export function ManualRecipeCreateScreen({
   );
   const desktopManualModals = (
     <>
+      <RecipeEditorDiscardDialog
+        busy={imageCleanupState === "running"}
+        onDiscard={() => void editorShell.discard()}
+        onStay={handleStayEditing}
+        open={editorShell.isDiscardDialogOpen}
+      />
       {modalMode === "ingredient-add" && (
         <RecipeIngredientAddModal
           onClose={() => setModalMode("none")}
@@ -1492,71 +1530,105 @@ export function ManualRecipeCreateScreen({
   if (isDesktopViewport) {
     if (presentation === "embedded") {
       return (
-        <div
-          className="web-menu-add-embedded web-menu-add-embedded-manual"
-          data-testid="manual-recipe-embedded"
+        <PersonalRecipeEditorShell
+          context="planner-add"
+          controller={editorShell}
+          presentation="integrated"
         >
-          <div className="web-menu-add-embedded-form">
-            {desktopManualBody}
-            {desktopManualFooter}
-          </div>
+          <div
+            className="web-menu-add-embedded web-menu-add-embedded-manual"
+            data-testid="manual-recipe-embedded"
+          >
+            <div className="web-menu-add-embedded-form">
+              {desktopManualBody}
+              {desktopManualFooter}
+            </div>
 
-          {desktopManualModals}
-        </div>
+            {desktopManualModals}
+          </div>
+        </PersonalRecipeEditorShell>
       );
     }
 
     return (
-      <div className="web-menu-add-shell">
-        <WebShell>
-          <WebTopNav activeId="planner" />
-          <nav aria-label="직접 등록 경로" className="web-breadcrumb">
-            <button
-              className="web-breadcrumb-link"
-              onClick={handleBack}
-              type="button"
-            >
-              플래너
-            </button>
-            <span className="web-breadcrumb-sep">/</span>
-            <span className="web-breadcrumb-link">{targetLabel}</span>
-            <span className="web-breadcrumb-sep">/</span>
-            <span className="web-breadcrumb-current">직접 등록</span>
-          </nav>
-          <div className="web-manual-head">
-            <div>
-              <p className="web-menu-add-eyebrow">직접 등록</p>
-              <h1>새 레시피 직접 등록</h1>
-              <p>요리 이름, 재료, 만들기를 입력해 저장해요.</p>
+      <PersonalRecipeEditorShell
+        context="planner-add"
+        controller={editorShell}
+        presentation="integrated"
+      >
+        <div className="web-menu-add-shell">
+          <WebShell>
+            <WebTopNav
+              activeId="planner"
+              onNavigate={requestAppNavigation}
+            />
+            <nav aria-label="직접 등록 경로" className="web-breadcrumb">
+              <button
+                className="web-breadcrumb-link"
+                onClick={handleBack}
+                type="button"
+              >
+                플래너
+              </button>
+              <span className="web-breadcrumb-sep">/</span>
+              <span className="web-breadcrumb-link">{targetLabel}</span>
+              <span className="web-breadcrumb-sep">/</span>
+              <span className="web-breadcrumb-current">직접 등록</span>
+            </nav>
+            <div className="web-manual-head">
+              <div>
+                <p className="web-menu-add-eyebrow">직접 등록</p>
+                <h1>새 레시피 직접 등록</h1>
+                <p>요리 이름, 재료, 만들기를 입력해 저장해요.</p>
+              </div>
+              <div className="web-manual-actions">
+                <WebButton onClick={handleBack} variant="secondary">
+                  취소
+                </WebButton>
+              </div>
             </div>
-            <div className="web-manual-actions">
-              <WebButton onClick={handleBack} variant="secondary">
-                취소
-              </WebButton>
-            </div>
-          </div>
 
-          <WebCard className="web-manual-card">
-            {desktopManualBody}
-            {desktopManualFooter}
-          </WebCard>
-        </WebShell>
+            <WebCard className="web-manual-card">
+              {desktopManualBody}
+              {desktopManualFooter}
+            </WebCard>
+          </WebShell>
 
-        {desktopManualModals}
-      </div>
+          {desktopManualModals}
+        </div>
+      </PersonalRecipeEditorShell>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col bg-[var(--surface-fill)] md:bg-[var(--background)]">
-      <AppBar
-        onBack={handleBack}
-        onSave={handleSave}
-        isSaving={isSaving}
-        isUploading={isUploading}
-      />
-      <div className="min-h-0 flex-1 scroll-pb-[96px] overflow-y-auto pb-[88px] md:px-4 md:pb-6 md:scroll-pb-6">
-        <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
+    <PersonalRecipeEditorShell
+      context="planner-add"
+      controller={editorShell}
+      feedbackPlacement="consumer"
+      presentation="integrated"
+    >
+      <div className="flex h-screen flex-col overflow-hidden bg-[var(--surface-fill)] md:bg-[var(--background)]">
+        <AppBar
+          onBack={handleBack}
+          onSave={() => void editorShell.submit("save-private")}
+          isSaving={isSaving}
+          isUploading={isUploading}
+        />
+        {editorShell.submitError || editorShell.hasCleanupFailure ? (
+          <div
+            className="shrink-0 bg-[var(--surface-fill)] md:bg-[var(--background)]"
+            data-testid="manual-editor-feedback-region"
+          >
+            <div className="mx-auto max-w-2xl md:px-4">
+              <PersonalRecipeEditorShellFeedback controller={editorShell} />
+            </div>
+          </div>
+        ) : null}
+        <div
+          className="min-h-0 flex-1 scroll-pb-[96px] overflow-y-auto pb-[88px] md:px-4 md:pb-6 md:scroll-pb-6"
+          data-testid="manual-editor-scroll-region"
+        >
+          <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
           {planDate || slotName ? (
             <div className="bg-[var(--surface)] px-4 pt-4 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
               <MealAddTargetBadge
@@ -1582,7 +1654,7 @@ export function ManualRecipeCreateScreen({
                   placeholder="예: 김치찌개"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="h-[38px] w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5 text-[14px] font-normal text-[var(--foreground)] placeholder:text-[var(--text-3)] focus:border-[var(--brand)] focus:outline-none"
+                  className="h-11 w-full rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] px-3.5 text-[14px] font-normal text-[var(--foreground)] placeholder:text-[var(--text-3)] focus:border-[var(--brand)] focus:outline-none"
                 />
                 {showValidationErrors && title.trim().length === 0 ? (
                   <span className="mt-1.5 block text-[12px] font-semibold leading-[1.4] text-[var(--danger)]">
@@ -1594,7 +1666,7 @@ export function ManualRecipeCreateScreen({
                 <span className="mb-1.5 block text-[12px] font-medium leading-[1.4] text-[var(--text-3)]">
                   기준 인분
                 </span>
-                <BaseServingsStepper
+                <RecipeEditorBaseServingsControl
                   value={baseServings}
                   onChange={setBaseServings}
                 />
@@ -1603,117 +1675,31 @@ export function ManualRecipeCreateScreen({
           </section>
 
           {/* Image Upload */}
-          <section
-            className="bg-[var(--surface)] px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]"
-            data-testid="manual-image-upload-section"
-          >
-            <h2 className="mb-3 text-[16px] font-bold leading-[1.3] text-[var(--foreground)]">
-              이미지
-            </h2>
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              data-testid="manual-image-file-input"
-              onChange={handleImageSelect}
-            />
-            {imageStatus === "idle" ? (
-              <button
-                className="flex h-[100px] w-full items-center justify-center rounded-[var(--radius-card)] border border-dashed border-[var(--line-strong)] bg-[var(--surface-fill)] text-[13px] text-[var(--text-3)]"
-                data-testid="manual-image-choose-button"
-                onClick={() => imageInputRef.current?.click()}
-                type="button"
-              >
-                사진 선택 (선택사항)
-              </button>
-            ) : null}
-            {imageStatus !== "idle" && imagePreviewUrl ? (
-              <div className="space-y-2">
-                <div
-                  className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface-fill)]"
-                  data-testid="manual-image-preview"
-                >
-                  <Image
-                    src={imagePreviewUrl}
-                    alt="레시피 이미지 미리보기"
-                    fill
-                    className="object-cover"
-                    sizes="(min-width: 768px) 42rem, 100vw"
-                    unoptimized
-                  />
-                  {imageStatus === "uploading" ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-[var(--overlay-30)]">
-                      <span className="text-[13px] font-semibold text-[var(--text-inverse)]" data-testid="manual-image-uploading-indicator">
-                        업로드 중...
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-                {imageStatus === "uploaded" ? (
-                  <div className="flex gap-2">
-                    <button
-                      className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
-                      data-testid="manual-image-replace-button"
-                      onClick={handleImageReplace}
-                      type="button"
-                    >
-                      교체
-                    </button>
-                    <button
-                      className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
-                      data-testid="manual-image-remove-button"
-                      onClick={handleImageRemove}
-                      type="button"
-                    >
-                      제거
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-            {imageStatus === "failed" ? (
-              <div className="space-y-2">
-                <div
-                  className="rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-[13px] text-[var(--danger)]"
-                  data-testid="manual-image-error"
-                  role="alert"
-                >
-                  {imageError}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    className="flex-1 rounded-[var(--radius-control)] bg-[var(--brand)] py-2 text-[13px] font-semibold text-[var(--text-inverse)]"
-                    data-testid="manual-image-retry-button"
-                    onClick={handleImageRetry}
-                    type="button"
-                  >
-                    다시 시도
-                  </button>
-                  <button
-                    className="flex-1 rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-[var(--surface)] py-2 text-[13px] font-medium text-[var(--text-2)]"
-                    data-testid="manual-image-remove-button"
-                    onClick={handleImageRemove}
-                    type="button"
-                  >
-                    제거
-                  </button>
-                </div>
-              </div>
-            ) : null}
-          </section>
+          <RecipeEditorImageSection
+            actionsDisabled={
+              imageCleanupState === "running" || editorShell.isSubmitting
+            }
+            fileInputRef={imageInputRef}
+            imageError={imageError}
+            imagePreviewUrl={imagePreviewUrl}
+            imageStatus={imageCleanupState === "failed" ? "uploaded" : imageStatus}
+            onRemove={handleImageRemove}
+            onReplace={handleImageReplace}
+            onRetry={handleImageRetry}
+            onSelectFile={handleImageSelect}
+            variant="mobile"
+          />
 
-          <section className="bg-[var(--surface)] px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
-            <RecipeTagEditor
-              errorMessage={tagSubmitError}
-              isLoading={tagSuggestionState === "loading"}
-              onChange={handleReviewedTagsChange}
-              onRefreshSuggestions={() => void loadTagSuggestions()}
-              suggestedTags={suggestedTags}
-              suggestionErrorMessage={tagSuggestionError}
-              tags={reviewedTags}
-            />
-          </section>
+          <RecipeEditorTagSection
+            isLoading={tagSuggestionState === "loading"}
+            onChange={handleReviewedTagsChange}
+            onRefreshSuggestions={() => void loadTagSuggestions()}
+            suggestedTags={suggestedTags}
+            suggestionErrorMessage={tagSuggestionError}
+            tags={reviewedTags}
+            tagSubmitError={tagSubmitError}
+            variant="mobile"
+          />
 
           {/* Ingredients */}
           <section className="bg-[var(--surface)] px-4 pb-4 pt-5 md:rounded-[var(--radius-panel)] md:border md:border-[var(--line)]">
@@ -1725,14 +1711,14 @@ export function ManualRecipeCreateScreen({
                 {ingredients.length}개 선택됨
               </span>
             </div>
-            <IngredientList
+            <RecipeEditorIngredientList
               ingredients={ingredients}
               showValidationError={showValidationErrors}
               onChange={handleUpdateIngredient}
               onRemove={handleRemoveIngredient}
             />
             <button
-              className="mt-2 flex h-[42px] w-fit items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-4 text-[13px] font-bold text-[var(--brand)] hover:bg-[var(--brand-soft)]"
+              className="mt-2 flex h-11 w-fit items-center justify-center rounded-[var(--radius-control)] border border-[var(--brand)] bg-[var(--surface)] px-4 text-[13px] font-bold text-[var(--brand)] hover:bg-[var(--brand-soft)]"
               onClick={() => setModalMode("ingredient-add")}
               type="button"
             >
@@ -1756,12 +1742,12 @@ export function ManualRecipeCreateScreen({
               </p>
             ) : (
               <>
-                <StepList
+                <RecipeEditorStepList
                   steps={steps}
                   showValidationError={showValidationErrors}
                   onRemove={handleRemoveStep}
                 />
-                <StepInlineComposer
+                <RecipeEditorStepComposer
                   cookingMethods={cookingMethods}
                   nextStepNumber={steps.length + 1}
                   onAdd={handleAddStep}
@@ -1770,47 +1756,51 @@ export function ManualRecipeCreateScreen({
             )}
           </section>
 
-          {saveError && (
-            <div
-              className="mx-4 rounded-[var(--radius-card)] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)] md:mx-0"
-              role="alert"
-            >
-              {saveError}
-            </div>
-          )}
         </div>
+        </div>
+        <Wave1MobileBottomTab
+          ariaLabel="직접 등록 화면 하단 내비게이션"
+          currentTab="planner"
+          onTabClick={(_tabId, event) => {
+            requestAppNavigation(
+              event.currentTarget.getAttribute("href") ?? "/",
+              event,
+            );
+          }}
+        />
 
+        {/* Modals */}
+        <RecipeEditorDiscardDialog
+          busy={imageCleanupState === "running"}
+          onDiscard={() => void editorShell.discard()}
+          onStay={handleStayEditing}
+          open={editorShell.isDiscardDialogOpen}
+        />
+        {modalMode === "ingredient-add" && (
+          <RecipeIngredientAddModal
+            onClose={() => setModalMode("none")}
+            onAdd={handleAddIngredient}
+          />
+        )}
+        {modalMode === "success" && createdRecipeId && (
+          <SuccessModal
+            recipeTitle={createdRecipeTitle}
+            mealAddError={mealAddError}
+            onMealAdd={handleMealAdd}
+            onViewDetail={handleViewDetail}
+            onClose={handleSuccessClose}
+          />
+        )}
+        {modalMode === "servings-input" && (
+          <ServingsInputModal
+            onConfirm={handleServingsConfirm}
+            onCancel={() => setModalMode("success")}
+            defaultServings={baseServings}
+            isCreating={isCreatingMeal}
+            error={mealAddError}
+          />
+        )}
       </div>
-      <Wave1MobileBottomTab
-        ariaLabel="직접 등록 화면 하단 내비게이션"
-        currentTab="planner"
-      />
-
-      {/* Modals */}
-      {modalMode === "ingredient-add" && (
-        <RecipeIngredientAddModal
-          onClose={() => setModalMode("none")}
-          onAdd={handleAddIngredient}
-        />
-      )}
-      {modalMode === "success" && createdRecipeId && (
-        <SuccessModal
-          recipeTitle={createdRecipeTitle}
-          mealAddError={mealAddError}
-          onMealAdd={handleMealAdd}
-          onViewDetail={handleViewDetail}
-          onClose={handleSuccessClose}
-        />
-      )}
-      {modalMode === "servings-input" && (
-        <ServingsInputModal
-          onConfirm={handleServingsConfirm}
-          onCancel={() => setModalMode("success")}
-          defaultServings={baseServings}
-          isCreating={isCreatingMeal}
-          error={mealAddError}
-        />
-      )}
-    </div>
+    </PersonalRecipeEditorShell>
   );
 }
