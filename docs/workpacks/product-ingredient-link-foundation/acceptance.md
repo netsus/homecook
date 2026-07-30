@@ -1,6 +1,6 @@
 # Acceptance Checklist
 
-> Evidence is checked only after the owning implementation/review stage produces it. This hybrid relock fixes the current official tuple and safe implementation split. The link-only subset is merged and the hybrid verifier is implemented test-first, but verifier implementation alone does not satisfy the unchecked merged-exact-SHA local Data/Storage plus sanitized remote Auth evidence gate. Every item prefixed `after approved Contract Evolution` remains deferred and unchecked.
+> Evidence is checked only after the owning implementation/review stage produces it. This hybrid relock fixes the current official tuple and safe implementation split. The link-only subset is merged, and PR #1248 merged the test-first hybrid verifier as `4881c4c53181a5504e16f2fa3971e9f6f4b99f05`; its merged exact-SHA dry-run passed. Full local/remote evidence remains pending, so verifier implementation and dry-run alone do not satisfy the unchecked local Data/Storage plus sanitized remote Auth evidence gate. Every item prefixed `after approved Contract Evolution` remains deferred and unchecked.
 
 ## Happy Path
 

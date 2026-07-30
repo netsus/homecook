@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-07-30T20:03:23.000Z",
+  "updated_at": "2026-07-30T20:42:36.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -2312,7 +2312,7 @@
         "node scripts/verify-product-ingredient-link-hybrid.mjs --mode post-merge-read-only",
         "git diff --check"
       ],
-      "notes": "PR #1076 records the Stage 1 contract and independent internal 1.5/security-DB/five-axis approvals at exact head f3d9be4e37bf791c430635036aa14bf355a7b85b. PR #1235 relocked the official tuple to v1.7.26/v1.5.30/v1.3.28/v1.3.27/v1.2.30 and the hybrid local application Data plus remote Auth verification boundary. feature/be-product-ingredient-link-foundation now implements only the first Stage 2 safe subset: additive link authority, service-role promotion ACL and fail-closed eligible-link selector, with isolated fresh/replay PostgreSQL evidence. F0 and recipe-visibility-read-hardening are merged predecessors, but production activation remains Manual Only. The current public pantry contract accepts ingredient_ids only, shopping rows lack product/version provenance, and pantry product/version FK delete behavior is not locked; pantry identity/projection, public payloads and related readers remain unchecked pending approved Contract Evolution.",
+      "notes": "PR #1076 records the Stage 1 contract and independent internal 1.5/security-DB/five-axis approvals at exact head f3d9be4e37bf791c430635036aa14bf355a7b85b. PR #1235 relocked the current official tuple and hybrid boundary, and PR #1236 merged the first Stage 2 safe subset: additive link authority, service-role promotion ACL and fail-closed eligible-link selector with isolated fresh/replay PostgreSQL evidence. PR #1248 merged the test-first hybrid verifier as 4881c4c53181a5504e16f2fa3971e9f6f4b99f05 from exact head e58bea0c544693c1f99104d07bf58bd8c0d01285 after independent code/security P0/P1/P2 0/0/0 and 24 current-head checks with 14 success and 10 intended skips; its merged exact-SHA dry-run passed. Full local/remote evidence remains pending because truthful sanitized remote Auth evidence and the complete local application DB verification were not supplied, so lifecycle/verification/evaluation stay in_progress/pending/not_started. The current public pantry contract accepts ingredient_ids only, shopping rows lack product/version provenance, and pantry product/version FK delete behavior is not locked; pantry identity/projection, public payloads and related readers remain unchecked pending approved Contract Evolution. Production activation remains Manual Only, and production/staging/remote application writes remain zero.",
       "evaluation_status": "not_started",
       "evaluation_round": 0,
       "last_evaluator_result": null,
