@@ -14,6 +14,7 @@ const redirect = vi.fn((url: string) => {
 });
 
 vi.mock("@/lib/supabase/server", () => ({
+  createAdminDataInternalClient: createServiceRoleClient,
   createRouteHandlerClient,
   createServerComponentClient,
   createServiceRoleClient,

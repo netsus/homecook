@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 
 import {
+  createAdminDataInternalClient,
   createServerComponentClient,
-  createServiceRoleClient,
 } from "@/lib/supabase/server";
 
 interface AdminMemberRow {
@@ -40,7 +40,8 @@ async function enforceAdminRouteAccess() {
     notFound();
   }
 
-  const serviceRoleClient = createServiceRoleClient() as AdminMembershipClient | null;
+  const serviceRoleClient =
+    createAdminDataInternalClient() as AdminMembershipClient | null;
   if (!serviceRoleClient) {
     notFound();
   }

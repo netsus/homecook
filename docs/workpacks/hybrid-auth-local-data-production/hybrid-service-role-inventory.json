@@ -4,8 +4,18 @@
   "user_direct_service_role_count": 0,
   "internal_operation_violation_count": 0,
   "internal_operation_allowlist": {
-    "createAuthCallbackInternalDataClient": [
+    "createAuthCallbackOperationsClient": [
       "app/auth/callback/route.ts"
+    ],
+    "createAdminDataInternalClient": [
+      "app/admin/layout.tsx",
+      "lib/server/admin-auth.ts"
+    ],
+    "createNotFoundFeedbackInternalClient": [
+      "app/api/v1/feedback/404/route.ts"
+    ],
+    "createOperationalEventInternalClient": [
+      "lib/server/admin-events.ts"
     ],
     "createAuthRefreshInternalDataClient": [
       "lib/supabase/server.ts"
@@ -27,6 +37,24 @@
     ]
   },
   "internal_operation_entries": [
+    {
+      "classification": "admin",
+      "file": "app/admin/layout.tsx",
+      "column": 5,
+      "line": 44,
+      "allowed": true,
+      "factory": "createAdminDataInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "public",
+      "file": "app/api/v1/feedback/404/route.ts",
+      "column": 29,
+      "line": 106,
+      "allowed": true,
+      "factory": "createNotFoundFeedbackInternalClient",
+      "kind": "internal-operation-call"
+    },
     {
       "classification": "user",
       "file": "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
@@ -76,9 +104,9 @@
       "classification": "internal",
       "file": "app/auth/callback/route.ts",
       "column": 31,
-      "line": 265,
+      "line": 230,
       "allowed": true,
-      "factory": "createAuthCallbackInternalDataClient",
+      "factory": "createAuthCallbackOperationsClient",
       "kind": "internal-operation-call"
     },
     {
@@ -88,6 +116,24 @@
       "line": 72,
       "allowed": true,
       "factory": "createAccountLifecycleInternalRpcClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "lib/server/admin-auth.ts",
+      "column": 5,
+      "line": 68,
+      "allowed": true,
+      "factory": "createAdminDataInternalClient",
+      "kind": "internal-operation-call"
+    },
+    {
+      "classification": "internal",
+      "file": "lib/server/admin-events.ts",
+      "column": 7,
+      "line": 111,
+      "allowed": true,
+      "factory": "createOperationalEventInternalClient",
       "kind": "internal-operation-call"
     },
     {
@@ -112,7 +158,7 @@
       "classification": "internal",
       "file": "lib/supabase/server.ts",
       "column": 26,
-      "line": 58,
+      "line": 64,
       "allowed": true,
       "factory": "createAuthRefreshInternalDataClient",
       "kind": "internal-operation-call"
@@ -149,35 +195,6 @@
     "lib/server/admin-events.ts",
     "lib/supabase/server.ts"
   ],
-  "service_role_entries": [
-    {
-      "classification": "admin",
-      "file": "app/admin/layout.tsx",
-      "column": 29,
-      "line": 43,
-      "kind": "service-role-call"
-    },
-    {
-      "classification": "public",
-      "file": "app/api/v1/feedback/404/route.ts",
-      "column": 29,
-      "line": 101,
-      "kind": "service-role-call"
-    },
-    {
-      "classification": "internal",
-      "file": "lib/server/admin-auth.ts",
-      "column": 29,
-      "line": 64,
-      "kind": "service-role-call"
-    },
-    {
-      "classification": "internal",
-      "file": "lib/server/admin-events.ts",
-      "column": 7,
-      "line": 71,
-      "kind": "service-role-call"
-    }
-  ],
+  "service_role_entries": [],
   "service_role_fallback_entries": []
 }

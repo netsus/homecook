@@ -41,6 +41,122 @@ values (true, 'legacy')
 on conflict (singleton) do update
 set state = excluded.state;
 
+do $$
+begin
+  if not exists (
+    select 1 from pg_type where typname = 'social_provider_type'
+  ) then
+    create type public.social_provider_type as enum ('kakao', 'naver', 'google');
+  end if;
+  if not exists (
+    select 1 from pg_type where typname = 'recipe_book_type'
+  ) then
+    create type public.recipe_book_type
+      as enum ('my_added', 'saved', 'liked', 'custom');
+  end if;
+end
+$$;
+
+create table if not exists public.users (
+  id uuid primary key,
+  nickname text not null,
+  email text,
+  profile_image_url text,
+  social_provider public.social_provider_type not null,
+  social_id text not null,
+  settings_json jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default clock_timestamp(),
+  updated_at timestamptz not null default clock_timestamp(),
+  deleted_at timestamptz
+);
+create unique index if not exists hybrid_runtime_users_email_active_idx
+  on public.users (email)
+  where deleted_at is null and email is not null;
+
+create table if not exists public.recipe_books (
+  id uuid primary key,
+  user_id uuid not null references public.users(id) on delete cascade,
+  name text not null,
+  book_type public.recipe_book_type not null,
+  cover_color_key text,
+  cover_image_url text,
+  sort_order integer not null,
+  created_at timestamptz not null default clock_timestamp(),
+  updated_at timestamptz not null default clock_timestamp()
+);
+create unique index if not exists hybrid_runtime_recipe_books_system_idx
+  on public.recipe_books (user_id, book_type)
+  where book_type in ('my_added', 'saved', 'liked');
+
+create table if not exists public.meal_plan_columns (
+  id uuid primary key,
+  user_id uuid not null references public.users(id) on delete cascade,
+  name text not null,
+  sort_order integer not null,
+  created_at timestamptz not null default clock_timestamp(),
+  unique (user_id, sort_order)
+);
+
+create table if not exists public.admin_members (
+  id uuid primary key default extensions.gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  role text not null default 'viewer',
+  unique (user_id)
+);
+
+create table if not exists public.operational_events (
+  id uuid primary key default extensions.gen_random_uuid(),
+  event_type text not null,
+  severity text not null,
+  source text not null,
+  actor_user_id uuid,
+  target_user_id uuid,
+  request_path text,
+  http_status integer,
+  error_code text,
+  message_summary text,
+  metadata_json jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default clock_timestamp()
+);
+
+create table if not exists public.admin_audit_logs (
+  id uuid primary key default extensions.gen_random_uuid(),
+  actor_admin_user_id uuid not null references public.users(id),
+  action text not null,
+  target_type text,
+  target_id text,
+  request_path text not null,
+  result text not null default 'success',
+  ip_hash text,
+  user_agent_hash text,
+  created_at timestamptz not null default clock_timestamp()
+);
+
+create table if not exists public.meals (
+  id uuid primary key default extensions.gen_random_uuid(),
+  user_id uuid not null references public.users(id)
+);
+create table if not exists public.pantry_items (
+  id uuid primary key default extensions.gen_random_uuid(),
+  user_id uuid not null references public.users(id)
+);
+create table if not exists public.shopping_lists (
+  id uuid primary key default extensions.gen_random_uuid(),
+  user_id uuid not null references public.users(id)
+);
+
+grant select, insert, update, delete
+  on public.users,
+     public.recipe_books,
+     public.meal_plan_columns,
+     public.admin_members,
+     public.operational_events,
+     public.admin_audit_logs,
+     public.meals,
+     public.pantry_items,
+     public.shopping_lists
+  to service_role;
+
 create table if not exists private.remote_auth_identity_epochs (
   issuer text not null,
   owner_uuid uuid not null,
@@ -529,12 +645,12 @@ begin
       or not (
         (
           v_attestation_scope = 'ingredients'
-          and v_method in ('GET', 'HEAD')
+          and v_method = 'GET'
           and v_path in ('/ingredients', '/ingredient_synonyms')
         )
         or (
           v_attestation_scope = 'cooking-methods'
-          and v_method in ('GET', 'HEAD')
+          and v_method = 'GET'
           and v_path in ('/cooking_methods', '/cooking_method_synonyms')
         )
         or (
@@ -546,7 +662,7 @@ begin
           v_attestation_scope = 'recipe-themes'
           and (
             (
-              v_method in ('GET', 'HEAD')
+              v_method = 'GET'
               and v_path in ('/recipes', '/recipe_steps')
             )
             or (
@@ -557,7 +673,7 @@ begin
         )
         or (
           v_attestation_scope = 'recipes'
-          and v_method in ('GET', 'HEAD')
+          and v_method = 'GET'
           and v_path in ('/recipes', '/recipe_ingredients')
         )
         or (
@@ -567,7 +683,7 @@ begin
         )
         or (
           v_attestation_scope = 'recipe-detail'
-          and v_method in ('GET', 'HEAD')
+          and v_method = 'GET'
           and v_path in (
             '/recipes',
             '/recipe_ingredients',
@@ -578,7 +694,7 @@ begin
         )
         or (
           v_attestation_scope = 'recipe-cook-mode'
-          and v_method in ('GET', 'HEAD')
+          and v_method = 'GET'
           and v_path in ('/recipes', '/recipe_ingredients', '/recipe_steps')
         )
       ) then
@@ -611,8 +727,36 @@ begin
           and v_method = 'POST'
           and v_path in (
             '/rpc/get_account_generation_capability',
-            '/rpc/bootstrap_account_generation_identity'
+            '/rpc/bootstrap_account_generation_identity',
+            '/rpc/bootstrap_legacy_auth_callback_identity'
           )
+        )
+        or (
+          v_attestation_scope = 'admin-data'
+          and (
+            (
+              v_method = 'GET'
+              and v_path in (
+                '/admin_audit_logs',
+                '/admin_members',
+                '/meals',
+                '/operational_events',
+                '/pantry_items',
+                '/recipe_books',
+                '/shopping_lists',
+                '/users'
+              )
+            )
+            or (
+              v_method = 'POST'
+              and v_path in ('/admin_audit_logs', '/operational_events')
+            )
+          )
+        )
+        or (
+          v_attestation_scope in ('not-found-feedback', 'operational-event')
+          and v_method = 'POST'
+          and v_path = '/rpc/record_internal_operational_event'
         )
         or (
           v_attestation_scope = 'account-lifecycle'

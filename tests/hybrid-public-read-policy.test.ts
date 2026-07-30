@@ -107,6 +107,12 @@ describe("hybrid anonymous public read policy", () => {
   it.each([
     {
       scope: "ingredients",
+      method: "HEAD",
+      path: "/ingredients",
+      search: "?select=id%2Cstandard_name%2Ccategory%2Ccategory_code&order=standard_name.asc",
+    },
+    {
+      scope: "ingredients",
       method: "GET",
       path: "/ingredients",
       search: "?select=*",

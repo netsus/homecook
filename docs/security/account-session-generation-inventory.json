@@ -1267,7 +1267,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "operational_events",
-      "line": 49,
+      "line": 61,
       "source_file": "lib/server/admin-events.ts",
       "route": null,
       "owner_scope": "system",
@@ -1281,7 +1281,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "meal_plan_columns",
-      "line": 400,
+      "line": 413,
       "source_file": "lib/server/user-bootstrap.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -1295,7 +1295,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "recipe_books",
-      "line": 365,
+      "line": 378,
       "source_file": "lib/server/user-bootstrap.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -1309,7 +1309,7 @@
       "kind": "direct_dml",
       "operation": "insert",
       "target": "users",
-      "line": 315,
+      "line": 328,
       "source_file": "lib/server/user-bootstrap.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -1323,7 +1323,7 @@
       "kind": "direct_dml",
       "operation": "update",
       "target": "users",
-      "line": 424,
+      "line": 437,
       "source_file": "lib/server/user-bootstrap.ts",
       "route": null,
       "owner_scope": "authenticated-user",
@@ -1972,6 +1972,6 @@
       "on_delete": "cascade"
     }
   ],
-  "generated_at": "2026-07-30T01:06:48.647Z",
-  "checksum": "2b418d441dd73a8d693f0ed225ec8f2b67a5264db2a225772ec8c9ccf7dce76d"
+  "generated_at": "2026-07-30T02:10:42.840Z",
+  "checksum": "0f73d37728f9076a31b2a8f6ac18485c2f29876dfe11a962193c5ae3ad632d4d"
 }

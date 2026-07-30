@@ -169,12 +169,15 @@ describe("supabase server helpers", () => {
     createClient.mockReturnValue(client);
 
     const server = await import("@/lib/supabase/server");
-    const callbackClient = server.createAuthCallbackInternalDataClient();
+    const callbackClient = server.createAuthCallbackOperationsClient();
     server.createAuthRefreshInternalDataClient();
     server.createSessionLogoutInternalDataClient();
     const imageClient = server.createRecipeImageInternalClient();
     const lifecycleClient = server.createAccountLifecycleInternalRpcClient();
     server.createYoutubeIngredientRegistrationInternalRpcClient();
+    const adminClient = server.createAdminDataInternalClient();
+    const feedbackClient = server.createNotFoundFeedbackInternalClient();
+    const eventClient = server.createOperationalEventInternalClient();
 
     expect(createClient.mock.calls.map((call) =>
       call[2]?.global?.headers?.["x-homecook-internal-scope"])).toEqual([
@@ -184,6 +187,9 @@ describe("supabase server helpers", () => {
       "recipe-image",
       "account-lifecycle",
       "youtube-ingredient-registration",
+      "admin-data",
+      "not-found-feedback",
+      "operational-event",
     ]);
     expect(() => imageClient?.from("users")).toThrow(
       "Internal Data scope denied table: users",
@@ -192,6 +198,12 @@ describe("supabase server helpers", () => {
       "Internal Data scope denied table: recipes",
     );
     expect(callbackClient).not.toHaveProperty("from");
+    expect(callbackClient).toEqual({ rpc: expect.any(Function) });
+    expect(() => adminClient?.from("recipes")).toThrow(
+      "Internal Data scope denied table: recipes",
+    );
+    expect(feedbackClient).toEqual({ rpc: expect.any(Function) });
+    expect(eventClient).toEqual({ rpc: expect.any(Function) });
   });
 
   it("keeps the legacy callback data facade only while Data authority is remote", async () => {
@@ -207,6 +219,60 @@ describe("supabase server helpers", () => {
     const callbackClient = server.createAuthCallbackInternalDataClient();
 
     expect(callbackClient).toHaveProperty("from", client.from);
+  });
+
+  it("executes local legacy callback bootstrap through RPC without exposing from", async () => {
+    getSupabaseEnv.mockReturnValue({
+      url: "http://127.0.0.1:8000",
+      anonKey: "local-publishable",
+      authority: "local",
+      issuer: "https://remote.example/auth/v1",
+      jwksUrl: "https://remote.example/auth/v1/.well-known/jwks.json",
+    });
+    getServiceRoleKey.mockReturnValue("local-service-secret");
+    const rpc = vi.fn().mockResolvedValue({
+      data: { status: "ok", nickname: "집밥러" },
+      error: null,
+    });
+    const client = {
+      from: vi.fn(),
+      rpc,
+      storage: {},
+    };
+    createClient.mockReturnValue(client);
+
+    const server = await import("@/lib/supabase/server");
+    const callbackClient = server.createAuthCallbackOperationsClient();
+    if (!callbackClient) {
+      throw new Error("callback client missing");
+    }
+    const result = await server.bootstrapLegacyAuthCallbackIdentity(
+      callbackClient,
+      {
+        id: "71000000-0000-4000-8000-000000000001",
+        email: " Cook@Example.COM ",
+        app_metadata: { provider: "google" },
+        user_metadata: {
+          nickname: "집밥러",
+          sub: "google-remote-sub",
+        },
+      },
+    );
+
+    expect(result).toEqual({ ok: true, nickname: "집밥러" });
+    expect(callbackClient).toEqual({ rpc: expect.any(Function) });
+    expect(client.from).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith(
+      "bootstrap_legacy_auth_callback_identity",
+      {
+        p_email: "cook@example.com",
+        p_nickname: "집밥러",
+        p_owner_uuid: "71000000-0000-4000-8000-000000000001",
+        p_profile_image_url: null,
+        p_social_id: "google-remote-sub",
+        p_social_provider: "google",
+      },
+    );
   });
 });
 

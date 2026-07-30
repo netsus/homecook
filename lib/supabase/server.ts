@@ -17,6 +17,12 @@ import { createHybridShadowReadFetch } from "@/lib/server/hybrid-auth/shadow-rea
 import {
   beginHybridAuthorityResponseBoundary,
 } from "@/lib/server/hybrid-auth/route-error-context";
+import {
+  buildLegacyAuthCallbackProfile,
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  type UserBootstrapDbClient,
+} from "@/lib/server/user-bootstrap";
 import type { HybridPublicReadScope } from
   "@/lib/server/hybrid-auth/public-read-policy";
 import {
@@ -325,8 +331,11 @@ export function createDataServiceRoleClient() {
 
 type LocalInternalScope =
   | "account-lifecycle"
+  | "admin-data"
   | "auth-callback"
   | "auth-refresh"
+  | "not-found-feedback"
+  | "operational-event"
   | "recipe-image"
   | "request-authority"
   | "session-logout"
@@ -394,6 +403,86 @@ export function createAuthCallbackInternalDataClient() {
   };
 }
 
+export const createAuthCallbackOperationsClient =
+  createAuthCallbackInternalDataClient;
+
+type LegacyAuthCallbackUser = Parameters<
+  typeof buildLegacyAuthCallbackProfile
+>[0];
+
+export async function bootstrapLegacyAuthCallbackIdentity(
+  client: NonNullable<ReturnType<typeof createAuthCallbackInternalDataClient>>,
+  user: LegacyAuthCallbackUser,
+) {
+  if (getDataSupabaseEnv().authority !== "local") {
+    const dbClient = client as unknown as UserBootstrapDbClient;
+    const lookupClient = client as unknown as {
+      from(table: "users"): {
+        select(columns: string): {
+          eq(column: string, value: string): {
+            is(column: string, value: null): {
+              maybeSingle(): PromiseLike<{
+                data: { id: string } | null;
+                error: { message: string } | null;
+              }>;
+            };
+          };
+        };
+      };
+    };
+    const existing = await lookupClient
+      .from("users")
+      .select("id")
+      .eq("email", user.email ?? "")
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (existing.error) {
+      throw new Error(existing.error.message);
+    }
+    if (existing.data && existing.data.id !== user.id) {
+      return { ok: false as const, reason: "account_conflict" as const };
+    }
+    const userRow = await ensurePublicUserRow(dbClient, user);
+    await ensureUserBootstrapState(dbClient, user.id);
+    return {
+      ok: true as const,
+      nickname: userRow.nickname,
+    };
+  }
+
+  const profile = buildLegacyAuthCallbackProfile(user);
+  const result = await client.rpc(
+    "bootstrap_legacy_auth_callback_identity",
+    {
+      p_email: profile.email,
+      p_nickname: profile.nickname,
+      p_owner_uuid: profile.ownerUuid,
+      p_profile_image_url: profile.profileImageUrl,
+      p_social_id: profile.socialId,
+      p_social_provider: profile.socialProvider,
+    },
+  );
+  if (result.error || !result.data || typeof result.data !== "object") {
+    throw new Error(
+      result.error?.message ?? "legacy callback bootstrap failed",
+    );
+  }
+  const data = result.data as {
+    nickname?: unknown;
+    status?: unknown;
+  };
+  if (data.status === "account_conflict") {
+    return { ok: false as const, reason: "account_conflict" as const };
+  }
+  if (data.status !== "ok" || typeof data.nickname !== "string") {
+    throw new Error("legacy callback bootstrap returned an invalid result");
+  }
+  return {
+    ok: true as const,
+    nickname: data.nickname,
+  };
+}
+
 export function createAuthRefreshInternalDataClient() {
   return createScopedDataServiceRoleClient("auth-refresh");
 }
@@ -427,6 +516,44 @@ export function createYoutubeIngredientRegistrationInternalRpcClient() {
   const client = createScopedDataServiceRoleClient(
     "youtube-ingredient-registration",
   );
+  return client
+    ? {
+        rpc: client.rpc.bind(client),
+      }
+    : null;
+}
+
+const ADMIN_DATA_TABLES = new Set([
+  "admin_audit_logs",
+  "admin_members",
+  "meals",
+  "operational_events",
+  "pantry_items",
+  "recipe_books",
+  "shopping_lists",
+  "users",
+]);
+
+export function createAdminDataInternalClient() {
+  const client = createScopedDataServiceRoleClient("admin-data");
+  return client
+    ? {
+        from: exactInternalFrom(client, ADMIN_DATA_TABLES),
+      }
+    : null;
+}
+
+export function createNotFoundFeedbackInternalClient() {
+  const client = createScopedDataServiceRoleClient("not-found-feedback");
+  return client
+    ? {
+        rpc: client.rpc.bind(client),
+      }
+    : null;
+}
+
+export function createOperationalEventInternalClient() {
+  const client = createScopedDataServiceRoleClient("operational-event");
   return client
     ? {
         rpc: client.rpc.bind(client),

@@ -26,6 +26,7 @@ const INTERNAL_SCOPE_RULES = Object.freeze({
       "/rest/v1/rpc/record_hybrid_remote_session_authority",
       "/rest/v1/rpc/get_account_generation_capability",
       "/rest/v1/rpc/bootstrap_account_generation_identity",
+      "/rest/v1/rpc/bootstrap_legacy_auth_callback_identity",
     ]),
   },
   "auth-refresh": {
@@ -52,6 +53,31 @@ const INTERNAL_SCOPE_RULES = Object.freeze({
       "/rest/v1/rpc/start_legacy_external_write_attempt",
       "/rest/v1/rpc/finalize_legacy_external_write_attempt",
       "/rest/v1/operational_events",
+    ]),
+  },
+  "admin-data": {
+    methods: new Set(["GET", "POST"]),
+    paths: new Set([
+      "/rest/v1/admin_audit_logs",
+      "/rest/v1/admin_members",
+      "/rest/v1/meals",
+      "/rest/v1/operational_events",
+      "/rest/v1/pantry_items",
+      "/rest/v1/recipe_books",
+      "/rest/v1/shopping_lists",
+      "/rest/v1/users",
+    ]),
+  },
+  "not-found-feedback": {
+    methods: new Set(["POST"]),
+    paths: new Set([
+      "/rest/v1/rpc/record_internal_operational_event",
+    ]),
+  },
+  "operational-event": {
+    methods: new Set(["POST"]),
+    paths: new Set([
+      "/rest/v1/rpc/record_internal_operational_event",
     ]),
   },
   "recipe-image": {
@@ -516,6 +542,16 @@ function internalScope(request) {
 }
 
 function isExactInternalScopeRequest(scope, rule, method, pathname) {
+  if (scope === "admin-data") {
+    if (method === "GET") {
+      return rule.paths.has(pathname);
+    }
+    return method === "POST"
+      && (
+        pathname === "/rest/v1/admin_audit_logs"
+        || pathname === "/rest/v1/operational_events"
+      );
+  }
   if (scope !== "recipe-image") {
     return rule.methods.has(method) && rule.paths.has(pathname);
   }
@@ -555,7 +591,7 @@ function isInternalControlPlaneRequest(request, requestUrl, accessToken, config)
   const method = (request.method ?? "GET").toUpperCase();
   return Boolean(
     rule
-    && requestUrl.search === ""
+    && (requestUrl.search === "" || scope === "admin-data")
     && isExactInternalScopeRequest(
       scope,
       rule,
@@ -668,7 +704,7 @@ async function proxyInternalControlPlaneRequest(
   });
   let upstreamResponse;
   try {
-    upstreamResponse = await fetchImpl(upstream.url, {
+    upstreamResponse = await fetchImpl(`${upstream.url}${requestUrl.search}`, {
       method,
       headers: forwardedHeaders(request, proof, accessToken),
       body: ["GET", "HEAD"].includes(method) ? undefined : body,

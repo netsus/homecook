@@ -614,12 +614,12 @@ begin
       or not (
         (
           v_attestation_scope = 'ingredients'
-          and v_method in ('GET', 'HEAD')
+          and v_method = 'GET'
           and v_path in ('/ingredients', '/ingredient_synonyms')
         )
         or (
           v_attestation_scope = 'cooking-methods'
-          and v_method in ('GET', 'HEAD')
+          and v_method = 'GET'
           and v_path in ('/cooking_methods', '/cooking_method_synonyms')
         )
         or (
@@ -631,7 +631,7 @@ begin
           v_attestation_scope = 'recipe-themes'
           and (
             (
-              v_method in ('GET', 'HEAD')
+              v_method = 'GET'
               and v_path in ('/recipes', '/recipe_steps')
             )
             or (
@@ -642,7 +642,7 @@ begin
         )
         or (
           v_attestation_scope = 'recipes'
-          and v_method in ('GET', 'HEAD')
+          and v_method = 'GET'
           and v_path in ('/recipes', '/recipe_ingredients')
         )
         or (
@@ -652,7 +652,7 @@ begin
         )
         or (
           v_attestation_scope = 'recipe-detail'
-          and v_method in ('GET', 'HEAD')
+          and v_method = 'GET'
           and v_path in (
             '/recipes',
             '/recipe_ingredients',
@@ -663,7 +663,7 @@ begin
         )
         or (
           v_attestation_scope = 'recipe-cook-mode'
-          and v_method in ('GET', 'HEAD')
+          and v_method = 'GET'
           and v_path in ('/recipes', '/recipe_ingredients', '/recipe_steps')
         )
       ) then
@@ -696,8 +696,36 @@ begin
           and v_method = 'POST'
           and v_path in (
             '/rpc/get_account_generation_capability',
-            '/rpc/bootstrap_account_generation_identity'
+            '/rpc/bootstrap_account_generation_identity',
+            '/rpc/bootstrap_legacy_auth_callback_identity'
           )
+        )
+        or (
+          v_attestation_scope = 'admin-data'
+          and (
+            (
+              v_method = 'GET'
+              and v_path in (
+                '/admin_audit_logs',
+                '/admin_members',
+                '/meals',
+                '/operational_events',
+                '/pantry_items',
+                '/recipe_books',
+                '/shopping_lists',
+                '/users'
+              )
+            )
+            or (
+              v_method = 'POST'
+              and v_path in ('/admin_audit_logs', '/operational_events')
+            )
+          )
+        )
+        or (
+          v_attestation_scope in ('not-found-feedback', 'operational-event')
+          and v_method = 'POST'
+          and v_path = '/rpc/record_internal_operational_event'
         )
         or (
           v_attestation_scope = 'account-lifecycle'

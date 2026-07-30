@@ -476,6 +476,24 @@ composeRun("isolated hybrid integration runtime measured", () => {
       ], {
         input: readFileSync("infra/hybrid-supabase/runtime-bootstrap.sql", "utf8"),
       });
+      run("docker", [
+        ...composeArgs,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "supabase_admin",
+        "-d",
+        "homecook_hybrid_test",
+      ], {
+        input: readFileSync(
+          "supabase/migrations/20260730140000_hybrid_internal_operations_facades.sql",
+          "utf8",
+        ),
+      });
 
       runComposeWithRegistryRetry([...composeArgs, "up", "-d", "--wait"], {
         env: {
@@ -582,6 +600,219 @@ composeRun("isolated hybrid integration runtime measured", () => {
         body: string;
       };
       expect(parsedBootstrapB.status, parsedBootstrapB.body).toBe(200);
+
+      const callbackProviders = gatewayExec(
+        composeArgs,
+        `
+          const fixtures = [
+            {
+              owner: "71000000-0000-4000-8000-000000000001",
+              email: "google.local@example.com",
+              provider: "google",
+            },
+            {
+              owner: "71000000-0000-4000-8000-000000000002",
+              email: "naver.local@example.com",
+              provider: "naver",
+            },
+            {
+              owner: "71000000-0000-4000-8000-000000000003",
+              email: "kakao.local@example.com",
+              provider: "kakao",
+            },
+          ];
+          const results = {};
+          for (const fixture of fixtures) {
+            const response = await fetch(
+              "http://127.0.0.1:8080/rest/v1/rpc/bootstrap_legacy_auth_callback_identity",
+              {
+                method: "POST",
+                headers: {
+                  authorization: \`Bearer \${process.env.DATA_SECRET}\`,
+                  "content-type": "application/json",
+                  "x-homecook-internal-scope": "auth-callback",
+                },
+                body: JSON.stringify({
+                  p_owner_uuid: fixture.owner,
+                  p_email: fixture.email,
+                  p_social_provider: fixture.provider,
+                  p_social_id: \`\${fixture.provider}-remote-sub\`,
+                  p_nickname: \`\${fixture.provider}-cook\`,
+                  p_profile_image_url: null,
+                }),
+              },
+            );
+            results[fixture.provider] = {
+              status: response.status,
+              body: await response.text(),
+            };
+          }
+          console.log(JSON.stringify(results));
+        `,
+        { DATA_SECRET: serviceFixture.access_token },
+      );
+      const parsedCallbackProviders = JSON.parse(callbackProviders) as Record<
+        string,
+        { status: number; body: string }
+      >;
+      for (const provider of ["google", "naver", "kakao"]) {
+        const result = parsedCallbackProviders[provider];
+        expect(result.status, result.body).toBe(200);
+        expect(JSON.parse(result.body)).toMatchObject({
+          status: "ok",
+          nickname: `${provider}-cook`,
+        });
+      }
+
+      const callbackState = run("docker", [
+        ...composeArgs,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-At",
+        "-U",
+        "supabase_admin",
+        "-d",
+        "homecook_hybrid_test",
+        "-c",
+        "select (select count(*) from auth.users) || ':' || (select count(*) from public.users where id::text like '71000000-0000-4000-8000-%') || ':' || (select count(*) from public.recipe_books where user_id::text like '71000000-0000-4000-8000-%') || ':' || (select count(*) from public.meal_plan_columns where user_id::text like '71000000-0000-4000-8000-%') || ':' || (select count(*) from public.users where settings_json ->> 'user_bootstrap_version' = '3' and id::text like '71000000-0000-4000-8000-%');",
+      ]).trim();
+      expect(callbackState).toBe("0:3:9:9:3");
+
+      run("docker", [
+        ...composeArgs,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-U",
+        "supabase_admin",
+        "-d",
+        "homecook_hybrid_test",
+        "-c",
+        "insert into public.admin_members (user_id, role) values ('71000000-0000-4000-8000-000000000001', 'viewer');",
+      ]);
+
+      const scopedOperations = gatewayExec(
+        composeArgs,
+        `
+          const request = async (path, scope, method = "GET", body) => {
+            const response = await fetch(\`http://127.0.0.1:8080\${path}\`, {
+              method,
+              headers: {
+                authorization: \`Bearer \${process.env.DATA_SECRET}\`,
+                ...(body ? { "content-type": "application/json" } : {}),
+                "x-homecook-internal-scope": scope,
+              },
+              body: body ? JSON.stringify(body) : undefined,
+            });
+            return { status: response.status, body: await response.text() };
+          };
+          const member = await request(
+            "/rest/v1/admin_members?select=user_id%2Crole&user_id=eq.71000000-0000-4000-8000-000000000001",
+            "admin-data",
+          );
+          const nonMember = await request(
+            "/rest/v1/admin_members?select=user_id%2Crole&user_id=eq.71000000-0000-4000-8000-000000000002",
+            "admin-data",
+          );
+          const feedback = await request(
+            "/rest/v1/rpc/record_internal_operational_event",
+            "not-found-feedback",
+            "POST",
+            {
+              p_event_type: "not_found_feedback",
+              p_severity: "warn",
+              p_source: "web",
+              p_actor_user_id: null,
+              p_target_user_id: null,
+              p_request_path: "/missing",
+              p_http_status: 404,
+              p_error_code: "ROUTE_NOT_FOUND",
+              p_message_summary: "missing route",
+              p_metadata_json: { anonymous_id: "anon_runtime" },
+            },
+          );
+          const operational = await request(
+            "/rest/v1/rpc/record_internal_operational_event",
+            "operational-event",
+            "POST",
+            {
+              p_event_type: "auth_failure",
+              p_severity: "warn",
+              p_source: "auth",
+              p_actor_user_id: null,
+              p_target_user_id: null,
+              p_request_path: "/auth/callback",
+              p_http_status: 401,
+              p_error_code: "OAUTH_TEST",
+              p_message_summary: "runtime callback failure",
+              p_metadata_json: {},
+            },
+          );
+          const wrongMethod = await request(
+            "/rest/v1/rpc/record_internal_operational_event",
+            "operational-event",
+            "GET",
+          );
+          const wrongPath = await request(
+            "/rest/v1/users?select=id",
+            "not-found-feedback",
+            "GET",
+          );
+          const adminMutation = await request(
+            "/rest/v1/users",
+            "admin-data",
+            "POST",
+            {
+              id: "72000000-0000-4000-8000-000000000001",
+              nickname: "blocked",
+            },
+          );
+          console.log(JSON.stringify({
+            member,
+            nonMember,
+            feedback,
+            operational,
+            wrongMethod,
+            wrongPath,
+            adminMutation,
+          }));
+        `,
+        { DATA_SECRET: serviceFixture.access_token },
+      );
+      const parsedScopedOperations = JSON.parse(scopedOperations) as Record<
+        string,
+        { status: number; body: string }
+      >;
+      expect(parsedScopedOperations.member.status).toBe(200);
+      expect(JSON.parse(parsedScopedOperations.member.body)).toHaveLength(1);
+      expect(parsedScopedOperations.nonMember.status).toBe(200);
+      expect(JSON.parse(parsedScopedOperations.nonMember.body)).toEqual([]);
+      expect(parsedScopedOperations.feedback.status).toBe(200);
+      expect(parsedScopedOperations.operational.status).toBe(200);
+      expect(parsedScopedOperations.wrongMethod.status).toBe(409);
+      expect(parsedScopedOperations.wrongPath.status).toBe(409);
+      expect(parsedScopedOperations.adminMutation.status).toBe(409);
+
+      const operationalEventCount = run("docker", [
+        ...composeArgs,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-At",
+        "-U",
+        "supabase_admin",
+        "-d",
+        "homecook_hybrid_test",
+        "-c",
+        "select count(*) from public.operational_events where event_type in ('not_found_feedback', 'auth_failure');",
+      ]).trim();
+      expect(operationalEventCount).toBe("2");
 
       const rejectedUserControlPlane = gatewayExec(
         composeArgs,
@@ -848,6 +1079,24 @@ composeRun("isolated hybrid integration runtime measured", () => {
       for (const result of Object.values(parsedOfficialReads)) {
         expect(result.status, result.body).toBe(200);
       }
+
+      const rejectedHead = gatewayExec(
+        composeArgs,
+        `
+          const response = await fetch(
+            "http://127.0.0.1:8080/rest/v1/ingredients?select=id%2Cstandard_name%2Ccategory&order=standard_name.asc",
+            {
+              method: "HEAD",
+              headers: {
+                "x-homecook-public-read-scope": "ingredients",
+              },
+            },
+          );
+          console.log(JSON.stringify({ status: response.status }));
+        `,
+        {},
+      );
+      expect(JSON.parse(rejectedHead).status).toBe(409);
 
       const defenseInDepth = gatewayExec(
         composeArgs,

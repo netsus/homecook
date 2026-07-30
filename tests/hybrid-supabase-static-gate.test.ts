@@ -20,6 +20,14 @@ describe("hybrid authority AST/static gate", () => {
       file: entry.file,
     }))).toEqual([
       {
+        factory: "createAdminDataInternalClient",
+        file: "app/admin/layout.tsx",
+      },
+      {
+        factory: "createNotFoundFeedbackInternalClient",
+        file: "app/api/v1/feedback/404/route.ts",
+      },
+      {
         factory: "createRecipeImageInternalClient",
         file: "app/api/v1/recipes/images/[image_object_id]/cancel/route.ts",
       },
@@ -40,12 +48,20 @@ describe("hybrid authority AST/static gate", () => {
         file: "app/api/v1/users/me/route.ts",
       },
       {
-        factory: "createAuthCallbackInternalDataClient",
+        factory: "createAuthCallbackOperationsClient",
         file: "app/auth/callback/route.ts",
       },
       {
         factory: "createAccountLifecycleInternalRpcClient",
         file: "lib/server/account-generation/quarantine-gate.ts",
+      },
+      {
+        factory: "createAdminDataInternalClient",
+        file: "lib/server/admin-auth.ts",
+      },
+      {
+        factory: "createOperationalEventInternalClient",
+        file: "lib/server/admin-events.ts",
       },
       {
         factory: "createSessionLogoutInternalDataClient",
@@ -124,12 +140,9 @@ describe("hybrid authority AST/static gate", () => {
   it("keeps every remaining service-role call inside an exact allowlist", () => {
     const inventory = inventoryHybridAuthorityPaths();
 
-    expect(inventory.serviceRoleEntries.every((entry) =>
-      entry.classification === "public"
-      || entry.classification === "admin"
-      || entry.classification === "internal"
-    )).toBe(true);
-    expect(inventory.publicServiceRoleEntries.length).toBeGreaterThan(0);
-    expect(inventory.internalServiceRoleEntries.length).toBeGreaterThan(0);
+    expect(inventory.serviceRoleEntries).toEqual([]);
+    expect(inventory.genericLocalServiceRoleViolations).toEqual([]);
+    expect(inventory.remoteCompatibilityEntries.map((entry) => entry.file))
+      .toEqual(["app/api/v1/recipes/[id]/route.ts"]);
   });
 });

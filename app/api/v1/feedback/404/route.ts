@@ -1,9 +1,14 @@
 import { headers } from "next/headers";
 
 import { ok, fail } from "@/lib/api/response";
-import { recordOperationalEvent, type OperationalEventsDbClient } from "@/lib/server/admin-events";
+import {
+  recordOperationalEventThroughRpc,
+} from "@/lib/server/admin-events";
 import { hashPrivateValue, normalizeRequestPath } from "@/lib/server/admin-log-sanitize";
-import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createNotFoundFeedbackInternalClient,
+  createRouteHandlerClient,
+} from "@/lib/supabase/server";
 
 const MAX_FEEDBACK_LENGTH = 600;
 const MAX_SUMMARY_LENGTH = 180;
@@ -98,7 +103,7 @@ export async function POST(request: Request) {
     ]);
   }
 
-  const serviceRoleClient = createServiceRoleClient();
+  const serviceRoleClient = createNotFoundFeedbackInternalClient();
   if (!serviceRoleClient) {
     return fail(
       "NOT_FOUND_FEEDBACK_WRITE_FAILED",
@@ -114,8 +119,8 @@ export async function POST(request: Request) {
   const currentPath = normalizeRequestPath(normalizeText(body?.current_url)) ?? "/404";
   const referrerPath = normalizeRequestPath(normalizeText(body?.referrer)) ?? null;
 
-  const stored = await recordOperationalEvent(
-    serviceRoleClient as unknown as OperationalEventsDbClient,
+  const stored = await recordOperationalEventThroughRpc(
+    serviceRoleClient,
     {
       actor_user_id: userId,
       error_code: "ROUTE_NOT_FOUND",

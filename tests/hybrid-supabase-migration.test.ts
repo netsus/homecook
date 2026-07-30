@@ -5,6 +5,10 @@ import { describe, expect, it } from "vitest";
 const MIGRATION_PATH
   = "supabase/migrations/20260730090000_hybrid_auth_remote_identity_epoch_mirror.sql";
 const sql = readFileSync(MIGRATION_PATH, "utf8");
+const internalFacadeSql = readFileSync(
+  "supabase/migrations/20260730140000_hybrid_internal_operations_facades.sql",
+  "utf8",
+);
 
 describe("hybrid remote identity/session authority migration", () => {
   it("creates a PII-free private active-epoch singleton", () => {
@@ -98,6 +102,33 @@ describe("hybrid remote identity/session authority migration", () => {
     expect(sql).toMatch(
       /x-homecook-session-attestation[\s\S]+v_claims ->> 'role' = 'service_role'[\s\S]+v_attestation_kind is distinct from 'internal'/i,
     );
+    expect(sql).not.toMatch(/v_method in \('GET', 'HEAD'\)/i);
+    expect(sql).toMatch(
+      /v_attestation_scope = 'admin-data'[\s\S]+v_method = 'GET'[\s\S]+v_method = 'POST'/i,
+    );
+    expect(sql).toMatch(
+      /v_attestation_scope in \('not-found-feedback', 'operational-event'\)[\s\S]+record_internal_operational_event/i,
+    );
+  });
+
+  it("exposes callback and event writes only through service-role RPC facades", () => {
+    expect(internalFacadeSql).toMatch(
+      /create or replace function public\.bootstrap_legacy_auth_callback_identity\(/i,
+    );
+    expect(internalFacadeSql).toMatch(
+      /v_capability_state is distinct from 'legacy'[\s\S]+ACCOUNT_LIFECYCLE_MAINTENANCE/i,
+    );
+    expect(internalFacadeSql).toMatch(
+      /create or replace function public\.record_internal_operational_event\(/i,
+    );
+    expect(internalFacadeSql).toMatch(
+      /revoke all on function public\.bootstrap_legacy_auth_callback_identity\([\s\S]+from public, anon, authenticated[\s\S]+grant execute[\s\S]+to service_role/i,
+    );
+    expect(internalFacadeSql).toMatch(
+      /revoke all on function public\.record_internal_operational_event\([\s\S]+from public, anon, authenticated[\s\S]+grant execute[\s\S]+to service_role/i,
+    );
+    expect(internalFacadeSql).not.toMatch(/from auth\.users/i);
+    expect(internalFacadeSql).not.toMatch(/references auth\.users/i);
   });
 
   it("replaces the three historical auth.users FKs without reviving audit ownership", () => {

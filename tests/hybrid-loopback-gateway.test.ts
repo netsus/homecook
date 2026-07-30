@@ -248,6 +248,64 @@ describe("hybrid loopback gateway runtime", () => {
     expect(response.snapshot().statusCode).toBe(409);
   });
 
+  it("rejects HEAD when the public contract is GET-only", async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const response = createResponseRecorder();
+
+    await handler(
+      {
+        headers: { "x-homecook-public-read-scope": "ingredients" },
+        method: "HEAD",
+        url: "http://gateway.internal/rest/v1/ingredients?select=id%2Cstandard_name%2Ccategory%2Ccategory_code&order=standard_name.asc",
+      },
+      response,
+    );
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(response.snapshot().statusCode).toBe(409);
+  });
+
+  it("forwards an exact admin table query only under the admin-data scope", async () => {
+    const dataSecret = "0123456789abcdef0123456789abcdef";
+    const fetchImpl = vi.fn(async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      expect(String(input)).toBe(
+        "http://postgrest:3000/admin_members?select=user_id%2Crole&user_id=eq.user-1",
+      );
+      const headers = new Headers(init?.headers);
+      expect(headers.get("x-homecook-session-attestation")).toBeTruthy();
+      expect(headers.get("x-homecook-session-attestation-signature"))
+        .toMatch(/^[a-f0-9]{64}$/);
+      return new Response(null, { status: 200 });
+    });
+    const handler = createGatewayRequestHandler({
+      config: createConfig(),
+      fetchImpl,
+    });
+    const response = createResponseRecorder();
+
+    await handler(
+      {
+        headers: {
+          authorization: `Bearer ${dataSecret}`,
+          "x-homecook-internal-scope": "admin-data",
+        },
+        method: "GET",
+        url: "http://gateway.internal/rest/v1/admin_members?select=user_id%2Crole&user_id=eq.user-1",
+      },
+      response,
+    );
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(response.snapshot().statusCode).toBe(200);
+  });
+
   it("rejects a cross-method recipe-image scope request", async () => {
     const dataSecret = "0123456789abcdef0123456789abcdef";
     const fetchImpl = vi.fn(async () => new Response(null, { status: 200 }));

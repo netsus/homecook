@@ -7,6 +7,8 @@ const signOut = vi.fn();
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
 const bootstrapAuthCallbackSessionAuthority = vi.fn();
+const bootstrapLegacyAuthCallbackIdentity = vi.fn();
+const operationalEventRpc = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const cookies = vi.fn();
@@ -45,8 +47,13 @@ function createServiceRoleUserLookup(
 
 vi.mock("@/lib/supabase/server", () => ({
   bootstrapAuthCallbackSessionAuthority,
+  bootstrapLegacyAuthCallbackIdentity,
+  createAuthCallbackOperationsClient: createServiceRoleClient,
   createAuthCallbackInternalDataClient: createServiceRoleClient,
   createAuthRouteHandlerClient: createRouteHandlerClient,
+  createOperationalEventInternalClient: () => ({
+    rpc: operationalEventRpc,
+  }),
 }));
 
 vi.mock("next/headers", () => ({
@@ -79,6 +86,8 @@ describe("auth callback", () => {
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
     bootstrapAuthCallbackSessionAuthority.mockReset();
+    bootstrapLegacyAuthCallbackIdentity.mockReset();
+    operationalEventRpc.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     cookies.mockReset();
@@ -97,6 +106,11 @@ describe("auth callback", () => {
     createRouteHandlerClient.mockResolvedValue(routeClient);
     createServiceRoleClient.mockReturnValue(createServiceRoleUserLookup().client);
     bootstrapAuthCallbackSessionAuthority.mockResolvedValue({ ok: true });
+    bootstrapLegacyAuthCallbackIdentity.mockResolvedValue({
+      ok: true,
+      nickname: "집밥러",
+    });
+    operationalEventRpc.mockResolvedValue({ data: true, error: null });
     cookies.mockResolvedValue({
       get: cookieGet,
       getAll: cookieGetAll,
@@ -268,6 +282,10 @@ describe("auth callback", () => {
       social_provider: "google",
     });
     createServiceRoleClient.mockReturnValue(lookup.client);
+    bootstrapLegacyAuthCallbackIdentity.mockResolvedValueOnce({
+      ok: false,
+      reason: "account_conflict",
+    });
 
     const { GET } = await import("@/app/auth/callback/route");
     const response = await GET(
@@ -320,7 +338,10 @@ describe("auth callback", () => {
     ));
 
     expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
-    expect(lookup.usersQuery.eq).toHaveBeenCalledWith("email", "cook@example.com");
+    expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledWith(
+      lookup.client,
+      expect.objectContaining({ email: "cook@example.com", id: "user-1" }),
+    );
     expect(response.headers.get("set-cookie")).toContain("homecook-last-auth-provider=naver");
     expect(signOut).not.toHaveBeenCalled();
   });
@@ -480,8 +501,86 @@ describe("auth callback", () => {
         user: expect.objectContaining({ id: "user-1" }),
       }),
     );
-    expect(ensurePublicUserRow).toHaveBeenCalledTimes(1);
+    expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    ["google", "google"],
+    ["naver", "custom:naver"],
+    ["kakao", "kakao"],
+  ])(
+    "bootstraps a local %s callback through the RPC-only factory",
+    async (attemptedProvider, identityProvider) => {
+      exchangeCodeForSession.mockResolvedValue({
+        data: {
+          session: {
+            access_token: "remote-access-token",
+          },
+        },
+        error: null,
+      });
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: "user-1",
+            created_at: "2026-07-28T00:00:00.000Z",
+            email: "cook@example.com",
+            email_confirmed_at: "2026-07-28T00:00:00.000Z",
+            app_metadata: { provider: identityProvider },
+            user_metadata: {
+              nickname: "집밥러",
+              sub: `${attemptedProvider}-social-id`,
+            },
+            identities: [{
+              provider: identityProvider,
+              identity_data: { email_verified: true },
+            }],
+          },
+        },
+        error: null,
+      });
+      const rpc = vi.fn(async (name: string) => {
+        if (name === "get_account_generation_capability") {
+          return {
+            data: { state: "legacy", revision: 1 },
+            error: null,
+          };
+        }
+        throw new Error(`unexpected RPC: ${name}`);
+      });
+      const localOperationsClient = { rpc };
+      createServiceRoleClient.mockReturnValue(localOperationsClient);
+      cookieGetAll.mockReturnValue([
+        {
+          name: "sb-homecook-auth-token",
+          value: "remote-session-cookie",
+        },
+      ]);
+
+      const { GET } = await import("@/app/auth/callback/route");
+      const response = await GET(new Request(
+        `http://localhost:3000/auth/callback?code=abc&attemptedProvider=${attemptedProvider}&next=/planner`,
+      ));
+
+      expect(response.headers.get("location")).toBe(
+        "http://localhost:3000/planner",
+      );
+      expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledWith(
+        localOperationsClient,
+        expect.objectContaining({
+          id: "user-1",
+          email: "cook@example.com",
+        }),
+      );
+      expect(ensurePublicUserRow).not.toHaveBeenCalled();
+      expect(ensureUserBootstrapState).not.toHaveBeenCalled();
+      expect(signOut).not.toHaveBeenCalled();
+      expect(response.headers.get("set-cookie") ?? "")
+        .toContain(`homecook-last-auth-provider=${attemptedProvider}`);
+      expect(response.headers.get("set-cookie") ?? "")
+        .not.toMatch(/sb-homecook-auth-token=;.*Max-Age=0/i);
+    },
+  );
 
   it("preserves bootstrap maintenance instead of reporting a stale session", async () => {
     exchangeCodeForSession.mockResolvedValue({
@@ -900,16 +999,14 @@ describe("auth callback", () => {
       new Request("http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner"),
     );
 
-    expect(ensurePublicUserRow).toHaveBeenCalledWith(
-      expect.objectContaining({ from: expect.any(Function) }),
+    expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         id: "user-1",
       }),
     );
-    expect(ensureUserBootstrapState).toHaveBeenCalledWith(
-      expect.objectContaining({ from: expect.any(Function) }),
-      "user-1",
-    );
+    expect(ensurePublicUserRow).not.toHaveBeenCalled();
+    expect(ensureUserBootstrapState).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
   });
 
@@ -917,7 +1014,8 @@ describe("auth callback", () => {
     exchangeCodeForSession.mockResolvedValue({
       error: null,
     });
-    ensurePublicUserRow.mockResolvedValueOnce({
+    bootstrapLegacyAuthCallbackIdentity.mockResolvedValueOnce({
+      ok: true,
       nickname: "",
     });
 
@@ -926,10 +1024,7 @@ describe("auth callback", () => {
       new Request("http://localhost:3000/auth/callback?code=abc&attemptedProvider=google&next=/planner"),
     );
 
-    expect(ensureUserBootstrapState).toHaveBeenCalledWith(
-      expect.objectContaining({ from: expect.any(Function) }),
-      "user-1",
-    );
+    expect(bootstrapLegacyAuthCallbackIdentity).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toBe(
       "http://localhost:3000/onboarding/nickname?next=%2Fplanner",
     );

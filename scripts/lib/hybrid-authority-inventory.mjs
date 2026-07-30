@@ -34,8 +34,23 @@ const INTERNAL_ALLOWLIST_FILES = new Set([
 
 const INTERNAL_OPERATION_ALLOWLIST = new Map([
   [
-    "createAuthCallbackInternalDataClient",
+    "createAuthCallbackOperationsClient",
     new Set(["app/auth/callback/route.ts"]),
+  ],
+  [
+    "createAdminDataInternalClient",
+    new Set([
+      "app/admin/layout.tsx",
+      "lib/server/admin-auth.ts",
+    ]),
+  ],
+  [
+    "createNotFoundFeedbackInternalClient",
+    new Set(["app/api/v1/feedback/404/route.ts"]),
+  ],
+  [
+    "createOperationalEventInternalClient",
+    new Set(["lib/server/admin-events.ts"]),
   ],
   [
     "createAuthRefreshInternalDataClient",
@@ -438,6 +453,7 @@ function inventoryHybridAuthorityPaths(repoRoot = process.cwd()) {
       (entry) => !entry.allowed,
     ),
     internalServiceRoleEntries: sortedServiceRoleEntries.filter((entry) => entry.classification === "internal"),
+    genericLocalServiceRoleViolations: sortedServiceRoleEntries,
     publicAllowlistFiles: [...PUBLIC_ALLOWLIST_FILES].sort(),
     publicRouteContracts,
     publicRouteContractViolations,
